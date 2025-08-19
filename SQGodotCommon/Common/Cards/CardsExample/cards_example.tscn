@@ -1,0 +1,43 @@
+[gd_scene load_steps=7 format=3 uid="uid://liffs6pttuei"]
+
+[ext_resource type="Script" uid="uid://csxtjt8v0nr35" path="res://Common/Cards/CardsExample/CardsExampleScene.cs" id="1_rx7nk"]
+[ext_resource type="Script" uid="uid://bslmlodkspns5" path="res://Common/Cards/CardsExample/CardsExampleWorld.cs" id="1_se8hm"]
+[ext_resource type="PackedScene" uid="uid://bh2xv62842ljr" path="res://Common/Core/CharacterUI/character_ui.tscn" id="2_rx7nk"]
+[ext_resource type="Script" uid="uid://0pvwu05bpv2y" path="res://Common/Cards/CardsExample/CardsExampleUI.cs" id="3_ixxxe"]
+[ext_resource type="PackedScene" uid="uid://fjmqxy6nftux" path="res://Common/Cards/2D/Hand2D/Hand.tscn" id="4_wmxhi"]
+
+[sub_resource type="Environment" id="Environment_xek37"]
+background_mode = 3
+background_canvas_max_layer = 999
+glow_enabled = true
+glow_intensity = 1.3
+glow_bloom = 0.1
+glow_blend_mode = 4
+
+[node name="CardsExample" type="Node2D"]
+script = ExtResource("1_rx7nk")
+
+[node name="World" type="Node2D" parent="."]
+script = ExtResource("1_se8hm")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="World"]
+environment = SubResource("Environment_xek37")
+
+[node name="Heroes" type="Node2D" parent="World"]
+
+[node name="CharacterUi" parent="World/Heroes" instance=ExtResource("2_rx7nk")]
+position = Vector2(250, 400)
+
+[node name="Enemies" type="Node2D" parent="World"]
+
+[node name="CharacterUi2" parent="World/Enemies" instance=ExtResource("2_rx7nk")]
+position = Vector2(1100, 400)
+
+[node name="CharacterUi3" parent="World/Enemies" instance=ExtResource("2_rx7nk")]
+position = Vector2(1600, 400)
+
+[node name="UI" type="Node" parent="."]
+script = ExtResource("3_ixxxe")
+
+[node name="Hand" parent="UI" instance=ExtResource("4_wmxhi")]
+position = Vector2(960, 980)

@@ -1,0 +1,59 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SQGodotCommon", "SQGodotCommon\SQGodotCommon.csproj", "{A1BD72C8-3D35-41EB-B1B3-09DC518BD2D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SQGodotCommon.Tests", "SQGodotCommon.Tests\SQGodotCommon.Tests.csproj", "{141F0408-F3A2-4478-8270-FA02B78D143B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImmutableGameObjects", "ImmutableGameObjects", "{F4BAD200-BD4D-4B79-8934-5724D40AC7CE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImmutableGameObjects", "ImmutableGameObjects\ImmutableGameObjects\ImmutableGameObjects.csproj", "{32339CFC-CBF3-4CEF-B5D7-C7896F5F5004}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImmutableGameObjects.Tests", "ImmutableGameObjects\ImmutableGameObjects.Tests\ImmutableGameObjects.Tests.csproj", "{243BD16B-5F88-4A6C-B5CD-9A426267901A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImmutableGameObjects.Benchmarks", "ImmutableGameObjects\ImmutableGameObjects.Benchmarks\ImmutableGameObjects.Benchmarks.csproj", "{6C57C38D-DC49-4A87-83F6-2E0342858983}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logging", "Logging\Logging.csproj", "{A4BFE6AE-4C8C-4869-88A9-6AB34895C2EC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1BD72C8-3D35-41EB-B1B3-09DC518BD2D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1BD72C8-3D35-41EB-B1B3-09DC518BD2D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1BD72C8-3D35-41EB-B1B3-09DC518BD2D2}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1BD72C8-3D35-41EB-B1B3-09DC518BD2D2}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{141F0408-F3A2-4478-8270-FA02B78D143B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{141F0408-F3A2-4478-8270-FA02B78D143B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{141F0408-F3A2-4478-8270-FA02B78D143B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{141F0408-F3A2-4478-8270-FA02B78D143B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{32339CFC-CBF3-4CEF-B5D7-C7896F5F5004}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32339CFC-CBF3-4CEF-B5D7-C7896F5F5004}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32339CFC-CBF3-4CEF-B5D7-C7896F5F5004}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32339CFC-CBF3-4CEF-B5D7-C7896F5F5004}.Release|Any CPU.Build.0 = Release|Any CPU
+		{243BD16B-5F88-4A6C-B5CD-9A426267901A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{243BD16B-5F88-4A6C-B5CD-9A426267901A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{243BD16B-5F88-4A6C-B5CD-9A426267901A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{243BD16B-5F88-4A6C-B5CD-9A426267901A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6C57C38D-DC49-4A87-83F6-2E0342858983}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6C57C38D-DC49-4A87-83F6-2E0342858983}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6C57C38D-DC49-4A87-83F6-2E0342858983}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6C57C38D-DC49-4A87-83F6-2E0342858983}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4BFE6AE-4C8C-4869-88A9-6AB34895C2EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4BFE6AE-4C8C-4869-88A9-6AB34895C2EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4BFE6AE-4C8C-4869-88A9-6AB34895C2EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4BFE6AE-4C8C-4869-88A9-6AB34895C2EC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{32339CFC-CBF3-4CEF-B5D7-C7896F5F5004} = {F4BAD200-BD4D-4B79-8934-5724D40AC7CE}
+		{243BD16B-5F88-4A6C-B5CD-9A426267901A} = {F4BAD200-BD4D-4B79-8934-5724D40AC7CE}
+		{6C57C38D-DC49-4A87-83F6-2E0342858983} = {F4BAD200-BD4D-4B79-8934-5724D40AC7CE}
+	EndGlobalSection
+EndGlobal

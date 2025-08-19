@@ -1,0 +1,75 @@
+[gd_scene load_steps=8 format=3 uid="uid://bgju6iff00elq"]
+
+[ext_resource type="Script" uid="uid://2ei6b8qcn6tf" path="res://Project/GameScene/GameUI.cs" id="1_qono5"]
+[ext_resource type="Script" uid="uid://bgwyn2tccqm2a" path="res://Project/GameScene/GameScene.cs" id="1_rfclw"]
+[ext_resource type="Script" uid="uid://f0rb6jaeaxs3" path="res://Project/GameScene/GameWorld.cs" id="2_em4xr"]
+[ext_resource type="Texture2D" uid="uid://ds4rnuhypjs8a" path="res://addons/shaderV/examples/godot_logo.png" id="4_dao40"]
+
+[sub_resource type="Resource" id="Resource_870xn"]
+metadata/__load_path__ = "res://Common/Godot/Common/DamageFlash/damage_flash_material.tres"
+
+[sub_resource type="Theme" id="Theme_1gfna"]
+Label/font_sizes/font_size = 75
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uvpto"]
+bg_color = Color(0.00392157, 0.00392157, 0.00392157, 0.607843)
+border_width_left = 20
+border_width_top = 20
+border_width_right = 20
+border_width_bottom = 20
+border_color = Color(1, 1, 1, 1)
+border_blend = true
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_right = 20
+corner_radius_bottom_left = 20
+expand_margin_left = 20.0
+expand_margin_top = 20.0
+expand_margin_right = 20.0
+expand_margin_bottom = 20.0
+shadow_size = 20
+shadow_offset = Vector2(0, 20)
+
+[node name="GameScene" type="Node2D"]
+script = ExtResource("1_rfclw")
+
+[node name="World" type="Node2D" parent="."]
+script = ExtResource("2_em4xr")
+
+[node name="Sprite2D" type="Sprite2D" parent="World"]
+material = SubResource("Resource_870xn")
+texture = ExtResource("4_dao40")
+
+[node name="UI" type="CanvasLayer" parent="." node_paths=PackedStringArray("GameOverUI")]
+script = ExtResource("1_qono5")
+GameOverUI = NodePath("GameOverUI")
+
+[node name="GameOverUI" type="Control" parent="UI"]
+visible = false
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1980.0
+offset_bottom = 1080.0
+theme = SubResource("Theme_1gfna")
+
+[node name="CenterContainer" type="CenterContainer" parent="UI/GameOverUI"]
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+
+[node name="PanelContainer" type="PanelContainer" parent="UI/GameOverUI/CenterContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_uvpto")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="UI/GameOverUI/CenterContainer/PanelContainer"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="UI/GameOverUI/CenterContainer/PanelContainer/VBoxContainer"]
+layout_mode = 2
+text = "Game Over!"
+horizontal_alignment = 1
+
+[node name="Label2" type="Label" parent="UI/GameOverUI/CenterContainer/PanelContainer/VBoxContainer"]
+layout_mode = 2
+text = "Press any key to continue"
+horizontal_alignment = 1

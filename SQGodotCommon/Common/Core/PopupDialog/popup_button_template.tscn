@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://c6g8ybn2qbff4"]
+
+[node name="SubmitButton" type="Button"]
+size_flags_horizontal = 3
+focus_mode = 0
+text = "OK!"

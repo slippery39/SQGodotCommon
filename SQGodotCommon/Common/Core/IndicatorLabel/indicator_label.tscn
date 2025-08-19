@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3 uid="uid://bfydmd57h0r1m"]
+
+[ext_resource type="Script" uid="uid://dljxs56uicjsh" path="res://Common/Core/IndicatorLabel/IndicatorLabel.cs" id="1_dgk3l"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_tho3t"]
+font_size = 50
+outline_size = 10
+outline_color = Color(0, 0, 0, 1)
+shadow_size = 30
+shadow_color = Color(0, 0, 0, 0.270588)
+
+[node name="IndicatorLabel" type="Label"]
+offset_right = 292.0
+offset_bottom = 69.0
+text = "Strength + 1"
+label_settings = SubResource("LabelSettings_tho3t")
+horizontal_alignment = 1
+script = ExtResource("1_dgk3l")

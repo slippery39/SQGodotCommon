@@ -1,0 +1,81 @@
+{
+    "version": "2.0.0",
+    "configurations": [
+        {
+            "name": "Launch",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${env:Godot}",
+            "cwd": "${workspaceFolder}/SQGodotCommon",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "args": [
+                "--path",
+                "${workspaceFolder}/SQGodotCommon"
+            ]
+        },  
+        {
+            "name": "Launch (Select Scene)",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${env:Godot}",
+            "cwd": "${workspaceFolder}/SQGodotCommon",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "args": [
+                "--path",
+                "${workspaceFolder}/SQGodotCommon",
+                "${command:godot.csharp.getLaunchScene}"
+            ]
+        },
+        {
+            "name": "Launch Editor",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${env:Godot}",
+            "cwd": "${workspaceFolder}/SQGodotCommon",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "args": [
+                "--path",
+                "${workspaceFolder}/SQGodotCommon",
+                "--editor"
+            ]
+        },
+		{
+            "name": "Launch Editor (No Build)",
+            "type": "coreclr",
+            "request": "launch",
+            "program": "${env:Godot}",
+            "cwd": "${workspaceFolder}/SQGodotCommon",
+            "console": "internalConsole",
+            "stopAtEntry": false,
+            "args": [
+                "--path",
+                "${workspaceFolder}/SQGodotCommon",
+                "--editor"
+            ]
+        },
+        {
+            "name": "Attach to Process",
+            "type": "coreclr",
+            "request": "attach"            
+        },
+        {
+            "name": "Run Tests",
+            "type": "coreclr",
+            "request": "launch",
+            "cwd": "${workspaceFolder}/SQGodotCommon.Tests",
+            "program": "dotnet",
+            "args": [
+                "test",
+                "${workspaceFolder}/SQGodotCommon.Tests/SQGodotCommon.Tests.csproj"
+            ],
+            "stopAtEntry": false,
+            "console": "integratedTerminal"
+        }
+    ]    
+}

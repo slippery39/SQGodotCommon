@@ -1,0 +1,47 @@
+[gd_scene load_steps=7 format=3 uid="uid://elgywi5wfkh2"]
+
+[ext_resource type="Script" uid="uid://cjbbiuu0hkqo4" path="res://Common/Core/HealthBar/HealthBar.cs" id="1_b5n33"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_yx4cb"]
+bg_color = Color(0, 0, 0, 1)
+
+[sub_resource type="Gradient" id="Gradient_kvaxe"]
+colors = PackedColorArray(0, 0.882353, 0, 1, 0.0221553, 0.301799, 0.0203199, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_gin48"]
+gradient = SubResource("Gradient_kvaxe")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_6se60"]
+texture = SubResource("GradientTexture1D_gin48")
+
+[sub_resource type="LabelSettings" id="LabelSettings_mqlru"]
+font_size = 40
+
+[node name="HealthBar" type="ProgressBar"]
+custom_minimum_size = Vector2(400, 100)
+offset_top = -1.0
+offset_right = 200.0
+offset_bottom = 19.0
+theme_override_styles/background = SubResource("StyleBoxFlat_yx4cb")
+theme_override_styles/fill = SubResource("StyleBoxTexture_6se60")
+value = 80.0
+show_percentage = false
+script = ExtResource("1_b5n33")
+
+[node name="HealthLabel" type="Label" parent="."]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -50.0
+offset_top = -11.5
+offset_right = 50.0
+offset_bottom = 11.5
+grow_horizontal = 2
+grow_vertical = 2
+text = "400/500"
+label_settings = SubResource("LabelSettings_mqlru")
+horizontal_alignment = 1

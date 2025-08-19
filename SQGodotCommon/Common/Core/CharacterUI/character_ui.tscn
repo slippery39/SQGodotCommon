@@ -1,0 +1,45 @@
+[gd_scene load_steps=8 format=3 uid="uid://bh2xv62842ljr"]
+
+[ext_resource type="Script" path="./CharacterUI.cs" id="1_6fqf1"]
+[ext_resource type="Texture2D" uid="uid://ds4rnuhypjs8a" path="res://addons/shaderV/examples/godot_logo.png" id="2_g5h3u"]
+[ext_resource type="Shader" path="res://Common/Shaders/damage_and_highlight.gdshader" id="2_n44h1"]
+[ext_resource type="PackedScene" uid="uid://elgywi5wfkh2" path="res://Common/Godot/UI/HealthBar/health_bar.tscn" id="3_w1kw0"]
+[ext_resource type="Script" path="./DamageFlashController.cs" id="4_kbqij"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2dqtr"]
+shader = ExtResource("2_n44h1")
+shader_parameter/allow_out_of_bounds = true
+shader_parameter/outline_thickness = 1.0
+shader_parameter/outline_color = Color(0.954855, 0.99, 0.2871, 1)
+shader_parameter/flash_color = Color(1, 1, 1, 1)
+shader_parameter/flash_intensity = 0.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_77ew7"]
+size = Vector2(353, 310)
+
+[node name="CharacterUi" type="Node2D"]
+script = ExtResource("1_6fqf1")
+
+[node name="Sprite" type="Sprite2D" parent="."]
+material = SubResource("ShaderMaterial_2dqtr")
+position = Vector2(-3, -1)
+texture = ExtResource("2_g5h3u")
+
+[node name="ClickArea" type="Area2D" parent="Sprite"]
+unique_name_in_owner = true
+position = Vector2(3, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Sprite/ClickArea"]
+position = Vector2(-2.5, -1)
+shape = SubResource("RectangleShape2D_77ew7")
+
+[node name="DamageFlashController" type="Node" parent="Sprite"]
+unique_name_in_owner = true
+script = ExtResource("4_kbqij")
+
+[node name="HealthBar" parent="." instance=ExtResource("3_w1kw0")]
+offset_left = -203.0
+offset_top = 159.0
+offset_right = 197.0
+offset_bottom = 259.0
+value = 50.0

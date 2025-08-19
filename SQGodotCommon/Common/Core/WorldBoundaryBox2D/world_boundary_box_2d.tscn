@@ -1,0 +1,42 @@
+[gd_scene load_steps=6 format=3 uid="uid://dva1t8y33phui"]
+
+[ext_resource type="Script" uid="uid://b0svledjcpvk2" path="res://Common/Core/WorldBoundaryBox2D/WorldBoundaryBox2D.cs" id="1_f2yyd"]
+
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_d1bhb"]
+normal = Vector2(0, 1)
+
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_dk8g4"]
+normal = Vector2(-1, 0)
+
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_etm70"]
+
+[sub_resource type="WorldBoundaryShape2D" id="WorldBoundaryShape2D_r3dr4"]
+normal = Vector2(1, 0)
+
+[node name="WorldBoundaryBox2d" type="Node2D"]
+top_level = true
+script = ExtResource("1_f2yyd")
+BoundaryBox = Rect2(0, 0, 6000, 3000)
+
+[node name="TopWorldBoundary" type="StaticBody2D" parent="."]
+
+[node name="TopBoundary" type="CollisionShape2D" parent="TopWorldBoundary"]
+shape = SubResource("WorldBoundaryShape2D_d1bhb")
+
+[node name="RightWorldBoundary" type="StaticBody2D" parent="."]
+position = Vector2(6000, 0)
+
+[node name="RightBoundary" type="CollisionShape2D" parent="RightWorldBoundary"]
+shape = SubResource("WorldBoundaryShape2D_dk8g4")
+
+[node name="BottomWorldBoundary" type="StaticBody2D" parent="."]
+position = Vector2(6000, 3000)
+
+[node name="BottomBoundary" type="CollisionShape2D" parent="BottomWorldBoundary"]
+shape = SubResource("WorldBoundaryShape2D_etm70")
+
+[node name="LeftWorldBoundary" type="StaticBody2D" parent="."]
+position = Vector2(0, 3000)
+
+[node name="LeftBoundary" type="CollisionShape2D" parent="LeftWorldBoundary"]
+shape = SubResource("WorldBoundaryShape2D_r3dr4")

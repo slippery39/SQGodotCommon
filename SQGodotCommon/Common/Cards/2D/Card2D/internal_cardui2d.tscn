@@ -1,0 +1,163 @@
+[gd_scene load_steps=16 format=3 uid="uid://cdaltlvmpxycl"]
+
+[ext_resource type="Shader" uid="uid://b660bhlhx2nt8" path="res://Common/Shaders/damage_and_highlight.gdshader" id="1_ej3r4"]
+[ext_resource type="Script" uid="uid://c0uej0234tssk" path="res://Common/Cards/2D/Card2D/InternalCardUI2D.cs" id="1_ye8pd"]
+[ext_resource type="Texture2D" uid="uid://t0fia4eck42u" path="res://Common/Cards/2D/Card2D/Images/Parts/MainFrame.PNG" id="2_0yrcj"]
+[ext_resource type="Shader" uid="uid://dd7s2a6n7081j" path="res://Common/Cards/2D/Card2D/Shaders/Holographic/Test_Holo/new_holo.gdshader" id="3_aqtsa"]
+[ext_resource type="Texture2D" uid="uid://b311dmc3joa8x" path="res://Common/Cards/2D/Card2D/Images/Parts/Art.PNG" id="3_xxk7i"]
+[ext_resource type="Texture2D" uid="uid://ebt0usd1xub" path="res://Common/Cards/2D/Card2D/Images/Parts/TestArtwork3.png" id="4_d8nhu"]
+[ext_resource type="Texture2D" uid="uid://cfhtpm37bfhqj" path="res://Common/Cards/2D/Card2D/Shaders/Holographic/SimpleHolographic2D/Textures/noiseTexture01.tres" id="4_ygej2"]
+[ext_resource type="Texture2D" uid="uid://c37h3w6w47u70" path="res://Common/Cards/2D/Card2D/Shaders/Holographic/SimpleHolographic2D/Textures/rainbow_text_1d.tres" id="5_ce2i0"]
+[ext_resource type="Texture2D" uid="uid://b2c5nbpy0s63g" path="res://Common/Cards/2D/Card2D/Images/Parts/Name.PNG" id="5_pujh0"]
+[ext_resource type="LabelSettings" uid="uid://hfpv1hhsj022" path="res://Common/Cards/2D/Card2D/CardLabelSettings.tres" id="6_ckdyi"]
+[ext_resource type="Texture2D" uid="uid://ctcsof2nyk22s" path="res://Common/Cards/2D/Card2D/Images/Parts/ManaCost.PNG" id="7_2lkld"]
+[ext_resource type="LabelSettings" uid="uid://c6505dofji8ji" path="res://Common/Cards/2D/Card2D/ManaCostLabelSettings.tres" id="8_h65jh"]
+[ext_resource type="Texture2D" uid="uid://chffsn8lolttn" path="res://Common/Cards/2D/Card2D/Images/Parts/RulesText.PNG" id="9_p103l"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_muumw"]
+shader = ExtResource("1_ej3r4")
+shader_parameter/allow_out_of_bounds = true
+shader_parameter/outline_thickness = 1.0
+shader_parameter/outline_color = Color(0, 1.5, 0, 1)
+shader_parameter/flash_color = Color(1, 1, 1, 1)
+shader_parameter/flash_intensity = 0.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_f7u7x"]
+shader = ExtResource("3_aqtsa")
+shader_parameter/enable_holographic = true
+shader_parameter/holographic_intensity = 0.75
+shader_parameter/rainbow_texture = ExtResource("5_ce2i0")
+shader_parameter/rainbow_shift = 0.0
+shader_parameter/rainbow_speed = 1.0
+shader_parameter/enable_twirl = true
+shader_parameter/twirl_strength = 4.0
+shader_parameter/twirl_center = Vector2(0.5, 0.5)
+shader_parameter/twirl_speed = 10.0
+shader_parameter/twirl_frequency = 0.1
+shader_parameter/enable_frequency_mod = true
+shader_parameter/frequency_strength = 1.0
+shader_parameter/frequency_axis = 0
+shader_parameter/frequency_offset = 0.0
+shader_parameter/enable_noise = true
+shader_parameter/noise_texture = ExtResource("4_ygej2")
+shader_parameter/noise_tiling = Vector2(1, 1)
+shader_parameter/noise_speed = Vector2(0.1, 0.1)
+shader_parameter/noise_power = 3.0
+shader_parameter/noise_intensity = 1.0
+shader_parameter/invert_noise = true
+shader_parameter/global_time_scale = 1.0
+shader_parameter/pause_animation = false
+shader_parameter/manual_time = 0.0
+shader_parameter/blend_mode = 0
+shader_parameter/effect_opacity = 1.0
+shader_parameter/preserve_alpha = true
+shader_parameter/color_tint = Color(1, 1, 1, 1)
+
+[node name="InternalCard2D" type="Node2D"]
+script = ExtResource("1_ye8pd")
+OutlineColor = Color(0, 1.5, 0, 1)
+OutlineThickness = 2
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="."]
+unique_name_in_owner = true
+texture_repeat = 1
+material = SubResource("ShaderMaterial_muumw")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -156.0
+offset_top = -222.0
+offset_right = 156.0
+offset_bottom = 223.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer"]
+disable_3d = true
+transparent_bg = true
+handle_input_locally = false
+msaa_2d = 3
+sdf_oversize = 3
+sdf_scale = 0
+size = Vector2i(400, 500)
+render_target_update_mode = 4
+
+[node name="Node2D" type="Node2D" parent="SubViewportContainer/SubViewport"]
+position = Vector2(200, 250)
+
+[node name="CardContainer" type="Node2D" parent="SubViewportContainer/SubViewport/Node2D"]
+unique_name_in_owner = true
+material = SubResource("ShaderMaterial_f7u7x")
+
+[node name="MainFrame" type="Sprite2D" parent="SubViewportContainer/SubViewport/Node2D/CardContainer"]
+unique_name_in_owner = true
+use_parent_material = true
+texture = ExtResource("2_0yrcj")
+
+[node name="ArtFrame" type="Sprite2D" parent="SubViewportContainer/SubViewport/Node2D/CardContainer"]
+use_parent_material = true
+position = Vector2(2, -58)
+texture = ExtResource("3_xxk7i")
+
+[node name="ArtSprite" type="Sprite2D" parent="SubViewportContainer/SubViewport/Node2D/CardContainer/ArtFrame"]
+unique_name_in_owner = true
+use_parent_material = true
+position = Vector2(-1, 0)
+scale = Vector2(0.979899, 0.995098)
+texture = ExtResource("4_d8nhu")
+
+[node name="Name" type="Sprite2D" parent="SubViewportContainer/SubViewport/Node2D/CardContainer"]
+use_parent_material = true
+position = Vector2(2, -190)
+texture = ExtResource("5_pujh0")
+
+[node name="NameLabel" type="Label" parent="SubViewportContainer/SubViewport/Node2D/CardContainer/Name"]
+unique_name_in_owner = true
+offset_left = -129.0
+offset_top = -17.0
+offset_right = 129.0
+offset_bottom = 19.0
+text = "Slice"
+label_settings = ExtResource("6_ckdyi")
+horizontal_alignment = 1
+vertical_alignment = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="ManaCost" type="Sprite2D" parent="SubViewportContainer/SubViewport/Node2D/CardContainer"]
+use_parent_material = true
+position = Vector2(-140, -201)
+texture = ExtResource("7_2lkld")
+
+[node name="ManaCostLabel" type="Label" parent="SubViewportContainer/SubViewport/Node2D/CardContainer/ManaCost"]
+unique_name_in_owner = true
+offset_left = -30.0
+offset_top = -29.0
+offset_right = 31.0
+offset_bottom = 29.0
+text = "3
+"
+label_settings = ExtResource("8_h65jh")
+horizontal_alignment = 1
+vertical_alignment = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="RulesText" type="Sprite2D" parent="SubViewportContainer/SubViewport/Node2D/CardContainer"]
+use_parent_material = true
+position = Vector2(2, 126)
+texture = ExtResource("9_p103l")
+
+[node name="RulesTextLabel" type="Label" parent="SubViewportContainer/SubViewport/Node2D/CardContainer/RulesText"]
+unique_name_in_owner = true
+offset_left = -130.0
+offset_top = -69.0
+offset_right = 129.0
+offset_bottom = 69.0
+text = "Deal 6 damage"
+label_settings = ExtResource("6_ckdyi")
+horizontal_alignment = 1
+vertical_alignment = 1
+metadata/_edit_use_anchors_ = true
+
+[node name="BottomPoint" type="Node2D" parent="."]
+position = Vector2(0, 235)
