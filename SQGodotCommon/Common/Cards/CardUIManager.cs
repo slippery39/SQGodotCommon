@@ -52,7 +52,6 @@ public partial class CardUIManager : Node2D
 
 	public override void _Process(double delta)
 	{
-		LogManager.Instance.Info("CardUIManager exists!");
 		if (DraggingCard != null)
 		{
 			return;
