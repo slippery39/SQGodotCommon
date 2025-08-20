@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Logging;
 
 namespace Common.Cards;
 
@@ -9,21 +10,7 @@ namespace Common.Cards;
 /// </summary>
 public partial class CardUIManager : Node2D
 {
-	private static CardUIManager _instance;
-	public static CardUIManager Instance
-	{
-		get
-		{
-			if (_instance == null)
-			{
-				throw new InvalidOperationException(
-					"Trying to access CardUIManager before it has been initialized. Please make sure it is setup in the GameManager and restart the game."
-				);
-			}
-			return _instance;
-		}
-		set { _instance = value; }
-	}
+	public static CardUIManager Instance { get; set; }
 
 	/// <summary>
 	/// All cards that are being moused over but not necessarily hovered, for example if there are multiple bunched up cards, we will only actually want to hover one of them.
@@ -65,6 +52,7 @@ public partial class CardUIManager : Node2D
 
 	public override void _Process(double delta)
 	{
+		LogManager.Instance.Info("CardUIManager exists!");
 		if (DraggingCard != null)
 		{
 			return;
