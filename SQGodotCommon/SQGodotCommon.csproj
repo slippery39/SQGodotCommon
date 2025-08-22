@@ -8,9 +8,9 @@
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Version="9.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="R3" Version="1.2.9" />
+    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Logging\Logging.csproj" />
   </ItemGroup>
 </Project>
