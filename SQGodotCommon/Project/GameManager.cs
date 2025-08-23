@@ -3,10 +3,14 @@ using System.Linq;
 using Common;
 using Common.Cards;
 using Common.Core;
-using Logging;
+using Common.Log;
+using Serilog;
 
 namespace Project;
 
+/// <summary>
+/// Main entry point for the game.
+/// </summary>
 public partial class GameManager : Singleton<GameManager>
 {
 	public Node CurrentScene { get; private set; }
@@ -14,12 +18,13 @@ public partial class GameManager : Singleton<GameManager>
 
 	private EventManager _eventManager;
 
-	private List<object> Services { get; set; } = new();
+	private readonly Dictionary<System.Type, object> _services = new();
 
 	public override void _Ready()
 	{
 		_eventManager = new EventManager();
 		AddChild(new CardUIManager());
+		Initialize();
 	}
 
 	public void ChangeScene(string scenePath)
@@ -33,14 +38,14 @@ public partial class GameManager : Singleton<GameManager>
 
 		if (newScene == null)
 		{
-			LogManager.Instance.Error($"Failed to load scene: {scenePath}");
+			Log.Error($"Failed to load scene: {scenePath}");
 		}
 
 		Node sceneInstance = newScene.Instantiate();
 		GetTree().Root.AddChild(sceneInstance);
 		CurrentScene = sceneInstance;
 
-		LogManager.Instance.Info($"Scene changed to: {scenePath}");
+		Log.Information($"Scene changed to: {scenePath}");
 	}
 
 	public void GoToMainMenu()
@@ -50,30 +55,73 @@ public partial class GameManager : Singleton<GameManager>
 
 	protected override void Initialize()
 	{
-		ConfigureSettings();
+		InitializeLogging();
+		InitializeInputs();
 		CallDeferred("LoadInitialScene");
 	}
 
-	private void ConfigureSettings()
+	private void InitializeLogging()
 	{
-		StartupSettings.ConfigureSettings(this);
+		//Console is not needed here, since the Godot sink also seems to write to the console.
+		Log.Logger = new LoggerConfiguration()
+			.MinimumLevel.Debug()
+			.WriteTo.Godot()
+			//.WriteTo.InGameConsole() -this is something we could do later on to write to our in-game console
+			.CreateLogger();
+
+		Log.Information("Logging Initialized");
+	}
+
+	private void InitializeInputs()
+	{
+		AddInputActionIfMissing("move_left", new InputEventKey { Keycode = Key.A });
+		AddInputActionIfMissing("move_right", new InputEventKey { Keycode = Key.D });
+
+		Log.Information("Inputs Initialized");
+
+		//Just an example of how to add a service.
+		//manager.AddService<DynamicScriptingService<GameState>>();
+	}
+
+	private void AddInputActionIfMissing(string actionName, InputEventKey key)
+	{
+		if (!InputMap.HasAction(actionName))
+		{
+			InputMap.AddAction(actionName);
+			InputMap.ActionAddEvent(actionName, key);
+		}
 	}
 
 	private void LoadInitialScene()
 	{
-		LogManager.Instance.Info("Loading scene...");
+		Log.Information("Loading scene...");
 		GoToMainMenu();
 	}
 
-	public void AddService<T>()
-		where T : class, new()
+	// Service management - simplified but type-safe
+	public void RegisterService<T>(T service)
+		where T : class
 	{
-		Services.Add(new T());
+		_services[typeof(T)] = service;
+		Log.Debug("Registered service: {ServiceType}", typeof(T).Name);
 	}
 
-	public T GetService<T>()
+	public void RegisterService<TInterface, TImplementation>(TImplementation service)
+		where TInterface : class
+		where TImplementation : class, TInterface
 	{
-		return Services.OfType<T>().FirstOrDefault();
+		_services[typeof(TInterface)] = service;
+		Log.Debug(
+			"Registered service: {Interface} -> {Implementation}",
+			typeof(TInterface).Name,
+			typeof(TImplementation).Name
+		);
+	}
+
+	public bool HasService<T>()
+		where T : class
+	{
+		return _services.ContainsKey(typeof(T));
 	}
 
 	public void AddEvent(string channel)
@@ -84,5 +132,18 @@ public partial class GameManager : Singleton<GameManager>
 	public void AddEvent<T>(string channel, T data)
 	{
 		_eventManager.AddEvent(channel, data);
+	}
+
+	public override void _ExitTree()
+	{
+		Log.Information("GameManager shutting down");
+
+		// Dispose any services that implement IDisposable
+		foreach (var service in _services.Values.OfType<System.IDisposable>())
+		{
+			service.Dispose();
+		}
+
+		Log.CloseAndFlush();
 	}
 }

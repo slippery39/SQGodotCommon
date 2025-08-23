@@ -1,6 +1,7 @@
 using System;
-using Logging;
 using Project;
+using Serilog;
+using Serilog.Core;
 
 namespace Common.Core;
 
@@ -81,7 +82,7 @@ public partial class CharacterUI : Node2D
 			if (@event.IsPressed())
 			{
 				GameManager.Instance.AddEvent("character-clicked", IdReference);
-				LogManager.Instance.Debug($"Character : {IdReference} has been clicked");
+				Serilog.Log.Information($"Character : {IdReference} has been clicked");
 			}
 		}
 	}
