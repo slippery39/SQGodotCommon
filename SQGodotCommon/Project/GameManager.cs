@@ -24,7 +24,6 @@ public partial class GameManager : Singleton<GameManager>
 	{
 		_eventManager = new EventManager();
 		AddChild(new CardUIManager());
-		Initialize();
 	}
 
 	public void ChangeScene(string scenePath)
