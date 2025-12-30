@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
-using ImmutableGameObjects;
-using NUnit.Framework;
+
+namespace ImmutableGameObjects.Tests;
 
 [TestFixture]
 public class GameStateTests
@@ -38,7 +38,7 @@ public class GameStateTests
 	public void AddObject_ShouldAddObjectWithCorrectId()
 	{
 		// Act
-		var newState = _gameState.AddObject(_player);
+		var newState = _gameState.ThenAdd(_player);
 
 		// Assert
 		Assert.That(newState.NextId, Is.EqualTo(2));
@@ -53,10 +53,10 @@ public class GameStateTests
 	public void AddObject_WithParent_ShouldSetupParentChildRelationship()
 	{
 		// Arrange
-		var stateWithPlayer = _gameState.AddObject(_player);
+		var stateWithPlayer = _gameState.ThenAdd(_player);
 
 		// Act
-		var finalState = stateWithPlayer.AddObject(_sword, parentId: 1);
+		var finalState = stateWithPlayer.ThenAdd(_sword, parentId: 1);
 
 		// Assert
 		Assert.That(finalState.GetParent(2), Is.EqualTo(1));
@@ -68,7 +68,7 @@ public class GameStateTests
 	public void AddObject_WithNonExistentParent_ShouldThrowException()
 	{
 		// Act & Assert
-		Assert.Throws<ArgumentException>(() => _gameState.AddObject(_player, parentId: 999));
+		Assert.Throws<ArgumentException>(() => _gameState.ThenAdd(_player, parentId: 999));
 	}
 
 	[Test]
@@ -129,7 +129,7 @@ public class GameStateTests
 	public void UpdateObject_ShouldReplaceExistingObject()
 	{
 		// Arrange
-		var stateWithPlayer = _gameState.AddObject(_player);
+		var stateWithPlayer = _gameState.ThenAdd(_player);
 		var updatedPlayer = new Player
 		{
 			Name = "Updated Hero",
@@ -161,9 +161,9 @@ public class GameStateTests
 	{
 		// Arrange
 		var state = _gameState
-			.AddObject(_player) // ID: 1
-			.AddObject(_sword, parentId: 1) // ID: 2
-			.AddObject(_potion); // ID: 3
+			.ThenAdd(_player) // ID: 1
+			.ThenAdd(_sword, parentId: 1) // ID: 2
+			.ThenAdd(_potion); // ID: 3
 
 		// Act - Move sword from player to root
 		var newState = state.MoveObject(2, 0);
@@ -185,9 +185,9 @@ public class GameStateTests
 	{
 		// Arrange - Create parent -> child -> grandchild hierarchy
 		var state = _gameState
-			.AddObject(_player) // ID: 1
-			.AddObject(_sword, parentId: 1) // ID: 2
-			.AddObject(_potion, parentId: 2); // ID: 3
+			.ThenAdd(_player) // ID: 1
+			.ThenAdd(_sword, parentId: 1) // ID: 2
+			.ThenAdd(_potion, parentId: 2); // ID: 3
 
 		// Act & Assert - Try to move player under potion (its grandchild)
 		Assert.Throws<InvalidOperationException>(() => state.MoveObject(1, 3));
@@ -197,7 +197,7 @@ public class GameStateTests
 	public void MoveObject_ToSelf_ShouldThrowException()
 	{
 		// Arrange
-		var state = _gameState.AddObject(_player);
+		var state = _gameState.ThenAdd(_player);
 
 		// Act & Assert
 		Assert.Throws<InvalidOperationException>(() => state.MoveObject(1, 1));
@@ -208,8 +208,8 @@ public class GameStateTests
 	{
 		// Arrange
 		var state = _gameState
-			.AddObject(_player) // ID: 1
-			.AddObject(_sword, parentId: 1); // ID: 2
+			.ThenAdd(_player) // ID: 1
+			.ThenAdd(_sword, parentId: 1); // ID: 2
 
 		// Act
 		var newState = state.RemoveObject(2);
@@ -225,9 +225,9 @@ public class GameStateTests
 	{
 		// Arrange
 		var state = _gameState
-			.AddObject(_player) // ID: 1
-			.AddObject(_sword, parentId: 1) // ID: 2
-			.AddObject(_potion, parentId: 2); // ID: 3
+			.ThenAdd(_player) // ID: 1
+			.ThenAdd(_sword, parentId: 1) // ID: 2
+			.ThenAdd(_potion, parentId: 2); // ID: 3
 
 		// Act
 		var newState = state.RemoveObject(2, removeChildren: false);
@@ -244,9 +244,9 @@ public class GameStateTests
 	{
 		// Arrange
 		var state = _gameState
-			.AddObject(_player) // ID: 1
-			.AddObject(_sword, parentId: 1) // ID: 2
-			.AddObject(_potion, parentId: 2); // ID: 3
+			.ThenAdd(_player) // ID: 1
+			.ThenAdd(_sword, parentId: 1) // ID: 2
+			.ThenAdd(_potion, parentId: 2); // ID: 3
 
 		// Act
 		var newState = state.RemoveObject(2, removeChildren: true);
@@ -261,7 +261,7 @@ public class GameStateTests
 	public void GetChildren_WithNoChildren_ShouldReturnEmpty()
 	{
 		// Arrange
-		var state = _gameState.AddObject(_player);
+		var state = _gameState.ThenAdd(_player);
 
 		// Act
 		var children = state.GetChildren(1);
@@ -275,9 +275,9 @@ public class GameStateTests
 	{
 		// Arrange
 		var state = _gameState
-			.AddObject(_player) // ID: 1
-			.AddObject(_sword, parentId: 1) // ID: 2
-			.AddObject(_potion, parentId: 1); // ID: 3
+			.ThenAdd(_player) // ID: 1
+			.ThenAdd(_sword, parentId: 1) // ID: 2
+			.ThenAdd(_potion, parentId: 1); // ID: 3
 
 		// Act
 		var children = state.GetChildren(1).ToList();
@@ -299,10 +299,10 @@ public class GameStateTests
 			Value = 1000,
 		};
 		var state = _gameState
-			.AddObject(_player) // ID: 1
-			.AddObject(_sword, parentId: 1) // ID: 2
-			.AddObject(_potion, parentId: 1) // ID: 3
-			.AddObject(gem, parentId: 2); // ID: 4
+			.ThenAdd(_player) // ID: 1
+			.ThenAdd(_sword, parentId: 1) // ID: 2
+			.ThenAdd(_potion, parentId: 1) // ID: 3
+			.ThenAdd(gem, parentId: 2); // ID: 4
 
 		// Act
 		var descendants = state.GetAllDescendants(1).ToList();
@@ -372,11 +372,11 @@ public class GameStateTests
 	public void GameState_ShouldBeImmutable()
 	{
 		// Arrange
-		var originalState = _gameState.AddObject(_player);
+		var originalState = _gameState.ThenAdd(_player);
 		var originalNextId = originalState.NextId;
 
 		// Act
-		var newState = originalState.AddObject(_sword);
+		var newState = originalState.ThenAdd(_sword);
 
 		// Assert
 		Assert.That(originalState.NextId, Is.EqualTo(originalNextId)); // Original unchanged
@@ -390,12 +390,12 @@ public class GameStateTests
 	{
 		// Arrange & Act - Build a complex scenario
 		var state = _gameState
-			.AddObject(_player) // ID: 1
-			.AddObject(_sword, parentId: 1) // ID: 2
-			.AddObject(_potion, parentId: 1) // ID: 3
+			.ThenAdd(_player) // ID: 1
+			.ThenAdd(_sword, parentId: 1) // ID: 2
+			.ThenAdd(_potion, parentId: 1) // ID: 3
 			.MoveObject(2, 0) // Move sword to root
 			.UpdateObject(1, _player with { Name = "Updated Hero" })
-			.AddObject(
+			.ThenAdd(
 				new Item
 				{
 					Name = "Shield",

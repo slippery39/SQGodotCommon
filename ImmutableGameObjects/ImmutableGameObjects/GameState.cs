@@ -12,7 +12,77 @@ public record GameState
 	public ImmutableDictionary<int, int> ChildToParent { get; init; } =
 		ImmutableDictionary<int, int>.Empty;
 
+	// Action system
+	public ImmutableStack<GameAction> ActionStack { get; init; } = ImmutableStack<GameAction>.Empty;
+
+	// Helper properties for action system
+	public bool HasPendingActions => !ActionStack.IsEmpty;
+	public bool IsWaitingForChoice
+	{
+		get
+		{
+			if (ActionStack.IsEmpty)
+				return false;
+
+			var topAction = ActionStack.Peek();
+
+			if (topAction is ChoiceAction)
+				return true;
+
+			var pAction = topAction as PipelineAction;
+
+			//Note that this does not support nested PipelineActions at this point... keep in mind for the future.
+			if (pAction != null)
+			{
+				return pAction.GetCurrentAction is ChoiceAction;
+			}
+
+			return false;
+		}
+	}
+
+	// ===== EVENT SYSTEM =====
+	/// <summary>
+	/// Events that occurred this frame. Should be cleared after UI processes them.
+	/// </summary>
+	public ImmutableList<GameEvent> EventLog { get; init; } = ImmutableList<GameEvent>.Empty;
+
+	/// <summary>
+	/// Adds an event to the log with the current battle time as timestamp
+	/// </summary>
+	public GameState AddEvent(GameEvent gameEvent)
+	{
+		return this with { EventLog = EventLog.Add(gameEvent) };
+	}
+
+	/// <summary>
+	/// Clears all events - call this after UI has processed them
+	/// </summary>
+	public GameState ClearEvents()
+	{
+		return this with { EventLog = ImmutableList<GameEvent>.Empty };
+	}
+
+	/// <summary>
+	/// Get all events of a specific type
+	/// </summary>
+	public IEnumerable<T> GetEvents<T>()
+		where T : GameEvent
+	{
+		return EventLog.OfType<T>();
+	}
+
 	public GameObject GetObject(int id) => IdToGameObjectMap[id];
+
+	/// <summary>
+	/// Returns the first object in the state that is of Type T
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <returns></returns>
+	public T? GetObjectOfType<T>()
+	{
+		return IdToGameObjectMap.Values.OfType<T>().FirstOrDefault();
+	}
 
 	public IEnumerable<GameObject> GetChildren(int parentId) =>
 		ParentToChildren.TryGetValue(parentId, out var childrenIds)
@@ -147,7 +217,8 @@ public record GameState
 		};
 	}
 
-	public GameState AddObject(GameObject obj, int parentId = 0)
+	public (GameState GameState, T GameObject) AddObject<T>(T obj, int parentId = 0)
+		where T : GameObject
 	{
 		if (parentId != 0 && !IdToGameObjectMap.ContainsKey(parentId))
 			throw new ArgumentException($"Parent with id {parentId} does not exist");
@@ -170,13 +241,16 @@ public record GameState
 			updatedChildToParent = updatedChildToParent.Add(id, parentId);
 		}
 
-		return this with
-		{
-			NextId = NextId + 1,
-			IdToGameObjectMap = newObjectMap,
-			ParentToChildren = updatedParentToChildren,
-			ChildToParent = updatedChildToParent,
-		};
+		return (
+			this with
+			{
+				NextId = NextId + 1,
+				IdToGameObjectMap = newObjectMap,
+				ParentToChildren = updatedParentToChildren,
+				ChildToParent = updatedChildToParent,
+			},
+			newObject
+		);
 	}
 
 	// Fixed version of AddObjectRecursive
@@ -186,7 +260,7 @@ public record GameState
 			throw new ArgumentException($"Parent with id {parentId} does not exist");
 
 		// Add the main object first
-		var state = AddObject(obj, parentId);
+		var state = AddObject(obj, parentId).GameState;
 		var newObjectId = state.NextId - 1; // The ID that was just assigned
 
 		// Recursively add children
@@ -237,32 +311,183 @@ public record GameState
 
 		return rootObject.LoadFrom(this);
 	}
-}
 
-public abstract record GameObject
-{
-	// Made init-only since we should set this when adding to game state
-	public int Id { get; init; }
-	public string Name { get; init; } = "";
-	public string Description { get; init; } = "";
+	// ===== ACTION SYSTEM METHODS =====
 
 	/// <summary>
-	/// For initialization or view purposes only. Internals do not use this as a source of truth.
+	/// Add an action to the stack.
 	/// </summary>
-	public virtual ImmutableList<GameObject> Children { get; init; } =
-		ImmutableList<GameObject>.Empty;
-
-	public GameObject LoadFrom(GameState gameState)
+	public GameState AddAction(GameAction action)
 	{
-		var children = gameState
-			.GetChildren(this.Id)
-			.Select(child => child.LoadFrom(gameState))
-			.ToImmutableList();
+		return this with { ActionStack = ActionStack.Push(action) };
+	}
 
-		// Use reflection to call the with expression properly for the derived type
-		return this with
+	/// <summary>
+	/// Add multiple actions to the stack (they will execute in the order provided).
+	/// </summary>
+	public GameState AddActions(IEnumerable<GameAction> actions)
+	{
+		var newStack = ActionStack;
+		// Push in reverse order so first action executes first
+		foreach (var action in actions.Reverse())
 		{
-			Children = children,
+			newStack = newStack.Push(action);
+		}
+		return this with { ActionStack = newStack };
+	}
+
+	/// <summary>
+	/// Process the next action on the stack.
+	/// Returns a new state with the action processed.
+	/// </summary>
+	public GameState ProcessNextAction()
+	{
+		if (ActionStack.IsEmpty)
+			return this;
+
+		// Stop if we hit a ChoiceAction - it needs to be resolved first
+		if (ActionStack.Peek() is ChoiceAction)
+			return this;
+
+		var action = ActionStack.Peek();
+		var remainingStack = ActionStack.Pop();
+
+		var result = action.Execute(this);
+
+		var newState = this with { ActionStack = remainingStack };
+
+		// Update the game state from the result
+		newState = newState with
+		{
+			NextId = result.GameState.NextId,
+			IdToGameObjectMap = result.GameState.IdToGameObjectMap,
+			ParentToChildren = result.GameState.ParentToChildren,
+			ChildToParent = result.GameState.ChildToParent,
+			EventLog = result.GameState.EventLog,
 		};
+
+		// Add any spawned actions
+		if (result.SpawnedActions.Any())
+		{
+			newState = newState.AddActions(result.SpawnedActions);
+		}
+
+		return newState;
+	}
+
+	/// <summary>
+	/// Process all actions until we need player input or stack is empty.
+	/// </summary>
+	public GameState ProcessAllActions()
+	{
+		var state = this;
+		while (state.HasPendingActions && !state.IsWaitingForChoice)
+		{
+			state = state.ProcessNextAction();
+		}
+		return state;
+	}
+
+	/// <summary>
+	/// Get the current choice action if waiting for one.
+	/// </summary>
+	/// <summary>
+	/// Get the current choice action if waiting for one.
+	/// </summary>
+	public ChoiceAction? GetPendingChoice()
+	{
+		if (!IsWaitingForChoice)
+			return null;
+
+		var topAction = ActionStack.Peek();
+
+		// Direct choice
+		if (topAction is ChoiceAction choice)
+			return choice;
+
+		// Choice inside pipeline
+		if (
+			topAction is PipelineAction pipeline
+			&& pipeline.CurrentStepIndex < pipeline.Steps.Count
+		)
+		{
+			return pipeline.Steps[pipeline.CurrentStepIndex] as ChoiceAction;
+		}
+
+		return null;
+	}
+
+	/// <summary>
+	/// Resolve the current ChoiceAction with player's selection.
+	/// Works for both standalone choices and choices in pipelines.
+	/// </summary>
+	public GameState ResolveChoice(ImmutableList<int> selectedIds)
+	{
+		if (!IsWaitingForChoice)
+		{
+			throw new Exception("No pending choice to resolve");
+		}
+
+		var topAction = ActionStack.Peek();
+
+		// Case 1: Direct ChoiceAction on stack
+		if (topAction is ChoiceAction choiceAction)
+		{
+			if (
+				selectedIds.Count < choiceAction.MinChoices
+				|| selectedIds.Count > choiceAction.MaxChoices
+			)
+			{
+				throw new Exception(
+					$"Must select between {choiceAction.MinChoices} and {choiceAction.MaxChoices} options"
+				);
+			}
+
+			// Remove choice, add output to a context somehow?
+			// Actually, standalone choices don't make sense - they should always be in pipelines
+			throw new Exception("Standalone choice actions not supported - use pipelines");
+		}
+
+		// Case 2: PipelineAction with ChoiceAction as current step
+		if (topAction is PipelineAction pipeline)
+		{
+			var choiceStep = pipeline.Steps[pipeline.CurrentStepIndex] as ChoiceAction;
+
+			if (choiceStep == null)
+			{
+				throw new Exception("Current step is not a ChoiceAction");
+			}
+
+			if (
+				selectedIds.Count < choiceStep.MinChoices
+				|| selectedIds.Count > choiceStep.MaxChoices
+			)
+			{
+				throw new Exception(
+					$"Must select between {choiceStep.MinChoices} and {choiceStep.MaxChoices} options"
+				);
+			}
+
+			// Pop pipeline, advance it past the choice with choice data in context
+			var newState = this with
+			{
+				ActionStack = ActionStack.Pop(),
+			};
+
+			var choiceOutput = selectedIds.Count == 1 ? selectedIds[0] : (object)selectedIds;
+			var updatedContext = pipeline.PipelineContext.Add(choiceStep.OutputKey, choiceOutput);
+
+			var advancedPipeline = pipeline with
+			{
+				CurrentStepIndex = pipeline.CurrentStepIndex + 1,
+				PipelineContext = updatedContext,
+			};
+
+			// Put advanced pipeline back and continue
+			newState = newState.AddAction(advancedPipeline);
+			return newState.ProcessAllActions();
+		}
+
+		throw new Exception("Unexpected state in ResolveChoice");
 	}
 }
