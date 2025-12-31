@@ -346,10 +346,20 @@ public record GameState
 			return this;
 
 		// Stop if we hit a ChoiceAction - it needs to be resolved first
-		if (ActionStack.Peek() is ChoiceAction)
+		Console.WriteLine(
+			$"ProcessNextAction - IsWaitingForChoice: {IsWaitingForChoice}, StackSize: {ActionStack.Count()}"
+		);
+
+		// Stop if we're waiting for a choice (could be in a pipeline)
+		if (IsWaitingForChoice)
+		{
+			Console.WriteLine("Stopping - waiting for choice");
 			return this;
+		}
 
 		var action = ActionStack.Peek();
+		Console.WriteLine($"Processing action: {action.GetType().Name}");
+
 		var remainingStack = ActionStack.Pop();
 
 		var result = action.Execute(this);
@@ -433,21 +443,12 @@ public record GameState
 		// Case 1: Direct ChoiceAction on stack
 		if (topAction is ChoiceAction choiceAction)
 		{
-			if (
-				selectedIds.Count < choiceAction.MinChoices
-				|| selectedIds.Count > choiceAction.MaxChoices
-			)
-			{
-				throw new Exception(
-					$"Must select between {choiceAction.MinChoices} and {choiceAction.MaxChoices} options"
-				);
-			}
-
-			// Remove choice, add output to a context somehow?
-			// Actually, standalone choices don't make sense - they should always be in pipelines
-			throw new Exception("Standalone choice actions not supported - use pipelines");
+			throw new InvalidOperationException(
+				"Internal error: Standalone ChoiceAction on stack. Choices must be in pipelines."
+			);
 		}
 
+		// Case 2: PipelineAction with ChoiceAction as current step
 		// Case 2: PipelineAction with ChoiceAction as current step
 		if (topAction is PipelineAction pipeline)
 		{
@@ -468,7 +469,7 @@ public record GameState
 				);
 			}
 
-			// Pop pipeline, advance it past the choice with choice data in context
+			// Pop pipeline, store choice in context, advance past choice
 			var newState = this with
 			{
 				ActionStack = ActionStack.Pop(),
