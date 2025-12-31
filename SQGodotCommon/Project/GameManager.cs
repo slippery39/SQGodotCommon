@@ -20,6 +20,9 @@ public partial class GameManager : Singleton<GameManager>
 
 	private readonly Dictionary<System.Type, object> _services = new();
 
+	[Export]
+	public PackedScene InitialScene { get; set; }
+
 	public override void _Ready()
 	{
 		_eventManager = new EventManager();
@@ -47,9 +50,31 @@ public partial class GameManager : Singleton<GameManager>
 		Log.Information($"Scene changed to: {scenePath}");
 	}
 
+	public void ChangeScene(PackedScene packedScene)
+	{
+		if (CurrentScene != null)
+		{
+			CurrentScene.QueueFree();
+		}
+
+		if (packedScene == null)
+		{
+			Log.Error($"Could not change scene, packed scene was null");
+		}
+
+		Node sceneInstance = packedScene.Instantiate();
+		GetTree().Root.AddChild(sceneInstance);
+		CurrentScene = sceneInstance;
+
+		Log.Information($"Scene changed to: {packedScene.ResourceName}");
+	}
+
 	public void GoToMainMenu()
 	{
-		ChangeScene("res://Project/MainMenu/main_menu.tscn");
+		if (InitialScene == null)
+			ChangeScene("res://Project/MainMenu/main_menu.tscn");
+		else
+			ChangeScene(InitialScene);
 	}
 
 	protected override void Initialize()
