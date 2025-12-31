@@ -2,7 +2,6 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using Godot;
 using Serilog;
 using Serilog.Configuration;
 using Serilog.Core;
@@ -11,13 +10,13 @@ using Serilog.Formatting;
 using Serilog.Formatting.Display;
 using Serilog.Parsing;
 
-namespace Common.Log;
+namespace Common.Logging;
 
 public class GodotSink : ILogEventSink
 {
 	private readonly ITextFormatter formatter;
 
-	public GodotSink(string outputTemplate, IFormatProvider? formatProvider)
+	public GodotSink(string outputTemplate, IFormatProvider formatProvider)
 	{
 		formatter = new TemplateRenderer(outputTemplate, formatProvider);
 	}
@@ -50,14 +49,14 @@ public class GodotSink : ILogEventSink
 			GD.PushWarning(logEvent.Exception);
 	}
 
-	private class TemplateRenderer : ITextFormatter
+	private sealed class TemplateRenderer : ITextFormatter
 	{
 		private delegate void Renderer(LogEvent logEvent, TextWriter output);
 
 		private readonly Renderer[] renderers;
-		private readonly IFormatProvider? formatProvider;
+		private readonly IFormatProvider formatProvider;
 
-		public TemplateRenderer(string outputTemplate, IFormatProvider? formatProvider)
+		public TemplateRenderer(string outputTemplate, IFormatProvider formatProvider)
 		{
 			this.formatProvider = formatProvider;
 
