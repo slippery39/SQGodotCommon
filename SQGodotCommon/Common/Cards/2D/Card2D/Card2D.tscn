@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://b5iehtnbyu28u"]
+[gd_scene load_steps=7 format=3 uid="uid://b5iehtnbyu28u"]
 
 [ext_resource type="Script" uid="uid://c8dqu0tjetbqu" path="res://Common/Cards/2D/Card2D/CardUI2D.cs" id="1_1spq0"]
 [ext_resource type="PackedScene" uid="uid://cdaltlvmpxycl" path="res://Common/Cards/2D/Card2D/internal_cardui2d.tscn" id="2_jt7e2"]
@@ -6,7 +6,10 @@
 [ext_resource type="PackedScene" uid="uid://32rm64h555od" path="res://Common/Core/DraggableNode2D/DraggableNode2D.tscn" id="9_h2mar"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_jsjmp"]
-size = Vector2(175, 237)
+size = Vector2(166, 225)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ve1db"]
+size = Vector2(83, 100)
 
 [node name="Card" type="Node2D"]
 script = ExtResource("1_1spq0")
@@ -15,6 +18,9 @@ metadata/_edit_vertical_guides_ = [-255.0]
 
 [node name="InternalCard2D" parent="." instance=ExtResource("2_jt7e2")]
 scale = Vector2(0.5, 0.5)
+OutlineColor = Color(1, 1, 1, 1)
+OutlineThickness = 5.0
+CardName = "Slice"
 
 [node name="HoverArea" type="Area2D" parent="."]
 monitoring = false
@@ -28,19 +34,25 @@ shape = SubResource("RectangleShape2D_jsjmp")
 
 [node name="DraggableNode2d" parent="." instance=ExtResource("9_h2mar")]
 
+[node name="DropAreaDetector" type="Area2D" parent="DraggableNode2d"]
+collision_layer = 0
+collision_mask = 4
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DraggableNode2d/DropAreaDetector"]
+position = Vector2(1, -1)
+shape = SubResource("RectangleShape2D_ve1db")
+
 [node name="Area2D" type="Area2D" parent="DraggableNode2d"]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="DraggableNode2d/Area2D"]
-position = Vector2(-0.5, -1)
+position = Vector2(-2, 4)
 shape = SubResource("RectangleShape2D_jsjmp")
 
 [node name="CopyCollisionShape" type="Node" parent="DraggableNode2d/Area2D/CollisionShape2D" node_paths=PackedStringArray("TargetCollisionShape")]
 script = ExtResource("4_lk2kg")
 TargetCollisionShape = NodePath("../../../../HoverArea/CollisionShape2D")
-
-[node name="CopyCollisionShape2" type="Node" parent="DraggableNode2d/Area2D/CollisionShape2D" node_paths=PackedStringArray("TargetCollisionShape")]
-script = ExtResource("4_lk2kg")
-TargetCollisionShape = NodePath("../../../../HoverArea/CollisionShape2D")
+AutoUpdate = false
 
 [connection signal="mouse_entered" from="HoverArea" to="." method="OnHover"]
 [connection signal="mouse_exited" from="HoverArea" to="." method="OnHoverEnd"]

@@ -145,6 +145,16 @@ public partial class CardUI2D : Node2D
 		CardUIManager.Instance.RemoveMouseOvered(this);
 	}
 
+	public void Highlight()
+	{
+		_internalCardUI2D.OutlineThickness = 5;
+	}
+
+	public void NoHighlight()
+	{
+		_internalCardUI2D.OutlineThickness = 0;
+	}
+
 	public void StartHover()
 	{
 		// Consider more explicit null checking where appropriate
@@ -208,7 +218,15 @@ public partial class CardUI2D : Node2D
 
 		//This code might run, when we have queued the hover card for deletion but it hasn't been fully removed yet.
 		//This is causing errors, so hopefully this code will prevent those errors from happening.
-		if ((_hoverCard != null && _hoverCard.IsQueuedForDeletion()) || _hoverCard == null)
+
+		//!GodotObject.IsInstanceValid(_hoverCard)
+		if (
+			(
+				_hoverCard != null
+				&& (!IsInstanceValid(_hoverCard) || _hoverCard.IsQueuedForDeletion())
+			)
+			|| _hoverCard == null
+		)
 		{
 			return;
 		}
