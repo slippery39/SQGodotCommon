@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Common.Core;
+using Serilog;
 
 namespace Common.Cards;
 
@@ -30,6 +31,9 @@ public partial class Hand2D : Node2D
 	public float MaxRotationDegrees { get; set; } = 15;
 
 	[Export]
+	public float CardSizeX { get; set; } = 200;
+
+	[Export]
 	public PackedScene CardScene { get; set; }
 
 	// Track active card tweens to update them when new cards are added
@@ -39,6 +43,8 @@ public partial class Hand2D : Node2D
 	public Func<DragEndContext, bool> IsDragSuccess;
 	public Action<DragEndContext> OnDragSuccess;
 	public Action<DragEndContext> OnDragFail;
+
+	private bool _needsRepositioning = false;
 
 	public override void _Ready()
 	{
@@ -77,23 +83,23 @@ public partial class Hand2D : Node2D
 	}
 
 	// Default implementations
-	private bool _DefaultIsDragSuccess(DragEndContext context)
+	private static bool _DefaultIsDragSuccess(DragEndContext context)
 	{
 		// Default: always return false (drag always fails)
 		// External clients can override this with their own logic
 		return false;
 	}
 
-	private void _DefaultOnDragSuccess(DragEndContext context)
+	private static void _DefaultOnDragSuccess(DragEndContext context)
 	{
 		// Default success behavior: just print to console
-		GD.Print($"Card {context.CardUI2D.Id} drag succeeded!");
+		Log.Information($"Card {context.CardUI2D.Id} drag succeeded!");
 	}
 
 	private void _DefaultOnDragFail(DragEndContext context)
 	{
 		// Default fail behavior: return card to its position in hand
-		GD.Print($"Card {context.CardUI2D.Id} drag failed, returning to hand");
+		Log.Information($"Card {context.CardUI2D.Id} drag failed, returning to hand");
 		LerpCardTransform(context.CardUI2D);
 	}
 
@@ -104,6 +110,15 @@ public partial class Hand2D : Node2D
 			var isOk = Init();
 			if (isOk)
 				SetCardTransforms();
+		}
+
+		if (!Engine.IsEditorHint())
+		{
+			if (_needsRepositioning)
+			{
+				UpdateAllCardPositions(GetNumberOfCardsInHand());
+				_needsRepositioning = false;
+			}
 		}
 	}
 
@@ -158,19 +173,19 @@ public partial class Hand2D : Node2D
 
 		if (LeftMostPoint == null)
 		{
-			GD.PrintErr("Could not find left most point node");
+			Log.Error("Could not find left most point node");
 			isOK = false;
 		}
 
 		if (RightMostPoint == null)
 		{
-			GD.PrintErr("Could not find right most point node");
+			Log.Error("Could not find right most point node");
 			isOK = false;
 		}
 
 		if (CardsContainer == null)
 		{
-			GD.PrintErr("Could not find cards container node");
+			Log.Error("Could not find cards container node");
 			isOK = false;
 		}
 
@@ -181,7 +196,7 @@ public partial class Hand2D : Node2D
 	{
 		if (@event is InputEventKey keyEvent && keyEvent.Pressed && keyEvent.Keycode == Key.D)
 		{
-			GD.Print("Drawing card");
+			Log.Information("Drawing card");
 			DrawCard(new Vector2(0, GlobalPosition.Y));
 		}
 	}
@@ -249,18 +264,13 @@ public partial class Hand2D : Node2D
 		CardsContainer.RemoveChild(discardedCard);
 		discardedCard.QueueFree();
 
-		// Update remaining cards to their new positions
-		var totalCards = GetNumberOfCardsInHand();
-		UpdateAllCardPositions(totalCards);
+		_needsRepositioning = true;
 	}
 
 	public CardUI2D DrawCard()
 	{
 		return DrawCard(new Vector2(0, GlobalPosition.Y));
 	}
-
-	[Export]
-	public float CardSizeX { get; set; } = 200;
 
 	public CardUI2D DrawCard(Vector2 from)
 	{
@@ -270,13 +280,7 @@ public partial class Hand2D : Node2D
 		// Set the starting position for the new card
 		drawnCard.GlobalPosition = from;
 		drawnCard.IsPosLerping = true;
-
-		// Get current card count - this is the final count with the new card
-		var totalCards = GetNumberOfCardsInHand();
-
-		// Update ALL cards to their correct final positions
-		// This ensures that even cards currently animating will redirect to the right place
-		UpdateAllCardPositions(totalCards, drawnCard);
+		_needsRepositioning = true;
 
 		return drawnCard;
 	}
@@ -301,6 +305,12 @@ public partial class Hand2D : Node2D
 			var card = allCards[i];
 			var info = GetCardTransformInfo(i, totalCards);
 
+			// Skip the card being dragged - don't reposition it!
+			if (card is CardUI2D cardUI2D1 && CardUIManager.DraggingCard == cardUI2D1)
+			{
+				continue;
+			}
+
 			// Set Z-index immediately
 			if (card is CardUI2D cardUI2D)
 			{
@@ -320,12 +330,12 @@ public partial class Hand2D : Node2D
 			// Determine animation duration - new cards take longer, existing cards are quicker
 			float duration = (card == newCard) ? 0.5f : 0.3f;
 
-			tween.TweenProperty(card, "position", info.Position, duration);
+			tween.TweenProperty(card, "position", info.Position, duration).From(card.Position);
 			tween.Parallel();
 			tween.TweenProperty(
 				card,
 				"global_rotation",
-				Mathf.DegToRad(info.GlobalRotationDegrees),
+				Mathf.DegToRad(info.RotationDegrees),
 				duration
 			);
 
@@ -355,7 +365,7 @@ public partial class Hand2D : Node2D
 		{
 			var info = GetCardTransformInfo(index, totalCards);
 
-			card.GlobalRotationDegrees = info.GlobalRotationDegrees;
+			card.GlobalRotationDegrees = info.RotationDegrees;
 			card.Position = info.Position;
 
 			//Temporary hack while we figure out why we cant use CardUI2D with this in Tool mode.
@@ -374,7 +384,7 @@ public partial class Hand2D : Node2D
 
 		if (details.Count != cards.Count)
 		{
-			throw new Exception(
+			throw new InvalidOperationException(
 				"Something went wrong in SetCardDetails, the cards and the details are not the same size"
 			);
 		}
@@ -428,6 +438,13 @@ public partial class Hand2D : Node2D
 				continue;
 			}
 
+			// Skip the card being dragged - don't reposition it!
+			if (card is CardUI2D cardUI2D1 && CardUIManager.DraggingCard == cardUI2D1)
+			{
+				index++;
+				continue;
+			}
+
 			var info = GetCardTransformInfo(index, totalCards);
 
 			//Teporary hack while we figure out why we cant use CardUI2D with this in Tool mode.
@@ -445,7 +462,7 @@ public partial class Hand2D : Node2D
 			tween.TweenProperty(
 				card,
 				"global_rotation",
-				Mathf.DegToRad(info.GlobalRotationDegrees),
+				Mathf.DegToRad(info.RotationDegrees),
 				0.2f
 			);
 			tween.Parallel();
@@ -469,7 +486,7 @@ public partial class Hand2D : Node2D
 
 		var info = new CardTransformInfo
 		{
-			GlobalRotationDegrees =
+			RotationDegrees =
 				CardRotationCurve.Sample(GetNormalizedPositionValue(index, totalCards))
 				* MaxRotationDegrees,
 		};
@@ -500,7 +517,7 @@ public partial class Hand2D : Node2D
 	private sealed class CardTransformInfo
 	{
 		public Vector2 Position { get; set; }
-		public float GlobalRotationDegrees { get; set; }
+		public float RotationDegrees { get; set; }
 		public int ZIndex { get; set; }
 	}
 }
