@@ -14,17 +14,18 @@
 [ext_resource type="LabelSettings" uid="uid://c6505dofji8ji" path="res://Common/Cards/2D/Card2D/ManaCostLabelSettings.tres" id="8_h65jh"]
 [ext_resource type="Texture2D" uid="uid://chffsn8lolttn" path="res://Common/Cards/2D/Card2D/Images/Parts/RulesText.PNG" id="9_p103l"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_muumw"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5j4g1"]
+resource_local_to_scene = true
 shader = ExtResource("1_ej3r4")
 shader_parameter/allow_out_of_bounds = true
 shader_parameter/outline_thickness = 1.0
-shader_parameter/outline_color = Color(0, 1.5, 0, 1)
+shader_parameter/outline_color = Color(0, 1.50196, 0, 0)
 shader_parameter/flash_color = Color(1, 1, 1, 1)
 shader_parameter/flash_intensity = 0.0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_f7u7x"]
 shader = ExtResource("3_aqtsa")
-shader_parameter/enable_holographic = true
+shader_parameter/enable_holographic = false
 shader_parameter/holographic_intensity = 0.75
 shader_parameter/rainbow_texture = ExtResource("5_ce2i0")
 shader_parameter/rainbow_shift = 0.0
@@ -55,13 +56,15 @@ shader_parameter/color_tint = Color(1, 1, 1, 1)
 
 [node name="InternalCard2D" type="Node2D"]
 script = ExtResource("1_ye8pd")
-OutlineColor = Color(0, 1.5, 0, 1)
-OutlineThickness = 2
+OutlineColor = Color(0, 1.50196, 0, 0)
+CardName = "Strike"
+ManaCost = "3"
+RulesText = "Deal 6 Damage"
 
 [node name="SubViewportContainer" type="SubViewportContainer" parent="."]
 unique_name_in_owner = true
 texture_repeat = 1
-material = SubResource("ShaderMaterial_muumw")
+material = SubResource("ShaderMaterial_5j4g1")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -118,7 +121,7 @@ offset_left = -129.0
 offset_top = -17.0
 offset_right = 129.0
 offset_bottom = 19.0
-text = "Slice"
+text = "Strike"
 label_settings = ExtResource("6_ckdyi")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -135,8 +138,7 @@ offset_left = -30.0
 offset_top = -29.0
 offset_right = 31.0
 offset_bottom = 29.0
-text = "3
-"
+text = "3"
 label_settings = ExtResource("8_h65jh")
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -153,7 +155,7 @@ offset_left = -130.0
 offset_top = -69.0
 offset_right = 129.0
 offset_bottom = 69.0
-text = "Deal 6 damage"
+text = "Deal 6 Damage"
 label_settings = ExtResource("6_ckdyi")
 horizontal_alignment = 1
 vertical_alignment = 1
