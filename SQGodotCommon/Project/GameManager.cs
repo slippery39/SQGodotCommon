@@ -148,6 +148,20 @@ public partial class GameManager : Singleton<GameManager>
 		return _services.ContainsKey(typeof(T));
 	}
 
+	/// <summary>
+	/// Retrieves a registered service. Throws if the service hasn't been registered.
+	/// </summary>
+	public T GetService<T>()
+		where T : class
+	{
+		if (!_services.TryGetValue(typeof(T), out var service))
+			throw new System.InvalidOperationException(
+				$"Service {typeof(T).Name} has not been registered with GameManager."
+			);
+
+		return (T)service;
+	}
+
 	public void AddEvent(string channel)
 	{
 		_eventManager.AddEvent(channel);
