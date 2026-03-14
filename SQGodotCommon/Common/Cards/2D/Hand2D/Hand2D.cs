@@ -248,6 +248,13 @@ public partial class Hand2D : Node2D
 	{
 		var discardedCard = GetCards().FirstOrDefault(x => x.Id == id);
 
+		// Guard: the card may not be in the UI hand (for example if it was already discarded, or if the id is wrong), in which case we do nothing
+		if (discardedCard == null)
+		{
+			Log.Debug("DiscardCard called for id {Id} but card is not in hand — ignoring", id);
+			return;
+		}
+
 		// Clean up any active tween for this card
 		if (activeCardTweens.ContainsKey(discardedCard))
 		{
