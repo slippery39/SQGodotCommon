@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://cdaltlvmpxycl"]
+[gd_scene load_steps=17 format=3 uid="uid://cdaltlvmpxycl"]
 
 [ext_resource type="Shader" uid="uid://b660bhlhx2nt8" path="res://Common/Shaders/damage_and_highlight.gdshader" id="1_ej3r4"]
 [ext_resource type="Script" uid="uid://c0uej0234tssk" path="res://Common/Cards/2D/Card2D/InternalCardUI2D.cs" id="1_ye8pd"]
@@ -54,12 +54,22 @@ shader_parameter/effect_opacity = 1.0
 shader_parameter/preserve_alpha = true
 shader_parameter/color_tint = Color(1, 1, 1, 1)
 
+[sub_resource type="LabelSettings" id="LabelSettings_5j4g1"]
+font_size = 18
+outline_size = 10
+outline_color = Color(0, 0, 0, 1)
+shadow_size = 10
+shadow_color = Color(0, 0, 0, 1)
+
 [node name="InternalCard2D" type="Node2D"]
 script = ExtResource("1_ye8pd")
 OutlineColor = Color(0, 1.50196, 0, 0)
 CardName = "Strike"
 ManaCost = "3"
-RulesText = "Deal 6 Damage"
+RulesText = "Deal 6 Damage.
+Draw 2 Cards.
+Gain 10 Life.
+Your opponent discards his or her hand."
 
 [node name="SubViewportContainer" type="SubViewportContainer" parent="."]
 unique_name_in_owner = true
@@ -151,14 +161,19 @@ texture = ExtResource("9_p103l")
 
 [node name="RulesTextLabel" type="Label" parent="SubViewportContainer/SubViewport/Node2D/CardContainer/RulesText"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(259, 140)
 offset_left = -130.0
 offset_top = -69.0
 offset_right = 129.0
-offset_bottom = 69.0
-text = "Deal 6 Damage"
-label_settings = ExtResource("6_ckdyi")
+offset_bottom = 71.0
+text = "Deal 6 Damage.
+Draw 2 Cards.
+Gain 10 Life.
+Your opponent discards his or her hand."
+label_settings = SubResource("LabelSettings_5j4g1")
 horizontal_alignment = 1
 vertical_alignment = 1
+autowrap_mode = 3
 metadata/_edit_use_anchors_ = true
 
 [node name="BottomPoint" type="Node2D" parent="."]

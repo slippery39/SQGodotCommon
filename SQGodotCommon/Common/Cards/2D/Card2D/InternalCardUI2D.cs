@@ -1,3 +1,5 @@
+using Serilog;
+
 namespace Common.Cards;
 
 [Tool]
@@ -224,7 +226,11 @@ public partial class InternalCardUI2D : Node2D
 		{
 			_rulesText = value;
 			if (_rulesTextLabel != null)
+			{
 				_rulesTextLabel.Text = value;
+				GD.Print($"Set rules text to '{value}' for card '{CardName}'");
+				CallDeferred(nameof(FitRulesTextToBox));
+			}
 		}
 	}
 
@@ -285,6 +291,11 @@ public partial class InternalCardUI2D : Node2D
 			_manaCostSprite2D = _cardContainer.GetNodeOrNull<Sprite2D>("ManaCost");
 			_rulesTextSprite2D = _cardContainer.GetNodeOrNull<Sprite2D>("RulesText");
 		}
+
+		// Each card gets its own copy of the label settings up front
+		if (_rulesTextLabel?.LabelSettings != null)
+			_rulesTextLabel.LabelSettings = (LabelSettings)
+				_rulesTextLabel.LabelSettings.Duplicate();
 
 		// Capture default textures from the scene
 		CaptureDefaultTextures();
@@ -413,6 +424,39 @@ public partial class InternalCardUI2D : Node2D
 	public void SetHolographic(bool enabled)
 	{
 		Holographic = enabled;
+	}
+
+	private void FitRulesTextToBox()
+	{
+		if (_rulesTextLabel == null)
+			return;
+
+		const int maxFontSize = 30;
+		const int minFontSize = 12;
+
+		var font = _rulesTextLabel.LabelSettings.Font ?? _rulesTextLabel.GetThemeFont("font");
+
+		//Hard coded values because I can't actually get the size of the label to calculate properly.
+		//Make sure that if you change the label size that you change these values accordingly.
+		// The available height is the distance from the top of the rules text box to the bottom, minus a small padding to make sure the text properly fits without going out of bounds.
+		float availableHeight = 130;
+		float availableWidth = 230;
+
+		for (int size = maxFontSize; size >= minFontSize; size--)
+		{
+			var textSize = font.GetMultilineStringSize(
+				_rulesTextLabel.Text,
+				HorizontalAlignment.Left,
+				availableWidth,
+				size
+			);
+
+			if (textSize.Y <= availableHeight)
+			{
+				_rulesTextLabel.LabelSettings.FontSize = size;
+				break;
+			}
+		}
 	}
 
 	/// <summary>
