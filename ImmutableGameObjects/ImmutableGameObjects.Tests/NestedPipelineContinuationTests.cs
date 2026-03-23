@@ -67,44 +67,40 @@ public class NestedPipelineContinuationTests
 			Steps = ImmutableList.Create<GameAction>(
 				new ChooseCreatureAction(),
 				new UseCreatureAbilityAction(),
-				new RecordOutcomeAction() // this step must run AFTER inner pipeline completes
+				new RecordOutcomeAction()
 			),
 		};
 
-		var state = _initialState.AddAction(outerPipeline).ProcessAllActions();
+		var (stateAtCreatureChoice, _) = _initialState.AddAction(outerPipeline).ProcessAllActions();
 
-		// Paused at creature choice
-		Assert.That(state.IsWaitingForChoice, Is.True);
-		Assert.That(state.GetPendingChoice(), Is.TypeOf<ChooseCreatureAction>());
+		Assert.That(stateAtCreatureChoice.IsWaitingForChoice, Is.True);
+		Assert.That(stateAtCreatureChoice.GetPendingChoice(), Is.TypeOf<ChooseCreatureAction>());
 
-		// Choose creature A (ID: 10)
-		state = state.ResolveChoice(ImmutableList.Create(10));
+		var (stateAtTargetChoice, _) = stateAtCreatureChoice.ResolveChoice(
+			ImmutableList.Create(10)
+		);
 
-		// Should now be paused at inner pipeline's target choice
-		Assert.That(state.IsWaitingForChoice, Is.True);
+		Assert.That(stateAtTargetChoice.IsWaitingForChoice, Is.True);
 		Assert.That(
-			state.GetPendingChoice(),
+			stateAtTargetChoice.GetPendingChoice(),
 			Is.TypeOf<ChooseTargetAction>(),
 			"Should be waiting for inner pipeline's target choice, not outer pipeline's next step"
 		);
 
 		// OutcomeMarker should NOT exist yet - outer pipeline hasn't resumed
-		var earlyMarker = state.GetObjectOfType<OutcomeMarker>();
+		var earlyMarker = stateAtTargetChoice.GetObjectOfType<OutcomeMarker>();
 		Assert.That(
 			earlyMarker,
 			Is.Null,
 			"RecordOutcomeAction should not have run before inner pipeline completes"
 		);
 
-		// Choose target A (ID: 100)
-		state = state.ResolveChoice(ImmutableList.Create(100));
+		var (finalState, _) = stateAtTargetChoice.ResolveChoice(ImmutableList.Create(100));
 
-		// Everything should now be complete
-		Assert.That(state.HasPendingActions, Is.False);
-		Assert.That(state.IsWaitingForChoice, Is.False);
+		Assert.That(finalState.HasPendingActions, Is.False);
+		Assert.That(finalState.IsWaitingForChoice, Is.False);
 
-		// OutcomeMarker should now exist
-		var outcomeMarker = state.GetObjectOfType<OutcomeMarker>();
+		var outcomeMarker = finalState.GetObjectOfType<OutcomeMarker>();
 		Assert.That(
 			outcomeMarker,
 			Is.Not.Null,
@@ -130,18 +126,16 @@ public class NestedPipelineContinuationTests
 			),
 		};
 
-		var state = _initialState.AddAction(outerPipeline).ProcessAllActions();
-
-		// Choose Creature B (ID: 20)
-		state = state.ResolveChoice(ImmutableList.Create(20));
-
-		// Choose Target B (ID: 200)
-		state = state.ResolveChoice(ImmutableList.Create(200));
+		var (stateAtCreatureChoice, _) = _initialState.AddAction(outerPipeline).ProcessAllActions();
+		var (stateAtTargetChoice, _) = stateAtCreatureChoice.ResolveChoice(
+			ImmutableList.Create(20)
+		);
+		var (finalState, _) = stateAtTargetChoice.ResolveChoice(ImmutableList.Create(200));
 
 		// RecordOutcomeAction reads "ability_triggered_by" which was written
 		// by UseCreatureAbilityAction in the outer pipeline context.
 		// It should be 20 (the creature we chose).
-		var outcomeMarker = state.GetObjectOfType<OutcomeMarker>();
+		var outcomeMarker = finalState.GetObjectOfType<OutcomeMarker>();
 		Assert.That(outcomeMarker, Is.Not.Null);
 		Assert.That(
 			outcomeMarker!.SeenCreatureId,
@@ -167,13 +161,14 @@ public class NestedPipelineContinuationTests
 			),
 		};
 
-		var state = _initialState.AddAction(outerPipeline).ProcessAllActions();
+		var (stateAtCreatureChoice, _) = _initialState.AddAction(outerPipeline).ProcessAllActions();
+		var (stateAtTargetChoice, _) = stateAtCreatureChoice.ResolveChoice(
+			ImmutableList.Create(10)
+		);
+		var (finalState, _) = stateAtTargetChoice.ResolveChoice(ImmutableList.Create(100));
 
-		state = state.ResolveChoice(ImmutableList.Create(10)); // creature choice
-		state = state.ResolveChoice(ImmutableList.Create(100)); // target choice
-
-		var damageMarker = state.GetObjectOfType<DamageMarker>();
-		var outcomeMarker = state.GetObjectOfType<OutcomeMarker>();
+		var damageMarker = finalState.GetObjectOfType<DamageMarker>();
+		var outcomeMarker = finalState.GetObjectOfType<OutcomeMarker>();
 
 		Assert.That(damageMarker, Is.Not.Null, "Inner pipeline should have written a DamageMarker");
 		Assert.That(
@@ -182,7 +177,6 @@ public class NestedPipelineContinuationTests
 			"Outer pipeline should have written an OutcomeMarker"
 		);
 
-		// Verify correct values in both
 		Assert.That(damageMarker!.SourceCreatureId, Is.EqualTo(10));
 		Assert.That(damageMarker.TargetId, Is.EqualTo(100));
 		Assert.That(outcomeMarker!.SeenCreatureId, Is.EqualTo(10));

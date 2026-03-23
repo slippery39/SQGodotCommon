@@ -49,8 +49,6 @@ public record UseCreatureAbilityAction : GameAction
 	{
 		var chosenCreatureId = GetInput<int>("chosen_creature_id", -1);
 
-		// Spawn an inner pipeline representing the creature's triggered ability.
-		// This inner pipeline has its own isolated context.
 		var innerPipeline = new PipelineAction
 		{
 			Steps = ImmutableList.Create<GameAction>(
@@ -59,9 +57,7 @@ public record UseCreatureAbilityAction : GameAction
 			),
 		};
 
-		return new ActionResult(gameState).WithOutput("ability_triggered_by", chosenCreatureId)
-		// Spawn the inner pipeline - it will execute before the outer pipeline continues
-		with
+		return new ActionResult(gameState).WithOutput("ability_triggered_by", chosenCreatureId) with
 		{
 			SpawnedActions = ImmutableList.Create<GameAction>(innerPipeline),
 		};
@@ -81,7 +77,6 @@ public record DealDamageFromContextAction : GameAction
 	{
 		var targetId = GetInput<int>("chosen_target_id", -1);
 
-		// Record the damage in game state so tests can verify it happened correctly.
 		var marker = new DamageMarker
 		{
 			SourceCreatureId = SourceCreatureId,
@@ -131,7 +126,6 @@ public class NestedPipelineTests
 	[Test]
 	public void NestedPipeline_FullFlow_CompletesCleanly()
 	{
-		// Outer pipeline: choose creature -> use creature ability (spawns inner pipeline)
 		var outerPipeline = new PipelineAction
 		{
 			Steps = ImmutableList.Create<GameAction>(
@@ -140,26 +134,22 @@ public class NestedPipelineTests
 			),
 		};
 
-		var state = _initialState.AddAction(outerPipeline).ProcessAllActions();
+		var (stateAtCreatureChoice, _) = _initialState.AddAction(outerPipeline).ProcessAllActions();
 
-		// Step 1: should be paused waiting for creature choice
-		Assert.That(state.IsWaitingForChoice, Is.True);
-		Assert.That(state.GetPendingChoice(), Is.TypeOf<ChooseCreatureAction>());
+		Assert.That(stateAtCreatureChoice.IsWaitingForChoice, Is.True);
+		Assert.That(stateAtCreatureChoice.GetPendingChoice(), Is.TypeOf<ChooseCreatureAction>());
 
-		// Player chooses Creature A (ID: 10)
-		state = state.ResolveChoice(ImmutableList.Create(10));
+		var (stateAtTargetChoice, _) = stateAtCreatureChoice.ResolveChoice(
+			ImmutableList.Create(10)
+		);
 
-		// Step 2: outer pipeline should have advanced and now be waiting
-		// for the inner pipeline's target choice
-		Assert.That(state.IsWaitingForChoice, Is.True);
-		Assert.That(state.GetPendingChoice(), Is.TypeOf<ChooseTargetAction>());
+		Assert.That(stateAtTargetChoice.IsWaitingForChoice, Is.True);
+		Assert.That(stateAtTargetChoice.GetPendingChoice(), Is.TypeOf<ChooseTargetAction>());
 
-		// Player chooses Target B (ID: 200)
-		state = state.ResolveChoice(ImmutableList.Create(200));
+		var (finalState, _) = stateAtTargetChoice.ResolveChoice(ImmutableList.Create(200));
 
-		// Everything should have resolved cleanly
-		Assert.That(state.IsWaitingForChoice, Is.False);
-		Assert.That(state.HasPendingActions, Is.False);
+		Assert.That(finalState.IsWaitingForChoice, Is.False);
+		Assert.That(finalState.HasPendingActions, Is.False);
 	}
 
 	/// <summary>
@@ -177,16 +167,13 @@ public class NestedPipelineTests
 			),
 		};
 
-		var state = _initialState.AddAction(outerPipeline).ProcessAllActions();
+		var (stateAtCreatureChoice, _) = _initialState.AddAction(outerPipeline).ProcessAllActions();
+		var (stateAtTargetChoice, _) = stateAtCreatureChoice.ResolveChoice(
+			ImmutableList.Create(20)
+		);
+		var (finalState, _) = stateAtTargetChoice.ResolveChoice(ImmutableList.Create(100));
 
-		// Choose Creature B (ID: 20)
-		state = state.ResolveChoice(ImmutableList.Create(20));
-
-		// Choose Target A (ID: 100)
-		state = state.ResolveChoice(ImmutableList.Create(100));
-
-		// Verify the damage marker was written to game state with correct IDs
-		var marker = state.GetObjectOfType<DamageMarker>();
+		var marker = finalState.GetObjectOfType<DamageMarker>();
 		Assert.That(marker, Is.Not.Null, "DamageMarker should have been added to game state");
 		Assert.That(
 			marker!.SourceCreatureId,
@@ -204,10 +191,6 @@ public class NestedPipelineTests
 	[Test]
 	public void NestedPipeline_InnerContext_IsIsolatedFromOuterContext()
 	{
-		// We verify isolation by checking that DealDamageFromContextAction
-		// correctly reads "chosen_target_id" (inner context key) and NOT
-		// "chosen_creature_id" (outer context key) as its target.
-
 		var outerPipeline = new PipelineAction
 		{
 			Steps = ImmutableList.Create<GameAction>(
@@ -216,18 +199,15 @@ public class NestedPipelineTests
 			),
 		};
 
-		var state = _initialState.AddAction(outerPipeline).ProcessAllActions();
+		var (stateAtCreatureChoice, _) = _initialState.AddAction(outerPipeline).ProcessAllActions();
+		var (stateAtTargetChoice, _) = stateAtCreatureChoice.ResolveChoice(
+			ImmutableList.Create(10)
+		);
+		var (finalState, _) = stateAtTargetChoice.ResolveChoice(ImmutableList.Create(200));
 
-		// Choose Creature A (ID: 10)
-		state = state.ResolveChoice(ImmutableList.Create(10));
-
-		// Choose Target B (ID: 200)
-		state = state.ResolveChoice(ImmutableList.Create(200));
-
-		var marker = state.GetObjectOfType<DamageMarker>();
+		var marker = finalState.GetObjectOfType<DamageMarker>();
 		Assert.That(marker, Is.Not.Null);
 
-		// Target should be 200 (from inner choice), NOT 10 (from outer creature choice)
 		Assert.That(
 			marker!.TargetId,
 			Is.EqualTo(200),
@@ -255,16 +235,17 @@ public class NestedPipelineTests
 			),
 		};
 
-		var state = _initialState.AddAction(outerPipeline).ProcessAllActions();
-
-		state = state.ResolveChoice(ImmutableList.Create(10)); // creature choice
-		state = state.ResolveChoice(ImmutableList.Create(100)); // target choice
+		var (stateAtCreatureChoice, _) = _initialState.AddAction(outerPipeline).ProcessAllActions();
+		var (stateAtTargetChoice, _) = stateAtCreatureChoice.ResolveChoice(
+			ImmutableList.Create(10)
+		);
+		var (finalState, _) = stateAtTargetChoice.ResolveChoice(ImmutableList.Create(100));
 
 		Assert.That(
-			state.HasPendingActions,
+			finalState.HasPendingActions,
 			Is.False,
 			"No actions should remain after both pipelines complete"
 		);
-		Assert.That(state.IsWaitingForChoice, Is.False);
+		Assert.That(finalState.IsWaitingForChoice, Is.False);
 	}
 }

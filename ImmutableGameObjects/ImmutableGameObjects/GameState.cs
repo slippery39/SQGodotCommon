@@ -15,7 +15,6 @@ public record GameState
 	// Action system
 	public ImmutableStack<GameAction> ActionStack { get; init; } = ImmutableStack<GameAction>.Empty;
 
-	// Helper properties for action system
 	public bool HasPendingActions => !ActionStack.IsEmpty;
 
 	public bool IsWaitingForChoice
@@ -36,24 +35,6 @@ public record GameState
 			return false;
 		}
 	}
-
-	// ===== EVENT SYSTEM =====
-
-	/// <summary>
-	/// Events that occurred this frame. Should be cleared after UI processes them.
-	/// </summary>
-	public ImmutableList<GameEvent> EventLog { get; init; } = ImmutableList<GameEvent>.Empty;
-
-	public GameState AddEvent(GameEvent gameEvent) =>
-		this with
-		{
-			EventLog = EventLog.Add(gameEvent),
-		};
-
-	public GameState ClearEvents() => this with { EventLog = ImmutableList<GameEvent>.Empty };
-
-	public IEnumerable<T> GetEvents<T>()
-		where T : GameEvent => EventLog.OfType<T>();
 
 	// ===== OBJECT QUERIES =====
 
@@ -294,78 +275,72 @@ public record GameState
 
 	/// <summary>
 	/// Process the next action on the stack.
-	///
-	/// PipelineActions are handled natively here — the executor advances them
-	/// one step at a time, re-pushing the updated pipeline after each step.
-	/// Individual actions simply return an ActionResult; they never touch the stack.
+	/// Returns the new state and any events emitted during this step.
 	/// </summary>
-	public GameState ProcessNextAction()
+	public (GameState State, ImmutableList<GameEvent> Events) ProcessNextAction()
 	{
 		if (ActionStack.IsEmpty || IsWaitingForChoice)
-			return this;
+			return (this, ImmutableList<GameEvent>.Empty);
 
 		var action = ActionStack.Peek();
 		var remainingStack = ActionStack.Pop();
 
-		// Pipeline handling is owned entirely by the executor
 		if (action is PipelineAction pipeline)
 			return ExecutePipelineStep(pipeline, remainingStack);
 
-		// Regular action
 		return ExecuteAction(action, remainingStack);
 	}
 
 	/// <summary>
 	/// Advances a pipeline by one step and re-pushes it for the next tick.
+	/// Returns the new state and any events emitted during this step.
 	/// </summary>
-	private GameState ExecutePipelineStep(
+	private (GameState State, ImmutableList<GameEvent> Events) ExecutePipelineStep(
 		PipelineAction pipeline,
 		ImmutableStack<GameAction> remainingStack
 	)
 	{
-		// Pipeline finished — nothing to push back
 		if (pipeline.IsComplete)
-			return this with { ActionStack = remainingStack };
+			return (this with { ActionStack = remainingStack }, ImmutableList<GameEvent>.Empty);
 
 		var step = pipeline.CurrentStep!;
 
-		// Pause on choice — put pipeline back unchanged, executor will stop
+		// Pause on choice — put pipeline back unchanged
 		if (step is ChoiceAction)
-			return this with { ActionStack = remainingStack.Push(pipeline) };
+			return (
+				this with
+				{
+					ActionStack = remainingStack.Push(pipeline),
+				},
+				ImmutableList<GameEvent>.Empty
+			);
 
-		// Inject accumulated pipeline context into the step
-		var stepWithContext = step with
-		{
-			InputContext = pipeline.PipelineContext,
-		};
-
-		// Execute the step
+		var stepWithContext = step with { InputContext = pipeline.PipelineContext };
 		var result = stepWithContext.Execute(this);
 
-		// Merge context: pipeline context + whatever the step output
 		var updatedContext = pipeline.PipelineContext.SetItems(result.OutputData);
-
-		// Advance pipeline index
 		var advancedPipeline = pipeline with
 		{
 			CurrentStepIndex = pipeline.CurrentStepIndex + 1,
 			PipelineContext = updatedContext,
 		};
 
-		// Build new state from result, with remaining stack + re-pushed pipeline
 		var newState = ApplyActionResult(result, remainingStack.Push(advancedPipeline));
 
-		// Spawned actions from a pipeline step go on top (execute before pipeline continues)
 		if (result.SpawnedActions.Any())
 			newState = newState.AddActions(result.SpawnedActions);
 
-		return newState;
+		return (newState, result.Events);
 	}
 
 	/// <summary>
 	/// Executes a regular (non-pipeline) action and applies its result.
+	/// Returns the new state and any events emitted.
 	/// </summary>
-	private GameState ExecuteAction(GameAction action, ImmutableStack<GameAction> remainingStack)
+	private (GameState State, ImmutableList<GameEvent> Events) ExecuteAction(
+		GameAction action,
+		ImmutableStack<GameAction> remainingStack
+	)
 	{
 		var result = action.Execute(this);
 		var newState = ApplyActionResult(result, remainingStack);
@@ -373,7 +348,7 @@ public record GameState
 		if (result.SpawnedActions.Any())
 			newState = newState.AddActions(result.SpawnedActions);
 
-		return newState;
+		return (newState, result.Events);
 	}
 
 	/// <summary>
@@ -389,19 +364,26 @@ public record GameState
 			IdToGameObjectMap = result.GameState.IdToGameObjectMap,
 			ParentToChildren = result.GameState.ParentToChildren,
 			ChildToParent = result.GameState.ChildToParent,
-			EventLog = result.GameState.EventLog,
 		};
 	}
 
 	/// <summary>
 	/// Process all pending actions until the stack is empty or a choice is needed.
+	/// Returns the final state and all events emitted across every step.
 	/// </summary>
-	public GameState ProcessAllActions()
+	public (GameState State, ImmutableList<GameEvent> Events) ProcessAllActions()
 	{
 		var state = this;
+		var allEvents = ImmutableList<GameEvent>.Empty;
+
 		while (state.HasPendingActions && !state.IsWaitingForChoice)
-			state = state.ProcessNextAction();
-		return state;
+		{
+			var (nextState, stepEvents) = state.ProcessNextAction();
+			state = nextState;
+			allEvents = allEvents.AddRange(stepEvents);
+		}
+
+		return (state, allEvents);
 	}
 
 	/// <summary>
@@ -426,8 +408,11 @@ public record GameState
 	/// <summary>
 	/// Resolves the current pending ChoiceAction with the player's selection,
 	/// stores the result in the pipeline context, and resumes execution.
+	/// Returns the final state and all events emitted during resumed execution.
 	/// </summary>
-	public GameState ResolveChoice(ImmutableList<int> selectedIds)
+	public (GameState State, ImmutableList<GameEvent> Events) ResolveChoice(
+		ImmutableList<int> selectedIds
+	)
 	{
 		if (!IsWaitingForChoice)
 			throw new InvalidOperationException("No pending choice to resolve");
@@ -450,9 +435,7 @@ public record GameState
 			);
 
 		var choiceOutput = selectedIds.Count == 1 ? (object)selectedIds[0] : selectedIds;
-
 		var updatedContext = pipeline.PipelineContext.SetItem(choiceStep.OutputKey, choiceOutput);
-
 		var advancedPipeline = pipeline with
 		{
 			CurrentStepIndex = pipeline.CurrentStepIndex + 1,
