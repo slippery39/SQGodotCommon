@@ -12,7 +12,6 @@ public record GameState
 	public ImmutableDictionary<int, int> ChildToParent { get; init; } =
 		ImmutableDictionary<int, int>.Empty;
 
-	// Action system
 	public ImmutableStack<GameAction> ActionStack { get; init; } = ImmutableStack<GameAction>.Empty;
 
 	public bool HasPendingActions => !ActionStack.IsEmpty;
@@ -253,19 +252,56 @@ public record GameState
 	// ===== ACTION SYSTEM =====
 
 	/// <summary>
-	/// Add a single action to the top of the stack.
+	/// Adds an action to the top of the stack after validating it.
+	/// Throws InvalidOperationException if ValidateAdd fails.
+	/// Use TryAddAction if you want to handle failure gracefully.
 	/// </summary>
-	public GameState AddAction(GameAction action) =>
-		this with
+	public GameState AddAction(GameAction action)
+	{
+		var validation = action.ValidateAdd(this);
+		if (!validation.IsValid)
+			throw new InvalidOperationException(
+				$"Action {action.GetType().Name} failed validation: {validation.Reason}"
+			);
+
+		return this with
 		{
 			ActionStack = ActionStack.Push(action),
 		};
+	}
 
 	/// <summary>
-	/// Add multiple actions to the stack. They will execute in the order provided
-	/// (first item in the list executes first).
+	/// Attempts to add an action to the stack.
+	/// Returns (unchanged state, false) if ValidateAdd fails, rather than throwing.
+	/// </summary>
+	public (GameState State, bool Success) TryAddAction(GameAction action)
+	{
+		var validation = action.ValidateAdd(this);
+		if (!validation.IsValid)
+			return (this, false);
+
+		return (this with { ActionStack = ActionStack.Push(action) }, true);
+	}
+
+	/// <summary>
+	/// Adds multiple actions to the stack with validation on each.
+	/// They will execute in the order provided (first item executes first).
+	/// Throws if any action fails ValidateAdd.
 	/// </summary>
 	public GameState AddActions(IEnumerable<GameAction> actions)
+	{
+		var state = this;
+		foreach (var action in actions)
+			state = state.AddAction(action);
+		return state;
+	}
+
+	/// <summary>
+	/// Pushes actions onto the stack without validation.
+	/// Used internally for spawned actions, which are created by already-executing
+	/// actions and assumed to be valid.
+	/// </summary>
+	private GameState PushActionsInternal(IEnumerable<GameAction> actions)
 	{
 		var newStack = ActionStack;
 		foreach (var action in actions.Reverse())
@@ -276,6 +312,8 @@ public record GameState
 	/// <summary>
 	/// Process the next action on the stack.
 	/// Returns the new state and any events emitted during this step.
+	/// If the action fails ValidateResolve it is removed from the stack
+	/// and an ActionValidationFailedEvent is emitted.
 	/// </summary>
 	public (GameState State, ImmutableList<GameEvent> Events) ProcessNextAction()
 	{
@@ -293,7 +331,6 @@ public record GameState
 
 	/// <summary>
 	/// Advances a pipeline by one step and re-pushes it for the next tick.
-	/// Returns the new state and any events emitted during this step.
 	/// </summary>
 	private (GameState State, ImmutableList<GameEvent> Events) ExecutePipelineStep(
 		PipelineAction pipeline,
@@ -305,7 +342,6 @@ public record GameState
 
 		var step = pipeline.CurrentStep!;
 
-		// Pause on choice — put pipeline back unchanged
 		if (step is ChoiceAction)
 			return (
 				this with
@@ -315,45 +351,93 @@ public record GameState
 				ImmutableList<GameEvent>.Empty
 			);
 
-		var stepWithContext = step with { InputContext = pipeline.PipelineContext };
-		var result = stepWithContext.Execute(this);
+		// Validate the step before executing
+		var stepWithContext = step with
+		{
+			InputContext = pipeline.PipelineContext,
+		};
+		var validation = stepWithContext.ValidateResolve(this);
 
+		if (!validation.IsValid)
+		{
+			var failedEvent = new ActionValidationFailedEvent
+			{
+				Action = stepWithContext,
+				Reason = validation.Reason,
+			};
+
+			// Advance past the invalid step and continue the pipeline
+			var advancedPipeline = pipeline with
+			{
+				CurrentStepIndex = pipeline.CurrentStepIndex + 1,
+			};
+
+			var stateWithAdvancedPipeline = this with
+			{
+				ActionStack = remainingStack.Push(advancedPipeline),
+			};
+
+			return (stateWithAdvancedPipeline, ImmutableList.Create<GameEvent>(failedEvent));
+		}
+
+		var result = stepWithContext.Execute(this);
 		var updatedContext = pipeline.PipelineContext.SetItems(result.OutputData);
-		var advancedPipeline = pipeline with
+		var advancedPipelineAfterExecution = pipeline with
 		{
 			CurrentStepIndex = pipeline.CurrentStepIndex + 1,
 			PipelineContext = updatedContext,
 		};
 
-		var newState = ApplyActionResult(result, remainingStack.Push(advancedPipeline));
+		var newState = ApplyActionResult(
+			result,
+			remainingStack.Push(advancedPipelineAfterExecution)
+		);
 
 		if (result.SpawnedActions.Any())
-			newState = newState.AddActions(result.SpawnedActions);
+			newState = newState.PushActionsInternal(result.SpawnedActions);
 
 		return (newState, result.Events);
 	}
 
 	/// <summary>
-	/// Executes a regular (non-pipeline) action and applies its result.
-	/// Returns the new state and any events emitted.
+	/// Executes a regular (non-pipeline) action after validating it can still resolve.
+	/// If ValidateResolve fails, the action is dropped and a failure event is emitted.
 	/// </summary>
 	private (GameState State, ImmutableList<GameEvent> Events) ExecuteAction(
 		GameAction action,
 		ImmutableStack<GameAction> remainingStack
 	)
 	{
+		var validation = action.ValidateResolve(this);
+
+		if (!validation.IsValid)
+		{
+			var failedEvent = new ActionValidationFailedEvent
+			{
+				Action = action,
+				Reason = validation.Reason,
+			};
+
+			return (
+				this with
+				{
+					ActionStack = remainingStack,
+				},
+				ImmutableList.Create<GameEvent>(failedEvent)
+			);
+		}
+
 		var result = action.Execute(this);
 		var newState = ApplyActionResult(result, remainingStack);
 
 		if (result.SpawnedActions.Any())
-			newState = newState.AddActions(result.SpawnedActions);
+			newState = newState.PushActionsInternal(result.SpawnedActions);
 
 		return (newState, result.Events);
 	}
 
 	/// <summary>
-	/// Applies the game-object changes from an ActionResult onto this state,
-	/// using the provided stack as the new ActionStack.
+	/// Applies the game-object changes from an ActionResult onto this state.
 	/// </summary>
 	private GameState ApplyActionResult(ActionResult result, ImmutableStack<GameAction> stack)
 	{
@@ -406,8 +490,7 @@ public record GameState
 	}
 
 	/// <summary>
-	/// Resolves the current pending ChoiceAction with the player's selection,
-	/// stores the result in the pipeline context, and resumes execution.
+	/// Resolves the current pending ChoiceAction with the player's selection.
 	/// Returns the final state and all events emitted during resumed execution.
 	/// </summary>
 	public (GameState State, ImmutableList<GameEvent> Events) ResolveChoice(
@@ -443,7 +526,16 @@ public record GameState
 		};
 
 		return (this with { ActionStack = ActionStack.Pop() })
-			.AddAction(advancedPipeline)
+			.PushActionInternal(advancedPipeline)
 			.ProcessAllActions();
 	}
+
+	/// <summary>
+	/// Pushes a single action without validation. Internal use only.
+	/// </summary>
+	private GameState PushActionInternal(GameAction action) =>
+		this with
+		{
+			ActionStack = ActionStack.Push(action),
+		};
 }
