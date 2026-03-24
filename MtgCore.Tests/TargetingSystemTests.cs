@@ -88,11 +88,29 @@ public class TargetingSystemTests
 	[Test]
 	public void OrSpecification_AcceptsEitherCondition()
 	{
-		var spec = new IsPlayerSpecification().Or(new IsCreatureSpecification());
-		var context = MakeContext(_state);
+		var (s1, creature) = _state.AddObject(
+			MakeCreature("Bear", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			parentId: _ids.Player2BattlefieldId
+		);
 
-		Assert.That(spec.IsSatisfiedBy(_ids.Player1Id, context), Is.True);
-		Assert.That(spec.IsSatisfiedBy(_ids.Player2Id, context), Is.True);
+		var spec = new IsPlayerSpecification().Or(new IsCreatureSpecification());
+		var context = MakeContext(s1);
+
+		Assert.That(
+			spec.IsSatisfiedBy(_ids.Player1Id, context),
+			Is.True,
+			"Player should satisfy IsPlayer"
+		);
+		Assert.That(
+			spec.IsSatisfiedBy(_ids.Player2Id, context),
+			Is.True,
+			"Player should satisfy IsPlayer"
+		);
+		Assert.That(
+			spec.IsSatisfiedBy(creature.Id, context),
+			Is.True,
+			"Creature on battlefield should satisfy IsCreature"
+		);
 		Assert.That(
 			spec.IsSatisfiedBy(_ids.StackId, context),
 			Is.False,
