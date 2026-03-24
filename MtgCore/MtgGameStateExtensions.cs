@@ -1,0 +1,62 @@
+using ImmutableGameObjects;
+
+namespace MtgCore;
+
+/// <summary>
+/// MTG-specific query helpers on GameState.
+/// These are read-only — no state mutations live here.
+/// </summary>
+public static class MtgGameStateExtensions
+{
+	// ===== PLAYER QUERIES =====
+
+	public static MtgPlayer GetPlayer(this GameState state, int playerId) =>
+		(MtgPlayer)state.GetObject(playerId);
+
+	// ===== ZONE QUERIES =====
+
+	public static Zone GetZone(this GameState state, int zoneId) => (Zone)state.GetObject(zoneId);
+
+	/// <summary>
+	/// Returns the Zone of the given type owned by the given player.
+	/// Valid for: Hand, Library, Graveyard, Battlefield, Exile.
+	/// </summary>
+	public static Zone GetPlayerZone(this GameState state, int playerId, ZoneType zoneType)
+	{
+		return state.GetChildren(playerId).OfType<Zone>().First(z => z.ZoneType == zoneType);
+	}
+
+	public static int GetPlayerZoneId(this GameState state, int playerId, ZoneType zoneType) =>
+		state.GetPlayerZone(playerId, zoneType).Id;
+
+	/// <summary>
+	/// Returns the Stack zone, which is the only shared zone (child of MtgGame root).
+	/// </summary>
+	public static Zone GetStack(this GameState state, int gameId)
+	{
+		return state.GetChildren(gameId).OfType<Zone>().First(z => z.ZoneType == ZoneType.Stack);
+	}
+
+	public static int GetStackId(this GameState state, int gameId) => state.GetStack(gameId).Id;
+
+	// ===== CARD QUERIES =====
+
+	/// <summary>
+	/// Returns all cards currently in the given zone.
+	/// </summary>
+	public static IEnumerable<Card> GetCardsInZone(this GameState state, int zoneId) =>
+		state.GetChildren(zoneId).OfType<Card>();
+
+	/// <summary>
+	/// Returns the zone ID that currently contains this card.
+	/// </summary>
+	public static int GetCardZoneId(this GameState state, int cardId) =>
+		state.GetParent(cardId)
+		?? throw new InvalidOperationException($"Card {cardId} has no parent zone");
+
+	/// <summary>
+	/// Returns the zone that currently contains this card.
+	/// </summary>
+	public static Zone GetCardZone(this GameState state, int cardId) =>
+		state.GetZone(state.GetCardZoneId(cardId));
+}
