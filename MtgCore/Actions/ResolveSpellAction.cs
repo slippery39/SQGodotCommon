@@ -5,11 +5,14 @@ namespace MtgCore;
 
 /// <summary>
 /// Resolves a spell that is currently on the stack.
-/// For each CardEffect:
-///   - If UserSelect: injects the pre-chosen target IDs from TargetIds
-///   - If AllValid: resolves targets from the current game state
-///   - If None: spawns the action with no targets
-/// Then moves the card to the graveyard.
+///
+/// For each CardEffect, resolves targets based on SelectionMode:
+///   UserSelect — injects the pre-chosen target IDs from TargetIds
+///   AllValid   — queries all valid targets from current game state
+///   Random     — picks one random valid target from current game state
+///   None       — no targets, spawns action as-is
+///
+/// Then moves the card to the owner's graveyard.
 /// </summary>
 public record ResolveSpellAction : GameAction
 {
@@ -17,6 +20,10 @@ public record ResolveSpellAction : GameAction
 	public int CastingPlayerId { get; init; }
 	public int GameId { get; init; }
 
+	/// <summary>
+	/// Pre-chosen targets from the UI, keyed by effect index.
+	/// Only populated for UserSelect effects.
+	/// </summary>
 	public ImmutableDictionary<int, ImmutableList<int>> TargetIds { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
@@ -32,7 +39,6 @@ public record ResolveSpellAction : GameAction
 			CastingPlayerId = CastingPlayerId,
 		};
 
-		// Build spawned actions for each effect
 		var spawnedActions = ImmutableList<GameAction>.Empty;
 
 		for (int i = 0; i < card.Effects.Count; i++)
@@ -40,16 +46,13 @@ public record ResolveSpellAction : GameAction
 			var effect = card.Effects[i];
 			var resolvedTargets = ResolveTargets(effect, i, context);
 
-			GameAction action;
-			if (effect.ActionTemplate is ITargetedAction targeted)
-				action = targeted.WithTargets(resolvedTargets);
-			else
-				action = effect.ActionTemplate;
+			GameAction action = effect.ActionTemplate is ITargetedAction targeted
+				? targeted.WithTargets(resolvedTargets)
+				: effect.ActionTemplate;
 
 			spawnedActions = spawnedActions.Add(action);
 		}
 
-		// Move card from stack to graveyard
 		var stateWithCardInGraveyard = gameState.MoveObject(CardId, graveyardId);
 
 		return new ActionResult(stateWithCardInGraveyard) { SpawnedActions = spawnedActions };
@@ -69,9 +72,26 @@ public record ResolveSpellAction : GameAction
 
 			TargetSelectionMode.AllValid => effect.TargetingStrategy.GetValidTargets(context),
 
+			TargetSelectionMode.Random => ResolveRandomTarget(effect.TargetingStrategy, context),
+
 			TargetSelectionMode.None => ImmutableList<int>.Empty,
 
 			_ => ImmutableList<int>.Empty,
 		};
+	}
+
+	private static ImmutableList<int> ResolveRandomTarget(
+		TargetingStrategy strategy,
+		TargetingContext context
+	)
+	{
+		var validTargets = strategy.GetValidTargets(context);
+
+		if (validTargets.IsEmpty)
+			return ImmutableList<int>.Empty;
+
+		var rng = new Random();
+		var chosen = validTargets[rng.Next(validTargets.Count)];
+		return ImmutableList.Create(chosen);
 	}
 }
