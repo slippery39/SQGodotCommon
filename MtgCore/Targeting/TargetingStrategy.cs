@@ -14,6 +14,9 @@ public enum TargetSelectionMode
 	/// <summary>One random valid target is selected.</summary>
 	Random,
 
+	/// <summary>Automatically targets the casting player. Used for effects like "you gain 3 life".</summary>
+	CastingPlayer,
+
 	/// <summary>No target needed.</summary>
 	None,
 }
@@ -121,5 +124,18 @@ public record TargetingStrategy
 			SelectionMode = TargetSelectionMode.None,
 			MinTargets = 0,
 			MaxTargets = 0,
+		};
+
+	/// <summary>
+	/// Automatically targets the casting player.
+	/// Used for effects like "you gain 3 life" where the caster is always the recipient.
+	/// </summary>
+	public static TargetingStrategy Self() =>
+		new()
+		{
+			Specification = new IsPlayerSpecification(), // unused — target is always the caster
+			SelectionMode = TargetSelectionMode.CastingPlayer,
+			MinTargets = 1,
+			MaxTargets = 1,
 		};
 }

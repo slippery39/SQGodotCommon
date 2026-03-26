@@ -74,6 +74,8 @@ public record ResolveSpellAction : GameAction
 
 			TargetSelectionMode.Random => ResolveRandomTarget(effect.TargetingStrategy, context),
 
+			TargetSelectionMode.CastingPlayer => ImmutableList.Create(context.CastingPlayerId),
+
 			TargetSelectionMode.None => ImmutableList<int>.Empty,
 
 			_ => ImmutableList<int>.Empty,

@@ -31,4 +31,30 @@ public static class CardLibrary
 				}
 			),
 		};
+
+	/// <summary>
+	/// Lightning Helix — 2 mana instant.
+	/// "Lightning Helix deals 3 damage to any target and you gain 3 life."
+	/// Two independent effects: damage to any target, life gain to the casting player.
+	/// </summary>
+	public static InstantCard LightningHelix() =>
+		new()
+		{
+			Name = "Lightning Helix",
+			ManaCost = 2,
+			Effects = ImmutableList.Create(
+				new CardEffect
+				{
+					TargetingStrategy = TargetingStrategy.SingleTarget(
+						new IsPlayerSpecification().Or(new IsCreatureSpecification())
+					),
+					ActionTemplate = new DealDamageAction { Amount = 3 },
+				},
+				new CardEffect
+				{
+					TargetingStrategy = TargetingStrategy.Self(),
+					ActionTemplate = new GainLifeAction { Amount = 3 },
+				}
+			),
+		};
 }
