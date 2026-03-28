@@ -342,14 +342,26 @@ public record GameState
 
 		var step = pipeline.CurrentStep!;
 
-		if (step is ChoiceAction)
+		if (step is ChoiceAction choice)
+		{
+			// Refresh options from game state and pipeline context before pausing.
+			// Allows subclasses to provide dynamic options (e.g. cards in hand,
+			// or cards not yet chosen by a previous pipeline step).
+			var freshOptions = choice.GetOptions(this, pipeline.PipelineContext);
+			var refreshedChoice = choice with { Options = freshOptions };
+			var pipelineWithRefreshedChoice = pipeline with
+			{
+				Steps = pipeline.Steps.SetItem(pipeline.CurrentStepIndex, refreshedChoice),
+			};
+
 			return (
 				this with
 				{
-					ActionStack = remainingStack.Push(pipeline),
+					ActionStack = remainingStack.Push(pipelineWithRefreshedChoice),
 				},
 				ImmutableList<GameEvent>.Empty
 			);
+		}
 
 		// Validate the step before executing
 		var stepWithContext = step with
