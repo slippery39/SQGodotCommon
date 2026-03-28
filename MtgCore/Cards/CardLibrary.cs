@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using ImmutableGameObjects;
 
 namespace MtgCore;
 
@@ -35,7 +36,6 @@ public static class CardLibrary
 	/// <summary>
 	/// Lightning Helix — 2 mana instant.
 	/// "Lightning Helix deals 3 damage to any target and you gain 3 life."
-	/// Two independent effects: damage to any target, life gain to the casting player.
 	/// </summary>
 	public static InstantCard LightningHelix() =>
 		new()
@@ -54,6 +54,52 @@ public static class CardLibrary
 				{
 					TargetingStrategy = TargetingStrategy.Self(),
 					ActionTemplate = new GainLifeAction { Amount = 3 },
+				}
+			),
+		};
+
+	/// <summary>
+	/// Dark Confidant — 2 mana creature (2/1).
+	/// "At the beginning of your upkeep, reveal the top card of your library
+	///  and put it into your hand. You lose life equal to its mana cost."
+	///
+	/// The creature has no CardEffects — its ability is a triggered ability
+	/// that fires at upkeep. Use DarkConfidantTrigger() to get the pipeline
+	/// to push onto the stack when the trigger fires.
+	/// </summary>
+	public static CreatureCard DarkConfidant() =>
+		new()
+		{
+			Name = "Dark Confidant",
+			ManaCost = 2,
+			Power = 2,
+			Toughness = 1,
+		};
+
+	/// <summary>
+	/// The upkeep trigger pipeline for Dark Confidant.
+	/// Push this onto the action stack at the beginning of the controlling
+	/// player's upkeep.
+	///
+	/// Steps:
+	///   1. Reveal top card — outputs card ID and mana cost to pipeline context
+	///   2. Move revealed card to hand
+	///   3. Lose life equal to revealed card's mana cost (read from context)
+	/// </summary>
+	public static PipelineAction DarkConfidantTrigger(int playerId) =>
+		new()
+		{
+			Steps = ImmutableList.Create<GameAction>(
+				new RevealTopCardAction { PlayerId = playerId },
+				new MoveCardToHandAction
+				{
+					PlayerId = playerId,
+					CardIdContextKey = ContextKeys.RevealedCardId,
+				},
+				new LoseLifeAction
+				{
+					PlayerId = playerId,
+					AmountContextKey = ContextKeys.RevealedCardManaCost,
 				}
 			),
 		};

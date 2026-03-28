@@ -53,3 +53,9 @@ public record CardRevealedEvent : GameEvent
 	public int CardId { get; init; }
 	public int ManaCost { get; init; }
 }
+
+public record PlayerLostLifeEvent : GameEvent
+{
+	public int PlayerId { get; init; }
+	public int Amount { get; init; }
+}
