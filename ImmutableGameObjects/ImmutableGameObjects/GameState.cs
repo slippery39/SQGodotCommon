@@ -200,6 +200,68 @@ public record GameState
 		);
 	}
 
+	/// <summary>
+	/// Moves an object to the front (index 0) of a new parent's children list.
+	/// Equivalent to MoveObject but inserts at the front rather than appending.
+	///
+	/// Use cases:
+	///   - Putting a card on top of a library
+	///   - Any effect that specifies "put on top" rather than "put on bottom"
+	///
+	/// If the object is already a child of the target parent, it is removed from
+	/// its current position and reinserted at the front.
+	/// </summary>
+	public GameState MoveObjectToFront(int objId, int newParentId)
+	{
+		if (!IdToGameObjectMap.ContainsKey(objId))
+			throw new ArgumentException($"Object with id {objId} does not exist");
+
+		if (newParentId != 0 && !IdToGameObjectMap.ContainsKey(newParentId))
+			throw new ArgumentException($"Parent with id {newParentId} does not exist");
+
+		if (IsDescendant(newParentId, objId))
+			throw new InvalidOperationException("Cannot move object to its own descendant");
+
+		var currentParentId = ChildToParent.TryGetValue(objId, out var parent) ? parent : 0;
+
+		var updatedParentToChildren = ParentToChildren;
+		if (
+			currentParentId != 0
+			&& ParentToChildren.TryGetValue(currentParentId, out var currentSiblings)
+		)
+		{
+			var newSiblings = currentSiblings.Remove(objId);
+			updatedParentToChildren = newSiblings.IsEmpty
+				? updatedParentToChildren.Remove(currentParentId)
+				: updatedParentToChildren.SetItem(currentParentId, newSiblings);
+		}
+
+		if (newParentId != 0)
+		{
+			var newParentChildren = updatedParentToChildren.TryGetValue(
+				newParentId,
+				out var existingChildren
+			)
+				? existingChildren.Insert(0, objId)
+				: [objId];
+			updatedParentToChildren = updatedParentToChildren.SetItem(
+				newParentId,
+				newParentChildren
+			);
+		}
+
+		var updatedChildToParent =
+			newParentId == 0
+				? ChildToParent.Remove(objId)
+				: ChildToParent.SetItem(objId, newParentId);
+
+		return this with
+		{
+			ParentToChildren = updatedParentToChildren,
+			ChildToParent = updatedChildToParent,
+		};
+	}
+
 	public GameState AddObjectRecursive(GameObject obj, int parentId = 0)
 	{
 		if (parentId != 0 && !IdToGameObjectMap.ContainsKey(parentId))
