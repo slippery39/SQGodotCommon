@@ -17,7 +17,6 @@ public record CardEffect
 
 	/// <summary>
 	/// The action to spawn when this effect resolves.
-	/// Must implement ITargetedAction so the engine can inject resolved target IDs.
 	/// </summary>
 	public GameAction ActionTemplate { get; init; } = null!;
 }

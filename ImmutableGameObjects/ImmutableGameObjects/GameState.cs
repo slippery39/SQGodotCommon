@@ -400,10 +400,27 @@ public record GameState
 			PipelineContext = updatedContext,
 		};
 
-		var newState = ApplyActionResult(
-			result,
-			remainingStack.Push(advancedPipelineAfterExecution)
-		);
+		// If the next step is a ChoiceAction, refresh its options now before returning.
+		// ProcessAllActions will stop when it sees IsWaitingForChoice = true on the
+		// returned state, so we must refresh here rather than waiting for the next tick.
+		var finalPipeline = advancedPipelineAfterExecution;
+		if (!finalPipeline.IsComplete && finalPipeline.CurrentStep is ChoiceAction nextChoice)
+		{
+			var freshOptions = nextChoice.GetOptions(
+				result.GameState,
+				finalPipeline.PipelineContext
+			);
+			var refreshedNextChoice = nextChoice with { Options = freshOptions };
+			finalPipeline = finalPipeline with
+			{
+				Steps = finalPipeline.Steps.SetItem(
+					finalPipeline.CurrentStepIndex,
+					refreshedNextChoice
+				),
+			};
+		}
+
+		var newState = ApplyActionResult(result, remainingStack.Push(finalPipeline));
 
 		if (result.SpawnedActions.Any())
 			newState = newState.PushActionsInternal(result.SpawnedActions);

@@ -7,9 +7,6 @@ namespace MtgCore;
 /// Static definitions for all cards in the game.
 /// Cards are pure data templates — OwnerId and ControllerId default to 0
 /// and are stamped on at deck construction time via 'with'.
-///
-/// Example:
-///   var bolt = CardLibrary.LightningBolt() with { OwnerId = playerId, ControllerId = playerId };
 /// </summary>
 public static class CardLibrary
 {
@@ -59,13 +56,46 @@ public static class CardLibrary
 		};
 
 	/// <summary>
+	/// Careful Study — 1 mana instant.
+	/// "Draw 2 cards, then discard 2 cards."
+	/// The discard step pauses for the player to choose which cards to discard.
+	/// The inner PipelineAction handles the draw-then-choose-then-discard sequence.
+	/// </summary>
+	public static InstantCard CarefulStudy() =>
+		new()
+		{
+			Name = "Careful Study",
+			ManaCost = 1,
+			Effects =
+			[
+				new CardEffect
+				{
+					TargetingStrategy = TargetingStrategy.NoTarget(),
+					ActionTemplate = new PipelineAction
+					{
+						Steps = ImmutableList.Create<GameAction>(
+							new DrawCardsAction { Amount = 2 },
+							new SelectCardsFromHandAction
+							{
+								Prompt = "Choose 2 cards to discard",
+								MinChoices = 2,
+								MaxChoices = 2,
+								OutputKey = ContextKeys.SelectedCardIds,
+							},
+							new DiscardCardsAction
+							{
+								CardIdsContextKey = ContextKeys.SelectedCardIds,
+							}
+						),
+					},
+				},
+			],
+		};
+
+	/// <summary>
 	/// Dark Confidant — 2 mana creature (2/1).
 	/// "At the beginning of your upkeep, reveal the top card of your library
 	///  and put it into your hand. You lose life equal to its mana cost."
-	///
-	/// The creature has no CardEffects — its ability is a triggered ability
-	/// that fires at upkeep. Use DarkConfidantTrigger() to get the pipeline
-	/// to push onto the stack when the trigger fires.
 	/// </summary>
 	public static CreatureCard DarkConfidant() =>
 		new()
@@ -80,11 +110,6 @@ public static class CardLibrary
 	/// The upkeep trigger pipeline for Dark Confidant.
 	/// Push this onto the action stack at the beginning of the controlling
 	/// player's upkeep.
-	///
-	/// Steps:
-	///   1. Reveal top card — outputs card ID and mana cost to pipeline context
-	///   2. Move revealed card to hand
-	///   3. Lose life equal to revealed card's mana cost (read from context)
 	/// </summary>
 	public static PipelineAction DarkConfidantTrigger(int playerId) =>
 		new()

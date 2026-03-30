@@ -6,11 +6,9 @@ namespace MtgCore;
 /// <summary>
 /// Resolves a spell that is currently on the stack.
 ///
-/// For each CardEffect, resolves targets based on SelectionMode:
-///   UserSelect — injects the pre-chosen target IDs from TargetIds
-///   AllValid   — queries all valid targets from current game state
-///   Random     — picks one random valid target from current game state
-///   None       — no targets, spawns action as-is
+/// For each CardEffect, resolves targets based on SelectionMode then spawns
+/// the action template. If the template is a PipelineAction, CastingPlayerId
+/// is seeded into its initial context so inner steps can read it via GetInput.
 ///
 /// Then moves the card to the owner's graveyard.
 /// </summary>
@@ -20,10 +18,6 @@ public record ResolveSpellAction : GameAction
 	public int CastingPlayerId { get; init; }
 	public int GameId { get; init; }
 
-	/// <summary>
-	/// Pre-chosen targets from the UI, keyed by effect index.
-	/// Only populated for UserSelect effects.
-	/// </summary>
 	public ImmutableDictionary<int, ImmutableList<int>> TargetIds { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
@@ -50,6 +44,19 @@ public record ResolveSpellAction : GameAction
 				? targeted.WithTargets(resolvedTargets)
 				: effect.ActionTemplate;
 
+			// Seed CastingPlayerId into pipeline context so inner steps
+			// can read it without needing it hardcoded at card definition time
+			if (action is PipelineAction pipeline)
+			{
+				action = pipeline with
+				{
+					PipelineContext = pipeline.PipelineContext.SetItem(
+						ContextKeys.CastingPlayerId,
+						CastingPlayerId
+					),
+				};
+			}
+
 			spawnedActions = spawnedActions.Add(action);
 		}
 
@@ -74,7 +81,7 @@ public record ResolveSpellAction : GameAction
 
 			TargetSelectionMode.Random => ResolveRandomTarget(effect.TargetingStrategy, context),
 
-			TargetSelectionMode.CastingPlayer => ImmutableList.Create(context.CastingPlayerId),
+			TargetSelectionMode.CastingPlayer => [CastingPlayerId],
 
 			TargetSelectionMode.None => ImmutableList<int>.Empty,
 
@@ -94,6 +101,6 @@ public record ResolveSpellAction : GameAction
 
 		var rng = new Random();
 		var chosen = validTargets[rng.Next(validTargets.Count)];
-		return ImmutableList.Create(chosen);
+		return [chosen];
 	}
 }

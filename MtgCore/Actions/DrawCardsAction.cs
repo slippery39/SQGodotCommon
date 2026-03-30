@@ -5,14 +5,9 @@ namespace MtgCore;
 
 /// <summary>
 /// Draws Amount cards from the target player's library into their hand.
-/// Cards are drawn from the top of the library (first child of the library zone).
 ///
-/// Emits a CardDrawnEvent per card drawn.
-/// Emits a LibraryEmptyEvent if the library runs out mid-draw and stops drawing.
-///
-/// Note: In MTG, drawing from an empty library means you lose the game at the
-/// next state-based action check. That rule is not enforced here yet —
-/// LibraryEmptyEvent gives the game layer the hook to handle it.
+/// PlayerId can be set directly or read from pipeline context via
+/// ContextKeys.CastingPlayerId when used inside a spell effect pipeline.
 /// </summary>
 public record DrawCardsAction : GameAction
 {
@@ -21,11 +16,13 @@ public record DrawCardsAction : GameAction
 
 	public override ActionResult Execute(GameState gameState)
 	{
+		var playerId = PlayerId != 0 ? PlayerId : GetInput<int>(ContextKeys.CastingPlayerId, 0);
+
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
 
-		var handId = state.GetPlayerZoneId(PlayerId, ZoneType.Hand);
-		var libraryId = state.GetPlayerZoneId(PlayerId, ZoneType.Library);
+		var handId = state.GetPlayerZoneId(playerId, ZoneType.Hand);
+		var libraryId = state.GetPlayerZoneId(playerId, ZoneType.Library);
 
 		for (int i = 0; i < Amount; i++)
 		{
@@ -33,12 +30,12 @@ public record DrawCardsAction : GameAction
 
 			if (topCardId == 0)
 			{
-				events = events.Add(new LibraryEmptyEvent { PlayerId = PlayerId });
+				events = events.Add(new LibraryEmptyEvent { PlayerId = playerId });
 				break;
 			}
 
 			state = state.MoveObject(topCardId, handId);
-			events = events.Add(new CardDrawnEvent { PlayerId = PlayerId, CardId = topCardId });
+			events = events.Add(new CardDrawnEvent { PlayerId = playerId, CardId = topCardId });
 		}
 
 		return new ActionResult(state) { Events = events };
