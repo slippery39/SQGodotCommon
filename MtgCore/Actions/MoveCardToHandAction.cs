@@ -28,7 +28,8 @@ public record MoveCardToHandAction : GameAction
 		if (cardId == 0 || !gameState.HasObject(cardId))
 			return new ActionResult(gameState);
 
-		var handId = gameState.GetPlayerZoneId(PlayerId, ZoneType.Hand);
+		var playerId = PlayerId != 0 ? PlayerId : GetInput<int>(ContextKeys.CastingPlayerId, 0);
+		var handId = gameState.GetPlayerZoneId(playerId, ZoneType.Hand);
 		var newState = gameState.MoveObject(cardId, handId);
 
 		return new ActionResult(newState);

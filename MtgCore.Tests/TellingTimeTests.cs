@@ -218,6 +218,26 @@ public class TellingTimeTests
 		Assert.That(choice!.Options.Count, Is.EqualTo(1));
 	}
 
+	[Test]
+	public void TellingTime_MoveToHand_UsesCastingPlayerIdFromContext()
+	{
+		// This test specifically verifies that MoveCardToHandAction reads
+		// CastingPlayerId from pipeline context rather than relying on a
+		// hardcoded PlayerId — the bug that caused the console to crash.
+		var (stateAtFirstChoice, _) = _state.AddAction(MakeCast()).ProcessAllActions();
+
+		// Resolve choice — this triggers MoveCardToHandAction
+		// If PlayerId is not read from context, GetPlayerZoneId(0, Hand) throws
+		Assert.DoesNotThrow(() =>
+		{
+			var (stateAfter, _) = stateAtFirstChoice.ResolveChoice(
+				ImmutableList.Create(_topCardId)
+			);
+			// Card should be in hand — not just "no exception", but correct result
+			Assert.That(stateAfter.GetCardZone(_topCardId).ZoneType, Is.EqualTo(ZoneType.Hand));
+		});
+	}
+
 	// ===== HELPERS =====
 
 	private CastSpellAction MakeCast() =>
