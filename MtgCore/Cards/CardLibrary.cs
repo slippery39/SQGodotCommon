@@ -58,16 +58,13 @@ public static class CardLibrary
 	/// <summary>
 	/// Careful Study — 1 mana instant.
 	/// "Draw 2 cards, then discard 2 cards."
-	/// The discard step pauses for the player to choose which cards to discard.
-	/// The inner PipelineAction handles the draw-then-choose-then-discard sequence.
 	/// </summary>
 	public static InstantCard CarefulStudy() =>
 		new()
 		{
 			Name = "Careful Study",
 			ManaCost = 1,
-			Effects =
-			[
+			Effects = ImmutableList.Create(
 				new CardEffect
 				{
 					TargetingStrategy = TargetingStrategy.NoTarget(),
@@ -88,8 +85,71 @@ public static class CardLibrary
 							}
 						),
 					},
-				},
-			],
+				}
+			),
+		};
+
+	/// <summary>
+	/// Telling Time — 2 mana instant.
+	/// "Look at the top three cards of your library. Put one into your hand,
+	///  one on top of your library, and one on the bottom of your library."
+	///
+	/// Intermediate context keys are defined inline here since they are
+	/// only meaningful within this card's pipeline.
+	/// </summary>
+	public static InstantCard TellingTime() =>
+		new()
+		{
+			Name = "Telling Time",
+			ManaCost = 2,
+			Effects = ImmutableList.Create(
+				new CardEffect
+				{
+					TargetingStrategy = TargetingStrategy.NoTarget(),
+					ActionTemplate = new PipelineAction
+					{
+						Steps = ImmutableList.Create<GameAction>(
+							new LookAtTopCardsAction
+							{
+								Amount = 3,
+								OutputKey = ContextKeys.TopCardIds,
+							},
+							new SelectCardFromContextAction
+							{
+								Prompt = "Choose a card to put into your hand",
+								MinChoices = 1,
+								MaxChoices = 1,
+								OutputKey = "tt_hand_pick",
+								CardIdsContextKey = ContextKeys.TopCardIds,
+							},
+							new MoveCardToHandAction { CardIdContextKey = "tt_hand_pick" },
+							new SelectCardFromContextAction
+							{
+								Prompt = "Choose a card to put on top of your library",
+								MinChoices = 1,
+								MaxChoices = 1,
+								OutputKey = "tt_top_pick",
+								CardIdsContextKey = ContextKeys.TopCardIds,
+								ExcludeContextKeys = ImmutableList.Create("tt_hand_pick"),
+							},
+							new MoveCardToTopOfLibraryAction { CardIdContextKey = "tt_top_pick" },
+							new ExcludeSelectedCardsAction
+							{
+								CardIdsContextKey = ContextKeys.TopCardIds,
+								ExcludeContextKeys = ImmutableList.Create(
+									"tt_hand_pick",
+									"tt_top_pick"
+								),
+								OutputKey = ContextKeys.RemainingCardIds,
+							},
+							new MoveCardToBottomOfLibraryAction
+							{
+								CardIdsContextKey = ContextKeys.RemainingCardIds,
+							}
+						),
+					},
+				}
+			),
 		};
 
 	/// <summary>
@@ -108,8 +168,6 @@ public static class CardLibrary
 
 	/// <summary>
 	/// The upkeep trigger pipeline for Dark Confidant.
-	/// Push this onto the action stack at the beginning of the controlling
-	/// player's upkeep.
 	/// </summary>
 	public static PipelineAction DarkConfidantTrigger(int playerId) =>
 		new()
