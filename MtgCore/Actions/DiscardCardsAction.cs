@@ -6,22 +6,28 @@ namespace MtgCore;
 /// <summary>
 /// Moves one or more cards to the owner's graveyard (discard).
 ///
-/// Card IDs can be supplied in two ways:
-///   - Hardcoded: set CardIds directly
-///   - Dynamic: set CardIdsContextKey to read from pipeline context
+/// Card resolution:
+///   - Set CardIds directly, or
+///   - Set CardIdsContextKey to read from pipeline context
 ///
-/// PlayerId can be set directly or read from pipeline context via
-/// ContextKeys.CastingPlayerId when used inside a spell effect pipeline.
+/// Player resolution (used for the discard event — graveyard destination always uses card.OwnerId):
+///   - Set PlayerId directly, or
+///   - Set PlayerIdContextKey to read the player ID from pipeline context
+///
+/// If the context key variants are set they take priority over the direct values.
 /// </summary>
 public record DiscardCardsAction : GameAction
 {
 	public int PlayerId { get; init; }
+	public string PlayerIdContextKey { get; init; } = "";
 	public ImmutableList<int> CardIds { get; init; } = ImmutableList<int>.Empty;
 	public string CardIdsContextKey { get; init; } = "";
 
 	public override ActionResult Execute(GameState gameState)
 	{
-		var playerId = PlayerId != 0 ? PlayerId : GetInput<int>(ContextKeys.CastingPlayerId, 0);
+		var playerId = string.IsNullOrEmpty(PlayerIdContextKey)
+			? PlayerId
+			: GetInput<int>(PlayerIdContextKey, 0);
 
 		var cardIds = ResolveCardIds();
 

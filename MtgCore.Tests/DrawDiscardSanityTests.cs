@@ -31,7 +31,11 @@ public class DrawDiscardSanityTests
 					ActionTemplate = new PipelineAction
 					{
 						Steps = ImmutableList.Create<GameAction>(
-							new DrawCardsAction { Amount = 1 },
+							new DrawCardsAction
+							{
+								Amount = 1,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
 							new SelectCardsFromHandAction
 							{
 								Prompt = "Choose 1 card to discard",
@@ -42,6 +46,7 @@ public class DrawDiscardSanityTests
 							new DiscardCardsAction
 							{
 								CardIdsContextKey = ContextKeys.SelectedCardIds,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
 							}
 						),
 					},

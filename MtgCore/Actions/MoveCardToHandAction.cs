@@ -5,17 +5,21 @@ namespace MtgCore;
 /// <summary>
 /// Moves a card to a player's hand.
 ///
-/// The card to move can be specified in two ways:
-///   - Hardcoded: set CardId directly (useful when the card is known at design time)
-///   - Dynamic: set CardIdContextKey to read the card ID from pipeline context
-///              (useful when the card is only known at resolution time, e.g. Dark Confidant)
+/// Card resolution:
+///   - Set CardId directly, or
+///   - Set CardIdContextKey to read the card ID from pipeline context
 ///
-/// If CardIdContextKey is set it takes priority over CardId.
+/// Player resolution:
+///   - Set PlayerId directly, or
+///   - Set PlayerIdContextKey to read the player ID from pipeline context
+///
+/// If the context key variants are set they take priority over the direct values.
 /// If the resolved card ID is 0 or the card no longer exists, the action does nothing.
 /// </summary>
 public record MoveCardToHandAction : GameAction
 {
 	public int PlayerId { get; init; }
+	public string PlayerIdContextKey { get; init; } = "";
 	public int CardId { get; init; }
 	public string CardIdContextKey { get; init; } = "";
 
@@ -28,7 +32,13 @@ public record MoveCardToHandAction : GameAction
 		if (cardId == 0 || !gameState.HasObject(cardId))
 			return new ActionResult(gameState);
 
-		var playerId = PlayerId != 0 ? PlayerId : GetInput<int>(ContextKeys.CastingPlayerId, 0);
+		var playerId = string.IsNullOrEmpty(PlayerIdContextKey)
+			? PlayerId
+			: GetInput<int>(PlayerIdContextKey, 0);
+
+		if (playerId == 0 || !gameState.HasObject(playerId))
+			return new ActionResult(gameState);
+
 		var handId = gameState.GetPlayerZoneId(playerId, ZoneType.Hand);
 		var newState = gameState.MoveObject(cardId, handId);
 

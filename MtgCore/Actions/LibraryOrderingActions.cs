@@ -7,18 +7,31 @@ namespace MtgCore;
 /// Moves a single card to the top (front) of a player's library.
 /// Uses MoveObjectToFront so the card becomes the next card drawn.
 ///
-/// CardId can be set directly or read from pipeline context via CardIdContextKey.
-/// PlayerId can be set directly or read from context via ContextKeys.CastingPlayerId.
+/// Card resolution:
+///   - Set CardId directly, or
+///   - Set CardIdContextKey to read from pipeline context
+///
+/// Player resolution:
+///   - Set PlayerId directly, or
+///   - Set PlayerIdContextKey to read from pipeline context
+///
+/// If the context key variants are set they take priority over the direct values.
 /// </summary>
 public record MoveCardToTopOfLibraryAction : GameAction
 {
 	public int PlayerId { get; init; }
+	public string PlayerIdContextKey { get; init; } = "";
 	public int CardId { get; init; }
 	public string CardIdContextKey { get; init; } = "";
 
 	public override ActionResult Execute(GameState gameState)
 	{
-		var playerId = PlayerId != 0 ? PlayerId : GetInput<int>(ContextKeys.CastingPlayerId, 0);
+		var playerId = string.IsNullOrEmpty(PlayerIdContextKey)
+			? PlayerId
+			: GetInput<int>(PlayerIdContextKey, 0);
+
+		if (playerId == 0 || !gameState.HasObject(playerId))
+			return new ActionResult(gameState);
 
 		var cardId = string.IsNullOrEmpty(CardIdContextKey)
 			? CardId
@@ -38,24 +51,35 @@ public record MoveCardToTopOfLibraryAction : GameAction
 /// Moves one or more cards to the bottom of a player's library.
 /// Uses MoveObject which appends to the end of the children list.
 ///
-/// CardIds can be supplied directly or read from pipeline context via CardIdsContextKey.
-/// Handles both single int and ImmutableList&lt;int&gt; context values — consistent with
-/// how ResolveRemainingCardAction and ResolveChoice store their output.
+/// Card resolution:
+///   - Set CardIds directly, or
+///   - Set CardIdsContextKey to read from pipeline context
 ///
-/// PlayerId can be set directly or read from context via ContextKeys.CastingPlayerId.
+/// Player resolution:
+///   - Set PlayerId directly, or
+///   - Set PlayerIdContextKey to read from pipeline context
+///
+/// If the context key variants are set they take priority over the direct values.
+/// Handles both single int and ImmutableList&lt;int&gt; context values — consistent with
+/// how ResolveChoice stores its output.
 /// </summary>
 public record MoveCardToBottomOfLibraryAction : GameAction
 {
 	public int PlayerId { get; init; }
+	public string PlayerIdContextKey { get; init; } = "";
 	public ImmutableList<int> CardIds { get; init; } = ImmutableList<int>.Empty;
 	public string CardIdsContextKey { get; init; } = "";
 
 	public override ActionResult Execute(GameState gameState)
 	{
-		var playerId = PlayerId != 0 ? PlayerId : GetInput<int>(ContextKeys.CastingPlayerId, 0);
+		var playerId = string.IsNullOrEmpty(PlayerIdContextKey)
+			? PlayerId
+			: GetInput<int>(PlayerIdContextKey, 0);
+
+		if (playerId == 0 || !gameState.HasObject(playerId))
+			return new ActionResult(gameState);
 
 		var cardIds = ResolveCardIds();
-
 		var state = gameState;
 		var libraryId = state.GetPlayerZoneId(playerId, ZoneType.Library);
 

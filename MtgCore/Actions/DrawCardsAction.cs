@@ -6,17 +6,26 @@ namespace MtgCore;
 /// <summary>
 /// Draws Amount cards from the target player's library into their hand.
 ///
-/// PlayerId can be set directly or read from pipeline context via
-/// ContextKeys.CastingPlayerId when used inside a spell effect pipeline.
+/// Player resolution:
+///   - Set PlayerId directly, or
+///   - Set PlayerIdContextKey to read the player ID from pipeline context
+///
+/// If PlayerIdContextKey is set it takes priority over PlayerId.
 /// </summary>
 public record DrawCardsAction : GameAction
 {
 	public int PlayerId { get; init; }
+	public string PlayerIdContextKey { get; init; } = "";
 	public int Amount { get; init; } = 1;
 
 	public override ActionResult Execute(GameState gameState)
 	{
-		var playerId = PlayerId != 0 ? PlayerId : GetInput<int>(ContextKeys.CastingPlayerId, 0);
+		var playerId = string.IsNullOrEmpty(PlayerIdContextKey)
+			? PlayerId
+			: GetInput<int>(PlayerIdContextKey, 0);
+
+		if (playerId == 0 || !gameState.HasObject(playerId))
+			return new ActionResult(gameState);
 
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;

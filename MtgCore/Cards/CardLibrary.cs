@@ -71,7 +71,11 @@ public static class CardLibrary
 					ActionTemplate = new PipelineAction
 					{
 						Steps = ImmutableList.Create<GameAction>(
-							new DrawCardsAction { Amount = 2 },
+							new DrawCardsAction
+							{
+								Amount = 2,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
 							new SelectCardsFromHandAction
 							{
 								Prompt = "Choose 2 cards to discard",
@@ -82,6 +86,7 @@ public static class CardLibrary
 							new DiscardCardsAction
 							{
 								CardIdsContextKey = ContextKeys.SelectedCardIds,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
 							}
 						),
 					},
@@ -113,6 +118,7 @@ public static class CardLibrary
 							{
 								Amount = 3,
 								OutputKey = ContextKeys.TopCardIds,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
 							},
 							new SelectCardFromContextAction
 							{
@@ -122,7 +128,11 @@ public static class CardLibrary
 								OutputKey = "tt_hand_pick",
 								CardIdsContextKey = ContextKeys.TopCardIds,
 							},
-							new MoveCardToHandAction { CardIdContextKey = "tt_hand_pick" },
+							new MoveCardToHandAction
+							{
+								CardIdContextKey = "tt_hand_pick",
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
 							new SelectCardFromContextAction
 							{
 								Prompt = "Choose a card to put on top of your library",
@@ -132,7 +142,11 @@ public static class CardLibrary
 								CardIdsContextKey = ContextKeys.TopCardIds,
 								ExcludeContextKeys = ImmutableList.Create("tt_hand_pick"),
 							},
-							new MoveCardToTopOfLibraryAction { CardIdContextKey = "tt_top_pick" },
+							new MoveCardToTopOfLibraryAction
+							{
+								CardIdContextKey = "tt_top_pick",
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
 							new ExcludeSelectedCardsAction
 							{
 								CardIdsContextKey = ContextKeys.TopCardIds,
@@ -145,6 +159,7 @@ public static class CardLibrary
 							new MoveCardToBottomOfLibraryAction
 							{
 								CardIdsContextKey = ContextKeys.RemainingCardIds,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
 							}
 						),
 					},
