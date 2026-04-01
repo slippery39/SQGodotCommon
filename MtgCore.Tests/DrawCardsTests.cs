@@ -22,7 +22,13 @@ public class DrawCardsTests
 	[Test]
 	public void DrawCards_MovesTopCardToHand()
 	{
-		var state = AddCardsToLibrary(_state, _ids.Player1Id, "Card A", "Card B", "Card C");
+		var state = TestCardFactory.AddCardsToLibrary(
+			_state,
+			_ids.Player1Id,
+			"Card A",
+			"Card B",
+			"Card C"
+		);
 
 		var (finalState, _) = state
 			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 1 })
@@ -35,7 +41,13 @@ public class DrawCardsTests
 	[Test]
 	public void DrawCards_DrawsFromTopOfLibrary()
 	{
-		var state = AddCardsToLibrary(_state, _ids.Player1Id, "Card A", "Card B", "Card C");
+		var state = TestCardFactory.AddCardsToLibrary(
+			_state,
+			_ids.Player1Id,
+			"Card A",
+			"Card B",
+			"Card C"
+		);
 		var topCardId = state.GetChildrenIds(_ids.Player1LibraryId).First();
 
 		var (finalState, _) = state
@@ -53,7 +65,13 @@ public class DrawCardsTests
 	[Test]
 	public void DrawCards_DrawMultiple_MovesCorrectNumberToHand()
 	{
-		var state = AddCardsToLibrary(_state, _ids.Player1Id, "Card A", "Card B", "Card C");
+		var state = TestCardFactory.AddCardsToLibrary(
+			_state,
+			_ids.Player1Id,
+			"Card A",
+			"Card B",
+			"Card C"
+		);
 
 		var (finalState, _) = state
 			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 2 })
@@ -66,7 +84,13 @@ public class DrawCardsTests
 	[Test]
 	public void DrawCards_DrawEntireLibrary_HandHasAllCards()
 	{
-		var state = AddCardsToLibrary(_state, _ids.Player1Id, "Card A", "Card B", "Card C");
+		var state = TestCardFactory.AddCardsToLibrary(
+			_state,
+			_ids.Player1Id,
+			"Card A",
+			"Card B",
+			"Card C"
+		);
 
 		var (finalState, _) = state
 			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 3 })
@@ -81,7 +105,13 @@ public class DrawCardsTests
 	[Test]
 	public void DrawCards_EmitsCardDrawnEventPerCard()
 	{
-		var state = AddCardsToLibrary(_state, _ids.Player1Id, "Card A", "Card B", "Card C");
+		var state = TestCardFactory.AddCardsToLibrary(
+			_state,
+			_ids.Player1Id,
+			"Card A",
+			"Card B",
+			"Card C"
+		);
 
 		var (_, events) = state
 			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 2 })
@@ -95,7 +125,7 @@ public class DrawCardsTests
 	[Test]
 	public void DrawCards_CardDrawnEvent_ContainsCorrectCardId()
 	{
-		var state = AddCardsToLibrary(_state, _ids.Player1Id, "Card A");
+		var state = TestCardFactory.AddCardsToLibrary(_state, _ids.Player1Id, "Card A");
 		var topCardId = state.GetChildrenIds(_ids.Player1LibraryId).First();
 
 		var (_, events) = state
@@ -125,7 +155,7 @@ public class DrawCardsTests
 	[Test]
 	public void DrawCards_RunsOutMidDraw_DrawsRemainingAndEmitsLibraryEmpty()
 	{
-		var state = AddCardsToLibrary(_state, _ids.Player1Id, "Card A", "Card B");
+		var state = TestCardFactory.AddCardsToLibrary(_state, _ids.Player1Id, "Card A", "Card B");
 
 		var (finalState, events) = state
 			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 5 })
@@ -133,26 +163,5 @@ public class DrawCardsTests
 
 		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(2));
 		Assert.That(events.OfType<LibraryEmptyEvent>().Count(), Is.EqualTo(1));
-	}
-
-	// ===== HELPERS =====
-
-	private GameState AddCardsToLibrary(GameState state, int playerId, params string[] cardNames)
-	{
-		var libraryId = state.GetPlayerZoneId(playerId, ZoneType.Library);
-
-		foreach (var name in cardNames)
-		{
-			var card = new Card
-			{
-				Name = name,
-				ManaCost = 1,
-				OwnerId = playerId,
-				ControllerId = playerId,
-			};
-			state = state.AddObject(card, parentId: libraryId).GameState;
-		}
-
-		return state;
 	}
 }

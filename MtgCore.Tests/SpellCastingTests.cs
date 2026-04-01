@@ -52,7 +52,12 @@ public class LightningBoltTests
 	public void IsCreatureSpecification_MatchesCreatureOnBattlefield()
 	{
 		var (stateWithCreature, creature) = _state.AddObject(
-			MakeCreature("Grizzly Bears", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Grizzly Bears",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -66,7 +71,12 @@ public class LightningBoltTests
 	public void IsCreatureSpecification_DoesNotMatchCreatureInHand()
 	{
 		var (stateWithCreature, creature) = _state.AddObject(
-			MakeCreature("Grizzly Bears", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Grizzly Bears",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2HandId
 		);
 
@@ -80,7 +90,12 @@ public class LightningBoltTests
 	public void OrSpecification_MatchesPlayerOrCreature()
 	{
 		var (stateWithCreature, creature) = _state.AddObject(
-			MakeCreature("Grizzly Bears", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Grizzly Bears",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -200,7 +215,12 @@ public class LightningBoltTests
 	public void LightningBolt_TargetingCreature_DestroysItIfLethal()
 	{
 		var (stateWithCreature, creature) = _state.AddObject(
-			MakeCreature("Grizzly Bears", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Grizzly Bears",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -231,7 +251,12 @@ public class LightningBoltTests
 	public void LightningBolt_TargetingCreature_DoesNotDestroyIfTough()
 	{
 		var (stateWithCreature, creature) = _state.AddObject(
-			MakeCreature("Hill Giant", power: 3, toughness: 4, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Hill Giant",
+				power: 3,
+				toughness: 4,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -274,26 +299,5 @@ public class LightningBoltTests
 		};
 
 	private CastSpellAction MakeCastBoltAt(int targetId) =>
-		new()
-		{
-			CardId = _boltId,
-			CastingPlayerId = _ids.Player1Id,
-			GameId = _ids.GameId,
-			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
-				0,
-				ImmutableList.Create(targetId)
-			),
-		};
-
-	private static Card MakeCreature(string name, int power, int toughness, int ownerId) =>
-		new()
-		{
-			Name = name,
-			ManaCost = 2,
-			OwnerId = ownerId,
-			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
-				new CreatureComponent { Power = power, Toughness = toughness }
-			),
-		};
+		TestCardFactory.MakeCastActionWithTarget(_boltId, _ids.Player1Id, _ids.GameId, targetId);
 }

@@ -147,12 +147,5 @@ public class DrawDiscardSanityTests
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
 		};
 
-	private Card MakeLibraryCard() =>
-		new()
-		{
-			Name = "Library Card",
-			ManaCost = 1,
-			OwnerId = _ids.Player1Id,
-			ControllerId = _ids.Player1Id,
-		};
+	private Card MakeLibraryCard() => TestCardFactory.MakePlainCard("Library Card", _ids.Player1Id);
 }

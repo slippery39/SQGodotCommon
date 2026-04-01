@@ -53,11 +53,21 @@ public class TargetingSystemTests
 	public void AndSpecification_RequiresBothConditions()
 	{
 		var (s1, weakCreature) = _state.AddObject(
-			MakeCreature("Memnite", power: 1, toughness: 1, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Memnite",
+				power: 1,
+				toughness: 1,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 		var (s2, strongCreature) = s1.AddObject(
-			MakeCreature("Leatherback Baloth", power: 4, toughness: 4, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Leatherback Baloth",
+				power: 4,
+				toughness: 4,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -85,7 +95,12 @@ public class TargetingSystemTests
 	public void OrSpecification_AcceptsEitherCondition()
 	{
 		var (s1, creature) = _state.AddObject(
-			MakeCreature("Bear", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -118,7 +133,12 @@ public class TargetingSystemTests
 	public void NotSpecification_InvertsResult()
 	{
 		var (s1, creature) = _state.AddObject(
-			MakeCreature("Bear", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -141,15 +161,30 @@ public class TargetingSystemTests
 	public void MinPowerSpecification_FiltersCorrectly()
 	{
 		var (s1, smallCreature) = _state.AddObject(
-			MakeCreature("Squire", power: 1, toughness: 2, ownerId: _ids.Player1Id),
+			TestCardFactory.MakeCreatureCard(
+				"Squire",
+				power: 1,
+				toughness: 2,
+				ownerId: _ids.Player1Id
+			),
 			parentId: _ids.Player1BattlefieldId
 		);
 		var (s2, medCreature) = s1.AddObject(
-			MakeCreature("Bear", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 		var (s3, bigCreature) = s2.AddObject(
-			MakeCreature("Titan", power: 6, toughness: 6, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Titan",
+				power: 6,
+				toughness: 6,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -173,11 +208,21 @@ public class TargetingSystemTests
 	public void IsControlledByOpponent_FiltersCorrectly()
 	{
 		var (s1, myCreature) = _state.AddObject(
-			MakeCreature("My Bear", power: 2, toughness: 2, ownerId: _ids.Player1Id),
+			TestCardFactory.MakeCreatureCard(
+				"My Bear",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player1Id
+			),
 			parentId: _ids.Player1BattlefieldId
 		);
 		var (s2, theirCreature) = s1.AddObject(
-			MakeCreature("Their Bear", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Their Bear",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -202,15 +247,25 @@ public class TargetingSystemTests
 	public void AllValid_HitsAllCreaturesOnBothBattlefields()
 	{
 		var (s1, p1Creature) = _state.AddObject(
-			MakeCreature("My Bear", power: 2, toughness: 2, ownerId: _ids.Player1Id),
+			TestCardFactory.MakeCreatureCard(
+				"My Bear",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player1Id
+			),
 			parentId: _ids.Player1BattlefieldId
 		);
 		var (s2, p2Creature) = s1.AddObject(
-			MakeCreature("Their Bear", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Their Bear",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		var pyroclasm = MakeSpellCard(
+		var pyroclasm = TestCardFactory.MakeSpellCard(
 			"Pyroclasm",
 			_ids.Player1Id,
 			new CardEffect
@@ -241,11 +296,16 @@ public class TargetingSystemTests
 	public void AllValid_DoesNotHitPlayers()
 	{
 		var (s1, creature) = _state.AddObject(
-			MakeCreature("Bear", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		var pyroclasm = MakeSpellCard(
+		var pyroclasm = TestCardFactory.MakeSpellCard(
 			"Pyroclasm",
 			_ids.Player1Id,
 			new CardEffect
@@ -274,7 +334,7 @@ public class TargetingSystemTests
 	[Test]
 	public void AllValid_WithNoValidTargets_SpawnsActionWithEmptyTargets()
 	{
-		var pyroclasm = MakeSpellCard(
+		var pyroclasm = TestCardFactory.MakeSpellCard(
 			"Pyroclasm",
 			_ids.Player1Id,
 			new CardEffect
@@ -296,15 +356,25 @@ public class TargetingSystemTests
 	public void AllValid_WithPowerFilter_OnlyHitsMatchingCreatures()
 	{
 		var (s1, smallCreature) = _state.AddObject(
-			MakeCreature("Squire", power: 1, toughness: 3, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Squire",
+				power: 1,
+				toughness: 3,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 		var (s2, bigCreature) = s1.AddObject(
-			MakeCreature("Titan", power: 6, toughness: 6, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Titan",
+				power: 6,
+				toughness: 6,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		var spell = MakeSpellCard(
+		var spell = TestCardFactory.MakeSpellCard(
 			"Forced March",
 			_ids.Player1Id,
 			new CardEffect
@@ -338,15 +408,25 @@ public class TargetingSystemTests
 	public void MultiTarget_PlayerCanChooseUpToMaxTargets()
 	{
 		var (s1, creature1) = _state.AddObject(
-			MakeCreature("Bear A", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear A",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 		var (s2, creature2) = s1.AddObject(
-			MakeCreature("Bear B", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear B",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		var spell = MakeSpellCard(
+		var spell = TestCardFactory.MakeSpellCard(
 			"Arc Lightning",
 			_ids.Player1Id,
 			new CardEffect
@@ -392,19 +472,34 @@ public class TargetingSystemTests
 	public void MultiTarget_ValidateAdd_FailsIfTooManyTargetsChosen()
 	{
 		var (s1, c1) = _state.AddObject(
-			MakeCreature("Bear A", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear A",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 		var (s2, c2) = s1.AddObject(
-			MakeCreature("Bear B", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear B",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 		var (s3, c3) = s2.AddObject(
-			MakeCreature("Bear C", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear C",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		var spell = MakeSpellCard(
+		var spell = TestCardFactory.MakeSpellCard(
 			"Arc Lightning",
 			_ids.Player1Id,
 			new CardEffect
@@ -438,7 +533,7 @@ public class TargetingSystemTests
 	[Test]
 	public void MultiTarget_ValidateAdd_FailsIfTooFewTargetsChosen()
 	{
-		var spell = MakeSpellCard(
+		var spell = TestCardFactory.MakeSpellCard(
 			"Arc Lightning",
 			_ids.Player1Id,
 			new CardEffect
@@ -454,7 +549,12 @@ public class TargetingSystemTests
 
 		var (s1, spellCard) = _state.AddObject(spell, parentId: _ids.Player1HandId);
 		var (s2, creature) = s1.AddObject(
-			MakeCreature("Bear", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -480,15 +580,25 @@ public class TargetingSystemTests
 	public void RandomTarget_HitsExactlyOneCreature()
 	{
 		var (s1, c1) = _state.AddObject(
-			MakeCreature("Bear A", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear A",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 		var (s2, c2) = s1.AddObject(
-			MakeCreature("Bear B", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear B",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		var spell = MakeSpellCard(
+		var spell = TestCardFactory.MakeSpellCard(
 			"Shock Bolt",
 			_ids.Player1Id,
 			new CardEffect
@@ -516,7 +626,7 @@ public class TargetingSystemTests
 	[Test]
 	public void RandomTarget_WithNoValidTargets_DoesNothing()
 	{
-		var spell = MakeSpellCard(
+		var spell = TestCardFactory.MakeSpellCard(
 			"Shock Bolt",
 			_ids.Player1Id,
 			new CardEffect
@@ -540,23 +650,32 @@ public class TargetingSystemTests
 	public void MultiEffectCard_EachEffectResolvesIndependently()
 	{
 		var (s1, creature) = _state.AddObject(
-			MakeCreature("Bear", power: 2, toughness: 2, ownerId: _ids.Player2Id),
+			TestCardFactory.MakeCreatureCard(
+				"Bear",
+				power: 2,
+				toughness: 2,
+				ownerId: _ids.Player2Id
+			),
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		var spell = MakeSpellCard(
+		var spell = TestCardFactory.MakeSpellCard(
 			"Split Decision",
 			_ids.Player1Id,
-			new CardEffect
-			{
-				TargetingStrategy = TargetingStrategy.SingleTarget(new IsCreatureSpecification()),
-				ActionTemplate = new DealDamageAction { Amount = 1 },
-			},
-			new CardEffect
-			{
-				TargetingStrategy = TargetingStrategy.SingleTarget(new IsPlayerSpecification()),
-				ActionTemplate = new DealDamageAction { Amount = 2 },
-			}
+			[
+				new CardEffect
+				{
+					TargetingStrategy = TargetingStrategy.SingleTarget(
+						new IsCreatureSpecification()
+					),
+					ActionTemplate = new DealDamageAction { Amount = 1 },
+				},
+				new CardEffect
+				{
+					TargetingStrategy = TargetingStrategy.SingleTarget(new IsPlayerSpecification()),
+					ActionTemplate = new DealDamageAction { Amount = 2 },
+				},
+			]
 		);
 
 		var (s2, spellCard) = s1.AddObject(spell, parentId: _ids.Player1HandId);
@@ -596,36 +715,6 @@ public class TargetingSystemTests
 			CastingPlayerId = _ids.Player1Id,
 		};
 
-	private static Card MakeCreature(string name, int power, int toughness, int ownerId) =>
-		new()
-		{
-			Name = name,
-			ManaCost = 2,
-			OwnerId = ownerId,
-			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
-				new CreatureComponent { Power = power, Toughness = toughness }
-			),
-		};
-
-	private static Card MakeSpellCard(string name, int ownerId, params CardEffect[] effects) =>
-		new()
-		{
-			Name = name,
-			ManaCost = 1,
-			OwnerId = ownerId,
-			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent { Effects = ImmutableList.Create(effects) }
-			),
-		};
-
 	private CastSpellAction MakeCastAction(int cardId, int castingPlayerId) =>
-		new()
-		{
-			CardId = cardId,
-			CastingPlayerId = castingPlayerId,
-			GameId = _ids.GameId,
-			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
-		};
+		TestCardFactory.MakeCastAction(cardId, castingPlayerId, _ids.GameId);
 }

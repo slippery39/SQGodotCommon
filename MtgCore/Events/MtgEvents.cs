@@ -65,3 +65,9 @@ public record CardDiscardedEvent : GameEvent
 	public int PlayerId { get; init; }
 	public int CardId { get; init; }
 }
+
+public record CreaturePlayedEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public int PlayerId { get; init; }
+}
