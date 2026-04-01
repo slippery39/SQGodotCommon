@@ -4,7 +4,7 @@ using MtgCore;
 namespace MtgConsole;
 
 /// <summary>
-/// Handles all console output for the game.
+/// Renders game state and events to the console.
 /// Separated from game logic — reads GameState, writes to console, nothing else.
 /// </summary>
 public static class ConsoleRenderer
@@ -12,9 +12,9 @@ public static class ConsoleRenderer
 	public static void RenderGameState(GameState state, MtgGameIds ids)
 	{
 		Console.Clear();
-		Console.WriteLine("╔═══════════════════════════════════════╗");
-		Console.WriteLine("║           MTG SANDBOX                 ║");
-		Console.WriteLine("╚═══════════════════════════════════════╝");
+		Console.WriteLine("╔══════════════════════════════════════════╗");
+		Console.WriteLine("║           MTG SANDBOX                    ║");
+		Console.WriteLine("╚══════════════════════════════════════════╝");
 		Console.WriteLine();
 
 		var opponent = state.GetPlayer(ids.Player2Id);
@@ -23,7 +23,7 @@ public static class ConsoleRenderer
 		RenderZone(state, ids.Player2GraveyardId, "Graveyard");
 		Console.WriteLine();
 
-		Console.WriteLine("  ─────────────────────────────────────");
+		Console.WriteLine("  ─────────────────────────────────────────");
 		Console.WriteLine();
 
 		var player = state.GetPlayer(ids.Player1Id);
@@ -51,6 +51,36 @@ public static class ConsoleRenderer
 			Console.WriteLine($"    [{i + 1}] {FormatCard(cards[i])}");
 	}
 
+	/// <summary>
+	/// Renders a numbered list of your creatures that could be used as attackers.
+	/// </summary>
+	public static void RenderAttackers(GameState state, IReadOnlyList<Card> creatures)
+	{
+		Console.WriteLine("  YOUR CREATURES:");
+		for (int i = 0; i < creatures.Count; i++)
+			Console.WriteLine($"    [{i + 1}] {FormatCreature(creatures[i])}");
+	}
+
+	/// <summary>
+	/// Renders a numbered list of valid attack targets (player first, then creatures).
+	/// </summary>
+	public static void RenderAttackTargets(GameState state, IReadOnlyList<int> targetIds)
+	{
+		Console.WriteLine("  VALID TARGETS:");
+		for (int i = 0; i < targetIds.Count; i++)
+		{
+			var id = targetIds[i];
+			var obj = state.GetObject(id);
+			var label = obj switch
+			{
+				MtgPlayer player => $"Player: {player.Name} (Life: {player.Life})",
+				Card card when card.HasComponent<CreatureComponent>() => FormatCreature(card),
+				_ => $"Object {id}",
+			};
+			Console.WriteLine($"    [{i + 1}] {label}");
+		}
+	}
+
 	public static void RenderTargets(
 		GameState state,
 		MtgGameIds ids,
@@ -66,7 +96,7 @@ public static class ConsoleRenderer
 			var label = obj switch
 			{
 				MtgPlayer player => $"Player: {player.Name} (Life: {player.Life})",
-				Card card when card.HasComponent<CreatureComponent>() => FormatCreatureTarget(card),
+				Card card when card.HasComponent<CreatureComponent>() => FormatCreature(card),
 				Card card => $"Card: {card.Name}",
 				_ => $"Object {id}",
 			};
@@ -106,9 +136,9 @@ public static class ConsoleRenderer
 					$"  {GetPlayerName(pge.PlayerId)} gains {pge.Amount} life",
 				PlayerLostLifeEvent ple =>
 					$"  {GetPlayerName(ple.PlayerId)} loses {ple.Amount} life",
-				CreatureDestroyedEvent cde => $"  Creature {cde.CreatureId} is destroyed",
+				CreatureDestroyedEvent cde => $"  {GetCreatureName(cde.CreatureId)} is destroyed",
 				CreatureDamagedEvent cde =>
-					$"  Creature {cde.CreatureId} takes {cde.Amount} damage",
+					$"  {GetCreatureName(cde.CreatureId)} takes {cde.Amount} damage",
 				CardDrawnEvent cde => $"  Card drawn: {cde.CardId}",
 				CardDiscardedEvent cde => $"  Card discarded: {cde.CardId}",
 				CardRevealedEvent cre => $"  Card revealed: mana cost {cre.ManaCost}",
@@ -139,16 +169,21 @@ public static class ConsoleRenderer
 	private static string FormatCard(Card card)
 	{
 		var creature = card.GetComponent<CreatureComponent>();
-		return creature != null
-			? $"{card.Name} ({creature.Power}/{creature.Toughness}) [{card.ManaCost}]"
-			: $"{card.Name} [{card.ManaCost}]";
+		return creature != null ? FormatCreature(card) : $"{card.Name} [{card.ManaCost}]";
 	}
 
-	private static string FormatCreatureTarget(Card card)
+	private static string FormatCreature(Card card)
 	{
 		var creature = card.GetComponent<CreatureComponent>()!;
-		return $"Creature: {card.Name} ({creature.Power}/{creature.Toughness})";
+		var damageStr = creature.Damage > 0 ? $" *{creature.Damage} dmg*" : "";
+		return $"{card.Name} ({creature.Power}/{creature.Toughness}){damageStr} [{card.ManaCost}]";
 	}
+
+	/// <summary>
+	/// Returns a display-friendly creature name. Used in event messages — the card may
+	/// have already moved to the graveyard by the time we read it, so we fall back to the ID.
+	/// </summary>
+	private static string GetCreatureName(int creatureId) => $"Creature #{creatureId}";
 
 	private static string GetPlayerName(int playerId) => playerId == 1 ? "You" : "Opponent";
 }
