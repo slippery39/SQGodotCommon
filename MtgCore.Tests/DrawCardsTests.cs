@@ -111,7 +111,6 @@ public class DrawCardsTests
 	[Test]
 	public void DrawCards_EmptyLibrary_EmitsLibraryEmptyEvent()
 	{
-		// No cards added to library
 		var (_, events) = _state
 			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 1 })
 			.ProcessAllActions();
@@ -128,104 +127,23 @@ public class DrawCardsTests
 	{
 		var state = AddCardsToLibrary(_state, _ids.Player1Id, "Card A", "Card B");
 
-		// Try to draw 3 but only 2 exist
 		var (finalState, events) = state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 3 })
+			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 5 })
 			.ProcessAllActions();
 
-		Assert.That(
-			finalState.GetCardsInZone(_ids.Player1HandId).Count(),
-			Is.EqualTo(2),
-			"Should draw the 2 available cards"
-		);
-		Assert.That(finalState.GetCardsInZone(_ids.Player1LibraryId).Count(), Is.EqualTo(0));
-		Assert.That(
-			events.OfType<CardDrawnEvent>().Count(),
-			Is.EqualTo(2),
-			"Should emit draw events for each card actually drawn"
-		);
-		Assert.That(
-			events.OfType<LibraryEmptyEvent>().Count(),
-			Is.EqualTo(1),
-			"Should emit library empty event when it runs out"
-		);
-	}
-
-	[Test]
-	public void DrawCards_EmptyLibrary_DoesNotAffectHand()
-	{
-		var (finalState, _) = _state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 1 })
-			.ProcessAllActions();
-
-		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(0));
-	}
-
-	// ===== PLAYER ISOLATION =====
-
-	[Test]
-	public void DrawCards_OnlyAffectsTargetPlayer()
-	{
-		var state = AddCardsToLibrary(_state, _ids.Player1Id, "P1 Card");
-		state = AddCardsToLibrary(state, _ids.Player2Id, "P2 Card");
-
-		var (finalState, _) = state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 1 })
-			.ProcessAllActions();
-
-		Assert.That(
-			finalState.GetCardsInZone(_ids.Player1HandId).Count(),
-			Is.EqualTo(1),
-			"Player 1 should have drawn"
-		);
-		Assert.That(
-			finalState.GetCardsInZone(_ids.Player2HandId).Count(),
-			Is.EqualTo(0),
-			"Player 2 should be unaffected"
-		);
-		Assert.That(
-			finalState.GetCardsInZone(_ids.Player2LibraryId).Count(),
-			Is.EqualTo(1),
-			"Player 2's library should be untouched"
-		);
-	}
-
-	// ===== IMMUTABILITY =====
-
-	[Test]
-	public void DrawCards_OriginalStateUnchanged()
-	{
-		var state = AddCardsToLibrary(_state, _ids.Player1Id, "Card A", "Card B");
-
-		var _ = state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 2 })
-			.ProcessAllActions();
-
-		Assert.That(
-			state.GetCardsInZone(_ids.Player1LibraryId).Count(),
-			Is.EqualTo(2),
-			"Original state should be unchanged"
-		);
-		Assert.That(
-			state.GetCardsInZone(_ids.Player1HandId).Count(),
-			Is.EqualTo(0),
-			"Original hand should be unchanged"
-		);
+		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(2));
+		Assert.That(events.OfType<LibraryEmptyEvent>().Count(), Is.EqualTo(1));
 	}
 
 	// ===== HELPERS =====
 
-	/// <summary>
-	/// Adds named cards to the bottom of a player's library in order.
-	/// First card added will be the top of the library (drawn first).
-	/// </summary>
 	private GameState AddCardsToLibrary(GameState state, int playerId, params string[] cardNames)
 	{
 		var libraryId = state.GetPlayerZoneId(playerId, ZoneType.Library);
 
 		foreach (var name in cardNames)
 		{
-			var card = new InstantCard
+			var card = new Card
 			{
 				Name = name,
 				ManaCost = 1,

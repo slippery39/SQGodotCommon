@@ -12,12 +12,11 @@ public static class ConsoleRenderer
 	public static void RenderGameState(GameState state, MtgGameIds ids)
 	{
 		Console.Clear();
-		Console.WriteLine("╔══════════════════════════════════════╗");
-		Console.WriteLine("║           MTG SANDBOX                ║");
-		Console.WriteLine("╚══════════════════════════════════════╝");
+		Console.WriteLine("╔═══════════════════════════════════════╗");
+		Console.WriteLine("║           MTG SANDBOX                 ║");
+		Console.WriteLine("╚═══════════════════════════════════════╝");
 		Console.WriteLine();
 
-		// Opponent
 		var opponent = state.GetPlayer(ids.Player2Id);
 		Console.WriteLine($"  OPPONENT  Life: {opponent.Life}");
 		RenderZone(state, ids.Player2BattlefieldId, "Battlefield");
@@ -27,7 +26,6 @@ public static class ConsoleRenderer
 		Console.WriteLine("  ─────────────────────────────────────");
 		Console.WriteLine();
 
-		// Player
 		var player = state.GetPlayer(ids.Player1Id);
 		var libraryCount = state.GetCardsInZone(ids.Player1LibraryId).Count();
 		Console.WriteLine($"  YOU  Life: {player.Life}  |  Library: {libraryCount} cards");
@@ -68,8 +66,7 @@ public static class ConsoleRenderer
 			var label = obj switch
 			{
 				MtgPlayer player => $"Player: {player.Name} (Life: {player.Life})",
-				CreatureCard creature =>
-					$"Creature: {creature.Name} ({creature.Power}/{creature.Toughness})",
+				Card card when card.HasComponent<CreatureComponent>() => FormatCreatureTarget(card),
 				Card card => $"Card: {card.Name}",
 				_ => $"Object {id}",
 			};
@@ -138,12 +135,19 @@ public static class ConsoleRenderer
 		Console.WriteLine($"    {label}: {string.Join(", ", cards.Select(FormatCard))}");
 	}
 
-	private static string FormatCard(Card card) =>
-		card switch
-		{
-			CreatureCard c => $"{c.Name} ({c.Power}/{c.Toughness}) [{c.ManaCost}]",
-			_ => $"{card.Name} [{card.ManaCost}]",
-		};
+	private static string FormatCard(Card card)
+	{
+		var creature = card.GetComponent<CreatureComponent>();
+		return creature != null
+			? $"{card.Name} ({creature.Power}/{creature.Toughness}) [{card.ManaCost}]"
+			: $"{card.Name} [{card.ManaCost}]";
+	}
+
+	private static string FormatCreatureTarget(Card card)
+	{
+		var creature = card.GetComponent<CreatureComponent>()!;
+		return $"Creature: {card.Name} ({creature.Power}/{creature.Toughness})";
+	}
 
 	private static string GetPlayerName(int playerId) => playerId == 1 ? "You" : "Opponent";
 }

@@ -40,9 +40,6 @@ public class CarefulStudyTests
 
 		var choice = stateAtChoice.GetPendingChoice();
 		Assert.That(choice, Is.Not.Null);
-
-		// Hand contains: Careful Study itself + 2 drawn cards = 3
-		// But Careful Study moved to graveyard on resolution, so just 2 drawn cards
 		Assert.That(
 			choice!.Options.Count,
 			Is.EqualTo(2),
@@ -58,7 +55,7 @@ public class CarefulStudyTests
 	public void CarefulStudy_ChoiceOptions_IncludeCardsAlreadyInHand()
 	{
 		var (stateWithExisting, _) = _state.AddObject(
-			new InstantCard
+			new Card
 			{
 				Name = "Existing Card",
 				ManaCost = 1,
@@ -138,7 +135,7 @@ public class CarefulStudyTests
 	public void CarefulStudy_CanKeepOneCardAndDiscardAnother()
 	{
 		var (stateWithExisting, existingCard) = _state.AddObject(
-			new InstantCard
+			new Card
 			{
 				Name = "Keep Me",
 				ManaCost = 1,
@@ -156,7 +153,6 @@ public class CarefulStudyTests
 			.Options.Where(o => o.Id != existingCard.Id)
 			.Select(o => o.Id)
 			.ToImmutableList();
-
 		var (finalState, _) = stateAtChoice.ResolveChoice(discardIds);
 
 		Assert.That(
@@ -223,13 +219,8 @@ public class CarefulStudyTests
 		var (stateAtChoice, _) = state.AddAction(MakeCastStudy()).ProcessAllActions();
 
 		var choice = stateAtChoice.GetPendingChoice()!;
-
-		Assert.That(choice, Is.Not.Null, "Choice should not be null");
-		Assert.That(
-			choice.Options.Count,
-			Is.GreaterThanOrEqualTo(2),
-			"Choice should have at least 2 options"
-		);
+		Assert.That(choice, Is.Not.Null);
+		Assert.That(choice.Options.Count, Is.GreaterThanOrEqualTo(2));
 
 		var (finalState, _) = stateAtChoice.ResolveChoice(
 			ImmutableList.Create(choice.Options[0].Id, choice.Options[1].Id)
@@ -253,9 +244,10 @@ public class CarefulStudyTests
 	private GameState AddCardsToLibrary(GameState state, params string[] cardNames)
 	{
 		var libraryId = state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Library);
+
 		foreach (var name in cardNames)
 		{
-			var card = new InstantCard
+			var card = new Card
 			{
 				Name = name,
 				ManaCost = 1,
@@ -264,58 +256,7 @@ public class CarefulStudyTests
 			};
 			state = state.AddObject(card, parentId: libraryId).GameState;
 		}
+
 		return state;
-	}
-
-	[Test]
-	public void Debug_PipelineContextHasCastingPlayerId()
-	{
-		var state = AddCardsToLibrary(_state, "Card A", "Card B");
-
-		var (stateAtChoice, _) = state.AddAction(MakeCastStudy()).ProcessAllActions();
-
-		var pipeline = stateAtChoice.ActionStack.Peek() as PipelineAction;
-		Assert.That(pipeline, Is.Not.Null, "Should have pipeline on stack");
-		Assert.That(
-			pipeline!.PipelineContext.ContainsKey(ContextKeys.CastingPlayerId),
-			Is.True,
-			"PipelineContext should contain CastingPlayerId"
-		);
-
-		var libraryCount = stateAtChoice.GetCardsInZone(_ids.Player1LibraryId).Count();
-		var handCount = stateAtChoice.GetCardsInZone(_ids.Player1HandId).Count();
-		Assert.That(libraryCount, Is.EqualTo(0), $"Library should be empty, has {libraryCount}");
-		Assert.That(handCount, Is.EqualTo(2), $"Hand should have 2 cards, has {handCount}");
-	}
-
-	[Test]
-	public void Debug_SelectCardsFromHandOptionsCount()
-	{
-		var state = AddCardsToLibrary(_state, "Card A", "Card B");
-
-		var (stateAtChoice, _) = state.AddAction(MakeCastStudy()).ProcessAllActions();
-
-		Assert.That(stateAtChoice.IsWaitingForChoice, Is.True, "Should be waiting for choice");
-
-		var pipeline = stateAtChoice.ActionStack.Peek() as PipelineAction;
-		Assert.That(pipeline, Is.Not.Null);
-
-		// Check what CastingPlayerId value is actually in context
-		var castingPlayerId = (int)pipeline!.PipelineContext[ContextKeys.CastingPlayerId];
-		Assert.That(
-			castingPlayerId,
-			Is.EqualTo(_ids.Player1Id),
-			"CastingPlayerId should match Player1"
-		);
-
-		// Check hand directly
-		var handId = stateAtChoice.GetPlayerZoneId(castingPlayerId, ZoneType.Hand);
-		var handCards = stateAtChoice.GetCardsInZone(handId).ToList();
-		Assert.That(handCards.Count, Is.EqualTo(2), "Hand should have 2 cards");
-
-		// Check what GetPendingChoice actually returns
-		var choice = stateAtChoice.GetPendingChoice();
-		Assert.That(choice, Is.Not.Null);
-		Assert.That(choice!.Options.Count, Is.EqualTo(2), "Options should have 2 entries");
 	}
 }

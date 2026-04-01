@@ -26,7 +26,6 @@ public class ConsoleGameLoop
 
 		while (true)
 		{
-			// If waiting for a choice, handle it immediately
 			if (_state.IsWaitingForChoice)
 			{
 				HandleChoice();
@@ -65,13 +64,19 @@ public class ConsoleGameLoop
 
 		var card = handCards[cardIndex - 1];
 		var cardObj = (Card)_state.GetObject(card.Id);
+		var spellComponent = cardObj.GetComponent<SpellComponent>();
 
-		// Check if any effects need user-selected targets
+		if (spellComponent == null)
+		{
+			ConsoleRenderer.RenderMessage("That card is not a spell and cannot be cast.");
+			return;
+		}
+
 		var targetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
-		for (int i = 0; i < cardObj.Effects.Count; i++)
+		for (int i = 0; i < spellComponent.Effects.Count; i++)
 		{
-			var effect = cardObj.Effects[i];
+			var effect = spellComponent.Effects[i];
 			if (!effect.TargetingStrategy.RequiresUserSelection)
 				continue;
 
@@ -103,11 +108,11 @@ public class ConsoleGameLoop
 			);
 
 			if (chosen == null)
-				return; // Cancelled
+				return;
+
 			targetIds = targetIds.Add(i, chosen);
 		}
 
-		// Try to cast
 		var castAction = new CastSpellAction
 		{
 			CardId = card.Id,
@@ -182,7 +187,6 @@ public class ConsoleGameLoop
 
 		if (choice.MinChoices == choice.MaxChoices && choice.MinChoices == 1)
 		{
-			// Single selection — simple input
 			Console.Write("  > ");
 			var input = Console.ReadLine()?.Trim() ?? "";
 
@@ -197,7 +201,6 @@ public class ConsoleGameLoop
 		}
 		else
 		{
-			// Multi selection — comma separated
 			Console.WriteLine($"  Enter comma-separated numbers (e.g. 1,3):");
 			Console.Write("  > ");
 			var input = Console.ReadLine()?.Trim() ?? "";

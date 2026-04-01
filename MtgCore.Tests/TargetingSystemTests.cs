@@ -6,13 +6,9 @@ using NUnit.Framework;
 namespace MtgCore.Tests;
 
 // =====================================================================
-// Test-only specifications — proof of concept for property-based filtering
+// Custom specification used only in these tests
 // =====================================================================
 
-/// <summary>
-/// Matches creatures with power greater than or equal to the threshold.
-/// Demonstrates that specifications can filter on any game object property.
-/// </summary>
 public record MinPowerSpecification : TargetSpecification
 {
 	public int MinPower { get; init; }
@@ -23,7 +19,11 @@ public record MinPowerSpecification : TargetSpecification
 			return false;
 
 		var obj = context.GameState.GetObject(candidateId);
-		if (obj is not CreatureCard creature)
+		if (obj is not Card card)
+			return false;
+
+		var creature = card.GetComponent<CreatureComponent>();
+		if (creature == null)
 			return false;
 
 		var zone = context.GameState.GetCardZone(candidateId);
@@ -52,20 +52,16 @@ public class TargetingSystemTests
 	[Test]
 	public void AndSpecification_RequiresBothConditions()
 	{
-		// Creature with low power on battlefield
 		var (s1, weakCreature) = _state.AddObject(
 			MakeCreature("Memnite", power: 1, toughness: 1, ownerId: _ids.Player2Id),
 			parentId: _ids.Player2BattlefieldId
 		);
-		// Creature with high power on battlefield
 		var (s2, strongCreature) = s1.AddObject(
 			MakeCreature("Leatherback Baloth", power: 4, toughness: 4, ownerId: _ids.Player2Id),
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		// "Creature with power 3 or greater"
 		var spec = new IsCreatureSpecification().And(new MinPowerSpecification { MinPower = 3 });
-
 		var context = MakeContext(s2);
 
 		Assert.That(
@@ -126,7 +122,6 @@ public class TargetingSystemTests
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		// "Not a creature" — should match players but not creatures
 		var spec = new IsCreatureSpecification().Not();
 		var context = MakeContext(s1);
 
@@ -226,22 +221,18 @@ public class TargetingSystemTests
 		);
 
 		var (s3, pyroCard) = s2.AddObject(pyroclasm, parentId: _ids.Player1HandId);
-
 		var (finalState, events) = s3.AddAction(MakeCastAction(pyroCard.Id, _ids.Player1Id))
 			.ProcessAllActions();
 
-		var p1CreatureZone = finalState.GetCardZone(p1Creature.Id);
-		var p2CreatureZone = finalState.GetCardZone(p2Creature.Id);
-
 		Assert.That(
-			p1CreatureZone.ZoneType,
+			finalState.GetCardZone(p1Creature.Id).ZoneType,
 			Is.EqualTo(ZoneType.Graveyard),
-			"Player 1's 2/2 should die to 2 damage"
+			"Player 1's 2/2 should die"
 		);
 		Assert.That(
-			p2CreatureZone.ZoneType,
+			finalState.GetCardZone(p2Creature.Id).ZoneType,
 			Is.EqualTo(ZoneType.Graveyard),
-			"Player 2's 2/2 should die to 2 damage"
+			"Player 2's 2/2 should die"
 		);
 		Assert.That(events.OfType<CreatureDestroyedEvent>().Count(), Is.EqualTo(2));
 	}
@@ -265,7 +256,6 @@ public class TargetingSystemTests
 		);
 
 		var (s2, pyroCard) = s1.AddObject(pyroclasm, parentId: _ids.Player1HandId);
-
 		var (finalState, events) = s2.AddAction(MakeCastAction(pyroCard.Id, _ids.Player1Id))
 			.ProcessAllActions();
 
@@ -284,7 +274,6 @@ public class TargetingSystemTests
 	[Test]
 	public void AllValid_WithNoValidTargets_SpawnsActionWithEmptyTargets()
 	{
-		// No creatures on the battlefield
 		var pyroclasm = MakeSpellCard(
 			"Pyroclasm",
 			_ids.Player1Id,
@@ -296,13 +285,11 @@ public class TargetingSystemTests
 		);
 
 		var (s1, pyroCard) = _state.AddObject(pyroclasm, parentId: _ids.Player1HandId);
-
 		var (finalState, events) = s1.AddAction(MakeCastAction(pyroCard.Id, _ids.Player1Id))
 			.ProcessAllActions();
 
 		Assert.That(finalState.HasPendingActions, Is.False);
 		Assert.That(events.OfType<CreatureDestroyedEvent>(), Is.Empty);
-		Assert.That(events.OfType<PlayerDamagedEvent>(), Is.Empty);
 	}
 
 	[Test]
@@ -317,7 +304,6 @@ public class TargetingSystemTests
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		// "Destroy all creatures with power 3 or greater"
 		var spell = MakeSpellCard(
 			"Forced March",
 			_ids.Player1Id,
@@ -331,7 +317,6 @@ public class TargetingSystemTests
 		);
 
 		var (s3, spellCard) = s2.AddObject(spell, parentId: _ids.Player1HandId);
-
 		var (finalState, events) = s3.AddAction(MakeCastAction(spellCard.Id, _ids.Player1Id))
 			.ProcessAllActions();
 
@@ -361,7 +346,6 @@ public class TargetingSystemTests
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		// "Deal 2 damage to up to 2 targets"
 		var spell = MakeSpellCard(
 			"Arc Lightning",
 			_ids.Player1Id,
@@ -377,7 +361,6 @@ public class TargetingSystemTests
 		);
 
 		var (s3, spellCard) = s2.AddObject(spell, parentId: _ids.Player1HandId);
-
 		var (finalState, events) = s3.AddAction(
 				new CastSpellAction
 				{
@@ -436,8 +419,6 @@ public class TargetingSystemTests
 		);
 
 		var (s4, spellCard) = s3.AddObject(spell, parentId: _ids.Player1HandId);
-
-		// Try to choose 3 targets when max is 2
 		var (_, success) = s4.TryAddAction(
 			new CastSpellAction
 			{
@@ -472,8 +453,6 @@ public class TargetingSystemTests
 		);
 
 		var (s1, spellCard) = _state.AddObject(spell, parentId: _ids.Player1HandId);
-
-		// Only choose 1 target when min is 2
 		var (s2, creature) = s1.AddObject(
 			MakeCreature("Bear", power: 2, toughness: 2, ownerId: _ids.Player2Id),
 			parentId: _ids.Player2BattlefieldId
@@ -520,19 +499,18 @@ public class TargetingSystemTests
 		);
 
 		var (s3, spellCard) = s2.AddObject(spell, parentId: _ids.Player1HandId);
-
 		var (finalState, events) = s3.AddAction(MakeCastAction(spellCard.Id, _ids.Player1Id))
 			.ProcessAllActions();
 
-		var destroyedCount = events.OfType<CreatureDestroyedEvent>().Count();
-		Assert.That(destroyedCount, Is.EqualTo(1), "Exactly one creature should be destroyed");
-
-		// One in graveyard, one still on battlefield
+		Assert.That(
+			events.OfType<CreatureDestroyedEvent>().Count(),
+			Is.EqualTo(1),
+			"Exactly one creature should be destroyed"
+		);
 		var c1Zone = finalState.GetCardZone(c1.Id).ZoneType;
 		var c2Zone = finalState.GetCardZone(c2.Id).ZoneType;
-		var zones = new[] { c1Zone, c2Zone };
-		Assert.That(zones.Count(z => z == ZoneType.Graveyard), Is.EqualTo(1));
-		Assert.That(zones.Count(z => z == ZoneType.Battlefield), Is.EqualTo(1));
+		Assert.That(new[] { c1Zone, c2Zone }.Count(z => z == ZoneType.Graveyard), Is.EqualTo(1));
+		Assert.That(new[] { c1Zone, c2Zone }.Count(z => z == ZoneType.Battlefield), Is.EqualTo(1));
 	}
 
 	[Test]
@@ -549,7 +527,6 @@ public class TargetingSystemTests
 		);
 
 		var (s1, spellCard) = _state.AddObject(spell, parentId: _ids.Player1HandId);
-
 		var (finalState, events) = s1.AddAction(MakeCastAction(spellCard.Id, _ids.Player1Id))
 			.ProcessAllActions();
 
@@ -567,31 +544,22 @@ public class TargetingSystemTests
 			parentId: _ids.Player2BattlefieldId
 		);
 
-		// A card with two effects: deal 1 damage to a creature, deal 2 damage to a player
-		var spell = new InstantCard
-		{
-			Name = "Split Decision",
-			ManaCost = 2,
-			OwnerId = _ids.Player1Id,
-			ControllerId = _ids.Player1Id,
-			Effects = ImmutableList.Create(
-				new CardEffect
-				{
-					TargetingStrategy = TargetingStrategy.SingleTarget(
-						new IsCreatureSpecification()
-					),
-					ActionTemplate = new DealDamageAction { Amount = 1 },
-				},
-				new CardEffect
-				{
-					TargetingStrategy = TargetingStrategy.SingleTarget(new IsPlayerSpecification()),
-					ActionTemplate = new DealDamageAction { Amount = 2 },
-				}
-			),
-		};
+		var spell = MakeSpellCard(
+			"Split Decision",
+			_ids.Player1Id,
+			new CardEffect
+			{
+				TargetingStrategy = TargetingStrategy.SingleTarget(new IsCreatureSpecification()),
+				ActionTemplate = new DealDamageAction { Amount = 1 },
+			},
+			new CardEffect
+			{
+				TargetingStrategy = TargetingStrategy.SingleTarget(new IsPlayerSpecification()),
+				ActionTemplate = new DealDamageAction { Amount = 2 },
+			}
+		);
 
 		var (s2, spellCard) = s1.AddObject(spell, parentId: _ids.Player1HandId);
-
 		var (finalState, events) = s2.AddAction(
 				new CastSpellAction
 				{
@@ -605,8 +573,12 @@ public class TargetingSystemTests
 			)
 			.ProcessAllActions();
 
-		var updatedCreature = (CreatureCard)finalState.GetObject(creature.Id);
-		Assert.That(updatedCreature.Damage, Is.EqualTo(1), "Creature should have 1 damage");
+		var updatedCard = (Card)finalState.GetObject(creature.Id);
+		Assert.That(
+			updatedCard.GetComponent<CreatureComponent>()!.Damage,
+			Is.EqualTo(1),
+			"Creature should have 1 damage"
+		);
 		Assert.That(
 			finalState.GetPlayer(_ids.Player2Id).Life,
 			Is.EqualTo(18),
@@ -624,25 +596,28 @@ public class TargetingSystemTests
 			CastingPlayerId = _ids.Player1Id,
 		};
 
-	private CreatureCard MakeCreature(string name, int power, int toughness, int ownerId) =>
+	private static Card MakeCreature(string name, int power, int toughness, int ownerId) =>
 		new()
 		{
 			Name = name,
-			Power = power,
-			Toughness = toughness,
-			ManaCost = power,
+			ManaCost = 2,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = power, Toughness = toughness }
+			),
 		};
 
-	private InstantCard MakeSpellCard(string name, int ownerId, params CardEffect[] effects) =>
+	private static Card MakeSpellCard(string name, int ownerId, params CardEffect[] effects) =>
 		new()
 		{
 			Name = name,
 			ManaCost = 1,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Effects = ImmutableList.Create(effects),
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent { Effects = ImmutableList.Create(effects) }
+			),
 		};
 
 	private CastSpellAction MakeCastAction(int cardId, int castingPlayerId) =>

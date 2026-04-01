@@ -65,7 +65,6 @@ public class LightningHelixTests
 	{
 		var (finalState, _) = _state.AddAction(MakeCastHelixAt(_ids.Player2Id)).ProcessAllActions();
 
-		// Caster gains, target loses
 		Assert.That(
 			finalState.GetPlayer(_ids.Player1Id).Life,
 			Is.EqualTo(23),
@@ -82,15 +81,7 @@ public class LightningHelixTests
 	public void LightningHelix_TargetingCreature_DamagesCreatureAndCasterGainsLife()
 	{
 		var (stateWithCreature, creature) = _state.AddObject(
-			new CreatureCard
-			{
-				Name = "Hill Giant",
-				Power = 3,
-				Toughness = 4,
-				ManaCost = 4,
-				OwnerId = _ids.Player2Id,
-				ControllerId = _ids.Player2Id,
-			},
+			MakeCreature("Hill Giant", power: 3, toughness: 4, ownerId: _ids.Player2Id),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -109,12 +100,9 @@ public class LightningHelixTests
 			)
 			.ProcessAllActions();
 
-		// Creature takes damage but survives (4 toughness vs 3 damage)
-		var updatedCreature = (CreatureCard)finalState.GetObject(creature.Id);
-		Assert.That(updatedCreature.Damage, Is.EqualTo(3));
+		var updatedCard = (Card)finalState.GetObject(creature.Id);
+		Assert.That(updatedCard.GetComponent<CreatureComponent>()!.Damage, Is.EqualTo(3));
 		Assert.That(finalState.GetCardZone(creature.Id).ZoneType, Is.EqualTo(ZoneType.Battlefield));
-
-		// Caster still gains life regardless of what the damage hits
 		Assert.That(finalState.GetPlayer(_ids.Player1Id).Life, Is.EqualTo(23));
 		Assert.That(events.OfType<PlayerGainedLifeEvent>().Single().Amount, Is.EqualTo(3));
 	}
@@ -147,6 +135,18 @@ public class LightningHelixTests
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 				0,
 				ImmutableList.Create(targetId)
+			),
+		};
+
+	private static Card MakeCreature(string name, int power, int toughness, int ownerId) =>
+		new()
+		{
+			Name = name,
+			ManaCost = 2,
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = power, Toughness = toughness }
 			),
 		};
 }

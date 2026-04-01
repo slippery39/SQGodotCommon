@@ -52,15 +52,7 @@ public class LightningBoltTests
 	public void IsCreatureSpecification_MatchesCreatureOnBattlefield()
 	{
 		var (stateWithCreature, creature) = _state.AddObject(
-			new CreatureCard
-			{
-				Name = "Grizzly Bears",
-				Power = 2,
-				Toughness = 2,
-				ManaCost = 2,
-				OwnerId = _ids.Player2Id,
-				ControllerId = _ids.Player2Id,
-			},
+			MakeCreature("Grizzly Bears", power: 2, toughness: 2, ownerId: _ids.Player2Id),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -74,15 +66,7 @@ public class LightningBoltTests
 	public void IsCreatureSpecification_DoesNotMatchCreatureInHand()
 	{
 		var (stateWithCreature, creature) = _state.AddObject(
-			new CreatureCard
-			{
-				Name = "Grizzly Bears",
-				Power = 2,
-				Toughness = 2,
-				ManaCost = 2,
-				OwnerId = _ids.Player2Id,
-				ControllerId = _ids.Player2Id,
-			},
+			MakeCreature("Grizzly Bears", power: 2, toughness: 2, ownerId: _ids.Player2Id),
 			parentId: _ids.Player2HandId
 		);
 
@@ -96,15 +80,7 @@ public class LightningBoltTests
 	public void OrSpecification_MatchesPlayerOrCreature()
 	{
 		var (stateWithCreature, creature) = _state.AddObject(
-			new CreatureCard
-			{
-				Name = "Grizzly Bears",
-				Power = 2,
-				Toughness = 2,
-				ManaCost = 2,
-				OwnerId = _ids.Player2Id,
-				ControllerId = _ids.Player2Id,
-			},
+			MakeCreature("Grizzly Bears", power: 2, toughness: 2, ownerId: _ids.Player2Id),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -224,15 +200,7 @@ public class LightningBoltTests
 	public void LightningBolt_TargetingCreature_DestroysItIfLethal()
 	{
 		var (stateWithCreature, creature) = _state.AddObject(
-			new CreatureCard
-			{
-				Name = "Grizzly Bears",
-				Power = 2,
-				Toughness = 2,
-				ManaCost = 2,
-				OwnerId = _ids.Player2Id,
-				ControllerId = _ids.Player2Id,
-			},
+			MakeCreature("Grizzly Bears", power: 2, toughness: 2, ownerId: _ids.Player2Id),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -263,15 +231,7 @@ public class LightningBoltTests
 	public void LightningBolt_TargetingCreature_DoesNotDestroyIfTough()
 	{
 		var (stateWithCreature, creature) = _state.AddObject(
-			new CreatureCard
-			{
-				Name = "Hill Giant",
-				Power = 3,
-				Toughness = 4,
-				ManaCost = 4,
-				OwnerId = _ids.Player2Id,
-				ControllerId = _ids.Player2Id,
-			},
+			MakeCreature("Hill Giant", power: 3, toughness: 4, ownerId: _ids.Player2Id),
 			parentId: _ids.Player2BattlefieldId
 		);
 
@@ -300,7 +260,6 @@ public class LightningBoltTests
 	public void LightningBolt_NoActionsRemainAfterResolution()
 	{
 		var (finalState, _) = _state.AddAction(MakeCastBoltAt(_ids.Player2Id)).ProcessAllActions();
-
 		Assert.That(finalState.HasPendingActions, Is.False);
 	}
 
@@ -323,6 +282,18 @@ public class LightningBoltTests
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 				0,
 				ImmutableList.Create(targetId)
+			),
+		};
+
+	private static Card MakeCreature(string name, int power, int toughness, int ownerId) =>
+		new()
+		{
+			Name = name,
+			ManaCost = 2,
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = power, Toughness = toughness }
 			),
 		};
 }

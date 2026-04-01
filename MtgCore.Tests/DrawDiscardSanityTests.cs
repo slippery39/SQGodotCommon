@@ -17,39 +17,43 @@ public class DrawDiscardSanityTests
 	{
 		(_state, _ids) = MtgGameFactory.Create();
 
-		// A "Draw 1, Discard 1" card — same pipeline as Careful Study but with Amount = 1
-		var drawDiscard = new InstantCard
+		var drawDiscard = new Card
 		{
 			Name = "Faithless Looting (simplified)",
 			ManaCost = 1,
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
-			Effects = ImmutableList.Create(
-				new CardEffect
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
 				{
-					TargetingStrategy = TargetingStrategy.NoTarget(),
-					ActionTemplate = new PipelineAction
-					{
-						Steps = ImmutableList.Create<GameAction>(
-							new DrawCardsAction
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
 							{
-								Amount = 1,
-								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								Steps = ImmutableList.Create<GameAction>(
+									new DrawCardsAction
+									{
+										Amount = 1,
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new SelectCardsFromHandAction
+									{
+										Prompt = "Choose 1 card to discard",
+										MinChoices = 1,
+										MaxChoices = 1,
+										OutputKey = ContextKeys.SelectedCardIds,
+									},
+									new DiscardCardsAction
+									{
+										CardIdsContextKey = ContextKeys.SelectedCardIds,
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									}
+								),
 							},
-							new SelectCardsFromHandAction
-							{
-								Prompt = "Choose 1 card to discard",
-								MinChoices = 1,
-								MaxChoices = 1,
-								OutputKey = ContextKeys.SelectedCardIds,
-							},
-							new DiscardCardsAction
-							{
-								CardIdsContextKey = ContextKeys.SelectedCardIds,
-								PlayerIdContextKey = ContextKeys.CastingPlayerId,
-							}
-						),
-					},
+						}
+					),
 				}
 			),
 		};
@@ -62,36 +66,23 @@ public class DrawDiscardSanityTests
 	[Test]
 	public void DrawOneDiscardOne_DrawsOneCard()
 	{
-		var libraryCard = new InstantCard
-		{
-			Name = "Library Card",
-			ManaCost = 1,
-			OwnerId = _ids.Player1Id,
-			ControllerId = _ids.Player1Id,
-		};
-		var (stateWithCard, _) = _state.AddObject(libraryCard, parentId: _ids.Player1LibraryId);
+		var (stateWithCard, _) = _state.AddObject(
+			MakeLibraryCard(),
+			parentId: _ids.Player1LibraryId
+		);
 
 		var (stateAtChoice, events) = stateWithCard.AddAction(MakeCast()).ProcessAllActions();
 
 		Assert.That(stateAtChoice.IsWaitingForChoice, Is.True);
 		Assert.That(events.OfType<CardDrawnEvent>().Count(), Is.EqualTo(1));
-
-		// Hand should have the drawn card (draw-discard spell itself went to graveyard on cast)
 		Assert.That(stateAtChoice.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(1));
 	}
 
 	[Test]
 	public void DrawOneDiscardOne_ChoiceOffersSingleCard()
 	{
-		var libraryCard = new InstantCard
-		{
-			Name = "Library Card",
-			ManaCost = 1,
-			OwnerId = _ids.Player1Id,
-			ControllerId = _ids.Player1Id,
-		};
 		var (stateWithCard, drawnCard) = _state.AddObject(
-			libraryCard,
+			MakeLibraryCard(),
 			parentId: _ids.Player1LibraryId
 		);
 
@@ -106,15 +97,8 @@ public class DrawDiscardSanityTests
 	[Test]
 	public void DrawOneDiscardOne_AfterChoice_CardMovesToGraveyard()
 	{
-		var libraryCard = new InstantCard
-		{
-			Name = "Library Card",
-			ManaCost = 1,
-			OwnerId = _ids.Player1Id,
-			ControllerId = _ids.Player1Id,
-		};
 		var (stateWithCard, drawnCard) = _state.AddObject(
-			libraryCard,
+			MakeLibraryCard(),
 			parentId: _ids.Player1LibraryId
 		);
 
@@ -136,19 +120,17 @@ public class DrawDiscardSanityTests
 	[Test]
 	public void DrawOneDiscardOne_HandEmptyAfterDiscard()
 	{
-		var libraryCard = new InstantCard
-		{
-			Name = "Library Card",
-			ManaCost = 1,
-			OwnerId = _ids.Player1Id,
-			ControllerId = _ids.Player1Id,
-		};
-		var (stateWithCard, _) = _state.AddObject(libraryCard, parentId: _ids.Player1LibraryId);
+		var (stateWithCard, _) = _state.AddObject(
+			MakeLibraryCard(),
+			parentId: _ids.Player1LibraryId
+		);
 
 		var (stateAtChoice, _) = stateWithCard.AddAction(MakeCast()).ProcessAllActions();
 
 		var choice = stateAtChoice.GetPendingChoice()!;
-		var (finalState, _) = stateAtChoice.ResolveChoice([choice.Options[0].Id]);
+		var (finalState, _) = stateAtChoice.ResolveChoice(
+			ImmutableList.Create(choice.Options[0].Id)
+		);
 
 		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(0));
 		Assert.That(finalState.HasPendingActions, Is.False);
@@ -163,5 +145,14 @@ public class DrawDiscardSanityTests
 			CastingPlayerId = _ids.Player1Id,
 			GameId = _ids.GameId,
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
+		};
+
+	private Card MakeLibraryCard() =>
+		new()
+		{
+			Name = "Library Card",
+			ManaCost = 1,
+			OwnerId = _ids.Player1Id,
+			ControllerId = _ids.Player1Id,
 		};
 }

@@ -54,7 +54,7 @@ var libraryCards = new[]
 
 foreach (var name in libraryCards)
 {
-	var card = new InstantCard
+	var card = new Card
 	{
 		Name = name,
 		ManaCost = libraryCards.ToList().IndexOf(name) + 1,

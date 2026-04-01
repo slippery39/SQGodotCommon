@@ -20,7 +20,6 @@ public class TellingTimeTests
 	{
 		(_state, _ids) = MtgGameFactory.Create();
 
-		// Add Telling Time to hand
 		var tellingTime = CardLibrary.TellingTime() with
 		{
 			OwnerId = _ids.Player1Id,
@@ -29,7 +28,6 @@ public class TellingTimeTests
 		var (s1, addedCard) = _state.AddObject(tellingTime, parentId: _ids.Player1HandId);
 		_cardId = addedCard.Id;
 
-		// Add 3 cards to library (top to bottom: Top, Mid, Bot)
 		var (s2, topCard) = s1.AddObject(MakeCard("Top Card", 1), parentId: _ids.Player1LibraryId);
 		var (s3, midCard) = s2.AddObject(MakeCard("Mid Card", 2), parentId: _ids.Player1LibraryId);
 		var (s4, botCard) = s3.AddObject(MakeCard("Bot Card", 3), parentId: _ids.Player1LibraryId);
@@ -62,7 +60,6 @@ public class TellingTimeTests
 	{
 		var (stateAtChoice, _) = _state.AddAction(MakeCast()).ProcessAllActions();
 
-		// Cards should not have moved yet
 		Assert.That(stateAtChoice.GetCardsInZone(_ids.Player1LibraryId).Count(), Is.EqualTo(3));
 		Assert.That(stateAtChoice.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(0));
 	}
@@ -74,7 +71,6 @@ public class TellingTimeTests
 	{
 		var (stateAtFirstChoice, _) = _state.AddAction(MakeCast()).ProcessAllActions();
 
-		// Choose top card for hand
 		var (stateAtSecondChoice, _) = stateAtFirstChoice.ResolveChoice(
 			ImmutableList.Create(_topCardId)
 		);
@@ -162,12 +158,10 @@ public class TellingTimeTests
 	[Test]
 	public void TellingTime_FullFlow_DifferentChoices_CorrectOutcome()
 	{
-		// Choose mid for hand, bot for top — top card goes to bottom
 		var (finalState, _) = ResolveFullFlow(handChoice: _midCardId, topChoice: _botCardId);
 
-		var libraryIds = finalState.GetChildrenIds(_ids.Player1LibraryId).ToList();
-
 		Assert.That(finalState.GetCardZone(_midCardId).ZoneType, Is.EqualTo(ZoneType.Hand));
+		var libraryIds = finalState.GetChildrenIds(_ids.Player1LibraryId).ToList();
 		Assert.That(libraryIds[0], Is.EqualTo(_botCardId), "Bot should be on top");
 		Assert.That(libraryIds[^1], Is.EqualTo(_topCardId), "Top should be on bottom");
 	}
@@ -202,12 +196,9 @@ public class TellingTimeTests
 		Assert.That(finalState.GetCardsInZone(_ids.Player2HandId).Count(), Is.EqualTo(0));
 	}
 
-	// ===== FEWER THAN 3 CARDS =====
-
 	[Test]
 	public void TellingTime_WithOnlyOneCardInLibrary_OffersOneOption()
 	{
-		// Remove mid and bot cards, leave only top
 		var state = _state
 			.MoveObject(_midCardId, _ids.Player1GraveyardId)
 			.MoveObject(_botCardId, _ids.Player1GraveyardId);
@@ -221,19 +212,13 @@ public class TellingTimeTests
 	[Test]
 	public void TellingTime_MoveToHand_UsesCastingPlayerIdFromContext()
 	{
-		// This test specifically verifies that MoveCardToHandAction reads
-		// CastingPlayerId from pipeline context rather than relying on a
-		// hardcoded PlayerId — the bug that caused the console to crash.
 		var (stateAtFirstChoice, _) = _state.AddAction(MakeCast()).ProcessAllActions();
 
-		// Resolve choice — this triggers MoveCardToHandAction
-		// If PlayerId is not read from context, GetPlayerZoneId(0, Hand) throws
 		Assert.DoesNotThrow(() =>
 		{
 			var (stateAfter, _) = stateAtFirstChoice.ResolveChoice(
 				ImmutableList.Create(_topCardId)
 			);
-			// Card should be in hand — not just "no exception", but correct result
 			Assert.That(stateAfter.GetCardZone(_topCardId).ZoneType, Is.EqualTo(ZoneType.Hand));
 		});
 	}
@@ -252,15 +237,13 @@ public class TellingTimeTests
 	private (GameState, ImmutableList<GameEvent>) ResolveFullFlow(int handChoice, int topChoice)
 	{
 		var (stateAtFirstChoice, _) = _state.AddAction(MakeCast()).ProcessAllActions();
-
 		var (stateAtSecondChoice, _) = stateAtFirstChoice.ResolveChoice(
 			ImmutableList.Create(handChoice)
 		);
-
 		return stateAtSecondChoice.ResolveChoice(ImmutableList.Create(topChoice));
 	}
 
-	private InstantCard MakeCard(string name, int manaCost) =>
+	private Card MakeCard(string name, int manaCost) =>
 		new()
 		{
 			Name = name,
