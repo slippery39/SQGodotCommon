@@ -6,6 +6,9 @@ namespace MtgCore;
 /// <summary>
 /// Resolves a spell that is currently on the stack.
 ///
+/// Reads effects from the card's SpellComponent. If the card has no
+/// SpellComponent, the action does nothing beyond moving it to the graveyard.
+///
 /// For each CardEffect, resolves targets based on SelectionMode then spawns
 /// the action template. If the template is a PipelineAction, CastingPlayerId
 /// is seeded into its initial context so inner steps can read it via GetInput.
@@ -25,39 +28,41 @@ public record ResolveSpellAction : GameAction
 	{
 		var card = (Card)gameState.GetObject(CardId);
 		var graveyardId = gameState.GetPlayerZoneId(CastingPlayerId, ZoneType.Graveyard);
-
-		var context = new TargetingContext
-		{
-			GameState = gameState,
-			SourceCardId = CardId,
-			CastingPlayerId = CastingPlayerId,
-		};
+		var spellComponent = card.GetComponent<SpellComponent>();
 
 		var spawnedActions = ImmutableList<GameAction>.Empty;
 
-		for (int i = 0; i < card.Effects.Count; i++)
+		if (spellComponent != null)
 		{
-			var effect = card.Effects[i];
-			var resolvedTargets = ResolveTargets(effect, i, context);
-
-			GameAction action = effect.ActionTemplate is ITargetedAction targeted
-				? targeted.WithTargets(resolvedTargets)
-				: effect.ActionTemplate;
-
-			// Seed CastingPlayerId into pipeline context so inner steps
-			// can read it without needing it hardcoded at card definition time
-			if (action is PipelineAction pipeline)
+			var context = new TargetingContext
 			{
-				action = pipeline with
-				{
-					PipelineContext = pipeline.PipelineContext.SetItem(
-						ContextKeys.CastingPlayerId,
-						CastingPlayerId
-					),
-				};
-			}
+				GameState = gameState,
+				SourceCardId = CardId,
+				CastingPlayerId = CastingPlayerId,
+			};
 
-			spawnedActions = spawnedActions.Add(action);
+			for (int i = 0; i < spellComponent.Effects.Count; i++)
+			{
+				var effect = spellComponent.Effects[i];
+				var resolvedTargets = ResolveTargets(effect, i, context);
+
+				GameAction action = effect.ActionTemplate is ITargetedAction targeted
+					? targeted.WithTargets(resolvedTargets)
+					: effect.ActionTemplate;
+
+				if (action is PipelineAction pipeline)
+				{
+					action = pipeline with
+					{
+						PipelineContext = pipeline.PipelineContext.SetItem(
+							ContextKeys.CastingPlayerId,
+							CastingPlayerId
+						),
+					};
+				}
+
+				spawnedActions = spawnedActions.Add(action);
+			}
 		}
 
 		var stateWithCardInGraveyard = gameState.MoveObject(CardId, graveyardId);
