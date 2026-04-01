@@ -33,7 +33,11 @@ public record DealDamageAction : GameAction, ITargetedAction
 			var (newState, newEvents) = obj switch
 			{
 				MtgPlayer player => ApplyToPlayer(state, player, Amount),
-				CreatureCard creature => ApplyToCreature(state, creature, Amount),
+				Card card when card.HasComponent<CreatureComponent>() => ApplyToCreature(
+					state,
+					card,
+					Amount
+				),
 				_ => (state, ImmutableList<GameEvent>.Empty),
 			};
 
@@ -42,6 +46,36 @@ public record DealDamageAction : GameAction, ITargetedAction
 		}
 
 		return new ActionResult(state) { Events = events };
+	}
+
+	private static (GameState, ImmutableList<GameEvent>) ApplyToCreature(
+		GameState state,
+		Card card,
+		int amount
+	)
+	{
+		var creature = card.GetComponent<CreatureComponent>()!;
+		var newDamage = creature.Damage + amount;
+		var events = ImmutableList<GameEvent>.Empty;
+
+		if (newDamage >= creature.Toughness)
+		{
+			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
+			var updatedCreature = creature with { Damage = newDamage };
+			var updatedCard = card.WithComponentReplaced(updatedCreature);
+			state = state.UpdateObject(card.Id, updatedCard);
+			state = state.MoveObject(card.Id, graveyardId);
+			events = events.Add(new CreatureDestroyedEvent { CreatureId = card.Id });
+		}
+		else
+		{
+			var updatedCreature = creature with { Damage = newDamage };
+			var updatedCard = card.WithComponentReplaced(updatedCreature);
+			state = state.UpdateObject(card.Id, updatedCard);
+			events = events.Add(new CreatureDamagedEvent { CreatureId = card.Id, Amount = amount });
+		}
+
+		return (state, events);
 	}
 
 	private static (GameState, ImmutableList<GameEvent>) ApplyToPlayer(
@@ -56,36 +90,6 @@ public record DealDamageAction : GameAction, ITargetedAction
 			new PlayerDamagedEvent { PlayerId = player.Id, Amount = amount }
 		);
 		return (newState, events);
-	}
-
-	private static (GameState, ImmutableList<GameEvent>) ApplyToCreature(
-		GameState state,
-		CreatureCard creature,
-		int amount
-	)
-	{
-		var newDamage = creature.Damage + amount;
-		var events = ImmutableList<GameEvent>.Empty;
-
-		if (newDamage >= creature.Toughness)
-		{
-			// Placeholder: state-based effects will handle this properly later
-			var graveyardId = state.GetPlayerZoneId(creature.OwnerId, ZoneType.Graveyard);
-			var destroyed = creature with { Damage = newDamage };
-			state = state.UpdateObject(creature.Id, destroyed);
-			state = state.MoveObject(creature.Id, graveyardId);
-			events = events.Add(new CreatureDestroyedEvent { CreatureId = creature.Id });
-		}
-		else
-		{
-			var damaged = creature with { Damage = newDamage };
-			state = state.UpdateObject(creature.Id, damaged);
-			events = events.Add(
-				new CreatureDamagedEvent { CreatureId = creature.Id, Amount = amount }
-			);
-		}
-
-		return (state, events);
 	}
 
 	public override ValidationResult ValidateResolve(GameState gameState)

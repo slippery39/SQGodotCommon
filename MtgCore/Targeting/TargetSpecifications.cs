@@ -18,7 +18,7 @@ public record IsPlayerSpecification : TargetSpecification
 }
 
 /// <summary>
-/// Matches any creature card currently on any battlefield.
+/// Matches any card with a CreatureComponent currently on any battlefield.
 /// </summary>
 public record IsCreatureSpecification : TargetSpecification
 {
@@ -28,10 +28,12 @@ public record IsCreatureSpecification : TargetSpecification
 			return false;
 
 		var obj = context.GameState.GetObject(candidateId);
-		if (obj is not CreatureCard creature)
+		if (obj is not Card card)
 			return false;
 
-		// Must be on a battlefield zone
+		if (!card.HasComponent<CreatureComponent>())
+			return false;
+
 		var zone = context.GameState.GetCardZone(candidateId);
 		return zone.ZoneType == ZoneType.Battlefield;
 	}
