@@ -37,13 +37,15 @@ public record CastSpellAction : GameAction
 		if (card.ControllerId != CastingPlayerId)
 			return ValidationResult.Invalid("You do not control this card");
 
-		// Card must be in the casting player's hand
 		var handId = gameState.GetPlayerZoneId(CastingPlayerId, ZoneType.Hand);
 		var cardZoneId = gameState.GetCardZoneId(CardId);
 		if (cardZoneId != handId)
 			return ValidationResult.Invalid("Card is not in your hand");
 
-		// Validate targets for each effect
+		var spellComponent = card.GetComponent<SpellComponent>();
+		if (spellComponent == null)
+			return ValidationResult.Invalid("Card is not a spell");
+
 		var context = new TargetingContext
 		{
 			GameState = gameState,
@@ -51,9 +53,9 @@ public record CastSpellAction : GameAction
 			CastingPlayerId = CastingPlayerId,
 		};
 
-		for (int i = 0; i < card.Effects.Count; i++)
+		for (int i = 0; i < spellComponent.Effects.Count; i++)
 		{
-			var effect = card.Effects[i];
+			var effect = spellComponent.Effects[i];
 			if (!effect.TargetingStrategy.RequiresUserSelection)
 				continue;
 
