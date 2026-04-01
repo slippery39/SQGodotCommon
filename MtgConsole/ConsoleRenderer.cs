@@ -113,6 +113,7 @@ public static class ConsoleRenderer
 				CardDiscardedEvent cde => $"  Card discarded: {cde.CardId}",
 				CardRevealedEvent cre => $"  Card revealed: mana cost {cre.ManaCost}",
 				LibraryEmptyEvent _ => $"  Library is empty!",
+				CreaturePlayedEvent cpe => $"  {cpe.CardId} enters the battlefield",
 				_ => $"  {e.GetType().Name}",
 			};
 			Console.WriteLine(message);

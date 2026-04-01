@@ -33,7 +33,7 @@ public class ConsoleGameLoop
 			}
 
 			ConsoleRenderer.RenderGameState(_state, _ids);
-			Console.WriteLine("  COMMANDS: [number] cast card  |  quit");
+			Console.WriteLine("  COMMANDS: [number] play card  |  quit");
 			Console.Write("  > ");
 
 			var input = Console.ReadLine()?.Trim().ToLower() ?? "";
@@ -42,15 +42,15 @@ public class ConsoleGameLoop
 				break;
 
 			if (int.TryParse(input, out var cardIndex))
-				HandleCastCard(cardIndex);
+				HandlePlayCard(cardIndex);
 			else
-				ConsoleRenderer.RenderMessage("Unknown command. Type a card number to cast it.");
+				ConsoleRenderer.RenderMessage("Unknown command. Type a card number to play it.");
 		}
 
 		Console.WriteLine("Thanks for playing!");
 	}
 
-	private void HandleCastCard(int cardIndex)
+	private void HandlePlayCard(int cardIndex)
 	{
 		var handCards = _state.GetCardsInZone(_ids.Player1HandId).ToList();
 
@@ -64,14 +64,37 @@ public class ConsoleGameLoop
 
 		var card = handCards[cardIndex - 1];
 		var cardObj = (Card)_state.GetObject(card.Id);
-		var spellComponent = cardObj.GetComponent<SpellComponent>();
 
-		if (spellComponent == null)
+		if (cardObj.HasComponent<CreatureComponent>())
+			HandlePlayCreature(cardObj);
+		else if (cardObj.HasComponent<SpellComponent>())
+			HandleCastSpell(cardObj);
+		else
+			ConsoleRenderer.RenderMessage("That card cannot be played.");
+	}
+
+	private void HandlePlayCreature(Card card)
+	{
+		var action = new PlayCreatureAction { CardId = card.Id, PlayerId = _ids.Player1Id };
+
+		var (newState, success) = _state.TryAddAction(action);
+		if (!success)
 		{
-			ConsoleRenderer.RenderMessage("That card is not a spell and cannot be cast.");
+			ConsoleRenderer.RenderMessage("Cannot play that creature right now.");
 			return;
 		}
 
+		var (finalState, events) = newState.ProcessAllActions();
+		_state = finalState;
+
+		ConsoleRenderer.RenderGameState(_state, _ids);
+		ConsoleRenderer.RenderEvents(events);
+		WaitForKeyPress();
+	}
+
+	private void HandleCastSpell(Card card)
+	{
+		var spellComponent = card.GetComponent<SpellComponent>()!;
 		var targetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
 		for (int i = 0; i < spellComponent.Effects.Count; i++)
@@ -97,7 +120,7 @@ public class ConsoleGameLoop
 
 			ConsoleRenderer.RenderGameState(_state, _ids);
 			ConsoleRenderer.RenderMessage(
-				$"Casting {cardObj.Name} — choose target(s) for effect {i + 1}:"
+				$"Casting {card.Name} — choose target(s) for effect {i + 1}:"
 			);
 			ConsoleRenderer.RenderTargets(_state, _ids, validTargets);
 
@@ -129,7 +152,6 @@ public class ConsoleGameLoop
 
 		ConsoleRenderer.RenderGameState(_state, _ids);
 		ConsoleRenderer.RenderEvents(newState.events);
-
 		WaitForKeyPress();
 	}
 
