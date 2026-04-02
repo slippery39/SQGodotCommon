@@ -71,3 +71,33 @@ public record CreaturePlayedEvent : GameEvent
 	public int CardId { get; init; }
 	public int PlayerId { get; init; }
 }
+
+/// <summary>
+/// Emitted when a player's loss condition is triggered (life <= 0 or empty library).
+/// </summary>
+public record PlayerLostEvent : GameEvent
+{
+	public int PlayerId { get; init; }
+	public string Reason { get; init; } = "";
+}
+
+/// <summary>
+/// Emitted when the game ends. Contains the winning player ID, or -1 for a draw.
+/// </summary>
+public record GameOverEvent : GameEvent
+{
+	/// <summary>
+	/// The winning player's ID, or -1 if the game ended in a draw.
+	/// </summary>
+	public int WinnerPlayerId { get; init; }
+}
+
+public record TurnStartedEvent : GameEvent
+{
+	public int PlayerId { get; init; }
+}
+
+public record TurnEndedEvent : GameEvent
+{
+	public int PlayerId { get; init; }
+}

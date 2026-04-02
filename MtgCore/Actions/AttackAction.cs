@@ -6,12 +6,15 @@ namespace MtgCore;
 /// <summary>
 /// Resolves a creature attacking either an opponent player or one of their creatures.
 ///
-/// The attacker must be a creature on the attacking player's battlefield.
-/// The target must be either the opponent player or a creature on the opponent's battlefield.
+/// The attacker must be on the attacking player's battlefield, must not have
+/// summoning sickness, and must not have already attacked this turn.
 ///
-/// When a creature attacks a creature both deal their power to each other simultaneously.
-/// When a creature attacks a player only the attacker deals damage.
-/// Creatures with lethal damage (damage >= toughness) are moved to their owner's graveyard.
+/// When attacking a player, only the attacker deals damage.
+/// When attacking a creature, both deal their power simultaneously.
+/// Creatures with lethal damage are moved to their owner's graveyard.
+///
+/// State-based effects (win/loss) are handled automatically by
+/// GameState.PostActionProcessor after this action resolves.
 /// </summary>
 public record AttackAction : GameAction
 {
@@ -33,6 +36,14 @@ public record AttackAction : GameAction
 
 		if (!attacker.HasComponent<CreatureComponent>())
 			return ValidationResult.Invalid("Attacker is not a creature");
+
+		var creature = attacker.GetComponent<CreatureComponent>()!;
+
+		if (creature.HasSummoningSickness)
+			return ValidationResult.Invalid("Creature has summoning sickness and cannot attack");
+
+		if (creature.HasAttacked)
+			return ValidationResult.Invalid("Creature has already attacked this turn");
 
 		var attackerZone = gameState.GetCardZone(AttackerId);
 		if (attackerZone.ZoneType != ZoneType.Battlefield)
@@ -77,6 +88,15 @@ public record AttackAction : GameAction
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
 
+		// Mark attacker as having attacked this turn
+		var updatedAttacker = attacker.WithComponentReplaced(
+			attackerCreature with
+			{
+				HasAttacked = true,
+			}
+		);
+		state = state.UpdateObject(AttackerId, updatedAttacker);
+
 		if (targetObj is MtgPlayer targetPlayer)
 		{
 			var (newState, newEvents) = ApplyDamageToPlayer(
@@ -89,7 +109,6 @@ public record AttackAction : GameAction
 		}
 		else if (targetObj is Card targetCard)
 		{
-			// Attacker damages target creature
 			var (stateAfterTargetDamage, targetEvents) = ApplyDamageToCreature(
 				state,
 				targetCard,
@@ -98,7 +117,7 @@ public record AttackAction : GameAction
 			state = stateAfterTargetDamage;
 			events = events.AddRange(targetEvents);
 
-			// Target creature damages attacker back — re-fetch attacker in case state changed
+			// Target retaliates — re-fetch attacker in case it was already destroyed
 			var targetCreature = targetCard.GetComponent<CreatureComponent>()!;
 			var currentAttacker = state.HasObject(AttackerId)
 				? (Card)state.GetObject(AttackerId)

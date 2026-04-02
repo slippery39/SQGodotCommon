@@ -11,6 +11,8 @@ namespace MtgCore;
 /// Damage is marked damage accumulated this turn and resets at end of turn.
 /// HasSummoningSickness prevents attacking the turn the creature enters
 /// the battlefield — cleared at the start of the controller's next turn.
+/// HasAttacked prevents a creature from attacking more than once per turn —
+/// cleared at the start of the controller's next turn alongside summoning sickness.
 /// </summary>
 public record CreatureComponent : GameComponent
 {
@@ -18,4 +20,5 @@ public record CreatureComponent : GameComponent
 	public int Toughness { get; init; }
 	public int Damage { get; init; } = 0;
 	public bool HasSummoningSickness { get; init; } = true;
+	public bool HasAttacked { get; init; } = false;
 }

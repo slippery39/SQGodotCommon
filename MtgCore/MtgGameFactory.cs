@@ -10,6 +10,7 @@ namespace MtgCore;
 ///   Shared (child of MtgGame): Stack only
 ///
 /// After calling Create(), no cards are present — decks are loaded separately.
+/// Player 1 is always the first active player.
 /// </summary>
 public static class MtgGameFactory
 {
@@ -17,7 +18,7 @@ public static class MtgGameFactory
 	{
 		var state = new GameState();
 
-		// Root game object
+		// Root game object — ActivePlayerId is set below once we know Player 1's ID
 		var (s1, game) = state.AddObject(new MtgGame { Name = "Game" });
 
 		// Shared zone — Stack only
@@ -133,6 +134,10 @@ public static class MtgGameFactory
 			parentId: player2.Id
 		);
 
+		// Now that Player 1's ID is known, stamp it onto the game root as the first active player
+		var gameWithTurnState = (MtgGame)s14.GetObject(game.Id);
+		var s15 = s14.UpdateObject(game.Id, gameWithTurnState with { ActivePlayerId = player1.Id });
+
 		var ids = new MtgGameIds(
 			GameId: game.Id,
 			StackId: stack.Id,
@@ -150,7 +155,7 @@ public static class MtgGameFactory
 			Player2ExileId: p2Exile.Id
 		);
 
-		return (s14, ids);
+		return (s15, ids);
 	}
 }
 

@@ -13,6 +13,30 @@ public static class MtgGameStateExtensions
 	public static MtgPlayer GetPlayer(this GameState state, int playerId) =>
 		(MtgPlayer)state.GetObject(playerId);
 
+	// ===== GAME / TURN STATE QUERIES =====
+
+	/// <summary>
+	/// Returns the MtgGame root object, which holds global turn state.
+	/// </summary>
+	public static MtgGame GetGame(this GameState state, int gameId) =>
+		(MtgGame)state.GetObject(gameId);
+
+	/// <summary>
+	/// Returns the ID of the player whose turn it currently is.
+	/// </summary>
+	public static int GetActivePlayerId(this GameState state, int gameId) =>
+		state.GetGame(gameId).ActivePlayerId;
+
+	/// <summary>
+	/// Returns the opponent's player ID given the active player ID and both player IDs.
+	/// </summary>
+	public static int GetOpponentId(
+		this GameState state,
+		int activePlayerId,
+		int player1Id,
+		int player2Id
+	) => activePlayerId == player1Id ? player2Id : player1Id;
+
 	// ===== ZONE QUERIES =====
 
 	public static Zone GetZone(this GameState state, int zoneId) => (Zone)state.GetObject(zoneId);
