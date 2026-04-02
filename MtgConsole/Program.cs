@@ -6,7 +6,17 @@ using MtgCore;
 // ===== SETUP GAME =====
 var (state, ids) = MtgGameFactory.Create();
 
-// Give Player 1 a hand of cards to test with
+// Wire up the post-action processor for state-based effects
+state = state with
+{
+	PostActionProcessor = new CheckStateBasedEffectsAction
+	{
+		Player1Id = ids.Player1Id,
+		Player2Id = ids.Player2Id,
+	},
+};
+
+// ===== PLAYER 1 HAND =====
 var bolt1 = CardLibrary.LightningBolt() with
 {
 	OwnerId = ids.Player1Id,
@@ -45,8 +55,8 @@ var darkConfidantInHand = CardLibrary.DarkConfidant() with
 (state, _) = state.AddObject(tellingTime, parentId: ids.Player1HandId);
 (state, _) = state.AddObject(darkConfidantInHand, parentId: ids.Player1HandId);
 
-// Give Player 1 a library of properly-typed cards for draw effects
-var libraryCreatures = new[]
+// ===== PLAYER 1 LIBRARY =====
+var p1Creatures = new[]
 {
 	("Grizzly Bears", 2, 2, 2),
 	("Hill Giant", 3, 3, 4),
@@ -54,8 +64,7 @@ var libraryCreatures = new[]
 	("Serra Angel", 5, 4, 4),
 	("Siege Rhino", 4, 4, 5),
 };
-
-foreach (var (name, cost, power, toughness) in libraryCreatures)
+foreach (var (name, cost, power, toughness) in p1Creatures)
 {
 	var card = new Card
 	{
@@ -70,25 +79,8 @@ foreach (var (name, cost, power, toughness) in libraryCreatures)
 	(state, _) = state.AddObject(card, parentId: ids.Player1LibraryId);
 }
 
-var librarySpells = new[] { ("Shock", 1), ("Counterspell", 2), ("Dark Ritual", 1) };
-
-foreach (var (name, cost) in librarySpells)
-{
-	var card = new Card
-	{
-		Name = name,
-		ManaCost = cost,
-		OwnerId = ids.Player1Id,
-		ControllerId = ids.Player1Id,
-		Components = ImmutableList.Create<GameComponent>(
-			new SpellComponent { Effects = ImmutableList<CardEffect>.Empty }
-		),
-	};
-	(state, _) = state.AddObject(card, parentId: ids.Player1LibraryId);
-}
-
-// Give Player 1 a creature on the battlefield (no summoning sickness — pre-placed)
-var darkConfidantOnField = CardLibrary.DarkConfidant() with
+// ===== PLAYER 1 BATTLEFIELD =====
+var p1Confidant = CardLibrary.DarkConfidant() with
 {
 	OwnerId = ids.Player1Id,
 	ControllerId = ids.Player1Id,
@@ -101,9 +93,53 @@ var darkConfidantOnField = CardLibrary.DarkConfidant() with
 		}
 	),
 };
-(state, _) = state.AddObject(darkConfidantOnField, parentId: ids.Player1BattlefieldId);
+(state, _) = state.AddObject(p1Confidant, parentId: ids.Player1BattlefieldId);
 
-// Give Player 2 two creatures on the battlefield
+// ===== PLAYER 2 HAND =====
+var p2Bolt = CardLibrary.LightningBolt() with
+{
+	OwnerId = ids.Player2Id,
+	ControllerId = ids.Player2Id,
+};
+var p2Helix = CardLibrary.LightningHelix() with
+{
+	OwnerId = ids.Player2Id,
+	ControllerId = ids.Player2Id,
+};
+var p2Confidant = CardLibrary.DarkConfidant() with
+{
+	OwnerId = ids.Player2Id,
+	ControllerId = ids.Player2Id,
+};
+
+(state, _) = state.AddObject(p2Bolt, parentId: ids.Player2HandId);
+(state, _) = state.AddObject(p2Helix, parentId: ids.Player2HandId);
+(state, _) = state.AddObject(p2Confidant, parentId: ids.Player2HandId);
+
+// ===== PLAYER 2 LIBRARY =====
+var p2Creatures = new[]
+{
+	("Goblin Guide", 1, 2, 2),
+	("Grizzly Bears", 2, 2, 2),
+	("Craw Wurm", 6, 6, 4),
+	("Wall of Stone", 3, 0, 8),
+};
+foreach (var (name, cost, power, toughness) in p2Creatures)
+{
+	var card = new Card
+	{
+		Name = name,
+		ManaCost = cost,
+		OwnerId = ids.Player2Id,
+		ControllerId = ids.Player2Id,
+		Components = ImmutableList.Create<GameComponent>(
+			new CreatureComponent { Power = power, Toughness = toughness }
+		),
+	};
+	(state, _) = state.AddObject(card, parentId: ids.Player2LibraryId);
+}
+
+// ===== PLAYER 2 BATTLEFIELD =====
 var goblinGuide = new Card
 {
 	Name = "Goblin Guide",
@@ -134,10 +170,22 @@ var grizzlyBears = new Card
 		}
 	),
 };
-
 (state, _) = state.AddObject(goblinGuide, parentId: ids.Player2BattlefieldId);
 (state, _) = state.AddObject(grizzlyBears, parentId: ids.Player2BattlefieldId);
 
+// ===== MODE SELECTION =====
+Console.WriteLine("╔══════════════════════════════════════════╗");
+Console.WriteLine("║           MTG SANDBOX                    ║");
+Console.WriteLine("╚══════════════════════════════════════════╝");
+Console.WriteLine();
+Console.WriteLine("  Select mode:");
+Console.WriteLine("    [1] vs AI");
+Console.WriteLine("    [2] Hotseat");
+Console.Write("  > ");
+
+var modeInput = Console.ReadLine()?.Trim() ?? "";
+var mode = modeInput == "2" ? GameMode.Hotseat : GameMode.Ai;
+
 // ===== RUN =====
-var loop = new ConsoleGameLoop(state, ids);
+var loop = new ConsoleGameLoop(state, ids, mode);
 loop.Run();

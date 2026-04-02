@@ -4,27 +4,42 @@ using MtgCore;
 
 namespace MtgConsole;
 
+public enum GameMode
+{
+	Hotseat,
+	Ai,
+}
+
 /// <summary>
-/// Drives the console sandbox game loop.
+/// Drives the console game loop.
 /// Handles player input, dispatches to game state, and renders output.
 /// No game logic lives here — this is purely a UI layer.
+///
+/// Supports two modes:
+///   Hotseat — both players take turns at the same keyboard
+///   Ai      — Player 1 is human, Player 2 is a random action AI
 /// </summary>
 public class ConsoleGameLoop
 {
 	private GameState _state;
 	private readonly MtgGameIds _ids;
+	private readonly GameMode _mode;
+	private bool _gameOver = false;
 
-	public ConsoleGameLoop(GameState state, MtgGameIds ids)
+	public ConsoleGameLoop(GameState state, MtgGameIds ids, GameMode mode)
 	{
 		_state = state;
 		_ids = ids;
+		_mode = mode;
 	}
 
 	public void Run()
 	{
-		ConsoleRenderer.RenderMessage("Welcome to MTG Sandbox! Type 'help' for commands.");
+		ConsoleRenderer.RenderMessage("Welcome to MTG Sandbox!");
 
-		while (true)
+		// Kick off the first turn — Player 1 starts but does NOT draw
+		// (first turn draw skip is handled by not pushing StartTurnAction here)
+		while (!_gameOver)
 		{
 			if (_state.IsWaitingForChoice)
 			{
@@ -32,31 +47,210 @@ public class ConsoleGameLoop
 				continue;
 			}
 
-			ConsoleRenderer.RenderGameState(_state, _ids);
-			Console.WriteLine("  COMMANDS: [number] play card  |  attack  |  quit");
-			Console.Write("  > ");
+			var activePlayerId = _state.GetActivePlayerId(_ids.GameId);
 
-			var input = Console.ReadLine()?.Trim().ToLower() ?? "";
+			if (_mode == GameMode.Ai && activePlayerId == _ids.Player2Id)
+			{
+				RunAiTurn();
+				continue;
+			}
 
-			if (input == "quit" || input == "q")
-				break;
-
-			if (input == "attack" || input == "a")
-				HandleAttack();
-			else if (int.TryParse(input, out var cardIndex))
-				HandlePlayCard(cardIndex);
-			else
-				ConsoleRenderer.RenderMessage(
-					"Unknown command. Type a card number, 'attack', or 'quit'."
-				);
+			RunHumanTurn(activePlayerId);
 		}
 
-		Console.WriteLine("Thanks for playing!");
+		Console.WriteLine();
+		Console.WriteLine("  Thanks for playing!");
 	}
 
-	private void HandlePlayCard(int cardIndex)
+	// ===== HUMAN TURN =====
+
+	private void RunHumanTurn(int activePlayerId)
 	{
-		var handCards = _state.GetCardsInZone(_ids.Player1HandId).ToList();
+		ConsoleRenderer.RenderGameState(_state, _ids);
+		Console.WriteLine("  COMMANDS: [number] play card  |  attack  |  end turn  |  quit");
+		Console.Write("  > ");
+
+		var input = Console.ReadLine()?.Trim().ToLower() ?? "";
+
+		switch (input)
+		{
+			case "quit"
+			or "q":
+				_gameOver = true;
+				break;
+			case "end turn"
+			or "end"
+			or "e":
+				HandleEndTurn();
+				break;
+			case "attack"
+			or "a":
+				HandleAttack(activePlayerId);
+				break;
+			default:
+				if (int.TryParse(input, out var cardIndex))
+					HandlePlayCard(cardIndex, activePlayerId);
+				else
+					ConsoleRenderer.RenderMessage("Unknown command.");
+				break;
+		}
+	}
+
+	// ===== AI TURN =====
+
+	private void RunAiTurn()
+	{
+		ConsoleRenderer.RenderGameState(_state, _ids);
+		ConsoleRenderer.RenderMessage("Opponent is thinking...");
+		WaitForKeyPress();
+
+		var rng = new Random();
+
+		while (true)
+		{
+			if (_gameOver)
+				return;
+
+			var actions = GenerateLegalActions(_ids.Player2Id);
+
+			// AI always ends its turn if no other actions are available
+			if (!actions.Any())
+			{
+				ConsoleRenderer.RenderAiAction("Ends turn.");
+				HandleEndTurn();
+				return;
+			}
+
+			// Randomly decide whether to end turn (gives ~25% chance each loop)
+			// ensuring the AI doesn't always play everything it can
+			var allOptions = actions.Append(null).ToList(); // null = end turn
+			var chosen = allOptions[rng.Next(allOptions.Count)];
+
+			if (chosen == null)
+			{
+				ConsoleRenderer.RenderAiAction("Ends turn.");
+				HandleEndTurn();
+				return;
+			}
+
+			ExecuteAiAction(chosen);
+		}
+	}
+
+	/// <summary>
+	/// Generates all legal actions the given player can take right now.
+	/// Returns a flat list of GameAction — the game loop picks from these.
+	/// </summary>
+	private List<GameAction> GenerateLegalActions(int playerId)
+	{
+		var actions = new List<GameAction>();
+
+		var handId = _state.GetPlayerZoneId(playerId, ZoneType.Hand);
+		var battlefieldId = _state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+		var opponentId = playerId == _ids.Player1Id ? _ids.Player2Id : _ids.Player1Id;
+		var opponentBattlefieldId = _state.GetPlayerZoneId(opponentId, ZoneType.Battlefield);
+
+		// Play creatures from hand
+		foreach (var card in _state.GetCardsInZone(handId))
+		{
+			if (!card.HasComponent<CreatureComponent>())
+				continue;
+
+			var action = new PlayCreatureAction { CardId = card.Id, PlayerId = playerId };
+			if (_state.TryAddAction(action).Success)
+				actions.Add(action);
+		}
+
+		// Cast spells from hand (no targets for now — only no-target spells)
+		foreach (var card in _state.GetCardsInZone(handId))
+		{
+			var spell = card.GetComponent<SpellComponent>();
+			if (spell == null)
+				continue;
+
+			if (spell.Effects.Any(e => e.TargetingStrategy.RequiresUserSelection))
+				continue;
+
+			var castAction = new CastSpellAction
+			{
+				CardId = card.Id,
+				CastingPlayerId = playerId,
+				GameId = _ids.GameId,
+				TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
+			};
+			if (_state.TryAddAction(castAction).Success)
+				actions.Add(castAction);
+		}
+
+		// Attack with creatures
+		var attackerCandidates = _state
+			.GetCardsInZone(battlefieldId)
+			.Where(c => c.HasComponent<CreatureComponent>())
+			.ToList();
+
+		var targets = new List<int> { opponentId };
+		targets.AddRange(
+			_state
+				.GetCardsInZone(opponentBattlefieldId)
+				.Where(c => c.HasComponent<CreatureComponent>())
+				.Select(c => c.Id)
+		);
+
+		foreach (var attacker in attackerCandidates)
+		{
+			foreach (var targetId in targets)
+			{
+				var attack = new AttackAction
+				{
+					AttackerId = attacker.Id,
+					TargetId = targetId,
+					AttackingPlayerId = playerId,
+				};
+				if (_state.TryAddAction(attack).Success)
+				{
+					actions.Add(attack);
+					break; // one valid target per attacker is enough to add it as an option
+				}
+			}
+		}
+
+		return actions;
+	}
+
+	private void ExecuteAiAction(GameAction action)
+	{
+		var description = action switch
+		{
+			PlayCreatureAction pca => $"Plays creature (card {pca.CardId})",
+			CastSpellAction csa => $"Casts spell (card {csa.CardId})",
+			AttackAction aa => $"Attacks target {aa.TargetId} with creature {aa.AttackerId}",
+			_ => action.GetType().Name,
+		};
+
+		ConsoleRenderer.RenderAiAction(description);
+
+		var (newState, success) = _state.TryAddAction(action);
+		if (!success)
+		{
+			ConsoleRenderer.RenderAiAction("Action was invalid, skipping.");
+			return;
+		}
+
+		var (finalState, events) = newState.ProcessAllActions();
+		_state = finalState;
+
+		ConsoleRenderer.RenderEvents(events, _ids);
+		CheckGameOver(events);
+
+		Thread.Sleep(600); // brief pause so the player can follow along
+	}
+
+	// ===== HUMAN ACTIONS =====
+
+	private void HandlePlayCard(int cardIndex, int activePlayerId)
+	{
+		var handId = _state.GetPlayerZoneId(activePlayerId, ZoneType.Hand);
+		var handCards = _state.GetCardsInZone(handId).ToList();
 
 		if (cardIndex < 1 || cardIndex > handCards.Count)
 		{
@@ -70,16 +264,16 @@ public class ConsoleGameLoop
 		var cardObj = (Card)_state.GetObject(card.Id);
 
 		if (cardObj.HasComponent<CreatureComponent>())
-			HandlePlayCreature(cardObj);
+			HandlePlayCreature(cardObj, activePlayerId);
 		else if (cardObj.HasComponent<SpellComponent>())
-			HandleCastSpell(cardObj);
+			HandleCastSpell(cardObj, activePlayerId);
 		else
 			ConsoleRenderer.RenderMessage("That card cannot be played.");
 	}
 
-	private void HandlePlayCreature(Card card)
+	private void HandlePlayCreature(Card card, int activePlayerId)
 	{
-		var action = new PlayCreatureAction { CardId = card.Id, PlayerId = _ids.Player1Id };
+		var action = new PlayCreatureAction { CardId = card.Id, PlayerId = activePlayerId };
 
 		var (newState, success) = _state.TryAddAction(action);
 		if (!success)
@@ -92,105 +286,13 @@ public class ConsoleGameLoop
 		_state = finalState;
 
 		ConsoleRenderer.RenderGameState(_state, _ids);
-		ConsoleRenderer.RenderEvents(events);
-		WaitForKeyPress();
+		ConsoleRenderer.RenderEvents(events, _ids);
+		CheckGameOver(events);
+		if (!_gameOver)
+			WaitForKeyPress();
 	}
 
-	// ===== ATTACK =====
-
-	private void HandleAttack()
-	{
-		// Step 1: List your creatures that can attack
-		var myCreatures = _state
-			.GetCardsInZone(_ids.Player1BattlefieldId)
-			.Where(c => c.HasComponent<CreatureComponent>())
-			.ToList();
-
-		if (!myCreatures.Any())
-		{
-			ConsoleRenderer.RenderMessage("You have no creatures on the battlefield.");
-			return;
-		}
-
-		ConsoleRenderer.RenderGameState(_state, _ids);
-		ConsoleRenderer.RenderMessage("Choose a creature to attack with (0 to cancel):");
-		ConsoleRenderer.RenderAttackers(_state, myCreatures);
-
-		var attackerIndex = ReadIndex(1, myCreatures.Count);
-		if (attackerIndex == null)
-			return;
-
-		var attacker = myCreatures[attackerIndex.Value - 1];
-
-		// Step 2: Build the list of valid targets (opponent player + opponent creatures)
-		var targets = BuildAttackTargets();
-
-		if (!targets.Any())
-		{
-			ConsoleRenderer.RenderMessage("No valid targets to attack.");
-			return;
-		}
-
-		ConsoleRenderer.RenderGameState(_state, _ids);
-		ConsoleRenderer.RenderMessage(
-			$"Attacking with {attacker.Name} — choose a target (0 to cancel):"
-		);
-		ConsoleRenderer.RenderAttackTargets(_state, targets);
-
-		var targetIndex = ReadIndex(1, targets.Count);
-		if (targetIndex == null)
-			return;
-
-		var targetId = targets[targetIndex.Value - 1];
-
-		// Step 3: Dispatch the attack
-		var attackAction = new AttackAction
-		{
-			AttackerId = attacker.Id,
-			TargetId = targetId,
-			AttackingPlayerId = _ids.Player1Id,
-		};
-
-		var (newState, success) = _state.TryAddAction(attackAction);
-		if (!success)
-		{
-			ConsoleRenderer.RenderMessage("Cannot perform that attack.");
-			return;
-		}
-
-		var (finalState, events) = newState.ProcessAllActions();
-		_state = finalState;
-
-		ConsoleRenderer.RenderGameState(_state, _ids);
-		ConsoleRenderer.RenderEvents(events);
-		WaitForKeyPress();
-	}
-
-	/// <summary>
-	/// Builds the ordered list of valid attack targets: opponent player first, then their creatures.
-	/// Returns a list of IDs.
-	/// </summary>
-	private List<int> BuildAttackTargets()
-	{
-		var targets = new List<int>();
-
-		// Opponent player is always a valid target
-		targets.Add(_ids.Player2Id);
-
-		// Opponent's creatures on the battlefield
-		var opponentCreatures = _state
-			.GetCardsInZone(_ids.Player2BattlefieldId)
-			.Where(c => c.HasComponent<CreatureComponent>())
-			.Select(c => c.Id);
-
-		targets.AddRange(opponentCreatures);
-
-		return targets;
-	}
-
-	// ===== CAST SPELL =====
-
-	private void HandleCastSpell(Card card)
+	private void HandleCastSpell(Card card, int activePlayerId)
 	{
 		var spellComponent = card.GetComponent<SpellComponent>()!;
 		var targetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty;
@@ -205,7 +307,7 @@ public class ConsoleGameLoop
 			{
 				GameState = _state,
 				SourceCardId = card.Id,
-				CastingPlayerId = _ids.Player1Id,
+				CastingPlayerId = activePlayerId,
 			};
 
 			var validTargets = effect.TargetingStrategy.GetValidTargets(context).ToList();
@@ -237,20 +339,124 @@ public class ConsoleGameLoop
 		var castAction = new CastSpellAction
 		{
 			CardId = card.Id,
-			CastingPlayerId = _ids.Player1Id,
+			CastingPlayerId = activePlayerId,
 			GameId = _ids.GameId,
 			TargetIds = targetIds,
 		};
 
-		var (success, newState) = TryCast(castAction);
+		var (newState, success) = _state.TryAddAction(castAction);
 		if (!success)
+		{
+			ConsoleRenderer.RenderMessage("Cannot cast that spell right now.");
 			return;
+		}
 
-		_state = newState.state;
+		var (finalState, events) = newState.ProcessAllActions();
+		_state = finalState;
 
 		ConsoleRenderer.RenderGameState(_state, _ids);
-		ConsoleRenderer.RenderEvents(newState.events);
-		WaitForKeyPress();
+		ConsoleRenderer.RenderEvents(events, _ids);
+		CheckGameOver(events);
+		if (!_gameOver)
+			WaitForKeyPress();
+	}
+
+	private void HandleAttack(int activePlayerId)
+	{
+		var battlefieldId = _state.GetPlayerZoneId(activePlayerId, ZoneType.Battlefield);
+		var opponentId = activePlayerId == _ids.Player1Id ? _ids.Player2Id : _ids.Player1Id;
+		var opponentBattlefieldId = _state.GetPlayerZoneId(opponentId, ZoneType.Battlefield);
+
+		var myCreatures = _state
+			.GetCardsInZone(battlefieldId)
+			.Where(c => c.HasComponent<CreatureComponent>())
+			.ToList();
+
+		if (!myCreatures.Any())
+		{
+			ConsoleRenderer.RenderMessage("You have no creatures on the battlefield.");
+			return;
+		}
+
+		ConsoleRenderer.RenderGameState(_state, _ids);
+		ConsoleRenderer.RenderMessage("Choose a creature to attack with (0 to cancel):");
+		ConsoleRenderer.RenderAttackers(_state, myCreatures);
+
+		var attackerIndex = ReadIndex(1, myCreatures.Count);
+		if (attackerIndex == null)
+			return;
+
+		var attacker = myCreatures[attackerIndex.Value - 1];
+
+		var targets = new List<int> { opponentId };
+		targets.AddRange(
+			_state
+				.GetCardsInZone(opponentBattlefieldId)
+				.Where(c => c.HasComponent<CreatureComponent>())
+				.Select(c => c.Id)
+		);
+
+		ConsoleRenderer.RenderGameState(_state, _ids);
+		ConsoleRenderer.RenderMessage(
+			$"Attacking with {attacker.Name} — choose a target (0 to cancel):"
+		);
+		ConsoleRenderer.RenderAttackTargets(_state, targets);
+
+		var targetIndex = ReadIndex(1, targets.Count);
+		if (targetIndex == null)
+			return;
+
+		var targetId = targets[targetIndex.Value - 1];
+
+		var attackAction = new AttackAction
+		{
+			AttackerId = attacker.Id,
+			TargetId = targetId,
+			AttackingPlayerId = activePlayerId,
+		};
+
+		var (newState, success) = _state.TryAddAction(attackAction);
+		if (!success)
+		{
+			ConsoleRenderer.RenderMessage("Cannot perform that attack.");
+			return;
+		}
+
+		var (finalState, events) = newState.ProcessAllActions();
+		_state = finalState;
+
+		ConsoleRenderer.RenderGameState(_state, _ids);
+		ConsoleRenderer.RenderEvents(events, _ids);
+		CheckGameOver(events);
+		if (!_gameOver)
+			WaitForKeyPress();
+	}
+
+	private void HandleEndTurn()
+	{
+		var action = new EndTurnAction
+		{
+			GameId = _ids.GameId,
+			Player1Id = _ids.Player1Id,
+			Player2Id = _ids.Player2Id,
+		};
+
+		var (newState, _) = _state.TryAddAction(action);
+		var (finalState, events) = newState.ProcessAllActions();
+		_state = finalState;
+
+		ConsoleRenderer.RenderGameState(_state, _ids);
+		ConsoleRenderer.RenderEvents(events, _ids);
+		CheckGameOver(events);
+
+		// In hotseat, pause so the next player can sit down
+		if (!_gameOver && _mode == GameMode.Hotseat)
+		{
+			var nextPlayer = _state.GetGame(_ids.GameId).ActivePlayerId;
+			var nextName = nextPlayer == _ids.Player1Id ? "Player 1" : "Player 2";
+			ConsoleRenderer.RenderMessage($"{nextName}'s turn — press any key when ready.");
+			WaitForKeyPress();
+		}
 	}
 
 	private void HandleChoice()
@@ -268,17 +474,28 @@ public class ConsoleGameLoop
 		var (newState, events) = _state.ResolveChoice(chosen);
 		_state = newState;
 
-		ConsoleRenderer.RenderEvents(events);
+		ConsoleRenderer.RenderEvents(events, _ids);
+		CheckGameOver(events);
 
-		if (!_state.IsWaitingForChoice)
+		if (!_state.IsWaitingForChoice && !_gameOver)
 			WaitForKeyPress();
+	}
+
+	// ===== GAME OVER =====
+
+	private void CheckGameOver(ImmutableList<GameEvent> events)
+	{
+		if (events.OfType<GameOverEvent>().Any())
+		{
+			_gameOver = true;
+			ConsoleRenderer.RenderGameState(_state, _ids);
+			ConsoleRenderer.RenderEvents(events, _ids);
+			WaitForKeyPress();
+		}
 	}
 
 	// ===== INPUT HELPERS =====
 
-	/// <summary>
-	/// Reads a number in [min, max] from stdin. Returns null if the user enters 0 (cancel).
-	/// </summary>
 	private int? ReadIndex(int min, int max)
 	{
 		Console.WriteLine($"  (Enter {min}-{max}, or 0 to cancel)");
@@ -327,7 +544,6 @@ public class ConsoleGameLoop
 				+ " option(s), or 0 to cancel)"
 		);
 
-		// Single-select: accept a plain number
 		if (choice.MinChoices == 1 && choice.MaxChoices == 1)
 		{
 			Console.Write("  > ");
@@ -343,7 +559,6 @@ public class ConsoleGameLoop
 			return null;
 		}
 
-		// Multi-select: accept comma-separated numbers (e.g. "1,3")
 		Console.WriteLine($"  Enter comma-separated numbers (e.g. 1,3):");
 		Console.Write("  > ");
 		var multiInput = Console.ReadLine()?.Trim() ?? "";
@@ -373,21 +588,6 @@ public class ConsoleGameLoop
 		}
 
 		return parts.Select(p => choice.Options[p - 1].Id).ToImmutableList();
-	}
-
-	private (bool success, (GameState state, ImmutableList<GameEvent> events) result) TryCast(
-		CastSpellAction castAction
-	)
-	{
-		var (newState, success) = _state.TryAddAction(castAction);
-		if (!success)
-		{
-			ConsoleRenderer.RenderMessage("Cannot cast that spell right now.");
-			return (false, default);
-		}
-
-		var result = newState.ProcessAllActions();
-		return (true, result);
 	}
 
 	private static void WaitForKeyPress()
