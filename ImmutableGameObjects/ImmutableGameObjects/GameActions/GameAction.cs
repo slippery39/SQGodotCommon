@@ -14,6 +14,15 @@ public abstract record GameAction
 		ImmutableDictionary<string, object>.Empty;
 
 	/// <summary>
+	/// When true, this action is treated as a post-action processor and will not
+	/// itself trigger the PostActionProcessor after it resolves. This prevents
+	/// infinite recursion when the processor runs.
+	///
+	/// Override to true in any action that is registered as GameState.PostActionProcessor.
+	/// </summary>
+	public virtual bool IsPostProcessor => false;
+
+	/// <summary>
 	/// Validates whether this action can be added to the action stack.
 	/// Called by GameState.AddAction before pushing to the stack.
 	/// Override to enforce preconditions such as valid targets existing,

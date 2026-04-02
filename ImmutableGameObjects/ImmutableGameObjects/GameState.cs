@@ -14,6 +14,22 @@ public record GameState
 
 	public ImmutableStack<GameAction> ActionStack { get; init; } = ImmutableStack<GameAction>.Empty;
 
+	/// <summary>
+	/// An optional action template that is automatically pushed onto the stack after
+	/// every non-post-processor action resolves (standalone actions and completed pipelines).
+	///
+	/// It does NOT fire between individual steps of a pipeline — only after the whole
+	/// pipeline completes. This mirrors MTG's rule of checking state-based effects after
+	/// each spell or ability fully resolves, not between its individual steps.
+	///
+	/// The processor must set IsPostProcessor = true on its GameAction subclass to prevent
+	/// itself from triggering another post-processing cycle after it runs.
+	///
+	/// Set this once at game setup (e.g. CheckStateBasedEffectsAction for MTG).
+	/// Leave null for games or tests that don't need post-action processing.
+	/// </summary>
+	public GameAction? PostActionProcessor { get; init; } = null;
+
 	public bool HasPendingActions => !ActionStack.IsEmpty;
 
 	public bool IsWaitingForChoice
@@ -203,13 +219,6 @@ public record GameState
 	/// <summary>
 	/// Moves an object to the front (index 0) of a new parent's children list.
 	/// Equivalent to MoveObject but inserts at the front rather than appending.
-	///
-	/// Use cases:
-	///   - Putting a card on top of a library
-	///   - Any effect that specifies "put on top" rather than "put on bottom"
-	///
-	/// If the object is already a child of the target parent, it is removed from
-	/// its current position and reinserted at the front.
 	/// </summary>
 	public GameState MoveObjectToFront(int objId, int newParentId)
 	{
@@ -243,7 +252,7 @@ public record GameState
 				out var existingChildren
 			)
 				? existingChildren.Insert(0, objId)
-				: [objId];
+				: ImmutableList.Create(objId);
 			updatedParentToChildren = updatedParentToChildren.SetItem(
 				newParentId,
 				newParentChildren
@@ -393,6 +402,8 @@ public record GameState
 
 	/// <summary>
 	/// Advances a pipeline by one step and re-pushes it for the next tick.
+	/// The PostActionProcessor fires only when the pipeline is fully complete,
+	/// not between individual steps.
 	/// </summary>
 	private (GameState State, ImmutableList<GameEvent> Events) ExecutePipelineStep(
 		PipelineAction pipeline,
@@ -400,15 +411,21 @@ public record GameState
 	)
 	{
 		if (pipeline.IsComplete)
-			return (this with { ActionStack = remainingStack }, ImmutableList<GameEvent>.Empty);
+		{
+			var completedState = this with { ActionStack = remainingStack };
+
+			// Pipeline finished — fire the post-processor if one is set
+			if (PostActionProcessor != null && !pipeline.IsPostProcessor)
+				completedState = completedState.PushActionsInternal(new[] { PostActionProcessor });
+
+			return (completedState, ImmutableList<GameEvent>.Empty);
+		}
 
 		var step = pipeline.CurrentStep!;
 
 		if (step is ChoiceAction choice)
 		{
 			// Refresh options from game state and pipeline context before pausing.
-			// Allows subclasses to provide dynamic options (e.g. cards in hand,
-			// or cards not yet chosen by a previous pipeline step).
 			var freshOptions = choice.GetOptions(this, pipeline.PipelineContext);
 			var refreshedChoice = choice with { Options = freshOptions };
 			var pipelineWithRefreshedChoice = pipeline with
@@ -425,7 +442,7 @@ public record GameState
 			);
 		}
 
-		// Validate the step before executing
+		// Validate and execute the current step
 		var stepWithContext = step with
 		{
 			InputContext = pipeline.PipelineContext,
@@ -440,18 +457,18 @@ public record GameState
 				Reason = validation.Reason,
 			};
 
-			// Advance past the invalid step and continue the pipeline
 			var advancedPipeline = pipeline with
 			{
 				CurrentStepIndex = pipeline.CurrentStepIndex + 1,
 			};
 
-			var stateWithAdvancedPipeline = this with
-			{
-				ActionStack = remainingStack.Push(advancedPipeline),
-			};
-
-			return (stateWithAdvancedPipeline, ImmutableList.Create<GameEvent>(failedEvent));
+			return (
+				this with
+				{
+					ActionStack = remainingStack.Push(advancedPipeline),
+				},
+				ImmutableList.Create<GameEvent>(failedEvent)
+			);
 		}
 
 		var result = stepWithContext.Execute(this);
@@ -462,9 +479,7 @@ public record GameState
 			PipelineContext = updatedContext,
 		};
 
-		// If the next step is a ChoiceAction, refresh its options now before returning.
-		// ProcessAllActions will stop when it sees IsWaitingForChoice = true on the
-		// returned state, so we must refresh here rather than waiting for the next tick.
+		// If the next step is a ChoiceAction, refresh its options now before returning
 		var finalPipeline = advancedPipelineAfterExecution;
 		if (!finalPipeline.IsComplete && finalPipeline.CurrentStep is ChoiceAction nextChoice)
 		{
@@ -493,6 +508,8 @@ public record GameState
 	/// <summary>
 	/// Executes a regular (non-pipeline) action after validating it can still resolve.
 	/// If ValidateResolve fails, the action is dropped and a failure event is emitted.
+	/// After a successful execution, the PostActionProcessor is pushed if one is set
+	/// and the action that just ran is not itself a post-processor.
 	/// </summary>
 	private (GameState State, ImmutableList<GameEvent> Events) ExecuteAction(
 		GameAction action,
@@ -523,6 +540,10 @@ public record GameState
 
 		if (result.SpawnedActions.Any())
 			newState = newState.PushActionsInternal(result.SpawnedActions);
+
+		// Fire the post-processor after any non-post-processor standalone action
+		if (PostActionProcessor != null && !action.IsPostProcessor)
+			newState = newState.PushActionsInternal(new[] { PostActionProcessor });
 
 		return (newState, result.Events);
 	}
