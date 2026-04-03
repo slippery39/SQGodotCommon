@@ -10,8 +10,9 @@ namespace MtgCore;
 /// SpellComponent, the action does nothing beyond moving it to the graveyard.
 ///
 /// For each CardEffect, resolves targets based on SelectionMode then spawns
-/// the action template. If the template is a PipelineAction, CastingPlayerId
-/// is seeded into its initial context so inner steps can read it via GetInput.
+/// the action template. CastingPlayerId is seeded into the spawned action's
+/// InputContext (for standalone actions) or PipelineContext (for pipelines)
+/// so that PlayerIdContextKey resolution works correctly in both cases.
 ///
 /// Then moves the card to the owner's graveyard.
 /// </summary>
@@ -50,11 +51,23 @@ public record ResolveSpellAction : GameAction
 					? targeted.WithTargets(resolvedTargets)
 					: effect.ActionTemplate;
 
+				// Seed CastingPlayerId so PlayerIdContextKey resolution works
+				// regardless of whether the action is a pipeline or standalone
 				if (action is PipelineAction pipeline)
 				{
 					action = pipeline with
 					{
 						PipelineContext = pipeline.PipelineContext.SetItem(
+							ContextKeys.CastingPlayerId,
+							CastingPlayerId
+						),
+					};
+				}
+				else
+				{
+					action = action with
+					{
+						InputContext = action.InputContext.SetItem(
 							ContextKeys.CastingPlayerId,
 							CastingPlayerId
 						),
@@ -86,7 +99,7 @@ public record ResolveSpellAction : GameAction
 
 			TargetSelectionMode.Random => ResolveRandomTarget(effect.TargetingStrategy, context),
 
-			TargetSelectionMode.CastingPlayer => [CastingPlayerId],
+			TargetSelectionMode.CastingPlayer => ImmutableList.Create(CastingPlayerId),
 
 			TargetSelectionMode.None => ImmutableList<int>.Empty,
 
@@ -106,6 +119,6 @@ public record ResolveSpellAction : GameAction
 
 		var rng = new Random();
 		var chosen = validTargets[rng.Next(validTargets.Count)];
-		return [chosen];
+		return ImmutableList.Create(chosen);
 	}
 }
