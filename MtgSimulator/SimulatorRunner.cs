@@ -82,18 +82,7 @@ public class SimulatorRunner
 			cardNames[added.Id] = added.Name;
 		}
 
-		// Push StartTurnAction for Player 1's first turn
-		// Note: first turn does not draw a card — StartTurnAction draws,
-		// but we skip it here and push it manually so no draw occurs on turn 1.
-		// For simulator purposes we do draw on turn 1 to keep games moving.
-		var startTurn = new StartTurnAction
-		{
-			ActivePlayerId = ids.Player1Id,
-			BattlefieldId = state.GetPlayerZoneId(ids.Player1Id, ZoneType.Battlefield),
-		};
-		state = state.AddAction(startTurn);
-		var (startedState, _) = state.ProcessAllActions();
-		state = startedState;
+		(state, _) = state.BeginGame(ids.GameId);
 
 		return (state, ids, cardNames);
 	}

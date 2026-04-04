@@ -6,11 +6,11 @@ namespace MtgCore;
 /// Plays a creature card from a player's hand onto their battlefield.
 ///
 /// ValidateAdd confirms the card exists, is in the player's hand,
-/// is controlled by the playing player, and has a CreatureComponent.
+/// is controlled by the playing player, has a CreatureComponent,
+/// and that the player has enough mana to pay the cost.
 ///
-/// On execution the card moves to the battlefield and its CreatureComponent
-/// is updated to set HasSummoningSickness = true, ensuring it cannot
-/// attack the turn it enters.
+/// On execution the card moves to the battlefield, the player's CurrentMana
+/// is reduced by the card's ManaCost, and HasSummoningSickness is set.
 /// </summary>
 public record PlayCreatureAction : GameAction
 {
@@ -36,6 +36,12 @@ public record PlayCreatureAction : GameAction
 		if (!card.HasComponent<CreatureComponent>())
 			return ValidationResult.Invalid("Card is not a creature");
 
+		var player = gameState.GetPlayer(PlayerId);
+		if (player.CurrentMana < card.ManaCost)
+			return ValidationResult.Invalid(
+				$"Not enough mana (have {player.CurrentMana}, need {card.ManaCost})"
+			);
+
 		return ValidationResult.Valid;
 	}
 
@@ -44,15 +50,18 @@ public record PlayCreatureAction : GameAction
 		var card = (Card)gameState.GetObject(CardId);
 		var battlefieldId = gameState.GetPlayerZoneId(PlayerId, ZoneType.Battlefield);
 
-		// Stamp summoning sickness on — always true when entering the battlefield
+		// Spend mana
+		var player = gameState.GetPlayer(PlayerId);
+		var updatedPlayer = player with { CurrentMana = player.CurrentMana - card.ManaCost };
+		var state = gameState.UpdateObject(PlayerId, updatedPlayer);
+
+		// Stamp summoning sickness
 		var creature = card.GetComponent<CreatureComponent>()!;
 		var updatedCard = card.WithComponentReplaced(creature with { HasSummoningSickness = true });
 
-		var newState = gameState
-			.UpdateObject(CardId, updatedCard)
-			.MoveObject(CardId, battlefieldId);
+		state = state.UpdateObject(CardId, updatedCard).MoveObject(CardId, battlefieldId);
 
-		return new ActionResult(newState).WithEvent(
+		return new ActionResult(state).WithEvent(
 			new CreaturePlayedEvent { CardId = CardId, PlayerId = PlayerId }
 		);
 	}

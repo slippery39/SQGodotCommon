@@ -37,8 +37,9 @@ public class ConsoleGameLoop
 	{
 		ConsoleRenderer.RenderMessage("Welcome to MTG Sandbox!");
 
-		// Kick off the first turn — Player 1 starts but does NOT draw
-		// (first turn draw skip is handled by not pushing StartTurnAction here)
+		(_state, var beginEvents) = _state.BeginGame(_ids.GameId);
+		CheckGameOver(beginEvents);
+
 		while (!_gameOver)
 		{
 			if (_state.IsWaitingForChoice)
@@ -113,7 +114,6 @@ public class ConsoleGameLoop
 
 			var actions = GenerateLegalActions(_ids.Player2Id);
 
-			// AI always ends its turn if no other actions are available
 			if (!actions.Any())
 			{
 				ConsoleRenderer.RenderAiAction("Ends turn.");
@@ -121,18 +121,7 @@ public class ConsoleGameLoop
 				return;
 			}
 
-			// Randomly decide whether to end turn (gives ~25% chance each loop)
-			// ensuring the AI doesn't always play everything it can
-			var allOptions = actions.Append(null).ToList(); // null = end turn
-			var chosen = allOptions[rng.Next(allOptions.Count)];
-
-			if (chosen == null)
-			{
-				ConsoleRenderer.RenderAiAction("Ends turn.");
-				HandleEndTurn();
-				return;
-			}
-
+			var chosen = actions[rng.Next(actions.Count)];
 			ExecuteAiAction(chosen);
 		}
 	}

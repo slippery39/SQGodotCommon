@@ -6,12 +6,11 @@ namespace MtgCore;
 /// <summary>
 /// Casts a spell from a player's hand.
 ///
-/// Targets are chosen by the UI before this action is created and submitted.
-/// ValidateAdd confirms the targets are legal per each effect's TargetingStrategy.
-/// Execute moves the card to the stack and spawns a ResolveSpellAction.
+/// ValidateAdd confirms the card exists, is in the player's hand,
+/// is controlled by the casting player, has a SpellComponent,
+/// has valid targets, and that the player has enough mana.
 ///
-/// TargetIds maps effect index → chosen target IDs for that effect.
-/// Most spells have one effect so TargetIds will have one entry.
+/// Execute moves the card to the stack, spends mana, and spawns ResolveSpellAction.
 /// </summary>
 public record CastSpellAction : GameAction
 {
@@ -19,9 +18,6 @@ public record CastSpellAction : GameAction
 	public int CastingPlayerId { get; init; }
 	public int GameId { get; init; }
 
-	/// <summary>
-	/// Targets chosen by the UI, keyed by effect index.
-	/// </summary>
 	public ImmutableDictionary<int, ImmutableList<int>> TargetIds { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
@@ -45,6 +41,12 @@ public record CastSpellAction : GameAction
 		var spellComponent = card.GetComponent<SpellComponent>();
 		if (spellComponent == null)
 			return ValidationResult.Invalid("Card is not a spell");
+
+		var player = gameState.GetPlayer(CastingPlayerId);
+		if (player.CurrentMana < card.ManaCost)
+			return ValidationResult.Invalid(
+				$"Not enough mana (have {player.CurrentMana}, need {card.ManaCost})"
+			);
 
 		var context = new TargetingContext
 		{
@@ -72,12 +74,15 @@ public record CastSpellAction : GameAction
 	public override ActionResult Execute(GameState gameState)
 	{
 		var card = (Card)gameState.GetObject(CardId);
-		var stackId = gameState.GetStackId(GameId);
 
-		// Move card from hand to stack
-		var stateWithCardOnStack = gameState.MoveObject(CardId, stackId);
+		// Spend mana
+		var player = gameState.GetPlayer(CastingPlayerId);
+		var updatedPlayer = player with { CurrentMana = player.CurrentMana - card.ManaCost };
+		var state = gameState.UpdateObject(CastingPlayerId, updatedPlayer);
 
-		// Spawn the resolution action
+		var stackId = state.GetStackId(GameId);
+		state = state.MoveObject(CardId, stackId);
+
 		var resolveAction = new ResolveSpellAction
 		{
 			CardId = CardId,
@@ -86,7 +91,7 @@ public record CastSpellAction : GameAction
 			TargetIds = TargetIds,
 		};
 
-		return new ActionResult(stateWithCardOnStack)
+		return new ActionResult(state)
 		{
 			SpawnedActions = ImmutableList.Create<GameAction>(resolveAction),
 		};

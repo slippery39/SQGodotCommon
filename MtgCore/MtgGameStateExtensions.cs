@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -36,6 +37,21 @@ public static class MtgGameStateExtensions
 		int player1Id,
 		int player2Id
 	) => activePlayerId == player1Id ? player2Id : player1Id;
+
+	// ===== GAME ACTIONS =====
+
+	/// <summary>
+	/// Begins the game. Kicks off the first player's turn and returns the resulting
+	/// state and events. Presentation layers call this once at startup and respond
+	/// to the events — no knowledge of BeginGameAction required.
+	/// </summary>
+	public static (GameState State, ImmutableList<GameEvent> Events) BeginGame(
+		this GameState state,
+		int gameId
+	)
+	{
+		return state.AddAction(new BeginGameAction { GameId = gameId }).ProcessAllActions();
+	}
 
 	// ===== ZONE QUERIES =====
 

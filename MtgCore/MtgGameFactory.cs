@@ -138,6 +138,10 @@ public static class MtgGameFactory
 		var gameWithTurnState = (MtgGame)s14.GetObject(game.Id);
 		var s15 = s14.UpdateObject(game.Id, gameWithTurnState with { ActivePlayerId = player1.Id });
 
+		// // Player 1 starts with 1 mana — they go first and don't draw but do get mana
+		// var p1WithMana = (MtgPlayer)s15.GetObject(player1.Id);
+		// var s16 = s15.UpdateObject(player1.Id, p1WithMana with { CurrentMana = 1, MaxMana = 1 });
+
 		var ids = new MtgGameIds(
 			GameId: game.Id,
 			StackId: stack.Id,

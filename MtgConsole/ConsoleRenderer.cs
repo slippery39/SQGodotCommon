@@ -45,7 +45,7 @@ public static class ConsoleRenderer
 
 		var libraryCount = state.GetCardsInZone(activeLibraryId).Count();
 		Console.WriteLine(
-			$"  YOU ({activePlayer.Name})  Life: {activePlayer.Life}  |  Library: {libraryCount} cards"
+			$"  YOU ({activePlayer.Name})  Life: {activePlayer.Life}  |  Mana: {activePlayer.CurrentMana}/{activePlayer.MaxMana}  |  Library: {libraryCount} cards"
 		);
 		RenderZone(state, activeBattlefieldId, "Battlefield");
 		RenderZone(state, activeGraveyardId, "Graveyard");
