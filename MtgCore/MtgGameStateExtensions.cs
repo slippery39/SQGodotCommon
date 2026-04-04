@@ -38,19 +38,62 @@ public static class MtgGameStateExtensions
 		int player2Id
 	) => activePlayerId == player1Id ? player2Id : player1Id;
 
+	// ===== DECK OPERATIONS =====
+
+	/// <summary>
+	/// Shuffles a player's library by randomly reordering the cards within it.
+	/// Pure helper — no action, no events. Use this for game setup only.
+	/// If a shuffle effect needs to occur during gameplay, implement it as a GameAction instead.
+	/// </summary>
+	public static GameState ShuffleLibrary(this GameState state, int playerId)
+	{
+		var libraryId = state.GetPlayerZoneId(playerId, ZoneType.Library);
+		var cardIds = state.GetChildrenIds(libraryId).ToList();
+
+		var rng = new Random();
+		for (int i = cardIds.Count - 1; i > 0; i--)
+		{
+			var j = rng.Next(i + 1);
+			(cardIds[i], cardIds[j]) = (cardIds[j], cardIds[i]);
+		}
+
+		// Rebuild the parent-to-children mapping in the new order
+		// by moving each card to the zone in shuffled order
+		// We do this by removing all cards and re-adding in new order
+		var tempState = state;
+		foreach (var cardId in cardIds)
+			tempState = tempState.MoveObject(cardId, 0); // detach from library
+
+		foreach (var cardId in cardIds)
+			tempState = tempState.MoveObject(cardId, libraryId); // re-attach in shuffled order
+
+		return tempState;
+	}
+
 	// ===== GAME ACTIONS =====
 
 	/// <summary>
-	/// Begins the game. Kicks off the first player's turn and returns the resulting
-	/// state and events. Presentation layers call this once at startup and respond
-	/// to the events — no knowledge of BeginGameAction required.
+	/// Begins the game. Shuffles both libraries, deals opening hands, then kicks off
+	/// the first player's turn. Presentation layers call this once at startup and
+	/// respond to the events — no knowledge of BeginGameAction or SetupGameAction required.
 	/// </summary>
 	public static (GameState State, ImmutableList<GameEvent> Events) BeginGame(
 		this GameState state,
-		int gameId
+		int gameId,
+		int player1Id,
+		int player2Id
 	)
 	{
-		return state.AddAction(new BeginGameAction { GameId = gameId }).ProcessAllActions();
+		return state
+			.AddAction(
+				new BeginGameAction
+				{
+					GameId = gameId,
+					Player1Id = player1Id,
+					Player2Id = player2Id,
+				}
+			)
+			.ProcessAllActions();
 	}
 
 	// ===== ZONE QUERIES =====

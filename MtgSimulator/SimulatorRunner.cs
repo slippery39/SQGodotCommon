@@ -82,7 +82,7 @@ public class SimulatorRunner
 			cardNames[added.Id] = added.Name;
 		}
 
-		(state, _) = state.BeginGame(ids.GameId);
+		(state, _) = state.BeginGame(ids.GameId, ids.Player1Id, ids.Player2Id);
 
 		return (state, ids, cardNames);
 	}

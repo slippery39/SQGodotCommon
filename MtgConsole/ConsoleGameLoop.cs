@@ -37,7 +37,7 @@ public class ConsoleGameLoop
 	{
 		ConsoleRenderer.RenderMessage("Welcome to MTG Sandbox!");
 
-		(_state, var beginEvents) = _state.BeginGame(_ids.GameId);
+		(_state, var beginEvents) = _state.BeginGame(_ids.GameId, _ids.Player1Id, _ids.Player2Id);
 		CheckGameOver(beginEvents);
 
 		while (!_gameOver)

@@ -4,22 +4,29 @@ using ImmutableGameObjects;
 namespace MtgCore;
 
 /// <summary>
-/// Begins the game by kicking off the first player's first turn.
-/// The first player skips their draw step on turn 1 — this is handled
-/// by passing SkipDraw = true to StartTurnAction.
+/// Begins the game by running all pre-game setup then kicking off the first turn.
 ///
-/// Presentation layers call BeginGame() on the state and respond to events.
-/// No knowledge of this action or StartTurnAction is required outside MTGCore.
+/// Order of operations:
+///   1. SetupGameAction — shuffles both libraries, draws opening hands of 7
+///   2. StartTurnAction — gives Player 1 their first mana, skips draw
+///
+/// Presentation layers call BeginGame() on the state and respond to the result.
+/// No knowledge of this action, SetupGameAction, or StartTurnAction is required
+/// outside MTGCore.
 /// </summary>
 public record BeginGameAction : GameAction
 {
 	public int GameId { get; init; }
+	public int Player1Id { get; init; }
+	public int Player2Id { get; init; }
 
 	public override ActionResult Execute(GameState gameState)
 	{
 		var game = gameState.GetGame(GameId);
 		var activePlayerId = game.ActivePlayerId;
 		var battlefieldId = gameState.GetPlayerZoneId(activePlayerId, ZoneType.Battlefield);
+
+		var setup = new SetupGameAction { Player1Id = Player1Id, Player2Id = Player2Id };
 
 		var startTurn = new StartTurnAction
 		{
@@ -28,9 +35,11 @@ public record BeginGameAction : GameAction
 			SkipDraw = true,
 		};
 
+		// SetupGameAction resolves first (top of stack = first to execute)
+		// then StartTurnAction resolves after
 		return new ActionResult(gameState)
 		{
-			SpawnedActions = ImmutableList.Create<GameAction>(startTurn),
+			SpawnedActions = ImmutableList.Create<GameAction>(startTurn, setup),
 		};
 	}
 }
