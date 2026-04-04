@@ -68,7 +68,9 @@ public class ConsoleGameLoop
 	private void RunHumanTurn(int activePlayerId)
 	{
 		ConsoleRenderer.RenderGameState(_state, _ids);
-		Console.WriteLine("  COMMANDS: [number] play card  |  attack  |  end turn  |  quit");
+		Console.WriteLine(
+			"  COMMANDS: [number] play card  |  attack  |  ability  |  end turn  |  quit"
+		);
 		Console.Write("  > ");
 
 		var input = Console.ReadLine()?.Trim().ToLower() ?? "";
@@ -87,6 +89,10 @@ public class ConsoleGameLoop
 			case "attack"
 			or "a":
 				HandleAttack(activePlayerId);
+				break;
+			case "ability"
+			or "ab":
+				HandleAbility(activePlayerId);
 				break;
 			default:
 				if (int.TryParse(input, out var cardIndex))
@@ -198,8 +204,46 @@ public class ConsoleGameLoop
 				if (_state.TryAddAction(attack).Success)
 				{
 					actions.Add(attack);
-					break; // one valid target per attacker is enough to add it as an option
+					break;
 				}
+			}
+		}
+
+		// Activate abilities on battlefield permanents
+		foreach (var card in _state.GetCardsInZone(battlefieldId))
+		{
+			var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
+			for (int i = 0; i < abilities.Count; i++)
+			{
+				var context = new TargetingContext
+				{
+					GameState = _state,
+					SourceCardId = card.Id,
+					CastingPlayerId = playerId,
+				};
+
+				var needsTarget = abilities[i].Effect.TargetingStrategy.RequiresUserSelection;
+				var targetId = needsTarget
+					? abilities[i]
+						.Effect.TargetingStrategy.GetValidTargets(context)
+						.FirstOrDefault()
+					: 0;
+
+				if (needsTarget && targetId == 0)
+					continue;
+
+				var abilityAction = new ActivateAbilityAction
+				{
+					CardId = card.Id,
+					ActivatingPlayerId = playerId,
+					AbilityIndex = i,
+					TargetIds = needsTarget
+						? ImmutableList.Create(targetId)
+						: ImmutableList<int>.Empty,
+				};
+
+				if (_state.TryAddAction(abilityAction).Success)
+					actions.Add(abilityAction);
 			}
 		}
 
@@ -213,6 +257,8 @@ public class ConsoleGameLoop
 			PlayCreatureAction pca => $"Plays creature (card {pca.CardId})",
 			CastSpellAction csa => $"Casts spell (card {csa.CardId})",
 			AttackAction aa => $"Attacks target {aa.TargetId} with creature {aa.AttackerId}",
+			ActivateAbilityAction aaa =>
+				$"Activates ability {aaa.AbilityIndex} on card {aaa.CardId}",
 			_ => action.GetType().Name,
 		};
 
@@ -258,6 +304,99 @@ public class ConsoleGameLoop
 			HandleCastSpell(cardObj, activePlayerId);
 		else
 			ConsoleRenderer.RenderMessage("That card cannot be played.");
+	}
+
+	private void HandleAbility(int activePlayerId)
+	{
+		var battlefieldId = _state.GetPlayerZoneId(activePlayerId, ZoneType.Battlefield);
+
+		// Find all cards with at least one usable activated ability
+		var cardsWithAbilities = _state
+			.GetCardsInZone(battlefieldId)
+			.Where(c => c.GetComponents<ActivatedAbilityComponent>().Any())
+			.ToList();
+
+		if (!cardsWithAbilities.Any())
+		{
+			ConsoleRenderer.RenderMessage("No cards with activated abilities on the battlefield.");
+			return;
+		}
+
+		ConsoleRenderer.RenderGameState(_state, _ids);
+		ConsoleRenderer.RenderMessage("Choose a card to activate an ability on (0 to cancel):");
+		ConsoleRenderer.RenderCardsWithAbilities(_state, cardsWithAbilities);
+
+		var cardIndex = ReadIndex(1, cardsWithAbilities.Count);
+		if (cardIndex == null)
+			return;
+
+		var card = cardsWithAbilities[cardIndex.Value - 1];
+		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
+
+		ConsoleRenderer.RenderGameState(_state, _ids);
+		ConsoleRenderer.RenderMessage(
+			$"Choose an ability to activate on {card.Name} (0 to cancel):"
+		);
+		ConsoleRenderer.RenderAbilities(abilities);
+
+		var abilityIndex = ReadIndex(1, abilities.Count);
+		if (abilityIndex == null)
+			return;
+
+		var ability = abilities[abilityIndex.Value - 1];
+		var targetIds = ImmutableList<int>.Empty;
+
+		if (ability.Effect.TargetingStrategy.RequiresUserSelection)
+		{
+			var context = new TargetingContext
+			{
+				GameState = _state,
+				SourceCardId = card.Id,
+				CastingPlayerId = activePlayerId,
+			};
+
+			var validTargets = ability.Effect.TargetingStrategy.GetValidTargets(context).ToList();
+
+			if (!validTargets.Any())
+			{
+				ConsoleRenderer.RenderMessage("No valid targets available.");
+				return;
+			}
+
+			ConsoleRenderer.RenderGameState(_state, _ids);
+			ConsoleRenderer.RenderMessage($"Choose a target for {ability.Name} (0 to cancel):");
+			ConsoleRenderer.RenderAttackTargets(_state, validTargets);
+
+			var targetIndex = ReadIndex(1, validTargets.Count);
+			if (targetIndex == null)
+				return;
+
+			targetIds = ImmutableList.Create(validTargets[targetIndex.Value - 1]);
+		}
+
+		var abilityAction = new ActivateAbilityAction
+		{
+			CardId = card.Id,
+			ActivatingPlayerId = activePlayerId,
+			AbilityIndex = abilityIndex.Value - 1,
+			TargetIds = targetIds,
+		};
+
+		var (newState, success) = _state.TryAddAction(abilityAction);
+		if (!success)
+		{
+			ConsoleRenderer.RenderMessage("Cannot activate that ability right now.");
+			return;
+		}
+
+		var (finalState, events) = newState.ProcessAllActions();
+		_state = finalState;
+
+		ConsoleRenderer.RenderGameState(_state, _ids);
+		ConsoleRenderer.RenderEvents(events, _ids);
+		CheckGameOver(events);
+		if (!_gameOver)
+			WaitForKeyPress();
 	}
 
 	private void HandlePlayCreature(Card card, int activePlayerId)

@@ -9,8 +9,10 @@ namespace MtgCore;
 /// Responsibilities:
 ///   - Increments MaxMana by 1 (capped at 10) and refills CurrentMana to MaxMana
 ///   - Draws one card, unless SkipDraw is true (used for the first turn of the game)
-///   - Clears HasSummoningSickness, HasAttacked, and Damage on all creatures
-///     the active player controls on the battlefield
+///   - Clears HasSummoningSickness, HasAttacked on CreatureComponent
+///   - Clears HasActivated on all ActivatedAbilityComponents
+///   - Resets Damage on CreatureComponent
+///   All of the above apply only to creatures the active player controls.
 ///
 /// Emits TurnStartedEvent.
 /// </summary>
@@ -20,10 +22,6 @@ public record StartTurnAction : GameAction
 
 	public int ActivePlayerId { get; init; }
 	public int BattlefieldId { get; init; }
-
-	/// <summary>
-	/// When true the draw step is skipped. Used for the first player's opening turn.
-	/// </summary>
 	public bool SkipDraw { get; init; } = false;
 
 	public override ActionResult Execute(GameState gameState)
@@ -36,22 +34,42 @@ public record StartTurnAction : GameAction
 		var updatedPlayer = player with { MaxMana = newMax, CurrentMana = newMax };
 		state = state.UpdateObject(ActivePlayerId, updatedPlayer);
 
-		// Clear per-turn flags on all creatures the active player controls
-		var battlefieldCreatures = state
+		// Reset per-turn flags on all permanents the active player controls
+		var battlefieldCards = state
 			.GetCardsInZone(BattlefieldId)
-			.Where(c => c.ControllerId == ActivePlayerId && c.HasComponent<CreatureComponent>())
+			.Where(c => c.ControllerId == ActivePlayerId)
 			.ToList();
 
-		foreach (var creature in battlefieldCreatures)
+		foreach (var card in battlefieldCards)
 		{
-			var component = creature.GetComponent<CreatureComponent>()!;
-			var reset = component with
+			var updatedComponents = card.Components;
+
+			for (int i = 0; i < updatedComponents.Count; i++)
 			{
-				HasSummoningSickness = false,
-				HasAttacked = false,
-				Damage = 0,
-			};
-			state = state.UpdateObject(creature.Id, creature.WithComponentReplaced(reset));
+				updatedComponents = updatedComponents[i] switch
+				{
+					CreatureComponent cc => updatedComponents.SetItem(
+						i,
+						cc with
+						{
+							HasSummoningSickness = false,
+							HasAttacked = false,
+							Damage = 0,
+						}
+					),
+					ActivatedAbilityComponent ac => updatedComponents.SetItem(
+						i,
+						ac with
+						{
+							HasActivated = false,
+						}
+					),
+					_ => updatedComponents,
+				};
+			}
+
+			if (updatedComponents != card.Components)
+				state = state.UpdateObject(card.Id, card with { Components = updatedComponents });
 		}
 
 		var spawned = ImmutableList<GameAction>.Empty;

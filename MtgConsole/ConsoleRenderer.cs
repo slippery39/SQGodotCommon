@@ -69,6 +69,24 @@ public static class ConsoleRenderer
 			Console.WriteLine($"    [{i + 1}] {FormatCard(cards[i])}");
 	}
 
+	public static void RenderCardsWithAbilities(GameState state, IReadOnlyList<Card> cards)
+	{
+		Console.WriteLine("  CARDS WITH ABILITIES:");
+		for (int i = 0; i < cards.Count; i++)
+			Console.WriteLine($"    [{i + 1}] {FormatCard(cards[i])}");
+	}
+
+	public static void RenderAbilities(IReadOnlyList<ActivatedAbilityComponent> abilities)
+	{
+		Console.WriteLine("  ABILITIES:");
+		for (int i = 0; i < abilities.Count; i++)
+		{
+			var ab = abilities[i];
+			var usedStr = ab.HasActivated ? " (used)" : "";
+			Console.WriteLine($"    [{i + 1}] {ab.Name} — Cost: {ab.ManaCost}{usedStr}");
+		}
+	}
+
 	public static void RenderAttackers(GameState state, IReadOnlyList<Card> creatures)
 	{
 		Console.WriteLine("  YOUR CREATURES:");

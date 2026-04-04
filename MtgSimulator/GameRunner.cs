@@ -284,6 +284,44 @@ public class GameRunner
 			}
 		}
 
+		// Activate abilities on battlefield permanents
+		foreach (var card in state.GetCardsInZone(battlefieldId))
+		{
+			var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
+			for (int i = 0; i < abilities.Count; i++)
+			{
+				var context = new TargetingContext
+				{
+					GameState = state,
+					SourceCardId = card.Id,
+					CastingPlayerId = playerId,
+				};
+
+				var needsTarget = abilities[i].Effect.TargetingStrategy.RequiresUserSelection;
+				var validTargets = needsTarget
+					? abilities[i].Effect.TargetingStrategy.GetValidTargets(context)
+					: ImmutableList<int>.Empty;
+
+				if (needsTarget && validTargets.IsEmpty)
+					continue;
+
+				var targetId = needsTarget ? validTargets[_rng.Next(validTargets.Count)] : 0;
+
+				var abilityAction = new ActivateAbilityAction
+				{
+					CardId = card.Id,
+					ActivatingPlayerId = playerId,
+					AbilityIndex = i,
+					TargetIds = needsTarget
+						? ImmutableList.Create(targetId)
+						: ImmutableList<int>.Empty,
+				};
+
+				if (state.TryAddAction(abilityAction).Success)
+					actions.Add(abilityAction);
+			}
+		}
+
 		return actions;
 	}
 

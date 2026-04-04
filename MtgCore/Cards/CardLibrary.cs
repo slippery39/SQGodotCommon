@@ -199,4 +199,71 @@ public static class CardLibrary
 				new CreatureComponent { Power = 2, Toughness = 1 }
 			),
 		};
+
+	/// <summary>
+	/// Prodigal Sorcerer — 3 mana creature (1/1).
+	/// Activated ability: "1 mana: Deal 1 damage to any target."
+	/// Classic example of a simple damage ping ability.
+	/// </summary>
+	public static Card ProdigalSorcerer() =>
+		new()
+		{
+			Name = "Prodigal Sorcerer",
+			ManaCost = 3,
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 1, Toughness = 1 },
+				new ActivatedAbilityComponent
+				{
+					Name = "Ping",
+					ManaCost = 1,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.SingleTarget(
+							new IsPlayerSpecification().Or(new IsCreatureSpecification())
+						),
+						ActionTemplate = new DealDamageAction { Amount = 1 },
+					},
+				}
+			),
+		};
+
+	/// <summary>
+	/// Throne of Bone — 1 mana artifact creature (1/1).
+	/// Activated ability: "1 mana: Gain 2 life."
+	/// Activated ability: "2 mana: Draw a card."
+	/// Simple card with two abilities to exercise the multi-ability path.
+	/// </summary>
+	public static Card ThroneOfBone() =>
+		new()
+		{
+			Name = "Throne of Bone",
+			ManaCost = 1,
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 1, Toughness = 1 },
+				new ActivatedAbilityComponent
+				{
+					Name = "Gain Life",
+					ManaCost = 1,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 2 },
+					},
+				},
+				new ActivatedAbilityComponent
+				{
+					Name = "Draw",
+					ManaCost = 2,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new DrawCardsAction
+						{
+							Amount = 1,
+							PlayerIdContextKey = ContextKeys.CastingPlayerId,
+						},
+					},
+				}
+			),
+		};
 }

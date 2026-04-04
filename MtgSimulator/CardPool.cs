@@ -151,6 +151,114 @@ public static class CardPool
 					),
 					new DealDamageAction { Amount = 3 }
 				),
+			// ===== CREATURES WITH ACTIVATED ABILITIES =====
+
+			// Prodigal Sorcerer — 3 mana 1/1. "1 mana: Deal 1 damage to any opponent target."
+			ownerId =>
+				MakeAbilityCreature(
+					"Prodigal Sorcerer",
+					ownerId,
+					cost: 3,
+					power: 1,
+					toughness: 1,
+					new ActivatedAbilityComponent
+					{
+						Name = "Ping",
+						ManaCost = 1,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								new IsPlayerSpecification()
+									.And(new IsControlledByOpponentSpecification())
+									.Or(
+										new IsCreatureSpecification().And(
+											new IsControlledByOpponentSpecification()
+										)
+									)
+							),
+							ActionTemplate = new DealDamageAction { Amount = 1 },
+						},
+					}
+				),
+			// Drudge Skeletons — 2 mana 1/1. "1 mana: Gain 2 life."
+			ownerId =>
+				MakeAbilityCreature(
+					"Drudge Skeletons",
+					ownerId,
+					cost: 2,
+					power: 1,
+					toughness: 1,
+					new ActivatedAbilityComponent
+					{
+						Name = "Drain Life",
+						ManaCost = 1,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new GainLifeAction { Amount = 2 },
+						},
+					}
+				),
+			// Wizard Mentor — 3 mana 2/2. "2 mana: Draw a card."
+			ownerId =>
+				MakeAbilityCreature(
+					"Wizard Mentor",
+					ownerId,
+					cost: 3,
+					power: 2,
+					toughness: 2,
+					new ActivatedAbilityComponent
+					{
+						Name = "Study",
+						ManaCost = 2,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new DrawCardsAction
+							{
+								Amount = 1,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
+						},
+					}
+				),
+			// Spikeshot Goblin — 3 mana 1/1. Two abilities: ping and drain.
+			ownerId =>
+				MakeAbilityCreature(
+					"Spikeshot Goblin",
+					ownerId,
+					cost: 3,
+					power: 1,
+					toughness: 1,
+					new ActivatedAbilityComponent
+					{
+						Name = "Spike",
+						ManaCost = 1,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								new IsPlayerSpecification()
+									.And(new IsControlledByOpponentSpecification())
+									.Or(
+										new IsCreatureSpecification().And(
+											new IsControlledByOpponentSpecification()
+										)
+									)
+							),
+							ActionTemplate = new DealDamageAction { Amount = 1 },
+						},
+					},
+					new ActivatedAbilityComponent
+					{
+						Name = "Drain",
+						ManaCost = 2,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new GainLifeAction { Amount = 2 },
+						},
+					}
+				),
 			// ===== UTILITY SPELLS =====
 			ownerId =>
 				MakeSpell(
@@ -225,6 +333,27 @@ public static class CardPool
 			Components = ImmutableList.Create<GameComponent>(
 				new CreatureComponent { Power = power, Toughness = toughness }
 			),
+		};
+
+	private static Card MakeAbilityCreature(
+		string name,
+		int ownerId,
+		int cost,
+		int power,
+		int toughness,
+		params ActivatedAbilityComponent[] abilities
+	) =>
+		new Card
+		{
+			Name = name,
+			ManaCost = cost,
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+			Components = ImmutableList
+				.Create<GameComponent>(
+					new CreatureComponent { Power = power, Toughness = toughness }
+				)
+				.AddRange(abilities),
 		};
 
 	private static Card MakeSpell(
