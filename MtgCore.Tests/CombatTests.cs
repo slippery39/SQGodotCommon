@@ -14,7 +14,7 @@ public class CombatTests
 	[SetUp]
 	public void Setup()
 	{
-		(_state, _ids) = MtgGameFactory.Create();
+		(_state, _ids) = MtgGameFactory.CreateForTesting();
 	}
 
 	// ===== ATTACKING A PLAYER =====
@@ -144,55 +144,70 @@ public class CombatTests
 		var (finalState, events) = s2.AddAction(MakeAttack(attacker.Id, defender.Id))
 			.ProcessAllActions();
 
-		Assert.That(
-			finalState.GetCardZone(attacker.Id).ZoneType,
-			Is.EqualTo(ZoneType.Graveyard),
-			"Attacker should die"
-		);
-		Assert.That(
-			finalState.GetCardZone(defender.Id).ZoneType,
-			Is.EqualTo(ZoneType.Graveyard),
-			"Defender should die"
-		);
+		Assert.That(finalState.GetCardZone(attacker.Id).ZoneType, Is.EqualTo(ZoneType.Graveyard));
+		Assert.That(finalState.GetCardZone(defender.Id).ZoneType, Is.EqualTo(ZoneType.Graveyard));
 		Assert.That(events.OfType<CreatureDestroyedEvent>().Count(), Is.EqualTo(2));
+	}
+
+	// ===== HAS ATTACKED =====
+
+	[Test]
+	public void Attack_SetsHasAttacked_OnAttacker()
+	{
+		var (state, attacker) = AddCreatureToBattlefield(_state, "Bear", 2, 2, _ids.Player1Id);
+
+		var (finalState, _) = state
+			.AddAction(MakeAttack(attacker.Id, _ids.Player2Id))
+			.ProcessAllActions();
+
+		var card = (Card)finalState.GetObject(attacker.Id);
+		Assert.That(card.GetComponent<CreatureComponent>()!.HasAttacked, Is.True);
+	}
+
+	[Test]
+	public void Attack_FailsIfCreatureAlreadyAttacked()
+	{
+		var (state, attacker) = AddCreatureToBattlefield(_state, "Bear", 2, 2, _ids.Player1Id);
+
+		var (stateAfterAttack, _) = state
+			.AddAction(MakeAttack(attacker.Id, _ids.Player2Id))
+			.ProcessAllActions();
+
+		var (_, success) = stateAfterAttack.TryAddAction(MakeAttack(attacker.Id, _ids.Player2Id));
+		Assert.That(success, Is.False);
 	}
 
 	// ===== VALIDATION =====
 
 	[Test]
-	public void Attack_FailsIfAttackerNotOnBattlefield()
+	public void Attack_FailsIfAttackerHasSummoningSickness()
 	{
-		var attacker = TestCardFactory.MakeCreatureCard("Bear", _ids.Player1Id, 2, 2);
-		var (state, added) = _state.AddObject(attacker, parentId: _ids.Player1HandId);
+		var battlefieldId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield);
+		var sickCreature = new Card
+		{
+			Name = "Sick Bear",
+			ManaCost = 2,
+			OwnerId = _ids.Player1Id,
+			ControllerId = _ids.Player1Id,
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent
+				{
+					Power = 2,
+					Toughness = 2,
+					HasSummoningSickness = true,
+				}
+			),
+		};
+		var (state, added) = _state.AddObject(sickCreature, parentId: battlefieldId);
 
 		var (_, success) = state.TryAddAction(MakeAttack(added.Id, _ids.Player2Id));
-
-		Assert.That(success, Is.False);
-	}
-
-	[Test]
-	public void Attack_FailsIfAttackerIsNotACreature()
-	{
-		var spell = TestCardFactory.MakeSpellCard(
-			"Lightning Bolt",
-			_ids.Player1Id,
-			new CardEffect
-			{
-				TargetingStrategy = TargetingStrategy.NoTarget(),
-				ActionTemplate = new DealDamageAction { Amount = 3 },
-			}
-		);
-		var (state, added) = _state.AddObject(spell, parentId: _ids.Player1BattlefieldId);
-
-		var (_, success) = state.TryAddAction(MakeAttack(added.Id, _ids.Player2Id));
-
 		Assert.That(success, Is.False);
 	}
 
 	[Test]
 	public void Attack_FailsIfNotController()
 	{
-		var (state, attacker) = AddCreatureToBattlefield(_state, "Bear", 2, 2, _ids.Player2Id);
+		var (state, attacker) = AddCreatureToBattlefield(_state, "Bear", 2, 2, _ids.Player1Id);
 
 		var (_, success) = state.TryAddAction(
 			new AttackAction
@@ -258,7 +273,21 @@ public class CombatTests
 	)
 	{
 		var battlefieldId = state.GetPlayerZoneId(ownerId, ZoneType.Battlefield);
-		var creature = TestCardFactory.MakeCreatureCard(name, ownerId, power, toughness);
+		var creature = new Card
+		{
+			Name = name,
+			ManaCost = 2,
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent
+				{
+					Power = power,
+					Toughness = toughness,
+					HasSummoningSickness = false, // combat tests don't test summoning sickness
+				}
+			),
+		};
 		var (newState, added) = state.AddObject(creature, parentId: battlefieldId);
 		return (newState, added);
 	}

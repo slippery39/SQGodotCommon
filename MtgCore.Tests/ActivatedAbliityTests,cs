@@ -1,0 +1,397 @@
+using System.Collections.Immutable;
+using ImmutableGameObjects;
+using MtgCore;
+using NUnit.Framework;
+
+namespace MtgCore.Tests;
+
+[TestFixture]
+public class ActivatedAbilityTests
+{
+	private GameState _state;
+	private MtgGameIds _ids;
+
+	[SetUp]
+	public void Setup()
+	{
+		(_state, _ids) = MtgGameFactory.CreateForTesting();
+	}
+
+	// ===== BASIC ACTIVATION =====
+
+	[Test]
+	public void ActivateAbility_SpendsMana()
+	{
+		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 2);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 3, max: 3);
+
+		var (finalState, _) = state
+			.AddAction(MakeActivate(cardId, _ids.Player1Id, abilityIndex: 0))
+			.ProcessAllActions();
+
+		Assert.That(finalState.GetPlayer(_ids.Player1Id).CurrentMana, Is.EqualTo(1));
+	}
+
+	[Test]
+	public void ActivateAbility_SetsHasActivated()
+	{
+		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 1);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 2, max: 2);
+
+		var (finalState, _) = state
+			.AddAction(MakeActivate(cardId, _ids.Player1Id, abilityIndex: 0))
+			.ProcessAllActions();
+
+		var card = (Card)finalState.GetObject(cardId);
+		var ability = card.GetComponents<ActivatedAbilityComponent>().First();
+		Assert.That(ability.HasActivated, Is.True);
+	}
+
+	[Test]
+	public void ActivateAbility_ExecutesEffect()
+	{
+		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 1);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 2, max: 2);
+
+		var (finalState, _) = state
+			.AddAction(MakeActivate(cardId, _ids.Player1Id, abilityIndex: 0))
+			.ProcessAllActions();
+
+		// The test ability gains 3 life
+		Assert.That(finalState.GetPlayer(_ids.Player1Id).Life, Is.EqualTo(23));
+	}
+
+	// ===== VALIDATION =====
+
+	[Test]
+	public void ActivateAbility_FailsIfAlreadyActivatedThisTurn()
+	{
+		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 1);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 5, max: 5);
+
+		// First activation
+		var (stateAfterFirst, _) = state
+			.AddAction(MakeActivate(cardId, _ids.Player1Id, abilityIndex: 0))
+			.ProcessAllActions();
+
+		// Second activation should fail
+		var (_, success) = stateAfterFirst.TryAddAction(
+			MakeActivate(cardId, _ids.Player1Id, abilityIndex: 0)
+		);
+
+		Assert.That(success, Is.False);
+	}
+
+	[Test]
+	public void ActivateAbility_FailsWithInsufficientMana()
+	{
+		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 3);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 2, max: 2);
+
+		var (_, success) = state.TryAddAction(
+			MakeActivate(cardId, _ids.Player1Id, abilityIndex: 0)
+		);
+
+		Assert.That(success, Is.False);
+	}
+
+	[Test]
+	public void ActivateAbility_FailsIfCardNotOnBattlefield()
+	{
+		var creature = MakeAbilityCard(_ids.Player1Id, manaCost: 1);
+		var (state, added) = _state.AddObject(creature, parentId: _ids.Player1HandId);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 3, max: 3);
+
+		var (_, success) = state.TryAddAction(
+			MakeActivate(added.Id, _ids.Player1Id, abilityIndex: 0)
+		);
+
+		Assert.That(success, Is.False);
+	}
+
+	[Test]
+	public void ActivateAbility_FailsIfNotController()
+	{
+		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 1);
+		state = GivePlayerMana(state, _ids.Player2Id, current: 3, max: 3);
+
+		var (_, success) = state.TryAddAction(
+			MakeActivate(cardId, _ids.Player2Id, abilityIndex: 0)
+		);
+
+		Assert.That(success, Is.False);
+	}
+
+	[Test]
+	public void ActivateAbility_FailsWithInvalidAbilityIndex()
+	{
+		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 1);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 3, max: 3);
+
+		var (_, success) = state.TryAddAction(
+			MakeActivate(cardId, _ids.Player1Id, abilityIndex: 99)
+		);
+
+		Assert.That(success, Is.False);
+	}
+
+	// ===== MULTIPLE ABILITIES =====
+
+	[Test]
+	public void MultipleAbilities_EachTrackedIndependently()
+	{
+		var (state, cardId) = AddTwoAbilityCreature(_state, _ids.Player1Id);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 5, max: 5);
+
+		// Activate first ability
+		var (stateAfterFirst, _) = state
+			.AddAction(MakeActivate(cardId, _ids.Player1Id, abilityIndex: 0))
+			.ProcessAllActions();
+
+		// Second ability should still be available
+		var (_, success) = stateAfterFirst.TryAddAction(
+			MakeActivate(cardId, _ids.Player1Id, abilityIndex: 1)
+		);
+
+		Assert.That(success, Is.True);
+	}
+
+	[Test]
+	public void MultipleAbilities_BothCanBeActivatedInSameTurn()
+	{
+		var (state, cardId) = AddTwoAbilityCreature(_state, _ids.Player1Id);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 5, max: 5);
+
+		var (stateAfterFirst, _) = state
+			.AddAction(MakeActivate(cardId, _ids.Player1Id, abilityIndex: 0))
+			.ProcessAllActions();
+
+		var (finalState, _) = stateAfterFirst
+			.AddAction(MakeActivate(cardId, _ids.Player1Id, abilityIndex: 1))
+			.ProcessAllActions();
+
+		var card = (Card)finalState.GetObject(cardId);
+		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
+		Assert.That(abilities[0].HasActivated, Is.True);
+		Assert.That(abilities[1].HasActivated, Is.True);
+	}
+
+	// ===== RESET ON NEW TURN =====
+
+	[Test]
+	public void ActivateAbility_HasActivatedCleared_AtStartOfControllersTurn()
+	{
+		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 1);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 3, max: 3);
+
+		// Activate ability
+		var (stateAfterActivation, _) = state
+			.AddAction(MakeActivate(cardId, _ids.Player1Id, abilityIndex: 0))
+			.ProcessAllActions();
+
+		// Simulate start of Player 1's next turn
+		var battlefieldId = stateAfterActivation.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield);
+		var startTurn = new StartTurnAction
+		{
+			ActivePlayerId = _ids.Player1Id,
+			BattlefieldId = battlefieldId,
+			SkipDraw = true,
+		};
+
+		var (finalState, _) = stateAfterActivation.AddAction(startTurn).ProcessAllActions();
+
+		var card = (Card)finalState.GetObject(cardId);
+		var ability = card.GetComponents<ActivatedAbilityComponent>().First();
+		Assert.That(ability.HasActivated, Is.False);
+	}
+
+	[Test]
+	public void ActivateAbility_HasActivatedNotCleared_AtStartOfOpponentsTurn()
+	{
+		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 1);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 3, max: 3);
+
+		var (stateAfterActivation, _) = state
+			.AddAction(MakeActivate(cardId, _ids.Player1Id, abilityIndex: 0))
+			.ProcessAllActions();
+
+		// Simulate start of Player 2's turn (should not clear Player 1's ability)
+		var battlefieldId = stateAfterActivation.GetPlayerZoneId(_ids.Player2Id, ZoneType.Battlefield);
+		var startTurn = new StartTurnAction
+		{
+			ActivePlayerId = _ids.Player2Id,
+			BattlefieldId = battlefieldId,
+			SkipDraw = true,
+		};
+
+		var (finalState, _) = stateAfterActivation.AddAction(startTurn).ProcessAllActions();
+
+		var card = (Card)finalState.GetObject(cardId);
+		var ability = card.GetComponents<ActivatedAbilityComponent>().First();
+		Assert.That(ability.HasActivated, Is.True);
+	}
+
+	// ===== TARGETED ABILITY =====
+
+	[Test]
+	public void ActivateAbility_WithTarget_DamagesTarget()
+	{
+		var (state, cardId) = AddDamagePingCreature(_state, _ids.Player1Id);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 3, max: 3);
+
+		var (finalState, _) = state
+			.AddAction(MakeActivateWithTarget(cardId, _ids.Player1Id, 0, _ids.Player2Id))
+			.ProcessAllActions();
+
+		Assert.That(finalState.GetPlayer(_ids.Player2Id).Life, Is.EqualTo(19));
+	}
+
+	[Test]
+	public void ActivateAbility_WithTarget_FailsIfNoValidTargets()
+	{
+		var (state, cardId) = AddDamagePingCreature(_state, _ids.Player1Id);
+		state = GivePlayerMana(state, _ids.Player1Id, current: 3, max: 3);
+
+		// Try to target self (ability only targets opponents)
+		var (_, success) = state.TryAddAction(
+			MakeActivateWithTarget(cardId, _ids.Player1Id, 0, _ids.Player1Id)
+		);
+
+		Assert.That(success, Is.False);
+	}
+
+	// ===== HELPERS =====
+
+	private Card MakeAbilityCard(int ownerId, int manaCost) =>
+		new Card
+		{
+			Name = "Ability Creature",
+			ManaCost = 2,
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 1, Toughness = 1 },
+				new ActivatedAbilityComponent
+				{
+					Name = "Gain Life",
+					ManaCost = manaCost,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 3 },
+					},
+				}
+			),
+		};
+
+	private (GameState state, int id) AddAbilityCreature(
+		GameState state,
+		int ownerId,
+		int manaCost
+	)
+	{
+		var battlefieldId = state.GetPlayerZoneId(ownerId, ZoneType.Battlefield);
+		var (newState, added) = state.AddObject(MakeAbilityCard(ownerId, manaCost), parentId: battlefieldId);
+		return (newState, added.Id);
+	}
+
+	private (GameState state, int id) AddTwoAbilityCreature(GameState state, int ownerId)
+	{
+		var battlefieldId = state.GetPlayerZoneId(ownerId, ZoneType.Battlefield);
+		var card = new Card
+		{
+			Name = "Two Ability Creature",
+			ManaCost = 3,
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 1, Toughness = 1 },
+				new ActivatedAbilityComponent
+				{
+					Name = "Ability A",
+					ManaCost = 1,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 1 },
+					},
+				},
+				new ActivatedAbilityComponent
+				{
+					Name = "Ability B",
+					ManaCost = 2,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 2 },
+					},
+				}
+			),
+		};
+		var (newState, added) = state.AddObject(card, parentId: battlefieldId);
+		return (newState, added.Id);
+	}
+
+	private (GameState state, int id) AddDamagePingCreature(GameState state, int ownerId)
+	{
+		var battlefieldId = state.GetPlayerZoneId(ownerId, ZoneType.Battlefield);
+		var card = new Card
+		{
+			Name = "Ping Creature",
+			ManaCost = 3,
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 1, Toughness = 1 },
+				new ActivatedAbilityComponent
+				{
+					Name = "Ping",
+					ManaCost = 1,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.SingleTarget(
+							new IsPlayerSpecification()
+								.And(new IsControlledByOpponentSpecification())
+						),
+						ActionTemplate = new DealDamageAction { Amount = 1 },
+					},
+				}
+			),
+		};
+		var (newState, added) = state.AddObject(card, parentId: battlefieldId);
+		return (newState, added.Id);
+	}
+
+	private static ActivateAbilityAction MakeActivate(
+		int cardId,
+		int playerId,
+		int abilityIndex
+	) =>
+		new()
+		{
+			CardId = cardId,
+			ActivatingPlayerId = playerId,
+			AbilityIndex = abilityIndex,
+			TargetIds = ImmutableList<int>.Empty,
+		};
+
+	private static ActivateAbilityAction MakeActivateWithTarget(
+		int cardId,
+		int playerId,
+		int abilityIndex,
+		int targetId
+	) =>
+		new()
+		{
+			CardId = cardId,
+			ActivatingPlayerId = playerId,
+			AbilityIndex = abilityIndex,
+			TargetIds = ImmutableList.Create(targetId),
+		};
+
+	private static GameState GivePlayerMana(GameState state, int playerId, int current, int max)
+	{
+		var player = state.GetPlayer(playerId);
+		return state.UpdateObject(playerId, player with { CurrentMana = current, MaxMana = max });
+	}
+}

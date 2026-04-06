@@ -15,7 +15,7 @@ public class LightningBoltTests
 	[SetUp]
 	public void Setup()
 	{
-		(_state, _ids) = MtgGameFactory.Create();
+		(_state, _ids) = MtgGameFactory.CreateForTesting();
 
 		var bolt = CardLibrary.LightningBolt() with
 		{

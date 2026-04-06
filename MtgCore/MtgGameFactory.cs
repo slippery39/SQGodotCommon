@@ -138,10 +138,6 @@ public static class MtgGameFactory
 		var gameWithTurnState = (MtgGame)s14.GetObject(game.Id);
 		var s15 = s14.UpdateObject(game.Id, gameWithTurnState with { ActivePlayerId = player1.Id });
 
-		// // Player 1 starts with 1 mana — they go first and don't draw but do get mana
-		// var p1WithMana = (MtgPlayer)s15.GetObject(player1.Id);
-		// var s16 = s15.UpdateObject(player1.Id, p1WithMana with { CurrentMana = 1, MaxMana = 1 });
-
 		var ids = new MtgGameIds(
 			GameId: game.Id,
 			StackId: stack.Id,
@@ -160,6 +156,25 @@ public static class MtgGameFactory
 		);
 
 		return (s15, ids);
+	}
+
+	/// <summary>
+	/// Creates a game state suitable for unit testing.
+	/// Both players are given a large mana pool so tests don't need to
+	/// worry about mana unless they are specifically testing mana behaviour.
+	/// Use Create() directly for mana-specific tests.
+	/// </summary>
+	public static (GameState State, MtgGameIds Ids) CreateForTesting()
+	{
+		var (state, ids) = Create();
+
+		var p1 = state.GetPlayer(ids.Player1Id);
+		var p2 = state.GetPlayer(ids.Player2Id);
+
+		state = state.UpdateObject(ids.Player1Id, p1 with { CurrentMana = 99, MaxMana = 99 });
+		state = state.UpdateObject(ids.Player2Id, p2 with { CurrentMana = 99, MaxMana = 99 });
+
+		return (state, ids);
 	}
 }
 

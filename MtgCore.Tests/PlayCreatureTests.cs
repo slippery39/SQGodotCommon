@@ -15,7 +15,7 @@ public class PlayCreatureTests
 	[SetUp]
 	public void Setup()
 	{
-		(_state, _ids) = MtgGameFactory.Create();
+		(_state, _ids) = MtgGameFactory.CreateForTesting();
 
 		var creature = MakeCreature("Grizzly Bears", power: 2, toughness: 2);
 		var (newState, added) = _state.AddObject(creature, parentId: _ids.Player1HandId);

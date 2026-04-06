@@ -19,30 +19,18 @@ public record SelectCardsFromHandAction : ChoiceAction
 		ImmutableDictionary<string, object> pipelineContext
 	)
 	{
-		var log = new System.Text.StringBuilder();
-		log.AppendLine(
-			$"GetOptions called. PipelineContext keys: {string.Join(", ", pipelineContext.Keys)}"
-		);
-
 		var playerId =
 			PlayerId != 0 ? PlayerId
 			: pipelineContext.TryGetValue(ContextKeys.CastingPlayerId, out var id) ? (int)id
 			: 0;
 
-		log.AppendLine($"Resolved playerId: {playerId}");
-
 		if (playerId == 0)
 		{
-			log.AppendLine("PlayerId was 0, returning empty");
-			File.AppendAllText("C:/temp/mtg_debug.txt", log.ToString());
 			return ImmutableList<ChoiceOption>.Empty;
 		}
 
 		var handId = gameState.GetPlayerZoneId(playerId, ZoneType.Hand);
 		var cards = gameState.GetCardsInZone(handId).ToList();
-		log.AppendLine($"Cards in hand: {cards.Count}");
-
-		File.AppendAllText("C:/temp/mtg_debug.txt", log.ToString());
 
 		return cards
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })

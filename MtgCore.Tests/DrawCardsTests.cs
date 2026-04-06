@@ -14,7 +14,7 @@ public class DrawCardsTests
 	[SetUp]
 	public void Setup()
 	{
-		(_state, _ids) = MtgGameFactory.Create();
+		(_state, _ids) = MtgGameFactory.CreateForTesting();
 	}
 
 	// ===== BASIC DRAW =====
