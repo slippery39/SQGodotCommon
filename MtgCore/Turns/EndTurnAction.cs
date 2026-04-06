@@ -51,10 +51,6 @@ public record EndTurnAction : GameAction
 			new TurnEndedEvent { PlayerId = activePlayerId }
 		);
 
-		return new ActionResult(state)
-		{
-			Events = events,
-			SpawnedActions = ImmutableList.Create<GameAction>(startTurn),
-		};
+		return new ActionResult(state.SpawnAction(startTurn)) { Events = events };
 	}
 }

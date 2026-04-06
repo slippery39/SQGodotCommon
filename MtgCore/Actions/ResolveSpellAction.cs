@@ -80,7 +80,7 @@ public record ResolveSpellAction : GameAction
 
 		var stateWithCardInGraveyard = gameState.MoveObject(CardId, graveyardId);
 
-		return new ActionResult(stateWithCardInGraveyard) { SpawnedActions = spawnedActions };
+		return new ActionResult(stateWithCardInGraveyard.SpawnActions(spawnedActions));
 	}
 
 	private ImmutableList<int> ResolveTargets(

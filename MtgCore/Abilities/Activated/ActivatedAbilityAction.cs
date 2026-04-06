@@ -155,6 +155,6 @@ public record ActivateAbilityAction : GameAction
 				),
 			};
 
-		return new ActionResult(state) { SpawnedActions = ImmutableList.Create(effectAction) };
+		return new ActionResult(state.SpawnAction(effectAction));
 	}
 }

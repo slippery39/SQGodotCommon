@@ -15,6 +15,15 @@ public record GameState
 	public ImmutableStack<GameAction> ActionStack { get; init; } = ImmutableStack<GameAction>.Empty;
 
 	/// <summary>
+	/// Staging area for actions spawned during Execute().
+	/// Actions placed here by SpawnAction/SpawnActions are flushed onto the
+	/// ActionStack by the executor after every action or pipeline step completes.
+	/// This allows both standalone actions and pipeline steps to safely spawn
+	/// follow-up actions without clobbering the stack mid-execution.
+	/// </summary>
+	public ImmutableList<GameAction> SpawnQueue { get; init; } = ImmutableList<GameAction>.Empty;
+
+	/// <summary>
 	/// An optional action template that is automatically pushed onto the stack after
 	/// every non-post-processor action resolves (standalone actions and completed pipelines).
 	///
@@ -381,6 +390,46 @@ public record GameState
 	}
 
 	/// <summary>
+	/// Stages a single action for spawning. The action will be pushed onto the
+	/// ActionStack by the executor after the current action or pipeline step finishes.
+	/// Call this from within Execute() to queue follow-up work safely.
+	/// </summary>
+	public GameState SpawnAction(GameAction action) =>
+		this with
+		{
+			SpawnQueue = SpawnQueue.Add(action),
+		};
+
+	/// <summary>
+	/// Stages multiple actions for spawning. First action in the list executes first.
+	/// </summary>
+	public GameState SpawnActions(IEnumerable<GameAction> actions) =>
+		this with
+		{
+			SpawnQueue = SpawnQueue.AddRange(actions),
+		};
+
+	/// <summary>
+	/// Flushes all staged actions from SpawnQueue onto the ActionStack and clears the queue.
+	/// Called by the executor after every action or pipeline step.
+	/// </summary>
+	private GameState FlushSpawnQueue()
+	{
+		if (SpawnQueue.IsEmpty)
+			return this;
+
+		var newStack = ActionStack;
+		foreach (var action in SpawnQueue.Reverse())
+			newStack = newStack.Push(action);
+
+		return this with
+		{
+			ActionStack = newStack,
+			SpawnQueue = ImmutableList<GameAction>.Empty,
+		};
+	}
+
+	/// <summary>
 	/// Process the next action on the stack.
 	/// Returns the new state and any events emitted during this step.
 	/// If the action fails ValidateResolve it is removed from the stack
@@ -416,7 +465,7 @@ public record GameState
 
 			// Pipeline finished — fire the post-processor if one is set
 			if (PostActionProcessor != null && !pipeline.IsPostProcessor)
-				completedState = completedState.PushActionsInternal(new[] { PostActionProcessor });
+				completedState = completedState.SpawnAction(PostActionProcessor);
 
 			return (completedState, ImmutableList<GameEvent>.Empty);
 		}
@@ -471,7 +520,12 @@ public record GameState
 			);
 		}
 
-		var result = stepWithContext.Execute(this);
+		// Pass post-pop state so the step has an accurate stack view
+		var postPopState = this with
+		{
+			ActionStack = remainingStack,
+		};
+		var result = stepWithContext.Execute(postPopState);
 		var updatedContext = pipeline.PipelineContext.SetItems(result.OutputData);
 		var advancedPipelineAfterExecution = pipeline with
 		{
@@ -497,10 +551,15 @@ public record GameState
 			};
 		}
 
-		var newState = ApplyActionResult(result, remainingStack.Push(finalPipeline));
+		// Reconcile the stack — push the advanced pipeline back on top of remaining.
+		// Any actions in SpawnQueue survive this because we only replace ActionStack.
+		var newState = result.GameState with
+		{
+			ActionStack = remainingStack.Push(finalPipeline),
+		};
 
-		if (result.SpawnedActions.Any())
-			newState = newState.PushActionsInternal(result.SpawnedActions);
+		// Flush spawned actions on top of the reconciled stack
+		newState = newState.FlushSpawnQueue();
 
 		return (newState, result.Events);
 	}
@@ -535,32 +594,23 @@ public record GameState
 			);
 		}
 
-		var result = action.Execute(this);
-		var newState = ApplyActionResult(result, remainingStack);
+		// Pass the post-pop state into Execute so actions have an accurate view
+		// of the stack and can call SpawnAction directly if needed
+		var postPopState = this with
+		{
+			ActionStack = remainingStack,
+		};
+		var result = action.Execute(postPopState);
 
-		if (result.SpawnedActions.Any())
-			newState = newState.PushActionsInternal(result.SpawnedActions);
-
-		// Fire the post-processor after any non-post-processor standalone action
+		// Fire the post-processor before flushing so it goes on top of any spawned actions
+		var newState = result.GameState;
 		if (PostActionProcessor != null && !action.IsPostProcessor)
-			newState = newState.PushActionsInternal(new[] { PostActionProcessor });
+			newState = newState.SpawnAction(PostActionProcessor);
+
+		// Flush any actions staged in SpawnQueue onto the ActionStack
+		newState = newState.FlushSpawnQueue();
 
 		return (newState, result.Events);
-	}
-
-	/// <summary>
-	/// Applies the game-object changes from an ActionResult onto this state.
-	/// </summary>
-	private GameState ApplyActionResult(ActionResult result, ImmutableStack<GameAction> stack)
-	{
-		return this with
-		{
-			ActionStack = stack,
-			NextId = result.GameState.NextId,
-			IdToGameObjectMap = result.GameState.IdToGameObjectMap,
-			ParentToChildren = result.GameState.ParentToChildren,
-			ChildToParent = result.GameState.ChildToParent,
-		};
 	}
 
 	/// <summary>

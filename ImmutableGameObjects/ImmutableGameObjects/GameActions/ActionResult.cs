@@ -3,16 +3,19 @@ using System.Collections.Immutable;
 namespace ImmutableGameObjects;
 
 /// <summary>
-/// Result of executing an action. Can return new state, spawn new actions,
-/// and emit events for the UI to consume.
+/// Result of executing an action. Returns the new game state and any events
+/// emitted during execution.
+///
+/// Actions that need to queue follow-up work should call state.SpawnAction()
+/// or state.SpawnActions() directly within Execute() rather than returning
+/// spawned actions here. This keeps the action's intent explicit and removes
+/// the need for a separate reconciliation step in the executor.
 /// </summary>
 public record ActionResult
 {
 	public GameState GameState { get; init; }
-	public ImmutableList<GameAction> SpawnedActions { get; init; } =
-		ImmutableList<GameAction>.Empty;
 
-	// Data that can be passed to next action in the pipeline
+	// Data that can be passed to the next action in a pipeline
 	public ImmutableDictionary<string, object> OutputData { get; init; } =
 		ImmutableDictionary<string, object>.Empty;
 

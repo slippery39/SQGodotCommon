@@ -91,9 +91,6 @@ public record CastSpellAction : GameAction
 			TargetIds = TargetIds,
 		};
 
-		return new ActionResult(state)
-		{
-			SpawnedActions = ImmutableList.Create<GameAction>(resolveAction),
-		};
+		return new ActionResult(state.SpawnAction(resolveAction));
 	}
 }

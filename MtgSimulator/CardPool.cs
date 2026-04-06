@@ -300,13 +300,25 @@ public static class CardPool
 						PlayerIdContextKey = ContextKeys.CastingPlayerId,
 					}
 				),
+			ownerId =>
+				MakeSpell(
+					"Ancestral Recall",
+					ownerId,
+					cost: 0,
+					TargetingStrategy.NoTarget(),
+					new DrawCardsAction
+					{
+						Amount = 3,
+						PlayerIdContextKey = ContextKeys.CastingPlayerId,
+					}
+				),
 		};
 
 	/// <summary>
 	/// Builds a random 20-card deck for the given player by sampling
 	/// without replacement from the full card pool.
 	/// </summary>
-	public static IReadOnlyList<Card> BuildRandomDeck(int ownerId, int deckSize = 20)
+	public static IReadOnlyList<Card> BuildRandomDeck(int ownerId, int deckSize = 40)
 	{
 		var rng = new Random();
 		return All.OrderBy(_ => rng.Next())

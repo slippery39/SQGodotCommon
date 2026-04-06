@@ -37,9 +37,6 @@ public record BeginGameAction : GameAction
 
 		// SetupGameAction resolves first (top of stack = first to execute)
 		// then StartTurnAction resolves after
-		return new ActionResult(gameState)
-		{
-			SpawnedActions = ImmutableList.Create<GameAction>(startTurn, setup),
-		};
+		return new ActionResult(gameState.SpawnActions(new GameAction[] { setup, startTurn }));
 	}
 }

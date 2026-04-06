@@ -79,12 +79,12 @@ public record StartTurnAction : GameAction
 			spawned = spawned.Add(new DrawCardsAction { PlayerId = ActivePlayerId, Amount = 1 });
 		}
 
-		return new ActionResult(state)
+		var finalState = spawned.IsEmpty ? state : state.SpawnActions(spawned);
+		return new ActionResult(finalState)
 		{
 			Events = ImmutableList.Create<GameEvent>(
 				new TurnStartedEvent { PlayerId = ActivePlayerId }
 			),
-			SpawnedActions = spawned,
 		};
 	}
 }

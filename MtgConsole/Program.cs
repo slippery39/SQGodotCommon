@@ -16,70 +16,83 @@ state = state with
 	},
 };
 
-// ===== PLAYER 1 HAND =====
-var bolt1 = CardLibrary.LightningBolt() with
+// ===== PLAYER 1 LIBRARY (20 cards — BeginGame will shuffle and deal 7) =====
+var p1Cards = new (string Name, int Cost, bool IsCreature, int Power, int Toughness)[]
 {
-	OwnerId = ids.Player1Id,
-	ControllerId = ids.Player1Id,
-};
-var bolt2 = CardLibrary.LightningBolt() with
-{
-	OwnerId = ids.Player1Id,
-	ControllerId = ids.Player1Id,
-};
-var helix = CardLibrary.LightningHelix() with
-{
-	OwnerId = ids.Player1Id,
-	ControllerId = ids.Player1Id,
-};
-var carefulStudy = CardLibrary.CarefulStudy() with
-{
-	OwnerId = ids.Player1Id,
-	ControllerId = ids.Player1Id,
-};
-var tellingTime = CardLibrary.TellingTime() with
-{
-	OwnerId = ids.Player1Id,
-	ControllerId = ids.Player1Id,
-};
-var darkConfidantInHand = CardLibrary.DarkConfidant() with
-{
-	OwnerId = ids.Player1Id,
-	ControllerId = ids.Player1Id,
+	("Lightning Bolt", 1, false, 0, 0),
+	("Lightning Bolt", 1, false, 0, 0),
+	("Lightning Helix", 2, false, 0, 0),
+	("Careful Study", 1, false, 0, 0),
+	("Telling Time", 2, false, 0, 0),
+	("Dark Confidant", 2, true, 2, 1),
+	("Grizzly Bears", 2, true, 2, 2),
+	("Hill Giant", 3, true, 3, 4),
+	("Llanowar Elves", 1, true, 1, 1),
+	("Serra Angel", 5, true, 4, 4),
+	("Siege Rhino", 4, true, 4, 5),
+	("Goblin Raider", 1, true, 2, 1),
+	("Centaur Courser", 3, true, 3, 3),
+	("Wind Drake", 3, true, 2, 2),
+	("Iron Golem", 4, true, 4, 4),
+	("Runeclaw Bear", 2, true, 2, 2),
+	("Elvish Warrior", 2, true, 2, 3),
+	("Jackal Pup", 1, true, 2, 1),
+	("Bladetusk Boar", 4, true, 3, 3),
+	("Kalonian Tusker", 3, true, 3, 3),
 };
 
-(state, _) = state.AddObject(bolt1, parentId: ids.Player1HandId);
-(state, _) = state.AddObject(bolt2, parentId: ids.Player1HandId);
-(state, _) = state.AddObject(helix, parentId: ids.Player1HandId);
-(state, _) = state.AddObject(carefulStudy, parentId: ids.Player1HandId);
-(state, _) = state.AddObject(tellingTime, parentId: ids.Player1HandId);
-(state, _) = state.AddObject(darkConfidantInHand, parentId: ids.Player1HandId);
-
-// ===== PLAYER 1 LIBRARY =====
-var p1Creatures = new[]
+foreach (var (name, cost, isCreature, power, toughness) in p1Cards)
 {
-	("Grizzly Bears", 2, 2, 2),
-	("Hill Giant", 3, 3, 4),
-	("Llanowar Elves", 1, 1, 1),
-	("Serra Angel", 5, 4, 4),
-	("Siege Rhino", 4, 4, 5),
-};
-foreach (var (name, cost, power, toughness) in p1Creatures)
-{
-	var card = new Card
-	{
-		Name = name,
-		ManaCost = cost,
-		OwnerId = ids.Player1Id,
-		ControllerId = ids.Player1Id,
-		Components = ImmutableList.Create<GameComponent>(
+	var components = isCreature
+		? ImmutableList.Create<GameComponent>(
 			new CreatureComponent { Power = power, Toughness = toughness }
-		),
+		)
+		: ImmutableList.Create<GameComponent>(
+			new SpellComponent { Effects = ImmutableList<CardEffect>.Empty }
+		);
+
+	// Use CardLibrary for cards that have proper effect definitions
+	Card card = name switch
+	{
+		"Lightning Bolt" => CardLibrary.LightningBolt() with
+		{
+			OwnerId = ids.Player1Id,
+			ControllerId = ids.Player1Id,
+		},
+		"Lightning Helix" => CardLibrary.LightningHelix() with
+		{
+			OwnerId = ids.Player1Id,
+			ControllerId = ids.Player1Id,
+		},
+		"Careful Study" => CardLibrary.CarefulStudy() with
+		{
+			OwnerId = ids.Player1Id,
+			ControllerId = ids.Player1Id,
+		},
+		"Telling Time" => CardLibrary.TellingTime() with
+		{
+			OwnerId = ids.Player1Id,
+			ControllerId = ids.Player1Id,
+		},
+		"Dark Confidant" => CardLibrary.DarkConfidant() with
+		{
+			OwnerId = ids.Player1Id,
+			ControllerId = ids.Player1Id,
+		},
+		_ => new Card
+		{
+			Name = name,
+			ManaCost = cost,
+			OwnerId = ids.Player1Id,
+			ControllerId = ids.Player1Id,
+			Components = components,
+		},
 	};
+
 	(state, _) = state.AddObject(card, parentId: ids.Player1LibraryId);
 }
 
-// ===== PLAYER 1 BATTLEFIELD =====
+// ===== PLAYER 1 BATTLEFIELD (pre-placed, no summoning sickness) =====
 var p1Confidant = CardLibrary.DarkConfidant() with
 {
 	OwnerId = ids.Player1Id,
@@ -95,36 +108,32 @@ var p1Confidant = CardLibrary.DarkConfidant() with
 };
 (state, _) = state.AddObject(p1Confidant, parentId: ids.Player1BattlefieldId);
 
-// ===== PLAYER 2 HAND =====
-var p2Bolt = CardLibrary.LightningBolt() with
-{
-	OwnerId = ids.Player2Id,
-	ControllerId = ids.Player2Id,
-};
-var p2Helix = CardLibrary.LightningHelix() with
-{
-	OwnerId = ids.Player2Id,
-	ControllerId = ids.Player2Id,
-};
-var p2Confidant = CardLibrary.DarkConfidant() with
-{
-	OwnerId = ids.Player2Id,
-	ControllerId = ids.Player2Id,
-};
-
-(state, _) = state.AddObject(p2Bolt, parentId: ids.Player2HandId);
-(state, _) = state.AddObject(p2Helix, parentId: ids.Player2HandId);
-(state, _) = state.AddObject(p2Confidant, parentId: ids.Player2HandId);
-
-// ===== PLAYER 2 LIBRARY =====
-var p2Creatures = new[]
+// ===== PLAYER 2 LIBRARY (20 cards — BeginGame will shuffle and deal 7) =====
+var p2Cards = new (string Name, int Cost, int Power, int Toughness)[]
 {
 	("Goblin Guide", 1, 2, 2),
 	("Grizzly Bears", 2, 2, 2),
 	("Craw Wurm", 6, 6, 4),
 	("Wall of Stone", 3, 0, 8),
+	("Hill Giant", 3, 3, 4),
+	("Iron Golem", 4, 4, 4),
+	("Serra Angel", 5, 4, 4),
+	("Centaur Courser", 3, 3, 3),
+	("Jackal Pup", 1, 2, 1),
+	("Wind Drake", 3, 2, 2),
+	("Goblin Raider", 1, 2, 1),
+	("Elvish Warrior", 2, 2, 3),
+	("Runeclaw Bear", 2, 2, 2),
+	("Bladetusk Boar", 4, 3, 3),
+	("Kalonian Tusker", 3, 3, 3),
+	("Savannah Lions", 1, 2, 1),
+	("Raging Goblin", 1, 1, 1),
+	("Llanowar Elves", 1, 1, 1),
+	("Mahamoti Djinn", 6, 5, 6),
+	("Ancient Ooze", 7, 6, 6),
 };
-foreach (var (name, cost, power, toughness) in p2Creatures)
+
+foreach (var (name, cost, power, toughness) in p2Cards)
 {
 	var card = new Card
 	{
@@ -139,7 +148,7 @@ foreach (var (name, cost, power, toughness) in p2Creatures)
 	(state, _) = state.AddObject(card, parentId: ids.Player2LibraryId);
 }
 
-// ===== PLAYER 2 BATTLEFIELD =====
+// ===== PLAYER 2 BATTLEFIELD (pre-placed, no summoning sickness) =====
 var goblinGuide = new Card
 {
 	Name = "Goblin Guide",
