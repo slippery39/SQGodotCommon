@@ -118,7 +118,7 @@ public class ConsoleGameLoop
 			if (_gameOver)
 				return;
 
-			var actions = GenerateLegalActions(_ids.Player2Id);
+			var actions = MtgActionGenerator.GetLegalActions(_state, _ids, _ids.Player2Id);
 
 			if (!actions.Any())
 			{
@@ -130,124 +130,6 @@ public class ConsoleGameLoop
 			var chosen = actions[rng.Next(actions.Count)];
 			ExecuteAiAction(chosen);
 		}
-	}
-
-	/// <summary>
-	/// Generates all legal actions the given player can take right now.
-	/// Returns a flat list of GameAction — the game loop picks from these.
-	/// </summary>
-	private List<GameAction> GenerateLegalActions(int playerId)
-	{
-		var actions = new List<GameAction>();
-
-		var handId = _state.GetPlayerZoneId(playerId, ZoneType.Hand);
-		var battlefieldId = _state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
-		var opponentId = playerId == _ids.Player1Id ? _ids.Player2Id : _ids.Player1Id;
-		var opponentBattlefieldId = _state.GetPlayerZoneId(opponentId, ZoneType.Battlefield);
-
-		// Play creatures from hand
-		foreach (var card in _state.GetCardsInZone(handId))
-		{
-			if (!card.HasComponent<CreatureComponent>())
-				continue;
-
-			var action = new PlayCreatureAction { CardId = card.Id, PlayerId = playerId };
-			if (_state.TryAddAction(action).Success)
-				actions.Add(action);
-		}
-
-		// Cast spells from hand (no targets for now — only no-target spells)
-		foreach (var card in _state.GetCardsInZone(handId))
-		{
-			var spell = card.GetComponent<SpellComponent>();
-			if (spell == null)
-				continue;
-
-			if (spell.Effects.Any(e => e.TargetingStrategy.RequiresUserSelection))
-				continue;
-
-			var castAction = new CastSpellAction
-			{
-				CardId = card.Id,
-				CastingPlayerId = playerId,
-				GameId = _ids.GameId,
-				TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
-			};
-			if (_state.TryAddAction(castAction).Success)
-				actions.Add(castAction);
-		}
-
-		// Attack with creatures
-		var attackerCandidates = _state
-			.GetCardsInZone(battlefieldId)
-			.Where(c => c.HasComponent<CreatureComponent>())
-			.ToList();
-
-		var targets = new List<int> { opponentId };
-		targets.AddRange(
-			_state
-				.GetCardsInZone(opponentBattlefieldId)
-				.Where(c => c.HasComponent<CreatureComponent>())
-				.Select(c => c.Id)
-		);
-
-		foreach (var attacker in attackerCandidates)
-		{
-			foreach (var targetId in targets)
-			{
-				var attack = new AttackAction
-				{
-					AttackerId = attacker.Id,
-					TargetId = targetId,
-					AttackingPlayerId = playerId,
-				};
-				if (_state.TryAddAction(attack).Success)
-				{
-					actions.Add(attack);
-					break;
-				}
-			}
-		}
-
-		// Activate abilities on battlefield permanents
-		foreach (var card in _state.GetCardsInZone(battlefieldId))
-		{
-			var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
-			for (int i = 0; i < abilities.Count; i++)
-			{
-				var context = new TargetingContext
-				{
-					GameState = _state,
-					SourceCardId = card.Id,
-					CastingPlayerId = playerId,
-				};
-
-				var needsTarget = abilities[i].Effect.TargetingStrategy.RequiresUserSelection;
-				var targetId = needsTarget
-					? abilities[i]
-						.Effect.TargetingStrategy.GetValidTargets(context)
-						.FirstOrDefault()
-					: 0;
-
-				if (needsTarget && targetId == 0)
-					continue;
-
-				var abilityAction = new ActivateAbilityAction
-				{
-					CardId = card.Id,
-					ActivatingPlayerId = playerId,
-					AbilityIndex = i,
-					TargetIds = needsTarget
-						? ImmutableList.Create(targetId)
-						: ImmutableList<int>.Empty,
-				};
-
-				if (_state.TryAddAction(abilityAction).Success)
-					actions.Add(abilityAction);
-			}
-		}
-
-		return actions;
 	}
 
 	private void ExecuteAiAction(GameAction action)
