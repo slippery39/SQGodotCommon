@@ -134,9 +134,19 @@ public static class MtgGameFactory
 			parentId: player2.Id
 		);
 
-		// Now that Player 1's ID is known, stamp it onto the game root as the first active player
+		// Stamp Player 1 as the first active player
 		var gameWithTurnState = (MtgGame)s14.GetObject(game.Id);
 		var s15 = s14.UpdateObject(game.Id, gameWithTurnState with { ActivePlayerId = player1.Id });
+
+		// Register the post-action processor now that both player IDs are known
+		var s16 = s15 with
+		{
+			PostActionProcessor = new CheckStateBasedEffectsAction
+			{
+				Player1Id = player1.Id,
+				Player2Id = player2.Id,
+			},
+		};
 
 		var ids = new MtgGameIds(
 			GameId: game.Id,
@@ -155,7 +165,7 @@ public static class MtgGameFactory
 			Player2ExileId: p2Exile.Id
 		);
 
-		return (s15, ids);
+		return (s16, ids);
 	}
 
 	/// <summary>

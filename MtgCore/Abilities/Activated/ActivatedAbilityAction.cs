@@ -17,9 +17,12 @@ namespace MtgCore;
 ///   - The player has enough mana
 ///
 /// Execute:
+///   - Opens a resolution scope (IsInResolutionScope = true) so SBE checks
+///     are deferred until all effects resolve
 ///   - Marks the ability as HasActivated = true
 ///   - Spends mana
 ///   - Resolves targets and spawns the effect action (same as ResolveSpellAction)
+///   - Spawns EndResolutionScopeAction last to close the scope
 /// </summary>
 public record ActivateAbilityAction : GameAction
 {
@@ -86,8 +89,14 @@ public record ActivateAbilityAction : GameAction
 		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
 		var ability = abilities[AbilityIndex];
 
+		// Suppress the post-processor while this ability resolves — SBE checks
+		// are deferred until EndResolutionScopeAction clears this flag.
+		var state = gameState with
+		{
+			SuppressPostProcessor = true,
+		};
+
 		// Mark ability as used this turn
-		var updatedAbilities = card.Components.OfType<ActivatedAbilityComponent>().ToList();
 		var updatedComponents = card.Components;
 		var abilityCount = 0;
 		for (int i = 0; i < card.Components.Count; i++)
@@ -108,14 +117,14 @@ public record ActivateAbilityAction : GameAction
 			}
 		}
 		var updatedCard = card with { Components = updatedComponents };
-		var state = gameState.UpdateObject(CardId, updatedCard);
+		state = state.UpdateObject(CardId, updatedCard);
 
 		// Spend mana
 		var player = state.GetPlayer(ActivatingPlayerId);
 		var updatedPlayer = player with { CurrentMana = player.CurrentMana - ability.ManaCost };
 		state = state.UpdateObject(ActivatingPlayerId, updatedPlayer);
 
-		// Resolve targets and spawn the effect action
+		// Resolve targets
 		var context = new TargetingContext
 		{
 			GameState = state,
@@ -155,6 +164,8 @@ public record ActivateAbilityAction : GameAction
 				),
 			};
 
-		return new ActionResult(state.SpawnAction(effectAction));
+		// EndResolutionScopeAction is always last — it clears SuppressPostProcessor
+		// after all effects have executed, unblocking the post-processor.
+		return new ActionResult(state.SpawnActions([effectAction, new EndResolutionScopeAction()]));
 	}
 }

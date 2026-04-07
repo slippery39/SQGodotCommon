@@ -52,16 +52,6 @@ public class SimulatorRunner
 	{
 		var (state, ids) = MtgGameFactory.Create();
 
-		// Wire up post-action processor
-		state = state with
-		{
-			PostActionProcessor = new CheckStateBasedEffectsAction
-			{
-				Player1Id = ids.Player1Id,
-				Player2Id = ids.Player2Id,
-			},
-		};
-
 		var cardNames = new Dictionary<int, string>();
 
 		// Build and load Player 1's deck

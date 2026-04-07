@@ -39,6 +39,18 @@ public record GameState
 	/// </summary>
 	public GameAction? PostActionProcessor { get; init; } = null;
 
+	/// <summary>
+	/// When true, the PostActionProcessor is skipped after each action resolves.
+	///
+	/// General-purpose suppression flag — the game layer decides when to set and
+	/// clear it. GameState itself has no opinion on when or why it is used.
+	///
+	/// In MtgCore this is set by ResolveSpellAction and ActivateAbilityAction to
+	/// defer state-based effect checks until a spell or ability fully resolves.
+	/// Cleared by EndResolutionScopeAction.
+	/// </summary>
+	public bool SuppressPostProcessor { get; init; } = false;
+
 	public bool HasPendingActions => !ActionStack.IsEmpty;
 
 	public bool IsWaitingForChoice
@@ -464,7 +476,7 @@ public record GameState
 			var completedState = this with { ActionStack = remainingStack };
 
 			// Pipeline finished — fire the post-processor if one is set
-			if (PostActionProcessor != null && !pipeline.IsPostProcessor)
+			if (PostActionProcessor != null && !pipeline.IsPostProcessor && !SuppressPostProcessor)
 				completedState = completedState.SpawnAction(PostActionProcessor);
 
 			return (completedState, ImmutableList<GameEvent>.Empty);
@@ -604,7 +616,7 @@ public record GameState
 
 		// Fire the post-processor before flushing so it goes on top of any spawned actions
 		var newState = result.GameState;
-		if (PostActionProcessor != null && !action.IsPostProcessor)
+		if (PostActionProcessor != null && !action.IsPostProcessor && !SuppressPostProcessor)
 			newState = newState.SpawnAction(PostActionProcessor);
 
 		// Flush any actions staged in SpawnQueue onto the ActionStack

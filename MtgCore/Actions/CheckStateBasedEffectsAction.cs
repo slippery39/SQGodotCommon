@@ -10,6 +10,10 @@ namespace MtgCore;
 /// after every standalone action and every completed pipeline — never between
 /// individual pipeline steps.
 ///
+/// While GameState.SuppressPostProcessor is true this action never runs — the
+/// executor skips the PostActionProcessor entirely. MtgCore uses this to defer
+/// SBE checks until a spell or ability has fully resolved.
+///
 /// Loss conditions checked:
 ///   - Life <= 0
 ///   - Library is empty (drew from an empty library)

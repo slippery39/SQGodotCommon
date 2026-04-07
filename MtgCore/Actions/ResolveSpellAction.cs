@@ -14,6 +14,10 @@ namespace MtgCore;
 /// InputContext (for standalone actions) or PipelineContext (for pipelines)
 /// so that PlayerIdContextKey resolution works correctly in both cases.
 ///
+/// Opens a resolution scope (IsInResolutionScope = true) at the start of Execute
+/// and spawns EndResolutionScopeAction as the final action so that
+/// CheckStateBasedEffectsAction is deferred until all effects have resolved.
+///
 /// Then moves the card to the owner's graveyard.
 /// </summary>
 public record ResolveSpellAction : GameAction
@@ -31,13 +35,20 @@ public record ResolveSpellAction : GameAction
 		var graveyardId = gameState.GetPlayerZoneId(CastingPlayerId, ZoneType.Graveyard);
 		var spellComponent = card.GetComponent<SpellComponent>();
 
+		// Suppress the post-processor while this spell resolves — SBE checks
+		// are deferred until EndResolutionScopeAction clears this flag.
+		var state = gameState with
+		{
+			SuppressPostProcessor = true,
+		};
+
 		var spawnedActions = ImmutableList<GameAction>.Empty;
 
 		if (spellComponent != null)
 		{
 			var context = new TargetingContext
 			{
-				GameState = gameState,
+				GameState = state,
 				SourceCardId = CardId,
 				CastingPlayerId = CastingPlayerId,
 			};
@@ -78,7 +89,11 @@ public record ResolveSpellAction : GameAction
 			}
 		}
 
-		var stateWithCardInGraveyard = gameState.MoveObject(CardId, graveyardId);
+		// EndResolutionScopeAction is always last — it clears SuppressPostProcessor
+		// after all effects have executed, unblocking the post-processor.
+		spawnedActions = spawnedActions.Add(new EndResolutionScopeAction());
+
+		var stateWithCardInGraveyard = state.MoveObject(CardId, graveyardId);
 
 		return new ActionResult(stateWithCardInGraveyard.SpawnActions(spawnedActions));
 	}

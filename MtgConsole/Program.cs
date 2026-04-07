@@ -6,16 +6,6 @@ using MtgCore;
 // ===== SETUP GAME =====
 var (state, ids) = MtgGameFactory.Create();
 
-// Wire up the post-action processor for state-based effects
-state = state with
-{
-	PostActionProcessor = new CheckStateBasedEffectsAction
-	{
-		Player1Id = ids.Player1Id,
-		Player2Id = ids.Player2Id,
-	},
-};
-
 // ===== PLAYER 1 LIBRARY (20 cards — BeginGame will shuffle and deal 7) =====
 var p1Cards = new (string Name, int Cost, bool IsCreature, int Power, int Toughness)[]
 {
