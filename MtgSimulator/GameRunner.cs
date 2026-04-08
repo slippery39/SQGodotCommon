@@ -5,8 +5,11 @@ using MtgCore;
 namespace MtgSimulator;
 
 /// <summary>
-/// Runs a single game to completion using a random action selector for both players.
+/// Runs a single game to completion using the provided AI strategies for both players.
 /// Returns a GameResult describing the outcome.
+///
+/// AI strategies are injected — swap RandomAiStrategy for DepthLimitedAiStrategy
+/// or any other IAiStrategy implementation without changing this class.
 ///
 /// Limits:
 ///   - Max turns: 100 (flags as TurnLimitReached)
@@ -19,14 +22,15 @@ public class GameRunner
 	private const int ActionWarningThreshold = 50;
 	private const int ActionLimitThreshold = 100;
 
-	private readonly Random _rng = new();
+	private readonly IAiStrategy _player1Strategy;
+	private readonly IAiStrategy _player2Strategy;
 
-	/// <param name="initialState">The game state after decks have been loaded.</param>
-	/// <param name="ids">Well-known IDs for this game.</param>
-	/// <param name="cardNames">
-	/// Map of card ID to card name, built from both decks before the game starts.
-	/// Used to track drawn cards by name regardless of where they end up.
-	/// </param>
+	public GameRunner(IAiStrategy player1Strategy, IAiStrategy player2Strategy)
+	{
+		_player1Strategy = player1Strategy;
+		_player2Strategy = player2Strategy;
+	}
+
 	public GameResult Run(
 		GameState initialState,
 		MtgGameIds ids,
@@ -59,20 +63,23 @@ public class GameRunner
 			}
 
 			var activePlayerId = game.ActivePlayerId;
+			var activeStrategy =
+				activePlayerId == ids.Player1Id ? _player1Strategy : _player2Strategy;
 			var actionsThisTurn = 0;
 
 			while (true)
 			{
 				if (state.IsWaitingForChoice)
 				{
-					var (resolvedState, choiceEvents) = ResolveRandomChoice(state);
+					var choice = state.GetPendingChoice()!;
+					var selectedIds = activeStrategy.ResolveChoice(state, choice, activePlayerId);
+					var (resolvedState, choiceEvents) = state.ResolveChoice(selectedIds);
 					state = resolvedState;
 					TrackDrawnCards(choiceEvents, ids, cardNames, drawnCards1, drawnCards2);
 					allEvents.AddRange(choiceEvents);
 					continue;
 				}
 
-				// Check for game over after every batch of events
 				var overEvent = allEvents.OfType<GameOverEvent>().LastOrDefault();
 				if (overEvent != null)
 				{
@@ -123,7 +130,7 @@ public class GameRunner
 					break;
 				}
 
-				var chosen = legalActions[_rng.Next(legalActions.Count)];
+				var chosen = activeStrategy.SelectAction(state, ids, activePlayerId);
 				var (newState, actionEvents) = ExecuteAction(state, chosen);
 				state = newState;
 				TrackDrawnCards(actionEvents, ids, cardNames, drawnCards1, drawnCards2);
@@ -154,7 +161,10 @@ public class GameRunner
 		}
 	}
 
-	private (GameState, ImmutableList<GameEvent>) ExecuteAction(GameState state, GameAction action)
+	private static (GameState, ImmutableList<GameEvent>) ExecuteAction(
+		GameState state,
+		GameAction action
+	)
 	{
 		var (newState, success) = state.TryAddAction(action);
 		if (!success)
@@ -163,7 +173,10 @@ public class GameRunner
 		return newState.ProcessAllActions();
 	}
 
-	private (GameState, ImmutableList<GameEvent>) ExecuteEndTurn(GameState state, MtgGameIds ids)
+	private static (GameState, ImmutableList<GameEvent>) ExecuteEndTurn(
+		GameState state,
+		MtgGameIds ids
+	)
 	{
 		var action = new EndTurnAction
 		{
@@ -174,13 +187,6 @@ public class GameRunner
 
 		var (newState, _) = state.TryAddAction(action);
 		return newState.ProcessAllActions();
-	}
-
-	private (GameState, ImmutableList<GameEvent>) ResolveRandomChoice(GameState state)
-	{
-		var choice = state.GetPendingChoice()!;
-		var option = choice.Options[_rng.Next(choice.Options.Count)];
-		return state.ResolveChoice(ImmutableList.Create(option.Id));
 	}
 
 	private static GameResult BuildResult(

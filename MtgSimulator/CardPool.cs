@@ -39,7 +39,7 @@ public static class CardPool
 			ownerId => MakeCreature("Craw Wurm", ownerId, cost: 6, power: 6, toughness: 4),
 			ownerId => MakeCreature("Ancient Ooze", ownerId, cost: 7, power: 6, toughness: 6),
 			ownerId => MakeCreature("Leviathan", ownerId, cost: 9, power: 10, toughness: 10),
-			// ===== REMOVAL SPELLS (damage to opponent or opponent's creatures) =====
+			// ===== REMOVAL SPELLS =====
 			ownerId =>
 				MakeSpell(
 					"Lightning Bolt",
@@ -120,7 +120,7 @@ public static class CardPool
 					),
 					new DealDamageAction { Amount = 3 }
 				),
-			// ===== BURN SPELLS (damage to opponent player only) =====
+			// ===== BURN SPELLS =====
 			ownerId =>
 				MakeSpell(
 					"Lightning Helix",
@@ -150,6 +150,59 @@ public static class CardPool
 						new IsPlayerSpecification().And(new IsControlledByOpponentSpecification())
 					),
 					new DealDamageAction { Amount = 3 }
+				),
+			// ===== UTILITY SPELLS =====
+			ownerId =>
+				MakeSpell(
+					"Healing Salve",
+					ownerId,
+					cost: 1,
+					TargetingStrategy.Self(),
+					new GainLifeAction { Amount = 3 }
+				),
+			ownerId =>
+				MakeSpell(
+					"Revitalize",
+					ownerId,
+					cost: 2,
+					TargetingStrategy.Self(),
+					new GainLifeAction { Amount = 3 }
+				),
+			ownerId =>
+				MakeSpell(
+					"Inspiration",
+					ownerId,
+					cost: 4,
+					TargetingStrategy.NoTarget(),
+					new DrawCardsAction
+					{
+						Amount = 2,
+						PlayerIdContextKey = ContextKeys.CastingPlayerId,
+					}
+				),
+			ownerId =>
+				MakeSpell(
+					"Counsel of the Soratami",
+					ownerId,
+					cost: 3,
+					TargetingStrategy.NoTarget(),
+					new DrawCardsAction
+					{
+						Amount = 2,
+						PlayerIdContextKey = ContextKeys.CastingPlayerId,
+					}
+				),
+			ownerId =>
+				MakeSpell(
+					"Ancestral Recall",
+					ownerId,
+					cost: 0,
+					TargetingStrategy.NoTarget(),
+					new DrawCardsAction
+					{
+						Amount = 3,
+						PlayerIdContextKey = ContextKeys.CastingPlayerId,
+					}
 				),
 			// ===== CREATURES WITH ACTIVATED ABILITIES =====
 
@@ -259,66 +312,130 @@ public static class CardPool
 						},
 					}
 				),
-			// ===== UTILITY SPELLS =====
+			// ===== CREATURES WITH TRIGGERED ABILITIES =====
+
+			// Grim Initiate — 2 mana 2/1.
+			// "When a creature you control dies, gain 1 life."
 			ownerId =>
-				MakeSpell(
-					"Healing Salve",
-					ownerId,
-					cost: 1,
-					TargetingStrategy.Self(),
-					new GainLifeAction { Amount = 3 }
-				),
-			ownerId =>
-				MakeSpell(
-					"Revitalize",
+				MakeTriggerCreature(
+					"Grim Initiate",
 					ownerId,
 					cost: 2,
-					TargetingStrategy.Self(),
-					new GainLifeAction { Amount = 3 }
-				),
-			ownerId =>
-				MakeSpell(
-					"Inspiration",
-					ownerId,
-					cost: 4,
-					TargetingStrategy.NoTarget(),
-					new DrawCardsAction
+					power: 2,
+					toughness: 1,
+					new TriggeredAbilityComponent
 					{
-						Amount = 2,
-						PlayerIdContextKey = ContextKeys.CastingPlayerId,
+						Name = "Death Rites",
+						Condition = new CreatureDiesCondition { OnlyYourCreatures = true },
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new GainLifeAction { Amount = 3 },
+						},
 					}
 				),
+			// Blood Artist — 3 mana 0/1.
+			// "When any creature dies, deal 1 damage to the opponent."
 			ownerId =>
-				MakeSpell(
-					"Counsel of the Soratami",
+				MakeTriggerCreature(
+					"Blood Artist",
 					ownerId,
-					cost: 3,
-					TargetingStrategy.NoTarget(),
-					new DrawCardsAction
+					cost: 1,
+					power: 0,
+					toughness: 1,
+					new TriggeredAbilityComponent
 					{
-						Amount = 2,
-						PlayerIdContextKey = ContextKeys.CastingPlayerId,
+						Name = "Blood Drain",
+						Condition = new CreatureDiesCondition(),
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.AllValid(
+								new IsPlayerSpecification().And(
+									new IsControlledByOpponentSpecification()
+								)
+							),
+							ActionTemplate = new DealDamageAction { Amount = 1 },
+						},
 					}
 				),
+			// Reconnaissance — 2 mana 1/2.
+			// "Whenever a creature attacks, gain 1 life."
 			ownerId =>
-				MakeSpell(
-					"Ancestral Recall",
+				MakeTriggerCreature(
+					"Reconnaissance",
 					ownerId,
-					cost: 0,
-					TargetingStrategy.NoTarget(),
-					new DrawCardsAction
+					cost: 2,
+					power: 2,
+					toughness: 2,
+					new TriggeredAbilityComponent
 					{
-						Amount = 3,
-						PlayerIdContextKey = ContextKeys.CastingPlayerId,
+						Name = "Battle Cry",
+						Condition = new CreatureAttacksCondition { OnlyYourCreatures = true },
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new GainLifeAction { Amount = 1 },
+						},
+					}
+				),
+			// Mentor of the Meek — 4 mana 2/2.
+			// "Whenever a creature you control enters the battlefield, draw a card."
+			ownerId =>
+				MakeTriggerCreature(
+					"Mentor of the Meek",
+					ownerId,
+					cost: 2,
+					power: 2,
+					toughness: 2,
+					new TriggeredAbilityComponent
+					{
+						Name = "Tutelage",
+						Condition = new CreatureEntersBattlefieldCondition
+						{
+							OnlyYourCreatures = true,
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new DrawCardsAction
+							{
+								Amount = 1,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
+						},
+					}
+				),
+			// Vengeful Reaper — 3 mana 1/3.
+			// "Whenever an opponent's creature dies, deal 1 damage to the opponent."
+			ownerId =>
+				MakeTriggerCreature(
+					"Vengeful Reaper",
+					ownerId,
+					cost: 2,
+					power: 1,
+					toughness: 3,
+					new TriggeredAbilityComponent
+					{
+						Name = "Vengeance",
+						Condition = new CreatureDiesCondition { OnlyOpponentCreatures = true },
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.AllValid(
+								new IsPlayerSpecification().And(
+									new IsControlledByOpponentSpecification()
+								)
+							),
+							ActionTemplate = new DealDamageAction { Amount = 1 },
+						},
 					}
 				),
 		};
 
 	/// <summary>
-	/// Builds a random 20-card deck for the given player by sampling
+	/// Builds a random deck for the given player by sampling
 	/// without replacement from the full card pool.
 	/// </summary>
-	public static IReadOnlyList<Card> BuildRandomDeck(int ownerId, int deckSize = 40)
+	public static IReadOnlyList<Card> BuildRandomDeck(int ownerId, int deckSize = 20)
 	{
 		var rng = new Random();
 		return All.OrderBy(_ => rng.Next())
@@ -366,6 +483,27 @@ public static class CardPool
 					new CreatureComponent { Power = power, Toughness = toughness }
 				)
 				.AddRange(abilities),
+		};
+
+	private static Card MakeTriggerCreature(
+		string name,
+		int ownerId,
+		int cost,
+		int power,
+		int toughness,
+		params TriggeredAbilityComponent[] triggers
+	) =>
+		new Card
+		{
+			Name = name,
+			ManaCost = cost,
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+			Components = ImmutableList
+				.Create<GameComponent>(
+					new CreatureComponent { Power = power, Toughness = toughness }
+				)
+				.AddRange(triggers),
 		};
 
 	private static Card MakeSpell(

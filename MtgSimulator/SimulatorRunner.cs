@@ -6,21 +6,25 @@ namespace MtgSimulator;
 
 /// <summary>
 /// Orchestrates multiple simulated games and aggregates results.
-/// Each game uses freshly randomised 20-card decks drawn from CardPool.
+/// Each game uses freshly randomised 40-card decks drawn from CardPool.
+///
+/// AI strategy is configurable — swap DepthLimitedAiStrategy for
+/// RandomAiStrategy or any other IAiStrategy implementation.
 /// </summary>
 public class SimulatorRunner
 {
 	private readonly int _gameCount;
-	private readonly GameRunner _runner = new();
+	private readonly int _aiDepth;
 
-	public SimulatorRunner(int gameCount)
+	public SimulatorRunner(int gameCount, int aiDepth = 3)
 	{
 		_gameCount = gameCount;
+		_aiDepth = aiDepth;
 	}
 
 	public void Run()
 	{
-		Console.WriteLine($"Running {_gameCount} games...");
+		Console.WriteLine($"Running {_gameCount} games (AI depth: {_aiDepth})...");
 		Console.WriteLine();
 
 		var results = new List<GameResult>();
@@ -29,7 +33,14 @@ public class SimulatorRunner
 		for (int i = 0; i < _gameCount; i++)
 		{
 			var (state, ids, cardNames) = SetupGame();
-			var result = _runner.Run(state, ids, cardNames);
+
+			// Both players use depth-limited AI — swap to RandomAiStrategy for baseline
+			var rng = new Random();
+			var player1Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, rng);
+			var player2Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, rng);
+
+			var runner = new GameRunner(player1Strategy, player2Strategy);
+			var result = runner.Run(state, ids, cardNames);
 			results.Add(result);
 
 			if (result.IsFlagged)
@@ -54,7 +65,6 @@ public class SimulatorRunner
 
 		var cardNames = new Dictionary<int, string>();
 
-		// Build and load Player 1's deck
 		var deck1 = CardPool.BuildRandomDeck(ids.Player1Id);
 		foreach (var card in deck1)
 		{
@@ -63,7 +73,6 @@ public class SimulatorRunner
 			cardNames[added.Id] = added.Name;
 		}
 
-		// Build and load Player 2's deck
 		var deck2 = CardPool.BuildRandomDeck(ids.Player2Id);
 		foreach (var card in deck2)
 		{
@@ -92,9 +101,9 @@ public class SimulatorRunner
 		var actionLimits = results.Count(r => r.EndReason == GameEndReason.ActionLimitReached);
 		var warnings = results.Count(r => r.HadActionWarning);
 
-		Console.WriteLine("╔══════════════════════════════════════════╗");
-		Console.WriteLine("║           SIMULATION RESULTS             ║");
-		Console.WriteLine("╚══════════════════════════════════════════╝");
+		Console.WriteLine("╔═══════════════════════════════════════════════╗");
+		Console.WriteLine("║           SIMULATION RESULTS                  ║");
+		Console.WriteLine("╚═══════════════════════════════════════════════╝");
 		Console.WriteLine();
 		Console.WriteLine($"  Total games:      {total}");
 		Console.WriteLine($"  Player 1 wins:    {p1Wins} ({Pct(p1Wins, total)})");
@@ -114,30 +123,56 @@ public class SimulatorRunner
 
 	private static void PrintCardReport(List<GameResult> results)
 	{
-		// Build per-card stats: times drawn, times drawn in a winning game
-		var stats = new Dictionary<string, (int Drawn, int DrawnInWin)>();
+		// Per-card stats tracked separately for each player position
+		var p1Stats = new Dictionary<string, (int Drawn, int DrawnInWin)>();
+		var p2Stats = new Dictionary<string, (int Drawn, int DrawnInWin)>();
 
 		foreach (var result in results)
 		{
-			UpdateCardStats(stats, result.Player1DrawnCards, result.IsPlayer1Win);
-			UpdateCardStats(stats, result.Player2DrawnCards, result.IsPlayer2Win);
+			UpdateCardStats(p1Stats, result.Player1DrawnCards, result.IsPlayer1Win);
+			UpdateCardStats(p2Stats, result.Player2DrawnCards, result.IsPlayer2Win);
 		}
+
+		// Combine into a unified view per card name
+		var allNames = p1Stats.Keys.Union(p2Stats.Keys).OrderBy(n => n).ToList();
 
 		Console.WriteLine("  --- Card Win Rate When Drawn ---");
 		Console.WriteLine();
+		Console.WriteLine(
+			$"  {"Card", -25} {"P1 Drawn", 9} {"P1 Win%", 8} {"P2 Drawn", 9} {"P2 Win%", 8} {"Combined", 9}"
+		);
+		Console.WriteLine($"  {new string('-', 72)}");
 
-		var sorted = stats
-			.OrderByDescending(kvp => WinRate(kvp.Value.DrawnInWin, kvp.Value.Drawn))
+		var rows = allNames
+			.Select(name =>
+			{
+				p1Stats.TryGetValue(name, out var p1);
+				p2Stats.TryGetValue(name, out var p2);
+				var combined = WinRate(p1.DrawnInWin + p2.DrawnInWin, p1.Drawn + p2.Drawn);
+				return (name, p1, p2, combined);
+			})
+			.OrderByDescending(r => r.combined)
 			.ToList();
 
-		Console.WriteLine($"  {"Card", -25} {"Drawn", 6} {"Wins", 6} {"Win%", 7}");
-		Console.WriteLine($"  {new string('-', 47)}");
-
-		foreach (var (name, (drawn, wins)) in sorted)
+		foreach (var (name, p1, p2, combined) in rows)
 		{
-			Console.WriteLine($"  {name, -25} {drawn, 6} {wins, 6} {WinRate(wins, drawn), 6:F1}%");
+			var p1WinPct = p1.Drawn > 0 ? $"{WinRate(p1.DrawnInWin, p1.Drawn):F1}%" : "  n/a";
+			var p2WinPct = p2.Drawn > 0 ? $"{WinRate(p2.DrawnInWin, p2.Drawn):F1}%" : "  n/a";
+
+			Console.WriteLine(
+				$"  {name, -25} {p1.Drawn, 9} {p1WinPct, 8} {p2.Drawn, 9} {p2WinPct, 8} {combined, 8:F1}%"
+			);
 		}
 
+		Console.WriteLine();
+
+		// Print baseline win rates for context
+		var p1BaseWins = results.Count(r => r.IsPlayer1Win);
+		var p2BaseWins = results.Count(r => r.IsPlayer2Win);
+		var total = results.Count;
+		Console.WriteLine(
+			$"  Baseline: P1 wins {Pct(p1BaseWins, total)}, P2 wins {Pct(p2BaseWins, total)}"
+		);
 		Console.WriteLine();
 	}
 
@@ -184,7 +219,6 @@ public class SimulatorRunner
 		bool playerWon
 	)
 	{
-		// Use distinct names — we care whether the card was drawn, not how many times
 		foreach (var name in drawnCards.Distinct())
 		{
 			if (!stats.ContainsKey(name))
