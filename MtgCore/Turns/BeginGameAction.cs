@@ -7,7 +7,7 @@ namespace MtgCore;
 /// Begins the game by running all pre-game setup then kicking off the first turn.
 ///
 /// Order of operations:
-///   1. SetupGameAction — shuffles both libraries, draws opening hands of 7
+///   1. SetupGameAction — shuffles both libraries, draws opening hands of 4
 ///   2. StartTurnAction — gives Player 1 their first mana, skips draw
 ///
 /// Presentation layers call BeginGame() on the state and respond to the result.
@@ -20,13 +20,25 @@ public record BeginGameAction : GameAction
 	public int Player1Id { get; init; }
 	public int Player2Id { get; init; }
 
+	/// <summary>
+	/// Number of cards each player draws as their opening hand.
+	/// Defaults to 4 — lower than traditional MTG (7) to reduce
+	/// opening consistency and first-player advantage in a land-free format.
+	/// </summary>
+	public int OpeningHandSize { get; init; } = 4;
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var game = gameState.GetGame(GameId);
 		var activePlayerId = game.ActivePlayerId;
 		var battlefieldId = gameState.GetPlayerZoneId(activePlayerId, ZoneType.Battlefield);
 
-		var setup = new SetupGameAction { Player1Id = Player1Id, Player2Id = Player2Id };
+		var setup = new SetupGameAction
+		{
+			Player1Id = Player1Id,
+			Player2Id = Player2Id,
+			OpeningHandSize = OpeningHandSize,
+		};
 
 		var startTurn = new StartTurnAction
 		{
@@ -35,8 +47,6 @@ public record BeginGameAction : GameAction
 			SkipDraw = true,
 		};
 
-		// SetupGameAction resolves first (top of stack = first to execute)
-		// then StartTurnAction resolves after
 		return new ActionResult(gameState.SpawnActions(new GameAction[] { setup, startTurn }));
 	}
 }
