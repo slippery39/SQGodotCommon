@@ -4,7 +4,7 @@ using ImmutableGameObjects;
 namespace MtgCore;
 
 /// <summary>
-/// Checks all state-based loss conditions and marks any qualifying players as having lost.
+/// Checks state-based loss conditions and evaluates pending triggered abilities.
 ///
 /// Registered as GameState.PostActionProcessor at game setup. Runs automatically
 /// after every standalone action and every completed pipeline — never between
@@ -14,9 +14,17 @@ namespace MtgCore;
 /// executor skips the PostActionProcessor entirely. MtgCore uses this to defer
 /// SBE checks until a spell or ability has fully resolved.
 ///
-/// Loss conditions checked:
-///   - Life <= 0
-///   - Library is empty (drew from an empty library)
+/// Order of operations each time it runs:
+///   1. Evaluate PendingGameEvents against all TriggeredAbilityComponents
+///      and spawn ResolveEffectAction for each match — triggers fire before
+///      loss conditions so their effects resolve against the full game state
+///   2. Clear PendingGameEvents
+///   3. Check loss conditions (life <= 0 only)
+///
+/// Note: Empty library is NOT a loss condition here. A player loses from
+/// failing to draw from an empty library — that is handled by DrawCardsAction
+/// emitting a LibraryEmptyEvent, which will eventually trigger a loss via a
+/// separate mechanism. Having an empty library alone is not a loss condition.
 ///
 /// If both players lose simultaneously, a draw is declared (WinnerPlayerId = -1).
 ///
@@ -40,21 +48,71 @@ public record CheckStateBasedEffectsAction : GameAction
 
 		// Skip if both players are already marked as lost — game is already over
 		if (player1.HasLost && player2.HasLost)
-			return new ActionResult(state);
+			return new ActionResult(
+				state with
+				{
+					PendingGameEvents = ImmutableList<GameEvent>.Empty,
+				}
+			);
 
-		var p1ShouldLose = !player1.HasLost && PlayerMeetsLossCondition(state, player1);
-		var p2ShouldLose = !player2.HasLost && PlayerMeetsLossCondition(state, player2);
+		// ===== TRIGGERED ABILITIES =====
+		// Evaluated before loss conditions so triggers resolve against the full
+		// game state before any player is marked as having lost.
+
+		var pendingEvents = state.PendingGameEvents;
+
+		if (!pendingEvents.IsEmpty)
+		{
+			var battlefieldCards = GetAllBattlefieldCards(state);
+
+			foreach (var card in battlefieldCards)
+			{
+				var triggeredAbilities = card.GetComponents<TriggeredAbilityComponent>();
+
+				foreach (var ability in triggeredAbilities)
+				{
+					var triggerContext = new TriggerContext
+					{
+						GameState = state,
+						SourceCardId = card.Id,
+						ControllingPlayerId = card.ControllerId,
+					};
+
+					foreach (var pendingEvent in pendingEvents)
+					{
+						if (ability.Condition.IsSatisfiedBy(pendingEvent, triggerContext))
+						{
+							state = state.SpawnAction(
+								new ResolveEffectAction
+								{
+									Effects = ImmutableList.Create(ability.Effect),
+									CastingPlayerId = card.ControllerId,
+									SourceCardId = card.Id,
+								}
+							);
+						}
+					}
+				}
+			}
+		}
+
+		// Clear pending game events — consumed for this resolution
+		state = state with
+		{
+			PendingGameEvents = ImmutableList<GameEvent>.Empty,
+		};
+
+		// ===== STATE-BASED EFFECTS =====
+
+		var p1ShouldLose = !player1.HasLost && player1.Life <= 0;
+		var p2ShouldLose = !player2.HasLost && player2.Life <= 0;
 
 		if (p1ShouldLose)
 		{
 			player1 = player1 with { HasLost = true };
 			state = state.UpdateObject(Player1Id, player1);
 			events = events.Add(
-				new PlayerLostEvent
-				{
-					PlayerId = Player1Id,
-					Reason = GetLossReason(gameState, player1),
-				}
+				new PlayerLostEvent { PlayerId = Player1Id, Reason = "life total reached zero" }
 			);
 		}
 
@@ -63,11 +121,7 @@ public record CheckStateBasedEffectsAction : GameAction
 			player2 = player2 with { HasLost = true };
 			state = state.UpdateObject(Player2Id, player2);
 			events = events.Add(
-				new PlayerLostEvent
-				{
-					PlayerId = Player2Id,
-					Reason = GetLossReason(gameState, player2),
-				}
+				new PlayerLostEvent { PlayerId = Player2Id, Reason = "life total reached zero" }
 			);
 		}
 
@@ -87,27 +141,11 @@ public record CheckStateBasedEffectsAction : GameAction
 		return new ActionResult(state) { Events = events };
 	}
 
-	private static bool PlayerMeetsLossCondition(GameState state, MtgPlayer player)
+	private static IEnumerable<Card> GetAllBattlefieldCards(GameState state)
 	{
-		if (player.Life <= 0)
-			return true;
-
-		var libraryId = state.GetPlayerZoneId(player.Id, ZoneType.Library);
-		if (!state.GetCardsInZone(libraryId).Any())
-			return true;
-
-		return false;
-	}
-
-	private static string GetLossReason(GameState state, MtgPlayer player)
-	{
-		if (player.Life <= 0)
-			return "life total reached zero";
-
-		var libraryId = state.GetPlayerZoneId(player.Id, ZoneType.Library);
-		if (!state.GetCardsInZone(libraryId).Any())
-			return "drew from an empty library";
-
-		return "unknown";
+		return state
+			.IdToGameObjectMap.Values.OfType<Zone>()
+			.Where(z => z.ZoneType == ZoneType.Battlefield)
+			.SelectMany(z => state.GetCardsInZone(z.Id));
 	}
 }

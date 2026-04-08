@@ -6,19 +6,14 @@ namespace MtgCore;
 /// <summary>
 /// Resolves a spell that is currently on the stack.
 ///
-/// Reads effects from the card's SpellComponent. If the card has no
-/// SpellComponent, the action does nothing beyond moving it to the graveyard.
+/// Owns the resolution scope for the entire spell:
+///   1. Sets SuppressPostProcessor = true (defers SBE and trigger evaluation)
+///   2. Spawns ResolveEffectAction with all of the spell's effects
+///   3. Spawns MoveCardToGraveyardAction — card moves to graveyard after effects resolve
+///   4. Spawns EndResolutionScopeAction — clears SuppressPostProcessor, unblocking
+///      the PostActionProcessor which then runs SBE and trigger evaluation
 ///
-/// For each CardEffect, resolves targets based on SelectionMode then spawns
-/// the action template. CastingPlayerId is seeded into the spawned action's
-/// InputContext (for standalone actions) or PipelineContext (for pipelines)
-/// so that PlayerIdContextKey resolution works correctly in both cases.
-///
-/// Opens a resolution scope (IsInResolutionScope = true) at the start of Execute
-/// and spawns EndResolutionScopeAction as the final action so that
-/// CheckStateBasedEffectsAction is deferred until all effects have resolved.
-///
-/// Then moves the card to the owner's graveyard.
+/// The card intentionally moves to the graveyard after effects resolve, not before.
 /// </summary>
 public record ResolveSpellAction : GameAction
 {
@@ -32,11 +27,10 @@ public record ResolveSpellAction : GameAction
 	public override ActionResult Execute(GameState gameState)
 	{
 		var card = (Card)gameState.GetObject(CardId);
-		var graveyardId = gameState.GetPlayerZoneId(CastingPlayerId, ZoneType.Graveyard);
 		var spellComponent = card.GetComponent<SpellComponent>();
 
-		// Suppress the post-processor while this spell resolves — SBE checks
-		// are deferred until EndResolutionScopeAction clears this flag.
+		// Open the resolution scope — SBE and trigger evaluation deferred until
+		// EndResolutionScopeAction clears this flag.
 		var state = gameState with
 		{
 			SuppressPostProcessor = true,
@@ -44,96 +38,25 @@ public record ResolveSpellAction : GameAction
 
 		var spawnedActions = ImmutableList<GameAction>.Empty;
 
-		if (spellComponent != null)
+		if (spellComponent != null && spellComponent.Effects.Count > 0)
 		{
-			var context = new TargetingContext
-			{
-				GameState = state,
-				SourceCardId = CardId,
-				CastingPlayerId = CastingPlayerId,
-			};
-
-			for (int i = 0; i < spellComponent.Effects.Count; i++)
-			{
-				var effect = spellComponent.Effects[i];
-				var resolvedTargets = ResolveTargets(effect, i, context);
-
-				GameAction action = effect.ActionTemplate is ITargetedAction targeted
-					? targeted.WithTargets(resolvedTargets)
-					: effect.ActionTemplate;
-
-				// Seed CastingPlayerId so PlayerIdContextKey resolution works
-				// regardless of whether the action is a pipeline or standalone
-				if (action is PipelineAction pipeline)
+			spawnedActions = spawnedActions.Add(
+				new ResolveEffectAction
 				{
-					action = pipeline with
-					{
-						PipelineContext = pipeline.PipelineContext.SetItem(
-							ContextKeys.CastingPlayerId,
-							CastingPlayerId
-						),
-					};
+					Effects = spellComponent.Effects,
+					CastingPlayerId = CastingPlayerId,
+					SourceCardId = CardId,
+					TargetIds = TargetIds,
 				}
-				else
-				{
-					action = action with
-					{
-						InputContext = action.InputContext.SetItem(
-							ContextKeys.CastingPlayerId,
-							CastingPlayerId
-						),
-					};
-				}
-
-				spawnedActions = spawnedActions.Add(action);
-			}
+			);
 		}
 
-		// EndResolutionScopeAction is always last — it clears SuppressPostProcessor
-		// after all effects have executed, unblocking the post-processor.
+		// Card moves to graveyard after effects resolve
+		spawnedActions = spawnedActions.Add(new MoveCardToGraveyardAction { CardId = CardId });
+
+		// EndResolutionScopeAction always last — clears SuppressPostProcessor
 		spawnedActions = spawnedActions.Add(new EndResolutionScopeAction());
 
-		var stateWithCardInGraveyard = state.MoveObject(CardId, graveyardId);
-
-		return new ActionResult(stateWithCardInGraveyard.SpawnActions(spawnedActions));
-	}
-
-	private ImmutableList<int> ResolveTargets(
-		CardEffect effect,
-		int effectIndex,
-		TargetingContext context
-	)
-	{
-		return effect.TargetingStrategy.SelectionMode switch
-		{
-			TargetSelectionMode.UserSelect => TargetIds.TryGetValue(effectIndex, out var targets)
-				? targets
-				: ImmutableList<int>.Empty,
-
-			TargetSelectionMode.AllValid => effect.TargetingStrategy.GetValidTargets(context),
-
-			TargetSelectionMode.Random => ResolveRandomTarget(effect.TargetingStrategy, context),
-
-			TargetSelectionMode.CastingPlayer => ImmutableList.Create(CastingPlayerId),
-
-			TargetSelectionMode.None => ImmutableList<int>.Empty,
-
-			_ => ImmutableList<int>.Empty,
-		};
-	}
-
-	private static ImmutableList<int> ResolveRandomTarget(
-		TargetingStrategy strategy,
-		TargetingContext context
-	)
-	{
-		var validTargets = strategy.GetValidTargets(context);
-
-		if (validTargets.IsEmpty)
-			return ImmutableList<int>.Empty;
-
-		var rng = new Random();
-		var chosen = validTargets[rng.Next(validTargets.Count)];
-		return ImmutableList.Create(chosen);
+		return new ActionResult(state.SpawnActions(spawnedActions));
 	}
 }

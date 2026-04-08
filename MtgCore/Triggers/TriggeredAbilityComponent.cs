@@ -1,0 +1,22 @@
+using ImmutableGameObjects;
+
+namespace MtgCore;
+
+/// <summary>
+/// Marks a card as having a triggered ability.
+/// A card may have multiple TriggeredAbilityComponents — one per ability.
+///
+/// When the PostActionProcessor runs after a resolution scope closes, it scans
+/// all battlefield permanents for TriggeredAbilityComponents, evaluates each
+/// Condition against the PendingTriggerEvents, and spawns a
+/// ResolveTriggeredAbilityAction for each match.
+///
+/// The Effect uses the existing CardEffect infrastructure — same targeting and
+/// action template system as spells and activated abilities.
+/// </summary>
+public record TriggeredAbilityComponent : GameComponent
+{
+	public string Name { get; init; } = "";
+	public TriggerCondition Condition { get; init; } = null!;
+	public CardEffect Effect { get; init; } = null!;
+}

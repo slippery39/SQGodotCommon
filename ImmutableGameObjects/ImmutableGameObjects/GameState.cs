@@ -24,6 +24,21 @@ public record GameState
 	public ImmutableList<GameAction> SpawnQueue { get; init; } = ImmutableList<GameAction>.Empty;
 
 	/// <summary>
+	/// Game events staged during action execution for consumption by the
+	/// PostActionProcessor after a resolution scope closes.
+	///
+	/// Actions that produce trigger-relevant events (creature dies, enters
+	/// battlefield, attacks) append to this list explicitly. CheckStateBasedEffectsAction
+	/// reads the list, evaluates all TriggeredAbilityComponents against it, spawns
+	/// any triggered abilities, then clears it.
+	///
+	/// Cleared every time the PostActionProcessor runs — never accumulates
+	/// across multiple resolutions.
+	/// </summary>
+	public ImmutableList<GameEvent> PendingGameEvents { get; init; } =
+		ImmutableList<GameEvent>.Empty;
+
+	/// <summary>
 	/// An optional action template that is automatically pushed onto the stack after
 	/// every non-post-processor action resolves (standalone actions and completed pipelines).
 	///

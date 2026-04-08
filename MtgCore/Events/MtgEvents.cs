@@ -19,6 +19,12 @@ public record CreatureDestroyedEvent : GameEvent
 	public int CreatureId { get; init; }
 }
 
+public record CreatureAttackedEvent : GameEvent
+{
+	public int CreatureId { get; init; }
+	public int AttackingPlayerId { get; init; }
+}
+
 public record SpellCastEvent : GameEvent
 {
 	public int CardId { get; init; }

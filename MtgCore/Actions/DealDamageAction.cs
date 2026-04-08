@@ -7,8 +7,9 @@ namespace MtgCore;
 /// Deals a fixed amount of damage to each target in TargetIds.
 /// Handles both player targets (reduces life) and creature targets (adds damage markers).
 ///
-/// Note: Moving creatures with lethal damage to the graveyard is a state-based effect
-/// and will be handled by a separate system. For now it is applied here as a placeholder.
+/// When a creature takes lethal damage it is moved to the graveyard and a
+/// CreatureDestroyedEvent is appended to GameState.PendingGameEvents for
+/// the PostActionProcessor to evaluate triggered abilities after the scope closes.
 /// </summary>
 public record DealDamageAction : GameAction, ITargetedAction
 {
@@ -28,6 +29,9 @@ public record DealDamageAction : GameAction, ITargetedAction
 
 		foreach (var targetId in TargetIds)
 		{
+			if (!state.HasObject(targetId))
+				continue;
+
 			var obj = state.GetObject(targetId);
 
 			var (newState, newEvents) = obj switch
@@ -61,17 +65,27 @@ public record DealDamageAction : GameAction, ITargetedAction
 		if (newDamage >= creature.Toughness)
 		{
 			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
-			var updatedCreature = creature with { Damage = newDamage };
-			var updatedCard = card.WithComponentReplaced(updatedCreature);
-			state = state.UpdateObject(card.Id, updatedCard);
+			state = state.UpdateObject(
+				card.Id,
+				card.WithComponentReplaced(creature with { Damage = newDamage })
+			);
 			state = state.MoveObject(card.Id, graveyardId);
-			events = events.Add(new CreatureDestroyedEvent { CreatureId = card.Id });
+
+			var destroyedEvent = new CreatureDestroyedEvent { CreatureId = card.Id };
+			events = events.Add(destroyedEvent);
+
+			// Stage for trigger evaluation after the resolution scope closes
+			state = state with
+			{
+				PendingGameEvents = state.PendingGameEvents.Add(destroyedEvent),
+			};
 		}
 		else
 		{
-			var updatedCreature = creature with { Damage = newDamage };
-			var updatedCard = card.WithComponentReplaced(updatedCreature);
-			state = state.UpdateObject(card.Id, updatedCard);
+			state = state.UpdateObject(
+				card.Id,
+				card.WithComponentReplaced(creature with { Damage = newDamage })
+			);
 			events = events.Add(new CreatureDamagedEvent { CreatureId = card.Id, Amount = amount });
 		}
 

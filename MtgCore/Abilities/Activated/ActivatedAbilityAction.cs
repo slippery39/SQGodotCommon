@@ -17,11 +17,10 @@ namespace MtgCore;
 ///   - The player has enough mana
 ///
 /// Execute:
-///   - Opens a resolution scope (IsInResolutionScope = true) so SBE checks
-///     are deferred until all effects resolve
+///   - Opens the resolution scope (SuppressPostProcessor = true)
 ///   - Marks the ability as HasActivated = true
 ///   - Spends mana
-///   - Resolves targets and spawns the effect action (same as ResolveSpellAction)
+///   - Spawns ResolveEffectAction with the ability's effect
 ///   - Spawns EndResolutionScopeAction last to close the scope
 /// </summary>
 public record ActivateAbilityAction : GameAction
@@ -66,7 +65,6 @@ public record ActivateAbilityAction : GameAction
 				$"Not enough mana (have {player.CurrentMana}, need {ability.ManaCost})"
 			);
 
-		// Validate targets if required
 		if (ability.Effect.TargetingStrategy.RequiresUserSelection)
 		{
 			var context = new TargetingContext
@@ -89,8 +87,8 @@ public record ActivateAbilityAction : GameAction
 		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
 		var ability = abilities[AbilityIndex];
 
-		// Suppress the post-processor while this ability resolves — SBE checks
-		// are deferred until EndResolutionScopeAction clears this flag.
+		// Open the resolution scope — SBE and trigger evaluation deferred until
+		// EndResolutionScopeAction clears this flag.
 		var state = gameState with
 		{
 			SuppressPostProcessor = true,
@@ -116,56 +114,36 @@ public record ActivateAbilityAction : GameAction
 				abilityCount++;
 			}
 		}
-		var updatedCard = card with { Components = updatedComponents };
-		state = state.UpdateObject(CardId, updatedCard);
+		state = state.UpdateObject(CardId, card with { Components = updatedComponents });
 
 		// Spend mana
 		var player = state.GetPlayer(ActivatingPlayerId);
-		var updatedPlayer = player with { CurrentMana = player.CurrentMana - ability.ManaCost };
-		state = state.UpdateObject(ActivatingPlayerId, updatedPlayer);
-
-		// Resolve targets
-		var context = new TargetingContext
-		{
-			GameState = state,
-			SourceCardId = CardId,
-			CastingPlayerId = ActivatingPlayerId,
-		};
-
-		var resolvedTargets = ability.Effect.TargetingStrategy.SelectionMode switch
-		{
-			TargetSelectionMode.UserSelect => TargetIds,
-			TargetSelectionMode.AllValid => ability.Effect.TargetingStrategy.GetValidTargets(
-				context
-			),
-			TargetSelectionMode.CastingPlayer => ImmutableList.Create(ActivatingPlayerId),
-			TargetSelectionMode.None => ImmutableList<int>.Empty,
-			_ => ImmutableList<int>.Empty,
-		};
-
-		GameAction effectAction = ability.Effect.ActionTemplate is ITargetedAction targeted
-			? targeted.WithTargets(resolvedTargets)
-			: ability.Effect.ActionTemplate;
-
-		// Seed CastingPlayerId into InputContext for actions that use PlayerIdContextKey
-		effectAction = effectAction is PipelineAction pipeline
-			? pipeline with
+		state = state.UpdateObject(
+			ActivatingPlayerId,
+			player with
 			{
-				PipelineContext = pipeline.PipelineContext.SetItem(
-					ContextKeys.CastingPlayerId,
-					ActivatingPlayerId
-				),
+				CurrentMana = player.CurrentMana - ability.ManaCost,
 			}
-			: effectAction with
-			{
-				InputContext = effectAction.InputContext.SetItem(
-					ContextKeys.CastingPlayerId,
-					ActivatingPlayerId
-				),
-			};
+		);
 
-		// EndResolutionScopeAction is always last — it clears SuppressPostProcessor
-		// after all effects have executed, unblocking the post-processor.
-		return new ActionResult(state.SpawnActions([effectAction, new EndResolutionScopeAction()]));
+		// Build target map for ResolveEffectAction (single effect at index 0)
+		var targetIds = TargetIds.IsEmpty
+			? ImmutableDictionary<int, ImmutableList<int>>.Empty
+			: ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(0, TargetIds);
+
+		return new ActionResult(
+			state.SpawnActions(
+				[
+					new ResolveEffectAction
+					{
+						Effects = ImmutableList.Create(ability.Effect),
+						CastingPlayerId = ActivatingPlayerId,
+						SourceCardId = CardId,
+						TargetIds = targetIds,
+					},
+					new EndResolutionScopeAction(),
+				]
+			)
+		);
 	}
 }

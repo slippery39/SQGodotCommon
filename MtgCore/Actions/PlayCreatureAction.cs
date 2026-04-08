@@ -5,12 +5,9 @@ namespace MtgCore;
 /// <summary>
 /// Plays a creature card from a player's hand onto their battlefield.
 ///
-/// ValidateAdd confirms the card exists, is in the player's hand,
-/// is controlled by the playing player, has a CreatureComponent,
-/// and that the player has enough mana to pay the cost.
-///
 /// On execution the card moves to the battlefield, the player's CurrentMana
-/// is reduced by the card's ManaCost, and HasSummoningSickness is set.
+/// is reduced by the card's ManaCost, HasSummoningSickness is set, and a
+/// CreaturePlayedEvent is appended to PendingGameEvents for trigger evaluation.
 /// </summary>
 public record PlayCreatureAction : GameAction
 {
@@ -55,14 +52,15 @@ public record PlayCreatureAction : GameAction
 		var updatedPlayer = player with { CurrentMana = player.CurrentMana - card.ManaCost };
 		var state = gameState.UpdateObject(PlayerId, updatedPlayer);
 
-		// Stamp summoning sickness
+		// Stamp summoning sickness and move to battlefield
 		var creature = card.GetComponent<CreatureComponent>()!;
 		var updatedCard = card.WithComponentReplaced(creature with { HasSummoningSickness = true });
-
 		state = state.UpdateObject(CardId, updatedCard).MoveObject(CardId, battlefieldId);
 
-		return new ActionResult(state).WithEvent(
-			new CreaturePlayedEvent { CardId = CardId, PlayerId = PlayerId }
-		);
+		// Emit event and stage for trigger evaluation
+		var playedEvent = new CreaturePlayedEvent { CardId = CardId, PlayerId = PlayerId };
+		state = state with { PendingGameEvents = state.PendingGameEvents.Add(playedEvent) };
+
+		return new ActionResult(state).WithEvent(playedEvent);
 	}
 }

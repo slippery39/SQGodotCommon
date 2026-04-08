@@ -92,16 +92,30 @@ public class CarefulStudyTests
 	}
 
 	[Test]
-	public void CarefulStudy_MovesToGraveyardBeforeChoicePauses()
+	public void CarefulStudy_MovesToGraveyard_AfterFullResolution()
 	{
 		var state = AddCardsToLibrary(_state, "Card A", "Card B");
 
 		var (stateAtChoice, _) = state.AddAction(MakeCastStudy()).ProcessAllActions();
 
+		// Card is still on the stack while the choice is pending —
+		// spells move to the graveyard after their effects fully resolve, not before.
 		Assert.That(
 			stateAtChoice.GetCardZone(_studyId).ZoneType,
+			Is.EqualTo(ZoneType.Stack),
+			"Careful Study should still be on the stack while choice is pending"
+		);
+
+		// Resolve the choice and confirm the card moves to the graveyard afterwards
+		var choice = stateAtChoice.GetPendingChoice()!;
+		var (finalState, _) = stateAtChoice.ResolveChoice(
+			ImmutableList.Create(choice.Options[0].Id, choice.Options[1].Id)
+		);
+
+		Assert.That(
+			finalState.GetCardZone(_studyId).ZoneType,
 			Is.EqualTo(ZoneType.Graveyard),
-			"Careful Study should be in graveyard by the time the choice pauses"
+			"Careful Study should be in the graveyard after full resolution"
 		);
 	}
 
