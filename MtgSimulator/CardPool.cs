@@ -330,7 +330,7 @@ public static class CardPool
 						Effect = new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new GainLifeAction { Amount = 3 },
+							ActionTemplate = new GainLifeAction { Amount = 1 },
 						},
 					}
 				),
@@ -340,7 +340,7 @@ public static class CardPool
 				MakeTriggerCreature(
 					"Blood Artist",
 					ownerId,
-					cost: 1,
+					cost: 3,
 					power: 0,
 					toughness: 1,
 					new TriggeredAbilityComponent
@@ -365,7 +365,7 @@ public static class CardPool
 					"Reconnaissance",
 					ownerId,
 					cost: 2,
-					power: 2,
+					power: 1,
 					toughness: 2,
 					new TriggeredAbilityComponent
 					{
@@ -384,7 +384,7 @@ public static class CardPool
 				MakeTriggerCreature(
 					"Mentor of the Meek",
 					ownerId,
-					cost: 2,
+					cost: 4,
 					power: 2,
 					toughness: 2,
 					new TriggeredAbilityComponent
@@ -411,7 +411,7 @@ public static class CardPool
 				MakeTriggerCreature(
 					"Vengeful Reaper",
 					ownerId,
-					cost: 2,
+					cost: 3,
 					power: 1,
 					toughness: 3,
 					new TriggeredAbilityComponent
@@ -429,13 +429,121 @@ public static class CardPool
 						},
 					}
 				),
+			// ===== CREATURES WITH TRIGGERED ABILITIES (EventTriggerCondition) =====
+			// These are equivalent to the cards above but use the new generic
+			// EventTriggerCondition system instead of concrete condition classes.
+			// Both systems work side by side — remove old versions once validated.
+
+			// Grim Watcher — same as Grim Initiate using EventTriggerCondition
+			// "When a creature you control dies, gain 1 life."
+			ownerId =>
+				MakeTriggerCreature(
+					"Grim Watcher",
+					ownerId,
+					cost: 2,
+					power: 2,
+					toughness: 1,
+					new TriggeredAbilityComponent
+					{
+						Name = "Death Rites",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.CreatureDestroyed,
+							Filter = new IsControlledByYouSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new GainLifeAction { Amount = 1 },
+						},
+					}
+				),
+			// Soul Harvester — same as Blood Artist using EventTriggerCondition
+			// "When any creature dies, deal 1 damage to the opponent."
+			ownerId =>
+				MakeTriggerCreature(
+					"Soul Harvester",
+					ownerId,
+					cost: 2,
+					power: 0,
+					toughness: 1,
+					new TriggeredAbilityComponent
+					{
+						Name = "Harvest",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.CreatureDestroyed,
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.AllValid(
+								new IsPlayerSpecification().And(
+									new IsControlledByOpponentSpecification()
+								)
+							),
+							ActionTemplate = new DealDamageAction { Amount = 1 },
+						},
+					}
+				),
+			// War Drummer — same as Reconnaissance using EventTriggerCondition
+			// "Whenever your creature attacks, gain 1 life."
+			ownerId =>
+				MakeTriggerCreature(
+					"War Drummer",
+					ownerId,
+					cost: 2,
+					power: 1,
+					toughness: 2,
+					new TriggeredAbilityComponent
+					{
+						Name = "Battle Cry",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.CreatureAttacked,
+							Filter = new IsControlledByYouSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new GainLifeAction { Amount = 1 },
+						},
+					}
+				),
+			// Battlefield Scholar — same as Mentor of the Meek using EventTriggerCondition
+			// "Whenever a creature you control enters the battlefield, draw a card."
+			ownerId =>
+				MakeTriggerCreature(
+					"Battlefield Scholar",
+					ownerId,
+					cost: 4,
+					power: 2,
+					toughness: 2,
+					new TriggeredAbilityComponent
+					{
+						Name = "Tutelage",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.CreaturePlayed,
+							Filter = new IsControlledByYouSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new DrawCardsAction
+							{
+								Amount = 1,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
+						},
+					}
+				),
 		};
 
 	/// <summary>
 	/// Builds a random deck for the given player by sampling
 	/// without replacement from the full card pool.
 	/// </summary>
-	public static IReadOnlyList<Card> BuildRandomDeck(int ownerId, int deckSize = 20)
+	public static IReadOnlyList<Card> BuildRandomDeck(int ownerId, int deckSize = 40)
 	{
 		var rng = new Random();
 		return All.OrderBy(_ => rng.Next())
