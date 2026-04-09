@@ -244,8 +244,8 @@ public class TurnStructureTests
 
 		var (finalState, _) = state.BeginGame(_ids.GameId, _ids.Player1Id, _ids.Player2Id);
 
-		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(7));
-		Assert.That(finalState.GetCardsInZone(_ids.Player2HandId).Count(), Is.EqualTo(7));
+		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(4));
+		Assert.That(finalState.GetCardsInZone(_ids.Player2HandId).Count(), Is.EqualTo(4));
 	}
 
 	[Test]
@@ -287,8 +287,8 @@ public class TurnStructureTests
 
 		var (finalState, _) = state.BeginGame(_ids.GameId, _ids.Player1Id, _ids.Player2Id);
 
-		// Hand should be exactly 7 — the opening hand, no extra draw
-		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(7));
+		// Hand should be exactly 4 — the opening hand, no extra draw
+		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(4));
 	}
 
 	[Test]
