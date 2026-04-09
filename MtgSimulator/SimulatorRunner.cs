@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using ImmutableGameObjects;
 using MtgCore;
 
@@ -29,30 +30,67 @@ public class SimulatorRunner
 
 		var results = new List<GameResult>();
 		var flaggedResults = new List<(int GameNumber, GameResult Result)>();
+		var gameTimes = new List<long>(); // milliseconds per game
+
+		var totalTimer = Stopwatch.StartNew();
 
 		for (int i = 0; i < _gameCount; i++)
 		{
+			var gameTimer = Stopwatch.StartNew();
+
 			var (state, ids, cardNames) = SetupGame();
 
-			// Both players use depth-limited AI — swap to RandomAiStrategy for baseline
 			var rng = new Random();
 			var player1Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, rng);
 			var player2Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, rng);
 
 			var runner = new GameRunner(player1Strategy, player2Strategy);
 			var result = runner.Run(state, ids, cardNames);
+
+			gameTimer.Stop();
+			gameTimes.Add(gameTimer.ElapsedMilliseconds);
+
 			results.Add(result);
 
 			if (result.IsFlagged)
 				flaggedResults.Add((i + 1, result));
 
 			if ((i + 1) % 100 == 0)
-				Console.WriteLine($"  Completed {i + 1} / {_gameCount} games...");
+			{
+				var elapsed = totalTimer.Elapsed;
+				Console.WriteLine(
+					$"  Completed {i + 1} / {_gameCount} games... "
+						+ $"({elapsed.TotalSeconds:F1}s elapsed)"
+				);
+			}
 		}
 
+		totalTimer.Stop();
+
 		PrintAggregateReport(results);
+		PrintTimingReport(gameTimes, totalTimer.ElapsedMilliseconds);
 		PrintCardReport(results);
 		PrintFlaggedGames(flaggedResults);
+	}
+
+	private static void PrintTimingReport(List<long> gameTimes, long totalMs)
+	{
+		if (gameTimes.Count == 0)
+			return;
+
+		var avgMs = gameTimes.Average();
+		var minMs = gameTimes.Min();
+		var maxMs = gameTimes.Max();
+		var totalSeconds = totalMs / 1000.0;
+
+		Console.WriteLine("  --- Timing ---");
+		Console.WriteLine();
+		Console.WriteLine($"  Total time:       {totalSeconds:F2}s");
+		Console.WriteLine($"  Avg time/game:    {avgMs:F1}ms");
+		Console.WriteLine($"  Fastest game:     {minMs}ms");
+		Console.WriteLine($"  Slowest game:     {maxMs}ms");
+		Console.WriteLine($"  Games/second:     {gameTimes.Count / totalSeconds:F1}");
+		Console.WriteLine();
 	}
 
 	private static (
@@ -123,7 +161,6 @@ public class SimulatorRunner
 
 	private static void PrintCardReport(List<GameResult> results)
 	{
-		// Per-card stats tracked separately for each player position
 		var p1Stats = new Dictionary<string, (int Drawn, int DrawnInWin)>();
 		var p2Stats = new Dictionary<string, (int Drawn, int DrawnInWin)>();
 
@@ -133,7 +170,6 @@ public class SimulatorRunner
 			UpdateCardStats(p2Stats, result.Player2DrawnCards, result.IsPlayer2Win);
 		}
 
-		// Combine into a unified view per card name
 		var allNames = p1Stats.Keys.Union(p2Stats.Keys).OrderBy(n => n).ToList();
 
 		Console.WriteLine("  --- Card Win Rate When Drawn ---");
@@ -166,7 +202,6 @@ public class SimulatorRunner
 
 		Console.WriteLine();
 
-		// Print baseline win rates for context
 		var p1BaseWins = results.Count(r => r.IsPlayer1Win);
 		var p2BaseWins = results.Count(r => r.IsPlayer2Win);
 		var total = results.Count;

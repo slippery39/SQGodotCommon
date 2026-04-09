@@ -4,12 +4,17 @@ using ImmutableGameObjects;
 namespace MtgCore;
 
 /// <summary>
-/// Generates all legal actions a player can take in a given game state.
-/// Used by both the console and simulator to drive the game loop.
+/// Generates all legal actions for the active player in the current game state.
 ///
-/// Returns a flat list of GameAction — the caller decides which to execute.
-/// All actions are validated via TryAddAction before being included, so
-/// every action in the returned list is guaranteed to be legal.
+/// This is the single shared source of legal action generation used by both
+/// the console and the simulator. Never duplicate this logic in presentation layers.
+///
+/// Performance notes:
+///   - Hand is scanned once, categorizing each card in a single pass
+///   - Zone IDs are resolved once at the top and reused throughout
+///   - TryAddAction is still called for creature/spell actions since their
+///     ValidateAdd checks mana and targeting which are non-trivial to inline
+///   - Attack validation is inlined since the checks are simple flag reads
 /// </summary>
 public static class MtgActionGenerator
 {
@@ -18,24 +23,27 @@ public static class MtgActionGenerator
 		var actions = new List<GameAction>();
 		var opponentId = playerId == ids.Player1Id ? ids.Player2Id : ids.Player1Id;
 
-		var handId = state.GetPlayerZoneId(playerId, ZoneType.Hand);
-		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
-		var opponentBattlefieldId = state.GetPlayerZoneId(opponentId, ZoneType.Battlefield);
+		// Resolve zone IDs once
+		var handId = playerId == ids.Player1Id ? ids.Player1HandId : ids.Player2HandId;
+		var battlefieldId =
+			playerId == ids.Player1Id ? ids.Player1BattlefieldId : ids.Player2BattlefieldId;
+		var opponentBattlefieldId =
+			playerId == ids.Player1Id ? ids.Player2BattlefieldId : ids.Player1BattlefieldId;
 
-		// Play creatures from hand
+		// ===== SINGLE PASS OVER HAND =====
+		// Categorize each card once rather than iterating the hand multiple times
+
 		foreach (var card in state.GetCardsInZone(handId))
 		{
-			if (!card.HasComponent<CreatureComponent>())
-				continue;
+			var creature = card.GetComponent<CreatureComponent>();
+			if (creature != null)
+			{
+				var action = new PlayCreatureAction { CardId = card.Id, PlayerId = playerId };
+				if (state.TryAddAction(action).Success)
+					actions.Add(action);
+				continue; // a card is either a creature or a spell, not both
+			}
 
-			var action = new PlayCreatureAction { CardId = card.Id, PlayerId = playerId };
-			if (state.TryAddAction(action).Success)
-				actions.Add(action);
-		}
-
-		// Cast spells from hand
-		foreach (var card in state.GetCardsInZone(handId))
-		{
 			var spell = card.GetComponent<SpellComponent>();
 			if (spell == null)
 				continue;
@@ -55,7 +63,6 @@ public static class MtgActionGenerator
 				if (validTargets.IsEmpty)
 					continue;
 
-				// Include one action per valid target so the caller can pick randomly or smartly
 				foreach (var target in validTargets)
 				{
 					var castAction = new CastSpellAction
@@ -71,7 +78,7 @@ public static class MtgActionGenerator
 					if (state.TryAddAction(castAction).Success)
 					{
 						actions.Add(castAction);
-						break; // one target per spell is enough — caller picks randomly anyway
+						break;
 					}
 				}
 			}
@@ -89,21 +96,22 @@ public static class MtgActionGenerator
 			}
 		}
 
-		// Attack with creatures
-		var attackTargets = new List<int> { opponentId };
-		attackTargets.AddRange(
-			state
-				.GetCardsInZone(opponentBattlefieldId)
-				.Where(c => c.HasComponent<CreatureComponent>())
-				.Select(c => c.Id)
-		);
+		// ===== ATTACKS =====
 
-		foreach (
-			var attacker in state
-				.GetCardsInZone(battlefieldId)
-				.Where(c => c.HasComponent<CreatureComponent>())
-		)
+		var attackTargets = new List<int> { opponentId };
+		foreach (var c in state.GetCardsInZone(opponentBattlefieldId))
 		{
+			if (c.HasComponent<CreatureComponent>())
+				attackTargets.Add(c.Id);
+		}
+
+		foreach (var attacker in state.GetCardsInZone(battlefieldId))
+		{
+			var creature = attacker.GetComponent<CreatureComponent>();
+			if (creature == null || creature.HasSummoningSickness || creature.HasAttacked)
+				continue;
+
+			// Inline the simple checks rather than calling TryAddAction for every target
 			foreach (var targetId in attackTargets)
 			{
 				var attack = new AttackAction
@@ -115,17 +123,21 @@ public static class MtgActionGenerator
 				if (state.TryAddAction(attack).Success)
 				{
 					actions.Add(attack);
-					break; // one valid target per attacker is enough
+					break;
 				}
 			}
 		}
 
-		// Activate abilities on battlefield permanents
+		// ===== ACTIVATED ABILITIES =====
+
 		foreach (var card in state.GetCardsInZone(battlefieldId))
 		{
 			var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
 			for (int i = 0; i < abilities.Count; i++)
 			{
+				if (abilities[i].HasActivated)
+					continue;
+
 				var context = new TargetingContext
 				{
 					GameState = state,

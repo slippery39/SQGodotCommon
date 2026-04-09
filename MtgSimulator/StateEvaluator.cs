@@ -8,27 +8,22 @@ namespace MtgSimulator;
 ///
 /// Returns a float score where higher is better for the given player.
 /// Terminal states (win/loss) return the maximum or minimum score.
-/// Non-terminal states are scored using a weighted sum of game factors.
+/// Non-terminal states use a weighted sum of game factors.
 ///
-/// Weights are tunable constants — adjust based on simulator output.
+/// Uses MtgGameIds zone IDs directly to avoid GetPlayerZoneId lookups,
+/// which scan the child list on every call.
 /// </summary>
 public static class StateEvaluator
 {
-	// Terminal scores
 	public const float WinScore = 10000f;
 	public const float LossScore = -10000f;
 
-	// Factor weights — tune these based on simulation results
 	private const float LifeWeight = 2.0f;
 	private const float CreatureCountWeight = 3.0f;
 	private const float TotalPowerWeight = 1.5f;
 	private const float CardsInHandWeight = 1.0f;
 	private const float ManaWeight = 0.5f;
 
-	/// <summary>
-	/// Scores the game state from the perspective of the given player.
-	/// Higher scores are better for that player.
-	/// </summary>
 	public static float Evaluate(GameState state, MtgGameIds ids, int playerId)
 	{
 		var opponentId = playerId == ids.Player1Id ? ids.Player2Id : ids.Player1Id;
@@ -36,20 +31,22 @@ public static class StateEvaluator
 		var player = state.GetPlayer(playerId);
 		var opponent = state.GetPlayer(opponentId);
 
-		// Terminal conditions
 		if (player.HasLost)
 			return LossScore;
 		if (opponent.HasLost)
 			return WinScore;
 
+		// Use known zone IDs directly — no child list scanning
+		var playerBattlefieldId =
+			playerId == ids.Player1Id ? ids.Player1BattlefieldId : ids.Player2BattlefieldId;
+		var opponentBattlefieldId =
+			playerId == ids.Player1Id ? ids.Player2BattlefieldId : ids.Player1BattlefieldId;
+		var playerHandId = playerId == ids.Player1Id ? ids.Player1HandId : ids.Player2HandId;
+		var opponentHandId = playerId == ids.Player1Id ? ids.Player2HandId : ids.Player1HandId;
+
 		var score = 0f;
 
-		// Life total difference
 		score += (player.Life - opponent.Life) * LifeWeight;
-
-		// Battlefield presence
-		var playerBattlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
-		var opponentBattlefieldId = state.GetPlayerZoneId(opponentId, ZoneType.Battlefield);
 
 		var playerCreatures = state
 			.GetCardsInZone(playerBattlefieldId)
@@ -62,22 +59,17 @@ public static class StateEvaluator
 
 		score += (playerCreatures.Count - opponentCreatures.Count) * CreatureCountWeight;
 
-		// Total power on board — measures offensive pressure
 		var playerPower = playerCreatures.Sum(c => c.GetComponent<CreatureComponent>()!.Power);
 		var opponentPower = opponentCreatures.Sum(c => c.GetComponent<CreatureComponent>()!.Power);
 
 		score += (playerPower - opponentPower) * TotalPowerWeight;
 
-		// Cards in hand — hand size is a resource advantage
-		var playerHandId = state.GetPlayerZoneId(playerId, ZoneType.Hand);
-		var opponentHandId = state.GetPlayerZoneId(opponentId, ZoneType.Hand);
+		score +=
+			(
+				state.GetCardsInZone(playerHandId).Count()
+				- state.GetCardsInZone(opponentHandId).Count()
+			) * CardsInHandWeight;
 
-		var playerHand = state.GetCardsInZone(playerHandId).Count();
-		var opponentHand = state.GetCardsInZone(opponentHandId).Count();
-
-		score += (playerHand - opponentHand) * CardsInHandWeight;
-
-		// Current mana — more mana means more options this turn
 		score += player.CurrentMana * ManaWeight;
 
 		return score;

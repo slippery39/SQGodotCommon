@@ -145,6 +145,8 @@ public static class MtgGameFactory
 			{
 				Player1Id = player1.Id,
 				Player2Id = player2.Id,
+				Player1BattlefieldId = p1Battlefield.Id,
+				Player2BattlefieldId = p2Battlefield.Id,
 			},
 		};
 

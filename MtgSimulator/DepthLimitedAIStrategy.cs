@@ -15,25 +15,25 @@ namespace MtgSimulator;
 /// responses are not modelled during the search. The opponent's turn is
 /// handled naturally when the game transitions to them.
 ///
-/// Choices (ChoiceAction) are resolved by evaluating each option and
-/// picking the one that produces the best immediate state.
+/// Alpha-beta style pruning:
+///   - In SelectAction: stops evaluating further actions once a winning
+///     action is found (score >= WinScore) since nothing can beat it
+///   - In EvaluateToDepth: propagates the cutoff upward — once a winning
+///     score is found at any depth level, remaining siblings are skipped
 ///
-/// Falls back to random selection when all actions score equally,
-/// which prevents deterministic repetition in symmetric states.
+/// Falls back to random selection when all actions score equally.
 /// </summary>
 public class DepthLimitedAiStrategy : IAiStrategy
 {
 	private readonly int _maxDepth;
 	private readonly MtgGameIds _ids;
 	private readonly Random _rng;
-	private readonly RandomAiStrategy _random;
 
 	public DepthLimitedAiStrategy(MtgGameIds ids, int maxDepth = 3, Random? rng = null)
 	{
 		_ids = ids;
 		_maxDepth = maxDepth;
 		_rng = rng ?? new Random();
-		_random = new RandomAiStrategy(_rng);
 	}
 
 	public GameAction SelectAction(GameState state, MtgGameIds ids, int playerId)
@@ -66,9 +66,12 @@ public class DepthLimitedAiStrategy : IAiStrategy
 			{
 				bestActions.Add(action);
 			}
+
+			// Win cutoff — can't do better than a guaranteed win
+			if (bestScore >= StateEvaluator.WinScore)
+				break;
 		}
 
-		// Break ties randomly to avoid deterministic repetition
 		return bestActions[_rng.Next(bestActions.Count)];
 	}
 
@@ -77,7 +80,6 @@ public class DepthLimitedAiStrategy : IAiStrategy
 		if (choice.Options.IsEmpty)
 			return ImmutableList<int>.Empty;
 
-		// For choices we evaluate each option's immediate state
 		var bestScore = float.MinValue;
 		var bestOption = choice.Options[0];
 
@@ -91,6 +93,9 @@ public class DepthLimitedAiStrategy : IAiStrategy
 				bestScore = score;
 				bestOption = option;
 			}
+
+			if (bestScore >= StateEvaluator.WinScore)
+				break;
 		}
 
 		return ImmutableList.Create(bestOption.Id);
@@ -99,10 +104,12 @@ public class DepthLimitedAiStrategy : IAiStrategy
 	/// <summary>
 	/// Recursively evaluates the state by greedily selecting the best action
 	/// at each depth level, returning the leaf score.
+	///
+	/// Returns as soon as a winning score is found — no need to evaluate
+	/// remaining actions at that node.
 	/// </summary>
 	private float EvaluateToDepth(GameState state, int playerId, int depth)
 	{
-		// Evaluate terminal or leaf states immediately
 		var player = state.GetPlayer(playerId);
 		var opponentId = playerId == _ids.Player1Id ? _ids.Player2Id : _ids.Player1Id;
 		var opponent = state.GetPlayer(opponentId);
@@ -115,7 +122,6 @@ public class DepthLimitedAiStrategy : IAiStrategy
 		if (depth <= 0)
 			return StateEvaluator.Evaluate(state, _ids, playerId);
 
-		// Handle pending choice — resolve greedily
 		if (state.IsWaitingForChoice)
 		{
 			var choice = state.GetPendingChoice()!;
@@ -126,11 +132,9 @@ public class DepthLimitedAiStrategy : IAiStrategy
 
 		var actions = MtgActionGenerator.GetLegalActions(state, _ids, playerId);
 
-		// No actions available — this is effectively a turn-end state
 		if (actions.Count == 0)
 			return StateEvaluator.Evaluate(state, _ids, playerId);
 
-		// Greedily pick the best action at this depth level
 		var bestScore = float.MinValue;
 
 		foreach (var action in actions)
@@ -140,15 +144,15 @@ public class DepthLimitedAiStrategy : IAiStrategy
 
 			if (score > bestScore)
 				bestScore = score;
+
+			// Cutoff — winning score found, no need to evaluate remaining actions
+			if (bestScore >= StateEvaluator.WinScore)
+				break;
 		}
 
 		return bestScore;
 	}
 
-	/// <summary>
-	/// Executes an action and returns the resulting state.
-	/// Returns the original state if the action fails validation.
-	/// </summary>
 	private static GameState ExecuteAction(GameState state, GameAction action)
 	{
 		var (newState, success) = state.TryAddAction(action);

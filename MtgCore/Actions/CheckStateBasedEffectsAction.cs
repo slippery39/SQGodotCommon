@@ -10,31 +10,26 @@ namespace MtgCore;
 /// after every standalone action and every completed pipeline — never between
 /// individual pipeline steps.
 ///
-/// While GameState.SuppressPostProcessor is true this action never runs — the
-/// executor skips the PostActionProcessor entirely. MtgCore uses this to defer
-/// SBE checks until a spell or ability has fully resolved.
+/// While GameState.SuppressPostProcessor is true this action never runs.
 ///
-/// Order of operations each time it runs:
+/// Player1BattlefieldId and Player2BattlefieldId are stored directly to avoid
+/// scanning the entire IdToGameObjectMap on every execution — a significant
+/// performance improvement given this runs after every action.
+///
+/// Order of operations:
 ///   1. Evaluate PendingGameEvents against all TriggeredAbilityComponents
-///      and spawn ResolveEffectAction for each match — triggers fire before
-///      loss conditions so their effects resolve against the full game state
+///      on both battlefields and spawn ResolveEffectAction for each match
 ///   2. Clear PendingGameEvents
 ///   3. Check loss conditions (life <= 0 only)
 ///
-/// Note: Empty library is NOT a loss condition here. A player loses from
-/// failing to draw from an empty library — that is handled by DrawCardsAction
-/// emitting a LibraryEmptyEvent, which will eventually trigger a loss via a
-/// separate mechanism. Having an empty library alone is not a loss condition.
-///
-/// If both players lose simultaneously, a draw is declared (WinnerPlayerId = -1).
-///
-/// IsPostProcessor = true prevents this action from triggering another post-processing
-/// cycle after it runs, avoiding infinite recursion.
+/// IsPostProcessor = true prevents recursive post-processing cycles.
 /// </summary>
 public record CheckStateBasedEffectsAction : GameAction
 {
 	public int Player1Id { get; init; }
 	public int Player2Id { get; init; }
+	public int Player1BattlefieldId { get; init; }
+	public int Player2BattlefieldId { get; init; }
 
 	public override bool IsPostProcessor => true;
 
@@ -46,7 +41,6 @@ public record CheckStateBasedEffectsAction : GameAction
 		var player1 = state.GetPlayer(Player1Id);
 		var player2 = state.GetPlayer(Player2Id);
 
-		// Skip if both players are already marked as lost — game is already over
 		if (player1.HasLost && player2.HasLost)
 			return new ActionResult(
 				state with
@@ -56,14 +50,16 @@ public record CheckStateBasedEffectsAction : GameAction
 			);
 
 		// ===== TRIGGERED ABILITIES =====
-		// Evaluated before loss conditions so triggers resolve against the full
-		// game state before any player is marked as having lost.
+		// Evaluated before loss conditions so triggers resolve against the full game state.
 
 		var pendingEvents = state.PendingGameEvents;
 
 		if (!pendingEvents.IsEmpty)
 		{
-			var battlefieldCards = GetAllBattlefieldCards(state);
+			// Use known battlefield IDs directly — no full object map scan needed
+			var battlefieldCards = state
+				.GetCardsInZone(Player1BattlefieldId)
+				.Concat(state.GetCardsInZone(Player2BattlefieldId));
 
 			foreach (var card in battlefieldCards)
 			{
@@ -96,11 +92,7 @@ public record CheckStateBasedEffectsAction : GameAction
 			}
 		}
 
-		// Clear pending game events — consumed for this resolution
-		state = state with
-		{
-			PendingGameEvents = ImmutableList<GameEvent>.Empty,
-		};
+		state = state with { PendingGameEvents = ImmutableList<GameEvent>.Empty };
 
 		// ===== STATE-BASED EFFECTS =====
 
@@ -139,13 +131,5 @@ public record CheckStateBasedEffectsAction : GameAction
 		}
 
 		return new ActionResult(state) { Events = events };
-	}
-
-	private static IEnumerable<Card> GetAllBattlefieldCards(GameState state)
-	{
-		return state
-			.IdToGameObjectMap.Values.OfType<Zone>()
-			.Where(z => z.ZoneType == ZoneType.Battlefield)
-			.SelectMany(z => state.GetCardsInZone(z.Id));
 	}
 }
