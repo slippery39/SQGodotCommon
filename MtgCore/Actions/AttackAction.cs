@@ -102,10 +102,11 @@ public record AttackAction : GameAction
 
 		if (targetObj is MtgPlayer targetPlayer)
 		{
+			// Use effective power — accounts for static ability bonuses
 			var (newState, newEvents) = ApplyDamageToPlayer(
 				state,
 				targetPlayer,
-				attackerCreature.Power
+				state.GetEffectivePower(AttackerId)
 			);
 			state = newState;
 			events = events.AddRange(newEvents);
@@ -115,12 +116,11 @@ public record AttackAction : GameAction
 			var (stateAfterTargetDamage, targetEvents) = ApplyDamageToCreature(
 				state,
 				targetCard,
-				attackerCreature.Power
+				state.GetEffectivePower(AttackerId)
 			);
 			state = stateAfterTargetDamage;
 			events = events.AddRange(targetEvents);
 
-			var targetCreature = targetCard.GetComponent<CreatureComponent>()!;
 			var currentAttacker = state.HasObject(AttackerId)
 				? (Card)state.GetObject(AttackerId)
 				: null;
@@ -130,7 +130,7 @@ public record AttackAction : GameAction
 				var (stateAfterAttackerDamage, attackerEvents) = ApplyDamageToCreature(
 					state,
 					currentAttacker,
-					targetCreature.Power
+					state.GetEffectivePower(targetCard.Id)
 				);
 				state = stateAfterAttackerDamage;
 				events = events.AddRange(attackerEvents);
@@ -164,13 +164,13 @@ public record AttackAction : GameAction
 		var newDamage = creature.Damage + amount;
 		var events = ImmutableList<GameEvent>.Empty;
 
-		if (newDamage >= creature.Toughness)
+		// Use effective toughness — accounts for modifiers
+		var updatedCard = card.WithComponentReplaced(creature with { Damage = newDamage });
+		state = state.UpdateObject(card.Id, updatedCard);
+
+		if (state.HasLethalDamage(card.Id))
 		{
 			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
-			state = state.UpdateObject(
-				card.Id,
-				card.WithComponentReplaced(creature with { Damage = newDamage })
-			);
 			state = state.MoveObject(card.Id, graveyardId);
 
 			var destroyedEvent = new CreatureDestroyedEvent { CreatureId = card.Id };
@@ -179,10 +179,6 @@ public record AttackAction : GameAction
 		}
 		else
 		{
-			state = state.UpdateObject(
-				card.Id,
-				card.WithComponentReplaced(creature with { Damage = newDamage })
-			);
 			events = events.Add(new CreatureDamagedEvent { CreatureId = card.Id, Amount = amount });
 		}
 

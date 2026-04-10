@@ -98,6 +98,13 @@ public record GameOverEvent : GameEvent
 	public int WinnerPlayerId { get; init; }
 }
 
+public record CreatureModifiedEvent : GameEvent
+{
+	public int CreatureId { get; init; }
+	public int PowerBonus { get; init; }
+	public int ToughnessBonus { get; init; }
+}
+
 public record TurnStartedEvent : GameEvent
 {
 	public int PlayerId { get; init; }

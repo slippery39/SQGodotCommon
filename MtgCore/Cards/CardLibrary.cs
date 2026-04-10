@@ -266,4 +266,70 @@ public static class CardLibrary
 				}
 			),
 		};
+
+	/// <summary>
+	/// Giant Growth — 1 mana instant.
+	/// "Target creature gets +3/+3 until end of turn."
+	/// Classic combat trick — applies a UntilEndOfTurn PowerToughnessModifier.
+	/// </summary>
+	public static Card GiantGrowth() =>
+		new()
+		{
+			Name = "Giant Growth",
+			ManaCost = 1,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								new IsCreatureSpecification().And(
+									new IsControlledByYouSpecification()
+								)
+							),
+							ActionTemplate = new AddModifierAction
+							{
+								PowerBonus = 3,
+								ToughnessBonus = 3,
+								Duration = ModifierDuration.UntilEndOfTurn,
+							},
+						}
+					),
+				}
+			),
+		};
+
+	/// <summary>
+	/// Unholy Strength — 1 mana instant.
+	/// "Target creature gets +2/+1 permanently."
+	/// Simplified enchantment-style permanent buff using a Permanent modifier.
+	/// </summary>
+	public static Card UnholyStrength() =>
+		new()
+		{
+			Name = "Unholy Strength",
+			ManaCost = 1,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								new IsCreatureSpecification().And(
+									new IsControlledByYouSpecification()
+								)
+							),
+							ActionTemplate = new AddModifierAction
+							{
+								PowerBonus = 2,
+								ToughnessBonus = 1,
+								Duration = ModifierDuration.Permanent,
+							},
+						}
+					),
+				}
+			),
+		};
 }

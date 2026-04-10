@@ -58,7 +58,12 @@ public record StartTurnAction : GameAction
 
 		foreach (var card in battlefieldCards)
 		{
-			var updatedComponents = card.Components;
+			// First clear end-of-turn modifiers (Giant Growth etc.)
+			state = state.ClearEndOfTurnModifiers(card.Id);
+
+			// Re-fetch card in case it was updated by ClearEndOfTurnModifiers
+			var currentCard = (Card)state.GetObject(card.Id);
+			var updatedComponents = currentCard.Components;
 
 			for (int i = 0; i < updatedComponents.Count; i++)
 			{
@@ -84,8 +89,14 @@ public record StartTurnAction : GameAction
 				};
 			}
 
-			if (updatedComponents != card.Components)
-				state = state.UpdateObject(card.Id, card with { Components = updatedComponents });
+			if (updatedComponents != currentCard.Components)
+				state = state.UpdateObject(
+					currentCard.Id,
+					currentCard with
+					{
+						Components = updatedComponents,
+					}
+				);
 		}
 
 		var spawned = ImmutableList<GameAction>.Empty;
