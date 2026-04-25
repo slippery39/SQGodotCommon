@@ -14,6 +14,7 @@ Runs N simulated games with configurable AI strategies and reports aggregate sta
 | `DepthLimitedAiStrategy.cs` | Greedy depth-limited search AI — the default strategy |
 | `StateEvaluator.cs` | Scores a `GameState` from a given player's perspective (float) |
 | `CardPool.cs` | Defines the full card pool; `BuildRandomDeck` samples 40 random cards per game |
+| `ZooDeckFactory.cs` | Builds a fixed 40-card Zoo deck (RGW aggro) for a given player |
 | `GameResult.cs` | Record capturing outcome, turn count, actions, drawn cards, end reason |
 
 ## Architecture

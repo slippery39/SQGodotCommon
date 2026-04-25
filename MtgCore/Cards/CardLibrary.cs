@@ -332,4 +332,152 @@ public static class CardLibrary
 				}
 			),
 		};
+
+	// ===== ZOO DECK CARDS =====
+
+	/// <summary>
+	/// Wild Nacatl — 1 mana creature (2/2).
+	/// Cat Warrior. Simplified: no domain condition, just solid stats.
+	/// </summary>
+	public static Card WildNacatl() =>
+		new()
+		{
+			Name = "Wild Nacatl",
+			ManaCost = 1,
+			Subtypes = ImmutableList.Create("Cat", "Warrior"),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 2, Toughness = 2 }
+			),
+		};
+
+	/// <summary>
+	/// Kird Ape — 1 mana creature (2/3).
+	/// Ape. Simplified: no Forest condition, just solid stats.
+	/// </summary>
+	public static Card KirdApe() =>
+		new()
+		{
+			Name = "Kird Ape",
+			ManaCost = 1,
+			Subtypes = ImmutableList.Create("Ape"),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 2, Toughness = 3 }
+			),
+		};
+
+	/// <summary>
+	/// Tarmogoyf — 2 mana creature (*/1+*).
+	/// Power and toughness each scale with the total number of cards in all graveyards.
+	/// Base Power = 0, Base Toughness = 1; GraveyardCountComponent adds the dynamic bonus.
+	/// </summary>
+	public static Card Tarmogoyf() =>
+		new()
+		{
+			Name = "Tarmogoyf",
+			ManaCost = 2,
+			Subtypes = ImmutableList.Create("Lhurgoyf"),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 0, Toughness = 1 },
+				new GraveyardCountComponent { Duration = ModifierDuration.Permanent }
+			),
+		};
+
+	/// <summary>
+	/// Path to Exile — 1 mana instant.
+	/// "Exile target creature."
+	/// Simplified: no basic land search for the exiled creature's controller.
+	/// </summary>
+	public static Card PathToExile() =>
+		new()
+		{
+			Name = "Path to Exile",
+			ManaCost = 1,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								new IsCreatureSpecification().And(
+									new IsControlledByOpponentSpecification()
+								)
+							),
+							ActionTemplate = new ExileAction(),
+						}
+					),
+				}
+			),
+		};
+
+	/// <summary>
+	/// Tribal Flames — 2 mana instant.
+	/// "Tribal Flames deals 5 damage to any target."
+	/// Simplified: fixed 5 damage, ignores domain condition.
+	/// </summary>
+	public static Card TribalFlames() =>
+		new()
+		{
+			Name = "Tribal Flames",
+			ManaCost = 2,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								new IsPlayerSpecification().Or(new IsCreatureSpecification())
+							),
+							ActionTemplate = new DealDamageAction { Amount = 5 },
+						}
+					),
+				}
+			),
+		};
+
+	/// <summary>
+	/// Qasali Pridemage — 2 mana creature (2/2).
+	/// Cat Wizard. Activated ability: destroy target opponent's creature (proxy for
+	/// the real card's sac-to-destroy-artifact/enchantment — no artifact type yet).
+	/// </summary>
+	public static Card QasaliPridemage() =>
+		new()
+		{
+			Name = "Qasali Pridemage",
+			ManaCost = 2,
+			Subtypes = ImmutableList.Create("Cat", "Wizard"),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 2, Toughness = 2 },
+				new ActivatedAbilityComponent
+				{
+					Name = "Destroy",
+					ManaCost = 1,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.SingleTarget(
+							new IsCreatureSpecification().And(
+								new IsControlledByOpponentSpecification()
+							)
+						),
+						ActionTemplate = new DealDamageAction { Amount = 99 },
+					},
+				}
+			),
+		};
+
+	/// <summary>
+	/// Loam Lion — 1 mana creature (2/3).
+	/// Cat. Simplified: no Forest condition, just good defensive stats.
+	/// </summary>
+	public static Card LoamLion() =>
+		new()
+		{
+			Name = "Loam Lion",
+			ManaCost = 1,
+			Subtypes = ImmutableList.Create("Cat"),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 2, Toughness = 3 }
+			),
+		};
 }

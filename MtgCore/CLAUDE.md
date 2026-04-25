@@ -6,14 +6,16 @@
 MtgCore/
 ├── Abilities/Activated/     # ActivatedAbilityComponent, ActivatedAbilityAction
 ├── Actions/                 # All GameAction subclasses; ContextKeys; MtgActionGenerator
-├── Cards/                   # Card (GameObject subclass), CardLibrary
-│   └── Components/          # CreatureComponent, SpellComponent
+│                            # Includes: ExileAction
+├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
+│   └── Components/          # CreatureComponent, SpellComponent, GraveyardCountComponent
 ├── Effects/                 # CardEffect (data-only effect descriptor)
-├── Events/                  # EventTypeNames, MtgEvents
+├── Events/                  # EventTypeNames, MtgEvents (includes CardExiledEvent)
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods)
-├── Modifiers/               # PowerToughnessModifier (GameComponent)
+├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier
 ├── Players/                 # MtgPlayer (GameObject subclass)
 ├── Targeting/               # TargetSpecification, TargetingContext, TargetingStrategy
+│                            # Includes: IsSubtypeSpecification
 ├── Triggers/                # TriggeredAbilityComponent, EventTriggerCondition, TriggerCondition
 ├── Turns/                   # BeginGameAction, SetupGameAction, StartTurnAction, EndTurnAction, TurnPhase
 ├── Zones/                   # Zone, ZoneType
@@ -48,7 +50,12 @@ Always use the extension methods `GetEffectivePower`, `GetEffectiveToughness`, a
 
 ### PowerToughnessModifier
 
-`GameComponent` with `PowerBonus`, `ToughnessBonus`, `Duration` (`UntilEndOfTurn` or `Permanent`), and `SourceCardId`. Applied via `AddModifierAction`. `UntilEndOfTurn` modifiers are cleared by `StartTurnAction`.
+`PowerToughnessModifier` is an abstract `GameComponent` base with `Duration` (`UntilEndOfTurn` or `Permanent`) and `SourceCardId`. Subclasses implement `GetPowerBonus(GameState, int cardId)` and `GetToughnessBonus(GameState, int cardId)`. `CreatureEvaluator` calls these methods — no type switching.
+
+- `StaticPowerToughnessModifier` — fixed `PowerBonus` / `ToughnessBonus` values. Used by `AddModifierAction` for spells like Giant Growth and Unholy Strength.
+- `GraveyardCountComponent` — dynamic modifier; both bonus methods return the total card count across all graveyards. Used by Tarmogoyf (base Power = 0, base Toughness = 1).
+
+Applied via `AddModifierAction`. `UntilEndOfTurn` modifiers are cleared by `StartTurnAction`.
 
 ## Mana System
 
@@ -113,6 +120,5 @@ These are designed but not yet implemented. Do not re-implement or work around t
 | Step | Feature | Notes |
 |------|---------|-------|
 | 2 | Static P/T modifiers | `StaticAbilityComponent` on permanents for anthem/lord effects. `CreatureEvaluator` adds a second pass scanning battlefield permanents for applicable bonuses. |
-| 3 | Characteristic-defining abilities | Tarmogoyf-style runtime P/T formulas. |
-| 4 | Zone-dependent statics | Wonder-style abilities active only in specific zones. `ActiveInZone` property already designed on `StaticAbilityComponent`. |
-| 5 | Keyword abilities as components | Lifelink, Deathtouch, Trample etc. as individual components checked by relevant actions. Rules-engine keywords that do not use the stack. |
+| 3 | Zone-dependent statics | Wonder-style abilities active only in specific zones. `ActiveInZone` property already designed on `StaticAbilityComponent`. |
+| 4 | Keyword abilities as components | Lifelink, Deathtouch, Trample etc. as individual components checked by relevant actions. Rules-engine keywords that do not use the stack. |

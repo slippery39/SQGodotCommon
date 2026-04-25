@@ -348,7 +348,7 @@ public class PowerToughnessModifierTests
 	)
 	{
 		var card = (Card)state.GetObject(cardId);
-		var modifier = new PowerToughnessModifier
+		var modifier = new StaticPowerToughnessModifier
 		{
 			PowerBonus = powerBonus,
 			ToughnessBonus = toughnessBonus,

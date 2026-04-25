@@ -114,3 +114,9 @@ public record TurnEndedEvent : GameEvent
 {
 	public int PlayerId { get; init; }
 }
+
+public record CardExiledEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public int PlayerId { get; init; }
+}

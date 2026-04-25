@@ -43,7 +43,7 @@ public record AddModifierAction : GameAction, ITargetedAction
 			if (card == null || !card.HasComponent<CreatureComponent>())
 				continue;
 
-			var modifier = new PowerToughnessModifier
+			var modifier = new StaticPowerToughnessModifier
 			{
 				PowerBonus = PowerBonus,
 				ToughnessBonus = ToughnessBonus,

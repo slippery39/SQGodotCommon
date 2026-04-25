@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -12,10 +13,15 @@ namespace MtgCore;
 /// Multiple components can be active simultaneously (e.g. a creature-land).
 /// OwnerId and ControllerId default to 0 and are stamped on at deck
 /// construction time via 'with'.
+/// Subtypes (e.g. "Goblin", "Elf", "Beast") support tribal and type-based queries.
 /// </summary>
 public record Card : GameObject
 {
 	public int ManaCost { get; init; }
 	public int OwnerId { get; init; }
 	public int ControllerId { get; init; }
+	public ImmutableList<string> Subtypes { get; init; } = ImmutableList<string>.Empty;
+
+	public bool HasSubtype(string subtype) =>
+		Subtypes.Contains(subtype, StringComparer.OrdinalIgnoreCase);
 }

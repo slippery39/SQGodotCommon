@@ -32,7 +32,7 @@ public static class CreatureEvaluator
 		var power = creature.Power;
 
 		foreach (var modifier in card.GetComponents<PowerToughnessModifier>())
-			power += modifier.PowerBonus;
+			power += modifier.GetPowerBonus(state, cardId);
 
 		return power;
 	}
@@ -55,7 +55,7 @@ public static class CreatureEvaluator
 		var toughness = creature.Toughness;
 
 		foreach (var modifier in card.GetComponents<PowerToughnessModifier>())
-			toughness += modifier.ToughnessBonus;
+			toughness += modifier.GetToughnessBonus(state, cardId);
 
 		return toughness;
 	}

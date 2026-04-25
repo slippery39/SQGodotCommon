@@ -23,26 +23,14 @@ public enum ModifierDuration
 }
 
 /// <summary>
-/// Represents a power and/or toughness modification applied to a creature.
+/// Abstract base for all P/T modifiers attached to a creature card.
+/// Each subclass owns its own calculation logic via GetPowerBonus / GetToughnessBonus.
+/// CreatureEvaluator loops over all modifiers and calls these methods — no type switching.
 ///
-/// Modifiers are components on the card itself — they travel with the card.
-/// GetEffectivePower / GetEffectiveToughness sum all modifiers on a card
-/// on top of the base printed values.
-///
-/// Sources of modifiers:
-///   - Spells like Giant Growth (UntilEndOfTurn)
-///   - Permanent enchantment-style spells like Unholy Strength (Permanent)
-///
-/// Static ability bonuses (anthem effects) are evaluated separately at read
-/// time and do not add modifier components to cards.
-///
-/// SourceCardId tracks which card or effect applied this modifier.
-/// Useful for removal effects that target specific buffs.
+/// Duration and SourceCardId are shared by all modifier types.
 /// </summary>
-public record PowerToughnessModifier : GameComponent
+public abstract record PowerToughnessModifier : GameComponent
 {
-	public int PowerBonus { get; init; } = 0;
-	public int ToughnessBonus { get; init; } = 0;
 	public ModifierDuration Duration { get; init; } = ModifierDuration.UntilEndOfTurn;
 
 	/// <summary>
@@ -50,4 +38,8 @@ public record PowerToughnessModifier : GameComponent
 	/// 0 if the source is unknown or not relevant.
 	/// </summary>
 	public int SourceCardId { get; init; } = 0;
+
+	public abstract int GetPowerBonus(GameState state, int cardId);
+
+	public abstract int GetToughnessBonus(GameState state, int cardId);
 }
