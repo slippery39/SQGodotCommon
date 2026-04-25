@@ -446,7 +446,6 @@ public class TargetingSystemTests
 				{
 					CardId = spellCard.Id,
 					CastingPlayerId = _ids.Player1Id,
-					GameId = _ids.GameId,
 					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 						0,
 						ImmutableList.Create(creature1.Id, creature2.Id)
@@ -519,7 +518,6 @@ public class TargetingSystemTests
 			{
 				CardId = spellCard.Id,
 				CastingPlayerId = _ids.Player1Id,
-				GameId = _ids.GameId,
 				TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 					0,
 					ImmutableList.Create(c1.Id, c2.Id, c3.Id)
@@ -563,7 +561,6 @@ public class TargetingSystemTests
 			{
 				CardId = spellCard.Id,
 				CastingPlayerId = _ids.Player1Id,
-				GameId = _ids.GameId,
 				TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 					0,
 					ImmutableList.Create(creature.Id)
@@ -684,7 +681,6 @@ public class TargetingSystemTests
 				{
 					CardId = spellCard.Id,
 					CastingPlayerId = _ids.Player1Id,
-					GameId = _ids.GameId,
 					TargetIds = ImmutableDictionary<int, ImmutableList<int>>
 						.Empty.Add(0, ImmutableList.Create(creature.Id))
 						.Add(1, ImmutableList.Create(_ids.Player2Id)),
@@ -716,5 +712,5 @@ public class TargetingSystemTests
 		};
 
 	private CastSpellAction MakeCastAction(int cardId, int castingPlayerId) =>
-		TestCardFactory.MakeCastAction(cardId, castingPlayerId, _ids.GameId);
+		TestCardFactory.MakeCastAction(cardId, castingPlayerId);
 }

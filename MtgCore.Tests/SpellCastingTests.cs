@@ -169,7 +169,6 @@ public class LightningBoltTests
 		{
 			CardId = _boltId,
 			CastingPlayerId = _ids.Player1Id,
-			GameId = _ids.GameId,
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 				0,
 				ImmutableList.Create(_ids.Player1HandId)
@@ -230,7 +229,6 @@ public class LightningBoltTests
 				{
 					CardId = _boltId,
 					CastingPlayerId = _ids.Player1Id,
-					GameId = _ids.GameId,
 					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 						0,
 						ImmutableList.Create(creature.Id)
@@ -266,7 +264,6 @@ public class LightningBoltTests
 				{
 					CardId = _boltId,
 					CastingPlayerId = _ids.Player1Id,
-					GameId = _ids.GameId,
 					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 						0,
 						ImmutableList.Create(creature.Id)
@@ -299,5 +296,5 @@ public class LightningBoltTests
 		};
 
 	private CastSpellAction MakeCastBoltAt(int targetId) =>
-		TestCardFactory.MakeCastActionWithTarget(_boltId, _ids.Player1Id, _ids.GameId, targetId);
+		TestCardFactory.MakeCastActionWithTarget(_boltId, _ids.Player1Id, targetId);
 }

@@ -181,7 +181,7 @@ public class MtgCoreDataModelTests
 	[Test]
 	public void GetStack_ReturnsCorrectZone()
 	{
-		var stack = _state.GetStack(_ids.GameId);
+		var stack = _state.GetStack();
 		Assert.That(stack.ZoneType, Is.EqualTo(ZoneType.Stack));
 		Assert.That(stack.Id, Is.EqualTo(_ids.StackId));
 	}

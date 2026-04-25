@@ -91,7 +91,6 @@ public class LightningHelixTests
 				{
 					CardId = _helixId,
 					CastingPlayerId = _ids.Player1Id,
-					GameId = _ids.GameId,
 					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 						0,
 						ImmutableList.Create(creature.Id)
@@ -131,7 +130,6 @@ public class LightningHelixTests
 		{
 			CardId = _helixId,
 			CastingPlayerId = _ids.Player1Id,
-			GameId = _ids.GameId,
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 				0,
 				ImmutableList.Create(targetId)

@@ -42,7 +42,7 @@ public class ResolutionScopeTests
 		);
 
 		var state = stateWithCard.AddAction(
-			TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id, _ids.GameId)
+			TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id)
 		);
 
 		// CastSpellAction
@@ -67,7 +67,7 @@ public class ResolutionScopeTests
 		);
 
 		var (finalState, _) = stateWithCard
-			.AddAction(TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id, _ids.GameId))
+			.AddAction(TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id))
 			.ProcessAllActions();
 
 		Assert.That(
@@ -97,7 +97,7 @@ public class ResolutionScopeTests
 		);
 
 		var state = stateWithCard.AddAction(
-			TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id, _ids.GameId)
+			TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id)
 		);
 
 		// CastSpellAction
@@ -132,7 +132,7 @@ public class ResolutionScopeTests
 		);
 
 		var (finalState, _) = stateWithCard
-			.AddAction(TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id, _ids.GameId))
+			.AddAction(TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id))
 			.ProcessAllActions();
 
 		Assert.That(
@@ -168,7 +168,7 @@ public class ResolutionScopeTests
 		// because we use TargetingStrategy.AllValid with IsPlayerSpecification filtered
 		// to the opponent. We use a cast with no explicit targets since it's AllValid.
 		var state = stateWithCard.AddAction(
-			TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id, _ids.GameId)
+			TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id)
 		);
 
 		// CastSpellAction

@@ -230,7 +230,6 @@ public class TellingTimeTests
 		{
 			CardId = _cardId,
 			CastingPlayerId = _ids.Player1Id,
-			GameId = _ids.GameId,
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
 		};
 

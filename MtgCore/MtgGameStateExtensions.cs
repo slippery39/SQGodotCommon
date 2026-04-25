@@ -113,14 +113,12 @@ public static class MtgGameStateExtensions
 		state.GetPlayerZone(playerId, zoneType).Id;
 
 	/// <summary>
-	/// Returns the Stack zone, which is the only shared zone (child of MtgGame root).
+	/// Returns the Stack zone. There is exactly one Stack zone per game state.
 	/// </summary>
-	public static Zone GetStack(this GameState state, int gameId)
-	{
-		return state.GetChildren(gameId).OfType<Zone>().First(z => z.ZoneType == ZoneType.Stack);
-	}
+	public static Zone GetStack(this GameState state) =>
+		state.IdToGameObjectMap.Values.OfType<Zone>().First(z => z.ZoneType == ZoneType.Stack);
 
-	public static int GetStackId(this GameState state, int gameId) => state.GetStack(gameId).Id;
+	public static int GetStackId(this GameState state) => state.GetStack().Id;
 
 	// ===== CARD QUERIES =====
 

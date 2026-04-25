@@ -69,7 +69,6 @@ public static class MtgActionGenerator
 					{
 						CardId = card.Id,
 						CastingPlayerId = playerId,
-						GameId = ids.GameId,
 						TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 							0,
 							ImmutableList.Create(target)
@@ -88,7 +87,6 @@ public static class MtgActionGenerator
 				{
 					CardId = card.Id,
 					CastingPlayerId = playerId,
-					GameId = ids.GameId,
 					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
 				};
 				if (state.TryAddAction(castAction).Success)

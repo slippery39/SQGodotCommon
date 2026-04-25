@@ -90,12 +90,11 @@ public static class TestCardFactory
 	/// <summary>
 	/// Builds a standard CastSpellAction with no targets.
 	/// </summary>
-	public static CastSpellAction MakeCastAction(int cardId, int castingPlayerId, int gameId) =>
+	public static CastSpellAction MakeCastAction(int cardId, int castingPlayerId) =>
 		new()
 		{
 			CardId = cardId,
 			CastingPlayerId = castingPlayerId,
-			GameId = gameId,
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
 		};
 
@@ -105,14 +104,12 @@ public static class TestCardFactory
 	public static CastSpellAction MakeCastActionWithTarget(
 		int cardId,
 		int castingPlayerId,
-		int gameId,
 		int targetId
 	) =>
 		new()
 		{
 			CardId = cardId,
 			CastingPlayerId = castingPlayerId,
-			GameId = gameId,
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 				0,
 				ImmutableList.Create(targetId)

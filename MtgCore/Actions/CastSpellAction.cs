@@ -16,7 +16,6 @@ public record CastSpellAction : GameAction
 {
 	public int CardId { get; init; }
 	public int CastingPlayerId { get; init; }
-	public int GameId { get; init; }
 
 	public ImmutableDictionary<int, ImmutableList<int>> TargetIds { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
@@ -80,14 +79,12 @@ public record CastSpellAction : GameAction
 		var updatedPlayer = player with { CurrentMana = player.CurrentMana - card.ManaCost };
 		var state = gameState.UpdateObject(CastingPlayerId, updatedPlayer);
 
-		var stackId = state.GetStackId(GameId);
-		state = state.MoveObject(CardId, stackId);
+		state = state.MoveObject(CardId, state.GetStackId());
 
 		var resolveAction = new ResolveSpellAction
 		{
 			CardId = CardId,
 			CastingPlayerId = CastingPlayerId,
-			GameId = GameId,
 			TargetIds = TargetIds,
 		};
 

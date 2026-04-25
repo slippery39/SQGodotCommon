@@ -251,7 +251,6 @@ public class CarefulStudyTests
 		{
 			CardId = _studyId,
 			CastingPlayerId = _ids.Player1Id,
-			GameId = _ids.GameId,
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
 		};
 

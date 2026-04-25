@@ -19,7 +19,6 @@ public record ResolveSpellAction : GameAction
 {
 	public int CardId { get; init; }
 	public int CastingPlayerId { get; init; }
-	public int GameId { get; init; }
 
 	public ImmutableDictionary<int, ImmutableList<int>> TargetIds { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;

@@ -215,7 +215,6 @@ public class PowerToughnessModifierTests
 		{
 			CardId = card.Id,
 			CastingPlayerId = _ids.Player1Id,
-			GameId = _ids.GameId,
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 				0,
 				ImmutableList.Create(creature.Id)
@@ -248,7 +247,6 @@ public class PowerToughnessModifierTests
 		{
 			CardId = card.Id,
 			CastingPlayerId = _ids.Player1Id,
-			GameId = _ids.GameId,
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 				0,
 				ImmutableList.Create(bear.Id)
@@ -306,7 +304,6 @@ public class PowerToughnessModifierTests
 		{
 			CardId = card.Id,
 			CastingPlayerId = _ids.Player1Id,
-			GameId = _ids.GameId,
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
 				0,
 				ImmutableList.Create(creature.Id)

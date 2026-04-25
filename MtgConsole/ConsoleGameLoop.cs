@@ -350,7 +350,6 @@ public class ConsoleGameLoop
 		{
 			CardId = card.Id,
 			CastingPlayerId = activePlayerId,
-			GameId = _ids.GameId,
 			TargetIds = targetIds,
 		};
 

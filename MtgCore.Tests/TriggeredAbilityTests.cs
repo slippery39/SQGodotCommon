@@ -51,14 +51,7 @@ public class TriggeredAbilityTests
 		var (stateWithCard, card) = stateWithCreature.AddObject(bolt, parentId: _ids.Player1HandId);
 
 		var (finalState, _) = stateWithCard
-			.AddAction(
-				TestCardFactory.MakeCastActionWithTarget(
-					card.Id,
-					_ids.Player1Id,
-					_ids.GameId,
-					target.Id
-				)
-			)
+			.AddAction(TestCardFactory.MakeCastActionWithTarget(card.Id, _ids.Player1Id, target.Id))
 			.ProcessAllActions();
 
 		// Bolt hit the creature (not the player), so only the death trigger deals damage.
@@ -161,9 +154,7 @@ public class TriggeredAbilityTests
 		var pyroclasm = MakePyroclasm(_ids.Player1Id);
 		var (s4, card) = s3.AddObject(pyroclasm, parentId: _ids.Player1HandId);
 
-		var (finalState, _) = s4.AddAction(
-				TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id, _ids.GameId)
-			)
+		var (finalState, _) = s4.AddAction(TestCardFactory.MakeCastAction(card.Id, _ids.Player1Id))
 			.ProcessAllActions();
 
 		Assert.That(

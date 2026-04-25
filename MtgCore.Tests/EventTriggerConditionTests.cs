@@ -120,12 +120,7 @@ public class EventTriggerConditionTests
 		var (s3, card) = s2.AddObject(bolt, parentId: _ids.Player1HandId);
 
 		var (finalState, _) = s3.AddAction(
-				TestCardFactory.MakeCastActionWithTarget(
-					card.Id,
-					_ids.Player1Id,
-					_ids.GameId,
-					target.Id
-				)
+				TestCardFactory.MakeCastActionWithTarget(card.Id, _ids.Player1Id, target.Id)
 			)
 			.ProcessAllActions();
 
