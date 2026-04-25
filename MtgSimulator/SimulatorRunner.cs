@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Diagnostics;
 using ImmutableGameObjects;
 using MtgCore;
@@ -29,15 +28,12 @@ public class SimulatorRunner
 		Console.WriteLine();
 
 		var results = new List<GameResult>();
-		var flaggedResults = new List<(int GameNumber, GameResult Result)>();
-		var gameTimes = new List<long>(); // milliseconds per game
+		var flaggedGames = new List<(int GameNumber, GameResult Result)>();
 
 		var totalTimer = Stopwatch.StartNew();
 
 		for (int i = 0; i < _gameCount; i++)
 		{
-			var gameTimer = Stopwatch.StartNew();
-
 			var (state, ids, cardNames) = SetupGame();
 
 			var rng = new Random();
@@ -45,15 +41,24 @@ public class SimulatorRunner
 			var player2Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, rng);
 
 			var runner = new GameRunner(player1Strategy, player2Strategy);
-			var result = runner.Run(state, ids, cardNames);
-
-			gameTimer.Stop();
-			gameTimes.Add(gameTimer.ElapsedMilliseconds);
-
-			results.Add(result);
+			var (result, finalState) = runner.Run(state, ids, cardNames);
 
 			if (result.IsFlagged)
-				flaggedResults.Add((i + 1, result));
+			{
+				var savedPath = FlaggedGameSaver.TrySave(
+					i + 1,
+					result,
+					finalState,
+					ids,
+					flaggedGames.Count
+				);
+				if (savedPath != null)
+					result = result with { SavedFilePath = savedPath };
+
+				flaggedGames.Add((i + 1, result));
+			}
+
+			results.Add(result);
 
 			if ((i + 1) % 100 == 0)
 			{
@@ -68,16 +73,17 @@ public class SimulatorRunner
 		totalTimer.Stop();
 
 		PrintAggregateReport(results);
-		PrintTimingReport(gameTimes, totalTimer.ElapsedMilliseconds);
+		PrintTimingReport(results, totalTimer.ElapsedMilliseconds);
 		PrintCardReport(results);
-		PrintFlaggedGames(flaggedResults);
+		PrintFlaggedGames(flaggedGames);
 	}
 
-	private static void PrintTimingReport(List<long> gameTimes, long totalMs)
+	private static void PrintTimingReport(List<GameResult> results, long totalMs)
 	{
-		if (gameTimes.Count == 0)
+		if (results.Count == 0)
 			return;
 
+		var gameTimes = results.Select(r => r.GameDurationMs).ToList();
 		var avgMs = gameTimes.Average();
 		var minMs = gameTimes.Min();
 		var maxMs = gameTimes.Max();
@@ -89,7 +95,7 @@ public class SimulatorRunner
 		Console.WriteLine($"  Avg time/game:    {avgMs:F1}ms");
 		Console.WriteLine($"  Fastest game:     {minMs}ms");
 		Console.WriteLine($"  Slowest game:     {maxMs}ms");
-		Console.WriteLine($"  Games/second:     {gameTimes.Count / totalSeconds:F1}");
+		Console.WriteLine($"  Games/second:     {results.Count / totalSeconds:F1}");
 		Console.WriteLine();
 	}
 
@@ -137,6 +143,7 @@ public class SimulatorRunner
 		var libraryWins = results.Count(r => r.EndReason == GameEndReason.LibraryEmpty);
 		var turnLimits = results.Count(r => r.EndReason == GameEndReason.TurnLimitReached);
 		var actionLimits = results.Count(r => r.EndReason == GameEndReason.ActionLimitReached);
+		var timeLimits = results.Count(r => r.EndReason == GameEndReason.TimeLimitReached);
 		var warnings = results.Count(r => r.HadActionWarning);
 
 		Console.WriteLine("╔═══════════════════════════════════════════════╗");
@@ -155,6 +162,7 @@ public class SimulatorRunner
 		Console.WriteLine($"  End by library:   {libraryWins} ({Pct(libraryWins, total)})");
 		Console.WriteLine($"  Turn limit hit:   {turnLimits} ({Pct(turnLimits, total)})");
 		Console.WriteLine($"  Action limit hit: {actionLimits} ({Pct(actionLimits, total)})");
+		Console.WriteLine($"  Time limit hit:   {timeLimits} ({Pct(timeLimits, total)})");
 		Console.WriteLine($"  Action warnings:  {warnings} ({Pct(warnings, total)})");
 		Console.WriteLine();
 	}
@@ -213,35 +221,52 @@ public class SimulatorRunner
 
 	private static void PrintFlaggedGames(List<(int GameNumber, GameResult Result)> flaggedGames)
 	{
-		if (!flaggedGames.Any())
+		if (flaggedGames.Count == 0)
 		{
 			Console.WriteLine("  No flagged games.");
 			return;
 		}
 
+		var savedCount = flaggedGames.Count(g => g.Result.SavedFilePath != null);
 		Console.WriteLine($"  --- Flagged Games ({flaggedGames.Count}) ---");
+		if (savedCount > 0)
+			Console.WriteLine(
+				$"  Snapshots saved to: ./{SaveDirectory}/  ({savedCount} of {flaggedGames.Count})"
+			);
+		if (flaggedGames.Count > FlaggedGameSaver.MaxSaves)
+			Console.WriteLine(
+				$"  (save cap of {FlaggedGameSaver.MaxSaves} reached — remaining games not saved)"
+			);
 		Console.WriteLine();
 
 		foreach (var (gameNumber, result) in flaggedGames)
 		{
-			var winner =
-				result.IsDraw ? "Draw"
-				: result.IsPlayer1Win ? "Player 1"
-				: "Player 2";
+			string winner;
+			if (result.IsDraw)
+				winner = "Draw";
+			else if (result.IsPlayer1Win)
+				winner = "Player 1";
+			else
+				winner = "Player 2";
 
 			var flags = new List<string>();
 			if (result.EndReason == GameEndReason.TurnLimitReached)
 				flags.Add("TURN LIMIT");
 			if (result.EndReason == GameEndReason.ActionLimitReached)
 				flags.Add("ACTION LIMIT");
+			if (result.EndReason == GameEndReason.TimeLimitReached)
+				flags.Add("TIME LIMIT");
 			if (result.HadActionWarning)
 				flags.Add("action warning");
+
+			var savedMark = result.SavedFilePath != null ? " [saved]" : "";
 
 			Console.WriteLine(
 				$"  Game {gameNumber, 4}: {winner, -10} | "
 					+ $"Turns: {result.TurnCount, 3} | "
 					+ $"Actions: {result.TotalActions, 5} | "
-					+ $"[{string.Join(", ", flags)}]"
+					+ $"Time: {result.GameDurationMs, 6}ms | "
+					+ $"[{string.Join(", ", flags)}]{savedMark}"
 			);
 		}
 
@@ -268,4 +293,6 @@ public class SimulatorRunner
 		total == 0 ? "0%" : $"{100.0 * value / total:F1}%";
 
 	private static double WinRate(int wins, int drawn) => drawn == 0 ? 0 : 100.0 * wins / drawn;
+
+	private const string SaveDirectory = "flagged_games";
 }

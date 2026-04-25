@@ -121,10 +121,7 @@ public static class MtgActionGenerator
 					AttackingPlayerId = playerId,
 				};
 				if (state.TryAddAction(attack).Success)
-				{
 					actions.Add(attack);
-					break;
-				}
 			}
 		}
 

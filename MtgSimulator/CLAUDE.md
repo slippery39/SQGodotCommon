@@ -15,7 +15,9 @@ Runs N simulated games with configurable AI strategies and reports aggregate sta
 | `StateEvaluator.cs` | Scores a `GameState` from a given player's perspective (float) |
 | `CardPool.cs` | Defines the full card pool; `BuildRandomDeck` samples 40 random cards per game |
 | `ZooDeckFactory.cs` | Builds a fixed 40-card Zoo deck (RGW aggro) for a given player |
-| `GameResult.cs` | Record capturing outcome, turn count, actions, drawn cards, end reason |
+| `GameResult.cs` | Record capturing outcome, turn count, actions, drawn cards, end reason, duration |
+| `GameStateSnapshot.cs` | Human-readable snapshot DTO — `GameStateSnapshot`, `PlayerSnapshot`, `CreatureSnapshot` |
+| `FlaggedGameSaver.cs` | Builds a snapshot from a flagged `GameState` and writes it as JSON to `flagged_games/` |
 
 ## Architecture
 
@@ -27,9 +29,12 @@ Runs N simulated games with configurable AI strategies and reports aggregate sta
 
 | Limit | Threshold | Effect |
 |-------|-----------|--------|
+| Time limit | 5 000 ms wall-clock | `GameEndReason.TimeLimitReached` — game ends as draw |
 | Turn limit | 100 turns | `GameEndReason.TurnLimitReached` — game ends as draw |
 | Action warning | 50 actions in one turn | `HadActionWarning = true` — game continues |
 | Action limit | 100 actions in one turn | `GameEndReason.ActionLimitReached` — game ends as draw |
+
+`GameRunner.Run()` returns `(GameResult Result, GameState FinalState)` — the final state is passed to `FlaggedGameSaver` by `SimulatorRunner` when the result is flagged.
 
 Flagged games (any of the above) are collected separately and printed in the flagged games report.
 
@@ -71,10 +76,14 @@ Defines all cards available for random deck generation. `BuildRandomDeck(ownerId
 
 `SimulatorRunner` prints four sections after all games complete:
 
-1. **Aggregate report** — total games, P1/P2 wins, draws, avg turns, avg actions, end reason breakdown, action warnings.
-2. **Timing report** — total time, avg/min/max ms per game, games per second.
+1. **Aggregate report** — total games, P1/P2 wins, draws, avg turns, avg actions, end reason breakdown (including time limit), action warnings.
+2. **Timing report** — total time, avg/min/max ms per game, games per second. Duration comes from `GameResult.GameDurationMs` (measured inside `GameRunner`).
 3. **Card win rate when drawn** — per-card P1 draw count + win%, P2 draw count + win%, combined win rate. Sorted descending by combined win rate.
-4. **Flagged games** — game number, winner, turn count, total actions, and which limits were hit.
+4. **Flagged games** — game number, winner, turn count, total actions, wall-clock time, which limits were hit, and `[saved]` if a snapshot was written. Lists the save directory and cap status.
+
+## Flagged Game Snapshots
+
+When a game is flagged, `SimulatorRunner` calls `FlaggedGameSaver.TrySave()` immediately after the game ends. Snapshots are written to `flagged_games/` (next to the binary) as indented JSON. Naming: `game_{number}_{reason}_{timestamp_ms}.json`. Saves are capped at `FlaggedGameSaver.MaxSaves` (25) per run — if a run produces more flagged games the first 25 are sufficient to diagnose the cause.
 
 ## Known Issues / Tech Debt
 

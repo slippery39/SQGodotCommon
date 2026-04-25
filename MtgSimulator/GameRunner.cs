@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using ImmutableGameObjects;
 using MtgCore;
 
@@ -6,18 +7,20 @@ namespace MtgSimulator;
 
 /// <summary>
 /// Runs a single game to completion using the provided AI strategies for both players.
-/// Returns a GameResult describing the outcome.
+/// Returns a GameResult and the final GameState when the game ends.
 ///
 /// AI strategies are injected — swap RandomAiStrategy for DepthLimitedAiStrategy
 /// or any other IAiStrategy implementation without changing this class.
 ///
 /// Limits:
-///   - Max turns: 100 (flags as TurnLimitReached)
+///   - Max time:      5 000 ms wall-clock (flags as TimeLimitReached)
+///   - Max turns:     100 turns           (flags as TurnLimitReached)
 ///   - Action warning: 50 actions in a single turn (logged, game continues)
-///   - Action limit: 100 actions in a single turn (flags as ActionLimitReached, game ends)
+///   - Action limit:  100 actions in a single turn (flags as ActionLimitReached)
 /// </summary>
 public class GameRunner
 {
+	private const long MaxGameTimeMs = 5_000;
 	private const int MaxTurns = 100;
 	private const int ActionWarningThreshold = 50;
 	private const int ActionLimitThreshold = 100;
@@ -31,114 +34,178 @@ public class GameRunner
 		_player2Strategy = player2Strategy;
 	}
 
-	public GameResult Run(
+	// Packages all mutable state for a single game run, passed through helpers to avoid
+	// long parameter lists and repeated ref parameters.
+	private sealed class RunContext(GameState initialState)
+	{
+		public GameState State = initialState;
+		public int TotalActions;
+		public bool HadActionWarning;
+		public readonly List<string> DrawnCards1 = [];
+		public readonly List<string> DrawnCards2 = [];
+		public readonly List<GameEvent> AllEvents = [];
+		public readonly Stopwatch Timer = Stopwatch.StartNew();
+	}
+
+	public (GameResult Result, GameState FinalState) Run(
 		GameState initialState,
 		MtgGameIds ids,
 		IReadOnlyDictionary<int, string> cardNames
 	)
 	{
-		var state = initialState;
-		var totalActions = 0;
-		var hadActionWarning = false;
-		var drawnCards1 = new List<string>();
-		var drawnCards2 = new List<string>();
-		var allEvents = new List<GameEvent>();
+		var ctx = new RunContext(initialState);
 
 		while (true)
 		{
-			var game = state.GetGame(ids.GameId);
+			var game = ctx.State.GetGame(ids.GameId);
 
 			if (game.TurnNumber > MaxTurns)
-			{
-				return BuildResult(
-					ids,
-					-1,
-					GameEndReason.TurnLimitReached,
-					game.TurnNumber,
-					totalActions,
-					hadActionWarning,
-					drawnCards1,
-					drawnCards2
-				);
-			}
+				return Terminate(ctx, ids, -1, GameEndReason.TurnLimitReached, game.TurnNumber);
 
-			var activePlayerId = game.ActivePlayerId;
-			var activeStrategy =
-				activePlayerId == ids.Player1Id ? _player1Strategy : _player2Strategy;
-			var actionsThisTurn = 0;
+			var strategy =
+				game.ActivePlayerId == ids.Player1Id ? _player1Strategy : _player2Strategy;
 
-			while (true)
-			{
-				if (state.IsWaitingForChoice)
-				{
-					var choice = state.GetPendingChoice()!;
-					var selectedIds = activeStrategy.ResolveChoice(state, choice, activePlayerId);
-					var (resolvedState, choiceEvents) = state.ResolveChoice(selectedIds);
-					state = resolvedState;
-					TrackDrawnCards(choiceEvents, ids, cardNames, drawnCards1, drawnCards2);
-					allEvents.AddRange(choiceEvents);
-					continue;
-				}
-
-				var overEvent = allEvents.OfType<GameOverEvent>().LastOrDefault();
-				if (overEvent != null)
-				{
-					var endReason = allEvents
-						.OfType<PlayerLostEvent>()
-						.Any(e => e.Reason.Contains("library"))
-						? GameEndReason.LibraryEmpty
-						: GameEndReason.Damage;
-
-					return BuildResult(
-						ids,
-						overEvent.WinnerPlayerId,
-						endReason,
-						game.TurnNumber,
-						totalActions,
-						hadActionWarning,
-						drawnCards1,
-						drawnCards2
-					);
-				}
-
-				if (actionsThisTurn >= ActionLimitThreshold)
-				{
-					return BuildResult(
-						ids,
-						-1,
-						GameEndReason.ActionLimitReached,
-						game.TurnNumber,
-						totalActions,
-						hadActionWarning,
-						drawnCards1,
-						drawnCards2
-					);
-				}
-
-				if (actionsThisTurn >= ActionWarningThreshold)
-					hadActionWarning = true;
-
-				var legalActions = MtgActionGenerator.GetLegalActions(state, ids, activePlayerId);
-
-				if (!legalActions.Any())
-				{
-					var (endState, endEvents) = ExecuteEndTurn(state, ids);
-					state = endState;
-					TrackDrawnCards(endEvents, ids, cardNames, drawnCards1, drawnCards2);
-					allEvents.AddRange(endEvents);
-					totalActions++;
-					break;
-				}
-
-				var chosen = activeStrategy.SelectAction(state, ids, activePlayerId);
-				var (newState, actionEvents) = ExecuteAction(state, chosen);
-				state = newState;
-				TrackDrawnCards(actionEvents, ids, cardNames, drawnCards1, drawnCards2);
-				allEvents.AddRange(actionEvents);
-				totalActions++;
-				actionsThisTurn++;
-			}
+			var result = RunTurn(ctx, ids, game, strategy, cardNames);
+			if (result.HasValue)
+				return result.Value;
 		}
+	}
+
+	// Returns null when the turn ended normally (outer loop should continue).
+	// Returns the completed game result when the game ends mid-turn.
+	private static (GameResult, GameState)? RunTurn(
+		RunContext ctx,
+		MtgGameIds ids,
+		MtgGame game,
+		IAiStrategy strategy,
+		IReadOnlyDictionary<int, string> cardNames
+	)
+	{
+		var actionsThisTurn = 0;
+
+		while (true)
+		{
+			if (ctx.Timer.ElapsedMilliseconds > MaxGameTimeMs)
+				return Terminate(ctx, ids, -1, GameEndReason.TimeLimitReached, game.TurnNumber);
+
+			if (ctx.State.IsWaitingForChoice)
+			{
+				ProcessChoice(ctx, ids, game.ActivePlayerId, strategy, cardNames);
+				continue;
+			}
+
+			var gameOver = CheckGameOver(ctx, ids, game.TurnNumber);
+			if (gameOver.HasValue)
+				return gameOver;
+
+			if (actionsThisTurn >= ActionLimitThreshold)
+				return Terminate(ctx, ids, -1, GameEndReason.ActionLimitReached, game.TurnNumber);
+
+			if (actionsThisTurn >= ActionWarningThreshold)
+				ctx.HadActionWarning = true;
+
+			var legalActions = MtgActionGenerator.GetLegalActions(
+				ctx.State,
+				ids,
+				game.ActivePlayerId
+			);
+
+			if (legalActions.Count == 0)
+			{
+				EndTurn(ctx, ids, cardNames);
+				ctx.TotalActions++;
+				return null;
+			}
+
+			var chosen = strategy.SelectAction(ctx.State, ids, game.ActivePlayerId);
+			var (newState, events) = ExecuteAction(ctx.State, chosen);
+			ctx.State = newState;
+			TrackDrawnCards(events, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);
+			ctx.AllEvents.AddRange(events);
+			ctx.TotalActions++;
+			actionsThisTurn++;
+		}
+	}
+
+	private static (GameResult, GameState)? CheckGameOver(
+		RunContext ctx,
+		MtgGameIds ids,
+		int turnNumber
+	)
+	{
+		var overEvent = ctx.AllEvents.OfType<GameOverEvent>().LastOrDefault();
+		if (overEvent == null)
+			return null;
+
+		var endReason = ctx
+			.AllEvents.OfType<PlayerLostEvent>()
+			.Any(e => e.Reason.Contains("library"))
+			? GameEndReason.LibraryEmpty
+			: GameEndReason.Damage;
+
+		return Terminate(ctx, ids, overEvent.WinnerPlayerId, endReason, turnNumber);
+	}
+
+	private static void ProcessChoice(
+		RunContext ctx,
+		MtgGameIds ids,
+		int activePlayerId,
+		IAiStrategy strategy,
+		IReadOnlyDictionary<int, string> cardNames
+	)
+	{
+		var choice = ctx.State.GetPendingChoice()!;
+		var selectedIds = strategy.ResolveChoice(ctx.State, choice, activePlayerId);
+		var (resolvedState, choiceEvents) = ctx.State.ResolveChoice(selectedIds);
+		ctx.State = resolvedState;
+		TrackDrawnCards(choiceEvents, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);
+		ctx.AllEvents.AddRange(choiceEvents);
+	}
+
+	private static void EndTurn(
+		RunContext ctx,
+		MtgGameIds ids,
+		IReadOnlyDictionary<int, string> cardNames
+	)
+	{
+		var action = new EndTurnAction
+		{
+			GameId = ids.GameId,
+			Player1Id = ids.Player1Id,
+			Player2Id = ids.Player2Id,
+		};
+		var (newState, _) = ctx.State.TryAddAction(action);
+		var (endState, endEvents) = newState.ProcessAllActions();
+		ctx.State = endState;
+		TrackDrawnCards(endEvents, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);
+		ctx.AllEvents.AddRange(endEvents);
+	}
+
+	private static (GameResult, GameState) Terminate(
+		RunContext ctx,
+		MtgGameIds ids,
+		int winnerId,
+		GameEndReason endReason,
+		int turnCount
+	)
+	{
+		ctx.Timer.Stop();
+		return (
+			new GameResult
+			{
+				WinnerPlayerId = winnerId,
+				Player1Id = ids.Player1Id,
+				Player2Id = ids.Player2Id,
+				EndReason = endReason,
+				TurnCount = turnCount,
+				TotalActions = ctx.TotalActions,
+				HadActionWarning = ctx.HadActionWarning,
+				GameDurationMs = ctx.Timer.ElapsedMilliseconds,
+				Player1DrawnCards = ctx.DrawnCards1,
+				Player2DrawnCards = ctx.DrawnCards2,
+			},
+			ctx.State
+		);
 	}
 
 	private static void TrackDrawnCards(
@@ -172,43 +239,4 @@ public class GameRunner
 
 		return newState.ProcessAllActions();
 	}
-
-	private static (GameState, ImmutableList<GameEvent>) ExecuteEndTurn(
-		GameState state,
-		MtgGameIds ids
-	)
-	{
-		var action = new EndTurnAction
-		{
-			GameId = ids.GameId,
-			Player1Id = ids.Player1Id,
-			Player2Id = ids.Player2Id,
-		};
-
-		var (newState, _) = state.TryAddAction(action);
-		return newState.ProcessAllActions();
-	}
-
-	private static GameResult BuildResult(
-		MtgGameIds ids,
-		int winnerId,
-		GameEndReason endReason,
-		int turnCount,
-		int totalActions,
-		bool hadActionWarning,
-		List<string> drawnCards1,
-		List<string> drawnCards2
-	) =>
-		new GameResult
-		{
-			WinnerPlayerId = winnerId,
-			Player1Id = ids.Player1Id,
-			Player2Id = ids.Player2Id,
-			EndReason = endReason,
-			TurnCount = turnCount,
-			TotalActions = totalActions,
-			HadActionWarning = hadActionWarning,
-			Player1DrawnCards = drawnCards1,
-			Player2DrawnCards = drawnCards2,
-		};
 }

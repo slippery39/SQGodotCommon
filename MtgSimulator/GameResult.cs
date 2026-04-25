@@ -6,6 +6,7 @@ public enum GameEndReason
 	LibraryEmpty,
 	TurnLimitReached,
 	ActionLimitReached,
+	TimeLimitReached,
 }
 
 /// <summary>
@@ -35,6 +36,16 @@ public record GameResult
 	public bool HadActionWarning { get; init; }
 
 	/// <summary>
+	/// Wall-clock milliseconds the game took from first action to termination.
+	/// </summary>
+	public long GameDurationMs { get; init; }
+
+	/// <summary>
+	/// Path to the saved state file, or null if this game was not saved.
+	/// </summary>
+	public string? SavedFilePath { get; init; }
+
+	/// <summary>
 	/// Cards that were drawn by Player 1 during the game.
 	/// Used for per-card win rate tracking.
 	/// </summary>
@@ -49,6 +60,9 @@ public record GameResult
 	public bool IsPlayer2Win => WinnerPlayerId == Player2Id;
 	public bool IsDraw => WinnerPlayerId == -1;
 	public bool IsFlagged =>
-		EndReason is GameEndReason.TurnLimitReached or GameEndReason.ActionLimitReached
+		EndReason
+			is GameEndReason.TurnLimitReached
+				or GameEndReason.ActionLimitReached
+				or GameEndReason.TimeLimitReached
 		|| HadActionWarning;
 }
