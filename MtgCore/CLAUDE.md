@@ -6,11 +6,11 @@
 MtgCore/
 ├── Abilities/Activated/     # ActivatedAbilityComponent, ActivatedAbilityAction
 ├── Actions/                 # All GameAction subclasses; ContextKeys; MtgActionGenerator
-│                            # Includes: ExileAction
+│                            # Includes: ExileAction, PutIntoBattlefieldAction, CastCreatureAction, ResolveCreatureAction
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
 │   └── Components/          # CreatureComponent, SpellComponent, GraveyardCountComponent
 ├── Effects/                 # CardEffect (data-only effect descriptor)
-├── Events/                  # EventTypeNames, MtgEvents (includes CardExiledEvent)
+├── Events/                  # EventTypeNames, MtgEvents (includes CardExiledEvent, CreatureEnteredBattlefieldEvent)
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods)
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier
 ├── Players/                 # MtgPlayer (GameObject subclass)
@@ -62,7 +62,7 @@ Applied via `AddModifierAction`. `UntilEndOfTurn` modifiers are cleared by `Star
 Hearthstone-style. Both players start at `MaxMana = 0`, `CurrentMana = 0`.
 
 - `StartTurnAction` increments `MaxMana` by 1 (cap 10) and refills `CurrentMana` to `MaxMana` for both players every turn. Starting at 0 gives both players 1 mana on turn 1 with no special casing.
-- `PlayCreatureAction` and `CastSpellAction` validate sufficient mana in `ValidateAdd` and deduct `ManaCost` in `Execute`.
+- `CastCreatureAction` and `CastSpellAction` validate sufficient mana in `ValidateAdd` and deduct `ManaCost` in `Execute`.
 - All mana generation logic lives in `StartTurnAction` only. Future mana systems (lands, flat grants) swap in by changing `StartTurnAction` only.
 
 ## Activated Abilities

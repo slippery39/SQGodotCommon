@@ -103,6 +103,7 @@ public record EventTriggerCondition : TriggerCondition
 			SpellCastEvent e => e.CardId,
 			TurnStartedEvent e => e.PlayerId,
 			TurnEndedEvent e => e.PlayerId,
+			CreatureEnteredBattlefieldEvent e => e.CardId,
 			_ => 0,
 		};
 }

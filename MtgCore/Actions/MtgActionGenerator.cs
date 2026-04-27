@@ -38,7 +38,11 @@ public static class MtgActionGenerator
 			var creature = card.GetComponent<CreatureComponent>();
 			if (creature != null)
 			{
-				var action = new PlayCreatureAction { CardId = card.Id, PlayerId = playerId };
+				var action = new CastCreatureAction
+				{
+					CardId = card.Id,
+					CastingPlayerId = playerId,
+				};
 				if (state.TryAddAction(action).Success)
 					actions.Add(action);
 				continue; // a card is either a creature or a spell, not both

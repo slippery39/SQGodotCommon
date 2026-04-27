@@ -136,7 +136,7 @@ public class ConsoleGameLoop
 	{
 		var description = action switch
 		{
-			PlayCreatureAction pca => $"Plays creature (card {pca.CardId})",
+			CastCreatureAction cca => $"Plays creature (card {cca.CardId})",
 			CastSpellAction csa => $"Casts spell (card {csa.CardId})",
 			AttackAction aa => $"Attacks target {aa.TargetId} with creature {aa.AttackerId}",
 			ActivateAbilityAction aaa =>
@@ -283,7 +283,7 @@ public class ConsoleGameLoop
 
 	private void HandlePlayCreature(Card card, int activePlayerId)
 	{
-		var action = new PlayCreatureAction { CardId = card.Id, PlayerId = activePlayerId };
+		var action = new CastCreatureAction { CardId = card.Id, CastingPlayerId = activePlayerId };
 
 		var (newState, success) = _state.TryAddAction(action);
 		if (!success)

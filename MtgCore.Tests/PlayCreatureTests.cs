@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace MtgCore.Tests;
 
 [TestFixture]
-public class PlayCreatureTests
+public class CastCreatureTests
 {
 	private GameState _state;
 	private MtgGameIds _ids;
@@ -26,34 +26,34 @@ public class PlayCreatureTests
 	// ===== RESOLUTION =====
 
 	[Test]
-	public void PlayCreature_MovesCardToBattlefield()
+	public void CastCreature_MovesCardToBattlefield()
 	{
-		var (finalState, _) = _state.AddAction(MakePlay()).ProcessAllActions();
+		var (finalState, _) = _state.AddAction(MakeCast()).ProcessAllActions();
 
 		Assert.That(finalState.GetCardZone(_creatureId).ZoneType, Is.EqualTo(ZoneType.Battlefield));
 	}
 
 	[Test]
-	public void PlayCreature_CardLeavesHand()
+	public void CastCreature_CardLeavesHand()
 	{
-		var (finalState, _) = _state.AddAction(MakePlay()).ProcessAllActions();
+		var (finalState, _) = _state.AddAction(MakeCast()).ProcessAllActions();
 
 		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(0));
 	}
 
 	[Test]
-	public void PlayCreature_HasSummoningSickness()
+	public void CastCreature_HasSummoningSickness()
 	{
-		var (finalState, _) = _state.AddAction(MakePlay()).ProcessAllActions();
+		var (finalState, _) = _state.AddAction(MakeCast()).ProcessAllActions();
 
 		var card = (Card)finalState.GetObject(_creatureId);
 		Assert.That(card.GetComponent<CreatureComponent>()!.HasSummoningSickness, Is.True);
 	}
 
 	[Test]
-	public void PlayCreature_EmitsCreaturePlayedEvent()
+	public void CastCreature_EmitsCreaturePlayedEvent()
 	{
-		var (_, events) = _state.AddAction(MakePlay()).ProcessAllActions();
+		var (_, events) = _state.AddAction(MakeCast()).ProcessAllActions();
 
 		var evt = events.OfType<CreaturePlayedEvent>().Single();
 		Assert.That(evt.CardId, Is.EqualTo(_creatureId));
@@ -61,9 +61,19 @@ public class PlayCreatureTests
 	}
 
 	[Test]
-	public void PlayCreature_NoActionsRemainAfterResolution()
+	public void CastCreature_EmitsCreatureEnteredBattlefieldEvent()
 	{
-		var (finalState, _) = _state.AddAction(MakePlay()).ProcessAllActions();
+		var (_, events) = _state.AddAction(MakeCast()).ProcessAllActions();
+
+		var evt = events.OfType<CreatureEnteredBattlefieldEvent>().Single();
+		Assert.That(evt.CardId, Is.EqualTo(_creatureId));
+		Assert.That(evt.PlayerId, Is.EqualTo(_ids.Player1Id));
+	}
+
+	[Test]
+	public void CastCreature_NoActionsRemainAfterResolution()
+	{
+		var (finalState, _) = _state.AddAction(MakeCast()).ProcessAllActions();
 
 		Assert.That(finalState.HasPendingActions, Is.False);
 	}
@@ -71,16 +81,16 @@ public class PlayCreatureTests
 	// ===== VALIDATION =====
 
 	[Test]
-	public void PlayCreature_FailsIfCardNotInHand()
+	public void CastCreature_FailsIfCardNotInHand()
 	{
 		var stateWithCardInGraveyard = _state.MoveObject(_creatureId, _ids.Player1GraveyardId);
-		var (_, success) = stateWithCardInGraveyard.TryAddAction(MakePlay());
+		var (_, success) = stateWithCardInGraveyard.TryAddAction(MakeCast());
 
 		Assert.That(success, Is.False);
 	}
 
 	[Test]
-	public void PlayCreature_FailsIfCardHasNoCreatureComponent()
+	public void CastCreature_FailsIfCardHasNoCreatureComponent()
 	{
 		var spell = new Card
 		{
@@ -95,17 +105,17 @@ public class PlayCreatureTests
 		var (stateWithSpell, addedSpell) = _state.AddObject(spell, parentId: _ids.Player1HandId);
 
 		var (_, success) = stateWithSpell.TryAddAction(
-			new PlayCreatureAction { CardId = addedSpell.Id, PlayerId = _ids.Player1Id }
+			new CastCreatureAction { CardId = addedSpell.Id, CastingPlayerId = _ids.Player1Id }
 		);
 
 		Assert.That(success, Is.False);
 	}
 
 	[Test]
-	public void PlayCreature_FailsIfNotController()
+	public void CastCreature_FailsIfNotController()
 	{
 		var (_, success) = _state.TryAddAction(
-			new PlayCreatureAction { CardId = _creatureId, PlayerId = _ids.Player2Id }
+			new CastCreatureAction { CardId = _creatureId, CastingPlayerId = _ids.Player2Id }
 		);
 
 		Assert.That(success, Is.False);
@@ -113,8 +123,8 @@ public class PlayCreatureTests
 
 	// ===== HELPERS =====
 
-	private PlayCreatureAction MakePlay() =>
-		new() { CardId = _creatureId, PlayerId = _ids.Player1Id };
+	private CastCreatureAction MakeCast() =>
+		new() { CardId = _creatureId, CastingPlayerId = _ids.Player1Id };
 
 	private Card MakeCreature(string name, int power, int toughness) =>
 		TestCardFactory.MakeCreatureCard(name, _ids.Player1Id, power, toughness);

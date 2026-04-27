@@ -181,7 +181,7 @@ public class TriggeredAbilityTests
 		var (s2, card) = s1.AddObject(creature, parentId: _ids.Player1HandId);
 
 		var (finalState, _) = s2.AddAction(
-				new PlayCreatureAction { CardId = card.Id, PlayerId = _ids.Player1Id }
+				new CastCreatureAction { CardId = card.Id, CastingPlayerId = _ids.Player1Id }
 			)
 			.ProcessAllActions();
 
@@ -208,7 +208,7 @@ public class TriggeredAbilityTests
 		var (s2, card) = s1.AddObject(creature, parentId: _ids.Player1HandId);
 
 		var (finalState, _) = s2.AddAction(
-				new PlayCreatureAction { CardId = card.Id, PlayerId = _ids.Player1Id }
+				new CastCreatureAction { CardId = card.Id, CastingPlayerId = _ids.Player1Id }
 			)
 			.ProcessAllActions();
 

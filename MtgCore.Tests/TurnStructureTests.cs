@@ -309,7 +309,9 @@ public class TurnStructureTests
 		var (stateWithCard, added) = state.AddObject(creature, parentId: _ids.Player1HandId);
 
 		var (finalState, _) = stateWithCard
-			.AddAction(new PlayCreatureAction { CardId = added.Id, PlayerId = _ids.Player1Id })
+			.AddAction(
+				new CastCreatureAction { CardId = added.Id, CastingPlayerId = _ids.Player1Id }
+			)
 			.ProcessAllActions();
 
 		Assert.That(finalState.GetPlayer(_ids.Player1Id).CurrentMana, Is.EqualTo(1));
@@ -323,7 +325,7 @@ public class TurnStructureTests
 		var (stateWithCard, added) = state.AddObject(creature, parentId: _ids.Player1HandId);
 
 		var (_, success) = stateWithCard.TryAddAction(
-			new PlayCreatureAction { CardId = added.Id, PlayerId = _ids.Player1Id }
+			new CastCreatureAction { CardId = added.Id, CastingPlayerId = _ids.Player1Id }
 		);
 
 		Assert.That(success, Is.False);

@@ -24,4 +24,5 @@ public static class EventTypeNames
 	public const string TurnEnded = nameof(TurnEndedEvent);
 	public const string LibraryEmpty = nameof(LibraryEmptyEvent);
 	public const string CardExiled = nameof(CardExiledEvent);
+	public const string CreatureEnteredBattlefield = nameof(CreatureEnteredBattlefieldEvent);
 }
