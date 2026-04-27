@@ -18,6 +18,8 @@ namespace MtgCore;
 public record Card : GameObject
 {
 	public int ManaCost { get; init; }
+	public ImmutableList<AdditionalCost> AdditionalCastCosts { get; init; } =
+		ImmutableList<AdditionalCost>.Empty;
 	public int OwnerId { get; init; }
 	public int ControllerId { get; init; }
 	public ImmutableList<string> Subtypes { get; init; } = ImmutableList<string>.Empty;

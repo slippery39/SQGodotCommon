@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -16,6 +17,13 @@ public record CastCreatureAction : GameAction
 {
 	public int CardId { get; init; }
 	public int CastingPlayerId { get; init; }
+
+	/// <summary>
+	/// Payment selections for selection-based additional costs (sacrifice, discard).
+	/// Key = index into card.AdditionalCastCosts. Resource costs (life) need no entry here.
+	/// </summary>
+	public ImmutableDictionary<int, ImmutableList<int>> AdditionalCostPayments { get; init; } =
+		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
 	public override ValidationResult ValidateAdd(GameState gameState)
 	{
@@ -42,22 +50,36 @@ public record CastCreatureAction : GameAction
 				$"Not enough mana (have {player.CurrentMana}, need {card.ManaCost})"
 			);
 
+		for (int i = 0; i < card.AdditionalCastCosts.Count; i++)
+		{
+			var cost = card.AdditionalCastCosts[i];
+			var paymentIds =
+				cost.RequiresSelection && AdditionalCostPayments.TryGetValue(i, out var ids)
+					? ids
+					: [];
+			var result = cost.Validate(gameState, CastingPlayerId, CardId, paymentIds);
+			if (!result.IsValid)
+				return result;
+		}
+
 		return ValidationResult.Valid;
 	}
 
 	public override ActionResult Execute(GameState gameState)
 	{
 		var card = (Card)gameState.GetObject(CardId);
+		var state = PayAdditionalCosts(gameState, card);
 
-		// Spend mana
-		var player = gameState.GetPlayer(CastingPlayerId);
-		var updatedPlayer = player with { CurrentMana = player.CurrentMana - card.ManaCost };
-		var state = gameState.UpdateObject(CastingPlayerId, updatedPlayer);
-
-		// Move to stack
+		var player = state.GetPlayer(CastingPlayerId);
+		state = state.UpdateObject(
+			CastingPlayerId,
+			player with
+			{
+				CurrentMana = player.CurrentMana - card.ManaCost,
+			}
+		);
 		state = state.MoveObject(CardId, state.GetStackId());
 
-		// Emit CreaturePlayedEvent at cast time (distinct from CreatureEnteredBattlefieldEvent)
 		var playedEvent = new CreaturePlayedEvent { CardId = CardId, PlayerId = CastingPlayerId };
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(playedEvent) };
 
@@ -66,5 +88,19 @@ public record CastCreatureAction : GameAction
 				new ResolveCreatureAction { CardId = CardId, CastingPlayerId = CastingPlayerId }
 			)
 		).WithEvent(playedEvent);
+	}
+
+	private GameState PayAdditionalCosts(GameState state, Card card)
+	{
+		for (int i = 0; i < card.AdditionalCastCosts.Count; i++)
+		{
+			var cost = card.AdditionalCastCosts[i];
+			var paymentIds =
+				cost.RequiresSelection && AdditionalCostPayments.TryGetValue(i, out var ids)
+					? ids
+					: [];
+			state = cost.Pay(state, CastingPlayerId, CardId, paymentIds);
+		}
+		return state;
 	}
 }

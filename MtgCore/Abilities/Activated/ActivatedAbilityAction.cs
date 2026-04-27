@@ -29,10 +29,15 @@ public record ActivateAbilityAction : GameAction
 	public int ActivatingPlayerId { get; init; }
 	public int AbilityIndex { get; init; }
 
-	/// <summary>
-	/// Targets chosen by the player for the ability's effect, if required.
-	/// </summary>
+	/// <summary>Targets chosen by the player for the ability's effect, if required.</summary>
 	public ImmutableList<int> TargetIds { get; init; } = ImmutableList<int>.Empty;
+
+	/// <summary>
+	/// Payment selections for selection-based additional costs (sacrifice, discard).
+	/// Key = index into ability.AdditionalCosts. Resource costs (life) need no entry here.
+	/// </summary>
+	public ImmutableDictionary<int, ImmutableList<int>> AdditionalCostPayments { get; init; } =
+		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
 	public override ValidationResult ValidateAdd(GameState gameState)
 	{
@@ -65,6 +70,14 @@ public record ActivateAbilityAction : GameAction
 				$"Not enough mana (have {player.CurrentMana}, need {ability.ManaCost})"
 			);
 
+		return ValidateTargetsAndCosts(gameState, ability);
+	}
+
+	private ValidationResult ValidateTargetsAndCosts(
+		GameState gameState,
+		ActivatedAbilityComponent ability
+	)
+	{
 		if (ability.Effect.TargetingStrategy.RequiresUserSelection)
 		{
 			var context = new TargetingContext
@@ -73,9 +86,20 @@ public record ActivateAbilityAction : GameAction
 				SourceCardId = CardId,
 				CastingPlayerId = ActivatingPlayerId,
 			};
-
 			if (!ability.Effect.TargetingStrategy.ValidateTargets(TargetIds, context))
 				return ValidationResult.Invalid("Invalid targets for ability");
+		}
+
+		for (int i = 0; i < ability.AdditionalCosts.Count; i++)
+		{
+			var cost = ability.AdditionalCosts[i];
+			var paymentIds =
+				cost.RequiresSelection && AdditionalCostPayments.TryGetValue(i, out var ids)
+					? ids
+					: [];
+			var result = cost.Validate(gameState, ActivatingPlayerId, CardId, paymentIds);
+			if (!result.IsValid)
+				return result;
 		}
 
 		return ValidationResult.Valid;
@@ -87,9 +111,11 @@ public record ActivateAbilityAction : GameAction
 		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
 		var ability = abilities[AbilityIndex];
 
+		var state = PayAdditionalCosts(gameState, ability);
+
 		// Open the resolution scope — SBE and trigger evaluation deferred until
 		// EndResolutionScopeAction clears this flag.
-		var state = gameState with
+		state = state with
 		{
 			SuppressPostProcessor = true,
 		};
@@ -145,5 +171,19 @@ public record ActivateAbilityAction : GameAction
 				]
 			)
 		);
+	}
+
+	private GameState PayAdditionalCosts(GameState state, ActivatedAbilityComponent ability)
+	{
+		for (int i = 0; i < ability.AdditionalCosts.Count; i++)
+		{
+			var cost = ability.AdditionalCosts[i];
+			var paymentIds =
+				cost.RequiresSelection && AdditionalCostPayments.TryGetValue(i, out var ids)
+					? ids
+					: [];
+			state = cost.Pay(state, ActivatingPlayerId, CardId, paymentIds);
+		}
+		return state;
 	}
 }

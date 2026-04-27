@@ -20,6 +20,13 @@ public record CastSpellAction : GameAction
 	public ImmutableDictionary<int, ImmutableList<int>> TargetIds { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
+	/// <summary>
+	/// Payment selections for selection-based additional costs (sacrifice, discard).
+	/// Key = index into card.AdditionalCastCosts. Resource costs (life) need no entry here.
+	/// </summary>
+	public ImmutableDictionary<int, ImmutableList<int>> AdditionalCostPayments { get; init; } =
+		ImmutableDictionary<int, ImmutableList<int>>.Empty;
+
 	public override ValidationResult ValidateAdd(GameState gameState)
 	{
 		if (!gameState.HasObject(CardId))
@@ -33,8 +40,7 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("You do not control this card");
 
 		var handId = gameState.GetPlayerZoneId(CastingPlayerId, ZoneType.Hand);
-		var cardZoneId = gameState.GetCardZoneId(CardId);
-		if (cardZoneId != handId)
+		if (gameState.GetCardZoneId(CardId) != handId)
 			return ValidationResult.Invalid("Card is not in your hand");
 
 		var spellComponent = card.GetComponent<SpellComponent>();
@@ -47,6 +53,58 @@ public record CastSpellAction : GameAction
 				$"Not enough mana (have {player.CurrentMana}, need {card.ManaCost})"
 			);
 
+		var costsResult = ValidateAdditionalCosts(gameState, card);
+		if (!costsResult.IsValid)
+			return costsResult;
+
+		return ValidateTargets(gameState, spellComponent);
+	}
+
+	public override ActionResult Execute(GameState gameState)
+	{
+		var card = (Card)gameState.GetObject(CardId);
+		var state = PayAdditionalCosts(gameState, card);
+
+		var player = state.GetPlayer(CastingPlayerId);
+		state = state.UpdateObject(
+			CastingPlayerId,
+			player with
+			{
+				CurrentMana = player.CurrentMana - card.ManaCost,
+			}
+		);
+		state = state.MoveObject(CardId, state.GetStackId());
+
+		return new ActionResult(
+			state.SpawnAction(
+				new ResolveSpellAction
+				{
+					CardId = CardId,
+					CastingPlayerId = CastingPlayerId,
+					TargetIds = TargetIds,
+				}
+			)
+		);
+	}
+
+	private ValidationResult ValidateAdditionalCosts(GameState gameState, Card card)
+	{
+		for (int i = 0; i < card.AdditionalCastCosts.Count; i++)
+		{
+			var cost = card.AdditionalCastCosts[i];
+			var paymentIds =
+				cost.RequiresSelection && AdditionalCostPayments.TryGetValue(i, out var ids)
+					? ids
+					: ImmutableList<int>.Empty;
+			var result = cost.Validate(gameState, CastingPlayerId, CardId, paymentIds);
+			if (!result.IsValid)
+				return result;
+		}
+		return ValidationResult.Valid;
+	}
+
+	private ValidationResult ValidateTargets(GameState gameState, SpellComponent spellComponent)
+	{
 		var context = new TargetingContext
 		{
 			GameState = gameState,
@@ -66,28 +124,20 @@ public record CastSpellAction : GameAction
 			if (!effect.TargetingStrategy.ValidateTargets(targets, context))
 				return ValidationResult.Invalid($"Invalid targets for effect {i}");
 		}
-
 		return ValidationResult.Valid;
 	}
 
-	public override ActionResult Execute(GameState gameState)
+	private GameState PayAdditionalCosts(GameState state, Card card)
 	{
-		var card = (Card)gameState.GetObject(CardId);
-
-		// Spend mana
-		var player = gameState.GetPlayer(CastingPlayerId);
-		var updatedPlayer = player with { CurrentMana = player.CurrentMana - card.ManaCost };
-		var state = gameState.UpdateObject(CastingPlayerId, updatedPlayer);
-
-		state = state.MoveObject(CardId, state.GetStackId());
-
-		var resolveAction = new ResolveSpellAction
+		for (int i = 0; i < card.AdditionalCastCosts.Count; i++)
 		{
-			CardId = CardId,
-			CastingPlayerId = CastingPlayerId,
-			TargetIds = TargetIds,
-		};
-
-		return new ActionResult(state.SpawnAction(resolveAction));
+			var cost = card.AdditionalCastCosts[i];
+			var paymentIds =
+				cost.RequiresSelection && AdditionalCostPayments.TryGetValue(i, out var ids)
+					? ids
+					: ImmutableList<int>.Empty;
+			state = cost.Pay(state, CastingPlayerId, CardId, paymentIds);
+		}
+		return state;
 	}
 }

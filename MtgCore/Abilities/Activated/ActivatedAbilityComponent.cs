@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -10,7 +11,8 @@ namespace MtgCore;
 /// HasActivated is cleared by StartTurnAction at the start of the controller's turn,
 /// the same way HasAttacked is cleared on CreatureComponent.
 ///
-/// Cost is mana only for now. Tap costs and other costs may be added later.
+/// ManaCost is the primary mana cost (0 = free). AdditionalCosts holds any
+/// extra costs beyond mana (sacrifice, discard, life payment, etc.).
 /// The effect uses the existing CardEffect infrastructure — same targeting and
 /// action template system as spells.
 /// </summary>
@@ -18,6 +20,8 @@ public record ActivatedAbilityComponent : GameComponent
 {
 	public string Name { get; init; } = "";
 	public int ManaCost { get; init; }
+	public ImmutableList<AdditionalCost> AdditionalCosts { get; init; } =
+		ImmutableList<AdditionalCost>.Empty;
 	public CardEffect Effect { get; init; } = null!;
 	public bool HasActivated { get; init; } = false;
 }

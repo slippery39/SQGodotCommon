@@ -23,89 +23,162 @@ public static class MtgActionGenerator
 		var actions = new List<GameAction>();
 		var opponentId = playerId == ids.Player1Id ? ids.Player2Id : ids.Player1Id;
 
-		// Resolve zone IDs once
 		var handId = playerId == ids.Player1Id ? ids.Player1HandId : ids.Player2HandId;
 		var battlefieldId =
 			playerId == ids.Player1Id ? ids.Player1BattlefieldId : ids.Player2BattlefieldId;
 		var opponentBattlefieldId =
 			playerId == ids.Player1Id ? ids.Player2BattlefieldId : ids.Player1BattlefieldId;
 
-		// ===== SINGLE PASS OVER HAND =====
-		// Categorize each card once rather than iterating the hand multiple times
+		AddHandActions(state, playerId, handId, actions);
+		AddAttackActions(
+			state,
+			playerId,
+			opponentId,
+			battlefieldId,
+			opponentBattlefieldId,
+			actions
+		);
+		AddAbilityActions(state, playerId, battlefieldId, actions);
 
+		return actions;
+	}
+
+	// ===== HAND =====
+
+	private static void AddHandActions(
+		GameState state,
+		int playerId,
+		int handId,
+		List<GameAction> actions
+	)
+	{
 		foreach (var card in state.GetCardsInZone(handId))
 		{
-			var creature = card.GetComponent<CreatureComponent>();
-			if (creature != null)
-			{
-				var action = new CastCreatureAction
-				{
-					CardId = card.Id,
-					CastingPlayerId = playerId,
-				};
-				if (state.TryAddAction(action).Success)
-					actions.Add(action);
-				continue; // a card is either a creature or a spell, not both
-			}
-
-			var spell = card.GetComponent<SpellComponent>();
-			if (spell == null)
+			var costPayments = BuildAdditionalCostPayments(
+				state,
+				playerId,
+				card.Id,
+				card.AdditionalCastCosts
+			);
+			if (costPayments == null)
 				continue;
 
-			var needsTarget = spell.Effects.Any(e => e.TargetingStrategy.RequiresUserSelection);
-
-			if (needsTarget)
+			if (card.HasComponent<CreatureComponent>())
 			{
-				var effect = spell.Effects.First(e => e.TargetingStrategy.RequiresUserSelection);
-				var context = new TargetingContext
-				{
-					GameState = state,
-					SourceCardId = card.Id,
-					CastingPlayerId = playerId,
-				};
-				var validTargets = effect.TargetingStrategy.GetValidTargets(context);
-				if (validTargets.IsEmpty)
-					continue;
-
-				foreach (var target in validTargets)
-				{
-					var castAction = new CastSpellAction
-					{
-						CardId = card.Id,
-						CastingPlayerId = playerId,
-						TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
-							0,
-							ImmutableList.Create(target)
-						),
-					};
-					if (state.TryAddAction(castAction).Success)
-					{
-						actions.Add(castAction);
-						break;
-					}
-				}
+				AddCreatureAction(state, playerId, card, costPayments, actions);
 			}
 			else
 			{
-				var castAction = new CastSpellAction
-				{
-					CardId = card.Id,
-					CastingPlayerId = playerId,
-					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
-				};
-				if (state.TryAddAction(castAction).Success)
-					actions.Add(castAction);
+				AddSpellAction(state, playerId, card, costPayments, actions);
 			}
 		}
+	}
 
-		// ===== ATTACKS =====
-
-		var attackTargets = new List<int> { opponentId };
-		foreach (var c in state.GetCardsInZone(opponentBattlefieldId))
+	private static void AddCreatureAction(
+		GameState state,
+		int playerId,
+		Card card,
+		ImmutableDictionary<int, ImmutableList<int>> costPayments,
+		List<GameAction> actions
+	)
+	{
+		var action = new CastCreatureAction
 		{
-			if (c.HasComponent<CreatureComponent>())
-				attackTargets.Add(c.Id);
+			CardId = card.Id,
+			CastingPlayerId = playerId,
+			AdditionalCostPayments = costPayments,
+		};
+		if (state.TryAddAction(action).Success)
+			actions.Add(action);
+	}
+
+	private static void AddSpellAction(
+		GameState state,
+		int playerId,
+		Card card,
+		ImmutableDictionary<int, ImmutableList<int>> costPayments,
+		List<GameAction> actions
+	)
+	{
+		var spell = card.GetComponent<SpellComponent>();
+		if (spell == null)
+			return;
+
+		var targetedEffect = spell.Effects.FirstOrDefault(e =>
+			e.TargetingStrategy.RequiresUserSelection
+		);
+		if (targetedEffect != null)
+		{
+			AddTargetedSpellAction(state, playerId, card, costPayments, targetedEffect, actions);
 		}
+		else
+		{
+			var castAction = new CastSpellAction
+			{
+				CardId = card.Id,
+				CastingPlayerId = playerId,
+				AdditionalCostPayments = costPayments,
+				TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
+			};
+			if (state.TryAddAction(castAction).Success)
+				actions.Add(castAction);
+		}
+	}
+
+	private static void AddTargetedSpellAction(
+		GameState state,
+		int playerId,
+		Card card,
+		ImmutableDictionary<int, ImmutableList<int>> costPayments,
+		CardEffect targetedEffect,
+		List<GameAction> actions
+	)
+	{
+		var context = new TargetingContext
+		{
+			GameState = state,
+			SourceCardId = card.Id,
+			CastingPlayerId = playerId,
+		};
+		var validTargets = targetedEffect.TargetingStrategy.GetValidTargets(context);
+
+		foreach (var target in validTargets)
+		{
+			var castAction = new CastSpellAction
+			{
+				CardId = card.Id,
+				CastingPlayerId = playerId,
+				AdditionalCostPayments = costPayments,
+				TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
+					0,
+					ImmutableList.Create(target)
+				),
+			};
+			if (state.TryAddAction(castAction).Success)
+			{
+				actions.Add(castAction);
+				break;
+			}
+		}
+	}
+
+	// ===== ATTACKS =====
+
+	private static void AddAttackActions(
+		GameState state,
+		int playerId,
+		int opponentId,
+		int battlefieldId,
+		int opponentBattlefieldId,
+		List<GameAction> actions
+	)
+	{
+		var attackTargets = state
+			.GetCardsInZone(opponentBattlefieldId)
+			.Where(c => c.HasComponent<CreatureComponent>())
+			.Select(c => c.Id)
+			.Prepend(opponentId)
+			.ToList();
 
 		foreach (var attacker in state.GetCardsInZone(battlefieldId))
 		{
@@ -113,7 +186,6 @@ public static class MtgActionGenerator
 			if (creature == null || creature.HasSummoningSickness || creature.HasAttacked)
 				continue;
 
-			// Inline the simple checks rather than calling TryAddAction for every target
 			foreach (var targetId in attackTargets)
 			{
 				var attack = new AttackAction
@@ -126,9 +198,17 @@ public static class MtgActionGenerator
 					actions.Add(attack);
 			}
 		}
+	}
 
-		// ===== ACTIVATED ABILITIES =====
+	// ===== ACTIVATED ABILITIES =====
 
+	private static void AddAbilityActions(
+		GameState state,
+		int playerId,
+		int battlefieldId,
+		List<GameAction> actions
+	)
+	{
 		foreach (var card in state.GetCardsInZone(battlefieldId))
 		{
 			var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
@@ -137,36 +217,97 @@ public static class MtgActionGenerator
 				if (abilities[i].HasActivated)
 					continue;
 
-				var context = new TargetingContext
-				{
-					GameState = state,
-					SourceCardId = card.Id,
-					CastingPlayerId = playerId,
-				};
-
-				var needsTarget = abilities[i].Effect.TargetingStrategy.RequiresUserSelection;
-				var validTargets = needsTarget
-					? abilities[i].Effect.TargetingStrategy.GetValidTargets(context)
-					: ImmutableList<int>.Empty;
-
-				if (needsTarget && validTargets.IsEmpty)
+				var costPayments = BuildAdditionalCostPayments(
+					state,
+					playerId,
+					card.Id,
+					abilities[i].AdditionalCosts
+				);
+				if (costPayments == null)
 					continue;
 
-				var abilityAction = new ActivateAbilityAction
-				{
-					CardId = card.Id,
-					ActivatingPlayerId = playerId,
-					AbilityIndex = i,
-					TargetIds = needsTarget
-						? ImmutableList.Create(validTargets[0])
-						: ImmutableList<int>.Empty,
-				};
-
-				if (state.TryAddAction(abilityAction).Success)
+				var abilityAction = BuildAbilityAction(
+					state,
+					playerId,
+					card.Id,
+					i,
+					abilities[i],
+					costPayments
+				);
+				if (abilityAction != null && state.TryAddAction(abilityAction).Success)
 					actions.Add(abilityAction);
 			}
 		}
+	}
 
-		return actions;
+	private static ActivateAbilityAction? BuildAbilityAction(
+		GameState state,
+		int playerId,
+		int cardId,
+		int abilityIndex,
+		ActivatedAbilityComponent ability,
+		ImmutableDictionary<int, ImmutableList<int>> costPayments
+	)
+	{
+		var needsTarget = ability.Effect.TargetingStrategy.RequiresUserSelection;
+		if (needsTarget)
+		{
+			var context = new TargetingContext
+			{
+				GameState = state,
+				SourceCardId = cardId,
+				CastingPlayerId = playerId,
+			};
+			var validTargets = ability.Effect.TargetingStrategy.GetValidTargets(context);
+			if (validTargets.IsEmpty)
+				return null;
+
+			return new ActivateAbilityAction
+			{
+				CardId = cardId,
+				ActivatingPlayerId = playerId,
+				AbilityIndex = abilityIndex,
+				AdditionalCostPayments = costPayments,
+				TargetIds = ImmutableList.Create(validTargets[0]),
+			};
+		}
+
+		return new ActivateAbilityAction
+		{
+			CardId = cardId,
+			ActivatingPlayerId = playerId,
+			AbilityIndex = abilityIndex,
+			AdditionalCostPayments = costPayments,
+			TargetIds = ImmutableList<int>.Empty,
+		};
+	}
+
+	// ===== ADDITIONAL COST HELPERS =====
+
+	/// <summary>
+	/// Builds the AdditionalCostPayments dictionary for a cast/activate action.
+	/// Returns null if any selection cost has no valid payments (card cannot be played).
+	/// Picks the first valid payment for each selection cost — sufficient for AI use.
+	/// </summary>
+	private static ImmutableDictionary<int, ImmutableList<int>>? BuildAdditionalCostPayments(
+		GameState state,
+		int playerId,
+		int sourceCardId,
+		ImmutableList<AdditionalCost> costs
+	)
+	{
+		var payments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+		for (int i = 0; i < costs.Count; i++)
+		{
+			if (!costs[i].RequiresSelection)
+				continue;
+
+			var validPayments = costs[i].GetValidPayments(state, playerId, sourceCardId);
+			if (validPayments.IsEmpty)
+				return null;
+
+			payments = payments.Add(i, ImmutableList.Create(validPayments[0]));
+		}
+		return payments;
 	}
 }

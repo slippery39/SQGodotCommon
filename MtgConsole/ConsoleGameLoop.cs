@@ -283,7 +283,31 @@ public class ConsoleGameLoop
 
 	private void HandlePlayCreature(Card card, int activePlayerId)
 	{
-		var action = new CastCreatureAction { CardId = card.Id, CastingPlayerId = activePlayerId };
+		// Auto-select first valid payment for selection costs (console UI enhancement deferred)
+		var additionalCostPayments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+		for (int i = 0; i < card.AdditionalCastCosts.Count; i++)
+		{
+			var cost = card.AdditionalCastCosts[i];
+			if (!cost.RequiresSelection)
+				continue;
+			var validPayments = cost.GetValidPayments(_state, activePlayerId, card.Id);
+			if (validPayments.IsEmpty)
+			{
+				ConsoleRenderer.RenderMessage("Cannot pay additional cost — no valid options.");
+				return;
+			}
+			additionalCostPayments = additionalCostPayments.Add(
+				i,
+				ImmutableList.Create(validPayments[0])
+			);
+		}
+
+		var action = new CastCreatureAction
+		{
+			CardId = card.Id,
+			CastingPlayerId = activePlayerId,
+			AdditionalCostPayments = additionalCostPayments,
+		};
 
 		var (newState, success) = _state.TryAddAction(action);
 		if (!success)
@@ -346,11 +370,31 @@ public class ConsoleGameLoop
 			targetIds = targetIds.Add(i, chosen);
 		}
 
+		// Auto-select first valid payment for selection costs (console UI enhancement deferred)
+		var additionalCostPayments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+		for (int i = 0; i < card.AdditionalCastCosts.Count; i++)
+		{
+			var cost = card.AdditionalCastCosts[i];
+			if (!cost.RequiresSelection)
+				continue;
+			var validPayments = cost.GetValidPayments(_state, activePlayerId, card.Id);
+			if (validPayments.IsEmpty)
+			{
+				ConsoleRenderer.RenderMessage("Cannot pay additional cost — no valid options.");
+				return;
+			}
+			additionalCostPayments = additionalCostPayments.Add(
+				i,
+				ImmutableList.Create(validPayments[0])
+			);
+		}
+
 		var castAction = new CastSpellAction
 		{
 			CardId = card.Id,
 			CastingPlayerId = activePlayerId,
 			TargetIds = targetIds,
+			AdditionalCostPayments = additionalCostPayments,
 		};
 
 		var (newState, success) = _state.TryAddAction(castAction);

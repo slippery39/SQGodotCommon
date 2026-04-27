@@ -7,6 +7,7 @@ MtgCore/
 ├── Abilities/Activated/     # ActivatedAbilityComponent, ActivatedAbilityAction
 ├── Actions/                 # All GameAction subclasses; ContextKeys; MtgActionGenerator
 │                            # Includes: ExileAction, PutIntoBattlefieldAction, CastCreatureAction, ResolveCreatureAction
+├── Costs/                   # AdditionalCost (abstract), LifeAdditionalCost, SacrificeAdditionalCost, DiscardAdditionalCost
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
 │   └── Components/          # CreatureComponent, SpellComponent, GraveyardCountComponent
 ├── Effects/                 # CardEffect (data-only effect descriptor)
@@ -65,13 +66,24 @@ Hearthstone-style. Both players start at `MaxMana = 0`, `CurrentMana = 0`.
 - `CastCreatureAction` and `CastSpellAction` validate sufficient mana in `ValidateAdd` and deduct `ManaCost` in `Execute`.
 - All mana generation logic lives in `StartTurnAction` only. Future mana systems (lands, flat grants) swap in by changing `StartTurnAction` only.
 
+## Additional Costs
+
+Beyond mana, cards and abilities can carry `AdditionalCost` entries (on `Card.AdditionalCastCosts` and `ActivatedAbilityComponent.AdditionalCosts`). Two categories:
+
+- **Resource costs** (`LifeAdditionalCost`): validate against player state, no selection needed.
+- **Selection costs** (`SacrificeAdditionalCost`, `DiscardAdditionalCost`): player chooses game objects. Payment IDs are carried in `AdditionalCostPayments` on the cast/activate action — same pattern as `TargetIds`.
+
+Mana is always the primary cost (`ManaCost: int`); this matches MTG's "0:" notation for free abilities. Additional costs are paid before mana in `Execute`, before the card moves to the stack.
+
+`MtgActionGenerator` calls `GetValidPayments` and picks the first valid option per selection cost — sufficient for the AI. The console auto-selects the first valid payment (player choice UI is deferred).
+
 ## Activated Abilities
 
-- Modelled as `ActivatedAbilityComponent` on a card. Fields: `Name`, `ManaCost`, `CardEffect`, `HasActivated`.
+- Modelled as `ActivatedAbilityComponent` on a card. Fields: `Name`, `ManaCost`, `AdditionalCosts`, `CardEffect`, `HasActivated`.
 - A card may have multiple `ActivatedAbilityComponent` instances — one per ability, each independently tracked.
 - Each ability can be activated once per turn. `HasActivated` is cleared by `StartTurnAction`.
-- `ActivateAbilityAction` validates mana, checks `HasActivated`, marks the ability used, spends mana, resolves targets, and spawns the effect — using the same `CardEffect` and `TargetingStrategy` infrastructure as spells.
-- Cost is mana only for now; tap costs and other cost types may be added later.
+- `ActivateAbilityAction` validates mana and additional costs, checks `HasActivated`, marks the ability used, pays all costs, resolves targets, and spawns the effect — using the same `CardEffect` and `TargetingStrategy` infrastructure as spells.
+- Tap costs not yet implemented.
 
 ## Combat System
 
