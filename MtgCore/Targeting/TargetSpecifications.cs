@@ -80,3 +80,33 @@ public record IsControlledByOpponentSpecification : TargetSpecification
 		};
 	}
 }
+
+/// <summary>
+/// Matches any card currently in the casting player's hand.
+/// Use with IsSubtypeSpecification to target e.g. "a Goblin in your hand."
+/// </summary>
+public record IsInHandSpecification : TargetSpecification
+{
+	public override bool IsSatisfiedBy(int candidateId, TargetingContext context)
+	{
+		if (!context.GameState.HasObject(candidateId))
+			return false;
+
+		if (context.GameState.GetObject(candidateId) is not Card)
+			return false;
+
+		var handId = context.GameState.GetPlayerZoneId(context.CastingPlayerId, ZoneType.Hand);
+		return context.GameState.GetCardZoneId(candidateId) == handId;
+	}
+}
+
+/// <summary>
+/// Matches when the candidate ID equals the SourceCardId of the targeting context.
+/// Used in EventTriggerCondition filters to express "when this specific card triggers"
+/// (e.g. Goblin Lackey fires only when Lackey itself deals combat damage).
+/// </summary>
+public record IsSourceCardSpecification : TargetSpecification
+{
+	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
+		candidateId == context.SourceCardId;
+}

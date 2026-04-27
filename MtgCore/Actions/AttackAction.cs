@@ -81,75 +81,111 @@ public record AttackAction : GameAction
 		var attacker = (Card)gameState.GetObject(AttackerId);
 		var attackerCreature = attacker.GetComponent<CreatureComponent>()!;
 		var targetObj = gameState.GetObject(TargetId);
+		var strikeCount = attackerCreature.HasDoubleStrike ? 2 : 1;
 
-		var state = gameState;
-		var events = ImmutableList<GameEvent>.Empty;
-
-		// Mark attacker as having attacked this turn
-		state = state.UpdateObject(
+		var state = gameState.UpdateObject(
 			AttackerId,
 			attacker.WithComponentReplaced(attackerCreature with { HasAttacked = true })
 		);
 
-		// Emit and stage attack event
 		var attackedEvent = new CreatureAttackedEvent
 		{
 			CreatureId = AttackerId,
 			AttackingPlayerId = AttackingPlayerId,
 		};
-		events = events.Add(attackedEvent);
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(attackedEvent) };
+		var events = ImmutableList.Create<GameEvent>(attackedEvent);
+
+		var power = state.GetEffectivePower(AttackerId);
 
 		if (targetObj is MtgPlayer targetPlayer)
 		{
-			// Use effective power — accounts for static ability bonuses
-			var (newState, newEvents) = ApplyDamageToPlayer(
-				state,
-				targetPlayer,
-				state.GetEffectivePower(AttackerId)
-			);
-			state = newState;
-			events = events.AddRange(newEvents);
+			var (s, e) = ApplyDamageToPlayerStrikes(state, targetPlayer.Id, power, strikeCount);
+			return new ActionResult(s) { Events = events.AddRange(e) };
 		}
-		else if (targetObj is Card targetCard)
+
+		if (targetObj is Card targetCard)
 		{
-			var (stateAfterTargetDamage, targetEvents) = ApplyDamageToCreature(
-				state,
-				targetCard,
-				state.GetEffectivePower(AttackerId)
-			);
-			state = stateAfterTargetDamage;
-			events = events.AddRange(targetEvents);
-
-			var currentAttacker = state.HasObject(AttackerId)
-				? (Card)state.GetObject(AttackerId)
-				: null;
-
-			if (currentAttacker != null)
-			{
-				var (stateAfterAttackerDamage, attackerEvents) = ApplyDamageToCreature(
-					state,
-					currentAttacker,
-					state.GetEffectivePower(targetCard.Id)
-				);
-				state = stateAfterAttackerDamage;
-				events = events.AddRange(attackerEvents);
-			}
+			var (s, e) = ApplyCreatureVsCreature(state, targetCard, power, strikeCount);
+			return new ActionResult(s) { Events = events.AddRange(e) };
 		}
 
 		return new ActionResult(state) { Events = events };
 	}
 
+	private (GameState, ImmutableList<GameEvent>) ApplyDamageToPlayerStrikes(
+		GameState state,
+		int targetPlayerId,
+		int power,
+		int strikeCount
+	)
+	{
+		var events = ImmutableList<GameEvent>.Empty;
+		for (int i = 0; i < strikeCount; i++)
+		{
+			if (!state.HasObject(targetPlayerId))
+				break;
+			var (newState, newEvents) = ApplyDamageToPlayer(
+				state,
+				AttackerId,
+				(MtgPlayer)state.GetObject(targetPlayerId),
+				power
+			);
+			state = newState;
+			events = events.AddRange(newEvents);
+		}
+		return (state, events);
+	}
+
+	private (GameState, ImmutableList<GameEvent>) ApplyCreatureVsCreature(
+		GameState state,
+		Card targetCard,
+		int power,
+		int strikeCount
+	)
+	{
+		var (state2, targetEvents) = ApplyDamageToCreature(state, targetCard, power * strikeCount);
+		var events = targetEvents;
+
+		var currentAttacker = state2.HasObject(AttackerId)
+			? (Card)state2.GetObject(AttackerId)
+			: null;
+
+		if (currentAttacker == null)
+			return (state2, events);
+
+		var (state3, attackerEvents) = ApplyDamageToCreature(
+			state2,
+			currentAttacker,
+			state2.GetEffectivePower(targetCard.Id)
+		);
+		return (state3, events.AddRange(attackerEvents));
+	}
+
 	private static (GameState, ImmutableList<GameEvent>) ApplyDamageToPlayer(
 		GameState state,
+		int attackerId,
 		MtgPlayer player,
 		int amount
 	)
 	{
 		var updated = player with { Life = player.Life - amount };
 		var newState = state.UpdateObject(player.Id, updated);
+
+		var combatEvent = new CombatDamageDealtToPlayerEvent
+		{
+			AttackerId = attackerId,
+			DefendingPlayerId = player.Id,
+			Amount = amount,
+		};
+		newState = newState with
+		{
+			PendingGameEvents = newState.PendingGameEvents.Add(combatEvent),
+		};
+
 		var events = ImmutableList.Create<GameEvent>(
-			new PlayerDamagedEvent { PlayerId = player.Id, Amount = amount }
+			new PlayerDamagedEvent { PlayerId = player.Id, Amount = amount },
+			combatEvent
 		);
 		return (newState, events);
 	}

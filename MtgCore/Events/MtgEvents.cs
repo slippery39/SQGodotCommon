@@ -126,3 +126,15 @@ public record CreatureEnteredBattlefieldEvent : GameEvent
 	public int CardId { get; init; }
 	public int PlayerId { get; init; }
 }
+
+/// <summary>
+/// Emitted when a creature deals combat damage directly to a player.
+/// Fires once per strike — twice for double-strike creatures.
+/// AttackerId is the subject so IsSourceCardSpecification filters can match it.
+/// </summary>
+public record CombatDamageDealtToPlayerEvent : GameEvent
+{
+	public int AttackerId { get; init; }
+	public int DefendingPlayerId { get; init; }
+	public int Amount { get; init; }
+}

@@ -21,4 +21,6 @@ public record CreatureComponent : GameComponent
 	public int Damage { get; init; } = 0;
 	public bool HasSummoningSickness { get; init; } = true;
 	public bool HasAttacked { get; init; } = false;
+	public bool HasHaste { get; init; } = false;
+	public bool HasDoubleStrike { get; init; } = false;
 }

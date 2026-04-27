@@ -10,6 +10,8 @@ namespace MtgCore;
 /// </summary>
 public static class CardLibrary
 {
+	private const string GoblinSubtype = "Goblin";
+
 	/// <summary>
 	/// Lightning Bolt — 1 mana instant.
 	/// "Lightning Bolt deals 3 damage to any target."
@@ -327,6 +329,265 @@ public static class CardLibrary
 								ToughnessBonus = 1,
 								Duration = ModifierDuration.Permanent,
 							},
+						}
+					),
+				}
+			),
+		};
+
+	// ===== GOBLINS DECK CARDS =====
+
+	/// <summary>
+	/// Goblin Token — 1/1 creature token.
+	/// Created by Siege-Gang Commander and Krenko, Mob Boss.
+	/// OwnerId/ControllerId default to 0 and are stamped by CreateTokenAction at runtime.
+	/// </summary>
+	public static Card GoblinToken() =>
+		new()
+		{
+			Name = "Goblin",
+			Subtypes = ImmutableList.Create(GoblinSubtype),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 1, Toughness = 1 }
+			),
+		};
+
+	/// <summary>
+	/// Goblin Guide — 1 mana creature (2/2, Haste).
+	/// Goblin Scout. "Whenever Goblin Guide attacks, defending player reveals the
+	/// top card of their library." — Reveal clause omitted; just a 2/2 haste for 1.
+	/// </summary>
+	public static Card GoblinGuide() =>
+		new()
+		{
+			Name = "Goblin Guide",
+			ManaCost = 1,
+			Subtypes = ImmutableList.Create(GoblinSubtype, "Scout"),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent
+				{
+					Power = 2,
+					Toughness = 2,
+					HasHaste = true,
+				}
+			),
+		};
+
+	/// <summary>
+	/// Goblin Lackey — 1 mana creature (1/1).
+	/// "Whenever Goblin Lackey deals combat damage to a player, you may put a Goblin
+	///  permanent card from your hand onto the battlefield."
+	/// </summary>
+	public static Card GoblinLackey() =>
+		new()
+		{
+			Name = "Goblin Lackey",
+			ManaCost = 1,
+			Subtypes = ImmutableList.Create(GoblinSubtype),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 1, Toughness = 1 },
+				new TriggeredAbilityComponent
+				{
+					Name = "Lackey Trigger",
+					Condition = new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.CombatDamageDealtToPlayer,
+						Filter = new IsSourceCardSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.RandomTarget(
+							new IsInHandSpecification().And(
+								new IsSubtypeSpecification { Subtype = GoblinSubtype }
+							)
+						),
+						ActionTemplate = new PutIntoBattlefieldAction(),
+					},
+				}
+			),
+		};
+
+	/// <summary>
+	/// Warren Instigator — 2 mana creature (1/1, Double Strike).
+	/// "Whenever Warren Instigator deals combat damage to a player, you may put a Goblin
+	///  permanent card from your hand onto the battlefield." Fires twice (double strike).
+	/// </summary>
+	public static Card WarrenInstigator() =>
+		new()
+		{
+			Name = "Warren Instigator",
+			ManaCost = 2,
+			Subtypes = ImmutableList.Create(GoblinSubtype, "Berserker"),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent
+				{
+					Power = 1,
+					Toughness = 1,
+					HasDoubleStrike = true,
+				},
+				new TriggeredAbilityComponent
+				{
+					Name = "Instigator Trigger",
+					Condition = new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.CombatDamageDealtToPlayer,
+						Filter = new IsSourceCardSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.RandomTarget(
+							new IsInHandSpecification().And(
+								new IsSubtypeSpecification { Subtype = GoblinSubtype }
+							)
+						),
+						ActionTemplate = new PutIntoBattlefieldAction(),
+					},
+				}
+			),
+		};
+
+	/// <summary>
+	/// Goblin Chieftain — 3 mana creature (2/2, Haste).
+	/// Lord effect ("other Goblins get +1/+1 and haste") deferred until static anthems
+	/// are implemented (Step 2). For now: aggressive 2/2 haste body.
+	/// </summary>
+	public static Card GoblinChieftain() =>
+		new()
+		{
+			Name = "Goblin Chieftain",
+			ManaCost = 3,
+			Subtypes = ImmutableList.Create(GoblinSubtype),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent
+				{
+					Power = 2,
+					Toughness = 2,
+					HasHaste = true,
+				}
+			),
+		};
+
+	/// <summary>
+	/// Siege-Gang Commander — 5 mana creature (2/2).
+	/// ETB: create three 1/1 Goblin creature tokens.
+	/// Activated: 1 mana, sacrifice a Goblin → deal 2 damage to any target.
+	/// </summary>
+	public static Card SiegeGangCommander() =>
+		new()
+		{
+			Name = "Siege-Gang Commander",
+			ManaCost = 5,
+			Subtypes = ImmutableList.Create(GoblinSubtype),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 2, Toughness = 2 },
+				new TriggeredAbilityComponent
+				{
+					Name = "ETB Tokens",
+					Condition = new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
+						Filter = new IsSourceCardSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new CreateTokenAction
+						{
+							TokenTemplate = GoblinToken(),
+							Count = 3,
+						},
+					},
+				},
+				new ActivatedAbilityComponent
+				{
+					Name = "Sacrifice Goblin",
+					ManaCost = 1,
+					AdditionalCosts = ImmutableList.Create<AdditionalCost>(
+						new SacrificeAdditionalCost
+						{
+							Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype },
+							Count = 1,
+						}
+					),
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.SingleTarget(
+							new IsPlayerSpecification().Or(new IsCreatureSpecification())
+						),
+						ActionTemplate = new DealDamageAction { Amount = 2 },
+					},
+				}
+			),
+		};
+
+	/// <summary>
+	/// Krenko, Mob Boss — 4 mana creature (3/3).
+	/// Activated (tap proxy — no tap cost implemented): create X 1/1 Goblin tokens,
+	/// where X is the number of Goblins you control. Uses pipeline to count at resolution.
+	/// </summary>
+	public static Card KrenkoMobBoss() =>
+		new()
+		{
+			Name = "Krenko, Mob Boss",
+			ManaCost = 4,
+			Subtypes = ImmutableList.Create(GoblinSubtype, "Warrior"),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 3, Toughness = 3 },
+				new ActivatedAbilityComponent
+				{
+					Name = "Create Tokens",
+					ManaCost = 0,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new PipelineAction
+						{
+							Steps = ImmutableList.Create<GameAction>(
+								new CountCardsWithSubtypeAction
+								{
+									Subtype = GoblinSubtype,
+									OutputKey = "krenko_goblin_count",
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								},
+								new CreateTokenAction
+								{
+									TokenTemplate = GoblinToken(),
+									CountInputKey = "krenko_goblin_count",
+								}
+							),
+						},
+					},
+				}
+			),
+		};
+
+	/// <summary>
+	/// Goblin Grenade — 1 mana sorcery.
+	/// Additional cost: sacrifice a Goblin.
+	/// "Goblin Grenade deals 5 damage to any target."
+	/// </summary>
+	public static Card GoblinGrenade() =>
+		new()
+		{
+			Name = "Goblin Grenade",
+			ManaCost = 1,
+			AdditionalCastCosts = ImmutableList.Create<AdditionalCost>(
+				new SacrificeAdditionalCost
+				{
+					Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype },
+					Count = 1,
+				}
+			),
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								new IsPlayerSpecification().Or(new IsCreatureSpecification())
+							),
+							ActionTemplate = new DealDamageAction { Amount = 5 },
 						}
 					),
 				}

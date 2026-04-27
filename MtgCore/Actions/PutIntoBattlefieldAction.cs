@@ -43,7 +43,7 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 			var updatedCard = card.WithComponentReplaced(
 				creature with
 				{
-					HasSummoningSickness = true,
+					HasSummoningSickness = !creature.HasHaste,
 				}
 			);
 			state = state.UpdateObject(targetId, updatedCard).MoveObject(targetId, battlefieldId);

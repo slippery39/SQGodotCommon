@@ -7,16 +7,17 @@ MtgCore/
 ├── Abilities/Activated/     # ActivatedAbilityComponent, ActivatedAbilityAction
 ├── Actions/                 # All GameAction subclasses; ContextKeys; MtgActionGenerator
 │                            # Includes: ExileAction, PutIntoBattlefieldAction, CastCreatureAction, ResolveCreatureAction
+│                            #           CreateTokenAction, CountCardsWithSubtypeAction
 ├── Costs/                   # AdditionalCost (abstract), LifeAdditionalCost, SacrificeAdditionalCost, DiscardAdditionalCost
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
-│   └── Components/          # CreatureComponent, SpellComponent, GraveyardCountComponent
+│   └── Components/          # CreatureComponent (HasHaste, HasDoubleStrike), SpellComponent, GraveyardCountComponent
 ├── Effects/                 # CardEffect (data-only effect descriptor)
-├── Events/                  # EventTypeNames, MtgEvents (includes CardExiledEvent, CreatureEnteredBattlefieldEvent)
+├── Events/                  # EventTypeNames, MtgEvents (includes CreatureEnteredBattlefieldEvent, CombatDamageDealtToPlayerEvent)
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods)
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier
 ├── Players/                 # MtgPlayer (GameObject subclass)
 ├── Targeting/               # TargetSpecification, TargetingContext, TargetingStrategy
-│                            # Includes: IsSubtypeSpecification
+│                            # Includes: IsSubtypeSpecification, IsInHandSpecification, IsSourceCardSpecification
 ├── Triggers/                # TriggeredAbilityComponent, EventTriggerCondition, TriggerCondition
 ├── Turns/                   # BeginGameAction, SetupGameAction, StartTurnAction, EndTurnAction, TurnPhase
 ├── Zones/                   # Zone, ZoneType
@@ -89,12 +90,21 @@ Mana is always the primary cost (`ManaCost: int`); this matches MTG's "0:" notat
 
 Hearthstone-style (turn-based, no blockers). The active player attacks; the opponent does not assign blockers.
 
-- `HasSummoningSickness` — cannot attack the turn they enter the battlefield.
+- `HasSummoningSickness` — cannot attack the turn they enter the battlefield. Cleared by `HasHaste` on `CreatureComponent` — haste creatures enter with `HasSummoningSickness = false`.
+- `HasDoubleStrike` — creature deals damage twice. vs player: two separate damage applications, two `CombatDamageDealtToPlayerEvent`s (triggers fire twice). vs creature: deals 2× power in one pass.
 - `HasAttacked` — can only attack once per turn.
 - Both flags and `Damage` on `CreatureComponent` are cleared by `StartTurnAction` at the start of the controller's turn.
-- Creature attacks player: deals damage equal to effective Power; attacker takes no damage.
+- Creature attacks player: deals damage equal to effective Power; emits `CombatDamageDealtToPlayerEvent` (used by Goblin Lackey/Warren Instigator triggers).
 - Creature attacks creature: both deal damage simultaneously. Dies if `Damage >= effective Toughness`; moves to owner's graveyard.
 - Damage resets each turn — creatures cannot be chipped down over multiple turns.
+
+## Token Creation
+
+`CreateTokenAction` creates new `Card` objects directly on a player's battlefield. Tokens are not drawn from any zone — they are created fresh via `GameState.AddObject`. Each token emits `CreatureEnteredBattlefieldEvent` so ETB triggers fire normally.
+
+- `ControllerId`: if 0, reads from `InputContext[CastingPlayerId]` (set by `ResolveEffectAction`).
+- `CountInputKey`: if set, reads the count from pipeline context (used by Krenko, Mob Boss to count Goblins at resolution time via `CountCardsWithSubtypeAction`).
+- `HasSummoningSickness` is stamped based on the token template's `HasHaste` flag.
 
 ## Game Startup
 
@@ -133,4 +143,6 @@ These are designed but not yet implemented. Do not re-implement or work around t
 |------|---------|-------|
 | 2 | Static P/T modifiers | `StaticAbilityComponent` on permanents for anthem/lord effects. `CreatureEvaluator` adds a second pass scanning battlefield permanents for applicable bonuses. |
 | 3 | Zone-dependent statics | Wonder-style abilities active only in specific zones. `ActiveInZone` property already designed on `StaticAbilityComponent`. |
-| 4 | Keyword abilities as components | Lifelink, Deathtouch, Trample etc. as individual components checked by relevant actions. Rules-engine keywords that do not use the stack. |
+| 4 | Keyword abilities as components | Lifelink, Deathtouch, Trample etc. as individual components checked by relevant actions. Rules-engine keywords that do not use the stack. Note: `HasHaste` and `HasDoubleStrike` are currently implemented as flags on `CreatureComponent` — these should be migrated to individual components when the full keyword system is built. |
+| — | Goblin Chieftain lord effect | "+1/+1 and haste to other Goblins" deferred until Step 2 static anthems. Currently a 2/2 haste for 3. |
+| — | Tap costs | Krenko's activation is modelled as a free (0-mana) ability since tap costs are not yet implemented. |
