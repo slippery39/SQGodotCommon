@@ -110,3 +110,23 @@ public record IsSourceCardSpecification : TargetSpecification
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
 		candidateId == context.SourceCardId;
 }
+
+/// <summary>
+/// Matches any candidate that is NOT the source card of the targeting context.
+/// Used with lord/anthem effects to express "other creatures" (e.g. Goblin Chieftain
+/// buffs other Goblins, not itself).
+/// </summary>
+public record IsNotSelfSpecification : TargetSpecification
+{
+	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
+		candidateId != context.SourceCardId;
+}
+
+/// <summary>
+/// Never matches any candidate. Used as a safe default on StaticAbilityComponent
+/// so the filter must be explicitly set on every concrete ability.
+/// </summary>
+public record AlwaysFalseSpecification : TargetSpecification
+{
+	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) => false;
+}

@@ -5,6 +5,7 @@
 ```
 MtgCore/
 ├── Abilities/Activated/     # ActivatedAbilityComponent, ActivatedAbilityAction
+│   └── Static/              # StaticAbilityComponent (abstract), StaticPTBoostAbility, StaticGrantKeywordAbility
 ├── Actions/                 # All GameAction subclasses; ContextKeys; MtgActionGenerator
 │                            # Includes: ExileAction, PutIntoBattlefieldAction, CastCreatureAction, ResolveCreatureAction
 │                            #           CreateTokenAction, CountCardsWithSubtypeAction
@@ -17,7 +18,8 @@ MtgCore/
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier
 ├── Players/                 # MtgPlayer (GameObject subclass)
 ├── Targeting/               # TargetSpecification, TargetingContext, TargetingStrategy
-│                            # Includes: IsSubtypeSpecification, IsInHandSpecification, IsSourceCardSpecification
+│                            # Includes: IsSubtypeSpecification, IsInHandSpecification, IsSourceCardSpecification,
+│                            #           IsNotSelfSpecification, AlwaysFalseSpecification
 ├── Triggers/                # TriggeredAbilityComponent, EventTriggerCondition, TriggerCondition
 ├── Turns/                   # BeginGameAction, SetupGameAction, StartTurnAction, EndTurnAction, TurnPhase
 ├── Zones/                   # Zone, ZoneType
@@ -46,9 +48,11 @@ Cards are `GameObject` subclasses. Effects are `GameAction` subclasses — pure 
 
 1. Base values on `CreatureComponent`
 2. `PowerToughnessModifier` components on the card (from spells like Giant Growth)
-3. Static ability bonuses from `StaticAbilityComponent` on battlefield permanents *(Step 2 — not yet implemented)*
+3. `StaticPTBoostAbility` components on battlefield permanents controlled by the same player (lord/anthem effects)
 
-Always use the extension methods `GetEffectivePower`, `GetEffectiveToughness`, and `HasLethalDamage` on `GameState`. `AttackAction` and `DealDamageAction` must never read base values directly.
+Always use the extension methods `GetEffectivePower`, `GetEffectiveToughness`, `GetEffectiveHaste`, and `HasLethalDamage` on `GameState`. `AttackAction` and `DealDamageAction` must never read base values directly.
+
+`GetEffectiveHaste(state, cardId)` returns true if the creature has intrinsic `HasHaste` on `CreatureComponent` OR a `StaticGrantKeywordAbility{GrantsHaste=true}` applies to it from a battlefield permanent. `AttackAction.ValidateAdd` and `MtgActionGenerator` both call this instead of reading `HasHaste` directly.
 
 ### PowerToughnessModifier
 
@@ -141,8 +145,7 @@ These are designed but not yet implemented. Do not re-implement or work around t
 
 | Step | Feature | Notes |
 |------|---------|-------|
-| 2 | Static P/T modifiers | `StaticAbilityComponent` on permanents for anthem/lord effects. `CreatureEvaluator` adds a second pass scanning battlefield permanents for applicable bonuses. |
-| 3 | Zone-dependent statics | Wonder-style abilities active only in specific zones. `ActiveInZone` property already designed on `StaticAbilityComponent`. |
+| 3 | Zone-dependent statics | Wonder-style abilities active only in specific zones. `ActiveInZone` property on `StaticAbilityComponent`. |
 | 4 | Keyword abilities as components | Lifelink, Deathtouch, Trample etc. as individual components checked by relevant actions. Rules-engine keywords that do not use the stack. Note: `HasHaste` and `HasDoubleStrike` are currently implemented as flags on `CreatureComponent` — these should be migrated to individual components when the full keyword system is built. |
 | — | Goblin Chieftain lord effect | "+1/+1 and haste to other Goblins" deferred until Step 2 static anthems. Currently a 2/2 haste for 3. |
 | — | Tap costs | Krenko's activation is modelled as a free (0-mana) ability since tap costs are not yet implemented. |

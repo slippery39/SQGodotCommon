@@ -21,6 +21,15 @@ public record AttackAction : GameAction
 
 	public override ValidationResult ValidateAdd(GameState gameState)
 	{
+		var attackerResult = ValidateAttacker(gameState);
+		if (!attackerResult.IsValid)
+			return attackerResult;
+
+		return ValidateTarget(gameState);
+	}
+
+	private ValidationResult ValidateAttacker(GameState gameState)
+	{
 		if (!gameState.HasObject(AttackerId))
 			return ValidationResult.Invalid($"Attacker {AttackerId} does not exist");
 
@@ -36,7 +45,7 @@ public record AttackAction : GameAction
 
 		var creature = attacker.GetComponent<CreatureComponent>()!;
 
-		if (creature.HasSummoningSickness)
+		if (creature.HasSummoningSickness && !gameState.GetEffectiveHaste(AttackerId))
 			return ValidationResult.Invalid("Creature has summoning sickness and cannot attack");
 
 		if (creature.HasAttacked)
@@ -46,6 +55,11 @@ public record AttackAction : GameAction
 		if (attackerZone.ZoneType != ZoneType.Battlefield)
 			return ValidationResult.Invalid("Attacker is not on the battlefield");
 
+		return ValidationResult.Valid;
+	}
+
+	private ValidationResult ValidateTarget(GameState gameState)
+	{
 		if (!gameState.HasObject(TargetId))
 			return ValidationResult.Invalid($"Target {TargetId} does not exist");
 
@@ -55,8 +69,10 @@ public record AttackAction : GameAction
 		{
 			if (targetPlayer.Id == AttackingPlayerId)
 				return ValidationResult.Invalid("Cannot attack yourself");
+			return ValidationResult.Valid;
 		}
-		else if (targetObj is Card targetCard)
+
+		if (targetObj is Card targetCard)
 		{
 			if (!targetCard.HasComponent<CreatureComponent>())
 				return ValidationResult.Invalid("Target card is not a creature");
@@ -67,13 +83,11 @@ public record AttackAction : GameAction
 
 			if (targetCard.ControllerId == AttackingPlayerId)
 				return ValidationResult.Invalid("Cannot attack your own creature");
-		}
-		else
-		{
-			return ValidationResult.Invalid("Target must be a player or creature");
+
+			return ValidationResult.Valid;
 		}
 
-		return ValidationResult.Valid;
+		return ValidationResult.Invalid("Target must be a player or creature");
 	}
 
 	public override ActionResult Execute(GameState gameState)

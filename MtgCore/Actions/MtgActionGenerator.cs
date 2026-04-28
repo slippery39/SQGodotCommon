@@ -183,7 +183,9 @@ public static class MtgActionGenerator
 		foreach (var attacker in state.GetCardsInZone(battlefieldId))
 		{
 			var creature = attacker.GetComponent<CreatureComponent>();
-			if (creature == null || creature.HasSummoningSickness || creature.HasAttacked)
+			if (creature == null || creature.HasAttacked)
+				continue;
+			if (creature.HasSummoningSickness && !state.GetEffectiveHaste(attacker.Id))
 				continue;
 
 			foreach (var targetId in attackTargets)

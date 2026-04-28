@@ -19,4 +19,7 @@ scan statics" pattern is copy-pasted a third time, refactor toward a single
 `GetEffectiveKeywords(state, cardId) → KeywordSet` that does the static scan once and returns
 all active keywords in one pass. Actions then query the set rather than calling individual methods.
 
+**Note on above**
+Not entirely sure on the above solution actually... but we will need to revisit this when we get there
+
 ---

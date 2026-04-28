@@ -463,6 +463,21 @@ public static class CardLibrary
 					Power = 2,
 					Toughness = 2,
 					HasHaste = true,
+				},
+				new StaticPTBoostAbility
+				{
+					PowerBonus = 1,
+					ToughnessBonus = 1,
+					Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype }
+						.And(new IsNotSelfSpecification())
+						.And(new IsControlledByYouSpecification()),
+				},
+				new StaticGrantKeywordAbility
+				{
+					GrantsHaste = true,
+					Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype }
+						.And(new IsNotSelfSpecification())
+						.And(new IsControlledByYouSpecification()),
 				}
 			),
 		};
