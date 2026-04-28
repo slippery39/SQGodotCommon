@@ -16,6 +16,7 @@ Runs N simulated games with configurable AI strategies and reports aggregate sta
 | `CardPool.cs` | Defines the full card pool; `BuildRandomDeck` samples 40 random cards per game |
 | `ZooDeckFactory.cs` | Builds a fixed 40-card Zoo deck (RGW aggro) for a given player |
 | `GoblinsDeckFactory.cs` | Builds a fixed Goblins deck (red aggro tribal) for a given player |
+| `DeckRegistry.cs` | Registers all named precon decks (`DeckInfo` records); exposes `All` and `Build(name, ownerId)` |
 | `GameResult.cs` | Record capturing outcome, turn count, actions, drawn cards, end reason, duration |
 | `PreconstructedGameResult.cs` | Wraps `GameResult` with deck names and on-play metadata for preconstructed mode |
 | `GameStateSnapshot.cs` | Human-readable snapshot DTO — `GameStateSnapshot`, `PlayerSnapshot`, `CreatureSnapshot` |
