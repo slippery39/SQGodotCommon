@@ -65,6 +65,10 @@ public class PreconstructedSimulatorRunner
 		totalTimer.Stop();
 
 		PrintSummary(stats, totalGames, _n, decks.Count, _aiDepth, totalTimer.ElapsedMilliseconds);
+
+		var csvPath = PreconstructedCsvExporter.Export(stats);
+		Console.WriteLine($"  Card stats written to: {csvPath}");
+		Console.WriteLine();
 	}
 
 	// Each unique pair (A, B) yields N games with A as Player 1 (on play)

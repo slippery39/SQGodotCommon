@@ -18,7 +18,8 @@ Runs N simulated games with configurable AI strategies and reports aggregate sta
 | `GoblinsDeckFactory.cs` | Builds a fixed Goblins deck (red aggro tribal) for a given player |
 | `DeckRegistry.cs` | Registers all named precon decks (`DeckInfo` records); exposes `All` and `Build(name, ownerId)` |
 | `PreconstructedStats.cs` | Aggregates precon game results into four stat tables; exposes row records for deck, matchup, card GIH WR, and card-per-matchup GIH WR |
-| `PreconstructedSimulatorRunner.cs` | Round-robin precon runner: builds schedule, runs games via `GameRunner`, feeds `PreconstructedStats`, prints console summary |
+| `PreconstructedSimulatorRunner.cs` | Round-robin precon runner: builds schedule, runs games via `GameRunner`, feeds `PreconstructedStats`, prints console summary, triggers CSV export |
+| `PreconstructedCsvExporter.cs` | Writes all four stat tables to `sim_results/precon_<timestamp>.csv`; escapes card names with commas (e.g. "Krenko, Mob Boss") |
 | `GameResult.cs` | Record capturing outcome, turn count, actions, drawn cards, end reason, duration |
 | `PreconstructedGameResult.cs` | Wraps `GameResult` with deck names and on-play metadata for preconstructed mode |
 | `GameStateSnapshot.cs` | Human-readable snapshot DTO — `GameStateSnapshot`, `PlayerSnapshot`, `CreatureSnapshot` |
