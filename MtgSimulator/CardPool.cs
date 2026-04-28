@@ -5,7 +5,7 @@ using MtgCore;
 namespace MtgSimulator;
 
 /// <summary>
-/// Defines the full pool of cards available for random deck generation.
+/// Defines the simulator's built-in pool of cards available for random deck generation.
 ///
 /// Damage spells target opponents and opponent creatures only — the random AI
 /// has no targeting intelligence so we restrict valid targets at the card level
@@ -13,422 +13,363 @@ namespace MtgSimulator;
 /// </summary>
 public static class CardPool
 {
-	public static IReadOnlyList<Func<int, Card>> All { get; } =
-		new List<Func<int, Card>>
+	public static IReadOnlyList<Card> All { get; } =
+		new List<Card>
 		{
 			// ===== CHEAP AGGRESSIVE CREATURES =====
-			ownerId => MakeCreature("Goblin Raider", ownerId, cost: 1, power: 2, toughness: 1),
-			ownerId => MakeCreature("Jackal Pup", ownerId, cost: 1, power: 2, toughness: 1),
-			ownerId => MakeCreature("Savannah Lions", ownerId, cost: 1, power: 2, toughness: 1),
-			ownerId => MakeCreature("Raging Goblin", ownerId, cost: 1, power: 1, toughness: 1),
-			ownerId => MakeCreature("Llanowar Elves", ownerId, cost: 1, power: 1, toughness: 1),
+			MakeCreature("Goblin Raider", cost: 1, power: 2, toughness: 1),
+			MakeCreature("Jackal Pup", cost: 1, power: 2, toughness: 1),
+			MakeCreature("Savannah Lions", cost: 1, power: 2, toughness: 1),
+			MakeCreature("Raging Goblin", cost: 1, power: 1, toughness: 1),
+			MakeCreature("Llanowar Elves", cost: 1, power: 1, toughness: 1),
 			// ===== MIDRANGE CREATURES =====
-			ownerId => MakeCreature("Grizzly Bears", ownerId, cost: 2, power: 2, toughness: 2),
-			ownerId => MakeCreature("Runeclaw Bear", ownerId, cost: 2, power: 2, toughness: 2),
-			ownerId => MakeCreature("Elvish Warrior", ownerId, cost: 2, power: 2, toughness: 3),
-			ownerId => MakeCreature("Centaur Courser", ownerId, cost: 3, power: 3, toughness: 3),
-			ownerId => MakeCreature("Hill Giant", ownerId, cost: 3, power: 3, toughness: 4),
-			ownerId => MakeCreature("Bladetusk Boar", ownerId, cost: 4, power: 3, toughness: 3),
-			ownerId => MakeCreature("Kalonian Tusker", ownerId, cost: 3, power: 3, toughness: 3),
-			ownerId => MakeCreature("Wind Drake", ownerId, cost: 3, power: 2, toughness: 2),
-			ownerId => MakeCreature("Wall of Stone", ownerId, cost: 3, power: 0, toughness: 8),
-			ownerId => MakeCreature("Iron Golem", ownerId, cost: 4, power: 4, toughness: 4),
+			MakeCreature("Grizzly Bears", cost: 2, power: 2, toughness: 2),
+			MakeCreature("Runeclaw Bear", cost: 2, power: 2, toughness: 2),
+			MakeCreature("Elvish Warrior", cost: 2, power: 2, toughness: 3),
+			MakeCreature("Centaur Courser", cost: 3, power: 3, toughness: 3),
+			MakeCreature("Hill Giant", cost: 3, power: 3, toughness: 4),
+			MakeCreature("Bladetusk Boar", cost: 4, power: 3, toughness: 3),
+			MakeCreature("Kalonian Tusker", cost: 3, power: 3, toughness: 3),
+			MakeCreature("Wind Drake", cost: 3, power: 2, toughness: 2),
+			MakeCreature("Wall of Stone", cost: 3, power: 0, toughness: 8),
+			MakeCreature("Iron Golem", cost: 4, power: 4, toughness: 4),
 			// ===== BIG CREATURES =====
-			ownerId => MakeCreature("Serra Angel", ownerId, cost: 5, power: 4, toughness: 4),
-			ownerId => MakeCreature("Mahamoti Djinn", ownerId, cost: 6, power: 5, toughness: 6),
-			ownerId => MakeCreature("Craw Wurm", ownerId, cost: 6, power: 6, toughness: 4),
-			ownerId => MakeCreature("Ancient Ooze", ownerId, cost: 7, power: 6, toughness: 6),
-			ownerId => MakeCreature("Leviathan", ownerId, cost: 9, power: 10, toughness: 10),
+			MakeCreature("Serra Angel", cost: 5, power: 4, toughness: 4),
+			MakeCreature("Mahamoti Djinn", cost: 6, power: 5, toughness: 6),
+			MakeCreature("Craw Wurm", cost: 6, power: 6, toughness: 4),
+			MakeCreature("Ancient Ooze", cost: 7, power: 6, toughness: 6),
+			MakeCreature("Leviathan", cost: 9, power: 10, toughness: 10),
 			// ===== REMOVAL SPELLS =====
-			ownerId =>
-				MakeSpell(
-					"Lightning Bolt",
-					ownerId,
-					cost: 1,
-					TargetingStrategy.SingleTarget(
-						new IsPlayerSpecification()
-							.And(new IsControlledByOpponentSpecification())
-							.Or(
-								new IsCreatureSpecification().And(
-									new IsControlledByOpponentSpecification()
-								)
+			MakeSpell(
+				"Lightning Bolt",
+				cost: 1,
+				TargetingStrategy.SingleTarget(
+					new IsPlayerSpecification()
+						.And(new IsControlledByOpponentSpecification())
+						.Or(
+							new IsCreatureSpecification().And(
+								new IsControlledByOpponentSpecification()
 							)
-					),
-					new DealDamageAction { Amount = 3 }
+						)
 				),
-			ownerId =>
-				MakeSpell(
-					"Shock",
-					ownerId,
-					cost: 1,
-					TargetingStrategy.SingleTarget(
-						new IsPlayerSpecification()
-							.And(new IsControlledByOpponentSpecification())
-							.Or(
-								new IsCreatureSpecification().And(
-									new IsControlledByOpponentSpecification()
-								)
+				new DealDamageAction { Amount = 3 }
+			),
+			MakeSpell(
+				"Shock",
+				cost: 1,
+				TargetingStrategy.SingleTarget(
+					new IsPlayerSpecification()
+						.And(new IsControlledByOpponentSpecification())
+						.Or(
+							new IsCreatureSpecification().And(
+								new IsControlledByOpponentSpecification()
 							)
-					),
-					new DealDamageAction { Amount = 2 }
+						)
 				),
-			ownerId =>
-				MakeSpell(
-					"Volcanic Hammer",
-					ownerId,
-					cost: 2,
-					TargetingStrategy.SingleTarget(
-						new IsPlayerSpecification()
-							.And(new IsControlledByOpponentSpecification())
-							.Or(
-								new IsCreatureSpecification().And(
-									new IsControlledByOpponentSpecification()
-								)
+				new DealDamageAction { Amount = 2 }
+			),
+			MakeSpell(
+				"Volcanic Hammer",
+				cost: 2,
+				TargetingStrategy.SingleTarget(
+					new IsPlayerSpecification()
+						.And(new IsControlledByOpponentSpecification())
+						.Or(
+							new IsCreatureSpecification().And(
+								new IsControlledByOpponentSpecification()
 							)
-					),
-					new DealDamageAction { Amount = 3 }
+						)
 				),
-			ownerId =>
-				MakeSpell(
-					"Searing Spear",
-					ownerId,
-					cost: 2,
-					TargetingStrategy.SingleTarget(
-						new IsPlayerSpecification()
-							.And(new IsControlledByOpponentSpecification())
-							.Or(
-								new IsCreatureSpecification().And(
-									new IsControlledByOpponentSpecification()
-								)
+				new DealDamageAction { Amount = 3 }
+			),
+			MakeSpell(
+				"Searing Spear",
+				cost: 2,
+				TargetingStrategy.SingleTarget(
+					new IsPlayerSpecification()
+						.And(new IsControlledByOpponentSpecification())
+						.Or(
+							new IsCreatureSpecification().And(
+								new IsControlledByOpponentSpecification()
 							)
-					),
-					new DealDamageAction { Amount = 3 }
+						)
 				),
-			ownerId =>
-				MakeSpell(
-					"Incinerate",
-					ownerId,
-					cost: 2,
-					TargetingStrategy.SingleTarget(
-						new IsPlayerSpecification()
-							.And(new IsControlledByOpponentSpecification())
-							.Or(
-								new IsCreatureSpecification().And(
-									new IsControlledByOpponentSpecification()
-								)
+				new DealDamageAction { Amount = 3 }
+			),
+			MakeSpell(
+				"Incinerate",
+				cost: 2,
+				TargetingStrategy.SingleTarget(
+					new IsPlayerSpecification()
+						.And(new IsControlledByOpponentSpecification())
+						.Or(
+							new IsCreatureSpecification().And(
+								new IsControlledByOpponentSpecification()
 							)
-					),
-					new DealDamageAction { Amount = 3 }
+						)
 				),
+				new DealDamageAction { Amount = 3 }
+			),
 			// ===== BURN SPELLS =====
-			ownerId =>
-				MakeSpell(
-					"Lightning Helix",
-					ownerId,
-					cost: 2,
-					TargetingStrategy.SingleTarget(
-						new IsPlayerSpecification().And(new IsControlledByOpponentSpecification())
-					),
-					new DealDamageAction { Amount = 3 }
+			MakeSpell(
+				"Lightning Helix",
+				cost: 2,
+				TargetingStrategy.SingleTarget(
+					new IsPlayerSpecification().And(new IsControlledByOpponentSpecification())
 				),
-			ownerId =>
-				MakeSpell(
-					"Lava Spike",
-					ownerId,
-					cost: 1,
-					TargetingStrategy.SingleTarget(
-						new IsPlayerSpecification().And(new IsControlledByOpponentSpecification())
-					),
-					new DealDamageAction { Amount = 3 }
+				new DealDamageAction { Amount = 3 }
+			),
+			MakeSpell(
+				"Lava Spike",
+				cost: 1,
+				TargetingStrategy.SingleTarget(
+					new IsPlayerSpecification().And(new IsControlledByOpponentSpecification())
 				),
-			ownerId =>
-				MakeSpell(
-					"Rift Bolt",
-					ownerId,
-					cost: 2,
-					TargetingStrategy.SingleTarget(
-						new IsPlayerSpecification().And(new IsControlledByOpponentSpecification())
-					),
-					new DealDamageAction { Amount = 3 }
+				new DealDamageAction { Amount = 3 }
+			),
+			MakeSpell(
+				"Rift Bolt",
+				cost: 2,
+				TargetingStrategy.SingleTarget(
+					new IsPlayerSpecification().And(new IsControlledByOpponentSpecification())
 				),
+				new DealDamageAction { Amount = 3 }
+			),
 			// ===== UTILITY SPELLS =====
-			ownerId =>
-				MakeSpell(
-					"Healing Salve",
-					ownerId,
-					cost: 1,
-					TargetingStrategy.Self(),
-					new GainLifeAction { Amount = 3 }
-				),
-			ownerId =>
-				MakeSpell(
-					"Revitalize",
-					ownerId,
-					cost: 2,
-					TargetingStrategy.Self(),
-					new GainLifeAction { Amount = 3 }
-				),
-			ownerId =>
-				MakeSpell(
-					"Inspiration",
-					ownerId,
-					cost: 4,
-					TargetingStrategy.NoTarget(),
-					new DrawCardsAction
-					{
-						Amount = 2,
-						PlayerIdContextKey = ContextKeys.CastingPlayerId,
-					}
-				),
-			ownerId =>
-				MakeSpell(
-					"Counsel of the Soratami",
-					ownerId,
-					cost: 3,
-					TargetingStrategy.NoTarget(),
-					new DrawCardsAction
-					{
-						Amount = 2,
-						PlayerIdContextKey = ContextKeys.CastingPlayerId,
-					}
-				),
-			ownerId =>
-				MakeSpell(
-					"Ancestral Recall",
-					ownerId,
-					cost: 0,
-					TargetingStrategy.NoTarget(),
-					new DrawCardsAction
-					{
-						Amount = 3,
-						PlayerIdContextKey = ContextKeys.CastingPlayerId,
-					}
-				),
+			MakeSpell(
+				"Healing Salve",
+				cost: 1,
+				TargetingStrategy.Self(),
+				new GainLifeAction { Amount = 3 }
+			),
+			MakeSpell(
+				"Revitalize",
+				cost: 2,
+				TargetingStrategy.Self(),
+				new GainLifeAction { Amount = 3 }
+			),
+			MakeSpell(
+				"Inspiration",
+				cost: 4,
+				TargetingStrategy.NoTarget(),
+				new DrawCardsAction { Amount = 2, PlayerIdContextKey = ContextKeys.CastingPlayerId }
+			),
+			MakeSpell(
+				"Counsel of the Soratami",
+				cost: 3,
+				TargetingStrategy.NoTarget(),
+				new DrawCardsAction { Amount = 2, PlayerIdContextKey = ContextKeys.CastingPlayerId }
+			),
+			MakeSpell(
+				"Ancestral Recall",
+				cost: 0,
+				TargetingStrategy.NoTarget(),
+				new DrawCardsAction { Amount = 3, PlayerIdContextKey = ContextKeys.CastingPlayerId }
+			),
 			// ===== CREATURES WITH ACTIVATED ABILITIES =====
 
 			// Prodigal Sorcerer — 3 mana 1/1. "1 mana: Deal 1 damage to any opponent target."
-			ownerId =>
-				MakeAbilityCreature(
-					"Prodigal Sorcerer",
-					ownerId,
-					cost: 3,
-					power: 1,
-					toughness: 1,
-					new ActivatedAbilityComponent
+			MakeAbilityCreature(
+				"Prodigal Sorcerer",
+				cost: 3,
+				power: 1,
+				toughness: 1,
+				new ActivatedAbilityComponent
+				{
+					Name = "Ping",
+					ManaCost = 1,
+					Effect = new CardEffect
 					{
-						Name = "Ping",
-						ManaCost = 1,
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								new IsPlayerSpecification()
-									.And(new IsControlledByOpponentSpecification())
-									.Or(
-										new IsCreatureSpecification().And(
-											new IsControlledByOpponentSpecification()
-										)
+						TargetingStrategy = TargetingStrategy.SingleTarget(
+							new IsPlayerSpecification()
+								.And(new IsControlledByOpponentSpecification())
+								.Or(
+									new IsCreatureSpecification().And(
+										new IsControlledByOpponentSpecification()
 									)
-							),
-							ActionTemplate = new DealDamageAction { Amount = 1 },
-						},
-					}
-				),
+								)
+						),
+						ActionTemplate = new DealDamageAction { Amount = 1 },
+					},
+				}
+			),
 			// Drudge Skeletons — 2 mana 1/1. "1 mana: Gain 2 life."
-			ownerId =>
-				MakeAbilityCreature(
-					"Drudge Skeletons",
-					ownerId,
-					cost: 2,
-					power: 1,
-					toughness: 1,
-					new ActivatedAbilityComponent
+			MakeAbilityCreature(
+				"Drudge Skeletons",
+				cost: 2,
+				power: 1,
+				toughness: 1,
+				new ActivatedAbilityComponent
+				{
+					Name = "Drain Life",
+					ManaCost = 1,
+					Effect = new CardEffect
 					{
-						Name = "Drain Life",
-						ManaCost = 1,
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new GainLifeAction { Amount = 2 },
-						},
-					}
-				),
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 2 },
+					},
+				}
+			),
 			// Wizard Mentor — 3 mana 2/2. "2 mana: Draw a card."
-			ownerId =>
-				MakeAbilityCreature(
-					"Wizard Mentor",
-					ownerId,
-					cost: 3,
-					power: 2,
-					toughness: 2,
-					new ActivatedAbilityComponent
+			MakeAbilityCreature(
+				"Wizard Mentor",
+				cost: 3,
+				power: 2,
+				toughness: 2,
+				new ActivatedAbilityComponent
+				{
+					Name = "Study",
+					ManaCost = 2,
+					Effect = new CardEffect
 					{
-						Name = "Study",
-						ManaCost = 2,
-						Effect = new CardEffect
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new DrawCardsAction
 						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new DrawCardsAction
-							{
-								Amount = 1,
-								PlayerIdContextKey = ContextKeys.CastingPlayerId,
-							},
-						},
-					}
-				),
-			// Spikeshot Goblin — 3 mana 1/1. Two abilities: ping and drain.
-			ownerId =>
-				MakeAbilityCreature(
-					"Spikeshot Goblin",
-					ownerId,
-					cost: 3,
-					power: 1,
-					toughness: 1,
-					new ActivatedAbilityComponent
-					{
-						Name = "Spike",
-						ManaCost = 1,
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								new IsPlayerSpecification()
-									.And(new IsControlledByOpponentSpecification())
-									.Or(
-										new IsCreatureSpecification().And(
-											new IsControlledByOpponentSpecification()
-										)
-									)
-							),
-							ActionTemplate = new DealDamageAction { Amount = 1 },
+							Amount = 1,
+							PlayerIdContextKey = ContextKeys.CastingPlayerId,
 						},
 					},
-					new ActivatedAbilityComponent
+				}
+			),
+			// Spikeshot Goblin — 3 mana 1/1. Two abilities: ping and drain.
+			MakeAbilityCreature(
+				"Spikeshot Goblin",
+				cost: 3,
+				power: 1,
+				toughness: 1,
+				new ActivatedAbilityComponent
+				{
+					Name = "Spike",
+					ManaCost = 1,
+					Effect = new CardEffect
 					{
-						Name = "Drain",
-						ManaCost = 2,
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new GainLifeAction { Amount = 2 },
-						},
-					}
-				),
+						TargetingStrategy = TargetingStrategy.SingleTarget(
+							new IsPlayerSpecification()
+								.And(new IsControlledByOpponentSpecification())
+								.Or(
+									new IsCreatureSpecification().And(
+										new IsControlledByOpponentSpecification()
+									)
+								)
+						),
+						ActionTemplate = new DealDamageAction { Amount = 1 },
+					},
+				},
+				new ActivatedAbilityComponent
+				{
+					Name = "Drain",
+					ManaCost = 2,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 2 },
+					},
+				}
+			),
 			// ===== CREATURES WITH TRIGGERED ABILITIES =====
 
 			// Grim Initiate — 2 mana 2/1.
 			// "When a creature you control dies, gain 1 life."
-			ownerId =>
-				MakeTriggerCreature(
-					"Grim Initiate",
-					ownerId,
-					cost: 2,
-					power: 2,
-					toughness: 1,
-					new TriggeredAbilityComponent
+			MakeTriggerCreature(
+				"Grim Initiate",
+				cost: 2,
+				power: 2,
+				toughness: 1,
+				new TriggeredAbilityComponent
+				{
+					Name = "Death Rites",
+					Condition = new CreatureDiesCondition { OnlyYourCreatures = true },
+					Effect = new CardEffect
 					{
-						Name = "Death Rites",
-						Condition = new CreatureDiesCondition { OnlyYourCreatures = true },
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new GainLifeAction { Amount = 1 },
-						},
-					}
-				),
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 1 },
+					},
+				}
+			),
 			// Blood Artist — 3 mana 0/1.
 			// "When any creature dies, deal 1 damage to the opponent."
-			ownerId =>
-				MakeTriggerCreature(
-					"Blood Artist",
-					ownerId,
-					cost: 3,
-					power: 0,
-					toughness: 1,
-					new TriggeredAbilityComponent
+			MakeTriggerCreature(
+				"Blood Artist",
+				cost: 3,
+				power: 0,
+				toughness: 1,
+				new TriggeredAbilityComponent
+				{
+					Name = "Blood Drain",
+					Condition = new CreatureDiesCondition(),
+					Effect = new CardEffect
 					{
-						Name = "Blood Drain",
-						Condition = new CreatureDiesCondition(),
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.AllValid(
-								new IsPlayerSpecification().And(
-									new IsControlledByOpponentSpecification()
-								)
-							),
-							ActionTemplate = new DealDamageAction { Amount = 1 },
-						},
-					}
-				),
+						TargetingStrategy = TargetingStrategy.AllValid(
+							new IsPlayerSpecification().And(
+								new IsControlledByOpponentSpecification()
+							)
+						),
+						ActionTemplate = new DealDamageAction { Amount = 1 },
+					},
+				}
+			),
 			// Reconnaissance — 2 mana 1/2.
 			// "Whenever a creature attacks, gain 1 life."
-			ownerId =>
-				MakeTriggerCreature(
-					"Reconnaissance",
-					ownerId,
-					cost: 2,
-					power: 1,
-					toughness: 2,
-					new TriggeredAbilityComponent
+			MakeTriggerCreature(
+				"Reconnaissance",
+				cost: 2,
+				power: 1,
+				toughness: 2,
+				new TriggeredAbilityComponent
+				{
+					Name = "Battle Cry",
+					Condition = new CreatureAttacksCondition { OnlyYourCreatures = true },
+					Effect = new CardEffect
 					{
-						Name = "Battle Cry",
-						Condition = new CreatureAttacksCondition { OnlyYourCreatures = true },
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new GainLifeAction { Amount = 1 },
-						},
-					}
-				),
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 1 },
+					},
+				}
+			),
 			// Mentor of the Meek — 4 mana 2/2.
 			// "Whenever a creature you control enters the battlefield, draw a card."
-			ownerId =>
-				MakeTriggerCreature(
-					"Mentor of the Meek",
-					ownerId,
-					cost: 4,
-					power: 2,
-					toughness: 2,
-					new TriggeredAbilityComponent
+			MakeTriggerCreature(
+				"Mentor of the Meek",
+				cost: 4,
+				power: 2,
+				toughness: 2,
+				new TriggeredAbilityComponent
+				{
+					Name = "Tutelage",
+					Condition = new CreatureEntersBattlefieldCondition { OnlyYourCreatures = true },
+					Effect = new CardEffect
 					{
-						Name = "Tutelage",
-						Condition = new CreatureEntersBattlefieldCondition
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new DrawCardsAction
 						{
-							OnlyYourCreatures = true,
+							Amount = 1,
+							PlayerIdContextKey = ContextKeys.CastingPlayerId,
 						},
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new DrawCardsAction
-							{
-								Amount = 1,
-								PlayerIdContextKey = ContextKeys.CastingPlayerId,
-							},
-						},
-					}
-				),
+					},
+				}
+			),
 			// Vengeful Reaper — 3 mana 1/3.
 			// "Whenever an opponent's creature dies, deal 1 damage to the opponent."
-			ownerId =>
-				MakeTriggerCreature(
-					"Vengeful Reaper",
-					ownerId,
-					cost: 3,
-					power: 1,
-					toughness: 3,
-					new TriggeredAbilityComponent
+			MakeTriggerCreature(
+				"Vengeful Reaper",
+				cost: 3,
+				power: 1,
+				toughness: 3,
+				new TriggeredAbilityComponent
+				{
+					Name = "Vengeance",
+					Condition = new CreatureDiesCondition { OnlyOpponentCreatures = true },
+					Effect = new CardEffect
 					{
-						Name = "Vengeance",
-						Condition = new CreatureDiesCondition { OnlyOpponentCreatures = true },
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.AllValid(
-								new IsPlayerSpecification().And(
-									new IsControlledByOpponentSpecification()
-								)
-							),
-							ActionTemplate = new DealDamageAction { Amount = 1 },
-						},
-					}
-				),
+						TargetingStrategy = TargetingStrategy.AllValid(
+							new IsPlayerSpecification().And(
+								new IsControlledByOpponentSpecification()
+							)
+						),
+						ActionTemplate = new DealDamageAction { Amount = 1 },
+					},
+				}
+			),
 			// ===== CREATURES WITH TRIGGERED ABILITIES (EventTriggerCondition) =====
 			// These are equivalent to the cards above but use the new generic
 			// EventTriggerCondition system instead of concrete condition classes.
@@ -436,137 +377,125 @@ public static class CardPool
 
 			// Grim Watcher — same as Grim Initiate using EventTriggerCondition
 			// "When a creature you control dies, gain 1 life."
-			ownerId =>
-				MakeTriggerCreature(
-					"Grim Watcher",
-					ownerId,
-					cost: 2,
-					power: 2,
-					toughness: 1,
-					new TriggeredAbilityComponent
+			MakeTriggerCreature(
+				"Grim Watcher",
+				cost: 2,
+				power: 2,
+				toughness: 1,
+				new TriggeredAbilityComponent
+				{
+					Name = "Death Rites",
+					Condition = new EventTriggerCondition
 					{
-						Name = "Death Rites",
-						Condition = new EventTriggerCondition
-						{
-							EventTypeName = EventTypeNames.CreatureDestroyed,
-							Filter = new IsControlledByYouSpecification(),
-						},
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new GainLifeAction { Amount = 1 },
-						},
-					}
-				),
+						EventTypeName = EventTypeNames.CreatureDestroyed,
+						Filter = new IsControlledByYouSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 1 },
+					},
+				}
+			),
 			// Soul Harvester — same as Blood Artist using EventTriggerCondition
 			// "When any creature dies, deal 1 damage to the opponent."
-			ownerId =>
-				MakeTriggerCreature(
-					"Soul Harvester",
-					ownerId,
-					cost: 2,
-					power: 0,
-					toughness: 1,
-					new TriggeredAbilityComponent
+			MakeTriggerCreature(
+				"Soul Harvester",
+				cost: 2,
+				power: 0,
+				toughness: 1,
+				new TriggeredAbilityComponent
+				{
+					Name = "Harvest",
+					Condition = new EventTriggerCondition
 					{
-						Name = "Harvest",
-						Condition = new EventTriggerCondition
-						{
-							EventTypeName = EventTypeNames.CreatureDestroyed,
-						},
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.AllValid(
-								new IsPlayerSpecification().And(
-									new IsControlledByOpponentSpecification()
-								)
-							),
-							ActionTemplate = new DealDamageAction { Amount = 1 },
-						},
-					}
-				),
+						EventTypeName = EventTypeNames.CreatureDestroyed,
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.AllValid(
+							new IsPlayerSpecification().And(
+								new IsControlledByOpponentSpecification()
+							)
+						),
+						ActionTemplate = new DealDamageAction { Amount = 1 },
+					},
+				}
+			),
 			// War Drummer — same as Reconnaissance using EventTriggerCondition
 			// "Whenever your creature attacks, gain 1 life."
-			ownerId =>
-				MakeTriggerCreature(
-					"War Drummer",
-					ownerId,
-					cost: 2,
-					power: 1,
-					toughness: 2,
-					new TriggeredAbilityComponent
+			MakeTriggerCreature(
+				"War Drummer",
+				cost: 2,
+				power: 1,
+				toughness: 2,
+				new TriggeredAbilityComponent
+				{
+					Name = "Battle Cry",
+					Condition = new EventTriggerCondition
 					{
-						Name = "Battle Cry",
-						Condition = new EventTriggerCondition
-						{
-							EventTypeName = EventTypeNames.CreatureAttacked,
-							Filter = new IsControlledByYouSpecification(),
-						},
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new GainLifeAction { Amount = 1 },
-						},
-					}
-				),
+						EventTypeName = EventTypeNames.CreatureAttacked,
+						Filter = new IsControlledByYouSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 1 },
+					},
+				}
+			),
 			// Battlefield Scholar — same as Mentor of the Meek using EventTriggerCondition
 			// "Whenever a creature you control enters the battlefield, draw a card."
-			ownerId =>
-				MakeTriggerCreature(
-					"Battlefield Scholar",
-					ownerId,
-					cost: 4,
-					power: 2,
-					toughness: 2,
-					new TriggeredAbilityComponent
+			MakeTriggerCreature(
+				"Battlefield Scholar",
+				cost: 4,
+				power: 2,
+				toughness: 2,
+				new TriggeredAbilityComponent
+				{
+					Name = "Tutelage",
+					Condition = new EventTriggerCondition
 					{
-						Name = "Tutelage",
-						Condition = new EventTriggerCondition
+						EventTypeName = EventTypeNames.CreaturePlayed,
+						Filter = new IsControlledByYouSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new DrawCardsAction
 						{
-							EventTypeName = EventTypeNames.CreaturePlayed,
-							Filter = new IsControlledByYouSpecification(),
+							Amount = 1,
+							PlayerIdContextKey = ContextKeys.CastingPlayerId,
 						},
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new DrawCardsAction
-							{
-								Amount = 1,
-								PlayerIdContextKey = ContextKeys.CastingPlayerId,
-							},
-						},
-					}
-				),
+					},
+				}
+			),
 		};
 
 	/// <summary>
-	/// Builds a random deck for the given player by sampling
-	/// without replacement from the full card pool.
+	/// Builds a random deck for the given player by sampling without replacement from the
+	/// provided pool. Owner is stamped onto each card template at deck-build time.
 	/// </summary>
-	public static IReadOnlyList<Card> BuildRandomDeck(int ownerId, int deckSize = 40)
+	public static IReadOnlyList<Card> BuildRandomDeck(
+		int ownerId,
+		IReadOnlyList<Card> pool,
+		int deckSize = 40
+	)
 	{
 		var rng = new Random();
-		return All.OrderBy(_ => rng.Next())
+		return pool.OrderBy(_ => rng.Next())
 			.Take(deckSize)
-			.Select(factory => factory(ownerId))
+			.Select(template => template with { OwnerId = ownerId, ControllerId = ownerId })
 			.ToList();
 	}
 
 	// ===== FACTORIES =====
 
-	private static Card MakeCreature(
-		string name,
-		int ownerId,
-		int cost,
-		int power,
-		int toughness
-	) =>
+	private static Card MakeCreature(string name, int cost, int power, int toughness) =>
 		new Card
 		{
 			Name = name,
 			ManaCost = cost,
-			OwnerId = ownerId,
-			ControllerId = ownerId,
 			Components = ImmutableList.Create<GameComponent>(
 				new CreatureComponent { Power = power, Toughness = toughness }
 			),
@@ -574,7 +503,6 @@ public static class CardPool
 
 	private static Card MakeAbilityCreature(
 		string name,
-		int ownerId,
 		int cost,
 		int power,
 		int toughness,
@@ -584,8 +512,6 @@ public static class CardPool
 		{
 			Name = name,
 			ManaCost = cost,
-			OwnerId = ownerId,
-			ControllerId = ownerId,
 			Components = ImmutableList
 				.Create<GameComponent>(
 					new CreatureComponent { Power = power, Toughness = toughness }
@@ -595,7 +521,6 @@ public static class CardPool
 
 	private static Card MakeTriggerCreature(
 		string name,
-		int ownerId,
 		int cost,
 		int power,
 		int toughness,
@@ -605,8 +530,6 @@ public static class CardPool
 		{
 			Name = name,
 			ManaCost = cost,
-			OwnerId = ownerId,
-			ControllerId = ownerId,
 			Components = ImmutableList
 				.Create<GameComponent>(
 					new CreatureComponent { Power = power, Toughness = toughness }
@@ -616,7 +539,6 @@ public static class CardPool
 
 	private static Card MakeSpell(
 		string name,
-		int ownerId,
 		int cost,
 		TargetingStrategy targeting,
 		GameAction actionTemplate
@@ -625,8 +547,6 @@ public static class CardPool
 		{
 			Name = name,
 			ManaCost = cost,
-			OwnerId = ownerId,
-			ControllerId = ownerId,
 			Components = ImmutableList.Create<GameComponent>(
 				new SpellComponent
 				{

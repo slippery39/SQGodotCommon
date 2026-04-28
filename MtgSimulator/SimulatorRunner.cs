@@ -109,7 +109,15 @@ public class SimulatorRunner
 
 		var cardNames = new Dictionary<int, string>();
 
-		var deck1 = CardPool.BuildRandomDeck(ids.Player1Id);
+		// Krenko and Siege-Gang Commander excluded: token flood causes search blowup.
+		// See DesignNotes.md — symmetry reduction needed before re-enabling.
+		var excludedCards = new HashSet<string> { "Krenko, Mob Boss", "Siege-Gang Commander" };
+		var pool = CardPool
+			.All.Concat(CardLibrary.All)
+			.Where(c => !excludedCards.Contains(c.Name))
+			.ToList();
+
+		var deck1 = CardPool.BuildRandomDeck(ids.Player1Id, pool);
 		foreach (var card in deck1)
 		{
 			var (newState, added) = state.AddObject(card, parentId: ids.Player1LibraryId);
@@ -117,7 +125,7 @@ public class SimulatorRunner
 			cardNames[added.Id] = added.Name;
 		}
 
-		var deck2 = CardPool.BuildRandomDeck(ids.Player2Id);
+		var deck2 = CardPool.BuildRandomDeck(ids.Player2Id, pool);
 		foreach (var card in deck2)
 		{
 			var (newState, added) = state.AddObject(card, parentId: ids.Player2LibraryId);

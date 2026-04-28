@@ -5,6 +5,23 @@ This is not authoritative architecture (that lives in CLAUDE.md) — it's a watc
 
 ---
 
+## Choice action resolution in the simulator
+
+**Concern:** `DepthLimitedAiStrategy.ResolveChoice` only handles single-select choices well — it
+evaluates each option individually and picks the best. For multi-select choices (`MinChoices > 1`,
+e.g. "discard 2" from Careful Study) it falls back to random selection because evaluating all
+combinations is too expensive at search time.
+
+**Why it's fine now:** Multi-select choices are rare in the current card pool and random resolution
+is good enough for the baseline AI.
+
+**Watch for:** Cards with high-impact multi-select choices where random resolution produces clearly
+wrong decisions (e.g. discarding your best card when better targets exist). At that point, consider
+a greedy iterative approach: score each option individually, rank them, pick the top/bottom N. This
+won't be optimal over all combinations but will outperform random in practice.
+
+---
+
 ## GetEffectiveX proliferation
 
 **Concern:** The keyword system currently uses per-keyword extension methods on `CreatureEvaluator`
@@ -21,6 +38,28 @@ all active keywords in one pass. Actions then query the set rather than calling 
 
 **Note on above**
 Not entirely sure on the above solution actually... but we will need to revisit this when we get there
+
+---
+
+## Token explosion / symmetry reduction in the simulator
+
+**Concern:** Cards like Krenko and Siege-Gang Commander create many identical tokens. Because each
+token is a distinct game object, `GetLegalActions` generates a separate action per token
+(attack with token #1, attack with token #2, …). The AI's depth-limited search evaluates all of
+them even though they produce identical board states, causing exponential blowup that pushes games
+past the time limit.
+
+**Why it's fine now:** Excluded from the random card pool until resolved.
+
+**Proposed fix:** Action-level deduplication inside the simulator AI (not in `MtgActionGenerator`,
+which stays authoritative). After `GetLegalActions` returns, collapse actions that operate on cards
+sharing an identical fingerprint: `Name + ManaCost + Components + current Damage + active modifiers`.
+Two cards with the same fingerprint are interchangeable for search purposes — only evaluate one
+representative per group. Cards that diverge (one takes damage, one gets a buff) will naturally
+have different fingerprints and stay separate.
+
+**Edge cases to handle:** Partial activation (`HasActivated`), `UntilEndOfTurn` modifiers,
+summoning sickness flag — all must be part of the fingerprint.
 
 ---
 

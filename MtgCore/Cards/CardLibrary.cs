@@ -13,6 +13,39 @@ public static class CardLibrary
 	private const string GoblinSubtype = "Goblin";
 
 	/// <summary>
+	/// All playable cards in the library as owner-agnostic templates.
+	/// OwnerId and ControllerId default to 0 and are stamped at deck-build time.
+	/// Excludes token cards (GoblinToken) — those are created at runtime, not drawn.
+	/// </summary>
+	public static IReadOnlyList<Card> All { get; } =
+		new List<Card>
+		{
+			LightningBolt(),
+			LightningHelix(),
+			CarefulStudy(),
+			TellingTime(),
+			DarkConfidant(),
+			ProdigalSorcerer(),
+			ThroneOfBone(),
+			GiantGrowth(),
+			UnholyStrength(),
+			GoblinGuide(),
+			GoblinLackey(),
+			WarrenInstigator(),
+			GoblinChieftain(),
+			SiegeGangCommander(),
+			KrenkoMobBoss(),
+			GoblinGrenade(),
+			WildNacatl(),
+			KirdApe(),
+			Tarmogoyf(),
+			PathToExile(),
+			TribalFlames(),
+			QasaliPridemage(),
+			LoamLion(),
+		};
+
+	/// <summary>
 	/// Lightning Bolt — 1 mana instant.
 	/// "Lightning Bolt deals 3 damage to any target."
 	/// </summary>

@@ -80,6 +80,17 @@ public class DepthLimitedAiStrategy : IAiStrategy
 		if (choice.Options.IsEmpty)
 			return ImmutableList<int>.Empty;
 
+		// Multi-select choices (e.g. "discard 2"): evaluating all combinations is
+		// too expensive for the search; pick randomly instead.
+		if (choice.MinChoices > 1)
+		{
+			return choice
+				.Options.OrderBy(_ => _rng.Next())
+				.Take(choice.MinChoices)
+				.Select(o => o.Id)
+				.ToImmutableList();
+		}
+
 		var bestScore = float.MinValue;
 		var bestOption = choice.Options[0];
 
