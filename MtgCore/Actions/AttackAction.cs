@@ -64,15 +64,15 @@ public record AttackAction : GameAction
 			return ValidationResult.Invalid($"Target {TargetId} does not exist");
 
 		var targetObj = gameState.GetObject(TargetId);
+		int defendingPlayerId;
 
 		if (targetObj is MtgPlayer targetPlayer)
 		{
 			if (targetPlayer.Id == AttackingPlayerId)
 				return ValidationResult.Invalid("Cannot attack yourself");
-			return ValidationResult.Valid;
+			defendingPlayerId = targetPlayer.Id;
 		}
-
-		if (targetObj is Card targetCard)
+		else if (targetObj is Card targetCard)
 		{
 			if (!targetCard.HasComponent<CreatureComponent>())
 				return ValidationResult.Invalid("Target card is not a creature");
@@ -84,10 +84,58 @@ public record AttackAction : GameAction
 			if (targetCard.ControllerId == AttackingPlayerId)
 				return ValidationResult.Invalid("Cannot attack your own creature");
 
-			return ValidationResult.Valid;
+			defendingPlayerId = targetCard.ControllerId;
+		}
+		else
+		{
+			return ValidationResult.Invalid("Target must be a player or creature");
 		}
 
-		return ValidationResult.Invalid("Target must be a player or creature");
+		return ValidateTauntConstraint(gameState, defendingPlayerId);
+	}
+
+	/// <summary>
+	/// Enforces the Taunt rule: if the defending player has Taunt creatures, the attacker
+	/// must attack one of them — unless the attacker has Flying and none of the Taunt
+	/// creatures have Flying or Reach (in which case the aerial attacker flies over).
+	/// </summary>
+	private ValidationResult ValidateTauntConstraint(GameState gameState, int defendingPlayerId)
+	{
+		var opponentBattlefieldId = gameState.GetPlayerZoneId(
+			defendingPlayerId,
+			ZoneType.Battlefield
+		);
+
+		var tauntCreatureIds = gameState
+			.GetCardsInZone(opponentBattlefieldId)
+			.Where(c => c.HasComponent<CreatureComponent>() && gameState.GetEffectiveTaunt(c.Id))
+			.Select(c => c.Id)
+			.ToHashSet();
+
+		if (tauntCreatureIds.Count == 0)
+			return ValidationResult.Valid;
+
+		if (gameState.GetEffectiveFlying(AttackerId))
+		{
+			var obstructingTauntIds = tauntCreatureIds
+				.Where(id => gameState.GetEffectiveFlying(id) || gameState.GetEffectiveReach(id))
+				.ToHashSet();
+
+			if (obstructingTauntIds.Count == 0)
+				return ValidationResult.Valid;
+
+			if (obstructingTauntIds.Contains(TargetId))
+				return ValidationResult.Valid;
+
+			return ValidationResult.Invalid(
+				"A Taunt creature with Flying or Reach must be attacked first"
+			);
+		}
+
+		if (tauntCreatureIds.Contains(TargetId))
+			return ValidationResult.Valid;
+
+		return ValidationResult.Invalid("A Taunt creature must be attacked first");
 	}
 
 	public override ActionResult Execute(GameState gameState)

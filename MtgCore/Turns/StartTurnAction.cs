@@ -50,19 +50,25 @@ public record StartTurnAction : GameAction
 		var updatedPlayer = player with { MaxMana = newMax, CurrentMana = newCurrent };
 		state = state.UpdateObject(ActivePlayerId, updatedPlayer);
 
+		// Reset storm counter at the start of each turn
+		var game = state.TryGetGame();
+		if (game != null)
+			state = state.UpdateObject(game.Id, game with { SpellsCastThisTurn = 0 });
+
 		// Reset per-turn flags on all permanents the active player controls
-		var battlefieldCards = state
+		var battlefieldCardIds = state
 			.GetCardsInZone(BattlefieldId)
 			.Where(c => c.ControllerId == ActivePlayerId)
+			.Select(c => c.Id)
 			.ToList();
 
-		foreach (var card in battlefieldCards)
+		foreach (var cardId in battlefieldCardIds)
 		{
 			// First clear end-of-turn modifiers (Giant Growth etc.)
-			state = state.ClearEndOfTurnModifiers(card.Id);
+			state = state.ClearEndOfTurnModifiers(cardId);
 
 			// Re-fetch card in case it was updated by ClearEndOfTurnModifiers
-			var currentCard = (Card)state.GetObject(card.Id);
+			var currentCard = (Card)state.GetObject(cardId);
 			var updatedComponents = currentCard.Components;
 
 			for (int i = 0; i < updatedComponents.Count; i++)
@@ -91,7 +97,7 @@ public record StartTurnAction : GameAction
 
 			if (updatedComponents != currentCard.Components)
 				state = state.UpdateObject(
-					currentCard.Id,
+					cardId,
 					currentCard with
 					{
 						Components = updatedComponents,

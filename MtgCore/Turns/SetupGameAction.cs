@@ -18,7 +18,7 @@ public record SetupGameAction : GameAction
 {
 	public int Player1Id { get; init; }
 	public int Player2Id { get; init; }
-	public int OpeningHandSize { get; init; } = 7;
+	public int OpeningHandSize { get; init; } = 4;
 
 	public override ActionResult Execute(GameState gameState)
 	{

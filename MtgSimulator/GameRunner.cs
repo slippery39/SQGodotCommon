@@ -43,6 +43,8 @@ public class GameRunner
 		public bool HadActionWarning;
 		public readonly List<string> DrawnCards1 = [];
 		public readonly List<string> DrawnCards2 = [];
+		public readonly List<string> PlayedCards1 = [];
+		public readonly List<string> PlayedCards2 = [];
 		public readonly List<GameEvent> AllEvents = [];
 		public readonly Stopwatch Timer = Stopwatch.StartNew();
 	}
@@ -121,6 +123,7 @@ public class GameRunner
 			var (newState, events) = ExecuteAction(ctx.State, chosen);
 			ctx.State = newState;
 			TrackDrawnCards(events, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);
+			TrackPlayedCards(events, ids, cardNames, ctx.PlayedCards1, ctx.PlayedCards2);
 			ctx.AllEvents.AddRange(events);
 			ctx.TotalActions++;
 			actionsThisTurn++;
@@ -159,6 +162,7 @@ public class GameRunner
 		var (resolvedState, choiceEvents) = ctx.State.ResolveChoice(selectedIds);
 		ctx.State = resolvedState;
 		TrackDrawnCards(choiceEvents, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);
+		TrackPlayedCards(choiceEvents, ids, cardNames, ctx.PlayedCards1, ctx.PlayedCards2);
 		ctx.AllEvents.AddRange(choiceEvents);
 	}
 
@@ -178,6 +182,7 @@ public class GameRunner
 		var (endState, endEvents) = newState.ProcessAllActions();
 		ctx.State = endState;
 		TrackDrawnCards(endEvents, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);
+		TrackPlayedCards(endEvents, ids, cardNames, ctx.PlayedCards1, ctx.PlayedCards2);
 		ctx.AllEvents.AddRange(endEvents);
 	}
 
@@ -203,6 +208,8 @@ public class GameRunner
 				GameDurationMs = ctx.Timer.ElapsedMilliseconds,
 				Player1DrawnCards = ctx.DrawnCards1,
 				Player2DrawnCards = ctx.DrawnCards2,
+				Player1PlayedCards = ctx.PlayedCards1,
+				Player2PlayedCards = ctx.PlayedCards2,
 			},
 			ctx.State
 		);
@@ -225,6 +232,41 @@ public class GameRunner
 				drawnCards1.Add(name);
 			else
 				drawnCards2.Add(name);
+		}
+	}
+
+	private static void TrackPlayedCards(
+		IEnumerable<GameEvent> events,
+		MtgGameIds ids,
+		IReadOnlyDictionary<int, string> cardNames,
+		List<string> playedCards1,
+		List<string> playedCards2
+	)
+	{
+		foreach (var e in events)
+		{
+			int cardId,
+				playerId;
+			if (e is SpellCastEvent sc)
+			{
+				cardId = sc.CardId;
+				playerId = sc.CastingPlayerId;
+			}
+			else if (e is CreaturePlayedEvent cp)
+			{
+				cardId = cp.CardId;
+				playerId = cp.PlayerId;
+			}
+			else
+				continue;
+
+			if (!cardNames.TryGetValue(cardId, out var name))
+				continue;
+
+			if (playerId == ids.Player1Id)
+				playedCards1.Add(name);
+			else
+				playedCards2.Add(name);
 		}
 	}
 

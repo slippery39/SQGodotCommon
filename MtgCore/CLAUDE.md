@@ -7,13 +7,15 @@ MtgCore/
 ├── Abilities/Activated/     # ActivatedAbilityComponent, ActivatedAbilityAction
 │   └── Static/              # StaticAbilityComponent (abstract), StaticPTBoostAbility, StaticGrantKeywordAbility
 ├── Actions/                 # All GameAction subclasses; ContextKeys; MtgActionGenerator
-│                            # Includes: ExileAction, PutIntoBattlefieldAction, CastCreatureAction, ResolveCreatureAction
-│                            #           CreateTokenAction, CountCardsWithSubtypeAction
+│                            # Includes: ExileAction, PutIntoBattlefieldAction (CardIdContextKey for pipeline use), CastCreatureAction, ResolveCreatureAction
+│                            #           CreateTokenAction, CountCardsWithSubtypeAction, CountCardsWithNameAction
+│                            #           AddTemporaryManaAction, SelectCardFromLibraryAction
 ├── Costs/                   # AdditionalCost (abstract), LifeAdditionalCost, SacrificeAdditionalCost, DiscardAdditionalCost
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
-│   └── Components/          # CreatureComponent (HasHaste, HasDoubleStrike), SpellComponent, GraveyardCountComponent
+│   └── Components/          # CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach), SpellComponent (HasStorm), GraveyardCountComponent
 ├── Effects/                 # CardEffect (data-only effect descriptor)
-├── Events/                  # EventTypeNames, MtgEvents (includes CreatureEnteredBattlefieldEvent, CombatDamageDealtToPlayerEvent)
+├── Events/                  # EventTypeNames, MtgEvents (includes CreatureEnteredBattlefieldEvent, CombatDamageDealtToPlayerEvent,
+│                            #   SpellCastEvent emitted by CastSpellAction, CreaturePlayedEvent emitted by CastCreatureAction)
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods)
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier
 ├── Players/                 # MtgPlayer (GameObject subclass)
@@ -23,7 +25,7 @@ MtgCore/
 ├── Triggers/                # TriggeredAbilityComponent, EventTriggerCondition, TriggerCondition
 ├── Turns/                   # BeginGameAction, SetupGameAction, StartTurnAction, EndTurnAction, TurnPhase
 ├── Zones/                   # Zone, ZoneType
-├── MtgGame.cs               # Core game state object (ActivePlayerId, TurnNumber)
+├── MtgGame.cs               # Core game state object (ActivePlayerId, TurnNumber, SpellsCastThisTurn)
 ├── MtgGameFactory.cs        # Factory: Create() and CreateForTesting()
 └── MtgGameStateExtensions.cs # API boundary — BeginGame, ShuffleLibrary, etc.
 ```
@@ -70,6 +72,18 @@ Hearthstone-style. Both players start at `MaxMana = 0`, `CurrentMana = 0`.
 - `StartTurnAction` increments `MaxMana` by 1 (cap 10) and refills `CurrentMana` to `MaxMana` for both players every turn. Starting at 0 gives both players 1 mana on turn 1 with no special casing.
 - `CastCreatureAction` and `CastSpellAction` validate sufficient mana in `ValidateAdd` and deduct `ManaCost` in `Execute`.
 - All mana generation logic lives in `StartTurnAction` only. Future mana systems (lands, flat grants) swap in by changing `StartTurnAction` only.
+- **Fast mana** (`AddTemporaryManaAction`) adds to `CurrentMana` only — `MaxMana` is unchanged, so the bonus evaporates at the start of the next turn. Used by Rite of Flame, Seething Song, Lotus Bloom.
+
+## Storm Mechanic
+
+`MtgGame.SpellsCastThisTurn` (int) counts every spell cast this turn by either player. It is:
+- Incremented by `CastSpellAction.Execute()` and `CastCreatureAction.Execute()` after mana is spent.
+- Reset to 0 by `StartTurnAction.Execute()` at the start of each turn.
+- Read by `ResolveSpellAction` when `SpellComponent.HasStorm = true`.
+
+`SpellComponent.HasStorm` — when true, `ResolveSpellAction` spawns `Math.Max(SpellsCastThisTurn, 1)` copies of `ResolveEffectAction` instead of one. This gives any spell the storm mechanic for free. The storm count already includes this spell since `CastSpellAction` increments before resolution.
+
+`TryGetGame()` on `GameState` finds the `MtgGame` instance without requiring a known ID. Used by cast actions and `ResolveSpellAction` (storm handling) so they don't need to carry `GameId`.
 
 ## Additional Costs
 
@@ -97,6 +111,10 @@ Hearthstone-style (turn-based, no blockers). The active player attacks; the oppo
 - `HasSummoningSickness` — cannot attack the turn they enter the battlefield. Cleared by `HasHaste` on `CreatureComponent` — haste creatures enter with `HasSummoningSickness = false`.
 - `HasDoubleStrike` — creature deals damage twice. vs player: two separate damage applications, two `CombatDamageDealtToPlayerEvent`s (triggers fire twice). vs creature: deals 2× power in one pass.
 - `HasAttacked` — can only attack once per turn.
+- `HasFlying` — bypasses Taunt from non-flying/non-reach creatures. Evaluated via `GetEffectiveFlying()`.
+- `HasTaunt` — must be attacked before non-taunt targets. Enforced in `AttackAction.ValidateTauntConstraint`. Evaluated via `GetEffectiveTaunt()`.
+- `HasReach` — intercepts flying attackers; flying does not bypass Taunt from Reach creatures. Evaluated via `GetEffectiveReach()`.
+- All three keywords can also be granted by `StaticGrantKeywordAbility` (same pattern as `GrantsHaste`).
 - Both flags and `Damage` on `CreatureComponent` are cleared by `StartTurnAction` at the start of the controller's turn.
 - Creature attacks player: deals damage equal to effective Power; emits `CombatDamageDealtToPlayerEvent` (used by Goblin Lackey/Warren Instigator triggers).
 - Creature attacks creature: both deal damage simultaneously. Dies if `Damage >= effective Toughness`; moves to owner's graveyard.

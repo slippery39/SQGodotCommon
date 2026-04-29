@@ -10,6 +10,7 @@ public static class DeckRegistry
 		[
 			new DeckInfo("Zoo", ZooDeckFactory.Build),
 			new DeckInfo("Goblins", GoblinsDeckFactory.Build),
+			new DeckInfo("Dragonstorm", DragonstormDeckFactory.Build),
 		];
 
 	public static IReadOnlyList<Card> Build(string deckName, int ownerId)

@@ -75,6 +75,19 @@ public record CastSpellAction : GameAction
 		);
 		state = state.MoveObject(CardId, state.GetStackId());
 
+		var game = state.TryGetGame();
+		if (game != null)
+			state = state.UpdateObject(
+				game.Id,
+				game with
+				{
+					SpellsCastThisTurn = game.SpellsCastThisTurn + 1,
+				}
+			);
+
+		var castEvent = new SpellCastEvent { CardId = CardId, CastingPlayerId = CastingPlayerId };
+		state = state with { PendingGameEvents = state.PendingGameEvents.Add(castEvent) };
+
 		return new ActionResult(
 			state.SpawnAction(
 				new ResolveSpellAction
@@ -84,7 +97,7 @@ public record CastSpellAction : GameAction
 					TargetIds = TargetIds,
 				}
 			)
-		);
+		).WithEvent(castEvent);
 	}
 
 	private ValidationResult ValidateAdditionalCosts(GameState gameState, Card card)

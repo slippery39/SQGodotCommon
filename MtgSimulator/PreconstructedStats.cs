@@ -20,7 +20,9 @@ public class PreconstructedStats
 			opponentDeckName: result.Player2DeckName,
 			isOnPlay: result.Player1IsOnPlay,
 			playerWon: gr.IsPlayer1Win,
-			drawnCards: gr.Player1DrawnCards
+			turnCount: gr.TurnCount,
+			drawnCards: gr.Player1DrawnCards,
+			playedCards: gr.Player1PlayedCards
 		);
 
 		ProcessPlayerPerspective(
@@ -28,7 +30,9 @@ public class PreconstructedStats
 			opponentDeckName: result.Player1DeckName,
 			isOnPlay: !result.Player1IsOnPlay,
 			playerWon: gr.IsPlayer2Win,
-			drawnCards: gr.Player2DrawnCards
+			turnCount: gr.TurnCount,
+			drawnCards: gr.Player2DrawnCards,
+			playedCards: gr.Player2PlayedCards
 		);
 	}
 
@@ -37,11 +41,18 @@ public class PreconstructedStats
 		string opponentDeckName,
 		bool isOnPlay,
 		bool playerWon,
-		IReadOnlyList<string> drawnCards
+		int turnCount,
+		IReadOnlyList<string> drawnCards,
+		IReadOnlyList<string> playedCards
 	)
 	{
-		Accumulate(GetOrAdd(_deckStats, deckName), isOnPlay, playerWon);
-		Accumulate(GetOrAdd(_matchupStats, (deckName, opponentDeckName)), isOnPlay, playerWon);
+		Accumulate(GetOrAdd(_deckStats, deckName), isOnPlay, playerWon, turnCount);
+		Accumulate(
+			GetOrAdd(_matchupStats, (deckName, opponentDeckName)),
+			isOnPlay,
+			playerWon,
+			turnCount
+		);
 
 		// GIH WR: binary per game — each unique card name counts once regardless of copies drawn
 		foreach (var group in drawnCards.GroupBy(c => c))
@@ -61,13 +72,35 @@ public class PreconstructedStats
 				cardMatchup.GihWins++;
 			cardMatchup.TotalCopiesDrawn += copies;
 		}
+
+		foreach (var group in playedCards.GroupBy(c => c))
+		{
+			var cardName = group.Key;
+			var copies = group.Count();
+
+			GetOrAdd(_cardStats, (deckName, cardName)).TotalCopiesPlayed += copies;
+			GetOrAdd(_cardMatchupStats, (deckName, opponentDeckName, cardName)).TotalCopiesPlayed +=
+				copies;
+		}
 	}
 
-	private static void Accumulate(WinLossAccumulator acc, bool isOnPlay, bool playerWon)
+	private static void Accumulate(
+		WinLossAccumulator acc,
+		bool isOnPlay,
+		bool playerWon,
+		int turnCount
+	)
 	{
 		acc.TotalGames++;
 		if (playerWon)
+		{
 			acc.Wins++;
+			acc.TotalWinTurns += turnCount;
+			if (turnCount < acc.WinTurnMin)
+				acc.WinTurnMin = turnCount;
+			if (turnCount > acc.WinTurnMax)
+				acc.WinTurnMax = turnCount;
+		}
 		if (isOnPlay)
 		{
 			acc.OnPlayGames++;
@@ -92,7 +125,12 @@ public class PreconstructedStats
 				OnPlayGames: kv.Value.OnPlayGames,
 				OnPlayWinRate: WinRate(kv.Value.OnPlayWins, kv.Value.OnPlayGames),
 				OnDrawGames: kv.Value.OnDrawGames,
-				OnDrawWinRate: WinRate(kv.Value.OnDrawWins, kv.Value.OnDrawGames)
+				OnDrawWinRate: WinRate(kv.Value.OnDrawWins, kv.Value.OnDrawGames),
+				AvgWinTurn: kv.Value.Wins > 0
+					? kv.Value.TotalWinTurns / (double)kv.Value.Wins
+					: 0.0,
+				MinWinTurn: kv.Value.WinTurnMin == int.MaxValue ? 0 : kv.Value.WinTurnMin,
+				MaxWinTurn: kv.Value.WinTurnMax
 			))
 			.OrderByDescending(r => r.WinRate)
 			.ToList();
@@ -122,7 +160,10 @@ public class PreconstructedStats
 				GihGames: kv.Value.GihGames,
 				GihWins: kv.Value.GihWins,
 				GihWinRate: WinRate(kv.Value.GihWins, kv.Value.GihGames),
-				AvgCopiesDrawn: AvgCopies(kv.Value)
+				AvgCopiesDrawn: AvgCopies(kv.Value),
+				AvgCopiesPlayed: kv.Value.GihGames > 0
+					? kv.Value.TotalCopiesPlayed / (double)kv.Value.GihGames
+					: 0.0
 			))
 			.OrderBy(r => r.DeckName)
 			.ThenByDescending(r => r.GihWinRate)
@@ -137,7 +178,10 @@ public class PreconstructedStats
 				GihGames: kv.Value.GihGames,
 				GihWins: kv.Value.GihWins,
 				GihWinRate: WinRate(kv.Value.GihWins, kv.Value.GihGames),
-				AvgCopiesDrawn: AvgCopies(kv.Value)
+				AvgCopiesDrawn: AvgCopies(kv.Value),
+				AvgCopiesPlayed: kv.Value.GihGames > 0
+					? kv.Value.TotalCopiesPlayed / (double)kv.Value.GihGames
+					: 0.0
 			))
 			.OrderBy(r => r.DeckName)
 			.ThenBy(r => r.OpponentDeckName)
@@ -169,6 +213,9 @@ public class PreconstructedStats
 		public int OnPlayWins;
 		public int OnDrawGames;
 		public int OnDrawWins;
+		public long TotalWinTurns;
+		public int WinTurnMin = int.MaxValue;
+		public int WinTurnMax;
 	}
 
 	private class CardAccumulator
@@ -176,6 +223,7 @@ public class PreconstructedStats
 		public int GihGames;
 		public int GihWins;
 		public int TotalCopiesDrawn;
+		public int TotalCopiesPlayed;
 	}
 }
 
@@ -187,7 +235,10 @@ public record DeckWinRateRow(
 	int OnPlayGames,
 	double OnPlayWinRate,
 	int OnDrawGames,
-	double OnDrawWinRate
+	double OnDrawWinRate,
+	double AvgWinTurn,
+	int MinWinTurn,
+	int MaxWinTurn
 );
 
 public record MatchupWinRateRow(
@@ -208,7 +259,8 @@ public record CardGihRow(
 	int GihGames,
 	int GihWins,
 	double GihWinRate,
-	double AvgCopiesDrawn
+	double AvgCopiesDrawn,
+	double AvgCopiesPlayed
 );
 
 public record CardMatchupGihRow(
@@ -218,5 +270,6 @@ public record CardMatchupGihRow(
 	int GihGames,
 	int GihWins,
 	double GihWinRate,
-	double AvgCopiesDrawn
+	double AvgCopiesDrawn,
+	double AvgCopiesPlayed
 );

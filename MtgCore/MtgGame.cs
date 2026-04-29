@@ -26,4 +26,11 @@ public record MtgGame : GameObject
 	/// The current phase of the active player's turn.
 	/// </summary>
 	public TurnPhase Phase { get; init; } = TurnPhase.Main;
+
+	/// <summary>
+	/// Number of spells (creatures + non-creatures) cast this turn by any player.
+	/// Incremented by CastSpellAction and CastCreatureAction; reset to 0 by StartTurnAction.
+	/// Used by the Storm mechanic to determine the number of copies.
+	/// </summary>
+	public int SpellsCastThisTurn { get; init; } = 0;
 }

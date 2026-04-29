@@ -39,15 +39,27 @@ public record ResolveSpellAction : GameAction
 
 		if (spellComponent != null && spellComponent.Effects.Count > 0)
 		{
-			spawnedActions = spawnedActions.Add(
-				new ResolveEffectAction
-				{
-					Effects = spellComponent.Effects,
-					CastingPlayerId = CastingPlayerId,
-					SourceCardId = CardId,
-					TargetIds = TargetIds,
-				}
-			);
+			var resolveEffect = new ResolveEffectAction
+			{
+				Effects = spellComponent.Effects,
+				CastingPlayerId = CastingPlayerId,
+				SourceCardId = CardId,
+				TargetIds = TargetIds,
+			};
+
+			if (spellComponent.HasStorm)
+			{
+				// Storm: repeat effects once per spell cast this turn (including this one).
+				// SpellsCastThisTurn was already incremented by CastSpellAction before we run.
+				var game = gameState.TryGetGame();
+				var copies = game != null ? Math.Max(game.SpellsCastThisTurn, 1) : 1;
+				for (var i = 0; i < copies; i++)
+					spawnedActions = spawnedActions.Add(resolveEffect);
+			}
+			else
+			{
+				spawnedActions = spawnedActions.Add(resolveEffect);
+			}
 		}
 
 		// Card moves to graveyard after effects resolve

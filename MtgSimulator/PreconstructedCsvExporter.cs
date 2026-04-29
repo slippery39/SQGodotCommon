@@ -15,11 +15,12 @@ public static class PreconstructedCsvExporter
 		WriteSection(
 			writer,
 			"Overall Deck Win Rates",
-			"Deck,Games,Wins,WinRate,OnPlayGames,OnPlayWinRate,OnDrawGames,OnDrawWinRate",
+			"Deck,Games,Wins,WinRate,OnPlayGames,OnPlayWinRate,OnDrawGames,OnDrawWinRate,AvgWinTurn,MinWinTurn,MaxWinTurn",
 			stats.GetDeckStats(),
 			r =>
 				$"{r.DeckName},{r.TotalGames},{r.Wins},{r.WinRate:F4}"
 				+ $",{r.OnPlayGames},{r.OnPlayWinRate:F4},{r.OnDrawGames},{r.OnDrawWinRate:F4}"
+				+ $",{r.AvgWinTurn:F2},{r.MinWinTurn},{r.MaxWinTurn}"
 		);
 
 		writer.WriteLine();
@@ -39,11 +40,11 @@ public static class PreconstructedCsvExporter
 		WriteSection(
 			writer,
 			"Card GIH Win Rates (Overall)",
-			"Deck,Card,GIHGames,GIHWins,GIHWinRate,AvgCopiesDrawn",
+			"Deck,Card,GIHGames,GIHWins,GIHWinRate,AvgCopiesDrawn,AvgCopiesPlayed",
 			stats.GetCardStats(),
 			r =>
 				$"{r.DeckName},{Escape(r.CardName)},{r.GihGames},{r.GihWins}"
-				+ $",{r.GihWinRate:F4},{r.AvgCopiesDrawn:F3}"
+				+ $",{r.GihWinRate:F4},{r.AvgCopiesDrawn:F3},{r.AvgCopiesPlayed:F3}"
 		);
 
 		writer.WriteLine();
@@ -51,11 +52,11 @@ public static class PreconstructedCsvExporter
 		WriteSection(
 			writer,
 			"Card GIH Win Rates (Per Matchup)",
-			"Deck,Opponent,Card,GIHGames,GIHWins,GIHWinRate,AvgCopiesDrawn",
+			"Deck,Opponent,Card,GIHGames,GIHWins,GIHWinRate,AvgCopiesDrawn,AvgCopiesPlayed",
 			stats.GetCardMatchupStats(),
 			r =>
 				$"{r.DeckName},{r.OpponentDeckName},{Escape(r.CardName)},{r.GihGames},{r.GihWins}"
-				+ $",{r.GihWinRate:F4},{r.AvgCopiesDrawn:F3}"
+				+ $",{r.GihWinRate:F4},{r.AvgCopiesDrawn:F3},{r.AvgCopiesPlayed:F3}"
 		);
 
 		return filePath;

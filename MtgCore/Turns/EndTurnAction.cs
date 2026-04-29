@@ -52,10 +52,8 @@ public record EndTurnAction : GameAction
 		{
 			ActivePlayerId = nextPlayerId,
 			BattlefieldId = nextBattlefieldId,
-			BonusMana = isPlayer2FirstTurn ? 1 : 0,
-			BonusDraws =
-				0 //isPlayer2FirstTurn ? 1 : 0,
-			,
+			//BonusMana = isPlayer2FirstTurn ? 1 : 0,
+			//BonusDraws = isPlayer2FirstTurn ? 1 : 0,
 		};
 
 		var events = ImmutableList.Create<GameEvent>(

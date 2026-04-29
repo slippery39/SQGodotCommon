@@ -23,6 +23,13 @@ public static class MtgGameStateExtensions
 		(MtgGame)state.GetObject(gameId);
 
 	/// <summary>
+	/// Finds the MtgGame object without knowing its ID. There is exactly one per game state.
+	/// Used by actions that need global turn state but don't carry GameId.
+	/// </summary>
+	public static MtgGame? TryGetGame(this GameState state) =>
+		state.IdToGameObjectMap.Values.OfType<MtgGame>().FirstOrDefault();
+
+	/// <summary>
 	/// Returns the ID of the player whose turn it currently is.
 	/// </summary>
 	public static int GetActivePlayerId(this GameState state, int gameId) =>

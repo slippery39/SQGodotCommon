@@ -80,6 +80,16 @@ public record CastCreatureAction : GameAction
 		);
 		state = state.MoveObject(CardId, state.GetStackId());
 
+		var game = state.TryGetGame();
+		if (game != null)
+			state = state.UpdateObject(
+				game.Id,
+				game with
+				{
+					SpellsCastThisTurn = game.SpellsCastThisTurn + 1,
+				}
+			);
+
 		var playedEvent = new CreaturePlayedEvent { CardId = CardId, PlayerId = CastingPlayerId };
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(playedEvent) };
 

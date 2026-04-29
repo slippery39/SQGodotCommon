@@ -10,10 +10,15 @@ namespace MtgCore;
 /// Unlike PlayCreatureAction, this bypasses mana cost validation and does not emit
 /// CreaturePlayedEvent. It stamps HasSummoningSickness and emits CreatureEnteredBattlefieldEvent
 /// so ETB triggers fire the same way as for normally cast creatures.
+///
+/// CardIdContextKey: when set, reads a single card ID from pipeline context and includes
+/// it in the targets. Used by storm pipelines (Dragonstorm) where SelectCardFromLibraryAction
+/// writes the chosen card ID and this action deploys it. Ignored if the context value is 0.
 /// </summary>
 public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 {
 	public ImmutableList<int> TargetIds { get; init; } = ImmutableList<int>.Empty;
+	public string CardIdContextKey { get; init; } = "";
 
 	public GameAction WithTargets(ImmutableList<int> targetIds) =>
 		this with
@@ -26,18 +31,23 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
 
-		foreach (var targetId in TargetIds)
+		var targets = TargetIds;
+		if (!string.IsNullOrEmpty(CardIdContextKey))
 		{
-			if (!state.HasObject(targetId))
-				continue;
+			var contextId = GetInput<int>(CardIdContextKey, 0);
+			if (contextId != 0)
+				targets = targets.Add(contextId);
+		}
 
-			if (state.GetObject(targetId) is not Card card)
-				continue;
+		var creatures = targets
+			.Where(id => state.HasObject(id))
+			.Select(id => state.GetObject(id) as Card)
+			.Where(card => card?.HasComponent<CreatureComponent>() == true)
+			.ToList();
 
-			if (!card.HasComponent<CreatureComponent>())
-				continue;
-
-			var battlefieldId = state.GetPlayerZoneId(card.ControllerId, ZoneType.Battlefield);
+		foreach (var card in creatures)
+		{
+			var battlefieldId = state.GetPlayerZoneId(card!.ControllerId, ZoneType.Battlefield);
 
 			var creature = card.GetComponent<CreatureComponent>()!;
 			var updatedCard = card.WithComponentReplaced(
@@ -46,11 +56,11 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 					HasSummoningSickness = !creature.HasHaste,
 				}
 			);
-			state = state.UpdateObject(targetId, updatedCard).MoveObject(targetId, battlefieldId);
+			state = state.UpdateObject(card.Id, updatedCard).MoveObject(card.Id, battlefieldId);
 
 			var enteredEvent = new CreatureEnteredBattlefieldEvent
 			{
-				CardId = targetId,
+				CardId = card.Id,
 				PlayerId = card.ControllerId,
 			};
 			events = events.Add(enteredEvent);
@@ -62,11 +72,9 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 
 	public override ValidationResult ValidateResolve(GameState gameState)
 	{
-		foreach (var targetId in TargetIds)
-		{
-			if (!gameState.HasObject(targetId))
-				return ValidationResult.Invalid($"Target {targetId} no longer exists");
-		}
-		return ValidationResult.Valid;
+		var missingId = TargetIds.FirstOrDefault(id => !gameState.HasObject(id));
+		return missingId != 0
+			? ValidationResult.Invalid($"Target {missingId} no longer exists")
+			: ValidationResult.Valid;
 	}
 }

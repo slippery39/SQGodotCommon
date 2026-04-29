@@ -155,15 +155,19 @@ public class PreconstructedSimulatorRunner
 		Console.WriteLine("  --- Overall Win Rates ---");
 		Console.WriteLine();
 		Console.WriteLine(
-			$"  {"Deck", -18} {"Games", 6}  {"Wins", 5}  {"Win%", 7}  {"OnPlay%", 8}  {"OnDraw%", 8}"
+			$"  {"Deck", -18} {"Games", 6}  {"Wins", 5}  {"Win%", 7}  {"OnPlay%", 8}  {"OnDraw%", 8}  {"AvgWinT", 8}  {"MinT", 5}  {"MaxT", 5}"
 		);
-		Console.WriteLine($"  {new string('-', 62)}");
+		Console.WriteLine($"  {new string('-', 85)}");
 
 		foreach (var r in rows)
 		{
+			var avgWinTurn = r.Wins > 0 ? $"{r.AvgWinTurn:F1}" : "—";
+			var minTurn = r.Wins > 0 ? r.MinWinTurn.ToString() : "—";
+			var maxTurn = r.Wins > 0 ? r.MaxWinTurn.ToString() : "—";
 			Console.WriteLine(
 				$"  {r.DeckName, -18} {r.TotalGames, 6}  {r.Wins, 5}  {Pct(r.WinRate), 7}  "
-					+ $"{Pct(r.OnPlayWinRate), 8}  {Pct(r.OnDrawWinRate), 8}"
+					+ $"{Pct(r.OnPlayWinRate), 8}  {Pct(r.OnDrawWinRate), 8}  "
+					+ $"{avgWinTurn, 8}  {minTurn, 5}  {maxTurn, 5}"
 			);
 		}
 

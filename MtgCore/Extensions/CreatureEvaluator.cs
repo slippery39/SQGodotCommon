@@ -60,8 +60,7 @@ public static class CreatureEvaluator
 	}
 
 	/// <summary>
-	/// Returns true if the creature has haste — either intrinsic (HasHaste on CreatureComponent)
-	/// or granted by a StaticGrantKeywordAbility on a battlefield permanent.
+	/// Returns true if the creature has haste — either intrinsic or granted by a static ability.
 	/// </summary>
 	public static bool GetEffectiveHaste(this GameState state, int cardId)
 	{
@@ -78,6 +77,69 @@ public static class CreatureEvaluator
 
 		return GetApplicableStaticAbilities<StaticGrantKeywordAbility>(state, cardId)
 			.Any(x => x.Ability.GrantsHaste);
+	}
+
+	/// <summary>
+	/// Returns true if the creature has flying — either intrinsic or granted by a static ability.
+	/// Flying creatures bypass Taunt from non-flying/non-reach creatures.
+	/// </summary>
+	public static bool GetEffectiveFlying(this GameState state, int cardId)
+	{
+		var card = state.GetObject(cardId) as Card;
+		if (card == null)
+			return false;
+
+		var creature = card.GetComponent<CreatureComponent>();
+		if (creature == null)
+			return false;
+
+		if (creature.HasFlying)
+			return true;
+
+		return GetApplicableStaticAbilities<StaticGrantKeywordAbility>(state, cardId)
+			.Any(x => x.Ability.GrantsFlying);
+	}
+
+	/// <summary>
+	/// Returns true if the creature has taunt — either intrinsic or granted by a static ability.
+	/// Taunt creatures must be attacked before non-taunt targets (unless bypassed by flying).
+	/// </summary>
+	public static bool GetEffectiveTaunt(this GameState state, int cardId)
+	{
+		var card = state.GetObject(cardId) as Card;
+		if (card == null)
+			return false;
+
+		var creature = card.GetComponent<CreatureComponent>();
+		if (creature == null)
+			return false;
+
+		if (creature.HasTaunt)
+			return true;
+
+		return GetApplicableStaticAbilities<StaticGrantKeywordAbility>(state, cardId)
+			.Any(x => x.Ability.GrantsTaunt);
+	}
+
+	/// <summary>
+	/// Returns true if the creature has reach — either intrinsic or granted by a static ability.
+	/// Reach creatures can intercept flying attackers (flying does not bypass their Taunt).
+	/// </summary>
+	public static bool GetEffectiveReach(this GameState state, int cardId)
+	{
+		var card = state.GetObject(cardId) as Card;
+		if (card == null)
+			return false;
+
+		var creature = card.GetComponent<CreatureComponent>();
+		if (creature == null)
+			return false;
+
+		if (creature.HasReach)
+			return true;
+
+		return GetApplicableStaticAbilities<StaticGrantKeywordAbility>(state, cardId)
+			.Any(x => x.Ability.GrantsReach);
 	}
 
 	/// <summary>

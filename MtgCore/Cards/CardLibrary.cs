@@ -11,6 +11,7 @@ namespace MtgCore;
 public static class CardLibrary
 {
 	private const string GoblinSubtype = "Goblin";
+	private const string DragonSubtype = "Dragon";
 
 	/// <summary>
 	/// All playable cards in the library as owner-agnostic templates.
@@ -43,6 +44,14 @@ public static class CardLibrary
 			TribalFlames(),
 			QasaliPridemage(),
 			LoamLion(),
+			// ===== DRAGONSTORM DECK CARDS =====
+			SleightOfHand(),
+			LotusBoom(),
+			RiteOfFlame(),
+			SeethingSong(),
+			HuntedDragon(),
+			BogardanHellkite(),
+			Dragonstorm(),
 		};
 
 	/// <summary>
@@ -787,6 +796,265 @@ public static class CardLibrary
 			Subtypes = ImmutableList.Create("Cat"),
 			Components = ImmutableList.Create<GameComponent>(
 				new CreatureComponent { Power = 2, Toughness = 3 }
+			),
+		};
+
+	// ===== DRAGONSTORM DECK CARDS =====
+
+	/// <summary>
+	/// Sleight of Hand — 1 mana instant.
+	/// "Look at the top two cards of your library. Put one into your hand
+	///  and the other on the bottom of your library."
+	/// </summary>
+	public static Card SleightOfHand() =>
+		new()
+		{
+			Name = "Sleight of Hand",
+			ManaCost = 1,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new LookAtTopCardsAction
+									{
+										Amount = 2,
+										OutputKey = ContextKeys.TopCardIds,
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new SelectCardFromContextAction
+									{
+										Prompt = "Choose a card to put into your hand",
+										MinChoices = 1,
+										MaxChoices = 1,
+										OutputKey = "soh_hand_pick",
+										CardIdsContextKey = ContextKeys.TopCardIds,
+									},
+									new MoveCardToHandAction
+									{
+										CardIdContextKey = "soh_hand_pick",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new ExcludeSelectedCardsAction
+									{
+										CardIdsContextKey = ContextKeys.TopCardIds,
+										ExcludeContextKeys = ImmutableList.Create("soh_hand_pick"),
+										OutputKey = ContextKeys.RemainingCardIds,
+									},
+									new MoveCardToBottomOfLibraryAction
+									{
+										CardIdsContextKey = ContextKeys.RemainingCardIds,
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									}
+								),
+							},
+						}
+					),
+				}
+			),
+		};
+
+	/// <summary>
+	/// Lotus Bloom — 0 mana sorcery (simplified from Suspend 3).
+	/// "Add RRR." Suspend mechanic omitted — treated as a free mana spell.
+	/// </summary>
+	public static Card LotusBoom() =>
+		new()
+		{
+			Name = "Lotus Bloom",
+			ManaCost = 0,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new AddTemporaryManaAction
+							{
+								Amount = 3,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
+						}
+					),
+				}
+			),
+		};
+
+	/// <summary>
+	/// Rite of Flame — 1 mana instant.
+	/// "Add RR. Add an additional R for each card named Rite of Flame in your graveyard."
+	/// </summary>
+	public static Card RiteOfFlame() =>
+		new()
+		{
+			Name = "Rite of Flame",
+			ManaCost = 1,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new CountCardsWithNameAction
+									{
+										CardName = "Rite of Flame",
+										Zone = ZoneType.Graveyard,
+										OutputKey = "rite_count",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new AddTemporaryManaAction
+									{
+										Amount = 3,
+										BonusAmountContextKey = "rite_count",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									}
+								),
+							},
+						}
+					),
+				}
+			),
+		};
+
+	/// <summary>
+	/// Seething Song — 3 mana instant.
+	/// "Add RRRRR." Net +2 mana at sorcery speed — fuels same-turn Dragonstorm.
+	/// </summary>
+	public static Card SeethingSong() =>
+		new()
+		{
+			Name = "Seething Song",
+			ManaCost = 3,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new AddTemporaryManaAction
+							{
+								Amount = 6,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
+						}
+					),
+				}
+			),
+		};
+
+	/// <summary>
+	/// Hunted Dragon — 6 mana creature (6/6, Flying, Haste).
+	/// Simplified: Knight token ETB omitted.
+	/// </summary>
+	public static Card HuntedDragon() =>
+		new()
+		{
+			Name = "Hunted Dragon",
+			ManaCost = 10,
+			Subtypes = ImmutableList.Create(DragonSubtype, "Lizard"),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent
+				{
+					Power = 10,
+					Toughness = 10,
+					HasFlying = true,
+					HasHaste = true,
+				}
+			),
+		};
+
+	/// <summary>
+	/// Bogardan Hellkite — 8 mana creature (5/5, Flying).
+	/// "When Bogardan Hellkite enters the battlefield, it deals 5 damage to target
+	///  player or creature." Simplified: single random opponent target.
+	/// </summary>
+	public static Card BogardanHellkite() =>
+		new()
+		{
+			Name = "Bogardan Hellkite",
+			ManaCost = 8,
+			Subtypes = ImmutableList.Create(DragonSubtype),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent
+				{
+					Power = 5,
+					Toughness = 5,
+					HasFlying = true,
+				},
+				new TriggeredAbilityComponent
+				{
+					Name = "ETB Damage",
+					Condition = new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
+						Filter = new IsSourceCardSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.RandomTarget(
+							new IsPlayerSpecification()
+								.And(new IsControlledByOpponentSpecification())
+								.Or(
+									new IsCreatureSpecification().And(
+										new IsControlledByOpponentSpecification()
+									)
+								)
+						),
+						ActionTemplate = new DealDamageAction { Amount = 5 },
+					},
+				}
+			),
+		};
+
+	/// <summary>
+	/// Dragonstorm — 9 mana sorcery with Storm.
+	/// "Search your library for a Dragon permanent card and put it onto the battlefield.
+	///  Storm — copy this spell for each spell cast before it this turn."
+	/// HasStorm=true causes ResolveSpellAction to repeat the effect SpellsCastThisTurn times.
+	/// Each copy: SelectCardFromLibraryAction finds the next Dragon, PutIntoBattlefieldAction deploys it.
+	/// </summary>
+	public static Card Dragonstorm() =>
+		new()
+		{
+			Name = "Dragonstorm",
+			ManaCost = 9,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					HasStorm = true,
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new SelectCardFromLibraryAction
+									{
+										Subtype = DragonSubtype,
+										OutputKey = "dragonstorm_target",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new PutIntoBattlefieldAction
+									{
+										CardIdContextKey = "dragonstorm_target",
+									}
+								),
+							},
+						}
+					),
+				}
 			),
 		};
 }

@@ -17,10 +17,10 @@ Runs N simulated games with configurable AI strategies and reports aggregate sta
 | `ZooDeckFactory.cs` | Builds a fixed 40-card Zoo deck (RGW aggro) for a given player |
 | `GoblinsDeckFactory.cs` | Builds a fixed Goblins deck (red aggro tribal) for a given player |
 | `DeckRegistry.cs` | Registers all named precon decks (`DeckInfo` records); exposes `All` and `Build(name, ownerId)` |
-| `PreconstructedStats.cs` | Aggregates precon game results into four stat tables; exposes row records for deck, matchup, card GIH WR, and card-per-matchup GIH WR |
+| `PreconstructedStats.cs` | Aggregates precon game results into four stat tables; exposes row records for deck (inc. AvgWinTurn/MinWinTurn/MaxWinTurn), matchup, card GIH WR (inc. AvgCopiesPlayed), and card-per-matchup GIH WR (inc. AvgCopiesPlayed) |
 | `PreconstructedSimulatorRunner.cs` | Round-robin precon runner: builds schedule, runs games via `GameRunner`, feeds `PreconstructedStats`, prints console summary, triggers CSV export |
 | `PreconstructedCsvExporter.cs` | Writes all four stat tables to `sim_results/precon_<timestamp>.csv`; escapes card names with commas (e.g. "Krenko, Mob Boss") |
-| `GameResult.cs` | Record capturing outcome, turn count, actions, drawn cards, end reason, duration |
+| `GameResult.cs` | Record capturing outcome, turn count, actions, drawn cards, played cards, end reason, duration |
 | `PreconstructedGameResult.cs` | Wraps `GameResult` with deck names and on-play metadata for preconstructed mode |
 | `GameStateSnapshot.cs` | Human-readable snapshot DTO — `GameStateSnapshot`, `PlayerSnapshot`, `CreatureSnapshot` |
 | `FlaggedGameSaver.cs` | Builds a snapshot from a flagged `GameState` and writes it as JSON to `flagged_games/` |
@@ -62,7 +62,7 @@ Scores a non-terminal state as a weighted sum. Terminal states short-circuit.
 | Creature count difference | 3.0 |
 | Total base Power difference | 1.5 |
 | Cards in hand difference | 1.0 |
-| Player's own current mana | 0.5 |
+| Player's own permanent mana (`MaxMana` only — temporary fast mana excluded) | 0.5 |
 | Win (opponent has lost) | +10000 |
 | Loss (player has lost) | −10000 |
 

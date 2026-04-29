@@ -56,6 +56,16 @@ public record GameResult
 	/// </summary>
 	public IReadOnlyList<string> Player2DrawnCards { get; init; } = Array.Empty<string>();
 
+	/// <summary>
+	/// Cards that were played (cast) by Player 1 during the game.
+	/// </summary>
+	public IReadOnlyList<string> Player1PlayedCards { get; init; } = Array.Empty<string>();
+
+	/// <summary>
+	/// Cards that were played (cast) by Player 2 during the game.
+	/// </summary>
+	public IReadOnlyList<string> Player2PlayedCards { get; init; } = Array.Empty<string>();
+
 	public bool IsPlayer1Win => WinnerPlayerId == Player1Id;
 	public bool IsPlayer2Win => WinnerPlayerId == Player2Id;
 	public bool IsDraw => WinnerPlayerId == -1;

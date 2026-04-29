@@ -7,4 +7,7 @@ namespace MtgCore;
 public record StaticGrantKeywordAbility : StaticAbilityComponent
 {
 	public bool GrantsHaste { get; init; } = false;
+	public bool GrantsFlying { get; init; } = false;
+	public bool GrantsTaunt { get; init; } = false;
+	public bool GrantsReach { get; init; } = false;
 }

@@ -23,4 +23,7 @@ public record CreatureComponent : GameComponent
 	public bool HasAttacked { get; init; } = false;
 	public bool HasHaste { get; init; } = false;
 	public bool HasDoubleStrike { get; init; } = false;
+	public bool HasFlying { get; init; } = false;
+	public bool HasTaunt { get; init; } = false;
+	public bool HasReach { get; init; } = false;
 }

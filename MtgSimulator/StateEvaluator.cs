@@ -70,7 +70,9 @@ public static class StateEvaluator
 				- state.GetCardsInZone(opponentHandId).Count()
 			) * CardsInHandWeight;
 
-		score += player.CurrentMana * ManaWeight;
+		// Count only permanent mana (MaxMana), not temporary fast mana (CurrentMana).
+		// Fast mana should score 0 unless the depth search finds it enables something worthwhile.
+		score += player.MaxMana * ManaWeight;
 
 		return score;
 	}
