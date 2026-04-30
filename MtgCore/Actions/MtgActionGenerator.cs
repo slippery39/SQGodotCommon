@@ -157,7 +157,6 @@ public static class MtgActionGenerator
 			if (state.TryAddAction(castAction).Success)
 			{
 				actions.Add(castAction);
-				break;
 			}
 		}
 	}
