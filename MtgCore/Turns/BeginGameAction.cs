@@ -27,6 +27,12 @@ public record BeginGameAction : GameAction
 	/// </summary>
 	public int OpeningHandSize { get; init; } = 4;
 
+	/// <summary>
+	/// Seed used to shuffle both libraries. 0 = random (default).
+	/// Pass a non-zero value for deterministic/benchmark runs.
+	/// </summary>
+	public int ShuffleSeed { get; init; } = 0;
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var game = gameState.GetGame(GameId);
@@ -38,6 +44,7 @@ public record BeginGameAction : GameAction
 			Player1Id = Player1Id,
 			Player2Id = Player2Id,
 			OpeningHandSize = OpeningHandSize,
+			ShuffleSeed = ShuffleSeed,
 		};
 
 		var startTurn = new StartTurnAction

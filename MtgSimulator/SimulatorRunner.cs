@@ -15,16 +15,20 @@ public class SimulatorRunner
 {
 	private readonly int _gameCount;
 	private readonly int _aiDepth;
+	private readonly int? _seed;
 
-	public SimulatorRunner(int gameCount, int aiDepth = 3)
+	public SimulatorRunner(int gameCount, int aiDepth = 3, int? seed = null)
 	{
 		_gameCount = gameCount;
 		_aiDepth = aiDepth;
+		_seed = seed;
 	}
 
 	public void Run()
 	{
-		Console.WriteLine($"Running {_gameCount} games (AI depth: {_aiDepth})...");
+		var masterSeed = _seed ?? new Random().Next();
+		var seedLabel = _seed.HasValue ? $"seed: {masterSeed}" : $"seed: {masterSeed} (random)";
+		Console.WriteLine($"Running {_gameCount} games (AI depth: {_aiDepth}, {seedLabel})...");
 		Console.WriteLine();
 
 		var results = new List<GameResult>();
@@ -34,11 +38,13 @@ public class SimulatorRunner
 
 		for (int i = 0; i < _gameCount; i++)
 		{
-			var (state, ids, cardNames) = SetupGame();
+			// Each game gets a block of 5 derived seeds: deck1, deck2, shuffle, AI
+			var gameSeed = masterSeed + i * 5;
+			var (state, ids, cardNames) = SetupGame(gameSeed);
 
-			var rng = new Random();
-			var player1Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, rng);
-			var player2Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, rng);
+			var aiRng = new Random(gameSeed + 4);
+			var player1Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, aiRng);
+			var player2Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, aiRng);
 
 			var runner = new GameRunner(player1Strategy, player2Strategy);
 			var (result, finalState) = runner.Run(state, ids, cardNames);
@@ -103,7 +109,7 @@ public class SimulatorRunner
 		GameState State,
 		MtgGameIds Ids,
 		IReadOnlyDictionary<int, string> CardNames
-	) SetupGame()
+	) SetupGame(int gameSeed)
 	{
 		var (state, ids) = MtgGameFactory.Create();
 
@@ -117,7 +123,7 @@ public class SimulatorRunner
 			.Where(c => !excludedCards.Contains(c.Name))
 			.ToList();
 
-		var deck1 = CardPool.BuildRandomDeck(ids.Player1Id, pool);
+		var deck1 = CardPool.BuildRandomDeck(ids.Player1Id, pool, rng: new Random(gameSeed));
 		foreach (var card in deck1)
 		{
 			var (newState, added) = state.AddObject(card, parentId: ids.Player1LibraryId);
@@ -125,7 +131,7 @@ public class SimulatorRunner
 			cardNames[added.Id] = added.Name;
 		}
 
-		var deck2 = CardPool.BuildRandomDeck(ids.Player2Id, pool);
+		var deck2 = CardPool.BuildRandomDeck(ids.Player2Id, pool, rng: new Random(gameSeed + 1));
 		foreach (var card in deck2)
 		{
 			var (newState, added) = state.AddObject(card, parentId: ids.Player2LibraryId);
@@ -133,7 +139,12 @@ public class SimulatorRunner
 			cardNames[added.Id] = added.Name;
 		}
 
-		(state, _) = state.BeginGame(ids.GameId, ids.Player1Id, ids.Player2Id);
+		(state, _) = state.BeginGame(
+			ids.GameId,
+			ids.Player1Id,
+			ids.Player2Id,
+			shuffleSeed: gameSeed + 2
+		);
 
 		return (state, ids, cardNames);
 	}

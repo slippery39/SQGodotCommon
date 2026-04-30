@@ -20,13 +20,21 @@ public record SetupGameAction : GameAction
 	public int Player2Id { get; init; }
 	public int OpeningHandSize { get; init; } = 4;
 
+	/// <summary>
+	/// Seed used to shuffle both libraries. 0 = random (default).
+	/// Player 1 uses this seed directly; Player 2 uses seed + 1.
+	/// </summary>
+	public int ShuffleSeed { get; init; } = 0;
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
 
 		// Shuffle both libraries
-		state = state.ShuffleLibrary(Player1Id);
-		state = state.ShuffleLibrary(Player2Id);
+		var rng1 = ShuffleSeed == 0 ? null : new Random(ShuffleSeed);
+		var rng2 = ShuffleSeed == 0 ? null : new Random(ShuffleSeed + 1);
+		state = state.ShuffleLibrary(Player1Id, rng1);
+		state = state.ShuffleLibrary(Player2Id, rng2);
 
 		// Draw opening hands for both players
 		state = DrawOpeningHand(state, Player1Id);

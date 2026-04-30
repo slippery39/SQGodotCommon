@@ -52,12 +52,12 @@ public static class MtgGameStateExtensions
 	/// Pure helper — no action, no events. Use this for game setup only.
 	/// If a shuffle effect needs to occur during gameplay, implement it as a GameAction instead.
 	/// </summary>
-	public static GameState ShuffleLibrary(this GameState state, int playerId)
+	public static GameState ShuffleLibrary(this GameState state, int playerId, Random? rng = null)
 	{
 		var libraryId = state.GetPlayerZoneId(playerId, ZoneType.Library);
 		var cardIds = state.GetChildrenIds(libraryId).ToList();
 
-		var rng = new Random();
+		rng ??= new Random();
 		for (int i = cardIds.Count - 1; i > 0; i--)
 		{
 			var j = rng.Next(i + 1);
@@ -88,7 +88,8 @@ public static class MtgGameStateExtensions
 		this GameState state,
 		int gameId,
 		int player1Id,
-		int player2Id
+		int player2Id,
+		int shuffleSeed = 0
 	)
 	{
 		return state
@@ -98,6 +99,7 @@ public static class MtgGameStateExtensions
 					GameId = gameId,
 					Player1Id = player1Id,
 					Player2Id = player2Id,
+					ShuffleSeed = shuffleSeed,
 				}
 			)
 			.ProcessAllActions();

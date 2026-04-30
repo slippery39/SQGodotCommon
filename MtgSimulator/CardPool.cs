@@ -479,10 +479,11 @@ public static class CardPool
 	public static IReadOnlyList<Card> BuildRandomDeck(
 		int ownerId,
 		IReadOnlyList<Card> pool,
-		int deckSize = 40
+		int deckSize = 40,
+		Random? rng = null
 	)
 	{
-		var rng = new Random();
+		rng ??= new Random();
 		return pool.OrderBy(_ => rng.Next())
 			.Take(deckSize)
 			.Select(template => template with { OwnerId = ownerId, ControllerId = ownerId })

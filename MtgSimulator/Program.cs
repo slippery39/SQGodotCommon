@@ -27,7 +27,11 @@ if (mode == 1)
 	var gameCountInput = Console.ReadLine()?.Trim() ?? "";
 	var gameCount = int.TryParse(gameCountInput, out var g) && g > 0 ? g : 1000;
 
-	new SimulatorRunner(gameCount, aiDepth).Run();
+	Console.Write("Benchmark seed? (blank = random, number = fixed/reproducible): ");
+	var seedInput = Console.ReadLine()?.Trim() ?? "";
+	var seed = int.TryParse(seedInput, out var s) ? (int?)s : null;
+
+	new SimulatorRunner(gameCount, aiDepth, seed).Run();
 }
 else
 {

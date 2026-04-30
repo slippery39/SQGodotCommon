@@ -261,7 +261,7 @@ public static class MtgActionGenerator
 				CastingPlayerId = playerId,
 			};
 			var validTargets = ability.Effect.TargetingStrategy.GetValidTargets(context);
-			if (validTargets.IsEmpty)
+			if (validTargets.Count == 0)
 				return null;
 
 			return new ActivateAbilityAction

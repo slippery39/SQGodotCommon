@@ -89,7 +89,9 @@ public record ResolveEffectAction : GameAction
 				? targets
 				: ImmutableList<int>.Empty,
 
-			TargetSelectionMode.AllValid => effect.TargetingStrategy.GetValidTargets(context),
+			TargetSelectionMode.AllValid => ImmutableList.CreateRange(
+				effect.TargetingStrategy.GetValidTargets(context)
+			),
 
 			TargetSelectionMode.Random => ResolveRandomTarget(effect.TargetingStrategy, context),
 
@@ -107,7 +109,7 @@ public record ResolveEffectAction : GameAction
 	)
 	{
 		var validTargets = strategy.GetValidTargets(context);
-		if (validTargets.IsEmpty)
+		if (validTargets.Count == 0)
 			return ImmutableList<int>.Empty;
 
 		var chosen = validTargets[new Random().Next(validTargets.Count)];
