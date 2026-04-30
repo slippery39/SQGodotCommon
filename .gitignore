@@ -3,6 +3,13 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+#Custom Files
+simulator.nettrace
+simulator.speedscope.json
+
+flagged_games/
+sim_results/
+
 # User-specific files
 *.rsuser
 *.suo
