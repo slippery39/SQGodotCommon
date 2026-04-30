@@ -4,7 +4,8 @@ using ImmutableGameObjects;
 namespace MtgCore;
 
 /// <summary>
-/// Checks state-based loss conditions and evaluates pending triggered abilities.
+/// Checks state-based loss conditions, updates applied static ability components,
+/// and evaluates pending triggered abilities.
 ///
 /// Registered as GameState.PostActionProcessor at game setup. Runs automatically
 /// after every standalone action and every completed pipeline — never between
@@ -12,20 +13,21 @@ namespace MtgCore;
 ///
 /// While GameState.SuppressPostProcessor is true this action never runs.
 ///
-/// Player1BattlefieldId and Player2BattlefieldId are stored directly to avoid
-/// scanning the entire IdToGameObjectMap on every execution — a significant
-/// performance improvement given this runs after every action.
+/// GameId, Player1BattlefieldId and Player2BattlefieldId are stored directly to avoid
+/// scanning the entire IdToGameObjectMap on every execution.
 ///
 /// Order of operations:
-///   1. Evaluate PendingGameEvents against all TriggeredAbilityComponents
+///   1. Process static ability zone changes (ETB/LTB) via StaticAbilityEngine
+///   2. Evaluate PendingGameEvents against all TriggeredAbilityComponents
 ///      on both battlefields and spawn ResolveEffectAction for each match
-///   2. Clear PendingGameEvents
-///   3. Check loss conditions (life <= 0 only)
+///   3. Clear PendingGameEvents
+///   4. Check loss conditions (life <= 0 only)
 ///
 /// IsPostProcessor = true prevents recursive post-processing cycles.
 /// </summary>
 public record CheckStateBasedEffectsAction : GameAction
 {
+	public int GameId { get; init; }
 	public int Player1Id { get; init; }
 	public int Player2Id { get; init; }
 	public int Player1BattlefieldId { get; init; }
@@ -36,65 +38,97 @@ public record CheckStateBasedEffectsAction : GameAction
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
-		var events = ImmutableList<GameEvent>.Empty;
 
 		var player1 = state.GetPlayer(Player1Id);
 		var player2 = state.GetPlayer(Player2Id);
 
 		if (player1.HasLost && player2.HasLost)
-			return new ActionResult(
-				state with
-				{
-					PendingGameEvents = ImmutableList<GameEvent>.Empty,
-				}
-			);
-
-		// ===== TRIGGERED ABILITIES =====
-		// Evaluated before loss conditions so triggers resolve against the full game state.
+			return new ActionResult(state with { PendingGameEvents = [] });
 
 		var pendingEvents = state.PendingGameEvents;
 
-		if (!pendingEvents.IsEmpty)
+		state = ProcessStaticAbilityUpdates(state, pendingEvents);
+		state = EvaluateTriggeredAbilities(state, pendingEvents);
+		state = state with { PendingGameEvents = ImmutableList<GameEvent>.Empty };
+
+		var (finalState, events) = CheckLossConditions(state, player1, player2);
+		return new ActionResult(finalState) { Events = events };
+	}
+
+	private GameState ProcessStaticAbilityUpdates(
+		GameState state,
+		ImmutableList<GameEvent> pendingEvents
+	)
+	{
+		foreach (var e in pendingEvents.OfType<CreatureEnteredBattlefieldEvent>())
+			state = StaticAbilityEngine.ProcessPermanentEntered(state, e.CardId, GameId);
+
+		foreach (var e in pendingEvents.OfType<PermanentLeftBattlefieldEvent>())
+			state = StaticAbilityEngine.ProcessPermanentLeft(state, e.CardId, GameId);
+
+		return state;
+	}
+
+	private GameState EvaluateTriggeredAbilities(
+		GameState state,
+		ImmutableList<GameEvent> pendingEvents
+	)
+	{
+		if (pendingEvents.IsEmpty)
+			return state;
+
+		var battlefieldCards = state
+			.GetCardsInZone(Player1BattlefieldId)
+			.Concat(state.GetCardsInZone(Player2BattlefieldId));
+
+		foreach (var card in battlefieldCards)
+			state = EvaluateCardTriggers(state, card, pendingEvents);
+
+		return state;
+	}
+
+	private static GameState EvaluateCardTriggers(
+		GameState state,
+		Card card,
+		ImmutableList<GameEvent> pendingEvents
+	)
+	{
+		var triggerContext = new TriggerContext
 		{
-			// Use known battlefield IDs directly — no full object map scan needed
-			var battlefieldCards = state
-				.GetCardsInZone(Player1BattlefieldId)
-				.Concat(state.GetCardsInZone(Player2BattlefieldId));
+			GameState = state,
+			SourceCardId = card.Id,
+			ControllingPlayerId = card.ControllerId,
+		};
 
-			foreach (var card in battlefieldCards)
+		foreach (var ability in card.GetComponents<TriggeredAbilityComponent>())
+		{
+			foreach (
+				var _ in pendingEvents.Where(e =>
+					ability.Condition.IsSatisfiedBy(e, triggerContext)
+				)
+			)
 			{
-				var triggeredAbilities = card.GetComponents<TriggeredAbilityComponent>();
-
-				foreach (var ability in triggeredAbilities)
-				{
-					var triggerContext = new TriggerContext
+				state = state.SpawnAction(
+					new ResolveEffectAction
 					{
-						GameState = state,
+						Effects = [ability.Effect],
+						CastingPlayerId = card.ControllerId,
 						SourceCardId = card.Id,
-						ControllingPlayerId = card.ControllerId,
-					};
-
-					foreach (var pendingEvent in pendingEvents)
-					{
-						if (ability.Condition.IsSatisfiedBy(pendingEvent, triggerContext))
-						{
-							state = state.SpawnAction(
-								new ResolveEffectAction
-								{
-									Effects = ImmutableList.Create(ability.Effect),
-									CastingPlayerId = card.ControllerId,
-									SourceCardId = card.Id,
-								}
-							);
-						}
 					}
-				}
+				);
 			}
 		}
 
-		state = state with { PendingGameEvents = ImmutableList<GameEvent>.Empty };
+		return state;
+	}
 
-		// ===== STATE-BASED EFFECTS =====
+	private (GameState, ImmutableList<GameEvent>) CheckLossConditions(
+		GameState state,
+		MtgPlayer player1,
+		MtgPlayer player2
+	)
+	{
+		ImmutableList<GameEvent> events = [];
 
 		var p1ShouldLose = !player1.HasLost && player1.Life <= 0;
 		var p2ShouldLose = !player2.HasLost && player2.Life <= 0;
@@ -126,10 +160,9 @@ public record CheckStateBasedEffectsAction : GameAction
 				(false, true) => Player1Id,
 				_ => -1,
 			};
-
 			events = events.Add(new GameOverEvent { WinnerPlayerId = winnerId });
 		}
 
-		return new ActionResult(state) { Events = events };
+		return (state, events);
 	}
 }

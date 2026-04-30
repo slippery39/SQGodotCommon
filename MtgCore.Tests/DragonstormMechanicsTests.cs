@@ -73,7 +73,7 @@ public class DragonstormMechanicsTests
 	[Test]
 	public void SeethingSong_AddsNetTwoMana()
 	{
-		var card = CardLibrary.SeethingSong() with
+		var card = MakeSeethingSong() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -91,7 +91,7 @@ public class DragonstormMechanicsTests
 	[Test]
 	public void RiteOfFlame_WithNoGraveyardCopies_AddsNetOneMana()
 	{
-		var card = CardLibrary.RiteOfFlame() with
+		var card = MakeRiteOfFlame() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -110,7 +110,7 @@ public class DragonstormMechanicsTests
 		var s = _state;
 		for (var i = 0; i < 2; i++)
 		{
-			var grave = CardLibrary.RiteOfFlame() with
+			var grave = MakeRiteOfFlame() with
 			{
 				OwnerId = _ids.Player1Id,
 				ControllerId = _ids.Player1Id,
@@ -118,7 +118,7 @@ public class DragonstormMechanicsTests
 			(s, _) = s.AddObject(grave, parentId: _ids.Player1GraveyardId);
 		}
 
-		var card = CardLibrary.RiteOfFlame() with
+		var card = MakeRiteOfFlame() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -327,5 +327,72 @@ public class DragonstormMechanicsTests
 			CardId = cardId,
 			CastingPlayerId = _ids.Player1Id,
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
+		};
+
+	// Test-local cards with fixed mana values — independent of CardLibrary changes.
+
+	// Seething Song: cost 3, adds 5 mana (net +2).
+	private static Card MakeSeethingSong() =>
+		new()
+		{
+			Name = "Seething Song",
+			ManaCost = 3,
+			Components =
+			[
+				new SpellComponent
+				{
+					Effects =
+					[
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new AddTemporaryManaAction
+							{
+								Amount = 5,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
+						},
+					],
+				},
+			],
+		};
+
+	// Rite of Flame: cost 1, adds 2 base + 1 per copy in graveyard.
+	private static Card MakeRiteOfFlame() =>
+		new()
+		{
+			Name = "Rite of Flame",
+			ManaCost = 1,
+			Components =
+			[
+				new SpellComponent
+				{
+					Effects =
+					[
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new CountCardsWithNameAction
+									{
+										CardName = "Rite of Flame",
+										Zone = ZoneType.Graveyard,
+										OutputKey = "rite_count",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new AddTemporaryManaAction
+									{
+										Amount = 2,
+										BonusAmountContextKey = "rite_count",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									}
+								),
+							},
+						},
+					],
+				},
+			],
 		};
 }

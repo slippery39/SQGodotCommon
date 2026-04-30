@@ -143,6 +143,7 @@ public static class MtgGameFactory
 		{
 			PostActionProcessor = new CheckStateBasedEffectsAction
 			{
+				GameId = game.Id,
 				Player1Id = player1.Id,
 				Player2Id = player2.Id,
 				Player1BattlefieldId = p1Battlefield.Id,

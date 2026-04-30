@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -33,4 +34,11 @@ public record MtgGame : GameObject
 	/// Used by the Storm mechanic to determine the number of copies.
 	/// </summary>
 	public int SpellsCastThisTurn { get; init; } = 0;
+
+	/// <summary>
+	/// IDs of all permanents currently on the battlefield that have at least one
+	/// StaticAbilityComponent. Maintained by StaticAbilityEngine via CheckStateBasedEffectsAction.
+	/// Enables O(k) source lookup when applying statics to new permanents or cleaning up.
+	/// </summary>
+	public ImmutableHashSet<int> StaticSourceIds { get; init; } = ImmutableHashSet<int>.Empty;
 }

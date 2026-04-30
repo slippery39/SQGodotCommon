@@ -62,8 +62,17 @@ public record DealDamageAction : GameAction, ITargetedAction
 		var newDamage = creature.Damage + amount;
 		var events = ImmutableList<GameEvent>.Empty;
 
-		if (newDamage >= creature.Toughness)
+		var effectiveToughness = state.GetEffectiveStats(card.Id).Toughness;
+
+		if (newDamage >= effectiveToughness)
 		{
+			var leftEvent = new PermanentLeftBattlefieldEvent
+			{
+				CardId = card.Id,
+				OwnerId = card.OwnerId,
+			};
+			state = state with { PendingGameEvents = state.PendingGameEvents.Add(leftEvent) };
+
 			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
 			state = state.UpdateObject(
 				card.Id,
@@ -73,12 +82,7 @@ public record DealDamageAction : GameAction, ITargetedAction
 
 			var destroyedEvent = new CreatureDestroyedEvent { CreatureId = card.Id };
 			events = events.Add(destroyedEvent);
-
-			// Stage for trigger evaluation after the resolution scope closes
-			state = state with
-			{
-				PendingGameEvents = state.PendingGameEvents.Add(destroyedEvent),
-			};
+			state = state with { PendingGameEvents = state.PendingGameEvents.Add(destroyedEvent) };
 		}
 		else
 		{
@@ -108,11 +112,9 @@ public record DealDamageAction : GameAction, ITargetedAction
 
 	public override ValidationResult ValidateResolve(GameState gameState)
 	{
-		foreach (var targetId in TargetIds)
-		{
-			if (!gameState.HasObject(targetId))
-				return ValidationResult.Invalid($"Target {targetId} no longer exists");
-		}
-		return ValidationResult.Valid;
+		var missingId = TargetIds.FirstOrDefault(id => !gameState.HasObject(id));
+		return missingId != 0
+			? ValidationResult.Invalid($"Target {missingId} no longer exists")
+			: ValidationResult.Valid;
 	}
 }

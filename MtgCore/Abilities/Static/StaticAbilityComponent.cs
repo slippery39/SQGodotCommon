@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -6,8 +7,9 @@ namespace MtgCore;
 /// Abstract base for static abilities on battlefield permanents.
 /// A static ability applies a continuous effect to cards that satisfy its Filter.
 ///
-/// Subclasses own their specific effect logic. CreatureEvaluator scans all
-/// battlefield permanents for StaticAbilityComponents and applies them.
+/// Applied effects are stamped as components onto affected permanents by StaticAbilityEngine
+/// when sources or targets enter/leave the battlefield. AffectedIds is the reverse index
+/// used to find and remove those components when this source leaves play.
 ///
 /// Filter is evaluated with SourceCardId set to the permanent that carries
 /// the ability, so IsNotSelfSpecification correctly excludes the source card.
@@ -16,7 +18,12 @@ public abstract record StaticAbilityComponent : GameComponent
 {
 	/// <summary>
 	/// Determines which cards this static ability applies to.
-	/// Evaluated against each candidate creature at read time.
 	/// </summary>
 	public TargetSpecification Filter { get; init; } = new AlwaysFalseSpecification();
+
+	/// <summary>
+	/// IDs of all permanents currently affected by this ability.
+	/// Maintained by StaticAbilityEngine — used for O(k) cleanup when the source leaves play.
+	/// </summary>
+	public ImmutableHashSet<int> AffectedIds { get; init; } = ImmutableHashSet<int>.Empty;
 }

@@ -106,19 +106,25 @@ public record AttackAction : GameAction
 			ZoneType.Battlefield
 		);
 
-		var tauntCreatureIds = gameState
+		// Compute stats for all opponent creatures in one pass per creature — avoids
+		// separate scans for Taunt, Flying, and Reach checks below.
+		var opponentStats = gameState
 			.GetCardsInZone(opponentBattlefieldId)
-			.Where(c => c.HasComponent<CreatureComponent>() && gameState.GetEffectiveTaunt(c.Id))
-			.Select(c => c.Id)
-			.ToHashSet();
+			.Where(c => c.HasComponent<CreatureComponent>())
+			.Select(c => (Id: c.Id, Stats: gameState.GetEffectiveStats(c.Id)))
+			.ToList();
 
-		if (tauntCreatureIds.Count == 0)
+		var tauntIds = opponentStats.Where(x => x.Stats.HasTaunt).Select(x => x.Id).ToHashSet();
+
+		if (tauntIds.Count == 0)
 			return ValidationResult.Valid;
 
-		if (gameState.GetEffectiveFlying(AttackerId))
+		var attackerStats = gameState.GetEffectiveStats(AttackerId);
+		if (attackerStats.HasFlying)
 		{
-			var obstructingTauntIds = tauntCreatureIds
-				.Where(id => gameState.GetEffectiveFlying(id) || gameState.GetEffectiveReach(id))
+			var obstructingTauntIds = opponentStats
+				.Where(x => tauntIds.Contains(x.Id) && (x.Stats.HasFlying || x.Stats.HasReach))
+				.Select(x => x.Id)
 				.ToHashSet();
 
 			if (obstructingTauntIds.Count == 0)
@@ -132,7 +138,7 @@ public record AttackAction : GameAction
 			);
 		}
 
-		if (tauntCreatureIds.Contains(TargetId))
+		if (tauntIds.Contains(TargetId))
 			return ValidationResult.Valid;
 
 		return ValidationResult.Invalid("A Taunt creature must be attacked first");
@@ -268,6 +274,13 @@ public record AttackAction : GameAction
 
 		if (state.HasLethalDamage(card.Id))
 		{
+			var leftEvent = new PermanentLeftBattlefieldEvent
+			{
+				CardId = card.Id,
+				OwnerId = card.OwnerId,
+			};
+			state = state with { PendingGameEvents = state.PendingGameEvents.Add(leftEvent) };
+
 			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
 			state = state.MoveObject(card.Id, graveyardId);
 

@@ -4,178 +4,89 @@ using ImmutableGameObjects;
 namespace MtgCore;
 
 /// <summary>
-/// Computes effective P/T and keywords for creatures by aggregating:
-///   Pass 1 — PowerToughnessModifier components on the card itself (Giant Growth, etc.)
-///   Pass 2 — StaticAbilityComponent on battlefield permanents (lord/anthem effects)
+/// Snapshot of all effective stats for a creature, computed from the card's own components.
+/// Use GetEffectiveStats when multiple properties are needed to avoid redundant reads.
+/// </summary>
+public record CreatureStats(
+	int Power,
+	int Toughness,
+	bool HasHaste,
+	bool HasFlying,
+	bool HasTaunt,
+	bool HasReach
+);
+
+/// <summary>
+/// Computes effective P/T and keywords for creatures from components stamped onto the card.
+/// No battlefield scan — all values are O(1) reads from the card's own component list.
 ///
-/// Values are always derived at read time — never stored as computed state.
+/// Static ability effects (lord/anthem P/T boosts and keyword grants) are pre-computed by
+/// StaticAbilityEngine and stored as AppliedStaticPTBoost and AppliedKeywordComponent
+/// on each affected permanent. GetEffectiveStats reads those components directly.
+///
+/// Prefer GetEffectiveStats when multiple properties are needed. The individual methods
+/// (GetEffectivePower, etc.) delegate to it and are safe to call for single-property reads.
+///
 /// Both game actions and the UI call these methods to get effective values.
 /// </summary>
 public static class CreatureEvaluator
 {
-	public static int GetEffectivePower(this GameState state, int cardId)
+	/// <summary>
+	/// Computes all effective stats for a creature from its own components — no board scan.
+	/// </summary>
+	public static CreatureStats GetEffectiveStats(this GameState state, int cardId)
 	{
 		var card = state.GetObject(cardId) as Card;
 		if (card == null)
-			return 0;
+			return new CreatureStats(0, 0, false, false, false, false);
 
 		var creature = card.GetComponent<CreatureComponent>();
 		if (creature == null)
-			return 0;
+			return new CreatureStats(0, 0, false, false, false, false);
 
 		var power = creature.Power;
-
-		foreach (var modifier in card.GetComponents<PowerToughnessModifier>())
-			power += modifier.GetPowerBonus(state, cardId);
-
-		foreach (
-			var (_, ability) in GetApplicableStaticAbilities<StaticPTBoostAbility>(state, cardId)
-		)
-			power += ability.PowerBonus;
-
-		return power;
-	}
-
-	public static int GetEffectiveToughness(this GameState state, int cardId)
-	{
-		var card = state.GetObject(cardId) as Card;
-		if (card == null)
-			return 0;
-
-		var creature = card.GetComponent<CreatureComponent>();
-		if (creature == null)
-			return 0;
-
 		var toughness = creature.Toughness;
+		var hasHaste = creature.HasHaste;
+		var hasFlying = creature.HasFlying;
+		var hasTaunt = creature.HasTaunt;
+		var hasReach = creature.HasReach;
 
+		// Spell-based and static-ability-based P/T modifiers (AppliedStaticPTBoost is a subtype)
 		foreach (var modifier in card.GetComponents<PowerToughnessModifier>())
-			toughness += modifier.GetToughnessBonus(state, cardId);
-
-		foreach (
-			var (_, ability) in GetApplicableStaticAbilities<StaticPTBoostAbility>(state, cardId)
-		)
-			toughness += ability.ToughnessBonus;
-
-		return toughness;
-	}
-
-	/// <summary>
-	/// Returns true if the creature has haste — either intrinsic or granted by a static ability.
-	/// </summary>
-	public static bool GetEffectiveHaste(this GameState state, int cardId)
-	{
-		var card = state.GetObject(cardId) as Card;
-		if (card == null)
-			return false;
-
-		var creature = card.GetComponent<CreatureComponent>();
-		if (creature == null)
-			return false;
-
-		if (creature.HasHaste)
-			return true;
-
-		return GetApplicableStaticAbilities<StaticGrantKeywordAbility>(state, cardId)
-			.Any(x => x.Ability.GrantsHaste);
-	}
-
-	/// <summary>
-	/// Returns true if the creature has flying — either intrinsic or granted by a static ability.
-	/// Flying creatures bypass Taunt from non-flying/non-reach creatures.
-	/// </summary>
-	public static bool GetEffectiveFlying(this GameState state, int cardId)
-	{
-		var card = state.GetObject(cardId) as Card;
-		if (card == null)
-			return false;
-
-		var creature = card.GetComponent<CreatureComponent>();
-		if (creature == null)
-			return false;
-
-		if (creature.HasFlying)
-			return true;
-
-		return GetApplicableStaticAbilities<StaticGrantKeywordAbility>(state, cardId)
-			.Any(x => x.Ability.GrantsFlying);
-	}
-
-	/// <summary>
-	/// Returns true if the creature has taunt — either intrinsic or granted by a static ability.
-	/// Taunt creatures must be attacked before non-taunt targets (unless bypassed by flying).
-	/// </summary>
-	public static bool GetEffectiveTaunt(this GameState state, int cardId)
-	{
-		var card = state.GetObject(cardId) as Card;
-		if (card == null)
-			return false;
-
-		var creature = card.GetComponent<CreatureComponent>();
-		if (creature == null)
-			return false;
-
-		if (creature.HasTaunt)
-			return true;
-
-		return GetApplicableStaticAbilities<StaticGrantKeywordAbility>(state, cardId)
-			.Any(x => x.Ability.GrantsTaunt);
-	}
-
-	/// <summary>
-	/// Returns true if the creature has reach — either intrinsic or granted by a static ability.
-	/// Reach creatures can intercept flying attackers (flying does not bypass their Taunt).
-	/// </summary>
-	public static bool GetEffectiveReach(this GameState state, int cardId)
-	{
-		var card = state.GetObject(cardId) as Card;
-		if (card == null)
-			return false;
-
-		var creature = card.GetComponent<CreatureComponent>();
-		if (creature == null)
-			return false;
-
-		if (creature.HasReach)
-			return true;
-
-		return GetApplicableStaticAbilities<StaticGrantKeywordAbility>(state, cardId)
-			.Any(x => x.Ability.GrantsReach);
-	}
-
-	/// <summary>
-	/// Scans all battlefield permanents for StaticAbilityComponents of type T that apply
-	/// to the given card. SourceCardId on the targeting context is set to the permanent's ID
-	/// so that IsNotSelfSpecification works correctly for "other creatures" filters.
-	/// Only permanents controlled by the same player are scanned (sufficient for current cards).
-	/// </summary>
-	private static IEnumerable<(int SourceId, T Ability)> GetApplicableStaticAbilities<T>(
-		GameState state,
-		int cardId
-	)
-		where T : StaticAbilityComponent
-	{
-		var card = state.GetObject(cardId) as Card;
-		if (card == null)
-			yield break;
-
-		var battlefieldId = state.GetPlayerZoneId(card.ControllerId, ZoneType.Battlefield);
-
-		foreach (var permanent in state.GetCardsInZone(battlefieldId))
 		{
-			foreach (var ability in permanent.GetComponents<T>())
-			{
-				var context = new TargetingContext
-				{
-					GameState = state,
-					CastingPlayerId = card.ControllerId,
-					SourceCardId = permanent.Id,
-				};
-
-				if (ability.Filter.IsSatisfiedBy(cardId, context))
-					yield return (permanent.Id, ability);
-			}
+			power += modifier.GetPowerBonus(state, cardId);
+			toughness += modifier.GetToughnessBonus(state, cardId);
 		}
+
+		// Keyword grants from static abilities (stamped by StaticAbilityEngine)
+		foreach (var applied in card.GetComponents<AppliedKeywordComponent>())
+		{
+			hasHaste |= applied.GrantsHaste;
+			hasFlying |= applied.GrantsFlying;
+			hasTaunt |= applied.GrantsTaunt;
+			hasReach |= applied.GrantsReach;
+		}
+
+		return new CreatureStats(power, toughness, hasHaste, hasFlying, hasTaunt, hasReach);
 	}
+
+	public static int GetEffectivePower(this GameState state, int cardId) =>
+		state.GetEffectiveStats(cardId).Power;
+
+	public static int GetEffectiveToughness(this GameState state, int cardId) =>
+		state.GetEffectiveStats(cardId).Toughness;
+
+	public static bool GetEffectiveHaste(this GameState state, int cardId) =>
+		state.GetEffectiveStats(cardId).HasHaste;
+
+	public static bool GetEffectiveFlying(this GameState state, int cardId) =>
+		state.GetEffectiveStats(cardId).HasFlying;
+
+	public static bool GetEffectiveTaunt(this GameState state, int cardId) =>
+		state.GetEffectiveStats(cardId).HasTaunt;
+
+	public static bool GetEffectiveReach(this GameState state, int cardId) =>
+		state.GetEffectiveStats(cardId).HasReach;
 
 	/// <summary>
 	/// Returns true if the creature has accumulated damage >= its effective toughness.
@@ -190,7 +101,7 @@ public static class CreatureEvaluator
 		if (creature == null)
 			return false;
 
-		return creature.Damage >= state.GetEffectiveToughness(cardId);
+		return creature.Damage >= state.GetEffectiveStats(cardId).Toughness;
 	}
 
 	/// <summary>

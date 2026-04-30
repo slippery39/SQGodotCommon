@@ -32,6 +32,16 @@ public record ExileAction : GameAction, ITargetedAction
 			if (card == null)
 				continue;
 
+			if (state.GetCardZone(targetId).ZoneType == ZoneType.Battlefield)
+			{
+				var leftEvent = new PermanentLeftBattlefieldEvent
+				{
+					CardId = targetId,
+					OwnerId = card.OwnerId,
+				};
+				state = state with { PendingGameEvents = state.PendingGameEvents.Add(leftEvent) };
+			}
+
 			var exileId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Exile);
 			state = state.MoveObject(targetId, exileId);
 			events = events.Add(new CardExiledEvent { CardId = targetId, PlayerId = card.OwnerId });
@@ -42,11 +52,9 @@ public record ExileAction : GameAction, ITargetedAction
 
 	public override ValidationResult ValidateResolve(GameState gameState)
 	{
-		foreach (var targetId in TargetIds)
-		{
-			if (!gameState.HasObject(targetId))
-				return ValidationResult.Invalid($"Target {targetId} no longer exists");
-		}
-		return ValidationResult.Valid;
+		var missingId = TargetIds.FirstOrDefault(id => !gameState.HasObject(id));
+		return missingId != 0
+			? ValidationResult.Invalid($"Target {missingId} no longer exists")
+			: ValidationResult.Valid;
 	}
 }

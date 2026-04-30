@@ -59,8 +59,8 @@ public static class StateEvaluator
 
 		score += (playerCreatures.Count - opponentCreatures.Count) * CreatureCountWeight;
 
-		var playerPower = playerCreatures.Sum(c => c.GetComponent<CreatureComponent>()!.Power);
-		var opponentPower = opponentCreatures.Sum(c => c.GetComponent<CreatureComponent>()!.Power);
+		var playerPower = playerCreatures.Sum(c => state.GetEffectivePower(c.Id));
+		var opponentPower = opponentCreatures.Sum(c => state.GetEffectivePower(c.Id));
 
 		score += (playerPower - opponentPower) * TotalPowerWeight;
 

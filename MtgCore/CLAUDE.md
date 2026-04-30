@@ -16,8 +16,8 @@ MtgCore/
 ├── Effects/                 # CardEffect (data-only effect descriptor)
 ├── Events/                  # EventTypeNames, MtgEvents (includes CreatureEnteredBattlefieldEvent, CombatDamageDealtToPlayerEvent,
 │                            #   SpellCastEvent emitted by CastSpellAction, CreaturePlayedEvent emitted by CastCreatureAction)
-├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods)
-├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier
+├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods), StaticAbilityEngine (push-model ETB/LTB logic)
+├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier, AppliedStaticPTBoost
 ├── Players/                 # MtgPlayer (GameObject subclass)
 ├── Targeting/               # TargetSpecification, TargetingContext, TargetingStrategy
 │                            # Includes: IsSubtypeSpecification, IsInHandSpecification, IsSourceCardSpecification,
@@ -46,15 +46,19 @@ Cards are `GameObject` subclasses. Effects are `GameAction` subclasses — pure 
 
 ## P/T Evaluation
 
-`CreatureEvaluator` (`Extensions/CreatureEvaluator.cs`) aggregates P/T from multiple sources in order:
+`CreatureEvaluator` (`Extensions/CreatureEvaluator.cs`) aggregates P/T and keywords from multiple sources in a single battlefield scan:
 
 1. Base values on `CreatureComponent`
 2. `PowerToughnessModifier` components on the card (from spells like Giant Growth)
-3. `StaticPTBoostAbility` components on battlefield permanents controlled by the same player (lord/anthem effects)
+3. `StaticAbilityComponent` on battlefield permanents controlled by the same player — one scan covers both `StaticPTBoostAbility` and `StaticGrantKeywordAbility`
 
-Always use the extension methods `GetEffectivePower`, `GetEffectiveToughness`, `GetEffectiveHaste`, and `HasLethalDamage` on `GameState`. `AttackAction` and `DealDamageAction` must never read base values directly.
+**Prefer `GetEffectiveStats(state, cardId) → CreatureStats`** when multiple properties are needed — it reads from the card's own components, returning power, toughness, and all keywords in one O(1) pass. The individual methods (`GetEffectivePower`, `GetEffectiveToughness`, `GetEffectiveHaste`, etc.) delegate to it.
 
-`GetEffectiveHaste(state, cardId)` returns true if the creature has intrinsic `HasHaste` on `CreatureComponent` OR a `StaticGrantKeywordAbility{GrantsHaste=true}` applies to it from a battlefield permanent. `AttackAction.ValidateAdd` and `MtgActionGenerator` both call this instead of reading `HasHaste` directly.
+`AttackAction` and `DealDamageAction` must never read base values directly. `AttackAction.ValidateTauntConstraint` calls `GetEffectiveStats` once per creature to cover Taunt, Flying, and Reach checks in a single pass.
+
+**Static ability effects are pre-computed (push model):** `StaticAbilityEngine` stamps `AppliedStaticPTBoost` and `AppliedKeywordComponent` onto affected permanents via `CheckStateBasedEffectsAction` in response to `CreatureEnteredBattlefieldEvent` and `PermanentLeftBattlefieldEvent`. `GetEffectiveStats` reads those applied components directly — no board scan. `MtgGame.StaticSourceIds` caches the set of battlefield permanents with active static abilities for O(k) source lookup.
+
+`GetEffectiveHaste(state, cardId)` returns true if the creature has intrinsic `HasHaste` on `CreatureComponent` OR an `AppliedKeywordComponent{GrantsHaste=true}` is stamped on it. `AttackAction.ValidateAdd` and `MtgActionGenerator` both call this instead of reading `HasHaste` directly.
 
 ### PowerToughnessModifier
 

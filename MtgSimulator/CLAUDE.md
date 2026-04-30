@@ -60,7 +60,7 @@ Scores a non-terminal state as a weighted sum. Terminal states short-circuit.
 |--------|--------|
 | Life difference (player − opponent) | 2.0 |
 | Creature count difference | 3.0 |
-| Total base Power difference | 1.5 |
+| Total effective Power difference | 1.5 |
 | Cards in hand difference | 1.0 |
 | Player's own permanent mana (`MaxMana` only — temporary fast mana excluded) | 0.5 |
 | Win (opponent has lost) | +10000 |
@@ -93,7 +93,6 @@ When a game is flagged, `SimulatorRunner` calls `FlaggedGameSaver.TrySave()` imm
 
 ## Known Issues / Tech Debt
 
-- **`StateEvaluator` uses base Power, not effective Power** — reads `CreatureComponent.Power` directly instead of `state.GetEffectivePower(...)`. P/T modifiers (Giant Growth etc.) are invisible to the AI's board evaluation. Should be updated to use `CreatureEvaluator` extension methods to stay consistent with the rest of the engine.
 - **`IAiStrategy` is in the `MtgCore` namespace** despite its file living in `MtgSimulator/`. Should be moved to the `MtgSimulator` namespace for correctness.
 - **EventTriggerCondition migration** — see CardPool section above.
 

@@ -128,6 +128,17 @@ public record CreatureEnteredBattlefieldEvent : GameEvent
 }
 
 /// <summary>
+/// Emitted when any permanent leaves the battlefield (death, exile, sacrifice).
+/// Consumed by CheckStateBasedEffectsAction to clean up applied static ability components.
+/// Separate from CreatureDestroyedEvent — this fires for exile and sacrifice too.
+/// </summary>
+public record PermanentLeftBattlefieldEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public int OwnerId { get; init; }
+}
+
+/// <summary>
 /// Emitted when a creature deals combat damage directly to a player.
 /// Fires once per strike — twice for double-strike creatures.
 /// AttackerId is the subject so IsSourceCardSpecification filters can match it.

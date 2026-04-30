@@ -91,6 +91,12 @@ public record SacrificeAdditionalCost : AdditionalCost
 		foreach (var id in paymentIds)
 		{
 			var card = (Card)state.GetObject(id);
+			var leftEvent = new PermanentLeftBattlefieldEvent
+			{
+				CardId = id,
+				OwnerId = card.OwnerId,
+			};
+			state = state with { PendingGameEvents = state.PendingGameEvents.Add(leftEvent) };
 			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
 			state = state.MoveObject(id, graveyardId);
 		}
