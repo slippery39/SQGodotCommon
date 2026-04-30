@@ -3,6 +3,10 @@ using MtgSimulator;
 
 Console.WriteLine("MTG Simulator");
 Console.WriteLine($"  PID: {Process.GetCurrentProcess().Id}");
+Console.WriteLine(
+	$"To profile with dotTrace, run this command dotnet-trace collect --process-id {Process.GetCurrentProcess().Id} --output simulator.nettrace --duration 00:01:00"
+);
+Console.WriteLine("Then run dotnet-trace convert simulator.nettrace --format Speedscope ");
 Console.WriteLine();
 
 Console.WriteLine("Select mode:");
