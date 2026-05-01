@@ -55,8 +55,8 @@ public class SimulatorRunner
 					i + 1,
 					result,
 					finalState,
-					ids,
-					flaggedGames.Count
+					flaggedGames.Count,
+					cardNames
 				);
 				if (savedPath != null)
 					result = result with { SavedFilePath = savedPath };
@@ -163,6 +163,7 @@ public class SimulatorRunner
 		var turnLimits = results.Count(r => r.EndReason == GameEndReason.TurnLimitReached);
 		var actionLimits = results.Count(r => r.EndReason == GameEndReason.ActionLimitReached);
 		var timeLimits = results.Count(r => r.EndReason == GameEndReason.TimeLimitReached);
+		var exceptions = results.Count(r => r.EndReason == GameEndReason.UnhandledException);
 		var warnings = results.Count(r => r.HadActionWarning);
 
 		Console.WriteLine("╔═══════════════════════════════════════════════╗");
@@ -182,6 +183,7 @@ public class SimulatorRunner
 		Console.WriteLine($"  Turn limit hit:   {turnLimits} ({Pct(turnLimits, total)})");
 		Console.WriteLine($"  Action limit hit: {actionLimits} ({Pct(actionLimits, total)})");
 		Console.WriteLine($"  Time limit hit:   {timeLimits} ({Pct(timeLimits, total)})");
+		Console.WriteLine($"  Exceptions:       {exceptions} ({Pct(exceptions, total)})");
 		Console.WriteLine($"  Action warnings:  {warnings} ({Pct(warnings, total)})");
 		Console.WriteLine();
 	}
@@ -275,6 +277,14 @@ public class SimulatorRunner
 				flags.Add("ACTION LIMIT");
 			if (result.EndReason == GameEndReason.TimeLimitReached)
 				flags.Add("TIME LIMIT");
+			if (result.EndReason == GameEndReason.UnhandledException)
+			{
+				var firstLine =
+					result
+						.ExceptionMessage?.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+						.FirstOrDefault() ?? "unknown";
+				flags.Add($"EXCEPTION: {firstLine}");
+			}
 			if (result.HadActionWarning)
 				flags.Add("action warning");
 

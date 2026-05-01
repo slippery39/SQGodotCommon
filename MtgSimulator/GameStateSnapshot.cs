@@ -11,8 +11,12 @@ public record GameStateSnapshot
 	public int TurnNumber { get; init; }
 	public string ActivePlayerName { get; init; } = "";
 	public int TotalActions { get; init; }
+	public IReadOnlyList<string> StackCards { get; init; } = [];
 	public PlayerSnapshot Player1 { get; init; } = new();
 	public PlayerSnapshot Player2 { get; init; } = new();
+	public IReadOnlyList<TurnLog> TurnLogs { get; init; } = [];
+	public string? ExceptionMessage { get; init; }
+	public string? ExceptionStackTrace { get; init; }
 }
 
 public record PlayerSnapshot
@@ -21,7 +25,7 @@ public record PlayerSnapshot
 	public int Life { get; init; }
 	public int CurrentMana { get; init; }
 	public int MaxMana { get; init; }
-	public int HandCount { get; init; }
+	public IReadOnlyList<string> HandCards { get; init; } = [];
 	public int LibraryCount { get; init; }
 	public IReadOnlyList<string> GraveyardCards { get; init; } = [];
 	public IReadOnlyList<CreatureSnapshot> Battlefield { get; init; } = [];
@@ -35,4 +39,11 @@ public record CreatureSnapshot
 	public int Damage { get; init; }
 	public bool HasSummoningSickness { get; init; }
 	public bool HasAttacked { get; init; }
+}
+
+public record TurnLog
+{
+	public int TurnNumber { get; init; }
+	public string PlayerName { get; init; } = "";
+	public IReadOnlyList<string> Events { get; init; } = [];
 }

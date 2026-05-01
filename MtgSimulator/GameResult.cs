@@ -1,3 +1,5 @@
+using ImmutableGameObjects;
+
 namespace MtgSimulator;
 
 public enum GameEndReason
@@ -7,6 +9,7 @@ public enum GameEndReason
 	TurnLimitReached,
 	ActionLimitReached,
 	TimeLimitReached,
+	UnhandledException,
 }
 
 /// <summary>
@@ -66,6 +69,21 @@ public record GameResult
 	/// </summary>
 	public IReadOnlyList<string> Player2PlayedCards { get; init; } = Array.Empty<string>();
 
+	/// <summary>
+	/// All game events emitted during this game. Used by FlaggedGameSaver to produce the turn-by-turn event log.
+	/// </summary>
+	public IReadOnlyList<GameEvent> AllEvents { get; init; } = Array.Empty<GameEvent>();
+
+	/// <summary>
+	/// Set when the game ended due to an unhandled exception.
+	/// </summary>
+	public string? ExceptionMessage { get; init; }
+
+	/// <summary>
+	/// Set when the game ended due to an unhandled exception.
+	/// </summary>
+	public string? ExceptionStackTrace { get; init; }
+
 	public bool IsPlayer1Win => WinnerPlayerId == Player1Id;
 	public bool IsPlayer2Win => WinnerPlayerId == Player2Id;
 	public bool IsDraw => WinnerPlayerId == -1;
@@ -74,5 +92,6 @@ public record GameResult
 			is GameEndReason.TurnLimitReached
 				or GameEndReason.ActionLimitReached
 				or GameEndReason.TimeLimitReached
+				or GameEndReason.UnhandledException
 		|| HadActionWarning;
 }

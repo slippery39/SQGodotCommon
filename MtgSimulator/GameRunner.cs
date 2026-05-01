@@ -56,20 +56,30 @@ public class GameRunner
 	)
 	{
 		var ctx = new RunContext(initialState);
+		SeedInitialHand(initialState, ids.Player1HandId, cardNames, ctx.DrawnCards1);
+		SeedInitialHand(initialState, ids.Player2HandId, cardNames, ctx.DrawnCards2);
 
-		while (true)
+		try
 		{
-			var game = ctx.State.GetGame(ids.GameId);
+			while (true)
+			{
+				var game = ctx.State.GetGame(ids.GameId);
 
-			if (game.TurnNumber > MaxTurns)
-				return Terminate(ctx, ids, -1, GameEndReason.TurnLimitReached, game.TurnNumber);
+				if (game.TurnNumber > MaxTurns)
+					return Terminate(ctx, ids, -1, GameEndReason.TurnLimitReached, game.TurnNumber);
 
-			var strategy =
-				game.ActivePlayerId == ids.Player1Id ? _player1Strategy : _player2Strategy;
+				var strategy =
+					game.ActivePlayerId == ids.Player1Id ? _player1Strategy : _player2Strategy;
 
-			var result = RunTurn(ctx, ids, game, strategy, cardNames);
-			if (result.HasValue)
-				return result.Value;
+				var result = RunTurn(ctx, ids, game, strategy, cardNames);
+				if (result.HasValue)
+					return result.Value;
+			}
+		}
+		catch (Exception ex)
+		{
+			var turnNumber = ctx.State.TryGetGame()?.TurnNumber ?? 0;
+			return Terminate(ctx, ids, -1, GameEndReason.UnhandledException, turnNumber, ex);
 		}
 	}
 
@@ -191,7 +201,8 @@ public class GameRunner
 		MtgGameIds ids,
 		int winnerId,
 		GameEndReason endReason,
-		int turnCount
+		int turnCount,
+		Exception? exception = null
 	)
 	{
 		ctx.Timer.Stop();
@@ -210,9 +221,24 @@ public class GameRunner
 				Player2DrawnCards = ctx.DrawnCards2,
 				Player1PlayedCards = ctx.PlayedCards1,
 				Player2PlayedCards = ctx.PlayedCards2,
+				AllEvents = ctx.AllEvents,
+				ExceptionMessage = exception?.Message,
+				ExceptionStackTrace = exception?.StackTrace,
 			},
 			ctx.State
 		);
+	}
+
+	private static void SeedInitialHand(
+		GameState state,
+		int handId,
+		IReadOnlyDictionary<int, string> cardNames,
+		List<string> target
+	)
+	{
+		foreach (var cardId in state.GetChildrenIds(handId))
+			if (cardNames.TryGetValue(cardId, out var name))
+				target.Add(name);
 	}
 
 	private static void TrackDrawnCards(
