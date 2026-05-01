@@ -28,19 +28,36 @@ public abstract record GameObject
 	/// Returns the first component of type T, or null if none exists.
 	/// </summary>
 	public T? GetComponent<T>()
-		where T : GameComponent => Components.OfType<T>().FirstOrDefault();
+		where T : GameComponent
+	{
+		foreach (var c in Components)
+			if (c is T t)
+				return t;
+		return null;
+	}
 
 	/// <summary>
 	/// Returns all components of type T.
 	/// </summary>
 	public IEnumerable<T> GetComponents<T>()
-		where T : GameComponent => Components.OfType<T>();
+		where T : GameComponent
+	{
+		foreach (var c in Components)
+			if (c is T t)
+				yield return t;
+	}
 
 	/// <summary>
 	/// Returns true if this object has at least one component of type T.
 	/// </summary>
 	public bool HasComponent<T>()
-		where T : GameComponent => Components.OfType<T>().Any();
+		where T : GameComponent
+	{
+		foreach (var c in Components)
+			if (c is T)
+				return true;
+		return false;
+	}
 
 	/// <summary>
 	/// Returns a new GameObject with the given component added.

@@ -115,7 +115,10 @@ public static class MtgGameStateExtensions
 	/// </summary>
 	public static Zone GetPlayerZone(this GameState state, int playerId, ZoneType zoneType)
 	{
-		return state.GetChildren(playerId).OfType<Zone>().First(z => z.ZoneType == zoneType);
+		foreach (var id in state.GetChildrenIds(playerId))
+			if (state.GetObject(id) is Zone zone && zone.ZoneType == zoneType)
+				return zone;
+		throw new InvalidOperationException($"No zone {zoneType} for player {playerId}");
 	}
 
 	public static int GetPlayerZoneId(this GameState state, int playerId, ZoneType zoneType) =>
@@ -134,8 +137,12 @@ public static class MtgGameStateExtensions
 	/// <summary>
 	/// Returns all cards currently in the given zone.
 	/// </summary>
-	public static IEnumerable<Card> GetCardsInZone(this GameState state, int zoneId) =>
-		state.GetChildren(zoneId).OfType<Card>();
+	public static IEnumerable<Card> GetCardsInZone(this GameState state, int zoneId)
+	{
+		foreach (var id in state.GetChildrenIds(zoneId))
+			if (state.GetObject(id) is Card card)
+				yield return card;
+	}
 
 	/// <summary>
 	/// Returns the zone ID that currently contains this card.

@@ -96,10 +96,13 @@ public record GameState
 		return IdToGameObjectMap.Values.OfType<T>().FirstOrDefault();
 	}
 
-	public IEnumerable<GameObject> GetChildren(int parentId) =>
-		ParentToChildren.TryGetValue(parentId, out var childrenIds)
-			? childrenIds.Select(id => IdToGameObjectMap[id])
-			: Enumerable.Empty<GameObject>();
+	public IEnumerable<GameObject> GetChildren(int parentId)
+	{
+		if (!ParentToChildren.TryGetValue(parentId, out var childrenIds))
+			yield break;
+		foreach (var id in childrenIds)
+			yield return IdToGameObjectMap[id];
+	}
 
 	public IEnumerable<int> GetChildrenIds(int parentId) =>
 		ParentToChildren.TryGetValue(parentId, out var childrenIds)
