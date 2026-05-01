@@ -55,6 +55,13 @@ public record ActivateAbilityAction : GameAction
 		if (zone.ZoneType != ZoneType.Battlefield)
 			return ValidationResult.Invalid("Card is not on the battlefield");
 
+		var summoningSickness =
+			card.GetComponent<CreatureComponent>()?.HasSummoningSickness ?? false;
+		if (summoningSickness)
+			return ValidationResult.Invalid(
+				"This creature has summoning sickness and can't activate abilities"
+			);
+
 		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
 		if (AbilityIndex < 0 || AbilityIndex >= abilities.Count)
 			return ValidationResult.Invalid($"Ability index {AbilityIndex} is out of range");
