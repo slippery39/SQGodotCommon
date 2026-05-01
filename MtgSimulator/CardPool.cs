@@ -41,20 +41,6 @@ public static class CardPool
 			MakeCreature("Leviathan", cost: 9, power: 10, toughness: 10),
 			// ===== REMOVAL SPELLS =====
 			MakeSpell(
-				"Lightning Bolt",
-				cost: 1,
-				TargetingStrategy.SingleTarget(
-					new IsPlayerSpecification()
-						.And(new IsControlledByOpponentSpecification())
-						.Or(
-							new IsCreatureSpecification().And(
-								new IsControlledByOpponentSpecification()
-							)
-						)
-				),
-				new DealDamageAction { Amount = 3 }
-			),
-			MakeSpell(
 				"Shock",
 				cost: 1,
 				TargetingStrategy.SingleTarget(
@@ -111,14 +97,6 @@ public static class CardPool
 				new DealDamageAction { Amount = 3 }
 			),
 			// ===== BURN SPELLS =====
-			MakeSpell(
-				"Lightning Helix",
-				cost: 2,
-				TargetingStrategy.SingleTarget(
-					new IsPlayerSpecification().And(new IsControlledByOpponentSpecification())
-				),
-				new DealDamageAction { Amount = 3 }
-			),
 			MakeSpell(
 				"Lava Spike",
 				cost: 1,
