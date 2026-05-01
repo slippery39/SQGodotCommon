@@ -287,7 +287,12 @@ public class AdditionalCostTests
 			OwnerId = ownerId,
 			ControllerId = ownerId,
 			Components = ImmutableList.Create<GameComponent>(
-				new CreatureComponent { Power = 2, Toughness = 2 },
+				new CreatureComponent
+				{
+					Power = 2,
+					Toughness = 2,
+					HasHaste = true,
+				},
 				new ActivatedAbilityComponent
 				{
 					Name = "Pump",

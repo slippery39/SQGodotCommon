@@ -383,9 +383,16 @@ public class GoblinTests
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
 		};
+
+		var sgcCreature = sgc.GetComponent<CreatureComponent>()!;
+		sgcCreature = sgcCreature with { HasHaste = true }; // Bypass summoning sickness for testing the activated ability
+		sgc = sgc.WithComponentReplaced(sgcCreature) as Card;
+
 		var (s1, sgcCard) = _state.AddObject(sgc, _ids.Player1BattlefieldId);
 		var goblin = MakeGoblin(_ids.Player1Id);
+
 		var (s2, goblinCard) = s1.AddObject(goblin, _ids.Player1BattlefieldId);
+
 		var lifeBefore = s2.GetPlayer(_ids.Player2Id).Life;
 
 		var (finalState, _) = s2.AddAction(
@@ -421,6 +428,15 @@ public class GoblinTests
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
 		};
+
+		//Give Krenko haste to bypass summoning sickness and test the token creation without needing to wait a turn
+
+		var creature = krenko.GetComponent<CreatureComponent>();
+
+		creature = creature with { HasHaste = true };
+
+		krenko = krenko.WithComponentReplaced(creature) as Card;
+
 		var (s1, krenkoBf) = _state.AddObject(krenko, _ids.Player1BattlefieldId);
 		// 2 extra Goblins on battlefield alongside Krenko = 3 total
 		var (s2, _) = s1.AddObject(MakeGoblin(_ids.Player1Id), _ids.Player1BattlefieldId);

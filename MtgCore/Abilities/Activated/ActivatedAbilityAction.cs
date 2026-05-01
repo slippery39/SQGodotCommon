@@ -55,12 +55,20 @@ public record ActivateAbilityAction : GameAction
 		if (zone.ZoneType != ZoneType.Battlefield)
 			return ValidationResult.Invalid("Card is not on the battlefield");
 
-		var summoningSickness =
-			card.GetComponent<CreatureComponent>()?.HasSummoningSickness ?? false;
-		if (summoningSickness)
-			return ValidationResult.Invalid(
-				"This creature has summoning sickness and can't activate abilities"
-			);
+		var creature = card.GetComponent<CreatureComponent>();
+
+		if (creature != null)
+		{
+			//This is a design flaw in the creature and how we are handling summoning sickness
+			//But for now we have to check both. We really should only ever need to check HasSummoningSickness
+			//If a cretaure has haste, than SummoningSickness should be false automatically.
+			//We might want to make SummoningSickness a calculated property that returns either if haste is true, or if the creature has been on the battlefield since the start of its controller's turn.
+			var summoningSickness = creature.HasSummoningSickness && !creature.HasHaste;
+			if (summoningSickness)
+				return ValidationResult.Invalid(
+					"This creature has summoning sickness and can't activate abilities"
+				);
+		}
 
 		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
 		if (AbilityIndex < 0 || AbilityIndex >= abilities.Count)
