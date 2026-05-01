@@ -14,6 +14,14 @@ public abstract record TargetSpecification
 {
 	public abstract bool IsSatisfiedBy(int candidateId, TargetingContext context);
 
+	/// <summary>
+	/// Returns the candidate IDs to evaluate. Override to return only a relevant zone's
+	/// IDs instead of all game objects. IsSatisfiedBy is the correctness gate — this is
+	/// a performance superset only.
+	/// </summary>
+	public virtual IEnumerable<int> GetCandidateIds(TargetingContext context) =>
+		context.GameState.IdToGameObjectMap.Keys;
+
 	public TargetSpecification And(TargetSpecification other) =>
 		new AndSpecification { Left = this, Right = other };
 
@@ -21,6 +29,16 @@ public abstract record TargetSpecification
 		new OrSpecification { Left = this, Right = other };
 
 	public TargetSpecification Not() => new NotSpecification { Inner = this };
+}
+
+/// <summary>
+/// Base for all zone-scoped specifications. Subclasses return only the IDs from
+/// their target zone(s). AndSpecification automatically prefers a ZoneSpecification's
+/// narrow candidate set over a full-map scan when composing specs.
+/// </summary>
+public abstract record ZoneSpecification : TargetSpecification
+{
+	public abstract override IEnumerable<int> GetCandidateIds(TargetingContext context);
 }
 
 // ===== COMPOSITES =====
@@ -32,6 +50,19 @@ public record AndSpecification : TargetSpecification
 
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
 		Left.IsSatisfiedBy(candidateId, context) && Right.IsSatisfiedBy(candidateId, context);
+
+	/// <summary>
+	/// Prefers the ZoneSpecification side's narrow candidates when one side is zone-scoped.
+	/// Falls back to Left's candidates otherwise (which may itself be a narrowed spec).
+	/// </summary>
+	public override IEnumerable<int> GetCandidateIds(TargetingContext context)
+	{
+		if (Left is ZoneSpecification)
+			return Left.GetCandidateIds(context);
+		if (Right is ZoneSpecification)
+			return Right.GetCandidateIds(context);
+		return Left.GetCandidateIds(context);
+	}
 }
 
 public record OrSpecification : TargetSpecification

@@ -43,8 +43,9 @@ public record TargetingStrategy
 	/// Used by the UI to highlight selectable targets, and by AllValid/Random modes at resolution.
 	/// </summary>
 	public ImmutableList<int> GetValidTargets(TargetingContext context) =>
-		context
-			.GameState.IdToGameObjectMap.Keys.Where(id => Specification.IsSatisfiedBy(id, context))
+		Specification
+			.GetCandidateIds(context)
+			.Where(id => Specification.IsSatisfiedBy(id, context))
 			.ToImmutableList();
 
 	/// <summary>

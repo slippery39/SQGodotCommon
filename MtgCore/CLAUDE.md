@@ -19,9 +19,12 @@ MtgCore/
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods), StaticAbilityEngine (push-model ETB/LTB logic)
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier, AppliedStaticPTBoost
 ├── Players/                 # MtgPlayer (GameObject subclass)
-├── Targeting/               # TargetSpecification, TargetingContext, TargetingStrategy
-│                            # Includes: IsSubtypeSpecification, IsInHandSpecification, IsSourceCardSpecification,
-│                            #           IsNotSelfSpecification, AlwaysFalseSpecification
+├── Targeting/               # TargetSpecification (base), ZoneSpecification (abstract base for zone specs), TargetingContext, TargetingStrategy
+│                            # Zone specs: IsOnBattlefieldSpecification, IsInHandSpecification
+│                            # Other specs: IsCreatureSpecification, IsPlayerSpecification, IsSubtypeSpecification,
+│                            #              IsControlledByYouSpecification, IsControlledByOpponentSpecification,
+│                            #              IsSourceCardSpecification, IsNotSelfSpecification, AlwaysFalseSpecification
+│                            # Composites: AndSpecification (zone-first candidate narrowing), OrSpecification, NotSpecification
 ├── Triggers/                # TriggeredAbilityComponent, EventTriggerCondition, TriggerCondition
 ├── Turns/                   # BeginGameAction, SetupGameAction, StartTurnAction, EndTurnAction, TurnPhase
 ├── Zones/                   # Zone, ZoneType

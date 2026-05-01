@@ -7,6 +7,16 @@ namespace MtgCore;
 /// </summary>
 public record IsPlayerSpecification : TargetSpecification
 {
+	public override IEnumerable<int> GetCandidateIds(TargetingContext context)
+	{
+		var state = context.GameState;
+		return
+		[
+			state.GetWellKnownId(MtgObjectKeys.Player1),
+			state.GetWellKnownId(MtgObjectKeys.Player2),
+		];
+	}
+
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context)
 	{
 		if (!context.GameState.HasObject(candidateId))
@@ -22,6 +32,14 @@ public record IsPlayerSpecification : TargetSpecification
 /// </summary>
 public record IsCreatureSpecification : TargetSpecification
 {
+	public override IEnumerable<int> GetCandidateIds(TargetingContext context)
+	{
+		var state = context.GameState;
+		return state
+			.GetChildrenIds(state.GetWellKnownId(MtgObjectKeys.Player1Battlefield))
+			.Concat(state.GetChildrenIds(state.GetWellKnownId(MtgObjectKeys.Player2Battlefield)));
+	}
+
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context)
 	{
 		if (!context.GameState.HasObject(candidateId))
@@ -85,8 +103,13 @@ public record IsControlledByOpponentSpecification : TargetSpecification
 /// Matches any card currently in the casting player's hand.
 /// Use with IsSubtypeSpecification to target e.g. "a Goblin in your hand."
 /// </summary>
-public record IsInHandSpecification : TargetSpecification
+public record IsInHandSpecification : ZoneSpecification
 {
+	public override IEnumerable<int> GetCandidateIds(TargetingContext context) =>
+		context.GameState.GetChildrenIds(
+			context.GameState.GetPlayerZoneId(context.CastingPlayerId, ZoneType.Hand)
+		);
+
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context)
 	{
 		if (!context.GameState.HasObject(candidateId))
@@ -129,4 +152,33 @@ public record IsNotSelfSpecification : TargetSpecification
 public record AlwaysFalseSpecification : TargetSpecification
 {
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) => false;
+}
+
+/// <summary>
+/// Matches any card currently on either player's battlefield.
+/// Compose with other specs (e.g. IsSubtypeSpecification) to restrict to specific permanents.
+/// Being a ZoneSpecification, AndSpecification will automatically prefer this side's
+/// candidates over a full-map scan.
+/// </summary>
+public record IsOnBattlefieldSpecification : ZoneSpecification
+{
+	public override IEnumerable<int> GetCandidateIds(TargetingContext context)
+	{
+		var state = context.GameState;
+		return state
+			.GetChildrenIds(state.GetWellKnownId(MtgObjectKeys.Player1Battlefield))
+			.Concat(state.GetChildrenIds(state.GetWellKnownId(MtgObjectKeys.Player2Battlefield)));
+	}
+
+	public override bool IsSatisfiedBy(int candidateId, TargetingContext context)
+	{
+		if (!context.GameState.HasObject(candidateId))
+			return false;
+
+		if (context.GameState.GetObject(candidateId) is not Card)
+			return false;
+
+		var zone = context.GameState.GetCardZone(candidateId);
+		return zone.ZoneType == ZoneType.Battlefield;
+	}
 }
