@@ -70,7 +70,7 @@ public static class CardLibrary
 						new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.SingleTarget(
-								new IsPlayerSpecification().Or(new IsCreatureSpecification())
+								TargetSpecification.PlayersOrCreatures()
 							),
 							ActionTemplate = new DealDamageAction { Amount = 3 },
 						}
@@ -95,7 +95,7 @@ public static class CardLibrary
 						new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.SingleTarget(
-								new IsPlayerSpecification().Or(new IsCreatureSpecification())
+								TargetSpecification.PlayersOrCreatures()
 							),
 							ActionTemplate = new DealDamageAction { Amount = 3 },
 						},
@@ -263,7 +263,7 @@ public static class CardLibrary
 					Effect = new CardEffect
 					{
 						TargetingStrategy = TargetingStrategy.SingleTarget(
-							new IsPlayerSpecification().Or(new IsCreatureSpecification())
+							TargetSpecification.PlayersOrCreatures()
 						),
 						ActionTemplate = new DealDamageAction { Amount = 1 },
 					},
@@ -361,9 +361,7 @@ public static class CardLibrary
 						new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.SingleTarget(
-								new IsCreatureSpecification().And(
-									new IsControlledByYouSpecification()
-								)
+								TargetSpecification.CreatureControlledByYou()
 							),
 							ActionTemplate = new AddModifierAction
 							{
@@ -510,16 +508,16 @@ public static class CardLibrary
 				{
 					PowerBonus = 1,
 					ToughnessBonus = 1,
-					Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype }
-						.And(new IsNotSelfSpecification())
-						.And(new IsControlledByYouSpecification()),
+					Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype }.And(
+						TargetSpecification.OtherCreaturesYouControl()
+					),
 				},
 				new StaticGrantKeywordAbility
 				{
 					GrantsHaste = true,
-					Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype }
-						.And(new IsNotSelfSpecification())
-						.And(new IsControlledByYouSpecification()),
+					Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype }.And(
+						TargetSpecification.OtherCreaturesYouControl()
+					),
 				}
 			),
 		};
@@ -569,7 +567,7 @@ public static class CardLibrary
 					Effect = new CardEffect
 					{
 						TargetingStrategy = TargetingStrategy.SingleTarget(
-							new IsPlayerSpecification().Or(new IsCreatureSpecification())
+							TargetSpecification.PlayersOrCreatures()
 						),
 						ActionTemplate = new DealDamageAction { Amount = 2 },
 					},
@@ -642,7 +640,7 @@ public static class CardLibrary
 						new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.SingleTarget(
-								new IsPlayerSpecification().Or(new IsCreatureSpecification())
+								TargetSpecification.PlayersOrCreatures()
 							),
 							ActionTemplate = new DealDamageAction { Amount = 5 },
 						}
@@ -717,9 +715,7 @@ public static class CardLibrary
 						new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.SingleTarget(
-								new IsCreatureSpecification().And(
-									new IsControlledByOpponentSpecification()
-								)
+								TargetSpecification.OpponentCreatures()
 							),
 							ActionTemplate = new ExileAction(),
 						}
@@ -745,7 +741,7 @@ public static class CardLibrary
 						new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.SingleTarget(
-								new IsPlayerSpecification().Or(new IsCreatureSpecification())
+								TargetSpecification.PlayersOrCreatures()
 							),
 							ActionTemplate = new DealDamageAction { Amount = 5 },
 						}
@@ -774,9 +770,7 @@ public static class CardLibrary
 					Effect = new CardEffect
 					{
 						TargetingStrategy = TargetingStrategy.SingleTarget(
-							new IsCreatureSpecification().And(
-								new IsControlledByOpponentSpecification()
-							)
+							TargetSpecification.OpponentCreatures()
 						),
 						ActionTemplate = new DealDamageAction { Amount = 99 },
 					},
@@ -1003,13 +997,7 @@ public static class CardLibrary
 					Effect = new CardEffect
 					{
 						TargetingStrategy = TargetingStrategy.RandomTarget(
-							new IsPlayerSpecification()
-								.And(new IsControlledByOpponentSpecification())
-								.Or(
-									new IsCreatureSpecification().And(
-										new IsControlledByOpponentSpecification()
-									)
-								)
+							TargetSpecification.OpponentOrOpponentCreatures()
 						),
 						ActionTemplate = new DealDamageAction { Amount = 5 },
 					},

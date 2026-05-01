@@ -29,6 +29,27 @@ public abstract record TargetSpecification
 		new OrSpecification { Left = this, Right = other };
 
 	public TargetSpecification Not() => new NotSpecification { Inner = this };
+
+	public static TargetSpecification PlayersOrCreatures() =>
+		new IsPlayerSpecification().Or(new IsCreatureSpecification());
+
+	public static TargetSpecification CreatureControlledByYou() =>
+		new IsCreatureSpecification().And(new IsControlledByYouSpecification());
+
+	/// <summary>
+	/// Matches any creature you control except the source object itself. Used for cards like Goblin Chieftan. Assumes we are counting creatures in play.
+	/// </summary>
+	/// <returns></returns>
+	public static TargetSpecification OtherCreaturesYouControl() =>
+		new IsCreatureSpecification()
+			.And(new IsControlledByYouSpecification())
+			.And(new IsNotSelfSpecification());
+
+	public static TargetSpecification OpponentCreatures() =>
+		new IsCreatureSpecification().And(new IsControlledByOpponentSpecification());
+
+	public static TargetSpecification OpponentOrOpponentCreatures() =>
+		PlayersOrCreatures().And(new IsControlledByOpponentSpecification());
 }
 
 /// <summary>
