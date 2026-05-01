@@ -60,11 +60,13 @@ public record CheckStateBasedEffectsAction : GameAction
 		ImmutableList<GameEvent> pendingEvents
 	)
 	{
-		foreach (var e in pendingEvents.OfType<CreatureEnteredBattlefieldEvent>())
-			state = StaticAbilityEngine.ProcessPermanentEntered(state, e.CardId, GameId);
-
-		foreach (var e in pendingEvents.OfType<PermanentLeftBattlefieldEvent>())
-			state = StaticAbilityEngine.ProcessPermanentLeft(state, e.CardId, GameId);
+		foreach (var e in pendingEvents)
+		{
+			if (e is CreatureEnteredBattlefieldEvent entered)
+				state = StaticAbilityEngine.ProcessPermanentEntered(state, entered.CardId, GameId);
+			else if (e is PermanentLeftBattlefieldEvent left)
+				state = StaticAbilityEngine.ProcessPermanentLeft(state, left.CardId, GameId);
+		}
 
 		return state;
 	}
@@ -77,11 +79,9 @@ public record CheckStateBasedEffectsAction : GameAction
 		if (pendingEvents.IsEmpty)
 			return state;
 
-		var battlefieldCards = state
-			.GetCardsInZone(Player1BattlefieldId)
-			.Concat(state.GetCardsInZone(Player2BattlefieldId));
-
-		foreach (var card in battlefieldCards)
+		foreach (var card in state.GetCardsInZone(Player1BattlefieldId))
+			state = EvaluateCardTriggers(state, card, pendingEvents);
+		foreach (var card in state.GetCardsInZone(Player2BattlefieldId))
 			state = EvaluateCardTriggers(state, card, pendingEvents);
 
 		return state;
@@ -102,20 +102,17 @@ public record CheckStateBasedEffectsAction : GameAction
 
 		foreach (var ability in card.GetComponents<TriggeredAbilityComponent>())
 		{
-			foreach (
-				var _ in pendingEvents.Where(e =>
-					ability.Condition.IsSatisfiedBy(e, triggerContext)
-				)
-			)
+			foreach (var e in pendingEvents)
 			{
-				state = state.SpawnAction(
-					new ResolveEffectAction
-					{
-						Effects = [ability.Effect],
-						CastingPlayerId = card.ControllerId,
-						SourceCardId = card.Id,
-					}
-				);
+				if (ability.Condition.IsSatisfiedBy(e, triggerContext))
+					state = state.SpawnAction(
+						new ResolveEffectAction
+						{
+							Effects = [ability.Effect],
+							CastingPlayerId = card.ControllerId,
+							SourceCardId = card.Id,
+						}
+					);
 			}
 		}
 

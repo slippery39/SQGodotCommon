@@ -17,23 +17,31 @@ public static class MtgGameStateExtensions
 	// ===== GAME / TURN STATE QUERIES =====
 
 	/// <summary>
-	/// Returns the MtgGame root object, which holds global turn state.
+	/// Returns the MtgGame root object via a direct registry lookup. O(1).
+	/// </summary>
+	public static MtgGame GetGame(this GameState state) =>
+		(MtgGame)state.GetObject(state.GetWellKnownId(MtgObjectKeys.Game));
+
+	/// <summary>
+	/// Returns the MtgGame root object via a known ID. Use when the caller already
+	/// holds the game ID (e.g. CheckStateBasedEffectsAction).
 	/// </summary>
 	public static MtgGame GetGame(this GameState state, int gameId) =>
 		(MtgGame)state.GetObject(gameId);
 
 	/// <summary>
-	/// Finds the MtgGame object without knowing its ID. There is exactly one per game state.
-	/// Used by actions that need global turn state but don't carry GameId.
+	/// Returns the MtgGame root object, or null if the registry is not yet populated.
+	/// Prefer GetGame() in all normal gameplay code.
 	/// </summary>
 	public static MtgGame? TryGetGame(this GameState state) =>
-		state.IdToGameObjectMap.Values.OfType<MtgGame>().FirstOrDefault();
+		state.WellKnownIds.TryGetValue(MtgObjectKeys.Game, out var id)
+			? (MtgGame)state.GetObject(id)
+			: null;
 
 	/// <summary>
 	/// Returns the ID of the player whose turn it currently is.
 	/// </summary>
-	public static int GetActivePlayerId(this GameState state, int gameId) =>
-		state.GetGame(gameId).ActivePlayerId;
+	public static int GetActivePlayerId(this GameState state) => state.GetGame().ActivePlayerId;
 
 	/// <summary>
 	/// Returns the opponent's player ID given the active player ID and both player IDs.
@@ -110,27 +118,43 @@ public static class MtgGameStateExtensions
 	public static Zone GetZone(this GameState state, int zoneId) => (Zone)state.GetObject(zoneId);
 
 	/// <summary>
-	/// Returns the Zone of the given type owned by the given player.
+	/// Returns the ID of the given zone type owned by the given player. O(1) via registry.
 	/// Valid for: Hand, Library, Graveyard, Battlefield, Exile.
 	/// </summary>
-	public static Zone GetPlayerZone(this GameState state, int playerId, ZoneType zoneType)
+	public static int GetPlayerZoneId(this GameState state, int playerId, ZoneType zoneType)
 	{
-		foreach (var id in state.GetChildrenIds(playerId))
-			if (state.GetObject(id) is Zone zone && zone.ZoneType == zoneType)
-				return zone;
-		throw new InvalidOperationException($"No zone {zoneType} for player {playerId}");
+		var isP1 = state.GetWellKnownId(MtgObjectKeys.Player1) == playerId;
+		var key = (isP1, zoneType) switch
+		{
+			(true, ZoneType.Hand) => MtgObjectKeys.Player1Hand,
+			(true, ZoneType.Library) => MtgObjectKeys.Player1Library,
+			(true, ZoneType.Graveyard) => MtgObjectKeys.Player1Graveyard,
+			(true, ZoneType.Battlefield) => MtgObjectKeys.Player1Battlefield,
+			(true, ZoneType.Exile) => MtgObjectKeys.Player1Exile,
+			(false, ZoneType.Hand) => MtgObjectKeys.Player2Hand,
+			(false, ZoneType.Library) => MtgObjectKeys.Player2Library,
+			(false, ZoneType.Graveyard) => MtgObjectKeys.Player2Graveyard,
+			(false, ZoneType.Battlefield) => MtgObjectKeys.Player2Battlefield,
+			(false, ZoneType.Exile) => MtgObjectKeys.Player2Exile,
+			_ => throw new InvalidOperationException($"No well-known key for zone {zoneType}"),
+		};
+		return state.GetWellKnownId(key);
 	}
 
-	public static int GetPlayerZoneId(this GameState state, int playerId, ZoneType zoneType) =>
-		state.GetPlayerZone(playerId, zoneType).Id;
+	/// <summary>
+	/// Returns the Zone of the given type owned by the given player. O(1) via registry.
+	/// Valid for: Hand, Library, Graveyard, Battlefield, Exile.
+	/// </summary>
+	public static Zone GetPlayerZone(this GameState state, int playerId, ZoneType zoneType) =>
+		state.GetZone(state.GetPlayerZoneId(playerId, zoneType));
 
 	/// <summary>
-	/// Returns the Stack zone. There is exactly one Stack zone per game state.
+	/// Returns the Stack zone via a direct registry lookup. O(1).
 	/// </summary>
 	public static Zone GetStack(this GameState state) =>
-		state.IdToGameObjectMap.Values.OfType<Zone>().First(z => z.ZoneType == ZoneType.Stack);
+		state.GetZone(state.GetWellKnownId(MtgObjectKeys.Stack));
 
-	public static int GetStackId(this GameState state) => state.GetStack().Id;
+	public static int GetStackId(this GameState state) => state.GetWellKnownId(MtgObjectKeys.Stack);
 
 	// ===== CARD QUERIES =====
 

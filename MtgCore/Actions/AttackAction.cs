@@ -106,40 +106,50 @@ public record AttackAction : GameAction
 			ZoneType.Battlefield
 		);
 
-		// Compute stats for all opponent creatures in one pass per creature — avoids
-		// separate scans for Taunt, Flying, and Reach checks below.
-		var opponentStats = gameState
-			.GetCardsInZone(opponentBattlefieldId)
-			.Where(c => c.HasComponent<CreatureComponent>())
-			.Select(c => (Id: c.Id, Stats: gameState.GetEffectiveStats(c.Id)))
-			.ToList();
+		// Single pass: collect only taunt creatures — avoids allocating stats for non-taunt creatures
+		// and eliminates the three LINQ chains (Where+Select+ToList, two Where+Select+ToHashSet).
+		List<(int Id, CreatureStats Stats)>? tauntCreatures = null;
+		foreach (var c in gameState.GetCardsInZone(opponentBattlefieldId))
+		{
+			if (!c.HasComponent<CreatureComponent>())
+				continue;
+			var stats = gameState.GetEffectiveStats(c.Id);
+			if (!stats.HasTaunt)
+				continue;
+			tauntCreatures ??= [];
+			tauntCreatures.Add((c.Id, stats));
+		}
 
-		var tauntIds = opponentStats.Where(x => x.Stats.HasTaunt).Select(x => x.Id).ToHashSet();
-
-		if (tauntIds.Count == 0)
+		if (tauntCreatures is null)
 			return ValidationResult.Valid;
 
 		var attackerStats = gameState.GetEffectiveStats(AttackerId);
 		if (attackerStats.HasFlying)
 		{
-			var obstructingTauntIds = opponentStats
-				.Where(x => tauntIds.Contains(x.Id) && (x.Stats.HasFlying || x.Stats.HasReach))
-				.Select(x => x.Id)
-				.ToHashSet();
+			var hasObstructingTaunt = false;
+			var targetIsObstructing = false;
+			foreach (var (id, stats) in tauntCreatures)
+			{
+				if (stats.HasFlying || stats.HasReach)
+				{
+					hasObstructingTaunt = true;
+					if (id == TargetId)
+						targetIsObstructing = true;
+				}
+			}
 
-			if (obstructingTauntIds.Count == 0)
+			if (!hasObstructingTaunt)
 				return ValidationResult.Valid;
-
-			if (obstructingTauntIds.Contains(TargetId))
+			if (targetIsObstructing)
 				return ValidationResult.Valid;
-
 			return ValidationResult.Invalid(
 				"A Taunt creature with Flying or Reach must be attacked first"
 			);
 		}
 
-		if (tauntIds.Contains(TargetId))
-			return ValidationResult.Valid;
+		foreach (var (id, _) in tauntCreatures)
+			if (id == TargetId)
+				return ValidationResult.Valid;
 
 		return ValidationResult.Invalid("A Taunt creature must be attacked first");
 	}

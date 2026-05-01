@@ -48,7 +48,7 @@ public class ConsoleGameLoop
 				continue;
 			}
 
-			var activePlayerId = _state.GetActivePlayerId(_ids.GameId);
+			var activePlayerId = _state.GetActivePlayerId();
 
 			if (_mode == GameMode.Ai && activePlayerId == _ids.Player2Id)
 			{

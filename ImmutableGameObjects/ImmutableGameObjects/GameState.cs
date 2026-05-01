@@ -66,6 +66,30 @@ public record GameState
 	/// </summary>
 	public bool SuppressPostProcessor { get; init; } = false;
 
+	// ===== WELL-KNOWN OBJECT REGISTRY =====
+
+	/// <summary>
+	/// Maps string keys to object IDs for objects that need O(1) access throughout the game.
+	/// Populated once at game setup; never modified during play.
+	/// The game layer (e.g. MtgCore) defines the key constants — this dictionary is generic.
+	/// </summary>
+	public ImmutableDictionary<string, int> WellKnownIds { get; init; } =
+		ImmutableDictionary<string, int>.Empty;
+
+	/// <summary>
+	/// Returns the ID registered under the given key. Throws if the key is not registered.
+	/// </summary>
+	public int GetWellKnownId(string key) => WellKnownIds[key];
+
+	/// <summary>
+	/// Returns a new GameState with the given key registered to the given ID.
+	/// </summary>
+	public GameState RegisterWellKnownId(string key, int id) =>
+		this with
+		{
+			WellKnownIds = WellKnownIds.SetItem(key, id),
+		};
+
 	public bool HasPendingActions => !ActionStack.IsEmpty;
 
 	public bool IsWaitingForChoice

@@ -94,22 +94,30 @@ public static class StaticAbilityEngine
 						if (affectedCard == null)
 							continue;
 
-						var updatedComponents = affectedCard
-							.Components.Where(c =>
-								!(c is AppliedStaticPTBoost b && b.SourceCardId == leavingCardId)
-								&& !(
+						var builder = ImmutableList.CreateBuilder<GameComponent>();
+						var removed = false;
+						foreach (var c in affectedCard.Components)
+						{
+							if (
+								(c is AppliedStaticPTBoost b && b.SourceCardId == leavingCardId)
+								|| (
 									c is AppliedKeywordComponent k
 									&& k.SourceCardId == leavingCardId
 								)
 							)
-							.ToImmutableList();
+							{
+								removed = true;
+								continue;
+							}
+							builder.Add(c);
+						}
 
-						if (updatedComponents.Count != affectedCard.Components.Count)
+						if (removed)
 							state = state.UpdateObject(
 								affectedId,
 								affectedCard with
 								{
-									Components = updatedComponents,
+									Components = builder.ToImmutable(),
 								}
 							);
 					}

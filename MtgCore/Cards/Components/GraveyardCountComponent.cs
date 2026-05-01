@@ -15,8 +15,6 @@ public record GraveyardCountComponent : PowerToughnessModifier
 		CountAllGraveyardCards(state);
 
 	private static int CountAllGraveyardCards(GameState state) =>
-		state
-			.IdToGameObjectMap.Values.OfType<Zone>()
-			.Where(z => z.ZoneType == ZoneType.Graveyard)
-			.Sum(z => state.GetCardsInZone(z.Id).Count());
+		state.GetChildrenIds(state.GetWellKnownId(MtgObjectKeys.Player1Graveyard)).Count()
+		+ state.GetChildrenIds(state.GetWellKnownId(MtgObjectKeys.Player2Graveyard)).Count();
 }

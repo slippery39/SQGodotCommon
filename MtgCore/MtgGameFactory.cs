@@ -151,6 +151,22 @@ public static class MtgGameFactory
 			},
 		};
 
+		// Register all well-known object IDs for O(1) access throughout the game
+		var s17 = s16.RegisterWellKnownId(MtgObjectKeys.Game, game.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Stack, stack.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player1, player1.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player1Hand, p1Hand.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player1Library, p1Library.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player1Graveyard, p1Graveyard.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player1Battlefield, p1Battlefield.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player1Exile, p1Exile.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player2, player2.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player2Hand, p2Hand.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player2Library, p2Library.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player2Graveyard, p2Graveyard.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player2Battlefield, p2Battlefield.Id)
+			.RegisterWellKnownId(MtgObjectKeys.Player2Exile, p2Exile.Id);
+
 		var ids = new MtgGameIds(
 			GameId: game.Id,
 			StackId: stack.Id,
@@ -168,7 +184,7 @@ public static class MtgGameFactory
 			Player2ExileId: p2Exile.Id
 		);
 
-		return (s16, ids);
+		return (s17, ids);
 	}
 
 	/// <summary>
@@ -195,6 +211,7 @@ public static class MtgGameFactory
 /// Holds all the well-known IDs for a freshly created game.
 /// Passed around so callers don't need to query for these fixed objects.
 /// </summary>
+[Obsolete("Use GameState.GetWellKnownId directly instead of passing around this struct")]
 public record MtgGameIds(
 	int GameId,
 	int StackId,

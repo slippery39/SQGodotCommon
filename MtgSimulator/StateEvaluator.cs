@@ -48,26 +48,33 @@ public static class StateEvaluator
 
 		score += (player.Life - opponent.Life) * LifeWeight;
 
-		var playerCreatures = state
-			.GetCardsInZone(playerBattlefieldId)
-			.Where(c => c.HasComponent<CreatureComponent>())
-			.ToList();
-		var opponentCreatures = state
-			.GetCardsInZone(opponentBattlefieldId)
-			.Where(c => c.HasComponent<CreatureComponent>())
-			.ToList();
+		var playerCreatureCount = 0;
+		var playerPower = 0;
+		foreach (var c in state.GetCardsInZone(playerBattlefieldId))
+		{
+			if (!c.HasComponent<CreatureComponent>())
+				continue;
+			playerCreatureCount++;
+			playerPower += state.GetEffectivePower(c.Id);
+		}
 
-		score += (playerCreatures.Count - opponentCreatures.Count) * CreatureCountWeight;
+		var opponentCreatureCount = 0;
+		var opponentPower = 0;
+		foreach (var c in state.GetCardsInZone(opponentBattlefieldId))
+		{
+			if (!c.HasComponent<CreatureComponent>())
+				continue;
+			opponentCreatureCount++;
+			opponentPower += state.GetEffectivePower(c.Id);
+		}
 
-		var playerPower = playerCreatures.Sum(c => state.GetEffectivePower(c.Id));
-		var opponentPower = opponentCreatures.Sum(c => state.GetEffectivePower(c.Id));
-
+		score += (playerCreatureCount - opponentCreatureCount) * CreatureCountWeight;
 		score += (playerPower - opponentPower) * TotalPowerWeight;
 
 		score +=
 			(
-				state.GetCardsInZone(playerHandId).Count()
-				- state.GetCardsInZone(opponentHandId).Count()
+				state.GetChildrenIds(playerHandId).Count()
+				- state.GetChildrenIds(opponentHandId).Count()
 			) * CardsInHandWeight;
 
 		// Count only permanent mana (MaxMana), not temporary fast mana (CurrentMana).

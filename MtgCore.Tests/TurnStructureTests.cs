@@ -159,7 +159,7 @@ public class TurnStructureTests
 	{
 		var (finalState, _) = _state.AddAction(MakeEndTurn()).ProcessAllActions();
 
-		Assert.That(finalState.GetActivePlayerId(_ids.GameId), Is.EqualTo(_ids.Player2Id));
+		Assert.That(finalState.GetActivePlayerId(), Is.EqualTo(_ids.Player2Id));
 	}
 
 	[Test]
@@ -296,7 +296,7 @@ public class TurnStructureTests
 	{
 		var (finalState, _) = _state.BeginGame(_ids.GameId, _ids.Player1Id, _ids.Player2Id);
 
-		Assert.That(finalState.GetActivePlayerId(_ids.GameId), Is.EqualTo(_ids.Player1Id));
+		Assert.That(finalState.GetActivePlayerId(), Is.EqualTo(_ids.Player1Id));
 	}
 
 	// ===== MANA =====
