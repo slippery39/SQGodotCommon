@@ -11,7 +11,10 @@ Runs N simulated games with configurable AI strategies and reports aggregate sta
 | `GameRunner.cs` | Runs a single game to completion using two `IAiStrategy` implementations |
 | `IAiStrategy.cs` | Interface: `SelectAction` + `ResolveChoice` — all AI implementations conform to this |
 | `RandomAiStrategy.cs` | Baseline AI — picks a random legal action; used as playout policy |
-| `DepthLimitedAiStrategy.cs` | Greedy depth-limited search AI — the default strategy |
+| `DepthLimitedAiStrategy.cs` | Greedy depth-limited DFS AI — retained for comparison; not the default |
+| `BeamSearchAiStrategy.cs` | Beam search AI — the default strategy; two-bucket pruning (concrete + potential) |
+| `IPotentialEvaluator.cs` | Interface for secondary "potential" signals used during beam pruning |
+| `FastManaPotentialEvaluator.cs` | Potential evaluator that scores by current available mana (preserves fast-mana lines) |
 | `StateEvaluator.cs` | Scores a `GameState` from a given player's perspective (float) |
 | `CardPool.cs` | Defines the full card pool; `BuildRandomDeck` samples 40 random cards per game |
 | `ZooDeckFactory.cs` | Builds a fixed 40-card Zoo deck (RGW aggro) for a given player |
@@ -51,9 +54,17 @@ Flagged games (any of the above) are collected separately and printed in the fla
 
 **`RandomAiStrategy`** — picks a uniformly random legal action. Baseline; also used as the playout policy inside more sophisticated strategies.
 
-**`DepthLimitedAiStrategy`** — greedy best-first search to a fixed depth. Not minimax — opponent responses during search are not modelled (the opponent's turn plays out naturally in the game loop). Falls back to random when all actions score equally. Win cutoff: stops evaluating once a winning score (`>= StateEvaluator.WinScore`) is found at any node — propagates upward.
+**`DepthLimitedAiStrategy`** — greedy depth-first search to a fixed depth. Not minimax — opponent responses during search are not modelled. Retained for comparison; not the current default.
 
-**`IAiStrategy`** — swap implementations freely; `GameRunner` and `SimulatorRunner` only depend on the interface. Current default: `DepthLimitedAiStrategy` at depth 3 for both players.
+**`BeamSearchAiStrategy`** — beam search (breadth-first) to a fixed depth. At each level, candidates are pruned to two buckets before expanding the next level:
+- **Concrete bucket** — top N by `StateEvaluator` score (default: 10)
+- **Potential bucket** — top M per `IPotentialEvaluator` (default: 5 slots via `FastManaPotentialEvaluator`)
+
+Potential evaluators preserve setup lines (fast mana, etc.) that score poorly on the main evaluator but may enable a win condition deeper in the tree. The final action is always chosen by concrete score at the leaf level. Falls back to random among tied leaves. Current default: depth 3, concreteSlots 10, with `FastManaPotentialEvaluator` injected by default.
+
+**`IPotentialEvaluator`** — pluggable interface for secondary beam-pruning signals. Implement to add new potential heuristics (graveyard value, storm count, etc.) without touching the search logic.
+
+**`IAiStrategy`** — swap implementations freely; `GameRunner` and `SimulatorRunner` only depend on the interface.
 
 ## StateEvaluator
 
@@ -71,7 +82,7 @@ Scores a non-terminal state as a weighted sum. Terminal states short-circuit.
 
 Zone IDs are read directly from `MtgGameIds` to avoid child-list scans on every evaluation call.
 
-When tuning weights: changes here affect `DepthLimitedAiStrategy` only. `RandomAiStrategy` ignores evaluation.
+When tuning weights: changes here affect `BeamSearchAiStrategy` and `DepthLimitedAiStrategy`. `RandomAiStrategy` ignores evaluation.
 
 ## CardPool
 

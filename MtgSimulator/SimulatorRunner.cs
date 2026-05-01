@@ -43,8 +43,8 @@ public class SimulatorRunner
 			var (state, ids, cardNames) = SetupGame(gameSeed);
 
 			var aiRng = new Random(gameSeed + 4);
-			var player1Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, aiRng);
-			var player2Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, aiRng);
+			var player1Strategy = new BeamSearchAiStrategy(ids, _aiDepth, rng: aiRng);
+			var player2Strategy = new BeamSearchAiStrategy(ids, _aiDepth, rng: aiRng);
 
 			var runner = new GameRunner(player1Strategy, player2Strategy);
 			var (result, finalState) = runner.Run(state, ids, cardNames, shuffleSeed: gameSeed + 2);
