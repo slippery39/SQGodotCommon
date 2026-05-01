@@ -81,7 +81,7 @@ public record StartTurnAction : GameAction
 						{
 							HasSummoningSickness = false,
 							HasAttacked = false,
-							Damage = 0,
+							//Damage = 0,
 						}
 					),
 					ActivatedAbilityComponent ac => updatedComponents.SetItem(
