@@ -26,11 +26,11 @@ public static class GoblinsDeckFactory
 		var deck = new List<Card>();
 		AddCopies(deck, ownerId, 4, CardLibrary.GoblinGuide);
 		AddCopies(deck, ownerId, 4, CardLibrary.GoblinLackey);
-		AddCopies(deck, ownerId, 4, CardLibrary.GoblinGrenade);
+		//AddCopies(deck, ownerId, 4, CardLibrary.GoblinGrenade);
 		AddCopies(deck, ownerId, 4, CardLibrary.LightningBolt);
 		AddCopies(deck, ownerId, 2, CardLibrary.WarrenInstigator);
 		AddCopies(deck, ownerId, 2, CardLibrary.GoblinChieftain);
-		AddCopies(deck, ownerId, 2, CardLibrary.SiegeGangCommander);
+		//AddCopies(deck, ownerId, 2, CardLibrary.SiegeGangCommander);
 		AddCopies(deck, ownerId, 2, CardLibrary.KrenkoMobBoss);
 		return deck;
 	}

@@ -6,7 +6,7 @@ namespace MtgCore;
 /// <summary>
 /// Performs all pre-game setup before the first turn begins:
 ///   1. Shuffles both players' libraries
-///   2. Draws opening hands of 7 cards for both players
+///   2. Draws opening hands (size configured by BeginGameAction, default 4) for both players
 ///
 /// Spawned by BeginGameAction before StartTurnAction so that both players
 /// have a full hand when the first turn starts.
@@ -37,16 +37,17 @@ public record SetupGameAction : GameAction
 		state = state.ShuffleLibrary(Player2Id, rng2);
 
 		// Draw opening hands for both players
-		state = DrawOpeningHand(state, Player1Id);
-		state = DrawOpeningHand(state, Player2Id);
+		var (state1, events1) = DrawOpeningHand(state, Player1Id);
+		var (state2, events2) = DrawOpeningHand(state1, Player2Id);
 
-		return new ActionResult(state);
+		return new ActionResult(state2) { Events = events1.AddRange(events2) };
 	}
 
-	private GameState DrawOpeningHand(GameState state, int playerId)
+	private (GameState, ImmutableList<GameEvent>) DrawOpeningHand(GameState state, int playerId)
 	{
 		var libraryId = state.GetPlayerZoneId(playerId, ZoneType.Library);
 		var handId = state.GetPlayerZoneId(playerId, ZoneType.Hand);
+		var events = ImmutableList<GameEvent>.Empty;
 
 		for (int i = 0; i < OpeningHandSize; i++)
 		{
@@ -55,8 +56,9 @@ public record SetupGameAction : GameAction
 				break;
 
 			state = state.MoveObject(topCardId, handId);
+			events = events.Add(new CardDrawnEvent { PlayerId = playerId, CardId = topCardId });
 		}
 
-		return state;
+		return (state, events);
 	}
 }

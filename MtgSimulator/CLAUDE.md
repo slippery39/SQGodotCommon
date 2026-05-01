@@ -27,9 +27,9 @@ Runs N simulated games with configurable AI strategies and reports aggregate sta
 
 ## Architecture
 
-`SimulatorRunner` creates a game via `SetupGame()` (calls `MtgGameFactory.Create()`, builds random decks from `CardPool`, then `BeginGame`), injects two `IAiStrategy` instances into a `GameRunner`, and collects `GameResult`s. All reporting runs after all games complete.
+`SimulatorRunner` creates a game via `SetupGame()` (calls `MtgGameFactory.Create()`, builds random decks from `CardPool`), injects two `IAiStrategy` instances into a `GameRunner`, and collects `GameResult`s. All reporting runs after all games complete.
 
-`GameRunner` drives the game loop: checks for pending choices first (delegates to `activeStrategy.ResolveChoice`), then calls `MtgActionGenerator.GetLegalActions` and `activeStrategy.SelectAction`. When no legal actions remain, it auto-fires `EndTurnAction`. Events are tracked throughout for card draw tracking and game-over detection.
+`GameRunner` owns the full game lifecycle: it calls `BeginGame` at the start of `Run()`, captures the begin-game events (initial hand draws, first turn start) into `AllEvents` and `DrawnCards`, then drives the game loop. This ensures no events are lost to the caller. The loop checks for pending choices first (delegates to `activeStrategy.ResolveChoice`), then calls `MtgActionGenerator.GetLegalActions` and `activeStrategy.SelectAction`. When no legal actions remain, it auto-fires `EndTurnAction`.
 
 ## Game Limits (in `GameRunner`)
 
@@ -110,6 +110,6 @@ Each snapshot includes:
 ## Key Rules
 
 - Never duplicate legal action generation — always call `MtgActionGenerator.GetLegalActions`. Do not reimplement this in simulator code.
-- Never call `BeginGame` or construct turn actions directly — use `MtgGameStateExtensions.BeginGame` as the entry point.
+- Never call `BeginGame` from setup code — `GameRunner.Run` is responsible for calling it. Pass a pre-begin `GameState` to `Run`; it calls `BeginGame` internally and captures all resulting events.
 - `SimulatorRunner.SetupGame()` uses `MtgGameFactory.Create()` (real mana), not `CreateForTesting()`. The simulator tests real mana constraints.
 - All state mutation goes through `GameAction`s — no direct state modification in the simulator.

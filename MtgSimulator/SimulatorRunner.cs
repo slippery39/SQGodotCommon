@@ -47,7 +47,7 @@ public class SimulatorRunner
 			var player2Strategy = new DepthLimitedAiStrategy(ids, _aiDepth, aiRng);
 
 			var runner = new GameRunner(player1Strategy, player2Strategy);
-			var (result, finalState) = runner.Run(state, ids, cardNames);
+			var (result, finalState) = runner.Run(state, ids, cardNames, shuffleSeed: gameSeed + 2);
 
 			if (result.IsFlagged)
 			{
@@ -138,13 +138,6 @@ public class SimulatorRunner
 			state = newState;
 			cardNames[added.Id] = added.Name;
 		}
-
-		(state, _) = state.BeginGame(
-			ids.GameId,
-			ids.Player1Id,
-			ids.Player2Id,
-			shuffleSeed: gameSeed + 2
-		);
 
 		return (state, ids, cardNames);
 	}

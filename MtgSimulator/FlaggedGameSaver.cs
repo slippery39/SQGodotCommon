@@ -118,10 +118,8 @@ public static class FlaggedGameSaver
 	{
 		var turns = new List<TurnLog>();
 		var currentEvents = new List<string>();
-		// Player 1 always goes first; their TurnStartedEvent fires during BeginGame
-		// before any actions are recorded, so initialise to Turn 1 / Player 1 here.
-		var displayTurn = 1;
-		var playerName = "Player 1";
+		var displayTurn = 0;
+		var playerName = "Game Start";
 
 		void FlushTurn()
 		{

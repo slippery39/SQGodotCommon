@@ -50,14 +50,22 @@ public class GameRunner
 	}
 
 	public (GameResult Result, GameState FinalState) Run(
-		GameState initialState,
+		GameState preBeginState,
 		MtgGameIds ids,
-		IReadOnlyDictionary<int, string> cardNames
+		IReadOnlyDictionary<int, string> cardNames,
+		int shuffleSeed = 0
 	)
 	{
+		var (initialState, beginEvents) = preBeginState.BeginGame(
+			ids.GameId,
+			ids.Player1Id,
+			ids.Player2Id,
+			shuffleSeed
+		);
 		var ctx = new RunContext(initialState);
-		SeedInitialHand(initialState, ids.Player1HandId, cardNames, ctx.DrawnCards1);
-		SeedInitialHand(initialState, ids.Player2HandId, cardNames, ctx.DrawnCards2);
+		TrackDrawnCards(beginEvents, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);
+		TrackPlayedCards(beginEvents, ids, cardNames, ctx.PlayedCards1, ctx.PlayedCards2);
+		ctx.AllEvents.AddRange(beginEvents);
 
 		try
 		{
@@ -227,18 +235,6 @@ public class GameRunner
 			},
 			ctx.State
 		);
-	}
-
-	private static void SeedInitialHand(
-		GameState state,
-		int handId,
-		IReadOnlyDictionary<int, string> cardNames,
-		List<string> target
-	)
-	{
-		foreach (var cardId in state.GetChildrenIds(handId))
-			if (cardNames.TryGetValue(cardId, out var name))
-				target.Add(name);
 	}
 
 	private static void TrackDrawnCards(
