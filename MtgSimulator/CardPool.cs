@@ -28,17 +28,17 @@ public static class CardPool
 			MakeCreature("Elvish Warrior", cost: 2, power: 2, toughness: 3),
 			MakeCreature("Centaur Courser", cost: 3, power: 3, toughness: 3),
 			MakeCreature("Hill Giant", cost: 3, power: 3, toughness: 4),
-			MakeCreature("Bladetusk Boar", cost: 4, power: 3, toughness: 3),
-			MakeCreature("Kalonian Tusker", cost: 3, power: 3, toughness: 3),
-			MakeCreature("Wind Drake", cost: 3, power: 2, toughness: 2),
+			MakeCreature("Bladetusk Boar", cost: 4, power: 4, toughness: 4),
+			MakeCreature("Kalonian Tusker", cost: 2, power: 3, toughness: 3),
+			MakeCreature("Wind Drake", cost: 3, power: 2, toughness: 4),
 			MakeCreature("Wall of Stone", cost: 3, power: 0, toughness: 8),
-			MakeCreature("Iron Golem", cost: 4, power: 4, toughness: 4),
+			MakeCreature("Iron Golem", cost: 4, power: 5, toughness: 3),
 			// ===== BIG CREATURES =====
-			MakeCreature("Serra Angel", cost: 5, power: 4, toughness: 4),
-			MakeCreature("Mahamoti Djinn", cost: 6, power: 5, toughness: 6),
-			MakeCreature("Craw Wurm", cost: 6, power: 6, toughness: 4),
-			MakeCreature("Ancient Ooze", cost: 7, power: 6, toughness: 6),
-			MakeCreature("Leviathan", cost: 9, power: 10, toughness: 10),
+			MakeCreature("Serra Angel", cost: 5, power: 6, toughness: 6),
+			MakeCreature("Mahamoti Djinn", cost: 6, power: 7, toughness: 7),
+			MakeCreature("Craw Wurm", cost: 6, power: 8, toughness: 4),
+			MakeCreature("Ancient Ooze", cost: 7, power: 10, toughness: 10),
+			MakeCreature("Leviathan", cost: 9, power: 16, toughness: 16),
 			// ===== REMOVAL SPELLS =====
 			MakeSpell(
 				"Shock",
@@ -111,36 +111,36 @@ public static class CardPool
 				TargetingStrategy.SingleTarget(
 					new IsPlayerSpecification().And(new IsControlledByOpponentSpecification())
 				),
-				new DealDamageAction { Amount = 3 }
+				new DealDamageAction { Amount = 5 }
 			),
 			// ===== UTILITY SPELLS =====
 			MakeSpell(
 				"Healing Salve",
 				cost: 1,
 				TargetingStrategy.Self(),
-				new GainLifeAction { Amount = 3 }
+				new GainLifeAction { Amount = 10 }
 			),
 			MakeSpell(
 				"Revitalize",
 				cost: 2,
 				TargetingStrategy.Self(),
-				new GainLifeAction { Amount = 3 }
+				new GainLifeAction { Amount = 15 }
 			),
 			MakeSpell(
 				"Inspiration",
-				cost: 4,
+				cost: 3,
 				TargetingStrategy.NoTarget(),
-				new DrawCardsAction { Amount = 2, PlayerIdContextKey = ContextKeys.CastingPlayerId }
+				new DrawCardsAction { Amount = 4, PlayerIdContextKey = ContextKeys.CastingPlayerId }
 			),
 			MakeSpell(
 				"Counsel of the Soratami",
-				cost: 3,
+				cost: 2,
 				TargetingStrategy.NoTarget(),
-				new DrawCardsAction { Amount = 2, PlayerIdContextKey = ContextKeys.CastingPlayerId }
+				new DrawCardsAction { Amount = 3, PlayerIdContextKey = ContextKeys.CastingPlayerId }
 			),
 			MakeSpell(
 				"Ancestral Recall",
-				cost: 0,
+				cost: 1,
 				TargetingStrategy.NoTarget(),
 				new DrawCardsAction { Amount = 3, PlayerIdContextKey = ContextKeys.CastingPlayerId }
 			),
@@ -149,9 +149,9 @@ public static class CardPool
 			// Prodigal Sorcerer — 3 mana 1/1. "1 mana: Deal 1 damage to any opponent target."
 			MakeAbilityCreature(
 				"Prodigal Sorcerer",
-				cost: 3,
+				cost: 2,
 				power: 1,
-				toughness: 1,
+				toughness: 2,
 				new ActivatedAbilityComponent
 				{
 					Name = "Ping",
@@ -176,7 +176,7 @@ public static class CardPool
 				"Drudge Skeletons",
 				cost: 2,
 				power: 1,
-				toughness: 1,
+				toughness: 4,
 				new ActivatedAbilityComponent
 				{
 					Name = "Drain Life",
@@ -193,7 +193,7 @@ public static class CardPool
 				"Wizard Mentor",
 				cost: 3,
 				power: 2,
-				toughness: 2,
+				toughness: 5,
 				new ActivatedAbilityComponent
 				{
 					Name = "Study",
@@ -214,7 +214,7 @@ public static class CardPool
 				"Spikeshot Goblin",
 				cost: 3,
 				power: 1,
-				toughness: 1,
+				toughness: 3,
 				new ActivatedAbilityComponent
 				{
 					Name = "Spike",
@@ -268,7 +268,7 @@ public static class CardPool
 			// "When any creature dies, deal 1 damage to the opponent."
 			MakeTriggerCreature(
 				"Blood Artist",
-				cost: 3,
+				cost: 1,
 				power: 0,
 				toughness: 1,
 				new TriggeredAbilityComponent
@@ -290,7 +290,7 @@ public static class CardPool
 			// "Whenever a creature attacks, gain 1 life."
 			MakeTriggerCreature(
 				"Reconnaissance",
-				cost: 2,
+				cost: 1,
 				power: 1,
 				toughness: 2,
 				new TriggeredAbilityComponent
@@ -308,7 +308,7 @@ public static class CardPool
 			// "Whenever a creature you control enters the battlefield, draw a card."
 			MakeTriggerCreature(
 				"Mentor of the Meek",
-				cost: 4,
+				cost: 3,
 				power: 2,
 				toughness: 2,
 				new TriggeredAbilityComponent
@@ -330,7 +330,7 @@ public static class CardPool
 			// "Whenever an opponent's creature dies, deal 1 damage to the opponent."
 			MakeTriggerCreature(
 				"Vengeful Reaper",
-				cost: 3,
+				cost: 2,
 				power: 1,
 				toughness: 3,
 				new TriggeredAbilityComponent
@@ -357,7 +357,7 @@ public static class CardPool
 			// "When a creature you control dies, gain 1 life."
 			MakeTriggerCreature(
 				"Grim Watcher",
-				cost: 2,
+				cost: 1,
 				power: 2,
 				toughness: 1,
 				new TriggeredAbilityComponent
@@ -380,8 +380,8 @@ public static class CardPool
 			MakeTriggerCreature(
 				"Soul Harvester",
 				cost: 2,
-				power: 0,
-				toughness: 1,
+				power: 2,
+				toughness: 2,
 				new TriggeredAbilityComponent
 				{
 					Name = "Harvest",
@@ -406,7 +406,7 @@ public static class CardPool
 				"War Drummer",
 				cost: 2,
 				power: 1,
-				toughness: 2,
+				toughness: 3,
 				new TriggeredAbilityComponent
 				{
 					Name = "Battle Cry",
@@ -426,9 +426,9 @@ public static class CardPool
 			// "Whenever a creature you control enters the battlefield, draw a card."
 			MakeTriggerCreature(
 				"Battlefield Scholar",
-				cost: 4,
-				power: 2,
-				toughness: 2,
+				cost: 3,
+				power: 1,
+				toughness: 4,
 				new TriggeredAbilityComponent
 				{
 					Name = "Tutelage",

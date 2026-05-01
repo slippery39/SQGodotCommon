@@ -44,6 +44,7 @@ public static class CardLibrary
 			TribalFlames(),
 			QasaliPridemage(),
 			LoamLion(),
+			Slagstorm(),
 			// ===== DRAGONSTORM DECK CARDS =====
 			SleightOfHand(),
 			LotusBoom(),
@@ -70,6 +71,27 @@ public static class CardLibrary
 						new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.SingleTarget(
+								TargetSpecification.PlayersOrCreatures()
+							),
+							ActionTemplate = new DealDamageAction { Amount = 3 },
+						}
+					),
+				}
+			),
+		};
+
+	public static Card Slagstorm() =>
+		new()
+		{
+			Name = "Slagstorm",
+			ManaCost = 3,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.AllValid(
 								TargetSpecification.PlayersOrCreatures()
 							),
 							ActionTemplate = new DealDamageAction { Amount = 3 },
