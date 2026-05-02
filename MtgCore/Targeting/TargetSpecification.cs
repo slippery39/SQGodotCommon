@@ -30,6 +30,8 @@ public abstract record TargetSpecification
 
 	public TargetSpecification Not() => new NotSpecification { Inner = this };
 
+	public static TargetSpecification Creatures() => new IsCreatureSpecification();
+
 	public static TargetSpecification PlayersOrCreatures() =>
 		new IsPlayerSpecification().Or(new IsCreatureSpecification());
 

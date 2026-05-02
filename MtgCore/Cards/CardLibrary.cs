@@ -27,6 +27,8 @@ public static class CardLibrary
 			TellingTime(),
 			DarkConfidant(),
 			LlanowarElves(),
+			DoomBlade(),
+			WrathOfGod(),
 			ProdigalSorcerer(),
 			ThroneOfBone(),
 			GiantGrowth(),
@@ -54,6 +56,48 @@ public static class CardLibrary
 			HuntedDragon(),
 			BogardanHellkite(),
 			Dragonstorm(),
+		};
+
+	public static Card DoomBlade() =>
+		new()
+		{
+			Name = "Doom Blade",
+			ManaCost = 2,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								TargetSpecification.OpponentCreatures()
+							),
+							ActionTemplate = new DestroyCreatureAction(),
+						}
+					),
+				}
+			),
+		};
+
+	public static Card WrathOfGod() =>
+		new()
+		{
+			Name = "Wrath of God",
+			ManaCost = 3,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.AllValid(
+								TargetSpecification.Creatures()
+							),
+							ActionTemplate = new DestroyCreatureAction(),
+						}
+					),
+				}
+			),
 		};
 
 	/// <summary>
