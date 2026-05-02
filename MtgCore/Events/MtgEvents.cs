@@ -149,3 +149,14 @@ public record CombatDamageDealtToPlayerEvent : GameEvent
 	public int DefendingPlayerId { get; init; }
 	public int Amount { get; init; }
 }
+
+/// <summary>
+/// Emitted when a non-creature permanent enters the battlefield via ResolvePermanentAction.
+/// Used by StaticAbilityEngine and triggered abilities on enchantments and artifacts.
+/// Creature permanents continue to emit CreatureEnteredBattlefieldEvent instead.
+/// </summary>
+public record PermanentEnteredBattlefieldEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public int PlayerId { get; init; }
+}

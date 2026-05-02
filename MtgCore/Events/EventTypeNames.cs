@@ -26,4 +26,5 @@ public static class EventTypeNames
 	public const string CardExiled = nameof(CardExiledEvent);
 	public const string CreatureEnteredBattlefield = nameof(CreatureEnteredBattlefieldEvent);
 	public const string CombatDamageDealtToPlayer = nameof(CombatDamageDealtToPlayerEvent);
+	public const string PermanentEnteredBattlefield = nameof(PermanentEnteredBattlefieldEvent);
 }

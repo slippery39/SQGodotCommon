@@ -8,14 +8,16 @@ MtgCore/
 │   └── Static/              # StaticAbilityComponent (abstract), StaticPTBoostAbility, StaticGrantKeywordAbility
 ├── Actions/                 # All GameAction subclasses; ContextKeys; MtgActionGenerator
 │                            # Includes: ExileAction, PutIntoBattlefieldAction (CardIdContextKey for pipeline use), CastCreatureAction, ResolveCreatureAction
+│                            #           CastPermanentAction, ResolvePermanentAction (non-creature permanents → battlefield)
 │                            #           CreateTokenAction, CountCardsWithSubtypeAction, CountCardsWithNameAction
 │                            #           AddTemporaryManaAction, SelectCardFromLibraryAction
 ├── Costs/                   # AdditionalCost (abstract), LifeAdditionalCost, SacrificeAdditionalCost, DiscardAdditionalCost
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
-│   └── Components/          # CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach), SpellComponent (HasStorm), GraveyardCountComponent
+│   └── Components/          # PermanentComponent (battlefield marker), CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach), SpellComponent (HasStorm), GraveyardCountComponent
 ├── Effects/                 # CardEffect (data-only effect descriptor)
 ├── Events/                  # EventTypeNames, MtgEvents (includes CreatureEnteredBattlefieldEvent, CombatDamageDealtToPlayerEvent,
-│                            #   SpellCastEvent emitted by CastSpellAction, CreaturePlayedEvent emitted by CastCreatureAction)
+│                            #   SpellCastEvent emitted by CastSpellAction, CreaturePlayedEvent emitted by CastCreatureAction
+│                            #   PermanentEnteredBattlefieldEvent emitted by ResolvePermanentAction for non-creature permanents)
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods), StaticAbilityEngine (push-model ETB/LTB logic)
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier, AppliedStaticPTBoost
 ├── Players/                 # MtgPlayer (GameObject subclass)
@@ -91,6 +93,27 @@ Hearthstone-style. Both players start at `MaxMana = 0`, `CurrentMana = 0`.
 `SpellComponent.HasStorm` — when true, `ResolveSpellAction` spawns `Math.Max(SpellsCastThisTurn, 1)` copies of `ResolveEffectAction` instead of one. This gives any spell the storm mechanic for free. The storm count already includes this spell since `CastSpellAction` increments before resolution.
 
 `TryGetGame()` on `GameState` finds the `MtgGame` instance without requiring a known ID. Used by cast actions and `ResolveSpellAction` (storm handling) so they don't need to carry `GameId`.
+
+## Permanent System
+
+Cards are divided into **permanents** (stay on the battlefield after resolving) and **non-permanents** (instants and sorceries, which go to the graveyard). This is modelled via components:
+
+- **`PermanentComponent`** — marker with no data. Every card that enters the battlefield must carry this component. All creature cards in `CardLibrary` already include it. New non-creature permanents (artifacts, enchantments) must also include it.
+- **`CreatureComponent`** — combat data (power, toughness, keywords). Independent of `PermanentComponent`. A card can gain or lose creature status mid-game by adding/removing `CreatureComponent` without any zone change.
+
+**Casting routing** in `MtgActionGenerator.AddHandActions`:
+1. `HasComponent<CreatureComponent>()` → `CastCreatureAction` (handles summoning sickness setup)
+2. `HasComponent<PermanentComponent>()` and not a creature → `CastPermanentAction` → `ResolvePermanentAction` → battlefield
+3. Otherwise (`SpellComponent` only) → `CastSpellAction` → resolves and goes to graveyard
+
+**Card type identity** (Artifact, Enchantment, etc.) is stored as strings in `Card.Subtypes` — e.g., `"Artifact"` or `"Enchantment"`. Use `HasSubtype("Artifact")` in targeting specifications. `PermanentComponent` itself carries no type data.
+
+**Events**:
+- `CreatureEnteredBattlefieldEvent` — fired by `PutIntoBattlefieldAction` for creatures (cast or cheated in).
+- `PermanentEnteredBattlefieldEvent` — fired by `ResolvePermanentAction` for non-creature permanents.
+- `PermanentLeftBattlefieldEvent` — fired for all permanents leaving the battlefield (death, exile, sacrifice).
+
+**Factory rule**: Always construct creature cards through `CardLibrary` factory methods. Both `PermanentComponent` and `CreatureComponent` must be present. `CastPermanentAction.ValidateAdd` rejects cards that have `PermanentComponent` but also `CreatureComponent` — and vice versa for `CastCreatureAction`.
 
 ## Additional Costs
 

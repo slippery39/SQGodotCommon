@@ -57,6 +57,7 @@ public static class TestCardFactory
 
 	/// <summary>
 	/// A creature card with the given power and toughness.
+	/// Includes PermanentComponent as required by the permanent system invariant.
 	/// </summary>
 	public static Card MakeCreatureCard(
 		string name,
@@ -72,8 +73,32 @@ public static class TestCardFactory
 			OwnerId = ownerId,
 			ControllerId = ownerId,
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = power, Toughness = toughness }
 			),
+		};
+
+	/// <summary>
+	/// A non-creature permanent card (artifact, enchantment, etc.) with no abilities.
+	/// Includes PermanentComponent so it routes through CastPermanentAction.
+	/// Pass subtype "Artifact" or "Enchantment" as needed for targeting tests.
+	/// </summary>
+	public static Card MakePermanentCard(
+		string name,
+		int ownerId,
+		int manaCost = 2,
+		string subtype = ""
+	) =>
+		new()
+		{
+			Name = name,
+			ManaCost = manaCost,
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+			Subtypes = string.IsNullOrEmpty(subtype)
+				? ImmutableList<string>.Empty
+				: ImmutableList.Create(subtype),
+			Components = ImmutableList.Create<GameComponent>(new PermanentComponent()),
 		};
 
 	/// <summary>

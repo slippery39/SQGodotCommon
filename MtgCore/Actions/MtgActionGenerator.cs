@@ -67,6 +67,10 @@ public static class MtgActionGenerator
 			{
 				AddCreatureAction(state, playerId, card, costPayments, actions);
 			}
+			else if (card.HasComponent<PermanentComponent>())
+			{
+				AddPermanentAction(state, playerId, card, costPayments, actions);
+			}
 			else
 			{
 				AddSpellAction(state, playerId, card, costPayments, actions);
@@ -83,6 +87,24 @@ public static class MtgActionGenerator
 	)
 	{
 		var action = new CastCreatureAction
+		{
+			CardId = card.Id,
+			CastingPlayerId = playerId,
+			AdditionalCostPayments = costPayments,
+		};
+		if (state.TryAddAction(action).Success)
+			actions.Add(action);
+	}
+
+	private static void AddPermanentAction(
+		GameState state,
+		int playerId,
+		Card card,
+		ImmutableDictionary<int, ImmutableList<int>> costPayments,
+		List<GameAction> actions
+	)
+	{
+		var action = new CastPermanentAction
 		{
 			CardId = card.Id,
 			CastingPlayerId = playerId,

@@ -307,6 +307,7 @@ public static class CardLibrary
 			Name = "Dark Confidant",
 			ManaCost = 2,
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 1, Toughness = 4 },
 				new TriggeredAbilityComponent
 				{
@@ -354,6 +355,7 @@ public static class CardLibrary
 			Name = "Prodigal Sorcerer",
 			ManaCost = 3,
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 1, Toughness = 1 },
 				new ActivatedAbilityComponent
 				{
@@ -382,6 +384,7 @@ public static class CardLibrary
 			Name = "Throne of Bone",
 			ManaCost = 1,
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 1, Toughness = 1 },
 				new ActivatedAbilityComponent
 				{
@@ -487,6 +490,7 @@ public static class CardLibrary
 			Name = "Goblin",
 			Subtypes = ImmutableList.Create(GoblinSubtype),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 1, Toughness = 1 }
 			),
 		};
@@ -503,6 +507,7 @@ public static class CardLibrary
 			ManaCost = 1,
 			Subtypes = ImmutableList.Create(GoblinSubtype, "Scout"),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent
 				{
 					Power = 2,
@@ -524,6 +529,7 @@ public static class CardLibrary
 			ManaCost = 1,
 			Subtypes = ImmutableList.Create(GoblinSubtype),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 1, Toughness = 1 },
 				new TriggeredAbilityComponent
 				{
@@ -558,6 +564,7 @@ public static class CardLibrary
 			ManaCost = 2,
 			Subtypes = ImmutableList.Create(GoblinSubtype, "Berserker"),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent
 				{
 					Power = 1,
@@ -597,6 +604,7 @@ public static class CardLibrary
 			ManaCost = 3,
 			Subtypes = ImmutableList.Create(GoblinSubtype),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent
 				{
 					Power = 2,
@@ -633,6 +641,7 @@ public static class CardLibrary
 			ManaCost = 5,
 			Subtypes = ImmutableList.Create(GoblinSubtype),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 2, Toughness = 2 },
 				new TriggeredAbilityComponent
 				{
@@ -686,6 +695,7 @@ public static class CardLibrary
 			ManaCost = 4,
 			Subtypes = ImmutableList.Create(GoblinSubtype, "Warrior"),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 3, Toughness = 3 },
 				new ActivatedAbilityComponent
 				{
@@ -761,6 +771,7 @@ public static class CardLibrary
 			ManaCost = 1,
 			Subtypes = ImmutableList.Create("Cat", "Warrior"),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 2, Toughness = 2 }
 			),
 		};
@@ -776,6 +787,7 @@ public static class CardLibrary
 			ManaCost = 1,
 			Subtypes = ImmutableList.Create("Ape"),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 2, Toughness = 3 }
 			),
 		};
@@ -792,6 +804,7 @@ public static class CardLibrary
 			ManaCost = 2,
 			Subtypes = ImmutableList.Create("Lhurgoyf"),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 0, Toughness = 1 },
 				new GraveyardCountComponent { Duration = ModifierDuration.Permanent }
 			),
@@ -804,6 +817,7 @@ public static class CardLibrary
 			ManaCost = 1,
 			Subtypes = ImmutableList.Create("Elf", "Druid"),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 1, Toughness = 1 },
 				new ActivatedAbilityComponent
 				{
@@ -886,6 +900,7 @@ public static class CardLibrary
 			ManaCost = 2,
 			Subtypes = ImmutableList.Create("Cat", "Wizard"),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 2, Toughness = 2 },
 				new ActivatedAbilityComponent
 				{
@@ -913,6 +928,7 @@ public static class CardLibrary
 			ManaCost = 1,
 			Subtypes = ImmutableList.Create("Cat"),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent { Power = 2, Toughness = 3 }
 			),
 		};
@@ -1082,6 +1098,7 @@ public static class CardLibrary
 			ManaCost = 10,
 			Subtypes = ImmutableList.Create(DragonSubtype, "Lizard"),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent
 				{
 					Power = 10,
@@ -1104,6 +1121,7 @@ public static class CardLibrary
 			ManaCost = 8,
 			Subtypes = ImmutableList.Create(DragonSubtype),
 			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
 				new CreatureComponent
 				{
 					Power = 5,
