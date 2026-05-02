@@ -71,7 +71,10 @@ public record CheckStateBasedEffectsAction : GameAction
 					GameId
 				);
 			else if (e is PermanentLeftBattlefieldEvent left)
+			{
 				state = StaticAbilityEngine.ProcessPermanentLeft(state, left.CardId, GameId);
+				state = DetachEquipmentFromLeavingCard(state, left.CardId);
+			}
 		}
 
 		return state;
@@ -122,6 +125,40 @@ public record CheckStateBasedEffectsAction : GameAction
 			}
 		}
 
+		return state;
+	}
+
+	private GameState DetachEquipmentFromLeavingCard(GameState state, int leavingCardId)
+	{
+		//NOTE - If we can already have the permanent that left the battlefield from the event
+		//then do we really need to loop through everything here? Maybe we can just look at the equipment that is attached to it and update those directly?
+		foreach (
+			var card in state
+				.GetCardsInZone(Player1BattlefieldId)
+				.Concat(state.GetCardsInZone(Player2BattlefieldId))
+		)
+		{
+			var equip = card.GetComponent<EquipmentComponent>();
+			if (equip == null || equip.EquippedToCardId != leavingCardId)
+				continue;
+
+			var updatedComponents = card.Components;
+			for (int i = 0; i < updatedComponents.Count; i++)
+			{
+				if (updatedComponents[i] is EquipmentComponent e)
+				{
+					updatedComponents = updatedComponents.SetItem(
+						i,
+						e with
+						{
+							EquippedToCardId = 0,
+						}
+					);
+					break;
+				}
+			}
+			state = state.UpdateObject(card.Id, card with { Components = updatedComponents });
+		}
 		return state;
 	}
 

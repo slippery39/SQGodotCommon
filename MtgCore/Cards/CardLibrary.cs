@@ -33,6 +33,7 @@ public static class CardLibrary
 			SolRing(),
 			GloriousAnthem(),
 			PhyrexianArena(),
+			Bonesplitter(),
 			ProdigalSorcerer(),
 			ThroneOfBone(),
 			GiantGrowth(),
@@ -604,6 +605,40 @@ public static class CardLibrary
 								}
 							),
 						},
+					},
+				}
+			),
+		};
+
+	// ===== EQUIPMENT =====
+
+	public static Card Bonesplitter() =>
+		new()
+		{
+			Name = "Bonesplitter",
+			ManaCost = 1,
+			Subtypes = ImmutableList.Create("Artifact", "Equipment"),
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new EquipmentComponent { PowerBonus = 2, ToughnessBonus = 0 },
+				new ActivatedAbilityComponent
+				{
+					Name = "Equip",
+					ManaCost = 1,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.SingleTarget(
+							new AndSpecification
+							{
+								Left = new IsOnBattlefieldSpecification(),
+								Right = new AndSpecification
+								{
+									Left = new IsCreatureSpecification(),
+									Right = new IsControlledByYouSpecification(),
+								},
+							}
+						),
+						ActionTemplate = new AttachEquipmentAction(),
 					},
 				}
 			),

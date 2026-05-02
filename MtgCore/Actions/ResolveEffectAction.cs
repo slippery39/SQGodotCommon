@@ -53,22 +53,21 @@ public record ResolveEffectAction : GameAction
 				? targeted.WithTargets(resolvedTargets)
 				: effect.ActionTemplate;
 
-			// Seed CastingPlayerId so PlayerIdContextKey resolution works
-			// regardless of whether the action is a pipeline or standalone
+			// Seed CastingPlayerId and SourceCardId so context-key-based actions
+			// (PlayerIdContextKey, EquipmentCardIdContextKey, etc.) resolve correctly
+			// regardless of whether the action is a pipeline or standalone.
 			action = action is PipelineAction pipeline
 				? pipeline with
 				{
-					PipelineContext = pipeline.PipelineContext.SetItem(
-						ContextKeys.CastingPlayerId,
-						CastingPlayerId
-					),
+					PipelineContext = pipeline
+						.PipelineContext.SetItem(ContextKeys.CastingPlayerId, CastingPlayerId)
+						.SetItem(ContextKeys.SourceCardId, SourceCardId),
 				}
 				: action with
 				{
-					InputContext = action.InputContext.SetItem(
-						ContextKeys.CastingPlayerId,
-						CastingPlayerId
-					),
+					InputContext = action
+						.InputContext.SetItem(ContextKeys.CastingPlayerId, CastingPlayerId)
+						.SetItem(ContextKeys.SourceCardId, SourceCardId),
 				};
 
 			spawnedActions = spawnedActions.Add(action);

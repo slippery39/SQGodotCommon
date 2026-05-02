@@ -11,6 +11,9 @@ public static class ContextKeys
 	/// <summary>Injected by ResolveSpellAction into pipeline context for self-targeting effects.</summary>
 	public const string CastingPlayerId = "casting_player_id";
 
+	/// <summary>Injected by ResolveEffectAction so ITargetedActions can identify their source card.</summary>
+	public const string SourceCardId = "source_card_id";
+
 	// ===== SHARED EFFECT KEYS =====
 	/// <summary>ID of a card revealed from the top of a library.</summary>
 	public const string RevealedCardId = "revealed_card_id";

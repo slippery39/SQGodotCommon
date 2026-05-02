@@ -11,15 +11,18 @@ MtgCore/
 │                            #           CastPermanentAction, ResolvePermanentAction (non-creature permanents → battlefield)
 │                            #           CreateTokenAction, CountCardsWithSubtypeAction, CountCardsWithNameAction
 │                            #           AddTemporaryManaAction, SelectCardFromLibraryAction
+│                            #           AttachEquipmentAction (ITargetedAction; reads equipment ID from ContextKeys.SourceCardId)
 ├── Costs/                   # AdditionalCost (abstract), LifeAdditionalCost, SacrificeAdditionalCost, DiscardAdditionalCost
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
 │   └── Components/          # PermanentComponent (battlefield marker), CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach), SpellComponent (HasStorm), GraveyardCountComponent
+│                            # EquipmentComponent (PowerBonus, ToughnessBonus, EquippedToCardId — tracks attachment state)
 ├── Effects/                 # CardEffect (data-only effect descriptor)
 ├── Events/                  # EventTypeNames, MtgEvents (includes CreatureEnteredBattlefieldEvent, CombatDamageDealtToPlayerEvent,
 │                            #   SpellCastEvent emitted by CastSpellAction, CreaturePlayedEvent emitted by CastCreatureAction
 │                            #   PermanentEnteredBattlefieldEvent emitted by ResolvePermanentAction for non-creature permanents)
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods), StaticAbilityEngine (push-model ETB/LTB logic)
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier, AppliedStaticPTBoost
+│                            # EquippedBoostComponent (stamped on creature by AttachEquipmentAction; removed on detach/creature-death)
 ├── Players/                 # MtgPlayer (GameObject subclass)
 ├── Targeting/               # TargetSpecification (base), ZoneSpecification (abstract base for zone specs), TargetingContext, TargetingStrategy
 │                            # Zone specs: IsOnBattlefieldSpecification, IsInHandSpecification
@@ -114,6 +117,26 @@ Cards are divided into **permanents** (stay on the battlefield after resolving) 
 - `PermanentLeftBattlefieldEvent` — fired for all permanents leaving the battlefield (death, exile, sacrifice).
 
 **Factory rule**: Always construct creature cards through `CardLibrary` factory methods. Both `PermanentComponent` and `CreatureComponent` must be present. `CastPermanentAction.ValidateAdd` rejects cards that have `PermanentComponent` but also `CreatureComponent` — and vice versa for `CastCreatureAction`.
+
+## Equipment System
+
+Equipment is an Artifact subtype that stays on the battlefield and can be attached to creatures you control.
+
+**Components on the equipment card:**
+- `PermanentComponent` — battlefield marker (same as all permanents)
+- `EquipmentComponent` — `PowerBonus`, `ToughnessBonus`, `EquippedToCardId` (0 = unequipped)
+- `ActivatedAbilityComponent` — equip activated ability with `ManaCost` and `AttachEquipmentAction` as `ActionTemplate`
+
+**`AttachEquipmentAction` (ITargetedAction):**
+- Gets the equipment card ID from `InputContext[ContextKeys.SourceCardId]` (injected by `ResolveEffectAction`)
+- Gets the target creature from `TargetIds` (injected by `WithTargets` at resolution time)
+- Removes `EquippedBoostComponent(SourceCardId == equipmentId)` from the previously-equipped creature (if re-equipping)
+- Updates `EquipmentComponent.EquippedToCardId` on the equipment card
+- Stamps `EquippedBoostComponent` onto the target creature — extends `PowerToughnessModifier` so `CreatureEvaluator` picks it up with no changes
+
+**Detach on creature death:** `CheckStateBasedEffectsAction.DetachEquipmentFromLeavingCard` scans both battlefields for equipment whose `EquippedToCardId` matches the leaving card ID, and resets it to 0. The `EquippedBoostComponent` on the creature is left as-is since the creature is leaving anyway.
+
+**`ContextKeys.SourceCardId`:** Added alongside `CastingPlayerId`. `ResolveEffectAction` injects both into the action's `InputContext` before spawning it, enabling any `ITargetedAction` to identify its source card.
 
 ## Additional Costs
 
