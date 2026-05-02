@@ -31,6 +31,8 @@ public static class CardLibrary
 			WrathOfGod(),
 			Mox(),
 			SolRing(),
+			GloriousAnthem(),
+			PhyrexianArena(),
 			ProdigalSorcerer(),
 			ThroneOfBone(),
 			GiantGrowth(),
@@ -533,6 +535,74 @@ public static class CardLibrary
 						{
 							PlayerIdContextKey = ContextKeys.CastingPlayerId,
 							Amount = 2,
+						},
+					},
+				}
+			),
+		};
+
+	// ===== ENCHANTMENTS =====
+
+	/// <summary>
+	/// Glorious Anthem — 3 mana enchantment.
+	/// "Creatures you control get +1/+1."
+	/// Global static boost applied via StaticAbilityEngine push model.
+	/// </summary>
+	public static Card GloriousAnthem() =>
+		new()
+		{
+			Name = "Glorious Anthem",
+			ManaCost = 3,
+			Subtypes = ImmutableList.Create("Enchantment"),
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new StaticPTBoostAbility
+				{
+					PowerBonus = 1,
+					ToughnessBonus = 1,
+					Filter = new IsCreatureSpecification(),
+				}
+			),
+		};
+
+	/// <summary>
+	/// Phyrexian Arena — 3 mana enchantment.
+	/// "At the beginning of your upkeep, you draw a card and you lose 1 life."
+	/// Triggered on TurnStarted; draws one card and costs one life each turn.
+	/// </summary>
+	public static Card PhyrexianArena() =>
+		new()
+		{
+			Name = "Phyrexian Arena",
+			ManaCost = 3,
+			Subtypes = ImmutableList.Create("Enchantment"),
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new TriggeredAbilityComponent
+				{
+					Name = "Draw and Pay",
+					Condition = new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.TurnStarted,
+						Filter = new IsControlledByYouSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new PipelineAction
+						{
+							Steps = ImmutableList.Create<GameAction>(
+								new DrawCardsAction
+								{
+									Amount = 1,
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								},
+								new LoseLifeAction
+								{
+									Amount = 1,
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								}
+							),
 						},
 					},
 				}

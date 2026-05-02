@@ -64,6 +64,12 @@ public record CheckStateBasedEffectsAction : GameAction
 		{
 			if (e is CreatureEnteredBattlefieldEvent entered)
 				state = StaticAbilityEngine.ProcessPermanentEntered(state, entered.CardId, GameId);
+			else if (e is PermanentEnteredBattlefieldEvent permanentEntered)
+				state = StaticAbilityEngine.ProcessPermanentEntered(
+					state,
+					permanentEntered.CardId,
+					GameId
+				);
 			else if (e is PermanentLeftBattlefieldEvent left)
 				state = StaticAbilityEngine.ProcessPermanentLeft(state, left.CardId, GameId);
 		}
