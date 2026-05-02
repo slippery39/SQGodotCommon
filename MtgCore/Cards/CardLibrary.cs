@@ -260,15 +260,16 @@ public static class CardLibrary
 		new()
 		{
 			Name = "Dark Confidant",
-			ManaCost = 0,
+			ManaCost = 2,
 			Components = ImmutableList.Create<GameComponent>(
-				new CreatureComponent { Power = 1, Toughness = 5 },
+				new CreatureComponent { Power = 1, Toughness = 4 },
 				new TriggeredAbilityComponent
 				{
 					Name = "Dark Condidant Trigger",
 					Condition = new EventTriggerCondition
 					{
 						EventTypeName = EventTypeNames.TurnStarted,
+						Filter = new IsControlledByYouSpecification(),
 					},
 					Effect = new CardEffect
 					{
@@ -280,44 +281,14 @@ public static class CardLibrary
 								{
 									PlayerIdContextKey = ContextKeys.CastingPlayerId,
 								},
-								new AddTemporaryManaAction
-								{
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									Amount = 4,
-								},
 								new GainLifeAction
 								{
-									//player who owns dark confidant loses life equal to the mana cost of the card
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									AmountContextKey = ContextKeys.RevealedCardManaCost,
-								},
-								new GainLifeAction
-								{
-									//player who owns dark confidant loses life equal to the mana cost of the card
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									AmountContextKey = ContextKeys.RevealedCardManaCost,
-								},
-								new GainLifeAction
-								{
-									//player who owns dark confidant loses life equal to the mana cost of the card
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									AmountContextKey = ContextKeys.RevealedCardManaCost,
-								},
-								new GainLifeAction
-								{
-									//player who owns dark confidant loses life equal to the mana cost of the card
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									AmountContextKey = ContextKeys.RevealedCardManaCost,
-								},
-								new GainLifeAction
-								{
-									//player who owns dark confidant loses life equal to the mana cost of the card
 									PlayerIdContextKey = ContextKeys.CastingPlayerId,
 									AmountContextKey = ContextKeys.RevealedCardManaCost,
 								},
 								new DrawCardsAction
 								{
-									Amount = 2,
+									Amount = 1,
 									PlayerIdContextKey = ContextKeys.CastingPlayerId,
 								}
 							),

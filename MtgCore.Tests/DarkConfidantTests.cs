@@ -160,6 +160,24 @@ public class DarkConfidantTests
 		);
 	}
 
+	[Test]
+	public void TurnStartedTrigger_DoesNotFireOnOpponentTurn()
+	{
+		var (s1, _) = AddCardToTopOfLibrary(_state, _ids.Player1Id, manaCost: 3);
+		var s2 = TestCardFactory.AddCardsToLibrary(s1, _ids.Player1Id, "Filler A", "Filler B");
+		var (s3, _) = AddDarkConfidantToBattlefield(s2, _ids.Player1Id);
+
+		// Trigger P2's turn — DC is controlled by P1, so it must not fire
+		var (finalState, _) = s3.AddAction(MakeStartTurn(_ids.Player2Id, skipDraw: true))
+			.ProcessAllActions();
+
+		Assert.That(
+			finalState.GetCardsInZone(_ids.Player1HandId).Count(),
+			Is.EqualTo(0),
+			"Dark Confidant must not draw cards on the opponent's turn"
+		);
+	}
+
 	// ===== HELPERS =====
 
 	private (GameState, Card) AddCardToTopOfLibrary(GameState state, int ownerId, int manaCost)
@@ -193,6 +211,7 @@ public class DarkConfidantTests
 					Condition = new EventTriggerCondition
 					{
 						EventTypeName = EventTypeNames.TurnStarted,
+						Filter = new IsControlledByYouSpecification(),
 					},
 					Effect = new CardEffect
 					{
