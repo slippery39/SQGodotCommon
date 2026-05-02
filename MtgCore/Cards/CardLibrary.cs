@@ -26,6 +26,7 @@ public static class CardLibrary
 			CarefulStudy(),
 			TellingTime(),
 			DarkConfidant(),
+			LlanowarElves(),
 			ProdigalSorcerer(),
 			ThroneOfBone(),
 			GiantGrowth(),
@@ -749,6 +750,31 @@ public static class CardLibrary
 			Components = ImmutableList.Create<GameComponent>(
 				new CreatureComponent { Power = 0, Toughness = 1 },
 				new GraveyardCountComponent { Duration = ModifierDuration.Permanent }
+			),
+		};
+
+	public static Card LlanowarElves() =>
+		new()
+		{
+			Name = "Llanowar Elves",
+			ManaCost = 1,
+			Subtypes = ImmutableList.Create("Elf", "Druid"),
+			Components = ImmutableList.Create<GameComponent>(
+				new CreatureComponent { Power = 1, Toughness = 1 },
+				new ActivatedAbilityComponent
+				{
+					Name = "Mana Ramp",
+					ManaCost = 0,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new AddTemporaryManaAction
+						{
+							PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							Amount = 1,
+						},
+					},
+				}
 			),
 		};
 

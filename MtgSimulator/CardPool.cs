@@ -21,7 +21,6 @@ public static class CardPool
 			MakeCreature("Jackal Pup", cost: 1, power: 2, toughness: 1),
 			MakeCreature("Savannah Lions", cost: 1, power: 2, toughness: 1),
 			MakeCreature("Raging Goblin", cost: 1, power: 1, toughness: 1),
-			MakeCreature("Llanowar Elves", cost: 1, power: 1, toughness: 1),
 			// ===== MIDRANGE CREATURES =====
 			MakeCreature("Grizzly Bears", cost: 2, power: 2, toughness: 2),
 			MakeCreature("Runeclaw Bear", cost: 2, power: 2, toughness: 2),
