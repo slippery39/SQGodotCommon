@@ -29,6 +29,8 @@ public static class CardLibrary
 			LlanowarElves(),
 			DoomBlade(),
 			WrathOfGod(),
+			Mox(),
+			SolRing(),
 			ProdigalSorcerer(),
 			ThroneOfBone(),
 			GiantGrowth(),
@@ -473,6 +475,66 @@ public static class CardLibrary
 							},
 						}
 					),
+				}
+			),
+		};
+
+	// ===== ARTIFACTS =====
+
+	/// <summary>
+	/// Mox (generic) — 0 mana artifact.
+	/// Once per turn: add 1 mana. Tap is proxied as HasActivated — no tap cost implemented yet.
+	/// </summary>
+	public static Card Mox() =>
+		new()
+		{
+			Name = "Mox",
+			ManaCost = 0,
+			Subtypes = ImmutableList.Create("Artifact"),
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new ActivatedAbilityComponent
+				{
+					Name = "Add Mana",
+					ManaCost = 0,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new AddTemporaryManaAction
+						{
+							PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							Amount = 1,
+						},
+					},
+				}
+			),
+		};
+
+	/// <summary>
+	/// Sol Ring — 1 mana artifact.
+	/// Once per turn: add 2 mana. Tap is proxied as HasActivated — no tap cost implemented yet.
+	/// </summary>
+	public static Card SolRing() =>
+		new()
+		{
+			Name = "Sol Ring",
+			ManaCost = 1,
+			Subtypes = ImmutableList.Create("Artifact"),
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new ActivatedAbilityComponent
+				{
+					Name = "Add Mana",
+					ManaCost = 0,
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new AddTemporaryManaAction
+						{
+							PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							Amount = 2,
+						},
+					},
 				}
 			),
 		};
