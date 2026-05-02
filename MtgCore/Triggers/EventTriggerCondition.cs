@@ -101,6 +101,7 @@ public record EventTriggerCondition : TriggerCondition
 			CardDiscardedEvent e => e.CardId,
 			CardRevealedEvent e => e.CardId,
 			SpellCastEvent e => e.CardId,
+			PermanentPlayedEvent e => e.CardId,
 			TurnStartedEvent e => e.PlayerId,
 			TurnEndedEvent e => e.PlayerId,
 			CreatureEnteredBattlefieldEvent e => e.CardId,

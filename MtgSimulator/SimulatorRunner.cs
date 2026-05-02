@@ -183,17 +183,22 @@ public class SimulatorRunner
 
 	private static void PrintCardReport(List<GameResult> results)
 	{
-		var p1Stats = new Dictionary<string, (int Drawn, int DrawnInWin)>();
-		var p2Stats = new Dictionary<string, (int Drawn, int DrawnInWin)>();
+		var p1DrawnStats = new Dictionary<string, (int Count, int Wins)>();
+		var p2DrawnStats = new Dictionary<string, (int Count, int Wins)>();
+		var p1PlayedStats = new Dictionary<string, (int Count, int Wins)>();
+		var p2PlayedStats = new Dictionary<string, (int Count, int Wins)>();
 
 		foreach (var result in results)
 		{
-			UpdateCardStats(p1Stats, result.Player1DrawnCards, result.IsPlayer1Win);
-			UpdateCardStats(p2Stats, result.Player2DrawnCards, result.IsPlayer2Win);
+			UpdateCardStats(p1DrawnStats, result.Player1DrawnCards, result.IsPlayer1Win);
+			UpdateCardStats(p2DrawnStats, result.Player2DrawnCards, result.IsPlayer2Win);
+			UpdateCardStats(p1PlayedStats, result.Player1PlayedCards, result.IsPlayer1Win);
+			UpdateCardStats(p2PlayedStats, result.Player2PlayedCards, result.IsPlayer2Win);
 		}
 
-		var allNames = p1Stats.Keys.Union(p2Stats.Keys).OrderBy(n => n).ToList();
+		var allNames = p1DrawnStats.Keys.Union(p2DrawnStats.Keys).OrderBy(n => n).ToList();
 
+		// --- Drawn table ---
 		Console.WriteLine("  --- Card Win Rate When Drawn ---");
 		Console.WriteLine();
 		Console.WriteLine(
@@ -201,24 +206,77 @@ public class SimulatorRunner
 		);
 		Console.WriteLine($"  {new string('-', 72)}");
 
-		var rows = allNames
+		var drawnRows = allNames
 			.Select(name =>
 			{
-				p1Stats.TryGetValue(name, out var p1);
-				p2Stats.TryGetValue(name, out var p2);
-				var combined = WinRate(p1.DrawnInWin + p2.DrawnInWin, p1.Drawn + p2.Drawn);
+				p1DrawnStats.TryGetValue(name, out var p1);
+				p2DrawnStats.TryGetValue(name, out var p2);
+				var combined = WinRate(p1.Wins + p2.Wins, p1.Count + p2.Count);
 				return (name, p1, p2, combined);
 			})
 			.OrderByDescending(r => r.combined)
 			.ToList();
 
-		foreach (var (name, p1, p2, combined) in rows)
+		foreach (var (name, p1, p2, combined) in drawnRows)
 		{
-			var p1WinPct = p1.Drawn > 0 ? $"{WinRate(p1.DrawnInWin, p1.Drawn):F1}%" : "  n/a";
-			var p2WinPct = p2.Drawn > 0 ? $"{WinRate(p2.DrawnInWin, p2.Drawn):F1}%" : "  n/a";
+			var p1WinPct = p1.Count > 0 ? $"{WinRate(p1.Wins, p1.Count):F1}%" : NotAvailable;
+			var p2WinPct = p2.Count > 0 ? $"{WinRate(p2.Wins, p2.Count):F1}%" : NotAvailable;
 
 			Console.WriteLine(
-				$"  {name, -25} {p1.Drawn, 9} {p1WinPct, 8} {p2.Drawn, 9} {p2WinPct, 8} {combined, 8:F1}%"
+				$"  {name, -25} {p1.Count, 9} {p1WinPct, 8} {p2.Count, 9} {p2WinPct, 8} {combined, 8:F1}%"
+			);
+		}
+
+		Console.WriteLine();
+
+		// --- Played table ---
+		// Sorted by play rate ascending so "dead" cards (drawn but rarely played) appear first.
+		Console.WriteLine("  --- Card Win Rate When Played ---");
+		Console.WriteLine();
+		Console.WriteLine(
+			$"  {"Card", -25} {"Drawn", 7} {"Played", 8} {"Play%", 7} {"P1 Win%", 8} {"P2 Win%", 8} {"Combined", 9}"
+		);
+		Console.WriteLine($"  {new string('-', 76)}");
+
+		var playedRows = allNames
+			.Select(name =>
+			{
+				p1DrawnStats.TryGetValue(name, out var p1Drawn);
+				p2DrawnStats.TryGetValue(name, out var p2Drawn);
+				p1PlayedStats.TryGetValue(name, out var p1Played);
+				p2PlayedStats.TryGetValue(name, out var p2Played);
+				var totalDrawn = p1Drawn.Count + p2Drawn.Count;
+				var totalPlayed = p1Played.Count + p2Played.Count;
+				var playRate = totalDrawn > 0 ? 100.0 * totalPlayed / totalDrawn : 0;
+				var combined = WinRate(
+					p1Played.Wins + p2Played.Wins,
+					p1Played.Count + p2Played.Count
+				);
+				return (name, p1Played, p2Played, totalDrawn, totalPlayed, playRate, combined);
+			})
+			.OrderBy(r => r.playRate)
+			.ToList();
+
+		foreach (
+			var (
+				name,
+				p1Played,
+				p2Played,
+				totalDrawn,
+				totalPlayed,
+				playRate,
+				combined
+			) in playedRows
+		)
+		{
+			var p1WinPct =
+				p1Played.Count > 0 ? $"{WinRate(p1Played.Wins, p1Played.Count):F1}%" : NotAvailable;
+			var p2WinPct =
+				p2Played.Count > 0 ? $"{WinRate(p2Played.Wins, p2Played.Count):F1}%" : NotAvailable;
+			var combinedStr = totalPlayed > 0 ? $"{combined:F1}%" : NotAvailable;
+
+			Console.WriteLine(
+				$"  {name, -25} {totalDrawn, 7} {totalPlayed, 8} {playRate, 6:F1}% {p1WinPct, 8} {p2WinPct, 8} {combinedStr, 9}"
 			);
 		}
 
@@ -317,4 +375,5 @@ public class SimulatorRunner
 	private static double WinRate(int wins, int drawn) => drawn == 0 ? 0 : 100.0 * wins / drawn;
 
 	private const string SaveDirectory = "flagged_games";
+	private const string NotAvailable = "  n/a";
 }

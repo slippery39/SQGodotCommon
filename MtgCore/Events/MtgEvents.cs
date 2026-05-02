@@ -78,6 +78,12 @@ public record CreaturePlayedEvent : GameEvent
 	public int PlayerId { get; init; }
 }
 
+public record PermanentPlayedEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public int PlayerId { get; init; }
+}
+
 /// <summary>
 /// Emitted when a player's loss condition is triggered (life <= 0 or empty library).
 /// </summary>

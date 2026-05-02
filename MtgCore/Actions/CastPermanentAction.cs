@@ -95,11 +95,14 @@ public record CastPermanentAction : GameAction
 				}
 			);
 
+		var playedEvent = new PermanentPlayedEvent { CardId = CardId, PlayerId = CastingPlayerId };
+		state = state with { PendingGameEvents = state.PendingGameEvents.Add(playedEvent) };
+
 		return new ActionResult(
 			state.SpawnAction(
 				new ResolvePermanentAction { CardId = CardId, CastingPlayerId = CastingPlayerId }
 			)
-		);
+		).WithEvent(playedEvent);
 	}
 
 	private GameState PayAdditionalCosts(GameState state, Card card)

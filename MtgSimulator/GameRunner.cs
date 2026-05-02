@@ -279,6 +279,11 @@ public class GameRunner
 				cardId = cp.CardId;
 				playerId = cp.PlayerId;
 			}
+			else if (e is PermanentPlayedEvent pe)
+			{
+				cardId = pe.CardId;
+				playerId = pe.PlayerId;
+			}
 			else
 				continue;
 

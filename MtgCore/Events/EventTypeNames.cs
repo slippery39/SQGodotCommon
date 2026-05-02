@@ -27,4 +27,6 @@ public static class EventTypeNames
 	public const string CreatureEnteredBattlefield = nameof(CreatureEnteredBattlefieldEvent);
 	public const string CombatDamageDealtToPlayer = nameof(CombatDamageDealtToPlayerEvent);
 	public const string PermanentEnteredBattlefield = nameof(PermanentEnteredBattlefieldEvent);
+
+	public const string PermanentPlayed = nameof(PermanentPlayedEvent);
 }

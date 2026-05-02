@@ -168,6 +168,8 @@ public static class FlaggedGameSaver
 				$"{P(cast.CastingPlayerId, player1Id)} cast {C(cast.CardId, cardNames)}",
 			CreaturePlayedEvent played =>
 				$"{P(played.PlayerId, player1Id)} played {C(played.CardId, cardNames)}",
+			PermanentPlayedEvent played =>
+				$"{P(played.PlayerId, player1Id)} played {C(played.CardId, cardNames)}",
 			SpellResolvedEvent resolved => $"{C(resolved.CardId, cardNames)} resolved",
 			CreatureEnteredBattlefieldEvent entered =>
 				$"{C(entered.CardId, cardNames)} entered the battlefield under {P(entered.PlayerId, player1Id)}'s control",
