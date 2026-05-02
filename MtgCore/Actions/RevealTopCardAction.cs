@@ -14,10 +14,14 @@ namespace MtgCore;
 public record RevealTopCardAction : GameAction
 {
 	public int PlayerId { get; init; }
+	public string PlayerIdContextKey { get; init; } = "";
 
 	public override ActionResult Execute(GameState gameState)
 	{
-		var libraryId = gameState.GetPlayerZoneId(PlayerId, ZoneType.Library);
+		var playerId = string.IsNullOrEmpty(PlayerIdContextKey)
+			? PlayerId
+			: GetInput<int>(PlayerIdContextKey, 0);
+		var libraryId = gameState.GetPlayerZoneId(playerId, ZoneType.Library);
 		var topCardId = gameState.GetChildrenIds(libraryId).FirstOrDefault();
 
 		if (topCardId == 0)
@@ -31,7 +35,7 @@ public record RevealTopCardAction : GameAction
 			.WithEvent(
 				new CardRevealedEvent
 				{
-					PlayerId = PlayerId,
+					PlayerId = playerId,
 					CardId = topCardId,
 					ManaCost = topCard.ManaCost,
 				}

@@ -39,6 +39,7 @@ public static class DragonstormDeckFactory
 		AddCopies(deck, ownerId, 8, CardLibrary.RiteOfFlame);
 		AddCopies(deck, ownerId, 4, CardLibrary.SeethingSong);
 		AddCopies(deck, ownerId, 8, CardLibrary.LotusBoom);
+		AddCopies(deck, ownerId, 4, CardLibrary.DarkConfidant);
 		return deck;
 	}
 

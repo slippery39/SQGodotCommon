@@ -115,12 +115,14 @@ public record StartTurnAction : GameAction
 				new DrawCardsAction { PlayerId = ActivePlayerId, Amount = BonusDraws }
 			);
 
-		var finalState = spawned.IsEmpty ? state : state.SpawnActions(spawned);
-		return new ActionResult(finalState)
+		var turnStartedEvent = new TurnStartedEvent { PlayerId = ActivePlayerId };
+		var stateWithEvent = (spawned.IsEmpty ? state : state.SpawnActions(spawned)) with
 		{
-			Events = ImmutableList.Create<GameEvent>(
-				new TurnStartedEvent { PlayerId = ActivePlayerId }
-			),
+			PendingGameEvents = state.PendingGameEvents.Add(turnStartedEvent),
+		};
+		return new ActionResult(stateWithEvent)
+		{
+			Events = ImmutableList.Create<GameEvent>(turnStartedEvent),
 		};
 	}
 }

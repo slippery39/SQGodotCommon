@@ -260,9 +260,70 @@ public static class CardLibrary
 		new()
 		{
 			Name = "Dark Confidant",
-			ManaCost = 2,
+			ManaCost = 0,
 			Components = ImmutableList.Create<GameComponent>(
-				new CreatureComponent { Power = 2, Toughness = 1 }
+				new CreatureComponent { Power = 1, Toughness = 5 },
+				new TriggeredAbilityComponent
+				{
+					Name = "Dark Condidant Trigger",
+					Condition = new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.TurnStarted,
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new PipelineAction
+						{
+							Steps = ImmutableList.Create<GameAction>(
+								new RevealTopCardAction
+								{
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								},
+								new AddTemporaryManaAction
+								{
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									Amount = 4,
+								},
+								new GainLifeAction
+								{
+									//player who owns dark confidant loses life equal to the mana cost of the card
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									AmountContextKey = ContextKeys.RevealedCardManaCost,
+								},
+								new GainLifeAction
+								{
+									//player who owns dark confidant loses life equal to the mana cost of the card
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									AmountContextKey = ContextKeys.RevealedCardManaCost,
+								},
+								new GainLifeAction
+								{
+									//player who owns dark confidant loses life equal to the mana cost of the card
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									AmountContextKey = ContextKeys.RevealedCardManaCost,
+								},
+								new GainLifeAction
+								{
+									//player who owns dark confidant loses life equal to the mana cost of the card
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									AmountContextKey = ContextKeys.RevealedCardManaCost,
+								},
+								new GainLifeAction
+								{
+									//player who owns dark confidant loses life equal to the mana cost of the card
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									AmountContextKey = ContextKeys.RevealedCardManaCost,
+								},
+								new DrawCardsAction
+								{
+									Amount = 2,
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								}
+							),
+						},
+					},
+				}
 			),
 		};
 
