@@ -728,13 +728,19 @@ public record GameState
 			pipeline.CurrentStep as ChoiceAction
 			?? throw new InvalidOperationException("Current pipeline step is not a ChoiceAction");
 
-		if (selectedIds.Count < choiceStep.MinChoices || selectedIds.Count > choiceStep.MaxChoices)
+		var options = choiceStep.GetOptions(this, pipeline.PipelineContext);
+		var effectiveMin = Math.Min(choiceStep.MinChoices, options.Count);
+
+		if (selectedIds.Count < effectiveMin || selectedIds.Count > choiceStep.MaxChoices)
 			throw new InvalidOperationException(
 				$"Must select between {choiceStep.MinChoices} and {choiceStep.MaxChoices} options"
 			);
 
-		var choiceOutput = selectedIds.Count == 1 ? (object)selectedIds[0] : selectedIds;
-		var updatedContext = pipeline.PipelineContext.SetItem(choiceStep.OutputKey, choiceOutput);
+		object choiceOutput = selectedIds.Count == 1 ? selectedIds[0] : selectedIds;
+		var updatedContext =
+			selectedIds.Count == 0
+				? pipeline.PipelineContext
+				: pipeline.PipelineContext.SetItem(choiceStep.OutputKey, choiceOutput);
 		var advancedPipeline = pipeline with
 		{
 			CurrentStepIndex = pipeline.CurrentStepIndex + 1,
