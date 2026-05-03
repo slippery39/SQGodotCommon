@@ -53,6 +53,7 @@ public static class CardLibrary
 			QasaliPridemage(),
 			LoamLion(),
 			Slagstorm(),
+			GeistOfSaintTraft(),
 			// ===== DRAGONSTORM DECK CARDS =====
 			SleightOfHand(),
 			LotusBoom(),
@@ -205,6 +206,9 @@ public static class CardLibrary
 										Amount = 2,
 										PlayerIdContextKey = ContextKeys.CastingPlayerId,
 									},
+									//Selecting cards and discarding could created from some sort of factory method or builder which would
+									//abstract these details of creating this specific type of effect. And we could also, make a factory
+									//method for Draw and Discard specifically which would combine all these effects in one for easy use.
 									new SelectCardsFromHandAction
 									{
 										Prompt = "Choose 2 cards to discard",
@@ -1078,7 +1082,68 @@ public static class CardLibrary
 						TargetingStrategy = TargetingStrategy.SingleTarget(
 							TargetSpecification.OpponentCreatures()
 						),
-						ActionTemplate = new DealDamageAction { Amount = 99 },
+						ActionTemplate = new DealDamageAction { Amount = 10 },
+					},
+				}
+			),
+		};
+
+	public static Card GeistOfSaintTraft() =>
+		new()
+		{
+			Name = "Geist of Saint Traft",
+			ManaCost = 3,
+			Subtypes = ImmutableList.Create("Spirit"),
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 2, Toughness = 2 },
+				new TriggeredAbilityComponent
+				{
+					Name = "Geist Attack Trigger",
+					Condition = new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.CreatureAttacked,
+						Filter = new IsSourceCardSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new CreateTokenAction
+						{
+							TokenTemplate = new Card
+							{
+								Name = "Angel Token",
+								Subtypes = ImmutableList.Create("Angel"),
+								Components = ImmutableList.Create<GameComponent>(
+									new PermanentComponent(),
+									new CreatureComponent
+									{
+										Power = 4,
+										Toughness = 4,
+										HasFlying = true,
+										HasHaste = true,
+									},
+									new TriggeredAbilityComponent
+									{
+										Name = "Angel Sacrifice Trigger",
+										Condition = new EventTriggerCondition
+										{
+											EventTypeName = EventTypeNames.TurnEnded,
+											Filter = new IsControlledByYouSpecification(),
+										},
+
+										Effect = new CardEffect
+										{
+											TargetingStrategy = TargetingStrategy.AllValid(
+												new IsSourceCardSpecification()
+											),
+											ActionTemplate = new DestroyCreatureAction { },
+										},
+									}
+								),
+							},
+							Count = 1,
+						},
 					},
 				}
 			),
