@@ -117,11 +117,8 @@ public class SimulatorRunner
 
 		// Krenko and Siege-Gang Commander excluded: token flood causes search blowup.
 		// See DesignNotes.md — symmetry reduction needed before re-enabling.
-		var excludedCards = new HashSet<string> { "Krenko, Mob Boss", "Siege-Gang Commander" };
-		var pool = CardPool
-			.All.Concat(CardLibrary.All)
-			.Where(c => !excludedCards.Contains(c.Name))
-			.ToList();
+		var excludedCards = new HashSet<string> { };
+		var pool = CardLibrary.All.Where(c => !excludedCards.Contains(c.Name)).ToList();
 
 		var deck1 = CardPool.BuildRandomDeck(ids.Player1Id, pool, rng: new Random(gameSeed));
 		foreach (var card in deck1)

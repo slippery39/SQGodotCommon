@@ -54,6 +54,15 @@ public static class CardLibrary
 			LoamLion(),
 			Slagstorm(),
 			GeistOfSaintTraft(),
+			WallOfThorns(),
+			RagingGoblin(),
+			HillGiant(),
+			GrizzlyBears(),
+			KalonianTusker(),
+			IronGolem(),
+			CrawWurm(),
+			AncestralRecall(),
+			MahamotiDjinn(),
 			// ===== DRAGONSTORM DECK CARDS =====
 			SleightOfHand(),
 			LotusBoom(),
@@ -64,6 +73,23 @@ public static class CardLibrary
 			Dragonstorm(),
 		};
 
+	/*
+	-static builders that can be accessed from anywhere for ease of use.
+	-should we have a fluent builder type syntax? Or something else?
+		Spell.WithManaCost(2).WithDestroyCreatureEffect().WithSingleTarget().OpponentCreatures()
+
+		Another way this would allow us to chain multiple effects onto one card.
+		Spell.WithManaCost(2).WithEffect(eb=> eb.WithDestroyCreatureEffect().WithSingleTarget().OpponentCreatures())
+
+		Example for lightning bolt
+		Spell.WithManaCost(1).WithEffect(ev=> eb.WithDamageEffect().WithSingleTarget().OpponentOrOpponentCreature());
+
+		Or with Ancestrall Recall
+		Spell.WithManaCost(1).WithEffect(eb=> eb.WithDrawCardsEffect(3).WithTargetingStrategy(TargetingStrategy.Self());
+
+		This greatly simplifies the card creation process, should make it easier to design and modify cards.
+
+	*/
 	public static Card DoomBlade() =>
 		new()
 		{
@@ -82,6 +108,131 @@ public static class CardLibrary
 						}
 					),
 				}
+			),
+		};
+
+	public static Card GrizzlyBears() =>
+		new()
+		{
+			Name = "Grizzly Bears",
+			ManaCost = 2,
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 2, Toughness = 2 }
+			),
+		};
+
+	public static Card HillGiant() =>
+		new()
+		{
+			Name = "Hill Giant",
+			ManaCost = 3,
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 3, Toughness = 4 }
+			),
+		};
+
+	public static Card KalonianTusker() =>
+		new()
+		{
+			Name = "Kalonian Tusker",
+			ManaCost = 2,
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 3, Toughness = 3 }
+			),
+		};
+
+	public static Card IronGolem() =>
+		new()
+		{
+			Name = "Iron Golem",
+			ManaCost = 4,
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 5, Toughness = 5 }
+			),
+			Subtypes = ImmutableList.Create("Golem"),
+		};
+
+	public static Card MahamotiDjinn() =>
+		new()
+		{
+			Name = "Mahamoti Djinn",
+			ManaCost = 6,
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent
+				{
+					Power = 6,
+					Toughness = 7,
+					HasFlying = true,
+				}
+			),
+			Subtypes = ImmutableList.Create("Djinn"),
+		};
+
+	public static Card CrawWurm() =>
+		new()
+		{
+			Name = "Craw Wurm",
+			ManaCost = 6,
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 8, Toughness = 4 }
+			),
+			Subtypes = ImmutableList.Create("Wurm"),
+		};
+
+	public static Card AncestralRecall() =>
+		new()
+		{
+			Name = "Ancestral Recall",
+			ManaCost = 1,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new DrawCardsAction
+							{
+								Amount = 3,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
+						}
+					),
+				}
+			),
+		};
+
+	public static Card RagingGoblin() =>
+		new()
+		{
+			Name = "Raging Goblin",
+			ManaCost = 1,
+			Subtypes = ImmutableList.Create(GoblinSubtype),
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent
+				{
+					Power = 1,
+					Toughness = 1,
+					HasHaste = true,
+				}
+			),
+		};
+
+	public static Card SavannahLions() =>
+		new()
+		{
+			Name = "Savannah Lions",
+			ManaCost = 1,
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 2, Toughness = 1 }
 			),
 		};
 
@@ -1084,6 +1235,23 @@ public static class CardLibrary
 						),
 						ActionTemplate = new DealDamageAction { Amount = 10 },
 					},
+				}
+			),
+		};
+
+	public static Card WallOfThorns() =>
+		new()
+		{
+			Name = "Wall of Thorns",
+			ManaCost = 3,
+			Subtypes = ImmutableList.Create("Plant"),
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent
+				{
+					Power = 2,
+					Toughness = 5,
+					HasTaunt = true,
 				}
 			),
 		};

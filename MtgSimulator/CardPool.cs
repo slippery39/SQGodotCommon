@@ -16,28 +16,6 @@ public static class CardPool
 	public static IReadOnlyList<Card> All { get; } =
 		new List<Card>
 		{
-			// ===== CHEAP AGGRESSIVE CREATURES =====
-			MakeCreature("Goblin Raider", cost: 1, power: 2, toughness: 1),
-			MakeCreature("Jackal Pup", cost: 1, power: 2, toughness: 1),
-			MakeCreature("Savannah Lions", cost: 1, power: 2, toughness: 1),
-			MakeCreature("Raging Goblin", cost: 1, power: 1, toughness: 1),
-			// ===== MIDRANGE CREATURES =====
-			MakeCreature("Grizzly Bears", cost: 2, power: 2, toughness: 2),
-			MakeCreature("Runeclaw Bear", cost: 2, power: 2, toughness: 2),
-			MakeCreature("Elvish Warrior", cost: 2, power: 2, toughness: 3),
-			MakeCreature("Centaur Courser", cost: 3, power: 3, toughness: 3),
-			MakeCreature("Hill Giant", cost: 3, power: 3, toughness: 4),
-			MakeCreature("Bladetusk Boar", cost: 4, power: 4, toughness: 4),
-			MakeCreature("Kalonian Tusker", cost: 2, power: 3, toughness: 3),
-			MakeCreature("Wind Drake", cost: 3, power: 2, toughness: 4),
-			MakeCreature("Wall of Stone", cost: 3, power: 0, toughness: 8),
-			MakeCreature("Iron Golem", cost: 4, power: 5, toughness: 3),
-			// ===== BIG CREATURES =====
-			MakeCreature("Serra Angel", cost: 5, power: 6, toughness: 6),
-			MakeCreature("Mahamoti Djinn", cost: 6, power: 7, toughness: 7),
-			MakeCreature("Craw Wurm", cost: 6, power: 8, toughness: 4),
-			MakeCreature("Ancient Ooze", cost: 7, power: 10, toughness: 10),
-			MakeCreature("Leviathan", cost: 9, power: 16, toughness: 16),
 			// ===== REMOVAL SPELLS =====
 			MakeSpell(
 				"Shock",
