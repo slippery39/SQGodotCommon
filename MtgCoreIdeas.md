@@ -59,3 +59,14 @@ Lands -> Permanent Cards, do not use the stack (so they don't need to resolve li
 -> Has a natural option reducing capability for the simulator (lands cannot be played after a certain point, so it reduces the amount of options at once)
 
 MTG Simulator - 10 draws happened out of 100,000 games. But we didn't flag those games. Why are they drawing? Is there some combination of cards that can cause a draw to happen? (Maybe something with blood artist)
+
+HasSummoningSickness and Haste do not work consistently across the codebase. This is a design flaw.
+
+The AI should consider just "ending the turn" as a relevant move. This is for states in which ending the turn would be better than doing something which would not be beneficial for the player.
+
+It would be nice, if we could have ContextKeys automatically applied to all of our actions, or at least enforced via an interface.
+
+We need to consolidate the targeting system. Are we creating a new action for each target? Or are we looping through actions based on targets?
+
+Also LoseLifeAction allows us to supply a context key to for a player to lose life, and an amount. Deal Damage, Gain life do not offer these possibilities.
+This is confusing, can we consolidate this somehow?
