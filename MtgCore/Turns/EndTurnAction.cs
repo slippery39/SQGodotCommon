@@ -12,12 +12,6 @@ namespace MtgCore;
 ///     (i.e. when Player 2 ends their turn — both players have gone)
 ///   - Spawns StartTurnAction for the next player
 ///
-/// First-turn compensation for Player 2 (TurnNumber == 1):
-///   - BonusMana = 1 — one extra mana this turn only
-///   - BonusDraws = 1 — one extra card draw this turn only
-/// This mirrors Hearthstone's "The Coin" concept and partially offsets
-/// the inherent first-player advantage in an aggressive land-free format.
-///
 /// Emits TurnEndedEvent.
 /// </summary>
 public record EndTurnAction : GameAction
@@ -45,15 +39,10 @@ public record EndTurnAction : GameAction
 
 		var nextBattlefieldId = state.GetPlayerZoneId(nextPlayerId, ZoneType.Battlefield);
 
-		// Give Player 2 bonus mana and an extra draw on their very first turn
-		var isPlayer2FirstTurn = nextPlayerId == Player2Id && game.TurnNumber == 1;
-
 		var startTurn = new StartTurnAction
 		{
 			ActivePlayerId = nextPlayerId,
 			BattlefieldId = nextBattlefieldId,
-			//BonusMana = isPlayer2FirstTurn ? 1 : 0,
-			//BonusDraws = isPlayer2FirstTurn ? 1 : 0,
 		};
 
 		var events = ImmutableList.Create<GameEvent>(

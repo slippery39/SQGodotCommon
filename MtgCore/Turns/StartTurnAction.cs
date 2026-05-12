@@ -8,14 +8,10 @@ namespace MtgCore;
 ///
 /// Responsibilities:
 ///   - Increments MaxMana by 1 (capped at 10) and refills CurrentMana to MaxMana
-///   - Applies BonusMana on top of CurrentMana (does not affect MaxMana)
 ///   - Draws one card, unless SkipDraw is true
-///   - Draws BonusDraws additional cards after the normal draw
 ///   - Clears HasSummoningSickness, HasAttacked, Damage on CreatureComponent
 ///   - Clears HasActivated on ActivatedAbilityComponents
-///   All of the above apply only to creatures the active player controls.
-///
-/// BonusMana and BonusDraws are used for first-turn Player 2 compensation.
+///   All of the above apply only to permanents the active player controls.
 ///
 /// Emits TurnStartedEvent.
 /// </summary>
@@ -27,18 +23,6 @@ public record StartTurnAction : GameAction
 	public int BattlefieldId { get; init; }
 	public bool SkipDraw { get; init; } = false;
 
-	/// <summary>
-	/// Extra mana granted this turn only, on top of the normal MaxMana refill.
-	/// Does not affect MaxMana. Used for Player 2 first-turn compensation.
-	/// </summary>
-	public int BonusMana { get; init; } = 0;
-
-	/// <summary>
-	/// Extra cards drawn after the normal turn draw.
-	/// Used for Player 2 first-turn compensation.
-	/// </summary>
-	public int BonusDraws { get; init; } = 0;
-
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
@@ -46,7 +30,7 @@ public record StartTurnAction : GameAction
 		// Increment max mana, refill, then apply bonus
 		var player = state.GetPlayer(ActivePlayerId);
 		var newMax = Math.Min(player.MaxMana + 1, MaxManaCap);
-		var newCurrent = Math.Min(newMax + BonusMana, MaxManaCap);
+		var newCurrent = newMax;
 		var updatedPlayer = player with { MaxMana = newMax, CurrentMana = newCurrent };
 		state = state.UpdateObject(ActivePlayerId, updatedPlayer);
 
@@ -109,11 +93,6 @@ public record StartTurnAction : GameAction
 
 		if (!SkipDraw)
 			spawned = spawned.Add(new DrawCardsAction { PlayerId = ActivePlayerId, Amount = 1 });
-
-		if (BonusDraws > 0)
-			spawned = spawned.Add(
-				new DrawCardsAction { PlayerId = ActivePlayerId, Amount = BonusDraws }
-			);
 
 		var turnStartedEvent = new TurnStartedEvent { PlayerId = ActivePlayerId };
 		var stateWithEvent = (spawned.IsEmpty ? state : state.SpawnActions(spawned)) with
