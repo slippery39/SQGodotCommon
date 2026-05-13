@@ -14,27 +14,19 @@ namespace MtgCore;
 /// UntilEndOfTurn modifiers are cleared by StartTurnAction at the start
 /// of the controlling player's next turn.
 /// </summary>
-public record AddModifierAction : GameAction, ITargetedAction
+public record AddModifierAction : EffectAction
 {
 	public int PowerBonus { get; init; } = 0;
 	public int ToughnessBonus { get; init; } = 0;
 	public ModifierDuration Duration { get; init; } = ModifierDuration.UntilEndOfTurn;
 	public int SourceCardId { get; init; } = 0;
 
-	public ImmutableList<int> TargetIds { get; init; } = ImmutableList<int>.Empty;
-
-	public GameAction WithTargets(ImmutableList<int> targetIds) =>
-		this with
-		{
-			TargetIds = targetIds,
-		};
-
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
 
-		foreach (var targetId in TargetIds)
+		foreach (var targetId in ResolveTargetIds())
 		{
 			if (!state.HasObject(targetId))
 				continue;
@@ -66,15 +58,5 @@ public record AddModifierAction : GameAction, ITargetedAction
 		}
 
 		return new ActionResult(state) { Events = events };
-	}
-
-	public override ValidationResult ValidateResolve(GameState gameState)
-	{
-		foreach (var targetId in TargetIds)
-		{
-			if (!gameState.HasObject(targetId))
-				return ValidationResult.Invalid($"Target {targetId} no longer exists");
-		}
-		return ValidationResult.Valid;
 	}
 }

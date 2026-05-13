@@ -196,12 +196,8 @@ public static class CardLibrary
 					Effects = ImmutableList.Create(
 						new CardEffect
 						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new DrawCardsAction
-							{
-								Amount = 3,
-								PlayerIdContextKey = ContextKeys.CastingPlayerId,
-							},
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new DrawCardsAction { Amount = 3 },
 						}
 					),
 				}
@@ -355,7 +351,7 @@ public static class CardLibrary
 									new DrawCardsAction
 									{
 										Amount = 2,
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										TargetContextKey = ContextKeys.CastingPlayerId,
 									},
 									//Selecting cards and discarding could created from some sort of factory method or builder which would
 									//abstract these details of creating this specific type of effect. And we could also, make a factory
@@ -369,8 +365,7 @@ public static class CardLibrary
 									},
 									new DiscardCardsAction
 									{
-										CardIdsContextKey = ContextKeys.SelectedCardIds,
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										TargetContextKey = ContextKeys.SelectedCardIds,
 									}
 								),
 							},
@@ -487,15 +482,15 @@ public static class CardLibrary
 								{
 									PlayerIdContextKey = ContextKeys.CastingPlayerId,
 								},
-								new GainLifeAction
+								new LoseLifeAction
 								{
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									TargetContextKey = ContextKeys.CastingPlayerId,
 									AmountContextKey = ContextKeys.RevealedCardManaCost,
 								},
 								new DrawCardsAction
 								{
 									Amount = 1,
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									TargetContextKey = ContextKeys.CastingPlayerId,
 								}
 							),
 						},
@@ -562,12 +557,8 @@ public static class CardLibrary
 					ManaCost = 2,
 					Effect = new CardEffect
 					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new DrawCardsAction
-						{
-							Amount = 1,
-							PlayerIdContextKey = ContextKeys.CastingPlayerId,
-						},
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new DrawCardsAction { Amount = 1 },
 					},
 				}
 			),
@@ -657,12 +648,8 @@ public static class CardLibrary
 					ManaCost = 0,
 					Effect = new CardEffect
 					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new AddTemporaryManaAction
-						{
-							PlayerIdContextKey = ContextKeys.CastingPlayerId,
-							Amount = 1,
-						},
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new AddTemporaryManaAction { Amount = 1 },
 					},
 				}
 			),
@@ -686,12 +673,8 @@ public static class CardLibrary
 					ManaCost = 0,
 					Effect = new CardEffect
 					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new AddTemporaryManaAction
-						{
-							PlayerIdContextKey = ContextKeys.CastingPlayerId,
-							Amount = 2,
-						},
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new AddTemporaryManaAction { Amount = 2 },
 					},
 				}
 			),
@@ -751,12 +734,12 @@ public static class CardLibrary
 								new DrawCardsAction
 								{
 									Amount = 1,
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									TargetContextKey = ContextKeys.CastingPlayerId,
 								},
 								new LoseLifeAction
 								{
 									Amount = 1,
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									TargetContextKey = ContextKeys.CastingPlayerId,
 								}
 							),
 						},
@@ -1147,12 +1130,8 @@ public static class CardLibrary
 					ManaCost = 0,
 					Effect = new CardEffect
 					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new AddTemporaryManaAction
-						{
-							PlayerIdContextKey = ContextKeys.CastingPlayerId,
-							Amount = 1,
-						},
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new AddTemporaryManaAction { Amount = 1 },
 					},
 				}
 			),
@@ -1408,12 +1387,8 @@ public static class CardLibrary
 					Effects = ImmutableList.Create(
 						new CardEffect
 						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new AddTemporaryManaAction
-							{
-								Amount = 3,
-								PlayerIdContextKey = ContextKeys.CastingPlayerId,
-							},
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new AddTemporaryManaAction { Amount = 3 },
 						}
 					),
 				}
@@ -1450,7 +1425,7 @@ public static class CardLibrary
 									{
 										Amount = 3,
 										BonusAmountContextKey = "rite_count",
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										TargetContextKey = ContextKeys.CastingPlayerId,
 									}
 								),
 							},
@@ -1475,12 +1450,8 @@ public static class CardLibrary
 					Effects = ImmutableList.Create(
 						new CardEffect
 						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new AddTemporaryManaAction
-							{
-								Amount = 6,
-								PlayerIdContextKey = ContextKeys.CastingPlayerId,
-							},
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new AddTemporaryManaAction { Amount = 6 },
 						}
 					),
 				}

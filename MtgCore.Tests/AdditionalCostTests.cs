@@ -303,7 +303,7 @@ public class AdditionalCostTests
 					Effect = new CardEffect
 					{
 						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new DrawCardsAction { PlayerId = ownerId, Amount = 1 },
+						ActionTemplate = new DrawCardsAction { TargetIds = [ownerId], Amount = 1 },
 					},
 				}
 			),

@@ -3,22 +3,14 @@ using ImmutableGameObjects;
 
 namespace MtgCore;
 
-public record DestroyCreatureAction : GameAction, ITargetedAction
+public record DestroyCreatureAction : EffectAction
 {
-	public ImmutableList<int> TargetIds { get; init; } = ImmutableList<int>.Empty;
-
-	public GameAction WithTargets(ImmutableList<int> targetIds) =>
-		this with
-		{
-			TargetIds = targetIds,
-		};
-
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
 
-		foreach (var targetId in TargetIds)
+		foreach (var targetId in ResolveTargetIds())
 		{
 			if (!state.HasObject(targetId))
 				continue;

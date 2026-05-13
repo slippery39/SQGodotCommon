@@ -22,7 +22,7 @@ public class DragonstormMechanicsTests
 	[Test]
 	public void AddTemporaryManaAction_IncreasesCurrentMana()
 	{
-		var action = new AddTemporaryManaAction { PlayerId = _ids.Player1Id, Amount = 5 };
+		var action = new AddTemporaryManaAction { TargetIds = [_ids.Player1Id], Amount = 5 };
 		var (finalState, _) = _state.AddAction(action).ProcessAllActions();
 		Assert.That(finalState.GetPlayer(_ids.Player1Id).CurrentMana, Is.EqualTo(104)); // 99 + 5
 	}
@@ -30,7 +30,7 @@ public class DragonstormMechanicsTests
 	[Test]
 	public void AddTemporaryManaAction_DoesNotChangeMaxMana()
 	{
-		var action = new AddTemporaryManaAction { PlayerId = _ids.Player1Id, Amount = 5 };
+		var action = new AddTemporaryManaAction { TargetIds = [_ids.Player1Id], Amount = 5 };
 		var (finalState, _) = _state.AddAction(action).ProcessAllActions();
 		Assert.That(finalState.GetPlayer(_ids.Player1Id).MaxMana, Is.EqualTo(99));
 	}
@@ -345,12 +345,8 @@ public class DragonstormMechanicsTests
 					[
 						new CardEffect
 						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new AddTemporaryManaAction
-							{
-								Amount = 5,
-								PlayerIdContextKey = ContextKeys.CastingPlayerId,
-							},
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new AddTemporaryManaAction { Amount = 5 },
 						},
 					],
 				},
@@ -386,7 +382,7 @@ public class DragonstormMechanicsTests
 									{
 										Amount = 2,
 										BonusAmountContextKey = "rite_count",
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										TargetContextKey = ContextKeys.CastingPlayerId,
 									}
 								),
 							},

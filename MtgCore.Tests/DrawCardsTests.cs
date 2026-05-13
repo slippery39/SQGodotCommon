@@ -31,7 +31,7 @@ public class DrawCardsTests
 		);
 
 		var (finalState, _) = state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 1 })
+			.AddAction(new DrawCardsAction { TargetIds = [_ids.Player1Id], Amount = 1 })
 			.ProcessAllActions();
 
 		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(1));
@@ -51,7 +51,7 @@ public class DrawCardsTests
 		var topCardId = state.GetChildrenIds(_ids.Player1LibraryId).First();
 
 		var (finalState, _) = state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 1 })
+			.AddAction(new DrawCardsAction { TargetIds = [_ids.Player1Id], Amount = 1 })
 			.ProcessAllActions();
 
 		var handCards = finalState.GetCardsInZone(_ids.Player1HandId).ToList();
@@ -74,7 +74,7 @@ public class DrawCardsTests
 		);
 
 		var (finalState, _) = state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 2 })
+			.AddAction(new DrawCardsAction { TargetIds = [_ids.Player1Id], Amount = 2 })
 			.ProcessAllActions();
 
 		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(2));
@@ -93,7 +93,7 @@ public class DrawCardsTests
 		);
 
 		var (finalState, _) = state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 3 })
+			.AddAction(new DrawCardsAction { TargetIds = [_ids.Player1Id], Amount = 3 })
 			.ProcessAllActions();
 
 		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(3));
@@ -114,7 +114,7 @@ public class DrawCardsTests
 		);
 
 		var (_, events) = state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 2 })
+			.AddAction(new DrawCardsAction { TargetIds = [_ids.Player1Id], Amount = 2 })
 			.ProcessAllActions();
 
 		var drawEvents = events.OfType<CardDrawnEvent>().ToList();
@@ -129,7 +129,7 @@ public class DrawCardsTests
 		var topCardId = state.GetChildrenIds(_ids.Player1LibraryId).First();
 
 		var (_, events) = state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 1 })
+			.AddAction(new DrawCardsAction { TargetIds = [_ids.Player1Id], Amount = 1 })
 			.ProcessAllActions();
 
 		var drawEvent = events.OfType<CardDrawnEvent>().Single();
@@ -142,7 +142,7 @@ public class DrawCardsTests
 	public void DrawCards_EmptyLibrary_EmitsLibraryEmptyEvent()
 	{
 		var (_, events) = _state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 1 })
+			.AddAction(new DrawCardsAction { TargetIds = [_ids.Player1Id], Amount = 1 })
 			.ProcessAllActions();
 
 		Assert.That(events.OfType<LibraryEmptyEvent>().Count(), Is.EqualTo(1));
@@ -158,7 +158,7 @@ public class DrawCardsTests
 		var state = TestCardFactory.AddCardsToLibrary(_state, _ids.Player1Id, "Card A", "Card B");
 
 		var (finalState, events) = state
-			.AddAction(new DrawCardsAction { PlayerId = _ids.Player1Id, Amount = 5 })
+			.AddAction(new DrawCardsAction { TargetIds = [_ids.Player1Id], Amount = 5 })
 			.ProcessAllActions();
 
 		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(2));

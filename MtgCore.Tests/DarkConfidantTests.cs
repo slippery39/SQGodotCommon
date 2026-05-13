@@ -225,38 +225,38 @@ public class DarkConfidantTests
 								},
 								new AddTemporaryManaAction
 								{
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									TargetContextKey = ContextKeys.CastingPlayerId,
 									Amount = 4,
 								},
 								new GainLifeAction
 								{
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									TargetContextKey = ContextKeys.CastingPlayerId,
 									AmountContextKey = ContextKeys.RevealedCardManaCost,
 								},
 								new GainLifeAction
 								{
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									TargetContextKey = ContextKeys.CastingPlayerId,
 									AmountContextKey = ContextKeys.RevealedCardManaCost,
 								},
 								new GainLifeAction
 								{
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									TargetContextKey = ContextKeys.CastingPlayerId,
 									AmountContextKey = ContextKeys.RevealedCardManaCost,
 								},
 								new GainLifeAction
 								{
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									TargetContextKey = ContextKeys.CastingPlayerId,
 									AmountContextKey = ContextKeys.RevealedCardManaCost,
 								},
 								new GainLifeAction
 								{
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									TargetContextKey = ContextKeys.CastingPlayerId,
 									AmountContextKey = ContextKeys.RevealedCardManaCost,
 								},
 								new DrawCardsAction
 								{
 									Amount = 2,
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									TargetContextKey = ContextKeys.CastingPlayerId,
 								}
 							),
 						},

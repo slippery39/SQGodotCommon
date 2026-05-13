@@ -106,20 +106,20 @@ public static class CardPool
 			MakeSpell(
 				"Inspiration",
 				cost: 3,
-				TargetingStrategy.NoTarget(),
-				new DrawCardsAction { Amount = 4, PlayerIdContextKey = ContextKeys.CastingPlayerId }
+				TargetingStrategy.Self(),
+				new DrawCardsAction { Amount = 4 }
 			),
 			MakeSpell(
 				"Counsel of the Soratami",
 				cost: 2,
-				TargetingStrategy.NoTarget(),
-				new DrawCardsAction { Amount = 3, PlayerIdContextKey = ContextKeys.CastingPlayerId }
+				TargetingStrategy.Self(),
+				new DrawCardsAction { Amount = 3 }
 			),
 			MakeSpell(
 				"Ancestral Recall",
 				cost: 1,
-				TargetingStrategy.NoTarget(),
-				new DrawCardsAction { Amount = 3, PlayerIdContextKey = ContextKeys.CastingPlayerId }
+				TargetingStrategy.Self(),
+				new DrawCardsAction { Amount = 3 }
 			),
 			// ===== CREATURES WITH ACTIVATED ABILITIES =====
 
@@ -177,12 +177,8 @@ public static class CardPool
 					ManaCost = 2,
 					Effect = new CardEffect
 					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new DrawCardsAction
-						{
-							Amount = 1,
-							PlayerIdContextKey = ContextKeys.CastingPlayerId,
-						},
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new DrawCardsAction { Amount = 1 },
 					},
 				}
 			),
@@ -294,12 +290,8 @@ public static class CardPool
 					Condition = new CreatureEntersBattlefieldCondition { OnlyYourCreatures = true },
 					Effect = new CardEffect
 					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new DrawCardsAction
-						{
-							Amount = 1,
-							PlayerIdContextKey = ContextKeys.CastingPlayerId,
-						},
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new DrawCardsAction { Amount = 1 },
 					},
 				}
 			),
@@ -416,12 +408,8 @@ public static class CardPool
 					},
 					Effect = new CardEffect
 					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new DrawCardsAction
-						{
-							Amount = 1,
-							PlayerIdContextKey = ContextKeys.CastingPlayerId,
-						},
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new DrawCardsAction { Amount = 1 },
 					},
 				}
 			),

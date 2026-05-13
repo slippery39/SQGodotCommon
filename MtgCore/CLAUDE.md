@@ -7,11 +7,19 @@ MtgCore/
 ├── Abilities/Activated/     # ActivatedAbilityComponent, ActivatedAbilityAction
 │   └── Static/              # StaticAbilityComponent (abstract), StaticPTBoostAbility, StaticGrantKeywordAbility
 ├── Actions/                 # All GameAction subclasses; ContextKeys; MtgActionGenerator
-│                            # Includes: ExileAction, PutIntoBattlefieldAction (CardIdContextKey for pipeline use), CastCreatureAction, ResolveCreatureAction
+│                            # EffectAction — abstract base for all state-changing actions (DealDamageAction,
+│                            #   GainLifeAction, LoseLifeAction, DrawCardsAction, DiscardCardsAction,
+│                            #   AddTemporaryManaAction, ExileAction, DestroyCreatureAction, AddModifierAction).
+│                            #   Provides TargetContextKey, AmountContextKey, TargetIds, WithTargets(),
+│                            #   ResolveTargetIds(), ResolveAmount(), and lenient ValidateResolve.
+│                            # Data/query actions (CountCardsWithSubtypeAction, CountCardsWithNameAction,
+│                            #   RevealTopCardAction, LookAtTopCardsAction, SelectCardFromLibraryAction)
+│                            #   are NOT EffectActions — they still use PlayerIdContextKey (scalar).
+│                            # Includes: PutIntoBattlefieldAction (CardIdContextKey for pipeline use), CastCreatureAction, ResolveCreatureAction
 │                            #           CastPermanentAction, ResolvePermanentAction (non-creature permanents → battlefield)
-│                            #           CreateTokenAction, CountCardsWithSubtypeAction, CountCardsWithNameAction
-│                            #           AddTemporaryManaAction, SelectCardFromLibraryAction
+│                            #           CreateTokenAction
 │                            #           AttachEquipmentAction (ITargetedAction; reads equipment ID from ContextKeys.SourceCardId)
+│                            # DealDamageAction has PlayerOutputKey and CreatureOutputKey for pipeline chaining.
 ├── Costs/                   # AdditionalCost (abstract), LifeAdditionalCost, SacrificeAdditionalCost, DiscardAdditionalCost
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
 │   └── Components/          # PermanentComponent (battlefield marker), CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach), SpellComponent (HasStorm), GraveyardCountComponent

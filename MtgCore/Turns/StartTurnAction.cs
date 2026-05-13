@@ -92,7 +92,7 @@ public record StartTurnAction : GameAction
 		var spawned = ImmutableList<GameAction>.Empty;
 
 		if (!SkipDraw)
-			spawned = spawned.Add(new DrawCardsAction { PlayerId = ActivePlayerId, Amount = 1 });
+			spawned = spawned.Add(new DrawCardsAction { TargetIds = [ActivePlayerId], Amount = 1 });
 
 		var turnStartedEvent = new TurnStartedEvent { PlayerId = ActivePlayerId };
 		var stateWithEvent = (spawned.IsEmpty ? state : state.SpawnActions(spawned)) with

@@ -6,14 +6,23 @@
 
 The main path looks correct (`CreatureEvaluator.cs`, `AttackAction.cs`, `StartTurnAction.cs`). The inconsistency flagged in the ideas doc may be more subtle — possibly specific cards, ETB scenarios, or equipment granting Haste. **Before doing anything else here, read those three files together and identify exactly what's wrong.** This step is purely investigative.
 
-### Step 2: Normalize LoseLife / DealDamage / GainLife
+### Step 2: Unified effect action targeting system ✓ DONE
 
-Current state:
-- `LoseLifeAction` — non-targeted, ContextKey-driven
-- `DealDamageAction` — `ITargetedAction`, no ContextKey support for amount
-- `GainLifeAction` — `ITargetedAction` *and* ContextKey override (both, conflicting)
+The original scope (normalize LoseLife / DealDamage / GainLife) expanded into a broader
+architectural change during design. Full design is documented in `ContextKeyTargetingPlan.md`.
 
-Target outcome: `DealDamageAction` and `GainLifeAction` both use `ITargetedAction` cleanly (TargetIds only). `LoseLifeAction` stays non-targeted but gets `AmountContextKey` parity. Remove the `PlayerIdContextKey` path from `GainLifeAction` — callers should inject via TargetIds.
+Summary: introduce an `EffectAction` abstract base record that all effect actions inherit from.
+It provides `TargetContextKey`, `AmountContextKey`, `TargetIds`, `WithTargets()`,
+`ResolveTargetIds()`, `ResolveAmount()`, and default `ValidateResolve` (lenient — skips invalid
+targets at resolution, only fizzles if all targets are gone). `ITargetedAction` boilerplate and
+individual `PlayerIdContextKey` / `AmountContextKey` properties are removed from each action.
+
+Actions to migrate: `DealDamageAction`, `GainLifeAction`, `LoseLifeAction`, `DrawCardsAction`,
+`DiscardCardsAction`, `AddTemporaryManaAction`, `ExileAction`, `DestroyCreatureAction`,
+`AddModifierAction`.
+
+Card definitions in `CardLibrary` and `CardPool` updated accordingly. Dark Confidant bug fixed
+(currently uses `GainLifeAction` — should be `LoseLifeAction`).
 
 ### Step 3: Clarify targeting consolidation
 

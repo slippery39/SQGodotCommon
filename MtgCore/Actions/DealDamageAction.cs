@@ -11,23 +11,21 @@ namespace MtgCore;
 /// CreatureDestroyedEvent is appended to GameState.PendingGameEvents for
 /// the PostActionProcessor to evaluate triggered abilities after the scope closes.
 /// </summary>
-public record DealDamageAction : GameAction, ITargetedAction
+public record DealDamageAction : EffectAction
 {
 	public int Amount { get; init; }
-	public ImmutableList<int> TargetIds { get; init; } = ImmutableList<int>.Empty;
-
-	public GameAction WithTargets(ImmutableList<int> targetIds) =>
-		this with
-		{
-			TargetIds = targetIds,
-		};
+	public string PlayerOutputKey { get; init; } = "";
+	public string CreatureOutputKey { get; init; } = "";
 
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
+		var amount = ResolveAmount(Amount);
+		var damagedPlayers = ImmutableList<int>.Empty;
+		var damagedCreatures = ImmutableList<int>.Empty;
 
-		foreach (var targetId in TargetIds)
+		foreach (var targetId in ResolveTargetIds())
 		{
 			if (!state.HasObject(targetId))
 				continue;
@@ -36,20 +34,30 @@ public record DealDamageAction : GameAction, ITargetedAction
 
 			var (newState, newEvents) = obj switch
 			{
-				MtgPlayer player => ApplyToPlayer(state, player, Amount),
+				MtgPlayer player => ApplyToPlayer(state, player, amount),
 				Card card when card.HasComponent<CreatureComponent>() => ApplyToCreature(
 					state,
 					card,
-					Amount
+					amount
 				),
 				_ => (state, ImmutableList<GameEvent>.Empty),
 			};
 
 			state = newState;
 			events = events.AddRange(newEvents);
+
+			if (obj is MtgPlayer)
+				damagedPlayers = damagedPlayers.Add(targetId);
+			else if (obj is Card c && c.HasComponent<CreatureComponent>())
+				damagedCreatures = damagedCreatures.Add(targetId);
 		}
 
-		return new ActionResult(state) { Events = events };
+		var result = new ActionResult(state) { Events = events };
+		if (!string.IsNullOrEmpty(PlayerOutputKey))
+			result = result.WithOutput(PlayerOutputKey, damagedPlayers);
+		if (!string.IsNullOrEmpty(CreatureOutputKey))
+			result = result.WithOutput(CreatureOutputKey, damagedCreatures);
+		return result;
 	}
 
 	private static (GameState, ImmutableList<GameEvent>) ApplyToCreature(
@@ -108,13 +116,5 @@ public record DealDamageAction : GameAction, ITargetedAction
 			new PlayerDamagedEvent { PlayerId = player.Id, Amount = amount }
 		);
 		return (newState, events);
-	}
-
-	public override ValidationResult ValidateResolve(GameState gameState)
-	{
-		var missingId = TargetIds.FirstOrDefault(id => !gameState.HasObject(id));
-		return missingId != 0
-			? ValidationResult.Invalid($"Target {missingId} no longer exists")
-			: ValidationResult.Valid;
 	}
 }

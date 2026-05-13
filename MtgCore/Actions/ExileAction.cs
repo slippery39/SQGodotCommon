@@ -8,22 +8,14 @@ namespace MtgCore;
 /// Used by spells like Path to Exile.
 /// Cards in Exile are permanently removed from the game (no interaction yet).
 /// </summary>
-public record ExileAction : GameAction, ITargetedAction
+public record ExileAction : EffectAction
 {
-	public ImmutableList<int> TargetIds { get; init; } = ImmutableList<int>.Empty;
-
-	public GameAction WithTargets(ImmutableList<int> targetIds) =>
-		this with
-		{
-			TargetIds = targetIds,
-		};
-
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
 
-		foreach (var targetId in TargetIds)
+		foreach (var targetId in ResolveTargetIds())
 		{
 			if (!state.HasObject(targetId))
 				continue;
@@ -48,13 +40,5 @@ public record ExileAction : GameAction, ITargetedAction
 		}
 
 		return new ActionResult(state) { Events = events };
-	}
-
-	public override ValidationResult ValidateResolve(GameState gameState)
-	{
-		var missingId = TargetIds.FirstOrDefault(id => !gameState.HasObject(id));
-		return missingId != 0
-			? ValidationResult.Invalid($"Target {missingId} no longer exists")
-			: ValidationResult.Valid;
 	}
 }

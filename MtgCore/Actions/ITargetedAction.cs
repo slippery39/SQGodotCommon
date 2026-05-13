@@ -10,8 +10,16 @@ namespace MtgCore;
 ///
 /// The original ActionTemplate is never mutated — WithTargets returns
 /// a new record instance via 'with'.
+///
+/// Canonical pattern: one action instance holds all target IDs and loops
+/// through them in Execute(). Do not spawn one action per target.
 /// </summary>
 public interface ITargetedAction
 {
+	/// <summary>
+	/// Helper method to easily add targets to an action
+	/// </summary>
+	/// <param name="targetIds"></param>
+	/// <returns></returns>
 	GameAction WithTargets(ImmutableList<int> targetIds);
 }

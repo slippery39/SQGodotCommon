@@ -36,7 +36,7 @@ public class DrawDiscardSanityTests
 									new DrawCardsAction
 									{
 										Amount = 1,
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										TargetContextKey = ContextKeys.CastingPlayerId,
 									},
 									new SelectCardsFromHandAction
 									{
@@ -47,8 +47,7 @@ public class DrawDiscardSanityTests
 									},
 									new DiscardCardsAction
 									{
-										CardIdsContextKey = ContextKeys.SelectedCardIds,
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										TargetContextKey = ContextKeys.SelectedCardIds,
 									}
 								),
 							},
