@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -293,13 +293,13 @@ public class GoblinTests
 	// ===== TOKEN CREATION =====
 
 	[Test]
-	public void CreateTokenAction_CreatesTokensOnBattlefield()
+	public void CreateCardAction_CreatesTokensOnBattlefield()
 	{
 		var (finalState, _) = _state
 			.AddAction(
-				new CreateTokenAction
+				new CreateCardAction
 				{
-					TokenTemplate = CardLibrary.GoblinToken(),
+					CardTemplate = CardLibrary.GoblinToken(),
 					ControllerId = _ids.Player1Id,
 					Count = 3,
 				}
@@ -315,13 +315,13 @@ public class GoblinTests
 	}
 
 	[Test]
-	public void CreateTokenAction_TokensHaveSummoningSickness()
+	public void CreateCardAction_TokensHaveSummoningSickness()
 	{
 		var (finalState, _) = _state
 			.AddAction(
-				new CreateTokenAction
+				new CreateCardAction
 				{
-					TokenTemplate = CardLibrary.GoblinToken(),
+					CardTemplate = CardLibrary.GoblinToken(),
 					ControllerId = _ids.Player1Id,
 					Count = 1,
 				}
@@ -333,13 +333,13 @@ public class GoblinTests
 	}
 
 	[Test]
-	public void CreateTokenAction_EmitsCreatureEnteredBattlefieldEvent_PerToken()
+	public void CreateCardAction_EmitsCreatureEnteredBattlefieldEvent_PerToken()
 	{
 		var (_, events) = _state
 			.AddAction(
-				new CreateTokenAction
+				new CreateCardAction
 				{
-					TokenTemplate = CardLibrary.GoblinToken(),
+					CardTemplate = CardLibrary.GoblinToken(),
 					ControllerId = _ids.Player1Id,
 					Count = 3,
 				}

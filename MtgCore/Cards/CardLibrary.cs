@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -787,7 +787,7 @@ public static class CardLibrary
 	/// <summary>
 	/// Goblin Token — 1/1 creature token.
 	/// Created by Siege-Gang Commander and Krenko, Mob Boss.
-	/// OwnerId/ControllerId default to 0 and are stamped by CreateTokenAction at runtime.
+	/// OwnerId/ControllerId default to 0 and are stamped by CreateCardAction at runtime.
 	/// </summary>
 	public static Card GoblinToken() =>
 		new()
@@ -959,9 +959,9 @@ public static class CardLibrary
 					Effect = new CardEffect
 					{
 						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new CreateTokenAction
+						ActionTemplate = new CreateCardAction
 						{
-							TokenTemplate = GoblinToken(),
+							CardTemplate = GoblinToken(),
 							Count = 3,
 						},
 					},
@@ -1018,9 +1018,9 @@ public static class CardLibrary
 									OutputKey = "krenko_goblin_count",
 									PlayerIdContextKey = ContextKeys.CastingPlayerId,
 								},
-								new CreateTokenAction
+								new CreateCardAction
 								{
-									TokenTemplate = GoblinToken(),
+									CardTemplate = GoblinToken(),
 									CountInputKey = "krenko_goblin_count",
 								}
 							),
@@ -1255,9 +1255,9 @@ public static class CardLibrary
 					Effect = new CardEffect
 					{
 						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new CreateTokenAction
+						ActionTemplate = new CreateCardAction
 						{
-							TokenTemplate = new Card
+							CardTemplate = new Card
 							{
 								Name = "Angel Token",
 								Subtypes = ImmutableList.Create("Angel"),

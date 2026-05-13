@@ -1,4 +1,4 @@
-# MtgCore — MTG Card Game Engine
+﻿# MtgCore — MTG Card Game Engine
 
 ## Source Map
 
@@ -181,13 +181,13 @@ Hearthstone-style (turn-based, no blockers). The active player attacks; the oppo
 - Creature attacks creature: both deal damage simultaneously. Dies if `Damage >= effective Toughness`; moves to owner's graveyard.
 - Damage resets each turn — creatures cannot be chipped down over multiple turns.
 
-## Token Creation
+## Card Creation
 
-`CreateTokenAction` creates new `Card` objects directly on a player's battlefield. Tokens are not drawn from any zone — they are created fresh via `GameState.AddObject`. Each token emits `CreatureEnteredBattlefieldEvent` so ETB triggers fire normally.
+`CreateCardAction` creates new `Card` objects and places them on a player's battlefield by spawning one `PutIntoBattlefieldAction` per card. The ETB ceremony is handled entirely by `PutIntoBattlefieldAction`, which is the single entry point for all battlefield placement regardless of whether a card is moving from another zone or being created fresh.
 
-- `ControllerId`: if 0, reads from `InputContext[CastingPlayerId]` (set by `ResolveEffectAction`).
-- `CountInputKey`: if set, reads the count from pipeline context (used by Krenko, Mob Boss to count Goblins at resolution time via `CountCardsWithSubtypeAction`).
-- `HasSummoningSickness` is stamped based on the token template's `HasHaste` flag.
+- `ControllerId`: if 0, reads from `InputContext[CastingPlayerId]`.
+- `CountInputKey`: if set, reads the count from pipeline context (used by Krenko, Mob Boss via `CountCardsWithSubtypeAction`).
+- `HasSummoningSickness` is stamped by `PutIntoBattlefieldAction.ApplyEtbCeremony` based on `HasHaste`.
 
 ## Game Startup
 
