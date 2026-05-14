@@ -34,6 +34,18 @@ public partial class BoardUI : Control
 		_opponentPanel.Clicked += () => OpponentDirectAttacked?.Invoke();
 	}
 
+	public Vector2 GetPlayerLibraryPosition() =>
+		_playerPanel.GlobalPosition
+		+ new Vector2(_playerPanel.Size.X - 40f, _playerPanel.Size.Y * 0.5f);
+
+	public void FlashLoss(int losingPlayerId, int humanPlayerId)
+	{
+		var panel = losingPlayerId == humanPlayerId ? _playerPanel : _opponentPanel;
+		var tween = panel.CreateTween();
+		tween.TweenProperty(panel, "modulate", new Color(1f, 0.15f, 0.15f, 1f), 0.15f);
+		tween.TweenProperty(panel, "modulate", Colors.White, 0.35f);
+	}
+
 	public void RefreshAll(
 		GameState state,
 		int humanPlayerId,

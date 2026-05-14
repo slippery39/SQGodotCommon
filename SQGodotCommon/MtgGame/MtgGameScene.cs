@@ -30,7 +30,10 @@ public partial class MtgGameScene : Node2D
 		_boardUI.OpponentCreatureClicked += OnOpponentCreatureClicked;
 		_boardUI.OpponentDirectAttacked += OnOpponentDirectAttacked;
 
-		_hand.IsDragSuccess = context => context.SelectedAreas.Contains(_battlefieldDropZone);
+		_hand.IsDragSuccess = context =>
+			!_manager.IsAiTurn
+			&& !_isGameOver
+			&& context.SelectedAreas.Contains(_battlefieldDropZone);
 
 		_hand.OnDragSuccess = context =>
 		{
@@ -120,11 +123,24 @@ public partial class MtgGameScene : Node2D
 
 		_isGameOver = true;
 		Refresh();
-		ShowGameOverOverlay(gameOver);
+
+		var lostEvent = events.OfType<PlayerLostEvent>().FirstOrDefault();
+		if (lostEvent != null)
+		{
+			_boardUI.FlashLoss(lostEvent.PlayerId, _manager.HumanPlayerId);
+			// Give the flash time to play before the overlay covers the board
+			var timer = GetTree().CreateTimer(0.55f);
+			timer.Timeout += () => CreateGameOverUI(gameOver);
+		}
+		else
+		{
+			CreateGameOverUI(gameOver);
+		}
+
 		return true;
 	}
 
-	private void ShowGameOverOverlay(GameOverEvent e)
+	private void CreateGameOverUI(GameOverEvent e)
 	{
 		var layer = new CanvasLayer { Layer = 10 };
 		AddChild(layer);
@@ -165,6 +181,8 @@ public partial class MtgGameScene : Node2D
 			_manager.AiPlayerId,
 			_selectedAttackerId
 		);
+		// Dim the hand while the AI is taking its turn
+		_hand.Modulate = _manager.IsAiTurn ? new Color(0.5f, 0.5f, 0.5f, 0.7f) : Colors.White;
 		SyncHand();
 	}
 
@@ -183,9 +201,10 @@ public partial class MtgGameScene : Node2D
 		}
 
 		var existingIds = _handCardIds.ToHashSet();
+		var libraryPos = _boardUI.GetPlayerLibraryPosition();
 		foreach (var card in handCards.Where(c => !existingIds.Contains(c.Id)))
 		{
-			var cardUI = _hand.DrawCard();
+			var cardUI = _hand.DrawCard(libraryPos);
 			cardUI.Id = card.Id.ToString();
 			_handCardIds.Add(card.Id);
 		}
