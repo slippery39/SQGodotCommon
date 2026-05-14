@@ -1,47 +1,35 @@
-using System.Linq;
-using ImmutableGameObjects;
-using MtgCore;
-
 namespace MtgGame;
 
 public partial class MtgGameScene : Node2D
 {
 	private MtgGameManager _manager = null!;
+	private BoardUI _boardUI = null!;
 
 	public override void _Ready()
 	{
 		_manager = new MtgGameManager();
-		var events = _manager.StartGame();
+		_boardUI = GetNode<BoardUI>("BoardUI");
+		_boardUI.EndTurnPressed += OnEndTurnPressed;
 
-		PrintGameState();
-		GD.Print($"Game started with {events.Count} opening events.");
+		_manager.StartGame();
+		Refresh();
 	}
 
-	private void PrintGameState()
+	private async void OnEndTurnPressed()
 	{
-		var state = _manager.State;
-		var game = state.GetGame();
-		var human = state.GetPlayer(_manager.HumanPlayerId);
-		var ai = state.GetPlayer(_manager.AiPlayerId);
+		_manager.EndTurn();
+		Refresh();
 
-		var humanHandId = state.GetWellKnownId(MtgObjectKeys.Player1Hand);
-		var aiHandId = state.GetWellKnownId(MtgObjectKeys.Player2Hand);
-		var humanLibraryId = state.GetWellKnownId(MtgObjectKeys.Player1Library);
-		var aiLibraryId = state.GetWellKnownId(MtgObjectKeys.Player2Library);
+		while (_manager.IsAiTurn && !_manager.IsWaitingForChoice)
+		{
+			await ToSignal(GetTree().CreateTimer(0.8), SceneTreeTimer.SignalName.Timeout);
+			_manager.RunAiTurnStep();
+			Refresh();
+		}
+	}
 
-		var humanHandCount = state.GetCardsInZone(humanHandId).Count();
-		var aiHandCount = state.GetCardsInZone(aiHandId).Count();
-		var humanLibraryCount = state.GetCardsInZone(humanLibraryId).Count();
-		var aiLibraryCount = state.GetCardsInZone(aiLibraryId).Count();
-
-		GD.Print(
-			$"Turn {game.TurnNumber} | Active: {(game.ActivePlayerId == _manager.HumanPlayerId ? "Human" : "AI")}"
-		);
-		GD.Print(
-			$"  Human — Life: {human.Life}, Mana: {human.CurrentMana}/{human.MaxMana}, Hand: {humanHandCount}, Library: {humanLibraryCount}"
-		);
-		GD.Print(
-			$"  AI    — Life: {ai.Life}, Mana: {ai.CurrentMana}/{ai.MaxMana}, Hand: {aiHandCount}, Library: {aiLibraryCount}"
-		);
+	private void Refresh()
+	{
+		_boardUI.RefreshAll(_manager.State, _manager.HumanPlayerId, _manager.AiPlayerId);
 	}
 }

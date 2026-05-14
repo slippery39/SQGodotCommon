@@ -1,0 +1,35 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://MtgGame/Board/BoardUI.cs" id="1_boardui"]
+[ext_resource type="Script" path="res://MtgGame/Board/PlayerPanel.cs" id="2_panel"]
+[ext_resource type="Script" path="res://MtgGame/Board/BattlefieldZone.cs" id="3_battlefield"]
+
+[node name="BoardUI" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource("1_boardui")
+
+[node name="MainColumn" type="VBoxContainer" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="TurnLabel" type="Label" parent="MainColumn"]
+text = "Turn -"
+horizontal_alignment = 1
+
+[node name="OpponentPanel" type="PanelContainer" parent="MainColumn"]
+script = ExtResource("2_panel")
+
+[node name="OpponentBattlefield" type="PanelContainer" parent="MainColumn"]
+size_flags_vertical = 3
+script = ExtResource("3_battlefield")
+
+[node name="PlayerBattlefield" type="PanelContainer" parent="MainColumn"]
+size_flags_vertical = 3
+script = ExtResource("3_battlefield")
+
+[node name="PlayerPanel" type="PanelContainer" parent="MainColumn"]
+script = ExtResource("2_panel")
+
+[node name="EndTurnButton" type="Button" parent="MainColumn"]
+text = "End Turn"

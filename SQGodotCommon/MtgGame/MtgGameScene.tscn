@@ -1,6 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://MtgGame/MtgGameScene.cs" id="1_mtgscene"]
+[ext_resource type="PackedScene" path="res://MtgGame/Board/BoardUI.tscn" id="2_boardui"]
 
 [node name="MtgGameScene" type="Node2D"]
 script = ExtResource("1_mtgscene")
+
+[node name="BoardUI" parent="." instance=ExtResource("2_boardui")]

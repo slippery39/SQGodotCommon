@@ -55,6 +55,19 @@ public class MtgGameManager
 		return MtgActionGenerator.GetLegalActions(_state, playerId);
 	}
 
+	public ImmutableList<GameEvent> EndTurn()
+	{
+		var (_, events) = SubmitAction(
+			new EndTurnAction
+			{
+				GameId = _state.GetWellKnownId(MtgObjectKeys.Game),
+				Player1Id = HumanPlayerId,
+				Player2Id = AiPlayerId,
+			}
+		);
+		return events;
+	}
+
 	/// <summary>
 	/// Executes one AI action (or ends the turn if no legal actions remain).
 	/// Call repeatedly with a visual delay between calls until IsAiTurn is false.
