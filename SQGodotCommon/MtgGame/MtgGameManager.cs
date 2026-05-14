@@ -146,6 +146,41 @@ public class MtgGameManager
 		return -1;
 	}
 
+	public ChoiceAction GetPendingChoice() => _state.GetPendingChoice();
+
+	public ImmutableList<ChoiceOption> GetPendingChoiceOptions()
+	{
+		if (!_state.IsWaitingForChoice)
+			return ImmutableList<ChoiceOption>.Empty;
+		if (_state.ActionStack.Peek() is not PipelineAction pipeline)
+			return ImmutableList<ChoiceOption>.Empty;
+		if (pipeline.CurrentStep is not ChoiceAction choice)
+			return ImmutableList<ChoiceOption>.Empty;
+		return choice.GetOptions(_state, pipeline.PipelineContext);
+	}
+
+	public ImmutableList<GameEvent> ResolveChoice(ImmutableList<int> selectedIds)
+	{
+		var (newState, events) = _state.ResolveChoice(selectedIds);
+		_state = newState;
+		return events;
+	}
+
+	public ImmutableList<GameEvent> ResolveAiChoice()
+	{
+		if (!IsWaitingForChoice)
+			return ImmutableList<GameEvent>.Empty;
+		var options = GetPendingChoiceOptions();
+		var choice = _state.GetPendingChoice()!;
+		var count = Math.Min(choice.MinChoices, options.Count);
+		var selected = options
+			.OrderBy(_ => _rng.Next())
+			.Take(count)
+			.Select(o => o.Id)
+			.ToImmutableList();
+		return ResolveChoice(selected);
+	}
+
 	/// <summary>
 	/// Executes one AI action (or ends the turn if no legal actions remain).
 	/// Call repeatedly with a visual delay between calls until IsAiTurn is false.
@@ -268,6 +303,8 @@ public class MtgGameManager
 		CardLibrary.DoomBlade,
 		CardLibrary.GiantGrowth,
 		CardLibrary.WrathOfGod,
+		CardLibrary.CarefulStudy,
+		CardLibrary.TellingTime,
 	];
 
 	private static readonly Func<Card>[] AiSpells =

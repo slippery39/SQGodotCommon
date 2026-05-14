@@ -13,10 +13,12 @@ public partial class MtgGameScene : Node2D
 	private BoardUI _boardUI = null!;
 	private Hand2D _hand = null!;
 	private Area2D _battlefieldDropZone = null!;
+	private ChoicePanel _choicePanel = null!;
 
 	private readonly List<int> _handCardIds = new();
 	private int? _selectedAttackerId;
 	private bool _isGameOver;
+	private bool _choicePanelShowing;
 
 	private int? _targetingSpellCardId;
 	private ImmutableDictionary<int, ImmutableList<int>> _pendingTargetIds = ImmutableDictionary<
@@ -33,6 +35,10 @@ public partial class MtgGameScene : Node2D
 		_hand = GetNode<Hand2D>("Hand2D");
 		_battlefieldDropZone = GetNode<Area2D>("BattlefieldDropZone");
 
+		_choicePanel = new ChoicePanel();
+		AddChild(_choicePanel);
+		_choicePanel.Confirmed += OnChoiceConfirmed;
+
 		_boardUI.EndTurnPressed += OnEndTurnPressed;
 		_boardUI.PlayerCreatureClicked += OnPlayerCreatureClicked;
 		_boardUI.OpponentCreatureClicked += OnOpponentCreatureClicked;
@@ -42,6 +48,7 @@ public partial class MtgGameScene : Node2D
 			!_manager.IsAiTurn
 			&& !_isGameOver
 			&& !_targetingSpellCardId.HasValue
+			&& !_choicePanelShowing
 			&& context.SelectedAreas.Contains(_battlefieldDropZone);
 
 		_hand.OnDragSuccess = context =>
@@ -102,6 +109,8 @@ public partial class MtgGameScene : Node2D
 		}
 	}
 
+	// ===== TARGETING STATE MACHINE =====
+
 	private void EnterTargetingMode(int cardId)
 	{
 		_targetingSpellCardId = cardId;
@@ -156,6 +165,18 @@ public partial class MtgGameScene : Node2D
 		}
 	}
 
+	// ===== CHOICE HANDLING =====
+
+	private void OnChoiceConfirmed(ImmutableList<int> selectedIds)
+	{
+		_choicePanelShowing = false;
+		var events = _manager.ResolveChoice(selectedIds);
+		Refresh();
+		CheckAndShowGameOver(events);
+	}
+
+	// ===== TURN / ACTION HANDLERS =====
+
 	private async void OnEndTurnPressed()
 	{
 		if (_isGameOver)
@@ -173,12 +194,18 @@ public partial class MtgGameScene : Node2D
 		if (CheckAndShowGameOver(events))
 			return;
 
-		while (_manager.IsAiTurn && !_manager.IsWaitingForChoice && !_isGameOver)
+		while (_manager.IsAiTurn && !_isGameOver)
 		{
 			await ToSignal(GetTree().CreateTimer(0.8), SceneTreeTimer.SignalName.Timeout);
-			events = _manager.RunAiTurnStep();
+
+			ImmutableList<GameEvent> stepEvents;
+			if (_manager.IsWaitingForChoice)
+				stepEvents = _manager.ResolveAiChoice();
+			else
+				stepEvents = _manager.RunAiTurnStep();
+
 			Refresh();
-			if (CheckAndShowGameOver(events))
+			if (CheckAndShowGameOver(stepEvents))
 				return;
 		}
 	}
@@ -243,6 +270,8 @@ public partial class MtgGameScene : Node2D
 		CheckAndShowGameOver(events);
 	}
 
+	// ===== GAME OVER =====
+
 	private bool CheckAndShowGameOver(ImmutableList<GameEvent> events)
 	{
 		var gameOver = events.OfType<GameOverEvent>().FirstOrDefault();
@@ -300,6 +329,8 @@ public partial class MtgGameScene : Node2D
 		vbox.AddChild(restartBtn);
 	}
 
+	// ===== REFRESH =====
+
 	private void Refresh()
 	{
 		_boardUI.RefreshAll(
@@ -310,6 +341,21 @@ public partial class MtgGameScene : Node2D
 			_targetingSpellCardId.HasValue ? _currentValidTargetIds : null
 		);
 		_hand.Modulate = _manager.IsAiTurn ? new Color(0.5f, 0.5f, 0.5f, 0.7f) : Colors.White;
+
+		var shouldShowChoice = !_manager.IsAiTurn && !_isGameOver && _manager.IsWaitingForChoice;
+		if (shouldShowChoice && !_choicePanelShowing)
+		{
+			var choice = _manager.GetPendingChoice();
+			var options = _manager.GetPendingChoiceOptions();
+			_choicePanel.ShowChoice(choice.Prompt, options, choice.MinChoices, choice.MaxChoices);
+			_choicePanelShowing = true;
+		}
+		else if (!shouldShowChoice && _choicePanelShowing)
+		{
+			_choicePanel.Hide();
+			_choicePanelShowing = false;
+		}
+
 		SyncHand();
 	}
 
