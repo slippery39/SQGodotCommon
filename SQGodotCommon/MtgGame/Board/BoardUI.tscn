@@ -11,7 +11,7 @@ script = ExtResource("1_boardui")
 
 [node name="MainColumn" type="VBoxContainer" parent="."]
 anchor_right = 1.0
-anchor_bottom = 1.0
+anchor_bottom = 0.73
 
 [node name="TurnLabel" type="Label" parent="MainColumn"]
 text = "Turn -"

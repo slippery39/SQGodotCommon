@@ -1,9 +1,24 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://MtgGame/MtgGameScene.cs" id="1_mtgscene"]
 [ext_resource type="PackedScene" path="res://MtgGame/Board/BoardUI.tscn" id="2_boardui"]
+[ext_resource type="PackedScene" path="res://Common/Cards/2D/Hand2D/Hand.tscn" id="3_hand"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1"]
+size = Vector2(1800, 300)
 
 [node name="MtgGameScene" type="Node2D"]
 script = ExtResource("1_mtgscene")
 
 [node name="BoardUI" parent="." instance=ExtResource("2_boardui")]
+
+[node name="Hand2D" parent="." instance=ExtResource("3_hand")]
+position = Vector2(960, 980)
+
+[node name="BattlefieldDropZone" type="Area2D" parent="."]
+position = Vector2(960, 530)
+collision_layer = 4
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BattlefieldDropZone"]
+shape = SubResource("RectangleShape2D_1")

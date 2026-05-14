@@ -68,6 +68,13 @@ public class MtgGameManager
 		return events;
 	}
 
+	public (bool Success, ImmutableList<GameEvent> Events) CastCreature(int cardId)
+	{
+		return SubmitAction(
+			new CastCreatureAction { CardId = cardId, CastingPlayerId = HumanPlayerId }
+		);
+	}
+
 	/// <summary>
 	/// Executes one AI action (or ends the turn if no legal actions remain).
 	/// Call repeatedly with a visual delay between calls until IsAiTurn is false.
