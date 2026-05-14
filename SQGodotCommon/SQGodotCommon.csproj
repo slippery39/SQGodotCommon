@@ -5,6 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MtgCore\MtgCore.csproj" />
+    <ProjectReference Include="..\MtgSimulator\MtgSimulator.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DynamicExpresso.Core" Version="2.18.0" />

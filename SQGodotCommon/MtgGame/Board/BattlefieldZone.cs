@@ -11,6 +11,7 @@ public partial class BattlefieldZone : PanelContainer
 	private HBoxContainer _container = null!;
 
 	public event Action<int>? CardClicked;
+	public event Action<int>? CardRightClicked;
 
 	public override void _Ready()
 	{
@@ -30,7 +31,8 @@ public partial class BattlefieldZone : PanelContainer
 		IEnumerable<Card> cards,
 		GameState state,
 		int? selectedId = null,
-		IEnumerable<int> targetHighlightIds = null
+		IEnumerable<int> targetHighlightIds = null,
+		IEnumerable<int> additionalCostHighlightIds = null
 	)
 	{
 		foreach (var child in _container.GetChildren())
@@ -38,7 +40,13 @@ public partial class BattlefieldZone : PanelContainer
 
 		foreach (var card in cards)
 			_container.AddChild(
-				CreateCreaturePlaceholder(card, state, selectedId, targetHighlightIds)
+				CreateCreaturePlaceholder(
+					card,
+					state,
+					selectedId,
+					targetHighlightIds,
+					additionalCostHighlightIds
+				)
 			);
 	}
 
@@ -46,7 +54,8 @@ public partial class BattlefieldZone : PanelContainer
 		Card card,
 		GameState state,
 		int? selectedId,
-		IEnumerable<int> targetHighlightIds
+		IEnumerable<int> targetHighlightIds,
+		IEnumerable<int> additionalCostHighlightIds
 	)
 	{
 		var panel = new PanelContainer();
@@ -54,7 +63,10 @@ public partial class BattlefieldZone : PanelContainer
 
 		var creature = card.GetComponent<CreatureComponent>();
 
-		if (targetHighlightIds != null && targetHighlightIds.Contains(card.Id))
+		// Color priority: orange (cost selection) > yellow (target) > green (selected) > gray (sick) > white
+		if (additionalCostHighlightIds != null && additionalCostHighlightIds.Contains(card.Id))
+			panel.Modulate = new Color(1f, 0.65f, 0.1f, 1f);
+		else if (targetHighlightIds != null && targetHighlightIds.Contains(card.Id))
 			panel.Modulate = new Color(1f, 1f, 0.3f, 1f);
 		else if (card.Id == selectedId)
 			panel.Modulate = new Color(0.4f, 1f, 0.4f, 1f);
@@ -64,12 +76,13 @@ public partial class BattlefieldZone : PanelContainer
 		var cardId = card.Id;
 		panel.GuiInput += inputEvent =>
 		{
-			if (
-				inputEvent is InputEventMouseButton mb
-				&& mb.Pressed
-				&& mb.ButtonIndex == MouseButton.Left
-			)
-				CardClicked?.Invoke(cardId);
+			if (inputEvent is InputEventMouseButton mb && mb.Pressed)
+			{
+				if (mb.ButtonIndex == MouseButton.Left)
+					CardClicked?.Invoke(cardId);
+				else if (mb.ButtonIndex == MouseButton.Right)
+					CardRightClicked?.Invoke(cardId);
+			}
 		};
 
 		var marginInner = new MarginContainer();
@@ -97,6 +110,15 @@ public partial class BattlefieldZone : PanelContainer
 			var stats = new Label { Text = statsText };
 			stats.HorizontalAlignment = HorizontalAlignment.Right;
 			vbox.AddChild(stats);
+		}
+
+		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
+		if (abilities.Any(a => !a.HasActivated))
+		{
+			var abilityLabel = new Label { Text = "[A]" };
+			abilityLabel.AddThemeFontSizeOverride("font_size", 11);
+			abilityLabel.Modulate = new Color(0.6f, 0.9f, 1f, 1f);
+			vbox.AddChild(abilityLabel);
 		}
 
 		return panel;

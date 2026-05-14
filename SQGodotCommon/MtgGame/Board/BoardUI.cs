@@ -10,6 +10,7 @@ public partial class BoardUI : Control
 {
 	public event Action? EndTurnPressed;
 	public event Action<int>? PlayerCreatureClicked;
+	public event Action<int>? PlayerCreatureRightClicked;
 	public event Action<int>? OpponentCreatureClicked;
 	public event Action? OpponentDirectAttacked;
 
@@ -31,6 +32,7 @@ public partial class BoardUI : Control
 
 		_endTurnButton.Pressed += () => EndTurnPressed?.Invoke();
 		_playerBattlefield.CardClicked += id => PlayerCreatureClicked?.Invoke(id);
+		_playerBattlefield.CardRightClicked += id => PlayerCreatureRightClicked?.Invoke(id);
 		_opponentBattlefield.CardClicked += id => OpponentCreatureClicked?.Invoke(id);
 		_opponentPanel.Clicked += () => OpponentDirectAttacked?.Invoke();
 	}
@@ -52,7 +54,8 @@ public partial class BoardUI : Control
 		int humanPlayerId,
 		int aiPlayerId,
 		int? selectedAttackerId = null,
-		IEnumerable<int> targetHighlightIds = null
+		IEnumerable<int> targetHighlightIds = null,
+		IEnumerable<int> additionalCostHighlightIds = null
 	)
 	{
 		var game = state.GetGame();
@@ -70,7 +73,8 @@ public partial class BoardUI : Control
 			state.GetCardsInZone(humanBattlefieldId),
 			state,
 			selectedAttackerId,
-			targetHighlightIds
+			targetHighlightIds,
+			additionalCostHighlightIds
 		);
 		_opponentBattlefield.Refresh(
 			state.GetCardsInZone(aiBattlefieldId),
@@ -82,7 +86,7 @@ public partial class BoardUI : Control
 		_playerPanel.SetActive(isHumanTurn);
 		_opponentPanel.SetActive(!isHumanTurn);
 
-		// Highlight player panels that are valid spell targets (overrides active state)
+		// Highlight player panels that are valid spell/ability targets (overrides active state)
 		if (targetHighlightIds != null)
 		{
 			if (targetHighlightIds.Contains(humanPlayerId))

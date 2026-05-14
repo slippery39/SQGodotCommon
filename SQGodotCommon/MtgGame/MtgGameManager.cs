@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using ImmutableGameObjects;
 using MtgCore;
+using MtgSimulator;
 
 namespace MtgGame;
 
@@ -15,6 +16,10 @@ public class MtgGameManager
 {
 	private GameState _state;
 	private readonly Random _rng = new();
+#pragma warning disable CS0618
+	private readonly MtgGameIds _ids;
+	private readonly BeamSearchAiStrategy _aiStrategy;
+#pragma warning restore CS0618
 
 	public int HumanPlayerId { get; private set; }
 	public int AiPlayerId { get; private set; }
@@ -25,7 +30,10 @@ public class MtgGameManager
 
 	public MtgGameManager()
 	{
-		(_state, _) = MtgGameFactory.Create();
+#pragma warning disable CS0618
+		(_state, _ids) = MtgGameFactory.Create();
+		_aiStrategy = new BeamSearchAiStrategy(_ids, maxDepth: 3);
+#pragma warning restore CS0618
 		HumanPlayerId = _state.GetWellKnownId(MtgObjectKeys.Player1);
 		AiPlayerId = _state.GetWellKnownId(MtgObjectKeys.Player2);
 		PopulateDecks();
@@ -93,12 +101,22 @@ public class MtgGameManager
 		ImmutableDictionary<int, ImmutableList<int>> targetIds
 	)
 	{
+		return CastSpell(cardId, targetIds, ImmutableDictionary<int, ImmutableList<int>>.Empty);
+	}
+
+	public (bool Success, ImmutableList<GameEvent> Events) CastSpell(
+		int cardId,
+		ImmutableDictionary<int, ImmutableList<int>> targetIds,
+		ImmutableDictionary<int, ImmutableList<int>> additionalCostPayments
+	)
+	{
 		return SubmitAction(
 			new CastSpellAction
 			{
 				CardId = cardId,
 				CastingPlayerId = HumanPlayerId,
 				TargetIds = targetIds,
+				AdditionalCostPayments = additionalCostPayments,
 			}
 		);
 	}
@@ -146,6 +164,138 @@ public class MtgGameManager
 		return -1;
 	}
 
+	// ===== ADDITIONAL COST HELPERS =====
+
+	public bool SpellHasAdditionalCostSelection(int cardId)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		return card?.AdditionalCastCosts.Any(c => c.RequiresSelection) ?? false;
+	}
+
+	public List<int> GetAdditionalCostValidPayments(int cardId, int costIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		if (card == null || costIndex < 0 || costIndex >= card.AdditionalCastCosts.Count)
+			return new List<int>();
+		return card.AdditionalCastCosts[costIndex]
+			.GetValidPayments(_state, HumanPlayerId, cardId)
+			.ToList();
+	}
+
+	public int GetNextAdditionalCostNeedingSelection(int cardId, int afterIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		if (card == null)
+			return -1;
+		for (int i = afterIndex + 1; i < card.AdditionalCastCosts.Count; i++)
+			if (card.AdditionalCastCosts[i].RequiresSelection)
+				return i;
+		return -1;
+	}
+
+	// ===== ACTIVATED ABILITY HELPERS =====
+
+	public List<(int Index, string Name, int ManaCost)> GetLegalAbilities(int cardId)
+	{
+		var legalActions = MtgActionGenerator.GetLegalActions(_state, HumanPlayerId);
+		var result = new List<(int, string, int)>();
+		var card = _state.GetObject(cardId) as Card;
+		if (card == null)
+			return result;
+		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
+		foreach (var action in legalActions.OfType<ActivateAbilityAction>())
+		{
+			if (action.CardId != cardId)
+				continue;
+			if (action.AbilityIndex >= abilities.Count)
+				continue;
+			var ability = abilities[action.AbilityIndex];
+			result.Add((action.AbilityIndex, ability.Name, ability.ManaCost));
+		}
+		return result;
+	}
+
+	public bool AbilityNeedsTarget(int cardId, int abilityIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		var abilities = card?.GetComponents<ActivatedAbilityComponent>().ToList();
+		if (abilities == null || abilityIndex >= abilities.Count)
+			return false;
+		return abilities[abilityIndex].Effect.TargetingStrategy.RequiresUserSelection;
+	}
+
+	public List<int> GetAbilityValidTargets(int cardId, int abilityIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		var abilities = card?.GetComponents<ActivatedAbilityComponent>().ToList();
+		if (abilities == null || abilityIndex >= abilities.Count)
+			return new List<int>();
+		var context = new TargetingContext
+		{
+			GameState = _state,
+			SourceCardId = cardId,
+			CastingPlayerId = HumanPlayerId,
+		};
+		return abilities[abilityIndex].Effect.TargetingStrategy.GetValidTargets(context).ToList();
+	}
+
+	public bool AbilityHasAdditionalCostSelection(int cardId, int abilityIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		var abilities = card?.GetComponents<ActivatedAbilityComponent>().ToList();
+		if (abilities == null || abilityIndex >= abilities.Count)
+			return false;
+		return abilities[abilityIndex].AdditionalCosts.Any(c => c.RequiresSelection);
+	}
+
+	public List<int> GetAbilityAdditionalCostValidPayments(
+		int cardId,
+		int abilityIndex,
+		int costIndex
+	)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		var abilities = card?.GetComponents<ActivatedAbilityComponent>().ToList();
+		if (abilities == null || abilityIndex >= abilities.Count)
+			return new List<int>();
+		var costs = abilities[abilityIndex].AdditionalCosts;
+		if (costIndex < 0 || costIndex >= costs.Count)
+			return new List<int>();
+		return costs[costIndex].GetValidPayments(_state, HumanPlayerId, cardId).ToList();
+	}
+
+	public int GetNextAbilityCostNeedingSelection(int cardId, int abilityIndex, int afterIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		var abilities = card?.GetComponents<ActivatedAbilityComponent>().ToList();
+		if (abilities == null || abilityIndex >= abilities.Count)
+			return -1;
+		var costs = abilities[abilityIndex].AdditionalCosts;
+		for (int i = afterIndex + 1; i < costs.Count; i++)
+			if (costs[i].RequiresSelection)
+				return i;
+		return -1;
+	}
+
+	public (bool Success, ImmutableList<GameEvent> Events) ActivateAbility(
+		int cardId,
+		int abilityIndex,
+		ImmutableList<int> targetIds,
+		ImmutableDictionary<int, ImmutableList<int>> additionalCostPayments
+	)
+	{
+		return SubmitAction(
+			new ActivateAbilityAction
+			{
+				CardId = cardId,
+				ActivatingPlayerId = HumanPlayerId,
+				AbilityIndex = abilityIndex,
+				TargetIds = targetIds,
+				AdditionalCostPayments = additionalCostPayments,
+			}
+		);
+	}
+
 	public ChoiceAction GetPendingChoice() => _state.GetPendingChoice();
 
 	public ImmutableList<ChoiceOption> GetPendingChoiceOptions()
@@ -182,7 +332,7 @@ public class MtgGameManager
 	}
 
 	/// <summary>
-	/// Executes one AI action (or ends the turn if no legal actions remain).
+	/// Executes one AI action using BeamSearch, or ends the turn if no legal actions remain.
 	/// Call repeatedly with a visual delay between calls until IsAiTurn is false.
 	/// </summary>
 	public ImmutableList<GameEvent> RunAiTurnStep()
@@ -191,15 +341,22 @@ public class MtgGameManager
 			return ImmutableList<GameEvent>.Empty;
 
 		var actions = GetLegalActions(AiPlayerId);
-		GameAction next =
-			actions.Count > 0
-				? actions[_rng.Next(actions.Count)]
-				: new EndTurnAction
-				{
-					GameId = _state.GetWellKnownId(MtgObjectKeys.Game),
-					Player1Id = HumanPlayerId,
-					Player2Id = AiPlayerId,
-				};
+		GameAction next;
+		if (actions.Count == 0)
+		{
+			next = new EndTurnAction
+			{
+				GameId = _state.GetWellKnownId(MtgObjectKeys.Game),
+				Player1Id = HumanPlayerId,
+				Player2Id = AiPlayerId,
+			};
+		}
+		else
+		{
+#pragma warning disable CS0618
+			next = _aiStrategy.SelectAction(_state, _ids, AiPlayerId);
+#pragma warning restore CS0618
+		}
 
 		var (_, events) = SubmitAction(next);
 		return events;
@@ -209,13 +366,11 @@ public class MtgGameManager
 
 	private void PopulateDecks()
 	{
-		AddCreaturesToLibrary(HumanPlayerId, MtgObjectKeys.Player1Library, HumanDeck);
-		AddSpellsToLibrary(HumanPlayerId, MtgObjectKeys.Player1Library, HumanSpells);
-		AddCreaturesToLibrary(AiPlayerId, MtgObjectKeys.Player2Library, AiDeck);
-		AddSpellsToLibrary(AiPlayerId, MtgObjectKeys.Player2Library, AiSpells);
+		AddCardsToLibrary(HumanPlayerId, MtgObjectKeys.Player1Library, HumanDeck);
+		AddCardsToLibrary(AiPlayerId, MtgObjectKeys.Player2Library, AiDeck);
 	}
 
-	private void AddSpellsToLibrary(int playerId, string libraryKey, Func<Card>[] factories)
+	private void AddCardsToLibrary(int playerId, string libraryKey, Func<Card>[] factories)
 	{
 		var libraryId = _state.GetWellKnownId(libraryKey);
 		foreach (var factory in factories)
@@ -225,93 +380,71 @@ public class MtgGameManager
 		}
 	}
 
-	private void AddCreaturesToLibrary(
-		int playerId,
-		string libraryKey,
-		(string Name, int Cost, int Power, int Toughness)[] cards
-	)
-	{
-		var libraryId = _state.GetWellKnownId(libraryKey);
-		foreach (var (name, cost, power, toughness) in cards)
-		{
-			var card = new Card
-			{
-				Name = name,
-				ManaCost = cost,
-				OwnerId = playerId,
-				ControllerId = playerId,
-				Components = ImmutableList.Create<GameComponent>(
-					new CreatureComponent { Power = power, Toughness = toughness }
-				),
-			};
-			(_state, _) = _state.AddObject(card, parentId: libraryId);
-		}
-	}
-
-	private static readonly (string Name, int Cost, int Power, int Toughness)[] HumanDeck =
+	// Zoo aggro + tricks: lots of 1-drops with abilities, a few finishers, and interactive spells
+	private static readonly Func<Card>[] HumanDeck =
 	[
-		("Grizzly Bears", 2, 2, 2),
-		("Hill Giant", 3, 3, 4),
-		("Llanowar Elves", 1, 1, 1),
-		("Serra Angel", 5, 4, 4),
-		("Siege Rhino", 4, 4, 5),
-		("Goblin Raider", 1, 2, 1),
-		("Centaur Courser", 3, 3, 3),
-		("Wind Drake", 3, 2, 2),
-		("Iron Golem", 4, 4, 4),
-		("Runeclaw Bear", 2, 2, 2),
-		("Elvish Warrior", 2, 2, 3),
-		("Jackal Pup", 1, 2, 1),
-		("Bladetusk Boar", 4, 3, 3),
-		("Kalonian Tusker", 3, 3, 3),
-		("Goblin Guide", 1, 2, 2),
-		("Craw Wurm", 6, 6, 4),
-		("Savannah Lions", 1, 2, 1),
-		("Raging Goblin", 1, 1, 1),
-		("Mahamoti Djinn", 6, 5, 6),
-		("Ancient Ooze", 7, 6, 6),
-	];
-
-	private static readonly (string Name, int Cost, int Power, int Toughness)[] AiDeck =
-	[
-		("Goblin Guide", 1, 2, 2),
-		("Grizzly Bears", 2, 2, 2),
-		("Craw Wurm", 6, 6, 4),
-		("Wall of Stone", 3, 0, 8),
-		("Hill Giant", 3, 3, 4),
-		("Iron Golem", 4, 4, 4),
-		("Serra Angel", 5, 4, 4),
-		("Centaur Courser", 3, 3, 3),
-		("Jackal Pup", 1, 2, 1),
-		("Wind Drake", 3, 2, 2),
-		("Goblin Raider", 1, 2, 1),
-		("Elvish Warrior", 2, 2, 3),
-		("Runeclaw Bear", 2, 2, 2),
-		("Bladetusk Boar", 4, 3, 3),
-		("Kalonian Tusker", 3, 3, 3),
-		("Savannah Lions", 1, 2, 1),
-		("Raging Goblin", 1, 1, 1),
-		("Llanowar Elves", 1, 1, 1),
-		("Mahamoti Djinn", 6, 5, 6),
-		("Ancient Ooze", 7, 6, 6),
-	];
-
-	private static readonly Func<Card>[] HumanSpells =
-	[
+		// 1-drops
+		CardLibrary.GoblinGuide, // 2/2 haste
+		CardLibrary.WildNacatl, // 2/2
+		CardLibrary.KirdApe, // 2/3
+		CardLibrary.LoamLion, // 2/3
+		CardLibrary.SavannahLions, // 2/1
+		CardLibrary.LlanowarElves, // 1/1 mana ramp
+		CardLibrary.RagingGoblin, // 1/1 haste
+		// 2-drops
+		CardLibrary.GrizzlyBears, // 2/2
+		CardLibrary.KalonianTusker, // 3/3
+		CardLibrary.Tarmogoyf, // */1+*
+		CardLibrary.DarkConfidant, // 1/4, upkeep draw+life
+		CardLibrary.QasaliPridemage, // 2/2, destroy activated
+		// 3-drops
+		CardLibrary.WallOfThorns, // 2/5 taunt
+		CardLibrary.GeistOfSaintTraft, // 2/2, attack creates 4/4 flying token
+		CardLibrary.HillGiant, // 3/4
+		CardLibrary.ProdigalSorcerer, // 1/1, ping activated
+		// Finishers
+		CardLibrary.MahamotiDjinn, // 6/7 flying
+		CardLibrary.CrawWurm, // 8/4
+		// Spells
+		CardLibrary.LightningBolt, // deal 3 to any target
 		CardLibrary.LightningBolt,
-		CardLibrary.LightningBolt,
-		CardLibrary.DoomBlade,
-		CardLibrary.GiantGrowth,
-		CardLibrary.WrathOfGod,
-		CardLibrary.CarefulStudy,
-		CardLibrary.TellingTime,
+		CardLibrary.DoomBlade, // destroy target creature
+		CardLibrary.GiantGrowth, // +3/+3
+		CardLibrary.WrathOfGod, // destroy all creatures
+		CardLibrary.CarefulStudy, // draw 2, discard 2
+		CardLibrary.TellingTime, // look at top 3, arrange
 	];
 
-	private static readonly Func<Card>[] AiSpells =
+	// Goblins tribal: fast aggro with haste creatures, token makers, and tribal synergies
+	private static readonly Func<Card>[] AiDeck =
 	[
+		// 1-drops
+		CardLibrary.GoblinGuide, // 2/2 haste
+		CardLibrary.GoblinGuide,
+		CardLibrary.RagingGoblin, // 1/1 haste
+		CardLibrary.RagingGoblin,
+		CardLibrary.GoblinLackey, // 1/1, deals damage → put goblin from hand into play
+		CardLibrary.GoblinLackey,
+		// 2-drops
+		CardLibrary.WarrenInstigator, // 1/1 double strike, same trigger as Lackey
+		// 3-drops
+		CardLibrary.GoblinChieftain, // 2/2 haste, +1/+1 and haste to other goblins
+		CardLibrary.GoblinChieftain,
+		CardLibrary.WallOfThorns, // 2/5 taunt
+		CardLibrary.HillGiant, // 3/4
+		// 4-drops
+		CardLibrary.KrenkoMobBoss, // 3/3, creates X goblin tokens
+		// 5-drops
+		CardLibrary.SiegeGangCommander, // 2/2, ETB creates 3 goblin tokens, sac ability
+		CardLibrary.SiegeGangCommander,
+		// Finisher
+		CardLibrary.MahamotiDjinn, // 6/7 flying
+		// Spells
 		CardLibrary.LightningBolt,
 		CardLibrary.LightningBolt,
 		CardLibrary.DoomBlade,
 		CardLibrary.WrathOfGod,
+		CardLibrary.GoblinGrenade, // 1 mana, sac a goblin, deal 5 to any target
+		CardLibrary.GoblinGrenade,
 	];
 }
