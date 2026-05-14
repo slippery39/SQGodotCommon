@@ -43,6 +43,41 @@ public static class MtgActionGenerator
 		return actions;
 	}
 
+	/// <summary>
+	/// Generates all legal actions for the given player using well-known IDs from GameState,
+	/// without needing the obsolete MtgGameIds struct.
+	/// </summary>
+	public static List<GameAction> GetLegalActions(GameState state, int playerId)
+	{
+		var player1Id = state.GetWellKnownId(MtgObjectKeys.Player1);
+		var player2Id = state.GetWellKnownId(MtgObjectKeys.Player2);
+		var isPlayer1 = playerId == player1Id;
+		var opponentId = isPlayer1 ? player2Id : player1Id;
+
+		var handId = state.GetWellKnownId(
+			isPlayer1 ? MtgObjectKeys.Player1Hand : MtgObjectKeys.Player2Hand
+		);
+		var battlefieldId = state.GetWellKnownId(
+			isPlayer1 ? MtgObjectKeys.Player1Battlefield : MtgObjectKeys.Player2Battlefield
+		);
+		var opponentBattlefieldId = state.GetWellKnownId(
+			isPlayer1 ? MtgObjectKeys.Player2Battlefield : MtgObjectKeys.Player1Battlefield
+		);
+
+		var actions = new List<GameAction>();
+		AddHandActions(state, playerId, handId, actions);
+		AddAttackActions(
+			state,
+			playerId,
+			opponentId,
+			battlefieldId,
+			opponentBattlefieldId,
+			actions
+		);
+		AddAbilityActions(state, playerId, battlefieldId, actions);
+		return actions;
+	}
+
 	// ===== HAND =====
 
 	private static void AddHandActions(

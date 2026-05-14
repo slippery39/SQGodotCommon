@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3 uid="uid://cu2greewjvlm3"]
+[gd_scene format=3 uid="uid://cu2greewjvlm3"]
 
 [ext_resource type="Script" uid="uid://bpvn6nt0m0dj5" path="res://Project/GameManager.cs" id="1_3f33t"]
+[ext_resource type="PackedScene" path="res://MtgGame/MtgGameScene.tscn" id="2_vykjv"]
 
-[node name="GameManager" type="Node2D"]
+[node name="GameManager" type="Node2D" unique_id=1595048554]
 script = ExtResource("1_3f33t")
+InitialScene = ExtResource("2_vykjv")
