@@ -8,6 +8,9 @@ namespace MtgGame;
 public partial class BoardUI : Control
 {
 	public event Action? EndTurnPressed;
+	public event Action<int>? PlayerCreatureClicked;
+	public event Action<int>? OpponentCreatureClicked;
+	public event Action? OpponentDirectAttacked;
 
 	private Label _turnLabel = null!;
 	private PlayerPanel _opponentPanel = null!;
@@ -26,9 +29,17 @@ public partial class BoardUI : Control
 		_endTurnButton = GetNode<Button>("MainColumn/EndTurnButton");
 
 		_endTurnButton.Pressed += () => EndTurnPressed?.Invoke();
+		_playerBattlefield.CardClicked += id => PlayerCreatureClicked?.Invoke(id);
+		_opponentBattlefield.CardClicked += id => OpponentCreatureClicked?.Invoke(id);
+		_opponentPanel.Clicked += () => OpponentDirectAttacked?.Invoke();
 	}
 
-	public void RefreshAll(GameState state, int humanPlayerId, int aiPlayerId)
+	public void RefreshAll(
+		GameState state,
+		int humanPlayerId,
+		int aiPlayerId,
+		int? selectedAttackerId = null
+	)
 	{
 		var game = state.GetGame();
 		var human = state.GetPlayer(humanPlayerId);
@@ -41,8 +52,12 @@ public partial class BoardUI : Control
 
 		_playerPanel.Refresh("You", human, state.GetCardsInZone(humanLibraryId).Count());
 		_opponentPanel.Refresh("Opponent", ai, state.GetCardsInZone(aiLibraryId).Count());
-		_playerBattlefield.Refresh(state.GetCardsInZone(humanBattlefieldId));
-		_opponentBattlefield.Refresh(state.GetCardsInZone(aiBattlefieldId));
+		_playerBattlefield.Refresh(
+			state.GetCardsInZone(humanBattlefieldId),
+			state,
+			selectedAttackerId
+		);
+		_opponentBattlefield.Refresh(state.GetCardsInZone(aiBattlefieldId), state);
 
 		var isHumanTurn = game.ActivePlayerId == humanPlayerId;
 		_playerPanel.SetActive(isHumanTurn);

@@ -75,6 +75,18 @@ public class MtgGameManager
 		);
 	}
 
+	public (bool Success, ImmutableList<GameEvent> Events) Attack(int attackerId, int targetId)
+	{
+		return SubmitAction(
+			new AttackAction
+			{
+				AttackerId = attackerId,
+				TargetId = targetId,
+				AttackingPlayerId = HumanPlayerId,
+			}
+		);
+	}
+
 	/// <summary>
 	/// Executes one AI action (or ends the turn if no legal actions remain).
 	/// Call repeatedly with a visual delay between calls until IsAiTurn is false.

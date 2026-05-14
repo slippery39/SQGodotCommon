@@ -1,3 +1,4 @@
+using System;
 using MtgCore;
 
 namespace MtgGame;
@@ -8,6 +9,8 @@ public partial class PlayerPanel : PanelContainer
 	private Label _lifeLabel = null!;
 	private Label _manaLabel = null!;
 	private Label _libraryLabel = null!;
+
+	public event Action? Clicked;
 
 	public override void _Ready()
 	{
@@ -33,6 +36,16 @@ public partial class PlayerPanel : PanelContainer
 
 		_libraryLabel = new Label();
 		hbox.AddChild(_libraryLabel);
+
+		GuiInput += inputEvent =>
+		{
+			if (
+				inputEvent is InputEventMouseButton mb
+				&& mb.Pressed
+				&& mb.ButtonIndex == MouseButton.Left
+			)
+				Clicked?.Invoke();
+		};
 	}
 
 	public void Refresh(string playerName, MtgPlayer player, int libraryCount)
