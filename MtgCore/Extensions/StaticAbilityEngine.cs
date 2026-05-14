@@ -259,6 +259,8 @@ public static class StaticAbilityEngine
 						GrantsFlying = keywords.GrantsFlying,
 						GrantsTaunt = keywords.GrantsTaunt,
 						GrantsReach = keywords.GrantsReach,
+						GrantsLifelink = keywords.GrantsLifelink,
+						GrantsTrample = keywords.GrantsTrample,
 					}
 				),
 			};

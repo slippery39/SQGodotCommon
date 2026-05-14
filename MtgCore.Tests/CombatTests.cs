@@ -254,6 +254,149 @@ public class CombatTests
 		Assert.That(finalState.HasPendingActions, Is.False);
 	}
 
+	// ===== LIFELINK =====
+
+	[Test]
+	public void Lifelink_AttackerVsPlayer_ControllerGainsLife()
+	{
+		var (state, attacker) = AddCreatureToBattlefield(
+			_state,
+			"Lifelinker",
+			3,
+			3,
+			_ids.Player1Id,
+			hasLifelink: true
+		);
+
+		var (finalState, _) = state
+			.AddAction(MakeAttack(attacker.Id, _ids.Player2Id))
+			.ProcessAllActions();
+
+		Assert.That(finalState.GetPlayer(_ids.Player1Id).Life, Is.EqualTo(23));
+		Assert.That(finalState.GetPlayer(_ids.Player2Id).Life, Is.EqualTo(17));
+	}
+
+	[Test]
+	public void Lifelink_AttackerVsCreature_ControllerGainsLife()
+	{
+		var (s1, attacker) = AddCreatureToBattlefield(
+			_state,
+			"Lifelinker",
+			3,
+			3,
+			_ids.Player1Id,
+			hasLifelink: true
+		);
+		var (s2, defender) = AddCreatureToBattlefield(s1, "Tank", 1, 5, _ids.Player2Id);
+
+		var (finalState, _) = s2.AddAction(MakeAttack(attacker.Id, defender.Id))
+			.ProcessAllActions();
+
+		Assert.That(finalState.GetPlayer(_ids.Player1Id).Life, Is.EqualTo(23));
+	}
+
+	[Test]
+	public void Lifelink_Defender_ControllerGainsLife()
+	{
+		var (s1, attacker) = AddCreatureToBattlefield(_state, "Attacker", 3, 3, _ids.Player1Id);
+		var (s2, defender) = AddCreatureToBattlefield(
+			s1,
+			"Lifelinker",
+			2,
+			5,
+			_ids.Player2Id,
+			hasLifelink: true
+		);
+
+		var (finalState, _) = s2.AddAction(MakeAttack(attacker.Id, defender.Id))
+			.ProcessAllActions();
+
+		Assert.That(finalState.GetPlayer(_ids.Player2Id).Life, Is.EqualTo(22));
+	}
+
+	[Test]
+	public void Lifelink_DoubleStrike_GainsLifeForBothStrikes()
+	{
+		var (s1, attacker) = AddCreatureToBattlefield(
+			_state,
+			"Double Lifelinker",
+			2,
+			5,
+			_ids.Player1Id,
+			hasDoubleStrike: true,
+			hasLifelink: true
+		);
+
+		var (finalState, _) = s1.AddAction(MakeAttack(attacker.Id, _ids.Player2Id))
+			.ProcessAllActions();
+
+		Assert.That(finalState.GetPlayer(_ids.Player1Id).Life, Is.EqualTo(24));
+	}
+
+	// ===== TRAMPLE =====
+
+	[Test]
+	public void Trample_ExcessDamageGoesToDefendingPlayer()
+	{
+		var (s1, attacker) = AddCreatureToBattlefield(
+			_state,
+			"Trampler",
+			5,
+			5,
+			_ids.Player1Id,
+			hasTrample: true
+		);
+		var (s2, defender) = AddCreatureToBattlefield(s1, "Chump", 1, 2, _ids.Player2Id);
+
+		var (finalState, _) = s2.AddAction(MakeAttack(attacker.Id, defender.Id))
+			.ProcessAllActions();
+
+		Assert.That(finalState.GetCardZone(defender.Id).ZoneType, Is.EqualTo(ZoneType.Graveyard));
+		Assert.That(finalState.GetPlayer(_ids.Player2Id).Life, Is.EqualTo(17));
+	}
+
+	[Test]
+	public void Trample_NoExcessWhenPowerDoesNotExceedToughness()
+	{
+		var (s1, attacker) = AddCreatureToBattlefield(
+			_state,
+			"Trampler",
+			2,
+			2,
+			_ids.Player1Id,
+			hasTrample: true
+		);
+		var (s2, defender) = AddCreatureToBattlefield(s1, "Tank", 1, 5, _ids.Player2Id);
+
+		var (finalState, _) = s2.AddAction(MakeAttack(attacker.Id, defender.Id))
+			.ProcessAllActions();
+
+		Assert.That(finalState.GetPlayer(_ids.Player2Id).Life, Is.EqualTo(20));
+	}
+
+	[Test]
+	public void Trample_AndLifelink_GainsLifeForTotalDamageNotJustCreature()
+	{
+		var (s1, attacker) = AddCreatureToBattlefield(
+			_state,
+			"Trampling Lifelinker",
+			5,
+			5,
+			_ids.Player1Id,
+			hasLifelink: true,
+			hasTrample: true
+		);
+		var (s2, defender) = AddCreatureToBattlefield(s1, "Chump", 1, 2, _ids.Player2Id);
+
+		var (finalState, _) = s2.AddAction(MakeAttack(attacker.Id, defender.Id))
+			.ProcessAllActions();
+
+		// Total damage dealt = 5. Lifelink gains 5 (not 5+3).
+		// Trample excess = 3 goes to P2.
+		Assert.That(finalState.GetPlayer(_ids.Player1Id).Life, Is.EqualTo(25));
+		Assert.That(finalState.GetPlayer(_ids.Player2Id).Life, Is.EqualTo(17));
+	}
+
 	// ===== HELPERS =====
 
 	private AttackAction MakeAttack(int attackerId, int targetId) =>
@@ -269,7 +412,10 @@ public class CombatTests
 		string name,
 		int power,
 		int toughness,
-		int ownerId
+		int ownerId,
+		bool hasLifelink = false,
+		bool hasTrample = false,
+		bool hasDoubleStrike = false
 	)
 	{
 		var battlefieldId = state.GetPlayerZoneId(ownerId, ZoneType.Battlefield);
@@ -284,7 +430,10 @@ public class CombatTests
 				{
 					Power = power,
 					Toughness = toughness,
-					HasSummoningSickness = false, // combat tests don't test summoning sickness
+					HasSummoningSickness = false,
+					HasLifelink = hasLifelink,
+					HasTrample = hasTrample,
+					HasDoubleStrike = hasDoubleStrike,
 				}
 			),
 		};

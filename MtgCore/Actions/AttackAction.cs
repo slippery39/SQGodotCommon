@@ -174,18 +174,71 @@ public record AttackAction : GameAction
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(attackedEvent) };
 		var events = ImmutableList.Create<GameEvent>(attackedEvent);
 
-		var power = state.GetEffectivePower(AttackerId);
+		var attackerStats = state.GetEffectiveStats(AttackerId);
+		var power = attackerStats.Power;
 
 		if (targetObj is MtgPlayer targetPlayer)
 		{
+			var totalDamage = power * strikeCount;
 			var (s, e) = ApplyDamageToPlayerStrikes(state, targetPlayer.Id, power, strikeCount);
-			return new ActionResult(s) { Events = events.AddRange(e) };
+			state = s;
+			events = events.AddRange(e);
+
+			if (attackerStats.HasLifelink)
+				state = state.SpawnAction(
+					new GainLifeAction
+					{
+						Amount = totalDamage,
+						TargetIds = ImmutableList.Create(AttackingPlayerId),
+					}
+				);
+
+			return new ActionResult(state) { Events = events };
 		}
 
 		if (targetObj is Card targetCard)
 		{
+			var targetStats = state.GetEffectiveStats(targetCard.Id);
+
 			var (s, e) = ApplyCreatureVsCreature(state, targetCard, power, strikeCount);
-			return new ActionResult(s) { Events = events.AddRange(e) };
+			state = s;
+			events = events.AddRange(e);
+
+			if (attackerStats.HasLifelink)
+				state = state.SpawnAction(
+					new GainLifeAction
+					{
+						Amount = power * strikeCount,
+						TargetIds = ImmutableList.Create(AttackingPlayerId),
+					}
+				);
+
+			if (targetStats.HasLifelink)
+				state = state.SpawnAction(
+					new GainLifeAction
+					{
+						Amount = targetStats.Power,
+						TargetIds = ImmutableList.Create(targetCard.ControllerId),
+					}
+				);
+
+			if (attackerStats.HasTrample)
+			{
+				var excess = Math.Max(0, power * strikeCount - targetStats.Toughness);
+				if (excess > 0)
+				{
+					var (s2, e2) = ApplyDamageToPlayer(
+						state,
+						AttackerId,
+						(MtgPlayer)state.GetObject(targetCard.ControllerId),
+						excess
+					);
+					state = s2;
+					events = events.AddRange(e2);
+				}
+			}
+
+			return new ActionResult(state) { Events = events };
 		}
 
 		return new ActionResult(state) { Events = events };

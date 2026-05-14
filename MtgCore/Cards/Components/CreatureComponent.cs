@@ -26,4 +26,6 @@ public record CreatureComponent : GameComponent
 	public bool HasFlying { get; init; } = false;
 	public bool HasTaunt { get; init; } = false;
 	public bool HasReach { get; init; } = false;
+	public bool HasLifelink { get; init; } = false;
+	public bool HasTrample { get; init; } = false;
 }

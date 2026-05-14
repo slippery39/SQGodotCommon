@@ -13,7 +13,9 @@ public record CreatureStats(
 	bool HasHaste,
 	bool HasFlying,
 	bool HasTaunt,
-	bool HasReach
+	bool HasReach,
+	bool HasLifelink,
+	bool HasTrample
 );
 
 /// <summary>
@@ -38,11 +40,11 @@ public static class CreatureEvaluator
 	{
 		var card = state.GetObject(cardId) as Card;
 		if (card == null)
-			return new CreatureStats(0, 0, false, false, false, false);
+			return new CreatureStats(0, 0, false, false, false, false, false, false);
 
 		var creature = card.GetComponent<CreatureComponent>();
 		if (creature == null)
-			return new CreatureStats(0, 0, false, false, false, false);
+			return new CreatureStats(0, 0, false, false, false, false, false, false);
 
 		var power = creature.Power;
 		var toughness = creature.Toughness;
@@ -50,6 +52,8 @@ public static class CreatureEvaluator
 		var hasFlying = creature.HasFlying;
 		var hasTaunt = creature.HasTaunt;
 		var hasReach = creature.HasReach;
+		var hasLifelink = creature.HasLifelink;
+		var hasTrample = creature.HasTrample;
 
 		// Spell-based and static-ability-based P/T modifiers (AppliedStaticPTBoost is a subtype)
 		foreach (var modifier in card.GetComponents<PowerToughnessModifier>())
@@ -65,9 +69,20 @@ public static class CreatureEvaluator
 			hasFlying |= applied.GrantsFlying;
 			hasTaunt |= applied.GrantsTaunt;
 			hasReach |= applied.GrantsReach;
+			hasLifelink |= applied.GrantsLifelink;
+			hasTrample |= applied.GrantsTrample;
 		}
 
-		return new CreatureStats(power, toughness, hasHaste, hasFlying, hasTaunt, hasReach);
+		return new CreatureStats(
+			power,
+			toughness,
+			hasHaste,
+			hasFlying,
+			hasTaunt,
+			hasReach,
+			hasLifelink,
+			hasTrample
+		);
 	}
 
 	public static int GetEffectivePower(this GameState state, int cardId) =>

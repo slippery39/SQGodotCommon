@@ -14,4 +14,6 @@ public record AppliedKeywordComponent : GameComponent
 	public bool GrantsFlying { get; init; } = false;
 	public bool GrantsTaunt { get; init; } = false;
 	public bool GrantsReach { get; init; } = false;
+	public bool GrantsLifelink { get; init; } = false;
+	public bool GrantsTrample { get; init; } = false;
 }
