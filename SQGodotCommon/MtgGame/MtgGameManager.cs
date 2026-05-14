@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using ImmutableGameObjects;
 using MtgCore;
 
@@ -87,6 +88,64 @@ public class MtgGameManager
 		);
 	}
 
+	public (bool Success, ImmutableList<GameEvent> Events) CastSpell(
+		int cardId,
+		ImmutableDictionary<int, ImmutableList<int>> targetIds
+	)
+	{
+		return SubmitAction(
+			new CastSpellAction
+			{
+				CardId = cardId,
+				CastingPlayerId = HumanPlayerId,
+				TargetIds = targetIds,
+			}
+		);
+	}
+
+	public bool IsSpell(int cardId)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		return card?.GetComponent<SpellComponent>() != null;
+	}
+
+	public bool SpellNeedsTargets(int cardId)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		var spell = card?.GetComponent<SpellComponent>();
+		return spell?.Effects.Any(e => e.TargetingStrategy.RequiresUserSelection) ?? false;
+	}
+
+	public List<int> GetSpellValidTargets(int cardId, int effectIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		var spell = card?.GetComponent<SpellComponent>();
+		if (spell == null || effectIndex < 0 || effectIndex >= spell.Effects.Count)
+			return new List<int>();
+
+		var context = new TargetingContext
+		{
+			GameState = _state,
+			SourceCardId = cardId,
+			CastingPlayerId = HumanPlayerId,
+		};
+		return spell.Effects[effectIndex].TargetingStrategy.GetValidTargets(context).ToList();
+	}
+
+	public int GetNextEffectNeedingTarget(int cardId, int afterIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		var spell = card?.GetComponent<SpellComponent>();
+		if (spell == null)
+			return -1;
+		for (int i = afterIndex + 1; i < spell.Effects.Count; i++)
+		{
+			if (spell.Effects[i].TargetingStrategy.RequiresUserSelection)
+				return i;
+		}
+		return -1;
+	}
+
 	/// <summary>
 	/// Executes one AI action (or ends the turn if no legal actions remain).
 	/// Call repeatedly with a visual delay between calls until IsAiTurn is false.
@@ -116,7 +175,19 @@ public class MtgGameManager
 	private void PopulateDecks()
 	{
 		AddCreaturesToLibrary(HumanPlayerId, MtgObjectKeys.Player1Library, HumanDeck);
+		AddSpellsToLibrary(HumanPlayerId, MtgObjectKeys.Player1Library, HumanSpells);
 		AddCreaturesToLibrary(AiPlayerId, MtgObjectKeys.Player2Library, AiDeck);
+		AddSpellsToLibrary(AiPlayerId, MtgObjectKeys.Player2Library, AiSpells);
+	}
+
+	private void AddSpellsToLibrary(int playerId, string libraryKey, Func<Card>[] factories)
+	{
+		var libraryId = _state.GetWellKnownId(libraryKey);
+		foreach (var factory in factories)
+		{
+			var card = factory() with { OwnerId = playerId, ControllerId = playerId };
+			(_state, _) = _state.AddObject(card, parentId: libraryId);
+		}
 	}
 
 	private void AddCreaturesToLibrary(
@@ -188,5 +259,22 @@ public class MtgGameManager
 		("Llanowar Elves", 1, 1, 1),
 		("Mahamoti Djinn", 6, 5, 6),
 		("Ancient Ooze", 7, 6, 6),
+	];
+
+	private static readonly Func<Card>[] HumanSpells =
+	[
+		CardLibrary.LightningBolt,
+		CardLibrary.LightningBolt,
+		CardLibrary.DoomBlade,
+		CardLibrary.GiantGrowth,
+		CardLibrary.WrathOfGod,
+	];
+
+	private static readonly Func<Card>[] AiSpells =
+	[
+		CardLibrary.LightningBolt,
+		CardLibrary.LightningBolt,
+		CardLibrary.DoomBlade,
+		CardLibrary.WrathOfGod,
 	];
 }

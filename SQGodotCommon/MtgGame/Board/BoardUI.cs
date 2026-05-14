@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using ImmutableGameObjects;
 using MtgCore;
@@ -50,7 +51,8 @@ public partial class BoardUI : Control
 		GameState state,
 		int humanPlayerId,
 		int aiPlayerId,
-		int? selectedAttackerId = null
+		int? selectedAttackerId = null,
+		IEnumerable<int> targetHighlightIds = null
 	)
 	{
 		var game = state.GetGame();
@@ -67,13 +69,28 @@ public partial class BoardUI : Control
 		_playerBattlefield.Refresh(
 			state.GetCardsInZone(humanBattlefieldId),
 			state,
-			selectedAttackerId
+			selectedAttackerId,
+			targetHighlightIds
 		);
-		_opponentBattlefield.Refresh(state.GetCardsInZone(aiBattlefieldId), state);
+		_opponentBattlefield.Refresh(
+			state.GetCardsInZone(aiBattlefieldId),
+			state,
+			targetHighlightIds: targetHighlightIds
+		);
 
 		var isHumanTurn = game.ActivePlayerId == humanPlayerId;
 		_playerPanel.SetActive(isHumanTurn);
 		_opponentPanel.SetActive(!isHumanTurn);
+
+		// Highlight player panels that are valid spell targets (overrides active state)
+		if (targetHighlightIds != null)
+		{
+			if (targetHighlightIds.Contains(humanPlayerId))
+				_playerPanel.Modulate = new Color(1f, 1f, 0.3f, 1f);
+			if (targetHighlightIds.Contains(aiPlayerId))
+				_opponentPanel.Modulate = new Color(1f, 1f, 0.3f, 1f);
+		}
+
 		_turnLabel.Text =
 			$"Turn {game.TurnNumber} — {(isHumanTurn ? "Your turn" : "Opponent's turn")}";
 		_endTurnButton.Disabled = !isHumanTurn;

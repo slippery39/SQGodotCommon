@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ImmutableGameObjects;
 using MtgCore;
 
@@ -25,23 +26,37 @@ public partial class BattlefieldZone : PanelContainer
 		margin.AddChild(_container);
 	}
 
-	public void Refresh(IEnumerable<Card> cards, GameState state, int? selectedId = null)
+	public void Refresh(
+		IEnumerable<Card> cards,
+		GameState state,
+		int? selectedId = null,
+		IEnumerable<int> targetHighlightIds = null
+	)
 	{
 		foreach (var child in _container.GetChildren())
 			child.QueueFree();
 
 		foreach (var card in cards)
-			_container.AddChild(CreateCreaturePlaceholder(card, state, selectedId));
+			_container.AddChild(
+				CreateCreaturePlaceholder(card, state, selectedId, targetHighlightIds)
+			);
 	}
 
-	private PanelContainer CreateCreaturePlaceholder(Card card, GameState state, int? selectedId)
+	private PanelContainer CreateCreaturePlaceholder(
+		Card card,
+		GameState state,
+		int? selectedId,
+		IEnumerable<int> targetHighlightIds
+	)
 	{
 		var panel = new PanelContainer();
 		panel.CustomMinimumSize = new Vector2(110, 150);
 
 		var creature = card.GetComponent<CreatureComponent>();
 
-		if (card.Id == selectedId)
+		if (targetHighlightIds != null && targetHighlightIds.Contains(card.Id))
+			panel.Modulate = new Color(1f, 1f, 0.3f, 1f);
+		else if (card.Id == selectedId)
 			panel.Modulate = new Color(0.4f, 1f, 0.4f, 1f);
 		else if (creature is { HasSummoningSickness: true })
 			panel.Modulate = new Color(0.6f, 0.6f, 0.6f, 1f);

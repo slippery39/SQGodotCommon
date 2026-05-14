@@ -18,6 +18,14 @@ public partial class MtgGameScene : Node2D
 	private int? _selectedAttackerId;
 	private bool _isGameOver;
 
+	private int? _targetingSpellCardId;
+	private ImmutableDictionary<int, ImmutableList<int>> _pendingTargetIds = ImmutableDictionary<
+		int,
+		ImmutableList<int>
+	>.Empty;
+	private int _currentEffectIndex;
+	private HashSet<int> _currentValidTargetIds = new();
+
 	public override void _Ready()
 	{
 		_manager = new MtgGameManager();
@@ -33,6 +41,7 @@ public partial class MtgGameScene : Node2D
 		_hand.IsDragSuccess = context =>
 			!_manager.IsAiTurn
 			&& !_isGameOver
+			&& !_targetingSpellCardId.HasValue
 			&& context.SelectedAreas.Contains(_battlefieldDropZone);
 
 		_hand.OnDragSuccess = context =>
@@ -43,25 +52,120 @@ public partial class MtgGameScene : Node2D
 				return;
 			}
 
-			var (success, events) = _manager.CastCreature(cardId);
-			if (!success)
+			if (_manager.IsSpell(cardId))
+			{
+				_hand.LerpCardTransform(context.CardUI2D);
+				if (!_manager.SpellNeedsTargets(cardId))
+				{
+					var (success, events) = _manager.CastSpell(
+						cardId,
+						ImmutableDictionary<int, ImmutableList<int>>.Empty
+					);
+					if (!success)
+						return;
+					Refresh();
+					CheckAndShowGameOver(events);
+				}
+				else
+				{
+					EnterTargetingMode(cardId);
+				}
+				return;
+			}
+
+			var (creatureSuccess, creatureEvents) = _manager.CastCreature(cardId);
+			if (!creatureSuccess)
 			{
 				_hand.LerpCardTransform(context.CardUI2D);
 				return;
 			}
 
 			Refresh();
-			CheckAndShowGameOver(events);
+			CheckAndShowGameOver(creatureEvents);
 		};
 
 		_manager.StartGame();
 		Refresh();
 	}
 
+	public override void _Input(InputEvent @event)
+	{
+		if (
+			@event is InputEventKey key
+			&& key.Pressed
+			&& !key.Echo
+			&& key.Keycode == Key.Escape
+			&& _targetingSpellCardId.HasValue
+		)
+		{
+			ExitTargetingMode();
+		}
+	}
+
+	private void EnterTargetingMode(int cardId)
+	{
+		_targetingSpellCardId = cardId;
+		_pendingTargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+		_currentEffectIndex = _manager.GetNextEffectNeedingTarget(cardId, -1);
+		_currentValidTargetIds = new HashSet<int>(
+			_manager.GetSpellValidTargets(cardId, _currentEffectIndex)
+		);
+		Refresh();
+	}
+
+	private void ExitTargetingMode()
+	{
+		_targetingSpellCardId = null;
+		_pendingTargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+		_currentEffectIndex = 0;
+		_currentValidTargetIds = new HashSet<int>();
+		Refresh();
+	}
+
+	private void OnTargetSelected(int targetId)
+	{
+		if (!_targetingSpellCardId.HasValue)
+			return;
+		if (!_currentValidTargetIds.Contains(targetId))
+			return;
+
+		var cardId = _targetingSpellCardId.Value;
+		_pendingTargetIds = _pendingTargetIds.Add(
+			_currentEffectIndex,
+			ImmutableList.Create(targetId)
+		);
+
+		var nextEffect = _manager.GetNextEffectNeedingTarget(cardId, _currentEffectIndex);
+		if (nextEffect == -1)
+		{
+			var targetIds = _pendingTargetIds;
+			ExitTargetingMode();
+			var (success, events) = _manager.CastSpell(cardId, targetIds);
+			if (!success)
+				return;
+			Refresh();
+			CheckAndShowGameOver(events);
+		}
+		else
+		{
+			_currentEffectIndex = nextEffect;
+			_currentValidTargetIds = new HashSet<int>(
+				_manager.GetSpellValidTargets(cardId, _currentEffectIndex)
+			);
+			Refresh();
+		}
+	}
+
 	private async void OnEndTurnPressed()
 	{
 		if (_isGameOver)
 			return;
+
+		if (_targetingSpellCardId.HasValue)
+		{
+			ExitTargetingMode();
+			return;
+		}
 
 		_selectedAttackerId = null;
 		var events = _manager.EndTurn();
@@ -84,13 +188,28 @@ public partial class MtgGameScene : Node2D
 		if (_isGameOver || _manager.IsAiTurn)
 			return;
 
+		if (_targetingSpellCardId.HasValue)
+		{
+			OnTargetSelected(cardId);
+			return;
+		}
+
 		_selectedAttackerId = _selectedAttackerId == cardId ? null : cardId;
 		Refresh();
 	}
 
 	private void OnOpponentCreatureClicked(int cardId)
 	{
-		if (_isGameOver || _manager.IsAiTurn || !_selectedAttackerId.HasValue)
+		if (_isGameOver || _manager.IsAiTurn)
+			return;
+
+		if (_targetingSpellCardId.HasValue)
+		{
+			OnTargetSelected(cardId);
+			return;
+		}
+
+		if (!_selectedAttackerId.HasValue)
 			return;
 
 		TryAttack(_selectedAttackerId.Value, cardId);
@@ -98,7 +217,16 @@ public partial class MtgGameScene : Node2D
 
 	private void OnOpponentDirectAttacked()
 	{
-		if (_isGameOver || _manager.IsAiTurn || !_selectedAttackerId.HasValue)
+		if (_isGameOver || _manager.IsAiTurn)
+			return;
+
+		if (_targetingSpellCardId.HasValue)
+		{
+			OnTargetSelected(_manager.AiPlayerId);
+			return;
+		}
+
+		if (!_selectedAttackerId.HasValue)
 			return;
 
 		TryAttack(_selectedAttackerId.Value, _manager.AiPlayerId);
@@ -128,7 +256,6 @@ public partial class MtgGameScene : Node2D
 		if (lostEvent != null)
 		{
 			_boardUI.FlashLoss(lostEvent.PlayerId, _manager.HumanPlayerId);
-			// Give the flash time to play before the overlay covers the board
 			var timer = GetTree().CreateTimer(0.55f);
 			timer.Timeout += () => CreateGameOverUI(gameOver);
 		}
@@ -179,9 +306,9 @@ public partial class MtgGameScene : Node2D
 			_manager.State,
 			_manager.HumanPlayerId,
 			_manager.AiPlayerId,
-			_selectedAttackerId
+			_selectedAttackerId,
+			_targetingSpellCardId.HasValue ? _currentValidTargetIds : null
 		);
-		// Dim the hand while the AI is taking its turn
 		_hand.Modulate = _manager.IsAiTurn ? new Color(0.5f, 0.5f, 0.5f, 0.7f) : Colors.White;
 		SyncHand();
 	}
