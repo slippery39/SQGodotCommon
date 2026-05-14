@@ -52,6 +52,16 @@ public partial class EventLogPanel : CanvasLayer
 		_scroll.AddChild(_logContainer);
 	}
 
+	public void Clear()
+	{
+		foreach (var child in _logContainer.GetChildren())
+		{
+			_logContainer.RemoveChild(child);
+			child.Free();
+		}
+		_cardNames.Clear();
+	}
+
 	public void AppendEvents(ImmutableList<GameEvent> events, GameState state, int humanPlayerId)
 	{
 		_humanPlayerId = humanPlayerId;

@@ -605,8 +605,47 @@ public partial class MtgGameScene : Node2D
 		vbox.AddChild(resultLabel);
 
 		var restartBtn = new Button { Text = "Play Again" };
-		restartBtn.Pressed += () => GetTree().ReloadCurrentScene();
+		restartBtn.Pressed += () =>
+		{
+			layer.QueueFree();
+			ResetGame();
+		};
 		vbox.AddChild(restartBtn);
+	}
+
+	private void ResetGame()
+	{
+		// Clear hand visuals
+		foreach (var id in _handCardIds.ToList())
+			_hand.DiscardCard(id.ToString());
+		_handCardIds.Clear();
+
+		// Reset all scene state
+		_selectedAttackerId = null;
+		_isGameOver = false;
+		_choicePanelShowing = false;
+		_targetingSpellCardId = null;
+		_pendingTargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+		_pendingAdditionalCostPayments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+		_currentEffectIndex = 0;
+		_currentValidTargetIds = new HashSet<int>();
+		_additionalCostCardId = null;
+		_additionalCostIsAbility = false;
+		_additionalCostAbilityIndex = -1;
+		_currentCostIndex = 0;
+		_pendingCostPayments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+		_currentCostValidPaymentIds = new HashSet<int>();
+		_activatingAbilityCardId = null;
+		_activatingAbilityIndex = 0;
+		_abilityCollectedCostPayments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+
+		_choicePanel.Hide();
+		_eventLog.Clear();
+
+		_manager = new MtgGameManager();
+		var startEvents = _manager.StartGame();
+		_eventLog.AppendEvents(startEvents, _manager.State, _manager.HumanPlayerId);
+		Refresh();
 	}
 
 	// ===== REFRESH =====
