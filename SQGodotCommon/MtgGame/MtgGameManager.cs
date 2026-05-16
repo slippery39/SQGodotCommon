@@ -127,6 +127,21 @@ public class MtgGameManager
 		return card?.GetComponent<SpellComponent>() != null;
 	}
 
+	public bool IsNonCreaturePermanent(int cardId)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		return card != null
+			&& card.HasComponent<PermanentComponent>()
+			&& !card.HasComponent<CreatureComponent>();
+	}
+
+	public (bool Success, ImmutableList<GameEvent> Events) CastPermanent(int cardId)
+	{
+		return SubmitAction(
+			new CastPermanentAction { CardId = cardId, CastingPlayerId = HumanPlayerId }
+		);
+	}
+
 	public bool SpellNeedsTargets(int cardId)
 	{
 		var card = _state.GetObject(cardId) as Card;
@@ -386,7 +401,10 @@ public class MtgGameManager
 				DeckRegistry.All[_rng.Next(DeckRegistry.All.Count)].Name,
 				ownerId
 			),
-			DeckChoice.Randomized => CardPool.BuildRandomDeck(ownerId, CardPool.All),
+			DeckChoice.Randomized => CardPool.BuildRandomDeck(
+				ownerId,
+				[.. CardPool.All, .. CardLibrary.All]
+			),
 			_ => throw new ArgumentOutOfRangeException(nameof(choice)),
 		};
 
