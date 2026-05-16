@@ -28,7 +28,7 @@ public class MtgGameManager
 	public bool IsAiTurn => _state.TryGetGame()?.ActivePlayerId == AiPlayerId;
 	public bool IsWaitingForChoice => _state.IsWaitingForChoice;
 
-	public MtgGameManager()
+	public MtgGameManager(DeckSetupData setup)
 	{
 #pragma warning disable CS0618
 		(_state, _ids) = MtgGameFactory.Create();
@@ -36,7 +36,7 @@ public class MtgGameManager
 #pragma warning restore CS0618
 		HumanPlayerId = _state.GetWellKnownId(MtgObjectKeys.Player1);
 		AiPlayerId = _state.GetWellKnownId(MtgObjectKeys.Player2);
-		PopulateDecks();
+		PopulateDecks(setup);
 	}
 
 	public ImmutableList<GameEvent> StartGame()
@@ -364,87 +364,39 @@ public class MtgGameManager
 
 	// ===== DECK SETUP =====
 
-	private void PopulateDecks()
+	private void PopulateDecks(DeckSetupData setup)
 	{
-		AddCardsToLibrary(HumanPlayerId, MtgObjectKeys.Player1Library, HumanDeck);
-		AddCardsToLibrary(AiPlayerId, MtgObjectKeys.Player2Library, AiDeck);
+		AddCardsToLibrary(
+			HumanPlayerId,
+			MtgObjectKeys.Player1Library,
+			ResolveCards(setup.PlayerDeck, HumanPlayerId)
+		);
+		AddCardsToLibrary(
+			AiPlayerId,
+			MtgObjectKeys.Player2Library,
+			ResolveCards(setup.OpponentDeck, AiPlayerId)
+		);
 	}
 
-	private void AddCardsToLibrary(int playerId, string libraryKey, Func<Card>[] factories)
+	private IReadOnlyList<Card> ResolveCards(DeckChoice choice, int ownerId) =>
+		choice switch
+		{
+			DeckChoice.Premade p => DeckRegistry.Build(p.Name, ownerId),
+			DeckChoice.RandomPremade => DeckRegistry.Build(
+				DeckRegistry.All[_rng.Next(DeckRegistry.All.Count)].Name,
+				ownerId
+			),
+			DeckChoice.Randomized => CardPool.BuildRandomDeck(ownerId, CardPool.All),
+			_ => throw new ArgumentOutOfRangeException(nameof(choice)),
+		};
+
+	private void AddCardsToLibrary(int playerId, string libraryKey, IReadOnlyList<Card> cards)
 	{
 		var libraryId = _state.GetWellKnownId(libraryKey);
-		foreach (var factory in factories)
+		foreach (var card in cards)
 		{
-			var card = factory() with { OwnerId = playerId, ControllerId = playerId };
-			(_state, _) = _state.AddObject(card, parentId: libraryId);
+			var stamped = card with { OwnerId = playerId, ControllerId = playerId };
+			(_state, _) = _state.AddObject(stamped, parentId: libraryId);
 		}
 	}
-
-	// Zoo aggro + tricks: lots of 1-drops with abilities, a few finishers, and interactive spells
-	private static readonly Func<Card>[] HumanDeck =
-	[
-		// 1-drops
-		CardLibrary.GoblinGuide, // 2/2 haste
-		CardLibrary.WildNacatl, // 2/2
-		CardLibrary.KirdApe, // 2/3
-		CardLibrary.LoamLion, // 2/3
-		CardLibrary.SavannahLions, // 2/1
-		CardLibrary.LlanowarElves, // 1/1 mana ramp
-		CardLibrary.RagingGoblin, // 1/1 haste
-		// 2-drops
-		CardLibrary.GrizzlyBears, // 2/2
-		CardLibrary.KalonianTusker, // 3/3
-		CardLibrary.Tarmogoyf, // */1+*
-		CardLibrary.DarkConfidant, // 1/4, upkeep draw+life
-		CardLibrary.QasaliPridemage, // 2/2, destroy activated
-		// 3-drops
-		CardLibrary.WallOfThorns, // 2/5 taunt
-		CardLibrary.GeistOfSaintTraft, // 2/2, attack creates 4/4 flying token
-		CardLibrary.HillGiant, // 3/4
-		CardLibrary.ProdigalSorcerer, // 1/1, ping activated
-		// Finishers
-		CardLibrary.MahamotiDjinn, // 6/7 flying
-		CardLibrary.CrawWurm, // 8/4
-		// Spells
-		CardLibrary.LightningBolt, // deal 3 to any target
-		CardLibrary.LightningBolt,
-		CardLibrary.DoomBlade, // destroy target creature
-		CardLibrary.GiantGrowth, // +3/+3
-		CardLibrary.WrathOfGod, // destroy all creatures
-		CardLibrary.CarefulStudy, // draw 2, discard 2
-		CardLibrary.TellingTime, // look at top 3, arrange
-	];
-
-	// Goblins tribal: fast aggro with haste creatures, token makers, and tribal synergies
-	private static readonly Func<Card>[] AiDeck =
-	[
-		// 1-drops
-		CardLibrary.GoblinGuide, // 2/2 haste
-		CardLibrary.GoblinGuide,
-		CardLibrary.RagingGoblin, // 1/1 haste
-		CardLibrary.RagingGoblin,
-		CardLibrary.GoblinLackey, // 1/1, deals damage → put goblin from hand into play
-		CardLibrary.GoblinLackey,
-		// 2-drops
-		CardLibrary.WarrenInstigator, // 1/1 double strike, same trigger as Lackey
-		// 3-drops
-		CardLibrary.GoblinChieftain, // 2/2 haste, +1/+1 and haste to other goblins
-		CardLibrary.GoblinChieftain,
-		CardLibrary.WallOfThorns, // 2/5 taunt
-		CardLibrary.HillGiant, // 3/4
-		// 4-drops
-		CardLibrary.KrenkoMobBoss, // 3/3, creates X goblin tokens
-		// 5-drops
-		CardLibrary.SiegeGangCommander, // 2/2, ETB creates 3 goblin tokens, sac ability
-		CardLibrary.SiegeGangCommander,
-		// Finisher
-		CardLibrary.MahamotiDjinn, // 6/7 flying
-		// Spells
-		CardLibrary.LightningBolt,
-		CardLibrary.LightningBolt,
-		CardLibrary.DoomBlade,
-		CardLibrary.WrathOfGod,
-		CardLibrary.GoblinGrenade, // 1 mana, sac a goblin, deal 5 to any target
-		CardLibrary.GoblinGrenade,
-	];
 }

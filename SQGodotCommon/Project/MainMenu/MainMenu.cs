@@ -130,10 +130,7 @@ public partial class MainMenu : Control
 		{
 			case "Start Game":
 				QueueFree();
-				// Load the game scene
-				GameManager.Instance.ChangeScene(
-					"res://Common/Cards/CardsExample/cards_example.tscn"
-				);
+				GameManager.Instance.ChangeScene("res://MtgGame/DeckSelect/DeckSelectScene.tscn");
 				break;
 
 			case "Options":

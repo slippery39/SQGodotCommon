@@ -4,6 +4,7 @@ using System.Linq;
 using Common.Cards;
 using ImmutableGameObjects;
 using MtgCore;
+using Project;
 
 namespace MtgGame;
 
@@ -51,7 +52,8 @@ public partial class MtgGameScene : Node2D
 
 	public override void _Ready()
 	{
-		_manager = new MtgGameManager();
+		var setup = GameManager.Instance.GetService<DeckSetupData>();
+		_manager = new MtgGameManager(setup);
 		_boardUI = GetNode<BoardUI>("BoardUI");
 		_hand = GetNode<Hand2D>("Hand2D");
 		_battlefieldDropZone = GetNode<Area2D>("BattlefieldDropZone");
@@ -606,46 +608,8 @@ public partial class MtgGameScene : Node2D
 
 		var restartBtn = new Button { Text = "Play Again" };
 		restartBtn.Pressed += () =>
-		{
-			layer.QueueFree();
-			ResetGame();
-		};
+			GameManager.Instance.ChangeScene("res://MtgGame/DeckSelect/DeckSelectScene.tscn");
 		vbox.AddChild(restartBtn);
-	}
-
-	private void ResetGame()
-	{
-		// Clear hand visuals
-		foreach (var id in _handCardIds.ToList())
-			_hand.DiscardCard(id.ToString());
-		_handCardIds.Clear();
-
-		// Reset all scene state
-		_selectedAttackerId = null;
-		_isGameOver = false;
-		_choicePanelShowing = false;
-		_targetingSpellCardId = null;
-		_pendingTargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty;
-		_pendingAdditionalCostPayments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
-		_currentEffectIndex = 0;
-		_currentValidTargetIds = new HashSet<int>();
-		_additionalCostCardId = null;
-		_additionalCostIsAbility = false;
-		_additionalCostAbilityIndex = -1;
-		_currentCostIndex = 0;
-		_pendingCostPayments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
-		_currentCostValidPaymentIds = new HashSet<int>();
-		_activatingAbilityCardId = null;
-		_activatingAbilityIndex = 0;
-		_abilityCollectedCostPayments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
-
-		_choicePanel.Hide();
-		_eventLog.Clear();
-
-		_manager = new MtgGameManager();
-		var startEvents = _manager.StartGame();
-		_eventLog.AppendEvents(startEvents, _manager.State, _manager.HumanPlayerId);
-		Refresh();
 	}
 
 	// ===== REFRESH =====
