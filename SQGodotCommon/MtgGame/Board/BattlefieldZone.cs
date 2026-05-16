@@ -126,6 +126,10 @@ public partial class BattlefieldZone : PanelContainer
 		manaLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
 		vbox.AddChild(manaLabel);
 
+		// Keyword pills
+		if (creature != null)
+			AddKeywordPills(vbox, creature);
+
 		var spacer = new Control();
 		spacer.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
 		spacer.MouseFilter = Control.MouseFilterEnum.Ignore;
@@ -158,6 +162,45 @@ public partial class BattlefieldZone : PanelContainer
 			vbox.AddChild(statsLabel);
 		}
 
+		panel.TooltipText = MtgCardMapper.GetRulesText(card);
+
 		return panel;
+	}
+
+	private static void AddKeywordPills(VBoxContainer vbox, CreatureComponent creature)
+	{
+		var pills = new List<string>();
+		if (creature.HasFlying)
+			pills.Add("FLY");
+		if (creature.HasHaste)
+			pills.Add("HASTE");
+		if (creature.HasDoubleStrike)
+			pills.Add("DBLSTK");
+		if (creature.HasTaunt)
+			pills.Add("TAUNT");
+		if (creature.HasReach)
+			pills.Add("REACH");
+		if (creature.HasLifelink)
+			pills.Add("LINK");
+		if (creature.HasTrample)
+			pills.Add("TRAMPLE");
+
+		if (pills.Count == 0)
+			return;
+
+		var row = new HBoxContainer();
+		row.AddThemeConstantOverride("separation", 3);
+		row.MouseFilter = Control.MouseFilterEnum.Ignore;
+
+		foreach (var pill in pills)
+		{
+			var label = new Label { Text = pill };
+			label.AddThemeFontSizeOverride("font_size", 12);
+			label.AddThemeColorOverride("font_color", new Color(0.5f, 0.9f, 1f, 1f));
+			label.MouseFilter = MouseFilterEnum.Ignore;
+			row.AddChild(label);
+		}
+
+		vbox.AddChild(row);
 	}
 }
