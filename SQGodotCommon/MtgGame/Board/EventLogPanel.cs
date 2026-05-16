@@ -36,7 +36,7 @@ public partial class EventLogPanel : CanvasLayer
 		margin.AddChild(vbox);
 
 		var title = new Label { Text = "Event Log" };
-		title.AddThemeFontSizeOverride("font_size", 14);
+		title.AddThemeFontSizeOverride("font_size", 25);
 		vbox.AddChild(title);
 
 		vbox.AddChild(new HSeparator());
@@ -92,7 +92,7 @@ public partial class EventLogPanel : CanvasLayer
 	{
 		var label = new Label { Text = text };
 		label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-		label.AddThemeFontSizeOverride("font_size", 11);
+		label.AddThemeFontSizeOverride("font_size", 20);
 		if (isTurnSeparator)
 			label.Modulate = new Color(0.75f, 0.85f, 1f, 1f);
 		_logContainer.AddChild(label);

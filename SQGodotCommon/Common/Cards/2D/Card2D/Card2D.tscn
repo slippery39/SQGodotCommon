@@ -6,10 +6,10 @@
 [ext_resource type="PackedScene" uid="uid://32rm64h555od" path="res://Common/Core/DraggableNode2D/DraggableNode2D.tscn" id="9_h2mar"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_jsjmp"]
-size = Vector2(166, 225)
+size = Vector2(232, 315)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ve1db"]
-size = Vector2(83, 100)
+size = Vector2(116, 140)
 
 [node name="Card" type="Node2D"]
 script = ExtResource("1_1spq0")
@@ -17,7 +17,7 @@ metadata/_edit_group_ = true
 metadata/_edit_vertical_guides_ = [-255.0]
 
 [node name="InternalCard2D" parent="." instance=ExtResource("2_jt7e2")]
-scale = Vector2(0.5, 0.5)
+scale = Vector2(0.7, 0.7)
 OutlineColor = Color(1, 1, 1, 1)
 OutlineThickness = 5.0
 CardName = "Slice"

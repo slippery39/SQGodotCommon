@@ -15,15 +15,19 @@ public partial class BattlefieldZone : PanelContainer
 
 	public override void _Ready()
 	{
+		AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel(borderWidth: 2));
+
 		var margin = new MarginContainer();
 		margin.AddThemeConstantOverride("margin_left", 12);
 		margin.AddThemeConstantOverride("margin_right", 12);
 		margin.AddThemeConstantOverride("margin_top", 12);
 		margin.AddThemeConstantOverride("margin_bottom", 12);
+		margin.MouseFilter = Control.MouseFilterEnum.Ignore;
 		AddChild(margin);
 
 		_container = new HBoxContainer();
 		_container.AddThemeConstantOverride("separation", 12);
+		_container.MouseFilter = Control.MouseFilterEnum.Ignore;
 		margin.AddChild(_container);
 	}
 
@@ -40,7 +44,7 @@ public partial class BattlefieldZone : PanelContainer
 
 		foreach (var card in cards)
 			_container.AddChild(
-				CreateCreaturePlaceholder(
+				CreateMiniCard(
 					card,
 					state,
 					selectedId,
@@ -50,7 +54,7 @@ public partial class BattlefieldZone : PanelContainer
 			);
 	}
 
-	private PanelContainer CreateCreaturePlaceholder(
+	private PanelContainer CreateMiniCard(
 		Card card,
 		GameState state,
 		int? selectedId,
@@ -59,11 +63,12 @@ public partial class BattlefieldZone : PanelContainer
 	)
 	{
 		var panel = new PanelContainer();
-		panel.CustomMinimumSize = new Vector2(110, 150);
+		panel.CustomMinimumSize = new Vector2(130, 186);
+		panel.AddThemeStyleboxOverride("panel", MtgUiStyles.MiniCardStyle());
 
 		var creature = card.GetComponent<CreatureComponent>();
 
-		// Color priority: orange (cost selection) > yellow (target) > green (selected) > gray (sick) > white
+		// Color priority: orange (cost) > yellow (target) > green (selected) > grey (sick) > default
 		if (additionalCostHighlightIds != null && additionalCostHighlightIds.Contains(card.Id))
 			panel.Modulate = new Color(1f, 0.65f, 0.1f, 1f);
 		else if (targetHighlightIds != null && targetHighlightIds.Contains(card.Id))
@@ -85,40 +90,72 @@ public partial class BattlefieldZone : PanelContainer
 			}
 		};
 
-		var marginInner = new MarginContainer();
-		marginInner.AddThemeConstantOverride("margin_left", 6);
-		marginInner.AddThemeConstantOverride("margin_right", 6);
-		marginInner.AddThemeConstantOverride("margin_top", 6);
-		marginInner.AddThemeConstantOverride("margin_bottom", 6);
-		panel.AddChild(marginInner);
+		var margin = new MarginContainer();
+		margin.AddThemeConstantOverride("margin_left", 6);
+		margin.AddThemeConstantOverride("margin_right", 6);
+		margin.AddThemeConstantOverride("margin_top", 6);
+		margin.AddThemeConstantOverride("margin_bottom", 6);
+		margin.MouseFilter = Control.MouseFilterEnum.Ignore;
+		panel.AddChild(margin);
 
 		var vbox = new VBoxContainer();
-		marginInner.AddChild(vbox);
+		vbox.AddThemeConstantOverride("separation", 4);
+		vbox.MouseFilter = Control.MouseFilterEnum.Ignore;
+		margin.AddChild(vbox);
 
+		// Card name
 		var nameLabel = new Label { Text = card.Name };
+		nameLabel.AddThemeFontSizeOverride("font_size", 18);
 		nameLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-		nameLabel.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+		nameLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.88f, 0.70f, 1f));
+		nameLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
 		vbox.AddChild(nameLabel);
 
-		if (creature != null)
-		{
-			var effectiveStats = state.GetEffectiveStats(card.Id);
-			var statsText = $"{effectiveStats.Power}/{effectiveStats.Toughness}";
-			if (creature.Damage > 0)
-				statsText += $" -{creature.Damage}";
+		// Art placeholder
+		var artRect = new ColorRect();
+		artRect.Color = MtgUiStyles.ArtBlock;
+		artRect.CustomMinimumSize = new Vector2(0, 50);
+		artRect.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+		artRect.MouseFilter = Control.MouseFilterEnum.Ignore;
+		vbox.AddChild(artRect);
 
-			var stats = new Label { Text = statsText };
-			stats.HorizontalAlignment = HorizontalAlignment.Right;
-			vbox.AddChild(stats);
-		}
+		// Mana cost
+		var manaLabel = new Label { Text = $"Mana: {card.ManaCost}" };
+		manaLabel.AddThemeFontSizeOverride("font_size", 16);
+		manaLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.75f, 0.85f, 1f));
+		manaLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
+		vbox.AddChild(manaLabel);
 
+		var spacer = new Control();
+		spacer.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+		spacer.MouseFilter = Control.MouseFilterEnum.Ignore;
+		vbox.AddChild(spacer);
+
+		// Activated ability indicator
 		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
 		if (abilities.Any(a => !a.HasActivated))
 		{
 			var abilityLabel = new Label { Text = "[A]" };
-			abilityLabel.AddThemeFontSizeOverride("font_size", 11);
-			abilityLabel.Modulate = new Color(0.6f, 0.9f, 1f, 1f);
+			abilityLabel.AddThemeFontSizeOverride("font_size", 16);
+			abilityLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.85f, 1f, 1f));
+			abilityLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
 			vbox.AddChild(abilityLabel);
+		}
+
+		// Power / toughness
+		if (creature != null)
+		{
+			var stats = state.GetEffectiveStats(card.Id);
+			var statsText = $"{stats.Power}/{stats.Toughness}";
+			if (creature.Damage > 0)
+				statsText += $" -{creature.Damage}";
+
+			var statsLabel = new Label { Text = statsText };
+			statsLabel.AddThemeFontSizeOverride("font_size", 20);
+			statsLabel.HorizontalAlignment = HorizontalAlignment.Right;
+			statsLabel.AddThemeColorOverride("font_color", new Color(1f, 0.95f, 0.75f, 1f));
+			statsLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
+			vbox.AddChild(statsLabel);
 		}
 
 		return panel;

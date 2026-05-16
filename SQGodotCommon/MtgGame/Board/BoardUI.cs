@@ -23,6 +23,12 @@ public partial class BoardUI : Control
 
 	public override void _Ready()
 	{
+		// Fill the full viewport — anchors don't resolve when parented under a Node2D
+		Size = GetViewportRect().Size;
+		Position = Vector2.Zero;
+		// Pass mouse events through so hand cards (Node2D below) remain draggable
+		MouseFilter = Control.MouseFilterEnum.Ignore;
+
 		_turnLabel = GetNode<Label>("MainColumn/TurnLabel");
 		_opponentPanel = GetNode<PlayerPanel>("MainColumn/OpponentPanel");
 		_opponentBattlefield = GetNode<BattlefieldZone>("MainColumn/OpponentBattlefield");
@@ -30,7 +36,28 @@ public partial class BoardUI : Control
 		_playerPanel = GetNode<PlayerPanel>("MainColumn/PlayerPanel");
 		_endTurnButton = GetNode<Button>("MainColumn/EndTurnButton");
 
+		// Stop at 78% width — leaves space for the EventLog panel on the right
+		var mainColumn = GetNode<VBoxContainer>("MainColumn");
+		mainColumn.AnchorRight = 0.78f;
+
+		// Center player panels instead of spanning the full width
+		_opponentPanel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+		_opponentPanel.CustomMinimumSize = new Vector2(450, 0);
+		_playerPanel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+		_playerPanel.CustomMinimumSize = new Vector2(450, 0);
+
 		_endTurnButton.Pressed += () => EndTurnPressed?.Invoke();
+
+		_turnLabel.AddThemeFontSizeOverride("font_size", 25);
+		_turnLabel.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
+		_turnLabel.HorizontalAlignment = HorizontalAlignment.Center;
+
+		_endTurnButton.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
+		_endTurnButton.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
+		_endTurnButton.AddThemeStyleboxOverride("disabled", MtgUiStyles.ButtonDisabled());
+		_endTurnButton.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
+		_endTurnButton.AddThemeColorOverride("font_disabled_color", MtgUiStyles.DimBorder);
+
 		_playerBattlefield.CardClicked += id => PlayerCreatureClicked?.Invoke(id);
 		_playerBattlefield.CardRightClicked += id => PlayerCreatureRightClicked?.Invoke(id);
 		_opponentBattlefield.CardClicked += id => OpponentCreatureClicked?.Invoke(id);
