@@ -88,6 +88,33 @@ public static class CreatureEvaluator
 	public static int GetEffectivePower(this GameState state, int cardId) =>
 		state.GetEffectiveStats(cardId).Power;
 
+	/// <summary>
+	/// Returns the creature's power counting only permanent modifiers — excludes
+	/// UntilEndOfTurn buffs such as Giant Growth. Used by StateEvaluator so that
+	/// temporary pumps are not counted as lasting board advantage.
+	/// Combat code must continue using GetEffectivePower; temporary buffs are valid during combat.
+	/// </summary>
+	public static int GetEffectivePermanentPower(this GameState state, int cardId)
+	{
+		var card = state.GetObject(cardId) as Card;
+		if (card == null)
+			return 0;
+
+		var creature = card.GetComponent<CreatureComponent>();
+		if (creature == null)
+			return 0;
+
+		var power = creature.Power;
+		foreach (
+			var modifier in card.GetComponents<PowerToughnessModifier>()
+				.Where(m => m.Duration != ModifierDuration.UntilEndOfTurn)
+		)
+		{
+			power += modifier.GetPowerBonus(state, cardId);
+		}
+		return power;
+	}
+
 	public static int GetEffectiveToughness(this GameState state, int cardId) =>
 		state.GetEffectiveStats(cardId).Toughness;
 

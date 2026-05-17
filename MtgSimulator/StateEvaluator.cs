@@ -55,7 +55,9 @@ public static class StateEvaluator
 			if (!c.HasComponent<CreatureComponent>())
 				continue;
 			playerCreatureCount++;
-			playerPower += state.GetEffectivePower(c.Id);
+			// Permanent power only — UntilEndOfTurn buffs (Giant Growth etc.) evaporate next turn
+			// and should not count as lasting board advantage.
+			playerPower += state.GetEffectivePermanentPower(c.Id);
 		}
 
 		var opponentCreatureCount = 0;
@@ -65,7 +67,7 @@ public static class StateEvaluator
 			if (!c.HasComponent<CreatureComponent>())
 				continue;
 			opponentCreatureCount++;
-			opponentPower += state.GetEffectivePower(c.Id);
+			opponentPower += state.GetEffectivePermanentPower(c.Id);
 		}
 
 		score += (playerCreatureCount - opponentCreatureCount) * CreatureCountWeight;

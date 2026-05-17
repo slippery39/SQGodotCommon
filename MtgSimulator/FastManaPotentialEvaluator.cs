@@ -20,5 +20,9 @@ public class FastManaPotentialEvaluator : IPotentialEvaluator
 		SlotCount = slotCount;
 	}
 
-	public float Score(GameState state, int playerId) => state.GetPlayer(playerId).CurrentMana;
+	public float Score(GameState state, int playerId)
+	{
+		var player = state.GetPlayer(playerId);
+		return player.CurrentMana;
+	}
 }

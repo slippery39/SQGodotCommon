@@ -95,9 +95,14 @@ public class BeamSearchAiStrategy : IAiStrategy
 			beam = PruneBeam(nextBeam, playerId);
 		}
 
-		// Return the root action of the highest-scoring leaf
+		// Return the root action of the highest-scoring leaf.
+		// Prefer EndTurn as a tiebreaker so neutral attacks or pointless spells
+		// don't win the coin flip over doing nothing.
 		var bestScore = beam.Max(n => n.ConcreteScore);
 		var bestNodes = beam.Where(n => n.ConcreteScore == bestScore).ToList();
+		var endTurnNode = bestNodes.FirstOrDefault(n => n.RootAction is EndTurnAction);
+		if (endTurnNode != null)
+			return endTurnNode.RootAction;
 		return bestNodes[_rng.Next(bestNodes.Count)].RootAction;
 	}
 
@@ -153,6 +158,15 @@ public class BeamSearchAiStrategy : IAiStrategy
 			var choice = state.GetPendingChoice()!;
 			var resolvedIds = ResolveChoice(state, choice, playerId);
 			(state, _) = state.ResolveChoice(resolvedIds);
+		}
+
+		// If the turn crossed to the opponent during choice resolution or after a prior action
+		// (e.g. EndTurn was played), stop expanding. We don't model opponent responses.
+		var game = state.TryGetGame();
+		if (game != null && game.ActivePlayerId != playerId)
+		{
+			var leafScore = StateEvaluator.Evaluate(state, _ids, playerId);
+			return [new BeamNode(state, node.RootAction, leafScore)];
 		}
 
 		var actions = MtgActionGenerator.GetLegalActions(state, _ids, playerId);

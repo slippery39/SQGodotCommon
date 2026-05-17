@@ -127,11 +127,12 @@ public class BeamSearchBugTests
 	// ===== BUG 2: GIANT GROWTH WITHOUT COMBAT BENEFIT =====
 
 	/// <summary>
-	/// Bug 2: AI casts Giant Growth on a creature when there are no opponent creatures
-	/// to kill with the bonus — the +3/+3 is wasted because it evaporates at end of turn.
+	/// Bug 2: AI casts Giant Growth on a creature after it has already attacked —
+	/// the +3/+3 is wasted because the creature can't attack again this turn and
+	/// the buff evaporates at end of turn.
 	///
-	/// Setup: Player has Grizzly Bears on the battlefield and Giant Growth in hand.
-	/// No opponent creatures exist. Pumping the bear gains nothing concrete.
+	/// Setup: Player has Grizzly Bears on the battlefield (HasAttacked=true) and
+	/// Giant Growth in hand. No opponent creatures exist. Pumping the bear gains nothing.
 	///
 	/// Expected to FAIL on buggy code (GetEffectivePower includes UntilEndOfTurn modifiers,
 	/// so GG looks like +6 concrete score). Expected to PASS after Fix 2
@@ -143,7 +144,7 @@ public class BeamSearchBugTests
 		(_state, _ids) = MtgGameFactory.CreateForTesting();
 		_ai = new BeamSearchAiStrategy(_ids, rng: new Random(42));
 
-		// Grizzly Bears already on battlefield, no summoning sickness
+		// Grizzly Bears already attacked this turn — cannot attack again, so GG has no combat use
 		var bears = CardLibrary.GrizzlyBears() with
 		{
 			OwnerId = _ids.Player1Id,
@@ -157,6 +158,7 @@ public class BeamSearchBugTests
 				bearsCc with
 				{
 					HasSummoningSickness = false,
+					HasAttacked = true,
 				}
 			),
 		};

@@ -39,6 +39,14 @@ public static class MtgActionGenerator
 			actions
 		);
 		AddAbilityActions(state, playerId, battlefieldId, actions);
+		actions.Add(
+			new EndTurnAction
+			{
+				GameId = ids.GameId,
+				Player1Id = ids.Player1Id,
+				Player2Id = ids.Player2Id,
+			}
+		);
 
 		return actions;
 	}
@@ -63,6 +71,7 @@ public static class MtgActionGenerator
 		var opponentBattlefieldId = state.GetWellKnownId(
 			isPlayer1 ? MtgObjectKeys.Player2Battlefield : MtgObjectKeys.Player1Battlefield
 		);
+		var gameId = state.GetWellKnownId(MtgObjectKeys.Game);
 
 		var actions = new List<GameAction>();
 		AddHandActions(state, playerId, handId, actions);
@@ -75,6 +84,14 @@ public static class MtgActionGenerator
 			actions
 		);
 		AddAbilityActions(state, playerId, battlefieldId, actions);
+		actions.Add(
+			new EndTurnAction
+			{
+				GameId = gameId,
+				Player1Id = player1Id,
+				Player2Id = player2Id,
+			}
+		);
 		return actions;
 	}
 

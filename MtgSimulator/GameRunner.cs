@@ -124,19 +124,6 @@ public class GameRunner
 			if (actionsThisTurn >= ActionWarningThreshold)
 				ctx.HadActionWarning = true;
 
-			var legalActions = MtgActionGenerator.GetLegalActions(
-				ctx.State,
-				ids,
-				game.ActivePlayerId
-			);
-
-			if (legalActions.Count == 0)
-			{
-				EndTurn(ctx, ids, cardNames);
-				ctx.TotalActions++;
-				return null;
-			}
-
 			var chosen = strategy.SelectAction(ctx.State, ids, game.ActivePlayerId);
 			var (newState, events) = ExecuteAction(ctx.State, chosen);
 			ctx.State = newState;
@@ -145,6 +132,9 @@ public class GameRunner
 			ctx.AllEvents.AddRange(events);
 			ctx.TotalActions++;
 			actionsThisTurn++;
+
+			if (ctx.State.TryGetGame()?.ActivePlayerId != game.ActivePlayerId)
+				return null;
 		}
 	}
 
@@ -182,26 +172,6 @@ public class GameRunner
 		TrackDrawnCards(choiceEvents, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);
 		TrackPlayedCards(choiceEvents, ids, cardNames, ctx.PlayedCards1, ctx.PlayedCards2);
 		ctx.AllEvents.AddRange(choiceEvents);
-	}
-
-	private static void EndTurn(
-		RunContext ctx,
-		MtgGameIds ids,
-		IReadOnlyDictionary<int, string> cardNames
-	)
-	{
-		var action = new EndTurnAction
-		{
-			GameId = ids.GameId,
-			Player1Id = ids.Player1Id,
-			Player2Id = ids.Player2Id,
-		};
-		var (newState, _) = ctx.State.TryAddAction(action);
-		var (endState, endEvents) = newState.ProcessAllActions();
-		ctx.State = endState;
-		TrackDrawnCards(endEvents, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);
-		TrackPlayedCards(endEvents, ids, cardNames, ctx.PlayedCards1, ctx.PlayedCards2);
-		ctx.AllEvents.AddRange(endEvents);
 	}
 
 	private static (GameResult, GameState) Terminate(
