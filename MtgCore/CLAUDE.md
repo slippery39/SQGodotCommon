@@ -186,7 +186,7 @@ Hearthstone-style (turn-based, no blockers). The active player attacks; the oppo
 - `HasLifelink` — when the creature deals combat damage, its controller gains that much life. Applies to damage to players and creatures (including trample excess, which is counted once as part of total power). Defender lifelink also triggers on counter-damage in creature vs creature combat.
 - `HasTrample` — when attacking a creature, excess damage beyond the target's effective toughness carries over to the defending player. Applies per strike for double strike.
 - All keywords can also be granted by `StaticGrantKeywordAbility` (same pattern as `GrantsHaste`).
-- Both flags and `Damage` on `CreatureComponent` are cleared by `StartTurnAction` at the start of the controller's turn.
+- `HasSummoningSickness`, `HasAttacked` on `CreatureComponent` are cleared by `StartTurnAction`. `Damage` persists between turns — creatures can be chipped down across multiple turns.
 - Creature attacks player: deals damage equal to effective Power; emits `CombatDamageDealtToPlayerEvent` (used by Goblin Lackey/Warren Instigator triggers).
 - Creature attacks creature: both deal damage simultaneously. Dies if `Damage >= effective Toughness`; moves to owner's graveyard.
 - Damage resets each turn — creatures cannot be chipped down over multiple turns.
@@ -211,7 +211,7 @@ Hearthstone-style (turn-based, no blockers). The active player attacks; the oppo
 
 Files: `Turns/BeginGameAction.cs`, `SetupGameAction.cs`, `StartTurnAction.cs`, `EndTurnAction.cs`, `TurnPhase.cs`
 
-- **`StartTurnAction`**: refills `CurrentMana = MaxMana` (does NOT auto-increment MaxMana — mana comes from lands), resets `LandsPlayedThisTurn = 0`, optionally draws (`SkipDraw` flag), clears per-turn flags on all permanents the active player controls (`HasSummoningSickness`, `HasAttacked`, `Damage` on `CreatureComponent`; `HasActivated` on `ActivatedAbilityComponent`; `UntilEndOfTurn` P/T modifiers).
+- **`StartTurnAction`**: refills `CurrentMana = MaxMana` (does NOT auto-increment MaxMana — mana comes from lands), resets `LandsPlayedThisTurn = 0`, optionally draws (`SkipDraw` flag), clears per-turn flags on all permanents the active player controls (`HasSummoningSickness`, `HasAttacked` on `CreatureComponent`; `HasActivated` on `ActivatedAbilityComponent`; `UntilEndOfTurn` P/T modifiers). `Damage` is NOT reset — it persists across turns.
 - **`EndTurnAction`**: switches `ActivePlayerId`, increments `TurnNumber` when Player 2 ends their turn, spawns `StartTurnAction` for the next player.
 - `MtgGame` tracks `ActivePlayerId` and `TurnNumber`. Phases within a turn are not yet modelled — the turn is a single phase.
 - Win/loss conditions checked by `CheckStateBasedEffectsAction` as the `PostActionProcessor` after every action (life ≤ 0, empty library).

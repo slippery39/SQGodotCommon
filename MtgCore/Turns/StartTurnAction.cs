@@ -10,7 +10,7 @@ namespace MtgCore;
 ///   - Refills CurrentMana to MaxMana (permanent mana from lands; no auto-increment)
 ///   - Resets LandsPlayedThisTurn to 0
 ///   - Draws one card, unless SkipDraw is true
-///   - Clears HasSummoningSickness, HasAttacked, Damage on CreatureComponent
+///   - Clears HasSummoningSickness, HasAttacked on CreatureComponent (Damage persists between turns)
 ///   - Clears HasActivated on ActivatedAbilityComponents
 ///   All of the above apply only to permanents the active player controls.
 ///
@@ -62,7 +62,6 @@ public record StartTurnAction : GameAction
 						{
 							HasSummoningSickness = false,
 							HasAttacked = false,
-							Damage = 0,
 						}
 					),
 					ActivatedAbilityComponent ac => updatedComponents.SetItem(
