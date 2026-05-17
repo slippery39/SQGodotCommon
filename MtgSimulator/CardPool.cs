@@ -416,21 +416,28 @@ public static class CardPool
 		};
 
 	/// <summary>
-	/// Builds a random deck for the given player by sampling without replacement from the
-	/// provided pool. Owner is stamped onto each card template at deck-build time.
+	/// Builds a random deck for the given player: 17 basic lands + 23 non-land cards
+	/// sampled without replacement from the provided pool (limited-format ratio, 40 total).
+	/// Owner is stamped onto each card template at deck-build time.
 	/// </summary>
 	public static IReadOnlyList<Card> BuildRandomDeck(
 		int ownerId,
 		IReadOnlyList<Card> pool,
 		int deckSize = 40,
+		int landCount = 17,
 		Random? rng = null
 	)
 	{
 		rng ??= new Random();
-		return pool.OrderBy(_ => rng.Next())
-			.Take(deckSize)
-			.Select(template => template with { OwnerId = ownerId, ControllerId = ownerId })
-			.ToList();
+		var nonLandCount = deckSize - landCount;
+		var nonLands = pool.Where(c => !c.HasSubtype("Land"))
+			.OrderBy(_ => rng.Next())
+			.Take(nonLandCount)
+			.Select(template => template with { OwnerId = ownerId, ControllerId = ownerId });
+		var lands = Enumerable
+			.Range(0, landCount)
+			.Select(_ => CardLibrary.Plains() with { OwnerId = ownerId, ControllerId = ownerId });
+		return nonLands.Concat(lands).ToList();
 	}
 
 	// ===== FACTORIES =====

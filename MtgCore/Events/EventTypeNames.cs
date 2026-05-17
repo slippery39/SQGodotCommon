@@ -29,4 +29,5 @@ public static class EventTypeNames
 	public const string PermanentEnteredBattlefield = nameof(PermanentEnteredBattlefieldEvent);
 
 	public const string PermanentPlayed = nameof(PermanentPlayedEvent);
+	public const string LandPlayed = nameof(LandPlayedEvent);
 }

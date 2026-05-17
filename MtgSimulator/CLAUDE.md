@@ -17,8 +17,8 @@ Runs N simulated games with configurable AI strategies and reports aggregate sta
 | `FastManaPotentialEvaluator.cs` | Potential evaluator that scores by current available mana (preserves fast-mana lines) |
 | `StateEvaluator.cs` | Scores a `GameState` from a given player's perspective (float) |
 | `CardPool.cs` | Defines the full card pool; `BuildRandomDeck` samples 40 random cards per game |
-| `ZooDeckFactory.cs` | Builds a fixed 40-card Zoo deck (RGW aggro) for a given player |
-| `GoblinsDeckFactory.cs` | Builds a fixed Goblins deck (red aggro tribal) for a given player |
+| `ZooDeckFactory.cs` | Builds a fixed 60-card Zoo deck (RGW aggro — 24 Plains + 36 spells) for a given player |
+| `GoblinsDeckFactory.cs` | Builds a fixed 60-card Goblins deck (red aggro tribal — 24 Plains + 36 spells) for a given player |
 | `DeckRegistry.cs` | Registers all named precon decks (`DeckInfo` records); exposes `All` and `Build(name, ownerId)` |
 | `PreconstructedStats.cs` | Aggregates precon game results into four stat tables; exposes row records for deck (inc. AvgWinTurn/MinWinTurn/MaxWinTurn), matchup, card GIH WR (inc. AvgCopiesPlayed), and card-per-matchup GIH WR (inc. AvgCopiesPlayed) |
 | `PreconstructedSimulatorRunner.cs` | Round-robin precon runner: builds schedule, runs games via `GameRunner`, feeds `PreconstructedStats`, prints console summary, triggers CSV export |
@@ -60,7 +60,9 @@ Flagged games (any of the above) are collected separately and printed in the fla
 - **Concrete bucket** — top N by `StateEvaluator` score (default: 10)
 - **Potential bucket** — top M per `IPotentialEvaluator` (default: 5 slots via `FastManaPotentialEvaluator`)
 
-Potential evaluators preserve setup lines (fast mana, etc.) that score poorly on the main evaluator but may enable a win condition deeper in the tree. The final action is always chosen by concrete score at the leaf level. Falls back to random among tied leaves. Current default: depth 3, concreteSlots 10, with `FastManaPotentialEvaluator` injected by default.
+Potential evaluators preserve setup lines (fast mana, etc.) that score poorly on the main evaluator but may enable a win condition deeper in the tree. The final action is always chosen by concrete score at the leaf level. Falls back to `EndTurnAction` as a tiebreaker (to avoid neutral attacks or pointless spells), then random among remaining ties. Current default: depth 3, concreteSlots 10, with `FastManaPotentialEvaluator` injected by default.
+
+**Land-first override**: before entering beam search, `SelectAction` plays any available `PlayLandAction` immediately. Permanent mana is the highest-priority resource; no search is needed for this decision.
 
 **`IPotentialEvaluator`** — pluggable interface for secondary beam-pruning signals. Implement to add new potential heuristics (graveyard value, storm count, etc.) without touching the search logic.
 
@@ -72,13 +74,15 @@ Scores a non-terminal state as a weighted sum. Terminal states short-circuit.
 
 | Factor | Weight |
 |--------|--------|
-| Life difference (player − opponent) | 2.0 |
+| Life difference (player − opponent) | 0.4 |
 | Creature count difference | 3.0 |
-| Total effective Power difference | 1.5 |
-| Cards in hand difference | 1.0 |
-| Player's own permanent mana (`MaxMana` only — temporary fast mana excluded) | 0.5 |
+| Total effective Power difference (permanent power only) | 2.0 |
+| Cards in hand difference | 1.1 |
+| Player's own permanent mana (`MaxMana` only — temporary fast mana excluded) | 2.0 |
 | Win (opponent has lost) | +10000 |
 | Loss (player has lost) | −10000 |
+
+`MaxMana` weight is high (2.0) because in the land system permanent mana is the primary resource — a land behind means fewer spells castable every turn for the rest of the game. Power uses permanent power only (`GetEffectivePermanentPower`); `UntilEndOfTurn` buffs like Giant Growth are excluded since they evaporate next turn.
 
 Zone IDs are read directly from `MtgGameIds` to avoid child-list scans on every evaluation call.
 
@@ -86,7 +90,7 @@ When tuning weights: changes here affect `BeamSearchAiStrategy` and `DepthLimite
 
 ## CardPool
 
-Defines all cards available for random deck generation. `BuildRandomDeck(ownerId, deckSize = 40)` samples without replacement.
+Defines all cards available for random deck generation. `BuildRandomDeck(ownerId, deckSize = 40, landCount = 17)` builds a 40-card limited deck: 17 Plains + 23 non-land cards sampled without replacement from the pool. Land cards in the pool are excluded from the non-land draw.
 
 **Targeting restriction**: damage spells target opponents and opponent creatures only. The random AI has no targeting intelligence, so restricting targets at the card level prevents self-damage. This is intentional — do not add friendly targets to simulator cards without also updating the AI strategy.
 
@@ -122,5 +126,5 @@ Each snapshot includes:
 
 - Never duplicate legal action generation — always call `MtgActionGenerator.GetLegalActions`. Do not reimplement this in simulator code.
 - Never call `BeginGame` from setup code — `GameRunner.Run` is responsible for calling it. Pass a pre-begin `GameState` to `Run`; it calls `BeginGame` internally and captures all resulting events.
-- `SimulatorRunner.SetupGame()` uses `MtgGameFactory.Create()` (real mana), not `CreateForTesting()`. The simulator tests real mana constraints.
+- `SimulatorRunner.SetupGame()` uses `MtgGameFactory.Create()` (real mana — players start at 0/0), not `CreateForTesting()`. The simulator tests real land-based mana constraints.
 - All state mutation goes through `GameAction`s — no direct state modification in the simulator.

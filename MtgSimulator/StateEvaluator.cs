@@ -22,7 +22,7 @@ public static class StateEvaluator
 	private const float CreatureCountWeight = 3.0f;
 	private const float TotalPowerWeight = 2.0f;
 	private const float CardsInHandWeight = 1.1f;
-	private const float ManaWeight = 1.0f;
+	private const float ManaWeight = 2.0f;
 
 	public static float Evaluate(GameState state, MtgGameIds ids, int playerId)
 	{

@@ -114,6 +114,20 @@ public partial class MtgGameScene : Node2D
 				return;
 			}
 
+			if (_manager.IsLand(cardId))
+			{
+				var (landSuccess, landEvents) = _manager.PlayLand(cardId);
+				if (!landSuccess)
+				{
+					_hand.LerpCardTransform(context.CardUI2D);
+					return;
+				}
+				_eventLog.AppendEvents(landEvents, _manager.State, _manager.HumanPlayerId);
+				Refresh();
+				CheckAndShowGameOver(landEvents);
+				return;
+			}
+
 			if (_manager.IsNonCreaturePermanent(cardId))
 			{
 				var (permSuccess, permEvents) = _manager.CastPermanent(cardId);

@@ -6,7 +6,8 @@ namespace MtgCore;
 /// <summary>
 /// Performs all pre-game setup before the first turn begins:
 ///   1. Shuffles both players' libraries
-///   2. Draws opening hands (size configured by BeginGameAction, default 4) for both players
+///   2. Draws opening hands for both players, guaranteeing OpeningHandLandCount lands
+///      and OpeningHandSize - OpeningHandLandCount non-lands.
 ///
 /// Spawned by BeginGameAction before StartTurnAction so that both players
 /// have a full hand when the first turn starts.
@@ -18,7 +19,13 @@ public record SetupGameAction : GameAction
 {
 	public int Player1Id { get; init; }
 	public int Player2Id { get; init; }
-	public int OpeningHandSize { get; init; } = 4;
+	public int OpeningHandSize { get; init; } = 7;
+
+	/// <summary>
+	/// Number of lands guaranteed in the opening hand. Defaults to 3.
+	/// If the deck has fewer lands than this, takes all available lands.
+	/// </summary>
+	public int OpeningHandLandCount { get; init; } = 3;
 
 	/// <summary>
 	/// Seed used to shuffle both libraries. 0 = random (default).
@@ -49,14 +56,25 @@ public record SetupGameAction : GameAction
 		var handId = state.GetPlayerZoneId(playerId, ZoneType.Hand);
 		var events = ImmutableList<GameEvent>.Empty;
 
-		for (int i = 0; i < OpeningHandSize; i++)
-		{
-			var topCardId = state.GetChildrenIds(libraryId).FirstOrDefault();
-			if (topCardId == 0)
-				break;
+		// Split the shuffled library into lands and non-lands, preserving shuffle order
+		// within each group so selection is still random.
+		var allCards = state
+			.GetChildrenIds(libraryId)
+			.Select(id => state.GetObject(id) as Card)
+			.Where(c => c != null)
+			.ToList();
 
-			state = state.MoveObject(topCardId, handId);
-			events = events.Add(new CardDrawnEvent { PlayerId = playerId, CardId = topCardId });
+		var lands = allCards.Where(c => c!.HasSubtype("Land")).ToList();
+		var nonLands = allCards.Where(c => !c!.HasSubtype("Land")).ToList();
+
+		var landsToDraw = Math.Min(OpeningHandLandCount, lands.Count);
+		var nonLandsToDraw = Math.Min(OpeningHandSize - landsToDraw, nonLands.Count);
+
+		var handCards = lands.Take(landsToDraw).Concat(nonLands.Take(nonLandsToDraw));
+		foreach (var card in handCards)
+		{
+			state = state.MoveObject(card!.Id, handId);
+			events = events.Add(new CardDrawnEvent { PlayerId = playerId, CardId = card.Id });
 		}
 
 		return (state, events);

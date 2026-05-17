@@ -16,7 +16,8 @@ namespace MtgSimulator;
 ///   - Remand: not included (counterspell stack interaction not implemented)
 ///   - Calciform Pools / Dreadship Reef / Shivan Reef: not included (no land system)
 ///
-/// Deck list (36 cards — no lands):
+/// Deck list (60 cards — 24 lands + 36 spells):
+///   24x Plains             (basic land)
 ///   4x Bogardan Hellkite   (8 mana 5/5 Flying Dragon, ETB deal 5)
 ///   2x Hunted Dragon       (6 mana 6/6 Flying Haste Dragon)
 ///   4x Dragonstorm         (9 mana sorcery, Storm — deploy Dragons)
@@ -27,19 +28,21 @@ namespace MtgSimulator;
 ///   4x Telling Time        (2 mana instant, library manipulation)
 ///   4x Lotus Bloom         (0 mana sorcery, +3 mana; simplified)
 ///   2x Dark Confidant      (2 mana 2/1; draw filler)
+///   2x Rampant Growth      (2 mana sorcery, search for land)
 /// </summary>
 public static class DragonstormDeckFactory
 {
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
+		AddCopies(deck, ownerId, 24, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, CardLibrary.BogardanHellkite);
 		AddCopies(deck, ownerId, 4, CardLibrary.HuntedDragon);
 		AddCopies(deck, ownerId, 8, CardLibrary.Dragonstorm);
 		AddCopies(deck, ownerId, 8, CardLibrary.RiteOfFlame);
 		AddCopies(deck, ownerId, 4, CardLibrary.SeethingSong);
-		AddCopies(deck, ownerId, 8, CardLibrary.LotusBoom);
-		AddCopies(deck, ownerId, 4, CardLibrary.DarkConfidant);
+		AddCopies(deck, ownerId, 6, CardLibrary.LotusBoom);
+		AddCopies(deck, ownerId, 2, CardLibrary.RampantGrowth);
 		return deck;
 	}
 

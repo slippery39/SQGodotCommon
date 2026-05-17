@@ -11,21 +11,36 @@ public static class MtgCardMapper
 	public static InternalCardUI2D.Details ToDetails(Card card, GameState state, int playerId)
 	{
 		var player = state.GetPlayer(playerId);
-		var canAfford = player.CurrentMana >= card.ManaCost;
+		bool canPlay;
+		string manaCostDisplay;
+		if (card.HasSubtype("Land"))
+		{
+			canPlay =
+				player.LandsPlayedThisTurn < PlayLandAction.ComputeLandsAllowed(state, playerId);
+			manaCostDisplay = "";
+		}
+		else
+		{
+			canPlay = player.CurrentMana >= card.ManaCost;
+			manaCostDisplay = $"{card.ManaCost}";
+		}
 
 		return new InternalCardUI2D.Details
 		{
 			Id = card.Id.ToString(),
 			CardName = card.Name,
-			ManaCost = $"{card.ManaCost}",
+			ManaCost = manaCostDisplay,
 			RulesText = GetRulesText(card),
-			OutlineColor = canAfford ? new Color(0, 1.5f, 0, 1) : new Color(0.3f, 0.3f, 0.3f, 1),
-			OutlineThickness = canAfford ? 3f : 0f,
+			OutlineColor = canPlay ? new Color(0, 1.5f, 0, 1) : new Color(0.3f, 0.3f, 0.3f, 1),
+			OutlineThickness = canPlay ? 3f : 0f,
 		};
 	}
 
 	public static string GetRulesText(Card card)
 	{
+		if (card.HasSubtype("Land"))
+			return card.HasSubtype("Basic") ? "Basic Land\n(Tap: Add 1 mana)" : "Land";
+
 		var creature = card.GetComponent<CreatureComponent>();
 		var spell = card.GetComponent<SpellComponent>();
 		var lines = new List<string>();

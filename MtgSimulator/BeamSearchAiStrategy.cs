@@ -63,6 +63,12 @@ public class BeamSearchAiStrategy : IAiStrategy
 		if (actions.Count == 1)
 			return actions[0];
 
+		// Always play a land if available — permanent mana is the highest-priority resource.
+		// Edge cases (landfall combos, hand-size manipulation) are rare enough to ignore here.
+		var landAction = actions.OfType<PlayLandAction>().FirstOrDefault();
+		if (landAction != null)
+			return landAction;
+
 		// Level 0: execute each root action and score the resulting state
 		var beam = new List<BeamNode>(actions.Count);
 		foreach (var action in actions)

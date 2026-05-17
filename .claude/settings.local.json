@@ -4,7 +4,8 @@
       "Bash(dotnet build *)",
       "Bash(dotnet test *)",
       "Bash(dotnet sln *)",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "PowerShell($lines = Get-Content \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgCore\\\\Cards\\\\CardLibrary.cs\"; $lines[-5..-1] | ForEach-Object { [System.Web.HttpUtility]::HtmlEncode\\($_\\) })"
     ]
   }
 }

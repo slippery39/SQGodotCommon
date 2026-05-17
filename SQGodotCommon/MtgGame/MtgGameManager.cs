@@ -127,6 +127,19 @@ public class MtgGameManager
 		return card?.GetComponent<SpellComponent>() != null;
 	}
 
+	public bool IsLand(int cardId)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		return card?.HasSubtype("Land") ?? false;
+	}
+
+	public (bool Success, ImmutableList<GameEvent> Events) PlayLand(int cardId)
+	{
+		return SubmitAction(
+			new PlayLandAction { CardId = cardId, CastingPlayerId = HumanPlayerId }
+		);
+	}
+
 	public bool IsNonCreaturePermanent(int cardId)
 	{
 		var card = _state.GetObject(cardId) as Card;

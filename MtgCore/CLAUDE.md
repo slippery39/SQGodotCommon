@@ -19,19 +19,24 @@ MtgCore/
 │                            #           CastPermanentAction, ResolvePermanentAction (non-creature permanents → battlefield)
 │                            #           CreateTokenAction
 │                            #           AttachEquipmentAction (ITargetedAction; reads equipment ID from ContextKeys.SourceCardId)
+│                            #           PlayLandAction (play land from hand: MaxMana++, CurrentMana++, LandsPlayedThisTurn++, LandsPlayedTotal++, card → graveyard)
+│                            #           PutLandIntoPlayAction (effect-sourced land: MaxMana++, CurrentMana++, LandsPlayedTotal++ only, card → graveyard; used by Rampant Growth/Primeval Titan)
 │                            # DealDamageAction has PlayerOutputKey and CreatureOutputKey for pipeline chaining.
 ├── Costs/                   # AdditionalCost (abstract), LifeAdditionalCost, SacrificeAdditionalCost, DiscardAdditionalCost
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
 │   └── Components/          # PermanentComponent (battlefield marker), CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach), SpellComponent (HasStorm), GraveyardCountComponent
 │                            # EquipmentComponent (PowerBonus, ToughnessBonus, EquippedToCardId — tracks attachment state)
+│                            # ExtraLandPerTurnComponent — marker; presence on a controlled battlefield permanent grants +1 land play per turn (used by Exploration)
 ├── Effects/                 # CardEffect (data-only effect descriptor)
 ├── Events/                  # EventTypeNames, MtgEvents (includes CreatureEnteredBattlefieldEvent, CombatDamageDealtToPlayerEvent,
 │                            #   SpellCastEvent emitted by CastSpellAction, CreaturePlayedEvent emitted by CastCreatureAction
-│                            #   PermanentEnteredBattlefieldEvent emitted by ResolvePermanentAction for non-creature permanents)
+│                            #   PermanentEnteredBattlefieldEvent emitted by ResolvePermanentAction for non-creature permanents
+│                            #   LandPlayedEvent { PlayerId, CardId } emitted by both PlayLandAction and PutLandIntoPlayAction; triggers Steppe Lynx landfall)
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods), StaticAbilityEngine (push-model ETB/LTB logic)
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier, AppliedStaticPTBoost
 │                            # EquippedBoostComponent (stamped on creature by AttachEquipmentAction; removed on detach/creature-death)
-├── Players/                 # MtgPlayer (GameObject subclass)
+│                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Land Elemental. Must be stamped with Duration = Permanent in card definitions.
+├── Players/                 # MtgPlayer (GameObject subclass) — fields: Life, MaxMana, CurrentMana, LandsPlayedThisTurn (resets each turn), LandsPlayedTotal (never resets; used by Land Elemental)
 ├── Targeting/               # TargetSpecification (base), ZoneSpecification (abstract base for zone specs), TargetingContext, TargetingStrategy
 │                            # Zone specs: IsOnBattlefieldSpecification, IsInHandSpecification
 │                            # Other specs: IsCreatureSpecification, IsPlayerSpecification, IsSubtypeSpecification,
@@ -87,12 +92,15 @@ Applied via `AddModifierAction`. `UntilEndOfTurn` modifiers are cleared by `Star
 
 ## Mana System
 
-Hearthstone-style. Both players start at `MaxMana = 0`, `CurrentMana = 0`.
+Land-based. Both players start at `MaxMana = 0`, `CurrentMana = 0`. All permanent mana comes from playing land cards.
 
-- `StartTurnAction` increments `MaxMana` by 1 (cap 10) and refills `CurrentMana` to `MaxMana` for both players every turn. Starting at 0 gives both players 1 mana on turn 1 with no special casing.
+- **Playing a land** (`PlayLandAction`): `MaxMana++`, `CurrentMana++`, `LandsPlayedThisTurn++`, `LandsPlayedTotal++`. Card moves Hand → Graveyard. Emits `LandPlayedEvent`.
+- **Effect-sourced lands** (`PutLandIntoPlayAction`): same MaxMana/CurrentMana/LandsPlayedTotal increments, but does NOT increment `LandsPlayedThisTurn` (doesn't consume the land-per-turn). Used by Rampant Growth and Primeval Titan ETB.
+- `StartTurnAction` refills `CurrentMana = MaxMana` and resets `LandsPlayedThisTurn = 0`. It does **not** auto-increment `MaxMana`.
+- **Land limit**: one land play per turn. Each permanent with `ExtraLandPerTurnComponent` controlled by the player adds +1. Limit is computed dynamically in `PlayLandAction.ValidateAdd` — no stored `LandsAllowedThisTurn` field.
 - `CastCreatureAction` and `CastSpellAction` validate sufficient mana in `ValidateAdd` and deduct `ManaCost` in `Execute`.
-- All mana generation logic lives in `StartTurnAction` only. Future mana systems (lands, flat grants) swap in by changing `StartTurnAction` only.
 - **Fast mana** (`AddTemporaryManaAction`) adds to `CurrentMana` only — `MaxMana` is unchanged, so the bonus evaporates at the start of the next turn. Used by Rite of Flame, Seething Song, Lotus Bloom.
+- `MtgGameFactory.CreateForTesting()` gives both players `MaxMana = 99` / `CurrentMana = 99` — use in all unit tests not specifically testing the land system.
 
 ## Storm Mechanic
 
@@ -203,7 +211,7 @@ Hearthstone-style (turn-based, no blockers). The active player attacks; the oppo
 
 Files: `Turns/BeginGameAction.cs`, `SetupGameAction.cs`, `StartTurnAction.cs`, `EndTurnAction.cs`, `TurnPhase.cs`
 
-- **`StartTurnAction`**: increments `MaxMana`, refills `CurrentMana`, optionally draws (`SkipDraw` flag), clears per-turn flags on all permanents the active player controls (`HasSummoningSickness`, `HasAttacked`, `Damage` on `CreatureComponent`; `HasActivated` on `ActivatedAbilityComponent`; `UntilEndOfTurn` P/T modifiers).
+- **`StartTurnAction`**: refills `CurrentMana = MaxMana` (does NOT auto-increment MaxMana — mana comes from lands), resets `LandsPlayedThisTurn = 0`, optionally draws (`SkipDraw` flag), clears per-turn flags on all permanents the active player controls (`HasSummoningSickness`, `HasAttacked`, `Damage` on `CreatureComponent`; `HasActivated` on `ActivatedAbilityComponent`; `UntilEndOfTurn` P/T modifiers).
 - **`EndTurnAction`**: switches `ActivePlayerId`, increments `TurnNumber` when Player 2 ends their turn, spawns `StartTurnAction` for the next player.
 - `MtgGame` tracks `ActivePlayerId` and `TurnNumber`. Phases within a turn are not yet modelled — the turn is a single phase.
 - Win/loss conditions checked by `CheckStateBasedEffectsAction` as the `PostActionProcessor` after every action (life ≤ 0, empty library).
@@ -213,7 +221,7 @@ Files: `Turns/BeginGameAction.cs`, `SetupGameAction.cs`, `StartTurnAction.cs`, `
 - `MtgConsole` and `MtgSimulator` never construct game actions directly for game flow — use `MtgGameStateExtensions` methods as the API boundary.
 - Presentation layers never modify game state directly. All state changes go through `GameAction`s. Exceptions: explicit test setup and debug/cheat tooling (both must be clearly commented as such).
 - `MtgActionGenerator.GetLegalActions(state, ids, playerId)` is the **single shared source** of legal action generation. Console and simulator both call this — never duplicate this logic.
-- `MtgGameFactory.CreateForTesting()` gives both players `MaxMana = 99` / `CurrentMana = 99`. Use in all unit tests not specifically testing mana. Use `MtgGameFactory.Create()` with manual mana setup for mana-specific tests.
+- `MtgGameFactory.CreateForTesting()` gives both players `MaxMana = 99` / `CurrentMana = 99`. Use in all unit tests not specifically testing the land/mana system. Use `MtgGameFactory.Create()` with manual land plays for land-specific tests.
 - The simulator detects potential infinite loops via per-turn action counts (warning at 50, cutoff at 100) and flags unusual games.
 
 ## Debugging / Error Handling

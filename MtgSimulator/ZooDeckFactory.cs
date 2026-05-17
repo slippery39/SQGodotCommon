@@ -11,7 +11,8 @@ namespace MtgSimulator;
 /// requirement on Kird Ape, no land search on Path to Exile.
 /// Tarmogoyf scales with all graveyards via GraveyardCountComponent.
 ///
-/// Deck list (40 cards):
+/// Deck list (60 cards — 24 lands + 36 spells):
+///   24x Plains           (basic land)
 ///   4x Wild Nacatl       (1 mana 2/2 Cat)
 ///   4x Kird Ape          (1 mana 2/3 Ape)
 ///   4x Loam Lion         (1 mana 2/3 Cat)
@@ -20,14 +21,16 @@ namespace MtgSimulator;
 ///   4x Lightning Bolt    (1 mana, 3 damage)
 ///   4x Lightning Helix   (2 mana, 3 damage + 3 life)
 ///   4x Path to Exile     (1 mana, exile opponent creature)
-///   4x Tribal Flames     (2 mana, 5 damage)
-///   4x Giant Growth      (1 mana, +3/+3 until end of turn)
+///   4x Steppe Lynx       (0 mana 0/1, Landfall: +2/+2)
+///   2x Rampant Growth    (2 mana, search for a land)
+///   2x Primeval Titan    (6 mana 6/6, ETB: put 2 lands into play)
 /// </summary>
 public static class ZooDeckFactory
 {
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
+		AddCopies(deck, ownerId, 24, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, CardLibrary.WildNacatl);
 		AddCopies(deck, ownerId, 4, CardLibrary.KirdApe);
 		AddCopies(deck, ownerId, 4, CardLibrary.LoamLion);
@@ -36,8 +39,9 @@ public static class ZooDeckFactory
 		AddCopies(deck, ownerId, 4, CardLibrary.LightningBolt);
 		AddCopies(deck, ownerId, 4, CardLibrary.LightningHelix);
 		AddCopies(deck, ownerId, 4, CardLibrary.PathToExile);
-		AddCopies(deck, ownerId, 4, CardLibrary.TribalFlames);
-		AddCopies(deck, ownerId, 4, CardLibrary.GiantGrowth);
+		AddCopies(deck, ownerId, 4, CardLibrary.SteppeLynx);
+		AddCopies(deck, ownerId, 2, CardLibrary.RampantGrowth);
+		AddCopies(deck, ownerId, 2, CardLibrary.PrimevalTitan);
 		return deck;
 	}
 

@@ -106,6 +106,13 @@ public static class MtgActionGenerator
 	{
 		foreach (var card in state.GetCardsInZone(handId))
 		{
+			// Lands bypass the cost system — no mana cost, no additional costs
+			if (card.HasSubtype("Land"))
+			{
+				AddLandAction(state, playerId, card, actions);
+				continue;
+			}
+
 			var costPayments = BuildAdditionalCostPayments(
 				state,
 				playerId,
@@ -128,6 +135,18 @@ public static class MtgActionGenerator
 				AddSpellAction(state, playerId, card, costPayments, actions);
 			}
 		}
+	}
+
+	private static void AddLandAction(
+		GameState state,
+		int playerId,
+		Card card,
+		List<GameAction> actions
+	)
+	{
+		var action = new PlayLandAction { CardId = card.Id, CastingPlayerId = playerId };
+		if (state.TryAddAction(action).Success)
+			actions.Add(action);
 	}
 
 	private static void AddCreatureAction(

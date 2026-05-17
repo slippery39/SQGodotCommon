@@ -166,3 +166,15 @@ public record PermanentEnteredBattlefieldEvent : GameEvent
 	public int CardId { get; init; }
 	public int PlayerId { get; init; }
 }
+
+/// <summary>
+/// Emitted when any land enters play — whether played from hand (PlayLandAction) or
+/// put into play by an effect (PutLandIntoPlayAction, Rampant Growth, Primeval Titan ETB).
+/// Subject for EventTriggerCondition is PlayerId, so IsControlledByYouSpecification
+/// filters to "your lands only" for Landfall triggers.
+/// </summary>
+public record LandPlayedEvent : GameEvent
+{
+	public int PlayerId { get; init; }
+	public int CardId { get; init; }
+}

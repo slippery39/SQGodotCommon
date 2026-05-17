@@ -7,7 +7,8 @@ namespace MtgCore;
 /// Begins the active player's turn.
 ///
 /// Responsibilities:
-///   - Increments MaxMana by 1 (capped at 10) and refills CurrentMana to MaxMana
+///   - Refills CurrentMana to MaxMana (permanent mana from lands; no auto-increment)
+///   - Resets LandsPlayedThisTurn to 0
 ///   - Draws one card, unless SkipDraw is true
 ///   - Clears HasSummoningSickness, HasAttacked, Damage on CreatureComponent
 ///   - Clears HasActivated on ActivatedAbilityComponents
@@ -17,8 +18,6 @@ namespace MtgCore;
 /// </summary>
 public record StartTurnAction : GameAction
 {
-	private const int MaxManaCap = 10;
-
 	public int ActivePlayerId { get; init; }
 	public int BattlefieldId { get; init; }
 	public bool SkipDraw { get; init; } = false;
@@ -27,11 +26,9 @@ public record StartTurnAction : GameAction
 	{
 		var state = gameState;
 
-		// Increment max mana, refill, then apply bonus
+		// Refill current mana to max (no auto-increment — mana comes from lands)
 		var player = state.GetPlayer(ActivePlayerId);
-		var newMax = Math.Min(player.MaxMana + 1, MaxManaCap);
-		var newCurrent = newMax;
-		var updatedPlayer = player with { MaxMana = newMax, CurrentMana = newCurrent };
+		var updatedPlayer = player with { CurrentMana = player.MaxMana, LandsPlayedThisTurn = 0 };
 		state = state.UpdateObject(ActivePlayerId, updatedPlayer);
 
 		// Reset storm counter at the start of each turn

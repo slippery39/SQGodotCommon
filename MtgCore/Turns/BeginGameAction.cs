@@ -22,10 +22,13 @@ public record BeginGameAction : GameAction
 
 	/// <summary>
 	/// Number of cards each player draws as their opening hand.
-	/// Defaults to 4 — lower than traditional MTG (7) to reduce
-	/// opening consistency and first-player advantage in a land-free format.
 	/// </summary>
-	public int OpeningHandSize { get; init; } = 4;
+	public int OpeningHandSize { get; init; } = 7;
+
+	/// <summary>
+	/// Number of those cards that are guaranteed to be lands.
+	/// </summary>
+	public int OpeningHandLandCount { get; init; } = 3;
 
 	/// <summary>
 	/// Seed used to shuffle both libraries. 0 = random (default).
@@ -44,6 +47,7 @@ public record BeginGameAction : GameAction
 			Player1Id = Player1Id,
 			Player2Id = Player2Id,
 			OpeningHandSize = OpeningHandSize,
+			OpeningHandLandCount = OpeningHandLandCount,
 			ShuffleSeed = ShuffleSeed,
 		};
 

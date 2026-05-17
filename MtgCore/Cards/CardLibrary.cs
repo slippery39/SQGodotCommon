@@ -12,6 +12,7 @@ public static class CardLibrary
 {
 	private const string GoblinSubtype = "Goblin";
 	private const string DragonSubtype = "Dragon";
+	private const string LandSubtype = "Land";
 
 	/// <summary>
 	/// All playable cards in the library as owner-agnostic templates.
@@ -71,6 +72,12 @@ public static class CardLibrary
 			HuntedDragon(),
 			BogardanHellkite(),
 			Dragonstorm(),
+			// ===== LAND-ADJACENT CARDS =====
+			RampantGrowth(),
+			PrimevalTitan(),
+			Exploration(),
+			SteppeLynx(),
+			LandElemental(),
 		};
 
 	/*
@@ -1556,6 +1563,193 @@ public static class CardLibrary
 						}
 					),
 				}
+			),
+		};
+
+	// ===== LAND =====
+
+	/// <summary>
+	/// Plains — basic land.
+	/// Playing a land from hand permanently increases MaxMana and CurrentMana by 1.
+	/// Behavior is handled entirely by PlayLandAction; the card has no components.
+	/// </summary>
+	public static Card Plains() =>
+		new()
+		{
+			Name = "Plains",
+			ManaCost = 0,
+			Subtypes = ImmutableList.Create(LandSubtype, "Basic"),
+			Components = ImmutableList<GameComponent>.Empty,
+		};
+
+	// ===== LAND-ADJACENT CARDS =====
+
+	/// <summary>
+	/// Rampant Growth — 2 mana sorcery.
+	/// "Search your library for a basic land card and put it into play."
+	/// Pipeline: SelectCardFromLibraryAction (subtype Land) → PutLandIntoPlayAction.
+	/// </summary>
+	public static Card RampantGrowth() =>
+		new()
+		{
+			Name = "Rampant Growth",
+			ManaCost = 2,
+			Components = ImmutableList.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new SelectCardFromLibraryAction
+									{
+										Subtype = LandSubtype,
+										OutputKey = "rampant_land",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new PutLandIntoPlayAction
+									{
+										CardIdContextKey = "rampant_land",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									}
+								),
+							},
+						}
+					),
+				}
+			),
+		};
+
+	/// <summary>
+	/// Primeval Titan — 6 mana 6/6.
+	/// "When Primeval Titan enters the battlefield, search your library for up to two
+	///  basic land cards and put them into play."
+	/// ETB trigger: pipeline runs twice (SelectCardFromLibraryAction → PutLandIntoPlayAction).
+	/// </summary>
+	public static Card PrimevalTitan() =>
+		new()
+		{
+			Name = "Primeval Titan",
+			ManaCost = 6,
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 6, Toughness = 6 },
+				new TriggeredAbilityComponent
+				{
+					Name = "ETB Fetch Lands",
+					Condition = new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
+						Filter = new IsSourceCardSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new PipelineAction
+						{
+							Steps = ImmutableList.Create<GameAction>(
+								new SelectCardFromLibraryAction
+								{
+									Subtype = LandSubtype,
+									OutputKey = "primeval_land_1",
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								},
+								new PutLandIntoPlayAction
+								{
+									CardIdContextKey = "primeval_land_1",
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								},
+								new SelectCardFromLibraryAction
+								{
+									Subtype = LandSubtype,
+									OutputKey = "primeval_land_2",
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								},
+								new PutLandIntoPlayAction
+								{
+									CardIdContextKey = "primeval_land_2",
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								}
+							),
+						},
+					},
+				}
+			),
+		};
+
+	/// <summary>
+	/// Exploration — 1 mana artifact.
+	/// "You may play an additional land on each of your turns."
+	/// ExtraLandPerTurnComponent on the battlefield grants +1 to the land-per-turn limit.
+	/// </summary>
+	public static Card Exploration() =>
+		new()
+		{
+			Name = "Exploration",
+			ManaCost = 1,
+			Subtypes = ImmutableList.Create("Artifact"),
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new ExtraLandPerTurnComponent()
+			),
+		};
+
+	/// <summary>
+	/// Steppe Lynx — 0 mana 0/1.
+	/// "Landfall — Whenever a land enters play under your control, Steppe Lynx gets
+	///  +2/+2 until end of turn."
+	/// TargetContextKey = SourceCardId applies the modifier to the Lynx itself at resolution.
+	/// </summary>
+	public static Card SteppeLynx() =>
+		new()
+		{
+			Name = "Steppe Lynx",
+			ManaCost = 0,
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 0, Toughness = 1 },
+				new TriggeredAbilityComponent
+				{
+					Name = "Landfall",
+					Condition = new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.LandPlayed,
+						Filter = new IsControlledByYouSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new AddModifierAction
+						{
+							PowerBonus = 2,
+							ToughnessBonus = 2,
+							Duration = ModifierDuration.UntilEndOfTurn,
+							TargetContextKey = ContextKeys.SourceCardId,
+						},
+					},
+				}
+			),
+		};
+
+	/// <summary>
+	/// Land Elemental — 3 mana creature (0/0 base).
+	/// "Land Elemental's power and toughness are each equal to the number of lands
+	///  you have played this game."
+	/// LandsPlayedCountComponent reads the controller's LandsPlayedTotal dynamically.
+	/// Duration = Permanent so StartTurnAction does not clear it.
+	/// </summary>
+	public static Card LandElemental() =>
+		new()
+		{
+			Name = "Land Elemental",
+			ManaCost = 3,
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 0, Toughness = 0 },
+				new LandsPlayedCountComponent { Duration = ModifierDuration.Permanent }
 			),
 		};
 }
