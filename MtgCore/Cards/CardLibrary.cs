@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -22,62 +22,1311 @@ public static class CardLibrary
 	public static IReadOnlyList<Card> All { get; } =
 		new List<Card>
 		{
-			LightningBolt(),
-			LightningHelix(),
-			CarefulStudy(),
-			TellingTime(),
-			DarkConfidant(),
-			LlanowarElves(),
-			DoomBlade(),
-			WrathOfGod(),
-			Mox(),
-			SolRing(),
-			GloriousAnthem(),
-			PhyrexianArena(),
-			Bonesplitter(),
-			ProdigalSorcerer(),
-			ThroneOfBone(),
-			GiantGrowth(),
-			UnholyStrength(),
-			GoblinGuide(),
-			GoblinLackey(),
-			WarrenInstigator(),
-			GoblinChieftain(),
-			SiegeGangCommander(),
-			KrenkoMobBoss(),
-			GoblinGrenade(),
-			WildNacatl(),
-			KirdApe(),
-			Tarmogoyf(),
-			PathToExile(),
-			TribalFlames(),
-			QasaliPridemage(),
-			LoamLion(),
-			Slagstorm(),
-			GeistOfSaintTraft(),
-			WallOfThorns(),
-			RagingGoblin(),
-			HillGiant(),
-			GrizzlyBears(),
-			KalonianTusker(),
-			IronGolem(),
-			CrawWurm(),
-			AncestralRecall(),
-			MahamotiDjinn(),
+			new()
+			{
+				Name = "Lightning Bolt",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.SingleTarget(
+									TargetSpecification.PlayersOrCreatures()
+								),
+								ActionTemplate = new DealDamageAction { Amount = 3 },
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Lightning Helix",
+				ManaCost = 2,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.SingleTarget(
+									TargetSpecification.PlayersOrCreatures()
+								),
+								ActionTemplate = new DealDamageAction { Amount = 3 },
+							},
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.Self(),
+								ActionTemplate = new GainLifeAction { Amount = 3 },
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Careful Study",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.NoTarget(),
+								ActionTemplate = new PipelineAction
+								{
+									Steps = ImmutableList.Create<GameAction>(
+										new DrawCardsAction
+										{
+											Amount = 2,
+											TargetContextKey = ContextKeys.CastingPlayerId,
+										},
+										new SelectCardsFromHandAction
+										{
+											Prompt = "Choose 2 cards to discard",
+											MinChoices = 2,
+											MaxChoices = 2,
+											OutputKey = ContextKeys.SelectedCardIds,
+										},
+										new DiscardCardsAction
+										{
+											TargetContextKey = ContextKeys.SelectedCardIds,
+										}
+									),
+								},
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Telling Time",
+				ManaCost = 2,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.NoTarget(),
+								ActionTemplate = new PipelineAction
+								{
+									Steps = ImmutableList.Create<GameAction>(
+										new LookAtTopCardsAction
+										{
+											Amount = 3,
+											OutputKey = ContextKeys.TopCardIds,
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										},
+										new SelectCardFromContextAction
+										{
+											Prompt = "Choose a card to put into your hand",
+											MinChoices = 1,
+											MaxChoices = 1,
+											OutputKey = "tt_hand_pick",
+											CardIdsContextKey = ContextKeys.TopCardIds,
+										},
+										new MoveCardToHandAction
+										{
+											CardIdContextKey = "tt_hand_pick",
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										},
+										new SelectCardFromContextAction
+										{
+											Prompt = "Choose a card to put on top of your library",
+											MinChoices = 1,
+											MaxChoices = 1,
+											OutputKey = "tt_top_pick",
+											CardIdsContextKey = ContextKeys.TopCardIds,
+											ExcludeContextKeys = ImmutableList.Create(
+												"tt_hand_pick"
+											),
+										},
+										new MoveCardToTopOfLibraryAction
+										{
+											CardIdContextKey = "tt_top_pick",
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										},
+										new ExcludeSelectedCardsAction
+										{
+											CardIdsContextKey = ContextKeys.TopCardIds,
+											ExcludeContextKeys = ImmutableList.Create(
+												"tt_hand_pick",
+												"tt_top_pick"
+											),
+											OutputKey = ContextKeys.RemainingCardIds,
+										},
+										new MoveCardToBottomOfLibraryAction
+										{
+											CardIdsContextKey = ContextKeys.RemainingCardIds,
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										}
+									),
+								},
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Dark Confidant",
+				ManaCost = 2,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 1, Toughness = 4 },
+					new TriggeredAbilityComponent
+					{
+						Name = "Dark Condidant Trigger",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.TurnStarted,
+							Filter = new IsControlledByYouSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new RevealTopCardAction
+									{
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new LoseLifeAction
+									{
+										TargetContextKey = ContextKeys.CastingPlayerId,
+										AmountContextKey = ContextKeys.RevealedCardManaCost,
+									},
+									new DrawCardsAction
+									{
+										Amount = 1,
+										TargetContextKey = ContextKeys.CastingPlayerId,
+									}
+								),
+							},
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Llanowar Elves",
+				ManaCost = 1,
+				Subtypes = ImmutableList.Create("Elf", "Druid"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 1, Toughness = 1 },
+					new ActivatedAbilityComponent
+					{
+						Name = "Mana Ramp",
+						ManaCost = 0,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new AddTemporaryManaAction { Amount = 1 },
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Doom Blade",
+				ManaCost = 2,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.SingleTarget(
+									TargetSpecification.OpponentCreatures()
+								),
+								ActionTemplate = new DestroyCreatureAction(),
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Wrath of God",
+				ManaCost = 3,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.AllValid(
+									TargetSpecification.Creatures()
+								),
+								ActionTemplate = new DestroyCreatureAction(),
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Mox",
+				ManaCost = 0,
+				Subtypes = ImmutableList.Create("Artifact"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new ActivatedAbilityComponent
+					{
+						Name = "Add Mana",
+						ManaCost = 0,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new AddTemporaryManaAction { Amount = 1 },
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Sol Ring",
+				ManaCost = 1,
+				Subtypes = ImmutableList.Create("Artifact"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new ActivatedAbilityComponent
+					{
+						Name = "Add Mana",
+						ManaCost = 0,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new AddTemporaryManaAction { Amount = 2 },
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Glorious Anthem",
+				ManaCost = 3,
+				Subtypes = ImmutableList.Create("Enchantment"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new StaticPTBoostAbility
+					{
+						PowerBonus = 1,
+						ToughnessBonus = 1,
+						Filter = new IsCreatureSpecification(),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Phyrexian Arena",
+				ManaCost = 3,
+				Subtypes = ImmutableList.Create("Enchantment"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new TriggeredAbilityComponent
+					{
+						Name = "Draw and Pay",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.TurnStarted,
+							Filter = new IsControlledByYouSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new DrawCardsAction
+									{
+										Amount = 1,
+										TargetContextKey = ContextKeys.CastingPlayerId,
+									},
+									new LoseLifeAction
+									{
+										Amount = 1,
+										TargetContextKey = ContextKeys.CastingPlayerId,
+									}
+								),
+							},
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Bonesplitter",
+				ManaCost = 1,
+				Subtypes = ImmutableList.Create("Artifact", "Equipment"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new EquipmentComponent { PowerBonus = 2, ToughnessBonus = 0 },
+					new ActivatedAbilityComponent
+					{
+						Name = "Equip",
+						ManaCost = 1,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								new AndSpecification
+								{
+									Left = new IsOnBattlefieldSpecification(),
+									Right = new AndSpecification
+									{
+										Left = new IsCreatureSpecification(),
+										Right = new IsControlledByYouSpecification(),
+									},
+								}
+							),
+							ActionTemplate = new AttachEquipmentAction(),
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Prodigal Sorcerer",
+				ManaCost = 3,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 1, Toughness = 1 },
+					new ActivatedAbilityComponent
+					{
+						Name = "Ping",
+						ManaCost = 1,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								TargetSpecification.PlayersOrCreatures()
+							),
+							ActionTemplate = new DealDamageAction { Amount = 1 },
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Throne of Bone",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 1, Toughness = 1 },
+					new ActivatedAbilityComponent
+					{
+						Name = "Gain Life",
+						ManaCost = 1,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new GainLifeAction { Amount = 2 },
+						},
+					},
+					new ActivatedAbilityComponent
+					{
+						Name = "Draw",
+						ManaCost = 2,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.Self(),
+							ActionTemplate = new DrawCardsAction { Amount = 1 },
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Giant Growth",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.SingleTarget(
+									new IsCreatureSpecification().And(
+										new IsControlledByYouSpecification()
+									)
+								),
+								ActionTemplate = new AddModifierAction
+								{
+									PowerBonus = 3,
+									ToughnessBonus = 3,
+									Duration = ModifierDuration.UntilEndOfTurn,
+								},
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Unholy Strength",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.SingleTarget(
+									TargetSpecification.CreatureControlledByYou()
+								),
+								ActionTemplate = new AddModifierAction
+								{
+									PowerBonus = 2,
+									ToughnessBonus = 1,
+									Duration = ModifierDuration.Permanent,
+								},
+							}
+						),
+					}
+				),
+			},
+			// ===== GOBLINS DECK CARDS =====
+			new()
+			{
+				Name = "Goblin Guide",
+				ManaCost = 1,
+				Subtypes = ImmutableList.Create(GoblinSubtype, "Scout"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 2,
+						Toughness = 2,
+						HasHaste = true,
+					}
+				),
+			},
+			new()
+			{
+				Name = "Goblin Lackey",
+				ManaCost = 1,
+				Subtypes = ImmutableList.Create(GoblinSubtype),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 1, Toughness = 1 },
+					new TriggeredAbilityComponent
+					{
+						Name = "Lackey Trigger",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.CombatDamageDealtToPlayer,
+							Filter = new IsSourceCardSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.RandomTarget(
+								new IsInHandSpecification().And(
+									new IsSubtypeSpecification { Subtype = GoblinSubtype }
+								)
+							),
+							ActionTemplate = new PutIntoBattlefieldAction(),
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Warren Instigator",
+				ManaCost = 2,
+				Subtypes = ImmutableList.Create(GoblinSubtype, "Berserker"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 1,
+						Toughness = 1,
+						HasDoubleStrike = true,
+					},
+					new TriggeredAbilityComponent
+					{
+						Name = "Instigator Trigger",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.CombatDamageDealtToPlayer,
+							Filter = new IsSourceCardSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.RandomTarget(
+								new IsInHandSpecification().And(
+									new IsSubtypeSpecification { Subtype = GoblinSubtype }
+								)
+							),
+							ActionTemplate = new PutIntoBattlefieldAction(),
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Goblin Chieftain",
+				ManaCost = 3,
+				Subtypes = ImmutableList.Create(GoblinSubtype),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 2,
+						Toughness = 2,
+						HasHaste = true,
+					},
+					new StaticPTBoostAbility
+					{
+						PowerBonus = 1,
+						ToughnessBonus = 1,
+						Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype }.And(
+							TargetSpecification.OtherCreaturesYouControl()
+						),
+					},
+					new StaticGrantKeywordAbility
+					{
+						GrantsHaste = true,
+						Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype }.And(
+							TargetSpecification.OtherCreaturesYouControl()
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Siege-Gang Commander",
+				ManaCost = 5,
+				Subtypes = ImmutableList.Create(GoblinSubtype),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 2, Toughness = 2 },
+					new TriggeredAbilityComponent
+					{
+						Name = "ETB Tokens",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
+							Filter = new IsSourceCardSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new CreateCardAction
+							{
+								CardTemplate = GoblinToken(),
+								Count = 3,
+							},
+						},
+					},
+					new ActivatedAbilityComponent
+					{
+						Name = "Sacrifice Goblin",
+						ManaCost = 1,
+						AdditionalCosts = ImmutableList.Create<AdditionalCost>(
+							new SacrificeAdditionalCost
+							{
+								Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype },
+								Count = 1,
+							}
+						),
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								TargetSpecification.PlayersOrCreatures()
+							),
+							ActionTemplate = new DealDamageAction { Amount = 2 },
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Krenko, Mob Boss",
+				ManaCost = 4,
+				Subtypes = ImmutableList.Create(GoblinSubtype, "Warrior"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 3, Toughness = 3 },
+					new ActivatedAbilityComponent
+					{
+						Name = "Create Tokens",
+						ManaCost = 0,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new CountCardsWithSubtypeAction
+									{
+										Subtype = GoblinSubtype,
+										OutputKey = "krenko_goblin_count",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new CreateCardAction
+									{
+										CardTemplate = GoblinToken(),
+										CountInputKey = "krenko_goblin_count",
+									}
+								),
+							},
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Goblin Grenade",
+				ManaCost = 1,
+				AdditionalCastCosts = ImmutableList.Create<AdditionalCost>(
+					new SacrificeAdditionalCost
+					{
+						Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype },
+						Count = 1,
+					}
+				),
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.SingleTarget(
+									TargetSpecification.PlayersOrCreatures()
+								),
+								ActionTemplate = new DealDamageAction { Amount = 5 },
+							}
+						),
+					}
+				),
+			},
+			// ===== ZOO DECK CARDS =====
+			new()
+			{
+				Name = "Wild Nacatl",
+				ManaCost = 1,
+				Subtypes = ImmutableList.Create("Cat", "Warrior"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 2, Toughness = 2 }
+				),
+			},
+			new()
+			{
+				Name = "Kird Ape",
+				ManaCost = 1,
+				Subtypes = ImmutableList.Create("Ape"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 2, Toughness = 3 }
+				),
+			},
+			new()
+			{
+				Name = "Tarmogoyf",
+				ManaCost = 2,
+				Subtypes = ImmutableList.Create("Lhurgoyf"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 0, Toughness = 1 },
+					new GraveyardCountComponent { Duration = ModifierDuration.Permanent }
+				),
+			},
+			new()
+			{
+				Name = "Path to Exile",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.SingleTarget(
+									TargetSpecification.OpponentCreatures()
+								),
+								ActionTemplate = new ExileAction(),
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Tribal Flames",
+				ManaCost = 2,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.SingleTarget(
+									TargetSpecification.PlayersOrCreatures()
+								),
+								ActionTemplate = new DealDamageAction { Amount = 5 },
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Qasali Pridemage",
+				ManaCost = 2,
+				Subtypes = ImmutableList.Create("Cat", "Wizard"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 2, Toughness = 2 },
+					new ActivatedAbilityComponent
+					{
+						Name = "Destroy",
+						ManaCost = 1,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								TargetSpecification.OpponentCreatures()
+							),
+							ActionTemplate = new DealDamageAction { Amount = 10 },
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Loam Lion",
+				ManaCost = 1,
+				Subtypes = ImmutableList.Create("Cat"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 2, Toughness = 3 }
+				),
+			},
+			new()
+			{
+				Name = "Slagstorm",
+				ManaCost = 3,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.AllValid(
+									TargetSpecification.PlayersOrCreatures()
+								),
+								ActionTemplate = new DealDamageAction { Amount = 3 },
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Geist of Saint Traft",
+				ManaCost = 3,
+				Subtypes = ImmutableList.Create("Spirit"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 2, Toughness = 2 },
+					new TriggeredAbilityComponent
+					{
+						Name = "Geist Attack Trigger",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.CreatureAttacked,
+							Filter = new IsSourceCardSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new CreateCardAction
+							{
+								CardTemplate = new Card
+								{
+									Name = "Angel Token",
+									Subtypes = ImmutableList.Create("Angel"),
+									Components = ImmutableList.Create<GameComponent>(
+										new PermanentComponent(),
+										new CreatureComponent
+										{
+											Power = 4,
+											Toughness = 4,
+											HasFlying = true,
+											HasHaste = true,
+										},
+										new TriggeredAbilityComponent
+										{
+											Name = "Angel Sacrifice Trigger",
+											Condition = new EventTriggerCondition
+											{
+												EventTypeName = EventTypeNames.TurnEnded,
+												Filter = new IsControlledByYouSpecification(),
+											},
+
+											Effect = new CardEffect
+											{
+												TargetingStrategy = TargetingStrategy.AllValid(
+													new IsSourceCardSpecification()
+												),
+												ActionTemplate = new DestroyCreatureAction { },
+											},
+										}
+									),
+								},
+								Count = 1,
+							},
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Wall of Thorns",
+				ManaCost = 3,
+				Subtypes = ImmutableList.Create("Plant"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 2,
+						Toughness = 5,
+						HasTaunt = true,
+					}
+				),
+			},
+			new()
+			{
+				Name = "Raging Goblin",
+				ManaCost = 1,
+				Subtypes = ImmutableList.Create(GoblinSubtype),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 1,
+						Toughness = 1,
+						HasHaste = true,
+					}
+				),
+			},
+			new()
+			{
+				Name = "Hill Giant",
+				ManaCost = 3,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 3, Toughness = 4 }
+				),
+			},
+			new()
+			{
+				Name = "Grizzly Bears",
+				ManaCost = 2,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 2, Toughness = 2 }
+				),
+			},
+			new()
+			{
+				Name = "Kalonian Tusker",
+				ManaCost = 2,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 3, Toughness = 3 }
+				),
+			},
+			new()
+			{
+				Name = "Iron Golem",
+				ManaCost = 4,
+				Subtypes = ImmutableList.Create("Golem"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 5, Toughness = 5 }
+				),
+			},
+			new()
+			{
+				Name = "Craw Wurm",
+				ManaCost = 6,
+				Subtypes = ImmutableList.Create("Wurm"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 8, Toughness = 4 }
+				),
+			},
+			new()
+			{
+				Name = "Ancestral Recall",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.Self(),
+								ActionTemplate = new DrawCardsAction { Amount = 3 },
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Mahamoti Djinn",
+				ManaCost = 6,
+				Subtypes = ImmutableList.Create("Djinn"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 6,
+						Toughness = 7,
+						HasFlying = true,
+					}
+				),
+			},
 			// ===== DRAGONSTORM DECK CARDS =====
-			SleightOfHand(),
-			LotusBoom(),
-			RiteOfFlame(),
-			SeethingSong(),
-			HuntedDragon(),
-			BogardanHellkite(),
-			Dragonstorm(),
+			new()
+			{
+				Name = "Sleight of Hand",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.NoTarget(),
+								ActionTemplate = new PipelineAction
+								{
+									Steps = ImmutableList.Create<GameAction>(
+										new LookAtTopCardsAction
+										{
+											Amount = 2,
+											OutputKey = ContextKeys.TopCardIds,
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										},
+										new SelectCardFromContextAction
+										{
+											Prompt = "Choose a card to put into your hand",
+											MinChoices = 1,
+											MaxChoices = 1,
+											OutputKey = "soh_hand_pick",
+											CardIdsContextKey = ContextKeys.TopCardIds,
+										},
+										new MoveCardToHandAction
+										{
+											CardIdContextKey = "soh_hand_pick",
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										},
+										new ExcludeSelectedCardsAction
+										{
+											CardIdsContextKey = ContextKeys.TopCardIds,
+											ExcludeContextKeys = ImmutableList.Create(
+												"soh_hand_pick"
+											),
+											OutputKey = ContextKeys.RemainingCardIds,
+										},
+										new MoveCardToBottomOfLibraryAction
+										{
+											CardIdsContextKey = ContextKeys.RemainingCardIds,
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										}
+									),
+								},
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Lotus Bloom",
+				ManaCost = 0,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.Self(),
+								ActionTemplate = new AddTemporaryManaAction { Amount = 3 },
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Rite of Flame",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.NoTarget(),
+								ActionTemplate = new PipelineAction
+								{
+									Steps = ImmutableList.Create<GameAction>(
+										new CountCardsWithNameAction
+										{
+											CardName = "Rite of Flame",
+											Zone = ZoneType.Graveyard,
+											OutputKey = "rite_count",
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										},
+										new AddTemporaryManaAction
+										{
+											Amount = 3,
+											BonusAmountContextKey = "rite_count",
+											TargetContextKey = ContextKeys.CastingPlayerId,
+										}
+									),
+								},
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Seething Song",
+				ManaCost = 3,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.Self(),
+								ActionTemplate = new AddTemporaryManaAction { Amount = 6 },
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Hunted Dragon",
+				ManaCost = 10,
+				Subtypes = ImmutableList.Create(DragonSubtype, "Lizard"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 10,
+						Toughness = 10,
+						HasFlying = true,
+						HasHaste = true,
+					}
+				),
+			},
+			new()
+			{
+				Name = "Bogardan Hellkite",
+				ManaCost = 8,
+				Subtypes = ImmutableList.Create(DragonSubtype),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 5,
+						Toughness = 5,
+						HasFlying = true,
+					},
+					new TriggeredAbilityComponent
+					{
+						Name = "ETB Damage",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
+							Filter = new IsSourceCardSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.RandomTarget(
+								TargetSpecification.OpponentOrOpponentCreatures()
+							),
+							ActionTemplate = new DealDamageAction { Amount = 5 },
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Dragonstorm",
+				ManaCost = 9,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						HasStorm = true,
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.NoTarget(),
+								ActionTemplate = new PipelineAction
+								{
+									Steps = ImmutableList.Create<GameAction>(
+										new SelectCardFromLibraryAction
+										{
+											Subtype = DragonSubtype,
+											OutputKey = "dragonstorm_target",
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										},
+										new PutIntoBattlefieldAction
+										{
+											CardIdContextKey = "dragonstorm_target",
+										}
+									),
+								},
+							}
+						),
+					}
+				),
+			},
 			// ===== LAND-ADJACENT CARDS =====
-			RampantGrowth(),
-			PrimevalTitan(),
-			Exploration(),
-			SteppeLynx(),
-			LandElemental(),
+			new()
+			{
+				Name = "Rampant Growth",
+				ManaCost = 2,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.NoTarget(),
+								ActionTemplate = new PipelineAction
+								{
+									Steps = ImmutableList.Create<GameAction>(
+										new SelectCardFromLibraryAction
+										{
+											Subtype = LandSubtype,
+											OutputKey = "rampant_land",
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										},
+										new PutLandIntoPlayAction
+										{
+											CardIdContextKey = "rampant_land",
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										}
+									),
+								},
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Primeval Titan",
+				ManaCost = 6,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 6, Toughness = 6 },
+					new TriggeredAbilityComponent
+					{
+						Name = "ETB Fetch Lands",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
+							Filter = new IsSourceCardSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new SelectCardFromLibraryAction
+									{
+										Subtype = LandSubtype,
+										OutputKey = "primeval_land_1",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new PutLandIntoPlayAction
+									{
+										CardIdContextKey = "primeval_land_1",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new SelectCardFromLibraryAction
+									{
+										Subtype = LandSubtype,
+										OutputKey = "primeval_land_2",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new PutLandIntoPlayAction
+									{
+										CardIdContextKey = "primeval_land_2",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									}
+								),
+							},
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Exploration",
+				ManaCost = 1,
+				Subtypes = ImmutableList.Create("Artifact"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new ExtraLandPerTurnComponent()
+				),
+			},
+			new()
+			{
+				Name = "Steppe Lynx",
+				ManaCost = 0,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 0, Toughness = 1 },
+					new TriggeredAbilityComponent
+					{
+						Name = "Landfall",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.LandPlayed,
+							Filter = new IsControlledByYouSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new AddModifierAction
+							{
+								PowerBonus = 2,
+								ToughnessBonus = 2,
+								Duration = ModifierDuration.UntilEndOfTurn,
+								TargetContextKey = ContextKeys.SourceCardId,
+							},
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Land Elemental",
+				ManaCost = 3,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 0, Toughness = 0 },
+					new LandsPlayedCountComponent { Duration = ModifierDuration.Permanent }
+				),
+			},
 		};
 
 	/*
@@ -97,136 +1346,24 @@ public static class CardLibrary
 		This greatly simplifies the card creation process, should make it easier to design and modify cards.
 
 	*/
-	public static Card DoomBlade() =>
-		new()
-		{
-			Name = "Doom Blade",
-			ManaCost = 2,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								TargetSpecification.OpponentCreatures()
-							),
-							ActionTemplate = new DestroyCreatureAction(),
-						}
-					),
-				}
-			),
-		};
 
-	public static Card GrizzlyBears() =>
-		new()
-		{
-			Name = "Grizzly Bears",
-			ManaCost = 2,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 2, Toughness = 2 }
-			),
-		};
+	public static Card DoomBlade() => All.First(c => c.Name == "Doom Blade");
 
-	public static Card HillGiant() =>
-		new()
-		{
-			Name = "Hill Giant",
-			ManaCost = 3,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 3, Toughness = 4 }
-			),
-		};
+	public static Card GrizzlyBears() => All.First(c => c.Name == "Grizzly Bears");
 
-	public static Card KalonianTusker() =>
-		new()
-		{
-			Name = "Kalonian Tusker",
-			ManaCost = 2,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 3, Toughness = 3 }
-			),
-		};
+	public static Card HillGiant() => All.First(c => c.Name == "Hill Giant");
 
-	public static Card IronGolem() =>
-		new()
-		{
-			Name = "Iron Golem",
-			ManaCost = 4,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 5, Toughness = 5 }
-			),
-			Subtypes = ImmutableList.Create("Golem"),
-		};
+	public static Card KalonianTusker() => All.First(c => c.Name == "Kalonian Tusker");
 
-	public static Card MahamotiDjinn() =>
-		new()
-		{
-			Name = "Mahamoti Djinn",
-			ManaCost = 6,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent
-				{
-					Power = 6,
-					Toughness = 7,
-					HasFlying = true,
-				}
-			),
-			Subtypes = ImmutableList.Create("Djinn"),
-		};
+	public static Card IronGolem() => All.First(c => c.Name == "Iron Golem");
 
-	public static Card CrawWurm() =>
-		new()
-		{
-			Name = "Craw Wurm",
-			ManaCost = 6,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 8, Toughness = 4 }
-			),
-			Subtypes = ImmutableList.Create("Wurm"),
-		};
+	public static Card MahamotiDjinn() => All.First(c => c.Name == "Mahamoti Djinn");
 
-	public static Card AncestralRecall() =>
-		new()
-		{
-			Name = "Ancestral Recall",
-			ManaCost = 1,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new DrawCardsAction { Amount = 3 },
-						}
-					),
-				}
-			),
-		};
+	public static Card CrawWurm() => All.First(c => c.Name == "Craw Wurm");
 
-	public static Card RagingGoblin() =>
-		new()
-		{
-			Name = "Raging Goblin",
-			ManaCost = 1,
-			Subtypes = ImmutableList.Create(GoblinSubtype),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent
-				{
-					Power = 1,
-					Toughness = 1,
-					HasHaste = true,
-				}
-			),
-		};
+	public static Card AncestralRecall() => All.First(c => c.Name == "Ancestral Recall");
+
+	public static Card RagingGoblin() => All.First(c => c.Name == "Raging Goblin");
 
 	public static Card SavannahLions() =>
 		new()
@@ -239,223 +1376,34 @@ public static class CardLibrary
 			),
 		};
 
-	public static Card WrathOfGod() =>
-		new()
-		{
-			Name = "Wrath of God",
-			ManaCost = 3,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.AllValid(
-								TargetSpecification.Creatures()
-							),
-							ActionTemplate = new DestroyCreatureAction(),
-						}
-					),
-				}
-			),
-		};
+	public static Card WrathOfGod() => All.First(c => c.Name == "Wrath of God");
 
 	/// <summary>
 	/// Lightning Bolt — 1 mana instant.
 	/// "Lightning Bolt deals 3 damage to any target."
 	/// </summary>
-	public static Card LightningBolt() =>
-		new()
-		{
-			Name = "Lightning Bolt",
-			ManaCost = 1,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								TargetSpecification.PlayersOrCreatures()
-							),
-							ActionTemplate = new DealDamageAction { Amount = 3 },
-						}
-					),
-				}
-			),
-		};
+	public static Card LightningBolt() => All.First(c => c.Name == "Lightning Bolt");
 
-	public static Card Slagstorm() =>
-		new()
-		{
-			Name = "Slagstorm",
-			ManaCost = 3,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.AllValid(
-								TargetSpecification.PlayersOrCreatures()
-							),
-							ActionTemplate = new DealDamageAction { Amount = 3 },
-						}
-					),
-				}
-			),
-		};
+	public static Card Slagstorm() => All.First(c => c.Name == "Slagstorm");
 
 	/// <summary>
 	/// Lightning Helix — 2 mana instant.
 	/// "Lightning Helix deals 3 damage to any target and you gain 3 life."
 	/// </summary>
-	public static Card LightningHelix() =>
-		new()
-		{
-			Name = "Lightning Helix",
-			ManaCost = 2,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								TargetSpecification.PlayersOrCreatures()
-							),
-							ActionTemplate = new DealDamageAction { Amount = 3 },
-						},
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new GainLifeAction { Amount = 3 },
-						}
-					),
-				}
-			),
-		};
+	public static Card LightningHelix() => All.First(c => c.Name == "Lightning Helix");
 
 	/// <summary>
 	/// Careful Study — 1 mana instant.
 	/// "Draw 2 cards, then discard 2 cards."
 	/// </summary>
-	public static Card CarefulStudy() =>
-		new()
-		{
-			Name = "Careful Study",
-			ManaCost = 1,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new PipelineAction
-							{
-								Steps = ImmutableList.Create<GameAction>(
-									new DrawCardsAction
-									{
-										Amount = 2,
-										TargetContextKey = ContextKeys.CastingPlayerId,
-									},
-									//Selecting cards and discarding could created from some sort of factory method or builder which would
-									//abstract these details of creating this specific type of effect. And we could also, make a factory
-									//method for Draw and Discard specifically which would combine all these effects in one for easy use.
-									new SelectCardsFromHandAction
-									{
-										Prompt = "Choose 2 cards to discard",
-										MinChoices = 2,
-										MaxChoices = 2,
-										OutputKey = ContextKeys.SelectedCardIds,
-									},
-									new DiscardCardsAction
-									{
-										TargetContextKey = ContextKeys.SelectedCardIds,
-									}
-								),
-							},
-						}
-					),
-				}
-			),
-		};
+	public static Card CarefulStudy() => All.First(c => c.Name == "Careful Study");
 
 	/// <summary>
 	/// Telling Time — 2 mana instant.
 	/// "Look at the top three cards of your library. Put one into your hand,
 	///  one on top of your library, and one on the bottom of your library."
 	/// </summary>
-	public static Card TellingTime() =>
-		new()
-		{
-			Name = "Telling Time",
-			ManaCost = 2,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new PipelineAction
-							{
-								Steps = ImmutableList.Create<GameAction>(
-									new LookAtTopCardsAction
-									{
-										Amount = 3,
-										OutputKey = ContextKeys.TopCardIds,
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									},
-									new SelectCardFromContextAction
-									{
-										Prompt = "Choose a card to put into your hand",
-										MinChoices = 1,
-										MaxChoices = 1,
-										OutputKey = "tt_hand_pick",
-										CardIdsContextKey = ContextKeys.TopCardIds,
-									},
-									new MoveCardToHandAction
-									{
-										CardIdContextKey = "tt_hand_pick",
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									},
-									new SelectCardFromContextAction
-									{
-										Prompt = "Choose a card to put on top of your library",
-										MinChoices = 1,
-										MaxChoices = 1,
-										OutputKey = "tt_top_pick",
-										CardIdsContextKey = ContextKeys.TopCardIds,
-										ExcludeContextKeys = ImmutableList.Create("tt_hand_pick"),
-									},
-									new MoveCardToTopOfLibraryAction
-									{
-										CardIdContextKey = "tt_top_pick",
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									},
-									new ExcludeSelectedCardsAction
-									{
-										CardIdsContextKey = ContextKeys.TopCardIds,
-										ExcludeContextKeys = ImmutableList.Create(
-											"tt_hand_pick",
-											"tt_top_pick"
-										),
-										OutputKey = ContextKeys.RemainingCardIds,
-									},
-									new MoveCardToBottomOfLibraryAction
-									{
-										CardIdsContextKey = ContextKeys.RemainingCardIds,
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									}
-								),
-							},
-						}
-					),
-				}
-			),
-		};
+	public static Card TellingTime() => All.First(c => c.Name == "Telling Time");
 
 	/// <summary>
 	/// Dark Confidant — 2 mana creature (2/1).
@@ -463,76 +1411,14 @@ public static class CardLibrary
 	///  and put it into your hand. You lose life equal to its mana cost."
 	/// Triggered ability not yet implemented — see TriggeredAbilityComponent (future).
 	/// </summary>
-	public static Card DarkConfidant() =>
-		new()
-		{
-			Name = "Dark Confidant",
-			ManaCost = 2,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 1, Toughness = 4 },
-				new TriggeredAbilityComponent
-				{
-					Name = "Dark Condidant Trigger",
-					Condition = new EventTriggerCondition
-					{
-						EventTypeName = EventTypeNames.TurnStarted,
-						Filter = new IsControlledByYouSpecification(),
-					},
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new PipelineAction
-						{
-							Steps = ImmutableList.Create<GameAction>(
-								new RevealTopCardAction
-								{
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
-								},
-								new LoseLifeAction
-								{
-									TargetContextKey = ContextKeys.CastingPlayerId,
-									AmountContextKey = ContextKeys.RevealedCardManaCost,
-								},
-								new DrawCardsAction
-								{
-									Amount = 1,
-									TargetContextKey = ContextKeys.CastingPlayerId,
-								}
-							),
-						},
-					},
-				}
-			),
-		};
+	public static Card DarkConfidant() => All.First(c => c.Name == "Dark Confidant");
 
 	/// <summary>
 	/// Prodigal Sorcerer — 3 mana creature (1/1).
 	/// Activated ability: "1 mana: Deal 1 damage to any target."
 	/// Classic example of a simple damage ping ability.
 	/// </summary>
-	public static Card ProdigalSorcerer() =>
-		new()
-		{
-			Name = "Prodigal Sorcerer",
-			ManaCost = 3,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 1, Toughness = 1 },
-				new ActivatedAbilityComponent
-				{
-					Name = "Ping",
-					ManaCost = 1,
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.SingleTarget(
-							TargetSpecification.PlayersOrCreatures()
-						),
-						ActionTemplate = new DealDamageAction { Amount = 1 },
-					},
-				}
-			),
-		};
+	public static Card ProdigalSorcerer() => All.First(c => c.Name == "Prodigal Sorcerer");
 
 	/// <summary>
 	/// Throne of Bone — 1 mana artifact creature (1/1).
@@ -540,100 +1426,21 @@ public static class CardLibrary
 	/// Activated ability: "2 mana: Draw a card."
 	/// Simple card with two abilities to exercise the multi-ability path.
 	/// </summary>
-	public static Card ThroneOfBone() =>
-		new()
-		{
-			Name = "Throne of Bone",
-			ManaCost = 1,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 1, Toughness = 1 },
-				new ActivatedAbilityComponent
-				{
-					Name = "Gain Life",
-					ManaCost = 1,
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.Self(),
-						ActionTemplate = new GainLifeAction { Amount = 2 },
-					},
-				},
-				new ActivatedAbilityComponent
-				{
-					Name = "Draw",
-					ManaCost = 2,
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.Self(),
-						ActionTemplate = new DrawCardsAction { Amount = 1 },
-					},
-				}
-			),
-		};
+	public static Card ThroneOfBone() => All.First(c => c.Name == "Throne of Bone");
 
 	/// <summary>
 	/// Giant Growth — 1 mana instant.
 	/// "Target creature gets +3/+3 until end of turn."
 	/// Classic combat trick — applies a UntilEndOfTurn PowerToughnessModifier.
 	/// </summary>
-	public static Card GiantGrowth() =>
-		new()
-		{
-			Name = "Giant Growth",
-			ManaCost = 1,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								new IsCreatureSpecification().And(
-									new IsControlledByYouSpecification()
-								)
-							),
-							ActionTemplate = new AddModifierAction
-							{
-								PowerBonus = 3,
-								ToughnessBonus = 3,
-								Duration = ModifierDuration.UntilEndOfTurn,
-							},
-						}
-					),
-				}
-			),
-		};
+	public static Card GiantGrowth() => All.First(c => c.Name == "Giant Growth");
 
 	/// <summary>
 	/// Unholy Strength — 1 mana instant.
 	/// "Target creature gets +2/+1 permanently."
 	/// Simplified enchantment-style permanent buff using a Permanent modifier.
 	/// </summary>
-	public static Card UnholyStrength() =>
-		new()
-		{
-			Name = "Unholy Strength",
-			ManaCost = 1,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								TargetSpecification.CreatureControlledByYou()
-							),
-							ActionTemplate = new AddModifierAction
-							{
-								PowerBonus = 2,
-								ToughnessBonus = 1,
-								Duration = ModifierDuration.Permanent,
-							},
-						}
-					),
-				}
-			),
-		};
+	public static Card UnholyStrength() => All.First(c => c.Name == "Unholy Strength");
 
 	// ===== ARTIFACTS =====
 
@@ -641,51 +1448,13 @@ public static class CardLibrary
 	/// Mox (generic) — 0 mana artifact.
 	/// Once per turn: add 1 mana. Tap is proxied as HasActivated — no tap cost implemented yet.
 	/// </summary>
-	public static Card Mox() =>
-		new()
-		{
-			Name = "Mox",
-			ManaCost = 0,
-			Subtypes = ImmutableList.Create("Artifact"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new ActivatedAbilityComponent
-				{
-					Name = "Add Mana",
-					ManaCost = 0,
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.Self(),
-						ActionTemplate = new AddTemporaryManaAction { Amount = 1 },
-					},
-				}
-			),
-		};
+	public static Card Mox() => All.First(c => c.Name == "Mox");
 
 	/// <summary>
 	/// Sol Ring — 1 mana artifact.
 	/// Once per turn: add 2 mana. Tap is proxied as HasActivated — no tap cost implemented yet.
 	/// </summary>
-	public static Card SolRing() =>
-		new()
-		{
-			Name = "Sol Ring",
-			ManaCost = 1,
-			Subtypes = ImmutableList.Create("Artifact"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new ActivatedAbilityComponent
-				{
-					Name = "Add Mana",
-					ManaCost = 0,
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.Self(),
-						ActionTemplate = new AddTemporaryManaAction { Amount = 2 },
-					},
-				}
-			),
-		};
+	public static Card SolRing() => All.First(c => c.Name == "Sol Ring");
 
 	// ===== ENCHANTMENTS =====
 
@@ -694,100 +1463,18 @@ public static class CardLibrary
 	/// "Creatures you control get +1/+1."
 	/// Global static boost applied via StaticAbilityEngine push model.
 	/// </summary>
-	public static Card GloriousAnthem() =>
-		new()
-		{
-			Name = "Glorious Anthem",
-			ManaCost = 3,
-			Subtypes = ImmutableList.Create("Enchantment"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new StaticPTBoostAbility
-				{
-					PowerBonus = 1,
-					ToughnessBonus = 1,
-					Filter = new IsCreatureSpecification(),
-				}
-			),
-		};
+	public static Card GloriousAnthem() => All.First(c => c.Name == "Glorious Anthem");
 
 	/// <summary>
 	/// Phyrexian Arena — 3 mana enchantment.
 	/// "At the beginning of your upkeep, you draw a card and you lose 1 life."
 	/// Triggered on TurnStarted; draws one card and costs one life each turn.
 	/// </summary>
-	public static Card PhyrexianArena() =>
-		new()
-		{
-			Name = "Phyrexian Arena",
-			ManaCost = 3,
-			Subtypes = ImmutableList.Create("Enchantment"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new TriggeredAbilityComponent
-				{
-					Name = "Draw and Pay",
-					Condition = new EventTriggerCondition
-					{
-						EventTypeName = EventTypeNames.TurnStarted,
-						Filter = new IsControlledByYouSpecification(),
-					},
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new PipelineAction
-						{
-							Steps = ImmutableList.Create<GameAction>(
-								new DrawCardsAction
-								{
-									Amount = 1,
-									TargetContextKey = ContextKeys.CastingPlayerId,
-								},
-								new LoseLifeAction
-								{
-									Amount = 1,
-									TargetContextKey = ContextKeys.CastingPlayerId,
-								}
-							),
-						},
-					},
-				}
-			),
-		};
+	public static Card PhyrexianArena() => All.First(c => c.Name == "Phyrexian Arena");
 
 	// ===== EQUIPMENT =====
 
-	public static Card Bonesplitter() =>
-		new()
-		{
-			Name = "Bonesplitter",
-			ManaCost = 1,
-			Subtypes = ImmutableList.Create("Artifact", "Equipment"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new EquipmentComponent { PowerBonus = 2, ToughnessBonus = 0 },
-				new ActivatedAbilityComponent
-				{
-					Name = "Equip",
-					ManaCost = 1,
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.SingleTarget(
-							new AndSpecification
-							{
-								Left = new IsOnBattlefieldSpecification(),
-								Right = new AndSpecification
-								{
-									Left = new IsCreatureSpecification(),
-									Right = new IsControlledByYouSpecification(),
-								},
-							}
-						),
-						ActionTemplate = new AttachEquipmentAction(),
-					},
-				}
-			),
-		};
+	public static Card Bonesplitter() => All.First(c => c.Name == "Bonesplitter");
 
 	// ===== GOBLINS DECK CARDS =====
 
@@ -812,263 +1499,49 @@ public static class CardLibrary
 	/// Goblin Scout. "Whenever Goblin Guide attacks, defending player reveals the
 	/// top card of their library." — Reveal clause omitted; just a 2/2 haste for 1.
 	/// </summary>
-	public static Card GoblinGuide() =>
-		new()
-		{
-			Name = "Goblin Guide",
-			ManaCost = 1,
-			Subtypes = ImmutableList.Create(GoblinSubtype, "Scout"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent
-				{
-					Power = 2,
-					Toughness = 2,
-					HasHaste = true,
-				}
-			),
-		};
+	public static Card GoblinGuide() => All.First(c => c.Name == "Goblin Guide");
 
 	/// <summary>
 	/// Goblin Lackey — 1 mana creature (1/1).
 	/// "Whenever Goblin Lackey deals combat damage to a player, you may put a Goblin
 	///  permanent card from your hand onto the battlefield."
 	/// </summary>
-	public static Card GoblinLackey() =>
-		new()
-		{
-			Name = "Goblin Lackey",
-			ManaCost = 1,
-			Subtypes = ImmutableList.Create(GoblinSubtype),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 1, Toughness = 1 },
-				new TriggeredAbilityComponent
-				{
-					Name = "Lackey Trigger",
-					Condition = new EventTriggerCondition
-					{
-						EventTypeName = EventTypeNames.CombatDamageDealtToPlayer,
-						Filter = new IsSourceCardSpecification(),
-					},
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.RandomTarget(
-							new IsInHandSpecification().And(
-								new IsSubtypeSpecification { Subtype = GoblinSubtype }
-							)
-						),
-						ActionTemplate = new PutIntoBattlefieldAction(),
-					},
-				}
-			),
-		};
+	public static Card GoblinLackey() => All.First(c => c.Name == "Goblin Lackey");
 
 	/// <summary>
 	/// Warren Instigator — 2 mana creature (1/1, Double Strike).
 	/// "Whenever Warren Instigator deals combat damage to a player, you may put a Goblin
 	///  permanent card from your hand onto the battlefield." Fires twice (double strike).
 	/// </summary>
-	public static Card WarrenInstigator() =>
-		new()
-		{
-			Name = "Warren Instigator",
-			ManaCost = 2,
-			Subtypes = ImmutableList.Create(GoblinSubtype, "Berserker"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent
-				{
-					Power = 1,
-					Toughness = 1,
-					HasDoubleStrike = true,
-				},
-				new TriggeredAbilityComponent
-				{
-					Name = "Instigator Trigger",
-					Condition = new EventTriggerCondition
-					{
-						EventTypeName = EventTypeNames.CombatDamageDealtToPlayer,
-						Filter = new IsSourceCardSpecification(),
-					},
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.RandomTarget(
-							new IsInHandSpecification().And(
-								new IsSubtypeSpecification { Subtype = GoblinSubtype }
-							)
-						),
-						ActionTemplate = new PutIntoBattlefieldAction(),
-					},
-				}
-			),
-		};
+	public static Card WarrenInstigator() => All.First(c => c.Name == "Warren Instigator");
 
 	/// <summary>
 	/// Goblin Chieftain — 3 mana creature (2/2, Haste).
 	/// Lord effect ("other Goblins get +1/+1 and haste") deferred until static anthems
 	/// are implemented (Step 2). For now: aggressive 2/2 haste body.
 	/// </summary>
-	public static Card GoblinChieftain() =>
-		new()
-		{
-			Name = "Goblin Chieftain",
-			ManaCost = 3,
-			Subtypes = ImmutableList.Create(GoblinSubtype),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent
-				{
-					Power = 2,
-					Toughness = 2,
-					HasHaste = true,
-				},
-				new StaticPTBoostAbility
-				{
-					PowerBonus = 1,
-					ToughnessBonus = 1,
-					Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype }.And(
-						TargetSpecification.OtherCreaturesYouControl()
-					),
-				},
-				new StaticGrantKeywordAbility
-				{
-					GrantsHaste = true,
-					Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype }.And(
-						TargetSpecification.OtherCreaturesYouControl()
-					),
-				}
-			),
-		};
+	public static Card GoblinChieftain() => All.First(c => c.Name == "Goblin Chieftain");
 
 	/// <summary>
 	/// Siege-Gang Commander — 5 mana creature (2/2).
 	/// ETB: create three 1/1 Goblin creature tokens.
 	/// Activated: 1 mana, sacrifice a Goblin → deal 2 damage to any target.
 	/// </summary>
-	public static Card SiegeGangCommander() =>
-		new()
-		{
-			Name = "Siege-Gang Commander",
-			ManaCost = 5,
-			Subtypes = ImmutableList.Create(GoblinSubtype),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 2, Toughness = 2 },
-				new TriggeredAbilityComponent
-				{
-					Name = "ETB Tokens",
-					Condition = new EventTriggerCondition
-					{
-						EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
-						Filter = new IsSourceCardSpecification(),
-					},
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new CreateCardAction
-						{
-							CardTemplate = GoblinToken(),
-							Count = 3,
-						},
-					},
-				},
-				new ActivatedAbilityComponent
-				{
-					Name = "Sacrifice Goblin",
-					ManaCost = 1,
-					AdditionalCosts = ImmutableList.Create<AdditionalCost>(
-						new SacrificeAdditionalCost
-						{
-							Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype },
-							Count = 1,
-						}
-					),
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.SingleTarget(
-							TargetSpecification.PlayersOrCreatures()
-						),
-						ActionTemplate = new DealDamageAction { Amount = 2 },
-					},
-				}
-			),
-		};
+	public static Card SiegeGangCommander() => All.First(c => c.Name == "Siege-Gang Commander");
 
 	/// <summary>
 	/// Krenko, Mob Boss — 4 mana creature (3/3).
 	/// Activated (tap proxy — no tap cost implemented): create X 1/1 Goblin tokens,
 	/// where X is the number of Goblins you control. Uses pipeline to count at resolution.
 	/// </summary>
-	public static Card KrenkoMobBoss() =>
-		new()
-		{
-			Name = "Krenko, Mob Boss",
-			ManaCost = 4,
-			Subtypes = ImmutableList.Create(GoblinSubtype, "Warrior"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 3, Toughness = 3 },
-				new ActivatedAbilityComponent
-				{
-					Name = "Create Tokens",
-					ManaCost = 0,
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new PipelineAction
-						{
-							Steps = ImmutableList.Create<GameAction>(
-								new CountCardsWithSubtypeAction
-								{
-									Subtype = GoblinSubtype,
-									OutputKey = "krenko_goblin_count",
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
-								},
-								new CreateCardAction
-								{
-									CardTemplate = GoblinToken(),
-									CountInputKey = "krenko_goblin_count",
-								}
-							),
-						},
-					},
-				}
-			),
-		};
+	public static Card KrenkoMobBoss() => All.First(c => c.Name == "Krenko, Mob Boss");
 
 	/// <summary>
 	/// Goblin Grenade — 1 mana sorcery.
 	/// Additional cost: sacrifice a Goblin.
 	/// "Goblin Grenade deals 5 damage to any target."
 	/// </summary>
-	public static Card GoblinGrenade() =>
-		new()
-		{
-			Name = "Goblin Grenade",
-			ManaCost = 1,
-			AdditionalCastCosts = ImmutableList.Create<AdditionalCost>(
-				new SacrificeAdditionalCost
-				{
-					Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype },
-					Count = 1,
-				}
-			),
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								TargetSpecification.PlayersOrCreatures()
-							),
-							ActionTemplate = new DealDamageAction { Amount = 5 },
-						}
-					),
-				}
-			),
-		};
+	public static Card GoblinGrenade() => All.First(c => c.Name == "Goblin Grenade");
 
 	// ===== ZOO DECK CARDS =====
 
@@ -1076,248 +1549,53 @@ public static class CardLibrary
 	/// Wild Nacatl — 1 mana creature (2/2).
 	/// Cat Warrior. Simplified: no domain condition, just solid stats.
 	/// </summary>
-	public static Card WildNacatl() =>
-		new()
-		{
-			Name = "Wild Nacatl",
-			ManaCost = 1,
-			Subtypes = ImmutableList.Create("Cat", "Warrior"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 2, Toughness = 2 }
-			),
-		};
+	public static Card WildNacatl() => All.First(c => c.Name == "Wild Nacatl");
 
 	/// <summary>
 	/// Kird Ape — 1 mana creature (2/3).
 	/// Ape. Simplified: no Forest condition, just solid stats.
 	/// </summary>
-	public static Card KirdApe() =>
-		new()
-		{
-			Name = "Kird Ape",
-			ManaCost = 1,
-			Subtypes = ImmutableList.Create("Ape"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 2, Toughness = 3 }
-			),
-		};
+	public static Card KirdApe() => All.First(c => c.Name == "Kird Ape");
 
 	/// <summary>
 	/// Tarmogoyf — 2 mana creature (*/1+*).
 	/// Power and toughness each scale with the total number of cards in all graveyards.
 	/// Base Power = 0, Base Toughness = 1; GraveyardCountComponent adds the dynamic bonus.
 	/// </summary>
-	public static Card Tarmogoyf() =>
-		new()
-		{
-			Name = "Tarmogoyf",
-			ManaCost = 2,
-			Subtypes = ImmutableList.Create("Lhurgoyf"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 0, Toughness = 1 },
-				new GraveyardCountComponent { Duration = ModifierDuration.Permanent }
-			),
-		};
+	public static Card Tarmogoyf() => All.First(c => c.Name == "Tarmogoyf");
 
-	public static Card LlanowarElves() =>
-		new()
-		{
-			Name = "Llanowar Elves",
-			ManaCost = 1,
-			Subtypes = ImmutableList.Create("Elf", "Druid"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 1, Toughness = 1 },
-				new ActivatedAbilityComponent
-				{
-					Name = "Mana Ramp",
-					ManaCost = 0,
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.Self(),
-						ActionTemplate = new AddTemporaryManaAction { Amount = 1 },
-					},
-				}
-			),
-		};
+	public static Card LlanowarElves() => All.First(c => c.Name == "Llanowar Elves");
 
 	/// <summary>
 	/// Path to Exile — 1 mana instant.
 	/// "Exile target creature."
 	/// Simplified: no basic land search for the exiled creature's controller.
 	/// </summary>
-	public static Card PathToExile() =>
-		new()
-		{
-			Name = "Path to Exile",
-			ManaCost = 1,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								TargetSpecification.OpponentCreatures()
-							),
-							ActionTemplate = new ExileAction(),
-						}
-					),
-				}
-			),
-		};
+	public static Card PathToExile() => All.First(c => c.Name == "Path to Exile");
 
 	/// <summary>
 	/// Tribal Flames — 2 mana instant.
 	/// "Tribal Flames deals 5 damage to any target."
 	/// Simplified: fixed 5 damage, ignores domain condition.
 	/// </summary>
-	public static Card TribalFlames() =>
-		new()
-		{
-			Name = "Tribal Flames",
-			ManaCost = 2,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								TargetSpecification.PlayersOrCreatures()
-							),
-							ActionTemplate = new DealDamageAction { Amount = 5 },
-						}
-					),
-				}
-			),
-		};
+	public static Card TribalFlames() => All.First(c => c.Name == "Tribal Flames");
 
 	/// <summary>
 	/// Qasali Pridemage — 2 mana creature (2/2).
 	/// Cat Wizard. Activated ability: destroy target opponent's creature (proxy for
 	/// the real card's sac-to-destroy-artifact/enchantment — no artifact type yet).
 	/// </summary>
-	public static Card QasaliPridemage() =>
-		new()
-		{
-			Name = "Qasali Pridemage",
-			ManaCost = 2,
-			Subtypes = ImmutableList.Create("Cat", "Wizard"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 2, Toughness = 2 },
-				new ActivatedAbilityComponent
-				{
-					Name = "Destroy",
-					ManaCost = 1,
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.SingleTarget(
-							TargetSpecification.OpponentCreatures()
-						),
-						ActionTemplate = new DealDamageAction { Amount = 10 },
-					},
-				}
-			),
-		};
+	public static Card QasaliPridemage() => All.First(c => c.Name == "Qasali Pridemage");
 
-	public static Card WallOfThorns() =>
-		new()
-		{
-			Name = "Wall of Thorns",
-			ManaCost = 3,
-			Subtypes = ImmutableList.Create("Plant"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent
-				{
-					Power = 2,
-					Toughness = 5,
-					HasTaunt = true,
-				}
-			),
-		};
+	public static Card WallOfThorns() => All.First(c => c.Name == "Wall of Thorns");
 
-	public static Card GeistOfSaintTraft() =>
-		new()
-		{
-			Name = "Geist of Saint Traft",
-			ManaCost = 3,
-			Subtypes = ImmutableList.Create("Spirit"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 2, Toughness = 2 },
-				new TriggeredAbilityComponent
-				{
-					Name = "Geist Attack Trigger",
-					Condition = new EventTriggerCondition
-					{
-						EventTypeName = EventTypeNames.CreatureAttacked,
-						Filter = new IsSourceCardSpecification(),
-					},
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new CreateCardAction
-						{
-							CardTemplate = new Card
-							{
-								Name = "Angel Token",
-								Subtypes = ImmutableList.Create("Angel"),
-								Components = ImmutableList.Create<GameComponent>(
-									new PermanentComponent(),
-									new CreatureComponent
-									{
-										Power = 4,
-										Toughness = 4,
-										HasFlying = true,
-										HasHaste = true,
-									},
-									new TriggeredAbilityComponent
-									{
-										Name = "Angel Sacrifice Trigger",
-										Condition = new EventTriggerCondition
-										{
-											EventTypeName = EventTypeNames.TurnEnded,
-											Filter = new IsControlledByYouSpecification(),
-										},
-
-										Effect = new CardEffect
-										{
-											TargetingStrategy = TargetingStrategy.AllValid(
-												new IsSourceCardSpecification()
-											),
-											ActionTemplate = new DestroyCreatureAction { },
-										},
-									}
-								),
-							},
-							Count = 1,
-						},
-					},
-				}
-			),
-		};
+	public static Card GeistOfSaintTraft() => All.First(c => c.Name == "Geist of Saint Traft");
 
 	/// <summary>
 	/// Loam Lion — 1 mana creature (2/3).
 	/// Cat. Simplified: no Forest condition, just good defensive stats.
 	/// </summary>
-	public static Card LoamLion() =>
-		new()
-		{
-			Name = "Loam Lion",
-			ManaCost = 1,
-			Subtypes = ImmutableList.Create("Cat"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 2, Toughness = 3 }
-			),
-		};
+	public static Card LoamLion() => All.First(c => c.Name == "Loam Lion");
 
 	// ===== DRAGONSTORM DECK CARDS =====
 
@@ -1326,204 +1604,38 @@ public static class CardLibrary
 	/// "Look at the top two cards of your library. Put one into your hand
 	///  and the other on the bottom of your library."
 	/// </summary>
-	public static Card SleightOfHand() =>
-		new()
-		{
-			Name = "Sleight of Hand",
-			ManaCost = 1,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new PipelineAction
-							{
-								Steps = ImmutableList.Create<GameAction>(
-									new LookAtTopCardsAction
-									{
-										Amount = 2,
-										OutputKey = ContextKeys.TopCardIds,
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									},
-									new SelectCardFromContextAction
-									{
-										Prompt = "Choose a card to put into your hand",
-										MinChoices = 1,
-										MaxChoices = 1,
-										OutputKey = "soh_hand_pick",
-										CardIdsContextKey = ContextKeys.TopCardIds,
-									},
-									new MoveCardToHandAction
-									{
-										CardIdContextKey = "soh_hand_pick",
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									},
-									new ExcludeSelectedCardsAction
-									{
-										CardIdsContextKey = ContextKeys.TopCardIds,
-										ExcludeContextKeys = ImmutableList.Create("soh_hand_pick"),
-										OutputKey = ContextKeys.RemainingCardIds,
-									},
-									new MoveCardToBottomOfLibraryAction
-									{
-										CardIdsContextKey = ContextKeys.RemainingCardIds,
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									}
-								),
-							},
-						}
-					),
-				}
-			),
-		};
+	public static Card SleightOfHand() => All.First(c => c.Name == "Sleight of Hand");
 
 	/// <summary>
 	/// Lotus Bloom — 0 mana sorcery (simplified from Suspend 3).
 	/// "Add RRR." Suspend mechanic omitted — treated as a free mana spell.
 	/// </summary>
-	public static Card LotusBoom() =>
-		new()
-		{
-			Name = "Lotus Bloom",
-			ManaCost = 0,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new AddTemporaryManaAction { Amount = 3 },
-						}
-					),
-				}
-			),
-		};
+	public static Card LotusBoom() => All.First(c => c.Name == "Lotus Bloom");
 
 	/// <summary>
 	/// Rite of Flame — 1 mana instant.
 	/// "Add RR. Add an additional R for each card named Rite of Flame in your graveyard."
 	/// </summary>
-	public static Card RiteOfFlame() =>
-		new()
-		{
-			Name = "Rite of Flame",
-			ManaCost = 1,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new PipelineAction
-							{
-								Steps = ImmutableList.Create<GameAction>(
-									new CountCardsWithNameAction
-									{
-										CardName = "Rite of Flame",
-										Zone = ZoneType.Graveyard,
-										OutputKey = "rite_count",
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									},
-									new AddTemporaryManaAction
-									{
-										Amount = 3,
-										BonusAmountContextKey = "rite_count",
-										TargetContextKey = ContextKeys.CastingPlayerId,
-									}
-								),
-							},
-						}
-					),
-				}
-			),
-		};
+	public static Card RiteOfFlame() => All.First(c => c.Name == "Rite of Flame");
 
 	/// <summary>
 	/// Seething Song — 3 mana instant.
 	/// "Add RRRRR." Net +2 mana at sorcery speed — fuels same-turn Dragonstorm.
 	/// </summary>
-	public static Card SeethingSong() =>
-		new()
-		{
-			Name = "Seething Song",
-			ManaCost = 3,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new AddTemporaryManaAction { Amount = 6 },
-						}
-					),
-				}
-			),
-		};
+	public static Card SeethingSong() => All.First(c => c.Name == "Seething Song");
 
 	/// <summary>
 	/// Hunted Dragon — 6 mana creature (6/6, Flying, Haste).
 	/// Simplified: Knight token ETB omitted.
 	/// </summary>
-	public static Card HuntedDragon() =>
-		new()
-		{
-			Name = "Hunted Dragon",
-			ManaCost = 10,
-			Subtypes = ImmutableList.Create(DragonSubtype, "Lizard"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent
-				{
-					Power = 10,
-					Toughness = 10,
-					HasFlying = true,
-					HasHaste = true,
-				}
-			),
-		};
+	public static Card HuntedDragon() => All.First(c => c.Name == "Hunted Dragon");
 
 	/// <summary>
 	/// Bogardan Hellkite — 8 mana creature (5/5, Flying).
 	/// "When Bogardan Hellkite enters the battlefield, it deals 5 damage to target
 	///  player or creature." Simplified: single random opponent target.
 	/// </summary>
-	public static Card BogardanHellkite() =>
-		new()
-		{
-			Name = "Bogardan Hellkite",
-			ManaCost = 8,
-			Subtypes = ImmutableList.Create(DragonSubtype),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent
-				{
-					Power = 5,
-					Toughness = 5,
-					HasFlying = true,
-				},
-				new TriggeredAbilityComponent
-				{
-					Name = "ETB Damage",
-					Condition = new EventTriggerCondition
-					{
-						EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
-						Filter = new IsSourceCardSpecification(),
-					},
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.RandomTarget(
-							TargetSpecification.OpponentOrOpponentCreatures()
-						),
-						ActionTemplate = new DealDamageAction { Amount = 5 },
-					},
-				}
-			),
-		};
+	public static Card BogardanHellkite() => All.First(c => c.Name == "Bogardan Hellkite");
 
 	/// <summary>
 	/// Dragonstorm — 9 mana sorcery with Storm.
@@ -1532,39 +1644,7 @@ public static class CardLibrary
 	/// HasStorm=true causes ResolveSpellAction to repeat the effect SpellsCastThisTurn times.
 	/// Each copy: SelectCardFromLibraryAction finds the next Dragon, PutIntoBattlefieldAction deploys it.
 	/// </summary>
-	public static Card Dragonstorm() =>
-		new()
-		{
-			Name = "Dragonstorm",
-			ManaCost = 9,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					HasStorm = true,
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new PipelineAction
-							{
-								Steps = ImmutableList.Create<GameAction>(
-									new SelectCardFromLibraryAction
-									{
-										Subtype = DragonSubtype,
-										OutputKey = "dragonstorm_target",
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									},
-									new PutIntoBattlefieldAction
-									{
-										CardIdContextKey = "dragonstorm_target",
-									}
-								),
-							},
-						}
-					),
-				}
-			),
-		};
+	public static Card Dragonstorm() => All.First(c => c.Name == "Dragonstorm");
 
 	// ===== LAND =====
 
@@ -1589,39 +1669,7 @@ public static class CardLibrary
 	/// "Search your library for a basic land card and put it into play."
 	/// Pipeline: SelectCardFromLibraryAction (subtype Land) → PutLandIntoPlayAction.
 	/// </summary>
-	public static Card RampantGrowth() =>
-		new()
-		{
-			Name = "Rampant Growth",
-			ManaCost = 2,
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent
-				{
-					Effects = ImmutableList.Create(
-						new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new PipelineAction
-							{
-								Steps = ImmutableList.Create<GameAction>(
-									new SelectCardFromLibraryAction
-									{
-										Subtype = LandSubtype,
-										OutputKey = "rampant_land",
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									},
-									new PutLandIntoPlayAction
-									{
-										CardIdContextKey = "rampant_land",
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
-									}
-								),
-							},
-						}
-					),
-				}
-			),
-		};
+	public static Card RampantGrowth() => All.First(c => c.Name == "Rampant Growth");
 
 	/// <summary>
 	/// Primeval Titan — 6 mana 6/6.
@@ -1629,73 +1677,14 @@ public static class CardLibrary
 	///  basic land cards and put them into play."
 	/// ETB trigger: pipeline runs twice (SelectCardFromLibraryAction → PutLandIntoPlayAction).
 	/// </summary>
-	public static Card PrimevalTitan() =>
-		new()
-		{
-			Name = "Primeval Titan",
-			ManaCost = 6,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 6, Toughness = 6 },
-				new TriggeredAbilityComponent
-				{
-					Name = "ETB Fetch Lands",
-					Condition = new EventTriggerCondition
-					{
-						EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
-						Filter = new IsSourceCardSpecification(),
-					},
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new PipelineAction
-						{
-							Steps = ImmutableList.Create<GameAction>(
-								new SelectCardFromLibraryAction
-								{
-									Subtype = LandSubtype,
-									OutputKey = "primeval_land_1",
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
-								},
-								new PutLandIntoPlayAction
-								{
-									CardIdContextKey = "primeval_land_1",
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
-								},
-								new SelectCardFromLibraryAction
-								{
-									Subtype = LandSubtype,
-									OutputKey = "primeval_land_2",
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
-								},
-								new PutLandIntoPlayAction
-								{
-									CardIdContextKey = "primeval_land_2",
-									PlayerIdContextKey = ContextKeys.CastingPlayerId,
-								}
-							),
-						},
-					},
-				}
-			),
-		};
+	public static Card PrimevalTitan() => All.First(c => c.Name == "Primeval Titan");
 
 	/// <summary>
 	/// Exploration — 1 mana artifact.
 	/// "You may play an additional land on each of your turns."
 	/// ExtraLandPerTurnComponent on the battlefield grants +1 to the land-per-turn limit.
 	/// </summary>
-	public static Card Exploration() =>
-		new()
-		{
-			Name = "Exploration",
-			ManaCost = 1,
-			Subtypes = ImmutableList.Create("Artifact"),
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new ExtraLandPerTurnComponent()
-			),
-		};
+	public static Card Exploration() => All.First(c => c.Name == "Exploration");
 
 	/// <summary>
 	/// Steppe Lynx — 0 mana 0/1.
@@ -1703,36 +1692,7 @@ public static class CardLibrary
 	///  +2/+2 until end of turn."
 	/// TargetContextKey = SourceCardId applies the modifier to the Lynx itself at resolution.
 	/// </summary>
-	public static Card SteppeLynx() =>
-		new()
-		{
-			Name = "Steppe Lynx",
-			ManaCost = 0,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 0, Toughness = 1 },
-				new TriggeredAbilityComponent
-				{
-					Name = "Landfall",
-					Condition = new EventTriggerCondition
-					{
-						EventTypeName = EventTypeNames.LandPlayed,
-						Filter = new IsControlledByYouSpecification(),
-					},
-					Effect = new CardEffect
-					{
-						TargetingStrategy = TargetingStrategy.NoTarget(),
-						ActionTemplate = new AddModifierAction
-						{
-							PowerBonus = 2,
-							ToughnessBonus = 2,
-							Duration = ModifierDuration.UntilEndOfTurn,
-							TargetContextKey = ContextKeys.SourceCardId,
-						},
-					},
-				}
-			),
-		};
+	public static Card SteppeLynx() => All.First(c => c.Name == "Steppe Lynx");
 
 	/// <summary>
 	/// Land Elemental — 3 mana creature (0/0 base).
@@ -1741,15 +1701,5 @@ public static class CardLibrary
 	/// LandsPlayedCountComponent reads the controller's LandsPlayedTotal dynamically.
 	/// Duration = Permanent so StartTurnAction does not clear it.
 	/// </summary>
-	public static Card LandElemental() =>
-		new()
-		{
-			Name = "Land Elemental",
-			ManaCost = 3,
-			Components = ImmutableList.Create<GameComponent>(
-				new PermanentComponent(),
-				new CreatureComponent { Power = 0, Toughness = 0 },
-				new LandsPlayedCountComponent { Duration = ModifierDuration.Permanent }
-			),
-		};
+	public static Card LandElemental() => All.First(c => c.Name == "Land Elemental");
 }
