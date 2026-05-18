@@ -8,7 +8,7 @@ namespace MtgCore;
 /// Plays a land card from a player's hand.
 ///
 /// Unlike spells, lands do not use the MTG stack — they resolve immediately with
-/// no window for opponents to respond. The card moves directly from hand to graveyard
+/// no window for opponents to respond. The card moves directly from hand to exile
 /// (lands do not stay in play; they add permanent mana to the pool instead).
 ///
 /// ValidateAdd confirms the card is a Land in the player's hand and that the player
@@ -16,7 +16,7 @@ namespace MtgCore;
 /// allow additional land plays by contributing ExtraLandPerTurnComponent).
 ///
 /// Execute: increments MaxMana and CurrentMana by 1, increments LandsPlayedThisTurn
-/// and LandsPlayedTotal, moves card to graveyard, emits LandPlayedEvent.
+/// and LandsPlayedTotal, moves card to exile, emits LandPlayedEvent.
 /// </summary>
 public record PlayLandAction : GameAction
 {
@@ -66,8 +66,8 @@ public record PlayLandAction : GameAction
 			}
 		);
 
-		var graveyardId = state.GetPlayerZoneId(CastingPlayerId, ZoneType.Graveyard);
-		state = state.MoveObject(CardId, graveyardId);
+		var exileId = state.GetPlayerZoneId(CastingPlayerId, ZoneType.Exile);
+		state = state.MoveObject(CardId, exileId);
 
 		var landPlayedEvent = new LandPlayedEvent { PlayerId = CastingPlayerId, CardId = CardId };
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(landPlayedEvent) };

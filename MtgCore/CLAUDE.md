@@ -20,8 +20,8 @@ MtgCore/
 │                            #           CreateTokenAction
 │                            #           TransformAction (EffectAction; swaps card face in place via TransformComponent; carries creature state across)
 │                            #           AttachEquipmentAction (ITargetedAction; reads equipment ID from ContextKeys.SourceCardId)
-│                            #           PlayLandAction (play land from hand: MaxMana++, CurrentMana++, LandsPlayedThisTurn++, LandsPlayedTotal++, card → graveyard)
-│                            #           PutLandIntoPlayAction (effect-sourced land: MaxMana++, CurrentMana++, LandsPlayedTotal++ only, card → graveyard; used by Rampant Growth/Primeval Titan)
+│                            #           PlayLandAction (play land from hand: MaxMana++, CurrentMana++, LandsPlayedThisTurn++, LandsPlayedTotal++, card → exile)
+│                            #           PutLandIntoPlayAction (effect-sourced land: MaxMana++, CurrentMana++, LandsPlayedTotal++ only, card → exile; used by Rampant Growth/Primeval Titan)
 │                            #           CastFromGraveyardAction (flashback: casts a spell from graveyard at FlashbackManaCost; card exiles after resolution via MoveCardToExileAction)
 │                            #           MoveCardToExileAction (post-resolution cleanup for flashback; analogous to MoveCardToGraveyardAction but routes to exile)
 │                            #           MoveCardToGraveyardAction (post-resolution cleanup for normal spells)
@@ -111,7 +111,7 @@ Applied via `AddModifierAction`. `UntilEndOfTurn` modifiers are cleared by `Star
 
 Land-based. Both players start at `MaxMana = 0`, `CurrentMana = 0`. All permanent mana comes from playing land cards.
 
-- **Playing a land** (`PlayLandAction`): `MaxMana++`, `CurrentMana++`, `LandsPlayedThisTurn++`, `LandsPlayedTotal++`. Card moves Hand → Graveyard. Emits `LandPlayedEvent`.
+- **Playing a land** (`PlayLandAction`): `MaxMana++`, `CurrentMana++`, `LandsPlayedThisTurn++`, `LandsPlayedTotal++`. Card moves Hand → Exile. Emits `LandPlayedEvent`.
 - **Effect-sourced lands** (`PutLandIntoPlayAction`): same MaxMana/CurrentMana/LandsPlayedTotal increments, but does NOT increment `LandsPlayedThisTurn` (doesn't consume the land-per-turn). Used by Rampant Growth and Primeval Titan ETB.
 - `StartTurnAction` refills `CurrentMana = MaxMana` and resets `LandsPlayedThisTurn = 0`. It does **not** auto-increment `MaxMana`.
 - **Land limit**: one land play per turn. Each permanent with `ExtraLandPerTurnComponent` controlled by the player adds +1. Limit is computed dynamically in `PlayLandAction.ValidateAdd` — no stored `LandsAllowedThisTurn` field.

@@ -53,8 +53,8 @@ public record PutLandIntoPlayAction : GameAction
 			}
 		);
 
-		var graveyardId = state.GetPlayerZoneId(playerId, ZoneType.Graveyard);
-		state = state.MoveObject(cardId, graveyardId);
+		var exileId = state.GetPlayerZoneId(playerId, ZoneType.Exile);
+		state = state.MoveObject(cardId, exileId);
 
 		var landPlayedEvent = new LandPlayedEvent { PlayerId = playerId, CardId = cardId };
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(landPlayedEvent) };
