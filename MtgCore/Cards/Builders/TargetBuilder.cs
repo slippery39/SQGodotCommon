@@ -29,6 +29,9 @@ public class TargetBuilder
 
 	public TargetingStrategy Creatures() => Build(TargetSpecification.Creatures());
 
+	public TargetingStrategy InstantOrSorceryInYourGraveyard() =>
+		Build(new IsInstantOrSorceryInOwnGraveyardSpecification());
+
 	public TargetingStrategy WithSpec(TargetSpecification spec) => Build(spec);
 
 	private TargetingStrategy Build(TargetSpecification spec) =>

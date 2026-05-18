@@ -620,6 +620,11 @@ public static class CardLibrary
 				.WithHaste()
 				.Build(),
 			CardFactory.Creature("Hill Giant", manaCost: 3, power: 3, toughness: 4).Build(),
+			CardFactory
+				.Creature("Snapcaster Mage", manaCost: 2, power: 2, toughness: 1)
+				.WithSubtype("Wizard")
+				.WithEtbTrigger("ETB Flashback", e => e.WithGiveFlashback())
+				.Build(),
 			CardFactory.Creature("Grizzly Bears", manaCost: 2, power: 2, toughness: 2).Build(),
 			CardFactory.Creature("Kalonian Tusker", manaCost: 2, power: 3, toughness: 3).Build(),
 			CardFactory

@@ -26,6 +26,7 @@ MtgCore/
 │                            #           MoveCardToExileAction (post-resolution cleanup for flashback; analogous to MoveCardToGraveyardAction but routes to exile)
 │                            #           MoveCardToGraveyardAction (post-resolution cleanup for normal spells)
 │                            #           ResolveSpellAction.ExileAfterResolution — when true, spawns MoveCardToExileAction instead of MoveCardToGraveyardAction
+│                            #           GiveFlashbackAction (EffectAction; adds FlashbackComponent{FlashbackManaCost=card.ManaCost} to a target spell in the graveyard; no-ops if already present)
 │                            # DealDamageAction has PlayerOutputKey and CreatureOutputKey for pipeline chaining.
 ├── Costs/                   # AdditionalCost (abstract), LifeAdditionalCost, SacrificeAdditionalCost, DiscardAdditionalCost
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
@@ -35,6 +36,9 @@ MtgCore/
 │   │                        # TargetBuilder (use via 'using static'), TriggerConditions (static helpers)
 │   │                        # Usage: CardFactory.Spell("Name", manaCost).WithDamage(3).WithTarget(Single().PlayersOrCreatures()).Build()
 │   │                        # SpellCardBuilder.WithFlashback(cost) adds FlashbackComponent — card becomes castable from graveyard at that cost
+│   │                        # SpellCardBuilder.WithGiveFlashback() — effect that adds FlashbackComponent to a random instant/sorcery in your graveyard; use in ETB triggers
+│   │                        # CreatureCardBuilder.WithEtbTrigger(name, effect) — shorthand for WithTriggeredAbility using OnSelfEntersBattlefield() condition
+│   │                        # TargetBuilder.InstantOrSorceryInYourGraveyard() — targets an instant/sorcery in the caster's own graveyard
 │   └── Components/          # PermanentComponent (battlefield marker), CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach), SpellComponent (HasStorm), GraveyardCountComponent
 │                            # FlashbackComponent { FlashbackManaCost } — marks a spell castable from graveyard; MtgActionGenerator scans graveyard for these and generates CastFromGraveyardAction
 │                            # EquipmentComponent (PowerBonus, ToughnessBonus, EquippedToCardId — tracks attachment state)
@@ -51,7 +55,7 @@ MtgCore/
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Land Elemental. Must be stamped with Duration = Permanent in card definitions.
 ├── Players/                 # MtgPlayer (GameObject subclass) — fields: Life, MaxMana, CurrentMana, LandsPlayedThisTurn (resets each turn), LandsPlayedTotal (never resets; used by Land Elemental)
 ├── Targeting/               # TargetSpecification (base), ZoneSpecification (abstract base for zone specs), TargetingContext, TargetingStrategy
-│                            # Zone specs: IsOnBattlefieldSpecification, IsInHandSpecification
+│                            # Zone specs: IsOnBattlefieldSpecification, IsInHandSpecification, IsInstantOrSorceryInOwnGraveyardSpecification
 │                            # Other specs: IsCreatureSpecification, IsPlayerSpecification, IsSubtypeSpecification,
 │                            #              IsControlledByYouSpecification, IsControlledByOpponentSpecification,
 │                            #              IsSourceCardSpecification, IsNotSelfSpecification, AlwaysFalseSpecification

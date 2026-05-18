@@ -131,6 +131,13 @@ public class CreatureCardBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// Shorthand for WithTriggeredAbility using OnSelfEntersBattlefield() as the condition.
+	/// Use this for "when ~ enters the battlefield" abilities.
+	/// </summary>
+	public CreatureCardBuilder WithEtbTrigger(string name, Action<SpellCardBuilder> effect) =>
+		WithTriggeredAbility(name, TriggerConditions.OnSelfEntersBattlefield(), effect);
+
 	public CreatureCardBuilder WithTriggeredAbility(
 		string name,
 		TriggerCondition condition,

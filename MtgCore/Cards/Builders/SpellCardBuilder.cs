@@ -148,6 +148,16 @@ public class SpellCardBuilder
 		return this;
 	}
 
+	public SpellCardBuilder WithGiveFlashback()
+	{
+		FlushPending();
+		_pendingAction = new GiveFlashbackAction();
+		_pendingTargeting = TargetingStrategy.RandomTarget(
+			new IsInstantOrSorceryInOwnGraveyardSpecification()
+		);
+		return this;
+	}
+
 	public SpellCardBuilder WithAction(GameAction action, TargetingStrategy targeting)
 	{
 		FlushPending();
