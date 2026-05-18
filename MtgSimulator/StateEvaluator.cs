@@ -23,6 +23,7 @@ public static class StateEvaluator
 	private const float TotalPowerWeight = 2.0f;
 	private const float CardsInHandWeight = 1.1f;
 	private const float ManaWeight = 2.0f;
+	private const float NonCreaturePermanentWeight = 1.5f;
 
 	public static float Evaluate(GameState state, MtgGameIds ids, int playerId)
 	{
@@ -72,6 +73,22 @@ public static class StateEvaluator
 
 		score += (playerCreatureCount - opponentCreatureCount) * CreatureCountWeight;
 		score += (playerPower - opponentPower) * TotalPowerWeight;
+
+		var playerNonCreatureCount = 0;
+		foreach (var c in state.GetCardsInZone(playerBattlefieldId))
+		{
+			if (c.HasComponent<PermanentComponent>() && !c.HasComponent<CreatureComponent>())
+				playerNonCreatureCount++;
+		}
+
+		var opponentNonCreatureCount = 0;
+		foreach (var c in state.GetCardsInZone(opponentBattlefieldId))
+		{
+			if (c.HasComponent<PermanentComponent>() && !c.HasComponent<CreatureComponent>())
+				opponentNonCreatureCount++;
+		}
+
+		score += (playerNonCreatureCount - opponentNonCreatureCount) * NonCreaturePermanentWeight;
 
 		score +=
 			(

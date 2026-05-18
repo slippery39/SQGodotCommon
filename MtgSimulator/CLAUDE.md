@@ -77,12 +77,13 @@ Scores a non-terminal state as a weighted sum. Terminal states short-circuit.
 | Life difference (player − opponent) | 0.4 |
 | Creature count difference | 3.0 |
 | Total effective Power difference (permanent power only) | 2.0 |
+| Non-creature permanent count difference (Mox, Arena, Exploration, etc.) | 1.5 |
 | Cards in hand difference | 1.1 |
 | Player's own permanent mana (`MaxMana` only — temporary fast mana excluded) | 2.0 |
 | Win (opponent has lost) | +10000 |
 | Loss (player has lost) | −10000 |
 
-`MaxMana` weight is high (2.0) because in the land system permanent mana is the primary resource — a land behind means fewer spells castable every turn for the rest of the game. Power uses permanent power only (`GetEffectivePermanentPower`); `UntilEndOfTurn` buffs like Giant Growth are excluded since they evaporate next turn.
+`MaxMana` weight is high (2.0) because in the land system permanent mana is the primary resource — a land behind means fewer spells castable every turn for the rest of the game. Power uses permanent power only (`GetEffectivePermanentPower`); `UntilEndOfTurn` buffs like Giant Growth are excluded since they evaporate next turn. Non-creature permanents (weight 1.5) are identified by `PermanentComponent && !CreatureComponent`; land cards are excluded automatically since `Plains` carries no `PermanentComponent`.
 
 Zone IDs are read directly from `MtgGameIds` to avoid child-list scans on every evaluation call.
 

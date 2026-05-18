@@ -5,7 +5,13 @@
       "Bash(dotnet test *)",
       "Bash(dotnet sln *)",
       "Bash(xargs grep *)",
-      "PowerShell($lines = Get-Content \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgCore\\\\Cards\\\\CardLibrary.cs\"; $lines[-5..-1] | ForEach-Object { [System.Web.HttpUtility]::HtmlEncode\\($_\\) })"
+      "PowerShell($lines = Get-Content \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgCore\\\\Cards\\\\CardLibrary.cs\"; $lines[-5..-1] | ForEach-Object { [System.Web.HttpUtility]::HtmlEncode\\($_\\) })",
+      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgCore\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Recurse -Path \"C:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgSimulator\" -Include \"*.cs\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(grep -E \"\\\\.cs$\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\" -Filter \"*Tests*\" -Directory -Recurse)"
     ]
   }
 }

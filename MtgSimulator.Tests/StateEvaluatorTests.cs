@@ -119,6 +119,39 @@ public class StateEvaluatorTests
 		Assert.That(p2Score, Is.LessThan(0f));
 	}
 
+	// ===== NON-CREATURE PERMANENTS =====
+
+	[Test]
+	public void Evaluate_PlayerHasNonCreaturePermanent_ScoresPositive()
+	{
+		var (state, _) = AddNonCreaturePermanentToBattlefield(_state, _ids.Player1Id);
+
+		var score = StateEvaluator.Evaluate(state, _ids, _ids.Player1Id);
+
+		Assert.That(score, Is.GreaterThan(0f));
+	}
+
+	[Test]
+	public void Evaluate_OpponentHasNonCreaturePermanent_ScoresNegative()
+	{
+		var (state, _) = AddNonCreaturePermanentToBattlefield(_state, _ids.Player2Id);
+
+		var score = StateEvaluator.Evaluate(state, _ids, _ids.Player1Id);
+
+		Assert.That(score, Is.LessThan(0f));
+	}
+
+	[Test]
+	public void Evaluate_EqualNonCreaturePermanentsBothSides_ScoresZero()
+	{
+		var (state, _) = AddNonCreaturePermanentToBattlefield(_state, _ids.Player1Id);
+		(state, _) = AddNonCreaturePermanentToBattlefield(state, _ids.Player2Id);
+
+		var score = StateEvaluator.Evaluate(state, _ids, _ids.Player1Id);
+
+		Assert.That(score, Is.EqualTo(0f));
+	}
+
 	// ===== HELPERS =====
 
 	private (GameState, Card) AddCreatureToBattlefield(
@@ -140,6 +173,20 @@ public class StateEvaluatorTests
 			),
 		};
 		var (newState, added) = state.AddObject(creature, parentId: battlefieldId);
+		return (newState, added);
+	}
+
+	private (GameState, Card) AddNonCreaturePermanentToBattlefield(GameState state, int ownerId)
+	{
+		var battlefieldId = state.GetPlayerZoneId(ownerId, ZoneType.Battlefield);
+		var permanent = new Card
+		{
+			Name = "TestEnchantment",
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+			Components = ImmutableList.Create<GameComponent>(new PermanentComponent()),
+		};
+		var (newState, added) = state.AddObject(permanent, parentId: battlefieldId);
 		return (newState, added);
 	}
 }
