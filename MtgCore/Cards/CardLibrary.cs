@@ -30,6 +30,11 @@ public static class CardLibrary
 				.WithTarget(Single().PlayersOrCreatures())
 				.Build(),
 			CardFactory
+				.Spell("Gut Shot", manaCost: 0)
+				.WithDamage(1)
+				.WithTarget(Single().PlayersOrCreatures())
+				.Build(),
+			CardFactory
 				.Spell("Firebolt", manaCost: 1)
 				.WithDamage(2)
 				.WithTarget(Single().PlayersOrCreatures())
@@ -636,6 +641,7 @@ public static class CardLibrary
 				.WithSubtype("Wurm")
 				.Build(),
 			CardFactory.Spell("Ancestral Recall", manaCost: 1).WithDraw(3).Build(),
+			CardFactory.Spell("Gitaxian Probe", manaCost: 0).WithDraw(1).Build(),
 			CardFactory
 				.Creature("Mahamoti Djinn", manaCost: 6, power: 6, toughness: 7)
 				.WithSubtype("Djinn")
