@@ -11,8 +11,8 @@ namespace MtgSimulator;
 /// requirement on Kird Ape, no land search on Path to Exile.
 /// Tarmogoyf scales with all graveyards via GraveyardCountComponent.
 ///
-/// Deck list (60 cards — 24 lands + 36 spells):
-///   24x Plains           (basic land)
+/// Deck list (56 cards — 20 lands + 36 spells):
+///   20x Plains           (basic land)
 ///   4x Wild Nacatl       (1 mana 2/2 Cat)
 ///   4x Kird Ape          (1 mana 2/3 Ape)
 ///   4x Loam Lion         (1 mana 2/3 Cat)
@@ -30,7 +30,7 @@ public static class ZooDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 24, CardLibrary.Plains);
+		AddCopies(deck, ownerId, 20, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, CardLibrary.WildNacatl);
 		AddCopies(deck, ownerId, 4, CardLibrary.KirdApe);
 		AddCopies(deck, ownerId, 4, CardLibrary.LoamLion);

@@ -91,7 +91,7 @@ When tuning weights: changes here affect `BeamSearchAiStrategy` and `DepthLimite
 
 ## CardPool
 
-Defines all cards available for random deck generation. `BuildRandomDeck(ownerId, deckSize = 40, landCount = 17)` builds a 40-card limited deck: 17 Plains + 23 non-land cards sampled without replacement from the pool. Land cards in the pool are excluded from the non-land draw.
+Defines all cards available for random deck generation. `BuildRandomDeck(ownerId, deckSize = 40, landCount = 13)` builds a 40-card limited deck: 13 Plains + 27 non-land cards sampled without replacement from the pool. Land cards in the pool are excluded from the non-land draw.
 
 **Targeting restriction**: damage spells target opponents and opponent creatures only. The random AI has no targeting intelligence, so restricting targets at the card level prevents self-damage. This is intentional — do not add friendly targets to simulator cards without also updating the AI strategy.
 

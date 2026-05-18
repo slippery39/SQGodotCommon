@@ -9,8 +9,8 @@ namespace MtgSimulator;
 /// Red aggro built around cheap Goblin creatures, direct damage, and synergistic
 /// effects (Lackey/Instigator board acceleration, Siege-Gang token generation, Krenko doubling).
 ///
-/// Deck list (60 cards — 24 lands + 36 spells):
-///   24x Plains             (basic land)
+/// Deck list (56 cards — 20 lands + 36 spells):
+///   20x Plains             (basic land)
 ///   4x Goblin Guide        (1 mana 2/2 haste)
 ///   4x Goblin Lackey       (1 mana 1/1, combat damage → put Goblin from hand into play)
 ///   4x Goblin Grenade      (1 mana, sacrifice Goblin → 5 damage)
@@ -28,7 +28,7 @@ public static class GoblinsDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 24, CardLibrary.Plains);
+		AddCopies(deck, ownerId, 20, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, CardLibrary.GoblinGuide);
 		AddCopies(deck, ownerId, 4, CardLibrary.GoblinLackey);
 		AddCopies(deck, ownerId, 4, CardLibrary.GoblinGrenade);

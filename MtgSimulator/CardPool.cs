@@ -416,7 +416,7 @@ public static class CardPool
 		};
 
 	/// <summary>
-	/// Builds a random deck for the given player: 17 basic lands + 23 non-land cards
+	/// Builds a random deck for the given player: 13 basic lands + 27 non-land cards
 	/// sampled without replacement from the provided pool (limited-format ratio, 40 total).
 	/// Owner is stamped onto each card template at deck-build time.
 	/// </summary>
@@ -424,7 +424,7 @@ public static class CardPool
 		int ownerId,
 		IReadOnlyList<Card> pool,
 		int deckSize = 40,
-		int landCount = 17,
+		int landCount = 13,
 		Random? rng = null
 	)
 	{

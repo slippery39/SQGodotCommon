@@ -16,8 +16,8 @@ namespace MtgSimulator;
 ///   - Remand: not included (counterspell stack interaction not implemented)
 ///   - Calciform Pools / Dreadship Reef / Shivan Reef: not included (no land system)
 ///
-/// Deck list (60 cards — 24 lands + 36 spells):
-///   24x Plains             (basic land)
+/// Deck list (56 cards — 20 lands + 36 spells):
+///   20x Plains             (basic land)
 ///   4x Bogardan Hellkite   (8 mana 5/5 Flying Dragon, ETB deal 5)
 ///   2x Hunted Dragon       (6 mana 6/6 Flying Haste Dragon)
 ///   4x Dragonstorm         (9 mana sorcery, Storm — deploy Dragons)
@@ -35,7 +35,7 @@ public static class DragonstormDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 24, CardLibrary.Plains);
+		AddCopies(deck, ownerId, 20, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, CardLibrary.BogardanHellkite);
 		AddCopies(deck, ownerId, 4, CardLibrary.HuntedDragon);
 		AddCopies(deck, ownerId, 8, CardLibrary.Dragonstorm);
