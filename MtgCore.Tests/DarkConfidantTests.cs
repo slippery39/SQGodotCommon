@@ -95,11 +95,11 @@ public class DarkConfidantTests
 		var (finalState, _) = s3.AddAction(MakeStartTurn(_ids.Player1Id, skipDraw: true))
 			.ProcessAllActions();
 
-		// StartTurn: MaxMana 0→1, CurrentMana refills to 1. Then trigger adds 4.
+		// StartTurn: no auto-mana (mana comes from lands). Trigger adds 4.
 		Assert.That(
 			finalState.GetPlayer(_ids.Player1Id).CurrentMana,
-			Is.EqualTo(5),
-			"Player should have 1 (from turn start) + 4 (from Dark Confidant) = 5 mana"
+			Is.EqualTo(4),
+			"Player should have 0 (StartTurn adds no mana) + 4 (from trigger) = 4 mana"
 		);
 	}
 

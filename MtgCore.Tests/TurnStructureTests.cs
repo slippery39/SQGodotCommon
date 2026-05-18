@@ -20,12 +20,12 @@ public class TurnStructureTests
 	// ===== START TURN ACTION =====
 
 	[Test]
-	public void StartTurn_IncrementsMaxMana()
+	public void StartTurn_DoesNotIncrementMaxMana()
 	{
 		var (finalState, _) = _state.AddAction(MakeStartTurn(_ids.Player1Id)).ProcessAllActions();
 
 		var player = finalState.GetPlayer(_ids.Player1Id);
-		Assert.That(player.MaxMana, Is.EqualTo(1));
+		Assert.That(player.MaxMana, Is.EqualTo(0));
 	}
 
 	[Test]
@@ -113,7 +113,7 @@ public class TurnStructureTests
 	}
 
 	[Test]
-	public void StartTurn_ResetsDamage_OnControlledCreatures()
+	public void StartTurn_DoesNotResetDamage_OnControlledCreatures()
 	{
 		var creature = AddCreatureToBattlefield(_state, _ids.Player1Id);
 		var card = (Card)creature.state.GetObject(creature.id);
@@ -126,7 +126,7 @@ public class TurnStructureTests
 		var (finalState, _) = damaged.AddAction(MakeStartTurn(_ids.Player1Id)).ProcessAllActions();
 
 		var updated = (Card)finalState.GetObject(creature.id);
-		Assert.That(updated.GetComponent<CreatureComponent>()!.Damage, Is.EqualTo(0));
+		Assert.That(updated.GetComponent<CreatureComponent>()!.Damage, Is.EqualTo(3));
 	}
 
 	[Test]
@@ -195,8 +195,8 @@ public class TurnStructureTests
 
 		var (finalState, events) = state.AddAction(MakeEndTurn()).ProcessAllActions();
 
-		// StartTurnAction should have fired for Player 2, giving them mana and drawing a card
-		Assert.That(finalState.GetPlayer(_ids.Player2Id).MaxMana, Is.EqualTo(1));
+		// StartTurnAction should have fired for Player 2 — mana comes from lands, not auto-increment
+		Assert.That(finalState.GetPlayer(_ids.Player2Id).MaxMana, Is.EqualTo(0));
 		Assert.That(
 			events.OfType<TurnStartedEvent>().Any(e => e.PlayerId == _ids.Player2Id),
 			Is.True
@@ -244,17 +244,17 @@ public class TurnStructureTests
 
 		var (finalState, _) = state.BeginGame(_ids.GameId, _ids.Player1Id, _ids.Player2Id);
 
-		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(4));
-		Assert.That(finalState.GetCardsInZone(_ids.Player2HandId).Count(), Is.EqualTo(4));
+		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(7));
+		Assert.That(finalState.GetCardsInZone(_ids.Player2HandId).Count(), Is.EqualTo(7));
 	}
 
 	[Test]
-	public void BeginGame_Player1HasMana_AfterBegin()
+	public void BeginGame_Player1StartsWithNoMana()
 	{
 		var (finalState, _) = _state.BeginGame(_ids.GameId, _ids.Player1Id, _ids.Player2Id);
 
-		Assert.That(finalState.GetPlayer(_ids.Player1Id).CurrentMana, Is.EqualTo(1));
-		Assert.That(finalState.GetPlayer(_ids.Player1Id).MaxMana, Is.EqualTo(1));
+		Assert.That(finalState.GetPlayer(_ids.Player1Id).CurrentMana, Is.EqualTo(0));
+		Assert.That(finalState.GetPlayer(_ids.Player1Id).MaxMana, Is.EqualTo(0));
 	}
 
 	[Test]
@@ -287,8 +287,8 @@ public class TurnStructureTests
 
 		var (finalState, _) = state.BeginGame(_ids.GameId, _ids.Player1Id, _ids.Player2Id);
 
-		// Hand should be exactly 4 — the opening hand, no extra draw
-		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(4));
+		// Hand should be exactly 7 — the opening hand, no extra draw
+		Assert.That(finalState.GetCardsInZone(_ids.Player1HandId).Count(), Is.EqualTo(7));
 	}
 
 	[Test]
