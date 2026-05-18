@@ -944,6 +944,10 @@ public static class CardLibrary
 			},
 		};
 
+	public static Card GetByName(string name) =>
+		All.FirstOrDefault(c => c.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+		?? throw new InvalidOperationException($"Card '{name}' not found in CardLibrary.");
+
 	/*
 	-static builders that can be accessed from anywhere for ease of use.
 	-should we have a fluent builder type syntax? Or something else?
@@ -1211,8 +1215,6 @@ public static class CardLibrary
 	/// Cat. Simplified: no Forest condition, just good defensive stats.
 	/// </summary>
 	public static Card LoamLion() => All.First(c => c.Name == "Loam Lion");
-
-	public static Card DelverOfSecrets() => All.First(c => c.Name == "Delver of Secrets");
 
 	// ===== DRAGONSTORM DECK CARDS =====
 
