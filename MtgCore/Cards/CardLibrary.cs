@@ -183,64 +183,18 @@ public static class CardLibrary
 					}
 				),
 			},
-			new()
-			{
-				Name = "Llanowar Elves",
-				ManaCost = 1,
-				Subtypes = ImmutableList.Create("Elf", "Druid"),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 1, Toughness = 1 },
-					new ActivatedAbilityComponent
-					{
-						Name = "Mana Ramp",
-						ManaCost = 0,
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new AddTemporaryManaAction { Amount = 1 },
-						},
-					}
-				),
-			},
-			new()
-			{
-				Name = "Doom Blade",
-				ManaCost = 2,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.SingleTarget(
-									TargetSpecification.OpponentCreatures()
-								),
-								ActionTemplate = new DestroyCreatureAction(),
-							}
-						),
-					}
-				),
-			},
-			new()
-			{
-				Name = "Wrath of God",
-				ManaCost = 3,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.AllValid(
-									TargetSpecification.Creatures()
-								),
-								ActionTemplate = new DestroyCreatureAction(),
-							}
-						),
-					}
-				),
-			},
+			CardFactory
+				.Creature("Llanowar Elves", manaCost: 1, power: 1, toughness: 1)
+				.WithSubtype("Elf")
+				.WithSubtype("Druid")
+				.WithActivatedAbility("Mana Ramp", manaCost: 0, effect: eb => eb.WithAddMana(1))
+				.Build(),
+			CardFactory.Spell("Doom Blade", manaCost: 2).WithDestroy().Build(),
+			CardFactory
+				.Spell("Wrath of God", manaCost: 3)
+				.WithDestroy()
+				.WithTarget(AllValid().Creatures())
+				.Build(),
 			new()
 			{
 				Name = "Mox",
@@ -361,84 +315,23 @@ public static class CardLibrary
 					}
 				),
 			},
-			new()
-			{
-				Name = "Prodigal Sorcerer",
-				ManaCost = 3,
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 1, Toughness = 1 },
-					new ActivatedAbilityComponent
-					{
-						Name = "Ping",
-						ManaCost = 1,
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								TargetSpecification.PlayersOrCreatures()
-							),
-							ActionTemplate = new DealDamageAction { Amount = 1 },
-						},
-					}
-				),
-			},
-			new()
-			{
-				Name = "Throne of Bone",
-				ManaCost = 1,
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 1, Toughness = 1 },
-					new ActivatedAbilityComponent
-					{
-						Name = "Gain Life",
-						ManaCost = 1,
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new GainLifeAction { Amount = 2 },
-						},
-					},
-					new ActivatedAbilityComponent
-					{
-						Name = "Draw",
-						ManaCost = 2,
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.Self(),
-							ActionTemplate = new DrawCardsAction { Amount = 1 },
-						},
-					}
-				),
-			},
+			CardFactory
+				.Creature("Prodigal Sorcerer", manaCost: 3, power: 1, toughness: 1)
+				.WithActivatedAbility("Ping", manaCost: 1, effect: eb => eb.WithDamage(1))
+				.Build(),
+			CardFactory
+				.Creature("Throne of Bone", manaCost: 1, power: 1, toughness: 1)
+				.WithActivatedAbility("Gain Life", manaCost: 1, effect: eb => eb.WithLifeGain(2))
+				.WithActivatedAbility("Draw", manaCost: 2, effect: eb => eb.WithDraw(1))
+				.Build(),
 			CardFactory
 				.Spell("Giant Growth", manaCost: 1)
 				.WithBoost(power: 3, toughness: 3)
 				.Build(),
-			new()
-			{
-				Name = "Unholy Strength",
-				ManaCost = 1,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.SingleTarget(
-									TargetSpecification.CreatureControlledByYou()
-								),
-								ActionTemplate = new AddModifierAction
-								{
-									PowerBonus = 2,
-									ToughnessBonus = 1,
-									Duration = ModifierDuration.Permanent,
-								},
-							}
-						),
-					}
-				),
-			},
+			CardFactory
+				.Spell("Unholy Strength", manaCost: 1)
+				.WithBoost(power: 2, toughness: 1, ModifierDuration.Permanent)
+				.Build(),
 			// ===== GOBLINS DECK CARDS =====
 			CardFactory
 				.Creature("Goblin Guide", manaCost: 1, power: 2, toughness: 2)
@@ -594,26 +487,15 @@ public static class CardLibrary
 				.WithTarget(Single().PlayersOrCreatures())
 				.Build(),
 			// ===== ZOO DECK CARDS =====
-			new()
-			{
-				Name = "Wild Nacatl",
-				ManaCost = 1,
-				Subtypes = ImmutableList.Create("Cat", "Warrior"),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 2, Toughness = 2 }
-				),
-			},
-			new()
-			{
-				Name = "Kird Ape",
-				ManaCost = 1,
-				Subtypes = ImmutableList.Create("Ape"),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 2, Toughness = 3 }
-				),
-			},
+			CardFactory
+				.Creature("Wild Nacatl", manaCost: 1, power: 2, toughness: 2)
+				.WithSubtype("Cat")
+				.WithSubtype("Warrior")
+				.Build(),
+			CardFactory
+				.Creature("Kird Ape", manaCost: 1, power: 2, toughness: 3)
+				.WithSubtype("Ape")
+				.Build(),
 			new()
 			{
 				Name = "Tarmogoyf",
@@ -625,44 +507,12 @@ public static class CardLibrary
 					new GraveyardCountComponent { Duration = ModifierDuration.Permanent }
 				),
 			},
-			new()
-			{
-				Name = "Path to Exile",
-				ManaCost = 1,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.SingleTarget(
-									TargetSpecification.OpponentCreatures()
-								),
-								ActionTemplate = new ExileAction(),
-							}
-						),
-					}
-				),
-			},
-			new()
-			{
-				Name = "Tribal Flames",
-				ManaCost = 2,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.SingleTarget(
-									TargetSpecification.PlayersOrCreatures()
-								),
-								ActionTemplate = new DealDamageAction { Amount = 5 },
-							}
-						),
-					}
-				),
-			},
+			CardFactory
+				.Spell("Path to Exile", manaCost: 1)
+				.WithExile()
+				.WithTarget(Single().OpponentCreatures())
+				.Build(),
+			CardFactory.Spell("Tribal Flames", manaCost: 2).WithDamage(5).Build(),
 			new()
 			{
 				Name = "Qasali Pridemage",
@@ -685,35 +535,15 @@ public static class CardLibrary
 					}
 				),
 			},
-			new()
-			{
-				Name = "Loam Lion",
-				ManaCost = 1,
-				Subtypes = ImmutableList.Create("Cat"),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 2, Toughness = 3 }
-				),
-			},
-			new()
-			{
-				Name = "Slagstorm",
-				ManaCost = 3,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.AllValid(
-									TargetSpecification.PlayersOrCreatures()
-								),
-								ActionTemplate = new DealDamageAction { Amount = 3 },
-							}
-						),
-					}
-				),
-			},
+			CardFactory
+				.Creature("Loam Lion", manaCost: 1, power: 2, toughness: 3)
+				.WithSubtype("Cat")
+				.Build(),
+			CardFactory
+				.Spell("Slagstorm", manaCost: 3)
+				.WithDamage(3)
+				.WithTarget(AllValid().PlayersOrCreatures())
+				.Build(),
 			new()
 			{
 				Name = "Geist of Saint Traft",
@@ -773,99 +603,33 @@ public static class CardLibrary
 					}
 				),
 			},
-			new()
-			{
-				Name = "Wall of Thorns",
-				ManaCost = 3,
-				Subtypes = ImmutableList.Create("Plant"),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent
-					{
-						Power = 2,
-						Toughness = 5,
-						HasTaunt = true,
-					}
-				),
-			},
-			new()
-			{
-				Name = "Raging Goblin",
-				ManaCost = 1,
-				Subtypes = ImmutableList.Create(GoblinSubtype),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent
-					{
-						Power = 1,
-						Toughness = 1,
-						HasHaste = true,
-					}
-				),
-			},
-			new()
-			{
-				Name = "Hill Giant",
-				ManaCost = 3,
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 3, Toughness = 4 }
-				),
-			},
-			new()
-			{
-				Name = "Grizzly Bears",
-				ManaCost = 2,
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 2, Toughness = 2 }
-				),
-			},
-			new()
-			{
-				Name = "Kalonian Tusker",
-				ManaCost = 2,
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 3, Toughness = 3 }
-				),
-			},
-			new()
-			{
-				Name = "Iron Golem",
-				ManaCost = 4,
-				Subtypes = ImmutableList.Create("Golem"),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 5, Toughness = 5 }
-				),
-			},
-			new()
-			{
-				Name = "Craw Wurm",
-				ManaCost = 6,
-				Subtypes = ImmutableList.Create("Wurm"),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 8, Toughness = 4 }
-				),
-			},
+			CardFactory
+				.Creature("Wall of Thorns", manaCost: 3, power: 2, toughness: 5)
+				.WithSubtype("Plant")
+				.WithTaunt()
+				.Build(),
+			CardFactory
+				.Creature("Raging Goblin", manaCost: 1, power: 1, toughness: 1)
+				.WithSubtype(GoblinSubtype)
+				.WithHaste()
+				.Build(),
+			CardFactory.Creature("Hill Giant", manaCost: 3, power: 3, toughness: 4).Build(),
+			CardFactory.Creature("Grizzly Bears", manaCost: 2, power: 2, toughness: 2).Build(),
+			CardFactory.Creature("Kalonian Tusker", manaCost: 2, power: 3, toughness: 3).Build(),
+			CardFactory
+				.Creature("Iron Golem", manaCost: 4, power: 5, toughness: 5)
+				.WithSubtype("Golem")
+				.Build(),
+			CardFactory
+				.Creature("Craw Wurm", manaCost: 6, power: 8, toughness: 4)
+				.WithSubtype("Wurm")
+				.Build(),
 			CardFactory.Spell("Ancestral Recall", manaCost: 1).WithDraw(3).Build(),
-			new()
-			{
-				Name = "Mahamoti Djinn",
-				ManaCost = 6,
-				Subtypes = ImmutableList.Create("Djinn"),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent
-					{
-						Power = 6,
-						Toughness = 7,
-						HasFlying = true,
-					}
-				),
-			},
+			CardFactory
+				.Creature("Mahamoti Djinn", manaCost: 6, power: 6, toughness: 7)
+				.WithSubtype("Djinn")
+				.WithFlying()
+				.Build(),
 			// ===== DRAGONSTORM DECK CARDS =====
 			new()
 			{
@@ -920,23 +684,7 @@ public static class CardLibrary
 					}
 				),
 			},
-			new()
-			{
-				Name = "Lotus Bloom",
-				ManaCost = 0,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.Self(),
-								ActionTemplate = new AddTemporaryManaAction { Amount = 3 },
-							}
-						),
-					}
-				),
-			},
+			CardFactory.Spell("Lotus Bloom", manaCost: 0).WithAddMana(3).Build(),
 			new()
 			{
 				Name = "Rite of Flame",
@@ -971,70 +719,25 @@ public static class CardLibrary
 					}
 				),
 			},
-			new()
-			{
-				Name = "Seething Song",
-				ManaCost = 3,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.Self(),
-								ActionTemplate = new AddTemporaryManaAction { Amount = 6 },
-							}
-						),
-					}
-				),
-			},
-			new()
-			{
-				Name = "Hunted Dragon",
-				ManaCost = 10,
-				Subtypes = ImmutableList.Create(DragonSubtype, "Lizard"),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent
-					{
-						Power = 10,
-						Toughness = 10,
-						HasFlying = true,
-						HasHaste = true,
-					}
-				),
-			},
-			new()
-			{
-				Name = "Bogardan Hellkite",
-				ManaCost = 8,
-				Subtypes = ImmutableList.Create(DragonSubtype),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent
-					{
-						Power = 5,
-						Toughness = 5,
-						HasFlying = true,
-					},
-					new TriggeredAbilityComponent
-					{
-						Name = "ETB Damage",
-						Condition = new EventTriggerCondition
-						{
-							EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
-							Filter = new IsSourceCardSpecification(),
-						},
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.RandomTarget(
-								TargetSpecification.OpponentOrOpponentCreatures()
-							),
-							ActionTemplate = new DealDamageAction { Amount = 5 },
-						},
-					}
-				),
-			},
+			CardFactory.Spell("Seething Song", manaCost: 3).WithAddMana(6).Build(),
+			CardFactory
+				.Creature("Hunted Dragon", manaCost: 10, power: 10, toughness: 10)
+				.WithSubtype(DragonSubtype)
+				.WithSubtype("Lizard")
+				.WithFlying()
+				.WithHaste()
+				.Build(),
+			CardFactory
+				.Creature("Bogardan Hellkite", manaCost: 8, power: 5, toughness: 5)
+				.WithSubtype(DragonSubtype)
+				.WithFlying()
+				.WithTriggeredAbility(
+					"ETB Damage",
+					TriggerConditions.OnSelfEntersBattlefield(),
+					effect: eb =>
+						eb.WithDamage(5).WithTarget(Random().OpponentOrOpponentCreatures())
+				)
+				.Build(),
 			new()
 			{
 				Name = "Dragonstorm",
