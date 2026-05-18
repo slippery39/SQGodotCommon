@@ -30,6 +30,12 @@ public static class CardLibrary
 				.WithTarget(Single().PlayersOrCreatures())
 				.Build(),
 			CardFactory
+				.Spell("Firebolt", manaCost: 1)
+				.WithDamage(2)
+				.WithTarget(Single().PlayersOrCreatures())
+				.WithFlashback(2)
+				.Build(),
+			CardFactory
 				.Spell("Lightning Helix", manaCost: 2)
 				.WithDamage(3)
 				.WithTarget(Single().PlayersOrCreatures())

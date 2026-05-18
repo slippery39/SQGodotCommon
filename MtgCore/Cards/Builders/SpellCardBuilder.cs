@@ -16,6 +16,7 @@ public class SpellCardBuilder
 	private readonly List<AdditionalCost> _castCosts = new();
 	private readonly List<CardEffect> _effects = new();
 	private bool _hasStorm;
+	private int? _flashbackManaCost;
 
 	private GameAction? _pendingAction;
 	private TargetingStrategy? _pendingTargeting;
@@ -49,6 +50,12 @@ public class SpellCardBuilder
 	public SpellCardBuilder WithStorm()
 	{
 		_hasStorm = true;
+		return this;
+	}
+
+	public SpellCardBuilder WithFlashback(int manaCost)
+	{
+		_flashbackManaCost = manaCost;
 		return this;
 	}
 
@@ -191,14 +198,18 @@ public class SpellCardBuilder
 	public Card Build()
 	{
 		FlushPending();
+		var components = ImmutableList.CreateBuilder<GameComponent>();
+		components.Add(
+			new SpellComponent { Effects = _effects.ToImmutableList(), HasStorm = _hasStorm }
+		);
+		if (_flashbackManaCost.HasValue)
+			components.Add(new FlashbackComponent { FlashbackManaCost = _flashbackManaCost.Value });
 		return new Card
 		{
 			Name = _name,
 			ManaCost = _manaCost,
 			AdditionalCastCosts = _castCosts.ToImmutableList(),
-			Components = ImmutableList.Create<GameComponent>(
-				new SpellComponent { Effects = _effects.ToImmutableList(), HasStorm = _hasStorm }
-			),
+			Components = components.ToImmutable(),
 		};
 	}
 }

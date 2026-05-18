@@ -22,6 +22,10 @@ MtgCore/
 │                            #           AttachEquipmentAction (ITargetedAction; reads equipment ID from ContextKeys.SourceCardId)
 │                            #           PlayLandAction (play land from hand: MaxMana++, CurrentMana++, LandsPlayedThisTurn++, LandsPlayedTotal++, card → graveyard)
 │                            #           PutLandIntoPlayAction (effect-sourced land: MaxMana++, CurrentMana++, LandsPlayedTotal++ only, card → graveyard; used by Rampant Growth/Primeval Titan)
+│                            #           CastFromGraveyardAction (flashback: casts a spell from graveyard at FlashbackManaCost; card exiles after resolution via MoveCardToExileAction)
+│                            #           MoveCardToExileAction (post-resolution cleanup for flashback; analogous to MoveCardToGraveyardAction but routes to exile)
+│                            #           MoveCardToGraveyardAction (post-resolution cleanup for normal spells)
+│                            #           ResolveSpellAction.ExileAfterResolution — when true, spawns MoveCardToExileAction instead of MoveCardToGraveyardAction
 │                            # DealDamageAction has PlayerOutputKey and CreatureOutputKey for pipeline chaining.
 ├── Costs/                   # AdditionalCost (abstract), LifeAdditionalCost, SacrificeAdditionalCost, DiscardAdditionalCost
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
@@ -30,7 +34,9 @@ MtgCore/
 │   ├── Builders/            # Fluent card builder API: CardFactory (entry point), SpellCardBuilder, CreatureCardBuilder,
 │   │                        # TargetBuilder (use via 'using static'), TriggerConditions (static helpers)
 │   │                        # Usage: CardFactory.Spell("Name", manaCost).WithDamage(3).WithTarget(Single().PlayersOrCreatures()).Build()
+│   │                        # SpellCardBuilder.WithFlashback(cost) adds FlashbackComponent — card becomes castable from graveyard at that cost
 │   └── Components/          # PermanentComponent (battlefield marker), CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach), SpellComponent (HasStorm), GraveyardCountComponent
+│                            # FlashbackComponent { FlashbackManaCost } — marks a spell castable from graveyard; MtgActionGenerator scans graveyard for these and generates CastFromGraveyardAction
 │                            # EquipmentComponent (PowerBonus, ToughnessBonus, EquippedToCardId — tracks attachment state)
 │                            # ExtraLandPerTurnComponent — marker; presence on a controlled battlefield permanent grants +1 land play per turn (used by Exploration)
 │                            # TransformComponent (OtherFaceName, OtherFaceSubtypes, OtherFaceComponents) — stores the other face of a double-faced card; TransformAction swaps Name/Subtypes/Components in place, preserving the card's ID and carrying creature state across

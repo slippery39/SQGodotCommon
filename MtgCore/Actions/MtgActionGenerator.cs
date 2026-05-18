@@ -24,12 +24,15 @@ public static class MtgActionGenerator
 		var opponentId = playerId == ids.Player1Id ? ids.Player2Id : ids.Player1Id;
 
 		var handId = playerId == ids.Player1Id ? ids.Player1HandId : ids.Player2HandId;
+		var graveyardId =
+			playerId == ids.Player1Id ? ids.Player1GraveyardId : ids.Player2GraveyardId;
 		var battlefieldId =
 			playerId == ids.Player1Id ? ids.Player1BattlefieldId : ids.Player2BattlefieldId;
 		var opponentBattlefieldId =
 			playerId == ids.Player1Id ? ids.Player2BattlefieldId : ids.Player1BattlefieldId;
 
 		AddHandActions(state, playerId, handId, actions);
+		AddGraveyardFlashbackActions(state, playerId, graveyardId, actions);
 		AddAttackActions(
 			state,
 			playerId,
@@ -73,8 +76,13 @@ public static class MtgActionGenerator
 		);
 		var gameId = state.GetWellKnownId(MtgObjectKeys.Game);
 
+		var graveyardId = state.GetWellKnownId(
+			isPlayer1 ? MtgObjectKeys.Player1Graveyard : MtgObjectKeys.Player2Graveyard
+		);
+
 		var actions = new List<GameAction>();
 		AddHandActions(state, playerId, handId, actions);
+		AddGraveyardFlashbackActions(state, playerId, graveyardId, actions);
 		AddAttackActions(
 			state,
 			playerId,
@@ -251,6 +259,77 @@ public static class MtgActionGenerator
 			{
 				actions.Add(castAction);
 			}
+		}
+	}
+
+	// ===== GRAVEYARD (FLASHBACK) =====
+
+	private static void AddGraveyardFlashbackActions(
+		GameState state,
+		int playerId,
+		int graveyardId,
+		List<GameAction> actions
+	)
+	{
+		foreach (var card in state.GetCardsInZone(graveyardId))
+		{
+			if (!card.HasComponent<FlashbackComponent>())
+				continue;
+
+			var spell = card.GetComponent<SpellComponent>();
+			if (spell == null)
+				continue;
+
+			var targetedEffect = spell.Effects.FirstOrDefault(e =>
+				e.TargetingStrategy.RequiresUserSelection
+			);
+			if (targetedEffect != null)
+			{
+				AddTargetedFlashbackAction(state, playerId, card, targetedEffect, actions);
+			}
+			else
+			{
+				var castAction = new CastFromGraveyardAction
+				{
+					CardId = card.Id,
+					CastingPlayerId = playerId,
+					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
+				};
+				if (state.TryAddAction(castAction).Success)
+					actions.Add(castAction);
+			}
+		}
+	}
+
+	private static void AddTargetedFlashbackAction(
+		GameState state,
+		int playerId,
+		Card card,
+		CardEffect targetedEffect,
+		List<GameAction> actions
+	)
+	{
+		var context = new TargetingContext
+		{
+			GameState = state,
+			SourceCardId = card.Id,
+			CastingPlayerId = playerId,
+		};
+		var validTargets = targetedEffect.TargetingStrategy.GetValidTargets(context);
+
+		foreach (var target in validTargets)
+		{
+			var castAction = new CastFromGraveyardAction
+			{
+				CardId = card.Id,
+				CastingPlayerId = playerId,
+				TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
+					0,
+					ImmutableList.Create(target)
+				),
+			};
+			if (state.TryAddAction(castAction).Success)
+				actions.Add(castAction);
 		}
 	}
 

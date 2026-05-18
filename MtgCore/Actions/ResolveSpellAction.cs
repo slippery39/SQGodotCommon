@@ -19,6 +19,7 @@ public record ResolveSpellAction : GameAction
 {
 	public int CardId { get; init; }
 	public int CastingPlayerId { get; init; }
+	public bool ExileAfterResolution { get; init; }
 
 	public ImmutableDictionary<int, ImmutableList<int>> TargetIds { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
@@ -62,8 +63,12 @@ public record ResolveSpellAction : GameAction
 			}
 		}
 
-		// Card moves to graveyard after effects resolve
-		spawnedActions = spawnedActions.Add(new MoveCardToGraveyardAction { CardId = CardId });
+		// Card moves to graveyard (or exile for flashback) after effects resolve
+		spawnedActions = spawnedActions.Add(
+			ExileAfterResolution
+				? new MoveCardToExileAction { CardId = CardId }
+				: new MoveCardToGraveyardAction { CardId = CardId }
+		);
 
 		// EndResolutionScopeAction always last — clears SuppressPostProcessor
 		spawnedActions = spawnedActions.Add(new EndResolutionScopeAction());
