@@ -630,6 +630,47 @@ public static class CardLibrary
 				.WithSubtype("Djinn")
 				.WithFlying()
 				.Build(),
+			new()
+			{
+				Name = "Delver of Secrets",
+				ManaCost = 1,
+				Subtypes = ImmutableList.Create("Human", "Wizard"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 1, Toughness = 1 },
+					new TriggeredAbilityComponent
+					{
+						Name = "Delver Transform",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.TurnStarted,
+							Filter = new IsControlledByYouSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new TransformAction
+							{
+								TargetContextKey = ContextKeys.SourceCardId,
+							},
+						},
+					},
+					new TransformComponent
+					{
+						OtherFaceName = "Insectile Aberration",
+						OtherFaceSubtypes = ImmutableList.Create("Insect"),
+						OtherFaceComponents = ImmutableList.Create<GameComponent>(
+							new PermanentComponent(),
+							new CreatureComponent
+							{
+								Power = 3,
+								Toughness = 2,
+								HasFlying = true,
+							}
+						),
+					}
+				),
+			},
 			// ===== DRAGONSTORM DECK CARDS =====
 			new()
 			{
@@ -1170,6 +1211,8 @@ public static class CardLibrary
 	/// Cat. Simplified: no Forest condition, just good defensive stats.
 	/// </summary>
 	public static Card LoamLion() => All.First(c => c.Name == "Loam Lion");
+
+	public static Card DelverOfSecrets() => All.First(c => c.Name == "Delver of Secrets");
 
 	// ===== DRAGONSTORM DECK CARDS =====
 

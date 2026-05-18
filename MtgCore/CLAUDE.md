@@ -18,6 +18,7 @@ MtgCore/
 │                            # Includes: PutIntoBattlefieldAction (CardIdContextKey for pipeline use), CastCreatureAction, ResolveCreatureAction
 │                            #           CastPermanentAction, ResolvePermanentAction (non-creature permanents → battlefield)
 │                            #           CreateTokenAction
+│                            #           TransformAction (EffectAction; swaps card face in place via TransformComponent; carries creature state across)
 │                            #           AttachEquipmentAction (ITargetedAction; reads equipment ID from ContextKeys.SourceCardId)
 │                            #           PlayLandAction (play land from hand: MaxMana++, CurrentMana++, LandsPlayedThisTurn++, LandsPlayedTotal++, card → graveyard)
 │                            #           PutLandIntoPlayAction (effect-sourced land: MaxMana++, CurrentMana++, LandsPlayedTotal++ only, card → graveyard; used by Rampant Growth/Primeval Titan)
@@ -30,6 +31,7 @@ MtgCore/
 │   └── Components/          # PermanentComponent (battlefield marker), CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach), SpellComponent (HasStorm), GraveyardCountComponent
 │                            # EquipmentComponent (PowerBonus, ToughnessBonus, EquippedToCardId — tracks attachment state)
 │                            # ExtraLandPerTurnComponent — marker; presence on a controlled battlefield permanent grants +1 land play per turn (used by Exploration)
+│                            # TransformComponent (OtherFaceName, OtherFaceSubtypes, OtherFaceComponents) — stores the other face of a double-faced card; TransformAction swaps Name/Subtypes/Components in place, preserving the card's ID and carrying creature state across
 ├── Effects/                 # CardEffect (data-only effect descriptor)
 ├── Events/                  # EventTypeNames, MtgEvents (includes CreatureEnteredBattlefieldEvent, CombatDamageDealtToPlayerEvent,
 │                            #   SpellCastEvent emitted by CastSpellAction, CreaturePlayedEvent emitted by CastCreatureAction
