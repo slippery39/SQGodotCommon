@@ -28,6 +28,9 @@ script = ExtResource("3_battlefield")
 size_flags_vertical = 3
 script = ExtResource("3_battlefield")
 
+[node name="GraveyardButton" type="Button" parent="MainColumn"]
+text = "Graveyard (0)"
+
 [node name="PlayerPanel" type="PanelContainer" parent="MainColumn"]
 script = ExtResource("2_panel")
 

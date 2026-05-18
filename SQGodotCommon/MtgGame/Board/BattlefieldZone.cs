@@ -36,7 +36,8 @@ public partial class BattlefieldZone : PanelContainer
 		GameState state,
 		int? selectedId = null,
 		IEnumerable<int> targetHighlightIds = null,
-		IEnumerable<int> additionalCostHighlightIds = null
+		IEnumerable<int> additionalCostHighlightIds = null,
+		IEnumerable<int> flashbackHighlightIds = null
 	)
 	{
 		foreach (var child in _container.GetChildren())
@@ -49,7 +50,8 @@ public partial class BattlefieldZone : PanelContainer
 					state,
 					selectedId,
 					targetHighlightIds,
-					additionalCostHighlightIds
+					additionalCostHighlightIds,
+					flashbackHighlightIds
 				)
 			);
 	}
@@ -59,7 +61,8 @@ public partial class BattlefieldZone : PanelContainer
 		GameState state,
 		int? selectedId,
 		IEnumerable<int> targetHighlightIds,
-		IEnumerable<int> additionalCostHighlightIds
+		IEnumerable<int> additionalCostHighlightIds,
+		IEnumerable<int> flashbackHighlightIds
 	)
 	{
 		var panel = new PanelContainer();
@@ -77,6 +80,8 @@ public partial class BattlefieldZone : PanelContainer
 			panel.Modulate = new Color(0.4f, 1f, 0.4f, 1f);
 		else if (creature is { HasSummoningSickness: true })
 			panel.Modulate = new Color(0.6f, 0.6f, 0.6f, 1f);
+		else if (flashbackHighlightIds != null && flashbackHighlightIds.Contains(card.Id))
+			panel.Modulate = new Color(0.8f, 0.5f, 1f, 1f);
 
 		var cardId = card.Id;
 		panel.GuiInput += inputEvent =>

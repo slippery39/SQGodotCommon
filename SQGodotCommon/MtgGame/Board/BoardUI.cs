@@ -13,12 +13,14 @@ public partial class BoardUI : Control
 	public event Action<int>? PlayerCreatureRightClicked;
 	public event Action<int>? OpponentCreatureClicked;
 	public event Action? OpponentDirectAttacked;
+	public event Action? GraveyardButtonPressed;
 
 	private Label _turnLabel = null!;
 	private PlayerPanel _opponentPanel = null!;
 	private PlayerPanel _playerPanel = null!;
 	private BattlefieldZone _opponentBattlefield = null!;
 	private BattlefieldZone _playerBattlefield = null!;
+	private Button _graveyardButton = null!;
 	private Button _endTurnButton = null!;
 
 	public override void _Ready()
@@ -33,6 +35,7 @@ public partial class BoardUI : Control
 		_opponentPanel = GetNode<PlayerPanel>("MainColumn/OpponentPanel");
 		_opponentBattlefield = GetNode<BattlefieldZone>("MainColumn/OpponentBattlefield");
 		_playerBattlefield = GetNode<BattlefieldZone>("MainColumn/PlayerBattlefield");
+		_graveyardButton = GetNode<Button>("MainColumn/GraveyardButton");
 		_playerPanel = GetNode<PlayerPanel>("MainColumn/PlayerPanel");
 		_endTurnButton = GetNode<Button>("MainColumn/EndTurnButton");
 
@@ -62,6 +65,15 @@ public partial class BoardUI : Control
 		_playerBattlefield.CardRightClicked += id => PlayerCreatureRightClicked?.Invoke(id);
 		_opponentBattlefield.CardClicked += id => OpponentCreatureClicked?.Invoke(id);
 		_opponentPanel.Clicked += () => OpponentDirectAttacked?.Invoke();
+
+		_graveyardButton.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
+		_graveyardButton.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
+		_graveyardButton.AddThemeStyleboxOverride("disabled", MtgUiStyles.ButtonDisabled());
+		_graveyardButton.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
+		_graveyardButton.AddThemeColorOverride("font_disabled_color", MtgUiStyles.DimBorder);
+		_graveyardButton.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+		_graveyardButton.CustomMinimumSize = new Vector2(200, 0);
+		_graveyardButton.Pressed += () => GraveyardButtonPressed?.Invoke();
 	}
 
 	public Vector2 GetPlayerLibraryPosition() =>
@@ -108,6 +120,11 @@ public partial class BoardUI : Control
 			state,
 			targetHighlightIds: targetHighlightIds
 		);
+
+		var humanGraveyardId = state.GetWellKnownId(MtgObjectKeys.Player1Graveyard);
+		var graveyardCount = state.GetCardsInZone(humanGraveyardId).Count();
+		_graveyardButton.Text = $"Graveyard ({graveyardCount})";
+		_graveyardButton.Disabled = graveyardCount == 0;
 
 		var isHumanTurn = game.ActivePlayerId == humanPlayerId;
 		_playerPanel.SetActive(isHumanTurn);

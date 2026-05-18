@@ -16,6 +16,7 @@ public partial class MtgGameScene : Node2D
 	private Area2D _battlefieldDropZone = null!;
 	private ChoicePanel _choicePanel = null!;
 	private EventLogPanel _eventLog = null!;
+	private GraveyardPopup _graveyardPopup = null!;
 
 	private readonly List<int> _handCardIds = new();
 	private int? _selectedAttackerId;
@@ -23,6 +24,7 @@ public partial class MtgGameScene : Node2D
 	private bool _choicePanelShowing;
 
 	// Spell targeting state
+	private bool _isFlashbackTargeting;
 	private int? _targetingSpellCardId;
 	private ImmutableDictionary<int, ImmutableList<int>> _pendingTargetIds = ImmutableDictionary<
 		int,
@@ -65,11 +67,16 @@ public partial class MtgGameScene : Node2D
 		_eventLog = new EventLogPanel();
 		AddChild(_eventLog);
 
+		_graveyardPopup = new GraveyardPopup();
+		AddChild(_graveyardPopup);
+		_graveyardPopup.CardClicked += OnGraveyardCardClicked;
+
 		_boardUI.EndTurnPressed += OnEndTurnPressed;
 		_boardUI.PlayerCreatureClicked += OnPlayerCreatureClicked;
 		_boardUI.PlayerCreatureRightClicked += OnPlayerCreatureRightClicked;
 		_boardUI.OpponentCreatureClicked += OnOpponentCreatureClicked;
 		_boardUI.OpponentDirectAttacked += OnOpponentDirectAttacked;
+		_boardUI.GraveyardButtonPressed += OpenGraveyardPopup;
 
 		_hand.IsDragSuccess = context =>
 			!_manager.IsAiTurn
@@ -311,12 +318,54 @@ public partial class MtgGameScene : Node2D
 
 	private void ExitTargetingMode()
 	{
+		_isFlashbackTargeting = false;
 		_targetingSpellCardId = null;
 		_pendingTargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty;
 		_pendingAdditionalCostPayments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
 		_currentEffectIndex = 0;
 		_currentValidTargetIds = new HashSet<int>();
 		Refresh();
+	}
+
+	private void OpenGraveyardPopup()
+	{
+		var state = _manager.State;
+		var graveyardId = state.GetWellKnownId(MtgObjectKeys.Player1Graveyard);
+		var cards = state.GetCardsInZone(graveyardId).ToList();
+		var flashbackIds = cards.Where(c => c.HasComponent<FlashbackComponent>()).Select(c => c.Id);
+		_graveyardPopup.ShowGraveyard(cards, state, flashbackIds);
+	}
+
+	private void OnGraveyardCardClicked(int cardId)
+	{
+		if (_manager.IsAiTurn || _isGameOver)
+			return;
+		if (
+			_targetingSpellCardId.HasValue
+			|| _additionalCostCardId.HasValue
+			|| _activatingAbilityCardId.HasValue
+		)
+			return;
+		if (!_manager.HasFlashback(cardId))
+			return;
+
+		if (_manager.SpellNeedsTargets(cardId))
+		{
+			_isFlashbackTargeting = true;
+			EnterTargetingMode(cardId);
+		}
+		else
+		{
+			var (success, events) = _manager.CastFromGraveyard(
+				cardId,
+				ImmutableDictionary<int, ImmutableList<int>>.Empty
+			);
+			if (!success)
+				return;
+			_eventLog.AppendEvents(events, _manager.State, _manager.HumanPlayerId);
+			Refresh();
+			CheckAndShowGameOver(events);
+		}
 	}
 
 	private void OnTargetSelected(int targetId)
@@ -337,8 +386,11 @@ public partial class MtgGameScene : Node2D
 		{
 			var targetIds = _pendingTargetIds;
 			var costPayments = _pendingAdditionalCostPayments;
+			var isFlashback = _isFlashbackTargeting;
 			ExitTargetingMode();
-			var (success, events) = _manager.CastSpell(cardId, targetIds, costPayments);
+			var (success, events) = isFlashback
+				? _manager.CastFromGraveyard(cardId, targetIds)
+				: _manager.CastSpell(cardId, targetIds, costPayments);
 			if (!success)
 				return;
 			_eventLog.AppendEvents(events, _manager.State, _manager.HumanPlayerId);

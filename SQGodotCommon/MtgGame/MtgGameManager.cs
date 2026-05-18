@@ -121,6 +121,29 @@ public class MtgGameManager
 		);
 	}
 
+	public bool HasFlashback(int cardId)
+	{
+		if (!_state.HasObject(cardId))
+			return false;
+		var card = _state.GetObject(cardId) as Card;
+		return card?.HasComponent<FlashbackComponent>() == true;
+	}
+
+	public (bool Success, ImmutableList<GameEvent> Events) CastFromGraveyard(
+		int cardId,
+		ImmutableDictionary<int, ImmutableList<int>> targetIds
+	)
+	{
+		return SubmitAction(
+			new CastFromGraveyardAction
+			{
+				CardId = cardId,
+				CastingPlayerId = HumanPlayerId,
+				TargetIds = targetIds,
+			}
+		);
+	}
+
 	public bool IsSpell(int cardId)
 	{
 		var card = _state.GetObject(cardId) as Card;
