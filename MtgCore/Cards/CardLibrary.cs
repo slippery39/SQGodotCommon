@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using ImmutableGameObjects;
+using MtgCore.Cards.Builders;
+using static MtgCore.Cards.Builders.TargetBuilder;
 
 namespace MtgCore;
 
@@ -22,49 +24,17 @@ public static class CardLibrary
 	public static IReadOnlyList<Card> All { get; } =
 		new List<Card>
 		{
-			new()
-			{
-				Name = "Lightning Bolt",
-				ManaCost = 1,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.SingleTarget(
-									TargetSpecification.PlayersOrCreatures()
-								),
-								ActionTemplate = new DealDamageAction { Amount = 3 },
-							}
-						),
-					}
-				),
-			},
-			new()
-			{
-				Name = "Lightning Helix",
-				ManaCost = 2,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.SingleTarget(
-									TargetSpecification.PlayersOrCreatures()
-								),
-								ActionTemplate = new DealDamageAction { Amount = 3 },
-							},
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.Self(),
-								ActionTemplate = new GainLifeAction { Amount = 3 },
-							}
-						),
-					}
-				),
-			},
+			CardFactory
+				.Spell("Lightning Bolt", manaCost: 1)
+				.WithDamage(3)
+				.WithTarget(Single().PlayersOrCreatures())
+				.Build(),
+			CardFactory
+				.Spell("Lightning Helix", manaCost: 2)
+				.WithDamage(3)
+				.WithTarget(Single().PlayersOrCreatures())
+				.WithLifeGain(3)
+				.Build(),
 			new()
 			{
 				Name = "Careful Study",
@@ -441,32 +411,10 @@ public static class CardLibrary
 					}
 				),
 			},
-			new()
-			{
-				Name = "Giant Growth",
-				ManaCost = 1,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.SingleTarget(
-									new IsCreatureSpecification().And(
-										new IsControlledByYouSpecification()
-									)
-								),
-								ActionTemplate = new AddModifierAction
-								{
-									PowerBonus = 3,
-									ToughnessBonus = 3,
-									Duration = ModifierDuration.UntilEndOfTurn,
-								},
-							}
-						),
-					}
-				),
-			},
+			CardFactory
+				.Spell("Giant Growth", manaCost: 1)
+				.WithBoost(power: 3, toughness: 3)
+				.Build(),
 			new()
 			{
 				Name = "Unholy Strength",
@@ -492,21 +440,12 @@ public static class CardLibrary
 				),
 			},
 			// ===== GOBLINS DECK CARDS =====
-			new()
-			{
-				Name = "Goblin Guide",
-				ManaCost = 1,
-				Subtypes = ImmutableList.Create(GoblinSubtype, "Scout"),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent
-					{
-						Power = 2,
-						Toughness = 2,
-						HasHaste = true,
-					}
-				),
-			},
+			CardFactory
+				.Creature("Goblin Guide", manaCost: 1, power: 2, toughness: 2)
+				.WithSubtype(GoblinSubtype)
+				.WithSubtype("Scout")
+				.WithHaste()
+				.Build(),
 			new()
 			{
 				Name = "Goblin Lackey",
@@ -598,53 +537,21 @@ public static class CardLibrary
 					}
 				),
 			},
-			new()
-			{
-				Name = "Siege-Gang Commander",
-				ManaCost = 5,
-				Subtypes = ImmutableList.Create(GoblinSubtype),
-				Components = ImmutableList.Create<GameComponent>(
-					new PermanentComponent(),
-					new CreatureComponent { Power = 2, Toughness = 2 },
-					new TriggeredAbilityComponent
-					{
-						Name = "ETB Tokens",
-						Condition = new EventTriggerCondition
-						{
-							EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
-							Filter = new IsSourceCardSpecification(),
-						},
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.NoTarget(),
-							ActionTemplate = new CreateCardAction
-							{
-								CardTemplate = GoblinToken(),
-								Count = 3,
-							},
-						},
-					},
-					new ActivatedAbilityComponent
-					{
-						Name = "Sacrifice Goblin",
-						ManaCost = 1,
-						AdditionalCosts = ImmutableList.Create<AdditionalCost>(
-							new SacrificeAdditionalCost
-							{
-								Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype },
-								Count = 1,
-							}
-						),
-						Effect = new CardEffect
-						{
-							TargetingStrategy = TargetingStrategy.SingleTarget(
-								TargetSpecification.PlayersOrCreatures()
-							),
-							ActionTemplate = new DealDamageAction { Amount = 2 },
-						},
-					}
-				),
-			},
+			CardFactory
+				.Creature("Siege-Gang Commander", manaCost: 5, power: 2, toughness: 2)
+				.WithSubtype(GoblinSubtype)
+				.WithTriggeredAbility(
+					"ETB Tokens",
+					TriggerConditions.OnSelfEntersBattlefield(),
+					effect: eb => eb.WithCreateTokens(GoblinToken(), count: 3)
+				)
+				.WithActivatedAbility(
+					"Sacrifice Goblin",
+					manaCost: 1,
+					effect: eb => eb.WithDamage(2).WithTarget(Single().PlayersOrCreatures()),
+					costs: cb => cb.SacrificeSubtype(GoblinSubtype)
+				)
+				.Build(),
 			new()
 			{
 				Name = "Krenko, Mob Boss",
@@ -680,32 +587,12 @@ public static class CardLibrary
 					}
 				),
 			},
-			new()
-			{
-				Name = "Goblin Grenade",
-				ManaCost = 1,
-				AdditionalCastCosts = ImmutableList.Create<AdditionalCost>(
-					new SacrificeAdditionalCost
-					{
-						Filter = new IsSubtypeSpecification { Subtype = GoblinSubtype },
-						Count = 1,
-					}
-				),
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.SingleTarget(
-									TargetSpecification.PlayersOrCreatures()
-								),
-								ActionTemplate = new DealDamageAction { Amount = 5 },
-							}
-						),
-					}
-				),
-			},
+			CardFactory
+				.Spell("Goblin Grenade", manaCost: 1)
+				.WithSacrificeSubtypeCost(GoblinSubtype)
+				.WithDamage(5)
+				.WithTarget(Single().PlayersOrCreatures())
+				.Build(),
 			// ===== ZOO DECK CARDS =====
 			new()
 			{
@@ -963,23 +850,7 @@ public static class CardLibrary
 					new CreatureComponent { Power = 8, Toughness = 4 }
 				),
 			},
-			new()
-			{
-				Name = "Ancestral Recall",
-				ManaCost = 1,
-				Components = ImmutableList.Create<GameComponent>(
-					new SpellComponent
-					{
-						Effects = ImmutableList.Create(
-							new CardEffect
-							{
-								TargetingStrategy = TargetingStrategy.Self(),
-								ActionTemplate = new DrawCardsAction { Amount = 3 },
-							}
-						),
-					}
-				),
-			},
+			CardFactory.Spell("Ancestral Recall", manaCost: 1).WithDraw(3).Build(),
 			new()
 			{
 				Name = "Mahamoti Djinn",

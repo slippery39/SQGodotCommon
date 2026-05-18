@@ -11,7 +11,8 @@
       "Bash(Get-ChildItem -Recurse -Path \"C:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgSimulator\" -Include \"*.cs\")",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(grep -E \"\\\\.cs$\")",
-      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\" -Filter \"*Tests*\" -Directory -Recurse)"
+      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\" -Filter \"*Tests*\" -Directory -Recurse)",
+      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\" -Recurse -Directory)"
     ]
   }
 }
