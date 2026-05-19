@@ -108,7 +108,7 @@ Cards are `GameObject` subclasses. Effects are `GameAction` subclasses — pure 
 `PowerToughnessModifier` is an abstract `GameComponent` base with `Duration` (`UntilEndOfTurn` or `Permanent`) and `SourceCardId`. Subclasses implement `GetPowerBonus(GameState, int cardId)` and `GetToughnessBonus(GameState, int cardId)`. `CreatureEvaluator` calls these methods — no type switching.
 
 - `StaticPowerToughnessModifier` — fixed `PowerBonus` / `ToughnessBonus` values. Used by `AddModifierAction` for spells like Giant Growth and Unholy Strength.
-- `GraveyardCountComponent` — dynamic modifier; both bonus methods return the total card count across all graveyards. Used by Tarmogoyf (base Power = 0, base Toughness = 1).
+- `GraveyardCountComponent` — dynamic modifier; both bonus methods return the card count in the controller's own graveyard. Used by Tarmogoyf (base Power = 0, base Toughness = 1).
 
 Applied via `AddModifierAction`. `UntilEndOfTurn` modifiers are cleared by `StartTurnAction`.
 
