@@ -313,6 +313,13 @@ public partial class MtgGameScene : Node2D
 		_currentValidTargetIds = new HashSet<int>(
 			_manager.GetSpellValidTargets(cardId, _currentEffectIndex)
 		);
+
+		var state = _manager.State;
+		var graveyardId = state.GetWellKnownId(MtgObjectKeys.Player1Graveyard);
+		var graveyardIds = new HashSet<int>(state.GetCardsInZone(graveyardId).Select(c => c.Id));
+		if (_currentValidTargetIds.Any(id => graveyardIds.Contains(id)))
+			OpenGraveyardPopup();
+
 		Refresh();
 	}
 
@@ -333,18 +340,22 @@ public partial class MtgGameScene : Node2D
 		var graveyardId = state.GetWellKnownId(MtgObjectKeys.Player1Graveyard);
 		var cards = state.GetCardsInZone(graveyardId).ToList();
 		var flashbackIds = cards.Where(c => c.HasComponent<FlashbackComponent>()).Select(c => c.Id);
-		_graveyardPopup.ShowGraveyard(cards, state, flashbackIds);
+		var targetIds = _targetingSpellCardId.HasValue ? _currentValidTargetIds : null;
+		_graveyardPopup.ShowGraveyard(cards, state, flashbackIds, targetIds);
 	}
 
 	private void OnGraveyardCardClicked(int cardId)
 	{
 		if (_manager.IsAiTurn || _isGameOver)
 			return;
-		if (
-			_targetingSpellCardId.HasValue
-			|| _additionalCostCardId.HasValue
-			|| _activatingAbilityCardId.HasValue
-		)
+
+		if (_targetingSpellCardId.HasValue)
+		{
+			OnTargetSelected(cardId);
+			return;
+		}
+
+		if (_additionalCostCardId.HasValue || _activatingAbilityCardId.HasValue)
 			return;
 		if (!_manager.HasFlashback(cardId))
 			return;

@@ -15,7 +15,8 @@
       "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\" -Recurse -Directory)",
       "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\SQGodotCommon\" -Recurse -Directory)",
       "Bash(Select-Object FullName)",
-      "Bash(Select-String \"error|Error\")"
+      "Bash(Select-String \"error|Error\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\" -Directory)"
     ]
   }
 }

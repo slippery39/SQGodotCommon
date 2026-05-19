@@ -92,10 +92,16 @@ public partial class GraveyardPopup : CanvasLayer
 	public void ShowGraveyard(
 		IEnumerable<Card> cards,
 		GameState state,
-		IEnumerable<int> flashbackIds
+		IEnumerable<int> flashbackIds,
+		IEnumerable<int>? targetHighlightIds = null
 	)
 	{
-		_zone.Refresh(cards, state, flashbackHighlightIds: flashbackIds);
+		_zone.Refresh(
+			cards,
+			state,
+			flashbackHighlightIds: flashbackIds,
+			targetHighlightIds: targetHighlightIds
+		);
 		Show();
 	}
 }
