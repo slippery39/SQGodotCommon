@@ -119,6 +119,61 @@ public class StateEvaluatorTests
 		Assert.That(p2Score, Is.LessThan(0f));
 	}
 
+	// ===== CARDS IN HAND =====
+
+	[Test]
+	public void Evaluate_PlayerHasCardInHand_ScoresPositive()
+	{
+		var (state, _) = AddCardToHand(_state, _ids.Player1Id);
+
+		var score = StateEvaluator.Evaluate(state, _ids, _ids.Player1Id);
+
+		Assert.That(score, Is.GreaterThan(0f));
+	}
+
+	[Test]
+	public void Evaluate_OpponentHasCardInHand_ScoresNegative()
+	{
+		var (state, _) = AddCardToHand(_state, _ids.Player2Id);
+
+		var score = StateEvaluator.Evaluate(state, _ids, _ids.Player1Id);
+
+		Assert.That(score, Is.LessThan(0f));
+	}
+
+	// ===== BURN SPELL OPPORTUNITY COST =====
+
+	[Test]
+	public void BurnSpell_HoldingCard_ScoresHigherThan_FaceDamageAtFullLife()
+	{
+		// Holding: card in hand, opponent at 20 life
+		var (stateHolding, _) = AddCardToHand(_state, _ids.Player1Id);
+		var holdScore = StateEvaluator.Evaluate(stateHolding, _ids, _ids.Player1Id);
+
+		// Used on face: no card in hand, opponent at 17 life
+		var opponent = _state.GetPlayer(_ids.Player2Id);
+		var stateBolted = _state.UpdateObject(_ids.Player2Id, opponent with { Life = 17 });
+		var boltScore = StateEvaluator.Evaluate(stateBolted, _ids, _ids.Player1Id);
+
+		// Keeping the spell in hand should be worth more than dealing 3 face damage at 20 life
+		Assert.That(holdScore, Is.GreaterThan(boltScore));
+	}
+
+	[Test]
+	public void BurnSpell_KillingOpponentCreature_ScoresHigherThan_HoldingCard()
+	{
+		// Holding: card in hand, facing a 3/3
+		var (state, _) = AddCreatureToBattlefield(_state, "Bear", 3, 3, _ids.Player2Id);
+		(state, _) = AddCardToHand(state, _ids.Player1Id);
+		var holdScore = StateEvaluator.Evaluate(state, _ids, _ids.Player1Id);
+
+		// Used on creature: card and creature both gone (equal baseline state)
+		var boltScore = StateEvaluator.Evaluate(_state, _ids, _ids.Player1Id);
+
+		// Killing the creature should improve the score more than holding the spell
+		Assert.That(boltScore, Is.GreaterThan(holdScore));
+	}
+
 	// ===== NON-CREATURE PERMANENTS =====
 
 	[Test]
@@ -153,6 +208,19 @@ public class StateEvaluatorTests
 	}
 
 	// ===== HELPERS =====
+
+	private (GameState, Card) AddCardToHand(GameState state, int ownerId)
+	{
+		var handId = ownerId == _ids.Player1Id ? _ids.Player1HandId : _ids.Player2HandId;
+		var card = new Card
+		{
+			Name = "TestCard",
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+		};
+		var (newState, added) = state.AddObject(card, parentId: handId);
+		return (newState, added);
+	}
 
 	private (GameState, Card) AddCreatureToBattlefield(
 		GameState state,

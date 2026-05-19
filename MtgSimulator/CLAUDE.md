@@ -74,11 +74,11 @@ Scores a non-terminal state as a weighted sum. Terminal states short-circuit.
 
 | Factor | Weight |
 |--------|--------|
-| Life difference (player − opponent) | 0.4 |
+| Life difference (player − opponent) | 0.2 |
 | Creature count difference | 3.0 |
 | Total effective Power difference (permanent power only) | 2.0 |
 | Non-creature permanent count difference (Mox, Arena, Exploration, etc.) | 1.5 |
-| Cards in hand difference | 1.1 |
+| Cards in hand difference | 1.4 |
 | Player's own permanent mana (`MaxMana` only — temporary fast mana excluded) | 2.0 |
 | Win (opponent has lost) | +10000 |
 | Loss (player has lost) | −10000 |

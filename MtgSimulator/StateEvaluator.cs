@@ -18,10 +18,10 @@ public static class StateEvaluator
 	public const float WinScore = 10000f;
 	public const float LossScore = -10000f;
 
-	private const float LifeWeight = 0.4f;
+	private const float LifeWeight = 0.2f;
 	private const float CreatureCountWeight = 3.0f;
 	private const float TotalPowerWeight = 2.0f;
-	private const float CardsInHandWeight = 1.1f;
+	private const float CardsInHandWeight = 1.4f;
 	private const float ManaWeight = 2.0f;
 	private const float NonCreaturePermanentWeight = 1.5f;
 
