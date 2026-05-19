@@ -39,4 +39,15 @@ public static class TriggerConditions
 			EventTypeName = EventTypeNames.CreatureAttacked,
 			Filter = new IsSourceCardSpecification(),
 		};
+
+	/// <summary>
+	/// Fires whenever the controller plays a land ("landfall").
+	/// Filter checks that the land was played by the card's controlling player.
+	/// </summary>
+	public static TriggerCondition OnLandfall() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.LandPlayed,
+			Filter = new IsControlledByYouSpecification(),
+		};
 }

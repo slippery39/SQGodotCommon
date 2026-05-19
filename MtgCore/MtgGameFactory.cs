@@ -148,6 +148,8 @@ public static class MtgGameFactory
 				Player2Id = player2.Id,
 				Player1BattlefieldId = p1Battlefield.Id,
 				Player2BattlefieldId = p2Battlefield.Id,
+				Player1GraveyardId = p1Graveyard.Id,
+				Player2GraveyardId = p2Graveyard.Id,
 			},
 		};
 

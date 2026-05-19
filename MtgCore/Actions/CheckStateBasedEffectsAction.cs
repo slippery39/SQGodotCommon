@@ -13,13 +13,15 @@ namespace MtgCore;
 ///
 /// While GameState.SuppressPostProcessor is true this action never runs.
 ///
-/// GameId, Player1BattlefieldId and Player2BattlefieldId are stored directly to avoid
-/// scanning the entire IdToGameObjectMap on every execution.
+/// GameId, Player1BattlefieldId, Player2BattlefieldId, Player1GraveyardId, and
+/// Player2GraveyardId are stored directly to avoid scanning the entire
+/// IdToGameObjectMap on every execution.
 ///
 /// Order of operations:
 ///   1. Process static ability zone changes (ETB/LTB) via StaticAbilityEngine
 ///   2. Evaluate PendingGameEvents against all TriggeredAbilityComponents
-///      on both battlefields and spawn ResolveEffectAction for each match
+///      on both battlefields and both graveyards; spawn ResolveEffectAction for each match.
+///      Each ability's ActiveInZone determines which zone pass evaluates it.
 ///   3. Clear PendingGameEvents
 ///   4. Check loss conditions (life <= 0 only)
 ///
@@ -32,6 +34,8 @@ public record CheckStateBasedEffectsAction : GameAction
 	public int Player2Id { get; init; }
 	public int Player1BattlefieldId { get; init; }
 	public int Player2BattlefieldId { get; init; }
+	public int Player1GraveyardId { get; init; }
+	public int Player2GraveyardId { get; init; }
 
 	public override bool IsPostProcessor => true;
 
@@ -89,9 +93,13 @@ public record CheckStateBasedEffectsAction : GameAction
 			return state;
 
 		foreach (var card in state.GetCardsInZone(Player1BattlefieldId))
-			state = EvaluateCardTriggers(state, card, pendingEvents);
+			state = EvaluateCardTriggers(state, card, pendingEvents, ZoneType.Battlefield);
 		foreach (var card in state.GetCardsInZone(Player2BattlefieldId))
-			state = EvaluateCardTriggers(state, card, pendingEvents);
+			state = EvaluateCardTriggers(state, card, pendingEvents, ZoneType.Battlefield);
+		foreach (var card in state.GetCardsInZone(Player1GraveyardId))
+			state = EvaluateCardTriggers(state, card, pendingEvents, ZoneType.Graveyard);
+		foreach (var card in state.GetCardsInZone(Player2GraveyardId))
+			state = EvaluateCardTriggers(state, card, pendingEvents, ZoneType.Graveyard);
 
 		return state;
 	}
@@ -99,7 +107,8 @@ public record CheckStateBasedEffectsAction : GameAction
 	private static GameState EvaluateCardTriggers(
 		GameState state,
 		Card card,
-		ImmutableList<GameEvent> pendingEvents
+		ImmutableList<GameEvent> pendingEvents,
+		ZoneType activeZone
 	)
 	{
 		var triggerContext = new TriggerContext
@@ -111,6 +120,9 @@ public record CheckStateBasedEffectsAction : GameAction
 
 		foreach (var ability in card.GetComponents<TriggeredAbilityComponent>())
 		{
+			if (ability.ActiveInZone != activeZone)
+				continue;
+
 			foreach (var e in pendingEvents)
 			{
 				if (ability.Condition.IsSatisfiedBy(e, triggerContext))

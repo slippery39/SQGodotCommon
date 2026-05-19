@@ -33,7 +33,7 @@ MtgCore/
 │                            # Card lookup: use CardLibrary.GetByName("Name") — do NOT add new static per-card accessor methods.
 │                            # The existing static accessors (LightningBolt(), GrizzlyBears(), etc.) are legacy and are being phased out.
 │   ├── Builders/            # Fluent card builder API: CardFactory (entry point), SpellCardBuilder, CreatureCardBuilder,
-│   │                        # TargetBuilder (use via 'using static'), TriggerConditions (static helpers)
+│   │                        # TargetBuilder (use via 'using static'), TriggerConditions (static helpers: OnSelfEntersBattlefield, OnYourUpkeep, OnAnyCreatureDies, OnAnyCreatureAttacks, OnSelfAttacks, OnLandfall)
 │   │                        # Usage: CardFactory.Spell("Name", manaCost).WithDamage(3).WithTarget(Single().PlayersOrCreatures()).Build()
 │   │                        # SpellCardBuilder.WithFlashback(cost) adds FlashbackComponent — card becomes castable from graveyard at that cost
 │   │                        # SpellCardBuilder.WithGiveFlashback() — effect that adds FlashbackComponent to a random instant/sorcery in your graveyard; use in ETB triggers
@@ -61,7 +61,9 @@ MtgCore/
 │                            #              IsControlledByYouSpecification, IsControlledByOpponentSpecification,
 │                            #              IsSourceCardSpecification, IsNotSelfSpecification, AlwaysFalseSpecification
 │                            # Composites: AndSpecification (zone-first candidate narrowing), OrSpecification, NotSpecification
-├── Triggers/                # TriggeredAbilityComponent, EventTriggerCondition, TriggerCondition
+├── Triggers/                # TriggeredAbilityComponent { Name, Condition, Effect, ActiveInZone (default Battlefield) }, EventTriggerCondition, TriggerCondition
+│                            # ActiveInZone = ZoneType.Graveyard for abilities that fire from the graveyard (e.g. Bloodghast landfall)
+│                            # CheckStateBasedEffectsAction scans battlefield AND graveyard; ActiveInZone guards which pass fires each ability
 ├── Turns/                   # BeginGameAction, SetupGameAction, StartTurnAction, EndTurnAction, TurnPhase
 ├── Zones/                   # Zone, ZoneType
 ├── MtgGame.cs               # Core game state object (ActivePlayerId, TurnNumber, SpellsCastThisTurn)

@@ -930,11 +930,7 @@ public static class CardLibrary
 					new TriggeredAbilityComponent
 					{
 						Name = "Landfall",
-						Condition = new EventTriggerCondition
-						{
-							EventTypeName = EventTypeNames.LandPlayed,
-							Filter = new IsControlledByYouSpecification(),
-						},
+						Condition = TriggerConditions.OnLandfall(),
 						Effect = new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.NoTarget(),
@@ -964,6 +960,29 @@ public static class CardLibrary
 				.Spell("Reanimate", manaCost: 1)
 				.WithAction(new PutIntoBattlefieldAction(), Single().CreatureInYourGraveyard())
 				.Build(),
+			new()
+			{
+				Name = "Bloodghast",
+				ManaCost = 2,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 2, Toughness = 1 },
+					new TriggeredAbilityComponent
+					{
+						Name = "Landfall",
+						ActiveInZone = ZoneType.Graveyard,
+						Condition = TriggerConditions.OnLandfall(),
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PutIntoBattlefieldAction
+							{
+								CardIdContextKey = ContextKeys.SourceCardId,
+							},
+						},
+					}
+				),
+			},
 		};
 
 	public static Card GetByName(string name) =>
