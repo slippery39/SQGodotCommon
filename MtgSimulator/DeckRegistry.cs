@@ -12,6 +12,7 @@ public static class DeckRegistry
 			new DeckInfo("Goblins", GoblinsDeckFactory.Build),
 			new DeckInfo("Dragonstorm", DragonstormDeckFactory.Build),
 			new DeckInfo("Delver", DelverDeckFactory.Build),
+			new DeckInfo("Reanimator", ReanimatorDeckFactory.Build),
 		];
 
 	public static IReadOnlyList<Card> Build(string deckName, int ownerId)

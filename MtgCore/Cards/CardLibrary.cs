@@ -85,6 +85,44 @@ public static class CardLibrary
 			},
 			new()
 			{
+				Name = "Faithless Looting",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.NoTarget(),
+								ActionTemplate = new PipelineAction
+								{
+									Steps = ImmutableList.Create<GameAction>(
+										new DrawCardsAction
+										{
+											Amount = 2,
+											TargetContextKey = ContextKeys.CastingPlayerId,
+										},
+										new SelectCardsFromHandAction
+										{
+											Prompt = "Choose 2 cards to discard",
+											MinChoices = 2,
+											MaxChoices = 2,
+											OutputKey = ContextKeys.SelectedCardIds,
+										},
+										new DiscardCardsAction
+										{
+											TargetContextKey = ContextKeys.SelectedCardIds,
+										}
+									),
+								},
+							}
+						),
+					},
+					new FlashbackComponent() { FlashbackManaCost = 2 }
+				),
+			},
+			new()
+			{
 				Name = "Telling Time",
 				ManaCost = 2,
 				Components = ImmutableList.Create<GameComponent>(

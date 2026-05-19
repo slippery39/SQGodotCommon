@@ -40,8 +40,7 @@ public static class ZooDeckFactory
 		AddCopies(deck, ownerId, 4, CardLibrary.LightningHelix);
 		AddCopies(deck, ownerId, 4, CardLibrary.PathToExile);
 		AddCopies(deck, ownerId, 4, CardLibrary.SteppeLynx);
-		AddCopies(deck, ownerId, 2, CardLibrary.RampantGrowth);
-		AddCopies(deck, ownerId, 2, CardLibrary.PrimevalTitan);
+		AddCopies(deck, ownerId, 4, CardLibrary.TribalFlames);
 		return deck;
 	}
 
