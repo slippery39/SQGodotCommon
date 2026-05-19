@@ -99,14 +99,14 @@ public static class CardLibrary
 									Steps = ImmutableList.Create<GameAction>(
 										new DrawCardsAction
 										{
-											Amount = 2,
+											Amount = 3,
 											TargetContextKey = ContextKeys.CastingPlayerId,
 										},
 										new SelectCardsFromHandAction
 										{
 											Prompt = "Choose 2 cards to discard",
-											MinChoices = 2,
-											MaxChoices = 2,
+											MinChoices = 3,
+											MaxChoices = 3,
 											OutputKey = ContextKeys.SelectedCardIds,
 										},
 										new DiscardCardsAction
@@ -118,7 +118,7 @@ public static class CardLibrary
 							}
 						),
 					},
-					new FlashbackComponent() { FlashbackManaCost = 2 }
+					new FlashbackComponent() { FlashbackManaCost = 1 }
 				),
 			},
 			new()
@@ -285,7 +285,7 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Glorious Anthem",
-				ManaCost = 3,
+				ManaCost = 2,
 				Subtypes = ImmutableList.Create("Enchantment"),
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
@@ -452,7 +452,7 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Goblin Chieftain",
-				ManaCost = 3,
+				ManaCost = 2,
 				Subtypes = ImmutableList.Create(GoblinSubtype),
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
@@ -480,7 +480,7 @@ public static class CardLibrary
 				),
 			},
 			CardFactory
-				.Creature("Siege-Gang Commander", manaCost: 5, power: 2, toughness: 2)
+				.Creature("Siege-Gang Commander", manaCost: 4, power: 2, toughness: 2)
 				.WithSubtype(GoblinSubtype)
 				.WithTriggeredAbility(
 					"ETB Tokens",
@@ -497,11 +497,11 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Krenko, Mob Boss",
-				ManaCost = 4,
+				ManaCost = 3,
 				Subtypes = ImmutableList.Create(GoblinSubtype, "Warrior"),
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
-					new CreatureComponent { Power = 3, Toughness = 3 },
+					new CreatureComponent { Power = 1, Toughness = 3 },
 					new ActivatedAbilityComponent
 					{
 						Name = "Create Tokens",
@@ -824,20 +824,20 @@ public static class CardLibrary
 				.WithHaste()
 				.Build(),
 			CardFactory
-				.Creature("Bogardan Hellkite", manaCost: 8, power: 5, toughness: 5)
+				.Creature("Bogardan Hellkite", manaCost: 8, power: 7, toughness: 7)
 				.WithSubtype(DragonSubtype)
 				.WithFlying()
 				.WithTriggeredAbility(
 					"ETB Damage",
 					TriggerConditions.OnSelfEntersBattlefield(),
 					effect: eb =>
-						eb.WithDamage(5).WithTarget(Random().OpponentOrOpponentCreatures())
+						eb.WithDamage(7).WithTarget(Random().OpponentOrOpponentCreatures())
 				)
 				.Build(),
 			new()
 			{
 				Name = "Dragonstorm",
-				ManaCost = 9,
+				ManaCost = 7,
 				Components = ImmutableList.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -1018,6 +1018,21 @@ public static class CardLibrary
 								CardIdContextKey = ContextKeys.SourceCardId,
 							},
 						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Carnage Tyrant",
+				ManaCost = 7,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 10,
+						Toughness = 10,
+						HasTrample = true,
+						HasHexproof = true,
 					}
 				),
 			},

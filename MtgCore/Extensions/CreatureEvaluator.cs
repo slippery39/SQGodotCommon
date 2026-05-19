@@ -15,7 +15,9 @@ public record CreatureStats(
 	bool HasTaunt,
 	bool HasReach,
 	bool HasLifelink,
-	bool HasTrample
+	bool HasTrample,
+	bool HasShroud,
+	bool HasHexproof
 );
 
 /// <summary>
@@ -40,11 +42,11 @@ public static class CreatureEvaluator
 	{
 		var card = state.GetObject(cardId) as Card;
 		if (card == null)
-			return new CreatureStats(0, 0, false, false, false, false, false, false);
+			return new CreatureStats(0, 0, false, false, false, false, false, false, false, false);
 
 		var creature = card.GetComponent<CreatureComponent>();
 		if (creature == null)
-			return new CreatureStats(0, 0, false, false, false, false, false, false);
+			return new CreatureStats(0, 0, false, false, false, false, false, false, false, false);
 
 		var power = creature.Power;
 		var toughness = creature.Toughness;
@@ -54,6 +56,8 @@ public static class CreatureEvaluator
 		var hasReach = creature.HasReach;
 		var hasLifelink = creature.HasLifelink;
 		var hasTrample = creature.HasTrample;
+		var hasShroud = creature.HasShroud;
+		var hasHexproof = creature.HasHexproof;
 
 		// Spell-based and static-ability-based P/T modifiers (AppliedStaticPTBoost is a subtype)
 		foreach (var modifier in card.GetComponents<PowerToughnessModifier>())
@@ -71,6 +75,8 @@ public static class CreatureEvaluator
 			hasReach |= applied.GrantsReach;
 			hasLifelink |= applied.GrantsLifelink;
 			hasTrample |= applied.GrantsTrample;
+			hasShroud |= applied.GrantsShroud;
+			hasHexproof |= applied.GrantsHexproof;
 		}
 
 		return new CreatureStats(
@@ -81,7 +87,9 @@ public static class CreatureEvaluator
 			hasTaunt,
 			hasReach,
 			hasLifelink,
-			hasTrample
+			hasTrample,
+			hasShroud,
+			hasHexproof
 		);
 	}
 
@@ -129,6 +137,12 @@ public static class CreatureEvaluator
 
 	public static bool GetEffectiveReach(this GameState state, int cardId) =>
 		state.GetEffectiveStats(cardId).HasReach;
+
+	public static bool GetEffectiveShroud(this GameState state, int cardId) =>
+		state.GetEffectiveStats(cardId).HasShroud;
+
+	public static bool GetEffectiveHexproof(this GameState state, int cardId) =>
+		state.GetEffectiveStats(cardId).HasHexproof;
 
 	/// <summary>
 	/// Returns true if the creature has accumulated damage >= its effective toughness.

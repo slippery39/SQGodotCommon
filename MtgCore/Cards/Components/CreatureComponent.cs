@@ -28,4 +28,6 @@ public record CreatureComponent : GameComponent
 	public bool HasReach { get; init; } = false;
 	public bool HasLifelink { get; init; } = false;
 	public bool HasTrample { get; init; } = false;
+	public bool HasShroud { get; init; } = false;
+	public bool HasHexproof { get; init; } = false;
 }

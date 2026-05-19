@@ -53,7 +53,16 @@ public record IsCreatureSpecification : TargetSpecification
 			return false;
 
 		var zone = context.GameState.GetCardZone(candidateId);
-		return zone.ZoneType == ZoneType.Battlefield;
+		if (zone.ZoneType != ZoneType.Battlefield)
+			return false;
+
+		var stats = context.GameState.GetEffectiveStats(candidateId);
+		if (stats.HasShroud)
+			return false;
+		if (stats.HasHexproof && card.ControllerId != context.CastingPlayerId)
+			return false;
+
+		return true;
 	}
 }
 

@@ -40,7 +40,7 @@ MtgCore/
 │   │                        # CreatureCardBuilder.WithEtbTrigger(name, effect) — shorthand for WithTriggeredAbility using OnSelfEntersBattlefield() condition
 │   │                        # TargetBuilder.InstantOrSorceryInYourGraveyard() — targets an instant/sorcery in the caster's own graveyard
 │   │                        # TargetBuilder.CreatureInYourGraveyard() — targets a creature card in the caster's own graveyard
-│   └── Components/          # PermanentComponent (battlefield marker), CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach), SpellComponent (HasStorm), GraveyardCountComponent
+│   └── Components/          # PermanentComponent (battlefield marker), CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach, HasShroud, HasHexproof), SpellComponent (HasStorm), GraveyardCountComponent
 │                            # FlashbackComponent { FlashbackManaCost } — marks a spell castable from graveyard; MtgActionGenerator scans graveyard for these and generates CastFromGraveyardAction
 │                            # EquipmentComponent (PowerBonus, ToughnessBonus, EquippedToCardId — tracks attachment state)
 │                            # ExtraLandPerTurnComponent — marker; presence on a controlled battlefield permanent grants +1 land play per turn (used by Exploration)
@@ -57,9 +57,11 @@ MtgCore/
 ├── Players/                 # MtgPlayer (GameObject subclass) — fields: Life, MaxMana, CurrentMana, LandsPlayedThisTurn (resets each turn), LandsPlayedTotal (never resets; used by Land Elemental)
 ├── Targeting/               # TargetSpecification (base), ZoneSpecification (abstract base for zone specs), TargetingContext, TargetingStrategy
 │                            # Zone specs: IsOnBattlefieldSpecification, IsInHandSpecification, IsInstantOrSorceryInOwnGraveyardSpecification, IsCreatureInOwnGraveyardSpecification
-│                            # Other specs: IsCreatureSpecification, IsPlayerSpecification, IsSubtypeSpecification,
+│                            # Other specs: IsCreatureSpecification (enforces Shroud/Hexproof at IsSatisfiedBy level), IsPlayerSpecification, IsSubtypeSpecification,
 │                            #              IsControlledByYouSpecification, IsControlledByOpponentSpecification,
 │                            #              IsSourceCardSpecification, IsNotSelfSpecification, AlwaysFalseSpecification
+│                            # Shroud/Hexproof: enforced in IsCreatureSpecification.IsSatisfiedBy — no other spec changes needed.
+│                            #   HasShroud = no one can target (including controller). HasHexproof = opponents can't target (controller can).
 │                            # Composites: AndSpecification (zone-first candidate narrowing), OrSpecification, NotSpecification
 ├── Triggers/                # TriggeredAbilityComponent { Name, Condition, Effect, ActiveInZone (default Battlefield) }, EventTriggerCondition, TriggerCondition
 │                            # ActiveInZone = ZoneType.Graveyard for abilities that fire from the graveyard (e.g. Bloodghast landfall)
@@ -93,7 +95,7 @@ Cards are `GameObject` subclasses. Effects are `GameAction` subclasses — pure 
 2. `PowerToughnessModifier` components on the card (from spells like Giant Growth)
 3. `StaticAbilityComponent` on battlefield permanents controlled by the same player — one scan covers both `StaticPTBoostAbility` and `StaticGrantKeywordAbility`
 
-**Prefer `GetEffectiveStats(state, cardId) → CreatureStats`** when multiple properties are needed — it reads from the card's own components, returning power, toughness, and all keywords in one O(1) pass. The individual methods (`GetEffectivePower`, `GetEffectiveToughness`, `GetEffectiveHaste`, etc.) delegate to it.
+**Prefer `GetEffectiveStats(state, cardId) → CreatureStats`** when multiple properties are needed — it reads from the card's own components, returning power, toughness, and all keywords (including `HasShroud`, `HasHexproof`) in one O(1) pass. The individual methods (`GetEffectivePower`, `GetEffectiveToughness`, `GetEffectiveHaste`, `GetEffectiveShroud`, `GetEffectiveHexproof`, etc.) delegate to it.
 
 `AttackAction` and `DealDamageAction` must never read base values directly. `AttackAction.ValidateTauntConstraint` calls `GetEffectiveStats` once per creature to cover Taunt, Flying, and Reach checks in a single pass.
 

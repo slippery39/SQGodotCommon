@@ -38,11 +38,14 @@ public static class DragonstormDeckFactory
 		AddCopies(deck, ownerId, 20, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, CardLibrary.BogardanHellkite);
 		AddCopies(deck, ownerId, 4, CardLibrary.HuntedDragon);
-		AddCopies(deck, ownerId, 8, CardLibrary.Dragonstorm);
-		AddCopies(deck, ownerId, 8, CardLibrary.RiteOfFlame);
+		AddCopies(deck, ownerId, 4, CardLibrary.Dragonstorm);
+		AddCopies(deck, ownerId, 4, CardLibrary.RiteOfFlame);
 		AddCopies(deck, ownerId, 4, CardLibrary.SeethingSong);
-		AddCopies(deck, ownerId, 6, CardLibrary.LotusBoom);
-		AddCopies(deck, ownerId, 2, CardLibrary.RampantGrowth);
+		AddCopies(deck, ownerId, 4, CardLibrary.LotusBoom);
+		AddCopies(deck, ownerId, 4, CardLibrary.AncestralRecall);
+		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Faithless Looting"));
+		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Mox"));
+		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Lightning Bolt"));
 		return deck;
 	}
 
