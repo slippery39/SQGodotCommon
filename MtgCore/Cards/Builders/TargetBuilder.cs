@@ -32,6 +32,9 @@ public class TargetBuilder
 	public TargetingStrategy InstantOrSorceryInYourGraveyard() =>
 		Build(new IsInstantOrSorceryInOwnGraveyardSpecification());
 
+	public TargetingStrategy CreatureInYourGraveyard() =>
+		Build(new IsCreatureInOwnGraveyardSpecification());
+
 	public TargetingStrategy WithSpec(TargetSpecification spec) => Build(spec);
 
 	private TargetingStrategy Build(TargetSpecification spec) =>

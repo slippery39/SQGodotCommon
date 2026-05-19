@@ -185,6 +185,35 @@ public record IsInstantOrSorceryInOwnGraveyardSpecification : ZoneSpecification
 }
 
 /// <summary>
+/// Matches any creature card currently in the casting player's own graveyard.
+/// </summary>
+public record IsCreatureInOwnGraveyardSpecification : ZoneSpecification
+{
+	public override IEnumerable<int> GetCandidateIds(TargetingContext context) =>
+		context.GameState.GetChildrenIds(
+			context.GameState.GetPlayerZoneId(context.CastingPlayerId, ZoneType.Graveyard)
+		);
+
+	public override bool IsSatisfiedBy(int candidateId, TargetingContext context)
+	{
+		if (!context.GameState.HasObject(candidateId))
+			return false;
+
+		if (context.GameState.GetObject(candidateId) is not Card card)
+			return false;
+
+		if (!card.HasComponent<CreatureComponent>())
+			return false;
+
+		var graveyardId = context.GameState.GetPlayerZoneId(
+			context.CastingPlayerId,
+			ZoneType.Graveyard
+		);
+		return context.GameState.GetCardZoneId(candidateId) == graveyardId;
+	}
+}
+
+/// <summary>
 /// Matches any card currently on either player's battlefield.
 /// Compose with other specs (e.g. IsSubtypeSpecification) to restrict to specific permanents.
 /// Being a ZoneSpecification, AndSpecification will automatically prefer this side's

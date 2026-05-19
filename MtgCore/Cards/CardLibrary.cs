@@ -959,6 +959,11 @@ public static class CardLibrary
 					new LandsPlayedCountComponent { Duration = ModifierDuration.Permanent }
 				),
 			},
+			// ===== REANIMATOR CARDS =====
+			CardFactory
+				.Spell("Reanimate", manaCost: 1)
+				.WithAction(new PutIntoBattlefieldAction(), Single().CreatureInYourGraveyard())
+				.Build(),
 		};
 
 	public static Card GetByName(string name) =>
@@ -1338,4 +1343,12 @@ public static class CardLibrary
 	/// Duration = Permanent so StartTurnAction does not clear it.
 	/// </summary>
 	public static Card LandElemental() => All.First(c => c.Name == "Land Elemental");
+
+	// ===== REANIMATOR CARDS =====
+
+	/// <summary>
+	/// Reanimate — 1 mana sorcery.
+	/// "Return target creature card from your graveyard to the battlefield."
+	/// </summary>
+	public static Card Reanimate() => All.First(c => c.Name == "Reanimate");
 }
