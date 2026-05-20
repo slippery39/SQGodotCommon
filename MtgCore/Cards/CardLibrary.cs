@@ -866,6 +866,19 @@ public static class CardLibrary
 					}
 				),
 			},
+			// ===== TRADITIONAL STORM DECK CARDS =====
+			CardFactory
+				.Spell("Tendrils of Agony", manaCost: 4)
+				.WithStorm()
+				.WithLoseLife(2)
+				.WithTarget(Single().PlayersOrCreatures())
+				.WithLifeGain(2)
+				.Build(),
+			CardFactory
+				.Spell("Past in Flames", manaCost: 4)
+				.WithFlashback(5)
+				.WithAction(new GiveFlashbackAction(), AllValid().InstantOrSorceryInYourGraveyard())
+				.Build(),
 			// ===== LAND-ADJACENT CARDS =====
 			new()
 			{
