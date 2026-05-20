@@ -6,6 +6,9 @@
 MtgCore/
 ├── Abilities/Activated/     # ActivatedAbilityComponent, ActivatedAbilityAction
 │   └── Static/              # StaticAbilityComponent (abstract), StaticPTBoostAbility, StaticGrantKeywordAbility
+├── Emblems/                 # Emblem (Name, TriggerCondition, CardEffect) — player-owned persistent triggered abilities
+│                            # GrantEmblemComponent — placed on a land card; PlayLandAction/PutLandIntoPlayAction add the emblem to the player when the land is played
+│                            # MtgPlayer.Emblems: ImmutableList<Emblem> holds all active emblems; scanned by CheckStateBasedEffectsAction after battlefield/graveyard passes
 ├── Actions/                 # All GameAction subclasses; ContextKeys; MtgActionGenerator
 │                            # EffectAction — abstract base for all state-changing actions (DealDamageAction,
 │                            #   GainLifeAction, LoseLifeAction, DrawCardsAction, DiscardCardsAction,
@@ -54,7 +57,7 @@ MtgCore/
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier, AppliedStaticPTBoost
 │                            # EquippedBoostComponent (stamped on creature by AttachEquipmentAction; removed on detach/creature-death)
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Land Elemental. Must be stamped with Duration = Permanent in card definitions.
-├── Players/                 # MtgPlayer (GameObject subclass) — fields: Life, MaxMana, CurrentMana, LandsPlayedThisTurn (resets each turn), LandsPlayedTotal (never resets; used by Land Elemental)
+├── Players/                 # MtgPlayer (GameObject subclass) — fields: Life, MaxMana, CurrentMana, LandsPlayedThisTurn (resets each turn), LandsPlayedTotal (never resets; used by Land Elemental), Emblems (ImmutableList<Emblem>; grows when lands with GrantEmblemComponent are played)
 ├── Targeting/               # TargetSpecification (base), ZoneSpecification (abstract base for zone specs), TargetingContext, TargetingStrategy
 │                            # Zone specs: IsOnBattlefieldSpecification, IsInHandSpecification, IsInstantOrSorceryInOwnGraveyardSpecification, IsCreatureInOwnGraveyardSpecification
 │                            # Other specs: IsCreatureSpecification (enforces Shroud/Hexproof at IsSatisfiedBy level), IsPlayerSpecification, IsSubtypeSpecification,
@@ -65,7 +68,8 @@ MtgCore/
 │                            # Composites: AndSpecification (zone-first candidate narrowing), OrSpecification, NotSpecification
 ├── Triggers/                # TriggeredAbilityComponent { Name, Condition, Effect, ActiveInZone (default Battlefield) }, EventTriggerCondition, TriggerCondition
 │                            # ActiveInZone = ZoneType.Graveyard for abilities that fire from the graveyard (e.g. Bloodghast landfall)
-│                            # CheckStateBasedEffectsAction scans battlefield AND graveyard; ActiveInZone guards which pass fires each ability
+│                            # LandsPlayedCondition { Threshold } — fires when LandPlayedEvent.PlayerId == controller AND LandsPlayedTotal >= Threshold; used by Valakut's emblem
+│                            # CheckStateBasedEffectsAction scans battlefield, graveyard, AND player emblems; ActiveInZone guards card-based triggers; emblems always fire
 ├── Turns/                   # BeginGameAction, SetupGameAction, StartTurnAction, EndTurnAction, TurnPhase
 ├── Zones/                   # Zone, ZoneType
 ├── MtgGame.cs               # Core game state object (ActivePlayerId, TurnNumber, SpellsCastThisTurn)
@@ -116,8 +120,8 @@ Applied via `AddModifierAction`. `UntilEndOfTurn` modifiers are cleared by `Star
 
 Land-based. Both players start at `MaxMana = 0`, `CurrentMana = 0`. All permanent mana comes from playing land cards.
 
-- **Playing a land** (`PlayLandAction`): `MaxMana++`, `CurrentMana++`, `LandsPlayedThisTurn++`, `LandsPlayedTotal++`. Card moves Hand → Exile. Emits `LandPlayedEvent`.
-- **Effect-sourced lands** (`PutLandIntoPlayAction`): same MaxMana/CurrentMana/LandsPlayedTotal increments, but does NOT increment `LandsPlayedThisTurn` (doesn't consume the land-per-turn). Used by Rampant Growth and Primeval Titan ETB.
+- **Playing a land** (`PlayLandAction`): `MaxMana++`, `CurrentMana++`, `LandsPlayedThisTurn++`, `LandsPlayedTotal++`. If the card has `GrantEmblemComponent`, adds the emblem to the player before emitting the event (so the emblem is active when the LandPlayedEvent triggers are evaluated). Card moves Hand → Exile. Emits `LandPlayedEvent`.
+- **Effect-sourced lands** (`PutLandIntoPlayAction`): same MaxMana/CurrentMana/LandsPlayedTotal increments (and same `GrantEmblemComponent` check), but does NOT increment `LandsPlayedThisTurn` (doesn't consume the land-per-turn). Used by Rampant Growth and Primeval Titan ETB.
 - `StartTurnAction` refills `CurrentMana = MaxMana` and resets `LandsPlayedThisTurn = 0`. It does **not** auto-increment `MaxMana`.
 - **Land limit**: one land play per turn. Each permanent with `ExtraLandPerTurnComponent` controlled by the player adds +1. Limit is computed dynamically in `PlayLandAction.ValidateAdd` — no stored `LandsAllowedThisTurn` field.
 - `CastCreatureAction` and `CastSpellAction` validate sufficient mana in `ValidateAdd` and deduct `ManaCost` in `Execute`.

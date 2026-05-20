@@ -66,6 +66,20 @@ public record PlayLandAction : GameAction
 			}
 		);
 
+		var card = state.GetObject(CardId) as Card;
+		var grantEmblem = card?.GetComponent<GrantEmblemComponent>();
+		if (grantEmblem != null)
+		{
+			var updatedPlayer = state.GetPlayer(CastingPlayerId);
+			state = state.UpdateObject(
+				CastingPlayerId,
+				updatedPlayer with
+				{
+					Emblems = updatedPlayer.Emblems.Add(grantEmblem.Emblem),
+				}
+			);
+		}
+
 		var exileId = state.GetPlayerZoneId(CastingPlayerId, ZoneType.Exile);
 		state = state.MoveObject(CardId, exileId);
 

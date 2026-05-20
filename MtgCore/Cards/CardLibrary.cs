@@ -1049,6 +1049,27 @@ public static class CardLibrary
 					}
 				),
 			},
+			new()
+			{
+				Name = "Valakut, the Molten Pinnacle",
+				ManaCost = 0,
+				Subtypes = ImmutableList.Create(LandSubtype),
+				Components = ImmutableList.Create<GameComponent>(
+					new GrantEmblemComponent
+					{
+						Emblem = new Emblem
+						{
+							Name = "Valakut",
+							Condition = new LandsPlayedCondition { Threshold = 7 },
+							Effect = new CardEffect
+							{
+								TargetingStrategy = Random().OpponentOrOpponentCreatures(),
+								ActionTemplate = new DealDamageAction { Amount = 3 },
+							},
+						},
+					}
+				),
+			},
 		};
 
 	public static Card GetByName(string name) =>
@@ -1387,6 +1408,14 @@ public static class CardLibrary
 			Subtypes = ImmutableList.Create(LandSubtype, "Basic"),
 			Components = ImmutableList<GameComponent>.Empty,
 		};
+
+	/// <summary>
+	/// Valakut, the Molten Pinnacle — special land.
+	/// Grants the player a Valakut emblem when played. The emblem deals 3 damage
+	/// to a random opponent or opponent creature each time the player plays a land
+	/// while LandsPlayedTotal >= 7 (fires from the 7th land onward).
+	/// </summary>
+	public static Card Valakut() => GetByName("Valakut, the Molten Pinnacle");
 
 	// ===== LAND-ADJACENT CARDS =====
 

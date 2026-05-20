@@ -53,6 +53,20 @@ public record PutLandIntoPlayAction : GameAction
 			}
 		);
 
+		var card = state.GetObject(cardId) as Card;
+		var grantEmblem = card?.GetComponent<GrantEmblemComponent>();
+		if (grantEmblem != null)
+		{
+			var updatedPlayer = state.GetPlayer(playerId);
+			state = state.UpdateObject(
+				playerId,
+				updatedPlayer with
+				{
+					Emblems = updatedPlayer.Emblems.Add(grantEmblem.Emblem),
+				}
+			);
+		}
+
 		var exileId = state.GetPlayerZoneId(playerId, ZoneType.Exile);
 		state = state.MoveObject(cardId, exileId);
 

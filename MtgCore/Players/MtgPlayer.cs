@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -21,4 +22,5 @@ public record MtgPlayer : GameObject
 	public int MaxMana { get; init; } = 0;
 	public int LandsPlayedThisTurn { get; init; } = 0;
 	public int LandsPlayedTotal { get; init; } = 0;
+	public ImmutableList<Emblem> Emblems { get; init; } = ImmutableList<Emblem>.Empty;
 }

@@ -101,6 +101,43 @@ public record CheckStateBasedEffectsAction : GameAction
 		foreach (var card in state.GetCardsInZone(Player2GraveyardId))
 			state = EvaluateCardTriggers(state, card, pendingEvents, ZoneType.Graveyard);
 
+		state = EvaluateEmblemTriggers(state, Player1Id, pendingEvents);
+		state = EvaluateEmblemTriggers(state, Player2Id, pendingEvents);
+
+		return state;
+	}
+
+	private static GameState EvaluateEmblemTriggers(
+		GameState state,
+		int playerId,
+		ImmutableList<GameEvent> pendingEvents
+	)
+	{
+		var player = state.GetPlayer(playerId);
+		if (player.Emblems.IsEmpty)
+			return state;
+
+		var context = new TriggerContext
+		{
+			GameState = state,
+			SourceCardId = 0,
+			ControllingPlayerId = playerId,
+		};
+
+		foreach (var emblem in player.Emblems)
+		foreach (var e in pendingEvents)
+		{
+			if (emblem.Condition.IsSatisfiedBy(e, context))
+				state = state.SpawnAction(
+					new ResolveEffectAction
+					{
+						Effects = [emblem.Effect],
+						CastingPlayerId = playerId,
+						SourceCardId = 0,
+					}
+				);
+		}
+
 		return state;
 	}
 
