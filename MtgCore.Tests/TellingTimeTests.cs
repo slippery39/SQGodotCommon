@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -20,7 +20,7 @@ public class TellingTimeTests
 	{
 		(_state, _ids) = MtgGameFactory.CreateForTesting();
 
-		var tellingTime = CardLibrary.TellingTime() with
+		var tellingTime = TestCardLibrary.TellingTime() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,

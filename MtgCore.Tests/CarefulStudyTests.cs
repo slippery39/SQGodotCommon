@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -17,7 +17,7 @@ public class CarefulStudyTests
 	{
 		(_state, _ids) = MtgGameFactory.CreateForTesting();
 
-		var study = CardLibrary.CarefulStudy() with
+		var study = TestCardLibrary.CarefulStudy() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -98,7 +98,7 @@ public class CarefulStudyTests
 
 		var (stateAtChoice, _) = state.AddAction(MakeCastStudy()).ProcessAllActions();
 
-		// Card is still on the stack while the choice is pending —
+		// Card is still on the stack while the choice is pending â€”
 		// spells move to the graveyard after their effects fully resolve, not before.
 		Assert.That(
 			stateAtChoice.GetCardZone(_studyId).ZoneType,

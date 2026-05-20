@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace MtgCore.Tests;
 
 /// <summary>
-/// Tests for Valakut, the Molten Pinnacle — the first emblem-granting land.
+/// Tests for Valakut, the Molten Pinnacle â€” the first emblem-granting land.
 ///
 /// Valakut grants the player a Valakut emblem when played. The emblem fires
 /// LandsPlayedCondition: once LandsPlayedTotal >= 7, each land the player plays
@@ -60,7 +60,7 @@ public class ValakutTests
 	[Test]
 	public void Valakut_PlayedBeforeThreshold_GrantsEmblemButNoDamage()
 	{
-		// LandsPlayedTotal will be 5 after playing Valakut — below the threshold of 7
+		// LandsPlayedTotal will be 5 after playing Valakut â€” below the threshold of 7
 		var state = SetLandsPlayedTotal(_state, _ids.Player1Id, 4);
 		var (s2, valakut) = AddValakutToHand(state, _ids.Player1Id);
 
@@ -88,7 +88,7 @@ public class ValakutTests
 	public void Valakut_OpponentLandPlay_DoesNotTriggerEmblem()
 	{
 		// Player1 plays Valakut as the 7th land, granting the emblem.
-		// Player2 then plays a land — the emblem must not fire (wrong owner).
+		// Player2 then plays a land â€” the emblem must not fire (wrong owner).
 		var s1 = SetLandsPlayedTotal(_state, _ids.Player1Id, 6);
 		var (s2, valakut) = AddValakutToHand(s1, _ids.Player1Id);
 
@@ -106,7 +106,7 @@ public class ValakutTests
 			)
 			.ProcessAllActions();
 
-		// Player2 played the land — should not trigger Player1's Valakut emblem
+		// Player2 played the land â€” should not trigger Player1's Valakut emblem
 		var player2 = finalState.GetPlayer(_ids.Player2Id);
 		Assert.That(
 			player2.Life,
@@ -157,7 +157,11 @@ public class ValakutTests
 
 	private (GameState, Card) AddValakutToHand(GameState state, int playerId)
 	{
-		var valakut = CardLibrary.Valakut() with { OwnerId = playerId, ControllerId = playerId };
+		var valakut = TestCardLibrary.Valakut() with
+		{
+			OwnerId = playerId,
+			ControllerId = playerId,
+		};
 		var handId = state.GetPlayerZoneId(playerId, ZoneType.Hand);
 		return state.AddObject(valakut, parentId: handId);
 	}

@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -47,7 +47,7 @@ public class ResolutionScopeTests
 
 		// CastSpellAction
 		(state, _) = state.ProcessNextAction();
-		// ResolveSpellAction — sets SuppressPostProcessor, spawns DealDamageActions + EndScope
+		// ResolveSpellAction â€” sets SuppressPostProcessor, spawns DealDamageActions + EndScope
 		(state, _) = state.ProcessNextAction();
 
 		Assert.That(
@@ -102,9 +102,9 @@ public class ResolutionScopeTests
 
 		// CastSpellAction
 		(state, _) = state.ProcessNextAction();
-		// ResolveSpellAction — sets SuppressPostProcessor, spawns 2x DealDamageAction + EndScope
+		// ResolveSpellAction â€” sets SuppressPostProcessor, spawns 2x DealDamageAction + EndScope
 		(state, _) = state.ProcessNextAction();
-		// First DealDamageAction — creature 1 takes lethal damage
+		// First DealDamageAction â€” creature 1 takes lethal damage
 		(state, _) = state.ProcessNextAction();
 
 		Assert.That(
@@ -115,7 +115,7 @@ public class ResolutionScopeTests
 		Assert.That(
 			state.HasObject(creature1Id),
 			Is.True,
-			"Creature with lethal damage should still exist mid-resolution — SBE is deferred"
+			"Creature with lethal damage should still exist mid-resolution â€” SBE is deferred"
 		);
 	}
 
@@ -164,7 +164,7 @@ public class ResolutionScopeTests
 			parentId: _ids.Player1HandId
 		);
 
-		// Two-hit spell targets the opponent player directly — no user targeting needed
+		// Two-hit spell targets the opponent player directly â€” no user targeting needed
 		// because we use TargetingStrategy.AllValid with IsPlayerSpecification filtered
 		// to the opponent. We use a cast with no explicit targets since it's AllValid.
 		var state = stateWithCard.AddAction(
@@ -175,13 +175,13 @@ public class ResolutionScopeTests
 		(state, _) = state.ProcessNextAction();
 		// ResolveSpellAction
 		(state, _) = state.ProcessNextAction();
-		// First DealDamageAction — opponent drops to 0
+		// First DealDamageAction â€” opponent drops to 0
 		(state, _) = state.ProcessNextAction();
 
 		Assert.That(
 			state.GetPlayer(_ids.Player2Id).HasLost,
 			Is.False,
-			"Player should not be marked as lost mid-resolution — SBE is deferred"
+			"Player should not be marked as lost mid-resolution â€” SBE is deferred"
 		);
 
 		var (finalState, events) = state.ProcessAllActions();
@@ -211,7 +211,7 @@ public class ResolutionScopeTests
 			}
 		);
 
-		// ActivateAbilityAction — sets SuppressPostProcessor, spawns effect + EndScope
+		// ActivateAbilityAction â€” sets SuppressPostProcessor, spawns effect + EndScope
 		(state, _) = state.ProcessNextAction();
 
 		Assert.That(
@@ -309,7 +309,7 @@ public class ResolutionScopeTests
 	/// </summary>
 	private (GameState state, int cardId) AddProdigalSorcererToBattlefield(GameState state)
 	{
-		var sorcerer = CardLibrary.ProdigalSorcerer() with
+		var sorcerer = TestCardLibrary.ProdigalSorcerer() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,

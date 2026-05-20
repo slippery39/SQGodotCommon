@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -31,7 +31,7 @@ public class EquipmentTests
 	[Test]
 	public void Bonesplitter_EntersBattlefield()
 	{
-		var (state, bsId) = CastFromHand(CardLibrary.Bonesplitter());
+		var (state, bsId) = CastFromHand(TestCardLibrary.Bonesplitter());
 
 		Assert.That(state.GetCardZone(bsId).ZoneType, Is.EqualTo(ZoneType.Battlefield));
 	}
@@ -45,7 +45,7 @@ public class EquipmentTests
 			power: 2,
 			toughness: 2
 		);
-		var (s2, _) = CastFromHand(s1, CardLibrary.Bonesplitter());
+		var (s2, _) = CastFromHand(s1, TestCardLibrary.Bonesplitter());
 
 		Assert.That(s2.GetEffectivePower(creatureId), Is.EqualTo(2));
 	}
@@ -59,7 +59,7 @@ public class EquipmentTests
 			power: 2,
 			toughness: 2
 		);
-		var (s2, bsId) = CastFromHand(s1, CardLibrary.Bonesplitter());
+		var (s2, bsId) = CastFromHand(s1, TestCardLibrary.Bonesplitter());
 		var s3 = Equip(s2, bsId, creatureId);
 
 		Assert.That(s3.GetEffectivePower(creatureId), Is.EqualTo(4));
@@ -75,7 +75,7 @@ public class EquipmentTests
 			power: 1,
 			toughness: 1
 		);
-		var (s2, bsId) = CastFromHand(s1, CardLibrary.Bonesplitter());
+		var (s2, bsId) = CastFromHand(s1, TestCardLibrary.Bonesplitter());
 		var s3 = Equip(s2, bsId, creatureId);
 
 		var (_, success) = s3.TryAddAction(MakeEquipAction(s3, bsId, creatureId));
@@ -92,7 +92,7 @@ public class EquipmentTests
 			power: 1,
 			toughness: 1
 		);
-		var (s2, bsId) = CastFromHand(s1, CardLibrary.Bonesplitter());
+		var (s2, bsId) = CastFromHand(s1, TestCardLibrary.Bonesplitter());
 		var s3 = Equip(s2, bsId, creatureId);
 		var s4 = SimulateNextTurn(s3);
 
@@ -116,7 +116,7 @@ public class EquipmentTests
 			power: 1,
 			toughness: 1
 		);
-		var (s3, bsId) = CastFromHand(s2, CardLibrary.Bonesplitter());
+		var (s3, bsId) = CastFromHand(s2, TestCardLibrary.Bonesplitter());
 
 		// Equip to creature1 this turn, then simulate next turn and re-equip to creature2
 		var s4 = Equip(s3, bsId, creature1Id);
@@ -146,10 +146,10 @@ public class EquipmentTests
 			power: 2,
 			toughness: 2
 		);
-		var (s2, bsId) = CastFromHand(s1, CardLibrary.Bonesplitter());
+		var (s2, bsId) = CastFromHand(s1, TestCardLibrary.Bonesplitter());
 		var s3 = Equip(s2, bsId, creatureId);
 
-		// Kill the creature — fires PermanentLeftBattlefieldEvent
+		// Kill the creature â€” fires PermanentLeftBattlefieldEvent
 		var s4 = KillCreature(s3, creatureId, _ids.Player1Id);
 
 		// Bonesplitter stays on the battlefield
@@ -170,7 +170,7 @@ public class EquipmentTests
 			power: 2,
 			toughness: 2
 		);
-		var (s2, bsId) = CastFromHand(s1, CardLibrary.Bonesplitter());
+		var (s2, bsId) = CastFromHand(s1, TestCardLibrary.Bonesplitter());
 		var s3 = Equip(s2, bsId, creatureId);
 
 		var s4 = KillCreature(s3, creatureId, _ids.Player1Id);
@@ -187,9 +187,9 @@ public class EquipmentTests
 			power: 2,
 			toughness: 2
 		);
-		var (s2, bsId) = CastFromHand(s1, CardLibrary.Bonesplitter());
+		var (s2, bsId) = CastFromHand(s1, TestCardLibrary.Bonesplitter());
 
-		// Try to equip to opponent's creature — should fail validation
+		// Try to equip to opponent's creature â€” should fail validation
 		var equipAction = new ActivateAbilityAction
 		{
 			CardId = bsId,

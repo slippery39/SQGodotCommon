@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -17,7 +17,7 @@ public class FlashbackTests
 	{
 		(_state, _ids) = MtgGameFactory.CreateForTesting();
 
-		var firebolt = CardLibrary.GetByName("Firebolt") with
+		var firebolt = TestCardLibrary.GetByName("Firebolt") with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -43,7 +43,7 @@ public class FlashbackTests
 	[Test]
 	public void CastFromGraveyard_FailsIfCardHasNoFlashback()
 	{
-		var boltInGraveyard = CardLibrary.LightningBolt() with
+		var boltInGraveyard = TestCardLibrary.LightningBolt() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,

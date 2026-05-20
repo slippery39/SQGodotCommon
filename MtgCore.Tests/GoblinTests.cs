@@ -22,7 +22,7 @@ public class GoblinTests
 	[Test]
 	public void HasteCreature_CanAttackImmediately_AfterEnteringBattlefield()
 	{
-		var guide = CardLibrary.GoblinGuide() with
+		var guide = TestCardLibrary.GoblinGuide() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -53,7 +53,7 @@ public class GoblinTests
 	[Test]
 	public void PutIntoBattlefield_HasteCreature_NoSummoningSickness()
 	{
-		var guide = CardLibrary.GoblinGuide() with
+		var guide = TestCardLibrary.GoblinGuide() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -75,7 +75,7 @@ public class GoblinTests
 	[Test]
 	public void NonHasteCreature_HasSummoningSickness_AfterPutIntoBattlefield()
 	{
-		var lackey = CardLibrary.GoblinLackey() with
+		var lackey = TestCardLibrary.GoblinLackey() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -101,7 +101,7 @@ public class GoblinTests
 	{
 		var (state, lackey) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.GoblinLackey(),
+			TestCardLibrary.GoblinLackey(),
 			_ids.Player1Id,
 			hasSummoningSickness: false
 		);
@@ -128,7 +128,7 @@ public class GoblinTests
 	{
 		var (stateWithLackey, lackey) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.GoblinLackey(),
+			TestCardLibrary.GoblinLackey(),
 			_ids.Player1Id,
 			hasSummoningSickness: false
 		);
@@ -161,7 +161,7 @@ public class GoblinTests
 	{
 		var (stateWithLackey, lackey) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.GoblinLackey(),
+			TestCardLibrary.GoblinLackey(),
 			_ids.Player1Id,
 			hasSummoningSickness: false
 		);
@@ -195,7 +195,7 @@ public class GoblinTests
 	{
 		var (state, instigator) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.WarrenInstigator(),
+			TestCardLibrary.WarrenInstigator(),
 			_ids.Player1Id,
 			hasSummoningSickness: false
 		);
@@ -224,7 +224,7 @@ public class GoblinTests
 	{
 		var (state, instigator) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.WarrenInstigator(),
+			TestCardLibrary.WarrenInstigator(),
 			_ids.Player1Id,
 			hasSummoningSickness: false
 		);
@@ -257,7 +257,7 @@ public class GoblinTests
 	{
 		var (stateWithInstigator, instigator) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.WarrenInstigator(),
+			TestCardLibrary.WarrenInstigator(),
 			_ids.Player1Id,
 			hasSummoningSickness: false
 		);
@@ -299,7 +299,7 @@ public class GoblinTests
 			.AddAction(
 				new CreateCardAction
 				{
-					CardTemplate = CardLibrary.GoblinToken(),
+					CardTemplate = TestCardLibrary.GoblinToken(),
 					ControllerId = _ids.Player1Id,
 					Count = 3,
 				}
@@ -321,7 +321,7 @@ public class GoblinTests
 			.AddAction(
 				new CreateCardAction
 				{
-					CardTemplate = CardLibrary.GoblinToken(),
+					CardTemplate = TestCardLibrary.GoblinToken(),
 					ControllerId = _ids.Player1Id,
 					Count = 1,
 				}
@@ -339,7 +339,7 @@ public class GoblinTests
 			.AddAction(
 				new CreateCardAction
 				{
-					CardTemplate = CardLibrary.GoblinToken(),
+					CardTemplate = TestCardLibrary.GoblinToken(),
 					ControllerId = _ids.Player1Id,
 					Count = 3,
 				}
@@ -354,7 +354,7 @@ public class GoblinTests
 	[Test]
 	public void SiegeGangCommander_ETB_CreatesThreeGoblinTokens()
 	{
-		var sgc = CardLibrary.SiegeGangCommander() with
+		var sgc = TestCardLibrary.SiegeGangCommander() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -378,7 +378,7 @@ public class GoblinTests
 	[Test]
 	public void SiegeGangCommander_ActivatedAbility_SacrificesGoblinAndDeals2Damage()
 	{
-		var sgc = CardLibrary.SiegeGangCommander() with
+		var sgc = TestCardLibrary.SiegeGangCommander() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -423,7 +423,7 @@ public class GoblinTests
 	[Test]
 	public void Krenko_ActivatedAbility_CreatesTokensEqualToGoblinCount()
 	{
-		var krenko = CardLibrary.KrenkoMobBoss() with
+		var krenko = TestCardLibrary.KrenkoMobBoss() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,

@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -24,13 +24,13 @@ public class ChieftainTests
 	{
 		var (s1, _) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.GoblinChieftain(),
+			TestCardLibrary.GoblinChieftain(),
 			_ids.Player1Id,
 			_ids.GameId
 		);
 		var (s2, lackey) = AddCreatureToBattlefield(
 			s1,
-			CardLibrary.GoblinLackey(),
+			TestCardLibrary.GoblinLackey(),
 			_ids.Player1Id,
 			_ids.GameId
 		);
@@ -48,7 +48,7 @@ public class ChieftainTests
 	{
 		var (s1, chieftain) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.GoblinChieftain(),
+			TestCardLibrary.GoblinChieftain(),
 			_ids.Player1Id,
 			_ids.GameId
 		);
@@ -66,13 +66,13 @@ public class ChieftainTests
 	{
 		var (s1, _) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.GoblinChieftain(),
+			TestCardLibrary.GoblinChieftain(),
 			_ids.Player1Id,
 			_ids.GameId
 		);
 		var (s2, opponentLackey) = AddCreatureToBattlefield(
 			s1,
-			CardLibrary.GoblinLackey(),
+			TestCardLibrary.GoblinLackey(),
 			_ids.Player2Id,
 			_ids.GameId
 		);
@@ -89,13 +89,13 @@ public class ChieftainTests
 	{
 		var (s1, chieftain) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.GoblinChieftain(),
+			TestCardLibrary.GoblinChieftain(),
 			_ids.Player1Id,
 			_ids.GameId
 		);
 		var (s2, lackey) = AddCreatureToBattlefield(
 			s1,
-			CardLibrary.GoblinLackey(),
+			TestCardLibrary.GoblinLackey(),
 			_ids.Player1Id,
 			_ids.GameId
 		);
@@ -121,7 +121,7 @@ public class ChieftainTests
 	{
 		var (s1, _) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.GoblinChieftain(),
+			TestCardLibrary.GoblinChieftain(),
 			_ids.Player1Id,
 			_ids.GameId
 		);
@@ -129,7 +129,7 @@ public class ChieftainTests
 		// Add a Lackey with summoning sickness (as it would ETB normally)
 		var (s2, lackey) = AddCreatureToBattlefield(
 			s1,
-			CardLibrary.GoblinLackey(),
+			TestCardLibrary.GoblinLackey(),
 			_ids.Player1Id,
 			_ids.GameId,
 			hasSummoningSickness: true
@@ -147,13 +147,13 @@ public class ChieftainTests
 	{
 		var (s1, _) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.GoblinChieftain(),
+			TestCardLibrary.GoblinChieftain(),
 			_ids.Player1Id,
 			_ids.GameId
 		);
 		var (s2, lackey) = AddCreatureToBattlefield(
 			s1,
-			CardLibrary.GoblinLackey(),
+			TestCardLibrary.GoblinLackey(),
 			_ids.Player1Id,
 			_ids.GameId,
 			hasSummoningSickness: true
@@ -172,10 +172,10 @@ public class ChieftainTests
 	[Test]
 	public void Chieftain_DoesNotGrantHasteToItself_BeyondIntrinsic()
 	{
-		// Chieftain already has intrinsic haste — confirm its effective haste is still true
+		// Chieftain already has intrinsic haste â€” confirm its effective haste is still true
 		var (s1, chieftain) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.GoblinChieftain(),
+			TestCardLibrary.GoblinChieftain(),
 			_ids.Player1Id,
 			_ids.GameId
 		);
@@ -187,7 +187,7 @@ public class ChieftainTests
 	{
 		var (s1, lackey) = AddCreatureToBattlefield(
 			_state,
-			CardLibrary.GoblinLackey(),
+			TestCardLibrary.GoblinLackey(),
 			_ids.Player1Id,
 			_ids.GameId,
 			hasSummoningSickness: true
@@ -196,7 +196,11 @@ public class ChieftainTests
 		var actions = MtgActionGenerator.GetLegalActions(s1, _ids, _ids.Player1Id);
 		var canAttack = actions.OfType<AttackAction>().Any(a => a.AttackerId == lackey.Id);
 
-		Assert.That(canAttack, Is.False, "No Chieftain — summoning sickness should prevent attack");
+		Assert.That(
+			canAttack,
+			Is.False,
+			"No Chieftain â€” summoning sickness should prevent attack"
+		);
 	}
 
 	// ===== HELPERS =====

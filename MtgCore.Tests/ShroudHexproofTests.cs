@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -20,7 +20,7 @@ public class ShroudHexproofTests
 	[Test]
 	public void Hexproof_BlocksOpponentTargeting()
 	{
-		var tyrant = CardLibrary.GetByName("Carnage Tyrant") with
+		var tyrant = TestCardLibrary.GetByName("Carnage Tyrant") with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -45,7 +45,7 @@ public class ShroudHexproofTests
 	[Test]
 	public void Hexproof_AllowsControllerTargeting()
 	{
-		var tyrant = CardLibrary.GetByName("Carnage Tyrant") with
+		var tyrant = TestCardLibrary.GetByName("Carnage Tyrant") with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -118,7 +118,7 @@ public class ShroudHexproofTests
 	[Test]
 	public void Hexproof_DoesNotAffectGraveyardTargeting()
 	{
-		var tyrant = CardLibrary.GetByName("Carnage Tyrant") with
+		var tyrant = TestCardLibrary.GetByName("Carnage Tyrant") with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -136,7 +136,7 @@ public class ShroudHexproofTests
 		Assert.That(
 			spec.IsSatisfiedBy(card.Id, context),
 			Is.True,
-			"Hexproof/Shroud applies on the battlefield only — Reanimate should still be able to target a Hexproof creature in the graveyard"
+			"Hexproof/Shroud applies on the battlefield only â€” Reanimate should still be able to target a Hexproof creature in the graveyard"
 		);
 	}
 }

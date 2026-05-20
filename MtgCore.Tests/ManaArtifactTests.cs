@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -33,7 +33,7 @@ public class ManaArtifactTests
 	[Test]
 	public void Mox_EntersBattlefield()
 	{
-		var (state, moxId) = CastFromHand(CardLibrary.Mox());
+		var (state, moxId) = CastFromHand(TestCardLibrary.Mox());
 
 		Assert.That(state.GetCardZone(moxId).ZoneType, Is.EqualTo(ZoneType.Battlefield));
 	}
@@ -41,7 +41,7 @@ public class ManaArtifactTests
 	[Test]
 	public void Mox_AddsOneMana()
 	{
-		var (state, moxId) = CastFromHand(CardLibrary.Mox());
+		var (state, moxId) = CastFromHand(TestCardLibrary.Mox());
 		var manaBefore = state.GetPlayer(_ids.Player1Id).CurrentMana;
 
 		var (finalState, _) = state.AddAction(MakeActivate(moxId)).ProcessAllActions();
@@ -52,7 +52,7 @@ public class ManaArtifactTests
 	[Test]
 	public void Mox_CanOnlyActivateOncePerTurn()
 	{
-		var (state, moxId) = CastFromHand(CardLibrary.Mox());
+		var (state, moxId) = CastFromHand(TestCardLibrary.Mox());
 		var (afterFirst, _) = state.AddAction(MakeActivate(moxId)).ProcessAllActions();
 
 		var (_, success) = afterFirst.TryAddAction(MakeActivate(moxId));
@@ -63,7 +63,7 @@ public class ManaArtifactTests
 	[Test]
 	public void Mox_ResetsAfterTurnEnd()
 	{
-		var (state, moxId) = CastFromHand(CardLibrary.Mox());
+		var (state, moxId) = CastFromHand(TestCardLibrary.Mox());
 		var (afterActivation, _) = state.AddAction(MakeActivate(moxId)).ProcessAllActions();
 		var afterTurn = SimulateNextTurn(afterActivation);
 
@@ -75,7 +75,7 @@ public class ManaArtifactTests
 	[Test]
 	public void Mox_ActivationAvailableImmediately_NoSummoningSickness()
 	{
-		var (state, moxId) = CastFromHand(CardLibrary.Mox());
+		var (state, moxId) = CastFromHand(TestCardLibrary.Mox());
 
 		var actions = MtgActionGenerator.GetLegalActions(state, _ids, _ids.Player1Id);
 
@@ -87,7 +87,7 @@ public class ManaArtifactTests
 	[Test]
 	public void SolRing_EntersBattlefield()
 	{
-		var (state, solRingId) = CastFromHand(CardLibrary.SolRing());
+		var (state, solRingId) = CastFromHand(TestCardLibrary.SolRing());
 
 		Assert.That(state.GetCardZone(solRingId).ZoneType, Is.EqualTo(ZoneType.Battlefield));
 	}
@@ -95,7 +95,7 @@ public class ManaArtifactTests
 	[Test]
 	public void SolRing_AddsTwoMana()
 	{
-		var (state, solRingId) = CastFromHand(CardLibrary.SolRing());
+		var (state, solRingId) = CastFromHand(TestCardLibrary.SolRing());
 		var manaBefore = state.GetPlayer(_ids.Player1Id).CurrentMana;
 
 		var (finalState, _) = state.AddAction(MakeActivate(solRingId)).ProcessAllActions();
@@ -106,7 +106,7 @@ public class ManaArtifactTests
 	[Test]
 	public void SolRing_CanOnlyActivateOncePerTurn()
 	{
-		var (state, solRingId) = CastFromHand(CardLibrary.SolRing());
+		var (state, solRingId) = CastFromHand(TestCardLibrary.SolRing());
 		var (afterFirst, _) = state.AddAction(MakeActivate(solRingId)).ProcessAllActions();
 
 		var (_, success) = afterFirst.TryAddAction(MakeActivate(solRingId));
@@ -117,7 +117,7 @@ public class ManaArtifactTests
 	[Test]
 	public void SolRing_ResetsAfterTurnEnd()
 	{
-		var (state, solRingId) = CastFromHand(CardLibrary.SolRing());
+		var (state, solRingId) = CastFromHand(TestCardLibrary.SolRing());
 		var (afterActivation, _) = state.AddAction(MakeActivate(solRingId)).ProcessAllActions();
 		var afterTurn = SimulateNextTurn(afterActivation);
 
@@ -129,7 +129,7 @@ public class ManaArtifactTests
 	[Test]
 	public void SolRing_ActivationAvailableImmediately_NoSummoningSickness()
 	{
-		var (state, solRingId) = CastFromHand(CardLibrary.SolRing());
+		var (state, solRingId) = CastFromHand(TestCardLibrary.SolRing());
 
 		var actions = MtgActionGenerator.GetLegalActions(state, _ids, _ids.Player1Id);
 
@@ -142,7 +142,7 @@ public class ManaArtifactTests
 	[Test]
 	public void SolRing_ManaIsTemporary_DoesNotAffectMaxMana()
 	{
-		var (state, solRingId) = CastFromHand(CardLibrary.SolRing());
+		var (state, solRingId) = CastFromHand(TestCardLibrary.SolRing());
 		var maxManaBefore = state.GetPlayer(_ids.Player1Id).MaxMana;
 
 		var (finalState, _) = state.AddAction(MakeActivate(solRingId)).ProcessAllActions();

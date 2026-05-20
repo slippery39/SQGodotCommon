@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -10,7 +10,7 @@ namespace MtgCore.Tests;
 ///
 /// Bloodghast has a TriggeredAbilityComponent with ActiveInZone = Graveyard.
 /// CheckStateBasedEffectsAction scans both graveyards after every action, firing
-/// abilities with ActiveInZone = Graveyard only from that pass — not from the
+/// abilities with ActiveInZone = Graveyard only from that pass â€” not from the
 /// battlefield pass.
 /// </summary>
 [TestFixture]
@@ -28,7 +28,7 @@ public class BloodghastTests
 	[Test]
 	public void Bloodghast_InGraveyard_ReturnsWhenLandPlayed()
 	{
-		var bloodghast = CardLibrary.GetByName("Bloodghast") with
+		var bloodghast = TestCardLibrary.GetByName("Bloodghast") with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -61,8 +61,8 @@ public class BloodghastTests
 	[Test]
 	public void Bloodghast_OnBattlefield_DoesNotRetriggerWhenLandPlayed()
 	{
-		// Bloodghast is alive on the battlefield — landfall graveyard trigger must not fire
-		var bloodghast = CardLibrary.GetByName("Bloodghast") with
+		// Bloodghast is alive on the battlefield â€” landfall graveyard trigger must not fire
+		var bloodghast = TestCardLibrary.GetByName("Bloodghast") with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -83,7 +83,7 @@ public class BloodghastTests
 		Assert.That(
 			finalBattlefield.Count(c => c.Name == "Bloodghast"),
 			Is.EqualTo(1),
-			"Battlefield Bloodghast should not trigger — ActiveInZone = Graveyard means the battlefield scan skips it"
+			"Battlefield Bloodghast should not trigger â€” ActiveInZone = Graveyard means the battlefield scan skips it"
 		);
 	}
 
@@ -91,7 +91,7 @@ public class BloodghastTests
 	public void Bloodghast_OpponentLandPlay_DoesNotTrigger()
 	{
 		// Only the controller's land plays trigger Bloodghast (IsControlledByYouSpecification filter)
-		var bloodghast = CardLibrary.GetByName("Bloodghast") with
+		var bloodghast = TestCardLibrary.GetByName("Bloodghast") with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -119,7 +119,7 @@ public class BloodghastTests
 	{
 		// Regression: existing battlefield landfall trigger (Steppe Lynx) must still work
 		// after the graveyard scan was added to CheckStateBasedEffectsAction.
-		var lynx = CardLibrary.GetByName("Steppe Lynx") with
+		var lynx = TestCardLibrary.GetByName("Steppe Lynx") with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,

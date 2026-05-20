@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -6,7 +6,7 @@ using NUnit.Framework;
 namespace MtgCore.Tests;
 
 /// <summary>
-/// Tests for PowerToughnessModifier — temporary and permanent P/T modifications.
+/// Tests for PowerToughnessModifier â€” temporary and permanent P/T modifications.
 /// Covers modifier application, stacking, duration, and integration with combat.
 /// </summary>
 [TestFixture]
@@ -112,7 +112,7 @@ public class PowerToughnessModifierTests
 			"Modifier should be active before start of turn"
 		);
 
-		// Run StartTurnAction — should clear UntilEndOfTurn modifiers
+		// Run StartTurnAction â€” should clear UntilEndOfTurn modifiers
 		var battlefieldId = s2.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield);
 		var startTurn = new StartTurnAction
 		{
@@ -204,7 +204,7 @@ public class PowerToughnessModifierTests
 	public void GiantGrowth_IncreasesEffectivePowerAndToughness()
 	{
 		var (s1, creature) = AddCreature(_state, "Bear", 2, 2, _ids.Player1Id);
-		var spell = CardLibrary.GiantGrowth() with
+		var spell = TestCardLibrary.GiantGrowth() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -230,12 +230,12 @@ public class PowerToughnessModifierTests
 	[Test]
 	public void GiantGrowth_AllowsCreatureToSurviveCombatItWouldOtherwiseLose()
 	{
-		// 2/2 Bear vs 3/3 — Bear would normally die
-		// Giant Growth gives Bear +3/+3 making it effectively 5/5 — survives
+		// 2/2 Bear vs 3/3 â€” Bear would normally die
+		// Giant Growth gives Bear +3/+3 making it effectively 5/5 â€” survives
 		var (s1, bear) = AddCreature(_state, "Bear", 2, 2, _ids.Player1Id);
 		var (s2, giant) = AddCreature(s1, "Giant", 3, 3, _ids.Player2Id);
 
-		var spell = CardLibrary.GiantGrowth() with
+		var spell = TestCardLibrary.GiantGrowth() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -266,7 +266,7 @@ public class PowerToughnessModifierTests
 			"Giant Growth should have been applied before attack"
 		);
 
-		// Now attack — Bear (effectively 5/5) vs Giant (3/3)
+		// Now attack â€” Bear (effectively 5/5) vs Giant (3/3)
 		var (finalState, _) = s4.AddAction(
 				new AttackAction
 				{
@@ -280,12 +280,12 @@ public class PowerToughnessModifierTests
 		Assert.That(
 			finalState.GetCardZone(bear.Id).ZoneType,
 			Is.EqualTo(ZoneType.Battlefield),
-			"Bear should survive — effective toughness 5 > 3 damage"
+			"Bear should survive â€” effective toughness 5 > 3 damage"
 		);
 		Assert.That(
 			finalState.GetCardZone(giant.Id).ZoneType,
 			Is.EqualTo(ZoneType.Graveyard),
-			"Giant should die — effective power of Bear (5) > Giant's toughness (3)"
+			"Giant should die â€” effective power of Bear (5) > Giant's toughness (3)"
 		);
 	}
 
@@ -293,7 +293,7 @@ public class PowerToughnessModifierTests
 	public void GiantGrowth_ModifierExpires_AfterStartOfNextTurn()
 	{
 		var (s1, creature) = AddCreature(_state, "Bear", 2, 2, _ids.Player1Id);
-		var spell = CardLibrary.GiantGrowth() with
+		var spell = TestCardLibrary.GiantGrowth() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,

@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Linq;
 using ImmutableGameObjects;
 using MtgCore;
@@ -20,7 +20,7 @@ public class SnapcasterMageTests
 		(_state, _ids) = MtgGameFactory.CreateForTesting();
 
 		// Snapcaster in hand
-		var snapcaster = CardLibrary.GetByName("Snapcaster Mage") with
+		var snapcaster = TestCardLibrary.GetByName("Snapcaster Mage") with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -31,7 +31,7 @@ public class SnapcasterMageTests
 
 		// Firebolt in graveyard, with built-in FlashbackComponent stripped so we
 		// are testing only the Snapcaster grant, not the card's inherent flashback.
-		var firebolt = CardLibrary.GetByName("Firebolt") with
+		var firebolt = TestCardLibrary.GetByName("Firebolt") with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -85,7 +85,7 @@ public class SnapcasterMageTests
 		// Move Firebolt out so the graveyard is empty
 		var stateNoGraveyard = _state.MoveObject(_fireboltId, _ids.Player1HandId);
 
-		// Should still succeed — no graveyard card to target is fine
+		// Should still succeed â€” no graveyard card to target is fine
 		Assert.DoesNotThrow(
 			() =>
 				stateNoGraveyard
@@ -104,7 +104,7 @@ public class SnapcasterMageTests
 	public void CastingSnapcaster_DoesNotGrantFlashbackToCreature()
 	{
 		// Put a creature in the graveyard alongside the spell
-		var bear = CardLibrary.GetByName("Grizzly Bears") with
+		var bear = TestCardLibrary.GetByName("Grizzly Bears") with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -132,7 +132,7 @@ public class SnapcasterMageTests
 		// Cast Snapcaster to grant flashback
 		var stateAfterSnap = CastSnapcaster();
 
-		// Firebolt now has flashback — try to cast it from graveyard
+		// Firebolt now has flashback â€” try to cast it from graveyard
 		var (_, success) = stateAfterSnap.TryAddAction(
 			new CastFromGraveyardAction
 			{

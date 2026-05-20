@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -17,7 +17,7 @@ public class LightningHelixTests
 	{
 		(_state, _ids) = MtgGameFactory.CreateForTesting();
 
-		var helix = CardLibrary.LightningHelix() with
+		var helix = TestCardLibrary.LightningHelix() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,

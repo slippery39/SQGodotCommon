@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -40,7 +40,7 @@ public class DragonstormMechanicsTests
 	[Test]
 	public void LotusBoom_AddsThreeMana()
 	{
-		var card = CardLibrary.LotusBoom() with
+		var card = TestCardLibrary.LotusBoom() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -56,7 +56,7 @@ public class DragonstormMechanicsTests
 	[Test]
 	public void LotusBoom_DoesNotChangeMaxMana()
 	{
-		var card = CardLibrary.LotusBoom() with
+		var card = TestCardLibrary.LotusBoom() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -136,7 +136,7 @@ public class DragonstormMechanicsTests
 	[Test]
 	public void SelectAndDeploy_PutsDragonOnBattlefield()
 	{
-		var dragon = CardLibrary.HuntedDragon() with
+		var dragon = TestCardLibrary.HuntedDragon() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -180,7 +180,7 @@ public class DragonstormMechanicsTests
 	[Test]
 	public void SelectAndDeploy_RemovesDragonFromLibrary()
 	{
-		var dragon = CardLibrary.HuntedDragon() with
+		var dragon = TestCardLibrary.HuntedDragon() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -217,7 +217,7 @@ public class DragonstormMechanicsTests
 		Assert.That(finalState.GetCardsInZone(_ids.Player1LibraryId).Count(), Is.EqualTo(0));
 	}
 
-	// ===== Dragonstorm — storm count integration =====
+	// ===== Dragonstorm â€” storm count integration =====
 
 	[Test]
 	public void Dragonstorm_WithTwoPriorSpells_DeploysThreeDragons()
@@ -231,7 +231,7 @@ public class DragonstormMechanicsTests
 
 		for (var i = 0; i < 5; i++)
 		{
-			var dragon = CardLibrary.HuntedDragon() with
+			var dragon = TestCardLibrary.HuntedDragon() with
 			{
 				OwnerId = _ids.Player1Id,
 				ControllerId = _ids.Player1Id,
@@ -239,7 +239,7 @@ public class DragonstormMechanicsTests
 			(s, _) = s.AddObject(dragon, parentId: _ids.Player1LibraryId);
 		}
 
-		var ds = CardLibrary.Dragonstorm() with
+		var ds = TestCardLibrary.Dragonstorm() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -260,14 +260,14 @@ public class DragonstormMechanicsTests
 	{
 		var s = _state;
 
-		var dragon = CardLibrary.HuntedDragon() with
+		var dragon = TestCardLibrary.HuntedDragon() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
 		};
 		(s, _) = s.AddObject(dragon, parentId: _ids.Player1LibraryId);
 
-		var ds = CardLibrary.Dragonstorm() with
+		var ds = TestCardLibrary.Dragonstorm() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -286,11 +286,11 @@ public class DragonstormMechanicsTests
 	// ===== Bogardan Hellkite ETB =====
 
 	[Test]
-	public void BogardanHellkite_WhenCast_DealsFiveDamageToOpponent()
+	public void BogardanHellkite_WhenCast_DealsSevenDamageToOpponent()
 	{
 		var initialLife = _state.GetPlayer(_ids.Player2Id).Life;
 
-		var card = CardLibrary.BogardanHellkite() with
+		var card = TestCardLibrary.BogardanHellkite() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -300,13 +300,13 @@ public class DragonstormMechanicsTests
 		var cast = new CastCreatureAction { CardId = added.Id, CastingPlayerId = _ids.Player1Id };
 		var (finalState, _) = s.AddAction(cast).ProcessAllActions();
 
-		Assert.That(finalState.GetPlayer(_ids.Player2Id).Life, Is.EqualTo(initialLife - 5));
+		Assert.That(finalState.GetPlayer(_ids.Player2Id).Life, Is.EqualTo(initialLife - 7));
 	}
 
 	[Test]
 	public void BogardanHellkite_WhenCast_LandsOnBattlefield()
 	{
-		var card = CardLibrary.BogardanHellkite() with
+		var card = TestCardLibrary.BogardanHellkite() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
@@ -329,7 +329,7 @@ public class DragonstormMechanicsTests
 			TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
 		};
 
-	// Test-local cards with fixed mana values — independent of CardLibrary changes.
+	// Test-local cards with fixed mana values â€” independent of CardLibrary changes.
 
 	// Seething Song: cost 3, adds 5 mana (net +2).
 	private static Card MakeSeethingSong() =>

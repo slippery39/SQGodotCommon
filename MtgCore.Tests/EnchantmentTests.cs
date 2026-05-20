@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -31,7 +31,7 @@ public class EnchantmentTests
 		(_state, _ids) = MtgGameFactory.CreateForTesting();
 	}
 
-	// ===== GLORIOUS ANTHEM — STATIC BOOST =====
+	// ===== GLORIOUS ANTHEM â€” STATIC BOOST =====
 
 	[Test]
 	public void GloriousAnthem_BoostsCreatureAlreadyOnBattlefield()
@@ -116,7 +116,7 @@ public class EnchantmentTests
 		Assert.That(s3.GetEffectiveToughness(creatureId), Is.EqualTo(3));
 	}
 
-	// ===== PHYREXIAN ARENA — TRIGGERED DRAW/LOSS =====
+	// ===== PHYREXIAN ARENA â€” TRIGGERED DRAW/LOSS =====
 
 	[Test]
 	public void PhyrexianArena_DrawsOneCardOnUpkeep()
@@ -208,7 +208,7 @@ public class EnchantmentTests
 
 	private (GameState, int anthemId) CastAnthemReturnId(GameState state, int playerId)
 	{
-		var card = CardLibrary.GloriousAnthem() with
+		var card = TestCardLibrary.GloriousAnthem() with
 		{
 			OwnerId = playerId,
 			ControllerId = playerId,
@@ -225,7 +225,11 @@ public class EnchantmentTests
 
 	private GameState AddArenaToBattlefield(GameState state, int ownerId)
 	{
-		var card = CardLibrary.PhyrexianArena() with { OwnerId = ownerId, ControllerId = ownerId };
+		var card = TestCardLibrary.PhyrexianArena() with
+		{
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+		};
 		var battlefieldId = state.GetPlayerZoneId(ownerId, ZoneType.Battlefield);
 		var (newState, _) = state.AddObject(card, parentId: battlefieldId);
 		return newState;
