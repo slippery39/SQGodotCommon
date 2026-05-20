@@ -244,6 +244,96 @@ public class ChoiceLookaheadTests
 		);
 	}
 
+	// ===== PATH TO EXILE =====
+
+	/// <summary>
+	/// Faithless Looting draws 3 then discards 3. When a 10/10 threatens lethal next turn
+	/// and Path to Exile (cost 1) is in hand with mana available, the AI must keep Path to
+	/// Exile and discard something else — LookaheadScore sees casting it exiles the threat.
+	/// </summary>
+	[Test]
+	public void FaithlessLooting_KeepsPathToExile_WhenDrawnByLooting()
+	{
+		// 2 mana: 1 for Faithless Looting, 1 left for Path to Exile
+		var p1 = _state.GetPlayer(_ids.Player1Id);
+		_state = _state.UpdateObject(_ids.Player1Id, p1 with { MaxMana = 2, CurrentMana = 2 });
+
+		// P2 battlefield: 10/10 — lethal threat, clearable by Path to Exile
+		var bigThreat = new Card
+		{
+			Name = "HuntedDragon",
+			OwnerId = _ids.Player2Id,
+			ControllerId = _ids.Player2Id,
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 10, Toughness = 10 }
+			),
+		};
+		(_state, _) = _state.AddObject(bigThreat, parentId: _ids.Player2BattlefieldId);
+
+		// P1 hand: only Faithless Looting + one junk — no PtE or AR in hand yet.
+		// AR and PtE are in the library so FL draws them; this forces FL as the first action
+		// and isolates the discard choice: keep PtE (exile 10/10) vs keep AR (draw 3 from empty library).
+		var faithlessLooting = CardLibrary.GetByName("Faithless Looting") with
+		{
+			OwnerId = _ids.Player1Id,
+			ControllerId = _ids.Player1Id,
+		};
+		(_state, var addedFL) = _state.AddObject(faithlessLooting, parentId: _ids.Player1HandId);
+		(_state, _) = _state.AddObject(
+			MakeJunk(_ids.Player1Id, "HandJunk"),
+			parentId: _ids.Player1HandId
+		);
+
+		// Library top 3 drawn by FL: AR + Path to Exile + junk
+		// After drawing, discard choice is [HandJunk, AR, PtE, LibJunk] — keep 1.
+		// Keeping PtE → cast it → exile 10/10 → score +23
+		// Keeping AR  → cast it → draw 0 (library now empty) → score ≈ baseline
+		var ancestralRecall = CardLibrary.AncestralRecall() with
+		{
+			OwnerId = _ids.Player1Id,
+			ControllerId = _ids.Player1Id,
+		};
+		var pathToExile = CardLibrary.PathToExile() with
+		{
+			OwnerId = _ids.Player1Id,
+			ControllerId = _ids.Player1Id,
+		};
+		(_state, _) = _state.AddObject(ancestralRecall, parentId: _ids.Player1LibraryId);
+		(_state, var addedPtE) = _state.AddObject(pathToExile, parentId: _ids.Player1LibraryId);
+		(_state, _) = _state.AddObject(
+			MakeJunk(_ids.Player1Id, "LibJunk"),
+			parentId: _ids.Player1LibraryId
+		);
+
+		// Step 1: FL is the only castable spell — AI must cast it
+		var action1 = _ai.SelectAction(_state, _ids, _ids.Player1Id);
+		Assert.That(action1, Is.InstanceOf<CastSpellAction>());
+		Assert.That(((CastSpellAction)action1).CardId, Is.EqualTo(addedFL.Id));
+		_state = Execute(_state, action1);
+
+		// Discard choice: [HandJunk, AR, PtE, LibJunk] — keep 1 (discard 3)
+		Assert.That(_state.IsWaitingForChoice, Is.True);
+		var choice = _state.GetPendingChoice()!;
+		var discardIds = _ai.ResolveChoice(_state, choice, _ids.Player1Id);
+
+		Assert.That(
+			discardIds,
+			Does.Not.Contain(addedPtE.Id),
+			"AI should keep Path to Exile — removing the 10/10 (score +23) beats any alternative"
+		);
+
+		// After keeping PtE, AI should cast it to exile the 10/10
+		(_state, _) = _state.ResolveChoice(discardIds);
+		var action2 = _ai.SelectAction(_state, _ids, _ids.Player1Id);
+		Assert.That(action2, Is.InstanceOf<CastSpellAction>());
+		Assert.That(
+			((CastSpellAction)action2).CardId,
+			Is.EqualTo(addedPtE.Id),
+			"AI should immediately cast Path to Exile to remove the lethal threat"
+		);
+	}
+
 	// ===== HELPERS =====
 
 	private static Card MakeJunk(int ownerId, string name) =>
