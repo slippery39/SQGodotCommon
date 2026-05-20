@@ -117,14 +117,30 @@ public class BeamSearchAiStrategy : IAiStrategy
 		if (choice.Options.IsEmpty)
 			return ImmutableList<int>.Empty;
 
-		// Multi-select: evaluating all combinations is too expensive; pick randomly
+		// Multi-select: enumerate all combinations and pick the one that scores best
 		if (choice.MinChoices > 1)
 		{
-			return choice
-				.Options.OrderBy(_ => _rng.Next())
-				.Take(choice.MinChoices)
-				.Select(o => o.Id)
-				.ToImmutableList();
+			var bestMultiScore = float.MinValue;
+			ImmutableList<int>? bestSelection = null;
+
+			foreach (var combo in GetCombinations(choice.Options, choice.MinChoices))
+			{
+				var selectedIds = combo.Select(o => o.Id).ToImmutableList();
+				var (resultState, _) = state.ResolveChoice(selectedIds);
+				var score = LookaheadScore(resultState, playerId);
+
+				if (score > bestMultiScore)
+				{
+					bestMultiScore = score;
+					bestSelection = selectedIds;
+				}
+
+				if (bestMultiScore >= StateEvaluator.WinScore)
+					break;
+			}
+
+			return bestSelection
+				?? choice.Options.Take(choice.MinChoices).Select(o => o.Id).ToImmutableList();
 		}
 
 		var bestScore = float.MinValue;
@@ -133,7 +149,7 @@ public class BeamSearchAiStrategy : IAiStrategy
 		foreach (var option in choice.Options)
 		{
 			var (resultState, _) = state.ResolveChoice(ImmutableList.Create(option.Id));
-			var score = StateEvaluator.Evaluate(resultState, _ids, playerId);
+			var score = LookaheadScore(resultState, playerId);
 
 			if (score > bestScore)
 			{
@@ -229,6 +245,100 @@ public class BeamSearchAiStrategy : IAiStrategy
 
 	private static BeamNode? FindWinner(List<BeamNode> beam) =>
 		beam.FirstOrDefault(n => n.ConcreteScore >= StateEvaluator.WinScore);
+
+	/// <summary>
+	/// Scores a state by looking one ply ahead: tries every legal action from the given
+	/// state, resolves any resulting choices greedily (immediate scoring, no further
+	/// recursion), and returns the best reachable score.
+	///
+	/// Used inside ResolveChoice so the AI can see the downstream value of its choices —
+	/// e.g. discarding Bloodghast then playing a land, or keeping Reanimate to cast it.
+	/// </summary>
+	private float LookaheadScore(GameState state, int playerId)
+	{
+		var game = state.TryGetGame();
+		if (game == null || game.ActivePlayerId != playerId)
+			return StateEvaluator.Evaluate(state, _ids, playerId);
+
+		// Attacks and end-turn never depend on which card was just chosen — exclude them so
+		// we don't pay O(attackers × targets) cost on every choice option or combination.
+		var actions = MtgActionGenerator
+			.GetLegalActions(state, _ids, playerId)
+			.Where(a => a is not AttackAction and not EndTurnAction)
+			.ToList();
+		var best = StateEvaluator.Evaluate(state, _ids, playerId);
+
+		foreach (var action in actions)
+		{
+			var nextState = ExecuteAction(state, action);
+
+			// Greedily resolve any choices created by this action (e.g. Reanimate's
+			// target picker) using plain StateEvaluator — no further recursion.
+			while (nextState.IsWaitingForChoice)
+			{
+				var pending = nextState.GetPendingChoice()!;
+				var greedyIds = GreedyResolveChoice(nextState, pending, playerId);
+				(nextState, _) = nextState.ResolveChoice(greedyIds);
+			}
+
+			var score = StateEvaluator.Evaluate(nextState, _ids, playerId);
+			if (score > best)
+				best = score;
+
+			if (best >= StateEvaluator.WinScore)
+				break;
+		}
+
+		return best;
+	}
+
+	/// <summary>
+	/// Resolves a choice using immediate StateEvaluator scoring only — no lookahead.
+	/// Used by LookaheadScore to handle nested choices without further recursion.
+	/// </summary>
+	private ImmutableList<int> GreedyResolveChoice(
+		GameState state,
+		ChoiceAction choice,
+		int playerId
+	)
+	{
+		if (choice.Options.IsEmpty)
+			return ImmutableList<int>.Empty;
+
+		if (choice.MinChoices > 1)
+			return choice.Options.Take(choice.MinChoices).Select(o => o.Id).ToImmutableList();
+
+		var bestScore = float.MinValue;
+		var bestOption = choice.Options[0];
+
+		foreach (var option in choice.Options)
+		{
+			var (resultState, _) = state.ResolveChoice(ImmutableList.Create(option.Id));
+			var score = StateEvaluator.Evaluate(resultState, _ids, playerId);
+			if (score > bestScore)
+			{
+				bestScore = score;
+				bestOption = option;
+			}
+		}
+
+		return ImmutableList.Create(bestOption.Id);
+	}
+
+	private static IEnumerable<IEnumerable<ChoiceOption>> GetCombinations(
+		ImmutableList<ChoiceOption> options,
+		int count
+	)
+	{
+		if (count == 0)
+		{
+			yield return [];
+			yield break;
+		}
+		for (var i = 0; i <= options.Count - count; i++)
+			foreach (var rest in GetCombinations(options.RemoveRange(0, i + 1), count - 1))
+				yield return rest.Prepend(options[i]);
+	}
 
 	private static GameState ExecuteAction(GameState state, GameAction action)
 	{
