@@ -65,18 +65,20 @@ public class BeamSearchAiStrategy : IAiStrategy
 
 		// Always play a land if available — permanent mana is the highest-priority resource.
 		// Edge cases (landfall combos, hand-size manipulation) are rare enough to ignore here.
-		var landAction = actions.OfType<PlayLandAction>().FirstOrDefault();
-		if (landAction != null)
-			return landAction;
+		// var landAction = actions.OfType<PlayLandAction>().FirstOrDefault();
+		// if (landAction != null)
+		// 	return landAction;
 
 		// Level 0: execute each root action and score the resulting state
-		var beam = new List<BeamNode>(actions.Count);
-		foreach (var action in actions)
-		{
-			var resultState = ExecuteAction(state, action);
-			var score = StateEvaluator.Evaluate(resultState, _ids, playerId);
-			beam.Add(new BeamNode(resultState, action, score));
-		}
+		var beam = actions
+			.AsParallel()
+			.Select(action =>
+			{
+				var resultState = ExecuteAction(state, action);
+				var score = StateEvaluator.Evaluate(resultState, _ids, playerId);
+				return new BeamNode(resultState, action, score);
+			})
+			.ToList();
 
 		var winner = FindWinner(beam);
 		if (winner != null)
@@ -87,9 +89,9 @@ public class BeamSearchAiStrategy : IAiStrategy
 		// Levels 1..maxDepth-1: expand survivors one level at a time
 		for (var depth = 1; depth < _maxDepth; depth++)
 		{
-			var nextBeam = new List<BeamNode>();
-			foreach (var node in beam)
-				nextBeam.AddRange(ExpandNode(node, playerId));
+			var nextBeam = beam.AsParallel()
+				.SelectMany(node => ExpandNode(node, playerId))
+				.ToList();
 
 			if (nextBeam.Count == 0)
 				break;

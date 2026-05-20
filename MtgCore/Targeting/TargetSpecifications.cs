@@ -56,11 +56,19 @@ public record IsCreatureSpecification : TargetSpecification
 		if (zone.ZoneType != ZoneType.Battlefield)
 			return false;
 
-		var stats = context.GameState.GetEffectiveStats(candidateId);
-		if (stats.HasShroud)
+		var creature = card.GetComponent<CreatureComponent>()!;
+		if (creature.HasShroud)
 			return false;
-		if (stats.HasHexproof && card.ControllerId != context.CastingPlayerId)
+		if (creature.HasHexproof && card.ControllerId != context.CastingPlayerId)
 			return false;
+
+		foreach (var kw in card.GetComponents<AppliedKeywordComponent>())
+		{
+			if (kw.GrantsShroud)
+				return false;
+			if (kw.GrantsHexproof && card.ControllerId != context.CastingPlayerId)
+				return false;
+		}
 
 		return true;
 	}
