@@ -20,10 +20,10 @@ namespace MtgSimulator;
 /// </summary>
 public class GameRunner
 {
-	private const long MaxGameTimeMs = 10_000;
+	private const long MaxGameTimeMs = 20_000;
 	private const int MaxTurns = 100;
-	private const int ActionWarningThreshold = 50;
-	private const int ActionLimitThreshold = 100;
+	private const int ActionWarningThreshold = 100;
+	private const int ActionLimitThreshold = 200;
 
 	private readonly IAiStrategy _player1Strategy;
 	private readonly IAiStrategy _player2Strategy;
