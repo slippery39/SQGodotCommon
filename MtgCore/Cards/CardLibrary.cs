@@ -99,14 +99,14 @@ public static class CardLibrary
 									Steps = ImmutableList.Create<GameAction>(
 										new DrawCardsAction
 										{
-											Amount = 3,
+											Amount = 2,
 											TargetContextKey = ContextKeys.CastingPlayerId,
 										},
 										new SelectCardsFromHandAction
 										{
 											Prompt = "Choose 2 cards to discard",
-											MinChoices = 3,
-											MaxChoices = 3,
+											MinChoices = 2,
+											MaxChoices = 2,
 											OutputKey = ContextKeys.SelectedCardIds,
 										},
 										new DiscardCardsAction
@@ -118,7 +118,7 @@ public static class CardLibrary
 							}
 						),
 					},
-					new FlashbackComponent() { FlashbackManaCost = 1 }
+					new FlashbackComponent() { FlashbackManaCost = 3 }
 				),
 			},
 			new()
@@ -240,7 +240,7 @@ public static class CardLibrary
 				.Build(),
 			CardFactory.Spell("Doom Blade", manaCost: 2).WithDestroy().Build(),
 			CardFactory
-				.Spell("Wrath of God", manaCost: 3)
+				.Spell("Wrath of God", manaCost: 4)
 				.WithDestroy()
 				.WithTarget(AllValid().Creatures())
 				.Build(),
@@ -300,7 +300,7 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Phyrexian Arena",
-				ManaCost = 3,
+				ManaCost = 2,
 				Subtypes = ImmutableList.Create("Enchantment"),
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
@@ -345,7 +345,7 @@ public static class CardLibrary
 					new ActivatedAbilityComponent
 					{
 						Name = "Equip",
-						ManaCost = 1,
+						ManaCost = 0,
 						Effect = new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.SingleTarget(
@@ -365,21 +365,21 @@ public static class CardLibrary
 				),
 			},
 			CardFactory
-				.Creature("Prodigal Sorcerer", manaCost: 3, power: 1, toughness: 1)
-				.WithActivatedAbility("Ping", manaCost: 1, effect: eb => eb.WithDamage(1))
+				.Creature("Prodigal Sorcerer", manaCost: 2, power: 1, toughness: 1)
+				.WithActivatedAbility("Ping", manaCost: 0, effect: eb => eb.WithDamage(1))
 				.Build(),
 			CardFactory
 				.Creature("Throne of Bone", manaCost: 1, power: 1, toughness: 1)
-				.WithActivatedAbility("Gain Life", manaCost: 1, effect: eb => eb.WithLifeGain(2))
-				.WithActivatedAbility("Draw", manaCost: 2, effect: eb => eb.WithDraw(1))
+				.WithActivatedAbility("Gain Life", manaCost: 0, effect: eb => eb.WithLifeGain(2))
+				.WithActivatedAbility("Draw", manaCost: 1, effect: eb => eb.WithDraw(1))
 				.Build(),
 			CardFactory
 				.Spell("Giant Growth", manaCost: 1)
-				.WithBoost(power: 3, toughness: 3)
+				.WithBoost(power: 4, toughness: 4)
 				.Build(),
 			CardFactory
 				.Spell("Unholy Strength", manaCost: 1)
-				.WithBoost(power: 2, toughness: 1, ModifierDuration.Permanent)
+				.WithBoost(power: 3, toughness: 2, ModifierDuration.Permanent)
 				.Build(),
 			// ===== GOBLINS DECK CARDS =====
 			CardFactory
@@ -501,7 +501,7 @@ public static class CardLibrary
 				Subtypes = ImmutableList.Create(GoblinSubtype, "Warrior"),
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
-					new CreatureComponent { Power = 1, Toughness = 3 },
+					new CreatureComponent { Power = 3, Toughness = 3 },
 					new ActivatedAbilityComponent
 					{
 						Name = "Create Tokens",
@@ -537,7 +537,7 @@ public static class CardLibrary
 				.Build(),
 			// ===== ZOO DECK CARDS =====
 			CardFactory
-				.Creature("Wild Nacatl", manaCost: 1, power: 2, toughness: 2)
+				.Creature("Wild Nacatl", manaCost: 1, power: 3, toughness: 3)
 				.WithSubtype("Cat")
 				.WithSubtype("Warrior")
 				.Build(),
@@ -600,7 +600,7 @@ public static class CardLibrary
 				Subtypes = ImmutableList.Create("Spirit"),
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
-					new CreatureComponent { Power = 2, Toughness = 2 },
+					new CreatureComponent { Power = 2, Toughness = 4 },
 					new TriggeredAbilityComponent
 					{
 						Name = "Geist Attack Trigger",
@@ -664,7 +664,7 @@ public static class CardLibrary
 				.Build(),
 			CardFactory.Creature("Hill Giant", manaCost: 3, power: 3, toughness: 4).Build(),
 			CardFactory
-				.Creature("Snapcaster Mage", manaCost: 2, power: 2, toughness: 1)
+				.Creature("Snapcaster Mage", manaCost: 1, power: 2, toughness: 1)
 				.WithSubtype("Wizard")
 				.WithEtbTrigger("ETB Flashback", e => e.WithGiveFlashback())
 				.Build(),
@@ -692,7 +692,7 @@ public static class CardLibrary
 				Subtypes = ImmutableList.Create("Human", "Wizard"),
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
-					new CreatureComponent { Power = 1, Toughness = 1 },
+					new CreatureComponent { Power = 1, Toughness = 3 },
 					new TriggeredAbilityComponent
 					{
 						Name = "Delver Transform",
@@ -718,8 +718,8 @@ public static class CardLibrary
 							new PermanentComponent(),
 							new CreatureComponent
 							{
-								Power = 3,
-								Toughness = 2,
+								Power = 4,
+								Toughness = 3,
 								HasFlying = true,
 							}
 						),
@@ -780,7 +780,7 @@ public static class CardLibrary
 					}
 				),
 			},
-			CardFactory.Spell("Lotus Bloom", manaCost: 0).WithAddMana(3).Build(),
+			CardFactory.Spell("Lotus Bloom", manaCost: 0).WithAddMana(2).Build(),
 			new()
 			{
 				Name = "Rite of Flame",
@@ -804,7 +804,7 @@ public static class CardLibrary
 										},
 										new AddTemporaryManaAction
 										{
-											Amount = 3,
+											Amount = 2,
 											BonusAmountContextKey = "rite_count",
 											TargetContextKey = ContextKeys.CastingPlayerId,
 										}
@@ -815,29 +815,29 @@ public static class CardLibrary
 					}
 				),
 			},
-			CardFactory.Spell("Seething Song", manaCost: 3).WithAddMana(6).Build(),
+			CardFactory.Spell("Seething Song", manaCost: 3).WithAddMana(5).Build(),
 			CardFactory
-				.Creature("Hunted Dragon", manaCost: 10, power: 10, toughness: 10)
+				.Creature("Hunted Dragon", manaCost: 7, power: 7, toughness: 7)
 				.WithSubtype(DragonSubtype)
 				.WithSubtype("Lizard")
 				.WithFlying()
 				.WithHaste()
 				.Build(),
 			CardFactory
-				.Creature("Bogardan Hellkite", manaCost: 8, power: 7, toughness: 7)
+				.Creature("Bogardan Hellkite", manaCost: 8, power: 5, toughness: 5)
 				.WithSubtype(DragonSubtype)
 				.WithFlying()
 				.WithTriggeredAbility(
 					"ETB Damage",
 					TriggerConditions.OnSelfEntersBattlefield(),
 					effect: eb =>
-						eb.WithDamage(7).WithTarget(Random().OpponentOrOpponentCreatures())
+						eb.WithDamage(5).WithTarget(Random().OpponentOrOpponentCreatures())
 				)
 				.Build(),
 			new()
 			{
 				Name = "Dragonstorm",
-				ManaCost = 7,
+				ManaCost = 8,
 				Components = ImmutableList.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -868,15 +868,15 @@ public static class CardLibrary
 			},
 			// ===== TRADITIONAL STORM DECK CARDS =====
 			CardFactory
-				.Spell("Tendrils of Agony", manaCost: 4)
+				.Spell("Tendrils of Agony", manaCost: 5)
 				.WithStorm()
 				.WithLoseLife(2)
 				.WithTarget(Single().PlayersOrCreatures())
 				.WithLifeGain(2)
 				.Build(),
 			CardFactory
-				.Spell("Past in Flames", manaCost: 4)
-				.WithFlashback(5)
+				.Spell("Past in Flames", manaCost: 6)
+				.WithFlashback(6)
 				.WithAction(new GiveFlashbackAction(), AllValid().InstantOrSorceryInYourGraveyard())
 				.Build(),
 			// ===== LAND-ADJACENT CARDS =====
@@ -1001,8 +1001,24 @@ public static class CardLibrary
 							TargetingStrategy = TargetingStrategy.NoTarget(),
 							ActionTemplate = new AddModifierAction
 							{
-								PowerBonus = 2,
-								ToughnessBonus = 2,
+								PowerBonus = 1,
+								ToughnessBonus = 1,
+								Duration = ModifierDuration.Permanent,
+								TargetContextKey = ContextKeys.SourceCardId,
+							},
+						},
+					},
+					new TriggeredAbilityComponent
+					{
+						Name = "Landfall",
+						Condition = TriggerConditions.OnLandfall(),
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new AddModifierAction
+							{
+								PowerBonus = 1,
+								ToughnessBonus = 1,
 								Duration = ModifierDuration.UntilEndOfTurn,
 								TargetContextKey = ContextKeys.SourceCardId,
 							},
@@ -1144,7 +1160,7 @@ public static class CardLibrary
 			},
 			// ===== REANIMATOR CARDS =====
 			CardFactory
-				.Spell("Reanimate", manaCost: 1)
+				.Spell("Reanimate", manaCost: 3)
 				.WithAction(new PutIntoBattlefieldAction(), Single().CreatureInYourGraveyard())
 				.Build(),
 			new()
@@ -1153,7 +1169,7 @@ public static class CardLibrary
 				ManaCost = 2,
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
-					new CreatureComponent { Power = 2, Toughness = 1 },
+					new CreatureComponent { Power = 1, Toughness = 1 },
 					new TriggeredAbilityComponent
 					{
 						Name = "Landfall",
@@ -1182,6 +1198,7 @@ public static class CardLibrary
 						Toughness = 10,
 						HasTrample = true,
 						HasHexproof = true,
+						HasTaunt = true,
 					}
 				),
 			},

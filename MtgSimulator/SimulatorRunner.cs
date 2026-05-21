@@ -22,7 +22,7 @@ public class SimulatorRunner
 		int gameCount,
 		int aiDepth = 3,
 		int? seed = null,
-		AiStrategyType strategyType = AiStrategyType.BeamSearch
+		AiStrategyType strategyType = AiStrategyType.MultiTurnBeamSearch
 	)
 	{
 		_gameCount = gameCount;
