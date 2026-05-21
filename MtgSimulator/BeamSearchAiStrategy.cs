@@ -31,17 +31,25 @@ public class BeamSearchAiStrategy : IAiStrategy
 	private readonly Random _rng;
 	private readonly int _concreteSlots;
 	private readonly IReadOnlyList<IPotentialEvaluator> _potentialEvaluators;
+	private readonly bool _captureDecisions;
 
 	// Carries a game state forward through the beam, together with the root action
 	// that started this path (so SelectAction knows which first move to return).
 	private record BeamNode(GameState State, GameAction RootAction, float ConcreteScore);
+
+	/// <summary>
+	/// When captureDecisions is true, populated after each SelectAction call with the
+	/// chosen action, its score, and the top alternatives. Null when captureDecisions is false.
+	/// </summary>
+	public AiDecision? LastDecision { get; private set; }
 
 	public BeamSearchAiStrategy(
 		MtgGameIds ids,
 		int maxDepth = 3,
 		int concreteSlots = 10,
 		IReadOnlyList<IPotentialEvaluator>? potentialEvaluators = null,
-		Random? rng = null
+		Random? rng = null,
+		bool captureDecisions = false
 	)
 	{
 		_ids = ids;
@@ -49,6 +57,7 @@ public class BeamSearchAiStrategy : IAiStrategy
 		_concreteSlots = concreteSlots;
 		_potentialEvaluators = potentialEvaluators ?? [new FastManaPotentialEvaluator()];
 		_rng = rng ?? new Random();
+		_captureDecisions = captureDecisions;
 	}
 
 	public GameAction SelectAction(GameState state, MtgGameIds ids, int playerId)
@@ -61,7 +70,14 @@ public class BeamSearchAiStrategy : IAiStrategy
 			);
 
 		if (actions.Count == 1)
+		{
+			if (_captureDecisions)
+			{
+				var desc = ActionDescriber.Describe(actions[0], state);
+				LastDecision = new AiDecision(desc, 0f, [new AiActionCandidate(desc, 0f, true)]);
+			}
 			return actions[0];
+		}
 
 		// Always play a land if available — permanent mana is the highest-priority resource.
 		// Edge cases (landfall combos, hand-size manipulation) are rare enough to ignore here.
@@ -80,9 +96,23 @@ public class BeamSearchAiStrategy : IAiStrategy
 			})
 			.ToList();
 
+		// Track best reachable score per root action across all beam levels.
+		// Only allocated when captureDecisions is true — zero overhead otherwise.
+		Dictionary<GameAction, float>? rootScores = null;
+		if (_captureDecisions)
+		{
+			rootScores = new Dictionary<GameAction, float>(ReferenceEqualityComparer.Instance);
+			foreach (var n in beam)
+				rootScores[n.RootAction] = n.ConcreteScore;
+		}
+
 		var winner = FindWinner(beam);
 		if (winner != null)
+		{
+			if (_captureDecisions)
+				SetLastDecision(winner.RootAction, rootScores!, state);
 			return winner.RootAction;
+		}
 
 		beam = PruneBeam(beam, playerId);
 
@@ -96,12 +126,22 @@ public class BeamSearchAiStrategy : IAiStrategy
 			if (nextBeam.Count == 0)
 				break;
 
+			if (_captureDecisions)
+				UpdateRootScores(rootScores!, nextBeam);
+
 			winner = FindWinner(nextBeam);
 			if (winner != null)
+			{
+				if (_captureDecisions)
+					SetLastDecision(winner.RootAction, rootScores!, state);
 				return winner.RootAction;
+			}
 
 			beam = PruneBeam(nextBeam, playerId);
 		}
+
+		if (_captureDecisions)
+			UpdateRootScores(rootScores!, beam);
 
 		// Return the root action of the highest-scoring leaf.
 		// Prefer EndTurn as a tiebreaker so neutral attacks or pointless spells
@@ -109,9 +149,15 @@ public class BeamSearchAiStrategy : IAiStrategy
 		var bestScore = beam.Max(n => n.ConcreteScore);
 		var bestNodes = beam.Where(n => n.ConcreteScore == bestScore).ToList();
 		var endTurnNode = bestNodes.FirstOrDefault(n => n.RootAction is EndTurnAction);
+		GameAction chosen;
 		if (endTurnNode != null)
-			return endTurnNode.RootAction;
-		return bestNodes[_rng.Next(bestNodes.Count)].RootAction;
+			chosen = endTurnNode.RootAction;
+		else
+			chosen = bestNodes[_rng.Next(bestNodes.Count)].RootAction;
+
+		if (_captureDecisions)
+			SetLastDecision(chosen, rootScores!, state);
+		return chosen;
 	}
 
 	public ImmutableList<int> ResolveChoice(GameState state, ChoiceAction choice, int playerId)
@@ -119,7 +165,7 @@ public class BeamSearchAiStrategy : IAiStrategy
 		if (choice.Options.IsEmpty)
 			return ImmutableList<int>.Empty;
 
-		// Multi-select: enumerate all combinations and pick the one that scores best
+		// Multi-select: enumerate all combinations and pick the one that scores best.
 		if (choice.MinChoices > 1)
 		{
 			var bestMultiScore = float.MinValue;
@@ -141,17 +187,38 @@ public class BeamSearchAiStrategy : IAiStrategy
 					break;
 			}
 
+			if (_captureDecisions && bestSelection != null)
+			{
+				var comboDesc = string.Join(
+					", ",
+					bestSelection.Select(id =>
+						OptionDescription(state, choice.Options.First(o => o.Id == id))
+					)
+				);
+				LastDecision = new AiDecision(
+					$"{choice.Prompt} → [{comboDesc}]",
+					bestMultiScore,
+					[new AiActionCandidate(comboDesc, bestMultiScore, true)],
+					IsChoiceResolution: true
+				);
+			}
+
 			return bestSelection
 				?? choice.Options.Take(choice.MinChoices).Select(o => o.Id).ToImmutableList();
 		}
 
 		var bestScore = float.MinValue;
 		var bestOption = choice.Options[0];
+		var optionScores = _captureDecisions
+			? new List<(ChoiceOption Option, float Score)>(choice.Options.Count)
+			: null;
 
 		foreach (var option in choice.Options)
 		{
 			var (resultState, _) = state.ResolveChoice(ImmutableList.Create(option.Id));
 			var score = LookaheadScore(resultState, playerId);
+
+			optionScores?.Add((option, score));
 
 			if (score > bestScore)
 			{
@@ -161,6 +228,22 @@ public class BeamSearchAiStrategy : IAiStrategy
 
 			if (bestScore >= StateEvaluator.WinScore)
 				break;
+		}
+
+		if (_captureDecisions && optionScores != null)
+		{
+			LastDecision = new AiDecision(
+				$"{choice.Prompt} → {OptionDescription(state, bestOption)}",
+				bestScore,
+				optionScores
+					.Select(x => new AiActionCandidate(
+						OptionDescription(state, x.Option),
+						x.Score,
+						x.Option.Id == bestOption.Id
+					))
+					.ToList(),
+				IsChoiceResolution: true
+			);
 		}
 
 		return ImmutableList.Create(bestOption.Id);
@@ -340,6 +423,50 @@ public class BeamSearchAiStrategy : IAiStrategy
 		for (var i = 0; i <= options.Count - count; i++)
 			foreach (var rest in GetCombinations(options.RemoveRange(0, i + 1), count - 1))
 				yield return rest.Prepend(options[i]);
+	}
+
+	private void SetLastDecision(
+		GameAction chosen,
+		Dictionary<GameAction, float> rootScores,
+		GameState originalState
+	)
+	{
+		var candidates = rootScores
+			.OrderByDescending(kvp => kvp.Value)
+			.Take(10)
+			.Select(kvp => new AiActionCandidate(
+				ActionDescriber.Describe(kvp.Key, originalState),
+				kvp.Value,
+				ReferenceEquals(kvp.Key, chosen)
+			))
+			.ToList();
+		rootScores.TryGetValue(chosen, out var chosenScore);
+		LastDecision = new AiDecision(
+			ActionDescriber.Describe(chosen, originalState),
+			chosenScore,
+			candidates
+		);
+	}
+
+	private static void UpdateRootScores(Dictionary<GameAction, float> scores, List<BeamNode> beam)
+	{
+		foreach (var node in beam)
+			if (!scores.TryGetValue(node.RootAction, out var prev) || node.ConcreteScore > prev)
+				scores[node.RootAction] = node.ConcreteScore;
+	}
+
+	private static string OptionDescription(GameState state, ChoiceOption option)
+	{
+		if (!string.IsNullOrEmpty(option.DisplayText))
+			return option.DisplayText;
+		if (!state.HasObject(option.Id))
+			return option.Id.ToString();
+		return state.GetObject(option.Id) switch
+		{
+			Card c => c.Name,
+			MtgPlayer p => p.Name,
+			_ => option.Id.ToString(),
+		};
 	}
 
 	private static GameState ExecuteAction(GameState state, GameAction action)

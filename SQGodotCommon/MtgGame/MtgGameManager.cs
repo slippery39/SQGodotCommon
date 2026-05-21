@@ -21,6 +21,11 @@ public class MtgGameManager
 	private readonly BeamSearchAiStrategy _aiStrategy;
 #pragma warning restore CS0618
 
+	private record HistoryEntry(GameState State, string ActionDescription);
+
+	private readonly List<HistoryEntry> _history = new();
+	private readonly List<(AiDecision Decision, int HistoryIndex)> _aiDecisions = new();
+
 	public int HumanPlayerId { get; private set; }
 	public int AiPlayerId { get; private set; }
 
@@ -32,7 +37,7 @@ public class MtgGameManager
 	{
 #pragma warning disable CS0618
 		(_state, _ids) = MtgGameFactory.Create();
-		_aiStrategy = new BeamSearchAiStrategy(_ids, maxDepth: 3);
+		_aiStrategy = new BeamSearchAiStrategy(_ids, maxDepth: 3, captureDecisions: true);
 #pragma warning restore CS0618
 		HumanPlayerId = _state.GetWellKnownId(MtgObjectKeys.Player1);
 		AiPlayerId = _state.GetWellKnownId(MtgObjectKeys.Player2);
@@ -46,16 +51,19 @@ public class MtgGameManager
 			HumanPlayerId,
 			AiPlayerId
 		);
+		_history.Add(new HistoryEntry(_state, "Game Start"));
 		return events;
 	}
 
 	public (bool Success, ImmutableList<GameEvent> Events) SubmitAction(GameAction action)
 	{
+		var preActionState = _state;
 		var (newState, success) = _state.TryAddAction(action);
 		if (!success)
 			return (false, ImmutableList<GameEvent>.Empty);
 		var (finalState, events) = newState.ProcessAllActions();
 		_state = finalState;
+		_history.Add(new HistoryEntry(_state, ActionDescriber.Describe(action, preActionState)));
 		return (true, events);
 	}
 
@@ -364,6 +372,7 @@ public class MtgGameManager
 	{
 		var (newState, events) = _state.ResolveChoice(selectedIds);
 		_state = newState;
+		_history.Add(new HistoryEntry(_state, "Choice resolved"));
 		return events;
 	}
 
@@ -371,15 +380,13 @@ public class MtgGameManager
 	{
 		if (!IsWaitingForChoice)
 			return ImmutableList<GameEvent>.Empty;
-		var options = GetPendingChoiceOptions();
 		var choice = _state.GetPendingChoice()!;
-		var count = Math.Min(choice.MinChoices, options.Count);
-		var selected = options
-			.OrderBy(_ => _rng.Next())
-			.Take(count)
-			.Select(o => o.Id)
-			.ToImmutableList();
-		return ResolveChoice(selected);
+		var historyIndex = _history.Count;
+		var selected = _aiStrategy.ResolveChoice(_state, choice, AiPlayerId);
+		var events = ResolveChoice(selected);
+		if (_aiStrategy.LastDecision != null)
+			_aiDecisions.Add((_aiStrategy.LastDecision, historyIndex));
+		return events;
 	}
 
 	/// <summary>
@@ -407,10 +414,38 @@ public class MtgGameManager
 #pragma warning disable CS0618
 			next = _aiStrategy.SelectAction(_state, _ids, AiPlayerId);
 #pragma warning restore CS0618
+			if (_aiStrategy.LastDecision != null)
+				_aiDecisions.Add((_aiStrategy.LastDecision, _history.Count));
 		}
 
 		var (_, events) = SubmitAction(next);
 		return events;
+	}
+
+	// ===== DEBUG / REPLAY =====
+
+	public IReadOnlyList<(int Index, string Description)> GetHistorySummary() =>
+		_history.Select((e, i) => (i, e.ActionDescription)).ToList();
+
+	/// <summary>
+	/// Restores the game to a previous state in the history and trims everything after it.
+	/// </summary>
+	public void RewindTo(int historyIndex)
+	{
+		if (historyIndex < 0 || historyIndex >= _history.Count)
+			return;
+		_state = _history[historyIndex].State;
+		_history.RemoveRange(historyIndex + 1, _history.Count - historyIndex - 1);
+		_aiDecisions.RemoveAll(d => d.HistoryIndex > historyIndex);
+	}
+
+	/// <summary>
+	/// Builds and returns a JSON debug snapshot of the full game history and AI decisions.
+	/// </summary>
+	public string ExportDebugSnapshot()
+	{
+		var historyForBuilder = _history.Select(e => (e.State, e.ActionDescription)).ToList();
+		return DebugSnapshotBuilder.BuildJson(historyForBuilder, _aiDecisions);
 	}
 
 	// ===== DECK SETUP =====

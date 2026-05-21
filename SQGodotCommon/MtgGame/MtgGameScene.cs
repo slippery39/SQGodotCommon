@@ -23,6 +23,10 @@ public partial class MtgGameScene : Node2D
 	private bool _isGameOver;
 	private bool _choicePanelShowing;
 
+	// Debug controls
+	private bool _aiPaused;
+	private Label _debugStatusLabel = null!;
+
 	// Spell targeting state
 	private bool _isFlashbackTargeting;
 	private int? _targetingSpellCardId;
@@ -161,6 +165,19 @@ public partial class MtgGameScene : Node2D
 			CheckAndShowGameOver(creatureEvents);
 		};
 
+		var debugLayer = new CanvasLayer { Layer = 5 };
+		AddChild(debugLayer);
+		_debugStatusLabel = new Label
+		{
+			HorizontalAlignment = HorizontalAlignment.Center,
+			Visible = false,
+		};
+		_debugStatusLabel.SetAnchorsPreset(Control.LayoutPreset.TopWide);
+		_debugStatusLabel.OffsetTop = 8;
+		_debugStatusLabel.OffsetBottom = 36;
+		_debugStatusLabel.AddThemeFontSizeOverride("font_size", 16);
+		debugLayer.AddChild(_debugStatusLabel);
+
 		var startEvents = _manager.StartGame();
 		_eventLog.AppendEvents(startEvents, _manager.State, _manager.HumanPlayerId);
 		Refresh();
@@ -168,7 +185,10 @@ public partial class MtgGameScene : Node2D
 
 	public override void _Input(InputEvent @event)
 	{
-		if (@event is InputEventKey key && key.Pressed && !key.Echo && key.Keycode == Key.Escape)
+		if (@event is not InputEventKey key || !key.Pressed || key.Echo)
+			return;
+
+		if (key.Keycode == Key.Escape)
 		{
 			if (_additionalCostCardId.HasValue)
 				ExitAdditionalCostMode();
@@ -176,6 +196,18 @@ public partial class MtgGameScene : Node2D
 				ExitAbilityTargetingMode();
 			else if (_targetingSpellCardId.HasValue)
 				ExitTargetingMode();
+		}
+		else if (key.Keycode == Key.Space)
+		{
+			ToggleAiPause();
+		}
+		else if (key.Keycode == Key.F5)
+		{
+			ExportAndSaveSnapshot();
+		}
+		else if (key.Keycode == Key.Z && key.CtrlPressed)
+		{
+			RewindOnce();
 		}
 	}
 
@@ -497,7 +529,13 @@ public partial class MtgGameScene : Node2D
 
 		while (_manager.IsAiTurn && !_isGameOver)
 		{
-			await ToSignal(GetTree().CreateTimer(0.8), SceneTreeTimer.SignalName.Timeout);
+			await ToSignal(
+				GetTree().CreateTimer(_aiPaused ? 0.1f : 0.8f),
+				SceneTreeTimer.SignalName.Timeout
+			);
+
+			if (_aiPaused)
+				continue;
 
 			ImmutableList<GameEvent> stepEvents;
 			if (_manager.IsWaitingForChoice)
@@ -510,6 +548,9 @@ public partial class MtgGameScene : Node2D
 			if (CheckAndShowGameOver(stepEvents))
 				return;
 		}
+
+		_aiPaused = false;
+		UpdateDebugStatus();
 	}
 
 	private void OnPlayerCreatureClicked(int cardId)
@@ -641,6 +682,60 @@ public partial class MtgGameScene : Node2D
 		_eventLog.AppendEvents(events, _manager.State, _manager.HumanPlayerId);
 		Refresh();
 		CheckAndShowGameOver(events);
+	}
+
+	// ===== DEBUG CONTROLS =====
+
+	private void ToggleAiPause()
+	{
+		_aiPaused = !_aiPaused;
+		UpdateDebugStatus();
+	}
+
+	private void RewindOnce()
+	{
+		if (_manager.IsAiTurn && !_aiPaused)
+			return;
+		var history = _manager.GetHistorySummary();
+		if (history.Count <= 1)
+			return;
+		_manager.RewindTo(history.Count - 2);
+		Refresh();
+		ShowDebugToast($"Rewound to: {history[history.Count - 2].Description}");
+	}
+
+	private void ExportAndSaveSnapshot()
+	{
+		var json = _manager.ExportDebugSnapshot();
+		using var da = DirAccess.Open("user://");
+		da?.MakeDir("debug_snapshots");
+		var timestamp = (long)Time.GetUnixTimeFromSystem();
+		var path = $"user://debug_snapshots/debug_{timestamp}.json";
+		using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
+		file?.StoreString(json);
+		ShowDebugToast($"Saved: {ProjectSettings.GlobalizePath(path)}");
+	}
+
+	private void UpdateDebugStatus()
+	{
+		if (_aiPaused)
+		{
+			_debugStatusLabel.Text =
+				"AI Paused  (Space = resume  |  Ctrl+Z = rewind  |  F5 = export)";
+			_debugStatusLabel.Visible = true;
+		}
+		else
+		{
+			_debugStatusLabel.Visible = false;
+		}
+	}
+
+	private async void ShowDebugToast(string message)
+	{
+		_debugStatusLabel.Text = message;
+		_debugStatusLabel.Visible = true;
+		await ToSignal(GetTree().CreateTimer(4.0f), SceneTreeTimer.SignalName.Timeout);
+		UpdateDebugStatus();
 	}
 
 	// ===== GAME OVER =====
