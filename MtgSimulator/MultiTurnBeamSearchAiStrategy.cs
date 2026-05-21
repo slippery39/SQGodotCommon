@@ -5,60 +5,58 @@ using MtgCore;
 namespace MtgSimulator;
 
 /// <summary>
-/// An AI strategy that uses beam search to select actions.
+/// A beam search AI strategy that evaluates actions using a multi-turn lookahead.
 ///
-/// Expands the game tree level by level (breadth-first) rather than depth-first.
-/// At each depth level, candidates are pruned down to two buckets before expanding
-/// the next level:
+/// The beam explores all action sequences within the current turn (same structure as
+/// BeamSearchAiStrategy). Every node is scored by ScoreAfterCompletingTurn, which:
+///   1. Completes the current turn greedily (plays any remaining land/spell + EndTurn)
+///   2. Runs MultiTurnGreedyRollout for N future turns
 ///
-///   Concrete bucket  — top N by StateEvaluator score (board advantage)
-///   Potential bucket — top M per IPotentialEvaluator (setup/combo value)
+/// This separates "what to do this turn" (beam) from "how good is this path long-term"
+/// (rollout), so all root actions are compared from the same temporal starting point.
+/// No root action gets an unfair depth advantage from crossing turn boundaries early.
 ///
-/// The potential bucket lets combo lines survive pruning even when the main evaluator
-/// scores them poorly (e.g. fast mana plays score 0 on StateEvaluator but may enable
-/// a win-condition spell one or two levels later).
-///
-/// The final action returned is always the root action of the highest concrete-scoring
-/// leaf in the surviving beam — potential scores only influence which paths survive to
-/// the leaf level, never which action is ultimately chosen.
-///
-/// Falls back to random selection when multiple leaf nodes share the best score.
+/// Choices (discards, target picks) are branched in the beam rather than greedily
+/// resolved, giving full current-turn visibility into which discard leads to the best
+/// future (e.g. discard Carnage Tyrant to enable Reanimate next turn).
 /// </summary>
-public class BeamSearchAiStrategy : ICapturingAiStrategy
+public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 {
-	private readonly int _maxDepth;
 	private readonly MtgGameIds _ids;
-	private readonly Random _rng;
+	private readonly int _currentTurnDepth;
+	private readonly int _lookaheadTurns;
 	private readonly int _concreteSlots;
+	private readonly OpponentSimulationMode _opponentMode;
 	private readonly IReadOnlyList<IPotentialEvaluator> _potentialEvaluators;
+	private readonly Random _rng;
 	private readonly bool _captureDecisions;
+
+	private const int MaxChoiceBranches = 20;
 
 	// EndTurn must exceed the best non-EndTurn score by this margin to be chosen.
 	// Prevents EndTurn from winning ties — concrete actions are at least as valuable as passing.
 	private const float EndTurnBias = 0.01f;
 
-	// Carries a game state forward through the beam, together with the root action
-	// that started this path (so SelectAction knows which first move to return).
 	private record BeamNode(GameState State, GameAction RootAction, float ConcreteScore);
 
-	/// <summary>
-	/// When captureDecisions is true, populated after each SelectAction call with the
-	/// chosen action, its score, and the top alternatives. Null when captureDecisions is false.
-	/// </summary>
 	public AiDecision? LastDecision { get; private set; }
 
-	public BeamSearchAiStrategy(
+	public MultiTurnBeamSearchAiStrategy(
 		MtgGameIds ids,
-		int maxDepth = 3,
+		int currentTurnDepth = 3,
+		int lookaheadTurns = 2,
 		int concreteSlots = 10,
+		OpponentSimulationMode opponentMode = OpponentSimulationMode.Greedy,
 		IReadOnlyList<IPotentialEvaluator>? potentialEvaluators = null,
 		Random? rng = null,
 		bool captureDecisions = false
 	)
 	{
 		_ids = ids;
-		_maxDepth = maxDepth;
+		_currentTurnDepth = currentTurnDepth;
+		_lookaheadTurns = lookaheadTurns;
 		_concreteSlots = concreteSlots;
+		_opponentMode = opponentMode;
 		_potentialEvaluators = potentialEvaluators ?? [new FastManaPotentialEvaluator()];
 		_rng = rng ?? new Random();
 		_captureDecisions = captureDecisions;
@@ -83,25 +81,16 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 			return actions[0];
 		}
 
-		// Always play a land if available — permanent mana is the highest-priority resource.
-		// Edge cases (landfall combos, hand-size manipulation) are rare enough to ignore here.
-		// var landAction = actions.OfType<PlayLandAction>().FirstOrDefault();
-		// if (landAction != null)
-		// 	return landAction;
-
-		// Level 0: execute each root action and score the resulting state
+		// Level 0: execute each root action and score via multi-turn rollout
 		var beam = actions
-			.AsParallel()
 			.Select(action =>
 			{
 				var resultState = ExecuteAction(state, action);
-				var score = StateEvaluator.Evaluate(resultState, _ids, playerId);
+				var score = ScoreAfterCompletingTurn(resultState, playerId);
 				return new BeamNode(resultState, action, score);
 			})
 			.ToList();
 
-		// Track best reachable score per root action across all beam levels.
-		// Only allocated when captureDecisions is true — zero overhead otherwise.
 		Dictionary<GameAction, float>? rootScores = null;
 		if (_captureDecisions)
 		{
@@ -120,12 +109,10 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 
 		beam = PruneBeam(beam, playerId);
 
-		// Levels 1..maxDepth-1: expand survivors one level at a time
-		for (var depth = 1; depth < _maxDepth; depth++)
+		// Levels 1..currentTurnDepth-1: expand within the current turn only
+		for (var depth = 1; depth < _currentTurnDepth; depth++)
 		{
-			var nextBeam = beam.AsParallel()
-				.SelectMany(node => ExpandNode(node, playerId))
-				.ToList();
+			var nextBeam = beam.SelectMany(node => ExpandNode(node, playerId)).ToList();
 
 			if (nextBeam.Count == 0)
 				break;
@@ -147,9 +134,7 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 		if (_captureDecisions)
 			UpdateRootScores(rootScores!, beam);
 
-		// Return the root action of the highest-scoring leaf.
-		// EndTurn must beat the best non-EndTurn score by EndTurnBias to be chosen —
-		// concrete actions are at least as valuable as passing in a tie.
+		// EndTurn must beat the best non-EndTurn score by EndTurnBias to be chosen
 		var nonEndTurnNodes = beam.Where(n => n.RootAction is not EndTurnAction).ToList();
 		GameAction chosen;
 		if (nonEndTurnNodes.Count == 0)
@@ -186,25 +171,24 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 		if (choice.Options.IsEmpty)
 			return ImmutableList<int>.Empty;
 
-		// Multi-select: enumerate all combinations and pick the one that scores best.
 		if (choice.MinChoices > 1)
 		{
-			var bestMultiScore = float.MinValue;
+			var bestScore = float.MinValue;
 			ImmutableList<int>? bestSelection = null;
 
 			foreach (var combo in GetCombinations(choice.Options, choice.MinChoices))
 			{
 				var selectedIds = combo.Select(o => o.Id).ToImmutableList();
 				var (resultState, _) = state.ResolveChoice(selectedIds);
-				var score = LookaheadScore(resultState, playerId);
+				var score = ScoreAfterCompletingTurn(resultState, playerId);
 
-				if (score > bestMultiScore)
+				if (score > bestScore)
 				{
-					bestMultiScore = score;
+					bestScore = score;
 					bestSelection = selectedIds;
 				}
 
-				if (bestMultiScore >= StateEvaluator.WinScore)
+				if (bestScore >= StateEvaluator.WinScore)
 					break;
 			}
 
@@ -218,8 +202,8 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 				);
 				LastDecision = new AiDecision(
 					$"{choice.Prompt} → [{comboDesc}]",
-					bestMultiScore,
-					[new AiActionCandidate(comboDesc, bestMultiScore, true)],
+					bestScore,
+					[new AiActionCandidate(comboDesc, bestScore, true)],
 					IsChoiceResolution: true
 				);
 			}
@@ -228,7 +212,7 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 				?? choice.Options.Take(choice.MinChoices).Select(o => o.Id).ToImmutableList();
 		}
 
-		var bestScore = float.MinValue;
+		var bestSingleScore = float.MinValue;
 		var bestOption = choice.Options[0];
 		var optionScores = _captureDecisions
 			? new List<(ChoiceOption Option, float Score)>(choice.Options.Count)
@@ -237,17 +221,17 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 		foreach (var option in choice.Options)
 		{
 			var (resultState, _) = state.ResolveChoice(ImmutableList.Create(option.Id));
-			var score = LookaheadScore(resultState, playerId);
+			var score = ScoreAfterCompletingTurn(resultState, playerId);
 
 			optionScores?.Add((option, score));
 
-			if (score > bestScore)
+			if (score > bestSingleScore)
 			{
-				bestScore = score;
+				bestSingleScore = score;
 				bestOption = option;
 			}
 
-			if (bestScore >= StateEvaluator.WinScore)
+			if (bestSingleScore >= StateEvaluator.WinScore)
 				break;
 		}
 
@@ -255,7 +239,7 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 		{
 			LastDecision = new AiDecision(
 				$"{choice.Prompt} → {OptionDescription(state, bestOption)}",
-				bestScore,
+				bestSingleScore,
 				optionScores
 					.Select(x => new AiActionCandidate(
 						OptionDescription(state, x.Option),
@@ -271,55 +255,197 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 	}
 
 	/// <summary>
-	/// Expands a beam node by one level: resolves any pending choice, then applies
-	/// every legal action and scores each resulting state.
-	///
-	/// If the state has no legal actions (e.g. opponent's turn in the simulation),
-	/// the node is returned as-is with a refreshed concrete score.
+	/// Expands one beam level within the current turn only. Stops at turn boundaries —
+	/// the multi-turn lookahead is handled by ScoreAfterCompletingTurn, not here.
 	/// </summary>
 	private List<BeamNode> ExpandNode(BeamNode node, int playerId)
 	{
 		var state = node.State;
 
-		while (state.IsWaitingForChoice)
+		// Branch on pending choices rather than resolving greedily
+		if (state.IsWaitingForChoice)
 		{
 			var choice = state.GetPendingChoice()!;
-			var resolvedIds = ResolveChoice(state, choice, playerId);
-			(state, _) = state.ResolveChoice(resolvedIds);
+			return BranchOnChoice(node, choice, playerId);
 		}
 
-		// If the turn crossed to the opponent during choice resolution or after a prior action
-		// (e.g. EndTurn was played), stop expanding. We don't model opponent responses.
 		var game = state.TryGetGame();
+
+		// Turn boundary — stop expanding, score handles the future
 		if (game != null && game.ActivePlayerId != playerId)
 		{
-			var leafScore = StateEvaluator.Evaluate(state, _ids, playerId);
-			return [new BeamNode(state, node.RootAction, leafScore)];
+			var leafScore = ScoreAfterCompletingTurn(state, playerId);
+			return [node with { ConcreteScore = leafScore }];
 		}
 
 		var actions = MtgActionGenerator.GetLegalActions(state, _ids, playerId);
 
 		if (actions.Count == 0)
 		{
-			var leafScore = StateEvaluator.Evaluate(state, _ids, playerId);
-			return [new BeamNode(state, node.RootAction, leafScore)];
+			var leafScore = ScoreAfterCompletingTurn(state, playerId);
+			return [node with { ConcreteScore = leafScore }];
 		}
 
 		var result = new List<BeamNode>(actions.Count);
 		foreach (var action in actions)
 		{
 			var resultState = ExecuteAction(state, action);
-			var score = StateEvaluator.Evaluate(resultState, _ids, playerId);
+			var score = ScoreAfterCompletingTurn(resultState, playerId);
 			result.Add(new BeamNode(resultState, node.RootAction, score));
 		}
 		return result;
 	}
 
 	/// <summary>
-	/// Keeps the top N candidates by concrete score (concrete bucket) plus the top M
-	/// per potential evaluator (potential bucket). Duplicates across buckets are
-	/// removed by object identity — a node in both buckets only appears once.
+	/// Returns one beam node per choice combination. Each is expanded one level further
+	/// so the beam sees the state after the choice is resolved.
+	/// Capped at MaxChoiceBranches to prevent explosion on large option sets.
 	/// </summary>
+	private List<BeamNode> BranchOnChoice(BeamNode node, ChoiceAction choice, int playerId)
+	{
+		var result = new List<BeamNode>();
+		foreach (
+			var combo in GetCombinations(choice.Options, choice.MinChoices).Take(MaxChoiceBranches)
+		)
+		{
+			var selectedIds = combo.Select(o => o.Id).ToImmutableList();
+			var (resolvedState, _) = node.State.ResolveChoice(selectedIds);
+			result.AddRange(ExpandNode(node with { State = resolvedState }, playerId));
+		}
+		return result;
+	}
+
+	/// <summary>
+	/// Scores a state by completing the current turn greedily (if still our turn),
+	/// then running a multi-turn greedy rollout. All beam nodes are scored from the
+	/// same temporal point — after the current turn ends — making them comparable.
+	/// </summary>
+	private float ScoreAfterCompletingTurn(GameState state, int playerId)
+	{
+		var game = state.TryGetGame();
+		// Complete the current turn greedily before the lookahead
+		if (game?.ActivePlayerId == playerId)
+			state = PlayGreedyTurn(state, playerId);
+		return MultiTurnGreedyRollout(state, playerId);
+	}
+
+	/// <summary>
+	/// Simulates N turns starting from the given state, alternating between
+	/// our greedy turn and the opponent's simulated turn.
+	/// </summary>
+	private float MultiTurnGreedyRollout(GameState state, int playerId)
+	{
+		var opponentId = playerId == _ids.Player1Id ? _ids.Player2Id : _ids.Player1Id;
+
+		for (var t = 0; t < _lookaheadTurns; t++)
+		{
+			var game = state.TryGetGame();
+			if (game == null)
+				break;
+
+			state =
+				game.ActivePlayerId == playerId
+					? PlayGreedyTurn(state, playerId)
+					: SimulateOpponentTurn(state, playerId, opponentId);
+
+			if (Math.Abs(StateEvaluator.Evaluate(state, _ids, playerId)) >= StateEvaluator.WinScore)
+				break;
+		}
+
+		return StateEvaluator.Evaluate(state, _ids, playerId);
+	}
+
+	/// <summary>
+	/// Plays one of our turns greedily: land drop then best scoring spell, then EndTurn.
+	/// </summary>
+	private GameState PlayGreedyTurn(GameState state, int playerId)
+	{
+		// Land drop first
+		var landAction = MtgActionGenerator
+			.GetLegalActions(state, _ids, playerId)
+			.OfType<PlayLandAction>()
+			.FirstOrDefault();
+		if (landAction != null)
+		{
+			state = ExecuteAction(state, landAction);
+			state = ResolveAllChoices(state, playerId);
+		}
+
+		// Best non-land, non-EndTurn action by immediate StateEvaluator score
+		var spellActions = MtgActionGenerator
+			.GetLegalActions(state, _ids, playerId)
+			.Where(a => a is not EndTurnAction and not PlayLandAction)
+			.ToList();
+
+		if (spellActions.Count > 0)
+		{
+			var best = spellActions.MaxBy(a =>
+				StateEvaluator.Evaluate(ExecuteAction(state, a), _ids, playerId)
+			)!;
+			state = ExecuteAction(state, best);
+			state = ResolveAllChoices(state, playerId);
+		}
+
+		state = ExecuteAction(state, BuildEndTurnAction(state));
+		return ResolveAllChoices(state, playerId);
+	}
+
+	/// <summary>
+	/// Simulates the opponent's full turn according to the chosen mode.
+	/// </summary>
+	private GameState SimulateOpponentTurn(GameState state, int ourPlayerId, int opponentId)
+	{
+		switch (_opponentMode)
+		{
+			case OpponentSimulationMode.PassTurn:
+				return ExecuteAction(state, BuildEndTurnAction(state));
+
+			case OpponentSimulationMode.Greedy:
+				var greedyActions = MtgActionGenerator
+					.GetLegalActions(state, _ids, opponentId)
+					.Where(a => a is not EndTurnAction)
+					.ToList();
+				if (greedyActions.Count > 0)
+				{
+					var best = greedyActions.MaxBy(a =>
+						StateEvaluator.Evaluate(ExecuteAction(state, a), _ids, opponentId)
+					)!;
+					state = ExecuteAction(state, best);
+					state = ResolveAllChoices(state, opponentId);
+				}
+				return ExecuteAction(state, BuildEndTurnAction(state));
+
+			case OpponentSimulationMode.Random:
+				var randomActions = MtgActionGenerator
+					.GetLegalActions(state, _ids, opponentId)
+					.Where(a => a is not EndTurnAction)
+					.ToList();
+				if (randomActions.Count > 0)
+				{
+					state = ExecuteAction(state, randomActions[_rng.Next(randomActions.Count)]);
+					state = ResolveAllChoices(state, opponentId);
+				}
+				return ExecuteAction(state, BuildEndTurnAction(state));
+
+			default:
+				return ExecuteAction(state, BuildEndTurnAction(state));
+		}
+	}
+
+	/// <summary>
+	/// Greedily resolves all pending choices using immediate StateEvaluator scoring.
+	/// </summary>
+	private GameState ResolveAllChoices(GameState state, int playerId)
+	{
+		while (state.IsWaitingForChoice)
+		{
+			var choice = state.GetPendingChoice()!;
+			var ids = GreedyResolveChoice(state, choice, playerId);
+			(state, _) = state.ResolveChoice(ids);
+		}
+		return state;
+	}
+
 	private List<BeamNode> PruneBeam(List<BeamNode> candidates, int playerId)
 	{
 		var seen = new HashSet<BeamNode>(ReferenceEqualityComparer.Instance);
@@ -352,56 +478,6 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 	private static BeamNode? FindWinner(List<BeamNode> beam) =>
 		beam.FirstOrDefault(n => n.ConcreteScore >= StateEvaluator.WinScore);
 
-	/// <summary>
-	/// Scores a state by looking one ply ahead: tries every legal action from the given
-	/// state, resolves any resulting choices greedily (immediate scoring, no further
-	/// recursion), and returns the best reachable score.
-	///
-	/// Used inside ResolveChoice so the AI can see the downstream value of its choices —
-	/// e.g. discarding Bloodghast then playing a land, or keeping Reanimate to cast it.
-	/// </summary>
-	private float LookaheadScore(GameState state, int playerId)
-	{
-		var game = state.TryGetGame();
-		if (game == null || game.ActivePlayerId != playerId)
-			return StateEvaluator.Evaluate(state, _ids, playerId);
-
-		// Attacks and end-turn never depend on which card was just chosen — exclude them so
-		// we don't pay O(attackers × targets) cost on every choice option or combination.
-		var actions = MtgActionGenerator
-			.GetLegalActions(state, _ids, playerId)
-			.Where(a => a is not AttackAction and not EndTurnAction)
-			.ToList();
-		var best = StateEvaluator.Evaluate(state, _ids, playerId);
-
-		foreach (var action in actions)
-		{
-			var nextState = ExecuteAction(state, action);
-
-			// Greedily resolve any choices created by this action (e.g. Reanimate's
-			// target picker) using plain StateEvaluator — no further recursion.
-			while (nextState.IsWaitingForChoice)
-			{
-				var pending = nextState.GetPendingChoice()!;
-				var greedyIds = GreedyResolveChoice(nextState, pending, playerId);
-				(nextState, _) = nextState.ResolveChoice(greedyIds);
-			}
-
-			var score = StateEvaluator.Evaluate(nextState, _ids, playerId);
-			if (score > best)
-				best = score;
-
-			if (best >= StateEvaluator.WinScore)
-				break;
-		}
-
-		return best;
-	}
-
-	/// <summary>
-	/// Resolves a choice using immediate StateEvaluator scoring only — no lookahead.
-	/// Used by LookaheadScore to handle nested choices without further recursion.
-	/// </summary>
 	private ImmutableList<int> GreedyResolveChoice(
 		GameState state,
 		ChoiceAction choice,
@@ -445,6 +521,14 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 			foreach (var rest in GetCombinations(options.RemoveRange(0, i + 1), count - 1))
 				yield return rest.Prepend(options[i]);
 	}
+
+	private EndTurnAction BuildEndTurnAction(GameState state) =>
+		new()
+		{
+			GameId = state.GetWellKnownId(MtgObjectKeys.Game),
+			Player1Id = _ids.Player1Id,
+			Player2Id = _ids.Player2Id,
+		};
 
 	private void SetLastDecision(
 		GameAction chosen,
@@ -495,7 +579,6 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 		var (newState, success) = state.TryAddAction(action);
 		if (!success)
 			return state;
-
 		var (finalState, _) = newState.ProcessAllActions();
 		return finalState;
 	}

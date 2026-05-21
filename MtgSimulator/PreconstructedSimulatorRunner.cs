@@ -39,8 +39,8 @@ public class PreconstructedSimulatorRunner
 			var (state, ids, cardNames) = SetupGame(deck1Name, deck2Name);
 
 			var rng = new Random();
-			var p1Strategy = new BeamSearchAiStrategy(ids, _aiDepth, rng: rng);
-			var p2Strategy = new BeamSearchAiStrategy(ids, _aiDepth, rng: rng);
+			var p1Strategy = new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: rng);
+			var p2Strategy = new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: rng);
 
 			var (gameResult, finalState) = new GameRunner(p1Strategy, p2Strategy).Run(
 				state,

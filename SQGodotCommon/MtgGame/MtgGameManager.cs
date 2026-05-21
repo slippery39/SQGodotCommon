@@ -8,6 +8,12 @@ using MtgSimulator;
 
 namespace MtgGame;
 
+public enum AiStrategyType
+{
+	BeamSearch,
+	MultiTurnBeamSearch,
+}
+
 /// <summary>
 /// Owns the GameState and drives the game loop.
 /// Plain C# class — no Godot dependencies. The Godot scene owns one instance.
@@ -18,8 +24,8 @@ public class MtgGameManager
 	private readonly Random _rng = new();
 #pragma warning disable CS0618
 	private readonly MtgGameIds _ids;
-	private readonly BeamSearchAiStrategy _aiStrategy;
 #pragma warning restore CS0618
+	private readonly ICapturingAiStrategy _aiStrategy;
 
 	private record HistoryEntry(GameState State, string ActionDescription);
 
@@ -33,11 +39,23 @@ public class MtgGameManager
 	public bool IsAiTurn => _state.TryGetGame()?.ActivePlayerId == AiPlayerId;
 	public bool IsWaitingForChoice => _state.IsWaitingForChoice;
 
-	public MtgGameManager(DeckSetupData setup)
+	public MtgGameManager(
+		DeckSetupData setup,
+		AiStrategyType strategyType = AiStrategyType.MultiTurnBeamSearch
+	)
 	{
 #pragma warning disable CS0618
 		(_state, _ids) = MtgGameFactory.Create();
-		_aiStrategy = new BeamSearchAiStrategy(_ids, maxDepth: 3, captureDecisions: true);
+		_aiStrategy = strategyType switch
+		{
+			AiStrategyType.MultiTurnBeamSearch => new MultiTurnBeamSearchAiStrategy(
+				_ids,
+				currentTurnDepth: 3,
+				lookaheadTurns: 2,
+				captureDecisions: true
+			),
+			_ => new BeamSearchAiStrategy(_ids, maxDepth: 3, captureDecisions: true),
+		};
 #pragma warning restore CS0618
 		HumanPlayerId = _state.GetWellKnownId(MtgObjectKeys.Player1);
 		AiPlayerId = _state.GetWellKnownId(MtgObjectKeys.Player2);

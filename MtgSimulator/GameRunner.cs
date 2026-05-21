@@ -20,7 +20,7 @@ namespace MtgSimulator;
 /// </summary>
 public class GameRunner
 {
-	private const long MaxGameTimeMs = 5_000;
+	private const long MaxGameTimeMs = 10_000;
 	private const int MaxTurns = 100;
 	private const int ActionWarningThreshold = 50;
 	private const int ActionLimitThreshold = 100;
