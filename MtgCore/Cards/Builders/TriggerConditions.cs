@@ -19,6 +19,18 @@ public static class TriggerConditions
 		};
 
 	/// <summary>
+	/// Fires when this exact non-creature permanent enters the battlefield (artifacts, enchantments).
+	/// Uses PermanentEnteredBattlefield and IsSourceCardSpecification so it only triggers
+	/// for the card that owns the ability. Use OnSelfEntersBattlefield() for creatures.
+	/// </summary>
+	public static TriggerCondition OnSelfEntersBattlefieldAsNonCreature() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.PermanentEnteredBattlefield,
+			Filter = new IsSourceCardSpecification(),
+		};
+
+	/// <summary>
 	/// Fires at the start of the controller's turn ("at the beginning of your upkeep").
 	/// </summary>
 	public static TriggerCondition OnYourUpkeep() =>

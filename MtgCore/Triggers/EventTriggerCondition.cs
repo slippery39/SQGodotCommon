@@ -105,6 +105,7 @@ public record EventTriggerCondition : TriggerCondition
 			TurnStartedEvent e => e.PlayerId,
 			TurnEndedEvent e => e.PlayerId,
 			CreatureEnteredBattlefieldEvent e => e.CardId,
+			PermanentEnteredBattlefieldEvent e => e.CardId,
 			CombatDamageDealtToPlayerEvent e => e.AttackerId,
 			LandPlayedEvent e => e.PlayerId,
 			_ => 0,

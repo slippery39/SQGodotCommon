@@ -19,7 +19,10 @@
       "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\" -Directory)",
       "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgSimulator\" -Filter \"*.cs\" -File)",
       "Bash(Select-Object Name, FullName)",
-      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\" -Recurse -Filter \"*.Tests\" -Directory)"
+      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\" -Recurse -Filter \"*.Tests\" -Directory)",
+      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgCore\\\\Turns\" -Filter \"*.cs\")",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(Get-ChildItem -Path \"c:\\\\SQGodotHelperApps\\\\SQGodotCommon\\\\MtgCore\\\\Actions\" -Filter \"*Select*.cs\" -Recurse)"
     ]
   }
 }

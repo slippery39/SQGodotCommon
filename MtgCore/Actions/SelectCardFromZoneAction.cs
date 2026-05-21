@@ -1,0 +1,61 @@
+using ImmutableGameObjects;
+
+namespace MtgCore;
+
+/// <summary>
+/// Searches a player's zone for the first card matching the given subtype and
+/// writes its ID to OutputKey in pipeline context.
+///
+/// Follows the same pattern as SelectCardFromLibraryAction but targets any ZoneType
+/// (typically ZoneType.Exile). Used by Bounceland to find a land in the exile zone.
+///
+/// Player resolution:
+///   - Set PlayerId directly, or
+///   - Set PlayerIdContextKey to read the player ID from pipeline context (takes priority).
+/// If no matching card is found, OutputKey is set to 0 — downstream actions must handle 0.
+/// </summary>
+public record SelectCardFromZoneAction : GameAction
+{
+	public ZoneType Zone { get; init; }
+	public string Subtype { get; init; } = "";
+	public int PlayerId { get; init; } = 0;
+	public string PlayerIdContextKey { get; init; } = "";
+	public string OutputKey { get; init; } = "";
+
+	/// <summary>
+	/// When true, excludes the card whose ID is in context under ContextKeys.SourceCardId.
+	/// Use this when the source card itself has just entered the zone being searched
+	/// (e.g. Bounceland moves to exile then searches exile — without this flag it would
+	/// find and return itself, producing a self-bounce loop).
+	/// </summary>
+	public bool ExcludeSourceCard { get; init; } = false;
+
+	public override ActionResult Execute(GameState gameState)
+	{
+		var playerId = string.IsNullOrEmpty(PlayerIdContextKey)
+			? PlayerId
+			: GetInput<int>(PlayerIdContextKey, PlayerId);
+
+		if (playerId == 0)
+			return new ActionResult(gameState);
+
+		var excludeId = ExcludeSourceCard ? GetInput<int>(ContextKeys.SourceCardId, 0) : 0;
+
+		var zoneId = gameState.GetPlayerZoneId(playerId, Zone);
+
+		var candidate = gameState
+			.GetCardsInZone(zoneId)
+			.FirstOrDefault(c =>
+				(string.IsNullOrEmpty(Subtype) || c.HasSubtype(Subtype))
+				&& (excludeId == 0 || c.Id != excludeId)
+			);
+
+		var foundId = candidate?.Id ?? 0;
+
+		var result = new ActionResult(gameState);
+		if (!string.IsNullOrEmpty(OutputKey))
+			result = result.WithOutput(OutputKey, foundId);
+
+		return result;
+	}
+}

@@ -915,7 +915,7 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Primeval Titan",
-				ManaCost = 6,
+				ManaCost = 5,
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 6, Toughness = 6 },
@@ -968,7 +968,21 @@ public static class CardLibrary
 				Subtypes = ImmutableList.Create("Artifact"),
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
-					new ExtraLandPerTurnComponent()
+					new ExtraLandPerTurnComponent(),
+					new TriggeredAbilityComponent
+					{
+						Name = "ETB Draw",
+						Condition = TriggerConditions.OnSelfEntersBattlefieldAsNonCreature(),
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new DrawCardsAction
+							{
+								Amount = 1,
+								TargetContextKey = ContextKeys.CastingPlayerId,
+							},
+						},
+					}
 				),
 			},
 			new()
@@ -1004,6 +1018,128 @@ public static class CardLibrary
 					new PermanentComponent(),
 					new CreatureComponent { Power = 0, Toughness = 0 },
 					new LandsPlayedCountComponent { Duration = ModifierDuration.Permanent }
+				),
+			},
+			new()
+			{
+				Name = "Cultivate",
+				ManaCost = 2,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.NoTarget(),
+								ActionTemplate = new PipelineAction
+								{
+									Steps = ImmutableList.Create<GameAction>(
+										new SelectCardFromLibraryAction
+										{
+											Subtype = LandSubtype,
+											OutputKey = "cultivate_play",
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										},
+										new PutLandIntoPlayAction
+										{
+											CardIdContextKey = "cultivate_play",
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										},
+										new SelectCardFromLibraryAction
+										{
+											Subtype = LandSubtype,
+											OutputKey = "cultivate_hand",
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										},
+										new MoveCardToHandAction
+										{
+											CardIdContextKey = "cultivate_hand",
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										}
+									),
+								},
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Glimmervoid",
+				ManaCost = 0,
+				Subtypes = ImmutableList.Create(LandSubtype),
+				Components = ImmutableList.Create<GameComponent>(
+					new LandPlayEffectComponent
+					{
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new GainLifeAction
+							{
+								Amount = 2,
+								TargetContextKey = ContextKeys.CastingPlayerId,
+							},
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Field of the Dead",
+				ManaCost = 0,
+				Subtypes = ImmutableList.Create(LandSubtype),
+				Components = ImmutableList.Create<GameComponent>(
+					new GrantEmblemComponent
+					{
+						Emblem = new Emblem
+						{
+							Name = "Field of the Dead",
+							Condition = new LandsPlayedCondition { Threshold = 7 },
+							Effect = new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.NoTarget(),
+								ActionTemplate = new CreateCardAction
+								{
+									CardTemplate = ZombieToken(),
+									Count = 1,
+								},
+							},
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Bounceland",
+				ManaCost = 0,
+				Subtypes = ImmutableList.Create(LandSubtype),
+				Components = ImmutableList.Create<GameComponent>(
+					new BonusManaLandComponent { ExtraMana = 1, Deferred = true },
+					new LandPlayEffectComponent
+					{
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new SelectCardFromZoneAction
+									{
+										Zone = ZoneType.Exile,
+										Subtype = LandSubtype,
+										OutputKey = "bounce_land",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										ExcludeSourceCard = true,
+									},
+									new MoveCardToHandAction
+									{
+										CardIdContextKey = "bounce_land",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									}
+								),
+							},
+						},
+					}
 				),
 			},
 			// ===== REANIMATOR CARDS =====
@@ -1238,6 +1374,17 @@ public static class CardLibrary
 			Components = ImmutableList.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = 1, Toughness = 1 }
+			),
+		};
+
+	public static Card ZombieToken() =>
+		new()
+		{
+			Name = "Zombie",
+			Subtypes = ImmutableList.Create("Zombie"),
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 2, Toughness = 2 }
 			),
 		};
 

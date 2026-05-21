@@ -54,19 +54,24 @@ public record PlayLandAction : GameAction
 	{
 		var state = gameState;
 
+		var card = state.GetObject(CardId) as Card;
+
+		var bonus = card?.GetComponent<BonusManaLandComponent>();
+		var totalMana = 1 + (bonus?.ExtraMana ?? 0);
+		var manaThisTurn = bonus?.Deferred == true ? 0 : totalMana;
+
 		var player = state.GetPlayer(CastingPlayerId);
 		state = state.UpdateObject(
 			CastingPlayerId,
 			player with
 			{
-				MaxMana = player.MaxMana + 1,
-				CurrentMana = player.CurrentMana + 1,
+				MaxMana = player.MaxMana + totalMana,
+				CurrentMana = player.CurrentMana + manaThisTurn,
 				LandsPlayedThisTurn = player.LandsPlayedThisTurn + 1,
 				LandsPlayedTotal = player.LandsPlayedTotal + 1,
 			}
 		);
 
-		var card = state.GetObject(CardId) as Card;
 		var grantEmblem = card?.GetComponent<GrantEmblemComponent>();
 		if (grantEmblem != null)
 		{
@@ -85,6 +90,17 @@ public record PlayLandAction : GameAction
 
 		var landPlayedEvent = new LandPlayedEvent { PlayerId = CastingPlayerId, CardId = CardId };
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(landPlayedEvent) };
+
+		var landEffect = card?.GetComponent<LandPlayEffectComponent>();
+		if (landEffect != null)
+			state = state.SpawnAction(
+				new ResolveEffectAction
+				{
+					Effects = [landEffect.Effect],
+					CastingPlayerId = CastingPlayerId,
+					SourceCardId = CardId,
+				}
+			);
 
 		return new ActionResult(state).WithEvent(landPlayedEvent);
 	}
