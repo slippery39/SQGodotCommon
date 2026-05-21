@@ -14,6 +14,8 @@ public class PreconstructedStats
 	public void AddResult(PreconstructedGameResult result)
 	{
 		var gr = result.GameResult;
+		if (gr.IsDraw)
+			return;
 
 		ProcessPlayerPerspective(
 			deckName: result.Player1DeckName,

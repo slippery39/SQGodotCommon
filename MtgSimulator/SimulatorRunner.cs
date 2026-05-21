@@ -206,6 +206,8 @@ public class SimulatorRunner
 
 		foreach (var result in results)
 		{
+			if (result.IsDraw)
+				continue;
 			UpdateCardStats(p1DrawnStats, result.Player1DrawnCards, result.IsPlayer1Win);
 			UpdateCardStats(p2DrawnStats, result.Player2DrawnCards, result.IsPlayer2Win);
 			UpdateCardStats(p1PlayedStats, result.Player1PlayedCards, result.IsPlayer1Win);

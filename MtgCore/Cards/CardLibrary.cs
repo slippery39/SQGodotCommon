@@ -915,7 +915,7 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Primeval Titan",
-				ManaCost = 5,
+				ManaCost = 6,
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 6, Toughness = 6 },
@@ -964,7 +964,7 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Exploration",
-				ManaCost = 1,
+				ManaCost = 2,
 				Subtypes = ImmutableList.Create("Artifact"),
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
@@ -1039,7 +1039,7 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Cultivate",
-				ManaCost = 2,
+				ManaCost = 3,
 				Components = ImmutableList.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -1092,7 +1092,7 @@ public static class CardLibrary
 							TargetingStrategy = TargetingStrategy.NoTarget(),
 							ActionTemplate = new GainLifeAction
 							{
-								Amount = 2,
+								Amount = 1,
 								TargetContextKey = ContextKeys.CastingPlayerId,
 							},
 						},
@@ -1110,7 +1110,7 @@ public static class CardLibrary
 						Emblem = new Emblem
 						{
 							Name = "Field of the Dead",
-							Condition = new LandsPlayedCondition { Threshold = 7 },
+							Condition = new LandsPlayedCondition { Threshold = 9 },
 							Effect = new CardEffect
 							{
 								TargetingStrategy = TargetingStrategy.NoTarget(),
@@ -1130,7 +1130,7 @@ public static class CardLibrary
 				ManaCost = 0,
 				Subtypes = ImmutableList.Create(LandSubtype),
 				Components = ImmutableList.Create<GameComponent>(
-					new BonusManaLandComponent { ExtraMana = 1, Deferred = true },
+					new BonusManaLandComponent { ExtraMana = 0, Deferred = true },
 					new LandPlayEffectComponent
 					{
 						Effect = new CardEffect
@@ -1213,11 +1213,11 @@ public static class CardLibrary
 						Emblem = new Emblem
 						{
 							Name = "Valakut",
-							Condition = new LandsPlayedCondition { Threshold = 7 },
+							Condition = new LandsPlayedCondition { Threshold = 8 },
 							Effect = new CardEffect
 							{
 								TargetingStrategy = Random().OpponentOrOpponentCreatures(),
-								ActionTemplate = new DealDamageAction { Amount = 3 },
+								ActionTemplate = new DealDamageAction { Amount = 2 },
 							},
 						},
 					}
