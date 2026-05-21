@@ -16,19 +16,32 @@ public class SimulatorRunner
 	private readonly int _gameCount;
 	private readonly int _aiDepth;
 	private readonly int? _seed;
+	private readonly AiStrategyType _strategyType;
 
-	public SimulatorRunner(int gameCount, int aiDepth = 3, int? seed = null)
+	public SimulatorRunner(
+		int gameCount,
+		int aiDepth = 3,
+		int? seed = null,
+		AiStrategyType strategyType = AiStrategyType.BeamSearch
+	)
 	{
 		_gameCount = gameCount;
 		_aiDepth = aiDepth;
 		_seed = seed;
+		_strategyType = strategyType;
 	}
 
 	public void Run()
 	{
 		var masterSeed = _seed ?? new Random().Next();
 		var seedLabel = _seed.HasValue ? $"seed: {masterSeed}" : $"seed: {masterSeed} (random)";
-		Console.WriteLine($"Running {_gameCount} games (AI depth: {_aiDepth}, {seedLabel})...");
+		var strategyLabel =
+			_strategyType == AiStrategyType.MultiTurnBeamSearch
+				? "MultiTurnBeamSearch"
+				: "BeamSearch";
+		Console.WriteLine(
+			$"Running {_gameCount} games (AI: {strategyLabel}, depth: {_aiDepth}, {seedLabel})..."
+		);
 		Console.WriteLine();
 
 		var results = new List<GameResult>();
@@ -43,8 +56,14 @@ public class SimulatorRunner
 			var (state, ids, cardNames) = SetupGame(gameSeed);
 
 			var aiRng = new Random(gameSeed + 4);
-			var player1Strategy = new BeamSearchAiStrategy(ids, _aiDepth, rng: aiRng);
-			var player2Strategy = new BeamSearchAiStrategy(ids, _aiDepth, rng: aiRng);
+			IAiStrategy player1Strategy =
+				_strategyType == AiStrategyType.MultiTurnBeamSearch
+					? new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: aiRng)
+					: new BeamSearchAiStrategy(ids, _aiDepth, rng: aiRng);
+			IAiStrategy player2Strategy =
+				_strategyType == AiStrategyType.MultiTurnBeamSearch
+					? new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: aiRng)
+					: new BeamSearchAiStrategy(ids, _aiDepth, rng: aiRng);
 
 			var runner = new GameRunner(player1Strategy, player2Strategy);
 			var (result, finalState) = runner.Run(state, ids, cardNames, shuffleSeed: gameSeed + 2);
