@@ -35,7 +35,7 @@ public static class TraditionalStormDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 16, CardLibrary.Plains);
+		AddCopies(deck, ownerId, 12, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Tendrils of Agony"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Past In Flames"));
 		AddCopies(deck, ownerId, 4, CardLibrary.SleightOfHand);
@@ -46,6 +46,7 @@ public static class TraditionalStormDeckFactory
 		AddCopies(deck, ownerId, 4, CardLibrary.AncestralRecall);
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Faithless Looting"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Mox"));
+		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Sol Ring"));
 		return deck;
 	}
 

@@ -124,7 +124,7 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Telling Time",
-				ManaCost = 2,
+				ManaCost = 1,
 				Components = ImmutableList.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -780,7 +780,7 @@ public static class CardLibrary
 					}
 				),
 			},
-			CardFactory.Spell("Lotus Bloom", manaCost: 0).WithAddMana(2).Build(),
+			CardFactory.Spell("Lotus Bloom", manaCost: 0).WithAddMana(3).Build(),
 			new()
 			{
 				Name = "Rite of Flame",
@@ -868,14 +868,14 @@ public static class CardLibrary
 			},
 			// ===== TRADITIONAL STORM DECK CARDS =====
 			CardFactory
-				.Spell("Tendrils of Agony", manaCost: 5)
+				.Spell("Tendrils of Agony", manaCost: 4)
 				.WithStorm()
 				.WithLoseLife(2)
 				.WithTarget(Single().PlayersOrCreatures())
 				.WithLifeGain(2)
 				.Build(),
 			CardFactory
-				.Spell("Past in Flames", manaCost: 6)
+				.Spell("Past in Flames", manaCost: 4)
 				.WithFlashback(6)
 				.WithAction(new GiveFlashbackAction(), AllValid().InstantOrSorceryInYourGraveyard())
 				.Build(),
@@ -1160,7 +1160,7 @@ public static class CardLibrary
 			},
 			// ===== REANIMATOR CARDS =====
 			CardFactory
-				.Spell("Reanimate", manaCost: 3)
+				.Spell("Reanimate", manaCost: 1)
 				.WithAction(new PutIntoBattlefieldAction(), Single().CreatureInYourGraveyard())
 				.Build(),
 			new()
@@ -1199,6 +1199,146 @@ public static class CardLibrary
 						HasTrample = true,
 						HasHexproof = true,
 						HasTaunt = true,
+					}
+				),
+			},
+			// ===== JUND DECK CARDS =====
+			new()
+			{
+				Name = "Thoughtseize",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.NoTarget(),
+								ActionTemplate = new PipelineAction
+								{
+									Steps = ImmutableList.Create<GameAction>(
+										new SelectCardFromHandByManaCostAction
+										{
+											SelectLowest = false,
+											TargetOpponent = true,
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+											OutputKey = "ts_target",
+										},
+										new DiscardCardsAction { TargetContextKey = "ts_target" }
+									),
+								},
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Inquisition of Kozilek",
+				ManaCost = 1,
+				Components = ImmutableList.Create<GameComponent>(
+					new SpellComponent
+					{
+						Effects = ImmutableList.Create(
+							new CardEffect
+							{
+								TargetingStrategy = TargetingStrategy.NoTarget(),
+								ActionTemplate = new PipelineAction
+								{
+									Steps = ImmutableList.Create<GameAction>(
+										new SelectCardFromHandByManaCostAction
+										{
+											SelectLowest = true,
+											TargetOpponent = true,
+											PlayerIdContextKey = ContextKeys.CastingPlayerId,
+											OutputKey = "iok_target",
+										},
+										new DiscardCardsAction { TargetContextKey = "iok_target" }
+									),
+								},
+							}
+						),
+					}
+				),
+			},
+			new()
+			{
+				Name = "Liliana of the Veil",
+				ManaCost = 3,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 2, Toughness = 2 },
+					new TriggeredAbilityComponent
+					{
+						Name = "Liliana ETB",
+						Condition = TriggerConditions.OnSelfEntersBattlefield(),
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new SelectCreatureFromBattlefieldByManaCostAction
+									{
+										SelectLowest = true,
+										TargetOpponent = true,
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										OutputKey = "lili_destroy_target",
+									},
+									new DestroyCreatureAction
+									{
+										TargetContextKey = "lili_destroy_target",
+									}
+								),
+							},
+						},
+					},
+					new TriggeredAbilityComponent
+					{
+						Name = "Liliana Upkeep",
+						Condition = new EventTriggerCondition
+						{
+							EventTypeName = EventTypeNames.TurnStarted,
+							Filter = new IsControlledByYouSpecification(),
+						},
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new DiscardRandomCardAction
+							{
+								TargetOpponent = true,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Siege Rhino",
+				ManaCost = 4,
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 4,
+						Toughness = 5,
+						HasTrample = true,
+					},
+					new TriggeredAbilityComponent
+					{
+						Name = "Siege Rhino ETB",
+						Condition = TriggerConditions.OnSelfEntersBattlefield(),
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new DrainLifeAction
+							{
+								Amount = 3,
+								TargetOpponent = true,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
+						},
 					}
 				),
 			},

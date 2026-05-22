@@ -16,8 +16,17 @@ MtgCore/
 │                            #   Provides TargetContextKey, AmountContextKey, TargetIds, WithTargets(),
 │                            #   ResolveTargetIds(), ResolveAmount(), and lenient ValidateResolve.
 │                            # Data/query actions (CountCardsWithSubtypeAction, CountCardsWithNameAction,
-│                            #   RevealTopCardAction, LookAtTopCardsAction, SelectCardFromLibraryAction)
+│                            #   RevealTopCardAction, LookAtTopCardsAction, SelectCardFromLibraryAction,
+│                            #   SelectCardFromHandByManaCostAction, SelectCreatureFromBattlefieldByManaCostAction)
 │                            #   are NOT EffectActions — they still use PlayerIdContextKey (scalar).
+│                            # SelectCardFromHandByManaCostAction — picks highest/lowest non-land card from a player's (or opponent's)
+│                            #   hand by ManaCost; writes card ID to OutputKey. No-ops (writes nothing) if no non-land cards found.
+│                            #   TargetOpponent=true derives the opponent via Player1/Player2 well-known IDs.
+│                            # SelectCreatureFromBattlefieldByManaCostAction — same pattern but targets battlefield creatures.
+│                            # DiscardRandomCardAction — GameAction (not EffectAction); picks a random card from a player's (or
+│                            #   opponent's) hand and moves it to graveyard. Emits CardDiscardedEvent. No-ops if hand is empty.
+│                            # DrainLifeAction — GameAction; opponent loses Amount life, caster gains Amount life. Emits
+│                            #   PlayerLostLifeEvent + PlayerGainedLifeEvent. Used by Siege Rhino ETB.
 │                            # Includes: PutIntoBattlefieldAction (CardIdContextKey for pipeline use), CastCreatureAction, ResolveCreatureAction
 │                            #           CastPermanentAction, ResolvePermanentAction (non-creature permanents → battlefield)
 │                            #           CreateTokenAction
