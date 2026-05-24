@@ -68,6 +68,14 @@ Potential evaluators preserve setup lines (fast mana, etc.) that score poorly on
 
 **`IPotentialEvaluator`** — pluggable interface for secondary beam-pruning signals. Implement to add new potential heuristics (graveyard value, storm count, etc.) without touching the search logic.
 
+**`MultiTurnBeamSearchAiStrategy`** — beam search (same pruning as above) combined with a multi-turn greedy rollout. Each candidate is scored by `ScoreAfterCompletingTurn`, which completes the current turn greedily then runs `MultiTurnGreedyRollout` for N lookahead turns (default 2). The rollout alternates between `PlayGreedyTurn` (our turn) and `SimulateOpponentTurn` (opponent turn). Default opponent mode is `BoardOnly`. Default: depth 3, concreteSlots 10, lookaheadTurns 2.
+
+**`OpponentSimulationMode`** — controls how the opponent's turn is simulated in the rollout:
+- `PassTurn` — opponent does nothing.
+- `Greedy` — opponent plays the single best non-EndTurn action (includes hand cards; exposes hidden information).
+- `Random` — opponent plays one random non-EndTurn action.
+- `BoardOnly` — opponent iterates all legal `AttackAction` and `ActivateAbilityAction` options greedily in a loop until none remain, then ends turn. No hand cards, so simulation uses only visible information. This is the default. The loop is essential: stopping after a single attack would undercount the opponent's total damage (e.g. missing that two attackers together deal lethal).
+
 **`IAiStrategy`** — swap implementations freely; `GameRunner` and `SimulatorRunner` only depend on the interface.
 
 ## StateEvaluator

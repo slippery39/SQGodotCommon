@@ -30,11 +30,12 @@ public static class ZooDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 20, CardLibrary.Plains);
+		AddCopies(deck, ownerId, 16, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, CardLibrary.WildNacatl);
 		AddCopies(deck, ownerId, 4, CardLibrary.KirdApe);
 		AddCopies(deck, ownerId, 4, CardLibrary.LoamLion);
 		AddCopies(deck, ownerId, 4, CardLibrary.Tarmogoyf);
+		AddCopies(deck, ownerId, 4, CardLibrary.GoblinGuide);
 		AddCopies(deck, ownerId, 4, CardLibrary.QasaliPridemage);
 		AddCopies(deck, ownerId, 4, CardLibrary.LightningBolt);
 		AddCopies(deck, ownerId, 4, CardLibrary.LightningHelix);

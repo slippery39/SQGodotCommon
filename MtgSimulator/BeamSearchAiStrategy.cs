@@ -50,7 +50,7 @@ public class BeamSearchAiStrategy : ICapturingAiStrategy
 	public BeamSearchAiStrategy(
 		MtgGameIds ids,
 		int maxDepth = 3,
-		int concreteSlots = 10,
+		int concreteSlots = 6,
 		IReadOnlyList<IPotentialEvaluator>? potentialEvaluators = null,
 		Random? rng = null,
 		bool captureDecisions = false

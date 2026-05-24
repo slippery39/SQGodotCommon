@@ -15,7 +15,7 @@ public class FastManaPotentialEvaluator : IPotentialEvaluator
 {
 	public int SlotCount { get; }
 
-	public FastManaPotentialEvaluator(int slotCount = 5)
+	public FastManaPotentialEvaluator(int slotCount = 2)
 	{
 		SlotCount = slotCount;
 	}

@@ -11,12 +11,12 @@ public static class ReanimatorDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 20, CardLibrary.Plains);
+		AddCopies(deck, ownerId, 18, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Ancestral Recall"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Bloodghast"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Tarmogoyf"));
 		AddCopies(deck, ownerId, 3, () => CardLibrary.GetByName("Path to Exile"));
-		AddCopies(deck, ownerId, 2, () => CardLibrary.GetByName("Mox"));
+		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Mox"));
 		AddCopies(deck, ownerId, 2, () => CardLibrary.GetByName("Lotus Bloom"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Reanimate"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Hunted Dragon"));

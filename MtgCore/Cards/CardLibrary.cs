@@ -780,7 +780,7 @@ public static class CardLibrary
 					}
 				),
 			},
-			CardFactory.Spell("Lotus Bloom", manaCost: 0).WithAddMana(3).Build(),
+			CardFactory.Spell("Lotus Bloom", manaCost: 0).WithAddMana(2).Build(),
 			new()
 			{
 				Name = "Rite of Flame",
@@ -817,27 +817,27 @@ public static class CardLibrary
 			},
 			CardFactory.Spell("Seething Song", manaCost: 3).WithAddMana(5).Build(),
 			CardFactory
-				.Creature("Hunted Dragon", manaCost: 7, power: 7, toughness: 7)
+				.Creature("Hunted Dragon", manaCost: 7, power: 8, toughness: 8)
 				.WithSubtype(DragonSubtype)
 				.WithSubtype("Lizard")
 				.WithFlying()
 				.WithHaste()
 				.Build(),
 			CardFactory
-				.Creature("Bogardan Hellkite", manaCost: 8, power: 5, toughness: 5)
+				.Creature("Bogardan Hellkite", manaCost: 6, power: 6, toughness: 6)
 				.WithSubtype(DragonSubtype)
 				.WithFlying()
 				.WithTriggeredAbility(
 					"ETB Damage",
 					TriggerConditions.OnSelfEntersBattlefield(),
 					effect: eb =>
-						eb.WithDamage(5).WithTarget(Random().OpponentOrOpponentCreatures())
+						eb.WithDamage(6).WithTarget(Random().OpponentOrOpponentCreatures())
 				)
 				.Build(),
 			new()
 			{
 				Name = "Dragonstorm",
-				ManaCost = 8,
+				ManaCost = 7,
 				Components = ImmutableList.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -868,15 +868,15 @@ public static class CardLibrary
 			},
 			// ===== TRADITIONAL STORM DECK CARDS =====
 			CardFactory
-				.Spell("Tendrils of Agony", manaCost: 4)
+				.Spell("Tendrils of Agony", manaCost: 5)
 				.WithStorm()
 				.WithLoseLife(2)
 				.WithTarget(Single().PlayersOrCreatures())
 				.WithLifeGain(2)
 				.Build(),
 			CardFactory
-				.Spell("Past in Flames", manaCost: 4)
-				.WithFlashback(6)
+				.Spell("Past in Flames", manaCost: 5)
+				.WithFlashback(7)
 				.WithAction(new GiveFlashbackAction(), AllValid().InstantOrSorceryInYourGraveyard())
 				.Build(),
 			// ===== LAND-ADJACENT CARDS =====
@@ -1160,7 +1160,7 @@ public static class CardLibrary
 			},
 			// ===== REANIMATOR CARDS =====
 			CardFactory
-				.Spell("Reanimate", manaCost: 1)
+				.Spell("Reanimate", manaCost: 2)
 				.WithAction(new PutIntoBattlefieldAction(), Single().CreatureInYourGraveyard())
 				.Build(),
 			new()
@@ -1353,7 +1353,7 @@ public static class CardLibrary
 						Emblem = new Emblem
 						{
 							Name = "Valakut",
-							Condition = new LandsPlayedCondition { Threshold = 8 },
+							Condition = new LandsPlayedCondition { Threshold = 9 },
 							Effect = new CardEffect
 							{
 								TargetingStrategy = Random().OpponentOrOpponentCreatures(),

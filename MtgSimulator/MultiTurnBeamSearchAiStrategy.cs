@@ -30,14 +30,24 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	private readonly IReadOnlyList<IPotentialEvaluator> _potentialEvaluators;
 	private readonly Random _rng;
 	private readonly bool _captureDecisions;
+	private readonly float _scoreDivergenceThreshold;
 
-	private const int MaxChoiceBranches = 20;
+	private ImmutableList<GameAction>? _committedChain;
+	private ImmutableList<float>? _committedChainExpectedScores;
+	private int _chainIndex;
 
-	// EndTurn must exceed the best non-EndTurn score by this margin to be chosen.
-	// Prevents EndTurn from winning ties — concrete actions are at least as valuable as passing.
+	private const int MaxChoiceBranches = 3;
+
 	private const float EndTurnBias = 0.01f;
 
-	private record BeamNode(GameState State, GameAction RootAction, float ConcreteScore);
+	private record BeamNode(
+		GameState State,
+		ImmutableList<GameAction> ActionPath,
+		float ConcreteScore
+	)
+	{
+		public GameAction RootAction => ActionPath[0];
+	}
 
 	public AiDecision? LastDecision { get; private set; }
 
@@ -45,11 +55,12 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		MtgGameIds ids,
 		int currentTurnDepth = 3,
 		int lookaheadTurns = 2,
-		int concreteSlots = 10,
-		OpponentSimulationMode opponentMode = OpponentSimulationMode.Greedy,
+		int concreteSlots = 2,
+		OpponentSimulationMode opponentMode = OpponentSimulationMode.BoardOnly,
 		IReadOnlyList<IPotentialEvaluator>? potentialEvaluators = null,
 		Random? rng = null,
-		bool captureDecisions = false
+		bool captureDecisions = false,
+		float scoreDivergenceThreshold = 5.0f
 	)
 	{
 		_ids = ids;
@@ -60,6 +71,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		_potentialEvaluators = potentialEvaluators ?? [new FastManaPotentialEvaluator()];
 		_rng = rng ?? new Random();
 		_captureDecisions = captureDecisions;
+		_scoreDivergenceThreshold = scoreDivergenceThreshold;
 	}
 
 	public GameAction SelectAction(GameState state, MtgGameIds ids, int playerId)
@@ -73,6 +85,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 		if (actions.Count == 1)
 		{
+			InvalidateChain();
 			if (_captureDecisions)
 			{
 				var desc = ActionDescriber.Describe(actions[0], state);
@@ -81,13 +94,17 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			return actions[0];
 		}
 
+		var chainAction = TryConsumeCommittedAction(state, actions, playerId);
+		if (chainAction != null)
+			return chainAction;
+
 		// Level 0: execute each root action and score via multi-turn rollout
 		var beam = actions
 			.Select(action =>
 			{
 				var resultState = ExecuteAction(state, action);
 				var score = ScoreAfterCompletingTurn(resultState, playerId);
-				return new BeamNode(resultState, action, score);
+				return new BeamNode(resultState, ImmutableList.Create(action), score);
 			})
 			.ToList();
 
@@ -104,6 +121,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		{
 			if (_captureDecisions)
 				SetLastDecision(winner.RootAction, rootScores!, state);
+			CommitChain(winner.ActionPath, state, playerId);
 			return winner.RootAction;
 		}
 
@@ -125,6 +143,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			{
 				if (_captureDecisions)
 					SetLastDecision(winner.RootAction, rootScores!, state);
+				CommitChain(winner.ActionPath, state, playerId);
 				return winner.RootAction;
 			}
 
@@ -134,36 +153,58 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		if (_captureDecisions)
 			UpdateRootScores(rootScores!, beam);
 
-		// EndTurn must beat the best non-EndTurn score by EndTurnBias to be chosen
-		var nonEndTurnNodes = beam.Where(n => n.RootAction is not EndTurnAction).ToList();
-		GameAction chosen;
-		if (nonEndTurnNodes.Count == 0)
+		var chosenNode = PickBestNode(beam);
+		if (_captureDecisions)
+			SetLastDecision(chosenNode.RootAction, rootScores!, state);
+		CommitChain(chosenNode.ActionPath, state, playerId);
+		return chosenNode.RootAction;
+	}
+
+	/// <summary>
+	/// Returns the committed chain action if the chain is still valid, or null to trigger a fresh search.
+	/// </summary>
+	private GameAction? TryConsumeCommittedAction(
+		GameState state,
+		List<GameAction> actions,
+		int playerId
+	)
+	{
+		if (_committedChain == null || _chainIndex >= _committedChain.Count)
+			return null;
+
+		if (_chainIndex > 0)
 		{
-			chosen = beam.First(n => n.RootAction is EndTurnAction).RootAction;
-		}
-		else
-		{
-			var bestNonEndTurnScore = nonEndTurnNodes.Max(n => n.ConcreteScore);
-			var endTurnScore = beam.Where(n => n.RootAction is EndTurnAction)
-				.Select(n => n.ConcreteScore)
-				.DefaultIfEmpty(float.MinValue)
-				.Max();
-			if (endTurnScore > bestNonEndTurnScore + EndTurnBias)
+			var currentScore = StateEvaluator.Evaluate(state, _ids, playerId);
+			var expectedScore = _committedChainExpectedScores![_chainIndex];
+			if (Math.Abs(currentScore - expectedScore) > _scoreDivergenceThreshold)
 			{
-				chosen = beam.First(n => n.RootAction is EndTurnAction).RootAction;
-			}
-			else
-			{
-				var bestNodes = nonEndTurnNodes
-					.Where(n => n.ConcreteScore == bestNonEndTurnScore)
-					.ToList();
-				chosen = bestNodes[_rng.Next(bestNodes.Count)].RootAction;
+				InvalidateChain();
+				return null;
 			}
 		}
 
+		var freshAction = FindCommittedAction(actions, _committedChain[_chainIndex]);
+		if (freshAction == null)
+		{
+			InvalidateChain();
+			return null;
+		}
+
 		if (_captureDecisions)
-			SetLastDecision(chosen, rootScores!, state);
-		return chosen;
+		{
+			var desc = ActionDescriber.Describe(freshAction, state);
+			var score = _committedChainExpectedScores?[_chainIndex] ?? 0f;
+			LastDecision = new AiDecision(
+				$"[Chain] {desc}",
+				score,
+				[new AiActionCandidate(desc, score, true)]
+			);
+		}
+
+		_chainIndex++;
+		if (_chainIndex >= _committedChain.Count)
+			InvalidateChain();
+		return freshAction;
 	}
 
 	public ImmutableList<int> ResolveChoice(GameState state, ChoiceAction choice, int playerId)
@@ -291,7 +332,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		{
 			var resultState = ExecuteAction(state, action);
 			var score = ScoreAfterCompletingTurn(resultState, playerId);
-			result.Add(new BeamNode(resultState, node.RootAction, score));
+			result.Add(new BeamNode(resultState, node.ActionPath.Add(action), score));
 		}
 		return result;
 	}
@@ -427,6 +468,32 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 				}
 				return ExecuteAction(state, BuildEndTurnAction(state));
 
+			case OpponentSimulationMode.BoardOnly:
+				// Iterate all attacks greedily so the simulation captures full damage from
+				// multiple attackers — stopping after one attack underestimates lethal threats.
+				// Activated abilities are excluded: they don't affect attack outcomes and
+				// iterating them causes O(n²) blowup across the beam search.
+				while (true)
+				{
+					var attackActions = MtgActionGenerator
+						.GetLegalActions(state, _ids, opponentId)
+						.OfType<AttackAction>()
+						.ToList();
+					if (attackActions.Count == 0)
+						break;
+					var bestAttack = attackActions.MaxBy(a =>
+						StateEvaluator.Evaluate(ExecuteAction(state, a), _ids, opponentId)
+					)!;
+					state = ExecuteAction(state, bestAttack);
+					state = ResolveAllChoices(state, opponentId);
+					if (
+						Math.Abs(StateEvaluator.Evaluate(state, _ids, ourPlayerId))
+						>= StateEvaluator.WinScore
+					)
+						break;
+				}
+				return ExecuteAction(state, BuildEndTurnAction(state));
+
 			default:
 				return ExecuteAction(state, BuildEndTurnAction(state));
 		}
@@ -477,6 +544,26 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 	private static BeamNode? FindWinner(List<BeamNode> beam) =>
 		beam.FirstOrDefault(n => n.ConcreteScore >= StateEvaluator.WinScore);
+
+	// EndTurn must exceed the best non-EndTurn score by EndTurnBias to be chosen.
+	private BeamNode PickBestNode(List<BeamNode> beam)
+	{
+		var nonEndTurnNodes = beam.Where(n => n.RootAction is not EndTurnAction).ToList();
+		if (nonEndTurnNodes.Count == 0)
+			return beam.First(n => n.RootAction is EndTurnAction);
+
+		var bestNonEndTurnScore = nonEndTurnNodes.Max(n => n.ConcreteScore);
+		var endTurnScore = beam.Where(n => n.RootAction is EndTurnAction)
+			.Select(n => n.ConcreteScore)
+			.DefaultIfEmpty(float.MinValue)
+			.Max();
+
+		if (endTurnScore > bestNonEndTurnScore + EndTurnBias)
+			return beam.First(n => n.RootAction is EndTurnAction);
+
+		var bestNodes = nonEndTurnNodes.Where(n => n.ConcreteScore == bestNonEndTurnScore).ToList();
+		return bestNodes[_rng.Next(bestNodes.Count)];
+	}
 
 	private ImmutableList<int> GreedyResolveChoice(
 		GameState state,
@@ -558,6 +645,75 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		foreach (var node in beam)
 			if (!scores.TryGetValue(node.RootAction, out var prev) || node.ConcreteScore > prev)
 				scores[node.RootAction] = node.ConcreteScore;
+	}
+
+	private void InvalidateChain()
+	{
+		_committedChain = null;
+		_committedChainExpectedScores = null;
+		_chainIndex = 0;
+	}
+
+	private void CommitChain(
+		ImmutableList<GameAction> path,
+		GameState stateBeforeFirstAction,
+		int playerId
+	)
+	{
+		if (path.Count <= 1)
+		{
+			InvalidateChain();
+			return;
+		}
+		_committedChain = path;
+		_chainIndex = 1; // position 0 is being returned right now
+
+		// Pre-compute cheap StateEvaluator scores at each step for sanity checking.
+		// _committedChainExpectedScores[i] = score of the state just before executing path[i].
+		var scores = ImmutableList.CreateBuilder<float>();
+		var s = stateBeforeFirstAction;
+		foreach (var action in path)
+		{
+			scores.Add(StateEvaluator.Evaluate(s, _ids, playerId));
+			s = ExecuteAction(s, action);
+		}
+		_committedChainExpectedScores = scores.ToImmutable();
+	}
+
+	private static GameAction? FindCommittedAction(List<GameAction> legal, GameAction committed) =>
+		legal.FirstOrDefault(a => ActionsMatch(a, committed));
+
+	private static bool ActionsMatch(GameAction a, GameAction b) =>
+		(a, b) switch
+		{
+			(PlayLandAction x, PlayLandAction y) => x.CardId == y.CardId,
+			(CastCreatureAction x, CastCreatureAction y) => x.CardId == y.CardId,
+			(CastSpellAction x, CastSpellAction y) => x.CardId == y.CardId
+				&& TargetIdsMatch(x.TargetIds, y.TargetIds),
+			(AttackAction x, AttackAction y) => x.AttackerId == y.AttackerId
+				&& x.TargetId == y.TargetId,
+			(EndTurnAction, EndTurnAction) => true,
+			(ActivateAbilityAction x, ActivateAbilityAction y) => x.CardId == y.CardId
+				&& x.AbilityIndex == y.AbilityIndex,
+			(CastFromGraveyardAction x, CastFromGraveyardAction y) => x.CardId == y.CardId,
+			_ => false,
+		};
+
+	private static bool TargetIdsMatch(
+		ImmutableDictionary<int, ImmutableList<int>> a,
+		ImmutableDictionary<int, ImmutableList<int>> b
+	)
+	{
+		if (a.Count != b.Count)
+			return false;
+		foreach (var kvp in a)
+		{
+			if (!b.TryGetValue(kvp.Key, out var bList))
+				return false;
+			if (!kvp.Value.SequenceEqual(bList))
+				return false;
+		}
+		return true;
 	}
 
 	private static string OptionDescription(GameState state, ChoiceOption option)

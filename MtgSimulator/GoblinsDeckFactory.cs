@@ -28,12 +28,12 @@ public static class GoblinsDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 20, CardLibrary.Plains);
+		AddCopies(deck, ownerId, 16, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, CardLibrary.AncestralRecall);
 		AddCopies(deck, ownerId, 2, CardLibrary.GloriousAnthem);
 		AddCopies(deck, ownerId, 4, CardLibrary.GoblinGuide);
 		AddCopies(deck, ownerId, 4, CardLibrary.GoblinLackey);
-		AddCopies(deck, ownerId, 2, CardLibrary.Mox);
+		AddCopies(deck, ownerId, 4, CardLibrary.Mox);
 		AddCopies(deck, ownerId, 4, CardLibrary.LightningBolt);
 		AddCopies(deck, ownerId, 4, CardLibrary.RagingGoblin);
 		AddCopies(deck, ownerId, 4, CardLibrary.WarrenInstigator);
