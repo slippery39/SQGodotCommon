@@ -452,7 +452,7 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Goblin Chieftain",
-				ManaCost = 2,
+				ManaCost = 3,
 				Subtypes = ImmutableList.Create(GoblinSubtype),
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
@@ -534,6 +534,104 @@ public static class CardLibrary
 				.WithSacrificeSubtypeCost(GoblinSubtype)
 				.WithDamage(5)
 				.WithTarget(Single().PlayersOrCreatures())
+				.Build(),
+			CardFactory
+				.Creature("Mogg Warmaster", manaCost: 1, power: 1, toughness: 1)
+				.WithSubtype(GoblinSubtype)
+				.WithEtbTrigger("ETB Token", eb => eb.WithCreateTokens(GoblinToken()))
+				.WithComponent(
+					new TriggeredAbilityComponent
+					{
+						Name = "Dies Token",
+						Condition = TriggerConditions.OnSelfDies(),
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new CreateCardAction
+							{
+								CardTemplate = GoblinToken(),
+								Count = 1,
+							},
+						},
+						ActiveInZone = ZoneType.Graveyard,
+					}
+				)
+				.Build(),
+			CardFactory
+				.Creature("Goblin Matron", manaCost: 2, power: 1, toughness: 1)
+				.WithSubtype(GoblinSubtype)
+				.WithEtbTrigger(
+					"ETB Tutor",
+					eb =>
+						eb.WithAction(
+							new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new SelectCardFromLibraryAction
+									{
+										Subtype = GoblinSubtype,
+										OutputKey = "matron_target",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new MoveCardToHandAction
+									{
+										CardIdContextKey = "matron_target",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									}
+								),
+							},
+							TargetingStrategy.NoTarget()
+						)
+				)
+				.Build(),
+			CardFactory
+				.Creature("Goblin Ringleader", manaCost: 3, power: 2, toughness: 2)
+				.WithSubtype(GoblinSubtype)
+				.WithEtbTrigger(
+					"ETB Draw Goblins",
+					eb =>
+						eb.WithAction(
+							new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new SelectCardFromLibraryAction
+									{
+										Subtype = GoblinSubtype,
+										OutputKey = "ringleader_1",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new MoveCardToHandAction
+									{
+										CardIdContextKey = "ringleader_1",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new SelectCardFromLibraryAction
+									{
+										Subtype = GoblinSubtype,
+										OutputKey = "ringleader_2",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new MoveCardToHandAction
+									{
+										CardIdContextKey = "ringleader_2",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new SelectCardFromLibraryAction
+									{
+										Subtype = GoblinSubtype,
+										OutputKey = "ringleader_3",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									},
+									new MoveCardToHandAction
+									{
+										CardIdContextKey = "ringleader_3",
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+									}
+								),
+							},
+							TargetingStrategy.NoTarget()
+						)
+				)
 				.Build(),
 			// ===== ZOO DECK CARDS =====
 			CardFactory
@@ -1039,7 +1137,7 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Cultivate",
-				ManaCost = 3,
+				ManaCost = 2,
 				Components = ImmutableList.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -1203,6 +1301,56 @@ public static class CardLibrary
 				),
 			},
 			// ===== JUND DECK CARDS =====
+			CardFactory
+				.Creature("Scavenging Ooze", manaCost: 2, power: 2, toughness: 2)
+				.WithActivatedAbility(
+					"Scavenge",
+					manaCost: 0,
+					effect: eb =>
+						eb.WithAction(
+							new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new SelectCardFromZoneAction
+									{
+										Zone = ZoneType.Graveyard,
+										TargetOpponent = true,
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										OutputKey = "scooze_exile_1",
+									},
+									new MoveCardToExileAction
+									{
+										CardIdContextKey = "scooze_exile_1",
+									},
+									new SelectCardFromZoneAction
+									{
+										Zone = ZoneType.Graveyard,
+										TargetOpponent = true,
+										PlayerIdContextKey = ContextKeys.CastingPlayerId,
+										OutputKey = "scooze_exile_2",
+									},
+									new MoveCardToExileAction
+									{
+										CardIdContextKey = "scooze_exile_2",
+									},
+									new GainLifeAction
+									{
+										Amount = 1,
+										TargetContextKey = ContextKeys.CastingPlayerId,
+									},
+									new AddModifierAction
+									{
+										PowerBonus = 1,
+										ToughnessBonus = 1,
+										Duration = ModifierDuration.Permanent,
+										TargetContextKey = ContextKeys.SourceCardId,
+									}
+								),
+							},
+							TargetingStrategy.NoTarget()
+						)
+				)
+				.Build(),
 			new()
 			{
 				Name = "Thoughtseize",
@@ -1235,7 +1383,7 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Inquisition of Kozilek",
-				ManaCost = 1,
+				ManaCost = 0,
 				Components = ImmutableList.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -1267,7 +1415,7 @@ public static class CardLibrary
 				ManaCost = 3,
 				Components = ImmutableList.Create<GameComponent>(
 					new PermanentComponent(),
-					new CreatureComponent { Power = 2, Toughness = 2 },
+					new CreatureComponent { Power = 3, Toughness = 3 },
 					new TriggeredAbilityComponent
 					{
 						Name = "Liliana ETB",
@@ -1321,9 +1469,10 @@ public static class CardLibrary
 					new PermanentComponent(),
 					new CreatureComponent
 					{
-						Power = 4,
+						Power = 5,
 						Toughness = 5,
 						HasTrample = true,
+						HasLifelink = true,
 					},
 					new TriggeredAbilityComponent
 					{
@@ -1353,7 +1502,7 @@ public static class CardLibrary
 						Emblem = new Emblem
 						{
 							Name = "Valakut",
-							Condition = new LandsPlayedCondition { Threshold = 9 },
+							Condition = new LandsPlayedCondition { Threshold = 8 },
 							Effect = new CardEffect
 							{
 								TargetingStrategy = Random().OpponentOrOpponentCreatures(),
@@ -1594,6 +1743,25 @@ public static class CardLibrary
 	/// </summary>
 	public static Card GoblinGrenade() => All.First(c => c.Name == "Goblin Grenade");
 
+	/// <summary>
+	/// Mogg Warmaster — 1 mana creature (1/1, Goblin).
+	/// ETB: create a 1/1 Goblin token.
+	/// When it dies: create a 1/1 Goblin token.
+	/// </summary>
+	public static Card MoggWarmaster() => All.First(c => c.Name == "Mogg Warmaster");
+
+	/// <summary>
+	/// Goblin Matron — 2 mana creature (1/1, Goblin).
+	/// ETB: search library for a random Goblin and put it into your hand.
+	/// </summary>
+	public static Card GoblinMatron() => All.First(c => c.Name == "Goblin Matron");
+
+	/// <summary>
+	/// Goblin Ringleader — 3 mana creature (2/2, Goblin).
+	/// ETB: find up to 3 random Goblins from library and put them into your hand.
+	/// </summary>
+	public static Card GoblinRingleader() => All.First(c => c.Name == "Goblin Ringleader");
+
 	// ===== ZOO DECK CARDS =====
 
 	/// <summary>
@@ -1761,6 +1929,15 @@ public static class CardLibrary
 	/// Duration = Permanent so StartTurnAction does not clear it.
 	/// </summary>
 	public static Card LandElemental() => All.First(c => c.Name == "Land Elemental");
+
+	// ===== JUND DECK CARDS =====
+
+	/// <summary>
+	/// Scavenging Ooze — 2 mana creature (2/2).
+	/// Activated (0 cost, once per turn): exile 2 random cards from opponent's graveyard,
+	/// gain 1 life, and get +1/+1 permanently. No-ops gracefully when opponent graveyard is small.
+	/// </summary>
+	public static Card ScavengingOoze() => All.First(c => c.Name == "Scavenging Ooze");
 
 	// ===== REANIMATOR CARDS =====
 

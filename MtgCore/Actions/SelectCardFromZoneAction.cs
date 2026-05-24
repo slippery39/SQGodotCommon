@@ -12,6 +12,7 @@ namespace MtgCore;
 /// Player resolution:
 ///   - Set PlayerId directly, or
 ///   - Set PlayerIdContextKey to read the player ID from pipeline context (takes priority).
+/// If TargetOpponent is true, derives the opponent from the resolved player ID.
 /// If no matching card is found, OutputKey is set to 0 — downstream actions must handle 0.
 /// </summary>
 public record SelectCardFromZoneAction : GameAction
@@ -21,6 +22,7 @@ public record SelectCardFromZoneAction : GameAction
 	public int PlayerId { get; init; } = 0;
 	public string PlayerIdContextKey { get; init; } = "";
 	public string OutputKey { get; init; } = "";
+	public bool TargetOpponent { get; init; } = false;
 
 	/// <summary>
 	/// When true, excludes the card whose ID is in context under ContextKeys.SourceCardId.
@@ -32,12 +34,14 @@ public record SelectCardFromZoneAction : GameAction
 
 	public override ActionResult Execute(GameState gameState)
 	{
-		var playerId = string.IsNullOrEmpty(PlayerIdContextKey)
+		var castingPlayerId = string.IsNullOrEmpty(PlayerIdContextKey)
 			? PlayerId
 			: GetInput<int>(PlayerIdContextKey, PlayerId);
 
-		if (playerId == 0)
+		if (castingPlayerId == 0)
 			return new ActionResult(gameState);
+
+		var playerId = TargetOpponent ? GetOpponentId(gameState, castingPlayerId) : castingPlayerId;
 
 		var excludeId = ExcludeSourceCard ? GetInput<int>(ContextKeys.SourceCardId, 0) : 0;
 
@@ -57,5 +61,11 @@ public record SelectCardFromZoneAction : GameAction
 			result = result.WithOutput(OutputKey, foundId);
 
 		return result;
+	}
+
+	private static int GetOpponentId(GameState gameState, int castingPlayerId)
+	{
+		var p1Id = gameState.GetWellKnownId(MtgObjectKeys.Player1);
+		return castingPlayerId == p1Id ? gameState.GetWellKnownId(MtgObjectKeys.Player2) : p1Id;
 	}
 }

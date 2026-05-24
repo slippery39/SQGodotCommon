@@ -36,6 +36,14 @@ public static class TriggerConditions
 	public static TriggerCondition OnYourUpkeep() =>
 		new EventTriggerCondition { EventTypeName = EventTypeNames.TurnStarted };
 
+	/// <summary>Fires when this exact creature dies.</summary>
+	public static TriggerCondition OnSelfDies() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.CreatureDestroyed,
+			Filter = new IsSourceCardSpecification(),
+		};
+
 	/// <summary>Fires whenever any creature dies.</summary>
 	public static TriggerCondition OnAnyCreatureDies() =>
 		new EventTriggerCondition { EventTypeName = EventTypeNames.CreatureDestroyed };
