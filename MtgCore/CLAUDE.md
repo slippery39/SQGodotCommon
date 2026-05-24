@@ -276,3 +276,112 @@ These are designed but not yet implemented. Do not re-implement or work around t
 | 4 | Keyword abilities as components | Lifelink, Deathtouch, Trample etc. as individual components checked by relevant actions. Rules-engine keywords that do not use the stack. Note: `HasHaste` and `HasDoubleStrike` are currently implemented as flags on `CreatureComponent` — these should be migrated to individual components when the full keyword system is built. |
 | — | Goblin Chieftain lord effect | "+1/+1 and haste to other Goblins" deferred until Step 2 static anthems. Currently a 2/2 haste for 3. |
 | — | Tap costs | Krenko's activation is modelled as a free (0-mana) ability since tap costs are not yet implemented. |
+
+## Card Creation Cookbook
+
+Canonical recipes using verified working cards. All examples are in `Cards/CardLibrary.cs`.
+
+### 1. Simple ETB trigger (no pipeline)
+
+```csharp
+CardFactory
+    .Creature("Name", manaCost: N, power: P, toughness: T)
+    .WithEtbTrigger("ETB Effect", eb => eb.WithCreateTokens(SomeToken()))
+    .Build()
+```
+
+`WithEtbTrigger` is shorthand for `WithTriggeredAbility` using `TriggerConditions.OnSelfEntersBattlefield()`. Use `eb.WithDamage(3)`, `eb.WithDraw(1)`, etc. for non-token effects.
+
+### 2. Death trigger (fires from graveyard)
+
+```csharp
+CardFactory
+    .Creature("Mogg Warmaster", manaCost: 1, power: 1, toughness: 1)
+    .WithComponent(new TriggeredAbilityComponent
+    {
+        Name = "Dies Token",
+        Condition = TriggerConditions.OnSelfDies(),
+        Effect = new CardEffect
+        {
+            TargetingStrategy = TargetingStrategy.NoTarget(),
+            ActionTemplate = new CreateCardAction { CardTemplate = GoblinToken(), Count = 1 },
+        },
+        ActiveInZone = ZoneType.Graveyard,   // REQUIRED — card is already in graveyard when trigger fires
+    })
+    .Build()
+```
+
+**Key rule:** `ActiveInZone = ZoneType.Graveyard` is mandatory for death triggers. By the time `CheckStateBasedEffectsAction` scans for triggers, the card has already moved to the graveyard. `TriggerConditions.OnSelfDies()` wraps `EventTriggerCondition` + `IsSourceCardSpecification` so the trigger fires only for this specific card.
+
+### 3. Pipeline ETB tutor (search library → put in hand)
+
+```csharp
+.WithEtbTrigger("ETB Tutor", eb => eb.WithAction(
+    new PipelineAction
+    {
+        Steps = ImmutableList.Create<GameAction>(
+            new SelectCardFromLibraryAction
+            {
+                Subtype = "Goblin",
+                OutputKey = "tutor_target",
+                PlayerIdContextKey = ContextKeys.CastingPlayerId,
+            },
+            new MoveCardToHandAction
+            {
+                CardIdContextKey = "tutor_target",
+                PlayerIdContextKey = ContextKeys.CastingPlayerId,
+            }
+        ),
+    },
+    TargetingStrategy.NoTarget()
+))
+```
+
+`SelectCardFromLibraryAction` writes a card ID to `OutputKey`. `MoveCardToHandAction` reads it via `CardIdContextKey`. `ContextKeys.CastingPlayerId` is injected by `ResolveEffectAction` before the pipeline runs — always use it to identify the card's controller. For multiple tutor steps (e.g. Ringleader fetching 3), chain pairs with unique keys (`ringleader_1`, `ringleader_2`, `ringleader_3`) — each step sees the updated game state so already-moved cards are skipped automatically.
+
+### 4. Activated ability with pipeline and self-buff
+
+```csharp
+.WithActivatedAbility("Ability Name", manaCost: 0,
+    effect: eb => eb.WithAction(
+        new PipelineAction
+        {
+            Steps = ImmutableList.Create<GameAction>(
+                new SelectCardFromZoneAction
+                {
+                    Zone = ZoneType.Graveyard,
+                    TargetOpponent = true,                        // targets opponent's zone
+                    PlayerIdContextKey = ContextKeys.CastingPlayerId,
+                    OutputKey = "exile_target",
+                },
+                new MoveCardToExileAction { CardIdContextKey = "exile_target" },
+                new GainLifeAction
+                {
+                    Amount = 1,
+                    TargetContextKey = ContextKeys.CastingPlayerId,
+                },
+                new AddModifierAction
+                {
+                    PowerBonus = 1,
+                    ToughnessBonus = 1,
+                    Duration = ModifierDuration.Permanent,
+                    TargetContextKey = ContextKeys.SourceCardId,   // buff the card itself
+                }
+            ),
+        },
+        TargetingStrategy.NoTarget()
+    )
+)
+```
+
+**`TargetContextKey = ContextKeys.SourceCardId`** on `AddModifierAction` buffs the card running the ability. `ContextKeys.SourceCardId` is injected by `ResolveEffectAction` alongside `CastingPlayerId`. **`TargetOpponent = true`** on `SelectCardFromZoneAction` derives the opponent via `GetOpponentId(gameState, castingPlayerId)` — same pattern as `DiscardRandomCardAction` and `SelectCardFromHandByManaCostAction`. Canonical example: Scavenging Ooze in `CardLibrary.cs`.
+
+### 5. Context key quick-reference
+
+| Key | What it holds | Who injects it |
+|-----|--------------|----------------|
+| `ContextKeys.CastingPlayerId` | Controller of the resolving card/ability | `ResolveEffectAction` |
+| `ContextKeys.SourceCardId` | ID of the card whose effect is resolving | `ResolveEffectAction` |
+| Custom key (e.g. `"tutor_target"`) | Output from a previous pipeline step | `SelectCardFromLibraryAction` / `SelectCardFromZoneAction` |
+
+All `PlayerIdContextKey` and `CardIdContextKey` fields on actions read from the pipeline's `InputContext` — only set them when you want runtime lookup. Leave them empty and use the direct `int` fields for compile-time-known values.
