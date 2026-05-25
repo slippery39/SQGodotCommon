@@ -142,7 +142,11 @@ public partial class BattlefieldZone : PanelContainer
 
 		// Activated ability indicator
 		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
-		if (abilities.Any(a => !a.HasActivated))
+		if (
+			abilities.Any(a =>
+				a.MaxActivationsPerTurn == 0 || a.ActivationCount < a.MaxActivationsPerTurn
+			)
+		)
 		{
 			var abilityLabel = new Label { Text = "[A]" };
 			abilityLabel.AddThemeFontSizeOverride("font_size", 16);

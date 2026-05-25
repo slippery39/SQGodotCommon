@@ -13,12 +13,12 @@ namespace MtgCore;
 ///   - The card exists and is on the battlefield
 ///   - The controller matches the activating player
 ///   - The chosen ability index is valid
-///   - The ability has not already been activated this turn
+///   - The ability has not exceeded its MaxActivationsPerTurn for this turn
 ///   - The player has enough mana
 ///
 /// Execute:
 ///   - Opens the resolution scope (SuppressPostProcessor = true)
-///   - Marks the ability as HasActivated = true
+///   - Increments ActivationCount on the ability component
 ///   - Spends mana
 ///   - Spawns ResolveEffectAction with the ability's effect
 ///   - Spawns EndResolutionScopeAction last to close the scope
@@ -56,27 +56,25 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Card is not on the battlefield");
 
 		var creature = card.GetComponent<CreatureComponent>();
-
-		if (creature != null)
-		{
-			//This is a design flaw in the creature and how we are handling summoning sickness
-			//But for now we have to check both. We really should only ever need to check HasSummoningSickness
-			//If a cretaure has haste, than SummoningSickness should be false automatically.
-			//We might want to make SummoningSickness a calculated property that returns either if haste is true, or if the creature has been on the battlefield since the start of its controller's turn.
-			var summoningSickness = creature.HasSummoningSickness && !creature.HasHaste;
-			if (summoningSickness)
-				return ValidationResult.Invalid(
-					"This creature has summoning sickness and can't activate abilities"
-				);
-		}
-
 		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
 		if (AbilityIndex < 0 || AbilityIndex >= abilities.Count)
 			return ValidationResult.Invalid($"Ability index {AbilityIndex} is out of range");
 
 		var ability = abilities[AbilityIndex];
 
-		if (ability.HasActivated)
+		if (ability.RequiresTap && creature != null)
+		{
+			var summoningSickness = creature.HasSummoningSickness && !creature.HasHaste;
+			if (summoningSickness)
+				return ValidationResult.Invalid(
+					"This creature has summoning sickness and can't activate this ability"
+				);
+		}
+
+		if (
+			ability.MaxActivationsPerTurn > 0
+			&& ability.ActivationCount >= ability.MaxActivationsPerTurn
+		)
 			return ValidationResult.Invalid("This ability has already been activated this turn");
 
 		var player = gameState.GetPlayer(ActivatingPlayerId);
@@ -135,7 +133,7 @@ public record ActivateAbilityAction : GameAction
 			SuppressPostProcessor = true,
 		};
 
-		// Mark ability as used this turn
+		// Increment activation count for this turn
 		var updatedComponents = card.Components;
 		var abilityCount = 0;
 		for (int i = 0; i < card.Components.Count; i++)
@@ -148,7 +146,7 @@ public record ActivateAbilityAction : GameAction
 						i,
 						ab with
 						{
-							HasActivated = true,
+							ActivationCount = ab.ActivationCount + 1,
 						}
 					);
 				}

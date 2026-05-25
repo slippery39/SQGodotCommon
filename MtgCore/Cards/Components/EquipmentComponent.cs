@@ -18,4 +18,5 @@ public record EquipmentComponent : GameComponent
 	public int PowerBonus { get; init; }
 	public int ToughnessBonus { get; init; }
 	public int EquippedToCardId { get; init; } = 0;
+	public PowerToughnessModifier? CustomBoostTemplate { get; init; } = null;
 }

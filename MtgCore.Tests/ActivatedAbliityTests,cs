@@ -33,7 +33,7 @@ public class ActivatedAbilityTests
 	}
 
 	[Test]
-	public void ActivateAbility_SetsHasActivated()
+	public void ActivateAbility_IncrementsActivationCount()
 	{
 		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 1);
 		state = GivePlayerMana(state, _ids.Player1Id, current: 2, max: 2);
@@ -44,7 +44,7 @@ public class ActivatedAbilityTests
 
 		var card = (Card)finalState.GetObject(cardId);
 		var ability = card.GetComponents<ActivatedAbilityComponent>().First();
-		Assert.That(ability.HasActivated, Is.True);
+		Assert.That(ability.ActivationCount, Is.EqualTo(1));
 	}
 
 	[Test]
@@ -172,14 +172,14 @@ public class ActivatedAbilityTests
 
 		var card = (Card)finalState.GetObject(cardId);
 		var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
-		Assert.That(abilities[0].HasActivated, Is.True);
-		Assert.That(abilities[1].HasActivated, Is.True);
+		Assert.That(abilities[0].ActivationCount, Is.EqualTo(1));
+		Assert.That(abilities[1].ActivationCount, Is.EqualTo(1));
 	}
 
 	// ===== RESET ON NEW TURN =====
 
 	[Test]
-	public void ActivateAbility_HasActivatedCleared_AtStartOfControllersTurn()
+	public void ActivateAbility_ActivationCountCleared_AtStartOfControllersTurn()
 	{
 		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 1);
 		state = GivePlayerMana(state, _ids.Player1Id, current: 3, max: 3);
@@ -202,11 +202,11 @@ public class ActivatedAbilityTests
 
 		var card = (Card)finalState.GetObject(cardId);
 		var ability = card.GetComponents<ActivatedAbilityComponent>().First();
-		Assert.That(ability.HasActivated, Is.False);
+		Assert.That(ability.ActivationCount, Is.EqualTo(0));
 	}
 
 	[Test]
-	public void ActivateAbility_HasActivatedNotCleared_AtStartOfOpponentsTurn()
+	public void ActivateAbility_ActivationCountNotCleared_AtStartOfOpponentsTurn()
 	{
 		var (state, cardId) = AddAbilityCreature(_state, _ids.Player1Id, manaCost: 1);
 		state = GivePlayerMana(state, _ids.Player1Id, current: 3, max: 3);
@@ -228,7 +228,7 @@ public class ActivatedAbilityTests
 
 		var card = (Card)finalState.GetObject(cardId);
 		var ability = card.GetComponents<ActivatedAbilityComponent>().First();
-		Assert.That(ability.HasActivated, Is.True);
+		Assert.That(ability.ActivationCount, Is.EqualTo(1));
 	}
 
 	// ===== TARGETED ABILITY =====

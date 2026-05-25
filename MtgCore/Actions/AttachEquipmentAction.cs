@@ -58,7 +58,7 @@ public record AttachEquipmentAction : GameAction, ITargetedAction
 			var prev = (Card)state.GetObject(equip.EquippedToCardId);
 			var cleaned = prev
 				.Components.Where(c =>
-					c is not EquippedBoostComponent b || b.SourceCardId != equipmentId
+					c is not PowerToughnessModifier m || m.SourceCardId != equipmentId
 				)
 				.ToImmutableList();
 			state = state.UpdateObject(equip.EquippedToCardId, prev with { Components = cleaned });
@@ -84,13 +84,21 @@ public record AttachEquipmentAction : GameAction, ITargetedAction
 
 		// Stamp boost onto target creature
 		var target = (Card)state.GetObject(targetCreatureId);
-		var boost = new EquippedBoostComponent
-		{
-			SourceCardId = equipmentId,
-			PowerBonus = equip.PowerBonus,
-			ToughnessBonus = equip.ToughnessBonus,
-			Duration = ModifierDuration.Permanent,
-		};
+		var boost =
+			equip.CustomBoostTemplate != null
+				? equip.CustomBoostTemplate with
+				{
+					SourceCardId = equipmentId,
+					Duration = ModifierDuration.Permanent,
+				}
+				: (PowerToughnessModifier)
+					new EquippedBoostComponent
+					{
+						SourceCardId = equipmentId,
+						PowerBonus = equip.PowerBonus,
+						ToughnessBonus = equip.ToughnessBonus,
+						Duration = ModifierDuration.Permanent,
+					};
 		state = state.UpdateObject(
 			targetCreatureId,
 			target with

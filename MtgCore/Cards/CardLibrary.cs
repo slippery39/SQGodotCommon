@@ -255,6 +255,7 @@ public static class CardLibrary
 					{
 						Name = "Add Mana",
 						ManaCost = 0,
+						RequiresTap = true,
 						Effect = new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.Self(),
@@ -274,6 +275,7 @@ public static class CardLibrary
 					{
 						Name = "Add Mana",
 						ManaCost = 0,
+						RequiresTap = true,
 						Effect = new CardEffect
 						{
 							TargetingStrategy = TargetingStrategy.Self(),
@@ -330,6 +332,39 @@ public static class CardLibrary
 									}
 								),
 							},
+						},
+					}
+				),
+			},
+			new()
+			{
+				Name = "Cranial Plating",
+				ManaCost = 2,
+				Subtypes = ImmutableList.Create("Artifact", "Equipment"),
+				Components = ImmutableList.Create<GameComponent>(
+					new PermanentComponent(),
+					new EquipmentComponent
+					{
+						CustomBoostTemplate = new ArtifactCountPowerModifier(),
+					},
+					new ActivatedAbilityComponent
+					{
+						Name = "Equip",
+						ManaCost = 1,
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.SingleTarget(
+								new AndSpecification
+								{
+									Left = new IsOnBattlefieldSpecification(),
+									Right = new AndSpecification
+									{
+										Left = new IsCreatureSpecification(),
+										Right = new IsControlledByYouSpecification(),
+									},
+								}
+							),
+							ActionTemplate = new AttachEquipmentAction(),
 						},
 					}
 				),
@@ -966,15 +1001,15 @@ public static class CardLibrary
 			},
 			// ===== TRADITIONAL STORM DECK CARDS =====
 			CardFactory
-				.Spell("Tendrils of Agony", manaCost: 5)
+				.Spell("Tendrils of Agony", manaCost: 4)
 				.WithStorm()
 				.WithLoseLife(2)
 				.WithTarget(Single().PlayersOrCreatures())
 				.WithLifeGain(2)
 				.Build(),
 			CardFactory
-				.Spell("Past in Flames", manaCost: 5)
-				.WithFlashback(7)
+				.Spell("Past in Flames", manaCost: 4)
+				.WithFlashback(6)
 				.WithAction(new GiveFlashbackAction(), AllValid().InstantOrSorceryInYourGraveyard())
 				.Build(),
 			// ===== LAND-ADJACENT CARDS =====
@@ -1512,6 +1547,125 @@ public static class CardLibrary
 					}
 				),
 			},
+			// ===== AFFINITY CARDS =====
+
+			CardFactory
+				.Creature("Disciple of the Vault", manaCost: 1, power: 1, toughness: 3)
+				.WithTriggeredAbility(
+					"Artifact Death Drain",
+					TriggerConditions.OnAnyArtifactDies(),
+					effect: eb =>
+						eb.WithAction(
+							new DrainLifeAction
+							{
+								Amount = 1,
+								TargetOpponent = true,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+							},
+							TargetingStrategy.NoTarget()
+						)
+				)
+				.Build(),
+			CardFactory
+				.Creature("Arcbound Ravager", manaCost: 2, power: 2, toughness: 2)
+				.WithSubtype("Artifact")
+				.WithComponent(
+					new ActivatedAbilityComponent
+					{
+						Name = "Devour",
+						ManaCost = 0,
+						MaxActivationsPerTurn = 0,
+						AdditionalCosts = ImmutableList.Create<AdditionalCost>(
+							new SacrificeAdditionalCost { Filter = null, Count = 1 }
+						),
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new AddModifierAction
+							{
+								PowerBonus = 2,
+								ToughnessBonus = 2,
+								Duration = ModifierDuration.Permanent,
+								TargetContextKey = ContextKeys.SourceCardId,
+							},
+						},
+					}
+				)
+				.Build(),
+			CardFactory
+				.Creature("Atog", manaCost: 2, power: 2, toughness: 3)
+				.WithSubtype("Artifact")
+				.WithComponent(
+					new ActivatedAbilityComponent
+					{
+						Name = "Devour Artifact",
+						ManaCost = 0,
+						MaxActivationsPerTurn = 0,
+						AdditionalCosts = ImmutableList.Create<AdditionalCost>(
+							new SacrificeAdditionalCost
+							{
+								Filter = new IsSubtypeSpecification { Subtype = "Artifact" },
+								Count = 1,
+							}
+						),
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new AddModifierAction
+							{
+								PowerBonus = 3,
+								ToughnessBonus = 3,
+								Duration = ModifierDuration.UntilEndOfTurn,
+								TargetContextKey = ContextKeys.SourceCardId,
+							},
+						},
+					}
+				)
+				.Build(),
+			CardFactory
+				.Creature("Frogmite", manaCost: 3, power: 3, toughness: 3)
+				.WithSubtype("Artifact")
+				.WithComponent(new AffinityComponent())
+				.Build(),
+			CardFactory
+				.Creature("Thought Monitor", manaCost: 7, power: 2, toughness: 2)
+				.WithSubtype("Artifact")
+				.WithFlying()
+				.WithLifelink()
+				.WithComponent(new AffinityComponent())
+				.Build(),
+			CardFactory
+				.Creature("Myr Enforcer", manaCost: 6, power: 5, toughness: 5)
+				.WithSubtype("Artifact")
+				.WithComponent(new AffinityComponent())
+				.Build(),
+			CardFactory
+				.Spell("Thoughtcast", manaCost: 5)
+				.WithDraw(2)
+				.WithComponent(new AffinityComponent())
+				.Build(),
+			// ===== AFFINITY LANDS =====
+
+			new()
+			{
+				Name = "Vault of Ingenuity",
+				ManaCost = 0,
+				Subtypes = ImmutableList.Create(LandSubtype),
+				Components = ImmutableList.Create<GameComponent>(
+					new LandPlayEffectComponent
+					{
+						Effect = new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new CreateCardAction
+							{
+								CardTemplate = ClueToken(),
+								Count = 1,
+							},
+						},
+					}
+				),
+			},
 		};
 
 	public static Card GetByName(string name) =>
@@ -1691,6 +1845,43 @@ public static class CardLibrary
 			Components = ImmutableList.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = 2, Toughness = 2 }
+			),
+		};
+
+	/// <summary>
+	/// Clue Token — non-creature artifact permanent.
+	/// Created by Vault of Ingenuity when played. Counts as an artifact for affinity.
+	/// Activated: {2}, sacrifice this → draw 1 card.
+	/// OwnerId/ControllerId default to 0 and are stamped by CreateCardAction at runtime.
+	/// </summary>
+	public static Card ClueToken() =>
+		new()
+		{
+			Name = "Clue",
+			Subtypes = ImmutableList.Create("Artifact", "Clue"),
+			Components = ImmutableList.Create<GameComponent>(
+				new PermanentComponent(),
+				new ActivatedAbilityComponent
+				{
+					Name = "Investigate",
+					ManaCost = 2,
+					AdditionalCosts = ImmutableList.Create<AdditionalCost>(
+						new SacrificeAdditionalCost
+						{
+							Filter = new IsSourceCardSpecification(),
+							Count = 1,
+						}
+					),
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new DrawCardsAction
+						{
+							Amount = 1,
+							TargetContextKey = ContextKeys.CastingPlayerId,
+						},
+					},
+				}
 			),
 		};
 
@@ -1946,4 +2137,58 @@ public static class CardLibrary
 	/// "Return target creature card from your graveyard to the battlefield."
 	/// </summary>
 	public static Card Reanimate() => All.First(c => c.Name == "Reanimate");
+
+	// ===== AFFINITY CARDS =====
+
+	/// <summary>
+	/// Cranial Plating — 2 mana artifact equipment.
+	/// Equipped creature gets +X/+0, where X is the number of artifacts you control.
+	/// Equip {1}.
+	/// </summary>
+	public static Card CranialPlating() => GetByName("Cranial Plating");
+
+	/// <summary>
+	/// Atog — 2 mana creature (1/2).
+	/// Activated (unlimited): sacrifice an artifact you control → Atog gets +2/+2 until end of turn.
+	/// </summary>
+	public static Card Atog() => GetByName("Atog");
+
+	/// <summary>
+	/// Disciple of the Vault — 1 mana creature (1/1).
+	/// "Whenever an artifact is put into a graveyard from play, target opponent loses 1 life
+	///  and you gain 1 life." Triggers on ArtifactLeftBattlefieldEvent.
+	/// </summary>
+	public static Card DiscipleOfTheVault() => GetByName("Disciple of the Vault");
+
+	/// <summary>
+	/// Arcbound Ravager — 2 mana creature (1/1).
+	/// Activated (unlimited): sacrifice any permanent you control → Ravager gets +1/+1 permanently.
+	/// MaxActivationsPerTurn = 0 allows unlimited activations per turn.
+	/// </summary>
+	public static Card ArcboundRavager() => GetByName("Arcbound Ravager");
+
+	/// <summary>
+	/// Frogmite — 4 mana creature (2/2). Affinity for artifacts.
+	/// Cost reduced by 1 for each artifact you control (minimum 0).
+	/// </summary>
+	public static Card Frogmite() => GetByName("Frogmite");
+
+	/// <summary>
+	/// Myr Enforcer — 7 mana creature (4/4). Affinity for artifacts.
+	/// Cost reduced by 1 for each artifact you control (minimum 0).
+	/// </summary>
+	public static Card MyrEnforcer() => GetByName("Myr Enforcer");
+
+	/// <summary>
+	/// Thoughtcast — 5 mana sorcery (draw 2). Affinity for artifacts.
+	/// Cost reduced by 1 for each artifact you control (minimum 0).
+	/// </summary>
+	public static Card Thoughtcast() => GetByName("Thoughtcast");
+
+	/// <summary>
+	/// Vault of Ingenuity — artifact land proxy.
+	/// Playing this land creates a Clue artifact token, which counts as an artifact
+	/// for affinity purposes. Standard land mana increment also applies.
+	/// </summary>
+	public static Card VaultOfIngenuity() => GetByName("Vault of Ingenuity");
 }

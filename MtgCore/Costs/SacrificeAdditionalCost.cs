@@ -97,6 +97,18 @@ public record SacrificeAdditionalCost : AdditionalCost
 				OwnerId = card.OwnerId,
 			};
 			state = state with { PendingGameEvents = state.PendingGameEvents.Add(leftEvent) };
+			if (card.HasSubtype("Artifact"))
+			{
+				var artifactEvent = new ArtifactLeftBattlefieldEvent
+				{
+					CardId = id,
+					OwnerId = card.OwnerId,
+				};
+				state = state with
+				{
+					PendingGameEvents = state.PendingGameEvents.Add(artifactEvent),
+				};
+			}
 			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
 			state = state.MoveObject(id, graveyardId);
 		}

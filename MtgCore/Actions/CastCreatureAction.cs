@@ -45,9 +45,10 @@ public record CastCreatureAction : GameAction
 			return ValidationResult.Invalid("Card is not a creature");
 
 		var player = gameState.GetPlayer(CastingPlayerId);
-		if (player.CurrentMana < card.ManaCost)
+		var effectiveCost = ComputeEffectiveCost(gameState, card, CastingPlayerId);
+		if (player.CurrentMana < effectiveCost)
 			return ValidationResult.Invalid(
-				$"Not enough mana (have {player.CurrentMana}, need {card.ManaCost})"
+				$"Not enough mana (have {player.CurrentMana}, need {effectiveCost})"
 			);
 
 		for (int i = 0; i < card.AdditionalCastCosts.Count; i++)
@@ -75,7 +76,8 @@ public record CastCreatureAction : GameAction
 			CastingPlayerId,
 			player with
 			{
-				CurrentMana = player.CurrentMana - card.ManaCost,
+				CurrentMana =
+					player.CurrentMana - ComputeEffectiveCost(state, card, CastingPlayerId),
 			}
 		);
 		state = state.MoveObject(CardId, state.GetStackId());
@@ -112,5 +114,16 @@ public record CastCreatureAction : GameAction
 			state = cost.Pay(state, CastingPlayerId, CardId, paymentIds);
 		}
 		return state;
+	}
+
+	private static int ComputeEffectiveCost(GameState state, Card card, int playerId)
+	{
+		if (!card.HasComponent<AffinityComponent>())
+			return card.ManaCost;
+		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+		var artifactCount = state
+			.GetCardsInZone(battlefieldId)
+			.Count(c => c.HasSubtype("Artifact"));
+		return Math.Max(0, card.ManaCost - artifactCount);
 	}
 }

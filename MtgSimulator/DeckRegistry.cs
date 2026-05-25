@@ -16,6 +16,7 @@ public static class DeckRegistry
 			new DeckInfo("Traditional Storm", TraditionalStormDeckFactory.Build),
 			new DeckInfo("Valakut", ValakutDeckFactory.Build),
 			new DeckInfo("Jund", JundDeckFactory.Build),
+			new DeckInfo("Affinity", AffinityDeckFactory.Build),
 		];
 
 	public static IReadOnlyList<Card> Build(string deckName, int ownerId)

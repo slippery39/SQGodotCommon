@@ -387,7 +387,8 @@ public static class MtgActionGenerator
 			var abilities = card.GetComponents<ActivatedAbilityComponent>().ToList();
 			for (int i = 0; i < abilities.Count; i++)
 			{
-				if (abilities[i].HasActivated)
+				var ab = abilities[i];
+				if (ab.MaxActivationsPerTurn > 0 && ab.ActivationCount >= ab.MaxActivationsPerTurn)
 					continue;
 
 				var costPayments = BuildAdditionalCostPayments(

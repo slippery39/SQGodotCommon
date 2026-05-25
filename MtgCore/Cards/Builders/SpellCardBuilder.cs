@@ -15,6 +15,7 @@ public class SpellCardBuilder
 	private readonly int _manaCost;
 	private readonly List<AdditionalCost> _castCosts = new();
 	private readonly List<CardEffect> _effects = new();
+	private readonly List<GameComponent> _extraComponents = new();
 	private bool _hasStorm;
 	private int? _flashbackManaCost;
 
@@ -203,6 +204,12 @@ public class SpellCardBuilder
 		return _effects.ToImmutableList();
 	}
 
+	public SpellCardBuilder WithComponent(GameComponent component)
+	{
+		_extraComponents.Add(component);
+		return this;
+	}
+
 	// ===== BUILD =====
 
 	public Card Build()
@@ -214,6 +221,8 @@ public class SpellCardBuilder
 		);
 		if (_flashbackManaCost.HasValue)
 			components.Add(new FlashbackComponent { FlashbackManaCost = _flashbackManaCost.Value });
+		foreach (var extra in _extraComponents)
+			components.Add(extra);
 		return new Card
 		{
 			Name = _name,

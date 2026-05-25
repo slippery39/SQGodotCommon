@@ -30,4 +30,5 @@ public static class EventTypeNames
 
 	public const string PermanentPlayed = nameof(PermanentPlayedEvent);
 	public const string LandPlayed = nameof(LandPlayedEvent);
+	public const string ArtifactLeftBattlefield = nameof(ArtifactLeftBattlefieldEvent);
 }

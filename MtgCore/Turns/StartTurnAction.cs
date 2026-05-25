@@ -68,7 +68,7 @@ public record StartTurnAction : GameAction
 						i,
 						ac with
 						{
-							HasActivated = false,
+							ActivationCount = 0,
 						}
 					),
 					_ => updatedComponents,

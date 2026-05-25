@@ -145,6 +145,17 @@ public record PermanentLeftBattlefieldEvent : GameEvent
 }
 
 /// <summary>
+/// Emitted when an artifact permanent leaves the battlefield (sacrifice, destruction, exile).
+/// Fired in addition to PermanentLeftBattlefieldEvent when the leaving permanent HasSubtype("Artifact").
+/// Used by Disciple of the Vault and similar drain triggers.
+/// </summary>
+public record ArtifactLeftBattlefieldEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public int OwnerId { get; init; }
+}
+
+/// <summary>
 /// Emitted when a creature deals combat damage directly to a player.
 /// Fires once per strike — twice for double-strike creatures.
 /// AttackerId is the subject so IsSourceCardSpecification filters can match it.

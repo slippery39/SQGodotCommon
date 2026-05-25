@@ -70,4 +70,8 @@ public static class TriggerConditions
 			EventTypeName = EventTypeNames.LandPlayed,
 			Filter = new IsControlledByYouSpecification(),
 		};
+
+	/// <summary>Fires whenever any artifact leaves the battlefield (sacrifice, destruction, exile).</summary>
+	public static TriggerCondition OnAnyArtifactDies() =>
+		new EventTriggerCondition { EventTypeName = EventTypeNames.ArtifactLeftBattlefield };
 }

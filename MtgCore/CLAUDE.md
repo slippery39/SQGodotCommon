@@ -53,6 +53,7 @@ MtgCore/
 │   │                        # CreatureCardBuilder.WithEtbTrigger(name, effect) — shorthand for WithTriggeredAbility using OnSelfEntersBattlefield() condition
 │   │                        # TargetBuilder.InstantOrSorceryInYourGraveyard() — targets an instant/sorcery in the caster's own graveyard
 │   │                        # TargetBuilder.CreatureInYourGraveyard() — targets a creature card in the caster's own graveyard
+│   │                        # TriggerConditions.OnAnyArtifactDies() — fires on ArtifactLeftBattlefieldEvent (any artifact sacrificed or destroyed)
 │   └── Components/          # PermanentComponent (battlefield marker), CreatureComponent (HasHaste, HasDoubleStrike, HasFlying, HasTaunt, HasReach, HasShroud, HasHexproof), SpellComponent (HasStorm), GraveyardCountComponent
 │                            # FlashbackComponent { FlashbackManaCost } — marks a spell castable from graveyard; MtgActionGenerator scans graveyard for these and generates CastFromGraveyardAction
 │                            # EquipmentComponent (PowerBonus, ToughnessBonus, EquippedToCardId — tracks attachment state)
@@ -60,11 +61,14 @@ MtgCore/
 │                            # LandPlayEffectComponent { Effect: CardEffect } — spawns a ResolveEffectAction when the land is played or put into play; used by Glimmervoid (gain 2 life) and Bounceland (return exile land to hand)
 │                            # BonusManaLandComponent { ExtraMana, Deferred } — overrides land mana production: adds (1+ExtraMana) to MaxMana; if Deferred=true, CurrentMana is unchanged (mana usable next turn only); used by Bounceland
 │                            # TransformComponent (OtherFaceName, OtherFaceSubtypes, OtherFaceComponents) — stores the other face of a double-faced card; TransformAction swaps Name/Subtypes/Components in place, preserving the card's ID and carrying creature state across
+│                            # AffinityComponent — marker (no data); when present on a card, CastCreatureAction and CastSpellAction reduce ManaCost by the number of artifact permanents the casting player controls (min 0). Used by Frogmite, Myr Enforcer, Thoughtcast.
 ├── Effects/                 # CardEffect (data-only effect descriptor)
 ├── Events/                  # EventTypeNames, MtgEvents (includes CreatureEnteredBattlefieldEvent, CombatDamageDealtToPlayerEvent,
 │                            #   SpellCastEvent emitted by CastSpellAction, CreaturePlayedEvent emitted by CastCreatureAction
 │                            #   PermanentEnteredBattlefieldEvent emitted by ResolvePermanentAction for non-creature permanents
 │                            #   LandPlayedEvent { PlayerId, CardId } emitted by both PlayLandAction and PutLandIntoPlayAction; triggers Steppe Lynx landfall)
+│                            #   ArtifactLeftBattlefieldEvent { CardId, OwnerId } — emitted by SacrificeAdditionalCost when the sacrificed permanent HasSubtype("Artifact");
+│                            #   fired in addition to PermanentLeftBattlefieldEvent. Used by Disciple of the Vault and OnAnyArtifactDies() trigger condition.
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods), StaticAbilityEngine (push-model ETB/LTB logic)
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier, AppliedStaticPTBoost
 │                            # EquippedBoostComponent (stamped on creature by AttachEquipmentAction; removed on detach/creature-death)
@@ -205,10 +209,11 @@ Mana is always the primary cost (`ManaCost: int`); this matches MTG's "0:" notat
 
 ## Activated Abilities
 
-- Modelled as `ActivatedAbilityComponent` on a card. Fields: `Name`, `ManaCost`, `AdditionalCosts`, `CardEffect`, `HasActivated`.
+- Modelled as `ActivatedAbilityComponent` on a card. Fields: `Name`, `ManaCost`, `AdditionalCosts`, `CardEffect`, `MaxActivationsPerTurn`, `ActivationCount`.
 - A card may have multiple `ActivatedAbilityComponent` instances — one per ability, each independently tracked.
-- Each ability can be activated once per turn. `HasActivated` is cleared by `StartTurnAction`.
-- `ActivateAbilityAction` validates mana and additional costs, checks `HasActivated`, marks the ability used, pays all costs, resolves targets, and spawns the effect — using the same `CardEffect` and `TargetingStrategy` infrastructure as spells.
+- `MaxActivationsPerTurn` controls how many times the ability may fire per turn. Default = 1 (once per turn). Set to 0 for unlimited (e.g. Arcbound Ravager's sacrifice ability).
+- `ActivationCount` tracks uses this turn. Cleared to 0 by `StartTurnAction`.
+- `ActivateAbilityAction` validates mana and additional costs, checks `ActivationCount < MaxActivationsPerTurn` (skipped when `MaxActivationsPerTurn == 0`), increments `ActivationCount`, pays all costs, resolves targets, and spawns the effect — using the same `CardEffect` and `TargetingStrategy` infrastructure as spells.
 - Tap costs not yet implemented.
 
 ## Combat System
