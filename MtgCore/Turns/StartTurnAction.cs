@@ -52,7 +52,7 @@ public record StartTurnAction : GameAction
 			var currentCard = (Card)state.GetObject(cardId);
 			var updatedComponents = currentCard.Components;
 
-			for (int i = 0; i < updatedComponents.Count; i++)
+			for (int i = 0; i < updatedComponents.Length; i++)
 			{
 				updatedComponents = updatedComponents[i] switch
 				{

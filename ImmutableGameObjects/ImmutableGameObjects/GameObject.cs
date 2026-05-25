@@ -21,8 +21,8 @@ public abstract record GameObject
 	/// Use GetComponent/GetComponents to retrieve, WithComponent/WithoutComponents to modify.
 	/// Changes must be applied back to GameState via UpdateObject to take effect.
 	/// </summary>
-	public ImmutableList<GameComponent> Components { get; init; } =
-		ImmutableList<GameComponent>.Empty;
+	public ImmutableArray<GameComponent> Components { get; init; } =
+		ImmutableArray<GameComponent>.Empty;
 
 	/// <summary>
 	/// Returns the first component of type T, or null if none exists.

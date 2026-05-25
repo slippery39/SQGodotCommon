@@ -47,7 +47,7 @@ public class ChoiceLookaheadTests
 			ManaCost = 5,
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = 5, Toughness = 5 }
 			),
@@ -264,7 +264,7 @@ public class ChoiceLookaheadTests
 			Name = "HuntedDragon",
 			OwnerId = _ids.Player2Id,
 			ControllerId = _ids.Player2Id,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = 10, Toughness = 10 }
 			),

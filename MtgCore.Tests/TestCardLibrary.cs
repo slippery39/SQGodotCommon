@@ -49,7 +49,7 @@ public static class TestCardLibrary
 			{
 				Name = "Careful Study",
 				ManaCost = 1,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
 						Effects = ImmutableList.Create(
@@ -86,7 +86,7 @@ public static class TestCardLibrary
 			{
 				Name = "Faithless Looting",
 				ManaCost = 1,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
 						Effects = ImmutableList.Create(
@@ -124,7 +124,7 @@ public static class TestCardLibrary
 			{
 				Name = "Telling Time",
 				ManaCost = 2,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
 						Effects = ImmutableList.Create(
@@ -194,7 +194,7 @@ public static class TestCardLibrary
 			{
 				Name = "Dark Confidant",
 				ManaCost = 2,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 1, Toughness = 4 },
 					new TriggeredAbilityComponent
@@ -247,8 +247,8 @@ public static class TestCardLibrary
 			{
 				Name = "Mox",
 				ManaCost = 0,
-				Subtypes = ImmutableList.Create("Artifact"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Artifact"),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new ActivatedAbilityComponent
 					{
@@ -266,8 +266,8 @@ public static class TestCardLibrary
 			{
 				Name = "Sol Ring",
 				ManaCost = 1,
-				Subtypes = ImmutableList.Create("Artifact"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Artifact"),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new ActivatedAbilityComponent
 					{
@@ -285,8 +285,8 @@ public static class TestCardLibrary
 			{
 				Name = "Glorious Anthem",
 				ManaCost = 2,
-				Subtypes = ImmutableList.Create("Enchantment"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Enchantment"),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new StaticPTBoostAbility
 					{
@@ -300,8 +300,8 @@ public static class TestCardLibrary
 			{
 				Name = "Phyrexian Arena",
 				ManaCost = 3,
-				Subtypes = ImmutableList.Create("Enchantment"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Enchantment"),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new TriggeredAbilityComponent
 					{
@@ -337,8 +337,12 @@ public static class TestCardLibrary
 			{
 				Name = "Bonesplitter",
 				ManaCost = 1,
-				Subtypes = ImmutableList.Create("Artifact", "Equipment"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(
+					StringComparer.OrdinalIgnoreCase,
+					"Artifact",
+					"Equipment"
+				),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new EquipmentComponent { PowerBonus = 2, ToughnessBonus = 0 },
 					new ActivatedAbilityComponent
@@ -391,8 +395,8 @@ public static class TestCardLibrary
 			{
 				Name = "Goblin Lackey",
 				ManaCost = 1,
-				Subtypes = ImmutableList.Create(GoblinSubtype),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, GoblinSubtype),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 1, Toughness = 1 },
 					new TriggeredAbilityComponent
@@ -419,8 +423,12 @@ public static class TestCardLibrary
 			{
 				Name = "Warren Instigator",
 				ManaCost = 2,
-				Subtypes = ImmutableList.Create(GoblinSubtype, "Berserker"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(
+					StringComparer.OrdinalIgnoreCase,
+					GoblinSubtype,
+					"Berserker"
+				),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent
 					{
@@ -452,8 +460,8 @@ public static class TestCardLibrary
 			{
 				Name = "Goblin Chieftain",
 				ManaCost = 2,
-				Subtypes = ImmutableList.Create(GoblinSubtype),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, GoblinSubtype),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent
 					{
@@ -497,8 +505,12 @@ public static class TestCardLibrary
 			{
 				Name = "Krenko, Mob Boss",
 				ManaCost = 3,
-				Subtypes = ImmutableList.Create(GoblinSubtype, "Warrior"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(
+					StringComparer.OrdinalIgnoreCase,
+					GoblinSubtype,
+					"Warrior"
+				),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 1, Toughness = 3 },
 					new ActivatedAbilityComponent
@@ -548,8 +560,8 @@ public static class TestCardLibrary
 			{
 				Name = "Tarmogoyf",
 				ManaCost = 2,
-				Subtypes = ImmutableList.Create("Lhurgoyf"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Lhurgoyf"),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 0, Toughness = 1 },
 					new GraveyardCountComponent { Duration = ModifierDuration.Permanent }
@@ -565,8 +577,12 @@ public static class TestCardLibrary
 			{
 				Name = "Qasali Pridemage",
 				ManaCost = 2,
-				Subtypes = ImmutableList.Create("Cat", "Wizard"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(
+					StringComparer.OrdinalIgnoreCase,
+					"Cat",
+					"Wizard"
+				),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 2, Toughness = 2 },
 					new ActivatedAbilityComponent
@@ -596,8 +612,8 @@ public static class TestCardLibrary
 			{
 				Name = "Geist of Saint Traft",
 				ManaCost = 3,
-				Subtypes = ImmutableList.Create("Spirit"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Spirit"),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 2, Toughness = 2 },
 					new TriggeredAbilityComponent
@@ -616,8 +632,11 @@ public static class TestCardLibrary
 								CardTemplate = new Card
 								{
 									Name = "Angel Token",
-									Subtypes = ImmutableList.Create("Angel"),
-									Components = ImmutableList.Create<GameComponent>(
+									Subtypes = ImmutableHashSet.Create(
+										StringComparer.OrdinalIgnoreCase,
+										"Angel"
+									),
+									Components = ImmutableArray.Create<GameComponent>(
 										new PermanentComponent(),
 										new CreatureComponent
 										{
@@ -688,8 +707,12 @@ public static class TestCardLibrary
 			{
 				Name = "Delver of Secrets",
 				ManaCost = 1,
-				Subtypes = ImmutableList.Create("Human", "Wizard"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(
+					StringComparer.OrdinalIgnoreCase,
+					"Human",
+					"Wizard"
+				),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 1, Toughness = 1 },
 					new TriggeredAbilityComponent
@@ -712,8 +735,11 @@ public static class TestCardLibrary
 					new TransformComponent
 					{
 						OtherFaceName = "Insectile Aberration",
-						OtherFaceSubtypes = ImmutableList.Create("Insect"),
-						OtherFaceComponents = ImmutableList.Create<GameComponent>(
+						OtherFaceSubtypes = ImmutableHashSet.Create(
+							StringComparer.OrdinalIgnoreCase,
+							"Insect"
+						),
+						OtherFaceComponents = ImmutableArray.Create<GameComponent>(
 							new PermanentComponent(),
 							new CreatureComponent
 							{
@@ -730,7 +756,7 @@ public static class TestCardLibrary
 			{
 				Name = "Sleight of Hand",
 				ManaCost = 1,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
 						Effects = ImmutableList.Create(
@@ -784,7 +810,7 @@ public static class TestCardLibrary
 			{
 				Name = "Rite of Flame",
 				ManaCost = 1,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
 						Effects = ImmutableList.Create(
@@ -837,7 +863,7 @@ public static class TestCardLibrary
 			{
 				Name = "Dragonstorm",
 				ManaCost = 7,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
 						HasStorm = true,
@@ -883,7 +909,7 @@ public static class TestCardLibrary
 			{
 				Name = "Rampant Growth",
 				ManaCost = 2,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
 						Effects = ImmutableList.Create(
@@ -915,7 +941,7 @@ public static class TestCardLibrary
 			{
 				Name = "Primeval Titan",
 				ManaCost = 6,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 6, Toughness = 6 },
 					new TriggeredAbilityComponent
@@ -964,8 +990,8 @@ public static class TestCardLibrary
 			{
 				Name = "Exploration",
 				ManaCost = 1,
-				Subtypes = ImmutableList.Create("Artifact"),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Artifact"),
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new ExtraLandPerTurnComponent()
 				),
@@ -974,7 +1000,7 @@ public static class TestCardLibrary
 			{
 				Name = "Steppe Lynx",
 				ManaCost = 0,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 0, Toughness = 1 },
 					new TriggeredAbilityComponent
@@ -999,7 +1025,7 @@ public static class TestCardLibrary
 			{
 				Name = "Land Elemental",
 				ManaCost = 3,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 0, Toughness = 0 },
 					new LandsPlayedCountComponent { Duration = ModifierDuration.Permanent }
@@ -1014,7 +1040,7 @@ public static class TestCardLibrary
 			{
 				Name = "Bloodghast",
 				ManaCost = 2,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 2, Toughness = 1 },
 					new TriggeredAbilityComponent
@@ -1037,7 +1063,7 @@ public static class TestCardLibrary
 			{
 				Name = "Carnage Tyrant",
 				ManaCost = 7,
-				Components = ImmutableList.Create<GameComponent>(
+				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent
 					{
@@ -1052,8 +1078,8 @@ public static class TestCardLibrary
 			{
 				Name = "Valakut, the Molten Pinnacle",
 				ManaCost = 0,
-				Subtypes = ImmutableList.Create(LandSubtype),
-				Components = ImmutableList.Create<GameComponent>(
+				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, LandSubtype),
+				Components = ImmutableArray.Create<GameComponent>(
 					new GrantEmblemComponent
 					{
 						Emblem = new Emblem
@@ -1098,7 +1124,7 @@ public static class TestCardLibrary
 		{
 			Name = "Savannah Lions",
 			ManaCost = 1,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = 2, Toughness = 1 }
 			),
@@ -1148,8 +1174,8 @@ public static class TestCardLibrary
 		new()
 		{
 			Name = "Goblin",
-			Subtypes = ImmutableList.Create(GoblinSubtype),
-			Components = ImmutableList.Create<GameComponent>(
+			Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, GoblinSubtype),
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = 1, Toughness = 1 }
 			),
@@ -1214,8 +1240,12 @@ public static class TestCardLibrary
 		{
 			Name = "Plains",
 			ManaCost = 0,
-			Subtypes = ImmutableList.Create(LandSubtype, "Basic"),
-			Components = ImmutableList<GameComponent>.Empty,
+			Subtypes = ImmutableHashSet.Create(
+				StringComparer.OrdinalIgnoreCase,
+				LandSubtype,
+				"Basic"
+			),
+			Components = ImmutableArray<GameComponent>.Empty,
 		};
 
 	public static Card Valakut() => GetByName("Valakut, the Molten Pinnacle");

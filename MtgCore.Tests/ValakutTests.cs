@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -174,7 +174,7 @@ public class ValakutTests
 			ManaCost = 0,
 			OwnerId = playerId,
 			ControllerId = playerId,
-			Subtypes = ImmutableList.Create("Land", "Basic"),
+			Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Land", "Basic"),
 		};
 		var handId = state.GetPlayerZoneId(playerId, ZoneType.Hand);
 		return state.AddObject(land, parentId: handId);

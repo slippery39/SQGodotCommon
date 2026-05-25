@@ -40,7 +40,7 @@ public static class TestCardFactory
 			ManaCost = manaCost,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new SpellComponent { Effects = effects }
 			),
 		};
@@ -72,7 +72,7 @@ public static class TestCardFactory
 			ManaCost = manaCost,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = power, Toughness = toughness }
 			),
@@ -96,9 +96,9 @@ public static class TestCardFactory
 			OwnerId = ownerId,
 			ControllerId = ownerId,
 			Subtypes = string.IsNullOrEmpty(subtype)
-				? ImmutableList<string>.Empty
-				: ImmutableList.Create(subtype),
-			Components = ImmutableList.Create<GameComponent>(new PermanentComponent()),
+				? ImmutableHashSet.Create<string>(StringComparer.OrdinalIgnoreCase)
+				: ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, subtype),
+			Components = ImmutableArray.Create<GameComponent>(new PermanentComponent()),
 		};
 
 	/// <summary>

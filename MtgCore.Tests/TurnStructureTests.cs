@@ -362,7 +362,7 @@ public class TurnStructureTests
 			ManaCost = 2,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent
 				{
 					Power = 2,

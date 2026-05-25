@@ -136,7 +136,7 @@ public record ActivateAbilityAction : GameAction
 		// Increment activation count for this turn
 		var updatedComponents = card.Components;
 		var abilityCount = 0;
-		for (int i = 0; i < card.Components.Count; i++)
+		for (int i = 0; i < card.Components.Length; i++)
 		{
 			if (card.Components[i] is ActivatedAbilityComponent ab)
 			{

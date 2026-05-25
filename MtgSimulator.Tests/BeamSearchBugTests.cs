@@ -97,7 +97,7 @@ public class BeamSearchBugTests
 			ManaCost = 2,
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = 2, Toughness = 2 }
 			),
@@ -208,7 +208,7 @@ public class BeamSearchBugTests
 			ManaCost = 1,
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent
 				{

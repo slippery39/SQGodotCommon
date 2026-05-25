@@ -187,7 +187,7 @@ public class ManaAbilityAiTests
 			ManaCost = 3,
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = 3, Toughness = 3 }
 			),

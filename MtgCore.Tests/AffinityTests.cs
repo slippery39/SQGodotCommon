@@ -292,8 +292,8 @@ public class AffinityTests
 			ManaCost = 4,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Subtypes = ImmutableList.Create("Artifact"),
-			Components = ImmutableList.Create<GameComponent>(
+			Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Artifact"),
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = 2, Toughness = 2 },
 				new AffinityComponent()
@@ -314,7 +314,7 @@ public class AffinityTests
 			ManaCost = 5,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new SpellComponent(),
 				new AffinityComponent()
 			),
@@ -333,8 +333,8 @@ public class AffinityTests
 			Name = "Test Ravager",
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Subtypes = ImmutableList.Create("Artifact"),
-			Components = ImmutableList.Create<GameComponent>(
+			Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Artifact"),
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = 1, Toughness = 1 },
 				new ActivatedAbilityComponent
@@ -373,7 +373,7 @@ public class AffinityTests
 			Name = "Test Disciple",
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent { Power = 1, Toughness = 1 },
 				new TriggeredAbilityComponent

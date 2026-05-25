@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -496,8 +496,8 @@ public class GoblinTests
 			Name = "Goblin Token",
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Subtypes = ImmutableList.Create("Goblin"),
-			Components = ImmutableList.Create<GameComponent>(
+			Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Goblin"),
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent { Power = 1, Toughness = 1 }
 			),
 		};

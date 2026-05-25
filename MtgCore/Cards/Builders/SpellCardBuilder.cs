@@ -215,7 +215,7 @@ public class SpellCardBuilder
 	public Card Build()
 	{
 		FlushPending();
-		var components = ImmutableList.CreateBuilder<GameComponent>();
+		var components = ImmutableArray.CreateBuilder<GameComponent>();
 		components.Add(
 			new SpellComponent { Effects = _effects.ToImmutableList(), HasStorm = _hasStorm }
 		);

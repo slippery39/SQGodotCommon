@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgConsole;
 using MtgCore;
@@ -34,10 +34,10 @@ var p1Cards = new (string Name, int Cost, bool IsCreature, int Power, int Toughn
 foreach (var (name, cost, isCreature, power, toughness) in p1Cards)
 {
 	var components = isCreature
-		? ImmutableList.Create<GameComponent>(
+		? ImmutableArray.Create<GameComponent>(
 			new CreatureComponent { Power = power, Toughness = toughness }
 		)
-		: ImmutableList.Create<GameComponent>(
+		: ImmutableArray.Create<GameComponent>(
 			new SpellComponent { Effects = ImmutableList<CardEffect>.Empty }
 		);
 
@@ -87,7 +87,7 @@ var p1Confidant = CardLibrary.DarkConfidant() with
 {
 	OwnerId = ids.Player1Id,
 	ControllerId = ids.Player1Id,
-	Components = ImmutableList.Create<GameComponent>(
+	Components = ImmutableArray.Create<GameComponent>(
 		new CreatureComponent
 		{
 			Power = 2,
@@ -131,7 +131,7 @@ foreach (var (name, cost, power, toughness) in p2Cards)
 		ManaCost = cost,
 		OwnerId = ids.Player2Id,
 		ControllerId = ids.Player2Id,
-		Components = ImmutableList.Create<GameComponent>(
+		Components = ImmutableArray.Create<GameComponent>(
 			new CreatureComponent { Power = power, Toughness = toughness }
 		),
 	};
@@ -145,7 +145,7 @@ var goblinGuide = new Card
 	ManaCost = 1,
 	OwnerId = ids.Player2Id,
 	ControllerId = ids.Player2Id,
-	Components = ImmutableList.Create<GameComponent>(
+	Components = ImmutableArray.Create<GameComponent>(
 		new CreatureComponent
 		{
 			Power = 2,
@@ -160,7 +160,7 @@ var grizzlyBears = new Card
 	ManaCost = 2,
 	OwnerId = ids.Player2Id,
 	ControllerId = ids.Player2Id,
-	Components = ImmutableList.Create<GameComponent>(
+	Components = ImmutableArray.Create<GameComponent>(
 		new CreatureComponent
 		{
 			Power = 2,

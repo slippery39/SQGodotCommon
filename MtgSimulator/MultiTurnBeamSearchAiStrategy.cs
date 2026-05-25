@@ -100,11 +100,12 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 		// Level 0: execute each root action and score via multi-turn rollout
 		var beam = actions
+			.AsParallel()
 			.Select(action =>
 			{
 				var resultState = ExecuteAction(state, action);
 				var score = ScoreAfterCompletingTurn(resultState, playerId);
-				return new BeamNode(resultState, ImmutableList.Create(action), score);
+				return new BeamNode(resultState, [action], score);
 			})
 			.ToList();
 
@@ -130,7 +131,9 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		// Levels 1..currentTurnDepth-1: expand within the current turn only
 		for (var depth = 1; depth < _currentTurnDepth; depth++)
 		{
-			var nextBeam = beam.SelectMany(node => ExpandNode(node, playerId)).ToList();
+			var nextBeam = beam.AsParallel()
+				.SelectMany(node => ExpandNode(node, playerId))
+				.ToList();
 
 			if (nextBeam.Count == 0)
 				break;
@@ -463,7 +466,10 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 					.ToList();
 				if (randomActions.Count > 0)
 				{
-					state = ExecuteAction(state, randomActions[_rng.Next(randomActions.Count)]);
+					state = ExecuteAction(
+						state,
+						randomActions[Random.Shared.Next(randomActions.Count)]
+					);
 					state = ResolveAllChoices(state, opponentId);
 				}
 				return ExecuteAction(state, BuildEndTurnAction(state));

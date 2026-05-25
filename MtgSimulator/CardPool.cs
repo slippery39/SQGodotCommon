@@ -447,7 +447,7 @@ public static class CardPool
 		{
 			Name = name,
 			ManaCost = cost,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent { Power = power, Toughness = toughness }
 			),
 		};
@@ -463,7 +463,7 @@ public static class CardPool
 		{
 			Name = name,
 			ManaCost = cost,
-			Components = ImmutableList
+			Components = ImmutableArray
 				.Create<GameComponent>(
 					new CreatureComponent { Power = power, Toughness = toughness }
 				)
@@ -481,7 +481,7 @@ public static class CardPool
 		{
 			Name = name,
 			ManaCost = cost,
-			Components = ImmutableList
+			Components = ImmutableArray
 				.Create<GameComponent>(
 					new CreatureComponent { Power = power, Toughness = toughness }
 				)
@@ -498,7 +498,7 @@ public static class CardPool
 		{
 			Name = name,
 			ManaCost = cost,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new SpellComponent
 				{
 					Effects = ImmutableList.Create(

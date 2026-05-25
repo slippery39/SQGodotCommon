@@ -55,7 +55,7 @@ public class AdditionalCostTests
 			Name = "Bear",
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent { Power = 2, Toughness = 2 }
 			),
 		};
@@ -242,8 +242,8 @@ public class AdditionalCostTests
 			Name = "Goblin Token",
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Subtypes = ImmutableList.Create("Goblin"),
-			Components = ImmutableList.Create<GameComponent>(
+			Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Goblin"),
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent { Power = 1, Toughness = 1 }
 			),
 		};
@@ -262,7 +262,7 @@ public class AdditionalCostTests
 					Count = 1,
 				}
 			),
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new SpellComponent
 				{
 					Effects = ImmutableList.Create(
@@ -286,7 +286,7 @@ public class AdditionalCostTests
 			ManaCost = 2,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent
 				{
 					Power = 2,
@@ -346,7 +346,7 @@ public class AdditionalCostTests
 			AdditionalCastCosts = ImmutableList.Create<AdditionalCost>(
 				new LifeAdditionalCost { Amount = lifeCost }
 			),
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new SpellComponent { Effects = ImmutableList<CardEffect>.Empty }
 			),
 		};

@@ -178,7 +178,7 @@ public class ActionGeneratorTests
 			Name = name,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent
 				{
 					Power = power,
@@ -206,7 +206,7 @@ public class ActionGeneratorTests
 			Name = name,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent
 				{
 					Power = power,
@@ -225,7 +225,7 @@ public class ActionGeneratorTests
 			Name = name,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent
 				{
 					Power = power,
@@ -241,7 +241,7 @@ public class ActionGeneratorTests
 			Name = name,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent
 				{
 					Power = power,

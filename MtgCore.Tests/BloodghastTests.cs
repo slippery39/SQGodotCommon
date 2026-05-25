@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -147,7 +147,7 @@ public class BloodghastTests
 			ManaCost = 0,
 			OwnerId = playerId,
 			ControllerId = playerId,
-			Subtypes = ImmutableList.Create("Land", "Basic"),
+			Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Land", "Basic"),
 		};
 		var handId = state.GetPlayerZoneId(playerId, ZoneType.Hand);
 		var (newState, added) = state.AddObject(land, parentId: handId);

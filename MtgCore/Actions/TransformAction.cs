@@ -36,7 +36,7 @@ public record TransformAction : EffectAction
 
 		var currentFaceComponents = card
 			.Components.Where(c => c is not TransformComponent)
-			.ToImmutableList();
+			.ToImmutableArray();
 
 		var newTransformComponent = new TransformComponent
 		{
@@ -63,9 +63,9 @@ public record TransformAction : EffectAction
 	// Preserves HasSummoningSickness, HasAttacked, and Damage across the transform
 	// so the new face inherits the creature's current combat state rather than
 	// starting from the template defaults.
-	private static ImmutableList<GameComponent> CarryCreatureState(
-		ImmutableList<GameComponent> from,
-		ImmutableList<GameComponent> to
+	private static ImmutableArray<GameComponent> CarryCreatureState(
+		ImmutableArray<GameComponent> from,
+		ImmutableArray<GameComponent> to
 	)
 	{
 		var oldCreature = from.OfType<CreatureComponent>().FirstOrDefault();

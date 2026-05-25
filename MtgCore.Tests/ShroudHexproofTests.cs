@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using NUnit.Framework;
@@ -76,7 +76,7 @@ public class ShroudHexproofTests
 			ManaCost = 3,
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new PermanentComponent(),
 				new CreatureComponent
 				{

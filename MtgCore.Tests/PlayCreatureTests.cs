@@ -98,7 +98,7 @@ public class CastCreatureTests
 			ManaCost = 1,
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new SpellComponent { Effects = ImmutableList<CardEffect>.Empty }
 			),
 		};

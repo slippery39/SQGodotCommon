@@ -336,7 +336,7 @@ public class TriggeredAbilityTests
 			ManaCost = 0,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new TriggeredAbilityComponent
 				{
 					Name = "Trigger",
@@ -421,7 +421,7 @@ public class TriggeredAbilityTests
 			ManaCost = 0,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent
 				{
 					Power = power,

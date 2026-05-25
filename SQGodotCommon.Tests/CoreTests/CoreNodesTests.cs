@@ -21,9 +21,9 @@ public class CoreNodesTests
 
 		// Assert that one component was added
 		Assert.That(
-			coreNode.Components.Count,
+			coreNode.Components.Length,
 			Is.EqualTo(1),
-			$"Expected 1 component to be registered, but found {coreNode.Components.Count} components."
+			$"Expected 1 component to be registered, but found {coreNode.Components.Length} components."
 		);
 
 		// Assert that the component is of type TestCoreComponent

@@ -94,7 +94,7 @@ public static class StaticAbilityEngine
 						if (affectedCard == null)
 							continue;
 
-						var builder = ImmutableList.CreateBuilder<GameComponent>();
+						var builder = ImmutableArray.CreateBuilder<GameComponent>();
 						var removed = false;
 						foreach (var c in affectedCard.Components)
 						{
@@ -144,7 +144,7 @@ public static class StaticAbilityEngine
 
 			var modified = false;
 			var updatedComponents = sourceCard.Components;
-			for (int i = 0; i < updatedComponents.Count; i++)
+			for (int i = 0; i < updatedComponents.Length; i++)
 			{
 				if (updatedComponents[i] is not StaticAbilityComponent sa)
 					continue;
@@ -198,7 +198,7 @@ public static class StaticAbilityEngine
 			SourceCardId = sourceId,
 		};
 
-		for (int i = 0; i < sourceCard.Components.Count; i++)
+		for (int i = 0; i < sourceCard.Components.Length; i++)
 		{
 			if (sourceCard.Components[i] is not StaticAbilityComponent ability)
 				continue;

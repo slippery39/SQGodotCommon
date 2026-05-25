@@ -203,7 +203,7 @@ public class DarkConfidantTests
 			ManaCost = 0,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent { Power = 1, Toughness = 5 },
 				new TriggeredAbilityComponent
 				{

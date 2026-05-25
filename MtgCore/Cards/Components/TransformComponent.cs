@@ -15,7 +15,8 @@ namespace MtgCore;
 public record TransformComponent : GameComponent
 {
 	public string OtherFaceName { get; init; } = "";
-	public ImmutableList<string> OtherFaceSubtypes { get; init; } = ImmutableList<string>.Empty;
-	public ImmutableList<GameComponent> OtherFaceComponents { get; init; } =
-		ImmutableList<GameComponent>.Empty;
+	public ImmutableHashSet<string> OtherFaceSubtypes { get; init; } =
+		ImmutableHashSet.Create<string>(StringComparer.OrdinalIgnoreCase);
+	public ImmutableArray<GameComponent> OtherFaceComponents { get; init; } =
+		ImmutableArray<GameComponent>.Empty;
 }

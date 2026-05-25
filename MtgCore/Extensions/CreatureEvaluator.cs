@@ -180,7 +180,7 @@ public static class CreatureEvaluator
 			.Components.Where(c =>
 				c is not PowerToughnessModifier m || m.Duration != ModifierDuration.UntilEndOfTurn
 			)
-			.ToImmutableList();
+			.ToImmutableArray();
 
 		return state.UpdateObject(cardId, card with { Components = updatedComponents });
 	}

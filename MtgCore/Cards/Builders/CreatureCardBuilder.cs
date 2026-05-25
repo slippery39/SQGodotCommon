@@ -185,7 +185,7 @@ public class CreatureCardBuilder
 			HasDoubleStrike = _hasDoubleStrike,
 		};
 
-		var components = ImmutableList
+		var components = ImmutableArray
 			.Create<GameComponent>(new PermanentComponent(), creature)
 			.AddRange(_extraComponents);
 
@@ -194,7 +194,7 @@ public class CreatureCardBuilder
 			Name = _name,
 			ManaCost = _manaCost,
 			AdditionalCastCosts = _castCosts.ToImmutableList(),
-			Subtypes = _subtypes.ToImmutableList(),
+			Subtypes = _subtypes.ToImmutableHashSet(StringComparer.OrdinalIgnoreCase),
 			Components = components,
 		};
 	}

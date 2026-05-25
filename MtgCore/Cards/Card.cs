@@ -22,8 +22,8 @@ public record Card : GameObject
 		ImmutableList<AdditionalCost>.Empty;
 	public int OwnerId { get; init; }
 	public int ControllerId { get; init; }
-	public ImmutableList<string> Subtypes { get; init; } = ImmutableList<string>.Empty;
+	public ImmutableHashSet<string> Subtypes { get; init; } =
+		ImmutableHashSet.Create<string>(StringComparer.OrdinalIgnoreCase);
 
-	public bool HasSubtype(string subtype) =>
-		Subtypes.Contains(subtype, StringComparer.OrdinalIgnoreCase);
+	public bool HasSubtype(string subtype) => Subtypes.Contains(subtype);
 }

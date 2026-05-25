@@ -60,13 +60,13 @@ public record AttachEquipmentAction : GameAction, ITargetedAction
 				.Components.Where(c =>
 					c is not PowerToughnessModifier m || m.SourceCardId != equipmentId
 				)
-				.ToImmutableList();
+				.ToImmutableArray();
 			state = state.UpdateObject(equip.EquippedToCardId, prev with { Components = cleaned });
 		}
 
 		// Update EquipmentComponent.EquippedToCardId
 		var equipComponents = equipment.Components;
-		for (int i = 0; i < equipComponents.Count; i++)
+		for (int i = 0; i < equipComponents.Length; i++)
 		{
 			if (equipComponents[i] is EquipmentComponent e)
 			{

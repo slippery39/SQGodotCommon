@@ -91,7 +91,7 @@ public class PutIntoBattlefieldTests
 			Name = "ETB Watcher",
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent { Power = 1, Toughness = 1 },
 				new TriggeredAbilityComponent
 				{

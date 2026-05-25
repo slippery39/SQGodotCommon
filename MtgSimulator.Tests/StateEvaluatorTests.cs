@@ -236,7 +236,7 @@ public class StateEvaluatorTests
 			Name = name,
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(
+			Components = ImmutableArray.Create<GameComponent>(
 				new CreatureComponent { Power = power, Toughness = toughness }
 			),
 		};
@@ -252,7 +252,7 @@ public class StateEvaluatorTests
 			Name = "TestEnchantment",
 			OwnerId = ownerId,
 			ControllerId = ownerId,
-			Components = ImmutableList.Create<GameComponent>(new PermanentComponent()),
+			Components = ImmutableArray.Create<GameComponent>(new PermanentComponent()),
 		};
 		var (newState, added) = state.AddObject(permanent, parentId: battlefieldId);
 		return (newState, added);

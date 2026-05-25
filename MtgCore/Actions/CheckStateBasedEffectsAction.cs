@@ -192,7 +192,7 @@ public record CheckStateBasedEffectsAction : GameAction
 				continue;
 
 			var updatedComponents = card.Components;
-			for (int i = 0; i < updatedComponents.Count; i++)
+			for (int i = 0; i < updatedComponents.Length; i++)
 			{
 				if (updatedComponents[i] is EquipmentComponent e)
 				{
