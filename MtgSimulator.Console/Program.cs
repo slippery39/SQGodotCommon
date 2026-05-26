@@ -27,9 +27,22 @@ if (mode == 1)
 	var gameCountInput = Console.ReadLine()?.Trim() ?? "";
 	var gameCount = int.TryParse(gameCountInput, out var g) && g > 0 ? g : 1000;
 
-	Console.Write("Benchmark seed? (blank = random, number = fixed/reproducible): ");
+	Console.Write("Benchmark seed? (blank = random, number or word = fixed/reproducible): ");
 	var seedInput = Console.ReadLine()?.Trim() ?? "";
-	var seed = int.TryParse(seedInput, out var s) ? (int?)s : null;
+	int? seed;
+	if (string.IsNullOrEmpty(seedInput))
+	{
+		seed = null;
+	}
+	else if (int.TryParse(seedInput, out var parsedSeed))
+	{
+		seed = parsedSeed;
+	}
+	else
+	{
+		seed = StringToSeed(seedInput);
+		Console.WriteLine($"  Seed for \"{seedInput}\": {seed}");
+	}
 
 	new SimulatorRunner(gameCount, aiDepth, seed).Run();
 }
@@ -44,3 +57,15 @@ else
 
 Console.WriteLine("Done. Press any key to exit.");
 Console.ReadKey(intercept: true);
+
+// FNV-1a hash — stable across runs and platforms, unlike string.GetHashCode().
+static int StringToSeed(string s)
+{
+	uint hash = 2166136261u;
+	foreach (var c in s)
+	{
+		hash ^= (byte)c;
+		hash *= 16777619u;
+	}
+	return (int)hash;
+}

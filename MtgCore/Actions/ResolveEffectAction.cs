@@ -89,7 +89,7 @@ public record ResolveEffectAction : GameAction
 				: ImmutableList<int>.Empty,
 
 			TargetSelectionMode.AllValid => ImmutableList.CreateRange(
-				effect.TargetingStrategy.GetValidTargets(context)
+				effect.TargetingStrategy.GetValidTargets(context with { IsNonTargeted = true })
 			),
 
 			TargetSelectionMode.Random => ResolveRandomTarget(effect.TargetingStrategy, context),

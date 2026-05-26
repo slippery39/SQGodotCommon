@@ -57,17 +57,21 @@ public record IsCreatureSpecification : TargetSpecification
 			return false;
 
 		var creature = card.GetComponent<CreatureComponent>()!;
-		if (creature.HasShroud)
-			return false;
-		if (creature.HasHexproof && card.ControllerId != context.CastingPlayerId)
-			return false;
 
-		foreach (var kw in card.GetComponents<AppliedKeywordComponent>())
+		if (!context.IsNonTargeted)
 		{
-			if (kw.GrantsShroud)
+			if (creature.HasShroud)
 				return false;
-			if (kw.GrantsHexproof && card.ControllerId != context.CastingPlayerId)
+			if (creature.HasHexproof && card.ControllerId != context.CastingPlayerId)
 				return false;
+
+			foreach (var kw in card.GetComponents<AppliedKeywordComponent>())
+			{
+				if (kw.GrantsShroud)
+					return false;
+				if (kw.GrantsHexproof && card.ControllerId != context.CastingPlayerId)
+					return false;
+			}
 		}
 
 		return true;

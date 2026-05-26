@@ -20,4 +20,11 @@ public record TargetingContext
 	/// "your creatures", "opponent's creatures", etc.
 	/// </summary>
 	public int CastingPlayerId { get; init; }
+
+	/// <summary>
+	/// True when the effect is a mass/non-targeted effect (AllValid mode).
+	/// Hexproof and Shroud only protect against targeted effects — mass effects
+	/// like Wrath of God bypass them entirely.
+	/// </summary>
+	public bool IsNonTargeted { get; init; }
 }

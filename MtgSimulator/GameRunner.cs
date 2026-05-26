@@ -254,6 +254,11 @@ public class GameRunner
 				cardId = pe.CardId;
 				playerId = pe.PlayerId;
 			}
+			else if (e is LandPlayedEvent lp)
+			{
+				cardId = lp.CardId;
+				playerId = lp.PlayerId;
+			}
 			else
 				continue;
 

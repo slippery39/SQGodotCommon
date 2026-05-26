@@ -16,11 +16,16 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | `FastManaPotentialEvaluator.cs` | Potential evaluator that scores by current available mana (preserves fast-mana lines) |
 | `StateEvaluator.cs` | Scores a `GameState` from a given player's perspective (float) |
 | `CardPool.cs` | Defines the full card pool; `BuildRandomDeck` samples 40 random cards per game |
-| `ZooDeckFactory.cs` | Builds a fixed 60-card Zoo deck (RGW aggro — 24 Plains + 36 spells) for a given player |
-| `GoblinsDeckFactory.cs` | Builds a fixed 60-card Goblins deck (red aggro tribal — 24 Plains + 36 spells) for a given player |
-| `ValakutDeckFactory.cs` | Builds a fixed 60-card Valakut ramp deck (14 Plains + 4 Valakut + 4 Glimmervoid + 4 Field of the Dead + 2 Bounceland + ramp/spells) for a given player |
-| `JundDeckFactory.cs` | Builds a 60-card Jund midrange deck (18 Plains + 2 Mox + 2 Sol Ring + hand disruption, removal, threats, Siege Rhino) for a given player |
-| `DeckRegistry.cs` | Registers all named precon decks (`DeckInfo` records); exposes `All` and `Build(name, ownerId)` |
+| `Decks/ZooDeckFactory.cs` | Builds a fixed 60-card Zoo deck (RGW aggro — 24 Plains + 36 spells) for a given player |
+| `Decks/GoblinsDeckFactory.cs` | Builds a fixed 60-card Goblins deck (red aggro tribal — 24 Plains + 36 spells) for a given player |
+| `Decks/ValakutDeckFactory.cs` | Builds a fixed 60-card Valakut ramp deck (14 Plains + 4 Valakut + 4 Glimmervoid + 4 Field of the Dead + 2 Bounceland + ramp/spells) for a given player |
+| `Decks/JundDeckFactory.cs` | Builds a 60-card Jund midrange deck (18 Plains + 2 Mox + 2 Sol Ring + hand disruption, removal, threats, Siege Rhino) for a given player |
+| `Decks/DelverDeckFactory.cs` | Builds a fixed 60-card Delver deck for a given player |
+| `Decks/DragonstormDeckFactory.cs` | Builds a fixed 60-card Dragonstorm combo deck for a given player |
+| `Decks/ReanimatorDeckFactory.cs` | Builds a fixed 60-card Reanimator deck for a given player |
+| `Decks/TraditionalStormDeckFactory.cs` | Builds a fixed 60-card Traditional Storm combo deck for a given player |
+| `Decks/AffinityDeckFactory.cs` | Builds a fixed 60-card Affinity artifact aggro deck for a given player |
+| `Decks/DeckRegistry.cs` | Registers all named precon decks (`DeckInfo` records); exposes `All` and `Build(name, ownerId)` |
 | `PreconstructedStats.cs` | Aggregates precon game results into four stat tables; exposes row records for deck (inc. AvgWinTurn/MinWinTurn/MaxWinTurn), matchup, card GIH WR (inc. AvgCopiesPlayed), and card-per-matchup GIH WR (inc. AvgCopiesPlayed) |
 | `PreconstructedSimulatorRunner.cs` | Round-robin precon runner: builds schedule, runs games via `GameRunner`, feeds `PreconstructedStats`, prints console summary, triggers CSV export |
 | `PreconstructedCsvExporter.cs` | Writes all four stat tables to `sim_results/precon_<timestamp>.csv`; escapes card names with commas (e.g. "Krenko, Mob Boss") |
