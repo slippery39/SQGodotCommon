@@ -1,7 +1,9 @@
 using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
+using MtgCore.Cards.Builders;
 using MtgSimulator;
+using static MtgCore.Cards.Builders.TargetBuilder;
 
 namespace MtgSimulator.Tests;
 
@@ -52,12 +54,53 @@ public class ChoiceLookaheadTests
 				new CreatureComponent { Power = 5, Toughness = 5 }
 			),
 		};
-		var carefulStudy = CardLibrary.CarefulStudy() with
+		// Inlined so card balance tweaks in CardLibrary don't break this test.
+		// Careful Study: draw 2, then discard 2 (cost 1).
+		var carefulStudy = new Card
 		{
+			Name = "Careful Study",
+			ManaCost = 1,
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,
+			Components = ImmutableArray.Create<GameComponent>(
+				new SpellComponent
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.NoTarget(),
+							ActionTemplate = new PipelineAction
+							{
+								Steps = ImmutableList.Create<GameAction>(
+									new DrawCardsAction
+									{
+										Amount = 2,
+										TargetContextKey = ContextKeys.CastingPlayerId,
+									},
+									new SelectCardsFromHandAction
+									{
+										Prompt = "Choose 2 cards to discard",
+										MinChoices = 2,
+										MaxChoices = 2,
+										OutputKey = ContextKeys.SelectedCardIds,
+									},
+									new DiscardCardsAction
+									{
+										TargetContextKey = ContextKeys.SelectedCardIds,
+									}
+								),
+							},
+						}
+					),
+				}
+			),
 		};
-		var reanimate = CardLibrary.Reanimate() with
+		// Reanimate: put a creature from your graveyard onto the battlefield (cost 1).
+		// Inlined at cost 1 — this test requires CS (1) + Reanimate (1) = 2 total mana.
+		var reanimate = CardFactory
+			.Spell("Reanimate", manaCost: 1)
+			.WithAction(new PutIntoBattlefieldAction(), Single().CreatureInYourGraveyard())
+			.Build() with
 		{
 			OwnerId = _ids.Player1Id,
 			ControllerId = _ids.Player1Id,

@@ -11,7 +11,8 @@ SQGodotCommon/
 ├── MtgCore/                         # MTG card game engine (actions, cards, turns, combat, targeting)
 ├── MtgCore.Tests/                   # MTG engine unit tests
 ├── MtgConsole/                      # Console presentation layer (ConsoleGameLoop, ConsoleRenderer)
-├── MtgSimulator/                    # Game simulator and AI (SimulatorRunner, RandomAIStrategy)
+├── MtgSimulator/                    # Simulator library — AI strategies, runners, deck factories (referenced by Godot + tests)
+├── MtgSimulator.Console/            # Thin console entry point (Program.cs only — references MtgSimulator)
 └── SQGodotCommon/                   # Godot utility library (separate concern — ignore on MTG branch)
 ```
 

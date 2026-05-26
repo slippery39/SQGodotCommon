@@ -1,12 +1,11 @@
 # MtgSimulator
 
-Runs N simulated games with configurable AI strategies and reports aggregate stats, timing, per-card win rates, and flagged games.
+Class library containing all AI strategies, game runners, deck factories, and reporting for MTG simulation. Referenced by Godot and by `MtgSimulator.Console` (the runnable console entry point). Keeping it a library prevents file-locking conflicts when the console app and Godot are running simultaneously.
 
 ## Source Map
 
 | File | Purpose |
 |------|---------|
-| `Program.cs` | Entry point — prompts for game count and AI depth, runs `SimulatorRunner` |
 | `SimulatorRunner.cs` | Orchestrates N games, aggregates results, prints all reports |
 | `GameRunner.cs` | Runs a single game to completion using two `IAiStrategy` implementations |
 | `IAiStrategy.cs` | Interface: `SelectAction` + `ResolveChoice` — all AI implementations conform to this |
@@ -87,13 +86,14 @@ Scores a non-terminal state as a weighted sum. Terminal states short-circuit.
 | Life difference (player − opponent) | 0.2 |
 | Creature count difference | 3.0 |
 | Total effective Power difference (permanent power only) | 2.0 |
+| Creature damage difference (opponent damage − player damage) | 0.1 |
 | Non-creature permanent count difference (Mox, Arena, Exploration, etc.) | 1.5 |
 | Cards in hand difference | 1.4 |
 | Player's own permanent mana (`MaxMana` only — temporary fast mana excluded) | 2.0 |
 | Win (opponent has lost) | +10000 |
 | Loss (player has lost) | −10000 |
 
-`MaxMana` weight is high (2.0) because in the land system permanent mana is the primary resource — a land behind means fewer spells castable every turn for the rest of the game. Power uses permanent power only (`GetEffectivePermanentPower`); `UntilEndOfTurn` buffs like Giant Growth are excluded since they evaporate next turn. Non-creature permanents (weight 1.5) are identified by `PermanentComponent && !CreatureComponent`; land cards are excluded automatically since `Plains` carries no `PermanentComponent`.
+`MaxMana` weight is high (2.0) because in the land system permanent mana is the primary resource — a land behind means fewer spells castable every turn for the rest of the game. Power uses permanent power only (`GetEffectivePermanentPower`); `UntilEndOfTurn` buffs like Giant Growth are excluded since they evaporate next turn. Creature damage (weight 0.1) tracks accumulated damage on surviving creatures — a creature with near-lethal damage is far more fragile than a fresh one, and without this factor the evaluator sees a neutral attack (both creatures survive) as free. Non-creature permanents (weight 1.5) are identified by `PermanentComponent && !CreatureComponent`; land cards are excluded automatically since `Plains` carries no `PermanentComponent`.
 
 Zone IDs are read directly from `MtgGameIds` to avoid child-list scans on every evaluation call.
 
@@ -132,6 +132,10 @@ Each snapshot includes:
 
 - **`IAiStrategy` is in the `MtgCore` namespace** despite its file living in `MtgSimulator/`. Should be moved to the `MtgSimulator` namespace for correctness.
 - **EventTriggerCondition migration** — see CardPool section above.
+
+## Console Entry Point
+
+`MtgSimulator.Console/` is the runnable project — it contains only `Program.cs` and references this library. Run that project to launch the simulator interactively. `sim_results/` and `flagged_games/` output folders are written relative to the console app's working directory.
 
 ## Key Rules
 

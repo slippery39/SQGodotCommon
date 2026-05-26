@@ -21,6 +21,7 @@ public static class StateEvaluator
 	private const float LifeWeight = 0.2f;
 	private const float CreatureCountWeight = 3.0f;
 	private const float TotalPowerWeight = 2.0f;
+	private const float CreatureDamageWeight = 0.1f;
 	private const float CardsInHandWeight = 1.4f;
 	private const float ManaWeight = 2.0f;
 	private const float NonCreaturePermanentWeight = 1.5f;
@@ -51,28 +52,37 @@ public static class StateEvaluator
 
 		var playerCreatureCount = 0;
 		var playerPower = 0;
+		var playerCreatureDamage = 0;
 		foreach (var c in state.GetCardsInZone(playerBattlefieldId))
 		{
-			if (!c.HasComponent<CreatureComponent>())
+			var creature = c.GetComponent<CreatureComponent>();
+			if (creature == null)
 				continue;
 			playerCreatureCount++;
 			// Permanent power only — UntilEndOfTurn buffs (Giant Growth etc.) evaporate next turn
 			// and should not count as lasting board advantage.
 			playerPower += state.GetEffectivePermanentPower(c.Id);
+			playerCreatureDamage += creature.Damage;
 		}
 
 		var opponentCreatureCount = 0;
 		var opponentPower = 0;
+		var opponentCreatureDamage = 0;
 		foreach (var c in state.GetCardsInZone(opponentBattlefieldId))
 		{
-			if (!c.HasComponent<CreatureComponent>())
+			var creature = c.GetComponent<CreatureComponent>();
+			if (creature == null)
 				continue;
 			opponentCreatureCount++;
 			opponentPower += state.GetEffectivePermanentPower(c.Id);
+			opponentCreatureDamage += creature.Damage;
 		}
 
 		score += (playerCreatureCount - opponentCreatureCount) * CreatureCountWeight;
 		score += (playerPower - opponentPower) * TotalPowerWeight;
+		// Damage on surviving creatures is a hidden disadvantage the board snapshot misses.
+		// A creature with lethal-minus-one damage is much more fragile than a fresh one.
+		score += (opponentCreatureDamage - playerCreatureDamage) * CreatureDamageWeight;
 
 		var playerNonCreatureCount = 0;
 		foreach (var c in state.GetCardsInZone(playerBattlefieldId))
