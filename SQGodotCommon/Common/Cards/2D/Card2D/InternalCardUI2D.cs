@@ -328,7 +328,7 @@ public partial class InternalCardUI2D : Node2D
 			_defaultRulesTextFrameTexture = _rulesTextSprite2D.Texture;
 	}
 
-	private void UpdateOutlineShader()
+	protected virtual void UpdateOutlineShader()
 	{
 		if (_viewportContainer?.Material is ShaderMaterial outlineMaterial)
 		{

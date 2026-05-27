@@ -1,0 +1,59 @@
+[gd_scene format=3 uid="uid://du5hfbfu5dx85"]
+
+[ext_resource type="Script" uid="uid://c8dqu0tjetbqu" path="res://Common/Cards/2D/Card2D/CardUI2D.cs" id="1_1spq0"]
+[ext_resource type="PackedScene" path="res://Common/Cards/2D/Card2D/internal_cardui2d_canvasgroup.tscn" id="2_jt7e2"]
+[ext_resource type="Script" uid="uid://daws5l4pjvnvi" path="res://Common/Core/CopyCollisionShape.cs" id="4_lk2kg"]
+[ext_resource type="PackedScene" uid="uid://32rm64h555od" path="res://Common/Core/DraggableNode2D/DraggableNode2D.tscn" id="9_h2mar"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_cg01"]
+size = Vector2(232, 315)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_cg02"]
+size = Vector2(116, 140)
+
+[node name="Card" type="Node2D" unique_id=214974536]
+script = ExtResource("1_1spq0")
+metadata/_edit_group_ = true
+metadata/_edit_vertical_guides_ = [-255.0]
+
+[node name="InternalCard2D" parent="." unique_id=53676229 instance=ExtResource("2_jt7e2")]
+scale = Vector2(0.7, 0.7)
+OutlineColor = Color(1, 1, 1, 1)
+OutlineThickness = 5.0
+Holographic = true
+CardName = "Slice"
+
+[node name="HoverArea" type="Area2D" parent="." unique_id=115717729]
+monitoring = false
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="HoverArea" unique_id=91690873]
+position = Vector2(0.5, -1.5)
+shape = SubResource("RectangleShape2D_cg01")
+
+[node name="HoverContainer" type="Node2D" parent="." unique_id=591847908]
+
+[node name="DraggableNode2d" parent="." unique_id=1324063660 instance=ExtResource("9_h2mar")]
+
+[node name="DropAreaDetector" type="Area2D" parent="DraggableNode2d" unique_id=221011223]
+collision_layer = 0
+collision_mask = 4
+monitorable = false
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DraggableNode2d/DropAreaDetector" unique_id=1518806824]
+position = Vector2(1, -1)
+shape = SubResource("RectangleShape2D_cg02")
+
+[node name="Area2D" type="Area2D" parent="DraggableNode2d" unique_id=1816915992]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DraggableNode2d/Area2D" unique_id=1590279365]
+position = Vector2(-2, 4)
+shape = SubResource("RectangleShape2D_cg01")
+
+[node name="CopyCollisionShape" type="Node" parent="DraggableNode2d/Area2D/CollisionShape2D" unique_id=1181783424 node_paths=PackedStringArray("TargetCollisionShape")]
+script = ExtResource("4_lk2kg")
+TargetCollisionShape = NodePath("../../../../HoverArea/CollisionShape2D")
+AutoUpdate = false
+
+[connection signal="mouse_entered" from="HoverArea" to="." method="OnHover"]
+[connection signal="mouse_exited" from="HoverArea" to="." method="OnHoverEnd"]

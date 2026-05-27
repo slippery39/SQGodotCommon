@@ -1,12 +1,13 @@
-[gd_scene load_steps=6 format=3 uid="uid://fjmqxy6nftux"]
+[gd_scene format=3 uid="uid://fjmqxy6nftux"]
 
 [ext_resource type="Script" uid="uid://cav35hfvb7n5r" path="res://Common/Cards/2D/Hand2D/Hand2D.cs" id="1_uj7fv"]
 [ext_resource type="Curve" uid="uid://be10x3ameruti" path="res://Common/Cards/2D/Hand2D/card_in_hand_x_position_curve.tres" id="2_4tunq"]
 [ext_resource type="Curve" uid="uid://bj2y07gbpfo4o" path="res://Common/Cards/2D/Hand2D/card_rotation_in_hand_curve.tres" id="3_hw3cj"]
 [ext_resource type="Curve" uid="uid://ddivj4kw4fnd4" path="res://Common/Cards/2D/Hand2D/card_in_hand_y_position_curve.tres" id="3_m8e0g"]
 [ext_resource type="PackedScene" uid="uid://b5iehtnbyu28u" path="res://Common/Cards/2D/Card2D/Card2D.tscn" id="4_g8ssu"]
+[ext_resource type="PackedScene" path="res://Common/Cards/2D/Card2D/card_2d_canvasgroup.tscn" id="5_l74ka"]
 
-[node name="Hand" type="Node2D"]
+[node name="Hand" type="Node2D" unique_id=1227076380]
 position = Vector2(580, 498)
 script = ExtResource("1_uj7fv")
 CardXPositionCurve = ExtResource("2_4tunq")
@@ -14,86 +15,86 @@ CardYPositionCurve = ExtResource("3_m8e0g")
 CardRotationCurve = ExtResource("3_hw3cj")
 YMagnitude = 20.0
 MaxRotationDegrees = 7.5
-CardScene = ExtResource("4_g8ssu")
 CardSizeX = 100.0
+CardScene = ExtResource("5_l74ka")
 
-[node name="CardsContainer" type="Node2D" parent="."]
+[node name="CardsContainer" type="Node2D" parent="." unique_id=558022423]
 
-[node name="Card" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
+[node name="Card" parent="CardsContainer" unique_id=1423947507 instance=ExtResource("4_g8ssu")]
 position = Vector2(-401, 20)
-rotation = -0.1309
+rotation = -0.1308997
 script = null
 
-[node name="Card2" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(-343.714, 16.9194)
-rotation = -0.123649
+[node name="Card2" parent="CardsContainer" unique_id=222664046 instance=ExtResource("4_g8ssu")]
+position = Vector2(-343.7143, 16.919403)
+rotation = -0.12364869
 script = null
 
-[node name="Card3" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(-286.429, 13.2339)
-rotation = -0.104949
+[node name="Card3" parent="CardsContainer" unique_id=354477064 instance=ExtResource("4_g8ssu")]
+position = Vector2(-286.4286, 13.233871)
+rotation = -0.104948744
 script = null
 
-[node name="Card4" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(-229.143, 9.41962)
-rotation = -0.0793794
+[node name="Card4" parent="CardsContainer" unique_id=1117863914 instance=ExtResource("4_g8ssu")]
+position = Vector2(-229.14285, 9.4196205)
+rotation = -0.079379395
 script = null
 
-[node name="Card5" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(-171.857, 5.83288)
-rotation = -0.0515203
+[node name="Card5" parent="CardsContainer" unique_id=1936536420 instance=ExtResource("4_g8ssu")]
+position = Vector2(-171.85713, 5.832878)
+rotation = -0.051520273
 script = null
 
-[node name="Card6" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(-114.571, 2.82988)
-rotation = -0.025951
+[node name="Card6" parent="CardsContainer" unique_id=1231226711 instance=ExtResource("4_g8ssu")]
+position = Vector2(-114.57142, 2.8298755)
+rotation = -0.025950957
 script = null
 
-[node name="Card7" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(-57.2857, 0.76684)
-rotation = -0.007251
+[node name="Card7" parent="CardsContainer" unique_id=1215686835 instance=ExtResource("4_g8ssu")]
+position = Vector2(-57.28571, 0.7668402)
+rotation = -0.0072510024
 script = null
 
-[node name="Card8" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
+[node name="Card8" parent="CardsContainer" unique_id=2061874242 instance=ExtResource("4_g8ssu")]
 script = null
 
-[node name="Card9" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(57.2857, 0.768963)
-rotation = 0.00725101
+[node name="Card9" parent="CardsContainer" unique_id=412537834 instance=ExtResource("4_g8ssu")]
+position = Vector2(57.28574, 0.7689631)
+rotation = 0.007251008
 script = null
 
-[node name="Card10" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(114.571, 2.83694)
-rotation = 0.025951
+[node name="Card10" parent="CardsContainer" unique_id=1884431497 instance=ExtResource("4_g8ssu")]
+position = Vector2(114.57142, 2.8369398)
+rotation = 0.025950957
 script = null
 
-[node name="Card11" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(171.857, 5.84557)
-rotation = 0.0515203
+[node name="Card11" parent="CardsContainer" unique_id=591870845 instance=ExtResource("4_g8ssu")]
+position = Vector2(171.85716, 5.8455677)
+rotation = 0.051520295
 script = null
 
-[node name="Card12" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(229.143, 9.43648)
+[node name="Card12" parent="CardsContainer" unique_id=752839327 instance=ExtResource("4_g8ssu")]
+position = Vector2(229.14284, 9.436476)
 rotation = 0.0793794
 script = null
 
-[node name="Card13" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(286.429, 13.2513)
-rotation = 0.104949
+[node name="Card13" parent="CardsContainer" unique_id=2019367645 instance=ExtResource("4_g8ssu")]
+position = Vector2(286.4286, 13.251307)
+rotation = 0.10494874
 script = null
 
-[node name="Card14" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
-position = Vector2(343.714, 16.9317)
-rotation = 0.123649
+[node name="Card14" parent="CardsContainer" unique_id=1175082527 instance=ExtResource("4_g8ssu")]
+position = Vector2(343.71426, 16.931686)
+rotation = 0.12364868
 script = null
 
-[node name="Card15" parent="CardsContainer" instance=ExtResource("4_g8ssu")]
+[node name="Card15" parent="CardsContainer" unique_id=1754182836 instance=ExtResource("4_g8ssu")]
 position = Vector2(401, 20)
-rotation = 0.1309
+rotation = 0.1308997
 script = null
 
-[node name="LeftMostPoint" type="Node2D" parent="."]
+[node name="LeftMostPoint" type="Node2D" parent="." unique_id=671088963]
 position = Vector2(-400, 38)
 
-[node name="RightMostPoint" type="Node2D" parent="."]
+[node name="RightMostPoint" type="Node2D" parent="." unique_id=506489465]
 position = Vector2(400, 27)
