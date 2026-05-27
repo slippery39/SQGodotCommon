@@ -25,10 +25,17 @@ public partial class BattlefieldZone : PanelContainer
 		margin.MouseFilter = Control.MouseFilterEnum.Ignore;
 		AddChild(margin);
 
+		var scroll = new ScrollContainer();
+		scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Auto;
+		scroll.VerticalScrollMode = ScrollContainer.ScrollMode.Disabled;
+		scroll.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+		scroll.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
+		margin.AddChild(scroll);
+
 		_container = new HBoxContainer();
 		_container.AddThemeConstantOverride("separation", 12);
 		_container.MouseFilter = Control.MouseFilterEnum.Ignore;
-		margin.AddChild(_container);
+		scroll.AddChild(_container);
 	}
 
 	public void Refresh(

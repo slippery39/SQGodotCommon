@@ -35,4 +35,6 @@ text = "Graveyard (0)"
 script = ExtResource("2_panel")
 
 [node name="EndTurnButton" type="Button" parent="MainColumn"]
+custom_minimum_size = Vector2(200, 0)
+size_flags_horizontal = 4
 text = "End Turn"
