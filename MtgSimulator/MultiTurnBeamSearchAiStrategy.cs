@@ -98,16 +98,20 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		if (chainAction != null)
 			return chainAction;
 
-		// Level 0: execute each root action and score via multi-turn rollout
-		var beam = actions
-			.AsParallel()
-			.Select(action =>
+		// Level 0: execute each root action and score via multi-turn rollout.
+		// Pre-allocated array + Parallel.For gives deterministic ordering without AsOrdered buffering overhead.
+		var beamArray = new BeamNode[actions.Count];
+		Parallel.For(
+			0,
+			actions.Count,
+			i =>
 			{
-				var resultState = ExecuteAction(state, action);
+				var resultState = ExecuteAction(state, actions[i]);
 				var score = ScoreAfterCompletingTurn(resultState, playerId);
-				return new BeamNode(resultState, [action], score);
-			})
-			.ToList();
+				beamArray[i] = new BeamNode(resultState, [actions[i]], score);
+			}
+		);
+		var beam = beamArray.ToList();
 
 		Dictionary<GameAction, float>? rootScores = null;
 		if (_captureDecisions)
@@ -131,9 +135,9 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		// Levels 1..currentTurnDepth-1: expand within the current turn only
 		for (var depth = 1; depth < _currentTurnDepth; depth++)
 		{
-			var nextBeam = beam.AsParallel()
-				.SelectMany(node => ExpandNode(node, playerId))
-				.ToList();
+			var expansions = new List<BeamNode>[beam.Count];
+			Parallel.For(0, beam.Count, i => expansions[i] = ExpandNode(beam[i], playerId));
+			var nextBeam = expansions.SelectMany(x => x).ToList();
 
 			if (nextBeam.Count == 0)
 				break;
@@ -466,10 +470,8 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 					.ToList();
 				if (randomActions.Count > 0)
 				{
-					state = ExecuteAction(
-						state,
-						randomActions[Random.Shared.Next(randomActions.Count)]
-					);
+					var rand = state.RngSeed != 0 ? new Random(state.RngSeed) : Random.Shared;
+					state = ExecuteAction(state, randomActions[rand.Next(randomActions.Count)]);
 					state = ResolveAllChoices(state, opponentId);
 				}
 				return ExecuteAction(state, BuildEndTurnAction(state));

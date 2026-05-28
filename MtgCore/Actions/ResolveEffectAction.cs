@@ -47,7 +47,8 @@ public record ResolveEffectAction : GameAction
 		for (int i = 0; i < Effects.Count; i++)
 		{
 			var effect = Effects[i];
-			var resolvedTargets = ResolveTargets(effect, i, context);
+			var (resolvedTargets, newState) = ResolveTargets(effect, i, context, state);
+			state = newState;
 
 			GameAction action = effect.ActionTemplate is ITargetedAction targeted
 				? targeted.WithTargets(resolvedTargets)
@@ -76,42 +77,54 @@ public record ResolveEffectAction : GameAction
 		return new ActionResult(state.SpawnActions(spawnedActions));
 	}
 
-	private ImmutableList<int> ResolveTargets(
+	private (ImmutableList<int> Targets, GameState State) ResolveTargets(
 		CardEffect effect,
 		int effectIndex,
-		TargetingContext context
+		TargetingContext context,
+		GameState state
 	)
 	{
 		return effect.TargetingStrategy.SelectionMode switch
 		{
-			TargetSelectionMode.UserSelect => TargetIds.TryGetValue(effectIndex, out var targets)
-				? targets
-				: ImmutableList<int>.Empty,
-
-			TargetSelectionMode.AllValid => ImmutableList.CreateRange(
-				effect.TargetingStrategy.GetValidTargets(context with { IsNonTargeted = true })
+			TargetSelectionMode.UserSelect => (
+				TargetIds.TryGetValue(effectIndex, out var targets)
+					? targets
+					: ImmutableList<int>.Empty,
+				state
 			),
 
-			TargetSelectionMode.Random => ResolveRandomTarget(effect.TargetingStrategy, context),
+			TargetSelectionMode.AllValid => (
+				ImmutableList.CreateRange(
+					effect.TargetingStrategy.GetValidTargets(context with { IsNonTargeted = true })
+				),
+				state
+			),
 
-			TargetSelectionMode.CastingPlayer => ImmutableList.Create(CastingPlayerId),
+			TargetSelectionMode.Random => ResolveRandomTarget(
+				effect.TargetingStrategy,
+				context,
+				state
+			),
 
-			TargetSelectionMode.None => ImmutableList<int>.Empty,
+			TargetSelectionMode.CastingPlayer => (ImmutableList.Create(CastingPlayerId), state),
 
-			_ => ImmutableList<int>.Empty,
+			TargetSelectionMode.None => (ImmutableList<int>.Empty, state),
+
+			_ => (ImmutableList<int>.Empty, state),
 		};
 	}
 
-	private static ImmutableList<int> ResolveRandomTarget(
+	private static (ImmutableList<int> Targets, GameState State) ResolveRandomTarget(
 		TargetingStrategy strategy,
-		TargetingContext context
+		TargetingContext context,
+		GameState state
 	)
 	{
 		var validTargets = strategy.GetValidTargets(context);
 		if (validTargets.Count == 0)
-			return ImmutableList<int>.Empty;
+			return (ImmutableList<int>.Empty, state);
 
-		var chosen = validTargets[new Random().Next(validTargets.Count)];
-		return ImmutableList.Create(chosen);
+		var (index, newState) = state.ConsumeRandom(validTargets.Count);
+		return (ImmutableList.Create(validTargets[index]), newState);
 	}
 }

@@ -66,7 +66,13 @@ public class SimulatorRunner
 					: new BeamSearchAiStrategy(ids, _aiDepth, rng: aiRng);
 
 			var runner = new GameRunner(player1Strategy, player2Strategy);
-			var (result, finalState) = runner.Run(state, ids, cardNames, shuffleSeed: gameSeed + 2);
+			var (result, finalState) = runner.Run(
+				state,
+				ids,
+				cardNames,
+				shuffleSeed: gameSeed + 2,
+				gameRngSeed: gameSeed + 3
+			);
 
 			if (result.IsFlagged)
 			{

@@ -5,6 +5,12 @@ namespace ImmutableGameObjects;
 public record GameState
 {
 	public int NextId { get; init; } = 1;
+
+	/// <summary>
+	/// Seed used to drive in-game randomness (e.g. random discard, random targeting).
+	/// 0 = unseeded (truly random). Set once at game start; advances with each random pick.
+	/// </summary>
+	public int RngSeed { get; init; } = 0;
 	public ImmutableDictionary<int, GameObject> IdToGameObjectMap { get; init; } =
 		ImmutableDictionary<int, GameObject>.Empty;
 	public ImmutableDictionary<int, ImmutableList<int>> ParentToChildren { get; init; } =

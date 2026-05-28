@@ -36,6 +36,12 @@ public record BeginGameAction : GameAction
 	/// </summary>
 	public int ShuffleSeed { get; init; } = 0;
 
+	/// <summary>
+	/// Seed for in-game randomness (random discard, random targeting, etc.).
+	/// 0 = unseeded (default). Passed through to SetupGameAction.
+	/// </summary>
+	public int GameRngSeed { get; init; } = 0;
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var game = gameState.GetGame(GameId);
@@ -49,6 +55,7 @@ public record BeginGameAction : GameAction
 			OpeningHandSize = OpeningHandSize,
 			OpeningHandLandCount = OpeningHandLandCount,
 			ShuffleSeed = ShuffleSeed,
+			GameRngSeed = GameRngSeed,
 		};
 
 		var startTurn = new StartTurnAction

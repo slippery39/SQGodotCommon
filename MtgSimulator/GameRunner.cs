@@ -53,14 +53,16 @@ public class GameRunner
 		GameState preBeginState,
 		MtgGameIds ids,
 		IReadOnlyDictionary<int, string> cardNames,
-		int shuffleSeed = 0
+		int shuffleSeed = 0,
+		int gameRngSeed = 0
 	)
 	{
 		var (initialState, beginEvents) = preBeginState.BeginGame(
 			ids.GameId,
 			ids.Player1Id,
 			ids.Player2Id,
-			shuffleSeed
+			shuffleSeed,
+			gameRngSeed
 		);
 		var ctx = new RunContext(initialState);
 		TrackDrawnCards(beginEvents, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);

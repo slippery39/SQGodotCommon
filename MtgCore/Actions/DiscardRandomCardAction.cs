@@ -35,9 +35,10 @@ public record DiscardRandomCardAction : GameAction
 		if (cards.Count == 0)
 			return new ActionResult(gameState);
 
-		var chosen = cards[new Random().Next(cards.Count)];
-		var graveyardId = gameState.GetPlayerZoneId(chosen.OwnerId, ZoneType.Graveyard);
-		var state = gameState.MoveObject(chosen.Id, graveyardId);
+		var (chosenIndex, stateAfterRng) = gameState.ConsumeRandom(cards.Count);
+		var chosen = cards[chosenIndex];
+		var graveyardId = stateAfterRng.GetPlayerZoneId(chosen.OwnerId, ZoneType.Graveyard);
+		var state = stateAfterRng.MoveObject(chosen.Id, graveyardId);
 
 		var events = ImmutableList.Create<GameEvent>(
 			new CardDiscardedEvent { PlayerId = targetPlayerId, CardId = chosen.Id }

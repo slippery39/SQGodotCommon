@@ -33,9 +33,15 @@ public record SetupGameAction : GameAction
 	/// </summary>
 	public int ShuffleSeed { get; init; } = 0;
 
+	/// <summary>
+	/// Seed used for in-game randomness (random discard, random targeting, etc.).
+	/// 0 = unseeded (default). Written into GameState.RngSeed at game start.
+	/// </summary>
+	public int GameRngSeed { get; init; } = 0;
+
 	public override ActionResult Execute(GameState gameState)
 	{
-		var state = gameState;
+		var state = gameState with { RngSeed = GameRngSeed };
 
 		// Shuffle both libraries
 		var rng1 = ShuffleSeed == 0 ? null : new Random(ShuffleSeed);

@@ -97,7 +97,8 @@ public static class MtgGameStateExtensions
 		int gameId,
 		int player1Id,
 		int player2Id,
-		int shuffleSeed = 0
+		int shuffleSeed = 0,
+		int gameRngSeed = 0
 	)
 	{
 		return state
@@ -108,6 +109,7 @@ public static class MtgGameStateExtensions
 					Player1Id = player1Id,
 					Player2Id = player2Id,
 					ShuffleSeed = shuffleSeed,
+					GameRngSeed = gameRngSeed,
 				}
 			)
 			.ProcessAllActions();
