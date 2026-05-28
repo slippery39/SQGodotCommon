@@ -4,6 +4,6 @@
 [ext_resource type="PackedScene" path="res://Common/Cards/2D/Card2D/internal_cardui2d_canvasgroup.tscn" id="2_cardscene"]
 
 [node name="BoardCard" type="Control"]
-custom_minimum_size = Vector2(130, 186)
+custom_minimum_size = Vector2(150, 186)
 script = ExtResource("1_bcard")
 InternalCardScene = ExtResource("2_cardscene")

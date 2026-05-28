@@ -36,7 +36,7 @@ public partial class BoardCard : Control
 		{
 			_cardNode = InternalCardScene.Instantiate<InternalCardUI2D>();
 			_cardNode.Scale = new Vector2(0.42f, 0.42f);
-			_cardNode.Position = new Vector2(65, 93);
+			_cardNode.Position = new Vector2(75, 93);
 			AddChild(_cardNode);
 		}
 		else
