@@ -24,6 +24,7 @@ shader_parameter/flash_color = Color(1, 1, 1, 1)
 shader_parameter/flash_intensity = 0.0
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_cg02"]
+resource_local_to_scene = true
 shader = ExtResource("3_aqtsa")
 shader_parameter/enable_holographic = false
 shader_parameter/holographic_intensity = 0.75

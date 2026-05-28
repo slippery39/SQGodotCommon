@@ -813,7 +813,7 @@ public partial class MtgGameScene : Node2D
 				? _currentCostValidPaymentIds
 				: null
 		);
-		_hand.Modulate = _manager.IsAiTurn ? new Color(0.5f, 0.5f, 0.5f, 0.7f) : Colors.White;
+		_hand.Modulate = Colors.White;
 
 		var shouldShowChoice = !_manager.IsAiTurn && !_isGameOver && _manager.IsWaitingForChoice;
 		if (shouldShowChoice && !_choicePanelShowing)
