@@ -53,29 +53,41 @@ public static class StateEvaluator
 		var playerCreatureCount = 0;
 		var playerPower = 0;
 		var playerCreatureDamage = 0;
+		var playerNonCreatureCount = 0;
 		foreach (var c in state.GetCardsInZone(playerBattlefieldId))
 		{
 			var creature = c.GetComponent<CreatureComponent>();
-			if (creature == null)
-				continue;
-			playerCreatureCount++;
-			// Permanent power only — UntilEndOfTurn buffs (Giant Growth etc.) evaporate next turn
-			// and should not count as lasting board advantage.
-			playerPower += state.GetEffectivePermanentPower(c.Id);
-			playerCreatureDamage += creature.Damage;
+			if (creature != null)
+			{
+				playerCreatureCount++;
+				// Permanent power only — UntilEndOfTurn buffs (Giant Growth etc.) evaporate next turn
+				// and should not count as lasting board advantage.
+				playerPower += state.GetEffectivePermanentPower(c.Id);
+				playerCreatureDamage += creature.Damage;
+			}
+			else if (c.HasComponent<PermanentComponent>())
+			{
+				playerNonCreatureCount++;
+			}
 		}
 
 		var opponentCreatureCount = 0;
 		var opponentPower = 0;
 		var opponentCreatureDamage = 0;
+		var opponentNonCreatureCount = 0;
 		foreach (var c in state.GetCardsInZone(opponentBattlefieldId))
 		{
 			var creature = c.GetComponent<CreatureComponent>();
-			if (creature == null)
-				continue;
-			opponentCreatureCount++;
-			opponentPower += state.GetEffectivePermanentPower(c.Id);
-			opponentCreatureDamage += creature.Damage;
+			if (creature != null)
+			{
+				opponentCreatureCount++;
+				opponentPower += state.GetEffectivePermanentPower(c.Id);
+				opponentCreatureDamage += creature.Damage;
+			}
+			else if (c.HasComponent<PermanentComponent>())
+			{
+				opponentNonCreatureCount++;
+			}
 		}
 
 		score += (playerCreatureCount - opponentCreatureCount) * CreatureCountWeight;
@@ -83,20 +95,6 @@ public static class StateEvaluator
 		// Damage on surviving creatures is a hidden disadvantage the board snapshot misses.
 		// A creature with lethal-minus-one damage is much more fragile than a fresh one.
 		score += (opponentCreatureDamage - playerCreatureDamage) * CreatureDamageWeight;
-
-		var playerNonCreatureCount = 0;
-		foreach (var c in state.GetCardsInZone(playerBattlefieldId))
-		{
-			if (c.HasComponent<PermanentComponent>() && !c.HasComponent<CreatureComponent>())
-				playerNonCreatureCount++;
-		}
-
-		var opponentNonCreatureCount = 0;
-		foreach (var c in state.GetCardsInZone(opponentBattlefieldId))
-		{
-			if (c.HasComponent<PermanentComponent>() && !c.HasComponent<CreatureComponent>())
-				opponentNonCreatureCount++;
-		}
 
 		score += (playerNonCreatureCount - opponentNonCreatureCount) * NonCreaturePermanentWeight;
 
