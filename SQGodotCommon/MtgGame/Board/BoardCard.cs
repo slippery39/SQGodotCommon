@@ -92,6 +92,8 @@ public partial class BoardCard : Control
 			details.ApplyTo(_cardNode);
 		}
 
+		// SummoningSick greys the whole card (visual + stats). All other highlights tint only
+		// the card visual so the P/T label stays white.
 		Modulate =
 			highlight == BoardCardHighlight.SummoningSick
 				? new Color(0.6f, 0.6f, 0.6f, 1f)
@@ -99,16 +101,14 @@ public partial class BoardCard : Control
 
 		if (_cardNode != null)
 		{
-			var (outlineColor, outlineThickness) = highlight switch
+			_cardNode.Modulate = highlight switch
 			{
-				BoardCardHighlight.Target => (new Color(1f, 1f, 0.3f, 1f), 6f),
-				BoardCardHighlight.Selected => (new Color(0.4f, 1f, 0.4f, 1f), 6f),
-				BoardCardHighlight.AdditionalCost => (new Color(1f, 0.65f, 0.1f, 1f), 6f),
-				BoardCardHighlight.Flashback => (new Color(0.8f, 0.5f, 1f, 1f), 6f),
-				_ => (new Color(0, 0, 0, 0), 0f),
+				BoardCardHighlight.Target => new Color(1f, 1f, 0.3f, 1f),
+				BoardCardHighlight.Selected => new Color(0.4f, 1f, 0.4f, 1f),
+				BoardCardHighlight.AdditionalCost => new Color(1f, 0.65f, 0.1f, 1f),
+				BoardCardHighlight.Flashback => new Color(0.8f, 0.5f, 1f, 1f),
+				_ => Colors.White,
 			};
-			_cardNode.OutlineColor = outlineColor;
-			_cardNode.OutlineThickness = outlineThickness;
 		}
 
 		var creature = card.GetComponent<CreatureComponent>();

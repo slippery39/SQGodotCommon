@@ -7,28 +7,21 @@ public partial class CardPreviewPopup : CanvasLayer
 	[Export]
 	public PackedScene InternalCardScene { get; set; }
 
-	private Control _panel;
 	private InternalCardUI2D _cardNode;
+
+	// Card native size ~300×470px. At 0.65 scale: ~195×305px.
+	private const float HalfW = 97.5f;
+	private const float HalfH = 152.5f;
 
 	public override void _Ready()
 	{
 		Layer = 3;
 
-		_panel = new PanelContainer();
-		_panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel(borderWidth: 2));
-		_panel.MouseFilter = Control.MouseFilterEnum.Ignore;
-		AddChild(_panel);
-
 		if (InternalCardScene != null)
 		{
 			_cardNode = InternalCardScene.Instantiate<InternalCardUI2D>();
 			_cardNode.Scale = new Vector2(0.65f, 0.65f);
-			// Offset the Node2D origin so the card sits flush in the top-left of the panel.
-			// Native card extends ±150px wide and from -235 to +235 tall (centered at 0,0).
-			// At 0.65 scale: ~195px wide, ~305px tall. Shift by half those values.
-			_cardNode.Position = new Vector2(97, 152);
-			_panel.AddChild(_cardNode);
-			_panel.CustomMinimumSize = new Vector2(195, 305);
+			AddChild(_cardNode);
 		}
 
 		Hide();
@@ -40,17 +33,17 @@ public partial class CardPreviewPopup : CanvasLayer
 			return;
 
 		details.ApplyTo(_cardNode);
-
-		// Clear outline — preview is display-only
 		_cardNode.OutlineColor = new Color(0, 0, 0, 0);
 		_cardNode.OutlineThickness = 0f;
+		_cardNode.Modulate = Colors.White;
 
-		// Position near cursor, offset above-right, clamped to viewport
+		// Position card above-right of cursor, clamped to viewport.
+		// Node2D Position is the center of the card.
 		var viewport = GetViewport().GetVisibleRect();
-		var panelSize = _panel.CustomMinimumSize;
-		var x = Mathf.Clamp(cursorPos.X + 20f, 0f, viewport.Size.X - panelSize.X);
-		var y = Mathf.Clamp(cursorPos.Y - panelSize.Y - 10f, 0f, viewport.Size.Y - panelSize.Y);
-		_panel.SetPosition(new Vector2(x, y));
+		var topLeft = cursorPos + new Vector2(20f, -HalfH * 2 - 10f);
+		topLeft.X = Mathf.Clamp(topLeft.X, 0f, viewport.Size.X - HalfW * 2);
+		topLeft.Y = Mathf.Clamp(topLeft.Y, 0f, viewport.Size.Y - HalfH * 2);
+		_cardNode.Position = topLeft + new Vector2(HalfW, HalfH);
 
 		Show();
 	}
