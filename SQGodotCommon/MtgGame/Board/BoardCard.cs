@@ -125,7 +125,5 @@ public partial class BoardCard : Control
 		{
 			_statsLabel.Visible = false;
 		}
-
-		TooltipText = MtgCardMapper.GetRulesText(card);
 	}
 }
