@@ -15,6 +15,8 @@ public partial class BattlefieldZone : PanelContainer
 
 	public event Action<int>? CardClicked;
 	public event Action<int>? CardRightClicked;
+	public event Action<int>? CardHovered;
+	public event Action<int>? CardHoverEnded;
 
 	public override void _Ready()
 	{
@@ -66,6 +68,8 @@ public partial class BattlefieldZone : PanelContainer
 			_container.AddChild(boardCard);
 			boardCard.Clicked += id => CardClicked?.Invoke(id);
 			boardCard.RightClicked += id => CardRightClicked?.Invoke(id);
+			boardCard.Hovered += id => CardHovered?.Invoke(id);
+			boardCard.HoverEnded += id => CardHoverEnded?.Invoke(id);
 			boardCard.Refresh(
 				card,
 				state,

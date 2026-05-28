@@ -27,14 +27,16 @@ public partial class BoardCard : Control
 
 	public event Action<int> Clicked;
 	public event Action<int> RightClicked;
+	public event Action<int> Hovered;
+	public event Action<int> HoverEnded;
 
 	public override void _Ready()
 	{
 		if (InternalCardScene != null)
 		{
 			_cardNode = InternalCardScene.Instantiate<InternalCardUI2D>();
-			_cardNode.Scale = new Vector2(0.55f, 0.55f);
-			_cardNode.Position = new Vector2(82, 129);
+			_cardNode.Scale = new Vector2(0.42f, 0.42f);
+			_cardNode.Position = new Vector2(65, 93);
 			AddChild(_cardNode);
 		}
 		else
@@ -56,6 +58,8 @@ public partial class BoardCard : Control
 		AddChild(_statsLabel);
 
 		GuiInput += OnGuiInput;
+		MouseEntered += () => Hovered?.Invoke(_cardId);
+		MouseExited += () => HoverEnded?.Invoke(_cardId);
 	}
 
 	private void OnGuiInput(InputEvent inputEvent)

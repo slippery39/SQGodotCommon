@@ -17,6 +17,7 @@ public partial class MtgGameScene : Node2D
 	private ChoicePanel _choicePanel = null!;
 	private EventLogPanel _eventLog = null!;
 	private GraveyardPopup _graveyardPopup = null!;
+	private CardPreviewPopup _cardPreviewPopup = null!;
 
 	private readonly List<int> _handCardIds = new();
 	private int? _selectedAttackerId;
@@ -75,12 +76,20 @@ public partial class MtgGameScene : Node2D
 		AddChild(_graveyardPopup);
 		_graveyardPopup.CardClicked += OnGraveyardCardClicked;
 
+		_cardPreviewPopup = new CardPreviewPopup();
+		_cardPreviewPopup.InternalCardScene = ResourceLoader.Load<PackedScene>(
+			"res://Common/Cards/2D/Card2D/internal_cardui2d_canvasgroup.tscn"
+		);
+		AddChild(_cardPreviewPopup);
+
 		_boardUI.EndTurnPressed += OnEndTurnPressed;
 		_boardUI.PlayerCreatureClicked += OnPlayerCreatureClicked;
 		_boardUI.PlayerCreatureRightClicked += OnPlayerCreatureRightClicked;
 		_boardUI.OpponentCreatureClicked += OnOpponentCreatureClicked;
 		_boardUI.OpponentDirectAttacked += OnOpponentDirectAttacked;
 		_boardUI.GraveyardButtonPressed += OpenGraveyardPopup;
+		_boardUI.CreatureHovered += OnCreatureHovered;
+		_boardUI.CreatureHoverEnded += _ => _cardPreviewPopup.HideCard();
 
 		_hand.IsDragSuccess = context =>
 			!_manager.IsAiTurn
@@ -647,6 +656,20 @@ public partial class MtgGameScene : Node2D
 			return;
 
 		TryAttack(_selectedAttackerId.Value, cardId);
+	}
+
+	private void OnCreatureHovered(int cardId)
+	{
+		var card = _manager.State.GetObject(cardId) as Card;
+		if (card == null)
+			return;
+		var details = new InternalCardUI2D.Details
+		{
+			CardName = card.Name,
+			ManaCost = card.ManaCost.ToString(),
+			RulesText = MtgCardMapper.GetRulesText(card),
+		};
+		_cardPreviewPopup.ShowCard(details, GetViewport().GetMousePosition());
 	}
 
 	private void OnOpponentDirectAttacked()

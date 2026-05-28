@@ -14,6 +14,8 @@ public partial class BoardUI : Control
 	public event Action<int>? OpponentCreatureClicked;
 	public event Action? OpponentDirectAttacked;
 	public event Action? GraveyardButtonPressed;
+	public event Action<int>? CreatureHovered;
+	public event Action<int>? CreatureHoverEnded;
 
 	private Label _turnLabel = null!;
 	private PlayerPanel _opponentPanel = null!;
@@ -63,7 +65,11 @@ public partial class BoardUI : Control
 
 		_playerBattlefield.CardClicked += id => PlayerCreatureClicked?.Invoke(id);
 		_playerBattlefield.CardRightClicked += id => PlayerCreatureRightClicked?.Invoke(id);
+		_playerBattlefield.CardHovered += id => CreatureHovered?.Invoke(id);
+		_playerBattlefield.CardHoverEnded += id => CreatureHoverEnded?.Invoke(id);
 		_opponentBattlefield.CardClicked += id => OpponentCreatureClicked?.Invoke(id);
+		_opponentBattlefield.CardHovered += id => CreatureHovered?.Invoke(id);
+		_opponentBattlefield.CardHoverEnded += id => CreatureHoverEnded?.Invoke(id);
 		_opponentPanel.Clicked += () => OpponentDirectAttacked?.Invoke();
 
 		_graveyardButton.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
