@@ -351,6 +351,11 @@ public static class MtgActionGenerator
 			.Prepend(opponentId)
 			.ToList();
 
+		// Deduplicate by (target, attacker signature): two creatures with the same name,
+		// effective P/T, current damage, and combat-relevant abilities produce identical
+		// game outcomes when attacking the same target, so only one representative is needed.
+		var seen = new HashSet<(int targetId, AttackerSignature sig)>();
+
 		foreach (var attacker in state.GetCardsInZone(battlefieldId))
 		{
 			var creature = attacker.GetComponent<CreatureComponent>();
@@ -359,8 +364,23 @@ public static class MtgActionGenerator
 			if (creature.HasSummoningSickness && !state.GetEffectiveHaste(attacker.Id))
 				continue;
 
+			var stats = state.GetEffectiveStats(attacker.Id);
+			var sig = new AttackerSignature(
+				attacker.Name,
+				stats.Power,
+				stats.Toughness,
+				creature.Damage,
+				stats.HasFlying,
+				stats.HasTrample,
+				creature.HasDoubleStrike,
+				stats.HasLifelink
+			);
+
 			foreach (var targetId in attackTargets)
 			{
+				if (!seen.Add((targetId, sig)))
+					continue;
+
 				var attack = new AttackAction
 				{
 					AttackerId = attacker.Id,
@@ -485,3 +505,19 @@ public static class MtgActionGenerator
 		return payments;
 	}
 }
+
+/// <summary>
+/// Identifies a unique attacker profile for deduplication in AddAttackActions.
+/// Two creatures with the same signature produce identical outcomes when attacking
+/// the same target, so only one representative action is generated per (target, sig) pair.
+/// </summary>
+file record struct AttackerSignature(
+	string Name,
+	int Power,
+	int Toughness,
+	int Damage,
+	bool HasFlying,
+	bool HasTrample,
+	bool HasDoubleStrike,
+	bool HasLifelink
+);

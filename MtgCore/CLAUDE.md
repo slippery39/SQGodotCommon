@@ -220,6 +220,8 @@ Mana is always the primary cost (`ManaCost: int`); this matches MTG's "0:" notat
 
 Hearthstone-style (turn-based, no blockers). The active player attacks; the opponent does not assign blockers.
 
+**Attacker deduplication**: `AddAttackActions` generates only one representative attack action per (target, `AttackerSignature`) pair. `AttackerSignature` captures the fields that determine combat outcome: `Name`, effective `Power`/`Toughness` (from `GetEffectiveStats`), current `Damage`, `HasFlying`, `HasTrample`, `HasDoubleStrike`, `HasLifelink`. Two creatures with identical signatures attacking the same target produce strategically equivalent game states, so only one is offered to the AI. This prevents exponential action-count growth when many identical tokens (e.g. Goblin tokens from Krenko, Mob Boss) are on the battlefield.
+
 - `HasSummoningSickness` — cannot attack the turn they enter the battlefield. Cleared by `HasHaste` on `CreatureComponent` — haste creatures enter with `HasSummoningSickness = false`.
 - `HasDoubleStrike` — creature deals damage twice. vs player: two separate damage applications, two `CombatDamageDealtToPlayerEvent`s (triggers fire twice). vs creature: deals 2× power in one pass.
 - `HasAttacked` — can only attack once per turn.

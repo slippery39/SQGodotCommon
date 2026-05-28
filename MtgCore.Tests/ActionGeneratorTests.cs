@@ -130,6 +130,69 @@ public class ActionGeneratorTests
 		}
 	}
 
+	// ===== DEDUPLICATION =====
+
+	[Test]
+	public void GetLegalActions_TwoIdenticalAttackers_ProducesOneActionPerTarget()
+	{
+		var (s1, _) = AddAttacker(_state, "Goblin", 1, 1, _ids.Player1Id);
+		var (s2, _) = AddAttacker(s1, "Goblin", 1, 1, _ids.Player1Id);
+
+		var attacks = GetAttacks(s2);
+
+		Assert.That(
+			attacks.Count,
+			Is.EqualTo(1),
+			"Two identical attackers against the same target should produce one deduplicated action"
+		);
+	}
+
+	[Test]
+	public void GetLegalActions_TwoIdenticalAttackers_TwoTargets_ProducesTwoActions()
+	{
+		var (s1, _) = AddAttacker(_state, "Goblin", 1, 1, _ids.Player1Id);
+		var (s2, _) = AddAttacker(s1, "Goblin", 1, 1, _ids.Player1Id);
+		var (s3, _) = AddDefender(s2, "Bear", 2, 2, _ids.Player2Id);
+
+		var attacks = GetAttacks(s3);
+
+		Assert.That(
+			attacks.Count,
+			Is.EqualTo(2),
+			"Two identical attackers with two targets should produce one action per target, not two per target"
+		);
+	}
+
+	[Test]
+	public void GetLegalActions_SameStatsDifferentNames_NotDeduplicated()
+	{
+		var (s1, _) = AddAttacker(_state, "Goblin", 1, 1, _ids.Player1Id);
+		var (s2, _) = AddAttacker(s1, "Raging Goblin", 1, 1, _ids.Player1Id);
+
+		var attacks = GetAttacks(s2);
+
+		Assert.That(
+			attacks.Count,
+			Is.EqualTo(2),
+			"Different-named creatures with identical stats should each produce their own action"
+		);
+	}
+
+	[Test]
+	public void GetLegalActions_SameNameDifferentDamage_NotDeduplicated()
+	{
+		var (s1, _) = AddAttacker(_state, "Goblin", 1, 1, _ids.Player1Id);
+		var (s2, _) = AddDamagedAttacker(s1, "Goblin", 1, 1, damage: 1, _ids.Player1Id);
+
+		var attacks = GetAttacks(s2);
+
+		Assert.That(
+			attacks.Count,
+			Is.EqualTo(2),
+			"Identical cards with different damage taken have different survivability and should not be deduplicated"
+		);
+	}
+
 	// ===== ELIGIBILITY =====
 
 	[Test]
@@ -212,6 +275,35 @@ public class ActionGeneratorTests
 					Power = power,
 					Toughness = toughness,
 					HasSummoningSickness = false,
+				}
+			),
+		};
+		var (newState, added) = state.AddObject(creature, parentId: battlefieldId);
+		return (newState, added);
+	}
+
+	private (GameState, Card) AddDamagedAttacker(
+		GameState state,
+		string name,
+		int power,
+		int toughness,
+		int damage,
+		int ownerId
+	)
+	{
+		var battlefieldId = state.GetPlayerZoneId(ownerId, ZoneType.Battlefield);
+		var creature = new Card
+		{
+			Name = name,
+			OwnerId = ownerId,
+			ControllerId = ownerId,
+			Components = ImmutableArray.Create<GameComponent>(
+				new CreatureComponent
+				{
+					Power = power,
+					Toughness = toughness,
+					HasSummoningSickness = false,
+					Damage = damage,
 				}
 			),
 		};
