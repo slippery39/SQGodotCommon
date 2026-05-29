@@ -7,7 +7,7 @@ namespace MtgCore;
 /// writes its ID to OutputKey in pipeline context.
 ///
 /// Follows the same pattern as SelectCardFromLibraryAction but targets any ZoneType
-/// (typically ZoneType.Exile). Used by Bounceland to find a land in the exile zone.
+/// (typically ZoneType.Exile). Used by Simic Growth Chamber to find a land in the exile zone.
 ///
 /// Player resolution:
 ///   - Set PlayerId directly, or
@@ -27,7 +27,7 @@ public record SelectCardFromZoneAction : GameAction
 	/// <summary>
 	/// When true, excludes the card whose ID is in context under ContextKeys.SourceCardId.
 	/// Use this when the source card itself has just entered the zone being searched
-	/// (e.g. Bounceland moves to exile then searches exile — without this flag it would
+	/// (e.g. Simic Growth Chamber moves to exile then searches exile — without this flag it would
 	/// find and return itself, producing a self-bounce loop).
 	/// </summary>
 	public bool ExcludeSourceCard { get; init; } = false;

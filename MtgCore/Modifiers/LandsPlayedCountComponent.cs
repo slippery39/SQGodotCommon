@@ -7,7 +7,7 @@ namespace MtgCore;
 /// player has played this game (LandsPlayedTotal). Counts both lands played from hand
 /// and lands put into play by effects (Rampant Growth, Primeval Titan ETB).
 ///
-/// Used by Land Elemental: base Power = 0, base Toughness = 0, so effective P/T equals
+/// Used by Terravore: base Power = 0, base Toughness = 0, so effective P/T equals
 /// the controller's LandsPlayedTotal at read time.
 ///
 /// Must be stamped with Duration = Permanent when included in a card's component list

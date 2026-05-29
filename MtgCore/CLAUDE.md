@@ -34,7 +34,7 @@ MtgCore/
 │                            #           AttachEquipmentAction (ITargetedAction; reads equipment ID from ContextKeys.SourceCardId)
 │                            #           PlayLandAction (play land from hand: MaxMana+totalMana, CurrentMana+manaThisTurn, LandsPlayedThisTurn++, LandsPlayedTotal++, card → exile; checks BonusManaLandComponent and LandPlayEffectComponent)
 │                            #           PutLandIntoPlayAction (effect-sourced land: same mana logic as PlayLandAction, LandsPlayedTotal++ only, card → exile; used by Rampant Growth/Primeval Titan)
-│                            #           SelectCardFromZoneAction (like SelectCardFromLibraryAction but targets any ZoneType; used by Bounceland to find a land in exile)
+│                            #           SelectCardFromZoneAction (like SelectCardFromLibraryAction but targets any ZoneType; used by Simic Growth Chamber to find a land in exile)
 │                            #           CastFromGraveyardAction (flashback: casts a spell from graveyard at FlashbackManaCost; card exiles after resolution via MoveCardToExileAction)
 │                            #           MoveCardToExileAction (post-resolution cleanup for flashback; analogous to MoveCardToGraveyardAction but routes to exile)
 │                            #           MoveCardToGraveyardAction (post-resolution cleanup for normal spells)
@@ -58,8 +58,8 @@ MtgCore/
 │                            # FlashbackComponent { FlashbackManaCost } — marks a spell castable from graveyard; MtgActionGenerator scans graveyard for these and generates CastFromGraveyardAction
 │                            # EquipmentComponent (PowerBonus, ToughnessBonus, EquippedToCardId — tracks attachment state)
 │                            # ExtraLandPerTurnComponent — marker; presence on a controlled battlefield permanent grants +1 land play per turn (used by Exploration)
-│                            # LandPlayEffectComponent { Effect: CardEffect } — spawns a ResolveEffectAction when the land is played or put into play; used by Glimmervoid (gain 2 life) and Bounceland (return exile land to hand)
-│                            # BonusManaLandComponent { ExtraMana, Deferred } — overrides land mana production: adds (1+ExtraMana) to MaxMana; if Deferred=true, CurrentMana is unchanged (mana usable next turn only); used by Bounceland
+│                            # LandPlayEffectComponent { Effect: CardEffect } — spawns a ResolveEffectAction when the land is played or put into play; used by Glimmervoid (gain 2 life) and Simic Growth Chamber (return exile land to hand)
+│                            # BonusManaLandComponent { ExtraMana, Deferred } — overrides land mana production: adds (1+ExtraMana) to MaxMana; if Deferred=true, CurrentMana is unchanged (mana usable next turn only); used by Simic Growth Chamber
 │                            # TransformComponent (OtherFaceName, OtherFaceSubtypes, OtherFaceComponents) — stores the other face of a double-faced card; TransformAction swaps Name/Subtypes/Components in place, preserving the card's ID and carrying creature state across
 │                            # AffinityComponent — marker (no data); when present on a card, CastCreatureAction and CastSpellAction reduce ManaCost by the number of artifact permanents the casting player controls (min 0). Used by Frogmite, Myr Enforcer, Thoughtcast.
 ├── Effects/                 # CardEffect (data-only effect descriptor)
@@ -72,8 +72,8 @@ MtgCore/
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods), StaticAbilityEngine (push-model ETB/LTB logic)
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier, AppliedStaticPTBoost
 │                            # EquippedBoostComponent (stamped on creature by AttachEquipmentAction; removed on detach/creature-death)
-│                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Land Elemental. Must be stamped with Duration = Permanent in card definitions.
-├── Players/                 # MtgPlayer (GameObject subclass) — fields: Life, MaxMana, CurrentMana, LandsPlayedThisTurn (resets each turn), LandsPlayedTotal (never resets; used by Land Elemental), Emblems (ImmutableList<Emblem>; grows when lands with GrantEmblemComponent are played)
+│                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Terravore. Must be stamped with Duration = Permanent in card definitions.
+├── Players/                 # MtgPlayer (GameObject subclass) — fields: Life, MaxMana, CurrentMana, LandsPlayedThisTurn (resets each turn), LandsPlayedTotal (never resets; used by Terravore), Emblems (ImmutableList<Emblem>; grows when lands with GrantEmblemComponent are played)
 ├── Targeting/               # TargetSpecification (base), ZoneSpecification (abstract base for zone specs), TargetingContext, TargetingStrategy
 │                            # Zone specs: IsOnBattlefieldSpecification, IsInHandSpecification, IsInstantOrSorceryInOwnGraveyardSpecification, IsCreatureInOwnGraveyardSpecification
 │                            # Other specs: IsCreatureSpecification (enforces Shroud/Hexproof at IsSatisfiedBy level), IsPlayerSpecification, IsSubtypeSpecification,
@@ -303,7 +303,7 @@ CardFactory
 
 ```csharp
 CardFactory
-    .Creature("Mogg Warmaster", manaCost: 1, power: 1, toughness: 1)
+    .Creature("Mogg War Marshal", manaCost: 1, power: 1, toughness: 1)
     .WithComponent(new TriggeredAbilityComponent
     {
         Name = "Dies Token",

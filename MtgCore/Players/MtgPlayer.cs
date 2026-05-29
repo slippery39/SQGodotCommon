@@ -12,7 +12,7 @@ namespace MtgCore;
 /// MaxMana is permanent mana from lands — increases each time a land is played.
 /// CurrentMana is refilled to MaxMana at the start of each turn.
 /// LandsPlayedThisTurn resets each turn; limits land plays to 1 (or more with Exploration).
-/// LandsPlayedTotal never resets; used by Land Elemental's dynamic P/T.
+/// LandsPlayedTotal never resets; used by Terravore's dynamic P/T.
 /// </summary>
 public record MtgPlayer : GameObject
 {

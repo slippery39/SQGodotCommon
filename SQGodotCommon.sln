@@ -27,6 +27,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MtgSimulator.Console", "Mtg
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MtgSimulator.Tests", "MtgSimulator.Tests\MtgSimulator.Tests.csproj", "{F2584909-EF62-4353-AC5B-5D1775EE2E3A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MtgArtScraper", "MtgArtScraper\MtgArtScraper.csproj", "{0CB8A45E-2046-4536-83EF-B5409F541E62}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -169,6 +171,18 @@ Global
 		{F2584909-EF62-4353-AC5B-5D1775EE2E3A}.Release|x64.Build.0 = Release|Any CPU
 		{F2584909-EF62-4353-AC5B-5D1775EE2E3A}.Release|x86.ActiveCfg = Release|Any CPU
 		{F2584909-EF62-4353-AC5B-5D1775EE2E3A}.Release|x86.Build.0 = Release|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Debug|x64.Build.0 = Debug|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Debug|x86.Build.0 = Debug|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Release|x64.ActiveCfg = Release|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Release|x64.Build.0 = Release|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Release|x86.ActiveCfg = Release|Any CPU
+		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

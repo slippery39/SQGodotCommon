@@ -16,7 +16,7 @@ public static class ReanimatorDeckFactory
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Bloodghast"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Tarmogoyf"));
 		AddCopies(deck, ownerId, 3, () => CardLibrary.GetByName("Path to Exile"));
-		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Mox"));
+		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Mox Pearl"));
 		AddCopies(deck, ownerId, 2, () => CardLibrary.GetByName("Lotus Bloom"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Reanimate"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Hunted Dragon"));

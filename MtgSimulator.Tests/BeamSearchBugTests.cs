@@ -187,7 +187,7 @@ public class BeamSearchBugTests
 	/// Bug 3: AI attacks into a Taunt creature when the attack gains nothing —
 	/// both creatures survive and no damage reaches the opponent player.
 	///
-	/// Setup: Player has a 1/3 creature (no sickness). Opponent has Wall of Thorns
+	/// Setup: Player has a 1/3 creature (no sickness). Opponent has Wall of Roots
 	/// (2/5 Taunt). Attack outcome: attacker takes 2 damage and survives (1 toughness
 	/// left), wall takes 1 damage and survives — truly neutral. AI should EndTurn.
 	///
@@ -220,7 +220,7 @@ public class BeamSearchBugTests
 		};
 		(_state, _) = _state.AddObject(attacker, parentId: _ids.Player1BattlefieldId);
 
-		// Wall of Thorns: 2/5 with Taunt — forces any attack to target it
+		// Wall of Roots: 2/5 with Taunt — forces any attack to target it
 		var wall = CardLibrary.WallOfThorns() with
 		{
 			OwnerId = _ids.Player2Id,
@@ -244,7 +244,7 @@ public class BeamSearchBugTests
 		Assert.That(
 			action,
 			Is.InstanceOf<EndTurnAction>(),
-			"Attacking into Wall of Thorns gains nothing (both creatures survive) — AI should EndTurn"
+			"Attacking into Wall of Roots gains nothing (both creatures survive) — AI should EndTurn"
 		);
 	}
 

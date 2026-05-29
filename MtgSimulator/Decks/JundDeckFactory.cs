@@ -27,7 +27,7 @@ public static class JundDeckFactory
 	{
 		var deck = new List<Card>();
 		AddCopies(deck, ownerId, 16, CardLibrary.Plains);
-		AddCopies(deck, ownerId, 3, () => CardLibrary.GetByName("Mox"));
+		AddCopies(deck, ownerId, 3, () => CardLibrary.GetByName("Mox Pearl"));
 		AddCopies(deck, ownerId, 2, () => CardLibrary.GetByName("Sol Ring"));
 		AddCopies(deck, ownerId, 3, () => CardLibrary.GetByName("Lightning Bolt"));
 		AddCopies(deck, ownerId, 3, () => CardLibrary.GetByName("Thoughtseize"));

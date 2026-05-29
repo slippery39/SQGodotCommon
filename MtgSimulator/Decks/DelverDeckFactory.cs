@@ -18,7 +18,7 @@ public static class DelverDeckFactory
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Tarmogoyf"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Geist of Saint Traft"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Path to Exile"));
-		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Mox"));
+		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Mox Pearl"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Gitaxian Probe"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Gut Shot"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Lightning Helix"));

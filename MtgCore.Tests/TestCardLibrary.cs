@@ -245,7 +245,7 @@ public static class TestCardLibrary
 				.Build(),
 			new()
 			{
-				Name = "Mox",
+				Name = "Mox Pearl",
 				ManaCost = 0,
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Artifact"),
 				Components = ImmutableArray.Create<GameComponent>(
@@ -671,7 +671,7 @@ public static class TestCardLibrary
 				),
 			},
 			CardFactory
-				.Creature("Wall of Thorns", manaCost: 3, power: 2, toughness: 5)
+				.Creature("Wall of Roots", manaCost: 3, power: 2, toughness: 5)
 				.WithSubtype("Plant")
 				.WithTaunt()
 				.Build(),
@@ -1023,7 +1023,7 @@ public static class TestCardLibrary
 			},
 			new()
 			{
-				Name = "Land Elemental",
+				Name = "Terravore",
 				ManaCost = 3,
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
@@ -1154,7 +1154,7 @@ public static class TestCardLibrary
 
 	// ===== ARTIFACTS =====
 
-	public static Card Mox() => All.First(c => c.Name == "Mox");
+	public static Card Mox() => All.First(c => c.Name == "Mox Pearl");
 
 	public static Card SolRing() => All.First(c => c.Name == "Sol Ring");
 
@@ -1211,7 +1211,7 @@ public static class TestCardLibrary
 
 	public static Card QasaliPridemage() => All.First(c => c.Name == "Qasali Pridemage");
 
-	public static Card WallOfThorns() => All.First(c => c.Name == "Wall of Thorns");
+	public static Card WallOfThorns() => All.First(c => c.Name == "Wall of Roots");
 
 	public static Card GeistOfSaintTraft() => All.First(c => c.Name == "Geist of Saint Traft");
 
@@ -1260,7 +1260,7 @@ public static class TestCardLibrary
 
 	public static Card SteppeLynx() => All.First(c => c.Name == "Steppe Lynx");
 
-	public static Card LandElemental() => All.First(c => c.Name == "Land Elemental");
+	public static Card LandElemental() => All.First(c => c.Name == "Terravore");
 
 	// ===== REANIMATOR CARDS =====
 

@@ -7,12 +7,12 @@ namespace MtgSimulator;
 ///
 /// Affinity uses artifacts to generate tempo through cost reduction and drains the
 /// opponent via Disciple of the Vault when artifacts are sacrificed to Arcbound Ravager.
-/// Vault of Ingenuity acts as an artifact land proxy — each one played creates a Clue
+/// Seat of the Synod acts as an artifact land proxy — each one played creates a Clue
 /// token (a non-creature artifact), which counts toward affinity cost reduction.
 ///
 /// Deck list (60 cards):
 ///   20x Plains               (basic land)
-///    4x Vault of Ingenuity   (land: creates a Clue artifact token when played)
+///    4x Seat of the Synod   (land: creates a Clue artifact token when played)
 ///    4x Disciple of the Vault (1B 1/1: whenever an artifact is sacrificed, opponent loses 1 life)
 ///    4x Arcbound Ravager     (2 1/1: sacrifice any permanent → +1/+1; unlimited activations)
 ///    4x Atog                 (2 1/2: sacrifice an artifact → +2/+2 until end of turn; unlimited activations)

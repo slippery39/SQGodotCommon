@@ -44,7 +44,7 @@ public static class DragonstormDeckFactory
 		AddCopies(deck, ownerId, 4, CardLibrary.LotusBoom);
 		AddCopies(deck, ownerId, 4, CardLibrary.AncestralRecall);
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Faithless Looting"));
-		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Mox"));
+		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Mox Pearl"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Lightning Bolt"));
 		return deck;
 	}

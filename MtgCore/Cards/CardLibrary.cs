@@ -246,7 +246,7 @@ public static class CardLibrary
 				.Build(),
 			new()
 			{
-				Name = "Mox",
+				Name = "Mox Pearl",
 				ManaCost = 0,
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Artifact"),
 				Components = ImmutableArray.Create<GameComponent>(
@@ -587,7 +587,7 @@ public static class CardLibrary
 				.WithTarget(Single().PlayersOrCreatures())
 				.Build(),
 			CardFactory
-				.Creature("Mogg Warmaster", manaCost: 1, power: 1, toughness: 1)
+				.Creature("Mogg War Marshal", manaCost: 1, power: 1, toughness: 1)
 				.WithSubtype(GoblinSubtype)
 				.WithEtbTrigger("ETB Token", eb => eb.WithCreateTokens(GoblinToken()))
 				.WithComponent(
@@ -809,7 +809,7 @@ public static class CardLibrary
 				),
 			},
 			CardFactory
-				.Creature("Wall of Thorns", manaCost: 3, power: 2, toughness: 5)
+				.Creature("Wall of Roots", manaCost: 3, power: 2, toughness: 5)
 				.WithSubtype("Plant")
 				.WithTaunt()
 				.Build(),
@@ -1191,7 +1191,7 @@ public static class CardLibrary
 			},
 			new()
 			{
-				Name = "Land Elemental",
+				Name = "Terravore",
 				ManaCost = 3,
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
@@ -1289,7 +1289,7 @@ public static class CardLibrary
 			},
 			new()
 			{
-				Name = "Bounceland",
+				Name = "Simic Growth Chamber",
 				ManaCost = 0,
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, LandSubtype),
 				Components = ImmutableArray.Create<GameComponent>(
@@ -1678,7 +1678,7 @@ public static class CardLibrary
 
 			new()
 			{
-				Name = "Vault of Ingenuity",
+				Name = "Seat of the Synod",
 				ManaCost = 0,
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, LandSubtype),
 				Components = ImmutableArray.Create<GameComponent>(
@@ -1821,7 +1821,7 @@ public static class CardLibrary
 	/// Mox (generic) — 0 mana artifact.
 	/// Once per turn: add 1 mana. Tap is proxied as HasActivated — no tap cost implemented yet.
 	/// </summary>
-	public static Card Mox() => All.First(c => c.Name == "Mox");
+	public static Card Mox() => All.First(c => c.Name == "Mox Pearl");
 
 	/// <summary>
 	/// Sol Ring — 1 mana artifact.
@@ -1973,7 +1973,7 @@ public static class CardLibrary
 	/// ETB: create a 1/1 Goblin token.
 	/// When it dies: create a 1/1 Goblin token.
 	/// </summary>
-	public static Card MoggWarmaster() => All.First(c => c.Name == "Mogg Warmaster");
+	public static Card MoggWarmaster() => All.First(c => c.Name == "Mogg War Marshal");
 
 	/// <summary>
 	/// Goblin Matron — 2 mana creature (1/1, Goblin).
@@ -2031,7 +2031,7 @@ public static class CardLibrary
 	/// </summary>
 	public static Card QasaliPridemage() => All.First(c => c.Name == "Qasali Pridemage");
 
-	public static Card WallOfThorns() => All.First(c => c.Name == "Wall of Thorns");
+	public static Card WallOfThorns() => All.First(c => c.Name == "Wall of Roots");
 
 	public static Card GeistOfSaintTraft() => All.First(c => c.Name == "Geist of Saint Traft");
 
@@ -2157,7 +2157,7 @@ public static class CardLibrary
 	/// LandsPlayedCountComponent reads the controller's LandsPlayedTotal dynamically.
 	/// Duration = Permanent so StartTurnAction does not clear it.
 	/// </summary>
-	public static Card LandElemental() => All.First(c => c.Name == "Land Elemental");
+	public static Card LandElemental() => All.First(c => c.Name == "Terravore");
 
 	// ===== JUND DECK CARDS =====
 
@@ -2228,5 +2228,5 @@ public static class CardLibrary
 	/// Playing this land creates a Clue artifact token, which counts as an artifact
 	/// for affinity purposes. Standard land mana increment also applies.
 	/// </summary>
-	public static Card VaultOfIngenuity() => GetByName("Vault of Ingenuity");
+	public static Card VaultOfIngenuity() => GetByName("Seat of the Synod");
 }

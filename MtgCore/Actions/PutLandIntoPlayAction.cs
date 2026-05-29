@@ -9,7 +9,7 @@ namespace MtgCore;
 ///
 /// Unlike PlayLandAction, this does NOT count against the player's land-per-turn limit
 /// and does NOT require the card to be in hand. It does count toward LandsPlayedTotal
-/// for Land Elemental's dynamic P/T.
+/// for Terravore's dynamic P/T.
 ///
 /// Takes the card ID from pipeline context via CardIdContextKey (or directly from CardId).
 /// Takes the player ID from pipeline context via PlayerIdContextKey (or directly from PlayerId).
