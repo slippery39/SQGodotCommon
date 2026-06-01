@@ -527,6 +527,11 @@ public record GameState
 			if (PostActionProcessor != null && !pipeline.IsPostProcessor && !SuppressPostProcessor)
 				completedState = completedState.SpawnAction(PostActionProcessor);
 
+			// Flush the staged post-processor onto the stack so it actually runs — the
+			// standalone-action path does the same. Without this the processor is stranded
+			// in SpawnQueue and never executes after a completed pipeline.
+			completedState = completedState.FlushSpawnQueue();
+
 			return (completedState, ImmutableList<GameEvent>.Empty);
 		}
 
