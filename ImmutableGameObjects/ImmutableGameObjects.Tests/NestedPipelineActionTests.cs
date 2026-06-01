@@ -57,10 +57,10 @@ public record UseCreatureAbilityAction : GameAction
 			),
 		};
 
-		return new ActionResult(gameState).WithOutput("ability_triggered_by", chosenCreatureId) with
-		{
-			SpawnedActions = ImmutableList.Create<GameAction>(innerPipeline),
-		};
+		return new ActionResult(gameState.SpawnAction(innerPipeline)).WithOutput(
+			"ability_triggered_by",
+			chosenCreatureId
+		);
 	}
 }
 

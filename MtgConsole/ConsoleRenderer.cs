@@ -82,7 +82,7 @@ public static class ConsoleRenderer
 		for (int i = 0; i < abilities.Count; i++)
 		{
 			var ab = abilities[i];
-			var usedStr = ab.HasActivated ? " (used)" : "";
+			var usedStr = ab.ActivationCount > 0 ? " (used)" : "";
 			Console.WriteLine($"    [{i + 1}] {ab.Name} — Cost: {ab.ManaCost}{usedStr}");
 		}
 	}

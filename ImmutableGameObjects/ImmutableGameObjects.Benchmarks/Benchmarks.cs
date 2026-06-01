@@ -42,7 +42,7 @@ public class GameStateBenchmarks
 			Weight = 1,
 			Value = 10,
 		};
-		return _smallState.AddObject(item, parentId: 1);
+		return _smallState.AddObject(item, parentId: 1).GameState;
 	}
 
 	[Benchmark]
@@ -55,7 +55,7 @@ public class GameStateBenchmarks
 			Weight = 1,
 			Value = 10,
 		};
-		return _mediumState.AddObject(item, parentId: 1);
+		return _mediumState.AddObject(item, parentId: 1).GameState;
 	}
 
 	[Benchmark]
@@ -68,7 +68,7 @@ public class GameStateBenchmarks
 			Weight = 1,
 			Value = 10,
 		};
-		return _largeState.AddObject(item, parentId: 1);
+		return _largeState.AddObject(item, parentId: 1).GameState;
 	}
 
 	[Benchmark]
@@ -304,7 +304,7 @@ public class GameStateBenchmarks
 				Weight = 1,
 				Value = 5,
 			};
-			state = state.AddObject(item, parentId: 1);
+			state = state.AddObject(item, parentId: 1).GameState;
 		}
 		return state;
 	}
@@ -353,7 +353,7 @@ public class GameStateBenchmarks
 			Health = 100,
 			Level = 1,
 		};
-		var state = new GameState().AddObject(player);
+		var state = new GameState().AddObject(player).GameState;
 
 		for (int i = 0; i < itemCount - 1; i++)
 		{
@@ -363,7 +363,7 @@ public class GameStateBenchmarks
 				Weight = i % 10 + 1,
 				Value = i * 5 + 10,
 			};
-			state = state.AddObject(item, parentId: 1);
+			state = state.AddObject(item, parentId: 1).GameState;
 		}
 
 		return state;
@@ -377,7 +377,7 @@ public class GameStateBenchmarks
 			Health = 100,
 			Level = 1,
 		};
-		var state = new GameState().AddObject(root);
+		var state = new GameState().AddObject(root).GameState;
 
 		var currentParents = new List<int> { 1 };
 
@@ -395,7 +395,7 @@ public class GameStateBenchmarks
 						Weight = level + 1,
 						Value = (level + 1) * 10,
 					};
-					state = state.AddObject(item, parentId);
+					state = state.AddObject(item, parentId).GameState;
 					nextParents.Add(state.NextId - 1); // The ID that was just assigned
 				}
 			}
@@ -517,7 +517,7 @@ public class DataStructureComparisonBenchmarks
 			Health = 100,
 			Level = 1,
 		};
-		var state = new GameState().AddObject(player);
+		var state = new GameState().AddObject(player).GameState;
 
 		for (int i = 0; i < itemCount - 1; i++)
 		{
@@ -527,7 +527,7 @@ public class DataStructureComparisonBenchmarks
 				Weight = i % 10 + 1,
 				Value = i * 5 + 10,
 			};
-			state = state.AddObject(item, parentId: 1);
+			state = state.AddObject(item, parentId: 1).GameState;
 		}
 
 		return state;

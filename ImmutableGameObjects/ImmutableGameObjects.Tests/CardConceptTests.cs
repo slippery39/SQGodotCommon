@@ -205,10 +205,7 @@ public record DamageAllCreaturesAction : GameAction
 			)
 			.ToImmutableList();
 
-		return new ActionResult(gameState) with
-		{
-			SpawnedActions = spawnedActions,
-		};
+		return new ActionResult(gameState.SpawnActions(spawnedActions));
 	}
 }
 
@@ -255,10 +252,7 @@ public record DestroyCreaturesByManaCostAction : GameAction
 			.Select(c => (GameAction)new DestroyCreatureAction { CreatureId = c.Id })
 			.ToImmutableList();
 
-		return new ActionResult(gameState) with
-		{
-			SpawnedActions = spawnedActions,
-		};
+		return new ActionResult(gameState.SpawnActions(spawnedActions));
 	}
 }
 
@@ -313,10 +307,7 @@ public record DamageRandomCreatureAction : GameAction
 			new DamageCreatureAction { CreatureId = target.Id, Amount = Amount }
 		);
 
-		return new ActionResult(gameState) with
-		{
-			SpawnedActions = spawned,
-		};
+		return new ActionResult(gameState.SpawnActions(spawned));
 	}
 }
 

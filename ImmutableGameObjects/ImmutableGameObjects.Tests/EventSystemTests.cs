@@ -284,9 +284,6 @@ public record SpawnInnerPipelineAction : GameAction
 			),
 		};
 
-		return new ActionResult(gameState) with
-		{
-			SpawnedActions = ImmutableList.Create<GameAction>(innerPipeline),
-		};
+		return new ActionResult(gameState.SpawnAction(innerPipeline));
 	}
 }
