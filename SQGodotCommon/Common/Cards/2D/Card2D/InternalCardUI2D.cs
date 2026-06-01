@@ -58,7 +58,11 @@ public partial class InternalCardUI2D : Node2D
 		{
 			_artworkTexture = value;
 			if (_artSprite2D != null)
-				_artSprite2D.Texture = value ?? _defaultArtworkTexture;
+			{
+				var tex = value ?? _defaultArtworkTexture;
+				_artSprite2D.Texture = tex;
+				FitArtToFrame(tex);
+			}
 		}
 	}
 
@@ -358,7 +362,11 @@ public partial class InternalCardUI2D : Node2D
 
 		// Update textures - use defaults if current is null
 		if (_artSprite2D != null)
-			_artSprite2D.Texture = _artworkTexture ?? _defaultArtworkTexture;
+		{
+			var artTex = _artworkTexture ?? _defaultArtworkTexture;
+			_artSprite2D.Texture = artTex;
+			FitArtToFrame(artTex);
+		}
 
 		if (_mainFrameSprite2D != null)
 			_mainFrameSprite2D.Texture = _mainFrameTexture ?? _defaultMainFrameTexture;
@@ -424,6 +432,16 @@ public partial class InternalCardUI2D : Node2D
 	public void SetHolographic(bool enabled)
 	{
 		Holographic = enabled;
+	}
+
+	private void FitArtToFrame(Texture2D artTexture)
+	{
+		if (_artFrameSprite2D?.Texture == null || artTexture == null)
+			return;
+		var frameSize = _artFrameSprite2D.Texture.GetSize();
+		var artSize = artTexture.GetSize();
+		var scale = Mathf.Max(frameSize.X / artSize.X, frameSize.Y / artSize.Y);
+		_artSprite2D.Scale = new Vector2(scale, scale);
 	}
 
 	private void FitRulesTextToBox()

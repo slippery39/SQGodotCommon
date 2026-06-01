@@ -10,9 +10,18 @@ var outputPath =
 	args.Length > 0 ? args[0] : Path.Combine(Directory.GetCurrentDirectory(), "card_art");
 Directory.CreateDirectory(outputPath);
 
-var cardNames = CardLibrary.All.Select(c => c.Name).Distinct().OrderBy(n => n).ToList();
+// Cards not in CardLibrary.All that still need art
+var extraCards = new List<string> { "Plains" };
 
-Console.WriteLine($"Scraping art for {cardNames.Count} cards -> {outputPath}");
+// Token cards — fetched via Scryfall search (t:token) rather than named lookup
+var tokenCards = new List<string> { "Goblin", "Clue" };
+
+var cardNames = CardLibrary.All.Select(c => c.Name).Distinct().OrderBy(n => n).ToList();
+var allNamed = cardNames.Concat(extraCards).Distinct().OrderBy(n => n).ToList();
+
+Console.WriteLine(
+	$"Scraping art for {allNamed.Count} cards + {tokenCards.Count} tokens -> {outputPath}"
+);
 Console.WriteLine();
 
 using var http = new HttpClient();
@@ -23,7 +32,7 @@ http.Timeout = TimeSpan.FromSeconds(30);
 var notFound = new List<string>();
 var errors = new List<(string Name, string Message)>();
 
-foreach (var name in cardNames)
+foreach (var name in allNamed)
 {
 	var slug = Slugify(name);
 	var destPath = Path.Combine(outputPath, $"{slug}.jpg");
@@ -60,8 +69,45 @@ foreach (var name in cardNames)
 	await Task.Delay(BaseDelayMs);
 }
 
+foreach (var name in tokenCards)
+{
+	var slug = Slugify(name);
+	var destPath = Path.Combine(outputPath, $"{slug}.jpg");
+
+	if (File.Exists(destPath))
+	{
+		Console.WriteLine($"[SKIP]  {name} (token)");
+		continue;
+	}
+
+	Console.Write($"[FETCH] {name} (token)... ");
+
+	try
+	{
+		var artUrl = await GetTokenArtCropUrl(http, name);
+		if (artUrl is null)
+		{
+			Console.WriteLine("not found");
+			notFound.Add($"{name} (token)");
+		}
+		else
+		{
+			var imgBytes = await http.GetByteArrayAsync(artUrl);
+			await File.WriteAllBytesAsync(destPath, imgBytes);
+			Console.WriteLine($"saved ({imgBytes.Length / 1024} KB)");
+		}
+	}
+	catch (Exception ex)
+	{
+		Console.WriteLine($"ERROR: {ex.Message}");
+		errors.Add(($"{name} (token)", ex.Message));
+	}
+
+	await Task.Delay(BaseDelayMs);
+}
+
 Console.WriteLine();
-Console.WriteLine($"Done. {cardNames.Count} cards processed.");
+Console.WriteLine($"Done. {allNamed.Count + tokenCards.Count} cards processed.");
 
 if (notFound.Count > 0)
 {
@@ -121,6 +167,50 @@ static async Task<string?> GetArtCropUrl(HttpClient http, string cardName)
 			&& faceUris.TryGetProperty("art_crop", out var faceArtCrop)
 		)
 			return faceArtCrop.GetString();
+
+		return null;
+	}
+
+	throw new Exception($"exceeded {MaxRetries} retries due to rate limiting");
+}
+
+// Tokens share names with real cards; use the search endpoint with t:token filter.
+static async Task<string?> GetTokenArtCropUrl(HttpClient http, string tokenName)
+{
+	var encoded = Uri.EscapeDataString($"!\"{tokenName}\" t:token");
+	var url = $"{ScryfallApi}/cards/search?q={encoded}&order=released&dir=asc";
+
+	for (var attempt = 0; attempt <= MaxRetries; attempt++)
+	{
+		using var resp = await http.GetAsync(url);
+
+		if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
+			return null;
+
+		if (resp.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+		{
+			var retryAfter =
+				resp.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+			Console.Write($"[rate limited, waiting {retryAfter.TotalSeconds:F0}s]... ");
+			await Task.Delay(retryAfter);
+			continue;
+		}
+
+		resp.EnsureSuccessStatusCode();
+
+		var json = await resp.Content.ReadAsStringAsync();
+		using var doc = JsonDocument.Parse(json);
+		var root = doc.RootElement;
+
+		if (root.TryGetProperty("data", out var data) && data.GetArrayLength() > 0)
+		{
+			var first = data[0];
+			if (
+				first.TryGetProperty("image_uris", out var imageUris)
+				&& imageUris.TryGetProperty("art_crop", out var artCrop)
+			)
+				return artCrop.GetString();
+		}
 
 		return null;
 	}

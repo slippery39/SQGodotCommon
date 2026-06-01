@@ -31,6 +31,7 @@ public static class MtgCardMapper
 			CardName = card.Name,
 			ManaCost = manaCostDisplay,
 			RulesText = GetRulesText(card),
+			ArtworkTexture = CardArtLoader.Load(card.Name),
 			OutlineColor = canPlay ? new Color(0, 1.5f, 0, 1) : new Color(0.3f, 0.3f, 0.3f, 1),
 			OutlineThickness = canPlay ? 3f : 0f,
 		};

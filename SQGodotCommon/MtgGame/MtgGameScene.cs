@@ -668,6 +668,7 @@ public partial class MtgGameScene : Node2D
 			CardName = card.Name,
 			ManaCost = card.ManaCost.ToString(),
 			RulesText = MtgCardMapper.GetRulesText(card),
+			ArtworkTexture = CardArtLoader.Load(card.Name),
 		};
 		_cardPreviewPopup.ShowCard(details, GetViewport().GetMousePosition());
 	}

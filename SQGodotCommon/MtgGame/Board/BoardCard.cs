@@ -88,6 +88,7 @@ public partial class BoardCard : Control
 				CardName = card.Name,
 				ManaCost = card.ManaCost.ToString(),
 				RulesText = MtgCardMapper.GetRulesText(card),
+				ArtworkTexture = CardArtLoader.Load(card.Name),
 			};
 			details.ApplyTo(_cardNode);
 		}
