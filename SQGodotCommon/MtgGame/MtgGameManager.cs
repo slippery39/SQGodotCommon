@@ -20,12 +20,28 @@ public enum AiStrategyType
 /// </summary>
 public class MtgGameManager
 {
+	// Guardrails for the interactive AI path. Unlike the simulator's GameRunner, the Godot
+	// loop has no outer time/action limits, so a runaway search would freeze the UI thread
+	// and eventually crash. These bound a single AI turn's work.
+	private static readonly TimeSpan AiMoveTimeBudget = TimeSpan.FromSeconds(2);
+	private const int MaxAiActionsPerTurn = 200;
+
 	private GameState _state;
 	private readonly Random _rng = new();
 #pragma warning disable CS0618
 	private readonly MtgGameIds _ids;
 #pragma warning restore CS0618
 	private readonly ICapturingAiStrategy _aiStrategy;
+
+	private int _aiActionsThisTurn;
+
+	/// <summary>
+	/// Set when a guardrail trips during an AI step (search threw or hit the action cap). The
+	/// scene can surface this so failures are visible instead of the game silently hanging or
+	/// crashing. Empty when there is no error. Cleared at the start of each
+	/// <see cref="ComputeAiAction"/> / <see cref="ComputeAiChoice"/> call.
+	/// </summary>
+	public string LastAiError { get; private set; } = "";
 
 	private record HistoryEntry(GameState State, string ActionDescription);
 
@@ -52,7 +68,8 @@ public class MtgGameManager
 				_ids,
 				currentTurnDepth: 3,
 				lookaheadTurns: 2,
-				captureDecisions: true
+				captureDecisions: true,
+				moveTimeBudget: AiMoveTimeBudget
 			),
 			_ => new BeamSearchAiStrategy(_ids, maxDepth: 3, captureDecisions: true),
 		};
@@ -394,51 +411,123 @@ public class MtgGameManager
 		return events;
 	}
 
-	public ImmutableList<GameEvent> ResolveAiChoice()
+	// ===== AI STEP (compute / apply split for off-main-thread execution) =====
+	//
+	// Compute* methods are pure: they read the immutable GameState and run the search but do
+	// NOT mutate manager state, so the Godot scene can run them on a background thread to keep
+	// the UI responsive during a heavy AI turn. Apply* methods mutate state/history and must
+	// run on the main thread. LastAiError is written by Compute* and read after the await.
+
+	/// <summary>
+	/// Outcome of <see cref="ComputeAiAction"/>: the action to apply, and whether it came from
+	/// a real search decision (true) or a forced end-of-turn fallback (false).
+	/// </summary>
+	public readonly record struct AiActionPlan(GameAction Action, bool IsDecision);
+
+	/// <summary>
+	/// Picks the AI's next action (or a forced EndTurn). Pure compute — safe to run on a
+	/// background thread. Honors the per-turn action cap and wraps the search in try/catch,
+	/// setting <see cref="LastAiError"/> when a guardrail trips. Apply the result with
+	/// <see cref="ApplyAiAction"/> on the main thread.
+	/// </summary>
+	public AiActionPlan ComputeAiAction()
+	{
+		LastAiError = "";
+
+		var actions = GetLegalActions(AiPlayerId);
+
+		// No legal actions, or the AI has taken an implausible number of actions this turn —
+		// end the turn rather than risk an unbounded loop.
+		if (actions.Count == 0 || _aiActionsThisTurn >= MaxAiActionsPerTurn)
+		{
+			if (_aiActionsThisTurn >= MaxAiActionsPerTurn)
+				LastAiError =
+					$"AI exceeded {MaxAiActionsPerTurn} actions in one turn — forcing end of turn.";
+			return new AiActionPlan(BuildAiEndTurnAction(), IsDecision: false);
+		}
+
+		try
+		{
+#pragma warning disable CS0618
+			var next = _aiStrategy.SelectAction(_state, _ids, AiPlayerId);
+#pragma warning restore CS0618
+			return new AiActionPlan(next, IsDecision: true);
+		}
+		catch (Exception ex)
+		{
+			// A runaway or failed search must not crash the session. End the AI turn so play
+			// can continue, and surface the error for display.
+			LastAiError = $"AI move selection failed: {ex.Message}";
+			return new AiActionPlan(BuildAiEndTurnAction(), IsDecision: false);
+		}
+	}
+
+	/// <summary>
+	/// Applies a plan from <see cref="ComputeAiAction"/>: records the AI decision, updates the
+	/// per-turn action counter, and submits the action. Mutates state — main thread only.
+	/// </summary>
+	public ImmutableList<GameEvent> ApplyAiAction(AiActionPlan plan)
+	{
+		if (plan.IsDecision && _aiStrategy.LastDecision != null)
+			_aiDecisions.Add((_aiStrategy.LastDecision, _history.Count));
+
+		if (plan.Action is EndTurnAction)
+			_aiActionsThisTurn = 0;
+		else
+			_aiActionsThisTurn++;
+
+		var (_, events) = SubmitAction(plan.Action);
+		return events;
+	}
+
+	/// <summary>
+	/// Picks the AI's selection for the pending choice. Pure compute — safe to run on a
+	/// background thread. Apply with <see cref="ApplyAiChoice"/> on the main thread.
+	/// </summary>
+	public ImmutableList<int> ComputeAiChoice()
+	{
+		LastAiError = "";
+		if (!IsWaitingForChoice)
+			return ImmutableList<int>.Empty;
+
+		var choice = _state.GetPendingChoice()!;
+		try
+		{
+			return _aiStrategy.ResolveChoice(_state, choice, AiPlayerId);
+		}
+		catch (Exception ex)
+		{
+			// Fall back to the minimum legal selection so the game can proceed.
+			LastAiError = $"AI choice resolution failed: {ex.Message}";
+			return choice
+				.Options.Take(Math.Max(choice.MinChoices, 0))
+				.Select(o => o.Id)
+				.ToImmutableList();
+		}
+	}
+
+	/// <summary>
+	/// Applies an AI choice selection: resolves the choice and records the decision.
+	/// Mutates state — main thread only.
+	/// </summary>
+	public ImmutableList<GameEvent> ApplyAiChoice(ImmutableList<int> selected)
 	{
 		if (!IsWaitingForChoice)
 			return ImmutableList<GameEvent>.Empty;
-		var choice = _state.GetPendingChoice()!;
 		var historyIndex = _history.Count;
-		var selected = _aiStrategy.ResolveChoice(_state, choice, AiPlayerId);
 		var events = ResolveChoice(selected);
 		if (_aiStrategy.LastDecision != null)
 			_aiDecisions.Add((_aiStrategy.LastDecision, historyIndex));
 		return events;
 	}
 
-	/// <summary>
-	/// Executes one AI action using BeamSearch, or ends the turn if no legal actions remain.
-	/// Call repeatedly with a visual delay between calls until IsAiTurn is false.
-	/// </summary>
-	public ImmutableList<GameEvent> RunAiTurnStep()
-	{
-		if (!IsAiTurn || IsWaitingForChoice)
-			return ImmutableList<GameEvent>.Empty;
-
-		var actions = GetLegalActions(AiPlayerId);
-		GameAction next;
-		if (actions.Count == 0)
+	private EndTurnAction BuildAiEndTurnAction() =>
+		new()
 		{
-			next = new EndTurnAction
-			{
-				GameId = _state.GetWellKnownId(MtgObjectKeys.Game),
-				Player1Id = HumanPlayerId,
-				Player2Id = AiPlayerId,
-			};
-		}
-		else
-		{
-#pragma warning disable CS0618
-			next = _aiStrategy.SelectAction(_state, _ids, AiPlayerId);
-#pragma warning restore CS0618
-			if (_aiStrategy.LastDecision != null)
-				_aiDecisions.Add((_aiStrategy.LastDecision, _history.Count));
-		}
-
-		var (_, events) = SubmitAction(next);
-		return events;
-	}
+			GameId = _state.GetWellKnownId(MtgObjectKeys.Game),
+			Player1Id = HumanPlayerId,
+			Player2Id = AiPlayerId,
+		};
 
 	// ===== DEBUG / REPLAY =====
 

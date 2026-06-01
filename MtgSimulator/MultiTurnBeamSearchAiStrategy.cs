@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using ImmutableGameObjects;
 using MtgCore;
 
@@ -32,6 +33,12 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	private readonly bool _captureDecisions;
 	private readonly float _scoreDivergenceThreshold;
 
+	// Optional wall-clock budget per move. When set, the search degrades gracefully
+	// (stops expanding, returns the best node found so far) once the budget is spent.
+	// Null = unbounded — preserves the simulator's deterministic behavior.
+	private readonly long _moveBudgetTimestampTicks;
+	private long _moveStartTimestamp;
+
 	private ImmutableList<GameAction>? _committedChain;
 	private ImmutableList<float>? _committedChainExpectedScores;
 	private int _chainIndex;
@@ -39,6 +46,10 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	private const int MaxChoiceBranches = 3;
 
 	private const float EndTurnBias = 0.01f;
+
+	// Upper bound on sequential choice resolutions in a single rollout step. Generous —
+	// only trips if a choice fails to advance, preventing a tight infinite loop.
+	private const int MaxChoiceResolutionIterations = 1000;
 
 	private record BeamNode(
 		GameState State,
@@ -60,7 +71,8 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		IReadOnlyList<IPotentialEvaluator>? potentialEvaluators = null,
 		Random? rng = null,
 		bool captureDecisions = false,
-		float scoreDivergenceThreshold = 5.0f
+		float scoreDivergenceThreshold = 5.0f,
+		TimeSpan? moveTimeBudget = null
 	)
 	{
 		_ids = ids;
@@ -72,10 +84,24 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		_rng = rng ?? new Random();
 		_captureDecisions = captureDecisions;
 		_scoreDivergenceThreshold = scoreDivergenceThreshold;
+		_moveBudgetTimestampTicks = moveTimeBudget.HasValue
+			? (long)(moveTimeBudget.Value.TotalSeconds * Stopwatch.Frequency)
+			: 0;
 	}
+
+	// Starts the per-move clock. Called at the top of every public entry point so that
+	// both action selection and choice resolution honor the same budget.
+	private void StartMoveTimer() => _moveStartTimestamp = Stopwatch.GetTimestamp();
+
+	// True once the per-move wall-clock budget is spent. Always false when no budget is
+	// configured (simulator path), so deterministic behavior is preserved there.
+	private bool BudgetExceeded() =>
+		_moveBudgetTimestampTicks > 0
+		&& Stopwatch.GetTimestamp() - _moveStartTimestamp > _moveBudgetTimestampTicks;
 
 	public GameAction SelectAction(GameState state, MtgGameIds ids, int playerId)
 	{
+		StartMoveTimer();
 		var actions = MtgActionGenerator.GetLegalActions(state, ids, playerId);
 
 		if (actions.Count == 0)
@@ -107,7 +133,11 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			i =>
 			{
 				var resultState = ExecuteAction(state, actions[i]);
-				var score = ScoreAfterCompletingTurn(resultState, playerId);
+				// Once the budget is spent, score remaining roots with the cheap immediate
+				// evaluator instead of a full rollout so level 0 can't run away on a wide board.
+				var score = BudgetExceeded()
+					? StateEvaluator.Evaluate(resultState, _ids, playerId)
+					: ScoreAfterCompletingTurn(resultState, playerId);
 				beamArray[i] = new BeamNode(resultState, [actions[i]], score);
 			}
 		);
@@ -135,6 +165,10 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		// Levels 1..currentTurnDepth-1: expand within the current turn only
 		for (var depth = 1; depth < _currentTurnDepth; depth++)
 		{
+			// Out of time — stop expanding and pick the best node found so far.
+			if (BudgetExceeded())
+				break;
+
 			var expansions = new List<BeamNode>[beam.Count];
 			Parallel.For(0, beam.Count, i => expansions[i] = ExpandNode(beam[i], playerId));
 			var nextBeam = expansions.SelectMany(x => x).ToList();
@@ -216,6 +250,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 	public ImmutableList<int> ResolveChoice(GameState state, ChoiceAction choice, int playerId)
 	{
+		StartMoveTimer();
 		if (choice.Options.IsEmpty)
 			return ImmutableList<int>.Empty;
 
@@ -226,6 +261,9 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 			foreach (var combo in GetCombinations(choice.Options, choice.MinChoices))
 			{
+				// Stop enumerating combinations once the budget is spent; keep the best found.
+				if (bestSelection != null && BudgetExceeded())
+					break;
 				var selectedIds = combo.Select(o => o.Id).ToImmutableList();
 				var (resultState, _) = state.ResolveChoice(selectedIds);
 				var score = ScoreAfterCompletingTurn(resultState, playerId);
@@ -262,12 +300,19 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 		var bestSingleScore = float.MinValue;
 		var bestOption = choice.Options[0];
+		var scored = 0;
 		var optionScores = _captureDecisions
 			? new List<(ChoiceOption Option, float Score)>(choice.Options.Count)
 			: null;
 
 		foreach (var option in choice.Options)
 		{
+			// Budget spent — keep the best option scored so far rather than scoring all.
+			// Always score at least one so bestOption is meaningful.
+			if (scored > 0 && BudgetExceeded())
+				break;
+			scored++;
+
 			var (resultState, _) = state.ResolveChoice(ImmutableList.Create(option.Id));
 			var score = ScoreAfterCompletingTurn(resultState, playerId);
 
@@ -308,6 +353,11 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	/// </summary>
 	private List<BeamNode> ExpandNode(BeamNode node, int playerId)
 	{
+		// Budget spent mid-level — return the node unexpanded with its existing score
+		// rather than executing every child action (each of which runs a full rollout).
+		if (BudgetExceeded())
+			return [node];
+
 		var state = node.State;
 
 		// Branch on pending choices rather than resolving greedily
@@ -512,7 +562,9 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	/// </summary>
 	private GameState ResolveAllChoices(GameState state, int playerId)
 	{
-		while (state.IsWaitingForChoice)
+		// Safety cap: if a choice ever fails to clear its waiting flag, bail out instead of
+		// spinning forever on the calling thread. A real game never chains this many choices.
+		for (var i = 0; i < MaxChoiceResolutionIterations && state.IsWaitingForChoice; i++)
 		{
 			var choice = state.GetPendingChoice()!;
 			var ids = GreedyResolveChoice(state, choice, playerId);

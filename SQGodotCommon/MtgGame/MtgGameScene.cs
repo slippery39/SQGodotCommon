@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading.Tasks;
 using Common.Cards;
 using ImmutableGameObjects;
 using MtgCore;
@@ -546,11 +547,25 @@ public partial class MtgGameScene : Node2D
 			if (_aiPaused)
 				continue;
 
+			// Run the (potentially expensive) AI search on a background thread so the UI stays
+			// responsive during a heavy opponent turn. The manager's Compute* methods are pure
+			// reads of the immutable GameState; only the Apply* calls mutate state, and those
+			// run here on the main thread after the await resumes (Godot marshals the
+			// continuation back to the main thread via its SynchronizationContext).
 			ImmutableList<GameEvent> stepEvents;
 			if (_manager.IsWaitingForChoice)
-				stepEvents = _manager.ResolveAiChoice();
+			{
+				var selected = await Task.Run(() => _manager.ComputeAiChoice());
+				stepEvents = _manager.ApplyAiChoice(selected);
+			}
 			else
-				stepEvents = _manager.RunAiTurnStep();
+			{
+				var plan = await Task.Run(() => _manager.ComputeAiAction());
+				stepEvents = _manager.ApplyAiAction(plan);
+			}
+
+			if (!string.IsNullOrEmpty(_manager.LastAiError))
+				ShowDebugToast(_manager.LastAiError);
 
 			_eventLog.AppendEvents(stepEvents, _manager.State, _manager.HumanPlayerId);
 			Refresh();
