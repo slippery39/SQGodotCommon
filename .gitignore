@@ -10,6 +10,16 @@ simulator.speedscope.json
 flagged_games/
 sim_results/
 
+# graphify generated knowledge graph (regenerate with /graphify)
+# Everything here is derivable for free EXCEPT cache/semantic, which holds the
+# LLM doc-extraction results. Committing it means a fresh clone rebuilds the
+# graph without re-spending tokens. Entries are content-hashed and use
+# repo-relative paths, so they are portable across machines.
+graphify-out/*
+!graphify-out/cache/
+graphify-out/cache/*
+!graphify-out/cache/semantic/
+
 # User-specific files
 *.rsuser
 *.suo
