@@ -5,6 +5,10 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <!-- The engine allocates heavily (immutable collections), so simulation is
+         memory-bound. Server GC measured ~1.8x faster than workstation GC on the
+         parallel training run; without it extra threads mostly add GC contention. -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>

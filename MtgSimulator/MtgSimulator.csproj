@@ -11,5 +11,11 @@
     <ProjectReference Include="..\MtgCore\MtgCore.csproj" />
   </ItemGroup>
 
+  <!-- Lets tests reach internal helpers (softmax sampling, pair keys) without
+       widening the public API just to make them testable. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="MtgSimulator.Tests" />
+  </ItemGroup>
+
 
 </Project>
