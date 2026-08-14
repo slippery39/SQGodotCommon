@@ -149,6 +149,28 @@ model would have every new card score 0 against known cards scoring up to +16.8,
 be passed over every pick, never make a deck, and never accumulate data — a self-reinforcing
 blind spot. A fresh run uses card-agnostic Curve/Random, which samples new cards uniformly.
 
+**Strip pairs from the shipped Godot asset on a large set.** Pair count is O(cards²): the
+82-card Legacy set has 3 321 pairs (450 KB), the 300-card Hollowmere set has 44 850 (6.2 MB).
+Since `synergyWeight` defaults to 0 the pairs are never read at pick time — verified by running
+the same evaluation against the full and pairs-free files and getting seat-for-seat identical
+win rates. `sim_results/` is gitignored, so keep the full file there for any future synergy
+experiment and commit only the stripped copy to `MtgGame/Assets/` (6.2 MB → 63 KB).
+
+### Measured: Hollowmere (HLM), 300 cards
+
+600 drafts, 16 800 games, 33 600 deck-games, ~112 deck-games per card (the Legacy model has
+410/card off the same run size — pair and card density both fall as the pool grows). Evaluated
+over 72 games at 9 seats:
+
+| Picker | Win rate |
+|---|---|
+| Trained | **75.0%** |
+| Curve | 37.5% |
+| Random | 37.5% |
+
+Curve does not underperform Random here as it does on the Legacy pool, because Hollowmere's
+expensive cards are genuinely castable via the reanimation package rather than being traps.
+
 Key rules:
 - **Picks are indices into `Seat.Offer`, never `Card` values.** `Card` is a record, so two copies of one template in a pack compare equal and picking by value would remove the wrong card.
 - **Packs exclude lands** — `Draft.BuildDeck` supplies the mana base by padding to `deckSize` with Plains. It stamps `OwnerId`/`ControllerId`, so it must be called **per game**, not once per seat.
