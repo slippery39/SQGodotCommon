@@ -9,7 +9,11 @@ namespace MtgCore;
 /// Theme 1 — Graveyard Matters. The set's spine: threshold, flashback, reanimation, and
 /// creatures that scale off graveyard size. Most other themes overlap into this one.
 ///
-/// Batch 1 contribution: 10 cards.
+/// Self-mill is capped at 5 per card. In a 40-card deck a player draws roughly 20 cards over a
+/// normal game, so stacking large self-mill effects can deck the caster — LibraryEmptyEvent is
+/// a loss condition. Repeatable small mill is the safer way to build a deep graveyard.
+///
+/// Batches 1-2: 40 cards.
 /// </summary>
 public static class HollowmereGraveyard
 {
@@ -131,6 +135,213 @@ public static class HollowmereGraveyard
 				.WithSubtype(Hollowmere.Cleric)
 				.WithEtbTrigger("Wade In", eb => eb.WithMill(2))
 				.WithThreshold(power: 2, toughness: 1)
+				.Build(),
+			// ===== BATCH 2 =====
+			// One-drop threshold. Trades up all game once the graveyard is stocked.
+			CardFactory
+				.Creature("Cryptside Scavenger", manaCost: 1, power: 1, toughness: 1)
+				.WithSubtype(Hollowmere.Human)
+				.WithSubtype(Hollowmere.Rogue)
+				.WithThreshold(power: 2, toughness: 2)
+				.Build(),
+			// Cheap recursion that comes back for a second creature.
+			CardFactory
+				.Spell("Ashen Rite", manaCost: 1)
+				.WithReturnCreatureFromGraveyard()
+				.WithFlashback(3)
+				.Build(),
+			// Efficient reanimation with no flashback — the cheap, one-shot version.
+			CardFactory.Spell("Exhume the Mere", manaCost: 2).WithReanimate().Build(),
+			// Threshold plus trample: the graveyard deck's way through a Taunt wall.
+			CardFactory
+				.Creature("Mire Prowler", manaCost: 2, power: 2, toughness: 2)
+				.WithSubtype(Hollowmere.Zombie)
+				.WithThreshold(power: 2, toughness: 2, trample: true)
+				.Build(),
+			// Self-mill plus recursion in one card — the theme's engine at two mana.
+			CardFactory
+				.Spell("Corpse Harvest", manaCost: 2)
+				.WithMill(3)
+				.WithReturnCreatureFromGraveyard()
+				.Build(),
+			// Recurs itself to hand, so it is never truly answered by removal.
+			CardFactory
+				.Creature("Silt-Choked Wanderer", manaCost: 2, power: 2, toughness: 1)
+				.WithSubtype(Hollowmere.Spirit)
+				.WithDeathTrigger(
+					"Drift Back",
+					eb =>
+						eb.WithAction(
+							new ReturnToHandAction { TargetContextKey = ContextKeys.SourceCardId },
+							TargetingStrategy.NoTarget()
+						)
+				)
+				.Build(),
+			// Bulk self-mill with a second use. Capped at 5 — see the class header.
+			CardFactory.Spell("Unhallowed Rite", manaCost: 2).WithMill(5).WithFlashback(4).Build(),
+			// A wall that stops being a wall. Taunt is the only defensive tool here.
+			CardFactory
+				.Creature("Cairnwatch Sentinel", manaCost: 2, power: 0, toughness: 4)
+				.WithSubtype(Hollowmere.Spirit)
+				.WithTaunt()
+				.WithThreshold(power: 4, toughness: 0)
+				.Build(),
+			// Recurring body: dies, comes back, dies again. The set's sacrifice fodder.
+			CardFactory
+				.Creature("Bone Shambler", manaCost: 3, power: 2, toughness: 2)
+				.WithSubtype(Hollowmere.Zombie)
+				.WithGraveyardRecursion(manaCost: 3)
+				.Build(),
+			// Anger: haste from the graveyard. The second zone-dependent static in the set,
+			// and the one that makes reanimated fatties attack the turn they arrive.
+			new()
+			{
+				Name = "Fury of the Mere",
+				ManaCost = 4,
+				Subtypes = ImmutableHashSet.Create(
+					StringComparer.OrdinalIgnoreCase,
+					Hollowmere.Horror
+				),
+				Components = ImmutableArray.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 3, Toughness = 3 },
+					new StaticGrantKeywordAbility
+					{
+						GrantsHaste = true,
+						ActiveInZone = ZoneType.Graveyard,
+						Filter = new IsOnBattlefieldSpecification()
+							.And(new IsCreatureSpecification())
+							.And(new IsControlledByYouSpecification()),
+					}
+				),
+			},
+			// A graveyard-active lord: Spirits get bigger while this sits in the yard.
+			new()
+			{
+				Name = "Dirge-Singer of the Mere",
+				ManaCost = 3,
+				Subtypes = ImmutableHashSet.Create(
+					StringComparer.OrdinalIgnoreCase,
+					Hollowmere.Spirit
+				),
+				Components = ImmutableArray.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 2, Toughness = 2 },
+					new StaticPTBoostAbility
+					{
+						PowerBonus = 1,
+						ToughnessBonus = 1,
+						ActiveInZone = ZoneType.Graveyard,
+						Filter = new IsSubtypeSpecification { Subtype = Hollowmere.Spirit }
+							.And(new IsOnBattlefieldSpecification())
+							.And(new IsControlledByYouSpecification()),
+					}
+				),
+			},
+			// Repeatable recursion on a body — a mana sink that never runs out of gas.
+			CardFactory
+				.Creature("Hollowmere Necromancer", manaCost: 3, power: 2, toughness: 2)
+				.WithSubtype(Hollowmere.Human)
+				.WithSubtype(Hollowmere.Wizard)
+				.WithActivatedAbility(
+					"Call the Drowned",
+					manaCost: 3,
+					effect: eb => eb.WithReturnCreatureFromGraveyard()
+				)
+				.Build(),
+			// Removal that also advances the plan — the two-for-one bar for three mana.
+			CardFactory
+				.Spell("Rite of Rot", manaCost: 3)
+				.WithDestroy()
+				.WithTarget(Single().OpponentCreatures())
+				.WithMill(3)
+				.Build(),
+			// Mills on arrival and grows into a threat. Enabler and payoff in one slot.
+			CardFactory
+				.Creature("Sepulchral Warden", manaCost: 3, power: 2, toughness: 3)
+				.WithSubtype(Hollowmere.Spirit)
+				.WithEtbTrigger("Silt the Vault", eb => eb.WithMill(3))
+				.WithThreshold(power: 2, toughness: 2)
+				.Build(),
+			// Reanimation that attacks immediately, which is what makes it lethal rather
+			// than merely large in a format with no blockers.
+			CardFactory
+				.Spell("Second Burial", manaCost: 3)
+				.WithReanimate()
+				.WithGrantKeyword(haste: true)
+				.Build(),
+			// Card advantage stapled to the enabler. The Graveyard deck's draw spell.
+			CardFactory
+				.Spell("Whispers from the Mere", manaCost: 4)
+				.WithDraw(3)
+				.WithMill(3)
+				.Build(),
+			// Graveyard hate on a body — maindeckable because everyone uses their yard.
+			CardFactory
+				.Creature("Graveyard Trespasser", manaCost: 4, power: 3, toughness: 3)
+				.WithSubtype(Hollowmere.Werewolf)
+				.WithEtbTrigger("Desecrate", eb => eb.WithExileFromGraveyard().WithLifeGain(2))
+				.Build(),
+			// Big threshold body with evasion — the top of the theme's own curve.
+			CardFactory
+				.Creature("Mausoleum Warden", manaCost: 5, power: 3, toughness: 5)
+				.WithSubtype(Hollowmere.Spirit)
+				.WithTaunt()
+				.WithThreshold(power: 2, toughness: 2, lifelink: true)
+				.Build(),
+			// The premium reanimation target: huge, tramples, and refills the yard on arrival.
+			CardFactory
+				.Creature("Sepulchral Leviathan", manaCost: 6, power: 6, toughness: 6)
+				.WithSubtype(Hollowmere.Horror)
+				.WithTrample()
+				.WithEtbTrigger("Silt Surge", eb => eb.WithMill(5))
+				.Build(),
+			// Returns two creatures on resolution — the 7-drop bar is "wins if unanswered".
+			CardFactory
+				.Creature("Choir of the Drowned", manaCost: 7, power: 5, toughness: 5)
+				.WithSubtype(Hollowmere.Spirit)
+				.WithFlying()
+				.WithEtbTrigger(
+					"Raise the Choir",
+					eb =>
+						eb.WithReturnCreatureFromGraveyard()
+							.WithCreateTokens(HollowmereTokens.Spirit(), count: 2)
+				)
+				.Build(),
+			// Repeatable mill on a cheap body — the safe way to build a deep graveyard
+			// without the decking risk of a large one-shot self-mill.
+			CardFactory
+				.Creature("Silt-Sifter", manaCost: 2, power: 1, toughness: 3)
+				.WithSubtype(Hollowmere.Human)
+				.WithSubtype(Hollowmere.Wizard)
+				.WithActivatedAbility("Sift the Silt", manaCost: 1, effect: eb => eb.WithMill(2))
+				.Build(),
+			// Removal priced off the graveyard: cheap once the yard is stocked.
+			CardFactory
+				.Spell("Drag Under", manaCost: 3)
+				.WithDamage(3)
+				.WithTarget(Single().OpponentCreatures())
+				.WithFlashback(5)
+				.Build(),
+			// Lifegain that scales with the theme, keeping the aggressive decks honest.
+			CardFactory
+				.Creature("Mere-Tender Acolyte", manaCost: 2, power: 1, toughness: 3)
+				.WithSubtype(Hollowmere.Human)
+				.WithSubtype(Hollowmere.Cleric)
+				.WithLifelink()
+				.WithThreshold(power: 2, toughness: 1)
+				.Build(),
+			// Mass reanimation at the very top. Deliberately the set's only one.
+			CardFactory
+				.Spell("The Mere Gives Up Its Dead", manaCost: 6)
+				.WithAction(new PutIntoBattlefieldAction(), AllValid().CreaturesInYourGraveyard())
+				.Build(),
+			// A cantrip that turns on threshold and finds the card you need.
+			CardFactory
+				.Spell("Consult the Drowned", manaCost: 2)
+				.WithMill(3)
+				.WithDraw(1)
+				.WithFlashback(4)
 				.Build(),
 		];
 }

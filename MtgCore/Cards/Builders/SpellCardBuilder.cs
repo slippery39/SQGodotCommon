@@ -234,6 +234,55 @@ public class SpellCardBuilder
 	}
 
 	/// <summary>
+	/// Target opponent discards <paramref name="count"/> cards at random.
+	///
+	/// Always sets PlayerIdContextKey: DiscardRandomCardAction resolves the discarding player
+	/// from context and silently no-ops when that key is missing, which is invisible in a card
+	/// definition. Use this rather than constructing the action by hand.
+	/// </summary>
+	public SpellCardBuilder WithOpponentDiscard(int count = 1)
+	{
+		FlushPending();
+
+		GameAction Discard() =>
+			new DiscardRandomCardAction
+			{
+				TargetOpponent = true,
+				PlayerIdContextKey = ContextKeys.CastingPlayerId,
+			};
+
+		_pendingAction =
+			count <= 1
+				? Discard()
+				: new PipelineAction
+				{
+					Steps = Enumerable.Range(0, count).Select(_ => Discard()).ToImmutableList(),
+				};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Discard a card you choose from your hand — the outlet half of the discard theme.
+	///
+	/// Excludes the source card. Targets are chosen at cast time, while the spell is still in
+	/// hand, so without this a looting spell could select itself as its own discard.
+	/// </summary>
+	public SpellCardBuilder WithDiscard(int count = 1)
+	{
+		FlushPending();
+		_pendingAction = new DiscardCardsAction();
+		_pendingTargeting = TargetingStrategy.SingleTarget(
+			new IsInHandSpecification().And(new IsNotSelfSpecification())
+		) with
+		{
+			MinTargets = count,
+			MaxTargets = count,
+		};
+		return this;
+	}
+
+	/// <summary>
 	/// Exile cards from a graveyard — the format's answer to the graveyard theme.
 	/// </summary>
 	public SpellCardBuilder WithExileFromGraveyard(bool opponent = true)

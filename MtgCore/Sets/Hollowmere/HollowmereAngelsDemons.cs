@@ -100,10 +100,7 @@ public static class HollowmereAngelsDemons
 									TargetSpecification.OpponentCreatures()
 								)
 							)
-							.WithAction(
-								new DiscardRandomCardAction { TargetOpponent = true },
-								TargetingStrategy.NoTarget()
-							)
+							.WithOpponentDiscard()
 				)
 				.Build(),
 			// The cheap Angel that bridges to the Human deck — a reanimation target you are
