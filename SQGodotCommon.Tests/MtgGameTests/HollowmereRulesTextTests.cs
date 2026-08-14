@@ -195,6 +195,72 @@ public class HollowmereRulesTextTests
 		Assert.That(TextFor("Fiery Temper"), Does.Contain("Deal 3 damage to any target"));
 	}
 
+	/// <summary>
+	/// The worst class of text bug: the card promises MORE than it does. Zombie Apocalypse
+	/// returns only Zombies but read as "each creature card in your graveyard", because the
+	/// graveyard phrase was returned before the subtype narrowing was considered.
+	///
+	/// Walks every targeting specification for a subtype restriction and requires the rendered
+	/// text to mention it.
+	/// </summary>
+	[Test]
+	public void SubtypeRestrictions_AppearInTheText()
+	{
+		var offenders = new List<string>();
+
+		foreach (var card in Hollowmere.Cards)
+		{
+			var text = MtgCardMapper.GetRulesText(card);
+
+			foreach (var effect in AllEffects(card))
+			{
+				var subtype = FindSubtype(effect.TargetingStrategy.Specification);
+				if (subtype == null)
+					continue;
+				if (!text.Contains(subtype, StringComparison.OrdinalIgnoreCase))
+					offenders.Add($"{card.Name} (restricted to {subtype})");
+			}
+		}
+
+		Assert.That(
+			offenders.Distinct(),
+			Is.Empty,
+			"Text omits a subtype restriction: " + string.Join("; ", offenders.Distinct())
+		);
+	}
+
+	private static IEnumerable<CardEffect> AllEffects(Card card)
+	{
+		var spell = card.GetComponent<SpellComponent>();
+		if (spell != null)
+			foreach (var e in spell.Effects)
+				yield return e;
+
+		foreach (var t in card.GetComponents<TriggeredAbilityComponent>())
+		foreach (var e in t.Effects)
+			yield return e;
+
+		foreach (var a in card.GetComponents<ActivatedAbilityComponent>())
+		foreach (var e in a.Effects)
+			yield return e;
+	}
+
+	/// Specs compose with And/Or, so a subtype can sit several levels down.
+	private static string? FindSubtype(TargetSpecification? spec) =>
+		spec switch
+		{
+			IsSubtypeSpecification s => s.Subtype,
+			AndSpecification a => FindSubtype(a.Left) ?? FindSubtype(a.Right),
+			OrSpecification o => FindSubtype(o.Left) ?? FindSubtype(o.Right),
+			_ => null,
+		};
+
+	[Test]
+	public void ZombieApocalypse_SaysItOnlyReturnsZombies()
+	{
+		Assert.That(TextFor("Zombie Apocalypse"), Does.Contain("Zombie card in your graveyard"));
+	}
+
 	[Test]
 	public void MassEffects_ReadAsEachRatherThanTarget()
 	{

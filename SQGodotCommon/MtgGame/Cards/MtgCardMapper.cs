@@ -488,13 +488,18 @@ public static class MtgCardMapper
 		var f = new SpecFacts();
 		Collect(spec, f);
 
-		// The graveyard and hand specs are complete phrases already — they imply the zone.
+		// The graveyard and hand specs imply the zone, but they can still be narrowed by a
+		// subtype — and dropping that narrowing is the worst kind of text bug, because the
+		// card then promises MORE than it does. Zombie Apocalypse read as "each creature card
+		// in your graveyard" while only ever returning Zombies.
 		if (f.CreatureInGraveyard)
-			return "creature card in your graveyard";
+			return f.Subtype == null
+				? "creature card in your graveyard"
+				: $"{f.Subtype} card in your graveyard";
 		if (f.SpellInGraveyard)
 			return "instant or sorcery in your graveyard";
 		if (f.InHand)
-			return "card from your hand";
+			return f.Subtype == null ? "card from your hand" : $"{f.Subtype} card from your hand";
 
 		// Players OR creatures is the classic burn-spell target — collapsing it to "creature"
 		// would hide that these spells can go to the face.
