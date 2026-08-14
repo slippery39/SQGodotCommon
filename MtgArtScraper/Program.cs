@@ -129,7 +129,13 @@ if (notFound.Count > 0)
 	// These are the original designs — no real card shares the name, so Scryfall has nothing.
 	// This list is the exact input for generating the remaining art, and it is written to a
 	// file so it can be fed straight to a generator without re-running the scrape.
-	var missingPath = Path.Combine(outputPath, "_needs_art.txt");
+	//
+	// Written BESIDE the art directory, not inside it: Godot imports everything under its
+	// asset folders, and a stray .txt would gain a .import sidecar and show up as a resource.
+	var missingPath = Path.Combine(
+		Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? outputPath,
+		$"_needs_art_{set.Code.ToLowerInvariant()}.txt"
+	);
 	await File.WriteAllLinesAsync(missingPath, notFound);
 
 	Console.WriteLine($"\n=== NOT FOUND ({notFound.Count}) — written to {missingPath} ===");
