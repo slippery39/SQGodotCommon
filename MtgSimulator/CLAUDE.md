@@ -149,6 +149,18 @@ model would have every new card score 0 against known cards scoring up to +16.8,
 be passed over every pick, never make a deck, and never accumulate data — a self-reinforcing
 blind spot. A fresh run uses card-agnostic Curve/Random, which samples new cards uniformly.
 
+**Train from scratch after a rules change too, not just a new set.** The stored values describe
+how good a card was under the rules it was measured in. When the Flying restriction landed it
+changed what ~55 cards were worth, so every value in the model was describing a game that no
+longer existed — bootstrapping from it would have drafted decks by obsolete valuations.
+
+**Bootstrapping and merging are separate decisions in mode 4, and conflating them is a trap.**
+"Merge into it rather than replace?" governs only the *output file*. Whether the drafters use
+the existing model — which decides which cards get sampled, and therefore which get measured at
+all — is a different question, and the console now asks it separately: *"Draft with the existing
+model? (Y/n — n trains from scratch)"*. Answering "replace" alone still bootstrapped the
+drafters, which silently produced a model trained on stale valuations.
+
 **Strip pairs from the shipped Godot asset on a large set.** Pair count is O(cards²): the
 82-card Legacy set has 3 321 pairs (450 KB), the 300-card Hollowmere set has 44 850 (6.2 MB).
 Since `synergyWeight` defaults to 0 the pairs are never read at pick time — verified by running

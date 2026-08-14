@@ -96,18 +96,35 @@ else if (mode == 4)
 
 	var accumulate = false;
 	var existing = DraftTrainingStore.Load(trainModelPath);
-	if (generations == 1 && existing is not null)
+	if (existing is not null)
 	{
 		Console.WriteLine(
 			$"  Existing data: {existing.Cards.Count} cards, {existing.Pairs.Count} pairs "
 				+ $"from {existing.Perspectives} deck-games."
 		);
-		Console.Write("Merge into it rather than replace? (Y/n): ");
-		accumulate = Console.ReadLine()?.Trim().ToLowerInvariant() != "n";
+
+		// Bootstrapping and merging are SEPARATE decisions, and conflating them is a trap:
+		// "replace" only governs the output file, while bootstrapping governs which cards get
+		// drafted — and therefore which cards get measured at all. Train from scratch whenever
+		// the existing model's card values are stale: new cards were added (they score the
+		// prior, get passed over every pick, and never accumulate data) or the rules changed
+		// underneath it (the values describe a game that no longer exists).
+		Console.Write("Draft with the existing model? (Y/n — n trains from scratch): ");
+		if (Console.ReadLine()?.Trim().ToLowerInvariant() == "n")
+		{
+			existing = null;
+			Console.WriteLine("  Training from scratch with Curve/Random drafters.");
+		}
+
+		if (generations == 1 && existing is not null)
+		{
+			Console.Write("Merge into it rather than replace? (Y/n): ");
+			accumulate = Console.ReadLine()?.Trim().ToLowerInvariant() != "n";
+		}
 	}
 
 	var seed = ReadSeed() ?? new Random().Next();
-	// Generation 1 bootstraps from whatever is on disk (nothing, on a fresh run).
+	// Generation 1 bootstraps from whatever is on disk, unless the user opted out above.
 	var model = existing;
 	var history = new List<(int Gen, double Trained, double Curve, double Random, double Spread)>();
 

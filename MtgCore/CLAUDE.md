@@ -38,6 +38,11 @@ MtgCore/
 │                            # GrantKeywordAction — EffectAction; stamps AppliedKeywordComponent onto target creatures
 │                            #   for a Duration (default UntilEndOfTurn). The effect-driven counterpart to
 │                            #   StaticGrantKeywordAbility — use for combat tricks and "gains X until end of turn".
+│                            # ReturnToHandAction — EffectAction; targeted counterpart to MoveCardToHandAction.
+│                            # FightAction — EffectAction; source (from ContextKeys.SourceCardId) and target deal
+│                            #   damage to each other. Deliberately NOT routed through AttackAction: fighting must not
+│                            #   set HasAttacked, must ignore summoning sickness, and must ignore Taunt and the Flying
+│                            #   restriction — a ground creature can fight a flyer it could never attack.
 │                            # Includes: PutIntoBattlefieldAction (CardIdContextKey for pipeline use), CastCreatureAction, ResolveCreatureAction
 │                            #           CastPermanentAction, ResolvePermanentAction (non-creature permanents → battlefield)
 │                            #           CreateTokenAction
@@ -256,12 +261,15 @@ Mana is always the primary cost (`ManaCost: int`); this matches MTG's "0:" notat
 
 Hearthstone-style (turn-based, no blockers). The active player attacks; the opponent does not assign blockers.
 
-**Attacker deduplication**: `AddAttackActions` generates only one representative attack action per (target, `AttackerSignature`) pair. `AttackerSignature` captures the fields that determine combat outcome: `Name`, effective `Power`/`Toughness` (from `GetEffectiveStats`), current `Damage`, `HasFlying`, `HasTrample`, `HasDoubleStrike`, `HasLifelink`. Two creatures with identical signatures attacking the same target produce strategically equivalent game states, so only one is offered to the AI. This prevents exponential action-count growth when many identical tokens (e.g. Goblin tokens from Krenko, Mob Boss) are on the battlefield.
+**Attacker deduplication**: `AddAttackActions` generates only one representative attack action per (target, `AttackerSignature`) pair. **This is an AI search optimisation and must be off for a human** — it suppresses the duplicate's actions entirely, so a player holding two copies of the same creature finds the second one unclickable. `GetLegalActions` takes `deduplicateAttackers` (default true) and `MtgGameManager` passes false for the human player. `AttackerSignature` captures the fields that determine combat outcome: `Name`, effective `Power`/`Toughness` (from `GetEffectiveStats`), current `Damage`, `HasFlying`, `HasTrample`, `HasDoubleStrike`, `HasLifelink`. Two creatures with identical signatures attacking the same target produce strategically equivalent game states, so only one is offered to the AI. This prevents exponential action-count growth when many identical tokens (e.g. Goblin tokens from Krenko, Mob Boss) are on the battlefield.
 
 - `HasSummoningSickness` — cannot attack the turn they enter the battlefield. Cleared by `HasHaste` on `CreatureComponent` — haste creatures enter with `HasSummoningSickness = false`.
 - `HasDoubleStrike` — creature deals damage twice. vs player: two separate damage applications, two `CombatDamageDealtToPlayerEvent`s (triggers fire twice). vs creature: deals 2× power in one pass.
 - `HasAttacked` — can only attack once per turn.
-- `HasFlying` — bypasses Taunt from non-flying/non-reach creatures. Evaluated via `GetEffectiveFlying()`.
+- `HasFlying` — **a creature with Flying can only be attacked by a creature with Flying or Reach**, and it bypasses Taunt from non-flying/non-reach creatures. Evaluated via `GetEffectiveFlying()`; the attack restriction lives in `AttackAction.CanReach`.
+  - The attack restriction is what makes Flying worth anything. With no blockers there is no evasion to provide, so before it existed Flying's only function was bypassing Taunt — blank whenever the defender had no Taunt creature. Cards costed as though Flying were premium evasion were paying for nothing.
+  - **Taunt only compels attacks the attacker could legally make.** Otherwise a Flying Taunt creature would forbid every ground creature from attacking at all: Taunt would compel an attack the Flying rule simultaneously forbids. `ValidateTauntConstraint` filters Taunt creatures through `CanReach` for exactly this reason.
+  - Reach is the intended answer and is therefore worth real card text.
 - `HasTaunt` — must be attacked before non-taunt targets. Enforced in `AttackAction.ValidateTauntConstraint`. Evaluated via `GetEffectiveTaunt()`.
 - `HasReach` — intercepts flying attackers; flying does not bypass Taunt from Reach creatures. Evaluated via `GetEffectiveReach()`.
 - `HasDeathtouch` — any nonzero damage this creature deals to another creature is lethal. Evaluated via `GetEffectiveDeathtouch()`; enforced in `CreatureEvaluator.IsLethalDamage`. See "Deathtouch" above.
@@ -342,6 +350,19 @@ A `StaticAbilityComponent` applies only while its source card sits in `ActiveInZ
   static with exactly one live at a time.
 - The events that drive all of this come from `MoveCardTracked`, not from the individual
   actions — see the `Zones/` entry in the source map.
+
+## Zero-Toughness Deaths
+
+`CheckStateBasedEffectsAction.DestroyZeroToughnessCreatures` destroys any creature whose
+**effective** toughness has fallen to zero or below.
+
+Death by damage is decided at the damage site (`CreatureEvaluator.IsLethalDamage`), but a
+creature shrunk by a `-X/-X` modifier takes no damage at all — without this pass a 2/2 hit
+with -2/-2 would sit on the battlefield as a 2/0, and `-X/-X` could not work as removal.
+
+It runs **after** `ProcessStaticAbilityUpdates`, so a lord leaving play and a `-X/-X` effect
+are judged on the same pass, and appends its deaths to the pending event list so death
+triggers still see them.
 
 ## Threshold
 
@@ -427,7 +448,18 @@ builder produced, not just the first.
 
 `SpellCardBuilder`: `WithMill(n)` (defaults to milling yourself; override with
 `.WithTarget(Single().Opponent())`), `WithReanimate()`, `WithReturnCreatureFromGraveyard()`,
-`WithReturnSpellFromGraveyard()`, `WithGrantKeyword(…)`, `WithExileFromGraveyard()`.
+`WithReturnSpellFromGraveyard()`, `WithGrantKeyword(…)`, `WithExileFromGraveyard()`,
+`WithOpponentDiscard(n)`, `WithDiscard(n)`, `WithProwessBuff()`, `WithCreateTokensPerCard(…)`.
+
+Removal and selection verbs, added because the set was built from ~13 verbs and cards had
+begun repeating each other at different mana costs: `WithWeaken(p, t)` (-X/-X, kills via the
+zero-toughness rule), `WithBounce()`, `WithFight()`, `WithEdict()` (picks by mana cost, so it
+answers Hexproof and Shroud), `WithTutor(subtype)`, `WithDig(n)`.
+
+**Card design floors live in `MtgCore.Tests/HollowmereRateTests.cs`** — an ability-less
+creature must meet a stats-plus-keywords rate floor, and no pure token-maker may be strictly
+worse than another. Both exist because real cards failed them. Keep the comparisons to things
+code can judge honestly; whether a card is *interesting* is a human review job.
 
 `TargetBuilder`: `Players()`, `Opponent()`, `AllYourCreatures()`, `CreaturesInYourGraveyard()`.
 
