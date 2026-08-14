@@ -84,6 +84,13 @@ MtgCore/
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier, AppliedStaticPTBoost
 │                            # EquippedBoostComponent (stamped on creature by AttachEquipmentAction; removed on detach/creature-death)
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Terravore. Must be stamped with Duration = Permanent in card definitions.
+├── Sets/                    # CardSet (Code, Name, Cards; Draftable filters lands), SetRegistry (All, Default, Get)
+│                            # A draftable card pool. Cards do NOT know their set — the set owns the list.
+│                            # No SetCode on Card, no rarity, no pack-composition rules; packs stay uniform
+│                            # random samples, which is what a cube wants. Add those only when a set needs them.
+│                            # CardLibrary.All is registered as the "LEG" (Legacy) set so existing drafts and
+│                            # the existing trained model keep working. Sets are separate pools, never merged —
+│                            # the trained draft picker is keyed by card name and does not generalise across pools.
 ├── Players/                 # MtgPlayer (GameObject subclass) — fields: Life, MaxMana, CurrentMana, LandsPlayedThisTurn (resets each turn), LandsPlayedTotal (never resets; used by Terravore), Emblems (ImmutableList<Emblem>; grows when lands with GrantEmblemComponent are played)
 ├── Targeting/               # TargetSpecification (base), ZoneSpecification (abstract base for zone specs), TargetingContext, TargetingStrategy
 │                            # Zone specs: IsOnBattlefieldSpecification, IsInHandSpecification, IsInstantOrSorceryInOwnGraveyardSpecification, IsCreatureInOwnGraveyardSpecification

@@ -20,11 +20,16 @@ public class DraftRunner
 	private readonly int _gamesPerPair;
 	private readonly DraftTrainingData? _trained;
 	private readonly double _synergyWeight;
+	private readonly CardSet _set;
 
 	/// <param name="synergyWeight">
 	/// Weight on the trained picker's synergy term. Defaults to 0 because every non-zero
 	/// value measured has cost win rate — see DraftPickers.Trained for the sweep. Raise it
 	/// only to re-measure, and only with substantially more pair data than 464 games/pair.
+	/// </param>
+	/// <param name="set">
+	/// Which card set to draft. Defaults to Legacy (the original CardLibrary.All pool).
+	/// The trained model must have been trained on this same set — see DraftTrainingStore.PathFor.
 	/// </param>
 	public DraftRunner(
 		DraftFormat format,
@@ -33,7 +38,8 @@ public class DraftRunner
 		int aiDepth = 3,
 		int gamesPerPair = 2,
 		DraftTrainingData? trained = null,
-		double synergyWeight = 0.0
+		double synergyWeight = 0.0,
+		CardSet? set = null
 	)
 	{
 		if (seatCount < 2)
@@ -48,6 +54,7 @@ public class DraftRunner
 		_gamesPerPair = gamesPerPair;
 		_trained = trained;
 		_synergyWeight = synergyWeight;
+		_set = set ?? SetRegistry.Default;
 	}
 
 	/// <summary>
@@ -58,7 +65,8 @@ public class DraftRunner
 	{
 		if (verbose)
 			Console.WriteLine(
-				$"Drafting: {_format}, {_seatCount} seats, AI depth {_aiDepth}, seed {_seed}"
+				$"Drafting {_set.Name}: {_format}, {_seatCount} seats, "
+					+ $"AI depth {_aiDepth}, seed {_seed}"
 			);
 
 		// With trained data the seats cycle through three pickers; without it, two.
@@ -93,7 +101,7 @@ public class DraftRunner
 
 		var draftTimer = Stopwatch.StartNew();
 		var final = Draft.RunToCompletion(
-			Draft.Create(_format, CardLibrary.All, _seed, _seatCount),
+			Draft.Create(_format, _set.Cards, _seed, _seatCount),
 			pickers
 		);
 		draftTimer.Stop();

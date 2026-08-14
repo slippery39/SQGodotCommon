@@ -31,7 +31,7 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | `Draft/DraftRunner.cs` | All-AI draft harness: drafts a table, builds decks, round-robins via `GameRunner`, prints win rates per seat and per picker; `PlayGame` is the shared single-game helper |
 | `Draft/DraftTournament.cs` | Round-robin standings for a drafted pod with one human seat — circle-method pairings, background AI round simulation, `Standing` rows |
 | `Draft/DraftGameSetup.cs` | Builds a pre-begin `GameState` from two drafted pools; shared by `DraftRunner` and `DraftTrainer` |
-| `Draft/DraftTrainingData.cs` | `CardStat` / `PairStat` / `DraftTrainingData` count DTOs, `Shrink`, `Merge`; `DraftTrainingStore` load/save/merge JSON |
+| `Draft/DraftTrainingData.cs` | `CardStat` / `PairStat` / `DraftTrainingData` count DTOs, `Shrink`, `Merge`; `DraftTrainingStore` load/save/merge JSON and `PathFor(setCode)` |
 | `Draft/DraftTrainer.cs` | Training mode: N drafts, parallel games, accumulates games-in-hand counts per card and per card pair |
 | `PreconstructedStats.cs` | Aggregates precon game results into four stat tables; exposes row records for deck (inc. AvgWinTurn/MinWinTurn/MaxWinTurn), matchup, card GIH WR (inc. AvgCopiesPlayed), and card-per-matchup GIH WR (inc. AvgCopiesPlayed) |
 | `PreconstructedSimulatorRunner.cs` | Round-robin precon runner: builds schedule, runs games via `GameRunner`, feeds `PreconstructedStats`, prints console summary, triggers CSV export |
@@ -128,6 +128,26 @@ Deck *selection* as a game mode, for human and AI players alike. Lives in `Draft
 **Not a `GameState`.** `DraftState` is a plain immutable record graph. Drafting needs none of the action stack, pipelines, choice resolution, or event log, and the cards it holds are owner-agnostic templates that never enter a `GameState`. Do not migrate this to `GameAction`s.
 
 **Two formats, one model.** `DraftFormat.Booster` (15-card packs, pick one, pass, 3 packs) and `DraftFormat.Digital` (offered N cards, pick one, repeat — seats never interact). `Draft.Create` pre-generates every pack and every offer up front into each seat's `Queue`, so the only per-format branch in `ApplyPicks` is *rotate the remainder* vs *open your own next group*. Booster pass direction alternates per pack via `DraftState.Round`.
+
+### Card sets
+
+Which cards get drafted comes from a `CardSet` (`MtgCore/Sets/`), not from `CardLibrary.All`
+directly. `DraftRunner` and `DraftTrainer` both take an optional `CardSet set` parameter
+defaulting to `SetRegistry.Default`; `DraftScene` has a single `DraftedSet` field. Swapping
+sets needed no change to `Draft` itself — `Draft.Create` has always taken an
+`IReadOnlyList<Card>` card pool.
+
+**Models are per-set.** `DraftTrainingStore.PathFor(setCode)` gives the model path;
+the Legacy set keeps the original unsuffixed `sim_results/draft_training.json` so the existing
+model and its Godot asset copy load without migration, and every other set gets
+`draft_training_<code>.json`. `DraftScene` derives its `res://` asset filename from the same
+`PathFor` call, so the two cannot drift apart.
+
+**A new set must be trained from scratch, never bootstrapped.** `DraftPickers.Trained` is keyed
+by card name and scores unknown cards at exactly the prior. Bootstrapping a new set from an old
+model would have every new card score 0 against known cards scoring up to +16.8, so they would
+be passed over every pick, never make a deck, and never accumulate data — a self-reinforcing
+blind spot. A fresh run uses card-agnostic Curve/Random, which samples new cards uniformly.
 
 Key rules:
 - **Picks are indices into `Seat.Offer`, never `Card` values.** `Card` is a record, so two copies of one template in a pack compare equal and picking by value would remove the wrong card.
@@ -285,7 +305,7 @@ Each snapshot includes:
 
 ## Console Entry Point
 
-`MtgSimulator.Console/` is the runnable project — it contains only `Program.cs` and references this library. Run that project to launch the simulator interactively. Four modes: 1 = random card pool, 2 = preconstructed decks, 3 = draft, 4 = train draft pickers. `ReadSeed()` is shared by modes 1, 3 and 4 (blank = random, number = literal, word = FNV-1a hashed). Mode 3 auto-loads `sim_results/draft_training.json` if present and adds the `Trained` picker to the comparison. `ServerGarbageCollection` is enabled here — see the Draft Training section for why. `sim_results/` and `flagged_games/` output folders are written relative to the console app's working directory.
+`MtgSimulator.Console/` is the runnable project — it contains only `Program.cs` and references this library. Run that project to launch the simulator interactively. Four modes: 1 = random card pool, 2 = preconstructed decks, 3 = draft, 4 = train draft pickers. `ReadSeed()` is shared by modes 1, 3 and 4 (blank = random, number = literal, word = FNV-1a hashed). `ReadSet()` is shared by modes 3 and 4 and skips its prompt entirely while only one set is registered. Mode 3 auto-loads the selected set's model via `DraftTrainingStore.PathFor` if present and adds the `Trained` picker to the comparison. `ServerGarbageCollection` is enabled here — see the Draft Training section for why. `sim_results/` and `flagged_games/` output folders are written relative to the console app's working directory.
 
 ## Key Rules
 

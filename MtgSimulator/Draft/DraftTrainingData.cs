@@ -1,4 +1,5 @@
 using System.Text.Json;
+using MtgCore;
 
 namespace MtgSimulator;
 
@@ -129,6 +130,19 @@ public sealed record DraftTrainingData(
 public static class DraftTrainingStore
 {
 	public const string DefaultPath = "sim_results/draft_training.json";
+
+	/// <summary>
+	/// Where a set's trained model lives. Models are per-set because DraftPickers.Trained is
+	/// keyed by card name and does not generalise across pools — a model trained on one set
+	/// scores every card of another set at exactly the prior.
+	///
+	/// The Legacy set keeps the original unsuffixed filename so the existing model, and the
+	/// copy shipped in the Godot assets, keep loading without a migration.
+	/// </summary>
+	public static string PathFor(string setCode) =>
+		string.Equals(setCode, SetRegistry.LegacyCode, StringComparison.OrdinalIgnoreCase)
+			? DefaultPath
+			: $"sim_results/draft_training_{setCode.ToLowerInvariant()}.json";
 
 	private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
 

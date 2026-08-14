@@ -20,12 +20,19 @@ public class DraftTrainer
 	private readonly int _aiDepth;
 	private readonly int _gamesPerPair;
 	private readonly DraftTrainingData? _bootstrap;
+	private readonly CardSet _set;
 
 	/// <param name="bootstrap">
 	/// When supplied, seats draft with the trained picker instead of Curve/Random. This is
 	/// how a second training run sharpens the model toward decks the AI actually builds —
 	/// re-run training with the existing file and merge.
+	///
+	/// Never bootstrap when training a set for the first time. Cards absent from the model
+	/// score exactly the prior, so against known cards scoring up to +16 they would be passed
+	/// over every pick, never make a deck, and never accumulate data — a self-reinforcing
+	/// blind spot. A new set needs a from-scratch run, where Curve/Random sample it uniformly.
 	/// </param>
+	/// <param name="set">Which card set to train on. Defaults to Legacy.</param>
 	public DraftTrainer(
 		DraftFormat format,
 		int draftCount,
@@ -33,7 +40,8 @@ public class DraftTrainer
 		int seed,
 		int aiDepth = 2,
 		int gamesPerPair = 1,
-		DraftTrainingData? bootstrap = null
+		DraftTrainingData? bootstrap = null,
+		CardSet? set = null
 	)
 	{
 		if (seatCount < 2)
@@ -47,6 +55,7 @@ public class DraftTrainer
 		_aiDepth = aiDepth;
 		_gamesPerPair = gamesPerPair;
 		_bootstrap = bootstrap;
+		_set = set ?? SetRegistry.Default;
 	}
 
 	private readonly record struct ScheduledGame(int Draft, int Seat1, int Seat2, int GameSeed);
@@ -57,7 +66,7 @@ public class DraftTrainer
 	{
 		var drafterLabel = _bootstrap is null ? "Curve/Random" : "Trained (all seats)";
 		Console.WriteLine(
-			$"Training: {_draftCount} drafts x {_seatCount} seats ({_format}), "
+			$"Training on {_set.Name}: {_draftCount} drafts x {_seatCount} seats ({_format}), "
 				+ $"drafters: {drafterLabel}, AI depth {_aiDepth}, seed {_seed}"
 		);
 
@@ -68,7 +77,7 @@ public class DraftTrainer
 		{
 			var draftSeed = _seed + d * 1000;
 			var final = Draft.RunToCompletion(
-				Draft.Create(_format, CardLibrary.All, draftSeed, _seatCount),
+				Draft.Create(_format, _set.Cards, draftSeed, _seatCount),
 				BuildPickers(draftSeed)
 			);
 			pools[d] = final.Seats.Select(s => (IReadOnlyList<Card>)s.Pool).ToList();

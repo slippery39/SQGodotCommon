@@ -20,7 +20,15 @@ public partial class DraftScene : Control
 	private const int SeatCount = 8;
 	private const int PackSize = 15;
 	private const int PackCount = 3;
-	private const string ModelPath = "res://MtgGame/Assets/draft_training.json";
+
+	/// Which set this scene drafts. Change this one line to draft a different set.
+	private static readonly CardSet DraftedSet = SetRegistry.Default;
+
+	/// Derived from DraftTrainingStore.PathFor so the asset filename and the filename the
+	/// trainer writes cannot drift apart — only the directory differs (res:// vs sim_results/).
+	private static string ModelPath =>
+		"res://MtgGame/Assets/"
+		+ System.IO.Path.GetFileName(DraftTrainingStore.PathFor(DraftedSet.Code));
 
 	/// Draft cards are read, not glanced at — the battlefield's 0.42 leaves the rules box
 	/// illegible. This is ~250x310px per card, so a 15-card pack wraps to 2-3 rows.
@@ -51,7 +59,7 @@ public partial class DraftScene : Control
 		_boardCardScene = ResourceLoader.Load<PackedScene>("res://MtgGame/Board/board_card.tscn");
 		_state = Draft.Create(
 			DraftFormat.Booster,
-			CardLibrary.All,
+			DraftedSet.Cards,
 			_seed,
 			SeatCount,
 			PackSize,

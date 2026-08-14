@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using MtgCore;
 using MtgSimulator;
 
 Console.WriteLine("MTG Simulator");
@@ -42,11 +43,12 @@ else if (mode == 3)
 	var seatInput = Console.ReadLine()?.Trim() ?? "";
 	var seats = int.TryParse(seatInput, out var s) && s >= 2 ? s : 8;
 
-	var trained = DraftTrainingStore.Load();
+	var set = ReadSet();
+	var modelPath = DraftTrainingStore.PathFor(set.Code);
+
+	var trained = DraftTrainingStore.Load(modelPath);
 	if (trained is null)
-		Console.WriteLine(
-			$"  No training data at {DraftTrainingStore.DefaultPath} — comparing Curve vs Random."
-		);
+		Console.WriteLine($"  No training data at {modelPath} — comparing Curve vs Random.");
 	else
 		Console.WriteLine(
 			$"  Loaded training data: {trained.Cards.Count} cards, {trained.Pairs.Count} pairs "
@@ -68,7 +70,8 @@ else if (mode == 3)
 		ReadSeed() ?? new Random().Next(),
 		aiDepth,
 		trained: trained,
-		synergyWeight: synergyWeight
+		synergyWeight: synergyWeight,
+		set: set
 	).Run();
 }
 else if (mode == 4)
@@ -88,8 +91,11 @@ else if (mode == 4)
 	var genInput = Console.ReadLine()?.Trim() ?? "";
 	var generations = int.TryParse(genInput, out var gv) && gv > 0 ? gv : 1;
 
+	var trainSet = ReadSet();
+	var trainModelPath = DraftTrainingStore.PathFor(trainSet.Code);
+
 	var accumulate = false;
-	var existing = DraftTrainingStore.Load();
+	var existing = DraftTrainingStore.Load(trainModelPath);
 	if (generations == 1 && existing is not null)
 	{
 		Console.WriteLine(
@@ -119,14 +125,15 @@ else if (mode == 4)
 			trainSeats,
 			seed + gen * 7_000_000,
 			aiDepth,
-			bootstrap: model
+			bootstrap: model,
+			set: trainSet
 		).Run();
 
 		// Overwrite by default: the model should describe the CURRENT drafting policy.
 		model = accumulate && model is not null ? DraftTrainingData.Merge(model, fresh) : fresh;
-		DraftTrainingStore.Save(model);
+		DraftTrainingStore.Save(model, trainModelPath);
 		Console.WriteLine(
-			$"  Saved to {DraftTrainingStore.DefaultPath} — {model.Cards.Count} cards, "
+			$"  Saved to {trainModelPath} — {model.Cards.Count} cards, "
 				+ $"{model.Pairs.Count} pairs from {model.Perspectives} deck-games."
 		);
 
@@ -142,7 +149,8 @@ else if (mode == 4)
 					seatCount: 9,
 					seed: evalSeed,
 					aiDepth: aiDepth,
-					trained: model
+					trained: model,
+					set: trainSet
 				).Run(verbose: false);
 				foreach (var (picker, r) in run)
 				{
@@ -194,6 +202,22 @@ else
 
 Console.WriteLine("Done. Press any key to exit.");
 Console.ReadKey(intercept: true);
+
+// Which set to draft or train on. Skips the prompt entirely while only one set is registered.
+static CardSet ReadSet()
+{
+	if (SetRegistry.All.Count == 1)
+		return SetRegistry.All[0];
+
+	Console.WriteLine("Which set?");
+	for (var i = 0; i < SetRegistry.All.Count; i++)
+		Console.WriteLine($"  {i + 1} = {SetRegistry.All[i]}");
+	Console.Write($"Choice (default 1): ");
+
+	var input = Console.ReadLine()?.Trim() ?? "";
+	var index = int.TryParse(input, out var v) && v >= 1 && v <= SetRegistry.All.Count ? v - 1 : 0;
+	return SetRegistry.All[index];
+}
 
 // Blank = random (null); a number is used as-is; a word is hashed so it is reproducible.
 static int? ReadSeed()
