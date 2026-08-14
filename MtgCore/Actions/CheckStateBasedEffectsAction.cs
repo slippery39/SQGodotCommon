@@ -81,6 +81,25 @@ public record CheckStateBasedEffectsAction : GameAction
 			}
 		}
 
+		// Graveyard-active statics are processed in a second pass so that a permanent which
+		// dies has its battlefield statics stripped (first pass) before its graveyard statics
+		// are stamped (second pass). Interleaving the two would let the strip undo the stamp.
+		foreach (var e in pendingEvents)
+		{
+			if (e is CardEnteredGraveyardEvent enteredGraveyard)
+				state = StaticAbilityEngine.ProcessZoneSourceEntered(
+					state,
+					enteredGraveyard.CardId,
+					GameId
+				);
+			else if (e is CardLeftGraveyardEvent leftGraveyard)
+				state = StaticAbilityEngine.ProcessZoneSourceLeft(
+					state,
+					leftGraveyard.CardId,
+					GameId
+				);
+		}
+
 		return state;
 	}
 

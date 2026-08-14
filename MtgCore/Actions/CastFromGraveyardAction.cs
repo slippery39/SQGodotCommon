@@ -4,8 +4,11 @@ using ImmutableGameObjects;
 namespace MtgCore;
 
 /// <summary>
-/// Casts a flashback spell from a player's graveyard using its flashback cost.
-/// After resolution the card is exiled, not returned to the graveyard.
+/// Casts a card from a player's graveyard using its FlashbackComponent cost.
+///
+/// Instants and sorceries resolve as spells and are then exiled, so flashback is one-shot.
+/// Creatures resolve onto the battlefield and are NOT exiled — that is the graveyard
+/// recursion path (Gravecrawler / unearth), limited by mana rather than by exile.
 /// </summary>
 public record CastFromGraveyardAction : GameAction
 {
@@ -36,8 +39,9 @@ public record CastFromGraveyardAction : GameAction
 			return ValidationResult.Invalid("Card does not have Flashback");
 
 		var spellComponent = card.GetComponent<SpellComponent>();
-		if (spellComponent == null)
-			return ValidationResult.Invalid("Card is not a spell");
+		var isCreature = card.HasComponent<CreatureComponent>();
+		if (spellComponent == null && !isCreature)
+			return ValidationResult.Invalid("Card is neither a spell nor a creature");
 
 		var player = gameState.GetPlayer(CastingPlayerId);
 		if (player.CurrentMana < flashback.FlashbackManaCost)
@@ -45,7 +49,10 @@ public record CastFromGraveyardAction : GameAction
 				$"Not enough mana for Flashback (have {player.CurrentMana}, need {flashback.FlashbackManaCost})"
 			);
 
-		return ValidateTargets(gameState, spellComponent);
+		// Creatures carry no SpellComponent, so they have no per-effect targets to validate.
+		return spellComponent == null
+			? ValidationResult.Valid
+			: ValidateTargets(gameState, spellComponent);
 	}
 
 	public override ActionResult Execute(GameState gameState)
@@ -61,7 +68,9 @@ public record CastFromGraveyardAction : GameAction
 				CurrentMana = player.CurrentMana - flashback.FlashbackManaCost,
 			}
 		);
-		state = state.MoveObject(CardId, state.GetStackId());
+		// MoveCardTracked emits CardLeftGraveyardEvent, deactivating any graveyard-active
+		// static this card had.
+		state = state.MoveCardTracked(CardId, state.GetStackId());
 
 		var game = state.TryGetGame();
 		if (game != null)
@@ -76,17 +85,18 @@ public record CastFromGraveyardAction : GameAction
 		var castEvent = new SpellCastEvent { CardId = CardId, CastingPlayerId = CastingPlayerId };
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(castEvent) };
 
-		return new ActionResult(
-			state.SpawnAction(
-				new ResolveSpellAction
-				{
-					CardId = CardId,
-					CastingPlayerId = CastingPlayerId,
-					TargetIds = TargetIds,
-					ExileAfterResolution = true,
-				}
-			)
-		).WithEvent(castEvent);
+		// Creatures go to the battlefield and stay there; spells resolve and then exile.
+		GameAction resolve = card.HasComponent<CreatureComponent>()
+			? new ResolveCreatureAction { CardId = CardId, CastingPlayerId = CastingPlayerId }
+			: new ResolveSpellAction
+			{
+				CardId = CardId,
+				CastingPlayerId = CastingPlayerId,
+				TargetIds = TargetIds,
+				ExileAfterResolution = true,
+			};
+
+		return new ActionResult(state.SpawnAction(resolve)).WithEvent(castEvent);
 	}
 
 	private ValidationResult ValidateTargets(GameState gameState, SpellComponent spellComponent)

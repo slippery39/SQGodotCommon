@@ -24,6 +24,6 @@ public record MoveCardToGraveyardAction : GameAction
 			return new ActionResult(gameState);
 
 		var graveyardId = gameState.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
-		return new ActionResult(gameState.MoveObject(CardId, graveyardId));
+		return new ActionResult(gameState.MoveCardTracked(CardId, graveyardId));
 	}
 }

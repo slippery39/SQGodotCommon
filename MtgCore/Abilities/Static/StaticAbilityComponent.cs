@@ -26,4 +26,15 @@ public abstract record StaticAbilityComponent : GameComponent
 	/// Maintained by StaticAbilityEngine — used for O(k) cleanup when the source leaves play.
 	/// </summary>
 	public ImmutableHashSet<int> AffectedIds { get; init; } = ImmutableHashSet<int>.Empty;
+
+	/// <summary>
+	/// The zone the source card must be in for this ability to be active.
+	/// Defaults to Battlefield, which leaves every pre-existing card unchanged.
+	///
+	/// Set to Graveyard for Wonder-style abilities ("while this is in your graveyard,
+	/// creatures you control have Flying"). The engine registers and unregisters graveyard
+	/// sources on CardEnteredGraveyardEvent / CardLeftGraveyardEvent, exactly mirroring how
+	/// battlefield sources are handled on ETB/LTB.
+	/// </summary>
+	public ZoneType ActiveInZone { get; init; } = ZoneType.Battlefield;
 }

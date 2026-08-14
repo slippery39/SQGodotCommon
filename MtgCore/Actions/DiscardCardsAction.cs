@@ -23,10 +23,11 @@ public record DiscardCardsAction : EffectAction
 				continue;
 
 			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
-			state = state.MoveObject(cardId, graveyardId);
-			events = events.Add(
-				new CardDiscardedEvent { PlayerId = card.OwnerId, CardId = cardId }
-			);
+			state = state.MoveCardTracked(cardId, graveyardId);
+
+			var discarded = new CardDiscardedEvent { PlayerId = card.OwnerId, CardId = cardId };
+			state = state with { PendingGameEvents = state.PendingGameEvents.Add(discarded) };
+			events = events.Add(discarded);
 		}
 
 		return new ActionResult(state) { Events = events };

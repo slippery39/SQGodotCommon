@@ -31,6 +31,6 @@ public record MoveCardToExileAction : GameAction
 			return new ActionResult(gameState);
 
 		var exileId = gameState.GetPlayerZoneId(card.OwnerId, ZoneType.Exile);
-		return new ActionResult(gameState.MoveObject(cardId, exileId));
+		return new ActionResult(gameState.MoveCardTracked(cardId, exileId));
 	}
 }

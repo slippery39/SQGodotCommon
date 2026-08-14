@@ -31,10 +31,18 @@ public record StartTurnAction : GameAction
 		var updatedPlayer = player with { CurrentMana = player.MaxMana, LandsPlayedThisTurn = 0 };
 		state = state.UpdateObject(ActivePlayerId, updatedPlayer);
 
-		// Reset storm counter at the start of each turn
+		// Roll the storm counter into last turn's count, then reset it. The roll-over is what
+		// lets werewolf transform conditions ask "were no spells cast last turn?".
 		var game = state.TryGetGame();
 		if (game != null)
-			state = state.UpdateObject(game.Id, game with { SpellsCastThisTurn = 0 });
+			state = state.UpdateObject(
+				game.Id,
+				game with
+				{
+					SpellsCastLastTurn = game.SpellsCastThisTurn,
+					SpellsCastThisTurn = 0,
+				}
+			);
 
 		// Reset per-turn flags on all permanents the active player controls
 		var battlefieldCardIds = state

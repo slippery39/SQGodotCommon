@@ -17,8 +17,14 @@ public record CreatureStats(
 	bool HasLifelink,
 	bool HasTrample,
 	bool HasShroud,
-	bool HasHexproof
-);
+	bool HasHexproof,
+	bool HasDeathtouch
+)
+{
+	/// All-false stats for a missing card or a non-creature.
+	public static readonly CreatureStats None =
+		new(0, 0, false, false, false, false, false, false, false, false, false);
+}
 
 /// <summary>
 /// Computes effective P/T and keywords for creatures from components stamped onto the card.
@@ -42,11 +48,11 @@ public static class CreatureEvaluator
 	{
 		var card = state.GetObject(cardId) as Card;
 		if (card == null)
-			return new CreatureStats(0, 0, false, false, false, false, false, false, false, false);
+			return CreatureStats.None;
 
 		var creature = card.GetComponent<CreatureComponent>();
 		if (creature == null)
-			return new CreatureStats(0, 0, false, false, false, false, false, false, false, false);
+			return CreatureStats.None;
 
 		var power = creature.Power;
 		var toughness = creature.Toughness;
@@ -58,6 +64,7 @@ public static class CreatureEvaluator
 		var hasTrample = creature.HasTrample;
 		var hasShroud = creature.HasShroud;
 		var hasHexproof = creature.HasHexproof;
+		var hasDeathtouch = creature.HasDeathtouch;
 
 		// Spell-based and static-ability-based P/T modifiers (AppliedStaticPTBoost is a subtype)
 		foreach (var modifier in card.GetComponents<PowerToughnessModifier>())
@@ -77,6 +84,26 @@ public static class CreatureEvaluator
 			hasTrample |= applied.GrantsTrample;
 			hasShroud |= applied.GrantsShroud;
 			hasHexproof |= applied.GrantsHexproof;
+			hasDeathtouch |= applied.GrantsDeathtouch;
+		}
+
+		// Threshold keyword grants are evaluated live rather than stamped, because the
+		// graveyard count that gates them changes without any battlefield event firing.
+		// The P/T half is already covered by the PowerToughnessModifier loop above.
+		foreach (var threshold in card.GetComponents<ThresholdComponent>())
+		{
+			if (!threshold.IsActive(state, cardId))
+				continue;
+
+			hasHaste |= threshold.GrantsHaste;
+			hasFlying |= threshold.GrantsFlying;
+			hasTaunt |= threshold.GrantsTaunt;
+			hasReach |= threshold.GrantsReach;
+			hasLifelink |= threshold.GrantsLifelink;
+			hasTrample |= threshold.GrantsTrample;
+			hasShroud |= threshold.GrantsShroud;
+			hasHexproof |= threshold.GrantsHexproof;
+			hasDeathtouch |= threshold.GrantsDeathtouch;
 		}
 
 		return new CreatureStats(
@@ -89,7 +116,8 @@ public static class CreatureEvaluator
 			hasLifelink,
 			hasTrample,
 			hasShroud,
-			hasHexproof
+			hasHexproof,
+			hasDeathtouch
 		);
 	}
 
@@ -144,25 +172,50 @@ public static class CreatureEvaluator
 	public static bool GetEffectiveHexproof(this GameState state, int cardId) =>
 		state.GetEffectiveStats(cardId).HasHexproof;
 
+	public static bool GetEffectiveDeathtouch(this GameState state, int cardId) =>
+		state.GetEffectiveStats(cardId).HasDeathtouch;
+
 	/// <summary>
 	/// Returns true if the creature has accumulated damage >= its effective toughness.
 	/// </summary>
-	public static bool HasLethalDamage(this GameState state, int cardId)
-	{
-		var card = state.GetObject(cardId) as Card;
-		if (card == null)
-			return false;
-
-		var creature = card.GetComponent<CreatureComponent>();
-		if (creature == null)
-			return false;
-
-		return creature.Damage >= state.GetEffectiveStats(cardId).Toughness;
-	}
+	public static bool HasLethalDamage(this GameState state, int cardId) =>
+		state.IsLethalDamage(cardId, DamageOn(state, cardId), fromDeathtouch: false);
 
 	/// <summary>
-	/// Removes all UntilEndOfTurn PowerToughnessModifiers from a card.
+	/// The single lethality rule for damage. Both combat (AttackAction) and effect damage
+	/// (DealDamageAction) route through this so deathtouch cannot work in one and not the other.
+	///
+	/// Deathtouch is a property of the damage SOURCE, not the creature taking it, so callers
+	/// pass it in. Any nonzero deathtouch damage is lethal immediately — there is no lingering
+	/// "deathtouched" state to persist, which is why no marker is stored on the creature.
+	/// </summary>
+	public static bool IsLethalDamage(
+		this GameState state,
+		int cardId,
+		int totalDamage,
+		bool fromDeathtouch
+	)
+	{
+		if (state.GetObject(cardId) is not Card card)
+			return false;
+		if (card.GetComponent<CreatureComponent>() == null)
+			return false;
+
+		if (fromDeathtouch && totalDamage > 0)
+			return true;
+
+		return totalDamage >= state.GetEffectiveStats(cardId).Toughness;
+	}
+
+	private static int DamageOn(GameState state, int cardId) =>
+		(state.GetObject(cardId) as Card)?.GetComponent<CreatureComponent>()?.Damage ?? 0;
+
+	/// <summary>
+	/// Removes all UntilEndOfTurn PowerToughnessModifiers and AppliedKeywordComponents from a card.
 	/// Called by StartTurnAction at the start of each turn.
+	///
+	/// Both temporary buff kinds are cleared here so a combat trick and a temporary keyword
+	/// grant expire at exactly the same moment.
 	/// </summary>
 	public static GameState ClearEndOfTurnModifiers(this GameState state, int cardId)
 	{
@@ -170,15 +223,23 @@ public static class CreatureEvaluator
 		if (card == null)
 			return state;
 
-		var hasEndOfTurnModifiers = card.GetComponents<PowerToughnessModifier>()
-			.Any(m => m.Duration == ModifierDuration.UntilEndOfTurn);
+		var hasEndOfTurnModifiers =
+			card.GetComponents<PowerToughnessModifier>()
+				.Any(m => m.Duration == ModifierDuration.UntilEndOfTurn)
+			|| card.GetComponents<AppliedKeywordComponent>()
+				.Any(k => k.Duration == ModifierDuration.UntilEndOfTurn);
 
 		if (!hasEndOfTurnModifiers)
 			return state;
 
 		var updatedComponents = card
 			.Components.Where(c =>
-				c is not PowerToughnessModifier m || m.Duration != ModifierDuration.UntilEndOfTurn
+				c switch
+				{
+					PowerToughnessModifier m => m.Duration != ModifierDuration.UntilEndOfTurn,
+					AppliedKeywordComponent k => k.Duration != ModifierDuration.UntilEndOfTurn,
+					_ => true,
+				}
 			)
 			.ToImmutableArray();
 

@@ -27,7 +27,7 @@ public record DestroyCreatureAction : EffectAction
 			state = state with { PendingGameEvents = state.PendingGameEvents.Add(leftEvent) };
 
 			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
-			state = state.MoveObject(card.Id, graveyardId);
+			state = state.MoveCardTracked(card.Id, graveyardId);
 
 			var destroyedEvent = new CreatureDestroyedEvent { CreatureId = card.Id };
 			events = events.Add(destroyedEvent);

@@ -3,9 +3,14 @@ using ImmutableGameObjects;
 namespace MtgCore;
 
 /// <summary>
-/// Counts cards with a given subtype on a player's battlefield and writes the
-/// result to pipeline context. Used by Krenko, Mob Boss to count Goblins before
-/// creating tokens.
+/// Counts cards with a given subtype in one of a player's zones and writes the
+/// result to pipeline context. Used by Krenko, Mob Boss to count Goblins on the
+/// battlefield, and by graveyard tribal payoffs to count Zombies in the graveyard.
+///
+/// Zone defaults to Battlefield, which is the behaviour this action shipped with.
+///
+/// Leaving Subtype empty counts every card in the zone — that is how "X equal to the
+/// number of cards in your graveyard" effects are expressed.
 ///
 /// Player resolution:
 ///   - Set PlayerId directly, or
@@ -16,6 +21,7 @@ namespace MtgCore;
 public record CountCardsWithSubtypeAction : GameAction
 {
 	public string Subtype { get; init; } = "";
+	public ZoneType Zone { get; init; } = ZoneType.Battlefield;
 	public string OutputKey { get; init; } = "";
 	public string PlayerIdContextKey { get; init; } = "";
 	public int PlayerId { get; init; } = 0;
@@ -29,8 +35,11 @@ public record CountCardsWithSubtypeAction : GameAction
 		if (playerId == 0)
 			return new ActionResult(gameState);
 
-		var battlefieldId = gameState.GetPlayerZoneId(playerId, ZoneType.Battlefield);
-		var count = gameState.GetCardsInZone(battlefieldId).Count(c => c.HasSubtype(Subtype));
+		var zoneId = gameState.GetPlayerZoneId(playerId, Zone);
+		var cards = gameState.GetCardsInZone(zoneId);
+		var count = string.IsNullOrEmpty(Subtype)
+			? cards.Count()
+			: cards.Count(c => c.HasSubtype(Subtype));
 
 		return new ActionResult(gameState).WithOutput(OutputKey, count);
 	}

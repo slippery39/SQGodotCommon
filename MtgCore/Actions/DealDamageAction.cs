@@ -70,9 +70,8 @@ public record DealDamageAction : EffectAction
 		var newDamage = creature.Damage + amount;
 		var events = ImmutableList<GameEvent>.Empty;
 
-		var effectiveToughness = state.GetEffectiveStats(card.Id).Toughness;
-
-		if (newDamage >= effectiveToughness)
+		// Effect damage has no deathtouch source today — combat is the only deathtouch path.
+		if (state.IsLethalDamage(card.Id, newDamage, fromDeathtouch: false))
 		{
 			var leftEvent = new PermanentLeftBattlefieldEvent
 			{
@@ -86,7 +85,7 @@ public record DealDamageAction : EffectAction
 				card.Id,
 				card.WithComponentReplaced(creature with { Damage = newDamage })
 			);
-			state = state.MoveObject(card.Id, graveyardId);
+			state = state.MoveCardTracked(card.Id, graveyardId);
 
 			var destroyedEvent = new CreatureDestroyedEvent { CreatureId = card.Id };
 			events = events.Add(destroyedEvent);

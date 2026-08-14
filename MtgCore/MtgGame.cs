@@ -36,6 +36,14 @@ public record MtgGame : GameObject
 	public int SpellsCastThisTurn { get; init; } = 0;
 
 	/// <summary>
+	/// Number of spells cast during the previous turn by any player. StartTurnAction rolls
+	/// SpellsCastThisTurn into this field before zeroing it, so "last turn" means the
+	/// immediately preceding half-turn (a turn is one player's turn in this engine).
+	/// Used by werewolf transform conditions.
+	/// </summary>
+	public int SpellsCastLastTurn { get; init; } = 0;
+
+	/// <summary>
 	/// IDs of all permanents currently on the battlefield that have at least one
 	/// StaticAbilityComponent. Maintained by StaticAbilityEngine via CheckStateBasedEffectsAction.
 	/// Enables O(k) source lookup when applying statics to new permanents or cleaning up.

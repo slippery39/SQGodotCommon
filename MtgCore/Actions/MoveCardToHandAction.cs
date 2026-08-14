@@ -40,7 +40,7 @@ public record MoveCardToHandAction : GameAction
 			return new ActionResult(gameState);
 
 		var handId = gameState.GetPlayerZoneId(playerId, ZoneType.Hand);
-		var newState = gameState.MoveObject(cardId, handId);
+		var newState = gameState.MoveCardTracked(cardId, handId);
 
 		return new ActionResult(newState);
 	}

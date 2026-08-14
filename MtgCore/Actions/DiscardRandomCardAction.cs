@@ -38,13 +38,14 @@ public record DiscardRandomCardAction : GameAction
 		var (chosenIndex, stateAfterRng) = gameState.ConsumeRandom(cards.Count);
 		var chosen = cards[chosenIndex];
 		var graveyardId = stateAfterRng.GetPlayerZoneId(chosen.OwnerId, ZoneType.Graveyard);
-		var state = stateAfterRng.MoveObject(chosen.Id, graveyardId);
+		var state = stateAfterRng.MoveCardTracked(chosen.Id, graveyardId);
 
-		var events = ImmutableList.Create<GameEvent>(
-			new CardDiscardedEvent { PlayerId = targetPlayerId, CardId = chosen.Id }
-		);
+		// PendingGameEvents is the trigger feed; the returned Events list is only the
+		// caller-visible log. Adding to both is what lets "whenever you discard" fire.
+		var discarded = new CardDiscardedEvent { PlayerId = targetPlayerId, CardId = chosen.Id };
+		state = state with { PendingGameEvents = state.PendingGameEvents.Add(discarded) };
 
-		return new ActionResult(state) { Events = events };
+		return new ActionResult(state) { Events = ImmutableList.Create<GameEvent>(discarded) };
 	}
 
 	private static int GetOpponentId(GameState gameState, int castingPlayerId)

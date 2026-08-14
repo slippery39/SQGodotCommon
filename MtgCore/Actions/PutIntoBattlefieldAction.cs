@@ -64,7 +64,7 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 		foreach (var card in cards)
 		{
 			var battlefieldId = state.GetPlayerZoneId(card!.ControllerId, ZoneType.Battlefield);
-			state = state.MoveObject(card.Id, battlefieldId);
+			state = state.MoveCardTracked(card.Id, battlefieldId);
 			var (newState, etbEvents) = ApplyEtbCeremony(state, card);
 			state = newState;
 			events = events.AddRange(etbEvents);

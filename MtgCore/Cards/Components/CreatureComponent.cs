@@ -30,4 +30,11 @@ public record CreatureComponent : GameComponent
 	public bool HasTrample { get; init; } = false;
 	public bool HasShroud { get; init; } = false;
 	public bool HasHexproof { get; init; } = false;
+
+	/// <summary>
+	/// Any nonzero damage from this creature is lethal to the creature it damages.
+	/// Unusually strong in this engine's no-blocker combat — every attack becomes a
+	/// favourable trade — so keep it rare in card design.
+	/// </summary>
+	public bool HasDeathtouch { get; init; } = false;
 }

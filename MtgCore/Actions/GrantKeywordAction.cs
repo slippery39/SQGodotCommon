@@ -1,0 +1,74 @@
+using System.Collections.Immutable;
+using ImmutableGameObjects;
+
+namespace MtgCore;
+
+/// <summary>
+/// Grants keyword abilities to target creatures by stamping an AppliedKeywordComponent.
+///
+/// This is the effect-driven counterpart to StaticGrantKeywordAbility: a static ability
+/// grants keywords for as long as its source is on the battlefield, whereas this action
+/// grants them for a fixed duration regardless of any source persisting. Used by combat
+/// tricks and ETB pumps ("creatures you control gain Flying until end of turn").
+///
+/// UntilEndOfTurn grants are cleared by StartTurnAction via ClearEndOfTurnModifiers,
+/// the same path that clears temporary P/T buffs — so a trick and a pump expire together.
+/// StaticAbilityEngine deliberately skips UntilEndOfTurn grants during source cleanup.
+/// </summary>
+public record GrantKeywordAction : EffectAction
+{
+	public ModifierDuration Duration { get; init; } = ModifierDuration.UntilEndOfTurn;
+	public int SourceCardId { get; init; } = 0;
+
+	public bool GrantsHaste { get; init; } = false;
+	public bool GrantsFlying { get; init; } = false;
+	public bool GrantsTaunt { get; init; } = false;
+	public bool GrantsReach { get; init; } = false;
+	public bool GrantsLifelink { get; init; } = false;
+	public bool GrantsTrample { get; init; } = false;
+	public bool GrantsShroud { get; init; } = false;
+	public bool GrantsHexproof { get; init; } = false;
+	public bool GrantsDeathtouch { get; init; } = false;
+
+	public override ActionResult Execute(GameState gameState)
+	{
+		var state = gameState;
+
+		foreach (var targetId in ResolveTargetIds())
+		{
+			if (!state.HasObject(targetId))
+				continue;
+
+			if (state.GetObject(targetId) is not Card card)
+				continue;
+
+			if (!card.HasComponent<CreatureComponent>())
+				continue;
+
+			var granted = new AppliedKeywordComponent
+			{
+				SourceCardId = SourceCardId,
+				Duration = Duration,
+				GrantsHaste = GrantsHaste,
+				GrantsFlying = GrantsFlying,
+				GrantsTaunt = GrantsTaunt,
+				GrantsReach = GrantsReach,
+				GrantsLifelink = GrantsLifelink,
+				GrantsTrample = GrantsTrample,
+				GrantsShroud = GrantsShroud,
+				GrantsHexproof = GrantsHexproof,
+				GrantsDeathtouch = GrantsDeathtouch,
+			};
+
+			state = state.UpdateObject(
+				targetId,
+				card with
+				{
+					Components = card.Components.Add(granted),
+				}
+			);
+		}
+
+		return new ActionResult(state);
+	}
+}

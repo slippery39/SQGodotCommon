@@ -72,6 +72,37 @@ public record CardDiscardedEvent : GameEvent
 	public int CardId { get; init; }
 }
 
+/// <summary>
+/// A card moved from a library to its owner's graveyard. Distinct from CardDiscardedEvent
+/// so "whenever you discard" payoffs do not fire on self-mill.
+/// </summary>
+public record CardMilledEvent : GameEvent
+{
+	public int PlayerId { get; init; }
+	public int CardId { get; init; }
+}
+
+/// <summary>
+/// A card entered a graveyard, from any zone and by any means. PermanentLeftBattlefieldEvent
+/// carries no destination, so it cannot distinguish death from exile — this event can.
+/// Used by StaticAbilityEngine to activate graveyard-active static abilities.
+/// </summary>
+public record CardEnteredGraveyardEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public int OwnerId { get; init; }
+}
+
+/// <summary>
+/// A card left a graveyard (cast from it, reanimated, exiled, or shuffled away).
+/// Deactivates graveyard-active static abilities.
+/// </summary>
+public record CardLeftGraveyardEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public int OwnerId { get; init; }
+}
+
 public record CreaturePlayedEvent : GameEvent
 {
 	public int CardId { get; init; }

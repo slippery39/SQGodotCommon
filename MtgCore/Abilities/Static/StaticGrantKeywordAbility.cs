@@ -14,4 +14,5 @@ public record StaticGrantKeywordAbility : StaticAbilityComponent
 	public bool GrantsTrample { get; init; } = false;
 	public bool GrantsShroud { get; init; } = false;
 	public bool GrantsHexproof { get; init; } = false;
+	public bool GrantsDeathtouch { get; init; } = false;
 }

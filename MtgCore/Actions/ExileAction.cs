@@ -35,7 +35,7 @@ public record ExileAction : EffectAction
 			}
 
 			var exileId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Exile);
-			state = state.MoveObject(targetId, exileId);
+			state = state.MoveCardTracked(targetId, exileId);
 			events = events.Add(new CardExiledEvent { CardId = targetId, PlayerId = card.OwnerId });
 		}
 

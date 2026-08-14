@@ -275,7 +275,18 @@ public record AttackAction : GameAction
 		int strikeCount
 	)
 	{
-		var (state2, targetEvents) = ApplyDamageToCreature(state, targetCard, power * strikeCount);
+		// Both deathtouch reads happen before any damage, so a creature that dies in this
+		// exchange still deals its deathtouch damage back.
+		var attackerHasDeathtouch = state.GetEffectiveDeathtouch(AttackerId);
+		var defenderHasDeathtouch = state.GetEffectiveDeathtouch(targetCard.Id);
+		var defenderPower = state.GetEffectivePower(targetCard.Id);
+
+		var (state2, targetEvents) = ApplyDamageToCreature(
+			state,
+			targetCard,
+			power * strikeCount,
+			attackerHasDeathtouch
+		);
 		var events = targetEvents;
 
 		var currentAttacker = state2.HasObject(AttackerId)
@@ -288,7 +299,8 @@ public record AttackAction : GameAction
 		var (state3, attackerEvents) = ApplyDamageToCreature(
 			state2,
 			currentAttacker,
-			state2.GetEffectivePower(targetCard.Id)
+			defenderPower,
+			defenderHasDeathtouch
 		);
 		return (state3, events.AddRange(attackerEvents));
 	}
@@ -324,7 +336,8 @@ public record AttackAction : GameAction
 	private static (GameState, ImmutableList<GameEvent>) ApplyDamageToCreature(
 		GameState state,
 		Card card,
-		int amount
+		int amount,
+		bool fromDeathtouch = false
 	)
 	{
 		var creature = card.GetComponent<CreatureComponent>()!;
@@ -335,7 +348,7 @@ public record AttackAction : GameAction
 		var updatedCard = card.WithComponentReplaced(creature with { Damage = newDamage });
 		state = state.UpdateObject(card.Id, updatedCard);
 
-		if (state.HasLethalDamage(card.Id))
+		if (state.IsLethalDamage(card.Id, newDamage, fromDeathtouch))
 		{
 			var leftEvent = new PermanentLeftBattlefieldEvent
 			{
@@ -345,7 +358,7 @@ public record AttackAction : GameAction
 			state = state with { PendingGameEvents = state.PendingGameEvents.Add(leftEvent) };
 
 			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
-			state = state.MoveObject(card.Id, graveyardId);
+			state = state.MoveCardTracked(card.Id, graveyardId);
 
 			var destroyedEvent = new CreatureDestroyedEvent { CreatureId = card.Id };
 			events = events.Add(destroyedEvent);

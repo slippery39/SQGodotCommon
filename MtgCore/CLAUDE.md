@@ -5,7 +5,11 @@
 ```
 MtgCore/
 ├── Abilities/Activated/     # ActivatedAbilityComponent, ActivatedAbilityAction
-│   └── Static/              # StaticAbilityComponent (abstract), StaticPTBoostAbility, StaticGrantKeywordAbility
+│   └── Static/              # StaticAbilityComponent (abstract; Filter, AffectedIds, ActiveInZone), StaticPTBoostAbility, StaticGrantKeywordAbility
+│                            # StaticAbilityComponent.ActiveInZone — zone the SOURCE must be in for the ability to apply.
+│                            #   Default Battlefield. Set to Graveyard for Wonder-style effects. See "Zone-Dependent Statics".
+│                            # AppliedKeywordComponent.Duration — Permanent grants are owned by StaticAbilityEngine;
+│                            #   UntilEndOfTurn grants are stamped by GrantKeywordAction and cleared by StartTurnAction.
 ├── Emblems/                 # Emblem (Name, TriggerCondition, CardEffect) — player-owned persistent triggered abilities
 │                            # GrantEmblemComponent — placed on a land card; PlayLandAction/PutLandIntoPlayAction add the emblem to the player when the land is played
 │                            # MtgPlayer.Emblems: ImmutableList<Emblem> holds all active emblems; scanned by CheckStateBasedEffectsAction after battlefield/graveyard passes
@@ -27,6 +31,13 @@ MtgCore/
 │                            #   opponent's) hand and moves it to graveyard. Emits CardDiscardedEvent. No-ops if hand is empty.
 │                            # DrainLifeAction — GameAction; opponent loses Amount life, caster gains Amount life. Emits
 │                            #   PlayerLostLifeEvent + PlayerGainedLifeEvent. Used by Siege Rhino ETB.
+│                            # MillAction — EffectAction; moves Amount cards from each target player's library to their
+│                            #   graveyard. Targets are PLAYERS. Emits CardMilledEvent per card (distinct from
+│                            #   CardDiscardedEvent so discard payoffs don't fire on self-mill) and LibraryEmptyEvent
+│                            #   when the library runs out. OutputKey writes the milled card IDs to pipeline context.
+│                            # GrantKeywordAction — EffectAction; stamps AppliedKeywordComponent onto target creatures
+│                            #   for a Duration (default UntilEndOfTurn). The effect-driven counterpart to
+│                            #   StaticGrantKeywordAbility — use for combat tricks and "gains X until end of turn".
 │                            # Includes: PutIntoBattlefieldAction (CardIdContextKey for pipeline use), CastCreatureAction, ResolveCreatureAction
 │                            #           CastPermanentAction, ResolvePermanentAction (non-creature permanents → battlefield)
 │                            #           CreateTokenAction
@@ -88,6 +99,13 @@ MtgCore/
 │                            # CheckStateBasedEffectsAction scans battlefield, graveyard, AND player emblems; ActiveInZone guards card-based triggers; emblems always fire
 ├── Turns/                   # BeginGameAction, SetupGameAction, StartTurnAction, EndTurnAction, TurnPhase
 ├── Zones/                   # Zone, ZoneType
+│                            # ZoneTransitionExtensions.MoveCardTracked(cardId, destZoneId) — MoveObject that emits
+│                            #   CardEnteredGraveyardEvent / CardLeftGraveyardEvent when the move crosses a graveyard
+│                            #   boundary. ALL graveyard-touching moves must use this, not MoveObject, or zone-dependent
+│                            #   statics silently stop updating. Already used by DiscardCardsAction, DiscardRandomCardAction,
+│                            #   MillAction, DestroyCreatureAction, AttackAction, DealDamageAction, MoveCardToGraveyardAction,
+│                            #   MoveCardToExileAction, MoveCardToHandAction, PutIntoBattlefieldAction, ExileAction,
+│                            #   CastFromGraveyardAction.
 ├── MtgGame.cs               # Core game state object (ActivePlayerId, TurnNumber, SpellsCastThisTurn)
 ├── MtgGameFactory.cs        # Factory: Create() and CreateForTesting()
 └── MtgGameStateExtensions.cs # API boundary — BeginGame, ShuffleLibrary, etc.
@@ -148,7 +166,7 @@ Land-based. Both players start at `MaxMana = 0`, `CurrentMana = 0`. All permanen
 
 `MtgGame.SpellsCastThisTurn` (int) counts every spell cast this turn by either player. It is:
 - Incremented by `CastSpellAction.Execute()` and `CastCreatureAction.Execute()` after mana is spent.
-- Reset to 0 by `StartTurnAction.Execute()` at the start of each turn.
+- Rolled into `MtgGame.SpellsCastLastTurn` and then reset to 0 by `StartTurnAction.Execute()` at the start of each turn. `SpellsCastLastTurn` is what werewolf transform conditions read — "last turn" means the immediately preceding half-turn, since a turn here is one player's turn.
 - Read by `ResolveSpellAction` when `SpellComponent.HasStorm = true`.
 
 `SpellComponent.HasStorm` — when true, `ResolveSpellAction` spawns `Math.Max(SpellsCastThisTurn, 1)` copies of `ResolveEffectAction` instead of one. This gives any spell the storm mechanic for free. The storm count already includes this spell since `CastSpellAction` increments before resolution.
@@ -228,6 +246,7 @@ Hearthstone-style (turn-based, no blockers). The active player attacks; the oppo
 - `HasFlying` — bypasses Taunt from non-flying/non-reach creatures. Evaluated via `GetEffectiveFlying()`.
 - `HasTaunt` — must be attacked before non-taunt targets. Enforced in `AttackAction.ValidateTauntConstraint`. Evaluated via `GetEffectiveTaunt()`.
 - `HasReach` — intercepts flying attackers; flying does not bypass Taunt from Reach creatures. Evaluated via `GetEffectiveReach()`.
+- `HasDeathtouch` — any nonzero damage this creature deals to another creature is lethal. Evaluated via `GetEffectiveDeathtouch()`; enforced in `CreatureEvaluator.IsLethalDamage`. See "Deathtouch" above.
 - `HasLifelink` — when the creature deals combat damage, its controller gains that much life. Applies to damage to players and creatures (including trample excess, which is counted once as part of total power). Defender lifelink also triggers on counter-damage in creature vs creature combat.
 - `HasTrample` — when attacking a creature, excess damage beyond the target's effective toughness carries over to the defending player. Applies per strike for double strike.
 - All keywords can also be granted by `StaticGrantKeywordAbility` (same pattern as `GrantsHaste`).
@@ -279,10 +298,106 @@ These are designed but not yet implemented. Do not re-implement or work around t
 
 | Step | Feature | Notes |
 |------|---------|-------|
-| 3 | Zone-dependent statics | Wonder-style abilities active only in specific zones. `ActiveInZone` property on `StaticAbilityComponent`. |
-| 4 | Keyword abilities as components | Lifelink, Deathtouch, Trample etc. as individual components checked by relevant actions. Rules-engine keywords that do not use the stack. Note: `HasHaste` and `HasDoubleStrike` are currently implemented as flags on `CreatureComponent` — these should be migrated to individual components when the full keyword system is built. |
-| — | Goblin Chieftain lord effect | "+1/+1 and haste to other Goblins" deferred until Step 2 static anthems. Currently a 2/2 haste for 3. |
+| 4 | Keyword abilities as components | Lifelink, Deathtouch, Trample etc. as individual components checked by relevant actions. Rules-engine keywords that do not use the stack. Note: `HasHaste`, `HasDoubleStrike`, and `HasDeathtouch` are currently flags on `CreatureComponent` — migrate to individual components when the full keyword system is built. |
 | — | Tap costs | Krenko's activation is modelled as a free (0-mana) ability since tap costs are not yet implemented. |
+| — | Delirium | Needs "N+ card types in your graveyard". There is no card-type system — Artifact/Enchantment/Land are strings in `Subtypes` and instants/sorceries carry no type marker at all. Deliberately cut in favour of Threshold, which covers the same design space at zero cost. |
+| — | Real Madness | Casting a discarded card requires a priority window; the engine has a stack but no priority. Modelled instead as a graveyard-active `CardDiscardedEvent` trigger — see "Discard Triggers" below. |
+| — | Deathtouch from effect damage | `DealDamageAction` always passes `fromDeathtouch: false`. Only combat can deal deathtouch damage today. Add a `SourceHasDeathtouch` field when a card needs a deathtouch ping ability. |
+
+**Completed since this table was written:** Step 3 (zone-dependent statics) is implemented — see below.
+
+## Zone-Dependent Statics
+
+A `StaticAbilityComponent` applies only while its source card sits in `ActiveInZone`
+(default `Battlefield`). Setting it to `Graveyard` gives Wonder-style effects:
+"while this is in your graveyard, creatures you control have Flying."
+
+- `StaticAbilityEngine.ProcessZoneSourceEntered` / `ProcessZoneSourceLeft` register and
+  unregister graveyard sources in `MtgGame.StaticSourceIds` — the same set battlefield
+  sources use, so no type change was needed.
+- `CheckStateBasedEffectsAction.ProcessStaticAbilityUpdates` runs graveyard events in a
+  **second pass**, after the battlefield pass. This ordering matters: a permanent that dies
+  must have its battlefield statics stripped before its graveyard statics are stamped, or
+  the strip undoes the stamp.
+- `ApplySourceToTarget` checks each ability's `ActiveInZone` against the source card's
+  *actual current zone*, so one card can carry both a battlefield static and a graveyard
+  static with exactly one live at a time.
+- The events that drive all of this come from `MoveCardTracked`, not from the individual
+  actions — see the `Zones/` entry in the source map.
+
+## Threshold
+
+`ThresholdComponent` (a `PowerToughnessModifier`) grants P/T and keywords while the
+controller's graveyard holds at least `Minimum` cards.
+
+**It is deliberately not built on `StaticAbilityEngine`.** That engine is a push model: it
+re-stamps only on `CreatureEnteredBattlefieldEvent` and `PermanentLeftBattlefieldEvent`. A
+threshold keyed to graveyard size would go stale the instant a card was milled, discarded, or
+exiled, because none of those fire a re-stamp. Instead the graveyard is counted live at read
+time — `CreatureEvaluator` calls `GetPowerBonus`/`GetToughnessBonus` on every read, and
+`GetEffectiveStats` reads the keyword half directly. Always correct, and no engine changes.
+
+Set `Duration = ModifierDuration.Permanent` in card definitions or `StartTurnAction` strips it.
+
+## Deathtouch
+
+`CreatureComponent.HasDeathtouch` (also `StaticGrantKeywordAbility.GrantsDeathtouch`,
+`AppliedKeywordComponent.GrantsDeathtouch`, `ThresholdComponent.GrantsDeathtouch`).
+
+Lethality is decided in **one** place: `CreatureEvaluator.IsLethalDamage(cardId, totalDamage,
+fromDeathtouch)`. Both `AttackAction` and `DealDamageAction` route through it, so deathtouch
+cannot work in one and silently not the other. Deathtouch is a property of the damage *source*,
+so callers pass it in; any nonzero deathtouch damage is lethal immediately, which is why no
+"deathtouched" marker is persisted on the creature.
+
+`ApplyCreatureVsCreature` reads both combatants' deathtouch **before** applying any damage, so
+a creature that dies in the exchange still deals its deathtouch damage back.
+
+Balance note: with no blockers, deathtouch makes every attack a favourable trade. Keep it rare.
+
+## Discard Triggers (and the Madness reskin)
+
+`CardDiscardedEvent` is now added to `PendingGameEvents` by both `DiscardCardsAction` and
+`DiscardRandomCardAction`. **Before this, it was only placed on the returned `Events` list,
+which is the caller-visible log and not the trigger feed — so no discard trigger had ever
+fired.** Any new action that emits an event cards should trigger on must add it to
+`PendingGameEvents`; adding it only to `ActionResult.Events` is silently inert.
+
+Madness is modelled as a discard trigger rather than a cast window:
+
+```csharp
+new TriggeredAbilityComponent
+{
+    Name = "Madness",
+    Condition = new EventTriggerCondition
+    {
+        EventTypeName = EventTypeNames.CardDiscarded,
+        Filter = new IsSourceCardSpecification(),
+    },
+    Effect = /* ... */,
+    ActiveInZone = ZoneType.Graveyard,   // REQUIRED — the card is already in the graveyard
+}
+```
+
+The effect fires for **no mana cost** since the card is never cast — price madness effects as
+free, not as a discount on the card's face cost. `CardMilledEvent` is a separate event
+precisely so these payoffs do not fire on self-mill.
+
+**Gotcha when writing trigger effects:** `TargetingStrategy.NoTarget()` resolves to an empty
+target list, and `ResolveEffectAction` injects that over any hardcoded `TargetIds` on an
+`ITargetedAction`. To affect the opponent from a trigger, use an action that derives them from
+context (`DrainLifeAction` with `PlayerIdContextKey = ContextKeys.CastingPlayerId`) or a real
+targeting strategy — not `NoTarget()` plus preset `TargetIds`.
+
+## Creature Recursion from the Graveyard
+
+`FlashbackComponent` on a creature means Gravecrawler/unearth/disturb: `CastFromGraveyardAction`
+resolves it onto the battlefield via `ResolveCreatureAction` and does **not** exile it, so it can
+be recurred every time it dies. Mana cost is the only limiter, which keeps the loop bounded.
+On an instant or sorcery the component still means one-shot Flashback (resolve, then exile).
+
+`MtgActionGenerator.AddGraveyardFlashbackActions` generates the creature case with no target
+enumeration, since creatures carry no `SpellComponent`.
 
 ## Card Creation Cookbook
 

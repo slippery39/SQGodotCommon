@@ -1,5 +1,16 @@
 # Zone-Dependent Statics — Design Spec
 
+> **STATUS: IMPLEMENTED.** This spec is kept for its rationale only — the authoritative
+> description of the shipped behaviour is the "Zone-Dependent Statics" section of
+> `MtgCore/CLAUDE.md`. Two things differ from the plan below:
+>
+> - The boundary events are emitted by `ZoneTransitionExtensions.MoveCardTracked`, a single
+>   tracked-move helper, rather than by each of the ~12 actions that touch a graveyard.
+> - `CardLeftGraveyardEvent` was added alongside `CardEnteredGraveyardEvent`, which resolves
+>   §7's "Card leaves graveyard" open question.
+>
+> Safe to delete once you're satisfied with the implementation.
+
 **Target card:** Wonder (gives all your creatures flying while Wonder is in your graveyard)
 
 ---

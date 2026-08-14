@@ -277,8 +277,24 @@ public static class MtgActionGenerator
 				continue;
 
 			var spell = card.GetComponent<SpellComponent>();
+
+			// Creatures with FlashbackComponent are graveyard recursion (Gravecrawler).
+			// They carry no SpellComponent and so have no targets to enumerate.
 			if (spell == null)
+			{
+				if (!card.HasComponent<CreatureComponent>())
+					continue;
+
+				var recurAction = new CastFromGraveyardAction
+				{
+					CardId = card.Id,
+					CastingPlayerId = playerId,
+					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
+				};
+				if (state.TryAddAction(recurAction).Success)
+					actions.Add(recurAction);
 				continue;
+			}
 
 			var targetedEffect = spell.Effects.FirstOrDefault(e =>
 				e.TargetingStrategy.RequiresUserSelection
