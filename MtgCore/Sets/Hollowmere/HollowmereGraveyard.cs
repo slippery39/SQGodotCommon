@@ -343,5 +343,69 @@ public static class HollowmereGraveyard
 				.WithDraw(1)
 				.WithFlashback(4)
 				.Build(),
+			// ===== BATCH 3 =====
+			// Threshold at the top of the curve, where the payoff should be largest.
+			CardFactory
+				.Creature("Silt-Wreathed Colossus", manaCost: 5, power: 4, toughness: 4)
+				.WithSubtype(Hollowmere.Horror)
+				.WithThreshold(power: 4, toughness: 4, trample: true)
+				.Build(),
+			// A recurring flier — the graveyard deck's evasive clock.
+			CardFactory
+				.Creature("Drowned Revenant", manaCost: 4, power: 3, toughness: 2)
+				.WithSubtype(Hollowmere.Spirit)
+				.WithFlying()
+				.WithGraveyardRecursion(manaCost: 5)
+				.Build(),
+			// Cheap interaction that also stocks the yard.
+			CardFactory
+				.Spell("Silt in the Lungs", manaCost: 1)
+				.WithDamage(2)
+				.WithTarget(Single().OpponentCreatures())
+				.WithMill(2)
+				.Build(),
+			// The graveyard deck's card-advantage engine on a stick.
+			CardFactory
+				.Creature("Keeper of the Ossuary", manaCost: 4, power: 2, toughness: 4)
+				.WithSubtype(Hollowmere.Human)
+				.WithSubtype(Hollowmere.Cleric)
+				.WithTaunt()
+				.WithTriggeredAbility(
+					"Tally the Bones",
+					TriggerConditions.OnYourUpkeep(),
+					eb => eb.WithMill(1).WithLifeGain(1)
+				)
+				.Build(),
+			// Sacrifice outlet: converts a dying board into graveyard depth and reach.
+			CardFactory
+				.Creature("Ossuary Warden", manaCost: 3, power: 2, toughness: 3)
+				.WithSubtype(Hollowmere.Zombie)
+				.WithActivatedAbility(
+					"Feed the Ossuary",
+					manaCost: 0,
+					effect: eb => eb.WithDraw(1).WithLoseLife(1),
+					costs: cb => cb.Sacrifice(TargetSpecification.CreatureControlledByYou())
+				)
+				.Build(),
+			// Punishes the opponent's graveyard while filling yours.
+			CardFactory
+				.Spell("Silt the Vaults", manaCost: 3)
+				.WithExileFromGraveyard()
+				.WithMill(3)
+				.WithDraw(1)
+				.Build(),
+			// Reanimation that dodges sorcery-speed removal by rebuilding immediately.
+			CardFactory
+				.Spell("Dredge the Deep Mere", manaCost: 5)
+				.WithReanimate()
+				.WithCreateTokens(HollowmereTokens.Spirit(), count: 2)
+				.Build(),
+			// A threshold one-drop with evasion — relevant on turn one and turn twelve.
+			CardFactory
+				.Creature("Mere-Wisp", manaCost: 1, power: 1, toughness: 1)
+				.WithSubtype(Hollowmere.Spirit)
+				.WithFlying()
+				.WithThreshold(power: 2, toughness: 1)
+				.Build(),
 		];
 }

@@ -25,18 +25,18 @@ public class HollowmereSetTests
 	[Test]
 	public void Set_HasExpectedSizeSoFar()
 	{
-		Assert.That(Hollowmere.Cards.Count, Is.EqualTo(100), "Batches 1-2 are 50 cards each");
+		Assert.That(Hollowmere.Cards.Count, Is.EqualTo(150), "Batches 1-3 are 50 cards each");
 	}
 
-	[TestCase(nameof(HollowmereGraveyard), 35)]
+	[TestCase(nameof(HollowmereGraveyard), 43)]
 	[TestCase(nameof(HollowmereDiscard), 30)]
-	[TestCase(nameof(HollowmereHumans), 5)]
+	[TestCase(nameof(HollowmereHumans), 30)]
 	[TestCase(nameof(HollowmereMill), 5)]
 	[TestCase(nameof(HollowmereAngelsDemons), 4)]
 	[TestCase(nameof(HollowmereSpirits), 4)]
 	[TestCase(nameof(HollowmereSpells), 5)]
 	[TestCase(nameof(HollowmereZombies), 4)]
-	[TestCase(nameof(HollowmereWerewolves), 3)]
+	[TestCase(nameof(HollowmereWerewolves), 20)]
 	[TestCase(nameof(HollowmereVampires), 3)]
 	[TestCase(nameof(HollowmereGlue), 2)]
 	public void Theme_HasExpectedCardCount(string theme, int expected)
@@ -190,6 +190,99 @@ public class HollowmereSetTests
 	public void Set_CanFillABoosterPack()
 	{
 		Assert.That(Hollowmere.Set.Draftable.Count, Is.GreaterThanOrEqualTo(15));
+	}
+
+	/// <summary>
+	/// A real werewolf from the set must actually flip. Deliberately asserts no names or
+	/// stats — it takes whichever double-faced card the set happens to define first — so
+	/// balance changes cannot break it, but a broken transform wiring will.
+	/// </summary>
+	[Test]
+	public void Werewolf_TransformsWhenNoSpellsWereCastLastTurn()
+	{
+		var (state, ids) = MtgGameFactory.CreateForTesting();
+
+		var template = HollowmereWerewolves.Cards.First(c => c.HasComponent<TransformComponent>());
+		var nightName = template.GetComponent<TransformComponent>()!.OtherFaceName;
+
+		var battlefieldId = state.GetPlayerZoneId(ids.Player1Id, ZoneType.Battlefield);
+		var (withCard, card) = state.AddObject(
+			template with
+			{
+				OwnerId = ids.Player1Id,
+				ControllerId = ids.Player1Id,
+			},
+			battlefieldId
+		);
+
+		// No spells cast last turn is the default (SpellsCastThisTurn starts at 0), so simply
+		// starting the turn should satisfy the transform condition.
+		var (final, _) = withCard
+			.AddAction(
+				new StartTurnAction
+				{
+					ActivePlayerId = ids.Player1Id,
+					BattlefieldId = battlefieldId,
+					SkipDraw = true,
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(
+			((Card)final.GetObject(card.Id)).Name,
+			Is.EqualTo(nightName),
+			"Werewolf should have transformed to its night face"
+		);
+	}
+
+	/// <summary>
+	/// And back again when the previous turn was busy — the night face's own trigger.
+	/// </summary>
+	[Test]
+	public void Werewolf_TransformsBackWhenTwoSpellsWereCastLastTurn()
+	{
+		var (state, ids) = MtgGameFactory.CreateForTesting();
+
+		var template = HollowmereWerewolves.Cards.First(c => c.HasComponent<TransformComponent>());
+		var dayName = template.Name;
+
+		var battlefieldId = state.GetPlayerZoneId(ids.Player1Id, ZoneType.Battlefield);
+		var (withCard, card) = state.AddObject(
+			template with
+			{
+				OwnerId = ids.Player1Id,
+				ControllerId = ids.Player1Id,
+			},
+			battlefieldId
+		);
+
+		StartTurnAction StartTurn() =>
+			new()
+			{
+				ActivePlayerId = ids.Player1Id,
+				BattlefieldId = battlefieldId,
+				SkipDraw = true,
+			};
+
+		// Quiet turn: flips to night.
+		var (night, _) = withCard.AddAction(StartTurn()).ProcessAllActions();
+		Assert.That(
+			((Card)night.GetObject(card.Id)).Name,
+			Is.Not.EqualTo(dayName),
+			"Precondition: flipped to night"
+		);
+
+		// Busy turn: two spells cast, so the next turn start flips it back.
+		var game = (MtgGame)night.GetObject(ids.GameId);
+		var busy = night.UpdateObject(ids.GameId, game with { SpellsCastThisTurn = 2 });
+
+		var (day, _) = busy.AddAction(StartTurn()).ProcessAllActions();
+
+		Assert.That(
+			((Card)day.GetObject(card.Id)).Name,
+			Is.EqualTo(dayName),
+			"Werewolf should have transformed back to its day face"
+		);
 	}
 
 	/// <summary>
