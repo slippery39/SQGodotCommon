@@ -13,7 +13,7 @@ namespace MtgCore;
 /// normal game, so stacking large self-mill effects can deck the caster — LibraryEmptyEvent is
 /// a loss condition. Repeatable small mill is the safer way to build a deep graveyard.
 ///
-/// Batches 1-2: 35 cards of a planned 60.
+/// Batches 1-4: 48 cards of a planned 60.
 /// </summary>
 public static class HollowmereGraveyard
 {
