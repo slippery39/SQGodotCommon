@@ -52,11 +52,56 @@ public record CheckStateBasedEffectsAction : GameAction
 		var pendingEvents = state.PendingGameEvents;
 
 		state = ProcessStaticAbilityUpdates(state, pendingEvents);
+
+		// Runs after statics are applied, so a creature only dies once its effective toughness
+		// is final — a lord leaving play and a -X/-X effect must be judged on the same pass.
+		// Deaths are appended to the pending list so death triggers still see them.
+		state = DestroyZeroToughnessCreatures(state, ref pendingEvents);
+
 		state = EvaluateTriggeredAbilities(state, pendingEvents);
 		state = state with { PendingGameEvents = ImmutableList<GameEvent>.Empty };
 
 		var (finalState, events) = CheckLossConditions(state, player1, player2);
 		return new ActionResult(finalState) { Events = events };
+	}
+
+	/// <summary>
+	/// Destroys any creature whose effective toughness has fallen to zero or below.
+	///
+	/// Damage-based death is decided at the damage site by IsLethalDamage, but a creature
+	/// shrunk by a -X/-X effect takes no damage at all — without this check it would sit on
+	/// the battlefield as a 2/0, so -X/-X could never function as removal.
+	/// </summary>
+	private GameState DestroyZeroToughnessCreatures(
+		GameState state,
+		ref ImmutableList<GameEvent> pendingEvents
+	)
+	{
+		foreach (var battlefieldId in new[] { Player1BattlefieldId, Player2BattlefieldId })
+		{
+			// Materialised first: the loop moves cards out of the zone it is reading.
+			foreach (var card in state.GetCardsInZone(battlefieldId).ToList())
+			{
+				if (!card.HasComponent<CreatureComponent>())
+					continue;
+				if (state.GetEffectiveStats(card.Id).Toughness > 0)
+					continue;
+
+				var leftEvent = new PermanentLeftBattlefieldEvent
+				{
+					CardId = card.Id,
+					OwnerId = card.OwnerId,
+				};
+				var destroyedEvent = new CreatureDestroyedEvent { CreatureId = card.Id };
+
+				var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
+				state = state.MoveCardTracked(card.Id, graveyardId);
+
+				pendingEvents = pendingEvents.Add(leftEvent).Add(destroyedEvent);
+			}
+		}
+
+		return state;
 	}
 
 	private GameState ProcessStaticAbilityUpdates(

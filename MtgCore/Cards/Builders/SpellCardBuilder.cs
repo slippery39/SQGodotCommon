@@ -234,6 +234,117 @@ public class SpellCardBuilder
 	}
 
 	/// <summary>
+	/// Weaken — -X/-X to an opposing creature. Kills anything whose toughness reaches zero,
+	/// which CheckStateBasedEffectsAction enforces, so this is removal that scales with the
+	/// target rather than a flat "destroy". Doubles as a combat trick against a big attacker.
+	/// </summary>
+	public SpellCardBuilder WithWeaken(int power, int toughness)
+	{
+		FlushPending();
+		_pendingAction = new AddModifierAction
+		{
+			PowerBonus = -power,
+			ToughnessBonus = -toughness,
+			Duration = ModifierDuration.UntilEndOfTurn,
+		};
+		_pendingTargeting = TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures());
+		return this;
+	}
+
+	/// <summary>
+	/// Bounce — return an opposing permanent to its owner's hand. Answers what destroy cannot
+	/// (a recurring threat comes back as a card to re-cast, not a card in the graveyard),
+	/// which matters in a set this full of graveyard recursion.
+	/// </summary>
+	public SpellCardBuilder WithBounce()
+	{
+		FlushPending();
+		_pendingAction = new ReturnToHandAction();
+		_pendingTargeting = TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures());
+		return this;
+	}
+
+	/// <summary>
+	/// Fight — this creature and a target creature deal damage to each other. Removal that
+	/// costs no card but risks the fighter, and it reaches flyers a ground creature could
+	/// never attack.
+	/// </summary>
+	public SpellCardBuilder WithFight()
+	{
+		FlushPending();
+		_pendingAction = new FightAction();
+		_pendingTargeting = TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures());
+		return this;
+	}
+
+	/// <summary>
+	/// Edict — the opponent loses a creature chosen by mana cost rather than by targeting,
+	/// so it answers Hexproof and Shroud, which nothing else in the set can touch.
+	/// </summary>
+	public SpellCardBuilder WithEdict(bool takeBiggest = true)
+	{
+		FlushPending();
+		_pendingAction = new PipelineAction
+		{
+			Steps = ImmutableList.Create<GameAction>(
+				new SelectCreatureFromBattlefieldByManaCostAction
+				{
+					TargetOpponent = true,
+					SelectLowest = !takeBiggest,
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+					OutputKey = "edict_target",
+				},
+				new DestroyCreatureAction { TargetContextKey = "edict_target" }
+			),
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Tutor — search your library for a card of a given subtype and put it in your hand.
+	/// Consistency, which is what makes a synergy deck function rather than flood.
+	/// </summary>
+	public SpellCardBuilder WithTutor(string subtype)
+	{
+		FlushPending();
+		_pendingAction = new PipelineAction
+		{
+			Steps = ImmutableList.Create<GameAction>(
+				new SelectCardFromLibraryAction
+				{
+					Subtype = subtype,
+					OutputKey = "tutor_target",
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+				},
+				new MoveCardToHandAction
+				{
+					CardIdContextKey = "tutor_target",
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+				}
+			),
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Dig — look at the top N cards and put one in your hand. Card selection rather than card
+	/// advantage, which is a different axis from Draw and lets a deck find its payoff.
+	/// </summary>
+	public SpellCardBuilder WithDig(int amount)
+	{
+		FlushPending();
+		_pendingAction = new LookAtTopCardsAction
+		{
+			Amount = amount,
+			PlayerIdContextKey = ContextKeys.CastingPlayerId,
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
 	/// Prowess: +1/+1 until end of turn to the card whose ability is resolving.
 	///
 	/// Targets via ContextKeys.SourceCardId rather than a targeting strategy, because the

@@ -501,6 +501,126 @@ public class HollowmereMechanicsTests
 		);
 	}
 
+	// ===== NEW REMOVAL VERBS =====
+
+	/// <summary>
+	/// A shrunk creature takes no damage, so the damage-site lethality check never sees it.
+	/// Without a state-based zero-toughness rule it would sit on the battlefield as a 2/0 and
+	/// -X/-X could not function as removal at all.
+	/// </summary>
+	[Test]
+	public void Weaken_KillsACreatureWhoseToughnessReachesZero()
+	{
+		var (state, victim) = AddToBattlefield(
+			_state,
+			TestCardFactory.MakeCreatureCard("Victim", _ids.Player2Id, 2, 2),
+			_ids.Player2Id
+		);
+
+		var (final, _) = state
+			.AddAction(
+				new AddModifierAction
+				{
+					PowerBonus = -2,
+					ToughnessBonus = -2,
+					Duration = ModifierDuration.UntilEndOfTurn,
+					TargetIds = ImmutableList.Create(victim.Id),
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(final.GetCardZone(victim.Id).ZoneType, Is.EqualTo(ZoneType.Graveyard));
+	}
+
+	[Test]
+	public void Weaken_LeavesACreatureAliveAboveZeroToughness()
+	{
+		var (state, victim) = AddToBattlefield(
+			_state,
+			TestCardFactory.MakeCreatureCard("Victim", _ids.Player2Id, 3, 3),
+			_ids.Player2Id
+		);
+
+		var (final, _) = state
+			.AddAction(
+				new AddModifierAction
+				{
+					PowerBonus = -1,
+					ToughnessBonus = -1,
+					Duration = ModifierDuration.UntilEndOfTurn,
+					TargetIds = ImmutableList.Create(victim.Id),
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(final.GetCardZone(victim.Id).ZoneType, Is.EqualTo(ZoneType.Battlefield));
+		Assert.That(final.GetEffectiveToughness(victim.Id), Is.EqualTo(2));
+	}
+
+	/// <summary>
+	/// Fight must reach a flyer a ground creature could never attack — that difference from
+	/// attacking is the whole reason the card exists.
+	/// </summary>
+	[Test]
+	public void Fight_TradesDamageBothWaysAndReachesFlyers()
+	{
+		var (state, fighter) = AddToBattlefield(
+			_state,
+			TestCardFactory.MakeCreatureCard("Fighter", _ids.Player1Id, 3, 3)
+		);
+		var (state2, flyer) = AddOpposingFlyer(state);
+
+		var (final, _) = state2
+			.AddAction(
+				new FightAction
+				{
+					TargetIds = ImmutableList.Create(flyer.Id),
+					InputContext = ImmutableDictionary<string, object>.Empty.SetItem(
+						ContextKeys.SourceCardId,
+						fighter.Id
+					),
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(
+			final.GetCardZone(flyer.Id).ZoneType,
+			Is.EqualTo(ZoneType.Graveyard),
+			"3 power should kill the 2/2 flyer"
+		);
+		Assert.That(
+			final.GetCardZone(fighter.Id).ZoneType,
+			Is.EqualTo(ZoneType.Battlefield),
+			"Fighter takes 2 and survives at 3 toughness"
+		);
+	}
+
+	[Test]
+	public void Fight_DoesNotMarkTheFighterAsHavingAttacked()
+	{
+		var (state, fighter) = AddToBattlefield(
+			_state,
+			TestCardFactory.MakeCreatureCard("Fighter", _ids.Player1Id, 3, 3)
+		);
+		var (state2, flyer) = AddOpposingFlyer(state);
+
+		var (final, _) = state2
+			.AddAction(
+				new FightAction
+				{
+					TargetIds = ImmutableList.Create(flyer.Id),
+					InputContext = ImmutableDictionary<string, object>.Empty.SetItem(
+						ContextKeys.SourceCardId,
+						fighter.Id
+					),
+				}
+			)
+			.ProcessAllActions();
+
+		var creature = ((Card)final.GetObject(fighter.Id)).GetComponent<CreatureComponent>()!;
+		Assert.That(creature.HasAttacked, Is.False, "Fighting is not attacking");
+	}
+
 	// ===== FLYING =====
 
 	/// <summary>
