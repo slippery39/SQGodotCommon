@@ -501,6 +501,165 @@ public class HollowmereMechanicsTests
 		);
 	}
 
+	// ===== FLYING =====
+
+	/// <summary>
+	/// Flying's whole value in a no-blocker model. Before this rule it only bypassed Taunt,
+	/// so it was blank whenever the defender had no Taunt creature — which meant 55 cards in
+	/// the set were paying mana for nothing.
+	/// </summary>
+	[Test]
+	public void GroundCreature_CannotAttackAFlyer()
+	{
+		var (state, attacker) = AddToBattlefield(
+			_state,
+			TestCardFactory.MakeCreatureCard("Grounded", _ids.Player1Id, 3, 3)
+		);
+		var (state2, flyer) = AddOpposingFlyer(state);
+
+		var (_, success) = state2.TryAddAction(
+			new AttackAction
+			{
+				AttackerId = attacker.Id,
+				TargetId = flyer.Id,
+				AttackingPlayerId = _ids.Player1Id,
+			}
+		);
+
+		Assert.That(success, Is.False);
+	}
+
+	[Test]
+	public void FlyingCreature_CanAttackAFlyer()
+	{
+		var attacker = WithKeyword(
+			TestCardFactory.MakeCreatureCard("Aerial", _ids.Player1Id, 2, 2),
+			flying: true
+		);
+		var (state, attackerCard) = AddToBattlefield(_state, attacker);
+		var (state2, flyer) = AddOpposingFlyer(state);
+
+		var (_, success) = state2.TryAddAction(
+			new AttackAction
+			{
+				AttackerId = attackerCard.Id,
+				TargetId = flyer.Id,
+				AttackingPlayerId = _ids.Player1Id,
+			}
+		);
+
+		Assert.That(success, Is.True);
+	}
+
+	/// Reach is the intended answer to Flying, which is what makes it worth printing.
+	[Test]
+	public void ReachCreature_CanAttackAFlyer()
+	{
+		var attacker = WithKeyword(
+			TestCardFactory.MakeCreatureCard("Archer", _ids.Player1Id, 2, 3),
+			reach: true
+		);
+		var (state, attackerCard) = AddToBattlefield(_state, attacker);
+		var (state2, flyer) = AddOpposingFlyer(state);
+
+		var (_, success) = state2.TryAddAction(
+			new AttackAction
+			{
+				AttackerId = attackerCard.Id,
+				TargetId = flyer.Id,
+				AttackingPlayerId = _ids.Player1Id,
+			}
+		);
+
+		Assert.That(success, Is.True);
+	}
+
+	/// <summary>
+	/// The interaction that would otherwise deadlock: Taunt compels an attack the Flying rule
+	/// forbids. A Flying Taunt creature must not prevent ground creatures from attacking at all.
+	/// </summary>
+	[Test]
+	public void FlyingTauntCreature_DoesNotLockOutGroundAttackers()
+	{
+		var (state, attacker) = AddToBattlefield(
+			_state,
+			TestCardFactory.MakeCreatureCard("Grounded", _ids.Player1Id, 3, 3)
+		);
+
+		var wall = WithKeyword(
+			TestCardFactory.MakeCreatureCard("Aerial Wall", _ids.Player2Id, 1, 4),
+			flying: true,
+			taunt: true
+		);
+		var (state2, _) = AddToBattlefield(state, wall, _ids.Player2Id);
+
+		var (_, success) = state2.TryAddAction(
+			new AttackAction
+			{
+				AttackerId = attacker.Id,
+				TargetId = _ids.Player2Id,
+				AttackingPlayerId = _ids.Player1Id,
+			}
+		);
+
+		Assert.That(success, Is.True, "Ground creature should still be able to attack the player");
+	}
+
+	/// A ground Taunt creature still compels a ground attacker — the ordinary case.
+	[Test]
+	public void GroundTauntCreature_StillCompelsGroundAttackers()
+	{
+		var (state, attacker) = AddToBattlefield(
+			_state,
+			TestCardFactory.MakeCreatureCard("Grounded", _ids.Player1Id, 3, 3)
+		);
+
+		var wall = WithKeyword(
+			TestCardFactory.MakeCreatureCard("Wall", _ids.Player2Id, 1, 4),
+			taunt: true
+		);
+		var (state2, _) = AddToBattlefield(state, wall, _ids.Player2Id);
+
+		var (_, success) = state2.TryAddAction(
+			new AttackAction
+			{
+				AttackerId = attacker.Id,
+				TargetId = _ids.Player2Id,
+				AttackingPlayerId = _ids.Player1Id,
+			}
+		);
+
+		Assert.That(success, Is.False, "Taunt must still force the attack");
+	}
+
+	private (GameState, Card) AddOpposingFlyer(GameState state)
+	{
+		var flyer = WithKeyword(
+			TestCardFactory.MakeCreatureCard("Flyer", _ids.Player2Id, 2, 2),
+			flying: true
+		);
+		return AddToBattlefield(state, flyer, _ids.Player2Id);
+	}
+
+	private static Card WithKeyword(
+		Card card,
+		bool flying = false,
+		bool reach = false,
+		bool taunt = false
+	)
+	{
+		var creature = card.GetComponent<CreatureComponent>()!;
+		return (Card)
+			card.WithComponentReplaced(
+				creature with
+				{
+					HasFlying = flying,
+					HasReach = reach,
+					HasTaunt = taunt,
+				}
+			);
+	}
+
 	// ===== ATTACKER DEDUPLICATION =====
 
 	/// <summary>

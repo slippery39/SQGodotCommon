@@ -84,6 +84,16 @@ public record AttackAction : GameAction
 			if (targetCard.ControllerId == AttackingPlayerId)
 				return ValidationResult.Invalid("Cannot attack your own creature");
 
+			if (
+				!CanReach(
+					gameState.GetEffectiveStats(AttackerId),
+					gameState.GetEffectiveStats(TargetId)
+				)
+			)
+				return ValidationResult.Invalid(
+					"Only a creature with Flying or Reach can attack a creature with Flying"
+				);
+
 			defendingPlayerId = targetCard.ControllerId;
 		}
 		else
@@ -93,6 +103,17 @@ public record AttackAction : GameAction
 
 		return ValidateTauntConstraint(gameState, defendingPlayerId);
 	}
+
+	/// <summary>
+	/// Flying: a creature with Flying can only be attacked by a creature with Flying or Reach.
+	///
+	/// This is what makes Flying worth anything in a combat model with no blockers. Without it
+	/// the keyword does nothing but bypass Taunt, which is blank whenever the defender has no
+	/// Taunt creature — so a card paying for Flying was usually paying for nothing. Reach is
+	/// the intended answer, and is therefore worth real card text.
+	/// </summary>
+	private static bool CanReach(CreatureStats attacker, CreatureStats target) =>
+		!target.HasFlying || attacker.HasFlying || attacker.HasReach;
 
 	/// <summary>
 	/// Enforces the Taunt rule: if the defending player has Taunt creatures, the attacker
@@ -106,8 +127,14 @@ public record AttackAction : GameAction
 			ZoneType.Battlefield
 		);
 
+		var attackerStats = gameState.GetEffectiveStats(AttackerId);
+
 		// Single pass: collect only taunt creatures — avoids allocating stats for non-taunt creatures
 		// and eliminates the three LINQ chains (Where+Select+ToList, two Where+Select+ToHashSet).
+		//
+		// Only Taunt creatures this attacker could actually attack constrain it. Otherwise a
+		// Flying Taunt creature would forbid every ground creature from attacking at all: Taunt
+		// would compel an attack that the Flying rule simultaneously forbids.
 		List<(int Id, CreatureStats Stats)>? tauntCreatures = null;
 		foreach (var c in gameState.GetCardsInZone(opponentBattlefieldId))
 		{
@@ -116,6 +143,8 @@ public record AttackAction : GameAction
 			var stats = gameState.GetEffectiveStats(c.Id);
 			if (!stats.HasTaunt)
 				continue;
+			if (!CanReach(attackerStats, stats))
+				continue;
 			tauntCreatures ??= [];
 			tauntCreatures.Add((c.Id, stats));
 		}
@@ -123,7 +152,6 @@ public record AttackAction : GameAction
 		if (tauntCreatures is null)
 			return ValidationResult.Valid;
 
-		var attackerStats = gameState.GetEffectiveStats(AttackerId);
 		if (attackerStats.HasFlying)
 		{
 			var hasObstructingTaunt = false;
