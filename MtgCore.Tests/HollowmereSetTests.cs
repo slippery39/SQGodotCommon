@@ -23,22 +23,22 @@ public class HollowmereSetTests
 	}
 
 	[Test]
-	public void Set_HasExpectedSizeSoFar()
+	public void Set_IsComplete()
 	{
-		Assert.That(Hollowmere.Cards.Count, Is.EqualTo(200), "Batches 1-4 are 50 cards each");
+		Assert.That(Hollowmere.Cards.Count, Is.EqualTo(300), "Hollowmere is a 300-card set");
 	}
 
-	[TestCase(nameof(HollowmereGraveyard), 48)]
+	[TestCase(nameof(HollowmereGraveyard), 60)]
 	[TestCase(nameof(HollowmereDiscard), 30)]
 	[TestCase(nameof(HollowmereHumans), 30)]
 	[TestCase(nameof(HollowmereMill), 25)]
-	[TestCase(nameof(HollowmereAngelsDemons), 4)]
-	[TestCase(nameof(HollowmereSpirits), 4)]
+	[TestCase(nameof(HollowmereAngelsDemons), 25)]
+	[TestCase(nameof(HollowmereSpirits), 25)]
 	[TestCase(nameof(HollowmereSpells), 30)]
-	[TestCase(nameof(HollowmereZombies), 4)]
+	[TestCase(nameof(HollowmereZombies), 25)]
 	[TestCase(nameof(HollowmereWerewolves), 20)]
-	[TestCase(nameof(HollowmereVampires), 3)]
-	[TestCase(nameof(HollowmereGlue), 2)]
+	[TestCase(nameof(HollowmereVampires), 20)]
+	[TestCase(nameof(HollowmereGlue), 10)]
 	public void Theme_HasExpectedCardCount(string theme, int expected)
 	{
 		var actual = theme switch

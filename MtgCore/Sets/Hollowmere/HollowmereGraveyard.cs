@@ -13,7 +13,7 @@ namespace MtgCore;
 /// normal game, so stacking large self-mill effects can deck the caster — LibraryEmptyEvent is
 /// a loss condition. Repeatable small mill is the safer way to build a deep graveyard.
 ///
-/// Batches 1-4: 48 cards of a planned 60.
+/// Complete at 60 cards — the set's largest theme, as its spine should be.
 /// </summary>
 public static class HollowmereGraveyard
 {
@@ -441,6 +441,108 @@ public static class HollowmereGraveyard
 				.WithSubtype(Hollowmere.Spirit)
 				.WithLifelink()
 				.WithGraveyardRecursion(manaCost: 4)
+				.Build(),
+			// ===== BATCH 5-6 =====
+			// A one-mana enabler that is still a card later.
+			CardFactory
+				.Spell("Silt-Stained Rites", manaCost: 1)
+				.WithMill(3)
+				.WithLifeGain(2)
+				.WithFlashback(3)
+				.Build(),
+			// Threshold on an evasive two-drop.
+			CardFactory
+				.Creature("Cairn-Bound Wisp", manaCost: 2, power: 1, toughness: 1)
+				.WithSubtype(Hollowmere.Spirit)
+				.WithFlying()
+				.WithThreshold(power: 3, toughness: 2)
+				.Build(),
+			// Recursion that scales — better the longer the game runs.
+			CardFactory
+				.Creature("Mere-Bound Revenant", manaCost: 4, power: 3, toughness: 3)
+				.WithSubtype(Hollowmere.Zombie)
+				.WithThreshold(power: 2, toughness: 2, trample: true)
+				.WithGraveyardRecursion(manaCost: 5)
+				.Build(),
+			// The graveyard deck's sweeper answer: rebuilds the board from the yard.
+			CardFactory
+				.Spell("Rise from the Silt", manaCost: 4)
+				.WithReanimate()
+				.WithReturnCreatureFromGraveyard()
+				.Build(),
+			// A discard outlet that is also a threshold enabler.
+			CardFactory
+				.Creature("Silt-Choked Chronicler", manaCost: 3, power: 2, toughness: 3)
+				.WithSubtype(Hollowmere.Human)
+				.WithSubtype(Hollowmere.Wizard)
+				.WithActivatedAbility(
+					"Chronicle the Drowned",
+					manaCost: 1,
+					effect: eb => eb.WithDiscard().WithDraw(1).WithMill(1)
+				)
+				.Build(),
+			// Removal priced for a deep graveyard, with a second use.
+			CardFactory
+				.Spell("Pull Beneath", manaCost: 4)
+				.WithDestroy()
+				.WithTarget(Single().OpponentCreatures())
+				.WithFlashback(6)
+				.Build(),
+			// The threshold finisher: enormous once the yard is full, fine before.
+			CardFactory
+				.Creature("Drowned Colossus of the Mere", manaCost: 6, power: 5, toughness: 5)
+				.WithSubtype(Hollowmere.Horror)
+				.WithTrample()
+				.WithThreshold(power: 4, toughness: 4, deathtouch: true)
+				.Build(),
+			// Recursion on a cheap evasive body — hard for a removal deck to answer.
+			CardFactory
+				.Creature("Silt-Wisp Haunt", manaCost: 2, power: 1, toughness: 2)
+				.WithSubtype(Hollowmere.Spirit)
+				.WithFlying()
+				.WithGraveyardRecursion(manaCost: 3)
+				.Build(),
+			// Card advantage gated on the theme actually being online.
+			CardFactory
+				.Creature("Keeper of Drowned Lore", manaCost: 4, power: 2, toughness: 3)
+				.WithSubtype(Hollowmere.Human)
+				.WithSubtype(Hollowmere.Wizard)
+				.WithEtbTrigger("Read the Drowned", eb => eb.WithMill(3).WithDraw(2))
+				.Build(),
+			// The third graveyard-active static, and the one that closes games.
+			new()
+			{
+				Name = "Wrath of the Sunken Choir",
+				ManaCost = 5,
+				Subtypes = ImmutableHashSet.Create(
+					StringComparer.OrdinalIgnoreCase,
+					Hollowmere.Spirit
+				),
+				Components = ImmutableArray.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 4, Toughness = 4 },
+					new StaticPTBoostAbility
+					{
+						PowerBonus = 2,
+						ToughnessBonus = 0,
+						ActiveInZone = ZoneType.Graveyard,
+						Filter = new IsOnBattlefieldSpecification()
+							.And(new IsCreatureSpecification())
+							.And(new IsControlledByYouSpecification()),
+					}
+				),
+			},
+			// Mass recursion to hand — slower than reanimation, but it dodges exile removal.
+			CardFactory
+				.Spell("The Mere Remembers", manaCost: 4)
+				.WithAction(new ReturnToHandAction(), AllValid().CreaturesInYourGraveyard())
+				.Build(),
+			// A cheap threshold body that also blocks the ground early.
+			CardFactory
+				.Creature("Bone-Silt Sentinel", manaCost: 2, power: 1, toughness: 3)
+				.WithSubtype(Hollowmere.Zombie)
+				.WithTaunt()
+				.WithThreshold(power: 3, toughness: 1)
 				.Build(),
 		];
 }

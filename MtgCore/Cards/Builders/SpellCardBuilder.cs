@@ -203,6 +203,37 @@ public class SpellCardBuilder
 	}
 
 	/// <summary>
+	/// Create one token per matching card in a zone — "create a Zombie for each Zombie in your
+	/// graveyard". The Krenko pattern: count into pipeline context, then create that many.
+	///
+	/// Leave <paramref name="subtype"/> empty to count every card in the zone.
+	/// </summary>
+	public SpellCardBuilder WithCreateTokensPerCard(
+		Card template,
+		string subtype,
+		ZoneType zone = ZoneType.Graveyard,
+		string countKey = "token_scale_count"
+	)
+	{
+		FlushPending();
+		_pendingAction = new PipelineAction
+		{
+			Steps = ImmutableList.Create<GameAction>(
+				new CountCardsWithSubtypeAction
+				{
+					Subtype = subtype,
+					Zone = zone,
+					OutputKey = countKey,
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+				},
+				new CreateCardAction { CardTemplate = template, CountInputKey = countKey }
+			),
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
 	/// Prowess: +1/+1 until end of turn to the card whose ability is resolving.
 	///
 	/// Targets via ContextKeys.SourceCardId rather than a targeting strategy, because the
