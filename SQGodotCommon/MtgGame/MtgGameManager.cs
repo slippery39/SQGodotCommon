@@ -102,9 +102,19 @@ public class MtgGameManager
 		return (true, events);
 	}
 
+	/// <summary>
+	/// Attacker deduplication is applied only for the AI. It collapses strategically-identical
+	/// attackers to one representative action, which keeps the AI's search from blowing up on a
+	/// board full of identical tokens — but for the human it means the second copy of a creature
+	/// generates no attack action at all and is simply unclickable.
+	/// </summary>
 	public List<GameAction> GetLegalActions(int playerId)
 	{
-		return MtgActionGenerator.GetLegalActions(_state, playerId);
+		return MtgActionGenerator.GetLegalActions(
+			_state,
+			playerId,
+			deduplicateAttackers: playerId != HumanPlayerId
+		);
 	}
 
 	public ImmutableList<GameEvent> EndTurn()

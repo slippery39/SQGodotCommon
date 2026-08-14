@@ -18,7 +18,18 @@ namespace MtgCore;
 /// </summary>
 public static class MtgActionGenerator
 {
-	public static List<GameAction> GetLegalActions(GameState state, MtgGameIds ids, int playerId)
+	/// <param name="deduplicateAttackers">
+	/// Collapses strategically-identical attackers to one representative action. Correct for AI
+	/// search, where it prevents exponential blow-up with many identical tokens; wrong for a
+	/// human, who needs every creature to be individually attackable. Presentation layers pass
+	/// false.
+	/// </param>
+	public static List<GameAction> GetLegalActions(
+		GameState state,
+		MtgGameIds ids,
+		int playerId,
+		bool deduplicateAttackers = true
+	)
 	{
 		var actions = new List<GameAction>();
 		var opponentId = playerId == ids.Player1Id ? ids.Player2Id : ids.Player1Id;
@@ -39,7 +50,8 @@ public static class MtgActionGenerator
 			opponentId,
 			battlefieldId,
 			opponentBattlefieldId,
-			actions
+			actions,
+			deduplicateAttackers
 		);
 		AddAbilityActions(state, playerId, battlefieldId, actions);
 		actions.Add(
@@ -58,7 +70,12 @@ public static class MtgActionGenerator
 	/// Generates all legal actions for the given player using well-known IDs from GameState,
 	/// without needing the obsolete MtgGameIds struct.
 	/// </summary>
-	public static List<GameAction> GetLegalActions(GameState state, int playerId)
+	/// <param name="deduplicateAttackers">See the overload above — pass false for a human UI.</param>
+	public static List<GameAction> GetLegalActions(
+		GameState state,
+		int playerId,
+		bool deduplicateAttackers = true
+	)
 	{
 		var player1Id = state.GetWellKnownId(MtgObjectKeys.Player1);
 		var player2Id = state.GetWellKnownId(MtgObjectKeys.Player2);
@@ -89,7 +106,8 @@ public static class MtgActionGenerator
 			opponentId,
 			battlefieldId,
 			opponentBattlefieldId,
-			actions
+			actions,
+			deduplicateAttackers
 		);
 		AddAbilityActions(state, playerId, battlefieldId, actions);
 		actions.Add(
@@ -357,7 +375,8 @@ public static class MtgActionGenerator
 		int opponentId,
 		int battlefieldId,
 		int opponentBattlefieldId,
-		List<GameAction> actions
+		List<GameAction> actions,
+		bool deduplicateAttackers
 	)
 	{
 		var attackTargets = state
@@ -370,7 +389,13 @@ public static class MtgActionGenerator
 		// Deduplicate by (target, attacker signature): two creatures with the same name,
 		// effective P/T, current damage, and combat-relevant abilities produce identical
 		// game outcomes when attacking the same target, so only one representative is needed.
-		var seen = new HashSet<(int targetId, AttackerSignature sig)>();
+		//
+		// This is an AI search optimisation and must be OFF for a human: it suppresses the
+		// duplicate's actions entirely, so a player holding two copies of the same creature
+		// finds the second one simply unclickable.
+		var seen = deduplicateAttackers
+			? new HashSet<(int targetId, AttackerSignature sig)>()
+			: null;
 
 		foreach (var attacker in state.GetCardsInZone(battlefieldId))
 		{
@@ -394,7 +419,7 @@ public static class MtgActionGenerator
 
 			foreach (var targetId in attackTargets)
 			{
-				if (!seen.Add((targetId, sig)))
+				if (seen != null && !seen.Add((targetId, sig)))
 					continue;
 
 				var attack = new AttackAction

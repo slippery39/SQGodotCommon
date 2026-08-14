@@ -21,6 +21,10 @@ public partial class MtgGameScene : Node2D
 	private GraveyardPopup _graveyardPopup = null!;
 	private CardPreviewPopup _cardPreviewPopup = null!;
 
+	/// Comfortably above the 0.42 board-card scale — a preview that is not clearly bigger
+	/// than the card it previews is worse than none.
+	private const float PreviewCardScale = 1.3f;
+
 	private readonly List<int> _handCardIds = new();
 	private int? _selectedAttackerId;
 	private bool _isGameOver;
@@ -82,6 +86,10 @@ public partial class MtgGameScene : Node2D
 		_cardPreviewPopup.InternalCardScene = ResourceLoader.Load<PackedScene>(
 			"res://Common/Cards/2D/Card2D/internal_cardui2d_canvasgroup.tscn"
 		);
+		// Board cards render at 0.42, and CardPreviewPopup defaults to 0.65 — barely larger
+		// than the card being previewed, which leaves the rules box unreadable. Matches the
+		// draft screen, where the same value was chosen for the same reason.
+		_cardPreviewPopup.PreviewScale = PreviewCardScale;
 		AddChild(_cardPreviewPopup);
 
 		_boardUI.EndTurnPressed += OnEndTurnPressed;

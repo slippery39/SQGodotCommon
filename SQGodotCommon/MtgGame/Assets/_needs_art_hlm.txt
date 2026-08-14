@@ -1,0 +1,252 @@
+Abyssal Dredger
+Abyssal Tyrant
+Angel of Broken Vigils
+Angel of Second Rites
+Angel of the Drowned Choir
+Angelic Reckoning
+Archangel of Hollowmere
+Archangel of Vigils
+Archfiend of the Mere
+Archmage of the Mere
+Ashen Bolt
+Ashen Reckoning
+Ashen Rite
+Ashwood Herbalist
+Ashwood Ripper
+Asylum Chronicler
+Banish to the Mere
+Bargain at the Crossroads
+Bell-Torn Beast
+Bellowing Sergeant
+Blood-Moon Acolyte
+Blood-Moon Devourer
+Bloodgorged Fiend
+Bloodlord of Hollowmere
+Bone Shambler
+Bone-Silt Sentinel
+Cairn Warden
+Cairn-Bound Wisp
+Cairnwatch Sentinel
+Champion of the Chapel
+Chapel Bell-Warden
+Chapel Bellringer
+Chapel Candle
+Chapel Conjurer
+Chapel Guard
+Chapel Guardian Angel
+Chapel Rites
+Chapel Scavenger
+Chapel Seraph
+Chapel Ward
+Charnel Titan
+Choir of the Drowned
+Choir-Honored Abbess
+Chorus of the Drowned Bell
+Chorus of Whispers
+Cloistered Novice
+Consecrate the Mere
+Consult the Drowned
+Corpse Harvest
+Cryptside Scavenger
+Cryptwalk Scarab
+Deep Mere Lurker
+Demon of the Drowned Vow
+Diregraf Muster
+Dirge-Singer of the Mere
+Dredge the Deep Mere
+Dregs of the Mere
+Drogskol Anthem
+Drown in the Mere
+Drown the Archive
+Drown the Lantern-Bearer
+Drowned Acolyte
+Drowned Archivist
+Drowned Colossus of the Mere
+Drowned Revenant
+Echo of the Drowned
+Elder of the Blood Court
+Elder of the Long Night
+Elder of the Parish
+Endless Ranks
+Exhume the Mere
+Fanged Shepherd
+Fiend of the Silt
+Final Rites
+Flood the Vaults
+Ford-Drowned Horror
+Fury of the Mere
+Gaunt Howler
+Geist of the Deep Mere
+Ghostly Chorus
+Ghoulcaller's Bargain
+Ghoulish Bargainer
+Gnawing Hunger
+Grasp of the Mere
+Grave Scholar
+Gravepact Acolyte
+Gravewatch Sentry
+Grim Excavation
+Grim Improvisation
+Grim-Faced Reeve
+Grimgrin Acolyte
+Grimgrin the Sewn
+Guardian of the Last Vigil
+Herald of the Chapel
+Hollow Vow Tyrant
+Hollowmere Apprentice
+Hollowmere Bailiff
+Hollowmere Bulwark
+Hollowmere Choirmaster
+Hollowmere Confessor
+Hollowmere Gravecaller
+Hollowmere Herbalist
+Hollowmere Houndmaster
+Hollowmere Inquisitor
+Hollowmere Lycanthrope
+Hollowmere Marshal
+Hollowmere Militia Captain
+Hollowmere Muster
+Hollowmere Necromancer
+Hollowmere Poacher
+Hollowmere Procession
+Hollowmere Savant
+Hollowmere Shepherd
+Infernal Bargainer
+Keeper of Broken Vows
+Keeper of Drowned Lore
+Keeper of the Ossuary
+Keeper of the Quiet Hour
+Keeper of the Silent Choir
+Kindled Zealot
+Lantern of the Mere
+Lantern-Lit Trapper
+Leviathan of the Deep Mere
+Lord of the Drowned Host
+Master of the Pack
+Mausoleum Warden
+Mayor of Hollowmere
+Mere-Bank Tracker
+Mere-Bound Revenant
+Mere-Bound Ritualist
+Mere-Chapel Bells
+Mere-Drifter Wisp
+Mere-Drowned Penitent
+Mere-Drowned Scribe
+Mere-Fed Horror
+Mere-Gaze
+Mere-Road Vagrant
+Mere-Storm
+Mere-Tender Acolyte
+Mere-Touched Adept
+Mere-Watch Adept
+Mere-Wisp
+Mire Prowler
+Moonlit Sentry
+Moonrise
+Moonrise Stalker
+Niblis of the Mere
+Night of the Long Thirst
+Nightfall Reveler
+Nighthawk Penitent
+Olivia of the Mere
+Ossuary Scavenger
+Ossuary Warden
+Parish Bell-Ringer
+Parish Cantor
+Parish Exhumer
+Parish Gravedigger
+Parish Torchbearer
+Parish Zealot
+Past in Ashes
+Persecutor of Hollowmere
+Pull Beneath
+Purge the Vaults
+Rabid Rabblerouser
+Rally the Watch
+Reaper from the Mere
+Reeve of Broken Oaths
+Relentless Corpse
+Riddle of the Mere
+Riders of Hollowmere
+Rise from the Silt
+Rise of the Drowned Host
+Rite of Rot
+Rite of Second Drowning
+Rites of the Sunken Choir
+Rot-Marked Thrall
+Rotting Chorus
+Rummaging Wight
+Sanguine Rite
+Scourge of Hollowmere
+Second Burial
+Sentry of the Long Howl
+Sepulchral Leviathan
+Sepulchral Warden
+Seraph of the Silt
+Sexton of the Drowned Chapel
+Shoal Scarab
+Shrieking Penitent
+Silent Vigil
+Silt Blast
+Silt Golem
+Silt in the Lungs
+Silt Ritual
+Silt the Vaults
+Silt-Bound Cantor
+Silt-Choked Chronicler
+Silt-Choked Grasp
+Silt-Choked Oracle
+Silt-Choked Wanderer
+Silt-Gorged Wurm
+Silt-Sifter
+Silt-Slick Prowler
+Silt-Stained Ledger
+Silt-Stained Rites
+Silt-Veiled Shade
+Silt-Wisp Haunt
+Silt-Wreathed Colossus
+Silt-Wreathed Scholar
+Skim the Surface
+Snuff the Lantern
+Spectral Surge
+Spectral Tide
+Spell-Sworn Revenant
+Spirit Shepherd
+Splinterbone Horror
+Storm of Silt
+Sunken Archives
+Sunken Chorus
+Sunken Grave-Lord
+Terror of the Long Night
+The Drowned Archfiend
+The Drowning Chorus
+The Mere Gives Up Its Dead
+The Mere Remembers
+The Mere Swallows All
+Thraben Marshal
+Throat-Ripper Lycanthrope
+Tidal Erasure
+Tide of Whispers
+Tome Dredger
+Tracker of Cold Scents
+Twitching Ghoul
+Unhallowed Novice
+Unhallowed Rite
+Vigil of the Drowned
+Vigilant Watcher
+Village Rabblerouser
+Voice of the Chapel
+Vow-Breaker Fiend
+Watcher at the Ford
+Whisper of the Choir
+Whispered Betrayal
+Whispers from the Mere
+Windswept Chorus
+Wings of the Vigil
+Wisp-Lit Sentry
+Wonder of the Drowned
+Wrath of the Sunken Choir
+Zealous Penitent
+Zombie Horde Leader
+Clue (token)
+Human (token)

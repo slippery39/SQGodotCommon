@@ -501,6 +501,60 @@ public class HollowmereMechanicsTests
 		);
 	}
 
+	// ===== ATTACKER DEDUPLICATION =====
+
+	/// <summary>
+	/// Two copies of the same creature are strategically identical to the AI, so the generator
+	/// collapses them to one representative attack action. For a human that means the second
+	/// copy produces no action at all and cannot be clicked — so the UI must opt out.
+	/// </summary>
+	[Test]
+	public void Attackers_AreDeduplicatedForAi()
+	{
+		var state = TwoIdenticalAttackers();
+
+		var actions = MtgActionGenerator.GetLegalActions(
+			state,
+			_ids.Player1Id,
+			deduplicateAttackers: true
+		);
+
+		Assert.That(
+			actions.OfType<AttackAction>().Count(),
+			Is.EqualTo(1),
+			"AI should see one representative attack"
+		);
+	}
+
+	[Test]
+	public void Attackers_AreNotDeduplicatedForAHuman()
+	{
+		var state = TwoIdenticalAttackers();
+
+		var actions = MtgActionGenerator.GetLegalActions(
+			state,
+			_ids.Player1Id,
+			deduplicateAttackers: false
+		);
+
+		var attackerIds = actions.OfType<AttackAction>().Select(a => a.AttackerId).Distinct();
+		Assert.That(
+			attackerIds.Count(),
+			Is.EqualTo(2),
+			"Both copies must be individually attackable"
+		);
+	}
+
+	/// Two same-named, same-statted creatures with no opposing board — so the only attack
+	/// target is the opponent and any duplicate collapses to a single action.
+	private GameState TwoIdenticalAttackers()
+	{
+		var template = TestCardFactory.MakeCreatureCard("Twin", _ids.Player1Id, 2, 2);
+		var (s1, _) = AddToBattlefield(_state, template);
+		var (s2, _) = AddToBattlefield(s1, template);
+		return s2;
+	}
+
 	// ===== HELPERS =====
 
 	private MillAction MakeMill(int amount, int playerId) =>
