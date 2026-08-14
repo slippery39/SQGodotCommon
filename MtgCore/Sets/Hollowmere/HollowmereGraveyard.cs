@@ -407,5 +407,40 @@ public static class HollowmereGraveyard
 				.WithFlying()
 				.WithThreshold(power: 2, toughness: 1)
 				.Build(),
+			// ===== BATCH 4 =====
+			// Reanimation on a body — the effect the whole top-end is built around.
+			CardFactory
+				.Creature("Hollowmere Gravecaller", manaCost: 5, power: 3, toughness: 3)
+				.WithSubtype(Hollowmere.Human)
+				.WithSubtype(Hollowmere.Wizard)
+				.WithEtbTrigger("Call Them Up", eb => eb.WithReanimate())
+				.Build(),
+			// A cheap threshold flier for the aggressive graveyard decks.
+			CardFactory
+				.Creature("Silt-Veiled Shade", manaCost: 2, power: 1, toughness: 2)
+				.WithSubtype(Hollowmere.Spirit)
+				.WithFlying()
+				.WithThreshold(power: 2, toughness: 2)
+				.Build(),
+			// Sacrifice plus recursion: converts a board into a rebuilt one.
+			CardFactory
+				.Spell("Rite of Second Drowning", manaCost: 3)
+				.WithSacrificeCost(TargetSpecification.CreatureControlledByYou())
+				.WithReanimate()
+				.WithDraw(1)
+				.Build(),
+			// Punishes the mirror while advancing your own plan.
+			CardFactory
+				.Creature("Ossuary Scavenger", manaCost: 3, power: 3, toughness: 2)
+				.WithSubtype(Hollowmere.Zombie)
+				.WithEtbTrigger("Pick the Bones", eb => eb.WithExileFromGraveyard().WithMill(2))
+				.Build(),
+			// Recurring lifelink — the graveyard deck's answer to an aggressive start.
+			CardFactory
+				.Creature("Mere-Drowned Penitent", manaCost: 3, power: 2, toughness: 2)
+				.WithSubtype(Hollowmere.Spirit)
+				.WithLifelink()
+				.WithGraveyardRecursion(manaCost: 4)
+				.Build(),
 		];
 }

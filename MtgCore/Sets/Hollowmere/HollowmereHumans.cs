@@ -163,17 +163,7 @@ public static class HollowmereHumans
 						EventTypeName = EventTypeNames.SpellCast,
 						Filter = new IsControlledByYouSpecification(),
 					},
-					eb =>
-						eb.WithAction(
-							new AddModifierAction
-							{
-								PowerBonus = 1,
-								ToughnessBonus = 1,
-								Duration = ModifierDuration.UntilEndOfTurn,
-								TargetContextKey = ContextKeys.SourceCardId,
-							},
-							TargetingStrategy.NoTarget()
-						)
+					eb => eb.WithProwessBuff()
 				)
 				.Build(),
 			// A second lord with a different axis, so two lords stack meaningfully.

@@ -25,16 +25,16 @@ public class HollowmereSetTests
 	[Test]
 	public void Set_HasExpectedSizeSoFar()
 	{
-		Assert.That(Hollowmere.Cards.Count, Is.EqualTo(150), "Batches 1-3 are 50 cards each");
+		Assert.That(Hollowmere.Cards.Count, Is.EqualTo(200), "Batches 1-4 are 50 cards each");
 	}
 
-	[TestCase(nameof(HollowmereGraveyard), 43)]
+	[TestCase(nameof(HollowmereGraveyard), 48)]
 	[TestCase(nameof(HollowmereDiscard), 30)]
 	[TestCase(nameof(HollowmereHumans), 30)]
-	[TestCase(nameof(HollowmereMill), 5)]
+	[TestCase(nameof(HollowmereMill), 25)]
 	[TestCase(nameof(HollowmereAngelsDemons), 4)]
 	[TestCase(nameof(HollowmereSpirits), 4)]
-	[TestCase(nameof(HollowmereSpells), 5)]
+	[TestCase(nameof(HollowmereSpells), 30)]
 	[TestCase(nameof(HollowmereZombies), 4)]
 	[TestCase(nameof(HollowmereWerewolves), 20)]
 	[TestCase(nameof(HollowmereVampires), 3)]

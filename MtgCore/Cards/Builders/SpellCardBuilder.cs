@@ -203,6 +203,26 @@ public class SpellCardBuilder
 	}
 
 	/// <summary>
+	/// Prowess: +1/+1 until end of turn to the card whose ability is resolving.
+	///
+	/// Targets via ContextKeys.SourceCardId rather than a targeting strategy, because the
+	/// buff must land on the trigger's own source. Pair with a SpellCast trigger.
+	/// </summary>
+	public SpellCardBuilder WithProwessBuff(int power = 1, int toughness = 1)
+	{
+		FlushPending();
+		_pendingAction = new AddModifierAction
+		{
+			PowerBonus = power,
+			ToughnessBonus = toughness,
+			Duration = ModifierDuration.UntilEndOfTurn,
+			TargetContextKey = ContextKeys.SourceCardId,
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
 	/// Grant keywords for a duration. The effect-driven counterpart to a lord's static grant —
 	/// used for combat tricks and one-shot team pumps.
 	/// </summary>

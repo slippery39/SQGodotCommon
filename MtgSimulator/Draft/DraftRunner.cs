@@ -121,6 +121,11 @@ public class DraftRunner
 		var draws = 0;
 		var gameIndex = 0;
 
+		// How games actually ended. A deck-out is a normal win for the opponent, not a draw,
+		// so without this a format where mill quietly became the dominant win condition would
+		// look identical to a healthy one.
+		var endReasons = new Dictionary<GameEndReason, int>();
+
 		var gameTimer = Stopwatch.StartNew();
 		for (var a = 0; a < _seatCount; a++)
 		{
@@ -134,6 +139,9 @@ public class DraftRunner
 					var gameSeed = _seed + 1000 + gameIndex++ * 5;
 
 					var result = PlayGame(pools[p1], pools[p2], gameSeed, _aiDepth);
+
+					endReasons[result.EndReason] =
+						endReasons.GetValueOrDefault(result.EndReason) + 1;
 
 					played[p1]++;
 					played[p2]++;
@@ -156,7 +164,8 @@ public class DraftRunner
 				played,
 				draws,
 				gameIndex,
-				gameTimer.ElapsedMilliseconds
+				gameTimer.ElapsedMilliseconds,
+				endReasons
 			);
 
 		return pickerNames
@@ -206,7 +215,8 @@ public class DraftRunner
 		IReadOnlyList<int> played,
 		int draws,
 		int totalGames,
-		long elapsedMs
+		long elapsedMs,
+		IReadOnlyDictionary<GameEndReason, int> endReasons
 	)
 	{
 		Console.WriteLine("  --- Draft Results ---");
@@ -230,6 +240,15 @@ public class DraftRunner
 			PrintPickerSummary(pickerNames, wins, played, picker);
 		Console.WriteLine();
 		Console.WriteLine($"  Games: {totalGames}  Draws: {draws}  Time: {elapsedMs / 1000.0:F1}s");
+
+		// Reading this: Damage should dominate. A large LibraryEmpty share means the format is
+		// being decided by decking rather than by combat, which is a set-design problem and is
+		// otherwise invisible — a deck-out is a normal win, not a draw.
+		var reasons = string.Join(
+			"  ",
+			endReasons.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value}")
+		);
+		Console.WriteLine($"  Ended by: {reasons}");
 		Console.WriteLine();
 	}
 

@@ -99,6 +99,13 @@ public record EventTriggerCondition : TriggerCondition
 			PlayerGainedLifeEvent e => e.PlayerId,
 			CardDrawnEvent e => e.CardId,
 			CardDiscardedEvent e => e.CardId,
+			// The milled/graveyard events report the CARD, not the player, so an
+			// IsControlledByYouSpecification filter reads "a card of yours was milled".
+			// Without these entries the subject is 0, the filter is skipped, and a
+			// "whenever you mill" trigger would also fire on the opponent's mills.
+			CardMilledEvent e => e.CardId,
+			CardEnteredGraveyardEvent e => e.CardId,
+			CardLeftGraveyardEvent e => e.CardId,
 			CardRevealedEvent e => e.CardId,
 			SpellCastEvent e => e.CardId,
 			PermanentPlayedEvent e => e.CardId,
