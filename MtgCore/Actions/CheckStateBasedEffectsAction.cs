@@ -185,7 +185,7 @@ public record CheckStateBasedEffectsAction : GameAction
 					state = state.SpawnAction(
 						new ResolveEffectAction
 						{
-							Effects = [ability.Effect],
+							Effects = ability.Effects,
 							CastingPlayerId = card.ControllerId,
 							SourceCardId = card.Id,
 						}

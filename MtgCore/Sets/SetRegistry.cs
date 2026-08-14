@@ -22,7 +22,7 @@ public static class SetRegistry
 	public const string LegacyCode = "LEG";
 
 	public static IReadOnlyList<CardSet> All { get; } =
-		[new CardSet(LegacyCode, "Legacy", CardLibrary.All)];
+		[new CardSet(LegacyCode, "Legacy", CardLibrary.All), Hollowmere.Set];
 
 	/// The set used when a caller does not specify one.
 	public static CardSet Default => Get(LegacyCode);

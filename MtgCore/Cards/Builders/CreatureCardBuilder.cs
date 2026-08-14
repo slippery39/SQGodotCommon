@@ -25,6 +25,7 @@ public class CreatureCardBuilder
 	private bool _hasLifelink;
 	private bool _hasTrample;
 	private bool _hasDoubleStrike;
+	private bool _hasDeathtouch;
 
 	internal CreatureCardBuilder(string name, int manaCost, int power, int toughness)
 	{
@@ -100,6 +101,56 @@ public class CreatureCardBuilder
 		return this;
 	}
 
+	public CreatureCardBuilder WithDeathtouch()
+	{
+		_hasDeathtouch = true;
+		return this;
+	}
+
+	/// <summary>
+	/// Threshold — while the controller's graveyard holds at least <paramref name="minimum"/>
+	/// cards, this creature gets the given bonus. Stamped Permanent so StartTurnAction's
+	/// end-of-turn cleanup does not strip it.
+	/// </summary>
+	public CreatureCardBuilder WithThreshold(
+		int power,
+		int toughness,
+		int minimum = 7,
+		bool flying = false,
+		bool taunt = false,
+		bool lifelink = false,
+		bool trample = false,
+		bool deathtouch = false
+	)
+	{
+		_extraComponents.Add(
+			new ThresholdComponent
+			{
+				Minimum = minimum,
+				PowerBonus = power,
+				ToughnessBonus = toughness,
+				GrantsFlying = flying,
+				GrantsTaunt = taunt,
+				GrantsLifelink = lifelink,
+				GrantsTrample = trample,
+				GrantsDeathtouch = deathtouch,
+				Duration = ModifierDuration.Permanent,
+			}
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// Graveyard recursion (Gravecrawler / unearth): castable from the graveyard for
+	/// <paramref name="manaCost"/>. Unlike spell flashback the creature is not exiled
+	/// afterwards, so it can be recurred every time it dies.
+	/// </summary>
+	public CreatureCardBuilder WithGraveyardRecursion(int manaCost)
+	{
+		_extraComponents.Add(new FlashbackComponent { FlashbackManaCost = manaCost });
+		return this;
+	}
+
 	// ===== ABILITIES =====
 
 	public CreatureCardBuilder WithActivatedAbility(
@@ -138,25 +189,40 @@ public class CreatureCardBuilder
 	public CreatureCardBuilder WithEtbTrigger(string name, Action<SpellCardBuilder> effect) =>
 		WithTriggeredAbility(name, TriggerConditions.OnSelfEntersBattlefield(), effect);
 
+	/// <summary>
+	/// "When this dies, ...". Sets ActiveInZone = Graveyard, which is mandatory for death
+	/// triggers: by the time CheckStateBasedEffectsAction scans for triggers the card has
+	/// already moved to the graveyard, so a Battlefield-scoped trigger silently never fires.
+	/// </summary>
+	public CreatureCardBuilder WithDeathTrigger(string name, Action<SpellCardBuilder> effect) =>
+		WithTriggeredAbility(
+			name,
+			TriggerConditions.OnSelfDies(),
+			effect,
+			ActiveInZone: ZoneType.Graveyard
+		);
+
 	public CreatureCardBuilder WithTriggeredAbility(
 		string name,
 		TriggerCondition condition,
-		Action<SpellCardBuilder> effect
+		Action<SpellCardBuilder> effect,
+		ZoneType ActiveInZone = ZoneType.Battlefield
 	)
 	{
 		var effectBuilder = new SpellCardBuilder("_", 0);
 		effect(effectBuilder);
+
+		var effects = effectBuilder.BuildEffects();
+		if (effects.Count == 0)
+			throw new InvalidOperationException($"Triggered ability '{name}' has no effect.");
 
 		_extraComponents.Add(
 			new TriggeredAbilityComponent
 			{
 				Name = name,
 				Condition = condition,
-				Effect = effectBuilder.BuildEffects() is { Count: > 0 } fx
-					? fx[0]
-					: throw new InvalidOperationException(
-						$"Triggered ability '{name}' has no effect."
-					),
+				ActiveInZone = ActiveInZone,
+				Effects = effects,
 			}
 		);
 		return this;
@@ -183,6 +249,7 @@ public class CreatureCardBuilder
 			HasLifelink = _hasLifelink,
 			HasTrample = _hasTrample,
 			HasDoubleStrike = _hasDoubleStrike,
+			HasDeathtouch = _hasDeathtouch,
 		};
 
 		var components = ImmutableArray

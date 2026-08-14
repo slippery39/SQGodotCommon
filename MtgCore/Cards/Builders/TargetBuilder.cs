@@ -35,6 +35,21 @@ public class TargetBuilder
 	public TargetingStrategy CreatureInYourGraveyard() =>
 		Build(new IsCreatureInOwnGraveyardSpecification());
 
+	/// Either player. Use for symmetric effects ("each player mills 4").
+	public TargetingStrategy Players() => Build(new IsPlayerSpecification());
+
+	/// The opposing player only — the mill/discard target, not their creatures.
+	public TargetingStrategy Opponent() =>
+		Build(new IsPlayerSpecification().And(new IsControlledByOpponentSpecification()));
+
+	/// Any creature card in your own graveyard, as a non-targeted mass selection.
+	public TargetingStrategy CreaturesInYourGraveyard() =>
+		Build(new IsCreatureInOwnGraveyardSpecification());
+
+	/// Every creature you control — for anthems and team pumps.
+	public TargetingStrategy AllYourCreatures() =>
+		Build(new IsCreatureSpecification().And(new IsControlledByYouSpecification()));
+
 	public TargetingStrategy WithSpec(TargetSpecification spec) => Build(spec);
 
 	private TargetingStrategy Build(TargetSpecification spec) =>

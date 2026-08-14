@@ -19,6 +19,18 @@ public record SelectCardFromZoneAction : GameAction
 {
 	public ZoneType Zone { get; init; }
 	public string Subtype { get; init; } = "";
+
+	/// <summary>
+	/// Optional specification the card must also satisfy. Subtype alone cannot express
+	/// "a creature card" or "an instant or sorcery", because those are identified by
+	/// components rather than by a subtype string — use
+	/// IsCreatureInOwnGraveyardSpecification / IsInstantOrSorceryInOwnGraveyardSpecification.
+	///
+	/// Evaluated with CastingPlayerId set to the player whose zone is being searched, so
+	/// "own graveyard" specs resolve against that zone even when TargetOpponent is true.
+	/// </summary>
+	public TargetSpecification? Filter { get; init; } = null;
+
 	public int PlayerId { get; init; } = 0;
 	public string PlayerIdContextKey { get; init; } = "";
 	public string OutputKey { get; init; } = "";
@@ -47,11 +59,20 @@ public record SelectCardFromZoneAction : GameAction
 
 		var zoneId = gameState.GetPlayerZoneId(playerId, Zone);
 
+		var filterContext = new TargetingContext
+		{
+			GameState = gameState,
+			CastingPlayerId = playerId,
+			SourceCardId = GetInput<int>(ContextKeys.SourceCardId, 0),
+			IsNonTargeted = true,
+		};
+
 		var candidate = gameState
 			.GetCardsInZone(zoneId)
 			.FirstOrDefault(c =>
 				(string.IsNullOrEmpty(Subtype) || c.HasSubtype(Subtype))
 				&& (excludeId == 0 || c.Id != excludeId)
+				&& (Filter == null || Filter.IsSatisfiedBy(c.Id, filterContext))
 			);
 
 		var foundId = candidate?.Id ?? 0;

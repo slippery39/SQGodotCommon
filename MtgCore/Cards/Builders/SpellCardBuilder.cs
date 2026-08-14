@@ -149,6 +149,113 @@ public class SpellCardBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// Mill — move cards from the top of a library to the graveyard. Defaults to milling
+	/// yourself (self-mill is the enabler half of the graveyard theme); override with
+	/// .WithTarget(Single().Opponent()) for an opposing mill.
+	/// </summary>
+	public SpellCardBuilder WithMill(int amount)
+	{
+		FlushPending();
+		_pendingAction = new MillAction { Amount = amount };
+		_pendingTargeting = TargetingStrategy.Self();
+		return this;
+	}
+
+	/// <summary>
+	/// Reanimation — put a creature card from your graveyard onto the battlefield.
+	/// </summary>
+	public SpellCardBuilder WithReanimate()
+	{
+		FlushPending();
+		_pendingAction = new PutIntoBattlefieldAction();
+		_pendingTargeting = TargetingStrategy.SingleTarget(
+			new IsCreatureInOwnGraveyardSpecification()
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// Return a creature card from your graveyard to your hand. Slower than reanimation but
+	/// not restricted to creatures you can afford to cheat in.
+	/// </summary>
+	public SpellCardBuilder WithReturnCreatureFromGraveyard()
+	{
+		FlushPending();
+		_pendingAction = new ReturnToHandAction();
+		_pendingTargeting = TargetingStrategy.SingleTarget(
+			new IsCreatureInOwnGraveyardSpecification()
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// Return an instant or sorcery card from your graveyard to your hand.
+	/// </summary>
+	public SpellCardBuilder WithReturnSpellFromGraveyard()
+	{
+		FlushPending();
+		_pendingAction = new ReturnToHandAction();
+		_pendingTargeting = TargetingStrategy.SingleTarget(
+			new IsInstantOrSorceryInOwnGraveyardSpecification()
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// Grant keywords for a duration. The effect-driven counterpart to a lord's static grant —
+	/// used for combat tricks and one-shot team pumps.
+	/// </summary>
+	public SpellCardBuilder WithGrantKeyword(
+		bool flying = false,
+		bool haste = false,
+		bool taunt = false,
+		bool lifelink = false,
+		bool trample = false,
+		bool deathtouch = false,
+		ModifierDuration duration = ModifierDuration.UntilEndOfTurn
+	)
+	{
+		FlushPending();
+		_pendingAction = new GrantKeywordAction
+		{
+			GrantsFlying = flying,
+			GrantsHaste = haste,
+			GrantsTaunt = taunt,
+			GrantsLifelink = lifelink,
+			GrantsTrample = trample,
+			GrantsDeathtouch = deathtouch,
+			Duration = duration,
+		};
+		_pendingTargeting = TargetingStrategy.SingleTarget(
+			TargetSpecification.CreatureControlledByYou()
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// Exile cards from a graveyard — the format's answer to the graveyard theme.
+	/// </summary>
+	public SpellCardBuilder WithExileFromGraveyard(bool opponent = true)
+	{
+		FlushPending();
+		_pendingAction = new PipelineAction
+		{
+			Steps = ImmutableList.Create<GameAction>(
+				new SelectCardFromZoneAction
+				{
+					Zone = ZoneType.Graveyard,
+					TargetOpponent = opponent,
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+					OutputKey = "gy_hate_target",
+				},
+				new MoveCardToExileAction { CardIdContextKey = "gy_hate_target" }
+			),
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
 	public SpellCardBuilder WithGiveFlashback()
 	{
 		FlushPending();

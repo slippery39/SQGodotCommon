@@ -145,8 +145,13 @@ public static class MtgCardMapper
 
 	private static string? DescribeTriggeredAbility(TriggeredAbilityComponent trigger)
 	{
-		var effectStr = DescribeEffect(trigger.Effect);
-		if (effectStr == null)
+		// A trigger may carry several effects; join the ones we can describe and drop the
+		// rest, so an undescribable effect degrades the text rather than blanking the ability.
+		var effectStr = string.Join(
+			", ",
+			trigger.Effects.Select(DescribeEffect).Where(s => s != null)
+		);
+		if (string.IsNullOrEmpty(effectStr))
 			return null;
 		return $"{DescribeTriggerCondition(trigger.Condition)}: {effectStr}";
 	}

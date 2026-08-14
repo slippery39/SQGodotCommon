@@ -85,6 +85,10 @@ MtgCore/
 │                            # EquippedBoostComponent (stamped on creature by AttachEquipmentAction; removed on detach/creature-death)
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Terravore. Must be stamped with Duration = Permanent in card definitions.
 ├── Sets/                    # CardSet (Code, Name, Cards; Draftable filters lands), SetRegistry (All, Default, Get)
+│   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
+│                            # HollowmereTokens.cs holds token templates (excluded from the card list).
+│                            # Read the header of Hollowmere.cs before adding cards — it states the rate bar and
+│                            # why no-blocker combat drives every cost in the set.
 │                            # A draftable card pool. Cards do NOT know their set — the set owns the list.
 │                            # No SetCode on Card, no rarity, no pack-composition rules; packs stay uniform
 │                            # random samples, which is what a cube wants. Add those only when a set needs them.
@@ -100,7 +104,14 @@ MtgCore/
 │                            # Shroud/Hexproof: enforced in IsCreatureSpecification.IsSatisfiedBy — no other spec changes needed.
 │                            #   HasShroud = no one can target (including controller). HasHexproof = opponents can't target (controller can).
 │                            # Composites: AndSpecification (zone-first candidate narrowing), OrSpecification, NotSpecification
-├── Triggers/                # TriggeredAbilityComponent { Name, Condition, Effect, ActiveInZone (default Battlefield) }, EventTriggerCondition, TriggerCondition
+├── Triggers/                # TriggeredAbilityComponent { Name, Condition, Effects, ActiveInZone (default Battlefield) }, EventTriggerCondition, TriggerCondition
+│                            # Effects is a LIST — read it, not Effect. `Effect = ...` is a write-only convenience
+│                            #   that appends, kept so single-effect definitions read naturally. Multiple effects
+│                            #   resolve in order through one ResolveEffectAction, which is the only way each can
+│                            #   carry its own targeting strategy (PipelineAction steps read targets from context
+│                            #   keys, so mass "all valid" targeting is unavailable inside a pipeline).
+│                            # SpellsCastLastTurnCondition { Minimum, Maximum } — fires at the controller's turn start
+│                            #   when MtgGame.SpellsCastLastTurn is in range. The werewolf transform condition.
 │                            # ActiveInZone = ZoneType.Graveyard for abilities that fire from the graveyard (e.g. Bloodghast landfall)
 │                            # LandsPlayedCondition { Threshold } — fires when LandPlayedEvent.PlayerId == controller AND LandsPlayedTotal >= Threshold; used by Valakut's emblem
 │                            # CheckStateBasedEffectsAction scans battlefield, graveyard, AND player emblems; ActiveInZone guards card-based triggers; emblems always fire
@@ -405,6 +416,27 @@ On an instant or sorcery the component still means one-shot Flashback (resolve, 
 
 `MtgActionGenerator.AddGraveyardFlashbackActions` generates the creature case with no target
 enumeration, since creatures carry no `SpellComponent`.
+
+## Card Builder Additions for Hollowmere
+
+`CreatureCardBuilder`: `WithDeathtouch()`, `WithThreshold(power, toughness, minimum, …)`,
+`WithGraveyardRecursion(manaCost)`, and `WithDeathTrigger(name, effect)` — the last sets
+`ActiveInZone = Graveyard` for you, which is mandatory and easy to forget.
+`WithTriggeredAbility` now takes an optional `ActiveInZone` and keeps **all** effects the
+builder produced, not just the first.
+
+`SpellCardBuilder`: `WithMill(n)` (defaults to milling yourself; override with
+`.WithTarget(Single().Opponent())`), `WithReanimate()`, `WithReturnCreatureFromGraveyard()`,
+`WithReturnSpellFromGraveyard()`, `WithGrantKeyword(…)`, `WithExileFromGraveyard()`.
+
+`TargetBuilder`: `Players()`, `Opponent()`, `AllYourCreatures()`, `CreaturesInYourGraveyard()`.
+
+`SelectCardFromZoneAction.Filter` takes a `TargetSpecification`, because subtype alone cannot
+express "a creature card" or "an instant or sorcery" — those are identified by components.
+
+`ReturnToHandAction` is the targeted counterpart to `MoveCardToHandAction`, so
+"return target creature card from your graveyard to your hand" works with ordinary targeting
+instead of a pipeline.
 
 ## Card Creation Cookbook
 
