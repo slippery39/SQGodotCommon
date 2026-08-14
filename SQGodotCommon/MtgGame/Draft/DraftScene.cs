@@ -21,8 +21,9 @@ public partial class DraftScene : Control
 	private const int PackSize = 15;
 	private const int PackCount = 3;
 
-	/// Which set this scene drafts. Change this one line to draft a different set.
-	private static readonly CardSet DraftedSet = SetRegistry.Default;
+	/// Which set this scene drafts. Change this one line to draft a different set —
+	/// SetRegistry.Default is the Legacy pool, Hollowmere.Set is the graveyard set.
+	private static readonly CardSet DraftedSet = Hollowmere.Set;
 
 	/// Derived from DraftTrainingStore.PathFor so the asset filename and the filename the
 	/// trainer writes cannot drift apart — only the directory differs (res:// vs sim_results/).
@@ -73,8 +74,8 @@ public partial class DraftScene : Control
 
 	/// <summary>
 	/// Bots use the trained model when it is available and Curve when it is not. Those are not
-	/// equivalent — Curve measures ~30% against Trained's ~82% — so the difference is shown in
-	/// the header rather than hidden.
+	/// equivalent — on Hollowmere, Trained measures 75% against Curve's 37.5% — so the
+	/// difference is shown in the header rather than hidden.
 	/// </summary>
 	private List<DraftPicker> BuildPickers(out string pickerName)
 	{

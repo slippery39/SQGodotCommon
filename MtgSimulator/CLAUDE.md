@@ -182,7 +182,13 @@ Key rules:
 
 `SQGodotCommon/MtgGame/Draft/DraftScene.cs` is the caller the "human seats have no picker type" rule anticipated. It renders `Seats[0].Offer`, takes a click, and builds the pick list as `i == humanSeat ? clickedIndex : pickers[i](offer, pool)` before calling `ApplyPicks`. **No library change was needed to make drafting playable** — keep it that way.
 
-The Godot scene loads the trained model through `DraftTrainingStore.FromJson` rather than `Load`, because `System.IO` cannot read a `res://` path inside an exported build. The model is duplicated at `SQGodotCommon/MtgGame/Assets/draft_training.json`; **regenerating `sim_results/draft_training.json` does not update it** — copy it across, or the game keeps drafting against a stale model.
+The Godot scene loads the trained model through `DraftTrainingStore.FromJson` rather than `Load`, because `System.IO` cannot read a `res://` path inside an exported build. The model is duplicated under `SQGodotCommon/MtgGame/Assets/`; **regenerating the file in `sim_results/` does not update it** — copy it across, or the game keeps drafting against a stale model.
+
+`DraftScene.DraftedSet` selects which set the UI drafts — currently `Hollowmere.Set`, changeable in one line. `ModelPath` is derived from `DraftTrainingStore.PathFor(DraftedSet.Code)`, so the asset filename tracks the set automatically and cannot drift from what the trainer writes.
+
+**Card text is part of making a set playable, not a cosmetic afterthought.** A pack is read, not glanced at, and `MtgCardMapper.GetRulesText` silently omits any mechanic it does not know — invisible in a screenshot, but it makes the card undraftable. `SQGodotCommon.Tests/MtgGameTests/HollowmereRulesTextTests.cs` pins one card per mechanic and asserts no card in the set renders blank. Extend both when adding a mechanic.
+
+Card art is keyed by a slug of the card name (`CardArtLoader`). Hollowmere has essentially none, which degrades to the card scene's default artwork rather than failing — `Details.ApplyTo` only overwrites the texture when non-null.
 
 `DraftTournament` runs the pod afterwards: circle-method pairings (seat 0 fixed, the rest rotate) give `seats - 1` rounds where every seat plays every other exactly once. The human's game is played in the UI and reported via `RecordHumanResult`; the other pairings run through `DraftRunner.PlayGame` on a background task started *before* the human leaves for their match, so the tables resolve in parallel with them playing. `SimulateRoundAsync` deliberately touches no tournament state — results come back and are folded in by `CompletePendingRoundAsync` on the caller's thread, which is why there is no lock anywhere in the class.
 

@@ -60,6 +60,15 @@ public static class MtgCardMapper
 				lines.Add(spellText);
 		}
 
+		// Dynamic P/T. Without this a Tarmogoyf-style card reads as a plain 0/1.
+		if (card.HasComponent<GraveyardCountComponent>())
+			lines.Add(
+				"Power and toughness are each equal to the number of cards in your graveyard"
+			);
+
+		foreach (var threshold in card.GetComponents<ThresholdComponent>())
+			lines.Add(DescribeThreshold(threshold));
+
 		foreach (var ability in card.GetComponents<ActivatedAbilityComponent>())
 		{
 			var text = DescribeActivatedAbility(ability);
@@ -81,7 +90,61 @@ public static class MtgCardMapper
 				lines.Add(text);
 		}
 
+		// The other half of a double-faced card. Without this a werewolf reads as a plain
+		// vanilla creature and the drafter cannot see what it becomes.
+		var transform = card.GetComponent<TransformComponent>();
+		if (transform != null)
+			lines.Add(DescribeTransform(transform));
+
+		// Last, as on a real card. Flashback changes how a card is drafted more than almost
+		// anything else in this set, so it must never be missing from the text.
+		var flashback = card.GetComponent<FlashbackComponent>();
+		if (flashback != null)
+			lines.Add(
+				card.HasComponent<CreatureComponent>()
+					? $"Cast from graveyard for {flashback.FlashbackManaCost} (stays on the battlefield)"
+					: $"Flashback {flashback.FlashbackManaCost}"
+			);
+
 		return string.Join("\n", lines);
+	}
+
+	private static string DescribeThreshold(ThresholdComponent t)
+	{
+		var parts = new List<string>();
+		if (t.PowerBonus != 0 || t.ToughnessBonus != 0)
+			parts.Add($"+{t.PowerBonus}/+{t.ToughnessBonus}");
+
+		var keywords = new List<string>();
+		if (t.GrantsFlying)
+			keywords.Add("Flying");
+		if (t.GrantsHaste)
+			keywords.Add("Haste");
+		if (t.GrantsTaunt)
+			keywords.Add("Taunt");
+		if (t.GrantsReach)
+			keywords.Add("Reach");
+		if (t.GrantsLifelink)
+			keywords.Add("Lifelink");
+		if (t.GrantsTrample)
+			keywords.Add("Trample");
+		if (t.GrantsDeathtouch)
+			keywords.Add("Deathtouch");
+		if (keywords.Count > 0)
+			parts.Add($"gains {string.Join(", ", keywords)}");
+
+		var effect = parts.Count > 0 ? string.Join(" and ", parts) : "has no bonus";
+		return $"Threshold — while {t.Minimum}+ cards are in your graveyard, this {effect}";
+	}
+
+	private static string DescribeTransform(TransformComponent transform)
+	{
+		var nightCreature = transform
+			.OtherFaceComponents.OfType<CreatureComponent>()
+			.FirstOrDefault();
+		var stats =
+			nightCreature == null ? "" : $" ({nightCreature.Power}/{nightCreature.Toughness})";
+		return $"Transforms into {transform.OtherFaceName}{stats}";
 	}
 
 	private static string? DescribeKeywords(CreatureComponent creature)
@@ -101,6 +164,12 @@ public static class MtgCardMapper
 			keywords.Add("Lifelink");
 		if (creature.HasTrample)
 			keywords.Add("Trample");
+		if (creature.HasDeathtouch)
+			keywords.Add("Deathtouch");
+		if (creature.HasShroud)
+			keywords.Add("Shroud");
+		if (creature.HasHexproof)
+			keywords.Add("Hexproof");
 		return keywords.Count > 0 ? string.Join(", ", keywords) : null;
 	}
 
@@ -158,30 +227,65 @@ public static class MtgCardMapper
 
 	private static string DescribeTriggerCondition(TriggerCondition condition)
 	{
+		// Werewolf transform conditions are not EventTriggerConditions, so they must be
+		// matched before the cast below or every werewolf reads "When triggered".
+		if (condition is SpellsCastLastTurnCondition s)
+			return s.Maximum == 0
+				? "If no spells were cast last turn"
+				: $"If {s.Minimum}+ spells were cast last turn";
+
+		if (condition is LandsPlayedCondition l)
+			return $"Whenever you play a land, if you have played {l.Threshold}+";
+
 		if (condition is not EventTriggerCondition e)
 			return "When triggered";
 
+		// A source-card filter means the event is about THIS card, which changes the wording
+		// from "whenever a card is discarded" to "when you discard this" — the difference
+		// between a generic trigger and a madness card.
+		var isSelf = e.Filter is IsSourceCardSpecification;
+
 		return e.EventTypeName switch
 		{
-			EventTypeNames.CreatureEnteredBattlefield => "When this enters",
+			EventTypeNames.CreatureEnteredBattlefield => isSelf
+				? "When this enters"
+				: "Whenever a creature enters",
+			EventTypeNames.PermanentEnteredBattlefield => "When this enters",
 			EventTypeNames.TurnStarted => "At the beginning of your upkeep",
 			EventTypeNames.CombatDamageDealtToPlayer =>
 				"Whenever this deals combat damage to a player",
-			EventTypeNames.CreatureDestroyed => "When this dies",
+			EventTypeNames.CreatureDestroyed => isSelf
+				? "When this dies"
+				: "Whenever a creature dies",
 			EventTypeNames.CreatureAttacked => "Whenever this attacks",
-			EventTypeNames.SpellCast => "Whenever a spell is cast",
+			EventTypeNames.SpellCast => "Whenever you cast a spell",
+			EventTypeNames.CardDiscarded => isSelf
+				? "Madness — when you discard this"
+				: "Whenever you discard a card",
+			EventTypeNames.CardMilled => "Whenever a card of yours is milled",
+			EventTypeNames.LandPlayed => "Landfall — whenever you play a land",
 			EventTypeNames.TurnEnded => "At end of turn",
 			_ => "When triggered",
 		};
 	}
 
-	private static string? DescribeStaticAbility(StaticAbilityComponent ability) =>
-		ability switch
+	private static string? DescribeStaticAbility(StaticAbilityComponent ability)
+	{
+		var text = ability switch
 		{
 			StaticPTBoostAbility p => $"+{p.PowerBonus}/+{p.ToughnessBonus} to matching creatures",
 			StaticGrantKeywordAbility g => DescribeGrantedKeywords(g),
 			_ => null,
 		};
+		if (text == null)
+			return null;
+
+		// A graveyard-active static is a completely different card from a battlefield one —
+		// Wonder does nothing while it is in play. The zone has to be in the text.
+		return ability.ActiveInZone == ZoneType.Graveyard
+			? $"While this is in your graveyard: {text}"
+			: text;
+	}
 
 	private static string? DescribeGrantedKeywords(StaticGrantKeywordAbility g)
 	{
@@ -198,6 +302,12 @@ public static class MtgCardMapper
 			keywords.Add("Lifelink");
 		if (g.GrantsTrample)
 			keywords.Add("Trample");
+		if (g.GrantsDeathtouch)
+			keywords.Add("Deathtouch");
+		if (g.GrantsShroud)
+			keywords.Add("Shroud");
+		if (g.GrantsHexproof)
+			keywords.Add("Hexproof");
 		return keywords.Count > 0 ? $"Matching creatures gain {string.Join(", ", keywords)}" : null;
 	}
 
@@ -216,12 +326,58 @@ public static class MtgCardMapper
 				? $"Create a {c.CardTemplate.Name}"
 				: $"Create {c.Count} {c.CardTemplate.Name}s",
 			ExileAction => $"Exile{targetSuffix}",
-			DiscardCardsAction => $"Discard a card{targetSuffix}",
+			DiscardCardsAction => "Discard a card",
 			MoveCardToHandAction => $"Return{targetSuffix} to hand",
 			AddTemporaryManaAction m => $"Add {m.Amount} mana",
+			MillAction m => DescribeMill(m, effect),
+			ReturnToHandAction => $"Return{targetSuffix} to hand",
+			DrainLifeAction d => $"Target opponent loses {d.Amount} life and you gain {d.Amount}",
+			DiscardRandomCardAction => "Target opponent discards a card at random",
+			GrantKeywordAction g => DescribeGrantKeyword(g, targetSuffix),
+			GiveFlashbackAction => "An instant or sorcery in your graveyard gains Flashback",
+			PutIntoBattlefieldAction => $"Put{targetSuffix} onto the battlefield",
+			TransformAction => "Transform this",
 			PipelineAction p => DescribePipeline(p),
 			_ => null,
 		};
+	}
+
+	/// Mill reads very differently depending on who it hits, and the targeting strategy is
+	/// the only thing that says which — so it is resolved here rather than in the table.
+	private static string DescribeMill(MillAction mill, CardEffect effect)
+	{
+		var who = effect.TargetingStrategy.SelectionMode switch
+		{
+			TargetSelectionMode.CastingPlayer => "You mill",
+			TargetSelectionMode.AllValid => "Each player mills",
+			_ => "Target player mills",
+		};
+		return $"{who} {mill.Amount}";
+	}
+
+	private static string DescribeGrantKeyword(GrantKeywordAction g, string targetSuffix)
+	{
+		var keywords = new List<string>();
+		if (g.GrantsFlying)
+			keywords.Add("Flying");
+		if (g.GrantsHaste)
+			keywords.Add("Haste");
+		if (g.GrantsTaunt)
+			keywords.Add("Taunt");
+		if (g.GrantsReach)
+			keywords.Add("Reach");
+		if (g.GrantsLifelink)
+			keywords.Add("Lifelink");
+		if (g.GrantsTrample)
+			keywords.Add("Trample");
+		if (g.GrantsDeathtouch)
+			keywords.Add("Deathtouch");
+
+		if (keywords.Count == 0)
+			return "Grants nothing";
+
+		var duration = g.Duration == ModifierDuration.UntilEndOfTurn ? " until end of turn" : "";
+		return $"Gain {string.Join(", ", keywords)}{targetSuffix}{duration}";
 	}
 
 	private static string? DescribePipeline(PipelineAction pipeline)
@@ -246,6 +402,21 @@ public static class MtgCardMapper
 				: $"search your library for a {s.Subtype}",
 			PutIntoBattlefieldAction => "put it into play",
 			DiscardCardsAction => "discard",
+			MillAction m => $"mill {m.Amount}",
+			MoveCardToHandAction => "return it to hand",
+			MoveCardToExileAction => "exile it",
+			ReturnToHandAction => "return it to hand",
+			DrainLifeAction d => $"drain {d.Amount}",
+			DiscardRandomCardAction => "opponent discards at random",
+			CreateCardAction c => string.IsNullOrEmpty(c.CountInputKey)
+				? $"create {c.Count} {c.CardTemplate.Name}"
+				: $"create that many {c.CardTemplate.Name}s",
+			CountCardsWithSubtypeAction s => string.IsNullOrEmpty(s.Subtype)
+				? $"count the cards in your {s.Zone.ToString().ToLowerInvariant()}"
+				: $"count {s.Subtype}s in your {s.Zone.ToString().ToLowerInvariant()}",
+			SelectCardFromZoneAction s => string.IsNullOrEmpty(s.Subtype)
+				? $"choose a card from a {s.Zone.ToString().ToLowerInvariant()}"
+				: $"choose a {s.Subtype} from a {s.Zone.ToString().ToLowerInvariant()}",
 			_ => null,
 		};
 }
