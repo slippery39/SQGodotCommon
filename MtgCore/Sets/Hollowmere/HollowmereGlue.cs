@@ -72,12 +72,51 @@ public static class HollowmereGlue
 				.WithSubtype(Hollowmere.Spirit)
 				.WithTaunt()
 				.Build(),
-			// The bigger wall, for the decks that need to reach their top end.
+			// The bigger wall, for the decks that need to reach their top end. Reach matters
+			// now that Flying keeps a creature off the ground entirely.
 			CardFactory
 				.Creature("Hollowmere Bulwark", manaCost: 4, power: 2, toughness: 6)
 				.WithSubtype(Hollowmere.Horror)
 				.WithTaunt()
 				.WithReach()
 				.Build(),
+			// ===== REMOVAL PASS =====
+			// Scales with the target instead of being a flat destroy, and doubles as a trick.
+			CardFactory.Spell("Wither the Vein", manaCost: 2).WithWeaken(3, 3).Build(),
+			// Cheap interaction that answers a big threat for one mana at the right moment.
+			CardFactory
+				.Spell("Grasping Silt", manaCost: 1)
+				.WithWeaken(2, 2)
+				.WithFlashback(3)
+				.Build(),
+			// Answers Hexproof and Shroud, which nothing else in the set can touch, and it
+			// takes their best creature rather than their worst.
+			CardFactory.Spell("Toll of the Mere", manaCost: 3).WithEdict().WithDraw(1).Build(),
+			// Bounce answers what destroy cannot: a recursive threat comes back as a card to
+			// re-cast rather than as fuel in the graveyard.
+			CardFactory.Spell("Drag to the Depths", manaCost: 2).WithBounce().WithMill(2).Build(),
+			// Removal that costs no card but risks the fighter — and reaches flyers a ground
+			// creature could never attack.
+			CardFactory
+				.Spell("Set Upon the Pack", manaCost: 2)
+				.WithFight()
+				.WithFlashback(4)
+				.Build(),
+			// A creature that is itself removal, so the aggressive decks have interaction too.
+			CardFactory
+				.Creature("Mere-Bank Hunter", manaCost: 4, power: 3, toughness: 3)
+				.WithSubtype(Hollowmere.Human)
+				.WithEtbTrigger("Run It Down", eb => eb.WithFight())
+				.Build(),
+			// Reach on a body plus a shrink — the answer to the Flying decks.
+			CardFactory
+				.Creature("Chapel Longbowman", manaCost: 3, power: 2, toughness: 3)
+				.WithSubtype(Hollowmere.Human)
+				.WithSubtype(Hollowmere.Soldier)
+				.WithReach()
+				.WithEtbTrigger("Loose an Arrow", eb => eb.WithWeaken(2, 2))
+				.Build(),
+			// Finds the answer or the payoff, which is what stops a synergy deck flooding.
+			CardFactory.Spell("Search the Parish", manaCost: 2).WithDig(4).Build(),
 		];
 }

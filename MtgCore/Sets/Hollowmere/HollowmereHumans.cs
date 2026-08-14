@@ -336,7 +336,7 @@ public static class HollowmereHumans
 				.Build(),
 			// The defensive top-end, for the Human decks that want to go long.
 			CardFactory
-				.Creature("Cathedral Sanctifier", manaCost: 5, power: 3, toughness: 5)
+				.Creature("Cathedral Sanctifier", manaCost: 5, power: 4, toughness: 6)
 				.WithSubtype(Hollowmere.Human)
 				.WithSubtype(Hollowmere.Cleric)
 				.WithTaunt()

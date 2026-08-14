@@ -117,20 +117,20 @@ public static class HollowmereAngelsDemons
 			// ===== BATCH 6: ANGELS =====
 			// The cheap Angel, so the tribe is castable rather than only reanimatable.
 			CardFactory
-				.Creature("Voice of the Chapel", manaCost: 3, power: 2, toughness: 2)
+				.Creature("Voice of the Chapel", manaCost: 3, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Angel)
 				.WithFlying()
 				.Build(),
 			// A defensive Angel — Taunt plus Flying holds both attack angles at once.
 			CardFactory
-				.Creature("Herald of the Chapel", manaCost: 4, power: 2, toughness: 4)
+				.Creature("Herald of the Chapel", manaCost: 4, power: 3, toughness: 5)
 				.WithSubtype(Hollowmere.Angel)
 				.WithFlying()
 				.WithTaunt()
 				.Build(),
 			// The efficient evasive lifelinker that stabilises a race.
 			CardFactory
-				.Creature("Chapel Guardian Angel", manaCost: 4, power: 3, toughness: 3)
+				.Creature("Chapel Guardian Angel", manaCost: 4, power: 3, toughness: 4)
 				.WithSubtype(Hollowmere.Angel)
 				.WithFlying()
 				.WithLifelink()
@@ -223,7 +223,7 @@ public static class HollowmereAngelsDemons
 			// The cheap Demon. Slightly under rate on toughness rather than carrying a
 			// recurring drawback, which would be pure downside with no blockers.
 			CardFactory
-				.Creature("Fiend of the Silt", manaCost: 4, power: 4, toughness: 3)
+				.Creature("Fiend of the Silt", manaCost: 4, power: 4, toughness: 4)
 				.WithSubtype(Hollowmere.Demon)
 				.WithFlying()
 				.Build(),

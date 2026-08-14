@@ -168,7 +168,7 @@ public static class HollowmereVampires
 				.Build(),
 			// Evasive damage — the tribe's clock when the ground stalls.
 			CardFactory
-				.Creature("Vampire Interloper", manaCost: 3, power: 3, toughness: 1)
+				.Creature("Vampire Interloper", manaCost: 3, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Vampire)
 				.WithFlying()
 				.Build(),

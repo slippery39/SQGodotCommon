@@ -165,7 +165,7 @@ public static class HollowmereSpirits
 				.Build(),
 			// An efficient evasive clock.
 			CardFactory
-				.Creature("Niblis of the Mere", manaCost: 3, power: 3, toughness: 2)
+				.Creature("Niblis of the Mere", manaCost: 3, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Spirit)
 				.WithFlying()
 				.Build(),
@@ -213,10 +213,12 @@ public static class HollowmereSpirits
 					AllValid().AllYourCreatures()
 				)
 				.Build(),
-			// Two bodies twice — four evasive creatures from one card.
+			// Three bodies twice. Deliberately a bigger burst than Lingering Souls rather than
+			// a costlier one — at 2 tokens it was strictly worse than Souls in the same set,
+			// which is the exact failure HollowmereRateTests now guards against.
 			CardFactory
 				.Spell("Windswept Chorus", manaCost: 4)
-				.WithCreateTokens(HollowmereTokens.Spirit(), count: 2)
+				.WithCreateTokens(HollowmereTokens.Spirit(), count: 3)
 				.WithFlashback(6)
 				.Build(),
 			// Four power of evasion across two bodies.

@@ -25,7 +25,7 @@ public class HollowmereSetTests
 	[Test]
 	public void Set_IsComplete()
 	{
-		Assert.That(Hollowmere.Cards.Count, Is.EqualTo(300), "Hollowmere is a 300-card set");
+		Assert.That(Hollowmere.Cards.Count, Is.EqualTo(308), "Hollowmere is a 300-card set");
 	}
 
 	[TestCase(nameof(HollowmereGraveyard), 60)]
@@ -38,7 +38,7 @@ public class HollowmereSetTests
 	[TestCase(nameof(HollowmereZombies), 25)]
 	[TestCase(nameof(HollowmereWerewolves), 20)]
 	[TestCase(nameof(HollowmereVampires), 20)]
-	[TestCase(nameof(HollowmereGlue), 10)]
+	[TestCase(nameof(HollowmereGlue), 18)]
 	public void Theme_HasExpectedCardCount(string theme, int expected)
 	{
 		var actual = theme switch
