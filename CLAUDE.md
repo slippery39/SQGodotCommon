@@ -13,8 +13,12 @@ SQGodotCommon/
 ├── MtgConsole/                      # Console presentation layer (ConsoleGameLoop, ConsoleRenderer)
 ├── MtgSimulator/                    # Simulator library — AI strategies, runners, deck factories (referenced by Godot + tests)
 ├── MtgSimulator.Console/            # Thin console entry point (Program.cs only — references MtgSimulator)
-└── SQGodotCommon/                   # Godot utility library (separate concern — ignore on MTG branch)
+└── SQGodotCommon/                   # Godot project — reusable utilities (Common/, Project/)
+    └── MtgGame/                     # MTG front end: board, deck select, draft + tournament
 ```
+
+The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only through
+`MtgGameManager` (plain C#, no Godot types) — see `MtgSimulator/CLAUDE.md` for the draft path.
 
 ## Platform
 

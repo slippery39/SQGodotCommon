@@ -138,9 +138,19 @@ public static class DraftTrainingStore
 	{
 		if (!File.Exists(path))
 			return null;
+		return FromJson(File.ReadAllText(path));
+	}
+
+	/// <summary>
+	/// Parses already-read JSON. Godot needs this: the model ships inside the .pck as a
+	/// res:// file, which System.IO cannot open, so the caller reads it with Godot's
+	/// FileAccess and hands the text here.
+	/// </summary>
+	public static DraftTrainingData? FromJson(string json)
+	{
 		try
 		{
-			return JsonSerializer.Deserialize<DraftTrainingData>(File.ReadAllText(path), Options);
+			return JsonSerializer.Deserialize<DraftTrainingData>(json, Options);
 		}
 		catch (JsonException)
 		{

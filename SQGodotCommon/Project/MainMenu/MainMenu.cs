@@ -6,7 +6,7 @@ public partial class MainMenu : Control
 {
 	// Exported array to define menu options
 	[Export]
-	public string[] MenuOptions = { "Start Game", "Options", "Quit" };
+	public string[] MenuOptions = { "Start Game", "Draft", "Options", "Quit" };
 
 	private int _currentOptionIndex = 0; // Tracks the currently selected option
 	private List<Label> _menuLabels = new List<Label>(); // Holds references to menu option labels
@@ -131,6 +131,11 @@ public partial class MainMenu : Control
 			case "Start Game":
 				QueueFree();
 				GameManager.Instance.ChangeScene("res://MtgGame/DeckSelect/DeckSelectScene.tscn");
+				break;
+
+			case "Draft":
+				QueueFree();
+				GameManager.Instance.ChangeScene("res://MtgGame/Draft/DraftScene.tscn");
 				break;
 
 			case "Options":

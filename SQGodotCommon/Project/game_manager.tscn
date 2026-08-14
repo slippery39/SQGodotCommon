@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://cu2greewjvlm3"]
 
 [ext_resource type="Script" uid="uid://bpvn6nt0m0dj5" path="res://Project/GameManager.cs" id="1_3f33t"]
-[ext_resource type="PackedScene" path="res://MtgGame/DeckSelect/DeckSelectScene.tscn" id="2_deckselect"]
+[ext_resource type="PackedScene" uid="uid://yhu7afnrqy6a" path="res://Project/MainMenu/main_menu.tscn" id="2_mainmenu"]
 
 [node name="GameManager" type="Node2D" unique_id=1595048554]
 script = ExtResource("1_3f33t")
-InitialScene = ExtResource("2_deckselect")
+InitialScene = ExtResource("2_mainmenu")

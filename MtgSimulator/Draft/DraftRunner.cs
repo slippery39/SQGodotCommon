@@ -125,19 +125,7 @@ public class DraftRunner
 					var (p1, p2) = k % 2 == 0 ? (a, b) : (b, a);
 					var gameSeed = _seed + 1000 + gameIndex++ * 5;
 
-					var (state, ids, cardNames) = DraftGameSetup.Build(pools[p1], pools[p2]);
-					var aiRng = new Random(gameSeed + 4);
-					var runner = new GameRunner(
-						new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: aiRng),
-						new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: aiRng)
-					);
-					var (result, _) = runner.Run(
-						state,
-						ids,
-						cardNames,
-						shuffleSeed: gameSeed + 2,
-						gameRngSeed: gameSeed + 3
-					);
+					var result = PlayGame(pools[p1], pools[p2], gameSeed, _aiDepth);
 
 					played[p1]++;
 					played[p2]++;
@@ -170,6 +158,37 @@ public class DraftRunner
 				g => g.Key,
 				g => (Wins: g.Sum(x => wins[x.i]), Played: g.Sum(x => played[x.i]))
 			);
+	}
+
+	/// <summary>
+	/// Plays one game between two drafted pools. Shared with <see cref="DraftTournament"/> so
+	/// the seed derivation and strategy setup live in exactly one place — the seeds are what
+	/// make a draft reproducible, and two copies of this would drift.
+	///
+	/// <paramref name="pool1"/> is on the play. Both seats get the same AI so the result
+	/// measures the decks, not the pilots.
+	/// </summary>
+	public static GameResult PlayGame(
+		IReadOnlyList<Card> pool1,
+		IReadOnlyList<Card> pool2,
+		int gameSeed,
+		int aiDepth
+	)
+	{
+		var (state, ids, cardNames) = DraftGameSetup.Build(pool1, pool2);
+		var aiRng = new Random(gameSeed + 4);
+		var runner = new GameRunner(
+			new MultiTurnBeamSearchAiStrategy(ids, aiDepth, rng: aiRng),
+			new MultiTurnBeamSearchAiStrategy(ids, aiDepth, rng: aiRng)
+		);
+		var (result, _) = runner.Run(
+			state,
+			ids,
+			cardNames,
+			shuffleSeed: gameSeed + 2,
+			gameRngSeed: gameSeed + 3
+		);
+		return result;
 	}
 
 	private static void PrintReport(

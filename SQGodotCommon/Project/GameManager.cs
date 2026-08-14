@@ -149,6 +149,18 @@ public partial class GameManager : Singleton<GameManager>
 	}
 
 	/// <summary>
+	/// Drops a service so <see cref="HasService{T}"/> reports false again. Needed for services
+	/// that scope a run rather than the session — a finished draft tournament, for instance,
+	/// would otherwise keep redirecting later games back to its standings screen.
+	/// </summary>
+	public void RemoveService<T>()
+		where T : class
+	{
+		if (_services.Remove(typeof(T)))
+			Log.Debug("Removed service: {ServiceType}", typeof(T).Name);
+	}
+
+	/// <summary>
 	/// Retrieves a registered service. Throws if the service hasn't been registered.
 	/// </summary>
 	public T GetService<T>()

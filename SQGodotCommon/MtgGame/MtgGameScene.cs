@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Common.Cards;
 using ImmutableGameObjects;
 using MtgCore;
+using MtgSimulator;
 using Project;
 
 namespace MtgGame;
@@ -785,8 +786,15 @@ public partial class MtgGameScene : Node2D
 		if (gameOver == null)
 			return false;
 
+		// Callers guard on _isGameOver inconsistently, and several of them can deliver the same
+		// batch of events. Stacking a second game-over overlay was merely ugly; double-reporting
+		// a draft tournament result would silently corrupt the standings.
+		if (_isGameOver)
+			return true;
+
 		_isGameOver = true;
 		Refresh();
+		ReportTournamentResult(gameOver);
 
 		var lostEvent = events.OfType<PlayerLostEvent>().FirstOrDefault();
 		if (lostEvent != null)
@@ -831,10 +839,42 @@ public partial class MtgGameScene : Node2D
 		resultLabel.AddThemeFontSizeOverride("font_size", 72);
 		vbox.AddChild(resultLabel);
 
+		vbox.AddChild(BuildPostGameButton());
+	}
+
+	/// <summary>
+	/// Reports the human's result when this game is one round of a draft tournament. Called
+	/// exactly once, from the guarded branch above — the standings have no way to detect a
+	/// duplicate.
+	/// </summary>
+	private void ReportTournamentResult(GameOverEvent e)
+	{
+		if (!GameManager.Instance.HasService<DraftTournament>())
+			return;
+
+		var tournament = GameManager.Instance.GetService<DraftTournament>();
+		tournament.RecordHumanResult(
+			tournament.Round,
+			humanWon: e.WinnerPlayerId == _manager.HumanPlayerId,
+			isDraw: e.WinnerPlayerId == -1
+		);
+	}
+
+	/// A tournament game returns to the standings; a one-off game goes back to deck selection.
+	private static Button BuildPostGameButton()
+	{
+		if (GameManager.Instance.HasService<DraftTournament>())
+		{
+			var standingsBtn = new Button { Text = "Back to Standings" };
+			standingsBtn.Pressed += () =>
+				GameManager.Instance.ChangeScene("res://MtgGame/Draft/TournamentScene.tscn");
+			return standingsBtn;
+		}
+
 		var restartBtn = new Button { Text = "Play Again" };
 		restartBtn.Pressed += () =>
 			GameManager.Instance.ChangeScene("res://MtgGame/DeckSelect/DeckSelectScene.tscn");
-		vbox.AddChild(restartBtn);
+		return restartBtn;
 	}
 
 	// ===== REFRESH =====

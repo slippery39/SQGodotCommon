@@ -7,11 +7,22 @@ public partial class CardPreviewPopup : CanvasLayer
 	[Export]
 	public PackedScene InternalCardScene { get; set; }
 
+	/// <summary>
+	/// Preview scale. Must be set before the node enters the tree — <see cref="_Ready"/> applies
+	/// it. The default suits the battlefield's small cards; a screen showing larger cards needs
+	/// a larger preview, or hovering shrinks the card instead of magnifying it.
+	/// </summary>
+	[Export]
+	public float PreviewScale { get; set; } = 0.65f;
+
 	private InternalCardUI2D _cardNode;
 
-	// Card native size ~300×470px. At 0.65 scale: ~195×305px.
-	private const float HalfW = 97.5f;
-	private const float HalfH = 152.5f;
+	// Card native size, before scaling.
+	private const float CardWidth = 300f;
+	private const float CardHeight = 470f;
+
+	private float HalfW => CardWidth * PreviewScale / 2f;
+	private float HalfH => CardHeight * PreviewScale / 2f;
 
 	public override void _Ready()
 	{
@@ -20,7 +31,7 @@ public partial class CardPreviewPopup : CanvasLayer
 		if (InternalCardScene != null)
 		{
 			_cardNode = InternalCardScene.Instantiate<InternalCardUI2D>();
-			_cardNode.Scale = new Vector2(0.65f, 0.65f);
+			_cardNode.Scale = new Vector2(PreviewScale, PreviewScale);
 			AddChild(_cardNode);
 		}
 

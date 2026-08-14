@@ -583,6 +583,7 @@ public class MtgGameManager
 				ownerId,
 				[.. CardPool.All, .. CardLibrary.All]
 			),
+			DeckChoice.Drafted d => Draft.BuildDeck(d.Pool, ownerId),
 			_ => throw new ArgumentOutOfRangeException(nameof(choice)),
 		};
 

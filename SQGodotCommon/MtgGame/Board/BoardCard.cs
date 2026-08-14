@@ -18,8 +18,19 @@ public enum BoardCardHighlight
 
 public partial class BoardCard : Control
 {
+	/// The scale board_card.tscn's CustomMinimumSize (150x186) was authored against.
+	private const float BaseScale = 0.42f;
+
 	[Export]
 	public PackedScene InternalCardScene { get; set; }
+
+	/// <summary>
+	/// Card visual scale. The node's minimum size scales with it, so layout follows.
+	/// Must be set before the node enters the tree — <see cref="_Ready"/> applies it.
+	/// Defaults to the battlefield's size, which is too small to read a rules box at.
+	/// </summary>
+	[Export]
+	public float CardScale { get; set; } = BaseScale;
 
 	private InternalCardUI2D _cardNode;
 	private Label _statsLabel;
@@ -32,11 +43,16 @@ public partial class BoardCard : Control
 
 	public override void _Ready()
 	{
+		// The authored minimum size assumes BaseScale, so grow it by the same factor rather
+		// than hardcoding a second set of dimensions. At CardScale = BaseScale this is a no-op,
+		// which is what keeps the battlefield pixel-identical.
+		CustomMinimumSize *= CardScale / BaseScale;
+
 		if (InternalCardScene != null)
 		{
 			_cardNode = InternalCardScene.Instantiate<InternalCardUI2D>();
-			_cardNode.Scale = new Vector2(0.42f, 0.42f);
-			_cardNode.Position = new Vector2(75, 93);
+			_cardNode.Scale = new Vector2(CardScale, CardScale);
+			_cardNode.Position = CustomMinimumSize / 2;
 			AddChild(_cardNode);
 		}
 		else
@@ -48,7 +64,10 @@ public partial class BoardCard : Control
 		_statsLabel.SetAnchorsPreset(LayoutPreset.FullRect);
 		_statsLabel.HorizontalAlignment = HorizontalAlignment.Right;
 		_statsLabel.VerticalAlignment = VerticalAlignment.Bottom;
-		_statsLabel.AddThemeFontSizeOverride("font_size", 14);
+		_statsLabel.AddThemeFontSizeOverride(
+			"font_size",
+			Mathf.RoundToInt(14 * CardScale / BaseScale)
+		);
 		_statsLabel.AddThemeColorOverride("font_color", new Color(1f, 0.95f, 0.75f, 1f));
 		_statsLabel.AddThemeColorOverride("font_shadow_color", Colors.Black);
 		_statsLabel.AddThemeConstantOverride("shadow_offset_x", 1);
@@ -73,6 +92,10 @@ public partial class BoardCard : Control
 		}
 	}
 
+	/// <param name="state">
+	/// Null for a card that is not in a game — a draft pack, for instance. Stats then come from
+	/// the printed P/T, since a card outside a GameState can carry no modifiers or damage.
+	/// </param>
 	public void Refresh(
 		Card card,
 		GameState state,
@@ -115,10 +138,10 @@ public partial class BoardCard : Control
 		var creature = card.GetComponent<CreatureComponent>();
 		if (creature != null)
 		{
-			var stats = state.GetEffectiveStats(card.Id);
-			var statsText = $"{stats.Power}/{stats.Toughness}";
-			if (creature.Damage > 0)
-				statsText += $" -{creature.Damage}";
+			var statsText =
+				state == null
+					? $"{creature.Power}/{creature.Toughness}"
+					: BuildInGameStats(state, card, creature);
 			_statsLabel.Text = statsText;
 			_statsLabel.Visible = true;
 		}
@@ -126,5 +149,12 @@ public partial class BoardCard : Control
 		{
 			_statsLabel.Visible = false;
 		}
+	}
+
+	private static string BuildInGameStats(GameState state, Card card, CreatureComponent creature)
+	{
+		var stats = state.GetEffectiveStats(card.Id);
+		var text = $"{stats.Power}/{stats.Toughness}";
+		return creature.Damage > 0 ? $"{text} -{creature.Damage}" : text;
 	}
 }
