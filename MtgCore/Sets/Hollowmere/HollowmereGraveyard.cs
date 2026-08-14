@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore.Cards.Builders;
 using static MtgCore.Cards.Builders.TargetBuilder;
@@ -6,14 +6,14 @@ using static MtgCore.Cards.Builders.TargetBuilder;
 namespace MtgCore;
 
 /// <summary>
-/// Theme 1 — Graveyard Matters. The set's spine: threshold, flashback, reanimation, and
+/// Theme 1 â€” Graveyard Matters. The set's spine: threshold, flashback, reanimation, and
 /// creatures that scale off graveyard size. Most other themes overlap into this one.
 ///
 /// Self-mill is capped at 5 per card. In a 40-card deck a player draws roughly 20 cards over a
-/// normal game, so stacking large self-mill effects can deck the caster — LibraryEmptyEvent is
+/// normal game, so stacking large self-mill effects can deck the caster â€” LibraryEmptyEvent is
 /// a loss condition. Repeatable small mill is the safer way to build a deep graveyard.
 ///
-/// Complete at 60 cards — the set's largest theme, as its spine should be.
+/// Complete at 60 cards â€” the set's largest theme, as its spine should be.
 /// </summary>
 public static class HollowmereGraveyard
 {
@@ -55,7 +55,7 @@ public static class HollowmereGraveyard
 						)
 				)
 				.Build(),
-			// Tarmogoyf's rate is the whole appeal — at a higher cost this is a worse vanilla.
+			// Tarmogoyf's rate is the whole appeal â€” at a higher cost this is a worse vanilla.
 			new()
 			{
 				Name = "Splinterbone Horror",
@@ -108,7 +108,7 @@ public static class HollowmereGraveyard
 				.Build(),
 			// Cheap self-mill plus a body later. Two cards' worth of value in one slot.
 			CardFactory.Spell("Grim Excavation", manaCost: 1).WithMill(4).WithFlashback(3).Build(),
-			// Threshold on a defensive body. Taunt matters — without it a big butt does nothing.
+			// Threshold on a defensive body. Taunt matters â€” without it a big butt does nothing.
 			CardFactory
 				.Creature("Cairn Warden", manaCost: 3, power: 1, toughness: 4)
 				.WithSubtype(Hollowmere.Spirit)
@@ -120,7 +120,7 @@ public static class HollowmereGraveyard
 				.Creature("Sexton of the Drowned Chapel", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Human)
 				.WithSubtype(Hollowmere.Cleric)
-				.WithEtbTrigger("Exhume the Faithful", eb => eb.WithReturnCreatureFromGraveyard())
+				.WithEtbTrigger("Exhume the Faithful", eb => eb.WithAutoReturnCreature())
 				.Build(),
 			// Payoff for a full graveyard that also fills it. Draws two at threshold.
 			CardFactory
@@ -150,7 +150,7 @@ public static class HollowmereGraveyard
 				.WithReturnCreatureFromGraveyard()
 				.WithFlashback(3)
 				.Build(),
-			// Efficient reanimation with no flashback — the cheap, one-shot version.
+			// Efficient reanimation with no flashback â€” the cheap, one-shot version.
 			CardFactory.Spell("Exhume the Mere", manaCost: 2).WithReanimate().Build(),
 			// Threshold plus trample: the graveyard deck's way through a Taunt wall.
 			CardFactory
@@ -158,7 +158,7 @@ public static class HollowmereGraveyard
 				.WithSubtype(Hollowmere.Zombie)
 				.WithThreshold(power: 2, toughness: 2, trample: true)
 				.Build(),
-			// Self-mill plus recursion in one card — the theme's engine at two mana.
+			// Self-mill plus recursion in one card â€” the theme's engine at two mana.
 			CardFactory
 				.Spell("Corpse Harvest", manaCost: 2)
 				.WithMill(3)
@@ -177,7 +177,7 @@ public static class HollowmereGraveyard
 						)
 				)
 				.Build(),
-			// Bulk self-mill with a second use. Capped at 5 — see the class header.
+			// Bulk self-mill with a second use. Capped at 5 â€” see the class header.
 			CardFactory.Spell("Unhallowed Rite", manaCost: 2).WithMill(5).WithFlashback(4).Build(),
 			// A wall that stops being a wall. Taunt is the only defensive tool here.
 			CardFactory
@@ -238,7 +238,7 @@ public static class HollowmereGraveyard
 					}
 				),
 			},
-			// Repeatable recursion on a body — a mana sink that never runs out of gas.
+			// Repeatable recursion on a body â€” a mana sink that never runs out of gas.
 			CardFactory
 				.Creature("Hollowmere Necromancer", manaCost: 3, power: 2, toughness: 2)
 				.WithSubtype(Hollowmere.Human)
@@ -246,10 +246,10 @@ public static class HollowmereGraveyard
 				.WithActivatedAbility(
 					"Call the Drowned",
 					manaCost: 3,
-					effect: eb => eb.WithReturnCreatureFromGraveyard()
+					effect: eb => eb.WithAutoReturnCreature()
 				)
 				.Build(),
-			// Removal that also advances the plan — the two-for-one bar for three mana.
+			// Removal that also advances the plan â€” the two-for-one bar for three mana.
 			CardFactory
 				.Spell("Rite of Rot", manaCost: 3)
 				.WithDestroy()
@@ -269,6 +269,7 @@ public static class HollowmereGraveyard
 				.Spell("Second Burial", manaCost: 3)
 				.WithReanimate()
 				.WithGrantKeyword(haste: true)
+				.WithTarget(AllValid().AllYourCreatures())
 				.Build(),
 			// Card advantage stapled to the enabler. The Graveyard deck's draw spell.
 			CardFactory
@@ -276,13 +277,13 @@ public static class HollowmereGraveyard
 				.WithDraw(3)
 				.WithMill(3)
 				.Build(),
-			// Graveyard hate on a body — maindeckable because everyone uses their yard.
+			// Graveyard hate on a body â€” maindeckable because everyone uses their yard.
 			CardFactory
 				.Creature("Graveyard Trespasser", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Werewolf)
 				.WithEtbTrigger("Desecrate", eb => eb.WithExileFromGraveyard().WithLifeGain(2))
 				.Build(),
-			// Big threshold body with evasion — the top of the theme's own curve.
+			// Big threshold body with evasion â€” the top of the theme's own curve.
 			CardFactory
 				.Creature("Mausoleum Warden", manaCost: 5, power: 3, toughness: 5)
 				.WithSubtype(Hollowmere.Spirit)
@@ -296,7 +297,7 @@ public static class HollowmereGraveyard
 				.WithTrample()
 				.WithEtbTrigger("Silt Surge", eb => eb.WithMill(5))
 				.Build(),
-			// Returns two creatures on resolution — the 7-drop bar is "wins if unanswered".
+			// Returns two creatures on resolution â€” the 7-drop bar is "wins if unanswered".
 			CardFactory
 				.Creature("Choir of the Drowned", manaCost: 7, power: 5, toughness: 5)
 				.WithSubtype(Hollowmere.Spirit)
@@ -304,11 +305,11 @@ public static class HollowmereGraveyard
 				.WithEtbTrigger(
 					"Raise the Choir",
 					eb =>
-						eb.WithReturnCreatureFromGraveyard()
+						eb.WithAutoReturnCreature()
 							.WithCreateTokens(HollowmereTokens.Spirit(), count: 2)
 				)
 				.Build(),
-			// Repeatable mill on a cheap body — the safe way to build a deep graveyard
+			// Repeatable mill on a cheap body â€” the safe way to build a deep graveyard
 			// without the decking risk of a large one-shot self-mill.
 			CardFactory
 				.Creature("Silt-Sifter", manaCost: 2, power: 1, toughness: 3)
@@ -350,7 +351,7 @@ public static class HollowmereGraveyard
 				.WithSubtype(Hollowmere.Horror)
 				.WithThreshold(power: 4, toughness: 4, trample: true)
 				.Build(),
-			// A recurring flier — the graveyard deck's evasive clock.
+			// A recurring flier â€” the graveyard deck's evasive clock.
 			CardFactory
 				.Creature("Drowned Revenant", manaCost: 4, power: 3, toughness: 2)
 				.WithSubtype(Hollowmere.Spirit)
@@ -400,7 +401,7 @@ public static class HollowmereGraveyard
 				.WithReanimate()
 				.WithCreateTokens(HollowmereTokens.Spirit(), count: 2)
 				.Build(),
-			// A threshold one-drop with evasion — relevant on turn one and turn twelve.
+			// A threshold one-drop with evasion â€” relevant on turn one and turn twelve.
 			CardFactory
 				.Creature("Mere-Wisp", manaCost: 1, power: 1, toughness: 1)
 				.WithSubtype(Hollowmere.Spirit)
@@ -408,12 +409,12 @@ public static class HollowmereGraveyard
 				.WithThreshold(power: 2, toughness: 1)
 				.Build(),
 			// ===== BATCH 4 =====
-			// Reanimation on a body — the effect the whole top-end is built around.
+			// Reanimation on a body â€” the effect the whole top-end is built around.
 			CardFactory
 				.Creature("Hollowmere Gravecaller", manaCost: 5, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Human)
 				.WithSubtype(Hollowmere.Wizard)
-				.WithEtbTrigger("Call Them Up", eb => eb.WithReanimate())
+				.WithEtbTrigger("Call Them Up", eb => eb.WithAutoReanimate())
 				.Build(),
 			// A cheap threshold flier for the aggressive graveyard decks.
 			CardFactory
@@ -435,7 +436,7 @@ public static class HollowmereGraveyard
 				.WithSubtype(Hollowmere.Zombie)
 				.WithEtbTrigger("Pick the Bones", eb => eb.WithExileFromGraveyard().WithMill(2))
 				.Build(),
-			// Recurring lifelink — the graveyard deck's answer to an aggressive start.
+			// Recurring lifelink â€” the graveyard deck's answer to an aggressive start.
 			CardFactory
 				.Creature("Mere-Drowned Penitent", manaCost: 3, power: 2, toughness: 2)
 				.WithSubtype(Hollowmere.Spirit)
@@ -457,7 +458,7 @@ public static class HollowmereGraveyard
 				.WithFlying()
 				.WithThreshold(power: 3, toughness: 2)
 				.Build(),
-			// Recursion that scales — better the longer the game runs.
+			// Recursion that scales â€” better the longer the game runs.
 			CardFactory
 				.Creature("Mere-Bound Revenant", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Zombie)
@@ -468,7 +469,7 @@ public static class HollowmereGraveyard
 			CardFactory
 				.Spell("Rise from the Silt", manaCost: 4)
 				.WithReanimate()
-				.WithReturnCreatureFromGraveyard()
+				.WithMill(2)
 				.Build(),
 			// A discard outlet that is also a threshold enabler.
 			CardFactory
@@ -495,7 +496,7 @@ public static class HollowmereGraveyard
 				.WithTrample()
 				.WithThreshold(power: 4, toughness: 4, deathtouch: true)
 				.Build(),
-			// Recursion on a cheap evasive body — hard for a removal deck to answer.
+			// Recursion on a cheap evasive body â€” hard for a removal deck to answer.
 			CardFactory
 				.Creature("Silt-Wisp Haunt", manaCost: 2, power: 1, toughness: 2)
 				.WithSubtype(Hollowmere.Spirit)
@@ -532,7 +533,7 @@ public static class HollowmereGraveyard
 					}
 				),
 			},
-			// Mass recursion to hand — slower than reanimation, but it dodges exile removal.
+			// Mass recursion to hand â€” slower than reanimation, but it dodges exile removal.
 			CardFactory
 				.Spell("The Mere Remembers", manaCost: 4)
 				.WithAction(new ReturnToHandAction(), AllValid().CreaturesInYourGraveyard())

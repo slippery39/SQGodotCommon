@@ -164,13 +164,17 @@ public class HollowmereRulesTextTests
 	[Test]
 	public void TargetedGraveyardEffects_NameTheZone()
 	{
+		// A spell can ask the player to choose, so it names a target.
 		Assert.That(
 			TextFor("Ghoulcaller's Bargain"),
 			Does.Contain("target creature card in your graveyard")
 		);
+
+		// A TRIGGER cannot ask, so it picks automatically — the text has to say so rather
+		// than claim a target the player never gets to choose.
 		Assert.That(
 			TextFor("Sexton of the Drowned Chapel"),
-			Does.Contain("Return target creature card in your graveyard to your hand")
+			Does.Contain("choose a creature card from your graveyard")
 		);
 	}
 

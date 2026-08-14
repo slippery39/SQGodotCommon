@@ -91,7 +91,7 @@ public record ActivateAbilityAction : GameAction
 		ActivatedAbilityComponent ability
 	)
 	{
-		if (ability.Effect.TargetingStrategy.RequiresUserSelection)
+		if (ability.TargetedEffect?.TargetingStrategy.RequiresUserSelection == true)
 		{
 			var context = new TargetingContext
 			{
@@ -99,7 +99,7 @@ public record ActivateAbilityAction : GameAction
 				SourceCardId = CardId,
 				CastingPlayerId = ActivatingPlayerId,
 			};
-			if (!ability.Effect.TargetingStrategy.ValidateTargets(TargetIds, context))
+			if (!ability.TargetedEffect.TargetingStrategy.ValidateTargets(TargetIds, context))
 				return ValidationResult.Invalid("Invalid targets for ability");
 		}
 
@@ -175,7 +175,7 @@ public record ActivateAbilityAction : GameAction
 				[
 					new ResolveEffectAction
 					{
-						Effects = ImmutableList.Create(ability.Effect),
+						Effects = ability.Effects,
 						CastingPlayerId = ActivatingPlayerId,
 						SourceCardId = CardId,
 						TargetIds = targetIds,

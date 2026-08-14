@@ -1,16 +1,16 @@
-using MtgCore.Cards.Builders;
+﻿using MtgCore.Cards.Builders;
 using static MtgCore.Cards.Builders.TargetBuilder;
 
 namespace MtgCore;
 
 /// <summary>
-/// Theme 4 — Mill. Mostly self-mill, which is the enabler half of the graveyard theme;
+/// Theme 4 â€” Mill. Mostly self-mill, which is the enabler half of the graveyard theme;
 /// opposing mill exists but is a slower clock than combat damage in a 40-card format, so it
 /// is always attached to a body or a cantrip rather than sold as a win condition on its own.
 ///
 /// Opposing mill is real here in a way it usually is not: decks are 40 cards and games run
 /// long enough that 8-10 cards is a meaningful chunk. It is still never sold as a standalone
-/// win condition — every opposing-mill card also draws, kills, or leaves a body, so drafting
+/// win condition â€” every opposing-mill card also draws, kills, or leaves a body, so drafting
 /// them is never a trap.
 ///
 /// Self-mill stays capped at 5 per card for the decking reason in the Graveyard theme header.
@@ -28,7 +28,7 @@ public static class HollowmereMill
 				.WithTarget(Single().Players())
 				.WithDraw(1)
 				.Build(),
-			// Deathtouch keeps a 1-drop enabler relevant on turn 10 — otherwise it rots in hand.
+			// Deathtouch keeps a 1-drop enabler relevant on turn 10 â€” otherwise it rots in hand.
 			CardFactory
 				.Creature("Cryptwalk Scarab", manaCost: 1, power: 1, toughness: 2)
 				.WithSubtype(Hollowmere.Insect)
@@ -45,10 +45,10 @@ public static class HollowmereMill
 				.Creature("Tome Dredger", manaCost: 4, power: 4, toughness: 4)
 				.WithSubtype(Hollowmere.Zombie)
 				.WithEtbTrigger("Dredge the Archive", eb => eb.WithMill(4))
-				.WithDeathTrigger("Reclaim", eb => eb.WithReturnCreatureFromGraveyard())
+				.WithDeathTrigger("Reclaim", eb => eb.WithAutoReturnCreature())
 				.Build(),
 			// The opposing-mill card, priced as a cantrip because milling out is not a
-			// realistic clock here — it is graveyard denial and a trigger enabler.
+			// realistic clock here â€” it is graveyard denial and a trigger enabler.
 			CardFactory
 				.Spell("Dreadwaters", manaCost: 2)
 				.WithMill(5)
@@ -94,7 +94,7 @@ public static class HollowmereMill
 				.WithTarget(Single().Opponent())
 				.WithDraw(1)
 				.Build(),
-			// Self-mill with a second use — two graveyard-fills from one card.
+			// Self-mill with a second use â€” two graveyard-fills from one card.
 			CardFactory
 				.Spell("Sunken Archives", manaCost: 2)
 				.WithMill(4)
@@ -115,13 +115,13 @@ public static class HollowmereMill
 				.WithEtbTrigger("Drown the Records", eb => eb.WithMill(4))
 				.WithThreshold(power: 2, toughness: 2)
 				.Build(),
-			// Symmetric on paper, one-sided in practice — you are the one with the payoffs.
+			// Symmetric on paper, one-sided in practice â€” you are the one with the payoffs.
 			CardFactory
 				.Spell("Flood the Vaults", manaCost: 3)
 				.WithMill(5)
 				.WithTarget(AllValid().Players())
 				.Build(),
-			// A repeatable mill outlet — the safe way to reach a deep graveyard.
+			// A repeatable mill outlet â€” the safe way to reach a deep graveyard.
 			CardFactory
 				.Creature("Silt-Choked Oracle", manaCost: 3, power: 2, toughness: 2)
 				.WithSubtype(Hollowmere.Human)
@@ -162,7 +162,7 @@ public static class HollowmereMill
 				.WithTaunt()
 				.WithEtbTrigger("Drag Down", eb => eb.WithMill(4))
 				.Build(),
-			// Mills a quarter of their deck and draws — a real threat to a slow deck.
+			// Mills a quarter of their deck and draws â€” a real threat to a slow deck.
 			CardFactory
 				.Spell("Drown the Archive", manaCost: 4)
 				.WithMill(10)
@@ -176,7 +176,7 @@ public static class HollowmereMill
 				.WithSubtype(Hollowmere.Wizard)
 				.WithTriggeredAbility("Study the Drowned", OnYouMill(), eb => eb.WithLifeGain(1))
 				.Build(),
-			// Mill plus a board — the four-drop two-for-one.
+			// Mill plus a board â€” the four-drop two-for-one.
 			CardFactory
 				.Spell("Sunken Chorus", manaCost: 4)
 				.WithMill(5)
@@ -193,12 +193,9 @@ public static class HollowmereMill
 			CardFactory
 				.Creature("Abyssal Dredger", manaCost: 5, power: 4, toughness: 4)
 				.WithSubtype(Hollowmere.Zombie)
-				.WithEtbTrigger(
-					"Dredge the Depths",
-					eb => eb.WithMill(5).WithReturnCreatureFromGraveyard()
-				)
+				.WithEtbTrigger("Dredge the Depths", eb => eb.WithMill(5).WithAutoReturnCreature())
 				.Build(),
-			// Threshold at the top of the mill curve — this theme turns it on fastest.
+			// Threshold at the top of the mill curve â€” this theme turns it on fastest.
 			CardFactory
 				.Creature("Silt-Gorged Wurm", manaCost: 5, power: 4, toughness: 4)
 				.WithSubtype(Hollowmere.Horror)
@@ -214,7 +211,7 @@ public static class HollowmereMill
 				.Build(),
 		];
 
-	/// "Whenever a card of yours is milled" — the subject of CardMilledEvent is the card,
+	/// "Whenever a card of yours is milled" â€” the subject of CardMilledEvent is the card,
 	/// so this filter reads as "one of your cards", not "you milled someone".
 	private static EventTriggerCondition OnYouMill() =>
 		new()

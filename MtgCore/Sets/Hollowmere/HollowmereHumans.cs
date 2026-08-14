@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore.Cards.Builders;
 using static MtgCore.Cards.Builders.TargetBuilder;
@@ -6,7 +6,7 @@ using static MtgCore.Cards.Builders.TargetBuilder;
 namespace MtgCore;
 
 /// <summary>
-/// Theme 3 — Human Tribal. The set's aggressive backbone, and the tribe Angels reward.
+/// Theme 3 â€” Human Tribal. The set's aggressive backbone, and the tribe Angels reward.
 /// Humans are also the most common creature type on cards belonging to other themes, so a
 /// Human deck picks up density from Spells and Werewolves without trying.
 ///
@@ -62,7 +62,7 @@ public static class HollowmereHumans
 					}
 				)
 				.Build(),
-			// Two bodies for two mana — the density enabler every tribal deck needs.
+			// Two bodies for two mana â€” the density enabler every tribal deck needs.
 			CardFactory
 				.Spell("Gather the Townsfolk", manaCost: 2)
 				.WithCreateTokens(HollowmereTokens.Human(), count: 2)
@@ -71,7 +71,7 @@ public static class HollowmereHumans
 			CardFactory
 				.Creature("Parish Gravedigger", manaCost: 3, power: 2, toughness: 3)
 				.WithSubtype(Hollowmere.Human)
-				.WithEtbTrigger("Unearth a Kinsman", eb => eb.WithReturnCreatureFromGraveyard())
+				.WithEtbTrigger("Unearth a Kinsman", eb => eb.WithAutoReturnCreature())
 				.Build(),
 			// Payoff at the top of the Human curve. Immediate board impact, per the rate bar.
 			CardFactory
@@ -93,7 +93,7 @@ public static class HollowmereHumans
 					eb => eb.WithCreateTokens(HollowmereTokens.Spirit())
 				)
 				.Build(),
-			// The aggressive one-drop. Nothing clever — the tribe needs a body on turn one.
+			// The aggressive one-drop. Nothing clever â€” the tribe needs a body on turn one.
 			CardFactory
 				.Creature("Parish Torchbearer", manaCost: 1, power: 2, toughness: 1)
 				.WithSubtype(Hollowmere.Human)
@@ -120,7 +120,7 @@ public static class HollowmereHumans
 						)
 				)
 				.Build(),
-			// Two Humans on one card at two mana — raw tribal density.
+			// Two Humans on one card at two mana â€” raw tribal density.
 			CardFactory
 				.Creature("Bellowing Sergeant", manaCost: 2, power: 2, toughness: 1)
 				.WithSubtype(Hollowmere.Human)
@@ -144,7 +144,7 @@ public static class HollowmereHumans
 					effect: eb => eb.WithBoost(2, 0).WithTarget(Single().YourCreatures())
 				)
 				.Build(),
-			// The Human that wants a full graveyard — this tribe's link to the set's spine.
+			// The Human that wants a full graveyard â€” this tribe's link to the set's spine.
 			CardFactory
 				.Creature("Gravewatch Sentry", manaCost: 2, power: 2, toughness: 2)
 				.WithSubtype(Hollowmere.Human)
@@ -181,7 +181,7 @@ public static class HollowmereHumans
 					}
 				)
 				.Build(),
-			// A rescue effect — the payoff for the temporary keyword grants added in step 1.
+			// A rescue effect â€” the payoff for the temporary keyword grants added in step 1.
 			CardFactory
 				.Creature("Parish Bell-Ringer", manaCost: 3, power: 2, toughness: 3)
 				.WithSubtype(Hollowmere.Human)
@@ -204,7 +204,7 @@ public static class HollowmereHumans
 				.WithActivatedAbility(
 					"Cast Out the Unclean",
 					manaCost: 2,
-					effect: eb => eb.WithDestroy().WithTarget(Single().OpponentCreatures()),
+					effect: eb => eb.WithAutoDestroy(),
 					costs: cb => cb.SacrificeSubtype(Hollowmere.Human)
 				)
 				.Build(),
@@ -257,7 +257,7 @@ public static class HollowmereHumans
 				.WithSubtype(Hollowmere.Wizard)
 				.WithEtbTrigger("Sing the Roll", eb => eb.WithDraw(1))
 				.Build(),
-			// Permanently grows the team — the anthem that survives its own removal.
+			// Permanently grows the team â€” the anthem that survives its own removal.
 			CardFactory
 				.Creature("Hollowmere Marshal", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Human)
@@ -297,15 +297,12 @@ public static class HollowmereHumans
 					eb => eb.WithLifeGain(2)
 				)
 				.Build(),
-			// Removal stapled to a body — the four-drop two-for-one bar.
+			// Removal stapled to a body â€” the four-drop two-for-one bar.
 			CardFactory
 				.Creature("Hollowmere Bailiff", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Human)
 				.WithSubtype(Hollowmere.Soldier)
-				.WithEtbTrigger(
-					"Put Down",
-					eb => eb.WithDamage(3).WithTarget(Single().OpponentCreatures())
-				)
+				.WithEtbTrigger("Put Down", eb => eb.WithAutoDamage(3))
 				.Build(),
 			// A big trampling body for the tribe's top of curve.
 			CardFactory
@@ -362,7 +359,7 @@ public static class HollowmereHumans
 				.WithTarget(AllValid().AllYourCreatures())
 				.WithFlashback(4)
 				.Build(),
-			// The tribal finisher spell — width plus evasion is lethal with no blockers.
+			// The tribal finisher spell â€” width plus evasion is lethal with no blockers.
 			CardFactory
 				.Spell("Hollowmere Procession", manaCost: 4)
 				.WithCreateTokens(HollowmereTokens.Human(), count: 2)

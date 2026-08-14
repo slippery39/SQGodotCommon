@@ -22,7 +22,29 @@ public record ActivatedAbilityComponent : GameComponent
 	public int ManaCost { get; init; }
 	public ImmutableList<AdditionalCost> AdditionalCosts { get; init; } =
 		ImmutableList<AdditionalCost>.Empty;
-	public CardEffect Effect { get; init; } = null!;
+
+	/// <summary>
+	/// Effects resolve in order through a single ResolveEffectAction. This is a LIST — read it,
+	/// not Effect. An ability like "discard a card, then draw a card" is two effects, and when
+	/// this held only one the second half was silently dropped at build time.
+	/// </summary>
+	public ImmutableList<CardEffect> Effects { get; init; } = ImmutableList<CardEffect>.Empty;
+
+	/// <summary>
+	/// Convenience for the common single-effect case: <c>Effect = ...</c> appends to
+	/// <see cref="Effects"/>. Write-only by design — read <see cref="Effects"/>.
+	/// </summary>
+	public CardEffect Effect
+	{
+		init => Effects = Effects.Add(value);
+	}
+
+	/// <summary>
+	/// The effect that carries targeting. Only the first is offered a target, which keeps the
+	/// action generator from having to enumerate target combinations.
+	/// </summary>
+	public CardEffect? TargetedEffect => Effects.Count > 0 ? Effects[0] : null;
+
 	public int MaxActivationsPerTurn { get; init; } = 1;
 	public int ActivationCount { get; init; } = 0;
 	public bool RequiresTap { get; init; } = false;

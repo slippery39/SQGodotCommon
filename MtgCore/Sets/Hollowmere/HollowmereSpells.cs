@@ -1,17 +1,17 @@
-using MtgCore.Cards.Builders;
+﻿using MtgCore.Cards.Builders;
 using static MtgCore.Cards.Builders.TargetBuilder;
 
 namespace MtgCore;
 
 /// <summary>
-/// Theme 7 — Spells, and spells in the graveyard. Cantrips, prowess, and cast triggers.
+/// Theme 7 â€” Spells, and spells in the graveyard. Cantrips, prowess, and cast triggers.
 ///
 /// The bridge theme: cheap spells fill the graveyard for theme 1, make Spirits for theme 6,
-/// and turn on threshold. Prowess needs no engine support — it is a SpellCast trigger that
+/// and turn on threshold. Prowess needs no engine support â€” it is a SpellCast trigger that
 /// adds an until-end-of-turn modifier to its own source.
 ///
 /// This theme is also where the format's interaction lives. Removal is at a premium with no
-/// blockers — a resolved threat stays a threat — and most of it is naturally an instant or
+/// blockers â€” a resolved threat stays a threat â€” and most of it is naturally an instant or
 /// sorcery, so it lands here rather than in the glue slot.
 ///
 /// Batches 1 and 4: 30 cards.
@@ -33,7 +33,7 @@ public static class HollowmereSpells
 					eb => eb.WithCreateTokens(HollowmereTokens.Spirit())
 				)
 				.Build(),
-			// Prowess. Free to model — a SpellCast trigger buffing its own source.
+			// Prowess. Free to model â€” a SpellCast trigger buffing its own source.
 			CardFactory
 				.Creature("Zealous Penitent", manaCost: 1, power: 1, toughness: 2)
 				.WithSubtype(Hollowmere.Human)
@@ -46,7 +46,7 @@ public static class HollowmereSpells
 				.Creature("Mere-Watch Adept", manaCost: 2, power: 2, toughness: 1)
 				.WithSubtype(Hollowmere.Human)
 				.WithSubtype(Hollowmere.Wizard)
-				.WithEtbTrigger("Echo of the Mere", eb => eb.WithReturnSpellFromGraveyard())
+				.WithEtbTrigger("Echo of the Mere", eb => eb.WithAutoReturnSpell())
 				.Build(),
 			// The graveyard-spells payoff. Rebuys a spell now and again later.
 			CardFactory
@@ -56,7 +56,7 @@ public static class HollowmereSpells
 				.WithFlashback(6)
 				.Build(),
 			// ===== BATCH 4 =====
-			// A cantrip that comes back — two spell-cast triggers from one card.
+			// A cantrip that comes back â€” two spell-cast triggers from one card.
 			CardFactory
 				.Spell("Mere-Gaze", manaCost: 1)
 				.WithDraw(1)
@@ -70,7 +70,7 @@ public static class HollowmereSpells
 				.WithTarget(Single().PlayersOrCreatures())
 				.WithFlashback(4)
 				.Build(),
-			// A body from a spell slot, twice — bridges Spells into the go-wide themes.
+			// A body from a spell slot, twice â€” bridges Spells into the go-wide themes.
 			CardFactory
 				.Spell("Whisper of the Choir", manaCost: 1)
 				.WithCreateTokens(HollowmereTokens.Spirit())
@@ -93,7 +93,7 @@ public static class HollowmereSpells
 				.WithReturnSpellFromGraveyard()
 				.WithDraw(1)
 				.Build(),
-			// A second cantrip with flashback — the spells deck wants many of these.
+			// A second cantrip with flashback â€” the spells deck wants many of these.
 			CardFactory.Spell("Second Sight", manaCost: 2).WithDraw(2).WithFlashback(4).Build(),
 			// Storm. Free to model, and the payoff for a turn full of cheap spells.
 			CardFactory
@@ -104,7 +104,7 @@ public static class HollowmereSpells
 				.Build(),
 			// Deep card selection that also feeds the graveyard.
 			CardFactory.Spell("Chorus of Whispers", manaCost: 3).WithDraw(3).WithDiscard().Build(),
-			// Exile removal — the format's only clean answer to the recursion themes.
+			// Exile removal â€” the format's only clean answer to the recursion themes.
 			CardFactory
 				.Spell("Drown the Lantern-Bearer", manaCost: 3)
 				.WithExile()
@@ -124,7 +124,7 @@ public static class HollowmereSpells
 				.WithTarget(Single().OpponentCreatures())
 				.WithMill(2)
 				.Build(),
-			// Recursion plus a card — the Spells deck's way into the graveyard theme.
+			// Recursion plus a card â€” the Spells deck's way into the graveyard theme.
 			CardFactory
 				.Spell("Grim Improvisation", manaCost: 2)
 				.WithReturnCreatureFromGraveyard()
@@ -144,7 +144,7 @@ public static class HollowmereSpells
 				.WithSubtype(Hollowmere.Wizard)
 				.WithTriggeredAbility("Silt Trickle", OnYouCastSpell(), eb => eb.WithMill(2))
 				.Build(),
-			// Drains a point per spell — the payoff that lets a spells deck win without combat.
+			// Drains a point per spell â€” the payoff that lets a spells deck win without combat.
 			CardFactory
 				.Creature("Mere-Bound Ritualist", manaCost: 3, power: 2, toughness: 2)
 				.WithSubtype(Hollowmere.Human)
@@ -164,7 +164,7 @@ public static class HollowmereSpells
 						)
 				)
 				.Build(),
-			// A defensive prowess body — Taunt plus a growing power stabilises a board.
+			// A defensive prowess body â€” Taunt plus a growing power stabilises a board.
 			CardFactory
 				.Creature("Silt-Bound Cantor", manaCost: 3, power: 1, toughness: 4)
 				.WithSubtype(Hollowmere.Human)
@@ -182,17 +182,14 @@ public static class HollowmereSpells
 				.Build(),
 			// Big card draw for the decks that can afford to durdle.
 			CardFactory.Spell("Tide of Whispers", manaCost: 4).WithDraw(4).WithDiscard().Build(),
-			// Rebuys two spells on arrival — a four-drop that must two-for-one.
+			// Rebuys two spells on arrival â€” a four-drop that must two-for-one.
 			CardFactory
 				.Creature("Drowned Archivist", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Zombie)
 				.WithSubtype(Hollowmere.Wizard)
-				.WithEtbTrigger(
-					"Reshelve the Drowned",
-					eb => eb.WithReturnSpellFromGraveyard().WithMill(2)
-				)
+				.WithEtbTrigger("Reshelve the Drowned", eb => eb.WithAutoReturnSpell().WithMill(2))
 				.Build(),
-			// A prowess body that keeps coming back — hard for a removal deck to answer.
+			// A prowess body that keeps coming back â€” hard for a removal deck to answer.
 			CardFactory
 				.Creature("Spell-Sworn Revenant", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Spirit)
@@ -227,7 +224,7 @@ public static class HollowmereSpells
 				.Build(),
 		];
 
-	/// "Whenever you cast a spell" — the theme's shared trigger.
+	/// "Whenever you cast a spell" â€” the theme's shared trigger.
 	private static EventTriggerCondition OnYouCastSpell() =>
 		new()
 		{

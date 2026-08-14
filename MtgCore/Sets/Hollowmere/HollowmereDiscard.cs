@@ -266,7 +266,7 @@ public static class HollowmereDiscard
 			// Discard as a cost rather than a drawback: a hard-cast bargain.
 			CardFactory
 				.Spell("Bargain at the Crossroads", manaCost: 2)
-				.WithDiscard()
+				.WithDiscardCost()
 				.WithReanimate()
 				.Build(),
 			// The outlet that also mills — two enablers stapled together.
@@ -281,8 +281,17 @@ public static class HollowmereDiscard
 				.Creature("Ghoulish Bargainer", manaCost: 3, power: 2, toughness: 3)
 				.WithSubtype(Hollowmere.Zombie)
 				.WithEtbTrigger(
+					// Discard at random and an automatic pick: a trigger can ask for neither.
 					"Strike the Bargain",
-					eb => eb.WithDiscard().WithReturnCreatureFromGraveyard()
+					eb =>
+						eb.WithAction(
+								new DiscardRandomCardAction
+								{
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								},
+								TargetingStrategy.NoTarget()
+							)
+							.WithAutoReturnCreature()
 				)
 				.Build(),
 			// A madness spell that answers the go-wide decks.

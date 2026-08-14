@@ -48,6 +48,21 @@ public class SpellCardBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// Discard as an additional cost to cast, rather than as an effect.
+	///
+	/// This is what a card like "discard a card, return a creature from your graveyard" must
+	/// use. As two targeted EFFECTS it is uncastable: the action generator only supplies
+	/// targets for the first, and CastSpellAction rejects the spell for the missing second.
+	/// As a cost the discard is paid through AdditionalCostPayments, leaving one targeted
+	/// effect — and it reads better as a cost anyway.
+	/// </summary>
+	public SpellCardBuilder WithDiscardCost(int count = 1)
+	{
+		_castCosts.Add(new DiscardAdditionalCost { Count = count });
+		return this;
+	}
+
 	public SpellCardBuilder WithStorm()
 	{
 		_hasStorm = true;
@@ -339,6 +354,122 @@ public class SpellCardBuilder
 		{
 			Amount = amount,
 			PlayerIdContextKey = ContextKeys.CastingPlayerId,
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	// ===== TRIGGER-SAFE VARIANTS =====
+	//
+	// A triggered ability spawns ResolveEffectAction with no TargetIds, so a UserSelect
+	// targeting strategy resolves to an EMPTY target list and the effect silently does
+	// nothing. Every one of these picks its target itself, so it works from a trigger.
+	// HollowmereCardBugTests.TriggeredAbilities_DoNotUseUserSelectTargeting enforces the rule.
+
+	/// Reanimates the first creature found in your graveyard.
+	public SpellCardBuilder WithAutoReanimate() =>
+		WithGraveyardPipeline(
+			new IsCreatureInOwnGraveyardSpecification(),
+			key => new PutIntoBattlefieldAction { CardIdContextKey = key },
+			"auto_reanimate"
+		);
+
+	/// Returns the first creature found in your graveyard to your hand.
+	public SpellCardBuilder WithAutoReturnCreature() =>
+		WithGraveyardPipeline(
+			new IsCreatureInOwnGraveyardSpecification(),
+			key => new MoveCardToHandAction
+			{
+				CardIdContextKey = key,
+				PlayerIdContextKey = ContextKeys.CastingPlayerId,
+			},
+			"auto_return_creature"
+		);
+
+	/// Returns the first instant or sorcery found in your graveyard to your hand.
+	public SpellCardBuilder WithAutoReturnSpell() =>
+		WithGraveyardPipeline(
+			new IsInstantOrSorceryInOwnGraveyardSpecification(),
+			key => new MoveCardToHandAction
+			{
+				CardIdContextKey = key,
+				PlayerIdContextKey = ContextKeys.CastingPlayerId,
+			},
+			"auto_return_spell"
+		);
+
+	/// Destroys the opponent's most expensive creature. Same shape as WithEdict.
+	public SpellCardBuilder WithAutoDestroy() => WithEdict();
+
+	/// Damages the opponent's most expensive creature.
+	public SpellCardBuilder WithAutoDamage(int amount) =>
+		WithBiggestOpposingCreaturePipeline(
+			key => new DealDamageAction { Amount = amount, TargetContextKey = key },
+			"auto_damage"
+		);
+
+	/// Shrinks the opponent's most expensive creature, killing it if toughness hits zero.
+	public SpellCardBuilder WithAutoWeaken(int power, int toughness) =>
+		WithBiggestOpposingCreaturePipeline(
+			key => new AddModifierAction
+			{
+				PowerBonus = -power,
+				ToughnessBonus = -toughness,
+				Duration = ModifierDuration.UntilEndOfTurn,
+				TargetContextKey = key,
+			},
+			"auto_weaken"
+		);
+
+	/// Fights the opponent's most expensive creature.
+	public SpellCardBuilder WithAutoFight() =>
+		WithBiggestOpposingCreaturePipeline(
+			key => new FightAction { TargetContextKey = key },
+			"auto_fight"
+		);
+
+	private SpellCardBuilder WithGraveyardPipeline(
+		TargetSpecification filter,
+		Func<string, GameAction> follow,
+		string key
+	)
+	{
+		FlushPending();
+		_pendingAction = new PipelineAction
+		{
+			Steps = ImmutableList.Create(
+				new SelectCardFromZoneAction
+				{
+					Zone = ZoneType.Graveyard,
+					Filter = filter,
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+					OutputKey = key,
+				},
+				follow(key)
+			),
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	private SpellCardBuilder WithBiggestOpposingCreaturePipeline(
+		Func<string, GameAction> follow,
+		string key
+	)
+	{
+		FlushPending();
+		_pendingAction = new PipelineAction
+		{
+			Steps = ImmutableList.Create(
+				new SelectCreatureFromBattlefieldByManaCostAction
+				{
+					TargetOpponent = true,
+					SelectLowest = false,
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+					OutputKey = key,
+				},
+				follow(key)
+			),
 		};
 		_pendingTargeting = TargetingStrategy.NoTarget();
 		return this;

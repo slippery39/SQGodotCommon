@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore.Cards.Builders;
 using static MtgCore.Cards.Builders.TargetBuilder;
@@ -6,12 +6,12 @@ using static MtgCore.Cards.Builders.TargetBuilder;
 namespace MtgCore;
 
 /// <summary>
-/// Theme 5 — Angels and Demons. The set's top end, and the reanimation package's payoff.
+/// Theme 5 â€” Angels and Demons. The set's top end, and the reanimation package's payoff.
 ///
 /// Every card here obeys the 6-8 rate bar: it must effectively end the game on resolution.
 /// A body alone is only a clock in a no-blocker combat model, and these are also the cards
 /// most often cheated into play, so their value is front-loaded into the ETB. Nothing here
-/// pays off "next upkeep" — a recurring drawback or a delayed reward would make them dead.
+/// pays off "next upkeep" â€” a recurring drawback or a delayed reward would make them dead.
 ///
 /// Angels reward Humans; Demons feed on discard and sacrifice.
 ///
@@ -49,7 +49,7 @@ public static class HollowmereAngelsDemons
 							)
 				)
 				.Build(),
-			// Lifelink is what stops this being a worse Griselbrand — it refuels the life it
+			// Lifelink is what stops this being a worse Griselbrand â€” it refuels the life it
 			// spends, so it draws into the winning turn instead of just being a big flier.
 			new()
 			{
@@ -72,7 +72,7 @@ public static class HollowmereAngelsDemons
 					{
 						Name = "Bargain",
 						ManaCost = 0,
-						MaxActivationsPerTurn = 0, // unlimited — the life total is the limiter
+						MaxActivationsPerTurn = 0, // unlimited â€” the life total is the limiter
 						AdditionalCosts = ImmutableList.Create<AdditionalCost>(
 							new LifeAdditionalCost { Amount = 7 }
 						),
@@ -91,19 +91,9 @@ public static class HollowmereAngelsDemons
 				.WithSubtype(Hollowmere.Demon)
 				.WithFlying()
 				.WithDeathtouch()
-				.WithEtbTrigger(
-					"Collect the Vow",
-					eb =>
-						eb.WithAction(
-								new DestroyCreatureAction(),
-								TargetingStrategy.SingleTarget(
-									TargetSpecification.OpponentCreatures()
-								)
-							)
-							.WithOpponentDiscard()
-				)
+				.WithEtbTrigger("Collect the Vow", eb => eb.WithAutoDestroy().WithOpponentDiscard())
 				.Build(),
-			// The cheap Angel that bridges to the Human deck — a reanimation target you are
+			// The cheap Angel that bridges to the Human deck â€” a reanimation target you are
 			// also happy to hard-cast.
 			CardFactory
 				.Creature("Chapel Seraph", manaCost: 5, power: 4, toughness: 4)
@@ -121,7 +111,7 @@ public static class HollowmereAngelsDemons
 				.WithSubtype(Hollowmere.Angel)
 				.WithFlying()
 				.Build(),
-			// A defensive Angel — Taunt plus Flying holds both attack angles at once.
+			// A defensive Angel â€” Taunt plus Flying holds both attack angles at once.
 			CardFactory
 				.Creature("Herald of the Chapel", manaCost: 4, power: 3, toughness: 5)
 				.WithSubtype(Hollowmere.Angel)
@@ -135,15 +125,12 @@ public static class HollowmereAngelsDemons
 				.WithFlying()
 				.WithLifelink()
 				.Build(),
-			// Removal on a flier — the five-drop two-for-one.
+			// Removal on a flier â€” the five-drop two-for-one.
 			CardFactory
 				.Creature("Angel of Broken Vigils", manaCost: 5, power: 4, toughness: 4)
 				.WithSubtype(Hollowmere.Angel)
 				.WithFlying()
-				.WithEtbTrigger(
-					"Break the Vigil",
-					eb => eb.WithDestroy().WithTarget(Single().OpponentCreatures())
-				)
+				.WithEtbTrigger("Break the Vigil", eb => eb.WithAutoDestroy())
 				.Build(),
 			// Bridges Angels into the go-wide themes.
 			CardFactory
@@ -163,12 +150,12 @@ public static class HollowmereAngelsDemons
 				.WithLifelink()
 				.WithEtbTrigger("Cleanse the Silt", eb => eb.WithLifeGain(4))
 				.Build(),
-			// Reanimation on the tribe's own body — an Angel that finds another.
+			// Reanimation on the tribe's own body â€” an Angel that finds another.
 			CardFactory
 				.Creature("Angel of Second Rites", manaCost: 6, power: 5, toughness: 5)
 				.WithSubtype(Hollowmere.Angel)
 				.WithFlying()
-				.WithEtbTrigger("Second Rites", eb => eb.WithReanimate())
+				.WithEtbTrigger("Second Rites", eb => eb.WithAutoReanimate())
 				.Build(),
 			// Wins on resolution in a Human deck, which is the six-drop bar.
 			CardFactory
@@ -210,13 +197,16 @@ public static class HollowmereAngelsDemons
 				.WithDamage(4)
 				.WithTarget(AllValid().OpponentCreatures())
 				.Build(),
-			// Evasion and a pump — the Angel deck's combat trick.
+			// Evasion and a pump â€” the Angel deck's combat trick.
 			CardFactory
+				// Both halves hit the whole team. As two single-target effects the spell was
+				// uncastable â€” only the first gets a target, and the cast is then rejected for
+				// the missing second.
 				.Spell("Wings of the Vigil", manaCost: 2)
 				.WithBoost(2, 2)
-				.WithTarget(Single().YourCreatures())
+				.WithTarget(AllValid().AllYourCreatures())
 				.WithGrantKeyword(flying: true)
-				.WithTarget(Single().YourCreatures())
+				.WithTarget(AllValid().AllYourCreatures())
 				.WithFlashback(4)
 				.Build(),
 			// ===== BATCH 6: DEMONS =====
@@ -232,21 +222,30 @@ public static class HollowmereAngelsDemons
 				.Creature("Infernal Bargainer", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Demon)
 				.WithFlying()
-				.WithEtbTrigger("Strike a Bargain", eb => eb.WithDiscard().WithDraw(2))
+				// Discard at random rather than chosen: a trigger has no way to ask.
+				.WithEtbTrigger(
+					"Strike a Bargain",
+					eb =>
+						eb.WithAction(
+								new DiscardRandomCardAction
+								{
+									PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								},
+								TargetingStrategy.NoTarget()
+							)
+							.WithDraw(2)
+				)
 				.Build(),
 			// Raw card advantage at a life cost the Vampire and Demon decks can pay.
 			CardFactory.Spell("Demonic Bargain", manaCost: 3).WithDraw(3).WithLoseLife(3).Build(),
-			// Edict on a flier — answers the hexproof and recursion threats targeting cannot.
+			// Edict on a flier â€” answers the hexproof and recursion threats targeting cannot.
 			CardFactory
 				.Creature("Demon of the Drowned Vow", manaCost: 5, power: 5, toughness: 5)
 				.WithSubtype(Hollowmere.Demon)
 				.WithFlying()
-				.WithEtbTrigger(
-					"Collect the Drowned Vow",
-					eb => eb.WithDestroy().WithTarget(Single().OpponentCreatures())
-				)
+				.WithEtbTrigger("Collect the Drowned Vow", eb => eb.WithAutoDestroy())
 				.Build(),
-			// A big trampling flier — pure clock at five.
+			// A big trampling flier â€” pure clock at five.
 			CardFactory
 				.Creature("Persecutor of Hollowmere", manaCost: 5, power: 5, toughness: 5)
 				.WithSubtype(Hollowmere.Demon)
@@ -273,7 +272,7 @@ public static class HollowmereAngelsDemons
 						)
 				)
 				.Build(),
-			// Strips their hand and threatens lethal — a two-for-one on a huge body.
+			// Strips their hand and threatens lethal â€” a two-for-one on a huge body.
 			CardFactory
 				.Creature("Vow-Breaker Fiend", manaCost: 6, power: 6, toughness: 6)
 				.WithSubtype(Hollowmere.Demon)
@@ -288,18 +287,16 @@ public static class HollowmereAngelsDemons
 				.WithFlying()
 				.WithTrample()
 				.Build(),
-			// Two removal spells stapled to a 6/6 flier — the seven-drop bar.
+			// Two removal spells stapled to a 6/6 flier â€” the seven-drop bar.
 			CardFactory
 				.Creature("Reaper from the Mere", manaCost: 7, power: 6, toughness: 6)
 				.WithSubtype(Hollowmere.Demon)
 				.WithFlying()
 				.WithEtbTrigger(
+					// Two edicts rather than two targeted destroys: a trigger cannot ask for a
+					// target, so each half takes the opponent's biggest remaining creature.
 					"Reap the Mere",
-					eb =>
-						eb.WithDestroy()
-							.WithTarget(Single().OpponentCreatures())
-							.WithDestroy()
-							.WithTarget(Single().OpponentCreatures())
+					eb => eb.WithAutoDestroy().WithAutoDestroy()
 				)
 				.Build(),
 			// The set's largest body, and an eight-point life swing on arrival.

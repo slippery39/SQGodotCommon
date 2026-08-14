@@ -1,14 +1,14 @@
-using MtgCore.Cards.Builders;
+﻿using MtgCore.Cards.Builders;
 using static MtgCore.Cards.Builders.TargetBuilder;
 
 namespace MtgCore;
 
 /// <summary>
-/// Theme 6 — Go-Wide Spirits. Token flood plus pump.
+/// Theme 6 â€” Go-Wide Spirits. Token flood plus pump.
 ///
 /// Rates are deliberately below their paper equivalents. With no blockers every token
 /// connects with the opponent's face, so a squad of 1/1 fliers is closer to a squad of
-/// unblockable creatures — and an anthem multiplies that across the whole board. Spirits
+/// unblockable creatures â€” and an anthem multiplies that across the whole board. Spirits
 /// overlap heavily into Spells (cast triggers make them) and Graveyard (flashback makes
 /// them twice).
 ///
@@ -18,7 +18,7 @@ public static class HollowmereSpirits
 {
 	public static IReadOnlyList<Card> Cards { get; } =
 		[
-			// Four evasive bodies across two casts — the archetype's defining card.
+			// Four evasive bodies across two casts â€” the archetype's defining card.
 			CardFactory
 				.Spell("Lingering Souls", manaCost: 3)
 				.WithCreateTokens(HollowmereTokens.Spirit(), count: 2)
@@ -83,7 +83,7 @@ public static class HollowmereSpirits
 				.WithSubtype(Hollowmere.Spirit)
 				.WithFlying()
 				.Build(),
-			// A token for one mana — raw width, which is what this deck converts into damage.
+			// A token for one mana â€” raw width, which is what this deck converts into damage.
 			CardFactory
 				.Spell("Chapel Candle", manaCost: 1)
 				.WithCreateTokens(HollowmereTokens.Spirit())
@@ -93,19 +93,19 @@ public static class HollowmereSpirits
 			CardFactory
 				.Spell("Silent Vigil", manaCost: 1)
 				.WithBoost(1, 1)
-				.WithTarget(Single().YourCreatures())
+				.WithTarget(AllValid().AllYourCreatures())
 				.WithGrantKeyword(flying: true)
-				.WithTarget(Single().YourCreatures())
+				.WithTarget(AllValid().AllYourCreatures())
 				.WithFlashback(3)
 				.Build(),
-			// The defensive flier — Taunt plus Flying blunts both attack angles.
+			// The defensive flier â€” Taunt plus Flying blunts both attack angles.
 			CardFactory
 				.Creature("Drogskol Shieldmate", manaCost: 2, power: 1, toughness: 3)
 				.WithSubtype(Hollowmere.Spirit)
 				.WithFlying()
 				.WithTaunt()
 				.Build(),
-			// Two evasive bodies for two mana — the archetype's density spell.
+			// Two evasive bodies for two mana â€” the archetype's density spell.
 			CardFactory
 				.Spell("Spectral Reserves", manaCost: 2)
 				.WithCreateTokens(HollowmereTokens.Spirit(), count: 2)
@@ -136,7 +136,7 @@ public static class HollowmereSpirits
 				.Spell("Spectral Procession", manaCost: 3)
 				.WithCreateTokens(HollowmereTokens.Spirit(), count: 3)
 				.Build(),
-			// Grows with the flood rather than pumping it — harder to answer than an anthem.
+			// Grows with the flood rather than pumping it â€” harder to answer than an anthem.
 			CardFactory
 				.Creature("Hollowmere Choirmaster", manaCost: 3, power: 2, toughness: 2)
 				.WithSubtype(Hollowmere.Spirit)
@@ -178,7 +178,7 @@ public static class HollowmereSpirits
 					eb => eb.WithCreateTokens(HollowmereTokens.Spirit())
 				)
 				.Build(),
-			// Mass evasion — turns any stalled board into lethal, in any deck.
+			// Mass evasion â€” turns any stalled board into lethal, in any deck.
 			CardFactory
 				.Spell("Ghostly Chorus", manaCost: 3)
 				.WithGrantKeyword(flying: true)
@@ -214,7 +214,7 @@ public static class HollowmereSpirits
 				)
 				.Build(),
 			// Three bodies twice. Deliberately a bigger burst than Lingering Souls rather than
-			// a costlier one — at 2 tokens it was strictly worse than Souls in the same set,
+			// a costlier one â€” at 2 tokens it was strictly worse than Souls in the same set,
 			// which is the exact failure HollowmereRateTests now guards against.
 			CardFactory
 				.Spell("Windswept Chorus", manaCost: 4)
@@ -242,7 +242,7 @@ public static class HollowmereSpirits
 					eb => eb.WithCreateTokens(HollowmereTokens.Spirit())
 				)
 				.Build(),
-			// Scales off a graveyard full of dead Spirits — the theme's graveyard crossover.
+			// Scales off a graveyard full of dead Spirits â€” the theme's graveyard crossover.
 			CardFactory
 				.Spell("Spectral Tide", manaCost: 5)
 				.WithCreateTokensPerCard(HollowmereTokens.Spirit(), Hollowmere.Spirit)
@@ -272,7 +272,7 @@ public static class HollowmereSpirits
 				.Creature("Keeper of the Silent Choir", manaCost: 4, power: 2, toughness: 4)
 				.WithSubtype(Hollowmere.Spirit)
 				.WithFlying()
-				.WithEtbTrigger("Recall the Choir", eb => eb.WithReturnCreatureFromGraveyard())
+				.WithEtbTrigger("Recall the Choir", eb => eb.WithAutoReturnCreature())
 				.Build(),
 		];
 }

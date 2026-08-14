@@ -325,7 +325,8 @@ public class MtgGameManager
 		var abilities = card?.GetComponents<ActivatedAbilityComponent>().ToList();
 		if (abilities == null || abilityIndex >= abilities.Count)
 			return false;
-		return abilities[abilityIndex].Effect.TargetingStrategy.RequiresUserSelection;
+		return abilities[abilityIndex].TargetedEffect?.TargetingStrategy.RequiresUserSelection
+			== true;
 	}
 
 	public List<int> GetAbilityValidTargets(int cardId, int abilityIndex)
@@ -340,7 +341,9 @@ public class MtgGameManager
 			SourceCardId = cardId,
 			CastingPlayerId = HumanPlayerId,
 		};
-		return abilities[abilityIndex].Effect.TargetingStrategy.GetValidTargets(context).ToList();
+		return abilities[abilityIndex]
+				.TargetedEffect?.TargetingStrategy.GetValidTargets(context)
+				.ToList() ?? new List<int>();
 	}
 
 	public bool AbilityHasAdditionalCostSelection(int cardId, int abilityIndex)

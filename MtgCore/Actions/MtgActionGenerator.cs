@@ -484,7 +484,7 @@ public static class MtgActionGenerator
 		ImmutableDictionary<int, ImmutableList<int>> costPayments
 	)
 	{
-		var needsTarget = ability.Effect.TargetingStrategy.RequiresUserSelection;
+		var needsTarget = ability.TargetedEffect?.TargetingStrategy.RequiresUserSelection == true;
 		if (needsTarget)
 		{
 			var context = new TargetingContext
@@ -493,7 +493,7 @@ public static class MtgActionGenerator
 				SourceCardId = cardId,
 				CastingPlayerId = playerId,
 			};
-			var validTargets = ability.Effect.TargetingStrategy.GetValidTargets(context);
+			var validTargets = ability.TargetedEffect!.TargetingStrategy.GetValidTargets(context);
 			if (validTargets.Count == 0)
 				return null;
 

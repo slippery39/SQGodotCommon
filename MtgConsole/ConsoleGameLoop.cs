@@ -228,7 +228,7 @@ public class ConsoleGameLoop
 		var ability = abilities[abilityIndex.Value - 1];
 		var targetIds = ImmutableList<int>.Empty;
 
-		if (ability.Effect.TargetingStrategy.RequiresUserSelection)
+		if (ability.TargetedEffect?.TargetingStrategy.RequiresUserSelection == true)
 		{
 			var context = new TargetingContext
 			{
@@ -237,7 +237,9 @@ public class ConsoleGameLoop
 				CastingPlayerId = activePlayerId,
 			};
 
-			var validTargets = ability.Effect.TargetingStrategy.GetValidTargets(context).ToList();
+			var validTargets = ability
+				.TargetedEffect!.TargetingStrategy.GetValidTargets(context)
+				.ToList();
 
 			if (!validTargets.Any())
 			{

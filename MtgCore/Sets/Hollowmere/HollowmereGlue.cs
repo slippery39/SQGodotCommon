@@ -1,15 +1,15 @@
-using MtgCore.Cards.Builders;
+﻿using MtgCore.Cards.Builders;
 using static MtgCore.Cards.Builders.TargetBuilder;
 
 namespace MtgCore;
 
 /// <summary>
-/// Format glue — cards that belong to no theme but that the format needs to function:
+/// Format glue â€” cards that belong to no theme but that the format needs to function:
 /// removal, and an answer to the graveyard theme. Gothic-horror flavoured, so they still
 /// read as part of the set.
 ///
 /// Removal is at a premium in this combat model. With no blockers you cannot trade by
-/// blocking, so a resolved threat stays a threat until a card answers it — which is why
+/// blocking, so a resolved threat stays a threat until a card answers it â€” which is why
 /// the glue slot leads with removal rather than card draw.
 ///
 /// Batches 1 and 6: 10 cards.
@@ -38,7 +38,7 @@ public static class HollowmereGlue
 				.WithDestroy()
 				.WithTarget(Single().OpponentCreatures())
 				.Build(),
-			// Exile removal — the only clean answer to the set's many recursion threats.
+			// Exile removal â€” the only clean answer to the set's many recursion threats.
 			CardFactory
 				.Spell("Banish to the Mere", manaCost: 3)
 				.WithExile()
@@ -66,7 +66,7 @@ public static class HollowmereGlue
 				.WithExileFromGraveyard()
 				.WithDraw(1)
 				.Build(),
-			// A cheap Taunt body — the format's only way to buy a turn against an attack.
+			// A cheap Taunt body â€” the format's only way to buy a turn against an attack.
 			CardFactory
 				.Creature("Chapel Ward", manaCost: 2, power: 1, toughness: 4)
 				.WithSubtype(Hollowmere.Spirit)
@@ -95,7 +95,7 @@ public static class HollowmereGlue
 			// Bounce answers what destroy cannot: a recursive threat comes back as a card to
 			// re-cast rather than as fuel in the graveyard.
 			CardFactory.Spell("Drag to the Depths", manaCost: 2).WithBounce().WithMill(2).Build(),
-			// Removal that costs no card but risks the fighter — and reaches flyers a ground
+			// Removal that costs no card but risks the fighter â€” and reaches flyers a ground
 			// creature could never attack.
 			CardFactory
 				.Spell("Set Upon the Pack", manaCost: 2)
@@ -106,15 +106,15 @@ public static class HollowmereGlue
 			CardFactory
 				.Creature("Mere-Bank Hunter", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Human)
-				.WithEtbTrigger("Run It Down", eb => eb.WithFight())
+				.WithEtbTrigger("Run It Down", eb => eb.WithAutoFight())
 				.Build(),
-			// Reach on a body plus a shrink — the answer to the Flying decks.
+			// Reach on a body plus a shrink â€” the answer to the Flying decks.
 			CardFactory
 				.Creature("Chapel Longbowman", manaCost: 3, power: 2, toughness: 3)
 				.WithSubtype(Hollowmere.Human)
 				.WithSubtype(Hollowmere.Soldier)
 				.WithReach()
-				.WithEtbTrigger("Loose an Arrow", eb => eb.WithWeaken(2, 2))
+				.WithEtbTrigger("Loose an Arrow", eb => eb.WithAutoWeaken(2, 2))
 				.Build(),
 			// Finds the answer or the payoff, which is what stops a synergy deck flooding.
 			CardFactory.Spell("Search the Parish", manaCost: 2).WithDig(4).Build(),

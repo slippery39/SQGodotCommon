@@ -166,17 +166,17 @@ public class CreatureCardBuilder
 		var costBuilder = new CreatureCostBuilder();
 		costs?.Invoke(costBuilder);
 
+		var effects = effectBuilder.BuildEffects();
+		if (effects.Count == 0)
+			throw new InvalidOperationException($"Activated ability '{name}' has no effect.");
+
 		_extraComponents.Add(
 			new ActivatedAbilityComponent
 			{
 				Name = name,
 				ManaCost = manaCost,
 				AdditionalCosts = costBuilder.Build(),
-				Effect = effectBuilder.BuildEffects() is { Count: > 0 } fx
-					? fx[0]
-					: throw new InvalidOperationException(
-						$"Activated ability '{name}' has no effect."
-					),
+				Effects = effects,
 			}
 		);
 		return this;

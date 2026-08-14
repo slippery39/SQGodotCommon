@@ -1,13 +1,13 @@
-using MtgCore.Cards.Builders;
+﻿using MtgCore.Cards.Builders;
 using static MtgCore.Cards.Builders.TargetBuilder;
 
 namespace MtgCore;
 
 /// <summary>
-/// Theme 10 — Vampire Tribal. Lifedrain and sacrifice; the tribe that profits from creatures
+/// Theme 10 â€” Vampire Tribal. Lifedrain and sacrifice; the tribe that profits from creatures
 /// dying, which makes it the natural home for the set's deathtouch.
 ///
-/// Deathtouch is concentrated here and kept rare — with no blockers it turns every attack
+/// Deathtouch is concentrated here and kept rare â€” with no blockers it turns every attack
 /// into a favourable trade, so it goes on small bodies where the trade is the whole point.
 ///
 /// Lifelink is the tribe's signature rather than deathtouch. In a no-blocker format the only
@@ -20,8 +20,8 @@ public static class HollowmereVampires
 {
 	public static IReadOnlyList<Card> Cards { get; } =
 		[
-			// The drain engine. Every creature that dies — including the opponent's, and
-			// including tokens — is reach, which is what makes the go-wide themes fear it.
+			// The drain engine. Every creature that dies â€” including the opponent's, and
+			// including tokens â€” is reach, which is what makes the go-wide themes fear it.
 			CardFactory
 				.Creature("Blood Artist", manaCost: 2, power: 0, toughness: 1)
 				.WithSubtype(Hollowmere.Vampire)
@@ -40,7 +40,7 @@ public static class HollowmereVampires
 						)
 				)
 				.Build(),
-			// A repeatable token maker on an evasive body — the tribe's mana sink and its
+			// A repeatable token maker on an evasive body â€” the tribe's mana sink and its
 			// best reanimation target below the Angels.
 			CardFactory
 				.Creature("Bloodline Keeper", manaCost: 4, power: 3, toughness: 3)
@@ -91,7 +91,7 @@ public static class HollowmereVampires
 						)
 				)
 				.Build(),
-			// Grows every time it connects — with no blockers, that is most turns.
+			// Grows every time it connects â€” with no blockers, that is most turns.
 			CardFactory
 				.Creature("Bloodcrazed Neonate", manaCost: 2, power: 2, toughness: 1)
 				.WithSubtype(Hollowmere.Vampire)
@@ -121,7 +121,7 @@ public static class HollowmereVampires
 				.WithSubtype(Hollowmere.Vampire)
 				.WithLifelink()
 				.Build(),
-			// The sacrifice outlet — turns a board about to be swept into a lethal attack.
+			// The sacrifice outlet â€” turns a board about to be swept into a lethal attack.
 			CardFactory
 				.Creature("Bloodthrone Vampire", manaCost: 2, power: 1, toughness: 1)
 				.WithSubtype(Hollowmere.Vampire)
@@ -166,7 +166,7 @@ public static class HollowmereVampires
 					}
 				)
 				.Build(),
-			// Evasive damage — the tribe's clock when the ground stalls.
+			// Evasive damage â€” the tribe's clock when the ground stalls.
 			CardFactory
 				.Creature("Vampire Interloper", manaCost: 3, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Vampire)
@@ -197,7 +197,7 @@ public static class HollowmereVampires
 				)
 				.WithFlashback(5)
 				.Build(),
-			// Grows off every death on either side — a slow inevitability engine.
+			// Grows off every death on either side â€” a slow inevitability engine.
 			CardFactory
 				.Creature("Stromkirk Bloodthief", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Vampire)
@@ -217,7 +217,7 @@ public static class HollowmereVampires
 						)
 				)
 				.Build(),
-			// The evasive drain engine — Blood Artist's bigger sibling.
+			// The evasive drain engine â€” Blood Artist's bigger sibling.
 			CardFactory
 				.Creature("Falkenrath Noble", manaCost: 4, power: 2, toughness: 2)
 				.WithSubtype(Hollowmere.Vampire)
@@ -242,7 +242,7 @@ public static class HollowmereVampires
 				.Creature("Bloodline Necromancer", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Hollowmere.Vampire)
 				.WithSubtype(Hollowmere.Wizard)
-				.WithEtbTrigger("Call the Bloodline", eb => eb.WithReanimate())
+				.WithEtbTrigger("Call the Bloodline", eb => eb.WithAutoReanimate())
 				.Build(),
 			// Two evasive lifelinking bodies from one card.
 			CardFactory
@@ -276,7 +276,7 @@ public static class HollowmereVampires
 				.WithTarget(Single().YourCreatures())
 				.WithFlashback(4)
 				.Build(),
-			// Mass lifelink — the payoff that ends a race the turn it resolves.
+			// Mass lifelink â€” the payoff that ends a race the turn it resolves.
 			CardFactory
 				.Spell("Night of the Long Thirst", manaCost: 4)
 				.WithGrantKeyword(lifelink: true)

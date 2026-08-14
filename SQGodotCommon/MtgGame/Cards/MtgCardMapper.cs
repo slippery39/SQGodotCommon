@@ -184,8 +184,12 @@ public static class MtgCardMapper
 
 	private static string? DescribeActivatedAbility(ActivatedAbilityComponent ability)
 	{
-		var effectStr = DescribeEffect(ability.Effect);
-		if (effectStr == null)
+		// An ability may carry several effects — "discard a card, then draw a card" is two.
+		var effectStr = string.Join(
+			", ",
+			ability.Effects.Select(DescribeEffect).Where(s => s != null)
+		);
+		if (string.IsNullOrEmpty(effectStr))
 			return null;
 
 		var costParts = new List<string>();
@@ -357,6 +361,8 @@ public static class MtgCardMapper
 			GiveFlashbackAction => "An instant or sorcery in your graveyard gains Flashback",
 			PutIntoBattlefieldAction => $"Put {t} onto the battlefield",
 			TransformAction => "Transform this",
+			FightAction => $"This fights {t}",
+			LookAtTopCardsAction l => $"Look at the top {l.Amount} cards, put one in your hand",
 			PipelineAction p => DescribePipeline(p),
 			_ => null,
 		};
@@ -600,6 +606,16 @@ public static class MtgCardMapper
 				? $"count the cards in your {s.Zone.ToString().ToLowerInvariant()}"
 				: $"count {s.Subtype}s in your {s.Zone.ToString().ToLowerInvariant()}",
 			SelectCardFromZoneAction s => DescribeZoneSelection(s),
+			// The trigger-safe verbs are pipelines that pick a target themselves, so their
+			// steps have to read as one sentence: "the opponent's best creature, destroy it".
+			SelectCreatureFromBattlefieldByManaCostAction s => s.TargetOpponent
+				? $"take the opponent's {(s.SelectLowest ? "cheapest" : "best")} creature"
+				: $"take your {(s.SelectLowest ? "cheapest" : "best")} creature",
+			DestroyCreatureAction => "destroy it",
+			ExileAction => "exile it",
+			DealDamageAction d => $"deal {d.Amount} damage to it",
+			FightAction => "fight it",
+			AddModifierAction m => $"give it {Signed(m.PowerBonus)}/{Signed(m.ToughnessBonus)}",
 			_ => null,
 		};
 }
