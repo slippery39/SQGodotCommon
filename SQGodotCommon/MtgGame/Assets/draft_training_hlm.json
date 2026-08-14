@@ -1,1810 +1,1858 @@
 {
-    "Perspectives":  33600,
-    "Wins":  15792,
+    "Perspectives":  44800,
+    "Wins":  20205,
     "Cards":  [
                   {
                       "Name":  "Abyssal Dredger",
-                      "Games":  1192,
-                      "Wins":  546,
-                      "DeckGames":  2765
+                      "Games":  1443,
+                      "Wins":  649,
+                      "DeckGames":  3507
                   },
                   {
                       "Name":  "Abyssal Tyrant",
-                      "Games":  1320,
-                      "Wins":  611,
-                      "DeckGames":  3052
+                      "Games":  1600,
+                      "Wins":  692,
+                      "DeckGames":  3864
                   },
                   {
                       "Name":  "Alms of the Vein",
-                      "Games":  1304,
-                      "Wins":  609,
-                      "DeckGames":  3122
+                      "Games":  1686,
+                      "Wins":  775,
+                      "DeckGames":  4200
                   },
                   {
                       "Name":  "Angel of Broken Vigils",
-                      "Games":  1138,
-                      "Wins":  505,
-                      "DeckGames":  2534
+                      "Games":  1388,
+                      "Wins":  580,
+                      "DeckGames":  3402
                   },
                   {
                       "Name":  "Angel of Second Rites",
-                      "Games":  1149,
-                      "Wins":  527,
-                      "DeckGames":  2765
+                      "Games":  1353,
+                      "Wins":  607,
+                      "DeckGames":  3430
                   },
                   {
                       "Name":  "Angel of the Drowned Choir",
-                      "Games":  1137,
-                      "Wins":  461,
-                      "DeckGames":  2611
+                      "Games":  1343,
+                      "Wins":  545,
+                      "DeckGames":  3262
                   },
                   {
                       "Name":  "Angelic Reckoning",
-                      "Games":  1068,
-                      "Wins":  484,
-                      "DeckGames":  2569
+                      "Games":  1319,
+                      "Wins":  608,
+                      "DeckGames":  3213
                   },
                   {
                       "Name":  "Archangel of Hollowmere",
-                      "Games":  1253,
-                      "Wins":  702,
-                      "DeckGames":  2800
+                      "Games":  1460,
+                      "Wins":  738,
+                      "DeckGames":  3640
                   },
                   {
                       "Name":  "Archangel of Vigils",
-                      "Games":  1187,
-                      "Wins":  577,
-                      "DeckGames":  2842
+                      "Games":  1505,
+                      "Wins":  713,
+                      "DeckGames":  3591
                   },
                   {
                       "Name":  "Archfiend of the Mere",
-                      "Games":  1255,
-                      "Wins":  627,
-                      "DeckGames":  3003
+                      "Games":  1572,
+                      "Wins":  776,
+                      "DeckGames":  3780
                   },
                   {
                       "Name":  "Archmage of the Mere",
-                      "Games":  1146,
-                      "Wins":  525,
-                      "DeckGames":  2632
+                      "Games":  1499,
+                      "Wins":  612,
+                      "DeckGames":  3500
                   },
                   {
                       "Name":  "Ashen Bolt",
-                      "Games":  1381,
-                      "Wins":  703,
-                      "DeckGames":  3178
+                      "Games":  1741,
+                      "Wins":  825,
+                      "DeckGames":  4074
                   },
                   {
                       "Name":  "Ashen Reckoning",
-                      "Games":  1061,
-                      "Wins":  479,
-                      "DeckGames":  2387
+                      "Games":  1384,
+                      "Wins":  584,
+                      "DeckGames":  3346
                   },
                   {
                       "Name":  "Ashen Rite",
-                      "Games":  1258,
-                      "Wins":  596,
-                      "DeckGames":  2975
+                      "Games":  1680,
+                      "Wins":  731,
+                      "DeckGames":  4158
                   },
                   {
                       "Name":  "Ashwood Herbalist",
-                      "Games":  1147,
-                      "Wins":  458,
-                      "DeckGames":  2828
+                      "Games":  1394,
+                      "Wins":  536,
+                      "DeckGames":  3416
                   },
                   {
                       "Name":  "Asylum Chronicler",
-                      "Games":  1321,
-                      "Wins":  622,
-                      "DeckGames":  3080
+                      "Games":  1481,
+                      "Wins":  617,
+                      "DeckGames":  3731
                   },
                   {
                       "Name":  "Asylum Visitor",
-                      "Games":  1296,
-                      "Wins":  558,
-                      "DeckGames":  2996
+                      "Games":  1580,
+                      "Wins":  641,
+                      "DeckGames":  3808
                   },
                   {
                       "Name":  "Avacyn\u0027s Judgment",
-                      "Games":  1101,
-                      "Wins":  446,
-                      "DeckGames":  2555
+                      "Games":  1362,
+                      "Wins":  536,
+                      "DeckGames":  3430
                   },
                   {
                       "Name":  "Banish to the Mere",
-                      "Games":  1066,
-                      "Wins":  495,
-                      "DeckGames":  2513
+                      "Games":  1411,
+                      "Wins":  651,
+                      "DeckGames":  3437
                   },
                   {
                       "Name":  "Bargain at the Crossroads",
-                      "Games":  1384,
-                      "Wins":  587,
-                      "DeckGames":  3192
+                      "Games":  1645,
+                      "Wins":  654,
+                      "DeckGames":  4158
                   },
                   {
                       "Name":  "Bellowing Sergeant",
-                      "Games":  1327,
-                      "Wins":  674,
-                      "DeckGames":  2912
+                      "Games":  1625,
+                      "Wins":  770,
+                      "DeckGames":  3661
                   },
                   {
                       "Name":  "Blood Artist",
-                      "Games":  1077,
-                      "Wins":  430,
-                      "DeckGames":  2485
+                      "Games":  1274,
+                      "Wins":  463,
+                      "DeckGames":  3108
                   },
                   {
                       "Name":  "Blood Seeker",
-                      "Games":  1283,
-                      "Wins":  631,
-                      "DeckGames":  3010
+                      "Games":  1627,
+                      "Wins":  762,
+                      "DeckGames":  3808
                   },
                   {
                       "Name":  "Blood-Moon Acolyte",
-                      "Games":  1321,
-                      "Wins":  599,
-                      "DeckGames":  3094
+                      "Games":  1644,
+                      "Wins":  722,
+                      "DeckGames":  4172
                   },
                   {
                       "Name":  "Bloodcrazed Neonate",
-                      "Games":  1215,
-                      "Wins":  562,
-                      "DeckGames":  2905
+                      "Games":  1777,
+                      "Wins":  807,
+                      "DeckGames":  4284
                   },
                   {
                       "Name":  "Bloodgorged Fiend",
-                      "Games":  1354,
-                      "Wins":  679,
-                      "DeckGames":  3087
+                      "Games":  1583,
+                      "Wins":  772,
+                      "DeckGames":  3899
                   },
                   {
                       "Name":  "Bloodline Keeper",
-                      "Games":  1259,
-                      "Wins":  548,
-                      "DeckGames":  2961
+                      "Games":  1420,
+                      "Wins":  599,
+                      "DeckGames":  3528
                   },
                   {
                       "Name":  "Bloodline Necromancer",
-                      "Games":  1281,
-                      "Wins":  556,
-                      "DeckGames":  3010
+                      "Games":  1494,
+                      "Wins":  607,
+                      "DeckGames":  3752
                   },
                   {
                       "Name":  "Bloodlord of Hollowmere",
-                      "Games":  1229,
-                      "Wins":  604,
-                      "DeckGames":  2933
+                      "Games":  1525,
+                      "Wins":  784,
+                      "DeckGames":  3773
                   },
                   {
                       "Name":  "Bloodmad Vampire",
-                      "Games":  1278,
-                      "Wins":  605,
-                      "DeckGames":  2933
+                      "Games":  1589,
+                      "Wins":  705,
+                      "DeckGames":  3759
                   },
                   {
                       "Name":  "Bloodthrone Vampire",
-                      "Games":  1118,
-                      "Wins":  395,
-                      "DeckGames":  2625
-                  },
-                  {
-                      "Name":  "Bone Shambler",
-                      "Games":  1144,
-                      "Wins":  475,
-                      "DeckGames":  2723
-                  },
-                  {
-                      "Name":  "Bone-Silt Sentinel",
-                      "Games":  1192,
-                      "Wins":  637,
-                      "DeckGames":  2807
-                  },
-                  {
-                      "Name":  "Butcher Ghoul",
-                      "Games":  1209,
-                      "Wins":  616,
-                      "DeckGames":  2989
-                  },
-                  {
-                      "Name":  "Cairn Warden",
-                      "Games":  1171,
-                      "Wins":  559,
-                      "DeckGames":  2667
-                  },
-                  {
-                      "Name":  "Cairn-Bound Wisp",
-                      "Games":  930,
-                      "Wins":  394,
-                      "DeckGames":  2282
-                  },
-                  {
-                      "Name":  "Cairnwatch Sentinel",
-                      "Games":  1167,
-                      "Wins":  513,
-                      "DeckGames":  2674
-                  },
-                  {
-                      "Name":  "Cathartic Reunion",
-                      "Games":  1371,
-                      "Wins":  826,
-                      "DeckGames":  3297
-                  },
-                  {
-                      "Name":  "Cathedral Sanctifier",
-                      "Games":  985,
-                      "Wins":  429,
-                      "DeckGames":  2303
-                  },
-                  {
-                      "Name":  "Cemetery Reaper",
-                      "Games":  1160,
-                      "Wins":  521,
-                      "DeckGames":  2702
-                  },
-                  {
-                      "Name":  "Champion of the Chapel",
-                      "Games":  1220,
-                      "Wins":  607,
-                      "DeckGames":  2772
-                  },
-                  {
-                      "Name":  "Champion of the Parish",
-                      "Games":  1260,
-                      "Wins":  632,
-                      "DeckGames":  3038
-                  },
-                  {
-                      "Name":  "Chapel Bell-Warden",
-                      "Games":  1291,
-                      "Wins":  612,
-                      "DeckGames":  3087
-                  },
-                  {
-                      "Name":  "Chapel Bellringer",
-                      "Games":  1166,
-                      "Wins":  507,
-                      "DeckGames":  2695
-                  },
-                  {
-                      "Name":  "Chapel Candle",
-                      "Games":  1327,
-                      "Wins":  705,
-                      "DeckGames":  3066
-                  },
-                  {
-                      "Name":  "Chapel Conjurer",
-                      "Games":  1226,
-                      "Wins":  621,
-                      "DeckGames":  2884
-                  },
-                  {
-                      "Name":  "Chapel Guard",
-                      "Games":  1315,
-                      "Wins":  726,
-                      "DeckGames":  2968
-                  },
-                  {
-                      "Name":  "Chapel Guardian Angel",
-                      "Games":  1278,
-                      "Wins":  538,
-                      "DeckGames":  2933
-                  },
-                  {
-                      "Name":  "Chapel Rites",
-                      "Games":  1277,
-                      "Wins":  643,
-                      "DeckGames":  3129
-                  },
-                  {
-                      "Name":  "Chapel Scavenger",
-                      "Games":  1028,
-                      "Wins":  405,
-                      "DeckGames":  2485
-                  },
-                  {
-                      "Name":  "Chapel Seraph",
-                      "Games":  1269,
-                      "Wins":  612,
-                      "DeckGames":  2863
-                  },
-                  {
-                      "Name":  "Chapel Ward",
-                      "Games":  1378,
-                      "Wins":  694,
-                      "DeckGames":  3178
-                  },
-                  {
-                      "Name":  "Charnel Titan",
-                      "Games":  1216,
-                      "Wins":  619,
-                      "DeckGames":  2723
-                  },
-                  {
-                      "Name":  "Choir of the Drowned",
-                      "Games":  1046,
-                      "Wins":  400,
-                      "DeckGames":  2478
-                  },
-                  {
-                      "Name":  "Choir-Honored Abbess",
-                      "Games":  1098,
-                      "Wins":  430,
-                      "DeckGames":  2464
-                  },
-                  {
-                      "Name":  "Chorus of Whispers",
-                      "Games":  1069,
-                      "Wins":  374,
-                      "DeckGames":  2639
-                  },
-                  {
-                      "Name":  "Chorus of the Drowned Bell",
-                      "Games":  1069,
-                      "Wins":  488,
-                      "DeckGames":  2667
-                  },
-                  {
-                      "Name":  "Cloistered Novice",
-                      "Games":  1431,
-                      "Wins":  759,
-                      "DeckGames":  3227
-                  },
-                  {
-                      "Name":  "Consecrate the Mere",
-                      "Games":  1313,
-                      "Wins":  692,
-                      "DeckGames":  3059
-                  },
-                  {
-                      "Name":  "Consult the Drowned",
-                      "Games":  1318,
-                      "Wins":  689,
-                      "DeckGames":  3206
-                  },
-                  {
-                      "Name":  "Corpse Harvest",
-                      "Games":  1338,
-                      "Wins":  547,
-                      "DeckGames":  3178
-                  },
-                  {
-                      "Name":  "Corpse Knight",
-                      "Games":  1263,
-                      "Wins":  608,
-                      "DeckGames":  3031
-                  },
-                  {
-                      "Name":  "Crypt Creeper",
-                      "Games":  1220,
-                      "Wins":  587,
-                      "DeckGames":  2912
-                  },
-                  {
-                      "Name":  "Cryptbreaker",
-                      "Games":  1067,
-                      "Wins":  404,
-                      "DeckGames":  2541
-                  },
-                  {
-                      "Name":  "Cryptside Scavenger",
-                      "Games":  1263,
-                      "Wins":  597,
-                      "DeckGames":  2940
-                  },
-                  {
-                      "Name":  "Cryptwalk Scarab",
-                      "Games":  1378,
-                      "Wins":  885,
-                      "DeckGames":  3213
-                  },
-                  {
-                      "Name":  "Deep Mere Lurker",
-                      "Games":  1390,
-                      "Wins":  801,
-                      "DeckGames":  3199
-                  },
-                  {
-                      "Name":  "Demon of the Drowned Vow",
-                      "Games":  1307,
-                      "Wins":  675,
-                      "DeckGames":  3059
-                  },
-                  {
-                      "Name":  "Demonic Bargain",
-                      "Games":  1055,
-                      "Wins":  452,
-                      "DeckGames":  2590
-                  },
-                  {
-                      "Name":  "Devout Chaplain",
-                      "Games":  1148,
-                      "Wins":  495,
-                      "DeckGames":  2730
-                  },
-                  {
-                      "Name":  "Diregraf Captain",
-                      "Games":  1264,
-                      "Wins":  569,
-                      "DeckGames":  2975
-                  },
-                  {
-                      "Name":  "Diregraf Colossus",
-                      "Games":  1218,
-                      "Wins":  555,
-                      "DeckGames":  2723
-                  },
-                  {
-                      "Name":  "Diregraf Ghoul",
-                      "Games":  1361,
-                      "Wins":  788,
-                      "DeckGames":  3066
-                  },
-                  {
-                      "Name":  "Diregraf Muster",
-                      "Games":  1217,
-                      "Wins":  610,
-                      "DeckGames":  2814
-                  },
-                  {
-                      "Name":  "Dirge-Singer of the Mere",
-                      "Games":  1096,
-                      "Wins":  445,
-                      "DeckGames":  2723
-                  },
-                  {
-                      "Name":  "Doomed Traveler",
-                      "Games":  1285,
-                      "Wins":  660,
-                      "DeckGames":  3066
-                  },
-                  {
-                      "Name":  "Drag Under",
-                      "Games":  1082,
-                      "Wins":  524,
-                      "DeckGames":  2534
-                  },
-                  {
-                      "Name":  "Dreadwaters",
-                      "Games":  1311,
-                      "Wins":  570,
-                      "DeckGames":  3234
-                  },
-                  {
-                      "Name":  "Dredge the Deep Mere",
-                      "Games":  1124,
-                      "Wins":  451,
-                      "DeckGames":  2590
-                  },
-                  {
-                      "Name":  "Dregs of the Mere",
-                      "Games":  1205,
-                      "Wins":  602,
-                      "DeckGames":  2947
-                  },
-                  {
-                      "Name":  "Drogskol Anthem",
-                      "Games":  990,
-                      "Wins":  366,
-                      "DeckGames":  2359
-                  },
-                  {
-                      "Name":  "Drogskol Captain",
-                      "Games":  1150,
-                      "Wins":  463,
-                      "DeckGames":  2716
-                  },
-                  {
-                      "Name":  "Drogskol Shieldmate",
-                      "Games":  1595,
-                      "Wins":  766,
-                      "DeckGames":  3633
-                  },
-                  {
-                      "Name":  "Drown in the Mere",
-                      "Games":  1414,
-                      "Wins":  605,
-                      "DeckGames":  3199
-                  },
-                  {
-                      "Name":  "Drown the Archive",
-                      "Games":  1026,
-                      "Wins":  372,
-                      "DeckGames":  2436
-                  },
-                  {
-                      "Name":  "Drown the Lantern-Bearer",
-                      "Games":  1079,
-                      "Wins":  463,
-                      "DeckGames":  2527
-                  },
-                  {
-                      "Name":  "Drowned Acolyte",
-                      "Games":  1385,
-                      "Wins":  790,
-                      "DeckGames":  3108
-                  },
-                  {
-                      "Name":  "Drowned Archivist",
-                      "Games":  1165,
-                      "Wins":  511,
-                      "DeckGames":  2709
-                  },
-                  {
-                      "Name":  "Drowned Colossus of the Mere",
-                      "Games":  1334,
-                      "Wins":  677,
-                      "DeckGames":  3052
-                  },
-                  {
-                      "Name":  "Drowned Revenant",
-                      "Games":  1065,
-                      "Wins":  453,
-                      "DeckGames":  2618
-                  },
-                  {
-                      "Name":  "Echo of the Drowned",
-                      "Games":  1391,
-                      "Wins":  686,
-                      "DeckGames":  3276
-                  },
-                  {
-                      "Name":  "Elder of the Blood Court",
-                      "Games":  1135,
-                      "Wins":  524,
-                      "DeckGames":  2688
-                  },
-                  {
-                      "Name":  "Elder of the Long Night",
-                      "Games":  1121,
-                      "Wins":  463,
-                      "DeckGames":  2695
-                  },
-                  {
-                      "Name":  "Elder of the Parish",
-                      "Games":  1112,
-                      "Wins":  421,
-                      "DeckGames":  2667
-                  },
-                  {
-                      "Name":  "Endless Ranks",
-                      "Games":  1017,
-                      "Wins":  368,
-                      "DeckGames":  2387
-                  },
-                  {
-                      "Name":  "Exhume the Mere",
-                      "Games":  1450,
-                      "Wins":  807,
-                      "DeckGames":  3164
-                  },
-                  {
-                      "Name":  "Faithless Looting",
-                      "Games":  1308,
-                      "Wins":  594,
-                      "DeckGames":  3080
-                  },
-                  {
-                      "Name":  "Falkenrath Noble",
-                      "Games":  1076,
-                      "Wins":  406,
-                      "DeckGames":  2590
-                  },
-                  {
-                      "Name":  "Feast of Blood",
-                      "Games":  1202,
-                      "Wins":  571,
-                      "DeckGames":  2989
-                  },
-                  {
-                      "Name":  "Fiend of the Silt",
-                      "Games":  1383,
-                      "Wins":  676,
-                      "DeckGames":  3136
-                  },
-                  {
-                      "Name":  "Fiery Temper",
-                      "Games":  1383,
-                      "Wins":  695,
-                      "DeckGames":  3199
-                  },
-                  {
-                      "Name":  "Final Rites",
-                      "Games":  1011,
-                      "Wins":  425,
-                      "DeckGames":  2359
-                  },
-                  {
-                      "Name":  "Flood the Vaults",
-                      "Games":  1124,
-                      "Wins":  430,
-                      "DeckGames":  2604
-                  },
-                  {
-                      "Name":  "Fury of the Mere",
-                      "Games":  1232,
-                      "Wins":  642,
-                      "DeckGames":  2982
-                  },
-                  {
-                      "Name":  "Gather the Townsfolk",
-                      "Games":  1433,
-                      "Wins":  731,
-                      "DeckGames":  3178
-                  },
-                  {
-                      "Name":  "Geist of the Deep Mere",
-                      "Games":  1310,
-                      "Wins":  703,
-                      "DeckGames":  2905
-                  },
-                  {
-                      "Name":  "Ghostly Chorus",
-                      "Games":  1116,
-                      "Wins":  415,
-                      "DeckGames":  2632
-                  },
-                  {
-                      "Name":  "Ghoulcaller\u0027s Bargain",
-                      "Games":  1206,
-                      "Wins":  533,
-                      "DeckGames":  2758
-                  },
-                  {
-                      "Name":  "Ghoulish Bargainer",
-                      "Games":  1202,
-                      "Wins":  538,
-                      "DeckGames":  2975
-                  },
-                  {
-                      "Name":  "Gnawing Hunger",
-                      "Games":  1297,
-                      "Wins":  662,
-                      "DeckGames":  3059
-                  },
-                  {
-                      "Name":  "Grasp of the Mere",
-                      "Games":  1290,
-                      "Wins":  536,
-                      "DeckGames":  3066
-                  },
-                  {
-                      "Name":  "Grave Scholar",
-                      "Games":  1410,
-                      "Wins":  906,
-                      "DeckGames":  3024
-                  },
-                  {
-                      "Name":  "Gravecrawler",
-                      "Games":  1325,
-                      "Wins":  796,
-                      "DeckGames":  3199
-                  },
-                  {
-                      "Name":  "Gravepact Acolyte",
-                      "Games":  1310,
-                      "Wins":  704,
-                      "DeckGames":  3129
-                  },
-                  {
-                      "Name":  "Gravewatch Sentry",
-                      "Games":  1357,
-                      "Wins":  729,
-                      "DeckGames":  3213
-                  },
-                  {
-                      "Name":  "Graveyard Trespasser",
-                      "Games":  1173,
-                      "Wins":  551,
-                      "DeckGames":  2835
-                  },
-                  {
-                      "Name":  "Grim Excavation",
-                      "Games":  1360,
-                      "Wins":  732,
-                      "DeckGames":  3185
-                  },
-                  {
-                      "Name":  "Grim Improvisation",
-                      "Games":  1305,
-                      "Wins":  666,
-                      "DeckGames":  3073
-                  },
-                  {
-                      "Name":  "Grim-Faced Reeve",
-                      "Games":  1352,
-                      "Wins":  632,
-                      "DeckGames":  3003
-                  },
-                  {
-                      "Name":  "Grimgrin Acolyte",
-                      "Games":  1218,
-                      "Wins":  604,
-                      "DeckGames":  2968
-                  },
-                  {
-                      "Name":  "Grimgrin the Sewn",
-                      "Games":  1151,
-                      "Wins":  450,
-                      "DeckGames":  2730
-                  },
-                  {
-                      "Name":  "Guardian of the Last Vigil",
-                      "Games":  1202,
-                      "Wins":  603,
-                      "DeckGames":  2821
-                  },
-                  {
-                      "Name":  "Harvester of Souls",
-                      "Games":  1177,
-                      "Wins":  563,
-                      "DeckGames":  2758
-                  },
-                  {
-                      "Name":  "Herald of the Chapel",
-                      "Games":  1171,
-                      "Wins":  455,
-                      "DeckGames":  2870
-                  },
-                  {
-                      "Name":  "Hollow Vow Tyrant",
-                      "Games":  1278,
-                      "Wins":  653,
-                      "DeckGames":  3003
-                  },
-                  {
-                      "Name":  "Hollowmere Apprentice",
-                      "Games":  1281,
-                      "Wins":  639,
-                      "DeckGames":  3010
-                  },
-                  {
-                      "Name":  "Hollowmere Bailiff",
-                      "Games":  1193,
-                      "Wins":  513,
-                      "DeckGames":  2835
-                  },
-                  {
-                      "Name":  "Hollowmere Bulwark",
-                      "Games":  1357,
-                      "Wins":  687,
-                      "DeckGames":  3220
-                  },
-                  {
-                      "Name":  "Hollowmere Choirmaster",
-                      "Games":  1039,
-                      "Wins":  473,
-                      "DeckGames":  2485
-                  },
-                  {
-                      "Name":  "Hollowmere Confessor",
-                      "Games":  1415,
-                      "Wins":  633,
-                      "DeckGames":  3234
-                  },
-                  {
-                      "Name":  "Hollowmere Gravecaller",
-                      "Games":  1034,
-                      "Wins":  386,
-                      "DeckGames":  2436
-                  },
-                  {
-                      "Name":  "Hollowmere Herbalist",
-                      "Games":  1356,
-                      "Wins":  680,
-                      "DeckGames":  3101
-                  },
-                  {
-                      "Name":  "Hollowmere Houndmaster",
-                      "Games":  1387,
-                      "Wins":  658,
-                      "DeckGames":  3178
-                  },
-                  {
-                      "Name":  "Hollowmere Inquisitor",
-                      "Games":  1199,
-                      "Wins":  610,
-                      "DeckGames":  2884
-                  },
-                  {
-                      "Name":  "Hollowmere Lycanthrope",
-                      "Games":  1185,
-                      "Wins":  532,
-                      "DeckGames":  2842
-                  },
-                  {
-                      "Name":  "Hollowmere Marshal",
-                      "Games":  1267,
-                      "Wins":  634,
-                      "DeckGames":  2926
-                  },
-                  {
-                      "Name":  "Hollowmere Militia Captain",
-                      "Games":  1083,
-                      "Wins":  444,
-                      "DeckGames":  2471
-                  },
-                  {
-                      "Name":  "Hollowmere Muster",
-                      "Games":  1238,
-                      "Wins":  542,
-                      "DeckGames":  2681
-                  },
-                  {
-                      "Name":  "Hollowmere Necromancer",
-                      "Games":  1164,
-                      "Wins":  459,
-                      "DeckGames":  2653
-                  },
-                  {
-                      "Name":  "Hollowmere Poacher",
-                      "Games":  1371,
-                      "Wins":  674,
-                      "DeckGames":  3115
-                  },
-                  {
-                      "Name":  "Hollowmere Procession",
-                      "Games":  1122,
-                      "Wins":  452,
-                      "DeckGames":  2506
-                  },
-                  {
-                      "Name":  "Hollowmere Savant",
-                      "Games":  1216,
-                      "Wins":  693,
-                      "DeckGames":  2898
-                  },
-                  {
-                      "Name":  "Hollowmere Shepherd",
-                      "Games":  1077,
-                      "Wins":  492,
-                      "DeckGames":  2562
-                  },
-                  {
-                      "Name":  "Howlpack Alpha",
-                      "Games":  1268,
-                      "Wins":  563,
-                      "DeckGames":  3045
-                  },
-                  {
-                      "Name":  "Incorrigible Youths",
-                      "Games":  1347,
-                      "Wins":  787,
-                      "DeckGames":  3094
-                  },
-                  {
-                      "Name":  "Infernal Bargainer",
-                      "Games":  1291,
-                      "Wins":  647,
-                      "DeckGames":  2961
-                  },
-                  {
-                      "Name":  "Insolent Neonate",
-                      "Games":  1275,
-                      "Wins":  516,
-                      "DeckGames":  2982
-                  },
-                  {
-                      "Name":  "Keeper of Broken Vows",
-                      "Games":  916,
-                      "Wins":  363,
-                      "DeckGames":  2219
-                  },
-                  {
-                      "Name":  "Keeper of Drowned Lore",
-                      "Games":  1046,
-                      "Wins":  453,
-                      "DeckGames":  2534
-                  },
-                  {
-                      "Name":  "Keeper of the Ossuary",
-                      "Games":  1160,
-                      "Wins":  490,
-                      "DeckGames":  2646
-                  },
-                  {
-                      "Name":  "Keeper of the Quiet Hour",
-                      "Games":  1273,
-                      "Wins":  590,
-                      "DeckGames":  2954
-                  },
-                  {
-                      "Name":  "Keeper of the Silent Choir",
-                      "Games":  1134,
-                      "Wins":  459,
-                      "DeckGames":  2723
-                  },
-                  {
-                      "Name":  "Kindled Zealot",
                       "Games":  1355,
-                      "Wins":  724,
-                      "DeckGames":  3178
-                  },
-                  {
-                      "Name":  "Lantern of the Mere",
-                      "Games":  1331,
-                      "Wins":  697,
+                      "Wins":  456,
                       "DeckGames":  3269
                   },
                   {
-                      "Name":  "Lantern-Lit Trapper",
-                      "Games":  1304,
-                      "Wins":  584,
-                      "DeckGames":  3059
+                      "Name":  "Bone Shambler",
+                      "Games":  1371,
+                      "Wins":  550,
+                      "DeckGames":  3458
                   },
                   {
-                      "Name":  "Leviathan of the Deep Mere",
-                      "Games":  1393,
-                      "Wins":  743,
-                      "DeckGames":  3199
+                      "Name":  "Bone-Silt Sentinel",
+                      "Games":  1576,
+                      "Wins":  789,
+                      "DeckGames":  3836
                   },
                   {
-                      "Name":  "Lingering Souls",
-                      "Games":  1140,
-                      "Wins":  493,
-                      "DeckGames":  2541
+                      "Name":  "Butcher Ghoul",
+                      "Games":  1522,
+                      "Wins":  704,
+                      "DeckGames":  3738
                   },
                   {
-                      "Name":  "Lord of the Drowned Host",
-                      "Games":  1269,
-                      "Wins":  620,
-                      "DeckGames":  2947
+                      "Name":  "Cairn Warden",
+                      "Games":  1402,
+                      "Wins":  658,
+                      "DeckGames":  3402
                   },
                   {
-                      "Name":  "Markov Patrician",
-                      "Games":  1078,
-                      "Wins":  424,
-                      "DeckGames":  2555
-                  },
-                  {
-                      "Name":  "Mausoleum Wanderer",
-                      "Games":  1277,
-                      "Wins":  594,
-                      "DeckGames":  3010
-                  },
-                  {
-                      "Name":  "Mausoleum Warden",
-                      "Games":  1060,
-                      "Wins":  500,
-                      "DeckGames":  2492
-                  },
-                  {
-                      "Name":  "Mayor of Hollowmere",
-                      "Games":  1155,
-                      "Wins":  505,
-                      "DeckGames":  2709
-                  },
-                  {
-                      "Name":  "Mere-Bank Tracker",
-                      "Games":  1180,
-                      "Wins":  545,
-                      "DeckGames":  2800
-                  },
-                  {
-                      "Name":  "Mere-Bound Revenant",
-                      "Games":  1228,
-                      "Wins":  619,
-                      "DeckGames":  2933
-                  },
-                  {
-                      "Name":  "Mere-Bound Ritualist",
-                      "Games":  1084,
-                      "Wins":  433,
-                      "DeckGames":  2576
-                  },
-                  {
-                      "Name":  "Mere-Chapel Bells",
-                      "Games":  1248,
-                      "Wins":  572,
-                      "DeckGames":  3059
-                  },
-                  {
-                      "Name":  "Mere-Drifter Wisp",
-                      "Games":  1053,
-                      "Wins":  368,
-                      "DeckGames":  2450
-                  },
-                  {
-                      "Name":  "Mere-Drowned Penitent",
-                      "Games":  1199,
-                      "Wins":  502,
-                      "DeckGames":  2842
-                  },
-                  {
-                      "Name":  "Mere-Drowned Scribe",
-                      "Games":  1237,
-                      "Wins":  738,
-                      "DeckGames":  2828
-                  },
-                  {
-                      "Name":  "Mere-Fed Horror",
-                      "Games":  1103,
-                      "Wins":  482,
-                      "DeckGames":  2618
-                  },
-                  {
-                      "Name":  "Mere-Gaze",
-                      "Games":  1293,
-                      "Wins":  740,
-                      "DeckGames":  3115
-                  },
-                  {
-                      "Name":  "Mere-Road Vagrant",
-                      "Games":  1356,
-                      "Wins":  725,
-                      "DeckGames":  3115
-                  },
-                  {
-                      "Name":  "Mere-Storm",
-                      "Games":  987,
-                      "Wins":  317,
-                      "DeckGames":  2457
-                  },
-                  {
-                      "Name":  "Mere-Tender Acolyte",
-                      "Games":  1310,
-                      "Wins":  654,
-                      "DeckGames":  3052
-                  },
-                  {
-                      "Name":  "Mere-Touched Adept",
-                      "Games":  1086,
-                      "Wins":  460,
-                      "DeckGames":  2653
-                  },
-                  {
-                      "Name":  "Mere-Watch Adept",
-                      "Games":  1280,
-                      "Wins":  571,
-                      "DeckGames":  2982
-                  },
-                  {
-                      "Name":  "Mere-Wisp",
-                      "Games":  1302,
-                      "Wins":  625,
-                      "DeckGames":  2954
-                  },
-                  {
-                      "Name":  "Mire Prowler",
-                      "Games":  1364,
-                      "Wins":  748,
-                      "DeckGames":  3262
-                  },
-                  {
-                      "Name":  "Moonlit Sentry",
-                      "Games":  1389,
-                      "Wins":  743,
-                      "DeckGames":  3164
-                  },
-                  {
-                      "Name":  "Moonrise",
-                      "Games":  1251,
-                      "Wins":  504,
-                      "DeckGames":  3157
-                  },
-                  {
-                      "Name":  "Niblis of Frost",
-                      "Games":  1257,
-                      "Wins":  584,
-                      "DeckGames":  2933
-                  },
-                  {
-                      "Name":  "Niblis of the Mere",
-                      "Games":  1365,
-                      "Wins":  697,
-                      "DeckGames":  3150
-                  },
-                  {
-                      "Name":  "Night of the Long Thirst",
-                      "Games":  990,
-                      "Wins":  365,
-                      "DeckGames":  2415
-                  },
-                  {
-                      "Name":  "Nightfall Reveler",
-                      "Games":  1142,
-                      "Wins":  537,
-                      "DeckGames":  2625
-                  },
-                  {
-                      "Name":  "Nighthawk Penitent",
-                      "Games":  1274,
-                      "Wins":  661,
-                      "DeckGames":  3108
-                  },
-                  {
-                      "Name":  "Olivia of the Mere",
-                      "Games":  1249,
-                      "Wins":  593,
-                      "DeckGames":  2814
-                  },
-                  {
-                      "Name":  "Olivia\u0027s Dragoon",
-                      "Games":  1054,
-                      "Wins":  415,
-                      "DeckGames":  2576
-                  },
-                  {
-                      "Name":  "Ossuary Scavenger",
-                      "Games":  1321,
-                      "Wins":  701,
-                      "DeckGames":  3017
-                  },
-                  {
-                      "Name":  "Ossuary Warden",
-                      "Games":  1284,
-                      "Wins":  538,
-                      "DeckGames":  3094
-                  },
-                  {
-                      "Name":  "Parish Bell-Ringer",
-                      "Games":  1117,
-                      "Wins":  487,
-                      "DeckGames":  2562
-                  },
-                  {
-                      "Name":  "Parish Cantor",
-                      "Games":  1191,
-                      "Wins":  548,
-                      "DeckGames":  2765
-                  },
-                  {
-                      "Name":  "Parish Exhumer",
-                      "Games":  1194,
-                      "Wins":  538,
-                      "DeckGames":  2737
-                  },
-                  {
-                      "Name":  "Parish Gravedigger",
-                      "Games":  1269,
-                      "Wins":  578,
-                      "DeckGames":  3045
-                  },
-                  {
-                      "Name":  "Parish Torchbearer",
-                      "Games":  1431,
-                      "Wins":  749,
-                      "DeckGames":  3213
-                  },
-                  {
-                      "Name":  "Parish Zealot",
-                      "Games":  1151,
-                      "Wins":  564,
-                      "DeckGames":  2681
-                  },
-                  {
-                      "Name":  "Past in Ashes",
-                      "Games":  1172,
-                      "Wins":  439,
-                      "DeckGames":  2758
-                  },
-                  {
-                      "Name":  "Persecutor of Hollowmere",
-                      "Games":  1246,
-                      "Wins":  611,
-                      "DeckGames":  2905
-                  },
-                  {
-                      "Name":  "Ponder",
-                      "Games":  1331,
-                      "Wins":  799,
-                      "DeckGames":  3206
-                  },
-                  {
-                      "Name":  "Pull Beneath",
-                      "Games":  989,
-                      "Wins":  389,
-                      "DeckGames":  2254
-                  },
-                  {
-                      "Name":  "Purge the Vaults",
-                      "Games":  1292,
-                      "Wins":  620,
-                      "DeckGames":  3108
-                  },
-                  {
-                      "Name":  "Rally the Watch",
-                      "Games":  1325,
-                      "Wins":  683,
-                      "DeckGames":  3283
-                  },
-                  {
-                      "Name":  "Rattlechains",
-                      "Games":  1292,
-                      "Wins":  584,
-                      "DeckGames":  3038
-                  },
-                  {
-                      "Name":  "Raven\u0027s Crime",
-                      "Games":  1301,
-                      "Wins":  717,
-                      "DeckGames":  3066
-                  },
-                  {
-                      "Name":  "Ravenous Bloodseeker",
+                      "Name":  "Cairn-Bound Wisp",
                       "Games":  1359,
-                      "Wins":  729,
-                      "DeckGames":  3157
-                  },
-                  {
-                      "Name":  "Read the Bones",
-                      "Games":  1178,
-                      "Wins":  509,
-                      "DeckGames":  2702
-                  },
-                  {
-                      "Name":  "Reaper from the Mere",
-                      "Games":  1321,
-                      "Wins":  627,
-                      "DeckGames":  3087
-                  },
-                  {
-                      "Name":  "Relentless Corpse",
-                      "Games":  1347,
-                      "Wins":  646,
-                      "DeckGames":  3192
-                  },
-                  {
-                      "Name":  "Riddle of the Mere",
-                      "Games":  1021,
-                      "Wins":  483,
-                      "DeckGames":  2513
-                  },
-                  {
-                      "Name":  "Riders of Hollowmere",
-                      "Games":  1365,
-                      "Wins":  723,
-                      "DeckGames":  3038
-                  },
-                  {
-                      "Name":  "Rise from the Silt",
-                      "Games":  973,
-                      "Wins":  331,
-                      "DeckGames":  2408
-                  },
-                  {
-                      "Name":  "Rise of the Drowned Host",
-                      "Games":  1066,
-                      "Wins":  382,
-                      "DeckGames":  2548
-                  },
-                  {
-                      "Name":  "Rite of Rot",
-                      "Games":  1289,
-                      "Wins":  626,
-                      "DeckGames":  2933
-                  },
-                  {
-                      "Name":  "Rite of Second Drowning",
-                      "Games":  1118,
-                      "Wins":  468,
-                      "DeckGames":  2660
-                  },
-                  {
-                      "Name":  "Rites of the Sunken Choir",
-                      "Games":  1124,
-                      "Wins":  515,
-                      "DeckGames":  2667
-                  },
-                  {
-                      "Name":  "Rot-Marked Thrall",
-                      "Games":  1434,
-                      "Wins":  902,
-                      "DeckGames":  3255
-                  },
-                  {
-                      "Name":  "Rotting Chorus",
-                      "Games":  1172,
-                      "Wins":  547,
-                      "DeckGames":  2709
-                  },
-                  {
-                      "Name":  "Rummaging Wight",
-                      "Games":  1179,
-                      "Wins":  454,
-                      "DeckGames":  2772
-                  },
-                  {
-                      "Name":  "Sanguine Rite",
-                      "Games":  1090,
-                      "Wins":  433,
-                      "DeckGames":  2618
-                  },
-                  {
-                      "Name":  "Second Burial",
-                      "Games":  1117,
-                      "Wins":  421,
-                      "DeckGames":  2681
-                  },
-                  {
-                      "Name":  "Second Sight",
-                      "Games":  1292,
-                      "Wins":  694,
-                      "DeckGames":  3213
-                  },
-                  {
-                      "Name":  "Sepulchral Leviathan",
-                      "Games":  1376,
-                      "Wins":  749,
-                      "DeckGames":  3115
-                  },
-                  {
-                      "Name":  "Sepulchral Warden",
-                      "Games":  1186,
-                      "Wins":  661,
-                      "DeckGames":  2702
-                  },
-                  {
-                      "Name":  "Seraph of the Silt",
-                      "Games":  1125,
-                      "Wins":  525,
-                      "DeckGames":  2695
-                  },
-                  {
-                      "Name":  "Sever the Bloodline",
-                      "Games":  1359,
-                      "Wins":  728,
-                      "DeckGames":  3115
-                  },
-                  {
-                      "Name":  "Sexton of the Drowned Chapel",
-                      "Games":  1302,
-                      "Wins":  564,
-                      "DeckGames":  3129
-                  },
-                  {
-                      "Name":  "Shoal Scarab",
-                      "Games":  1266,
-                      "Wins":  620,
-                      "DeckGames":  3052
-                  },
-                  {
-                      "Name":  "Shrieking Penitent",
-                      "Games":  1441,
-                      "Wins":  729,
-                      "DeckGames":  3157
-                  },
-                  {
-                      "Name":  "Silent Vigil",
-                      "Games":  1340,
-                      "Wins":  601,
-                      "DeckGames":  3220
-                  },
-                  {
-                      "Name":  "Silt Blast",
-                      "Games":  1155,
-                      "Wins":  525,
-                      "DeckGames":  2758
-                  },
-                  {
-                      "Name":  "Silt Crawler",
-                      "Games":  1263,
-                      "Wins":  627,
-                      "DeckGames":  2982
-                  },
-                  {
-                      "Name":  "Silt Golem",
-                      "Games":  1356,
-                      "Wins":  754,
-                      "DeckGames":  3024
-                  },
-                  {
-                      "Name":  "Silt Ritual",
-                      "Games":  1258,
-                      "Wins":  641,
-                      "DeckGames":  3157
-                  },
-                  {
-                      "Name":  "Silt in the Lungs",
-                      "Games":  1429,
-                      "Wins":  802,
-                      "DeckGames":  3206
-                  },
-                  {
-                      "Name":  "Silt the Vaults",
-                      "Games":  1107,
-                      "Wins":  480,
-                      "DeckGames":  2520
-                  },
-                  {
-                      "Name":  "Silt-Bound Cantor",
-                      "Games":  1111,
-                      "Wins":  478,
-                      "DeckGames":  2611
-                  },
-                  {
-                      "Name":  "Silt-Choked Chronicler",
-                      "Games":  1258,
-                      "Wins":  536,
-                      "DeckGames":  2947
-                  },
-                  {
-                      "Name":  "Silt-Choked Grasp",
-                      "Games":  1365,
-                      "Wins":  733,
-                      "DeckGames":  3157
-                  },
-                  {
-                      "Name":  "Silt-Choked Oracle",
-                      "Games":  1080,
-                      "Wins":  436,
-                      "DeckGames":  2576
-                  },
-                  {
-                      "Name":  "Silt-Choked Wanderer",
-                      "Games":  1286,
-                      "Wins":  609,
-                      "DeckGames":  3003
-                  },
-                  {
-                      "Name":  "Silt-Gorged Wurm",
-                      "Games":  1113,
-                      "Wins":  556,
-                      "DeckGames":  2667
-                  },
-                  {
-                      "Name":  "Silt-Sifter",
-                      "Games":  1263,
-                      "Wins":  590,
-                      "DeckGames":  3101
-                  },
-                  {
-                      "Name":  "Silt-Stained Ledger",
-                      "Games":  1375,
-                      "Wins":  778,
-                      "DeckGames":  3164
-                  },
-                  {
-                      "Name":  "Silt-Stained Rites",
-                      "Games":  1261,
-                      "Wins":  668,
-                      "DeckGames":  2919
-                  },
-                  {
-                      "Name":  "Silt-Veiled Shade",
-                      "Games":  1184,
-                      "Wins":  558,
-                      "DeckGames":  2681
-                  },
-                  {
-                      "Name":  "Silt-Wisp Haunt",
-                      "Games":  1065,
-                      "Wins":  451,
-                      "DeckGames":  2576
-                  },
-                  {
-                      "Name":  "Silt-Wreathed Colossus",
-                      "Games":  1204,
-                      "Wins":  609,
-                      "DeckGames":  2653
-                  },
-                  {
-                      "Name":  "Silt-Wreathed Scholar",
-                      "Games":  1293,
-                      "Wins":  562,
-                      "DeckGames":  3101
-                  },
-                  {
-                      "Name":  "Skim the Surface",
-                      "Games":  1340,
-                      "Wins":  797,
-                      "DeckGames":  3185
-                  },
-                  {
-                      "Name":  "Snuff the Lantern",
-                      "Games":  1342,
-                      "Wins":  732,
-                      "DeckGames":  3157
-                  },
-                  {
-                      "Name":  "Spectral Procession",
-                      "Games":  1235,
-                      "Wins":  625,
-                      "DeckGames":  2611
-                  },
-                  {
-                      "Name":  "Spectral Reserves",
-                      "Games":  1458,
-                      "Wins":  760,
-                      "DeckGames":  3164
-                  },
-                  {
-                      "Name":  "Spectral Surge",
-                      "Games":  1327,
-                      "Wins":  641,
-                      "DeckGames":  3143
-                  },
-                  {
-                      "Name":  "Spectral Tide",
-                      "Games":  1149,
-                      "Wins":  393,
-                      "DeckGames":  2639
-                  },
-                  {
-                      "Name":  "Spell-Sworn Revenant",
-                      "Games":  1179,
-                      "Wins":  552,
-                      "DeckGames":  2849
-                  },
-                  {
-                      "Name":  "Spirit Shepherd",
-                      "Games":  1375,
-                      "Wins":  686,
-                      "DeckGames":  3038
-                  },
-                  {
-                      "Name":  "Splinterbone Horror",
-                      "Games":  1100,
-                      "Wins":  644,
-                      "DeckGames":  2450
-                  },
-                  {
-                      "Name":  "Storm of Silt",
-                      "Games":  1120,
-                      "Wins":  398,
-                      "DeckGames":  2688
-                  },
-                  {
-                      "Name":  "Stromkirk Bloodthief",
-                      "Games":  1188,
-                      "Wins":  593,
-                      "DeckGames":  2905
-                  },
-                  {
-                      "Name":  "Stromkirk Captain",
-                      "Games":  1055,
-                      "Wins":  448,
-                      "DeckGames":  2541
-                  },
-                  {
-                      "Name":  "Sunken Archives",
-                      "Games":  1415,
-                      "Wins":  736,
+                      "Wins":  591,
                       "DeckGames":  3318
                   },
                   {
-                      "Name":  "Sunken Chorus",
-                      "Games":  1042,
-                      "Wins":  413,
-                      "DeckGames":  2352
-                  },
-                  {
-                      "Name":  "Sunken Grave-Lord",
-                      "Games":  1132,
-                      "Wins":  440,
-                      "DeckGames":  2548
-                  },
-                  {
-                      "Name":  "The Drowned Archfiend",
-                      "Games":  1300,
-                      "Wins":  600,
-                      "DeckGames":  3080
-                  },
-                  {
-                      "Name":  "The Drowning Chorus",
-                      "Games":  1084,
-                      "Wins":  450,
-                      "DeckGames":  2555
-                  },
-                  {
-                      "Name":  "The Mere Gives Up Its Dead",
-                      "Games":  1098,
-                      "Wins":  431,
-                      "DeckGames":  2450
-                  },
-                  {
-                      "Name":  "The Mere Remembers",
-                      "Games":  1003,
-                      "Wins":  374,
-                      "DeckGames":  2408
-                  },
-                  {
-                      "Name":  "The Mere Swallows All",
-                      "Games":  1020,
-                      "Wins":  377,
-                      "DeckGames":  2527
-                  },
-                  {
-                      "Name":  "Thought Scour",
-                      "Games":  1369,
-                      "Wins":  781,
-                      "DeckGames":  3185
-                  },
-                  {
-                      "Name":  "Thraben Marshal",
-                      "Games":  1121,
-                      "Wins":  484,
-                      "DeckGames":  2681
-                  },
-                  {
-                      "Name":  "Tidal Erasure",
-                      "Games":  1181,
-                      "Wins":  435,
-                      "DeckGames":  2744
-                  },
-                  {
-                      "Name":  "Tide of Whispers",
-                      "Games":  1033,
-                      "Wins":  360,
-                      "DeckGames":  2457
-                  },
-                  {
-                      "Name":  "Tome Dredger",
-                      "Games":  1358,
-                      "Wins":  722,
-                      "DeckGames":  3101
-                  },
-                  {
-                      "Name":  "Tormenting Voice",
+                      "Name":  "Cairnwatch Sentinel",
                       "Games":  1318,
-                      "Wins":  770,
-                      "DeckGames":  3136
+                      "Wins":  593,
+                      "DeckGames":  3192
                   },
                   {
-                      "Name":  "Twitching Ghoul",
-                      "Games":  1263,
-                      "Wins":  586,
-                      "DeckGames":  3024
+                      "Name":  "Cathartic Reunion",
+                      "Games":  1731,
+                      "Wins":  1003,
+                      "DeckGames":  4158
                   },
                   {
-                      "Name":  "Undead Alchemist",
-                      "Games":  1401,
-                      "Wins":  694,
-                      "DeckGames":  3066
+                      "Name":  "Cathedral Sanctifier",
+                      "Games":  1642,
+                      "Wins":  871,
+                      "DeckGames":  3983
                   },
                   {
-                      "Name":  "Unhallowed Rite",
-                      "Games":  1354,
-                      "Wins":  621,
-                      "DeckGames":  3178
+                      "Name":  "Cemetery Reaper",
+                      "Games":  1314,
+                      "Wins":  517,
+                      "DeckGames":  3339
                   },
                   {
-                      "Name":  "Vampire Cutthroat",
-                      "Games":  1268,
-                      "Wins":  623,
-                      "DeckGames":  2982
+                      "Name":  "Champion of the Chapel",
+                      "Games":  1606,
+                      "Wins":  815,
+                      "DeckGames":  3836
                   },
                   {
-                      "Name":  "Vampire Interloper",
-                      "Games":  1432,
-                      "Wins":  626,
-                      "DeckGames":  3297
+                      "Name":  "Champion of the Parish",
+                      "Games":  1579,
+                      "Wins":  765,
+                      "DeckGames":  3899
                   },
                   {
-                      "Name":  "Vampire Lacerator",
-                      "Games":  1399,
-                      "Wins":  688,
-                      "DeckGames":  3262
+                      "Name":  "Chapel Bell-Warden",
+                      "Games":  1544,
+                      "Wins":  674,
+                      "DeckGames":  3885
                   },
                   {
-                      "Name":  "Vigil of the Drowned",
-                      "Games":  1074,
-                      "Wins":  441,
-                      "DeckGames":  2464
+                      "Name":  "Chapel Bellringer",
+                      "Games":  1352,
+                      "Wins":  536,
+                      "DeckGames":  3409
                   },
                   {
-                      "Name":  "Vigilant Watcher",
-                      "Games":  1304,
-                      "Wins":  618,
-                      "DeckGames":  3087
+                      "Name":  "Chapel Candle",
+                      "Games":  1708,
+                      "Wins":  861,
+                      "DeckGames":  4046
                   },
                   {
-                      "Name":  "Village Ironsmith",
-                      "Games":  1286,
-                      "Wins":  684,
-                      "DeckGames":  3010
+                      "Name":  "Chapel Conjurer",
+                      "Games":  1606,
+                      "Wins":  764,
+                      "DeckGames":  3675
                   },
                   {
-                      "Name":  "Village Messenger",
-                      "Games":  1340,
-                      "Wins":  670,
-                      "DeckGames":  3150
+                      "Name":  "Chapel Guard",
+                      "Games":  1756,
+                      "Wins":  934,
+                      "DeckGames":  4200
                   },
                   {
-                      "Name":  "Village Rabblerouser",
-                      "Games":  1440,
-                      "Wins":  691,
+                      "Name":  "Chapel Guardian Angel",
+                      "Games":  1682,
+                      "Wins":  804,
+                      "DeckGames":  3997
+                  },
+                  {
+                      "Name":  "Chapel Longbowman",
+                      "Games":  1542,
+                      "Wins":  650,
+                      "DeckGames":  3836
+                  },
+                  {
+                      "Name":  "Chapel Rites",
+                      "Games":  1707,
+                      "Wins":  833,
+                      "DeckGames":  4242
+                  },
+                  {
+                      "Name":  "Chapel Scavenger",
+                      "Games":  1365,
+                      "Wins":  503,
+                      "DeckGames":  3381
+                  },
+                  {
+                      "Name":  "Chapel Seraph",
+                      "Games":  1455,
+                      "Wins":  630,
+                      "DeckGames":  3437
+                  },
+                  {
+                      "Name":  "Chapel Ward",
+                      "Games":  1691,
+                      "Wins":  854,
+                      "DeckGames":  4018
+                  },
+                  {
+                      "Name":  "Charnel Titan",
+                      "Games":  1584,
+                      "Wins":  713,
+                      "DeckGames":  3661
+                  },
+                  {
+                      "Name":  "Choir of the Drowned",
+                      "Games":  1246,
+                      "Wins":  488,
+                      "DeckGames":  3038
+                  },
+                  {
+                      "Name":  "Choir-Honored Abbess",
+                      "Games":  1364,
+                      "Wins":  568,
                       "DeckGames":  3206
                   },
                   {
-                      "Name":  "Voice of the Chapel",
-                      "Games":  1097,
-                      "Wins":  433,
-                      "DeckGames":  2618
+                      "Name":  "Chorus of Whispers",
+                      "Games":  1341,
+                      "Wins":  440,
+                      "DeckGames":  3276
                   },
                   {
-                      "Name":  "Vow-Breaker Fiend",
-                      "Games":  1321,
-                      "Wins":  731,
-                      "DeckGames":  3080
+                      "Name":  "Chorus of the Drowned Bell",
+                      "Games":  1339,
+                      "Wins":  575,
+                      "DeckGames":  3185
                   },
                   {
-                      "Name":  "Watcher at the Ford",
-                      "Games":  1255,
-                      "Wins":  585,
-                      "DeckGames":  2898
+                      "Name":  "Cloistered Novice",
+                      "Games":  1795,
+                      "Wins":  915,
+                      "DeckGames":  4109
                   },
                   {
-                      "Name":  "Whisper of the Choir",
-                      "Games":  1271,
-                      "Wins":  693,
-                      "DeckGames":  2989
+                      "Name":  "Consecrate the Mere",
+                      "Games":  1640,
+                      "Wins":  850,
+                      "DeckGames":  3997
                   },
                   {
-                      "Name":  "Whispered Betrayal",
-                      "Games":  1279,
-                      "Wins":  528,
-                      "DeckGames":  2982
+                      "Name":  "Consult the Drowned",
+                      "Games":  1673,
+                      "Wins":  783,
+                      "DeckGames":  4116
                   },
                   {
-                      "Name":  "Whispers from the Mere",
-                      "Games":  1068,
-                      "Wins":  430,
-                      "DeckGames":  2534
+                      "Name":  "Corpse Harvest",
+                      "Games":  1613,
+                      "Wins":  643,
+                      "DeckGames":  4109
                   },
                   {
-                      "Name":  "Wild Guess",
-                      "Games":  1289,
-                      "Wins":  742,
-                      "DeckGames":  3031
+                      "Name":  "Corpse Knight",
+                      "Games":  1616,
+                      "Wins":  713,
+                      "DeckGames":  3871
                   },
                   {
-                      "Name":  "Windswept Chorus",
-                      "Games":  1172,
-                      "Wins":  469,
-                      "DeckGames":  2667
+                      "Name":  "Crypt Creeper",
+                      "Games":  1544,
+                      "Wins":  696,
+                      "DeckGames":  3815
                   },
                   {
-                      "Name":  "Wings of the Vigil",
+                      "Name":  "Cryptbreaker",
+                      "Games":  1350,
+                      "Wins":  496,
+                      "DeckGames":  3227
+                  },
+                  {
+                      "Name":  "Cryptside Scavenger",
+                      "Games":  1601,
+                      "Wins":  771,
+                      "DeckGames":  3920
+                  },
+                  {
+                      "Name":  "Cryptwalk Scarab",
+                      "Games":  1759,
+                      "Wins":  1019,
+                      "DeckGames":  4109
+                  },
+                  {
+                      "Name":  "Deep Mere Lurker",
+                      "Games":  1697,
+                      "Wins":  905,
+                      "DeckGames":  4011
+                  },
+                  {
+                      "Name":  "Demon of the Drowned Vow",
+                      "Games":  1704,
+                      "Wins":  820,
+                      "DeckGames":  4011
+                  },
+                  {
+                      "Name":  "Demonic Bargain",
+                      "Games":  1345,
+                      "Wins":  534,
+                      "DeckGames":  3318
+                  },
+                  {
+                      "Name":  "Devout Chaplain",
+                      "Games":  1362,
+                      "Wins":  512,
+                      "DeckGames":  3318
+                  },
+                  {
+                      "Name":  "Diregraf Captain",
+                      "Games":  1539,
+                      "Wins":  691,
+                      "DeckGames":  3808
+                  },
+                  {
+                      "Name":  "Diregraf Colossus",
+                      "Games":  1507,
+                      "Wins":  613,
+                      "DeckGames":  3451
+                  },
+                  {
+                      "Name":  "Diregraf Ghoul",
+                      "Games":  1765,
+                      "Wins":  991,
+                      "DeckGames":  4088
+                  },
+                  {
+                      "Name":  "Diregraf Muster",
+                      "Games":  1508,
+                      "Wins":  687,
+                      "DeckGames":  3514
+                  },
+                  {
+                      "Name":  "Dirge-Singer of the Mere",
+                      "Games":  1434,
+                      "Wins":  601,
+                      "DeckGames":  3724
+                  },
+                  {
+                      "Name":  "Doomed Traveler",
+                      "Games":  1608,
+                      "Wins":  802,
+                      "DeckGames":  3955
+                  },
+                  {
+                      "Name":  "Drag Under",
+                      "Games":  1368,
+                      "Wins":  576,
+                      "DeckGames":  3458
+                  },
+                  {
+                      "Name":  "Drag to the Depths",
+                      "Games":  1808,
+                      "Wins":  876,
+                      "DeckGames":  4214
+                  },
+                  {
+                      "Name":  "Dreadwaters",
+                      "Games":  1664,
+                      "Wins":  691,
+                      "DeckGames":  4060
+                  },
+                  {
+                      "Name":  "Dredge the Deep Mere",
+                      "Games":  1281,
+                      "Wins":  499,
+                      "DeckGames":  2870
+                  },
+                  {
+                      "Name":  "Dregs of the Mere",
+                      "Games":  1784,
+                      "Wins":  888,
+                      "DeckGames":  4291
+                  },
+                  {
+                      "Name":  "Drogskol Anthem",
+                      "Games":  1352,
+                      "Wins":  520,
+                      "DeckGames":  3311
+                  },
+                  {
+                      "Name":  "Drogskol Captain",
+                      "Games":  1454,
+                      "Wins":  650,
+                      "DeckGames":  3479
+                  },
+                  {
+                      "Name":  "Drogskol Shieldmate",
+                      "Games":  1624,
+                      "Wins":  737,
+                      "DeckGames":  4039
+                  },
+                  {
+                      "Name":  "Drown in the Mere",
+                      "Games":  1666,
+                      "Wins":  681,
+                      "DeckGames":  4151
+                  },
+                  {
+                      "Name":  "Drown the Archive",
+                      "Games":  1373,
+                      "Wins":  443,
+                      "DeckGames":  3367
+                  },
+                  {
+                      "Name":  "Drown the Lantern-Bearer",
+                      "Games":  1319,
+                      "Wins":  588,
+                      "DeckGames":  3395
+                  },
+                  {
+                      "Name":  "Drowned Acolyte",
+                      "Games":  1733,
+                      "Wins":  984,
+                      "DeckGames":  3927
+                  },
+                  {
+                      "Name":  "Drowned Archivist",
+                      "Games":  1557,
+                      "Wins":  640,
+                      "DeckGames":  3843
+                  },
+                  {
+                      "Name":  "Drowned Colossus of the Mere",
+                      "Games":  1516,
+                      "Wins":  734,
+                      "DeckGames":  3731
+                  },
+                  {
+                      "Name":  "Drowned Revenant",
+                      "Games":  1422,
+                      "Wins":  560,
+                      "DeckGames":  3479
+                  },
+                  {
+                      "Name":  "Echo of the Drowned",
+                      "Games":  1733,
+                      "Wins":  810,
+                      "DeckGames":  4207
+                  },
+                  {
+                      "Name":  "Elder of the Blood Court",
+                      "Games":  1541,
+                      "Wins":  699,
+                      "DeckGames":  3759
+                  },
+                  {
+                      "Name":  "Elder of the Long Night",
+                      "Games":  1462,
+                      "Wins":  608,
+                      "DeckGames":  3479
+                  },
+                  {
+                      "Name":  "Elder of the Parish",
+                      "Games":  1333,
+                      "Wins":  519,
+                      "DeckGames":  3255
+                  },
+                  {
+                      "Name":  "Endless Ranks",
+                      "Games":  1339,
+                      "Wins":  458,
+                      "DeckGames":  3150
+                  },
+                  {
+                      "Name":  "Exhume the Mere",
+                      "Games":  1803,
+                      "Wins":  937,
+                      "DeckGames":  4123
+                  },
+                  {
+                      "Name":  "Faithless Looting",
+                      "Games":  1710,
+                      "Wins":  715,
+                      "DeckGames":  4046
+                  },
+                  {
+                      "Name":  "Falkenrath Noble",
+                      "Games":  1354,
+                      "Wins":  551,
+                      "DeckGames":  3262
+                  },
+                  {
+                      "Name":  "Feast of Blood",
+                      "Games":  1556,
+                      "Wins":  691,
+                      "DeckGames":  3647
+                  },
+                  {
+                      "Name":  "Fiend of the Silt",
+                      "Games":  1674,
+                      "Wins":  831,
+                      "DeckGames":  3920
+                  },
+                  {
+                      "Name":  "Fiery Temper",
+                      "Games":  1723,
+                      "Wins":  848,
+                      "DeckGames":  4102
+                  },
+                  {
+                      "Name":  "Final Rites",
+                      "Games":  1347,
+                      "Wins":  547,
+                      "DeckGames":  3346
+                  },
+                  {
+                      "Name":  "Flood the Vaults",
+                      "Games":  1485,
+                      "Wins":  545,
+                      "DeckGames":  3584
+                  },
+                  {
+                      "Name":  "Fury of the Mere",
+                      "Games":  1775,
+                      "Wins":  836,
+                      "DeckGames":  4340
+                  },
+                  {
+                      "Name":  "Gather the Townsfolk",
+                      "Games":  1779,
+                      "Wins":  835,
+                      "DeckGames":  4151
+                  },
+                  {
+                      "Name":  "Geist of the Deep Mere",
+                      "Games":  1651,
+                      "Wins":  839,
+                      "DeckGames":  3773
+                  },
+                  {
+                      "Name":  "Ghostly Chorus",
+                      "Games":  1444,
+                      "Wins":  484,
+                      "DeckGames":  3577
+                  },
+                  {
+                      "Name":  "Ghoulcaller\u0027s Bargain",
+                      "Games":  1387,
+                      "Wins":  576,
+                      "DeckGames":  3269
+                  },
+                  {
+                      "Name":  "Ghoulish Bargainer",
+                      "Games":  1593,
+                      "Wins":  658,
+                      "DeckGames":  3948
+                  },
+                  {
+                      "Name":  "Gnawing Hunger",
+                      "Games":  1650,
+                      "Wins":  801,
+                      "DeckGames":  3899
+                  },
+                  {
+                      "Name":  "Grasp of the Mere",
+                      "Games":  1719,
+                      "Wins":  688,
+                      "DeckGames":  4165
+                  },
+                  {
+                      "Name":  "Grasping Silt",
+                      "Games":  1566,
+                      "Wins":  859,
+                      "DeckGames":  3773
+                  },
+                  {
+                      "Name":  "Grave Scholar",
+                      "Games":  1900,
+                      "Wins":  1160,
+                      "DeckGames":  4144
+                  },
+                  {
+                      "Name":  "Gravecrawler",
+                      "Games":  1715,
+                      "Wins":  1011,
+                      "DeckGames":  4228
+                  },
+                  {
+                      "Name":  "Gravepact Acolyte",
+                      "Games":  1758,
+                      "Wins":  931,
+                      "DeckGames":  4172
+                  },
+                  {
+                      "Name":  "Gravewatch Sentry",
+                      "Games":  1807,
+                      "Wins":  934,
+                      "DeckGames":  4137
+                  },
+                  {
+                      "Name":  "Graveyard Trespasser",
+                      "Games":  1651,
+                      "Wins":  695,
+                      "DeckGames":  4046
+                  },
+                  {
+                      "Name":  "Grim Excavation",
+                      "Games":  1609,
+                      "Wins":  823,
+                      "DeckGames":  4116
+                  },
+                  {
+                      "Name":  "Grim Improvisation",
+                      "Games":  1661,
+                      "Wins":  778,
+                      "DeckGames":  4053
+                  },
+                  {
+                      "Name":  "Grim-Faced Reeve",
+                      "Games":  1569,
+                      "Wins":  694,
+                      "DeckGames":  3836
+                  },
+                  {
+                      "Name":  "Grimgrin Acolyte",
+                      "Games":  1613,
+                      "Wins":  708,
+                      "DeckGames":  3801
+                  },
+                  {
+                      "Name":  "Grimgrin the Sewn",
+                      "Games":  1434,
+                      "Wins":  586,
+                      "DeckGames":  3514
+                  },
+                  {
+                      "Name":  "Guardian of the Last Vigil",
+                      "Games":  1584,
+                      "Wins":  754,
+                      "DeckGames":  3836
+                  },
+                  {
+                      "Name":  "Harvester of Souls",
+                      "Games":  1526,
+                      "Wins":  692,
+                      "DeckGames":  3626
+                  },
+                  {
+                      "Name":  "Herald of the Chapel",
+                      "Games":  1868,
+                      "Wins":  950,
+                      "DeckGames":  4333
+                  },
+                  {
+                      "Name":  "Hollow Vow Tyrant",
+                      "Games":  1674,
+                      "Wins":  841,
+                      "DeckGames":  4011
+                  },
+                  {
+                      "Name":  "Hollowmere Apprentice",
+                      "Games":  1597,
+                      "Wins":  745,
+                      "DeckGames":  3948
+                  },
+                  {
+                      "Name":  "Hollowmere Bailiff",
+                      "Games":  1500,
+                      "Wins":  638,
+                      "DeckGames":  3577
+                  },
+                  {
+                      "Name":  "Hollowmere Bulwark",
+                      "Games":  2070,
+                      "Wins":  983,
+                      "DeckGames":  4935
+                  },
+                  {
+                      "Name":  "Hollowmere Choirmaster",
+                      "Games":  1425,
+                      "Wins":  642,
+                      "DeckGames":  3360
+                  },
+                  {
+                      "Name":  "Hollowmere Confessor",
+                      "Games":  1677,
+                      "Wins":  768,
+                      "DeckGames":  4109
+                  },
+                  {
+                      "Name":  "Hollowmere Gravecaller",
+                      "Games":  1287,
+                      "Wins":  449,
+                      "DeckGames":  3136
+                  },
+                  {
+                      "Name":  "Hollowmere Herbalist",
+                      "Games":  1895,
+                      "Wins":  930,
+                      "DeckGames":  4452
+                  },
+                  {
+                      "Name":  "Hollowmere Houndmaster",
+                      "Games":  1700,
+                      "Wins":  815,
+                      "DeckGames":  4172
+                  },
+                  {
+                      "Name":  "Hollowmere Inquisitor",
+                      "Games":  1678,
+                      "Wins":  771,
+                      "DeckGames":  3962
+                  },
+                  {
+                      "Name":  "Hollowmere Lycanthrope",
+                      "Games":  1497,
+                      "Wins":  630,
+                      "DeckGames":  3682
+                  },
+                  {
+                      "Name":  "Hollowmere Marshal",
+                      "Games":  1567,
+                      "Wins":  726,
+                      "DeckGames":  3878
+                  },
+                  {
+                      "Name":  "Hollowmere Militia Captain",
+                      "Games":  1417,
+                      "Wins":  567,
+                      "DeckGames":  3262
+                  },
+                  {
+                      "Name":  "Hollowmere Muster",
+                      "Games":  1498,
+                      "Wins":  612,
+                      "DeckGames":  3360
+                  },
+                  {
+                      "Name":  "Hollowmere Necromancer",
+                      "Games":  1443,
+                      "Wins":  535,
+                      "DeckGames":  3353
+                  },
+                  {
+                      "Name":  "Hollowmere Poacher",
+                      "Games":  1669,
+                      "Wins":  825,
+                      "DeckGames":  3934
+                  },
+                  {
+                      "Name":  "Hollowmere Procession",
+                      "Games":  1411,
+                      "Wins":  543,
+                      "DeckGames":  3164
+                  },
+                  {
+                      "Name":  "Hollowmere Savant",
+                      "Games":  1557,
+                      "Wins":  803,
+                      "DeckGames":  3766
+                  },
+                  {
+                      "Name":  "Hollowmere Shepherd",
+                      "Games":  1520,
+                      "Wins":  630,
+                      "DeckGames":  3696
+                  },
+                  {
+                      "Name":  "Howlpack Alpha",
+                      "Games":  1549,
+                      "Wins":  646,
+                      "DeckGames":  3780
+                  },
+                  {
+                      "Name":  "Incorrigible Youths",
+                      "Games":  1739,
+                      "Wins":  965,
+                      "DeckGames":  4081
+                  },
+                  {
+                      "Name":  "Infernal Bargainer",
+                      "Games":  1630,
+                      "Wins":  775,
+                      "DeckGames":  3843
+                  },
+                  {
+                      "Name":  "Insolent Neonate",
+                      "Games":  1509,
+                      "Wins":  586,
+                      "DeckGames":  3745
+                  },
+                  {
+                      "Name":  "Keeper of Broken Vows",
+                      "Games":  1356,
+                      "Wins":  476,
+                      "DeckGames":  3311
+                  },
+                  {
+                      "Name":  "Keeper of Drowned Lore",
+                      "Games":  1367,
+                      "Wins":  525,
+                      "DeckGames":  3297
+                  },
+                  {
+                      "Name":  "Keeper of the Ossuary",
+                      "Games":  1444,
+                      "Wins":  576,
+                      "DeckGames":  3465
+                  },
+                  {
+                      "Name":  "Keeper of the Quiet Hour",
+                      "Games":  1648,
+                      "Wins":  689,
+                      "DeckGames":  3941
+                  },
+                  {
+                      "Name":  "Keeper of the Silent Choir",
+                      "Games":  1471,
+                      "Wins":  560,
+                      "DeckGames":  3563
+                  },
+                  {
+                      "Name":  "Kindled Zealot",
+                      "Games":  1693,
+                      "Wins":  835,
+                      "DeckGames":  4116
+                  },
+                  {
+                      "Name":  "Lantern of the Mere",
+                      "Games":  1675,
+                      "Wins":  851,
+                      "DeckGames":  4060
+                  },
+                  {
+                      "Name":  "Lantern-Lit Trapper",
+                      "Games":  1594,
+                      "Wins":  624,
+                      "DeckGames":  3885
+                  },
+                  {
+                      "Name":  "Leviathan of the Deep Mere",
+                      "Games":  1732,
+                      "Wins":  867,
+                      "DeckGames":  4060
+                  },
+                  {
+                      "Name":  "Lingering Souls",
+                      "Games":  1428,
+                      "Wins":  614,
+                      "DeckGames":  3346
+                  },
+                  {
+                      "Name":  "Lord of the Drowned Host",
+                      "Games":  1576,
+                      "Wins":  727,
+                      "DeckGames":  3696
+                  },
+                  {
+                      "Name":  "Markov Patrician",
+                      "Games":  1417,
+                      "Wins":  552,
+                      "DeckGames":  3486
+                  },
+                  {
+                      "Name":  "Mausoleum Wanderer",
+                      "Games":  1591,
+                      "Wins":  675,
+                      "DeckGames":  3829
+                  },
+                  {
+                      "Name":  "Mausoleum Warden",
+                      "Games":  1367,
+                      "Wins":  661,
+                      "DeckGames":  3325
+                  },
+                  {
+                      "Name":  "Mayor of Hollowmere",
+                      "Games":  1434,
+                      "Wins":  612,
+                      "DeckGames":  3423
+                  },
+                  {
+                      "Name":  "Mere-Bank Hunter",
+                      "Games":  1600,
+                      "Wins":  620,
+                      "DeckGames":  3850
+                  },
+                  {
+                      "Name":  "Mere-Bank Tracker",
+                      "Games":  1595,
+                      "Wins":  654,
+                      "DeckGames":  3906
+                  },
+                  {
+                      "Name":  "Mere-Bound Revenant",
+                      "Games":  1618,
+                      "Wins":  730,
+                      "DeckGames":  3871
+                  },
+                  {
+                      "Name":  "Mere-Bound Ritualist",
+                      "Games":  1337,
+                      "Wins":  523,
+                      "DeckGames":  3423
+                  },
+                  {
+                      "Name":  "Mere-Chapel Bells",
+                      "Games":  1660,
+                      "Wins":  751,
+                      "DeckGames":  4060
+                  },
+                  {
+                      "Name":  "Mere-Drifter Wisp",
+                      "Games":  1256,
+                      "Wins":  437,
+                      "DeckGames":  3122
+                  },
+                  {
+                      "Name":  "Mere-Drowned Penitent",
                       "Games":  1326,
-                      "Wins":  531,
+                      "Wins":  550,
+                      "DeckGames":  3353
+                  },
+                  {
+                      "Name":  "Mere-Drowned Scribe",
+                      "Games":  1521,
+                      "Wins":  828,
+                      "DeckGames":  3731
+                  },
+                  {
+                      "Name":  "Mere-Fed Horror",
+                      "Games":  1381,
+                      "Wins":  603,
+                      "DeckGames":  3374
+                  },
+                  {
+                      "Name":  "Mere-Gaze",
+                      "Games":  1675,
+                      "Wins":  901,
+                      "DeckGames":  4186
+                  },
+                  {
+                      "Name":  "Mere-Road Vagrant",
+                      "Games":  1656,
+                      "Wins":  789,
+                      "DeckGames":  4039
+                  },
+                  {
+                      "Name":  "Mere-Storm",
+                      "Games":  1310,
+                      "Wins":  461,
+                      "DeckGames":  3227
+                  },
+                  {
+                      "Name":  "Mere-Tender Acolyte",
+                      "Games":  1570,
+                      "Wins":  765,
+                      "DeckGames":  3829
+                  },
+                  {
+                      "Name":  "Mere-Touched Adept",
+                      "Games":  1421,
+                      "Wins":  586,
+                      "DeckGames":  3549
+                  },
+                  {
+                      "Name":  "Mere-Watch Adept",
+                      "Games":  1657,
+                      "Wins":  706,
+                      "DeckGames":  3962
+                  },
+                  {
+                      "Name":  "Mere-Wisp",
+                      "Games":  1667,
+                      "Wins":  776,
+                      "DeckGames":  3871
+                  },
+                  {
+                      "Name":  "Mire Prowler",
+                      "Games":  1756,
+                      "Wins":  900,
+                      "DeckGames":  3955
+                  },
+                  {
+                      "Name":  "Moonlit Sentry",
+                      "Games":  1674,
+                      "Wins":  857,
+                      "DeckGames":  4025
+                  },
+                  {
+                      "Name":  "Moonrise",
+                      "Games":  1626,
+                      "Wins":  652,
+                      "DeckGames":  3969
+                  },
+                  {
+                      "Name":  "Niblis of Frost",
+                      "Games":  1518,
+                      "Wins":  658,
+                      "DeckGames":  3724
+                  },
+                  {
+                      "Name":  "Niblis of the Mere",
+                      "Games":  1801,
+                      "Wins":  997,
+                      "DeckGames":  4214
+                  },
+                  {
+                      "Name":  "Night of the Long Thirst",
+                      "Games":  1357,
+                      "Wins":  483,
+                      "DeckGames":  3234
+                  },
+                  {
+                      "Name":  "Nightfall Reveler",
+                      "Games":  1413,
+                      "Wins":  616,
+                      "DeckGames":  3367
+                  },
+                  {
+                      "Name":  "Nighthawk Penitent",
+                      "Games":  1495,
+                      "Wins":  776,
+                      "DeckGames":  3661
+                  },
+                  {
+                      "Name":  "Olivia of the Mere",
+                      "Games":  1471,
+                      "Wins":  694,
+                      "DeckGames":  3409
+                  },
+                  {
+                      "Name":  "Olivia\u0027s Dragoon",
+                      "Games":  1387,
+                      "Wins":  495,
+                      "DeckGames":  3486
+                  },
+                  {
+                      "Name":  "Ossuary Scavenger",
+                      "Games":  1747,
+                      "Wins":  818,
+                      "DeckGames":  4046
+                  },
+                  {
+                      "Name":  "Ossuary Warden",
+                      "Games":  1616,
+                      "Wins":  662,
+                      "DeckGames":  3857
+                  },
+                  {
+                      "Name":  "Parish Bell-Ringer",
+                      "Games":  1631,
+                      "Wins":  700,
+                      "DeckGames":  3864
+                  },
+                  {
+                      "Name":  "Parish Cantor",
+                      "Games":  1343,
+                      "Wins":  595,
+                      "DeckGames":  3206
+                  },
+                  {
+                      "Name":  "Parish Exhumer",
+                      "Games":  1423,
+                      "Wins":  610,
+                      "DeckGames":  3409
+                  },
+                  {
+                      "Name":  "Parish Gravedigger",
+                      "Games":  1617,
+                      "Wins":  695,
+                      "DeckGames":  3913
+                  },
+                  {
+                      "Name":  "Parish Torchbearer",
+                      "Games":  1668,
+                      "Wins":  911,
+                      "DeckGames":  4060
+                  },
+                  {
+                      "Name":  "Parish Zealot",
+                      "Games":  1425,
+                      "Wins":  701,
+                      "DeckGames":  3514
+                  },
+                  {
+                      "Name":  "Past in Ashes",
+                      "Games":  1202,
+                      "Wins":  438,
                       "DeckGames":  3171
                   },
                   {
-                      "Name":  "Wisp-Lit Sentry",
-                      "Games":  1383,
-                      "Wins":  710,
+                      "Name":  "Persecutor of Hollowmere",
+                      "Games":  1691,
+                      "Wins":  911,
+                      "DeckGames":  4025
+                  },
+                  {
+                      "Name":  "Ponder",
+                      "Games":  1647,
+                      "Wins":  959,
+                      "DeckGames":  3997
+                  },
+                  {
+                      "Name":  "Pull Beneath",
+                      "Games":  1306,
+                      "Wins":  550,
                       "DeckGames":  3283
                   },
                   {
+                      "Name":  "Purge the Vaults",
+                      "Games":  1693,
+                      "Wins":  770,
+                      "DeckGames":  4102
+                  },
+                  {
+                      "Name":  "Rally the Watch",
+                      "Games":  1677,
+                      "Wins":  819,
+                      "DeckGames":  4116
+                  },
+                  {
+                      "Name":  "Rattlechains",
+                      "Games":  1516,
+                      "Wins":  686,
+                      "DeckGames":  3619
+                  },
+                  {
+                      "Name":  "Raven\u0027s Crime",
+                      "Games":  1746,
+                      "Wins":  930,
+                      "DeckGames":  4403
+                  },
+                  {
+                      "Name":  "Ravenous Bloodseeker",
+                      "Games":  1738,
+                      "Wins":  907,
+                      "DeckGames":  4200
+                  },
+                  {
+                      "Name":  "Read the Bones",
+                      "Games":  1334,
+                      "Wins":  524,
+                      "DeckGames":  3269
+                  },
+                  {
+                      "Name":  "Reaper from the Mere",
+                      "Games":  1587,
+                      "Wins":  688,
+                      "DeckGames":  3871
+                  },
+                  {
+                      "Name":  "Relentless Corpse",
+                      "Games":  1599,
+                      "Wins":  731,
+                      "DeckGames":  3850
+                  },
+                  {
+                      "Name":  "Riddle of the Mere",
+                      "Games":  1382,
+                      "Wins":  603,
+                      "DeckGames":  3381
+                  },
+                  {
+                      "Name":  "Riders of Hollowmere",
+                      "Games":  1764,
+                      "Wins":  855,
+                      "DeckGames":  4032
+                  },
+                  {
+                      "Name":  "Rise from the Silt",
+                      "Games":  1280,
+                      "Wins":  447,
+                      "DeckGames":  3122
+                  },
+                  {
+                      "Name":  "Rise of the Drowned Host",
+                      "Games":  1224,
+                      "Wins":  417,
+                      "DeckGames":  2975
+                  },
+                  {
+                      "Name":  "Rite of Rot",
+                      "Games":  1462,
+                      "Wins":  680,
+                      "DeckGames":  3542
+                  },
+                  {
+                      "Name":  "Rite of Second Drowning",
+                      "Games":  1391,
+                      "Wins":  577,
+                      "DeckGames":  3276
+                  },
+                  {
+                      "Name":  "Rites of the Sunken Choir",
+                      "Games":  1411,
+                      "Wins":  591,
+                      "DeckGames":  3360
+                  },
+                  {
+                      "Name":  "Rot-Marked Thrall",
+                      "Games":  1749,
+                      "Wins":  978,
+                      "DeckGames":  4172
+                  },
+                  {
+                      "Name":  "Rotting Chorus",
+                      "Games":  1331,
+                      "Wins":  634,
+                      "DeckGames":  3304
+                  },
+                  {
+                      "Name":  "Rummaging Wight",
+                      "Games":  1211,
+                      "Wins":  446,
+                      "DeckGames":  3108
+                  },
+                  {
+                      "Name":  "Sanguine Rite",
+                      "Games":  1472,
+                      "Wins":  587,
+                      "DeckGames":  3486
+                  },
+                  {
+                      "Name":  "Search the Parish",
+                      "Games":  1644,
+                      "Wins":  635,
+                      "DeckGames":  4158
+                  },
+                  {
+                      "Name":  "Second Burial",
+                      "Games":  1376,
+                      "Wins":  483,
+                      "DeckGames":  3318
+                  },
+                  {
+                      "Name":  "Second Sight",
+                      "Games":  1815,
+                      "Wins":  970,
+                      "DeckGames":  4354
+                  },
+                  {
+                      "Name":  "Sepulchral Leviathan",
+                      "Games":  1747,
+                      "Wins":  820,
+                      "DeckGames":  4004
+                  },
+                  {
+                      "Name":  "Sepulchral Warden",
+                      "Games":  1583,
+                      "Wins":  842,
+                      "DeckGames":  3745
+                  },
+                  {
+                      "Name":  "Seraph of the Silt",
+                      "Games":  1414,
+                      "Wins":  638,
+                      "DeckGames":  3395
+                  },
+                  {
+                      "Name":  "Set Upon the Pack",
+                      "Games":  1753,
+                      "Wins":  673,
+                      "DeckGames":  4298
+                  },
+                  {
+                      "Name":  "Sever the Bloodline",
+                      "Games":  1682,
+                      "Wins":  831,
+                      "DeckGames":  4053
+                  },
+                  {
+                      "Name":  "Sexton of the Drowned Chapel",
+                      "Games":  1492,
+                      "Wins":  592,
+                      "DeckGames":  3829
+                  },
+                  {
+                      "Name":  "Shoal Scarab",
+                      "Games":  1612,
+                      "Wins":  736,
+                      "DeckGames":  3913
+                  },
+                  {
+                      "Name":  "Shrieking Penitent",
+                      "Games":  1712,
+                      "Wins":  857,
+                      "DeckGames":  3885
+                  },
+                  {
+                      "Name":  "Silent Vigil",
+                      "Games":  1671,
+                      "Wins":  697,
+                      "DeckGames":  4095
+                  },
+                  {
+                      "Name":  "Silt Blast",
+                      "Games":  1353,
+                      "Wins":  575,
+                      "DeckGames":  3339
+                  },
+                  {
+                      "Name":  "Silt Crawler",
+                      "Games":  1695,
+                      "Wins":  816,
+                      "DeckGames":  4011
+                  },
+                  {
+                      "Name":  "Silt Golem",
+                      "Games":  1666,
+                      "Wins":  880,
+                      "DeckGames":  4081
+                  },
+                  {
+                      "Name":  "Silt Ritual",
+                      "Games":  1662,
+                      "Wins":  747,
+                      "DeckGames":  4060
+                  },
+                  {
+                      "Name":  "Silt in the Lungs",
+                      "Games":  1730,
+                      "Wins":  949,
+                      "DeckGames":  3990
+                  },
+                  {
+                      "Name":  "Silt the Vaults",
+                      "Games":  1356,
+                      "Wins":  564,
+                      "DeckGames":  3395
+                  },
+                  {
+                      "Name":  "Silt-Bound Cantor",
+                      "Games":  1460,
+                      "Wins":  578,
+                      "DeckGames":  3493
+                  },
+                  {
+                      "Name":  "Silt-Choked Chronicler",
+                      "Games":  1585,
+                      "Wins":  698,
+                      "DeckGames":  3899
+                  },
+                  {
+                      "Name":  "Silt-Choked Grasp",
+                      "Games":  1727,
+                      "Wins":  901,
+                      "DeckGames":  4039
+                  },
+                  {
+                      "Name":  "Silt-Choked Oracle",
+                      "Games":  1347,
+                      "Wins":  541,
+                      "DeckGames":  3325
+                  },
+                  {
+                      "Name":  "Silt-Choked Wanderer",
+                      "Games":  1602,
+                      "Wins":  744,
+                      "DeckGames":  3892
+                  },
+                  {
+                      "Name":  "Silt-Gorged Wurm",
+                      "Games":  1432,
+                      "Wins":  689,
+                      "DeckGames":  3444
+                  },
+                  {
+                      "Name":  "Silt-Sifter",
+                      "Games":  1557,
+                      "Wins":  724,
+                      "DeckGames":  3696
+                  },
+                  {
+                      "Name":  "Silt-Stained Ledger",
+                      "Games":  1664,
+                      "Wins":  893,
+                      "DeckGames":  4025
+                  },
+                  {
+                      "Name":  "Silt-Stained Rites",
+                      "Games":  1666,
+                      "Wins":  852,
+                      "DeckGames":  3941
+                  },
+                  {
+                      "Name":  "Silt-Veiled Shade",
+                      "Games":  1474,
+                      "Wins":  667,
+                      "DeckGames":  3556
+                  },
+                  {
+                      "Name":  "Silt-Wisp Haunt",
+                      "Games":  1351,
+                      "Wins":  555,
+                      "DeckGames":  3325
+                  },
+                  {
+                      "Name":  "Silt-Wreathed Colossus",
+                      "Games":  1423,
+                      "Wins":  683,
+                      "DeckGames":  3416
+                  },
+                  {
+                      "Name":  "Silt-Wreathed Scholar",
+                      "Games":  1630,
+                      "Wins":  680,
+                      "DeckGames":  3969
+                  },
+                  {
+                      "Name":  "Skim the Surface",
+                      "Games":  1618,
+                      "Wins":  901,
+                      "DeckGames":  4074
+                  },
+                  {
+                      "Name":  "Snuff the Lantern",
+                      "Games":  1664,
+                      "Wins":  910,
+                      "DeckGames":  4130
+                  },
+                  {
+                      "Name":  "Spectral Procession",
+                      "Games":  1435,
+                      "Wins":  649,
+                      "DeckGames":  3234
+                  },
+                  {
+                      "Name":  "Spectral Reserves",
+                      "Games":  1707,
+                      "Wins":  884,
+                      "DeckGames":  3815
+                  },
+                  {
+                      "Name":  "Spectral Surge",
+                      "Games":  1650,
+                      "Wins":  791,
+                      "DeckGames":  4123
+                  },
+                  {
+                      "Name":  "Spectral Tide",
+                      "Games":  1248,
+                      "Wins":  406,
+                      "DeckGames":  3010
+                  },
+                  {
+                      "Name":  "Spell-Sworn Revenant",
+                      "Games":  1495,
+                      "Wins":  632,
+                      "DeckGames":  3752
+                  },
+                  {
+                      "Name":  "Spirit Shepherd",
+                      "Games":  1841,
+                      "Wins":  902,
+                      "DeckGames":  4116
+                  },
+                  {
+                      "Name":  "Splinterbone Horror",
+                      "Games":  1423,
+                      "Wins":  828,
+                      "DeckGames":  3290
+                  },
+                  {
+                      "Name":  "Storm of Silt",
+                      "Games":  1395,
+                      "Wins":  477,
+                      "DeckGames":  3458
+                  },
+                  {
+                      "Name":  "Stromkirk Bloodthief",
+                      "Games":  1577,
+                      "Wins":  756,
+                      "DeckGames":  4004
+                  },
+                  {
+                      "Name":  "Stromkirk Captain",
+                      "Games":  1388,
+                      "Wins":  527,
+                      "DeckGames":  3388
+                  },
+                  {
+                      "Name":  "Sunken Archives",
+                      "Games":  1633,
+                      "Wins":  820,
+                      "DeckGames":  3906
+                  },
+                  {
+                      "Name":  "Sunken Chorus",
+                      "Games":  1483,
+                      "Wins":  555,
+                      "DeckGames":  3458
+                  },
+                  {
+                      "Name":  "Sunken Grave-Lord",
+                      "Games":  1450,
+                      "Wins":  569,
+                      "DeckGames":  3486
+                  },
+                  {
+                      "Name":  "The Drowned Archfiend",
+                      "Games":  1798,
+                      "Wins":  814,
+                      "DeckGames":  4326
+                  },
+                  {
+                      "Name":  "The Drowning Chorus",
+                      "Games":  1338,
+                      "Wins":  581,
+                      "DeckGames":  3227
+                  },
+                  {
+                      "Name":  "The Mere Gives Up Its Dead",
+                      "Games":  1365,
+                      "Wins":  479,
+                      "DeckGames":  3185
+                  },
+                  {
+                      "Name":  "The Mere Remembers",
+                      "Games":  1329,
+                      "Wins":  442,
+                      "DeckGames":  3136
+                  },
+                  {
+                      "Name":  "The Mere Swallows All",
+                      "Games":  1218,
+                      "Wins":  420,
+                      "DeckGames":  3094
+                  },
+                  {
+                      "Name":  "Thought Scour",
+                      "Games":  1611,
+                      "Wins":  837,
+                      "DeckGames":  3948
+                  },
+                  {
+                      "Name":  "Thraben Marshal",
+                      "Games":  1416,
+                      "Wins":  584,
+                      "DeckGames":  3528
+                  },
+                  {
+                      "Name":  "Tidal Erasure",
+                      "Games":  1324,
+                      "Wins":  456,
+                      "DeckGames":  3451
+                  },
+                  {
+                      "Name":  "Tide of Whispers",
+                      "Games":  1331,
+                      "Wins":  455,
+                      "DeckGames":  3276
+                  },
+                  {
+                      "Name":  "Toll of the Mere",
+                      "Games":  1366,
+                      "Wins":  644,
+                      "DeckGames":  3332
+                  },
+                  {
+                      "Name":  "Tome Dredger",
+                      "Games":  1762,
+                      "Wins":  870,
+                      "DeckGames":  4130
+                  },
+                  {
+                      "Name":  "Tormenting Voice",
+                      "Games":  1649,
+                      "Wins":  921,
+                      "DeckGames":  3990
+                  },
+                  {
+                      "Name":  "Twitching Ghoul",
+                      "Games":  1583,
+                      "Wins":  720,
+                      "DeckGames":  3871
+                  },
+                  {
+                      "Name":  "Undead Alchemist",
+                      "Games":  1602,
+                      "Wins":  742,
+                      "DeckGames":  3836
+                  },
+                  {
+                      "Name":  "Unhallowed Rite",
+                      "Games":  1580,
+                      "Wins":  659,
+                      "DeckGames":  4011
+                  },
+                  {
+                      "Name":  "Vampire Cutthroat",
+                      "Games":  1617,
+                      "Wins":  721,
+                      "DeckGames":  3948
+                  },
+                  {
+                      "Name":  "Vampire Interloper",
+                      "Games":  1661,
+                      "Wins":  845,
+                      "DeckGames":  4032
+                  },
+                  {
+                      "Name":  "Vampire Lacerator",
+                      "Games":  1741,
+                      "Wins":  883,
+                      "DeckGames":  4123
+                  },
+                  {
+                      "Name":  "Vigil of the Drowned",
+                      "Games":  1290,
+                      "Wins":  489,
+                      "DeckGames":  3073
+                  },
+                  {
+                      "Name":  "Vigilant Watcher",
+                      "Games":  1650,
+                      "Wins":  703,
+                      "DeckGames":  4004
+                  },
+                  {
+                      "Name":  "Village Ironsmith",
+                      "Games":  1756,
+                      "Wins":  914,
+                      "DeckGames":  4067
+                  },
+                  {
+                      "Name":  "Village Messenger",
+                      "Games":  1609,
+                      "Wins":  741,
+                      "DeckGames":  4004
+                  },
+                  {
+                      "Name":  "Village Rabblerouser",
+                      "Games":  1734,
+                      "Wins":  794,
+                      "DeckGames":  4060
+                  },
+                  {
+                      "Name":  "Voice of the Chapel",
+                      "Games":  1836,
+                      "Wins":  963,
+                      "DeckGames":  4284
+                  },
+                  {
+                      "Name":  "Vow-Breaker Fiend",
+                      "Games":  1755,
+                      "Wins":  843,
+                      "DeckGames":  4263
+                  },
+                  {
+                      "Name":  "Watcher at the Ford",
+                      "Games":  1633,
+                      "Wins":  719,
+                      "DeckGames":  3983
+                  },
+                  {
+                      "Name":  "Whisper of the Choir",
+                      "Games":  1755,
+                      "Wins":  939,
+                      "DeckGames":  4172
+                  },
+                  {
+                      "Name":  "Whispered Betrayal",
+                      "Games":  1707,
+                      "Wins":  688,
+                      "DeckGames":  4179
+                  },
+                  {
+                      "Name":  "Whispers from the Mere",
+                      "Games":  1180,
+                      "Wins":  422,
+                      "DeckGames":  3059
+                  },
+                  {
+                      "Name":  "Wild Guess",
+                      "Games":  1629,
+                      "Wins":  903,
+                      "DeckGames":  3913
+                  },
+                  {
+                      "Name":  "Windswept Chorus",
+                      "Games":  1338,
+                      "Wins":  541,
+                      "DeckGames":  3199
+                  },
+                  {
+                      "Name":  "Wings of the Vigil",
+                      "Games":  1632,
+                      "Wins":  645,
+                      "DeckGames":  4102
+                  },
+                  {
+                      "Name":  "Wisp-Lit Sentry",
+                      "Games":  1822,
+                      "Wins":  873,
+                      "DeckGames":  4179
+                  },
+                  {
+                      "Name":  "Wither the Vein",
+                      "Games":  1681,
+                      "Wins":  838,
+                      "DeckGames":  4109
+                  },
+                  {
                       "Name":  "Wonder of the Drowned",
-                      "Games":  1058,
-                      "Wins":  367,
-                      "DeckGames":  2457
+                      "Games":  1241,
+                      "Wins":  468,
+                      "DeckGames":  3157
                   },
                   {
                       "Name":  "Wrath of the Sunken Choir",
-                      "Games":  933,
-                      "Wins":  460,
-                      "DeckGames":  2695
+                      "Games":  1276,
+                      "Wins":  580,
+                      "DeckGames":  3584
                   },
                   {
                       "Name":  "Zealous Penitent",
-                      "Games":  1406,
-                      "Wins":  792,
-                      "DeckGames":  3178
+                      "Games":  1660,
+                      "Wins":  886,
+                      "DeckGames":  4130
                   },
                   {
                       "Name":  "Zombie Apocalypse",
-                      "Games":  1116,
-                      "Wins":  423,
-                      "DeckGames":  2534
+                      "Games":  1266,
+                      "Wins":  453,
+                      "DeckGames":  3150
                   },
                   {
                       "Name":  "Zombie Horde Leader",
-                      "Games":  1535,
-                      "Wins":  958,
-                      "DeckGames":  3220
+                      "Games":  1898,
+                      "Wins":  1119,
+                      "DeckGames":  4067
                   },
                   {
                       "Name":  "Zombie Infestation",
-                      "Games":  1208,
-                      "Wins":  623,
-                      "DeckGames":  2681
+                      "Games":  1483,
+                      "Wins":  721,
+                      "DeckGames":  3332
                   }
               ],
     "Pairs":  [
 
               ],
-    "Prior":  0.47
+    "Prior":  0.4510044642857143
 }
