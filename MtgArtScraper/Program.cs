@@ -6,21 +6,36 @@ const string ScryfallApi = "https://api.scryfall.com";
 const int BaseDelayMs = 200;
 const int MaxRetries = 4;
 
+// Usage: MtgArtScraper [outputPath] [setCode]
+// The set defaults to Legacy so the original invocation is unchanged. Pass HLM for Hollowmere.
 var outputPath =
 	args.Length > 0 ? args[0] : Path.Combine(Directory.GetCurrentDirectory(), "card_art");
 Directory.CreateDirectory(outputPath);
 
-// Cards not in CardLibrary.All that still need art
+var setCode = args.Length > 1 ? args[1] : SetRegistry.LegacyCode;
+var set = SetRegistry.Get(setCode);
+
+// Cards not in the set list that still need art
 var extraCards = new List<string> { "Plains" };
 
 // Token cards — fetched via Scryfall search (t:token) rather than named lookup
-var tokenCards = new List<string> { "Goblin", "Clue" };
+var tokenCards = new List<string> { "Goblin", "Clue", "Spirit", "Human", "Zombie", "Vampire" };
 
-var cardNames = CardLibrary.All.Select(c => c.Name).Distinct().OrderBy(n => n).ToList();
-var allNamed = cardNames.Concat(extraCards).Distinct().OrderBy(n => n).ToList();
+var cardNames = set.Cards.Select(c => c.Name).Distinct().OrderBy(n => n).ToList();
+
+// Double-faced cards need their night face fetched separately — it is a distinct piece of
+// art under a different name, and the card renders it when transformed.
+var nightFaces = set
+	.Cards.SelectMany(c => c.GetComponents<TransformComponent>())
+	.Select(t => t.OtherFaceName)
+	.Distinct()
+	.ToList();
+
+var allNamed = cardNames.Concat(nightFaces).Concat(extraCards).Distinct().OrderBy(n => n).ToList();
 
 Console.WriteLine(
-	$"Scraping art for {allNamed.Count} cards + {tokenCards.Count} tokens -> {outputPath}"
+	$"Scraping art for {set.Name}: {allNamed.Count} cards "
+		+ $"(incl. {nightFaces.Count} night faces) + {tokenCards.Count} tokens -> {outputPath}"
 );
 Console.WriteLine();
 
@@ -111,7 +126,13 @@ Console.WriteLine($"Done. {allNamed.Count + tokenCards.Count} cards processed.")
 
 if (notFound.Count > 0)
 {
-	Console.WriteLine($"\n=== NOT FOUND ({notFound.Count}) ===");
+	// These are the original designs — no real card shares the name, so Scryfall has nothing.
+	// This list is the exact input for generating the remaining art, and it is written to a
+	// file so it can be fed straight to a generator without re-running the scrape.
+	var missingPath = Path.Combine(outputPath, "_needs_art.txt");
+	await File.WriteAllLinesAsync(missingPath, notFound);
+
+	Console.WriteLine($"\n=== NOT FOUND ({notFound.Count}) — written to {missingPath} ===");
 	foreach (var n in notFound)
 		Console.WriteLine($"  {n}");
 }

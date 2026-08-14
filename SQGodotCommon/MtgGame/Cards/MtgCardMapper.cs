@@ -113,7 +113,7 @@ public static class MtgCardMapper
 	{
 		var parts = new List<string>();
 		if (t.PowerBonus != 0 || t.ToughnessBonus != 0)
-			parts.Add($"+{t.PowerBonus}/+{t.ToughnessBonus}");
+			parts.Add($"gets {Signed(t.PowerBonus)}/{Signed(t.ToughnessBonus)}");
 
 		var keywords = new List<string>();
 		if (t.GrantsFlying)
@@ -271,10 +271,15 @@ public static class MtgCardMapper
 
 	private static string? DescribeStaticAbility(StaticAbilityComponent ability)
 	{
+		// "Matching creatures" tells a drafter nothing — the filter is the whole card. A lord's
+		// filter is composed three specs deep, so it is walked rather than pattern-matched.
+		var who = Plural(DescribeSpecification(ability.Filter));
+
 		var text = ability switch
 		{
-			StaticPTBoostAbility p => $"+{p.PowerBonus}/+{p.ToughnessBonus} to matching creatures",
-			StaticGrantKeywordAbility g => DescribeGrantedKeywords(g),
+			StaticPTBoostAbility p =>
+				$"{Capitalise(who)} get {Signed(p.PowerBonus)}/{Signed(p.ToughnessBonus)}",
+			StaticGrantKeywordAbility g => DescribeGrantedKeywords(g, who),
 			_ => null,
 		};
 		if (text == null)
@@ -287,7 +292,18 @@ public static class MtgCardMapper
 			: text;
 	}
 
-	private static string? DescribeGrantedKeywords(StaticGrantKeywordAbility g)
+	/// Pluralises the head noun of a filter phrase so a static reads "other Spirits you
+	/// control" rather than "other Spirit you control".
+	private static string Plural(string phrase)
+	{
+		var suffixes = new[] { " you control", " an opponent controls" };
+		foreach (var suffix in suffixes)
+			if (phrase.EndsWith(suffix))
+				return phrase[..^suffix.Length] + "s" + suffix;
+		return phrase.EndsWith("s") ? phrase : phrase + "s";
+	}
+
+	private static string? DescribeGrantedKeywords(StaticGrantKeywordAbility g, string who)
 	{
 		var keywords = new List<string>();
 		if (g.GrantsFlying)
@@ -308,38 +324,189 @@ public static class MtgCardMapper
 			keywords.Add("Shroud");
 		if (g.GrantsHexproof)
 			keywords.Add("Hexproof");
-		return keywords.Count > 0 ? $"Matching creatures gain {string.Join(", ", keywords)}" : null;
+		return keywords.Count > 0 ? $"{Capitalise(who)} gain {string.Join(", ", keywords)}" : null;
 	}
 
 	private static string? DescribeEffect(CardEffect effect)
 	{
-		var targetSuffix = effect.TargetingStrategy.RequiresUserSelection ? " to target" : "";
+		// The target phrase must be placed grammatically per action, not appended as a generic
+		// suffix — a suffix is what produced "Put to target onto the battlefield".
+		var t = DescribeTarget(effect);
+
 		return effect.ActionTemplate switch
 		{
-			DealDamageAction d => $"Deal {d.Amount} damage{targetSuffix}",
-			DestroyCreatureAction => $"Destroy{targetSuffix}",
-			AddModifierAction m => $"+{m.PowerBonus}/+{m.ToughnessBonus}{targetSuffix}",
+			DealDamageAction d => $"Deal {d.Amount} damage to {t}",
+			DestroyCreatureAction => $"Destroy {t}",
+			ExileAction => $"Exile {t}",
+			AddModifierAction m => $"{Capitalise(t)} gets {Signed(m.PowerBonus)}/"
+				+ $"{Signed(m.ToughnessBonus)}{DurationSuffix(m.Duration)}",
 			DrawCardsAction d => d.Amount == 1 ? "Draw a card" : $"Draw {d.Amount} cards",
 			GainLifeAction g => $"Gain {g.Amount} life",
 			LoseLifeAction l => $"Lose {l.Amount} life",
 			CreateCardAction c => c.Count == 1
-				? $"Create a {c.CardTemplate.Name}"
-				: $"Create {c.Count} {c.CardTemplate.Name}s",
-			ExileAction => $"Exile{targetSuffix}",
+				? $"Create a {c.CardTemplate.Name} token"
+				: $"Create {c.Count} {c.CardTemplate.Name} tokens",
 			DiscardCardsAction => "Discard a card",
-			MoveCardToHandAction => $"Return{targetSuffix} to hand",
+			MoveCardToHandAction => $"Return {t} to your hand",
+			ReturnToHandAction => $"Return {t} to your hand",
 			AddTemporaryManaAction m => $"Add {m.Amount} mana",
 			MillAction m => DescribeMill(m, effect),
-			ReturnToHandAction => $"Return{targetSuffix} to hand",
 			DrainLifeAction d => $"Target opponent loses {d.Amount} life and you gain {d.Amount}",
 			DiscardRandomCardAction => "Target opponent discards a card at random",
-			GrantKeywordAction g => DescribeGrantKeyword(g, targetSuffix),
+			GrantKeywordAction g => DescribeGrantKeyword(g, t),
 			GiveFlashbackAction => "An instant or sorcery in your graveyard gains Flashback",
-			PutIntoBattlefieldAction => $"Put{targetSuffix} onto the battlefield",
+			PutIntoBattlefieldAction => $"Put {t} onto the battlefield",
 			TransformAction => "Transform this",
 			PipelineAction p => DescribePipeline(p),
 			_ => null,
 		};
+	}
+
+	private static string Signed(int n) => n >= 0 ? $"+{n}" : n.ToString();
+
+	private static string DurationSuffix(ModifierDuration d) =>
+		d == ModifierDuration.UntilEndOfTurn ? " until end of turn" : "";
+
+	private static string Capitalise(string s) =>
+		string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..];
+
+	/// <summary>
+	/// Turns a targeting strategy into the noun phrase a real card would print — "target
+	/// creature card in your graveyard", "each creature you control", "this". Without it every
+	/// targeted effect reads as a bare verb and the drafter cannot tell what it hits.
+	/// </summary>
+	private static string DescribeTarget(CardEffect effect)
+	{
+		// An effect aimed at its own source through a context key carries no targeting
+		// strategy to read, so the strategy would misleadingly say "no target". Two different
+		// keys mean the same thing here — EffectAction targets, and the card-id key that
+		// PutIntoBattlefieldAction uses for madness and self-recursion.
+		if (
+			effect.ActionTemplate is EffectAction ea
+			&& ea.TargetContextKey == ContextKeys.SourceCardId
+		)
+			return "this";
+
+		if (
+			effect.ActionTemplate is PutIntoBattlefieldAction pib
+			&& pib.CardIdContextKey == ContextKeys.SourceCardId
+		)
+			return "this";
+
+		var strategy = effect.TargetingStrategy;
+		if (strategy.SelectionMode == TargetSelectionMode.CastingPlayer)
+			return "you";
+		if (strategy.SelectionMode == TargetSelectionMode.None)
+			return "it";
+
+		var noun = DescribeSpecification(strategy.Specification);
+
+		// "any target" is already a complete target phrase — prefixing it yields
+		// "target any target".
+		if (noun == "any target")
+			return strategy.SelectionMode == TargetSelectionMode.AllValid
+				? "each opponent and creature"
+				: noun;
+
+		return strategy.SelectionMode switch
+		{
+			TargetSelectionMode.AllValid => $"each {noun}",
+			TargetSelectionMode.Random => $"a random {noun}",
+			_ => $"target {noun}",
+		};
+	}
+
+	/// Facts gathered by walking a composed specification tree.
+	private sealed class SpecFacts
+	{
+		public string? Subtype;
+		public bool Other;
+		public bool Yours;
+		public bool Opponents;
+		public bool Creature;
+		public bool Player;
+		public bool CreatureInGraveyard;
+		public bool SpellInGraveyard;
+		public bool InHand;
+	}
+
+	/// Specifications are composed with And/Or, so the shape has to be walked rather than
+	/// matched — a lord filter is three specs deep.
+	private static void Collect(TargetSpecification spec, SpecFacts f)
+	{
+		switch (spec)
+		{
+			case AndSpecification a:
+				Collect(a.Left, f);
+				Collect(a.Right, f);
+				break;
+			case OrSpecification o:
+				Collect(o.Left, f);
+				Collect(o.Right, f);
+				break;
+			case IsSubtypeSpecification s:
+				f.Subtype = s.Subtype;
+				break;
+			case IsNotSelfSpecification:
+				f.Other = true;
+				break;
+			case IsControlledByYouSpecification:
+				f.Yours = true;
+				break;
+			case IsControlledByOpponentSpecification:
+				f.Opponents = true;
+				break;
+			case IsCreatureSpecification:
+				f.Creature = true;
+				break;
+			case IsPlayerSpecification:
+				f.Player = true;
+				break;
+			case IsCreatureInOwnGraveyardSpecification:
+				f.CreatureInGraveyard = true;
+				break;
+			case IsInstantOrSorceryInOwnGraveyardSpecification:
+				f.SpellInGraveyard = true;
+				break;
+			case IsInHandSpecification:
+				f.InHand = true;
+				break;
+		}
+	}
+
+	public static string DescribeSpecification(TargetSpecification? spec)
+	{
+		if (spec == null)
+			return "it";
+
+		var f = new SpecFacts();
+		Collect(spec, f);
+
+		// The graveyard and hand specs are complete phrases already — they imply the zone.
+		if (f.CreatureInGraveyard)
+			return "creature card in your graveyard";
+		if (f.SpellInGraveyard)
+			return "instant or sorcery in your graveyard";
+		if (f.InHand)
+			return "card from your hand";
+
+		// Players OR creatures is the classic burn-spell target — collapsing it to "creature"
+		// would hide that these spells can go to the face.
+		if (f.Player && f.Creature)
+			return "any target";
+
+		// Player-only specs, which is what mill and hand attack aim at.
+		if (f.Player)
+			return f.Opponents ? "opponent" : "player";
+
+		var noun = f.Subtype ?? (f.Creature ? "creature" : "permanent");
+		var prefix = f.Other ? "other " : "";
+		var suffix =
+			f.Yours ? " you control"
+			: f.Opponents ? " an opponent controls"
+			: "";
+
+		return $"{prefix}{noun}{suffix}";
 	}
 
 	/// Mill reads very differently depending on who it hits, and the targeting strategy is
@@ -355,7 +522,7 @@ public static class MtgCardMapper
 		return $"{who} {mill.Amount}";
 	}
 
-	private static string DescribeGrantKeyword(GrantKeywordAction g, string targetSuffix)
+	private static string DescribeGrantKeyword(GrantKeywordAction g, string target)
 	{
 		var keywords = new List<string>();
 		if (g.GrantsFlying)
@@ -376,8 +543,26 @@ public static class MtgCardMapper
 		if (keywords.Count == 0)
 			return "Grants nothing";
 
-		var duration = g.Duration == ModifierDuration.UntilEndOfTurn ? " until end of turn" : "";
-		return $"Gain {string.Join(", ", keywords)}{targetSuffix}{duration}";
+		return $"{Capitalise(target)} gains {string.Join(", ", keywords)}"
+			+ DurationSuffix(g.Duration);
+	}
+
+	/// <summary>
+	/// A zone selection is only meaningful with WHOSE zone and WHICH card — "choose a card
+	/// from a graveyard" leaves a drafter guessing on both counts.
+	/// </summary>
+	private static string DescribeZoneSelection(SelectCardFromZoneAction s)
+	{
+		var whose = s.TargetOpponent ? "an opponent's" : "your";
+		var zone = s.Zone.ToString().ToLowerInvariant();
+
+		var what =
+			!string.IsNullOrEmpty(s.Subtype) ? $"a {s.Subtype}"
+			: s.Filter is IsCreatureInOwnGraveyardSpecification ? "a creature card"
+			: s.Filter is IsInstantOrSorceryInOwnGraveyardSpecification ? "an instant or sorcery"
+			: "a card";
+
+		return $"choose {what} from {whose} {zone}";
 	}
 
 	private static string? DescribePipeline(PipelineAction pipeline)
@@ -414,9 +599,7 @@ public static class MtgCardMapper
 			CountCardsWithSubtypeAction s => string.IsNullOrEmpty(s.Subtype)
 				? $"count the cards in your {s.Zone.ToString().ToLowerInvariant()}"
 				: $"count {s.Subtype}s in your {s.Zone.ToString().ToLowerInvariant()}",
-			SelectCardFromZoneAction s => string.IsNullOrEmpty(s.Subtype)
-				? $"choose a card from a {s.Zone.ToString().ToLowerInvariant()}"
-				: $"choose a {s.Subtype} from a {s.Zone.ToString().ToLowerInvariant()}",
+			SelectCardFromZoneAction s => DescribeZoneSelection(s),
 			_ => null,
 		};
 }

@@ -120,4 +120,83 @@ public class HollowmereRulesTextTests
 	{
 		Assert.That(TextFor("Blood Artist"), Does.Contain("loses 1 life"));
 	}
+
+	/// <summary>
+	/// Phrases that mean the mapper fell back rather than describing the card. Each was a real
+	/// bug: a generic " to target" suffix spliced into sentences that could not take it
+	/// ("Put to target onto the battlefield"), filters reported as "matching creatures", and
+	/// self-referential effects reading "it" instead of "this".
+	/// </summary>
+	/// Note the specific shapes: "to target" is CORRECT in "Deal 3 damage to target creature",
+	/// so the assertion has to name the broken verb-plus-suffix forms rather than the substring.
+	[TestCase("matching")]
+	[TestCase("Destroy to target")]
+	[TestCase("Put to target")]
+	[TestCase("Exile to target")]
+	[TestCase("Return to target")]
+	[TestCase("target any target")]
+	[TestCase("When triggered")]
+	[TestCase("Grants nothing")]
+	public void NoCard_UsesFallbackWording(string phrase)
+	{
+		var offenders = Hollowmere
+			.Cards.Where(c =>
+				MtgCardMapper.GetRulesText(c).Contains(phrase, StringComparison.OrdinalIgnoreCase)
+			)
+			.Select(c => c.Name)
+			.ToList();
+
+		Assert.That(offenders, Is.Empty, $"'{phrase}' in: {string.Join(", ", offenders)}");
+	}
+
+	/// <summary>
+	/// A lord whose filter is not described is unreadable — "creatures get +1/+1" hides which
+	/// creatures, and that is the entire card.
+	/// </summary>
+	[Test]
+	public void TribalLord_NamesTheTribeItBuffs()
+	{
+		var text = TextFor("Drogskol Captain");
+		Assert.That(text, Does.Contain("Other Spirits you control get +1/+1"));
+		Assert.That(text, Does.Contain("Hexproof"));
+	}
+
+	[Test]
+	public void TargetedGraveyardEffects_NameTheZone()
+	{
+		Assert.That(
+			TextFor("Ghoulcaller's Bargain"),
+			Does.Contain("target creature card in your graveyard")
+		);
+		Assert.That(
+			TextFor("Sexton of the Drowned Chapel"),
+			Does.Contain("Return target creature card in your graveyard to your hand")
+		);
+	}
+
+	/// <summary>
+	/// A madness creature puts ITSELF onto the battlefield, so "it" is ambiguous. The context
+	/// key carrying that is different from the one targeted effects use, so it needs its own
+	/// handling.
+	/// </summary>
+	[Test]
+	public void SelfReferentialEffects_SayThis()
+	{
+		Assert.That(TextFor("Twitching Ghoul"), Does.Contain("Put this onto the battlefield"));
+	}
+
+	[Test]
+	public void BurnSpells_SayTheyCanGoToTheFace()
+	{
+		Assert.That(TextFor("Fiery Temper"), Does.Contain("Deal 3 damage to any target"));
+	}
+
+	[Test]
+	public void MassEffects_ReadAsEachRatherThanTarget()
+	{
+		Assert.That(
+			TextFor("Archangel of Vigils"),
+			Does.Contain("Each Human you control gets +2/+2")
+		);
+	}
 }
