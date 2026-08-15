@@ -164,7 +164,7 @@ public static class HollowmereMill
 				.Build(),
 			// Mills a quarter of their deck and draws â€” a real threat to a slow deck.
 			CardFactory
-				.Spell("Drown the Archive", manaCost: 4)
+				.Spell("Drown the Archive", manaCost: 2)
 				.WithMill(10)
 				.WithTarget(Single().Opponent())
 				.WithDraw(1)

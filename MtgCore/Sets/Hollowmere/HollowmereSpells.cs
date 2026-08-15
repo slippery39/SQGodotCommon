@@ -97,13 +97,13 @@ public static class HollowmereSpells
 			CardFactory.Spell("Second Sight", manaCost: 2).WithDraw(2).WithFlashback(4).Build(),
 			// Storm. Free to model, and the payoff for a turn full of cheap spells.
 			CardFactory
-				.Spell("Storm of Silt", manaCost: 3)
+				.Spell("Storm of Silt", manaCost: 1)
 				.WithDamage(1)
 				.WithTarget(Single().PlayersOrCreatures())
 				.WithStorm()
 				.Build(),
 			// Deep card selection that also feeds the graveyard.
-			CardFactory.Spell("Chorus of Whispers", manaCost: 3).WithDraw(3).WithDiscard().Build(),
+			CardFactory.Spell("Chorus of Whispers", manaCost: 2).WithDraw(3).WithDiscard().Build(),
 			// Exile removal â€” the format's only clean answer to the recursion themes.
 			CardFactory
 				.Spell("Drown the Lantern-Bearer", manaCost: 3)
@@ -181,7 +181,7 @@ public static class HollowmereSpells
 				.WithTriggeredAbility("Prowess", OnYouCastSpell(), eb => eb.WithProwessBuff())
 				.Build(),
 			// Big card draw for the decks that can afford to durdle.
-			CardFactory.Spell("Tide of Whispers", manaCost: 4).WithDraw(4).WithDiscard().Build(),
+			CardFactory.Spell("Tide of Whispers", manaCost: 3).WithDraw(4).WithDiscard().Build(),
 			// Rebuys two spells on arrival â€” a four-drop that must two-for-one.
 			CardFactory
 				.Creature("Drowned Archivist", manaCost: 4, power: 3, toughness: 3)

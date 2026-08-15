@@ -123,7 +123,7 @@ public static class HollowmereVampires
 				.Build(),
 			// The sacrifice outlet â€” turns a board about to be swept into a lethal attack.
 			CardFactory
-				.Creature("Bloodthrone Vampire", manaCost: 2, power: 1, toughness: 1)
+				.Creature("Bloodthrone Vampire", manaCost: 2, power: 2, toughness: 2)
 				.WithSubtype(Hollowmere.Vampire)
 				.WithActivatedAbility(
 					"Drain the Thrall",

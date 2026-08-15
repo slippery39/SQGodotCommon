@@ -180,10 +180,10 @@ public static class HollowmereSpirits
 				.Build(),
 			// Mass evasion â€” turns any stalled board into lethal, in any deck.
 			CardFactory
-				.Spell("Ghostly Chorus", manaCost: 3)
+				.Spell("Ghostly Chorus", manaCost: 1)
 				.WithGrantKeyword(flying: true)
 				.WithTarget(AllValid().AllYourCreatures())
-				.WithFlashback(5)
+				.WithFlashback(3)
 				.Build(),
 			// Prowess on an evasive body, bridging Spirits into the Spells theme.
 			CardFactory
@@ -244,7 +244,7 @@ public static class HollowmereSpirits
 				.Build(),
 			// Scales off a graveyard full of dead Spirits â€” the theme's graveyard crossover.
 			CardFactory
-				.Spell("Spectral Tide", manaCost: 5)
+				.Spell("Spectral Tide", manaCost: 3)
 				.WithCreateTokensPerCard(HollowmereTokens.Spirit(), Hollowmere.Spirit)
 				.Build(),
 			// The finisher: width, evasion and a pump in one card.

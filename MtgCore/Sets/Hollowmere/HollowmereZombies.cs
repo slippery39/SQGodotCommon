@@ -260,7 +260,7 @@ public static class HollowmereZombies
 				.Build(),
 			// Scales with the board rather than the graveyard, so it rewards a different line.
 			CardFactory
-				.Spell("Endless Ranks", manaCost: 5)
+				.Spell("Endless Ranks", manaCost: 4)
 				.WithCreateTokensPerCard(
 					HollowmereTokens.Zombie(),
 					Hollowmere.Zombie,
@@ -315,7 +315,7 @@ public static class HollowmereZombies
 				.Build(),
 			// Scales off the graveyard, which the tribe fills faster than anyone.
 			CardFactory
-				.Spell("Rise of the Drowned Host", manaCost: 5)
+				.Spell("Rise of the Drowned Host", manaCost: 3)
 				.WithCreateTokensPerCard(HollowmereTokens.Zombie(), Hollowmere.Zombie)
 				.Build(),
 		];

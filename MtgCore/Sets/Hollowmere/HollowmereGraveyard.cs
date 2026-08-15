@@ -535,7 +535,7 @@ public static class HollowmereGraveyard
 			},
 			// Mass recursion to hand â€” slower than reanimation, but it dodges exile removal.
 			CardFactory
-				.Spell("The Mere Remembers", manaCost: 4)
+				.Spell("The Mere Remembers", manaCost: 3)
 				.WithAction(new ReturnToHandAction(), AllValid().CreaturesInYourGraveyard())
 				.Build(),
 			// A cheap threshold body that also blocks the ground early.
