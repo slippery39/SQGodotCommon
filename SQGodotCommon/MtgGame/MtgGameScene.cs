@@ -25,6 +25,11 @@ public partial class MtgGameScene : Node2D
 	/// than the card it previews is worse than none.
 	private const float PreviewCardScale = 1.3f;
 
+	/// Ceiling on AI steps in one turn before the turn is force-ended and the state dumped.
+	/// MtgGameManager caps the AI's own actions; this catches the case where the loop itself
+	/// stops making progress — a choice that never resolves, or a turn that never flips.
+	private const int MaxAiStepsPerTurn = 300;
+
 	private readonly List<int> _handCardIds = new();
 	private int? _selectedAttackerId;
 	private bool _isGameOver;
@@ -33,6 +38,11 @@ public partial class MtgGameScene : Node2D
 	// Debug controls
 	private bool _aiPaused;
 	private Label _debugStatusLabel = null!;
+
+	/// Tells the player what the game is waiting for. Every interaction mode that consumes the
+	/// next click must set it, or that mode is unexplained.
+	private PanelContainer _promptBanner = null!;
+	private Label _promptLabel = null!;
 
 	// Spell targeting state
 	private bool _isFlashbackTargeting;
@@ -184,8 +194,11 @@ public partial class MtgGameScene : Node2D
 			CheckAndShowGameOver(creatureEvents);
 		};
 
+		_hand.CardClicked += OnHandCardClicked;
+
 		var debugLayer = new CanvasLayer { Layer = 5 };
 		AddChild(debugLayer);
+		BuildPromptBanner(debugLayer);
 		_debugStatusLabel = new Label
 		{
 			HorizontalAlignment = HorizontalAlignment.Center,
@@ -197,9 +210,34 @@ public partial class MtgGameScene : Node2D
 		_debugStatusLabel.AddThemeFontSizeOverride("font_size", 16);
 		debugLayer.AddChild(_debugStatusLabel);
 
+		// Last-resort net: anything that escapes the handlers above still gets the game state
+		// written out before the process dies. Godot does not surface a managed stack on its
+		// way down, so without this a crash leaves nothing to work from.
+		System.AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+		System.Threading.Tasks.TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
 		var startEvents = _manager.StartGame();
 		_eventLog.AppendEvents(startEvents, _manager.State, _manager.HumanPlayerId);
 		Refresh();
+	}
+
+	public override void _ExitTree()
+	{
+		System.AppDomain.CurrentDomain.UnhandledException -= OnUnhandledException;
+		System.Threading.Tasks.TaskScheduler.UnobservedTaskException -= OnUnobservedTaskException;
+	}
+
+	private void OnUnhandledException(object sender, System.UnhandledExceptionEventArgs e)
+	{
+		WriteSnapshot("crash", $"Unhandled exception: {e.ExceptionObject}");
+	}
+
+	private void OnUnobservedTaskException(
+		object? sender,
+		System.Threading.Tasks.UnobservedTaskExceptionEventArgs e
+	)
+	{
+		WriteSnapshot("crash", $"Unobserved task exception: {e.Exception}");
 	}
 
 	public override void _Input(InputEvent @event)
@@ -345,6 +383,111 @@ public partial class MtgGameScene : Node2D
 		Refresh();
 	}
 
+	// ===== PROMPT BANNER =====
+
+	private void BuildPromptBanner(CanvasLayer layer)
+	{
+		_promptBanner = new PanelContainer { Visible = false };
+		_promptBanner.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel(borderWidth: 2));
+		_promptBanner.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
+		_promptBanner.GrowHorizontal = Control.GrowDirection.Both;
+		_promptBanner.OffsetTop = 44;
+		_promptBanner.MouseFilter = Control.MouseFilterEnum.Ignore;
+		layer.AddChild(_promptBanner);
+
+		var margin = new MarginContainer();
+		margin.AddThemeConstantOverride("margin_left", 18);
+		margin.AddThemeConstantOverride("margin_right", 18);
+		margin.AddThemeConstantOverride("margin_top", 8);
+		margin.AddThemeConstantOverride("margin_bottom", 8);
+		margin.MouseFilter = Control.MouseFilterEnum.Ignore;
+		_promptBanner.AddChild(margin);
+
+		_promptLabel = new Label { HorizontalAlignment = HorizontalAlignment.Center };
+		_promptLabel.AddThemeFontSizeOverride("font_size", 18);
+		_promptLabel.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
+		_promptLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
+		margin.AddChild(_promptLabel);
+	}
+
+	private void UpdatePromptBanner()
+	{
+		var text = BuildPromptText();
+		_promptLabel.Text = text;
+		// The choice panel is modal and carries its own prompt — two prompts at once is noise.
+		_promptBanner.Visible = text.Length > 0 && !_choicePanelShowing;
+	}
+
+	/// <summary>
+	/// One sentence naming what the next click does, for every mode that consumes a click.
+	/// Empty means the player is free to act however they like.
+	/// </summary>
+	private string BuildPromptText()
+	{
+		if (_isGameOver)
+			return "";
+
+		if (_manager.IsAiTurn)
+			return "Opponent is thinking…";
+
+		if (_additionalCostCardId.HasValue)
+		{
+			var name = CardName(_additionalCostCardId.Value);
+			var cost = _additionalCostIsAbility
+				? _manager.GetAbilityAdditionalCostDescription(
+					_additionalCostCardId.Value,
+					_additionalCostAbilityIndex,
+					_currentCostIndex
+				)
+				: _manager.GetAdditionalCostDescription(
+					_additionalCostCardId.Value,
+					_currentCostIndex
+				);
+			return $"{name} — {cost}{WhereHint(_currentCostValidPaymentIds)}   (Esc to cancel)";
+		}
+
+		if (_activatingAbilityCardId.HasValue)
+			return $"{CardName(_activatingAbilityCardId.Value)} — choose a target"
+				+ $"{WhereHint(_currentValidTargetIds)}   (Esc to cancel)";
+
+		if (_targetingSpellCardId.HasValue)
+			return $"{CardName(_targetingSpellCardId.Value)} — choose a target"
+				+ $"{WhereHint(_currentValidTargetIds)}   (Esc to cancel)";
+
+		if (_selectedAttackerId.HasValue)
+			return $"{CardName(_selectedAttackerId.Value)} is attacking — "
+				+ "click an enemy creature or the opponent";
+
+		return "";
+	}
+
+	/// GetObject throws on an unknown id, and the banner is rebuilt on every Refresh — including
+	/// the one right after a card the player had selected left play. Check before looking up.
+	private string CardName(int cardId) =>
+		_manager.State.HasObject(cardId) && _manager.State.GetObject(cardId) is Card card
+			? card.Name
+			: "Card";
+
+	/// <summary>
+	/// Names the zone the player should be looking in. Derived from where the legal choices
+	/// actually are rather than declared per card, so it cannot drift from what is clickable.
+	/// </summary>
+	private string WhereHint(IReadOnlyCollection<int> ids)
+	{
+		if (ids.Count == 0)
+			return " — no legal choices";
+
+		var state = _manager.State;
+		var handId = state.GetWellKnownId(MtgObjectKeys.Player1Hand);
+		var graveyardId = state.GetWellKnownId(MtgObjectKeys.Player1Graveyard);
+
+		if (ids.All(id => state.HasObject(id) && state.GetCardZoneId(id) == handId))
+			return " — click a card in your hand";
+		if (ids.All(id => state.HasObject(id) && state.GetCardZoneId(id) == graveyardId))
+			return " — click a card in your graveyard";
+		return "";
+	}
+
 	// ===== SPELL TARGETING STATE MACHINE =====
 
 	private void EnterTargetingMode(int cardId)
@@ -393,6 +536,25 @@ public partial class MtgGameScene : Node2D
 		var flashbackIds = cards.Where(c => c.HasComponent<FlashbackComponent>()).Select(c => c.Id);
 		var targetIds = _targetingSpellCardId.HasValue ? _currentValidTargetIds : null;
 		_graveyardPopup.ShowGraveyard(cards, state, flashbackIds, targetIds);
+	}
+
+	/// <summary>
+	/// A click on a card in hand. Only meaningful while something is asking the player to pick
+	/// one — outside those modes the hand is drag-to-play and a click does nothing.
+	/// </summary>
+	private void OnHandCardClicked(CardUI2D cardUI)
+	{
+		if (_manager.IsAiTurn || _isGameOver || _choicePanelShowing)
+			return;
+		if (!int.TryParse(cardUI.Id, out var cardId))
+			return;
+
+		if (_additionalCostCardId.HasValue)
+			OnCostPaymentSelected(cardId);
+		else if (_activatingAbilityCardId.HasValue)
+			OnAbilityTargetSelected(cardId);
+		else if (_targetingSpellCardId.HasValue)
+			OnTargetSelected(cardId);
 	}
 
 	private void OnGraveyardCardClicked(int cardId)
@@ -546,6 +708,11 @@ public partial class MtgGameScene : Node2D
 		if (CheckAndShowGameOver(events))
 			return;
 
+		// The AI turn is the one loop the player cannot interrupt, so it gets both guards:
+		// a hard step cap (a turn that never yields is a bug, not a long think) and a catch
+		// that dumps the game state. This method is async void — an escaping exception here
+		// takes the whole process down with nothing written anywhere.
+		var steps = 0;
 		while (_manager.IsAiTurn && !_isGameOver)
 		{
 			await ToSignal(
@@ -556,21 +723,46 @@ public partial class MtgGameScene : Node2D
 			if (_aiPaused)
 				continue;
 
+			if (++steps > MaxAiStepsPerTurn)
+			{
+				var path = WriteSnapshot(
+					"hang",
+					$"AI turn exceeded {MaxAiStepsPerTurn} steps without ending its turn."
+				);
+				ShowDebugToast(
+					$"AI turn did not finish after {MaxAiStepsPerTurn} steps — forcing end of turn."
+						+ (path == null ? "" : $"\nState saved to {path}")
+				);
+				_manager.ForceEndAiTurn();
+				Refresh();
+				break;
+			}
+
 			// Run the (potentially expensive) AI search on a background thread so the UI stays
 			// responsive during a heavy opponent turn. The manager's Compute* methods are pure
 			// reads of the immutable GameState; only the Apply* calls mutate state, and those
 			// run here on the main thread after the await resumes (Godot marshals the
 			// continuation back to the main thread via its SynchronizationContext).
 			ImmutableList<GameEvent> stepEvents;
-			if (_manager.IsWaitingForChoice)
+			try
 			{
-				var selected = await Task.Run(() => _manager.ComputeAiChoice());
-				stepEvents = _manager.ApplyAiChoice(selected);
+				if (_manager.IsWaitingForChoice)
+				{
+					var selected = await Task.Run(() => _manager.ComputeAiChoice());
+					stepEvents = _manager.ApplyAiChoice(selected);
+				}
+				else
+				{
+					var plan = await Task.Run(() => _manager.ComputeAiAction());
+					stepEvents = _manager.ApplyAiAction(plan);
+				}
 			}
-			else
+			catch (System.Exception ex)
 			{
-				var plan = await Task.Run(() => _manager.ComputeAiAction());
-				stepEvents = _manager.ApplyAiAction(plan);
+				ReportCrash("AI turn", ex);
+				_manager.ForceEndAiTurn();
+				Refresh();
+				break;
 			}
 
 			if (!string.IsNullOrEmpty(_manager.LastAiError))
@@ -754,14 +946,50 @@ public partial class MtgGameScene : Node2D
 
 	private void ExportAndSaveSnapshot()
 	{
-		var json = _manager.ExportDebugSnapshot();
-		using var da = DirAccess.Open("user://");
-		da?.MakeDir("debug_snapshots");
-		var timestamp = (long)Time.GetUnixTimeFromSystem();
-		var path = $"user://debug_snapshots/debug_{timestamp}.json";
-		using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
-		file?.StoreString(json);
-		ShowDebugToast($"Saved: {ProjectSettings.GlobalizePath(path)}");
+		var path = WriteSnapshot("debug", error: null);
+		ShowDebugToast(path == null ? "Snapshot failed" : $"Saved: {path}");
+	}
+
+	/// <summary>
+	/// Writes a debug snapshot and returns its absolute path, or null if writing failed.
+	/// Never throws — it is called from crash handlers, where a second failure would replace
+	/// the diagnosis with a mystery.
+	/// </summary>
+	private string? WriteSnapshot(string prefix, string? error)
+	{
+		try
+		{
+			var json = _manager.ExportDebugSnapshot(error);
+			using var da = DirAccess.Open("user://");
+			da?.MakeDir("debug_snapshots");
+			var timestamp = (long)Time.GetUnixTimeFromSystem();
+			var path = $"user://debug_snapshots/{prefix}_{timestamp}.json";
+			using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
+			if (file == null)
+				return null;
+			file.StoreString(json);
+			return ProjectSettings.GlobalizePath(path);
+		}
+		catch (System.Exception ex)
+		{
+			GD.PushError($"Failed to write debug snapshot: {ex}");
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// Single funnel for anything that kills a turn. Dumps the game state next to the exception
+	/// so a crash report is reproducible instead of anecdotal, and leaves the message on screen.
+	/// </summary>
+	private void ReportCrash(string context, System.Exception ex)
+	{
+		GD.PushError($"[{context}] {ex}");
+		var path = WriteSnapshot("crash", $"{context}: {ex}");
+		ShowDebugToast(
+			path == null
+				? $"CRASH in {context}: {ex.Message} (snapshot failed)"
+				: $"CRASH in {context}: {ex.Message}\nState saved to {path}"
+		);
 	}
 
 	private void UpdateDebugStatus()
@@ -917,6 +1145,7 @@ public partial class MtgGameScene : Node2D
 		}
 
 		SyncHand();
+		UpdatePromptBanner();
 	}
 
 	private void SyncHand()
@@ -956,5 +1185,29 @@ public partial class MtgGameScene : Node2D
 			.ToList();
 
 		_hand.SetCardsDetails(details);
+		HighlightSelectableHandCards(uiCards);
+	}
+
+	/// <summary>
+	/// Tints the hand cards the current mode will accept, using the same colours the battlefield
+	/// uses for the same meanings (yellow = target, orange = cost payment).
+	/// </summary>
+	private void HighlightSelectableHandCards(List<CardUI2D> uiCards)
+	{
+		var isCostMode = _additionalCostCardId.HasValue;
+		var selectable =
+			isCostMode ? _currentCostValidPaymentIds
+			: _targetingSpellCardId.HasValue || _activatingAbilityCardId.HasValue
+				? _currentValidTargetIds
+			: null;
+
+		var tint = isCostMode ? new Color(1f, 0.65f, 0.1f, 1f) : new Color(1f, 1f, 0.3f, 1f);
+
+		foreach (var ui in uiCards)
+		{
+			var isSelectable =
+				selectable != null && int.TryParse(ui.Id, out var id) && selectable.Contains(id);
+			ui.Modulate = isSelectable ? tint : Colors.White;
+		}
 	}
 }

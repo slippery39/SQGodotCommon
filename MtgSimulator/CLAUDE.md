@@ -338,6 +338,25 @@ Each snapshot includes:
 
 `FlaggedGameSaver.TrySave` no longer takes `MtgGameIds` — it resolves all IDs it needs directly from `GameState` via `GetWellKnownId`.
 
+## Interactive Debug Snapshots
+
+`DebugSnapshotBuilder.BuildJson(history, aiDecisions, error)` is the Godot-side counterpart to
+`FlaggedGameSaver` — it serialises the whole `MtgGameManager` history plus every AI decision.
+`DebugSnapshot.Error` carries crash context; null means a manual export.
+
+`MtgGameScene` writes these to `user://debug_snapshots/`:
+
+| Prefix | Trigger |
+|---|---|
+| `debug_` | F5, manual |
+| `crash_` | An exception in the AI turn loop, or the process-wide unhandled/unobserved handlers |
+| `hang_` | The AI turn exceeded `MaxAiStepsPerTurn` without ending |
+
+The AI turn loop is `async void`; an exception escaping it kills the process with nothing logged,
+which is why it is wrapped and why `MtgGameManager.ForceEndAiTurn()` exists — it drains any
+pending choice (an unresolved `ChoiceAction` blocks the action stack forever) and hands the turn
+back rather than leaving the game wedged.
+
 ## Known Issues / Tech Debt
 
 - **`IAiStrategy` is in the `MtgCore` namespace** despite its file living in `MtgSimulator/`. Should be moved to the `MtgSimulator` namespace for correctness.

@@ -85,7 +85,10 @@ public partial class ChoicePanel : CanvasLayer
 	)
 	{
 		_promptLabel.Text = prompt.Length > 0 ? prompt : "Choose:";
-		_minChoices = minChoices;
+		// Clamp to what is actually on offer, matching GameState.ResolveChoice. "Discard a card"
+		// with an empty hand offers nothing; without the clamp Confirm never enables and the
+		// game hangs on a panel the player cannot satisfy.
+		_minChoices = Math.Min(minChoices, options.Count);
 		_maxChoices = maxChoices;
 		_selected.Clear();
 		_optionButtons.Clear();

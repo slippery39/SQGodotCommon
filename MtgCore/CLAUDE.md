@@ -246,7 +246,11 @@ Beyond mana, cards and abilities can carry `AdditionalCost` entries (on `Card.Ad
 
 Mana is always the primary cost (`ManaCost: int`); this matches MTG's "0:" notation for free abilities. Additional costs are paid before mana in `Execute`, before the card moves to the stack.
 
-`MtgActionGenerator` calls `GetValidPayments` and picks the first valid option per selection cost — sufficient for the AI. The console auto-selects the first valid payment (player choice UI is deferred).
+`MtgActionGenerator` calls `GetValidPayments` and picks the first valid option per selection cost — sufficient for the AI. The console auto-selects the first valid payment. The Godot UI walks the costs one at a time, highlighting valid payments on the battlefield **and in hand**.
+
+`AdditionalCost.Describe()` supplies the player-facing instruction ("Discard a card from your hand"). It is abstract so a new cost type cannot ship without one; presentation layers must never type-switch to build this text.
+
+Selection costs are real zone changes: `DiscardAdditionalCost.Pay` routes through `MoveCardTracked` and stages `CardDiscardedEvent`, so discard payoffs and zone-dependent statics see a cost payment exactly as they see a discard effect.
 
 ## Activated Abilities
 
@@ -311,6 +315,7 @@ Files: `Turns/BeginGameAction.cs`, `SetupGameAction.cs`, `StartTurnAction.cs`, `
 - `MtgConsole` and `MtgSimulator` never construct game actions directly for game flow — use `MtgGameStateExtensions` methods as the API boundary.
 - Presentation layers never modify game state directly. All state changes go through `GameAction`s. Exceptions: explicit test setup and debug/cheat tooling (both must be clearly commented as such).
 - `MtgActionGenerator.GetLegalActions(state, ids, playerId)` is the **single shared source** of legal action generation. Console and simulator both call this — never duplicate this logic.
+- `CastSpellAction.TargetIds` / `CastFromGraveyardAction.TargetIds` are keyed by **effect index**, not by 0. `ValidateAdd` looks targets up under the index of the effect that needs them, so keying them anywhere else makes the spell silently uncastable rather than throwing.
 - `MtgGameFactory.CreateForTesting()` gives both players `MaxMana = 99` / `CurrentMana = 99`. Use in all unit tests not specifically testing the land/mana system. Use `MtgGameFactory.Create()` with manual land plays for land-specific tests.
 - The simulator detects potential infinite loops via per-turn action counts (warning at 50, cutoff at 100) and flags unusual games.
 
@@ -450,6 +455,21 @@ builder produced, not just the first.
 `.WithTarget(Single().Opponent())`), `WithReanimate()`, `WithReturnCreatureFromGraveyard()`,
 `WithReturnSpellFromGraveyard()`, `WithGrantKeyword(…)`, `WithExileFromGraveyard()`,
 `WithOpponentDiscard(n)`, `WithDiscard(n)`, `WithProwessBuff()`, `WithCreateTokensPerCard(…)`.
+
+**Discard comes in two flavours and they are not interchangeable:**
+
+| | `WithDiscard(n)` | `WithDiscardCost(n)` |
+|---|---|---|
+| Mechanism | `SelectCardsFromHandAction` → `DiscardCardsAction` pipeline, no targeting | `DiscardAdditionalCost` on `AdditionalCastCosts` |
+| Chosen | At resolution | Before the spell reaches the stack |
+| Empty hand | Casts, discards nothing | Uncastable |
+| Card text | "draw 4, then discard a card" | "as an additional cost, discard a card" |
+
+A post-draw discard **must** be the choice form: cast-time selection happens before the draw, so a
+targeted version could only ever pitch from the pre-draw hand.
+
+Both are human-playable — cards in hand are clickable as targets and as cost payments (see
+`MtgGameScene.OnHandCardClicked`).
 
 Removal and selection verbs, added because the set was built from ~13 verbs and cards had
 begun repeating each other at different mana costs: `WithWeaken(p, t)` (-X/-X, kills via the

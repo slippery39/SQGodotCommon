@@ -286,6 +286,14 @@ public class MtgGameManager
 			.ToList();
 	}
 
+	public string GetAdditionalCostDescription(int cardId, int costIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		if (card == null || costIndex < 0 || costIndex >= card.AdditionalCastCosts.Count)
+			return "";
+		return card.AdditionalCastCosts[costIndex].Describe();
+	}
+
 	public int GetNextAdditionalCostNeedingSelection(int cardId, int afterIndex)
 	{
 		var card = _state.GetObject(cardId) as Card;
@@ -369,6 +377,16 @@ public class MtgGameManager
 		if (costIndex < 0 || costIndex >= costs.Count)
 			return new List<int>();
 		return costs[costIndex].GetValidPayments(_state, HumanPlayerId, cardId).ToList();
+	}
+
+	public string GetAbilityAdditionalCostDescription(int cardId, int abilityIndex, int costIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		var abilities = card?.GetComponents<ActivatedAbilityComponent>().ToList();
+		if (abilities == null || abilityIndex >= abilities.Count)
+			return "";
+		var costs = abilities[abilityIndex].AdditionalCosts;
+		return costIndex >= 0 && costIndex < costs.Count ? costs[costIndex].Describe() : "";
 	}
 
 	public int GetNextAbilityCostNeedingSelection(int cardId, int abilityIndex, int afterIndex)
@@ -534,6 +552,38 @@ public class MtgGameManager
 		return events;
 	}
 
+	/// <summary>
+	/// Hands the turn back to the human after the AI turn failed or stopped progressing.
+	/// Clears any pending choice first — an unresolved ChoiceAction blocks the action stack, so
+	/// ending the turn on top of one would leave the game permanently stuck.
+	/// Best-effort by design: it must not throw, because its callers are error handlers.
+	/// </summary>
+	public void ForceEndAiTurn()
+	{
+		try
+		{
+			while (_state.IsWaitingForChoice)
+			{
+				var choice = _state.GetPendingChoice()!;
+				var minimum = Math.Min(choice.MinChoices, choice.Options.Count);
+				var (newState, _) = _state.ResolveChoice(
+					choice.Options.Take(minimum).Select(o => o.Id).ToImmutableList()
+				);
+				_state = newState;
+			}
+
+			if (IsAiTurn)
+				SubmitAction(BuildAiEndTurnAction());
+
+			_aiActionsThisTurn = 0;
+			_history.Add(new HistoryEntry(_state, "Forced end of AI turn"));
+		}
+		catch (Exception ex)
+		{
+			LastAiError = $"Forced end of AI turn failed: {ex.Message}";
+		}
+	}
+
 	private EndTurnAction BuildAiEndTurnAction() =>
 		new()
 		{
@@ -562,10 +612,14 @@ public class MtgGameManager
 	/// <summary>
 	/// Builds and returns a JSON debug snapshot of the full game history and AI decisions.
 	/// </summary>
-	public string ExportDebugSnapshot()
+	/// <param name="error">
+	/// Crash context, when this snapshot is a crash dump. The full history is already included,
+	/// so a dump carries every state up to the failure, not just the broken one.
+	/// </param>
+	public string ExportDebugSnapshot(string? error = null)
 	{
 		var historyForBuilder = _history.Select(e => (e.State, e.ActionDescription)).ToList();
-		return DebugSnapshotBuilder.BuildJson(historyForBuilder, _aiDecisions);
+		return DebugSnapshotBuilder.BuildJson(historyForBuilder, _aiDecisions, error);
 	}
 
 	// ===== DECK SETUP =====

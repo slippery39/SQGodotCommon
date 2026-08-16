@@ -52,6 +52,13 @@ public partial class CardUI2D : Node2D
 	public event Action<CardUI2D, bool> SelectionChanged;
 
 	/// <summary>
+	/// Left click on the card. Fires only while this card is the hovered one, which is the same
+	/// test dragging uses, so it cannot fire for a card sitting behind another in the fan.
+	/// Handled in _UnhandledInput so Controls above (buttons, popups) get first refusal.
+	/// </summary>
+	public event Action<CardUI2D> Clicked;
+
+	/// <summary>
 	/// Stores whether the card is selected for some external purpose (i.e, resolving a spell that needs you to select certain cards)
 	/// </summary>
 	public bool IsSelected { get; private set; }
@@ -90,6 +97,19 @@ public partial class CardUI2D : Node2D
 		dragNode2D.OnDragEnd += (drag) => _DragEnd(drag);
 
 		SavedZIndex = ZIndex;
+	}
+
+	public override void _UnhandledInput(InputEvent @event)
+	{
+		if (
+			Clicked != null
+			&& @event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }
+			&& CardUIManager.CurrentHoveredCard == this
+		)
+		{
+			Clicked(this);
+			GetViewport().SetInputAsHandled();
+		}
 	}
 
 	public class DragEndContext

@@ -10,11 +10,12 @@ public static class DebugSnapshotBuilder
 
 	public static string BuildJson(
 		IReadOnlyList<(GameState State, string Description)> history,
-		IReadOnlyList<(AiDecision Decision, int HistoryIndex)> aiDecisions
+		IReadOnlyList<(AiDecision Decision, int HistoryIndex)> aiDecisions,
+		string? error = null
 	)
 	{
 		if (history.Count == 0)
-			return JsonSerializer.Serialize(new DebugSnapshot(), JsonOptions);
+			return JsonSerializer.Serialize(new DebugSnapshot { Error = error }, JsonOptions);
 
 		var currentState = history[^1].State;
 		var game = currentState.TryGetGame();
@@ -42,6 +43,7 @@ public static class DebugSnapshotBuilder
 			CurrentPlayer2 = BuildPlayerSnapshot(currentState, player2Id),
 			StateHistory = historyEntries,
 			AiDecisions = aiDecisions.Select(d => d.Decision).ToList(),
+			Error = error,
 		};
 
 		return JsonSerializer.Serialize(snapshot, JsonOptions);

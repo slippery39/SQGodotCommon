@@ -44,6 +44,12 @@ public partial class Hand2D : Node2D
 	public Action<DragEndContext> OnDragSuccess;
 	public Action<DragEndContext> OnDragFail;
 
+	/// <summary>
+	/// A card in hand was clicked. Dragging plays a card; clicking selects one, which is what a
+	/// spell or cost that asks you to pick a card in hand needs.
+	/// </summary>
+	public event Action<CardUI2D> CardClicked;
+
 	private bool _needsRepositioning = false;
 
 	public override void _Ready()
@@ -406,6 +412,7 @@ public partial class Hand2D : Node2D
 	{
 		var card = CardScene.Instantiate<CardUI2D>();
 		card.DragEnd = OnCardDragEnd;
+		card.Clicked += c => CardClicked?.Invoke(c);
 		return card;
 	}
 

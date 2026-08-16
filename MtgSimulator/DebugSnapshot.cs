@@ -13,6 +13,13 @@ public record DebugSnapshot
 	public PlayerSnapshot CurrentPlayer2 { get; init; } = new();
 	public IReadOnlyList<DebugHistoryEntry> StateHistory { get; init; } = [];
 	public IReadOnlyList<AiDecision> AiDecisions { get; init; } = [];
+
+	/// <summary>
+	/// Where the snapshot came from and, for a crash dump, the exception. Null for a manual
+	/// export. First field to read when diagnosing: it says whether this state is a crime scene
+	/// or just a scene.
+	/// </summary>
+	public string? Error { get; init; }
 }
 
 public record DebugHistoryEntry(
