@@ -15,18 +15,25 @@ public partial class CardPreviewPopup : CanvasLayer
 	[Export]
 	public float PreviewScale { get; set; } = 0.65f;
 
+	/// <summary>
+	/// CanvasLayer the preview draws on. Must sit above whatever it previews for — the graveyard
+	/// popup is on layer 6, so a preview left on the default 3 would render behind it.
+	/// </summary>
+	[Export]
+	public int PreviewLayer { get; set; } = 3;
+
 	private InternalCardUI2D _cardNode;
 
-	// Card native size, before scaling.
-	private const float CardWidth = 300f;
-	private const float CardHeight = 470f;
+	// Card native size, before scaling. The frame art is 312x445.
+	private const float CardWidth = 312f;
+	private const float CardHeight = 445f;
 
 	private float HalfW => CardWidth * PreviewScale / 2f;
 	private float HalfH => CardHeight * PreviewScale / 2f;
 
 	public override void _Ready()
 	{
-		Layer = 3;
+		Layer = PreviewLayer;
 
 		if (InternalCardScene != null)
 		{

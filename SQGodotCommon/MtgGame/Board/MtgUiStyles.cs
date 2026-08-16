@@ -24,20 +24,6 @@ public static class MtgUiStyles
 		return s;
 	}
 
-	public static StyleBoxFlat MiniCardStyle(Color? borderColor = null)
-	{
-		var s = new StyleBoxFlat();
-		s.BgColor = CardBg;
-		s.SetBorderWidthAll(2);
-		s.BorderColor = borderColor ?? GoldBorder;
-		s.CornerRadiusTopLeft =
-			s.CornerRadiusTopRight =
-			s.CornerRadiusBottomLeft =
-			s.CornerRadiusBottomRight =
-				3;
-		return s;
-	}
-
 	public static StyleBoxFlat ButtonNormal()
 	{
 		var s = new StyleBoxFlat();

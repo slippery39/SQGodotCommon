@@ -14,30 +14,53 @@ script = ExtResource("1_boardui")
 anchor_right = 1.0
 anchor_bottom = 0.73
 
-[node name="TurnLabel" type="Label" parent="MainColumn"]
+[node name="TopBar" type="HBoxContainer" parent="MainColumn"]
+
+[node name="TurnLabel" type="Label" parent="MainColumn/TopBar"]
+size_flags_horizontal = 3
 text = "Turn -"
 horizontal_alignment = 1
 
-[node name="OpponentPanel" type="PanelContainer" parent="MainColumn"]
+[node name="LogToggleButton" type="Button" parent="MainColumn/TopBar"]
+custom_minimum_size = Vector2(150, 0)
+text = "Log"
+
+[node name="OpponentRow" type="HBoxContainer" parent="MainColumn"]
+size_flags_vertical = 3
+
+[node name="OpponentPanel" type="PanelContainer" parent="MainColumn/OpponentRow"]
+custom_minimum_size = Vector2(300, 0)
+size_flags_vertical = 4
 script = ExtResource("2_panel")
 
-[node name="OpponentBattlefield" type="PanelContainer" parent="MainColumn"]
+[node name="OpponentBattlefield" type="PanelContainer" parent="MainColumn/OpponentRow"]
+size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("3_battlefield")
 BoardCardScene = ExtResource("4_boardcard")
 
-[node name="PlayerBattlefield" type="PanelContainer" parent="MainColumn"]
+[node name="PlayerRow" type="HBoxContainer" parent="MainColumn"]
 size_flags_vertical = 3
-script = ExtResource("3_battlefield")
-BoardCardScene = ExtResource("4_boardcard")
 
-[node name="GraveyardButton" type="Button" parent="MainColumn"]
+[node name="PlayerSidebar" type="VBoxContainer" parent="MainColumn/PlayerRow"]
+custom_minimum_size = Vector2(300, 0)
+size_flags_vertical = 4
+
+[node name="PlayerPanel" type="PanelContainer" parent="MainColumn/PlayerRow/PlayerSidebar"]
+script = ExtResource("2_panel")
+
+[node name="GraveyardButton" type="Button" parent="MainColumn/PlayerRow/PlayerSidebar"]
 text = "Graveyard (0)"
 
-[node name="PlayerPanel" type="PanelContainer" parent="MainColumn"]
-script = ExtResource("2_panel")
+[node name="PlayerBattlefield" type="PanelContainer" parent="MainColumn/PlayerRow"]
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("3_battlefield")
+BoardCardScene = ExtResource("4_boardcard")
 
-[node name="EndTurnButton" type="Button" parent="MainColumn"]
-custom_minimum_size = Vector2(200, 0)
-size_flags_horizontal = 4
+[node name="BottomBar" type="HBoxContainer" parent="MainColumn"]
+alignment = 2
+
+[node name="EndTurnButton" type="Button" parent="MainColumn/BottomBar"]
+custom_minimum_size = Vector2(220, 0)
 text = "End Turn"

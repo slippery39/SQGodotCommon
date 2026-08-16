@@ -234,13 +234,18 @@ public partial class DraftScene : Control
 		CardListView.Fill(_poolList, pool);
 	}
 
+	// state: null — a draft pack card is not in a game, so P/T is the printed value.
 	private static InternalCardUI2D.Details ToDetails(Card card) =>
 		new()
 		{
 			CardName = card.Name,
 			ManaCost = card.ManaCost.ToString(),
+			TypeLine = MtgCardMapper.GetTypeLine(card),
+			PowerToughness = MtgCardMapper.GetPowerToughness(card, state: null),
 			RulesText = MtgCardMapper.GetRulesText(card),
 			ArtworkTexture = CardArtLoader.Load(card.Name),
+			FrameColor = MtgCardTheme.FrameColor(card),
+			NamePlateColor = MtgCardTheme.NamePlateColor(card),
 		};
 
 	// ===== Pick loop =====

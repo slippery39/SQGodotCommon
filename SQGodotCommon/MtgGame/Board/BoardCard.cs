@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Common.Cards;
 using ImmutableGameObjects;
 using MtgCore;
@@ -33,7 +32,6 @@ public partial class BoardCard : Control
 	public float CardScale { get; set; } = BaseScale;
 
 	private InternalCardUI2D _cardNode;
-	private Label _statsLabel;
 	private int _cardId;
 
 	public event Action<int> Clicked;
@@ -59,22 +57,6 @@ public partial class BoardCard : Control
 		{
 			GD.PushWarning($"{Name}: InternalCardScene is not set.");
 		}
-
-		_statsLabel = new Label();
-		_statsLabel.SetAnchorsPreset(LayoutPreset.FullRect);
-		_statsLabel.HorizontalAlignment = HorizontalAlignment.Right;
-		_statsLabel.VerticalAlignment = VerticalAlignment.Bottom;
-		_statsLabel.AddThemeFontSizeOverride(
-			"font_size",
-			Mathf.RoundToInt(14 * CardScale / BaseScale)
-		);
-		_statsLabel.AddThemeColorOverride("font_color", new Color(1f, 0.95f, 0.75f, 1f));
-		_statsLabel.AddThemeColorOverride("font_shadow_color", Colors.Black);
-		_statsLabel.AddThemeConstantOverride("shadow_offset_x", 1);
-		_statsLabel.AddThemeConstantOverride("shadow_offset_y", 1);
-		_statsLabel.Visible = false;
-		_statsLabel.MouseFilter = MouseFilterEnum.Ignore;
-		AddChild(_statsLabel);
 
 		GuiInput += OnGuiInput;
 		MouseEntered += () => Hovered?.Invoke(_cardId);
@@ -110,14 +92,17 @@ public partial class BoardCard : Control
 			{
 				CardName = card.Name,
 				ManaCost = card.ManaCost.ToString(),
+				TypeLine = MtgCardMapper.GetTypeLine(card),
+				PowerToughness = MtgCardMapper.GetPowerToughness(card, state),
 				RulesText = MtgCardMapper.GetRulesText(card),
 				ArtworkTexture = CardArtLoader.Load(card.Name),
+				FrameColor = MtgCardTheme.FrameColor(card),
+				NamePlateColor = MtgCardTheme.NamePlateColor(card),
 			};
 			details.ApplyTo(_cardNode);
 		}
 
-		// SummoningSick greys the whole card (visual + stats). All other highlights tint only
-		// the card visual so the P/T label stays white.
+		// SummoningSick greys the whole card. All other highlights tint only the card visual.
 		Modulate =
 			highlight == BoardCardHighlight.SummoningSick
 				? new Color(0.6f, 0.6f, 0.6f, 1f)
@@ -134,27 +119,5 @@ public partial class BoardCard : Control
 				_ => Colors.White,
 			};
 		}
-
-		var creature = card.GetComponent<CreatureComponent>();
-		if (creature != null)
-		{
-			var statsText =
-				state == null
-					? $"{creature.Power}/{creature.Toughness}"
-					: BuildInGameStats(state, card, creature);
-			_statsLabel.Text = statsText;
-			_statsLabel.Visible = true;
-		}
-		else
-		{
-			_statsLabel.Visible = false;
-		}
-	}
-
-	private static string BuildInGameStats(GameState state, Card card, CreatureComponent creature)
-	{
-		var stats = state.GetEffectiveStats(card.Id);
-		var text = $"{stats.Power}/{stats.Toughness}";
-		return creature.Damage > 0 ? $"{text} -{creature.Damage}" : text;
 	}
 }

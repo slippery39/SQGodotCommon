@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Shader" uid="uid://b660bhlhx2nt8" path="res://Common/Shaders/damage_and_highlight.gdshader" id="1_ej3r4"]
 [ext_resource type="Script" path="res://Common/Cards/2D/Card2D/InternalCardUI2DCanvasGroup.cs" id="1_cgscr"]
@@ -62,11 +62,27 @@ outline_color = Color(0, 0, 0, 1)
 shadow_size = 10
 shadow_color = Color(0, 0, 0, 1)
 
+[sub_resource type="LabelSettings" id="LabelSettings_typeline"]
+font_size = 22
+font_color = Color(1, 0.960784, 0.878431, 1)
+outline_size = 6
+outline_color = Color(0, 0, 0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_pt"]
+font_size = 24
+font_color = Color(1, 0.960784, 0.878431, 1)
+outline_size = 8
+outline_color = Color(0, 0, 0, 1)
+shadow_size = 6
+shadow_color = Color(0, 0, 0, 1)
+
 [node name="InternalCard2D" type="Node2D"]
 script = ExtResource("1_cgscr")
 OutlineColor = Color(0, 1.50196, 0, 0)
 CardName = "Strike"
 ManaCost = "3"
+TypeLine = "Creature — Human Soldier"
+PowerToughness = "2/2"
 RulesText = "Deal 6 Damage.
 Draw 2 Cards.
 Gain 10 Life.
@@ -102,6 +118,30 @@ position = Vector2(-1, 0)
 scale = Vector2(0.979899, 0.995098)
 texture = ExtResource("4_d8nhu")
 
+[node name="TypeLineBand" type="ColorRect" parent="CanvasGroup/CardContainer/ArtFrame"]
+unique_name_in_owner = true
+offset_left = -139.0
+offset_top = 71.0
+offset_right = 139.0
+offset_bottom = 99.0
+mouse_filter = 2
+color = Color(0.05, 0.04, 0.08, 0.78)
+
+[node name="TypeLineLabel" type="Label" parent="CanvasGroup/CardContainer/ArtFrame/TypeLineBand"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+text = "Creature — Human Soldier"
+label_settings = SubResource("LabelSettings_typeline")
+horizontal_alignment = 1
+vertical_alignment = 1
+clip_text = true
+
 [node name="Name" type="Sprite2D" parent="CanvasGroup/CardContainer"]
 use_parent_material = true
 position = Vector2(2, -190)
@@ -117,6 +157,7 @@ text = "Strike"
 label_settings = ExtResource("6_ckdyi")
 horizontal_alignment = 1
 vertical_alignment = 1
+clip_text = true
 metadata/_edit_use_anchors_ = true
 
 [node name="ManaCost" type="Sprite2D" parent="CanvasGroup/CardContainer"]
@@ -143,11 +184,11 @@ texture = ExtResource("9_p103l")
 
 [node name="RulesTextLabel" type="Label" parent="CanvasGroup/CardContainer/RulesText"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(259, 140)
 offset_left = -130.0
 offset_top = -69.0
 offset_right = 129.0
 offset_bottom = 71.0
+clip_text = true
 text = "Deal 6 Damage.
 Draw 2 Cards.
 Gain 10 Life.
@@ -156,6 +197,25 @@ label_settings = SubResource("LabelSettings_cg01")
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
+metadata/_edit_use_anchors_ = true
+
+[node name="PowerToughnessBadge" type="Sprite2D" parent="CanvasGroup/CardContainer"]
+unique_name_in_owner = true
+use_parent_material = true
+position = Vector2(140, 201)
+texture = ExtResource("7_2lkld")
+
+[node name="PowerToughnessLabel" type="Label" parent="CanvasGroup/CardContainer/PowerToughnessBadge"]
+unique_name_in_owner = true
+offset_left = -40.0
+offset_top = -32.0
+offset_right = 40.0
+offset_bottom = 32.0
+mouse_filter = 2
+text = "2/2"
+label_settings = SubResource("LabelSettings_pt")
+horizontal_alignment = 1
+vertical_alignment = 1
 metadata/_edit_use_anchors_ = true
 
 [node name="BottomPoint" type="Node2D" parent="."]

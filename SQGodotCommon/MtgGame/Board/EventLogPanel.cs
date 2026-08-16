@@ -9,15 +9,29 @@ public partial class EventLogPanel : CanvasLayer
 {
 	private VBoxContainer _logContainer = null!;
 	private ScrollContainer _scroll = null!;
+	private PanelContainer _panel = null!;
 	private readonly Dictionary<int, string> _cardNames = new();
 	private int _humanPlayerId;
 	private const int MaxEntries = 100;
+
+	/// Entries added since the log was last visible. The log starts closed, so without this the
+	/// AI could take a whole turn with no indication anything worth reading had happened.
+	private int _unreadCount;
+
+	public bool IsOpen { get; private set; }
+
+	/// Label for the toggle button, including the unread count while the log is closed.
+	public string ToggleText =>
+		IsOpen ? "Log ✕"
+		: _unreadCount > 0 ? $"Log ({_unreadCount})"
+		: "Log";
 
 	public override void _Ready()
 	{
 		Layer = 1;
 
-		var panel = new PanelContainer();
+		_panel = new PanelContainer();
+		var panel = _panel;
 		panel.AnchorLeft = 0.78f;
 		panel.AnchorRight = 1.0f;
 		panel.AnchorTop = 0.0f;
@@ -50,7 +64,26 @@ public partial class EventLogPanel : CanvasLayer
 		_logContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
 		_logContainer.AddThemeConstantOverride("separation", 2);
 		_scroll.AddChild(_logContainer);
+
+		SetOpen(false);
 	}
+
+	/// <summary>
+	/// Shows or hides the log. Opening clears the unread count and jumps to the newest entry —
+	/// you open it to find out what just happened, not to read from the top.
+	/// </summary>
+	public void SetOpen(bool open)
+	{
+		IsOpen = open;
+		_panel.Visible = open;
+		if (!open)
+			return;
+
+		_unreadCount = 0;
+		CallDeferred(nameof(ScrollToBottom));
+	}
+
+	public void Toggle() => SetOpen(!IsOpen);
 
 	public void Clear()
 	{
@@ -73,6 +106,8 @@ public partial class EventLogPanel : CanvasLayer
 			if (line == null)
 				continue;
 			AddLogLabel(line, isTurnSeparator: e is TurnStartedEvent);
+			if (!IsOpen)
+				_unreadCount++;
 		}
 
 		int excess = _logContainer.GetChildCount() - MaxEntries;

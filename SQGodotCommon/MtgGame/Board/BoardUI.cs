@@ -14,9 +14,18 @@ public partial class BoardUI : Control
 	public event Action<int>? OpponentCreatureClicked;
 	public event Action? OpponentDirectAttacked;
 	public event Action? GraveyardButtonPressed;
+	public event Action? LogTogglePressed;
 	public event Action<int>? CreatureHovered;
 	public event Action<int>? CreatureHoverEnded;
 
+	/// Fraction of the width the board keeps while the event log is open.
+	private const float BoardWidthWithLog = 0.78f;
+
+	/// Width of the left rail holding the player panels and the graveyard button. Taking these
+	/// out of the vertical stack is what lets the battlefield rows be tall enough to read.
+	private const float RailWidth = 300f;
+
+	private VBoxContainer _mainColumn = null!;
 	private Label _turnLabel = null!;
 	private PlayerPanel _opponentPanel = null!;
 	private PlayerPanel _playerPanel = null!;
@@ -24,6 +33,7 @@ public partial class BoardUI : Control
 	private BattlefieldZone _playerBattlefield = null!;
 	private Button _graveyardButton = null!;
 	private Button _endTurnButton = null!;
+	private Button _logToggleButton = null!;
 
 	public override void _Ready()
 	{
@@ -33,25 +43,26 @@ public partial class BoardUI : Control
 		// Pass mouse events through so hand cards (Node2D below) remain draggable
 		MouseFilter = Control.MouseFilterEnum.Ignore;
 
-		_turnLabel = GetNode<Label>("MainColumn/TurnLabel");
-		_opponentPanel = GetNode<PlayerPanel>("MainColumn/OpponentPanel");
-		_opponentBattlefield = GetNode<BattlefieldZone>("MainColumn/OpponentBattlefield");
-		_playerBattlefield = GetNode<BattlefieldZone>("MainColumn/PlayerBattlefield");
-		_graveyardButton = GetNode<Button>("MainColumn/GraveyardButton");
-		_playerPanel = GetNode<PlayerPanel>("MainColumn/PlayerPanel");
-		_endTurnButton = GetNode<Button>("MainColumn/EndTurnButton");
+		_mainColumn = GetNode<VBoxContainer>("MainColumn");
+		_turnLabel = GetNode<Label>("MainColumn/TopBar/TurnLabel");
+		_logToggleButton = GetNode<Button>("MainColumn/TopBar/LogToggleButton");
+		_opponentPanel = GetNode<PlayerPanel>("MainColumn/OpponentRow/OpponentPanel");
+		_opponentBattlefield = GetNode<BattlefieldZone>(
+			"MainColumn/OpponentRow/OpponentBattlefield"
+		);
+		_playerPanel = GetNode<PlayerPanel>("MainColumn/PlayerRow/PlayerSidebar/PlayerPanel");
+		_graveyardButton = GetNode<Button>("MainColumn/PlayerRow/PlayerSidebar/GraveyardButton");
+		_playerBattlefield = GetNode<BattlefieldZone>("MainColumn/PlayerRow/PlayerBattlefield");
+		_endTurnButton = GetNode<Button>("MainColumn/BottomBar/EndTurnButton");
 
-		// Stop at 78% width — leaves space for the EventLog panel on the right
-		var mainColumn = GetNode<VBoxContainer>("MainColumn");
-		mainColumn.AnchorRight = 0.78f;
-
-		// Center player panels instead of spanning the full width
-		_opponentPanel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
-		_opponentPanel.CustomMinimumSize = new Vector2(450, 0);
-		_playerPanel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
-		_playerPanel.CustomMinimumSize = new Vector2(450, 0);
+		// Each panel sits beside its own battlefield row rather than above it, so it reads as
+		// belonging to that half of the board and — more importantly — stops being a height
+		// driver. See SetBoardWidth for the horizontal half of this.
+		_opponentPanel.CustomMinimumSize = new Vector2(RailWidth, 0);
+		_playerPanel.CustomMinimumSize = new Vector2(RailWidth, 0);
 
 		_endTurnButton.Pressed += () => EndTurnPressed?.Invoke();
+		_logToggleButton.Pressed += () => LogTogglePressed?.Invoke();
 
 		_turnLabel.AddThemeFontSizeOverride("font_size", 25);
 		_turnLabel.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
@@ -77,10 +88,31 @@ public partial class BoardUI : Control
 		_graveyardButton.AddThemeStyleboxOverride("disabled", MtgUiStyles.ButtonDisabled());
 		_graveyardButton.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
 		_graveyardButton.AddThemeColorOverride("font_disabled_color", MtgUiStyles.DimBorder);
-		_graveyardButton.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
-		_graveyardButton.CustomMinimumSize = new Vector2(200, 0);
 		_graveyardButton.Pressed += () => GraveyardButtonPressed?.Invoke();
+
+		_logToggleButton.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
+		_logToggleButton.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
+		_logToggleButton.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
 	}
+
+	/// <summary>
+	/// Gives the board the full width when the event log is closed and 78% when it is open. The
+	/// log is an overlay on its own CanvasLayer, so nothing reclaims that space automatically.
+	/// </summary>
+	public void SetBoardWidth(bool logOpen)
+	{
+		_mainColumn.AnchorRight = logOpen ? BoardWidthWithLog : 1.0f;
+		_mainColumn.OffsetRight = 0;
+	}
+
+	public void SetLogToggleText(string text) => _logToggleButton.Text = text;
+
+	/// <summary>
+	/// Where a dragged hand card has to be dropped to be played. Read from the live rect rather
+	/// than hardcoded, so the drop target cannot drift out of step with the layout.
+	/// </summary>
+	public Rect2 GetPlayerBattlefieldRect() =>
+		new(_playerBattlefield.GlobalPosition, _playerBattlefield.Size);
 
 	public Vector2 GetPlayerLibraryPosition() =>
 		_playerPanel.GlobalPosition

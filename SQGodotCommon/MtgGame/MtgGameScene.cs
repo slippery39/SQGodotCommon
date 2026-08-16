@@ -96,9 +96,9 @@ public partial class MtgGameScene : Node2D
 		_cardPreviewPopup.InternalCardScene = ResourceLoader.Load<PackedScene>(
 			"res://Common/Cards/2D/Card2D/internal_cardui2d_canvasgroup.tscn"
 		);
-		// Board cards render at 0.42, and CardPreviewPopup defaults to 0.65 — barely larger
-		// than the card being previewed, which leaves the rules box unreadable. Matches the
-		// draft screen, where the same value was chosen for the same reason.
+		// The battlefield is capped at 0.45 by the height budget (see BattlefieldZone.CardScale),
+		// so the board card is for recognising a card and this preview is for reading it. It has
+		// to be a lot bigger than 0.45 to earn that job. Matches the draft screen.
 		_cardPreviewPopup.PreviewScale = PreviewCardScale;
 		AddChild(_cardPreviewPopup);
 
@@ -108,8 +108,15 @@ public partial class MtgGameScene : Node2D
 		_boardUI.OpponentCreatureClicked += OnOpponentCreatureClicked;
 		_boardUI.OpponentDirectAttacked += OnOpponentDirectAttacked;
 		_boardUI.GraveyardButtonPressed += OpenGraveyardPopup;
+		_boardUI.LogTogglePressed += OnLogTogglePressed;
 		_boardUI.CreatureHovered += OnCreatureHovered;
 		_boardUI.CreatureHoverEnded += _ => _cardPreviewPopup.HideCard();
+
+		// The log starts closed, so the board takes the full width until it is opened.
+		_boardUI.SetBoardWidth(logOpen: false);
+		_boardUI.SetLogToggleText(_eventLog.ToggleText);
+		// Deferred so the containers have resolved their sizes before the drop zone is measured.
+		CallDeferred(nameof(SyncBattlefieldDropZone));
 
 		_hand.IsDragSuccess = context =>
 			!_manager.IsAiTurn
@@ -874,6 +881,30 @@ public partial class MtgGameScene : Node2D
 		TryAttack(_selectedAttackerId.Value, cardId);
 	}
 
+	private void OnLogTogglePressed()
+	{
+		_eventLog.Toggle();
+		_boardUI.SetBoardWidth(_eventLog.IsOpen);
+		_boardUI.SetLogToggleText(_eventLog.ToggleText);
+		CallDeferred(nameof(SyncBattlefieldDropZone));
+	}
+
+	/// <summary>
+	/// Matches the hand-card drop target to wherever the player's battlefield actually is. The
+	/// zone used to be a fixed Area2D authored against one layout; the board now changes width
+	/// when the log opens, so a hardcoded rect would silently stop lining up.
+	/// </summary>
+	private void SyncBattlefieldDropZone()
+	{
+		var rect = _boardUI.GetPlayerBattlefieldRect();
+		if (rect.Size.X <= 0 || rect.Size.Y <= 0)
+			return;
+
+		_battlefieldDropZone.Position = rect.Position + rect.Size / 2f;
+		if (_battlefieldDropZone.GetChildOrNull<CollisionShape2D>(0)?.Shape is RectangleShape2D box)
+			box.Size = rect.Size;
+	}
+
 	private void OnCreatureHovered(int cardId)
 	{
 		var card = _manager.State.GetObject(cardId) as Card;
@@ -883,8 +914,12 @@ public partial class MtgGameScene : Node2D
 		{
 			CardName = card.Name,
 			ManaCost = card.ManaCost.ToString(),
+			TypeLine = MtgCardMapper.GetTypeLine(card),
+			PowerToughness = MtgCardMapper.GetPowerToughness(card, _manager.State),
 			RulesText = MtgCardMapper.GetRulesText(card),
 			ArtworkTexture = CardArtLoader.Load(card.Name),
+			FrameColor = MtgCardTheme.FrameColor(card),
+			NamePlateColor = MtgCardTheme.NamePlateColor(card),
 		};
 		_cardPreviewPopup.ShowCard(details, GetViewport().GetMousePosition());
 	}
@@ -1129,6 +1164,10 @@ public partial class MtgGameScene : Node2D
 				: null
 		);
 		_hand.Modulate = Colors.White;
+
+		// Central refresh rather than per-append: every path that logs an event ends here, so the
+		// unread badge cannot go stale without the rest of the board going stale too.
+		_boardUI.SetLogToggleText(_eventLog.ToggleText);
 
 		var shouldShowChoice = !_manager.IsAiTurn && !_isGameOver && _manager.IsWaitingForChoice;
 		if (shouldShowChoice && !_choicePanelShowing)

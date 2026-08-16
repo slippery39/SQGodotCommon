@@ -1,4 +1,6 @@
+using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 using MtgCore;
 using MtgGame;
 using NUnit.Framework;
@@ -19,15 +21,132 @@ public class HollowmereRulesTextTests
 	private static string TextFor(string cardName) =>
 		MtgCardMapper.GetRulesText(Hollowmere.Cards.First(c => c.Name == cardName));
 
+	/// <summary>
+	/// P/T moved out of the rules text and onto its own badge, so a French-vanilla creature now
+	/// legitimately renders empty rules text. The check that still matters is narrower: a card
+	/// that HAS a mechanic must render text for it. A blank face there means the mapper silently
+	/// dropped the mechanic, which is the failure this fixture exists to catch.
+	/// </summary>
 	[Test]
-	public void NoCardInTheSet_RendersBlank()
+	public void NoCardWithAMechanic_RendersBlankRulesText()
 	{
 		var blank = Hollowmere
-			.Cards.Where(c => string.IsNullOrWhiteSpace(MtgCardMapper.GetRulesText(c)))
+			.Cards.Where(HasPrintableMechanic)
+			.Where(c => string.IsNullOrWhiteSpace(MtgCardMapper.GetRulesText(c)))
 			.Select(c => c.Name)
 			.ToList();
 
 		Assert.That(blank, Is.Empty, $"Blank card faces: {string.Join(", ", blank)}");
+	}
+
+	private static bool HasPrintableMechanic(Card card) =>
+		card.HasComponent<SpellComponent>()
+		|| card.HasComponent<ActivatedAbilityComponent>()
+		|| card.HasComponent<TriggeredAbilityComponent>()
+		|| card.HasComponent<StaticAbilityComponent>()
+		|| card.HasComponent<FlashbackComponent>()
+		|| card.HasComponent<ThresholdComponent>()
+		|| card.HasComponent<TransformComponent>()
+		|| card.HasComponent<GraveyardCountComponent>();
+
+	// ===== Card face budget =====
+	//
+	// The rules box shrinks its font to fit, down to a 14pt readability floor, then clips. These
+	// tests are what stop a new card from silently crossing that floor: a clipped card is not
+	// visibly broken in a screenshot, it just quietly stops telling you what it does.
+
+	/// Rendered lines the rules box needs. The box fits roughly 26 characters per line, which is a
+	/// proxy for real text measurement — Godot's font metrics are not available in a unit test.
+	private static int WrappedLines(string text) =>
+		text.Split('\n').Sum(l => Math.Max(1, (int)Math.Ceiling(l.Length / 26.0)));
+
+	/// <summary>
+	/// Six lines is what fits above the 14pt floor. Cards used to reach seven purely by repeating
+	/// themselves — "Each creature you control gets +2/+2 until end of turn" followed by "Each
+	/// creature you control gains Flying until end of turn" — which the clause merge now folds.
+	/// </summary>
+	[Test]
+	public void NoCardExceedsTheRulesBoxLineBudget()
+	{
+		var overBudget = Hollowmere
+			.Cards.Select(c => (c.Name, Lines: WrappedLines(MtgCardMapper.GetRulesText(c))))
+			.Where(x => x.Lines > 6)
+			.ToList();
+
+		Assert.That(
+			overBudget,
+			Is.Empty,
+			$"Over the 6-line budget: {string.Join(", ", overBudget.Select(x => $"{x.Name} ({x.Lines})"))}"
+		);
+	}
+
+	/// <summary>
+	/// The type-line band fits about 24 characters. Three-subtype cards used to overrun it and
+	/// clip mid-word ("ture — Werewolf Human C"), which is why the "Creature — " prefix was
+	/// dropped — the P/T badge already says the card is a creature.
+	/// </summary>
+	[Test]
+	public void NoTypeLineOverrunsTheBand()
+	{
+		var tooLong = Hollowmere
+			.Cards.Select(c => MtgCardMapper.GetTypeLine(c))
+			.Where(t => t.Length > 24)
+			.Distinct()
+			.ToList();
+
+		Assert.That(tooLong, Is.Empty, $"Type lines over 24 chars: {string.Join(" | ", tooLong)}");
+	}
+
+	/// <summary>
+	/// The clause merge combines predicates that share a subject. It must never combine nouns:
+	/// "Create 2 Human tokens" + "Create 2 Spirit tokens" merged into "Create 2 Human and Spirit
+	/// tokens", which reads as two tokens rather than four. Merging wrongly misprints a card;
+	/// failing to merge only costs a line.
+	/// </summary>
+	[Test]
+	public void ClauseMerge_NeverDistributesASharedNoun()
+	{
+		var bad = Hollowmere
+			.Cards.SelectMany(c => MtgCardMapper.GetRulesText(c).Split('\n'))
+			.Where(l => Regex.IsMatch(l, @"Create .* and .* tokens?"))
+			.Distinct()
+			.ToList();
+
+		Assert.That(bad, Is.Empty, $"Merged token clauses: {string.Join(" | ", bad)}");
+	}
+
+	/// <summary>
+	/// The type line replaces rules text as the "this card face rendered something" guarantee —
+	/// it is the one element every card has, and it is what tells a drafter a Zombie from a Spirit.
+	/// </summary>
+	[Test]
+	public void EveryCardInTheSet_HasATypeLine()
+	{
+		var blank = Hollowmere
+			.Cards.Where(c => string.IsNullOrWhiteSpace(MtgCardMapper.GetTypeLine(c)))
+			.Select(c => c.Name)
+			.ToList();
+
+		Assert.That(blank, Is.Empty, $"Blank type lines: {string.Join(", ", blank)}");
+	}
+
+	/// <summary>
+	/// The duplication this pass removed: P/T used to be printed into the rules text AND drawn in
+	/// the corner badge, from two different sources that disagreed once a lord was on the board.
+	/// </summary>
+	[Test]
+	public void CreatureRulesText_DoesNotRepeatPowerToughness()
+	{
+		var creature = Hollowmere.Cards.First(c =>
+			c.HasComponent<CreatureComponent>() && c.HasComponent<TriggeredAbilityComponent>()
+		);
+		var stats = creature.GetComponent<CreatureComponent>();
+
+		Assert.That(
+			MtgCardMapper.GetRulesText(creature),
+			Does.Not.Contain($"{stats.Power}/{stats.Toughness}"),
+			$"{creature.Name} still prints its P/T in the rules box"
+		);
 	}
 
 	/// <summary>

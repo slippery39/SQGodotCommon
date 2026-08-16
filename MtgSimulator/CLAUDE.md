@@ -198,9 +198,29 @@ The Godot scene loads the trained model through `DraftTrainingStore.FromJson` ra
 
 `DraftScene.DraftedSet` selects which set the UI drafts — currently `Hollowmere.Set`, changeable in one line. `ModelPath` is derived from `DraftTrainingStore.PathFor(DraftedSet.Code)`, so the asset filename tracks the set automatically and cannot drift from what the trainer writes.
 
-**Card text is part of making a set playable, not a cosmetic afterthought.** A pack is read, not glanced at, and `MtgCardMapper.GetRulesText` silently omits any mechanic it does not know — invisible in a screenshot, but it makes the card undraftable. `SQGodotCommon.Tests/MtgGameTests/HollowmereRulesTextTests.cs` pins one card per mechanic and asserts no card in the set renders blank. Extend both when adding a mechanic.
+**Card text is part of making a set playable, not a cosmetic afterthought.** A pack is read, not glanced at, and `MtgCardMapper.GetRulesText` silently omits any mechanic it does not know — invisible in a screenshot, but it makes the card undraftable. `SQGodotCommon.Tests/MtgGameTests/HollowmereRulesTextTests.cs` pins one card per mechanic and asserts no card *with a mechanic* renders blank. Extend both when adding a mechanic.
 
-Card art is keyed by a slug of the card name (`CardArtLoader`). Hollowmere has essentially none, which degrades to the card scene's default artwork rather than failing — `Details.ApplyTo` only overwrites the texture when non-null.
+A card face is built from three `MtgCardMapper` calls, not one — each renders to its own element of the card frame:
+
+| Call | Frame element | Notes |
+|---|---|---|
+| `GetTypeLine(card)` | band across the bottom of the art | Never blank, so it is the "this face rendered something" guarantee. No `"Creature — "` prefix when subtypes exist — the badge already says it. Every spell reads a flat `"Spell"` — see DesignNotes.md. |
+| `GetPowerToughness(card, state)` | badge in the bottom-right corner | The **only** P/T source. `state: null` → printed stats, for draft packs. Returns null for non-creatures, which hides the badge. |
+| `GetRulesText(card)` | rules box | Deliberately excludes P/T. Legitimately blank for a French-vanilla creature. |
+
+**The card face is a fixed budget, and text is generated, so verbosity is a bug not a style question.** The rules box shrinks its font to fit and then clips at a 14pt readability floor; a clipped card is invisible in a screenshot but stops telling you what it does. Every place that joins rendered fragments goes through `CombineParts`, which squeezes out the two ways generated text repeats itself — a sequence authored twice over (`"take the opponent's best creature, destroy it"` × 2 → `"… — twice"`) and consecutive clauses differing only in their verb (`"Each creature you control gets +2/+2 …"` + `"… gains Flying …"` → one sentence). The clause merge only combines **predicates**: merging noun middles distributed a shared trailing noun and turned four tokens into two. Failing to merge costs a line; merging wrongly misprints the card, so `IsMergeableVerb` is a closed list.
+
+`HollowmereRulesTextTests` pins the budget set-wide (≤6 rendered lines, ≤24-char type lines, no merged noun clauses) without naming cards, so retuning card balance cannot break it.
+
+P/T used to be printed by `GetRulesText` *and* drawn by a `BoardCard` overlay label, from printed and effective stats respectively — so a lord-buffed creature read "2/2" in its box and "4/4" in its corner. Keep it single-sourced.
+
+**Board layout is a budget, not a free-form arrangement.** `BoardUI.tscn` is a `MainColumn` of `[TopBar] [OpponentRow] [PlayerRow] [BottomBar]`, where each row is an `HBox` of `[panel][battlefield zone]`. The player panels live *beside* their rows rather than above them specifically so they stop driving the column's height — that is what allows `BattlefieldZone.CardScale` to be 0.68 instead of 0.45. See DesignNotes.md before adding anything to the column.
+
+The event log is a collapsible overlay on its own `CanvasLayer`, closed by default, with an unread count on its toggle so an AI turn cannot pass unnoticed. Nothing reclaims its space automatically — `BoardUI.SetBoardWidth` moves `MainColumn`'s right anchor between 0.78 and 1.0. The hand's drop target is synced from `BoardUI.GetPlayerBattlefieldRect()` rather than hardcoded, since the board changes width when the log opens.
+
+`MtgCardTheme` colours the frame by card type and the name plate by tribe, via `SelfModulate` so the tint cannot bleed onto the labels. It is the only per-card visual differentiation the engine can support: there is no colour, faction or rarity field, so `Card.Subtypes` and component presence are all there is to key on.
+
+Card art is keyed by a slug of the card name (`CardArtLoader`). Hollowmere has essentially none, which degrades to the card scene's default artwork rather than failing — `Details.ApplyTo` assigns the texture unconditionally and the setter falls back, so a reused node cannot inherit the previous card's art.
 
 `DraftTournament` runs the pod afterwards: circle-method pairings (seat 0 fixed, the rest rotate) give `seats - 1` rounds where every seat plays every other exactly once. The human's game is played in the UI and reported via `RecordHumanResult`; the other pairings run through `DraftRunner.PlayGame` on a background task started *before* the human leaves for their match, so the tables resolve in parallel with them playing. `SimulateRoundAsync` deliberately touches no tournament state — results come back and are folded in by `CompletePendingRoundAsync` on the caller's thread, which is why there is no lock anywhere in the class.
 

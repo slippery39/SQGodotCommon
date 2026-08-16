@@ -98,3 +98,47 @@ the applied components are what keep each permanent self-describing.
 statics (Wonder) require reliable zone-change tracking anyway.
 
 ---
+
+## Spells have no type line worth reading
+
+**Concern:** `MtgCardMapper.GetTypeLine` renders a flat `"Spell"` for every instant and sorcery in
+the set. Two gaps cause this, both in the engine rather than the UI:
+
+1. `SpellCardBuilder` has no `WithSubtype` and never sets `Subtypes` (`SpellCardBuilder.Build()`),
+   so every spell carries an empty subtype set. Only creatures and tokens are tagged.
+2. There is no Instant/Sorcery marker anywhere — see the Delirium row in `MtgCore/CLAUDE.md`, which
+   was cut for the same reason.
+
+**Why it's fine now:** Creatures are where tribal identity matters for drafting, and they are fully
+tagged (Human 58, Zombie 31, Spirit 29, …). Spells are still differentiated by their frame tint
+(`MtgCardTheme.FrameColor`) and by their rules text.
+
+**Watch for:** A tribal or type-matters spell ("target Zombie gains…", "instants cost 1 less"), or a
+drafter who cannot tell removal from a combat trick at a glance. The fix is a `WithSubtype` on
+`SpellCardBuilder` plus a mechanical tagging pass over ~180 Hollowmere spell definitions — do it as
+one deliberate pass, not card by card.
+
+---
+
+## Battlefield card size is set by the board's height budget
+
+**Concern:** `BattlefieldZone.CardScale` (0.68) is a computed ceiling, not a taste call. `MainColumn`
+gets 0.73 of a 1080 viewport (788px), and each row costs the card's height plus 28px of margin and
+border. Whatever else lives in that vertical stack comes straight out of card size:
+
+| Chrome in the column | Left for both rows | Max scale |
+|---|---|---|
+| Panels + buttons stacked vertically (original) | ~469px | 0.45 |
+| Panels in the left rail (current) | ~713px | ~0.74 |
+
+`CustomMinimumSize` is a hard floor, so exceeding the budget pushes the End Turn button off the
+bottom rather than shrinking the rows — it fails by silently clipping the layout, not by erroring.
+
+**Why it's fine now:** The left rail keeps the column nearly empty, so 0.68 fits with slack.
+
+**Watch for:** Anything moved back into `MainColumn` — a phase bar, a stack display, a second
+button row. Recompute the budget rather than eyeballing it, and remember the hand occupies the
+remaining 27% of the screen, so raising the 0.73 anchor trades against hand space (the hand already
+clips at the bottom edge).
+
+---

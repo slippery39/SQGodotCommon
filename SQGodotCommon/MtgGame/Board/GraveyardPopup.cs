@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Common.Cards;
 using ImmutableGameObjects;
 using MtgCore;
 
@@ -14,8 +15,13 @@ namespace MtgGame;
 /// </summary>
 public partial class GraveyardPopup : CanvasLayer
 {
+	/// Large enough that a graveyard card can be read, not just recognised.
+	private const float GraveyardCardScale = 0.7f;
+
 	private ScrollContainer _scroll = null!;
 	private BattlefieldZone _zone = null!;
+	private CardPreviewPopup _preview = null!;
+	private GameState? _state;
 
 	public event Action<int>? CardClicked;
 
@@ -34,7 +40,7 @@ public partial class GraveyardPopup : CanvasLayer
 		AddChild(center);
 
 		var panel = new PanelContainer();
-		panel.CustomMinimumSize = new Vector2(600, 280);
+		panel.CustomMinimumSize = new Vector2(1150, 500);
 		panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel(borderWidth: 2));
 		center.AddChild(panel);
 
@@ -71,12 +77,13 @@ public partial class GraveyardPopup : CanvasLayer
 
 		// Scrollable card area
 		_scroll = new ScrollContainer();
-		_scroll.CustomMinimumSize = new Vector2(0, 210);
+		_scroll.CustomMinimumSize = new Vector2(0, 380);
 		_scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Auto;
 		_scroll.VerticalScrollMode = ScrollContainer.ScrollMode.Disabled;
 		vbox.AddChild(_scroll);
 
 		_zone = new BattlefieldZone();
+		_zone.CardScale = GraveyardCardScale;
 		_zone.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
 		_scroll.AddChild(_zone);
 
@@ -86,7 +93,50 @@ public partial class GraveyardPopup : CanvasLayer
 			CardClicked?.Invoke(id);
 		};
 
+		// This popup sits on layer 6, so its preview needs a higher one or it renders behind.
+		_preview = new CardPreviewPopup
+		{
+			InternalCardScene = ResourceLoader.Load<PackedScene>(
+				"res://Common/Cards/2D/Card2D/internal_cardui2d_canvasgroup.tscn"
+			),
+			PreviewScale = 1.1f,
+			PreviewLayer = 7,
+		};
+		AddChild(_preview);
+
+		_zone.CardHovered += OnCardHovered;
+		_zone.CardHoverEnded += _ => _preview.HideCard();
+
+		// A child CanvasLayer is its own layer and does not inherit this one's visibility, so the
+		// preview has to be dismissed explicitly however the popup gets closed.
+		VisibilityChanged += () =>
+		{
+			if (!Visible)
+				_preview.HideCard();
+		};
+
 		Hide();
+	}
+
+	private void OnCardHovered(int cardId)
+	{
+		if (_state?.GetObject(cardId) is not Card card)
+			return;
+
+		_preview.ShowCard(
+			new InternalCardUI2D.Details
+			{
+				CardName = card.Name,
+				ManaCost = card.ManaCost.ToString(),
+				TypeLine = MtgCardMapper.GetTypeLine(card),
+				PowerToughness = MtgCardMapper.GetPowerToughness(card, _state),
+				RulesText = MtgCardMapper.GetRulesText(card),
+				ArtworkTexture = CardArtLoader.Load(card.Name),
+				FrameColor = MtgCardTheme.FrameColor(card),
+				NamePlateColor = MtgCardTheme.NamePlateColor(card),
+			},
+			GetViewport().GetMousePosition()
+		);
 	}
 
 	public void ShowGraveyard(
@@ -96,6 +146,7 @@ public partial class GraveyardPopup : CanvasLayer
 		IEnumerable<int>? targetHighlightIds = null
 	)
 	{
+		_state = state;
 		_zone.Refresh(
 			cards,
 			state,

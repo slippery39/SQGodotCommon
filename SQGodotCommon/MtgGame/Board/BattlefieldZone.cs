@@ -11,6 +11,20 @@ public partial class BattlefieldZone : PanelContainer
 	[Export]
 	public PackedScene BoardCardScene { get; set; }
 
+	/// <summary>
+	/// Visual scale of the cards in this zone. The graveyard raises it further, since a card there
+	/// has to be read rather than recognised.
+	///
+	/// ponytail: 0.68 is set against the height budget, not chosen for looks. MainColumn gets
+	/// 0.73 of a 1080 viewport (788px), and since the player panels moved into the left rail the
+	/// only fixed chrome left in the column is the top bar and the End Turn row (~75px), leaving
+	/// ~713px for both rows. A row costs the card's height plus 28px of margin and border, and
+	/// CustomMinimumSize is a hard floor — past ~0.74 the rows push the End Turn button off the
+	/// bottom instead of shrinking. Recompute this if anything else moves back into the column.
+	/// </summary>
+	[Export]
+	public float CardScale { get; set; } = 0.68f;
+
 	private HBoxContainer _container = null!;
 
 	public event Action<int>? CardClicked;
@@ -65,6 +79,8 @@ public partial class BattlefieldZone : PanelContainer
 		foreach (var card in cards)
 		{
 			var boardCard = BoardCardScene.Instantiate<BoardCard>();
+			// Set before entering the tree: BoardCard applies it in _Ready.
+			boardCard.CardScale = CardScale;
 			_container.AddChild(boardCard);
 			boardCard.Clicked += id => CardClicked?.Invoke(id);
 			boardCard.RightClicked += id => CardRightClicked?.Invoke(id);
