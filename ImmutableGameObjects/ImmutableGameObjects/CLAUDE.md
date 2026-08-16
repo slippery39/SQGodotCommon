@@ -50,3 +50,5 @@ A `GameAction` template set on `GameState` that is automatically queued after ev
 ## ChoiceAction
 
 Used for player decisions that occur mid-resolution (triggered abilities, "choose on resolve" effects). When playing a spell or activating an ability, targets are chosen upfront — `ChoiceAction` is not used for targeting.
+
+Read options from `GetPendingChoice()`, never from a stored `ChoiceAction.Options`. A pipeline whose first step is a `ChoiceAction` pauses before any step runs, so nothing has refreshed its stored options yet; `GetPendingChoice()` resolves them against current state for every case.

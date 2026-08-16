@@ -14,6 +14,8 @@ public record LifeAdditionalCost : AdditionalCost
 
 	public override bool RequiresSelection => false;
 
+	public override string Describe() => $"Pay {Amount} life";
+
 	public override ImmutableList<int> GetValidPayments(
 		GameState state,
 		int castingPlayerId,

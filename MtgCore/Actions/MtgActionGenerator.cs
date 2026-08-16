@@ -223,12 +223,10 @@ public static class MtgActionGenerator
 		if (spell == null)
 			return;
 
-		var targetedEffect = spell.Effects.FirstOrDefault(e =>
-			e.TargetingStrategy.RequiresUserSelection
-		);
-		if (targetedEffect != null)
+		var effectIndex = spell.Effects.FindIndex(e => e.TargetingStrategy.RequiresUserSelection);
+		if (effectIndex >= 0)
 		{
-			AddTargetedSpellAction(state, playerId, card, costPayments, targetedEffect, actions);
+			AddTargetedSpellAction(state, playerId, card, costPayments, effectIndex, actions);
 		}
 		else
 		{
@@ -244,15 +242,22 @@ public static class MtgActionGenerator
 		}
 	}
 
+	/// <remarks>
+	/// TargetIds is keyed by EFFECT INDEX — CastSpellAction.ValidateTargets looks the targets up
+	/// under the index of the effect that needs them. Keying everything under 0 silently made any
+	/// spell whose targeted effect was not its first effect impossible to cast, for the AI and
+	/// the UI alike, because validation then found no targets for that effect.
+	/// </remarks>
 	private static void AddTargetedSpellAction(
 		GameState state,
 		int playerId,
 		Card card,
 		ImmutableDictionary<int, ImmutableList<int>> costPayments,
-		CardEffect targetedEffect,
+		int effectIndex,
 		List<GameAction> actions
 	)
 	{
+		var targetedEffect = card.GetComponent<SpellComponent>()!.Effects[effectIndex];
 		var context = new TargetingContext
 		{
 			GameState = state,
@@ -269,7 +274,7 @@ public static class MtgActionGenerator
 				CastingPlayerId = playerId,
 				AdditionalCostPayments = costPayments,
 				TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
-					0,
+					effectIndex,
 					ImmutableList.Create(target)
 				),
 			};
@@ -314,12 +319,12 @@ public static class MtgActionGenerator
 				continue;
 			}
 
-			var targetedEffect = spell.Effects.FirstOrDefault(e =>
+			var effectIndex = spell.Effects.FindIndex(e =>
 				e.TargetingStrategy.RequiresUserSelection
 			);
-			if (targetedEffect != null)
+			if (effectIndex >= 0)
 			{
-				AddTargetedFlashbackAction(state, playerId, card, targetedEffect, actions);
+				AddTargetedFlashbackAction(state, playerId, card, effectIndex, actions);
 			}
 			else
 			{
@@ -335,14 +340,16 @@ public static class MtgActionGenerator
 		}
 	}
 
+	/// <remarks>See AddTargetedSpellAction — TargetIds is keyed by effect index, not by 0.</remarks>
 	private static void AddTargetedFlashbackAction(
 		GameState state,
 		int playerId,
 		Card card,
-		CardEffect targetedEffect,
+		int effectIndex,
 		List<GameAction> actions
 	)
 	{
+		var targetedEffect = card.GetComponent<SpellComponent>()!.Effects[effectIndex];
 		var context = new TargetingContext
 		{
 			GameState = state,
@@ -358,7 +365,7 @@ public static class MtgActionGenerator
 				CardId = card.Id,
 				CastingPlayerId = playerId,
 				TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
-					0,
+					effectIndex,
 					ImmutableList.Create(target)
 				),
 			};

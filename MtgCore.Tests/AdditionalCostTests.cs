@@ -167,6 +167,58 @@ public class AdditionalCostTests
 		Assert.That(finalState.GetCardZone(handCard.Id).ZoneType, Is.EqualTo(ZoneType.Graveyard));
 	}
 
+	/// <summary>
+	/// Paying a discard cost is a discard. It used to move the card with a bare MoveObject and
+	/// stage no event, so "whenever you discard a card" payoffs never saw it and zone-dependent
+	/// statics never re-stamped.
+	/// </summary>
+	[Test]
+	public void DiscardCost_FiresDiscardTriggers()
+	{
+		var (stateWithMongrel, mongrelId) = AddWildMongrelToBattlefield(_state, _ids.Player1Id);
+		var (stateWithCard, handCard) = stateWithMongrel.AddObject(
+			TestCardFactory.MakeCreatureCard("Filler", _ids.Player1Id, 1, 1),
+			parentId: _ids.Player1HandId
+		);
+
+		var payoff = TestCardFactory.MakeCreatureCard("Payoff", _ids.Player1Id, 1, 1) with
+		{
+			Components = ImmutableArray.Create<GameComponent>(
+				new CreatureComponent { Power = 1, Toughness = 1 },
+				new PermanentComponent(),
+				new TriggeredAbilityComponent
+				{
+					Name = "Sate",
+					Condition = new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.CardDiscarded,
+						Filter = new IsControlledByYouSpecification(),
+					},
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 3 },
+					},
+				}
+			),
+		};
+		var (stateWithPayoff, _) = stateWithCard.AddObject(
+			payoff,
+			parentId: _ids.Player1BattlefieldId
+		);
+		var lifeBefore = stateWithPayoff.GetPlayer(_ids.Player1Id).Life;
+
+		var (finalState, _) = stateWithPayoff
+			.AddAction(MakeActivateMongrel(mongrelId, handCard.Id))
+			.ProcessAllActions();
+
+		Assert.That(
+			finalState.GetPlayer(_ids.Player1Id).Life,
+			Is.EqualTo(lifeBefore + 3),
+			"Discard payoff should have triggered on the cost payment"
+		);
+	}
+
 	// ===== LIFE COST =====
 
 	[Test]

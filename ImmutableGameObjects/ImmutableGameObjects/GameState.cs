@@ -698,7 +698,13 @@ public record GameState
 	}
 
 	/// <summary>
-	/// Returns the ChoiceAction currently blocking execution, if any.
+	/// Returns the ChoiceAction currently blocking execution, if any, with its options
+	/// resolved against the current state.
+	///
+	/// Options are computed here rather than trusted from the stored step: a pipeline whose
+	/// FIRST step is a ChoiceAction pauses before any step executes, so the eager refresh in
+	/// ExecutePipelineStep never runs on it and its stored Options are still empty. Resolving
+	/// at read time is correct for every case — ResolveChoice validates the same way.
 	/// </summary>
 	public ChoiceAction? GetPendingChoice()
 	{
@@ -708,10 +714,13 @@ public record GameState
 		var topAction = ActionStack.Peek();
 
 		if (topAction is ChoiceAction choice)
-			return choice;
+			return choice with
+			{
+				Options = choice.GetOptions(this, ImmutableDictionary<string, object>.Empty),
+			};
 
-		if (topAction is PipelineAction pipeline)
-			return pipeline.CurrentStep as ChoiceAction;
+		if (topAction is PipelineAction pipeline && pipeline.CurrentStep is ChoiceAction step)
+			return step with { Options = step.GetOptions(this, pipeline.PipelineContext) };
 
 		return null;
 	}

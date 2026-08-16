@@ -16,6 +16,9 @@ public record DiscardAdditionalCost : AdditionalCost
 
 	public override bool RequiresSelection => true;
 
+	public override string Describe() =>
+		Count == 1 ? "Discard a card from your hand" : $"Discard {Count} cards from your hand";
+
 	public override ImmutableList<int> GetValidPayments(
 		GameState state,
 		int castingPlayerId,
@@ -54,6 +57,11 @@ public record DiscardAdditionalCost : AdditionalCost
 		return ValidationResult.Valid;
 	}
 
+	/// <remarks>
+	/// Routes through MoveCardTracked and stages CardDiscardedEvent, exactly as
+	/// DiscardCardsAction does. A plain MoveObject here left zone-dependent statics stale and
+	/// fired no discard trigger, so paying this cost was invisible to every discard payoff.
+	/// </remarks>
 	public override GameState Pay(
 		GameState state,
 		int castingPlayerId,
@@ -65,7 +73,13 @@ public record DiscardAdditionalCost : AdditionalCost
 		{
 			var card = (Card)state.GetObject(id);
 			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
-			state = state.MoveObject(id, graveyardId);
+			state = state.MoveCardTracked(id, graveyardId);
+			state = state with
+			{
+				PendingGameEvents = state.PendingGameEvents.Add(
+					new CardDiscardedEvent { PlayerId = card.OwnerId, CardId = id }
+				),
+			};
 		}
 		return state;
 	}

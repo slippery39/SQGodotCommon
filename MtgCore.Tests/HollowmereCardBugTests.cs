@@ -206,6 +206,55 @@ public class HollowmereCardBugTests
 		);
 	}
 
+	// ===== REPORT 4: Tide of Whispers could not be played =====
+
+	/// <summary>
+	/// Draw 4, discard 1. The discard used to be cast-time targeting of a card in hand, which
+	/// nothing could satisfy: the generator keyed its targets under effect 0 while the discard
+	/// sat at effect 1, and the UI has no way to click a card in hand as a target. It is now a
+	/// choice at resolution, which the choice panel already handles.
+	/// </summary>
+	[Test]
+	public void TideOfWhispers_IsCastableAndPausesOnADiscardChoice()
+	{
+		var state = TestCardFactory.AddCardsToLibrary(
+			_state,
+			_ids.Player1Id,
+			"Card A",
+			"Card B",
+			"Card C",
+			"Card D"
+		);
+		var (withSpell, spell) = state.AddObject(Owned("Tide of Whispers"), _ids.Player1HandId);
+
+		var actions = MtgActionGenerator.GetLegalActions(withSpell, _ids.Player1Id);
+		Assert.That(
+			actions.OfType<CastSpellAction>().Any(a => a.CardId == spell.Id),
+			Is.True,
+			"Tide of Whispers should be offered as a legal cast"
+		);
+
+		var (atChoice, _) = withSpell
+			.AddAction(TestCardFactory.MakeCastAction(spell.Id, _ids.Player1Id))
+			.ProcessAllActions();
+
+		Assert.That(atChoice.IsWaitingForChoice, Is.True, "Should pause to pick a discard");
+		var choice = atChoice.GetPendingChoice()!;
+		Assert.That(choice.Options.Count, Is.EqualTo(4), "All four drawn cards should be offered");
+
+		var discardId = choice.Options[0].Id;
+		var (final, _) = atChoice.ResolveChoice(ImmutableList.Create(discardId));
+
+		Assert.That(final.GetCardZone(discardId).ZoneType, Is.EqualTo(ZoneType.Graveyard));
+		Assert.That(
+			final.GetCardsInZone(_ids.Player1HandId).Count(),
+			Is.EqualTo(3),
+			"Drew 4 and discarded 1"
+		);
+		Assert.That(final.IsWaitingForChoice, Is.False);
+		Assert.That(final.HasPendingActions, Is.False);
+	}
+
 	private (GameState, Card) AddToBattlefield(GameState state, Card template, int playerId)
 	{
 		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);

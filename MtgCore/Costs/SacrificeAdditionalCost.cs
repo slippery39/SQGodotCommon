@@ -20,6 +20,11 @@ public record SacrificeAdditionalCost : AdditionalCost
 
 	public override bool RequiresSelection => true;
 
+	public override string Describe() =>
+		Count == 1
+			? "Sacrifice a permanent you control"
+			: $"Sacrifice {Count} permanents you control";
+
 	public override ImmutableList<int> GetValidPayments(
 		GameState state,
 		int castingPlayerId,

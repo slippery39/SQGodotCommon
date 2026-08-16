@@ -20,6 +20,13 @@ public abstract record AdditionalCost
 	public abstract bool RequiresSelection { get; }
 
 	/// <summary>
+	/// Player-facing instruction for paying this cost, e.g. "Discard a card". Lives here rather
+	/// than in a presentation layer so console and Godot say the same thing, and so a new cost
+	/// type cannot ship without one.
+	/// </summary>
+	public abstract string Describe();
+
+	/// <summary>
 	/// Returns the IDs the player can choose as payment.
 	/// Always returns empty for resource costs.
 	/// </summary>

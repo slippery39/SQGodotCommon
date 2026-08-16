@@ -49,13 +49,12 @@ public class SpellCardBuilder
 	}
 
 	/// <summary>
-	/// Discard as an additional cost to cast, rather than as an effect.
+	/// Discard as an additional cost to cast, rather than as an effect. Unlike WithDiscard,
+	/// this makes the spell uncastable with an empty hand, and the card is gone before the
+	/// spell resolves.
 	///
-	/// This is what a card like "discard a card, return a creature from your graveyard" must
-	/// use. As two targeted EFFECTS it is uncastable: the action generator only supplies
-	/// targets for the first, and CastSpellAction rejects the spell for the missing second.
-	/// As a cost the discard is paid through AdditionalCostPayments, leaving one targeted
-	/// effect — and it reads better as a cost anyway.
+	/// Use for "as an additional cost, discard a card"; use WithDiscard for a discard that is
+	/// part of the effect ("draw 4, then discard 1").
 	/// </summary>
 	public SpellCardBuilder WithDiscardCost(int count = 1)
 	{
@@ -558,20 +557,34 @@ public class SpellCardBuilder
 	/// <summary>
 	/// Discard a card you choose from your hand — the outlet half of the discard theme.
 	///
-	/// Excludes the source card. Targets are chosen at cast time, while the spell is still in
-	/// hand, so without this a looting spell could select itself as its own discard.
+	/// Modelled as a ChoiceAction at resolution, not as cast-time targeting. Cast-time targets
+	/// are locked in before the spell resolves, so "draw 4, then discard 1" would have you
+	/// choosing the discard out of your pre-draw hand — you could never pitch a card you just
+	/// drew, which is the whole point of a looter.
+	///
+	/// Choosing at resolution also removes the self-discard hazard for free: the spell has
+	/// already moved to the stack by then, so it can never be its own discard.
 	/// </summary>
 	public SpellCardBuilder WithDiscard(int count = 1)
 	{
 		FlushPending();
-		_pendingAction = new DiscardCardsAction();
-		_pendingTargeting = TargetingStrategy.SingleTarget(
-			new IsInHandSpecification().And(new IsNotSelfSpecification())
-		) with
+		_pendingAction = new PipelineAction
 		{
-			MinTargets = count,
-			MaxTargets = count,
+			Steps = ImmutableList.Create<GameAction>(
+				new SelectCardsFromHandAction
+				{
+					Prompt =
+						count == 1
+							? "Choose a card to discard"
+							: $"Choose {count} cards to discard",
+					MinChoices = count,
+					MaxChoices = count,
+					OutputKey = ContextKeys.SelectedCardIds,
+				},
+				new DiscardCardsAction { TargetContextKey = ContextKeys.SelectedCardIds }
+			),
 		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
 		return this;
 	}
 
