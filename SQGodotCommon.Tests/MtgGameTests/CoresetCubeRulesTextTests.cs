@@ -1,0 +1,273 @@
+using System;
+using System.Linq;
+using MtgCore;
+using MtgGame;
+using NUnit.Framework;
+
+namespace SQGodotCommon.Tests;
+
+/// <summary>
+/// The Core Set Cube's counterpart to HollowmereRulesTextTests.
+///
+/// A pack is READ, not glanced at. `MtgCardMapper.GetRulesText` silently omits any mechanic it
+/// does not know — invisible in a screenshot, but it makes the card undraftable. This set added
+/// roughly twenty mechanics, so these pin one card per mechanic plus a blanket no-blank-face
+/// check.
+///
+/// Counterspell traps are the sharpest case: a trap is a SpellComponent with NO effects, so
+/// before the mapper knew about them every counterspell in blue rendered as a completely empty
+/// card face.
+/// </summary>
+[TestFixture]
+public class CoresetCubeRulesTextTests
+{
+	private static string TextFor(string cardName) =>
+		MtgCardMapper.GetRulesText(
+			CoresetCube.Cards.First(c =>
+				string.Equals(c.Name, cardName, StringComparison.OrdinalIgnoreCase)
+			)
+		);
+
+	[Test]
+	public void NoCardWithAMechanic_RendersBlankRulesText()
+	{
+		var blank = CoresetCube
+			.Cards.Where(HasPrintableMechanic)
+			.Where(c => string.IsNullOrWhiteSpace(MtgCardMapper.GetRulesText(c)))
+			.Select(c => c.Name)
+			.ToList();
+
+		Assert.That(blank, Is.Empty, $"Blank card faces: {string.Join(", ", blank)}");
+	}
+
+	[Test]
+	public void EveryCard_HasATypeLine()
+	{
+		// The type line is the "this face rendered something" guarantee — it is never blank.
+		var blank = CoresetCube
+			.Cards.Where(c => string.IsNullOrWhiteSpace(MtgCardMapper.GetTypeLine(c)))
+			.Select(c => c.Name)
+			.ToList();
+
+		Assert.That(blank, Is.Empty, $"Blank type lines: {string.Join(", ", blank)}");
+	}
+
+	private static bool HasPrintableMechanic(Card card) =>
+		card.HasComponent<SpellComponent>()
+		|| card.HasComponent<ActivatedAbilityComponent>()
+		|| card.HasComponent<TriggeredAbilityComponent>()
+		|| card.HasComponent<StaticAbilityComponent>()
+		|| card.HasComponent<CounterTrapComponent>()
+		|| card.HasComponent<EquipmentComponent>()
+		|| card.HasComponent<PlaneswalkerComponent>()
+		|| card.HasComponent<ExaltedComponent>()
+		|| card.HasComponent<ProtectionFromSubtypeComponent>()
+		|| card.HasComponent<SpellTaxComponent>()
+		|| card.HasComponent<CopyOnEnterComponent>()
+		|| card.HasComponent<CastRestrictionComponent>()
+		|| card.HasComponent<LifeTotalComponent>()
+		|| card.HasComponent<CreatureCountComponent>()
+		|| card.HasComponent<LifeGainBonusComponent>()
+		|| card.HasComponent<ThresholdComponent>();
+
+	// ===== One card per mechanic =====
+
+	[Test]
+	public void CounterTrap_ExplainsHowItFires()
+	{
+		// A player holding this has no other way to learn that it fires from hand — it is never
+		// cast, so it never appears as a playable action.
+		var text = TextFor("Negate");
+
+		Assert.That(text, Does.Contain("Trap"));
+		Assert.That(text, Does.Contain("unspent"), "It must say the mana has to be left up");
+		Assert.That(text, Does.Contain("noncreature"), "And what it can hit");
+	}
+
+	[Test]
+	public void CounterTrap_ManaTax_IsStated()
+	{
+		Assert.That(TextFor("Mana Leak"), Does.Contain("unless they pay 3"));
+	}
+
+	[Test]
+	public void CounterTrap_Variants_AreStated()
+	{
+		Assert.That(TextFor("Dissipate"), Does.Contain("Exiled"));
+		Assert.That(TextFor("Bone to Ash"), Does.Contain("Draw"));
+	}
+
+	[Test]
+	public void Planeswalker_ShowsLoyaltyNotation()
+	{
+		// "+1" and "-8" are how a player reads a planeswalker; rendering them as mana costs
+		// would make the card unreadable.
+		var text = TextFor("Jace Beleren");
+
+		Assert.That(text, Does.Contain("+2:"));
+		Assert.That(text, Does.Contain("-1:"));
+		Assert.That(text, Does.Contain("-10:"));
+	}
+
+	[Test]
+	public void Aura_SaysItIsAnAuraAndWhatItDoes()
+	{
+		var pacifism = TextFor("Pacifism");
+
+		Assert.That(pacifism, Does.Contain("Aura"));
+		Assert.That(pacifism, Does.Contain("can't attack"));
+	}
+
+	[Test]
+	public void Aura_WithKeywordGrants_ListsThem()
+	{
+		var destiny = TextFor("Angelic Destiny");
+
+		Assert.That(destiny, Does.Contain("+4/+4"));
+		Assert.That(destiny, Does.Contain("Flying"));
+		Assert.That(destiny, Does.Contain("First Strike"));
+	}
+
+	[Test]
+	public void Equipment_ReadsAsEquipped_NotEnchanted()
+	{
+		Assert.That(TextFor("Ancestral Blade"), Does.Contain("Equipped creature"));
+	}
+
+	[Test]
+	public void FirstStrikeAndIndestructible_Render()
+	{
+		Assert.That(TextFor("Baneslayer Angel"), Does.Contain("First Strike"));
+		Assert.That(TextFor("Baneslayer Angel"), Does.Contain("Protection from"));
+	}
+
+	[Test]
+	public void DoubleStrike_SuppressesFirstStrike()
+	{
+		// Double strike already includes first strike; printing both reads as two abilities.
+		var text = TextFor("Fencing Ace");
+
+		Assert.That(text, Does.Contain("Double Strike"));
+		Assert.That(text, Does.Not.Contain("First Strike"));
+	}
+
+	[Test]
+	public void Exalted_Renders()
+	{
+		Assert.That(TextFor("Knight of Glory"), Does.Contain("Exalted"));
+	}
+
+	[Test]
+	public void StarStarPowerAndToughness_IsExplained()
+	{
+		// Crusader of Odric is printed 0/0 plus a modifier. Without this line it reads as a
+		// literal 0/0 and nobody drafts it.
+		Assert.That(
+			TextFor("Crusader of Odric"),
+			Does.Contain("equal to the number of creatures you control")
+		);
+	}
+
+	[Test]
+	public void ReplacementEffect_IsExplained()
+	{
+		Assert.That(TextFor("Angel of Vitality"), Does.Contain("gain that much plus 1"));
+	}
+
+	[Test]
+	public void ConditionalPowerBonus_IsExplained()
+	{
+		Assert.That(TextFor("Angel of Vitality"), Does.Contain("25+ life"));
+	}
+
+	[Test]
+	public void CastRestriction_IsStated()
+	{
+		// Serra Avenger reads as a free 3/3 flyer for two without this.
+		Assert.That(TextFor("Serra Avenger"), Does.Contain("Can't be cast"));
+	}
+
+	[Test]
+	public void SpellTax_IsStated()
+	{
+		Assert.That(TextFor("Vryn Wingmare"), Does.Contain("cost 1 more"));
+	}
+
+	[Test]
+	public void Clone_SaysWhatItCopies()
+	{
+		Assert.That(TextFor("Clone"), Does.Contain("copy"));
+	}
+
+	[Test]
+	public void Convoke_AndXCost_AreStated()
+	{
+		var ranks = TextFor("Return to the Ranks");
+
+		Assert.That(ranks, Does.Contain("Convoke"));
+		Assert.That(ranks, Does.Contain("X"));
+	}
+
+	[Test]
+	public void FogBank_ExplainsBothOfItsUnusualRules()
+	{
+		// Its Taunt lapsing after one attack is the whole reason it is not unanswerable, so a
+		// player has to be able to see it.
+		var text = TextFor("Fog Bank");
+
+		Assert.That(text, Does.Contain("Taunt"));
+		Assert.That(text, Does.Contain("Prevents all combat damage"));
+	}
+
+	[Test]
+	public void ActivatedAbility_ShowsItsTapCostAndGate()
+	{
+		var speaker = TextFor("Speaker of the Heavens");
+
+		Assert.That(speaker, Does.Contain("tap"), "A tap cost is a real cost");
+		Assert.That(speaker, Does.Contain("life"), "And the life gate must be visible");
+	}
+
+	// ===== Card face budget =====
+
+	private static int WrappedLines(string text) =>
+		text.Split('\n').Sum(l => Math.Max(1, (int)Math.Ceiling(l.Length / 26.0)));
+
+	/// <summary>
+	/// The rules box shrinks to fit and then clips at a 14pt readability floor. A clipped card is
+	/// not visibly broken in a screenshot — it just quietly stops telling you what it does.
+	///
+	/// The budget is looser than Hollowmere's six lines: this set's cards genuinely have more
+	/// text (planeswalkers carry three abilities), and the trap wording is deliberately explicit
+	/// because the mechanic is unfamiliar.
+	/// </summary>
+	[Test]
+	public void NoCard_ExceedsTheRulesBoxBudget()
+	{
+		var overlong = CoresetCube
+			.Cards.Select(c => (c.Name, Lines: WrappedLines(MtgCardMapper.GetRulesText(c) ?? "")))
+			.Where(x => x.Lines > 10)
+			.ToList();
+
+		Assert.That(
+			overlong,
+			Is.Empty,
+			$"Over budget: {string.Join(", ", overlong.Select(x => $"{x.Name} ({x.Lines})"))}"
+		);
+	}
+
+	[Test]
+	public void TypeLines_StayShortEnoughToFitTheBand()
+	{
+		var overlong = CoresetCube
+			.Cards.Select(c => (c.Name, Line: MtgCardMapper.GetTypeLine(c)))
+			.Where(x => x.Line.Length > 24)
+			.ToList();
+
+		Assert.That(
+			overlong,
+			Is.Empty,
+			$"Type lines too long: {string.Join(", ", overlong.Select(x => $"{x.Name}: {x.Line}"))}"
+		);
+	}
+}

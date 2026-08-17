@@ -52,6 +52,11 @@ Two draftable sets exist, both registered in `SetRegistry`:
   by downloading `cubecobra.com/cube/download/csv/magiccoreset20xx` and filtering on the `Color`
   and `board` columns — the HTML page is a SPA and cannot be scraped.
 
+  **CSC is the set the Godot draft mode plays** (`DraftScene.DraftedSet`). Making a set playable
+  is three things, not one: the cards, the rules text that renders them, and a trained draft
+  model. See `MtgSimulator/CLAUDE.md` — a set with correct cards and no rules text is
+  undraftable, and the failure is invisible in a screenshot.
+
 Sets sourced from a real cube exist to force new mechanics: the card list drives the engine rather
 than the engine driving the list. When a card needs something the engine lacks, **build the
 mechanic** — dropping the ability defeats the exercise. Only cut text when the concept is

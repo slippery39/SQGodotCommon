@@ -22,8 +22,9 @@ public partial class DraftScene : Control
 	private const int PackCount = 3;
 
 	/// Which set this scene drafts. Change this one line to draft a different set —
-	/// SetRegistry.Default is the Legacy pool, Hollowmere.Set is the graveyard set.
-	private static readonly CardSet DraftedSet = Hollowmere.Set;
+	/// SetRegistry.Default is the Legacy pool, Hollowmere.Set is the graveyard set,
+	/// CoresetCube.Set is the cube-sourced set (white + blue).
+	private static readonly CardSet DraftedSet = CoresetCube.Set;
 
 	/// Derived from DraftTrainingStore.PathFor so the asset filename and the filename the
 	/// trainer writes cannot drift apart — only the directory differs (res:// vs sim_results/).

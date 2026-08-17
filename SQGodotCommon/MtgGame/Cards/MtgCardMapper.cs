@@ -162,11 +162,77 @@ public static class MtgCardMapper
 				lines.Add(spellText);
 		}
 
+		// A counter trap has a SpellComponent with NO effects, so without this the card renders
+		// completely blank — the single most important line in this method for the blue section.
+		var trap = card.GetComponent<CounterTrapComponent>();
+		if (trap != null)
+			lines.Add(DescribeCounterTrap(trap));
+
 		// Dynamic P/T. Without this a Tarmogoyf-style card reads as a plain 0/1.
 		if (card.HasComponent<GraveyardCountComponent>())
 			lines.Add(
 				"Power and toughness are each equal to the number of cards in your graveyard"
 			);
+
+		if (card.HasComponent<CreatureCountComponent>())
+			lines.Add("Power and toughness are each equal to the number of creatures you control");
+
+		foreach (var lifeBonus in card.GetComponents<LifeTotalComponent>())
+			lines.Add(
+				$"Gets +{lifeBonus.PowerBonus}/+{lifeBonus.ToughnessBonus} "
+					+ $"while you have {lifeBonus.Minimum}+ life"
+			);
+
+		foreach (var gain in card.GetComponents<LifeGainBonusComponent>())
+			lines.Add($"If you would gain life, gain that much plus {gain.Amount} instead");
+
+		foreach (var exalted in card.GetComponents<ExaltedComponent>())
+			lines.Add(
+				exalted.Count == 1
+					? "Exalted (attacks alone: +1/+1 until end of turn)"
+					: $"Exalted {exalted.Count}"
+			);
+
+		foreach (var protection in card.GetComponents<ProtectionFromSubtypeComponent>())
+			lines.Add($"Protection from {string.Join(" and ", protection.Subtypes)}");
+
+		foreach (var tax in card.GetComponents<SpellTaxComponent>())
+			lines.Add(
+				tax.NonCreatureOnly
+					? $"Noncreature spells cost {tax.Amount} more to cast"
+					: $"Spells cost {tax.Amount} more to cast"
+			);
+
+		if (card.HasComponent<CopyOnEnterComponent>())
+			lines.Add("Enters as a copy of the strongest creature on the battlefield");
+
+		if (card.HasComponent<TauntUntilAttackedComponent>())
+			lines.Add("Loses Taunt once it has been attacked this turn");
+
+		if (card.HasComponent<PreventsCombatDamageComponent>())
+			lines.Add("Prevents all combat damage dealt to and by this creature");
+
+		if (card.HasComponent<ConvokeComponent>())
+			lines.Add("Convoke (costs 1 less per ready creature; those creatures tap)");
+
+		if (card.HasComponent<XCostComponent>())
+			lines.Add("Costs X more; choose X as you cast it");
+
+		foreach (var reduction in card.GetComponents<ConditionalCostReductionComponent>())
+			lines.Add(
+				$"Costs {reduction.Amount} less to cast if "
+					+ LowerFirst(reduction.Condition?.Describe() ?? "a condition is met")
+			);
+
+		// Serra Avenger reads as a free 3/3 flyer for two without this.
+		foreach (var restriction in card.GetComponents<CastRestrictionComponent>())
+			lines.Add(restriction.Describe());
+
+		// Equipment and Auras. An Aura with only a can't-attack flag (Pacifism) has no other
+		// component to describe it at all.
+		var attachment = card.GetComponent<EquipmentComponent>();
+		if (attachment != null)
+			lines.Add(DescribeAttachment(attachment));
 
 		foreach (var threshold in card.GetComponents<ThresholdComponent>())
 			lines.Add(DescribeThreshold(threshold));
@@ -411,7 +477,15 @@ public static class MtgCardMapper
 
 		Add(stats?.HasFlying ?? creature.HasFlying, "Flying");
 		Add(stats?.HasHaste ?? creature.HasHaste, "Haste");
-		Add(creature.HasDoubleStrike, "Double Strike");
+		Add(stats?.HasDoubleStrike ?? creature.HasDoubleStrike, "Double Strike");
+		// Only when double strike is absent — double strike already includes first strike, and
+		// printing both reads as two abilities.
+		Add(
+			(stats?.HasFirstStrike ?? creature.HasFirstStrike)
+				&& !(stats?.HasDoubleStrike ?? creature.HasDoubleStrike),
+			"First Strike"
+		);
+		Add(stats?.HasIndestructible ?? creature.HasIndestructible, "Indestructible");
 		Add(stats?.HasTaunt ?? creature.HasTaunt, "Taunt");
 		Add(stats?.HasReach ?? creature.HasReach, "Reach");
 		Add(stats?.HasLifelink ?? creature.HasLifelink, "Lifelink");
@@ -419,9 +493,74 @@ public static class MtgCardMapper
 		Add(stats?.HasDeathtouch ?? creature.HasDeathtouch, "Deathtouch");
 		Add(stats?.HasShroud ?? creature.HasShroud, "Shroud");
 		Add(stats?.HasHexproof ?? creature.HasHexproof, "Hexproof");
+		Add(stats?.CantAttack ?? false, "Can't attack");
 
 		return keywords.Count > 0 ? string.Join(", ", keywords) : null;
 	}
+
+	/// <summary>
+	/// A counterspell trap. These fire from hand and are never cast, so a player holding one has
+	/// no other way to learn what it does — and the card has no effects to describe.
+	/// </summary>
+	private static string DescribeCounterTrap(CounterTrapComponent trap)
+	{
+		var what =
+			trap.ExcludeTypes.HasFlag(CardType.Creature) ? "a noncreature spell"
+			: trap.TargetTypes == CardType.Creature ? "a creature spell"
+			: "a spell";
+
+		var unless =
+			trap.TaxAllRemaining ? " unless they pay your remaining mana"
+			: trap.ManaTax > 0 ? $" unless they pay {trap.ManaTax}"
+			: "";
+
+		var fate =
+			trap.ExileInstead ? " Exiled instead of buried."
+			: trap.ReturnToHandInstead ? " Returned to hand instead of buried."
+			: "";
+
+		var draw = trap.DrawOnCounter > 0 ? $" Draw {trap.DrawOnCounter}." : "";
+
+		return $"Trap — if you leave this card's cost unspent, it fires from your hand and "
+			+ $"counters {what} an opponent casts{unless}.{fate}{draw}";
+	}
+
+	/// <summary>Equipment and Auras — they share one component, differing only by IsAura.</summary>
+	private static string DescribeAttachment(EquipmentComponent attachment)
+	{
+		var boost = attachment.CustomBoostTemplate as EquippedBoostComponent;
+		var parts = new List<string>();
+
+		var power = boost?.PowerBonus ?? attachment.PowerBonus;
+		var toughness = boost?.ToughnessBonus ?? attachment.ToughnessBonus;
+		if (power != 0 || toughness != 0)
+			parts.Add($"{Signed(power)}/{Signed(toughness)}");
+
+		if (boost != null)
+		{
+			if (boost.GrantsFlying)
+				parts.Add("Flying");
+			if (boost.GrantsFirstStrike)
+				parts.Add("First Strike");
+			if (boost.GrantsLifelink)
+				parts.Add("Lifelink");
+			if (boost.GrantsIndestructible)
+				parts.Add("Indestructible");
+			if (boost.GrantsHexproof)
+				parts.Add("Hexproof");
+			if (boost.PreventsAttacking)
+				parts.Add("can't attack");
+		}
+
+		var effect = parts.Count > 0 ? string.Join(", ", parts) : "nothing";
+		var subject = attachment.IsAura ? "Enchanted creature" : "Equipped creature";
+		var lead = attachment.IsAura ? "Aura — attaches when it enters. " : "";
+
+		return $"{lead}{subject} gets {effect}";
+	}
+
+	private static string LowerFirst(string text) =>
+		string.IsNullOrEmpty(text) ? text : char.ToLowerInvariant(text[0]) + text[1..];
 
 	private static string DescribeSpell(SpellComponent spell)
 	{
@@ -455,9 +594,16 @@ public static class MtgCardMapper
 		if (string.IsNullOrEmpty(effectStr))
 			return null;
 
+		// A loyalty ability's cost IS its identity — "+1" and "-8" are how a player reads a
+		// planeswalker. Printed as the real notation rather than as a mana cost.
+		if (ability.IsLoyaltyAbility)
+			return $"{Signed(ability.LoyaltyCost)}: {effectStr}";
+
 		var costParts = new List<string>();
 		if (ability.ManaCost > 0)
 			costParts.Add($"{ability.ManaCost} mana");
+		if (ability.RequiresTap)
+			costParts.Add("tap");
 		foreach (var cost in ability.AdditionalCosts)
 		{
 			var costText = DescribeCost(cost);
@@ -465,8 +611,12 @@ public static class MtgCardMapper
 				costParts.Add(costText);
 		}
 
+		// A gate is part of the cost from the player's point of view — an ability they cannot
+		// use yet needs to say why.
+		var gate = ability.Condition != null ? $" — {ability.Condition.Describe()}" : "";
+
 		var costStr = costParts.Count > 0 ? string.Join(", ", costParts) : "free";
-		return $"{ability.Name} ({costStr}): {effectStr}";
+		return $"{ability.Name} ({costStr}){gate}: {effectStr}";
 	}
 
 	private static string? DescribeTriggeredAbility(TriggeredAbilityComponent trigger)
@@ -641,9 +791,103 @@ public static class MtgCardMapper
 			TransformAction => "Transform this",
 			FightAction => $"This fights {t}",
 			LookAtTopCardsAction l => $"Look at the top {l.Amount} cards, put one in your hand",
+
+			// ===== Core Set Cube =====
+			// Every one of these left its card rendering completely blank before it was added.
+			DestroyPermanentAction => $"Destroy {t}",
+			ExhaustCreatureAction e => DescribeExhaust(e, t),
+			MoveCardToTopOfLibraryAction => $"Put {t} on top of its owner's library",
+			MoveCardToBottomOfLibraryAction => $"Put {t} on the bottom of its owner's library",
+			PreventDamageAction p => p.PreventAll
+				? "Prevent all damage to you and your creatures this turn"
+				: $"Prevent the next {p.Amount} damage to you and your creatures this turn",
+			TakeExtraTurnAction x => x.Turns == 1
+				? "Take an extra turn after this one"
+				: $"Take {x.Turns} extra turns after this one",
+			GainControlAction => $"Gain control of {t}",
+			ExileLinkedAction => $"Exile {t} until this leaves the battlefield",
+			ReturnLinkedExileAction => "Return the exiled card to the battlefield",
+			GrantEmblemAction g => $"You get an emblem: {g.Emblem?.Name ?? "an emblem"}",
+			ReanimateManyAction r => r.MaxManaCost > 0
+				? $"Return X creatures costing {r.MaxManaCost} or less from your graveyard to play"
+				: "Return X creatures from your graveyard to the battlefield",
+			CreateTokensPerPowerAction c =>
+				$"Create a {c.CardTemplate?.Name ?? "token"} for each +1/+1 counter on this",
+			AddCustomModifierAction m => DescribeCustomModifier(m, t),
+			ConditionalAction c => DescribeConditional(c),
+			ApplyChosenModeAction m => DescribeModes(m),
+			GainPermanentManaAction g => $"Add {g.Amount} permanent mana",
+			AttachEquipmentAction => $"Attach this to {t}",
+
 			PipelineAction p => DescribePipeline(p),
 			_ => null,
 		};
+	}
+
+	private static string DescribeExhaust(ExhaustCreatureAction e, string target)
+	{
+		if (e.FreezeWhileSourceRemains)
+			return $"Tap {target}; it doesn't untap while this remains";
+		if (e.FreezeTurns > 0)
+			return $"Tap {target}; it doesn't untap during its controller's next untap step";
+		return $"Tap {target}";
+	}
+
+	private static string? DescribeCustomModifier(AddCustomModifierAction m, string target) =>
+		m.Modifier switch
+		{
+			BecomesBaseCreatureComponent b =>
+				$"{Capitalise(target)} loses all abilities and becomes a {b.Power}/{b.Toughness}"
+					+ " until end of turn",
+			_ => null,
+		};
+
+	/// <summary>
+	/// An intervening-if clause. The condition is the whole point of these cards — Timely
+	/// Reinforcements without it reads as an unconditional "gain 6 life".
+	/// </summary>
+	private static string? DescribeConditional(ConditionalAction c)
+	{
+		var inner =
+			c.Action == null
+				? null
+				: DescribeEffect(
+					new CardEffect
+					{
+						ActionTemplate = c.Action,
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+					}
+				);
+
+		if (inner == null)
+			return null;
+
+		var condition = c.Condition?.Describe();
+		return condition == null ? inner : $"If {LowerFirst(condition)}, {LowerFirst(inner)}";
+	}
+
+	/// <summary>"Choose one —" on a modal spell. The modes carry their own display names.</summary>
+	private static string? DescribeModes(ApplyChosenModeAction m)
+	{
+		if (m.Modes.IsEmpty)
+			return null;
+
+		var described = m
+			.Modes.Select(mode =>
+				DescribeEffect(
+					new CardEffect
+					{
+						ActionTemplate = mode,
+						TargetingStrategy = TargetingStrategy.AllValid(
+							TargetSpecification.CreatureControlledByYou()
+						),
+					}
+				)
+			)
+			.Where(d => d != null)
+			.ToList();
+
+		return described.Count == 0 ? null : $"Choose one — {string.Join("; or ", described)}";
 	}
 
 	private static string Signed(int n) => n >= 0 ? $"+{n}" : n.ToString();
@@ -889,6 +1133,15 @@ public static class MtgCardMapper
 				? $"count the cards in your {s.Zone.ToString().ToLowerInvariant()}"
 				: $"count {s.Subtype}s in your {s.Zone.ToString().ToLowerInvariant()}",
 			SelectCardFromZoneAction s => DescribeZoneSelection(s),
+
+			// A modal spell is a pipeline of [choose a mode][apply it]. The choice step is
+			// silent — the modes themselves carry the text — so only the apply step speaks.
+			SelectModeAction => null,
+			ApplyChosenModeAction m => LowerFirst(DescribeModes(m) ?? ""),
+			SelectTopCardsToBottomAction s => $"scry {s.Amount}",
+			MoveCardToBottomOfLibraryAction => "put the rest on the bottom",
+			ExhaustCreatureAction e => e.FreezeTurns > 0 ? "tap it; it stays tapped" : "tap it",
+			ReanimateManyAction => "return them to the battlefield",
 			// The trigger-safe verbs are pipelines that pick a target themselves, so their
 			// steps have to read as one sentence: "the opponent's best creature, destroy it".
 			SelectCreatureFromBattlefieldByManaCostAction s => s.TargetOpponent

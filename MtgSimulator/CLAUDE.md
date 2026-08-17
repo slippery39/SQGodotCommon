@@ -183,6 +183,34 @@ over 72 games at 9 seats:
 Curve does not underperform Random here as it does on the Legacy pool, because Hollowmere's
 expensive cards are genuinely castable via the reanimation package rather than being traps.
 
+### Measured: Core Set Cube (CSC), 134 cards
+
+300 drafts, 8 400 games, 16 800 deck-games, **median 1 445 games per card** — an order of
+magnitude denser than Hollowmere off half the drafts, purely because the pool is 134 cards rather
+than 300. Evaluated over 72 games at 9 seats:
+
+| Picker | Win rate |
+|---|---|
+| Trained | **85.4%** |
+| Random | 39.6% |
+| Curve | 25.0% |
+
+Zero draws in evaluation; all 72 games ended by damage.
+
+**13% of training games were flagged, all `TimeLimitReached`, and this is a harness artifact, not
+a game bug.** Training plays its games in one parallel batch, so each game gets a fraction of a
+core and the 5 000 ms limit is wall-clock. The same decks run sequentially draw 0–2%. Diagnose the
+difference by the reason: `TimeLimitReached` under parallel load is expected, whereas
+`ActionLimitReached` would mean a genuine loop. Extra turns and counterspell traps — the two loop
+risks in blue — produced no action-limit games at all.
+
+**Balance signal: Wall of Frost tops the model at +16.1pp, 5.7pp clear of second place.** It is a
+0/7 Taunt wall that freezes whatever attacks it — the reskin chosen because this engine has no
+blocking. Taunt plus high toughness is evidently much stronger here than Defender is in real
+Magic, since there is no way to go wide around it. Worth retuning before adding more walls.
+Pacifism sits at the other end (−8.1pp): "can't attack" is weak when the opponent simply attacks
+with something else.
+
 Key rules:
 - **Picks are indices into `Seat.Offer`, never `Card` values.** `Card` is a record, so two copies of one template in a pack compare equal and picking by value would remove the wrong card.
 - **Packs exclude lands** — `Draft.BuildDeck` supplies the mana base by padding to `deckSize` with Plains. It stamps `OwnerId`/`ControllerId`, so it must be called **per game**, not once per seat.
@@ -196,9 +224,41 @@ Key rules:
 
 The Godot scene loads the trained model through `DraftTrainingStore.FromJson` rather than `Load`, because `System.IO` cannot read a `res://` path inside an exported build. The model is duplicated under `SQGodotCommon/MtgGame/Assets/`; **regenerating the file in `sim_results/` does not update it** — copy it across, or the game keeps drafting against a stale model.
 
-`DraftScene.DraftedSet` selects which set the UI drafts — currently `Hollowmere.Set`, changeable in one line. `ModelPath` is derived from `DraftTrainingStore.PathFor(DraftedSet.Code)`, so the asset filename tracks the set automatically and cannot drift from what the trainer writes.
+`DraftScene.DraftedSet` selects which set the UI drafts — currently `CoresetCube.Set`, changeable in one line. `ModelPath` is derived from `DraftTrainingStore.PathFor(DraftedSet.Code)`, so the asset filename tracks the set automatically and cannot drift from what the trainer writes.
 
-**Card text is part of making a set playable, not a cosmetic afterthought.** A pack is read, not glanced at, and `MtgCardMapper.GetRulesText` silently omits any mechanic it does not know — invisible in a screenshot, but it makes the card undraftable. `SQGodotCommon.Tests/MtgGameTests/HollowmereRulesTextTests.cs` pins one card per mechanic and asserts no card *with a mechanic* renders blank. Extend both when adding a mechanic.
+### Training a set from the command line
+
+Mode 4 is interactive, but the console reads plain `Console.ReadLine()`, so it drives fine from
+stdin — no CLI-argument path was added because piping needs no shipped code:
+
+```
+printf '4\n\n\n300\n8\n1\n3\ncscfinal\n' | dotnet run --project MtgSimulator.Console -c Release
+```
+
+Fields in order: mode, AI depth (blank = 3), format (blank = Booster), drafts, seats, generations,
+**set choice** (the index printed by `ReadSet`, which changes as sets are registered — read the
+menu, do not hardcode it), seed.
+
+The final `Console.ReadKey` throws `InvalidOperationException` when stdin is redirected. It fires
+*after* the model is written, so the file is safe; ignore it.
+
+Reference rate, measured: 5 drafts = 140 games = 28s, so ~5.6 games/sec. 300 drafts ≈ 8 400 games
+≈ 25 minutes.
+
+**Card text is part of making a set playable, not a cosmetic afterthought.** A pack is read, not glanced at, and `MtgCardMapper.GetRulesText` silently omits any mechanic it does not know — invisible in a screenshot, but it makes the card undraftable. `SQGodotCommon.Tests/MtgGameTests/HollowmereRulesTextTests.cs` and `CoresetCubeRulesTextTests.cs` pin one card per mechanic and assert no card *with a mechanic* renders blank. Extend both when adding a mechanic.
+
+This is not a hypothetical. Wiring the Core Set Cube into the draft UI produced **22 completely
+blank card faces** on the first run of that test — every freeze effect, every bounce-to-library,
+every prevention, modal and conditional spell — because `GetRulesText` knew none of the actions
+they were built from. The engine was correct and fully tested; the cards were simply undraftable.
+
+Two describe paths must both be extended, and missing either leaves a hole:
+- `DescribeEffect` — an action used directly as a `CardEffect.ActionTemplate`
+- `DescribeStep` — the same action used inside a `PipelineAction`
+
+A **counterspell trap is the worst case**: it is a `SpellComponent` with *no effects at all*, so
+nothing in the effect machinery has anything to say about it. It needs its own branch off the
+component, which is why `DescribeCounterTrap` exists.
 
 A card face is built from three `MtgCardMapper` calls, not one — each renders to its own element of the card frame:
 
