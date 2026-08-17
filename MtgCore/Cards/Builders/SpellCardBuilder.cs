@@ -226,7 +226,8 @@ public class SpellCardBuilder
 		Card template,
 		string subtype,
 		ZoneType zone = ZoneType.Graveyard,
-		string countKey = "token_scale_count"
+		string countKey = "token_scale_count",
+		bool creaturesOnly = false
 	)
 	{
 		FlushPending();
@@ -238,6 +239,7 @@ public class SpellCardBuilder
 					Subtype = subtype,
 					Zone = zone,
 					OutputKey = countKey,
+					CreaturesOnly = creaturesOnly,
 					PlayerIdContextKey = ContextKeys.CastingPlayerId,
 				},
 				new CreateCardAction { CardTemplate = template, CountInputKey = countKey }
@@ -505,6 +507,13 @@ public class SpellCardBuilder
 		bool lifelink = false,
 		bool trample = false,
 		bool deathtouch = false,
+		bool reach = false,
+		bool shroud = false,
+		bool hexproof = false,
+		bool firstStrike = false,
+		bool doubleStrike = false,
+		bool indestructible = false,
+		bool exalted = false,
 		ModifierDuration duration = ModifierDuration.UntilEndOfTurn
 	)
 	{
@@ -517,11 +526,52 @@ public class SpellCardBuilder
 			GrantsLifelink = lifelink,
 			GrantsTrample = trample,
 			GrantsDeathtouch = deathtouch,
+			GrantsReach = reach,
+			GrantsShroud = shroud,
+			GrantsHexproof = hexproof,
+			GrantsFirstStrike = firstStrike,
+			GrantsDoubleStrike = doubleStrike,
+			GrantsIndestructible = indestructible,
+			GrantsExalted = exalted,
 			Duration = duration,
 		};
 		_pendingTargeting = TargetingStrategy.SingleTarget(
 			TargetSpecification.CreatureControlledByYou()
 		);
+		return this;
+	}
+
+	/// <summary>
+	/// A permanent +X/+X on the card running this effect — "put a +1/+1 counter on this
+	/// creature" (Ajani's Pridemate, Gideon's Avenger, renown).
+	///
+	/// A permanent AddModifierAction IS this engine's +1/+1 counter. TargetContextKey =
+	/// SourceCardId is what makes it hit the source rather than needing a target, which matters
+	/// because ResolveEffectAction overwrites hardcoded TargetIds on a NoTarget strategy.
+	/// </summary>
+	public SpellCardBuilder WithSelfBuff(int power = 1, int toughness = 1)
+	{
+		FlushPending();
+		_pendingAction = new AddModifierAction
+		{
+			PowerBonus = power,
+			ToughnessBonus = toughness,
+			Duration = ModifierDuration.Permanent,
+			TargetContextKey = ContextKeys.SourceCardId,
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Exhaust target creature — "tap target creature". Defaults to an opponent's creature,
+	/// which is what every tapper in the cube wants; override with .WithTarget(...) otherwise.
+	/// </summary>
+	public SpellCardBuilder WithExhaust()
+	{
+		FlushPending();
+		_pendingAction = new ExhaustCreatureAction();
+		_pendingTargeting = TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures());
 		return this;
 	}
 

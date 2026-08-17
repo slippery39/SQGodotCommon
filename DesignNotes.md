@@ -142,3 +142,46 @@ remaining 27% of the screen, so raising the 0.73 anchor trades against hand spac
 clips at the bottom edge).
 
 ---
+
+## Vigilance is deliberately unimplemented
+
+**Concern:** Eight white cards in the Core Set Cube are printed with vigilance
+(Speaker of the Heavens, Serra Avenger, Topan Freeblade, Steadfast Sentry, Gallant Cavalry,
+Basri's Lieutenant, Captain of the Watch, Sun Titan, and Resplendent Angel's token). None of them
+have it. With no blocking and a one-attack-per-turn rule, "attacking doesn't cause this creature
+to tap" has nothing to attach to.
+
+**Why it's fine now:** The cards are still playable bodies; vigilance was simply the least
+load-bearing line of text on each. Every one carries a comment saying so.
+
+**Watch for:** The decision, when you make it. Two options were costed:
+- *Merge into Exhaust* — delete `HasAttacked`, make `IsExhausted` the single attack limiter, and
+  let vigilance mean "attacking doesn't exhaust you", i.e. attack twice per turn. One field
+  instead of two, and it makes every tapper meaningfully better. Strong, and mono-white flagged.
+  `IsExhausted` was deliberately added as a SEPARATE field so this refactor stays small: set it
+  in `AttackAction.Execute` and delete `HasAttacked`.
+- *Leave blank* — accept it as reminder text and compensate with stats.
+
+Nothing in Hollowmere uses vigilance, so whichever way this goes, only the Core Set Cube rebalances.
+
+---
+
+## Replacement effects cover amounts, not structure
+
+**Concern:** `ReplacementModifierComponent` (see `MtgCore/Modifiers/`) replaces the AMOUNT of an
+event — "gain that much life plus 1", "prevent 2 damage", "draw two instead". It cannot express a
+STRUCTURAL replacement: "enters the battlefield tapped", "if it would die, exile it instead",
+"if you would draw, mill instead".
+
+**Why it's fine now:** Every replacement in white is numeric (Angel of Vitality). Imposing
+Sovereign's "creatures your opponents control enter tapped" is modelled as an ETB trigger that
+exhausts the entering creature, which is observationally identical here because nothing can
+respond between the two.
+
+**Watch for:** A card where the difference is visible — an ETB trigger on the creature that
+enters tapped and cares about being tapped, or a "dies -> exile instead" that must beat a death
+trigger. At that point the answer is a pre-execute hook in the `ImmutableGameObjects` action loop
+that lets a component rewrite a spawned `GameAction` before it runs, plus an already-replaced
+marker so a replacement cannot replace its own output. Deliberately not built speculatively.
+
+---

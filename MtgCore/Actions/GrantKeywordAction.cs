@@ -29,6 +29,10 @@ public record GrantKeywordAction : EffectAction
 	public bool GrantsShroud { get; init; } = false;
 	public bool GrantsHexproof { get; init; } = false;
 	public bool GrantsDeathtouch { get; init; } = false;
+	public bool GrantsFirstStrike { get; init; } = false;
+	public bool GrantsDoubleStrike { get; init; } = false;
+	public bool GrantsIndestructible { get; init; } = false;
+	public bool GrantsExalted { get; init; } = false;
 
 	public override ActionResult Execute(GameState gameState)
 	{
@@ -58,6 +62,10 @@ public record GrantKeywordAction : EffectAction
 				GrantsShroud = GrantsShroud,
 				GrantsHexproof = GrantsHexproof,
 				GrantsDeathtouch = GrantsDeathtouch,
+				GrantsFirstStrike = GrantsFirstStrike,
+				GrantsDoubleStrike = GrantsDoubleStrike,
+				GrantsIndestructible = GrantsIndestructible,
+				GrantsExalted = GrantsExalted,
 			};
 
 			state = state.UpdateObject(

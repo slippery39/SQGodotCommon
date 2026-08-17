@@ -27,9 +27,17 @@ public record LoseLifeAction : EffectAction
 			if (state.GetObject(targetId) is not MtgPlayer player)
 				continue;
 
-			var updated = player with { Life = player.Life - amount };
+			var lost = state.ApplyReplacements(ReplaceableEvent.LifeLoss, player.Id, amount);
+			if (lost <= 0)
+				continue;
+
+			var updated = player with { Life = player.Life - lost };
 			state = state.UpdateObject(player.Id, updated);
-			events = events.Add(new PlayerLostLifeEvent { PlayerId = player.Id, Amount = amount });
+
+			// PendingGameEvents is the trigger feed — Events alone is silently inert.
+			var lostEvent = new PlayerLostLifeEvent { PlayerId = player.Id, Amount = lost };
+			state = state with { PendingGameEvents = state.PendingGameEvents.Add(lostEvent) };
+			events = events.Add(lostEvent);
 		}
 
 		return new ActionResult(state) { Events = events };

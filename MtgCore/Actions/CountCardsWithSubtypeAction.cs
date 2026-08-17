@@ -26,6 +26,13 @@ public record CountCardsWithSubtypeAction : GameAction
 	public string PlayerIdContextKey { get; init; } = "";
 	public int PlayerId { get; init; } = 0;
 
+	/// <summary>
+	/// Count only cards with a CreatureComponent. Needed for "for each creature you control"
+	/// (Lena) — an empty Subtype on the battlefield otherwise counts artifacts and enchantments
+	/// too, which is a silently wrong number rather than an approximate one.
+	/// </summary>
+	public bool CreaturesOnly { get; init; } = false;
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var playerId = string.IsNullOrEmpty(PlayerIdContextKey)
@@ -37,6 +44,10 @@ public record CountCardsWithSubtypeAction : GameAction
 
 		var zoneId = gameState.GetPlayerZoneId(playerId, Zone);
 		var cards = gameState.GetCardsInZone(zoneId);
+
+		if (CreaturesOnly)
+			cards = cards.Where(c => c.HasComponent<CreatureComponent>());
+
 		var count = string.IsNullOrEmpty(Subtype)
 			? cards.Count()
 			: cards.Count(c => c.HasSubtype(Subtype));

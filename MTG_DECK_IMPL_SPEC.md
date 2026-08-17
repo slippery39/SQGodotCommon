@@ -108,9 +108,9 @@ This is a rules/simulation project — not a full game. Some mechanics are simpl
 | Transform | Not started | Dual-face cards, IsTransformed flag |
 | Storm | Done | `SpellsCastThisTurn` on `MtgGame`; `DragonStormEffectAction` deploys N dragons |
 | Suspend | Not started | Lotus Bloom uses free-mana fallback instead |
-| Fast mana | Done | `AddManaAction` boosts `CurrentMana` without touching `MaxMana` |
+| Fast mana | Done | `AddTemporaryManaAction` boosts `CurrentMana` without touching `MaxMana` |
 | Counterspells (trap) | Not started | Auto-fire on opponent spell |
-| +1/+1 Counters | Not started | Needed for Affinity |
+| +1/+1 Counters | Won't do | A permanent `AddModifierAction` IS the counter. See `MtgCore/CLAUDE.md` |
 | Modular | Not started | Needs +1/+1 counters |
 | Affinity cost reduction | Not started | Needs artifact type tracking |
 | Equipment | Not started | Needed for Delver, Affinity |
@@ -141,17 +141,23 @@ This is a rules/simulation project — not a full game. Some mechanics are simpl
 | Bogardan Hellkite | ETB: deal 5 damage to single random opponent target | Done |
 | Hunted Dragon | 6/6 Flying Haste only — Knight token ETB omitted | Done |
 | Dragonstorm | Storm via `SpellsCastThisTurn`; deploys N dragons from library | Done |
-| Gigadrowse | Exhausts target creature (`HasAttacked = true`); Replicate omitted | Done |
+| Gigadrowse | Exhausts target creature; Replicate omitted | Done |
 | Remand | Not implemented — stack interaction required | Deferred |
 | Rite of Flame | Add 2 mana + 1 per Rite in graveyard (`CountCardsWithNameAction`) | Done |
-| Seething Song | Add 5 mana (`AddManaAction`) | Done |
+| Seething Song | Add 5 mana (`AddTemporaryManaAction`) | Done |
 | Sleight of Hand | Look at top 2, keep 1, put other on bottom | Done |
 | Telling Time | Already implemented | Done |
 | Lotus Bloom | Free sorcery — add 3 mana (Suspend 3 omitted) | Done |
 
 **New mechanics introduced:** Flying, Taunt, Reach (combat keywords), Storm, Fast mana, ETB targeted damage, Exhaust
 
-**New actions added:** `AddManaAction`, `ExhaustCreatureAction`, `SearchLibraryAndDeployAction`, `CountCardsWithNameAction`, `DragonStormEffectAction`
+**New actions added:** `AddTemporaryManaAction`, `SearchLibraryAndDeployAction`, `CountCardsWithNameAction`, `DragonStormEffectAction`
+
+> **Correction (Core Set Cube pass):** this section previously named `AddManaAction` and
+> `ExhaustCreatureAction`. Neither existed — the real fast-mana action has always been
+> `AddTemporaryManaAction`, and exhaustion was never implemented at all despite being listed
+> here as done. `ExhaustCreatureAction` and `CreatureComponent.IsExhausted` exist as of the
+> Core Set Cube white pass; see the Exhaust section in `MtgCore/CLAUDE.md`.
 
 **Status:** Complete — `DragonstormDeckFactory` registered in `DeckRegistry`
 

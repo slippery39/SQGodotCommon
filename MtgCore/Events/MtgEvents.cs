@@ -25,6 +25,16 @@ public record CreatureAttackedEvent : GameEvent
 	public int AttackingPlayerId { get; init; }
 }
 
+/// <summary>
+/// A creature became exhausted (this engine's equivalent of being tapped by a "tapper").
+/// Emitted by ExhaustCreatureAction and by activating a RequiresTap ability.
+/// Gideon's Avenger triggers on this.
+/// </summary>
+public record CreatureExhaustedEvent : GameEvent
+{
+	public int CreatureId { get; init; }
+}
+
 public record SpellCastEvent : GameEvent
 {
 	public int CardId { get; init; }

@@ -38,4 +38,30 @@ public record TriggeredAbilityComponent : GameComponent
 	{
 		init => Effects = Effects.Add(value);
 	}
+
+	/// <summary>
+	/// Lifetime cap on how many times this ability may ever fire. 0 = unlimited (the default).
+	/// This is how renown's "if it isn't renowned" works — set MaxTriggers = 1 and the ability
+	/// fires exactly once for the life of the permanent.
+	/// TriggerCountTotal is never reset, including by StartTurnAction.
+	/// </summary>
+	public int MaxTriggers { get; init; } = 0;
+
+	/// <summary>
+	/// Per-turn cap. 0 = unlimited (the default). Reset by StartTurnAction alongside
+	/// ActivatedAbilityComponent.ActivationCount.
+	///
+	/// Independent of MaxTriggers, because the two answer different card text: renown is once
+	/// ever, while Resplendent Angel and Basri's Lieutenant are once each turn. Collapsing them
+	/// into one field silently turns renown into a creature that grows every turn.
+	/// </summary>
+	public int MaxTriggersPerTurn { get; init; } = 0;
+
+	public int TriggerCountTotal { get; init; } = 0;
+	public int TriggerCountThisTurn { get; init; } = 0;
+
+	/// <summary>True when neither cap has been reached and the ability may fire again.</summary>
+	public bool CanTrigger =>
+		(MaxTriggers == 0 || TriggerCountTotal < MaxTriggers)
+		&& (MaxTriggersPerTurn == 0 || TriggerCountThisTurn < MaxTriggersPerTurn);
 }

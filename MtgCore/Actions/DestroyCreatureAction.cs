@@ -3,6 +3,13 @@ using ImmutableGameObjects;
 
 namespace MtgCore;
 
+/// <summary>
+/// Destroys each target creature outright, ignoring damage and toughness.
+///
+/// Indestructible creatures are skipped — "destroy" is exactly what indestructible answers.
+/// Damage-based death is decided separately in CreatureEvaluator.IsLethalDamage, which checks
+/// indestructible too, so the keyword cannot work against one and silently not the other.
+/// </summary>
 public record DestroyCreatureAction : EffectAction
 {
 	public override ActionResult Execute(GameState gameState)
@@ -17,6 +24,9 @@ public record DestroyCreatureAction : EffectAction
 
 			var obj = state.GetObject(targetId);
 			if (obj is not Card card || !card.HasComponent<CreatureComponent>())
+				continue;
+
+			if (state.GetEffectiveIndestructible(card.Id))
 				continue;
 
 			var leftEvent = new PermanentLeftBattlefieldEvent

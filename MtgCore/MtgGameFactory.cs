@@ -18,6 +18,8 @@ public static class MtgGameFactory
 	{
 		var state = new GameState();
 
+		var startingLife = 20;
+
 		// Root game object — ActivePlayerId is set below once we know Player 1's ID
 		var (s1, game) = state.AddObject(new MtgGame { Name = "Game" });
 
@@ -34,7 +36,14 @@ public static class MtgGameFactory
 
 		// Player 1 and their zones
 		var (s3, player1) = s2.AddObject(
-			new MtgPlayer { Name = "Player 1", Life = 20 },
+			// StartingLife is set alongside Life so the two cannot silently diverge — abilities
+			// gated on "N more than your starting life total" read it.
+			new MtgPlayer
+			{
+				Name = "Player 1",
+				Life = startingLife,
+				StartingLife = startingLife,
+			},
 			parentId: game.Id
 		);
 		var (s4, p1Hand) = s3.AddObject(
@@ -85,7 +94,12 @@ public static class MtgGameFactory
 
 		// Player 2 and their zones
 		var (s9, player2) = s8.AddObject(
-			new MtgPlayer { Name = "Player 2", Life = 20 },
+			new MtgPlayer
+			{
+				Name = "Player 2",
+				Life = startingLife,
+				StartingLife = startingLife,
+			},
 			parentId: game.Id
 		);
 		var (s10, p2Hand) = s9.AddObject(

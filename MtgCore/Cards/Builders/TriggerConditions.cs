@@ -74,4 +74,73 @@ public static class TriggerConditions
 	/// <summary>Fires whenever any artifact leaves the battlefield (sacrifice, destruction, exile).</summary>
 	public static TriggerCondition OnAnyArtifactDies() =>
 		new EventTriggerCondition { EventTypeName = EventTypeNames.ArtifactLeftBattlefield };
+
+	/// <summary>
+	/// Fires whenever the controller gains life ("whenever you gain life").
+	/// The event subject is the player, and IsControlledByYouSpecification matches an
+	/// MtgPlayer by ID, so the filter reads as "you" — same as OnLandfall().
+	/// </summary>
+	public static TriggerCondition OnGainLife() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.PlayerGainedLife,
+			Filter = new IsControlledByYouSpecification(),
+		};
+
+	/// <summary>Fires whenever the controller loses life.</summary>
+	public static TriggerCondition OnLoseLife() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.PlayerLostLife,
+			Filter = new IsControlledByYouSpecification(),
+		};
+
+	/// <summary>Fires whenever any creature enters the battlefield, either player's.</summary>
+	public static TriggerCondition OnAnyCreatureEnters() =>
+		new EventTriggerCondition { EventTypeName = EventTypeNames.CreatureEnteredBattlefield };
+
+	/// <summary>
+	/// Fires whenever a creature OTHER than this one enters the battlefield, either player's —
+	/// "whenever another creature enters" (Soul Warden).
+	///
+	/// The "another" is not decoration: without IsNotSelfSpecification the card triggers on its
+	/// own arrival, which is an extra activation every time it is cast or reanimated.
+	/// </summary>
+	public static TriggerCondition OnAnotherCreatureEnters() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
+			Filter = new IsNotSelfSpecification(),
+		};
+
+	/// <summary>Fires when a creature its controller owns enters the battlefield.</summary>
+	public static TriggerCondition OnCreatureYouControlEnters() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
+			Filter = new IsControlledByYouSpecification(),
+		};
+
+	/// <summary>
+	/// Fires when this exact creature deals combat damage to a player — the renown trigger.
+	/// CombatDamageDealtToPlayerEvent's subject is the ATTACKER, so IsSourceCardSpecification
+	/// correctly means "this creature dealt the damage", not "this creature was damaged".
+	/// </summary>
+	public static TriggerCondition OnSelfDealsCombatDamageToPlayer() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.CombatDamageDealtToPlayer,
+			Filter = new IsSourceCardSpecification(),
+		};
+
+	/// <summary>
+	/// Fires when a creature an opponent controls becomes exhausted — the "tapper payoff"
+	/// trigger (Gideon's Avenger). Pass opponentOnly: false to fire on either player's.
+	/// </summary>
+	public static TriggerCondition OnCreatureExhausted(bool opponentOnly = true) =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.CreatureExhausted,
+			Filter = opponentOnly ? new IsControlledByOpponentSpecification() : null,
+		};
 }

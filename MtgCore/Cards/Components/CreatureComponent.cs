@@ -21,8 +21,35 @@ public record CreatureComponent : GameComponent
 	public int Damage { get; init; } = 0;
 	public bool HasSummoningSickness { get; init; } = true;
 	public bool HasAttacked { get; init; } = false;
+
+	/// <summary>
+	/// This engine's equivalent of being tapped. An exhausted creature cannot attack and
+	/// cannot activate abilities that require tapping. Set by ExhaustCreatureAction ("tappers")
+	/// and by activating a RequiresTap ability; cleared by StartTurnAction for the active
+	/// player only — so exhausting an opponent's creature on your turn costs them exactly one
+	/// attack, matching an untap step.
+	///
+	/// Deliberately SEPARATE from HasAttacked. Attacking does not set this, so vigilance
+	/// remains an open design question rather than being decided by implication here.
+	/// </summary>
+	public bool IsExhausted { get; init; } = false;
+
 	public bool HasHaste { get; init; } = false;
 	public bool HasDoubleStrike { get; init; } = false;
+
+	/// <summary>
+	/// Deals combat damage before creatures without it. With no blockers this makes every
+	/// attack into a favourable creature a one-sided trade, so it is a premium keyword here —
+	/// see the note in AttackAction.ApplyCreatureVsCreature.
+	/// </summary>
+	public bool HasFirstStrike { get; init; } = false;
+
+	/// <summary>
+	/// Damage and "destroy" effects do not kill this creature. Zero effective toughness still
+	/// does, which is the real MTG rule — see CheckStateBasedEffectsAction.
+	/// </summary>
+	public bool HasIndestructible { get; init; } = false;
+
 	public bool HasFlying { get; init; } = false;
 	public bool HasTaunt { get; init; } = false;
 	public bool HasReach { get; init; } = false;

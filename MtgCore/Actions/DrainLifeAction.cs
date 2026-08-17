@@ -42,17 +42,44 @@ public record DrainLifeAction : GameAction
 		if (gameState.GetObject(gainTargetId) is not MtgPlayer gainTarget)
 			return new ActionResult(gameState);
 
-		var drained = drainTarget with { Life = drainTarget.Life - Amount };
-		var gained = gainTarget with { Life = gainTarget.Life + Amount };
+		// Each half is replaced independently — the drainer's life-gain bonuses must not
+		// change how much the drained player loses, and vice versa.
+		var lossAmount = gameState.ApplyReplacements(
+			ReplaceableEvent.LifeLoss,
+			drainTarget.Id,
+			Amount
+		);
+		var gainAmount = gameState.ApplyReplacements(
+			ReplaceableEvent.LifeGain,
+			gainTarget.Id,
+			Amount
+		);
+
+		var drained = drainTarget with { Life = drainTarget.Life - lossAmount };
+		var gained = gainTarget with
+		{
+			Life = gainTarget.Life + gainAmount,
+			LifeGainedThisTurn = gainTarget.LifeGainedThisTurn + gainAmount,
+		};
 
 		var state = gameState
 			.UpdateObject(drainTarget.Id, drained)
 			.UpdateObject(gainTarget.Id, gained);
 
-		var events = ImmutableList.Create<GameEvent>(
-			new PlayerLostLifeEvent { PlayerId = drainTarget.Id, Amount = Amount },
-			new PlayerGainedLifeEvent { PlayerId = gainTarget.Id, Amount = Amount }
-		);
+		var lostEvent = new PlayerLostLifeEvent { PlayerId = drainTarget.Id, Amount = lossAmount };
+		var gainedEvent = new PlayerGainedLifeEvent
+		{
+			PlayerId = gainTarget.Id,
+			Amount = gainAmount,
+		};
+
+		// PendingGameEvents is the trigger feed — Events alone is silently inert.
+		state = state with
+		{
+			PendingGameEvents = state.PendingGameEvents.Add(lostEvent).Add(gainedEvent),
+		};
+
+		var events = ImmutableList.Create<GameEvent>(lostEvent, gainedEvent);
 
 		return new ActionResult(state) { Events = events };
 	}

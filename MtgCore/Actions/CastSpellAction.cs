@@ -47,6 +47,10 @@ public record CastSpellAction : GameAction
 		if (spellComponent == null)
 			return ValidationResult.Invalid("Card is not a spell");
 
+		foreach (var restriction in card.GetComponents<CastRestrictionComponent>())
+			if (!restriction.CanCast(gameState, CastingPlayerId))
+				return ValidationResult.Invalid(restriction.Describe());
+
 		var player = gameState.GetPlayer(CastingPlayerId);
 		var effectiveCost = ComputeEffectiveCost(gameState, card, CastingPlayerId);
 		if (player.CurrentMana < effectiveCost)
@@ -156,14 +160,6 @@ public record CastSpellAction : GameAction
 		return state;
 	}
 
-	private static int ComputeEffectiveCost(GameState state, Card card, int playerId)
-	{
-		if (!card.HasComponent<AffinityComponent>())
-			return card.ManaCost;
-		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
-		var artifactCount = state
-			.GetCardsInZone(battlefieldId)
-			.Count(c => c.HasSubtype("Artifact"));
-		return Math.Max(0, card.ManaCost - artifactCount);
-	}
+	private static int ComputeEffectiveCost(GameState state, Card card, int playerId) =>
+		state.ComputeEffectiveCost(card, playerId);
 }

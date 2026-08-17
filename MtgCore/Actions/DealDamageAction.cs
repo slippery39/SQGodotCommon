@@ -60,12 +60,25 @@ public record DealDamageAction : EffectAction
 		return result;
 	}
 
-	private static (GameState, ImmutableList<GameEvent>) ApplyToCreature(
+	private (GameState, ImmutableList<GameEvent>) ApplyToCreature(
 		GameState state,
 		Card card,
-		int amount
+		int rawAmount
 	)
 	{
+		// Protection from the source's creature type prevents the damage entirely.
+		var sourceId = GetInput<int>(ContextKeys.SourceCardId, 0);
+		if (state.IsProtectedFrom(card.Id, sourceId))
+			return (state, ImmutableList<GameEvent>.Empty);
+
+		var amount = state.ApplyReplacements(
+			ReplaceableEvent.DamageToCreature,
+			card.ControllerId,
+			rawAmount
+		);
+		if (amount <= 0)
+			return (state, ImmutableList<GameEvent>.Empty);
+
 		var creature = card.GetComponent<CreatureComponent>()!;
 		var newDamage = creature.Damage + amount;
 		var events = ImmutableList<GameEvent>.Empty;
@@ -106,9 +119,14 @@ public record DealDamageAction : EffectAction
 	private static (GameState, ImmutableList<GameEvent>) ApplyToPlayer(
 		GameState state,
 		MtgPlayer player,
-		int amount
+		int rawAmount
 	)
 	{
+		// Damage prevention lives here, on the DAMAGED player's own permanents.
+		var amount = state.ApplyReplacements(ReplaceableEvent.DamageToPlayer, player.Id, rawAmount);
+		if (amount <= 0)
+			return (state, ImmutableList<GameEvent>.Empty);
+
 		var updated = player with { Life = player.Life - amount };
 		var newState = state.UpdateObject(player.Id, updated);
 		var events = ImmutableList.Create<GameEvent>(

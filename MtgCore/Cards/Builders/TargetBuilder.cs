@@ -50,6 +50,10 @@ public class TargetBuilder
 	public TargetingStrategy AllYourCreatures() =>
 		Build(new IsCreatureSpecification().And(new IsControlledByYouSpecification()));
 
+	/// Creatures you control EXCEPT the source — "another target creature you control".
+	public TargetingStrategy OtherCreaturesYouControl() =>
+		Build(TargetSpecification.OtherCreaturesYouControl());
+
 	public TargetingStrategy WithSpec(TargetSpecification spec) => Build(spec);
 
 	private TargetingStrategy Build(TargetSpecification spec) =>

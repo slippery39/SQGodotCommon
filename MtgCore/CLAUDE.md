@@ -5,6 +5,11 @@
 ```
 MtgCore/
 ├── Abilities/Activated/     # ActivatedAbilityComponent, ActivatedAbilityAction
+│                            # ActivatedAbilityComponent.Condition — optional ActivationCondition gate ("activate only if...")
+│                            # ActivationCondition (abstract; IsSatisfied + Describe). Subclasses:
+│                            #   LifeAboveStartingCondition (Speaker of the Heavens — reads MtgPlayer.StartingLife, not a hardcoded 20)
+│                            #   ControlsMoreLandsCondition (Knight of the White Orchid)
+│                            # RequiresTap now genuinely gates AND exhausts — see "Exhaust" below.
 │   └── Static/              # StaticAbilityComponent (abstract; Filter, AffectedIds, ActiveInZone), StaticPTBoostAbility, StaticGrantKeywordAbility
 │                            # StaticAbilityComponent.ActiveInZone — zone the SOURCE must be in for the ability to apply.
 │                            #   Default Battlefield. Set to Graveyard for Wonder-style effects. See "Zone-Dependent Statics".
@@ -35,6 +40,15 @@ MtgCore/
 │                            #   graveyard. Targets are PLAYERS. Emits CardMilledEvent per card (distinct from
 │                            #   CardDiscardedEvent so discard payoffs don't fire on self-mill) and LibraryEmptyEvent
 │                            #   when the library runs out. OutputKey writes the milled card IDs to pipeline context.
+│                            # ExhaustCreatureAction — EffectAction; "tap target creature". Sets
+│                            #   CreatureComponent.IsExhausted and emits CreatureExhaustedEvent. See "Exhaust".
+│                            # GainPermanentManaAction — EffectAction; +MaxMana AND +CurrentMana permanently.
+│                            #   How "search for a Plains and put it onto the battlefield" is expressed: lands are
+│                            #   consumed into MaxMana and exiled, so there is no land permanent to fetch.
+│                            #   Contrast AddTemporaryManaAction, which raises CurrentMana only.
+│                            # CountCardsWithSubtypeAction.CreaturesOnly — restricts the count to cards with a
+│                            #   CreatureComponent. Needed for "for each creature you control" (Lena): an empty
+│                            #   Subtype on the battlefield otherwise counts artifacts and enchantments too.
 │                            # GrantKeywordAction — EffectAction; stamps AppliedKeywordComponent onto target creatures
 │                            #   for a Duration (default UntilEndOfTurn). The effect-driven counterpart to
 │                            #   StaticGrantKeywordAbility — use for combat tricks and "gains X until end of turn".
@@ -86,10 +100,27 @@ MtgCore/
 │                            #   ArtifactLeftBattlefieldEvent { CardId, OwnerId } — emitted by SacrificeAdditionalCost when the sacrificed permanent HasSubtype("Artifact");
 │                            #   fired in addition to PermanentLeftBattlefieldEvent. Used by Disciple of the Vault and OnAnyArtifactDies() trigger condition.
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods), StaticAbilityEngine (push-model ETB/LTB logic)
+│                            # ReplacementEngine.ApplyReplacements(evt, playerId, amount) — call this at every site
+│                            #   that produces a replaceable number. Multipliers apply before additions; result clamped at 0.
+│                            # CostEngine.ComputeEffectiveCost(card, playerId) — the SINGLE place mana cost is
+│                            #   adjusted. Affinity reduction then SpellTaxComponent increase, floored at 0.
+│                            #   All three cast actions route through it; they each had a private copy before,
+│                            #   and CastPermanentAction had none, so non-creature permanents ignored affinity.
 ├── Modifiers/               # PowerToughnessModifier (abstract base), StaticPowerToughnessModifier, AppliedStaticPTBoost
+│                            # ReplacementModifierComponent (abstract) + ReplaceableEvent enum — numeric replacement
+│                            #   effects. LifeGainBonusComponent is the only concrete one (Angel of Vitality).
+│                            #   See "Replacement Effects" below; structural replacement is NOT covered.
+│                            # LifeTotalComponent — +X/+X while your life is >= Minimum (Angel of Vitality at 25)
+│                            # CreatureCountComponent — P/T equal to creatures you control; how */* is expressed
+│                            #   (Crusader of Odric is base 0/0 plus this). Both must be Duration = Permanent.
 │                            # EquippedBoostComponent (stamped on creature by AttachEquipmentAction; removed on detach/creature-death)
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Terravore. Must be stamped with Duration = Permanent in card definitions.
 ├── Sets/                    # CardSet (Code, Name, Cards; Draftable filters lands), SetRegistry (All, Default, Get)
+│   ├── CoresetCube/         # The CSC set, built from an external cube list (cubecobra magiccoreset20xx).
+│   │                        # CoresetCube.cs assembles the colour files; CoresetCubeWhite.cs holds all 38
+│   │                        # white creatures; CoresetCubeTokens.cs holds token templates (excluded from the
+│   │                        # card list). Read CoresetCubeWhite's header before adding cards — it lists every
+│   │                        # divergence from the printed cards and why. Non-creature white is not built yet.
 │   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
 │                            # HollowmereTokens.cs holds token templates (excluded from the card list).
 │                            # Read the header of Hollowmere.cs before adding cards — it states the rate bar and
@@ -100,16 +131,36 @@ MtgCore/
 │                            # CardLibrary.All is registered as the "LEG" (Legacy) set so existing drafts and
 │                            # the existing trained model keep working. Sets are separate pools, never merged —
 │                            # the trained draft picker is keyed by card name and does not generalise across pools.
-├── Players/                 # MtgPlayer (GameObject subclass) — fields: Life, MaxMana, CurrentMana, LandsPlayedThisTurn (resets each turn), LandsPlayedTotal (never resets; used by Terravore), Emblems (ImmutableList<Emblem>; grows when lands with GrantEmblemComponent are played)
+├── Players/                 # MtgPlayer (GameObject subclass) — fields: Life, StartingLife (set alongside Life by
+│                            #   MtgGameFactory; read by LifeAboveStartingCondition), LifeGainedThisTurn (resets
+│                            #   each turn; read by LifeGainedThisTurnCondition), MaxMana, CurrentMana,
+│                            #   LandsPlayedThisTurn (resets each turn), LandsPlayedTotal (never resets; used by
+│                            #   Terravore and by the land-count conditions), Emblems
 ├── Targeting/               # TargetSpecification (base), ZoneSpecification (abstract base for zone specs), TargetingContext, TargetingStrategy
 │                            # Zone specs: IsOnBattlefieldSpecification, IsInHandSpecification, IsInstantOrSorceryInOwnGraveyardSpecification, IsCreatureInOwnGraveyardSpecification
-│                            # Other specs: IsCreatureSpecification (enforces Shroud/Hexproof at IsSatisfiedBy level), IsPlayerSpecification, IsSubtypeSpecification,
+│                            # HasManaCostAtMostSpecification — "mana value N or less" (Sun Titan)
+│                            # HasPermanentPowerBonusSpecification — "if it had a +1/+1 counter on it"
+│                            #   (Basri's Lieutenant). A permanent AddModifierAction IS our counter, so this is
+│                            #   the faithful question, not a workaround. Excludes UntilEndOfTurn buffs.
+│                            # PowerAtLeastSpecification — "power 4 or greater" (Intrepid Hero); effective power
+│                            # PowerLessThanSourceSpecification — "power less than this creature's" (Lena)
+│                            # Other specs: IsCreatureSpecification (enforces Shroud/Hexproof AND subtype protection at IsSatisfiedBy level), IsPlayerSpecification, IsSubtypeSpecification,
 │                            #              IsControlledByYouSpecification, IsControlledByOpponentSpecification,
 │                            #              IsSourceCardSpecification, IsNotSelfSpecification, AlwaysFalseSpecification
 │                            # Shroud/Hexproof: enforced in IsCreatureSpecification.IsSatisfiedBy — no other spec changes needed.
 │                            #   HasShroud = no one can target (including controller). HasHexproof = opponents can't target (controller can).
 │                            # Composites: AndSpecification (zone-first candidate narrowing), OrSpecification, NotSpecification
 ├── Triggers/                # TriggeredAbilityComponent { Name, Condition, Effects, ActiveInZone (default Battlefield) }, EventTriggerCondition, TriggerCondition
+│                            # MaxTriggers (lifetime cap, never reset — this is renown's "if it isn't renowned")
+│                            #   and MaxTriggersPerTurn (reset by StartTurnAction) are INDEPENDENT. 0 = unlimited.
+│                            #   Collapsing them into one field silently turns renown into a creature that grows
+│                            #   every turn. Enforced in CheckStateBasedEffectsAction.EvaluateCardTriggers.
+│                            # AndTriggerCondition — fires only when every sub-condition fires; how an
+│                            #   "intervening if" clause is expressed without a bespoke type per card.
+│                            # OpponentControlsMoreLandsCondition — board question, not an event question;
+│                            #   meant to be combined via AndTriggerCondition (Knight of the White Orchid).
+│                            # LifeGainedThisTurnCondition { Minimum } — fires on TurnEndedEvent when the
+│                            #   controller's MtgPlayer.LifeGainedThisTurn has reached Minimum (Resplendent Angel).
 │                            # Effects is a LIST — read it, not Effect. `Effect = ...` is a write-only convenience
 │                            #   that appends, kept so single-effect definitions read naturally. Multiple effects
 │                            #   resolve in order through one ResolveEffectAction, which is the only way each can
@@ -271,7 +322,10 @@ Hearthstone-style (turn-based, no blockers). The active player attacks; the oppo
 **Attacker deduplication**: `AddAttackActions` generates only one representative attack action per (target, `AttackerSignature`) pair. **This is an AI search optimisation and must be off for a human** — it suppresses the duplicate's actions entirely, so a player holding two copies of the same creature finds the second one unclickable. `GetLegalActions` takes `deduplicateAttackers` (default true) and `MtgGameManager` passes false for the human player. `AttackerSignature` captures the fields that determine combat outcome: `Name`, effective `Power`/`Toughness` (from `GetEffectiveStats`), current `Damage`, `HasFlying`, `HasTrample`, `HasDoubleStrike`, `HasLifelink`. Two creatures with identical signatures attacking the same target produce strategically equivalent game states, so only one is offered to the AI. This prevents exponential action-count growth when many identical tokens (e.g. Goblin tokens from Krenko, Mob Boss) are on the battlefield.
 
 - `HasSummoningSickness` — cannot attack the turn they enter the battlefield. Cleared by `HasHaste` on `CreatureComponent` — haste creatures enter with `HasSummoningSickness = false`.
-- `HasDoubleStrike` — creature deals damage twice. vs player: two separate damage applications, two `CombatDamageDealtToPlayerEvent`s (triggers fire twice). vs creature: deals 2× power in one pass.
+- `HasDoubleStrike` — creature deals damage twice. vs player: two separate damage applications, two `CombatDamageDealtToPlayerEvent`s (triggers fire twice). vs creature: deals 2× power in one pass. **Implies first strike** — ask `CreatureStats.StrikesFirst`, never `HasFirstStrike` alone.
+- `HasFirstStrike` — deals combat damage before creatures without it. See "First Strike" below.
+- `HasIndestructible` — damage and "destroy" do not kill it. See "Indestructible" below.
+- `IsExhausted` — cannot attack, cannot use a `RequiresTap` ability. See "Exhaust" below.
 - `HasAttacked` — can only attack once per turn.
 - `HasFlying` — **a creature with Flying can only be attacked by a creature with Flying or Reach**, and it bypasses Taunt from non-flying/non-reach creatures. Evaluated via `GetEffectiveFlying()`; the attack restriction lives in `AttackAction.CanReach`.
   - The attack restriction is what makes Flying worth anything. With no blockers there is no evasion to provide, so before it existed Flying's only function was bypassing Taunt — blank whenever the defender had no Taunt creature. Cards costed as though Flying were premium evasion were paying for nothing.
@@ -332,13 +386,24 @@ These are designed but not yet implemented. Do not re-implement or work around t
 
 | Step | Feature | Notes |
 |------|---------|-------|
-| 4 | Keyword abilities as components | Lifelink, Deathtouch, Trample etc. as individual components checked by relevant actions. Rules-engine keywords that do not use the stack. Note: `HasHaste`, `HasDoubleStrike`, and `HasDeathtouch` are currently flags on `CreatureComponent` — migrate to individual components when the full keyword system is built. |
-| — | Tap costs | Krenko's activation is modelled as a free (0-mana) ability since tap costs are not yet implemented. |
+| 4 | Keyword abilities as components | Lifelink, Deathtouch, Trample etc. as individual components checked by relevant actions. Rules-engine keywords that do not use the stack. All keywords are currently flags on `CreatureComponent` — migrate when the full keyword system is built. Note the six-site rule under "First Strike" until then. |
+| — | Vigilance | Deliberately unimplemented, not merely missing — with no blocking it has nothing to do. Eight Core Set Cube cards are printed with it and go without. Two costed options in `DesignNotes.md`; `IsExhausted` was kept separate from `HasAttacked` so either stays cheap. |
+| — | Structural replacement effects | `ReplacementModifierComponent` covers numeric replacement only. "Enters tapped" / "exile it instead" needs an action-rewrite hook in the `ImmutableGameObjects` action loop. Not built speculatively — see `DesignNotes.md`. |
+| — | Planeswalkers | No loyalty, no counters, no planeswalker-as-attack-target. Blocks 4 white cards and Kytheon's flip side. |
+| — | Colour | Cards have no colour at all, so protection-from-a-colour, "black or red" targeting, and multicolour matter are all unreachable. Protection from a creature TYPE is implemented. |
 | — | Delirium | Needs "N+ card types in your graveyard". There is no card-type system — Artifact/Enchantment/Land are strings in `Subtypes` and instants/sorceries carry no type marker at all. Deliberately cut in favour of Threshold, which covers the same design space at zero cost. |
 | — | Real Madness | Casting a discarded card requires a priority window; the engine has a stack but no priority. Modelled instead as a graveyard-active `CardDiscardedEvent` trigger — see "Discard Triggers" below. |
 | — | Deathtouch from effect damage | `DealDamageAction` always passes `fromDeathtouch: false`. Only combat can deal deathtouch damage today. Add a `SourceHasDeathtouch` field when a card needs a deathtouch ping ability. |
 
-**Completed since this table was written:** Step 3 (zone-dependent statics) is implemented — see below.
+**Completed since this table was written:** Step 3 (zone-dependent statics). Also, from the Core
+Set Cube white pass: tap costs (see "Exhaust" — `RequiresTap` now exhausts), first strike,
+indestructible, exalted, subtype protection, numeric replacement effects, activation conditions,
+and cast restrictions.
+
+**+1/+1 counters are a "won't do", not a "not yet".** A permanent `AddModifierAction` *is* the
+counter. `HasPermanentPowerBonusSpecification` answers "did it have a counter on it". A dedicated
+counter system only becomes necessary for a card that counts counters ("for each +1/+1 counter"),
+and no card yet does.
 
 ## Zone-Dependent Statics
 
@@ -358,6 +423,118 @@ A `StaticAbilityComponent` applies only while its source card sits in `ActiveInZ
   static with exactly one live at a time.
 - The events that drive all of this come from `MoveCardTracked`, not from the individual
   actions — see the `Zones/` entry in the source map.
+
+## First Strike
+
+`CreatureComponent.HasFirstStrike`, plus `Grants*` on all four keyword-grant types. Read it as
+`CreatureStats.StrikesFirst`, which folds in double strike — asking `HasFirstStrike` alone means a
+double striker trades evenly with a creature it should kill outright.
+
+Combat lives in `AttackAction.ApplyCreatureVsCreature`. Damage is normally simultaneous; first
+strike breaks that. The striking side's damage lands first, and **if it kills the other creature,
+no damage comes back**. Symmetric — a defending first-striker punishes the attacker the same way.
+If both sides strike first, neither gains anything and damage is simultaneous again.
+
+Balance note: with no blockers this is a premium keyword. Every attack into a creature it can kill
+is a free trade, which is much stronger than in real MTG where the defender chooses the fight.
+
+**`HasDoubleStrike` was half-implemented before this.** It sat on `CreatureComponent` but was
+absent from `CreatureStats` and all three `Grants*` lists, and `AttackAction` read the raw
+component — so it could never be granted and ignored keyword grants. Both are now complete. If you
+add another combat keyword, mirror all six sites (`CreatureComponent`, `CreatureStats`,
+`StaticGrantKeywordAbility`, `AppliedKeywordComponent`, `ThresholdComponent`, `GrantKeywordAction`)
+or you will reproduce the same hole.
+
+## Indestructible
+
+`CreatureComponent.HasIndestructible`, plus the four `Grants*` lists.
+
+Enforced in exactly two places: `CreatureEvaluator.IsLethalDamage` returns false for it (which
+covers combat AND effect damage in one edit, per that method's single-lethality-rule invariant),
+and `DestroyCreatureAction` skips it. Deathtouch does not beat it — `IsLethalDamage` checks
+indestructible first, matching the real rule.
+
+**Zero effective toughness still kills it.** `CheckStateBasedEffectsAction.DestroyZeroToughnessCreatures`
+is deliberately unchanged: indestructible answers damage and destruction, not a `-X/-X` shrink.
+
+## Exhaust
+
+`CreatureComponent.IsExhausted` — this engine's tapped state. An exhausted creature cannot attack
+(`AttackAction.ValidateAttacker`) and cannot activate a `RequiresTap` ability
+(`ActivatedAbilityAction`). Set by `ExhaustCreatureAction` and by paying a tap cost. Cleared by
+`StartTurnAction` **for the active player only** — that is the untap step, and it is what makes
+exhausting an opponent's creature on your turn cost them exactly one attack.
+
+**`IsExhausted` is deliberately SEPARATE from `HasAttacked`.** Attacking does not set it, so
+nothing here decides the open vigilance question. Merging the two is a small refactor if that is
+the decision — see `DesignNotes.md`.
+
+Before this existed, `ActivatedAbilityComponent.RequiresTap` only blocked activation under
+summoning sickness; the ability was effectively free to repeat within a turn. It now costs the tap.
+
+`CreatureExhaustedEvent` goes into `PendingGameEvents` so tapper payoffs (Gideon's Avenger) fire.
+`ExhaustCreatureAction` no-ops on an already-exhausted creature so payoffs cannot double-count.
+
+## Exalted
+
+`ExaltedComponent { Count }` on the creature, plus `GrantsExalted` on `StaticGrantKeywordAbility`
+and `AppliedKeywordComponent`.
+
+Counted, not merely tested: Sublime Archangel grants exalted to every other creature you control
+and each instance triggers separately, so a boolean would lose the scaling.
+
+Resolved in `AttackAction.CountExaltedIfAttackingAlone`, **before** `HasAttacked` is set on the
+attacker — "attacks alone" means no OTHER creature its controller owns has attacked this turn.
+The bonus is stamped as an `UntilEndOfTurn` `StaticPowerToughnessModifier`, added not replaced, so
+a combat trick already on the creature survives.
+
+## Replacement Effects
+
+`ReplacementModifierComponent` (abstract) + the `ReplaceableEvent` enum. Modifies the AMOUNT of an
+event before it happens: "if you would gain life, gain that much plus 1" (Angel of Vitality).
+
+Same shape as `PowerToughnessModifier` and `TriggerCondition` — abstract serializable record,
+virtual method, scanned live at the point of use by `ReplacementEngine.ApplyReplacements`. No
+delegates, no `ImmutableGameObjects` change.
+
+**It is a replacement, not a trigger, and that is the whole point.** A trigger that gains life in
+response to gaining life is an infinite loop. Because the modifier applies *inside* the originating
+action, exactly one event is emitted, carrying the already-modified amount, and nothing can feed
+itself. `CoresetCubeWhiteTests` asserts Angel of Vitality has no `TriggeredAbilityComponent`.
+
+Ordering rule: **all multipliers apply first, then all additions**, clamped at 0. Real MTG lets the
+affected player choose; a deterministic engine must fix one order, and this one stops a doubler
+from also doubling someone else's flat bonus.
+
+Call sites: `GainLifeAction`, `LoseLifeAction`, `DrainLifeAction`, and both damage paths in
+`DealDamageAction`. Adding a new replaceable event is an enum value plus one line at the action.
+
+**Scope:** numeric only. Structural replacement ("enters tapped", "if it would die, exile it
+instead") rewrites an action rather than a number and is not covered — see `DesignNotes.md`.
+
+## Protection
+
+`ProtectionFromSubtypeComponent { Subtypes }`. Protection from a **colour is impossible** — cards
+have no colour in this engine at all. Protection from a creature **type** is what exists.
+
+Two of MTG's four clauses apply: cannot be targeted by a source of that type (enforced in
+`IsCreatureSpecification.IsSatisfiedBy`, beside Shroud and Hexproof) and cannot be dealt damage by
+one (`AttackAction.ApplyDamageToCreature`, `DealDamageAction.ApplyToCreature`). "Can't be blocked"
+needs blocking; "can't be enchanted or equipped" waits for a card that needs it.
+
+`GameState.IsProtectedFrom(cardId, sourceCardId)` is the single entry point so targeting and damage
+cannot disagree about what protection means.
+
+## Events That Must Reach PendingGameEvents
+
+`ActionResult.Events` is the caller-visible log. `GameState.PendingGameEvents` is the **trigger
+feed**. Adding an event only to the former is silently inert — the trigger never fires and nothing
+errors.
+
+This bug has now been found three separate times: `CardDiscardedEvent`, then
+`PlayerGainedLifeEvent` (so *no* "whenever you gain life" trigger had ever fired), then
+`TurnEndedEvent` (so no end-of-turn trigger could fire). All three are fixed. **Any new action that
+emits an event a card might trigger on must add it to both.**
 
 ## Zero-Toughness Deaths
 
@@ -487,7 +664,31 @@ creature must meet a stats-plus-keywords rate floor, and no pure token-maker may
 worse than another. Both exist because real cards failed them. Keep the comparisons to things
 code can judge honestly; whether a card is *interesting* is a human review job.
 
-`TargetBuilder`: `Players()`, `Opponent()`, `AllYourCreatures()`, `CreaturesInYourGraveyard()`.
+`TargetBuilder`: `Players()`, `Opponent()`, `AllYourCreatures()`, `CreaturesInYourGraveyard()`,
+`OtherCreaturesYouControl()`.
+
+## Card Builder Additions for the Core Set Cube
+
+`CreatureCardBuilder`: `WithFirstStrike()`, `WithIndestructible()`, `WithShroud()`,
+`WithHexproof()`, `WithExalted(count)`, `WithProtectionFrom(params subtypes)`,
+`WithLifeTotalBonus(p, t, minimum)`, `WithPowerEqualToCreatureCount()` (the `*/*` templating — build
+the card at base 0/0), `WithSpellTax(amount)`, `WithLifeGainBonus(amount)`,
+`WithCastRestriction(...)`, and `WithRenown(n)`.
+
+`WithRenown` is worth using rather than hand-rolling: it sets `MaxTriggers = 1`, the **lifetime**
+cap, which is what "if it isn't renowned" means. A per-turn cap makes the creature grow every turn.
+
+`WithActivatedAbility` now takes `condition`, `requiresTap` and `maxPerTurn`.
+`WithTriggeredAbility` now takes `maxTriggers` and `maxPerTurn`.
+
+`SpellCardBuilder`: `WithExhaust()` (defaults to an opponent's creature) and `WithSelfBuff(p, t)`
+— a permanent buff on the card running the effect, i.e. "put a +1/+1 counter on this creature".
+`WithSelfBuff` sets `TargetContextKey = SourceCardId` rather than hardcoding `TargetIds`, which
+matters because `ResolveEffectAction` overwrites hardcoded targets on a `NoTarget()` strategy.
+`WithGrantKeyword` gained `firstStrike`, `doubleStrike`, `indestructible`, `exalted`, and the
+previously-missing `reach`/`shroud`/`hexproof`.
+
+`CreatureCostBuilder`: `SacrificeSelf()`, `Discard(count)`.
 
 `SelectCardFromZoneAction.Filter` takes a `TargetSpecification`, because subtype alone cannot
 express "a creature card" or "an instant or sorcery" — those are identified by components.

@@ -18,12 +18,37 @@ public record CreatureStats(
 	bool HasTrample,
 	bool HasShroud,
 	bool HasHexproof,
-	bool HasDeathtouch
+	bool HasDeathtouch,
+	bool HasFirstStrike,
+	bool HasDoubleStrike,
+	bool HasIndestructible
 )
 {
 	/// All-false stats for a missing card or a non-creature.
 	public static readonly CreatureStats None =
-		new(0, 0, false, false, false, false, false, false, false, false, false);
+		new(
+			0,
+			0,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false
+		);
+
+	/// <summary>
+	/// Double strike implies first strike, as in real MTG. Combat code must ask this rather
+	/// than HasFirstStrike alone, or a double striker would trade evenly with a vanilla
+	/// creature it should kill outright.
+	/// </summary>
+	public bool StrikesFirst => HasFirstStrike || HasDoubleStrike;
 }
 
 /// <summary>
@@ -65,6 +90,9 @@ public static class CreatureEvaluator
 		var hasShroud = creature.HasShroud;
 		var hasHexproof = creature.HasHexproof;
 		var hasDeathtouch = creature.HasDeathtouch;
+		var hasFirstStrike = creature.HasFirstStrike;
+		var hasDoubleStrike = creature.HasDoubleStrike;
+		var hasIndestructible = creature.HasIndestructible;
 
 		// Spell-based and static-ability-based P/T modifiers (AppliedStaticPTBoost is a subtype)
 		foreach (var modifier in card.GetComponents<PowerToughnessModifier>())
@@ -85,6 +113,9 @@ public static class CreatureEvaluator
 			hasShroud |= applied.GrantsShroud;
 			hasHexproof |= applied.GrantsHexproof;
 			hasDeathtouch |= applied.GrantsDeathtouch;
+			hasFirstStrike |= applied.GrantsFirstStrike;
+			hasDoubleStrike |= applied.GrantsDoubleStrike;
+			hasIndestructible |= applied.GrantsIndestructible;
 		}
 
 		// Threshold keyword grants are evaluated live rather than stamped, because the
@@ -104,6 +135,9 @@ public static class CreatureEvaluator
 			hasShroud |= threshold.GrantsShroud;
 			hasHexproof |= threshold.GrantsHexproof;
 			hasDeathtouch |= threshold.GrantsDeathtouch;
+			hasFirstStrike |= threshold.GrantsFirstStrike;
+			hasDoubleStrike |= threshold.GrantsDoubleStrike;
+			hasIndestructible |= threshold.GrantsIndestructible;
 		}
 
 		return new CreatureStats(
@@ -117,7 +151,10 @@ public static class CreatureEvaluator
 			hasTrample,
 			hasShroud,
 			hasHexproof,
-			hasDeathtouch
+			hasDeathtouch,
+			hasFirstStrike,
+			hasDoubleStrike,
+			hasIndestructible
 		);
 	}
 
@@ -175,6 +212,12 @@ public static class CreatureEvaluator
 	public static bool GetEffectiveDeathtouch(this GameState state, int cardId) =>
 		state.GetEffectiveStats(cardId).HasDeathtouch;
 
+	public static bool GetEffectiveFirstStrike(this GameState state, int cardId) =>
+		state.GetEffectiveStats(cardId).StrikesFirst;
+
+	public static bool GetEffectiveIndestructible(this GameState state, int cardId) =>
+		state.GetEffectiveStats(cardId).HasIndestructible;
+
 	/// <summary>
 	/// Returns true if the creature has accumulated damage >= its effective toughness.
 	/// </summary>
@@ -188,6 +231,11 @@ public static class CreatureEvaluator
 	/// Deathtouch is a property of the damage SOURCE, not the creature taking it, so callers
 	/// pass it in. Any nonzero deathtouch damage is lethal immediately — there is no lingering
 	/// "deathtouched" state to persist, which is why no marker is stored on the creature.
+	///
+	/// Indestructible is checked here, and only here, so that no amount of damage from any
+	/// source can kill it — including deathtouch, which in real MTG also fails against it.
+	/// Zero effective toughness is a different rule and still kills; see
+	/// CheckStateBasedEffectsAction.DestroyZeroToughnessCreatures.
 	/// </summary>
 	public static bool IsLethalDamage(
 		this GameState state,
@@ -201,10 +249,15 @@ public static class CreatureEvaluator
 		if (card.GetComponent<CreatureComponent>() == null)
 			return false;
 
+		var stats = state.GetEffectiveStats(cardId);
+
+		if (stats.HasIndestructible)
+			return false;
+
 		if (fromDeathtouch && totalDamage > 0)
 			return true;
 
-		return totalDamage >= state.GetEffectiveStats(cardId).Toughness;
+		return totalDamage >= stats.Toughness;
 	}
 
 	private static int DamageOn(GameState state, int cardId) =>

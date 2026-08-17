@@ -95,8 +95,10 @@ public record EventTriggerCondition : TriggerCondition
 			CreatureDamagedEvent e => e.CreatureId,
 			CreaturePlayedEvent e => e.CardId,
 			CreatureAttackedEvent e => e.CreatureId,
+			CreatureExhaustedEvent e => e.CreatureId,
 			PlayerDamagedEvent e => e.PlayerId,
 			PlayerGainedLifeEvent e => e.PlayerId,
+			PlayerLostLifeEvent e => e.PlayerId,
 			CardDrawnEvent e => e.CardId,
 			CardDiscardedEvent e => e.CardId,
 			// The milled/graveyard events report the CARD, not the player, so an

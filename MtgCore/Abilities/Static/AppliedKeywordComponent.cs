@@ -25,4 +25,12 @@ public record AppliedKeywordComponent : GameComponent
 	public bool GrantsShroud { get; init; } = false;
 	public bool GrantsHexproof { get; init; } = false;
 	public bool GrantsDeathtouch { get; init; } = false;
+	public bool GrantsFirstStrike { get; init; } = false;
+	public bool GrantsDoubleStrike { get; init; } = false;
+	public bool GrantsIndestructible { get; init; } = false;
+
+	/// <summary>
+	/// Exalted is counted rather than tested — see StaticGrantKeywordAbility.GrantsExalted.
+	/// </summary>
+	public bool GrantsExalted { get; init; } = false;
 }

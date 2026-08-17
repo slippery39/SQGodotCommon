@@ -72,6 +72,12 @@ public record IsCreatureSpecification : TargetSpecification
 				if (kw.GrantsHexproof && card.ControllerId != context.CastingPlayerId)
 					return false;
 			}
+
+			// Protection from a creature type: untargetable by a source of that type. Sits with
+			// Shroud/Hexproof because all three are "this creature can't be chosen" rules and
+			// splitting them would let one drift out of sync with the others.
+			if (context.GameState.IsProtectedFrom(candidateId, context.SourceCardId))
+				return false;
 		}
 
 		return true;

@@ -47,5 +47,16 @@ public record ActivatedAbilityComponent : GameComponent
 
 	public int MaxActivationsPerTurn { get; init; } = 1;
 	public int ActivationCount { get; init; } = 0;
+
+	/// <summary>
+	/// When true, activating exhausts the creature (see CreatureComponent.IsExhausted) and the
+	/// ability cannot be activated while it is already exhausted or summoning-sick.
+	/// </summary>
 	public bool RequiresTap { get; init; } = false;
+
+	/// <summary>
+	/// Optional gate — "activate only if...". Null means no gate.
+	/// Enforced by both ActivateAbilityAction.ValidateAdd and MtgActionGenerator.
+	/// </summary>
+	public ActivationCondition? Condition { get; init; } = null;
 }

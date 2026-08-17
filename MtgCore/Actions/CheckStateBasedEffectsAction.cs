@@ -219,24 +219,53 @@ public record CheckStateBasedEffectsAction : GameAction
 			ControllingPlayerId = card.ControllerId,
 		};
 
-		foreach (var ability in card.GetComponents<TriggeredAbilityComponent>())
+		// Indexed rather than foreach over GetComponents, because a capped ability has to be
+		// written back with an incremented count and the index is the only way to find it again.
+		var components = card.Components;
+		var changed = false;
+
+		for (int i = 0; i < components.Length; i++)
 		{
+			if (components[i] is not TriggeredAbilityComponent ability)
+				continue;
+
 			if (ability.ActiveInZone != activeZone)
 				continue;
 
 			foreach (var e in pendingEvents)
 			{
-				if (ability.Condition.IsSatisfiedBy(e, triggerContext))
-					state = state.SpawnAction(
-						new ResolveEffectAction
-						{
-							Effects = ability.Effects,
-							CastingPlayerId = card.ControllerId,
-							SourceCardId = card.Id,
-						}
-					);
+				// Re-checked inside the event loop: two matching events in one batch must not
+				// both fire a once-per-turn ability.
+				if (!ability.CanTrigger)
+					break;
+
+				if (!ability.Condition.IsSatisfiedBy(e, triggerContext))
+					continue;
+
+				state = state.SpawnAction(
+					new ResolveEffectAction
+					{
+						Effects = ability.Effects,
+						CastingPlayerId = card.ControllerId,
+						SourceCardId = card.Id,
+					}
+				);
+
+				if (ability.MaxTriggers > 0 || ability.MaxTriggersPerTurn > 0)
+				{
+					ability = ability with
+					{
+						TriggerCountTotal = ability.TriggerCountTotal + 1,
+						TriggerCountThisTurn = ability.TriggerCountThisTurn + 1,
+					};
+					components = components.SetItem(i, ability);
+					changed = true;
+				}
 			}
 		}
+
+		if (changed)
+			state = state.UpdateObject(card.Id, card with { Components = components });
 
 		return state;
 	}

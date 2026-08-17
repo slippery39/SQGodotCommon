@@ -45,9 +45,13 @@ public record EndTurnAction : GameAction
 			BattlefieldId = nextBattlefieldId,
 		};
 
-		var events = ImmutableList.Create<GameEvent>(
-			new TurnEndedEvent { PlayerId = activePlayerId }
-		);
+		// PendingGameEvents is the trigger feed. TurnEndedEvent was previously only on the
+		// caller-visible Events list, so no "at the beginning of the end step" trigger could
+		// ever fire — the same silent-inertness as CardDiscardedEvent and PlayerGainedLifeEvent.
+		var turnEndedEvent = new TurnEndedEvent { PlayerId = activePlayerId };
+		state = state with { PendingGameEvents = state.PendingGameEvents.Add(turnEndedEvent) };
+
+		var events = ImmutableList.Create<GameEvent>(turnEndedEvent);
 
 		return new ActionResult(state.SpawnAction(startTurn)) { Events = events };
 	}

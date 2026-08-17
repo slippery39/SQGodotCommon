@@ -26,6 +26,10 @@ public class CreatureCardBuilder
 	private bool _hasTrample;
 	private bool _hasDoubleStrike;
 	private bool _hasDeathtouch;
+	private bool _hasFirstStrike;
+	private bool _hasIndestructible;
+	private bool _hasShroud;
+	private bool _hasHexproof;
 
 	internal CreatureCardBuilder(string name, int manaCost, int power, int toughness)
 	{
@@ -108,6 +112,127 @@ public class CreatureCardBuilder
 	}
 
 	/// <summary>
+	/// First strike — deals combat damage before creatures without it, so an attack into a
+	/// creature it can kill takes no damage back. Strong in this engine's no-blocker combat;
+	/// see AttackAction.ApplyCreatureVsCreature.
+	/// </summary>
+	public CreatureCardBuilder WithFirstStrike()
+	{
+		_hasFirstStrike = true;
+		return this;
+	}
+
+	/// <summary>Damage and "destroy" effects do not kill it. Zero toughness still does.</summary>
+	public CreatureCardBuilder WithIndestructible()
+	{
+		_hasIndestructible = true;
+		return this;
+	}
+
+	public CreatureCardBuilder WithShroud()
+	{
+		_hasShroud = true;
+		return this;
+	}
+
+	public CreatureCardBuilder WithHexproof()
+	{
+		_hasHexproof = true;
+		return this;
+	}
+
+	/// <summary>
+	/// Exalted — "whenever a creature you control attacks alone, that creature gets +1/+1 until
+	/// end of turn." Instances stack; pass count &gt; 1 for a card with multiple.
+	/// </summary>
+	public CreatureCardBuilder WithExalted(int count = 1)
+	{
+		_extraComponents.Add(new ExaltedComponent { Count = count });
+		return this;
+	}
+
+	/// <summary>
+	/// Protection from one or more creature types. Colour protection is not possible — this
+	/// engine has no colours — so subtype protection is the whole of protection here.
+	/// </summary>
+	public CreatureCardBuilder WithProtectionFrom(params string[] subtypes)
+	{
+		_extraComponents.Add(
+			new ProtectionFromSubtypeComponent
+			{
+				Subtypes = subtypes.ToImmutableHashSet(StringComparer.OrdinalIgnoreCase),
+			}
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// "As long as your life total is at least <paramref name="minimum"/>, this gets +X/+Y."
+	/// Stamped Permanent so StartTurnAction's cleanup does not strip it.
+	/// </summary>
+	public CreatureCardBuilder WithLifeTotalBonus(int power, int toughness, int minimum = 25)
+	{
+		_extraComponents.Add(
+			new LifeTotalComponent
+			{
+				Minimum = minimum,
+				PowerBonus = power,
+				ToughnessBonus = toughness,
+				Duration = ModifierDuration.Permanent,
+			}
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// P/T equal to the number of creatures you control — the */* templating. Build the card
+	/// with base power/toughness 0 and add this.
+	/// </summary>
+	public CreatureCardBuilder WithPowerEqualToCreatureCount(
+		int powerPer = 1,
+		int toughnessPer = 1,
+		bool countsSelf = true
+	)
+	{
+		_extraComponents.Add(
+			new CreatureCountComponent
+			{
+				PowerPerCreature = powerPer,
+				ToughnessPerCreature = toughnessPer,
+				CountsSelf = countsSelf,
+				Duration = ModifierDuration.Permanent,
+			}
+		);
+		return this;
+	}
+
+	/// <summary>"Noncreature spells cost {amount} more to cast" — taxes both players.</summary>
+	public CreatureCardBuilder WithSpellTax(int amount = 1, bool nonCreatureOnly = true)
+	{
+		_extraComponents.Add(
+			new SpellTaxComponent { Amount = amount, NonCreatureOnly = nonCreatureOnly }
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// "If you would gain life, gain that much plus <paramref name="amount"/> instead."
+	/// A replacement effect, not a trigger — a trigger version would loop forever.
+	/// </summary>
+	public CreatureCardBuilder WithLifeGainBonus(int amount = 1)
+	{
+		_extraComponents.Add(new LifeGainBonusComponent { Amount = amount });
+		return this;
+	}
+
+	/// <summary>Restricts when this card may be cast at all (e.g. Serra Avenger).</summary>
+	public CreatureCardBuilder WithCastRestriction(CastRestrictionComponent restriction)
+	{
+		_extraComponents.Add(restriction);
+		return this;
+	}
+
+	/// <summary>
 	/// Threshold — while the controller's graveyard holds at least <paramref name="minimum"/>
 	/// cards, this creature gets the given bonus. Stamped Permanent so StartTurnAction's
 	/// end-of-turn cleanup does not strip it.
@@ -157,7 +282,10 @@ public class CreatureCardBuilder
 		string name,
 		int manaCost,
 		Action<SpellCardBuilder> effect,
-		Action<CreatureCostBuilder>? costs = null
+		Action<CreatureCostBuilder>? costs = null,
+		ActivationCondition? condition = null,
+		bool requiresTap = false,
+		int maxPerTurn = 1
 	)
 	{
 		var effectBuilder = new SpellCardBuilder("_", 0);
@@ -177,6 +305,9 @@ public class CreatureCardBuilder
 				ManaCost = manaCost,
 				AdditionalCosts = costBuilder.Build(),
 				Effects = effects,
+				Condition = condition,
+				RequiresTap = requiresTap,
+				MaxActivationsPerTurn = maxPerTurn,
 			}
 		);
 		return this;
@@ -202,11 +333,20 @@ public class CreatureCardBuilder
 			ActiveInZone: ZoneType.Graveyard
 		);
 
+	/// <param name="maxTriggers">
+	/// Lifetime firing cap; 0 = unlimited. Use 1 for renown ("if it isn't renowned").
+	/// </param>
+	/// <param name="maxPerTurn">
+	/// Per-turn firing cap; 0 = unlimited. Independent of <paramref name="maxTriggers"/> —
+	/// "once each turn" and "once ever" are different card text.
+	/// </param>
 	public CreatureCardBuilder WithTriggeredAbility(
 		string name,
 		TriggerCondition condition,
 		Action<SpellCardBuilder> effect,
-		ZoneType ActiveInZone = ZoneType.Battlefield
+		ZoneType ActiveInZone = ZoneType.Battlefield,
+		int maxTriggers = 0,
+		int maxPerTurn = 0
 	)
 	{
 		var effectBuilder = new SpellCardBuilder("_", 0);
@@ -223,10 +363,37 @@ public class CreatureCardBuilder
 				Condition = condition,
 				ActiveInZone = ActiveInZone,
 				Effects = effects,
+				MaxTriggers = maxTriggers,
+				MaxTriggersPerTurn = maxPerTurn,
 			}
 		);
 		return this;
 	}
+
+	/// <summary>
+	/// Renown N — "when this deals combat damage to a player, if it isn't renowned, put N
+	/// +1/+1 counters on it and it becomes renowned."
+	///
+	/// "Isn't renowned" is MaxTriggers = 1: a lifetime cap, not a per-turn one. The counters are
+	/// a permanent P/T modifier, which is what a +1/+1 counter is in this engine.
+	/// </summary>
+	public CreatureCardBuilder WithRenown(int amount = 1) =>
+		WithTriggeredAbility(
+			$"Renown {amount}",
+			TriggerConditions.OnSelfDealsCombatDamageToPlayer(),
+			eb =>
+				eb.WithAction(
+					new AddModifierAction
+					{
+						PowerBonus = amount,
+						ToughnessBonus = amount,
+						Duration = ModifierDuration.Permanent,
+						TargetContextKey = ContextKeys.SourceCardId,
+					},
+					TargetingStrategy.NoTarget()
+				),
+			maxTriggers: 1
+		);
 
 	public CreatureCardBuilder WithComponent(GameComponent component)
 	{
@@ -250,6 +417,10 @@ public class CreatureCardBuilder
 			HasTrample = _hasTrample,
 			HasDoubleStrike = _hasDoubleStrike,
 			HasDeathtouch = _hasDeathtouch,
+			HasFirstStrike = _hasFirstStrike,
+			HasIndestructible = _hasIndestructible,
+			HasShroud = _hasShroud,
+			HasHexproof = _hasHexproof,
 		};
 
 		var components = ImmutableArray
@@ -289,6 +460,23 @@ public class CreatureCostBuilder
 	public CreatureCostBuilder Sacrifice(TargetSpecification? filter = null, int count = 1)
 	{
 		_costs.Add(new SacrificeAdditionalCost { Filter = filter, Count = count });
+		return this;
+	}
+
+	/// <summary>
+	/// "Sacrifice this creature" as part of the cost — Hanged Executioner, Lena.
+	/// IsSourceCardSpecification restricts the payment to the card owning the ability.
+	/// </summary>
+	public CreatureCostBuilder SacrificeSelf()
+	{
+		_costs.Add(new SacrificeAdditionalCost { Filter = new IsSourceCardSpecification() });
+		return this;
+	}
+
+	/// <summary>"Discard a card" as part of the cost — Seasoned Hallowblade.</summary>
+	public CreatureCostBuilder Discard(int count = 1)
+	{
+		_costs.Add(new DiscardAdditionalCost { Count = count });
 		return this;
 	}
 

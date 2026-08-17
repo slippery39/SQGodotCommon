@@ -51,6 +51,9 @@ public record AttackAction : GameAction
 		if (creature.HasAttacked)
 			return ValidationResult.Invalid("Creature has already attacked this turn");
 
+		if (creature.IsExhausted)
+			return ValidationResult.Invalid("Creature is exhausted and cannot attack");
+
 		var attackerZone = gameState.GetCardZone(AttackerId);
 		if (attackerZone.ZoneType != ZoneType.Battlefield)
 			return ValidationResult.Invalid("Attacker is not on the battlefield");
@@ -187,12 +190,36 @@ public record AttackAction : GameAction
 		var attacker = (Card)gameState.GetObject(AttackerId);
 		var attackerCreature = attacker.GetComponent<CreatureComponent>()!;
 		var targetObj = gameState.GetObject(TargetId);
-		var strikeCount = attackerCreature.HasDoubleStrike ? 2 : 1;
+
+		// Exalted is resolved BEFORE HasAttacked is set, because "attacks alone" is decided by
+		// whether any OTHER creature has already attacked this turn.
+		var exalted = CountExaltedIfAttackingAlone(gameState);
 
 		var state = gameState.UpdateObject(
 			AttackerId,
 			attacker.WithComponentReplaced(attackerCreature with { HasAttacked = true })
 		);
+
+		if (exalted > 0)
+		{
+			// Added, not replaced — a combat trick already on this creature must survive.
+			var stamped = (Card)state.GetObject(AttackerId);
+			state = state.UpdateObject(
+				AttackerId,
+				stamped with
+				{
+					Components = stamped.Components.Add(
+						new StaticPowerToughnessModifier
+						{
+							PowerBonus = exalted,
+							ToughnessBonus = exalted,
+							Duration = ModifierDuration.UntilEndOfTurn,
+							SourceCardId = AttackerId,
+						}
+					),
+				}
+			);
+		}
 
 		var attackedEvent = new CreatureAttackedEvent
 		{
@@ -202,7 +229,9 @@ public record AttackAction : GameAction
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(attackedEvent) };
 		var events = ImmutableList.Create<GameEvent>(attackedEvent);
 
+		// Read stats AFTER the exalted stamp so the bonus is part of this combat.
 		var attackerStats = state.GetEffectiveStats(AttackerId);
+		var strikeCount = attackerStats.HasDoubleStrike ? 2 : 1;
 		var power = attackerStats.Power;
 
 		if (targetObj is MtgPlayer targetPlayer)
@@ -296,6 +325,19 @@ public record AttackAction : GameAction
 		return (state, events);
 	}
 
+	/// <summary>
+	/// Resolves an attack into a creature. Damage is normally simultaneous, so both sides can
+	/// die in the exchange.
+	///
+	/// FIRST STRIKE breaks the simultaneity: the striking side's damage resolves first, and if
+	/// it kills the other creature, no damage comes back. With no blockers in this engine that
+	/// makes first strike a genuinely premium keyword — every attack into a creature it can kill
+	/// becomes a free trade — which is why it costs real card text. Double strike implies first
+	/// strike (CreatureStats.StrikesFirst).
+	///
+	/// If BOTH sides strike first, neither gains anything and damage is simultaneous again,
+	/// matching the real rule.
+	/// </summary>
 	private (GameState, ImmutableList<GameEvent>) ApplyCreatureVsCreature(
 		GameState state,
 		Card targetCard,
@@ -303,11 +345,40 @@ public record AttackAction : GameAction
 		int strikeCount
 	)
 	{
-		// Both deathtouch reads happen before any damage, so a creature that dies in this
-		// exchange still deals its deathtouch damage back.
-		var attackerHasDeathtouch = state.GetEffectiveDeathtouch(AttackerId);
-		var defenderHasDeathtouch = state.GetEffectiveDeathtouch(targetCard.Id);
-		var defenderPower = state.GetEffectivePower(targetCard.Id);
+		// All combat properties are read before any damage, so a creature that dies in this
+		// exchange still deals its own damage back where the rules say it should.
+		var attackerStats = state.GetEffectiveStats(AttackerId);
+		var defenderStats = state.GetEffectiveStats(targetCard.Id);
+		var attackerHasDeathtouch = attackerStats.HasDeathtouch;
+		var defenderHasDeathtouch = defenderStats.HasDeathtouch;
+		var defenderPower = defenderStats.Power;
+
+		var attackerStrikesFirst = attackerStats.StrikesFirst;
+		var defenderStrikesFirst = defenderStats.StrikesFirst;
+
+		// Defender strikes first and attacker doesn't: the defender's damage lands first and
+		// may kill the attacker before it deals any.
+		if (defenderStrikesFirst && !attackerStrikesFirst)
+		{
+			var (s1, e1) = ApplyDamageToCreature(
+				state,
+				(Card)state.GetObject(AttackerId),
+				defenderPower,
+				defenderHasDeathtouch
+			);
+
+			// Attacker died to the first strike — it never deals its damage.
+			if (IsInGraveyard(s1, AttackerId))
+				return (s1, e1);
+
+			var (s2, e2) = ApplyDamageToCreature(
+				s1,
+				(Card)s1.GetObject(targetCard.Id),
+				power * strikeCount,
+				attackerHasDeathtouch
+			);
+			return (s2, e1.AddRange(e2));
+		}
 
 		var (state2, targetEvents) = ApplyDamageToCreature(
 			state,
@@ -316,6 +387,10 @@ public record AttackAction : GameAction
 			attackerHasDeathtouch
 		);
 		var events = targetEvents;
+
+		// Attacker strikes first and the defender is dead: nothing comes back.
+		if (attackerStrikesFirst && !defenderStrikesFirst && IsInGraveyard(state2, targetCard.Id))
+			return (state2, events);
 
 		var currentAttacker = state2.HasObject(AttackerId)
 			? (Card)state2.GetObject(AttackerId)
@@ -331,6 +406,54 @@ public record AttackAction : GameAction
 			defenderHasDeathtouch
 		);
 		return (state3, events.AddRange(attackerEvents));
+	}
+
+	/// <summary>
+	/// A creature that died in combat is moved to its owner's graveyard rather than removed
+	/// from the game state, so "did it die?" is a zone check, not an existence check.
+	/// </summary>
+	private static bool IsInGraveyard(GameState state, int cardId) =>
+		state.HasObject(cardId) && state.GetCardZone(cardId).ZoneType == ZoneType.Graveyard;
+
+	/// <summary>
+	/// Total exalted instances the attacking player controls, or 0 if this creature is not
+	/// attacking alone.
+	///
+	/// "Attacks alone" is well defined even without a declare-attackers step: no OTHER creature
+	/// its controller owns has attacked yet this turn. Must be called before HasAttacked is set
+	/// on the attacker.
+	///
+	/// Instances are counted, not merely detected, because Sublime Archangel grants exalted to
+	/// every other creature you control and each instance triggers separately.
+	/// </summary>
+	private int CountExaltedIfAttackingAlone(GameState state)
+	{
+		var battlefieldId = state.GetPlayerZoneId(AttackingPlayerId, ZoneType.Battlefield);
+		if (battlefieldId == 0)
+			return 0;
+
+		var total = 0;
+
+		foreach (var card in state.GetCardsInZone(battlefieldId))
+		{
+			if (card.ControllerId != AttackingPlayerId)
+				continue;
+
+			var creature = card.GetComponent<CreatureComponent>();
+			if (creature == null)
+				continue;
+
+			if (card.Id != AttackerId && creature.HasAttacked)
+				return 0;
+
+			total += card.GetComponent<ExaltedComponent>()?.Count ?? 0;
+
+			foreach (var applied in card.GetComponents<AppliedKeywordComponent>())
+				if (applied.GrantsExalted)
+					total++;
+		}
+
+		return total;
 	}
 
 	private static (GameState, ImmutableList<GameEvent>) ApplyDamageToPlayer(
@@ -361,13 +484,21 @@ public record AttackAction : GameAction
 		return (newState, events);
 	}
 
-	private static (GameState, ImmutableList<GameEvent>) ApplyDamageToCreature(
+	private (GameState, ImmutableList<GameEvent>) ApplyDamageToCreature(
 		GameState state,
 		Card card,
 		int amount,
 		bool fromDeathtouch = false
 	)
 	{
+		// Protection from the damage source's creature type: the damage is not dealt at all,
+		// so no marked damage and no CreatureDamagedEvent. The other combatant in this exchange
+		// is the source — for damage to the defender that is the attacker, and for the return
+		// damage it is the defender.
+		var sourceId = card.Id == AttackerId ? TargetId : AttackerId;
+		if (state.IsProtectedFrom(card.Id, sourceId))
+			return (state, ImmutableList<GameEvent>.Empty);
+
 		var creature = card.GetComponent<CreatureComponent>()!;
 		var newDamage = creature.Damage + amount;
 		var events = ImmutableList<GameEvent>.Empty;

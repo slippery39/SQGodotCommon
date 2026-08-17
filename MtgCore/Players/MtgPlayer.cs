@@ -13,10 +13,15 @@ namespace MtgCore;
 /// CurrentMana is refilled to MaxMana at the start of each turn.
 /// LandsPlayedThisTurn resets each turn; limits land plays to 1 (or more with Exploration).
 /// LandsPlayedTotal never resets; used by Terravore's dynamic P/T.
+/// LifeGainedThisTurn resets each turn; read by LifeGainedThisTurnCondition.
+/// StartingLife is the life total the player began the game with — needed by abilities gated
+/// on "N more life than your starting life total", which cannot assume 20.
 /// </summary>
 public record MtgPlayer : GameObject
 {
 	public int Life { get; init; } = 20;
+	public int StartingLife { get; init; } = 20;
+	public int LifeGainedThisTurn { get; init; } = 0;
 	public bool HasLost { get; init; } = false;
 	public int CurrentMana { get; init; } = 0;
 	public int MaxMana { get; init; } = 0;

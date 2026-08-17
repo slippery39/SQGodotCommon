@@ -36,6 +36,23 @@ C# on .NET.
 
 A CLAUDE.md file exists at the root and in each active project (`ImmutableGameObjects/ImmutableGameObjects/`, `MtgCore/`, `MtgSimulator/`). When code changes affect the architecture, patterns, rules, or known issues described in these files — update the relevant CLAUDE.md in the same step. Source maps in particular go stale quickly; keep them accurate as files are added or removed.
 
+`DesignNotes.md` at the solution root is the companion watchlist: decisions that work for the
+current scope but will need revisiting. Deliberate deferrals go there with their costed options,
+not in CLAUDE.md.
+
+## Card Sets
+
+Two draftable sets exist, both registered in `SetRegistry`:
+- **Hollowmere (HLM)** — an original graveyard-themed set. See `MtgCore/Sets/Hollowmere/`.
+- **Core Set Cube (CSC)** — built from an external cube list
+  (https://cubecobra.com/cube/list/magiccoreset20xx). White creatures are complete; the rest of
+  white and the other colours are not started. See `MtgCore/Sets/CoresetCube/`.
+
+Sets sourced from a real cube exist to force new mechanics: the card list drives the engine rather
+than the engine driving the list. When a card needs something the engine lacks, **build the
+mechanic** — dropping the ability defeats the exercise. Only cut text when the concept is
+structurally absent (no colours, no blocking, no planeswalkers), and comment the cut on the card.
+
 ## Serialization Rule
 
 All objects stored in `GameState` must be fully serializable at all times. Delegates (`Func<>`, `Action<>`), lambdas, and expression trees are **forbidden** on any type that lives in `GameState`, including all `GameObject` and `GameAction` subclasses and their data. If a delegate seems necessary, make the case explicitly before implementing — there is almost always a data-oriented alternative.

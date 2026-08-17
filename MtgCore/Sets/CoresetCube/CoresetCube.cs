@@ -9,10 +9,13 @@ public static class CoresetCube
 	public const string Name = "Core Set Cube";
 
 	/// <summary>
-	/// The full set, assembled from its theme files. Themes are split across files to keep
-	/// each reviewable; the split is by primary theme, but most cards touch several.
+	/// The full set, assembled from its colour files. The split is by the cube's own colour
+	/// sections, which keeps each file reviewable and mirrors how the source list is organised.
+	///
+	/// Tokens live in CoresetCubeTokens and are deliberately excluded — they must never be
+	/// drafted.
 	/// </summary>
-	public static IReadOnlyList<Card> Cards { get; } = [];
+	public static IReadOnlyList<Card> Cards { get; } = [.. CoresetCubeWhite.Cards];
 
 	public static CardSet Set { get; } = new(Code, Name, Cards);
 }

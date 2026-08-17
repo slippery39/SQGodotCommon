@@ -69,6 +69,11 @@ public record ActivateAbilityAction : GameAction
 				return ValidationResult.Invalid(
 					"This creature has summoning sickness and can't activate this ability"
 				);
+
+			if (creature.IsExhausted)
+				return ValidationResult.Invalid(
+					"This creature is exhausted and can't activate this ability"
+				);
 		}
 
 		if (
@@ -76,6 +81,12 @@ public record ActivateAbilityAction : GameAction
 			&& ability.ActivationCount >= ability.MaxActivationsPerTurn
 		)
 			return ValidationResult.Invalid("This ability has already been activated this turn");
+
+		if (
+			ability.Condition != null
+			&& !ability.Condition.IsSatisfied(gameState, CardId, ActivatingPlayerId)
+		)
+			return ValidationResult.Invalid(ability.Condition.Describe());
 
 		var player = gameState.GetPlayer(ActivatingPlayerId);
 		if (player.CurrentMana < ability.ManaCost)
@@ -153,6 +164,30 @@ public record ActivateAbilityAction : GameAction
 				abilityCount++;
 			}
 		}
+		// A tap cost exhausts the creature, which is the whole point of RequiresTap — before
+		// IsExhausted existed the field only blocked activation under summoning sickness and
+		// the ability was effectively free to repeat.
+		if (ability.RequiresTap)
+		{
+			for (int i = 0; i < updatedComponents.Length; i++)
+				if (updatedComponents[i] is CreatureComponent cc && !cc.IsExhausted)
+				{
+					updatedComponents = updatedComponents.SetItem(
+						i,
+						cc with
+						{
+							IsExhausted = true,
+						}
+					);
+					state = state with
+					{
+						PendingGameEvents = state.PendingGameEvents.Add(
+							new CreatureExhaustedEvent { CreatureId = CardId }
+						),
+					};
+				}
+		}
+
 		state = state.UpdateObject(CardId, card with { Components = updatedComponents });
 
 		// Spend mana

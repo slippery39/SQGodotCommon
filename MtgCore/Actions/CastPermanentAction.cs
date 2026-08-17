@@ -49,10 +49,15 @@ public record CastPermanentAction : GameAction
 		if (card.HasComponent<CreatureComponent>())
 			return ValidationResult.Invalid("Use CastCreatureAction for creature cards");
 
+		foreach (var restriction in card.GetComponents<CastRestrictionComponent>())
+			if (!restriction.CanCast(gameState, CastingPlayerId))
+				return ValidationResult.Invalid(restriction.Describe());
+
 		var player = gameState.GetPlayer(CastingPlayerId);
-		if (player.CurrentMana < card.ManaCost)
+		var effectiveCost = gameState.ComputeEffectiveCost(card, CastingPlayerId);
+		if (player.CurrentMana < effectiveCost)
 			return ValidationResult.Invalid(
-				$"Not enough mana (have {player.CurrentMana}, need {card.ManaCost})"
+				$"Not enough mana (have {player.CurrentMana}, need {effectiveCost})"
 			);
 
 		for (int i = 0; i < card.AdditionalCastCosts.Count; i++)
@@ -80,7 +85,8 @@ public record CastPermanentAction : GameAction
 			CastingPlayerId,
 			player with
 			{
-				CurrentMana = player.CurrentMana - card.ManaCost,
+				CurrentMana =
+					player.CurrentMana - state.ComputeEffectiveCost(card, CastingPlayerId),
 			}
 		);
 		state = state.MoveObject(CardId, state.GetStackId());

@@ -28,7 +28,12 @@ public record StartTurnAction : GameAction
 
 		// Refill current mana to max (no auto-increment — mana comes from lands)
 		var player = state.GetPlayer(ActivePlayerId);
-		var updatedPlayer = player with { CurrentMana = player.MaxMana, LandsPlayedThisTurn = 0 };
+		var updatedPlayer = player with
+		{
+			CurrentMana = player.MaxMana,
+			LandsPlayedThisTurn = 0,
+			LifeGainedThisTurn = 0,
+		};
 		state = state.UpdateObject(ActivePlayerId, updatedPlayer);
 
 		// Roll the storm counter into last turn's count, then reset it. The roll-over is what
@@ -64,12 +69,16 @@ public record StartTurnAction : GameAction
 			{
 				updatedComponents = updatedComponents[i] switch
 				{
+					// IsExhausted clears here, for the ACTIVE player only — that is the untap
+					// step. Exhausting an opponent's creature during your turn therefore costs
+					// them exactly one attack, not zero and not two.
 					CreatureComponent cc => updatedComponents.SetItem(
 						i,
 						cc with
 						{
 							HasSummoningSickness = false,
 							HasAttacked = false,
+							IsExhausted = false,
 						}
 					),
 					ActivatedAbilityComponent ac => updatedComponents.SetItem(
@@ -77,6 +86,15 @@ public record StartTurnAction : GameAction
 						ac with
 						{
 							ActivationCount = 0,
+						}
+					),
+					// Only the per-turn count resets. TriggerCountTotal is deliberately left
+					// alone — it is what makes renown "once ever".
+					TriggeredAbilityComponent tc => updatedComponents.SetItem(
+						i,
+						tc with
+						{
+							TriggerCountThisTurn = 0,
 						}
 					),
 					_ => updatedComponents,

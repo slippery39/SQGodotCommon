@@ -13,9 +13,11 @@ public static class EventTypeNames
 	public const string CreatureDestroyed = nameof(CreatureDestroyedEvent);
 	public const string CreaturePlayed = nameof(CreaturePlayedEvent);
 	public const string CreatureAttacked = nameof(CreatureAttackedEvent);
+	public const string CreatureExhausted = nameof(CreatureExhaustedEvent);
 	public const string CreatureDamaged = nameof(CreatureDamagedEvent);
 	public const string PlayerDamaged = nameof(PlayerDamagedEvent);
 	public const string PlayerGainedLife = nameof(PlayerGainedLifeEvent);
+	public const string PlayerLostLife = nameof(PlayerLostLifeEvent);
 	public const string CardDrawn = nameof(CardDrawnEvent);
 	public const string CardDiscarded = nameof(CardDiscardedEvent);
 	public const string CardMilled = nameof(CardMilledEvent);
