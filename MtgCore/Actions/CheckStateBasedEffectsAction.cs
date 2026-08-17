@@ -57,6 +57,7 @@ public record CheckStateBasedEffectsAction : GameAction
 		// is final — a lord leaving play and a -X/-X effect must be judged on the same pass.
 		// Deaths are appended to the pending list so death triggers still see them.
 		state = DestroyZeroToughnessCreatures(state, ref pendingEvents);
+		state = DestroyZeroLoyaltyPlaneswalkers(state, ref pendingEvents);
 
 		state = EvaluateTriggeredAbilities(state, pendingEvents);
 		state = state with { PendingGameEvents = ImmutableList<GameEvent>.Empty };
@@ -72,6 +73,44 @@ public record CheckStateBasedEffectsAction : GameAction
 	/// shrunk by a -X/-X effect takes no damage at all — without this check it would sit on
 	/// the battlefield as a 2/0, so -X/-X could never function as removal.
 	/// </summary>
+	/// <summary>
+	/// Moves any planeswalker at 0 loyalty to its owner's graveyard.
+	///
+	/// The planeswalker equivalent of the zero-toughness rule. It emits
+	/// PermanentLeftBattlefieldEvent but NOT CreatureDestroyedEvent — a walker is not a creature,
+	/// and firing the creature-death event would make every "whenever a creature dies" payoff
+	/// trigger off a planeswalker dying.
+	/// </summary>
+	private GameState DestroyZeroLoyaltyPlaneswalkers(
+		GameState state,
+		ref ImmutableList<GameEvent> pendingEvents
+	)
+	{
+		foreach (var battlefieldId in new[] { Player1BattlefieldId, Player2BattlefieldId })
+		{
+			// Materialised first: the loop moves cards out of the zone it is reading.
+			foreach (var card in state.GetCardsInZone(battlefieldId).ToList())
+			{
+				var walker = card.GetComponent<PlaneswalkerComponent>();
+				if (walker == null || walker.Loyalty > 0)
+					continue;
+
+				var leftEvent = new PermanentLeftBattlefieldEvent
+				{
+					CardId = card.Id,
+					OwnerId = card.OwnerId,
+				};
+
+				var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
+				state = state.MoveCardTracked(card.Id, graveyardId);
+
+				pendingEvents = pendingEvents.Add(leftEvent);
+			}
+		}
+
+		return state;
+	}
+
 	private GameState DestroyZeroToughnessCreatures(
 		GameState state,
 		ref ImmutableList<GameEvent> pendingEvents
@@ -283,6 +322,15 @@ public record CheckStateBasedEffectsAction : GameAction
 			var equip = card.GetComponent<EquipmentComponent>();
 			if (equip == null || equip.EquippedToCardId != leavingCardId)
 				continue;
+
+			// An aura cannot exist without the permanent it enchants, so it dies with it.
+			// Equipment merely detaches and stays on the battlefield.
+			if (equip.IsAura)
+			{
+				var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
+				state = state.MoveCardTracked(card.Id, graveyardId);
+				continue;
+			}
 
 			var updatedComponents = card.Components;
 			for (int i = 0; i < updatedComponents.Length; i++)

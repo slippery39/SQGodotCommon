@@ -106,6 +106,10 @@ This is a rules/simulation project — not a full game. Some mechanics are simpl
 | Flash | Not started | Instant-speed casting for creatures |
 | Flashback | Not started | Cast from graveyard at flashback cost |
 | Transform | Not started | Dual-face cards, IsTransformed flag |
+| Planeswalkers | Done | `PlaneswalkerComponent`; loyalty abilities are `ActivatedAbilityComponent` with `IsLoyaltyAbility`. See `MtgCore/CLAUDE.md` |
+| Auras | Done | `EquipmentComponent.IsAura` — same attachment rails as equipment |
+| Card types | Done | `CardType` flags enum on `Card`. This was the stated blocker for Delirium |
+| Convoke / X costs / Modal | Done | All route through `CostEngine` / `SelectModeAction` |
 | Storm | Done | `SpellsCastThisTurn` on `MtgGame`; `DragonStormEffectAction` deploys N dragons |
 | Suspend | Not started | Lotus Bloom uses free-mana fallback instead |
 | Fast mana | Done | `AddTemporaryManaAction` boosts `CurrentMana` without touching `MaxMana` |

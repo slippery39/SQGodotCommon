@@ -27,6 +27,12 @@ public static class ContextKeys
 	/// <summary>List of card IDs from the top N cards of a library.</summary>
 	public const string TopCardIds = "top_card_ids";
 
+	/// <summary>
+	/// The X chosen when casting an {X} spell. Injected by ResolveSpellAction so the effect can
+	/// scale with it — an X spell's effect is meaningless without this.
+	/// </summary>
+	public const string XValue = "x_value";
+
 	/// <summary>List of remaining card IDs after selections have been excluded.</summary>
 	public const string RemainingCardIds = "remaining_card_ids";
 }

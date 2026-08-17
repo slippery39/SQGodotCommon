@@ -27,6 +27,13 @@ public record CastSpellAction : GameAction
 	public ImmutableDictionary<int, ImmutableList<int>> AdditionalCostPayments { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
+	/// <summary>
+	/// The X chosen for an {X} spell. Ignored on a card with no XCostComponent.
+	/// Carried on the action rather than the card so two copies of the same card can be cast
+	/// for different X.
+	/// </summary>
+	public int XValue { get; init; } = 0;
+
 	public override ValidationResult ValidateAdd(GameState gameState)
 	{
 		if (!gameState.HasObject(CardId))
@@ -71,6 +78,13 @@ public record CastSpellAction : GameAction
 		var state = PayAdditionalCosts(gameState, card);
 
 		var player = state.GetPlayer(CastingPlayerId);
+
+		// Convoke's reduction is measured before mana is spent, so the same number of creatures
+		// that paid are the ones exhausted below.
+		var convokeUsed = card.HasComponent<ConvokeComponent>()
+			? Math.Min(state.CountConvokers(CastingPlayerId), card.ManaCost + XValue)
+			: 0;
+
 		state = state.UpdateObject(
 			CastingPlayerId,
 			player with
@@ -79,6 +93,8 @@ public record CastSpellAction : GameAction
 					player.CurrentMana - ComputeEffectiveCost(state, card, CastingPlayerId),
 			}
 		);
+
+		state = ExhaustConvokers(state, card, CastingPlayerId, convokeUsed);
 		state = state.MoveObject(CardId, state.GetStackId());
 
 		var game = state.TryGetGame();
@@ -101,6 +117,7 @@ public record CastSpellAction : GameAction
 					CardId = CardId,
 					CastingPlayerId = CastingPlayerId,
 					TargetIds = TargetIds,
+					XValue = XValue,
 				}
 			)
 		).WithEvent(castEvent);
@@ -160,6 +177,46 @@ public record CastSpellAction : GameAction
 		return state;
 	}
 
-	private static int ComputeEffectiveCost(GameState state, Card card, int playerId) =>
-		state.ComputeEffectiveCost(card, playerId);
+	private int ComputeEffectiveCost(GameState state, Card card, int playerId) =>
+		state.ComputeEffectiveCost(card, playerId, XValue);
+
+	/// <summary>
+	/// Exhausts the creatures that helped cast a convoke spell — the "tap" half of convoke.
+	/// Exactly as many as the cost reduction actually used, so a spell whose cost was already
+	/// 0 taps nobody.
+	/// </summary>
+	private static GameState ExhaustConvokers(GameState state, Card card, int playerId, int used)
+	{
+		if (used <= 0 || !card.HasComponent<ConvokeComponent>())
+			return state;
+
+		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+		var remaining = used;
+
+		foreach (var permanent in state.GetCardsInZone(battlefieldId).ToList())
+		{
+			if (remaining == 0)
+				break;
+			if (permanent.ControllerId != playerId)
+				continue;
+
+			var creature = permanent.GetComponent<CreatureComponent>();
+			if (creature == null || creature.IsExhausted || creature.HasAttacked)
+				continue;
+
+			state = state.UpdateObject(
+				permanent.Id,
+				permanent.WithComponentReplaced(creature with { IsExhausted = true })
+			);
+			state = state with
+			{
+				PendingGameEvents = state.PendingGameEvents.Add(
+					new CreatureExhaustedEvent { CreatureId = permanent.Id }
+				),
+			};
+			remaining--;
+		}
+
+		return state;
+	}
 }

@@ -185,3 +185,43 @@ that lets a component rewrite a spawned `GameAction` before it runs, plus an alr
 marker so a replacement cannot replace its own output. Deliberately not built speculatively.
 
 ---
+
+## Conditional team anthems have no home
+
+**Concern:** Path of Bravery reads "as long as your life total is at or above your starting life
+total, creatures you control get +1/+1". It is implemented as an UNCONDITIONAL anthem.
+
+`StaticAbilityEngine` is a push model: it stamps `AppliedStaticPTBoost` onto affected permanents
+and only re-stamps on `CreatureEnteredBattlefieldEvent` / `PermanentLeftBattlefieldEvent`. A team
+anthem gated on a life total would go stale the instant anyone took damage, because nothing
+re-stamps on a life change.
+
+**Why it's fine now:** One card, and the unconditional version is a coherent card at the same rate.
+A single creature CAN be conditionally buffed today — `LifeTotalComponent` and `ThresholdComponent`
+are live-evaluated `PowerToughnessModifier`s and are always correct. Only the team-wide case is
+missing.
+
+**Watch for:** A second card wanting it. The fix is a live-evaluated team anthem: rather than
+stamping, have `GetEffectiveStats` scan the controller's battlefield for
+`ConditionalStaticBoost` sources. That is the O(k) board scan the push model was built to avoid,
+so measure before adopting it — or accept staleness and re-stamp on a wider event set.
+
+---
+
+## Card types exist now, and Delirium is unblocked
+
+**Note, not a concern.** `MtgCore/CLAUDE.md` previously recorded Delirium as permanently deferred
+because "there is no card-type system — Artifact/Enchantment/Land are strings in `Subtypes` and
+instants/sorceries carry no type marker at all". That is no longer true: `CardType` is a real flags
+enum on `Card`.
+
+Nothing counts distinct types in a graveyard yet, but the blocker named in that note is gone. If a
+future set wants Delirium, it is now a counting helper rather than a subsystem.
+
+**Watch for:** the derivation fallback in `Card.EffectiveTypes`. It reports `Instant|Sorcery` for
+any card that never declared a type, which is honest ("a spell, kind unknown") but means
+`HasType(CardType.Instant)` is true for every undeclared spell. Code needing the distinction must
+test one flag and not the other. Migrating the older `CardFactory.Spell(...)` cards to
+`.Instant(...)` / `.Sorcery(...)` would remove the ambiguity for good.
+
+---

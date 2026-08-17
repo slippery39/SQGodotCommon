@@ -15,7 +15,12 @@ public static class CoresetCube
 	/// Tokens live in CoresetCubeTokens and are deliberately excluded — they must never be
 	/// drafted.
 	/// </summary>
-	public static IReadOnlyList<Card> Cards { get; } = [.. CoresetCubeWhite.Cards];
+	public static IReadOnlyList<Card> Cards { get; } =
+		[
+			.. CoresetCubeWhite.Cards,
+			.. CoresetCubeWhiteSpells.Cards,
+			.. CoresetCubeWhitePermanents.Cards,
+		];
 
 	public static CardSet Set { get; } = new(Code, Name, Cards);
 }

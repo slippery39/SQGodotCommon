@@ -97,6 +97,14 @@ public record StartTurnAction : GameAction
 							TriggerCountThisTurn = 0,
 						}
 					),
+					// Loyalty itself never resets — only the once-per-turn activation does.
+					PlaneswalkerComponent pw => updatedComponents.SetItem(
+						i,
+						pw with
+						{
+							HasActivatedThisTurn = false,
+						}
+					),
 					_ => updatedComponents,
 				};
 			}

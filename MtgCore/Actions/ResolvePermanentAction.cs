@@ -26,6 +26,10 @@ public record ResolvePermanentAction : GameAction
 		var battlefieldId = state.GetPlayerZoneId(card.ControllerId, ZoneType.Battlefield);
 		state = state.MoveObject(CardId, battlefieldId);
 
+		// Planeswalkers arrive at their starting loyalty. Shared with PutIntoBattlefieldAction so
+		// the cast path and the reanimate path cannot disagree.
+		state = state.StampPlaneswalkerEntry(CardId);
+
 		var enteredEvent = new PermanentEnteredBattlefieldEvent
 		{
 			CardId = CardId,

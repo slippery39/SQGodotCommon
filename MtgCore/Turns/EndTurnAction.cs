@@ -37,6 +37,12 @@ public record EndTurnAction : GameAction
 
 		var state = gameState.UpdateObject(GameId, updatedGame);
 
+		// Strip "this turn" replacement effects from BOTH players. Done here rather than in
+		// StartTurnAction because that only touches the active player, so a prevention effect
+		// cleaned up there would linger through the opponent's entire turn.
+		state = ClearEndOfTurnReplacements(state, Player1Id);
+		state = ClearEndOfTurnReplacements(state, Player2Id);
+
 		var nextBattlefieldId = state.GetPlayerZoneId(nextPlayerId, ZoneType.Battlefield);
 
 		var startTurn = new StartTurnAction
@@ -54,5 +60,22 @@ public record EndTurnAction : GameAction
 		var events = ImmutableList.Create<GameEvent>(turnEndedEvent);
 
 		return new ActionResult(state.SpawnAction(startTurn)) { Events = events };
+	}
+
+	private static GameState ClearEndOfTurnReplacements(GameState state, int playerId)
+	{
+		if (state.GetObject(playerId) is not MtgPlayer player)
+			return state;
+
+		var kept = player
+			.Components.Where(c =>
+				c is not ReplacementModifierComponent r
+				|| r.Duration != ModifierDuration.UntilEndOfTurn
+			)
+			.ToImmutableArray();
+
+		return kept.Length == player.Components.Length
+			? state
+			: state.UpdateObject(playerId, player with { Components = kept });
 	}
 }

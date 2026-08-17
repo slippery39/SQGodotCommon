@@ -55,10 +55,20 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 				targets = targets.Add(contextId);
 		}
 
+		// Any permanent, not just creatures. Filtering on CreatureComponent alone silently
+		// dropped planeswalkers, artifacts and enchantments — a reanimation effect aimed at one
+		// simply did nothing, with no error.
+		//
+		// CreatureComponent is accepted on its own as well as PermanentComponent. Production
+		// cards always carry both, but a creature is a permanent by definition, and requiring
+		// the marker here would reject the many hand-built test creatures that omit it.
 		var cards = targets
 			.Where(id => state.HasObject(id))
 			.Select(id => state.GetObject(id) as Card)
-			.Where(card => card?.HasComponent<CreatureComponent>() == true)
+			.Where(card =>
+				card?.HasComponent<PermanentComponent>() == true
+				|| card?.HasComponent<CreatureComponent>() == true
+			)
 			.ToList();
 
 		foreach (var card in cards)
@@ -78,6 +88,21 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 		Card card
 	)
 	{
+		// A planeswalker enters at its starting loyalty and with its activation available, so a
+		// walker that died and was reanimated comes back whole rather than at 0.
+		if (card.HasComponent<PlaneswalkerComponent>())
+		{
+			state = state.StampPlaneswalkerEntry(card.Id);
+
+			var walkerEntered = new PermanentEnteredBattlefieldEvent
+			{
+				CardId = card.Id,
+				PlayerId = card.ControllerId,
+			};
+			state = state with { PendingGameEvents = state.PendingGameEvents.Add(walkerEntered) };
+			return (state, ImmutableList.Create<GameEvent>(walkerEntered));
+		}
+
 		var creature = card.GetComponent<CreatureComponent>();
 		if (creature == null)
 			return (state, ImmutableList<GameEvent>.Empty);

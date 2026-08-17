@@ -59,4 +59,18 @@ public record ActivatedAbilityComponent : GameComponent
 	/// Enforced by both ActivateAbilityAction.ValidateAdd and MtgActionGenerator.
 	/// </summary>
 	public ActivationCondition? Condition { get; init; } = null;
+
+	/// <summary>
+	/// True for a planeswalker loyalty ability. Needed as an explicit flag rather than inferred
+	/// from a nonzero LoyaltyCost, because a 0-cost loyalty ability is a real thing
+	/// (Gideon Jura's third ability) and would otherwise read as "not a loyalty ability".
+	/// </summary>
+	public bool IsLoyaltyAbility { get; init; } = false;
+
+	/// <summary>
+	/// Loyalty added on activation. Positive for "+1", negative for "-3", zero for "0".
+	/// Only meaningful when IsLoyaltyAbility is true; the ability is illegal if it would take
+	/// loyalty below zero.
+	/// </summary>
+	public int LoyaltyCost { get; init; } = 0;
 }

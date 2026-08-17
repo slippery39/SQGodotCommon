@@ -168,7 +168,8 @@ public class CoresetCubeWhiteTests
 	{
 		var set = SetRegistry.Get(CoresetCube.Code);
 
-		Assert.That(set.Cards, Has.Count.EqualTo(38));
+		// The whole white section: 38 creatures plus 29 non-creatures.
+		Assert.That(set.Cards, Has.Count.EqualTo(67));
 		Assert.That(set.Draftable, Is.Not.Empty);
 	}
 

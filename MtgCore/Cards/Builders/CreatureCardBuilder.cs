@@ -26,6 +26,7 @@ public class CreatureCardBuilder
 	private bool _hasTrample;
 	private bool _hasDoubleStrike;
 	private bool _hasDeathtouch;
+	private CardType _extraTypes = CardType.None;
 	private bool _hasFirstStrike;
 	private bool _hasIndestructible;
 	private bool _hasShroud;
@@ -401,6 +402,16 @@ public class CreatureCardBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// Adds types beyond Creature — for artifact creatures and enchantment creatures.
+	/// Creature is always included; this is additive.
+	/// </summary>
+	public CreatureCardBuilder WithTypes(CardType types)
+	{
+		_extraTypes |= types;
+		return this;
+	}
+
 	// ===== BUILD =====
 
 	public Card Build()
@@ -431,6 +442,7 @@ public class CreatureCardBuilder
 		{
 			Name = _name,
 			ManaCost = _manaCost,
+			Types = CardType.Creature | _extraTypes,
 			AdditionalCastCosts = _castCosts.ToImmutableList(),
 			Subtypes = _subtypes.ToImmutableHashSet(StringComparer.OrdinalIgnoreCase),
 			Components = components,

@@ -55,6 +55,13 @@ public static class MtgCardMapper
 		if (card.HasSubtype("Land"))
 			return card.HasSubtype("Basic") ? "Basic Land" : "Land";
 
+		// Card.EffectiveTypes now answers this properly. Checked before the component-sniffing
+		// fallbacks below, which stay for hand-built cards that never declared a type.
+		if (card.HasType(CardType.Planeswalker))
+			return "Planeswalker";
+		if (card.HasType(CardType.Enchantment))
+			return card.GetComponent<EquipmentComponent>()?.IsAura == true ? "Aura" : "Enchantment";
+
 		if (card.HasComponent<CreatureComponent>())
 		{
 			// No "Creature — " prefix when there are subtypes: the P/T badge already says the card
@@ -65,7 +72,20 @@ public static class MtgCardMapper
 		}
 
 		if (card.HasSubtype("Artifact"))
-			return "Artifact";
+			return card.HasComponent<EquipmentComponent>() ? "Equipment" : "Artifact";
+
+		// Instant and Sorcery are distinguishable for any card built through
+		// CardFactory.Instant/.Sorcery. A card built through the older Spell() entry point
+		// declares no type, and Card.EffectiveTypes reports Instant|Sorcery for it — "this is a
+		// spell, but which kind is unknown". Requiring exactly one is what tells the two cases
+		// apart, so an undeclared spell still reads a flat "Spell" rather than guessing.
+		var isInstant = card.HasType(CardType.Instant);
+		var isSorcery = card.HasType(CardType.Sorcery);
+
+		if (isInstant && !isSorcery)
+			return "Instant";
+		if (isSorcery && !isInstant)
+			return "Sorcery";
 		if (card.HasComponent<SpellComponent>())
 			return "Spell";
 
@@ -82,6 +102,13 @@ public static class MtgCardMapper
 	/// </param>
 	public static string GetPowerToughness(Card card, GameState state)
 	{
+		// A planeswalker's badge shows loyalty. Without this the card renders with no number at
+		// all, so a player cannot see how close it is to dying — the only thing that matters
+		// about it on the board.
+		var walker = card.GetComponent<PlaneswalkerComponent>();
+		if (walker != null)
+			return state == null ? $"{walker.StartingLoyalty}" : $"{walker.Loyalty}";
+
 		var creature = card.GetComponent<CreatureComponent>();
 		if (creature == null)
 			return null;

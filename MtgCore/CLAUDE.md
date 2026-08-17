@@ -73,6 +73,11 @@ MtgCore/
 │                            # DealDamageAction has PlayerOutputKey and CreatureOutputKey for pipeline chaining.
 ├── Costs/                   # AdditionalCost (abstract), LifeAdditionalCost, SacrificeAdditionalCost, DiscardAdditionalCost
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
+│                            # CardType — [Flags] enum: Creature, Instant, Sorcery, Artifact,
+│                            #   Enchantment, Land, Planeswalker, plus AnyPermanent / AnySpell.
+│                            # Card.Types (declared, set by builders) and Card.EffectiveTypes
+│                            #   (falls back to derivation). Ask Card.HasType(...) — see "Card Types".
+│                            # PlaneswalkerComponent { StartingLoyalty, Loyalty, HasActivatedThisTurn }
 │                            # Card lookup: use CardLibrary.GetByName("Name") — do NOT add new static per-card accessor methods.
 │                            # The existing static accessors (LightningBolt(), GrizzlyBears(), etc.) are legacy and are being phased out.
 │   ├── Builders/            # Fluent card builder API: CardFactory (entry point), SpellCardBuilder, CreatureCardBuilder,
@@ -117,10 +122,13 @@ MtgCore/
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Terravore. Must be stamped with Duration = Permanent in card definitions.
 ├── Sets/                    # CardSet (Code, Name, Cards; Draftable filters lands), SetRegistry (All, Default, Get)
 │   ├── CoresetCube/         # The CSC set, built from an external cube list (cubecobra magiccoreset20xx).
-│   │                        # CoresetCube.cs assembles the colour files; CoresetCubeWhite.cs holds all 38
-│   │                        # white creatures; CoresetCubeTokens.cs holds token templates (excluded from the
-│   │                        # card list). Read CoresetCubeWhite's header before adding cards — it lists every
-│   │                        # divergence from the printed cards and why. Non-creature white is not built yet.
+│   │                        # WHITE IS COMPLETE — all 67 cards. CoresetCube.cs assembles the files:
+│   │                        #   CoresetCubeWhite.cs           38 creatures
+│   │                        #   CoresetCubeWhiteSpells.cs     10 instants + 6 sorceries
+│   │                        #   CoresetCubeWhitePermanents.cs 8 enchantments + 1 equipment + 4 planeswalkers
+│   │                        #   CoresetCubeTokens.cs          token templates, excluded from the card list
+│   │                        # Read each file's header before adding cards — they list every divergence from
+│   │                        # the printed card and why. Other colours not started.
 │   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
 │                            # HollowmereTokens.cs holds token templates (excluded from the card list).
 │                            # Read the header of Hollowmere.cs before adding cards — it states the rate bar and
@@ -389,8 +397,10 @@ These are designed but not yet implemented. Do not re-implement or work around t
 | 4 | Keyword abilities as components | Lifelink, Deathtouch, Trample etc. as individual components checked by relevant actions. Rules-engine keywords that do not use the stack. All keywords are currently flags on `CreatureComponent` — migrate when the full keyword system is built. Note the six-site rule under "First Strike" until then. |
 | — | Vigilance | Deliberately unimplemented, not merely missing — with no blocking it has nothing to do. Eight Core Set Cube cards are printed with it and go without. Two costed options in `DesignNotes.md`; `IsExhausted` was kept separate from `HasAttacked` so either stays cheap. |
 | — | Structural replacement effects | `ReplacementModifierComponent` covers numeric replacement only. "Enters tapped" / "exile it instead" needs an action-rewrite hook in the `ImmutableGameObjects` action loop. Not built speculatively — see `DesignNotes.md`. |
-| — | Planeswalkers | No loyalty, no counters, no planeswalker-as-attack-target. Blocks 4 white cards and Kytheon's flip side. |
 | — | Colour | Cards have no colour at all, so protection-from-a-colour, "black or red" targeting, and multicolour matter are all unreachable. Protection from a creature TYPE is implemented. |
+| — | Conditional static abilities | `StaticAbilityEngine` is a push model that only re-stamps on ETB/LTB, so an anthem gated on a changing value (Path of Bravery's "while your life is at or above your starting total") would go stale the moment anyone took damage. Live-evaluated `PowerToughnessModifier`s dodge this for a single creature; a conditional TEAM anthem has no equivalent yet. |
+| — | Card-type counting | `CardType` now exists, so Delirium is finally expressible — nothing counts distinct types in a graveyard yet, but the blocker is gone. |
+| — | Double-faced planeswalkers | Kytheon's flip needs `TransformComponent` to swap a creature into a planeswalker, which crosses the creature/permanent routing split. |
 | — | Delirium | Needs "N+ card types in your graveyard". There is no card-type system — Artifact/Enchantment/Land are strings in `Subtypes` and instants/sorceries carry no type marker at all. Deliberately cut in favour of Threshold, which covers the same design space at zero cost. |
 | — | Real Madness | Casting a discarded card requires a priority window; the engine has a stack but no priority. Modelled instead as a graveyard-active `CardDiscardedEvent` trigger — see "Discard Triggers" below. |
 | — | Deathtouch from effect damage | `DealDamageAction` always passes `fromDeathtouch: false`. Only combat can deal deathtouch damage today. Add a `SourceHasDeathtouch` field when a card needs a deathtouch ping ability. |
@@ -535,6 +545,118 @@ This bug has now been found three separate times: `CardDiscardedEvent`, then
 `PlayerGainedLifeEvent` (so *no* "whenever you gain life" trigger had ever fired), then
 `TurnEndedEvent` (so no end-of-turn trigger could fire). All three are fixed. **Any new action that
 emits an event a card might trigger on must add it to both.**
+
+A second, quieter version of the same failure: an event with no `EventTypeNames` constant, or no
+entry in `EventTriggerCondition.ExtractSubjectId`, cannot be filtered even though it fires.
+`PermanentLeftBattlefieldEvent` had neither until Oblivion Ring needed it. **Adding an event means
+three places: the record, the constant, and `ExtractSubjectId`.**
+
+## Card Types
+
+`CardType` is a `[Flags]` enum; `Card.Types` holds what a card declares and `Card.EffectiveTypes`
+falls back to deriving them. **Always ask `card.HasType(...)`, never `Types` directly.**
+
+Before this, type lived in two unrelated places — `CreatureComponent` meant "creature", and magic
+strings in `Subtypes` meant "Artifact"/"Enchantment" — while instants and sorceries carried no
+marker at all. "Noncreature spell", "nonland permanent" and Delirium were all unexpressible.
+
+The derivation fallback exists so the type system could land without editing every hand-built card
+in `CardLibrary`. It reads `CreatureComponent` and the subtype strings. It **cannot** tell an
+instant from a sorcery, so it reports `Instant|Sorcery` — "a spell, kind unknown". Code that needs
+the distinction must test for one flag and not the other; `MtgCardMapper.GetTypeLine` shows the
+pattern.
+
+`CardFactory.Instant(...)` / `.Sorcery(...)` declare it properly. `.Spell(...)` remains for the
+several hundred existing cards and leaves it undeclared.
+
+Specs: `IsCardTypeSpecification { Types }` (any-of) and `IsNotCardTypeSpecification { Types }`
+(none-of). The negative form is its own type rather than `NotSpecification`-wrapping the positive
+one, because the negation must still require the candidate to *be* a card — a plain `Not` matches
+players too.
+
+## Planeswalkers
+
+`PlaneswalkerComponent { StartingLoyalty, Loyalty, HasActivatedThisTurn }` sits alongside
+`PermanentComponent` and never alongside `CreatureComponent`, so a walker routes through
+`CastPermanentAction` like any other non-creature permanent.
+
+**Loyalty abilities are `ActivatedAbilityComponent` with `IsLoyaltyAbility = true` and a
+`LoyaltyCost`** (positive for `+1`, negative for `-3`, zero for `0`). `IsLoyaltyAbility` is an
+explicit flag rather than "LoyaltyCost != 0" because a 0-cost loyalty ability is a real card
+(Gideon Jura) and would otherwise read as a normal free ability.
+
+**The once-per-turn limit is per WALKER, not per ability** — it lives on `PlaneswalkerComponent`,
+not on `ActivatedAbilityComponent.ActivationCount`. Tracking it per-ability would let a walker use
+its `+1` and its `-3` on the same turn. `StartTurnAction` clears the flag; loyalty itself never
+resets.
+
+- **Entering play**: `GameState.StampPlaneswalkerEntry` sets loyalty to `StartingLoyalty`. Called
+  from BOTH `ResolvePermanentAction` (cast) and `PutIntoBattlefieldAction` (reanimate), so a
+  reanimated walker comes back whole rather than at 0.
+- **Combat**: `AttackAction` accepts a planeswalker target; damage reduces loyalty, nothing strikes
+  back, and lifelink still applies. Taunt is enforced — a Taunt creature cannot be ignored in
+  favour of the walker behind it. `MtgActionGenerator` offers walkers as attack targets.
+- **Death**: `CheckStateBasedEffectsAction.DestroyZeroLoyaltyPlaneswalkers`. It emits
+  `PermanentLeftBattlefieldEvent` but **not** `CreatureDestroyedEvent` — a walker is not a
+  creature, and firing that would make every "whenever a creature dies" payoff trigger on it.
+- **Ultimates**: `GrantEmblemAction` adds an `Emblem` to a player. Emblems already existed but were
+  only reachable by playing a land with `GrantEmblemComponent`, so no effect could grant one.
+
+## Attachments: Equipment and Auras
+
+One mechanism, not two. `EquipmentComponent.IsAura` is the only difference, and it changes exactly
+two behaviours:
+- an aura attaches once on entering the battlefield (an ETB trigger) instead of via a repeatable
+  equip ability;
+- when the enchanted permanent leaves, the aura goes to the graveyard rather than detaching and
+  staying put (`CheckStateBasedEffectsAction.DetachEquipmentFromLeavingCard`).
+
+Real MTG picks an aura's target as the spell is cast. Nothing here can respond between cast and
+resolution, so the ETB-trigger route is observationally identical and needs no new casting plumbing.
+
+`EquippedBoostComponent` carries the keyword grants and `PreventsAttacking`. **Its keywords are read
+in their own pass in `GetEffectiveStats`, not via `AppliedKeywordComponent`** — Permanent-duration
+applied keywords are owned exclusively by `StaticAbilityEngine`, which would strip one stamped by
+`AttachEquipmentAction`.
+
+`PreventsAttacking` (Pacifism, Faith's Fetters) surfaces as `CreatureStats.CantAttack` and is
+checked in `AttackAction.ValidateAttacker`. It is deliberately **not** permanent exhaustion:
+`IsExhausted` is cleared every turn, so a Pacifism built on it would wear off after one turn.
+
+Builder: `CardFactory.Enchantment(...).AsAura(power, toughness, flying:, firstStrike:, …)`.
+
+## Cost Modification
+
+Everything routes through `CostEngine.ComputeEffectiveCost(card, playerId, xValue)`. Order:
+**X added first, then reductions (affinity, convoke), then taxes, floored at 0.** X is part of the
+printed cost, so a convoked X-spell has its whole cost reduced.
+
+- **X costs**: `XCostComponent` on the card; the chosen X lives on `CastSpellAction.XValue`, not on
+  the card, so two copies can be cast for different X. `ResolveSpellAction` injects it into the
+  effect's context as `ContextKeys.XValue`. `MtgActionGenerator` offers one action per affordable X,
+  capped at 8 so a big mana pool cannot explode the action count.
+- **Convoke**: `ConvokeComponent`. Costs {1} less per *ready* creature (not exhausted, not already
+  attacked) and exhausts exactly that many on cast. Which creatures help is automatic — there is no
+  colour to match, so a per-creature choice would reach the same board state with extra UI.
+- **Spell tax**: `SpellTaxComponent`, scanned on **both** battlefields, since Vryn Wingmare taxes
+  its own controller too.
+
+## Modal Spells
+
+`SelectModeAction` (a `ChoiceAction` over mode names) followed by `ApplyChosenModeAction`, which
+indexes a list of actions with the chosen index. Modes are stored as data — a name and an action —
+never as delegates, so a modal card stays serializable inside `GameState`.
+
+## Multi-Effect Targeting
+
+**A single chosen target is applied to EVERY effect whose strategy requires user selection.**
+Both `MtgActionGenerator.AddTargetedSpellAction` and `ActivateAbilityAction` do this.
+
+This is what cards like Feat of Resistance ("put a +1/+1 counter on target creature you control.
+It gains hexproof") and Basri Ket's `+1` actually say: one target, several effects. Filling only
+the first effect's index left the rest with empty target lists — the extra effects silently did
+nothing, and for a spell the card was never offered as castable at all, because validation then
+found no targets for the unfilled effect.
 
 ## Zero-Toughness Deaths
 
@@ -689,6 +811,21 @@ matters because `ResolveEffectAction` overwrites hardcoded targets on a `NoTarge
 previously-missing `reach`/`shroud`/`hexproof`.
 
 `CreatureCostBuilder`: `SacrificeSelf()`, `Discard(count)`.
+
+`SpellCardBuilder` (second pass): `WithScry(n)` — a real choice with `MinChoices = 0`, since an
+unconditional bottom-the-top-card is strictly worse than doing nothing half the time;
+`WithDamagePrevention(...)`, `WithConditionalAction(condition, action)`, `WithModes(...)`,
+`WithXCost()`, `WithConvoke()`, `WithTypes(...)`.
+
+`PermanentCardBuilder` (new — `CardFactory.Enchantment` / `.Artifact` / `.Planeswalker`):
+`WithLoyalty(n)`, `WithLoyaltyAbility(name, cost, effect)`, `AsAura(...)`, `WithStaticBoost(...)`,
+plus the usual `WithEtbTrigger` / `WithTriggeredAbility` / `WithActivatedAbility` / `WithComponent`.
+Its `WithEtbTrigger` uses `OnSelfEntersBattlefieldAsNonCreature` — a non-creature permanent never
+fires `CreatureEnteredBattlefield`, so the creature version silently never triggers.
+
+Deliberately a separate class from `CreatureCardBuilder` rather than a shared base: several hundred
+existing cards depend on that builder, and re-parenting it to extract four small methods is a far
+riskier change than duplicating them.
 
 `SelectCardFromZoneAction.Filter` takes a `TargetSpecification`, because subtype alone cannot
 express "a creature card" or "an instant or sorcery" — those are identified by components.

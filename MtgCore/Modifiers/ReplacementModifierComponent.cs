@@ -48,6 +48,41 @@ public abstract record ReplacementModifierComponent : GameComponent
 
 	/// <summary>Multiplies the amount. 1 = no change; 2 = doubling effects.</summary>
 	public virtual int Multiplier => 1;
+
+	/// <summary>
+	/// UntilEndOfTurn replacements are stamped on the PLAYER by a spell (Safe Passage) and
+	/// stripped by EndTurnAction. Permanent ones live on a battlefield permanent and last as
+	/// long as it does.
+	///
+	/// Cleared by EndTurnAction rather than StartTurnAction because "this turn" must end when
+	/// the turn does — StartTurnAction only touches the active player, so a prevention effect
+	/// cleaned up there would survive through the opponent's whole turn.
+	/// </summary>
+	public ModifierDuration Duration { get; init; } = ModifierDuration.Permanent;
+}
+
+/// <summary>
+/// "Prevent the next N damage" / "prevent all damage that would be dealt to you and creatures
+/// you control this turn" — Harm's Way, Safe Passage.
+///
+/// PreventAll is a Multiplier of 0 rather than a large negative Bonus, so it prevents any amount
+/// rather than only amounts up to some cap.
+/// </summary>
+public record DamagePreventionComponent : ReplacementModifierComponent
+{
+	public ReplaceableEvent Target { get; init; } = ReplaceableEvent.DamageToPlayer;
+
+	/// <summary>Prevent every point of damage, not just <see cref="Amount"/> of it.</summary>
+	public bool PreventAll { get; init; } = false;
+
+	/// <summary>Points of damage prevented when <see cref="PreventAll"/> is false.</summary>
+	public int Amount { get; init; } = 2;
+
+	public override ReplaceableEvent Event => Target;
+
+	public override int Multiplier => PreventAll ? 0 : 1;
+
+	public override int Bonus => PreventAll ? 0 : -Amount;
 }
 
 /// <summary>

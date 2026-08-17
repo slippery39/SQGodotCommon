@@ -45,8 +45,8 @@ not in CLAUDE.md.
 Two draftable sets exist, both registered in `SetRegistry`:
 - **Hollowmere (HLM)** — an original graveyard-themed set. See `MtgCore/Sets/Hollowmere/`.
 - **Core Set Cube (CSC)** — built from an external cube list
-  (https://cubecobra.com/cube/list/magiccoreset20xx). White creatures are complete; the rest of
-  white and the other colours are not started. See `MtgCore/Sets/CoresetCube/`.
+  (https://cubecobra.com/cube/list/magiccoreset20xx). **White is complete — all 67 cards.** Other
+  colours are not started. See `MtgCore/Sets/CoresetCube/`.
 
 Sets sourced from a real cube exist to force new mechanics: the card list drives the engine rather
 than the engine driving the list. When a card needs something the engine lacks, **build the

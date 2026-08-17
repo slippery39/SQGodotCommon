@@ -24,6 +24,9 @@ public record ResolveSpellAction : GameAction
 	public ImmutableDictionary<int, ImmutableList<int>> TargetIds { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
+	/// <summary>The X chosen at cast time. Injected into the effect's context so it can scale.</summary>
+	public int XValue { get; init; } = 0;
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var card = (Card)gameState.GetObject(CardId);
@@ -46,6 +49,9 @@ public record ResolveSpellAction : GameAction
 				CastingPlayerId = CastingPlayerId,
 				SourceCardId = CardId,
 				TargetIds = TargetIds,
+				// X reaches the effect through the context, which is the only channel a stored
+				// ActionTemplate can read at resolution time.
+				InputContext = InputContext.SetItem(ContextKeys.XValue, XValue),
 			};
 
 			if (spellComponent.HasStorm)

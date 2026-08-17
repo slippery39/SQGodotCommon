@@ -16,9 +16,20 @@ namespace MtgCore;
 /// </summary>
 public static class CostEngine
 {
-	public static int ComputeEffectiveCost(this GameState state, Card card, int playerId)
+	public static int ComputeEffectiveCost(
+		this GameState state,
+		Card card,
+		int playerId,
+		int xValue = 0
+	)
 	{
 		var cost = card.ManaCost;
+
+		// X is part of the printed cost, so it is added BEFORE any reduction — a convoked
+		// X-spell should have its whole cost reduced, not just the fixed part.
+		var x = card.GetComponent<XCostComponent>();
+		if (x != null)
+			cost += Math.Max(0, xValue) * x.Multiplier;
 
 		if (card.HasComponent<AffinityComponent>())
 		{
@@ -29,7 +40,38 @@ public static class CostEngine
 			cost = Math.Max(0, cost - artifactCount);
 		}
 
+		if (card.HasComponent<ConvokeComponent>())
+			cost = Math.Max(0, cost - CountConvokers(state, playerId));
+
 		return Math.Max(0, cost + ComputeTax(state, card));
+	}
+
+	/// <summary>
+	/// Creatures that can help cast a convoke spell: ready ones the player controls.
+	///
+	/// Exhausted creatures and creatures that already attacked are excluded, which is what stops
+	/// convoke being free after a full attack — the same bodies cannot both swing and pay.
+	/// </summary>
+	public static int CountConvokers(this GameState state, int playerId)
+	{
+		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+		if (battlefieldId == 0)
+			return 0;
+
+		var count = 0;
+		foreach (var card in state.GetCardsInZone(battlefieldId))
+		{
+			if (card.ControllerId != playerId)
+				continue;
+
+			var creature = card.GetComponent<CreatureComponent>();
+			if (creature == null || creature.IsExhausted || creature.HasAttacked)
+				continue;
+
+			count++;
+		}
+
+		return count;
 	}
 
 	/// <summary>

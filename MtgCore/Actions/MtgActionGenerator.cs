@@ -227,8 +227,12 @@ public static class MtgActionGenerator
 		if (effectIndex >= 0)
 		{
 			AddTargetedSpellAction(state, playerId, card, costPayments, effectIndex, actions);
+			return;
 		}
-		else
+
+		// An X spell is offered once per affordable X. Offering only X=0 would make every
+		// X spell look like a blank card to the AI and give a human no way to choose.
+		foreach (var x in AffordableXValues(state, card, playerId))
 		{
 			var castAction = new CastSpellAction
 			{
@@ -236,11 +240,35 @@ public static class MtgActionGenerator
 				CastingPlayerId = playerId,
 				AdditionalCostPayments = costPayments,
 				TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
+				XValue = x,
 			};
 			if (state.TryAddAction(castAction).Success)
 				actions.Add(castAction);
 		}
 	}
+
+	/// <summary>
+	/// Every X the player could pay for, or just {0} for a card with no {X} in its cost.
+	///
+	/// Capped so a huge mana pool cannot explode the action count — beyond a handful, larger X
+	/// is almost always strictly better anyway, so the cap costs the AI nothing real.
+	/// </summary>
+	private static IEnumerable<int> AffordableXValues(GameState state, Card card, int playerId)
+	{
+		if (!card.HasComponent<XCostComponent>())
+			return [0];
+
+		var available = state.GetPlayer(playerId).CurrentMana;
+		var maxX = 0;
+		while (
+			maxX < MaxXChoices && state.ComputeEffectiveCost(card, playerId, maxX + 1) <= available
+		)
+			maxX++;
+
+		return Enumerable.Range(0, maxX + 1);
+	}
+
+	private const int MaxXChoices = 8;
 
 	/// <remarks>
 	/// TargetIds is keyed by EFFECT INDEX — CastSpellAction.ValidateTargets looks the targets up
@@ -257,7 +285,8 @@ public static class MtgActionGenerator
 		List<GameAction> actions
 	)
 	{
-		var targetedEffect = card.GetComponent<SpellComponent>()!.Effects[effectIndex];
+		var effects = card.GetComponent<SpellComponent>()!.Effects;
+		var targetedEffect = effects[effectIndex];
 		var context = new TargetingContext
 		{
 			GameState = state,
@@ -266,17 +295,28 @@ public static class MtgActionGenerator
 		};
 		var validTargets = targetedEffect.TargetingStrategy.GetValidTargets(context);
 
+		// Every effect that needs a target gets the SAME chosen one. A card like Feat of
+		// Resistance reads "put a +1/+1 counter on target creature you control. It gains
+		// hexproof" — one target, two effects. Filling only the first index left the second
+		// effect with an empty target list, so it silently did nothing and, because
+		// ValidateAdd then found no targets for it, the whole spell was never offered at all.
+		var targetedIndices = new List<int>();
+		for (int i = 0; i < effects.Count; i++)
+			if (effects[i].TargetingStrategy.RequiresUserSelection)
+				targetedIndices.Add(i);
+
 		foreach (var target in validTargets)
 		{
+			var targetMap = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+			foreach (var index in targetedIndices)
+				targetMap = targetMap.Add(index, ImmutableList.Create(target));
+
 			var castAction = new CastSpellAction
 			{
 				CardId = card.Id,
 				CastingPlayerId = playerId,
 				AdditionalCostPayments = costPayments,
-				TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
-					effectIndex,
-					ImmutableList.Create(target)
-				),
+				TargetIds = targetMap,
 			};
 			if (state.TryAddAction(castAction).Success)
 			{
@@ -386,9 +426,12 @@ public static class MtgActionGenerator
 		bool deduplicateAttackers
 	)
 	{
+		// Planeswalkers are legal attack targets alongside creatures and the player itself.
 		var attackTargets = state
 			.GetCardsInZone(opponentBattlefieldId)
-			.Where(c => c.HasComponent<CreatureComponent>())
+			.Where(c =>
+				c.HasComponent<CreatureComponent>() || c.HasComponent<PlaneswalkerComponent>()
+			)
 			.Select(c => c.Id)
 			.Prepend(opponentId)
 			.ToList();
@@ -407,7 +450,7 @@ public static class MtgActionGenerator
 		foreach (var attacker in state.GetCardsInZone(battlefieldId))
 		{
 			var creature = attacker.GetComponent<CreatureComponent>();
-			if (creature == null || creature.HasAttacked)
+			if (creature == null || creature.HasAttacked || creature.IsExhausted)
 				continue;
 			if (creature.HasSummoningSickness && !state.GetEffectiveHaste(attacker.Id))
 				continue;
@@ -420,8 +463,11 @@ public static class MtgActionGenerator
 				creature.Damage,
 				stats.HasFlying,
 				stats.HasTrample,
-				creature.HasDoubleStrike,
-				stats.HasLifelink
+				stats.HasDoubleStrike,
+				stats.HasLifelink,
+				stats.HasFirstStrike,
+				stats.HasIndestructible,
+				stats.HasDeathtouch
 			);
 
 			foreach (var targetId in attackTargets)
@@ -559,6 +605,14 @@ public static class MtgActionGenerator
 /// Two creatures with the same signature produce identical outcomes when attacking
 /// the same target, so only one representative action is generated per (target, sig) pair.
 /// </summary>
+/// <summary>
+/// The fields that determine an attack's outcome. Two attackers with the same signature
+/// attacking the same target produce strategically identical states, so the AI only needs one.
+///
+/// Every combat-relevant keyword MUST appear here. Omitting one silently merges two creatures
+/// that fight differently — a first striker deduped against a vanilla creature of the same size
+/// would hide the trade that only one of them wins.
+/// </summary>
 file record struct AttackerSignature(
 	string Name,
 	int Power,
@@ -567,5 +621,8 @@ file record struct AttackerSignature(
 	bool HasFlying,
 	bool HasTrample,
 	bool HasDoubleStrike,
-	bool HasLifelink
+	bool HasLifelink,
+	bool HasFirstStrike,
+	bool HasIndestructible,
+	bool HasDeathtouch
 );

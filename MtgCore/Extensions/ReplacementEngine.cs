@@ -34,13 +34,27 @@ public static class ReplacementEngine
 		if (amount == 0)
 			return 0;
 
-		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
-		if (battlefieldId == 0)
-			return amount;
-
 		var multiplier = 1;
 		var bonus = 0;
 		var found = false;
+
+		// Replacements stamped directly on the PLAYER. This is where a one-shot spell effect
+		// lives — Safe Passage has no permanent to attach to, so without this a prevention
+		// instant would have nowhere to exist.
+		if (state.GetObject(playerId) is MtgPlayer player)
+			foreach (var modifier in player.GetComponents<ReplacementModifierComponent>())
+			{
+				if (modifier.Event != evt)
+					continue;
+
+				found = true;
+				multiplier *= modifier.Multiplier;
+				bonus += modifier.Bonus;
+			}
+
+		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+		if (battlefieldId == 0)
+			return found ? Math.Max(0, amount * multiplier + bonus) : amount;
 
 		foreach (var card in state.GetCardsInZone(battlefieldId))
 		{

@@ -33,6 +33,13 @@ public static class EventTypeNames
 	public const string CombatDamageDealtToPlayer = nameof(CombatDamageDealtToPlayerEvent);
 	public const string PermanentEnteredBattlefield = nameof(PermanentEnteredBattlefieldEvent);
 
+	/// <summary>
+	/// Any permanent leaving the battlefield — death, exile or sacrifice. A trigger on this must
+	/// be ActiveInZone = Graveyard when it watches for its OWN departure, since the card has
+	/// already moved by the time the event is scanned.
+	/// </summary>
+	public const string PermanentLeftBattlefield = nameof(PermanentLeftBattlefieldEvent);
+
 	public const string PermanentPlayed = nameof(PermanentPlayedEvent);
 	public const string LandPlayed = nameof(LandPlayedEvent);
 	public const string ArtifactLeftBattlefield = nameof(ArtifactLeftBattlefieldEvent);

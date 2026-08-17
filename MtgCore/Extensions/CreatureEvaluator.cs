@@ -21,7 +21,8 @@ public record CreatureStats(
 	bool HasDeathtouch,
 	bool HasFirstStrike,
 	bool HasDoubleStrike,
-	bool HasIndestructible
+	bool HasIndestructible,
+	bool CantAttack
 )
 {
 	/// All-false stats for a missing card or a non-creature.
@@ -29,6 +30,7 @@ public record CreatureStats(
 		new(
 			0,
 			0,
+			false,
 			false,
 			false,
 			false,
@@ -93,6 +95,7 @@ public static class CreatureEvaluator
 		var hasFirstStrike = creature.HasFirstStrike;
 		var hasDoubleStrike = creature.HasDoubleStrike;
 		var hasIndestructible = creature.HasIndestructible;
+		var cantAttack = false;
 
 		// Spell-based and static-ability-based P/T modifiers (AppliedStaticPTBoost is a subtype)
 		foreach (var modifier in card.GetComponents<PowerToughnessModifier>())
@@ -116,6 +119,26 @@ public static class CreatureEvaluator
 			hasFirstStrike |= applied.GrantsFirstStrike;
 			hasDoubleStrike |= applied.GrantsDoubleStrike;
 			hasIndestructible |= applied.GrantsIndestructible;
+		}
+
+		// Keyword grants from an attached Equipment or Aura. A separate pass from
+		// AppliedKeywordComponent because those are owned by StaticAbilityEngine, which would
+		// strip a Permanent-duration one stamped by AttachEquipmentAction.
+		foreach (var boost in card.GetComponents<EquippedBoostComponent>())
+		{
+			hasHaste |= boost.GrantsHaste;
+			hasFlying |= boost.GrantsFlying;
+			hasTaunt |= boost.GrantsTaunt;
+			hasReach |= boost.GrantsReach;
+			hasLifelink |= boost.GrantsLifelink;
+			hasTrample |= boost.GrantsTrample;
+			hasShroud |= boost.GrantsShroud;
+			hasHexproof |= boost.GrantsHexproof;
+			hasDeathtouch |= boost.GrantsDeathtouch;
+			hasFirstStrike |= boost.GrantsFirstStrike;
+			hasDoubleStrike |= boost.GrantsDoubleStrike;
+			hasIndestructible |= boost.GrantsIndestructible;
+			cantAttack |= boost.PreventsAttacking;
 		}
 
 		// Threshold keyword grants are evaluated live rather than stamped, because the
@@ -154,7 +177,8 @@ public static class CreatureEvaluator
 			hasDeathtouch,
 			hasFirstStrike,
 			hasDoubleStrike,
-			hasIndestructible
+			hasIndestructible,
+			cantAttack
 		);
 	}
 

@@ -18,6 +18,7 @@ public class SpellCardBuilder
 	private readonly List<GameComponent> _extraComponents = new();
 	private bool _hasStorm;
 	private int? _flashbackManaCost;
+	private CardType _types = CardType.None;
 
 	private GameAction? _pendingAction;
 	private TargetingStrategy? _pendingTargeting;
@@ -357,6 +358,119 @@ public class SpellCardBuilder
 			PlayerIdContextKey = ContextKeys.CastingPlayerId,
 		};
 		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Scry N — look at the top N cards of your library and put any of them on the bottom.
+	///
+	/// The choice is real: MinChoices is 0, so keeping everything on top is legal. Bottoming
+	/// unconditionally would not be scry — it is strictly worse than doing nothing whenever the
+	/// top card is one you wanted.
+	/// </summary>
+	public SpellCardBuilder WithScry(int amount = 1)
+	{
+		FlushPending();
+		_pendingAction = new PipelineAction
+		{
+			Steps = ImmutableList.Create<GameAction>(
+				new SelectTopCardsToBottomAction
+				{
+					Prompt = $"Scry {amount} — choose any to put on the bottom",
+					Amount = amount,
+					MinChoices = 0,
+					MaxChoices = amount,
+					OutputKey = "scry_to_bottom",
+				},
+				new MoveCardToBottomOfLibraryAction
+				{
+					CardIdsContextKey = "scry_to_bottom",
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+				}
+			),
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Prevent damage for the rest of the turn — Safe Passage, Harm's Way. Stamped on the
+	/// player, since a one-shot spell has no permanent to live on.
+	/// </summary>
+	public SpellCardBuilder WithDamagePrevention(
+		bool preventAll = true,
+		int amount = 2,
+		bool includeCreatures = true
+	)
+	{
+		FlushPending();
+		_pendingAction = new PreventDamageAction
+		{
+			PreventAll = preventAll,
+			Amount = amount,
+			PreventsCreatureDamage = includeCreatures,
+		};
+		_pendingTargeting = TargetingStrategy.Self();
+		return this;
+	}
+
+	/// <summary>
+	/// Wraps the next effect in an intervening-if clause, checked at resolution —
+	/// "if you have less life than an opponent, you gain 6 life".
+	/// </summary>
+	public SpellCardBuilder WithConditionalAction(ActivationCondition condition, GameAction action)
+	{
+		FlushPending();
+		_pendingAction = new ConditionalAction { Condition = condition, Action = action };
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// "Choose one —". Each mode is a display name and the action it runs.
+	/// </summary>
+	public SpellCardBuilder WithModes(params (string Name, GameAction Action)[] modes)
+	{
+		FlushPending();
+		_pendingAction = new PipelineAction
+		{
+			Steps = ImmutableList.Create<GameAction>(
+				new SelectModeAction
+				{
+					Prompt = "Choose one",
+					ModeNames = modes.Select(m => m.Name).ToImmutableList(),
+					MinChoices = 1,
+					MaxChoices = 1,
+					OutputKey = "chosen_mode",
+				},
+				new ApplyChosenModeAction
+				{
+					Modes = modes.Select(m => m.Action).ToImmutableList(),
+					ModeContextKey = "chosen_mode",
+				}
+			),
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Adds {X} to the mana cost. The effect reads the chosen X from pipeline context under
+	/// ContextKeys.XValue — an X spell whose effect ignores it is just an overpriced spell.
+	/// </summary>
+	public SpellCardBuilder WithXCost(int multiplier = 1)
+	{
+		_extraComponents.Add(new XCostComponent { Multiplier = multiplier });
+		return this;
+	}
+
+	/// <summary>
+	/// Convoke — costs {1} less per ready creature you control, and exhausts exactly that many
+	/// when cast. See ConvokeComponent for why the choice of which creatures is automatic.
+	/// </summary>
+	public SpellCardBuilder WithConvoke()
+	{
+		_extraComponents.Add(new ConvokeComponent());
 		return this;
 	}
 
@@ -739,8 +853,19 @@ public class SpellCardBuilder
 		{
 			Name = _name,
 			ManaCost = _manaCost,
+			Types = _types,
 			AdditionalCastCosts = _castCosts.ToImmutableList(),
 			Components = components.ToImmutable(),
 		};
+	}
+
+	/// <summary>
+	/// Declares the card's types. Left None, Card.EffectiveTypes derives Instant|Sorcery, which
+	/// is why every pre-existing spell keeps working without an edit.
+	/// </summary>
+	public SpellCardBuilder WithTypes(CardType types)
+	{
+		_types = types;
+		return this;
 	}
 }

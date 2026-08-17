@@ -54,6 +54,10 @@ public record AttackAction : GameAction
 		if (creature.IsExhausted)
 			return ValidationResult.Invalid("Creature is exhausted and cannot attack");
 
+		// Pacifism and friends. Distinct from exhaustion, which clears every turn.
+		if (gameState.GetEffectiveStats(AttackerId).CantAttack)
+			return ValidationResult.Invalid("This creature can't attack");
+
 		var attackerZone = gameState.GetCardZone(AttackerId);
 		if (attackerZone.ZoneType != ZoneType.Battlefield)
 			return ValidationResult.Invalid("Attacker is not on the battlefield");
@@ -77,15 +81,22 @@ public record AttackAction : GameAction
 		}
 		else if (targetObj is Card targetCard)
 		{
-			if (!targetCard.HasComponent<CreatureComponent>())
-				return ValidationResult.Invalid("Target card is not a creature");
+			var isPlaneswalker = targetCard.HasComponent<PlaneswalkerComponent>();
+
+			if (!targetCard.HasComponent<CreatureComponent>() && !isPlaneswalker)
+				return ValidationResult.Invalid("Target card is not a creature or planeswalker");
 
 			var targetZone = gameState.GetCardZone(TargetId);
 			if (targetZone.ZoneType != ZoneType.Battlefield)
-				return ValidationResult.Invalid("Target creature is not on the battlefield");
+				return ValidationResult.Invalid("Target is not on the battlefield");
 
 			if (targetCard.ControllerId == AttackingPlayerId)
-				return ValidationResult.Invalid("Cannot attack your own creature");
+				return ValidationResult.Invalid("Cannot attack your own permanent");
+
+			// A planeswalker has no Flying, so CanReach does not apply — but Taunt still does,
+			// which is what stops a Taunt creature being ignored in favour of the walker behind it.
+			if (isPlaneswalker)
+				return ValidateTauntConstraint(gameState, targetCard.ControllerId);
 
 			if (
 				!CanReach(
@@ -246,6 +257,25 @@ public record AttackAction : GameAction
 					new GainLifeAction
 					{
 						Amount = totalDamage,
+						TargetIds = ImmutableList.Create(AttackingPlayerId),
+					}
+				);
+
+			return new ActionResult(state) { Events = events };
+		}
+
+		// Attacking a planeswalker: loyalty absorbs the damage and nothing strikes back. Lifelink
+		// still applies — damage was dealt.
+		if (targetObj is Card walkerCard && walkerCard.HasComponent<PlaneswalkerComponent>())
+		{
+			var totalToWalker = power * strikeCount;
+			state = state.DamagePlaneswalker(walkerCard.Id, totalToWalker);
+
+			if (attackerStats.HasLifelink)
+				state = state.SpawnAction(
+					new GainLifeAction
+					{
+						Amount = totalToWalker,
 						TargetIds = ImmutableList.Create(AttackingPlayerId),
 					}
 				);

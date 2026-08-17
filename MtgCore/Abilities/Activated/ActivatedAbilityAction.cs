@@ -88,6 +88,25 @@ public record ActivateAbilityAction : GameAction
 		)
 			return ValidationResult.Invalid(ability.Condition.Describe());
 
+		if (ability.IsLoyaltyAbility)
+		{
+			var walker = card.GetComponent<PlaneswalkerComponent>();
+			if (walker == null)
+				return ValidationResult.Invalid("Only a planeswalker has loyalty abilities");
+
+			// One loyalty ability per PLANESWALKER per turn — not per ability. Checking
+			// ActivationCount instead would let a walker use its +1 and its -3 on the same turn.
+			if (walker.HasActivatedThisTurn)
+				return ValidationResult.Invalid(
+					"This planeswalker has already used a loyalty ability this turn"
+				);
+
+			if (walker.Loyalty + ability.LoyaltyCost < 0)
+				return ValidationResult.Invalid(
+					$"Not enough loyalty (have {walker.Loyalty}, need {-ability.LoyaltyCost})"
+				);
+		}
+
 		var player = gameState.GetPlayer(ActivatingPlayerId);
 		if (player.CurrentMana < ability.ManaCost)
 			return ValidationResult.Invalid(
@@ -188,6 +207,20 @@ public record ActivateAbilityAction : GameAction
 				}
 		}
 
+		// Pay the loyalty cost and spend the walker's one activation for the turn. Done here
+		// rather than as an effect so the cost is paid even if the effect fizzles.
+		if (ability.IsLoyaltyAbility)
+			for (int i = 0; i < updatedComponents.Length; i++)
+				if (updatedComponents[i] is PlaneswalkerComponent pw)
+					updatedComponents = updatedComponents.SetItem(
+						i,
+						pw with
+						{
+							Loyalty = pw.Loyalty + ability.LoyaltyCost,
+							HasActivatedThisTurn = true,
+						}
+					);
+
 		state = state.UpdateObject(CardId, card with { Components = updatedComponents });
 
 		// Spend mana
@@ -200,10 +233,15 @@ public record ActivateAbilityAction : GameAction
 			}
 		);
 
-		// Build target map for ResolveEffectAction (single effect at index 0)
-		var targetIds = TargetIds.IsEmpty
-			? ImmutableDictionary<int, ImmutableList<int>>.Empty
-			: ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(0, TargetIds);
+		// Every effect that needs a target gets the SAME chosen one. Basri Ket's "+1: put a
+		// +1/+1 counter on up to one target creature. It gains indestructible" is one target and
+		// two effects; mapping only index 0 left the second effect with an empty target list, so
+		// the indestructible half silently did nothing.
+		var targetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+		if (!TargetIds.IsEmpty)
+			for (int i = 0; i < ability.Effects.Count; i++)
+				if (ability.Effects[i].TargetingStrategy.RequiresUserSelection)
+					targetIds = targetIds.Add(i, TargetIds);
 
 		return new ActionResult(
 			state.SpawnActions(
