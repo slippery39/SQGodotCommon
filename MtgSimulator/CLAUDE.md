@@ -242,6 +242,20 @@ menu, do not hardcode it), seed.
 The final `Console.ReadKey` throws `InvalidOperationException` when stdin is redirected. It fires
 *after* the model is written, so the file is safe; ignore it.
 
+**`sim_results/` is relative to the SHELL's working directory, not the project's.** `dotnet run`
+does not chdir into the project, so running from the repo root writes `./sim_results/` while
+running from inside `MtgSimulator.Console/` writes `MtgSimulator.Console/sim_results/`. Two
+directories with the same filename in them is how a freshly trained model gets silently
+overwritten by a stale one — which happened, and the only symptom was every card's learned value
+being byte-identical after a retrain that had clearly produced different summary numbers.
+
+Always run from the repo root, and check `Prior` against the run's reported base win rate before
+shipping a model:
+
+```
+python -c "import json;d=json.load(open('sim_results/draft_training_csc.json'));print(d['Prior'],d['Perspectives'])"
+```
+
 Reference rate, measured: 5 drafts = 140 games = 28s, so ~5.6 games/sec. 300 drafts ≈ 8 400 games
 ≈ 25 minutes.
 

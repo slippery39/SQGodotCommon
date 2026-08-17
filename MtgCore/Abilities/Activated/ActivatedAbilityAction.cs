@@ -129,7 +129,17 @@ public record ActivateAbilityAction : GameAction
 				SourceCardId = CardId,
 				CastingPlayerId = ActivatingPlayerId,
 			};
-			if (!ability.TargetedEffect.TargetingStrategy.ValidateTargets(TargetIds, context))
+
+			// "Up to one target creature" — every planeswalker plus ability. Activating with no
+			// target is legal and the effect simply does nothing; the loyalty still changes.
+			// Without this a walker on an empty board could not use ANY ability, so it could
+			// never build toward its ultimate.
+			var optional = ability.IsLoyaltyAbility && TargetIds.IsEmpty;
+
+			if (
+				!optional
+				&& !ability.TargetedEffect.TargetingStrategy.ValidateTargets(TargetIds, context)
+			)
 				return ValidationResult.Invalid("Invalid targets for ability");
 		}
 

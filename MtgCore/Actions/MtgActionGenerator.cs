@@ -579,6 +579,22 @@ public static class MtgActionGenerator
 				CastingPlayerId = playerId,
 			};
 			var validTargets = ability.TargetedEffect!.TargetingStrategy.GetValidTargets(context);
+
+			// A loyalty ability may always be activated, even with nothing to target. Every
+			// planeswalker's plus ability reads "up to one target creature", and requiring a
+			// target made Ajani, Caller of the Pride offer NO abilities at all on an empty
+			// board — so it could never build loyalty toward its ultimate, which is the whole
+			// point of a plus ability. The effect simply does nothing; the loyalty still moves.
+			if (validTargets.Count == 0 && ability.IsLoyaltyAbility)
+				return new ActivateAbilityAction
+				{
+					CardId = cardId,
+					ActivatingPlayerId = playerId,
+					AbilityIndex = abilityIndex,
+					AdditionalCostPayments = costPayments,
+					TargetIds = ImmutableList<int>.Empty,
+				};
+
 			if (validTargets.Count == 0)
 				return null;
 
