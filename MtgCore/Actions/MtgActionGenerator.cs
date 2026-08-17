@@ -139,6 +139,11 @@ public static class MtgActionGenerator
 				continue;
 			}
 
+			// Counter traps fire from hand by themselves and are never cast. Offering one would
+			// be offering a blank spell at full price.
+			if (card.HasComponent<CounterTrapComponent>())
+				continue;
+
 			var costPayments = BuildAdditionalCostPayments(
 				state,
 				playerId,

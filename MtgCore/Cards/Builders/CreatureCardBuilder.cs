@@ -234,6 +234,18 @@ public class CreatureCardBuilder
 	}
 
 	/// <summary>
+	/// "This spell costs {amount} less to cast if …" — Stormwing Entity. Applied by CostEngine
+	/// alongside affinity and convoke, so the reductions compose rather than fight.
+	/// </summary>
+	public CreatureCardBuilder WithCostReduction(int amount, ActivationCondition condition)
+	{
+		_extraComponents.Add(
+			new ConditionalCostReductionComponent { Amount = amount, Condition = condition }
+		);
+		return this;
+	}
+
+	/// <summary>
 	/// Threshold — while the controller's graveyard holds at least <paramref name="minimum"/>
 	/// cards, this creature gets the given bonus. Stamped Permanent so StartTurnAction's
 	/// end-of-turn cleanup does not strip it.

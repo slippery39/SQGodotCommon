@@ -34,6 +34,33 @@ public record CreatureComponent : GameComponent
 	/// </summary>
 	public bool IsExhausted { get; init; } = false;
 
+	/// <summary>
+	/// Extra untap steps this creature must sit out — "doesn't untap during its controller's next
+	/// untap step". StartTurnAction decrements this instead of clearing IsExhausted while it is
+	/// above zero, so one point equals one additional turn frozen.
+	///
+	/// A plain tapper leaves this at 0 and the creature untaps normally next turn.
+	/// </summary>
+	public int FrozenTurns { get; init; } = 0;
+
+	/// <summary>
+	/// "Doesn't untap for as long as you control this" (Dungeon Geists). Holds the id of the
+	/// permanent maintaining the lock; while that card is on the battlefield the creature never
+	/// untaps, and CheckStateBasedEffectsAction releases it when the source leaves.
+	///
+	/// Distinct from FrozenTurns because the duration is not a number of turns — it is a
+	/// dependency on another permanent, and a turn count could not express "indefinitely".
+	/// </summary>
+	public int FrozenBySourceId { get; init; } = 0;
+
+	/// <summary>
+	/// This creature was attacked this turn. Set by AttackAction on the TARGET, cleared by
+	/// StartTurnAction. Read by TauntUntilAttackedComponent so Fog Bank soaks exactly one attack
+	/// per turn and then stops compelling — otherwise a damage-immune Taunt wall is unanswerable
+	/// in an engine with no way to go wide.
+	/// </summary>
+	public bool WasAttackedThisTurn { get; init; } = false;
+
 	public bool HasHaste { get; init; } = false;
 	public bool HasDoubleStrike { get; init; } = false;
 

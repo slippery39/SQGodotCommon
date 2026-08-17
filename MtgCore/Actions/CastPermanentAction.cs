@@ -104,6 +104,12 @@ public record CastPermanentAction : GameAction
 		var playedEvent = new PermanentPlayedEvent { CardId = CardId, PlayerId = CastingPlayerId };
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(playedEvent) };
 
+		// Negate hits enchantments and planeswalkers too — see CastSpellAction for the ordering.
+		var counter = CounterTrapEngine.TryCounterCast(state, CardId, CastingPlayerId);
+		state = counter.State;
+		if (counter.Countered)
+			return new ActionResult(state).WithEvent(playedEvent);
+
 		return new ActionResult(
 			state.SpawnAction(
 				new ResolvePermanentAction { CardId = CardId, CastingPlayerId = CastingPlayerId }

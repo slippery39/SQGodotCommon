@@ -25,6 +25,7 @@ public static class EventTypeNames
 	public const string CardLeftGraveyard = nameof(CardLeftGraveyardEvent);
 	public const string CardRevealed = nameof(CardRevealedEvent);
 	public const string SpellCast = nameof(SpellCastEvent);
+	public const string SpellCountered = nameof(SpellCounteredEvent);
 	public const string TurnStarted = nameof(TurnStartedEvent);
 	public const string TurnEnded = nameof(TurnEndedEvent);
 	public const string LibraryEmpty = nameof(LibraryEmptyEvent);

@@ -24,15 +24,25 @@ public record EndTurnAction : GameAction
 	{
 		var game = gameState.GetGame(GameId);
 		var activePlayerId = game.ActivePlayerId;
-		var nextPlayerId = activePlayerId == Player1Id ? Player2Id : Player1Id;
 
-		var newTurnNumber = activePlayerId == Player2Id ? game.TurnNumber + 1 : game.TurnNumber;
+		// An extra turn is spent here rather than passing play: the same player starts again, and
+		// the round counter does not advance, because no round completed.
+		var takingExtraTurn = game.ExtraTurnsQueued > 0;
+
+		var nextPlayerId =
+			takingExtraTurn ? activePlayerId
+			: activePlayerId == Player1Id ? Player2Id
+			: Player1Id;
+
+		var newTurnNumber =
+			!takingExtraTurn && activePlayerId == Player2Id ? game.TurnNumber + 1 : game.TurnNumber;
 
 		var updatedGame = game with
 		{
 			ActivePlayerId = nextPlayerId,
 			TurnNumber = newTurnNumber,
 			Phase = TurnPhase.Main,
+			ExtraTurnsQueued = takingExtraTurn ? game.ExtraTurnsQueued - 1 : 0,
 		};
 
 		var state = gameState.UpdateObject(GameId, updatedGame);

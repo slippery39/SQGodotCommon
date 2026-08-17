@@ -54,6 +54,13 @@ public record CastSpellAction : GameAction
 		if (spellComponent == null)
 			return ValidationResult.Invalid("Card is not a spell");
 
+		// A counter trap is never cast — it fires from hand on its own. Without this it would be
+		// castable for full price and do nothing at all, and the AI would happily do that.
+		if (card.HasComponent<CounterTrapComponent>())
+			return ValidationResult.Invalid(
+				"A counterspell trap cannot be cast; it fires from hand"
+			);
+
 		foreach (var restriction in card.GetComponents<CastRestrictionComponent>())
 			if (!restriction.CanCast(gameState, CastingPlayerId))
 				return ValidationResult.Invalid(restriction.Describe());
@@ -109,6 +116,14 @@ public record CastSpellAction : GameAction
 
 		var castEvent = new SpellCastEvent { CardId = CardId, CastingPlayerId = CastingPlayerId };
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(castEvent) };
+
+		// Counter traps fire AFTER the cast is counted and announced — a countered spell was
+		// still cast, so prowess and storm see it. If one fires, the card has already been moved
+		// and no resolve action must be spawned.
+		var counter = CounterTrapEngine.TryCounterCast(state, CardId, CastingPlayerId);
+		state = counter.State;
+		if (counter.Countered)
+			return new ActionResult(state).WithEvent(castEvent);
 
 		return new ActionResult(
 			state.SpawnAction(

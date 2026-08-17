@@ -103,6 +103,14 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 			return (state, ImmutableList.Create<GameEvent>(walkerEntered));
 		}
 
+		// Clone resolves BEFORE summoning sickness is stamped, so the copy is treated as a fresh
+		// creature rather than inheriting the original's attack state.
+		if (card.HasComponent<CopyOnEnterComponent>())
+		{
+			state = state.ApplyCopyOnEnter(card.Id);
+			card = (Card)state.GetObject(card.Id);
+		}
+
 		var creature = card.GetComponent<CreatureComponent>();
 		if (creature == null)
 			return (state, ImmutableList<GameEvent>.Empty);

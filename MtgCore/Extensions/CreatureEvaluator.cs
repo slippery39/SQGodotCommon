@@ -163,6 +163,26 @@ public static class CreatureEvaluator
 			hasIndestructible |= threshold.GrantsIndestructible;
 		}
 
+		// "Loses all abilities and becomes a 1/1" (Turn to Frog). Applied after every grant, since
+		// it removes them all — including ones granted this turn. The P/T half is handled by the
+		// modifier itself in the PowerToughnessModifier loop above.
+		if (card.HasComponent<BecomesBaseCreatureComponent>())
+		{
+			hasHaste = hasFlying = hasTaunt = hasReach = false;
+			hasLifelink = hasTrample = hasShroud = hasHexproof = false;
+			hasDeathtouch = hasFirstStrike = hasDoubleStrike = hasIndestructible = false;
+			cantAttack = false;
+		}
+
+		// Fog Bank: Taunt lapses once this creature has been attacked this turn, so it soaks one
+		// attack and then stops compelling. Applied last so it overrides every grant above.
+		if (
+			hasTaunt
+			&& creature.WasAttackedThisTurn
+			&& card.HasComponent<TauntUntilAttackedComponent>()
+		)
+			hasTaunt = false;
+
 		return new CreatureStats(
 			power,
 			toughness,

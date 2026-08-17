@@ -87,6 +87,28 @@ public static class TriggerConditions
 			Filter = new IsControlledByYouSpecification(),
 		};
 
+	/// <summary>
+	/// Fires whenever the controller draws a card — Chasm Skulker, Teferi's Tutelage.
+	/// The event's subject is the CARD drawn, so IsControlledByYouSpecification reads as
+	/// "a card of yours was drawn".
+	/// </summary>
+	public static TriggerCondition OnYouDraw() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.CardDrawn,
+			Filter = new IsControlledByYouSpecification(),
+		};
+
+	/// <summary>
+	/// Fires whenever the controller casts an instant or sorcery — Talrand, prowess payoffs.
+	/// </summary>
+	public static TriggerCondition OnYouCastSpell() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.SpellCast,
+			Filter = new IsControlledByYouSpecification(),
+		};
+
 	/// <summary>Fires whenever the controller loses life.</summary>
 	public static TriggerCondition OnLoseLife() =>
 		new EventTriggerCondition

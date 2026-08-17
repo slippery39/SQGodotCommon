@@ -26,6 +26,17 @@ public record CreatureAttackedEvent : GameEvent
 }
 
 /// <summary>
+/// A spell was countered by a hand trap. The countered card has already moved to wherever the
+/// trap sent it (graveyard, exile or hand) by the time this fires.
+/// </summary>
+public record SpellCounteredEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public int TrapCardId { get; init; }
+	public int CastingPlayerId { get; init; }
+}
+
+/// <summary>
 /// A creature became exhausted (this engine's equivalent of being tapped by a "tapper").
 /// Emitted by ExhaustCreatureAction and by activating a RequiresTap ability.
 /// Gideon's Avenger triggers on this.

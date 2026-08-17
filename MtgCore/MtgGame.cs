@@ -49,4 +49,13 @@ public record MtgGame : GameObject
 	/// Enables O(k) source lookup when applying statics to new permanents or cleaning up.
 	/// </summary>
 	public ImmutableHashSet<int> StaticSourceIds { get; init; } = ImmutableHashSet<int>.Empty;
+
+	/// <summary>
+	/// Extra turns owed to the active player. EndTurnAction spends one instead of passing the
+	/// turn, so the same player starts another.
+	///
+	/// Capped by TakeExtraTurnAction rather than here: an AI that overvalues extra turns could
+	/// otherwise chain them indefinitely and blow past the simulator's per-turn action cutoff.
+	/// </summary>
+	public int ExtraTurnsQueued { get; init; } = 0;
 }

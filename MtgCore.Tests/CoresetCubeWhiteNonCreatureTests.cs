@@ -32,7 +32,13 @@ public class CoresetCubeWhiteNonCreatureTests
 	[Test]
 	public void WholeWhiteSection_IsComplete()
 	{
-		Assert.That(CoresetCube.Cards, Has.Count.EqualTo(67), "38 creatures + 29 non-creatures");
+		// Counts the WHITE files rather than CoresetCube.Cards, which now also holds blue.
+		var white =
+			CoresetCubeWhite.Cards.Count
+			+ CoresetCubeWhiteSpells.Cards.Count
+			+ CoresetCubeWhitePermanents.Cards.Count;
+
+		Assert.That(white, Is.EqualTo(67), "38 creatures + 29 non-creatures");
 	}
 
 	[Test]

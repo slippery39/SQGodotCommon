@@ -43,6 +43,10 @@ public static class CostEngine
 		if (card.HasComponent<ConvokeComponent>())
 			cost = Math.Max(0, cost - CountConvokers(state, playerId));
 
+		foreach (var reduction in card.GetComponents<ConditionalCostReductionComponent>())
+			if (reduction.Condition?.IsSatisfied(state, card.Id, playerId) == true)
+				cost = Math.Max(0, cost - reduction.Amount);
+
 		return Math.Max(0, cost + ComputeTax(state, card));
 	}
 

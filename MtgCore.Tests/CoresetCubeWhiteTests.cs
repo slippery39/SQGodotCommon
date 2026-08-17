@@ -168,8 +168,14 @@ public class CoresetCubeWhiteTests
 	{
 		var set = SetRegistry.Get(CoresetCube.Code);
 
-		// The whole white section: 38 creatures plus 29 non-creatures.
-		Assert.That(set.Cards, Has.Count.EqualTo(67));
+		// The registered set grows with each colour; this asserts white is IN it, not that white
+		// is all of it. CoresetCubeBlueTests owns the total.
+		Assert.That(set.Cards.Count, Is.GreaterThanOrEqualTo(67));
+		Assert.That(
+			CoresetCubeWhite.Cards.All(w => set.Cards.Any(c => c.Name == w.Name)),
+			Is.True,
+			"Every white creature should be in the registered set"
+		);
 		Assert.That(set.Draftable, Is.Not.Empty);
 	}
 

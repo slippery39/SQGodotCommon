@@ -162,6 +162,7 @@ public record CheckStateBasedEffectsAction : GameAction
 			{
 				state = StaticAbilityEngine.ProcessPermanentLeft(state, left.CardId, GameId);
 				state = DetachEquipmentFromLeavingCard(state, left.CardId);
+				state = ReleaseFreezeFromLeavingCard(state, left.CardId);
 			}
 		}
 
@@ -305,6 +306,36 @@ public record CheckStateBasedEffectsAction : GameAction
 
 		if (changed)
 			state = state.UpdateObject(card.Id, card with { Components = components });
+
+		return state;
+	}
+
+	/// <summary>
+	/// Releases any creature held down by a permanent that just left the battlefield —
+	/// Dungeon Geists' "doesn't untap for as long as you control this".
+	///
+	/// The creature stays exhausted until its own next untap step; only the indefinite lock is
+	/// lifted. That matches the card: killing the Geists frees the creature, it does not
+	/// immediately untap it.
+	/// </summary>
+	private GameState ReleaseFreezeFromLeavingCard(GameState state, int leavingCardId)
+	{
+		foreach (
+			var card in state
+				.GetCardsInZone(Player1BattlefieldId)
+				.Concat(state.GetCardsInZone(Player2BattlefieldId))
+				.ToList()
+		)
+		{
+			var creature = card.GetComponent<CreatureComponent>();
+			if (creature == null || creature.FrozenBySourceId != leavingCardId)
+				continue;
+
+			state = state.UpdateObject(
+				card.Id,
+				card.WithComponentReplaced(creature with { FrozenBySourceId = 0 })
+			);
+		}
 
 		return state;
 	}

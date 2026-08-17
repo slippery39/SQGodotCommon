@@ -99,6 +99,12 @@ public record CastCreatureAction : GameAction
 		var playedEvent = new CreaturePlayedEvent { CardId = CardId, PlayerId = CastingPlayerId };
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(playedEvent) };
 
+		// Essence Scatter and friends. Fires after the cast is counted — see CastSpellAction.
+		var counter = CounterTrapEngine.TryCounterCast(state, CardId, CastingPlayerId);
+		state = counter.State;
+		if (counter.Countered)
+			return new ActionResult(state).WithEvent(playedEvent);
+
 		return new ActionResult(
 			state.SpawnAction(
 				new ResolveCreatureAction { CardId = CardId, CastingPlayerId = CastingPlayerId }

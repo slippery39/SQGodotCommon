@@ -22,6 +22,13 @@ public record StartTurnAction : GameAction
 	public int BattlefieldId { get; init; }
 	public bool SkipDraw { get; init; } = false;
 
+	/// <summary>
+	/// True when this creature must stay tapped through its own untap step — either it still owes
+	/// frozen turns, or something on the battlefield is holding it down.
+	/// </summary>
+	private static bool StaysExhausted(CreatureComponent creature) =>
+		creature.FrozenTurns > 0 || creature.FrozenBySourceId != 0;
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
@@ -72,13 +79,19 @@ public record StartTurnAction : GameAction
 					// IsExhausted clears here, for the ACTIVE player only — that is the untap
 					// step. Exhausting an opponent's creature during your turn therefore costs
 					// them exactly one attack, not zero and not two.
+					//
+					// A frozen creature does NOT untap: FrozenTurns burns down one per untap
+					// step, and a source-linked freeze (Dungeon Geists) holds indefinitely until
+					// CheckStateBasedEffectsAction sees its source leave the battlefield.
 					CreatureComponent cc => updatedComponents.SetItem(
 						i,
 						cc with
 						{
 							HasSummoningSickness = false,
 							HasAttacked = false,
-							IsExhausted = false,
+							WasAttackedThisTurn = false,
+							IsExhausted = StaysExhausted(cc),
+							FrozenTurns = Math.Max(0, cc.FrozenTurns - 1),
 						}
 					),
 					ActivatedAbilityComponent ac => updatedComponents.SetItem(

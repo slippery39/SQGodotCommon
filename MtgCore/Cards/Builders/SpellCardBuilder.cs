@@ -474,6 +474,102 @@ public class SpellCardBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// Freeze — exhaust the target and keep it tapped through <paramref name="turns"/> further
+	/// untap steps. turns: 0 is a plain tapper (WithExhaust); 1 is "doesn't untap during its
+	/// controller's next untap step".
+	/// </summary>
+	public SpellCardBuilder WithFreeze(int turns = 1, bool whileSourceRemains = false)
+	{
+		FlushPending();
+		_pendingAction = new ExhaustCreatureAction
+		{
+			FreezeTurns = turns,
+			FreezeWhileSourceRemains = whileSourceRemains,
+		};
+		_pendingTargeting = TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures());
+		return this;
+	}
+
+	/// <summary>
+	/// "Until end of turn, target creature loses all abilities and becomes a 1/1."
+	/// Stamped UntilEndOfTurn so the normal turn cleanup removes it.
+	/// </summary>
+	public SpellCardBuilder WithBecomesVanilla(int power = 1, int toughness = 1)
+	{
+		FlushPending();
+		_pendingAction = new AddCustomModifierAction
+		{
+			Modifier = new BecomesBaseCreatureComponent
+			{
+				Power = power,
+				Toughness = toughness,
+				Duration = ModifierDuration.UntilEndOfTurn,
+			},
+		};
+		_pendingTargeting = TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures());
+		return this;
+	}
+
+	/// <summary>"Take an extra turn after this one."</summary>
+	public SpellCardBuilder WithExtraTurn(int turns = 1)
+	{
+		FlushPending();
+		_pendingAction = new TakeExtraTurnAction { Turns = turns };
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>"Gain control of target permanent."</summary>
+	public SpellCardBuilder WithGainControl()
+	{
+		FlushPending();
+		_pendingAction = new GainControlAction();
+		_pendingTargeting = TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures());
+		return this;
+	}
+
+	/// <summary>"This spell costs {amount} less to cast if …".</summary>
+	public SpellCardBuilder WithCostReduction(int amount, ActivationCondition condition)
+	{
+		_extraComponents.Add(
+			new ConditionalCostReductionComponent { Amount = amount, Condition = condition }
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// A counterspell. This card is never cast — it fires automatically from hand when the
+	/// opponent casts a matching spell and you left its cost unspent. See CounterTrapComponent.
+	///
+	/// A trap needs no effect of its own, so it does not go through the usual effect pipeline;
+	/// DrawOnCounter covers the one card (Bone to Ash) that riders an effect onto the counter.
+	/// </summary>
+	public SpellCardBuilder AsCounterTrap(
+		CardType targetTypes = CardType.AnySpell | CardType.AnyPermanent,
+		CardType excludeTypes = CardType.None,
+		int manaTax = 0,
+		bool taxAllRemaining = false,
+		bool exileInstead = false,
+		bool returnToHandInstead = false,
+		int drawOnCounter = 0
+	)
+	{
+		_extraComponents.Add(
+			new CounterTrapComponent
+			{
+				TargetTypes = targetTypes,
+				ExcludeTypes = excludeTypes,
+				ManaTax = manaTax,
+				TaxAllRemaining = taxAllRemaining,
+				ExileInstead = exileInstead,
+				ReturnToHandInstead = returnToHandInstead,
+				DrawOnCounter = drawOnCounter,
+			}
+		);
+		return this;
+	}
+
 	// ===== TRIGGER-SAFE VARIANTS =====
 	//
 	// A triggered ability spawns ResolveEffectAction with no TargetIds, so a UserSelect

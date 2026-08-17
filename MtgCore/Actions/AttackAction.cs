@@ -232,6 +232,24 @@ public record AttackAction : GameAction
 			);
 		}
 
+		// Mark the DEFENDER as having been attacked. Fog Bank's Taunt lapses on this, so it must
+		// be stamped before any damage or death resolves — a wall that dies to the attack it
+		// soaked still counts as having soaked one.
+		if (
+			state.GetObject(TargetId) is Card defenderCard
+			&& defenderCard.GetComponent<CreatureComponent>() is { } defenderCreature
+			&& !defenderCreature.WasAttackedThisTurn
+		)
+			state = state.UpdateObject(
+				TargetId,
+				defenderCard.WithComponentReplaced(
+					defenderCreature with
+					{
+						WasAttackedThisTurn = true,
+					}
+				)
+			);
+
 		var attackedEvent = new CreatureAttackedEvent
 		{
 			CreatureId = AttackerId,
@@ -527,6 +545,15 @@ public record AttackAction : GameAction
 		// damage it is the defender.
 		var sourceId = card.Id == AttackerId ? TargetId : AttackerId;
 		if (state.IsProtectedFrom(card.Id, sourceId))
+			return (state, ImmutableList<GameEvent>.Empty);
+
+		// Fog Bank prevents combat damage in BOTH directions, so the check covers the creature
+		// taking the damage and the one dealing it.
+		if (
+			card.HasComponent<PreventsCombatDamageComponent>()
+			|| (state.GetObject(sourceId) as Card)?.HasComponent<PreventsCombatDamageComponent>()
+				== true
+		)
 			return (state, ImmutableList<GameEvent>.Empty);
 
 		var creature = card.GetComponent<CreatureComponent>()!;

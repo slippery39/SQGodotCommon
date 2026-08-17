@@ -225,3 +225,45 @@ test one flag and not the other. Migrating the older `CardFactory.Spell(...)` ca
 `.Instant(...)` / `.Sorcery(...)` would remove the ambiguity for good.
 
 ---
+
+## The AI does not hold mana for counterspell traps
+
+**Concern:** Counterspells fire from hand when the opponent casts a matching spell and you left the
+mana unspent (see "Counterspell Traps" in `MtgCore/CLAUDE.md`). `DepthLimitedAiStrategy` has no
+concept of value in unspent mana — it will spend down to zero every turn and its traps will
+therefore almost never fire.
+
+**Why it's fine now:** The mechanic is correct; only the AI's use of it is weak. Traps fire
+properly for a human player, and against the AI they are simply a dead card rather than a broken
+one.
+
+**Watch for:** the moment blue starts losing badly in simulator benchmarks, or when black/red
+counterparts arrive. The fix is in `StateEvaluator`, not the engine: score unspent mana as worth
+something when a trap is in hand and it is about to become the opponent's turn. Do it once, across
+all colours, rather than special-casing blue.
+
+---
+
+## Structural gaps blue could not close
+
+**Note, not a concern.** Blue is complete at 67/67, but five clauses were cut because the concept
+does not exist. Recorded so a later colour does not rediscover them:
+
+- **Phasing** (Teferi, Master of Time) — no notion of a permanent that temporarily does not exist.
+  Reskinned to a freeze.
+- **Opponent-made partitions** (Sphinx of Uthuun's "an opponent separates those cards into two
+  piles") — `ChoiceAction` can offer options to the active player only; there is no shape for a
+  choice made by the other player mid-resolution.
+- **Casting from another player's library** (Talent of the Telepath) — no path exists for one
+  player to cast another's cards.
+- **Keyword REMOVAL** (Mu Yanling's "loses flying") — every keyword path ORs abilities on;
+  nothing subtracts one. `BecomesBaseCreatureComponent` strips them ALL, which is a different
+  thing and only works because "loses all abilities" is what its cards say.
+- **Instant speed** generally — flash, and Teferi's "activate loyalty abilities on any player's
+  turn". Same priority gap the counterspell traps route around.
+
+If a later colour needs keyword removal specifically, that is the cheapest of the five: a
+`SuppressedKeywordsComponent` read at the end of `GetEffectiveStats`, mirroring how
+`BecomesBaseCreatureComponent` already zeroes them.
+
+---

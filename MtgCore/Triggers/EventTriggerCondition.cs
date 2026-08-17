@@ -110,6 +110,7 @@ public record EventTriggerCondition : TriggerCondition
 			CardLeftGraveyardEvent e => e.CardId,
 			CardRevealedEvent e => e.CardId,
 			SpellCastEvent e => e.CardId,
+			SpellCounteredEvent e => e.CardId,
 			PermanentPlayedEvent e => e.CardId,
 			TurnStartedEvent e => e.PlayerId,
 			TurnEndedEvent e => e.PlayerId,

@@ -122,13 +122,17 @@ MtgCore/
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Terravore. Must be stamped with Duration = Permanent in card definitions.
 ├── Sets/                    # CardSet (Code, Name, Cards; Draftable filters lands), SetRegistry (All, Default, Get)
 │   ├── CoresetCube/         # The CSC set, built from an external cube list (cubecobra magiccoreset20xx).
-│   │                        # WHITE IS COMPLETE — all 67 cards. CoresetCube.cs assembles the files:
+│   │                        # WHITE AND BLUE COMPLETE — 134 cards. The cube is 450: 67 per colour,
+│   │                        # 50 colourless, 53 multicolour. CoresetCube.cs assembles the files:
 │   │                        #   CoresetCubeWhite.cs           38 creatures
 │   │                        #   CoresetCubeWhiteSpells.cs     10 instants + 6 sorceries
 │   │                        #   CoresetCubeWhitePermanents.cs 8 enchantments + 1 equipment + 4 planeswalkers
-│   │                        #   CoresetCubeTokens.cs          token templates, excluded from the card list
+│   │                        #   CoresetCubeBlue.cs            28 creatures
+│   │                        #   CoresetCubeBlueSpells.cs      18 instants + 11 sorceries
+│   │                        #   CoresetCubeBluePermanents.cs  6 enchantments + 4 planeswalkers
+│   │                        #   CoresetCube*Tokens.cs         token templates, excluded from the card list
 │   │                        # Read each file's header before adding cards — they list every divergence from
-│   │                        # the printed card and why. Other colours not started.
+│   │                        # the printed card and why. Black, red and green not started.
 │   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
 │                            # HollowmereTokens.cs holds token templates (excluded from the card list).
 │                            # Read the header of Hollowmere.cs before adding cards — it states the rate bar and
@@ -550,6 +554,108 @@ A second, quieter version of the same failure: an event with no `EventTypeNames`
 entry in `EventTriggerCondition.ExtractSubjectId`, cannot be filtered even though it fires.
 `PermanentLeftBattlefieldEvent` had neither until Oblivion Ring needed it. **Adding an event means
 three places: the record, the constant, and `ExtractSubjectId`.**
+
+## Counterspell Traps
+
+This engine has a stack but **no priority** — the non-active player never acts during your turn —
+so a counterspell cannot be cast in response to anything. Rather than bolt on a priority system,
+a counterspell is a **trap that fires from hand**.
+
+`CounterTrapComponent` on the card; `CounterTrapEngine.TryCounterCast` does the work, called from
+**all three cast actions** after the card reaches the stack and mana is paid, **before** the
+resolve action is spawned.
+
+Firing rule, in order:
+1. Only the **non-active** player's hand is scanned, so your own traps never hit your own spells.
+2. Their hand is walked in **zone order** — insertion order, i.e. draw order. That is the
+   documented "first card in your hand wins" tiebreak when two traps could both fire.
+3. First card whose `TargetTypes`/`ExcludeTypes` match and whose `ManaCost <= CurrentMana`.
+4. The trap's cost is paid and the trap goes to the graveyard — **whether or not the counter
+   sticks**, exactly as a real counterspell that resolves and does nothing still gets used up.
+5. `ManaTax` ("unless its controller pays {3}") is auto-paid by the caster if they can afford it.
+   Neither side chooses, which keeps the mechanic symmetric and deterministic.
+
+**Leaving mana up already works with no engine change.** `StartTurnAction` refills `CurrentMana`
+only for the active player, so a non-active player's unspent mana carries into your turn. That
+unspent mana is exactly the resource this mechanic costs.
+
+**Ordering matters and is deliberate**: the trap fires *after* `SpellCastEvent` and the
+`SpellsCastThisTurn` increment, because a countered spell was still cast. Prowess and storm see it,
+matching the real rule. `CounterTrapTests.CounteredSpell_StillCountsAsCast` locks this in.
+
+A trap has a `SpellComponent` with no effects, so **both** `CastSpellAction.ValidateAdd` and
+`MtgActionGenerator.AddHandActions` must refuse to offer it — otherwise it is a blank spell at full
+price and the AI will happily cast it.
+
+`TaxAllRemaining` handles Clash of Wills' `{X}`: a trap is never cast, so there is no moment to
+choose X, and the tax becomes whatever the trapper had left after paying for the trap.
+
+## Freeze
+
+`CreatureComponent.FrozenTurns` and `FrozenBySourceId`, layered on the Exhaust mechanic.
+
+- `FrozenTurns` — extra untap steps to sit out. `StartTurnAction` decrements it and keeps
+  `IsExhausted` set while it is above zero. 1 is "doesn't untap during its controller's next
+  untap step"; 0 is a plain tapper.
+- `FrozenBySourceId` — an indefinite lock tied to another permanent (Dungeon Geists,
+  Claustrophobia). A turn count cannot express "for as long as you control this".
+  `CheckStateBasedEffectsAction.ReleaseFreezeFromLeavingCard` clears it when the source leaves,
+  next to the equipment-detach pass. The creature stays exhausted until its own next untap step —
+  killing the source frees it, it does not immediately untap it.
+
+`ExhaustCreatureAction` gained `FreezeTurns` and `FreezeWhileSourceRemains`;
+`SpellCardBuilder.WithFreeze(turns, whileSourceRemains)`.
+
+## Walls and Conditional Taunt
+
+Walls are pure blockers and this engine has no blocking, so **Taunt is their substitute** — it
+forces attackers through them, which is what a blocker does.
+
+That breaks for Fog Bank, which also prevents all combat damage to itself: a damage-immune Taunt
+creature is an unremovable roadblock that every attack is compelled into forever, and with no way
+to go wide the opponent has no answer at all.
+
+`TauntUntilAttackedComponent` fixes it. `CreatureComponent.WasAttackedThisTurn` is stamped by
+`AttackAction` on the **target** (before damage, so a wall that dies to the attack still counts as
+having soaked one) and cleared by `StartTurnAction`. `GetEffectiveStats` suppresses Taunt once both
+are true, so Fog Bank absorbs exactly one attack per turn and then steps aside.
+
+`PreventsCombatDamageComponent` is a marker on the creature, checked in
+`AttackAction.ApplyDamageToCreature` in **both** directions. Deliberately does not stop effect
+damage — Fog Bank still dies to a burn spell, which is what keeps it answerable.
+
+## Clone
+
+`CopyOnEnterComponent`, applied by `PutIntoBattlefieldAction`'s ETB ceremony — the single path
+every creature takes onto the battlefield, so a cast Clone and a reanimated one behave alike.
+
+The copy takes the target's `Name`, `Components`, `Subtypes` and `Types` but keeps its own `Id`,
+`OwnerId`, `ControllerId` and `ManaCost`: a Clone of the opponent's creature is still yours.
+`CopyOnEnterComponent` itself is stripped, so a reanimated Clone does not re-copy.
+
+**Which creature is copied is decided by the engine** — highest effective power, ties broken on
+lowest id for determinism. A real `ChoiceAction` would be more faithful but would have to pause the
+pipeline mid-ETB, and "copy the biggest thing" is what the choice almost always is.
+
+## Extra Turns
+
+`MtgGame.ExtraTurnsQueued`. `EndTurnAction` spends one instead of passing play: the same player
+starts again and `TurnNumber` does **not** advance, because no round completed.
+
+`TakeExtraTurnAction.MaxQueued` is a hard cap of 2. The simulator warns at 50 actions per turn and
+cuts a game off at 100; without a cap an AI that rates extra turns highly could chain them until it
+trips that, and a game lost to the loop detector is indistinguishable from a bug.
+
+## Gain Control
+
+`GainControlAction` sets `ControllerId` **and physically moves the card** to the new controller's
+battlefield. The move is not optional: every battlefield scan in the engine works from the zone,
+so a stolen permanent left in place would be invisible to its new controller's anthems, targeting
+and attack generation.
+
+`OwnerId` is untouched — that is what `ControlsStolenPermanentsCondition` counts, and it is where
+the card returns when it dies. The stolen creature is stamped summoning-sick so it cannot be stolen
+and swung with on the same turn.
 
 ## Card Types
 
