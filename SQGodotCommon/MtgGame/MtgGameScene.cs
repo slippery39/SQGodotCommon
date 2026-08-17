@@ -118,14 +118,13 @@ public partial class MtgGameScene : Node2D
 		// Deferred so the containers have resolved their sizes before the drop zone is measured.
 		CallDeferred(nameof(SyncBattlefieldDropZone));
 
+		// Dragging and clicking are mutually exclusive on the same card — picking one up clears the
+		// hover the click handler tests. So the hand stops being draggable whenever it is a
+		// selection surface, which is the same condition a successful drag already required.
+		_hand.DragEnabled = () => !IsWaitingForSelection();
+
 		_hand.IsDragSuccess = context =>
-			!_manager.IsAiTurn
-			&& !_isGameOver
-			&& !_targetingSpellCardId.HasValue
-			&& !_additionalCostCardId.HasValue
-			&& !_activatingAbilityCardId.HasValue
-			&& !_choicePanelShowing
-			&& context.SelectedAreas.Contains(_battlefieldDropZone);
+			!IsWaitingForSelection() && context.SelectedAreas.Contains(_battlefieldDropZone);
 
 		_hand.OnDragSuccess = context =>
 		{
@@ -416,6 +415,16 @@ public partial class MtgGameScene : Node2D
 		_promptLabel.MouseFilter = Control.MouseFilterEnum.Ignore;
 		margin.AddChild(_promptLabel);
 	}
+
+	/// True while the game is waiting on the player to pick something (a target, a cost payment,
+	/// a choice) or is not theirs to act in at all. In those states the hand is for clicking.
+	private bool IsWaitingForSelection() =>
+		_manager.IsAiTurn
+		|| _isGameOver
+		|| _targetingSpellCardId.HasValue
+		|| _additionalCostCardId.HasValue
+		|| _activatingAbilityCardId.HasValue
+		|| _choicePanelShowing;
 
 	private void UpdatePromptBanner()
 	{

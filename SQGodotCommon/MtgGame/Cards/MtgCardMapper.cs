@@ -105,6 +105,13 @@ public static class MtgCardMapper
 		var spell = card.GetComponent<SpellComponent>();
 		var lines = new List<string>();
 
+		// First, as on a real card. A cost paid before the spell resolves is invisible in the
+		// effect text, so a reanimate-for-a-discard read as pure upside until the prompt appeared.
+		foreach (
+			var costText in card.AdditionalCastCosts.Select(DescribeCost).Where(t => t != null)
+		)
+			lines.Add($"As an additional cost, {costText}");
+
 		if (creature != null)
 		{
 			// P/T deliberately absent — it has its own badge on the frame. Printing it here too
@@ -386,6 +393,19 @@ public static class MtgCardMapper
 		return text;
 	}
 
+	/// Lowercase phrase for one additional cost, so it reads inside a longer sentence.
+	/// Null means "no wording for this cost", and the caller drops it.
+	private static string? DescribeCost(AdditionalCost cost) =>
+		cost switch
+		{
+			SacrificeAdditionalCost s when s.Filter is IsSubtypeSpecification sub =>
+				$"sacrifice a {sub.Subtype}",
+			SacrificeAdditionalCost => "sacrifice a permanent",
+			DiscardAdditionalCost d => d.Count == 1 ? "discard a card" : $"discard {d.Count} cards",
+			LifeAdditionalCost l => $"pay {l.Amount} life",
+			_ => null,
+		};
+
 	private static string? DescribeActivatedAbility(ActivatedAbilityComponent ability)
 	{
 		// An ability may carry several effects — "discard a card, then draw a card" is two.
@@ -401,17 +421,7 @@ public static class MtgCardMapper
 			costParts.Add($"{ability.ManaCost} mana");
 		foreach (var cost in ability.AdditionalCosts)
 		{
-			var costText = cost switch
-			{
-				SacrificeAdditionalCost s when s.Filter is IsSubtypeSpecification sub =>
-					$"sacrifice a {sub.Subtype}",
-				SacrificeAdditionalCost => "sacrifice a permanent",
-				DiscardAdditionalCost d => d.Count == 1
-					? "discard a card"
-					: $"discard {d.Count} cards",
-				LifeAdditionalCost l => $"pay {l.Amount} life",
-				_ => null,
-			};
+			var costText = DescribeCost(cost);
 			if (costText != null)
 				costParts.Add(costText);
 		}

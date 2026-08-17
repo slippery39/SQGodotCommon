@@ -50,6 +50,12 @@ public partial class Hand2D : Node2D
 	/// </summary>
 	public event Action<CardUI2D> CardClicked;
 
+	/// <summary>
+	/// Whether cards may be dragged out of the hand right now. Null means yes. Must return false
+	/// while the hand is a click-to-select surface — a draggable card swallows its own click.
+	/// </summary>
+	public Func<bool> DragEnabled;
+
 	private bool _needsRepositioning = false;
 
 	public override void _Ready()
@@ -412,6 +418,7 @@ public partial class Hand2D : Node2D
 	{
 		var card = CardScene.Instantiate<CardUI2D>();
 		card.DragEnd = OnCardDragEnd;
+		card.DragEnabled = () => DragEnabled?.Invoke() ?? true;
 		card.Clicked += c => CardClicked?.Invoke(c);
 		return card;
 	}

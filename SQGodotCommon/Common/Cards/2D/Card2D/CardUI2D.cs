@@ -49,6 +49,12 @@ public partial class CardUI2D : Node2D
 	/// </summary>
 	private Node2D _hoverCard = null;
 	public Action<DragEndContext> DragEnd { get; set; }
+
+	/// <summary>
+	/// Whether this card may be picked up at all. Null means yes. Return false while the card is
+	/// meant to be clicked rather than dragged — see the comment in _Ready.
+	/// </summary>
+	public Func<bool> DragEnabled { get; set; }
 	public event Action<CardUI2D, bool> SelectionChanged;
 
 	/// <summary>
@@ -91,8 +97,13 @@ public partial class CardUI2D : Node2D
 			GetNodeOrNull<DraggableNode2D>("DraggableNode2d")
 			?? throw new InvalidOperationException("Could not find DraggableNode2D in CardUI2D");
 
+		// CanDrag must also gate on the owner's predicate, not just hover: starting a drag sets
+		// CardUIManager.DraggingCard, whose setter clears CurrentHoveredCard — on the very same
+		// press event, before _UnhandledInput runs. A card that can be dragged can never be
+		// clicked, so click-to-select only works while dragging is switched off.
 		dragNode2D.CanDrag = () =>
-			CardUIManager.CurrentHoveredCard == this || CardUIManager.DraggingCard == this;
+			(DragEnabled?.Invoke() ?? true)
+			&& (CardUIManager.CurrentHoveredCard == this || CardUIManager.DraggingCard == this);
 		dragNode2D.OnDragBegin += (drag) => _DragBegin();
 		dragNode2D.OnDragEnd += (drag) => _DragEnd(drag);
 

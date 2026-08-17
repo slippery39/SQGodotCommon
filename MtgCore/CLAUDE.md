@@ -469,7 +469,10 @@ A post-draw discard **must** be the choice form: cast-time selection happens bef
 targeted version could only ever pitch from the pre-draw hand.
 
 Both are human-playable — cards in hand are clickable as targets and as cost payments (see
-`MtgGameScene.OnHandCardClicked`).
+`MtgGameScene.OnHandCardClicked`). A hand card cannot be draggable and clickable at once:
+starting a drag clears `CardUIManager.CurrentHoveredCard` on the same press, which is the
+guard `CardUI2D._UnhandledInput` tests, so `Hand2D.DragEnabled` must be false whenever the
+hand is a selection surface (`MtgGameScene.IsWaitingForSelection`).
 
 Removal and selection verbs, added because the set was built from ~13 verbs and cards had
 begun repeating each other at different mana costs: `WithWeaken(p, t)` (-X/-X, kills via the

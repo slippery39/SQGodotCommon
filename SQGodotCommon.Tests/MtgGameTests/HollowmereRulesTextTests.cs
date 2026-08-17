@@ -81,6 +81,23 @@ public class HollowmereRulesTextTests
 	}
 
 	/// <summary>
+	/// An additional cast cost is paid before the spell resolves, so it appears nowhere in the
+	/// effect text. Bargain at the Crossroads read as a free reanimate and only revealed its
+	/// discard when the prompt appeared mid-cast.
+	/// </summary>
+	[Test]
+	public void CardsWithAnAdditionalCastCost_PrintIt()
+	{
+		var silent = Hollowmere
+			.Cards.Where(c => !c.AdditionalCastCosts.IsEmpty)
+			.Where(c => !MtgCardMapper.GetRulesText(c).Contains("As an additional cost"))
+			.Select(c => c.Name)
+			.ToList();
+
+		Assert.That(silent, Is.Empty, $"Hidden cast costs: {string.Join(", ", silent)}");
+	}
+
+	/// <summary>
 	/// The type-line band fits about 24 characters. Three-subtype cards used to overrun it and
 	/// clip mid-word ("ture — Werewolf Human C"), which is why the "Creature — " prefix was
 	/// dropped — the P/T badge already says the card is a creature.
