@@ -35,6 +35,10 @@ public partial class MtgGameScene : Node2D
 	private bool _isGameOver;
 	private bool _choicePanelShowing;
 
+	/// The graveyard popup is shared between both players' graveyards; this says whose is on
+	/// screen, so a click in the opponent's cannot start a flashback cast that would never validate.
+	private bool _viewingOpponentGraveyard;
+
 	// Debug controls
 	private bool _aiPaused;
 	private Label _debugStatusLabel = null!;
@@ -108,6 +112,7 @@ public partial class MtgGameScene : Node2D
 		_boardUI.OpponentCreatureClicked += OnOpponentCreatureClicked;
 		_boardUI.OpponentDirectAttacked += OnOpponentDirectAttacked;
 		_boardUI.GraveyardButtonPressed += OpenGraveyardPopup;
+		_boardUI.OpponentGraveyardButtonPressed += OpenOpponentGraveyardPopup;
 		_boardUI.LogTogglePressed += OnLogTogglePressed;
 		_boardUI.CreatureHovered += OnCreatureHovered;
 		_boardUI.CreatureHoverEnded += _ => _cardPreviewPopup.HideCard();
@@ -471,8 +476,17 @@ public partial class MtgGameScene : Node2D
 				+ $"{WhereHint(_currentValidTargetIds)}   (Esc to cancel)";
 
 		if (_selectedAttackerId.HasValue)
-			return $"{CardName(_selectedAttackerId.Value)} is attacking — "
-				+ "click an enemy creature or the opponent";
+		{
+			var name = CardName(_selectedAttackerId.Value);
+			var targets = _manager.GetLegalAttackTargets(_selectedAttackerId.Value);
+			if (targets.Count == 0)
+				return $"{name} has no legal attack — click it again to deselect";
+			// Not being allowed to go to the face is the whole tell that Taunt is in play, and it
+			// is the one thing a player will not work out from the highlights alone.
+			return targets.Contains(_manager.AiPlayerId)
+				? $"{name} is attacking — click a highlighted target"
+				: $"{name} is attacking — Taunt or Flying forces it onto a highlighted creature";
+		}
 
 		return "";
 	}
@@ -551,7 +565,26 @@ public partial class MtgGameScene : Node2D
 		var cards = state.GetCardsInZone(graveyardId).ToList();
 		var flashbackIds = cards.Where(c => c.HasComponent<FlashbackComponent>()).Select(c => c.Id);
 		var targetIds = _targetingSpellCardId.HasValue ? _currentValidTargetIds : null;
+		_viewingOpponentGraveyard = false;
 		_graveyardPopup.ShowGraveyard(cards, state, flashbackIds, targetIds);
+	}
+
+	/// <summary>
+	/// The opponent's graveyard, for reading only. Nothing in it is castable or targetable by the
+	/// player, so it shows no flashback glow and its clicks are ignored — see
+	/// <see cref="OnGraveyardCardClicked"/>.
+	/// </summary>
+	private void OpenOpponentGraveyardPopup()
+	{
+		var state = _manager.State;
+		var graveyardId = state.GetWellKnownId(MtgObjectKeys.Player2Graveyard);
+		_viewingOpponentGraveyard = true;
+		_graveyardPopup.ShowGraveyard(
+			state.GetCardsInZone(graveyardId).ToList(),
+			state,
+			flashbackIds: System.Array.Empty<int>(),
+			title: "Opponent's Graveyard"
+		);
 	}
 
 	/// <summary>
@@ -575,7 +608,7 @@ public partial class MtgGameScene : Node2D
 
 	private void OnGraveyardCardClicked(int cardId)
 	{
-		if (_manager.IsAiTurn || _isGameOver)
+		if (_manager.IsAiTurn || _isGameOver || _viewingOpponentGraveyard)
 			return;
 
 		if (_targetingSpellCardId.HasValue)
@@ -925,7 +958,7 @@ public partial class MtgGameScene : Node2D
 			ManaCost = card.ManaCost.ToString(),
 			TypeLine = MtgCardMapper.GetTypeLine(card),
 			PowerToughness = MtgCardMapper.GetPowerToughness(card, _manager.State),
-			RulesText = MtgCardMapper.GetRulesText(card),
+			RulesText = MtgCardMapper.GetRulesText(card, _manager.State),
 			ArtworkTexture = CardArtLoader.Load(card.Name),
 			FrameColor = MtgCardTheme.FrameColor(card),
 			NamePlateColor = MtgCardTheme.NamePlateColor(card),
@@ -1162,12 +1195,21 @@ public partial class MtgGameScene : Node2D
 	private void Refresh()
 	{
 		var isTargeting = _targetingSpellCardId.HasValue || _activatingAbilityCardId.HasValue;
+		// A selected attacker highlights what it may legally hit, for the same reason a spell
+		// highlights its targets: Taunt and Flying are invisible restrictions otherwise, and the
+		// only feedback on an illegal attack was the click doing nothing.
+		IEnumerable<int> highlightIds =
+			isTargeting ? _currentValidTargetIds
+			: _selectedAttackerId.HasValue
+				? _manager.GetLegalAttackTargets(_selectedAttackerId.Value)
+			: null;
+
 		_boardUI.RefreshAll(
 			_manager.State,
 			_manager.HumanPlayerId,
 			_manager.AiPlayerId,
 			_selectedAttackerId,
-			targetHighlightIds: isTargeting ? _currentValidTargetIds : null,
+			targetHighlightIds: highlightIds,
 			additionalCostHighlightIds: _additionalCostCardId.HasValue
 				? _currentCostValidPaymentIds
 				: null

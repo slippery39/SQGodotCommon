@@ -28,10 +28,15 @@ text = "Log"
 [node name="OpponentRow" type="HBoxContainer" parent="MainColumn"]
 size_flags_vertical = 3
 
-[node name="OpponentPanel" type="PanelContainer" parent="MainColumn/OpponentRow"]
+[node name="OpponentSidebar" type="VBoxContainer" parent="MainColumn/OpponentRow"]
 custom_minimum_size = Vector2(300, 0)
 size_flags_vertical = 4
+
+[node name="OpponentPanel" type="PanelContainer" parent="MainColumn/OpponentRow/OpponentSidebar"]
 script = ExtResource("2_panel")
+
+[node name="OpponentGraveyardButton" type="Button" parent="MainColumn/OpponentRow/OpponentSidebar"]
+text = "Opp. Graveyard (0)"
 
 [node name="OpponentBattlefield" type="PanelContainer" parent="MainColumn/OpponentRow"]
 size_flags_horizontal = 3

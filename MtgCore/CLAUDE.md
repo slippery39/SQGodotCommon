@@ -129,6 +129,9 @@ MtgCore/
 │                            #   MillAction, DestroyCreatureAction, AttackAction, DealDamageAction, MoveCardToGraveyardAction,
 │                            #   MoveCardToExileAction, MoveCardToHandAction, PutIntoBattlefieldAction, ExileAction,
 │                            #   CastFromGraveyardAction.
+│                            #   It ALSO clears CreatureComponent.Damage on any zone change — marked damage belongs
+│                            #   to the permanent, so a bounced or reanimated creature arrives undamaged. Another
+│                            #   reason a battlefield move must not use MoveObject directly.
 ├── MtgGame.cs               # Core game state object (ActivePlayerId, TurnNumber, SpellsCastThisTurn)
 ├── MtgGameFactory.cs        # Factory: Create() and CreateForTesting()
 └── MtgGameStateExtensions.cs # API boundary — BeginGame, ShuffleLibrary, etc.
@@ -280,10 +283,9 @@ Hearthstone-style (turn-based, no blockers). The active player attacks; the oppo
 - `HasLifelink` — when the creature deals combat damage, its controller gains that much life. Applies to damage to players and creatures (including trample excess, which is counted once as part of total power). Defender lifelink also triggers on counter-damage in creature vs creature combat.
 - `HasTrample` — when attacking a creature, excess damage beyond the target's effective toughness carries over to the defending player. Applies per strike for double strike.
 - All keywords can also be granted by `StaticGrantKeywordAbility` (same pattern as `GrantsHaste`).
-- `HasSummoningSickness`, `HasAttacked` on `CreatureComponent` are cleared by `StartTurnAction`. `Damage` persists between turns — creatures can be chipped down across multiple turns.
+- `HasSummoningSickness`, `HasAttacked` on `CreatureComponent` are cleared by `StartTurnAction`. `Damage` persists between turns — creatures can be chipped down across multiple turns. It does **not** survive a zone change: `MoveCardTracked` clears it, so a bounced or reanimated creature comes back undamaged.
 - Creature attacks player: deals damage equal to effective Power; emits `CombatDamageDealtToPlayerEvent` (used by Goblin Lackey/Warren Instigator triggers).
 - Creature attacks creature: both deal damage simultaneously. Dies if `Damage >= effective Toughness`; moves to owner's graveyard.
-- Damage resets each turn — creatures cannot be chipped down over multiple turns.
 
 ## Card Creation
 
@@ -315,6 +317,7 @@ Files: `Turns/BeginGameAction.cs`, `SetupGameAction.cs`, `StartTurnAction.cs`, `
 - `MtgConsole` and `MtgSimulator` never construct game actions directly for game flow — use `MtgGameStateExtensions` methods as the API boundary.
 - Presentation layers never modify game state directly. All state changes go through `GameAction`s. Exceptions: explicit test setup and debug/cheat tooling (both must be clearly commented as such).
 - `MtgActionGenerator.GetLegalActions(state, ids, playerId)` is the **single shared source** of legal action generation. Console and simulator both call this — never duplicate this logic.
+- A UI that highlights legal attack targets must ask `AttackAction.ValidateAdd` per candidate (`MtgGameManager.GetLegalAttackTargets` does this) rather than re-deriving Taunt/Flying/Reach. A second copy of those rules in the presentation layer would drift, and the symptom is a click that silently does nothing.
 - `CastSpellAction.TargetIds` / `CastFromGraveyardAction.TargetIds` are keyed by **effect index**, not by 0. `ValidateAdd` looks targets up under the index of the effect that needs them, so keying them anywhere else makes the spell silently uncastable rather than throwing.
 - `MtgGameFactory.CreateForTesting()` gives both players `MaxMana = 99` / `CurrentMana = 99`. Use in all unit tests not specifically testing the land/mana system. Use `MtgGameFactory.Create()` with manual land plays for land-specific tests.
 - The simulator detects potential infinite loops via per-turn action counts (warning at 50, cutoff at 100) and flags unusual games.

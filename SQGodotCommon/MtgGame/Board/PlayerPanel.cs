@@ -38,8 +38,10 @@ public partial class PlayerPanel : PanelContainer
 		_nameLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
 		topRow.AddChild(_nameLabel);
 
+		// Two short lines rather than one long one: the rail is 300px and the name shares the row,
+		// so "Hand 7  Lib. 33" at the name's size would not fit.
 		_libraryLabel = new Label();
-		_libraryLabel.AddThemeFontSizeOverride("font_size", 25);
+		_libraryLabel.AddThemeFontSizeOverride("font_size", 16);
 		_libraryLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.70f, 0.55f, 1f));
 		_libraryLabel.HorizontalAlignment = HorizontalAlignment.Right;
 		topRow.AddChild(_libraryLabel);
@@ -67,11 +69,11 @@ public partial class PlayerPanel : PanelContainer
 		};
 	}
 
-	public void Refresh(string playerName, MtgPlayer player, int libraryCount)
+	public void Refresh(string playerName, MtgPlayer player, int libraryCount, int handCount)
 	{
 		_nameLabel.Text = playerName;
 		_lifeLabel.Text = $"♥ {player.Life}";
-		_libraryLabel.Text = $"Lib. {libraryCount}";
+		_libraryLabel.Text = $"Hand {handCount}\nLib. {libraryCount}";
 
 		foreach (var child in _manaContainer.GetChildren())
 			child.QueueFree();

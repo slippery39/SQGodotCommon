@@ -94,7 +94,7 @@ public partial class BoardCard : Control
 				ManaCost = card.ManaCost.ToString(),
 				TypeLine = MtgCardMapper.GetTypeLine(card),
 				PowerToughness = MtgCardMapper.GetPowerToughness(card, state),
-				RulesText = MtgCardMapper.GetRulesText(card),
+				RulesText = MtgCardMapper.GetRulesText(card, state),
 				ArtworkTexture = CardArtLoader.Load(card.Name),
 				FrameColor = MtgCardTheme.FrameColor(card),
 				NamePlateColor = MtgCardTheme.NamePlateColor(card),

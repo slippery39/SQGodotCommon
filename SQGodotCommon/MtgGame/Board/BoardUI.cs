@@ -14,6 +14,7 @@ public partial class BoardUI : Control
 	public event Action<int>? OpponentCreatureClicked;
 	public event Action? OpponentDirectAttacked;
 	public event Action? GraveyardButtonPressed;
+	public event Action? OpponentGraveyardButtonPressed;
 	public event Action? LogTogglePressed;
 	public event Action<int>? CreatureHovered;
 	public event Action<int>? CreatureHoverEnded;
@@ -32,6 +33,7 @@ public partial class BoardUI : Control
 	private BattlefieldZone _opponentBattlefield = null!;
 	private BattlefieldZone _playerBattlefield = null!;
 	private Button _graveyardButton = null!;
+	private Button _opponentGraveyardButton = null!;
 	private Button _endTurnButton = null!;
 	private Button _logToggleButton = null!;
 
@@ -46,7 +48,12 @@ public partial class BoardUI : Control
 		_mainColumn = GetNode<VBoxContainer>("MainColumn");
 		_turnLabel = GetNode<Label>("MainColumn/TopBar/TurnLabel");
 		_logToggleButton = GetNode<Button>("MainColumn/TopBar/LogToggleButton");
-		_opponentPanel = GetNode<PlayerPanel>("MainColumn/OpponentRow/OpponentPanel");
+		_opponentPanel = GetNode<PlayerPanel>(
+			"MainColumn/OpponentRow/OpponentSidebar/OpponentPanel"
+		);
+		_opponentGraveyardButton = GetNode<Button>(
+			"MainColumn/OpponentRow/OpponentSidebar/OpponentGraveyardButton"
+		);
 		_opponentBattlefield = GetNode<BattlefieldZone>(
 			"MainColumn/OpponentRow/OpponentBattlefield"
 		);
@@ -89,6 +96,16 @@ public partial class BoardUI : Control
 		_graveyardButton.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
 		_graveyardButton.AddThemeColorOverride("font_disabled_color", MtgUiStyles.DimBorder);
 		_graveyardButton.Pressed += () => GraveyardButtonPressed?.Invoke();
+
+		_opponentGraveyardButton.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
+		_opponentGraveyardButton.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
+		_opponentGraveyardButton.AddThemeStyleboxOverride("disabled", MtgUiStyles.ButtonDisabled());
+		_opponentGraveyardButton.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
+		_opponentGraveyardButton.AddThemeColorOverride(
+			"font_disabled_color",
+			MtgUiStyles.DimBorder
+		);
+		_opponentGraveyardButton.Pressed += () => OpponentGraveyardButtonPressed?.Invoke();
 
 		_logToggleButton.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
 		_logToggleButton.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
@@ -144,8 +161,21 @@ public partial class BoardUI : Control
 		var humanBattlefieldId = state.GetWellKnownId(MtgObjectKeys.Player1Battlefield);
 		var aiBattlefieldId = state.GetWellKnownId(MtgObjectKeys.Player2Battlefield);
 
-		_playerPanel.Refresh("You", human, state.GetCardsInZone(humanLibraryId).Count());
-		_opponentPanel.Refresh("Opponent", ai, state.GetCardsInZone(aiLibraryId).Count());
+		var humanHandId = state.GetWellKnownId(MtgObjectKeys.Player1Hand);
+		var aiHandId = state.GetWellKnownId(MtgObjectKeys.Player2Hand);
+
+		_playerPanel.Refresh(
+			"You",
+			human,
+			state.GetCardsInZone(humanLibraryId).Count(),
+			state.GetCardsInZone(humanHandId).Count()
+		);
+		_opponentPanel.Refresh(
+			"Opponent",
+			ai,
+			state.GetCardsInZone(aiLibraryId).Count(),
+			state.GetCardsInZone(aiHandId).Count()
+		);
 		_playerBattlefield.Refresh(
 			state.GetCardsInZone(humanBattlefieldId),
 			state,
@@ -163,6 +193,11 @@ public partial class BoardUI : Control
 		var graveyardCount = state.GetCardsInZone(humanGraveyardId).Count();
 		_graveyardButton.Text = $"Graveyard ({graveyardCount})";
 		_graveyardButton.Disabled = graveyardCount == 0;
+
+		var aiGraveyardId = state.GetWellKnownId(MtgObjectKeys.Player2Graveyard);
+		var aiGraveyardCount = state.GetCardsInZone(aiGraveyardId).Count();
+		_opponentGraveyardButton.Text = $"Opp. Graveyard ({aiGraveyardCount})";
+		_opponentGraveyardButton.Disabled = aiGraveyardCount == 0;
 
 		var isHumanTurn = game.ActivePlayerId == humanPlayerId;
 		_playerPanel.SetActive(isHumanTurn);

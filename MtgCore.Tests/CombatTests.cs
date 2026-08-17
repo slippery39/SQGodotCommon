@@ -64,7 +64,9 @@ public class CombatTests
 	[Test]
 	public void Attack_CreatureAttacksCreature_BothTakeDamage()
 	{
-		var (s1, attacker) = AddCreatureToBattlefield(_state, "Bear", 2, 2, _ids.Player1Id);
+		// Both combatants must SURVIVE for this test to be about marked damage: damage falls off
+		// a creature that changes zones, so a dead attacker carries none into the graveyard.
+		var (s1, attacker) = AddCreatureToBattlefield(_state, "Wall", 2, 4, _ids.Player1Id);
 		var (s2, defender) = AddCreatureToBattlefield(s1, "Hill Giant", 3, 4, _ids.Player2Id);
 
 		var (finalState, _) = s2.AddAction(MakeAttack(attacker.Id, defender.Id))
@@ -82,6 +84,33 @@ public class CombatTests
 			defenderCard.GetComponent<CreatureComponent>()!.Damage,
 			Is.EqualTo(2),
 			"Defender should take attacker's power as damage"
+		);
+	}
+
+	[Test]
+	public void ChangingZones_ClearsMarkedDamage()
+	{
+		// Survives combat with 3 damage marked, then is bounced to hand. Marked damage belongs to
+		// the permanent, so the card must arrive in hand — and come back — undamaged.
+		var (s1, attacker) = AddCreatureToBattlefield(_state, "Wall", 1, 5, _ids.Player1Id);
+		var (s2, defender) = AddCreatureToBattlefield(s1, "Hill Giant", 3, 4, _ids.Player2Id);
+
+		var (afterCombat, _) = s2.AddAction(MakeAttack(attacker.Id, defender.Id))
+			.ProcessAllActions();
+
+		Assert.That(
+			((Card)afterCombat.GetObject(attacker.Id)).GetComponent<CreatureComponent>()!.Damage,
+			Is.EqualTo(3),
+			"Precondition: the attacker survives combat with damage marked on it"
+		);
+
+		var handId = afterCombat.GetPlayerZoneId(_ids.Player1Id, ZoneType.Hand);
+		var bounced = afterCombat.MoveCardTracked(attacker.Id, handId);
+
+		Assert.That(
+			((Card)bounced.GetObject(attacker.Id)).GetComponent<CreatureComponent>()!.Damage,
+			Is.EqualTo(0),
+			"Damage should fall off when the creature changes zones"
 		);
 	}
 

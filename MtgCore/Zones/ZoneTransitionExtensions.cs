@@ -29,10 +29,26 @@ public static class ZoneTransitionExtensions
 			return state.MoveObject(cardId, destinationZoneId);
 
 		var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
-		var wasInGraveyard = state.GetCardZoneId(cardId) == graveyardId;
+		var sourceZoneId = state.GetCardZoneId(cardId);
+		var wasInGraveyard = sourceZoneId == graveyardId;
 		var willBeInGraveyard = destinationZoneId == graveyardId;
 
 		state = state.MoveObject(cardId, destinationZoneId);
+
+		// Marked damage belongs to the permanent, not the card. A creature that leaves the
+		// battlefield and comes back is a new permanent and arrives undamaged — reanimating a
+		// creature that died at 3 damage must not bring the damage with it. Cleared here rather
+		// than at each caller for the same reason the boundary events are.
+		if (
+			sourceZoneId != destinationZoneId
+			&& card.GetComponent<CreatureComponent>() is { Damage: > 0 } damaged
+		)
+		{
+			state = state.UpdateObject(
+				cardId,
+				((Card)state.GetObject(cardId)).WithComponentReplaced(damaged with { Damage = 0 })
+			);
+		}
 
 		// A move within the same zone crosses no boundary.
 		if (wasInGraveyard == willBeInGraveyard)

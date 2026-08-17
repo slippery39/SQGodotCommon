@@ -33,7 +33,7 @@ public static class MtgCardMapper
 			ManaCost = manaCostDisplay,
 			TypeLine = GetTypeLine(card),
 			PowerToughness = GetPowerToughness(card, state),
-			RulesText = GetRulesText(card),
+			RulesText = GetRulesText(card, state),
 			ArtworkTexture = CardArtLoader.Load(card.Name),
 			FrameColor = MtgCardTheme.FrameColor(card),
 			NamePlateColor = MtgCardTheme.NamePlateColor(card),
@@ -96,7 +96,12 @@ public static class MtgCardMapper
 		return creature.Damage > 0 ? $"{text}\n-{creature.Damage}" : text;
 	}
 
-	public static string GetRulesText(Card card)
+	/// <param name="state">
+	/// The live game, when there is one. Keywords are then read from the card's effective stats,
+	/// so a creature granted Haste by something else says Haste. Without it only the printed
+	/// keywords show — which is all a draft pack card has.
+	/// </param>
+	public static string GetRulesText(Card card, GameState state = null)
 	{
 		if (card.HasSubtype("Land"))
 			return card.HasSubtype("Basic") ? "Basic Land\n(Tap: Add 1 mana)" : "Land";
@@ -116,7 +121,10 @@ public static class MtgCardMapper
 		{
 			// P/T deliberately absent — it has its own badge on the frame. Printing it here too
 			// meant a lord-buffed creature read "2/2" in its text box and "4/4" in its corner.
-			var keywords = DescribeKeywords(creature);
+			var keywords = DescribeKeywords(
+				creature,
+				state != null && state.HasObject(card.Id) ? state.GetEffectiveStats(card.Id) : null
+			);
 			if (keywords != null)
 				lines.Add(keywords);
 		}
@@ -358,29 +366,33 @@ public static class MtgCardMapper
 		return $"Transforms into {transform.OtherFaceName}{stats}";
 	}
 
-	private static string? DescribeKeywords(CreatureComponent creature)
+	/// <param name="stats">
+	/// Effective stats when the card is in play, so granted keywords (a lord's Flying, Fury of
+	/// the Mere's Haste from the graveyard) print alongside the printed ones. Null falls back to
+	/// the printed keywords. Double Strike is not carried on CreatureStats, so it always reads
+	/// from the component.
+	/// </param>
+	private static string? DescribeKeywords(CreatureComponent creature, CreatureStats stats)
 	{
 		var keywords = new List<string>();
-		if (creature.HasFlying)
-			keywords.Add("Flying");
-		if (creature.HasHaste)
-			keywords.Add("Haste");
-		if (creature.HasDoubleStrike)
-			keywords.Add("Double Strike");
-		if (creature.HasTaunt)
-			keywords.Add("Taunt");
-		if (creature.HasReach)
-			keywords.Add("Reach");
-		if (creature.HasLifelink)
-			keywords.Add("Lifelink");
-		if (creature.HasTrample)
-			keywords.Add("Trample");
-		if (creature.HasDeathtouch)
-			keywords.Add("Deathtouch");
-		if (creature.HasShroud)
-			keywords.Add("Shroud");
-		if (creature.HasHexproof)
-			keywords.Add("Hexproof");
+
+		void Add(bool present, string name)
+		{
+			if (present)
+				keywords.Add(name);
+		}
+
+		Add(stats?.HasFlying ?? creature.HasFlying, "Flying");
+		Add(stats?.HasHaste ?? creature.HasHaste, "Haste");
+		Add(creature.HasDoubleStrike, "Double Strike");
+		Add(stats?.HasTaunt ?? creature.HasTaunt, "Taunt");
+		Add(stats?.HasReach ?? creature.HasReach, "Reach");
+		Add(stats?.HasLifelink ?? creature.HasLifelink, "Lifelink");
+		Add(stats?.HasTrample ?? creature.HasTrample, "Trample");
+		Add(stats?.HasDeathtouch ?? creature.HasDeathtouch, "Deathtouch");
+		Add(stats?.HasShroud ?? creature.HasShroud, "Shroud");
+		Add(stats?.HasHexproof ?? creature.HasHexproof, "Hexproof");
+
 		return keywords.Count > 0 ? string.Join(", ", keywords) : null;
 	}
 
@@ -467,14 +479,14 @@ public static class MtgCardMapper
 		{
 			EventTypeNames.CreatureEnteredBattlefield => isSelf
 				? "When this enters"
-				: "Whenever a creature enters",
+				: $"Whenever {FilterPhrase(e.Filter)} enters",
 			EventTypeNames.PermanentEnteredBattlefield => "When this enters",
 			EventTypeNames.TurnStarted => "At the beginning of your upkeep",
 			EventTypeNames.CombatDamageDealtToPlayer =>
 				"Whenever this deals combat damage to a player",
 			EventTypeNames.CreatureDestroyed => isSelf
 				? "When this dies"
-				: "Whenever a creature dies",
+				: $"Whenever {FilterPhrase(e.Filter)} dies",
 			EventTypeNames.CreatureAttacked => "Whenever this attacks",
 			EventTypeNames.SpellCast => "Whenever you cast a spell",
 			EventTypeNames.CardDiscarded => isSelf
@@ -485,6 +497,31 @@ public static class MtgCardMapper
 			EventTypeNames.TurnEnded => "At end of turn",
 			_ => "When triggered",
 		};
+	}
+
+	/// <summary>
+	/// The noun phrase a creature trigger fires on, with its article — "another Human you
+	/// control", "a creature an opponent controls". Champion of the Parish read "Whenever a
+	/// creature enters" while only ever counting Humans, which is the worst kind of text bug:
+	/// the card promises more than it does.
+	///
+	/// Falls back to the generic wording when the filter carries nothing that narrows it, so an
+	/// unrecognised specification under-promises rather than mis-promises.
+	/// </summary>
+	private static string FilterPhrase(TargetSpecification? filter)
+	{
+		const string fallback = "a creature";
+		if (filter == null)
+			return fallback;
+
+		var phrase = DescribeSpecification(filter);
+		if (phrase is "it" or "permanent" or "creature")
+			return fallback;
+
+		if (phrase.StartsWith("other ", StringComparison.Ordinal))
+			return "another " + phrase["other ".Length..];
+
+		return ("aeiou".Contains(char.ToLowerInvariant(phrase[0])) ? "an " : "a ") + phrase;
 	}
 
 	private static string? DescribeStaticAbility(StaticAbilityComponent ability)

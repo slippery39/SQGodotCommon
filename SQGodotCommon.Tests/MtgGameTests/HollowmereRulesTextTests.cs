@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
+using ImmutableGameObjects;
 using MtgCore;
 using MtgGame;
 using NUnit.Framework;
@@ -222,6 +224,59 @@ public class HollowmereRulesTextTests
 	public void Deathtouch_IsShown()
 	{
 		Assert.That(TextFor("Nighthawk Penitent"), Does.Contain("Deathtouch"));
+	}
+
+	/// <summary>
+	/// A keyword the creature was GIVEN has to print like one it was born with. Fury of the Mere
+	/// grants Haste to the whole board from the graveyard, and without this the granted creatures
+	/// showed no Haste anywhere while still being attackable — the player's only clue that the
+	/// card was working at all was noticing the attack went through.
+	/// </summary>
+	[Test]
+	public void GrantedKeywords_ShowOnTheCreatureThatReceivedThem()
+	{
+		var (state, ids) = MtgGameFactory.CreateForTesting();
+		var battlefieldId = state.GetPlayerZoneId(ids.Player1Id, ZoneType.Battlefield);
+
+		var (withCreature, creature) = state.AddObject(
+			new Card
+			{
+				Name = "Test Bear",
+				ManaCost = 2,
+				OwnerId = ids.Player1Id,
+				ControllerId = ids.Player1Id,
+				Components = ImmutableArray.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent { Power = 2, Toughness = 2 },
+					new AppliedKeywordComponent { GrantsHaste = true, SourceCardId = 999 }
+				),
+			},
+			parentId: battlefieldId
+		);
+
+		Assert.That(
+			MtgCardMapper.GetRulesText(creature, withCreature),
+			Does.Contain("Haste"),
+			"A granted keyword must show in the rules text"
+		);
+		Assert.That(
+			MtgCardMapper.GetRulesText(creature),
+			Does.Not.Contain("Haste"),
+			"Without a game state only printed keywords show — a draft pack card has no grants"
+		);
+	}
+
+	/// <summary>
+	/// A trigger that only counts one subtype must say so. Champion of the Parish read "Whenever
+	/// a creature enters" while only ever counting Humans — text that promises more than the card
+	/// does is worse than text that is missing.
+	/// </summary>
+	[Test]
+	public void FilteredEntersTrigger_NamesTheSubtypeItCounts()
+	{
+		var text = TextFor("Champion of the Parish");
+		Assert.That(text, Does.Contain("Human"));
+		Assert.That(text, Does.Not.Contain("Whenever a creature enters"));
 	}
 
 	[Test]

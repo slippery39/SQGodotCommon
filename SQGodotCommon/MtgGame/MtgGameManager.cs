@@ -149,6 +149,34 @@ public class MtgGameManager
 		);
 	}
 
+	/// <summary>
+	/// Every target this attacker may legally attack — opponent creatures plus the opponent
+	/// themselves. Decided by asking <see cref="AttackAction"/> itself rather than by
+	/// re-implementing the rules here, so the highlight cannot drift out of step with Taunt,
+	/// Flying and Reach. Empty means the creature cannot attack at all.
+	/// </summary>
+	public List<int> GetLegalAttackTargets(int attackerId)
+	{
+		var opponentBattlefieldId = _state.GetPlayerZoneId(AiPlayerId, ZoneType.Battlefield);
+
+		return _state
+			.GetCardsInZone(opponentBattlefieldId)
+			.Where(c => c.HasComponent<CreatureComponent>())
+			.Select(c => c.Id)
+			.Append(AiPlayerId)
+			.Where(targetId =>
+				new AttackAction
+				{
+					AttackerId = attackerId,
+					TargetId = targetId,
+					AttackingPlayerId = HumanPlayerId,
+				}
+					.ValidateAdd(_state)
+					.IsValid
+			)
+			.ToList();
+	}
+
 	public (bool Success, ImmutableList<GameEvent> Events) CastSpell(
 		int cardId,
 		ImmutableDictionary<int, ImmutableList<int>> targetIds

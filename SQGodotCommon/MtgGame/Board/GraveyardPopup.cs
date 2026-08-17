@@ -21,6 +21,7 @@ public partial class GraveyardPopup : CanvasLayer
 	private ScrollContainer _scroll = null!;
 	private BattlefieldZone _zone = null!;
 	private CardPreviewPopup _preview = null!;
+	private Label _title = null!;
 	private GameState? _state;
 
 	public event Action<int>? CardClicked;
@@ -59,11 +60,11 @@ public partial class GraveyardPopup : CanvasLayer
 		var header = new HBoxContainer();
 		vbox.AddChild(header);
 
-		var title = new Label { Text = "Graveyard" };
-		title.AddThemeFontSizeOverride("font_size", 22);
-		title.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
-		title.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-		header.AddChild(title);
+		_title = new Label { Text = "Graveyard" };
+		_title.AddThemeFontSizeOverride("font_size", 22);
+		_title.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
+		_title.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+		header.AddChild(_title);
 
 		var closeBtn = new Button { Text = "✕" };
 		closeBtn.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
@@ -130,7 +131,7 @@ public partial class GraveyardPopup : CanvasLayer
 				ManaCost = card.ManaCost.ToString(),
 				TypeLine = MtgCardMapper.GetTypeLine(card),
 				PowerToughness = MtgCardMapper.GetPowerToughness(card, _state),
-				RulesText = MtgCardMapper.GetRulesText(card),
+				RulesText = MtgCardMapper.GetRulesText(card, _state),
 				ArtworkTexture = CardArtLoader.Load(card.Name),
 				FrameColor = MtgCardTheme.FrameColor(card),
 				NamePlateColor = MtgCardTheme.NamePlateColor(card),
@@ -139,14 +140,20 @@ public partial class GraveyardPopup : CanvasLayer
 		);
 	}
 
+	/// <param name="title">
+	/// Which graveyard this is. The popup is now used for the opponent's as well, and two
+	/// identical-looking piles of cards with no label is worse than not showing theirs at all.
+	/// </param>
 	public void ShowGraveyard(
 		IEnumerable<Card> cards,
 		GameState state,
 		IEnumerable<int> flashbackIds,
-		IEnumerable<int>? targetHighlightIds = null
+		IEnumerable<int>? targetHighlightIds = null,
+		string title = "Graveyard"
 	)
 	{
 		_state = state;
+		_title.Text = title;
 		_zone.Refresh(
 			cards,
 			state,
