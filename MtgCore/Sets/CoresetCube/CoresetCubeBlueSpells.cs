@@ -52,7 +52,7 @@ public static class CoresetCubeBlueSpells
 			CardFactory
 				.Instant("Aether Gust", manaCost: 2)
 				.WithAction(
-					new MoveCardToTopOfLibraryAction(),
+					new PutOnLibraryAction { Bottom = false },
 					TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures())
 				)
 				.Build(),
@@ -138,7 +138,7 @@ public static class CoresetCubeBlueSpells
 			CardFactory
 				.Instant("Aetherspouts", manaCost: 5)
 				.WithAction(
-					new MoveCardToTopOfLibraryAction(),
+					new PutOnLibraryAction { Bottom = false },
 					TargetingStrategy.AllValid(TargetSpecification.OpponentCreatures())
 				)
 				.Build(),
@@ -186,7 +186,7 @@ public static class CoresetCubeBlueSpells
 			CardFactory
 				.Sorcery("Anchor to the Aether", manaCost: 3)
 				.WithAction(
-					new MoveCardToTopOfLibraryAction(),
+					new PutOnLibraryAction { Bottom = false },
 					TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures())
 				)
 				.WithScry(1)

@@ -162,7 +162,8 @@ public class PermanentCardBuilder
 				Name = name,
 				Condition = condition,
 				ActiveInZone = activeInZone,
-				Effects = effects,
+				// See TriggerTargeting — user-select inside a trigger silently does nothing.
+				Effects = TriggerTargeting.MakeResolvable(effects),
 				MaxTriggers = maxTriggers,
 				MaxTriggersPerTurn = maxPerTurn,
 			}
@@ -171,12 +172,13 @@ public class PermanentCardBuilder
 	}
 
 	/// <summary>
-	/// Makes this card an Aura that attaches to a creature when it enters the battlefield.
+	/// Makes this card an Aura that chooses what it enchants when it is CAST.
 	///
-	/// Attachment happens via an ETB trigger rather than at cast time. Real MTG chooses the
-	/// aura's target as the spell is cast, but nothing in this engine can respond between cast
-	/// and resolution, so the two are observationally identical — and the trigger route needs no
-	/// new casting plumbing.
+	/// It used to attach through an ETB trigger, on the reasoning that nothing can respond
+	/// between cast and resolution so the timing was identical. Playtesting proved that wrong for
+	/// a reason unrelated to timing: an ETB trigger cannot make the spell illegal, so Pacifism
+	/// and Aether Tunnel were castable with no creature on the board, resolved, found nothing to
+	/// attach to, and sat there inert forever. See AuraTargetComponent.
 	///
 	/// Pass 0/0 bonuses for an aura that only grants keywords or only shuts a creature down.
 	/// </summary>
@@ -213,15 +215,15 @@ public class PermanentCardBuilder
 			}
 		);
 
-		return WithTriggeredAbility(
-			"Enchant",
-			TriggerConditions.OnSelfEntersBattlefieldAsNonCreature(),
-			eb =>
-				eb.WithAction(
-					new AttachEquipmentAction(),
-					targeting ?? TargetingStrategy.SingleTarget(TargetSpecification.Creatures())
-				)
+		_extraComponents.Add(
+			new AuraTargetComponent
+			{
+				Targeting =
+					targeting ?? TargetingStrategy.SingleTarget(TargetSpecification.Creatures()),
+			}
 		);
+
+		return this;
 	}
 
 	/// <summary>An anthem — a static P/T boost to permanents matching <paramref name="filter"/>.</summary>

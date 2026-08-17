@@ -35,6 +35,12 @@ public partial class MtgGameScene : Node2D
 	private bool _isGameOver;
 	private bool _choicePanelShowing;
 
+	/// <summary>
+	/// Set while the choice panel is offering which ABILITY to activate, rather than resolving a
+	/// pending ChoiceAction from the game. The two share one panel and must not share a handler.
+	/// </summary>
+	private int? _abilityChoiceCardId;
+
 	/// The graveyard popup is shared between both players' graveyards; this says whose is on
 	/// screen, so a click in the opponent's cannot start a flashback cast that would never validate.
 	private bool _viewingOpponentGraveyard;
@@ -718,6 +724,23 @@ public partial class MtgGameScene : Node2D
 
 	private void OnChoiceConfirmed(ImmutableList<int> selectedIds)
 	{
+		// The panel serves two different jobs. An ability choice is a purely local decision that
+		// has not touched the game yet, so it must not be routed into ResolveChoice — there is no
+		// pending ChoiceAction for it to resolve, and doing so would drop the pick silently.
+		if (_abilityChoiceCardId.HasValue)
+		{
+			var cardId = _abilityChoiceCardId.Value;
+			_abilityChoiceCardId = null;
+			_choicePanelShowing = false;
+			_choicePanel.Hide();
+
+			if (!selectedIds.IsEmpty)
+				BeginAbilityActivation(cardId, selectedIds[0]);
+			else
+				Refresh();
+			return;
+		}
+
 		_choicePanelShowing = false;
 		var events = _manager.ResolveChoice(selectedIds);
 		_eventLog.AppendEvents(events, _manager.State, _manager.HumanPlayerId);
@@ -870,8 +893,35 @@ public partial class MtgGameScene : Node2D
 		if (legalAbilities.Count == 0)
 			return;
 
-		var (abilityIndex, _, _) = legalAbilities[0];
+		// More than one ability means the player has a decision to make. Taking [0] silently
+		// picked for them — a planeswalker with three loyalty abilities could only ever use its
+		// first, which is how Jace Beleren shipped with two unreachable abilities.
+		if (legalAbilities.Count > 1)
+		{
+			_abilityChoiceCardId = cardId;
+			_choicePanel.ShowChoice(
+				"Choose an ability",
+				legalAbilities
+					.Select(a => new ChoiceOption { Id = a.Index, DisplayText = a.Name })
+					.ToImmutableList(),
+				minChoices: 1,
+				maxChoices: 1
+			);
+			_choicePanelShowing = true;
+			Refresh();
+			return;
+		}
 
+		BeginAbilityActivation(cardId, legalAbilities[0].Index);
+	}
+
+	/// <summary>
+	/// Runs the activation flow for one chosen ability: additional-cost selection, then target
+	/// selection, then activation. Split out of the click handler so the ability chooser can
+	/// re-enter it once the player has picked.
+	/// </summary>
+	private void BeginAbilityActivation(int cardId, int abilityIndex)
+	{
 		if (_manager.AbilityHasAdditionalCostSelection(cardId, abilityIndex))
 		{
 			EnterAdditionalCostMode(cardId, isAbility: true, abilityIndex);
@@ -1220,8 +1270,14 @@ public partial class MtgGameScene : Node2D
 		// unread badge cannot go stale without the rest of the board going stale too.
 		_boardUI.SetLogToggleText(_eventLog.ToggleText);
 
+		// An ability choice owns the panel until the player answers it. Without this guard the
+		// next Refresh sees no pending game choice and hides the panel out from under them.
 		var shouldShowChoice = !_manager.IsAiTurn && !_isGameOver && _manager.IsWaitingForChoice;
-		if (shouldShowChoice && !_choicePanelShowing)
+		if (_abilityChoiceCardId.HasValue)
+		{
+			// Leave it alone.
+		}
+		else if (shouldShowChoice && !_choicePanelShowing)
 		{
 			var choice = _manager.GetPendingChoice();
 			var options = _manager.GetPendingChoiceOptions();

@@ -198,8 +198,36 @@ public class MtgGameManager
 				CastingPlayerId = HumanPlayerId,
 				TargetIds = targetIds,
 				AdditionalCostPayments = additionalCostPayments,
+				XValue = MaxAffordableX(cardId),
 			}
 		);
+	}
+
+	/// <summary>
+	/// The largest X the human can pay for, or 0 for a card with no {X} in its cost.
+	///
+	/// X was previously never set at all from the UI, so every X spell resolved at X = 0 —
+	/// Mind Spring was a two-mana "draw zero cards". There is no X prompt in the interface, so
+	/// rather than build one this spends whatever mana is available, which is both what the
+	/// player expects from a card that says "draw X" and almost always the right choice.
+	///
+	/// The AI is unaffected: MtgActionGenerator enumerates one action per affordable X, so it
+	/// still chooses.
+	/// </summary>
+	private int MaxAffordableX(int cardId)
+	{
+		if (_state.GetObject(cardId) is not Card card)
+			return 0;
+		if (!card.HasComponent<XCostComponent>())
+			return 0;
+
+		var available = _state.GetPlayer(HumanPlayerId).CurrentMana;
+
+		var x = 0;
+		while (_state.ComputeEffectiveCost(card, HumanPlayerId, x + 1) <= available)
+			x++;
+
+		return x;
 	}
 
 	public bool HasFlashback(int cardId)

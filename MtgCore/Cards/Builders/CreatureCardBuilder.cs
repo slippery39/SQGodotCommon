@@ -375,7 +375,9 @@ public class CreatureCardBuilder
 				Name = name,
 				Condition = condition,
 				ActiveInZone = ActiveInZone,
-				Effects = effects,
+				// A user-select strategy inside a trigger resolves to no targets and the effect
+				// silently does nothing — see TriggerTargeting.
+				Effects = TriggerTargeting.MakeResolvable(effects),
 				MaxTriggers = maxTriggers,
 				MaxTriggersPerTurn = maxPerTurn,
 			}

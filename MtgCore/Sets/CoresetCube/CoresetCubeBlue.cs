@@ -90,24 +90,17 @@ public static class CoresetCubeBlue
 				.WithComponent(new TauntUntilAttackedComponent())
 				.WithComponent(new PreventsCombatDamageComponent())
 				.Build(),
-			// The ETB bounce only hits an exhausted creature, which makes this the payoff half of
-			// blue's own freeze theme rather than generic bounce.
+			// Printed as "return target TAPPED creature an opponent controls". Gating on
+			// exhaustion made it a blank card in play: creatures here only become exhausted from
+			// a tapper, because attacking does not tap — so the clause that is live in real Magic
+			// is almost never satisfiable in this engine. Bounces any opposing creature instead.
 			CardFactory
 				.Creature("Harbinger of the Tides", manaCost: 2, power: 2, toughness: 2)
 				.WithSubtype(Merfolk)
 				.WithSubtype(Wizard)
 				.WithEtbTrigger(
 					"Tidal Return",
-					eb =>
-						eb.WithBounce()
-							.WithTarget(
-								Single()
-									.WithSpec(
-										TargetSpecification
-											.OpponentCreatures()
-											.And(new IsExhaustedSpecification())
-									)
-							)
+					eb => eb.WithBounce().WithTarget(Random().OpponentCreatures())
 				)
 				.Build(),
 			// The flip to Jace, Telepath Unbound is cut — creature to planeswalker crosses the

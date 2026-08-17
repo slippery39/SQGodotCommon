@@ -216,7 +216,7 @@ public static class MtgCardMapper
 			lines.Add("Convoke (costs 1 less per ready creature; those creatures tap)");
 
 		if (card.HasComponent<XCostComponent>())
-			lines.Add("Costs X more; choose X as you cast it");
+			lines.Add("X is all the mana you have left when you cast it");
 
 		foreach (var reduction in card.GetComponents<ConditionalCostReductionComponent>())
 			lines.Add(
@@ -798,6 +798,9 @@ public static class MtgCardMapper
 			ExhaustCreatureAction e => DescribeExhaust(e, t),
 			MoveCardToTopOfLibraryAction => $"Put {t} on top of its owner's library",
 			MoveCardToBottomOfLibraryAction => $"Put {t} on the bottom of its owner's library",
+			PutOnLibraryAction p => p.Bottom
+				? $"Put {t} on the bottom of its owner's library"
+				: $"Put {t} on top of its owner's library",
 			PreventDamageAction p => p.PreventAll
 				? "Prevent all damage to you and your creatures this turn"
 				: $"Prevent the next {p.Amount} damage to you and your creatures this turn",
@@ -956,6 +959,15 @@ public static class MtgCardMapper
 		public bool CreatureInGraveyard;
 		public bool SpellInGraveyard;
 		public bool InHand;
+
+		/// Types a card-type spec narrows to, and types it excludes. Without these, Disenchant
+		/// read "Destroy target permanent" while only ever hitting artifacts and enchantments —
+		/// text that promises more than the card does.
+		public CardType Types;
+		public CardType ExcludedTypes;
+
+		public int MaxManaCost;
+		public bool Exhausted;
 	}
 
 	/// Specifications are composed with And/Or, so the shape has to be walked rather than
@@ -999,6 +1011,18 @@ public static class MtgCardMapper
 			case IsInHandSpecification:
 				f.InHand = true;
 				break;
+			case IsCardTypeSpecification t:
+				f.Types |= t.Types;
+				break;
+			case IsNotCardTypeSpecification t:
+				f.ExcludedTypes |= t.Types;
+				break;
+			case HasManaCostAtMostSpecification m:
+				f.MaxManaCost = m.Maximum;
+				break;
+			case IsExhaustedSpecification:
+				f.Exhausted = true;
+				break;
 		}
 	}
 
@@ -1032,14 +1056,59 @@ public static class MtgCardMapper
 		if (f.Player)
 			return f.Opponents ? "opponent" : "player";
 
-		var noun = f.Subtype ?? (f.Creature ? "creature" : "permanent");
+		var noun =
+			f.Subtype
+			?? (f.Creature ? "creature" : null)
+			?? TypeNoun(f.Types, f.ExcludedTypes)
+			?? "permanent";
+
 		var prefix = f.Other ? "other " : "";
+		if (f.Exhausted)
+			prefix += "tapped ";
+
 		var suffix =
 			f.Yours ? " you control"
 			: f.Opponents ? " an opponent controls"
 			: "";
 
+		if (f.MaxManaCost > 0)
+			suffix += $" costing {f.MaxManaCost} or less";
+
 		return $"{prefix}{noun}{suffix}";
+	}
+
+	/// <summary>
+	/// The noun a card-type filter should print — "artifact or enchantment", "nonland permanent".
+	/// Null when the filter narrows nothing, so the caller falls back to "permanent".
+	/// </summary>
+	private static string? TypeNoun(CardType types, CardType excluded)
+	{
+		if (excluded != CardType.None)
+			return excluded == CardType.Land ? "nonland permanent" : "permanent";
+
+		if (types == CardType.None || types == CardType.AnyPermanent)
+			return null;
+
+		var names = new List<string>();
+		foreach (
+			var (flag, name) in new[]
+			{
+				(CardType.Creature, "creature"),
+				(CardType.Artifact, "artifact"),
+				(CardType.Enchantment, "enchantment"),
+				(CardType.Planeswalker, "planeswalker"),
+				(CardType.Land, "land"),
+			}
+		)
+			if (types.HasFlag(flag))
+				names.Add(name);
+
+		return names.Count switch
+		{
+			0 => null,
+			1 => names[0],
+			_ => string.Join(" or ", names),
+		};
 	}
 
 	/// Mill reads very differently depending on who it hits, and the targeting strategy is

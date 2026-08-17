@@ -33,7 +33,7 @@ public static class CoresetCubeWhiteSpells
 			CardFactory
 				.Instant("Condemn", manaCost: 1)
 				.WithAction(
-					new MoveCardToBottomOfLibraryAction(),
+					new PutOnLibraryAction { Bottom = true },
 					TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures())
 				)
 				.Build(),

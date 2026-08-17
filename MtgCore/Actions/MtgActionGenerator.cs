@@ -206,6 +206,33 @@ public static class MtgActionGenerator
 		List<GameAction> actions
 	)
 	{
+		// An Aura is offered once per legal target, exactly as a targeted spell is — that is what
+		// gives the human the normal targeting prompt and lets the AI choose what to enchant.
+		var aura = card.GetComponent<AuraTargetComponent>();
+		if (aura != null)
+		{
+			var context = new TargetingContext
+			{
+				GameState = state,
+				SourceCardId = card.Id,
+				CastingPlayerId = playerId,
+			};
+
+			foreach (var target in aura.Targeting.GetValidTargets(context))
+			{
+				var auraAction = new CastPermanentAction
+				{
+					CardId = card.Id,
+					CastingPlayerId = playerId,
+					AdditionalCostPayments = costPayments,
+					TargetIds = ImmutableList.Create(target),
+				};
+				if (state.TryAddAction(auraAction).Success)
+					actions.Add(auraAction);
+			}
+			return;
+		}
+
 		var action = new CastPermanentAction
 		{
 			CardId = card.Id,

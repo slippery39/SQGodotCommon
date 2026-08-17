@@ -115,18 +115,20 @@ public class CoresetCubeWhiteNonCreatureTests
 	}
 
 	[Test]
-	public void Auras_AttachOnEntry()
+	public void Auras_TargetWhenCast()
 	{
-		// An aura with no attach trigger enters the battlefield and does nothing at all.
+		// Auras used to attach through an ETB trigger, which could not make the spell illegal —
+		// so one cast with no creature on the board resolved and sat there inert forever.
+		// They now declare a cast-time target instead.
 		foreach (
 			var aura in CoresetCubeWhitePermanents.Cards.Where(c =>
 				c.GetComponent<EquipmentComponent>()?.IsAura == true
 			)
 		)
 			Assert.That(
-				aura.GetComponents<TriggeredAbilityComponent>().Any(t => t.Name == "Enchant"),
-				Is.True,
-				$"{aura.Name} is an aura with no attach trigger"
+				aura.GetComponent<AuraTargetComponent>(),
+				Is.Not.Null,
+				$"{aura.Name} is an aura that does not target on cast"
 			);
 	}
 
@@ -205,13 +207,16 @@ public class CoresetCubeWhiteNonCreatureTests
 				parentId: handId
 			);
 
-			var (added, success) = withCard.TryAddAction(
-				new CastPermanentAction { CardId = card.Id, CastingPlayerId = ids.Player1Id }
-			);
+			// Through the generator rather than a hand-built action: an Aura needs a cast-time
+			// target, and the generator is what supplies one in a real game.
+			var legal = MtgActionGenerator
+				.GetLegalActions(withCard, ids.Player1Id)
+				.OfType<CastPermanentAction>()
+				.FirstOrDefault(a => a.CardId == card.Id);
 
-			Assert.That(success, Is.True, $"{template.Name} could not be cast");
+			Assert.That(legal, Is.Not.Null, $"{template.Name} was never offered as castable");
 			Assert.DoesNotThrow(
-				() => added.ProcessAllActions(),
+				() => withCard.AddAction(legal!).ProcessAllActions(),
 				$"{template.Name} threw while resolving"
 			);
 		}

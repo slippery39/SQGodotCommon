@@ -267,3 +267,33 @@ If a later colour needs keyword removal specifically, that is the cheapest of th
 `BecomesBaseCreatureComponent` already zeroes them.
 
 ---
+
+## A card that resolves is not a card that works
+
+**Note, not a concern — the fixture already exists.** The first Core Set Cube playtest found nine
+broken cards. Every one of them BUILT, cast and resolved without throwing, and every existing
+smoke test passed on them. `CoresetCubeWhiteTests.EveryCard_CanBeCastAndResolve` asserts a card
+reaches the battlefield; it says nothing about whether the card did anything.
+
+Diagnosing it properly turned nine reported bugs into **twenty-seven** — the reports were a
+sample, not the set. Three classes, all silent:
+
+1. **User-select targeting inside a trigger** (19 cards). A trigger spawns `ResolveEffectAction`
+   with no `TargetIds`, so a single-target strategy resolves to an EMPTY list and the effect does
+   nothing. `HollowmereCardBugTests` had a test for exactly this — scoped to Hollowmere, so it
+   never looked at the new set. Now fixed at the root in `TriggerTargeting`, which downgrades
+   user-select to Random at build time so no card can reintroduce it.
+2. **A targeting strategy on an action that cannot receive targets** (4 cards). `ResolveEffectAction`
+   only injects into an `ITargetedAction`; anything else silently gets none.
+3. **An aura attaching via an ETB trigger** (8 cards). A trigger cannot make a spell illegal, so
+   the aura resolved with nothing to enchant and sat inert forever.
+
+**The lesson for the next colour**: when a set introduces a mechanic, extend
+`CoresetCubeCardBugTests` in the same step. A set-scoped fixture is worth almost nothing to the
+set that comes after it — copy it forward or make it iterate `SetRegistry.All`.
+
+**And retrain after fixing cards.** The model had measured 19 cards while they did nothing, so
+their learned values described blanks. That is the same staleness the Flying-restriction note
+warns about, arriving by a different route.
+
+---

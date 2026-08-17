@@ -27,6 +27,12 @@ public record CastPermanentAction : GameAction
 	public ImmutableDictionary<int, ImmutableList<int>> AdditionalCostPayments { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
+	/// <summary>
+	/// What an Aura enchants, chosen at cast time. Empty for every other permanent.
+	/// Carried through to ResolvePermanentAction, which performs the attach.
+	/// </summary>
+	public ImmutableList<int> TargetIds { get; init; } = ImmutableList<int>.Empty;
+
 	public override ValidationResult ValidateAdd(GameState gameState)
 	{
 		if (!gameState.HasObject(CardId))
@@ -52,6 +58,29 @@ public record CastPermanentAction : GameAction
 		foreach (var restriction in card.GetComponents<CastRestrictionComponent>())
 			if (!restriction.CanCast(gameState, CastingPlayerId))
 				return ValidationResult.Invalid(restriction.Describe());
+
+		// An Aura targets when it is CAST. Without this it resolved onto the battlefield with
+		// nothing to enchant and sat there permanently inert — Pacifism and Aether Tunnel were
+		// both castable with no creature on the board at all.
+		var aura = card.GetComponent<AuraTargetComponent>();
+		if (aura != null)
+		{
+			var context = new TargetingContext
+			{
+				GameState = gameState,
+				SourceCardId = CardId,
+				CastingPlayerId = CastingPlayerId,
+			};
+
+			if (aura.Targeting.GetValidTargets(context).Count == 0)
+				return ValidationResult.Invalid("No legal permanent to enchant");
+
+			if (TargetIds.IsEmpty)
+				return ValidationResult.Invalid("An Aura must choose what it enchants");
+
+			if (!aura.Targeting.ValidateTargets(TargetIds, context))
+				return ValidationResult.Invalid("Invalid target for this Aura");
+		}
 
 		var player = gameState.GetPlayer(CastingPlayerId);
 		var effectiveCost = gameState.ComputeEffectiveCost(card, CastingPlayerId);
@@ -112,7 +141,12 @@ public record CastPermanentAction : GameAction
 
 		return new ActionResult(
 			state.SpawnAction(
-				new ResolvePermanentAction { CardId = CardId, CastingPlayerId = CastingPlayerId }
+				new ResolvePermanentAction
+				{
+					CardId = CardId,
+					CastingPlayerId = CastingPlayerId,
+					AuraTargetIds = TargetIds,
+				}
 			)
 		).WithEvent(playedEvent);
 	}
