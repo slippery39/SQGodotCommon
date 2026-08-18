@@ -178,8 +178,13 @@ public static class MtgCardMapper
 				"Power and toughness are each equal to the number of cards in your graveyard"
 			);
 
-		if (card.HasComponent<CreatureCountComponent>())
-			lines.Add("Power and toughness are each equal to the number of creatures you control");
+		// Not one fixed sentence: the component gained a Subtype and per-creature amounts for the
+		// Goblin lords, so the Crusader of Odric wording would have printed "power and toughness
+		// are each equal to the number of creatures you control" on a card that is actually
+		// "+2/+0 for each other Goblin you control" — confidently wrong text, which is worse than
+		// blank text because nothing looks broken.
+		foreach (var count in card.GetComponents<CreatureCountComponent>())
+			lines.Add(DescribeCreatureCount(count));
 
 		foreach (var lifeBonus in card.GetComponents<LifeTotalComponent>())
 			lines.Add(
@@ -796,7 +801,17 @@ public static class MtgCardMapper
 			EventTypeNames.PlayerLostLife => isYours
 				? "Whenever you lose life"
 				: "Whenever a player loses life",
-			EventTypeNames.SpellCast => "Whenever you cast a spell",
+			// The controller filter is load-bearing, exactly as it is for CreatureAttacked above.
+			// Scab-Clan Berserker punishes the OPPONENT's spells and read "Whenever you cast a
+			// spell", which describes the opposite card.
+			EventTypeNames.SpellCast => isOpponents
+				? "Whenever an opponent casts a spell"
+				: "Whenever you cast a spell",
+			// Brash Taunter's entire card. Without this it read "When triggered", which says
+			// nothing about the only reason to play it.
+			EventTypeNames.CreatureDamaged => isSelf
+				? "Whenever this is dealt damage"
+				: $"Whenever {FilterPhrase(e.Filter)} is dealt damage",
 			EventTypeNames.CardDiscarded => isSelf
 				? "Madness — when you discard this"
 				: "Whenever you discard a card",
@@ -905,7 +920,12 @@ public static class MtgCardMapper
 
 		return effect.ActionTemplate switch
 		{
-			DealDamageAction d => $"Deal {d.Amount} damage to {t}",
+			// A context-driven amount is not a number the card can print. Without this Brash
+			// Taunter read "Deal 0 damage" and Volley Veteran "Deal 0 damage to it" — both of
+			// which look like a finished card that simply does nothing.
+			DealDamageAction d => !string.IsNullOrEmpty(d.AmountContextKey)
+				? $"Deal that much damage to {t}"
+				: $"Deal {d.Amount} damage to {t}",
 			DestroyCreatureAction => $"Destroy {t}",
 			ExileAction => $"Exile {t}",
 			AddModifierAction m => $"{Capitalise(t)} gets {Signed(m.PowerBonus)}/"
@@ -943,6 +963,8 @@ public static class MtgCardMapper
 
 			// ===== Core Set Cube =====
 			// Every one of these left its card rendering completely blank before it was added.
+			ExileTopCardPlayableAction =>
+				"Exile the top card of your library. You may play it this turn",
 			DestroyPermanentAction => $"Destroy {t}",
 			ExhaustCreatureAction e => DescribeExhaust(e, t),
 			MoveCardToTopOfLibraryAction => $"Put {t} on top of its owner's library",
@@ -1005,6 +1027,25 @@ public static class MtgCardMapper
 		effect.TargetingStrategy.SelectionMode
 			is TargetSelectionMode.CastingPlayer
 				or TargetSelectionMode.None;
+
+	/// <summary>
+	/// Renders CreatureCountComponent in either of its two shapes: the */* templating it was built
+	/// for (Crusader of Odric, equal per creature, counting itself) and the per-creature bonus the
+	/// Goblin lords use (+2/+0 for each OTHER Goblin).
+	/// </summary>
+	private static string DescribeCreatureCount(CreatureCountComponent count)
+	{
+		var what = string.IsNullOrEmpty(count.Subtype) ? "creature" : count.Subtype;
+		var others = count.CountsSelf ? "" : "other ";
+		var scope = $"{others}{what}s you control";
+
+		// The */* case: the card IS its count, rather than getting a bonus on top of a base.
+		if (count.CountsSelf && count.PowerPerCreature == 1 && count.ToughnessPerCreature == 1)
+			return $"Power and toughness are each equal to the number of {scope}";
+
+		return $"Gets +{count.PowerPerCreature}/+{count.ToughnessPerCreature} for each {others}"
+			+ $"{what} you control";
+	}
 
 	private static string DescribeExhaust(ExhaustCreatureAction e, string target)
 	{
@@ -1475,7 +1516,11 @@ public static class MtgCardMapper
 				: $"take your {(s.SelectLowest ? "cheapest" : "best")} creature",
 			DestroyCreatureAction => "destroy it",
 			ExileAction => "exile it",
-			DealDamageAction d => $"deal {d.Amount} damage to it",
+			// Same context-driven-amount trap as the standalone case above: Volley Veteran's
+			// damage scales with its Goblin count and printed "deal 0 damage to it".
+			DealDamageAction d => !string.IsNullOrEmpty(d.AmountContextKey)
+				? "deal that much damage to it"
+				: $"deal {d.Amount} damage to it",
 			FightAction => "fight it",
 			AddModifierAction m => $"give it {Signed(m.PowerBonus)}/{Signed(m.ToughnessBonus)}",
 

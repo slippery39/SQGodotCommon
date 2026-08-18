@@ -587,7 +587,12 @@ public record AttackAction : GameAction
 		}
 		else
 		{
-			events = events.Add(new CreatureDamagedEvent { CreatureId = card.Id, Amount = amount });
+			// Must reach PendingGameEvents, not just the caller-visible log — see the matching
+			// comment in DealDamageAction. Combat is the damage source Brash Taunter's Taunt is
+			// designed to attract, so this is the half that matters most for it.
+			var damagedEvent = new CreatureDamagedEvent { CreatureId = card.Id, Amount = amount };
+			events = events.Add(damagedEvent);
+			state = state with { PendingGameEvents = state.PendingGameEvents.Add(damagedEvent) };
 		}
 
 		return (state, events);

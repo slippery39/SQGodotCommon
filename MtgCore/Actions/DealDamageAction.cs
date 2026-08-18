@@ -119,7 +119,16 @@ public record DealDamageAction : EffectAction
 				card.Id,
 				card.WithComponentReplaced(creature with { Damage = newDamage })
 			);
-			events = events.Add(new CreatureDamagedEvent { CreatureId = card.Id, Amount = amount });
+
+			// PendingGameEvents is the trigger feed; the returned list is only the caller-visible
+			// log. This event reached only the log, so NO "whenever this creature is dealt damage"
+			// trigger had ever fired — Brash Taunter reflected nothing. Fifth instance of this
+			// exact bug, and the most disguised: the event already had an EventTypeNames constant,
+			// an ExtractSubjectId entry AND TriggerAmountOf support, so everything downstream was
+			// ready for a trigger that could never arrive. See CLAUDE.md.
+			var damagedEvent = new CreatureDamagedEvent { CreatureId = card.Id, Amount = amount };
+			events = events.Add(damagedEvent);
+			state = state with { PendingGameEvents = state.PendingGameEvents.Add(damagedEvent) };
 		}
 
 		return (state, events);

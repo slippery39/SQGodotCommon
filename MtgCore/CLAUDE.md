@@ -145,12 +145,14 @@ MtgCore/
 │   │                        #   CoresetCube*Tokens.cs         token templates, excluded from the card list
 │   │                        # Read each file's header before adding cards — they list every divergence from
 │   │                        # the printed card and why.
-│   │                        # RED IN PROGRESS — its engine mechanics are done and tested (impulse draw,
-│   │                        # planeswalker damage, discard-a-land, flying spec; see "Red Section
-│   │                        # Mechanics"), the 67 cards are not yet written. Planned split:
-│   │                        #   CoresetCubeRed.cs             38 creatures
+│   │                        # RED IN PROGRESS — engine mechanics and creatures done; see "Red
+│   │                        # Section Mechanics". Remaining files are not yet written:
+│   │                        #   CoresetCubeRed.cs             38 creatures        DONE
+│   │                        #   CoresetCubeRedTokens.cs       token templates     DONE
 │   │                        #   CoresetCubeRedSpells.cs       12 instants + 8 sorceries
 │   │                        #   CoresetCubeRedPermanents.cs   4 enchantments + 1 artifact + 4 planeswalkers
+│   │                        # CoresetCube.Cards is therefore 239, not a round colour multiple —
+│   │                        # CoresetCubeBlueTests pins that number; bump it as each red file lands.
 │   │                        # Green not started.
 │   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
 │                            # HollowmereTokens.cs holds token templates (excluded from the card list).
@@ -505,6 +507,29 @@ must not become playable because you impulse-drew something else.
   "discard a land card" cost. Faithful rather than reskinned — a land IS a card in hand here, and
   only becomes `MaxMana` when played.
 - **`HasFlyingSpecification`** for Earthquake's "each creature without flying".
+- **`CreatureCountComponent.Subtype`** — "+2/+0 for each other Goblin you control" (Goblin
+  Piledriver, Goblin Rabblemaster). A field on the existing component rather than a parallel type:
+  the counting, controller check, self-exclusion and live-evaluation rationale are identical, and a
+  second copy is one more place to forget `Duration = Permanent`.
+- **`CreatureDamagedEvent` never reached `PendingGameEvents`** — from both `DealDamageAction` and
+  `AttackAction — so **no "whenever this creature is dealt damage" trigger had ever fired**. The
+  fifth instance of that bug and the best disguised: the event already had an `EventTypeNames`
+  constant, an `ExtractSubjectId` entry AND `TriggerAmountOf` support, so every downstream piece
+  was ready for a trigger that could never arrive. Brash Taunter reflected nothing.
+
+**Rules text caught four more silent failures, none visible from the card definitions.** Dumping
+every red card's rendered text (the `MtgCardMapper` pass the "rules text is not cosmetic" rule
+demands) found: Boggart Brute rendering a completely blank text box once menace was cut;
+`ExileTopCardPlayableAction` missing from the mapper entirely, blanking both impulse-draw cards; a
+context-driven `DealDamageAction` printing **"Deal 0 damage"** on Brash Taunter and Volley Veteran,
+in two separate switches; `SpellCast` hardcoded to "Whenever you cast a spell", so Scab-Clan
+Berserker described the opposite of the card it is. **Confidently wrong text is worse than blank
+text — nothing looks broken.**
+
+**Ogre Battledriver is the reason `ContextKeys.TriggerSubjectId` exists.** "Whenever another
+creature you control enters, IT gets +2/+0 and haste" must land on the creature that entered; a
+targeting strategy cannot see the event, so `Random()` buffs some other creature and the new
+arrival misses the haste that is the card's whole point. Same failure as Wall of Frost.
 
 **Cut clauses, all with existing precedent.** Menace and "can't block"/"can't be blocked" (no
 blocking — Boggart Brute, Frenzied Goblin, Goblin Glory Chaser, Stormblood Berserker); colour-based

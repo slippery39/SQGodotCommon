@@ -308,9 +308,14 @@ sample, not the set. Three classes, all silent:
 3. **An aura attaching via an ETB trigger** (8 cards). A trigger cannot make a spell illegal, so
    the aura resolved with nothing to enchant and sat inert forever.
 
-**The lesson for the next colour**: when a set introduces a mechanic, extend
-`CoresetCubeCardBugTests` in the same step. A set-scoped fixture is worth almost nothing to the
-set that comes after it — copy it forward or make it iterate `SetRegistry.All`.
+**The lesson for the next colour**: when a set introduces a mechanic, extend the structural bug
+fixture in the same step. A set-scoped fixture is worth almost nothing to the set that comes after
+it — copy it forward or make it iterate `SetRegistry.All`.
+
+**Done, during the red pass.** `CoresetCubeCardBugTests` is now `AllSetsCardBugTests` and iterates
+`SetRegistry.All`, so adding a set to the registry automatically subjects it to every rule. All
+four rules passed on Hollowmere and Legacy unchanged, so nothing was hiding in the older sets —
+the value is entirely forward-looking. Never narrow one of those rules back to a single set.
 
 **And retrain after fixing cards.** The model had measured 19 cards while they did nothing, so
 their learned values described blanks. That is the same staleness the Flying-restriction note

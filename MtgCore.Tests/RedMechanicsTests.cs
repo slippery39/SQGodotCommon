@@ -203,6 +203,147 @@ public class RedMechanicsTests
 		);
 	}
 
+	// ===== "WHENEVER THIS IS DEALT DAMAGE" =====
+
+	/// <summary>
+	/// CreatureDamagedEvent reached only the caller-visible Events list and never
+	/// PendingGameEvents, so no "whenever this creature is dealt damage" trigger had ever fired.
+	/// The fifth instance of that bug and the best disguised: the event already had an
+	/// EventTypeNames constant, an ExtractSubjectId entry and TriggerAmountOf support, so every
+	/// downstream piece was ready for a trigger that could never arrive.
+	///
+	/// Asserted on both damage paths, because they are separate call sites that each had it wrong.
+	/// </summary>
+	[Test]
+	public void CreatureDamaged_FiresATrigger([Values("effect", "combat")] string source)
+	{
+		var battlefieldId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield);
+		var reflector = MakeCreature("Reflector", _ids.Player1Id, 1, 10, manaCost: 5) with
+		{
+			Components = ImmutableArray.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 1, Toughness = 10 },
+				new TriggeredAbilityComponent
+				{
+					Name = "Spite",
+					Condition = new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.CreatureDamaged,
+						Filter = new IsSourceCardSpecification(),
+					},
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = TargetingStrategy.AllValid(
+								new IsPlayerSpecification().And(
+									new IsControlledByOpponentSpecification()
+								)
+							),
+							ActionTemplate = new DealDamageAction
+							{
+								AmountContextKey = ContextKeys.TriggerAmount,
+							},
+						}
+					),
+				}
+			),
+		};
+
+		var (state, card) = _state.AddObject(reflector, parentId: battlefieldId);
+		var startingLife = state.GetPlayer(_ids.Player2Id).Life;
+
+		if (source == "effect")
+		{
+			(state, _) = state
+				.AddAction(
+					new DealDamageAction { Amount = 3, TargetIds = ImmutableList.Create(card.Id) }
+				)
+				.ProcessAllActions();
+		}
+		else
+		{
+			var opponentBattlefieldId = state.GetPlayerZoneId(_ids.Player2Id, ZoneType.Battlefield);
+			// Player 2 swings a 3/3 into the reflector, which survives and reflects the 3.
+			// Added straight to the battlefield rather than cast, so it never went through the ETB
+			// ceremony that would clear summoning sickness — set it explicitly.
+			var attackerCard = MakeCreature("Attacker", _ids.Player2Id, 3, 3, manaCost: 3);
+			var (withAttacker, attacker) = state.AddObject(
+				attackerCard with
+				{
+					Components = ImmutableArray.Create<GameComponent>(
+						new PermanentComponent(),
+						new CreatureComponent
+						{
+							Power = 3,
+							Toughness = 3,
+							HasSummoningSickness = false,
+						}
+					),
+				},
+				parentId: opponentBattlefieldId
+			);
+			(state, _) = withAttacker
+				.AddAction(
+					new AttackAction
+					{
+						AttackerId = attacker.Id,
+						TargetId = card.Id,
+						AttackingPlayerId = _ids.Player2Id,
+					}
+				)
+				.ProcessAllActions();
+		}
+
+		Assert.That(
+			state.GetPlayer(_ids.Player2Id).Life,
+			Is.EqualTo(startingLife - 3),
+			$"The {source} damage trigger should have reflected 3 damage"
+		);
+	}
+
+	// ===== GOBLIN COUNTING =====
+
+	/// <summary>
+	/// Goblin Piledriver's "+2/+0 for each other Goblin you control", live-evaluated: a token
+	/// entering must be seen immediately, with no re-stamp. Also pins that it counts OTHER
+	/// Goblins — counting itself would make a lone Piledriver a 3/2.
+	/// </summary>
+	[Test]
+	public void GoblinPiledriver_ScalesWithOtherGoblinsOnly()
+	{
+		var battlefieldId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield);
+		var (state, piledriver) = _state.AddObject(
+			CoresetCubeRed.Cards.Single(c => c.Name == "Goblin Piledriver") with
+			{
+				OwnerId = _ids.Player1Id,
+				ControllerId = _ids.Player1Id,
+			},
+			parentId: battlefieldId
+		);
+
+		Assert.That(
+			state.GetEffectivePower(piledriver.Id),
+			Is.EqualTo(1),
+			"Alone it is a 1/2 — it must not count itself"
+		);
+
+		for (var i = 0; i < 2; i++)
+			(state, _) = state.AddObject(
+				CoresetCubeRedTokens.Goblin() with
+				{
+					OwnerId = _ids.Player1Id,
+					ControllerId = _ids.Player1Id,
+				},
+				parentId: battlefieldId
+			);
+
+		Assert.That(
+			state.GetEffectivePower(piledriver.Id),
+			Is.EqualTo(5),
+			"1 base + 2 per other Goblin, seen live with no re-stamp"
+		);
+	}
+
 	// ===== DAMAGE TO PLANESWALKERS =====
 
 	/// <summary>

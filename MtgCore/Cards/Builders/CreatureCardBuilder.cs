@@ -189,10 +189,15 @@ public class CreatureCardBuilder
 	/// P/T equal to the number of creatures you control — the */* templating. Build the card
 	/// with base power/toughness 0 and add this.
 	/// </summary>
+	/// <param name="subtype">
+	/// Counts only this creature type — "+2/+0 for each other Goblin you control"
+	/// (Goblin Piledriver). Empty counts every creature.
+	/// </param>
 	public CreatureCardBuilder WithPowerEqualToCreatureCount(
 		int powerPer = 1,
 		int toughnessPer = 1,
-		bool countsSelf = true
+		bool countsSelf = true,
+		string subtype = ""
 	)
 	{
 		_extraComponents.Add(
@@ -201,6 +206,7 @@ public class CreatureCardBuilder
 				PowerPerCreature = powerPer,
 				ToughnessPerCreature = toughnessPer,
 				CountsSelf = countsSelf,
+				Subtype = subtype,
 				Duration = ModifierDuration.Permanent,
 			}
 		);
@@ -506,6 +512,17 @@ public class CreatureCostBuilder
 	public CreatureCostBuilder Discard(int count = 1, string subtype = "")
 	{
 		_costs.Add(SpellCardBuilder.DiscardCost(count, subtype));
+		return this;
+	}
+
+	/// <summary>
+	/// "Exile N cards from your graveyard" as part of the cost — Grim Lavamancer. What makes a
+	/// repeatable ability self-limiting: it consumes a finite resource, so the loop has a floor
+	/// and graveyard hate is live against it.
+	/// </summary>
+	public CreatureCostBuilder ExileFromGraveyard(int count = 1, TargetSpecification? filter = null)
+	{
+		_costs.Add(new ExileFromGraveyardAdditionalCost { Count = count, Filter = filter });
 		return this;
 	}
 

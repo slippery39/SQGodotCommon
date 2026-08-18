@@ -30,10 +30,18 @@ public class CoresetCubeBlueTests
 		);
 	}
 
+	/// <summary>
+	/// Red is mid-build: its 38 creatures are in, its 20 spells and 9 permanents are not, so the
+	/// total is 201 + 38 rather than a round 268. Bump this as each red file lands.
+	/// </summary>
 	[Test]
-	public void WholeSet_IsWhitePlusBluePlusBlack()
+	public void WholeSet_IsWhitePlusBluePlusBlackPlusRedCreatures()
 	{
-		Assert.That(CoresetCube.Cards, Has.Count.EqualTo(201), "67 white + 67 blue + 67 black");
+		Assert.That(
+			CoresetCube.Cards,
+			Has.Count.EqualTo(239),
+			"67 white + 67 blue + 67 black + 38 red creatures"
+		);
 	}
 
 	[Test]

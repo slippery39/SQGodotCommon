@@ -26,6 +26,17 @@ public record CreatureCountComponent : PowerToughnessModifier
 	/// </summary>
 	public bool CountsSelf { get; init; } = true;
 
+	/// <summary>
+	/// Counts only creatures of this subtype — "+2/+0 for each other Goblin you control"
+	/// (Goblin Piledriver, Goblin Rabblemaster). Empty counts every creature, which is the
+	/// behaviour this component shipped with.
+	///
+	/// A field here rather than a parallel SubtypeCountComponent: the counting, the controller
+	/// check, the self-exclusion and the live-evaluation rationale are all identical, and a second
+	/// copy would be one more place for the Duration = Permanent trap to be forgotten.
+	/// </summary>
+	public string Subtype { get; init; } = "";
+
 	public override int GetPowerBonus(GameState state, int cardId) =>
 		Count(state, cardId) * PowerPerCreature;
 
@@ -49,6 +60,8 @@ public record CreatureCountComponent : PowerToughnessModifier
 			if (!other.HasComponent<CreatureComponent>())
 				continue;
 			if (!CountsSelf && other.Id == cardId)
+				continue;
+			if (!string.IsNullOrEmpty(Subtype) && !other.HasSubtype(Subtype))
 				continue;
 			count++;
 		}
