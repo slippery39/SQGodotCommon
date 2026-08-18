@@ -32,8 +32,17 @@ public abstract record TargetSpecification
 
 	public static TargetSpecification Creatures() => new IsCreatureSpecification();
 
+	/// <summary>
+	/// "Any target" — a player, a creature, or a planeswalker. Named for what it originally
+	/// matched; the planeswalker arm was added when red's burn arrived and it turned out that
+	/// NOTHING in the game could target a walker, because every helper here was built out of
+	/// players and creatures. Lightning Bolt genuinely does hit a planeswalker, so this is the
+	/// faithful reading of the text every caller was already printing.
+	/// </summary>
 	public static TargetSpecification PlayersOrCreatures() =>
-		new IsPlayerSpecification().Or(new IsCreatureSpecification());
+		new IsPlayerSpecification()
+			.Or(new IsCreatureSpecification())
+			.Or(new IsPlaneswalkerSpecification());
 
 	public static TargetSpecification CreatureControlledByYou() =>
 		new IsCreatureSpecification().And(new IsControlledByYouSpecification());

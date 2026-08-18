@@ -53,6 +53,11 @@ public record EndTurnAction : GameAction
 		state = ClearEndOfTurnReplacements(state, Player1Id);
 		state = ClearEndOfTurnReplacements(state, Player2Id);
 
+		// Impulse draw ("you may play it this turn") expires for the player whose turn is
+		// ending, not the one about to start — the same reason the line above lives here and
+		// not in StartTurnAction.
+		state = ClearExpiredImpulseDraws(state, activePlayerId);
+
 		var nextBattlefieldId = state.GetPlayerZoneId(nextPlayerId, ZoneType.Battlefield);
 
 		var startTurn = new StartTurnAction
@@ -70,6 +75,22 @@ public record EndTurnAction : GameAction
 		var events = ImmutableList.Create<GameEvent>(turnEndedEvent);
 
 		return new ActionResult(state.SpawnAction(startTurn)) { Events = events };
+	}
+
+	/// <summary>
+	/// Strips ExiledPlayableComponent from every card in the given player's exile zone. Anything
+	/// impulse-drawn during the turn that just ended goes from "playable" to plain exiled.
+	/// </summary>
+	private static GameState ClearExpiredImpulseDraws(GameState state, int playerId)
+	{
+		var exileId = state.GetPlayerZoneId(playerId, ZoneType.Exile);
+		foreach (var card in state.GetCardsInZone(exileId).ToList())
+			if (card.HasComponent<ExiledPlayableComponent>())
+				state = state.UpdateObject(
+					card.Id,
+					card.WithoutComponents<ExiledPlayableComponent>()
+				);
+		return state;
 	}
 
 	private static GameState ClearEndOfTurnReplacements(GameState state, int playerId)

@@ -131,40 +131,57 @@ public static class MtgActionGenerator
 	)
 	{
 		foreach (var card in state.GetCardsInZone(handId))
+			AddCastableCardAction(state, playerId, card, actions);
+
+		// Impulse draw: a card exiled by ExileTopCardPlayableAction ("you may play it this turn")
+		// is offered exactly like a hand card. IsInCastableZone (checked by all three cast
+		// actions) is what actually allows the resulting action to validate; this is only the
+		// generator's half of the same rule.
+		var exileId = state.GetPlayerZoneId(playerId, ZoneType.Exile);
+		foreach (var card in state.GetCardsInZone(exileId))
+			if (card.HasComponent<ExiledPlayableComponent>())
+				AddCastableCardAction(state, playerId, card, actions);
+	}
+
+	private static void AddCastableCardAction(
+		GameState state,
+		int playerId,
+		Card card,
+		List<GameAction> actions
+	)
+	{
+		// Lands bypass the cost system — no mana cost, no additional costs
+		if (card.HasSubtype("Land"))
 		{
-			// Lands bypass the cost system — no mana cost, no additional costs
-			if (card.HasSubtype("Land"))
-			{
-				AddLandAction(state, playerId, card, actions);
-				continue;
-			}
+			AddLandAction(state, playerId, card, actions);
+			return;
+		}
 
-			// Counter traps fire from hand by themselves and are never cast. Offering one would
-			// be offering a blank spell at full price.
-			if (card.HasComponent<CounterTrapComponent>())
-				continue;
+		// Counter traps fire from hand by themselves and are never cast. Offering one would
+		// be offering a blank spell at full price.
+		if (card.HasComponent<CounterTrapComponent>())
+			return;
 
-			var costPayments = BuildAdditionalCostPayments(
-				state,
-				playerId,
-				card.Id,
-				card.AdditionalCastCosts
-			);
-			if (costPayments == null)
-				continue;
+		var costPayments = BuildAdditionalCostPayments(
+			state,
+			playerId,
+			card.Id,
+			card.AdditionalCastCosts
+		);
+		if (costPayments == null)
+			return;
 
-			if (card.HasComponent<CreatureComponent>())
-			{
-				AddCreatureAction(state, playerId, card, costPayments, actions);
-			}
-			else if (card.HasComponent<PermanentComponent>())
-			{
-				AddPermanentAction(state, playerId, card, costPayments, actions);
-			}
-			else
-			{
-				AddSpellAction(state, playerId, card, costPayments, actions);
-			}
+		if (card.HasComponent<CreatureComponent>())
+		{
+			AddCreatureAction(state, playerId, card, costPayments, actions);
+		}
+		else if (card.HasComponent<PermanentComponent>())
+		{
+			AddPermanentAction(state, playerId, card, costPayments, actions);
+		}
+		else
+		{
+			AddSpellAction(state, playerId, card, costPayments, actions);
 		}
 	}
 

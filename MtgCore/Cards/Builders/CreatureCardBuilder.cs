@@ -499,10 +499,13 @@ public class CreatureCostBuilder
 		return this;
 	}
 
-	/// <summary>"Discard a card" as part of the cost — Seasoned Hallowblade.</summary>
-	public CreatureCostBuilder Discard(int count = 1)
+	/// <summary>
+	/// "Discard a card" as part of the cost — Seasoned Hallowblade. Pass a subtype for
+	/// "discard a land card" (Molten Vortex).
+	/// </summary>
+	public CreatureCostBuilder Discard(int count = 1, string subtype = "")
 	{
-		_costs.Add(new DiscardAdditionalCost { Count = count });
+		_costs.Add(SpellCardBuilder.DiscardCost(count, subtype));
 		return this;
 	}
 

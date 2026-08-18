@@ -37,8 +37,7 @@ public record CastCreatureAction : GameAction
 		if (card.ControllerId != CastingPlayerId)
 			return ValidationResult.Invalid("You do not control this card");
 
-		var handId = gameState.GetPlayerZoneId(CastingPlayerId, ZoneType.Hand);
-		if (gameState.GetCardZoneId(CardId) != handId)
+		if (!gameState.IsInCastableZone(CardId, CastingPlayerId))
 			return ValidationResult.Invalid("Card is not in your hand");
 
 		if (!card.HasComponent<CreatureComponent>())

@@ -182,4 +182,24 @@ public static class MtgGameStateExtensions
 	/// </summary>
 	public static Zone GetCardZone(this GameState state, int cardId) =>
 		state.GetZone(state.GetCardZoneId(cardId));
+
+	/// <summary>
+	/// True if the casting player may cast/play this card from where it currently sits: their
+	/// hand, or their exile zone if it carries ExiledPlayableComponent (impulse draw — "exile the
+	/// top card of your library, you may play it this turn").
+	///
+	/// The single entry point for all three cast actions' "is this card available to you" check,
+	/// so impulse draw did not need a bespoke copy of that logic in each one.
+	/// </summary>
+	public static bool IsInCastableZone(this GameState state, int cardId, int castingPlayerId)
+	{
+		var zoneId = state.GetCardZoneId(cardId);
+		if (zoneId == state.GetPlayerZoneId(castingPlayerId, ZoneType.Hand))
+			return true;
+
+		if (zoneId != state.GetPlayerZoneId(castingPlayerId, ZoneType.Exile))
+			return false;
+
+		return ((Card)state.GetObject(cardId)).HasComponent<ExiledPlayableComponent>();
+	}
 }

@@ -40,6 +40,15 @@ public record DealDamageAction : EffectAction
 					card,
 					amount
 				),
+				// Loyalty absorbs the damage, exactly as it does in combat. Without this arm a
+				// planeswalker fell through to the discard case and silently took nothing —
+				// no error, no event, the walker simply shrugged off every burn spell.
+				// The walker's death is left to CheckStateBasedEffectsAction's zero-loyalty
+				// pass, which is the same route combat damage takes.
+				Card walker when walker.HasComponent<PlaneswalkerComponent>() => (
+					state.DamagePlaneswalker(walker.Id, amount),
+					ImmutableList<GameEvent>.Empty
+				),
 				_ => (state, ImmutableList<GameEvent>.Empty),
 			};
 

@@ -16,6 +16,23 @@ public record IsExhaustedSpecification : TargetSpecification
 }
 
 /// <summary>
+/// Matches a creature with flying — compose with .Not() for "each creature without flying"
+/// (Earthquake), which is the clause that stops a symmetric sweeper from killing the flyers red
+/// cannot otherwise beat.
+///
+/// Reads EFFECTIVE flying, so a creature granted flight this turn is included and one that lost
+/// its anthem is not. Asking CreatureComponent.HasFlying directly would disagree with combat,
+/// which routes every flying question through GetEffectiveStats.
+/// </summary>
+public record HasFlyingSpecification : TargetSpecification
+{
+	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
+		context.GameState.GetObject(candidateId) is Card card
+		&& card.HasComponent<CreatureComponent>()
+		&& context.GameState.GetEffectiveStats(candidateId).HasFlying;
+}
+
+/// <summary>
 /// Matches a creature that has attacked this turn — Royal Assassin's "target tapped creature",
 /// retargeted.
 ///

@@ -85,6 +85,39 @@ public record IsCreatureSpecification : TargetSpecification
 }
 
 /// <summary>
+/// Matches any card with a PlaneswalkerComponent currently on any battlefield.
+///
+/// Until this existed no spell could name a planeswalker at all: every targeting helper was built
+/// from IsCreatureSpecification and IsPlayerSpecification, and a walker is neither. Combat could
+/// attack one (AttackAction handles it) but no burn spell, exile effect or bounce could touch it,
+/// which made every walker in the cube unanswerable except by attacking it.
+/// </summary>
+public record IsPlaneswalkerSpecification : TargetSpecification
+{
+	public override IEnumerable<int> GetCandidateIds(TargetingContext context)
+	{
+		var state = context.GameState;
+		return state
+			.GetChildrenIds(state.GetWellKnownId(MtgObjectKeys.Player1Battlefield))
+			.Concat(state.GetChildrenIds(state.GetWellKnownId(MtgObjectKeys.Player2Battlefield)));
+	}
+
+	public override bool IsSatisfiedBy(int candidateId, TargetingContext context)
+	{
+		if (!context.GameState.HasObject(candidateId))
+			return false;
+
+		if (context.GameState.GetObject(candidateId) is not Card card)
+			return false;
+
+		if (!card.HasComponent<PlaneswalkerComponent>())
+			return false;
+
+		return context.GameState.GetCardZone(candidateId).ZoneType == ZoneType.Battlefield;
+	}
+}
+
+/// <summary>
 /// Matches only objects controlled by the casting player.
 /// </summary>
 public record IsControlledByYouSpecification : TargetSpecification

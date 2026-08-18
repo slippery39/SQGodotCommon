@@ -268,6 +268,26 @@ If a later colour needs keyword removal specifically, that is the cheapest of th
 
 ---
 
+## Divided damage is sprayed at random
+
+**Concern:** Six red cards read "deals N damage divided as you choose among any number of targets"
+(Cone of Flame, Flames of the Firebrand, Chandra's Outrage, Thundermaw Hellkite, Inferno Titan,
+Drakuseth). Targeting here is single-target or all-valid; there is no shape for "choose K targets,
+then apportion N among them". They are built as N independent 1-damage effects with `Random()`
+targeting — Arcane Missiles — and cost one less than printed to pay for the loss of aim.
+
+**Why it's fine now:** It needed no engine change at all, the cards stay playable and on-theme, and
+random damage is a recognisable design rather than a broken one. Three of the six (Thundermaw,
+Inferno Titan, Drakuseth) are near enough to sweepers that aim barely matters.
+
+**Watch for:** the moment a card's whole point is the apportioning — "2 damage to one creature and
+1 to another" as a deliberate two-for-one — or a player complaining that their removal spell hit
+the wrong creature. The fix is a real multi-target strategy: `TargetSelectionMode.Divided` carrying
+a total and a max target count, filled by the UI the way `TargetIds` already is, plus AI evaluation
+that can score a partition. That last part is the expensive half, which is why this was deferred.
+
+---
+
 ## A card that resolves is not a card that works
 
 **Note, not a concern — the fixture already exists.** The first Core Set Cube playtest found nine

@@ -57,11 +57,26 @@ public class SpellCardBuilder
 	/// Use for "as an additional cost, discard a card"; use WithDiscard for a discard that is
 	/// part of the effect ("draw 4, then discard 1").
 	/// </summary>
-	public SpellCardBuilder WithDiscardCost(int count = 1)
+	/// <param name="subtype">
+	/// Restricts what may be pitched — "as an additional cost, discard a land card" (Magmatic
+	/// Insight). Empty means any card.
+	/// </param>
+	public SpellCardBuilder WithDiscardCost(int count = 1, string subtype = "")
 	{
-		_castCosts.Add(new DiscardAdditionalCost { Count = count });
+		_castCosts.Add(DiscardCost(count, subtype));
 		return this;
 	}
+
+	/// <summary>Shared by both discard-cost builders so the filter and its wording cannot drift.</summary>
+	internal static DiscardAdditionalCost DiscardCost(int count, string subtype) =>
+		new()
+		{
+			Count = count,
+			Filter = string.IsNullOrEmpty(subtype)
+				? null
+				: new IsSubtypeSpecification { Subtype = subtype },
+			FilterDescription = string.IsNullOrEmpty(subtype) ? "" : subtype.ToLowerInvariant(),
+		};
 
 	/// <summary>
 	/// "As an additional cost, pay N life." Distinct from WithLoseLife, which is an effect:
@@ -109,6 +124,18 @@ public class SpellCardBuilder
 	{
 		FlushPending();
 		_pendingAction = new DrawCardsAction { Amount = amount };
+		_pendingTargeting = TargetingStrategy.Self();
+		return this;
+	}
+
+	/// <summary>
+	/// "Exile the top card of your library. You may play it this turn." See
+	/// ExiledPlayableComponent for how the card stays castable until the turn ends.
+	/// </summary>
+	public SpellCardBuilder WithImpulseDraw()
+	{
+		FlushPending();
+		_pendingAction = new ExileTopCardPlayableAction();
 		_pendingTargeting = TargetingStrategy.Self();
 		return this;
 	}

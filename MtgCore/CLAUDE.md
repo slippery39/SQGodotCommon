@@ -42,6 +42,10 @@ MtgCore/
 │                            #   when the library runs out. OutputKey writes the milled card IDs to pipeline context.
 │                            # ExhaustCreatureAction — EffectAction; "tap target creature". Sets
 │                            #   CreatureComponent.IsExhausted and emits CreatureExhaustedEvent. See "Exhaust".
+│                            # ExileTopCardPlayableAction — EffectAction; impulse draw. Exiles each target
+│                            #   PLAYER's top card and stamps ExiledPlayableComponent. See "Impulse Draw".
+│                            # DealDamageAction damages PLANESWALKERS as well as players and creatures —
+│                            #   the walker arm routes to DamagePlaneswalker. See "Planeswalkers".
 │                            # GainPermanentManaAction — EffectAction; +MaxMana AND +CurrentMana permanently.
 │                            #   How "search for a Plains and put it onto the battlefield" is expressed: lands are
 │                            #   consumed into MaxMana and exiled, so there is no land permanent to fetch.
@@ -72,6 +76,9 @@ MtgCore/
 │                            #           GiveFlashbackAction (EffectAction; adds FlashbackComponent{FlashbackManaCost=card.ManaCost} to a target spell in the graveyard; no-ops if already present)
 │                            # DealDamageAction has PlayerOutputKey and CreatureOutputKey for pipeline chaining.
 ├── Costs/                   # AdditionalCost (abstract), LifeAdditionalCost, SacrificeAdditionalCost, DiscardAdditionalCost
+│                            # DiscardAdditionalCost.Filter — restricts what may be pitched ("discard a land
+│                            #   card"). Enforced in BOTH GetValidPayments and Validate; the generator reads
+│                            #   the first and the human UI path reaches the second.
 ├── Cards/                   # Card (GameObject subclass, has Subtypes + HasSubtype()), CardLibrary
 │                            # CardType — [Flags] enum: Creature, Instant, Sorcery, Artifact,
 │                            #   Enchantment, Land, Planeswalker, plus AnyPermanent / AnySpell.
@@ -97,6 +104,8 @@ MtgCore/
 │                            # BonusManaLandComponent { ExtraMana, Deferred } — overrides land mana production: adds (1+ExtraMana) to MaxMana; if Deferred=true, CurrentMana is unchanged (mana usable next turn only); used by Simic Growth Chamber
 │                            # TransformComponent (OtherFaceName, OtherFaceSubtypes, OtherFaceComponents) — stores the other face of a double-faced card; TransformAction swaps Name/Subtypes/Components in place, preserving the card's ID and carrying creature state across
 │                            # AffinityComponent — marker (no data); when present on a card, CastCreatureAction and CastSpellAction reduce ManaCost by the number of artifact permanents the casting player controls (min 0). Used by Frogmite, Myr Enforcer, Thoughtcast.
+│                            # ExiledPlayableComponent — marker; this exiled card may still be played this
+│                            #   turn (impulse draw). See "Impulse Draw" below.
 ├── Effects/                 # CardEffect (data-only effect descriptor)
 ├── Events/                  # EventTypeNames, MtgEvents (includes CreatureEnteredBattlefieldEvent, CombatDamageDealtToPlayerEvent,
 │                            #   SpellCastEvent emitted by CastSpellAction, CreaturePlayedEvent emitted by CastCreatureAction
@@ -135,7 +144,14 @@ MtgCore/
 │   │                        #   CoresetCubeBlackPermanents.cs 5 enchantments + 4 auras + 2 planeswalkers
 │   │                        #   CoresetCube*Tokens.cs         token templates, excluded from the card list
 │   │                        # Read each file's header before adding cards — they list every divergence from
-│   │                        # the printed card and why. Red and green not started.
+│   │                        # the printed card and why.
+│   │                        # RED IN PROGRESS — its engine mechanics are done and tested (impulse draw,
+│   │                        # planeswalker damage, discard-a-land, flying spec; see "Red Section
+│   │                        # Mechanics"), the 67 cards are not yet written. Planned split:
+│   │                        #   CoresetCubeRed.cs             38 creatures
+│   │                        #   CoresetCubeRedSpells.cs       12 instants + 8 sorceries
+│   │                        #   CoresetCubeRedPermanents.cs   4 enchantments + 1 artifact + 4 planeswalkers
+│   │                        # Green not started.
 │   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
 │                            # HollowmereTokens.cs holds token templates (excluded from the card list).
 │                            # Read the header of Hollowmere.cs before adding cards — it states the rate bar and
@@ -159,6 +175,11 @@ MtgCore/
 │                            #   the faithful question, not a workaround. Excludes UntilEndOfTurn buffs.
 │                            # PowerAtLeastSpecification — "power 4 or greater" (Intrepid Hero); effective power
 │                            # PowerLessThanSourceSpecification — "power less than this creature's" (Lena)
+│                            # IsPlaneswalkerSpecification — a walker on the battlefield. TargetSpecification
+│                            #   .PlayersOrCreatures() ("any target") includes it; before it existed NO spell
+│                            #   could name a planeswalker at all. See "Planeswalkers".
+│                            # HasFlyingSpecification — effective flying; compose with .Not() for Earthquake's
+│                            #   "each creature without flying".
 │                            # Other specs: IsCreatureSpecification (enforces Shroud/Hexproof AND subtype protection at IsSatisfiedBy level), IsPlayerSpecification, IsSubtypeSpecification,
 │                            #              IsControlledByYouSpecification, IsControlledByOpponentSpecification,
 │                            #              IsSourceCardSpecification, IsNotSelfSpecification, AlwaysFalseSpecification
@@ -447,6 +468,55 @@ and cast restrictions.
 counter. `HasPermanentPowerBonusSpecification` answers "did it have a counter on it". A dedicated
 counter system only becomes necessary for a card that counts counters ("for each +1/+1 counter"),
 and no card yet does.
+
+## Impulse Draw
+
+"Exile the top card of your library. You may play it this turn" — Abbot of Keral Keep, Chandra
+Pyromaster, Chandra Heart of Fire, Glint-Horn Buccaneer, Soul of Shandalar.
+
+`ExileTopCardPlayableAction` moves the card to exile and stamps `ExiledPlayableComponent`.
+`EndTurnAction` strips the marker from the **ending** player's exile zone — not the starting
+player's, for the same reason the `UntilEndOfTurn` replacement cleanup already lives there rather
+than in `StartTurnAction`, which only touches the active player.
+
+**`GameState.IsInCastableZone(cardId, playerId)` is the single "can you play this from where it
+is" check**, and all four play actions call it — the three cast actions plus `PlayLandAction`.
+Each previously hardcoded `zone == your hand`. Adding a fifth copy of that rule per action is how
+the "the AI can do it and I can't" class of bug gets made; one predicate cannot disagree with
+itself. `MtgActionGenerator` walks the exile zone for marked cards and routes them through the same
+`AddCastableCardAction` a hand card takes, so an impulse-drawn land, creature, spell or aura all
+behave exactly as they would from hand.
+
+The marker is deliberately **per card, not per player**: an unrelated card already sitting in exile
+must not become playable because you impulse-drew something else.
+
+## Red Section Mechanics (Core Set Cube)
+
+- **Damage to planeswalkers did not work at all.** See "Planeswalkers" — two independent holes,
+  both silent, both predating red.
+- **Divided damage is sprayed, not split.** "Deals N damage divided as you choose among any number
+  of targets" (Cone of Flame, Flames of the Firebrand, Chandra's Outrage, Thundermaw Hellkite,
+  Inferno Titan, Drakuseth) has no home here: targeting is single-target or all-valid, and there is
+  no shape for "pick K targets and apportion N among them". Modelled as N independent 1-damage
+  effects each with `Random()` targeting — Hearthstone's Arcane Missiles. **These cards cost one
+  less than printed** to pay for the loss of aim. This needed no engine code: a card already
+  carries a list of effects and each resolves its own targeting.
+- **`DiscardAdditionalCost.Filter`** gives Magmatic Insight and Molten Vortex their real
+  "discard a land card" cost. Faithful rather than reskinned — a land IS a card in hand here, and
+  only becomes `MaxMana` when played.
+- **`HasFlyingSpecification`** for Earthquake's "each creature without flying".
+
+**Cut clauses, all with existing precedent.** Menace and "can't block"/"can't be blocked" (no
+blocking — Boggart Brute, Frenzied Goblin, Goblin Glory Chaser, Stormblood Berserker); colour-based
+targeting (Fry); Chandra, Fire of Kaladesh's flip to a planeswalker (as Kytheon, Jace and Liliana);
+"if it would die, exile it instead" (Scorching Dragonfire — structural replacement, see
+`DesignNotes.md`); "attacks each turn if able" (Borderland Marauder, Goblin Rabblemaster — no
+forced-attack concept, and dropping it only ever helps the player, like vigilance).
+
+**Goblin count-based buffs read the BOARD, not the attack.** Goblin Piledriver and Goblin
+Rabblemaster are printed as "for each other attacking Goblin"; attacking is a fleeting state here
+(one attack per turn, resolving immediately), so they count Goblins you control instead. Costed
+down accordingly, since not having to commit the attack is a real upgrade.
 
 ## Black Section Mechanics (Core Set Cube)
 
@@ -845,6 +915,13 @@ resets.
 - **Combat**: `AttackAction` accepts a planeswalker target; damage reduces loyalty, nothing strikes
   back, and lifelink still applies. Taunt is enforced — a Taunt creature cannot be ignored in
   favour of the walker behind it. `MtgActionGenerator` offers walkers as attack targets.
+- **Effect damage**: `DealDamageAction` has a planeswalker arm routing to `DamagePlaneswalker`, and
+  `TargetSpecification.PlayersOrCreatures()` — the "any target" helper every burn spell uses —
+  includes `IsPlaneswalkerSpecification`. **Both halves were missing until red.** Every targeting
+  helper was built from players and creatures, so no spell could NAME a walker; and the damage
+  switch had no walker arm, so one handed the damage anyway took zero, silently. A walker was
+  therefore unanswerable by anything except attacking it, from the moment white shipped the first
+  one. Red is simply where it became impossible to miss.
 - **Death**: `CheckStateBasedEffectsAction.DestroyZeroLoyaltyPlaneswalkers`. It emits
   `PermanentLeftBattlefieldEvent` but **not** `CreatureDestroyedEvent` — a walker is not a
   creature, and firing that would make every "whenever a creature dies" payoff trigger on it.
@@ -1087,6 +1164,11 @@ previously-missing `reach`/`shroud`/`hexproof`.
 unconditional bottom-the-top-card is strictly worse than doing nothing half the time;
 `WithDamagePrevention(...)`, `WithConditionalAction(condition, action)`, `WithModes(...)`,
 `WithXCost()`, `WithConvoke()`, `WithTypes(...)`.
+
+Red pass: `WithImpulseDraw()` (see "Impulse Draw"), and `WithDiscardCost(count, subtype)` /
+`CreatureCostBuilder.Discard(count, subtype)` for "discard a land card". Both discard-cost builders
+route through one shared `DiscardCost` helper so the filter and its player-facing wording cannot
+drift apart.
 
 `PermanentCardBuilder` (new — `CardFactory.Enchantment` / `.Artifact` / `.Planeswalker`):
 `WithLoyalty(n)`, `WithLoyaltyAbility(name, cost, effect)`, `AsAura(...)`, `WithStaticBoost(...)`,
