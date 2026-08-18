@@ -127,7 +127,11 @@ public record DealDamageAction : EffectAction
 		if (amount <= 0)
 			return (state, ImmutableList<GameEvent>.Empty);
 
-		var updated = player with { Life = player.Life - amount };
+		var updated = player with
+		{
+			Life = player.Life - amount,
+			LifeLostThisTurn = player.LifeLostThisTurn + amount,
+		};
 		var newState = state.UpdateObject(player.Id, updated);
 		var events = ImmutableList.Create<GameEvent>(
 			new PlayerDamagedEvent { PlayerId = player.Id, Amount = amount }

@@ -23,6 +23,13 @@ public record ReanimateManyAction : GameAction
 	/// <summary>Only creatures at or below this mana value. 0 means no cap.</summary>
 	public int MaxManaCost { get; init; } = 0;
 
+	/// <summary>
+	/// Scan BOTH graveyards — "all creature cards from all graveyards" (Liliana Vess's ultimate).
+	/// They arrive under the casting player's control; PutIntoBattlefieldAction reassigns
+	/// ControllerId from context.
+	/// </summary>
+	public bool FromAllGraveyards { get; init; } = false;
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var playerId = GetInput<int>(PlayerIdContextKey, 0);
@@ -36,14 +43,21 @@ public record ReanimateManyAction : GameAction
 		if (count <= 0)
 			return new ActionResult(gameState);
 
-		var graveyardId = gameState.GetPlayerZoneId(playerId, ZoneType.Graveyard);
-		if (graveyardId == 0)
+		var graveyardIds = FromAllGraveyards
+			? new[] { MtgObjectKeys.Player1, MtgObjectKeys.Player2 }
+				.Select(gameState.GetWellKnownId)
+				.Select(pid => gameState.GetPlayerZoneId(pid, ZoneType.Graveyard))
+				.Where(id => id != 0)
+				.ToList()
+			: [gameState.GetPlayerZoneId(playerId, ZoneType.Graveyard)];
+
+		if (graveyardIds.Count == 0 || graveyardIds[0] == 0)
 			return new ActionResult(gameState);
 
 		// Cheapest first: with a fixed number of slots, more bodies beats bigger bodies in a
 		// go-wide deck, which is the deck this card is in.
-		var targets = gameState
-			.GetCardsInZone(graveyardId)
+		var targets = graveyardIds
+			.SelectMany(gameState.GetCardsInZone)
 			.Where(c => c.HasComponent<CreatureComponent>())
 			.Where(c => MaxManaCost == 0 || c.ManaCost <= MaxManaCost)
 			.OrderBy(c => c.ManaCost)
@@ -55,8 +69,14 @@ public record ReanimateManyAction : GameAction
 		if (targets.IsEmpty)
 			return new ActionResult(gameState);
 
+		// InputContext must be carried across, not dropped: PutIntoBattlefieldAction reads
+		// CastingPlayerId from it to set the new controller, and "under your control" is the
+		// whole point of raiding an opponent's graveyard. Without this the spawned action sees
+		// no caster and hands their creatures straight back to them.
 		return new ActionResult(
-			gameState.SpawnAction(new PutIntoBattlefieldAction { TargetIds = targets })
+			gameState.SpawnAction(
+				new PutIntoBattlefieldAction { TargetIds = targets, InputContext = InputContext }
+			)
 		);
 	}
 }

@@ -368,7 +368,20 @@ public static class MtgActionGenerator
 	{
 		foreach (var card in state.GetCardsInZone(graveyardId))
 		{
-			if (!card.HasComponent<FlashbackComponent>())
+			var flashback = card.GetComponent<FlashbackComponent>();
+			if (flashback == null)
+				continue;
+
+			// Flashback can carry costs beyond mana (Despoiler of Souls exiles two other
+			// creature cards). Null means they cannot be paid, so the card is not offered —
+			// same contract as the hand path.
+			var costPayments = BuildAdditionalCostPayments(
+				state,
+				playerId,
+				card.Id,
+				flashback.AdditionalCosts
+			);
+			if (costPayments == null)
 				continue;
 
 			var spell = card.GetComponent<SpellComponent>();
@@ -385,6 +398,7 @@ public static class MtgActionGenerator
 					CardId = card.Id,
 					CastingPlayerId = playerId,
 					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
+					AdditionalCostPayments = costPayments,
 				};
 				if (state.TryAddAction(recurAction).Success)
 					actions.Add(recurAction);
@@ -396,7 +410,14 @@ public static class MtgActionGenerator
 			);
 			if (effectIndex >= 0)
 			{
-				AddTargetedFlashbackAction(state, playerId, card, effectIndex, actions);
+				AddTargetedFlashbackAction(
+					state,
+					playerId,
+					card,
+					effectIndex,
+					costPayments,
+					actions
+				);
 			}
 			else
 			{
@@ -405,6 +426,7 @@ public static class MtgActionGenerator
 					CardId = card.Id,
 					CastingPlayerId = playerId,
 					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty,
+					AdditionalCostPayments = costPayments,
 				};
 				if (state.TryAddAction(castAction).Success)
 					actions.Add(castAction);
@@ -418,6 +440,7 @@ public static class MtgActionGenerator
 		int playerId,
 		Card card,
 		int effectIndex,
+		ImmutableDictionary<int, ImmutableList<int>> costPayments,
 		List<GameAction> actions
 	)
 	{
@@ -440,6 +463,7 @@ public static class MtgActionGenerator
 					effectIndex,
 					ImmutableList.Create(target)
 				),
+				AdditionalCostPayments = costPayments,
 			};
 			if (state.TryAddAction(castAction).Success)
 				actions.Add(castAction);
@@ -638,11 +662,12 @@ public static class MtgActionGenerator
 			if (!costs[i].RequiresSelection)
 				continue;
 
+			var needed = costs[i].RequiredPaymentCount;
 			var validPayments = costs[i].GetValidPayments(state, playerId, sourceCardId);
-			if (validPayments.IsEmpty)
+			if (validPayments.Count < needed)
 				return null;
 
-			payments = payments.Add(i, ImmutableList.Create(validPayments[0]));
+			payments = payments.Add(i, validPayments.Take(needed).ToImmutableList());
 		}
 		return payments;
 	}

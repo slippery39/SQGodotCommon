@@ -71,11 +71,38 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 			)
 			.ToList();
 
+		// Reanimation says "under YOUR control", and a card in a graveyard still carries the
+		// ControllerId it had in play. Without this, raiding an opponent's graveyard handed the
+		// creature straight back to them — worse than doing nothing, and silent. Affects
+		// Necromantic Summons, Endless Obedience and Liliana Vess's ultimate.
+		//
+		// Deliberately scoped to cards coming FROM A GRAVEYARD. This action is also the single
+		// entry point for cast creatures and freshly created tokens, and for those the template's
+		// ControllerId is already authoritative — a token deliberately created under another
+		// player's control must not be silently reassigned to the caster.
+		var newControllerId = GetInput<int>(ContextKeys.CastingPlayerId, 0);
+
 		foreach (var card in cards)
 		{
-			var battlefieldId = state.GetPlayerZoneId(card!.ControllerId, ZoneType.Battlefield);
-			state = state.MoveCardTracked(card.Id, battlefieldId);
-			var (newState, etbEvents) = ApplyEtbCeremony(state, card);
+			var fromGraveyard = state.GetCardZone(card!.Id) is { ZoneType: ZoneType.Graveyard };
+
+			var controlled =
+				fromGraveyard && newControllerId != 0 && card.ControllerId != newControllerId
+					? card with
+					{
+						ControllerId = newControllerId,
+					}
+					: card;
+
+			if (!ReferenceEquals(controlled, card))
+				state = state.UpdateObject(controlled.Id, controlled);
+
+			var battlefieldId = state.GetPlayerZoneId(
+				controlled.ControllerId,
+				ZoneType.Battlefield
+			);
+			state = state.MoveCardTracked(controlled.Id, battlefieldId);
+			var (newState, etbEvents) = ApplyEtbCeremony(state, controlled);
 			state = newState;
 			events = events.AddRange(etbEvents);
 		}

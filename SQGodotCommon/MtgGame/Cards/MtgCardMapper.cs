@@ -283,11 +283,24 @@ public static class MtgCardMapper
 		// anything else in this set, so it must never be missing from the text.
 		var flashback = card.GetComponent<FlashbackComponent>();
 		if (flashback != null)
+		{
+			// The extra costs are not decoration — Despoiler of Souls exiles two creature cards
+			// from your graveyard to come back, which is the only thing bounding the loop and
+			// the whole reason to weigh it against a cheaper recursion. Omitting them printed a
+			// strictly better card than the one being played.
+			var extra = flashback
+				.AdditionalCosts.Select(DescribeCost)
+				.Where(c => c != null)
+				.ToList();
+			var extraStr = extra.Count > 0 ? $", {string.Join(", ", extra)}" : "";
+
 			lines.Add(
 				card.HasComponent<CreatureComponent>()
-					? $"Cast from graveyard for {flashback.FlashbackManaCost} (stays on the battlefield)"
-					: $"Flashback {flashback.FlashbackManaCost}"
+					? $"Cast from graveyard for {flashback.FlashbackManaCost}{extraStr}"
+						+ " (stays on the battlefield)"
+					: $"Flashback {flashback.FlashbackManaCost}{extraStr}"
 			);
+		}
 
 		return string.Join("\n", MergeSharedClauses(lines));
 	}
@@ -646,11 +659,27 @@ public static class MtgCardMapper
 		{
 			SacrificeAdditionalCost s when s.Filter is IsSubtypeSpecification sub =>
 				$"sacrifice a {sub.Subtype}",
-			SacrificeAdditionalCost => "sacrifice a permanent",
+			SacrificeAdditionalCost s when s.Filter is IsSourceCardSpecification =>
+				"sacrifice this",
+			// "Sacrifice a permanent" understates every sacrifice outlet in the black section:
+			// they all require a CREATURE, which is a much narrower cost when your board is a
+			// planeswalker and an Aura.
+			SacrificeAdditionalCost s => s.Count == 1
+				? $"sacrifice a {SacrificeNoun(s.Filter)}"
+				: $"sacrifice {s.Count} {SacrificeNoun(s.Filter)}s",
 			DiscardAdditionalCost d => d.Count == 1 ? "discard a card" : $"discard {d.Count} cards",
 			LifeAdditionalCost l => $"pay {l.Amount} life",
+			ExileFromGraveyardAdditionalCost x => x.Count == 1
+				? "exile a card from your graveyard"
+				: $"exile {x.Count} cards from your graveyard",
 			_ => null,
 		};
+
+	private static string SacrificeNoun(TargetSpecification? filter) =>
+		filter != null
+		&& DescribeSpecification(filter).Contains("creature", StringComparison.Ordinal)
+			? "creature"
+			: "permanent";
 
 	private static string? DescribeActivatedAbility(ActivatedAbilityComponent ability)
 	{
@@ -712,8 +741,31 @@ public static class MtgCardMapper
 		if (condition is LandsPlayedCondition l)
 			return $"Whenever you play a land, if you have played {l.Threshold}+";
 
+		// Knight of the Ebon Legion's whole reason to exist. Without this it read "When
+		// triggered", which tells a drafter nothing about the card's only real ability.
+		if (condition is LifeLostThisTurnCondition lost)
+			return lost.ControllerOnly
+				? $"At end of turn, if you lost {lost.Minimum}+ life this turn"
+				: $"At end of turn, if a player lost {lost.Minimum}+ life this turn";
+
+		if (condition is AndTriggerCondition and)
+			return
+				string.Join(
+					", and ",
+					and.Conditions.Select(DescribeTriggerCondition)
+						.Where(c => c != "When triggered")
+				)
+					is { Length: > 0 } joined
+				? joined
+				: "When triggered";
+
 		if (condition is not EventTriggerCondition e)
 			return "When triggered";
+
+		// The subject of a player-scoped event is a PLAYER, so a controller filter reads
+		// "your"/"an opponent's" rather than naming a creature.
+		var isYours = e.Filter is IsControlledByYouSpecification;
+		var isOpponents = e.Filter is IsControlledByOpponentSpecification;
 
 		// A source-card filter means the event is about THIS card, which changes the wording
 		// from "whenever a card is discarded" to "when you discard this" — the difference
@@ -726,13 +778,24 @@ public static class MtgCardMapper
 				? "When this enters"
 				: $"Whenever {FilterPhrase(e.Filter)} enters",
 			EventTypeNames.PermanentEnteredBattlefield => "When this enters",
-			EventTypeNames.TurnStarted => "At the beginning of your upkeep",
+			// Stab Wound drains on the ENCHANTED creature's controller's upkeep, not yours.
+			// Printing "your upkeep" for it named the wrong player on the wrong turn.
+			EventTypeNames.TurnStarted => isOpponents
+				? "At the beginning of each opponent's upkeep"
+				: "At the beginning of your upkeep",
 			EventTypeNames.CombatDamageDealtToPlayer =>
 				"Whenever this deals combat damage to a player",
 			EventTypeNames.CreatureDestroyed => isSelf
 				? "When this dies"
 				: $"Whenever {FilterPhrase(e.Filter)} dies",
-			EventTypeNames.CreatureAttacked => "Whenever this attacks",
+			// Blood Reckoning read "Whenever this attacks" — it is an enchantment that never
+			// attacks, and the clause is about the OPPONENT's attackers.
+			EventTypeNames.CreatureAttacked => isSelf ? "Whenever this attacks"
+			: isOpponents ? "Whenever a creature attacks you"
+			: $"Whenever {FilterPhrase(e.Filter)} attacks",
+			EventTypeNames.PlayerLostLife => isYours
+				? "Whenever you lose life"
+				: "Whenever a player loses life",
 			EventTypeNames.SpellCast => "Whenever you cast a spell",
 			EventTypeNames.CardDiscarded => isSelf
 				? "Madness — when you discard this"
@@ -762,6 +825,13 @@ public static class MtgCardMapper
 		var phrase = DescribeSpecification(filter);
 		if (phrase is "it" or "permanent" or "creature")
 			return fallback;
+
+		// These are all creature-scoped events, so a bare controller filter describes itself as
+		// "permanent" only because nothing in the spec says "creature" — the EVENT does. Blood
+		// Seeker and Massacre Wurm both read "whenever a permanent an opponent controls dies",
+		// promising far more than they do.
+		if (phrase.StartsWith("permanent ", StringComparison.Ordinal))
+			phrase = "creature " + phrase["permanent ".Length..];
 
 		if (phrase.StartsWith("other ", StringComparison.Ordinal))
 			return "another " + phrase["other ".Length..];
@@ -840,9 +910,20 @@ public static class MtgCardMapper
 			ExileAction => $"Exile {t}",
 			AddModifierAction m => $"{Capitalise(t)} gets {Signed(m.PowerBonus)}/"
 				+ $"{Signed(m.ToughnessBonus)}{DurationSuffix(m.Duration)}",
-			DrawCardsAction d => d.Amount == 1 ? "Draw a card" : $"Draw {d.Amount} cards",
+			// A context-driven amount is not a number the card can print — Vilis draws "that
+			// many", scaling with the life just lost, and printing "Draw a card" understated it
+			// by most of the card.
+			DrawCardsAction d => !string.IsNullOrEmpty(d.AmountContextKey) ? "Draw that many cards"
+			: d.Amount == 1 ? "Draw a card"
+			: $"Draw {d.Amount} cards",
 			GainLifeAction g => $"Gain {g.Amount} life",
-			LoseLifeAction l => $"Lose {l.Amount} life",
+			// The target was ignored entirely, so every card that drains someone ELSE printed
+			// "Lose N life" — Blood Reckoning and Indulgent Tormentor both read as though they
+			// hurt their own controller, which is the opposite of what they do.
+			LoseLifeAction l => l.AmountContextKey == ContextKeys.RevealedCardManaCost
+				? "Lose life equal to its mana value"
+			: TargetsSelf(effect) ? $"Lose {l.Amount} life"
+			: $"{Capitalise(t)} loses {l.Amount} life",
 			CreateCardAction c => c.Count == 1
 				? $"Create a {c.CardTemplate.Name} token"
 				: $"Create {c.Count} {c.CardTemplate.Name} tokens",
@@ -887,13 +968,43 @@ public static class MtgCardMapper
 			AddCustomModifierAction m => DescribeCustomModifier(m, t),
 			ConditionalAction c => DescribeConditional(c),
 			ApplyChosenModeAction m => DescribeModes(m),
-			GainPermanentManaAction g => $"Add {g.Amount} permanent mana",
+			GainPermanentManaAction g => g.Amount < 0
+				? $"Lose {-g.Amount} permanent mana"
+				: $"Add {g.Amount} permanent mana",
 			AttachEquipmentAction => $"Attach this to {t}",
+
+			// ===== Core Set Cube: black =====
+			// "You lose the game" is Demonic Pact's whole identity and rendered as nothing at
+			// all — the card offered three good modes and silently hid the clock. Sorin's -3
+			// vanished the same way.
+			// A NoTarget strategy with TargetContextKey = CastingPlayerId means "you", but
+			// DescribeTarget has no target list to read and falls back to the generic phrase —
+			// which turned Demonic Pact's fourth mode into "each creature you control loses the
+			// game". The subject has to come from the context key, not the strategy.
+			SetLifeTotalAction s => SelfTargeted(s.TargetContextKey)
+				? (s.Amount == 0 ? "You lose the game" : $"Your life total becomes {s.Amount}")
+				: (
+					s.Amount == 0
+						? $"{Capitalise(t)} loses the game"
+						: $"{Capitalise(t)}'s life total becomes {s.Amount}"
+				),
 
 			PipelineAction p => DescribePipeline(p),
 			_ => null,
 		};
 	}
+
+	private static bool SelfTargeted(string targetContextKey) =>
+		targetContextKey == ContextKeys.CastingPlayerId;
+
+	/// <summary>
+	/// Whether an effect lands on its own controller — either it targets the casting player, or
+	/// it takes no target at all and therefore falls back to them.
+	/// </summary>
+	private static bool TargetsSelf(CardEffect effect) =>
+		effect.TargetingStrategy.SelectionMode
+			is TargetSelectionMode.CastingPlayer
+				or TargetSelectionMode.None;
 
 	private static string DescribeExhaust(ExhaustCreatureAction e, string target)
 	{
@@ -1036,6 +1147,13 @@ public static class MtgCardMapper
 
 		public int MaxManaCost;
 		public bool Exhausted;
+
+		/// Black-section narrowings. Each one is the entire restriction on its card: Royal
+		/// Assassin without "that attacked this turn" reads as unconditional removal, and
+		/// Gilt-Leaf Winnower without the P/T clause reads as a five-mana Murder on a body.
+		public bool Attacked;
+		public bool UnequalPowerToughness;
+		public bool CreatureInAnyGraveyard;
 	}
 
 	/// Specifications are composed with And/Or, so the shape has to be walked rather than
@@ -1091,6 +1209,15 @@ public static class MtgCardMapper
 			case IsExhaustedSpecification:
 				f.Exhausted = true;
 				break;
+			case HasAttackedThisTurnSpecification:
+				f.Attacked = true;
+				break;
+			case DifferentPowerAndToughnessSpecification:
+				f.UnequalPowerToughness = true;
+				break;
+			case IsCreatureInAnyGraveyardSpecification:
+				f.CreatureInAnyGraveyard = true;
+				break;
 		}
 	}
 
@@ -1106,6 +1233,8 @@ public static class MtgCardMapper
 		// subtype — and dropping that narrowing is the worst kind of text bug, because the
 		// card then promises MORE than it does. Zombie Apocalypse read as "each creature card
 		// in your graveyard" while only ever returning Zombies.
+		if (f.CreatureInAnyGraveyard)
+			return "creature card from a graveyard";
 		if (f.CreatureInGraveyard)
 			return f.Subtype == null
 				? "creature card in your graveyard"
@@ -1141,6 +1270,12 @@ public static class MtgCardMapper
 
 		if (f.MaxManaCost > 0)
 			suffix += $" costing {f.MaxManaCost} or less";
+
+		if (f.Attacked)
+			suffix += " that attacked this turn";
+
+		if (f.UnequalPowerToughness)
+			suffix += " with different power and toughness";
 
 		return $"{prefix}{noun}{suffix}";
 	}
@@ -1209,6 +1344,21 @@ public static class MtgCardMapper
 			keywords.Add("Trample");
 		if (g.GrantsDeathtouch)
 			keywords.Add("Deathtouch");
+		// GrantKeywordAction has grown six more keywords than this list did. Xathrid Slyblade
+		// grants first strike AND deathtouch and printed only the deathtouch — half its ability.
+		// Keep this in step with GrantKeywordAction's fields.
+		if (g.GrantsFirstStrike)
+			keywords.Add("First strike");
+		if (g.GrantsDoubleStrike)
+			keywords.Add("Double strike");
+		if (g.GrantsIndestructible)
+			keywords.Add("Indestructible");
+		if (g.GrantsShroud)
+			keywords.Add("Shroud");
+		if (g.GrantsHexproof)
+			keywords.Add("Hexproof");
+		if (g.GrantsExalted)
+			keywords.Add("Exalted");
 
 		if (keywords.Count == 0)
 			return "Grants nothing";
@@ -1237,15 +1387,51 @@ public static class MtgCardMapper
 
 	private static string? DescribePipeline(PipelineAction pipeline)
 	{
+		// A symmetric edict is four steps that describe one sentence. Rendered step by step it
+		// came out as "take the opponent's cheapest creature, destroy it, take your cheapest
+		// creature, destroy it" — accurate, four times as long as the card, and on three cards.
+		// Verbosity is a bug here: the rules box has a hard line budget.
+		if (DescribeSymmetricEdict(pipeline) is { } edict)
+			return edict;
+
 		var parts = pipeline.Steps.Select(DescribeStep).Where(d => d != null).ToList();
 		return parts.Count > 0 ? CombineParts(parts, ", ") : null;
+	}
+
+	/// <summary>
+	/// Matches the exact shape WithSymmetricEdict builds — select/destroy for the opponent, then
+	/// select/destroy for you — and nothing else. A looser match would silently reword unrelated
+	/// pipelines.
+	/// </summary>
+	private static string? DescribeSymmetricEdict(PipelineAction pipeline)
+	{
+		if (pipeline.Steps.Count != 4)
+			return null;
+
+		var selects = pipeline
+			.Steps.OfType<SelectCreatureFromBattlefieldByManaCostAction>()
+			.ToList();
+		if (selects.Count != 2 || pipeline.Steps.OfType<DestroyCreatureAction>().Count() != 2)
+			return null;
+		if (!selects.Any(s => s.TargetOpponent) || !selects.Any(s => !s.TargetOpponent))
+			return null;
+
+		var exclude = selects[0].ExcludeSubtype;
+		return string.IsNullOrEmpty(exclude)
+			? "Each player sacrifices a creature"
+			: $"Each player sacrifices a non-{exclude} creature";
 	}
 
 	private static string? DescribeStep(GameAction action) =>
 		action switch
 		{
-			DrawCardsAction d => d.Amount == 1 ? "draw a card" : $"draw {d.Amount} cards",
-			LoseLifeAction l => l.Amount > 0 ? $"lose {l.Amount} life" : "lose life",
+			DrawCardsAction d => !string.IsNullOrEmpty(d.AmountContextKey) ? "draw that many cards"
+			: d.Amount == 1 ? "draw a card"
+			: $"draw {d.Amount} cards",
+			LoseLifeAction l => l.AmountContextKey == ContextKeys.RevealedCardManaCost
+				? "lose life equal to its mana value"
+			: l.Amount > 0 ? $"lose {l.Amount} life"
+			: "lose life",
 			GainLifeAction g => $"gain {g.Amount} life",
 			AddTemporaryManaAction m => string.IsNullOrEmpty(m.BonusAmountContextKey)
 				? $"add {m.Amount} mana"
@@ -1253,10 +1439,11 @@ public static class MtgCardMapper
 			RevealTopCardAction => "reveal top card",
 			LookAtTopCardsAction l => $"look at top {l.Amount} cards, put one in hand",
 			SelectCardFromLibraryAction s => string.IsNullOrEmpty(s.Subtype)
-				? "search your library"
+				? "search your library for a card"
 				: $"search your library for a {s.Subtype}",
 			PutIntoBattlefieldAction => "put it into play",
-			DiscardCardsAction => "discard",
+			SelectCardsFromHandAction => "choose a card",
+			DiscardCardsAction => "discard it",
 			MillAction m => $"mill {m.Amount}",
 			MoveCardToHandAction => "return it to hand",
 			MoveCardToExileAction => "exile it",
@@ -1289,6 +1476,25 @@ public static class MtgCardMapper
 			DealDamageAction d => $"deal {d.Amount} damage to it",
 			FightAction => "fight it",
 			AddModifierAction m => $"give it {Signed(m.PowerBonus)}/{Signed(m.ToughnessBonus)}",
+
+			// ===== Core Set Cube: black =====
+			// Every one of these left part or all of its card unrendered before it was added.
+			// Kitesail Freebooter's whole ETB was invisible; Demonic Pact's fourth mode — the one
+			// that ends the game — simply did not appear among its choices.
+			SetLifeTotalAction s => s.Amount == 0
+				? "you lose the game"
+				: $"their life total becomes {s.Amount}",
+			SelectCardFromHandByManaCostAction s => s.TargetOpponent
+				? $"look at their hand and take their {(s.SelectLowest ? "cheapest" : "best")} card"
+				: $"take your {(s.SelectLowest ? "cheapest" : "best")} card",
+			ExileLinkedAction => "exile it until this leaves the battlefield",
+			ReturnLinkedExileAction => "return the exiled card",
+			PutOnLibraryAction p => p.Bottom
+				? "put it on the bottom of your library"
+				: "put it on top of your library",
+			GainPermanentManaAction g => g.Amount < 0
+				? $"lose {-g.Amount} permanent mana"
+				: $"add {g.Amount} permanent mana",
 			_ => null,
 		};
 }

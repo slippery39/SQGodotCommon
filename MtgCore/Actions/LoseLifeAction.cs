@@ -31,7 +31,11 @@ public record LoseLifeAction : EffectAction
 			if (lost <= 0)
 				continue;
 
-			var updated = player with { Life = player.Life - lost };
+			var updated = player with
+			{
+				Life = player.Life - lost,
+				LifeLostThisTurn = player.LifeLostThisTurn + lost,
+			};
 			state = state.UpdateObject(player.Id, updated);
 
 			// PendingGameEvents is the trigger feed — Events alone is silently inert.

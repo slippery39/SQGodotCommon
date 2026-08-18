@@ -43,6 +43,19 @@ public record StartTurnAction : GameAction
 		};
 		state = state.UpdateObject(ActivePlayerId, updatedPlayer);
 
+		// LifeLostThisTurn resets for BOTH players, unlike the per-player counters above.
+		// Life loss is overwhelmingly something that happens to the NON-active player — you
+		// attack them, you drain them — so an active-player-only reset would let the defender's
+		// count carry over from their own turn and "a player lost 4 life this turn" would fire
+		// on a total spanning two turns. LifeGainedThisTurn has the same shape but its only
+		// reader checks its own controller at its own turn end, so it never surfaced.
+		foreach (var id in new[] { MtgObjectKeys.Player1, MtgObjectKeys.Player2 })
+		{
+			var pid = state.GetWellKnownId(id);
+			if (state.GetObject(pid) is MtgPlayer p)
+				state = state.UpdateObject(pid, p with { LifeLostThisTurn = 0 });
+		}
+
 		// Roll the storm counter into last turn's count, then reset it. The roll-over is what
 		// lets werewolf transform conditions ask "were no spells cast last turn?".
 		var game = state.TryGetGame();

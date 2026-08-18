@@ -122,7 +122,7 @@ MtgCore/
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Terravore. Must be stamped with Duration = Permanent in card definitions.
 ├── Sets/                    # CardSet (Code, Name, Cards; Draftable filters lands), SetRegistry (All, Default, Get)
 │   ├── CoresetCube/         # The CSC set, built from an external cube list (cubecobra magiccoreset20xx).
-│   │                        # WHITE AND BLUE COMPLETE — 134 cards. The cube is 450: 67 per colour,
+│   │                        # WHITE, BLUE AND BLACK COMPLETE — 201 cards. The cube is 450: 67 per colour,
 │   │                        # 50 colourless, 53 multicolour. CoresetCube.cs assembles the files:
 │   │                        #   CoresetCubeWhite.cs           38 creatures
 │   │                        #   CoresetCubeWhiteSpells.cs     10 instants + 6 sorceries
@@ -130,9 +130,12 @@ MtgCore/
 │   │                        #   CoresetCubeBlue.cs            28 creatures
 │   │                        #   CoresetCubeBlueSpells.cs      18 instants + 11 sorceries
 │   │                        #   CoresetCubeBluePermanents.cs  6 enchantments + 4 planeswalkers
+│   │                        #   CoresetCubeBlack.cs           38 creatures
+│   │                        #   CoresetCubeBlackSpells.cs     8 instants + 10 sorceries
+│   │                        #   CoresetCubeBlackPermanents.cs 5 enchantments + 4 auras + 2 planeswalkers
 │   │                        #   CoresetCube*Tokens.cs         token templates, excluded from the card list
 │   │                        # Read each file's header before adding cards — they list every divergence from
-│   │                        # the printed card and why. Black, red and green not started.
+│   │                        # the printed card and why. Red and green not started.
 │   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
 │                            # HollowmereTokens.cs holds token templates (excluded from the card list).
 │                            # Read the header of Hollowmere.cs before adding cards — it states the rate bar and
@@ -323,6 +326,18 @@ Mana is always the primary cost (`ManaCost: int`); this matches MTG's "0:" notat
 
 Selection costs are real zone changes: `DiscardAdditionalCost.Pay` routes through `MoveCardTracked` and stages `CardDiscardedEvent`, so discard payoffs and zone-dependent statics see a cost payment exactly as they see a discard effect.
 
+`SacrificeAdditionalCost.Pay` had the same hole and it went unnoticed far longer. It used a bare
+`MoveObject` and announced only `PermanentLeftBattlefieldEvent`, so **a sacrificed creature never
+died as far as the trigger feed was concerned**: `OnAnyCreatureDies` and `OnSelfDies` both
+no-opped, `CardEnteredGraveyardEvent` never fired so graveyard-active statics stayed unregistered,
+and marked damage rode into the graveyard. Sacrifice outlet plus death payoff is an entire
+archetype and none of it worked, with nothing erroring. It now routes through `MoveCardTracked`
+and stages `CreatureDestroyedEvent` for creatures, matching `DestroyCreatureAction`.
+
+**The general rule both bugs are instances of: a cost payment is a real game event.** Any new
+`AdditionalCost` that moves a card must use `MoveCardTracked` and stage the same events the
+equivalent *effect* would.
+
 ## Activated Abilities
 
 - Modelled as `ActivatedAbilityComponent` on a card. Fields: `Name`, `ManaCost`, `AdditionalCosts`, `CardEffect`, `MaxActivationsPerTurn`, `ActivationCount`.
@@ -425,6 +440,72 @@ and cast restrictions.
 counter. `HasPermanentPowerBonusSpecification` answers "did it have a counter on it". A dedicated
 counter system only becomes necessary for a card that counts counters ("for each +1/+1 counter"),
 and no card yet does.
+
+## Black Section Mechanics (Core Set Cube)
+
+**Four bugs were found building this, all of the same shape: a card that builds, casts and
+resolves without erroring while doing nothing, or doing the wrong amount.** None were visible
+without a test that asserted the consequence.
+
+1. **`SacrificeAdditionalCost` never announced a death** — see "Additional Costs" above.
+2. **`TriggerConditions.OnYourUpkeep()` had no filter.** `TurnStartedEvent`'s subject is the
+   player whose turn began, so every upkeep trigger in the engine fired on **both** turns, at
+   double the printed rate. Six existing white/blue/Hollowmere cards were affected.
+   `OnOpponentUpkeep()` is its counterpart (Stab Wound).
+3. **`DrawCardsAction` ignored `AmountContextKey`.** It looped on the raw `Amount` field, so any
+   context-driven draw silently drew the default 1.
+4. **`MtgActionGenerator.BuildAdditionalCostPayments` only ever offered one payment**, while
+   `Validate` demands an exact count — so a cost of 2 made the card permanently uncastable with
+   no error. `AdditionalCost.RequiredPaymentCount` fixes it; **any selection cost with a `Count`
+   must override it.**
+
+### What was added
+
+- **`ContextKeys.TriggerAmount`** — the numeric payload of the event that fired a trigger,
+  injected by `ResolveEffectAction` from `CheckStateBasedEffectsAction.TriggerAmountOf`. This is
+  what makes "whenever you lose life, draw **that many** cards" (Vilis) expressible; every such
+  clause had previously been flattened to a constant. Read it with `EffectAction.AmountContextKey`.
+  `TriggerAmountOf` is a deliberately closed list of events — an event that gains an unrelated
+  numeric field later must not start silently feeding these effects.
+- **`MtgPlayer.LifeLostThisTurn`** — mirror of `LifeGainedThisTurn`, accumulating in
+  `LoseLifeAction`, `DrainLifeAction` and the player-damage path of `DealDamageAction`.
+  **It resets for BOTH players in `StartTurnAction`, unlike every other per-turn counter.** Life
+  loss overwhelmingly happens to the non-active player, so an active-player-only reset would let
+  the defender's tally span two turns. Read by `LifeLostThisTurnCondition` (which asks about ANY
+  player by default) and `OpponentLostLifeThisTurnCondition` (bloodthirst).
+- **`SetLifeTotalAction`** — absolute set, deliberately NOT routed through `ReplacementEngine`
+  (a life-gain bonus must not turn "becomes 10" into "becomes 11"). **`Amount = 0` is how "you
+  lose the game" is expressed**: the state-based loss check already owns `HasLost`,
+  `PlayerLostEvent` and winner determination, so there is no second way to lose.
+- **`ChosenModesComponent` + `SelectModeAction.ExcludeAlreadyChosen` +
+  `ApplyChosenModeAction.RecordChoice`** — "choose one that hasn't been chosen" (Demonic Pact).
+  State lives on the CARD because the exclusion must survive between resolutions turn after
+  turn; `ActivationCount` is reset every turn and pipeline context dies with the resolution.
+  The two flags must move together, so `WithModes(onceEach: true, …)` sets both.
+- **`FlashbackComponent.AdditionalCosts`** + **`ExileFromGraveyardAdditionalCost`** — a
+  repeatable graveyard recursion bounded only by mana just returns forever; a cost that eats the
+  graveyard gives it a hard floor and makes graveyard hate live. Paid **before** the card leaves
+  the graveyard, so it cannot select the card paying for itself.
+- **`WithSymmetricEdict(excludeSubtype)`** — "each player sacrifices a creature". Takes the
+  **cheapest** on each side, not the biggest: a real edict lets each player choose and each keeps
+  their bomb, so taking the biggest would make a symmetric effect one-sided.
+- **`WithTutor()`** with no subtype, backed by `SelectCardFromLibraryAction.SelectBestByManaCost`.
+  Library order is random, so a first-match search with no subtype is just "draw the top card" —
+  Grim Tutor would have been a strictly worse Sign in Blood.
+- **`WithChosenDiscard(n)`** — "you choose a card" via most-expensive-non-land, as distinct from
+  `WithOpponentDiscard`'s random. The gap is real: random discard off a full hand is a coin flip.
+- **`WithDrain(n)`** — hand-rolled ~10× in Hollowmere before this. Must be `DrainLifeAction`
+  rather than `WithLoseLife` + `WithLifeGain`, because inside a trigger `NoTarget()` overwrites
+  hardcoded `TargetIds` and the loss half hits nobody.
+- **`WithReanimate(fromAnyGraveyard: true)`** / `IsCreatureInAnyGraveyardSpecification`,
+  `CreatureCostBuilder.PayLife(n)` / `SpellCardBuilder.WithLifeCost(n)`,
+  `HasAttackedThisTurnSpecification`, `DifferentPowerAndToughnessSpecification`, and the trigger
+  helpers `OnCreatureYouControlDies(subtype)`, `OnOpponentCreatureDies()`,
+  `OnOpponentCreatureEnters()`, `OnCreatureAttacksYou()`, `OnCardDiscarded()`.
+
+**Dark Tutelage needed no new code** — `RevealTopCardAction` already outputs
+`ContextKeys.RevealedCardManaCost` (built for Dark Confidant) and `LoseLifeAction` already reads
+`AmountContextKey`.
 
 ## Zone-Dependent Statics
 

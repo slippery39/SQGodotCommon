@@ -241,6 +241,45 @@ public record IsCreatureInOwnGraveyardSpecification : ZoneSpecification
 }
 
 /// <summary>
+/// Matches any creature card in EITHER player's graveyard — "put a creature card from a
+/// graveyard onto the battlefield under your control" (Endless Obedience).
+///
+/// Distinct from IsCreatureInOwnGraveyardSpecification, and the difference is the card: raiding
+/// the opponent's graveyard turns their removal spell into your threat, and it is what makes
+/// reanimation an answer to a board you are losing to rather than only a rebuy of your own dead
+/// creatures.
+///
+/// The reanimated creature enters under the CASTING player's control regardless of whose
+/// graveyard it came from; PutIntoBattlefieldAction owns that, not this spec.
+/// </summary>
+public record IsCreatureInAnyGraveyardSpecification : ZoneSpecification
+{
+	public override IEnumerable<int> GetCandidateIds(TargetingContext context) =>
+		GraveyardIds(context).SelectMany(context.GameState.GetChildrenIds);
+
+	public override bool IsSatisfiedBy(int candidateId, TargetingContext context)
+	{
+		if (!context.GameState.HasObject(candidateId))
+			return false;
+
+		if (context.GameState.GetObject(candidateId) is not Card card)
+			return false;
+
+		if (!card.HasComponent<CreatureComponent>())
+			return false;
+
+		return GraveyardIds(context).Contains(context.GameState.GetCardZoneId(candidateId));
+	}
+
+	private static IEnumerable<int> GraveyardIds(TargetingContext context) =>
+		new[] { MtgObjectKeys.Player1, MtgObjectKeys.Player2 }
+			.Select(context.GameState.GetWellKnownId)
+			.Select(pid => context.GameState.GetPlayerZoneId(pid, ZoneType.Graveyard))
+			.Where(id => id != 0)
+			.ToList();
+}
+
+/// <summary>
 /// Matches any card currently on either player's battlefield.
 /// Compose with other specs (e.g. IsSubtypeSpecification) to restrict to specific permanents.
 /// Being a ZoneSpecification, AndSpecification will automatically prefer this side's

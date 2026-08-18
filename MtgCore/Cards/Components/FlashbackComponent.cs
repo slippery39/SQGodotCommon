@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -16,4 +17,16 @@ namespace MtgCore;
 public record FlashbackComponent : GameComponent
 {
 	public int FlashbackManaCost { get; init; }
+
+	/// <summary>
+	/// Costs beyond mana that must be paid to cast from the graveyard — Despoiler of Souls'
+	/// "exile two other creature cards from your graveyard", Demonic Embrace's discard.
+	///
+	/// On a repeatable creature recursion this is the only thing that can bound the loop other
+	/// than mana, and it is usually the point of the card: a recursion that eats its own
+	/// graveyard has a hard limit and interacts with graveyard hate, while a purely mana-limited
+	/// one just comes back forever.
+	/// </summary>
+	public ImmutableList<AdditionalCost> AdditionalCosts { get; init; } =
+		ImmutableList<AdditionalCost>.Empty;
 }

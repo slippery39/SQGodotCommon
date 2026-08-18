@@ -45,8 +45,8 @@ not in CLAUDE.md.
 Two draftable sets exist, both registered in `SetRegistry`:
 - **Hollowmere (HLM)** — an original graveyard-themed set. See `MtgCore/Sets/Hollowmere/`.
 - **Core Set Cube (CSC)** — built from an external cube list
-  (https://cubecobra.com/cube/list/magiccoreset20xx). **White and blue are complete — 134 cards.**
-  Black, red and green are not started. See `MtgCore/Sets/CoresetCube/`.
+  (https://cubecobra.com/cube/list/magiccoreset20xx). **White, blue and black are complete — 201
+  cards.** Red and green are not started. See `MtgCore/Sets/CoresetCube/`.
 
   The cube is 450 cards: 67 per colour, 50 colourless, 53 multicolour. Verify a colour's card list
   by downloading `cubecobra.com/cube/download/csv/magiccoreset20xx` and filtering on the `Color`

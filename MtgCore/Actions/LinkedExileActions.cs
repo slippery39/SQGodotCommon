@@ -27,6 +27,14 @@ public record ExileLinkedAction : GameAction, ITargetedAction
 {
 	public ImmutableList<int> TargetIds { get; init; } = ImmutableList<int>.Empty;
 
+	/// <summary>
+	/// Reads the card to exile from pipeline context instead of from TargetIds, so a preceding
+	/// step can pick it — Kitesail Freebooter's "you choose a card from their hand", where the
+	/// choice is resolved deterministically by a selection step rather than by targeting.
+	/// Targeting cannot do this: a trigger resolves with no user selection at all.
+	/// </summary>
+	public string CardIdContextKey { get; init; } = "";
+
 	public GameAction WithTargets(ImmutableList<int> targetIds) =>
 		this with
 		{
@@ -36,10 +44,14 @@ public record ExileLinkedAction : GameAction, ITargetedAction
 	public override ActionResult Execute(GameState gameState)
 	{
 		var sourceId = GetInput<int>(ContextKeys.SourceCardId, 0);
-		if (sourceId == 0 || TargetIds.IsEmpty)
+
+		var targetId = string.IsNullOrEmpty(CardIdContextKey)
+			? TargetIds.FirstOrDefault()
+			: GetInput<int>(CardIdContextKey, 0);
+
+		if (sourceId == 0 || targetId == 0)
 			return new ActionResult(gameState);
 
-		var targetId = TargetIds[0];
 		if (!gameState.HasObject(targetId) || gameState.GetObject(targetId) is not Card target)
 			return new ActionResult(gameState);
 

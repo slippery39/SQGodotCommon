@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
+using MtgCore.Cards.Builders;
 using NUnit.Framework;
 
 namespace MtgCore.Tests;
@@ -121,6 +122,134 @@ public class AdditionalCostTests
 			.ProcessAllActions();
 
 		Assert.That(finalState.GetPlayer(_ids.Player2Id).Life, Is.EqualTo(lifeBefore - 5));
+	}
+
+	/// <summary>
+	/// Paying a sacrifice cost is a death, and every death payoff must see it. This was the one
+	/// death route in the engine that moved the card with a bare MoveObject: it never announced
+	/// CreatureDestroyedEvent, so OnAnyCreatureDies and OnSelfDies both silently no-opped on a
+	/// sacrifice. The entire aristocrats archetype — sacrifice outlet plus death payoff — was
+	/// inert, and nothing errored.
+	/// </summary>
+	[Test]
+	public void SacrificeCost_FiresDeathTriggers()
+	{
+		var (stateWithGoblin, goblin) = _state.AddObject(
+			MakeGoblin(_ids.Player1Id),
+			parentId: _ids.Player1BattlefieldId
+		);
+		var (stateWithGrenade, grenadeId) = AddGrenadeToHand(stateWithGoblin, _ids.Player1Id);
+
+		var payoff = TestCardFactory.MakeCreatureCard("Blood Artist", _ids.Player1Id, 1, 1) with
+		{
+			Components = ImmutableArray.Create<GameComponent>(
+				new CreatureComponent { Power = 1, Toughness = 1 },
+				new PermanentComponent(),
+				new TriggeredAbilityComponent
+				{
+					Name = "Bloodletting",
+					Condition = TriggerConditions.OnAnyCreatureDies(),
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.Self(),
+						ActionTemplate = new GainLifeAction { Amount = 3 },
+					},
+				}
+			),
+		};
+		var (stateWithPayoff, _) = stateWithGrenade.AddObject(
+			payoff,
+			parentId: _ids.Player1BattlefieldId
+		);
+		var lifeBefore = stateWithPayoff.GetPlayer(_ids.Player1Id).Life;
+
+		var (finalState, _) = stateWithPayoff
+			.AddAction(MakeCastGrenadeAt(_ids.Player2Id, grenadeId, goblin.Id))
+			.ProcessAllActions();
+
+		Assert.That(
+			finalState.GetPlayer(_ids.Player1Id).Life,
+			Is.EqualTo(lifeBefore + 3),
+			"Death payoff should have triggered on the sacrifice cost payment"
+		);
+	}
+
+	/// <summary>
+	/// The same bare MoveObject meant a sacrifice never crossed the graveyard boundary as far as
+	/// the event feed was concerned, so every ActiveInZone = Graveyard static stayed unregistered.
+	/// Asserted through a Wonder-style graveyard static rather than by reading the raw event,
+	/// because the stale static is the symptom a player actually sees.
+	/// </summary>
+	[Test]
+	public void SacrificeCost_RegistersGraveyardStatics()
+	{
+		var wonderGoblin = MakeGoblin(_ids.Player1Id) with
+		{
+			Components = ImmutableArray.Create<GameComponent>(
+				new CreatureComponent { Power = 1, Toughness = 1 },
+				new PermanentComponent(),
+				new StaticGrantKeywordAbility
+				{
+					GrantsFlying = true,
+					ActiveInZone = ZoneType.Graveyard,
+					Filter = new IsControlledByYouSpecification(),
+				}
+			),
+		};
+		var (stateWithGoblin, goblin) = _state.AddObject(
+			wonderGoblin,
+			parentId: _ids.Player1BattlefieldId
+		);
+		var (stateWithGrenade, grenadeId) = AddGrenadeToHand(stateWithGoblin, _ids.Player1Id);
+		var (stateWithBear, bear) = stateWithGrenade.AddObject(
+			TestCardFactory.MakeCreatureCard("Bear", _ids.Player1Id, 2, 2),
+			parentId: _ids.Player1BattlefieldId
+		);
+
+		var (finalState, _) = stateWithBear
+			.AddAction(MakeCastGrenadeAt(_ids.Player2Id, grenadeId, goblin.Id))
+			.ProcessAllActions();
+
+		Assert.That(
+			finalState.GetEffectiveFlying(bear.Id),
+			Is.True,
+			"Sacrificing the source should register its graveyard-active static"
+		);
+	}
+
+	/// <summary>
+	/// Marked damage belongs to the permanent, not the card, so it must not ride along into the
+	/// graveyard — a sacrificed creature that is later reanimated comes back undamaged. The bare
+	/// MoveObject skipped the clearing that MoveCardTracked does for every other death route.
+	/// </summary>
+	[Test]
+	public void SacrificeCost_ClearsMarkedDamage()
+	{
+		var damagedGoblin = MakeGoblin(_ids.Player1Id) with
+		{
+			Components = ImmutableArray.Create<GameComponent>(
+				new CreatureComponent
+				{
+					Power = 1,
+					Toughness = 3,
+					Damage = 2,
+				}
+			),
+		};
+		var (stateWithGoblin, goblin) = _state.AddObject(
+			damagedGoblin,
+			parentId: _ids.Player1BattlefieldId
+		);
+		var (stateWithGrenade, grenadeId) = AddGrenadeToHand(stateWithGoblin, _ids.Player1Id);
+
+		var (finalState, _) = stateWithGrenade
+			.AddAction(MakeCastGrenadeAt(_ids.Player2Id, grenadeId, goblin.Id))
+			.ProcessAllActions();
+
+		Assert.That(
+			((Card)finalState.GetObject(goblin.Id)).GetComponent<CreatureComponent>()!.Damage,
+			Is.EqualTo(0)
+		);
 	}
 
 	// ===== DISCARD COST =====

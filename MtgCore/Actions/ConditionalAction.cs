@@ -14,11 +14,29 @@ namespace MtgCore;
 /// The condition is evaluated at RESOLUTION, which is what an intervening-if clause requires —
 /// a card that checks life totals must check them when it resolves, not when it was cast.
 /// </summary>
-public record ConditionalAction : GameAction
+public record ConditionalAction : GameAction, ITargetedAction
 {
 	public ActivationCondition? Condition { get; init; }
 	public GameAction? Action { get; init; }
 	public string PlayerIdContextKey { get; init; } = ContextKeys.CastingPlayerId;
+
+	/// <summary>
+	/// Targets chosen for this effect, forwarded to the inner action.
+	///
+	/// Without this a conditional effect could only ever be NoTarget, because ResolveEffectAction
+	/// injects targets solely into an ITargetedAction. That blocked "spell mastery — that
+	/// creature enters with two +1/+1 counters" (Necromantic Summons), where the conditional half
+	/// must land on the SAME creature the unconditional half chose. Giving both effects the same
+	/// targeting strategy is what pairs them: MtgActionGenerator fills one chosen target into
+	/// every user-select effect on the spell.
+	/// </summary>
+	public ImmutableList<int> TargetIds { get; init; } = ImmutableList<int>.Empty;
+
+	public GameAction WithTargets(ImmutableList<int> targetIds) =>
+		this with
+		{
+			TargetIds = targetIds,
+		};
 
 	public override ActionResult Execute(GameState gameState)
 	{
@@ -39,9 +57,11 @@ public record ConditionalAction : GameAction
 			InputContext = InputContext,
 		};
 
+		if (!TargetIds.IsEmpty && inner is ITargetedAction targeted)
+			inner = targeted.WithTargets(TargetIds);
 		// EffectActions resolve their targets from context; a nested one that targets "you"
 		// needs the player id handed to it explicitly.
-		if (inner is EffectAction effect && effect.TargetIds.IsEmpty)
+		else if (inner is EffectAction effect && effect.TargetIds.IsEmpty)
 			inner = effect with { TargetIds = ImmutableList.Create(playerId) };
 
 		return new ActionResult(gameState.SpawnAction(inner));

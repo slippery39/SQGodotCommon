@@ -23,7 +23,7 @@ public partial class DraftScene : Control
 
 	/// Which set this scene drafts. Change this one line to draft a different set —
 	/// SetRegistry.Default is the Legacy pool, Hollowmere.Set is the graveyard set,
-	/// CoresetCube.Set is the cube-sourced set (white + blue).
+	/// CoresetCube.Set is the cube-sourced set (white + blue + black).
 	private static readonly CardSet DraftedSet = CoresetCube.Set;
 
 	/// Derived from DraftTrainingStore.PathFor so the asset filename and the filename the

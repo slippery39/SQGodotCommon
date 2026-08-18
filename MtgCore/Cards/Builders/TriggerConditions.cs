@@ -32,9 +32,29 @@ public static class TriggerConditions
 
 	/// <summary>
 	/// Fires at the start of the controller's turn ("at the beginning of your upkeep").
+	///
+	/// The filter is load-bearing, not decoration. TurnStartedEvent's subject is the player
+	/// whose turn began, and without it this fired on BOTH turns — every upkeep trigger in the
+	/// engine ran at double the printed rate, silently. Nothing errors and the board looks
+	/// right; the card just does twice what it says.
 	/// </summary>
 	public static TriggerCondition OnYourUpkeep() =>
-		new EventTriggerCondition { EventTypeName = EventTypeNames.TurnStarted };
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.TurnStarted,
+			Filter = new IsControlledByYouSpecification(),
+		};
+
+	/// <summary>
+	/// Fires at the start of an OPPONENT's turn — "at the beginning of the upkeep of enchanted
+	/// creature's controller" (Stab Wound), read from the enchantment's own controller.
+	/// </summary>
+	public static TriggerCondition OnOpponentUpkeep() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.TurnStarted,
+			Filter = new IsControlledByOpponentSpecification(),
+		};
 
 	/// <summary>Fires when this exact creature dies.</summary>
 	public static TriggerCondition OnSelfDies() =>
@@ -47,6 +67,70 @@ public static class TriggerConditions
 	/// <summary>Fires whenever any creature dies.</summary>
 	public static TriggerCondition OnAnyCreatureDies() =>
 		new EventTriggerCondition { EventTypeName = EventTypeNames.CreatureDestroyed };
+
+	/// <summary>
+	/// Fires whenever a creature you control dies, optionally only one of a given subtype —
+	/// "whenever this or another Human you control dies" (Xathrid Necromancer).
+	///
+	/// The controller check reads the dead card, which still carries its ControllerId in the
+	/// graveyard, so this stays correct after the creature has left the battlefield.
+	/// </summary>
+	public static TriggerCondition OnCreatureYouControlDies(string subtype = "")
+	{
+		TargetSpecification filter = new IsControlledByYouSpecification();
+		if (!string.IsNullOrEmpty(subtype))
+			filter = filter.And(new IsSubtypeSpecification { Subtype = subtype });
+
+		return new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.CreatureDestroyed,
+			Filter = filter,
+		};
+	}
+
+	/// <summary>
+	/// Fires whenever a creature an opponent controls dies — "whenever a creature an opponent
+	/// controls dies, that player loses 2 life" (Massacre Wurm).
+	/// </summary>
+	public static TriggerCondition OnOpponentCreatureDies() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.CreatureDestroyed,
+			Filter = new IsControlledByOpponentSpecification(),
+		};
+
+	/// <summary>
+	/// Fires whenever a creature an opponent controls enters the battlefield — "whenever another
+	/// creature enters under an opponent's control, that player loses 1 life" (Blood Seeker).
+	/// </summary>
+	public static TriggerCondition OnOpponentCreatureEnters() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.CreatureEnteredBattlefield,
+			Filter = new IsControlledByOpponentSpecification(),
+		};
+
+	/// <summary>
+	/// Fires whenever a creature an opponent controls attacks — "whenever a creature attacks
+	/// you, its controller loses 1 life" (Blood Reckoning).
+	///
+	/// With no blocking there is no "attacks you" as distinct from "attacks": an attack is
+	/// declared against you or your planeswalker and resolves immediately, so filtering the
+	/// attacker to an opponent's creature is the whole clause.
+	/// </summary>
+	public static TriggerCondition OnCreatureAttacksYou() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.CreatureAttacked,
+			Filter = new IsControlledByOpponentSpecification(),
+		};
+
+	/// <summary>
+	/// Fires whenever a card is discarded, by either player. Pair with a filter-carrying
+	/// condition or MaxTriggersPerTurn where the card needs narrowing.
+	/// </summary>
+	public static TriggerCondition OnCardDiscarded() =>
+		new EventTriggerCondition { EventTypeName = EventTypeNames.CardDiscarded };
 
 	/// <summary>Fires whenever any creature attacks.</summary>
 	public static TriggerCondition OnAnyCreatureAttacks() =>

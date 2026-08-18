@@ -506,5 +506,16 @@ public class CreatureCostBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// "Pay N life" as part of the cost — Vilis, Cruel Sadist. Black's signature resource:
+	/// life is a cost here, not just a total, which is what makes its card advantage cheap.
+	/// LifeAdditionalCost had no builder wrapper at all before this.
+	/// </summary>
+	public CreatureCostBuilder PayLife(int amount)
+	{
+		_costs.Add(new LifeAdditionalCost { Amount = amount });
+		return this;
+	}
+
 	internal ImmutableList<AdditionalCost> Build() => _costs.ToImmutableList();
 }

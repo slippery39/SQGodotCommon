@@ -18,6 +18,13 @@ public record CastFromGraveyardAction : GameAction
 	public ImmutableDictionary<int, ImmutableList<int>> TargetIds { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
+	/// <summary>
+	/// Selected payments for FlashbackComponent.AdditionalCosts, keyed by index into that list.
+	/// Same shape as CastSpellAction.AdditionalCostPayments.
+	/// </summary>
+	public ImmutableDictionary<int, ImmutableList<int>> AdditionalCostPayments { get; init; } =
+		ImmutableDictionary<int, ImmutableList<int>>.Empty;
+
 	public override ValidationResult ValidateAdd(GameState gameState)
 	{
 		if (!gameState.HasObject(CardId))
@@ -49,10 +56,33 @@ public record CastFromGraveyardAction : GameAction
 				$"Not enough mana for Flashback (have {player.CurrentMana}, need {flashback.FlashbackManaCost})"
 			);
 
+		var costResult = ValidateAdditionalCosts(gameState, flashback);
+		if (!costResult.IsValid)
+			return costResult;
+
 		// Creatures carry no SpellComponent, so they have no per-effect targets to validate.
 		return spellComponent == null
 			? ValidationResult.Valid
 			: ValidateTargets(gameState, spellComponent);
+	}
+
+	private ValidationResult ValidateAdditionalCosts(
+		GameState gameState,
+		FlashbackComponent flashback
+	)
+	{
+		for (int i = 0; i < flashback.AdditionalCosts.Count; i++)
+		{
+			var cost = flashback.AdditionalCosts[i];
+			var paymentIds =
+				cost.RequiresSelection && AdditionalCostPayments.TryGetValue(i, out var ids)
+					? ids
+					: ImmutableList<int>.Empty;
+			var result = cost.Validate(gameState, CastingPlayerId, CardId, paymentIds);
+			if (!result.IsValid)
+				return result;
+		}
+		return ValidationResult.Valid;
 	}
 
 	public override ActionResult Execute(GameState gameState)
@@ -68,6 +98,20 @@ public record CastFromGraveyardAction : GameAction
 				CurrentMana = player.CurrentMana - flashback.FlashbackManaCost,
 			}
 		);
+
+		// Additional costs are paid BEFORE the card leaves the graveyard, matching the cast
+		// actions. It matters here in a way it does not there: a cost that exiles cards from
+		// this same graveyard must not be able to select the card paying for itself.
+		for (int i = 0; i < flashback.AdditionalCosts.Count; i++)
+		{
+			var cost = flashback.AdditionalCosts[i];
+			var paymentIds =
+				cost.RequiresSelection && AdditionalCostPayments.TryGetValue(i, out var ids)
+					? ids
+					: ImmutableList<int>.Empty;
+			state = cost.Pay(state, CastingPlayerId, CardId, paymentIds);
+		}
+
 		// MoveCardTracked emits CardLeftGraveyardEvent, deactivating any graveyard-active
 		// static this card had.
 		state = state.MoveCardTracked(CardId, state.GetStackId());

@@ -14,10 +14,18 @@ namespace MtgCore;
 ///
 /// Selection is the first matching card in current library order (shuffled at game start).
 /// If no matching card is found, OutputKey is set to 0 — downstream actions must handle 0.
+///
+/// SelectBestByManaCost changes that to "the most expensive non-land card", which is what an
+/// unrestricted tutor needs. Library order is random, so with no Subtype to narrow it the
+/// first-match rule degenerates into "the top card of your library" — Grim Tutor would have been
+/// a strictly worse Sign in Blood, and nothing would have looked wrong. Picking the biggest
+/// non-land is the same deterministic stand-in for a player choice already used by
+/// SelectCardFromHandByManaCostAction and by Clone's "copy the biggest thing".
 /// </summary>
 public record SelectCardFromLibraryAction : GameAction
 {
 	public string Subtype { get; init; } = "";
+	public bool SelectBestByManaCost { get; init; } = false;
 	public int PlayerId { get; init; } = 0;
 	public string PlayerIdContextKey { get; init; } = "";
 	public string OutputKey { get; init; } = "";
@@ -33,9 +41,13 @@ public record SelectCardFromLibraryAction : GameAction
 
 		var libraryId = gameState.GetPlayerZoneId(playerId, ZoneType.Library);
 
-		var candidate = gameState
+		var matches = gameState
 			.GetCardsInZone(libraryId)
-			.FirstOrDefault(c => string.IsNullOrEmpty(Subtype) || c.HasSubtype(Subtype));
+			.Where(c => string.IsNullOrEmpty(Subtype) || c.HasSubtype(Subtype));
+
+		var candidate = SelectBestByManaCost
+			? matches.Where(c => !c.HasSubtype("Land")).MaxBy(c => c.ManaCost)
+			: matches.FirstOrDefault();
 
 		var foundId = candidate?.Id ?? 0;
 

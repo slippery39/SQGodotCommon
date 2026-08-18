@@ -55,7 +55,11 @@ public record DrainLifeAction : GameAction
 			Amount
 		);
 
-		var drained = drainTarget with { Life = drainTarget.Life - lossAmount };
+		var drained = drainTarget with
+		{
+			Life = drainTarget.Life - lossAmount,
+			LifeLostThisTurn = drainTarget.LifeLostThisTurn + lossAmount,
+		};
 		var gained = gainTarget with
 		{
 			Life = gainTarget.Life + gainAmount,

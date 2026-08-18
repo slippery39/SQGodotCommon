@@ -232,12 +232,21 @@ Mode 4 is interactive, but the console reads plain `Console.ReadLine()`, so it d
 stdin — no CLI-argument path was added because piping needs no shipped code:
 
 ```
-printf '4\n\n\n300\n8\n1\n3\ncscfinal\n' | dotnet run --project MtgSimulator.Console -c Release
+printf '4\n\n\n300\n8\n1\n3\nn\ncscfinal\n' | dotnet run --project MtgSimulator.Console -c Release
 ```
 
 Fields in order: mode, AI depth (blank = 3), format (blank = Booster), drafts, seats, generations,
 **set choice** (the index printed by `ReadSet`, which changes as sets are registered — read the
-menu, do not hardcode it), seed.
+menu, do not hardcode it), **train-from-scratch**, seed.
+
+**The `n` is load-bearing and this command was missing it.** Once a model file exists, the trainer
+asks "Draft with the existing model? (Y/n — n trains from scratch)" and then "Merge into it rather
+than replace? (Y/n)", and an exhausted stdin answers **Y to both**. Adding a colour and running
+the old command therefore merged the new cards into the previous colour's model instead of
+retraining — the exact bootstrapping failure the section above warns about, arrived at by
+following the documented command. Answering `n` skips the merge prompt entirely and replaces the
+file, so the field count differs between the two paths; count the prompts in the output, do not
+assume.
 
 The final `Console.ReadKey` throws `InvalidOperationException` when stdin is redirected. It fires
 *after* the model is written, so the file is safe; ignore it.

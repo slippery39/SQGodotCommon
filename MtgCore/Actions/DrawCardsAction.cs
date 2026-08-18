@@ -5,6 +5,10 @@ namespace MtgCore;
 
 /// <summary>
 /// Draws Amount cards from each target player's library into their hand.
+///
+/// AmountContextKey (inherited from EffectAction) overrides Amount, which is what lets "draw
+/// that many cards" work off ContextKeys.TriggerAmount. This action looped on the raw Amount
+/// field and ignored the key entirely, so any context-driven draw silently drew the default 1.
 /// </summary>
 public record DrawCardsAction : EffectAction
 {
@@ -14,6 +18,10 @@ public record DrawCardsAction : EffectAction
 	{
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
+		var amount = ResolveAmount(Amount);
+
+		if (amount <= 0)
+			return new ActionResult(gameState);
 
 		foreach (var playerId in ResolveTargetIds())
 		{
@@ -23,7 +31,7 @@ public record DrawCardsAction : EffectAction
 			var handId = state.GetPlayerZoneId(playerId, ZoneType.Hand);
 			var libraryId = state.GetPlayerZoneId(playerId, ZoneType.Library);
 
-			for (int i = 0; i < Amount; i++)
+			for (int i = 0; i < amount; i++)
 			{
 				var topCardId = state.GetChildrenIds(libraryId).FirstOrDefault();
 

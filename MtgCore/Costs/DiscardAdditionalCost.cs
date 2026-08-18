@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -15,6 +15,8 @@ public record DiscardAdditionalCost : AdditionalCost
 	public int Count { get; init; } = 1;
 
 	public override bool RequiresSelection => true;
+
+	public override int RequiredPaymentCount => Count;
 
 	public override string Describe() =>
 		Count == 1 ? "Discard a card from your hand" : $"Discard {Count} cards from your hand";

@@ -35,4 +35,15 @@ public static class ContextKeys
 
 	/// <summary>List of remaining card IDs after selections have been excluded.</summary>
 	public const string RemainingCardIds = "remaining_card_ids";
+
+	/// <summary>
+	/// The numeric payload of the event that fired a triggered ability — "whenever you lose
+	/// life, draw THAT MANY cards" (Vilis). Injected by ResolveEffectAction from the triggering
+	/// event; 0 for events that carry no amount.
+	///
+	/// Read it with EffectAction.AmountContextKey. Without it a trigger can only ever act on a
+	/// number baked into the card, which is why every "that many" clause in the engine had
+	/// previously been flattened to a constant.
+	/// </summary>
+	public const string TriggerAmount = "trigger_amount";
 }

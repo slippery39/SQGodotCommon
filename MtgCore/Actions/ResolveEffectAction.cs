@@ -27,6 +27,13 @@ public record ResolveEffectAction : GameAction
 	public int SourceCardId { get; init; }
 
 	/// <summary>
+	/// Numeric payload of the event that fired this, surfaced to effects as
+	/// ContextKeys.TriggerAmount. 0 for spells, activated abilities, and events with no amount.
+	/// See TriggerAmountOf in CheckStateBasedEffectsAction for which events carry one.
+	/// </summary>
+	public int TriggerAmount { get; init; }
+
+	/// <summary>
 	/// Pre-selected targets for UserSelect effects, keyed by effect index.
 	/// </summary>
 	public ImmutableDictionary<int, ImmutableList<int>> TargetIds { get; init; } =
@@ -62,13 +69,15 @@ public record ResolveEffectAction : GameAction
 				{
 					PipelineContext = pipeline
 						.PipelineContext.SetItem(ContextKeys.CastingPlayerId, CastingPlayerId)
-						.SetItem(ContextKeys.SourceCardId, SourceCardId),
+						.SetItem(ContextKeys.SourceCardId, SourceCardId)
+						.SetItem(ContextKeys.TriggerAmount, TriggerAmount),
 				}
 				: action with
 				{
 					InputContext = action
 						.InputContext.SetItem(ContextKeys.CastingPlayerId, CastingPlayerId)
-						.SetItem(ContextKeys.SourceCardId, SourceCardId),
+						.SetItem(ContextKeys.SourceCardId, SourceCardId)
+						.SetItem(ContextKeys.TriggerAmount, TriggerAmount),
 				};
 
 			spawnedActions = spawnedActions.Add(action);

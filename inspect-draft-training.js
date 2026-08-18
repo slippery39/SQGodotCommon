@@ -11,7 +11,7 @@
 
 const fs = require("fs");
 
-const path = process.argv[2] || "sim_results/draft_training_hlm.json";
+const path = process.argv[2] || "sim_results/draft_training_csc.json";
 const topN = Number(process.argv[3] || 20);
 
 if (!fs.existsSync(path)) {

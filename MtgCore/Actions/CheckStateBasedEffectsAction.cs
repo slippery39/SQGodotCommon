@@ -272,12 +272,33 @@ public record CheckStateBasedEffectsAction : GameAction
 						Effects = [emblem.Effect],
 						CastingPlayerId = playerId,
 						SourceCardId = 0,
+						TriggerAmount = TriggerAmountOf(e),
 					}
 				);
 		}
 
 		return state;
 	}
+
+	/// <summary>
+	/// The numeric payload of a triggering event, for "that many" clauses (Vilis: "whenever you
+	/// lose life, draw that many cards"). 0 for events that carry no amount — an effect reading
+	/// ContextKeys.TriggerAmount off one of those does nothing, which is the right failure.
+	///
+	/// Deliberately a closed list rather than reflection over an Amount property: an event that
+	/// gains an unrelated numeric field later must not silently start feeding these effects.
+	/// </summary>
+	private static int TriggerAmountOf(GameEvent gameEvent) =>
+		gameEvent switch
+		{
+			PlayerLostLifeEvent e => e.Amount,
+			PlayerGainedLifeEvent e => e.Amount,
+			PlayerDamagedEvent e => e.Amount,
+			CreatureDamagedEvent e => e.Amount,
+			CombatDamageDealtToPlayerEvent e => e.Amount,
+			CardRevealedEvent e => e.ManaCost,
+			_ => 0,
+		};
 
 	private static GameState EvaluateCardTriggers(
 		GameState state,
@@ -322,6 +343,7 @@ public record CheckStateBasedEffectsAction : GameAction
 						Effects = ability.Effects,
 						CastingPlayerId = card.ControllerId,
 						SourceCardId = card.Id,
+						TriggerAmount = TriggerAmountOf(e),
 					}
 				);
 

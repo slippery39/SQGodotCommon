@@ -31,9 +31,9 @@ public class CoresetCubeBlueTests
 	}
 
 	[Test]
-	public void WholeSet_IsWhitePlusBlue()
+	public void WholeSet_IsWhitePlusBluePlusBlack()
 	{
-		Assert.That(CoresetCube.Cards, Has.Count.EqualTo(134), "67 white + 67 blue");
+		Assert.That(CoresetCube.Cards, Has.Count.EqualTo(201), "67 white + 67 blue + 67 black");
 	}
 
 	[Test]

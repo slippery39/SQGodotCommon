@@ -20,6 +20,16 @@ public abstract record AdditionalCost
 	public abstract bool RequiresSelection { get; }
 
 	/// <summary>
+	/// How many objects must be selected. Selection costs whose Validate demands an exact count
+	/// MUST override this, or MtgActionGenerator offers exactly one payment and the card is
+	/// silently never castable — it validates as "must sacrifice exactly 2" against a list of 1.
+	///
+	/// Latent until the first multi-payment cost shipped (Despoiler of Souls exiles two), since
+	/// every earlier cost happened to want exactly one.
+	/// </summary>
+	public virtual int RequiredPaymentCount => 1;
+
+	/// <summary>
 	/// Player-facing instruction for paying this cost, e.g. "Discard a card". Lives here rather
 	/// than in a presentation layer so console and Godot say the same thing, and so a new cost
 	/// type cannot ship without one.

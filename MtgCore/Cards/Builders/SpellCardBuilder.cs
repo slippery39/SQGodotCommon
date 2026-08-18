@@ -63,6 +63,16 @@ public class SpellCardBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// "As an additional cost, pay N life." Distinct from WithLoseLife, which is an effect:
+	/// this makes the spell uncastable at or below N life, and is paid before it resolves.
+	/// </summary>
+	public SpellCardBuilder WithLifeCost(int amount)
+	{
+		_castCosts.Add(new LifeAdditionalCost { Amount = amount });
+		return this;
+	}
+
 	public SpellCardBuilder WithStorm()
 	{
 		_hasStorm = true;
@@ -180,12 +190,14 @@ public class SpellCardBuilder
 	/// <summary>
 	/// Reanimation — put a creature card from your graveyard onto the battlefield.
 	/// </summary>
-	public SpellCardBuilder WithReanimate()
+	public SpellCardBuilder WithReanimate(bool fromAnyGraveyard = false)
 	{
 		FlushPending();
 		_pendingAction = new PutIntoBattlefieldAction();
 		_pendingTargeting = TargetingStrategy.SingleTarget(
-			new IsCreatureInOwnGraveyardSpecification()
+			fromAnyGraveyard
+				? new IsCreatureInAnyGraveyardSpecification()
+				: new IsCreatureInOwnGraveyardSpecification()
 		);
 		return this;
 	}
@@ -319,10 +331,104 @@ public class SpellCardBuilder
 	}
 
 	/// <summary>
-	/// Tutor — search your library for a card of a given subtype and put it in your hand.
+	/// Drain — target opponent loses N life and you gain N. Black's core verb, and the reason
+	/// this exists rather than chaining WithLoseLife + WithLifeGain: those are two targeted
+	/// effects, and inside a triggered ability TargetingStrategy.NoTarget() resolves to an empty
+	/// target list that ResolveEffectAction writes over any hardcoded TargetIds, so the loss
+	/// half silently hits nobody. DrainLifeAction derives both players from context instead,
+	/// which is the only shape that works from a trigger.
+	///
+	/// It was hand-rolled at roughly ten call sites in Hollowmere before this, each one an
+	/// opportunity to forget PlayerIdContextKey and get a card that does nothing.
+	/// </summary>
+	public SpellCardBuilder WithDrain(int amount)
+	{
+		FlushPending();
+		_pendingAction = new DrainLifeAction
+		{
+			Amount = amount,
+			TargetOpponent = true,
+			PlayerIdContextKey = ContextKeys.CastingPlayerId,
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Each player sacrifices a creature — a symmetric edict (Fleshbag Marauder, Smallpox).
+	///
+	/// Both halves take the CHEAPEST creature, not the biggest: a real edict lets each player
+	/// choose, and each would keep their bomb. Taking the biggest would make a symmetric edict
+	/// strictly better for whoever cast it, which is the opposite of what the card says.
+	///
+	/// excludeSubtype skips creatures of that type on both sides — Call to the Grave's
+	/// "non-Zombie creature", the clause that makes it a build-around rather than a liability.
+	/// </summary>
+	public SpellCardBuilder WithSymmetricEdict(string excludeSubtype = "")
+	{
+		FlushPending();
+
+		IEnumerable<GameAction> Half(bool opponent, string key) =>
+			[
+				new SelectCreatureFromBattlefieldByManaCostAction
+				{
+					TargetOpponent = opponent,
+					SelectLowest = true,
+					ExcludeSubtype = excludeSubtype,
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+					OutputKey = key,
+				},
+				new DestroyCreatureAction { TargetContextKey = key },
+			];
+
+		_pendingAction = new PipelineAction
+		{
+			Steps = [.. Half(true, "symmetric_edict_them"), .. Half(false, "symmetric_edict_you")],
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Target opponent reveals their hand and you choose a card to discard — the chosen half of
+	/// the discard theme, as distinct from WithOpponentDiscard's random one.
+	///
+	/// "You choose" becomes "take their most expensive non-land card", the same deterministic
+	/// stand-in for a choice used everywhere else in this engine. That gap matters: random
+	/// discard off an eight-card hand is a coin flip, while choosing is real disruption, and
+	/// cards are costed on which one they are.
+	/// </summary>
+	public SpellCardBuilder WithChosenDiscard(int count = 1)
+	{
+		FlushPending();
+
+		IEnumerable<GameAction> One(int index) =>
+			[
+				new SelectCardFromHandByManaCostAction
+				{
+					TargetOpponent = true,
+					SelectLowest = false,
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+					OutputKey = $"chosen_discard_{index}",
+				},
+				new DiscardCardsAction { TargetContextKey = $"chosen_discard_{index}" },
+			];
+
+		_pendingAction = new PipelineAction
+		{
+			Steps = [.. Enumerable.Range(0, count).SelectMany(One)],
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Tutor — search your library for a card and put it in your hand. With no subtype this is
+	/// an unrestricted tutor (Grim Tutor, Dark Petition); with one it is a synergy fetch.
+	///
 	/// Consistency, which is what makes a synergy deck function rather than flood.
 	/// </summary>
-	public SpellCardBuilder WithTutor(string subtype)
+	public SpellCardBuilder WithTutor(string subtype = "")
 	{
 		FlushPending();
 		_pendingAction = new PipelineAction
@@ -331,6 +437,9 @@ public class SpellCardBuilder
 				new SelectCardFromLibraryAction
 				{
 					Subtype = subtype,
+					// Unrestricted search must rank; library order is random, so without this an
+					// unfiltered tutor would just hand you the top card of your library.
+					SelectBestByManaCost = string.IsNullOrEmpty(subtype),
 					OutputKey = "tutor_target",
 					PlayerIdContextKey = ContextKeys.CastingPlayerId,
 				},
@@ -429,7 +538,21 @@ public class SpellCardBuilder
 	/// <summary>
 	/// "Choose one —". Each mode is a display name and the action it runs.
 	/// </summary>
-	public SpellCardBuilder WithModes(params (string Name, GameAction Action)[] modes)
+	public SpellCardBuilder WithModes(params (string Name, GameAction Action)[] modes) =>
+		WithModes(onceEach: false, modes);
+
+	/// <summary>
+	/// Modal, with onceEach giving "choose one that hasn't been chosen" — a mode is struck off
+	/// the list permanently once taken (Demonic Pact).
+	///
+	/// The two flags below must move together: excluding without recording never excludes, and
+	/// recording without excluding is dead state. Exposed as one parameter so a card cannot set
+	/// half of it.
+	/// </summary>
+	public SpellCardBuilder WithModes(
+		bool onceEach,
+		params (string Name, GameAction Action)[] modes
+	)
 	{
 		FlushPending();
 		_pendingAction = new PipelineAction
@@ -437,16 +560,18 @@ public class SpellCardBuilder
 			Steps = ImmutableList.Create<GameAction>(
 				new SelectModeAction
 				{
-					Prompt = "Choose one",
+					Prompt = onceEach ? "Choose one that hasn't been chosen" : "Choose one",
 					ModeNames = modes.Select(m => m.Name).ToImmutableList(),
 					MinChoices = 1,
 					MaxChoices = 1,
 					OutputKey = "chosen_mode",
+					ExcludeAlreadyChosen = onceEach,
 				},
 				new ApplyChosenModeAction
 				{
 					Modes = modes.Select(m => m.Action).ToImmutableList(),
 					ModeContextKey = "chosen_mode",
+					RecordChoice = onceEach,
 				}
 			),
 		};

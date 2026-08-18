@@ -11,11 +11,15 @@ namespace MtgCore;
 ///
 /// If TargetOpponent is true, derives the opponent from the casting player via
 /// the well-known Player1/Player2 IDs (2-player game only).
+///
+/// ExcludeSubtype skips creatures of that subtype — "each player sacrifices a non-Zombie
+/// creature" (Call to the Grave). Empty means no exclusion.
 /// </summary>
 public record SelectCreatureFromBattlefieldByManaCostAction : GameAction
 {
 	public bool SelectLowest { get; init; } = true;
 	public bool TargetOpponent { get; init; } = false;
+	public string ExcludeSubtype { get; init; } = "";
 	public string PlayerIdContextKey { get; init; } = "";
 	public string OutputKey { get; init; } = "";
 
@@ -36,6 +40,7 @@ public record SelectCreatureFromBattlefieldByManaCostAction : GameAction
 		var creatures = gameState
 			.GetCardsInZone(battlefieldId)
 			.Where(c => c.HasComponent<CreatureComponent>())
+			.Where(c => string.IsNullOrEmpty(ExcludeSubtype) || !c.HasSubtype(ExcludeSubtype))
 			.ToList();
 
 		if (creatures.Count == 0)

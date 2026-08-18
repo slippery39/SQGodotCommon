@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -19,6 +19,8 @@ public record SacrificeAdditionalCost : AdditionalCost
 	public int Count { get; init; } = 1;
 
 	public override bool RequiresSelection => true;
+
+	public override int RequiredPaymentCount => Count;
 
 	public override string Describe() =>
 		Count == 1
@@ -115,7 +117,23 @@ public record SacrificeAdditionalCost : AdditionalCost
 				};
 			}
 			var graveyardId = state.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
-			state = state.MoveObject(id, graveyardId);
+			state = state.MoveCardTracked(id, graveyardId);
+
+			// A sacrificed creature has died, and every death payoff must see it. This was the
+			// one death route in the engine that moved the card silently: it used MoveObject, so
+			// no CardEnteredGraveyardEvent fired and every graveyard-active static went stale,
+			// and it never announced CreatureDestroyedEvent, so OnAnyCreatureDies/OnSelfDies
+			// no-opped on a sacrifice. Sacrifice outlets and their payoffs are the whole point of
+			// the archetype, and none of them worked.
+			if (card.HasComponent<CreatureComponent>())
+			{
+				state = state with
+				{
+					PendingGameEvents = state.PendingGameEvents.Add(
+						new CreatureDestroyedEvent { CreatureId = id }
+					),
+				};
+			}
 		}
 		return state;
 	}

@@ -68,7 +68,11 @@ public class CoresetCubeRulesTextTests
 		|| card.HasComponent<LifeTotalComponent>()
 		|| card.HasComponent<CreatureCountComponent>()
 		|| card.HasComponent<LifeGainBonusComponent>()
-		|| card.HasComponent<ThresholdComponent>();
+		|| card.HasComponent<ThresholdComponent>()
+		// A creature whose only mechanic is graveyard recursion carries none of the above —
+		// Despoiler of Souls is a plain body plus a FlashbackComponent, so the sweep could not
+		// see it at all.
+		|| card.HasComponent<FlashbackComponent>();
 
 	// ===== One card per mechanic =====
 
@@ -255,6 +259,187 @@ public class CoresetCubeRulesTextTests
 			$"Over budget: {string.Join(", ", overlong.Select(x => $"{x.Name} ({x.Lines})"))}"
 		);
 	}
+
+	// ===== Black section =====
+
+	/// <summary>
+	/// The single most important line in the black section. Demonic Pact's fourth mode ends the
+	/// game, and it rendered as nothing at all — the card offered three good modes and silently
+	/// hid the clock that is its entire reason to exist.
+	/// </summary>
+	[Test]
+	public void DemonicPact_PrintsTheModeThatLosesTheGame()
+	{
+		var text = MtgCardMapper.GetRulesText(Find("Demonic Pact"));
+
+		Assert.That(text, Does.Contain("You lose the game"));
+	}
+
+	/// <summary>Sorin's -3 vanished the same way — SetLifeTotalAction had no describe at all.</summary>
+	[Test]
+	public void SorinMarkov_PrintsAllThreeLoyaltyAbilities()
+	{
+		var text = MtgCardMapper.GetRulesText(Find("Sorin Markov"));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(text, Does.Contain("+2:"));
+			Assert.That(text, Does.Contain("-3:"));
+			Assert.That(text, Does.Contain("becomes 10"));
+			Assert.That(text, Does.Contain("-7:"));
+		});
+	}
+
+	/// <summary>
+	/// The exile cost is the only thing bounding a repeatable recursion. Printing the mana cost
+	/// alone advertised a strictly better card than the one being played.
+	/// </summary>
+	[Test]
+	public void DespoilerOfSouls_PrintsItsGraveyardCost()
+	{
+		var text = MtgCardMapper.GetRulesText(Find("Despoiler of Souls"));
+
+		Assert.That(text, Does.Contain("exile 2 cards from your graveyard"));
+	}
+
+	/// <summary>Each of these is the whole restriction on its card.</summary>
+	[Test]
+	public void TargetRestrictions_AreNotSilentlyDropped()
+	{
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Royal Assassin")),
+				Does.Contain("attacked this turn"),
+				"Without this it reads as unconditional removal"
+			);
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Gilt-Leaf Winnower")),
+				Does.Contain("different power and toughness")
+			);
+		});
+	}
+
+	/// <summary>
+	/// A drain aimed at someone else read "Lose N life", which names the wrong player — Blood
+	/// Reckoning appeared to damage its own controller every time they were attacked.
+	/// </summary>
+	[Test]
+	public void LifeLoss_NamesThePlayerWhoActuallyLosesIt()
+	{
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Blood Reckoning")),
+				Does.Contain("opponent loses 1 life")
+			);
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Ulcerate")),
+				Does.Contain("Lose 3 life"),
+				"A genuinely self-inflicted loss must still read as one"
+			);
+		});
+	}
+
+	/// <summary>Stab Wound drains on the enchanted creature's controller's turn, not yours.</summary>
+	[Test]
+	public void StabWound_NamesTheRightUpkeep()
+	{
+		Assert.That(
+			MtgCardMapper.GetRulesText(Find("Stab Wound")),
+			Does.Contain("each opponent's upkeep")
+		);
+	}
+
+	/// <summary>
+	/// A context-driven amount is not a number the card can print. Vilis draws "that many",
+	/// scaling with the life just lost; "Draw a card" understated it by most of the card.
+	/// </summary>
+	[Test]
+	public void Vilis_PrintsTheScalingDraw()
+	{
+		var text = MtgCardMapper.GetRulesText(Find("Vilis, Broker of Blood"));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(text, Does.Contain("Whenever you lose life"));
+			Assert.That(text, Does.Contain("that many"));
+		});
+	}
+
+	/// <summary>
+	/// A four-step pipeline that describes one sentence. Rendered step by step it ran four times
+	/// the length of the card, on three cards, against a hard line budget.
+	/// </summary>
+	[Test]
+	public void SymmetricEdict_ReadsAsOneClause()
+	{
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Fleshbag Marauder")),
+				Does.Contain("Each player sacrifices a creature")
+			);
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Call to the Grave")),
+				Does.Contain("non-Zombie creature")
+			);
+		});
+	}
+
+	/// <summary>
+	/// Kitesail Freebooter's entire ETB was invisible: both steps of its pipeline were unknown
+	/// to DescribeStep, so the card printed only "Flying".
+	/// </summary>
+	[Test]
+	public void KitesailFreebooter_PrintsItsHandAttack()
+	{
+		var text = MtgCardMapper.GetRulesText(Find("Kitesail Freebooter"));
+
+		Assert.That(text, Does.Contain("exile it until this leaves the battlefield"));
+	}
+
+	/// <summary>
+	/// GrantKeywordAction had grown six keywords the describer never learned. Xathrid Slyblade
+	/// grants first strike AND deathtouch and printed only the deathtouch.
+	/// </summary>
+	[Test]
+	public void GrantedKeywords_IncludeAllOfThem()
+	{
+		var text = MtgCardMapper.GetRulesText(Find("Xathrid Slyblade"));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(text, Does.Contain("Deathtouch"));
+			Assert.That(text, Does.Contain("First strike"));
+		});
+	}
+
+	/// <summary>
+	/// These trigger conditions had no describe branch, so both cards read "When triggered" —
+	/// which tells a drafter nothing about the only ability that matters on them.
+	/// </summary>
+	[Test]
+	public void NewTriggerConditions_AreNamed()
+	{
+		var knight = MtgCardMapper.GetRulesText(Find("Knight of the Ebon Legion"));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(knight, Does.Contain("lost 4+ life this turn"));
+			Assert.That(knight, Does.Not.Contain("When triggered"));
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Blood Seeker")),
+				Does.Contain("creature an opponent controls enters"),
+				"'a permanent an opponent controls' promises more than the card does"
+			);
+		});
+	}
+
+	private static Card Find(string name) =>
+		CoresetCube.Cards.Single(c =>
+			string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)
+		);
 
 	[Test]
 	public void TypeLines_StayShortEnoughToFitTheBand()
