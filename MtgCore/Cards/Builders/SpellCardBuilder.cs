@@ -88,6 +88,16 @@ public class SpellCardBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// "This spell can't be countered", optionally gated (Exquisite Firecraft's spell mastery).
+	/// Live rather than reminder text: blue's counterspell traps really do fire from hand here.
+	/// </summary>
+	public SpellCardBuilder WithCannotBeCountered(ActivationCondition? condition = null)
+	{
+		_extraComponents.Add(new CannotBeCounteredComponent { Condition = condition });
+		return this;
+	}
+
 	public SpellCardBuilder WithStorm()
 	{
 		_hasStorm = true;

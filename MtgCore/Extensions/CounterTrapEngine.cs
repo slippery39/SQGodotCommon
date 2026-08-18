@@ -24,6 +24,14 @@ public static class CounterTrapEngine
 		if (state.GetObject(castCardId) is not Card cast)
 			return new CounterResult(state, false);
 
+		// Checked before a trap is even chosen, so an uncounterable spell does not SPEND the
+		// opponent's counterspell. That is the real rule — a trap that cannot counter its target
+		// was never a legal response to it — and it also keeps the interaction readable: the
+		// counterspell is still sitting in hand afterwards.
+		var uncounterable = cast.GetComponent<CannotBeCounteredComponent>();
+		if (uncounterable != null && uncounterable.IsActive(state, castCardId, castingPlayerId))
+			return new CounterResult(state, false);
+
 		var p1Id = state.GetWellKnownId(MtgObjectKeys.Player1);
 		var p2Id = state.GetWellKnownId(MtgObjectKeys.Player2);
 		var trapperId = castingPlayerId == p1Id ? p2Id : p1Id;

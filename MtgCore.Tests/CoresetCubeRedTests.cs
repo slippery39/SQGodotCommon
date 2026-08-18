@@ -19,7 +19,58 @@ public class CoresetCubeRedTests
 	[Test]
 	public void SectionCounts_MatchTheCube()
 	{
-		Assert.That(CoresetCubeRed.Cards, Has.Count.EqualTo(38), "38 creatures");
+		Assert.Multiple(() =>
+		{
+			Assert.That(CoresetCubeRed.Cards, Has.Count.EqualTo(38), "38 creatures");
+			Assert.That(
+				CoresetCubeRedSpells.Cards,
+				Has.Count.EqualTo(20),
+				"12 instants + 8 sorceries"
+			);
+			Assert.That(
+				CoresetCubeRedPermanents.Cards,
+				Has.Count.EqualTo(9),
+				"4 enchantments + 1 artifact + 4 planeswalkers"
+			);
+		});
+	}
+
+	[Test]
+	public void InstantsAndSorceries_DeclareTheirCardType()
+	{
+		var undeclared = CoresetCubeRedSpells
+			.Cards.Where(c => !c.HasType(CardType.Instant) && !c.HasType(CardType.Sorcery))
+			.Select(c => c.Name)
+			.ToList();
+
+		Assert.That(undeclared, Is.Empty, "Spell mastery cannot see an undeclared spell");
+	}
+
+	[Test]
+	public void Planeswalkers_HaveLoyaltyAndAreNotCreatures()
+	{
+		var walkers = CoresetCubeRedPermanents
+			.Cards.Where(c => c.HasComponent<PlaneswalkerComponent>())
+			.ToList();
+
+		Assert.That(walkers, Has.Count.EqualTo(4), "3 Chandras + Sarkhan");
+
+		foreach (var walker in walkers)
+			Assert.Multiple(() =>
+			{
+				Assert.That(
+					walker.HasComponent<CreatureComponent>(),
+					Is.False,
+					$"{walker.Name} must route through CastPermanentAction"
+				);
+				Assert.That(
+					walker
+						.GetComponents<ActivatedAbilityComponent>()
+						.Count(a => a.IsLoyaltyAbility),
+					Is.EqualTo(3),
+					$"{walker.Name} should have three loyalty abilities"
+				);
+			});
 	}
 
 	[Test]

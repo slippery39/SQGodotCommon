@@ -492,6 +492,92 @@ public class RedMechanicsTests
 		});
 	}
 
+	// ===== CANNOT BE COUNTERED =====
+
+	/// <summary>
+	/// An uncounterable spell must resolve AND must not spend the opponent's trap — a counterspell
+	/// that cannot counter its target was never a legal response to it, so it should still be in
+	/// hand afterwards. Checking only "the spell resolved" would pass on an implementation that
+	/// eats the counterspell for nothing.
+	/// </summary>
+	[Test]
+	public void CannotBeCountered_ResolvesAndLeavesTheTrapInHand()
+	{
+		var trapHandId = _state.GetPlayerZoneId(_ids.Player2Id, ZoneType.Hand);
+		var (state, trap) = _state.AddObject(
+			CardFactory.Instant("Counterspell", manaCost: 2).AsCounterTrap().Build() with
+			{
+				OwnerId = _ids.Player2Id,
+				ControllerId = _ids.Player2Id,
+			},
+			parentId: trapHandId
+		);
+
+		var startingLife = state.GetPlayer(_ids.Player2Id).Life;
+
+		var bolt = CardFactory
+			.Instant("Uncounterable Bolt", manaCost: 1)
+			.WithCannotBeCountered()
+			.WithDamage(3)
+			.WithTarget(Single().Opponent())
+			.Build();
+
+		var (final, _) = CastSpell(state, bolt, targetId: _ids.Player2Id);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				final.GetPlayer(_ids.Player2Id).Life,
+				Is.EqualTo(startingLife - 3),
+				"The spell should have resolved"
+			);
+			Assert.That(
+				final.GetCardZone(trap.Id).ZoneType,
+				Is.EqualTo(ZoneType.Hand),
+				"The trap must not be spent on a spell it could never counter"
+			);
+		});
+	}
+
+	/// <summary>The counterpart: without the marker the same spell IS countered.</summary>
+	[Test]
+	public void WithoutTheMarker_TheSameSpellIsCountered()
+	{
+		var trapHandId = _state.GetPlayerZoneId(_ids.Player2Id, ZoneType.Hand);
+		var (state, trap) = _state.AddObject(
+			CardFactory.Instant("Counterspell", manaCost: 2).AsCounterTrap().Build() with
+			{
+				OwnerId = _ids.Player2Id,
+				ControllerId = _ids.Player2Id,
+			},
+			parentId: trapHandId
+		);
+
+		var startingLife = state.GetPlayer(_ids.Player2Id).Life;
+
+		var bolt = CardFactory
+			.Instant("Counterable Bolt", manaCost: 1)
+			.WithDamage(3)
+			.WithTarget(Single().Opponent())
+			.Build();
+
+		var (final, _) = CastSpell(state, bolt, targetId: _ids.Player2Id);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				final.GetPlayer(_ids.Player2Id).Life,
+				Is.EqualTo(startingLife),
+				"The spell should have been countered"
+			);
+			Assert.That(
+				final.GetCardZone(trap.Id).ZoneType,
+				Is.EqualTo(ZoneType.Graveyard),
+				"The trap is spent when it does counter"
+			);
+		});
+	}
+
 	// ===== HELPERS =====
 
 	private (GameState, Card) AddWalker(GameState state, int ownerId, int loyalty)
@@ -556,7 +642,16 @@ public class RedMechanicsTests
 		};
 
 	/// <summary>Puts the template in player 1's hand, casts it, and resolves everything.</summary>
-	private (GameState State, int CardId) CastSpell(GameState state, Card template)
+	/// <param name="targetId">
+	/// Optional target. Keyed by EFFECT INDEX, not by 0 — ValidateAdd looks targets up under the
+	/// index of the effect that needs them, so keying them anywhere else makes the spell silently
+	/// uncastable rather than throwing.
+	/// </param>
+	private (GameState State, int CardId) CastSpell(
+		GameState state,
+		Card template,
+		int targetId = 0
+	)
 	{
 		var handId = state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Hand);
 		var (withCard, card) = state.AddObject(
@@ -568,9 +663,22 @@ public class RedMechanicsTests
 			parentId: handId
 		);
 
-		var (final, _) = withCard
-			.AddAction(new CastSpellAction { CardId = card.Id, CastingPlayerId = _ids.Player1Id })
-			.ProcessAllActions();
+		var cast = new CastSpellAction { CardId = card.Id, CastingPlayerId = _ids.Player1Id };
+		if (targetId != 0)
+		{
+			var spell = ((Card)withCard.GetObject(card.Id)).GetComponent<SpellComponent>()!;
+			var index = spell.Effects.FindIndex(e => e.TargetingStrategy.RequiresUserSelection);
+			if (index >= 0)
+				cast = cast with
+				{
+					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
+						index,
+						ImmutableList.Create(targetId)
+					),
+				};
+		}
+
+		var (final, _) = withCard.AddAction(cast).ProcessAllActions();
 
 		return (final, card.Id);
 	}

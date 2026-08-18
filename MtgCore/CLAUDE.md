@@ -131,7 +131,7 @@ MtgCore/
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Terravore. Must be stamped with Duration = Permanent in card definitions.
 ├── Sets/                    # CardSet (Code, Name, Cards; Draftable filters lands), SetRegistry (All, Default, Get)
 │   ├── CoresetCube/         # The CSC set, built from an external cube list (cubecobra magiccoreset20xx).
-│   │                        # WHITE, BLUE AND BLACK COMPLETE — 201 cards. The cube is 450: 67 per colour,
+│   │                        # WHITE, BLUE, BLACK AND RED COMPLETE — 268 cards. The cube is 450: 67 per colour,
 │   │                        # 50 colourless, 53 multicolour. CoresetCube.cs assembles the files:
 │   │                        #   CoresetCubeWhite.cs           38 creatures
 │   │                        #   CoresetCubeWhiteSpells.cs     10 instants + 6 sorceries
@@ -145,15 +145,10 @@ MtgCore/
 │   │                        #   CoresetCube*Tokens.cs         token templates, excluded from the card list
 │   │                        # Read each file's header before adding cards — they list every divergence from
 │   │                        # the printed card and why.
-│   │                        # RED IN PROGRESS — engine mechanics and creatures done; see "Red
-│   │                        # Section Mechanics". Remaining files are not yet written:
-│   │                        #   CoresetCubeRed.cs             38 creatures        DONE
-│   │                        #   CoresetCubeRedTokens.cs       token templates     DONE
+│   │                        #   CoresetCubeRed.cs             38 creatures
 │   │                        #   CoresetCubeRedSpells.cs       12 instants + 8 sorceries
 │   │                        #   CoresetCubeRedPermanents.cs   4 enchantments + 1 artifact + 4 planeswalkers
-│   │                        # CoresetCube.Cards is therefore 239, not a round colour multiple —
-│   │                        # CoresetCubeBlueTests pins that number; bump it as each red file lands.
-│   │                        # Green not started.
+│   │                        # Green not started — it is the last mono-coloured section.
 │   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
 │                            # HollowmereTokens.cs holds token templates (excluded from the card list).
 │                            # Read the header of Hollowmere.cs before adding cards — it states the rate bar and
@@ -530,6 +525,33 @@ text — nothing looks broken.**
 creature you control enters, IT gets +2/+0 and haste" must land on the creature that entered; a
 targeting strategy cannot see the event, so `Random()` buffs some other creature and the new
 arrival misses the haste that is the card's whole point. Same failure as Wall of Frost.
+
+### "Can't be countered" is kept, unlike most "can't be X" clauses
+
+`CannotBeCounteredComponent`, checked by `CounterTrapEngine.TryCounterCast` **before a trap is
+chosen**, so an uncounterable spell does not even SPEND the opponent's counterspell — a trap that
+cannot counter its target was never a legal response to it.
+
+This is worth implementing rather than cutting precisely because counterspells genuinely exist
+here (blue's traps fire from hand off unspent mana), so the clause protects against something real
+rather than describing a mechanic the game lacks. `Condition` reuses `ActivationCondition`, so
+Exquisite Firecraft's spell mastery works with no new type.
+
+**Banefire's is unconditional rather than "if X is 5 or more".** The chosen X lives on
+`CastSpellAction`, not on the card — that is what lets two copies be cast for different X — so a
+component on the card cannot see it. Threading `XValue` into the counter engine for one clause on
+one card is not worth it.
+
+### The rules-text pass found three more, all in the second half
+
+`Earthquake` rendered **"deal X damage to each creature"** — the flying exemption is the entire
+card, and `DescribeSpecification`'s walker had no `NotSpecification` case, so the wrapper was
+walked straight past. `DiscardAdditionalCost`'s filter was ignored, so "discard a land card" read
+as "discard a card" — understating it (only a land will do) and overstating it (a landless hand
+cannot pay) at the same time. And `CannotBeCounteredComponent` rendered nothing at all.
+
+**Two rules-text passes, eight silent failures, zero of them visible from the card definitions or
+catchable by a cast-and-resolve test.** Dump and read the rendered text of every new card.
 
 **Cut clauses, all with existing precedent.** Menace and "can't block"/"can't be blocked" (no
 blocking — Boggart Brute, Frenzied Goblin, Goblin Glory Chaser, Stormblood Berserker); colour-based

@@ -227,6 +227,16 @@ public static class MtgCardMapper
 		if (card.HasComponent<XCostComponent>())
 			lines.Add("X is all the mana you have left when you cast it");
 
+		// Not reminder text: blue's counterspell traps really do fire from hand here, so this
+		// clause protects against something the opponent can actually be holding. Rendering
+		// nothing would hide the only reason Exquisite Firecraft beats a counterspell deck.
+		foreach (var uncounterable in card.GetComponents<CannotBeCounteredComponent>())
+			lines.Add(
+				uncounterable.Condition == null
+					? "This spell can't be countered"
+					: $"This spell can't be countered if {LowerFirst(uncounterable.Condition.Describe())}"
+			);
+
 		foreach (var reduction in card.GetComponents<ConditionalCostReductionComponent>())
 			lines.Add(
 				$"Costs {reduction.Amount} less to cast if "
@@ -672,6 +682,13 @@ public static class MtgCardMapper
 			SacrificeAdditionalCost s => s.Count == 1
 				? $"sacrifice a {SacrificeNoun(s.Filter)}"
 				: $"sacrifice {s.Count} {SacrificeNoun(s.Filter)}s",
+			// The filter is the cost. "Discard a card" for Magmatic Insight and Molten Vortex
+			// understates it badly in one direction and overstates it in the other: it reads as
+			// though any card will do, when only a land will, and a hand with no land cannot pay
+			// at all. FilterDescription is set by the builder alongside the filter itself.
+			DiscardAdditionalCost d when !string.IsNullOrEmpty(d.FilterDescription) => d.Count == 1
+				? $"discard a {d.FilterDescription} card"
+				: $"discard {d.Count} {d.FilterDescription} cards",
 			DiscardAdditionalCost d => d.Count == 1 ? "discard a card" : $"discard {d.Count} cards",
 			LifeAdditionalCost l => $"pay {l.Amount} life",
 			ExileFromGraveyardAdditionalCost x => x.Count == 1
@@ -1195,6 +1212,8 @@ public static class MtgCardMapper
 		public bool Attacked;
 		public bool UnequalPowerToughness;
 		public bool CreatureInAnyGraveyard;
+		public bool Flying;
+		public bool WithoutFlying;
 	}
 
 	/// Specifications are composed with And/Or, so the shape has to be walked rather than
@@ -1259,6 +1278,17 @@ public static class MtgCardMapper
 			case IsCreatureInAnyGraveyardSpecification:
 				f.CreatureInAnyGraveyard = true;
 				break;
+			case HasFlyingSpecification:
+				f.Flying = true;
+				break;
+			// Earthquake's whole card is the flying EXEMPTION, and without this case the Not
+			// wrapper was walked straight past: it read "deal X damage to each creature", which
+			// is a different and much worse card. Matched narrowly rather than by inverting the
+			// walker, because negation does not distribute over the other facts sensibly —
+			// "not (creature you control)" is not "creature you don't control".
+			case NotSpecification { Inner: HasFlyingSpecification }:
+				f.WithoutFlying = true;
+				break;
 		}
 	}
 
@@ -1303,6 +1333,8 @@ public static class MtgCardMapper
 		var prefix = f.Other ? "other " : "";
 		if (f.Exhausted)
 			prefix += "exhausted ";
+		if (f.Flying)
+			prefix += "flying ";
 
 		var suffix =
 			f.Yours ? " you control"
@@ -1317,6 +1349,9 @@ public static class MtgCardMapper
 
 		if (f.UnequalPowerToughness)
 			suffix += " with different power and toughness";
+
+		if (f.WithoutFlying)
+			suffix += " without flying";
 
 		return $"{prefix}{noun}{suffix}";
 	}

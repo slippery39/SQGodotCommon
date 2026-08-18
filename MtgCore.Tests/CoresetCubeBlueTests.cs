@@ -31,16 +31,16 @@ public class CoresetCubeBlueTests
 	}
 
 	/// <summary>
-	/// Red is mid-build: its 38 creatures are in, its 20 spells and 9 permanents are not, so the
-	/// total is 201 + 38 rather than a round 268. Bump this as each red file lands.
+	/// Four colours complete at exactly 67 each. The cube is 450 — 67 per colour, 50 colourless,
+	/// 53 multicolour — so green is what remains of the mono-coloured sections.
 	/// </summary>
 	[Test]
-	public void WholeSet_IsWhitePlusBluePlusBlackPlusRedCreatures()
+	public void WholeSet_IsFourCompleteColours()
 	{
 		Assert.That(
 			CoresetCube.Cards,
-			Has.Count.EqualTo(239),
-			"67 white + 67 blue + 67 black + 38 red creatures"
+			Has.Count.EqualTo(268),
+			"67 white + 67 blue + 67 black + 67 red"
 		);
 	}
 
