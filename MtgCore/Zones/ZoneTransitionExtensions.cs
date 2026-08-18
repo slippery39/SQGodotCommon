@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -64,6 +65,14 @@ public static class ZoneTransitionExtensions
 			);
 		}
 
+		// Everything an effect STAMPED on the permanent goes the same way, and for the same
+		// reason: it belonged to the permanent, not to the card. Nothing removed these, so a
+		// creature bounced under an anthem kept the anthem's bonus in hand and collected a
+		// SECOND one when it was replayed, and a creature killed by -4/-4 sat in the graveyard
+		// still printing the -4/-4 in its text box.
+		if (leftBattlefield)
+			state = StripAppliedComponents(state, cardId);
+
 		// A move within the same zone crosses no boundary.
 		if (wasInGraveyard == willBeInGraveyard)
 			return state;
@@ -76,6 +85,37 @@ public static class ZoneTransitionExtensions
 		{
 			PendingGameEvents = state.PendingGameEvents.Add(boundary),
 		};
+	}
+
+	/// <summary>
+	/// Removes the components that an EFFECT stamped onto a permanent while it was in play.
+	///
+	/// Deliberately a closed list of the four applied types rather than "every
+	/// PowerToughnessModifier". Several modifier subclasses are PRINTED on the card and define
+	/// what it is — Tarmogoyf's GraveyardCountComponent, Threshold, CreatureCountComponent,
+	/// LifeTotalComponent, LandsPlayedCountComponent. Stripping by base type would delete the
+	/// card's own rules text on its way to the graveyard and reanimate it as a vanilla creature.
+	/// </summary>
+	private static GameState StripAppliedComponents(GameState state, int cardId)
+	{
+		if (state.GetObject(cardId) is not Card card)
+			return state;
+
+		var kept = card
+			.Components.Where(c =>
+				c
+					is not (
+						AppliedStaticPTBoost
+						or AppliedKeywordComponent
+						or StaticPowerToughnessModifier
+						or EquippedBoostComponent
+					)
+			)
+			.ToImmutableArray();
+
+		return kept.Length == card.Components.Length
+			? state
+			: state.UpdateObject(cardId, card with { Components = kept });
 	}
 
 	private static bool IsBattlefield(GameState state, int zoneId) =>

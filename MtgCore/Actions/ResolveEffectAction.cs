@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -32,6 +32,12 @@ public record ResolveEffectAction : GameAction
 	/// See TriggerAmountOf in CheckStateBasedEffectsAction for which events carry one.
 	/// </summary>
 	public int TriggerAmount { get; init; }
+
+	/// <summary>
+	/// Id of the card or player the triggering event was about, surfaced to effects as
+	/// ContextKeys.TriggerSubjectId. 0 for spells and activated abilities.
+	/// </summary>
+	public int TriggerSubjectId { get; init; }
 
 	/// <summary>
 	/// Pre-selected targets for UserSelect effects, keyed by effect index.
@@ -70,14 +76,16 @@ public record ResolveEffectAction : GameAction
 					PipelineContext = pipeline
 						.PipelineContext.SetItem(ContextKeys.CastingPlayerId, CastingPlayerId)
 						.SetItem(ContextKeys.SourceCardId, SourceCardId)
-						.SetItem(ContextKeys.TriggerAmount, TriggerAmount),
+						.SetItem(ContextKeys.TriggerAmount, TriggerAmount)
+						.SetItem(ContextKeys.TriggerSubjectId, TriggerSubjectId),
 				}
 				: action with
 				{
 					InputContext = action
 						.InputContext.SetItem(ContextKeys.CastingPlayerId, CastingPlayerId)
 						.SetItem(ContextKeys.SourceCardId, SourceCardId)
-						.SetItem(ContextKeys.TriggerAmount, TriggerAmount),
+						.SetItem(ContextKeys.TriggerAmount, TriggerAmount)
+						.SetItem(ContextKeys.TriggerSubjectId, TriggerSubjectId),
 				};
 
 			spawnedActions = spawnedActions.Add(action);

@@ -1,4 +1,4 @@
-using ImmutableGameObjects;
+﻿using ImmutableGameObjects;
 
 namespace MtgCore;
 
@@ -88,7 +88,12 @@ public record EventTriggerCondition : TriggerCondition
 	/// Future improvement: move this onto GameEvent as a virtual SubjectId property
 	/// so events are self-describing. Deferred to avoid touching ImmutableGameObjects.
 	/// </summary>
-	private static int ExtractSubjectId(GameEvent gameEvent) =>
+	/// <summary>
+	/// Internal so CheckStateBasedEffectsAction can publish the same subject to the effect as
+	/// ContextKeys.TriggerSubjectId. One extraction, so what a trigger FILTERS on and what its
+	/// effect ACTS on can never disagree.
+	/// </summary>
+	internal static int ExtractSubjectId(GameEvent gameEvent) =>
 		gameEvent switch
 		{
 			CreatureDestroyedEvent e => e.CreatureId,

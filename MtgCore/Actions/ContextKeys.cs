@@ -46,4 +46,15 @@ public static class ContextKeys
 	/// previously been flattened to a constant.
 	/// </summary>
 	public const string TriggerAmount = "trigger_amount";
+
+	/// <summary>
+	/// The id of the card or player the triggering event was ABOUT — "whenever a creature
+	/// attacks this, tap THAT CREATURE" (Wall of Frost). Injected by ResolveEffectAction from
+	/// the same extraction the trigger's Filter runs against.
+	///
+	/// Without it a trigger can only act on a target chosen by a targeting strategy, which
+	/// cannot see the event at all: Wall of Frost had to freeze every creature the opponent
+	/// controlled because it had no way to name the one that attacked it.
+	/// </summary>
+	public const string TriggerSubjectId = "trigger_subject_id";
 }

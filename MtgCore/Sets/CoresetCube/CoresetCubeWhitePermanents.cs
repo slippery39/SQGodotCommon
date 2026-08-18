@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore.Cards.Builders;
 using static MtgCore.Cards.Builders.TargetBuilder;
@@ -269,7 +269,7 @@ public static class CoresetCubeWhitePermanents
 					eb => eb.WithExhaust().WithTarget(AllValid().OpponentCreatures())
 				)
 				.WithLoyaltyAbility(
-					"-2: Destroy target tapped creature",
+					"-2: Destroy target exhausted creature",
 					-2,
 					eb =>
 						eb.WithAction(

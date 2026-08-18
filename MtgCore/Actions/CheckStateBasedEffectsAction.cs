@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -273,6 +273,7 @@ public record CheckStateBasedEffectsAction : GameAction
 						CastingPlayerId = playerId,
 						SourceCardId = 0,
 						TriggerAmount = TriggerAmountOf(e),
+						TriggerSubjectId = EventTriggerCondition.ExtractSubjectId(e),
 					}
 				);
 		}
@@ -344,6 +345,7 @@ public record CheckStateBasedEffectsAction : GameAction
 						CastingPlayerId = card.ControllerId,
 						SourceCardId = card.Id,
 						TriggerAmount = TriggerAmountOf(e),
+						TriggerSubjectId = EventTriggerCondition.ExtractSubjectId(e),
 					}
 				);
 

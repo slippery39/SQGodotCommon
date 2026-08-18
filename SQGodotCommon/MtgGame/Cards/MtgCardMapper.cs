@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Common.Cards;
@@ -135,7 +135,7 @@ public static class MtgCardMapper
 	public static string GetRulesText(Card card, GameState state = null)
 	{
 		if (card.HasSubtype("Land"))
-			return card.HasSubtype("Basic") ? "Basic Land\n(Tap: Add 1 mana)" : "Land";
+			return card.HasSubtype("Basic") ? "Basic Land\n(Exhaust: Add 1 mana)" : "Land";
 
 		var creature = card.GetComponent<CreatureComponent>();
 		var spell = card.GetComponent<SpellComponent>();
@@ -217,7 +217,7 @@ public static class MtgCardMapper
 			lines.Add("Prevents all combat damage dealt to and by this creature");
 
 		if (card.HasComponent<ConvokeComponent>())
-			lines.Add("Convoke (costs 1 less per ready creature; those creatures tap)");
+			lines.Add("Convoke (costs 1 less per ready creature; those creatures exhaust)");
 
 		if (card.HasComponent<XCostComponent>())
 			lines.Add("X is all the mana you have left when you cast it");
@@ -353,9 +353,9 @@ public static class MtgCardMapper
 			yield break;
 
 		if (creature.FrozenBySourceId != 0 || creature.FrozenTurns > 0)
-			yield return "Frozen — does not untap";
+			yield return "Frozen — does not ready";
 		else if (creature.IsExhausted)
-			yield return "Tapped";
+			yield return "Exhausted";
 	}
 
 	private static string? CardName(GameState state, int cardId) =>
@@ -700,7 +700,7 @@ public static class MtgCardMapper
 		if (ability.ManaCost > 0)
 			costParts.Add($"{ability.ManaCost} mana");
 		if (ability.RequiresTap)
-			costParts.Add("tap");
+			costParts.Add("exhaust");
 		foreach (var cost in ability.AdditionalCosts)
 		{
 			var costText = DescribeCost(cost);
@@ -1009,10 +1009,10 @@ public static class MtgCardMapper
 	private static string DescribeExhaust(ExhaustCreatureAction e, string target)
 	{
 		if (e.FreezeWhileSourceRemains)
-			return $"Tap {target}; it doesn't untap while this remains";
+			return $"Exhaust {target}; it stays exhausted while this remains";
 		if (e.FreezeTurns > 0)
-			return $"Tap {target}; it doesn't untap during its controller's next untap step";
-		return $"Tap {target}";
+			return $"Exhaust {target}; it does not ready on its controller's next turn";
+		return $"Exhaust {target}";
 	}
 
 	private static string? DescribeCustomModifier(AddCustomModifierAction m, string target) =>
@@ -1261,7 +1261,7 @@ public static class MtgCardMapper
 
 		var prefix = f.Other ? "other " : "";
 		if (f.Exhausted)
-			prefix += "tapped ";
+			prefix += "exhausted ";
 
 		var suffix =
 			f.Yours ? " you control"
@@ -1464,7 +1464,9 @@ public static class MtgCardMapper
 			ApplyChosenModeAction m => LowerFirst(DescribeModes(m) ?? ""),
 			SelectTopCardsToBottomAction s => $"scry {s.Amount}",
 			MoveCardToBottomOfLibraryAction => "put the rest on the bottom",
-			ExhaustCreatureAction e => e.FreezeTurns > 0 ? "tap it; it stays tapped" : "tap it",
+			ExhaustCreatureAction e => e.FreezeTurns > 0
+				? "exhaust it; it stays exhausted"
+				: "exhaust it",
 			ReanimateManyAction => "return them to the battlefield",
 			// The trigger-safe verbs are pipelines that pick a target themselves, so their
 			// steps have to read as one sentence: "the opponent's best creature, destroy it".

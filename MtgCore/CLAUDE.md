@@ -405,6 +405,13 @@ Files: `Turns/BeginGameAction.cs`, `SetupGameAction.cs`, `StartTurnAction.cs`, `
 - Presentation layers never modify game state directly. All state changes go through `GameAction`s. Exceptions: explicit test setup and debug/cheat tooling (both must be clearly commented as such).
 - `MtgActionGenerator.GetLegalActions(state, ids, playerId)` is the **single shared source** of legal action generation. Console and simulator both call this — never duplicate this logic.
 - A UI that highlights legal attack targets must ask `AttackAction.ValidateAdd` per candidate (`MtgGameManager.GetLegalAttackTargets` does this) rather than re-deriving Taunt/Flying/Reach. A second copy of those rules in the presentation layer would drift, and the symptom is a click that silently does nothing.
+- **The same rule applies to CONSTRUCTING an action, not just to validating one.** `MtgGameManager`
+  hand-built `CastPermanentAction` with no `TargetIds` and `CastFromGraveyardAction` with no
+  `AdditionalCostPayments`, so a human could not play **any Aura** and could not recur Despoiler
+  of Souls — while the AI did both perfectly, because it goes through `MtgActionGenerator`, which
+  enumerates aura targets and works out cost payments. **"The AI can do it and I can't" is the
+  signature of this bug.** `MtgGameManager.PaymentsFor<T>` now reads the payments back off the
+  generator rather than recomputing them.
 - A UI that prints a card's mana cost **in hand** must ask `CostEngine.ComputeEffectiveCost`, never `Card.ManaCost`. The cast actions all pay the effective cost, so a printed cost disagrees with what the game charges — Stormwing Entity read 5 in hand while costing 2, and the hand also greyed it out as unaffordable. On the battlefield the printed cost is correct: nothing is being paid.
 - `CastSpellAction.TargetIds` / `CastFromGraveyardAction.TargetIds` are keyed by **effect index**, not by 0. `ValidateAdd` looks targets up under the index of the effect that needs them, so keying them anywhere else makes the spell silently uncastable rather than throwing.
 - `MtgGameFactory.CreateForTesting()` gives both players `MaxMana = 99` / `CurrentMana = 99`. Use in all unit tests not specifically testing the land/mana system. Use `MtgGameFactory.Create()` with manual land plays for land-specific tests.
@@ -507,6 +514,44 @@ without a test that asserted the consequence.
 `ContextKeys.RevealedCardManaCost` (built for Dark Confidant) and `LoseLifeAction` already reads
 `AmountContextKey`.
 
+## Battlefield State Does Not Follow the Card
+
+`MoveCardTracked` strips the four components an EFFECT stamps onto a permanent whenever the card
+leaves the battlefield: `AppliedStaticPTBoost`, `AppliedKeywordComponent`,
+`StaticPowerToughnessModifier`, `EquippedBoostComponent`. Marked damage was already cleared here
+for exactly the same reason — it belonged to the permanent, not to the card.
+
+Nothing removed them before, and `StaticAbilityEngine.ProcessPermanentLeft` only maintained the
+SOURCE's index. Three separate QA reports were one bug:
+
+- A creature bounced under Glorious Anthem kept the +1/+1 in hand and **collected a second one**
+  when it was replayed.
+- A creature killed by -4/-4 sat in the graveyard still printing the -4/-4 in its text box.
+- A bounced creature "went to the graveyard for no reason" — replaying it put a creature with
+  negative toughness onto the battlefield and the zero-toughness check killed it on arrival.
+
+**The strip is a closed list of four types, not "every `PowerToughnessModifier`."** Several
+subclasses are PRINTED on the card and define what it is — `GraveyardCountComponent` (Tarmogoyf),
+`ThresholdComponent`, `CreatureCountComponent`, `LifeTotalComponent`, `LandsPlayedCountComponent`.
+Stripping by base type would delete the card's own rules text on the way to the graveyard and
+reanimate it as a vanilla creature.
+
+## Reading the Triggering Event
+
+Two context keys carry the event that fired a trigger into its effect, both injected by
+`ResolveEffectAction` and populated in `CheckStateBasedEffectsAction`:
+
+- `ContextKeys.TriggerAmount` — the event's number ("draw THAT MANY cards").
+- `ContextKeys.TriggerSubjectId` — the card or player the event was ABOUT ("tap THAT CREATURE").
+  Taken from `EventTriggerCondition.ExtractSubjectId`, the same extraction a trigger's `Filter`
+  runs against, so what a trigger filters on and what its effect acts on cannot disagree.
+
+Without the subject key a trigger could only act on a target chosen by a targeting strategy, and a
+strategy cannot see the event. That is why **Wall of Frost froze every creature an opponent
+controlled whenever anything attacked at all** — it had no way to name the creature that attacked
+it. `CreatureAttackedEvent` also gained `TargetId` (what was attacked) for the same card;
+`AttackedThisCardCondition` is the "whenever a creature attacks this" trigger built on it.
+
 ## Zone-Dependent Statics
 
 A `StaticAbilityComponent` applies only while its source card sits in `ActiveInZone`
@@ -561,7 +606,10 @@ is deliberately unchanged: indestructible answers damage and destruction, not a 
 
 ## Exhaust
 
-`CreatureComponent.IsExhausted` — this engine's tapped state. An exhausted creature cannot attack
+`CreatureComponent.IsExhausted` — this engine's tapped state. **All player-facing text says
+"exhaust", never "tap"** — the engine has no tapping, and printing MTG's word for a mechanic this
+game does not have invites the player to expect untap steps, vigilance and mana abilities that do
+not exist. `MtgCardMapper` is the only place that wording lives. An exhausted creature cannot attack
 (`AttackAction.ValidateAttacker`) and cannot activate a `RequiresTap` ability
 (`ActivatedAbilityAction`). Set by `ExhaustCreatureAction` and by paying a tap cost. Cleared by
 `StartTurnAction` **for the active player only** — that is the untap step, and it is what makes
@@ -633,10 +681,17 @@ cannot disagree about what protection means.
 feed**. Adding an event only to the former is silently inert — the trigger never fires and nothing
 errors.
 
-This bug has now been found three separate times: `CardDiscardedEvent`, then
+This bug has now been found **four** separate times: `CardDiscardedEvent`, then
 `PlayerGainedLifeEvent` (so *no* "whenever you gain life" trigger had ever fired), then
-`TurnEndedEvent` (so no end-of-turn trigger could fire). All three are fixed. **Any new action that
-emits an event a card might trigger on must add it to both.**
+`TurnEndedEvent` (so no end-of-turn trigger could fire), then `CardDrawnEvent` (so no "whenever
+you draw a card" trigger had ever fired — Teferi's Tutelage never milled anything). All four are
+fixed. **Any new action that emits an event a card might trigger on must add it to both.**
+
+`SetupGameAction` is the one deliberate exception: it emits `CardDrawnEvent` for the opening hand
+and does NOT stage it, because dealing an opening hand is not drawing.
+
+A grep that finds the next instance: an action file containing `new …Event` but no mention of
+`PendingGameEvents` is either inert or deliberate, and nothing else.
 
 A second, quieter version of the same failure: an event with no `EventTypeNames` constant, or no
 entry in `EventTriggerCondition.ExtractSubjectId`, cannot be filtered even though it fires.

@@ -98,11 +98,17 @@ public static class StateEvaluator
 
 		score += (playerNonCreatureCount - opponentNonCreatureCount) * NonCreaturePermanentWeight;
 
+		// Lands in hand are deliberately NOT counted.
+		//
+		// Hand size is a proxy for options, and a land held is not an option — it is a resource
+		// you have failed to deploy. Counting it made playing a land worth only +2.0 mana minus
+		// 1.4 for the card leaving hand: a net +0.6, small enough that the beam would sometimes
+		// prefer any other line and simply skip the land drop for a turn. Skipping an early land
+		// drop is close to the worst play available, and it was costing the AI a third of a mana
+		// step whenever the noise went the wrong way.
 		score +=
-			(
-				state.GetChildrenIds(playerHandId).Count()
-				- state.GetChildrenIds(opponentHandId).Count()
-			) * CardsInHandWeight;
+			(CountNonLand(state, playerHandId) - CountNonLand(state, opponentHandId))
+			* CardsInHandWeight;
 
 		// Count only permanent mana (MaxMana), not temporary fast mana (CurrentMana).
 		// Fast mana should score 0 unless the depth search finds it enables something worthwhile.
@@ -110,4 +116,7 @@ public static class StateEvaluator
 
 		return score;
 	}
+
+	private static int CountNonLand(GameState state, int handId) =>
+		state.GetCardsInZone(handId).Count(c => !c.HasSubtype("Land"));
 }

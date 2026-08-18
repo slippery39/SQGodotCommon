@@ -226,6 +226,19 @@ The Godot scene loads the trained model through `DraftTrainingStore.FromJson` ra
 
 `DraftScene.DraftedSet` selects which set the UI drafts — currently `CoresetCube.Set`, changeable in one line. `ModelPath` is derived from `DraftTrainingStore.PathFor(DraftedSet.Code)`, so the asset filename tracks the set automatically and cannot drift from what the trainer writes.
 
+### Lands in hand are not counted by StateEvaluator
+
+`CardsInHandWeight` counts only NON-land cards. Hand size is a proxy for options, and a land held
+is not an option — it is a resource you have failed to deploy.
+
+Counting it made a land drop worth `+2.0` mana minus `1.4` for the card leaving hand: a net
+`+0.6`, small enough that the beam would sometimes prefer another line and **skip the land drop
+entirely for a turn**, which QA saw as the AI stumbling on its early curve. Skipping an early land
+drop is close to the worst play available, so the margin has to be decisive rather than marginal.
+
+Pinned by `MtgSimulator.Tests/AiLandDropTests.cs`, which scores the evaluator directly rather than
+racing a time-budgeted beam search.
+
 ### Training a set from the command line
 
 Mode 4 is interactive, but the console reads plain `Console.ReadLine()`, so it drives fine from

@@ -254,6 +254,7 @@ public record AttackAction : GameAction
 		{
 			CreatureId = AttackerId,
 			AttackingPlayerId = AttackingPlayerId,
+			TargetId = TargetId,
 		};
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(attackedEvent) };
 		var events = ImmutableList.Create<GameEvent>(attackedEvent);

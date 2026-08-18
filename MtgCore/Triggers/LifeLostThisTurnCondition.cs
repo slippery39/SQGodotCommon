@@ -43,3 +43,23 @@ public record LifeLostThisTurnCondition : TriggerCondition
 		);
 	}
 }
+
+/// <summary>
+/// "Whenever this creature blocks a creature" — Wall of Frost.
+///
+/// With no blocking, a wall's substitute is Taunt: attackers are compelled into it. So the
+/// blocking clause becomes "whenever a creature attacks THIS creature", which needs the
+/// defender's identity — and CreatureAttackedEvent carried only the attacker.
+///
+/// This is a condition rather than an EventTriggerCondition Filter because a Filter is evaluated
+/// against the event's SUBJECT, which is the attacker. The question here is about the other end
+/// of the attack.
+///
+/// The effect gets the attacker via ContextKeys.TriggerSubjectId, so "that creature" means the
+/// one that actually attacked, not every creature the opponent controls.
+/// </summary>
+public record AttackedThisCardCondition : TriggerCondition
+{
+	public override bool IsSatisfiedBy(GameEvent gameEvent, TriggerContext context) =>
+		gameEvent is CreatureAttackedEvent e && e.TargetId == context.SourceCardId;
+}

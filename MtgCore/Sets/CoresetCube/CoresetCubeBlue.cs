@@ -275,10 +275,23 @@ public static class CoresetCubeBlue
 				.Creature("Wall of Frost", manaCost: 3, power: 0, toughness: 7)
 				.WithSubtype(Wall)
 				.WithTaunt()
+				// "Whenever Wall of Frost blocks a creature, that creature doesn't untap during
+				// its controller's next untap step." Blocking is Taunt here, so it becomes
+				// "whenever a creature attacks this". It previously listened for ANY attack and
+				// froze EVERY creature an opponent controlled — a three-mana one-sided Frost
+				// Breath every single turn, triggered by attacks it had nothing to do with.
 				.WithTriggeredAbility(
 					"Numbing Cold",
-					new EventTriggerCondition { EventTypeName = EventTypeNames.CreatureAttacked },
-					eb => eb.WithFreeze(1).WithTarget(AllValid().OpponentCreatures())
+					new AttackedThisCardCondition(),
+					eb =>
+						eb.WithAction(
+							new ExhaustCreatureAction
+							{
+								FreezeTurns = 1,
+								TargetContextKey = ContextKeys.TriggerSubjectId,
+							},
+							TargetingStrategy.NoTarget()
+						)
 				)
 				.Build(),
 			// ===== FOUR MANA =====

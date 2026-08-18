@@ -41,8 +41,17 @@ public record DrawCardsAction : EffectAction
 					break;
 				}
 
-				state = state.MoveObject(topCardId, handId);
-				events = events.Add(new CardDrawnEvent { PlayerId = playerId, CardId = topCardId });
+				// MoveCardTracked, not MoveObject: a draw can cross a graveyard boundary in
+				// principle, and it is the one move here that was still bypassing the tracker.
+				state = state.MoveCardTracked(topCardId, handId);
+
+				// PendingGameEvents is the trigger feed; the returned Events list is only the
+				// caller-visible log. This event reached only the log, so NO "whenever you draw a
+				// card" trigger in the engine had ever fired — Teferi's Tutelage never milled.
+				// Fourth instance of this exact bug; see CLAUDE.md.
+				var drawn = new CardDrawnEvent { PlayerId = playerId, CardId = topCardId };
+				state = state with { PendingGameEvents = state.PendingGameEvents.Add(drawn) };
+				events = events.Add(drawn);
 			}
 		}
 

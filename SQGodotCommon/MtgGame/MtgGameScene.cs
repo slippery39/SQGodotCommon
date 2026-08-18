@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
@@ -56,6 +56,10 @@ public partial class MtgGameScene : Node2D
 
 	// Spell targeting state
 	private bool _isFlashbackTargeting;
+
+	/// An Aura being cast from hand. Shares the spell targeting state machine, but has exactly one
+	/// target and no effect index, so the "next effect needing a target" walk is skipped.
+	private bool _isAuraTargeting;
 	private int? _targetingSpellCardId;
 	private ImmutableDictionary<int, ImmutableList<int>> _pendingTargetIds = ImmutableDictionary<
 		int,
@@ -187,6 +191,16 @@ public partial class MtgGameScene : Node2D
 
 			if (_manager.IsNonCreaturePermanent(cardId))
 			{
+				// An Aura chooses what it enchants as it is cast, so it needs the same targeting
+				// prompt a spell gets. Without this branch it was cast with no target, failed
+				// validation, and silently sprang back to hand.
+				if (_manager.PermanentNeedsTarget(cardId))
+				{
+					_hand.LerpCardTransform(context.CardUI2D);
+					EnterAuraTargetingMode(cardId);
+					return;
+				}
+
 				var (permSuccess, permEvents) = _manager.CastPermanent(cardId);
 				if (!permSuccess)
 				{
@@ -531,6 +545,23 @@ public partial class MtgGameScene : Node2D
 		EnterTargetingMode(cardId, ImmutableDictionary<int, ImmutableList<int>>.Empty);
 	}
 
+	/// <summary>
+	/// Targeting for an Aura. Its legal targets come from AuraTargetComponent rather than from a
+	/// spell effect, so the valid-target set is seeded from the manager's aura lookup instead of
+	/// GetSpellValidTargets — which reads a SpellComponent an Aura does not have and would return
+	/// nothing, leaving every creature unhighlighted and unclickable.
+	/// </summary>
+	private void EnterAuraTargetingMode(int cardId)
+	{
+		_isAuraTargeting = true;
+		_targetingSpellCardId = cardId;
+		_pendingTargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+		_pendingAdditionalCostPayments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
+		_currentEffectIndex = 0;
+		_currentValidTargetIds = new HashSet<int>(_manager.GetPermanentValidTargets(cardId));
+		Refresh();
+	}
+
 	private void EnterTargetingMode(
 		int cardId,
 		ImmutableDictionary<int, ImmutableList<int>> collectedCostPayments
@@ -556,6 +587,7 @@ public partial class MtgGameScene : Node2D
 	private void ExitTargetingMode()
 	{
 		_isFlashbackTargeting = false;
+		_isAuraTargeting = false;
 		_targetingSpellCardId = null;
 		_pendingTargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty;
 		_pendingAdditionalCostPayments = ImmutableDictionary<int, ImmutableList<int>>.Empty;
@@ -659,6 +691,21 @@ public partial class MtgGameScene : Node2D
 			_currentEffectIndex,
 			ImmutableList.Create(targetId)
 		);
+
+		// An Aura has exactly one target and no spell effects to walk, so it completes here
+		// rather than asking which effect still needs one — that walk reads a SpellComponent an
+		// Aura does not have and would report "none left" only by accident.
+		if (_isAuraTargeting)
+		{
+			ExitTargetingMode();
+			var (auraSuccess, auraEvents) = _manager.CastPermanent(cardId, targetId);
+			if (!auraSuccess)
+				return;
+			_eventLog.AppendEvents(auraEvents, _manager.State, _manager.HumanPlayerId);
+			Refresh();
+			CheckAndShowGameOver(auraEvents);
+			return;
+		}
 
 		var nextEffect = _manager.GetNextEffectNeedingTarget(cardId, _currentEffectIndex);
 		if (nextEffect == -1)

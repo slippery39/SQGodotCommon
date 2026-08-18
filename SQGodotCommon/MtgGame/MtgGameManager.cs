@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -52,6 +52,16 @@ public class MtgGameManager
 	public int AiPlayerId { get; private set; }
 
 	public GameState State => _state;
+
+	/// <summary>
+	/// TEST AND DEBUG TOOLING ONLY — replaces the manager's state wholesale.
+	///
+	/// Gameplay must never use this; every real state change goes through SubmitAction so the
+	/// engine's validation and post-processing run. It exists so a test can set up an exact board
+	/// (a specific Aura in hand, a stocked graveyard) without playing twenty turns to reach it.
+	/// </summary>
+	public void DebugSetState(GameState state) => _state = state;
+
 	public bool IsAiTurn => _state.TryGetGame()?.ActivePlayerId == AiPlayerId;
 	public bool IsWaitingForChoice => _state.IsWaitingForChoice;
 
@@ -249,8 +259,40 @@ public class MtgGameManager
 				CardId = cardId,
 				CastingPlayerId = HumanPlayerId,
 				TargetIds = targetIds,
+				// Flashback can cost more than mana — Despoiler of Souls exiles two creature
+				// cards from your graveyard. Leaving this empty made the action fail validation
+				// every time, so the card was simply uncastable for a human.
+				AdditionalCostPayments = PaymentsFor<CastFromGraveyardAction>(cardId),
 			}
 		);
+	}
+
+	/// <summary>
+	/// The additional-cost payments MtgActionGenerator already worked out for this card.
+	///
+	/// Taken from the generator rather than recomputed so the UI cannot disagree with the engine
+	/// about what a cost is or how it is paid. Empty when the card is not currently offered,
+	/// which lets the action fail its own validation with a real reason rather than this method
+	/// inventing one.
+	/// </summary>
+	private ImmutableDictionary<int, ImmutableList<int>> PaymentsFor<T>(int cardId)
+		where T : GameAction
+	{
+		foreach (var action in MtgActionGenerator.GetLegalActions(_state, HumanPlayerId, false))
+		{
+			if (action is not T)
+				continue;
+
+			switch (action)
+			{
+				case CastFromGraveyardAction g when g.CardId == cardId:
+					return g.AdditionalCostPayments;
+				case CastPermanentAction p when p.CardId == cardId:
+					return p.AdditionalCostPayments;
+			}
+		}
+
+		return ImmutableDictionary<int, ImmutableList<int>>.Empty;
 	}
 
 	public bool IsSpell(int cardId)
@@ -280,10 +322,48 @@ public class MtgGameManager
 			&& !card.HasComponent<CreatureComponent>();
 	}
 
-	public (bool Success, ImmutableList<GameEvent> Events) CastPermanent(int cardId)
+	/// <summary>
+	/// An Aura picks what it enchants as it is cast, exactly as a targeted spell does. Without a
+	/// target CastPermanentAction refuses to validate, so a human could not play ANY Aura — the
+	/// AI could, because it goes through MtgActionGenerator, which offers one action per legal
+	/// target. That asymmetry is the tell for this whole class of bug: the UI re-derived action
+	/// construction instead of asking the generator.
+	/// </summary>
+	public bool PermanentNeedsTarget(int cardId) =>
+		(_state.GetObject(cardId) as Card)?.HasComponent<AuraTargetComponent>() == true;
+
+	public List<int> GetPermanentValidTargets(int cardId)
+	{
+		var aura = (_state.GetObject(cardId) as Card)?.GetComponent<AuraTargetComponent>();
+		if (aura == null)
+			return [];
+
+		return aura
+			.Targeting.GetValidTargets(
+				new TargetingContext
+				{
+					GameState = _state,
+					SourceCardId = cardId,
+					CastingPlayerId = HumanPlayerId,
+				}
+			)
+			.ToList();
+	}
+
+	public (bool Success, ImmutableList<GameEvent> Events) CastPermanent(
+		int cardId,
+		int targetId = 0
+	)
 	{
 		return SubmitAction(
-			new CastPermanentAction { CardId = cardId, CastingPlayerId = HumanPlayerId }
+			new CastPermanentAction
+			{
+				CardId = cardId,
+				CastingPlayerId = HumanPlayerId,
+				TargetIds =
+					targetId == 0 ? ImmutableList<int>.Empty : ImmutableList.Create(targetId),
+				AdditionalCostPayments = PaymentsFor<CastPermanentAction>(cardId),
+			}
 		);
 	}
 

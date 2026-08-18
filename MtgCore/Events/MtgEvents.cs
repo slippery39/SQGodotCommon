@@ -23,6 +23,13 @@ public record CreatureAttackedEvent : GameEvent
 {
 	public int CreatureId { get; init; }
 	public int AttackingPlayerId { get; init; }
+
+	/// <summary>
+	/// What was attacked — a player, a planeswalker, or a creature. The event carried only the
+	/// attacker, so "whenever a creature attacks THIS" was unexpressible: Wall of Frost had to
+	/// freeze every creature an opponent controlled whenever anything attacked at all.
+	/// </summary>
+	public int TargetId { get; init; }
 }
 
 /// <summary>

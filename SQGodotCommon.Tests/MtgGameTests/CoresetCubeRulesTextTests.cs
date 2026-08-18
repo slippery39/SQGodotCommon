@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using MtgCore;
 using MtgGame;
@@ -224,11 +224,11 @@ public class CoresetCubeRulesTextTests
 	}
 
 	[Test]
-	public void ActivatedAbility_ShowsItsTapCostAndGate()
+	public void ActivatedAbility_ShowsItsExhaustCostAndGate()
 	{
 		var speaker = TextFor("Speaker of the Heavens");
 
-		Assert.That(speaker, Does.Contain("tap"), "A tap cost is a real cost");
+		Assert.That(speaker, Does.Contain("exhaust"), "An exhaust cost is a real cost");
 		Assert.That(speaker, Does.Contain("life"), "And the life gate must be visible");
 	}
 

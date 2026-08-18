@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using System.Linq;
 using ImmutableGameObjects;
 using MtgCore;
@@ -76,7 +76,7 @@ public class MtgCardLiveStateTests
 	}
 
 	[Test]
-	public void ATappedCreature_SaysSo()
+	public void AnExhaustedCreature_SaysSo()
 	{
 		var (s, creature) = AddCreature(_state, _ids.Player1Id);
 		var (tapped, _) = s.AddAction(
@@ -86,7 +86,7 @@ public class MtgCardLiveStateTests
 
 		Assert.That(
 			MtgCardMapper.GetRulesText((Card)tapped.GetObject(creature.Id), tapped),
-			Does.Contain("Tapped")
+			Does.Contain("Exhausted")
 		);
 	}
 
