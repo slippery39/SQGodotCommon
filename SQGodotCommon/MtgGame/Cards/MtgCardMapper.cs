@@ -22,8 +22,12 @@ public static class MtgCardMapper
 		}
 		else
 		{
-			canPlay = player.CurrentMana >= card.ManaCost;
-			manaCostDisplay = $"{card.ManaCost}";
+			// The cost the player will actually pay, not the printed one. CostEngine is the single
+			// place that answers this, and the cast actions already use it — showing card.ManaCost
+			// here meant a Stormwing Entity discounted to 2 still read 5 in hand.
+			var cost = state.ComputeEffectiveCost(card, playerId);
+			canPlay = player.CurrentMana >= cost;
+			manaCostDisplay = $"{cost}";
 		}
 
 		return new InternalCardUI2D.Details
@@ -269,6 +273,12 @@ public static class MtgCardMapper
 		if (transform != null && !FoldTransformIntoTrigger(lines, transform))
 			lines.Add(DescribeTransform(transform));
 
+		// What has been DONE to this permanent, as opposed to what it does. Everything above is
+		// printed text; these lines are live state. Without them a creature under Sensory
+		// Deprivation shows a smaller number in its badge and says nothing about why, and a
+		// tapped or frozen creature is indistinguishable from a ready one.
+		lines.AddRange(DescribeAppliedEffects(card, state));
+
 		// Last, as on a real card. Flashback changes how a card is drafted more than almost
 		// anything else in this set, so it must never be missing from the text.
 		var flashback = card.GetComponent<FlashbackComponent>();
@@ -281,6 +291,64 @@ public static class MtgCardMapper
 
 		return string.Join("\n", MergeSharedClauses(lines));
 	}
+
+	/// <summary>
+	/// Live effects stamped on a permanent in play: P/T modifiers with the card that applied them,
+	/// what an attachment is currently attached to, and tapped/frozen state.
+	///
+	/// Only these lines change during a game, so they are the only ones that can explain a board
+	/// the player did not expect — "my creature has no legal attacks" is answered by "Tapped",
+	/// "Frozen" or the "Can't attack" keyword, none of which were shown anywhere before.
+	///
+	/// The self-describing modifiers are skipped: they compute their bonus from live state and
+	/// already print their own rule ("Threshold — while 7+ cards…") higher up the card.
+	/// </summary>
+	private static IEnumerable<string> DescribeAppliedEffects(Card card, GameState state)
+	{
+		if (state == null || !state.HasObject(card.Id))
+			yield break;
+
+		foreach (var modifier in card.GetComponents<PowerToughnessModifier>())
+		{
+			if (
+				modifier
+				is ThresholdComponent
+					or GraveyardCountComponent
+					or LifeTotalComponent
+					or CreatureCountComponent
+					or LandsPlayedCountComponent
+			)
+				continue;
+
+			var power = modifier.GetPowerBonus(state, card.Id);
+			var toughness = modifier.GetToughnessBonus(state, card.Id);
+			if (power == 0 && toughness == 0)
+				continue;
+
+			var source = CardName(state, modifier.SourceCardId);
+			yield return $"{Signed(power)}/{Signed(toughness)}"
+				+ (source == null ? "" : $" from {source}")
+				+ DurationSuffix(modifier.Duration);
+		}
+
+		var attachedTo = card.GetComponent<EquipmentComponent>()?.EquippedToCardId ?? 0;
+		if (CardName(state, attachedTo) is string host)
+			yield return $"Attached to {host}";
+
+		var creature = card.GetComponent<CreatureComponent>();
+		if (creature == null)
+			yield break;
+
+		if (creature.FrozenBySourceId != 0 || creature.FrozenTurns > 0)
+			yield return "Frozen — does not untap";
+		else if (creature.IsExhausted)
+			yield return "Tapped";
+	}
+
+	private static string? CardName(GameState state, int cardId) =>
+		cardId != 0 && state.HasObject(cardId) && state.GetObject(cardId) is Card card
+			? card.Name
+			: null;
 
 	private const string TransformVerb = "Transform this";
 

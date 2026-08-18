@@ -192,6 +192,11 @@ MtgCore/
 │                            #   MillAction, DestroyCreatureAction, AttackAction, DealDamageAction, MoveCardToGraveyardAction,
 │                            #   MoveCardToExileAction, MoveCardToHandAction, PutIntoBattlefieldAction, ExileAction,
 │                            #   CastFromGraveyardAction.
+│                            #   It ALSO emits PermanentLeftBattlefieldEvent when the move leaves a battlefield for
+│                            #   a non-battlefield zone — see "Leaving the Battlefield" below. Battlefield-to-
+│                            #   battlefield is excluded, since that is GainControlAction and the permanent stays in
+│                            #   play. Deduped against an LTB already in PendingGameEvents, so the destroy/sacrifice/
+│                            #   combat paths that announce it themselves do not fire it twice.
 │                            #   It ALSO clears CreatureComponent.Damage on any zone change — marked damage belongs
 │                            #   to the permanent, so a bounced or reanimated creature arrives undamaged. Another
 │                            #   reason a battlefield move must not use MoveObject directly.
@@ -351,6 +356,7 @@ Hearthstone-style (turn-based, no blockers). The active player attacks; the oppo
 - All keywords can also be granted by `StaticGrantKeywordAbility` (same pattern as `GrantsHaste`).
 - `HasSummoningSickness`, `HasAttacked` on `CreatureComponent` are cleared by `StartTurnAction`. `Damage` persists between turns — creatures can be chipped down across multiple turns. It does **not** survive a zone change: `MoveCardTracked` clears it, so a bounced or reanimated creature comes back undamaged.
 - Creature attacks player: deals damage equal to effective Power; emits `CombatDamageDealtToPlayerEvent` (used by Goblin Lackey/Warren Instigator triggers).
+- **Combat power is clamped at 0** where `AttackAction` reads it (attacker, defender, and the defender's lifelink amount). Effective power can genuinely go negative — Sensory Deprivation is -3/-0 — and a raw negative ran straight through the subtraction at every damage site: it healed the defending player, healed marked damage off the defending creature, and drained a lifelinker's controller. `DealDamageAction` needed no change; it already ignores amounts `<= 0`, which is what covers Fight.
 - Creature attacks creature: both deal damage simultaneously. Dies if `Damage >= effective Toughness`; moves to owner's graveyard.
 
 ## Card Creation
@@ -384,6 +390,7 @@ Files: `Turns/BeginGameAction.cs`, `SetupGameAction.cs`, `StartTurnAction.cs`, `
 - Presentation layers never modify game state directly. All state changes go through `GameAction`s. Exceptions: explicit test setup and debug/cheat tooling (both must be clearly commented as such).
 - `MtgActionGenerator.GetLegalActions(state, ids, playerId)` is the **single shared source** of legal action generation. Console and simulator both call this — never duplicate this logic.
 - A UI that highlights legal attack targets must ask `AttackAction.ValidateAdd` per candidate (`MtgGameManager.GetLegalAttackTargets` does this) rather than re-deriving Taunt/Flying/Reach. A second copy of those rules in the presentation layer would drift, and the symptom is a click that silently does nothing.
+- A UI that prints a card's mana cost **in hand** must ask `CostEngine.ComputeEffectiveCost`, never `Card.ManaCost`. The cast actions all pay the effective cost, so a printed cost disagrees with what the game charges — Stormwing Entity read 5 in hand while costing 2, and the hand also greyed it out as unaffordable. On the battlefield the printed cost is correct: nothing is being paid.
 - `CastSpellAction.TargetIds` / `CastFromGraveyardAction.TargetIds` are keyed by **effect index**, not by 0. `ValidateAdd` looks targets up under the index of the effect that needs them, so keying them anywhere else makes the spell silently uncastable rather than throwing.
 - `MtgGameFactory.CreateForTesting()` gives both players `MaxMana = 99` / `CurrentMana = 99`. Use in all unit tests not specifically testing the land/mana system. Use `MtgGameFactory.Create()` with manual land plays for land-specific tests.
 - The simulator detects potential infinite loops via per-turn action counts (warning at 50, cutoff at 100) and flags unusual games.
@@ -730,6 +737,28 @@ checked in `AttackAction.ValidateAttacker`. It is deliberately **not** permanent
 `IsExhausted` is cleared every turn, so a Pacifism built on it would wear off after one turn.
 
 Builder: `CardFactory.Enchantment(...).AsAura(power, toughness, flying:, firstStrike:, …)`.
+
+**Detachment is two mirrored passes in `CheckStateBasedEffectsAction`, and both are needed.**
+`DetachEquipmentFromLeavingCard` handles the enchanted permanent leaving; `RemoveBoostFromLeavingAttachment`
+handles the ATTACHMENT leaving, stripping the `PowerToughnessModifier` it stamped and clearing its
+own `EquippedToCardId`. Without the second one, a destroyed or bounced Sensory Deprivation left its
+-3/-0 on the creature permanently — the boost lives on the creature as a component, so nothing
+removes it just because the Aura is gone.
+
+## Leaving the Battlefield
+
+Everything that reacts to a permanent leaving play — static abilities, attachments, freeze locks,
+Oblivion Ring's release — hangs off `PermanentLeftBattlefieldEvent`. Death, destruction and
+sacrifice always announced it; **every other route off the battlefield did not**, so a bounced,
+exiled or library-bound permanent silently left all its effects behind.
+
+It is now emitted by `MoveCardTracked` (see `Zones/`), so any move off the battlefield gets it.
+
+`CheckStateBasedEffectsAction.EvaluateDepartedCardTriggers` is the other half. The trigger passes
+scan battlefields and graveyards; a permanent bounced to hand or exiled is in neither, so its own
+departure trigger could never fire. Departed cards are given the graveyard pass — a
+leave-the-battlefield ability is declared `ActiveInZone = Graveyard` because the graveyard is where
+a permanent usually goes, but what it means is "after this left play".
 
 ## Cost Modification
 

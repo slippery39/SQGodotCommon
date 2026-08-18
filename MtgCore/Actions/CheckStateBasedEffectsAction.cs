@@ -162,6 +162,7 @@ public record CheckStateBasedEffectsAction : GameAction
 			{
 				state = StaticAbilityEngine.ProcessPermanentLeft(state, left.CardId, GameId);
 				state = DetachEquipmentFromLeavingCard(state, left.CardId);
+				state = RemoveBoostFromLeavingAttachment(state, left.CardId);
 				state = ReleaseFreezeFromLeavingCard(state, left.CardId);
 			}
 		}
@@ -205,8 +206,41 @@ public record CheckStateBasedEffectsAction : GameAction
 		foreach (var card in state.GetCardsInZone(Player2GraveyardId))
 			state = EvaluateCardTriggers(state, card, pendingEvents, ZoneType.Graveyard);
 
+		state = EvaluateDepartedCardTriggers(state, pendingEvents);
+
 		state = EvaluateEmblemTriggers(state, Player1Id, pendingEvents);
 		state = EvaluateEmblemTriggers(state, Player2Id, pendingEvents);
+
+		return state;
+	}
+
+	/// <summary>
+	/// Evaluates the triggers of a permanent that left the battlefield for hand, exile or library.
+	///
+	/// None of the zone passes above look there, so its own departure trigger could never fire —
+	/// an Oblivion Ring bounced to hand kept the card it had exiled. A leave-the-battlefield
+	/// ability is declared ActiveInZone = Graveyard because the graveyard is where a permanent
+	/// usually goes; what it actually means is "after this left play", so that is the pass these
+	/// cards are given.
+	/// </summary>
+	private GameState EvaluateDepartedCardTriggers(
+		GameState state,
+		ImmutableList<GameEvent> pendingEvents
+	)
+	{
+		foreach (var e in pendingEvents.OfType<PermanentLeftBattlefieldEvent>())
+		{
+			if (!state.HasObject(e.CardId) || state.GetObject(e.CardId) is not Card card)
+				continue;
+
+			// Battlefield and graveyard are already covered, and evaluating twice would fire
+			// every departure trigger twice.
+			var zone = state.GetCardZone(e.CardId).ZoneType;
+			if (zone is ZoneType.Battlefield or ZoneType.Graveyard)
+				continue;
+
+			state = EvaluateCardTriggers(state, card, pendingEvents, ZoneType.Graveyard);
+		}
 
 		return state;
 	}
@@ -338,6 +372,44 @@ public record CheckStateBasedEffectsAction : GameAction
 		}
 
 		return state;
+	}
+
+	/// <summary>
+	/// The mirror of DetachEquipmentFromLeavingCard: the ATTACHMENT left, not the thing it was
+	/// attached to. Its boost is stamped on the creature as a component, so without this the
+	/// creature keeps it forever — a bounced or destroyed Sensory Deprivation left its -3/-0
+	/// behind, which is exactly as good as the Aura never leaving.
+	/// </summary>
+	private static GameState RemoveBoostFromLeavingAttachment(GameState state, int leavingCardId)
+	{
+		if (state.GetObject(leavingCardId) is not Card leaving)
+			return state;
+
+		var equip = leaving.GetComponent<EquipmentComponent>();
+		if (equip == null || equip.EquippedToCardId == 0)
+			return state;
+
+		if (state.HasObject(equip.EquippedToCardId))
+		{
+			var host = (Card)state.GetObject(equip.EquippedToCardId);
+			state = state.UpdateObject(
+				equip.EquippedToCardId,
+				host with
+				{
+					Components = host
+						.Components.Where(c =>
+							c is not PowerToughnessModifier m || m.SourceCardId != leavingCardId
+						)
+						.ToImmutableArray(),
+				}
+			);
+		}
+
+		// An equipment that comes back can be re-equipped, so it must not still claim a host.
+		return state.UpdateObject(
+			leavingCardId,
+			leaving.WithComponentReplaced(equip with { EquippedToCardId = 0 })
+		);
 	}
 
 	private GameState DetachEquipmentFromLeavingCard(GameState state, int leavingCardId)

@@ -12,6 +12,7 @@ public enum BoardCardHighlight
 	Target,
 	AdditionalCost,
 	SummoningSick,
+	Exhausted,
 	Flashback,
 }
 
@@ -102,11 +103,14 @@ public partial class BoardCard : Control
 			details.ApplyTo(_cardNode);
 		}
 
-		// SummoningSick greys the whole card. All other highlights tint only the card visual.
-		Modulate =
-			highlight == BoardCardHighlight.SummoningSick
-				? new Color(0.6f, 0.6f, 0.6f, 1f)
-				: Colors.White;
+		// The two "cannot attack" states dim the whole card, since that is the thing a player
+		// scans the row for. All other highlights tint only the card visual.
+		Modulate = highlight switch
+		{
+			BoardCardHighlight.SummoningSick => new Color(0.6f, 0.6f, 0.6f, 1f),
+			BoardCardHighlight.Exhausted => new Color(0.55f, 0.6f, 0.75f, 1f),
+			_ => Colors.White,
+		};
 
 		if (_cardNode != null)
 		{

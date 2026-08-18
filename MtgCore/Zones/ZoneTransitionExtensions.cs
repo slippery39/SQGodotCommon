@@ -11,9 +11,11 @@ namespace MtgCore;
 /// chances to forget one. Instead the events are emitted here, at the move itself, so any
 /// action that uses MoveCardTracked gets them for free.
 ///
-/// Only graveyard transitions are tracked, because those are the only ones with a consumer
-/// today (StaticAbilityEngine's zone-dependent statics). Extend here — not at the callers —
-/// if exile or hand transitions ever need the same treatment.
+/// Battlefield departures are announced here too, for exactly the same reason: every route OFF
+/// the battlefield other than dying (bounce, exile, "put it on top of its library") used to move
+/// the card silently, so nothing the permanent was doing to other cards was ever undone. A
+/// bounced Aura left its -3/-0 stamped on the creature forever and a bounced Oblivion Ring never
+/// gave back what it had exiled.
 /// </summary>
 public static class ZoneTransitionExtensions
 {
@@ -32,8 +34,20 @@ public static class ZoneTransitionExtensions
 		var sourceZoneId = state.GetCardZoneId(cardId);
 		var wasInGraveyard = sourceZoneId == graveyardId;
 		var willBeInGraveyard = destinationZoneId == graveyardId;
+		var leftBattlefield =
+			IsBattlefield(state, sourceZoneId) && !IsBattlefield(state, destinationZoneId);
 
 		state = state.MoveObject(cardId, destinationZoneId);
+
+		// Battlefield to battlefield is a control change, not a departure — GainControlAction
+		// moves the card between the two battlefield zones and the permanent never leaves play.
+		if (leftBattlefield && !HasPendingDeparture(state, cardId))
+			state = state with
+			{
+				PendingGameEvents = state.PendingGameEvents.Add(
+					new PermanentLeftBattlefieldEvent { CardId = cardId, OwnerId = card.OwnerId }
+				),
+			};
 
 		// Marked damage belongs to the permanent, not the card. A creature that leaves the
 		// battlefield and comes back is a new permanent and arrives undamaged — reanimating a
@@ -63,4 +77,18 @@ public static class ZoneTransitionExtensions
 			PendingGameEvents = state.PendingGameEvents.Add(boundary),
 		};
 	}
+
+	private static bool IsBattlefield(GameState state, int zoneId) =>
+		state.HasObject(zoneId)
+		&& state.GetObject(zoneId) is Zone { ZoneType: ZoneType.Battlefield };
+
+	/// <summary>
+	/// Whether a departure for this card is already queued. Destruction, sacrifice and combat
+	/// death all announce the departure themselves before moving the card, and firing it a second
+	/// time here would run every death trigger twice.
+	/// </summary>
+	private static bool HasPendingDeparture(GameState state, int cardId) =>
+		state.PendingGameEvents.Any(e =>
+			e is PermanentLeftBattlefieldEvent left && left.CardId == cardId
+		);
 }

@@ -261,7 +261,10 @@ public record AttackAction : GameAction
 		// Read stats AFTER the exalted stamp so the bonus is part of this combat.
 		var attackerStats = state.GetEffectiveStats(AttackerId);
 		var strikeCount = attackerStats.HasDoubleStrike ? 2 : 1;
-		var power = attackerStats.Power;
+		// Clamped at 0 for damage purposes. A creature shrunk below 0 power by Sensory Deprivation
+		// deals no damage — it does NOT heal what it attacks, which is what a raw negative did to
+		// life totals and to marked damage alike.
+		var power = Math.Max(0, attackerStats.Power);
 
 		if (targetObj is MtgPlayer targetPlayer)
 		{
@@ -322,7 +325,7 @@ public record AttackAction : GameAction
 				state = state.SpawnAction(
 					new GainLifeAction
 					{
-						Amount = targetStats.Power,
+						Amount = Math.Max(0, targetStats.Power),
 						TargetIds = ImmutableList.Create(targetCard.ControllerId),
 					}
 				);
@@ -399,7 +402,8 @@ public record AttackAction : GameAction
 		var defenderStats = state.GetEffectiveStats(targetCard.Id);
 		var attackerHasDeathtouch = attackerStats.HasDeathtouch;
 		var defenderHasDeathtouch = defenderStats.HasDeathtouch;
-		var defenderPower = defenderStats.Power;
+		// Clamped for the same reason as the attacker's — see Execute.
+		var defenderPower = Math.Max(0, defenderStats.Power);
 
 		var attackerStrikesFirst = attackerStats.StrikesFirst;
 		var defenderStrikesFirst = defenderStats.StrikesFirst;
