@@ -95,20 +95,21 @@ public static class CoresetCubeRedSpells
 				.WithDamage(5)
 				.WithTarget(Single().OpponentCreatures())
 				.Build(),
-			// "Attacking creatures get +2/+0". HasAttackedThisTurnSpecification is the only way to
-			// ask that question here, and it is accurate: attacks resolve immediately, so on your
-			// own turn the creatures that have attacked ARE your attackers.
+			// "Attacking creatures get +2/+0", as a pump on your whole board.
+			//
+			// It was written as CreatureControlledByYou AND HasAttackedThisTurn, which reads
+			// faithfully and is COMPLETELY BLANK: attacks resolve damage immediately here, so
+			// before combat the spell has no legal target at all, and after combat the buff lands
+			// on a creature that has already dealt its damage and cannot attack again. No blocking
+			// means it cannot matter defensively either. The trained model measured it at -9.3pp,
+			// the worst red card in the set, which is exactly right for a card that does nothing.
+			//
+			// That specification is correct for REMOVAL (Royal Assassin kills what attacked you,
+			// on your turn) and wrong for a PUMP, because a pump always arrives after damage.
 			CardFactory
 				.Instant("Trumpet Blast", manaCost: 3)
 				.WithBoost(2, 0)
-				.WithTarget(
-					AllValid()
-						.WithSpec(
-							TargetSpecification
-								.CreatureControlledByYou()
-								.And(new HasAttackedThisTurnSpecification())
-						)
-				)
+				.WithTarget(AllValid().AllYourCreatures())
 				.Build(),
 			// Double strike implies first strike — ask CreatureStats.StrikesFirst, never
 			// HasFirstStrike alone. In no-blocker combat this is close to "kill their creature and

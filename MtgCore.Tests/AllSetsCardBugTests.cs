@@ -202,6 +202,54 @@ public class AllSetsCardBugTests
 		);
 	}
 
+	/// <summary>
+	/// A BUFF aimed at "a creature that attacked this turn" can never matter. Attacks resolve
+	/// their damage immediately in this engine, so before combat the spell has no legal target at
+	/// all, and after combat the buff lands on a creature that has already dealt its damage and
+	/// cannot attack again. With no blocking it cannot matter defensively either — the card is
+	/// blank in every window.
+	///
+	/// Found via the trained draft model, not by a test: Trumpet Blast measured -9.3pp, the worst
+	/// red card in the set, because it genuinely did nothing.
+	///
+	/// The same specification is correct and deliberate for REMOVAL — Royal Assassin destroys what
+	/// attacked you, on your turn — so this rule targets only the P/T-modifying case.
+	/// </summary>
+	[Test]
+	public void BuffEffects_DoNotTargetCreaturesThatAlreadyAttacked()
+	{
+		var offenders = new List<string>();
+
+		foreach (var (set, card) in AllCards())
+		foreach (var effect in AllEffects(card))
+		{
+			if (effect.ActionTemplate is not AddModifierAction)
+				continue;
+			if (!MentionsAttacked(effect.TargetingStrategy.Specification))
+				continue;
+
+			offenders.Add($"[{set}] {card.Name}");
+		}
+
+		Assert.That(
+			offenders.Distinct(),
+			Is.Empty,
+			"A buff on a creature that already attacked arrives after its damage and does "
+				+ "nothing: "
+				+ string.Join(", ", offenders.Distinct())
+		);
+	}
+
+	private static bool MentionsAttacked(TargetSpecification? spec) =>
+		spec switch
+		{
+			HasAttackedThisTurnSpecification => true,
+			AndSpecification a => MentionsAttacked(a.Left) || MentionsAttacked(a.Right),
+			OrSpecification o => MentionsAttacked(o.Left) || MentionsAttacked(o.Right),
+			NotSpecification n => MentionsAttacked(n.Inner),
+			_ => false,
+		};
+
 	/// <summary>Whether an action creates a creature, looking inside pipelines too.</summary>
 	private static bool MakesACreature(GameAction? action) =>
 		action switch
