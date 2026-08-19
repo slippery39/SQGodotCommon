@@ -64,16 +64,29 @@ public static class CoresetCubeRedSpells
 				.WithDamage(3)
 				.WithTarget(Single().PlayersOrCreatures())
 				.Build(),
-			// The X damage is the whole card; the "if you control a creature with power 4+" rider
-			// would need a board condition on a targeted effect, which no card shape here supports.
-			// Dropped in favour of the X being clean, which is what makes it scale into the late
-			// game the way the printed card does.
+			// X to the creature AND X to its controller. The printed card gates the second half on
+			// "if you control a creature with power 4 or greater"; that condition has no home on a
+			// targeted effect here, so it is granted unconditionally.
+			//
+			// Dropping the rider entirely — which is what this card did first — left X damage to
+			// one target for {X}{2}, i.e. Banefire at {X}{1} with a mana tax and no upside. A
+			// STRICTLY DOMINATED card is never a draft pick, and the model duly rated it the worst
+			// card in the set. The second half is what earns the extra mana.
+			//
+			// "That creature's controller" is the opponent, since the target is one of their
+			// creatures — the same shape Chandra's Outrage uses for its 4-and-2 split.
 			CardFactory
 				.Instant("Ravaging Blaze", manaCost: 2)
 				.WithXCost()
 				.WithAction(
 					new DealDamageAction { AmountContextKey = ContextKeys.XValue },
-					TargetingStrategy.SingleTarget(TargetSpecification.PlayersOrCreatures())
+					TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures())
+				)
+				.WithAction(
+					new DealDamageAction { AmountContextKey = ContextKeys.XValue },
+					TargetingStrategy.AllValid(
+						new IsPlayerSpecification().And(new IsControlledByOpponentSpecification())
+					)
 				)
 				.Build(),
 			// The exile-instead clause is a structural replacement the engine does not have.

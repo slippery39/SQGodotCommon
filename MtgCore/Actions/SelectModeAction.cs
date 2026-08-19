@@ -79,6 +79,20 @@ public record ApplyChosenModeAction : GameAction
 	public string ModeContextKey { get; init; } = "chosen_mode";
 
 	/// <summary>
+	/// Optional per-mode targeting, parallel to <see cref="Modes"/>. A mode with a strategy is
+	/// resolved through ResolveEffectAction so its action actually RECEIVES targets; a mode
+	/// without one is spawned directly.
+	///
+	/// Spawning directly is correct for the context-derived modes that most modal cards use —
+	/// Demonic Pact and Dread Presence drain and draw via PlayerIdContextKey, and find their own
+	/// subject. It is silently wrong for a TARGETED mode: nothing else in the pipeline resolves
+	/// targeting for it, so the action ran against an empty target list. Fortify offered "creatures
+	/// you control get +2/+0" and buffed nobody, in either mode.
+	/// </summary>
+	public ImmutableList<TargetingStrategy> ModeTargeting { get; init; } =
+		ImmutableList<TargetingStrategy>.Empty;
+
+	/// <summary>
 	/// Records the chosen index on the source card's ChosenModesComponent so it cannot be picked
 	/// again. Must be paired with SelectModeAction.ExcludeAlreadyChosen — recording without
 	/// excluding does nothing, and excluding without recording never excludes anything.
@@ -95,7 +109,30 @@ public record ApplyChosenModeAction : GameAction
 			index = 0;
 
 		var state = RecordChoice ? RecordOnSource(gameState, index) : gameState;
-		var chosen = Modes[index] with { InputContext = InputContext };
+
+		// A targeted mode has to go back through ResolveEffectAction, which is the only thing that
+		// resolves a TargetingStrategy into real ids. CastingPlayerId and SourceCardId come off our
+		// own context, which ResolveEffectAction seeded on the way in.
+		var targeting = index < ModeTargeting.Count ? ModeTargeting[index] : null;
+		GameAction chosen =
+			targeting == null
+				? Modes[index] with
+				{
+					InputContext = InputContext,
+				}
+				: new ResolveEffectAction
+				{
+					Effects = ImmutableList.Create(
+						new CardEffect
+						{
+							TargetingStrategy = targeting,
+							ActionTemplate = Modes[index],
+						}
+					),
+					CastingPlayerId = GetInput<int>(ContextKeys.CastingPlayerId, 0),
+					SourceCardId = GetInput<int>(ContextKeys.SourceCardId, 0),
+					InputContext = InputContext,
+				};
 
 		return new ActionResult(state.SpawnAction(chosen));
 	}

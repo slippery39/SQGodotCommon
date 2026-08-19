@@ -70,6 +70,15 @@ public record ResolveEffectAction : GameAction
 			// Seed CastingPlayerId and SourceCardId so context-key-based actions
 			// (PlayerIdContextKey, EquipmentCardIdContextKey, etc.) resolve correctly
 			// regardless of whether the action is a pipeline or standalone.
+			//
+			// XValue is forwarded from OUR OWN InputContext, not seeded from a field, because
+			// ResolveSpellAction puts the chosen X there on the way in. It was missing from both
+			// branches, and the effect's context is built from the TEMPLATE's context rather than
+			// ours — so X was dropped on the floor and every X spell in the game resolved for
+			// zero. Banefire, Earthquake, Mind Spring and Ravaging Blaze all did nothing at all,
+			// and nothing errored: an X spell with no X is a spell that fizzles quietly.
+			var xValue = GetInput<int>(ContextKeys.XValue, 0);
+
 			action = action is PipelineAction pipeline
 				? pipeline with
 				{
@@ -77,7 +86,8 @@ public record ResolveEffectAction : GameAction
 						.PipelineContext.SetItem(ContextKeys.CastingPlayerId, CastingPlayerId)
 						.SetItem(ContextKeys.SourceCardId, SourceCardId)
 						.SetItem(ContextKeys.TriggerAmount, TriggerAmount)
-						.SetItem(ContextKeys.TriggerSubjectId, TriggerSubjectId),
+						.SetItem(ContextKeys.TriggerSubjectId, TriggerSubjectId)
+						.SetItem(ContextKeys.XValue, xValue),
 				}
 				: action with
 				{
@@ -85,7 +95,8 @@ public record ResolveEffectAction : GameAction
 						.InputContext.SetItem(ContextKeys.CastingPlayerId, CastingPlayerId)
 						.SetItem(ContextKeys.SourceCardId, SourceCardId)
 						.SetItem(ContextKeys.TriggerAmount, TriggerAmount)
-						.SetItem(ContextKeys.TriggerSubjectId, TriggerSubjectId),
+						.SetItem(ContextKeys.TriggerSubjectId, TriggerSubjectId)
+						.SetItem(ContextKeys.XValue, xValue),
 				};
 
 			spawnedActions = spawnedActions.Add(action);

@@ -75,7 +75,14 @@ public static class CoresetCubeWhiteSpells
 			// A real modal choice, not a fixed mode.
 			CardFactory
 				.Instant("Fortify", manaCost: 3)
+				// The targeting is load-bearing. Written without it, both modes were bare
+				// AddModifierActions with no targets: ApplyChosenModeAction spawns the chosen mode
+				// directly and nothing else resolves a strategy for it, so whichever mode you
+				// picked, Fortify buffed NOBODY. It was the second-worst white card in the trained
+				// model at 41.6%, which is what a blank card measures.
 				.WithModes(
+					onceEach: false,
+					[AllValid().AllYourCreatures(), AllValid().AllYourCreatures()],
 					(
 						"Creatures you control get +2/+0",
 						new AddModifierAction { PowerBonus = 2, ToughnessBonus = 0 }

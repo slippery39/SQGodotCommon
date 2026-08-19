@@ -351,3 +351,50 @@ the generic `MaxActionsPerResolution` guard covers those. If a second instance a
 the test rather than adding a third special case.
 
 ---
+## Safe Passage cannot reach its own mechanism
+
+**Concern:** "Prevent all damage that would be dealt to you and creatures you control this turn."
+The prevention mechanism works — `DamagePreventionComponent` and `ReplacementEngine` are correct
+and tested. The card cannot reach it. A spell is castable only on your own turn (no priority
+window), combat damage to you only arrives on the OPPONENT's turn, and
+`EndTurnAction.ClearEndOfTurnReplacements` strips `UntilEndOfTurn` replacements from both players
+in between. The shield always expires before the damage it exists to stop.
+
+Not perfectly blank: cast on your own turn it still covers a symmetric effect you control — your
+own Earthquake, or Brash Taunter's reflection. That is a much narrower card than the text
+promises, and the trained model rates it 40.7%, barely above the ~40% a card that does nothing
+scores.
+
+**Why it's fine now:** One card. Nothing is wrong with the engine, and the same no-priority gap is
+already routed around elsewhere (counterspells are hand-fired traps — see "Counterspell Traps").
+
+**Watch for:** a second prevention card, or a decision to make this one work. Two options, both
+design changes rather than repairs, which is why neither was taken unilaterally:
+- *Extend the duration* — have it last until the start of your next turn, so it covers the
+  opponent's attack. One field on the component; changes what the card costs to be worth.
+- *Reskin to a fog on their terms* — make it a trap that fires from hand like a counterspell,
+  which is the pattern this engine already uses for the identical priority problem.
+
+`BottomOfModelCardTests.SafePassage_PreventsDamageWhenItArrives` is written and `[Ignore]`d against
+this note. Remove the Ignore when the decision is made.
+
+---
+
+## Targeted modes need explicit targeting, and silently do nothing without it
+
+**Note, not a concern — fixed.** `ApplyChosenModeAction` spawns the chosen mode directly, and
+nothing else in the modal pipeline resolves a `TargetingStrategy`. That is correct for the modes
+most modal cards use — Demonic Pact and Dread Presence drain, draw and discard via
+`PlayerIdContextKey` and find their own subject — and silently wrong for a mode that needs targets.
+
+Fortify offered "creatures you control get +2/+0" and buffed nobody in either mode. It measured
+41.6% in the trained model, which is what a blank card scores.
+
+`ApplyChosenModeAction.ModeTargeting` now carries an optional per-mode strategy; a mode that has
+one is resolved through `ResolveEffectAction`, which is the only thing that turns a strategy into
+real ids. `SpellCardBuilder.WithModes` gained the matching overload.
+
+**Watch for:** a new modal card whose mode is an `EffectAction` with neither `ModeTargeting` nor a
+`TargetContextKey`. It will build, cast, resolve and do nothing.
+
+---

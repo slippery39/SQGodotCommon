@@ -589,6 +589,20 @@ public class SpellCardBuilder
 	public SpellCardBuilder WithModes(
 		bool onceEach,
 		params (string Name, GameAction Action)[] modes
+	) => WithModes(onceEach, null, modes);
+
+	/// <summary>
+	/// Modal where a mode needs TARGETS — "creatures you control get +2/+0" (Fortify).
+	///
+	/// <paramref name="modeTargeting"/> runs parallel to <paramref name="modes"/>; a null entry
+	/// means that mode finds its own subject from context, which is how every other modal card
+	/// here works. Without a strategy a targeted mode resolves against nothing and the card is
+	/// blank — see ApplyChosenModeAction.ModeTargeting.
+	/// </summary>
+	public SpellCardBuilder WithModes(
+		bool onceEach,
+		TargetingStrategy?[]? modeTargeting,
+		params (string Name, GameAction Action)[] modes
 	)
 	{
 		FlushPending();
@@ -609,6 +623,12 @@ public class SpellCardBuilder
 					Modes = modes.Select(m => m.Action).ToImmutableList(),
 					ModeContextKey = "chosen_mode",
 					RecordChoice = onceEach,
+					ModeTargeting =
+						modeTargeting == null
+							? ImmutableList<TargetingStrategy>.Empty
+							: ImmutableList.CreateRange(
+								modeTargeting.Select(t => t ?? TargetingStrategy.NoTarget())
+							),
 				}
 			),
 		};
