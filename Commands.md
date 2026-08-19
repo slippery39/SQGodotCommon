@@ -22,7 +22,6 @@ dotnet run --project MtgConsole
 
 ```
 dotnet run --project MtgArtScraper -- SQGodotCommon/MtgGame/Assets/Card_Art HLM
-dotnet run --project MtgArtScraper -- SQGodotCommon/MtgGame/Assets/Card_Art CSC
 ```
 
 Pulls art crops from Scryfall by card name, skips files that already exist. Cards Scryfall
