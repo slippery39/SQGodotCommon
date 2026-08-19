@@ -322,3 +322,32 @@ their learned values described blanks. That is the same staleness the Flying-res
 warns about, arriving by a different route.
 
 ---
+## A self-feeding trigger hangs the engine, it does not merely slow it
+
+**Note, not a concern — both halves are fixed.** Flameshadow Conjuring is "whenever a creature you
+control enters, create a creature token". Nothing here can express the printed card's "**nontoken**
+creature", so the token it makes is itself a creature entering, which re-triggers the ability
+forever.
+
+The failure mode is worse than it sounds. `GameState.ProcessAllActions` was an unbounded `while`
+loop, and the per-turn action limit that would have caught this lives in `GameRunner`, not in the
+engine — so the call never returned. It did not produce slow games or time-limit flags; it wedged
+training threads permanently, and burned three hours of a 25-minute run before anyone noticed. In
+Godot it would have frozen the UI outright and lost the player's game with nothing logged.
+
+Two independent guards now exist, deliberately:
+- **`GameState.MaxActionsPerResolution`** (10 000) throws rather than looping. Enormous compared
+  to any legitimate resolution, so nothing real trips it. Both callers already handle exceptions —
+  `GameRunner` flags the game and snapshots it, `MtgGameScene` writes a crash snapshot — so an
+  exception is strictly better than a freeze.
+- **`AllSetsCardBugTests.CreatureEtbTriggers_ThatMakeCreatures_AreCapped`** stops such a card
+  shipping at all. It deliberately exempts triggers filtered by `IsSourceCardSpecification`:
+  "when THIS enters, create tokens" cannot feed itself, which is most ETB token-makers in every
+  set (Siege-Gang, Grave Titan, Captain of the Watch) and all of them are safe.
+
+**Watch for:** the same shape on a different event. "Whenever you gain life, gain 1 life" and
+"whenever a creature dies, create a creature" are the same bug wearing different clothes, and only
+the generic `MaxActionsPerResolution` guard covers those. If a second instance appears, generalise
+the test rather than adding a third special case.
+
+---

@@ -679,6 +679,22 @@ public record GameState
 	}
 
 	/// <summary>
+	/// Hard ceiling on how many actions a single ProcessAllActions call may resolve.
+	///
+	/// Deliberately enormous — a wide-board mass effect or a high storm count resolves in the
+	/// hundreds, so nothing legitimate comes near this. It exists solely to convert a
+	/// SELF-FEEDING loop from an unrecoverable freeze into a diagnosable exception.
+	///
+	/// A card whose trigger produces the very event it triggers on ("whenever a creature enters,
+	/// create a creature") spawns work forever, and this loop had no exit: not a slow game but a
+	/// wedged thread. It hung a training batch for hours and would freeze the Godot UI outright,
+	/// losing the player's game with nothing logged. Both callers already handle exceptions —
+	/// GameRunner flags the game and captures a snapshot, MtgGameScene writes a crash snapshot —
+	/// so throwing is strictly better than hanging.
+	/// </summary>
+	public const int MaxActionsPerResolution = 10_000;
+
+	/// <summary>
 	/// Process all pending actions until the stack is empty or a choice is needed.
 	/// Returns the final state and all events emitted across every step.
 	/// </summary>
@@ -686,9 +702,17 @@ public record GameState
 	{
 		var state = this;
 		var allEvents = ImmutableList<GameEvent>.Empty;
+		var processed = 0;
 
 		while (state.HasPendingActions && !state.IsWaitingForChoice)
 		{
+			if (++processed > MaxActionsPerResolution)
+				throw new InvalidOperationException(
+					$"Action resolution exceeded {MaxActionsPerResolution} steps — a self-feeding "
+						+ "loop, most likely a trigger that produces the event it triggers on. "
+						+ $"Last action: {(state.ActionStack.IsEmpty ? "none" : state.ActionStack.Peek().GetType().Name)}"
+				);
+
 			var (nextState, stepEvents) = state.ProcessNextAction();
 			state = nextState;
 			allEvents = allEvents.AddRange(stepEvents);

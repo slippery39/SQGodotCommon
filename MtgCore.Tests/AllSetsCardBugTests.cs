@@ -134,7 +134,9 @@ public class AllSetsCardBugTests
 		var allowed = new[] { "Swift Response", "Gideon Jura" };
 
 		var offenders = AllCards()
-			.Where(x => AllEffects(x.Card).Any(e => MentionsExhausted(e.TargetingStrategy.Specification)))
+			.Where(x =>
+				AllEffects(x.Card).Any(e => MentionsExhausted(e.TargetingStrategy.Specification))
+			)
 			.Select(x => x.Card.Name)
 			.Distinct()
 			.Except(allowed)
@@ -146,6 +148,68 @@ public class AllSetsCardBugTests
 			"Unexpected cards gated on an exhausted target: " + string.Join(", ", offenders)
 		);
 	}
+
+	/// <summary>
+	/// A trigger that fires on a creature entering and RESPONDS by creating a creature produces
+	/// the very event it listens for. Uncapped, that is not a slow card — it is an infinite loop:
+	/// GameState.ProcessAllActions never returns, because the per-turn action limit lives in
+	/// GameRunner rather than in the engine.
+	///
+	/// Found the hard way. Flameshadow Conjuring ("whenever a NONTOKEN creature enters" — and
+	/// nothing here can express "nontoken") wedged training threads for over three hours, and
+	/// would have frozen the Godot UI outright. A cap on either axis breaks the cycle.
+	///
+	/// The engine now also throws past GameState.MaxActionsPerResolution, so a future instance
+	/// fails loudly rather than hanging — but this test is what stops it shipping at all.
+	/// </summary>
+	[Test]
+	public void CreatureEtbTriggers_ThatMakeCreatures_AreCapped()
+	{
+		var offenders = new List<string>();
+
+		foreach (var (set, card) in AllCards())
+		foreach (var trigger in card.GetComponents<TriggeredAbilityComponent>())
+		{
+			if (
+				trigger.Condition
+				is not EventTriggerCondition
+				{
+					EventTypeName: EventTypeNames.CreatureEnteredBattlefield
+				} etb
+			)
+				continue;
+
+			// "When THIS enters" cannot feed itself: the filter matches only the source card, and
+			// a token it creates is a different card. That covers the great majority of ETB
+			// token-makers (Siege-Gang, Grave Titan, Captain of the Watch …), all of which are
+			// perfectly safe. The loop needs a trigger that matches a creature OTHER than itself.
+			if (etb.Filter is IsSourceCardSpecification)
+				continue;
+
+			if (trigger.MaxTriggersPerTurn > 0 || trigger.MaxTriggers > 0)
+				continue;
+
+			if (trigger.Effects.Any(e => MakesACreature(e.ActionTemplate)))
+				offenders.Add($"[{set}] {card.Name} ({trigger.Name})");
+		}
+
+		Assert.That(
+			offenders.Distinct(),
+			Is.Empty,
+			"Uncapped creature-ETB triggers that create creatures loop forever and hang the "
+				+ "engine: "
+				+ string.Join("; ", offenders.Distinct())
+		);
+	}
+
+	/// <summary>Whether an action creates a creature, looking inside pipelines too.</summary>
+	private static bool MakesACreature(GameAction? action) =>
+		action switch
+		{
+			CreateCardAction c => c.CardTemplate?.HasComponent<CreatureComponent>() == true,
+			PipelineAction p => p.Steps.Any(MakesACreature),
+			_ => false,
+		};
 
 	private static IEnumerable<CardEffect> AllEffects(Card card)
 	{

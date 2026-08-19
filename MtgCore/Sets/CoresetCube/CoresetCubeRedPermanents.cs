@@ -65,12 +65,19 @@ public static class CoresetCubeRedPermanents
 			// token, an optional cost on a trigger, and a delayed exile. What survives is the part
 			// that actually plays: every creature you cast brings a hasty friend. A fixed 3/1
 			// Elemental stands in for the copy, so the effect no longer scales with what entered.
+			// maxPerTurn IS LOAD-BEARING AND ITS ABSENCE HUNG THE ENGINE. The printed card says
+			// "whenever a NONTOKEN creature enters"; nothing here can express "nontoken", so
+			// without a cap the token this makes is itself a creature entering, which re-triggers
+			// the ability, forever. Not a slow game — ProcessAllActions never returns, because the
+			// per-turn action limit lives in GameRunner rather than in the engine. It wedged
+			// training threads permanently.
 			CardFactory
 				.Enchantment("Flameshadow Conjuring", manaCost: 4)
 				.WithTriggeredAbility(
 					"Conjure",
 					TriggerConditions.OnCreatureYouControlEnters(),
-					eb => eb.WithCreateTokens(CoresetCubeRedTokens.HastyElemental(), 1)
+					eb => eb.WithCreateTokens(CoresetCubeRedTokens.HastyElemental(), 1),
+					maxPerTurn: 1
 				)
 				.Build(),
 			// Printed: "enchanted creature has '{T}: deals damage equal to its power to any
