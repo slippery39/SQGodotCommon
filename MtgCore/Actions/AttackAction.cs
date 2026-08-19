@@ -516,7 +516,22 @@ public record AttackAction : GameAction
 		int amount
 	)
 	{
-		var updated = player with { Life = player.Life - amount };
+		// Combat damage NEVER went through the replacement engine, so damage prevention simply did
+		// not apply to attacks — the one kind of damage this game is mostly made of. Safe Passage
+		// could not do the thing it exists to do. DealDamageAction had always done this; combat was
+		// just never wired in.
+		amount = state.ApplyReplacements(ReplaceableEvent.DamageToPlayer, player.Id, amount);
+		if (amount <= 0)
+			return (state, ImmutableList<GameEvent>.Empty);
+
+		// LifeLostThisTurn was not updated here either, so the most common life loss in the game —
+		// being attacked — was invisible to every payoff that reads it: bloodthirst, Chandra's
+		// Phoenix, Knight of the Ebon Legion.
+		var updated = player with
+		{
+			Life = player.Life - amount,
+			LifeLostThisTurn = player.LifeLostThisTurn + amount,
+		};
 		var newState = state.UpdateObject(player.Id, updated);
 
 		var combatEvent = new CombatDamageDealtToPlayerEvent
@@ -559,6 +574,16 @@ public record AttackAction : GameAction
 			|| (state.GetObject(sourceId) as Card)?.HasComponent<PreventsCombatDamageComponent>()
 				== true
 		)
+			return (state, ImmutableList<GameEvent>.Empty);
+
+		// Same omission as the player path: prevention covers "you AND creatures you control", and
+		// the creature half was equally unreachable in combat.
+		amount = state.ApplyReplacements(
+			ReplaceableEvent.DamageToCreature,
+			card.ControllerId,
+			amount
+		);
+		if (amount <= 0)
 			return (state, ImmutableList<GameEvent>.Empty);
 
 		var creature = card.GetComponent<CreatureComponent>()!;

@@ -773,8 +773,22 @@ Ordering rule: **all multipliers apply first, then all additions**, clamped at 0
 affected player choose; a deterministic engine must fix one order, and this one stops a doubler
 from also doubling someone else's flat bonus.
 
-Call sites: `GainLifeAction`, `LoseLifeAction`, `DrainLifeAction`, and both damage paths in
-`DealDamageAction`. Adding a new replaceable event is an enum value plus one line at the action.
+Call sites: `GainLifeAction`, `LoseLifeAction`, `DrainLifeAction`, both damage paths in
+`DealDamageAction`, **and both damage paths in `AttackAction`**. Adding a new replaceable event is
+an enum value plus one line at the action.
+
+**`AttackAction` was missing for a long time, and it is the one that matters most.** Combat is
+where nearly all damage in this game happens, so prevention applied to burn spells and not to
+attacks — Safe Passage could not do the only thing it exists to do. If you add a replaceable
+numeric event, check combat as well as effects; the two damage systems are separate code paths and
+only one of them was ever wired up.
+
+**Durations.** `ModifierDuration.UntilYourNextTurn` survives `EndTurnAction` and is cleared by
+`StartTurnAction` for the player whose turn is beginning. Prevention defaults to it, because with
+no priority window a spell is castable only on your own turn while combat damage to you arrives on
+the opponent's — an `UntilEndOfTurn` shield expires before every attack it was cast to stop. The
+duration is honoured for REPLACEMENT components only; a P/T modifier carrying it would never be
+cleared.
 
 **Scope:** numeric only. Structural replacement ("enters tapped", "if it would die, exile it
 instead") rewrites an action rather than a number and is not covered — see `DesignNotes.md`.

@@ -98,26 +98,15 @@ public class BottomOfModelCardTests
 	// ===== SAFE PASSAGE — prevent all damage =====
 
 	/// <summary>
-	/// KNOWN STRUCTURAL GAP, not a code defect — the mechanism works, the card cannot reach it.
+	/// The whole point of the card, and it was blank until prevention gained UntilYourNextTurn.
 	///
-	/// "Prevent all damage dealt to you and creatures you control THIS TURN." A spell can only be
-	/// cast on your own turn (there is no priority window), combat damage to you only arrives on
-	/// the OPPONENT's turn, and EndTurnAction strips UntilEndOfTurn replacements from both players
-	/// in between. So the shield is always gone before the damage it exists to stop.
-	///
-	/// It is not perfectly blank: cast on your own turn it still covers a symmetric effect you
-	/// control, such as your own Earthquake or Brash Taunter's reflection. That is a far narrower
-	/// card than the text promises, and it is why the model rates it at 40.7%.
-	///
-	/// Fixing it is a DESIGN decision, not a repair — "until your next turn" would make it work,
-	/// and that is a balance change. Left deliberately failing-as-ignored rather than adjusted;
-	/// see the entry in DesignNotes.md. Remove the Ignore when the decision is made.
+	/// A spell is castable only on your own turn — there is no priority window — while combat
+	/// damage to you only arrives on the OPPONENT's turn, and EndTurnAction strips UntilEndOfTurn
+	/// replacements in between. An end-of-turn shield therefore expired before every attack it
+	/// existed to stop. The duration now runs to the start of your next turn, so it covers exactly
+	/// the window the card is for.
 	/// </summary>
 	[Test]
-	[Ignore(
-		"Structural: no priority window means the shield always expires before the damage. "
-			+ "Needs a design decision, not a fix — see DesignNotes.md."
-	)]
 	public void SafePassage_PreventsDamageWhenItArrives()
 	{
 		var (state, _) = CastSpell(_state, Find("Safe Passage"));

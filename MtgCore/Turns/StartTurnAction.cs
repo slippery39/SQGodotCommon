@@ -29,6 +29,27 @@ public record StartTurnAction : GameAction
 	private static bool StaysExhausted(CreatureComponent creature) =>
 		creature.FrozenTurns > 0 || creature.FrozenBySourceId != 0;
 
+	/// <summary>
+	/// Strips UntilYourNextTurn replacement effects from the given player. Mirrors
+	/// EndTurnAction.ClearEndOfTurnReplacements, but fires a turn later and for one player.
+	/// </summary>
+	private static GameState ClearUntilYourNextTurnReplacements(GameState state, int playerId)
+	{
+		if (state.GetObject(playerId) is not MtgPlayer player)
+			return state;
+
+		var kept = player
+			.Components.Where(c =>
+				c is not ReplacementModifierComponent r
+				|| r.Duration != ModifierDuration.UntilYourNextTurn
+			)
+			.ToImmutableArray();
+
+		return kept.Length == player.Components.Length
+			? state
+			: state.UpdateObject(playerId, player with { Components = kept });
+	}
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
@@ -55,6 +76,11 @@ public record StartTurnAction : GameAction
 			if (state.GetObject(pid) is MtgPlayer p)
 				state = state.UpdateObject(pid, p with { LifeLostThisTurn = 0 });
 		}
+
+		// "Until the start of your next turn" expires HERE, for the player whose turn is beginning
+		// — that is what lets a shield cast on your turn survive the opponent's turn in between.
+		// EndTurnAction deliberately leaves this duration alone; it only strips UntilEndOfTurn.
+		state = ClearUntilYourNextTurnReplacements(state, ActivePlayerId);
 
 		// Roll the storm counter into last turn's count, then reset it. The roll-over is what
 		// lets werewolf transform conditions ask "were no spells cast last turn?".

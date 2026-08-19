@@ -301,6 +301,56 @@ public class RedMechanicsTests
 		);
 	}
 
+	// ===== COMBAT DAMAGE FEEDS THE LIFE-LOSS PAYOFFS =====
+
+	/// <summary>
+	/// Being attacked is the most common way a player loses life, and combat damage did not touch
+	/// MtgPlayer.LifeLostThisTurn at all — only LoseLifeAction, DrainLifeAction and effect damage
+	/// did. So every payoff that reads it was blind to attacks: bloodthirst (Stormblood Berserker,
+	/// Duskhunter Bat), Chandra's Phoenix's recursion, Knight of the Ebon Legion's end-step growth.
+	/// They all worked when you burned the opponent and silently did nothing when you hit them.
+	/// </summary>
+	[Test]
+	public void CombatDamage_CountsTowardLifeLostThisTurn()
+	{
+		var battlefieldId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield);
+		var attackerCard = MakeCreature("Attacker", _ids.Player1Id, 3, 3, manaCost: 3);
+		var (state, attacker) = _state.AddObject(
+			attackerCard with
+			{
+				Components = ImmutableArray.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 3,
+						Toughness = 3,
+						HasSummoningSickness = false,
+					}
+				),
+			},
+			parentId: battlefieldId
+		);
+
+		Assert.That(state.GetPlayer(_ids.Player2Id).LifeLostThisTurn, Is.Zero, "nothing yet");
+
+		(state, _) = state
+			.AddAction(
+				new AttackAction
+				{
+					AttackerId = attacker.Id,
+					TargetId = _ids.Player2Id,
+					AttackingPlayerId = _ids.Player1Id,
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(
+			state.GetPlayer(_ids.Player2Id).LifeLostThisTurn,
+			Is.EqualTo(3),
+			"a 3-power attack is 3 life lost this turn"
+		);
+	}
+
 	// ===== GOBLIN COUNTING =====
 
 	/// <summary>

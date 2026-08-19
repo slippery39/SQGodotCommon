@@ -20,6 +20,21 @@ public enum ModifierDuration
 	/// Used for permanent enchantment-style buffs like Unholy Strength.
 	/// </summary>
 	Permanent,
+
+	/// <summary>
+	/// Survives the end of the current turn and is cleared at the start of the OWNER's next turn,
+	/// so it covers the opponent's turn in between.
+	///
+	/// This exists because there is no priority window: a spell can only be cast on your own turn,
+	/// so an UntilEndOfTurn shield always expires before the opponent's attack it was meant to
+	/// stop. Safe Passage was blank for exactly that reason.
+	///
+	/// Currently honoured for REPLACEMENT effects only — StartTurnAction clears these off the
+	/// player whose turn is beginning. A P/T modifier carrying this duration would never be
+	/// cleared, since ClearEndOfTurnModifiers only looks for UntilEndOfTurn; wire that up before
+	/// using it on a creature.
+	/// </summary>
+	UntilYourNextTurn,
 }
 
 /// <summary>

@@ -8,17 +8,24 @@ namespace MtgCore;
 /// Safe Passage, Harm's Way.
 ///
 /// The component goes on the PLAYER, not a permanent: a one-shot instant has no permanent to
-/// live on. ReplacementEngine.ApplyReplacements scans player components for exactly this reason,
-/// and EndTurnAction strips UntilEndOfTurn ones so "this turn" really means this turn.
+/// live on. ReplacementEngine.ApplyReplacements scans player components for exactly this reason.
 ///
 /// PreventsCreatureDamage covers the "and creatures you control" half of Safe Passage: it stamps
 /// a second component for DamageToCreature, since the two are separate ReplaceableEvents.
+///
+/// DURATION DEFAULTS TO UntilYourNextTurn, NOT UntilEndOfTurn, and that is what makes prevention
+/// a real card here rather than reminder text. With no priority window a spell can only be cast on
+/// your own turn, while combat damage to you only arrives on the opponent's — so an end-of-turn
+/// shield expired before every attack it existed to stop. Safe Passage was effectively blank.
 /// </summary>
 public record PreventDamageAction : EffectAction
 {
 	public bool PreventAll { get; init; } = true;
 	public int Amount { get; init; } = 2;
 	public bool PreventsCreatureDamage { get; init; } = true;
+
+	/// <summary>How long the shield lasts. See the note above before changing this.</summary>
+	public ModifierDuration Duration { get; init; } = ModifierDuration.UntilYourNextTurn;
 
 	public override ActionResult Execute(GameState gameState)
 	{
@@ -35,7 +42,7 @@ public record PreventDamageAction : EffectAction
 					Target = ReplaceableEvent.DamageToPlayer,
 					PreventAll = PreventAll,
 					Amount = Amount,
-					Duration = ModifierDuration.UntilEndOfTurn,
+					Duration = Duration,
 				}
 			);
 
@@ -46,7 +53,7 @@ public record PreventDamageAction : EffectAction
 						Target = ReplaceableEvent.DamageToCreature,
 						PreventAll = PreventAll,
 						Amount = Amount,
-						Duration = ModifierDuration.UntilEndOfTurn,
+						Duration = Duration,
 					}
 				);
 

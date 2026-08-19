@@ -351,32 +351,31 @@ the generic `MaxActionsPerResolution` guard covers those. If a second instance a
 the test rather than adding a third special case.
 
 ---
-## Safe Passage cannot reach its own mechanism
+## Safe Passage could not reach its own mechanism
 
-**Concern:** "Prevent all damage that would be dealt to you and creatures you control this turn."
-The prevention mechanism works — `DamagePreventionComponent` and `ReplacementEngine` are correct
-and tested. The card cannot reach it. A spell is castable only on your own turn (no priority
-window), combat damage to you only arrives on the OPPONENT's turn, and
-`EndTurnAction.ClearEndOfTurnReplacements` strips `UntilEndOfTurn` replacements from both players
-in between. The shield always expires before the damage it exists to stop.
+**Note, not a concern — fixed, and the root cause was much bigger than the card.**
 
-Not perfectly blank: cast on your own turn it still covers a symmetric effect you control — your
-own Earthquake, or Brash Taunter's reflection. That is a much narrower card than the text
-promises, and the trained model rates it 40.7%, barely above the ~40% a card that does nothing
-scores.
+The prevention mechanism itself was correct and tested. The card could not reach it, for two
+independent reasons, neither visible from the card definition:
 
-**Why it's fine now:** One card. Nothing is wrong with the engine, and the same no-priority gap is
-already routed around elsewhere (counterspells are hand-fired traps — see "Counterspell Traps").
+1. **Combat damage never called `ReplacementEngine.ApplyReplacements` at all.** `AttackAction` has
+   its own damage paths, separate from `DealDamageAction`, and they were simply never wired in —
+   so prevention applied to burn spells but not to attacks, in a game where combat is nearly all
+   of the damage. Fixed in both the player and creature paths.
+2. **The shield expired before the damage arrived.** With no priority window a spell is castable
+   only on your own turn, while combat damage to you arrives on the opponent's, and
+   `EndTurnAction` stripped `UntilEndOfTurn` replacements in between.
+   `ModifierDuration.UntilYourNextTurn` now survives that boundary and is cleared by
+   `StartTurnAction` for the player whose turn is beginning.
 
-**Watch for:** a second prevention card, or a decision to make this one work. Two options, both
-design changes rather than repairs, which is why neither was taken unilaterally:
-- *Extend the duration* — have it last until the start of your next turn, so it covers the
-  opponent's attack. One field on the component; changes what the card costs to be worth.
-- *Reskin to a fog on their terms* — make it a trap that fires from hand like a counterspell,
-  which is the pattern this engine already uses for the identical priority problem.
+The same edit exposed a third bug in the same method: combat damage did not update
+`MtgPlayer.LifeLostThisTurn`, so being attacked — the most common life loss in the game — was
+invisible to every payoff reading it (bloodthirst, Chandra's Phoenix, Knight of the Ebon Legion).
+They worked when you burned the opponent and silently did nothing when you hit them.
 
-`BottomOfModelCardTests.SafePassage_PreventsDamageWhenItArrives` is written and `[Ignore]`d against
-this note. Remove the Ignore when the decision is made.
+**Watch for the general shape rather than the card.** Effect damage and combat damage are separate
+code paths and only one was kept current. Any new numeric replacement, and anything that reads a
+life-loss counter, must be checked against BOTH.
 
 ---
 
