@@ -38,10 +38,10 @@ public static class CoresetCubeBluePermanents
 				.Build(),
 			// "Can't be blocked" is blank with no blocking, so the +1/+0 is the whole card.
 			CardFactory
-				.Enchantment("Aether Tunnel", manaCost: 2)
+				.Enchantment("Aether Tunnel", manaCost: 1)
 				.AsAura(
 					powerBonus: 1,
-					toughnessBonus: 0,
+					toughnessBonus: 3,
 					targeting: TargetingStrategy.SingleTarget(
 						TargetSpecification.CreatureControlledByYou()
 					)

@@ -56,7 +56,7 @@ public static class CoresetCubeBlackPermanents
 			// fix in place, this finally sees a sacrificed creature too, which is most of what it
 			// is meant to trigger on.
 			CardFactory
-				.Enchantment("Shadows of the Past", manaCost: 2)
+				.Enchantment("Shadows of the Past", manaCost: 0)
 				.WithTriggeredAbility(
 					"Echoes",
 					TriggerConditions.OnAnyCreatureDies(),
@@ -75,7 +75,7 @@ public static class CoresetCubeBlackPermanents
 			// LoseLifeAction already reads AmountContextKey. The card is a genuine clock — the
 			// life loss scales with your own curve, so a deck full of bombs pays for them twice.
 			CardFactory
-				.Enchantment("Dark Tutelage", manaCost: 3)
+				.Enchantment("Dark Tutelage", manaCost: 2)
 				.WithTriggeredAbility(
 					"Tutelage",
 					TriggerConditions.OnYourUpkeep(),
@@ -178,7 +178,7 @@ public static class CoresetCubeBlackPermanents
 			// The self-sacrifice clause is dropped — it checks "no creatures on the battlefield",
 			// which this card actively prevents from ever being true.
 			CardFactory
-				.Enchantment("Call to the Grave", manaCost: 5)
+				.Enchantment("Call to the Grave", manaCost: 4)
 				.WithTriggeredAbility(
 					"The Call",
 					TriggerConditions.OnYourUpkeep(),
@@ -248,7 +248,7 @@ public static class CoresetCubeBlackPermanents
 			// makes an unrestricted search mean anything — library order is random, so a
 			// first-match search would just have found whatever was already on top.
 			CardFactory
-				.Planeswalker("Liliana Vess", manaCost: 5)
+				.Planeswalker("Liliana Vess", manaCost: 4)
 				.WithLoyalty(5)
 				.WithLoyaltyAbility(
 					"+1: Target player discards a card",

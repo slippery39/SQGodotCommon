@@ -573,7 +573,7 @@ public static class CoresetCubeWhite
 			// token marker on Card, so token-ness is unrepresentable. CreaturesOnly at least
 			// stops artifacts and enchantments inflating the count.
 			CardFactory
-				.Creature("Lena, Selfless Champion", manaCost: 6, power: 3, toughness: 3)
+				.Creature("Lena, Selfless Champion", manaCost: 5, power: 3, toughness: 3)
 				.WithSubtype(Human)
 				.WithSubtype(Knight)
 				.WithEtbTrigger(

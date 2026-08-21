@@ -74,7 +74,7 @@ public static class CoresetCubeWhiteSpells
 				.Build(),
 			// A real modal choice, not a fixed mode.
 			CardFactory
-				.Instant("Fortify", manaCost: 3)
+				.Instant("Fortify", manaCost: 1)
 				// The targeting is load-bearing. Written without it, both modes were bare
 				// AddModifierActions with no targets: ApplyChosenModeAction spawns the chosen mode
 				// directly and nothing else resolves a strategy for it, so whichever mode you
@@ -94,7 +94,7 @@ public static class CoresetCubeWhiteSpells
 				)
 				.Build(),
 			CardFactory
-				.Instant("Inspired Charge", manaCost: 4)
+				.Instant("Inspired Charge", manaCost: 2)
 				.WithBoost(2, 1)
 				.WithTarget(AllValid().AllYourCreatures())
 				.Build(),
@@ -165,7 +165,7 @@ public static class CoresetCubeWhiteSpells
 				.Build(),
 			// X and convoke together, exactly as printed.
 			CardFactory
-				.Sorcery("Return to the Ranks", manaCost: 2)
+				.Sorcery("Return to the Ranks", manaCost: 0)
 				.WithXCost()
 				.WithConvoke()
 				.WithAction(

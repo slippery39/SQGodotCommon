@@ -76,7 +76,7 @@ public static class CoresetCubeRedSpells
 			// "That creature's controller" is the opponent, since the target is one of their
 			// creatures — the same shape Chandra's Outrage uses for its 4-and-2 split.
 			CardFactory
-				.Instant("Ravaging Blaze", manaCost: 2)
+				.Instant("Ravaging Blaze", manaCost: 0)
 				.WithXCost()
 				.WithAction(
 					new DealDamageAction { AmountContextKey = ContextKeys.XValue },
@@ -158,7 +158,7 @@ public static class CoresetCubeRedSpells
 			// so a component on the card cannot see it. Threading XValue into CounterTrapEngine
 			// for one clause on one card is not worth it, and an X spell is usually cast big.
 			CardFactory
-				.Sorcery("Banefire", manaCost: 1)
+				.Sorcery("Banefire", manaCost: 0)
 				.WithXCost()
 				.WithCannotBeCountered()
 				.WithAction(

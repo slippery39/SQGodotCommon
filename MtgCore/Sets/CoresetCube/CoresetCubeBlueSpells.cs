@@ -85,7 +85,7 @@ public static class CoresetCubeBlueSpells
 				.WithTarget(AllValid().OpponentCreatures())
 				.WithConditionalAction(
 					new SpellMasteryCondition(),
-					new ExhaustCreatureAction { FreezeTurns = 1 }
+					new ExhaustCreatureAction { FreezeTurns = 2 }
 				)
 				.Build(),
 			CardFactory.Instant("Turn to Frog", manaCost: 2).WithBecomesVanilla(1, 1).Build(),
@@ -172,7 +172,7 @@ public static class CoresetCubeBlueSpells
 				.Build(),
 			// X spell: the chosen X reaches the effect through ContextKeys.XValue.
 			CardFactory
-				.Sorcery("Mind Spring", manaCost: 2)
+				.Sorcery("Mind Spring", manaCost: 0)
 				.WithXCost()
 				.WithAction(
 					new DrawCardsAction
@@ -197,9 +197,9 @@ public static class CoresetCubeBlueSpells
 				.WithDraw(2)
 				.WithTarget(TargetingStrategy.Self())
 				.Build(),
-			CardFactory.Sorcery("Drawn from Dreams", manaCost: 4).WithDig(7).WithDig(7).Build(),
+			CardFactory.Sorcery("Drawn from Dreams", manaCost: 3).WithDig(7).WithDig(7).Build(),
 			CardFactory
-				.Sorcery("Sleep", manaCost: 4)
+				.Sorcery("Sleep", manaCost: 1)
 				.WithFreeze(1)
 				.WithTarget(AllValid().OpponentCreatures())
 				.Build(),

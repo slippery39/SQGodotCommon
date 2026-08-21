@@ -119,7 +119,7 @@ public static class CoresetCubeBlackSpells
 			// SelectBestByManaCost. Library order is random, so a first-match search with no
 			// subtype filter is just "draw the top card" — this would have been a strictly worse
 			// Sign in Blood, and nothing about it would have looked wrong.
-			CardFactory.Sorcery("Grim Tutor", manaCost: 3).WithTutor().WithLoseLife(3).Build(),
+			CardFactory.Sorcery("Grim Tutor", manaCost: 1).WithTutor().WithLoseLife(3).Build(),
 			CardFactory
 				.Sorcery("Read the Bones", manaCost: 3)
 				.WithScry(2)
@@ -132,7 +132,7 @@ public static class CoresetCubeBlackSpells
 			// graveyard — and now that a sacrificed creature actually announces its death, the
 			// cost feeds every death payoff in the section on the way through.
 			CardFactory
-				.Sorcery("Blood for Bones", manaCost: 4)
+				.Sorcery("Blood for Bones", manaCost: 3)
 				.WithSacrificeCost(TargetSpecification.CreatureControlledByYou())
 				.WithReanimate()
 				.WithReturnCreatureFromGraveyard()

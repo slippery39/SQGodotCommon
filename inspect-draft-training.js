@@ -105,9 +105,11 @@ const cards = d.Cards.map((c) => ({
   draw: draw[c.Name],
 })).sort((a, b) => b.rate - a.rate);
 
-console.log(`TOP 10 / BOTTOM 10 CARDS (shrunk games-in-hand win rate)`);
+const numToShow = 20;
+
+console.log(`TOP ${numToShow} / BOTTOM ${numToShow} CARDS (shrunk games-in-hand win rate)`);
 console.log(`  ${pad("Card", 30)}${pad("WR", 9)}${pad("P(drawn)", 11)}n`);
-for (const c of [...cards.slice(0, 10), null, ...cards.slice(-10)]) {
+for (const c of [...cards.slice(0, numToShow), null, ...cards.slice(-numToShow)]) {
   if (c === null) {
     console.log(`  ${"...".padEnd(30)}`);
     continue;
