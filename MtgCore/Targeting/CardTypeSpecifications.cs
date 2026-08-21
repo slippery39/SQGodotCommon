@@ -14,7 +14,7 @@ public record IsCardTypeSpecification : TargetSpecification
 	public CardType Types { get; init; } = CardType.AnyPermanent;
 
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
-		context.GameState.GetObject(candidateId) is Card card && card.HasType(Types);
+		context.Find(candidateId) is Card card && card.HasType(Types);
 }
 
 /// <summary>
@@ -31,5 +31,5 @@ public record IsNotCardTypeSpecification : TargetSpecification
 	public CardType Types { get; init; } = CardType.Land;
 
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
-		context.GameState.GetObject(candidateId) is Card card && !card.HasType(Types);
+		context.Find(candidateId) is Card card && !card.HasType(Types);
 }

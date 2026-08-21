@@ -35,9 +35,21 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 	// Optional wall-clock budget per move. When set, the search degrades gracefully
 	// (stops expanding, returns the best node found so far) once the budget is spent.
-	// Null = unbounded — preserves the simulator's deterministic behavior.
+	// Null = unbounded — the simulator uses the deterministic rollout budget below instead,
+	// because a wall-clock budget would make its results depend on machine speed.
 	private readonly long _moveBudgetTimestampTicks;
 	private long _moveStartTimestamp;
+
+	// Deterministic per-move work budget, counted in rollouts (ScoreAfterCompletingTurn calls
+	// — the expensive unit; each one plays out a turn plus a two-turn lookahead).
+	private readonly int _rolloutBudget;
+	private int _rolloutsThisMove;
+
+	// Widest set of actions any one level will roll out. See DefaultMaxBranching.
+	private readonly int _maxBranching;
+
+	// Same, for levels below the root. See DefaultExpandBranching.
+	private readonly int _expandBranching;
 
 	private ImmutableList<GameAction>? _committedChain;
 	private ImmutableList<float>? _committedChainExpectedScores;
@@ -72,9 +84,15 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		Random? rng = null,
 		bool captureDecisions = false,
 		float scoreDivergenceThreshold = 5.0f,
-		TimeSpan? moveTimeBudget = null
+		TimeSpan? moveTimeBudget = null,
+		int rolloutBudget = DefaultRolloutBudget,
+		int maxBranching = DefaultMaxBranching,
+		int expandBranching = DefaultExpandBranching
 	)
 	{
+		_rolloutBudget = rolloutBudget;
+		_maxBranching = maxBranching;
+		_expandBranching = expandBranching;
 		_ids = ids;
 		_currentTurnDepth = currentTurnDepth;
 		_lookaheadTurns = lookaheadTurns;
@@ -89,15 +107,72 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			: 0;
 	}
 
-	// Starts the per-move clock. Called at the top of every public entry point so that
-	// both action selection and choice resolution honor the same budget.
-	private void StartMoveTimer() => _moveStartTimestamp = Stopwatch.GetTimestamp();
+	/// <summary>
+	/// Rollouts a single move may spend before the search stops widening. Calibrated against
+	/// the measured spread of legal actions at the search root — p50 4, p90 9, p99 17,
+	/// p99.9 28, max 74 — so a typical move (9 actions: 9 + 2 levels x 15 beam slots x 9 ≈ 280)
+	/// never reaches it and only the wide-board tail loses a level of search.
+	///
+	/// This replaces wall-clock as the way the simulator bounds its own cost. Time was never
+	/// usable for that: it makes the same game play differently on a loaded machine.
+	/// </summary>
+	public const int DefaultRolloutBudget = 400;
+
+	/// <summary>
+	/// Most actions any single level will roll out. Beyond this the level is pre-ranked with the
+	/// cheap immediate evaluator and only the best survive to be scored properly.
+	///
+	/// Calibrated against the measured spread of legal actions per decision on CSC — p50 4,
+	/// p90 8, p99 16, p99.9 24, max 47 — so roughly 99% of decisions are below it and pay
+	/// nothing but one integer compare. It exists for the other 1%: with a 4-node beam at
+	/// depth 3, a 47-action board costs ~423 rollouts against ~36 for a typical one, and the
+	/// actions driving that count are near-identical anyway (which of twenty Goblins attacks
+	/// first). Capping at 16 takes that worst case to ~144.
+	///
+	/// Cutting an action here is not refusing to ever play it. SelectAction runs afresh after
+	/// every action, so a pruned action is re-offered from the next state — the search declines
+	/// to explore it *in this ordering*, not to make the play.
+	/// </summary>
+	public const int DefaultMaxBranching = 16;
+
+	/// <summary>
+	/// The same cap for levels below the root, where it is deliberately much tighter.
+	///
+	/// Profiling a move attributes **72% of search cost to `ExpandNode` and 27% to level 0** —
+	/// expansion spends `beam (4) x branching (16)` per level against level 0's single pass, so
+	/// roughly three times the budget goes to levels that cannot change *which* action is
+	/// returned. `SelectAction` always returns a ROOT action; deeper levels only refine the score
+	/// that ranks the roots. Buying that refinement at 3x the price of the decision itself is the
+	/// wrong allocation.
+	/// </summary>
+	public const int DefaultExpandBranching = 5;
+
+	// Starts the per-move clock and work counter. Called at the top of every public entry
+	// point so that both action selection and choice resolution honor the same budget.
+	private void StartMoveTimer()
+	{
+		_moveStartTimestamp = Stopwatch.GetTimestamp();
+		Interlocked.Exchange(ref _rolloutsThisMove, 0);
+	}
 
 	// True once the per-move wall-clock budget is spent. Always false when no budget is
 	// configured (simulator path), so deterministic behavior is preserved there.
 	private bool BudgetExceeded() =>
 		_moveBudgetTimestampTicks > 0
 		&& Stopwatch.GetTimestamp() - _moveStartTimestamp > _moveBudgetTimestampTicks;
+
+	/// <summary>
+	/// True once this move has spent its deterministic rollout budget.
+	///
+	/// **Only ever call this where the parallel work has joined.** The counter is incremented
+	/// from inside Parallel.For bodies, so its value mid-level depends on thread scheduling;
+	/// its total between levels does not, because a sum does not care what order it was added
+	/// in. Testing it at a sequential point is what keeps the search deterministic — testing
+	/// it inside a parallel body would reintroduce exactly the machine-dependence this whole
+	/// change exists to remove.
+	/// </summary>
+	private bool RolloutBudgetExhausted() =>
+		_rolloutBudget > 0 && Volatile.Read(ref _rolloutsThisMove) >= _rolloutBudget;
 
 	public GameAction SelectAction(GameState state, MtgGameIds ids, int playerId)
 	{
@@ -126,6 +201,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 		// Level 0: execute each root action and score via multi-turn rollout.
 		// Pre-allocated array + Parallel.For gives deterministic ordering without AsOrdered buffering overhead.
+		actions = NarrowActions(state, actions, playerId);
 		var beamArray = new BeamNode[actions.Count];
 		Parallel.For(
 			0,
@@ -165,8 +241,10 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		// Levels 1..currentTurnDepth-1: expand within the current turn only
 		for (var depth = 1; depth < _currentTurnDepth; depth++)
 		{
-			// Out of time — stop expanding and pick the best node found so far.
-			if (BudgetExceeded())
+			// Out of time (interactive) or out of work (simulator) — stop expanding and pick
+			// the best node found so far. Both tests sit here, between levels, where the
+			// previous level's Parallel.For has joined.
+			if (BudgetExceeded() || RolloutBudgetExhausted())
 				break;
 
 			var expansions = new List<BeamNode>[beam.Count];
@@ -261,8 +339,15 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 			foreach (var combo in GetCombinations(choice.Options, choice.MinChoices))
 			{
-				// Stop enumerating combinations once the budget is spent; keep the best found.
-				if (bestSelection != null && BudgetExceeded())
+				// Stop enumerating combinations once either budget is spent; keep the best found.
+				//
+				// The rollout budget is the load-bearing one here. This loop is C(n, k) and pays
+				// a FULL rollout per combination, and its only previous escape was the wall-clock
+				// budget — which is null in the simulator, so it never fired. That is how games
+				// with three permanents on the board burned five minutes: choice resolution is
+				// not counted in TotalActions either, so the cost was invisible in every report.
+				// Sequential loop, so reading the counter here is deterministic.
+				if (bestSelection != null && (BudgetExceeded() || RolloutBudgetExhausted()))
 					break;
 				var selectedIds = combo.Select(o => o.Id).ToImmutableList();
 				var (resultState, _) = state.ResolveChoice(selectedIds);
@@ -308,8 +393,10 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		foreach (var option in choice.Options)
 		{
 			// Budget spent — keep the best option scored so far rather than scoring all.
-			// Always score at least one so bestOption is meaningful.
-			if (scored > 0 && BudgetExceeded())
+			// Always score at least one so bestOption is meaningful. Same reasoning as the
+			// combination loop above: one full rollout per option, previously bounded only by a
+			// wall clock the simulator does not set.
+			if (scored > 0 && (BudgetExceeded() || RolloutBudgetExhausted()))
 				break;
 			scored++;
 
@@ -345,6 +432,67 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		}
 
 		return ImmutableList.Create(bestOption.Id);
+	}
+
+	/// <summary>
+	/// Narrows a level to the actions worth paying a rollout for. Returns the input untouched
+	/// below the cap, which is the common case by a wide margin.
+	///
+	/// Ranking uses StateEvaluator directly — one ExecuteAction and an immediate score, against
+	/// a rollout's turn completion plus two-turn lookahead. That is the same cheap/expensive
+	/// pair SelectAction already falls back to when the move time budget is spent.
+	///
+	/// Keeps a potential bucket alongside the concrete one, exactly as PruneBeam does. Ranking
+	/// on immediate score alone would cut a fast-mana setup line before it was ever rolled out
+	/// — the precise failure IPotentialEvaluator exists to prevent, and it would be invisible
+	/// because the action simply never gets explored.
+	/// </summary>
+	private List<GameAction> NarrowActions(
+		GameState state,
+		List<GameAction> actions,
+		int playerId,
+		int? capOverride = null
+	)
+	{
+		// The override never widens: an explicit maxBranching of 1 must stay 1 at every level.
+		var cap = capOverride is null ? _maxBranching : Math.Min(capOverride.Value, _maxBranching);
+		if (actions.Count <= cap)
+			return actions;
+
+		// Pre-allocated array + Parallel.For, then sort: the ranking must not depend on the
+		// order threads happen to finish in. Same rule as RolloutBudgetExhausted.
+		var scored = new (float Concrete, float Potential, int Index)[actions.Count];
+		Parallel.For(
+			0,
+			actions.Count,
+			i =>
+			{
+				var next = ExecuteAction(state, actions[i]);
+				scored[i] = (
+					StateEvaluator.Evaluate(next, _ids, playerId),
+					_potentialEvaluators.Count > 0
+						? _potentialEvaluators[0].Score(next, playerId)
+						: 0f,
+					i
+				);
+			}
+		);
+
+		var keep = new HashSet<int>();
+		foreach (var s in scored.OrderByDescending(s => s.Concrete).ThenBy(s => s.Index).Take(cap))
+			keep.Add(s.Index);
+
+		// One potential bucket, sized as the evaluators themselves ask for.
+		if (_potentialEvaluators.Count > 0)
+			foreach (
+				var s in scored
+					.OrderByDescending(s => s.Potential)
+					.ThenBy(s => s.Index)
+					.Take(_potentialEvaluators[0].SlotCount)
+			)
+				keep.Add(s.Index);
+
+		return [.. keep.OrderBy(i => i).Select(i => actions[i])];
 	}
 
 	/// <summary>
@@ -384,6 +532,11 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			return [node with { ConcreteScore = leafScore }];
 		}
 
+		// The bigger of the two call sites by far — 72% of search cost measured — because it runs
+		// once per beam node. Capped tighter than the root for that reason; see
+		// DefaultExpandBranching.
+		actions = NarrowActions(state, actions, playerId, _expandBranching);
+
 		var result = new List<BeamNode>(actions.Count);
 		foreach (var action in actions)
 		{
@@ -420,6 +573,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	/// </summary>
 	private float ScoreAfterCompletingTurn(GameState state, int playerId)
 	{
+		Interlocked.Increment(ref _rolloutsThisMove);
 		var game = state.TryGetGame();
 		// Complete the current turn greedily before the lookahead
 		if (game?.ActivePlayerId == playerId)

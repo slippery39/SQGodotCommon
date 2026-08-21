@@ -11,7 +11,7 @@ namespace MtgCore;
 public record IsExhaustedSpecification : TargetSpecification
 {
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
-		context.GameState.GetObject(candidateId) is Card card
+		context.Find(candidateId) is Card card
 		&& card.GetComponent<CreatureComponent>()?.IsExhausted == true;
 }
 
@@ -27,7 +27,7 @@ public record IsExhaustedSpecification : TargetSpecification
 public record HasFlyingSpecification : TargetSpecification
 {
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
-		context.GameState.GetObject(candidateId) is Card card
+		context.Find(candidateId) is Card card
 		&& card.HasComponent<CreatureComponent>()
 		&& context.GameState.GetEffectiveStats(candidateId).HasFlying;
 }
@@ -49,7 +49,7 @@ public record HasFlyingSpecification : TargetSpecification
 public record HasAttackedThisTurnSpecification : TargetSpecification
 {
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
-		context.GameState.GetObject(candidateId) is Card card
+		context.Find(candidateId) is Card card
 		&& card.GetComponent<CreatureComponent>()?.HasAttacked == true;
 }
 
@@ -64,7 +64,7 @@ public record DifferentPowerAndToughnessSpecification : TargetSpecification
 {
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context)
 	{
-		if (context.GameState.GetObject(candidateId) is not Card card)
+		if (context.Find(candidateId) is not Card card)
 			return false;
 		if (!card.HasComponent<CreatureComponent>())
 			return false;
@@ -90,7 +90,7 @@ public record IsNotCheapestCreatureSpecification : TargetSpecification
 	{
 		var state = context.GameState;
 
-		if (state.GetObject(candidateId) is not Card card)
+		if (context.Find(candidateId) is not Card card)
 			return false;
 		if (!card.HasComponent<CreatureComponent>())
 			return false;

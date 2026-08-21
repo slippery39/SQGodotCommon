@@ -445,7 +445,12 @@ public class MtgGameManager
 
 	public List<(int Index, string Name, int ManaCost)> GetLegalAbilities(int cardId)
 	{
-		var legalActions = MtgActionGenerator.GetLegalActions(_state, HumanPlayerId);
+		// Must go through the wrapper, not the generator directly: the generator defaults to
+		// deduplicating, which is an AI-only optimisation. It reads nothing but
+		// ActivateAbilityActions today, so the default was harmless — but a human path silently
+		// running with AI dedup on is a trap waiting for the day dedup covers abilities too,
+		// and the symptom would be a creature the player simply cannot activate.
+		var legalActions = GetLegalActions(HumanPlayerId);
 		var result = new List<(int, string, int)>();
 		var card = _state.GetObject(cardId) as Card;
 		if (card == null)

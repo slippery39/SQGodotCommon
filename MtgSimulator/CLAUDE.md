@@ -40,6 +40,7 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | `PreconstructedGameResult.cs` | Wraps `GameResult` with deck names and on-play metadata for preconstructed mode |
 | `GameStateSnapshot.cs` | Human-readable snapshot DTO — `GameStateSnapshot`, `PlayerSnapshot`, `CreatureSnapshot`, `TurnLog` |
 | `FlaggedGameSaver.cs` | Builds a snapshot from a flagged `GameState` and writes it as JSON to `flagged_games/` |
+| `DrawDiagnostics.cs` | `BoardSnapshot` capture + the end-of-training draw report: reason split, run-position trend, board medians, per-card lift |
 
 ## Architecture
 
@@ -49,13 +50,25 @@ Class library containing all AI strategies, game runners, deck factories, and re
 
 ## Game Limits (in `GameRunner`)
 
-| Limit | Threshold | Effect |
-|-------|-----------|--------|
-| Time limit | 5 000 ms wall-clock | `GameEndReason.TimeLimitReached` — game ends as draw |
-| Turn limit | 100 turns | `GameEndReason.TurnLimitReached` — game ends as draw |
-| Action warning | 50 actions in one turn | `HadActionWarning = true` — game continues |
-| Action limit | 100 actions in one turn | `GameEndReason.ActionLimitReached` — game ends as draw |
-| Unhandled exception | any thrown exception | `GameEndReason.UnhandledException` — game ends as draw, exception captured |
+| Limit | Threshold | Deterministic? | Effect |
+|-------|-----------|---|--------|
+| Turn limit | 100 turns | yes | `GameEndReason.TurnLimitReached` — game ends as draw |
+| Action warning | 100 actions in one turn | yes | `HadActionWarning = true` — game continues |
+| Action limit | 200 actions in one turn | yes | `GameEndReason.ActionLimitReached` — game ends as draw |
+| Safety timeout | 300 000 ms wall-clock | **no** | `GameEndReason.TimeLimitReached` — excluded from training, not a draw |
+| Unhandled exception | any thrown exception | — | `GameEndReason.UnhandledException` — excluded from training, exception captured |
+
+**Wall-clock time must never decide a game.** It used to: a 20 000 ms limit ended the game as a
+draw, so the result depended on how fast the machine was running at that moment. Turn and action
+limits already bound a game deterministically (100 x 200), so the clock was never load-bearing
+for termination — only for cost, and cost is now bounded inside the AI by
+`MultiTurnBeamSearchAiStrategy`'s rollout budget. The 300-second net exists only so a genuine
+engine hang cannot wedge a run; a game it ends is broken, not drawn.
+
+**Only `Damage` and `LibraryEmpty` draws are real draws** (both players lost at once —
+`CheckStateBasedEffectsAction` reports `WinnerPlayerId = -1`). `TurnLimitReached` and
+`ActionLimitReached` are honest evidence too — deterministic, and they mean these two decks
+could not finish — but they are not the same thing, and `DrawDiagnostics` keeps them apart.
 
 `GameRunner.Run()` wraps the entire game loop in a try/catch. On exception, it terminates with `UnhandledException`, capturing the last known `GameState`, all events up to the crash, and the exception message and stack trace — then returns normally so the run continues with the next game.
 
@@ -73,13 +86,78 @@ Flagged games (any of the above) are collected separately and printed in the fla
 - **Concrete bucket** — top N by `StateEvaluator` score (default: 10)
 - **Potential bucket** — top M per `IPotentialEvaluator` (default: 5 slots via `FastManaPotentialEvaluator`)
 
-Potential evaluators preserve setup lines (fast mana, etc.) that score poorly on the main evaluator but may enable a win condition deeper in the tree. The final action is always chosen by concrete score at the leaf level. Falls back to `EndTurnAction` as a tiebreaker (to avoid neutral attacks or pointless spells), then random among remaining ties. Current default: depth 3, concreteSlots 10, with `FastManaPotentialEvaluator` injected by default.
+Potential evaluators preserve setup lines (fast mana, etc.) that score poorly on the main evaluator but may enable a win condition deeper in the tree. The final action is always chosen by concrete score at the leaf level. Falls back to `EndTurnAction` as a tiebreaker (to avoid neutral attacks or pointless spells), then random among remaining ties. Current default: depth 3, **concreteSlots 6**, with `FastManaPotentialEvaluator` (**2 slots**) injected by default.
 
 **Land-first override**: before entering beam search, `SelectAction` plays any available `PlayLandAction` immediately. Permanent mana is the highest-priority resource; no search is needed for this decision.
 
 **`IPotentialEvaluator`** — pluggable interface for secondary beam-pruning signals. Implement to add new potential heuristics (graveyard value, storm count, etc.) without touching the search logic.
 
-**`MultiTurnBeamSearchAiStrategy`** — beam search (same pruning as above) combined with a multi-turn greedy rollout. Each candidate is scored by `ScoreAfterCompletingTurn`, which completes the current turn greedily then runs `MultiTurnGreedyRollout` for N lookahead turns (default 2). The rollout alternates between `PlayGreedyTurn` (our turn) and `SimulateOpponentTurn` (opponent turn). Default opponent mode is `BoardOnly`. Default: depth 3, concreteSlots 10, lookaheadTurns 2.
+**`MultiTurnBeamSearchAiStrategy`** — beam search (same pruning as above) combined with a multi-turn greedy rollout. Each candidate is scored by `ScoreAfterCompletingTurn`, which completes the current turn greedily then runs `MultiTurnGreedyRollout` for N lookahead turns (default 2). The rollout alternates between `PlayGreedyTurn` (our turn) and `SimulateOpponentTurn` (opponent turn). Default opponent mode is `BoardOnly`. Default: depth 3, **concreteSlots 2**, lookaheadTurns 2.
+
+**The beam is far narrower than it looks, and the numbers here were wrong for a long time** — both
+strategies were documented as `concreteSlots 10`. The real defaults are 6 for `BeamSearch` and
+**2** for `MultiTurnBeamSearch`, which with the `FastManaPotentialEvaluator`'s 2 slots makes the
+live beam **≤4 nodes per level**, not 10–15. That matters whenever you reason about search cost:
+a level expands `beam x actions`, so the multiplier is 4, and any estimate built on the old figure
+overstates the work by 3–4x. Measure the shape before tuning it.
+
+### The branching cap
+
+`DefaultMaxBranching` (16) is the most actions any one level will roll out. Above it,
+`NarrowActions` ranks with the cheap `StateEvaluator` — one `ExecuteAction`, no rollout — and keeps
+the best, plus a potential bucket mirroring `PruneBeam`. Below it the method returns its input
+after a single integer compare, which is the case for ~99% of decisions (measured spread per
+decision on CSC: p50 4, p90 8, p99 16, p99.9 24, max 47).
+
+**Pruning here is not refusing to make a play.** `SelectAction` runs afresh after every action, so
+a cut action is re-offered from the next state; the search declines to explore it *in this
+ordering*. That is what makes the cap cheap in strength terms, and it is why the idea works at all.
+
+Measured on CSC, 28 000 games, against the same build with the cap disabled:
+
+| | No cap | Cap 16 |
+|---|---|---|
+| Run time | 2 318s | **1 604s** (−31%) |
+| Median game | ~8 000 ms | **~1 700 ms** |
+| Games hitting the 300 s net | 12 | **4** |
+| Base win rate | 50.0% | 50.0% |
+
+**Strength was measured before shipping it, not assumed**: a capped AI played an uncapped one over
+224 drafted-deck games, alternating who was on the play, and scored **48.2% (1 SE = 3.3pp)** — even.
+`MtgSimulator.Tests/BranchingCapStrengthTests.cs` is that harness, `[Explicit]` because it plays
+hundreds of games. Re-run it before changing the cap; the premise it tests ("orderings among
+near-identical actions are not worth finding") is a claim about this game, not a general truth.
+
+**`ResolveChoice` is bounded by the same budget, and that is where the worst cost hid.** It pays a
+full rollout per option, and for `MinChoices > 1` a full rollout per *combination* via
+`GetCombinations` — C(n, k). Its only escape used to be the wall-clock `moveTimeBudget`, which is
+null in the simulator, so it never fired. Flagged snapshots showed games with **three permanents on
+the board burning five minutes**, and the cost was invisible in every report because
+`GameRunner.ProcessChoice` does not increment `TotalActions` — those games read as "13 actions, 327
+seconds". Both loops are sequential, so testing the rollout counter there is deterministic.
+
+**When a game looks slow but its action count is low, suspect choice resolution, not the board.**
+
+**`DefaultExpandBranching` (5) caps levels below the root, much tighter than the root's 16.**
+Profiling attributes **72% of search cost to `ExpandNode` against 27% to level 0** — expansion
+spends `beam (4) x branching` per level, so most of the budget was going to levels that cannot
+change *which* action is returned. `SelectAction` always returns a root action; deeper levels only
+refine the scores that rank the roots. Measured at 28 000 games: run time **1 593s → 1 260s
+(−21%)** with play strength unchanged.
+
+`NarrowActions` takes `min(expandBranching, maxBranching)` so an explicit tight cap is never
+widened. **That min is a trap for the strength harness**: passing `maxBranching: int.MaxValue`
+alone leaves expansion capped and the comparison measures nothing. Lift both, and sanity-check the
+harness by crippling one arm — branching 1 scores 41.1% against 48.2%, which is how you know the
+test can still see a difference at all.
+
+The potential bucket is load-bearing. Ranking on immediate score alone cuts a fast-mana setup line
+before it is ever rolled out — the exact failure `IPotentialEvaluator` exists to prevent, and
+invisible when it happens, because the action is never explored rather than explored and rejected.
+
+Ranking scores inside a `Parallel.For` into a pre-allocated array and sorts afterwards, ties broken
+by original index. Same rule as `RolloutBudgetExhausted`: never let thread completion order reach a
+decision.
 
 **Move time budget**: the optional `moveTimeBudget` constructor param caps wall-clock time per `SelectAction`/`ResolveChoice`. When set, the search degrades gracefully once spent — level 0 scores remaining roots with the cheap immediate evaluator instead of a rollout, beam expansion stops, and the best node found so far is returned. **Default is null (unbounded)**, which preserves deterministic simulator behavior; only the interactive Godot path passes a finite budget (the simulator relies on `GameRunner`'s outer limits instead). `ResolveAllChoices` also carries a generous iteration cap (`MaxChoiceResolutionIterations`) so a non-advancing choice can't spin the calling thread forever.
 
@@ -378,6 +456,87 @@ Two paths if it is worth revisiting, in order of cost:
 2. **More data** — noise falls as 1/√n, so meaningfully beating it needs ~5x again (≈3000 drafts, ~75 min). Training runs merge, so this is additive.
 
 Do not raise the weight on intuition. The sweep is cheap and has disproved the intuition twice.
+
+### Draw diagnostics
+
+`DraftTrainer.Run` prints a `DrawDiagnostics` report after every training run, because "N draws"
+on its own is unreadable — it does not say whether the rules produced a draw or the harness ran
+out of patience, and those need opposite fixes.
+
+The report answers four questions, in this order:
+
+| Section | Answers |
+|---|---|
+| By end reason | Real draw or harness limit. Only `Damage`/`LibraryEmpty` are real. Also prints median turn and median duration per reason — a `TimeLimitReached` at turn 10 is a slow AI, at turn 95 it is a loop. |
+| By position in the run | Flat means the card pool; rising means the machine degrading (GC, throttling, another process on the cores). This is what separates a game bug from a measurement artifact, and it has already killed one wrong hypothesis. |
+| Final board medians | Draw games vs decided games: life, lowest library, hand, permanent count, and whether anyone decked. |
+| Card lift tables | P(draw \| card drawn) and P(draw \| permanent on board at end), each against the run's base draw rate, minimum 30 games. |
+
+`BoardSnapshot` is captured for **every** game, not just draws. A board reading at a draw means
+nothing on its own — 11 permanents is only interesting next to the 7 that decided games end on.
+It is deliberately not a `GameStateSnapshot`: that carries the whole event log and is written one
+file per game, which cannot be held for 28 000 games.
+
+**The most useful single column is median turn at a time-limit draw.** Measured on CSC it is
+turn 9–11 after 20 seconds, with roughly double the permanents of a decided game — so the draws
+are the AI thinking itself to a standstill on a wide board, not games stalling out. `GameRunner`
+checks its clock *between* actions, so one slow `SelectAction` is unbounded; the simulator passes
+no `moveTimeBudget`.
+
+Read `Prior` in a saved model as a draw check before shipping it: two perspectives per game and
+one winner means a draw-free run gives exactly 0.50, so `Prior = 0.34` is a run that drew 32% of
+its games.
+
+#### Measured, and fixed: CSC's draws were the machine, not the cards
+
+Before the fix, the draw rate was a function of how many games were in the parallel batch — same
+code, same set, same decks, same seeds:
+
+| Games in the batch | Draws | Median game |
+|---|---|---|
+| 1 120 | 0.4% | — |
+| 8 400 | 2.8% | ~2 800 ms |
+| 28 000 | **15.2%** | **7 560 ms** |
+| 28 000, event logs dropped | 6.0% | ~4 400 ms |
+| 1 120, wall-clock removed | **0%** | — |
+| 28 000, wall-clock removed | **0.1%** | ~5 400 ms, flat across quarters |
+
+Over 28 000 games, **4 263 of 4 264 draws were `TimeLimitReached` and exactly one was real**.
+After the fix the same 28 000 games give 16 draws — 5 genuine turn-limit decking games kept as
+data, 11 broken games excluded — and a base win rate of exactly 50.0% against 33.97% before.
+Run time cost: +25%, which is the time those games were previously being cut short of.
+
+The chain was: a game ended on wall-clock → wall-clock is dominated by AI search, which is slow
+on wide boards → anything slowing the process pushed borderline games over the line → a bigger
+batch retained more memory, so every game got slower. `DraftTrainer` held every `GameResult`
+including its `AllEvents` log, which it never reads; dropping that alone moved 2 578 outcomes,
+which is the proof that the outcomes were never about the cards.
+
+Three changes, all of them worth understanding before touching this again:
+
+1. **`GameRunner` no longer ends a game on the clock** (300 s safety net only). Termination is
+   turn- and action-bounded, which is deterministic.
+2. **`MultiTurnBeamSearchAiStrategy` bounds its own cost deterministically** via
+   `DefaultRolloutBudget`, replacing wall-clock as the thing that stops a runaway search.
+3. **`DraftTrainer` excludes machine-decided games** (`TimeLimitReached`, `UnhandledException`)
+   from the counts instead of folding them in as draws, and prints how many it dropped.
+
+**Never read a training run's draw count as a signal about the cards without checking the end
+reason first.** For a year's worth of runs it measured the machine.
+
+`MtgSimulator.Tests/MachineIndependenceTests.cs` pins this: the same game is played twice, the
+second time against CPU contention, and the results must be identical.
+
+**The load must come from dedicated below-normal-priority threads, never from `Task.Run`.**
+Written with Tasks the test failed every time, and the fix was not at fault: the beam search
+parallelises over the thread pool, so busy Tasks starve it of workers instead of merely slowing
+it, and one move stretched past the 300-second safety net — the game ended at turn 1 having taken
+a single action. It also made the test take 7 minutes instead of 3 seconds. Contend for cores, do
+not take the workers.
+
+A failure now means a wall-clock reading has crept back into a decision. The one honest exception
+is the safety net firing, which the test asserts against separately and reports as proving
+nothing either way.
 
 Phases in `DraftTrainer.Run` are ordered deliberately: drafts run **sequentially** (cheap, must stay deterministic), all games across all drafts run in **one parallel batch** into a pre-allocated array, then results are folded in **sequentially** so the output never depends on thread scheduling.
 

@@ -487,25 +487,32 @@ public record CheckStateBasedEffectsAction : GameAction
 	{
 		ImmutableList<GameEvent> events = [];
 
-		var p1ShouldLose = !player1.HasLost && player1.Life <= 0;
-		var p2ShouldLose = !player2.HasLost && player2.Life <= 0;
+		// Two ways to lose, checked together so a simultaneous loss is still a draw. The reason
+		// string is not decoration: GameRunner reads it for "library" to report
+		// GameEndReason.LibraryEmpty, which was unreachable until decking could actually kill.
+		var deckingKills = state.TryGetGame()?.DeckingLossEnabled ?? true;
+		bool Decked(MtgPlayer p) => deckingKills && p.AttemptedDrawFromEmptyLibrary;
+
+		var p1ShouldLose = !player1.HasLost && (player1.Life <= 0 || Decked(player1));
+		var p2ShouldLose = !player2.HasLost && (player2.Life <= 0 || Decked(player2));
+
+		static string LossReason(MtgPlayer p) =>
+			p.Life <= 0 ? "life total reached zero" : "drew from an empty library";
 
 		if (p1ShouldLose)
 		{
+			var reason = LossReason(player1);
 			player1 = player1 with { HasLost = true };
 			state = state.UpdateObject(Player1Id, player1);
-			events = events.Add(
-				new PlayerLostEvent { PlayerId = Player1Id, Reason = "life total reached zero" }
-			);
+			events = events.Add(new PlayerLostEvent { PlayerId = Player1Id, Reason = reason });
 		}
 
 		if (p2ShouldLose)
 		{
+			var reason = LossReason(player2);
 			player2 = player2 with { HasLost = true };
 			state = state.UpdateObject(Player2Id, player2);
-			events = events.Add(
-				new PlayerLostEvent { PlayerId = Player2Id, Reason = "life total reached zero" }
-			);
+			events = events.Add(new PlayerLostEvent { PlayerId = Player2Id, Reason = reason });
 		}
 
 		if (p1ShouldLose || p2ShouldLose)

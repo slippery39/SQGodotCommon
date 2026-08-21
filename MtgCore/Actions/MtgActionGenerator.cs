@@ -137,10 +137,32 @@ public static class MtgActionGenerator
 		// is offered exactly like a hand card. IsInCastableZone (checked by all three cast
 		// actions) is what actually allows the resulting action to validate; this is only the
 		// generator's half of the same rule.
+		//
+		// Driven by MtgGame.PlayableExiledIds rather than by scanning the exile zone. This method
+		// runs on every legal-action generation — thousands of times per AI move once rollouts are
+		// counted — and exile only ever grows, because every played land is moved there. Scanning
+		// it meant the cost of impulse draw was paid by every deck, on every decision, rising with
+		// the turn number, even in games where no such card existed.
+		//
+		// The ids are a hint: re-check existence, the marker, and the zone, so a stale entry is
+		// skipped rather than conjuring an action for a card that has moved on. Ordered by id so
+		// action order stays deterministic — ImmutableHashSet enumeration order is not a contract.
+		var game = state.TryGetGame();
+		if (game == null || game.PlayableExiledIds.IsEmpty)
+			return;
+
 		var exileId = state.GetPlayerZoneId(playerId, ZoneType.Exile);
-		foreach (var card in state.GetCardsInZone(exileId))
-			if (card.HasComponent<ExiledPlayableComponent>())
-				AddCastableCardAction(state, playerId, card, actions);
+		foreach (var cardId in game.PlayableExiledIds.OrderBy(id => id))
+		{
+			if (!state.HasObject(cardId) || state.GetObject(cardId) is not Card card)
+				continue;
+			if (!card.HasComponent<ExiledPlayableComponent>())
+				continue;
+			if (state.GetParent(cardId) != exileId)
+				continue;
+
+			AddCastableCardAction(state, playerId, card, actions);
+		}
 	}
 
 	private static void AddCastableCardAction(
@@ -500,14 +522,63 @@ public static class MtgActionGenerator
 	)
 	{
 		// Planeswalkers are legal attack targets alongside creatures and the player itself.
-		var attackTargets = state
+		var targetCards = state
 			.GetCardsInZone(opponentBattlefieldId)
 			.Where(c =>
 				c.HasComponent<CreatureComponent>() || c.HasComponent<PlaneswalkerComponent>()
 			)
-			.Select(c => c.Id)
-			.Prepend(opponentId)
 			.ToList();
+
+		// Collapse interchangeable DEFENDERS, the mirror of the attacker dedup below. Attacking
+		// one of twenty identical Goblin tokens is the same decision twenty times over, and the
+		// two dimensions multiply: without this, deduplicating attackers alone still leaves
+		// (signatures x every individual token) actions, each of which the AI pays a full
+		// rollout to score.
+		//
+		// Safe because identical signatures also share legality: what makes an attack legal is
+		// reach (Flying/Reach, both in the signature) and the Taunt constraint, which is a
+		// question about the whole board and so answers the same for either twin. Same caveat as
+		// AttackerSignature — two same-named creatures differing only by an Aura that grants a
+		// triggered ability would collapse wrongly; no card does that today.
+		if (deduplicateAttackers && targetCards.Count > 1)
+		{
+			var seenDefenders = new HashSet<DefenderSignature>();
+			targetCards = targetCards.Where(c => seenDefenders.Add(SignatureOf(c))).ToList();
+		}
+
+		// Everything about a defender that changes what attacking it does: how much damage
+		// comes back, whether it survives, whether it can legally be attacked, and what its
+		// controller gains. A planeswalker contributes its loyalty instead of combat stats.
+		// Local rather than a private method because DefenderSignature is file-local.
+		DefenderSignature SignatureOf(Card card)
+		{
+			var loyalty = card.GetComponent<PlaneswalkerComponent>()?.Loyalty ?? 0;
+			var creature = card.GetComponent<CreatureComponent>();
+			if (creature == null)
+				return new DefenderSignature(card.Name, Loyalty: loyalty);
+
+			// GetEffectiveStats already folds TauntUntilAttacked's WasAttackedThisTurn into
+			// HasTaunt, so the conditional-taunt case needs no separate field here.
+			var stats = state.GetEffectiveStats(card.Id);
+			return new DefenderSignature(
+				card.Name,
+				stats.Power,
+				stats.Toughness,
+				creature.Damage,
+				stats.HasFirstStrike,
+				stats.HasDoubleStrike,
+				stats.HasDeathtouch,
+				stats.HasIndestructible,
+				stats.HasLifelink,
+				stats.HasTaunt,
+				stats.HasFlying,
+				stats.HasReach,
+				card.HasComponent<PreventsCombatDamageComponent>(),
+				loyalty
+			);
+		}
+
+		var attackTargets = targetCards.Select(c => c.Id).Prepend(opponentId).ToList();
 
 		// Deduplicate by (target, attacker signature): two creatures with the same name,
 		// effective P/T, current damage, and combat-relevant abilities produce identical
@@ -703,6 +774,25 @@ public static class MtgActionGenerator
 /// that fight differently — a first striker deduped against a vanilla creature of the same size
 /// would hide the trade that only one of them wins.
 /// </summary>
+/// The defender-side counterpart to AttackerSignature. Defaults let a planeswalker be described
+/// by name and loyalty alone.
+file record struct DefenderSignature(
+	string Name,
+	int Power = 0,
+	int Toughness = 0,
+	int Damage = 0,
+	bool HasFirstStrike = false,
+	bool HasDoubleStrike = false,
+	bool HasDeathtouch = false,
+	bool HasIndestructible = false,
+	bool HasLifelink = false,
+	bool HasTaunt = false,
+	bool HasFlying = false,
+	bool HasReach = false,
+	bool PreventsCombatDamage = false,
+	int Loyalty = 0
+);
+
 file record struct AttackerSignature(
 	string Name,
 	int Power,

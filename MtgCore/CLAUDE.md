@@ -369,6 +369,29 @@ equivalent *effect* would.
 
 Hearthstone-style (turn-based, no blockers). The active player attacks; the opponent does not assign blockers.
 
+**Attack deduplication is two-dimensional, and doing only one half leaves most of the blow-up in
+place.** Attack actions are the cross product of attackers x targets, so `AddAttackActions`
+collapses both: `AttackerSignature` for who swings, `DefenderSignature` for what is swung at.
+Attacking one of twenty identical Goblin tokens is the same decision twenty times over, exactly as
+swinging with one of twenty is. Measured over 75 000 AI decisions on CSC, adding the defender half
+cut the worst-case legal-action count from **74 to 47** and p99.9 from 28 to 24, left the median
+untouched at 4, and made runs **13% faster** at both 1 120 and 28 000 games — the signature work
+costs less than the `TryAddAction` validations it avoids.
+
+**Dedup alone did not fix the pathological tail** — games blowing past the safety net stayed at
+11 → 12 per 28 000. The branching cap in `MtgSimulator/MultiTurnBeamSearchAiStrategy.cs` did,
+taking it to **4**. The two are complements, not alternatives: dedup removes actions that are
+provably equivalent, the cap declines to explore actions that are merely *similar*, and on these
+boards most of the cost was in the second kind.
+
+`DefenderSignature` covers what changes the outcome of attacking a permanent: name, effective P/T,
+damage, first/double strike, deathtouch, indestructible, lifelink, taunt, flying, reach,
+`PreventsCombatDamage`, and loyalty for a planeswalker. It is safe against legality because the two
+things that gate an attack are reach (in the signature) and the Taunt constraint (a question about
+the whole board, so it answers the same for either twin). Both signatures share one caveat: two
+same-named creatures differing only by an Aura that grants a *triggered* ability would collapse
+wrongly. No card does that today.
+
 **Attacker deduplication**: `AddAttackActions` generates only one representative attack action per (target, `AttackerSignature`) pair. **This is an AI search optimisation and must be off for a human** — it suppresses the duplicate's actions entirely, so a player holding two copies of the same creature finds the second one unclickable. `GetLegalActions` takes `deduplicateAttackers` (default true) and `MtgGameManager` passes false for the human player. `AttackerSignature` captures the fields that determine combat outcome: `Name`, effective `Power`/`Toughness` (from `GetEffectiveStats`), current `Damage`, `HasFlying`, `HasTrample`, `HasDoubleStrike`, `HasLifelink`. Two creatures with identical signatures attacking the same target produce strategically equivalent game states, so only one is offered to the AI. This prevents exponential action-count growth when many identical tokens (e.g. Goblin tokens from Krenko, Mob Boss) are on the battlefield.
 
 - `HasSummoningSickness` — cannot attack the turn they enter the battlefield. Cleared by `HasHaste` on `CreatureComponent` — haste creatures enter with `HasSummoningSickness = false`.
@@ -806,6 +829,24 @@ needs blocking; "can't be enchanted or equipped" waits for a card that needs it.
 `GameState.IsProtectedFrom(cardId, sourceCardId)` is the single entry point so targeting and damage
 cannot disagree about what protection means.
 
+## Targeting specs must never index the object map
+
+Every `TargetSpecification.IsSatisfiedBy` looks its candidate up through
+**`TargetingContext.Find(candidateId)`**, which returns null for an id that is not in the game.
+`GameState.GetObject` is a raw dictionary indexer and throws.
+
+Specs are asked about ids that may be stale — a stored `TargetIds` entry naming a creature that has
+since died, or an action re-validated against an earlier state (`CommitChain` replays a path, and
+choice resolutions from `BranchOnChoice` are not in `ActionPath`, so the replay does not reproduce
+the same states). The correct answer for a missing id is "not a legal target", which is exactly
+what a null produces flowing into the `is Card card` patterns these specs are written with.
+
+This was a live crash, not a hypothetical: `KeyNotFoundException` out of `IsCardTypeSpecification`
+via `CastSpellAction.ValidateTargets`, which killed a training game outright and surfaced only as
+an `UnhandledException` result. **All 20 call sites across the five `Targeting/` files shared the
+bug** — it was the targeting layer as a whole, not one spec. Every other layer already guarded with
+`HasObject`, which appears at 20+ action sites.
+
 ## Events That Must Reach PendingGameEvents
 
 `ActionResult.Events` is the caller-visible log. `GameState.PendingGameEvents` is the **trigger
@@ -823,6 +864,32 @@ and does NOT stage it, because dealing an opening hand is not drawing.
 
 A grep that finds the next instance: an action file containing `new …Event` but no mention of
 `PendingGameEvents` is either inert or deliberate, and nothing else.
+
+**Fifth instance, now fixed: `LibraryEmptyEvent`.** `DrawCardsAction` added it to the returned list
+only and nothing acted on it, so drawing from an empty library was a complete no-op and a decked
+game ran to the turn limit — two flagged games sat at **turn 101 with both libraries empty and both
+players alive**, having fired 332 and 148 of these events.
+
+## Decking
+
+Drawing from an empty library loses the game. `DrawCardsAction` sets
+`MtgPlayer.AttemptedDrawFromEmptyLibrary`; `CheckStateBasedEffectsAction` turns it into the loss
+with reason `"drew from an empty library"`, which is what makes `GameEndReason.LibraryEmpty`
+reachable (`GameRunner` matches on "library").
+
+Three deliberate choices:
+- **The draw does not set `HasLost` itself.** The state-based check owns `HasLost`,
+  `PlayerLostEvent` and winner determination, so there is exactly one way to lose — same rule that
+  makes `SetLifeTotalAction` the way to express "you lose the game".
+- **It is a flag on the attempt, not a test of library size.** You have not lost by having zero
+  cards; you lose when something asks you to draw. This is also why **milling out is not a loss** —
+  only `DrawCardsAction` sets the flag, though `MillAction` and `ExileTopCardPlayableAction` also
+  emit `LibraryEmptyEvent`.
+- **`MtgGame.DeckingLossEnabled` turns it off for tests.** Hand-built test states leave libraries
+  empty, and with decking live that alone decides the game — see that field's comment.
+
+Measured over 28 000 games: `TurnLimitReached` went from 2–6 per run to **zero**, and the first
+genuine gameplay draw in the project appeared (simultaneous death at turn 13).
 
 A second, quieter version of the same failure: an event with no `EventTypeNames` constant, or no
 entry in `EventTriggerCondition.ExtractSubjectId`, cannot be filtered even though it fires.

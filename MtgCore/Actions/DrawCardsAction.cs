@@ -37,7 +37,28 @@ public record DrawCardsAction : EffectAction
 
 				if (topCardId == 0)
 				{
-					events = events.Add(new LibraryEmptyEvent { PlayerId = playerId });
+					// Drawing from an empty library loses the game. The flag is what
+					// CheckStateBasedEffectsAction reads; setting HasLost here would be the
+					// second way to lose and the two would drift.
+					//
+					// Before this, the event below went to the caller-visible log ONLY and
+					// nothing acted on it, so decking was a silent no-op — flagged training
+					// games sat at turn 101 with both libraries empty and both players alive,
+					// having fired 332 of these events. It also left GameEndReason.LibraryEmpty
+					// unreachable. Fifth instance of the log-vs-trigger-feed bug; see CLAUDE.md.
+					var drawingPlayer = state.GetPlayer(playerId);
+					if (!drawingPlayer.AttemptedDrawFromEmptyLibrary)
+						state = state.UpdateObject(
+							playerId,
+							drawingPlayer with
+							{
+								AttemptedDrawFromEmptyLibrary = true,
+							}
+						);
+
+					var empty = new LibraryEmptyEvent { PlayerId = playerId };
+					events = events.Add(empty);
+					state = state with { PendingGameEvents = state.PendingGameEvents.Add(empty) };
 					break;
 				}
 

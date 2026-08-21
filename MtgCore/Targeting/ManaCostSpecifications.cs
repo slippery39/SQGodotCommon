@@ -14,7 +14,7 @@ public record HasManaCostAtMostSpecification : TargetSpecification
 	public int Maximum { get; init; } = 3;
 
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
-		context.GameState.GetObject(candidateId) is Card card && card.ManaCost <= Maximum;
+		context.Find(candidateId) is Card card && card.ManaCost <= Maximum;
 }
 
 /// <summary>
@@ -30,7 +30,7 @@ public record HasPermanentPowerBonusSpecification : TargetSpecification
 {
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context)
 	{
-		if (context.GameState.GetObject(candidateId) is not Card card)
+		if (context.Find(candidateId) is not Card card)
 			return false;
 
 		foreach (var modifier in card.GetComponents<PowerToughnessModifier>())
@@ -61,7 +61,7 @@ public record PowerAtLeastSpecification : TargetSpecification
 	public int Minimum { get; init; } = 4;
 
 	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
-		context.GameState.GetObject(candidateId) is Card card
+		context.Find(candidateId) is Card card
 		&& card.HasComponent<CreatureComponent>()
 		&& context.GameState.GetEffectivePower(candidateId) >= Minimum;
 }

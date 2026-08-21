@@ -51,15 +51,51 @@ past the time limit.
 
 **Why it's fine now:** Excluded from the random card pool until resolved.
 
-**Proposed fix:** Action-level deduplication inside the simulator AI (not in `MtgActionGenerator`,
-which stays authoritative). After `GetLegalActions` returns, collapse actions that operate on cards
-sharing an identical fingerprint: `Name + ManaCost + Components + current Damage + active modifiers`.
-Two cards with the same fingerprint are interchangeable for search purposes — only evaluate one
-representative per group. Cards that diverge (one takes damage, one gets a buff) will naturally
-have different fingerprints and stay separate.
+**Confirmed in the Core Set Cube, which does not exclude them.** With wall-clock termination gone,
+11 games in 28 000 still needed more than 300 seconds to reach turn 12 and were dropped as broken
+(0.04%). `DrawDiagnostics` named the cards without being asked: the permanents most over-
+represented on the board when a game fails to finish are Generator Servant, Krenko Mob Boss,
+Siege-Gang Commander and Goblin Piledriver, and those games end with a median of **24 permanents
+against 7 for a decided game**.
 
-**Edge cases to handle:** Partial activation (`HasActivated`), `UntilEndOfTurn` modifiers,
-summoning sickness flag — all must be part of the fingerprint.
+**Half-fixed since.** The fingerprint deduplication this entry proposed already existed for
+*attackers* (`AttackerSignature`) and has now been mirrored for *defenders*
+(`DefenderSignature`) — see MtgCore/CLAUDE.md. Attack actions are a cross product, so collapsing
+one dimension left the other multiplying. Worst-case legal actions fell 74 → 47 with the median
+unchanged, and runs got 13% faster.
+
+**Resolved, but not by deduplication.** The defender-side dedup made runs 13% faster and moved the
+tail not at all (11 → 12 games per 28 000). What closed it was declining to *search* the
+near-identical actions rather than proving them equivalent: `DefaultMaxBranching` in
+`MultiTurnBeamSearchAiStrategy`. Over 28 000 games, cap versus no cap:
+
+| | No cap | Cap 16 |
+|---|---|---|
+| Run time | 2 318s | 1 604s |
+| Median game | ~8 000 ms | ~1 700 ms |
+| Games over the 300 s net | 12 | **4** |
+
+**The lesson worth keeping: dedup and capping are complements, and the cheap one is the cap.**
+Dedup requires proving two actions produce identical outcomes, which needs a signature per action
+type and is wrong the moment a card breaks the assumption. The cap needs no such proof — it ranks
+cheaply and explores the best few, and because `SelectAction` re-runs after every action, a pruned
+action returns from the next state rather than being lost. Measured cost in play strength: none
+(48.2% over 224 games against an uncapped opponent, 1 SE 3.3pp).
+
+Extending dedup to abilities and targeted spells is therefore **no longer worth doing on these
+grounds**. It stays unbuilt.
+
+**What remains:** 4 games per 28 000 still exceed 300 seconds, and their character has changed —
+median turn **3**, not 11–17, with a median of 3 permanents. These are no longer wide-board games,
+so a fifth signature type would not touch them. They are excluded from training data and cost
+nothing but wall-clock. Diagnose one from a `flagged_games/` snapshot before assuming a cause.
+
+**The original proposed fix, kept for the record and superseded.** It was action-level fingerprint
+deduplication in the simulator AI (`Name + ManaCost + Components + Damage + active modifiers`,
+with `HasActivated`, `UntilEndOfTurn` modifiers and summoning sickness in the fingerprint). Half of
+it was built — in `MtgActionGenerator` rather than the AI, since that is where attack actions are
+enumerated — and the branching cap then closed the problem it was aimed at. Do not build the other
+half without a measurement showing it is needed; see the paragraphs above.
 
 ---
 
@@ -397,3 +433,202 @@ real ids. `SpellCardBuilder.WithModes` gained the matching overload.
 `TargetContextKey`. It will build, cast, resolve and do nothing.
 
 ---
+
+## Wall-clock decided game outcomes, and the model wore the results
+
+**Note, not a concern — fixed.** `GameRunner` used to end a game as a draw at 20 000 ms of
+wall-clock. That made a game's *result* a function of machine speed, and the consequence was not
+subtle: over 28 000 games, 4 263 of 4 264 draws were `TimeLimitReached` and exactly one was a
+real draw. The draw rate scaled with batch size (0.4% at 1 120 games, 2.8% at 8 400, 15.2% at
+28 000) because a larger batch retains more finished games, which slows every game down.
+
+Dropping the retained event logs — a change that cannot touch gameplay — moved 2 578 outcomes.
+That is the whole argument: if holding memory changes who wins, the outcome was never about the
+cards.
+
+Fixed by removing wall-clock from the termination decision (turn and action limits already bound
+a game deterministically), bounding AI cost with a rollout budget instead of a clock, and
+excluding machine-decided games from training data. A 1 120-game run went from 0.4% draws to 0%,
+base win rate exactly 50.0%.
+
+**Watch for:** any new `Stopwatch`/`DateTime` reading that feeds a decision rather than a report.
+The safety net at 300 s is the only wall-clock left in the game loop, and a game it ends is
+excluded from training rather than scored. `MachineIndependenceTests` pins this under CPU load.
+
+## Two runs, one seed, different results — determinism is not fully held
+
+**Parked deliberately. Investigate as its own piece of work; it is not a side-effect of anything
+above.**
+
+Two 28 000-game training runs with the **same seed and the same gameplay code** produced different
+outcomes: 10 draws vs 8, `TurnLimitReached` 6 vs 2, and an `UnhandledException` game in one run and
+none in the other. Only the flagged-game snapshot saving was added between them, which touches no
+game state.
+
+The 300-second safety net is wall-clock and is a known, accepted source of variance for the handful
+of games sitting near it — a game cut at 300s in one run may continue in another and end
+differently. **That explains some of it and not the crash**, which happened 148 ms into its game.
+A 148 ms crash is nowhere near any clock and should reproduce exactly.
+
+Why it matters: the whole draw investigation concluded that a game's result must depend only on the
+cards and the seed. If that is still not true, the training data carries noise nobody can see, and
+every measured comparison in `MtgSimulator/CLAUDE.md` has an unquantified error bar.
+
+Candidates not yet ruled out:
+- Something in the engine reading ambient state (`Random.Shared`, a dictionary or set iteration
+  order, `DateTime`) on a path only reached occasionally.
+- A `Parallel.For` body in the AI whose result depends on completion order despite writing into a
+  pre-allocated array.
+- The safety net having second-order effects — a game cut early changes nothing for other games,
+  but confirm rather than assume.
+
+First step is cheap and does not need a full run: play one game twice in-process and diff the event
+logs, then bisect. `MachineIndependenceTests` already has the harness shape for it.
+
+## Drawing from an empty library does nothing at all
+
+Confirmed from flagged-game snapshots: both `TurnLimitReached` games reached **turn 101 with both
+libraries at 0 and both players alive** (life 9/8 and 11/10), having fired **332 and 148**
+`LibraryEmptyEvent`s and zero `PlayerLostEvent`s. The games could not end.
+
+`DrawCardsAction` adds `LibraryEmptyEvent` to the returned event list only — not to
+`PendingGameEvents` — and nothing anywhere acts on it. The engine's only loss condition is
+`"life total reached zero"` (`CheckStateBasedEffectsAction`). This is the **fifth** instance of the
+log-versus-trigger-feed bug catalogued in `MtgCore/CLAUDE.md`, and it sits three lines above the
+comment describing the fourth.
+
+Consequences beyond the stalled games: **`GameEndReason.LibraryEmpty` is unreachable**.
+`GameRunner` derives it from a `PlayerLostEvent` whose reason contains "library", which is never
+constructed — so `SimulatorRunner`'s "library wins" count is structurally always zero, and
+`DraftRunner` carries a comment telling you how to interpret that number.
+
+**Fixed — decking now loses the game.** See "Decking" in `MtgCore/CLAUDE.md` for the shape.
+Measured over 28 000 games: `TurnLimitReached` fell from 2–6 per run to **zero**, total draws from
+8–10 to 5, and the project's **first genuine gameplay draw** appeared (simultaneous death at turn
+13) — with decked games ending properly, the only draws left are ones that mean something.
+
+The format consequences are now live and were the reason to think twice: mill is a win condition,
+every long game has a clock, and card values shift enough that **CSC wants a retrain** before the
+model is trusted again.
+
+## Four games per 28 000 hang on an empty board — a choice that will not advance
+
+**Open. The last known "dropped game" cause, and the smallest.**
+
+After decking, dedup, the branching cap and the choice budget, 4 games per 28 000 still exceed the
+300-second safety net. Their signature is now unambiguous and rules out everything already fixed:
+
+| | Value |
+|---|---|
+| Turn | **2** |
+| Both battlefields | **empty** |
+| Actions taken in the whole game | 5–7 |
+| Wall-clock | 320+ seconds |
+| Stack at termination | empty |
+| Last logged event | the turn-start draw |
+
+Five minutes to choose a turn-2 play with nothing in play is not board complexity, not attack
+combinatorics and not decking. The flagged indices are consecutive pairs (0015/0016, 0655/0656),
+which in the schedule means **two deck-pairs each played twice** with the seats swapped — so it is
+one interaction per pool and it reproduces.
+
+**Leading candidate: `MultiTurnBeamSearchAiStrategy.ResolveAllChoices` spinning its safety cap.**
+It loops up to `MaxChoiceResolutionIterations` (1000) while `IsWaitingForChoice`, and that cap
+exists precisely because a choice can fail to clear its flag. It is called several times per
+rollout, and a move runs tens of rollouts, so a choice that never advances costs
+1000 x calls x rollouts of pure spin with no action ever recorded — which matches "5 actions, 5
+minutes" exactly. Note this is a **different** path from `ResolveChoice`'s option enumeration,
+which is now bounded by the rollout budget; `ResolveAllChoices` is the greedy in-rollout resolver
+and is not budget-aware.
+
+The real-game loop has no equivalent cap at all: `GameRunner.RunTurn` re-enters `ProcessChoice`
+while `IsWaitingForChoice` with no iteration limit and without incrementing `TotalActions`.
+
+Next step, cheap and deterministic: the runs reproduce, so re-run seed `deckcheck` (1000 drafts,
+8 seats, CSC, Curve/Random) and instrument `ResolveAllChoices` to log the choice prompt when it
+exceeds a few hundred iterations. The hands in the snapshots narrow the suspects — Fortify (modal),
+Sarkhan Fireblood, Rain of Revelation and Send to Sleep all appear.
+
+### Reproduced: the position, and what is not yet known
+
+A 40-draft run with seed `deckcheck` replays the flagged games exactly — draft seeds are
+`seed + d*1000` and game seeds `seed + 1_000_000 + index*5`, both independent of how many drafts
+the run does, so game 15 of a 40-draft run **is** game 15 of a 28 000-game run. It takes ~64s.
+
+Instrumented, one move took **30 seconds** with an empty board and five cards in hand:
+
+```
+hand: Chandra, Heart of Fire | Vampire Outcasts | Talrand's Invocation | Plains | Path of Bravery
+board: (empty)
+legal: CastCreature, CastSpell, PlayLand, CastPermanent, EndTurn
+```
+
+**The same move takes 30s alone and 300s+ inside a 28 000-game batch.** The hang is load-amplified,
+which is why it only trips the safety net at scale — and why the 40-draft repro reports zero
+dropped games while containing the identical position.
+
+**No single card is confirmed.** Two candidates, with honestly unequal evidence:
+
+- **Chandra, Heart of Fire** — her `+1` is `WithImpulseDraw()` twice. Every impulse-drawn card is
+  offered as a castable action *and* `MtgActionGenerator.AddHandActions` scans the whole exile zone
+  on every `GetLegalActions` call, so the action space grows each simulated turn of a rollout. She
+  is in this hand and in flagged game 0015 of the full run.
+- **Path of Bravery** — tops the "cards drawn in drawing games" table in *every* run, but at a 0.1%
+  base rate that lift is one or two games, i.e. noise; its 22.8% figure dates from the wide-board
+  era. Mechanically its `OnAnyCreatureAttacks` trigger fires on the **opponent's** attacks too, and
+  `SimulateOpponentTurn` loops attacks until none remain, so each simulated attack costs a trigger
+  plus a full state-based re-check.
+
+**Settle it by bisection, not by argument.** The position reproduces in ~64s, so replay it with one
+card removed at a time. Resist concluding from the lift tables alone — at this base rate they no
+longer separate signal from noise, and that is exactly the trap this investigation has already
+fallen into once.
+
+### Tried and did not fix it: indexing the impulse-draw scan
+
+`MtgActionGenerator.AddHandActions` scanned the **entire exile zone** on every legal-action
+generation, and exile only grows — every played land is moved there — so the cost of impulse draw
+was paid by every deck on every decision, rising with the turn number. Replaced with
+`MtgGame.PlayableExiledIds` (the `StaticSourceIds` pattern; a hint, re-verified on read).
+
+**Correct, kept, and not the cause.** Measured on the 40-draft repro: 64.1s → 67.9s (noise), and
+the slowest single move went 30s → 17.5s with **5 moves still over 5 seconds**. The two runs used
+different instrumentation so even that is not a clean comparison — the honest reading is that the
+scan was not where the time went.
+
+### Profiled — and DEFERRED here
+
+The three phases were finally measured instead of guessed at, over 1 120 games:
+
+| Phase | Time | Share |
+|---|---|---|
+| `ExpandNode` | 1 234 219 ms | **72%** |
+| Level 0 | 471 330 ms | 27% |
+| Choice resolution | 16 109 ms | **0.9%** |
+
+(Summed per game across a parallel batch, so the absolute numbers exceed wall-clock; only the
+ratios mean anything.) Rollouts were 672 649 at **18 executes each** — individually cheap, so the
+cost is the *number* of rollouts, not their price.
+
+**This retired the choice-resolution theory outright.** Two entries above, `ResolveAllChoices`
+spinning its 1000-iteration cap was called the leading candidate on the strength of "5 actions, 5
+minutes". It is 0.9% of the time. The reasoning was plausible and wrong, which is the whole reason
+the profile had to come first.
+
+It did produce a real fix — `DefaultExpandBranching`, worth **−21% run time at 28 000 games** with
+no strength cost (see MtgSimulator/CLAUDE.md) — but **it did not fix the hang**: broken games went
+4 → 5 (i.e. unchanged) and still sit at median turn 3 with ~305 seconds each.
+
+**Deferred deliberately at 5 games per 28 000 (0.018%), excluded from training and costing only
+wall-clock.** What the next session starts with, so none of this is re-derived:
+
+- The position reproduces in **~64 seconds**: 40 drafts, 8 seats, CSC, Curve/Random, seed
+  `deckcheck`. Games 15, 16, 655 and 656 are the same games as in a 28 000-game run.
+- **Ruled out:** choice resolution (0.9%), board width (empty boards), decking, the exile scan,
+  attack combinatorics.
+- **Where to look:** `ExpandNode`, which holds 72% of search cost. The open question is why a
+  *specific* position costs 17–30s there when a typical one costs milliseconds — a per-move
+  histogram of rollout counts would show whether one move issues far more rollouts than the
+  budget should allow, which would point at the budget being checked only between levels.
+- **Do not conclude from the draw-lift tables.** At a 0.0% base rate they are noise, and they have
+  already produced one confident wrong answer (Path of Bravery) in this investigation.

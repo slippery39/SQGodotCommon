@@ -23,6 +23,9 @@ public class ChoiceLookaheadTests
 	public void Setup()
 	{
 		(_state, _ids) = MtgGameFactory.Create();
+		// Board built by hand, so both libraries are empty. Without this the decking rule
+		// decides these games: EndTurn decks the opponent and wins outright.
+		_state = _state.WithoutDeckingLoss();
 		_ai = new BeamSearchAiStrategy(_ids, rng: new Random(42));
 	}
 

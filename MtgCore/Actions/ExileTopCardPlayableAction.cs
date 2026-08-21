@@ -40,6 +40,18 @@ public record ExileTopCardPlayableAction : EffectAction
 				exiledCard.WithComponent(new ExiledPlayableComponent())
 			);
 
+			// Index it so action generation never has to scan the exile zone. See
+			// MtgGame.PlayableExiledIds.
+			var game = state.TryGetGame();
+			if (game != null)
+				state = state.UpdateObject(
+					game.Id,
+					game with
+					{
+						PlayableExiledIds = game.PlayableExiledIds.Add(topCardId),
+					}
+				);
+
 			events = events.Add(new CardExiledEvent { CardId = topCardId, PlayerId = playerId });
 		}
 

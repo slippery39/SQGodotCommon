@@ -83,14 +83,46 @@ public record EndTurnAction : GameAction
 	/// </summary>
 	private static GameState ClearExpiredImpulseDraws(GameState state, int playerId)
 	{
+		var game = state.TryGetGame();
+		if (game == null || game.PlayableExiledIds.IsEmpty)
+			return state;
+
+		// Walk the index rather than the exile zone — exile grows all game (every played land
+		// lands there), while this set holds only the handful still playable.
 		var exileId = state.GetPlayerZoneId(playerId, ZoneType.Exile);
-		foreach (var card in state.GetCardsInZone(exileId).ToList())
+		var expired = ImmutableHashSet<int>.Empty;
+
+		foreach (var cardId in game.PlayableExiledIds)
+		{
+			// HasObject first: GetObject is a raw indexer and throws, and this set is explicitly
+			// allowed to hold stale ids.
+			if (!state.HasObject(cardId) || state.GetObject(cardId) is not Card card)
+			{
+				expired = expired.Add(cardId); // gone entirely — drop the stale id
+				continue;
+			}
+			if (state.GetParent(cardId) != exileId)
+				continue; // the other player's, or no longer in exile
+
+			expired = expired.Add(cardId);
 			if (card.HasComponent<ExiledPlayableComponent>())
 				state = state.UpdateObject(
-					card.Id,
+					cardId,
 					card.WithoutComponents<ExiledPlayableComponent>()
 				);
-		return state;
+		}
+
+		if (expired.IsEmpty)
+			return state;
+
+		var current = state.TryGetGame()!;
+		return state.UpdateObject(
+			current.Id,
+			current with
+			{
+				PlayableExiledIds = current.PlayableExiledIds.Except(expired),
+			}
+		);
 	}
 
 	private static GameState ClearEndOfTurnReplacements(GameState state, int playerId)

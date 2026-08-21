@@ -15,6 +15,6 @@ public record IsSubtypeSpecification : TargetSpecification
 		if (!context.GameState.HasObject(candidateId))
 			return false;
 
-		return context.GameState.GetObject(candidateId) is Card card && card.HasSubtype(Subtype);
+		return context.Find(candidateId) is Card card && card.HasSubtype(Subtype);
 	}
 }

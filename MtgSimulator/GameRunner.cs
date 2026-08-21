@@ -12,15 +12,31 @@ namespace MtgSimulator;
 /// AI strategies are injected — swap RandomAiStrategy for DepthLimitedAiStrategy
 /// or any other IAiStrategy implementation without changing this class.
 ///
-/// Limits:
-///   - Max time:      5 000 ms wall-clock (flags as TimeLimitReached)
-///   - Max turns:     100 turns           (flags as TurnLimitReached)
-///   - Action warning: 50 actions in a single turn (logged, game continues)
-///   - Action limit:  100 actions in a single turn (flags as ActionLimitReached)
+/// Limits — all deterministic except the last, which is a safety net that should never fire:
+///   - Max turns:      100 turns                  (flags as TurnLimitReached)
+///   - Action warning: 100 actions in a single turn (logged, game continues)
+///   - Action limit:   200 actions in a single turn (flags as ActionLimitReached)
+///   - Safety timeout: 300 000 ms wall-clock       (flags as TimeLimitReached)
+///
+/// **Wall-clock time must not decide a game.** It used to: a 20-second limit ended the game as
+/// a draw, which made the result depend on how fast the machine happened to be running. That is
+/// not a hypothetical — holding more finished games in memory (a change that cannot touch
+/// gameplay) moved 2 578 outcomes in a 28 000-game training batch, because it slowed every game
+/// down enough to push borderline ones over the line. Draw rate rose with batch size: 0.4% at
+/// 1 120 games, 2.8% at 8 400, 15.2% at 28 000. Of 4 264 draws in that run, exactly one was a
+/// real draw.
+///
+/// The turn and action limits above already bound a game deterministically (100 turns x 200
+/// actions), so the clock was never load-bearing for termination — only for cost. Cost is now
+/// bounded inside the AI instead, by MultiTurnBeamSearchAiStrategy's per-move rollout budget.
+///
+/// The 300-second net remains only so a genuine engine hang cannot wedge a training run
+/// forever. A game it ends is a broken game, not a draw — see DraftTrainer, which excludes it
+/// from training data rather than recording it as one.
 /// </summary>
 public class GameRunner
 {
-	private const long MaxGameTimeMs = 20_000;
+	private const long SafetyTimeoutMs = 300_000;
 	private const int MaxTurns = 100;
 	private const int ActionWarningThreshold = 100;
 	private const int ActionLimitThreshold = 200;
@@ -107,7 +123,7 @@ public class GameRunner
 
 		while (true)
 		{
-			if (ctx.Timer.ElapsedMilliseconds > MaxGameTimeMs)
+			if (ctx.Timer.ElapsedMilliseconds > SafetyTimeoutMs)
 				return Terminate(ctx, ids, -1, GameEndReason.TimeLimitReached, game.TurnNumber);
 
 			if (ctx.State.IsWaitingForChoice)

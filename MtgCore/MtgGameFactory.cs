@@ -208,6 +208,11 @@ public static class MtgGameFactory
 	/// Both players are given a large mana pool so tests don't need to
 	/// worry about mana unless they are specifically testing mana behaviour.
 	/// Use Create() directly for mana-specific tests.
+	///
+	/// Decking is also disabled, for the same reason and with the same trade-off: a hand-built
+	/// test leaves both libraries empty, and with decking live that alone decides games — the AI
+	/// correctly plays EndTurn to deck the opponent, and correctly refuses to cast draw spells.
+	/// See MtgGame.DeckingLossEnabled. Use Create() plus a real library to test decking itself.
 	/// </summary>
 	public static (GameState State, MtgGameIds Ids) CreateForTesting()
 	{
@@ -219,7 +224,20 @@ public static class MtgGameFactory
 		state = state.UpdateObject(ids.Player1Id, p1 with { CurrentMana = 99, MaxMana = 99 });
 		state = state.UpdateObject(ids.Player2Id, p2 with { CurrentMana = 99, MaxMana = 99 });
 
-		return (state, ids);
+		return (state.WithoutDeckingLoss(), ids);
+	}
+
+	/// <summary>
+	/// Turns off the decking loss for a state built with Create(). For tests that need real
+	/// mana rules — where CreateForTesting's 99 mana would defeat the point — but still build
+	/// their board by hand and so have empty libraries.
+	/// </summary>
+	public static GameState WithoutDeckingLoss(this GameState state)
+	{
+		var game = state.TryGetGame();
+		return game == null
+			? state
+			: state.UpdateObject(game.Id, game with { DeckingLossEnabled = false });
 	}
 }
 

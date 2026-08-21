@@ -92,7 +92,9 @@ public class DraftTrainer
 
 		// --- Phase 2: games (parallel into a pre-allocated array, so order is fixed) ---
 		var results = new GameResult[schedule.Count];
+		var boards = new BoardSnapshot[schedule.Count];
 		var completed = 0;
+		var flaggedSeen = 0;
 		var gameTimer = Stopwatch.StartNew();
 		// Measured ~1.8x over sequential and flat past 4 threads — the engine's immutable
 		// collections make this memory-bound, not CPU-bound, so there is no DOP to tune.
@@ -111,14 +113,35 @@ public class DraftTrainer
 					new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: aiRng),
 					new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: aiRng)
 				);
-				var (result, _) = runner.Run(
+				var (result, finalState) = runner.Run(
 					state,
 					ids,
 					cardNames,
 					shuffleSeed: g.GameSeed + 2,
 					gameRngSeed: g.GameSeed + 3
 				);
-				results[i] = result;
+				// Snapshot a flagged game HERE, before the event log is dropped one line below.
+				// The log is the only record of how the game got into trouble, and a handful of
+				// games per run is the entire diagnostic value in a 28 000-game batch — a
+				// training run that reports "4 games broke" and keeps nothing is a dead end.
+				if (result.IsFlagged)
+				{
+					var seen = Interlocked.Increment(ref flaggedSeen);
+					FlaggedGameSaver.TrySave(i, result, finalState, seen - 1, cardNames);
+				}
+
+				// Drop the event log. The trainer reads only the outcome and the drawn-card
+				// lists, but AllEvents is by far the largest thing a GameResult carries, and
+				// the array holds one per game for the whole batch. Keeping them made a
+				// 28 000-game run's median game take 7.5s against 2.8s at 8 400 games — the
+				// same games, just slower — which timed 15% of them out into draws.
+				results[i] = result with
+				{
+					AllEvents = [],
+				};
+				// Captured for every game, not just draws: a draw board only means something
+				// next to a decided one.
+				boards[i] = DrawDiagnostics.Capture(finalState, ids);
 
 				var done = Interlocked.Increment(ref completed);
 				if (done % 200 == 0)
@@ -129,10 +152,25 @@ public class DraftTrainer
 
 		// --- Phase 3: fold in results (sequential — independent of thread order) ---
 		var accumulator = new Accumulator();
+		var excluded = 0;
 		for (var i = 0; i < schedule.Count; i++)
 		{
 			var g = schedule[i];
 			var result = results[i];
+
+			// Keep what the rules decided; drop what the machine decided. A turn- or
+			// action-limit draw is real evidence (deterministic: these two decks could not
+			// finish), but a safety timeout or a crash says nothing about the cards, and
+			// folding it in credits both decks with a loss they did not earn.
+			if (
+				result.EndReason
+				is GameEndReason.TimeLimitReached
+					or GameEndReason.UnhandledException
+			)
+			{
+				excluded++;
+				continue;
+			}
 			// The deck, not the whole pool: BuildDeck plays only the first maxSpells picks,
 			// and the padded Plains must stay out of the counts entirely.
 			accumulator.Add(
@@ -148,7 +186,13 @@ public class DraftTrainer
 		}
 
 		var data = accumulator.ToData();
-		PrintSummary(data, results, gameTimer.ElapsedMilliseconds);
+		PrintSummary(data, results, gameTimer.ElapsedMilliseconds, excluded);
+		DrawDiagnostics.Print(results, boards);
+		if (flaggedSeen > 0)
+			Console.WriteLine(
+				$"  Snapshots for {Math.Min(flaggedSeen, FlaggedGameSaver.MaxSaves)} flagged "
+					+ $"game(s) written to flagged_games/ (relative to the shell's working directory)."
+			);
 		return data;
 	}
 
@@ -216,7 +260,8 @@ public class DraftTrainer
 	private static void PrintSummary(
 		DraftTrainingData data,
 		IReadOnlyList<GameResult> results,
-		long elapsedMs
+		long elapsedMs,
+		int excluded
 	)
 	{
 		var draws = results.Count(r => r.IsDraw);
@@ -228,6 +273,7 @@ public class DraftTrainer
 		Console.WriteLine($"  Games played:     {results.Count}  ({elapsedMs / 1000.0:F1}s)");
 		Console.WriteLine($"  Draws:            {draws}");
 		Console.WriteLine($"  Flagged games:    {flagged}");
+		Console.WriteLine($"  Excluded (broken): {excluded}");
 		Console.WriteLine($"  Deck-games:       {data.Perspectives}");
 		Console.WriteLine($"  Base win rate:    {data.Prior:P1}");
 		Console.WriteLine($"  Cards learned:    {data.Cards.Count}");

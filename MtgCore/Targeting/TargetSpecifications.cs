@@ -22,7 +22,7 @@ public record IsPlayerSpecification : TargetSpecification
 		if (!context.GameState.HasObject(candidateId))
 			return false;
 
-		var obj = context.GameState.GetObject(candidateId);
+		var obj = context.Find(candidateId);
 		return obj is MtgPlayer player && !player.HasLost;
 	}
 }
@@ -45,7 +45,7 @@ public record IsCreatureSpecification : TargetSpecification
 		if (!context.GameState.HasObject(candidateId))
 			return false;
 
-		var obj = context.GameState.GetObject(candidateId);
+		var obj = context.Find(candidateId);
 		if (obj is not Card card)
 			return false;
 
@@ -107,7 +107,7 @@ public record IsPlaneswalkerSpecification : TargetSpecification
 		if (!context.GameState.HasObject(candidateId))
 			return false;
 
-		if (context.GameState.GetObject(candidateId) is not Card card)
+		if (context.Find(candidateId) is not Card card)
 			return false;
 
 		if (!card.HasComponent<PlaneswalkerComponent>())
@@ -127,7 +127,7 @@ public record IsControlledByYouSpecification : TargetSpecification
 		if (!context.GameState.HasObject(candidateId))
 			return false;
 
-		var obj = context.GameState.GetObject(candidateId);
+		var obj = context.Find(candidateId);
 
 		return obj switch
 		{
@@ -148,7 +148,7 @@ public record IsControlledByOpponentSpecification : TargetSpecification
 		if (!context.GameState.HasObject(candidateId))
 			return false;
 
-		var obj = context.GameState.GetObject(candidateId);
+		var obj = context.Find(candidateId);
 
 		return obj switch
 		{
@@ -175,7 +175,7 @@ public record IsInHandSpecification : ZoneSpecification
 		if (!context.GameState.HasObject(candidateId))
 			return false;
 
-		if (context.GameState.GetObject(candidateId) is not Card)
+		if (context.Find(candidateId) is not Card)
 			return false;
 
 		var handId = context.GameState.GetPlayerZoneId(context.CastingPlayerId, ZoneType.Hand);
@@ -230,7 +230,7 @@ public record IsInstantOrSorceryInOwnGraveyardSpecification : ZoneSpecification
 		if (!context.GameState.HasObject(candidateId))
 			return false;
 
-		if (context.GameState.GetObject(candidateId) is not Card card)
+		if (context.Find(candidateId) is not Card card)
 			return false;
 
 		if (!card.HasComponent<SpellComponent>())
@@ -259,7 +259,7 @@ public record IsCreatureInOwnGraveyardSpecification : ZoneSpecification
 		if (!context.GameState.HasObject(candidateId))
 			return false;
 
-		if (context.GameState.GetObject(candidateId) is not Card card)
+		if (context.Find(candidateId) is not Card card)
 			return false;
 
 		if (!card.HasComponent<CreatureComponent>())
@@ -295,7 +295,7 @@ public record IsCreatureInAnyGraveyardSpecification : ZoneSpecification
 		if (!context.GameState.HasObject(candidateId))
 			return false;
 
-		if (context.GameState.GetObject(candidateId) is not Card card)
+		if (context.Find(candidateId) is not Card card)
 			return false;
 
 		if (!card.HasComponent<CreatureComponent>())
@@ -333,7 +333,7 @@ public record IsOnBattlefieldSpecification : ZoneSpecification
 		if (!context.GameState.HasObject(candidateId))
 			return false;
 
-		if (context.GameState.GetObject(candidateId) is not Card)
+		if (context.Find(candidateId) is not Card)
 			return false;
 
 		var zone = context.GameState.GetCardZone(candidateId);

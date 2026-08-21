@@ -83,6 +83,38 @@ public class RedMechanicsTests
 	}
 
 	/// <summary>
+	/// Once the card has actually been played, it must stop being offered.
+	///
+	/// `MtgGame.PlayableExiledIds` is an index, not the truth: it can hold an id whose card has
+	/// since left exile, because nothing hunts down every path out of that zone. The generator
+	/// re-checks the zone for exactly this case. Without that check the AI would be offered a
+	/// permanent that is already on the battlefield, on every turn for the rest of the game.
+	/// </summary>
+	[Test]
+	public void ImpulseDraw_PlayedCardIsNotOfferedAgain()
+	{
+		var libraryId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Library);
+		var (state, top) = _state.AddObject(
+			MakeCreature("Impulse Target", _ids.Player1Id, 2, 2, manaCost: 1),
+			parentId: libraryId
+		);
+
+		state = Impulse(state);
+		(state, _) = state
+			.AddAction(new CastCreatureAction { CardId = top.Id, CastingPlayerId = _ids.Player1Id })
+			.ProcessAllActions();
+
+		Assert.That(state.GetCardZone(top.Id).ZoneType, Is.EqualTo(ZoneType.Battlefield));
+
+		var offeredAgain = MtgActionGenerator
+			.GetLegalActions(state, _ids.Player1Id)
+			.OfType<CastCreatureAction>()
+			.Any(a => a.CardId == top.Id);
+
+		Assert.That(offeredAgain, Is.False, "A card already in play was offered as castable again");
+	}
+
+	/// <summary>
 	/// "This turn" is the whole cost of the mechanic. If the marker never expired, impulse draw
 	/// would be strictly better than drawing the card.
 	/// </summary>
