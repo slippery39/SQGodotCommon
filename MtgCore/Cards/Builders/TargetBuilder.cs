@@ -16,6 +16,12 @@ public class TargetBuilder
 
 	public static TargetBuilder Random() => new(TargetSelectionMode.Random);
 
+	/// <summary>
+	/// The engine picks the strongest valid target rather than the player. Used for the "your
+	/// creature" half of a two-target card — see TargetSelectionMode.Best.
+	/// </summary>
+	public static TargetBuilder Best() => new(TargetSelectionMode.Best);
+
 	public TargetingStrategy PlayersOrCreatures() =>
 		Build(TargetSpecification.PlayersOrCreatures());
 
@@ -62,6 +68,7 @@ public class TargetBuilder
 			TargetSelectionMode.UserSelect => TargetingStrategy.SingleTarget(spec),
 			TargetSelectionMode.AllValid => TargetingStrategy.AllValid(spec),
 			TargetSelectionMode.Random => TargetingStrategy.RandomTarget(spec),
+			TargetSelectionMode.Best => TargetingStrategy.BestTarget(spec),
 			_ => TargetingStrategy.SingleTarget(spec),
 		};
 }

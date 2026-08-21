@@ -22,6 +22,22 @@ public record BecomesBaseCreatureComponent : PowerToughnessModifier
 	public int Power { get; init; } = 1;
 	public int Toughness { get; init; } = 1;
 
+	/// <summary>
+	/// Keywords the new body HAS, granted after the suppression rather than before it.
+	///
+	/// "Becomes a 2/2 Bird with flying" (Skinshifter) is one effect, not two: it strips the
+	/// creature's abilities and hands it a keyword in the same breath. A separate
+	/// GrantKeywordAction cannot express that, because GetEffectiveStats deliberately applies
+	/// this component's suppression after every grant — so the flying would be stripped by the
+	/// very effect that is supposed to give it, and the mode would silently be a worse version
+	/// of the plain-body mode.
+	/// </summary>
+	public bool GrantsFlying { get; init; } = false;
+
+	public bool GrantsTrample { get; init; } = false;
+
+	public bool GrantsReach { get; init; } = false;
+
 	public override int GetPowerBonus(GameState state, int cardId) =>
 		Power - BasePower(state, cardId);
 

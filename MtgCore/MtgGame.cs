@@ -44,6 +44,23 @@ public record MtgGame : GameObject
 	public int SpellsCastLastTurn { get; init; } = 0;
 
 	/// <summary>
+	/// Creatures that have died this turn, EITHER player's — Fungal Rebirth's "if a creature died
+	/// this turn".
+	///
+	/// Deliberately on the game rather than on MtgPlayer. The card asks about "a creature", not
+	/// "your creature", so a per-player pair would have to be summed at every read. It also dodges
+	/// the reset asymmetry MtgPlayer.LifeLostThisTurn needed: that field resets for BOTH players
+	/// in StartTurnAction because life loss overwhelmingly lands on the non-active player, and an
+	/// active-player-only reset would let the defender's tally span two turns. A game-level field
+	/// has no owner, so a single reset alongside SpellsCastThisTurn is correct.
+	///
+	/// Incremented in CheckStateBasedEffectsAction from the pending CreatureDestroyedEvents, NOT
+	/// at the five separate sites that stage that event — five sites is five chances to miss one,
+	/// which is exactly how sacrifice failed to count as a death.
+	/// </summary>
+	public int CreaturesDiedThisTurn { get; init; } = 0;
+
+	/// <summary>
 	/// IDs of all permanents currently on the battlefield that have at least one
 	/// StaticAbilityComponent. Maintained by StaticAbilityEngine via CheckStateBasedEffectsAction.
 	/// Enables O(k) source lookup when applying statics to new permanents or cleaning up.

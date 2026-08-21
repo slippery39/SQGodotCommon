@@ -285,6 +285,81 @@ public class CreatureCardBuilder
 	}
 
 	/// <summary>
+	/// A cost reduction this creature grants to OTHER spells you cast — Goreclaw's "creature
+	/// spells you cast with power 4 or greater cost {2} less".
+	///
+	/// Distinct from WithCostReduction, which discounts the card it sits on. This one lives on a
+	/// battlefield permanent and asks a question about the card being cast, which is why it takes
+	/// a TargetSpecification rather than an ActivationCondition.
+	/// </summary>
+	public CreatureCardBuilder WithCostReductionFor(int amount, TargetSpecification appliesTo)
+	{
+		_extraComponents.Add(
+			new ConditionalCostReductionComponent { Amount = amount, AppliesTo = appliesTo }
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// "This creature enters with N +1/+1 counters on it."
+	///
+	/// Pass fromXValue: true for an {X} Hydra — the counters become the X paid to cast it, so the
+	/// card is built at base 0/0 and X is its whole body. That requires XCostComponent as well;
+	/// use WithXCost() alongside this.
+	/// </summary>
+	public CreatureCardBuilder WithEntersWithCounters(int count = 1, bool fromXValue = false)
+	{
+		_extraComponents.Add(
+			new EntersWithCountersComponent { Count = count, FromXValue = fromXValue }
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// An {X} cost on a creature spell. The chosen X lives on CastCreatureAction, not on the card,
+	/// so two copies can be cast for different X.
+	/// </summary>
+	public CreatureCardBuilder WithXCost(int multiplier = 1)
+	{
+		_extraComponents.Add(new XCostComponent { Multiplier = multiplier });
+		return this;
+	}
+
+	/// <summary>
+	/// A keyword granted while this creature has at least <paramref name="minimum"/> +1/+1
+	/// counters on it — Primordial Hydra's "has trample as long as it has ten or more".
+	///
+	/// Counted live at read time, not stamped: StaticAbilityEngine is a push model that re-stamps
+	/// only on ETB/LTB, so a counter-gated keyword would go stale the moment a counter was added.
+	/// </summary>
+	public CreatureCardBuilder WithCounterThreshold(
+		int minimum,
+		bool trample = false,
+		bool flying = false,
+		bool taunt = false,
+		bool lifelink = false,
+		bool deathtouch = false
+	)
+	{
+		_extraComponents.Add(
+			new ThresholdComponent
+			{
+				CountSource = ThresholdSource.PlusOneCounters,
+				Minimum = minimum,
+				PowerBonus = 0,
+				ToughnessBonus = 0,
+				GrantsTrample = trample,
+				GrantsFlying = flying,
+				GrantsTaunt = taunt,
+				GrantsLifelink = lifelink,
+				GrantsDeathtouch = deathtouch,
+				Duration = ModifierDuration.Permanent,
+			}
+		);
+		return this;
+	}
+
+	/// <summary>
 	/// Graveyard recursion (Gravecrawler / unearth): castable from the graveyard for
 	/// <paramref name="manaCost"/>. Unlike spell flashback the creature is not exiled
 	/// afterwards, so it can be recurred every time it dies.

@@ -36,6 +36,11 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
 
+		// The X paid to cast this creature, for EntersWithCountersComponent.FromXValue. Injected by
+		// ResolveCreatureAction; 0 for every other route onto the battlefield, which is correct —
+		// a reanimated Hydra was not cast and has no X.
+		var xValue = GetInput<int>(ContextKeys.XValue, 0);
+
 		if (CardTemplate != null)
 		{
 			var battlefieldId = state.GetPlayerZoneId(
@@ -43,7 +48,7 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 				ZoneType.Battlefield
 			);
 			(state, var addedCard) = state.AddObject(CardTemplate, battlefieldId);
-			var (newState, etbEvents) = ApplyEtbCeremony(state, addedCard);
+			var (newState, etbEvents) = ApplyEtbCeremony(state, addedCard, xValue);
 			return new ActionResult(newState) { Events = etbEvents };
 		}
 
@@ -102,7 +107,7 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 				ZoneType.Battlefield
 			);
 			state = state.MoveCardTracked(controlled.Id, battlefieldId);
-			var (newState, etbEvents) = ApplyEtbCeremony(state, controlled);
+			var (newState, etbEvents) = ApplyEtbCeremony(state, controlled, xValue);
 			state = newState;
 			events = events.AddRange(etbEvents);
 		}
@@ -112,7 +117,8 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 
 	private static (GameState, ImmutableList<GameEvent>) ApplyEtbCeremony(
 		GameState state,
-		Card card
+		Card card,
+		int xValue
 	)
 	{
 		// A planeswalker enters at its starting loyalty and with its activation available, so a
@@ -142,12 +148,10 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 		if (creature == null)
 			return (state, ImmutableList<GameEvent>.Empty);
 
-		var stamped = card.WithComponentReplaced(
-			creature with
-			{
-				HasSummoningSickness = !creature.HasHaste,
-			}
-		);
+		var stamped = (Card)
+			card.WithComponentReplaced(creature with { HasSummoningSickness = !creature.HasHaste });
+
+		stamped = ApplyEntryCounters(stamped, xValue);
 		state = state.UpdateObject(card.Id, stamped);
 
 		var enteredEvent = new CreatureEnteredBattlefieldEvent
@@ -157,6 +161,51 @@ public record PutIntoBattlefieldAction : GameAction, ITargetedAction
 		};
 		state = state with { PendingGameEvents = state.PendingGameEvents.Add(enteredEvent) };
 		return (state, ImmutableList.Create<GameEvent>(enteredEvent));
+	}
+
+	/// <summary>
+	/// Clears any +1/+1 counters the card arrived with, then applies its
+	/// EntersWithCountersComponent if it has one.
+	///
+	/// THE STRIP LIVES HERE, ON ENTRY, RATHER THAN IN MoveCardTracked ON EXIT — and the choice is
+	/// load-bearing. Real MTG says two things that pull in opposite directions: counters cease to
+	/// exist when a permanent changes zones, but a leaves-the-battlefield trigger uses the
+	/// permanent's LAST KNOWN information. Stripping on exit honours the first and breaks the
+	/// second, which is exactly what happens to Chasm Skulker today — MoveCardTracked removes its
+	/// StaticPowerToughnessModifier counters before CheckStateBasedEffectsAction resolves its own
+	/// death trigger, so it reads power 1 and makes zero tokens.
+	///
+	/// Stripping on entry honours both: nothing can come back onto the battlefield carrying old
+	/// counters, and a creature sitting in the graveyard still knows how many it had when it died.
+	/// The visible cost is that a dead Hydra prints its counters in the graveyard text box, which
+	/// is true — it did have them.
+	///
+	/// Consequently PlusOneCounterComponent is deliberately ABSENT from MoveCardTracked's closed
+	/// strip list in ZoneTransitionExtensions. Do not add it there.
+	/// </summary>
+	private static Card ApplyEntryCounters(Card card, int xValue)
+	{
+		var entersWith = card.GetComponent<EntersWithCountersComponent>();
+		var existing = card.GetComponent<PlusOneCounterComponent>();
+
+		if (entersWith == null && existing == null)
+			return card;
+
+		var components = card.Components;
+		if (existing != null)
+			components = components.Remove(existing);
+
+		if (entersWith == null)
+			return card with { Components = components };
+
+		var count = entersWith.FromXValue ? xValue : entersWith.Count;
+		if (count <= 0)
+			return card with { Components = components };
+
+		return card with
+		{
+			Components = components.Add(new PlusOneCounterComponent { Count = count }),
+		};
 	}
 
 	public override ValidationResult ValidateResolve(GameState gameState)

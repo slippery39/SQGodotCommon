@@ -10,11 +10,25 @@ namespace MtgCore;
 ///
 /// Reuses ActivationCondition for the "if" — the question ("is this board state true for this
 /// player?") is identical to the one an activated-ability gate asks, and the subclasses are shared.
+///
+/// TWO PLACES THIS CAN LIVE, and they mean different things:
+///   - on the card being cast, gated by Condition — "THIS spell costs {1} less if …"
+///   - on a permanent on your battlefield, gated by AppliesTo — "creature spells you cast with
+///     power 4 or greater cost {2} less" (Goreclaw). AppliesTo is a question about the CARD being
+///     cast, which is the part an ActivationCondition cannot ask: it only sees a player.
+/// CostEngine scans both. See ComputeReductions there for the caster-only asymmetry.
 /// </summary>
 public record ConditionalCostReductionComponent : GameComponent
 {
 	public int Amount { get; init; } = 1;
 	public ActivationCondition? Condition { get; init; }
+
+	/// <summary>
+	/// A specification the card being cast must satisfy, for a reduction that lives on a
+	/// battlefield permanent rather than on the card itself. Null means "any card", which is what
+	/// a self-reduction wants.
+	/// </summary>
+	public TargetSpecification? AppliesTo { get; init; }
 }
 
 /// <summary>"If you control a creature with flying." — Winged Words.</summary>

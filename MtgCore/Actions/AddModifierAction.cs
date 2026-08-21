@@ -21,10 +21,29 @@ public record AddModifierAction : EffectAction
 	public ModifierDuration Duration { get; init; } = ModifierDuration.UntilEndOfTurn;
 	public int SourceCardId { get; init; } = 0;
 
+	/// <summary>
+	/// Read the power bonus from pipeline context instead of PowerBonus — "gets +X/+X" where X is
+	/// only known at resolution (Primal Might reads ContextKeys.XValue; Overwhelming Stampede
+	/// reads the greatest power among your creatures).
+	///
+	/// Two explicit keys rather than the inherited AmountContextKey, which would have to mean
+	/// "both bonuses" and would silently make +X/+0 inexpressible.
+	/// </summary>
+	public string PowerBonusContextKey { get; init; } = "";
+
+	public string ToughnessBonusContextKey { get; init; } = "";
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
+
+		var powerBonus = string.IsNullOrEmpty(PowerBonusContextKey)
+			? PowerBonus
+			: GetInput<int>(PowerBonusContextKey, 0);
+		var toughnessBonus = string.IsNullOrEmpty(ToughnessBonusContextKey)
+			? ToughnessBonus
+			: GetInput<int>(ToughnessBonusContextKey, 0);
 
 		foreach (var targetId in ResolveTargetIds())
 		{
@@ -37,8 +56,8 @@ public record AddModifierAction : EffectAction
 
 			var modifier = new StaticPowerToughnessModifier
 			{
-				PowerBonus = PowerBonus,
-				ToughnessBonus = ToughnessBonus,
+				PowerBonus = powerBonus,
+				ToughnessBonus = toughnessBonus,
 				Duration = Duration,
 				SourceCardId = SourceCardId,
 			};
@@ -51,8 +70,8 @@ public record AddModifierAction : EffectAction
 				new CreatureModifiedEvent
 				{
 					CreatureId = targetId,
-					PowerBonus = PowerBonus,
-					ToughnessBonus = ToughnessBonus,
+					PowerBonus = powerBonus,
+					ToughnessBonus = toughnessBonus,
 				}
 			);
 		}

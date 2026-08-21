@@ -223,6 +223,28 @@ public class DraftTests
 		Assert.That(deck.Select(c => c.ControllerId), Is.All.EqualTo(7));
 	}
 
+	/// <summary>
+	/// A FULL pool plays 23 spells and 17 lands. The short-pool test above cannot see this — it
+	/// pads from five cards, so it passes at any DefaultMaxSpells.
+	///
+	/// The land count is the one number here that is a play-balance decision rather than an
+	/// implementation detail: at 13 lands the Core Set Cube's curve left decks stuck on three
+	/// mana, unable to cast the top of the curve. Changing it silently changes every card's
+	/// measured win rate, so it is pinned.
+	/// </summary>
+	[Test]
+	public void BuildDeck_FullPool_Plays17Lands()
+	{
+		var deck = Draft.BuildDeck(Pool(45), ownerId: 7);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(deck, Has.Count.EqualTo(40));
+			Assert.That(deck.Count(c => c.HasSubtype("Land")), Is.EqualTo(17), "lands");
+			Assert.That(deck.Count(c => !c.HasSubtype("Land")), Is.EqualTo(23), "spells");
+		});
+	}
+
 	// ===== Pickers =====
 
 	[Test]

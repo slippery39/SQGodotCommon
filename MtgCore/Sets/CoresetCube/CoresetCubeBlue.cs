@@ -201,10 +201,16 @@ public static class CoresetCubeBlue
 				.Creature("Chasm Skulker", manaCost: 3, power: 1, toughness: 1)
 				.WithSubtype("Squid")
 				.WithSubtype("Horror")
+				// REAL +1/+1 counters since green, and this card MADE ZERO TOKENS without them.
+				// WithSelfBuff stamps a StaticPowerToughnessModifier, which MoveCardTracked strips
+				// on the way to the graveyard — before the death trigger resolves. So the token
+				// count measured power 1, applied the -1 offset, and created nothing at all.
+				// Counters survive into the graveyard by design, so counting them is both faithful
+				// to the printed card and correct.
 				.WithTriggeredAbility(
 					"Ink Swell",
 					TriggerConditions.OnYouDraw(),
-					eb => eb.WithSelfBuff(1, 1)
+					eb => eb.WithSelfCounters(1)
 				)
 				.WithDeathTrigger(
 					"Ink Cloud",
@@ -213,7 +219,7 @@ public static class CoresetCubeBlue
 							new CreateTokensPerPowerAction
 							{
 								CardTemplate = CoresetCubeBlueTokens.Squid(),
-								Offset = -1,
+								UseCounters = true,
 							},
 							TargetingStrategy.NoTarget()
 						)

@@ -3,8 +3,29 @@ using ImmutableGameObjects;
 namespace MtgCore;
 
 /// <summary>
+/// What ThresholdComponent counts to decide whether its buff is on.
+/// </summary>
+public enum ThresholdSource
+{
+	/// <summary>Cards in the controller's graveyard — Threshold proper.</summary>
+	GraveyardCards,
+
+	/// <summary>
+	/// +1/+1 counters on this creature. Primordial Hydra's "has trample as long as it has ten or
+	/// more +1/+1 counters on it".
+	/// </summary>
+	PlusOneCounters,
+}
+
+/// <summary>
 /// Threshold — a conditional buff that switches on while the controller's graveyard holds
 /// at least Minimum cards. Grants P/T and, optionally, keywords.
+///
+/// CountSource retargets that question without a second component type. A counter-gated keyword
+/// has identical mechanics — a number compared against Minimum, read live because a push model
+/// would go stale — so a parallel type would be one more place to forget Duration = Permanent
+/// and one more Grants* list to keep in sync with the six-site keyword rule. Same reasoning as
+/// CreatureCountComponent.Subtype.
 ///
 /// Deliberately NOT built on StaticAbilityEngine. That engine is a push model: it stamps
 /// AppliedStaticPTBoost / AppliedKeywordComponent onto affected permanents and re-stamps only
@@ -22,8 +43,11 @@ namespace MtgCore;
 /// </summary>
 public record ThresholdComponent : PowerToughnessModifier
 {
-	/// Cards required in the controller's graveyard for the buff to be active.
+	/// How many of CountSource are required for the buff to be active.
 	public int Minimum { get; init; } = 7;
+
+	/// What is counted. Defaults to the graveyard, which is what every card using this predates.
+	public ThresholdSource CountSource { get; init; } = ThresholdSource.GraveyardCards;
 
 	public int PowerBonus { get; init; } = 0;
 	public int ToughnessBonus { get; init; } = 0;
@@ -48,13 +72,16 @@ public record ThresholdComponent : PowerToughnessModifier
 		IsActive(state, cardId) ? ToughnessBonus : 0;
 
 	/// <summary>
-	/// True while the controller's graveyard holds at least Minimum cards.
-	/// Counted live — never cached — so mill and discard flip it immediately.
+	/// True while CountSource has reached Minimum.
+	/// Counted live — never cached — so mill, discard and counter changes flip it immediately.
 	/// </summary>
 	public bool IsActive(GameState state, int cardId)
 	{
 		if (state.GetObject(cardId) is not Card card)
 			return false;
+
+		if (CountSource == ThresholdSource.PlusOneCounters)
+			return (card.GetComponent<PlusOneCounterComponent>()?.Count ?? 0) >= Minimum;
 
 		var graveyardId = state.GetPlayerZoneId(card.ControllerId, ZoneType.Graveyard);
 		return state.GetChildrenIds(graveyardId).Count() >= Minimum;

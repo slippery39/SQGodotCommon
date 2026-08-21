@@ -114,6 +114,20 @@ public record ApplyChosenModeAction : GameAction
 		// resolves a TargetingStrategy into real ids. CastingPlayerId and SourceCardId come off our
 		// own context, which ResolveEffectAction seeded on the way in.
 		var targeting = index < ModeTargeting.Count ? ModeTargeting[index] : null;
+
+		// A MODE CANNOT ASK THE PLAYER. The ResolveEffectAction spawned below carries no TargetIds
+		// — the mode was chosen during resolution, long after the cast action fixed its targets —
+		// so a UserSelect strategy here resolves to an EMPTY list and the mode silently does
+		// nothing. Return to Nature's "destroy target artifact" destroyed nothing at all.
+		//
+		// This is the same failure TriggerTargeting was written for, in a second place: a builder
+		// verb that reasonably defaults to single-target for a spell gets reused inside a mode and
+		// inherits that default. Downgrading here makes it unreachable by construction rather than
+		// fixing it one card at a time, and Random picks one legal target instead of none. A mode
+		// that genuinely wants every target asks for AllValid and is preserved untouched.
+		if (targeting is { } t && t.RequiresUserSelection)
+			targeting = t with { SelectionMode = TargetSelectionMode.Random };
+
 		GameAction chosen =
 			targeting == null
 				? Modes[index] with

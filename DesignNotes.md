@@ -632,3 +632,83 @@ wall-clock.** What the next session starts with, so none of this is re-derived:
   budget should allow, which would point at the budget being checked only between levels.
 - **Do not conclude from the draw-lift tables.** At a 0.0% base rate they are noise, and they have
   already produced one confident wrong answer (Path of Bravery) in this investigation.
+
+## Green's deferred clauses, and what each would cost
+
+Four green cards reference concepts the engine has no form of at all. All four were cut and
+recosted, with the cut commented on the card — the same call vigilance, menace, colours and
+forced attacks all took. Listed here with prices so the next session does not re-derive them.
+
+**Flash — Feral Invocation, Yeva, Nature's Herald.** There is no priority window; the non-active
+player never acts during your turn, which is why blue's counterspells fire as traps from hand
+rather than being cast in response. Building flash means building priority, which touches the
+action loop, the AI's turn-based action generation and the beam search's assumption that a turn
+is a closed sequence of the active player's moves. Its own project. Until then flash is worth
+roughly one mana of discount on an Aura and nothing at all on a creature, because nothing here
+can be responded to either.
+
+**Delayed triggers — Hunter's Insight.** "Whenever that creature deals combat damage to a player
+THIS TURN, draw that many cards." Nothing can register an effect to fire later in the same turn.
+A `DelayedTriggerComponent` held on the player and cleared by `EndTurnAction` (where the
+`UntilEndOfTurn` replacement cleanup already lives, for the same reason) is roughly 60 lines and
+would serve exactly one card today. Rebuilt as an immediate draw off the creature's power, which
+is the same card whenever the attack was going to connect, and costed one more because it no
+longer requires the attack at all.
+
+**Opening-hand permanents — Leyline of Vitality.** "If this is in your opening hand you may begin
+the game with it on the battlefield." `SetupGameAction` deals seven cards and there is no mulligan
+step, no pre-game window and no player decision anywhere before turn one. Clause dropped; the rest
+is an ordinary enchantment. Adding it means giving the game a pre-game phase, which is a bigger
+change than the card is worth.
+
+**Divided damage among your OWN creatures — Master of the Wild Hunt.** The red section already
+established that "damage divided as you choose" is sprayed rather than partitioned, but Master's
+return half divides the target's damage among the Wolves that attacked it, which is a partition
+over a set the card itself selects. Kept the aggressive half (damage scaled by Wolf count), cut the
+return half, costed one more.
+
+**Removing a +1/+1 counter as a cost — Barkhide Troll.** Counters became real in this section, but
+`RemoveCounterAdditionalCost` did not. It is ~40 lines (`Validate`, `Pay`, `Describe`,
+`RequiredPaymentCount`) for one card, and what the removal DOES is bound the hexproof, which
+`MaxActivationsPerTurn = 1` already does for nothing. Build it when a second card wants to spend
+counters — at that point it also needs to interact with `PlusOneCounterComponent`'s entry-strip
+rule, which is the part that will not be obvious.
+
+**Lands as battlefield permanents.** Six green cards want this (Gift of Paradise, Garruk
+Wildspeaker, Nissa Worldwaker, plus the fetch-to-battlefield ramp). All reskinned onto mana per
+the Knight of the White Orchid precedent. Making lands real permanents would touch
+`PlayLandAction`, the entire mana system, every battlefield scan, the AI, and the trained draft
+model — and the reskins play close enough that nothing in the section feels wrong. Not worth it
+for this set; revisit only if a colourless or multicolour card makes lands genuinely load-bearing.
+
+## The low win-rate band is a bug detector, not a balance signal
+
+Ten green cards came back at 39–43% after the first training run. **Seven of them did literally
+nothing.** A blank card and a genuinely weak card score identically in this metric — around 40% —
+which is precisely what makes that band worth auditing card by card before touching a single cost.
+
+The three root causes are written up in `MtgCore/CLAUDE.md` ("Auditing the bottom of the win-rate
+table"). The point worth keeping here is the method:
+
+- **Assert the consequence, not the resolution.** All seven cards cast, resolved, rendered correct
+  rules text and threw nothing. `EveryCard_CanBeCastAndResolve` passed on every one of them. Only
+  "did a card move / did the board change" caught them.
+- **Two of the three causes were shared infrastructure, not card definitions.** `WithDig` broke
+  seven cards across three colours; the battlefield-only creature spec broke four. Fixing the
+  cards one at a time would have left both traps armed.
+- **Check the harness before blaming the card.** `ProcessAllActions` stops at a `ChoiceAction`, so
+  any card with a scry or a mode looks inert in a naive test. Three of the seven were partly this.
+
+**A fourth bug came out of the same audit, and it was not a card bug at all.** Primordial Hydra
+sat at 39.2% because the AI's chain replay matched cast actions on card id alone, so a planned
+"cast for X=4" re-found the X=0 action — see `MtgSimulator/CLAUDE.md`. That one affects every `{X}`
+card in the cube, not just green. **When a card looks inert, the AI's action handling is a
+candidate cause alongside the card definition**; nothing in the card, its rules text or its
+engine mechanics was wrong.
+
+**What this implies for the remaining low band.** The non-green cards in the same 40–43% range —
+Demonic Pact, Frost Breath, Sphinx of Uthuun, Titan's Strength, Dark Tutelage, Gods Willing,
+Molten Vortex, Disenchant, Call to the Grave, Blood for Bones — have NOT been audited this way.
+Two of them (Drawn from Dreams, Fateful Vision) were already fixed as collateral from the `WithDig`
+repair, which is evidence the band still contains bugs rather than just weak cards. Audit before
+rebalancing.

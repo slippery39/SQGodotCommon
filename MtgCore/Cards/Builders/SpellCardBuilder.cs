@@ -344,6 +344,21 @@ public class SpellCardBuilder
 	}
 
 	/// <summary>
+	/// "Target creature you control deals damage equal to its power to target creature you don't
+	/// control" — a fight with no damage coming back (Rabid Bite, Hunter's Edge).
+	///
+	/// Which creature of yours does it is chosen by the engine: your strongest. See
+	/// TargetSelectionMode.Best for why the second target cannot be a player choice here.
+	/// </summary>
+	public SpellCardBuilder WithOneSidedFight()
+	{
+		FlushPending();
+		_pendingAction = new FightAction { OneSided = true };
+		_pendingTargeting = TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures());
+		return this;
+	}
+
+	/// <summary>
 	/// Edict — the opponent loses a creature chosen by mana cost rather than by targeting,
 	/// so it answers Hexproof and Shroud, which nothing else in the set can touch.
 	/// </summary>
@@ -498,14 +513,42 @@ public class SpellCardBuilder
 	public SpellCardBuilder WithDig(int amount)
 	{
 		FlushPending();
-		_pendingAction = new LookAtTopCardsAction
+
+		// THREE STEPS, NOT ONE. This used to be a bare LookAtTopCardsAction, which is a pure query
+		// — it writes card IDs into pipeline context and stops. Nothing consumed them, so every
+		// dig card in the cube revealed cards and then did absolutely nothing: Track Down lost its
+		// cantrip, Llanowar Empath and Garruk's Harbinger became vanilla creatures, and Drawn from
+		// Dreams, Fateful Vision, Vivien Reid's +1 and Search the Parish were blank. Reveal,
+		// choose, move — the middle step was the one missing.
+		var digKey = $"dig_{amount}_{_digCounter++}";
+
+		_pendingAction = new PipelineAction
 		{
-			Amount = amount,
-			PlayerIdContextKey = ContextKeys.CastingPlayerId,
+			Steps = ImmutableList.Create<GameAction>(
+				new LookAtTopCardsAction
+				{
+					Amount = amount,
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+					OutputKey = $"{digKey}_revealed",
+				},
+				new SelectFromRevealedAction
+				{
+					RevealedIdsContextKey = $"{digKey}_revealed",
+					OutputKey = digKey,
+				},
+				new MoveCardToHandAction
+				{
+					CardIdContextKey = digKey,
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+				}
+			),
 		};
 		_pendingTargeting = TargetingStrategy.NoTarget();
 		return this;
 	}
+
+	/// Distinguishes the context keys of two digs on one card (Drawn from Dreams digs twice).
+	private int _digCounter;
 
 	/// <summary>
 	/// Scry N — look at the top N cards of your library and put any of them on the bottom.
@@ -949,6 +992,57 @@ public class SpellCardBuilder
 			PowerBonus = power,
 			ToughnessBonus = toughness,
 			Duration = ModifierDuration.Permanent,
+			TargetContextKey = ContextKeys.SourceCardId,
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Put +1/+1 counters on the card running this effect — "put a +1/+1 counter on this
+	/// creature", where the count genuinely matters later (Managorger Hydra, Scavenging Ooze).
+	///
+	/// The counter twin of WithSelfBuff, and the same TargetContextKey trick for the same reason.
+	/// Prefer this over WithSelfBuff on any creature whose counters are read back: only
+	/// PlusOneCounterComponent can be doubled, removed or counted.
+	/// </summary>
+	public SpellCardBuilder WithSelfCounters(int count = 1)
+	{
+		FlushPending();
+		_pendingAction = new AddCountersAction
+		{
+			Amount = count,
+			TargetContextKey = ContextKeys.SourceCardId,
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
+	/// <summary>
+	/// Put +1/+1 counters on a target creature. Defaults to one of yours, which is what every
+	/// card that does this means; override with .WithTarget(...) otherwise.
+	/// </summary>
+	public SpellCardBuilder WithCounters(int count = 1)
+	{
+		FlushPending();
+		_pendingAction = new AddCountersAction { Amount = count };
+		_pendingTargeting = TargetingStrategy.SingleTarget(
+			TargetSpecification.CreatureControlledByYou()
+		);
+		return this;
+	}
+
+	/// <summary>
+	/// Multiply the +1/+1 counters on the card running this effect — Primordial Hydra's
+	/// "double the number of +1/+1 counters on this creature".
+	/// </summary>
+	public SpellCardBuilder WithSelfCounterMultiplier(int multiplier = 2)
+	{
+		FlushPending();
+		_pendingAction = new AddCountersAction
+		{
+			Amount = 0,
+			Multiplier = multiplier,
 			TargetContextKey = ContextKeys.SourceCardId,
 		};
 		_pendingTargeting = TargetingStrategy.NoTarget();

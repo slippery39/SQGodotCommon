@@ -52,6 +52,27 @@ Check the new model against the old prior before shipping it:
 python -c "import json;d=json.load(open('sim_results/draft_training_csc.json'));print(d['Prior'],d['Perspectives'])"
 ```
 
+## Card win rates as a spreadsheet
+
+Training writes `sim_results/draft_training_<code>.csv` automatically beside the JSON — no command
+to run. One row per card, best first:
+
+```
+Name,ManaCost,Types,Games,Wins,WinRate,ShrunkWinRate,DeltaPP,DeckGames,DrawRate
+```
+
+**Sort on `DeltaPP`, not `WinRate`.** That is the shrunk rate's distance from the run's base rate,
+in percentage points, and it is the number the picker actually drafts on. A raw rate off 30 games
+swings on noise, and an absolute rate means nothing without the base rate (printed in the `#`
+header lines at the top, along with the sample size).
+
+`DrawRate` is `Games / DeckGames` — how often the card was drawn when it was in the deck. A card
+far below ~0.44 is ending games early rather than being unlucky.
+
+**Cards near the bottom are as likely to be broken as weak** — a card that does nothing scores
+about the same as one that is merely bad. See DesignNotes.md, "The low win-rate band is a bug
+detector".
+
 ## Inspect a trained model
 
 ```

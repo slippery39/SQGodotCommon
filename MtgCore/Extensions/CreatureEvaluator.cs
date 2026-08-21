@@ -166,12 +166,20 @@ public static class CreatureEvaluator
 		// "Loses all abilities and becomes a 1/1" (Turn to Frog). Applied after every grant, since
 		// it removes them all — including ones granted this turn. The P/T half is handled by the
 		// modifier itself in the PowerToughnessModifier loop above.
-		if (card.HasComponent<BecomesBaseCreatureComponent>())
+		var becomes = card.GetComponent<BecomesBaseCreatureComponent>();
+		if (becomes != null)
 		{
 			hasHaste = hasFlying = hasTaunt = hasReach = false;
 			hasLifelink = hasTrample = hasShroud = hasHexproof = false;
 			hasDeathtouch = hasFirstStrike = hasDoubleStrike = hasIndestructible = false;
 			cantAttack = false;
+
+			// The new body's OWN keywords, applied after the strip — "becomes a 2/2 Bird with
+			// flying" is a single effect, so its flying must survive its own "loses all
+			// abilities". Granting it separately would be stripped by this very block.
+			hasFlying = becomes.GrantsFlying;
+			hasTrample = becomes.GrantsTrample;
+			hasReach = becomes.GrantsReach;
 		}
 
 		// Fog Bank: Taunt lapses once this creature has been attacked this turn, so it soaks one
@@ -306,6 +314,49 @@ public static class CreatureEvaluator
 
 	private static int DamageOn(GameState state, int cardId) =>
 		(state.GetObject(cardId) as Card)?.GetComponent<CreatureComponent>()?.Damage ?? 0;
+
+	/// <summary>
+	/// The single strongest of the given candidates — highest effective power, ties broken on
+	/// lowest id so the choice is deterministic. Returns an empty list when there are none.
+	///
+	/// The one place "which of my creatures does the engine pick" is decided. Shared by
+	/// TargetSelectionMode.Best and by FightAction's source fallback so that on a card like Wild
+	/// Instincts, the creature that gets the +2/+2 and the creature that fights cannot be
+	/// different creatures. Buffing the strongest keeps it strongest, and the id tiebreak is
+	/// stable, so the two calls agree.
+	/// </summary>
+	public static ImmutableList<int> PickStrongest(
+		this GameState state,
+		IEnumerable<int> candidateIds
+	)
+	{
+		var best = candidateIds
+			.Where(state.HasObject)
+			.OrderByDescending(state.GetEffectivePower)
+			.ThenBy(id => id)
+			.Cast<int?>()
+			.FirstOrDefault();
+
+		return best == null ? ImmutableList<int>.Empty : ImmutableList.Create(best.Value);
+	}
+
+	/// <summary>
+	/// The strongest creature the given player controls, by the same rule as PickStrongest.
+	/// 0 when they control none.
+	/// </summary>
+	public static int GetStrongestCreature(this GameState state, int playerId)
+	{
+		if (playerId == 0)
+			return 0;
+
+		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+		var candidates = state
+			.GetCardsInZone(battlefieldId)
+			.Where(c => c.HasComponent<CreatureComponent>())
+			.Select(c => c.Id);
+
+		return state.PickStrongest(candidates).FirstOrDefault();
+	}
 
 	/// <summary>
 	/// Removes all UntilEndOfTurn PowerToughnessModifiers and AppliedKeywordComponents from a card.

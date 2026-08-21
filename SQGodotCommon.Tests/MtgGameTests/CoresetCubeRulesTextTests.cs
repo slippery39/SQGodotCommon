@@ -436,6 +436,136 @@ public class CoresetCubeRulesTextTests
 		});
 	}
 
+	// ===== Green section =====
+
+	/// <summary>
+	/// The blanket check for the failure class this project keeps rediscovering: an action whose
+	/// amount comes from pipeline context renders its DEFAULT, so the card confidently prints a
+	/// number that means "does nothing". Four separate switches have had this bug.
+	///
+	/// A blanket assertion rather than one per card, because the next card to hit it has not been
+	/// written yet.
+	/// </summary>
+	[Test]
+	public void NoCard_PrintsAnAmountThatMeansItDoesNothing()
+	{
+		// Word-bounded: a bare substring "0 damage" also matches "10 damage", which flagged
+		// Chandra Nalaar's ultimate as broken when it is exactly right.
+		var deadNumber = new System.Text.RegularExpressions.Regex(
+			@"\+0/\+0|\b0 (damage|life|mana|cards?)\b|\b(add|gain|draw|put) 0\b",
+			System.Text.RegularExpressions.RegexOptions.IgnoreCase
+		);
+
+		var offenders = CoresetCube
+			.Cards.Select(c => (c.Name, Text: MtgCardMapper.GetRulesText(c) ?? ""))
+			.Where(x => deadNumber.IsMatch(x.Text))
+			.Select(x => $"{x.Name}: {x.Text}")
+			.ToList();
+
+		Assert.That(offenders, Is.Empty, string.Join(" | ", offenders));
+	}
+
+	[Test]
+	public void Counters_RenderAsCountersRatherThanBareBuffs()
+	{
+		Assert.Multiple(() =>
+		{
+			var hydra = MtgCardMapper.GetRulesText(Find("Primordial Hydra"));
+			Assert.That(hydra, Does.Contain("Enters with X +1/+1 counters"));
+			Assert.That(
+				hydra,
+				Does.Contain("Double the number of +1/+1 counters"),
+				"the doubling is the entire card"
+			);
+			Assert.That(
+				hydra,
+				Does.Not.Contain("in your graveyard"),
+				"its trample clause counts COUNTERS — the graveyard wording is a different card"
+			);
+
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Wildwood Scourge")),
+				Does.Contain("+1/+1 counters are put on"),
+				"its whole trigger is invisible without a CountersAdded case"
+			);
+		});
+	}
+
+	/// <summary>
+	/// The modal describer used to render every mode against a hardcoded placeholder target, so
+	/// Return to Nature's "destroy target artifact" printed as "Destroy each creature you
+	/// control" — a one-sided board wipe on what is actually a Naturalize.
+	/// </summary>
+	[Test]
+	public void ModalCards_DescribeEachModesOwnTarget()
+	{
+		var text = MtgCardMapper.GetRulesText(Find("Return to Nature"));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(text, Does.Contain("Destroy target artifact"));
+			Assert.That(text, Does.Contain("Destroy target enchantment"));
+			Assert.That(text, Does.Not.Contain("each creature you control"));
+		});
+	}
+
+	[Test]
+	public void FightSpells_NameTheCreatureThatActuallyFights()
+	{
+		Assert.Multiple(() =>
+		{
+			// "This fights" is wrong on a sorcery — there is no "this" creature.
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Rabid Bite")),
+				Does.Contain("Your strongest creature deals damage equal to its power")
+			);
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Wild Instincts")),
+				Does.Contain("Your strongest creature fights")
+			);
+		});
+	}
+
+	/// <summary>
+	/// Both of these promised MORE than the card does, which is worse than saying nothing.
+	/// </summary>
+	[Test]
+	public void RestrictedEffects_KeepTheirRestriction()
+	{
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Bramblecrush")),
+				Does.Contain("noncreature permanent"),
+				"'target permanent' offers creature removal the card cannot do"
+			);
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Goreclaw, Terror of Qal Sisma")),
+				Does.Contain("with power 4 or greater"),
+				"without it the discount reads as applying to every creature spell"
+			);
+			Assert.That(
+				MtgCardMapper.GetRulesText(Find("Woodland Bellower")),
+				Does.Contain("costing 3 or less"),
+				"an unrestricted tutor is a much stronger card"
+			);
+		});
+	}
+
+	/// <summary>
+	/// Rancor is +2/+0 AND trample, and AsAura could not grant trample at all before green — so
+	/// the Aura would have rendered and behaved as a bare P/T buff.
+	/// </summary>
+	[Test]
+	public void Auras_RenderEveryKeywordTheyGrant()
+	{
+		Assert.That(MtgCardMapper.GetRulesText(Find("Rancor")), Does.Contain("Trample"));
+		Assert.That(
+			MtgCardMapper.GetRulesText(Find("Arachnus Web")),
+			Does.Contain("can't attack").And.Not.Contain("gets can't attack")
+		);
+	}
+
 	private static Card Find(string name) =>
 		CoresetCube.Cards.Single(c =>
 			string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)

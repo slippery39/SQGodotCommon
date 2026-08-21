@@ -14,6 +14,27 @@ public enum TargetSelectionMode
 	/// <summary>One random valid target is selected.</summary>
 	Random,
 
+	/// <summary>
+	/// The engine picks the single strongest valid target — highest effective power, ties broken
+	/// on lowest id for determinism.
+	///
+	/// This is how "target creature YOU CONTROL … then it fights target creature you don't
+	/// control" is expressed. A spell like Rabid Bite or Wild Instincts names two different
+	/// creatures, but ResolveEffectAction broadcasts the one user-chosen target to every effect
+	/// that requires selection, so the second target has nowhere to come from. Deciding your own
+	/// side in the engine leaves the opponent's side as the real choice, which is the interesting
+	/// half and the one the card is actually about.
+	///
+	/// RequiresUserSelection stays FALSE, which is the whole point: a Best effect and a UserSelect
+	/// effect coexist on one card with no change to Multi-Effect Targeting or ValidateTargets.
+	///
+	/// Precedent for the engine standing in for a player choice: Clone copies the highest-power
+	/// creature, WithEdict takes the cheapest. Power rather than mana cost matters here because
+	/// these cards read "damage equal to its power" — in a counters set a two-mana Hydra with
+	/// eight counters must beat a five-mana 3/3.
+	/// </summary>
+	Best,
+
 	/// <summary>Automatically targets the casting player. Used for effects like "you gain 3 life".</summary>
 	CastingPlayer,
 
@@ -111,6 +132,18 @@ public record TargetingStrategy
 		{
 			Specification = specification,
 			SelectionMode = TargetSelectionMode.Random,
+			MinTargets = 1,
+			MaxTargets = 1,
+		};
+
+	/// <summary>
+	/// The strongest valid target, chosen by the engine at resolution. See TargetSelectionMode.Best.
+	/// </summary>
+	public static TargetingStrategy BestTarget(TargetSpecification specification) =>
+		new()
+		{
+			Specification = specification,
+			SelectionMode = TargetSelectionMode.Best,
 			MinTargets = 1,
 			MaxTargets = 1,
 		};

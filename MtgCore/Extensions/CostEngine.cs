@@ -43,11 +43,63 @@ public static class CostEngine
 		if (card.HasComponent<ConvokeComponent>())
 			cost = Math.Max(0, cost - CountConvokers(state, playerId));
 
+		cost = ComputeReductions(state, card, playerId, cost);
+
+		return Math.Max(0, cost + ComputeTax(state, card));
+	}
+
+	/// <summary>
+	/// Conditional reductions, from two sources.
+	///
+	/// The first is the card's own — "this spell costs {1} less if …" (Winged Words). The second
+	/// is a permanent on the CASTER'S battlefield whose reduction applies to other cards —
+	/// "creature spells you cast with power 4 or greater cost {2} less" (Goreclaw). That second
+	/// source could not previously exist: this only ever read components off the card being cast.
+	///
+	/// CASTER'S BATTLEFIELD ONLY, unlike ComputeTax which scans both. A tax like Vryn Wingmare's
+	/// is symmetric and taxes its own controller too, so scanning one side would make it stronger
+	/// than printed. A discount is the opposite — Goreclaw reduces YOUR spells, and scanning both
+	/// sides would hand the opponent your discount.
+	/// </summary>
+	private static int ComputeReductions(GameState state, Card card, int playerId, int cost)
+	{
 		foreach (var reduction in card.GetComponents<ConditionalCostReductionComponent>())
 			if (reduction.Condition?.IsSatisfied(state, card.Id, playerId) == true)
 				cost = Math.Max(0, cost - reduction.Amount);
 
-		return Math.Max(0, cost + ComputeTax(state, card));
+		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+		if (battlefieldId == 0)
+			return cost;
+
+		var context = new TargetingContext
+		{
+			GameState = state,
+			SourceCardId = card.Id,
+			CastingPlayerId = playerId,
+			IsNonTargeted = true,
+		};
+
+		foreach (var permanent in state.GetCardsInZone(battlefieldId))
+		{
+			// The card being cast is not on the battlefield, so it can never be its own source —
+			// but a permanent carrying a self-reduction would otherwise be counted twice.
+			if (permanent.Id == card.Id)
+				continue;
+
+			foreach (var reduction in permanent.GetComponents<ConditionalCostReductionComponent>())
+			{
+				if (reduction.AppliesTo == null)
+					continue;
+				if (!reduction.AppliesTo.IsSatisfiedBy(card.Id, context))
+					continue;
+				if (reduction.Condition?.IsSatisfied(state, permanent.Id, playerId) == false)
+					continue;
+
+				cost = Math.Max(0, cost - reduction.Amount);
+			}
+		}
+
+		return cost;
 	}
 
 	/// <summary>

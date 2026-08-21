@@ -172,12 +172,22 @@ public static class DraftTrainingStore
 		}
 	}
 
+	/// <summary>
+	/// Writes the model, and a spreadsheet-readable CSV of the same data beside it.
+	///
+	/// The CSV is written HERE rather than from the console, because this is the single path
+	/// every save takes (direct and via SaveMerged) — anywhere else and the two files drift the
+	/// first time someone adds a caller. It is derived output: safe to delete, regenerated on the
+	/// next run, and never read back by anything.
+	/// </summary>
 	public static void Save(DraftTrainingData data, string path = DefaultPath)
 	{
 		var dir = Path.GetDirectoryName(path);
 		if (!string.IsNullOrEmpty(dir))
 			Directory.CreateDirectory(dir);
 		File.WriteAllText(path, JsonSerializer.Serialize(data, Options));
+
+		DraftTrainingCsvExporter.Export(data, path);
 	}
 
 	/// Merges into whatever is already on disk, so repeated training runs accumulate.

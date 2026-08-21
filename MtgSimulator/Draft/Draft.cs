@@ -42,9 +42,21 @@ public sealed record DraftState(DraftFormat Format, ImmutableList<DraftSeat> Sea
 
 public static class Draft
 {
-	/// How many drafted spells make the deck. Shared so training and the trained picker
-	/// reason about the same cards BuildDeck will actually play.
-	public const int DefaultMaxSpells = 27;
+	/// <summary>
+	/// How many drafted spells make the deck. Shared so training, the trained picker and the
+	/// Godot deck list all reason about the same cards BuildDeck will actually play.
+	///
+	/// 23 spells in a 40-card deck is **17 lands**, up from 13. The old figure was set for a
+	/// low-curve pool where 13 was fine; the Core Set Cube's curve is much higher, and 13 lands
+	/// meant getting stuck on three mana and never casting the top of the curve. Real limited
+	/// Magic runs 17 lands in 40 for the same reason.
+	///
+	/// The three-land opening hand (SetupGameAction.OpeningHandLandCount) is what makes the
+	/// difference bigger than it looks: with the opening hand fixed, the land density that
+	/// actually decides whether you keep hitting drops is the REMAINDER of the library. At 13
+	/// lands that was 10 in 33 (30%); at 17 it is 14 in 33 (42%).
+	/// </summary>
+	public const int DefaultMaxSpells = 23;
 
 	/// <summary>
 	/// Deals a whole draft up front from <paramref name="seed"/>. Every pack and every

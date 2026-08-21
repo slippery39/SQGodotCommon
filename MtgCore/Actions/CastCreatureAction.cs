@@ -25,6 +25,13 @@ public record CastCreatureAction : GameAction
 	public ImmutableDictionary<int, ImmutableList<int>> AdditionalCostPayments { get; init; } =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
+	/// <summary>
+	/// The X chosen for an {X} creature spell — the Hydras. Ignored on a card with no
+	/// XCostComponent. Carried on the action rather than the card for the same reason as
+	/// CastSpellAction.XValue: two copies must be castable for different X.
+	/// </summary>
+	public int XValue { get; init; } = 0;
+
 	public override ValidationResult ValidateAdd(GameState gameState)
 	{
 		if (!gameState.HasObject(CardId))
@@ -106,7 +113,12 @@ public record CastCreatureAction : GameAction
 
 		return new ActionResult(
 			state.SpawnAction(
-				new ResolveCreatureAction { CardId = CardId, CastingPlayerId = CastingPlayerId }
+				new ResolveCreatureAction
+				{
+					CardId = CardId,
+					CastingPlayerId = CastingPlayerId,
+					XValue = XValue,
+				}
 			)
 		).WithEvent(playedEvent);
 	}
@@ -125,6 +137,6 @@ public record CastCreatureAction : GameAction
 		return state;
 	}
 
-	private static int ComputeEffectiveCost(GameState state, Card card, int playerId) =>
-		state.ComputeEffectiveCost(card, playerId);
+	private int ComputeEffectiveCost(GameState state, Card card, int playerId) =>
+		state.ComputeEffectiveCost(card, playerId, XValue);
 }

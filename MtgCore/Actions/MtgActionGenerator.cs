@@ -227,14 +227,20 @@ public static class MtgActionGenerator
 		List<GameAction> actions
 	)
 	{
-		var action = new CastCreatureAction
+		// An {X} creature (the Hydras) is offered once per affordable X, exactly as an X spell is.
+		// AffordableXValues returns [0] for everything else, so this costs non-X creatures nothing.
+		foreach (var x in AffordableXValues(state, card, playerId))
 		{
-			CardId = card.Id,
-			CastingPlayerId = playerId,
-			AdditionalCostPayments = costPayments,
-		};
-		if (state.TryAddAction(action).Success)
-			actions.Add(action);
+			var action = new CastCreatureAction
+			{
+				CardId = card.Id,
+				CastingPlayerId = playerId,
+				AdditionalCostPayments = costPayments,
+				XValue = x,
+			};
+			if (state.TryAddAction(action).Success)
+				actions.Add(action);
+		}
 	}
 
 	private static void AddPermanentAction(
@@ -376,22 +382,29 @@ public static class MtgActionGenerator
 			if (effects[i].TargetingStrategy.RequiresUserSelection)
 				targetedIndices.Add(i);
 
+		// A TARGETED X spell was previously only ever offered at X=0 — this loop was missing here
+		// while AddSpellAction had it, so Primal Might's whole cost was unreachable and the card
+		// looked blank. AffordableXValues returns [0] for a non-X spell, so nothing else changes.
 		foreach (var target in validTargets)
 		{
 			var targetMap = ImmutableDictionary<int, ImmutableList<int>>.Empty;
 			foreach (var index in targetedIndices)
 				targetMap = targetMap.Add(index, ImmutableList.Create(target));
 
-			var castAction = new CastSpellAction
+			foreach (var x in AffordableXValues(state, card, playerId))
 			{
-				CardId = card.Id,
-				CastingPlayerId = playerId,
-				AdditionalCostPayments = costPayments,
-				TargetIds = targetMap,
-			};
-			if (state.TryAddAction(castAction).Success)
-			{
-				actions.Add(castAction);
+				var castAction = new CastSpellAction
+				{
+					CardId = card.Id,
+					CastingPlayerId = playerId,
+					AdditionalCostPayments = costPayments,
+					TargetIds = targetMap,
+					XValue = x,
+				};
+				if (state.TryAddAction(castAction).Success)
+				{
+					actions.Add(castAction);
+				}
 			}
 		}
 	}

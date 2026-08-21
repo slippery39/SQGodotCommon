@@ -123,6 +123,7 @@ public record EventTriggerCondition : TriggerCondition
 			PermanentEnteredBattlefieldEvent e => e.CardId,
 			PermanentLeftBattlefieldEvent e => e.CardId,
 			CombatDamageDealtToPlayerEvent e => e.AttackerId,
+			CountersAddedEvent e => e.CardId,
 			LandPlayedEvent e => e.PlayerId,
 			ArtifactLeftBattlefieldEvent e => e.CardId,
 			_ => 0,

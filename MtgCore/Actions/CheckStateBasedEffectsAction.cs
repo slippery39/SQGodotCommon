@@ -59,11 +59,48 @@ public record CheckStateBasedEffectsAction : GameAction
 		state = DestroyZeroToughnessCreatures(state, ref pendingEvents);
 		state = DestroyZeroLoyaltyPlaneswalkers(state, ref pendingEvents);
 
+		state = CountCreatureDeaths(state, pendingEvents);
+
 		state = EvaluateTriggeredAbilities(state, pendingEvents);
 		state = state with { PendingGameEvents = ImmutableList<GameEvent>.Empty };
 
 		var (finalState, events) = CheckLossConditions(state, player1, player2);
 		return new ActionResult(finalState) { Events = events };
+	}
+
+	/// <summary>
+	/// Rolls this batch's creature deaths into MtgGame.CreaturesDiedThisTurn, for "if a creature
+	/// died this turn" (Fungal Rebirth).
+	///
+	/// Counted HERE, from the pending events, rather than at the five actions that stage
+	/// CreatureDestroyedEvent (DestroyCreatureAction, AttackAction, DealDamageAction,
+	/// SacrificeAdditionalCost, DestroyZeroToughnessCreatures). Every death batch passes through
+	/// this method and none can bypass it, whereas five call sites are five chances to forget one
+	/// — which is precisely how a sacrificed creature came not to count as having died.
+	///
+	/// Runs before EvaluateTriggeredAbilities so a trigger resolving this pass already sees the
+	/// death that fired it.
+	/// </summary>
+	private static GameState CountCreatureDeaths(
+		GameState state,
+		ImmutableList<GameEvent> pendingEvents
+	)
+	{
+		var deaths = pendingEvents.Count(e => e is CreatureDestroyedEvent);
+		if (deaths == 0)
+			return state;
+
+		var game = state.TryGetGame();
+		if (game == null)
+			return state;
+
+		return state.UpdateObject(
+			game.Id,
+			game with
+			{
+				CreaturesDiedThisTurn = game.CreaturesDiedThisTurn + deaths,
+			}
+		);
 	}
 
 	/// <summary>
@@ -298,6 +335,7 @@ public record CheckStateBasedEffectsAction : GameAction
 			CreatureDamagedEvent e => e.Amount,
 			CombatDamageDealtToPlayerEvent e => e.Amount,
 			CardRevealedEvent e => e.ManaCost,
+			CountersAddedEvent e => e.Amount,
 			_ => 0,
 		};
 

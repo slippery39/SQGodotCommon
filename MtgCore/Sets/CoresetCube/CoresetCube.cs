@@ -29,6 +29,9 @@ public static class CoresetCube
 			.. CoresetCubeRed.Cards,
 			.. CoresetCubeRedSpells.Cards,
 			.. CoresetCubeRedPermanents.Cards,
+			.. CoresetCubeGreen.Cards,
+			.. CoresetCubeGreenSpells.Cards,
+			.. CoresetCubeGreenPermanents.Cards,
 		];
 
 	public static CardSet Set { get; } = new(Code, Name, Cards);

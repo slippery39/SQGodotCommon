@@ -134,6 +134,16 @@ public record ResolveEffectAction : GameAction
 				state
 			),
 
+			// The engine stands in for the player on "your" side of a two-target card.
+			// See TargetSelectionMode.Best.
+			TargetSelectionMode.Best => (
+				CreatureEvaluator.PickStrongest(
+					state,
+					effect.TargetingStrategy.GetValidTargets(context with { IsNonTargeted = true })
+				),
+				state
+			),
+
 			TargetSelectionMode.CastingPlayer => (ImmutableList.Create(CastingPlayerId), state),
 
 			TargetSelectionMode.None => (ImmutableList<int>.Empty, state),

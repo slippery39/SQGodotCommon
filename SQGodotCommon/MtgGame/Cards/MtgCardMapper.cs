@@ -227,6 +227,15 @@ public static class MtgCardMapper
 		if (card.HasComponent<XCostComponent>())
 			lines.Add("X is all the mana you have left when you cast it");
 
+		// The Hydras are printed 0/0 — without this line they read as a creature that dies the
+		// moment it arrives, which is the exact opposite of what they do.
+		foreach (var entersWith in card.GetComponents<EntersWithCountersComponent>())
+			lines.Add(
+				entersWith.FromXValue ? "Enters with X +1/+1 counters on it"
+				: entersWith.Count == 1 ? "Enters with a +1/+1 counter on it"
+				: $"Enters with {entersWith.Count} +1/+1 counters on it"
+			);
+
 		// Not reminder text: blue's counterspell traps really do fire from hand here, so this
 		// clause protects against something the opponent can actually be holding. Rendering
 		// nothing would hide the only reason Exquisite Firecraft beats a counterspell deck.
@@ -237,10 +246,22 @@ public static class MtgCardMapper
 					: $"This spell can't be countered if {LowerFirst(uncounterable.Condition.Describe())}"
 			);
 
+		// Two shapes, and they describe different cards. A Condition discounts THIS card; an
+		// AppliesTo sits on a battlefield permanent and discounts OTHER cards you cast. Goreclaw
+		// has only the latter, and without this branch it printed a dangling "Costs 2 less to
+		// cast" with no subject and no clause — text that reads like the card discounts itself.
 		foreach (var reduction in card.GetComponents<ConditionalCostReductionComponent>())
 			lines.Add(
-				$"Costs {reduction.Amount} less to cast if "
-					+ LowerFirst(reduction.Condition?.Describe() ?? "a condition is met")
+				// The noun comes back as "creature with power 4 or greater", so "spells you cast"
+				// has to be spliced after the head noun rather than appended — otherwise it reads
+				// "Creature with power 4 or greater spells you cast".
+				reduction.AppliesTo != null
+					? SpliceSpellsYouCast(
+						DescribeSpecification(reduction.AppliesTo),
+						reduction.Amount
+					)
+					: $"Costs {reduction.Amount} less to cast if "
+						+ LowerFirst(reduction.Condition?.Describe() ?? "a condition is met")
 			);
 
 		// Serra Avenger reads as a free 3/3 flyer for two without this.
@@ -517,6 +538,31 @@ public static class MtgCardMapper
 	private static string Decapitalise(string s) =>
 		string.IsNullOrEmpty(s) ? s : char.ToLowerInvariant(s[0]) + s[1..];
 
+	/// <summary>
+	/// The three counter verbs. A Multiplier is not a number of counters, and printing "Put 0
+	/// +1/+1 counters" for Primordial Hydra would describe a card that does nothing.
+	/// </summary>
+	private static string DescribeCounters(AddCountersAction c, string target)
+	{
+		if (c.Multiplier > 1)
+			return $"Double the number of +1/+1 counters on {target}";
+
+		if (!string.IsNullOrEmpty(c.AmountContextKey))
+			return $"Put that many +1/+1 counters on {target}";
+
+		if (c.Amount < 0)
+		{
+			var removed = Math.Abs(c.Amount);
+			return removed == 1
+				? $"Remove a +1/+1 counter from {target}"
+				: $"Remove {removed} +1/+1 counters from {target}";
+		}
+
+		return c.Amount == 1
+			? $"Put a +1/+1 counter on {target}"
+			: $"Put {c.Amount} +1/+1 counters on {target}";
+	}
+
 	private static string DescribeThreshold(ThresholdComponent t)
 	{
 		var parts = new List<string>();
@@ -542,7 +588,13 @@ public static class MtgCardMapper
 			parts.Add($"gains {string.Join(", ", keywords)}");
 
 		var effect = parts.Count > 0 ? string.Join(" and ", parts) : "has no bonus";
-		return $"Threshold — while {t.Minimum}+ cards are in your graveyard, this {effect}";
+
+		// Primordial Hydra counts COUNTERS, not graveyard cards. Without this branch it reads
+		// "while 10+ cards are in your graveyard" — a clause about a completely different zone,
+		// on a card that has nothing to do with the graveyard.
+		return t.CountSource == ThresholdSource.PlusOneCounters
+			? $"While this has {t.Minimum}+ +1/+1 counters on it, it {effect}"
+			: $"Threshold — while {t.Minimum}+ cards are in your graveyard, this {effect}";
 	}
 
 	private static string DescribeTransform(TransformComponent transform)
@@ -632,6 +684,10 @@ public static class MtgCardMapper
 		if (power != 0 || toughness != 0)
 			parts.Add($"{Signed(power)}/{Signed(toughness)}");
 
+		// "can't attack" is a clause, not something a creature "gets", so it is kept out of the
+		// gets-list and joined on separately. Pacifism read "Enchanted creature gets can't attack".
+		var cantAttack = false;
+
 		if (boost != null)
 		{
 			if (boost.GrantsFlying)
@@ -644,15 +700,29 @@ public static class MtgCardMapper
 				parts.Add("Indestructible");
 			if (boost.GrantsHexproof)
 				parts.Add("Hexproof");
-			if (boost.PreventsAttacking)
-				parts.Add("can't attack");
+			// Trample is Rancor's whole reason to exist and was absent from this list, so the
+			// Aura described itself as a bare +2/+0.
+			if (boost.GrantsTrample)
+				parts.Add("Trample");
+			if (boost.GrantsReach)
+				parts.Add("Reach");
+			if (boost.GrantsDeathtouch)
+				parts.Add("Deathtouch");
+			cantAttack = boost.PreventsAttacking;
 		}
 
-		var effect = parts.Count > 0 ? string.Join(", ", parts) : "nothing";
 		var subject = attachment.IsAura ? "Enchanted creature" : "Equipped creature";
 		var lead = attachment.IsAura ? "Aura — attaches when it enters. " : "";
 
-		return $"{lead}{subject} gets {effect}";
+		var clauses = new List<string>();
+		if (parts.Count > 0)
+			clauses.Add($"gets {string.Join(", ", parts)}");
+		if (cantAttack)
+			clauses.Add("can't attack");
+		if (clauses.Count == 0)
+			clauses.Add("gets nothing");
+
+		return $"{lead}{subject} {string.Join(" and ", clauses)}";
 	}
 
 	private static string LowerFirst(string text) =>
@@ -821,9 +891,11 @@ public static class MtgCardMapper
 			// The controller filter is load-bearing, exactly as it is for CreatureAttacked above.
 			// Scab-Clan Berserker punishes the OPPONENT's spells and read "Whenever you cast a
 			// spell", which describes the opposite card.
-			EventTypeNames.SpellCast => isOpponents
-				? "Whenever an opponent casts a spell"
-				: "Whenever you cast a spell",
+			// An UNFILTERED SpellCast means either player — Managorger Hydra grows on the
+			// opponent's turn too, and "Whenever you cast a spell" describes half the card.
+			EventTypeNames.SpellCast => isOpponents ? "Whenever an opponent casts a spell"
+			: e.Filter == null ? "Whenever a player casts a spell"
+			: "Whenever you cast a spell",
 			// Brash Taunter's entire card. Without this it read "When triggered", which says
 			// nothing about the only reason to play it.
 			EventTypeNames.CreatureDamaged => isSelf
@@ -835,6 +907,15 @@ public static class MtgCardMapper
 			EventTypeNames.CardMilled => "Whenever a card of yours is milled",
 			EventTypeNames.LandPlayed => "Landfall — whenever you play a land",
 			EventTypeNames.TurnEnded => "At end of turn",
+
+			// ===== Green section =====
+			// Thragtusk and Rancor both hang their whole payoff off leaving play, and this read
+			// "When triggered" — a card that says nothing about the only reason to play it.
+			EventTypeNames.PermanentLeftBattlefield => isSelf
+				? "When this leaves the battlefield"
+				: $"Whenever {FilterPhrase(e.Filter)} leaves the battlefield",
+			EventTypeNames.CountersAdded =>
+				"Whenever one or more +1/+1 counters are put on another creature you control",
 			_ => "When triggered",
 		};
 	}
@@ -901,9 +982,23 @@ public static class MtgCardMapper
 		var suffixes = new[] { " you control", " an opponent controls" };
 		foreach (var suffix in suffixes)
 			if (phrase.EndsWith(suffix))
-				return phrase[..^suffix.Length] + "s" + suffix;
-		return phrase.EndsWith("s") ? phrase : phrase + "s";
+				return PluralNoun(phrase[..^suffix.Length]) + suffix;
+		return PluralNoun(phrase);
 	}
+
+	/// <summary>
+	/// Plural of a bare noun, with the irregulars the cube actually contains. Green's Elf lords
+	/// read "Elfs get +1/+1" without this, and a card that misspells its own tribe looks like a
+	/// bug in the card rather than in the text.
+	/// </summary>
+	private static string PluralNoun(string noun) =>
+		noun switch
+		{
+			"Elf" => "Elves",
+			"Dwarf" => "Dwarves",
+			"Wolf" => "Wolves",
+			_ => noun.EndsWith('s') ? noun : noun + "s",
+		};
 
 	private static string? DescribeGrantedKeywords(StaticGrantKeywordAbility g, string who)
 	{
@@ -945,15 +1040,25 @@ public static class MtgCardMapper
 				: $"Deal {d.Amount} damage to {t}",
 			DestroyCreatureAction => $"Destroy {t}",
 			ExileAction => $"Exile {t}",
-			AddModifierAction m => $"{Capitalise(t)} gets {Signed(m.PowerBonus)}/"
-				+ $"{Signed(m.ToughnessBonus)}{DurationSuffix(m.Duration)}",
+			// A context-driven bonus is not a number the card can print. Without this Primal Might
+			// read "Target creature gets +0/+0" and Overwhelming Stampede the same — the Brash
+			// Taunter "Deal 0 damage" bug in a second switch, and just as invisible.
+			AddModifierAction m => !string.IsNullOrEmpty(m.PowerBonusContextKey)
+			|| !string.IsNullOrEmpty(m.ToughnessBonusContextKey)
+				? $"{Capitalise(t)} gets +X/+X{DurationSuffix(m.Duration)}"
+				: $"{Capitalise(t)} gets {Signed(m.PowerBonus)}/"
+					+ $"{Signed(m.ToughnessBonus)}{DurationSuffix(m.Duration)}",
 			// A context-driven amount is not a number the card can print — Vilis draws "that
 			// many", scaling with the life just lost, and printing "Draw a card" understated it
 			// by most of the card.
 			DrawCardsAction d => !string.IsNullOrEmpty(d.AmountContextKey) ? "Draw that many cards"
 			: d.Amount == 1 ? "Draw a card"
 			: $"Draw {d.Amount} cards",
-			GainLifeAction g => $"Gain {g.Amount} life",
+			// Context-driven amount, fourth instance of the "Deal 0 damage" class. Dwynen scales
+			// with your Elf count and printed "Gain 0 life" — a card that appears to do nothing.
+			GainLifeAction g => !string.IsNullOrEmpty(g.AmountContextKey)
+				? "Gain that much life"
+				: $"Gain {g.Amount} life",
 			// The target was ignored entirely, so every card that drains someone ELSE printed
 			// "Lose N life" — Blood Reckoning and Indulgent Tormentor both read as though they
 			// hurt their own controller, which is the opposite of what they do.
@@ -962,12 +1067,15 @@ public static class MtgCardMapper
 			: TargetsSelf(effect) ? $"Lose {l.Amount} life"
 			: $"{Capitalise(t)} loses {l.Amount} life",
 			CreateCardAction c => c.Count == 1
-				? $"Create a {c.CardTemplate.Name} token"
+				? $"Create {Article(c.CardTemplate.Name)} {c.CardTemplate.Name} token"
 				: $"Create {c.Count} {c.CardTemplate.Name} tokens",
 			DiscardCardsAction => "Discard a card",
 			MoveCardToHandAction => $"Return {t} to your hand",
 			ReturnToHandAction => $"Return {t} to your hand",
-			AddTemporaryManaAction m => $"Add {m.Amount} mana",
+			// Elvish Archdruid scales with your Elf count and printed "Add 0 mana".
+			AddTemporaryManaAction m => !string.IsNullOrEmpty(m.AmountContextKey)
+				? "Add that much mana"
+				: $"Add {m.Amount} mana",
 			MillAction m => DescribeMill(m, effect),
 			DrainLifeAction d => $"Target opponent loses {d.Amount} life and you gain {d.Amount}",
 			DiscardRandomCardAction => "Target opponent discards a card at random",
@@ -975,8 +1083,19 @@ public static class MtgCardMapper
 			GiveFlashbackAction => "An instant or sorcery in your graveyard gains Flashback",
 			PutIntoBattlefieldAction => $"Put {t} onto the battlefield",
 			TransformAction => "Transform this",
-			FightAction => $"This fights {t}",
+			// "This" is the source creature on an ETB fight, but on a SPELL the source is the
+			// spell itself and FightAction falls back to your strongest creature — so the text
+			// has to say which creature is actually swinging.
+			FightAction f => f.OneSided
+				? $"Your strongest creature deals damage equal to its power to {t}"
+				: $"Your strongest creature fights {t}",
 			LookAtTopCardsAction l => $"Look at the top {l.Amount} cards, put one in your hand",
+
+			// ===== Green section =====
+			// +1/+1 counters. Every one of these renders blank without a case, and the doubling
+			// clause is the entire reason Primordial Hydra is worth a card.
+			AddCountersAction c => DescribeCounters(c, t),
+			CountGreatestPowerAction => "Find the greatest power among creatures you control",
 
 			// ===== Core Set Cube =====
 			// Every one of these left its card rendering completely blank before it was added.
@@ -1033,6 +1152,25 @@ public static class MtgCardMapper
 		};
 	}
 
+	/// <summary>
+	/// "Creature spells you cast with power 4 or greater cost 2 less" — the qualifier goes after
+	/// "spells you cast", not before it, which is how the real card is worded.
+	/// </summary>
+	private static string SpliceSpellsYouCast(string noun, int amount)
+	{
+		var head = noun;
+		var qualifier = "";
+
+		var split = noun.IndexOf(" with ", StringComparison.Ordinal);
+		if (split >= 0)
+		{
+			head = noun[..split];
+			qualifier = noun[split..];
+		}
+
+		return $"{Capitalise(head)} spells you cast{qualifier} cost {amount} less";
+	}
+
 	private static bool SelfTargeted(string targetContextKey) =>
 		targetContextKey == ContextKeys.CastingPlayerId;
 
@@ -1076,11 +1214,28 @@ public static class MtgCardMapper
 	private static string? DescribeCustomModifier(AddCustomModifierAction m, string target) =>
 		m.Modifier switch
 		{
+			// The new body's own keywords have to print. Skinshifter's three modes are chosen
+			// between, and with flying and trample invisible two of them read as strictly worse
+			// copies of the third.
 			BecomesBaseCreatureComponent b =>
 				$"{Capitalise(target)} loses all abilities and becomes a {b.Power}/{b.Toughness}"
+					+ BecomesKeywords(b)
 					+ " until end of turn",
 			_ => null,
 		};
+
+	private static string BecomesKeywords(BecomesBaseCreatureComponent b)
+	{
+		var keywords = new List<string>();
+		if (b.GrantsFlying)
+			keywords.Add("Flying");
+		if (b.GrantsTrample)
+			keywords.Add("Trample");
+		if (b.GrantsReach)
+			keywords.Add("Reach");
+
+		return keywords.Count == 0 ? "" : $" with {string.Join(" and ", keywords)}";
+	}
 
 	/// <summary>
 	/// An intervening-if clause. The condition is the whole point of these cards — Timely
@@ -1112,23 +1267,43 @@ public static class MtgCardMapper
 		if (m.Modes.IsEmpty)
 			return null;
 
+		// EACH MODE'S OWN TARGETING, not a placeholder. This used to hardcode
+		// AllValid(CreatureControlledByYou) for every mode, so a targeted mode described a
+		// completely different card: Return to Nature's "destroy target artifact" rendered as
+		// "Destroy each creature you control" — text that reads like a one-sided board wipe on
+		// what is actually a Naturalize.
 		var described = m
-			.Modes.Select(mode =>
-				DescribeEffect(
-					new CardEffect
-					{
-						ActionTemplate = mode,
-						TargetingStrategy = TargetingStrategy.AllValid(
-							TargetSpecification.CreatureControlledByYou()
-						),
-					}
-				)
+			.Modes.Select(
+				(mode, i) =>
+					DescribeEffect(
+						new CardEffect
+						{
+							ActionTemplate = mode,
+							TargetingStrategy =
+								(i < m.ModeTargeting.Count ? m.ModeTargeting[i] : null)
+								?? TargetingStrategy.AllValid(
+									TargetSpecification.CreatureControlledByYou()
+								),
+						}
+					)
 			)
 			.Where(d => d != null)
 			.ToList();
 
 		return described.Count == 0 ? null : $"Choose one — {string.Join("; or ", described)}";
 	}
+
+	private static string StripYouControl(string noun) =>
+		noun.EndsWith(" you control", StringComparison.Ordinal)
+			? noun[..^" you control".Length]
+			: noun;
+
+	/// "a Beast" but "an Elf Warrior" — token names are card names, so the article has to be
+	/// chosen rather than hardcoded.
+	private static string Article(string noun) =>
+		!string.IsNullOrEmpty(noun) && "AEIOU".Contains(char.ToUpperInvariant(noun[0]))
+			? "an"
+			: "a";
 
 	private static string Signed(int n) => n >= 0 ? $"+{n}" : n.ToString();
 
@@ -1180,6 +1355,11 @@ public static class MtgCardMapper
 		{
 			TargetSelectionMode.AllValid => $"each {noun}",
 			TargetSelectionMode.Random => $"a random {noun}",
+			// The engine picks this one, not the player, so calling it "target" would promise a
+			// choice the card never offers — and falling through to the default did exactly that.
+			// "your strongest" already says whose, so the spec's own " you control" is stripped
+			// rather than yielding "your strongest creature you control".
+			TargetSelectionMode.Best => $"your strongest {StripYouControl(noun)}",
 			_ => $"target {noun}",
 		};
 	}
@@ -1202,6 +1382,9 @@ public static class MtgCardMapper
 		/// text that promises more than the card does.
 		public CardType Types;
 		public CardType ExcludedTypes;
+
+		/// "with power N or greater" (Goreclaw). 0 means unrestricted.
+		public int MinPower;
 
 		public int MaxManaCost;
 		public bool Exhausted;
@@ -1289,6 +1472,11 @@ public static class MtgCardMapper
 			case NotSpecification { Inner: HasFlyingSpecification }:
 				f.WithoutFlying = true;
 				break;
+			// Goreclaw's discount applies only to power-4-and-up creatures, and without this the
+			// card read "Creature spells you cast cost 2 less" — a strictly better card.
+			case PowerAtLeastSpecification p:
+				f.MinPower = p.Minimum;
+				break;
 		}
 	}
 
@@ -1324,6 +1512,14 @@ public static class MtgCardMapper
 		if (f.Player)
 			return f.Opponents ? "opponent" : "player";
 
+		// An OR of "artifact or enchantment" with "creature with flying" (Vivien Reid's -3) walks
+		// into facts that say BOTH, and taking creature first dropped the artifact and
+		// enchantment halves entirely — text that promises less than the card does. The walker
+		// deliberately flattens And and Or the same way, so this reassembles the union here
+		// rather than teaching it to distinguish them.
+		if (f.Creature && f.Flying && TypeNoun(f.Types, f.ExcludedTypes) is { } alsoTypes)
+			return $"{alsoTypes} or creature with flying";
+
 		var noun =
 			f.Subtype
 			?? (f.Creature ? "creature" : null)
@@ -1344,6 +1540,9 @@ public static class MtgCardMapper
 		if (f.MaxManaCost > 0)
 			suffix += $" costing {f.MaxManaCost} or less";
 
+		if (f.MinPower > 0)
+			suffix += $" with power {f.MinPower} or greater";
+
 		if (f.Attacked)
 			suffix += " that attacked this turn";
 
@@ -1362,8 +1561,16 @@ public static class MtgCardMapper
 	/// </summary>
 	private static string? TypeNoun(CardType types, CardType excluded)
 	{
+		// "noncreature permanent" is Bramblecrush's whole restriction, and collapsing every
+		// exclusion but Land to a bare "permanent" promised removal for anything — text that says
+		// the card does strictly more than it does.
 		if (excluded != CardType.None)
-			return excluded == CardType.Land ? "nonland permanent" : "permanent";
+			return excluded switch
+			{
+				CardType.Land => "nonland permanent",
+				CardType.Creature => "noncreature permanent",
+				_ => "permanent",
+			};
 
 		if (types == CardType.None || types == CardType.AnyPermanent)
 			return null;
@@ -1405,6 +1612,21 @@ public static class MtgCardMapper
 
 	private static string DescribeGrantKeyword(GrantKeywordAction g, string target)
 	{
+		var keywords = GrantedKeywordList(g);
+
+		if (keywords.Length == 0)
+			return "Grants nothing";
+
+		return $"{Capitalise(target)} gains {keywords}" + DurationSuffix(g.Duration);
+	}
+
+	/// <summary>
+	/// The keyword names a GrantKeywordAction hands out, comma-joined. Extracted so the
+	/// standalone and pipeline-step renderings cannot drift — thirteen fields duplicated across
+	/// two switches is how Xathrid Slyblade came to print half its ability.
+	/// </summary>
+	private static string GrantedKeywordList(GrantKeywordAction g)
+	{
 		var keywords = new List<string>();
 		if (g.GrantsFlying)
 			keywords.Add("Flying");
@@ -1436,11 +1658,7 @@ public static class MtgCardMapper
 		if (g.GrantsExalted)
 			keywords.Add("Exalted");
 
-		if (keywords.Count == 0)
-			return "Grants nothing";
-
-		return $"{Capitalise(target)} gains {string.Join(", ", keywords)}"
-			+ DurationSuffix(g.Duration);
+		return string.Join(", ", keywords);
 	}
 
 	/// <summary>
@@ -1452,10 +1670,14 @@ public static class MtgCardMapper
 		var whose = s.TargetOpponent ? "an opponent's" : "your";
 		var zone = s.Zone.ToString().ToLowerInvariant();
 
+		// Any other Filter has to be described too, not silently ignored. Woodland Bellower reads
+		// "a nonlegendary creature card with mana value 3 or less"; without this it rendered as
+		// "choose a card from your library", which describes an unrestricted tutor.
 		var what =
 			!string.IsNullOrEmpty(s.Subtype) ? $"a {s.Subtype}"
 			: s.Filter is IsCreatureInOwnGraveyardSpecification ? "a creature card"
 			: s.Filter is IsInstantOrSorceryInOwnGraveyardSpecification ? "an instant or sorcery"
+			: s.Filter != null ? $"a {DescribeSpecification(s.Filter)}"
 			: "a card";
 
 		return $"choose {what} from {whose} {zone}";
@@ -1508,15 +1730,21 @@ public static class MtgCardMapper
 				? "lose life equal to its mana value"
 			: l.Amount > 0 ? $"lose {l.Amount} life"
 			: "lose life",
-			GainLifeAction g => $"gain {g.Amount} life",
-			AddTemporaryManaAction m => string.IsNullOrEmpty(m.BonusAmountContextKey)
-				? $"add {m.Amount} mana"
-				: $"add {m.Amount}+X mana",
+			// The context-driven-amount trap AGAIN, in the pipeline switch this time. Fixing only
+			// the standalone arm left Dwynen printing "gain 0 life" and Elvish Archdruid "add 0
+			// mana" — both scale with your Elf count, and both read as cards that do nothing.
+			GainLifeAction g => !string.IsNullOrEmpty(g.AmountContextKey)
+				? "gain that much life"
+				: $"gain {g.Amount} life",
+			AddTemporaryManaAction m => !string.IsNullOrEmpty(m.AmountContextKey)
+				? "add that much mana"
+			: string.IsNullOrEmpty(m.BonusAmountContextKey) ? $"add {m.Amount} mana"
+			: $"add {m.Amount}+X mana",
 			RevealTopCardAction => "reveal top card",
 			LookAtTopCardsAction l => $"look at top {l.Amount} cards, put one in hand",
 			SelectCardFromLibraryAction s => string.IsNullOrEmpty(s.Subtype)
 				? "search your library for a card"
-				: $"search your library for a {s.Subtype}",
+				: $"search your library for {Article(s.Subtype)} {s.Subtype}",
 			PutIntoBattlefieldAction => "put it into play",
 			SelectCardsFromHandAction => "choose a card",
 			DiscardCardsAction => "discard it",
@@ -1531,7 +1759,7 @@ public static class MtgCardMapper
 				: $"create that many {c.CardTemplate.Name}s",
 			CountCardsWithSubtypeAction s => string.IsNullOrEmpty(s.Subtype)
 				? $"count the cards in your {s.Zone.ToString().ToLowerInvariant()}"
-				: $"count {s.Subtype}s in your {s.Zone.ToString().ToLowerInvariant()}",
+				: $"count {PluralNoun(s.Subtype)} in your {s.Zone.ToString().ToLowerInvariant()}",
 			SelectCardFromZoneAction s => DescribeZoneSelection(s),
 
 			// A modal spell is a pipeline of [choose a mode][apply it]. The choice step is
@@ -1556,8 +1784,22 @@ public static class MtgCardMapper
 			DealDamageAction d => !string.IsNullOrEmpty(d.AmountContextKey)
 				? "deal that much damage to it"
 				: $"deal {d.Amount} damage to it",
-			FightAction => "fight it",
-			AddModifierAction m => $"give it {Signed(m.PowerBonus)}/{Signed(m.ToughnessBonus)}",
+			FightAction f => f.OneSided ? "deal damage equal to its power to it" : "fight it",
+			// Same context-driven trap again — Overwhelming Stampede's buff scales with the
+			// greatest power you control and printed "give it +0/+0".
+			AddModifierAction m => !string.IsNullOrEmpty(m.PowerBonusContextKey)
+			|| !string.IsNullOrEmpty(m.ToughnessBonusContextKey)
+				? "give them +X/+X"
+				: $"give it {Signed(m.PowerBonus)}/{Signed(m.ToughnessBonus)}",
+
+			// ===== Core Set Cube: green =====
+			AddCountersAction c => LowerFirst(DescribeCounters(c, "it")),
+			CountGreatestPowerAction => "find the greatest power among your creatures",
+			// DescribeGrantKeyword builds "{target} gains X", which is ungrammatical for a plural
+			// subject — Overwhelming Stampede read "them gains Trample".
+			GrantKeywordAction g => GrantedKeywordList(g) is { Length: > 0 } kw
+				? $"they gain {kw}"
+				: null,
 
 			// ===== Core Set Cube: black =====
 			// Every one of these left part or all of its card unrendered before it was added.

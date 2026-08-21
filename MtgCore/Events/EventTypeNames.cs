@@ -41,6 +41,12 @@ public static class EventTypeNames
 	/// </summary>
 	public const string PermanentLeftBattlefield = nameof(PermanentLeftBattlefieldEvent);
 
+	/// <summary>
+	/// +1/+1 counters PUT ON a creature. Carries an Amount, so a trigger reading
+	/// ContextKeys.TriggerAmount gets "put that many counters" for free.
+	/// </summary>
+	public const string CountersAdded = nameof(CountersAddedEvent);
+
 	public const string PermanentPlayed = nameof(PermanentPlayedEvent);
 	public const string LandPlayed = nameof(LandPlayedEvent);
 	public const string ArtifactLeftBattlefield = nameof(ArtifactLeftBattlefieldEvent);

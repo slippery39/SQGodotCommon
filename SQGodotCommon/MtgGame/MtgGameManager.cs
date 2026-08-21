@@ -142,8 +142,16 @@ public class MtgGameManager
 
 	public (bool Success, ImmutableList<GameEvent> Events) CastCreature(int cardId)
 	{
+		// XValue for the {X} Hydras, on the same "spend what you have" rule the X spells use.
+		// Without it a human casting Primordial Hydra gets a 0/0 that dies on arrival while the
+		// AI casts it correctly — the "the AI can do it and I can't" signature.
 		return SubmitAction(
-			new CastCreatureAction { CardId = cardId, CastingPlayerId = HumanPlayerId }
+			new CastCreatureAction
+			{
+				CardId = cardId,
+				CastingPlayerId = HumanPlayerId,
+				XValue = MaxAffordableX(cardId),
+			}
 		);
 	}
 

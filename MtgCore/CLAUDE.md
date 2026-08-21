@@ -131,7 +131,7 @@ MtgCore/
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Terravore. Must be stamped with Duration = Permanent in card definitions.
 ├── Sets/                    # CardSet (Code, Name, Cards; Draftable filters lands), SetRegistry (All, Default, Get)
 │   ├── CoresetCube/         # The CSC set, built from an external cube list (cubecobra magiccoreset20xx).
-│   │                        # WHITE, BLUE, BLACK AND RED COMPLETE — 268 cards. The cube is 450: 67 per colour,
+│   │                        # ALL FIVE COLOURS COMPLETE — 335 cards. The cube is 450: 67 per colour,
 │   │                        # 50 colourless, 53 multicolour. CoresetCube.cs assembles the files:
 │   │                        #   CoresetCubeWhite.cs           38 creatures
 │   │                        #   CoresetCubeWhiteSpells.cs     10 instants + 6 sorceries
@@ -148,7 +148,10 @@ MtgCore/
 │   │                        #   CoresetCubeRed.cs             38 creatures
 │   │                        #   CoresetCubeRedSpells.cs       12 instants + 8 sorceries
 │   │                        #   CoresetCubeRedPermanents.cs   4 enchantments + 1 artifact + 4 planeswalkers
-│   │                        # Green not started — it is the last mono-coloured section.
+│   │                        #   CoresetCubeGreen.cs           36 creatures
+│   │                        #   CoresetCubeGreenSpells.cs     10 instants + 10 sorceries
+│   │                        #   CoresetCubeGreenPermanents.cs 7 enchantments + 1 equipment + 3 planeswalkers
+│   │                        # Colourless (50) and multicolour (53) are what remain of the cube.
 │   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
 │                            # HollowmereTokens.cs holds token templates (excluded from the card list).
 │                            # Read the header of Hollowmere.cs before adding cards — it states the rate bar and
@@ -484,10 +487,16 @@ Set Cube white pass: tap costs (see "Exhaust" — `RequiresTap` now exhausts), f
 indestructible, exalted, subtype protection, numeric replacement effects, activation conditions,
 and cast restrictions.
 
-**+1/+1 counters are a "won't do", not a "not yet".** A permanent `AddModifierAction` *is* the
-counter. `HasPermanentPowerBonusSpecification` answers "did it have a counter on it". A dedicated
-counter system only becomes necessary for a card that counts counters ("for each +1/+1 counter"),
-and no card yet does.
+**+1/+1 counters WERE a "won't do", and green fired the stated trigger.** This section used to say
+a permanent `AddModifierAction` *is* the counter, and that a dedicated system only became necessary
+for a card that counts counters. Three green cards do arithmetic on them — Primordial Hydra doubles,
+Wildwood Scourge reacts to counters landing elsewhere, Barkhide Troll enters with one — so the
+system now exists. See "+1/+1 Counters" below.
+
+A permanent `AddModifierAction` is still the right tool for a card that just wants a permanent
+buff, and `HasPermanentPowerBonusSpecification` still answers "did it have a counter on it" for
+both. **Use `PlusOneCounterComponent` for anything whose counters are read back**: only it can be
+doubled, removed, or counted, and only it survives into the graveyard for a death trigger.
 
 ## Impulse Draw
 
@@ -587,6 +596,183 @@ forced-attack concept, and dropping it only ever helps the player, like vigilanc
 Rabblemaster are printed as "for each other attacking Goblin"; attacking is a fleeting state here
 (one attack per turn, resolving immediately), so they count Goblins you control instead. Costed
 down accordingly, since not having to commit the attack is a real upgrade.
+
+## Green Section Mechanics (Core Set Cube)
+
+Green is the counters colour, the ramp colour and the fight colour, and the engine had none of the
+three properly. Two shipped cards were also found to be silent no-ops on the way through.
+
+### +1/+1 Counters
+
+`PlusOneCounterComponent : PowerToughnessModifier { Count }` — **one component per card whose count
+mutates**, not N stamped modifiers. "Double the counters" and "remove a counter" both need a
+number, and "count the permanent P/T modifiers" answers a different question: an anthem's
+`AppliedStaticPTBoost`, an `EquippedBoostComponent` and Unholy Strength's +2/+1 are all permanent
+and none are counters. Doubling would double those too.
+
+`Duration` is forced to `Permanent` **in the constructor**. Every other live-evaluated modifier here
+carries a comment begging callers to remember it; this one simply cannot be built wrong.
+
+`CreatureEvaluator` and `HasPermanentPowerBonusSpecification` needed **no changes** — both already
+walk every `PowerToughnessModifier`.
+
+`AddCountersAction { Amount, Multiplier }` is the only mutator:
+`newCount = max(0, old * Multiplier + ResolveAmount(Amount))`. Negative `Amount` removes;
+`Multiplier = 2` is "double the counters on it". Builders: `WithSelfCounters`, `WithCounters`,
+`WithSelfCounterMultiplier`, `CreatureCardBuilder.WithEntersWithCounters`.
+
+**Counters are stripped on ENTRY, not on exit** — in `PutIntoBattlefieldAction.ApplyEntryCounters`,
+and deliberately absent from `MoveCardTracked`'s closed strip list. Real MTG says two things that
+pull apart here: counters cease to exist on a zone change, but a leaves-the-battlefield trigger uses
+last-known information. Exit-stripping honours the first and breaks the second, **which is exactly
+what was wrong with Chasm Skulker**: its counters were stripped before its own death trigger
+resolved, so it read power 1, applied its −1 offset and created **zero** tokens. Entry-stripping
+honours both. Do not move it.
+
+`EntersWithCountersComponent { Count, FromXValue }` is applied in the ETB ceremony, not as an ETB
+trigger — it is a replacement effect, and the ceremony is the one path every creature takes onto the
+battlefield, so cast/reanimated/cloned/token all behave alike. It emits **no** `CountersAddedEvent`:
+entering with counters is not counters being put on a creature.
+
+`CountersAddedEvent` got the full four-site treatment (record, `EventTypeNames`, `ExtractSubjectId`,
+`TriggerAmountOf`) and is staged into `PendingGameEvents`. **It is deliberately not
+`CreatureModifiedEvent`**, which is inert *and* fires for Giant Growth — reusing it would have made
+Wildwood Scourge grow off every combat trick.
+
+`ThresholdComponent.CountSource` (`GraveyardCards` | `PlusOneCounters`) covers "trample as long as
+it has ten or more +1/+1 counters". A field on the existing live-evaluated component rather than a
+parallel type: `StaticAbilityEngine`'s push model would go stale the moment a counter landed, and a
+second type is one more place to forget `Duration = Permanent` and one more `Grants*` list to keep
+in sync with the six-site keyword rule.
+
+**Barkhide Troll's "remove a +1/+1 counter" cost is reskinned**, not built. What the removal is FOR
+is bounding the hexproof, and `MaxActivationsPerTurn = 1` does that for zero lines. Build
+`RemoveCounterAdditionalCost` only when a second card wants to spend counters.
+
+### X on creature spells
+
+`CastCreatureAction.XValue` → `ResolveCreatureAction` → `PutIntoBattlefieldAction`'s
+`InputContext[ContextKeys.XValue]`. Only `CastSpellAction` had X before, so `{X}` creatures were
+impossible. `MtgActionGenerator.AffordableXValues` was already card-type agnostic and is reused
+verbatim.
+
+**`AddTargetedSpellAction` never looped X**, so a *targeted* X-spell could only ever be cast for
+X = 0 — Primal Might's entire cost was unreachable. Fixed in the same pass.
+`MtgGameManager.CastCreature` now passes `MaxAffordableX`, which it already had; without it a human
+casting a Hydra got a 0/0 while the AI cast it correctly — the "the AI can do it and I can't"
+signature.
+
+### Fight, and two-target spells
+
+Four cards say "target creature YOU CONTROL … target creature you DON'T control". Two independent
+problems:
+
+- **`TargetSelectionMode.Best`** — the engine picks the strongest valid target (highest effective
+  power, ties on lowest id). `RequiresUserSelection` stays **false**, which is the whole point: a
+  `Best` effect and a `UserSelect` effect coexist on one card with no change to Multi-Effect
+  Targeting or `ValidateTargets`. Precedent: Clone picks highest power, `WithEdict` takes the
+  cheapest. Power rather than mana cost, because these cards read "damage equal to its power" and in
+  a counters set a two-mana Hydra with eight counters beats a five-mana 3/3.
+- **`FightAction`'s source fallback** — on a spell, `ContextKeys.SourceCardId` is the *spell*, which
+  has no `CreatureComponent`, so `FightAction` bailed out silently. **Hollowmere's Set Upon the Pack
+  shipped as a complete no-op for exactly this reason.** When the source is not a creature, the
+  caster's strongest creature fights instead.
+
+Both share one picker, `CreatureEvaluator.PickStrongest` / `GetStrongestCreature`, so a card that
+buffs and then fights cannot pick two different creatures.
+
+`FightAction.OneSided` drops the return damage (Rabid Bite, Hunter's Edge).
+`RequiresCreatureRestriction` stops these being castable on an empty board, where the fallback finds
+nobody and the spell is a silent no-op at full price.
+
+### Everything else
+
+- **`AddModifierAction.PowerBonusContextKey` / `ToughnessBonusContextKey`** — two explicit keys, not
+  an overload of the inherited `AmountContextKey`, which would have to mean "both bonuses" and would
+  silently make `+X/+0` inexpressible.
+- **`CountGreatestPowerAction`** emits both the maximum power **and** the creature-id list, from the
+  one scan it already does. That second output is what makes Overwhelming Stampede expressible at
+  all: a mass buff needs a number *and* a target list, and `PipelineAction` is not `ITargetedAction`
+  so nothing can inject mass targets into a pipeline step. A live `GreatestPowerComponent` is
+  explicitly rejected — its `GetPowerBonus` would call `GetEffectivePower`, which reads the same
+  component on every other creature. That recurses.
+- **`ConditionalCostReductionComponent.AppliesTo`** — a `TargetSpecification` asking about the CARD
+  being cast, for a reduction that lives on a battlefield permanent (Goreclaw). `CostEngine` gained
+  a **caster's-battlefield-only** scan; `ComputeTax` scans both sides because a tax is symmetric,
+  but a discount must not cross the table.
+- **`MtgGame.CreaturesDiedThisTurn`** — game-level, not `MtgPlayer`, because Fungal Rebirth asks
+  about "a creature" either side. Incremented in `CheckStateBasedEffectsAction` from the pending
+  events, **not** at the five actions that stage `CreatureDestroyedEvent` — five sites is five
+  chances to miss one, which is how sacrifice came not to count as a death.
+- **`ControlsSubtypeCondition`** — one type, used through the existing `ConditionalAction` rather
+  than gaining a `TriggerCondition` twin. `ConditionalAction` evaluates with `cardId = 0`, so
+  "another Elf" is expressed as `Minimum = 2` and the card counts itself. Say so on the card.
+- **`BecomesBaseCreatureComponent.GrantsFlying/Trample/Reach`** — "becomes a 2/2 Bird **with
+  flying**" is one effect. `GetEffectiveStats` applies that component's suppression *after* every
+  grant, so a separate `GrantKeywordAction` would be stripped by the very effect meant to give it,
+  and Skinshifter's bird mode would silently be a worse copy of its rhino mode.
+- **`AsAura` could not grant trample, reach or deathtouch**, although `EquippedBoostComponent` has
+  always carried all three. Rancor would have been a silent +2/+0.
+
+### Mana dorks produce on your upkeep, never via a tap ability
+
+All five green dorks are `TriggerConditions.OnYourUpkeep()` → `AddTemporaryManaAction`. No engine
+work; both halves already existed. `StartTurnAction` refills `CurrentMana = MaxMana` and the trigger
+resolves after that, so the mana is additive and evaporates at the next refill — correct, since it
+must vanish if the creature dies — and a dork cast this turn produces nothing until the next upkeep,
+which is what summoning sickness would have done.
+
+The reason is not faithfulness, it is that **an unactivated mana ability is invisible**: the creature
+just looks weak, and the AI has to re-derive the activation every turn on every dork before it can
+cast anything. Price them slightly above their printed rate for the reliability.
+
+### The rules-text pass found nine more, and one was catastrophic
+
+`DescribeModes` rendered **every** mode against a hardcoded placeholder target, so Return to Nature's
+"destroy target artifact" printed as **"Destroy each creature you control"** — a one-sided board wipe
+on what is a Naturalize. Also: `AddTemporaryManaAction` and `GainLifeAction` printing "add 0 mana"
+and "gain 0 life" for context-driven amounts **in the pipeline switch after the standalone switch was
+already fixed** (fourth and fifth instances of that class); `AddModifierAction` printing "+0/+0";
+`IsNotCardTypeSpecification` collapsing "noncreature permanent" to "permanent"; `PowerAtLeastSpecification`
+dropped entirely, so Goreclaw discounted every creature spell; `SelectCardFromZoneAction.Filter`
+ignored, so Woodland Bellower read as an unrestricted tutor; an OR of types with a creature clause
+losing half itself (Vivien Reid); "Enchanted creature gets can't attack"; and `Elfs`.
+
+**`NoCard_PrintsAnAmountThatMeansItDoesNothing` in `CoresetCubeRulesTextTests` is the blanket guard**
+for the context-driven-amount class, because the next card to hit it has not been written yet.
+
+### Auditing the bottom of the win-rate table found three more inert-card bugs
+
+**A blank card and a merely weak card score the same (~40%), and only one is a bug.** Ten green
+cards came back at 39–43%; seven of them turned out to do literally nothing.
+`GreenLowWinRateAuditTests` pins each one by asserting the board or zone consequence — the
+technique that works here is auditing the low band card by card, not rebalancing it.
+
+1. **`WithDig` was a query with no consumer.** It built a bare `LookAtTopCardsAction`, which
+   writes card IDs into pipeline context and stops. Nothing read them, so *every* dig card in the
+   cube revealed cards and then did nothing: Track Down lost its cantrip, Llanowar Empath and
+   Garruk's Harbinger were vanilla creatures, and Drawn from Dreams, Fateful Vision, Vivien Reid's
+   `+1` and Hollowmere's Search the Parish were blank. `WithDig` is now reveal → choose → move,
+   with `SelectFromRevealedAction` as the missing middle.
+2. **`IsCreatureSpecification` is battlefield-only** (it enforces shroud/hexproof, so it must be),
+   which makes it silently wrong as a `SelectCardFromZoneAction.Filter` against a LIBRARY: it
+   matched nothing, and Shared Summons, Evolutionary Leap, Fauna Shaman and Woodland Bellower all
+   searched and found nothing. **For "a creature CARD in any zone" use
+   `IsCardTypeSpecification { Types = CardType.Creature }`,** which is zone-agnostic.
+   `HasManaCostAtMostSpecification` is zone-agnostic already.
+3. **A MODE could not target.** `SelectModeAction` spawns its `ResolveEffectAction` with no
+   `TargetIds` — the mode is chosen during resolution, long after the cast action fixed its
+   targets — so a `UserSelect` mode targeting strategy resolved to an empty list. Return to
+   Nature destroyed nothing. This is the same failure `TriggerTargeting` exists for, in a second
+   place, and it is now fixed the same way: `SelectModeAction` downgrades `UserSelect` to `Random`
+   at the point of construction, so it is unreachable rather than fixed one card at a time.
+
+**Harness note that cost real time:** `GameState.ProcessAllActions` deliberately STOPS at a
+`ChoiceAction` — the AI resolves choices (`MultiTurnBeamSearchAiStrategy.ResolveAllChoices`), not
+the action loop. A test that only calls `ProcessAllActions` leaves any card containing a scry or a
+mode frozen mid-pipeline, and everything after it looks inert. Track Down, Llanowar Empath and
+Return to Nature all looked broken for that reason on top of their real bugs. Use the
+`SettleChoices` helper pattern in `GreenLowWinRateAuditTests` before concluding a card is dead.
 
 ## Black Section Mechanics (Core Set Cube)
 

@@ -151,6 +151,29 @@ alone leaves expansion capped and the comparison measures nothing. Lift both, an
 harness by crippling one arm — branching 1 scores 41.1% against 48.2%, which is how you know the
 test can still see a difference at all.
 
+### A planned action must never be re-found as a different one
+
+`FindCommittedAction` re-finds each step of a committed chain in a freshly generated legal-action
+list, using `ActionsMatch`. That matcher compared the two cast actions **on card id alone**, and
+`MtgActionGenerator` enumerates X **ascending** — so a chain that planned "cast this for X=4"
+re-found and executed the **X=0** action.
+
+Every `{X}` card in the cube was exposed: Banefire and Earthquake dealing no damage, Mind Spring
+drawing nothing, and green's two Hydras arriving as 0/0s that the zero-toughness rule destroys on
+arrival. All of them are indistinguishable from a blank card in a win-rate table, which is where
+Primordial Hydra was found (39.2%, bottom of the CSC run). `XValue` is now part of the identity of
+both cast actions.
+
+**This is pinned at the matcher, not through a game, and that is deliberate.** `SelectAction`
+returns the FIRST action of a chain directly — it never goes through `ActionsMatch` — so a
+game-level test passes whether or not the bug is present, which is worse than no test. Forcing a
+specific card to position ≥1 of a committed chain is not reliably reproducible from a unit test.
+`ActionsMatch` is `internal` so `XCostChainReplayTests` can assert the invariant itself.
+
+**The general rule: anything the search chose between must be part of the match.** Targets already
+were; X was not. A field that distinguishes two legal actions and is absent here silently
+downgrades the AI's decision to whichever variant the generator happens to emit first.
+
 The potential bucket is load-bearing. Ranking on immediate score alone cuts a fast-mana setup line
 before it is ever rolled out — the exact failure `IPotentialEvaluator` exists to prevent, and
 invisible when it happens, because the action is never explored rather than explored and rejected.
@@ -291,7 +314,7 @@ with something else.
 
 Key rules:
 - **Picks are indices into `Seat.Offer`, never `Card` values.** `Card` is a record, so two copies of one template in a pack compare equal and picking by value would remove the wrong card.
-- **Packs exclude lands** — `Draft.BuildDeck` supplies the mana base by padding to `deckSize` with Plains. It stamps `OwnerId`/`ControllerId`, so it must be called **per game**, not once per seat.
+- **Packs exclude lands** — `Draft.BuildDeck` supplies the mana base by padding to `deckSize` with Plains: 23 spells + **17 lands** in a 40-card deck. See `Draft.DefaultMaxSpells` for why 17 rather than 13. It stamps `OwnerId`/`ControllerId`, so it must be called **per game**, not once per seat.
 - **`DraftPicker` is a delegate**, not an interface. The no-delegates serialization rule does not apply because draft state never enters a `GameState` — same reasoning as `DeckInfo.Builder`.
 - **Human seats have no picker type.** The caller drives the loop and supplies that seat's index; `RunToCompletion` is for all-AI drafts only. This keeps all presentation (console, Godot) out of the library — a UI renders `Seats[i].Offer` / `.Pool` and needs no library change.
 - **Determinism**: `Draft.Create(format, pool, seed, …)` consumes one `Random(seed)` in fixed seat order and fixes the entire draft. `ApplyPicks` and `RunToCompletion` are pure. Only `DraftPickers.Random` holds RNG; `DraftRunner` seeds it as `seed + 100 + seatIndex`, and games as `seed + 1000 + gameIndex * 5` (mirroring `SimulatorRunner`).
@@ -437,7 +460,7 @@ Three things here are deliberate and were each arrived at by fixing a measured r
 
 - **One global scalar, not per-card factors.** Per-card P(drawn) is *endogenous*: a card that wins games faster is drawn less often (measured correlation with win rate: −0.18), so scaling by it penalises exactly the best cards.
 - **Applied to synergy only, never to the card term.** Scaling both compresses the whole score range, which makes a fixed `temperature` behave far more randomly — that alone cost ~4 points of win rate (82.2% → 78.4%) and masqueraded as a modelling error.
-- **Summed, not averaged**, over only the first `Draft.DefaultMaxSpells` (27) pool cards — the ones `BuildDeck` actually plays. Averaging would arbitrarily divide by pool size; including all 45 counts synergies with cards that never make the deck.
+- **Summed, not averaged**, over only the first `Draft.DefaultMaxSpells` (23) pool cards — the ones `BuildDeck` actually plays. Averaging would arbitrarily divide by pool size; including all 45 counts synergies with cards that never make the deck.
 
 ### synergyWeight defaults to 0, on evidence
 

@@ -249,4 +249,32 @@ public static class TriggerConditions
 			EventTypeName = EventTypeNames.CreatureExhausted,
 			Filter = opponentOnly ? new IsControlledByOpponentSpecification() : null,
 		};
+
+	/// <summary>
+	/// Fires whenever ANY player casts a spell, yours or theirs (Managorger Hydra).
+	/// The counterpart to OnYouCastSpell, which filters to your own.
+	/// </summary>
+	public static TriggerCondition OnAnyPlayerCastsSpell() =>
+		new EventTriggerCondition { EventTypeName = EventTypeNames.SpellCast };
+
+	/// <summary>
+	/// Fires when +1/+1 counters are PUT ON another creature you control — Wildwood Scourge's
+	/// "whenever one or more +1/+1 counters are put on another non-Hydra creature you control".
+	///
+	/// Pass excludeSubtype to skip creatures of a given type; that exclusion is not decoration on
+	/// Wildwood Scourge, it is what stops two Scourges from growing each other without bound.
+	///
+	/// Reads CountersAddedEvent, which only fires on a net INCREASE, so removing a counter
+	/// elsewhere cannot feed this.
+	/// </summary>
+	public static TriggerCondition OnCountersPlacedOnAnotherCreature(string excludeSubtype = "") =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.CountersAdded,
+			Filter = string.IsNullOrEmpty(excludeSubtype)
+				? new IsControlledByYouSpecification().And(new IsNotSelfSpecification())
+				: new IsControlledByYouSpecification()
+					.And(new IsNotSelfSpecification())
+					.And(new IsSubtypeSpecification { Subtype = excludeSubtype }.Not()),
+		};
 }

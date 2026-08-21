@@ -92,6 +92,7 @@ public record StartTurnAction : GameAction
 				{
 					SpellsCastLastTurn = game.SpellsCastThisTurn,
 					SpellsCastThisTurn = 0,
+					CreaturesDiedThisTurn = 0,
 				}
 			);
 

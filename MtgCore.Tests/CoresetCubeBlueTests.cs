@@ -31,16 +31,16 @@ public class CoresetCubeBlueTests
 	}
 
 	/// <summary>
-	/// Four colours complete at exactly 67 each. The cube is 450 — 67 per colour, 50 colourless,
-	/// 53 multicolour — so green is what remains of the mono-coloured sections.
+	/// All five colours complete at exactly 67 each. The cube is 450 — 67 per colour, 50
+	/// colourless, 53 multicolour — so the colourless and multicolour sections are what remain.
 	/// </summary>
 	[Test]
-	public void WholeSet_IsFourCompleteColours()
+	public void WholeSet_IsFiveCompleteColours()
 	{
 		Assert.That(
 			CoresetCube.Cards,
-			Has.Count.EqualTo(268),
-			"67 white + 67 blue + 67 black + 67 red"
+			Has.Count.EqualTo(335),
+			"67 white + 67 blue + 67 black + 67 red + 67 green"
 		);
 	}
 

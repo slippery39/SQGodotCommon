@@ -170,6 +170,23 @@ public record CreatureModifiedEvent : GameEvent
 	public int ToughnessBonus { get; init; }
 }
 
+/// <summary>
+/// One or more +1/+1 counters were PUT ON a creature. Emitted by AddCountersAction only when the
+/// net change is positive, so removing a counter cannot feed a counter payoff.
+///
+/// Deliberately NOT CreatureModifiedEvent, which fires for Giant Growth and every other P/T
+/// change. Reusing that would make Wildwood Scourge grow off any combat trick — the "confidently
+/// wrong" failure mode, which is worse than no trigger at all.
+///
+/// A creature ENTERING with counters emits nothing; see EntersWithCountersComponent.
+/// </summary>
+public record CountersAddedEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public int PlayerId { get; init; }
+	public int Amount { get; init; }
+}
+
 public record TurnStartedEvent : GameEvent
 {
 	public int PlayerId { get; init; }

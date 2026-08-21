@@ -182,6 +182,11 @@ public class PermanentCardBuilder
 	///
 	/// Pass 0/0 bonuses for an aura that only grants keywords or only shuts a creature down.
 	/// </summary>
+	/// <remarks>
+	/// trample/reach/deathtouch were missing from this list while EquippedBoostComponent has
+	/// always carried them, so an Aura granting any of the three rendered and behaved as a bare
+	/// P/T buff — Rancor is +2/+0 AND trample, and the trample half would simply have vanished.
+	/// </remarks>
 	public PermanentCardBuilder AsAura(
 		int powerBonus = 0,
 		int toughnessBonus = 0,
@@ -191,6 +196,9 @@ public class PermanentCardBuilder
 		bool indestructible = false,
 		bool hexproof = false,
 		bool preventsAttacking = false,
+		bool trample = false,
+		bool reach = false,
+		bool deathtouch = false,
 		TargetingStrategy? targeting = null
 	)
 	{
@@ -209,6 +217,9 @@ public class PermanentCardBuilder
 					GrantsLifelink = lifelink,
 					GrantsIndestructible = indestructible,
 					GrantsHexproof = hexproof,
+					GrantsTrample = trample,
+					GrantsReach = reach,
+					GrantsDeathtouch = deathtouch,
 					PreventsAttacking = preventsAttacking,
 					Duration = ModifierDuration.Permanent,
 				},

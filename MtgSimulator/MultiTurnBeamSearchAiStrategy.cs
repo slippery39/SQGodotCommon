@@ -897,12 +897,26 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	private static GameAction? FindCommittedAction(List<GameAction> legal, GameAction committed) =>
 		legal.FirstOrDefault(a => ActionsMatch(a, committed));
 
-	private static bool ActionsMatch(GameAction a, GameAction b) =>
+	/// <remarks>
+	/// Internal so the X-cost identity rule below can be asserted directly. Forcing the beam to
+	/// commit a chain from a unit test is not reliably reproducible, and the invariant — a planned
+	/// action must never be re-found as a materially different one — is worth pinning on its own.
+	/// </remarks>
+	internal static bool ActionsMatch(GameAction a, GameAction b) =>
 		(a, b) switch
 		{
 			(PlayLandAction x, PlayLandAction y) => x.CardId == y.CardId,
-			(CastCreatureAction x, CastCreatureAction y) => x.CardId == y.CardId,
+			// XValue IS PART OF THE IDENTITY OF AN X SPELL. Without it, a chain that planned
+			// "cast this for X=4" re-finds the FIRST legal action with the same card id on replay —
+			// and MtgActionGenerator enumerates X ascending, so that is X=0. Every X card in the
+			// cube was therefore cast for zero whenever the beam search committed a chain: Banefire
+			// and Earthquake dealt no damage, Mind Spring drew nothing, and the two green Hydras
+			// arrived as 0/0s and died on the spot. Indistinguishable from a blank card, and it is
+			// what put Primordial Hydra at the bottom of the win-rate table.
+			(CastCreatureAction x, CastCreatureAction y) => x.CardId == y.CardId
+				&& x.XValue == y.XValue,
 			(CastSpellAction x, CastSpellAction y) => x.CardId == y.CardId
+				&& x.XValue == y.XValue
 				&& TargetIdsMatch(x.TargetIds, y.TargetIds),
 			(AttackAction x, AttackAction y) => x.AttackerId == y.AttackerId
 				&& x.TargetId == y.TargetId,
