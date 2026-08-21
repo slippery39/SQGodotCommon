@@ -16,6 +16,14 @@ namespace MtgCore;
 /// </summary>
 public record SelectModeAction : ChoiceAction
 {
+	/// <summary>
+	/// The caster picks the mode of their own modal spell. See ChoiceAction.GetDecidingPlayerId.
+	/// </summary>
+	public SelectModeAction()
+	{
+		DecidingPlayerContextKey = ContextKeys.CastingPlayerId;
+	}
+
 	public ImmutableList<string> ModeNames { get; init; } = ImmutableList<string>.Empty;
 
 	/// <summary>

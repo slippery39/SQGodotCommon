@@ -122,6 +122,22 @@ public class CoresetCubeRulesTextTests
 		Assert.That(pacifism, Does.Contain("can't attack"));
 	}
 
+	/// <summary>
+	/// The lockdown Auras shut down the ENCHANTED creature, and their text has to say so. They
+	/// shipped as an ETB trigger freezing AllValid().OpponentCreatures() — the whole opposing
+	/// board, indefinitely, off a card that enchants one creature. The rendered face never
+	/// mentioned the freeze at all, so the only way to see it was to lose to it.
+	/// </summary>
+	[TestCase("Claustrophobia")]
+	[TestCase("Capture Sphere")]
+	public void LockdownAura_ShutsDownOnlyTheEnchantedCreature(string cardName)
+	{
+		var text = TextFor(cardName);
+
+		Assert.That(text, Does.Contain("Enchanted creature"));
+		Assert.That(text, Does.Contain("can't attack"));
+	}
+
 	[Test]
 	public void Aura_WithKeywordGrants_ListsThem()
 	{

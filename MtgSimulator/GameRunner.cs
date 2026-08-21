@@ -184,7 +184,16 @@ public class GameRunner
 	)
 	{
 		var choice = ctx.State.GetPendingChoice()!;
-		var selectedIds = strategy.ResolveChoice(ctx.State, choice, activePlayerId);
+
+		// The choice's OWNER decides, not the active player. Both sides run the same strategy
+		// here so the simulation never deadlocked the way the UI did — but it evaluated the
+		// opponent's discards and scries as though they were the active player's, which quietly
+		// mistrained every model on those cards. 0 means the owner is unknown; fall back.
+		var decidingPlayerId = ctx.State.GetPendingChoiceDecidingPlayerId();
+		if (decidingPlayerId == 0)
+			decidingPlayerId = activePlayerId;
+
+		var selectedIds = strategy.ResolveChoice(ctx.State, choice, decidingPlayerId);
 		var (resolvedState, choiceEvents) = ctx.State.ResolveChoice(selectedIds);
 		ctx.State = resolvedState;
 		TrackDrawnCards(choiceEvents, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);

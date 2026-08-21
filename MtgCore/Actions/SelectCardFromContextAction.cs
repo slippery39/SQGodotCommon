@@ -15,6 +15,16 @@ namespace MtgCore;
 public record SelectCardFromContextAction : ChoiceAction
 {
 	/// <summary>
+	/// Always resolves inside a spell or ability pipeline, so the player who cast the source is
+	/// the one choosing. See ChoiceAction.GetDecidingPlayerId for what the active-player fallback
+	/// got wrong.
+	/// </summary>
+	public SelectCardFromContextAction()
+	{
+		DecidingPlayerContextKey = ContextKeys.CastingPlayerId;
+	}
+
+	/// <summary>
 	/// The context key containing the ImmutableList&lt;int&gt; of candidate card IDs.
 	/// </summary>
 	public string CardIdsContextKey { get; init; } = "";

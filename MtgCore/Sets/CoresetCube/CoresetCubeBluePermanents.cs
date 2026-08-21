@@ -50,17 +50,20 @@ public static class CoresetCubeBluePermanents
 			// Tap on entry, then hold it down for as long as the Aura is attached — a
 			// source-linked freeze, so destroying the Aura releases the creature.
 			CardFactory
+				// The lockdown is the AURA's boost, not an ETB trigger. The trigger version froze
+				// AllValid().OpponentCreatures() — every creature the opponent controlled, for as
+				// long as the Aura stayed out, off a card that enchants exactly one. A trigger
+				// cannot name "the enchanted creature" (it resolves with no targets, which is why
+				// the explicit AllValid was reached for), but PreventsAttacking rides on the
+				// attachment itself, so it is scoped to the host for free and lifts the moment the
+				// Aura leaves — which is the answerability the header describes. Same shape as
+				// Pacifism.
 				.Enchantment("Claustrophobia", manaCost: 3)
 				.AsAura(
+					preventsAttacking: true,
 					targeting: TargetingStrategy.SingleTarget(
 						TargetSpecification.OpponentCreatures()
 					)
-				)
-				.WithEtbTrigger(
-					"Confine",
-					eb =>
-						eb.WithFreeze(1, whileSourceRemains: true)
-							.WithTarget(AllValid().OpponentCreatures())
 				)
 				.Build(),
 			CardFactory
@@ -75,19 +78,15 @@ public static class CoresetCubeBluePermanents
 					eb => eb.WithMill(2).WithTarget(Single().Opponent())
 				)
 				.Build(),
-			// Flash is cut (no priority window); otherwise identical to Claustrophobia.
+			// Flash is cut (no priority window); otherwise identical to Claustrophobia, including
+			// the board-wide freeze bug — see the note there.
 			CardFactory
 				.Enchantment("Capture Sphere", manaCost: 4)
 				.AsAura(
+					preventsAttacking: true,
 					targeting: TargetingStrategy.SingleTarget(
 						TargetSpecification.OpponentCreatures()
 					)
-				)
-				.WithEtbTrigger(
-					"Ensnare",
-					eb =>
-						eb.WithFreeze(1, whileSourceRemains: true)
-							.WithTarget(AllValid().OpponentCreatures())
 				)
 				.Build(),
 			// "Draw a card for each LAND put into their graveyard" cannot be counted — lands are

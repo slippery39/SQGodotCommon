@@ -383,6 +383,65 @@ public class RedMechanicsTests
 		);
 	}
 
+	/// <summary>
+	/// The counter accumulating is only half the mechanic — the end-step trigger that READS it has
+	/// to actually fire. Every existing test asserted component shape (MaxTriggersPerTurn, the
+	/// condition type) and none drove a turn to its end, so a trigger that never fired would look
+	/// completely healthy. Knight of the Ebon Legion and Chandra's Phoenix both hang off this.
+	/// </summary>
+	[Test]
+	public void LifeLostThisTurn_EndStepTriggerFires()
+	{
+		var battlefieldId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield);
+
+		var knight = CardFactory
+			.Creature("Ebon Knight", manaCost: 1, power: 1, toughness: 1)
+			.WithTriggeredAbility(
+				"Bloodletting Toll",
+				new LifeLostThisTurnCondition { Minimum = 4 },
+				eb => eb.WithSelfBuff(1, 1),
+				maxPerTurn: 1
+			)
+			.Build();
+
+		var (state, card) = _state.AddObject(
+			knight with
+			{
+				OwnerId = _ids.Player1Id,
+				ControllerId = _ids.Player1Id,
+			},
+			parentId: battlefieldId
+		);
+
+		// Player 2 loses 4 life on player 1's turn — the ordinary case the card is built for.
+		(state, _) = state
+			.AddAction(new LoseLifeAction { Amount = 4, TargetIds = [_ids.Player2Id] })
+			.ProcessAllActions();
+
+		Assert.That(
+			state.GetPlayer(_ids.Player2Id).LifeLostThisTurn,
+			Is.EqualTo(4),
+			"precondition: the counter is armed before the turn ends"
+		);
+
+		(state, _) = state
+			.AddAction(
+				new EndTurnAction
+				{
+					GameId = _ids.GameId,
+					Player1Id = _ids.Player1Id,
+					Player2Id = _ids.Player2Id,
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(
+			state.GetEffectiveStats(card.Id).Power,
+			Is.EqualTo(2),
+			"the end-step trigger must fire while the turn's life loss is still readable"
+		);
+	}
+
 	// ===== GOBLIN COUNTING =====
 
 	/// <summary>

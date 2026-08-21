@@ -109,7 +109,39 @@ public class MtgGameManager
 		var (finalState, events) = newState.ProcessAllActions();
 		_state = finalState;
 		_history.Add(new HistoryEntry(_state, ActionDescriber.Describe(action, preActionState)));
-		return (true, events);
+		return (true, events.AddRange(DrainAiOwnedChoices()));
+	}
+
+	/// <summary>
+	/// Answers, as the AI, any pending choice that belongs to the AI — then keeps going, because
+	/// one resolution can immediately pause on the next.
+	///
+	/// Necessary the moment choices became owner-gated. The AI only ever answered choices from
+	/// inside its own turn loop, which was sound while the UI handed the human everything that
+	/// appeared on the human's turn. Now that the human is correctly shown only their own
+	/// choices, an AI-owned one raised during the human's turn — an opponent's end-step trigger,
+	/// a trigger off a creature you killed — would sit unanswered on the action stack and wedge
+	/// the game with no panel and no way to proceed.
+	///
+	/// Called from the two funnels every human-driven state change passes through, so no caller
+	/// can forget it.
+	/// </summary>
+	private ImmutableList<GameEvent> DrainAiOwnedChoices()
+	{
+		var events = ImmutableList<GameEvent>.Empty;
+
+		// Bounded rather than while(true): a choice whose resolution re-raises an identical
+		// choice would otherwise hang the UI thread outright. Matches MaxAiStepsPerTurn's intent.
+		for (var guard = 0; guard < 64; guard++)
+		{
+			if (!_state.IsWaitingForChoice || IsHumanChoice)
+				return events;
+
+			events = events.AddRange(ApplyAiChoice(ComputeAiChoice()));
+		}
+
+		LastAiError = "AI choice resolution did not settle after 64 steps.";
+		return events;
 	}
 
 	/// <summary>
@@ -572,6 +604,29 @@ public class MtgGameManager
 
 	public ChoiceAction GetPendingChoice() => _state.GetPendingChoice();
 
+	/// <summary>
+	/// True when the pending choice is the HUMAN's to answer.
+	///
+	/// The scene used to ask "is it the AI's turn?" instead, which is a different question and
+	/// gave the wrong answer in both directions: an opponent's trigger firing during your turn
+	/// put their discard and their scry in front of you, and your own trigger firing during
+	/// their turn was answered silently by the AI.
+	///
+	/// A choice whose owner is unknown (0) falls back to the active player, so it always has
+	/// someone to answer it rather than blocking the stack.
+	/// </summary>
+	public bool IsHumanChoice
+	{
+		get
+		{
+			if (!_state.IsWaitingForChoice)
+				return false;
+
+			var decider = _state.GetPendingChoiceDecidingPlayerId();
+			return decider == 0 ? !IsAiTurn : decider == HumanPlayerId;
+		}
+	}
+
 	public ImmutableList<ChoiceOption> GetPendingChoiceOptions()
 	{
 		if (!_state.IsWaitingForChoice)
@@ -590,6 +645,15 @@ public class MtgGameManager
 		_history.Add(new HistoryEntry(_state, "Choice resolved"));
 		return events;
 	}
+
+	/// <summary>
+	/// The human answering their own choice. Separate from <see cref="ResolveChoice"/> because
+	/// that one is also the AI's path via <see cref="ApplyAiChoice"/> — draining there would
+	/// recurse. Resolving the human's choice can immediately raise an AI-owned one (their trigger
+	/// was waiting behind yours), so this drains afterwards.
+	/// </summary>
+	public ImmutableList<GameEvent> ResolveHumanChoice(ImmutableList<int> selectedIds) =>
+		ResolveChoice(selectedIds).AddRange(DrainAiOwnedChoices());
 
 	// ===== AI STEP (compute / apply split for off-main-thread execution) =====
 	//

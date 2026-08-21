@@ -750,6 +750,35 @@ public record GameState
 	}
 
 	/// <summary>
+	/// The player who must answer the pending choice, or 0 when there is no choice or its owner
+	/// cannot be determined. Callers treat 0 as "fall back to the active player" — a choice with
+	/// no owner still has to be answerable by someone, or it wedges the action stack forever.
+	///
+	/// Read the owner from HERE rather than inferring it from whose turn it is. A triggered
+	/// ability asks its question whenever it triggers, which is routinely on the opponent's turn.
+	/// </summary>
+	public int GetPendingChoiceDecidingPlayerId()
+	{
+		if (!IsWaitingForChoice)
+			return 0;
+
+		var topAction = ActionStack.Peek();
+
+		return topAction switch
+		{
+			ChoiceAction choice => choice.GetDecidingPlayerId(
+				this,
+				ImmutableDictionary<string, object>.Empty
+			),
+			PipelineAction { CurrentStep: ChoiceAction step } pipeline => step.GetDecidingPlayerId(
+				this,
+				pipeline.PipelineContext
+			),
+			_ => 0,
+		};
+	}
+
+	/// <summary>
 	/// Resolves the current pending ChoiceAction with the player's selection.
 	/// Returns the final state and all events emitted during resumed execution.
 	/// </summary>

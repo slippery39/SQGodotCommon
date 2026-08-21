@@ -135,6 +135,57 @@ public class DrawDiscardSanityTests
 		Assert.That(finalState.HasPendingActions, Is.False);
 	}
 
+	/// <summary>
+	/// A choice belongs to the player it is ABOUT, not to whoever is taking a turn.
+	///
+	/// Nothing recorded an owner, so both front ends inferred one from the active player and both
+	/// got it wrong the same way: an opponent's trigger firing during your turn put THEIR discard
+	/// and THEIR scry in front of you to answer. Player 2 here never becomes active, so an
+	/// active-player inference cannot accidentally pass this.
+	/// </summary>
+	[Test]
+	public void PendingChoice_IsOwnedByThePlayerItIsAbout_NotTheActivePlayer()
+	{
+		var (stateWithCard, _) = _state.AddObject(
+			MakeLibraryCard(),
+			parentId: _ids.Player1LibraryId
+		);
+		var (stateAtChoice, _) = stateWithCard.AddAction(MakeCast()).ProcessAllActions();
+
+		Assert.That(stateAtChoice.IsWaitingForChoice, Is.True, "precondition: paused on a choice");
+		Assert.That(
+			stateAtChoice.GetPendingChoiceDecidingPlayerId(),
+			Is.EqualTo(_ids.Player1Id),
+			"player 1 cast the spell, so player 1 discards"
+		);
+
+		// The opponent's own discard — same action, other player. This is the Avaricious Dragon
+		// shape: it fires on the opponent's end step and must never be handed to the human.
+		var (opponentChoice, _) = _state
+			.AddAction(
+				new PipelineAction
+				{
+					Steps = ImmutableList.Create<GameAction>(
+						new SelectCardsFromHandAction
+						{
+							Prompt = "Opponent discards",
+							PlayerId = _ids.Player2Id,
+							MinChoices = 1,
+							MaxChoices = 1,
+							OutputKey = ContextKeys.SelectedCardIds,
+						}
+					),
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(
+			opponentChoice.GetPendingChoiceDecidingPlayerId(),
+			Is.EqualTo(_ids.Player2Id),
+			"it is the opponent's hand, so it is the opponent's choice"
+		);
+	}
+
 	// ===== HELPERS =====
 
 	private CastSpellAction MakeCast() =>

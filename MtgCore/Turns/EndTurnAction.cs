@@ -74,7 +74,25 @@ public record EndTurnAction : GameAction
 
 		var events = ImmutableList.Create<GameEvent>(turnEndedEvent);
 
-		return new ActionResult(state.SpawnAction(startTurn)) { Events = events };
+		// The end step's triggers must be DISPATCHED before the next turn begins, so the
+		// post-processor is scheduled explicitly ahead of StartTurnAction rather than left to
+		// the executor.
+		//
+		// The executor stages its post-processor alongside whatever the action spawned and
+		// flushes once, and FlushSpawnQueue reverses as it pushes — so the processor lands
+		// UNDERNEATH anything spawned here. StartTurnAction would therefore run first, and it
+		// zeroes LifeLostThisTurn for BOTH players. Every "if a player lost N life this turn"
+		// trigger then read a counter that had just been reset: Knight of the Ebon Legion never
+		// grew and Chandra's Phoenix never returned, while the counter itself tested fine.
+		//
+		// Fixed here rather than in the executor because that ordering is load-bearing engine
+		// wide — inverting it globally breaks 19 tests. Ending a turn is the one place that
+		// genuinely needs its events dispatched before its own follow-up runs.
+		var spawns = state.PostActionProcessor is { } processor
+			? ImmutableList.Create<GameAction>(processor, startTurn)
+			: ImmutableList.Create<GameAction>(startTurn);
+
+		return new ActionResult(state.SpawnActions(spawns)) { Events = events };
 	}
 
 	/// <summary>

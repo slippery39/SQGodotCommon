@@ -49,6 +49,11 @@ public partial class MtgGameScene : Node2D
 	private bool _aiPaused;
 	private Label _debugStatusLabel = null!;
 
+	/// Steps taken in the AI turn currently in progress. A field rather than a local in
+	/// RunAiTurn because that loop can be interrupted by a human-owned choice and resumed, and
+	/// the hang guard has to budget the whole turn rather than restarting on every resume.
+	private int _aiSteps;
+
 	/// Tells the player what the game is waiting for. Every interaction mode that consumes the
 	/// next click must set it, or that mode is unexplained.
 	private PanelContainer _promptBanner = null!;
@@ -769,7 +774,7 @@ public partial class MtgGameScene : Node2D
 
 	// ===== CHOICE HANDLING =====
 
-	private void OnChoiceConfirmed(ImmutableList<int> selectedIds)
+	private async void OnChoiceConfirmed(ImmutableList<int> selectedIds)
 	{
 		// The panel serves two different jobs. An ability choice is a purely local decision that
 		// has not touched the game yet, so it must not be routed into ResolveChoice — there is no
@@ -789,10 +794,17 @@ public partial class MtgGameScene : Node2D
 		}
 
 		_choicePanelShowing = false;
-		var events = _manager.ResolveChoice(selectedIds);
+		var events = _manager.ResolveHumanChoice(selectedIds);
 		_eventLog.AppendEvents(events, _manager.State, _manager.HumanPlayerId);
 		Refresh();
-		CheckAndShowGameOver(events);
+		if (CheckAndShowGameOver(events))
+			return;
+
+		// That choice may have been the one that stopped the opponent's turn mid-flight — your
+		// death trigger firing off their removal spell, say. RunAiTurn returned when it hit it,
+		// so pick the turn back up now that it is answered.
+		if (_manager.IsAiTurn)
+			await RunAiTurn();
 	}
 
 	// ===== TURN / ACTION HANDLERS =====
@@ -827,13 +839,29 @@ public partial class MtgGameScene : Node2D
 		if (CheckAndShowGameOver(events))
 			return;
 
-		// The AI turn is the one loop the player cannot interrupt, so it gets both guards:
-		// a hard step cap (a turn that never yields is a bug, not a long think) and a catch
-		// that dumps the game state. This method is async void — an escaping exception here
-		// takes the whole process down with nothing written anywhere.
-		var steps = 0;
+		_aiSteps = 0;
+		await RunAiTurn();
+	}
+
+	/// <summary>
+	/// Drives the AI's turn until it ends — or until it reaches a choice that belongs to the
+	/// HUMAN, at which point it returns and <see cref="OnChoiceConfirmed"/> calls it again.
+	///
+	/// Re-entrant for exactly that reason. A triggered ability of yours can fire on the
+	/// opponent's turn (a death trigger that scries, most obviously), and answering it is yours
+	/// to do — this loop used to take any pending choice regardless of owner, so the AI silently
+	/// answered yours. The step cap lives in a field rather than a local so a turn interrupted by
+	/// three of your choices still gets ONE budget, not three.
+	/// </summary>
+	private async Task RunAiTurn()
+	{
 		while (_manager.IsAiTurn && !_isGameOver)
 		{
+			// Checked before the delay so the panel is not left sitting behind a dead wait. The
+			// panel itself is already up: Refresh gates on ownership and ran before we got here.
+			if (_manager.IsWaitingForChoice && _manager.IsHumanChoice)
+				return;
+
 			await ToSignal(
 				GetTree().CreateTimer(_aiPaused ? 0.1f : 0.8f),
 				SceneTreeTimer.SignalName.Timeout
@@ -842,7 +870,7 @@ public partial class MtgGameScene : Node2D
 			if (_aiPaused)
 				continue;
 
-			if (++steps > MaxAiStepsPerTurn)
+			if (++_aiSteps > MaxAiStepsPerTurn)
 			{
 				var path = WriteSnapshot(
 					"hang",
@@ -1319,7 +1347,8 @@ public partial class MtgGameScene : Node2D
 
 		// An ability choice owns the panel until the player answers it. Without this guard the
 		// next Refresh sees no pending game choice and hides the panel out from under them.
-		var shouldShowChoice = !_manager.IsAiTurn && !_isGameOver && _manager.IsWaitingForChoice;
+		// Gate on WHOSE choice it is, not whose turn it is — see MtgGameManager.IsHumanChoice.
+		var shouldShowChoice = !_isGameOver && _manager.IsHumanChoice;
 		if (_abilityChoiceCardId.HasValue)
 		{
 			// Leave it alone.

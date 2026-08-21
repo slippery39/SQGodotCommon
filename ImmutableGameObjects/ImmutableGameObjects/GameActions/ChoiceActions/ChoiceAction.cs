@@ -46,6 +46,34 @@ public abstract record ChoiceAction : GameAction
 	) => Options;
 
 	/// <summary>
+	/// Context key naming the player who makes this choice. Set it to whichever key the game
+	/// layer stores the controlling player under (in MtgCore: ContextKeys.CastingPlayerId).
+	/// </summary>
+	public string DecidingPlayerContextKey { get; init; } = "";
+
+	/// <summary>
+	/// WHO answers this choice — not whose turn it is.
+	///
+	/// Without it every front end had to guess from the active player, and both guessed the same
+	/// wrong way: the Godot UI showed the panel whenever it was not the AI's turn, and GameRunner
+	/// handed the choice to whoever was active. So an opponent's card that asked a question during
+	/// YOUR turn asked YOU — you were prompted to discard for their Avaricious Dragon and to scry
+	/// their library — and the mirror case let the AI silently answer yours.
+	///
+	/// Returns 0 when the owner cannot be determined, which callers must treat as "fall back to
+	/// the active player" so a choice can never become unanswerable and wedge the stack.
+	/// </summary>
+	public virtual int GetDecidingPlayerId(
+		GameState gameState,
+		ImmutableDictionary<string, object> pipelineContext
+	) =>
+		!string.IsNullOrEmpty(DecidingPlayerContextKey)
+		&& pipelineContext.TryGetValue(DecidingPlayerContextKey, out var value)
+		&& value is int playerId
+			? playerId
+			: 0;
+
+	/// <summary>
 	/// ChoiceActions are never executed directly — the executor pauses when it
 	/// encounters one and waits for GameState.ResolveChoice() to be called.
 	/// </summary>

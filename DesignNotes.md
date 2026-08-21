@@ -712,3 +712,32 @@ Molten Vortex, Disenchant, Call to the Grave, Blood for Bones — have NOT been 
 Two of them (Drawn from Dreams, Fateful Vision) were already fixed as collateral from the `WithDig`
 repair, which is evidence the band still contains bugs rather than just weak cards. Audit before
 rebalancing.
+
+## Choices have owners; the non-active player can be asked to decide
+
+**Decision: the engine supports a player answering a choice on the opponent's turn.** A
+`ChoiceAction` carries an owner (`GetDecidingPlayerId`), and both front ends route the question to
+that player rather than to whoever is taking a turn.
+
+The alternative considered was restricting choice-raising triggers to their controller's turn.
+Rejected on two grounds:
+
+- It would not have fixed the bug that prompted the discussion. Avaricious Dragon's trigger is
+  already controller-turn-only (`TurnEndedEvent` → `ExtractSubjectId` → the player whose turn
+  ended). It looked cross-turn because `EndTurnAction` flips `ActivePlayerId` *before* staging the
+  event, so the UI's turn-based guess read "human".
+- It would silently gut death triggers. Shadows of the Past ("whenever any creature dies, scry 1")
+  and Return to the Winds (scry 2 on death) resolve on whichever turn the creature died, usually
+  the opponent's. Rules text would still promise the scry. Hollowmere is a graveyard set, so this
+  is the mechanic that set is built on.
+
+**This is not priority and does not open the door to it.** A mid-resolution choice is a question
+asked while something resolves; priority is a response window. Flash and counterspells stay cut.
+
+**If cross-turn choices play badly, constrain the CARDS, not the engine** — design triggers so it
+does not arise. That is reversible; an engine that cannot express it is not.
+
+**Watch:** the AI turn stops and waits on a human-owned choice (`MtgGameScene.RunAiTurn` returns;
+`OnChoiceConfirmed` resumes it). If the player ignores the panel the opponent's turn is stalled —
+waiting on input, not hung, but it has no timeout. `_aiSteps` is a field so an interrupted turn
+keeps one step budget rather than restarting it on each resume.
