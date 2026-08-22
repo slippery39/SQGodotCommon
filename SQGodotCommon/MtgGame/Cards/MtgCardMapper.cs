@@ -246,6 +246,22 @@ public static class MtgCardMapper
 					: $"This spell can't be countered if {LowerFirst(uncounterable.Condition.Describe())}"
 			);
 
+		// Platinum Angel's entire card. Without this it rendered as a seven-mana 4/4 flyer with a
+		// blank text box — the most expensive vanilla creature in the cube, as far as a player
+		// reading it could tell.
+		if (card.HasComponent<CannotLoseComponent>())
+			lines.Add("You can't lose the game");
+
+		// "You may play lands from the top of your library" (Radha). A permanent granting this and
+		// saying nothing is worse than most blank text: the enabling card is on the battlefield
+		// while the card it enables shows up somewhere the player is not looking.
+		foreach (var top in card.GetComponents<PlayFromLibraryTopComponent>())
+			lines.Add(
+				top.Types == CardType.Land
+					? "You may play lands from the top of your library"
+					: "You may play cards from the top of your library"
+			);
+
 		// Two shapes, and they describe different cards. A Condition discounts THIS card; an
 		// AppliesTo sits on a battlefield permanent and discounts OTHER cards you cast. Goreclaw
 		// has only the latter, and without this branch it printed a dangling "Costs 2 less to
@@ -708,6 +724,19 @@ public static class MtgCardMapper
 				parts.Add("Reach");
 			if (boost.GrantsDeathtouch)
 				parts.Add("Deathtouch");
+			// Haste, double strike and shroud were absent, and EquippedBoostComponent has always
+			// carried all three. The symptom was not a missing word: with no stat bonus either,
+			// the clause list came out empty and the card rendered "Equipped creature gets
+			// nothing" — Fireshrieker, Swiftfoot Boots, Whispersilk Cloak and Ring of Valkas all
+			// described themselves as doing literally nothing.
+			if (boost.GrantsHaste)
+				parts.Add("Haste");
+			if (boost.GrantsDoubleStrike)
+				parts.Add("Double Strike");
+			if (boost.GrantsShroud)
+				parts.Add("Shroud");
+			if (boost.GrantsTaunt)
+				parts.Add("Taunt");
 			cantAttack = boost.PreventsAttacking;
 		}
 
@@ -761,6 +790,11 @@ public static class MtgCardMapper
 				: $"discard {d.Count} {d.FilterDescription} cards",
 			DiscardAdditionalCost d => d.Count == 1 ? "discard a card" : $"discard {d.Count} cards",
 			LifeAdditionalCost l => $"pay {l.Amount} life",
+			// Without this Dragon's Hoard read "Spend the Hoard (free): Draw a card" — a free,
+			// unlimited draw engine as far as the card face was concerned. The cost is the card.
+			RemoveCounterAdditionalCost r => r.Count == 1
+				? $"remove a {r.Kind} counter"
+				: $"remove {r.Count} {r.Kind} counters",
 			ExileFromGraveyardAdditionalCost x => x.Count == 1
 				? "exile a card from your graveyard"
 				: $"exile {x.Count} cards from your graveyard",
@@ -893,9 +927,14 @@ public static class MtgCardMapper
 			// spell", which describes the opposite card.
 			// An UNFILTERED SpellCast means either player — Managorger Hydra grows on the
 			// opponent's turn too, and "Whenever you cast a spell" describes half the card.
-			EventTypeNames.SpellCast => isOpponents ? "Whenever an opponent casts a spell"
-			: e.Filter == null ? "Whenever a player casts a spell"
-			: "Whenever you cast a spell",
+			// "an instant or sorcery", not "a spell". SpellCastEvent is emitted only by
+			// CastSpellAction and CastFromGraveyardAction — CastCreatureAction and
+			// CastPermanentAction do not fire it — so every prowess card in the cube was
+			// over-promising, printing a trigger that fires on creatures and artifacts too.
+			EventTypeNames.SpellCast => isOpponents
+				? "Whenever an opponent casts an instant or sorcery"
+			: e.Filter == null ? "Whenever a player casts an instant or sorcery"
+			: "Whenever you cast an instant or sorcery",
 			// Brash Taunter's entire card. Without this it read "When triggered", which says
 			// nothing about the only reason to play it.
 			EventTypeNames.CreatureDamaged => isSelf
@@ -938,6 +977,11 @@ public static class MtgCardMapper
 		var phrase = DescribeSpecification(filter);
 		if (phrase is "it" or "permanent" or "creature")
 			return fallback;
+
+		// "equipped creature" takes no article — there is exactly one, and "an equipped creature"
+		// reads as though any equipped creature on the board would do.
+		if (phrase == "equipped creature")
+			return phrase;
 
 		// These are all creature-scoped events, so a bare controller filter describes itself as
 		// "permanent" only because nothing in the spec says "creature" — the EVENT does. Blood
@@ -1021,6 +1065,17 @@ public static class MtgCardMapper
 			keywords.Add("Shroud");
 		if (g.GrantsHexproof)
 			keywords.Add("Hexproof");
+		// First strike, double strike, indestructible and exalted were all missing while
+		// StaticGrantKeywordAbility has carried them since the white pass. Akroma's Memorial grants
+		// four keywords and printed three.
+		if (g.GrantsFirstStrike)
+			keywords.Add("First Strike");
+		if (g.GrantsDoubleStrike)
+			keywords.Add("Double Strike");
+		if (g.GrantsIndestructible)
+			keywords.Add("Indestructible");
+		if (g.GrantsExalted)
+			keywords.Add("Exalted");
 		return keywords.Count > 0 ? $"{Capitalise(who)} gain {string.Join(", ", keywords)}" : null;
 	}
 
@@ -1040,6 +1095,17 @@ public static class MtgCardMapper
 				: $"Deal {d.Amount} damage to {t}",
 			DestroyCreatureAction => $"Destroy {t}",
 			ExileAction => $"Exile {t}",
+			// Haunted Plate Mail's animate mode is half its card and rendered nothing at all.
+			AnimateAction a => $"Until end of turn, this becomes a {a.Power}/{a.Toughness}"
+				+ (string.IsNullOrEmpty(a.Subtype) ? "" : $" {a.Subtype}")
+				+ " creature",
+			// Dragon's Hoard accumulates gold counters and printed no clause that put any there,
+			// so the ability that spends them looked like it could never be turned on.
+			AddChargeCountersAction c => c.Amount >= 0
+				? $"Put {(c.Amount == 1 ? "a" : c.Amount.ToString())} {c.Kind} counter"
+					+ (c.Amount == 1 ? "" : "s")
+					+ " on this"
+				: $"Remove {Math.Abs(c.Amount)} {c.Kind} counters from this",
 			// A context-driven bonus is not a number the card can print. Without this Primal Might
 			// read "Target creature gets +0/+0" and Overwhelming Stampede the same — the Brash
 			// Taunter "Deal 0 damage" bug in a second switch, and just as invisible.
@@ -1351,6 +1417,13 @@ public static class MtgCardMapper
 				? "each opponent and creature"
 				: noun;
 
+		// "equipped creature" is already singular and already unambiguous — there is exactly one.
+		// AllValid is how an attachment addresses its wearer (nothing can inject a mass target
+		// into a trigger), so the mass phrasing leaks out as "each equipped creature", which reads
+		// as a board-wide pump. The five Rings all printed that.
+		if (noun == "equipped creature")
+			return noun;
+
 		return strategy.SelectionMode switch
 		{
 			TargetSelectionMode.AllValid => $"each {noun}",
@@ -1386,7 +1459,18 @@ public static class MtgCardMapper
 		/// "with power N or greater" (Goreclaw). 0 means unrestricted.
 		public int MinPower;
 
+		/// "equipped creature" — the wearer of the attachment running this effect. Without it the
+		/// five Rings printed "put a +1/+1 counter on each permanent" (a board-wide pump) and
+		/// Sword of the Animist printed "whenever a creature attacks" (either player's, any
+		/// creature). Both read as far stronger cards than they are.
+		public bool EquippedBySource;
+
 		public int MaxManaCost;
+
+		/// "with mana value N or greater" (Dragon's Hoard). Dropping it is the understate-the-
+		/// restriction bug: the Hoard read "whenever a creature you control enters", triggering on
+		/// everything, when it only wants the expensive ones.
+		public int MinManaCost;
 		public bool Exhausted;
 
 		/// Black-section narrowings. Each one is the entire restriction on its card: Royal
@@ -1449,6 +1533,9 @@ public static class MtgCardMapper
 			case HasManaCostAtMostSpecification m:
 				f.MaxManaCost = m.Maximum;
 				break;
+			case HasManaCostAtLeastSpecification ml:
+				f.MinManaCost = ml.Minimum;
+				break;
 			case IsExhaustedSpecification:
 				f.Exhausted = true;
 				break;
@@ -1477,6 +1564,9 @@ public static class MtgCardMapper
 			case PowerAtLeastSpecification p:
 				f.MinPower = p.Minimum;
 				break;
+			case IsEquippedBySourceSpecification:
+				f.EquippedBySource = true;
+				break;
 		}
 	}
 
@@ -1487,6 +1577,11 @@ public static class MtgCardMapper
 
 		var f = new SpecFacts();
 		Collect(spec, f);
+
+		// Checked first: it fully determines the noun, and every other narrowing is irrelevant
+		// once the target is "whatever this attachment is on".
+		if (f.EquippedBySource)
+			return "equipped creature";
 
 		// The graveyard and hand specs imply the zone, but they can still be narrowed by a
 		// subtype — and dropping that narrowing is the worst kind of text bug, because the
@@ -1539,6 +1634,8 @@ public static class MtgCardMapper
 
 		if (f.MaxManaCost > 0)
 			suffix += $" costing {f.MaxManaCost} or less";
+		if (f.MinManaCost > 0)
+			suffix += $" costing {f.MinManaCost} or more";
 
 		if (f.MinPower > 0)
 			suffix += $" with power {f.MinPower} or greater";

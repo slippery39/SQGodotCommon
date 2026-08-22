@@ -14,6 +14,12 @@ public static class CoresetCube
 	///
 	/// Tokens live in CoresetCubeTokens and are deliberately excluded — they must never be
 	/// drafted.
+	///
+	/// THE CUBE'S 42 LANDS ARE DELIBERATELY ABSENT — 35 duals and 7 utility. Draft.Create excludes
+	/// lands from packs and Draft.BuildDeck supplies the mana base, so none of them could ever be
+	/// drafted or played; with no colours in this engine a dual land is a basic; and Rogue's
+	/// Passage and Lotus Field each need a mechanic that is structurally absent. So the cube's 450
+	/// is 408 here, and that is the complete set rather than a partial one.
 	/// </summary>
 	public static IReadOnlyList<Card> Cards { get; } =
 		[
@@ -32,6 +38,9 @@ public static class CoresetCube
 			.. CoresetCubeGreen.Cards,
 			.. CoresetCubeGreenSpells.Cards,
 			.. CoresetCubeGreenPermanents.Cards,
+			.. CoresetCubeColourlessCreatures.Cards,
+			.. CoresetCubeColourlessArtifacts.Cards,
+			.. CoresetCubeColourlessEquipment.Cards,
 		];
 
 	public static CardSet Set { get; } = new(Code, Name, Cards);

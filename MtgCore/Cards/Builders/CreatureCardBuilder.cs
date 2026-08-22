@@ -612,5 +612,18 @@ public class CreatureCostBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// "Remove a gold counter from this artifact" — Dragon's Hoard. Spends charge counters off the
+	/// SOURCE, which is what bounds an otherwise mana-only repeatable ability.
+	///
+	/// Not a selection cost: a counter is fungible, so there is nothing for the player to choose.
+	/// See RemoveCounterAdditionalCost.
+	/// </summary>
+	public CreatureCostBuilder RemoveCounter(string kind = "charge", int count = 1)
+	{
+		_costs.Add(new RemoveCounterAdditionalCost { Kind = kind, Count = count });
+		return this;
+	}
+
 	internal ImmutableList<AdditionalCost> Build() => _costs.ToImmutableList();
 }

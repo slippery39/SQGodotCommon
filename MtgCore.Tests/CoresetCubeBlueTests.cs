@@ -31,15 +31,40 @@ public class CoresetCubeBlueTests
 	}
 
 	/// <summary>
-	/// All five colours complete at exactly 67 each. The cube is 450 — 67 per colour, 50
-	/// colourless, 53 multicolour — so the colourless and multicolour sections are what remain.
+	/// All five colours complete at exactly 67 each.
+	///
+	/// Sums the colour FILES rather than CoresetCube.Cards, which is what it always meant: the
+	/// whole-set count moved the moment the colourless section landed, and a test named after the
+	/// colours should not fail because a different section was added. The set total is owned by
+	/// CoresetCubeColourlessTests.SectionCounts_MatchTheCube.
+	///
+	/// The cube is 450: 67 per colour, 50 colourless, 65 multicolour. (MtgCore/CLAUDE.md said 53
+	/// multicolour for a long time; the CSV says 65.) 42 of those are lands and are deliberately
+	/// absent — see CoresetCube.cs.
 	/// </summary>
 	[Test]
 	public void WholeSet_IsFiveCompleteColours()
 	{
+		var colourSections =
+			CoresetCubeWhite.Cards.Count
+			+ CoresetCubeWhiteSpells.Cards.Count
+			+ CoresetCubeWhitePermanents.Cards.Count
+			+ CoresetCubeBlue.Cards.Count
+			+ CoresetCubeBlueSpells.Cards.Count
+			+ CoresetCubeBluePermanents.Cards.Count
+			+ CoresetCubeBlack.Cards.Count
+			+ CoresetCubeBlackSpells.Cards.Count
+			+ CoresetCubeBlackPermanents.Cards.Count
+			+ CoresetCubeRed.Cards.Count
+			+ CoresetCubeRedSpells.Cards.Count
+			+ CoresetCubeRedPermanents.Cards.Count
+			+ CoresetCubeGreen.Cards.Count
+			+ CoresetCubeGreenSpells.Cards.Count
+			+ CoresetCubeGreenPermanents.Cards.Count;
+
 		Assert.That(
-			CoresetCube.Cards,
-			Has.Count.EqualTo(335),
+			colourSections,
+			Is.EqualTo(335),
 			"67 white + 67 blue + 67 black + 67 red + 67 green"
 		);
 	}

@@ -237,6 +237,26 @@ public class PermanentCardBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// The equip ability: "{N}: Attach to target creature you control."
+	///
+	/// REPEATABLE BY DEFAULT (maxPerTurn: 0), which is the printed rule and the point of Equipment
+	/// — moving a sword off a dying creature is most of what the card class does. The two Equipment
+	/// that predate this method disagree about it, one passing 0 and one silently defaulting to
+	/// once per turn, which is the drift a shared helper exists to stop.
+	/// </summary>
+	public PermanentCardBuilder WithEquip(int manaCost) =>
+		WithActivatedAbility(
+			"Equip",
+			manaCost,
+			effect: eb =>
+				eb.WithAction(
+					new AttachEquipmentAction(),
+					TargetingStrategy.SingleTarget(TargetSpecification.CreatureControlledByYou())
+				),
+			maxPerTurn: 0
+		);
+
 	/// <summary>An anthem — a static P/T boost to permanents matching <paramref name="filter"/>.</summary>
 	public PermanentCardBuilder WithStaticBoost(
 		int power,

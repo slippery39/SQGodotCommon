@@ -131,8 +131,12 @@ MtgCore/
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Terravore. Must be stamped with Duration = Permanent in card definitions.
 ├── Sets/                    # CardSet (Code, Name, Cards; Draftable filters lands), SetRegistry (All, Default, Get)
 │   ├── CoresetCube/         # The CSC set, built from an external cube list (cubecobra magiccoreset20xx).
-│   │                        # ALL FIVE COLOURS COMPLETE — 335 cards. The cube is 450: 67 per colour,
-│   │                        # 50 colourless, 53 multicolour. CoresetCube.cs assembles the files:
+│   │                        # 378 cards. The cube is 450: 67 per colour, 50 colourless, 65
+│   │                        # multicolour — but 42 of those are LANDS and are deliberately absent
+│   │                        # (packs exclude lands, BuildDeck supplies the mana base, and with no
+│   │                        # colours a dual is a basic). So 408 is the complete set, not 450.
+│   │                        # All five colours and the colourless section are done; multicolour
+│   │                        # (30 nonland) remains. CoresetCube.cs assembles the files:
 │   │                        #   CoresetCubeWhite.cs           38 creatures
 │   │                        #   CoresetCubeWhiteSpells.cs     10 instants + 6 sorceries
 │   │                        #   CoresetCubeWhitePermanents.cs 8 enchantments + 1 equipment + 4 planeswalkers
@@ -151,7 +155,10 @@ MtgCore/
 │   │                        #   CoresetCubeGreen.cs           36 creatures
 │   │                        #   CoresetCubeGreenSpells.cs     10 instants + 10 sorceries
 │   │                        #   CoresetCubeGreenPermanents.cs 7 enchantments + 1 equipment + 3 planeswalkers
-│   │                        # Colourless (50) and multicolour (53) are what remain of the cube.
+│   │                        #   CoresetCubeColourlessCreatures.cs 11 artifact creatures
+│   │                        #   CoresetCubeColourlessArtifacts.cs 17 artifacts + Ugin
+│   │                        #   CoresetCubeColourlessEquipment.cs 14 equipment (5 of them Rings)
+│   │                        # Multicolour (30 nonland) is what remains of the cube.
 │   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
 │                            # HollowmereTokens.cs holds token templates (excluded from the card list).
 │                            # Read the header of Hollowmere.cs before adding cards — it states the rate bar and

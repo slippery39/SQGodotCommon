@@ -360,6 +360,17 @@ public static class StaticAbilityEngine
 						GrantsShroud = keywords.GrantsShroud,
 						GrantsHexproof = keywords.GrantsHexproof,
 						GrantsDeathtouch = keywords.GrantsDeathtouch,
+						// These four were declared on StaticGrantKeywordAbility and carried by
+						// AppliedKeywordComponent, and simply not copied between them — so a
+						// static ability granting first strike, double strike, indestructible or
+						// exalted did NOTHING, with both ends of the wiring present and correct.
+						// The six-site keyword rule again: adding a keyword means touching every
+						// site, and this is the site that is easiest to miss because nothing here
+						// fails to compile when it is skipped.
+						GrantsFirstStrike = keywords.GrantsFirstStrike,
+						GrantsDoubleStrike = keywords.GrantsDoubleStrike,
+						GrantsIndestructible = keywords.GrantsIndestructible,
+						GrantsExalted = keywords.GrantsExalted,
 					}
 				),
 			};

@@ -18,6 +18,23 @@ public record HasManaCostAtMostSpecification : TargetSpecification
 }
 
 /// <summary>
+/// "Mana value N or greater" — Dragon's Hoard's expensive-creature trigger.
+///
+/// A real type rather than NotSpecification(HasManaCostAtMost). The negation is arithmetically
+/// identical, but it inverts to true for a non-card, so it is only safe inside an And that already
+/// demands a card — and, worse, MtgCardMapper cannot describe it, so the whole restriction silently
+/// vanishes from the rules text and the card reads as triggering on everything. A spec that cannot
+/// print itself is a spec that will be dropped from a card face.
+/// </summary>
+public record HasManaCostAtLeastSpecification : TargetSpecification
+{
+	public int Minimum { get; init; } = 5;
+
+	public override bool IsSatisfiedBy(int candidateId, TargetingContext context) =>
+		context.Find(candidateId) is Card card && card.ManaCost >= Minimum;
+}
+
+/// <summary>
 /// Matches a creature carrying a PERMANENT power/toughness bonus.
 ///
 /// This is how "if it had a +1/+1 counter on it" (Basri's Lieutenant) is asked. There is no

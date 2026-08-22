@@ -618,6 +618,136 @@ public class CoresetCubeRulesTextTests
 		);
 	}
 
+	// ===== COLOURLESS SECTION =====
+	// Eight silent failures, found by dumping and reading every one of the 43 new card faces.
+	// Every one of them built, cast and resolved correctly — none was visible from the card
+	// definitions, and four of them rendered text that was confidently WRONG rather than blank.
+
+	/// <summary>
+	/// The worst of the eight. An EquippedBoostComponent granting only keywords the mapper did not
+	/// know produced an EMPTY clause list, which rendered as the literal phrase "Equipped creature
+	/// gets nothing" — on four cards, three of which grant nothing but a keyword.
+	/// </summary>
+	[Test]
+	public void Equipment_RendersEveryKeywordItGrants()
+	{
+		Assert.Multiple(() =>
+		{
+			Assert.That(TextFor("Fireshrieker"), Does.Contain("Double Strike"));
+			Assert.That(TextFor("Whispersilk Cloak"), Does.Contain("Shroud"));
+			Assert.That(TextFor("Ring of Valkas"), Does.Contain("Haste"));
+			Assert.That(
+				TextFor("Swiftfoot Boots"),
+				Does.Contain("Hexproof").And.Contain("Haste"),
+				"granting two keywords must print both"
+			);
+		});
+	}
+
+	/// <summary>No equipment may describe itself as doing nothing. The blanket guard for the above.</summary>
+	[Test]
+	public void NoEquipment_RendersGetsNothing()
+	{
+		var broken = CoresetCube
+			.Cards.Where(c => c.GetComponent<EquipmentComponent>() != null)
+			.Where(c => MtgCardMapper.GetRulesText(c).Contains("gets nothing"))
+			.Select(c => c.Name)
+			.ToList();
+
+		Assert.That(
+			broken,
+			Is.Empty,
+			$"Attachments claiming to do nothing: {string.Join(", ", broken)}"
+		);
+	}
+
+	/// <summary>
+	/// The five Rings put a counter on ONE creature. AllValid is how an attachment reaches its
+	/// wearer, and the mass phrasing leaked out as "each equipped creature" — a board-wide pump.
+	/// </summary>
+	[Test]
+	public void RingUpkeep_NamesTheWearer_NotTheBoard()
+	{
+		Assert.That(
+			TextFor("Ring of Thune"),
+			Does.Contain("on equipped creature").And.Not.Contain("each")
+		);
+	}
+
+	/// <summary>Sword of the Animist — the same spec as a trigger FILTER rather than as a target.</summary>
+	[Test]
+	public void EquippedCreatureTrigger_NamesTheWearer()
+	{
+		Assert.That(
+			TextFor("Sword of the Animist"),
+			Does.Contain("Whenever equipped creature attacks"),
+			"'whenever a creature attacks' fires on either player's whole board"
+		);
+	}
+
+	/// <summary>Platinum Angel's entire card. It rendered as a seven-mana vanilla 4/4 flyer.</summary>
+	[Test]
+	public void PlatinumAngel_PrintsTheClauseThatIsTheCard()
+	{
+		Assert.That(TextFor("Platinum Angel"), Does.Contain("can't lose the game"));
+	}
+
+	/// <summary>Akroma's Memorial grants four keywords and printed three.</summary>
+	[Test]
+	public void StaticKeywordGrants_IncludeFirstStrike()
+	{
+		Assert.That(
+			TextFor("Akroma's Memorial"),
+			Does.Contain("Flying")
+				.And.Contain("First Strike")
+				.And.Contain("Trample")
+				.And.Contain("Haste")
+		);
+	}
+
+	/// <summary>
+	/// Dragon's Hoard, twice over: the cost that bounds the ability rendered nothing, so it read as
+	/// a free unlimited draw engine, and the trigger that supplies the counters rendered nothing at
+	/// all, so the ability looked impossible to switch on.
+	/// </summary>
+	[Test]
+	public void ChargeCounters_PrintBothTheCostAndTheSource()
+	{
+		var text = TextFor("Dragon's Hoard");
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(text, Does.Contain("remove a gold counter"), "the cost is the card");
+			Assert.That(text, Does.Contain("Put a gold counter"), "and so is where they come from");
+			Assert.That(
+				text,
+				Does.Contain("costing 5 or more"),
+				"without it the trigger reads as firing on every creature"
+			);
+		});
+	}
+
+	/// <summary>Haunted Plate Mail's animate mode is half its card and rendered nothing.</summary>
+	[Test]
+	public void Animation_PrintsTheBodyItGrants()
+	{
+		Assert.That(
+			TextFor("Haunted Plate Mail"),
+			Does.Contain("becomes a 4/4").And.Contain("you control no creatures")
+		);
+	}
+
+	/// <summary>
+	/// SpellCastEvent fires only for instants and sorceries — CastCreatureAction and
+	/// CastPermanentAction never emit it — so "whenever you cast a spell" over-promised on every
+	/// prowess card in the cube, not just on Diamond Knight.
+	/// </summary>
+	[Test]
+	public void SpellCastTriggers_SayInstantOrSorcery()
+	{
+		Assert.That(TextFor("Diamond Knight"), Does.Contain("instant or sorcery"));
+	}
+
 	private static Card Find(string name) =>
 		CoresetCube.Cards.Single(c =>
 			string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)
