@@ -1745,6 +1745,11 @@ public static class MtgCardMapper
 			SelectCardFromLibraryAction s => string.IsNullOrEmpty(s.Subtype)
 				? "search your library for a card"
 				: $"search your library for {Article(s.Subtype)} {s.Subtype}",
+			// Says "choose" because the player actually does, unlike the auto-picking sibling
+			// above. The distinction is the whole reason the card is worth its life cost.
+			SearchLibraryAction s => string.IsNullOrEmpty(s.Subtype)
+				? "search your library and choose a card"
+				: $"search your library and choose {Article(s.Subtype)} {s.Subtype}",
 			PutIntoBattlefieldAction => "put it into play",
 			SelectCardsFromHandAction => "choose a card",
 			DiscardCardsAction => "discard it",

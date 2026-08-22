@@ -141,6 +141,92 @@ public class BlackMechanicsTests
 		});
 	}
 
+	/// <summary>
+	/// A player search offers the WHOLE library and takes what was picked — including the card the
+	/// auto-picker would never have chosen.
+	///
+	/// Grim Tutor's mana and life buy "any card in your deck". Resolved by
+	/// SelectCardFromLibraryAction's best-by-mana-cost ranking it was a worse Sign in Blood, while
+	/// the rendered text still promised a search. Picking the CHEAP card here is the assertion:
+	/// the auto-picker would have taken the bomb, so passing this cannot be an accident.
+	/// </summary>
+	[Test]
+	public void PlayerSearch_OffersTheWholeLibraryAndTakesThePick()
+	{
+		var libraryId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Library);
+		var state = _state;
+
+		(state, var cheap) = state.AddObject(
+			MakeCreature("Cheap Answer", _ids.Player1Id, 1, 1, manaCost: 1),
+			parentId: libraryId
+		);
+		(state, var bomb) = state.AddObject(
+			MakeCreature("Expensive Bomb", _ids.Player1Id, 8, 8, manaCost: 8),
+			parentId: libraryId
+		);
+
+		var handId = state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Hand);
+		var (paused, _) = CastSpell(
+			state,
+			CardFactory.Sorcery("Player Tutor", manaCost: 3).WithSearchLibrary().Build()
+		);
+
+		Assert.That(paused.IsWaitingForChoice, Is.True, "a real search must ask");
+
+		var choice = paused.GetPendingChoice()!;
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				choice.Options.Select(o => o.Id),
+				Does.Contain(cheap.Id).And.Contain(bomb.Id),
+				"every legal card in the library is on offer, not just the best one"
+			);
+			Assert.That(
+				paused.GetPendingChoiceDecidingPlayerId(),
+				Is.EqualTo(_ids.Player1Id),
+				"the searching player decides — not whoever happens to be active"
+			);
+		});
+
+		var (final, _) = paused.ResolveChoice(ImmutableList.Create(cheap.Id));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				final.GetCardZone(cheap.Id).ZoneType,
+				Is.EqualTo(ZoneType.Hand),
+				"the chosen card is the one that moves"
+			);
+			Assert.That(
+				final.GetCardZone(bomb.Id).ZoneType,
+				Is.EqualTo(ZoneType.Library),
+				"the auto-picker's answer stays put"
+			);
+		});
+	}
+
+	/// <summary>
+	/// An empty library must not wedge the pipeline. MinChoices is 1, but ResolveChoice clamps it
+	/// to the option count, so a search with nothing to find resolves as "fail to find".
+	/// </summary>
+	[Test]
+	public void PlayerSearch_WithNothingToFind_DoesNotBlockTheStack()
+	{
+		var (final, _) = CastSpell(
+			_state,
+			CardFactory.Sorcery("Player Tutor", manaCost: 3).WithSearchLibrary().Build()
+		);
+
+		if (final.IsWaitingForChoice)
+		{
+			var choice = final.GetPendingChoice()!;
+			Assert.That(choice.Options, Is.Empty, "nothing to find");
+			(final, _) = final.ResolveChoice(ImmutableList<int>.Empty);
+		}
+
+		Assert.That(final.HasPendingActions, Is.False, "the pipeline must complete either way");
+	}
+
 	// ===== CHOSEN DISCARD =====
 
 	/// <summary>

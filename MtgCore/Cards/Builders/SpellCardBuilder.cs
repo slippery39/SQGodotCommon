@@ -480,6 +480,42 @@ public class SpellCardBuilder
 	///
 	/// Consistency, which is what makes a synergy deck function rather than flood.
 	/// </summary>
+	/// <summary>
+	/// "Search your library for a card and put it into your hand" — with the PLAYER choosing.
+	///
+	/// Opt-in, and deliberately not the default for <see cref="WithTutor"/>. Most searches in this
+	/// engine read better resolved automatically (Simic Growth Chamber returning a land: you rarely
+	/// care which), and a prompt on every one of them would be friction rather than agency. This is
+	/// for the cards where the choice is what you are paying for — Grim Tutor's mana AND life buy
+	/// "any card in your deck", and an engine-picked answer is a different, worse card.
+	///
+	/// See SearchLibraryAction for why the auto-picker stays the default.
+	/// </summary>
+	public SpellCardBuilder WithSearchLibrary(string subtype = "")
+	{
+		FlushPending();
+		_pendingAction = new PipelineAction
+		{
+			Steps = ImmutableList.Create<GameAction>(
+				new SearchLibraryAction
+				{
+					Subtype = subtype,
+					Prompt = string.IsNullOrEmpty(subtype)
+						? "Search your library for a card"
+						: $"Search your library for a {subtype}",
+					OutputKey = "search_target",
+				},
+				new MoveCardToHandAction
+				{
+					CardIdContextKey = "search_target",
+					PlayerIdContextKey = ContextKeys.CastingPlayerId,
+				}
+			),
+		};
+		_pendingTargeting = TargetingStrategy.NoTarget();
+		return this;
+	}
+
 	public SpellCardBuilder WithTutor(string subtype = "")
 	{
 		FlushPending();

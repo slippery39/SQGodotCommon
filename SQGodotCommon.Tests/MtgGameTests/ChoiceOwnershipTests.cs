@@ -107,6 +107,60 @@ public class ChoiceOwnershipTests
 	}
 
 	/// <summary>
+	/// The AI must resolve a whole-library search without stalling or failing to pick.
+	///
+	/// SearchLibraryAction offers every legal card in the library — around forty options, where
+	/// every other choice in the game offers a handful — and the strategy pays a full rollout per
+	/// option scored. The loop is budget-bounded and seeds bestOption with the first entry, so it
+	/// should always come back with a pick; this pins that, because the failure mode in training
+	/// is a silent stall rather than an exception.
+	/// </summary>
+	[Test]
+	public void AiResolvesAWholeLibrarySearch()
+	{
+		var manager = NewManager();
+
+		var (state, _) = manager
+			.State.AddAction(
+				new PipelineAction
+				{
+					Steps = ImmutableList.Create<GameAction>(
+						new SearchLibraryAction
+						{
+							Prompt = "Search your library for a card",
+							PlayerId = manager.AiPlayerId,
+							OutputKey = "search_target",
+						},
+						new MoveCardToHandAction
+						{
+							CardIdContextKey = "search_target",
+							PlayerId = manager.AiPlayerId,
+						}
+					),
+				}
+			)
+			.ProcessAllActions();
+
+		manager.DebugSetState(state);
+
+		Assert.That(manager.IsWaitingForChoice, Is.True, "precondition: paused on the search");
+		Assert.That(
+			manager.GetPendingChoiceOptions(),
+			Has.Count.GreaterThan(10),
+			"precondition: a real library, not a handful of options"
+		);
+
+		var picked = manager.ComputeAiChoice();
+
+		Assert.That(picked, Has.Count.EqualTo(1), "the AI must come back with exactly one card");
+		Assert.That(
+			manager.LastAiError,
+			Is.Empty,
+			"and must not have fallen back through an error"
+		);
+	}
+
+	/// <summary>
 	/// The flip side of owner-gating the UI: an opponent-owned choice raised during the human's
 	/// turn has no panel to clear it, so something must. Without the drain it sits on the action
 	/// stack and wedges the game silently.

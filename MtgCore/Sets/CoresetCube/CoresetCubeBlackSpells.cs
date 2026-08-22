@@ -119,7 +119,15 @@ public static class CoresetCubeBlackSpells
 			// SelectBestByManaCost. Library order is random, so a first-match search with no
 			// subtype filter is just "draw the top card" — this would have been a strictly worse
 			// Sign in Blood, and nothing about it would have looked wrong.
-			CardFactory.Sorcery("Grim Tutor", manaCost: 1).WithTutor().WithLoseLife(3).Build(),
+			// The one search in the set where the PLAYER picks. Three mana and three life buy "any
+			// card in your deck", so resolving it with the auto-picker's best-by-mana-cost made it
+			// a worse Sign in Blood while the rules text still read "search your library for a
+			// card". Every other search in the cube keeps the auto-picker — see WithSearchLibrary.
+			CardFactory
+				.Sorcery("Grim Tutor", manaCost: 1)
+				.WithSearchLibrary()
+				.WithLoseLife(3)
+				.Build(),
 			CardFactory
 				.Sorcery("Read the Bones", manaCost: 3)
 				.WithScry(2)

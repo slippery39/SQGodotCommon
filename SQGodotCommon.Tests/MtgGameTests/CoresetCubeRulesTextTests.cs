@@ -123,6 +123,21 @@ public class CoresetCubeRulesTextTests
 	}
 
 	/// <summary>
+	/// Grim Tutor is the one search in the set the player resolves, and its text has to say so.
+	/// It read "search your library for a card" while an engine heuristic took the most expensive
+	/// one — text promising a choice the card did not offer, which is the confidently-wrong kind
+	/// that looks fine in a screenshot.
+	/// </summary>
+	[Test]
+	public void PlayerResolvedSearch_SaysTheChoiceIsYours()
+	{
+		var text = TextFor("Grim Tutor");
+
+		Assert.That(text, Does.Contain("choose"));
+		Assert.That(text, Does.Contain("library"));
+	}
+
+	/// <summary>
 	/// The lockdown Auras shut down the ENCHANTED creature, and their text has to say so. They
 	/// shipped as an ETB trigger freezing AllValid().OpponentCreatures() — the whole opposing
 	/// board, indefinitely, off a card that enchants one creature. The rendered face never
