@@ -123,6 +123,27 @@ public class CoresetCubeRulesTextTests
 	}
 
 	/// <summary>
+	/// Gideon Jura's two rebuilt abilities have to render what they now do: a Taunt grant on the
+	/// walker himself, and a token rather than the damage burst that stood in for it.
+	/// </summary>
+	[Test]
+	public void GideonJura_RendersItsTauntAndItsToken()
+	{
+		var text = TextFor("Gideon Jura");
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(text, Does.Contain("Taunt"), "the +2 is a Taunt grant");
+			Assert.That(text, Does.Contain("Gideon"), "the 0 creates a Gideon token");
+			Assert.That(
+				text,
+				Does.Not.Contain("6 damage"),
+				"the damage burst it replaced must be gone from the text too"
+			);
+		});
+	}
+
+	/// <summary>
 	/// Grim Tutor is the one search in the set the player resolves, and its text has to say so.
 	/// It read "search your library for a card" while an engine heuristic took the most expensive
 	/// one — text promising a choice the card did not offer, which is the confidently-wrong kind

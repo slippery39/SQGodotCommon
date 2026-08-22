@@ -57,7 +57,11 @@ public static class CoresetCubeBlue
 				.WithComponent(
 					new ThresholdComponent
 					{
-						Minimum = 10,
+						// 7, the set's Threshold number, not the printed 10. The printed clause
+						// counts the OPPONENT'S graveyard; ThresholdComponent counts the
+						// controller's, so the card already diverges — and at 10 on your own
+						// graveyard it was a 1/1 flier that essentially never woke up.
+						Minimum = 7,
 						PowerBonus = 4,
 						ToughnessBonus = 4,
 						Duration = ModifierDuration.Permanent,

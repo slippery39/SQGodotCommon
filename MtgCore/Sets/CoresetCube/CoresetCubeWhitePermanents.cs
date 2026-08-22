@@ -260,13 +260,27 @@ public static class CoresetCubeWhitePermanents
 			CardFactory
 				.Planeswalker("Gideon Jura", manaCost: 5)
 				.WithLoyalty(6)
-				// "Creatures attack Gideon if able" needs a forced-attack rule the engine has no
-				// concept of. Reskinned to the defensive role: exhaust the opponent's board so
-				// it cannot attack at all next turn.
+				// "Creatures attack Gideon if able" IS expressible after all — Taunt is exactly
+				// that rule, and AttackAction now honours it on a planeswalker as well as on a
+				// creature. This was reskinned to a mass exhaust on the belief the engine had no
+				// forced-attack concept; it had one, aimed only at creatures.
+				//
+				// An UntilEndOfTurn grant is cleared by StartTurnAction for its controller only,
+				// so one applied on your turn survives exactly through the opponent's next turn.
+				// That is the printed duration, with no new duration type.
 				.WithLoyaltyAbility(
-					"+2: Exhaust each creature an opponent controls",
+					"+2: Creatures attack Gideon during your opponent's next turn",
 					2,
-					eb => eb.WithExhaust().WithTarget(AllValid().OpponentCreatures())
+					eb =>
+						eb.WithAction(
+							new GrantKeywordAction
+							{
+								GrantsTaunt = true,
+								Duration = ModifierDuration.UntilEndOfTurn,
+								TargetContextKey = ContextKeys.SourceCardId,
+							},
+							TargetingStrategy.NoTarget()
+						)
 				)
 				.WithLoyaltyAbility(
 					"-2: Destroy target exhausted creature",
@@ -281,13 +295,15 @@ public static class CoresetCubeWhitePermanents
 							)
 						)
 				)
-				// "Becomes a 6/6 creature that's still a planeswalker" needs a permanent to hold
-				// both component sets and survive the swap. Reskinned to a damage burst, which is
-				// what the ability does in practice.
+				// "Becomes a 6/6 creature that's still a planeswalker" still cannot be one
+				// permanent — creature and non-creature routing is decided at cast time. A hasty
+				// 6/6 token that exiles at end of turn reaches the same board state: one attack,
+				// then gone. Closer than the damage burst it replaces, which was a removal spell
+				// wearing the ability's name and did nothing to advance a race.
 				.WithLoyaltyAbility(
-					"0: Deal 6 damage to target creature",
+					"0: Create a 6/6 Gideon that attacks this turn, then exiles",
 					0,
-					eb => eb.WithDamage(6).WithTarget(Single().OpponentCreatures())
+					eb => eb.WithCreateTokens(CoresetCubeTokens.GideonAvatar())
 				)
 				.Build(),
 			CardFactory

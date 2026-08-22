@@ -205,10 +205,42 @@ Scores a non-terminal state as a weighted sum. Terminal states short-circuit.
 | Non-creature permanent count difference (Mox, Arena, Exploration, etc.) | 1.5 |
 | Cards in hand difference | 1.4 |
 | Player's own permanent mana (`MaxMana` only — temporary fast mana excluded) | 2.0 |
+| Race pressure (whose clock is shorter — see below) | 20.0 / turns-to-kill |
 | Win (opponent has lost) | +10000 |
 | Loss (player has lost) | −10000 |
 
 `MaxMana` weight is high (2.0) because in the land system permanent mana is the primary resource — a land behind means fewer spells castable every turn for the rest of the game. Power uses permanent power only (`GetEffectivePermanentPower`); `UntilEndOfTurn` buffs like Giant Growth are excluded since they evaporate next turn. Creature damage (weight 0.1) tracks accumulated damage on surviving creatures — a creature with near-lethal damage is far more fragile than a fresh one, and without this factor the evaluator sees a neutral attack (both creatures survive) as free. Non-creature permanents (weight 1.5) are identified by `PermanentComponent && !CreatureComponent`; land cards are excluded automatically since `Plains` carries no `PermanentComponent`.
+
+### Race pressure: board power only matters relative to the life it threatens
+
+Every other term is a flat weight on a difference, which means a point of life is worth the same at
+6 as at 20 and a 2/2 is worth the same whether the player facing it is about to die to it or not.
+Nothing in the sum knew that the opponent's creatures convert into *your* death.
+
+Reported from a real game: the AI at 6 life with a 3/1 haste, the player at 20 with a 2/2. It
+attacked the face for 3 — worth `+0.6` against a player at 20 — instead of trading the 3/1 into
+the 2/2, which kills both and removes the clock that was actually killing it. It died two turns
+later. Scored on the old weights, going face was **-0.2** and trading was **-2.8**: the trade lost
+by 2.6 purely for giving up a power-2 board edge.
+
+`RacePressure(power, lifeThreatened) = 20 / max(life/power, 0.5)` is added for the player's board
+and subtracted for the opponent's. It is **symmetric on purpose** — the same term that makes the AI
+respect a clock aimed at it makes it press one aimed at the opponent, so this is not a blanket
+shift toward defence. At healthy totals it is a mild nudge (2 power against 20 life contributes
+2.0); as either player nears death it dominates every board-quality term, which is correct, because
+at that point nothing else decides the game.
+
+It counts total power rather than what can legally attack — summoning sickness, Taunt and
+"can't attack" are all ignored. It is a heuristic for how fast a board kills; the search covers the
+exact lines.
+
+Measured over 300 games at a fixed seed, against the same build without it: avg turn count
+**7.3 → 7.1**, avg actions/game **60.5 → 59.2**, avg time/game **213.5ms → 205.0ms**, zero
+turn/action/time-limit games and zero flagged games either way. **That measures stability, not
+strength** — both seats run the same evaluator, so a mirror match cannot show which is better.
+A real strength number needs an old-vs-new head-to-head, which the harness cannot express without
+plumbing a second evaluator through `IAiStrategy` (the pattern to copy is
+`BranchingCapStrengthTests`).
 
 Zone IDs are read directly from `MtgGameIds` to avoid child-list scans on every evaluation call.
 

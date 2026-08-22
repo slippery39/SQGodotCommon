@@ -328,6 +328,138 @@ public class PlaneswalkerTests
 		);
 	}
 
+	/// <summary>
+	/// "Creatures attack Gideon if able" — Taunt on a PLANESWALKER.
+	///
+	/// The walker was always a legal attack target; the Taunt scan just never looked at anything
+	/// without a CreatureComponent, so the grant sat on him doing nothing and the card's whole
+	/// defensive half was reskinned away on the belief that the engine had no forced-attack rule.
+	/// It had one, aimed only at creatures.
+	/// </summary>
+	[Test]
+	public void TauntingPlaneswalker_MustBeAttackedBeforeItsController()
+	{
+		var walker = CardFactory
+			.Planeswalker("Test Wall", manaCost: 5)
+			.WithLoyalty(6)
+			.WithLoyaltyAbility(
+				"+2: Taunt",
+				2,
+				eb =>
+					eb.WithAction(
+						new GrantKeywordAction
+						{
+							GrantsTaunt = true,
+							Duration = ModifierDuration.UntilEndOfTurn,
+							TargetContextKey = ContextKeys.SourceCardId,
+						},
+						TargetingStrategy.NoTarget()
+					)
+			)
+			.Build();
+
+		var (state, card) = Cast(_state, walker);
+
+		// An attacker on the other side, ready to swing at the walker's controller.
+		var (withAttacker, attacker) = state.AddObject(
+			new Card
+			{
+				Name = "Raider",
+				ManaCost = 2,
+				OwnerId = _ids.Player2Id,
+				ControllerId = _ids.Player2Id,
+				Types = CardType.Creature,
+				Components = ImmutableArray.Create<GameComponent>(
+					new PermanentComponent(),
+					new CreatureComponent
+					{
+						Power = 2,
+						Toughness = 2,
+						HasSummoningSickness = false,
+					}
+				),
+			},
+			parentId: state.GetPlayerZoneId(_ids.Player2Id, ZoneType.Battlefield)
+		);
+
+		var faceAttack = new AttackAction
+		{
+			AttackerId = attacker.Id,
+			TargetId = _ids.Player1Id,
+			AttackingPlayerId = _ids.Player2Id,
+		};
+
+		Assert.That(
+			faceAttack.ValidateAdd(withAttacker).IsValid,
+			Is.True,
+			"precondition: with no Taunt out, going to the face is legal"
+		);
+
+		var (taunting, _) = withAttacker.AddAction(Activate(card.Id, 0)).ProcessAllActions();
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				faceAttack.ValidateAdd(taunting).IsValid,
+				Is.False,
+				"a taunting walker must be attacked before its controller"
+			);
+			Assert.That(
+				new AttackAction
+				{
+					AttackerId = attacker.Id,
+					TargetId = card.Id,
+					AttackingPlayerId = _ids.Player2Id,
+				}
+					.ValidateAdd(taunting)
+					.IsValid,
+				Is.True,
+				"and attacking the walker itself is the legal move"
+			);
+		});
+	}
+
+	/// <summary>
+	/// A one-turn token is gone when the turn ends — otherwise "becomes a 6/6 until end of turn"
+	/// is a permanent 6/6 and Gideon's 0 is the best card in the set.
+	/// </summary>
+	[Test]
+	public void ExileAtEndOfTurnToken_DoesNotSurviveTheTurn()
+	{
+		var battlefieldId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield);
+		var (state, token) = _state.AddObject(
+			CoresetCubeTokens.GideonAvatar() with
+			{
+				OwnerId = _ids.Player1Id,
+				ControllerId = _ids.Player1Id,
+			},
+			parentId: battlefieldId
+		);
+
+		Assert.That(
+			state.GetEffectiveStats(token.Id).HasHaste,
+			Is.True,
+			"it has to be able to attack the turn it appears, or it does nothing at all"
+		);
+
+		var (after, _) = state
+			.AddAction(
+				new EndTurnAction
+				{
+					GameId = _ids.GameId,
+					Player1Id = _ids.Player1Id,
+					Player2Id = _ids.Player2Id,
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(
+			after.GetCardZone(token.Id).ZoneType,
+			Is.EqualTo(ZoneType.Exile),
+			"the token must be exiled when the turn ends"
+		);
+	}
+
 	// ===== HELPERS =====
 
 	/// <summary>

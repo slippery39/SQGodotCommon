@@ -260,4 +260,82 @@ public class StateEvaluatorTests
 		var (newState, added) = state.AddObject(permanent, parentId: battlefieldId);
 		return (newState, added);
 	}
+
+	// ===== RACING =====
+
+	/// <summary>
+	/// QA scenario. The AI is at 6 with a 3/1 haste; the opponent is at 20 with a 2/2. It attacked
+	/// the FACE for 3 and died two turns later to the 2/2 plus a burn spell.
+	///
+	/// Trading the 3/1 into the 2/2 kills both (3 ≥ 2 toughness, 2 ≥ 1 toughness) and removes the
+	/// clock that is actually killing it. Three damage to a player at 20 changes nothing.
+	///
+	/// Life was scored as a flat weight on the DIFFERENCE, so a point of life was worth the same
+	/// at 6 as at 20 and there was no notion of being nearly dead. Trading looked worse purely
+	/// because it gave up a power-2 board edge.
+	/// </summary>
+	[Test]
+	public void Evaluate_WhenLow_PrefersTradingAwayTheClockOverFaceDamage()
+	{
+		var lowLife = _state.GetPlayer(_ids.Player1Id) with { Life = 6 };
+		var healthy = _state.GetPlayer(_ids.Player2Id) with { Life = 20 };
+		var board = _state
+			.UpdateObject(_ids.Player1Id, lowLife)
+			.UpdateObject(_ids.Player2Id, healthy);
+
+		// After going face: both creatures alive, opponent at 17.
+		var (wentFace, _) = AddCreatureToBattlefield(board, "Raider", 3, 1, _ids.Player1Id);
+		(wentFace, _) = AddCreatureToBattlefield(wentFace, "Bear", 2, 2, _ids.Player2Id);
+		wentFace = wentFace.UpdateObject(
+			_ids.Player2Id,
+			wentFace.GetPlayer(_ids.Player2Id) with
+			{
+				Life = 17,
+			}
+		);
+
+		// After trading: both creatures dead, opponent still at 20.
+		var traded = board;
+
+		var faceScore = StateEvaluator.Evaluate(wentFace, _ids, _ids.Player1Id);
+		var tradeScore = StateEvaluator.Evaluate(traded, _ids, _ids.Player1Id);
+
+		Assert.That(
+			tradeScore,
+			Is.GreaterThan(faceScore),
+			"at 6 life, removing the 2/2 that is racing you beats 3 damage to a player at 20"
+		);
+	}
+
+	/// <summary>
+	/// The guard on the fix: the same trade must NOT be preferred when the AI is healthy. A player
+	/// at a comfortable total should take the aggressive line, or the fix has simply replaced
+	/// mindless aggression with mindless trading.
+	/// </summary>
+	[Test]
+	public void Evaluate_WhenHealthy_StillPrefersPressure()
+	{
+		var board = _state
+			.UpdateObject(_ids.Player1Id, _state.GetPlayer(_ids.Player1Id) with { Life = 20 })
+			.UpdateObject(_ids.Player2Id, _state.GetPlayer(_ids.Player2Id) with { Life = 20 });
+
+		var (wentFace, _) = AddCreatureToBattlefield(board, "Raider", 3, 1, _ids.Player1Id);
+		(wentFace, _) = AddCreatureToBattlefield(wentFace, "Bear", 2, 2, _ids.Player2Id);
+		wentFace = wentFace.UpdateObject(
+			_ids.Player2Id,
+			wentFace.GetPlayer(_ids.Player2Id) with
+			{
+				Life = 17,
+			}
+		);
+
+		var faceScore = StateEvaluator.Evaluate(wentFace, _ids, _ids.Player1Id);
+		var tradeScore = StateEvaluator.Evaluate(board, _ids, _ids.Player1Id);
+
+		Assert.That(
+			faceScore,
+			Is.GreaterThan(tradeScore),
+			"at a healthy total the aggressive line is still the better one"
+		);
+	}
 }

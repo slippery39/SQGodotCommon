@@ -149,18 +149,39 @@ public record AttackAction : GameAction
 		// Only Taunt creatures this attacker could actually attack constrain it. Otherwise a
 		// Flying Taunt creature would forbid every ground creature from attacking at all: Taunt
 		// would compel an attack that the Flying rule simultaneously forbids.
-		List<(int Id, CreatureStats Stats)>? tauntCreatures = null;
+		List<(int Id, bool HasFlying, bool HasReach)>? tauntCreatures = null;
 		foreach (var c in gameState.GetCardsInZone(opponentBattlefieldId))
 		{
-			if (!c.HasComponent<CreatureComponent>())
+			if (c.HasComponent<CreatureComponent>())
+			{
+				var stats = gameState.GetEffectiveStats(c.Id);
+				if (!stats.HasTaunt)
+					continue;
+				if (!CanReach(attackerStats, stats))
+					continue;
+				tauntCreatures ??= [];
+				tauntCreatures.Add((c.Id, stats.HasFlying, stats.HasReach));
 				continue;
-			var stats = gameState.GetEffectiveStats(c.Id);
-			if (!stats.HasTaunt)
+			}
+
+			// A PLANESWALKER can be taunting too — Gideon Jura's "+2: creatures attack Gideon if
+			// able" is the whole defensive half of the card, and this scan only ever looked at
+			// creatures, so the grant sat on him doing nothing. He is already a legal attack
+			// target; this is what makes him a compulsory one.
+			//
+			// Taunt reaches a walker through the ordinary GrantKeywordAction stamp rather than a
+			// bespoke component: an UntilEndOfTurn grant is cleared by StartTurnAction for its
+			// controller only, so one applied on your turn lasts exactly through the opponent's
+			// next turn — which is what the printed card says, for free.
+			if (!c.HasComponent<PlaneswalkerComponent>())
 				continue;
-			if (!CanReach(attackerStats, stats))
+			if (!c.GetComponents<AppliedKeywordComponent>().Any(k => k.GrantsTaunt))
 				continue;
+
+			// No flying and no reach: a walker cannot obstruct a flier, matching how a
+			// ground-bound Taunt creature is flown over rather than blocking the sky.
 			tauntCreatures ??= [];
-			tauntCreatures.Add((c.Id, stats));
+			tauntCreatures.Add((c.Id, false, false));
 		}
 
 		if (tauntCreatures is null)
@@ -170,9 +191,9 @@ public record AttackAction : GameAction
 		{
 			var hasObstructingTaunt = false;
 			var targetIsObstructing = false;
-			foreach (var (id, stats) in tauntCreatures)
+			foreach (var (id, hasFlying, hasReach) in tauntCreatures)
 			{
-				if (stats.HasFlying || stats.HasReach)
+				if (hasFlying || hasReach)
 				{
 					hasObstructingTaunt = true;
 					if (id == TargetId)
@@ -189,7 +210,7 @@ public record AttackAction : GameAction
 			);
 		}
 
-		foreach (var (id, _) in tauntCreatures)
+		foreach (var (id, _, _) in tauntCreatures)
 			if (id == TargetId)
 				return ValidationResult.Valid;
 

@@ -24,6 +24,40 @@ public static class CoresetCubeTokens
 
 	public static Card Angel() => Flyer("Angel", 4, 4, "Angel");
 
+	/// <summary>
+	/// Gideon Jura's 0: a 6/6 that attacks the turn it appears and is gone at end of turn.
+	///
+	/// The printed ability turns Gideon himself into a 6/6 creature until end of turn, which this
+	/// engine cannot express — creature and non-creature permanents are routed apart at cast time,
+	/// and a walker carries no CreatureComponent. A one-turn token reaches the same board state:
+	/// one attack from a 6/6, then nothing. Haste is what makes it an attack rather than a gift,
+	/// and ExileAtEndOfTurnComponent is what stops it being a 6/6 every turn forever.
+	///
+	/// Gideon does NOT stop being a planeswalker while it is out, so unlike the real card he can
+	/// still be attacked that turn. That is the cost of the substitution, and it is the direction
+	/// that favours the opponent.
+	/// </summary>
+	public static Card GideonAvatar() =>
+		new()
+		{
+			Name = "Gideon",
+			Subtypes = ImmutableHashSet.Create(
+				StringComparer.OrdinalIgnoreCase,
+				"Human",
+				"Soldier"
+			),
+			Components = ImmutableArray.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent
+				{
+					Power = 6,
+					Toughness = 6,
+					HasHaste = true,
+				},
+				new ExileAtEndOfTurnComponent()
+			),
+		};
+
 	private static Card Vanilla(string name, int power, int toughness, string subtype) =>
 		Make(name, power, toughness, subtype, flying: false);
 

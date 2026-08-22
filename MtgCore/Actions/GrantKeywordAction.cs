@@ -46,7 +46,15 @@ public record GrantKeywordAction : EffectAction
 			if (state.GetObject(targetId) is not Card card)
 				continue;
 
-			if (!card.HasComponent<CreatureComponent>())
+			// Planeswalkers as well as creatures. Taunt is the one keyword that means something on
+			// a walker — "creatures attack Gideon if able" — and AttackAction's Taunt scan reads
+			// AppliedKeywordComponent off planeswalkers for exactly that. Everything else that
+			// consumes these grants goes through GetEffectiveStats, which is only ever asked about
+			// creatures, so a stray grant on a walker is inert rather than harmful.
+			if (
+				!card.HasComponent<CreatureComponent>()
+				&& !card.HasComponent<PlaneswalkerComponent>()
+			)
 				continue;
 
 			var granted = new AppliedKeywordComponent

@@ -26,6 +26,50 @@ public static class StateEvaluator
 	private const float ManaWeight = 2.0f;
 	private const float NonCreaturePermanentWeight = 1.5f;
 
+	/// <summary>
+	/// How hard the race term pushes. See <see cref="RacePressure"/>.
+	///
+	/// Large next to the other weights on purpose: at a healthy life total it is a mild nudge
+	/// (a 2-power board against 20 life contributes 2.0), but as either player nears death it
+	/// dominates every board-quality term — which is correct, because at that point nothing else
+	/// decides the game.
+	/// </summary>
+	private const float RacePressureWeight = 20f;
+
+	/// <summary>
+	/// Clamp on turns-to-kill, so "dead next turn" and "dead twice over next turn" score the same
+	/// rather than diverging toward infinity.
+	/// </summary>
+	private const float MinTurnsToKill = 0.5f;
+
+	/// <summary>
+	/// How threatening a board of the given power is against the given life total, as a number
+	/// that grows sharply as the clock shortens.
+	///
+	/// This is the piece the evaluator was missing. Board power was scored symmetrically and life
+	/// as a flat weight on the difference, so a point of life was worth the same at 6 as at 20 and
+	/// nothing knew that the opponent's creatures convert into YOUR death. Reported from a real
+	/// game: the AI at 6 with a 3/1 haste, the player at 20 with a 2/2. It went face for 3 —
+	/// worth +0.6 to a player at 20 — instead of trading the 3/1 into the 2/2, which kills both
+	/// and removes the clock that was actually killing it. It died two turns later. Trading scored
+	/// 2.6 WORSE, purely for giving up a power-2 board edge.
+	///
+	/// Deliberately symmetric: the same term that makes the AI respect a clock pointed at it makes
+	/// it press one pointed at the opponent, so this is not a blanket shift toward defence.
+	///
+	/// Approximate on purpose. It counts total power rather than what can legally attack this
+	/// turn — summoning sickness, Taunt and "can't attack" are all ignored — because it is a
+	/// heuristic for how fast a board kills, and the search itself covers the exact lines.
+	/// </summary>
+	private static float RacePressure(int power, int lifeThreatened)
+	{
+		if (power <= 0)
+			return 0f;
+
+		var turnsToKill = MathF.Max(lifeThreatened / (float)power, MinTurnsToKill);
+		return RacePressureWeight / turnsToKill;
+	}
+
 	public static float Evaluate(GameState state, MtgGameIds ids, int playerId)
 	{
 		var opponentId = playerId == ids.Player1Id ? ids.Player2Id : ids.Player1Id;
@@ -97,6 +141,12 @@ public static class StateEvaluator
 		score += (opponentCreatureDamage - playerCreatureDamage) * CreatureDamageWeight;
 
 		score += (playerNonCreatureCount - opponentNonCreatureCount) * NonCreaturePermanentWeight;
+
+		// Whose clock is shorter. Without this the board terms above are the only thing that knows
+		// creatures exist, and they weigh a 2/2 the same whether the player facing it is at 20 or
+		// at 2. See RacePressure.
+		score +=
+			RacePressure(playerPower, opponent.Life) - RacePressure(opponentPower, player.Life);
 
 		// Lands in hand are deliberately NOT counted.
 		//

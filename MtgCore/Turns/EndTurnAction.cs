@@ -58,6 +58,10 @@ public record EndTurnAction : GameAction
 		// not in StartTurnAction.
 		state = ClearExpiredImpulseDraws(state, activePlayerId);
 
+		// "Exile it at end of turn" — the one-turn tokens. See ExileAtEndOfTurnComponent.
+		state = ExileEndOfTurnPermanents(state, Player1Id);
+		state = ExileEndOfTurnPermanents(state, Player2Id);
+
 		var nextBattlefieldId = state.GetPlayerZoneId(nextPlayerId, ZoneType.Battlefield);
 
 		var startTurn = new StartTurnAction
@@ -93,6 +97,29 @@ public record EndTurnAction : GameAction
 			: ImmutableList.Create<GameAction>(startTurn);
 
 		return new ActionResult(state.SpawnActions(spawns)) { Events = events };
+	}
+
+	/// <summary>
+	/// Exiles every permanent the given player controls that is marked to last one turn.
+	///
+	/// MoveCardTracked rather than MoveObject, so the token announces
+	/// PermanentLeftBattlefieldEvent on the way out — otherwise an Aura on it, a static ability it
+	/// was granting, or a freeze it was holding would all quietly outlive the token itself.
+	/// </summary>
+	private static GameState ExileEndOfTurnPermanents(GameState state, int playerId)
+	{
+		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+
+		// Materialised first: the loop moves cards out of the zone it is reading.
+		foreach (var card in state.GetCardsInZone(battlefieldId).ToList())
+		{
+			if (!card.HasComponent<ExileAtEndOfTurnComponent>())
+				continue;
+
+			state = state.MoveCardTracked(card.Id, state.GetPlayerZoneId(playerId, ZoneType.Exile));
+		}
+
+		return state;
 	}
 
 	/// <summary>

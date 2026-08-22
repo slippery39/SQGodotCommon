@@ -616,11 +616,18 @@ public static class CoresetCubeRed
 			// opponent". Taunt is what makes the damage half live — it forces attacks into a
 			// creature that cannot die and reflects every point. TriggerAmount is what carries
 			// "that much"; without it the clause would flatten to a constant.
+			//
+			// TauntUntilAttackedComponent for the same reason Fog Bank has it, and more sharply:
+			// permanent Taunt on something that cannot die and PUNISHES being hit is not a
+			// roadblock, it is a lock. Every attack was compelled into it, none of them killed it,
+			// and each one burned the attacker — unanswerable without exile. It now soaks one
+			// attack per turn and steps aside, which is what one blocker does.
 			CardFactory
 				.Creature("Brash Taunter", manaCost: 5, power: 1, toughness: 1)
 				.WithSubtype(Goblin)
 				.WithIndestructible()
 				.WithTaunt()
+				.WithComponent(new TauntUntilAttackedComponent())
 				.WithTriggeredAbility(
 					"Spite",
 					new EventTriggerCondition
