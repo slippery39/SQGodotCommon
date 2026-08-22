@@ -748,6 +748,144 @@ public class CoresetCubeRulesTextTests
 		Assert.That(TextFor("Diamond Knight"), Does.Contain("instant or sorcery"));
 	}
 
+	// ===== MULTICOLOUR SECTION =====
+	// Seven more, found the same way. Five of the seven printed text describing a DIFFERENT card
+	// rather than an incomplete one, which is the worse kind — nothing looks broken.
+
+	/// <summary>
+	/// Blood-Cursed Knight cares about enchantments. It printed "Threshold — while 1+ cards are in
+	/// your graveyard", a condition that is true from turn two onwards and has nothing whatever to
+	/// do with the card.
+	/// </summary>
+	[Test]
+	public void ThresholdSources_EachPrintTheirOwnCondition()
+	{
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				TextFor("Blood-Cursed Knight"),
+				Does.Contain("control an enchantment").And.Not.Contain("graveyard")
+			);
+			Assert.That(
+				TextFor("Primordial Hydra"),
+				Does.Contain("+1/+1 counters"),
+				"the counter source must not print a graveyard clause either"
+			);
+		});
+	}
+
+	/// <summary>
+	/// Enigma Drake is a */4 counting instants and sorceries. The unconditional sentence made it a
+	/// */* counting every card — bigger AND tougher than the card it is.
+	/// </summary>
+	[Test]
+	public void GraveyardCount_PrintsItsFilterAndWhichStatItAffects()
+	{
+		var drake = TextFor("Enigma Drake");
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(drake, Does.Contain("instant and sorcery"));
+			Assert.That(drake, Does.StartWith("Flying"));
+			Assert.That(
+				drake,
+				Does.Not.Contain("Power and toughness"),
+				"it is a */4 — only its power scales"
+			);
+			// The unfiltered case must be unchanged. Asserted against the component directly rather
+			// than a card, because the Tarmogoyf-shaped cards live in Hollowmere and CardLibrary —
+			// the Core Set Cube's only user is the filtered one.
+			Assert.That(
+				MtgCardMapper.GetRulesText(
+					new Card
+					{
+						Name = "Goyf",
+						Types = CardType.Creature,
+						Components =
+						[
+							new PermanentComponent(),
+							new CreatureComponent { Power = 0, Toughness = 1 },
+							new GraveyardCountComponent { Duration = ModifierDuration.Permanent },
+						],
+					}
+				),
+				Does.Contain("Power and toughness are each equal to the number of cards")
+			);
+		});
+	}
+
+	/// <summary>Conclave Mentor showed only its death trigger; its main ability rendered nothing.</summary>
+	[Test]
+	public void CounterReplacement_Renders()
+	{
+		Assert.That(TextFor("Conclave Mentor"), Does.Contain("plus 1 are put on it instead"));
+	}
+
+	/// <summary>Radha's activated ability rendered nothing at all — the whole ability was invisible.</summary>
+	[Test]
+	public void CustomModifierAbilities_Render()
+	{
+		var radha = TextFor("Radha, Heart of Keld");
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(radha, Does.Contain("number of lands you control"));
+			Assert.That(radha, Does.Contain("play lands from the top of your library"));
+		});
+	}
+
+	/// <summary>
+	/// Renown is a LIFETIME cap. Without saying so, Citadel Castellan reads as a creature that
+	/// grows every time it connects.
+	/// </summary>
+	[Test]
+	public void LifetimeCappedTriggers_SayTheyFireOnce()
+	{
+		Assert.That(TextFor("Citadel Castellan"), Does.Contain("once only"));
+	}
+
+	/// <summary>
+	/// Every event these triggers serve is about a creature, so a filter describing itself as
+	/// "permanent" promises a trigger that also fires on artifacts and enchantments.
+	/// </summary>
+	[Test]
+	public void CreatureTriggers_SayCreature_NotPermanent()
+	{
+		Assert.Multiple(() =>
+		{
+			Assert.That(TextFor("Poison-Tip Archer"), Does.Contain("another creature dies"));
+			Assert.That(
+				TextFor("Corpse Knight"),
+				Does.Contain("another creature you control enters")
+			);
+			Assert.That(TextFor("Watcher of the Spheres"), Does.Not.Contain("permanent"));
+		});
+	}
+
+	/// <summary>Garruk's +1 destroys a planeswalker; it read "destroy target permanent".</summary>
+	[Test]
+	public void PlaneswalkerTargeting_Renders()
+	{
+		Assert.That(
+			TextFor("Garruk, Apex Predator"),
+			Does.Contain("target planeswalker").And.Not.Contain("Destroy target permanent")
+		);
+	}
+
+	/// <summary>
+	/// A sweeper that reaches past creatures must say "nonland permanent", not enumerate itself as
+	/// "creature or artifact or enchantment or planeswalker".
+	/// </summary>
+	[Test]
+	public void NonlandPermanentSweepers_ReadAsSuch()
+	{
+		Assert.Multiple(() =>
+		{
+			Assert.That(TextFor("Perilous Vault"), Does.Contain("nonland permanent"));
+			Assert.That(TextFor("Ugin, the Spirit Dragon"), Does.Contain("nonland permanent"));
+		});
+	}
+
 	private static Card Find(string name) =>
 		CoresetCube.Cards.Single(c =>
 			string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)

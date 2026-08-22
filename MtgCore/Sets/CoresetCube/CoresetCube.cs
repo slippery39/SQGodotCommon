@@ -41,6 +41,8 @@ public static class CoresetCube
 			.. CoresetCubeColourlessCreatures.Cards,
 			.. CoresetCubeColourlessArtifacts.Cards,
 			.. CoresetCubeColourlessEquipment.Cards,
+			.. CoresetCubeMulticolour.Cards,
+			.. CoresetCubeMulticolourSpells.Cards,
 		];
 
 	public static CardSet Set { get; } = new(Code, Name, Cards);

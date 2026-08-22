@@ -75,7 +75,13 @@ public class TargetBuilder
 	/// </summary>
 	public TargetingStrategy NonlandPermanents() =>
 		Build(
-			new IsCardTypeSpecification { Types = CardType.AnyPermanent & ~CardType.Land }.And(
+			// IsNotCardTypeSpecification rather than IsCardTypeSpecification over the remaining
+			// flags. The two select the same battlefield permanents, but only the negative form
+			// renders as "nonland permanent" — the positive one enumerated itself as "creature or
+			// artifact or enchantment or planeswalker", which is what Perilous Vault and Ugin both
+			// printed. It is also the form that keeps requiring the candidate to BE a card, which
+			// a bare NotSpecification would not.
+			new IsNotCardTypeSpecification { Types = CardType.Land }.And(
 				new IsOnBattlefieldSpecification()
 			)
 		);

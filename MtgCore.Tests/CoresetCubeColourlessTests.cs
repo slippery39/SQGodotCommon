@@ -57,8 +57,8 @@ public class CoresetCubeColourlessTests
 			);
 			Assert.That(
 				CoresetCube.Cards,
-				Has.Count.EqualTo(378),
-				"335 coloured + 43 colourless; the cube's 42 lands are deliberately absent"
+				Has.Count.EqualTo(408),
+				"335 coloured + 43 colourless + 30 multicolour; the cube's 42 lands are cut"
 			);
 		});
 	}

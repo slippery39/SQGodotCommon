@@ -16,6 +16,18 @@ public static class CoresetCubeTokens
 {
 	public static Card Soldier() => Vanilla("Soldier", 1, 1, "Soldier");
 
+	/// <summary>
+	/// Skyknight Vanguard's Soldier. Printed as "tapped and attacking", which has no meaning here:
+	/// AttackAction declares, resolves and applies damage in one atomic action, so a token created
+	/// during it has already missed the combat. Haste is the nearest live thing — it lets the token
+	/// attack on the turn it arrives under its own steam.
+	///
+	/// A separate factory rather than a flag on Soldier(), matching CoresetCubeRedTokens' Goblin
+	/// and HastyGoblin: the two are different cards on the board and must be distinguishable.
+	/// </summary>
+	public static Card HastySoldier() =>
+		Make("Soldier", 1, 1, "Soldier", flying: false, haste: true);
+
 	public static Card Knight() => Vanilla("Knight", 2, 2, "Knight");
 
 	public static Card Cat() => Vanilla("Cat", 2, 2, "Cat");
@@ -64,7 +76,14 @@ public static class CoresetCubeTokens
 	private static Card Flyer(string name, int power, int toughness, string subtype) =>
 		Make(name, power, toughness, subtype, flying: true);
 
-	private static Card Make(string name, int power, int toughness, string subtype, bool flying) =>
+	private static Card Make(
+		string name,
+		int power,
+		int toughness,
+		string subtype,
+		bool flying,
+		bool haste = false
+	) =>
 		new()
 		{
 			Name = name,
@@ -76,6 +95,7 @@ public static class CoresetCubeTokens
 					Power = power,
 					Toughness = toughness,
 					HasFlying = flying,
+					HasHaste = haste,
 				}
 			),
 		};

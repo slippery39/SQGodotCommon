@@ -173,10 +173,15 @@ public static class MtgCardMapper
 			lines.Add(DescribeCounterTrap(trap));
 
 		// Dynamic P/T. Without this a Tarmogoyf-style card reads as a plain 0/1.
-		if (card.HasComponent<GraveyardCountComponent>())
-			lines.Add(
-				"Power and toughness are each equal to the number of cards in your graveyard"
-			);
+		// Both fields matter, and dropping either mis-describes the card. Enigma Drake is a */4
+		// counting instants and sorceries; the unconditional sentence made it a */* counting
+		// everything — bigger AND tougher than the card it is.
+		foreach (var gy in card.GetComponents<GraveyardCountComponent>())
+		{
+			var what = gy.Types == null ? "cards" : $"{DescribeCardTypes(gy.Types.Value)} cards";
+			var stat = gy.AffectsToughness ? "Power and toughness are each" : "Power is";
+			lines.Add($"{stat} equal to the number of {what} in your graveyard");
+		}
 
 		// Not one fixed sentence: the component gained a Subtype and per-creature amounts for the
 		// Goblin lords, so the Crusader of Odric wording would have printed "power and toughness
@@ -244,6 +249,14 @@ public static class MtgCardMapper
 				uncounterable.Condition == null
 					? "This spell can't be countered"
 					: $"This spell can't be countered if {LowerFirst(uncounterable.Condition.Describe())}"
+			);
+
+		// Conclave Mentor's main ability, and it rendered nothing — the card showed only its death
+		// trigger, so the replacement that is the entire reason to draft it was invisible.
+		foreach (var bonus in card.GetComponents<CounterBonusComponent>())
+			lines.Add(
+				$"If one or more +1/+1 counters would be put on a creature you control, "
+					+ $"that many plus {bonus.Amount} are put on it instead"
 			);
 
 		// Platinum Angel's entire card. Without this it rendered as a seven-mana 4/4 flyer with a
@@ -608,9 +621,18 @@ public static class MtgCardMapper
 		// Primordial Hydra counts COUNTERS, not graveyard cards. Without this branch it reads
 		// "while 10+ cards are in your graveyard" — a clause about a completely different zone,
 		// on a card that has nothing to do with the graveyard.
-		return t.CountSource == ThresholdSource.PlusOneCounters
-			? $"While this has {t.Minimum}+ +1/+1 counters on it, it {effect}"
-			: $"Threshold — while {t.Minimum}+ cards are in your graveyard, this {effect}";
+		// Each source is a clause about a different zone, and getting it wrong does not look wrong:
+		// Blood-Cursed Knight read "Threshold — while 1+ cards are in your graveyard", which is a
+		// condition that is true from turn two onwards and has nothing to do with the card.
+		return t.CountSource switch
+		{
+			ThresholdSource.PlusOneCounters =>
+				$"While this has {t.Minimum}+ +1/+1 counters on it, it {effect}",
+			ThresholdSource.ControlledEnchantments => t.Minimum == 1
+				? $"As long as you control an enchantment, this {effect}"
+				: $"As long as you control {t.Minimum} enchantments, this {effect}",
+			_ => $"Threshold — while {t.Minimum}+ cards are in your graveyard, this {effect}",
+		};
 	}
 
 	private static string DescribeTransform(TransformComponent transform)
@@ -852,7 +874,13 @@ public static class MtgCardMapper
 		);
 		if (string.IsNullOrEmpty(effectStr))
 			return null;
-		return $"{DescribeTriggerCondition(trigger.Condition)}: {effectStr}";
+
+		// MaxTriggers is the LIFETIME cap — it is what "if it isn't renowned" means. Without this
+		// suffix Citadel Castellan reads as a creature that grows every time it connects, which is
+		// a far better card than renown 2.
+		var once = trigger.MaxTriggers == 1 ? " (once only)" : "";
+
+		return $"{DescribeTriggerCondition(trigger.Condition)}: {effectStr}{once}";
 	}
 
 	private static string DescribeTriggerCondition(TriggerCondition condition)
@@ -944,6 +972,9 @@ public static class MtgCardMapper
 				? "Madness — when you discard this"
 				: "Whenever you discard a card",
 			EventTypeNames.CardMilled => "Whenever a card of yours is milled",
+			// Lorescale Coatl printed "When triggered" — the fallback, which says nothing at all
+			// about the only reason to play the card.
+			EventTypeNames.CardDrawn => "Whenever you draw a card",
 			EventTypeNames.LandPlayed => "Landfall — whenever you play a land",
 			EventTypeNames.TurnEnded => "At end of turn",
 
@@ -977,6 +1008,13 @@ public static class MtgCardMapper
 		var phrase = DescribeSpecification(filter);
 		if (phrase is "it" or "permanent" or "creature")
 			return fallback;
+
+		// Every event this phrase serves is about a CREATURE — entering, dying, attacking, being
+		// damaged — so a filter that describes itself in terms of "permanent" is describing the
+		// wrong noun. Poison-Tip Archer read "whenever another permanent dies" and Corpse Knight
+		// "whenever another permanent you control enters", both of which promise a trigger that
+		// also fires on artifacts and enchantments.
+		phrase = phrase.Replace("permanent", "creature", StringComparison.Ordinal);
 
 		// "equipped creature" takes no article — there is exactly one, and "an equipped creature"
 		// reads as though any equipped creature on the board would do.
@@ -1287,6 +1325,10 @@ public static class MtgCardMapper
 				$"{Capitalise(target)} loses all abilities and becomes a {b.Power}/{b.Toughness}"
 					+ BecomesKeywords(b)
 					+ " until end of turn",
+			// Radha's {4}{R}{G}. The null fallback blanks the WHOLE ability, not just the clause —
+			// her activated ability simply did not appear on the card.
+			LandsPlayedCountComponent => $"{Capitalise(target)} gets +X/+X until end of turn, "
+				+ "where X is the number of lands you control",
 			_ => null,
 		};
 
@@ -1427,7 +1469,9 @@ public static class MtgCardMapper
 		return strategy.SelectionMode switch
 		{
 			TargetSelectionMode.AllValid => $"each {noun}",
-			TargetSelectionMode.Random => $"a random {noun}",
+			// There is exactly one opponent, so "a random opponent" describes a choice that is not
+			// being made. Every other random target really is a pick among several.
+			TargetSelectionMode.Random => noun == "opponent" ? "your opponent" : $"a random {noun}",
 			// The engine picks this one, not the player, so calling it "target" would promise a
 			// choice the card never offers — and falling through to the default did exactly that.
 			// "your strongest" already says whose, so the spec's own " you control" is stripped
@@ -1567,6 +1611,11 @@ public static class MtgCardMapper
 			case IsEquippedBySourceSpecification:
 				f.EquippedBySource = true;
 				break;
+			// Garruk's +1 destroys a PLANESWALKER and read "destroy target permanent" — text that
+			// promises unconditional removal of anything on the board.
+			case IsPlaneswalkerSpecification:
+				f.Types |= CardType.Planeswalker;
+				break;
 		}
 	}
 
@@ -1656,6 +1705,36 @@ public static class MtgCardMapper
 	/// The noun a card-type filter should print — "artifact or enchantment", "nonland permanent".
 	/// Null when the filter narrows nothing, so the caller falls back to "permanent".
 	/// </summary>
+	/// <summary>
+	/// Card types as they appear mid-sentence — "instant and sorcery", "creature". Distinct from
+	/// TypeNoun, which answers "what noun is being targeted"; this answers "which kinds are being
+	/// counted", so it joins with "and" and knows about instants and sorceries, which TypeNoun's
+	/// permanent-shaped list does not.
+	/// </summary>
+	private static string DescribeCardTypes(CardType types)
+	{
+		if (types == CardType.AnySpell)
+			return "instant and sorcery";
+
+		var names = new List<string>();
+		foreach (
+			var (flag, name) in new[]
+			{
+				(CardType.Creature, "creature"),
+				(CardType.Artifact, "artifact"),
+				(CardType.Enchantment, "enchantment"),
+				(CardType.Planeswalker, "planeswalker"),
+				(CardType.Instant, "instant"),
+				(CardType.Sorcery, "sorcery"),
+				(CardType.Land, "land"),
+			}
+		)
+			if (types.HasFlag(flag))
+				names.Add(name);
+
+		return names.Count == 0 ? "" : string.Join(" and ", names);
+	}
+
 	private static string? TypeNoun(CardType types, CardType excluded)
 	{
 		// "noncreature permanent" is Bramblecrush's whole restriction, and collapsing every

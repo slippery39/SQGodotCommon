@@ -446,10 +446,7 @@ public static class CoresetCubeColourlessArtifacts
 							new ExileAction(),
 							AllValid()
 								.WithSpec(
-									new IsCardTypeSpecification
-									{
-										Types = CardType.AnyPermanent & ~CardType.Land,
-									}
+									new IsNotCardTypeSpecification { Types = CardType.Land }
 										.And(new IsOnBattlefieldSpecification())
 										.And(new HasManaCostAtMostSpecification { Maximum = 3 })
 								)

@@ -131,12 +131,11 @@ MtgCore/
 │                            # LandsPlayedCountComponent — dynamic P/T modifier; bonus = controller's LandsPlayedTotal. Used by Terravore. Must be stamped with Duration = Permanent in card definitions.
 ├── Sets/                    # CardSet (Code, Name, Cards; Draftable filters lands), SetRegistry (All, Default, Get)
 │   ├── CoresetCube/         # The CSC set, built from an external cube list (cubecobra magiccoreset20xx).
-│   │                        # 378 cards. The cube is 450: 67 per colour, 50 colourless, 65
-│   │                        # multicolour — but 42 of those are LANDS and are deliberately absent
-│   │                        # (packs exclude lands, BuildDeck supplies the mana base, and with no
-│   │                        # colours a dual is a basic). So 408 is the complete set, not 450.
-│   │                        # All five colours and the colourless section are done; multicolour
-│   │                        # (30 nonland) remains. CoresetCube.cs assembles the files:
+│   │                        # COMPLETE — 408 cards. The cube is 450: 67 per colour, 50 colourless,
+│   │                        # 65 multicolour — but 42 of those are LANDS and are deliberately
+│   │                        # absent (packs exclude lands, BuildDeck supplies the mana base, and
+│   │                        # with no colours a dual is a basic). 408 IS the finished set.
+│   │                        # CoresetCube.cs assembles the files:
 │   │                        #   CoresetCubeWhite.cs           38 creatures
 │   │                        #   CoresetCubeWhiteSpells.cs     10 instants + 6 sorceries
 │   │                        #   CoresetCubeWhitePermanents.cs 8 enchantments + 1 equipment + 4 planeswalkers
@@ -158,7 +157,8 @@ MtgCore/
 │   │                        #   CoresetCubeColourlessCreatures.cs 11 artifact creatures
 │   │                        #   CoresetCubeColourlessArtifacts.cs 17 artifacts + Ugin
 │   │                        #   CoresetCubeColourlessEquipment.cs 14 equipment (5 of them Rings)
-│   │                        # Multicolour (30 nonland) is what remains of the cube.
+│   │                        #   CoresetCubeMulticolour.cs         27 creatures
+│   │                        #   CoresetCubeMulticolourSpells.cs   2 sorceries + Garruk
 │   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
 │                            # HollowmereTokens.cs holds token templates (excluded from the card list).
 │                            # Read the header of Hollowmere.cs before adding cards — it states the rate bar and
@@ -614,6 +614,33 @@ sitting among cards that are is worse than not showing it at all.
   end step". Check the card before assuming either is a bug.
 - **`CannotLoseComponent`** — Platinum Angel, checked in `CheckLossConditions`. Suppresses the
   outcome, not the cause, so killing the Angel collects the waiting loss.
+- **`ThresholdSource.ControlledEnchantments`** — Blood-Cursed Knight, and the card that showed the
+  "conditional static abilities" deferral is narrower than it reads. That deferral is about a
+  conditional TEAM anthem, which `StaticAbilityEngine`'s push model cannot keep current; a
+  condition on a SINGLE creature buffing itself is a live-evaluated modifier, which is exactly what
+  `ThresholdComponent` already is. One enum value and one case in `IsActive`.
+- **`HasManaCostAtLeastSpecification`** — a real type rather than `Not(HasManaCostAtMost)`. The
+  negation is the same arithmetic, but it inverts to true for a non-card AND `MtgCardMapper` cannot
+  describe it, so the whole restriction vanished from Dragon's Hoard's face and the card read as
+  triggering on every creature. **A spec that cannot print itself will be dropped from a card.**
+
+### Two constraints the multicolour section pinned down
+
+**`SpellCardBuilder.WithTarget` binds only the PENDING effect, not every effect built so far.**
+Chaining two effects and putting one `WithTarget` at the end silently leaves the first on its
+default strategy. On Heroic Reinforcements that made the +1/+1 a single-target buff while only the
+haste went team-wide — a card that looks entirely correct until you count what got buffed. Repeat
+`WithTarget` after each effect.
+
+Its sibling trap: **`WithSelfBuff` is `Permanent` duration.** Used for an "until end of turn" pump
+it stacks every activation into an unbounded creature. Write the `AddModifierAction` out with
+`TargetContextKey = SourceCardId` when the duration matters.
+
+**`ResolveEffectAction` resolves EVERY effect's targets before any of them executes.** So an
+`AllValid` list cannot include a token an earlier effect on the same card just made — reordering
+does not help, since the tokens are absent either way. Heroic Reinforcements' Soldiers therefore
+carry haste natively instead of receiving it. `CoresetCubeMulticolourTests` asserts the token is a
+1/1, so if targeting ever becomes lazy the test says so rather than quietly passing.
 
 ### Mana producers produce on your upkeep, rocks included
 

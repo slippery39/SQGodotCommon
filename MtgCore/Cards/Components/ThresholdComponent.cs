@@ -15,6 +15,18 @@ public enum ThresholdSource
 	/// more +1/+1 counters on it".
 	/// </summary>
 	PlusOneCounters,
+
+	/// <summary>
+	/// Enchantments the controller has on the battlefield — Blood-Cursed Knight's "as long as you
+	/// control an enchantment, this gets +1/+1 and has lifelink".
+	///
+	/// This is the case MtgCore/CLAUDE.md's "conditional static abilities" deferral explicitly
+	/// carves out: a conditional TEAM anthem has no home, because StaticAbilityEngine is a push
+	/// model and would go stale, but a live-evaluated modifier on a SINGLE creature dodges that
+	/// entirely. One enum value and one case, rather than the parallel component type the deferral
+	/// was written about.
+	/// </summary>
+	ControlledEnchantments,
 }
 
 /// <summary>
@@ -82,6 +94,19 @@ public record ThresholdComponent : PowerToughnessModifier
 
 		if (CountSource == ThresholdSource.PlusOneCounters)
 			return (card.GetComponent<PlusOneCounterComponent>()?.Count ?? 0) >= Minimum;
+
+		if (CountSource == ThresholdSource.ControlledEnchantments)
+		{
+			var battlefieldId = state.GetPlayerZoneId(card.ControllerId, ZoneType.Battlefield);
+			if (battlefieldId == 0)
+				return false;
+
+			return state
+					.GetCardsInZone(battlefieldId)
+					.Count(c =>
+						c.ControllerId == card.ControllerId && c.HasType(CardType.Enchantment)
+					) >= Minimum;
+		}
 
 		var graveyardId = state.GetPlayerZoneId(card.ControllerId, ZoneType.Graveyard);
 		return state.GetChildrenIds(graveyardId).Count() >= Minimum;
