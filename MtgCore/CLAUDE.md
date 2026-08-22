@@ -190,7 +190,10 @@ MtgCore/
 │                            # Other specs: IsCreatureSpecification (enforces Shroud/Hexproof AND subtype protection at IsSatisfiedBy level), IsPlayerSpecification, IsSubtypeSpecification,
 │                            #              IsControlledByYouSpecification, IsControlledByOpponentSpecification,
 │                            #              IsSourceCardSpecification, IsNotSelfSpecification, AlwaysFalseSpecification
-│                            # Shroud/Hexproof: enforced in IsCreatureSpecification.IsSatisfiedBy — no other spec changes needed.
+│                            # Shroud/Hexproof: enforced in IsCreatureSpecification.IsSatisfiedBy via **GetEffectiveStats** —
+#                              it read the raw CreatureComponent plus a hand-rolled scan of
+#                              AppliedKeywordComponent, and missed EquippedBoostComponent entirely,
+#                              so EVERY equipment- and aura-granted shroud or hexproof was cosmetic.
 │                            #   HasShroud = no one can target (including controller). HasHexproof = opponents can't target (controller can).
 │                            # Composites: AndSpecification (zone-first candidate narrowing), OrSpecification, NotSpecification
 ├── Triggers/                # TriggeredAbilityComponent { Name, Condition, Effects, ActiveInZone (default Battlefield) }, EventTriggerCondition, TriggerCondition

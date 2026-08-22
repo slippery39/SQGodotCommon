@@ -56,22 +56,28 @@ public record IsCreatureSpecification : TargetSpecification
 		if (zone.ZoneType != ZoneType.Battlefield)
 			return false;
 
-		var creature = card.GetComponent<CreatureComponent>()!;
-
 		if (!context.IsNonTargeted)
 		{
-			if (creature.HasShroud)
-				return false;
-			if (creature.HasHexproof && card.ControllerId != context.CastingPlayerId)
-				return false;
+			// GetEffectiveStats, NOT the raw component plus a hand-rolled scan of
+			// AppliedKeywordComponent. That is what this did, and it missed
+			// EquippedBoostComponent entirely — which GetEffectiveStats reads in its own pass,
+			// because Permanent-duration applied keywords are owned by StaticAbilityEngine and it
+			// would strip one stamped by an attachment.
+			//
+			// The consequence was that EVERY equipment- and aura-granted shroud or hexproof was
+			// cosmetic: Whispersilk Cloak, Swiftfoot Boots and Ring of Evos Isle all rendered the
+			// keyword, reported it through GetEffectiveStats, and protected nothing at all,
+			// because targeting asked a different question and got a different answer.
+			//
+			// Asking the single source of truth also picks up ThresholdComponent's grants for
+			// free and cannot drift from the six-site keyword rule the way three parallel passes
+			// could.
+			var stats = context.GameState.GetEffectiveStats(candidateId);
 
-			foreach (var kw in card.GetComponents<AppliedKeywordComponent>())
-			{
-				if (kw.GrantsShroud)
-					return false;
-				if (kw.GrantsHexproof && card.ControllerId != context.CastingPlayerId)
-					return false;
-			}
+			if (stats.HasShroud)
+				return false;
+			if (stats.HasHexproof && card.ControllerId != context.CastingPlayerId)
+				return false;
 
 			// Protection from a creature type: untargetable by a source of that type. Sits with
 			// Shroud/Hexproof because all three are "this creature can't be chosen" rules and
