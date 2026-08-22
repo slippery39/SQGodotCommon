@@ -741,3 +741,43 @@ does not arise. That is reversible; an engine that cannot express it is not.
 `OnChoiceConfirmed` resumes it). If the player ignores the panel the opponent's turn is stalled —
 waiting on input, not hung, but it has no timeout. `_aiSteps` is a field so an interrupted turn
 keeps one step budget rather than restarting it on each resume.
+
+## RequiresTap does nothing on a non-creature permanent
+
+`ActivatedAbilityAction.ValidateAdd` gates the tap check on `ability.RequiresTap && creature != null`,
+and the exhaust write in `Execute` scans for a `CreatureComponent` and finds none. So on an artifact,
+`RequiresTap = true` is inert. `PermanentCardBuilder.WithActivatedAbility` does not even expose the
+parameter, so nothing in the Core Set Cube can currently set it by accident.
+
+**Left alone deliberately.** For a `{T}:` artifact ability, `MaxActivationsPerTurn = 1` produces the
+same once-per-turn behaviour, and artifacts correctly have no summoning sickness, so the common case
+is already right. `IsExhausted` lives on `CreatureComponent`; making it work here means either
+hoisting it onto `PermanentComponent` (touching every creature read in the engine) or a parallel
+exhausted flag for non-creatures (a second source of truth for one concept).
+
+**What it actually costs:** a permanent with TWO `{T}` abilities can use both in one turn, where
+real MTG locks the second. Three cards in the colourless section are printed that way — Dragon's
+Hoard, Meteorite, Scuttlemutt — and all three lose their second tap ability to the colour and
+counter cuts anyway, so nothing shipped depends on it.
+
+**Watch:** the next card that wants two competing tap abilities. It will build, activate and resolve
+without erroring, at twice the printed rate. The cheap fix if one arrives is a shared activation
+group id on `ActivatedAbilityComponent` so two abilities share one per-turn counter — much smaller
+than a general permanent-tapping system, and it covers the only case that has ever come up.
+
+## Platinum Angel can stall a game past the turn cutoff
+
+`CannotLoseComponent` suppresses the loss in `CheckStateBasedEffectsAction.CheckLossConditions`, the
+one place a player can lose. Life still falls and libraries still empty; only the outcome is held
+back, so killing the Angel collects the loss on the next state-based check rather than merely
+stopping the bleeding.
+
+**The accepted cost:** an unanswered Angel means neither life nor decking can end the game. The
+simulator warns at 50 actions per turn and cuts off at 100, and `GameEndReason.TurnLimitReached`
+went to zero when decking started killing — an Angel that never dies puts games back into that
+bucket, where a stalled game is indistinguishable from a bug.
+
+Judged acceptable: it is one card in 450, both players run removal, and the Angel is a 4/4 that
+can simply be attacked. **Watch:** `TurnLimitReached` in a training run. If it correlates with
+Angel being drafted, the honest fix is to keep the life-total protection and drop the decking
+protection, so the game still ends — not to weaken the clause everywhere.

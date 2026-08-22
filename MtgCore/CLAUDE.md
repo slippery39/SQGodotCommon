@@ -481,11 +481,17 @@ These are designed but not yet implemented. Do not re-implement or work around t
 | — | Delirium | Needs "N+ card types in your graveyard". There is no card-type system — Artifact/Enchantment/Land are strings in `Subtypes` and instants/sorceries carry no type marker at all. Deliberately cut in favour of Threshold, which covers the same design space at zero cost. |
 | — | Real Madness | Casting a discarded card requires a priority window; the engine has a stack but no priority. Modelled instead as a graveyard-active `CardDiscardedEvent` trigger — see "Discard Triggers" below. |
 | — | Deathtouch from effect damage | `DealDamageAction` always passes `fromDeathtouch: false`. Only combat can deal deathtouch damage today. Add a `SourceHasDeathtouch` field when a card needs a deathtouch ping ability. |
+| — | Chosen creature type / naming a card | Adaptive Automaton and Phyrexian Revoker. There is no runtime-choice state a spec can read — `ChosenModesComponent` holds mode indices, and `IsSubtypeSpecification` takes a build-time string. Both cards are reskinned. |
+| — | Two competing `{T}` abilities on one permanent | `RequiresTap` is inert on a non-creature. See `DesignNotes.md` for why that is left alone and the cheap fix if a card ever needs it. |
 
 **Completed since this table was written:** Step 3 (zone-dependent statics). Also, from the Core
 Set Cube white pass: tap costs (see "Exhaust" — `RequiresTap` now exhausts), first strike,
 indestructible, exalted, subtype protection, numeric replacement effects, activation conditions,
-and cast restrictions.
+and cast restrictions. From the colourless pass: **animating a non-creature** (`AnimateAction`),
+**charge counters as a spendable resource** (`ChargeCounterComponent` +
+`RemoveCounterAdditionalCost` — the removal cost green deferred), **playing cards off the top of
+your library** (`PlayFromLibraryTopComponent`), and **"you can't lose the game"**
+(`CannotLoseComponent`).
 
 **+1/+1 counters WERE a "won't do", and green fired the stated trigger.** This section used to say
 a permanent `AddModifierAction` *is* the counter, and that a dedicated system only became necessary
@@ -497,6 +503,117 @@ A permanent `AddModifierAction` is still the right tool for a card that just wan
 buff, and `HasPermanentPowerBonusSpecification` still answers "did it have a counter on it" for
 both. **Use `PlusOneCounterComponent` for anything whose counters are read back**: only it can be
 doubled, removed, or counted, and only it survives into the graveyard for a death trigger.
+
+## Colourless Section Mechanics (Core Set Cube)
+
+The colour sections were creature-and-spell work. This one is artifacts, equipment and counters,
+and it needed four primitives plus a handful of small additions. **Two latent engine bugs surfaced
+while building it, both silent, both caught by a test that asserted the consequence.**
+
+### Animation — `AnimateAction`
+
+The only way a `CreatureComponent` reaches a permanent already in play. It was previously created
+in exactly two places (`CreatureCardBuilder.Build`, `PutIntoBattlefieldAction`), and
+`AddModifierAction`, `AddCustomModifierAction` and `AddCountersAction` all silently `continue` on a
+non-creature. `BecomesBaseCreatureComponent` does not help — it is a `PowerToughnessModifier` that
+reshapes an EXISTING creature, and on a bodyless card its bonus is read by nobody.
+
+Three things it must get right, each silent when wrong:
+
+- **No summoning sickness.** An animated permanent has been under your control since the turn began
+  in the overwhelmingly common case, and the other default makes every animation a do-nothing on
+  the turn you paid for it. Limiters belong on the card (Haunted Plate Mail's "only if you control
+  no creatures").
+- **`StaticAbilityEngine.ProcessPermanentEntered` is called DIRECTLY, with no event staged.** The
+  engine is a push model driven by `CreatureEnteredBattlefieldEvent`, so an anthem otherwise misses
+  the new creature entirely — but staging that event would fire every ETB payoff on the board
+  (Corpse Knight, Soul Warden) for a permanent that entered nothing.
+- **Reverting happens in `EndTurnAction.RevertAnimatedPermanents`, for BOTH players.** A
+  `CreatureComponent` is not a modifier, so `ClearEndOfTurnModifiers` will not touch it, and
+  `StartTurnAction`'s per-component loop runs for the active player only — cleanup there would let
+  the animation survive the opponent's entire turn. Same reasoning as the impulse-draw and
+  prevention cleanups already living in `EndTurnAction`. The revert also strips the applied anthem
+  components and calls `ProcessPermanentLeft`, because `StampEffect` unconditionally `Add`s: a
+  permanent animated on three turns under a Glorious Anthem would otherwise accumulate three
+  boosts, the same accounting failure that once made a bounced creature collect a second one.
+
+`AddCountersAction`'s non-creature guard came out in the same change. It was harmless while nothing
+read P/T off a non-creature, and wrong the moment animation shipped.
+
+### Charge counters — the resource kind
+
+`ChargeCounterComponent { Kind, Count }` is a **sibling** of `PlusOneCounterComponent` and
+deliberately NOT a `PowerToughnessModifier`. `CreatureEvaluator` walks every one of those, so
+inheriting would turn a gold counter into +1/+1 and let a counter-doubler double it.
+`AddChargeCountersAction` is likewise separate from `AddCountersAction`: charge counters are not
+subject to the `CountersPlaced` replacement (Conclave Mentor says "+1/+1 counters") and emit no
+`CountersAddedEvent`, so a counters-matter payoff cannot fire on one. Unlike `AddCountersAction`
+they may go on a non-creature, which is the entire point.
+
+`RemoveCounterAdditionalCost` is the removal cost green deferred with "build it when a second card
+wants to spend counters". **It is NOT a selection cost** — a counter is fungible and "which of your
+three identical gold counters" is not a decision — so it sits with `LifeAdditionalCost`, validated
+against state and paid with no prompt, and neither `MtgActionGenerator` nor the Godot cost walker
+needed a change.
+
+**BUG FOUND: `ActivateAbilityAction.Execute` read the source card BEFORE paying costs**, then
+rebuilt its component array from that stale snapshot to bump `ActivationCount` — writing the
+pre-payment array straight back over the payment. Any cost that mutates the source card's own
+components validated, appeared to be paid, and silently was not; Dragon's Hoard would have drawn
+forever off one counter. Latent because every existing cost touches something else: sacrifice and
+discard move OTHER cards, life changes the player. The card is now re-read after payment.
+
+### Playing off the top of your library
+
+`PlayFromLibraryTopComponent { Types }` widens `GameState.IsInCastableZone`, which is the single
+"can you play this from where it is" predicate all four play actions consult — so `PlayLandAction`
+and the three cast actions all started working off the top with no edit to any of them. Same shape
+as impulse draw. Scope is the top card only, the controller's own library only.
+
+**BUG FOUND, and it is the one this feature was always going to risk:** the generator half was
+sequenced AFTER `AddHandActions`' early return for an empty `PlayableExiledIds` — which is nearly
+always — so `IsInCastableZone` said yes while `MtgActionGenerator` never offered the action. The
+generator and the predicate disagreeing is exactly the "the AI can do it and I can't" class, and
+the test that caught it asserts both halves together. Keep asserting both.
+
+Godot renders the playable top card **as a hand card** (`MtgGameScene.SyncHand`) rather than as a
+new board slot: the hand is already the "cards you can play" surface, with drawing, details, click
+routing and highlight tinting, and the engine treats the card identically. It is labelled
+"(Top of your library)" in its rules text, because an unlabelled card that is not in your hand
+sitting among cards that are is worse than not showing it at all.
+
+### Smaller additions
+
+- **`IsEquippedBySourceSpecification`** — "equipped creature", read off `TargetingContext.SourceCardId`,
+  which already existed. Without it an attachment cannot address its own wearer from its own
+  trigger, and the five Rings collapse into near-identical vanilla equipment.
+- **`GraveyardCountComponent.Types` / `.AffectsToughness`** — two fields, not a second type.
+  `AffectsToughness = false` is the `*/N` templating (Enigma Drake). `Card.EffectiveTypes` reports
+  `Instant|Sorcery` for an undeclared spell, which is exactly the union these cards count.
+- **`ReplaceableEvent.CountersPlaced` + `CounterBonusComponent`** — Conclave Mentor. Applied to the
+  net INCREASE rather than to `Amount`, so it also modifies a doubling (which really is "put that
+  many more counters on it") and cannot bump a removal.
+- **`ControlsCardNamedCondition`** — the Empires trio. Name-matching was missing, not structurally
+  absent, so it gets built.
+- **`TargetBuilder.NonlandPermanents()`** — every other mass helper was creature-shaped, so no
+  sweeper could name an artifact, enchantment or planeswalker. `Land` is masked out for honesty;
+  a land is never a battlefield permanent here.
+- **`PermanentCardBuilder.WithStaticGrantKeyword`** — the machinery already worked from a
+  non-creature source; only the builder method was missing.
+- **`GainPermanentManaAction.Deferred`** — "put it onto the battlefield tapped". Mirrors
+  `BonusManaLandComponent.Deferred`.
+- **`TriggerConditions.OnYourEndStep()`** — filtered, for the same reason `OnYourUpkeep` is. Note
+  `LifeGainedThisTurnCondition` deliberately does NOT filter: Resplendent Angel is printed "each
+  end step". Check the card before assuming either is a bug.
+- **`CannotLoseComponent`** — Platinum Angel, checked in `CheckLossConditions`. Suppresses the
+  outcome, not the cause, so killing the Angel collects the waiting loss.
+
+### Mana producers produce on your upkeep, rocks included
+
+Extending the green dork rule to artifacts: Gilded Lotus, Meteorite, Dragon's Hoard and Scuttlemutt
+all use `OnYourUpkeep()` → `AddTemporaryManaAction`, never a tap ability. An unactivated mana
+ability is invisible — the AI must re-derive the activation every turn on every producer before it
+can cast anything. Price them slightly above their printed rate for the reliability.
 
 ## Impulse Draw
 

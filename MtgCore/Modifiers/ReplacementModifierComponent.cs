@@ -17,6 +17,7 @@ public enum ReplaceableEvent
 	DamageToCreature,
 	Draw,
 	Mill,
+	CountersPlaced,
 }
 
 /// <summary>
@@ -93,6 +94,31 @@ public record DamagePreventionComponent : ReplacementModifierComponent
 public record LifeGainBonusComponent : ReplacementModifierComponent
 {
 	public override ReplaceableEvent Event => ReplaceableEvent.LifeGain;
+
+	public int Amount { get; init; } = 1;
+
+	public override int Bonus => Amount;
+}
+
+/// <summary>
+/// "If one or more +1/+1 counters would be put on a creature you control, that many plus N are put
+/// on it instead." — Conclave Mentor.
+///
+/// A REPLACEMENT, not a trigger, and here the distinction is not merely tidy — it is what stops an
+/// infinite loop. A trigger that adds counters in response to counters being added feeds itself
+/// forever. Because this applies inside AddCountersAction, exactly one CountersAddedEvent is
+/// emitted and it already carries the increased number, so a counters-matter payoff sees the final
+/// figure once.
+///
+/// The clamp in ApplyReplacements is load-bearing for the removal case: AddCountersAction runs
+/// negative amounts through the same call, and "remove a counter" must not become "remove a
+/// counter, plus one" — it does not, because the engine returns early on a zero amount and clamps
+/// the result at 0. See AddCountersAction for why the replacement is applied to the positive
+/// branch only.
+/// </summary>
+public record CounterBonusComponent : ReplacementModifierComponent
+{
+	public override ReplaceableEvent Event => ReplaceableEvent.CountersPlaced;
 
 	public int Amount { get; init; } = 1;
 

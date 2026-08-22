@@ -354,6 +354,28 @@ public class MtgGameManager
 		);
 	}
 
+	/// <summary>
+	/// The top card of the human's library, if a permanent they control lets them play it from
+	/// there (Radha, Heart of Keld). Null the rest of the time, which is nearly always.
+	///
+	/// Asks GameState.IsPlayableFromLibraryTop rather than looking for the enabler itself. That
+	/// predicate is the same one PlayLandAction and all three cast actions validate against, so the
+	/// UI cannot end up offering a card the engine will refuse, or hiding one it would accept.
+	/// Re-deriving the rule here is exactly how "the AI can do it and I can't" gets built.
+	/// </summary>
+	public Card? GetPlayableLibraryTopCard()
+	{
+		var libraryId = _state.GetPlayerZoneId(HumanPlayerId, ZoneType.Library);
+		if (libraryId == 0)
+			return null;
+
+		var topCardId = _state.GetChildrenIds(libraryId).FirstOrDefault();
+		if (topCardId == 0 || !_state.IsPlayableFromLibraryTop(topCardId, HumanPlayerId))
+			return null;
+
+		return _state.GetObject(topCardId) as Card;
+	}
+
 	public bool IsNonCreaturePermanent(int cardId)
 	{
 		var card = _state.GetObject(cardId) as Card;

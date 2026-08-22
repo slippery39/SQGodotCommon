@@ -184,12 +184,18 @@ public static class MtgGameStateExtensions
 		state.GetZone(state.GetCardZoneId(cardId));
 
 	/// <summary>
-	/// True if the casting player may cast/play this card from where it currently sits: their
-	/// hand, or their exile zone if it carries ExiledPlayableComponent (impulse draw — "exile the
-	/// top card of your library, you may play it this turn").
+	/// True if the casting player may cast/play this card from where it currently sits. Three
+	/// zones qualify:
+	///   - their hand;
+	///   - their exile zone, if the card carries ExiledPlayableComponent (impulse draw — "exile
+	///     the top card of your library, you may play it this turn");
+	///   - the TOP of their library, if they control a PlayFromLibraryTopComponent whose Types
+	///     match (Radha, Courser of Kruphix).
 	///
-	/// The single entry point for all three cast actions' "is this card available to you" check,
-	/// so impulse draw did not need a bespoke copy of that logic in each one.
+	/// The single entry point for all four play actions' "is this card available to you" check —
+	/// the three cast actions plus PlayLandAction. Each of them once hardcoded "zone == your hand",
+	/// and a fifth private copy of that rule per feature is precisely how the "the AI can do it and
+	/// I can't" class of bug gets made. One predicate cannot disagree with itself.
 	/// </summary>
 	public static bool IsInCastableZone(this GameState state, int cardId, int castingPlayerId)
 	{
@@ -197,9 +203,57 @@ public static class MtgGameStateExtensions
 		if (zoneId == state.GetPlayerZoneId(castingPlayerId, ZoneType.Hand))
 			return true;
 
-		if (zoneId != state.GetPlayerZoneId(castingPlayerId, ZoneType.Exile))
+		if (zoneId == state.GetPlayerZoneId(castingPlayerId, ZoneType.Exile))
+			return ((Card)state.GetObject(cardId)).HasComponent<ExiledPlayableComponent>();
+
+		if (zoneId == state.GetPlayerZoneId(castingPlayerId, ZoneType.Library))
+			return state.IsPlayableFromLibraryTop(cardId, castingPlayerId);
+
+		return false;
+	}
+
+	/// <summary>
+	/// True if this card is the top card of the player's library AND they control a permanent that
+	/// lets them play cards of its type from there.
+	///
+	/// Ordered cheapest-first deliberately. This runs inside IsInCastableZone, which every play
+	/// action validates against, so the common case — a card in hand — never reaches it, and a card
+	/// in the library fails the top-card test with a single lookup before any battlefield scan.
+	/// </summary>
+	public static bool IsPlayableFromLibraryTop(this GameState state, int cardId, int playerId)
+	{
+		var libraryId = state.GetPlayerZoneId(playerId, ZoneType.Library);
+		if (libraryId == 0 || state.GetChildrenIds(libraryId).FirstOrDefault() != cardId)
 			return false;
 
-		return ((Card)state.GetObject(cardId)).HasComponent<ExiledPlayableComponent>();
+		if (state.GetObject(cardId) is not Card card)
+			return false;
+
+		return state.LibraryTopPlayableTypes(playerId) is { } types && card.HasType(types);
+	}
+
+	/// <summary>
+	/// The union of card types the player may currently play off the top of their library, or null
+	/// if they control no enabler. Null rather than CardType.None so callers can skip the whole
+	/// feature with one test — the overwhelmingly common case.
+	/// </summary>
+	public static CardType? LibraryTopPlayableTypes(this GameState state, int playerId)
+	{
+		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+		if (battlefieldId == 0)
+			return null;
+
+		CardType? types = null;
+
+		foreach (var card in state.GetCardsInZone(battlefieldId))
+		{
+			if (card.ControllerId != playerId)
+				continue;
+
+			foreach (var enabler in card.GetComponents<PlayFromLibraryTopComponent>())
+				types = (types ?? CardType.None) | enabler.Types;
+		}
+
+		return types;
 	}
 }

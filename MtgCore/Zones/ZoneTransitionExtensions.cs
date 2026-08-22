@@ -96,7 +96,7 @@ public static class ZoneTransitionExtensions
 	/// LifeTotalComponent, LandsPlayedCountComponent. Stripping by base type would delete the
 	/// card's own rules text on its way to the graveyard and reanimate it as a vanilla creature.
 	/// </summary>
-	private static GameState StripAppliedComponents(GameState state, int cardId)
+	internal static GameState StripAppliedComponents(GameState state, int cardId)
 	{
 		if (state.GetObject(cardId) is not Card card)
 			return state;

@@ -1420,6 +1420,18 @@ public partial class MtgGameScene : Node2D
 		var state = _manager.State;
 		var humanHandId = state.GetWellKnownId(MtgObjectKeys.Player1Hand);
 		var handCards = state.GetCardsInZone(humanHandId).ToList();
+
+		// "You may play lands from the top of your library" (Radha) is shown AS A HAND CARD rather
+		// than as a new board slot. The hand is already the surface for "cards you can play" — it
+		// has the drawing, the details, the click routing and the highlight tinting — and the
+		// engine treats the card identically, because IsInCastableZone accepts library-top and all
+		// four play actions consult it. A dedicated slot would be a second copy of all of that.
+		//
+		// Without this the AI plays lands off the top and the human cannot see the card at all.
+		var libraryTop = _manager.GetPlayableLibraryTopCard();
+		if (libraryTop != null)
+			handCards.Add(libraryTop);
+
 		var currentCardIds = handCards.Select(c => c.Id).ToHashSet();
 
 		var toRemove = _handCardIds.Where(id => !currentCardIds.Contains(id)).ToList();
@@ -1446,13 +1458,40 @@ public partial class MtgGameScene : Node2D
 		var details = uiCards
 			.Select(ui =>
 				int.TryParse(ui.Id, out var id) && cardLookup.TryGetValue(id, out var card)
-					? MtgCardMapper.ToDetails(card, state, _manager.HumanPlayerId)
+					? MarkIfFromLibraryTop(
+						MtgCardMapper.ToDetails(card, state, _manager.HumanPlayerId),
+						id,
+						libraryTop
+					)
 					: new InternalCardUI2D.Details()
 			)
 			.ToList();
 
 		_hand.SetCardsDetails(details);
 		HighlightSelectableHandCards(uiCards);
+	}
+
+	/// <summary>
+	/// Says so on the card when one of the "hand" cards is actually the top of your library.
+	///
+	/// Sharing the hand surface is what makes the feature cheap, but a card that is not in your
+	/// hand sitting silently among cards that are is worse than no display at all — the player
+	/// would think they had drawn it, and wonder why it vanished when they drew for turn.
+	/// </summary>
+	private static InternalCardUI2D.Details MarkIfFromLibraryTop(
+		InternalCardUI2D.Details details,
+		int cardId,
+		Card? libraryTop
+	)
+	{
+		if (libraryTop == null || cardId != libraryTop.Id)
+			return details;
+
+		details.RulesText = string.IsNullOrWhiteSpace(details.RulesText)
+			? "(Top of your library)"
+			: $"(Top of your library)\n{details.RulesText}";
+
+		return details;
 	}
 
 	/// <summary>

@@ -60,6 +60,26 @@ public class TargetBuilder
 	public TargetingStrategy OtherCreaturesYouControl() =>
 		Build(TargetSpecification.OtherCreaturesYouControl());
 
+	/// <summary>
+	/// Every nonland permanent on the battlefield, either side — Perilous Vault, Ugin.
+	///
+	/// Every other helper here is creature- or player-shaped, so before this a mass effect simply
+	/// could not name an artifact, enchantment or planeswalker. DestroyPermanentAction and
+	/// ExileAction were both already EffectActions and both already handled every permanent type;
+	/// the specification was the only missing piece.
+	///
+	/// CardType.Land is masked out for honesty rather than necessity. A land here is consumed into
+	/// MaxMana and exiled by PlayLandAction, so no land is ever a battlefield permanent to begin
+	/// with — but the card says "nonland" and so should the code, or the next reader has to
+	/// rediscover the mana system to know whether this is a bug.
+	/// </summary>
+	public TargetingStrategy NonlandPermanents() =>
+		Build(
+			new IsCardTypeSpecification { Types = CardType.AnyPermanent & ~CardType.Land }.And(
+				new IsOnBattlefieldSpecification()
+			)
+		);
+
 	public TargetingStrategy WithSpec(TargetSpecification spec) => Build(spec);
 
 	private TargetingStrategy Build(TargetSpecification spec) =>

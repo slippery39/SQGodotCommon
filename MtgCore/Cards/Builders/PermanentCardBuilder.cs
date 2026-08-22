@@ -255,6 +255,55 @@ public class PermanentCardBuilder
 		return this;
 	}
 
+	/// <summary>
+	/// A static keyword grant to every permanent matching <paramref name="filter"/> — Akroma's
+	/// Memorial.
+	///
+	/// The machinery already worked from a non-creature source: CheckStateBasedEffectsAction
+	/// routes PermanentEnteredBattlefieldEvent into StaticAbilityEngine alongside the creature
+	/// event. Only the builder method was missing, so every existing StaticGrantKeywordAbility in
+	/// the repo happens to sit on a creature.
+	///
+	/// Vigilance is absent from the parameter list because it is absent from the engine — see the
+	/// deliberate non-implementation in MtgCore/CLAUDE.md.
+	/// </summary>
+	public PermanentCardBuilder WithStaticGrantKeyword(
+		TargetSpecification filter,
+		bool flying = false,
+		bool firstStrike = false,
+		bool doubleStrike = false,
+		bool trample = false,
+		bool haste = false,
+		bool lifelink = false,
+		bool deathtouch = false,
+		bool reach = false,
+		bool taunt = false,
+		bool indestructible = false,
+		bool shroud = false,
+		bool hexproof = false
+	)
+	{
+		_extraComponents.Add(
+			new StaticGrantKeywordAbility
+			{
+				Filter = filter,
+				GrantsFlying = flying,
+				GrantsFirstStrike = firstStrike,
+				GrantsDoubleStrike = doubleStrike,
+				GrantsTrample = trample,
+				GrantsHaste = haste,
+				GrantsLifelink = lifelink,
+				GrantsDeathtouch = deathtouch,
+				GrantsReach = reach,
+				GrantsTaunt = taunt,
+				GrantsIndestructible = indestructible,
+				GrantsShroud = shroud,
+				GrantsHexproof = hexproof,
+			}
+		);
+		return this;
+	}
+
 	public Card Build()
 	{
 		var components = ImmutableArray.CreateBuilder<GameComponent>();

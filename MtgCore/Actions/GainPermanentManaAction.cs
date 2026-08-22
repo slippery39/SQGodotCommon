@@ -21,6 +21,16 @@ public record GainPermanentManaAction : EffectAction
 {
 	public int Amount { get; init; } = 1;
 
+	/// <summary>
+	/// "…put it onto the battlefield TAPPED" — Solemn Simulacrum, Sword of the Animist, Golos.
+	///
+	/// Raises MaxMana only, so the mana is not usable until the next turn's refill. Mirrors
+	/// BonusManaLandComponent.Deferred, which expresses the same clause for a land played from
+	/// hand. Without it a fetch that says "tapped" is silently as good as one that does not, and
+	/// three cards in the colourless section are costed as though it mattered.
+	/// </summary>
+	public bool Deferred { get; init; } = false;
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
@@ -39,7 +49,7 @@ public record GainPermanentManaAction : EffectAction
 				player with
 				{
 					MaxMana = player.MaxMana + amount,
-					CurrentMana = player.CurrentMana + amount,
+					CurrentMana = Deferred ? player.CurrentMana : player.CurrentMana + amount,
 					LandsPlayedTotal = player.LandsPlayedTotal + amount,
 				}
 			);

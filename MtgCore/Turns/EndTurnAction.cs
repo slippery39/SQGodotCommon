@@ -62,6 +62,12 @@ public record EndTurnAction : GameAction
 		state = ExileEndOfTurnPermanents(state, Player1Id);
 		state = ExileEndOfTurnPermanents(state, Player2Id);
 
+		// "Until end of turn, this permanent becomes a 4/4 creature" wears off. Both players for
+		// the same reason as the two lines above: StartTurnAction only touches the active player,
+		// so an animation cleaned up there would survive the opponent's entire turn.
+		state = RevertAnimatedPermanents(state, Player1Id);
+		state = RevertAnimatedPermanents(state, Player2Id);
+
 		var nextBattlefieldId = state.GetPlayerZoneId(nextPlayerId, ZoneType.Battlefield);
 
 		var startTurn = new StartTurnAction
@@ -117,6 +123,63 @@ public record EndTurnAction : GameAction
 				continue;
 
 			state = state.MoveCardTracked(card.Id, state.GetPlayerZoneId(playerId, ZoneType.Exile));
+		}
+
+		return state;
+	}
+
+	/// <summary>
+	/// Takes the creature body back off every permanent AnimateAction gave one to.
+	///
+	/// Three removals, and skipping any of them leaves a different silent bug behind:
+	///   - the CreatureComponent and the marker, or the animation is permanent;
+	///   - the subtype the animation added, and ONLY that one, read back off the marker;
+	///   - the anthem effects the board stamped on it while it was a creature. StampEffect
+	///     unconditionally Adds, so a permanent animated on three consecutive turns under a
+	///     Glorious Anthem would accumulate three +1/+1 boosts — the same accounting failure that
+	///     made a bounced creature collect a second one. ProcessPermanentLeft handles the other
+	///     half, dropping this card out of every source's AffectedIds index.
+	///
+	/// Damage needs no handling: it lives on the CreatureComponent being removed, so an animated
+	/// permanent that survived the turn is undamaged when it animates again. That matches
+	/// MoveCardTracked, which clears damage for the same reason.
+	/// </summary>
+	private static GameState RevertAnimatedPermanents(GameState state, int playerId)
+	{
+		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+		var game = state.TryGetGame();
+
+		foreach (var card in state.GetCardsInZone(battlefieldId).ToList())
+		{
+			var animated = card.GetComponent<AnimatedUntilEndOfTurnComponent>();
+			if (animated == null)
+				continue;
+
+			if (game != null)
+				state = StaticAbilityEngine.ProcessPermanentLeft(state, card.Id, game.Id);
+
+			state = ZoneTransitionExtensions.StripAppliedComponents(state, card.Id);
+
+			if (state.GetObject(card.Id) is not Card stripped)
+				continue;
+
+			var subtypes = string.IsNullOrEmpty(animated.AddedSubtype)
+				? stripped.Subtypes
+				: stripped.Subtypes.Remove(animated.AddedSubtype);
+
+			state = state.UpdateObject(
+				card.Id,
+				stripped with
+				{
+					Types = stripped.EffectiveTypes & ~CardType.Creature,
+					Subtypes = subtypes,
+					Components = stripped
+						.Components.Where(c =>
+							c is not (CreatureComponent or AnimatedUntilEndOfTurnComponent)
+						)
+						.ToImmutableArray(),
+				}
+			);
 		}
 
 		return state;

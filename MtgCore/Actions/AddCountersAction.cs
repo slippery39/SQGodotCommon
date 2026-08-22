@@ -48,12 +48,29 @@ public record AddCountersAction : EffectAction
 			if (state.GetObject(targetId) is not Card card)
 				continue;
 
-			if (!card.HasComponent<CreatureComponent>())
-				continue;
-
+			// NO CREATURE GUARD. It used to skip non-creatures, which was harmless while nothing
+			// could read P/T off one — and wrong the moment AnimateAction shipped, because a
+			// permanent animated after taking a counter must arrive with that counter's stats.
+			// A +1/+1 counter on a permanent that never becomes a creature is inert, not a bug:
+			// PlusOneCounterComponent is only ever read through CreatureEvaluator.
 			var existing = card.GetComponent<PlusOneCounterComponent>();
 			var oldCount = existing?.Count ?? 0;
-			var newCount = Math.Max(0, (oldCount * Multiplier) + amount);
+
+			// Conclave Mentor replaces the number of counters being PUT ON, so the replacement
+			// applies to the net increase rather than to Amount. Taking the delta rather than
+			// Amount is what makes it also modify a doubling (Primordial Hydra), which really is
+			// "put that many more counters on it", and what keeps it away from a removal — a
+			// negative delta must not be bumped up by a bonus meant for gains.
+			var rawNew = Math.Max(0, (oldCount * Multiplier) + amount);
+			var delta = rawNew - oldCount;
+			if (delta > 0)
+				delta = state.ApplyReplacements(
+					ReplaceableEvent.CountersPlaced,
+					card.ControllerId,
+					delta
+				);
+
+			var newCount = Math.Max(0, oldCount + delta);
 
 			if (newCount == oldCount)
 				continue;

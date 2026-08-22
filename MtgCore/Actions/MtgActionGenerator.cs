@@ -133,6 +133,12 @@ public static class MtgActionGenerator
 		foreach (var card in state.GetCardsInZone(handId))
 			AddCastableCardAction(state, playerId, card, actions);
 
+		// Before the impulse-draw walk, because that walk returns early when no card is
+		// impulse-drawn — which is nearly always. Sequencing this after it silently produced a
+		// Radha whose top-of-library play the AI was never offered, while IsInCastableZone happily
+		// said yes. Predicate and generator disagreeing is the whole bug class this feature risks.
+		AddLibraryTopActions(state, playerId, actions);
+
 		// Impulse draw: a card exiled by ExileTopCardPlayableAction ("you may play it this turn")
 		// is offered exactly like a hand card. IsInCastableZone (checked by all three cast
 		// actions) is what actually allows the resulting action to validate; this is only the
@@ -163,6 +169,39 @@ public static class MtgActionGenerator
 
 			AddCastableCardAction(state, playerId, card, actions);
 		}
+	}
+
+	/// <summary>
+	/// "You may play lands from the top of your library" (Radha). The generator's half of the rule
+	/// IsInCastableZone enforces — offered through the same AddCastableCardAction a hand card takes,
+	/// so a land, creature, spell or aura played off the top behaves exactly as it would from hand.
+	///
+	/// Gated on the enabler existing before anything else happens, for the reason the impulse-draw
+	/// walk above is index-driven: this method runs on every legal-action generation, thousands of
+	/// times per AI move once rollouts are counted, and a deck with no enabler must not pay for the
+	/// feature. LibraryTopPlayableTypes returns null in that case after one battlefield pass.
+	/// </summary>
+	private static void AddLibraryTopActions(
+		GameState state,
+		int playerId,
+		List<GameAction> actions
+	)
+	{
+		if (state.LibraryTopPlayableTypes(playerId) is not { } playableTypes)
+			return;
+
+		var libraryId = state.GetPlayerZoneId(playerId, ZoneType.Library);
+		if (libraryId == 0)
+			return;
+
+		var topCardId = state.GetChildrenIds(libraryId).FirstOrDefault();
+		if (topCardId == 0 || state.GetObject(topCardId) is not Card topCard)
+			return;
+
+		if (!topCard.HasType(playableTypes))
+			return;
+
+		AddCastableCardAction(state, playerId, topCard, actions);
 	}
 
 	private static void AddCastableCardAction(

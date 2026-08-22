@@ -56,6 +56,24 @@ public static class TriggerConditions
 			Filter = new IsControlledByOpponentSpecification(),
 		};
 
+	/// <summary>
+	/// "At the beginning of your end step" — Twinblade Assassins, Indulging Patrician.
+	///
+	/// The filter carries the same weight it does on OnYourUpkeep: TurnEndedEvent's subject is the
+	/// player whose turn ended, so without it the trigger fires on both turns at double the
+	/// printed rate, silently.
+	///
+	/// Note the contrast with LifeGainedThisTurnCondition, which deliberately does NOT filter —
+	/// Resplendent Angel is printed "at the beginning of EACH end step". Check the card before
+	/// assuming either is a bug.
+	/// </summary>
+	public static TriggerCondition OnYourEndStep() =>
+		new EventTriggerCondition
+		{
+			EventTypeName = EventTypeNames.TurnEnded,
+			Filter = new IsControlledByYouSpecification(),
+		};
+
 	/// <summary>Fires when this exact creature dies.</summary>
 	public static TriggerCondition OnSelfDies() =>
 		new EventTriggerCondition

@@ -546,8 +546,14 @@ public record CheckStateBasedEffectsAction : GameAction
 		var deckingKills = state.TryGetGame()?.DeckingLossEnabled ?? true;
 		bool Decked(MtgPlayer p) => deckingKills && p.AttemptedDrawFromEmptyLibrary;
 
-		var p1ShouldLose = !player1.HasLost && (player1.Life <= 0 || Decked(player1));
-		var p2ShouldLose = !player2.HasLost && (player2.Life <= 0 || Decked(player2));
+		var p1ShouldLose =
+			!player1.HasLost
+			&& (player1.Life <= 0 || Decked(player1))
+			&& !CannotLose(state, Player1Id);
+		var p2ShouldLose =
+			!player2.HasLost
+			&& (player2.Life <= 0 || Decked(player2))
+			&& !CannotLose(state, Player2Id);
 
 		static string LossReason(MtgPlayer p) =>
 			p.Life <= 0 ? "life total reached zero" : "drew from an empty library";
@@ -581,5 +587,26 @@ public record CheckStateBasedEffectsAction : GameAction
 		}
 
 		return (state, events);
+	}
+
+	/// <summary>
+	/// "You can't lose the game" — Platinum Angel. See CannotLoseComponent.
+	///
+	/// Suppresses the loss, not the cause: life still falls below zero and the library still
+	/// empties, so the moment the permanent leaves the battlefield the very next state-based check
+	/// declares the loss that was waiting. That is what makes killing the Angel a real answer
+	/// rather than a way to stop further bleeding.
+	/// </summary>
+	private static bool CannotLose(GameState state, int playerId)
+	{
+		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+		if (battlefieldId == 0)
+			return false;
+
+		foreach (var card in state.GetCardsInZone(battlefieldId))
+			if (card.ControllerId == playerId && card.HasComponent<CannotLoseComponent>())
+				return true;
+
+		return false;
 	}
 }

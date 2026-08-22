@@ -166,6 +166,18 @@ public record ActivateAbilityAction : GameAction
 
 		var state = PayAdditionalCosts(gameState, ability);
 
+		// RE-READ THE CARD. Paying a cost can modify the source card's own components —
+		// RemoveCounterAdditionalCost decrements a ChargeCounterComponent on exactly this card —
+		// and everything below rebuilds the component array from `card`. Using the pre-payment
+		// snapshot writes the old array straight back over the payment, so the cost validates,
+		// appears to be paid, and then silently is not. Dragon's Hoard would draw a card per
+		// activation forever off a single gold counter.
+		//
+		// Latent until now only because every existing AdditionalCost touches something else:
+		// sacrifice and discard move OTHER cards, life changes the player.
+		if (state.HasObject(CardId) && state.GetObject(CardId) is Card paidCard)
+			card = paidCard;
+
 		// Open the resolution scope — SBE and trigger evaluation deferred until
 		// EndResolutionScopeAction clears this flag.
 		state = state with
