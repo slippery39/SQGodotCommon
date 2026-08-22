@@ -143,6 +143,34 @@ public class GreenLowWinRateAuditTests
 		Assert.That(HandCount(state) - handBefore, Is.EqualTo(1), "Track Down is a cantrip");
 	}
 
+	/// <summary>
+	/// The same card, with a LAND on top — which is what a real library looks like roughly a third
+	/// of the time.
+	///
+	/// The passing test above stocks four creatures and no lands, so it never exercises
+	/// SelectFromRevealedAction's AllowLands = false filter. With a land revealed the dig matches
+	/// nothing, writes 0, and the mover no-ops: the cantrip silently does not happen. That is the
+	/// QA report ("track down didn't put a card in my hand") and no card definition is wrong.
+	///
+	/// A dig is "put one of them into your hand" — the player takes the land if the land is what
+	/// is there. Excluding lands is right for a TUTOR that ranks by mana cost; it is wrong for a
+	/// reveal the player is choosing from.
+	/// </summary>
+	[Test]
+	public void TrackDown_StillDrawsWhenTheTopCardIsALand()
+	{
+		var (state, _) = AddTo(_state, MakeLand("Forest"), ZoneType.Library);
+		var handBefore = HandCount(state);
+
+		state = CastSpell(state, Find("Track Down"));
+
+		Assert.That(
+			HandCount(state) - handBefore,
+			Is.EqualTo(1),
+			"a dig must not whiff just because the card revealed is a land"
+		);
+	}
+
 	[Test]
 	public void LlanowarEmpath_PutsACardIntoYourHand()
 	{
@@ -388,6 +416,15 @@ public class GreenLowWinRateAuditTests
 			(state, _) = AddTo(state, MakeCreature(name), ZoneType.Library);
 		return state;
 	}
+
+	private static Card MakeLand(string name) =>
+		new()
+		{
+			Name = name,
+			ManaCost = 0,
+			Types = CardType.Land,
+			Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Land"),
+		};
 
 	private (GameState, int) AddTo(GameState state, Card template, ZoneType zone) =>
 		AddToPlayer(state, template, zone, _ids.Player1Id);

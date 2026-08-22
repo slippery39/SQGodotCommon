@@ -445,14 +445,28 @@ public static class CoresetCubeBlack
 			// ActiveInZone must be Graveyard or the trigger cannot fire for the Necromancer's own
 			// death, since by then it has already left the battlefield.
 			CardFactory
+				// "Whenever this or another Human you control dies" is TWO triggers, and collapsing
+				// them into one graveyard-active trigger got both halves wrong. Battlefield-active
+				// covers other Humans and stops when the Necromancer leaves play; the self half
+				// needs the graveyard pass, because the card has already moved there by the time
+				// triggers are evaluated, but is scoped to itself so it cannot fire again.
+				//
+				// As one graveyard-active trigger with a subtype filter it was inert while alive
+				// (the battlefield pass skips a graveyard-active ability) AND permanent once dead
+				// (the graveyard pass re-evaluates every card there, every batch, forever). Both
+				// were reported: "did not trigger off of a sacrifice" and "kept getting 2/2
+				// Zombies even though it had already died".
 				.Creature("Xathrid Necromancer", manaCost: 3, power: 2, toughness: 2)
 				.WithSubtype(Human)
 				.WithSubtype(Wizard)
 				.WithTriggeredAbility(
 					"Raise the Fallen",
 					TriggerConditions.OnCreatureYouControlDies(Human),
-					eb => eb.WithCreateTokens(CoresetCubeBlackTokens.Zombie()),
-					ActiveInZone: ZoneType.Graveyard
+					eb => eb.WithCreateTokens(CoresetCubeBlackTokens.Zombie())
+				)
+				.WithDeathTrigger(
+					"Raise the Fallen",
+					eb => eb.WithCreateTokens(CoresetCubeBlackTokens.Zombie())
 				)
 				.Build(),
 			// The ability trades hexproof away for first strike and deathtouch, which is a real

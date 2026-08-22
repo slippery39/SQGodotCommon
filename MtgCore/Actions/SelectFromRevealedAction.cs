@@ -28,8 +28,23 @@ public record SelectFromRevealedAction : GameAction
 	public string OutputKey { get; init; } = "";
 	public TargetSpecification? Filter { get; init; }
 
-	/// <summary>Allow a land to be taken. Off by default, matching the other "best card" pickers.</summary>
-	public bool AllowLands { get; init; } = false;
+	/// <summary>
+	/// Allow a land to be taken. ON by default, unlike the other "best card" pickers.
+	///
+	/// It was off, copied from SelectCardFromLibraryAction where excluding lands is right: that
+	/// one searches the WHOLE library, so a land is never the card you were hunting for. A dig
+	/// looks at one to four cards and says "put one into your hand" — the player takes the land
+	/// when the land is what is there.
+	///
+	/// Off, the dig matched nothing whenever every revealed card was a land, wrote 0, and the
+	/// mover no-opped: Track Down simply did not draw about a third of the time, silently and at
+	/// full price. Every dig card in the cube shared it. The existing test stocked a library of
+	/// four creatures and no lands, so it passed throughout.
+	///
+	/// Safe because selection is MaxBy(ManaCost) and a land costs 0: it can only ever win when
+	/// nothing else was revealed, which is precisely when it should.
+	/// </summary>
+	public bool AllowLands { get; init; } = true;
 
 	public override ActionResult Execute(GameState gameState)
 	{

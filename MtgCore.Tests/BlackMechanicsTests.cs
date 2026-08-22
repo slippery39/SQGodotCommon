@@ -626,6 +626,141 @@ public class BlackMechanicsTests
 		Assert.That(legal, Is.Null);
 	}
 
+	// ===== "WHENEVER THIS OR ANOTHER X DIES" =====
+
+	/// <summary>
+	/// A death-payoff lord stops paying out once it is dead.
+	///
+	/// "Whenever this or another Human you control dies, make a Zombie" was declared
+	/// ActiveInZone = Graveyard so it could catch its OWN death — by the time triggers are
+	/// evaluated the card has already moved there. But the graveyard pass re-evaluates every card
+	/// sitting in the graveyard on every batch, forever, so the lord kept making Zombies from the
+	/// graveyard for the rest of the game. That is the QA report: "my opponent kept getting 2/2
+	/// Zombies even though it had already died".
+	///
+	/// Inline card so rebalancing Xathrid Necromancer cannot delete the coverage.
+	/// </summary>
+	[Test]
+	public void DeathPayoffLord_StopsTriggeringOnceItIsInTheGraveyard()
+	{
+		var battlefieldId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield);
+
+		var (state, lord) = _state.AddObject(
+			MakeHumanLord() with
+			{
+				OwnerId = _ids.Player1Id,
+				ControllerId = _ids.Player1Id,
+			},
+			parentId: battlefieldId
+		);
+
+		// Kill the lord itself. That death is its own trigger, so one Zombie is correct.
+		(state, _) = state
+			.AddAction(new DestroyCreatureAction { TargetIds = [lord.Id] })
+			.ProcessAllActions();
+
+		var afterOwnDeath = CountTokens(state, battlefieldId);
+		Assert.That(afterOwnDeath, Is.EqualTo(1), "its own death should still pay out once");
+
+		// Now kill an unrelated Human while the lord sits in the graveyard.
+		var (withHuman, human) = state.AddObject(
+			MakeHuman("Villager") with
+			{
+				OwnerId = _ids.Player1Id,
+				ControllerId = _ids.Player1Id,
+			},
+			parentId: battlefieldId
+		);
+		(state, _) = withHuman
+			.AddAction(new DestroyCreatureAction { TargetIds = [human.Id] })
+			.ProcessAllActions();
+
+		Assert.That(
+			CountTokens(state, battlefieldId),
+			Is.EqualTo(afterOwnDeath),
+			"a dead lord must not keep making Zombies from the graveyard"
+		);
+	}
+
+	/// <summary>
+	/// The other half: while it is alive it must pay out for another Human dying, including one
+	/// killed by a SACRIFICE rather than by damage or destruction.
+	/// </summary>
+	[Test]
+	public void DeathPayoffLord_TriggersOnAnotherHumanDying()
+	{
+		var battlefieldId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield);
+
+		var (state, _) = _state.AddObject(
+			MakeHumanLord() with
+			{
+				OwnerId = _ids.Player1Id,
+				ControllerId = _ids.Player1Id,
+			},
+			parentId: battlefieldId
+		);
+
+		var (withHuman, human) = state.AddObject(
+			MakeHuman("Villager") with
+			{
+				OwnerId = _ids.Player1Id,
+				ControllerId = _ids.Player1Id,
+			},
+			parentId: battlefieldId
+		);
+
+		var before = CountTokens(withHuman, battlefieldId);
+
+		(state, _) = withHuman
+			.AddAction(new DestroyCreatureAction { TargetIds = [human.Id] })
+			.ProcessAllActions();
+
+		Assert.That(
+			CountTokens(state, battlefieldId) - before,
+			Is.EqualTo(1),
+			"a living lord pays out when another Human dies"
+		);
+	}
+
+	private static int CountTokens(GameState state, int battlefieldId) =>
+		state.GetCardsInZone(battlefieldId).Count(c => c.Name == "Zombie");
+
+	private static Card MakeHuman(string name) =>
+		CardFactory
+			.Creature(name, manaCost: 1, power: 1, toughness: 1)
+			.WithSubtype("Human")
+			.Build();
+
+	/// <summary>
+	/// "Whenever this or another Human you control dies, create a 2/2 Zombie."
+	///
+	/// TWO triggers, and the split is the whole point. "Another Human" is battlefield-active, so
+	/// it stops the moment the lord leaves play. Its OWN death needs the graveyard pass, because
+	/// the card has already moved there by the time triggers are evaluated — but scoped to itself
+	/// via OnSelfDies, so sitting in the graveyard it can only respond to an event that cannot
+	/// happen again.
+	///
+	/// One graveyard-active trigger with a broad filter looks like it covers both and covers
+	/// neither correctly: inert while alive, permanent once dead.
+	/// </summary>
+	private static Card MakeHumanLord() =>
+		CardFactory
+			.Creature("Test Necromancer", manaCost: 3, power: 2, toughness: 2)
+			.WithSubtype("Human")
+			.WithTriggeredAbility(
+				"Raise the Fallen",
+				TriggerConditions.OnCreatureYouControlDies("Human"),
+				eb => eb.WithCreateTokens(ZombieToken())
+			)
+			.WithDeathTrigger("Raise the Fallen", eb => eb.WithCreateTokens(ZombieToken()))
+			.Build();
+
+	private static Card ZombieToken() =>
+		CardFactory
+			.Creature("Zombie", manaCost: 0, power: 2, toughness: 2)
+			.WithSubtype("Zombie")
+			.Build();
+
 	// ===== HELPERS =====
 
 	private static Card MakeCreature(

@@ -278,6 +278,56 @@ public class PlaneswalkerTests
 		);
 	}
 
+	/// <summary>
+	/// A dig on a LOYALTY ability must actually put a card in hand — Vivien Reid's +1 is
+	/// "look at the top four cards, take one", and QA reported it doing nothing.
+	///
+	/// Worth its own test because a loyalty ability reaches the effect through
+	/// ActivateAbilityAction rather than a cast, and a dig pauses mid-pipeline on nothing while
+	/// still depending on ContextKeys.CastingPlayerId being injected. Inline card, so rebalancing
+	/// Vivien cannot delete the coverage.
+	/// </summary>
+	[Test]
+	public void LoyaltyAbility_Dig_PutsACardIntoHand()
+	{
+		var walker = CardFactory
+			.Planeswalker("Test Digger", manaCost: 5)
+			.WithLoyalty(4)
+			.WithLoyaltyAbility("+1: Look at the top four; take one", 1, eb => eb.WithDig(4))
+			.Build();
+
+		var (state, card) = Cast(_state, walker);
+
+		// Four cards to dig through, all lands — the case the AllowLands filter used to swallow.
+		for (var i = 0; i < 4; i++)
+		{
+			var (withLand, _) = state.AddObject(
+				new Card
+				{
+					Name = $"Forest {i}",
+					ManaCost = 0,
+					OwnerId = _ids.Player1Id,
+					ControllerId = _ids.Player1Id,
+					Types = CardType.Land,
+					Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Land"),
+				},
+				parentId: state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Library)
+			);
+			state = withLand;
+		}
+
+		var handId = state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Hand);
+		var before = state.GetCardsInZone(handId).Count();
+
+		var (after, _) = state.AddAction(Activate(card.Id, 0)).ProcessAllActions();
+
+		Assert.That(
+			after.GetCardsInZone(handId).Count() - before,
+			Is.EqualTo(1),
+			"the +1 must take one of the revealed cards, land or not"
+		);
+	}
+
 	// ===== HELPERS =====
 
 	/// <summary>

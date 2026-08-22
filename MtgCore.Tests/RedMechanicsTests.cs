@@ -442,6 +442,76 @@ public class RedMechanicsTests
 		);
 	}
 
+	/// <summary>
+	/// A lord that grants a keyword to its tribe does NOT thereby have it — a static source never
+	/// applies to itself, which is exactly what makes "other Goblins" work. So any such keyword the
+	/// printed card also has intrinsically must be declared on the card.
+	///
+	/// Goblin Chieftain granted haste to every other Goblin and could not attack the turn it
+	/// landed. Card-agnostic on purpose: this is the rule, not the card.
+	/// </summary>
+	[Test]
+	public void KeywordGrantingLord_DoesNotGrantTheKeywordToItself()
+	{
+		var battlefieldId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield);
+
+		var lord = CardFactory
+			.Creature("Test Lord", manaCost: 3, power: 2, toughness: 2)
+			.WithSubtype("Goblin")
+			.WithComponent(
+				new StaticGrantKeywordAbility
+				{
+					GrantsHaste = true,
+					Filter = new IsSubtypeSpecification { Subtype = "Goblin" },
+				}
+			)
+			.Build();
+
+		var (state, card) = _state.AddObject(
+			lord with
+			{
+				OwnerId = _ids.Player1Id,
+				ControllerId = _ids.Player1Id,
+			},
+			parentId: battlefieldId
+		);
+
+		Assert.That(
+			state.GetEffectiveStats(card.Id).HasHaste,
+			Is.False,
+			"a lord's own static must not reach itself — otherwise \"other\" is unexpressible"
+		);
+
+		// Which is why the real card declares it. Same shape, plus the intrinsic keyword.
+		var withOwnHaste = CardFactory
+			.Creature("Test Lord", manaCost: 3, power: 2, toughness: 2)
+			.WithSubtype("Goblin")
+			.WithHaste()
+			.WithComponent(
+				new StaticGrantKeywordAbility
+				{
+					GrantsHaste = true,
+					Filter = new IsSubtypeSpecification { Subtype = "Goblin" },
+				}
+			)
+			.Build();
+
+		var (state2, card2) = _state.AddObject(
+			withOwnHaste with
+			{
+				OwnerId = _ids.Player1Id,
+				ControllerId = _ids.Player1Id,
+			},
+			parentId: battlefieldId
+		);
+
+		Assert.That(
+			state2.GetEffectiveStats(card2.Id).HasHaste,
+			Is.True,
+			"declaring it intrinsically is how a lord has the keyword it hands out"
+		);
+	}
+
 	// ===== GOBLIN COUNTING =====
 
 	/// <summary>

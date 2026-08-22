@@ -382,8 +382,14 @@ public static class CoresetCubeRed
 			// The tribal lord. Haste on the whole team is what turns a board of Goblin tokens into
 			// immediate damage, and it is why the token-makers are costed where they are.
 			CardFactory
+				// Haste is INTRINSIC here as well as granted. The printed card reads "Haste. Other
+				// Goblin creatures you control get +1/+1 and have haste" — a static source never
+				// applies to itself (StaticAbilityEngine.RegisterSourceAndApply skips it, which is
+				// what makes "other" work at all), so without this line the Chieftain hands out a
+				// keyword it does not have and cannot attack the turn it lands.
 				.Creature("Goblin Chieftain", manaCost: 3, power: 2, toughness: 2)
 				.WithSubtype(Goblin)
+				.WithHaste()
 				.WithComponent(
 					new StaticPTBoostAbility
 					{
