@@ -470,6 +470,22 @@ public class MtgGameManager
 		return card.AdditionalCastCosts[costIndex].Describe();
 	}
 
+	/// <summary>
+	/// How many cards this cost needs selected — 2 for "exile two cards from your graveyard".
+	///
+	/// The UI collected exactly one payment per cost and then moved on, while Validate demands the
+	/// exact count, so any cost with a Count above 1 was unpayable by a human and the activation
+	/// failed silently. The AI was unaffected: it goes through MtgActionGenerator, which reads
+	/// RequiredPaymentCount. That asymmetry is the "the AI can do it and I can't" signature.
+	/// </summary>
+	public int GetAdditionalCostRequiredPayments(int cardId, int costIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		if (card == null || costIndex < 0 || costIndex >= card.AdditionalCastCosts.Count)
+			return 1;
+		return card.AdditionalCastCosts[costIndex].RequiredPaymentCount;
+	}
+
 	public int GetNextAdditionalCostNeedingSelection(int cardId, int afterIndex)
 	{
 		var card = _state.GetObject(cardId) as Card;
@@ -568,6 +584,19 @@ public class MtgGameManager
 			return "";
 		var costs = abilities[abilityIndex].AdditionalCosts;
 		return costIndex >= 0 && costIndex < costs.Count ? costs[costIndex].Describe() : "";
+	}
+
+	/// <summary>Ability counterpart of <see cref="GetAdditionalCostRequiredPayments"/>.</summary>
+	public int GetAbilityAdditionalCostRequiredPayments(int cardId, int abilityIndex, int costIndex)
+	{
+		var card = _state.GetObject(cardId) as Card;
+		var abilities = card?.GetComponents<ActivatedAbilityComponent>().ToList();
+		if (abilities == null || abilityIndex >= abilities.Count)
+			return 1;
+		var costs = abilities[abilityIndex].AdditionalCosts;
+		return costIndex >= 0 && costIndex < costs.Count
+			? costs[costIndex].RequiredPaymentCount
+			: 1;
 	}
 
 	public int GetNextAbilityCostNeedingSelection(int cardId, int abilityIndex, int afterIndex)

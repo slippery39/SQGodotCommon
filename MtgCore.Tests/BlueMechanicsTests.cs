@@ -38,6 +38,62 @@ public class BlueMechanicsTests
 		Assert.That(IsExhausted(afterUntap, victim.Id), Is.False);
 	}
 
+	/// <summary>
+	/// A card whose text is "exhaust target creature" has to cost the opponent an attack.
+	///
+	/// Plain exhaust — the ACTION above — is correct as a COST (convoke, tap-to-activate) but is a
+	/// complete no-op as an EFFECT, and the builder verb only ever aims at opponents' creatures.
+	/// You can act only on your own turn (no priority, no instant speed), and the exhaustion
+	/// clears at the start of theirs, which is before they attack. So it costs them nothing at
+	/// all. Real Magic gets away with a plain tapper because you cast it during THEIR turn.
+	///
+	/// Every one of the eight cards built on WithExhaust documented the opposite in its comment —
+	/// Gideon's Lawkeeper "costs its controller exactly one attack", Gideon Jura "cannot attack at
+	/// all next turn" — and none of them did it. Missing one untap step is what that sentence
+	/// means here.
+	/// </summary>
+	[Test]
+	public void ExhaustEffect_CostsTheOpponentTheirNextAttack()
+	{
+		var (s, victim) = AddCreature(_state, "Bear", 2, 2, _ids.Player2Id);
+
+		var tapper = CardFactory.Sorcery("Test Tapper", manaCost: 1).WithExhaust().Build();
+		var handId = s.GetPlayerZoneId(_ids.Player1Id, ZoneType.Hand);
+		var (withCard, card) = s.AddObject(
+			tapper with
+			{
+				OwnerId = _ids.Player1Id,
+				ControllerId = _ids.Player1Id,
+			},
+			parentId: handId
+		);
+
+		var (cast, _) = withCard
+			.AddAction(
+				new CastSpellAction
+				{
+					CardId = card.Id,
+					CastingPlayerId = _ids.Player1Id,
+					TargetIds = ImmutableDictionary<int, ImmutableList<int>>.Empty.Add(
+						0,
+						ImmutableList.Create(victim.Id)
+					),
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(IsExhausted(cast, victim.Id), Is.True, "precondition: it was exhausted");
+
+		// Their turn begins — the untap step the effect is supposed to make it miss.
+		var afterTheirUntap = StartTurnFor(cast, _ids.Player2Id);
+
+		Assert.That(
+			IsExhausted(afterTheirUntap, victim.Id),
+			Is.True,
+			"an exhaust EFFECT must survive the opponent's untap step or it does nothing"
+		);
+	}
+
 	[Test]
 	public void Freeze_SurvivesExactlyOneUntapStep()
 	{

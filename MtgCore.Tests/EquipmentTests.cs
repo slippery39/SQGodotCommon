@@ -202,6 +202,84 @@ public class EquipmentTests
 		Assert.That(success, Is.False);
 	}
 
+	/// <summary>
+	/// An Aura's OWN "when this leaves the battlefield" trigger has to fire when the creature it
+	/// enchanted dies — that is the only way most Auras ever leave play.
+	///
+	/// The Aura is moved to the graveyard by DetachEquipmentFromLeavingCard, which runs inside
+	/// ProcessStaticAbilityUpdates — i.e. DURING the post-processor pass, after the local
+	/// pendingEvents list was captured from state. EvaluateTriggeredAbilities reads that local and
+	/// Execute wipes state.PendingGameEvents immediately after, so the Aura's departure event was
+	/// staged and then discarded without ever being offered to a trigger. Rancor never returned to
+	/// hand. Same class as the zero-toughness sweep, which threads `ref pendingEvents` for exactly
+	/// this reason.
+	///
+	/// Inline card so rebalancing Rancor cannot delete the coverage.
+	/// </summary>
+	[Test]
+	public void Aura_LeaveTheBattlefieldTrigger_FiresWhenTheEnchantedCreatureDies()
+	{
+		var rancor = MtgCore
+			.Cards.Builders.CardFactory.Enchantment("Test Rancor", manaCost: 1)
+			.AsAura(
+				powerBonus: 2,
+				toughnessBonus: 0,
+				targeting: TargetingStrategy.SingleTarget(
+					TargetSpecification.CreatureControlledByYou()
+				)
+			)
+			.WithTriggeredAbility(
+				"Undying",
+				new EventTriggerCondition
+				{
+					EventTypeName = EventTypeNames.PermanentLeftBattlefield,
+					Filter = new IsSourceCardSpecification(),
+				},
+				eb =>
+					eb.WithAction(
+						new MoveCardToHandAction
+						{
+							CardIdContextKey = ContextKeys.SourceCardId,
+							PlayerIdContextKey = ContextKeys.CastingPlayerId,
+						},
+						TargetingStrategy.NoTarget()
+					),
+				activeInZone: ZoneType.Graveyard
+			)
+			.Build();
+
+		var (withCreature, creatureId) = AddCreatureToBattlefield(_state, _ids.Player1Id, 2, 2);
+
+		var card = rancor with { OwnerId = _ids.Player1Id, ControllerId = _ids.Player1Id };
+		var (withAura, aura) = withCreature.AddObject(card, parentId: _ids.Player1HandId);
+		var (attached, _) = withAura
+			.AddAction(
+				new CastPermanentAction
+				{
+					CardId = aura.Id,
+					CastingPlayerId = _ids.Player1Id,
+					TargetIds = ImmutableList.Create(creatureId),
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(
+			attached.GetCardZone(aura.Id).ZoneType,
+			Is.EqualTo(ZoneType.Battlefield),
+			"precondition: the Aura resolved and attached"
+		);
+
+		var (final, _) = attached
+			.AddAction(new DestroyCreatureAction { TargetIds = [creatureId] })
+			.ProcessAllActions();
+
+		Assert.That(
+			final.GetCardZone(aura.Id).ZoneType,
+			Is.EqualTo(ZoneType.Hand),
+			"the Aura's own departure trigger must fire when its host dies"
+		);
+	}
+
 	// ===== HELPERS =====
 
 	private (GameState, int cardId) CastFromHand(Card template) => CastFromHand(_state, template);

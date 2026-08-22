@@ -1089,13 +1089,26 @@ public class SpellCardBuilder
 	/// Exhaust target creature — "tap target creature". Defaults to an opponent's creature,
 	/// which is what every tapper in the cube wants; override with .WithTarget(...) otherwise.
 	/// </summary>
-	public SpellCardBuilder WithExhaust()
-	{
-		FlushPending();
-		_pendingAction = new ExhaustCreatureAction();
-		_pendingTargeting = TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures());
-		return this;
-	}
+	/// <summary>
+	/// "Exhaust target creature" as an EFFECT — which in this engine has to mean "it misses its
+	/// controller's next untap step", i.e. FreezeTurns = 1.
+	///
+	/// A plain exhaust is a no-op here and always was. This verb only ever aims at an opponent's
+	/// creature, you can act only on your own turn (no priority, no instant speed), and
+	/// StartTurnAction clears IsExhausted at the start of THEIRS — before they attack. Real Magic
+	/// gets away with a plain tapper because you cast it during their turn; nothing here can.
+	///
+	/// All eight cards built on this documented the behaviour it now has and none of them had it:
+	/// Gideon's Lawkeeper "costs its controller exactly one attack", Gideon Jura "cannot attack at
+	/// all next turn", Frenzied Goblin "takes it out of the way for a turn". Fixed on the verb
+	/// rather than at eight call sites, because the next card to say "tap target creature" would
+	/// otherwise be the ninth.
+	///
+	/// ExhaustCreatureAction itself is unchanged and still exhausts plainly — that is correct for
+	/// a COST (convoke, tap-to-activate), where the creature is yours and paying is the point.
+	/// Send to Sleep keeps its escalation, now one turn to two rather than nothing to two.
+	/// </summary>
+	public SpellCardBuilder WithExhaust() => WithFreeze(1);
 
 	/// <summary>
 	/// Target opponent discards <paramref name="count"/> cards at random.

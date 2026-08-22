@@ -53,6 +53,21 @@ public record CheckStateBasedEffectsAction : GameAction
 
 		state = ProcessStaticAbilityUpdates(state, pendingEvents);
 
+		// That pass MOVES CARDS, and a move stages events of its own — detaching an Aura sends it
+		// to the graveyard, which stages the Aura's own PermanentLeftBattlefieldEvent. Those land
+		// in state.PendingGameEvents after this local was captured, so without picking them up
+		// here EvaluateTriggeredAbilities never sees them and the wipe below discards them: an
+		// Aura's "when this leaves the battlefield" trigger could not fire when the creature it
+		// enchanted died, which is the only way most Auras ever leave play. Rancor never returned
+		// to hand.
+		//
+		// The zero-toughness and zero-loyalty sweeps below thread `ref pendingEvents` for exactly
+		// this reason; the static pass was the one mover that did not. Re-reading is safe because
+		// nothing clears the list mid-Execute — it can only have grown, and it keeps this local as
+		// the prefix.
+		if (state.PendingGameEvents.Count > pendingEvents.Count)
+			pendingEvents = state.PendingGameEvents;
+
 		// Runs after statics are applied, so a creature only dies once its effective toughness
 		// is final — a lord leaving play and a -X/-X effect must be judged on the same pass.
 		// Deaths are appended to the pending list so death triggers still see them.

@@ -349,10 +349,37 @@ public partial class MtgGameScene : Node2D
 		var isAbility = _additionalCostIsAbility;
 		var abilityIndex = _additionalCostAbilityIndex;
 
-		_pendingCostPayments = _pendingCostPayments.Add(
+		// ACCUMULATE, then advance. A cost states how many cards it wants — "exile two cards from
+		// your graveyard" is one cost needing two selections — and this used to record a single
+		// payment and move straight on. Validate demands the exact count, so any cost above 1 was
+		// unpayable by a human and the activation just failed with no message: Grim Lavamancer's
+		// ability could not be used at all, while the AI played it fine because MtgActionGenerator
+		// reads RequiredPaymentCount. Same rule as everywhere else — ask the engine, do not
+		// re-derive it here.
+		var already = _pendingCostPayments.TryGetValue(_currentCostIndex, out var existing)
+			? existing
+			: ImmutableList<int>.Empty;
+		var collectedForThisCost = already.Add(permanentId);
+		_pendingCostPayments = _pendingCostPayments.SetItem(
 			_currentCostIndex,
-			ImmutableList.Create(permanentId)
+			collectedForThisCost
 		);
+
+		var requiredForThisCost = isAbility
+			? _manager.GetAbilityAdditionalCostRequiredPayments(
+				cardId,
+				abilityIndex,
+				_currentCostIndex
+			)
+			: _manager.GetAdditionalCostRequiredPayments(cardId, _currentCostIndex);
+
+		if (collectedForThisCost.Count < requiredForThisCost)
+		{
+			// Same cost, fewer choices — a card already picked must not be pickable twice.
+			_currentCostValidPaymentIds.Remove(permanentId);
+			Refresh();
+			return;
+		}
 
 		int nextCost = isAbility
 			? _manager.GetNextAbilityCostNeedingSelection(cardId, abilityIndex, _currentCostIndex)
@@ -489,7 +516,25 @@ public partial class MtgGameScene : Node2D
 					_additionalCostCardId.Value,
 					_currentCostIndex
 				);
-			return $"{name} — {cost}{WhereHint(_currentCostValidPaymentIds)}   (Esc to cancel)";
+			// A multi-card cost has to say how many are still wanted, or the player clicks once,
+			// sees nothing happen, and concludes the card is broken.
+			var required = _additionalCostIsAbility
+				? _manager.GetAbilityAdditionalCostRequiredPayments(
+					_additionalCostCardId.Value,
+					_additionalCostAbilityIndex,
+					_currentCostIndex
+				)
+				: _manager.GetAdditionalCostRequiredPayments(
+					_additionalCostCardId.Value,
+					_currentCostIndex
+				);
+			var picked = _pendingCostPayments.TryGetValue(_currentCostIndex, out var sofar)
+				? sofar.Count
+				: 0;
+			var remaining = required > 1 ? $" ({required - picked} more)" : "";
+
+			return $"{name} — {cost}{remaining}{WhereHint(_currentCostValidPaymentIds)}"
+				+ "   (Esc to cancel)";
 		}
 
 		if (_activatingAbilityCardId.HasValue)

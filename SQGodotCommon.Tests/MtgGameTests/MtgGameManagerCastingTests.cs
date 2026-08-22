@@ -135,6 +135,44 @@ public class MtgGameManagerCastingTests
 	}
 
 	/// <summary>
+	/// A cost that wants TWO cards has to report that it wants two.
+	///
+	/// The scene walked costs one at a time and recorded a single payment per cost before moving
+	/// on, while Validate demands the exact count — so Grim Lavamancer's "exile two cards from
+	/// your graveyard" was unpayable and its ability simply could not be activated, with no error.
+	/// The AI was fine, because MtgActionGenerator reads RequiredPaymentCount. The scene itself is
+	/// Godot and untestable here; this pins the manager API it now asks instead of assuming 1.
+	/// </summary>
+	[Test]
+	public void AbilityCostWantingTwoCards_ReportsThatItWantsTwo()
+	{
+		var manager = ManagerWith();
+		var battlefieldId = manager.State.GetWellKnownId(MtgObjectKeys.Player1Battlefield);
+
+		var lavamancer = CoresetCube.Cards.Single(c => c.Name == "Grim Lavamancer");
+		var (state, card) = manager.State.AddObject(
+			lavamancer with
+			{
+				OwnerId = manager.HumanPlayerId,
+				ControllerId = manager.HumanPlayerId,
+			},
+			parentId: battlefieldId
+		);
+		manager.DebugSetState(state);
+
+		Assert.That(
+			manager.AbilityHasAdditionalCostSelection(card.Id, 0),
+			Is.True,
+			"precondition: the ability has a selection cost"
+		);
+		Assert.That(
+			manager.GetAbilityAdditionalCostRequiredPayments(card.Id, 0, 0),
+			Is.EqualTo(2),
+			"exiling TWO cards is one cost needing two selections, not one"
+		);
+	}
+
+	/// <summary>
 	/// Despoiler of Souls exiles two creature cards from your graveyard to come back. The manager
 	/// supplied no AdditionalCostPayments, so the action failed validation every time and the
 	/// card could never be recurred by a human.
