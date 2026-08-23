@@ -54,6 +54,25 @@ public record CreatureComponent : GameComponent
 	public int FrozenBySourceId { get; init; } = 0;
 
 	/// <summary>
+	/// COVER N — "this creature can't be attacked for N of your turns, or until it attacks".
+	///
+	/// The counterpart to Taunt, and the answer to the problem that a utility creature in a
+	/// blockerless game must be printed with high toughness or it never survives to do its job.
+	/// Cover buys that survival on the DEFENSIVE axis instead, so a 1/1 with a real ability can
+	/// exist without being statted like a wall.
+	///
+	/// Burns down one per controller's turn in StartTurnAction, exactly like FrozenTurns, so
+	/// Cover 1 means "survives the opponent's next turn". Attacking spends it immediately
+	/// (AttackAction clears it on the attacker): the creature is either hiding or fighting, and
+	/// without that clause Cover would be pure upside on an aggressive creature rather than
+	/// protection for a slow one.
+	///
+	/// NOT a keyword flag, so the six-site keyword rule does not apply — it is a countdown like
+	/// FrozenTurns, cannot currently be granted by an aura or equipment, and lives only here.
+	/// </summary>
+	public int CoverTurns { get; init; } = 0;
+
+	/// <summary>
 	/// This creature was attacked this turn. Set by AttackAction on the TARGET, cleared by
 	/// StartTurnAction. Read by TauntUntilAttackedComponent so Fog Bank soaks exactly one attack
 	/// per turn and then stops compelling — otherwise a damage-immune Taunt wall is unanswerable

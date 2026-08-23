@@ -240,10 +240,46 @@ public class PermanentCardBuilder
 	/// <summary>
 	/// The equip ability: "{N}: Attach to target creature you control."
 	///
-	/// REPEATABLE BY DEFAULT (maxPerTurn: 0), which is the printed rule and the point of Equipment
-	/// — moving a sword off a dying creature is most of what the card class does. The two Equipment
-	/// that predate this method disagree about it, one passing 0 and one silently defaulting to
-	/// once per turn, which is the drift a shared helper exists to stop.
+	/// ONCE PER TURN, which is a deliberate divergence from the printed rule. Real MTG allows
+	/// unlimited equips; this engine cannot afford them, and the reason is not a card-balance one.
+	///
+	/// Measured: with Swiftfoot Boots at equip {0}, the AI moves the boots back and forth between
+	/// two creatures until GameRunner's 200-action-per-turn limit ends the game as a draw. In a
+	/// 14 000-game run **28.7% of games with Boots on the board drew**, against a 0.7% base rate,
+	/// and Boots was the permanent on board in 12 of 12 sampled action-limit games.
+	///
+	/// IT IS NOT A TIE-BREAK PROBLEM, and two AI-side fixes were built and reverted before that was
+	/// established. Instrumenting the search shows the equip scoring **74.1 against 72.7 for ending
+	/// the turn** — and moving the boots straight back scores +1.4 again. The evaluator genuinely
+	/// rates both directions of the same oscillation as an improvement, so no "prefer to stop on a
+	/// tie" rule can ever catch it; there is no tie. The underlying evaluator defect is recorded in
+	/// DesignNotes.md and is a separate, larger piece of work.
+	///
+	/// VERIFIED: ActionLimitReached draws went 86 -> 0 over 7 000 games with this cap in place, and
+	/// the base win rate moved to exactly 50.0% (a draw-free run). Two earlier runs appeared to show
+	/// the cap failing; both were measuring a stale binary that never contained it.
+	///
+	/// A per-turn cap bounds the loop unconditionally, whatever the evaluator believes. The cost is
+	/// small and known: the printed reason for unlimited equips is moving a sword off a dying
+	/// creature, and once per turn still allows that. Raising this to 0 (unlimited) reopens the
+	/// draws — do not, without first fixing the evaluator and re-measuring.
+	///
+	/// THE CURRENT WEARER IS EXCLUDED AS A TARGET, and that exclusion is what stops a free equip
+	/// hanging the game. Re-attaching to the creature already wearing it is a perfect no-op:
+	/// AttachEquipmentAction strips the boost and re-stamps an identical one, so the resulting
+	/// state is byte-identical. Real MTG allows it and no player has ever done it on purpose.
+	///
+	/// It was invisible while every equip cost mana, because mana bounded the loop. Dropping
+	/// Swiftfoot Boots to equip {0} removed the bound and **38.5% of games with Boots on the board
+	/// ended in a draw** against a 1.5% base rate — the AI re-equipped until GameRunner's
+	/// 200-action-per-turn limit ended the game. See MultiTurnBeamSearchAiStrategy.PickBestNode:
+	/// EndTurn must EXCEED the best other action to be chosen, so a zero-value action beats ending
+	/// the turn forever.
+	///
+	/// The exclusion lives in the TARGETING SPEC rather than in AttachEquipmentAction.ValidateAdd
+	/// because the spec is the single thing both MtgActionGenerator and ActivateAbilityAction run.
+	/// A guard in the action alone would leave the generator offering an action that then fails —
+	/// the "the AI can do it and I can't" split this codebase keeps rediscovering.
 	/// </summary>
 	public PermanentCardBuilder WithEquip(int manaCost) =>
 		WithActivatedAbility(
@@ -252,9 +288,13 @@ public class PermanentCardBuilder
 			effect: eb =>
 				eb.WithAction(
 					new AttachEquipmentAction(),
-					TargetingStrategy.SingleTarget(TargetSpecification.CreatureControlledByYou())
+					TargetingStrategy.SingleTarget(
+						TargetSpecification
+							.CreatureControlledByYou()
+							.And(new IsEquippedBySourceSpecification().Not())
+					)
 				),
-			maxPerTurn: 0
+			maxPerTurn: 1
 		);
 
 	/// <summary>An anthem — a static P/T boost to permanents matching <paramref name="filter"/>.</summary>

@@ -70,7 +70,7 @@ public static class CoresetCubeBluePermanents
 				.Enchantment("Teferi's Tutelage", manaCost: 3)
 				.WithEtbTrigger(
 					"Study",
-					eb => eb.WithDraw(1).WithTarget(TargetingStrategy.Self()).WithDiscard(1)
+					eb => eb.WithDraw(2).WithTarget(TargetingStrategy.Self()).WithDiscard(1)
 				)
 				.WithTriggeredAbility(
 					"Tutelage",
@@ -92,7 +92,7 @@ public static class CoresetCubeBluePermanents
 			// "Draw a card for each LAND put into their graveyard" cannot be counted — lands are
 			// consumed into MaxMana and never reach a graveyard. Flat one card per upkeep instead.
 			CardFactory
-				.Enchantment("Patient Rebuilding", manaCost: 5)
+				.Enchantment("Patient Rebuilding", manaCost: 4)
 				.WithTriggeredAbility(
 					"Rebuild",
 					TriggerConditions.OnYourUpkeep(),
@@ -169,9 +169,9 @@ public static class CoresetCubeBluePermanents
 				.Planeswalker("Teferi, Master of Time", manaCost: 4)
 				.WithLoyalty(3)
 				.WithLoyaltyAbility(
-					"+1: Draw a card, then discard a card",
+					"+1: Draw 2 cards, then discard a card",
 					1,
-					eb => eb.WithDraw(1).WithTarget(TargetingStrategy.Self()).WithDiscard(1)
+					eb => eb.WithDraw(2).WithTarget(TargetingStrategy.Self()).WithDiscard(1)
 				)
 				.WithLoyaltyAbility(
 					"-3: Freeze target creature you don't control",

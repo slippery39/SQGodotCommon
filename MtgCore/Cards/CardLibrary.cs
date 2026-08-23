@@ -357,6 +357,11 @@ public static class CardLibrary
 						ManaCost = 1,
 						Effect = new CardEffect
 						{
+							// The current wearer is excluded — re-equipping to it is a perfect no-op
+							// and a free equip (Bonesplitter below is ManaCost 0) then loops until
+							// the action limit ends the game as a draw. See
+							// PermanentCardBuilder.WithEquip, which owns this rule for every
+							// equipment built through the fluent API.
 							TargetingStrategy = TargetingStrategy.SingleTarget(
 								new AndSpecification
 								{
@@ -364,7 +369,14 @@ public static class CardLibrary
 									Right = new AndSpecification
 									{
 										Left = new IsCreatureSpecification(),
-										Right = new IsControlledByYouSpecification(),
+										Right = new AndSpecification
+										{
+											Left = new IsControlledByYouSpecification(),
+											Right = new NotSpecification
+											{
+												Inner = new IsEquippedBySourceSpecification(),
+											},
+										},
 									},
 								}
 							),
@@ -391,6 +403,11 @@ public static class CardLibrary
 						ManaCost = 0,
 						Effect = new CardEffect
 						{
+							// The current wearer is excluded — re-equipping to it is a perfect no-op
+							// and a free equip (Bonesplitter below is ManaCost 0) then loops until
+							// the action limit ends the game as a draw. See
+							// PermanentCardBuilder.WithEquip, which owns this rule for every
+							// equipment built through the fluent API.
 							TargetingStrategy = TargetingStrategy.SingleTarget(
 								new AndSpecification
 								{
@@ -398,7 +415,14 @@ public static class CardLibrary
 									Right = new AndSpecification
 									{
 										Left = new IsCreatureSpecification(),
-										Right = new IsControlledByYouSpecification(),
+										Right = new AndSpecification
+										{
+											Left = new IsControlledByYouSpecification(),
+											Right = new NotSpecification
+											{
+												Inner = new IsEquippedBySourceSpecification(),
+											},
+										},
 									},
 								}
 							),

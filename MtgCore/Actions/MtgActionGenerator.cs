@@ -574,11 +574,20 @@ public static class MtgActionGenerator
 	)
 	{
 		// Planeswalkers are legal attack targets alongside creatures and the player itself.
+		//
+		// A creature under Cover is dropped HERE, before the dedup below, and the ordering is
+		// load-bearing. The dedup's safety argument is that identical signatures share legality;
+		// Cover breaks that, because two same-named creatures can differ only in whether one is
+		// still covered. Left in, the covered twin could win the signature race, be picked as the
+		// representative, fail validation, and take its perfectly attackable duplicate down with
+		// it — the creature would silently become unattackable. Filtering restores the invariant
+		// instead of adding a field that has to be remembered.
 		var targetCards = state
 			.GetCardsInZone(opponentBattlefieldId)
 			.Where(c =>
 				c.HasComponent<CreatureComponent>() || c.HasComponent<PlaneswalkerComponent>()
 			)
+			.Where(c => c.GetComponent<CreatureComponent>()?.CoverTurns is not > 0)
 			.ToList();
 
 		// Collapse interchangeable DEFENDERS, the mirror of the attacker dedup below. Attacking

@@ -141,10 +141,14 @@ public static class CoresetCubeColourlessCreatures
 			// a single colour would roughly have given it, and it keeps this an artifact for a
 			// spells deck rather than a free grower in every deck. Costed as the 1/1 it starts as.
 			CardFactory
-				.Creature("Diamond Knight", manaCost: 3, power: 1, toughness: 1)
+				.Creature("Diamond Knight", manaCost: 2, power: 1, toughness: 2)
 				.WithTypes(CardType.Artifact)
 				.WithSubtype("Artifact")
 				.WithSubtype("Knight")
+				// Vigilance -> Cover rather than Taunt: this is a grow-over-time card, so what it
+				// needs is turns alive to accumulate counters, not to be attacked. Taunt would do
+				// the exact opposite of what the card wants.
+				.WithCover(1)
 				.WithTriggeredAbility(
 					"Attune",
 					TriggerConditions.OnYouCastSpell(),
@@ -255,11 +259,15 @@ public static class CoresetCubeColourlessCreatures
 
 			// Printed: "Flying. You can't lose the game and your opponents can't win the game."
 			//
-			// Faithful, via CannotLoseComponent — the check lives in CheckLossConditions, the one
-			// place a player can lose. It suppresses the OUTCOME, not the cause: life still falls
-			// and libraries still empty, so killing the Angel collects the waiting loss on the very
-			// next state-based check rather than merely stopping the bleeding. See DesignNotes.md
-			// for the accepted cost — an unanswered Angel can run a game to the turn cutoff.
+			// NARROWED from the printed card: this stops the LIFE loss only, and its controller
+			// can still deck. A blanket "you can't lose" left an unanswered Angel with no way to
+			// lose at all, so those games ran to the harness cutoff — 11.8% of games with it on
+			// board were flagged draws against a 4.0% base rate. Decking is the one clock the
+			// board cannot interact with, so keeping it live guarantees every game an ending.
+			//
+			// Otherwise unchanged: the check lives in CheckLossConditions, the one place a player
+			// can lose, and it suppresses the OUTCOME rather than the cause — life still falls, so
+			// killing the Angel collects the waiting loss on the very next state-based check.
 			CardFactory
 				.Creature("Platinum Angel", manaCost: 7, power: 4, toughness: 4)
 				.WithTypes(CardType.Artifact)

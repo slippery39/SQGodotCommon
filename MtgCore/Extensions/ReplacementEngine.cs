@@ -23,12 +23,24 @@ public static class ReplacementEngine
 	///
 	/// The result is clamped at 0: prevention effects can reduce an amount to nothing but must
 	/// never invert it into its opposite.
+	///
+	/// <paramref name="subjectCardId"/> is the creature the damage is aimed at, and it only
+	/// matters for <see cref="ReplaceableEvent.DamageToCreature"/>. SCOPE RULE: a replacement
+	/// stamped on a PLAYER covers that player and every creature they control (Safe Passage);
+	/// one stamped on a CARD covers that card alone (Gods Willing). Without the distinction a
+	/// single-creature shield would silently protect the whole board, since this scan walks
+	/// every permanent its controller has.
+	///
+	/// The guard is on the event rather than on the component type, so it needs no new flag —
+	/// but it does mean a board-wide "prevent all damage to creatures you control" PERMANENT is
+	/// not expressible here. Stamp that on the player, or the scope rule needs widening.
 	/// </summary>
 	public static int ApplyReplacements(
 		this GameState state,
 		ReplaceableEvent evt,
 		int playerId,
-		int amount
+		int amount,
+		int subjectCardId = 0
 	)
 	{
 		if (amount == 0)
@@ -59,6 +71,11 @@ public static class ReplacementEngine
 		foreach (var card in state.GetCardsInZone(battlefieldId))
 		{
 			if (card.ControllerId != playerId)
+				continue;
+
+			// See the scope rule above: a creature-damage replacement living on a card is about
+			// that card, so it must not leak onto its controller's other creatures.
+			if (evt == ReplaceableEvent.DamageToCreature && card.Id != subjectCardId)
 				continue;
 
 			foreach (var modifier in card.GetComponents<ReplacementModifierComponent>())

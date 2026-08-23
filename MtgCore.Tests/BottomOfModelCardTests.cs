@@ -236,10 +236,11 @@ public class BottomOfModelCardTests
 		Assert.That(final.GetEffectivePower(mine.Id), Is.EqualTo(3), "aura should grant +1/+0");
 	}
 
-	// ===== MOLTEN VORTEX — discard a land for 2 damage =====
+	// ===== MOLTEN VORTEX — discard a land for 3 damage =====
 
+	/// <summary>Raised 2 -> 3 as a balance probe; see the card for what to check if it does not move.</summary>
 	[Test]
-	public void MoltenVortex_DiscardsALandAndDealsTwo()
+	public void MoltenVortex_DiscardsALandAndDealsThree()
 	{
 		var handId = _state.GetPlayerZoneId(_ids.Player1Id, ZoneType.Hand);
 		var (state, land) = _state.AddObject(
@@ -255,8 +256,8 @@ public class BottomOfModelCardTests
 		{
 			Assert.That(
 				state.GetPlayer(_ids.Player2Id).Life,
-				Is.EqualTo(lifeBefore - 2),
-				"should deal 2 damage"
+				Is.EqualTo(lifeBefore - 3),
+				"should deal 3 damage"
 			);
 			Assert.That(
 				state.GetCardZone(land.Id).ZoneType,
@@ -266,31 +267,17 @@ public class BottomOfModelCardTests
 		});
 	}
 
-	// ===== BARRAGE OF EXPENDABLES — sacrifice for 1 damage =====
-
-	[Test]
-	public void BarrageOfExpendables_SacrificesACreatureAndDealsOne()
-	{
-		var (state, fodder) = AddOwnCreature(_state, 1, 1);
-		state = PutOnBattlefield(state, Find("Barrage of Expendables"), _ids.Player1Id);
-
-		var lifeBefore = state.GetPlayer(_ids.Player2Id).Life;
-		state = ActivateFirstAbility(state, "Barrage of Expendables", targetId: _ids.Player2Id);
-
-		Assert.Multiple(() =>
-		{
-			Assert.That(
-				state.GetPlayer(_ids.Player2Id).Life,
-				Is.EqualTo(lifeBefore - 1),
-				"should deal 1 damage"
-			);
-			Assert.That(
-				state.GetCardZone(fodder.Id).ZoneType,
-				Is.EqualTo(ZoneType.Graveyard),
-				"the sacrificed creature must reach the graveyard"
-			);
-		});
-	}
+	// ===== BARRAGE OF EXPENDABLES =====
+	//
+	// The sacrifice outlet this fixture used to pin is gone. It measured at the bottom of the
+	// model, and auditing it the way this fixture intends showed the card was not inert — it
+	// worked exactly as written, and the AI simply would not pay a creature for 1 damage, because
+	// MtgActionGenerator offers one sacrifice payment and StateEvaluator prices a creature far
+	// above the damage. The card is now a death trigger; see LowWinRateRebuildTests.
+	//
+	// Worth keeping as a note rather than deleting silently: this is the case that showed the
+	// ~40% band contains BOTH inert cards and cards the AI refuses to play, and that those need
+	// opposite fixes.
 
 	// ===== HELPERS =====
 

@@ -83,7 +83,8 @@ public record DealDamageAction : EffectAction
 		var amount = state.ApplyReplacements(
 			ReplaceableEvent.DamageToCreature,
 			card.ControllerId,
-			rawAmount
+			rawAmount,
+			card.Id
 		);
 		if (amount <= 0)
 			return (state, ImmutableList<GameEvent>.Empty);

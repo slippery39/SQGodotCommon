@@ -95,7 +95,7 @@ public static class CoresetCubeBlueSpells
 				.Instant("Unsubstantiate", manaCost: 2)
 				.AsCounterTrap(returnToHandInstead: true)
 				.Build(),
-			CardFactory.Instant("Dissipate", manaCost: 3).AsCounterTrap(exileInstead: true).Build(),
+			CardFactory.Instant("Dissipate", manaCost: 2).AsCounterTrap(exileInstead: true).Build(),
 			CardFactory
 				.Instant("Frost Breath", manaCost: 3)
 				.WithFreeze(1)
@@ -120,7 +120,7 @@ public static class CoresetCubeBlueSpells
 				.Instant("Uncomfortable Chill", manaCost: 3)
 				.WithWeaken(2, 0)
 				.WithTarget(AllValid().OpponentCreatures())
-				.WithDraw(1)
+				.WithDraw(2)
 				.WithTarget(TargetingStrategy.Self())
 				.Build(),
 			CardFactory

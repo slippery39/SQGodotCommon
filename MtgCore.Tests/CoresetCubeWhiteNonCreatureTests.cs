@@ -14,6 +14,170 @@ namespace MtgCore.Tests;
 [TestFixture]
 public class CoresetCubeWhiteNonCreatureTests
 {
+	// ===== GODS WILLING — protection reskinned as a one-creature damage shield =====
+
+	/// <summary>
+	/// Prevention has always lived on the PLAYER, and ReplacementEngine scans every permanent its
+	/// controller has — so a shield stamped on one creature would silently cover the whole board.
+	/// That is the failure this asserts against: the second creature must still take its damage.
+	///
+	/// Also pins the expiry. UntilYourNextTurn was only ever stripped from the player object, so a
+	/// creature-stamped shield had nothing to remove it and the creature would have become
+	/// permanently immune to damage — a one-mana trick that never wears off, with nothing erroring.
+	/// </summary>
+	[Test]
+	public void GodsWilling_ShieldsOnlyItsTarget_AndWearsOffOnYourNextTurn()
+	{
+		var (state, ids) = MtgGameFactory.CreateForTesting();
+
+		(state, var shielded) = state.AddObject(
+			Vanilla("Shielded", ids.Player1Id),
+			parentId: ids.Player1BattlefieldId
+		);
+		(state, var bystander) = state.AddObject(
+			Vanilla("Bystander", ids.Player1Id),
+			parentId: ids.Player1BattlefieldId
+		);
+
+		(state, _) = state
+			.AddAction(
+				new PreventDamageAction
+				{
+					PreventAll = true,
+					TargetIds = ImmutableList.Create(shielded.Id),
+				}
+			)
+			.ProcessAllActions();
+
+		(state, _) = Burn(state, shielded.Id, bystander.Id);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(Damage(state, shielded.Id), Is.Zero, "the shielded creature takes nothing");
+			Assert.That(
+				Damage(state, bystander.Id),
+				Is.EqualTo(2),
+				"the shield must NOT spill onto the rest of your board — that is Safe Passage, not this"
+			);
+		});
+
+		// Your next turn begins: the shield expires and the creature is damageable again.
+		(state, _) = state
+			.AddAction(new StartTurnAction { ActivePlayerId = ids.Player1Id, SkipDraw = true })
+			.ProcessAllActions();
+		(state, _) = Burn(state, shielded.Id);
+
+		Assert.That(
+			Damage(state, shielded.Id),
+			Is.EqualTo(2),
+			"the shield lasts one turn cycle, not forever"
+		);
+	}
+
+	/// <summary>
+	/// The card itself, kept separate from the mechanism above. Protection does two jobs and this
+	/// reskin needs both: hexproof for "can't be targeted", prevention for "can't be damaged".
+	/// Either alone leaves half the card — hexproof does nothing in combat, prevention does
+	/// nothing against Murder.
+	/// </summary>
+	[Test]
+	public void GodsWilling_GrantsHexproofAndPrevention_BothForATurnCycle()
+	{
+		var card = CoresetCubeWhiteSpells.Cards.Single(c => c.Name == "Gods Willing");
+		var templates = card.GetComponent<SpellComponent>()!.Effects.Select(e => e.ActionTemplate);
+
+		var prevention = templates.OfType<PreventDamageAction>().SingleOrDefault();
+		var hexproof = templates.OfType<GrantKeywordAction>().SingleOrDefault();
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(prevention, Is.Not.Null, "the 'can't be damaged' half");
+			Assert.That(hexproof?.GrantsHexproof, Is.True, "the 'can't be targeted' half");
+
+			// An end-of-turn duration expires before the opponent's attack step, which is the one
+			// thing this card is cast to survive. See the note on PreventDamageAction.
+			Assert.That(
+				prevention!.Duration,
+				Is.EqualTo(ModifierDuration.UntilYourNextTurn),
+				"prevention must outlast the opponent's turn"
+			);
+			Assert.That(
+				hexproof!.Duration,
+				Is.EqualTo(ModifierDuration.UntilYourNextTurn),
+				"hexproof must outlast the opponent's turn too, or the two halves disagree"
+			);
+		});
+	}
+
+	/// <summary>
+	/// UntilYourNextTurn was only ever honoured for REPLACEMENT components, so a keyword granted
+	/// for a turn cycle had nothing anywhere that would remove it — ClearEndOfTurnModifiers only
+	/// handles UntilEndOfTurn. Silent failure: a one-mana trick granting permanent hexproof.
+	/// </summary>
+	[Test]
+	public void GrantedKeyword_ForATurnCycle_ExpiresOnYourNextTurn()
+	{
+		var (state, ids) = MtgGameFactory.CreateForTesting();
+
+		(state, var creature) = state.AddObject(
+			Vanilla("Warded", ids.Player1Id),
+			parentId: ids.Player1BattlefieldId
+		);
+
+		(state, _) = state
+			.AddAction(
+				new GrantKeywordAction
+				{
+					GrantsHexproof = true,
+					Duration = ModifierDuration.UntilYourNextTurn,
+					TargetIds = ImmutableList.Create(creature.Id),
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(
+			state.GetEffectiveStats(creature.Id).HasHexproof,
+			Is.True,
+			"the grant must land in the first place"
+		);
+
+		(state, _) = state
+			.AddAction(new StartTurnAction { ActivePlayerId = ids.Player1Id, SkipDraw = true })
+			.ProcessAllActions();
+
+		Assert.That(
+			state.GetEffectiveStats(creature.Id).HasHexproof,
+			Is.False,
+			"a turn-cycle keyword must wear off, not become permanent"
+		);
+	}
+
+	private static Card Vanilla(string name, int playerId) =>
+		new()
+		{
+			Name = name,
+			OwnerId = playerId,
+			ControllerId = playerId,
+			Components = ImmutableArray.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 2, Toughness = 9 }
+			),
+		};
+
+	private static (GameState, object?) Burn(GameState state, params int[] targetIds)
+	{
+		foreach (var id in targetIds)
+			(state, _) = state
+				.AddAction(
+					new DealDamageAction { Amount = 2, TargetIds = ImmutableList.Create(id) }
+				)
+				.ProcessAllActions();
+		return (state, null);
+	}
+
+	private static int Damage(GameState state, int cardId) =>
+		((Card)state.GetObject(cardId)).GetComponent<CreatureComponent>()!.Damage;
+
 	[Test]
 	public void AllNonCreatureWhiteCards_AreDefined()
 	{

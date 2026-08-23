@@ -20,6 +20,95 @@ public class AdditionalCostTests
 
 	// ===== SACRIFICE COST =====
 
+	/// <summary>
+	/// The AI is offered exactly ONE payment per selection cost
+	/// (MtgActionGenerator.BuildAdditionalCostPayments takes the first valid one), so the order
+	/// GetValidPayments returns decides what every sacrifice outlet in the game costs.
+	///
+	/// In plain zone order that is the EARLIEST-played permanent, which on a developed board is
+	/// normally the best one — so the search only ever saw "sacrifice your biggest creature",
+	/// correctly refused, and the card scored as a blank. Assert the consequence the AI actually
+	/// sees, not just the sort: the offered payment must be the worst creature.
+	///
+	/// The outlet is defined inline rather than pulled from a set, so retuning a real card's
+	/// numbers cannot break this.
+	/// </summary>
+	[Test]
+	public void SacrificeCost_OffersTheWorstCreature_NotTheFirstPlayed()
+	{
+		// Played first, so it leads the battlefield zone in insertion order.
+		var (state, bomb) = _state.AddObject(
+			MakeVanilla("Bomb", _ids.Player1Id, power: 6, toughness: 6),
+			parentId: _ids.Player1BattlefieldId
+		);
+		(state, var fodder) = state.AddObject(
+			MakeVanilla("Fodder", _ids.Player1Id, power: 1, toughness: 1),
+			parentId: _ids.Player1BattlefieldId
+		);
+		(state, _) = state.AddObject(
+			MakeSacrificeOutlet(_ids.Player1Id),
+			parentId: _ids.Player1BattlefieldId
+		);
+
+		var offered = MtgActionGenerator
+			.GetLegalActions(state, _ids, _ids.Player1Id)
+			.OfType<ActivateAbilityAction>()
+			.Single()
+			.AdditionalCostPayments[0];
+
+		Assert.That(
+			offered,
+			Is.EqualTo(ImmutableList.Create(fodder.Id)),
+			"the AI's single offered sacrifice must be the 1/1, not the 6/6 played first"
+		);
+		Assert.That(
+			bomb.Id,
+			Is.LessThan(fodder.Id),
+			"the bomb must genuinely be earlier in zone order"
+		);
+	}
+
+	private static Card MakeVanilla(string name, int playerId, int power, int toughness) =>
+		new()
+		{
+			Name = name,
+			OwnerId = playerId,
+			ControllerId = playerId,
+			Components = ImmutableArray.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = power, Toughness = toughness }
+			),
+		};
+
+	/// <summary>A Barrage of Expendables shape: free ability, sacrifice a creature you control.</summary>
+	private static Card MakeSacrificeOutlet(int playerId) =>
+		new()
+		{
+			Name = "Outlet",
+			OwnerId = playerId,
+			ControllerId = playerId,
+			Components = ImmutableArray.Create<GameComponent>(
+				new PermanentComponent(),
+				new ActivatedAbilityComponent
+				{
+					Name = "Expend",
+					ManaCost = 0,
+					MaxActivationsPerTurn = 0,
+					AdditionalCosts = ImmutableList.Create<AdditionalCost>(
+						new SacrificeAdditionalCost
+						{
+							Filter = TargetSpecification.CreatureControlledByYou(),
+						}
+					),
+					Effect = new CardEffect
+					{
+						TargetingStrategy = TargetingStrategy.NoTarget(),
+						ActionTemplate = new GainLifeAction { Amount = 1 },
+					},
+				}
+			),
+		};
+
 	[Test]
 	public void SacrificeCost_CanCastSpell_WhenValidTargetExists()
 	{

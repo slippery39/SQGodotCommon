@@ -781,3 +781,76 @@ Judged acceptable: it is one card in 450, both players run removal, and the Ange
 can simply be attacked. **Watch:** `TurnLimitReached` in a training run. If it correlates with
 Angel being drafted, the honest fix is to keep the life-total protection and drop the decking
 protection, so the game still ends — not to weaken the clause everywhere.
+
+## The evaluator oscillates: both directions of one move score as an improvement
+
+Found chasing the Swiftfoot Boots draw loop, and it is a bigger problem than the loop was.
+
+With equip {0}, the AI moves the boots between two creatures forever. That looks like a scoring
+tie broken toward acting, and **two AI-side tie-break fixes were built on that assumption before
+anyone measured it. Both were wrong and both were reverted.** Instrumenting `PickBestNode` on a
+board taken from a flagged game (Avaricious Dragon / Chasm Skulker / Sublime Archangel, all having
+already attacked):
+
+```
+root=ActivateAbilityAction  baseline(EndTurn)=72.7000  equip=74.1000
+```
+
+The equip scores **+1.4 over ending the turn** — and moving the boots straight back scores +1.4
+again. There is no tie. The evaluator rates both directions of the same oscillation as a genuine
+improvement, so no "prefer to stop on a tie" rule can ever catch it, at any bias value.
+
+A second instance of the same blindness, on a different board: a ready 9/10 Tarmogoyf facing a
+7/8 and a 4/5 at exactly lethal. Killing the 7/8 outright while surviving scores **-0.9784**, and
+ending the turn scores **-0.9784** — identical to four decimals.
+`MtgSimulator.Tests/MultiTurnBeamSearchBugTests.AttackTargeting_TarmogoyfVersusLethalBoard_
+AttacksCreatureNotFace` has therefore always passed on the tie-break rather than on evaluation.
+
+Both point at `ScoreAfterCompletingTurn` rather than at `StateEvaluator` itself: every root
+completes the turn greedily and then rolls out, so distinct positions can converge on the same
+rolled-out future, and small differences in the greedy tail can dominate the real board difference.
+Worth investigating in this order:
+
+- The greedy turn-completion converging both lines, averaging the real difference away.
+- `RacePressure` being symmetric and cancelling a removed attacker against the damage taken.
+- `SimulateOpponentTurn(BoardOnly)` not reflecting that a dead attacker cannot attack next turn.
+
+**Until this is fixed, unbounded free abilities must be bounded in the ENGINE, not in the search.**
+`PermanentCardBuilder.WithEquip` caps equip at once per turn for exactly this reason. Do not
+"fix" a loop by retuning `EndTurnBias` in either direction — the bias is a tie-break, and these
+defects are not ties.
+
+
+## A discard-a-land cost is priced at zero
+
+`StateEvaluator` counts only NON-land cards in hand, and that is correct on its own terms — see
+`AiLandDropTests`, where counting them made a land drop worth a net +0.6 and the AI started
+skipping early drops. The consequence nobody followed through is on the cost side: **a cost that
+discards a LAND is free**, while the same card played is worth a permanent +2.0 of MaxMana.
+
+Measured (`MtgSimulator.Tests/LandDiscardCostTests`):
+
+| | Evaluator delta |
+|---|---|
+| Discard a land — what Molten Vortex charges | **+0.000** |
+| Play that same land | **+2.000** |
+| 3 damage to the opponent — what Vortex pays | **+0.600** |
+
+So the AI sees a free +0.6 where the real trade is 2.0 for 0.6, and takes it whenever it holds a
+land to spare. The only thing pushing back is the 2-turn rollout, which is why the behaviour has a
+sharp boundary: it keeps exactly one land in reserve and vents every drop beyond it, at any mana
+total. A 40-card drafted deck runs 17 lands and wants drops through roughly turn six, so those are
+turn-three-onward drops being burned for 3 damage each.
+
+This is why Molten Vortex measures near the bottom of the model. It is an AI pricing problem, not a
+card rate problem — raising its damage 2 -> 3 makes the bad trade *more* attractive, so if that
+change does not help, this is the reason.
+
+**Affects every discard cost, not just Vortex.** Magmatic Insight has the same shape, and
+`DiscardAdditionalCost.Filter` exists precisely so cards can demand a land.
+
+The fix is a small NON-ZERO weight for lands in hand — enough to price the cost, low enough that a
+land drop still beats holding (the drop must clear `2.0 - landWeight` by a decisive margin). That
+number is exactly what `AiLandDropTests` pins from the other side, so it cannot be set by
+intuition: it needs the head-to-head strength harness (`BranchingCapStrengthTests`), not a guess.
+Deliberately not changed here.

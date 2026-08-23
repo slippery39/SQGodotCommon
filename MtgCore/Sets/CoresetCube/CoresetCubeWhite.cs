@@ -106,6 +106,11 @@ public static class CoresetCubeWhite
 				.WithSubtype(Human)
 				.WithSubtype(Cleric)
 				.WithLifelink()
+				// The textbook Cover card: a 1/1 whose entire value is a tap ability it has to
+				// survive to use, gated behind a life total it needs turns to reach. Without Cover
+				// the only way to make it live is to print it as a 1/3, which is the over-statting
+				// Cover exists to avoid.
+				.WithCover(1)
 				.WithActivatedAbility(
 					"Call the Host",
 					manaCost: 0,
@@ -354,6 +359,9 @@ public static class CoresetCubeWhite
 				.Creature("Steadfast Sentry", manaCost: 3, power: 3, toughness: 2)
 				.WithSubtype(Human)
 				.WithSubtype(Soldier)
+				// Vigilance -> Taunt, the swap this whole batch is built on: vigilance is
+				// unimplemented and blank, Taunt is the keyword that actually means "defends".
+				.WithTaunt()
 				.WithDeathTrigger(
 					"Last Stand",
 					eb =>
@@ -387,7 +395,7 @@ public static class CoresetCubeWhite
 				.Build(),
 			// The tax hits both players, exactly as printed.
 			CardFactory
-				.Creature("Vryn Wingmare", manaCost: 3, power: 2, toughness: 1)
+				.Creature("Vryn Wingmare", manaCost: 2, power: 2, toughness: 1)
 				.WithSubtype(Pegasus)
 				.WithFlying()
 				.WithSpellTax(1)
@@ -422,6 +430,9 @@ public static class CoresetCubeWhite
 				.Creature("Basri's Lieutenant", manaCost: 4, power: 3, toughness: 4)
 				.WithSubtype(Human)
 				.WithSubtype(Knight)
+				// Vigilance -> Taunt. Four toughness is the statline that wants it, and the card
+				// already protects the rest of the board on ETB.
+				.WithTaunt()
 				.WithEtbTrigger(
 					"Knight's Charge",
 					eb =>
@@ -551,6 +562,10 @@ public static class CoresetCubeWhite
 				.Creature("Captain of the Watch", manaCost: 6, power: 3, toughness: 3)
 				.WithSubtype(Human)
 				.WithSubtype(Soldier)
+				// Vigilance -> Taunt. Printed, the captain grants vigilance to Soldiers; that half
+				// is unreachable, so the Watch at least stands guard itself. A 3/3 body at six mana
+				// needs the help.
+				.WithTaunt()
 				.WithComponent(
 					new StaticPTBoostAbility
 					{

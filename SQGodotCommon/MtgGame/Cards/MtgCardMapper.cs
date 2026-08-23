@@ -158,6 +158,19 @@ public static class MtgCardMapper
 			);
 			if (keywords != null)
 				lines.Add(keywords);
+
+			// Cover gets its own line with reminder text rather than joining the keyword list.
+			// Taunt can go unexplained because a player arrives already knowing the word; Cover is
+			// invented here, and a bare "Cover 2" among "Flying, Lifelink" tells a drafter nothing.
+			// It carries a number, so it could not read as a bare keyword anyway.
+			//
+			// Reads live on the battlefield and printed in a pack, from the same field — a card
+			// whose Cover has burned down correctly stops advertising it.
+			if (creature.CoverTurns > 0)
+				lines.Add(
+					$"Cover {creature.CoverTurns} (can't be attacked for "
+						+ $"{creature.CoverTurns} of your turns, or until it attacks)"
+				);
 		}
 		else if (spell != null)
 		{
@@ -262,8 +275,11 @@ public static class MtgCardMapper
 		// Platinum Angel's entire card. Without this it rendered as a seven-mana 4/4 flyer with a
 		// blank text box — the most expensive vanilla creature in the cube, as far as a player
 		// reading it could tell.
+		// Scope matters and the unqualified sentence is now a lie: CannotLoseComponent covers the
+		// LIFE clause only, and its controller can still deck. Printing "you can't lose the game"
+		// tells a drafter they have an unbeatable permanent when milling still answers it.
 		if (card.HasComponent<CannotLoseComponent>())
-			lines.Add("You can't lose the game");
+			lines.Add("You can't lose the game from damage (you can still deck)");
 
 		// "You may play lands from the top of your library" (Radha). A permanent granting this and
 		// saying nothing is worse than most blank text: the enabling card is on the battlefield
@@ -1212,9 +1228,7 @@ public static class MtgCardMapper
 			PutOnLibraryAction p => p.Bottom
 				? $"Put {t} on the bottom of its owner's library"
 				: $"Put {t} on top of its owner's library",
-			PreventDamageAction p => p.PreventAll
-				? "Prevent all damage to you and your creatures this turn"
-				: $"Prevent the next {p.Amount} damage to you and your creatures this turn",
+			PreventDamageAction p => DescribePrevention(p, effect, t),
 			TakeExtraTurnAction x => x.Turns == 1
 				? "Take an extra turn after this one"
 				: $"Take {x.Turns} extra turns after this one",
@@ -1415,8 +1429,16 @@ public static class MtgCardMapper
 
 	private static string Signed(int n) => n >= 0 ? $"+{n}" : n.ToString();
 
+	/// Permanent grants print no suffix — that is the creature's own text, not a temporary buff.
+	/// UntilYourNextTurn must say so: it is a strictly longer shield than end-of-turn and it is
+	/// the whole reason a one-mana trick survives the opponent's attack step.
 	private static string DurationSuffix(ModifierDuration d) =>
-		d == ModifierDuration.UntilEndOfTurn ? " until end of turn" : "";
+		d switch
+		{
+			ModifierDuration.UntilEndOfTurn => " until end of turn",
+			ModifierDuration.UntilYourNextTurn => " until your next turn",
+			_ => "",
+		};
 
 	private static string Capitalise(string s) =>
 		string.IsNullOrEmpty(s) ? s : char.ToUpperInvariant(s[0]) + s[1..];
@@ -1786,6 +1808,34 @@ public static class MtgCardMapper
 		return $"{who} {mill.Amount}";
 	}
 
+	/// <summary>
+	/// Prevention has two shapes and one sentence cannot cover both. Stamped on the caster
+	/// (Safe Passage, Harm's Way) it shields them and their whole board; stamped on a chosen
+	/// creature (Gods Willing) it shields that creature alone. Printing the player wording on
+	/// the creature version would be confidently wrong text, which is worse than blank.
+	///
+	/// The duration was also wrong for every prevention card in the set: it read "this turn"
+	/// while PreventDamageAction has defaulted to UntilYourNextTurn since that default is what
+	/// made prevention work here at all.
+	/// </summary>
+	private static string DescribePrevention(
+		PreventDamageAction p,
+		CardEffect effect,
+		string target
+	)
+	{
+		var amount = p.PreventAll ? "all damage" : $"the next {p.Amount} damage";
+		var window =
+			p.Duration == ModifierDuration.UntilYourNextTurn ? "until your next turn" : "this turn";
+
+		var who =
+			effect.TargetingStrategy.SelectionMode == TargetSelectionMode.CastingPlayer
+				? "you and your creatures"
+				: target;
+
+		return $"Prevent {amount} to {who} {window}";
+	}
+
 	private static string DescribeGrantKeyword(GrantKeywordAction g, string target)
 	{
 		var keywords = GrantedKeywordList(g);
@@ -1856,7 +1906,14 @@ public static class MtgCardMapper
 			: s.Filter != null ? $"a {DescribeSpecification(s.Filter)}"
 			: "a card";
 
-		return $"choose {what} from {whose} {zone}";
+		// The mana bound is the restriction, not a detail. Evolutionary Leap replaces a dead
+		// creature with a strictly CHEAPER one; without this clause it rendered as an
+		// unrestricted tutor — confidently wrong text, which is worse than blank.
+		var bound = string.IsNullOrEmpty(s.MaxManaCostExclusiveFromCardContextKey)
+			? ""
+			: " costing less than it";
+
+		return $"choose {what}{bound} from {whose} {zone}";
 	}
 
 	private static string? DescribePipeline(PipelineAction pipeline)

@@ -15,6 +15,14 @@ public record GameStateSnapshot
 	public PlayerSnapshot Player1 { get; init; } = new();
 	public PlayerSnapshot Player2 { get; init; } = new();
 	public IReadOnlyList<TurnLog> TurnLogs { get; init; } = [];
+
+	/// <summary>
+	/// Every action chosen during the FINAL turn, in order. TurnLogs is built from game events,
+	/// and the actions that cause an action-limit draw usually emit none — activating an equip
+	/// moves no card and announces nothing. Without this a snapshot of a 200-action turn shows a
+	/// handful of draw events and no way to tell what repeated.
+	/// </summary>
+	public IReadOnlyList<string> FinalTurnActions { get; init; } = [];
 	public string? ExceptionMessage { get; init; }
 	public string? ExceptionStackTrace { get; init; }
 }

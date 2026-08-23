@@ -22,6 +22,7 @@ public class CreatureCardBuilder
 	private bool _hasFlying;
 	private bool _hasTaunt;
 	private bool _hasReach;
+	private int _coverTurns;
 	private bool _hasLifelink;
 	private bool _hasTrample;
 	private bool _hasDoubleStrike;
@@ -85,6 +86,17 @@ public class CreatureCardBuilder
 	public CreatureCardBuilder WithReach()
 	{
 		_hasReach = true;
+		return this;
+	}
+
+	/// <summary>
+	/// COVER N — can't be attacked for N of your turns, or until it attacks. See
+	/// CreatureComponent.CoverTurns. Use it to let a low-toughness utility creature live long
+	/// enough to do its job, instead of over-statting it into a wall.
+	/// </summary>
+	public CreatureCardBuilder WithCover(int turns = 1)
+	{
+		_coverTurns = turns;
 		return this;
 	}
 
@@ -519,6 +531,7 @@ public class CreatureCardBuilder
 			HasFlying = _hasFlying,
 			HasTaunt = _hasTaunt,
 			HasReach = _hasReach,
+			CoverTurns = _coverTurns,
 			HasLifelink = _hasLifelink,
 			HasTrample = _hasTrample,
 			HasDoubleStrike = _hasDoubleStrike,

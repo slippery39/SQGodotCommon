@@ -17,6 +17,14 @@ namespace MtgCore;
 /// a real card here rather than reminder text. With no priority window a spell can only be cast on
 /// your own turn, while combat damage to you only arrives on the opponent's — so an end-of-turn
 /// shield expired before every attack it existed to stop. Safe Passage was effectively blank.
+///
+/// A CREATURE target stamps the shield on that creature instead, which is how "protection" is
+/// reskinned here (Gods Willing): protection from a colour is unreachable — cards have no colour —
+/// but "damage can't touch it for a turn cycle" saves it from removal and wins its combat, which
+/// is what the card is actually cast for. ReplacementEngine's scope rule is what keeps the
+/// creature-stamped shield from spilling onto the rest of the board; read it before changing this.
+/// Only the DamageToCreature half is stamped on a creature — a creature cannot be dealt the
+/// player half.
 /// </summary>
 public record PreventDamageAction : EffectAction
 {
@@ -33,6 +41,32 @@ public record PreventDamageAction : EffectAction
 
 		foreach (var targetId in ResolveTargetIds())
 		{
+			if (!state.HasObject(targetId))
+				continue;
+
+			if (state.GetObject(targetId) is Card creatureCard)
+			{
+				if (!creatureCard.HasComponent<CreatureComponent>())
+					continue;
+
+				state = state.UpdateObject(
+					targetId,
+					creatureCard with
+					{
+						Components = creatureCard.Components.Add(
+							new DamagePreventionComponent
+							{
+								Target = ReplaceableEvent.DamageToCreature,
+								PreventAll = PreventAll,
+								Amount = Amount,
+								Duration = Duration,
+							}
+						),
+					}
+				);
+				continue;
+			}
+
 			if (state.GetObject(targetId) is not MtgPlayer player)
 				continue;
 

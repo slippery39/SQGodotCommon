@@ -351,7 +351,13 @@ Beyond mana, cards and abilities can carry `AdditionalCost` entries (on `Card.Ad
 
 Mana is always the primary cost (`ManaCost: int`); this matches MTG's "0:" notation for free abilities. Additional costs are paid before mana in `Execute`, before the card moves to the stack.
 
-`MtgActionGenerator` calls `GetValidPayments` and picks the first valid option per selection cost — sufficient for the AI. The console auto-selects the first valid payment. The Godot UI walks the costs one at a time, highlighting valid payments on the battlefield **and in hand**.
+`MtgActionGenerator` calls `GetValidPayments` and picks the first valid option per selection cost. The console auto-selects the first valid payment. The Godot UI walks the costs one at a time, highlighting valid payments on the battlefield **and in hand**.
+
+**"Sufficient for the AI" was wrong, and the order of `GetValidPayments` is a balance lever.** Because only index 0 is ever offered, that ordering *is* what the cost means to the search. `SacrificeAdditionalCost` returned plain zone order — the earliest-played permanent, which on a developed board is usually the best one — so every sacrifice outlet in the game was priced to the AI as "give up your biggest creature". `StateEvaluator` then correctly refused (a creature is worth 3.0 plus 2.0 per power plus race pressure), the ability never fired, and the card measured as a **blank**: Barrage of Expendables 39.4%, with Blood for Bones and Evolutionary Leap in the same band. It reads as a costing problem in a win-rate table and is not one.
+
+It now sorts **worst first** (power, then toughness, then id — the exact inverse of `CreatureEvaluator.PickStrongest`). A sort rather than one action per candidate, because the AI's branching is capped at 16 and a wide board would spend the whole cap deciding which token to sacrifice. `AdditionalCostTests.SacrificeCost_OffersTheWorstCreature_NotTheFirstPlayed` asserts the payment the generator actually offers, not just the sort.
+
+**Any new selection cost inherits this trap.** If the choice among valid payments matters, order them; nothing downstream will.
 
 `AdditionalCost.Describe()` supplies the player-facing instruction ("Discard a card from your hand"). It is abstract so a new cost type cannot ship without one; presentation layers must never type-switch to build this text.
 
@@ -1156,6 +1162,28 @@ cleared.
 **Scope:** numeric only. Structural replacement ("enters tapped", "if it would die, exile it
 instead") rewrites an action rather than a number and is not covered — see `DesignNotes.md`.
 
+**Where a replacement is STAMPED decides who it covers**, and this only became visible when one
+creature needed a shield of its own. `ApplyReplacements` walks the player object *and every
+permanent that player controls*, so a `DamagePreventionComponent` put on a single creature would
+have protected the entire board. The rule now is:
+
+| Stamped on | Covers |
+|---|---|
+| the player | that player and all their creatures (Safe Passage, Harm's Way) |
+| a card | that card alone (Gods Willing) |
+
+Enforced by the `subjectCardId` argument, which both `DamageToCreature` call sites
+(`AttackAction.ApplyDamageToCreature`, `DealDamageAction.ApplyToCreature`) pass. The guard keys on
+the *event*, not the component type, so it needs no new flag — the cost is that a board-wide
+"prevent all damage to creatures you control" **permanent** is not expressible. Stamp that on the
+player, or widen the rule.
+
+**A creature-stamped shield must also be cleared, and the cleanup was player-only.**
+`StartTurnAction.ClearUntilYourNextTurnReplacements` now sweeps the active player's battlefield as
+well as their player object. Without that half, `UntilYourNextTurn` had nothing to remove it and a
+one-mana trick became permanent immunity — with nothing erroring, and the only symptom being a
+creature that quietly refuses to die.
+
 ## Protection
 
 `ProtectionFromSubtypeComponent { Subtypes }`. Protection from a **colour is impossible** — cards
@@ -1168,6 +1196,13 @@ needs blocking; "can't be enchanted or equipped" waits for a card that needs it.
 
 `GameState.IsProtectedFrom(cardId, sourceCardId)` is the single entry point so targeting and damage
 cannot disagree about what protection means.
+
+**Protection from a COLOUR is reskinned as a one-creature damage shield, not as hexproof.** Gods
+Willing was built on hexproof first, and that read is too narrow: hexproof dodges targeted removal
+and does nothing whatever in combat or against a sweeper, which is half of what protection is for.
+`PreventDamageAction` aimed at a creature covers both halves for a turn cycle while staying
+honestly weaker than the printed card — the creature still dies to Murder and to `-X/-X`. Prefer
+this shape for any future "protection from ..." clause.
 
 ## Targeting specs must never index the object map
 
@@ -1296,6 +1331,34 @@ That breaks for Fog Bank, which also prevents all combat damage to itself: a dam
 creature is an unremovable roadblock that every attack is compelled into forever, and with no way
 to go wide the opponent has no answer at all.
 
+### Cover N — the defensive counterpart to Taunt
+
+`CreatureComponent.CoverTurns`. "Can't be attacked for N of your turns, or until it attacks."
+
+It exists because a blockerless game forces every utility creature to be printed with wall-level
+toughness or it never survives to do its job — the Hearthstone failure mode. Cover buys that
+survival on the defensive axis instead, so a 1/1 with a real ability is a playable card.
+
+Built as a countdown, not a keyword flag, so **the six-site keyword rule does not apply** — it
+mirrors `FrozenTurns` exactly: decremented in `StartTurnAction` for its own controller (which is
+what makes Cover 1 mean "survives the opponent's next turn"), and it cannot yet be granted by an
+aura or equipment.
+
+Three rules, each of which is silent when wrong:
+
+- **Attacking spends it outright**, in `AttackAction.Execute` alongside `HasAttacked`. Without
+  that clause Cover is free upside on an aggressive creature rather than protection bought by
+  staying home.
+- **Taunt may only compel a LEGAL attack.** `ValidateTauntConstraint` skips covered creatures for
+  exactly the reason it filters through `CanReach`: a creature with both Taunt and Cover would
+  otherwise forbid every attack on its controller — compelled as the only target, impossible as
+  any target — locking combat instead of shaping it.
+- **`MtgActionGenerator` filters covered creatures out of the target list BEFORE the defender
+  dedup**, and the ordering is load-bearing. The dedup's safety argument is that identical
+  signatures share legality; Cover breaks that, so a covered twin could win the signature race,
+  be chosen as the representative, fail validation, and take its attackable duplicate with it.
+  Filtering restores the invariant rather than adding a `DefenderSignature` field to remember.
+
 `TauntUntilAttackedComponent` fixes it. `CreatureComponent.WasAttackedThisTurn` is stamped by
 `AttackAction` on the **target** (before damage, so a wall that dies to the attack still counts as
 having soaked one) and cleared by `StartTurnAction`. `GetEffectiveStats` suppresses Taunt once both
@@ -1407,6 +1470,43 @@ two behaviours:
 
 Real MTG picks an aura's target as the spell is cast. Nothing here can respond between cast and
 resolution, so the ETB-trigger route is observationally identical and needs no new casting plumbing.
+
+**An attachment may never target the creature already wearing it.** Re-equipping to the current
+wearer is a perfect no-op — `AttachEquipmentAction` strips the boost and re-stamps an identical
+one — and offering it as a legal action hangs the game. `PermanentCardBuilder.WithEquip` excludes
+it via `IsEquippedBySourceSpecification().Not()`, in the TARGETING SPEC rather than in
+`ValidateAdd`, because the spec is the one thing both `MtgActionGenerator` and
+`ActivateAbilityAction` run.
+
+**Equip is also capped at once per turn (`maxPerTurn: 1`), diverging from the printed rule**,
+and that cap is what actually stopped the draws. Closing the no-op alone was not enough: the AI
+then moved the equipment *between* two creatures forever, which is not a no-op and which no
+state-equality guard can catch. Two AI-side tie-break fixes were built and reverted before the
+search was instrumented and showed the equip scoring **74.1 against 72.7 for ending the turn**,
+with the move back also scoring +1.4 — the evaluator rates both directions of one oscillation as
+an improvement, so there is no tie to break. See DesignNotes.md.
+
+Measured, end to end on 7 000-game runs: **86 ActionLimitReached draws before, 0 after**, and the
+base win rate moved to exactly 50.0% — the signature of a draw-free run. Intermediate figures were
+38.5% of Boots games drawing, then 28.7% with the no-op fix alone; Boots was on the battlefield in
+12 of 12 sampled action-limit games.
+
+**Two apparent "the fix did nothing" results in between were a STALE BINARY, not a failed fix.**
+`dotnet build MtgSimulator.Console.csproj` reported success while leaving hours-old copies of
+MtgCore.dll and MtgSimulator.dll in the console's `bin/`, so two runs measured code that was never
+in them. See MtgSimulator/CLAUDE.md — verify binary timestamps before trusting any training run.
+
+**The general rule this leaves: an unbounded free ability must be bounded in the ENGINE.** The
+search cannot be relied on to decline it, because the evaluator may believe it is worth taking.
+
+One more thing worth knowing, found on the way: `MtgActionGenerator.BuildAbilityAction` offers only
+`validTargets[0]` for a targeted activated ability — one option, by zone order. While the wearer
+sorted first, the *only* equip action the AI was ever offered was the no-op. Same
+one-option-by-zone-order shape as `SacrificeAdditionalCost`, and still unranked for every other
+ability in the game.
+
+Build equip abilities through `WithEquip`, never by hand. Three cards had hand-rolled copies and
+all three missed the exclusion; two also disagreed about `maxPerTurn`.
 
 `EquippedBoostComponent` carries the keyword grants and `PreventsAttacking`. **Its keywords are read
 in their own pass in `GetEffectiveStats`, not via `AppliedKeywordComponent`** — Permanent-duration

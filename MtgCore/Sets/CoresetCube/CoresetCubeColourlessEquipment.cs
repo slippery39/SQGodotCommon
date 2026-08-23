@@ -61,7 +61,7 @@ public static class CoresetCubeColourlessEquipment
 				deathtouch: true
 			),
 			// Printed: "Equipped creature has hexproof and haste. Equip {1}." Faithful.
-			Equipment("Swiftfoot Boots", manaCost: 2, equipCost: 1, hexproof: true, haste: true),
+			Equipment("Swiftfoot Boots", manaCost: 2, equipCost: 0, hexproof: true, haste: true),
 			// ===== THE RINGS =====
 			// All five: keyword grant, plus an upkeep +1/+1 counter on the wearer, equip {1}. The
 			// printed colour gate on the counter is cut, which makes the counter unconditional and
@@ -117,9 +117,9 @@ public static class CoresetCubeColourlessEquipment
 			// ===== THREE =====
 
 			// Printed: "Equipped creature has double strike. Equip {2}." Faithful.
-			Equipment("Fireshrieker", manaCost: 3, equipCost: 2, doubleStrike: true),
+			Equipment("Fireshrieker", manaCost: 2, equipCost: 2, doubleStrike: true),
 			// Printed: "Equipped creature gets +3/+0. Equip {3}." Faithful.
-			Equipment("Greatsword", manaCost: 3, equipCost: 3, power: 3),
+			Equipment("Greatsword", manaCost: 2, equipCost: 3, power: 3),
 			// Printed: "Equipped creature gets +2/+0 and has first strike, vigilance, trample, and
 			// haste. Equip {3}." Vigilance is cut; the other three are faithful.
 			Equipment(
@@ -236,7 +236,7 @@ public static class CoresetCubeColourlessEquipment
 	/// </summary>
 	private static Card Ring(
 		string name,
-		int manaCost = 3,
+		int manaCost = 2,
 		bool firstStrike = false,
 		bool trample = false,
 		bool haste = false,

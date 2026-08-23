@@ -424,6 +424,108 @@ public class CombatKeywordTests
 
 	// ===== HELPERS =====
 
+	// ===== COVER =====
+	//
+	// Cover N: can't be attacked for N of your turns, or until it attacks. The defensive
+	// counterpart to Taunt, and the reason a utility creature need not be statted like a wall.
+
+	[Test]
+	public void Cover_CannotBeAttacked()
+	{
+		var (s1, attacker) = AddCreature(_state, "Bear", 2, 2, _ids.Player1Id);
+		var (s2, hidden) = AddCreature(s1, "Mystic", 1, 1, _ids.Player2Id, cover: 1);
+
+		var (_, success) = s2.TryAddAction(Attack(attacker.Id, hidden.Id));
+
+		Assert.That(success, Is.False, "a covered creature is not a legal attack target");
+	}
+
+	/// <summary>
+	/// The generator and the validator must agree. A covered creature filtered out of the target
+	/// list but still accepted by ValidateAdd (or the reverse) is the "the AI can do it and I
+	/// can't" class of bug this codebase has hit repeatedly.
+	/// </summary>
+	[Test]
+	public void Cover_IsNotOfferedAsAnAttackTarget()
+	{
+		var (s1, _) = AddCreature(_state, "Bear", 2, 2, _ids.Player1Id);
+		var (s2, hidden) = AddCreature(s1, "Mystic", 1, 1, _ids.Player2Id, cover: 1);
+
+		var targets = MtgActionGenerator
+			.GetLegalActions(s2, _ids, _ids.Player1Id)
+			.OfType<AttackAction>()
+			.Select(a => a.TargetId);
+
+		Assert.That(targets, Does.Not.Contain(hidden.Id));
+	}
+
+	/// <summary>
+	/// "Or until it attacks" — the clause that stops Cover being free upside on an aggressive
+	/// creature. Without it, a covered attacker hides and swings in the same turn forever.
+	/// </summary>
+	[Test]
+	public void Cover_IsSpentByAttacking()
+	{
+		var (s1, hidden) = AddCreature(_state, "Mystic", 1, 1, _ids.Player1Id, cover: 2);
+
+		var (final, _) = s1.AddAction(Attack(hidden.Id, _ids.Player2Id)).ProcessAllActions();
+
+		Assert.That(
+			Cover(final, hidden.Id),
+			Is.Zero,
+			"attacking spends Cover outright, not one turn of it"
+		);
+	}
+
+	[Test]
+	public void Cover_BurnsDownOnYourOwnTurn()
+	{
+		var (s1, hidden) = AddCreature(_state, "Mystic", 1, 1, _ids.Player1Id, cover: 1);
+
+		var (final, _) = s1.AddAction(
+				new StartTurnAction
+				{
+					ActivePlayerId = _ids.Player1Id,
+					BattlefieldId = s1.GetPlayerZoneId(_ids.Player1Id, ZoneType.Battlefield),
+					SkipDraw = true,
+				}
+			)
+			.ProcessAllActions();
+
+		Assert.That(
+			Cover(final, hidden.Id),
+			Is.Zero,
+			"Cover 1 means 'survives the opponent's next turn', so it burns on YOUR untap"
+		);
+	}
+
+	/// <summary>
+	/// Taunt may only compel an attack that is otherwise legal — the same rule that stops a
+	/// Flying Taunt creature forbidding every ground attack. A creature with Taunt AND Cover
+	/// would otherwise lock combat entirely: compelled to be attacked, impossible to attack.
+	/// </summary>
+	[Test]
+	public void Cover_OnATauntCreature_DoesNotLockCombatEntirely()
+	{
+		var (s1, attacker) = AddCreature(_state, "Bear", 2, 2, _ids.Player1Id);
+		var (s2, wall) = AddCreature(s1, "Wall", 0, 4, _ids.Player2Id, taunt: true, cover: 1);
+
+		var (_, success) = s2.TryAddAction(Attack(attacker.Id, _ids.Player2Id));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(success, Is.True, "the covered Taunt creature must stop compelling");
+			Assert.That(
+				s2.TryAddAction(Attack(attacker.Id, wall.Id)).Item2,
+				Is.False,
+				"and must still be unattackable itself"
+			);
+		});
+	}
+
+	private static int Cover(GameState state, int cardId) =>
+		((Card)state.GetObject(cardId)).GetComponent<CreatureComponent>()!.CoverTurns;
+
 	private AttackAction Attack(int attackerId, int targetId) =>
 		new()
 		{
@@ -442,7 +544,9 @@ public class CombatKeywordTests
 		bool indestructible = false,
 		bool deathtouch = false,
 		int exalted = 0,
-		string[]? protectedFrom = null
+		string[]? protectedFrom = null,
+		bool taunt = false,
+		int cover = 0
 	)
 	{
 		var components = ImmutableArray.Create<GameComponent>(
@@ -454,6 +558,8 @@ public class CombatKeywordTests
 				HasSummoningSickness = false,
 				HasIndestructible = indestructible,
 				HasDeathtouch = deathtouch,
+				HasTaunt = taunt,
+				CoverTurns = cover,
 			}
 		);
 

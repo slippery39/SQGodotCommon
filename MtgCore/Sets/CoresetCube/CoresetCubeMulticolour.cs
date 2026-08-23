@@ -232,9 +232,10 @@ public static class CoresetCubeMulticolour
 			// deck wants the spell back, and the creature clause overlaps every reanimator in the
 			// cube.
 			CardFactory
-				.Creature("Possessed Skaab", manaCost: 6, power: 3, toughness: 2)
+				.Creature("Possessed Skaab", manaCost: 3, power: 3, toughness: 2)
 				.WithSubtype("Zombie")
 				.WithEtbTrigger("Dredge Up", eb => eb.WithAutoReturnSpell())
+				.WithTaunt()
 				.Build(),
 			// ===== BLACK-WHITE — creatures entering, and life =====
 
@@ -479,6 +480,9 @@ public static class CoresetCubeMulticolour
 			CardFactory
 				.Creature("Citadel Castellan", manaCost: 3, power: 2, toughness: 3)
 				.WithSubtype("Knight")
+				// Vigilance -> Taunt. A castellan holds the gate, which is what Taunt says here;
+				// vigilance says nothing at all, so this card was paying a keyword tax for a blank.
+				.WithTaunt()
 				.WithRenown(2)
 				.Build(),
 			// Printed: "Ironroot Warlord's power is equal to the number of creatures you control.

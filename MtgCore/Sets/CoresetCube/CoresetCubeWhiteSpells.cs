@@ -37,11 +37,24 @@ public static class CoresetCubeWhiteSpells
 					TargetingStrategy.SingleTarget(TargetSpecification.OpponentCreatures())
 				)
 				.Build(),
-			// Protection from a colour is impossible. Hexproof is the closest read: it saves the
-			// creature from targeted removal, which is what the card is played for.
+			// Protection from a colour is impossible — cards have no colour. Protection does two
+			// jobs, and each half needs its own mechanic here:
+			//   - "can't be TARGETED" -> hexproof, which dodges targeted removal.
+			//   - "can't be DAMAGED"  -> damage prevention, which wins the fight and survives burn
+			//                            and sweepers.
+			// Hexproof alone was the original read and it undersold the card badly, doing nothing
+			// whatever in combat. Together they are a fair reskin and still honestly weaker than
+			// the printed card: the creature dies to Murder, to an edict and to -X/-X.
+			//
+			// BOTH halves are UntilYourNextTurn, for the reason every prevention effect here uses
+			// it: with no priority window this is castable only on your own turn, while the
+			// attacks and removal it exists to answer arrive on the opponent's. An end-of-turn
+			// shield expires before the thing it was cast to stop.
 			CardFactory
 				.Instant("Gods Willing", manaCost: 1)
-				.WithGrantKeyword(hexproof: true)
+				.WithDamagePrevention(preventAll: true)
+				.WithTarget(Single().YourCreatures())
+				.WithGrantKeyword(hexproof: true, duration: ModifierDuration.UntilYourNextTurn)
 				.WithTarget(Single().YourCreatures())
 				.WithScry(1)
 				.Build(),
@@ -54,7 +67,7 @@ public static class CoresetCubeWhiteSpells
 			// Now expressible: CardType makes "artifact or enchantment" a real question rather
 			// than a guess from subtype strings.
 			CardFactory
-				.Instant("Disenchant", manaCost: 2)
+				.Instant("Disenchant", manaCost: 1)
 				.WithAction(
 					new DestroyPermanentAction(),
 					TargetingStrategy.SingleTarget(

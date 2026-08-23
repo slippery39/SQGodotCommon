@@ -397,6 +397,25 @@ assume.
 The final `Console.ReadKey` throws `InvalidOperationException` when stdin is redirected. It fires
 *after* the model is written, so the file is safe; ignore it.
 
+**Verify the console's `bin/` timestamps before trusting a training run.** `dotnet build
+MtgSimulator.Console.csproj -c Release` can report success while leaving a stale copy of
+`MtgCore.dll` / `MtgSimulator.dll` in `MtgSimulator.Console/bin/Release/net10.0/`, and
+`dotnet run --no-build` then measures code that is not in the binary. This cost two full training
+runs and three wrong conclusions in one session: a fix was declared ineffective twice when it had
+simply never been compiled in. The tell is maddening — unit tests pass (the test projects rebuild
+correctly) while the training run disagrees, which reads exactly like a real bug in the fix.
+
+It is the same class as the `sim_results/` trap below, one level down: the thing you are measuring
+is not the thing you changed.
+
+```
+rm -rf MtgSimulator.Console/bin MtgSimulator.Console/obj MtgSimulator/bin MtgSimulator/obj        MtgCore/bin MtgCore/obj
+dotnet build MtgSimulator.Console/MtgSimulator.Console.csproj -c Release --no-incremental
+ls -la MtgSimulator.Console/bin/Release/net10.0/MtgCore.dll   # must be newer than your edit
+```
+
+**When a training run contradicts a passing unit test, suspect the binary before the diagnosis.**
+
 **`sim_results/` is relative to the SHELL's working directory, not the project's.** `dotnet run`
 does not chdir into the project, so running from the repo root writes `./sim_results/` while
 running from inside `MtgSimulator.Console/` writes `MtgSimulator.Console/sim_results/`. Two

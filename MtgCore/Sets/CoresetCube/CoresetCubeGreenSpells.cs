@@ -174,7 +174,7 @@ public static class CoresetCubeGreenSpells
 				)
 				.Build(),
 			CardFactory
-				.Instant("Might of Oaks", manaCost: 4)
+				.Instant("Might of Oaks", manaCost: 3)
 				.WithBoost(7, 7)
 				.WithTarget(Single().Creatures())
 				.Build(),
@@ -182,7 +182,7 @@ public static class CoresetCubeGreenSpells
 			// state, so the second cannot re-find the first. Distinct names are not enforced
 			// beyond that, which only matters for a deck running duplicates.
 			CardFactory
-				.Instant("Shared Summons", manaCost: 5)
+				.Instant("Shared Summons", manaCost: 4)
 				.WithAction(
 					new PipelineAction
 					{
@@ -324,8 +324,8 @@ public static class CoresetCubeGreenSpells
 			// default to a SINGLE target, and a team pump that forgets to say so is a card that
 			// buffs exactly one creature. Fortify shipped blank for precisely this.
 			CardFactory
-				.Sorcery("Overrun", manaCost: 5)
-				.WithBoost(3, 3)
+				.Sorcery("Overrun", manaCost: 4)
+				.WithBoost(4, 4)
 				.WithTarget(AllValid().AllYourCreatures())
 				.WithGrantKeyword(trample: true)
 				.WithTarget(AllValid().AllYourCreatures())

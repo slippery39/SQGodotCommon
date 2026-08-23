@@ -63,6 +63,21 @@ public class GameRunner
 		public readonly List<string> PlayedCards2 = [];
 		public readonly List<GameEvent> AllEvents = [];
 		public readonly Stopwatch Timer = Stopwatch.StartNew();
+
+		/// <summary>
+		/// The actions chosen during the CURRENT turn, cleared at each turn boundary.
+		///
+		/// Exists because the flagged-game snapshot could not see the thing it most needed to
+		/// show. `TurnLogs` is built from game EVENTS, and the actions that cause an action-limit
+		/// draw are typically the ones that emit no event at all — activating an equip, moving an
+		/// attachment. A snapshot of a game that burned 200 actions in one turn was showing 11
+		/// events and no way to tell what was repeating, which cost two wrong diagnoses and two
+		/// training runs.
+		///
+		/// Names only, not actions: this is held for every game, so it must stay cheap, and the
+		/// same reasoning applies as to DrawDiagnostics.BoardSnapshot not being a GameStateSnapshot.
+		/// </summary>
+		public readonly List<string> ActionsThisTurn = [];
 	}
 
 	public (GameResult Result, GameState FinalState) Run(
@@ -120,6 +135,7 @@ public class GameRunner
 	)
 	{
 		var actionsThisTurn = 0;
+		ctx.ActionsThisTurn.Clear();
 
 		while (true)
 		{
@@ -143,6 +159,9 @@ public class GameRunner
 				ctx.HadActionWarning = true;
 
 			var chosen = strategy.SelectAction(ctx.State, ids, game.ActivePlayerId);
+			// Recorded BEFORE execution — an action that moves a card must be described while its
+			// source is still findable.
+			ctx.ActionsThisTurn.Add(ActionDescriber.Describe(chosen, ctx.State));
 			var (newState, events) = ExecuteAction(ctx.State, chosen);
 			ctx.State = newState;
 			TrackDrawnCards(events, ids, cardNames, ctx.DrawnCards1, ctx.DrawnCards2);
@@ -220,6 +239,7 @@ public class GameRunner
 				EndReason = endReason,
 				TurnCount = turnCount,
 				TotalActions = ctx.TotalActions,
+				FinalTurnActions = ctx.ActionsThisTurn.ToList(),
 				HadActionWarning = ctx.HadActionWarning,
 				GameDurationMs = ctx.Timer.ElapsedMilliseconds,
 				Player1DrawnCards = ctx.DrawnCards1,

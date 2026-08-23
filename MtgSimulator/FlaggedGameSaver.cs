@@ -67,6 +67,7 @@ public static class FlaggedGameSaver
 			Player1 = BuildPlayerSnapshot(state, player1Id),
 			Player2 = BuildPlayerSnapshot(state, player2Id),
 			TurnLogs = BuildTurnLogs(result.AllEvents, player1Id, cardNames),
+			FinalTurnActions = result.FinalTurnActions,
 			ExceptionMessage = result.ExceptionMessage,
 			ExceptionStackTrace = result.ExceptionStackTrace,
 		};

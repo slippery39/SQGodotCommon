@@ -44,6 +44,27 @@ public record SelectCardFromZoneAction : GameAction
 	/// </summary>
 	public bool ExcludeSourceCard { get; init; } = false;
 
+	/// <summary>
+	/// Bounds the search to cards costing STRICTLY LESS than the card whose id sits in context
+	/// under this key. Empty means no bound.
+	///
+	/// The bound has to be dynamic: Evolutionary Leap replaces a creature that just died with a
+	/// cheaper one, so the cap is whatever that creature cost and is not knowable at build time.
+	/// HasManaCostAtMostSpecification takes a literal, which cannot express it.
+	///
+	/// A missing or unresolvable card id means NO bound rather than a bound of zero — a zero cap
+	/// would silently match nothing and the card would read as a blank.
+	/// </summary>
+	public string MaxManaCostExclusiveFromCardContextKey { get; init; } = "";
+
+	/// <summary>
+	/// Picks the most expensive match instead of the first one. Mirrors
+	/// SelectCardFromLibraryAction.SelectBestByManaCost and exists for the same reason: library
+	/// order is random, so a first-match search is really "the top card of your library" and a
+	/// tutor that finds a random creature is not a tutor.
+	/// </summary>
+	public bool SelectBestByManaCost { get; init; } = false;
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var castingPlayerId = string.IsNullOrEmpty(PlayerIdContextKey)
@@ -67,13 +88,30 @@ public record SelectCardFromZoneAction : GameAction
 			IsNonTargeted = true,
 		};
 
-		var candidate = gameState
+		// int.MaxValue means "no bound" — see MaxManaCostExclusiveFromCardContextKey. A missing
+		// reference card must not collapse the search to nothing.
+		var maxCostExclusive = int.MaxValue;
+		if (!string.IsNullOrEmpty(MaxManaCostExclusiveFromCardContextKey))
+		{
+			var referenceId = GetInput<int>(MaxManaCostExclusiveFromCardContextKey, 0);
+			if (referenceId != 0 && gameState.GetObject(referenceId) is Card reference)
+				maxCostExclusive = reference.ManaCost;
+		}
+
+		var matches = gameState
 			.GetCardsInZone(zoneId)
-			.FirstOrDefault(c =>
+			.Where(c =>
 				(string.IsNullOrEmpty(Subtype) || c.HasSubtype(Subtype))
 				&& (excludeId == 0 || c.Id != excludeId)
+				&& c.ManaCost < maxCostExclusive
 				&& (Filter == null || Filter.IsSatisfiedBy(c.Id, filterContext))
 			);
+
+		// MaxBy ties on the first match, which is library order — random but deterministic for a
+		// given shuffle, same rule the rest of the engine uses for engine-made choices.
+		var candidate = SelectBestByManaCost
+			? matches.MaxBy(c => c.ManaCost)
+			: matches.FirstOrDefault();
 
 		var foundId = candidate?.Id ?? 0;
 

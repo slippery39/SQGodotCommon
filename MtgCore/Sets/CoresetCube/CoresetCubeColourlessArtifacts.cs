@@ -102,7 +102,7 @@ public static class CoresetCubeColourlessArtifacts
 				.Artifact("Manifold Key", manaCost: 1)
 				.WithActivatedAbility(
 					"Unlock",
-					manaCost: 3,
+					manaCost: 1,
 					effect: eb => eb.WithExhaust().WithTarget(Single().OpponentCreatures())
 				)
 				.Build(),
@@ -118,7 +118,7 @@ public static class CoresetCubeColourlessArtifacts
 				.Artifact("Crown of Empires", manaCost: 2)
 				.WithActivatedAbility(
 					"Command",
-					manaCost: 3,
+					manaCost: 1,
 					effect: eb =>
 						eb.WithExhaust()
 							.WithConditionalAction(
@@ -147,20 +147,20 @@ public static class CoresetCubeColourlessArtifacts
 
 			// Printed: "{3},{T}: Draw a card." Faithful.
 			CardFactory
-				.Artifact("Arcane Encyclopedia", manaCost: 3)
+				.Artifact("Arcane Encyclopedia", manaCost: 2)
 				.WithActivatedAbility(
 					"Consult",
-					manaCost: 3,
+					manaCost: 2,
 					effect: eb => eb.WithDraw(1).WithTarget(TargetingStrategy.Self())
 				)
 				.Build(),
 			// Printed: "{1},{T}: Scry 2." Faithful. WithScry is a real choice with MinChoices = 0 —
 			// bottoming a card unconditionally is strictly worse than doing nothing half the time.
 			CardFactory
-				.Artifact("Crystal Ball", manaCost: 3)
+				.Artifact("Crystal Ball", manaCost: 2)
 				.WithActivatedAbility(
 					"Gaze",
-					manaCost: 1,
+					manaCost: 0,
 					effect: eb => eb.WithScry(2).WithTarget(TargetingStrategy.Self())
 				)
 				.Build(),
@@ -273,7 +273,7 @@ public static class CoresetCubeColourlessArtifacts
 			// Faithful. The two damage halves are separate effects rather than a replaced amount:
 			// 1 always, plus 2 more with the set, which totals the printed 3.
 			CardFactory
-				.Artifact("Scepter of Empires", manaCost: 3)
+				.Artifact("Scepter of Empires", manaCost: 1)
 				.WithActivatedAbility(
 					"Rule",
 					manaCost: 0,
@@ -302,7 +302,7 @@ public static class CoresetCubeColourlessArtifacts
 			// instead, which is what the card does in practice on a board with no blockers, and it
 			// costs one more because it now also helps on defence.
 			CardFactory
-				.Artifact("War Horn", manaCost: 4)
+				.Artifact("War Horn", manaCost: 2)
 				.WithStaticBoost(1, 0, TargetSpecification.CreatureControlledByYou())
 				.Build(),
 			// ===== FOUR =====
@@ -355,7 +355,7 @@ public static class CoresetCubeColourlessArtifacts
 			// five: reliable and unactivated is a real upgrade over a tap ability, but it also
 			// produces nothing on the turn it lands, which is the offsetting cost.
 			CardFactory
-				.Artifact("Gilded Lotus", manaCost: 5)
+				.Artifact("Gilded Lotus", manaCost: 4)
 				.WithTriggeredAbility(
 					"Bloom",
 					TriggerConditions.OnYourUpkeep(),
@@ -365,7 +365,7 @@ public static class CoresetCubeColourlessArtifacts
 			// Printed: "When this artifact enters, it deals 2 damage to any target. {T}: Add one
 			// mana of any color." Faithful, with the mana half on the upkeep.
 			CardFactory
-				.Artifact("Meteorite", manaCost: 5)
+				.Artifact("Meteorite", manaCost: 4)
 				.WithEtbTrigger(
 					"Impact",
 					eb => eb.WithDamage(2).WithTarget(Random().OpponentOrOpponentCreatures())
@@ -382,7 +382,7 @@ public static class CoresetCubeColourlessArtifacts
 			// damage to any target." Faithful — two abilities, one triggered and one activated, so
 			// the two-{T} problem does not arise.
 			CardFactory
-				.Artifact("Staff of Nin", manaCost: 6)
+				.Artifact("Staff of Nin", manaCost: 4)
 				.WithTriggeredAbility(
 					"Foresight",
 					TriggerConditions.OnYourUpkeep(),

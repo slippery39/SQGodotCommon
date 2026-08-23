@@ -79,12 +79,31 @@ public static class CoresetCubeGreenPermanents
 			// A repeatable sacrifice outlet that converts a creature into a better creature. The
 			// tutor is filtered by component rather than subtype — "a creature card" is not a
 			// subtype string. Bounded by needing a creature to eat, so it needs no per-turn cap.
+			// WAS "{1}, sacrifice a creature: search your library for a creature card, put it in
+			// hand". It sat at the bottom of the model for the same reason Barrage of Expendables
+			// did, and it is not a rate problem: the AI is offered exactly ONE sacrifice payment,
+			// and giving up a creature plus a mana for a card it cannot cast until next turn is a
+			// trade StateEvaluator refuses on nearly every board.
+			//
+			// Rebuilt as a PAYOFF on deaths the deck already suffers, which removes the decision
+			// the AI was bad at. Three deliberate choices:
+			//   - The replacement must cost STRICTLY LESS than the creature that died, so this is
+			//     attrition value rather than a free upgrade. The cap is dynamic, which is what
+			//     MaxManaCostExclusiveFromCardContextKey exists for — it reads the dead creature
+			//     out of ContextKeys.TriggerSubjectId.
+			//   - It enters the BATTLEFIELD, not hand. To hand it is a slow cantrip the AI already
+			//     undervalues; onto the board it replaces a body immediately, which is the whole
+			//     point of "Leap".
+			//   - SelectBestByManaCost, because library order is random and a first-match tutor
+			//     hands you an arbitrary creature rather than the best one under the cap.
+			// maxPerTurn: 1 bounds it — an unbounded death payoff plus any sacrifice outlet is
+			// exactly the free-repeatable shape that hangs the search.
 			CardFactory
 				.Enchantment("Evolutionary Leap", manaCost: 2)
-				.WithActivatedAbility(
+				.WithTriggeredAbility(
 					"Evolve",
-					manaCost: 1,
-					effect: eb =>
+					TriggerConditions.OnCreatureYouControlDies(),
+					eb =>
 						eb.WithAction(
 							new PipelineAction
 							{
@@ -96,20 +115,24 @@ public static class CoresetCubeGreenPermanents
 										{
 											Types = CardType.Creature,
 										},
+										MaxManaCostExclusiveFromCardContextKey =
+											ContextKeys.TriggerSubjectId,
+										SelectBestByManaCost = true,
 										PlayerIdContextKey = ContextKeys.CastingPlayerId,
 										OutputKey = "leap_target",
 									},
-									new MoveCardToHandAction
+									// Controller comes from ContextKeys.CastingPlayerId, which
+									// ResolveEffectAction already injects — a library card's own
+									// ControllerId is its owner, so no override is needed.
+									new PutIntoBattlefieldAction
 									{
 										CardIdContextKey = "leap_target",
-										PlayerIdContextKey = ContextKeys.CastingPlayerId,
 									}
 								),
 							},
 							TargetingStrategy.NoTarget()
 						),
-					costs: cb => cb.Sacrifice(TargetSpecification.CreatureControlledByYou()),
-					maxPerTurn: 0
+					maxPerTurn: 1
 				)
 				.Build(),
 			// "At the beginning of the end step, if enchanted creature's power is 4 or greater,
@@ -151,7 +174,7 @@ public static class CoresetCubeGreenPermanents
 			// straight upkeep ramp — there is no land permanent, so the reveal has nothing to
 			// decide. Capped at one per turn as printed.
 			CardFactory
-				.Enchantment("Into the Wilds", manaCost: 4)
+				.Enchantment("Into the Wilds", manaCost: 3)
 				.WithTriggeredAbility(
 					"Growth of the Wilds",
 					TriggerConditions.OnYourUpkeep(),
@@ -193,12 +216,9 @@ public static class CoresetCubeGreenPermanents
 					"Saddle Up",
 					eb => eb.WithCreateTokens(CoresetCubeGreenTokens.Wolf(), 1)
 				)
-				.WithActivatedAbility(
-					"Equip",
-					manaCost: 3,
-					effect: eb =>
-						eb.WithAction(new AttachEquipmentAction(), Single().YourCreatures())
-				)
+				// Was hand-built, which silently defaulted to maxPerTurn 1 and skipped the
+				// current-wearer exclusion. WithEquip is the shared helper that owns both.
+				.WithEquip(3)
 				.Build(),
 			// ===== PLANESWALKERS =====
 

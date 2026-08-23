@@ -546,14 +546,13 @@ public record CheckStateBasedEffectsAction : GameAction
 		var deckingKills = state.TryGetGame()?.DeckingLossEnabled ?? true;
 		bool Decked(MtgPlayer p) => deckingKills && p.AttemptedDrawFromEmptyLibrary;
 
-		var p1ShouldLose =
-			!player1.HasLost
-			&& (player1.Life <= 0 || Decked(player1))
-			&& !CannotLose(state, Player1Id);
-		var p2ShouldLose =
-			!player2.HasLost
-			&& (player2.Life <= 0 || Decked(player2))
-			&& !CannotLose(state, Player2Id);
+		// CannotLose covers the LIFE clause only — decking still kills. See CannotLoseComponent:
+		// an Angel that answered both left no way at all to end the game, and the resulting
+		// unfinishable games were the single largest source of flagged draws in the set.
+		bool LifeLoss(MtgPlayer p, int id) => p.Life <= 0 && !CannotLose(state, id);
+
+		var p1ShouldLose = !player1.HasLost && (LifeLoss(player1, Player1Id) || Decked(player1));
+		var p2ShouldLose = !player2.HasLost && (LifeLoss(player2, Player2Id) || Decked(player2));
 
 		static string LossReason(MtgPlayer p) =>
 			p.Life <= 0 ? "life total reached zero" : "drew from an empty library";

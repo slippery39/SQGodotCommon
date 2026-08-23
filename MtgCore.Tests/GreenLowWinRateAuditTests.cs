@@ -57,27 +57,15 @@ public class GreenLowWinRateAuditTests
 		);
 	}
 
-	/// <summary>
-	/// Evolutionary Leap trades a creature for a creature. If the search finds nothing it is a
-	/// pure sacrifice outlet — strictly card disadvantage, which is exactly what a 39% win rate
-	/// looks like.
-	/// </summary>
-	[Test]
-	public void EvolutionaryLeap_TradesTheSacrificedCreatureForOneFromYourLibrary()
-	{
-		var state = WithLibrary(_state, "Grizzly One", "Grizzly Two");
-		var (withLeap, leap) = AddTo(state, Find("Evolutionary Leap"), ZoneType.Battlefield);
-		var (withFodder, _) = AddTo(withLeap, MakeCreature("Fodder"), ZoneType.Battlefield);
-
-		var handBefore = HandCount(withFodder);
-		var after = ActivateFirstAbility(withFodder, leap);
-
-		Assert.That(
-			HandCount(after) - handBefore,
-			Is.EqualTo(1),
-			"the whole card is turning a body into a card — without the tutor it is pure loss"
-		);
-	}
+	// Evolutionary Leap's activated ability is gone — it is now a death trigger that puts a
+	// strictly cheaper creature onto the battlefield, pinned by LowWinRateRebuildTests.
+	//
+	// The audit this fixture performs still stands and is worth recording: the card was NOT inert.
+	// The tutor worked (once IsCreatureSpecification was replaced with IsCardTypeSpecification —
+	// see below). It measured at ~39% because the AI would not pay a creature plus a mana for a
+	// card it could not cast until next turn, which MtgActionGenerator made worse by offering
+	// exactly one sacrifice payment. An inert card and a card the AI refuses to play look
+	// identical in a win-rate table and need opposite fixes.
 
 	/// <summary>
 	/// Woodland Bellower's six mana buys a 6/5 AND a free creature. Without the second half it is

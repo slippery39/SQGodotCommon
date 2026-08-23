@@ -93,8 +93,22 @@ public class CoresetCubeColourlessTests
 		Assert.That(cheapArtifacts, Is.GreaterThanOrEqualTo(15), "affinity needs a critical mass");
 	}
 
+	/// <summary>
+	/// This used to require `MaxActivationsPerTurn == 0` (unlimited), matching the printed rule.
+	/// **That was changed deliberately, and the reason is a harness one rather than a balance one.**
+	///
+	/// With Swiftfoot Boots at equip {0} the AI moved the boots between two creatures until
+	/// GameRunner's 200-action-per-turn limit ended the game as a draw: 28.7% of games with Boots
+	/// on board drew against a 0.7% base rate, and Boots was on the battlefield in 12 of 12 sampled
+	/// action-limit games. It is not a scoring tie the search could be taught to break — the equip
+	/// measures 74.1 against 72.7 for ending the turn, and moving it back measures +1.4 again. See
+	/// DesignNotes.md and PermanentCardBuilder.WithEquip.
+	///
+	/// Once per turn still allows the thing unlimited equips exist for: moving a sword off a dying
+	/// creature. Restore unlimited only after the evaluator oscillation is fixed and re-measured.
+	/// </summary>
 	[Test]
-	public void EveryEquipment_HasARepeatableEquipAbility()
+	public void EveryEquipment_HasAnEquipAbility_CappedAtOncePerTurn()
 	{
 		var equipment = All.Where(c => c.GetComponent<EquipmentComponent>() != null).ToList();
 
@@ -108,9 +122,8 @@ public class CoresetCubeColourlessTests
 			Assert.That(equip, Is.Not.Null, $"{card.Name} has no equip ability");
 			Assert.That(
 				equip!.MaxActivationsPerTurn,
-				Is.Zero,
-				$"{card.Name}'s equip must be repeatable — moving a sword off a dying creature "
-					+ "is most of what Equipment does"
+				Is.EqualTo(1),
+				$"{card.Name}'s equip must be capped — unlimited free equips hang the game"
 			);
 		}
 	}

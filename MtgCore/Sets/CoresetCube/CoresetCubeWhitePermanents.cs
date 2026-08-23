@@ -172,18 +172,9 @@ public static class CoresetCubeWhitePermanents
 				.Artifact("Ancestral Blade", manaCost: 2)
 				.WithComponent(new EquipmentComponent { PowerBonus = 1, ToughnessBonus = 1 })
 				.WithEtbTrigger("Forge", eb => eb.WithCreateTokens(CoresetCubeTokens.Soldier()))
-				.WithActivatedAbility(
-					"Equip",
-					manaCost: 1,
-					effect: eb =>
-						eb.WithAction(
-							new AttachEquipmentAction(),
-							TargetingStrategy.SingleTarget(
-								TargetSpecification.CreatureControlledByYou()
-							)
-						),
-					maxPerTurn: 0
-				)
+				// Hand-built copy of WithEquip, and so it missed the current-wearer exclusion.
+				// Routing through the helper is what stops the next equipment missing it too.
+				.WithEquip(1)
 				.Build(),
 			// ===== PLANESWALKERS =====
 

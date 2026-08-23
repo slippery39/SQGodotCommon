@@ -30,24 +30,56 @@ public record StartTurnAction : GameAction
 		creature.FrozenTurns > 0 || creature.FrozenBySourceId != 0;
 
 	/// <summary>
-	/// Strips UntilYourNextTurn replacement effects from the given player. Mirrors
+	/// Expires everything stamped UntilYourNextTurn on the given player and their board. Mirrors
 	/// EndTurnAction.ClearEndOfTurnReplacements, but fires a turn later and for one player.
+	///
+	/// TWO axes, and missing either leaves an effect that never wears off:
+	///
+	/// - BOTH HOMES. Prevention lives on the player (Safe Passage) or on a single creature
+	///   (Gods Willing, see PreventDamageAction), so the player object alone is not enough.
+	/// - BOTH COMPONENT KINDS. ReplacementModifierComponent AND AppliedKeywordComponent.
+	///   ClearEndOfTurnModifiers only ever handles UntilEndOfTurn, so a keyword granted for a
+	///   turn cycle — Gods Willing's hexproof — had nothing anywhere that would remove it.
+	///
+	/// Both failures are silent: no error, just a creature that is quietly permanently hexproof
+	/// or permanently immune to damage. PowerToughnessModifier is deliberately NOT swept here;
+	/// nothing grants P/T for a turn cycle and CLAUDE.md records that as a known limitation.
 	/// </summary>
-	private static GameState ClearUntilYourNextTurnReplacements(GameState state, int playerId)
+	private static GameState ClearUntilYourNextTurnEffects(GameState state, int playerId)
 	{
-		if (state.GetObject(playerId) is not MtgPlayer player)
+		if (state.GetObject(playerId) is MtgPlayer player)
+		{
+			var kept = Strip(player.Components);
+			if (kept.Length != player.Components.Length)
+				state = state.UpdateObject(playerId, player with { Components = kept });
+		}
+
+		var battlefieldId = state.GetPlayerZoneId(playerId, ZoneType.Battlefield);
+		if (battlefieldId == 0)
 			return state;
 
-		var kept = player
-			.Components.Where(c =>
-				c is not ReplacementModifierComponent r
-				|| r.Duration != ModifierDuration.UntilYourNextTurn
-			)
-			.ToImmutableArray();
+		foreach (var card in state.GetCardsInZone(battlefieldId).ToList())
+		{
+			var kept = Strip(card.Components);
+			if (kept.Length != card.Components.Length)
+				state = state.UpdateObject(card.Id, card with { Components = kept });
+		}
 
-		return kept.Length == player.Components.Length
-			? state
-			: state.UpdateObject(playerId, player with { Components = kept });
+		return state;
+
+		static ImmutableArray<GameComponent> Strip(ImmutableArray<GameComponent> components) =>
+			components
+				.Where(c =>
+					c switch
+					{
+						ReplacementModifierComponent r => r.Duration
+							!= ModifierDuration.UntilYourNextTurn,
+						AppliedKeywordComponent k => k.Duration
+							!= ModifierDuration.UntilYourNextTurn,
+						_ => true,
+					}
+				)
+				.ToImmutableArray();
 	}
 
 	public override ActionResult Execute(GameState gameState)
@@ -80,7 +112,7 @@ public record StartTurnAction : GameAction
 		// "Until the start of your next turn" expires HERE, for the player whose turn is beginning
 		// — that is what lets a shield cast on your turn survive the opponent's turn in between.
 		// EndTurnAction deliberately leaves this duration alone; it only strips UntilEndOfTurn.
-		state = ClearUntilYourNextTurnReplacements(state, ActivePlayerId);
+		state = ClearUntilYourNextTurnEffects(state, ActivePlayerId);
 
 		// Roll the storm counter into last turn's count, then reset it. The roll-over is what
 		// lets werewolf transform conditions ask "were no spells cast last turn?".
@@ -132,6 +164,11 @@ public record StartTurnAction : GameAction
 							WasAttackedThisTurn = false,
 							IsExhausted = StaysExhausted(cc),
 							FrozenTurns = Math.Max(0, cc.FrozenTurns - 1),
+							// Cover burns down on ITS CONTROLLER's turn, same clock as
+							// FrozenTurns. That is what makes Cover 1 mean "survives the
+							// opponent's next turn" rather than expiring before it ever
+							// protected anything.
+							CoverTurns = Math.Max(0, cc.CoverTurns - 1),
 						}
 					),
 					ActivatedAbilityComponent ac => updatedComponents.SetItem(

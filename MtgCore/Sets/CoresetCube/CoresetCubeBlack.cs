@@ -178,7 +178,7 @@ public static class CoresetCubeBlack
 			// unlimited per turn, so it converts any dying board into card selection — and, now
 			// that a sacrifice actually announces a death, into fuel for every payoff below.
 			CardFactory
-				.Creature("Viscera Seer", manaCost: 1, power: 1, toughness: 1)
+				.Creature("Viscera Seer", manaCost: 1, power: 1, toughness: 2)
 				.WithSubtype(Vampire)
 				.WithSubtype(Wizard)
 				.WithActivatedAbility(

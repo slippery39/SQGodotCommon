@@ -12,6 +12,25 @@ namespace MtgCore;
 ///
 /// Sacrifice moves the permanent directly to its owner's graveyard.
 /// This is not "destroy" — indestructible does not prevent it.
+///
+/// GetValidPayments returns WORST FIRST, and that ordering is load-bearing rather than cosmetic.
+/// MtgActionGenerator.BuildAdditionalCostPayments offers the AI exactly ONE payment per selection
+/// cost — `validPayments.Take(needed)` — so whatever sits at index 0 is the only sacrifice the
+/// search ever gets to consider. In zone order that is the permanent played EARLIEST, which on a
+/// developed board is usually the best one, so every sacrifice outlet was priced to the AI as
+/// "give up your biggest creature".
+///
+/// StateEvaluator then correctly refuses: losing a creature costs CreatureCountWeight (3.0) plus
+/// 2.0 per power plus the race-pressure term, which nothing a sacrifice outlet buys can repay.
+/// The card therefore never activated at all and scored as a blank — Barrage of Expendables at
+/// 39.4%, Blood for Bones and Evolutionary Leap in the same band. That looks like a costing
+/// problem in a win-rate table and is not one; see BottomOfModelCardTests for why the ~40% band
+/// means "inert", not "weak".
+///
+/// Sorting worst-first makes the one offered payment the one a player would actually pick. It is
+/// deliberately a sort rather than enumerating every candidate as its own action: the AI's
+/// branching is capped at 16 (see MtgSimulator/CLAUDE.md) and a wide board would spend the whole
+/// cap on which token to sacrifice.
 /// </summary>
 public record SacrificeAdditionalCost : AdditionalCost
 {
@@ -41,9 +60,15 @@ public record SacrificeAdditionalCost : AdditionalCost
 			SourceCardId = sourceCardId,
 		};
 
+		// Worst first — see the note on this type. Power then toughness then id, the exact
+		// inverse of CreatureEvaluator.PickStrongest, so "best" and "worst" cannot drift apart.
+		// The id tiebreak keeps this deterministic, which the training runs depend on.
 		return state
 			.GetCardsInZone(battlefieldId)
 			.Where(c => Filter == null || Filter.IsSatisfiedBy(c.Id, context))
+			.OrderBy(c => state.GetEffectivePower(c.Id))
+			.ThenBy(c => state.GetEffectiveToughness(c.Id))
+			.ThenBy(c => c.Id)
 			.Select(c => c.Id)
 			.ToImmutableList();
 	}

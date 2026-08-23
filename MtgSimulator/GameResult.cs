@@ -33,6 +33,9 @@ public record GameResult
 	/// </summary>
 	public int TotalActions { get; init; }
 
+	/// <summary>Actions chosen during the final turn — see GameStateSnapshot.FinalTurnActions.</summary>
+	public IReadOnlyList<string> FinalTurnActions { get; init; } = [];
+
 	/// <summary>
 	/// Whether any turn exceeded the action warning threshold (50 actions).
 	/// </summary>

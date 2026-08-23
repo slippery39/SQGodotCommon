@@ -31,32 +31,52 @@ public static class CoresetCubeRedPermanents
 		[
 			// ===== ENCHANTMENTS =====
 
-			// The cheapest repeatable sacrifice outlet in the cube, and the reason it matters is
-			// that a sacrifice now announces a real death — see SacrificeAdditionalCost. Unlimited
-			// per turn: it converts a board of Goblin tokens into reach.
+			// WAS a sacrifice outlet: "{0}, sacrifice a creature: deal 1 damage". It measured at
+			// the bottom of the model twice over, and the reason was never the rate — the AI is
+			// offered exactly ONE sacrifice payment, and until SacrificeAdditionalCost was sorted
+			// worst-first that payment was its best creature, which StateEvaluator correctly
+			// refuses forever. Even sorted, paying a whole creature for 1 damage is a trade the
+			// search will almost never take, so the card stayed a near-blank enchantment.
+			//
+			// Rebuilt as a PAYOFF rather than an outlet: it now rewards deaths the deck was going
+			// to suffer anyway instead of asking the AI to manufacture them. That removes the
+			// decision the AI was bad at and keeps the card's identity — a board of dying tokens
+			// still converts into reach, it just no longer costs an activation to do it.
+			//
+			// Random targeting because a death trigger has no targeting window; same shape as the
+			// divided-damage cards in this section.
 			CardFactory
-				.Enchantment("Barrage of Expendables", manaCost: 1)
-				.WithActivatedAbility(
+				.Enchantment("Barrage of Expendables", manaCost: 2)
+				.WithTriggeredAbility(
 					"Expend",
-					manaCost: 1,
-					effect: eb =>
-						eb.WithDamage(1).WithTarget(Single().OpponentOrOpponentCreatures()),
-					costs: cb => cb.Sacrifice(TargetSpecification.CreatureControlledByYou()),
-					maxPerTurn: 0
+					TriggerConditions.OnCreatureYouControlDies(),
+					eb =>
+						eb.WithDamage(1)
+							.WithTarget(
+								TargetingStrategy.RandomTarget(
+									TargetSpecification.OpponentOrOpponentCreatures()
+								)
+							)
 				)
 				.Build(),
 			// "Discard a land card" is a genuine cost here, not a reskin: a land in hand is a real
 			// card and pitching one gives up a mana drop. This and Magmatic Insight are why
 			// DiscardAdditionalCost gained a Filter.
 			CardFactory
+				// Damage raised 2 -> 3 as a balance probe. The card reads well — it turns flood into
+				// reach — but measured near the bottom of the model, and it is not obvious whether
+				// that is the rate or the AI. If 3 does not move it, the rate was never the problem
+				// and the next place to look is how the search values discarding a land: the
+				// evaluator counts non-land cards in hand only, so pitching a land costs it nothing
+				// on paper and the damage should already look free.
 				.Enchantment("Molten Vortex", manaCost: 1)
 				.WithActivatedAbility(
 					"Vent",
-					manaCost: 1,
+					manaCost: 0,
 					effect: eb =>
-						eb.WithDamage(2).WithTarget(Single().OpponentOrOpponentCreatures()),
+						eb.WithDamage(3).WithTarget(Single().OpponentOrOpponentCreatures()),
 					costs: cb => cb.Discard(1, "Land"),
-					maxPerTurn: 0
+					maxPerTurn: 1
 				)
 				.Build(),
 			// Printed: "whenever a nontoken creature enters under your control, you may pay {R};
@@ -103,11 +123,11 @@ public static class CoresetCubeRedPermanents
 			// card in the cube is not worth it — the looting half is the half that plays, and it
 			// fixes red's worst problem, which is flooding out with a hand of lands.
 			CardFactory
-				.Artifact("Chandra's Regulator", manaCost: 2)
+				.Artifact("Chandra's Regulator", manaCost: 1)
 				.WithActivatedAbility(
 					"Regulate",
 					manaCost: 1,
-					effect: eb => eb.WithDiscard(1).WithDraw(1).WithTarget(TargetingStrategy.Self())
+					effect: eb => eb.WithDiscard(1).WithDraw(2).WithTarget(TargetingStrategy.Self())
 				)
 				.Build(),
 			// ===== PLANESWALKERS =====

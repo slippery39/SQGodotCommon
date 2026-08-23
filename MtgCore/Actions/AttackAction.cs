@@ -98,6 +98,11 @@ public record AttackAction : GameAction
 			if (isPlaneswalker)
 				return ValidateTauntConstraint(gameState, targetCard.ControllerId);
 
+			if (IsCovered(targetCard))
+				return ValidationResult.Invalid(
+					"This creature is under Cover and can't be attacked"
+				);
+
 			if (
 				!CanReach(
 					gameState.GetEffectiveStats(AttackerId),
@@ -130,6 +135,14 @@ public record AttackAction : GameAction
 		!target.HasFlying || attacker.HasFlying || attacker.HasReach;
 
 	/// <summary>
+	/// Cover N: this creature cannot be attacked at all. Read off the raw CreatureComponent
+	/// rather than CreatureStats because it is a countdown, not a keyword — see
+	/// CreatureComponent.CoverTurns.
+	/// </summary>
+	private static bool IsCovered(Card card) =>
+		card.GetComponent<CreatureComponent>()?.CoverTurns > 0;
+
+	/// <summary>
 	/// Enforces the Taunt rule: if the defending player has Taunt creatures, the attacker
 	/// must attack one of them — unless the attacker has Flying and none of the Taunt
 	/// creatures have Flying or Reach (in which case the aerial attacker flies over).
@@ -158,6 +171,12 @@ public record AttackAction : GameAction
 				if (!stats.HasTaunt)
 					continue;
 				if (!CanReach(attackerStats, stats))
+					continue;
+				// Exactly the reason CanReach is filtered here: Taunt may only compel an attack
+				// that is otherwise LEGAL. A creature with both Taunt and Cover would otherwise
+				// forbid every attack on its controller — Taunt compelling the one target that
+				// Cover simultaneously forbids — which locks combat rather than shaping it.
+				if (IsCovered(c))
 					continue;
 				tauntCreatures ??= [];
 				tauntCreatures.Add((c.Id, stats.HasFlying, stats.HasReach));
@@ -227,9 +246,18 @@ public record AttackAction : GameAction
 		// whether any OTHER creature has already attacked this turn.
 		var exalted = CountExaltedIfAttackingAlone(gameState);
 
+		// Attacking spends Cover outright — "or until it attacks". The creature is hiding or it is
+		// fighting, never both, and without this Cover would be free upside on an aggressive
+		// creature instead of protection bought by staying home.
 		var state = gameState.UpdateObject(
 			AttackerId,
-			attacker.WithComponentReplaced(attackerCreature with { HasAttacked = true })
+			attacker.WithComponentReplaced(
+				attackerCreature with
+				{
+					HasAttacked = true,
+					CoverTurns = 0,
+				}
+			)
 		);
 
 		if (exalted > 0)
@@ -602,7 +630,8 @@ public record AttackAction : GameAction
 		amount = state.ApplyReplacements(
 			ReplaceableEvent.DamageToCreature,
 			card.ControllerId,
-			amount
+			amount,
+			card.Id
 		);
 		if (amount <= 0)
 			return (state, ImmutableList<GameEvent>.Empty);

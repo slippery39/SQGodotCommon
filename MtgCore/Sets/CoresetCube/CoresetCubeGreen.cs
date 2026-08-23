@@ -91,6 +91,10 @@ public static class CoresetCubeGreen
 				.Creature("Birds of Paradise", manaCost: 1, power: 0, toughness: 1)
 				.WithSubtype(Bird)
 				.WithFlying()
+				// Same reasoning as Elvish Mystic. A 0/1 cannot survive any attack at all, so the
+				// Flying it is printed with protects it only from ground creatures — Cover is what
+				// closes the gap without turning a mana dork into a body.
+				.WithCover(1)
 				.WithTriggeredAbility(
 					"Wild Growth",
 					TriggerConditions.OnYourUpkeep(),
@@ -101,6 +105,10 @@ public static class CoresetCubeGreen
 				.Creature("Elvish Mystic", manaCost: 1, power: 1, toughness: 1)
 				.WithSubtype(Elf)
 				.WithSubtype(Druid)
+				// A dork is the purest utility creature there is: worth nothing in combat, worth a
+				// whole turn of tempo if it lives. One turn of Cover is what makes ramp a real
+				// plan against an aggressive draw instead of a coin flip on the opposing curve.
+				.WithCover(1)
 				.WithTriggeredAbility(
 					"Channel Mana",
 					TriggerConditions.OnYourUpkeep(),
@@ -610,7 +618,7 @@ public static class CoresetCubeGreen
 			// you control pitches in, expressed as damage scaled by the Wolf count. Losing the
 			// drawback makes it better, so it costs one more than printed.
 			CardFactory
-				.Creature("Master of the Wild Hunt", manaCost: 5, power: 3, toughness: 3)
+				.Creature("Master of the Wild Hunt", manaCost: 4, power: 3, toughness: 3)
 				.WithSubtype(Human)
 				.WithSubtype(Shaman)
 				.WithTriggeredAbility(
