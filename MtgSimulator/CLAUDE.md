@@ -793,6 +793,56 @@ which is why it is wrapped and why `MtgGameManager.ForceEndAiTurn()` exists — 
 pending choice (an unresolved `ChoiceAction` blocks the action stack forever) and hands the turn
 back rather than leaving the game wedged.
 
+## Strength harness
+
+`MtgSimulator.Tests/StrengthHarness.cs` plays two AI configurations against each other over real
+drafted decks and returns a win rate with its standard error. **Every strength claim either comes
+from here or is a guess.**
+
+`EvaluatorStrengthTests` drives it, `[Explicit]` because each run plays hundreds of games.
+**Run the two self-checks before trusting any number from it:**
+
+| Self-check | Measured | Catches |
+|---|---|---|
+| `DefaultAgainstItself_IsEven` | 51.3% ± 3.3pp | harness bias — a skew here fakes an effect everywhere |
+| `HarnessCanSeeADifference` (branching 1) | 38.8% ± 3.3pp | a harness that measures nothing |
+
+The second matters more than it looks. **A 50% result is indistinguishable from "no effect", which
+is the answer most of these tests are hoping for** — so the harness has to prove it can see 38.8%
+first. This project has already shipped a comparison that silently measured nothing: raising
+`maxBranching` while `expandBranching` stayed capped, which returned a suspiciously exact result.
+
+`Drafts = 40` (1120 games) resolves a **3.0pp** effect at two standard errors. The 8 drafts the
+original used gives 224 games and 6.7pp — enough for "did we break it", not "is it better".
+
+Three fixes over `BranchingCapStrengthTests`, which pioneered the shape:
+- **Each arm gets its own RNG.** The original shares one `Random` between both strategies, so they
+  consume each other's draws — a confound, and why it could not be parallelised.
+- **Games run in parallel** into a pre-allocated array, folded sequentially.
+- **Arms interleave across the schedule** rather than running in blocks, so neither systematically
+  gets a busier machine. From the SCGAI organisers; this project has already lost a measurement to
+  exactly that.
+
+**To make a change measurable, give it a constructor parameter that turns it off**
+(`terminalDiscount: 1.0f`, `preferFastestWin: false`). Rebuilding an old commit to get an opponent
+is not a harness. Production paths always take the defaults.
+
+### Measured
+
+| Change | Result | Verdict |
+|---|---|---|
+| Terminal discount vs none | 50.2% ± 1.5pp, 1120 games | neutral — kept |
+| Fastest-win vs first-win | 50.1% ± 1.5pp, 1120 games | neutral — kept |
+
+**Both are kept despite being neutral, and that is not a contradiction.** Each fixes a defect that
+is demonstrable at the function level — the discount gives losing positions a gradient instead of
+collapsing every line to one number, and fastest-win stopped the AI bolting its own face when two
+immediate wins were available. Neither situation is common enough to move a win rate over 1120
+games. **Correctness that does not show up in a win rate is still correctness**; what would justify
+reverting is a clear loss, not the absence of a gain.
+
+Read "neutral" as "smaller than ~3pp", not "exactly zero".
+
 ## AI Inspection Tooling
 
 Three pieces over one data model. The point of all of them is the **term breakdown**, not the

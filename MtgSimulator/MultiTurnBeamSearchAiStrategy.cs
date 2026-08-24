@@ -33,6 +33,14 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	private readonly bool _captureDecisions;
 	private readonly float _scoreDivergenceThreshold;
 
+	// Per-half-turn terminal decay. A field only so the strength harness can turn it off; every
+	// production path takes the TerminalDiscount default.
+	private readonly float _terminalDiscount;
+
+	// Whether FindWinner returns the best win or the first one it sees. A field only so the
+	// strength harness can measure the change; every production path takes the default.
+	private readonly bool _preferFastestWin;
+
 	// Optional wall-clock budget per move. When set, the search degrades gracefully
 	// (stops expanding, returns the best node found so far) once the budget is spent.
 	// Null = unbounded — the simulator uses the deterministic rollout budget below instead,
@@ -92,7 +100,9 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		TimeSpan? moveTimeBudget = null,
 		int rolloutBudget = DefaultRolloutBudget,
 		int maxBranching = DefaultMaxBranching,
-		int expandBranching = DefaultExpandBranching
+		int expandBranching = DefaultExpandBranching,
+		float terminalDiscount = TerminalDiscount,
+		bool preferFastestWin = true
 	)
 	{
 		_rolloutBudget = rolloutBudget;
@@ -107,6 +117,8 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		_rng = rng ?? new Random();
 		_captureDecisions = captureDecisions;
 		_scoreDivergenceThreshold = scoreDivergenceThreshold;
+		_terminalDiscount = terminalDiscount;
+		_preferFastestWin = preferFastestWin;
 		_moveBudgetTimestampTicks = moveTimeBudget.HasValue
 			? (long)(moveTimeBudget.Value.TotalSeconds * Stopwatch.Frequency)
 			: 0;
@@ -187,10 +199,17 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	/// test would only reach this through a full beam search, which is the same trap
 	/// <c>ActionsMatch</c> documents: the assertion passes whether or not the logic is present.
 	/// </summary>
-	internal static float DiscountTerminal(float score, int halfTurns) =>
-		MathF.Abs(score) >= StateEvaluator.WinScore
-			? score * MathF.Pow(TerminalDiscount, halfTurns)
-			: score;
+	/// <param name="lambda">
+	/// Per-half-turn decay. Defaults to <see cref="TerminalDiscount"/>; exists as a parameter so
+	/// <c>EvaluatorStrengthTests</c> can play discount-on against discount-off (lambda 1.0) in one
+	/// process. A behaviour change that alters which action is returned has to be measurable
+	/// against its own absence, and rebuilding an old commit to get an opponent is not a harness.
+	/// </param>
+	internal static float DiscountTerminal(
+		float score,
+		int halfTurns,
+		float lambda = TerminalDiscount
+	) => MathF.Abs(score) >= StateEvaluator.WinScore ? score * MathF.Pow(lambda, halfTurns) : score;
 
 	// Starts the per-move clock and work counter. Called at the top of every public entry
 	// point so that both action selection and choice resolution honor the same budget.
@@ -281,7 +300,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 				rootScores[n.RootAction] = n.ConcreteScore;
 		}
 
-		var winner = FindWinner(beam);
+		var winner = FindWinner(beam, _preferFastestWin);
 		if (winner != null)
 		{
 			if (_captureDecisions)
@@ -311,7 +330,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			if (_captureDecisions)
 				UpdateRootScores(rootScores!, nextBeam);
 
-			winner = FindWinner(nextBeam);
+			winner = FindWinner(nextBeam, _preferFastestWin);
 			if (winner != null)
 			{
 				if (_captureDecisions)
@@ -662,7 +681,11 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 		// Terminals short-circuit the loop, so they arrive from different points in time and need
 		// to be made comparable again. See TerminalDiscount.
-		return DiscountTerminal(StateEvaluator.Evaluate(state, _ids, playerId), halfTurns);
+		return DiscountTerminal(
+			StateEvaluator.Evaluate(state, _ids, playerId),
+			halfTurns,
+			_terminalDiscount
+		);
 	}
 
 	/// <summary>
@@ -836,15 +859,22 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	/// <c>MaxBy</c> is stable on ties, so beam order still breaks equal-length wins and this stays
 	/// deterministic.
 	/// </summary>
-	internal static BeamNode? FindWinner(List<BeamNode> beam)
+	/// <param name="preferFastest">
+	/// False restores the old FirstOrDefault behaviour, so <c>EvaluatorStrengthTests</c> can play
+	/// this against its own absence. Production never passes it.
+	/// </param>
+	internal static BeamNode? FindWinner(List<BeamNode> beam, bool preferFastest = true)
 	{
 		BeamNode? best = null;
 		foreach (var node in beam)
-			if (
-				StateEvaluator.IsWin(node.ConcreteScore)
-				&& node.ConcreteScore > (best?.ConcreteScore ?? float.MinValue)
-			)
+		{
+			if (!StateEvaluator.IsWin(node.ConcreteScore))
+				continue;
+			if (!preferFastest)
+				return node;
+			if (node.ConcreteScore > (best?.ConcreteScore ?? float.MinValue))
 				best = node;
+		}
 		return best;
 	}
 
