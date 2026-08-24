@@ -8,11 +8,11 @@ using MtgSimulator;
 
 namespace MtgGame;
 
-public enum AiStrategyType
-{
-	BeamSearch,
-	MultiTurnBeamSearch,
-}
+// AiStrategyType lives in MtgSimulator and is used from here via the using above. A second copy
+// declared in this namespace used to shadow it — C# resolves the enclosing namespace before a
+// using, so every Godot call site silently bound to the local one. Harmless while the two agreed,
+// but "construct a strategy by name" is the seam the scenario viewer and the strength harness both
+// depend on, and two definitions of it is one waiting to disagree.
 
 /// <summary>
 /// Owns the GameState and drives the game loop.

@@ -41,6 +41,12 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | `GameStateSnapshot.cs` | Human-readable snapshot DTO — `GameStateSnapshot`, `PlayerSnapshot`, `CreatureSnapshot`, `TurnLog` |
 | `FlaggedGameSaver.cs` | Builds a snapshot from a flagged `GameState` and writes it as JSON to `flagged_games/` |
 | `DrawDiagnostics.cs` | `BoardSnapshot` capture + the end-of-training draw report: reason split, run-position trend, board medians, per-card lift |
+| `EvaluationBreakdown.cs` | A `StateEvaluator` score split into its eight terms; `readonly record struct` so producing it allocates nothing |
+| `AiDecision.cs` | `AiDecision` / `AiActionCandidate` — one captured decision, its ranked candidates, and their term breakdowns |
+| `Scenarios/StateJson.cs` | Real `GameState` ↔ JSON round-trip; reflection-based `$type` discriminators for every abstract game type |
+| `Scenarios/Scenario.cs` | `Scenario` record (name, note, player to move, state) + `ScenarioStore` load/save/list in `scenarios/` |
+| `Scenarios/ScenarioComparer.cs` | Runs N strategies against one scenario; `StrategyResult` rows and the fixed-width comparison table |
+| `Scenarios/ScenarioConsole.cs` | Console mode 5 — the standalone scenario viewer; owns the named strategy list |
 
 ## Architecture
 
@@ -192,6 +198,77 @@ decision.
 
 **`IAiStrategy`** — swap implementations freely; `GameRunner` and `SimulatorRunner` only depend on the interface.
 
+### Terminal rewards decay with how long they took
+
+A rollout that reaches a win or loss breaks out of `MultiTurnGreedyRollout` early, so unlike every
+other rollout it does not describe the state at the full lookahead horizon. Returning the raw
+`±WinScore` made winning next half-turn and winning in two score **identically**, and dying next
+half-turn and dying in two likewise — so inside the "someone dies within the lookahead" region
+every line collapsed to one number and the search fell through to its tiebreak, at the point where
+the choice matters most.
+
+`DiscountTerminal(score, halfTurns)` multiplies a terminal by `TerminalDiscount ^ halfTurns`.
+Because a loss is negative, decaying moves it **toward zero**, so a later death outscores an
+earlier one — playing for the topdeck falls out of the arithmetic instead of needing a rule.
+**This is why `LossScore` must stay negative rather than 0**: a zero loss decays to zero and the
+survival half of the effect disappears.
+
+λ is not a sensitive parameter — anything in ~0.85–0.99 ranks identically at a 2-turn lookahead.
+The only constraint is that a discounted terminal stays far above the largest non-terminal score.
+From Cowling, Ward & Powley (2012) §D; their λ = 0.99 is calibrated for rollouts that run to a
+terminal over 40–60 turns. Scope is narrow: it only fires when a terminal lands inside the
+lookahead, so it does not touch the oscillation or horizon-blindness defects.
+
+#### Never compare a rollout score against WinScore
+
+**A discounted win is 9500 or 9025, so `>= WinScore` is false for every win the search will ever
+find.** Use `StateEvaluator.IsWin` / `IsDecisive`, which test against `WinThreshold` (2500) —
+comfortably above any board score the weights can produce (~150) and below the most-decayed win at
+any sane lookahead (0.95²⁰ ≈ 3585).
+
+This shipped broken and is worth understanding, because the symptom pointed everywhere except the
+cause. `FindWinner` silently stopped returning winners and both `ResolveChoice` early-outs stopped
+firing, so the search never short-circuited on a found win and burned its full 400-rollout budget
+on every move. **The AI stopped taking a winning line the moment it found one.**
+
+It surfaced as an **8.8% wall-time regression**, which was then blamed on the `Evaluate`/`Explain`
+refactor and "fixed" twice — sharing the battlefield walk, then restoring the original body
+verbatim — neither of which moved it, because neither was the cause.
+
+**What identified it was reading `Avg actions/game` beside the clock.** Actions went *down* while
+time went *up*, which is impossible for a per-call cost and pointed straight at the search doing
+more work per decision. Wall time alone would have shipped duplicated evaluator logic to work
+around a bug introduced two commits earlier.
+
+Pinned by `TerminalDiscountTests`: a win discounted over 0–20 half-turns must still read as a win,
+and the threshold must stay above any plausible board score.
+
+**The general rule, now three for three in this project: a wall-clock number names a symptom, not
+a culprit.** Same class as the stale-binary trap and the parallel-batch draw disaster — always
+check whether the *work* changed before blaming the code you just touched.
+
+Pinned by `MtgSimulator.Tests/TerminalDiscountTests.cs`, at the function rather than through a
+game — reaching a terminal inside a 2-turn rollout needs an already-lethal board where the beam
+mostly wins either way, so a game-level assertion passes with or without the discount.
+
+### `PruneBeam`'s `seen` set is not transposition detection
+
+It uses `ReferenceEqualityComparer`, and its only job is stopping the same node **object** being
+added twice by the concrete bucket and the potential bucket. Nothing in the search compares
+`GameState`s, so two orderings of the same actions are rolled out separately even though they
+reach an identical board. `GameState` is a record, but `ImmutableDictionary` and `ImmutableArray`
+use reference semantics, so the generated `Equals` would not help — a real dedupe needs a
+hand-written state key.
+
+**If that is ever built, key on the resulting STATE, never on which actions commute.** A lord that
+pumps creatures entering after it makes `lord → creature` and `creature → lord` reach different
+states, so they key differently and both survive, with no rule written anywhere about
+commutativity. The state is the ground truth about whether order mattered.
+
+Measure the duplicate rate before building it. `DefaultExpandBranching` (5) is already a lossy
+version of the same optimisation and measured neutral on strength, so it may be capturing most of
+the available benefit.
+
 ## StateEvaluator
 
 Scores a non-terminal state as a weighted sum. Terminal states short-circuit.
@@ -337,12 +414,22 @@ difference by the reason: `TimeLimitReached` under parallel load is expected, wh
 `ActionLimitReached` would mean a genuine loop. Extra turns and counterspell traps — the two loop
 risks in blue — produced no action-limit games at all.
 
-**Balance signal: Wall of Frost tops the model at +16.1pp, 5.7pp clear of second place.** It is a
-0/7 Taunt wall that freezes whatever attacks it — the reskin chosen because this engine has no
-blocking. Taunt plus high toughness is evidently much stronger here than Defender is in real
-Magic, since there is no way to go wide around it. Worth retuning before adding more walls.
-Pacifism sits at the other end (−8.1pp): "can't attack" is weak when the opponent simply attacks
-with something else.
+**Do not record specific card values in this file — record the query that produces them.** A line
+here once read "Wall of Frost tops the model at +16.1pp, 5.7pp clear of second"; after a balance
+pass the file on disk had it at **+1.85, rank 167/408**, and the stale figure was used to argue a
+design position a session later. Card values move double digits in a day, and prose in a document
+loaded into every session is the worst possible place to cache them.
+
+```
+python -c "
+import json; d=json.load(open('sim_results/draft_training_csc.json'))
+prior=d['Wins']/d['Perspectives']; k=25
+v=sorted((100*((c['Wins']+k*prior)/(c['Games']+k))-100*prior, c['Name']) for c in d['Cards'])
+print(v[:10]); print(v[-10:])"
+```
+
+Check the model's mtime against `git log -1` before trusting it — one written before the last
+balance commit is describing a game that no longer exists.
 
 Key rules:
 - **Picks are indices into `Seat.Offer`, never `Card` values.** `Card` is a record, so two copies of one template in a pack compare equal and picking by value would remove the wrong card.
@@ -706,10 +793,85 @@ which is why it is wrapped and why `MtgGameManager.ForceEndAiTurn()` exists — 
 pending choice (an unresolved `ChoiceAction` blocks the action stack forever) and hands the turn
 back rather than leaving the game wedged.
 
+## AI Inspection Tooling
+
+Three pieces over one data model. The point of all of them is the **term breakdown**, not the
+score: "this action scores 4.52" is not a diagnosis, but `creatures +3.00, power +4.00,
+race −3.20, hand −1.40, lands-in-hand +0.00` is — the land-pricing defect is visible on sight in
+the second form and invisible in the first.
+
+**`StateEvaluator.Explain` is the implementation and `Evaluate` is a one-line wrapper over its
+`Total`.** That direction is deliberate. A second copy of the weighted sum written for display
+would drift from the one the search uses, and a panel showing terms that do not sum to the real
+score sends you hunting a discrepancy that exists only in the renderer. `EvaluationBreakdownTests`
+pins them together. It returns a `readonly record struct`, so the hottest call in the engine
+allocates nothing.
+
+**Measured at ~0% over 300 games**, three interleaved rounds (57.75s vs 58.78s, the gap inside
+first-run JIT warmup). Three earlier measurements said +11.8%, +8.0% and +8.8% and were all
+measuring the win-detection bug above, not this. Do not re-split them on an unmeasured hunch.
+
+**Summation order in `Explain` must not change.** Float addition is not associative and
+`DeterminismTests` / `MachineIndependenceTests` compare exact results.
+
+| Piece | Where | Trigger |
+|---|---|---|
+| Overlay | `SQGodotCommon/MtgGame/Board/AiInspectorPanel.cs` | **F6** in game |
+| Scenario capture | `MtgGameScene.SaveScenario` | **F7** in game |
+| Standalone viewer | `Scenarios/ScenarioConsole.cs` | console **mode 5** |
+
+`AiDecision.StateBefore` and `AiActionCandidate.Breakdown` are populated only under
+`_captureDecisions` — all three `SetLastDecision` call sites are already guarded — so the simulator
+and trainer pay nothing for them.
+
+**`AiActionCandidate.Score` is a ROLLOUT score, not the breakdown's total.** It is the evaluation
+of a state two turns ahead; the breakdown is the immediate position. They will not agree, and the
+gap between them is exactly what the lookahead contributed, which is why both are shown.
+
+### Scenarios are serialized state, not snapshots
+
+`GameStateSnapshot` renders a position for a human and **cannot be loaded back**. `StateJson` is
+the other thing: a real `GameState` round-trip, so a saved position can be handed to
+`SelectAction`.
+
+Polymorphic types get a `$type` discriminator resolved by **reflection over every abstract type in
+the game assemblies**, not `[JsonDerivedType]` attributes. The state holds 133 polymorphic types
+across five hierarchies and the set grows with every new card mechanic; annotating each one means a
+forgotten attribute silently breaks scenario loading. The first draft named four bases by hand and
+the round-trip test immediately found a fifth — `TargetSpecification`, nested two levels inside a
+card's effects.
+
+Three things that would otherwise be silent bugs, each pinned by `StateJsonTests`:
+- **`GameObject.Children` is dropped.** It is documented as view-only, `ParentToChildren` is the
+  source of truth, and `LoadFrom` populates it recursively — so a hydrated state would serialize
+  the object graph exponentially.
+- **`ImmutableStack` enumerates top-first**, so a converter that pushes in read order inverts the
+  action stack.
+- **Metadata values carry their own type tag.** `GetMeta<T>` casts, so an `int` returning as a
+  boxed `JsonElement` throws at some unrelated call far from the load.
+
+Round-trip is asserted on **behaviour** — same evaluator score, same legal actions, same AI
+decision. A state differing in a field the AI never reads is fine; one that scores differently is
+a broken scenario.
+
+**Godot writes `user://scenarios/` and the console reads `scenarios/` relative to the shell's cwd.**
+They do not meet on their own — same trap as the draft model asset. F7's toast prints the absolute
+path so the copy is one command.
+
+`ScenarioConsole.Strategies` is the single place strategies are named. "Construct these AIs by name
+and run them" is the same requirement for a one-position diff and for a head-to-head strength
+harness; keep it one list.
+
 ## Known Issues / Tech Debt
 
 - **`IAiStrategy` is in the `MtgCore` namespace** despite its file living in `MtgSimulator/`. Should be moved to the `MtgSimulator` namespace for correctness.
 - **EventTriggerCondition migration** — see CardPool section above.
+- **`BeamSearchAiStrategy` does not populate the breakdown.** Only `MultiTurnBeamSearchAiStrategy`
+  fills `StateBefore` / `Breakdown`, so the inspector shows bare scores when the plain beam is
+  selected in the scenario viewer. Deliberate — MultiTurn is the default — but wire it once the
+  display format has settled.
+- **Neither the F6 overlay nor the F7 toast has been visually verified.** Both compile and the
+  suite is green, but the layout is unreviewed.
 
 ## Console Entry Point
 

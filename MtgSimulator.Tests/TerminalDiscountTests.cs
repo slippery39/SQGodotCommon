@@ -116,4 +116,57 @@ public class TerminalDiscountTests
 			);
 		});
 	}
+
+	[Test]
+	public void ADiscountedWin_IsStillRecognisedAsAWin()
+	{
+		// The regression this exists to prevent, and it shipped once. Every "did someone win?"
+		// check in the search compared a ROLLOUT score against WinScore (10000) — but a discounted
+		// win comes back as 9500 or 9025, so those comparisons became permanently false.
+		// FindWinner stopped returning winners and both ResolveChoice early-outs stopped firing:
+		// the search burned its full budget instead of stopping, and stopped taking a winning line
+		// the moment it found one.
+		for (var halfTurns = 0; halfTurns <= 20; halfTurns++)
+		{
+			var win = MultiTurnBeamSearchAiStrategy.DiscountTerminal(
+				StateEvaluator.WinScore,
+				halfTurns
+			);
+			var loss = MultiTurnBeamSearchAiStrategy.DiscountTerminal(
+				StateEvaluator.LossScore,
+				halfTurns
+			);
+
+			Assert.Multiple(() =>
+			{
+				Assert.That(
+					StateEvaluator.IsWin(win),
+					Is.True,
+					$"a win discounted over {halfTurns} half-turns must still read as a win"
+				);
+				Assert.That(
+					StateEvaluator.IsDecisive(loss),
+					Is.True,
+					$"a loss discounted over {halfTurns} half-turns must still read as decisive"
+				);
+				Assert.That(StateEvaluator.IsWin(loss), Is.False);
+			});
+		}
+	}
+
+	[Test]
+	public void TheWinThreshold_SitsAboveAnyBoardScore()
+	{
+		// The other half of the separation: if an ordinary board score could clear the threshold,
+		// the search would start believing it had won games it had not.
+		const float boardScoreCeiling = 150f;
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(StateEvaluator.WinThreshold, Is.GreaterThan(boardScoreCeiling));
+			Assert.That(StateEvaluator.IsWin(boardScoreCeiling), Is.False);
+			Assert.That(StateEvaluator.IsWin(-boardScoreCeiling), Is.False);
+			Assert.That(StateEvaluator.IsDecisive(boardScoreCeiling), Is.False);
+		});
+	}
 }

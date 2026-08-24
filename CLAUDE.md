@@ -12,6 +12,7 @@ SQGodotCommon/
 ├── MtgCore.Tests/                   # MTG engine unit tests
 ├── MtgConsole/                      # Console presentation layer (ConsoleGameLoop, ConsoleRenderer)
 ├── MtgSimulator/                    # Simulator library — AI strategies, runners, deck factories (referenced by Godot + tests)
+│   └── Scenarios/                   # Saved positions: GameState↔JSON, scenario store, multi-strategy comparison
 ├── MtgSimulator.Console/            # Thin console entry point (Program.cs only — references MtgSimulator)
 └── SQGodotCommon/                   # Godot project — reusable utilities (Common/, Project/)
     └── MtgGame/                     # MTG front end: board, deck select, draft + tournament
@@ -19,6 +20,22 @@ SQGodotCommon/
 
 The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only through
 `MtgGameManager` (plain C#, no Godot types) — see `MtgSimulator/CLAUDE.md` for the draft path.
+
+## Seeing what the AI is doing
+
+Evaluation changes were argued rather than watched for two sessions, and several were wrong. There
+is now tooling; use it before proposing a scoring change.
+
+| | |
+|---|---|
+| **F6** in game | AI inspector overlay — every ranked action, and the chosen one's score split into evaluator terms |
+| **F7** in game | Save the live position to `user://scenarios/` |
+| Console **mode 5** | Load a scenario and have several strategies decide in it, side by side |
+| **Space** in game | Pause the AI — do this before F6 so you can click through candidates |
+
+Full detail in `MtgSimulator/CLAUDE.md`. Two rules worth carrying: a scenario is **serialized
+state**, not a `GameStateSnapshot` report, and `StateEvaluator.Explain` is the implementation with
+`Evaluate` as the wrapper — never write a second copy of the sum for display.
 
 ## Platform
 
@@ -66,3 +83,10 @@ structurally absent (no colours, no blocking, no planeswalkers), and comment the
 ## Serialization Rule
 
 All objects stored in `GameState` must be fully serializable at all times. Delegates (`Func<>`, `Action<>`), lambdas, and expression trees are **forbidden** on any type that lives in `GameState`, including all `GameObject` and `GameAction` subclasses and their data. If a delegate seems necessary, make the case explicitly before implementing — there is almost always a data-oriented alternative.
+
+**This rule is now enforced rather than aspirational.** `MtgSimulator/Scenarios/StateJson.cs`
+round-trips a whole `GameState` through JSON and `StateJsonTests` asserts the result scores
+identically, offers the same legal actions, and produces the same AI decision. A delegate on a
+`GameState` type breaks those tests instead of being discovered years later, and any new abstract
+type is picked up automatically by reflection — but a **metadata value** of an untagged type
+throws by design, naming the type and telling you to use a component instead.

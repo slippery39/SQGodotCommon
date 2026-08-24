@@ -18,6 +18,28 @@ dotnet test SQGodotCommon.Tests
 dotnet run --project MtgConsole
 ```
 
+## Inspect what the AI is doing
+
+In the Godot game: **Space** pauses the AI, **F6** opens the inspector, **F7** saves the position.
+Pause before opening the inspector or the AI moves on while you are reading it.
+
+F7 writes to `user://scenarios/` (the toast prints the absolute path); the console reads
+`scenarios/` relative to the shell's cwd, so copy it across — same trap as the draft model asset:
+
+```
+cp "<path from the toast>" scenarios/
+dotnet run --project MtgSimulator.Console -c Release      # mode 5
+```
+
+Mode 5 loads a scenario and has several strategies decide in the same position, printing each
+one's chosen action and the evaluator terms it moved. Non-interactively:
+
+```
+printf '5\n1\n\n' | dotnet run --project MtgSimulator.Console -c Release
+```
+
+Fields: mode, which scenario (blank = first), which strategies (blank = all).
+
 ## Art pass (download card art)
 
 ```

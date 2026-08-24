@@ -399,7 +399,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 					bestSelection = selectedIds;
 				}
 
-				if (bestScore >= StateEvaluator.WinScore)
+				if (StateEvaluator.IsWin(bestScore))
 					break;
 			}
 
@@ -451,7 +451,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 				bestOption = option;
 			}
 
-			if (bestSingleScore >= StateEvaluator.WinScore)
+			if (StateEvaluator.IsWin(bestSingleScore))
 				break;
 		}
 
@@ -801,7 +801,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	}
 
 	private static BeamNode? FindWinner(List<BeamNode> beam) =>
-		beam.FirstOrDefault(n => n.ConcreteScore >= StateEvaluator.WinScore);
+		beam.FirstOrDefault(n => StateEvaluator.IsWin(n.ConcreteScore));
 
 	// EndTurn must exceed the best non-EndTurn score by EndTurnBias to be chosen.
 	private BeamNode PickBestNode(List<BeamNode> beam)
