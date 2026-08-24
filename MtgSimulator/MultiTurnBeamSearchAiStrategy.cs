@@ -63,7 +63,12 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	// only trips if a choice fails to advance, preventing a tight infinite loop.
 	private const int MaxChoiceResolutionIterations = 1000;
 
-	private record BeamNode(
+	/// <summary>
+	/// Internal rather than private so <c>WinDetectionTests</c> can hand a beam straight to
+	/// <see cref="FindWinner"/>. Same reasoning as <c>ActionsMatch</c>: the invariant is worth
+	/// pinning at the function, because a game-level test passes whether or not it holds.
+	/// </summary>
+	internal record BeamNode(
 		GameState State,
 		ImmutableList<GameAction> ActionPath,
 		float ConcreteScore
@@ -229,8 +234,17 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			InvalidateChain();
 			if (_captureDecisions)
 			{
+				// StateBefore is carried even on a forced move. There is nothing to compare it
+				// against, but the inspector renders the current position from it, and a panel
+				// that goes blank whenever the AI had no choice reads as broken tooling rather
+				// than as "no decision was made here".
 				var desc = ActionDescriber.Describe(actions[0], state);
-				LastDecision = new AiDecision(desc, 0f, [new AiActionCandidate(desc, 0f, true)]);
+				LastDecision = new AiDecision(
+					desc,
+					0f,
+					[new AiActionCandidate(desc, 0f, true)],
+					StateBefore: StateEvaluator.Explain(state, _ids, playerId)
+				);
 			}
 			return actions[0];
 		}
@@ -800,7 +814,17 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		return result;
 	}
 
-	private static BeamNode? FindWinner(List<BeamNode> beam) =>
+	/// <summary>
+	/// The winning node in a scored beam, if there is one — this is what lets SelectAction return
+	/// a win immediately instead of finishing the search.
+	///
+	/// <c>ConcreteScore</c> is a ROLLOUT score and has been through <see cref="DiscountTerminal"/>,
+	/// so it must be tested with <c>StateEvaluator.IsWin</c>. Comparing it against
+	/// <c>WinScore</c> directly is the regression <c>WinDetectionTests</c> exists to catch: a
+	/// discounted win is 9500, <c>>= 10000</c> is false, and this silently returns null for every
+	/// win the search will ever find.
+	/// </summary>
+	internal static BeamNode? FindWinner(List<BeamNode> beam) =>
 		beam.FirstOrDefault(n => StateEvaluator.IsWin(n.ConcreteScore));
 
 	// EndTurn must exceed the best non-EndTurn score by EndTurnBias to be chosen.
