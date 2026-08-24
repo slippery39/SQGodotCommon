@@ -147,6 +147,46 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	/// </summary>
 	public const int DefaultExpandBranching = 5;
 
+	/// <summary>
+	/// Per-half-turn decay applied to a rollout that ends in a win or a loss.
+	///
+	/// Every rollout that does NOT reach a terminal runs the full lookahead, so they all describe
+	/// the same moment and are directly comparable. A terminal breaks out early and returns the
+	/// same +/-WinScore whenever it happened, which throws that common horizon away: winning next
+	/// half-turn and winning in two scored *identically*, as did dying next half-turn and dying in
+	/// two. Inside the "someone dies within the lookahead" region every line collapsed to one
+	/// number, so the search had no gradient left and fell through to its tiebreak — at exactly
+	/// the point where the choice matters most.
+	///
+	/// Because a loss is negative, decaying it moves it *toward* zero, so a later death outscores
+	/// an earlier one. Playing for the topdeck therefore falls out of the arithmetic rather than
+	/// needing a rule of its own. This is why LossScore must stay negative rather than 0 — a zero
+	/// loss decays to zero and the survival half of the effect disappears.
+	///
+	/// The value is not sensitive. At the default 2-turn lookahead any factor in ~0.85-0.99 ranks
+	/// identically; all that is required is that a discounted terminal stay far above the largest
+	/// non-terminal score (~150 at the current weights), which holds to 0.95^40 ≈ 1285. Raise the
+	/// lookahead far enough and that margin is what would break first.
+	///
+	/// From Cowling, Ward &amp; Powley (2012), "Ensemble Determinization in MCTS for Magic: The
+	/// Gathering", section D. Their λ = 0.99 is calibrated for rollouts that run to a terminal
+	/// over 40-60 turns; this rollout is bounded at 2, so the factor per step has to be larger.
+	/// </summary>
+	public const float TerminalDiscount = 0.95f;
+
+	/// <summary>
+	/// Decays a terminal rollout result by how many half-turns it took to arrive. Non-terminal
+	/// scores pass through untouched — they already share a horizon and need no correction.
+	///
+	/// Internal so <c>TerminalDiscountTests</c> can assert the ordering directly. A game-level
+	/// test would only reach this through a full beam search, which is the same trap
+	/// <c>ActionsMatch</c> documents: the assertion passes whether or not the logic is present.
+	/// </summary>
+	internal static float DiscountTerminal(float score, int halfTurns) =>
+		MathF.Abs(score) >= StateEvaluator.WinScore
+			? score * MathF.Pow(TerminalDiscount, halfTurns)
+			: score;
+
 	// Starts the per-move clock and work counter. Called at the top of every public entry
 	// point so that both action selection and choice resolution honor the same budget.
 	private void StartMoveTimer()
@@ -231,7 +271,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		if (winner != null)
 		{
 			if (_captureDecisions)
-				SetLastDecision(winner.RootAction, rootScores!, state);
+				SetLastDecision(winner.RootAction, rootScores!, state, playerId);
 			CommitChain(winner.ActionPath, state, playerId);
 			return winner.RootAction;
 		}
@@ -261,7 +301,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			if (winner != null)
 			{
 				if (_captureDecisions)
-					SetLastDecision(winner.RootAction, rootScores!, state);
+					SetLastDecision(winner.RootAction, rootScores!, state, playerId);
 				CommitChain(winner.ActionPath, state, playerId);
 				return winner.RootAction;
 			}
@@ -274,7 +314,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 		var chosenNode = PickBestNode(beam);
 		if (_captureDecisions)
-			SetLastDecision(chosenNode.RootAction, rootScores!, state);
+			SetLastDecision(chosenNode.RootAction, rootScores!, state, playerId);
 		CommitChain(chosenNode.ActionPath, state, playerId);
 		return chosenNode.RootAction;
 	}
@@ -589,6 +629,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	{
 		var opponentId = playerId == _ids.Player1Id ? _ids.Player2Id : _ids.Player1Id;
 
+		var halfTurns = 0;
 		for (var t = 0; t < _lookaheadTurns; t++)
 		{
 			var game = state.TryGetGame();
@@ -599,12 +640,15 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 				game.ActivePlayerId == playerId
 					? PlayGreedyTurn(state, playerId)
 					: SimulateOpponentTurn(state, playerId, opponentId);
+			halfTurns = t + 1;
 
 			if (Math.Abs(StateEvaluator.Evaluate(state, _ids, playerId)) >= StateEvaluator.WinScore)
 				break;
 		}
 
-		return StateEvaluator.Evaluate(state, _ids, playerId);
+		// Terminals short-circuit the loop, so they arrive from different points in time and need
+		// to be made comparable again. See TerminalDiscount.
+		return DiscountTerminal(StateEvaluator.Evaluate(state, _ids, playerId), halfTurns);
 	}
 
 	/// <summary>
@@ -834,24 +878,47 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	private void SetLastDecision(
 		GameAction chosen,
 		Dictionary<GameAction, float> rootScores,
-		GameState originalState
+		GameState originalState,
+		int playerId
 	)
 	{
+		// Re-executing each candidate to read its immediate position costs one ExecuteAction per
+		// displayed action. Only reached under _captureDecisions — every call site is guarded — so
+		// the simulator and training paths pay nothing for it.
 		var candidates = rootScores
 			.OrderByDescending(kvp => kvp.Value)
 			.Take(10)
 			.Select(kvp => new AiActionCandidate(
 				ActionDescriber.Describe(kvp.Key, originalState),
 				kvp.Value,
-				ReferenceEquals(kvp.Key, chosen)
+				ReferenceEquals(kvp.Key, chosen),
+				TryExplainAfter(originalState, kvp.Key, playerId)
 			))
 			.ToList();
 		rootScores.TryGetValue(chosen, out var chosenScore);
 		LastDecision = new AiDecision(
 			ActionDescriber.Describe(chosen, originalState),
 			chosenScore,
-			candidates
+			candidates,
+			StateBefore: StateEvaluator.Explain(originalState, _ids, playerId)
 		);
+	}
+
+	/// <summary>
+	/// The position one action leads to, for display only. An action that throws while being
+	/// replayed for the inspector must not take the game down with it — the decision has already
+	/// been made and returned by the time this runs.
+	/// </summary>
+	private EvaluationBreakdown? TryExplainAfter(GameState state, GameAction action, int playerId)
+	{
+		try
+		{
+			return StateEvaluator.Explain(ExecuteAction(state, action), _ids, playerId);
+		}
+		catch
+		{
+			return null;
+		}
 	}
 
 	private static void UpdateRootScores(Dictionary<GameAction, float> scores, List<BeamNode> beam)

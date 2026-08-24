@@ -70,7 +70,21 @@ public static class StateEvaluator
 		return RacePressureWeight / turnsToKill;
 	}
 
-	public static float Evaluate(GameState state, MtgGameIds ids, int playerId)
+	public static float Evaluate(GameState state, MtgGameIds ids, int playerId) =>
+		Explain(state, ids, playerId).Total;
+
+	/// <summary>
+	/// The same score as <see cref="Evaluate"/>, split into its terms.
+	///
+	/// This is the implementation and <see cref="Evaluate"/> is the one-line wrapper, rather than
+	/// the other way round — a second copy of the weighted sum written for display would drift
+	/// from the one the search uses, and an inspector showing terms that do not sum to the real
+	/// score is worse than no inspector. <c>EvaluationBreakdownTests</c> pins the two together.
+	///
+	/// Returns a struct, so this allocates nothing and the hot path pays only for the terms it
+	/// was already computing.
+	/// </summary>
+	public static EvaluationBreakdown Explain(GameState state, MtgGameIds ids, int playerId)
 	{
 		var opponentId = playerId == ids.Player1Id ? ids.Player2Id : ids.Player1Id;
 
@@ -78,9 +92,9 @@ public static class StateEvaluator
 		var opponent = state.GetPlayer(opponentId);
 
 		if (player.HasLost)
-			return LossScore;
+			return Terminal(LossScore);
 		if (opponent.HasLost)
-			return WinScore;
+			return Terminal(WinScore);
 
 		// Use known zone IDs directly — no child list scanning
 		var playerBattlefieldId =
@@ -90,9 +104,7 @@ public static class StateEvaluator
 		var playerHandId = playerId == ids.Player1Id ? ids.Player1HandId : ids.Player2HandId;
 		var opponentHandId = playerId == ids.Player1Id ? ids.Player2HandId : ids.Player1HandId;
 
-		var score = 0f;
-
-		score += (player.Life - opponent.Life) * LifeWeight;
+		var life = (player.Life - opponent.Life) * LifeWeight;
 
 		var playerCreatureCount = 0;
 		var playerPower = 0;
@@ -134,18 +146,19 @@ public static class StateEvaluator
 			}
 		}
 
-		score += (playerCreatureCount - opponentCreatureCount) * CreatureCountWeight;
-		score += (playerPower - opponentPower) * TotalPowerWeight;
+		var creatures = (playerCreatureCount - opponentCreatureCount) * CreatureCountWeight;
+		var power = (playerPower - opponentPower) * TotalPowerWeight;
 		// Damage on surviving creatures is a hidden disadvantage the board snapshot misses.
 		// A creature with lethal-minus-one damage is much more fragile than a fresh one.
-		score += (opponentCreatureDamage - playerCreatureDamage) * CreatureDamageWeight;
+		var creatureDamage = (opponentCreatureDamage - playerCreatureDamage) * CreatureDamageWeight;
 
-		score += (playerNonCreatureCount - opponentNonCreatureCount) * NonCreaturePermanentWeight;
+		var nonCreaturePermanents =
+			(playerNonCreatureCount - opponentNonCreatureCount) * NonCreaturePermanentWeight;
 
 		// Whose clock is shorter. Without this the board terms above are the only thing that knows
 		// creatures exist, and they weigh a 2/2 the same whether the player facing it is at 20 or
 		// at 2. See RacePressure.
-		score +=
+		var race =
 			RacePressure(playerPower, opponent.Life) - RacePressure(opponentPower, player.Life);
 
 		// Lands in hand are deliberately NOT counted.
@@ -156,16 +169,33 @@ public static class StateEvaluator
 		// prefer any other line and simply skip the land drop for a turn. Skipping an early land
 		// drop is close to the worst play available, and it was costing the AI a third of a mana
 		// step whenever the noise went the wrong way.
-		score +=
+		var hand =
 			(CountNonLand(state, playerHandId) - CountNonLand(state, opponentHandId))
 			* CardsInHandWeight;
 
 		// Count only permanent mana (MaxMana), not temporary fast mana (CurrentMana).
 		// Fast mana should score 0 unless the depth search finds it enables something worthwhile.
-		score += player.MaxMana * ManaWeight;
+		var mana = player.MaxMana * ManaWeight;
 
-		return score;
+		return new EvaluationBreakdown(
+			life,
+			creatures,
+			power,
+			creatureDamage,
+			nonCreaturePermanents,
+			hand,
+			mana,
+			race,
+			life + creatures + power + creatureDamage + nonCreaturePermanents + race + hand + mana,
+			IsTerminal: false
+		);
 	}
+
+	// Terminal states short-circuit before any term is computed, so every term is zero and the
+	// total carries the whole score. IsTerminal is what lets the inspector say "loss" rather than
+	// printing eight zeroes next to -10000.
+	private static EvaluationBreakdown Terminal(float score) =>
+		new(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, score, IsTerminal: true);
 
 	private static int CountNonLand(GameState state, int handId) =>
 		state.GetCardsInZone(handId).Count(c => !c.HasSubtype("Land"));
