@@ -207,4 +207,57 @@ public class WinDetectionTests
 			);
 		});
 	}
+
+	/// <summary>
+	/// FindWinner must return the BEST win, not the first one in beam order.
+	///
+	/// This was FirstOrDefault, and it was correct right up until the terminal discount landed:
+	/// while every win scored exactly WinScore, "first win" and "best win" were the same node.
+	/// Decaying terminals makes wins rankable, and taking the first means settling for a win two
+	/// turns out when one this turn is further down the list.
+	///
+	/// Found by LethalDetectionTests.BurnPlusAttack, where the AI cast its burn spell at ITSELF —
+	/// still a win in the rollout, because the creature closes over the following two turns — in
+	/// preference to two lines that won immediately.
+	/// </summary>
+	[Test]
+	public void FindWinner_PrefersTheFasterWin()
+	{
+		var slow = MultiTurnBeamSearchAiStrategy.DiscountTerminal(StateEvaluator.WinScore, 2);
+		var fast = MultiTurnBeamSearchAiStrategy.DiscountTerminal(StateEvaluator.WinScore, 1);
+
+		// Slow one first, so FirstOrDefault would take it.
+		var beam = new List<MultiTurnBeamSearchAiStrategy.BeamNode>
+		{
+			NodeScoring(slow),
+			NodeScoring(fast),
+			NodeScoring(slow),
+		};
+
+		Assert.That(
+			MultiTurnBeamSearchAiStrategy.FindWinner(beam)!.ConcreteScore,
+			Is.EqualTo(fast),
+			"a win one half-turn sooner must be preferred to one already in the beam"
+		);
+	}
+
+	[Test]
+	public void FindWinner_IsDeterministicAcrossEqualWins()
+	{
+		// MaxBy semantics: strictly-greater only, so ties keep the earliest node and the search
+		// stays reproducible. DeterminismTests depends on this holding.
+		var win = MultiTurnBeamSearchAiStrategy.DiscountTerminal(StateEvaluator.WinScore, 1);
+		var beam = new List<MultiTurnBeamSearchAiStrategy.BeamNode>
+		{
+			NodeScoring(win),
+			NodeScoring(win),
+			NodeScoring(win),
+		};
+
+		Assert.That(
+			MultiTurnBeamSearchAiStrategy.FindWinner(beam),
+			Is.SameAs(beam[0]),
+			"equal wins must resolve to the earliest node, not an arbitrary one"
+		);
+	}
 }

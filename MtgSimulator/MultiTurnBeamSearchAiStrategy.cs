@@ -815,17 +815,38 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	}
 
 	/// <summary>
-	/// The winning node in a scored beam, if there is one — this is what lets SelectAction return
-	/// a win immediately instead of finishing the search.
+	/// The BEST winning node in a scored beam, if there is one — this is what lets SelectAction
+	/// return a win immediately instead of finishing the search.
 	///
 	/// <c>ConcreteScore</c> is a ROLLOUT score and has been through <see cref="DiscountTerminal"/>,
 	/// so it must be tested with <c>StateEvaluator.IsWin</c>. Comparing it against
 	/// <c>WinScore</c> directly is the regression <c>WinDetectionTests</c> exists to catch: a
 	/// discounted win is 9500, <c>>= 10000</c> is false, and this silently returns null for every
 	/// win the search will ever find.
+	///
+	/// **Best, not first, and that is a second bug the discount exposed.** This was
+	/// <c>FirstOrDefault</c>, which was correct while every win scored exactly WinScore — "first
+	/// win" and "best win" were the same node. Once terminals decay by how long they took, they
+	/// become rankable, and taking the first one in beam order means settling for a win two turns
+	/// out while a win this turn sits further down the list. Measured: on a board with three
+	/// damage available and the opponent at six, it cast its burn spell at ITSELF (still a win in
+	/// the rollout, since the creature kills over the following two turns) in preference to two
+	/// lines that won immediately.
+	///
+	/// <c>MaxBy</c> is stable on ties, so beam order still breaks equal-length wins and this stays
+	/// deterministic.
 	/// </summary>
-	internal static BeamNode? FindWinner(List<BeamNode> beam) =>
-		beam.FirstOrDefault(n => StateEvaluator.IsWin(n.ConcreteScore));
+	internal static BeamNode? FindWinner(List<BeamNode> beam)
+	{
+		BeamNode? best = null;
+		foreach (var node in beam)
+			if (
+				StateEvaluator.IsWin(node.ConcreteScore)
+				&& node.ConcreteScore > (best?.ConcreteScore ?? float.MinValue)
+			)
+				best = node;
+		return best;
+	}
 
 	// EndTurn must exceed the best non-EndTurn score by EndTurnBias to be chosen.
 	private BeamNode PickBestNode(List<BeamNode> beam)
