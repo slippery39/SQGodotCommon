@@ -1214,7 +1214,9 @@ public partial class MtgGameScene : Node2D
 	private void ExportAndSaveSnapshot()
 	{
 		var path = WriteSnapshot("debug", error: null);
-		ShowDebugToast(path == null ? "Snapshot failed" : $"Saved: {path}");
+		if (path != null)
+			DisplayServer.ClipboardSet(path);
+		ShowDebugToast(path == null ? "Snapshot failed" : $"Saved (path copied): {path}");
 	}
 
 	/// <summary>
