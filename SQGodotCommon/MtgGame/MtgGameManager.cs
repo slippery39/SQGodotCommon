@@ -54,6 +54,14 @@ public class MtgGameManager
 	public GameState State => _state;
 
 	/// <summary>
+	/// The most recent decision the AI captured, for the inspector overlay.
+	///
+	/// Rewind trims <c>_aiDecisions</c> past the rewound-to point, so this follows the board back
+	/// rather than showing a decision from a future that no longer exists.
+	/// </summary>
+	public AiDecision? LastAiDecision => _aiDecisions.Count > 0 ? _aiDecisions[^1].Decision : null;
+
+	/// <summary>
 	/// TEST AND DEBUG TOOLING ONLY — replaces the manager's state wholesale.
 	///
 	/// Gameplay must never use this; every real state change goes through SubmitAction so the

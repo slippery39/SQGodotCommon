@@ -6,6 +6,7 @@ using Common.Cards;
 using ImmutableGameObjects;
 using MtgCore;
 using MtgSimulator;
+using MtgSimulator.Scenarios;
 using Project;
 
 namespace MtgGame;
@@ -18,6 +19,7 @@ public partial class MtgGameScene : Node2D
 	private Area2D _battlefieldDropZone = null!;
 	private ChoicePanel _choicePanel = null!;
 	private EventLogPanel _eventLog = null!;
+	private AiInspectorPanel _aiInspector = null!;
 	private GraveyardPopup _graveyardPopup = null!;
 	private CardPreviewPopup _cardPreviewPopup = null!;
 
@@ -106,6 +108,9 @@ public partial class MtgGameScene : Node2D
 
 		_eventLog = new EventLogPanel();
 		AddChild(_eventLog);
+
+		_aiInspector = new AiInspectorPanel();
+		AddChild(_aiInspector);
 
 		_graveyardPopup = new GraveyardPopup();
 		AddChild(_graveyardPopup);
@@ -297,6 +302,17 @@ public partial class MtgGameScene : Node2D
 		else if (key.Keycode == Key.F5)
 		{
 			ExportAndSaveSnapshot();
+		}
+		else if (key.Keycode == Key.F7)
+		{
+			SaveScenario();
+		}
+		else if (key.Keycode == Key.F6)
+		{
+			// Pull on open as well as on every AI step, so toggling it on mid-turn shows the
+			// decision already made rather than staying blank until the AI moves again.
+			_aiInspector.Toggle();
+			_aiInspector.Show(_manager.LastAiDecision);
 		}
 		else if (key.Keycode == Key.Z && key.CtrlPressed)
 		{
@@ -961,6 +977,10 @@ public partial class MtgGameScene : Node2D
 				ShowDebugToast(_manager.LastAiError);
 
 			_eventLog.AppendEvents(stepEvents, _manager.State, _manager.HumanPlayerId);
+			// Pushed every step whether or not the panel is open — it early-outs when the decision
+			// has not changed, and pausing (Space) then opening it should show the step you paused
+			// on rather than nothing.
+			_aiInspector.Show(_manager.LastAiDecision);
 			Refresh();
 			if (CheckAndShowGameOver(stepEvents))
 				return;
@@ -1202,6 +1222,54 @@ public partial class MtgGameScene : Node2D
 	/// Never throws — it is called from crash handlers, where a second failure would replace
 	/// the diagnosis with a mystery.
 	/// </summary>
+	/// <summary>
+	/// Saves the current position as a scenario the standalone viewer can load.
+	///
+	/// Deliberately no naming dialog — a position worth keeping is usually noticed mid-turn, and
+	/// anything that interrupts to ask for a name is a thing you stop doing. Rename the file
+	/// afterwards; the viewer lists them by filename.
+	///
+	/// The AI's player id is saved as the mover because the scenarios worth keeping are the ones
+	/// where the AI did something inexplicable.
+	/// </summary>
+	private void SaveScenario()
+	{
+		try
+		{
+			var name = $"scenario_{(long)Time.GetUnixTimeFromSystem()}";
+			var scenario = Scenario.Capture(
+				_manager.State,
+				_manager.AiPlayerId,
+				name,
+				$"Captured from a live game on turn {_manager.State.TryGetGame()?.TurnNumber ?? 0}."
+			);
+
+			using var da = DirAccess.Open("user://");
+			da?.MakeDir("scenarios");
+			var path = $"user://scenarios/{name}.json";
+			using var file = FileAccess.Open(path, FileAccess.ModeFlags.Write);
+			if (file == null)
+			{
+				ShowDebugToast("Could not open the scenarios folder for writing.");
+				return;
+			}
+			file.StoreString(scenario.ToJson());
+
+			// The console reads scenarios/ relative to the SHELL's working directory while Godot
+			// writes to user://, so the two do not meet on their own — same trap as the draft
+			// model asset. The absolute path is printed so the copy is one command.
+			ShowDebugToast(
+				$"Scenario saved to {ProjectSettings.GlobalizePath(path)}\n"
+					+ "Copy it into scenarios/ at the repo root for console mode 5."
+			);
+		}
+		catch (System.Exception ex)
+		{
+			GD.PushError($"Failed to save scenario: {ex}");
+			ShowDebugToast($"Scenario save failed: {ex.Message}");
+		}
+	}
+
 	private string? WriteSnapshot(string prefix, string? error)
 	{
 		try
@@ -1244,7 +1312,7 @@ public partial class MtgGameScene : Node2D
 		if (_aiPaused)
 		{
 			_debugStatusLabel.Text =
-				"AI Paused  (Space = resume  |  Ctrl+Z = rewind  |  F5 = export)";
+				"AI Paused  (Space = resume  |  Ctrl+Z = rewind  |  F5 = export  |  F6 = inspector  |  F7 = save scenario)";
 			_debugStatusLabel.Visible = true;
 		}
 		else

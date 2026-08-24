@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using MtgCore;
 using MtgSimulator;
+using MtgSimulator.Scenarios;
 
 Console.WriteLine("MTG Simulator");
 Console.WriteLine($"  PID: {Process.GetCurrentProcess().Id}");
@@ -15,10 +16,17 @@ Console.WriteLine("  1 - Random Card Pool");
 Console.WriteLine("  2 - Preconstructed Decks");
 Console.WriteLine("  3 - Draft");
 Console.WriteLine("  4 - Train draft pickers");
+Console.WriteLine("  5 - Inspect a saved scenario");
 Console.Write("Mode (default 1): ");
 var modeInput = Console.ReadLine()?.Trim() ?? "";
-var mode = modeInput is "2" or "3" or "4" ? int.Parse(modeInput) : 1;
+var mode = modeInput is "2" or "3" or "4" or "5" ? int.Parse(modeInput) : 1;
 Console.WriteLine();
+
+if (mode == 5)
+{
+	ScenarioConsole.Run();
+	return;
+}
 
 Console.Write("AI depth? (default 3): ");
 var depthInput = Console.ReadLine()?.Trim() ?? "";
