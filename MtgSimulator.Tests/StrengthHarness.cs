@@ -221,4 +221,24 @@ public static class StrengthHarness
 			(ids, rng) =>
 				new MultiTurnBeamSearchAiStrategy(ids, AiDepth, rng: rng, preferFastestWin: false)
 		);
+
+	/// <summary>
+	/// The default evaluator with a toughness term switched on. See
+	/// <c>WeightedStateEvaluator.ToughnessWeight</c> — the evaluator has never scored toughness at
+	/// all, so a 5/1 and a 5/5 are currently the same creature to it.
+	/// </summary>
+	public static Arm Toughness(float weight) =>
+		new(
+			$"toughness-{weight:0.##}",
+			(ids, rng) =>
+				new MultiTurnBeamSearchAiStrategy(
+					ids,
+					AiDepth,
+					rng: rng,
+					evaluator: WeightedStateEvaluator.Default with
+					{
+						ToughnessWeight = weight,
+					}
+				)
+		);
 }

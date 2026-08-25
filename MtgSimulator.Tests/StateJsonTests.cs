@@ -243,4 +243,41 @@ public class StateJsonTests
 			Assert.That(obj.GetMeta<bool>("flag"), Is.True);
 		});
 	}
+
+	/// <summary>
+	/// Round-trips MANY played-out games, not one.
+	///
+	/// The fixed-seed tests above all passed while the serializer could not write
+	/// <c>ImmutableList&lt;int&gt;</c> — the type chosen targets and resolved choices are carried
+	/// as. A probe across 60 seeds failed on **20 of them**; the five seeds hand-picked here
+	/// happened to avoid it, and the gap surfaced only as an intermittent failure in an unrelated
+	/// fixture that had a non-deterministic board.
+	///
+	/// A polymorphic serializer over 133 types cannot be covered by a handful of positions. This
+	/// sweeps instead, and it is the test that would have caught it.
+	/// </summary>
+	[Test]
+	public void ManyPlayedGames_AllRoundTrip()
+	{
+		var failures = new List<string>();
+
+		for (var seed = 1; seed <= 40; seed++)
+		{
+			var (state, ids) = PlayedGame(seed, actions: 30);
+			try
+			{
+				var loaded = StateJson.Deserialize(StateJson.Serialize(state));
+				var before = StateEvaluator.Evaluate(state, ids, ids.Player1Id);
+				var after = StateEvaluator.Evaluate(loaded, ids, ids.Player1Id);
+				if (before != after)
+					failures.Add($"seed {seed}: scored {before} before, {after} after");
+			}
+			catch (Exception ex)
+			{
+				failures.Add($"seed {seed}: {ex.Message.Split('\n')[0]}");
+			}
+		}
+
+		Assert.That(failures, Is.Empty, string.Join("\n", failures.Take(5)));
+	}
 }

@@ -266,6 +266,17 @@ public static class StateJson
 				case double d:
 					writer.WriteNumber("d", d);
 					break;
+				// Target lists. Chosen targets and resolved choices are carried through pipeline
+				// context as ImmutableList<int>, so this is not an edge case — a probe over 60
+				// played-out games found it in 20 of them. The first version of this converter
+				// handled only primitives, and the round-trip tests happened to use five seeds
+				// that all avoided it.
+				case ImmutableList<int> ints:
+					writer.WriteStartArray("li");
+					foreach (var i in ints)
+						writer.WriteNumberValue(i);
+					writer.WriteEndArray();
+					break;
 				default:
 					// Deliberately loud. Silently writing an unknown value as its ToString would
 					// load back as a string and fail at an unrelated GetMeta cast much later.
@@ -299,6 +310,7 @@ public static class StateJson
 					"l" => value.GetValue<long>(),
 					"f" => value.GetValue<float>(),
 					"d" => value.GetValue<double>(),
+					"li" => value.AsArray().Select(n => n!.GetValue<int>()).ToImmutableList(),
 					_ => throw new JsonException($"Unknown metadata type tag '{tag}'."),
 				};
 			}

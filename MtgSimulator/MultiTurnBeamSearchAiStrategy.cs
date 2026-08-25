@@ -41,6 +41,20 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	// strength harness can measure the change; every production path takes the default.
 	private readonly bool _preferFastestWin;
 
+	/// <summary>
+	/// The evaluator every score in this search comes from. Defaults to
+	/// <c>WeightedStateEvaluator.Default</c>, which is exactly what the static
+	/// <c>StateEvaluator</c> wraps, so injecting nothing is byte-identical to the old behaviour.
+	///
+	/// **One evaluator, not two.** Cowling's rollout-policy distinction argues for separating the
+	/// LEAF score (which action is returned) from the ROLLOUT POLICY (how the greedy simulation
+	/// plays) — a better card valuer can help the first and hurt the second. That split is real
+	/// and belongs here eventually, but nothing needs it yet: the current experiments vary weights,
+	/// which want to move together. Adding a second parameter later is a small change; guessing
+	/// wrong about which sites belong in which group today is not.
+	/// </summary>
+	private readonly IStateEvaluator _eval;
+
 	// Optional wall-clock budget per move. When set, the search degrades gracefully
 	// (stops expanding, returns the best node found so far) once the budget is spent.
 	// Null = unbounded — the simulator uses the deterministic rollout budget below instead,
@@ -102,7 +116,8 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		int maxBranching = DefaultMaxBranching,
 		int expandBranching = DefaultExpandBranching,
 		float terminalDiscount = TerminalDiscount,
-		bool preferFastestWin = true
+		bool preferFastestWin = true,
+		IStateEvaluator? evaluator = null
 	)
 	{
 		_rolloutBudget = rolloutBudget;
@@ -119,6 +134,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		_scoreDivergenceThreshold = scoreDivergenceThreshold;
 		_terminalDiscount = terminalDiscount;
 		_preferFastestWin = preferFastestWin;
+		_eval = evaluator ?? WeightedStateEvaluator.Default;
 		_moveBudgetTimestampTicks = moveTimeBudget.HasValue
 			? (long)(moveTimeBudget.Value.TotalSeconds * Stopwatch.Frequency)
 			: 0;
@@ -262,7 +278,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 					desc,
 					0f,
 					[new AiActionCandidate(desc, 0f, true)],
-					StateBefore: StateEvaluator.Explain(state, _ids, playerId)
+					StateBefore: _eval.Explain(state, _ids, playerId)
 				);
 			}
 			return actions[0];
@@ -285,7 +301,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 				// Once the budget is spent, score remaining roots with the cheap immediate
 				// evaluator instead of a full rollout so level 0 can't run away on a wide board.
 				var score = BudgetExceeded()
-					? StateEvaluator.Evaluate(resultState, _ids, playerId)
+					? _eval.Evaluate(resultState, _ids, playerId)
 					: ScoreAfterCompletingTurn(resultState, playerId);
 				beamArray[i] = new BeamNode(resultState, [actions[i]], score);
 			}
@@ -366,7 +382,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 		if (_chainIndex > 0)
 		{
-			var currentScore = StateEvaluator.Evaluate(state, _ids, playerId);
+			var currentScore = _eval.Evaluate(state, _ids, playerId);
 			var expectedScore = _committedChainExpectedScores![_chainIndex];
 			if (Math.Abs(currentScore - expectedScore) > _scoreDivergenceThreshold)
 			{
@@ -534,20 +550,23 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 		// Pre-allocated array + Parallel.For, then sort: the ranking must not depend on the
 		// order threads happen to finish in. Same rule as RolloutBudgetExhausted.
-		var scored = new (float Concrete, float Potential, int Index)[actions.Count];
+		//
+		// Every potential evaluator gets its own column. This read _potentialEvaluators[0] for both
+		// the score AND the slot count, so a second evaluator was silently ignored by the branching
+		// cap while PruneBeam honoured it — the two disagreed about which lines were worth keeping.
+		// Behaviour-identical with the one evaluator configured today, which is why it is safe to
+		// fix here rather than entangled with whatever adds the second one.
+		var scored = new (float Concrete, float[] Potential, int Index)[actions.Count];
 		Parallel.For(
 			0,
 			actions.Count,
 			i =>
 			{
 				var next = ExecuteAction(state, actions[i]);
-				scored[i] = (
-					StateEvaluator.Evaluate(next, _ids, playerId),
-					_potentialEvaluators.Count > 0
-						? _potentialEvaluators[0].Score(next, playerId)
-						: 0f,
-					i
-				);
+				var potential = new float[_potentialEvaluators.Count];
+				for (var e = 0; e < _potentialEvaluators.Count; e++)
+					potential[e] = _potentialEvaluators[e].Score(next, playerId);
+				scored[i] = (_eval.Evaluate(next, _ids, playerId), potential, i);
 			}
 		);
 
@@ -555,15 +574,18 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		foreach (var s in scored.OrderByDescending(s => s.Concrete).ThenBy(s => s.Index).Take(cap))
 			keep.Add(s.Index);
 
-		// One potential bucket, sized as the evaluators themselves ask for.
-		if (_potentialEvaluators.Count > 0)
+		// One bucket per evaluator, each sized as that evaluator asks. Mirrors PruneBeam.
+		for (var e = 0; e < _potentialEvaluators.Count; e++)
+		{
+			var index = e;
 			foreach (
 				var s in scored
-					.OrderByDescending(s => s.Potential)
+					.OrderByDescending(s => s.Potential[index])
 					.ThenBy(s => s.Index)
-					.Take(_potentialEvaluators[0].SlotCount)
+					.Take(_potentialEvaluators[index].SlotCount)
 			)
 				keep.Add(s.Index);
+		}
 
 		return [.. keep.OrderBy(i => i).Select(i => actions[i])];
 	}
@@ -675,14 +697,14 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 					: SimulateOpponentTurn(state, playerId, opponentId);
 			halfTurns = t + 1;
 
-			if (Math.Abs(StateEvaluator.Evaluate(state, _ids, playerId)) >= StateEvaluator.WinScore)
+			if (Math.Abs(_eval.Evaluate(state, _ids, playerId)) >= StateEvaluator.WinScore)
 				break;
 		}
 
 		// Terminals short-circuit the loop, so they arrive from different points in time and need
 		// to be made comparable again. See TerminalDiscount.
 		return DiscountTerminal(
-			StateEvaluator.Evaluate(state, _ids, playerId),
+			_eval.Evaluate(state, _ids, playerId),
 			halfTurns,
 			_terminalDiscount
 		);
@@ -713,7 +735,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		if (spellActions.Count > 0)
 		{
 			var best = spellActions.MaxBy(a =>
-				StateEvaluator.Evaluate(ExecuteAction(state, a), _ids, playerId)
+				_eval.Evaluate(ExecuteAction(state, a), _ids, playerId)
 			)!;
 			state = ExecuteAction(state, best);
 			state = ResolveAllChoices(state, playerId);
@@ -741,7 +763,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 				if (greedyActions.Count > 0)
 				{
 					var best = greedyActions.MaxBy(a =>
-						StateEvaluator.Evaluate(ExecuteAction(state, a), _ids, opponentId)
+						_eval.Evaluate(ExecuteAction(state, a), _ids, opponentId)
 					)!;
 					state = ExecuteAction(state, best);
 					state = ResolveAllChoices(state, opponentId);
@@ -775,12 +797,12 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 					if (attackActions.Count == 0)
 						break;
 					var bestAttack = attackActions.MaxBy(a =>
-						StateEvaluator.Evaluate(ExecuteAction(state, a), _ids, opponentId)
+						_eval.Evaluate(ExecuteAction(state, a), _ids, opponentId)
 					)!;
 					state = ExecuteAction(state, bestAttack);
 					state = ResolveAllChoices(state, opponentId);
 					if (
-						Math.Abs(StateEvaluator.Evaluate(state, _ids, ourPlayerId))
+						Math.Abs(_eval.Evaluate(state, _ids, ourPlayerId))
 						>= StateEvaluator.WinScore
 					)
 						break;
@@ -916,7 +938,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		foreach (var option in choice.Options)
 		{
 			var (resultState, _) = state.ResolveChoice(ImmutableList.Create(option.Id));
-			var score = StateEvaluator.Evaluate(resultState, _ids, playerId);
+			var score = _eval.Evaluate(resultState, _ids, playerId);
 			if (score > bestScore)
 			{
 				bestScore = score;
@@ -975,7 +997,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			ActionDescriber.Describe(chosen, originalState),
 			chosenScore,
 			candidates,
-			StateBefore: StateEvaluator.Explain(originalState, _ids, playerId)
+			StateBefore: _eval.Explain(originalState, _ids, playerId)
 		);
 	}
 
@@ -988,7 +1010,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	{
 		try
 		{
-			return StateEvaluator.Explain(ExecuteAction(state, action), _ids, playerId);
+			return _eval.Explain(ExecuteAction(state, action), _ids, playerId);
 		}
 		catch
 		{
@@ -1030,7 +1052,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		var s = stateBeforeFirstAction;
 		foreach (var action in path)
 		{
-			scores.Add(StateEvaluator.Evaluate(s, _ids, playerId));
+			scores.Add(_eval.Evaluate(s, _ids, playerId));
 			s = ExecuteAction(s, action);
 		}
 		_committedChainExpectedScores = scores.ToImmutable();

@@ -23,6 +23,7 @@ public readonly record struct EvaluationBreakdown(
 	float Hand,
 	float Mana,
 	float Race,
+	float Toughness,
 	float Total,
 	bool IsTerminal
 )
@@ -45,5 +46,6 @@ public readonly record struct EvaluationBreakdown(
 				("hand", Hand),
 				("mana", Mana),
 				("race", Race),
+				("toughness", Toughness),
 			];
 }

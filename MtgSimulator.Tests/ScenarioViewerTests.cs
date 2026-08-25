@@ -31,6 +31,13 @@ public class ScenarioViewerTests
 			Directory.Delete(_dir, recursive: true);
 	}
 
+	/// <summary>
+	/// NOTE: BeginGame shuffles, and nothing here seeds that shuffle, so the board reached varies
+	/// between runs even at a fixed seed. That non-determinism is what surfaced the
+	/// ImmutableList&lt;int&gt; serialization gap — as an intermittent failure in this fixture,
+	/// which is a bad way to learn about it. StateJsonTests.ManyPlayedGames_AllRoundTrip now sweeps
+	/// seeds deliberately instead of relying on this to stumble into coverage.
+	/// </summary>
 	private static (GameState State, MtgGameIds Ids) MidGame(int seed, int actions)
 	{
 		var (state, ids) = MtgGameFactory.Create();

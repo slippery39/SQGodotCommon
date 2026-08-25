@@ -833,6 +833,33 @@ is not a harness. Production paths always take the defaults.
 |---|---|---|
 | Terminal discount vs none | 50.2% ± 1.5pp, 1120 games | neutral — kept |
 | Fastest-win vs first-win | 50.1% ± 1.5pp, 1120 games | neutral — kept |
+| Toughness weight 0.5 | 50.2% ± 1.5pp, 1120 games | neutral — **not shipped** |
+| Toughness weight 1.33 | 51.0% ± 1.5pp, 1120 games | neutral — **not shipped** |
+| Weights const → init-only property | −0.6% wall time, actions identical | free |
+
+### Four evaluator changes measured, four neutral — read the pattern
+
+Nothing tried so far moves the win rate by 3pp. The most likely reason is structural, and it
+should temper expectations for any further evaluator work: **this engine already evaluates by
+playout.** `ScoreAfterCompletingTurn` finishes the turn and rolls two more, so the rollout
+*observes* much of what a static term would approximate — the toughness term tells the evaluator a
+5/5 survives better than a 5/1, and the rollout was already finding that out by playing it.
+
+Churchill (AIIDE 2012) measured the same ordering directly: a playout-based leaf evaluation scored
+**0.92** against **0.80** for the best static evaluation function they tried. Static terms have
+less headroom once playouts are in place.
+
+**The implication for the plan is to prefer rollout work over evaluator work.** `PlayGreedyTurn`
+plays exactly ONE spell per simulated turn while `SimulateOpponentTurn`'s BoardOnly mode loops
+every attack — so across a whole 2-turn lookahead the model gives us two spells and gives the
+opponent every attack, every turn. Fixing that asymmetry changes what the rollout *sees*, which is
+the thing carrying the strength.
+
+Toughness is kept at weight 0 rather than shipped at 1.33. The gap it addresses is real — a 5/1
+and a 5/5 are otherwise the same creature to the evaluator, including as removal targets — but a
+term that cannot be measured to help is complexity with a maintenance cost and no evidence. The
+knob stays so it costs nothing to revisit, and it should be revisited if blocking ever lands, since
+that changes what toughness is worth.
 
 **Both are kept despite being neutral, and that is not a contradiction.** Each fixes a defect that
 is demonstrable at the function level — the discount gives losing positions a gradient instead of

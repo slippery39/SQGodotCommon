@@ -116,4 +116,35 @@ public class EvaluatorStrengthTests
 			"taking a faster win must not lose strength"
 		);
 	}
+
+	/// <summary>
+	/// B3 — does scoring toughness help?
+	///
+	/// StateEvaluator has never had a toughness term: a creature is worth CreatureCountWeight plus
+	/// TotalPowerWeight * power, so a 5/1 and a 5/5 are the same creature to it, including as
+	/// removal targets where with three damage in hand one is killable and the other is not.
+	///
+	/// Toughness matters here despite there being no blocking, because AttackAction can target
+	/// creatures as well as players — toughness decides whether a creature survives being attacked.
+	/// Churchill's Attack-Value script targets by power/toughness and that ordering is provably
+	/// optimal in 1-vs-n attrition.
+	///
+	/// Swept rather than set: Forge's ratio suggests ~1.33 against TotalPowerWeight 2.0, but that
+	/// is a different game with blocking, and this project has been wrong about transferred
+	/// intuitions before. A weight is a number to measure, not a number to reason about.
+	/// </summary>
+	[TestCase(0.5f)]
+	[TestCase(1.33f)]
+	public void ToughnessTerm_Sweep(float weight)
+	{
+		var outcome = StrengthHarness.Measure(
+			StrengthHarness.Toughness(weight),
+			StrengthHarness.Default("no-toughness")
+		);
+		TestContext.Out.WriteLine(outcome);
+
+		// Reported, not asserted on a threshold. The question is "how much", and a sweep that
+		// fails the build at its first losing value tells you nothing about the shape of the curve.
+		Assert.That(outcome.Decided, Is.GreaterThan(900), "too many draws to read this");
+	}
 }
