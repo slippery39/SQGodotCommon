@@ -147,4 +147,29 @@ public class EvaluatorStrengthTests
 		// fails the build at its first losing value tells you nothing about the shape of the curve.
 		Assert.That(outcome.Decided, Is.GreaterThan(900), "too many draws to read this");
 	}
+
+	/// <summary>
+	/// Does fully resolving an action before scoring it actually make the AI stronger?
+	///
+	/// This is the biggest behaviour change of the session: ExecuteAction is called from every
+	/// ranking site in the search, so draining a raised choice there changes both what the AI sees
+	/// and what it costs. Unlike the evaluator experiments, this one fixes a case where the search
+	/// was scoring a position that did not exist — the turn had not ended, the triggers had not
+	/// fired, and the rollout then double-counted them.
+	/// </summary>
+	[Test]
+	public void ResolvingChoicesBeforeScoring_DoesNotCostStrength()
+	{
+		var outcome = StrengthHarness.Measure(
+			StrengthHarness.Default("resolved"),
+			StrengthHarness.UnresolvedChoices()
+		);
+		TestContext.Out.WriteLine(outcome);
+
+		Assert.That(
+			outcome.Rate,
+			Is.GreaterThan(50.0 - 2 * outcome.StandardError),
+			"scoring fully-applied positions must not lose strength"
+		);
+	}
 }

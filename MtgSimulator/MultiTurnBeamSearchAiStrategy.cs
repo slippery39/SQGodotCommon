@@ -41,6 +41,10 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	// strength harness can measure the change; every production path takes the default.
 	private readonly bool _preferFastestWin;
 
+	// False restores the half-applied-action bug, so the harness can measure the fix. Production
+	// always takes true.
+	private readonly bool _resolveChoicesOnExecute;
+
 	/// <summary>
 	/// The evaluator every score in this search comes from. Defaults to
 	/// <c>WeightedStateEvaluator.Default</c>, which is exactly what the static
@@ -117,7 +121,8 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		int expandBranching = DefaultExpandBranching,
 		float terminalDiscount = TerminalDiscount,
 		bool preferFastestWin = true,
-		IStateEvaluator? evaluator = null
+		IStateEvaluator? evaluator = null,
+		bool resolveChoicesOnExecute = true
 	)
 	{
 		_rolloutBudget = rolloutBudget;
@@ -134,6 +139,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		_scoreDivergenceThreshold = scoreDivergenceThreshold;
 		_terminalDiscount = terminalDiscount;
 		_preferFastestWin = preferFastestWin;
+		_resolveChoicesOnExecute = resolveChoicesOnExecute;
 		_eval = evaluator ?? WeightedStateEvaluator.Default;
 		_moveBudgetTimestampTicks = moveTimeBudget.HasValue
 			? (long)(moveTimeBudget.Value.TotalSeconds * Stopwatch.Frequency)
@@ -666,6 +672,43 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	/// then running a multi-turn greedy rollout. All beam nodes are scored from the
 	/// same temporal point — after the current turn ends — making them comparable.
 	/// </summary>
+	/// <summary>
+	/// The rollout's END state alongside its score, for diagnosis.
+	///
+	/// The AI inspector shows the position each candidate leads to IMMEDIATELY, which is the right
+	/// default — it answers "what did this action buy". It cannot answer "why do two actions with
+	/// identical immediate positions score differently", because that divergence happens inside
+	/// the rollout. This is the seam for that question, and the Swiftfoot Boots oscillation is the
+	/// case that needed it: two lines, both +0.00 immediate, 1.40 apart after the rollout.
+	/// </summary>
+	internal (float Score, GameState EndState) ScoreAndEndState(GameState state, int playerId)
+	{
+		var g0 = state.TryGetGame();
+		if (g0?.ActivePlayerId == playerId)
+			state = PlayGreedyTurn(state, playerId);
+
+		var opponentId = playerId == _ids.Player1Id ? _ids.Player2Id : _ids.Player1Id;
+		var halfTurns = 0;
+		for (var t = 0; t < _lookaheadTurns; t++)
+		{
+			var g = state.TryGetGame();
+			if (g == null)
+				break;
+			state =
+				g.ActivePlayerId == playerId
+					? PlayGreedyTurn(state, playerId)
+					: SimulateOpponentTurn(state, playerId, opponentId);
+			halfTurns = t + 1;
+			if (StateEvaluator.IsDecisive(_eval.Evaluate(state, _ids, playerId)))
+				break;
+		}
+
+		return (
+			DiscountTerminal(_eval.Evaluate(state, _ids, playerId), halfTurns, _terminalDiscount),
+			state
+		);
+	}
+
 	private float ScoreAfterCompletingTurn(GameState state, int playerId)
 	{
 		Interlocked.Increment(ref _rolloutsThisMove);
@@ -679,6 +722,32 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	/// <summary>
 	/// Simulates N turns starting from the given state, alternating between
 	/// our greedy turn and the opponent's simulated turn.
+	/// </summary>
+	/// <summary>
+	/// Rolls forward to a FIXED point in game time, measured from the state the search started
+	/// from — not a fixed number of half-turns from wherever this candidate happens to be.
+	///
+	/// **This is what stops the AI deferring costs it cannot actually avoid.** With a relative
+	/// horizon, a line that dawdles inside its own turn pushes the window along with it, so a
+	/// different number of turn boundaries — and therefore of end-step triggers, upkeep costs and
+	/// draw steps — lands inside it. Deferring a cost genuinely improved the score, because the
+	/// cost fell off the end of a window that moved.
+	///
+	/// Measured before the fix, on a board with Avaricious Dragon (discard 1 when your turn ends)
+	/// and a free equip available: ending the turn scored 48.50 against the equip's 47.10 at
+	/// lookahead 0, 59.30 against 57.90 at lookahead 1, and then INVERTED to 72.70 against 74.10
+	/// at the shipped lookahead of 2. An answer that changes with depth is the definition of a
+	/// horizon effect. The engine needed a per-turn cap on equips to stop the resulting loop.
+	///
+	/// With an absolute anchor every candidate spans the identical stretch of game time, so every
+	/// recurring cost fires the same number of times in every line and cancels. Dawdling buys
+	/// nothing because the window does not move.
+	///
+	/// The anchor deliberately does NOT change the cost knobs — <c>currentTurnDepth</c>,
+	/// <c>maxBranching</c>, <c>expandBranching</c> and <c>rolloutBudget</c> all still bound the
+	/// work. It only changes where the rollout stops for comparison. Cost per candidate moves by
+	/// at most one half-turn, and the candidate that already ended its turn simulating less is
+	/// correct — it genuinely spent less of its turn.
 	/// </summary>
 	private float MultiTurnGreedyRollout(GameState state, int playerId)
 	{
@@ -695,9 +764,9 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 				game.ActivePlayerId == playerId
 					? PlayGreedyTurn(state, playerId)
 					: SimulateOpponentTurn(state, playerId, opponentId);
-			halfTurns = t + 1;
+			halfTurns++;
 
-			if (Math.Abs(_eval.Evaluate(state, _ids, playerId)) >= StateEvaluator.WinScore)
+			if (StateEvaluator.IsDecisive(_eval.Evaluate(state, _ids, playerId)))
 				break;
 		}
 
@@ -817,6 +886,27 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	/// <summary>
 	/// Greedily resolves all pending choices using immediate StateEvaluator scoring.
 	/// </summary>
+	/// <summary>
+	/// Drains pending choices inside a rollout, answering each one AS ITS OWNER.
+	///
+	/// **The owner comes from <c>GetPendingChoiceDecidingPlayerId</c>, never from whose simulated
+	/// turn it happens to be.** That distinction is documented in ImmutableGameObjects/CLAUDE.md
+	/// and honoured by GameRunner and MtgGameManager; this rollout was the one place that ignored
+	/// it, and it scored choices from a fixed perspective for the whole drain.
+	///
+	/// The consequence was adversarial: <c>ExecuteAction</c> does not resolve choices, so a
+	/// candidate action that leaves one pending — an end-step discard, say — hands a waiting state
+	/// to the rollout. If the next simulated half-turn was the opponent's, SimulateOpponentTurn
+	/// called this with the OPPONENT's id, and <c>GreedyResolveChoice</c> then picked whichever of
+	/// OUR discards scored best for THEM. Our own trigger was resolved against us.
+	///
+	/// That is what made ending the turn look worse than a pointless free equip on a board with
+	/// Avaricious Dragon: the equip line's turn ended inside PlayGreedyTurn, which drained the
+	/// discard from our own perspective, while the EndTurn line's identical discard was drained by
+	/// the opponent's. Two lines, the same board, the same game time, one card apart — and it read
+	/// as a horizon effect for two rounds of investigation because the symptom (an answer that
+	/// changes with search depth) is exactly what a horizon effect looks like.
+	/// </summary>
 	private GameState ResolveAllChoices(GameState state, int playerId)
 	{
 		// Safety cap: if a choice ever fails to clear its waiting flag, bail out instead of
@@ -824,7 +914,10 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		for (var i = 0; i < MaxChoiceResolutionIterations && state.IsWaitingForChoice; i++)
 		{
 			var choice = state.GetPendingChoice()!;
-			var ids = GreedyResolveChoice(state, choice, playerId);
+			// 0 means the owner could not be determined; the documented contract is to fall back
+			// to the caller rather than leave the choice unanswerable and wedge the stack.
+			var owner = state.GetPendingChoiceDecidingPlayerId();
+			var ids = GreedyResolveChoice(state, choice, owner == 0 ? playerId : owner);
 			(state, _) = state.ResolveChoice(ids);
 		}
 		return state;
@@ -913,6 +1006,20 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			.DefaultIfEmpty(float.MinValue)
 			.Max();
 
+		// EndTurn must strictly beat the best action; ties go to acting.
+		//
+		// Breaking ties toward EndTurn was tried here and REVERTED — it made the AI never equip
+		// anything. Swiftfoot Boots grants keywords the evaluator has no term for, so an equip
+		// scores exactly 0.00, and a ties-to-EndTurn rule kills every action whose value the
+		// evaluator cannot see rather than only the pointless ones.
+		// Equip_IsStillTakenOncePerTurn is the gate that caught it: equipment that can never be
+		// attached is a worse bug than the loop it was meant to stop.
+		//
+		// With the double-resolution bug in ExecuteAction fixed, the equip and EndTurn now score
+		// IDENTICALLY on the Boots board (74.10 each) rather than the equip winning 74.10 to 72.70,
+		// so the systematic preference is gone. What remains is a genuine tie, bounded by the
+		// engine's per-turn equip cap. Note this contradicts DesignNotes.md, which records that
+		// there is no tie — that was true, but only because of the bug.
 		if (endTurnScore > bestNonEndTurnScore + EndTurnBias)
 			return beam.First(n => n.RootAction is EndTurnAction);
 
@@ -1122,12 +1229,33 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		};
 	}
 
-	private static GameState ExecuteAction(GameState state, GameAction action)
+	/// <summary>
+	/// Applies an action and drains any choice it raises, so the state handed on is a position and
+	/// not a half-finished resolution.
+	///
+	/// **The drain is the point.** ProcessAllActions stops at a pending ChoiceAction, so an action
+	/// with a trigger that asks a question left the state frozen mid-resolution: the action had
+	/// executed, but its consequences had not, and the active player had not changed.
+	///
+	/// The rollout then read that state, saw it was still our turn, and ENDED THE TURN AGAIN —
+	/// firing every end-of-turn trigger a second time. Measured on a board with Avaricious Dragon
+	/// (discard 1 when your turn ends): the EndTurn candidate came back with game time unchanged
+	/// and IsWaitingForChoice true, and finished the rollout one card worse than a line that had
+	/// done nothing at all. That is what made a free, pointless equip outscore ending the turn,
+	/// 74.10 to 72.70, and it cost the engine a per-turn cap on equips to contain the loop.
+	///
+	/// It presented as a horizon effect — the answer inverted with search depth — and two
+	/// diagnoses were built on that reading before the state was actually inspected. Only actions
+	/// that raise a choice were affected, which is why it looked card-specific.
+	/// </summary>
+	private GameState ExecuteAction(GameState state, GameAction action)
 	{
 		var (newState, success) = state.TryAddAction(action);
 		if (!success)
 			return state;
 		var (finalState, _) = newState.ProcessAllActions();
-		return finalState;
+		return _resolveChoicesOnExecute && finalState.IsWaitingForChoice
+			? ResolveAllChoices(finalState, finalState.GetPendingChoiceDecidingPlayerId())
+			: finalState;
 	}
 }

@@ -241,4 +241,21 @@ public static class StrengthHarness
 					}
 				)
 		);
+
+	/// <summary>
+	/// The half-applied-action bug restored: ExecuteAction leaves a raised choice unresolved, so
+	/// the rollout can end the turn twice and fire end-of-turn triggers twice. See
+	/// HalfAppliedActionTests.
+	/// </summary>
+	public static Arm UnresolvedChoices() =>
+		new(
+			"half-applied",
+			(ids, rng) =>
+				new MultiTurnBeamSearchAiStrategy(
+					ids,
+					AiDepth,
+					rng: rng,
+					resolveChoicesOnExecute: false
+				)
+		);
 }

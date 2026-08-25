@@ -835,7 +835,28 @@ is not a harness. Production paths always take the defaults.
 | Fastest-win vs first-win | 50.1% ± 1.5pp, 1120 games | neutral — kept |
 | Toughness weight 0.5 | 50.2% ± 1.5pp, 1120 games | neutral — **not shipped** |
 | Toughness weight 1.33 | 51.0% ± 1.5pp, 1120 games | neutral — **not shipped** |
+| Resolving choices before scoring | 50.2% ± 1.5pp, 1120 games | neutral — kept, see below |
 | Weights const → init-only property | −0.6% wall time, actions identical | free |
+
+### A head-to-head is the wrong instrument for a per-card bug
+
+The half-applied-action fix (see `DesignNotes.md`) measured **50.2% ± 1.5pp** — no aggregate
+change — despite fixing a case where the search was scoring positions that did not exist, and
+despite the engine needing a per-turn equip cap to contain the resulting loop.
+
+That is not evidence the fix is worthless. It is evidence the instrument is wrong for it. The bug
+only fired on actions that raise a **choice**, so it mishandled a specific subset of cards. Both
+arms draft from the same pool, so a defect concentrated in a few cards is diluted across 1120
+games into nothing.
+
+**The right acceptance test for a per-card defect is a retrain**, checking whether the affected
+cards move in the model — the same test the resource-model work needs. Cards with end-of-turn
+triggers, discard costs and upkeep costs are the population to watch: `Call to the Grave` (−6.21),
+`Dark Tutelage` (−5.52) and `Avaricious Dragon` all raise choices or recurring costs, and all sit
+near the bottom.
+
+**Before running a strength harness, ask what population the change affects.** If it is a subset of
+cards rather than every decision, a win rate over mixed decks will report 50% whatever happens.
 
 ### Four evaluator changes measured, four neutral — read the pattern
 

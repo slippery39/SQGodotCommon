@@ -800,6 +800,43 @@ The equip scores **+1.4 over ending the turn** — and moving the boots straight
 again. There is no tie. The evaluator rates both directions of the same oscillation as a genuine
 improvement, so no "prefer to stop on a tie" rule can ever catch it, at any bias value.
 
+> ### RESOLVED 2026-08-25 — and the diagnosis above was wrong
+>
+> **The evaluator was never at fault.** `ExecuteAction` was `TryAddAction` + `ProcessAllActions`,
+> and `ProcessAllActions` stops at a pending `ChoiceAction` — so any candidate whose trigger asks a
+> question came back HALF-APPLIED: executed, triggers unresolved, active player unchanged.
+>
+> `EndTurnAction` on this board fires Avaricious Dragon's Squander (discard 1 when your turn ends),
+> which raises a discard choice. The candidate therefore returned with game time **unchanged** and
+> `IsWaitingForChoice` true. The rollout read that state, saw it was still our turn, and **ended
+> the turn a second time** — firing every end-of-turn trigger twice. The 1.4 is one extra discard
+> at `CardsInHandWeight`.
+>
+> With `ExecuteAction` draining the choice, equip and EndTurn score **74.10 each — identical**. So
+> there IS a tie, and the two reverted tie-break fixes were sound reasoning on a false premise.
+>
+> **Do not reintroduce a ties-to-EndTurn rule anyway.** It was tried after the fix and reverted:
+> Swiftfoot Boots grants keywords the evaluator has no term for, so every equip scores exactly
+> 0.00, and the rule made the AI never equip anything.
+> `FreeAbilityLoopTests.Equip_IsStillTakenOncePerTurn` is the gate that caught it.
+>
+> **How this cost four diagnoses.** The symptom was that the preference INVERTED with search depth
+> (End Turn wins at lookahead 0 and 1, loses at 2), which is the textbook signature of a horizon
+> effect. Three fixes were designed against that reading — bundled extra actions, turn-boundary
+> counting, choice ownership — and one was fully built (an absolute game-time anchor) before being
+> reverted, because it changed nothing. What settled it was printing `IsWaitingForChoice` on the
+> two candidate states, which took two minutes. Both had already reported the same game time in
+> the first trace taken, and it was read past.
+>
+> **A symptom that matches a textbook pattern is not evidence of that pattern.** Same lesson as the
+> wall-clock investigation the same week.
+>
+> Pinned by `MtgSimulator.Tests/HalfAppliedActionTests`, which also asserts the bug REPRODUCES with
+> the fix disabled — without that, the gate would pass on a board where the defect never applied.
+>
+> Measured at **50.2% ± 1.5pp over 1120 games**, i.e. no aggregate strength change. See
+> `MtgSimulator/CLAUDE.md` for why a head-to-head is the wrong instrument for this class of fix.
+
 A second instance of the same blindness, on a different board: a ready 9/10 Tarmogoyf facing a
 7/8 and a 4/5 at exactly lethal. Killing the 7/8 outright while surviving scores **-0.9784**, and
 ending the turn scores **-0.9784** — identical to four decimals.
