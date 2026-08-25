@@ -61,6 +61,18 @@ public sealed record WeightedStateEvaluator : IStateEvaluator
 	/// rather than inventing new ones. **Forge is a game WITH blocking**, so treat that as a
 	/// starting point for the harness, not a recommendation. The scalar exists so the whole family
 	/// can be swept without editing eleven constants.
+	///
+	/// **Measured, at 2/15: 50.9% ± 1.5pp over 1120 games, and +0.3% wall time.** Neutral and free,
+	/// so it is kept on the same grounds as the terminal discount and fastest-win — it fixes a
+	/// defect demonstrable without playing a game (a 4/4 flier scored exactly like a 4/4 vanilla,
+	/// and equipping scored 0.00), and what would justify reverting is a clear loss, not the absence
+	/// of a gain. `StrengthHarness.Keywords(0f)` is the arm; see MtgSimulator/CLAUDE.md.
+	///
+	/// **The VALUES are still untested as values.** Flying keeps Forge's Power*10, where it is
+	/// offensive evasion; here it is a defensive attack restriction (`AttackAction.CanReach`), which
+	/// is not obviously worth the same. A neutral result is equally consistent with "keywords do not
+	/// matter here" and "these numbers transferred wrong", and the run above cannot separate the
+	/// two. That needs a sweep like `ToughnessTerm_Sweep`, not an argument.
 	/// </summary>
 	public float KeywordWeight { get; init; } = 2.0f / 15.0f;
 

@@ -35,7 +35,8 @@ public static class StrengthHarness
 		int ChallengerWins,
 		int Decided,
 		int Games,
-		double Seconds
+		double Seconds,
+		long TotalActions
 	)
 	{
 		public double Rate => 100.0 * ChallengerWins / Math.Max(1, Decided);
@@ -43,9 +44,20 @@ public static class StrengthHarness
 		/// <summary>Standard error in percentage points: 50/sqrt(n).</summary>
 		public double StandardError => 100.0 * Math.Sqrt(0.25 / Math.Max(1, Decided));
 
+		/// <summary>
+		/// Reported beside the clock, never without it. A wall-clock number names a symptom, not a
+		/// culprit: an 8.8% "regression" in this project was blamed on an evaluator refactor and
+		/// "fixed" twice before anyone noticed actions had gone DOWN while time went UP — impossible
+		/// for a per-call cost, and the real cause was a win-detection bug two commits earlier.
+		/// If time moves and this does not, the cost is per-call; if both move, the search changed
+		/// how much work it does and the two are not comparable.
+		/// </summary>
+		public double AvgActions => (double)TotalActions / Math.Max(1, Games);
+
 		public override string ToString() =>
 			$"{ChallengerName} vs {BaselineName}: {ChallengerWins}/{Decided} decided "
-			+ $"({Rate:F1}%, 1 SE = {StandardError:F1}pp) over {Games} games in {Seconds:F0}s";
+			+ $"({Rate:F1}%, 1 SE = {StandardError:F1}pp) over {Games} games in {Seconds:F0}s, "
+			+ $"{AvgActions:F1} actions/game";
 	}
 
 	/// <summary>
@@ -113,7 +125,7 @@ public static class StrengthHarness
 				);
 		}
 
-		var results = new (bool Decided, bool ChallengerWon)[schedule.Count];
+		var results = new (bool Decided, bool ChallengerWon, int Actions)[schedule.Count];
 		var sw = Stopwatch.StartNew();
 
 		Parallel.For(
@@ -144,14 +156,14 @@ public static class StrengthHarness
 
 				if (result.IsDraw)
 				{
-					results[i] = (false, false);
+					results[i] = (false, false, result.TotalActions);
 					return;
 				}
 
 				var challengerWon = p.ChallengerIsPlayer1
 					? result.IsPlayer1Win
 					: result.IsPlayer2Win;
-				results[i] = (true, challengerWon);
+				results[i] = (true, challengerWon, result.TotalActions);
 			}
 		);
 
@@ -161,8 +173,12 @@ public static class StrengthHarness
 		// array in index order keeps the reported number independent of thread scheduling.
 		var decided = 0;
 		var wins = 0;
-		foreach (var (isDecided, won) in results)
+		var actions = 0L;
+		foreach (var (isDecided, won, gameActions) in results)
 		{
+			// Actions are summed over EVERY game, drawn or not — it is a cost metric, not a
+			// strength one, and a game that drew still did the work.
+			actions += gameActions;
 			if (!isDecided)
 				continue;
 			decided++;
@@ -176,7 +192,8 @@ public static class StrengthHarness
 			wins,
 			decided,
 			schedule.Count,
-			sw.Elapsed.TotalSeconds
+			sw.Elapsed.TotalSeconds,
+			actions
 		);
 	}
 
@@ -238,6 +255,31 @@ public static class StrengthHarness
 					evaluator: WeightedStateEvaluator.Default with
 					{
 						ToughnessWeight = weight,
+					}
+				)
+		);
+
+	/// <summary>
+	/// The keyword term at an explicit weight. <c>Keywords(0f)</c> is the pre-keyword evaluator:
+	/// the term is appended LAST in <c>Explain</c>'s sum, so at zero every other term adds to
+	/// exactly the float it did before the term existed, and <c>ScanBattlefield</c> skips the
+	/// <c>GetEffectiveStats</c> allocation entirely.
+	///
+	/// That equivalence is why this arm replaces the worktree-at-the-previous-commit the plan
+	/// called for. Same binary, one flag — and no opportunity for a stale <c>bin/</c> to measure
+	/// code that was never compiled in, which has cost this project two full training runs.
+	/// </summary>
+	public static Arm Keywords(float weight) =>
+		new(
+			$"keywords-{weight:0.###}",
+			(ids, rng) =>
+				new MultiTurnBeamSearchAiStrategy(
+					ids,
+					AiDepth,
+					rng: rng,
+					evaluator: WeightedStateEvaluator.Default with
+					{
+						KeywordWeight = weight,
 					}
 				)
 		);

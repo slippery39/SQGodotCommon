@@ -836,7 +836,38 @@ is not a harness. Production paths always take the defaults.
 | Toughness weight 0.5 | 50.2% ± 1.5pp, 1120 games | neutral — **not shipped** |
 | Toughness weight 1.33 | 51.0% ± 1.5pp, 1120 games | neutral — **not shipped** |
 | Resolving choices before scoring | 50.2% ± 1.5pp, 1120 games | neutral — kept, see below |
+| Keyword term (2/15) vs none | 50.9% ± 1.5pp, 1120 games | neutral — kept |
+| Keyword term wall-clock cost | +0.3% time, +1.6% actions/game | free |
 | Weights const → init-only property | −0.6% wall time, actions identical | free |
+
+The self-check numbers above were taken **before** the keyword term shipped, so `Default()` is no
+longer the AI they were measured on. Re-measured with keywords live, `DefaultAgainstItself_IsEven`
+reads **52.7%** — still even within 2 SE, but do not read a 1.4pp move between those two figures as
+a finding. **A self-check number is only comparable to one taken against the same `Default`.**
+
+#### The keyword cost run is a worked example of lesson 1
+
+Measured AB — keywords on first, off second — it read **+10.7% time against +1.6% actions**, and
+the obvious reading is that the ~9pp gap is the `GetEffectiveStats` allocation, since actions
+barely moved. That reading was **wrong**, and it was argued in this project before the check that
+disproved it had been run.
+
+Re-run ABBA (on, off, off, on) the two configurations land on **180s each**. The raw sequence was
+83 / 89 / 91 / 97 — rising monotonically across the run *regardless of configuration*. It was
+machine drift, and the AB ordering handed all of it to whichever arm ran second.
+
+**`AvgActions` is what makes this legible, and it is now on `Outcome` for that reason.** Actions
+were 63.0 vs 62.0 in every one of the four runs — deterministic and repeatable — so the workload
+difference was real, tiny, and entirely separate from the clock. The rule the project already had
+("read actions/game beside the clock") is necessary but not sufficient: when actions and time
+disagree, the honest conclusion is *unexplained*, not *therefore the thing I just changed*.
+
+**Mirror-match a configuration against itself rather than rebuilding an old commit.** Both arms
+identical within a run makes the run time purely that configuration's cost, and `Keywords(0f)` is
+behaviourally identical to the commit before the term existed — the term is appended last in
+`Explain`'s sum, so at zero every other term adds to exactly the float it did before, and
+`ScanBattlefield` skips the allocation. Same binary, so a stale `bin/` cannot measure code that
+was never compiled in.
 
 ### A head-to-head is the wrong instrument for a per-card bug
 
