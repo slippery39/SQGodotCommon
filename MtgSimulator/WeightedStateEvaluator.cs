@@ -47,6 +47,24 @@ public sealed record WeightedStateEvaluator : IStateEvaluator
 	public float ToughnessWeight { get; init; } = 0f;
 
 	/// <summary>
+	/// Master scalar on the keyword term. 0 disables it entirely — the behaviour before it existed.
+	///
+	/// The evaluator scored a 4/4 flier exactly like a 4/4 vanilla. Keywords contributed nothing,
+	/// which also meant EQUIPPING contributed nothing, since equipment grants keywords rather than
+	/// changing power. That is why the AI shuffles Swiftfoot Boots between creatures every turn:
+	/// the move is worth exactly 0.00 to the evaluator, so it cannot be told apart from a genuinely
+	/// useful first attachment.
+	///
+	/// The per-keyword values in <see cref="KeywordValue"/> are Forge's, and this scalar is 2/15 —
+	/// Forge prices a point of power at 15 where this file prices it at
+	/// <see cref="TotalPowerWeight"/> 2.0, so the ratio carries Forge's numbers into these units
+	/// rather than inventing new ones. **Forge is a game WITH blocking**, so treat that as a
+	/// starting point for the harness, not a recommendation. The scalar exists so the whole family
+	/// can be swept without editing eleven constants.
+	/// </summary>
+	public float KeywordWeight { get; init; } = 2.0f / 15.0f;
+
+	/// <summary>
 	/// How hard the race term pushes. See <see cref="RacePressure"/>.
 	///
 	/// Large next to the other weights on purpose: at a healthy life total it is a mild nudge
@@ -118,6 +136,7 @@ public sealed record WeightedStateEvaluator : IStateEvaluator
 
 		var mine = ScanBattlefield(state, playerBattlefieldId);
 		var theirs = ScanBattlefield(state, opponentBattlefieldId);
+		var keywords = (mine.Keywords - theirs.Keywords) * KeywordWeight;
 
 		var life = (player.Life - opponent.Life) * LifeWeight;
 		var creatures = (mine.Creatures - theirs.Creatures) * CreatureCountWeight;
@@ -157,8 +176,14 @@ public sealed record WeightedStateEvaluator : IStateEvaluator
 		var mana = player.MaxMana * ManaWeight;
 
 		// Summation order is load-bearing: float addition is not associative and DeterminismTests
-		// compares exact results. Toughness is appended LAST so that at its default of 0 every
-		// other term sums exactly as it did before this property existed.
+		// compares exact results. New terms are appended LAST so that at a zero weight every other
+		// term sums exactly as it did before the term existed.
+		//
+		// Keywords was briefly computed, stored in the breakdown, and left OUT of this sum — the
+		// term existed, reached the panel, and contributed nothing to the score.
+		// KeywordTermTests.TheBreakdown_AddsUpWithKeywordsOn is what caught it, which is the whole
+		// reason that assertion exists: a panel whose rows do not add up to its total is the one
+		// failure mode that makes the inspector actively misleading.
 		return new EvaluationBreakdown(
 			life,
 			creatures,
@@ -169,6 +194,7 @@ public sealed record WeightedStateEvaluator : IStateEvaluator
 			mana,
 			race,
 			toughness,
+			keywords,
 			life
 				+ creatures
 				+ power
@@ -177,7 +203,8 @@ public sealed record WeightedStateEvaluator : IStateEvaluator
 				+ race
 				+ hand
 				+ mana
-				+ toughness,
+				+ toughness
+				+ keywords,
 			IsTerminal: false
 		);
 	}
@@ -186,18 +213,19 @@ public sealed record WeightedStateEvaluator : IStateEvaluator
 	// total carries the whole score. IsTerminal is what lets the inspector say "loss" rather than
 	// printing nine zeroes next to -10000.
 	private static EvaluationBreakdown Terminal(float score) =>
-		new(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, score, IsTerminal: true);
+		new(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, score, IsTerminal: true);
 
 	/// <summary>
 	/// One battlefield walk, so the two zone loops are written once. Five ints, which still returns
 	/// cheaply; the alternative of sharing the breakdown struct was measured and is not free.
 	/// </summary>
-	private static (
+	private (
 		int Creatures,
 		int Power,
 		int Toughness,
 		int Damage,
-		int NonCreatures
+		int NonCreatures,
+		float Keywords
 	) ScanBattlefield(GameState state, int battlefieldId)
 	{
 		var creatures = 0;
@@ -205,6 +233,7 @@ public sealed record WeightedStateEvaluator : IStateEvaluator
 		var toughness = 0;
 		var damage = 0;
 		var nonCreatures = 0;
+		var keywords = 0f;
 
 		foreach (var c in state.GetCardsInZone(battlefieldId))
 		{
@@ -217,6 +246,10 @@ public sealed record WeightedStateEvaluator : IStateEvaluator
 				power += state.GetEffectivePermanentPower(c.Id);
 				toughness += creature.Toughness;
 				damage += creature.Damage;
+				// Gated so a zero weight pays nothing: GetEffectiveStats allocates a record, and
+				// this is the most-called function in the engine.
+				if (KeywordWeight != 0f)
+					keywords += KeywordValue(state, c.Id);
 			}
 			else if (c.HasComponent<PermanentComponent>())
 			{
@@ -224,7 +257,57 @@ public sealed record WeightedStateEvaluator : IStateEvaluator
 			}
 		}
 
-		return (creatures, power, toughness, damage, nonCreatures);
+		return (creatures, power, toughness, damage, nonCreatures, keywords);
+	}
+
+	/// <summary>
+	/// Forge's creature-evaluation keyword bonuses, in Forge's own units — the caller scales them
+	/// by <see cref="KeywordWeight"/>.
+	///
+	/// **Reads EFFECTIVE stats, not the creature's own component.** Equipment and auras GRANT
+	/// keywords, so a term built on printed values would score an equipped creature identically to
+	/// a bare one and miss the entire point. That costs one CreatureStats allocation per creature
+	/// per evaluation, which is why the caller gates it on a non-zero weight.
+	///
+	/// Departures from Forge, each deliberate:
+	/// - **Menace, defender, fear, intimidate, skulk** dropped — no blocking, and CreatureStats has
+	///   no such fields. Nothing to read.
+	/// - **Flying** keeps Forge's Power*10 even though here it is a DEFENSIVE attack restriction
+	///   (AttackAction.CanReach) rather than offensive evasion. Same number for now so this stays
+	///   comparable to Forge's formula; first knob to turn if the arm loses.
+	/// - **Taunt and Reach** have no Forge equivalent — Taunt is this engine's blocking stand-in.
+	///   Left at zero rather than guessed, so a losing result stays attributable.
+	/// </summary>
+	private static float KeywordValue(GameState state, int cardId)
+	{
+		var s = state.GetEffectiveStats(cardId);
+
+		// Forge resets a creature that cannot attack to its "useless" floor rather than pricing its
+		// abilities, so its keywords are worth nothing while it is detained.
+		if (s.CantAttack)
+			return 0f;
+
+		var v = 0f;
+		if (s.HasFlying)
+			v += s.Power * 10f;
+		if (s.HasLifelink)
+			v += s.Power * 10f;
+		// StrikesFirst implies both in this engine; do not pay for the pair twice.
+		if (s.HasDoubleStrike)
+			v += 10f + s.Power * 15f;
+		else if (s.HasFirstStrike)
+			v += 10f + s.Power * 5f;
+		if (s.HasDeathtouch)
+			v += 25f;
+		if (s.HasTrample && s.Power > 1)
+			v += (s.Power - 1) * 5f;
+		if (s.HasIndestructible)
+			v += 70f;
+		if (s.HasHexproof)
+			v += 35f;
+		if (s.HasShroud)
+			v += 30f;
+		return v;
 	}
 
 	private static (

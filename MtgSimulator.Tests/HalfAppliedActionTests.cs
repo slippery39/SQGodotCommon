@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MtgCore;
 using MtgSimulator;
@@ -96,6 +97,14 @@ public class HalfAppliedActionTests
 			ids,
 			rng: new Random(7),
 			captureDecisions: true,
+			// Keywords OFF. This fixture is about choice resolution, not about what equipment is
+			// worth: with the keyword term live, attaching the boots to a bare creature is a real
+			// +4.67 of hexproof and SHOULD outscore ending the turn, which would mask the property
+			// under test. Pinning against a fixed evaluator keeps the two concerns separable.
+			evaluator: WeightedStateEvaluator.Default with
+			{
+				KeywordWeight = 0f,
+			},
 			resolveChoicesOnExecute: resolveChoicesOnExecute
 		);
 		ai.SelectAction(state, ids, ids.Player1Id);

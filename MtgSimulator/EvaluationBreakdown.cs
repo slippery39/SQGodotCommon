@@ -24,6 +24,7 @@ public readonly record struct EvaluationBreakdown(
 	float Mana,
 	float Race,
 	float Toughness,
+	float Keywords,
 	float Total,
 	bool IsTerminal
 )
@@ -47,5 +48,6 @@ public readonly record struct EvaluationBreakdown(
 				("mana", Mana),
 				("race", Race),
 				("toughness", Toughness),
+				("keywords", Keywords),
 			];
 }
