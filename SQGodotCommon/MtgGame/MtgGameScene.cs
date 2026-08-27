@@ -94,10 +94,29 @@ public partial class MtgGameScene : Node2D
 	private ImmutableDictionary<int, ImmutableList<int>> _abilityCollectedCostPayments =
 		ImmutableDictionary<int, ImmutableList<int>>.Empty;
 
+	/// <summary>
+	/// Sandbox card values for the AI's discard/scry/tutor choices.
+	///
+	/// Read through Godot's FileAccess because System.IO cannot see a res:// path in an exported
+	/// build — the same reason DraftScene loads the draft model this way. **Regenerating
+	/// sim_results/card_values_csc.json does NOT update this file**; copy it across, or the game
+	/// keeps playing against stale values. Null degrades to the pre-feature AI.
+	/// </summary>
+	private static CardValueTable? LoadCardValues()
+	{
+		const string path = "res://MtgGame/Assets/card_values_csc.json";
+		if (!FileAccess.FileExists(path))
+		{
+			GD.Print($"[MtgGameScene] no card values at {path} — AI choices run unassisted");
+			return null;
+		}
+		return CardValueTable.FromJson(FileAccess.GetFileAsString(path));
+	}
+
 	public override void _Ready()
 	{
 		var setup = GameManager.Instance.GetService<DeckSetupData>();
-		_manager = new MtgGameManager(setup);
+		_manager = new MtgGameManager(setup, cardValues: LoadCardValues());
 		_boardUI = GetNode<BoardUI>("BoardUI");
 		_hand = GetNode<Hand2D>("Hand2D");
 		_battlefieldDropZone = GetNode<Area2D>("BattlefieldDropZone");

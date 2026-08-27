@@ -28,6 +28,11 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	private readonly int _lookaheadTurns;
 	private readonly int _concreteSlots;
 	private readonly OpponentSimulationMode _opponentMode;
+
+	/// <summary>
+	/// Sandbox card values, consulted ONLY by ResolveChoice. Null disables the term entirely.
+	/// </summary>
+	private readonly CardValueTable? _cardValues;
 	private readonly IReadOnlyList<IPotentialEvaluator> _potentialEvaluators;
 	private readonly Random _rng;
 	private readonly bool _captureDecisions;
@@ -122,7 +127,8 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		float terminalDiscount = TerminalDiscount,
 		bool preferFastestWin = true,
 		IStateEvaluator? evaluator = null,
-		bool resolveChoicesOnExecute = true
+		bool resolveChoicesOnExecute = true,
+		CardValueTable? cardValues = null
 	)
 	{
 		_rolloutBudget = rolloutBudget;
@@ -138,6 +144,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		_captureDecisions = captureDecisions;
 		_scoreDivergenceThreshold = scoreDivergenceThreshold;
 		_terminalDiscount = terminalDiscount;
+		_cardValues = cardValues;
 		_preferFastestWin = preferFastestWin;
 		_resolveChoicesOnExecute = resolveChoicesOnExecute;
 		_eval = evaluator ?? WeightedStateEvaluator.Default;
@@ -421,6 +428,29 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		return freshAction;
 	}
 
+	/// <summary>
+	/// The rollout, plus what the resulting HAND is worth.
+	///
+	/// Only choices are scored this way. An evaluator term would be consulted about every action in
+	/// the game, including land drops — and because a card's reach discount moves with MaxMana, that
+	/// made playing a land score NEGATIVE and cost 24.6% win rate over 1120 games. Within one choice
+	/// the mana is identical across every option, so the discount is a constant and cannot distort
+	/// anything except the ranking it is there to inform.
+	///
+	/// Scoring the resulting hand rather than the chosen card is what makes direction automatic:
+	/// discarding a bomb leaves a worse hand, tutoring one leaves a better hand, and nothing has to
+	/// know which kind of choice this is.
+	/// </summary>
+	private float ScoreChoiceResult(GameState state, int playerId)
+	{
+		var score = ScoreAfterCompletingTurn(state, playerId);
+		// A decided position is already worth +/-WinScore; adding hand value to that is noise on a
+		// number the search compares against a threshold.
+		if (_cardValues == null || StateEvaluator.IsDecisive(score))
+			return score;
+		return score + _cardValues.HandValue(state, playerId);
+	}
+
 	public ImmutableList<int> ResolveChoice(GameState state, ChoiceAction choice, int playerId)
 	{
 		StartMoveTimer();
@@ -446,7 +476,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 					break;
 				var selectedIds = combo.Select(o => o.Id).ToImmutableList();
 				var (resultState, _) = state.ResolveChoice(selectedIds);
-				var score = ScoreAfterCompletingTurn(resultState, playerId);
+				var score = ScoreChoiceResult(resultState, playerId);
 
 				if (score > bestScore)
 				{
@@ -496,7 +526,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			scored++;
 
 			var (resultState, _) = state.ResolveChoice(ImmutableList.Create(option.Id));
-			var score = ScoreAfterCompletingTurn(resultState, playerId);
+			var score = ScoreChoiceResult(resultState, playerId);
 
 			optionScores?.Add((option, score));
 
@@ -709,7 +739,13 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		);
 	}
 
-	private float ScoreAfterCompletingTurn(GameState state, int playerId)
+	/// <summary>
+	/// Internal rather than private so <see cref="CardValueSandbox"/> can score a fixture with the
+	/// same rollout the live search uses. A second playout written for the sandbox would measure
+	/// card value in units nothing else consumes — the same reason <c>Explain</c> is the
+	/// implementation and <c>Evaluate</c> the wrapper.
+	/// </summary>
+	internal float ScoreAfterCompletingTurn(GameState state, int playerId)
 	{
 		Interlocked.Increment(ref _rolloutsThisMove);
 		var game = state.TryGetGame();

@@ -69,6 +69,11 @@ public class DraftTrainer
 			$"Training on {_set.Name}: {_draftCount} drafts x {_seatCount} seats ({_format}), "
 				+ $"drafters: {drafterLabel}, AI depth {_aiDepth}, seed {_seed}"
 		);
+		// Printed because a model records how good a card was UNDER THE AI THAT MEASURED IT, and
+		// AiCardValues silently degrades to null when the file is absent or the shell was started
+		// in the wrong directory. Without this line a run cannot be told apart from one that had
+		// the feature switched off.
+		Console.WriteLine($"  {AiCardValues.Describe()}");
 
 		// --- Phase 1: drafts (sequential, deterministic) ---
 		var draftTimer = Stopwatch.StartNew();
@@ -110,8 +115,18 @@ public class DraftTrainer
 				);
 				var aiRng = new Random(g.GameSeed + 4);
 				var runner = new GameRunner(
-					new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: aiRng),
-					new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: aiRng)
+					new MultiTurnBeamSearchAiStrategy(
+						ids,
+						_aiDepth,
+						rng: aiRng,
+						cardValues: AiCardValues.Current
+					),
+					new MultiTurnBeamSearchAiStrategy(
+						ids,
+						_aiDepth,
+						rng: aiRng,
+						cardValues: AiCardValues.Current
+					)
 				);
 				var (result, finalState) = runner.Run(
 					state,

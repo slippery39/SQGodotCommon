@@ -285,6 +285,26 @@ public static class StrengthHarness
 		);
 
 	/// <summary>
+	/// Card-value scoring inside ResolveChoice, at an explicit weight. A null table is the
+	/// behaviour before the feature existed, so <c>CardValues(0f)</c> style comparisons are done by
+	/// passing the Default arm as the baseline.
+	///
+	/// Returns an inert arm if the sandbox file is missing, which shows up as a dead-even mirror
+	/// match rather than as a crash — check the file before reading a 50% result as "no effect".
+	/// </summary>
+	public static Arm CardValues(float weight) =>
+		new(
+			$"card-values-{weight:0.###}",
+			(ids, rng) =>
+				new MultiTurnBeamSearchAiStrategy(
+					ids,
+					AiDepth,
+					rng: rng,
+					cardValues: CardValueTable.TryLoad(CoresetCube.Set.Code, weight)
+				)
+		);
+
+	/// <summary>
 	/// The half-applied-action bug restored: ExecuteAction leaves a raised choice unresolved, so
 	/// the rollout can end the turn twice and fire end-of-turn triggers twice. See
 	/// HalfAppliedActionTests.

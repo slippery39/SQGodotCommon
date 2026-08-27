@@ -58,11 +58,21 @@ public class SimulatorRunner
 			var aiRng = new Random(gameSeed + 4);
 			IAiStrategy player1Strategy =
 				_strategyType == AiStrategyType.MultiTurnBeamSearch
-					? new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: aiRng)
+					? new MultiTurnBeamSearchAiStrategy(
+						ids,
+						_aiDepth,
+						rng: aiRng,
+						cardValues: AiCardValues.Current
+					)
 					: new BeamSearchAiStrategy(ids, _aiDepth, rng: aiRng);
 			IAiStrategy player2Strategy =
 				_strategyType == AiStrategyType.MultiTurnBeamSearch
-					? new MultiTurnBeamSearchAiStrategy(ids, _aiDepth, rng: aiRng)
+					? new MultiTurnBeamSearchAiStrategy(
+						ids,
+						_aiDepth,
+						rng: aiRng,
+						cardValues: AiCardValues.Current
+					)
 					: new BeamSearchAiStrategy(ids, _aiDepth, rng: aiRng);
 
 			var runner = new GameRunner(player1Strategy, player2Strategy);

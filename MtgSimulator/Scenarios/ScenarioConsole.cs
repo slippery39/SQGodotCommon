@@ -28,7 +28,12 @@ public static class ScenarioConsole
 			(
 				"MultiTurnBeam",
 				(ids, rng) =>
-					new MultiTurnBeamSearchAiStrategy(ids, rng: rng, captureDecisions: true)
+					new MultiTurnBeamSearchAiStrategy(
+						ids,
+						rng: rng,
+						captureDecisions: true,
+						cardValues: AiCardValues.Current
+					)
 			),
 			("Beam", (ids, rng) => new BeamSearchAiStrategy(ids, rng: rng, captureDecisions: true)),
 			("DepthLimited", (ids, rng) => new DepthLimitedAiStrategy(ids)),

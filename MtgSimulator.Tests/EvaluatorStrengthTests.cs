@@ -1,3 +1,4 @@
+using MtgCore;
 using MtgSimulator;
 
 namespace MtgSimulator.Tests;
@@ -145,6 +146,42 @@ public class EvaluatorStrengthTests
 
 		// Reported, not asserted on a threshold. The question is "how much", and a sweep that
 		// fails the build at its first losing value tells you nothing about the shape of the curve.
+		Assert.That(outcome.Decided, Is.GreaterThan(900), "too many draws to read this");
+	}
+
+	/// <summary>
+	/// Card-value scoring in ResolveChoice. See `DiscardQualityTests` for what it fixes: the rollout
+	/// is provably blind to a card it cannot reach, so two discard options score identically and the
+	/// choice falls through to a tiebreak.
+	///
+	/// **Read the population before reading the number.** `ChoiceCensus` measures 2.33 choice
+	/// resolutions per game, so this touches a thin slice of a 1120-game head-to-head and a neutral
+	/// result is the expected outcome even if the change is correct — the same reason the
+	/// half-applied-action fix measured 50.2%. A clear LOSS is the informative result.
+	///
+	/// Unlike the evaluator version this replaced, it cannot reach a land drop or an attack:
+	/// ResolveChoice is only called when the AI is answering a choice.
+	/// </summary>
+	[TestCase(0.1f)]
+	[TestCase(0.5f)]
+	[TestCase(2.0f)]
+	public void CardValueChoiceScoring_Sweep(float weight)
+	{
+		// Fail in a second rather than after four minutes of measuring nothing. TryLoad returns
+		// null when sim_results/card_values_csc.json is absent — run CardValueSweep first, in the
+		// SAME configuration, since the path is relative to the test host's working directory.
+		Assert.That(
+			CardValueTable.TryLoad(CoresetCube.Set.Code, weight),
+			Is.Not.Null,
+			"no sandbox file — this arm would be identical to the baseline and the run would "
+				+ "report a meaningless 50%"
+		);
+
+		var outcome = StrengthHarness.Measure(
+			StrengthHarness.CardValues(weight),
+			StrengthHarness.Default("no-card-values")
+		);
+		TestContext.Out.WriteLine(outcome);
 		Assert.That(outcome.Decided, Is.GreaterThan(900), "too many draws to read this");
 	}
 

@@ -43,6 +43,7 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | `DrawDiagnostics.cs` | `BoardSnapshot` capture + the end-of-training draw report: reason split, run-position trend, board medians, per-card lift |
 | `EvaluationBreakdown.cs` | A `StateEvaluator` score split into its eight terms; `readonly record struct` so producing it allocates nothing |
 | `AiDecision.cs` | `AiDecision` / `AiActionCandidate` — one captured decision, its ranked candidates, and their term breakdowns |
+| `CardValueSandbox.cs` | What a card is worth ONCE CASTABLE — casts it into a fixed position and rolls forward; `CardValue` rows + JSON store |
 | `Scenarios/StateJson.cs` | Real `GameState` ↔ JSON round-trip; reflection-based `$type` discriminators for every abstract game type |
 | `Scenarios/Scenario.cs` | `Scenario` record (name, note, player to move, state) + `ScenarioStore` load/save/list in `scenarios/` |
 | `Scenarios/ScenarioComparer.cs` | Runs N strategies against one scenario; `StrategyResult` rows and the fixed-width comparison table |
@@ -143,6 +144,26 @@ the board burning five minutes**, and the cost was invisible in every report bec
 seconds". Both loops are sequential, so testing the rollout counter there is deterministic.
 
 **When a game looks slow but its action count is low, suspect choice resolution, not the board.**
+
+**That paragraph describes a FIXED bug, and reading it as a live one nearly cost a wasted feature.**
+Once the rollout budget bounded it, the cost went away. Measured by `ChoiceCensus` over 224 real
+drafted-deck games:
+
+| | Calls | Thread time | Share |
+|---|---|---|---|
+| `SelectAction` | 14 125 | 966.7s | **98.8%** |
+| `ResolveChoice` | 523 | 11.9s | **1.2%** |
+
+2.33 choices per game, **p50 of 2 options** and p90 of 6 — the biggest single line ("Choose a card
+to discard", 205 calls) is 0.6% of total. `MinChoices > 1`, the C(n,k) family, is 8 calls and 1.3s.
+
+**So pruning the option list has a ceiling of 1.2% and a realistic value near zero** — you cannot
+prune a 2-option choice. A card-value heuristic was about to be wired in to do exactly that, on the
+strength of the paragraph above. Re-run `ChoiceCensus` before believing choice cost is a problem
+again; it is a decorator over `IAiStrategy` and changes nothing in production.
+
+The quality question is untouched and is the live one: `CardsInHandWeight` scores every hand card
+at a flat 1.4, so nothing in the evaluator distinguishes discarding a bomb from discarding a blank.
 
 **`DefaultExpandBranching` (5) caps levels below the root, much tighter than the root's 16.**
 Profiling attributes **72% of search cost to `ExpandNode` against 27% to level 0** — expansion
@@ -372,11 +393,16 @@ model? (Y/n — n trains from scratch)"*. Answering "replace" alone still bootst
 drafters, which silently produced a model trained on stale valuations.
 
 **Strip pairs from the shipped Godot asset on a large set.** Pair count is O(cards²): the
-82-card Legacy set has 3 321 pairs (450 KB), the 300-card Hollowmere set has 44 850 (6.2 MB).
-Since `synergyWeight` defaults to 0 the pairs are never read at pick time — verified by running
-the same evaluation against the full and pairs-free files and getting seat-for-seat identical
-win rates. `sim_results/` is gitignored, so keep the full file there for any future synergy
-experiment and commit only the stripped copy to `MtgGame/Assets/` (6.2 MB → 63 KB).
+82-card Legacy set has 3 321 pairs (450 KB), the 300-card Hollowmere set has 44 850 (6.2 MB), and
+CSC now has 82 560 — **11.5 MB against 46.8 KB stripped**. `synergyWeight` defaults to 0 so pairs
+are never read at pick time. `sim_results/` is gitignored, so keep the full file there for any
+future synergy experiment and commit only the stripped copy to `MtgGame/Assets/`.
+
+**That safety rests on a RUNTIME default sitting a long way from a BUILD-TIME deletion**, so it is
+pinned rather than trusted: `StrippedModelTests` asserts a stripped model drafts identically to a
+full one over 50 seeds, and — because a vacuous test would pass just as well — a second test raises
+`synergyWeight` and confirms the two arms genuinely do diverge. Both use inline data, so neither
+depends on anyone having run a training pass.
 
 ### Measured: Hollowmere (HLM), 300 cards
 
@@ -458,6 +484,184 @@ drop is close to the worst play available, so the margin has to be decisive rath
 
 Pinned by `MtgSimulator.Tests/AiLandDropTests.cs`, which scores the evaluator directly rather than
 racing a time-budgeted beam search.
+
+### Card values in ResolveChoice
+
+`CardValueTable` adds the value of the RESULTING HAND to each option's rollout score, inside
+`MultiTurnBeamSearchAiStrategy.ResolveChoice` and nowhere else. Discard, scry, tutor, impulse.
+Null table = off, which is the production default today.
+
+**Score the resulting hand, never the option's card.** Direction then falls out of the state:
+discarding a bomb leaves a worse hand and scores lower, tutoring one leaves a better hand and
+scores higher, with nothing having to know which kind of choice it is looking at.
+
+`ReachDiscount` (0.75/turn) decays a card you cannot cast yet. At two mana an eight-drop is worth
+`0.75^6` ≈ 18% of its cast value, which is what makes the AI pitch it and keep a playable two-drop
+— pinned by `AnUncastableBombLosesToAPlayableCard_OnTurnOne`.
+
+#### Why this is not an evaluator term, measured the hard way
+
+It was built as one first (`HandQualityWeight`), and that is wrong in a way worth recording,
+because the reasoning for it sounded fine. **`IStateEvaluator` scores every position the search
+considers**, so a hand term is consulted about land drops and attacks too. The term's size depends
+on `MaxMana`, and playing a land raises `MaxMana` — so a land drop shrank the term:
+
+| Land drop, one cost-8 card held | Term contribution |
+|---|---|
+| 4 → 5 mana | +7.27 |
+| 5 → 6 mana | **−0.34** |
+| 7 → 8 mana | **−10.50** |
+
+Against `ManaWeight`'s +2.0 a land drop scored NEGATIVE, so the AI stopped playing lands. Measured
+over 1120 games per weight: 0.05 → 49.5%, 0.2 → 47.7%, **1.0 → 24.6% with actions/game 63.1 →
+50.0**. The action count is what diagnosed it — 24.6% alone says "worse", 63 → 50 says "stopped
+playing the game".
+
+**Inside one choice the mana is identical across every option**, so the reach discount is a
+constant and can only affect the ranking it exists to inform. That is the whole reason the feature
+belongs in `ResolveChoice`. `CardValues_DoNotTouchTheLandDropDecision` pins that the evaluator
+knows nothing about card values.
+
+The general rule: **a term that should only inform one decision must live at that decision, not in
+the shared position score.**
+
+#### What it fixes, measured
+
+`DiscardQualityTests` asks the AI to pitch one of two creatures:
+
+| Case | discard Bomb | discard Chaff | Spread | AI pitched |
+|---|---|---|---|---|
+| Both castable (cost 2, mana 10) | 26.253 | 53.933 | **27.68** | Chaff ✔ |
+| Bomb unreachable (cost 8, mana 2) | 5.400 | 5.400 | **0.0000** | **Bomb** ✘ |
+
+The rollout casts a reachable card, so it already prices it — case A needs no help and gets none.
+Case B is the gap, and it is exact: identical to four decimal places, so the choice falls through
+to a tiebreak. With a table supplied it pitches the Chaff.
+
+**Both sandbox arms are kept** (`CardValueSandbox.Lookup(values, underPressure)`) — a passive board
+wants the biggest threat, a dangerous one wants the answer. `TryLoad` currently takes the pressure
+arm; selecting per-position from the race term is the intended end state and is not built.
+
+#### Measured: 18/18 on positions with an obvious answer, and it is ON
+
+A win rate is the wrong instrument here — 2.33 choices per game means a 1120-game head-to-head
+reports 50.0% whatever happens, which it did (0.1 → 50.0%, 0.5 → 50.0%, 2.0 → 49.7%).
+`ChoiceAccuracyTests` counts correct answers on positions where the answer is not in doubt:
+six same-cost card pairs × discard / scry / tutor, mana set so neither card is castable.
+
+| | Correct |
+|---|---|
+| Rollout alone | **0/18** |
+| With card values | **18/18** |
+
+`ChoiceCensus.HowOftenDoCardValuesChangeAChoice` measures the population it acts on: 503 choices
+over 224 games, **86 changed (17.1%)**, and **24.7% of all choices have zero rollout spread** —
+the region this exists for, measured rather than assumed.
+
+**Two scenario bugs found while building that scorecard, both of which reported a clean 0/6 —
+indistinguishable from "the feature does not work":**
+
+1. `HandValue` read the hand only, so scry was inert: a scry reorders the LIBRARY and never
+   touches the hand. Fixed by valuing the top `LibraryTopCounted` (3) library cards with a
+   draw-distance discount.
+2. The scry fixture filled the library with 20 blanks BEFORE adding its two test cards, so the
+   choice was offering filler. **Top of library is the FIRST card in the zone**
+   (`DrawCardsAction` takes `GetChildrenIds(libraryId).FirstOrDefault()`); reading from the other
+   end values the three cards you draw LAST.
+
+The scorecard now asserts the choice options actually contain the cards under test, so a
+malformed scenario fails loudly instead of scoring zero.
+
+**On by default.** `AiCardValues.Current` loads once and is passed by `SimulatorRunner`,
+`PreconstructedSimulatorRunner`, `DraftRunner`, `DraftTrainer` and `ScenarioConsole`; Godot passes
+`MtgGameManager(setup, cardValues:)` from `MtgGameScene.LoadCardValues()`. **Null is valid and
+means the file is missing**, in which case the AI is exactly what it was before — call
+`AiCardValues.Describe()` rather than assuming.
+
+#### A land in hand is worth what it UNLOCKS
+
+A land has no entry in the value table and never will — it is not a threat. But it is not worth
+zero either, and pricing it at zero had a specific consequence: every non-land carried a positive
+value, so **pitching the land always maximised hand value**. The rollout out-argued that at the
+shipped weight, but the margin halved (26.13 → 13.70) and at **weight 1.5** the AI started throwing
+away land drops — 3x of headroom on the exact defect `AiLandDropTests` exists to prevent, and
+invisible to a win rate at 2.33 choices per game.
+
+**The deeper flaw was in the reach discount, not the zero.** `ReachDiscount` priced a four-drop at
+three lands as "one turn away" whether or not you were holding the land that gets you there. Those
+are very different positions: with the land, next turn's mana is certain; without it you have to
+topdeck one.
+
+`TopdeckDiscount` (0.6) splits `turnsAway` into turns you already hold the land for — merely
+LATER — and turns you must still draw — also UNCERTAIN. A land is still worth 0 on its own; its
+value is entirely the difference it makes to everything else, and that comes out right in every
+case without a rule per case:
+
+| Position | A land in hand is worth |
+|---|---|
+| 3 lands, four-drops stuck in hand | a lot — it unlocks all of them |
+| 6 lands, nothing above four | ~nothing — correctly the first pitch |
+| hand of one-drops | ~nothing — flood |
+
+Measured on the three-lands-three-four-drops position, pitching the Plains went from the **best**
+hand value (43.89) to the **worst** (26.33), and the margin over the correct pitch went 13.70 →
+**31.26** — wider than the 26.13 the rollout manages alone, so card values now reinforce the right
+answer instead of fighting it. `LandKeepingChoiceTests` covers both directions, because half of it
+is a bias rather than a fix:
+
+| Position | Choice | Answer |
+|---|---|---|
+| 3 lands, hand of four-drops | discard | pitch a spare four-drop, **keep the land** |
+| 3 lands, hand of four-drops | tutor | **fetch the land** — it unlocks three cards |
+| 4 lands, hand of four-drops | discard | **pitch the land** — it unlocks nothing |
+| 5 lands, hand of four-drops | tutor | **fetch the spell** — the fifth land is surplus |
+
+The land is kept at every weight from 0.25 to 3.0 in the first row. **A rule that simply never
+pitched lands would pass rows 1–2 and fail rows 3–4**, which is why the surplus cases are asserted
+rather than characterised.
+
+**Counting it twice is the trap to avoid here.** A land must not also get a direct value, or it is
+paid for once through `landsInHand` and again on its own.
+
+**The Godot asset is a separate copy**, `SQGodotCommon/MtgGame/Assets/card_values_csc.json`.
+Regenerating `sim_results/` does not update it — same trap as the draft model.
+
+#### The retrain was run as a controlled A/B, and card values do NOT move card valuations
+
+Two 300-draft runs, **same seed, same binary**, differing only in `MTG_CARD_VALUES=off`. Both
+16 798 deck-games, prior exactly 0.5000, 1 draw in 8400, flat across quarters.
+
+| Comparison | Spearman |
+|---|---|
+| values-ON vs values-OFF (16 798 each) | **0.972** |
+| values-OFF vs the older 5 600-deck-game model | **0.599** |
+
+**That second row is the control that matters.** Comparing the new model against the old one gave
+0.596 and looked like a large reranking; the same comparison with the feature OFF gives 0.599. The
+movement was **entirely sample size** — median games/card went 124 → 362, i.e. per-card 1 SE
+±4.48pp → ±2.63pp.
+
+Mean absolute movement between arms is 0.81pp. Tagging the 59 cards whose text raises a choice
+(`WithDiscard`/`WithScry`/`WithDig`/`WithSearchLibrary`/`WithImpulseDraw`/`WithTutor`/`WithModes`):
+
+| Group | n | Mean delta |
+|---|---|---|
+| choice-raising | 59 | **+0.035pp** (1 SE 0.157) |
+| everything else | 349 | −0.056pp (1 SE 0.054) |
+
+**No concentration.** Looters appear on both sides of the movement list (Jeskai Elder +3.09,
+Rummaging Goblin +2.76 against Merfolk Looter −1.35, Teferi's Tutelage −1.42), which is what noise
+looks like. Mean |delta| is mildly higher for choice cards (0.96 vs 0.78) with no directional
+effect — consistent with card values changing WHICH card gets pitched, adding variance to those
+cards' measured rates without systematically raising them.
+
+**So a retrain is NOT required for a change of this size**, and that is the reusable finding: this
+feature alters 17% of choices at 2.33 choices per game out of ~63 actions, and that does not reach
+card-level win rates. **Do not read a model comparison without an equal-data control** — the
+sample-size effect here was five times the real one.
+
+Both arms are archived: `sim_results/draft_training_csc.cardvalues-{on,off}.json`. The ON model is
+live, chosen for consistency with the AI that plays rather than on evidence of superiority.
 
 ### Training a set from the command line
 
@@ -921,6 +1125,60 @@ games. **Correctness that does not show up in a win rate is still correctness**;
 reverting is a clear loss, not the absence of a gain.
 
 Read "neutral" as "smaller than ~3pp", not "exactly zero".
+
+## CardValueSandbox — value conditioned on castability
+
+`CardValueSandbox.Measure(cards)` casts each card into a fixed position and rolls the game forward
+with the same `ScoreAfterCompletingTurn` the live search uses, minus a control rollout of the same
+fixture without the card. `CardValueSweep` drives it (`[Explicit]`, ~8s for CSC's 408 cards) and
+writes `sim_results/card_values_<code>.json`.
+
+**This is a different axis from the trained draft model and they are EXPECTED to disagree.**
+`DraftTrainingData` measures how much a card raises a 40-card deck's win rate, which is dominated
+by castability — a 2/2 for 1 rates well partly *because* it is always castable. That is one scalar
+per card and cannot answer "at eight lands, tutor the 2/2 or the 6/6 trample". The sandbox holds
+castability constant and measures the other half. **Draft picking keeps using the win rates.**
+
+Do not record card values here — run the sweep and read the file:
+
+```
+python -c "
+import json; d=json.load(open('sim_results/card_values_csc.json'))
+ok=[c for c in d if c['NotMeasured'] is None]
+v=sorted(ok,key=lambda c:-c['Value']); print(v[:10]); print(v[-10:])"
+```
+
+Three things the first run established, each found by reading the table rather than by reasoning:
+
+- **A rollout that reaches a win returns a discounted terminal (~9000 against board scores of ~80),
+  and one such card sets the scale for the entire table.** Sublime Archangel did this at 8971.70,
+  two orders of magnitude clear of second. Excluded via `IsDecisive` and reported by name — winning
+  inside the lookahead says the FIXTURE is decided, not that the card is worth 9000.
+- **The generator emits one cast action per TARGET, so taking any single one picks a target
+  arbitrarily** — and `PlayersOrCreatures` includes the caster's own face. Every burn spell in the
+  cube measured as a blank (Lightning Bolt at −1.66, exactly the cost of the card leaving hand).
+  All targets are now rolled out and the best kept; Bolt reads +6.30, Murder +18.00.
+- **`PassTurn` is not a neutral baseline — it is a game where the opponent has conceded**, so every
+  defensive, symmetric and reactive card prices negative in it. Day of Judgment reads −35.10 there
+  and +15.40 under `BoardOnly`. See the open question below.
+
+**The two arms are `PassTurn` and `BoardOnly` off the existing `OpponentSimulationMode` enum**, so
+the fragility probe needed no engine change. Their gap sorts cards by what board they need: a large
+positive gap means the value assumes a quiet board (Primordial Hydra +54.23, a 0/0 that grows),
+a large negative gap means the card is worthless without pressure to answer (Day of Judgment
+−50.50).
+
+**A card reading exactly 0.00 in BOTH arms is an inert-card candidate** — this is the standing
+version of the "inert cards throw no errors" audit, and the first run surfaced six.
+
+**Open: which arm is the headline.** Currently `Value` is the `PassTurn` arm, which the evidence
+above says is wrong for a whole family of cards. `BoardOnly` produces sensible numbers across the
+set and is the search's own production opponent model. Both are in the JSON, so this is a one-line
+change.
+
+**Known limitation: the board is symmetric, so a symmetric effect prices at ~zero.** Same
+limitation `EndTurnCostSweep` carries. An asymmetric fixture is the instrument for that family and
+it would move every other card's number too.
 
 ## AI Inspection Tooling
 

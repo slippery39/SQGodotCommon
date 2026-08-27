@@ -195,8 +195,18 @@ public class DraftRunner
 		var (state, ids, cardNames) = DraftGameSetup.Build(pool1, pool2);
 		var aiRng = new Random(gameSeed + 4);
 		var runner = new GameRunner(
-			new MultiTurnBeamSearchAiStrategy(ids, aiDepth, rng: aiRng),
-			new MultiTurnBeamSearchAiStrategy(ids, aiDepth, rng: aiRng)
+			new MultiTurnBeamSearchAiStrategy(
+				ids,
+				aiDepth,
+				rng: aiRng,
+				cardValues: AiCardValues.Current
+			),
+			new MultiTurnBeamSearchAiStrategy(
+				ids,
+				aiDepth,
+				rng: aiRng,
+				cardValues: AiCardValues.Current
+			)
 		);
 		var (result, _) = runner.Run(
 			state,

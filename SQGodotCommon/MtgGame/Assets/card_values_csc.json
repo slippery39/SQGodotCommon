@@ -1,0 +1,3674 @@
+[
+  {
+    "Name": "Anointer of Champions",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Gideon\u0027s Lawkeeper",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Kytheon, Hero of Akros",
+    "ManaCost": 1,
+    "Value": 9.533337,
+    "StressValue": -0.29999924,
+    "NotMeasured": null,
+    "Fragility": 9.833336,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Soul Warden",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Speaker of the Heavens",
+    "ManaCost": 1,
+    "Value": 7.333332,
+    "StressValue": 13.85,
+    "NotMeasured": null,
+    "Fragility": -6.5166683,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ajani\u0027s Pridemate",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Fencing Ace",
+    "ManaCost": 2,
+    "Value": 9.533333,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -3.8666677,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Grand Abolisher",
+    "ManaCost": 2,
+    "Value": 32.333332,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": 20.53333,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Imposing Sovereign",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Knight of Glory",
+    "ManaCost": 2,
+    "Value": 21.33334,
+    "StressValue": 14.6,
+    "NotMeasured": null,
+    "Fragility": 6.7333393,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Knight of the White Orchid",
+    "ManaCost": 2,
+    "Value": 11.866669,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": 0.06666756,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Seasoned Hallowblade",
+    "ManaCost": 2,
+    "Value": 12,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Serra Avenger",
+    "ManaCost": 2,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Stormfront Pegasus",
+    "ManaCost": 2,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Topan Freeblade",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Angel of Vitality",
+    "ManaCost": 3,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Attended Knight",
+    "ManaCost": 3,
+    "Value": 17.866665,
+    "StressValue": 22.400002,
+    "NotMeasured": null,
+    "Fragility": -4.5333366,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Crusader of Odric",
+    "ManaCost": 3,
+    "Value": 29.7,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": 17.9,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Gideon\u0027s Avenger",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Hanged Executioner",
+    "ManaCost": 3,
+    "Value": 14.666668,
+    "StressValue": 20.733335,
+    "NotMeasured": null,
+    "Fragility": -6.0666676,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Intrepid Hero",
+    "ManaCost": 3,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Master of Diversion",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Pegasus Courser",
+    "ManaCost": 3,
+    "Value": 7.1000023,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": -4.8999977,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Resplendent Angel",
+    "ManaCost": 3,
+    "Value": 16.000004,
+    "StressValue": 16,
+    "NotMeasured": null,
+    "Fragility": 3.8146973E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Steadfast Sentry",
+    "ManaCost": 3,
+    "Value": 12,
+    "StressValue": 14.400001,
+    "NotMeasured": null,
+    "Fragility": -2.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Veteran Swordsmith",
+    "ManaCost": 3,
+    "Value": 12,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Vryn Wingmare",
+    "ManaCost": 2,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Basri\u0027s Acolyte",
+    "ManaCost": 4,
+    "Value": 15.612118,
+    "StressValue": 14.800001,
+    "NotMeasured": null,
+    "Fragility": 0.8121166,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Basri\u0027s Lieutenant",
+    "ManaCost": 4,
+    "Value": 15.000004,
+    "StressValue": 25.8,
+    "NotMeasured": null,
+    "Fragility": -10.799995,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Gallant Cavalry",
+    "ManaCost": 4,
+    "Value": 18.000004,
+    "StressValue": 20.800001,
+    "NotMeasured": null,
+    "Fragility": -2.7999973,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Kytheon\u0027s Irregulars",
+    "ManaCost": 4,
+    "Value": 15.000004,
+    "StressValue": 15,
+    "NotMeasured": null,
+    "Fragility": 3.8146973E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Odric, Master Tactician",
+    "ManaCost": 4,
+    "Value": 15.83334,
+    "StressValue": 14.400002,
+    "NotMeasured": null,
+    "Fragility": 1.4333382,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sublime Archangel",
+    "ManaCost": 4,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "reached a terminal inside the lookahead",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Archangel of Thune",
+    "ManaCost": 5,
+    "Value": 64.3074,
+    "StressValue": 41.233334,
+    "NotMeasured": null,
+    "Fragility": 23.07407,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Baneslayer Angel",
+    "ManaCost": 5,
+    "Value": 48.499996,
+    "StressValue": 55.9,
+    "NotMeasured": null,
+    "Fragility": -7.4000053,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Captain of the Watch",
+    "ManaCost": 6,
+    "Value": 39.2,
+    "StressValue": 33.4,
+    "NotMeasured": null,
+    "Fragility": 5.799999,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Lena, Selfless Champion",
+    "ManaCost": 5,
+    "Value": 27.2,
+    "StressValue": 16.2,
+    "NotMeasured": null,
+    "Fragility": 11,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sun Titan",
+    "ManaCost": 6,
+    "Value": 29.7,
+    "StressValue": 26.8,
+    "NotMeasured": null,
+    "Fragility": 2.9000015,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Condemn",
+    "ManaCost": 1,
+    "Value": 18.000004,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -20.149998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Gods Willing",
+    "ManaCost": 1,
+    "Value": 9.200001,
+    "StressValue": 19.142857,
+    "NotMeasured": null,
+    "Fragility": -9.942856,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Harm\u0027s Way",
+    "ManaCost": 1,
+    "Value": 3.1000023,
+    "StressValue": 14.6,
+    "NotMeasured": null,
+    "Fragility": -11.499998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Disenchant",
+    "ManaCost": 1,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Devouring Light",
+    "ManaCost": 3,
+    "Value": 18.000004,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -20.149998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Fortify",
+    "ManaCost": 1,
+    "Value": 2.9000015,
+    "StressValue": 29.1,
+    "NotMeasured": null,
+    "Fragility": -26.199999,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Inspired Charge",
+    "ManaCost": 2,
+    "Value": 2.9000015,
+    "StressValue": 25.6,
+    "NotMeasured": null,
+    "Fragility": -22.699999,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Swift Response",
+    "ManaCost": 2,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Feat of Resistance",
+    "ManaCost": 2,
+    "Value": 5.9000015,
+    "StressValue": 13.800001,
+    "NotMeasured": null,
+    "Fragility": -7.8999996,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Safe Passage",
+    "ManaCost": 3,
+    "Value": 9.200001,
+    "StressValue": 33.2,
+    "NotMeasured": null,
+    "Fragility": -24,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Devout Decree",
+    "ManaCost": 2,
+    "Value": 18.000004,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -20.149998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Day of Judgment",
+    "ManaCost": 4,
+    "Value": -35.1,
+    "StressValue": 15.400002,
+    "NotMeasured": null,
+    "Fragility": -50.5,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Tragic Arrogance",
+    "ManaCost": 5,
+    "Value": -34.32353,
+    "StressValue": 15.6653595,
+    "NotMeasured": null,
+    "Fragility": -49.988888,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Return to the Ranks",
+    "ManaCost": 0,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Basri\u0027s Solidarity",
+    "ManaCost": 2,
+    "Value": 23.7,
+    "StressValue": 29.1,
+    "NotMeasured": null,
+    "Fragility": -5.3999996,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Timely Reinforcements",
+    "ManaCost": 3,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Pacifism",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 14.700001,
+    "NotMeasured": null,
+    "Fragility": -13.200001,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Spirit Bonds",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Spirit Mantle",
+    "ManaCost": 2,
+    "Value": 12.066669,
+    "StressValue": 13.800001,
+    "NotMeasured": null,
+    "Fragility": -1.7333317,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Oblivion Ring",
+    "ManaCost": 3,
+    "Value": 7.5,
+    "StressValue": 17.1,
+    "NotMeasured": null,
+    "Fragility": -9.6,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Path of Bravery",
+    "ManaCost": 3,
+    "Value": 26.191303,
+    "StressValue": 32.4,
+    "NotMeasured": null,
+    "Fragility": -6.2086983,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Angelic Destiny",
+    "ManaCost": 4,
+    "Value": 48.078793,
+    "StressValue": 68.466675,
+    "NotMeasured": null,
+    "Fragility": -20.387882,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Faith\u0027s Fetters",
+    "ManaCost": 4,
+    "Value": 3.300003,
+    "StressValue": 16.342106,
+    "NotMeasured": null,
+    "Fragility": -13.042103,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Glorious Anthem",
+    "ManaCost": 3,
+    "Value": 25.2,
+    "StressValue": 30.6,
+    "NotMeasured": null,
+    "Fragility": -5.3999996,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ancestral Blade",
+    "ManaCost": 2,
+    "Value": 7.5,
+    "StressValue": 14.900001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ajani, Caller of the Pride",
+    "ManaCost": 3,
+    "Value": 1.5,
+    "StressValue": -10.700001,
+    "NotMeasured": null,
+    "Fragility": 12.200001,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ajani Steadfast",
+    "ManaCost": 4,
+    "Value": 13.500004,
+    "StressValue": 3.8000002,
+    "NotMeasured": null,
+    "Fragility": 9.700004,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Gideon Jura",
+    "ManaCost": 5,
+    "Value": -33.6,
+    "StressValue": -52.299995,
+    "NotMeasured": null,
+    "Fragility": 18.699997,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Basri Ket",
+    "ManaCost": 3,
+    "Value": -3.666668,
+    "StressValue": -3.8999987,
+    "NotMeasured": null,
+    "Fragility": 0.23333073,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Jace\u0027s Phantasm",
+    "ManaCost": 1,
+    "Value": 7.333332,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -6.0666685,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Spectral Sailor",
+    "ManaCost": 1,
+    "Value": 7.333332,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -6.0666685,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Fog Bank",
+    "ManaCost": 2,
+    "Value": 3,
+    "StressValue": 3.000001,
+    "NotMeasured": null,
+    "Fragility": -9.536743E-07,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Harbinger of the Tides",
+    "ManaCost": 2,
+    "Value": 14.466667,
+    "StressValue": 45.75,
+    "NotMeasured": null,
+    "Fragility": -31.283333,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Jace, Vryn\u0027s Prodigy",
+    "ManaCost": 2,
+    "Value": 3,
+    "StressValue": 3.000001,
+    "NotMeasured": null,
+    "Fragility": -9.536743E-07,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Jeskai Elder",
+    "ManaCost": 2,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Merfolk Looter",
+    "ManaCost": 2,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Mystic Archaeologist",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Phantasmal Image",
+    "ManaCost": 2,
+    "Value": 18.000004,
+    "StressValue": 15.6,
+    "NotMeasured": null,
+    "Fragility": 2.4000034,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Aether Adept",
+    "ManaCost": 3,
+    "Value": 14.466663,
+    "StressValue": 36.482353,
+    "NotMeasured": null,
+    "Fragility": -22.01569,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Barrin, Tolarian Archmage",
+    "ManaCost": 3,
+    "Value": 13.599995,
+    "StressValue": 36.482353,
+    "NotMeasured": null,
+    "Fragility": -22.882359,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Chasm Skulker",
+    "ManaCost": 3,
+    "Value": 12,
+    "StressValue": 19.400002,
+    "NotMeasured": null,
+    "Fragility": -7.4000015,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Cloudkin Seer",
+    "ManaCost": 3,
+    "Value": 13.066662,
+    "StressValue": 13.200001,
+    "NotMeasured": null,
+    "Fragility": -0.13333893,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Frost Lynx",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 22.95,
+    "NotMeasured": null,
+    "Fragility": -13.950001,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Illusory Angel",
+    "ManaCost": 3,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Jhessian Thief",
+    "ManaCost": 3,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Mistral Singer",
+    "ManaCost": 3,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Wall of Frost",
+    "ManaCost": 3,
+    "Value": 3,
+    "StressValue": 23.900002,
+    "NotMeasured": null,
+    "Fragility": -20.900002,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Clone",
+    "ManaCost": 4,
+    "Value": 18.000004,
+    "StressValue": 14.400002,
+    "NotMeasured": null,
+    "Fragility": 3.6000023,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Dungeon Geists",
+    "ManaCost": 4,
+    "Value": 16.000004,
+    "StressValue": 30.270588,
+    "NotMeasured": null,
+    "Fragility": -14.270584,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Talrand, Sky Summoner",
+    "ManaCost": 4,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Whirler Rogue",
+    "ManaCost": 4,
+    "Value": 23.666668,
+    "StressValue": 29.733334,
+    "NotMeasured": null,
+    "Fragility": -6.0666656,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Cavalier of Gales",
+    "ManaCost": 5,
+    "Value": 26.066662,
+    "StressValue": 31.27436,
+    "NotMeasured": null,
+    "Fragility": -5.207699,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Soulblade Djinn",
+    "ManaCost": 5,
+    "Value": 20.33334,
+    "StressValue": 20.333334,
+    "NotMeasured": null,
+    "Fragility": 5.722046E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Stormwing Entity",
+    "ManaCost": 5,
+    "Value": 16.000004,
+    "StressValue": 16,
+    "NotMeasured": null,
+    "Fragility": 3.8146973E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Frost Titan",
+    "ManaCost": 6,
+    "Value": 29.7,
+    "StressValue": 25.882355,
+    "NotMeasured": null,
+    "Fragility": 3.817646,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Agent of Treachery",
+    "ManaCost": 7,
+    "Value": 57.599995,
+    "StressValue": 48.399998,
+    "NotMeasured": null,
+    "Fragility": 9.199997,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sphinx of Uthuun",
+    "ManaCost": 7,
+    "Value": 36.166668,
+    "StressValue": 40.36667,
+    "NotMeasured": null,
+    "Fragility": -4.200001,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Clash of Wills",
+    "ManaCost": 1,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Opt",
+    "ManaCost": 1,
+    "Value": 1.3999977,
+    "StressValue": 1.3999996,
+    "NotMeasured": null,
+    "Fragility": -1.9073486E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Unsummon",
+    "ManaCost": 1,
+    "Value": 16.599998,
+    "StressValue": 36.75,
+    "NotMeasured": null,
+    "Fragility": -20.150002,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Aether Gust",
+    "ManaCost": 2,
+    "Value": 18.000004,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -20.149998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Disperse",
+    "ManaCost": 2,
+    "Value": 16.599995,
+    "StressValue": 36.75,
+    "NotMeasured": null,
+    "Fragility": -20.150005,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Essence Scatter",
+    "ManaCost": 2,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Mana Leak",
+    "ManaCost": 2,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Negate",
+    "ManaCost": 2,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Send to Sleep",
+    "ManaCost": 2,
+    "Value": 0,
+    "StressValue": 18.6,
+    "NotMeasured": null,
+    "Fragility": -18.6,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Turn to Frog",
+    "ManaCost": 2,
+    "Value": 9.100002,
+    "StressValue": 19.142857,
+    "NotMeasured": null,
+    "Fragility": -10.042854,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Unsubstantiate",
+    "ManaCost": 2,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Dissipate",
+    "ManaCost": 2,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Frost Breath",
+    "ManaCost": 3,
+    "Value": 0,
+    "StressValue": 18.6,
+    "NotMeasured": null,
+    "Fragility": -18.6,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Polymorphist\u0027s Jest",
+    "ManaCost": 3,
+    "Value": 9.100002,
+    "StressValue": 19.142857,
+    "NotMeasured": null,
+    "Fragility": -10.042854,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Uncomfortable Chill",
+    "ManaCost": 3,
+    "Value": 5.9000015,
+    "StressValue": 17.2,
+    "NotMeasured": null,
+    "Fragility": -11.299999,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Bone to Ash",
+    "ManaCost": 4,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Rain of Revelation",
+    "ManaCost": 4,
+    "Value": 2.7999992,
+    "StressValue": 2.8000002,
+    "NotMeasured": null,
+    "Fragility": -9.536743E-07,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Aetherspouts",
+    "ManaCost": 5,
+    "Value": 52.899998,
+    "StressValue": 103.399994,
+    "NotMeasured": null,
+    "Fragility": -50.499996,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ponder",
+    "ManaCost": 1,
+    "Value": 1.3999977,
+    "StressValue": 1.3999996,
+    "NotMeasured": null,
+    "Fragility": -1.9073486E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Preordain",
+    "ManaCost": 1,
+    "Value": 1.3999977,
+    "StressValue": 1.3999996,
+    "NotMeasured": null,
+    "Fragility": -1.9073486E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Void Snare",
+    "ManaCost": 1,
+    "Value": 16.599998,
+    "StressValue": 36.75,
+    "NotMeasured": null,
+    "Fragility": -20.150002,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Mind Spring",
+    "ManaCost": 0,
+    "Value": 4.200001,
+    "StressValue": 4.2,
+    "NotMeasured": null,
+    "Fragility": 9.536743E-07,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Anchor to the Aether",
+    "ManaCost": 3,
+    "Value": 18.000004,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -20.149998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Winged Words",
+    "ManaCost": 3,
+    "Value": 2.7999992,
+    "StressValue": 2.8000002,
+    "NotMeasured": null,
+    "Fragility": -9.536743E-07,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Drawn from Dreams",
+    "ManaCost": 3,
+    "Value": 2.7999992,
+    "StressValue": 2.8000002,
+    "NotMeasured": null,
+    "Fragility": -9.536743E-07,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sleep",
+    "ManaCost": 1,
+    "Value": 0,
+    "StressValue": 18.6,
+    "NotMeasured": null,
+    "Fragility": -18.6,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Talent of the Telepath",
+    "ManaCost": 4,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Talrand\u0027s Invocation",
+    "ManaCost": 4,
+    "Value": 23.33334,
+    "StressValue": 23.466667,
+    "NotMeasured": null,
+    "Fragility": -0.13332748,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Time Warp",
+    "ManaCost": 5,
+    "Value": 2.7999992,
+    "StressValue": 18.733334,
+    "NotMeasured": null,
+    "Fragility": -15.933334,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sensory Deprivation",
+    "ManaCost": 1,
+    "Value": 10.5,
+    "StressValue": 32.642857,
+    "NotMeasured": null,
+    "Fragility": -22.142857,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Aether Tunnel",
+    "ManaCost": 1,
+    "Value": 10.300003,
+    "StressValue": 22.57143,
+    "NotMeasured": null,
+    "Fragility": -12.271427,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Claustrophobia",
+    "ManaCost": 3,
+    "Value": 1.5,
+    "StressValue": 14.700001,
+    "NotMeasured": null,
+    "Fragility": -13.200001,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Teferi\u0027s Tutelage",
+    "ManaCost": 3,
+    "Value": 2.8999977,
+    "StressValue": 2.8999996,
+    "NotMeasured": null,
+    "Fragility": -1.9073486E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Capture Sphere",
+    "ManaCost": 4,
+    "Value": 1.5,
+    "StressValue": 14.700001,
+    "NotMeasured": null,
+    "Fragility": -13.200001,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Patient Rebuilding",
+    "ManaCost": 4,
+    "Value": 4.299999,
+    "StressValue": 4.3,
+    "NotMeasured": null,
+    "Fragility": -9.536743E-07,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Jace Beleren",
+    "ManaCost": 3,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Mu Yanling, Sky Dancer",
+    "ManaCost": 3,
+    "Value": 11.533333,
+    "StressValue": -1.8222222,
+    "NotMeasured": null,
+    "Fragility": 13.355555,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Teferi, Master of Time",
+    "ManaCost": 4,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Tezzeret, Artifice Master",
+    "ManaCost": 5,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Cruel Sadist",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Diregraf Ghoul",
+    "ManaCost": 1,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Knight of the Ebon Legion",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Tormented Soul",
+    "ManaCost": 1,
+    "Value": 7.333332,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -6.0666685,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Vampire of the Dire Moon",
+    "ManaCost": 1,
+    "Value": 10.666668,
+    "StressValue": 12.384616,
+    "NotMeasured": null,
+    "Fragility": -1.717948,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Viscera Seer",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Blood Burglar",
+    "ManaCost": 2,
+    "Value": 11.666668,
+    "StressValue": 12.914286,
+    "NotMeasured": null,
+    "Fragility": -1.2476177,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Blood Seeker",
+    "ManaCost": 2,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Despoiler of Souls",
+    "ManaCost": 2,
+    "Value": 12,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Duskhunter Bat",
+    "ManaCost": 2,
+    "Value": 7.333332,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -6.0666685,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Kitesail Freebooter",
+    "ManaCost": 2,
+    "Value": 7.333332,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -6.0666685,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Knight of Infamy",
+    "ManaCost": 2,
+    "Value": 17.7,
+    "StressValue": 14.800001,
+    "NotMeasured": null,
+    "Fragility": 2.8999996,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ravenous Rats",
+    "ManaCost": 2,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Reassembling Skeleton",
+    "ManaCost": 2,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Deathbloom Thallid",
+    "ManaCost": 3,
+    "Value": 12,
+    "StressValue": 19.400002,
+    "NotMeasured": null,
+    "Fragility": -7.4000015,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Fleshbag Marauder",
+    "ManaCost": 3,
+    "Value": 12,
+    "StressValue": 15.6,
+    "NotMeasured": null,
+    "Fragility": -3.6000004,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Hooded Blightfang",
+    "ManaCost": 3,
+    "Value": 10.861156,
+    "StressValue": 16.800753,
+    "NotMeasured": null,
+    "Fragility": -5.939596,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Hypnotic Specter",
+    "ManaCost": 3,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Liliana\u0027s Specter",
+    "ManaCost": 3,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Liliana, Heretical Healer",
+    "ManaCost": 3,
+    "Value": 12.612125,
+    "StressValue": 12.914286,
+    "NotMeasured": null,
+    "Fragility": -0.30216026,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Plague Mare",
+    "ManaCost": 3,
+    "Value": 18.000004,
+    "StressValue": 38.300003,
+    "NotMeasured": null,
+    "Fragility": -20.3,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Rotting Regisaur",
+    "ManaCost": 3,
+    "Value": 31.446163,
+    "StressValue": 14.200001,
+    "NotMeasured": null,
+    "Fragility": 17.246162,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Royal Assassin",
+    "ManaCost": 3,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Vampire Nighthawk",
+    "ManaCost": 3,
+    "Value": 18.612125,
+    "StressValue": 18.580952,
+    "NotMeasured": null,
+    "Fragility": 0.031173706,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Xathrid Necromancer",
+    "ManaCost": 3,
+    "Value": 9.200001,
+    "StressValue": 22.400002,
+    "NotMeasured": null,
+    "Fragility": -13.200001,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Xathrid Slyblade",
+    "ManaCost": 3,
+    "Value": 13.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": 1.8666668,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Bloodhunter Bat",
+    "ManaCost": 4,
+    "Value": 14.901005,
+    "StressValue": 13.647619,
+    "NotMeasured": null,
+    "Fragility": 1.2533855,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Crypt Lurker",
+    "ManaCost": 4,
+    "Value": 12.000004,
+    "StressValue": 14.400002,
+    "NotMeasured": null,
+    "Fragility": -2.3999977,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Disciple of Bolas",
+    "ManaCost": 4,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Dread Presence",
+    "ManaCost": 4,
+    "Value": 12.000004,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": 3.8146973E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Gravedigger",
+    "ManaCost": 4,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Vampire Outcasts",
+    "ManaCost": 4,
+    "Value": 11.666668,
+    "StressValue": 12.914286,
+    "NotMeasured": null,
+    "Fragility": -1.2476177,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Gilt-Leaf Winnower",
+    "ManaCost": 5,
+    "Value": 15.000004,
+    "StressValue": 15,
+    "NotMeasured": null,
+    "Fragility": 3.8146973E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Indulgent Tormentor",
+    "ManaCost": 5,
+    "Value": 38.06666,
+    "StressValue": 28.009525,
+    "NotMeasured": null,
+    "Fragility": 10.057137,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Priest of the Blood Rite",
+    "ManaCost": 5,
+    "Value": 31.366665,
+    "StressValue": 38.222225,
+    "NotMeasured": null,
+    "Fragility": -6.8555603,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Grave Titan",
+    "ManaCost": 6,
+    "Value": 83.533325,
+    "StressValue": 53.800003,
+    "NotMeasured": null,
+    "Fragility": 29.733322,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Massacre Wurm",
+    "ManaCost": 6,
+    "Value": 67.899994,
+    "StressValue": 90.04285,
+    "NotMeasured": null,
+    "Fragility": -22.142853,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Vilis, Broker of Blood",
+    "ManaCost": 8,
+    "Value": 51.599987,
+    "StressValue": 50.56667,
+    "NotMeasured": null,
+    "Fragility": 1.0333176,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Disfigure",
+    "ManaCost": 1,
+    "Value": 6.200001,
+    "StressValue": 15.6,
+    "NotMeasured": null,
+    "Fragility": -9.4,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ulcerate",
+    "ManaCost": 1,
+    "Value": 7.87059,
+    "StressValue": 26.2,
+    "NotMeasured": null,
+    "Fragility": -18.32941,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Doom Blade",
+    "ManaCost": 2,
+    "Value": 18.000004,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -20.149998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Grasp of Darkness",
+    "ManaCost": 2,
+    "Value": 9.100002,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -29.05,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Noxious Grasp",
+    "ManaCost": 2,
+    "Value": 18.247623,
+    "StressValue": 32.4,
+    "NotMeasured": null,
+    "Fragility": -14.152378,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Distress",
+    "ManaCost": 2,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sign in Blood",
+    "ManaCost": 2,
+    "Value": 1.7333336,
+    "StressValue": 1.4000015,
+    "NotMeasured": null,
+    "Fragility": 0.33333206,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Smallpox",
+    "ManaCost": 2,
+    "Value": -0.9263153,
+    "StressValue": 0.8500004,
+    "NotMeasured": null,
+    "Fragility": -1.7763157,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Cower in Fear",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 29.3,
+    "NotMeasured": null,
+    "Fragility": -20.3,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Murder",
+    "ManaCost": 3,
+    "Value": 18.000004,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -20.149998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Grim Tutor",
+    "ManaCost": 1,
+    "Value": -0.2588234,
+    "StressValue": -0.8666649,
+    "NotMeasured": null,
+    "Fragility": 0.6078415,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Read the Bones",
+    "ManaCost": 3,
+    "Value": 1.7333336,
+    "StressValue": 1.4000015,
+    "NotMeasured": null,
+    "Fragility": 0.33333206,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Blood for Bones",
+    "ManaCost": 3,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Languish",
+    "ManaCost": 4,
+    "Value": -26.788887,
+    "StressValue": -4.966667,
+    "NotMeasured": null,
+    "Fragility": -21.82222,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Dark Petition",
+    "ManaCost": 5,
+    "Value": 1.3999977,
+    "StressValue": 1.3999996,
+    "NotMeasured": null,
+    "Fragility": -1.9073486E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Necromantic Summons",
+    "ManaCost": 5,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Endless Obedience",
+    "ManaCost": 6,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Public Execution",
+    "ManaCost": 6,
+    "Value": 18.2,
+    "StressValue": 41.7,
+    "NotMeasured": null,
+    "Fragility": -23.5,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Crippling Blight",
+    "ManaCost": 1,
+    "Value": 7.5,
+    "StressValue": 17.1,
+    "NotMeasured": null,
+    "Fragility": -9.6,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Shadows of the Past",
+    "ManaCost": 0,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Dark Tutelage",
+    "ManaCost": 2,
+    "Value": 0.5285721,
+    "StressValue": -1.8999996,
+    "NotMeasured": null,
+    "Fragility": 2.4285717,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Demonic Pact",
+    "ManaCost": 4,
+    "Value": 11.7060585,
+    "StressValue": 7.1500006,
+    "NotMeasured": null,
+    "Fragility": 4.556058,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Blood Reckoning",
+    "ManaCost": 4,
+    "Value": 1.5,
+    "StressValue": 2.7000008,
+    "NotMeasured": null,
+    "Fragility": -1.2000008,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Call to the Grave",
+    "ManaCost": 4,
+    "Value": -2.2999992,
+    "StressValue": -5.6333313,
+    "NotMeasured": null,
+    "Fragility": 3.333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Stab Wound",
+    "ManaCost": 3,
+    "Value": 22.233334,
+    "StressValue": 20.225134,
+    "NotMeasured": null,
+    "Fragility": 2.0081997,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Demonic Embrace",
+    "ManaCost": 3,
+    "Value": 28.866665,
+    "StressValue": 32.76923,
+    "NotMeasured": null,
+    "Fragility": -3.902565,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Mark of the Vampire",
+    "ManaCost": 4,
+    "Value": 34.35529,
+    "StressValue": 18.2,
+    "NotMeasured": null,
+    "Fragility": 16.155289,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Liliana Vess",
+    "ManaCost": 4,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sorin Markov",
+    "ManaCost": 6,
+    "Value": 9.700001,
+    "StressValue": -32.899998,
+    "NotMeasured": null,
+    "Fragility": 42.6,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Frenzied Goblin",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Goblin Arsonist",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.757895,
+    "NotMeasured": null,
+    "Fragility": -7.7578955,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Goblin Balloon Brigade",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Goblin Fireslinger",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Goblin Glory Chaser",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Grim Lavamancer",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Scorch Spitter",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Abbot of Keral Keep",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Borderland Marauder",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Generator Servant",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Goblin Instigator",
+    "ManaCost": 2,
+    "Value": 12,
+    "StressValue": 19.400002,
+    "NotMeasured": null,
+    "Fragility": -7.4000015,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Goblin Piledriver",
+    "ManaCost": 2,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Heartfire Immolator",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Stormblood Berserker",
+    "ManaCost": 2,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Unchained Berserker",
+    "ManaCost": 2,
+    "Value": 11.866669,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": 0.06666756,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Young Pyromancer",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Arms Dealer",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Boggart Brute",
+    "ManaCost": 3,
+    "Value": 13.333332,
+    "StressValue": 13.333333,
+    "NotMeasured": null,
+    "Fragility": -9.536743E-07,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Chandra, Fire of Kaladesh",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Chandra\u0027s Phoenix",
+    "ManaCost": 3,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Glint-Horn Buccaneer",
+    "ManaCost": 3,
+    "Value": 12,
+    "StressValue": 39.658825,
+    "NotMeasured": null,
+    "Fragility": -27.658825,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Goblin Chieftain",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Goblin Rabblemaster",
+    "ManaCost": 3,
+    "Value": 26.999996,
+    "StressValue": 29.8,
+    "NotMeasured": null,
+    "Fragility": -2.800003,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Guttersnipe",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Rummaging Goblin",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Scab-Clan Berserker",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Spellgorger Weird",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Avaricious Dragon",
+    "ManaCost": 4,
+    "Value": 18.93333,
+    "StressValue": 24.141027,
+    "NotMeasured": null,
+    "Fragility": -5.207697,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Krenko, Mob Boss",
+    "ManaCost": 4,
+    "Value": 12.000004,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": 3.8146973E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ogre Battledriver",
+    "ManaCost": 4,
+    "Value": 12.000004,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": 3.8146973E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Pia and Kiran Nalaar",
+    "ManaCost": 4,
+    "Value": 23.666668,
+    "StressValue": 29.733334,
+    "NotMeasured": null,
+    "Fragility": -6.0666656,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Volley Veteran",
+    "ManaCost": 4,
+    "Value": 12.100002,
+    "StressValue": 14.400002,
+    "NotMeasured": null,
+    "Fragility": -2.2999992,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Brash Taunter",
+    "ManaCost": 5,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "reached a terminal inside the lookahead",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Siege-Gang Commander",
+    "ManaCost": 5,
+    "Value": 26.999996,
+    "StressValue": 34.4,
+    "NotMeasured": null,
+    "Fragility": -7.4000053,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Thundermaw Hellkite",
+    "ManaCost": 5,
+    "Value": 24.666668,
+    "StressValue": 29.87436,
+    "NotMeasured": null,
+    "Fragility": -5.207691,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Inferno Titan",
+    "ManaCost": 6,
+    "Value": 55.2,
+    "StressValue": 38.666668,
+    "NotMeasured": null,
+    "Fragility": 16.533333,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Soul of Shandalar",
+    "ManaCost": 6,
+    "Value": 25.007694,
+    "StressValue": 36.72308,
+    "NotMeasured": null,
+    "Fragility": -11.715385,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Drakuseth, Maw of Flames",
+    "ManaCost": 7,
+    "Value": 77.533325,
+    "StressValue": 93.933334,
+    "NotMeasured": null,
+    "Fragility": -16.40001,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Lightning Bolt",
+    "ManaCost": 1,
+    "Value": 6.300003,
+    "StressValue": 26.2,
+    "NotMeasured": null,
+    "Fragility": -19.899998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Titan\u0027s Strength",
+    "ManaCost": 1,
+    "Value": 2.9000015,
+    "StressValue": 12.384616,
+    "NotMeasured": null,
+    "Fragility": -9.484614,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Fry",
+    "ManaCost": 3,
+    "Value": 18.000004,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -20.149998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Incinerate",
+    "ManaCost": 2,
+    "Value": 6.300003,
+    "StressValue": 26.2,
+    "NotMeasured": null,
+    "Fragility": -19.899998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ravaging Blaze",
+    "ManaCost": 0,
+    "Value": 11.900002,
+    "StressValue": 27.329414,
+    "NotMeasured": null,
+    "Fragility": -15.429413,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Scorching Dragonfire",
+    "ManaCost": 2,
+    "Value": 6.300003,
+    "StressValue": 26.2,
+    "NotMeasured": null,
+    "Fragility": -19.899998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Thrill of Possibility",
+    "ManaCost": 2,
+    "Value": 1.3999977,
+    "StressValue": 1.3999996,
+    "NotMeasured": null,
+    "Fragility": -1.9073486E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Soul Sear",
+    "ManaCost": 3,
+    "Value": 18.000004,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -20.149998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Trumpet Blast",
+    "ManaCost": 3,
+    "Value": 0,
+    "StressValue": 29.1,
+    "NotMeasured": null,
+    "Fragility": -29.1,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Uncaged Fury",
+    "ManaCost": 3,
+    "Value": 16.099995,
+    "StressValue": 29.763638,
+    "NotMeasured": null,
+    "Fragility": -13.663643,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Chandra\u0027s Outrage",
+    "ManaCost": 4,
+    "Value": 9.876923,
+    "StressValue": 33.155556,
+    "NotMeasured": null,
+    "Fragility": -23.278633,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Stoke the Flames",
+    "ManaCost": 4,
+    "Value": 6.4000015,
+    "StressValue": 35.9,
+    "NotMeasured": null,
+    "Fragility": -29.5,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Banefire",
+    "ManaCost": 0,
+    "Value": 6.300003,
+    "StressValue": 26.2,
+    "NotMeasured": null,
+    "Fragility": -19.899998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Earthquake",
+    "ManaCost": 1,
+    "Value": -2.6882324,
+    "StressValue": 19.714287,
+    "NotMeasured": null,
+    "Fragility": -22.40252,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Magmatic Insight",
+    "ManaCost": 1,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Krenko\u0027s Command",
+    "ManaCost": 2,
+    "Value": 12,
+    "StressValue": 19.400002,
+    "NotMeasured": null,
+    "Fragility": -7.4000015,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Exquisite Firecraft",
+    "ManaCost": 3,
+    "Value": 6.4000015,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -31.75,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Flames of the Firebrand",
+    "ManaCost": 2,
+    "Value": 6,
+    "StressValue": 15.6,
+    "NotMeasured": null,
+    "Fragility": -9.6,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Tectonic Rift",
+    "ManaCost": 4,
+    "Value": 0,
+    "StressValue": 18.6,
+    "NotMeasured": null,
+    "Fragility": -18.6,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Cone of Flame",
+    "ManaCost": 4,
+    "Value": 6.200001,
+    "StressValue": 29.944447,
+    "NotMeasured": null,
+    "Fragility": -23.744446,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Barrage of Expendables",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 29.133333,
+    "NotMeasured": null,
+    "Fragility": -27.633333,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Molten Vortex",
+    "ManaCost": 1,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Flameshadow Conjuring",
+    "ManaCost": 4,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Burning Anger",
+    "ManaCost": 5,
+    "Value": 9.253849,
+    "StressValue": 13.800001,
+    "NotMeasured": null,
+    "Fragility": -4.546152,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Chandra\u0027s Regulator",
+    "ManaCost": 1,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Chandra, Pyromaster",
+    "ManaCost": 4,
+    "Value": 1.5,
+    "StressValue": 7.9410267,
+    "NotMeasured": null,
+    "Fragility": -6.4410267,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Chandra Nalaar",
+    "ManaCost": 5,
+    "Value": 1.5,
+    "StressValue": 4.8666677,
+    "NotMeasured": null,
+    "Fragility": -3.3666677,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Chandra, Heart of Fire",
+    "ManaCost": 5,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sarkhan, Fireblood",
+    "ManaCost": 3,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Birds of Paradise",
+    "ManaCost": 1,
+    "Value": 3,
+    "StressValue": 3.000001,
+    "NotMeasured": null,
+    "Fragility": -9.536743E-07,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Elvish Mystic",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Llanowar Elves",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Wildwood Scourge",
+    "ManaCost": 1,
+    "Value": 12,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Barkhide Troll",
+    "ManaCost": 2,
+    "Value": 12,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Deadly Recluse",
+    "ManaCost": 2,
+    "Value": 9.333332,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.466669,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Dwynen\u0027s Elite",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Elvish Visionary",
+    "ManaCost": 2,
+    "Value": 7.3999977,
+    "StressValue": 14.800001,
+    "NotMeasured": null,
+    "Fragility": -7.4000034,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Fauna Shaman",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Primordial Hydra",
+    "ManaCost": 2,
+    "Value": 69.83333,
+    "StressValue": 15.6,
+    "NotMeasured": null,
+    "Fragility": 54.23333,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Scavenging Ooze",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Skinshifter",
+    "ManaCost": 2,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sylvan Ranger",
+    "ManaCost": 2,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Borderland Ranger",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Elvish Archdruid",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Garruk\u0027s Harbinger",
+    "ManaCost": 4,
+    "Value": 25.57777,
+    "StressValue": 14.400002,
+    "NotMeasured": null,
+    "Fragility": 11.177769,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Llanowar Visionary",
+    "ManaCost": 3,
+    "Value": 10.399998,
+    "StressValue": 13.200001,
+    "NotMeasured": null,
+    "Fragility": -2.800003,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Managorger Hydra",
+    "ManaCost": 3,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Nissa, Vastwood Seer",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Reclamation Sage",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Thrashing Brontodon",
+    "ManaCost": 3,
+    "Value": 12,
+    "StressValue": 14.400001,
+    "NotMeasured": null,
+    "Fragility": -2.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Yeva\u0027s Forcemage",
+    "ManaCost": 3,
+    "Value": 11.900002,
+    "StressValue": 23.400002,
+    "NotMeasured": null,
+    "Fragility": -11.5,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Dwynen, Gilt-Leaf Daen",
+    "ManaCost": 4,
+    "Value": 12.485714,
+    "StressValue": 14.6,
+    "NotMeasured": null,
+    "Fragility": -2.1142864,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Goreclaw, Terror of Qal Sisma",
+    "ManaCost": 4,
+    "Value": 21.30952,
+    "StressValue": 14.400002,
+    "NotMeasured": null,
+    "Fragility": 6.909519,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Llanowar Empath",
+    "ManaCost": 4,
+    "Value": 10.399998,
+    "StressValue": 13.200001,
+    "NotMeasured": null,
+    "Fragility": -2.800003,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Master of the Wild Hunt",
+    "ManaCost": 4,
+    "Value": 29.999996,
+    "StressValue": 46.833336,
+    "NotMeasured": null,
+    "Fragility": -16.83334,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Shifting Ceratops",
+    "ManaCost": 4,
+    "Value": 18.000004,
+    "StressValue": 14.400002,
+    "NotMeasured": null,
+    "Fragility": 3.6000023,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sylvan Messenger",
+    "ManaCost": 4,
+    "Value": 9.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Yeva, Nature\u0027s Herald",
+    "ManaCost": 4,
+    "Value": 15.000004,
+    "StressValue": 14.400002,
+    "NotMeasured": null,
+    "Fragility": 0.6000023,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Acidic Slime",
+    "ManaCost": 5,
+    "Value": 12.33334,
+    "StressValue": 12.333334,
+    "NotMeasured": null,
+    "Fragility": 5.722046E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Elder Gargaroth",
+    "ManaCost": 5,
+    "Value": 59.733334,
+    "StressValue": 28.770588,
+    "NotMeasured": null,
+    "Fragility": 30.962746,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Thragtusk",
+    "ManaCost": 5,
+    "Value": 22.800007,
+    "StressValue": 27.400002,
+    "NotMeasured": null,
+    "Fragility": -4.5999947,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Primeval Titan",
+    "ManaCost": 6,
+    "Value": 46.041027,
+    "StressValue": 24.020588,
+    "NotMeasured": null,
+    "Fragility": 22.02044,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Woodland Bellower",
+    "ManaCost": 6,
+    "Value": 22.399998,
+    "StressValue": 14.400002,
+    "NotMeasured": null,
+    "Fragility": 7.999996,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Hornet Queen",
+    "ManaCost": 7,
+    "Value": 57.66666,
+    "StressValue": 58.8,
+    "NotMeasured": null,
+    "Fragility": -1.1333389,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Pelakka Wurm",
+    "ManaCost": 7,
+    "Value": 49.862957,
+    "StressValue": 18.6,
+    "NotMeasured": null,
+    "Fragility": 31.262957,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Fog",
+    "ManaCost": 1,
+    "Value": 9.200001,
+    "StressValue": 33.2,
+    "NotMeasured": null,
+    "Fragility": -24,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Giant Growth",
+    "ManaCost": 1,
+    "Value": 8.700001,
+    "StressValue": 28.7,
+    "NotMeasured": null,
+    "Fragility": -20,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ranger\u0027s Guile",
+    "ManaCost": 1,
+    "Value": 2.9000015,
+    "StressValue": 12.384616,
+    "NotMeasured": null,
+    "Fragility": -9.484614,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Veil of Summer",
+    "ManaCost": 1,
+    "Value": 1.3999977,
+    "StressValue": 1.3999996,
+    "NotMeasured": null,
+    "Fragility": -1.9073486E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Return to Nature",
+    "ManaCost": 2,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Fungal Rebirth",
+    "ManaCost": 3,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Pulse of Murasa",
+    "ManaCost": 3,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Hunter\u0027s Insight",
+    "ManaCost": 4,
+    "Value": 7,
+    "StressValue": 7,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Might of Oaks",
+    "ManaCost": 3,
+    "Value": 16.099995,
+    "StressValue": 28.7,
+    "NotMeasured": null,
+    "Fragility": -12.600006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Shared Summons",
+    "ManaCost": 4,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Primal Might",
+    "ManaCost": 1,
+    "Value": 8.900002,
+    "StressValue": 29.3,
+    "NotMeasured": null,
+    "Fragility": -20.399998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Rabid Bite",
+    "ManaCost": 2,
+    "Value": 18.000004,
+    "StressValue": 38.15,
+    "NotMeasured": null,
+    "Fragility": -20.149998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Rampant Growth",
+    "ManaCost": 2,
+    "Value": 2,
+    "StressValue": 2,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Track Down",
+    "ManaCost": 2,
+    "Value": 1.3999977,
+    "StressValue": 1.3999996,
+    "NotMeasured": null,
+    "Fragility": -1.9073486E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Cultivate",
+    "ManaCost": 3,
+    "Value": 2,
+    "StressValue": 2,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Bramblecrush",
+    "ManaCost": 4,
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "no legal cast action",
+    "Fragility": 0,
+    "WasMeasured": false
+  },
+  {
+    "Name": "Hunter\u0027s Edge",
+    "ManaCost": 4,
+    "Value": 21.000004,
+    "StressValue": 34.505882,
+    "NotMeasured": null,
+    "Fragility": -13.505878,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Wild Instincts",
+    "ManaCost": 4,
+    "Value": 10.299995,
+    "StressValue": 29.3,
+    "NotMeasured": null,
+    "Fragility": -19.000004,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Overrun",
+    "ManaCost": 4,
+    "Value": 8.1727295,
+    "StressValue": 37.050003,
+    "NotMeasured": null,
+    "Fragility": -28.877274,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Overwhelming Stampede",
+    "ManaCost": 5,
+    "Value": 11.100002,
+    "StressValue": 19.533333,
+    "NotMeasured": null,
+    "Fragility": -8.433331,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Rancor",
+    "ManaCost": 1,
+    "Value": 21.7,
+    "StressValue": 15.200001,
+    "NotMeasured": null,
+    "Fragility": 6.5,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Evolutionary Leap",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Arachnus Web",
+    "ManaCost": 4,
+    "Value": 1.5,
+    "StressValue": 14.700001,
+    "NotMeasured": null,
+    "Fragility": -13.200001,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Feral Invocation",
+    "ManaCost": 2,
+    "Value": 13.300003,
+    "StressValue": 14.400001,
+    "NotMeasured": null,
+    "Fragility": -1.0999975,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Gift of Paradise",
+    "ManaCost": 3,
+    "Value": 4.8826103,
+    "StressValue": 5.1000004,
+    "NotMeasured": null,
+    "Fragility": -0.21739006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Into the Wilds",
+    "ManaCost": 3,
+    "Value": 5.5,
+    "StressValue": 5.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Leyline of Vitality",
+    "ManaCost": 3,
+    "Value": 10.200001,
+    "StressValue": 3.9705877,
+    "NotMeasured": null,
+    "Fragility": 6.229413,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Wolfrider\u0027s Saddle",
+    "ManaCost": 3,
+    "Value": 10.5,
+    "StressValue": 13.300001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Garruk Wildspeaker",
+    "ManaCost": 4,
+    "Value": 5,
+    "StressValue": 2.6000004,
+    "NotMeasured": null,
+    "Fragility": 2.3999996,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Nissa, Worldwaker",
+    "ManaCost": 5,
+    "Value": 17.399998,
+    "StressValue": -3.2999992,
+    "NotMeasured": null,
+    "Fragility": 20.699997,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Vivien Reid",
+    "ManaCost": 5,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Hangarback Walker",
+    "ManaCost": 0,
+    "Value": 6,
+    "StressValue": 20.733334,
+    "NotMeasured": null,
+    "Fragility": -14.733334,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Chronomaton",
+    "ManaCost": 1,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Phyrexian Revoker",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 17.877777,
+    "NotMeasured": null,
+    "Fragility": -8.877777,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Adaptive Automaton",
+    "ManaCost": 4,
+    "Value": 32.7,
+    "StressValue": 14.6,
+    "NotMeasured": null,
+    "Fragility": 18.1,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Diamond Knight",
+    "ManaCost": 2,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Scuttlemutt",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Skyscanner",
+    "ManaCost": 3,
+    "Value": 8.73333,
+    "StressValue": 14.800001,
+    "NotMeasured": null,
+    "Fragility": -6.0666714,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Guardian Automaton",
+    "ManaCost": 4,
+    "Value": 12.000004,
+    "StressValue": 13.400002,
+    "NotMeasured": null,
+    "Fragility": -1.3999977,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Solemn Simulacrum",
+    "ManaCost": 4,
+    "Value": 11.000004,
+    "StressValue": 16.800001,
+    "NotMeasured": null,
+    "Fragility": -5.7999973,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Golos, Tireless Pilgrim",
+    "ManaCost": 5,
+    "Value": 14.000004,
+    "StressValue": 16.400002,
+    "NotMeasured": null,
+    "Fragility": -2.3999977,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Platinum Angel",
+    "ManaCost": 7,
+    "Value": 20.33334,
+    "StressValue": 25.541027,
+    "NotMeasured": null,
+    "Fragility": -5.2076874,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Bag of Holding",
+    "ManaCost": 1,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Brittle Effigy",
+    "ManaCost": 1,
+    "Value": 1.5,
+    "StressValue": 4.666667,
+    "NotMeasured": null,
+    "Fragility": -3.166667,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Manifold Key",
+    "ManaCost": 1,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Crown of Empires",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Vial of Dragonfire",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 4.666667,
+    "NotMeasured": null,
+    "Fragility": -3.166667,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Arcane Encyclopedia",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Crystal Ball",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Dragon\u0027s Hoard",
+    "ManaCost": 3,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Druidic Satchel",
+    "ManaCost": 3,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Scepter of Empires",
+    "ManaCost": 1,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "War Horn",
+    "ManaCost": 2,
+    "Value": 17.471424,
+    "StressValue": 17,
+    "NotMeasured": null,
+    "Fragility": 0.4714241,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Perilous Vault",
+    "ManaCost": 4,
+    "Value": 1.5,
+    "StressValue": 15.400002,
+    "NotMeasured": null,
+    "Fragility": -13.900002,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Throne of Empires",
+    "ManaCost": 4,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Gilded Lotus",
+    "ManaCost": 4,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Meteorite",
+    "ManaCost": 4,
+    "Value": 1.7000008,
+    "StressValue": 13.300001,
+    "NotMeasured": null,
+    "Fragility": -11.6,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Staff of Nin",
+    "ManaCost": 4,
+    "Value": 4.299999,
+    "StressValue": 4.3,
+    "NotMeasured": null,
+    "Fragility": -9.536743E-07,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Akroma\u0027s Memorial",
+    "ManaCost": 7,
+    "Value": 57.98039,
+    "StressValue": 93.280396,
+    "NotMeasured": null,
+    "Fragility": -35.300007,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ugin, the Spirit Dragon",
+    "ManaCost": 8,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Short Sword",
+    "ManaCost": 1,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Gorgon Flail",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Swiftfoot Boots",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ring of Evos Isle",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ring of Kalonia",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ring of Thune",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ring of Valkas",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ring of Xathrid",
+    "ManaCost": 4,
+    "Value": 2.0333366,
+    "StressValue": 13.033335,
+    "NotMeasured": null,
+    "Fragility": -10.999998,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sword of the Animist",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Fireshrieker",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Greatsword",
+    "ManaCost": 2,
+    "Value": 1.7000008,
+    "StressValue": -14.76923,
+    "NotMeasured": null,
+    "Fragility": 16.46923,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Sword of Vengeance",
+    "ManaCost": 3,
+    "Value": 3.3666687,
+    "StressValue": 14.533335,
+    "NotMeasured": null,
+    "Fragility": -11.166666,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Whispersilk Cloak",
+    "ManaCost": 2,
+    "Value": 1.5,
+    "StressValue": 1.5,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Haunted Plate Mail",
+    "ManaCost": 4,
+    "Value": 4.700001,
+    "StressValue": 12.700001,
+    "NotMeasured": null,
+    "Fragility": -8,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Poison-Tip Archer",
+    "ManaCost": 4,
+    "Value": 15.933331,
+    "StressValue": 15.769697,
+    "NotMeasured": null,
+    "Fragility": 0.16363335,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Twinblade Assassins",
+    "ManaCost": 5,
+    "Value": 22.2,
+    "StressValue": 17.2,
+    "NotMeasured": null,
+    "Fragility": 5,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Dire Fleet Warmonger",
+    "ManaCost": 3,
+    "Value": 12,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Blazing Hellhound",
+    "ManaCost": 4,
+    "Value": 15.000004,
+    "StressValue": 15,
+    "NotMeasured": null,
+    "Fragility": 3.8146973E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Brawl-Bash Ogre",
+    "ManaCost": 3,
+    "Value": 12,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Obsessive Stitcher",
+    "ManaCost": 3,
+    "Value": 3,
+    "StressValue": 6.6000004,
+    "NotMeasured": null,
+    "Fragility": -3.6000004,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Tomebound Lich",
+    "ManaCost": 4,
+    "Value": 11.152386,
+    "StressValue": 13.114286,
+    "NotMeasured": null,
+    "Fragility": -1.9619007,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Possessed Skaab",
+    "ManaCost": 3,
+    "Value": 12,
+    "StressValue": 14.400001,
+    "NotMeasured": null,
+    "Fragility": -2.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Corpse Knight",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Blood-Cursed Knight",
+    "ManaCost": 3,
+    "Value": 12,
+    "StressValue": 12,
+    "NotMeasured": null,
+    "Fragility": 0,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Indulging Patrician",
+    "ManaCost": 3,
+    "Value": 8.666668,
+    "StressValue": 16.833334,
+    "NotMeasured": null,
+    "Fragility": -8.166666,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Draconic Disciple",
+    "ManaCost": 3,
+    "Value": 11.533333,
+    "StressValue": 11.933334,
+    "NotMeasured": null,
+    "Fragility": -0.40000153,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Radha, Heart of Keld",
+    "ManaCost": 3,
+    "Value": 15.833332,
+    "StressValue": 14.400001,
+    "NotMeasured": null,
+    "Fragility": 1.4333315,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Leafkin Avenger",
+    "ManaCost": 4,
+    "Value": 15.000004,
+    "StressValue": 15,
+    "NotMeasured": null,
+    "Fragility": 3.8146973E-06,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Lorescale Coatl",
+    "ManaCost": 3,
+    "Value": 15.000004,
+    "StressValue": 19.366669,
+    "NotMeasured": null,
+    "Fragility": -4.366665,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Risen Reef",
+    "ManaCost": 3,
+    "Value": 6,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -7.4000006,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Skyrider Patrol",
+    "ManaCost": 4,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Conclave Mentor",
+    "ManaCost": 2,
+    "Value": 9,
+    "StressValue": 14.270589,
+    "NotMeasured": null,
+    "Fragility": -5.270589,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Citadel Castellan",
+    "ManaCost": 3,
+    "Value": 9,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -2.8000011,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Ironroot Warlord",
+    "ManaCost": 3,
+    "Value": 29.7,
+    "StressValue": 20.377777,
+    "NotMeasured": null,
+    "Fragility": 9.322224,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Lightning Stormkin",
+    "ManaCost": 2,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Enigma Drake",
+    "ManaCost": 3,
+    "Value": 3,
+    "StressValue": 3.000001,
+    "NotMeasured": null,
+    "Fragility": -9.536743E-07,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Skyknight Vanguard",
+    "ManaCost": 2,
+    "Value": 10.433334,
+    "StressValue": 13.400001,
+    "NotMeasured": null,
+    "Fragility": -2.9666662,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Iroas\u0027s Champion",
+    "ManaCost": 3,
+    "Value": 14.833332,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": 3.033331,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Watcher of the Spheres",
+    "ManaCost": 2,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Empyrean Eagle",
+    "ManaCost": 3,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Thunderclap Wyvern",
+    "ManaCost": 3,
+    "Value": 11.666668,
+    "StressValue": 11.800001,
+    "NotMeasured": null,
+    "Fragility": -0.1333332,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Experimental Overload",
+    "ManaCost": 4,
+    "Value": 6,
+    "StressValue": 13.400002,
+    "NotMeasured": null,
+    "Fragility": -7.4000015,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Heroic Reinforcements",
+    "ManaCost": 4,
+    "Value": 14.899998,
+    "StressValue": 26.6,
+    "NotMeasured": null,
+    "Fragility": -11.700003,
+    "WasMeasured": true
+  },
+  {
+    "Name": "Garruk, Apex Predator",
+    "ManaCost": 7,
+    "Value": 12.400005,
+    "StressValue": -6.2999983,
+    "NotMeasured": null,
+    "Fragility": 18.700005,
+    "WasMeasured": true
+  }
+]

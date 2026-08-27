@@ -73,9 +73,16 @@ public class MtgGameManager
 	public bool IsAiTurn => _state.TryGetGame()?.ActivePlayerId == AiPlayerId;
 	public bool IsWaitingForChoice => _state.IsWaitingForChoice;
 
+	/// <param name="cardValues">
+	/// Sandbox card values for the AI's discard/scry/tutor choices. Null disables them, which is
+	/// how the AI behaved before the feature existed. Supplied by the scene rather than loaded
+	/// here, because System.IO cannot read a res:// path inside an exported build — same reason
+	/// DraftScene reads the draft model through FileAccess.
+	/// </param>
 	public MtgGameManager(
 		DeckSetupData setup,
-		AiStrategyType strategyType = AiStrategyType.MultiTurnBeamSearch
+		AiStrategyType strategyType = AiStrategyType.MultiTurnBeamSearch,
+		CardValueTable? cardValues = null
 	)
 	{
 #pragma warning disable CS0618
@@ -87,7 +94,8 @@ public class MtgGameManager
 				currentTurnDepth: 3,
 				lookaheadTurns: 2,
 				captureDecisions: true,
-				moveTimeBudget: AiMoveTimeBudget
+				moveTimeBudget: AiMoveTimeBudget,
+				cardValues: cardValues
 			),
 			_ => new BeamSearchAiStrategy(_ids, maxDepth: 3, captureDecisions: true),
 		};
