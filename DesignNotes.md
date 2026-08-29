@@ -891,3 +891,45 @@ land drop still beats holding (the drop must clear `2.0 - landWeight` by a decis
 number is exactly what `AiLandDropTests` pins from the other side, so it cannot be set by
 intuition: it needs the head-to-head strength harness (`BranchingCapStrengthTests`), not a guess.
 Deliberately not changed here.
+
+## Rules-derived synergy for constructed evolution
+
+**Status: deferred, needs its own design session.**
+
+`MtgSimulator/Evolution/` learns synergy from measured pair win rates, which covers genuine
+anti-synergy (a sweeper alongside your own creatures, once enough games exist) but **cannot
+express a critical-mass requirement at any sample size**. Atog does not want one artifact, it
+wants ~15; that is a threshold on a whole deck, not a property of a pair.
+
+Measured pairs also cannot help at all across sets. On the combined pool 58% of the pair space
+is cross-set, and sets are drafted separately, so those pairs have never co-occurred in any
+training game and never will.
+
+The proposal is to read the signal off components, which already encode it:
+
+| Pattern | Signal |
+|---|---|
+| `DestroyCreatureAction` + `AllValid(Creatures())` | −per creature in your own deck |
+| cost/count filtered on a subtype (`SacrificeAdditionalCost` with `IsSubtypeSpecification`, `CreatureCountComponent.Subtype`) | +per matching card in deck |
+| `ActiveInZone = Graveyard`, mill payoffs | +per self-mill enabler |
+
+**This is not the card labelling rejected at design time.** Nobody types "aggro" on a card —
+the components are the card's behaviour, so the signal cannot drift from what the card does and
+there is no upkeep cost. Day of Judgment is already `DestroyCreatureAction` over
+`AllValid(Creatures())`; Atog is already a `SacrificeAdditionalCost` filtered to `"Artifact"`.
+
+Costed options when this is picked up:
+
+1. **Three or four rules, scoring only.** Cheapest. Feeds the same fill/cut scores the measured
+   synergy does. Does not change what a deck is allowed to contain.
+2. **Threshold-aware deck coherence.** Adds "this payoff wants N enablers" as a deck-level term,
+   which is what Atog actually needs. Requires deciding N per pattern — the first place a
+   judgement call creeps in.
+3. **Full archetype tagging.** Rejected already; recorded here so it is not re-proposed.
+
+Do 1 first and measure before considering 2. The existing A/B shape is the mode's own
+constructed-vs-limited diff plus a field-quality comparison at a fixed seed.
+
+**Superseded by `SynergyFeaturePlan.md`** at the solution root, which carries the measured
+sparsity numbers, the four costed options, the baseline runs to A/B against, and the trap list.
+Read that rather than this entry.

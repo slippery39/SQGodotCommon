@@ -17,9 +17,10 @@ Console.WriteLine("  2 - Preconstructed Decks");
 Console.WriteLine("  3 - Draft");
 Console.WriteLine("  4 - Train draft pickers");
 Console.WriteLine("  5 - Inspect a saved scenario");
+Console.WriteLine("  6 - Evolve a constructed metagame");
 Console.Write("Mode (default 1): ");
 var modeInput = Console.ReadLine()?.Trim() ?? "";
-var mode = modeInput is "2" or "3" or "4" or "5" ? int.Parse(modeInput) : 1;
+var mode = modeInput is "2" or "3" or "4" or "5" or "6" ? int.Parse(modeInput) : 1;
 Console.WriteLine();
 
 if (mode == 5)
@@ -28,9 +29,15 @@ if (mode == 5)
 	return;
 }
 
-Console.Write("AI depth? (default 3): ");
+// Depth 2 rather than 3: this mode plays far more games than any other, and every one of them
+// runs two AIs of equal strength, which is what the measurement requires — not that they be
+// strong. Raise it if a deck's line looks unplayed rather than unplayable.
+Console.Write(mode == 6 ? "AI depth? (default 2): " : "AI depth? (default 3): ");
 var depthInput = Console.ReadLine()?.Trim() ?? "";
-var aiDepth = int.TryParse(depthInput, out var d) && d > 0 ? d : 3;
+var aiDepth =
+	int.TryParse(depthInput, out var d) && d > 0 ? d
+	: mode == 6 ? 2
+	: 3;
 
 if (mode == 1)
 {
@@ -216,6 +223,74 @@ else if (mode == 4)
 		Console.WriteLine();
 	}
 }
+else if (mode == 6)
+{
+	var evolveSet = ReadSet(includeCombined: true);
+
+	Console.Write("How many decks in the metagame? (default 8): ");
+	var deckInput = Console.ReadLine()?.Trim() ?? "";
+	var deckCount = int.TryParse(deckInput, out var dc) && dc >= 2 ? dc : 8;
+
+	Console.Write("How many generations? (default 30): ");
+	var evolveGenInput = Console.ReadLine()?.Trim() ?? "";
+	var evolveGens = int.TryParse(evolveGenInput, out var eg) && eg > 0 ? eg : 30;
+
+	Console.Write("How many mutants per deck per generation? (default 3): ");
+	var mutantInput = Console.ReadLine()?.Trim() ?? "";
+	var mutants = int.TryParse(mutantInput, out var mu) && mu > 0 ? mu : 3;
+
+	Console.Write("Games per matchup while evolving? (default 6): ");
+	var gpmInput = Console.ReadLine()?.Trim() ?? "";
+	var gamesPerMatchup = int.TryParse(gpmInput, out var gpm) && gpm > 0 ? gpm : 6;
+
+	Console.Write("Games per matchup in the final round-robin? (default 20): ");
+	var finalInput = Console.ReadLine()?.Trim() ?? "";
+	var finalGames = int.TryParse(finalInput, out var fg) && fg > 0 ? fg : 20;
+
+	// Raising this is the lever against a field that converges on one concentrated pool of
+	// cards. It costs accepted mutations — a mutant that improves but drifts toward another
+	// deck is rejected — so expect slower climbing on a small pool.
+	Console.Write("Minimum deck difference? (default 0.35, e.g. 0.6 for a wider field): ");
+	var diffInput = Console.ReadLine()?.Trim() ?? "";
+	var minDifference = double.TryParse(diffInput, out var md) && md > 0 && md < 1 ? md : 0.35;
+
+	// Measures the whole pool with uniformly-random decks before evolution, so a card's starting
+	// value does not depend on whether it happened to be picked up early. Without it, a card
+	// needs data to get into a deck and needs to be in a deck to get data.
+	Console.Write("Pre-simulation decks? (default 300, 0 = skip): ");
+	var presimInput = Console.ReadLine()?.Trim() ?? "";
+	var presimDecks = int.TryParse(presimInput, out var pd) && pd >= 0 ? pd : 300;
+
+	// Culling resets that slot's DeckHistory, which is now the main improvement mechanism — so
+	// a culled deck restarts not just bad but BLIND. Measured over 100 generations: the two
+	// slots culled once reached age 78/95 and finished best, while the slots culled 10 and 13
+	// times never recovered.
+	Console.Write("Cull non-viable decks? (Y/n — n lets every deck keep brewing): ");
+	var cullDecks = Console.ReadLine()?.Trim().ToLowerInvariant() != "n";
+
+	// The control arm for "is this just building draft decks". With no prior every card scores
+	// exactly average, so seeding is quality-blind and the constructed table builds from
+	// nothing — slower, but it cannot inherit a limited valuation it never read.
+	Console.Write("Seed from the draft model? (Y/n — n seeds quality-blind): ");
+	var useDraftPrior = Console.ReadLine()?.Trim().ToLowerInvariant() != "n";
+
+	new MetagameEvolver(
+		evolveSet,
+		deckCount: deckCount,
+		generations: evolveGens,
+		mutantsPerDeck: mutants,
+		gamesPerMatchup: gamesPerMatchup,
+		finalGamesPerMatchup: finalGames,
+		seed: ReadSeed() ?? new Random().Next(),
+		aiDepth: aiDepth,
+		minDifference: minDifference,
+		useDraftPrior: useDraftPrior,
+		// The floor stays 0.40 either way — with culling off it still flags a non-viable deck
+		// in the report, it just stops replacing it.
+		cullEnabled: cullDecks,
+		preSimDecks: presimDecks
+	).Run();
+}
 else
 {
 	Console.Write("N (games per side per matchup, default 10): ");
@@ -228,20 +303,25 @@ else
 Console.WriteLine("Done. Press any key to exit.");
 Console.ReadKey(intercept: true);
 
-// Which set to draft or train on. Skips the prompt entirely while only one set is registered.
-static CardSet ReadSet()
+// Which set to draft, train or build on. Skips the prompt entirely while only one choice exists.
+//
+// includeCombined offers the union of every set as one pool. It is deliberately NOT offered to
+// draft or training, where the model is the pick policy and a merged pool would score two thirds
+// of the cards at exactly the prior — see SetRegistry.Combined.
+static CardSet ReadSet(bool includeCombined = false)
 {
-	if (SetRegistry.All.Count == 1)
-		return SetRegistry.All[0];
+	var choices = includeCombined ? SetRegistry.AllIncludingCombined() : SetRegistry.All;
+	if (choices.Count == 1)
+		return choices[0];
 
 	Console.WriteLine("Which set?");
-	for (var i = 0; i < SetRegistry.All.Count; i++)
-		Console.WriteLine($"  {i + 1} = {SetRegistry.All[i]}");
+	for (var i = 0; i < choices.Count; i++)
+		Console.WriteLine($"  {i + 1} = {choices[i]}");
 	Console.Write($"Choice (default 1): ");
 
 	var input = Console.ReadLine()?.Trim() ?? "";
-	var index = int.TryParse(input, out var v) && v >= 1 && v <= SetRegistry.All.Count ? v - 1 : 0;
-	return SetRegistry.All[index];
+	var index = int.TryParse(input, out var v) && v >= 1 && v <= choices.Count ? v - 1 : 0;
+	return choices[index];
 }
 
 // Blank = random (null); a number is used as-is; a word is hashed so it is reproducible.

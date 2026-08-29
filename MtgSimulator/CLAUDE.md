@@ -8,6 +8,13 @@ Class library containing all AI strategies, game runners, deck factories, and re
 |------|---------|
 | `SimulatorRunner.cs` | Orchestrates N games, aggregates results, prints all reports |
 | `GameRunner.cs` | Runs a single game to completion using two `IAiStrategy` implementations |
+| `GameSetup.cs` | `FromDecks` — loads two built decks into a pre-begin `GameState`. Shared by draft and constructed; takes deck BUILDERS because owner ids only exist once the game does |
+| `CardStatAccumulator.cs` | Games-in-hand counting per card and per pair. Shared by `DraftTrainer` and `MetagameEvolver` so the two tables stay comparable |
+| `Evolution/Decklist.cs` | `Decklist` (name → copies + land count), its invariants (60 cards, max 4, 20-26 lands), `Difference`, `Materialize`; `MetagameResult` + `DecklistStore` |
+| `Evolution/ConstructedValues.cs` | Card/pair values learned from constructed games, shrunk toward the draft model as prior; `Movers`/`SpearmanAgainstDraft` diff the two formats |
+| `Evolution/DeckBuilder.cs` | Seeding (anchor + synergy kernel + curve target) and the three mutation operators |
+| `Evolution/ConstructedGameSetup.cs` | Two decklists → pre-begin `GameState`; the constructed sibling of `DraftGameSetup` |
+| `Evolution/MetagameEvolver.cs` | Console mode 6 — the evolution loop, paired evaluation, culling, and the report |
 | `IAiStrategy.cs` | Interface: `SelectAction` + `ResolveChoice` — all AI implementations conform to this |
 | `RandomAiStrategy.cs` | Baseline AI — picks a random legal action; used as playout policy |
 | `DepthLimitedAiStrategy.cs` | Greedy depth-limited DFS AI — retained for comparison; not the default |
@@ -957,6 +964,372 @@ Measured results on the 600-draft model (16 800 games, 33 600 deck-games): Train
 
 Caveat: the model is trained and evaluated on the same card pool. It learns card quality within that pool; it does not generalise to new cards.
 
+## Constructed Metagame Evolution
+
+Mode 6. Eight AI-built 60-card decks play each other, mutate toward better matchups against the
+rest of the field, and the run outputs a metagame — decklists plus the matchup matrix. The first
+thing in the project that BUILDS a constructed deck rather than measuring a hand-written one.
+
+Each generation: every deck proposes M mutants, every candidate plays the frozen field, the best
+improving mutant that stays distinct is accepted, and at most one non-viable deck is culled.
+Phases mirror `DraftTrainer` exactly — sequential proposals, one parallel game batch into a
+pre-allocated array, sequential fold-in.
+
+### Common random numbers are what make it work at all
+
+A mutation is worth ~1-3pp. An unpaired 42-game evaluation has a standard error near 7pp, so the
+accept/reject decision would be a coin flip and thirty generations of it would be a random walk
+that looks like evolution.
+
+`MetagameEvolver.Seed(gen, deck, opponent, repeat)` deliberately does **not** take the candidate
+index, so a parent and all of its mutants play identical opponents on identical shuffles with
+identical AI RNG. Shuffle and search variance is shared between the arms and cancels in the
+difference. **If one detail of this mode is ever "simplified", this is the one that silently
+invalidates every number it prints.**
+
+### A round-robin averages 50%, so the 40% target is a floor, not a goal
+
+The sum of win rates in a closed field is exactly `50% x N` by construction — "every deck at 40%"
+is unreachable arithmetic. It is implemented as a **viability floor**: a deck that cannot clear
+40% against the field is a non-viable list and gets replaced. Grace period of 5 generations (a
+fresh seed starts bad by definition) and at most one cull per generation (the field has to be
+re-measured after any replacement).
+
+The report also prints each deck's BEST matchup, because a deck under the floor that still
+counters something is a real archetype and one that beats nothing is not.
+
+### Seeding is a concept, not 36 random cards
+
+Anchor (sampled by card value) → kernel of its best-evidenced synergy partners → curve target →
+weighted fill. Archetypes fall out of the curve and the kernel; **nothing is hand-labelled**, and
+nothing should be. Both halves already existed in the trained model: per-card rates say what is
+good, `PairStat` says what wants to be together, and both were found unsupervised.
+
+Deck 8 is a permanent **wildcard** slot: uniform anchor ignoring card value, double synergy
+weight. It is often bad and gets culled, which IS the exploration. Without a slot that ignores
+what the prior already believes, the field can only refine cards the prior already liked, and a
+combo deck of individually-mediocre pieces is unreachable.
+
+### The synergy gate was set to a value nothing could reach
+
+**`MinPairGames` was 200 and that silently disabled every synergy path in the mode for three
+full runs.** The CSC draft table's busiest pair has **166** games (median 53, p99 108), so
+nothing cleared it: `SynergyDelta` returned 0 for all 83 028 pairs, `TopPartners` came back
+empty so the seeder's kernel never formed, and both fill and cut scoring collapsed to card
+quality plus curve.
+
+The output was piles of individually-strong cards with visible anti-synergies — Atog with no
+artifacts, a sweeper alongside the deck's own mana dorks. **It was caught by reading the
+decklists, not the code**, which is the same lesson as the inert-card audits: a wrong-but-
+plausible output is the only symptom a dead code path produces.
+
+Three compounding causes, all worth recognising again:
+
+1. The 200 was copied from `pairShrinkK`, a **shrinkage constant** — a different quantity that
+   happens to be a number about pairs.
+2. The unit test used inline data with `Games = 4000`, so it passed while no real pair could
+   clear the gate. A test measuring nothing, and the second in this file.
+3. Nothing reports a synergy term that is uniformly zero. `TopPartners` returning empty is
+   indistinguishable from "this card has no partners".
+
+Now 50, calibrated against measured distributions rather than analogy:
+
+| table | pairs | p50 | p99 | max | ≥50 games |
+|---|---|---|---|---|---|
+| CSC draft | 83 028 | 53 | 108 | 166 | 56% |
+| constructed (one run) | 3 484 | 119 | 5 768 | 13 704 | 56% |
+
+At 50, 46 868 CSC pairs clear and the top measured synergies are mechanically real (Siege-Gang
+Commander + Volley Veteran, Siege-Gang + Swiftfoot Boots). `RealisticPairEvidence_ClearsTheGate`
+and `TopPartners_FindsAKernel_AtRealisticEvidence` use volumes the real data reaches, so raising
+the gate back fails a test instead of going quiet.
+
+**Before trusting any synergy work here, check that pairs actually clear the gate on the model
+you are using** — the one-liner is in the Draft Training section and takes seconds.
+
+### Per-deck history: synergy-aware cutting
+
+The global pair table cannot answer "is this combination pulling its weight in THIS deck". It is
+spread over 83 000 pairs at a median of 53 games, and **on the combined pool 58% of the pair
+space is cross-set and can never have data at all**, because sets are drafted separately — Atog
+is in LEG and every artifact it wants is in CSC, a pair that has never existed in any draft.
+
+`DeckHistory` answers it per deck slot instead. Within one deck the same question is far better
+conditioned: ~15 distinct cards is ~105 pairs rather than 83 000, every one a 4-of drawn in most
+games, so pairs reach hundreds to thousands of games within a few generations.
+
+- **Cutting only.** `PickWeakest` adds `KeepScore`; selection stays on overall win rate plus
+  curve, because a card not yet in the deck has no history in it.
+- **`PairDelta` sums rather than averages**, so a card carrying four winning pairs is harder to
+  cut than one carrying a single lucky pair — the linchpin survives an unremarkable solo rate,
+  which is exactly what a synergy piece looks like and what pure card quality cuts first.
+- **Summing is safe here where it was not globally.** The measured harm was from adding ~27
+  thin cross-pool deltas; these are dense, few, about the deck being scored, and carry two
+  orders of magnitude more evidence per pair.
+- **Reset on cull**, and pairs whose partner has been cut are ignored — a record about a card no
+  longer in the deck is not evidence about the deck now.
+
+Baseline is the deck's OWN base rate, not an independence baseline: inside one deck the question
+is simply whether games drawing both go better than that deck's average game, and the cards'
+individual rates are already carried by `CardDelta`.
+
+### Selection scores ABSOLUTE joint win rate, never deviation from a baseline
+
+`ConstructedValues.JointDelta` (how the pair does against the base rate) is the selection
+criterion. `SynergyDelta` (how it does against `ExpectedPairRate`) is a diagnostic and **must not
+be used to choose cards**.
+
+The reason is not a preference. For two individually-terrible cards the independence baseline is
+catastrophic, so a pair that merely performs badly scores as strong positive synergy — **the
+worst cards in a format are the easiest to show synergy for.** Measured:
+
+| Pair | Baseline expects | "Synergy" | Absolute |
+|---|---|---|---|
+| Dragonstorm + Tendrils of Agony | −35.4pp | **+8.91pp** | **−26.11pp** |
+| Thoughtcast + Dragonstorm | −33.7pp | +5.08pp | −28.26pp |
+
+That ranking built a 4x-Dragonstorm storm deck which finished at **8.6%** and sat near-dead for
+30 generations, dragging the whole field's numbers with it.
+
+Absolute scoring also removes the need for a separate card-quality gate: a card that is weak
+alone but genuinely enables the anchor still qualifies, one that is bad alone AND together
+cannot. Both directions are pinned —
+`TwoTerribleCards_AreNotSelectedAsPartners_EvenWithHugeSynergy` and
+`AGenuineEnabler_IsStillSelected_EvenIfWeakAlone`. Without the second, the fix would silently
+become "only ever pair already-good cards".
+
+**`DeckFit` averages, it does not sum.** The summed version was unbounded in deck size: a
+10-card, 40-copy deck produced ~+290 against card values in the ±25 range, so card quality became
+rounding error and a deck rated Dragonstorm (+261 combined) above Ancestral Recall (+240).
+Averaging keeps it in `CardDelta` units so a weight of 1.0 means "these matter equally".
+
+### What per-deck history does NOT fix
+
+The user-visible complaint was **anti-synergy**, and half of it is still open. Two shapes:
+
+| | Example | Expressible as a pair? |
+|---|---|---|
+| Genuine anti-synergy | Wrath + your own mana dorks | Yes, once measured |
+| Missing critical mass | Atog with no artifacts | **No** |
+
+Atog does not want *one* artifact, it wants ~15. That is a threshold on a deck, and no pairwise
+statistic expresses it at any sample size. The planned answer is **rules-derived** synergy read
+off components, which needs no data and therefore works on cross-set pairs:
+
+- `DestroyCreatureAction` + `AllValid(Creatures())` → negative per creature in your own deck
+- a cost or count filtered on a subtype (Atog's `SacrificeAdditionalCost`, tribal lords) →
+  positive per matching card
+
+This is **not** the card labelling that was rejected at design time — nobody types "aggro" on a
+card. The components already encode the behaviour and cannot rot, because they *are* the card.
+
+**Deferred deliberately. The full plan, with measured numbers, costed options and the trap list,
+is `SynergyFeaturePlan.md` at the solution root.** Start there rather than re-deriving it.
+
+### The synergy gate is load-bearing
+
+This document records that `synergyWeight` cost win rate at every value tested. **That finding
+does not transfer here, and the distinction is the whole reason this works.** It measured summing
+~27 noisy pair deltas to rank one draft pick — noise accumulates as √27 and swamps a small signal.
+This mode uses only the top few pairs off a single anchor, gated at `ConstructedValues.MinPairGames`
+(200), which is the confidence-gating listed above as untested improvement path #1.
+
+**Drop the gate and this becomes the thing that was disproved.** `ThinPairs_ContributeExactlyZeroSynergy`
+pins it, and `WellEvidencedPairs_ReportRealSynergy` pins that it is not so tight nothing fires —
+a test asserting only the zero would pass on a synergy term that never works.
+
+### Limited values are not constructed values
+
+The draft model measures a card in a 40-card, 23-spell, near-singleton drafted deck. Constructed
+is 60 cards, 4-ofs, curated. Big vanilla creatures and grindy card advantage rate well in limited
+and poorly in constructed; narrow combo pieces rate near zero in limited and can define a
+constructed format. **Seeding from a limited prior and never correcting it just builds more
+consistent draft decks**, which is the failure this mode exists to avoid.
+
+Fitness is already immune — it is the win rate in constructed games. The exposure is
+*reachability*: hill climbing from limited-good starting points may never find the combo deck. So
+the mode counts its own games into `sim_results/constructed_values_<set>.json` and shrinks toward
+what it measures.
+
+**The blend needs no decay schedule.** It is `DraftTrainingData.Shrink` with the draft-derived
+rate passed as the prior instead of 0.5: few constructed games ⇒ the draft value, many ⇒ the
+measured constructed value. With no draft model at all every card scores 0, seeding is
+quality-blind, and the table builds from scratch — a supported mode, offered as `n` at the
+"Seed from the draft model?" prompt, and the honest control arm if the prior is ever suspected of
+dominating a result.
+
+`CardShrinkK` is 25, matching `DraftPickers`. That means a single game moves a valuation ~2.6pp
+and one generation of play (~168 deck-games for a card in a deck) flips it outright. Both are
+pinned, in both directions, by `ASingleConstructedGame_BarelyMovesTheValuation` and
+`OneGenerationOfEvidence_MovesTheValuationSubstantially`. **Do not retune k on intuition** — the
+same rule as `synergyWeight`.
+
+### Two self-checks before trusting any run
+
+| Check | Question | Where |
+|---|---|---|
+| 1 | Can the fitness measurement see anything? | `SelfCheck_ADeliberatelyTerribleDeckLosesFarBelowTheViabilityFloor` — 1/1s for 5 against 3/3s for 2. **Measured 0/40.** `[Explicit]` |
+| 2 | Did it escape the limited prior? | The run's own "Constructed vs limited" section: Spearman + top movers |
+
+Self-check 2 is the acceptance test for the whole limited-vs-constructed concern, and the run
+warns on its own output above 0.95:
+
+| Reading | Means |
+|---|---|
+| Spearman ≈ 1.0, no movers | **Failing** — constructed data is not displacing the prior |
+| ~0.5-0.8 with a coherent mover list | Working — the format has its own valuations |
+| ≈ 0 early | Noise, not signal — check games/card first |
+
+Sanity-check the mover list by eye: 4-of-dependent and narrow-but-powerful cards rising, big
+vanilla creatures and slow card advantage falling.
+
+### The combined pool
+
+`SetRegistry.Combined` ("ALL", 785 cards) is every registered set as one format. It does not
+contradict the no-merging rule on `SetRegistry` — that rule protects the trained *picker*, which
+would score a whole set at the prior and never pick from it. A merged pool is fine wherever the
+model is a starting prior rather than the pick policy. It is offered to mode 6 only, via
+`ReadSet(includeCombined: true)`.
+
+**18 names collide** and are resolved last-registered-wins, on the rule that two cards printed
+with the same name do the same thing and the most recent printing is current. Every replacement
+is logged, because a silent behaviour swap between two same-named cards is otherwise invisible.
+Do not prefix names with set codes — that breaks the name keying every per-card table depends on.
+
+### Measured: first real run (CSC, 8 decks x 30 generations)
+
+38 682 games, **0 excluded**, 38.7 minutes, prior exactly 0.5000 (draw-free). All 8 output decks
+valid: 60 cards, max 4 copies, 21-26 lands, 13-17 distinct spells. Final field spread 35.7-65.0%,
+6/8 above the viability floor, 10 culls.
+
+Do not record specific card values here — run it and read the file. What is worth carrying:
+
+**Diversity decays to the constraint and stops there: 76% at gen 1, 35% at gen 30**, i.e. exactly
+the threshold. The constraint is *binding*, not slack — the field wants to converge further and
+only the hard constraint prevents it. Read a final diversity equal to `minDifference` as "these
+decks are as similar as they were allowed to be", not as a healthy result.
+
+**Spread does not converge.** 33pp at gen 1, 40pp at gen 30, oscillating 24-55pp throughout with
+no trend, and 5-8 of 8 mutants accepted every single generation. The field churns rather than
+settling. That is not obviously wrong — a real metagame churns too — but it means **the final
+matrix is a snapshot of decks at different ages**, some re-seeded two generations earlier and
+still climbing. Deck A finished NON-VIABLE at 35.7% having been re-seeded at gen 28.
+
+**Only 182 of 408 cards were ever played, and 146 cleared 100 games.** The other 226 have no
+constructed data at all and will keep scoring at their draft prior forever — the same
+self-reinforcing blind spot this document warns about for draft bootstrapping, in a new place.
+More generations do not obviously fix it; the wildcard slot is the only pressure against it.
+
+**corr(draft rate, movement) = +0.224.** For reference, the poisoned draft run measured +0.63
+(amplification) and the healthy one −0.451 (regression to the mean). Positive means card values
+are mildly absorbing the strength of the decks that happened to hold them. **That is structural
+here and cannot be fixed the way it was for draft training**: the fix there was making every seat
+equal strength, and this mode deliberately makes decks unequal — that is the entire point. Read
+`constructed_values_*.json` as "how well this card did in the decks that played it", not as a
+context-free card rating.
+
+#### The two tables are NOT directly comparable, and the first report said they were
+
+Both are games-in-hand rates, and a card is credited only for games in which it was **drawn**.
+Constructed games end faster than limited ones, so the mean games-in-hand win rate differs by
+format even at identical priors: **draft 0.5162 against constructed 0.4439, a 7.2pp offset.**
+
+Uncentred, that made *every* card read as "worse in constructed" by ~9pp — the faller list was
+the offset and the riser list was whichever cards beat it. It looks like a dramatic finding and
+is an artifact. `Movers` now subtracts the median movement and `FormatOffset` reports it; the
+run prints the offset on its own line. `RawMove` is kept so the artifact stays visible rather
+than being silently absorbed.
+
+The **ranking was never affected** — `SpearmanAgainstDraft` is rank-based, and read 0.597 either
+way, squarely in the healthy band. Only the magnitudes were wrong. Pinned by
+`Movers_CentresOutTheCrossFormatOffset`.
+
+**The general rule: two games-in-hand tables measured in different formats share no zero point.**
+Compare ranks, or centre, but never subtract one pp column from the other and read the result.
+
+### Measured: 100 generations, all sets, synergy-aware cutting
+
+100 002 games, 258.9 minutes, 46 excluded (0.05%). 201 030 constructed deck-games, median **1 420
+games/card** over 429 cards, median **472 games/pair** over 4 654 pairs — the per-deck pair data
+is dense, which is what makes `DeckHistory` usable.
+
+Against the 30-generation runs, three things improved and one broke.
+
+**Diversity stopped decaying.** 83% at gen 1, never below 60%, 61% at the end — where the first
+CSC run went 76% → 35% and sat on its floor. The constraint is no longer the only thing holding
+the field apart.
+
+**The real field got tighter, not looser.** The headline spread of 45.7pp is a wildcard artifact;
+excluding it the seven real decks span **37.5–58.3%, 20.8pp**, against 29.3pp for the first run
+*including* its wildcard.
+
+**Decks brew when left alone.** Four slots reached age 70–95 (Deck F survived 95 generations
+uncut) and the decks are visibly more coherent than the earlier piles — the best deck was 8 of 10
+distinct cards from one Hollowmere graveyard theme, where a pre-fix deck was Path to Exile +
+Tarmogoyf + 4x Past in Flames with no storm enablers.
+
+#### The wildcard slot is structurally broken on a large pool
+
+**13 of 48 culls were the wildcard, and it never once survived** — final rate 17.1%, age 7, and
+EVERY other deck's best matchup is "vs Wildcard". It is a permanent punching bag inflating all
+seven real decks and both headline numbers ("Viable 7/8", "spread 45.7pp").
+
+The cause is the uniform anchor. On CSC's 408 cards a uniform pick landed on something playable
+often enough; over 785 it is a lottery ticket that never wins, so the slot re-seeds, dies, and
+re-seeds forever. The exploration it was meant to provide never materialises — a deck that dies
+every seven generations contributes nothing to the metagame it is supposed to widen.
+
+**Do not read this as "the wildcard idea was wrong."** It worked on the smaller pool. What is
+wrong is *uniform over everything* as the anchor rule. The fix to try is a restricted uniform —
+sample the anchor uniformly among cards that have measured synergy partners, or among the top
+half by value — so it still ignores what the prior prefers without being a pure lottery.
+Untested; do not ship it on intuition.
+
+#### Spearman fell to 0.280 and the reading is genuinely ambiguous
+
+Against 0.597 on the first CSC run, over 392 cards rather than 146. **This is not thin data** —
+median 1 420 games/card — so the two honest readings are:
+
+1. Real divergence. A 785-card format values cards very differently from limited, and more cards
+   measured means more of that difference is visible.
+2. Context narrowing. Decks are now specialised into themes, so a card played in only one deck
+   is measured entirely inside that deck's shell, which is the same deck-strength absorption
+   already recorded above (`corr(draft rate, movement)`), sharpened by specialisation.
+
+These need separating before the constructed table is trusted as a card rating. The cheap
+discriminator is per-card *deck spread*: a card measured in one deck only is a different kind of
+number from one measured across five, and nothing currently distinguishes them.
+
+### Known ceiling
+
+**The AI pilots with a 2-turn lookahead**, so combo and draw-go control systematically
+underperform what they would be worth in human hands. Expect a metagame skewed toward creature
+aggro/midrange. That is a property of the pilot, not of the card pool, and no amount of
+generations fixes it.
+
+### Running it
+
+```
+printf '6\n\n3\n8\n30\n3\n6\n20\nY\n<seed>\n' | dotnet run --project MtgSimulator.Console -c Release
+```
+
+Fields in order: mode, AI depth (blank = 2), set (the index printed by `ReadSet` — **read the
+menu, do not hardcode it**), decks, generations, mutants, games/matchup, final games/matchup,
+seed-from-draft-model, seed. Count the prompts in the output rather than trusting that list —
+mode 4's documented command was wrong for exactly this reason.
+
+Reference cost: 8 decks x 30 generations x 3 mutants x 6 games = ~1 300 games/generation (a
+little under 1 344, because some mutation proposals return null and are not scheduled).
+
+**Measured at ~1 000 games/minute on the default configuration**, i.e. ~1.3 minutes per
+generation and **~40 minutes for a 30-generation run**. Constructed games are much faster than
+drafted ones — the reference rate elsewhere in this document is 5.6 games/sec for draft training,
+and these are ~17/sec, because 60-card decks with a real curve end sooner than 40-card limited
+decks and nothing here pays for the draft itself.
+
+Both output files are relative to the **shell's** working directory — run from the repo root, and
+verify `bin/` timestamps before trusting a run. Same two traps as draft training.
+
 ## Reports
 
 `SimulatorRunner` prints four sections after all games complete:
@@ -1262,7 +1635,7 @@ harness; keep it one list.
 
 ## Console Entry Point
 
-`MtgSimulator.Console/` is the runnable project — it contains only `Program.cs` and references this library. Run that project to launch the simulator interactively. Four modes: 1 = random card pool, 2 = preconstructed decks, 3 = draft, 4 = train draft pickers. `ReadSeed()` is shared by modes 1, 3 and 4 (blank = random, number = literal, word = FNV-1a hashed). `ReadSet()` is shared by modes 3 and 4 and skips its prompt entirely while only one set is registered. Mode 3 auto-loads the selected set's model via `DraftTrainingStore.PathFor` if present and adds the `Trained` picker to the comparison. `ServerGarbageCollection` is enabled here — see the Draft Training section for why. `sim_results/` and `flagged_games/` output folders are written relative to the console app's working directory.
+`MtgSimulator.Console/` is the runnable project — it contains only `Program.cs` and references this library. Run that project to launch the simulator interactively. Six modes: 1 = random card pool, 2 = preconstructed decks, 3 = draft, 4 = train draft pickers, 5 = inspect a saved scenario, 6 = evolve a constructed metagame. `ReadSeed()` is shared by modes 1, 3, 4 and 6 (blank = random, number = literal, word = FNV-1a hashed). `ReadSet()` is shared by modes 3, 4 and 6 and skips its prompt entirely while only one choice exists; **mode 6 alone passes `includeCombined: true`**, which adds the merged all-sets pool. Mode 5 returns before the AI-depth prompt; mode 6 defaults that depth to 2 rather than 3, since it plays far more games and only needs both sides equally strong. Mode 3 auto-loads the selected set's model via `DraftTrainingStore.PathFor` if present and adds the `Trained` picker to the comparison. `ServerGarbageCollection` is enabled here — see the Draft Training section for why. `sim_results/` and `flagged_games/` output folders are written relative to the console app's working directory.
 
 ## Key Rules
 

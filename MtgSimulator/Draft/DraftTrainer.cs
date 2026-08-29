@@ -166,7 +166,7 @@ public class DraftTrainer
 		gameTimer.Stop();
 
 		// --- Phase 3: fold in results (sequential — independent of thread order) ---
-		var accumulator = new Accumulator();
+		var accumulator = new CardStatAccumulator();
 		var excluded = 0;
 		for (var i = 0; i < schedule.Count; i++)
 		{
@@ -314,103 +314,5 @@ public class DraftTrainer
 				);
 		}
 		Console.WriteLine();
-	}
-
-	/// <summary>
-	/// Accumulates games-in-hand counts. A card is credited once per game in which it was
-	/// drawn regardless of how many copies were drawn, and a pair only when both halves
-	/// were drawn in that same game.
-	/// </summary>
-	private sealed class Accumulator
-	{
-		private readonly Dictionary<string, (int Games, int Wins, int DeckGames)> _cards =
-			new(StringComparer.Ordinal);
-		private readonly Dictionary<
-			(string A, string B),
-			(int Games, int Wins, int DeckGames)
-		> _pairs = [];
-		private int _perspectives;
-		private int _wins;
-
-		/// <param name="deckSpells">
-		/// The non-land cards actually in this deck. Recorded whether drawn or not — the
-		/// drawn/in-deck ratio is what lets the picker weigh a pair term (needs both cards
-		/// drawn) against a card term (needs only one) on a common per-game scale.
-		/// </param>
-		public void Add(
-			IReadOnlyList<string> drawnCards,
-			IReadOnlyList<string> deckSpells,
-			bool won
-		)
-		{
-			_perspectives++;
-			if (won)
-				_wins++;
-
-			// Sorted so every pair key is (A <= B).
-			var deck = deckSpells
-				.Distinct(StringComparer.Ordinal)
-				.OrderBy(n => n, StringComparer.Ordinal)
-				.ToList();
-			var inDeck = deck.ToHashSet(StringComparer.Ordinal);
-			var drawn = drawnCards
-				.Where(inDeck.Contains)
-				.Distinct(StringComparer.Ordinal)
-				.OrderBy(n => n, StringComparer.Ordinal)
-				.ToList();
-			var wasDrawn = drawn.ToHashSet(StringComparer.Ordinal);
-
-			foreach (var name in deck)
-			{
-				var c = _cards.GetValueOrDefault(name);
-				var hit = wasDrawn.Contains(name);
-				_cards[name] = (
-					c.Games + (hit ? 1 : 0),
-					c.Wins + (hit && won ? 1 : 0),
-					c.DeckGames + 1
-				);
-			}
-
-			for (var i = 0; i < deck.Count; i++)
-			{
-				for (var j = i + 1; j < deck.Count; j++)
-				{
-					var key = (deck[i], deck[j]);
-					var p = _pairs.GetValueOrDefault(key);
-					var hit = wasDrawn.Contains(deck[i]) && wasDrawn.Contains(deck[j]);
-					_pairs[key] = (
-						p.Games + (hit ? 1 : 0),
-						p.Wins + (hit && won ? 1 : 0),
-						p.DeckGames + 1
-					);
-				}
-			}
-		}
-
-		public DraftTrainingData ToData() =>
-			new(
-				_perspectives,
-				_wins,
-				_cards
-					.OrderBy(kv => kv.Key, StringComparer.Ordinal)
-					.Select(kv => new CardStat(
-						kv.Key,
-						kv.Value.Games,
-						kv.Value.Wins,
-						kv.Value.DeckGames
-					))
-					.ToList(),
-				_pairs
-					.OrderBy(kv => kv.Key.A, StringComparer.Ordinal)
-					.ThenBy(kv => kv.Key.B, StringComparer.Ordinal)
-					.Select(kv => new PairStat(
-						kv.Key.A,
-						kv.Key.B,
-						kv.Value.Games,
-						kv.Value.Wins,
-						kv.Value.DeckGames
-					))
-					.ToList()
-			);
 	}
 }

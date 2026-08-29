@@ -12,7 +12,8 @@ SQGodotCommon/
 ├── MtgCore.Tests/                   # MTG engine unit tests
 ├── MtgConsole/                      # Console presentation layer (ConsoleGameLoop, ConsoleRenderer)
 ├── MtgSimulator/                    # Simulator library — AI strategies, runners, deck factories (referenced by Godot + tests)
-│   └── Scenarios/                   # Saved positions: GameState↔JSON, scenario store, multi-strategy comparison
+│   ├── Scenarios/                   # Saved positions: GameState↔JSON, scenario store, multi-strategy comparison
+│   └── Evolution/                   # Constructed metagame evolution: Decklist, seeding/mutation, the loop
 ├── MtgSimulator.Console/            # Thin console entry point (Program.cs only — references MtgSimulator)
 └── SQGodotCommon/                   # Godot project — reusable utilities (Common/, Project/)
     └── MtgGame/                     # MTG front end: board, deck select, draft + tournament
@@ -31,6 +32,7 @@ is now tooling; use it before proposing a scoring change.
 | **F6** in game | AI inspector overlay — every ranked action, and the chosen one's score split into evaluator terms |
 | **F7** in game | Save the live position to `user://scenarios/` |
 | Console **mode 5** | Load a scenario and have several strategies decide in it, side by side |
+| Console **mode 6** | Evolve a constructed metagame — AI-built decks, matchup matrix, and a constructed-vs-limited card value diff |
 | **Space** in game | Pause the AI — do this before F6 so you can click through candidates |
 
 Full detail in `MtgSimulator/CLAUDE.md`. Two rules worth carrying: a scenario is **serialized
