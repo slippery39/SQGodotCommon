@@ -16,7 +16,7 @@ namespace MtgSimulator;
 ///   - Max turns:      100 turns                  (flags as TurnLimitReached)
 ///   - Action warning: 100 actions in a single turn (logged, game continues)
 ///   - Action limit:   200 actions in a single turn (flags as ActionLimitReached)
-///   - Safety timeout: 300 000 ms wall-clock       (flags as TimeLimitReached)
+///   - Safety timeout: 1 800 000 ms wall-clock     (flags as TimeLimitReached — hang catcher only)
 ///
 /// **Wall-clock time must not decide a game.** It used to: a 20-second limit ended the game as
 /// a draw, which made the result depend on how fast the machine happened to be running. That is
@@ -30,13 +30,41 @@ namespace MtgSimulator;
 /// actions), so the clock was never load-bearing for termination — only for cost. Cost is now
 /// bounded inside the AI instead, by MultiTurnBeamSearchAiStrategy's per-move rollout budget.
 ///
-/// The 300-second net remains only so a genuine engine hang cannot wedge a training run
-/// forever. A game it ends is a broken game, not a draw — see DraftTrainer, which excludes it
-/// from training data rather than recording it as one.
+/// The net remains only so a genuine engine hang cannot wedge a training run forever. A game it
+/// ends is a broken game, not a draw — see DraftTrainer, which excludes it from training data
+/// rather than recording it as one.
+///
+/// **That exclusion is why the net was raised from 300s to 1800s.** Dropping a game is itself a
+/// wall-clock decision, so under a 9 600-game parallel batch two identical-seed runs discarded a
+/// different game each (1 vs 2 excluded) and produced completely different metagames. The clock
+/// had been removed from ENDING a game and left in DISCARDING one. See SafetyTimeoutMs.
 /// </summary>
 public class GameRunner
 {
-	private const long SafetyTimeoutMs = 300_000;
+	/// <summary>
+	/// Hang catcher only — never a termination condition the game is expected to reach.
+	///
+	/// **Was 300 000, and at that value it silently decided which games counted.** Measured on two
+	/// `PreSimulation` runs with an identical seed and byte-identical inputs: 9585 games with **1
+	/// excluded** against 9584 with **2 excluded**. `PreSimulation` and `DraftTrainer` both drop
+	/// `TimeLimitReached` games from their counts, so a different game was dropped each time, card
+	/// values differed slightly, and the seeding softmax turned that into a completely different
+	/// field by generation 1. Mode 6 was not reproducible at `presim 800`; at `presim 200` (2 391
+	/// games, no timeouts) it was.
+	///
+	/// **The game's RESULT is deterministic — only how long we wait for it is load-dependent.** A
+	/// game starved by a 9 600-game parallel batch reaches the same outcome, just later, so
+	/// waiting is strictly more correct than discarding it. That is the whole argument for raising
+	/// this rather than tuning it.
+	///
+	/// 30 minutes against a ~1.7s median game is ~1000x headroom, so load cannot plausibly reach
+	/// it while a genuine hang still cannot wedge a run forever. If it DOES fire, data is being
+	/// dropped non-deterministically again — callers report it loudly for that reason.
+	///
+	/// Same lesson as the draw-rate disaster, one level along: the clock was removed from ENDING a
+	/// game and left in DISCARDING one.
+	/// </summary>
+	private const long SafetyTimeoutMs = 1_800_000;
 	private const int MaxTurns = 100;
 	private const int ActionWarningThreshold = 100;
 	private const int ActionLimitThreshold = 200;

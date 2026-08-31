@@ -1136,4 +1136,425 @@ public class MetagameEvolutionTests
 
 		Assert.That(SetRegistry.Combined.Cards, Has.Count.EqualTo(expected));
 	}
+
+	// ===== Feature-driven support (PoolFeatures in DeckBuilder) =====
+
+	/// A tribe member: supplies the lord's demand and asks for nothing itself.
+	private static Card Tribesman(string name, string tribe = "Orc") =>
+		CardFactory.Creature(name, manaCost: 2, power: 2, toughness: 2).WithSubtype(tribe).Build();
+
+	/// A lord: demands its tribe and is worth nothing without it.
+	private static Card Lord(string name, string tribe = "Orc") =>
+		CardFactory
+			.Creature(name, manaCost: 3, power: 2, toughness: 2)
+			.WithSubtype(tribe)
+			.WithComponent(
+				new StaticPTBoostAbility
+				{
+					PowerBonus = 1,
+					ToughnessBonus = 1,
+					Filter = new IsSubtypeSpecification { Subtype = tribe }.And(
+						new IsNotSelfSpecification()
+					),
+				}
+			)
+			.Build();
+
+	/// <summary>
+	/// Two independent archetypes, for the distinct-concept rule. A one-concept pool cannot test
+	/// it: the second slot correctly finds nothing left and falls back, which looks identical to
+	/// the rule not working.
+	/// </summary>
+	/// <summary>
+	/// An anthem wanting ANY creature you control. Broad on purpose: it is the shape that broke
+	/// concept selection on CSC, where "creatures you control" answers 237 of 408 cards.
+	/// </summary>
+	private static Card BroadAnthem() =>
+		CardFactory
+			.Creature("Anthem", manaCost: 3, power: 2, toughness: 2)
+			.WithComponent(
+				new StaticPTBoostAbility
+				{
+					PowerBonus = 1,
+					ToughnessBonus = 1,
+					Filter = new IsCreatureSpecification().And(
+						new IsControlledByYouSpecification()
+					),
+				}
+			)
+			.Build();
+
+	private static IReadOnlyList<Card> TwoTribePool() =>
+		[
+			Lord("OrcLord"),
+			.. Enumerable.Range(0, 8).Select(i => Tribesman($"Orc{i}")),
+			Lord("ElfLord", "Elf"),
+			.. Enumerable.Range(0, 8).Select(i => Tribesman($"Elf{i}", "Elf")),
+			BroadAnthem(),
+			.. Enumerable.Range(0, 30).Select(i => Spell($"Filler{i}", 2)),
+		];
+
+	/// <summary>
+	/// Deliberately filler-heavy: 4 tribe members against 30 neutrals.
+	///
+	/// **A narrow pool makes this measure nothing.** At 4 orcs against 8 fillers a random fill
+	/// clusters the tribe by accident — the A/B below read 9.30 against 10.20 and would have
+	/// passed on a term that barely worked. The pool has to be wide enough that support is
+	/// evidence of the term rather than of the fixture.
+	///
+	/// Eight tribe members rather than four, because `DeckBuilder.MinConceptSuppliers` is 6: a
+	/// demand four cards answer is an interaction, not an archetype, and a fixture below the
+	/// threshold silently falls back to ordinary seeding and tests nothing.
+	/// </summary>
+	private static IReadOnlyList<Card> TribalPool() =>
+		[
+			Lord("Lord"),
+			.. Enumerable.Range(0, 8).Select(i => Tribesman($"Orc{i}")),
+			.. Enumerable.Range(0, 30).Select(i => Spell($"Filler{i}", 2)),
+		];
+
+	[Test]
+	public void ACardTheDeckCannotSupportAtAll_IsCutFarMoreOftenThanChance()
+	{
+		// The Dragonstorm case: a lord in a deck with none of its tribe does nothing at all, and
+		// before this nothing in the mode could tell that from a card that was merely unlucky.
+		var pool = TribalPool();
+		var features = PoolFeatures.Build(pool);
+		(string Name, int Count)[] spells =
+		[
+			("Lord", 4),
+			.. Enumerable.Range(0, 8).Select(i => (Name: $"Filler{i}", Count: 4)),
+		];
+		var deck = Build(24, spells);
+		Assume.That(deck.Validate(), Is.Null, deck.Validate());
+		Assume.That(
+			features.Satisfaction("Lord", deck),
+			Is.Zero,
+			"fixture must leave the lord genuinely unsupported"
+		);
+
+		var rng = new Random(7);
+		int proposals = 0,
+			cutLord = 0;
+		for (var i = 0; i < 400; i++)
+		{
+			var m = DeckBuilder.Mutate(deck, pool, NoData(), rng, features: features);
+			if (m is null)
+				continue;
+			proposals++;
+			if (m.CopiesOf("Lord") < deck.CopiesOf("Lord"))
+				cutLord++;
+		}
+
+		Assume.That(proposals, Is.GreaterThan(50));
+
+		// Nine distinct cards, so a blind cut hits the lord ~11% of the time.
+		Assert.That(
+			(double)cutLord / proposals,
+			Is.GreaterThan(0.25),
+			$"unsupported card cut in only {cutLord}/{proposals} proposals — no better than blind"
+		);
+	}
+
+	[Test]
+	public void AWinningCardIsNotCutJustBecauseItIsUnsupported()
+	{
+		// **The counterweight, and the reason this term RANKS instead of deleting.**
+		// Satisfaction == 0 cannot tell a card that does nothing from a fine card carrying an
+		// irrelevant rider — a 2/2 for 2 that would gain 1 life if a tribe member entered reads
+		// exactly the same as a 7-mana spell with no targets in the deck. Without this test the
+		// penalty could be raised until it deletes good cards and every other test would pass.
+		var pool = TribalPool();
+		var features = PoolFeatures.Build(pool);
+		(string Name, int Count)[] spells =
+		[
+			("Lord", 4),
+			.. Enumerable.Range(0, 8).Select(i => (Name: $"Filler{i}", Count: 4)),
+		];
+		var deck = Build(24, spells);
+
+		// The lord is unsupported AND the best card in the format.
+		var draft = new DraftTrainingData(
+			100000,
+			50000,
+			pool.Select(c => new CardStat(c.Name, 40000, c.Name == "Lord" ? 30000 : 20000))
+				.ToList(),
+			[]
+		);
+		var values = new ConstructedValues(DraftTrainingData.Empty, draft);
+		Assume.That(
+			values.CardDelta("Lord"),
+			Is.GreaterThan(10),
+			"fixture must make it clearly good"
+		);
+		Assume.That(features.Satisfaction("Lord", deck), Is.Zero);
+
+		var rng = new Random(11);
+		int proposals = 0,
+			cutLord = 0;
+		for (var i = 0; i < 400; i++)
+		{
+			var m = DeckBuilder.Mutate(deck, pool, values, rng, features: features);
+			if (m is null)
+				continue;
+			proposals++;
+			if (m.CopiesOf("Lord") < deck.CopiesOf("Lord"))
+				cutLord++;
+		}
+
+		Assume.That(proposals, Is.GreaterThan(50));
+		Assert.That(
+			(double)cutLord / proposals,
+			Is.LessThan(0.11),
+			$"a card winning by 10pp was cut in {cutLord}/{proposals} proposals — the support term "
+				+ "is overriding the measured win rate instead of breaking ties"
+		);
+	}
+
+	[Test]
+	public void SeedingWithFeatures_BuildsBetterSupportedDecks()
+	{
+		// The other direction, and the one single-card hill climbing cannot travel: Fill scores
+		// against the PARTIALLY built deck, so a tribe member already placed makes the next one
+		// and the lord more attractive. Measured as an A/B on the same seeds, because the claim
+		// is about the term and not about one lucky deck.
+		var pool = TribalPool();
+		var features = PoolFeatures.Build(pool);
+
+		double MeanSupport(bool on)
+		{
+			var total = 0.0;
+			for (var seed = 0; seed < 40; seed++)
+			{
+				var deck = DeckBuilder.Seed(
+					"D",
+					pool,
+					NoData(),
+					new Random(seed),
+					features: on ? features : null
+				);
+				var support = features.Satisfaction("Lord", deck);
+				total += deck.CopiesOf("Lord") > 0 && !double.IsNaN(support) ? support : 0;
+			}
+			return total / 40;
+		}
+
+		var withFeatures = MeanSupport(true);
+		var without = MeanSupport(false);
+
+		Assert.That(
+			withFeatures,
+			Is.GreaterThan(without),
+			$"support {without:F2} -> {withFeatures:F2}: seeding is not clustering a concept, which "
+				+ "is the whole reason the term exists"
+		);
+	}
+
+	[Test]
+	public void SeedConcept_JamsTheWholeArchetype_NotAPackageOfTwo()
+	{
+		// The operator the mode was missing. `Package` brings an anchor plus up to two partners;
+		// a concept needs its critical mass at once, because every intermediate step toward it is
+		// worse than the pile it came from and gets rejected by accept-if-better.
+		var pool = TribalPool();
+		var features = PoolFeatures.Build(pool);
+
+		var deck = DeckBuilder.SeedConcept("Synergy-1", pool, NoData(), features, new Random(5));
+
+		Assert.That(deck, Is.Not.Null);
+		Assert.That(deck!.Validate(), Is.Null, deck.Validate());
+
+		var tribe = deck
+			.Spells.Where(kv => kv.Key.StartsWith("Orc") || kv.Key == "Lord")
+			.Sum(kv => kv.Value);
+
+		Assert.That(
+			tribe,
+			Is.GreaterThanOrEqualTo(16),
+			$"only {tribe} on-concept cards — a concept seed that does not reach critical mass is "
+				+ "just a differently-shaped pile"
+		);
+	}
+
+	[Test]
+	public void SeedConcept_BeatsOrdinarySeeding_AtBuildingTheArchetype()
+	{
+		// The A/B that says the operator, not the scoring term, is doing the work. Same pool,
+		// same seeds, same features — only the seeding route differs.
+		var pool = TribalPool();
+		var features = PoolFeatures.Build(pool);
+
+		double MeanTribe(bool concept)
+		{
+			var total = 0.0;
+			for (var seed = 0; seed < 30; seed++)
+			{
+				var deck = concept
+					? DeckBuilder.SeedConcept("C", pool, NoData(), features, new Random(seed))
+					: DeckBuilder.Seed("D", pool, NoData(), new Random(seed), features: features);
+				if (deck is null)
+					continue;
+				total += deck
+					.Spells.Where(kv => kv.Key.StartsWith("Orc") || kv.Key == "Lord")
+					.Sum(kv => kv.Value);
+			}
+			return total / 30;
+		}
+
+		var withConcept = MeanTribe(true);
+		var ordinary = MeanTribe(false);
+
+		Assert.That(
+			withConcept,
+			Is.GreaterThan(ordinary * 3),
+			$"on-concept cards {ordinary:F1} -> {withConcept:F1}: committing to a concept must "
+				+ "build a visibly different deck, not a slightly nudged one"
+		);
+	}
+
+	[Test]
+	public void SeedField_LabelsSlotsAndGivesEachSynergySlotItsOwnConcept()
+	{
+		var pool = TwoTribePool();
+		var features = PoolFeatures.Build(pool);
+
+		var field = DeckBuilder.SeedField(
+			5,
+			pool,
+			NoData(),
+			new Random(9),
+			minDifference: 0.3,
+			includeWildcard: true,
+			features: features,
+			conceptSlots: 2
+		);
+
+		Assert.That(field, Has.Count.EqualTo(5));
+		Assert.Multiple(() =>
+		{
+			Assert.That(field[0].Name, Is.EqualTo("Synergy-1"));
+			Assert.That(field[1].Name, Is.EqualTo("Synergy-2"));
+			Assert.That(field[4].Name, Is.EqualTo("Wildcard"));
+			Assert.That(
+				field.Select(d => d.Name),
+				Is.Unique,
+				"every slot must be identifiable in the report"
+			);
+		});
+
+		foreach (var deck in field)
+			Assert.That(deck.Validate(), Is.Null, deck.Validate());
+	}
+
+	private static int Orcs(Decklist d) =>
+		d.Spells.Where(kv => kv.Key.StartsWith("Orc")).Sum(kv => kv.Value);
+
+	private static int Elves(Decklist d) =>
+		d.Spells.Where(kv => kv.Key.StartsWith("Elf")).Sum(kv => kv.Value);
+
+	/// <summary>
+	/// A labelled slot has to mean what it says. These were named "Midrange-A" while drawing a
+	/// curve target uniformly from 2.0-4.5, so a "midrange" slot could come out with an aggro or
+	/// control curve and the report would still call it midrange — a label that lies is worse than
+	/// no label, because it gets read as evidence.
+	/// </summary>
+	[Test]
+	public void ProfiledSlots_ActuallyBuildToTheirCurveBand()
+	{
+		// A pool spanning the whole curve, so a band is a real constraint rather than the only
+		// thing available.
+		IReadOnlyList<Card> pool =
+		[
+			.. Enumerable.Range(0, 10).Select(i => Spell($"One{i}", 1)),
+			.. Enumerable.Range(0, 10).Select(i => Spell($"Two{i}", 2)),
+			.. Enumerable.Range(0, 10).Select(i => Spell($"Four{i}", 4)),
+			.. Enumerable.Range(0, 10).Select(i => Spell($"Six{i}", 6)),
+		];
+		var index = Index(pool);
+
+		double MeanCost(DeckBuilder.DeckProfile profile)
+		{
+			var total = 0.0;
+			for (var seed = 0; seed < 25; seed++)
+				total += DeckBuilder
+					.Seed("D", pool, NoData(), new Random(seed), profile: profile)
+					.AverageCost(index);
+			return total / 25;
+		}
+
+		var aggro = MeanCost(DeckBuilder.DeckProfile.Aggro);
+		var midrange = MeanCost(DeckBuilder.DeckProfile.Midrange);
+		var control = MeanCost(DeckBuilder.DeckProfile.Control);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				aggro,
+				Is.LessThan(midrange),
+				$"aggro {aggro:F2} is not cheaper than midrange {midrange:F2}"
+			);
+			Assert.That(
+				midrange,
+				Is.LessThan(control),
+				$"midrange {midrange:F2} is not cheaper than control {control:F2}"
+			);
+		});
+
+		// Land count follows the curve through LandsForCurve, so the profile has to move the mana
+		// base too or "aggro" is only a spell mix.
+		var aggroLands = DeckBuilder
+			.Seed("A", pool, NoData(), new Random(3), profile: DeckBuilder.DeckProfile.Aggro)
+			.Lands;
+		var controlLands = DeckBuilder
+			.Seed("C", pool, NoData(), new Random(3), profile: DeckBuilder.DeckProfile.Control)
+			.Lands;
+		Assert.That(
+			aggroLands,
+			Is.LessThan(controlLands),
+			$"aggro ran {aggroLands} lands against control's {controlLands}"
+		);
+	}
+
+	/// A deck committed to ONE tribe rather than a mixed creature pile.
+	private static bool IsTribal(Decklist d) =>
+		Math.Max(Orcs(d), Elves(d)) > 0
+		&& Math.Max(Orcs(d), Elves(d)) >= 2 * Math.Min(Orcs(d), Elves(d));
+
+	/// <summary>
+	/// **REGRESSION, found by a real 25-generation A/B rather than by reasoning.**
+	/// <c>PickConcept</c> weighted by supplier count, so it drew the BROADEST demand available.
+	/// This pool's Anthem wants any creature at all (19 of 19 creatures); the equivalent on CSC
+	/// is "creatures you control" at 237 of 408. A deck built on that is a creature pile, not an
+	/// archetype, so three slots drawing such demands produced three similar decks — the field
+	/// started at 59% diversity against a 69% control and collapsed to 48% in one generation.
+	///
+	/// **Measured as a RATE over many seeds, because this changes a probability distribution and
+	/// one fixed seed cannot see it.** The first version of this test used a single seed and
+	/// passed under BOTH weightings — a test that measured nothing, which is the trap this file
+	/// keeps rediscovering.
+	/// </summary>
+	[Test]
+	public void ConceptChoice_PrefersDistinctiveDemands_OverBroadOnes()
+	{
+		var pool = TwoTribePool();
+		var features = PoolFeatures.Build(pool);
+
+		var tribal = 0;
+		const int Seeds = 60;
+		for (var seed = 0; seed < Seeds; seed++)
+		{
+			var deck = DeckBuilder.SeedConcept("C", pool, NoData(), features, new Random(seed));
+			if (deck is not null && IsTribal(deck))
+				tribal++;
+		}
+
+		// Three viable demands: Orc (9 suppliers), Elf (9), any-creature (19). Weighted by breadth
+		// the broad one takes 19/37 of draws; weighted by 1/n it takes 5/24.
+		Assert.That(
+			(double)tribal / Seeds,
+			Is.GreaterThan(0.7),
+			$"only {tribal}/{Seeds} concept seeds committed to a tribe — concept choice is still "
+				+ "drawing the broad demand, which builds piles"
+		);
+	}
 }

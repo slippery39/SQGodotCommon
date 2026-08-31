@@ -354,7 +354,7 @@ public static class CardLibrary
 					new ActivatedAbilityComponent
 					{
 						Name = "Equip",
-						ManaCost = 1,
+						ManaCost = 0,
 						Effect = new CardEffect
 						{
 							// The current wearer is excluded — re-equipping to it is a perfect no-op
@@ -462,7 +462,7 @@ public static class CardLibrary
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, GoblinSubtype),
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
-					new CreatureComponent { Power = 1, Toughness = 1 },
+					new CreatureComponent { Power = 1, Toughness = 2 },
 					new TriggeredAbilityComponent
 					{
 						Name = "Lackey Trigger",
@@ -497,7 +497,7 @@ public static class CardLibrary
 					new CreatureComponent
 					{
 						Power = 1,
-						Toughness = 1,
+						Toughness = 2,
 						HasDoubleStrike = true,
 					},
 					new TriggeredAbilityComponent
@@ -607,7 +607,7 @@ public static class CardLibrary
 			CardFactory
 				.Spell("Goblin Grenade", manaCost: 1)
 				.WithSacrificeSubtypeCost(GoblinSubtype)
-				.WithDamage(5)
+				.WithDamage(6)
 				.WithTarget(Single().PlayersOrCreatures())
 				.Build(),
 			CardFactory
@@ -633,7 +633,7 @@ public static class CardLibrary
 				)
 				.Build(),
 			CardFactory
-				.Creature("Goblin Matron", manaCost: 2, power: 1, toughness: 1)
+				.Creature("Goblin Matron", manaCost: 1, power: 1, toughness: 1)
 				.WithSubtype(GoblinSubtype)
 				.WithEtbTrigger(
 					"ETB Tutor",
@@ -1175,10 +1175,10 @@ public static class CardLibrary
 			new()
 			{
 				Name = "Steppe Lynx",
-				ManaCost = 0,
+				ManaCost = 1,
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
-					new CreatureComponent { Power = 0, Toughness = 1 },
+					new CreatureComponent { Power = 0, Toughness = 2 },
 					new TriggeredAbilityComponent
 					{
 						Name = "Landfall",
@@ -1347,7 +1347,7 @@ public static class CardLibrary
 			},
 			// ===== REANIMATOR CARDS =====
 			CardFactory
-				.Spell("Reanimate", manaCost: 2)
+				.Spell("Reanimate", manaCost: 1)
 				.WithAction(new PutIntoBattlefieldAction(), Single().CreatureInYourGraveyard())
 				.Build(),
 			new()
@@ -1386,6 +1386,7 @@ public static class CardLibrary
 						HasTrample = true,
 						HasHexproof = true,
 						HasTaunt = true,
+						HasLifelink = true,
 					}
 				),
 			},
@@ -1504,7 +1505,7 @@ public static class CardLibrary
 				ManaCost = 3,
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
-					new CreatureComponent { Power = 3, Toughness = 3 },
+					new CreatureComponent { Power = 2, Toughness = 2 },
 					new TriggeredAbilityComponent
 					{
 						Name = "Liliana ETB",
@@ -1612,7 +1613,7 @@ public static class CardLibrary
 						eb.WithAction(
 							new DrainLifeAction
 							{
-								Amount = 1,
+								Amount = 2,
 								TargetOpponent = true,
 								PlayerIdContextKey = ContextKeys.CastingPlayerId,
 							},
@@ -1647,7 +1648,7 @@ public static class CardLibrary
 				)
 				.Build(),
 			CardFactory
-				.Creature("Atog", manaCost: 2, power: 2, toughness: 3)
+				.Creature("Atog", manaCost: 2, power: 2, toughness: 2)
 				.WithSubtype("Artifact")
 				.WithComponent(
 					new ActivatedAbilityComponent
@@ -1677,24 +1678,24 @@ public static class CardLibrary
 				)
 				.Build(),
 			CardFactory
-				.Creature("Frogmite", manaCost: 3, power: 3, toughness: 3)
+				.Creature("Frogmite", manaCost: 4, power: 4, toughness: 4)
 				.WithSubtype("Artifact")
 				.WithComponent(new AffinityComponent())
 				.Build(),
 			CardFactory
-				.Creature("Thought Monitor", manaCost: 7, power: 2, toughness: 2)
+				.Creature("Thought Monitor", manaCost: 5, power: 2, toughness: 2)
 				.WithSubtype("Artifact")
 				.WithFlying()
 				.WithLifelink()
 				.WithComponent(new AffinityComponent())
 				.Build(),
 			CardFactory
-				.Creature("Myr Enforcer", manaCost: 6, power: 5, toughness: 5)
+				.Creature("Myr Enforcer", manaCost: 6, power: 6, toughness: 6)
 				.WithSubtype("Artifact")
 				.WithComponent(new AffinityComponent())
 				.Build(),
 			CardFactory
-				.Spell("Thoughtcast", manaCost: 5)
+				.Spell("Thoughtcast", manaCost: 4)
 				.WithDraw(2)
 				.WithComponent(new AffinityComponent())
 				.Build(),
@@ -1720,6 +1721,59 @@ public static class CardLibrary
 					}
 				),
 			},
+			// ===== COMBO ENABLERS =====
+			//
+			// Added to give the combo archetypes cards that are only good INSIDE them. The point is
+			// not raw power: a card that a midrange pile would happily play teaches the deckbuilder
+			// nothing about synergy, because it gets adopted for its own sake.
+
+			// Reanimator's missing enabler. Free, does nothing on its own, and actively BAD in any
+			// deck without reanimation — it mills you your best creature. That asymmetry is the
+			// whole design.
+			CardFactory
+				.Sorcery("Entomb", manaCost: 0)
+				.WithAction(
+					new PipelineAction
+					{
+						Steps = ImmutableList.Create<GameAction>(
+							new SelectCardFromZoneAction
+							{
+								Zone = ZoneType.Library,
+								Filter = new IsCardTypeSpecification { Types = CardType.Creature },
+								SelectBestByManaCost = true,
+								PlayerIdContextKey = ContextKeys.CastingPlayerId,
+								OutputKey = "entomb_target",
+							},
+							new MoveCardToGraveyardAction { CardIdContextKey = "entomb_target" }
+						),
+					},
+					TargetingStrategy.NoTarget()
+				)
+				.Build(),
+			// Affinity fuel: a cheap artifact that replaces itself twice, so flooding the board
+			// with artifacts costs no cards. Weak on rate alone; strong only where artifact COUNT
+			// is the payoff.
+			CardFactory
+				.Artifact("Chromatic Sphere", manaCost: 1)
+				.WithEtbTrigger("Sphere ETB", eb => eb.WithDraw(1))
+				.WithTriggeredAbility(
+					"Sphere LTB",
+					new EventTriggerCondition
+					{
+						EventTypeName = EventTypeNames.PermanentLeftBattlefield,
+						Filter = new IsSourceCardSpecification(),
+					},
+					eb => eb.WithDraw(1),
+					activeInZone: ZoneType.Graveyard
+				)
+				.Build(),
+			// A free artifact. Contributes a body to affinity's count for zero mana and replaces
+			// itself with an impulse, so it is never a dead draw in an artifact deck and never
+			// worth a slot outside one.
+			CardFactory
+				.Artifact("Ornithopter Shard", manaCost: 0)
+				.WithEtbTrigger("Shard ETB", eb => eb.WithImpulseDraw())
+				.Build(),
 		};
 
 	public static Card GetByName(string name) =>

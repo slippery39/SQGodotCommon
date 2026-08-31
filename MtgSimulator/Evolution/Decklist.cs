@@ -32,9 +32,34 @@ public sealed record Decklist(string Name, ImmutableSortedDictionary<string, int
 	/// </summary>
 	public const int MaxCopies = 4;
 
-	/// Real constructed mana bases. Also the range the mutator may move Lands within.
-	public const int MinLands = 20;
-	public const int MaxLands = 26;
+	/// <summary>
+	/// The range the mutator may move Lands within — and, as measured, the single constraint that
+	/// kept the evolution away from the best decks in the format.
+	///
+	/// **20 was set by analogy with paper Magic and is wrong for this engine.** Every hand-built
+	/// deck that beats an evolved field runs FEWER lands than the floor allowed: Traditional Storm
+	/// 12, Zoo 14, Affinity 14, Goblins 16 — against a legal minimum of 20. Those decks were not
+	/// hard to reach, they were **illegal**, and no amount of hill climbing, gauntlet pressure or
+	/// synergy detection can reach a deck the validator rejects. Evolved decks sat pinned at
+	/// exactly 20, which is what a binding constraint looks like.
+	///
+	/// The economics differ from paper in two ways that both push the floor down: there are no
+	/// colours, so a land is pure quantity rather than fixing, and **every opening hand contains
+	/// three lands by rule** — so 20 of 60 on top of a guaranteed three is far more than an
+	/// aggressive deck wants.
+	///
+	/// Overridable via `MTG_MIN_LANDS` / `MTG_MAX_LANDS` so an A/B can run both arms on ONE binary.
+	/// Rebuilding between arms is how the stale-`bin/` trap gets in, and this project has paid for
+	/// that twice.
+	/// </summary>
+	public static readonly int MinLands = ReadBound("MTG_MIN_LANDS", 20);
+
+	public static readonly int MaxLands = ReadBound("MTG_MAX_LANDS", 26);
+
+	private static int ReadBound(string variable, int fallback) =>
+		int.TryParse(Environment.GetEnvironmentVariable(variable), out var v) && v is > 0 and < 60
+			? v
+			: fallback;
 
 	public int SpellCount => Spells.Values.Sum();
 

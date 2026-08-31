@@ -274,6 +274,22 @@ else if (mode == 6)
 	Console.Write("Seed from the draft model? (Y/n — n seeds quality-blind): ");
 	var useDraftPrior = Console.ReadLine()?.Trim().ToLowerInvariant() != "n";
 
+	// Slots seeded by COMMITTING to one mechanical concept and jamming it, instead of by
+	// anchor-and-kernel. 0 keeps the mode exactly as it was, which is the A/B control: the
+	// question these answer is whether committed seeding builds archetypes a hill climb cannot
+	// reach, and that is only readable against a run without them.
+	Console.Write("Synergy (concept) deck slots? (default 0 = off, e.g. 3 of 8): ");
+	var conceptInput = Console.ReadLine()?.Trim() ?? "";
+	var conceptSlots = int.TryParse(conceptInput, out var cs) && cs >= 0 ? cs : 0;
+
+	// Fixed reference decks, counted in fitness but NOT in the diversity constraint. Without one
+	// the mode has no absolute reference: a closed round-robin averages 50% by construction, so a
+	// field that converges on something mediocre reports itself perfectly healthy. Measured: the
+	// evolved ALL field lost to hand-built Zoo 34-66. 0 keeps the old behaviour exactly.
+	Console.Write("Gauntlet games per reference deck? (default 0 = off, e.g. 4): ");
+	var gauntletInput = Console.ReadLine()?.Trim() ?? "";
+	var gauntletGames = int.TryParse(gauntletInput, out var gg) && gg >= 0 ? gg : 0;
+
 	new MetagameEvolver(
 		evolveSet,
 		deckCount: deckCount,
@@ -288,7 +304,9 @@ else if (mode == 6)
 		// The floor stays 0.40 either way — with culling off it still flags a non-viable deck
 		// in the report, it just stops replacing it.
 		cullEnabled: cullDecks,
-		preSimDecks: presimDecks
+		preSimDecks: presimDecks,
+		conceptSlots: conceptSlots,
+		gauntletGames: gauntletGames
 	).Run();
 }
 else

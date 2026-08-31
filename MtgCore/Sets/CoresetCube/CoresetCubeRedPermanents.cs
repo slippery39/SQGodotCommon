@@ -123,10 +123,10 @@ public static class CoresetCubeRedPermanents
 			// card in the cube is not worth it — the looting half is the half that plays, and it
 			// fixes red's worst problem, which is flooding out with a hand of lands.
 			CardFactory
-				.Artifact("Chandra's Regulator", manaCost: 1)
+				.Artifact("Chandra's Regulator", manaCost: 2)
 				.WithActivatedAbility(
 					"Regulate",
-					manaCost: 1,
+					manaCost: 2,
 					effect: eb => eb.WithDiscard(1).WithDraw(2).WithTarget(TargetingStrategy.Self())
 				)
 				.Build(),

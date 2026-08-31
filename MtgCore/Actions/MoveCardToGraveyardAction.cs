@@ -14,16 +14,27 @@ public record MoveCardToGraveyardAction : GameAction
 {
 	public int CardId { get; init; }
 
+	/// <summary>
+	/// Reads the card id from pipeline context instead, so a selection step can feed this one —
+	/// "find a card, put it in the graveyard". `MoveCardToExileAction` has always had this; the
+	/// graveyard twin did not, which made Entomb-style effects inexpressible.
+	/// </summary>
+	public string CardIdContextKey { get; init; } = "";
+
 	public override ActionResult Execute(GameState gameState)
 	{
-		if (!gameState.HasObject(CardId))
+		var cardId = string.IsNullOrEmpty(CardIdContextKey)
+			? CardId
+			: GetInput<int>(CardIdContextKey, 0);
+
+		if (cardId == 0 || !gameState.HasObject(cardId))
 			return new ActionResult(gameState);
 
-		var card = gameState.GetObject(CardId) as Card;
+		var card = gameState.GetObject(cardId) as Card;
 		if (card == null)
 			return new ActionResult(gameState);
 
 		var graveyardId = gameState.GetPlayerZoneId(card.OwnerId, ZoneType.Graveyard);
-		return new ActionResult(gameState.MoveCardTracked(CardId, graveyardId));
+		return new ActionResult(gameState.MoveCardTracked(cardId, graveyardId));
 	}
 }

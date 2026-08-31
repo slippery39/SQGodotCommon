@@ -13,6 +13,7 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | `Evolution/Decklist.cs` | `Decklist` (name → copies + land count), its invariants (60 cards, max 4, 20-26 lands), `Difference`, `Materialize`; `MetagameResult` + `DecklistStore` |
 | `Evolution/ConstructedValues.cs` | Card/pair values learned from constructed games, shrunk toward the draft model as prior; `Movers`/`SpearmanAgainstDraft` diff the two formats |
 | `Evolution/DeckBuilder.cs` | Seeding (anchor + synergy kernel + curve target) and the three mutation operators |
+| `Evolution/PoolFeatures.cs` | What each card ASKS of your deck and which cards ANSWER, read off the cards by reflection — no mechanic-to-meaning table. `Satisfaction`, `DeadCards` |
 | `Evolution/ConstructedGameSetup.cs` | Two decklists → pre-begin `GameState`; the constructed sibling of `DraftGameSetup` |
 | `Evolution/MetagameEvolver.cs` | Console mode 6 — the evolution loop, paired evaluation, culling, and the report |
 | `IAiStrategy.cs` | Interface: `SelectAction` + `ResolveChoice` — all AI implementations conform to this |
@@ -69,8 +70,56 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | Turn limit | 100 turns | yes | `GameEndReason.TurnLimitReached` — game ends as draw |
 | Action warning | 100 actions in one turn | yes | `HadActionWarning = true` — game continues |
 | Action limit | 200 actions in one turn | yes | `GameEndReason.ActionLimitReached` — game ends as draw |
-| Safety timeout | 300 000 ms wall-clock | **no** | `GameEndReason.TimeLimitReached` — excluded from training, not a draw |
+| Safety timeout | 1 800 000 ms wall-clock | **no** | `GameEndReason.TimeLimitReached` — excluded from training, not a draw. Hang catcher only; must never fire in normal operation |
 | Unhandled exception | any thrown exception | — | `GameEndReason.UnhandledException` — excluded from training, exception captured |
+
+### The clock was removed from ENDING a game and left in DISCARDING one
+
+**Mode 6 was not reproducible at `presim 800`, and this is why.** `PreSimulation` and
+`DraftTrainer` both drop `TimeLimitReached` games from their counts — and that reason comes from
+the wall-clock safety net, the one non-deterministic termination in the table above. Two runs at
+an **identical seed with byte-identical inputs**:
+
+```
+run 1:  9585 games in 9.4m, 1 excluded.   Base rate 50.0%
+run 2:  9584 games in 8.9m, 2 excluded.   Base rate 50.0%
+```
+
+A different game dropped each time → slightly different card values → different softmax draws at
+seeding → a completely different metagame by generation 1. Two full A/B comparisons were run and
+read before anyone noticed, because the evidence was one number in a summary line.
+
+**The fix is to WAIT, not to tune.** A game's result is deterministic; only how long we wait for it
+is load-dependent, so a game starved by a 9 600-game parallel batch reaches the same outcome later
+and including it is strictly more correct than discarding it. `SafetyTimeoutMs` is 1 800 000 —
+~1000x a ~1.7s median game, so load cannot reach it, while a genuine hang still cannot wedge a run.
+`PreSimulation` now prints a **loud warning** on any exclusion, because a nonzero count means that
+run is not reproducible.
+
+Verified: 8 decks / presim 800 / same seed, run twice, **bit-identical** apart from the elapsed-time
+column. Localised by elimination first — presim 0 at 8 decks reproduced, presim 800 did not, so the
+generation loop was never at fault.
+
+**Diagnostic rule: if two runs at one seed disagree, read the excluded count before reading
+anything else.**
+
+**It costs wall-clock, and that is the honest trade.** CSC presim at 800 decks:
+
+```
+before:  9585 games in  9.4m, 1 excluded
+before:  9584 games in  8.9m, 2 excluded
+after:   9586 games in 23.5m, 0 excluded
+```
+
+~9m -> 23.5m, well outside the previous run-to-run range. The games the 300s net was cutting are
+genuinely slow, and in a parallel batch one straggler dominates the tail once everything else has
+drained. **This is not a defect in the fix** — the deterministic bounds allow it: 100 turns x 200
+actions is 20 000 actions, and at ~70 ms per `SelectAction` a single legitimate game can run ~23
+minutes. The old net was hiding that by discarding the evidence.
+
+If the cost ever matters, the lever is the DETERMINISTIC bound (turn limit or per-turn action
+limit), never the clock. Lowering those changes what a game is, which is a real design decision,
+but it keeps runs reproducible. Reaching for the wall-clock again reintroduces exactly this bug.
 
 **Wall-clock time must never decide a game.** It used to: a 20 000 ms limit ended the game as a
 draw, so the result depended on how fast the machine was running at that moment. Turn and action
@@ -1300,12 +1349,162 @@ These need separating before the constructed table is trusted as a card rating. 
 discriminator is per-card *deck spread*: a card measured in one deck only is a different kind of
 number from one measured across five, and nothing currently distinguishes them.
 
-### Known ceiling
+### The pilot is NOT the ceiling — the search operator is
 
-**The AI pilots with a 2-turn lookahead**, so combo and draw-go control systematically
-underperform what they would be worth in human hands. Expect a metagame skewed toward creature
-aggro/midrange. That is a property of the pilot, not of the card pool, and no amount of
-generations fixes it.
+This section used to claim that a 2-turn lookahead cannot pilot combo, so a metagame skewed to
+creature aggro/midrange was inevitable. **That is false and it misdirected a whole session.**
+The precon decks in `DeckRegistry` — Traditional Storm, Reanimator, Affinity, Goblins,
+Dragonstorm — were piloted well enough to win games from the day they were written, and Storm had
+to be **balanced down** for being too strong. Not optimal piloting, but nowhere near unable.
+
+What actually produces the midrange piles is the **mutation operator**, and the difference matters
+because one is unfixable and the other is a search change:
+
+Real deckbuilding commits to a concept, jams every card in the pool that serves it, measures, and
+then prunes *within* the concept — abandoning it only once the pool is out of options. Nobody
+arrives at Goblins by adding eight Goblins to a midrange deck one at a time; that tanks the win
+rate at every intermediate step, which is exactly what the accept-if-better rule then rejects.
+
+`Mutate` random-walks: it proposes small edits and keeps whatever raises the win rate this
+generation. A half-built synergy deck is worse than the midrange pile it came from at every step
+of the way, so the climb never reaches it and the pieces get pruned back out. `Package` was the
+first attempt at this and is too small — it brings in an anchor plus up to two partners, where a
+concept needs its whole critical mass at once and then needs to be **held** while it is refined.
+
+The symptom to recognise: decks that read as halfway to an archetype. A Dragonstorm deck with **no
+dragons in it at all** — a literally blank card holding a slot for generations — and Thoughtcast
+in decks with no artifacts. A card whose demands are satisfied at zero is dead, and nothing in the
+mode currently notices.
+
+### Deck profiles
+
+Every non-concept, non-wildcard slot cycles through `DeckBuilder.DeckProfile` — **Aggro** (curve
+2.0–2.7), **Midrange** (2.4–3.6), **Control** (3.3–4.5) — and is named for it. `Any` is the
+pre-existing behaviour (uniform 2.0–4.5) and remains the default, so callers that do not ask are
+unaffected.
+
+Three bands of one number that already existed, not a new mechanism: `curveTarget` already drives
+land count via `LandsForCurve`, so an aggro deck is a low curve with fewer lands. There are no
+colours, and anything richer ("play removal", "play card draw") would be the hand-labelling this
+project rejects. `ProfiledSlots_ActuallyBuildToTheirCurveBand` pins both the spell curve and the
+land count.
+
+**The labels previously lied** — slots were named `Midrange-A` while drawing uniformly from
+2.0–4.5, so a "midrange" slot could come out with an aggro curve and the report still called it
+midrange. Profiles are cycled rather than split by a fixed count because deck count is a parameter.
+
+**Synergy slots take no profile**, deliberately: affinity and reanimator have high printed curves
+and low real ones, so `SeedConcept` uses the concept's own average cost instead.
+
+### The best decks were ILLEGAL: MinLands was the binding constraint
+
+`Decklist.MinLands` was 20. **Every hand-built deck that beats an evolved field runs fewer lands** —
+Traditional Storm 12, Zoo 14, Affinity 14, Goblins 16 — so they were not hard to reach, they were
+outside the search space. Evolved decks finish pinned at exactly 20, which is what a binding
+constraint looks like.
+
+The constant was justified as "real constructed mana bases", but two rules here break that analogy:
+**no colours** (a land is quantity, never fixing) and **every opening hand contains three lands by
+rule**, so 20 of 60 on top of a guaranteed three is far more than an aggressive deck wants.
+
+It also explains why Ancestral Recall and Liliana of the Veil appear 4x in nearly every evolved
+deck: inside a 20-land shell with a slow clock, card advantage genuinely IS the right plan. The
+card values were correct for the deck space they were given.
+
+`MinLands`/`MaxLands` are now overridable via `MTG_MIN_LANDS`/`MTG_MAX_LANDS` (default 20/26) so an
+A/B runs both arms on one binary.
+
+### The field has NO external reference, and it is ~15pp weak
+
+**Measured, and it is the most important thing on this page.** Hand-built decks from
+`DeckRegistry` against the evolved ALL field, 160 games each:
+
+| Deck | vs the field |
+|---|---|
+| **Zoo** (plain RGW aggro) | **66.2%** |
+| **Traditional Storm** | **63.1%** |
+| Dragonstorm / Jund / Goblins / Reanimator / Affinity | 44-51% |
+
+**Zoo is the control and it is the finding.** Storm alone would have said "hill climbing cannot
+reach combo". Zoo — 24 Plains and 36 efficient creatures, reachable by one-card steps — beats the
+field by MORE. So the field converges on something ~15pp worse than a straightforward aggro deck it
+could have built at any point.
+
+**Fitness is measured entirely inside a closed field, and a round-robin averages exactly 50% by
+construction.** All eight decks converged onto 4x Steppe Lynx and 4x Liliana of the Veil (8/8 each,
+Ancestral Recall 7/8) — ~10 of ~38 spells identical, held apart only by the diversity floor — and
+every internal metric still reported health: 8/8 viable, 18.6pp spread. **The mode cannot tell
+"my decks are good" from "my decks are equally mediocre".** The acceptance rule inherits it: a
+mutant is kept for beating the frozen field, so "better" means "better against weak decks".
+
+**Run `ArchetypeChallenge` after any evolution run.** It is the only external yardstick that
+exists. A field that loses to Zoo by 16pp is not a metagame, whatever its spread says.
+
+### ArchetypeChallenge — test the assumption before designing around it
+
+`MtgSimulator.Tests/ArchetypeChallenge.cs`. Builds the most theme-dense legal deck a pool allows
+and plays it against a **saved metagame** — the decks an evolution actually produced. One
+`[TestCase]` line per hypothesis.
+
+**Built because an assumption was wrong and nothing else would have caught it.** A run finished
+with 4x Goblin Chieftain supported by only 3x Frenzied Goblin, read all session as the
+"half-built deck" failure. Against that same eight-deck field:
+
+| Deck | Win rate |
+|---|---|
+| Full goblins — 4x each of the 10 best goblins, 37 goblin cards | **24.4%** (39/160) |
+| The half-goblin deck evolution actually built | **55.0%** |
+
+**The AI was right.** Committing to the tribe costs more than the payoff returns — your 10th-best
+goblin instead of the format's 10th-best card is a losing trade. CSC has 17 goblins, so it is not a
+pool limit. The half package is the optimum.
+
+**Treat "the AI half-built an archetype" as a HYPOTHESIS, not an observation.** Magic intuition
+about critical mass does not transfer to an engine with no colours, a small pool and mostly-weak
+tribe members. Run this before designing anything around a suspected archetype.
+
+It also vindicates the rule that features only GENERATE proposals while the win rate JUDGES them:
+letting deck composition into the fitness function would have driven decks toward exactly the
+losing configuration.
+
+Two traps it embeds: it anchors on the **solution file**, because stray `sim_results/` folders
+exist under `bin/` and anchoring there loads an empty table where every card reads 0.00pp; and it
+**reports rather than asserting a threshold**, since a pass/fail bar would encode the assumption
+under test.
+
+### Concept (synergy) deck slots
+
+`conceptSlots` (console prompt, **default 0 = off**) seeds N slots via `DeckBuilder.SeedConcept`
+instead of anchor-and-kernel: pick a mechanical demand from `PoolFeatures`, jam every card in the
+pool that answers or asks it, then refine. Slots are labelled `Synergy-1..N` / `Midrange-A..` /
+`Wildcard`, each synergy slot takes a **distinct** demand, and they seed first (a synergy deck is
+the hardest shape to fit past the diversity floor). Concept slots get `ConceptGraceMultiplier` (3)
+times the normal cull grace and re-seed on a concept when culled.
+
+**Unproven either way — leave `conceptSlots` at 0.** Two A/B runs were done and **neither is
+readable**, because the control was later run against itself and differed from its own repeat by
+MORE than it differed from the treatment (distinct cards 49 vs 47, diversity 55% vs 47%, viable
+8/8 vs 7/8 — all at an identical seed and byte-identical inputs).
+
+**This mode is chaotic, and a field-level metric from a single run is an anecdote.** One different
+game outcome changes which mutant is accepted, which changes the whole field. Common random
+numbers protect the *parent vs mutant* decision inside a generation; nothing protects final
+coverage or final diversity across runs. Any claim about a change to seeding, mutation or scoring
+needs **several seeds per arm and the noise floor measured first**. That floor has never been
+measured, so every single-run comparison in this document — csc1 vs csc2 included — is
+provisional. See `SynergyFeaturePlan.md` §14.
+
+The engine itself is deterministic at small scale (4 decks / 3 generations / presim 0 and presim
+200 both reproduce bit-identically at a fixed seed), so this is chaos plus an unmeasured noise
+floor, not a shuffling bug — with a large-scale reproduction check still outstanding.
+
+What IS established, by unit test rather than by a run: `PickConcept` must weight demands by
+**inverse** supplier count. Weighted by breadth it drew "creatures you control" (237 of 408) over
+Goblins (18) — a creature pile, not an archetype. **38/60 vs 50/60** concept seeds commit to a
+tribe, and `ConceptChoice_PrefersDistinctiveDemands_OverBroadOnes` fails under the old weighting.
+
+**Judge this on distinct cards in final decks and on the decklists, never on field spread** — a
+synergy slot narrows its own deck on purpose. And never on one run.
 
 ### Running it
 

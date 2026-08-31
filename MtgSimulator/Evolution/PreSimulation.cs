@@ -185,6 +185,17 @@ public static class PreSimulation
 			$"    {schedule.Count - excluded} games in {timer.Elapsed.TotalMinutes:F1}m, "
 				+ $"{excluded} excluded. Base rate {data.Prior:P1}."
 		);
+
+		// **A nonzero count here means this run is not reproducible.** Exclusions are
+		// TimeLimitReached (wall-clock, so load-dependent) or UnhandledException, and dropping a
+		// different game between two runs shifts card values enough for the seeding softmax to
+		// build a different field. That went unnoticed for two full A/B comparisons because it was
+		// one number in a summary line: 1 excluded in one run, 2 in the next, at an identical seed.
+		if (excluded > 0)
+			Console.WriteLine(
+				$"    WARNING: {excluded} game(s) excluded — this run is NOT reproducible, and any "
+					+ "A/B built on it is measuring machine load. See GameRunner.SafetyTimeoutMs."
+			);
 		Console.WriteLine(
 			$"    {data.Cards.Count}/{spells.Count} cards measured, median "
 				+ $"{(cardGames.Count > 0 ? cardGames[cardGames.Count / 2] : 0)} games/card; "

@@ -933,3 +933,63 @@ constructed-vs-limited diff plus a field-quality comparison at a fixed seed.
 **Superseded by `SynergyFeaturePlan.md`** at the solution root, which carries the measured
 sparsity numbers, the four costed options, the baseline runs to A/B against, and the trap list.
 Read that rather than this entry.
+
+---
+
+## Pathologically slow games: why presim costs 2.5x, and why it must be understood
+
+**Status: known, unexplained, and now visible instead of hidden. Priority raised deliberately.**
+
+`GameRunner.SafetyTimeoutMs` was raised 300s -> 1800s because presim EXCLUDED `TimeLimitReached`
+games, which made a wall-clock reading decide which data counted and left mode 6 irreproducible at
+a fixed seed (see `MtgSimulator/CLAUDE.md`, "The clock was removed from ENDING a game and left in
+DISCARDING one"). The fix is verified: runs are now bit-identical.
+
+The cost, on CSC presim at 800 decks:
+
+```
+before:  9585 games in  9.4m, 1 excluded
+before:  9584 games in  8.9m, 2 excluded
+after:   9586 games in 23.5m, 0 excluded
+```
+
+**~14 minutes for one or two games.** That is not noise — the two "before" runs bracket 8.9-9.4m,
+and the batch is parallel, so a lone straggler dominates the tail once everything else has drained.
+
+### Why this matters more now, not less
+
+Raising the timeout did not create the slow games; it stopped **concealing** them. Before, they
+were silently discarded and their cost capped at 300s. Now every run pays their real cost, so:
+
+- It is a standing ~2.5x tax on every presim, and mode 6 is already the most expensive mode.
+- It scales with pool size. ALL is 785 cards against CSC's 408, and ALL runs were already
+  disproportionately slow.
+- **A game taking 1000x the median is evidence of something, and nobody knows what.** It may be
+  legitimate (the deterministic bound genuinely permits it — 100 turns x 200 actions at ~70 ms per
+  `SelectAction` is ~23 minutes) or it may be a real defect: a near-loop the action limit does not
+  catch, a board state where branching explodes, or a choice-resolution blow-up of the kind
+  `ChoiceCensus` was built to detect.
+
+**Do not "fix" this by lowering the timeout again.** That reintroduces the exact bug just removed.
+If the cost has to come down before the cause is known, the lever is the DETERMINISTIC bound —
+turn limit or per-turn action limit — which changes what a game is but keeps runs reproducible.
+
+### Cheapest way in, when it is picked up
+
+`GameResult.GameDurationMs` already exists and `PreSimulation` already holds every result before
+folding them in. So:
+
+1. Report the p99/max game duration and the end reason of the slowest few, alongside the existing
+   "N games in Xm" line. Cheap, and it says immediately whether the straggler hits the turn limit,
+   the action limit, or simply ends normally after a long grind.
+2. If it is not hitting a limit, save a snapshot of the slowest game — `FlaggedGameSaver` does this
+   already but only fires on flagged results, so it needs a "slowest game" trigger.
+3. Read `Avg actions/game` beside the clock, per this project's standing rule: actions up means
+   more work, actions flat with time up means the cost is per-action and the search is the suspect.
+
+### Related, unclaimed optimisation
+
+An A/B runs presim TWICE for identical inputs — both arms use the same set, seed, deck count and
+opponent count, so both compute a bit-identical result. Caching presim output keyed on those four
+values would halve the cost of every future comparison. Not built; noted because the A/B shape is
+now the standard way anything in this mode gets measured.

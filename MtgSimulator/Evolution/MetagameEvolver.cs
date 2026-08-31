@@ -35,6 +35,22 @@ public sealed class MetagameEvolver
 	private readonly bool _cullEnabled;
 	private readonly int _preSimDecks;
 	private readonly int _preSimOpponents;
+	private readonly int _conceptSlots;
+	private readonly int _gauntletGames;
+	private readonly IReadOnlyList<string> _gauntlet;
+
+	/// <summary>
+	/// How much longer a concept slot is left alone before it can be culled.
+	///
+	/// **A proxy for "the candidate set is exhausted", which is the honest abandon rule and is
+	/// not built.** A human drops an archetype once the pool has no more cards that could fix it,
+	/// not because it is losing this week; a synergy deck is a coherent thing that gets better as
+	/// the wrong copies are pruned out, and culling it on the viability floor at generation 5
+	/// judges it before any of that has happened. The wildcard slot failed exactly this way on
+	/// the combined pool — 13 of 48 culls, never once survived, so the exploration it existed to
+	/// provide never materialised.
+	/// </summary>
+	public const int ConceptGraceMultiplier = 3;
 
 	/// <param name="minDifference">
 	/// Minimum fraction of spells any two decks must differ by. Enforced at seeding AND at
@@ -66,7 +82,9 @@ public sealed class MetagameEvolver
 		bool useDraftPrior = true,
 		bool cullEnabled = true,
 		int preSimDecks = 300,
-		int preSimOpponents = 12
+		int preSimOpponents = 12,
+		int conceptSlots = 0,
+		int gauntletGames = 0
 	)
 	{
 		if (deckCount < 2)
@@ -94,7 +112,21 @@ public sealed class MetagameEvolver
 		_cullEnabled = cullEnabled;
 		_preSimDecks = preSimDecks;
 		_preSimOpponents = preSimOpponents;
+		_conceptSlots = Math.Clamp(conceptSlots, 0, Math.Max(0, deckCount - 1));
+		_gauntletGames = Math.Max(0, gauntletGames);
+		_gauntlet = _gauntletGames > 0 ? Gauntlet.For(set.Code) : [];
 	}
+
+	/// <summary>
+	/// A gauntlet opponent is encoded as a NEGATIVE opponent index: -1 - gauntletIndex. Keeps
+	/// <see cref="Seed"/> unchanged (negative values still give distinct seeds) and keeps the
+	/// paired-evaluation guarantee intact, which is the property everything else depends on.
+	/// </summary>
+	private static int GauntletOpponent(int gauntletIndex) => -1 - gauntletIndex;
+
+	private static bool IsGauntlet(int opponentIndex) => opponentIndex < 0;
+
+	private static int GauntletIndexOf(int opponentIndex) => -1 - opponentIndex;
 
 	/// <param name="DeckIndex">Which deck slot this candidate belongs to.</param>
 	/// <param name="CandidateIndex">0 is the parent; 1..M are its mutants.</param>
@@ -144,8 +176,33 @@ public sealed class MetagameEvolver
 			Console.WriteLine();
 		}
 
+		// Structural features are pool-derived and deterministic, so this is built once. Null
+		// when no concept slot was asked for, which leaves every scoring path exactly as it was.
+		PoolFeatures? features = null;
+		if (_conceptSlots > 0)
+		{
+			var featureTimer = Stopwatch.StartNew();
+			features = PoolFeatures.Build(_spellPool);
+			featureTimer.Stop();
+			Console.WriteLine(
+				$"  Features: {features.Demands.Count} demands over {_spellPool.Count} spells "
+					+ $"({featureTimer.ElapsedMilliseconds} ms), {_conceptSlots} concept slots"
+			);
+			foreach (var f in features.Failures)
+				Console.WriteLine($"    WARNING: {f}");
+			Console.WriteLine();
+		}
+
 		var field = DeckBuilder
-			.SeedField(_deckCount, _spellPool, values, rng, _minDifference)
+			.SeedField(
+				_deckCount,
+				_spellPool,
+				values,
+				rng,
+				_minDifference,
+				features: features,
+				conceptSlots: _conceptSlots
+			)
 			.ToList();
 
 		// SeedDistinct relaxes rather than hanging when a pool cannot supply N genuinely
@@ -167,6 +224,10 @@ public sealed class MetagameEvolver
 
 		var ages = new int[_deckCount];
 		var isWildcard = Enumerable.Range(0, _deckCount).Select(i => i == _deckCount - 1).ToArray();
+		var isConcept = Enumerable
+			.Range(0, _deckCount)
+			.Select(i => features is not null && i < _conceptSlots && !isWildcard[i])
+			.ToArray();
 
 		var accumulator = new CardStatAccumulator();
 
@@ -198,7 +259,9 @@ public sealed class MetagameEvolver
 				var history = new DeckHistory(slotHistory[i].ToData());
 				var list = new List<Decklist?> { field[i] };
 				for (var m = 0; m < MutantsFor(lastRate[i]); m++)
-					list.Add(DeckBuilder.Mutate(field[i], _spellPool, values, mutRng, history));
+					list.Add(
+						DeckBuilder.Mutate(field[i], _spellPool, values, mutRng, history, features)
+					);
 				candidates[i] = list;
 			}
 
@@ -208,12 +271,28 @@ public sealed class MetagameEvolver
 			var results = PlayBatch(schedule, candidates, field, gen);
 
 			// --- Phase 3: fold in (sequential — independent of thread order) ---
+			//
+			// **Two tallies, and the split is deliberate.** `tallies` is field + gauntlet and
+			// drives ACCEPTANCE: that is the whole point, since a mutant that beats the field but
+			// loses to the gauntlet is not an improvement. `fieldTallies` is field-only and drives
+			// CULLING and the viability floor, because the floor means "competitive in this field".
+			// Judging viability on the combined rate would put every deck under 40% on day one
+			// against a gauntlet that beats the field 66-34, and `CullWorst` would replace a deck
+			// every generation forever — resetting its DeckHistory each time, which this document
+			// records as the thing culled slots never recover from.
 			var tallies = new Tally[_deckCount][];
+			var fieldTallies = new Tally[_deckCount][];
 			for (var i = 0; i < _deckCount; i++)
+			{
 				tallies[i] = Enumerable
 					.Range(0, candidates[i].Count)
 					.Select(_ => new Tally())
 					.ToArray();
+				fieldTallies[i] = Enumerable
+					.Range(0, candidates[i].Count)
+					.Select(_ => new Tally())
+					.ToArray();
+			}
 
 			var excluded = 0;
 			for (var s = 0; s < schedule.Count; s++)
@@ -239,6 +318,14 @@ public sealed class MetagameEvolver
 				tally.Games++;
 				if (candidateWon)
 					tally.Wins++;
+
+				if (!IsGauntlet(g.OpponentIndex))
+				{
+					var fieldTally = fieldTallies[g.DeckIndex][g.CandidateIndex];
+					fieldTally.Games++;
+					if (candidateWon)
+						fieldTally.Wins++;
+				}
 
 				FoldIntoValues(accumulator, g, result, candidates, field);
 
@@ -295,7 +382,18 @@ public sealed class MetagameEvolver
 				lastRate[i] = tallies[i][0].Games > 0 ? tallies[i][0].Rate : lastRate[i];
 
 			// --- Cull: at most one per generation, past its grace period ---
-			var culled = CullWorst(field, tallies, ages, isWildcard, values, rng, gen, slotHistory);
+			var culled = CullWorst(
+				field,
+				fieldTallies,
+				ages,
+				isWildcard,
+				isConcept,
+				values,
+				features,
+				rng,
+				gen,
+				slotHistory
+			);
 
 			PrintGeneration(gen, field, tallies, accepted, culled, excluded, timer);
 		}
@@ -356,6 +454,20 @@ public sealed class MetagameEvolver
 						schedule.Add(new ScheduledGame(i, c, j, gameSeed, k % 2 == 0));
 					}
 				}
+
+				// Gauntlet games use the SAME seeding rule — independent of candidate index — so a
+				// parent and its mutants face identical reference games on identical shuffles.
+				// Without that the extra games are unpaired noise (~7pp) swamping the 1-3pp effect
+				// the comparison exists to detect.
+				for (var q = 0; q < _gauntlet.Count; q++)
+				{
+					var opponent = GauntletOpponent(q);
+					for (var k = 0; k < _gauntletGames; k++)
+					{
+						var gameSeed = Seed(gen, i, opponent, k);
+						schedule.Add(new ScheduledGame(i, c, opponent, gameSeed, k % 2 == 0));
+					}
+				}
 			}
 		}
 		return schedule;
@@ -414,13 +526,25 @@ public sealed class MetagameEvolver
 			{
 				var g = schedule[s];
 				var candidate = candidates[g.DeckIndex][g.CandidateIndex]!;
-				var opponent = field[g.OpponentIndex];
 
-				var (deck1, deck2) = g.CandidateOnPlay
-					? (candidate, opponent)
-					: (opponent, candidate);
+				// A gauntlet deck is a card LIST, a field deck is a Decklist — FromDecks takes
+				// builders precisely so either can be supplied per game with the right owner id.
+				var gauntletName = IsGauntlet(g.OpponentIndex)
+					? _gauntlet[GauntletIndexOf(g.OpponentIndex)]
+					: null;
 
-				var (state, ids, cardNames) = ConstructedGameSetup.Build(deck1, deck2, _poolIndex);
+				Func<int, IReadOnlyList<Card>> BuildOpponent() =>
+					gauntletName is not null
+						? owner => DeckRegistry.Build(gauntletName, owner)
+						: owner => field[g.OpponentIndex].Materialize(owner, _poolIndex);
+
+				var buildCandidate = (int owner) => candidate.Materialize(owner, _poolIndex);
+				var buildOpponent = BuildOpponent();
+
+				var (state, ids, cardNames) = GameSetup.FromDecks(
+					g.CandidateOnPlay ? buildCandidate : buildOpponent,
+					g.CandidateOnPlay ? buildOpponent : buildCandidate
+				);
 				var aiRng = new Random(g.GameSeed + 4);
 				var runner = new GameRunner(
 					new MultiTurnBeamSearchAiStrategy(
@@ -475,7 +599,13 @@ public sealed class MetagameEvolver
 	)
 	{
 		var candidate = candidates[g.DeckIndex][g.CandidateIndex]!;
-		var opponent = field[g.OpponentIndex];
+
+		// Gauntlet cards ARE credited, deliberately. Their values rise, which makes challengers
+		// likelier to try them — and challengers converging onto a gauntlet deck is the desired
+		// outcome here, not a failure. Read constructed_values_*.json accordingly.
+		var opponentSpells = IsGauntlet(g.OpponentIndex)
+			? Gauntlet.SpellNames(_gauntlet[GauntletIndexOf(g.OpponentIndex)])
+			: field[g.OpponentIndex].Spells.Keys.ToList();
 
 		var candidateWon = g.CandidateOnPlay ? result.IsPlayer1Win : result.IsPlayer2Win;
 		var opponentWon = g.CandidateOnPlay ? result.IsPlayer2Win : result.IsPlayer1Win;
@@ -486,7 +616,7 @@ public sealed class MetagameEvolver
 		var opponentDrawn = g.CandidateOnPlay ? result.Player2DrawnCards : result.Player1DrawnCards;
 
 		accumulator.Add(candidateDrawn, candidate.Spells.Keys.ToList(), candidateWon);
-		accumulator.Add(opponentDrawn, opponent.Spells.Keys.ToList(), opponentWon);
+		accumulator.Add(opponentDrawn, opponentSpells, opponentWon);
 	}
 
 	/// <summary>
@@ -500,7 +630,9 @@ public sealed class MetagameEvolver
 		Tally[][] tallies,
 		int[] ages,
 		bool[] isWildcard,
+		bool[] isConcept,
 		ConstructedValues values,
+		PoolFeatures? features,
 		Random rng,
 		int gen,
 		CardStatAccumulator[] slotHistory
@@ -521,7 +653,10 @@ public sealed class MetagameEvolver
 
 		for (var i = 0; i < _deckCount; i++)
 		{
-			if (ages[i] < _graceGenerations || tallies[i][0].Games == 0)
+			var grace = isConcept[i]
+				? _graceGenerations * ConceptGraceMultiplier
+				: _graceGenerations;
+			if (ages[i] < grace || tallies[i][0].Games == 0)
 				continue;
 			if (tallies[i][0].Rate < worstRate)
 				(worst, worstRate) = (i, tallies[i][0].Rate);
@@ -531,15 +666,27 @@ public sealed class MetagameEvolver
 			return 0;
 
 		var others = field.Where((_, j) => j != worst).ToList();
-		field[worst] = DeckBuilder.SeedDistinct(
-			field[worst].Name,
-			_spellPool,
-			values,
-			rng,
-			others,
-			_minDifference,
-			isWildcard[worst]
-		);
+		var name = field[worst].Name;
+
+		// A culled concept slot re-seeds on a CONCEPT, not on an anchor-and-kernel pile. The slot
+		// exists to explore archetypes; replacing it with a midrange deck silently retires the
+		// exploration arm, which is how the wildcard slot stopped contributing anything.
+		field[worst] =
+			(
+				isConcept[worst] && features is not null
+					? DeckBuilder.SeedConcept(name, _spellPool, values, features, rng)
+					: null
+			)
+			?? DeckBuilder.SeedDistinct(
+				name,
+				_spellPool,
+				values,
+				rng,
+				others,
+				_minDifference,
+				isWildcard[worst],
+				features: features
+			);
 		ages[worst] = 0;
 		// The replacement shares almost nothing with what it replaced, so its predecessor's
 		// pair record is not evidence about it.
@@ -691,7 +838,41 @@ public sealed class MetagameEvolver
 				Console.WriteLine($"    {name} -> {set}");
 		}
 
-		var perGen = _deckCount * (1 + _mutantsPerDeck) * (_deckCount - 1) * _gamesPerMatchup;
+		// **Always print the gauntlet by name.** It is now part of fitness, so a run whose
+		// benchmark is unstated is a run whose result cannot be interpreted later.
+		if (_gauntletGames > 0)
+		{
+			if (_gauntlet.Count == 0)
+				Console.WriteLine(
+					$"  WARNING: gauntlet requested but none is defined for {_set.Code} — "
+						+ "running without one. See Gauntlet.For."
+				);
+			else
+			{
+				Console.WriteLine(
+					$"  Gauntlet ({_gauntlet.Count} decks x {_gauntletGames} games, counted in "
+						+ "fitness, NOT in diversity):"
+				);
+				foreach (var name in _gauntlet)
+				{
+					var missing = Gauntlet.MissingFrom(name, _spellPool);
+					Console.WriteLine(
+						$"    {name}"
+							+ (
+								missing.Count == 0
+									? "  (fully buildable from this pool)"
+									: $"  WARNING: {missing.Count} card(s) not in pool — challengers "
+										+ $"cannot copy it: {string.Join(", ", missing.Take(4))}"
+							)
+					);
+				}
+			}
+		}
+
+		var perGen =
+			_deckCount
+			* (1 + _mutantsPerDeck)
+			* ((_deckCount - 1) * _gamesPerMatchup + _gauntlet.Count * _gauntletGames);
 		Console.WriteLine(
 			$"  ~{perGen} games/generation, ~{perGen * _generations} total "
 				+ $"(+{_deckCount * (_deckCount - 1) / 2 * _finalGamesPerMatchup} final)."

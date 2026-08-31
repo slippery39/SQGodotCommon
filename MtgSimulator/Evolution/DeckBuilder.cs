@@ -51,8 +51,259 @@ public static class DeckBuilder
 	/// </summary>
 	public const double ExplorationBonus = 3.0;
 
+	/// <summary>
+	/// Points subtracted from a card whose demands this deck answers with NOTHING — Dragonstorm
+	/// with no dragons, Thoughtcast with no artifacts.
+	///
+	/// **This ranks the cut; it never deletes a card, and that limit is deliberate.**
+	/// `Satisfaction == 0` cannot tell a card that does literally nothing from a perfectly good
+	/// body carrying an irrelevant rider: a 7-mana Dragonstorm with no dragons and a 2/2 for 2
+	/// that would gain 1 life if a Goblin entered both read exactly 0. A second false positive is
+	/// structural — a "whenever a creature dies" trigger with no controller restriction fires on
+	/// the OPPONENT's creatures, so a creatureless control deck supplies zero while the card is
+	/// live all game.
+	///
+	/// Sized in the same percentage points as <see cref="ConstructedValues.CardDelta"/>, and small
+	/// on purpose: a card winning by 10pp survives it easily, while a card that is merely average
+	/// gets cut first. So the measured win rate still decides and this only breaks ties —
+	/// Dragonstorm leaves in generation 2 instead of generation 30, and the 2/2 stays as long as
+	/// it keeps winning.
+	/// </summary>
+	public const double DeadCardPenalty = 5.0;
+
+	/// <summary>
+	/// Points added for a card whose demands the deck already answers — "I have goblins, so try
+	/// the lord" and "I have the lord, so try goblins", which is the direction single-card hill
+	/// climbing cannot travel on its own.
+	///
+	/// Because `Fill` scores against the PARTIALLY built deck, this compounds as a deck fills:
+	/// the first goblin makes the second slightly more attractive. That is the clustering the
+	/// pair table was supposed to provide and could never evidence.
+	/// </summary>
+	public const double SupportBonus = 4.0;
+
+	/// Satisfaction at which <see cref="SupportBonus"/> is fully paid. Bounded rather than linear
+	/// for the same reason `DeckFit` averages: an unbounded term makes card quality a rounding
+	/// error, which this file has already been burned by once.
+	private const double FullSupport = 12.0;
+
+	/// <summary>
+	/// What KIND of deck a slot is told to build, expressed as the only lever the engine actually
+	/// has: where on the curve it sits.
+	///
+	/// **Deliberately three bands of one existing number, not a new mechanism.** There are no
+	/// colours, and `curveTarget` already drives land count through `LandsForCurve`, so an aggro
+	/// deck is a low curve with fewer lands and a control deck is the reverse. Anything more
+	/// ("play removal", "play card draw") would be the hand-labelling this project rejected.
+	///
+	/// <see cref="DeckProfile.Any"/> is the pre-existing behaviour — draw uniformly across the
+	/// whole range — and stays the default so nothing changes for callers that do not ask.
+	///
+	/// **Synergy slots deliberately take no profile.** Affinity and reanimator have high printed
+	/// curves and low real ones, so a band drawn from anywhere but the concept itself fights the
+	/// deck; `SeedConcept` uses the concept's own average cost instead.
+	/// </summary>
+	public enum DeckProfile
+	{
+		Any,
+		Aggro,
+		Midrange,
+		Control,
+	}
+
+	/// <summary>
+	/// The profiles a non-concept slot cycles through. Order matters only in that it spreads the
+	/// bands across adjacent slots; nothing downstream reads it.
+	/// </summary>
+	private static readonly DeckProfile[] Profiles =
+	[
+		DeckProfile.Aggro,
+		DeckProfile.Midrange,
+		DeckProfile.Control,
+	];
+
+	/// Curve band per profile. Bands overlap, because the boundary between aggro and midrange is
+	/// a spectrum and a hard edge would just be a different arbitrary number.
+	private static (double Min, double Max) BandFor(DeckProfile profile) =>
+		profile switch
+		{
+			DeckProfile.Aggro => (MinCurveTarget, 2.7),
+			DeckProfile.Midrange => (2.4, 3.6),
+			DeckProfile.Control => (3.3, MaxCurveTarget),
+			_ => (MinCurveTarget, MaxCurveTarget),
+		};
+
 	private const double MinCurveTarget = 2.0;
 	private const double MaxCurveTarget = 4.5;
+
+	/// <summary>
+	/// How much this deck supports one card, in `CardDelta` units. Zero when features are absent
+	/// (the production default today) or when the card asks nothing of the deck.
+	///
+	/// **NaN and 0 mean opposite things and both arrive here.** NaN is "asks nothing" — a burn
+	/// spell, a vanilla creature — which is neither rewarded nor punished. 0 is "asks and gets
+	/// nothing", which is the penalty case.
+	/// </summary>
+	private static double SupportScore(string name, Decklist deck, PoolFeatures? features)
+	{
+		if (features is null)
+			return 0;
+
+		var satisfaction = features.Satisfaction(name, deck);
+		if (double.IsNaN(satisfaction))
+			return 0;
+
+		return satisfaction <= 0
+			? -DeadCardPenalty
+			: SupportBonus * Math.Min(satisfaction / FullSupport, 1.0);
+	}
+
+	/// <summary>
+	/// Fewest suppliers a demand needs before it can be the concept of a whole deck. A demand two
+	/// cards answer is a nice interaction, not an archetype.
+	/// </summary>
+	public const int MinConceptSuppliers = 6;
+
+	/// <summary>
+	/// A deck built by COMMITTING to one concept and jamming it, rather than by hill climbing
+	/// toward it one card at a time.
+	///
+	/// **This is the operator the mode was missing, and no scoring change substitutes for it.**
+	/// Real deckbuilding picks a concept, plays every card in the pool that serves it, measures,
+	/// and then prunes *within* the concept — abandoning it only once the pool is out of options.
+	/// Nobody arrives at Goblins by adding eight Goblins to a midrange pile one at a time; that
+	/// tanks the win rate at every intermediate step, which is exactly what `Mutate`'s
+	/// accept-if-better rule then rejects. `Package` was the first attempt and is too small: an
+	/// anchor plus two partners, where a concept needs its whole critical mass at once.
+	///
+	/// The candidate set is both halves of the concept — every card that ANSWERS the demand and
+	/// every card that ASKS it. Without the payoffs you build 24 artifacts and no Atog; without
+	/// the suppliers you build Atog and nothing to eat.
+	///
+	/// **No curve target is imposed.** Affinity and reanimator have high printed curves and low
+	/// real ones, so a target drawn from anywhere but the concept itself would fight the deck. The
+	/// concept's own average cost is used instead, and land count is then tuned by `AdjustLands`
+	/// like any other deck's.
+	///
+	/// Returns null when the pool has no demand with <see cref="MinConceptSuppliers"/> suppliers —
+	/// the caller falls back to an ordinary seed rather than failing.
+	/// </summary>
+	/// <param name="demandIndex">
+	/// Which concept to build. Null picks one at random among the viable demands; the caller
+	/// passes distinct indices when seeding several concept slots, since three slots that all
+	/// discover Goblins are one deck and the diversity floor would reject two of them anyway.
+	/// </param>
+	public static Decklist? SeedConcept(
+		string name,
+		IReadOnlyList<Card> pool,
+		ConstructedValues values,
+		PoolFeatures features,
+		Random rng,
+		int? demandIndex = null
+	)
+	{
+		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
+		if (spells.Count == 0)
+			return null;
+
+		var present = spells.Select(c => c.Name).ToHashSet(StringComparer.Ordinal);
+
+		var chosen = demandIndex ?? PickConcept(features, present, rng);
+		if (chosen is null)
+			return null;
+
+		// Both halves: what answers the demand, and what asks it.
+		var wanted = features
+			.SuppliersOf(chosen.Value)
+			.Where(present.Contains)
+			.ToHashSet(StringComparer.Ordinal);
+		foreach (var card in spells)
+			if (features.DemandsOf(card.Name).Contains(chosen.Value))
+				wanted.Add(card.Name);
+
+		var candidates = spells.Where(c => wanted.Contains(c.Name)).ToList();
+		if (candidates.Count == 0)
+			return null;
+
+		var curve = candidates.Average(c => c.ManaCost);
+		var lands = LandsForCurve(Math.Clamp(curve, MinCurveTarget, MaxCurveTarget), rng);
+		var deck = Decklist.Empty(name) with { Lands = lands };
+
+		// Jam it. Four copies at a time, best-first with enough noise that two slots on the same
+		// concept are not the same 36 cards — this is "shove in as many as will fit and find out
+		// which ones pull their weight", which is what the refinement loop is for.
+		var remaining = candidates.ToList();
+		while (deck.SpellCount < Decklist.DeckSize - lands && remaining.Count > 0)
+		{
+			var scores = remaining
+				.Select(c => values.CardDelta(c.Name) + SupportScore(c.Name, deck, features))
+				.ToArray();
+			var pick = remaining[DraftPickers.SampleSoftmax(scores, SeedTemperature, rng)];
+			var room = Math.Min(Decklist.MaxCopies, Decklist.DeckSize - lands - deck.SpellCount);
+			deck = deck.WithCopies(pick.Name, room);
+			remaining.Remove(pick);
+		}
+
+		// A concept too small to fill 36 slots is topped up from the whole pool rather than
+		// abandoned — a 20-card artifact package plus good cards is still an artifact deck.
+		return deck.SpellCount < Decklist.DeckSize - lands
+			? Fill(deck, spells, values, rng, curve, 1.0, SeedTemperature, features)
+			: deck;
+	}
+
+	/// <summary>
+	/// A concept worth building, sampled among demands with enough suppliers to fill a deck and
+	/// weighted toward the DISTINCTIVE ones.
+	///
+	/// **This weighted by supplier count and that was backwards.** Measured on CSC over 8 decks x
+	/// 25 generations: it drew the broadest demands — "creatures you control" (237 of 408),
+	/// "creature card in your graveyard" (237), "creature mana value <= 3" (182) — which are
+	/// nearly the same card set and none of which is an archetype. Three "distinct" concepts
+	/// produced three similar decks, so the field STARTED at 59% diversity against the control's
+	/// 69% and collapsed to 48% within one generation. Goblin (18 suppliers) was almost never
+	/// drawn.
+	///
+	/// Inverse frequency instead: a concept 58% of the pool answers cannot produce a deck that
+	/// differs from any other deck, because a deck built at random already satisfies it. On CSC
+	/// this makes Goblin ~14x likelier than "creatures you control" rather than 13x less likely.
+	///
+	/// **This is not the rarity cutoff rejected in the extractor.** That rejection was about
+	/// SCORING whether a card is supported, where breadth is irrelevant — anthem-plus-cheap-tokens
+	/// is a real deck and "creatures you control" is exactly the right demand for it. Choosing
+	/// what a whole deck is ABOUT is the opposite question. Two rules, deliberately not shared.
+	///
+	/// No ceiling constant: a broad demand stays reachable, just rare, so the arm still explores.
+	/// </summary>
+	private static int? PickConcept(
+		PoolFeatures features,
+		HashSet<string> present,
+		Random rng,
+		HashSet<int>? exclude = null
+	)
+	{
+		var viable = new List<(int Demand, int Suppliers)>();
+		for (var d = 0; d < features.Demands.Count; d++)
+		{
+			if (exclude is not null && exclude.Contains(d))
+				continue;
+			var n = features.SuppliersOf(d).Count(present.Contains);
+			if (n >= MinConceptSuppliers)
+				viable.Add((d, n));
+		}
+
+		if (viable.Count == 0)
+			return null;
+
+		var weights = viable.Select(v => 1.0 / v.Suppliers).ToList();
+		var roll = rng.NextDouble() * weights.Sum();
+		for (var i = 0; i < viable.Count; i++)
+		{
+			roll -= weights[i];
+			if (roll <= 0)
+				return viable[i].Demand;
+		}
+		return viable[^1].Demand;
+	}
 
 	/// <summary>
 	/// A fresh decklist built around a randomly chosen concept.
@@ -69,14 +320,17 @@ public static class DeckBuilder
 		IReadOnlyList<Card> pool,
 		ConstructedValues values,
 		Random rng,
-		bool wildcard = false
+		bool wildcard = false,
+		PoolFeatures? features = null,
+		DeckProfile profile = DeckProfile.Any
 	)
 	{
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
 		if (spells.Count == 0)
 			throw new ArgumentException("Card pool has no non-land cards.", nameof(pool));
 
-		var curveTarget = MinCurveTarget + rng.NextDouble() * (MaxCurveTarget - MinCurveTarget);
+		var (bandMin, bandMax) = BandFor(profile);
+		var curveTarget = bandMin + rng.NextDouble() * (bandMax - bandMin);
 		var lands = LandsForCurve(curveTarget, rng);
 
 		var deck = Decklist.Empty(name) with { Lands = lands };
@@ -106,7 +360,16 @@ public static class DeckBuilder
 
 		// 3. Fill, in chunks — constructed decks play multiples, not 39 singletons.
 		var synergyWeight = wildcard ? 2.0 : 1.0;
-		return Fill(deck, spells, values, rng, curveTarget, synergyWeight, SeedTemperature);
+		return Fill(
+			deck,
+			spells,
+			values,
+			rng,
+			curveTarget,
+			synergyWeight,
+			SeedTemperature,
+			features
+		);
 	}
 
 	/// <summary>
@@ -129,7 +392,8 @@ public static class DeckBuilder
 		IReadOnlyList<Card> pool,
 		ConstructedValues values,
 		Random rng,
-		DeckHistory? history = null
+		DeckHistory? history = null,
+		PoolFeatures? features = null
 	)
 	{
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
@@ -145,10 +409,11 @@ public static class DeckBuilder
 		// already believes, and pair evidence is the thinnest thing in the model.
 		var roll = rng.Next(10);
 		var mutated =
-			roll < 5 ? Swap(deck, spells, values, rng, curveTarget, history)
-			: roll < 7 ? Recount(deck, spells, values, rng, curveTarget, history)
-			: roll < 9 ? Package(deck, spells, values, rng, history, partners: rng.Next(3))
-			: AdjustLands(deck, spells, values, rng, curveTarget, history);
+			roll < 5 ? Swap(deck, spells, values, rng, curveTarget, history, features)
+			: roll < 7 ? Recount(deck, spells, values, rng, curveTarget, history, features)
+			: roll < 9
+				? Package(deck, spells, values, rng, history, partners: rng.Next(3), features)
+			: AdjustLands(deck, spells, values, rng, curveTarget, history, features);
 
 		if (mutated is null || mutated.Validate() is not null)
 			return null;
@@ -162,16 +427,17 @@ public static class DeckBuilder
 		ConstructedValues values,
 		Random rng,
 		double curveTarget,
-		DeckHistory? history
+		DeckHistory? history,
+		PoolFeatures? features
 	)
 	{
-		var outgoing = PickWeakest(deck, values, rng, history);
+		var outgoing = PickWeakest(deck, values, rng, history, features: features);
 		if (outgoing is null)
 			return null;
 
 		var k = Math.Min(deck.CopiesOf(outgoing), 1 + rng.Next(Decklist.MaxCopies));
 		var trimmed = deck.WithCopies(outgoing, deck.CopiesOf(outgoing) - k);
-		return Fill(trimmed, spells, values, rng, curveTarget, 1.0, MutateTemperature);
+		return Fill(trimmed, spells, values, rng, curveTarget, 1.0, MutateTemperature, features);
 	}
 
 	/// Shift one card's copy count by 1, compensating with another card.
@@ -181,7 +447,8 @@ public static class DeckBuilder
 		ConstructedValues values,
 		Random rng,
 		double curveTarget,
-		DeckHistory? history
+		DeckHistory? history,
+		PoolFeatures? features
 	)
 	{
 		if (deck.DistinctSpells < 2)
@@ -198,9 +465,25 @@ public static class DeckBuilder
 
 		// Adding a copy has to take a slot from somewhere; removing one frees a slot to fill.
 		if (!up)
-			return Fill(adjusted, spells, values, rng, curveTarget, 1.0, MutateTemperature);
+			return Fill(
+				adjusted,
+				spells,
+				values,
+				rng,
+				curveTarget,
+				1.0,
+				MutateTemperature,
+				features
+			);
 
-		var donor = PickWeakest(adjusted, values, rng, history, exclude: target);
+		var donor = PickWeakest(
+			adjusted,
+			values,
+			rng,
+			history,
+			exclude: target,
+			features: features
+		);
 		return donor is null ? null : adjusted.WithCopies(donor, adjusted.CopiesOf(donor) - 1);
 	}
 
@@ -232,7 +515,8 @@ public static class DeckBuilder
 		ConstructedValues values,
 		Random rng,
 		DeckHistory? history,
-		int partners
+		int partners,
+		PoolFeatures? features
 	)
 	{
 		var outside = spells.Where(c => deck.CopiesOf(c.Name) == 0).ToList();
@@ -271,7 +555,7 @@ public static class DeckBuilder
 		{
 			if (guard++ > Decklist.DeckSize)
 				return null;
-			var cut = PickWeakest(trimmed, values, rng, history);
+			var cut = PickWeakest(trimmed, values, rng, history, features: features);
 			if (cut is null)
 				return null;
 			trimmed = trimmed.WithCopies(cut, trimmed.CopiesOf(cut) - 1);
@@ -289,7 +573,8 @@ public static class DeckBuilder
 				rng,
 				trimmed.AverageCost(spells.ToDictionary(c => c.Name, StringComparer.Ordinal)),
 				1.0,
-				MutateTemperature
+				MutateTemperature,
+				features
 			)
 			: trimmed;
 	}
@@ -301,7 +586,8 @@ public static class DeckBuilder
 		ConstructedValues values,
 		Random rng,
 		double curveTarget,
-		DeckHistory? history
+		DeckHistory? history,
+		PoolFeatures? features
 	)
 	{
 		var up = rng.Next(2) == 0;
@@ -311,9 +597,18 @@ public static class DeckBuilder
 
 		var adjusted = deck with { Lands = lands };
 		if (!up)
-			return Fill(adjusted, spells, values, rng, curveTarget, 1.0, MutateTemperature);
+			return Fill(
+				adjusted,
+				spells,
+				values,
+				rng,
+				curveTarget,
+				1.0,
+				MutateTemperature,
+				features
+			);
 
-		var donor = PickWeakest(adjusted, values, rng, history);
+		var donor = PickWeakest(adjusted, values, rng, history, features: features);
 		return donor is null ? null : adjusted.WithCopies(donor, adjusted.CopiesOf(donor) - 1);
 	}
 
@@ -331,7 +626,8 @@ public static class DeckBuilder
 		Random rng,
 		double curveTarget,
 		double synergyWeight,
-		double temperature
+		double temperature,
+		PoolFeatures? features
 	)
 	{
 		var guard = 0;
@@ -354,7 +650,8 @@ public static class DeckBuilder
 					values.CardDelta(card.Name)
 					+ synergyWeight * values.DeckFit(card.Name, deck)
 					- CurvePenalty * Math.Abs(card.ManaCost - curveTarget)
-					+ ExplorationBonus * values.Unmeasured(card.Name);
+					+ ExplorationBonus * values.Unmeasured(card.Name)
+					+ SupportScore(card.Name, deck, features);
 			}
 
 			var chosen = candidates[DraftPickers.SampleSoftmax(scores, temperature, rng)];
@@ -375,7 +672,8 @@ public static class DeckBuilder
 		ConstructedValues values,
 		Random rng,
 		DeckHistory? history = null,
-		string? exclude = null
+		string? exclude = null,
+		PoolFeatures? features = null
 	)
 	{
 		var names = deck
@@ -399,7 +697,10 @@ public static class DeckBuilder
 		// with no artifacts. Ancestral Recall meanwhile never got in, because the slots were
 		// locked by junk that could not be cut.
 		double Score(string n) =>
-			values.CardDelta(n) + values.DeckFit(n, deck) + (history?.KeepScore(n, deck) ?? 0);
+			values.CardDelta(n)
+			+ values.DeckFit(n, deck)
+			+ (history?.KeepScore(n, deck) ?? 0)
+			+ SupportScore(n, deck, features);
 
 		if (names.Count > 2)
 		{
@@ -457,23 +758,140 @@ public static class DeckBuilder
 	/// small pool, eight genuinely distinct 60-card decks may not exist, and reporting the
 	/// achieved diversity is more useful than hanging.
 	/// </summary>
+	/// <param name="conceptSlots">
+	/// How many slots are seeded by <see cref="SeedConcept"/> rather than by anchor-and-kernel.
+	/// Each gets a DISTINCT demand — three slots that all discover Goblins are one deck, and the
+	/// diversity floor would reject two of them anyway, so the slot would be wasted rather than
+	/// exploring. Ignored when <paramref name="features"/> is null.
+	/// </param>
 	public static IReadOnlyList<Decklist> SeedField(
 		int count,
 		IReadOnlyList<Card> pool,
 		ConstructedValues values,
 		Random rng,
 		double minDifference,
-		bool includeWildcard = true
+		bool includeWildcard = true,
+		PoolFeatures? features = null,
+		int conceptSlots = 0
 	)
 	{
 		var field = new List<Decklist>(count);
+		var usedConcepts = new HashSet<int>();
+
 		for (var i = 0; i < count; i++)
 		{
 			var wildcard = includeWildcard && i == count - 1;
-			var name = wildcard ? "Wildcard" : $"Deck {(char)('A' + i)}";
-			field.Add(SeedDistinct(name, pool, values, rng, field, minDifference, wildcard));
+
+			// Concept slots come first so they get first pick of the pool, before the diversity
+			// constraint has been narrowed by anything else. A synergy deck is the hardest shape
+			// to fit past that constraint, since its cards are the ones it cannot substitute.
+			if (!wildcard && features is not null && i < conceptSlots)
+			{
+				var built = SeedConceptDistinct(
+					pool,
+					values,
+					features,
+					rng,
+					field,
+					minDifference,
+					usedConcepts,
+					$"Synergy-{i + 1}"
+				);
+				if (built is not null)
+				{
+					field.Add(built);
+					continue;
+				}
+				// No viable concept left — fall through to an ordinary seed rather than a gap.
+			}
+
+			// **Every non-concept, non-wildcard slot gets a real profile, cycled.** The label has
+			// to mean something: these slots were previously named "Midrange-A" while drawing a
+			// curve target uniformly from 2.0-4.5, so a "midrange" deck could come out as an aggro
+			// or control curve and the report said otherwise.
+			//
+			// Cycling rather than a fixed split, because deck count is a parameter — 8 decks with
+			// 3 concept slots leaves 4, and hardcoding "2 aggro, 1 midrange, 1 control" breaks the
+			// moment either number changes. Cycling also guarantees the bands are spread across
+			// the field rather than left to the RNG, which is the point of having them.
+			var profile = wildcard
+				? DeckProfile.Any
+				: (Profiles.Length, i - conceptSlots) switch
+				{
+					(_, < 0) => DeckProfile.Any,
+					var (n, k) => Profiles[k % n],
+				};
+
+			var name =
+				wildcard ? "Wildcard"
+				: profile == DeckProfile.Any ? $"Deck {(char)('A' + i)}"
+				: $"{profile}-{(char)('A' + i)}";
+
+			field.Add(
+				SeedDistinct(
+					name,
+					pool,
+					values,
+					rng,
+					field,
+					minDifference,
+					wildcard,
+					features: features,
+					profile: profile
+				)
+			);
 		}
 		return field;
+	}
+
+	/// <summary>
+	/// One concept deck on a demand no other slot has taken, distinct from the field.
+	///
+	/// Unlike <see cref="SeedDistinct"/> this retries across CONCEPTS as well as across samples:
+	/// a concept whose cards are already in the field cannot produce a distinct deck no matter
+	/// how many times it is resampled.
+	/// </summary>
+	private static Decklist? SeedConceptDistinct(
+		IReadOnlyList<Card> pool,
+		ConstructedValues values,
+		PoolFeatures features,
+		Random rng,
+		IReadOnlyList<Decklist> others,
+		double minDifference,
+		HashSet<int> used,
+		string name,
+		int attempts = 12
+	)
+	{
+		var present = pool.Where(c => !c.HasSubtype("Land"))
+			.Select(c => c.Name)
+			.ToHashSet(StringComparer.Ordinal);
+
+		Decklist? best = null;
+		var bestGap = -1.0;
+		int? bestConcept = null;
+
+		for (var i = 0; i < attempts; i++)
+		{
+			var concept = PickConcept(features, present, rng, used);
+			if (concept is null)
+				break; // every viable concept is already taken by another slot
+
+			var candidate = SeedConcept(name, pool, values, features, rng, concept);
+			if (candidate is null || candidate.Validate() is not null)
+				continue;
+
+			var gap = MinDifference(candidate, others);
+			if (gap > bestGap)
+				(best, bestGap, bestConcept) = (candidate, gap, concept);
+			if (gap >= minDifference)
+				break;
+		}
+
+		if (bestConcept is not null)
+			used.Add(bestConcept.Value);
+
+		return best;
 	}
 
 	/// <summary>
@@ -488,7 +906,9 @@ public static class DeckBuilder
 		IReadOnlyList<Decklist> others,
 		double minDifference,
 		bool wildcard = false,
-		int attempts = 30
+		int attempts = 30,
+		PoolFeatures? features = null,
+		DeckProfile profile = DeckProfile.Any
 	)
 	{
 		Decklist? best = null;
@@ -496,7 +916,7 @@ public static class DeckBuilder
 
 		for (var i = 0; i < attempts; i++)
 		{
-			var candidate = Seed(name, pool, values, rng, wildcard);
+			var candidate = Seed(name, pool, values, rng, wildcard, features, profile);
 			if (candidate.Validate() is not null)
 				continue;
 
@@ -507,7 +927,7 @@ public static class DeckBuilder
 				(best, bestGap) = (candidate, gap);
 		}
 
-		return best ?? Seed(name, pool, values, rng, wildcard);
+		return best ?? Seed(name, pool, values, rng, wildcard, features, profile);
 	}
 
 	/// Smallest difference between a deck and any of a field. 1.0 against an empty field.
