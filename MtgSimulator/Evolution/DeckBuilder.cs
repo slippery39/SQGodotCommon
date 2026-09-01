@@ -468,6 +468,29 @@ public static class DeckBuilder
 	{
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
 
+		// **A core narrows what mutation may DRAW FROM, not just what it may cut.**
+		//
+		// `ProtectedIn` below stops the archetype being cut away; on its own that keeps the floors
+		// and lets every free slot drift back to the format's best cards — which is the good-stuff
+		// failure re-entering through the one door the core does not watch. Measured on the build
+		// side: filling flex from the format gave a Dragonstorm deck 61% off-theme cards (Atog,
+		// Frogmite, Kird Ape); filling from the archetype pool gave 100% on-theme.
+		//
+		// A POOL LOCK beats a share quota, and that is not a preference — a real run allowed 40%
+		// drift and the storm slot spent all of it on Steppe Lynx, Gravecrawler and Liliana while
+		// staying legal throughout. A budget for drift gets spent on drift.
+		//
+		// It converges INWARD: cutting stays unconstrained, so a deck that starts impure cleans
+		// itself up and nothing outside can return. Evolution may still discover a storm deck wants
+		// fewer rituals; it cannot discover that it wants Steppe Lynx.
+		if (core is not null)
+		{
+			var identity = core.Slots.SelectMany(s => s.Cards).ToHashSet(StringComparer.Ordinal);
+			spells = spells.Where(c => identity.Contains(c.Name)).ToList();
+			if (spells.Count == 0)
+				return null;
+		}
+
 		var curveTarget = deck.AverageCost(
 			spells.ToDictionary(c => c.Name, StringComparer.Ordinal)
 		);
@@ -850,6 +873,13 @@ public static class DeckBuilder
 	/// average cost, clamped into the target range. Exactly what <see cref="SeedConcept"/> does,
 	/// factored out so <see cref="EngineDiscovery"/> cannot drift into a second land rule.
 	/// </summary>
+	/// Land count for a request that named a curve band instead of a concept.
+	internal static int LandsForProfile(DeckProfile profile, Random rng)
+	{
+		var (lo, hi) = BandFor(profile);
+		return LandsForCurve(lo + rng.NextDouble() * (hi - lo), rng);
+	}
+
 	internal static int LandsForConcept(IEnumerable<Card> cards, Random rng)
 	{
 		var list = cards.ToList();

@@ -1805,10 +1805,16 @@ printf '6\n\n4\n8\n25\n3\n6\n20\n0.45\n800\nY\nY\n0\n4\nsim_results/engines_all_
   | dotnet run --project MtgSimulator.Console -c Release
 ```
 
-**`DeckBuilder.EngineIdentity` narrows the card pool `Mutate` draws from.** One clause at the top
-of `Mutate` filters `spells` to `Payoffs ∪ Enablers`, and every operator — Swap, Recount, Package,
+**A `DeckCore` narrows the card pool `Mutate` draws from.** One clause at the top of `Mutate`
+filters `spells` to the core's own slot cards, and every operator — Swap, Recount, Package,
 AdjustLands and the `Fill` they share — takes its candidates from that list, so nothing outside the
 archetype can enter by any path. No operator needed to learn about engines.
+
+**This paragraph described a `DeckBuilder.EngineIdentity` and an `EngineIdentityTests` for a whole
+session, and NEITHER EXISTED** — a grep over every `.cs` in the solution found only prose. The core
+protected what could be CUT (`ProtectedIn`) and nothing protected what could be ADDED, so every free
+slot was refilled from the format: the good-stuff failure re-entering through the one door the
+constraint did not watch. **Check that a documented mechanism exists before reasoning from it.**
 
 #### It shipped first as a 60% quota, and the drift went straight into the allowance
 
@@ -1837,9 +1843,39 @@ Narrowing the pool is also strictly better mechanically than grading the result:
 Cutting stays unconstrained, so evolution can still discover that a storm deck wants fewer rituals.
 It cannot discover that it wants Steppe Lynx.
 
-`EngineIdentityTests` chains 60 generations and asserts nothing outside the pool ever appears, with
-a control confirming that unconstrained mutation *does* wander outside the same card set — without
-it the test would pass on a mutator that never changes anything.
+`MutationNeverDrawsFromOutsideTheCoresPool` chains 60 generations and asserts nothing outside the
+pool ever appears, with `WithoutACore_MutationDoesWanderOutsideThatPool` confirming that
+unconstrained mutation *does* leave the same card set — without it the test would pass on a mutator
+that never changes anything.
+
+**The pool must be wide enough to fill a deck or the control measures the fixture.** At six cards
+every swap produces an illegal list, `Mutate` returns null, and "the deck did not move" says nothing
+about the mutator. `TheSameMutationsStillExploreInsideThePool` uses 24 and previously asserted that
+a core "leaves everything else free" — a claim the pool lock deliberately makes false.
+
+### A slot carries a FLOOR and a CAP, and they answer different questions
+
+`CoreSlot.MinCopies` is the identity floor — never cut below, and what `ProtectedIn` locks.
+`CoreSlot.TargetCopies` is the cap the fill aims for, defaulting to unbounded.
+
+**Collapsing them produced 12 Dragons where a real list plays six.** With only a floor, the fill ran
+to 60 cards best-first inside the archetype pool, so a slot that qualified kept getting topped up.
+
+The cap is set by *what kind of question the demand asks*, which is derived rather than declared:
+
+| Demand | Cap | Why |
+|---|---|---|
+| a COUNT (storm, artifacts, a tribe) | **unbounded** | a storm deck wants every ritual it can hold |
+| ONE OBJECT you FETCH (a Dragon) | **the floor** | past "enough survive to be found", a further copy is a card you did not want to draw |
+
+Measured — Dragonstorm at `MTG_MIN_LANDS=12` went from 12 Dragons to **4**, and the freed slots
+filled with Mox Pearl, Lotus Bloom and Consult the Drowned. That is the trade the fill could not
+previously make.
+
+**The floor is where the cap STARTS, not where it belongs.** It is the number an optimiser should
+move, and deriving it means there is something honest to move away from. Note `Satisfy` overshoots
+it slightly — it tops a card to a full playset once chosen, so a floor of 3 yields 4 — which is why
+the lists read as playsets rather than as odd counts.
 
 **Engine slots are never culled.** Mode 7 already judged the archetype on whether it ASSEMBLES; the
 win rate is here to tune it against the field, not to decide whether it deserves to exist. A

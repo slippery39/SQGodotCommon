@@ -12,7 +12,25 @@ namespace MtgSimulator;
 /// a combo deck a deck: Splinter Twin and Kiki-Jiki fill the same slot, so a list holding four of
 /// either — or two of each — satisfies it identically.
 /// </param>
-/// <param name="MinCopies">How many copies, across the whole set, the deck must hold.</param>
+/// <param name="MinCopies">
+/// The identity FLOOR: how many copies, across the whole set, the deck must hold. Never cut below —
+/// <see cref="DeckCore.ProtectedIn"/> locks at exactly this number, and this is what makes the deck
+/// the archetype it claims to be.
+/// </param>
+/// <param name="TargetCopies">
+/// The CAP the fill aims for, and the number an optimiser is free to move. Defaults to unbounded,
+/// which means "this slot absorbs the deck".
+///
+/// **Two numbers, because they answer different questions, and collapsing them produced 12 Dragons
+/// where a real list plays six.** The floor says what the deck must contain to BE this archetype;
+/// the cap says how much of it is worth playing. With only a floor, the fill ran to 60 cards
+/// best-first inside the archetype pool and a slot that qualified kept getting topped up.
+///
+/// Unbounded is right for a slot answering a COUNT — a storm deck wants as many rituals and
+/// cantrips as it can hold, and there is no such thing as too many. It is wrong for a slot
+/// answering for ONE OBJECT: you fetch a Dragon, so past "enough that one survives in the library"
+/// every further copy is a card you did not want to draw.
+/// </param>
 /// <remarks>
 /// <paramref name="Cards"/> is a concrete <see cref="ImmutableHashSet{T}"/> rather than
 /// <c>IReadOnlySet</c> because a core is WRITTEN TO DISK and read back by the evolver:
@@ -20,11 +38,19 @@ namespace MtgSimulator;
 /// load. `Program.cs` only compares engine counts after reloading, so the failure mode was a
 /// report that looked fine and un-constrained every engine slot that consumed it.
 /// </remarks>
-public sealed record CoreSlot(string Role, ImmutableHashSet<string> Cards, int MinCopies)
+public sealed record CoreSlot(
+	string Role,
+	ImmutableHashSet<string> Cards,
+	int MinCopies,
+	int TargetCopies = int.MaxValue
+)
 {
 	public int CountIn(Decklist deck) => Cards.Sum(deck.CopiesOf);
 
 	public bool SatisfiedBy(Decklist deck) => CountIn(deck) >= MinCopies;
+
+	/// Whether this slot will take another copy — the cap, not the floor.
+	public bool WantsMore(Decklist deck) => CountIn(deck) < Math.Max(MinCopies, TargetCopies);
 }
 
 /// <summary>
@@ -178,6 +204,70 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 		return new DeckCore(payoff, slots);
 	}
 
+	/// <summary>
+	/// **A core anchored on a DEMAND rather than on a payoff card** — the shape a THEME request
+	/// needs: "build me a graveyard deck", where no card is named.
+	///
+	/// This is the unit `EngineCandidate` used to be keyed on, and reviving it is not a step
+	/// backwards. That unit is one level too low for *"build a Dragonstorm deck"*, because
+	/// Dragonstorm is a conjunction of two demands and anchoring on either half builds something
+	/// that is not Dragonstorm. It is exactly right for *"build a graveyard deck"*, because there
+	/// the demand IS the request. **Two units, two questions; neither replaces the other.**
+	///
+	/// The payoff slot is every card that ASKS the demand, so "an artifact deck" gets Atog, Frogmite,
+	/// Myr Enforcer and Thoughtcast as interchangeable payoffs and `Satisfy` picks by value — Atog
+	/// appears because it is good, not because it was named.
+	/// </summary>
+	public static DeckCore? ForDemand(PoolFeatures features, int demandIndex, int payoffCopies = 4)
+	{
+		if (!features.Informative(demandIndex))
+			return null;
+
+		var askers = features.AskersOf(demandIndex).ToImmutableHashSet(StringComparer.Ordinal);
+		if (askers.IsEmpty)
+			return null;
+
+		var slots = new List<CoreSlot> { new("Payoff", askers, payoffCopies) };
+
+		var support = features.SuppliersOf(demandIndex).ToHashSet(StringComparer.Ordinal);
+		support.ExceptWith(askers);
+
+		if (support.Count > 0)
+		{
+			var causal = features
+				.CausalSuppliersOf(demandIndex)
+				.Where(support.Contains)
+				.ToImmutableHashSet(StringComparer.Ordinal);
+
+			var role = features.Describe(demandIndex);
+			int[] self = [demandIndex];
+
+			AddSlot(
+				slots,
+				support.Except(causal).ToImmutableHashSet(StringComparer.Ordinal),
+				role,
+				features,
+				demandIndex,
+				self,
+				TargetTurn
+			);
+			AddSlot(
+				slots,
+				causal,
+				$"{role} [enablers]",
+				features,
+				demandIndex,
+				self,
+				TargetTurn - 1
+			);
+		}
+
+		if (slots.Sum(s => s.MinCopies) > Decklist.DeckSize - Decklist.MinLands)
+			return null;
+
+		return new DeckCore(features.Describe(demandIndex), slots);
+	}
+
 	private static void AddSlot(
 		List<CoreSlot> slots,
 		ImmutableHashSet<string> cards,
@@ -190,16 +280,24 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 	{
 		if (cards.IsEmpty)
 			return;
-		slots.Add(
-			new CoreSlot(
-				role,
-				cards,
-				Math.Min(
-					MinFor(features, demandIndex, payoffDemands, byTurn),
-					cards.Count * Decklist.MaxCopies
-				)
-			)
+
+		var min = Math.Min(
+			MinFor(features, demandIndex, payoffDemands, byTurn),
+			cards.Count * Decklist.MaxCopies
 		);
+
+		// **A FETCHED slot is capped at its floor; everything else absorbs.** You search a Dragon out
+		// of the library, so once enough survive to be found, every further copy is a card you did
+		// not want to draw — measured, the uncapped version played 12 Dragons where a real list plays
+		// six. A slot answering a COUNT is the opposite: a storm deck wants every ritual and cantrip
+		// it can hold, and capping it would evict the cards the archetype is made of.
+		//
+		// The floor is where the cap STARTS, not where it belongs. It is the number an optimiser
+		// should move, and it is derived rather than guessed so there is something honest to move
+		// away from.
+		var target = IsFetched(features, demandIndex) ? min : int.MaxValue;
+
+		slots.Add(new CoreSlot(role, cards, min, target));
 	}
 
 	/// <summary>
@@ -423,16 +521,29 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 		var mine = Slots.SelectMany(s => s.Cards).ToHashSet(StringComparer.Ordinal);
 
 		deck = Satisfy(deck, values);
-		deck = FillFrom(deck, spells.Where(c => mine.Contains(c.Name)).ToList(), values);
-		return FillFrom(deck, spells, values);
+		deck = FillFrom(deck, spells.Where(c => mine.Contains(c.Name)).ToList(), values, this);
+		return FillFrom(deck, spells, values, this);
 	}
 
+	/// <summary>
+	/// Adds copies best-first, **stopping at each slot's cap**.
+	///
+	/// The cap is checked per card rather than per slot because slots are disjoint, so a card
+	/// belongs to at most one and the lookup is unambiguous. A card in no slot is off-theme filler
+	/// and is uncapped — the archetype pass never reaches it anyway.
+	/// </summary>
 	private static Decklist FillFrom(
 		Decklist deck,
 		IReadOnlyList<Card> candidates,
-		ConstructedValues values
+		ConstructedValues values,
+		DeckCore core
 	)
 	{
+		var slotOf = new Dictionary<string, CoreSlot>(StringComparer.Ordinal);
+		foreach (var slot in core.Slots)
+		foreach (var name in slot.Cards)
+			slotOf.TryAdd(name, slot);
+
 		foreach (
 			var card in candidates
 				.OrderByDescending(c => values.CardDelta(c.Name))
@@ -442,9 +553,19 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 			var room = Decklist.DeckSize - deck.Lands - deck.SpellCount;
 			if (room <= 0)
 				break;
+
 			var have = deck.CopiesOf(card.Name);
 			if (have >= Decklist.MaxCopies)
 				continue;
+
+			if (slotOf.TryGetValue(card.Name, out var slot))
+			{
+				var headroom = Math.Max(slot.MinCopies, slot.TargetCopies) - slot.CountIn(deck);
+				if (headroom <= 0)
+					continue;
+				room = Math.Min(room, headroom);
+			}
+
 			deck = deck.WithCopies(card.Name, Math.Min(Decklist.MaxCopies, have + room));
 		}
 

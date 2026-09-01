@@ -130,13 +130,19 @@ public class DeckCoreTests
 	}
 
 	[Test]
-	public void TheSameMutationsDoChangeTheRestOfTheDeck()
+	public void TheSameMutationsStillExploreInsideThePool()
 	{
-		// **The control.** Without it the test above passes on a mutator that proposes nothing —
-		// the vacuous-test trap this project has paid for repeatedly. A core must constrain the
-		// core and leave everything else free.
+		// **The control.** Without it the tests either side pass on a mutator that proposes nothing —
+		// the vacuous-test trap this project has paid for repeatedly.
+		//
+		// **This used to assert that a core "leaves everything else free", and that claim is now
+		// deliberately false.** A core narrows what `Mutate` may draw from, so the free slots are
+		// free to CHANGE but not free to leave the archetype. The pool has to be wide enough to fill
+		// a deck for the assertion to mean anything — at six cards every swap produces an illegal
+		// list, `Mutate` returns null, and "the deck did not move" measures the fixture rather than
+		// the mutator.
 		var (spells, values) = Pool();
-		var themed = spells.Take(6).Select(c => c.Name).ToArray();
+		var themed = spells.Take(24).Select(c => c.Name).ToArray();
 		var core = new DeckCore("test", [Slot("Theme", 12, themed)]);
 
 		var start = Fill(core.Satisfy(Decklist.Empty("t") with { Lands = 24 }, values), spells);
@@ -147,8 +153,54 @@ public class DeckCoreTests
 		Assert.That(
 			Decklist.Difference(start, deck),
 			Is.GreaterThan(0.1),
-			"the non-core slots must actually move"
+			"the deck must still move under a core"
 		);
+	}
+
+	[Test]
+	public void MutationNeverDrawsFromOutsideTheCoresPool()
+	{
+		// **CLAUDE.md documented this for a session and the code did not do it.** It described a
+		// `DeckBuilder.EngineIdentity` narrowing `Mutate`'s candidate list, and an
+		// `EngineIdentityTests` asserting it over 60 generations — neither existed anywhere in the
+		// solution. `ProtectedIn` stopped the core being CUT; nothing stopped the free slots being
+		// refilled from the format, which is the good-stuff failure coming back through the one door
+		// the core was not watching.
+		var (spells, values) = Pool();
+		var themed = spells.Take(12).Select(c => c.Name).ToArray();
+		var core = new DeckCore("test", [Slot("Theme", 8, themed)]);
+
+		var deck = Fill(core.Satisfy(Decklist.Empty("t") with { Lands = 24 }, values), spells);
+
+		for (var gen = 0; gen < 60; gen++)
+			deck = DeckBuilder.Mutate(deck, spells, values, new Random(gen), core: core) ?? deck;
+
+		Assert.That(
+			deck.Spells.Keys.Where(n => !themed.Contains(n, StringComparer.Ordinal)),
+			Is.Empty,
+			"a card from outside the core's pool entered the deck"
+		);
+	}
+
+	[Test]
+	public void WithoutACore_MutationDoesWanderOutsideThatPool()
+	{
+		// The control for the test above. Without it, a mutator that proposes nothing at all would
+		// pass — the vacuous-test trap this project has paid for three times.
+		var (spells, values) = Pool();
+		var themed = spells.Take(12).Select(c => c.Name).ToArray();
+
+		var core = new DeckCore("test", [Slot("Theme", 8, themed)]);
+		var deck = Fill(core.Satisfy(Decklist.Empty("t") with { Lands = 24 }, values), spells);
+
+		var wandered = false;
+		for (var gen = 0; gen < 60 && !wandered; gen++)
+		{
+			deck = DeckBuilder.Mutate(deck, spells, values, new Random(gen)) ?? deck;
+			wandered = deck.Spells.Keys.Any(n => !themed.Contains(n, StringComparer.Ordinal));
+		}
+
+		Assert.That(wandered, Is.True, "unconstrained mutation must be able to leave the pool");
 	}
 
 	[Test]
