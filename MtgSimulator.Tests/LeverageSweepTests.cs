@@ -46,13 +46,23 @@ public class LeverageSweepTests
 		// Chosen by MEASUREMENT rather than by name: the payoff whose core has the widest support
 		// slots is the broadest concept the pool contains, so this cannot rot when a card is
 		// renamed or the cube changes.
-		var broadest = cards
+		// **The broadest payoff that can actually be MEASURED.** Taking the widest core outright
+		// landed on Blood for Bones, which the sandbox reports as "no legal cast action" — an
+		// unmeasured arm, not a broad one, and the comparison would have been against a placeholder.
+		var candidates = cards
 			.Keys.Select(n => (Name: n, Core: DeckCore.For(features, n)))
 			.Where(x => x.Core is not null)
-			.OrderByDescending(x => x.Core!.Slots.Skip(1).Sum(s => s.Cards.Count))
+			.OrderByDescending(x => x.Core!.Slots.Where(s => !s.IsIdentity).Sum(s => s.Cards.Count))
 			.ThenBy(x => x.Name, StringComparer.Ordinal)
-			.First()
-			.Name;
+			.Select(x => x.Name)
+			.Take(12)
+			.ToList();
+
+		var broadest =
+			CardValueSandbox
+				.MeasureLeverage(candidates, features, cards)
+				.FirstOrDefault(r => r.WasMeasured)
+				?.Name ?? candidates[0];
 
 		var results = CardValueSandbox
 			.MeasureLeverage([Anchor, broadest], features, cards)

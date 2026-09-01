@@ -94,8 +94,12 @@ public sealed record EngineProbe(
 	public static EngineProbe FromCore(DeckCore core, Decklist deck) =>
 		new(
 			core.Name,
-			[.. deck.Spells.Keys.Where(core.Slots[0].Cards.Contains)],
-			[.. core.Slots.Skip(1).SelectMany(s => s.Cards)]
+			[
+				.. deck.Spells.Keys.Where(n =>
+					core.Slots.Any(s => s.IsIdentity && s.Cards.Contains(n))
+				),
+			],
+			[.. core.Slots.Where(s => !s.IsIdentity).SelectMany(s => s.Cards)]
 		);
 
 	public static EngineProbe FromConcept(PoolFeatures features, int demandIndex, Decklist deck) =>

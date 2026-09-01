@@ -65,8 +65,16 @@ public class DeckCoreGeneratorTests
 				Is.Not.Empty,
 				"the storm half is missing"
 			);
-			Assert.That(core!.Slots[0].Role, Is.EqualTo("Payoff"));
-			Assert.That(core.Slots[0].Cards, Does.Contain(Anchor));
+			Assert.That(
+				core!.Slots.Where(s => s.IsIdentity).SelectMany(s => s.Cards),
+				Does.Contain(Anchor)
+			);
+			// The anchor has a slot of its OWN, so mutation cannot satisfy the requirement with an
+			// interchangeable payoff and cut the card that was asked for.
+			Assert.That(
+				core.Slots.Single(s => s.Role == $"Required: {Anchor}").MinCopies,
+				Is.GreaterThan(0)
+			);
 		});
 	}
 
@@ -111,12 +119,12 @@ public class DeckCoreGeneratorTests
 		Assert.Multiple(() =>
 		{
 			Assert.That(
-				dragonstorm!.Slots[0].Cards,
+				dragonstorm!.Slots.Where(s => s.IsIdentity).SelectMany(s => s.Cards),
 				Does.Contain(StormOnlyPayoff),
 				"a card asking strictly less belongs in the richer core's payoff slot"
 			);
 			Assert.That(
-				tendrils!.Slots[0].Cards,
+				tendrils!.Slots.Where(s => s.IsIdentity).SelectMany(s => s.Cards),
 				Does.Not.Contain(Anchor),
 				"a card asking MORE than the core promises would be dead in it"
 			);
@@ -139,13 +147,13 @@ public class DeckCoreGeneratorTests
 				$"  {s.MinCopies, 3}x  {s.Role[..Math.Min(58, s.Role.Length)]}"
 			);
 
-		var storm = core.Slots.Single(s => s.Role.Contains("SpellsCastDemand"));
-		var dragons = core.Slots.Single(s => s.Role.Contains("Dragon"));
+		var storm = core.Slots.Single(s => !s.IsIdentity && s.Role.Contains("SpellsCastDemand"));
+		var dragons = core.Slots.Single(s => !s.IsIdentity && s.Role.Contains("Dragon"));
 
 		Assert.Multiple(() =>
 		{
 			Assert.That(
-				core.Slots.Select(s => s.MinCopies).Distinct().Count(),
+				core.Slots.Where(s => !s.IsIdentity).Select(s => s.MinCopies).Distinct().Count(),
 				Is.GreaterThan(1),
 				"every slot got the same number, so nothing is actually being derived"
 			);
@@ -173,8 +181,8 @@ public class DeckCoreGeneratorTests
 		var core = DeckCore.For(features, Anchor);
 		Assert.That(core, Is.Not.Null);
 
-		var dragons = core!.Slots.Single(s => s.Role.Contains("Dragon"));
-		var storm = core.Slots.Single(s => s.Role.Contains("SpellsCastDemand"));
+		var dragons = core!.Slots.Single(s => !s.IsIdentity && s.Role.Contains("Dragon"));
+		var storm = core.Slots.Single(s => !s.IsIdentity && s.Role.Contains("SpellsCastDemand"));
 
 		Assert.Multiple(() =>
 		{
@@ -220,7 +228,7 @@ public class DeckCoreGeneratorTests
 
 		var core = DeckCore.For(features, payoff);
 		var enabler = core!.Slots.Single(s => s.Role.EndsWith("[enablers]"));
-		var target = core.Slots.Single(s => s.Role != "Payoff" && !s.Role.EndsWith("[enablers]"));
+		var target = core.Slots.Single(s => !s.IsIdentity && !s.Role.EndsWith("[enablers]"));
 
 		TestContext.Out.WriteLine(
 			$"{payoff}: target {target.MinCopies}x, enabler {enabler.MinCopies}x"
@@ -297,7 +305,7 @@ public class DeckCoreGeneratorTests
 		Assert.That(core, Is.Not.Null);
 		var enablerSlot = core!.Slots.FirstOrDefault(s => s.Role.EndsWith("[enablers]"));
 		var targetSlot = core.Slots.FirstOrDefault(s =>
-			s.Role != "Payoff" && !s.Role.EndsWith("[enablers]")
+			!s.IsIdentity && !s.Role.EndsWith("[enablers]")
 		);
 
 		TestContext.Out.WriteLine(
@@ -337,9 +345,13 @@ public class DeckCoreGeneratorTests
 		var core = DeckCore.For(Features(), Anchor);
 		Assert.That(core, Is.Not.Null);
 
-		foreach (var slot in core!.Slots.Skip(1))
+		var identity = core!
+			.Slots.Where(s => s.IsIdentity)
+			.SelectMany(s => s.Cards)
+			.ToHashSet(StringComparer.Ordinal);
+		foreach (var slot in core.Slots.Where(s => !s.IsIdentity))
 			Assert.That(
-				slot.Cards.Intersect(core.Slots[0].Cards, StringComparer.Ordinal),
+				slot.Cards.Intersect(identity, StringComparer.Ordinal),
 				Is.Empty,
 				$"slot '{slot.Role}' overlaps the payoff slot"
 			);

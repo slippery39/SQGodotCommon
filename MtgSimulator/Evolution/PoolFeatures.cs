@@ -185,6 +185,10 @@ public sealed class PoolFeatures
 
 	public IReadOnlyList<object> Demands => _demands;
 
+	/// How many cards this was built from. Breadth is only meaningful as a SHARE of the pool: 300
+	/// suppliers is most of CSC and a third of ALL.
+	public int PoolSize { get; private init; }
+
 	/// <summary>
 	/// Specs that threw when evaluated against a candidate, by description.
 	///
@@ -662,7 +666,10 @@ public sealed class PoolFeatures
 			keep.Select(d => causal[d]).ToArray(),
 			keep.Select(d => landSupply[d]).ToArray(),
 			failures.Distinct(StringComparer.Ordinal).ToList()
-		);
+		)
+		{
+			PoolSize = pool.Count,
+		};
 	}
 
 	/// <summary>

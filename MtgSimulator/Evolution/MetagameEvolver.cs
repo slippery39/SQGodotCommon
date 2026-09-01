@@ -41,6 +41,19 @@ public sealed class MetagameEvolver
 	private readonly string? _enginesPath;
 
 	/// <summary>
+	/// How many field slots are seeded from the engine report. The rest become curve-profile decks —
+	/// Aggro, Midrange, Control — which are good-stuff piles BY DESIGN and are the control the themed
+	/// slots are read against.
+	///
+	/// **Setting this turns the wildcard off**, because the engine slots ARE the exploration. On a
+	/// large pool the wildcard never survived anyway: 13 of 48 culls, final rate 17.1%, and every
+	/// other deck's best matchup was "vs Wildcard".
+	/// </summary>
+	private readonly int _engineSlots;
+
+	private readonly bool _useWildcard;
+
+	/// <summary>
 	/// How much longer a concept slot is left alone before it can be culled.
 	///
 	/// **A proxy for "the candidate set is exhausted", which is the honest abandon rule and is
@@ -86,7 +99,8 @@ public sealed class MetagameEvolver
 		int preSimOpponents = 12,
 		int conceptSlots = 0,
 		int gauntletGames = 0,
-		string? enginesPath = null
+		string? enginesPath = null,
+		int engineSlots = -1
 	)
 	{
 		if (deckCount < 2)
@@ -118,6 +132,10 @@ public sealed class MetagameEvolver
 		_gauntletGames = Math.Max(0, gauntletGames);
 		_gauntlet = _gauntletGames > 0 ? Gauntlet.For(set.Code) : [];
 		_enginesPath = enginesPath;
+		// -1 keeps the old behaviour: fill every slot but the wildcard.
+		_engineSlots =
+			engineSlots < 0 ? Math.Max(0, deckCount - 1) : Math.Clamp(engineSlots, 0, deckCount);
+		_useWildcard = engineSlots < 0;
 	}
 
 	/// <summary>
@@ -156,10 +174,14 @@ public sealed class MetagameEvolver
 	/// <summary>
 	/// Engine slots from a mode 7 report, paired with the field slots they occupy.
 	///
-	/// Highest LIFT first — that column is the only one distinguishing a synergy from a
-	/// coincidence, so taking the top of it is taking the archetypes most likely to be real. The
-	/// last slot is left alone: it is the permanent wildcard, and replacing the exploration arm
-	/// with a fixed archetype removes the only slot that can find something nobody discovered.
+	/// **Taken in REPORT ORDER, which is blank-first.** This used to re-sort by LIFT and thereby
+	/// undo the ranking `EngineDiscovery` had already applied — and blank-first is the better one for
+	/// picking slots, because it puts payoffs that do NOTHING without their support at the top, which
+	/// is the class hill climbing provably cannot reach. LIFT ranks a tribal lord and a combo payoff
+	/// together; `bare` separates them.
+	///
+	/// The remaining slots are curve-profile decks (Aggro / Midrange / Control) — good-stuff piles by
+	/// design, and the control the themed slots are read against.
 	/// </summary>
 	private IEnumerable<(int Slot, EngineCandidate Engine)> LoadEngines()
 	{
@@ -173,8 +195,8 @@ public sealed class MetagameEvolver
 			yield break;
 		}
 
-		var usable = Math.Max(0, _deckCount - 1);
-		var take = report.Engines.OrderByDescending(e => e.Lift).Take(usable).ToList();
+		var usable = Math.Clamp(_engineSlots, 0, _deckCount);
+		var take = report.Engines.Take(usable).ToList();
 
 		Console.WriteLine($"  Engines: {take.Count} of {report.Engines.Count} from {_enginesPath}");
 		for (var i = 0; i < take.Count; i++)
@@ -237,6 +259,7 @@ public sealed class MetagameEvolver
 				values,
 				rng,
 				_minDifference,
+				includeWildcard: _useWildcard,
 				features: features,
 				conceptSlots: _conceptSlots
 			)
@@ -303,7 +326,10 @@ public sealed class MetagameEvolver
 		}
 
 		var ages = new int[_deckCount];
-		var isWildcard = Enumerable.Range(0, _deckCount).Select(i => i == _deckCount - 1).ToArray();
+		var isWildcard = Enumerable
+			.Range(0, _deckCount)
+			.Select(i => _useWildcard && i == _deckCount - 1)
+			.ToArray();
 		var isConcept = Enumerable
 			.Range(0, _deckCount)
 			.Select(i => features is not null && i < _conceptSlots && !isWildcard[i])

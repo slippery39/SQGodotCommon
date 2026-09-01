@@ -42,7 +42,8 @@ public sealed record CoreSlot(
 	string Role,
 	ImmutableHashSet<string> Cards,
 	int MinCopies,
-	int TargetCopies = int.MaxValue
+	int TargetCopies = int.MaxValue,
+	bool IsIdentity = false
 )
 {
 	public int CountIn(Decklist deck) => Cards.Sum(deck.CopiesOf);
@@ -102,6 +103,23 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 	private const int OpeningHandSpells = 4;
 
 	/// <summary>
+	/// **The widest a slot can be and still constrain anything.**
+	///
+	/// A demand answered by most of the format does not describe an archetype, it describes the
+	/// format — and a slot of "8 cards drawn from 453" is not a requirement, it is a suggestion.
+	///
+	/// The number is taken from a measurement this file already carries rather than invented: broad
+	/// concepts (>300 suppliers of 783) average **LIFT −0.54**, narrow ones (<100) average **+5.18**.
+	/// 300/783 is 0.38, so the line sits inside the empty gap between the two populations — real
+	/// archetypes here measure 7 to 12% (Dragons 7 of 783, Artifacts 55, Zombie-graveyard 79, storm
+	/// 92) and the failures measure 58 to 63%.
+	/// </summary>
+	public const double MaxSlotShare = 0.35;
+
+	/// Below this many cards a SHARE of the pool is noise, and the breadth gate does not apply.
+	private const int MinPoolForBreadth = 100;
+
+	/// <summary>
 	/// **The core of a deck, read off the payoff card's own demands.**
 	///
 	/// This is the answer to "how does the search DISCOVER that Dragonstorm needs dragons" — it
@@ -143,9 +161,27 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 			})
 			.ToHashSet(StringComparer.Ordinal);
 
+		// **The anchor gets a slot of its OWN, ahead of the interchangeable payoffs.**
+		//
+		// Sorting it first inside a shared payoff slot is enough at build time and not afterwards:
+		// `Satisfy` respects the order, and then mutation cuts the anchor and the slot stays
+		// satisfied by any of the other payoffs. Measured on an 8-deck run — the Spirit Bonds slot
+		// finished with **no Spirit Bonds in it**, because its payoff slot held 70 interchangeable
+		// cards and `Holds` never noticed.
+		//
+		// The rest of the core exists to serve THIS card's demands, so a deck without it carries
+		// slots answering a question nothing in the list asks.
 		var slots = new List<CoreSlot>
 		{
-			new("Payoff", interchangeable.ToImmutableHashSet(StringComparer.Ordinal), payoffCopies),
+			new($"Required: {payoff}", [payoff], payoffCopies, IsIdentity: true),
+			new(
+				"Payoff",
+				interchangeable
+					.Where(n => !string.Equals(n, payoff, StringComparison.Ordinal))
+					.ToImmutableHashSet(StringComparer.Ordinal),
+				0,
+				IsIdentity: true
+			),
 		};
 
 		foreach (var d in demands)
@@ -198,7 +234,36 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 		if (slots.Sum(s => s.MinCopies) > Decklist.DeckSize - Decklist.MinLands)
 			return null;
 
-		return new DeckCore(payoff, slots);
+		return HasANarrowSlot(slots, features.PoolSize) ? new DeckCore(payoff, slots) : null;
+	}
+
+	/// <summary>
+	/// **Does at least ONE support slot actually constrain the deck?**
+	///
+	/// Not "are all the slots narrow", and the difference is a real archetype. Reanimator's
+	/// declarative slot is **458 cards** — every creature can be the thing in your graveyard — while
+	/// its causal slot is **42**, the cards that put one there. The identity lives in the narrow half,
+	/// so a rule reading only breadth would delete a genuine deck.
+	///
+	/// **Measured, this is exactly the line between the cores that worked and the ones that did
+	/// not.** An 8-deck run gave Dragonstorm (dragons 7) and Zombie Apocalypse (zombie-graveyard 79)
+	/// real decks, while Flameshadow Conjuring (453), Spirit Bonds (463) and Evolutionary Leap (491)
+	/// all came back as the same affinity pile with a different payoff stapled on — because their
+	/// archetype pool WAS most of the creature pool and the lock had nothing to lock.
+	/// </summary>
+	private static bool HasANarrowSlot(IReadOnlyList<CoreSlot> slots, int poolSize)
+	{
+		// **Breadth is only meaningful against a real format.** At 8 cards, 35% is 2.8 and every slot
+		// reads as broad, so the gate would reject every core a small fixture can build — which is
+		// how it first failed, on `DeckCoreGeneratorTests`' named eight-card pool rather than on
+		// anything about the rule.
+		if (poolSize < MinPoolForBreadth)
+			return true;
+		var ceiling = poolSize * MaxSlotShare;
+		// **Identity slots do not count.** They hold the payoffs, which are narrow by construction
+		// on any card — Spirit Bonds has 70 interchangeable payoffs and support slots of 463, and
+		// counting the former would let exactly the case this exists to reject sail through.
+		return slots.Any(s => !s.IsIdentity && s.Cards.Count <= ceiling);
 	}
 
 	/// <summary>
@@ -224,7 +289,7 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 		if (askers.IsEmpty)
 			return null;
 
-		var slots = new List<CoreSlot> { new("Payoff", askers, payoffCopies) };
+		var slots = new List<CoreSlot> { new("Payoff", askers, payoffCopies, IsIdentity: true) };
 
 		var support = features.SuppliersOf(demandIndex).ToHashSet(StringComparer.Ordinal);
 		support.ExceptWith(askers);

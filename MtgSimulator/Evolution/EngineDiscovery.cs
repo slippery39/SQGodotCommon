@@ -169,8 +169,20 @@ public static class EngineDiscovery
 			// same things produce the byte-identical core: on ALL, ~64 payoffs that merely target a
 			// creature collapse to one entry, and probing each separately would be 64 runs of the
 			// same experiment charged to the same budget.
+			// **Keyed on the union of the IDENTITY slots, not on `Slots[0]`.** Since the anchor got a
+			// slot of its own, `Slots[0]` holds exactly one card and every payoff keys uniquely —
+			// nothing deduped, and the report went from 50 distinct cores to 97 copies of the same
+			// archetypes. The union is identical for two cards asking the same things, which is what
+			// "the same archetype" means.
 			.GroupBy(
-				c => string.Join("|", c.Slots[0].Cards.Order(StringComparer.Ordinal)),
+				c =>
+					string.Join(
+						"|",
+						c.Slots.Where(s => s.IsIdentity)
+							.SelectMany(s => s.Cards)
+							.Distinct(StringComparer.Ordinal)
+							.Order(StringComparer.Ordinal)
+					),
 				StringComparer.Ordinal
 			)
 			.Select(g => g.OrderBy(c => c.Name, StringComparer.Ordinal).First())
@@ -299,8 +311,18 @@ public static class EngineDiscovery
 		var coreCards = core.Slots.SelectMany(s => s.Cards).ToHashSet(StringComparer.Ordinal);
 		var lands = DeckBuilder.LandsForConcept(spells.Where(c => coreCards.Contains(c.Name)), rng);
 
-		var deck = core.Satisfy(Decklist.Empty($"Engine-{slot}") with { Lands = lands }, values);
-		deck = FillWithBestCards(deck, spells, values, _ => false);
+		// **`Complete`, not `Satisfy` plus a format-wide fill.** The saved report is what the evolver
+		// seeds from, so a format-filled deck here puts a 38%-on-theme list into every engine slot of
+		// the next run — the good-stuff failure travelling by file. Archetype-first fill takes the
+		// same Dragonstorm core to 100% on-theme.
+		var deck = core.Complete(
+			Decklist.Empty($"Engine-{slot}") with
+			{
+				Lands = lands,
+			},
+			spells,
+			values
+		);
 		if (!deck.IsValid || !core.Holds(deck))
 			return null;
 
@@ -343,7 +365,7 @@ public static class EngineDiscovery
 		}
 
 		var support = core
-			.Slots.Skip(1)
+			.Slots.Where(s => !s.IsIdentity)
 			.SelectMany(s => s.Cards)
 			.Distinct(StringComparer.Ordinal)
 			.Order(StringComparer.Ordinal)
@@ -359,7 +381,11 @@ public static class EngineDiscovery
 			// Pool-wide, NOT the probe's sets. The probe scopes payoffs to the deck because the
 			// control comparison needs "the same payoffs"; the report is answering a different
 			// question — what cards belong to this archetype at all.
-			core.Slots[0].Cards.Order(StringComparer.Ordinal).ToList(),
+			core.Slots.Where(s => s.IsIdentity)
+				.SelectMany(s => s.Cards)
+				.Distinct(StringComparer.Ordinal)
+				.Order(StringComparer.Ordinal)
+				.ToList(),
 			support,
 			features.DeadCards(deck),
 			rate,

@@ -304,6 +304,21 @@ else if (mode == 6)
 		enginesPath = null;
 	}
 
+	// How many slots the engine report fills. The REST become curve-profile decks — Aggro,
+	// Midrange, Control — which are good-stuff piles by design and are the control the themed
+	// slots are read against: if a curve pile ends up looking like the themed decks, the themes
+	// were never identities. Blank keeps the old behaviour (every slot but the wildcard).
+	var engineSlots = -1;
+	if (!string.IsNullOrWhiteSpace(enginesPath))
+	{
+		Console.Write(
+			$"How many of the {deckCount} slots are engines? "
+				+ "(blank = all but a wildcard; the rest become Aggro/Midrange/Control): "
+		);
+		if (int.TryParse(Console.ReadLine()?.Trim(), out var asked))
+			engineSlots = Math.Clamp(asked, 0, deckCount);
+	}
+
 	new MetagameEvolver(
 		evolveSet,
 		deckCount: deckCount,
@@ -321,7 +336,8 @@ else if (mode == 6)
 		preSimDecks: presimDecks,
 		conceptSlots: conceptSlots,
 		gauntletGames: gauntletGames,
-		enginesPath: string.IsNullOrWhiteSpace(enginesPath) ? null : enginesPath
+		enginesPath: string.IsNullOrWhiteSpace(enginesPath) ? null : enginesPath,
+		engineSlots: engineSlots
 	).Run();
 }
 else if (mode == 7)
