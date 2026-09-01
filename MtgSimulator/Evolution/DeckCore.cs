@@ -48,9 +48,6 @@ public sealed record CoreSlot(
 	public int CountIn(Decklist deck) => Cards.Sum(deck.CopiesOf);
 
 	public bool SatisfiedBy(Decklist deck) => CountIn(deck) >= MinCopies;
-
-	/// Whether this slot will take another copy — the cap, not the floor.
-	public bool WantsMore(Decklist deck) => CountIn(deck) < Math.Max(MinCopies, TargetCopies);
 }
 
 /// <summary>

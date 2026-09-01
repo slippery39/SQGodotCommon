@@ -505,9 +505,39 @@ public static class DeckBuilder
 		// `PickWeakest`, so handing it down is the whole enforcement.
 		var locked = core?.ProtectedIn(deck);
 
+		// **Two operators exist only under a core, and the roll is unchanged without one.** Mode 6's
+		// unconstrained slots must behave exactly as they did, or every existing measurement in this
+		// file becomes incomparable for a reason that has nothing to do with what was changed.
 		var roll = rng.Next(10);
 		var mutated =
-			roll < 5 ? Swap(deck, spells, values, rng, curveTarget, history, features, locked)
+			core is not null
+				? roll switch
+				{
+					< 4 => Swap(deck, spells, values, rng, curveTarget, history, features, locked),
+					< 6 => SwapWithinSlot(deck, core, values, rng, history, features),
+					< 8 => Rebalance(deck, core, values, rng, history, features),
+					< 9 => Recount(
+						deck,
+						spells,
+						values,
+						rng,
+						curveTarget,
+						history,
+						features,
+						locked
+					),
+					_ => AdjustLands(
+						deck,
+						spells,
+						values,
+						rng,
+						curveTarget,
+						history,
+						features,
+						locked
+					),
+				}
+			: roll < 5 ? Swap(deck, spells, values, rng, curveTarget, history, features, locked)
 			: roll < 7 ? Recount(deck, spells, values, rng, curveTarget, history, features, locked)
 			: roll < 9 ? Package(deck, spells, values, rng, history, rng.Next(3), features, locked)
 			: AdjustLands(deck, spells, values, rng, curveTarget, history, features, locked);
@@ -523,6 +553,122 @@ public static class DeckBuilder
 			return null;
 
 		return Decklist.Difference(deck, mutated) > 0 ? mutated : null;
+	}
+
+	/// <summary>
+	/// How much a card is worth KEEPING in this deck — card quality, fit with the rest of the list,
+	/// what this deck slot has learned about it, and how well its own demands are answered.
+	///
+	/// Extracted from `PickWeakest` so the slot operators cut by the same rule the general mutator
+	/// does. A second copy of this expression would drift, and the two would disagree about which
+	/// card is weakest while both looking correct.
+	/// </summary>
+	private static double CutScore(
+		string name,
+		Decklist deck,
+		ConstructedValues values,
+		DeckHistory? history,
+		PoolFeatures? features
+	) =>
+		values.CardDelta(name)
+		+ values.DeckFit(name, deck)
+		+ (history?.KeepScore(name, deck) ?? 0)
+		+ SupportScore(name, deck, features);
+
+	/// <summary>
+	/// **Try a different card for the SAME ROLE, at the same count.** "Bogardan Hellkite instead of
+	/// Hunted Dragon", not "a dragon instead of a ritual".
+	///
+	/// The slot is already the right unit for this — `CoreSlot.Cards` is by definition the set of
+	/// interchangeable cards that fill one role, so quality exploration is a swap inside that set
+	/// and needs no new vocabulary. `Satisfy` fills a slot best-first by card value and one playset
+	/// usually covers the floor, so a freshly built deck plays ONE of a role's options; this is what
+	/// lets the rest of the set be tried.
+	///
+	/// Slot composition is deliberately untouched — the count question belongs to
+	/// <see cref="Rebalance"/>, and an operator that moved both at once could not have either effect
+	/// attributed to it.
+	/// </summary>
+	private static Decklist? SwapWithinSlot(
+		Decklist deck,
+		DeckCore core,
+		ConstructedValues values,
+		Random rng,
+		DeckHistory? history,
+		PoolFeatures? features
+	)
+	{
+		var usable = core.Slots.Where(s => s.Cards.Count > 1 && s.CountIn(deck) > 0).ToList();
+		if (usable.Count == 0)
+			return null;
+
+		var slot = usable[rng.Next(usable.Count)];
+
+		var held = slot.Cards.Where(n => deck.CopiesOf(n) > 0).ToList();
+		var absent = slot.Cards.Where(n => deck.CopiesOf(n) == 0).ToList();
+		if (held.Count == 0 || absent.Count == 0)
+			return null;
+
+		// Weakest out, sampled in: cutting the worst is a judgement the value table can make, while
+		// choosing the replacement at random is what makes this exploration rather than a second
+		// reading of the same ranking.
+		var outgoing = held.OrderBy(n => CutScore(n, deck, values, history, features)).First();
+		var incoming = absent[rng.Next(absent.Count)];
+
+		var copies = Math.Min(deck.CopiesOf(outgoing), Decklist.MaxCopies);
+		return deck.WithCopies(outgoing, 0).WithCopies(incoming, copies);
+	}
+
+	/// <summary>
+	/// **Move one copy from one role to another** — the "is four Dragons better than six" operator.
+	///
+	/// Deck size is held constant, so this asks purely about COMPOSITION: more rituals against more
+	/// dragons, with everything else equal. Cutting only from a slot above its floor means the
+	/// identity cannot be eroded by it — `ProtectedIn` is not even consulted, because the operator
+	/// cannot propose an illegal move in the first place.
+	///
+	/// **`CoreSlot.TargetCopies` is not consulted here, and that is deliberate.** The cap is an
+	/// opening position for the FILL; once a deck exists, what it should hold is a question for
+	/// measurement, and a cap that also bound mutation would answer it by assumption.
+	/// </summary>
+	private static Decklist? Rebalance(
+		Decklist deck,
+		DeckCore core,
+		ConstructedValues values,
+		Random rng,
+		DeckHistory? history,
+		PoolFeatures? features
+	)
+	{
+		var donors = core.Slots.Where(s => s.CountIn(deck) > s.MinCopies).ToList();
+		var receivers = core
+			.Slots.Where(s => s.Cards.Any(n => deck.CopiesOf(n) < Decklist.MaxCopies))
+			.ToList();
+		if (donors.Count == 0 || receivers.Count == 0)
+			return null;
+
+		var from = donors[rng.Next(donors.Count)];
+		var to = receivers[rng.Next(receivers.Count)];
+		if (ReferenceEquals(from, to))
+			return null;
+
+		var outgoing = from
+			.Cards.Where(n => deck.CopiesOf(n) > 0)
+			.OrderBy(n => CutScore(n, deck, values, history, features))
+			.FirstOrDefault();
+		if (outgoing is null)
+			return null;
+
+		var incoming = to
+			.Cards.Where(n => deck.CopiesOf(n) < Decklist.MaxCopies)
+			.OrderByDescending(n => values.CardDelta(n))
+			.ThenBy(n => n, StringComparer.Ordinal)
+			.FirstOrDefault();
+		if (incoming is null)
+			return null;
+
+		return deck.WithCopies(outgoing, deck.CopiesOf(outgoing) - 1)
+			.WithCopies(incoming, deck.CopiesOf(incoming) + 1);
 	}
 
 	/// Remove k copies of one card, add k copies of another.
@@ -832,11 +978,7 @@ public static class DeckBuilder
 		// survived 2 096 games in a deck that way, and Thoughtcast held slots in three decks
 		// with no artifacts. Ancestral Recall meanwhile never got in, because the slots were
 		// locked by junk that could not be cut.
-		double Score(string n) =>
-			values.CardDelta(n)
-			+ values.DeckFit(n, deck)
-			+ (history?.KeepScore(n, deck) ?? 0)
-			+ SupportScore(n, deck, features);
+		double Score(string n) => CutScore(n, deck, values, history, features);
 
 		if (names.Count > 2)
 		{

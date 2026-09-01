@@ -1853,6 +1853,53 @@ every swap produces an illegal list, `Mutate` returns null, and "the deck did no
 about the mutator. `TheSameMutationsStillExploreInsideThePool` uses 24 and previously asserted that
 a core "leaves everything else free" — a claim the pool lock deliberately makes false.
 
+### Measured: an identity SURVIVES optimisation, and dissolves without a core
+
+`IdentityUnderOptimizationTests` hill climbs a requested deck for 20 generations against a fixed
+precon and asserts **cohesion**, not win rate. That framing is the point: a Dragonstorm deck that
+loses to Zoo is still a Dragonstorm deck, and a pile that wins more while holding no archetype is
+the failure the work exists to prevent. Win rate is the local gradient inside an identity; it is
+never the judge of whether the identity survived.
+
+```
+Dragonstorm         gen 0  66.7%  ->  gen 20  83.3%   cohesion 100% throughout
+Tendrils of Agony   gen 0  66.7%  ->  gen 20 100.0%   cohesion 100% throughout
+
+same 60 proposals, no core:  43/43 off-theme, Dragonstorm 0x
+```
+
+**Both decks improved by finding real cards.** Dragonstorm added Thundermaw Hellkite beside Hunted
+Dragon — **six Dragons, the historical number, reached by `Rebalance` rather than set by anyone**.
+Tendrils found 4x Past in Flames, which makes your graveyard castable and is exactly what a storm
+deck wants.
+
+Two operators exist only when a core is supplied, so mode 6's unconstrained slots behave exactly as
+before and every earlier measurement stays comparable:
+
+- **`SwapWithinSlot`** — a different card for the same role at the same count. `Satisfy` fills a
+  slot best-first and one playset usually covers the floor, so a freshly built deck plays ONE of a
+  role's options; this is what lets the rest be tried.
+- **`Rebalance`** — move one copy between roles, deck size fixed. The "is four Dragons better than
+  six" operator. It cuts only from a slot above its floor, so it cannot erode the identity —
+  `ProtectedIn` is not consulted because an illegal move cannot be proposed.
+
+`TargetCopies` is deliberately NOT consulted by mutation. The cap is an opening position for the
+fill; once a deck exists, what it should hold is a question for measurement, and a cap that also
+bound mutation would answer it by assumption.
+
+#### The control was wrong first, and the correction is a finding
+
+The negative control originally hill climbed without a core and expected the deck to dissolve. It
+**did not** — 100% on-theme for all 20 generations, Dragonstorm never cut. That is not the pool lock
+working, because the lock was off: `SupportScore` already pays `SupportBonus` for a card the deck
+answers and `DeadCardPenalty` against one it does not, so `Fill` prefers on-theme cards in a deck
+that is already on-theme. **The soft pressure and the hard lock were doing the same job and the
+fitness never had to choose.**
+
+The honest claim is narrower: unconstrained mutation *can* leave the archetype, which a random walk
+shows (43/43 off-theme) and a fitness-guided climb from a good deck does not. Read the pool lock as
+a **guarantee** rather than as the only thing keeping decks together.
+
 ### A slot carries a FLOOR and a CAP, and they answer different questions
 
 `CoreSlot.MinCopies` is the identity floor — never cut below, and what `ProtectedIn` locks.
