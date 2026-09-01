@@ -33,11 +33,14 @@ is now tooling; use it before proposing a scoring change.
 | **F7** in game | Save the live position to `user://scenarios/` |
 | Console **mode 5** | Load a scenario and have several strategies decide in it, side by side |
 | Console **mode 6** | Evolve a constructed metagame — AI-built decks, matchup matrix, and a constructed-vs-limited card value diff |
+| Console **mode 7** | Discover synergy engines in a pool — solitaire only, no battles. "Does this archetype assemble?", asked before "is it competitive?" |
 | **Space** in game | Pause the AI — do this before F6 so you can click through candidates |
 
-Full detail in `MtgSimulator/CLAUDE.md`. Two rules worth carrying: a scenario is **serialized
-state**, not a `GameStateSnapshot` report, and `StateEvaluator.Explain` is the implementation with
-`Evaluate` as the wrapper — never write a second copy of the sum for display.
+Full detail in `MtgSimulator/CLAUDE.md`. Three rules worth carrying: a scenario is **serialized
+state**, not a `GameStateSnapshot` report; `StateEvaluator.Explain` is the implementation with
+`Evaluate` as the wrapper — never write a second copy of the sum for display; and **goldfish speed
+is measured to be the wrong fitness for a combo deck** — dismantling Storm makes it goldfish
+*faster*. Use `EngineProbe`, which asks whether the payoff resolved with its support deployed.
 
 ## Platform
 

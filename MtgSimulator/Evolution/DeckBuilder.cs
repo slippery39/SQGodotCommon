@@ -143,13 +143,18 @@ public static class DeckBuilder
 	/// **NaN and 0 mean opposite things and both arrive here.** NaN is "asks nothing" — a burn
 	/// spell, a vanilla creature — which is neither rewarded nor punished. 0 is "asks and gets
 	/// nothing", which is the penalty case.
+	///
+	/// **Reads the WEAKEST demand, not the sum across them.** Dragonstorm asks for spells cast
+	/// this turn AND for a Dragon to find; summed, a storm deck answers the first so richly that
+	/// the total looks healthy and the card is seeded into a deck containing no Dragons, where it
+	/// resolves for nothing. A card is only as good as its starving demand.
 	/// </summary>
 	private static double SupportScore(string name, Decklist deck, PoolFeatures? features)
 	{
 		if (features is null)
 			return 0;
 
-		var satisfaction = features.Satisfaction(name, deck);
+		var satisfaction = features.WeakestSatisfaction(name, deck);
 		if (double.IsNaN(satisfaction))
 			return 0;
 
@@ -163,6 +168,21 @@ public static class DeckBuilder
 	/// cards answer is a nice interaction, not an archetype.
 	/// </summary>
 	public const int MinConceptSuppliers = 6;
+
+	/// <summary>
+	/// `CardDelta` points per unit of supply, inside concept seeding only.
+	///
+	/// Sized against `SupportBonus` (4.0) rather than tuned: one unit of supply should be worth
+	/// about as much as being well-supported, so a Lotus Bloom at supply 4 carries ~12 points and
+	/// comfortably outbids the ~5-15 point `CardDelta` spread between a good card and a mediocre
+	/// one — which is exactly the margin that was burying the rituals.
+	///
+	/// **This belongs to GENERATION and must never reach judgement.** It decides what gets
+	/// proposed; the measured win rate still decides what survives. Max-density goblins scored
+	/// 24.4% against the AI's half-built goblin deck at 55.0%, so a fitness that rewards synergy
+	/// density directly would rebuild that result on purpose.
+	/// </summary>
+	private const double ConceptSupplyWeight = 3.0;
 
 	/// <summary>
 	/// A deck built by COMMITTING to one concept and jamming it, rather than by hill climbing
@@ -229,14 +249,63 @@ public static class DeckBuilder
 		var lands = LandsForCurve(Math.Clamp(curve, MinCurveTarget, MaxCurveTarget), rng);
 		var deck = Decklist.Empty(name) with { Lands = lands };
 
+		// **The payoffs go in FIRST, and this is not a preference — without it the method breaks
+		// its own contract.** The jam loop below samples the whole candidate set, so when a demand
+		// has 400 suppliers and 4 askers the askers are essentially never drawn: a storm concept
+		// comes back as 36 cheap spells and no Tendrils, which is exactly the "24 artifacts and no
+		// Atog" failure ruled out three paragraphs above. Measured on the ALL pool, **17 of 39
+		// viable concepts produced a deck with no payoff in it at all**, and the broad demands —
+		// the ones whose payoff is rarest and therefore most worth finding — were systematically
+		// the ones that failed.
+		//
+		// Capped at a third of the spell slots so a concept with many askers still leaves room for
+		// the support that makes them work. Same softmax as the main loop, so two slots on one
+		// concept still differ.
+		var askers = candidates
+			.Where(c => features.DemandsOf(c.Name).Contains(chosen.Value))
+			.ToList();
+		var payoffRoom = (Decklist.DeckSize - lands) / 3;
+		while (deck.SpellCount < payoffRoom && askers.Count > 0)
+		{
+			// SupportScore, not raw value — a payoff with a SECOND demand this deck cannot answer
+			// is a blank. Dragonstorm asks for spells cast this turn and for a Dragon to find, and
+			// seeding payoffs on card value alone jammed it into a storm deck holding no Dragons,
+			// where the dead-card rule then correctly flagged it after the fact.
+			var askerScores = askers
+				.Select(c => values.CardDelta(c.Name) + SupportScore(c.Name, deck, features))
+				.ToArray();
+			var payoff = askers[DraftPickers.SampleSoftmax(askerScores, SeedTemperature, rng)];
+			deck = deck.WithCopies(
+				payoff.Name,
+				Math.Min(Decklist.MaxCopies, payoffRoom - deck.SpellCount)
+			);
+			askers.Remove(payoff);
+		}
+
 		// Jam it. Four copies at a time, best-first with enough noise that two slots on the same
 		// concept are not the same 36 cards — this is "shove in as many as will fit and find out
 		// which ones pull their weight", which is what the refinement loop is for.
-		var remaining = candidates.ToList();
+		//
+		// Cards already placed above are excluded rather than left in: `WithCopies` SETS a count,
+		// so re-picking a payoff would overwrite its four copies with however much room is left.
+		var remaining = candidates.Where(c => deck.CopiesOf(c.Name) == 0).ToList();
 		while (deck.SpellCount < Decklist.DeckSize - lands && remaining.Count > 0)
 		{
+			// **How much this card supplies THE CONCEPT, not just whether it qualifies.** Without
+			// this term the candidate set is correct and unsortable — every supplier scores the
+			// same through `SupportScore`, so `CardDelta` decides, and a 513-card reanimator pool
+			// gets sampled for its best creatures rather than its dozen discard outlets. Storm
+			// came out as the format's best draw spells with no rituals in it.
+			//
+			// `SupplyOf` carries the magnitude: net mana and cards for a storm demand, cards moved
+			// for a graveyard one, bodies produced for a token maker, and a flat 1 for a plain
+			// filter match — a Goblin is a Goblin.
 			var scores = remaining
-				.Select(c => values.CardDelta(c.Name) + SupportScore(c.Name, deck, features))
+				.Select(c =>
+					values.CardDelta(c.Name)
+					+ SupportScore(c.Name, deck, features)
+					+ ConceptSupplyWeight * features.SupplyOf(chosen.Value, c.Name)
+				)
 				.ToArray();
 			var pick = remaining[DraftPickers.SampleSoftmax(scores, SeedTemperature, rng)];
 			var room = Math.Min(Decklist.MaxCopies, Decklist.DeckSize - lands - deck.SpellCount);
@@ -393,10 +462,12 @@ public static class DeckBuilder
 		ConstructedValues values,
 		Random rng,
 		DeckHistory? history = null,
-		PoolFeatures? features = null
+		PoolFeatures? features = null,
+		DeckCore? core = null
 	)
 	{
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
+
 		var curveTarget = deck.AverageCost(
 			spells.ToDictionary(c => c.Name, StringComparer.Ordinal)
 		);
@@ -407,16 +478,27 @@ public static class DeckBuilder
 		// 0 partners is "just put a good card in this slot", 1 is a pair, 2 is a triple. A
 		// mutator that only ever proposes packages narrows the field to whatever the pair table
 		// already believes, and pair evidence is the thinnest thing in the model.
+		// Cards holding a core slot at its floor, computed once. Every operator cuts through
+		// `PickWeakest`, so handing it down is the whole enforcement.
+		var locked = core?.ProtectedIn(deck);
+
 		var roll = rng.Next(10);
 		var mutated =
-			roll < 5 ? Swap(deck, spells, values, rng, curveTarget, history, features)
-			: roll < 7 ? Recount(deck, spells, values, rng, curveTarget, history, features)
-			: roll < 9
-				? Package(deck, spells, values, rng, history, partners: rng.Next(3), features)
-			: AdjustLands(deck, spells, values, rng, curveTarget, history, features);
+			roll < 5 ? Swap(deck, spells, values, rng, curveTarget, history, features, locked)
+			: roll < 7 ? Recount(deck, spells, values, rng, curveTarget, history, features, locked)
+			: roll < 9 ? Package(deck, spells, values, rng, history, rng.Next(3), features, locked)
+			: AdjustLands(deck, spells, values, rng, curveTarget, history, features, locked);
 
 		if (mutated is null || mutated.Validate() is not null)
 			return null;
+
+		// **Backstop, and it should almost never fire.** Protection covers cutting; this covers
+		// the paths it cannot reach — `Recount` lowering copies of an unprotected card that was
+		// nonetheless carrying a slot's surplus. Cheap, and it makes the invariant true rather
+		// than merely likely.
+		if (core is not null && !core.Holds(mutated))
+			return null;
+
 		return Decklist.Difference(deck, mutated) > 0 ? mutated : null;
 	}
 
@@ -428,10 +510,18 @@ public static class DeckBuilder
 		Random rng,
 		double curveTarget,
 		DeckHistory? history,
-		PoolFeatures? features
+		PoolFeatures? features,
+		IReadOnlySet<string>? protectedNames = null
 	)
 	{
-		var outgoing = PickWeakest(deck, values, rng, history, features: features);
+		var outgoing = PickWeakest(
+			deck,
+			values,
+			rng,
+			history,
+			features: features,
+			protectedNames: protectedNames
+		);
 		if (outgoing is null)
 			return null;
 
@@ -448,7 +538,8 @@ public static class DeckBuilder
 		Random rng,
 		double curveTarget,
 		DeckHistory? history,
-		PoolFeatures? features
+		PoolFeatures? features,
+		IReadOnlySet<string>? protectedNames = null
 	)
 	{
 		if (deck.DistinctSpells < 2)
@@ -482,7 +573,8 @@ public static class DeckBuilder
 			rng,
 			history,
 			exclude: target,
-			features: features
+			features: features,
+			protectedNames: protectedNames
 		);
 		return donor is null ? null : adjusted.WithCopies(donor, adjusted.CopiesOf(donor) - 1);
 	}
@@ -516,7 +608,8 @@ public static class DeckBuilder
 		Random rng,
 		DeckHistory? history,
 		int partners,
-		PoolFeatures? features
+		PoolFeatures? features,
+		IReadOnlySet<string>? protectedNames = null
 	)
 	{
 		var outside = spells.Where(c => deck.CopiesOf(c.Name) == 0).ToList();
@@ -555,7 +648,14 @@ public static class DeckBuilder
 		{
 			if (guard++ > Decklist.DeckSize)
 				return null;
-			var cut = PickWeakest(trimmed, values, rng, history, features: features);
+			var cut = PickWeakest(
+				trimmed,
+				values,
+				rng,
+				history,
+				features: features,
+				protectedNames: protectedNames
+			);
 			if (cut is null)
 				return null;
 			trimmed = trimmed.WithCopies(cut, trimmed.CopiesOf(cut) - 1);
@@ -587,7 +687,8 @@ public static class DeckBuilder
 		Random rng,
 		double curveTarget,
 		DeckHistory? history,
-		PoolFeatures? features
+		PoolFeatures? features,
+		IReadOnlySet<string>? protectedNames = null
 	)
 	{
 		var up = rng.Next(2) == 0;
@@ -608,7 +709,14 @@ public static class DeckBuilder
 				features
 			);
 
-		var donor = PickWeakest(adjusted, values, rng, history, features: features);
+		var donor = PickWeakest(
+			adjusted,
+			values,
+			rng,
+			history,
+			features: features,
+			protectedNames: protectedNames
+		);
 		return donor is null ? null : adjusted.WithCopies(donor, adjusted.CopiesOf(donor) - 1);
 	}
 
@@ -673,11 +781,16 @@ public static class DeckBuilder
 		Random rng,
 		DeckHistory? history = null,
 		string? exclude = null,
-		PoolFeatures? features = null
+		PoolFeatures? features = null,
+		IReadOnlySet<string>? protectedNames = null
 	)
 	{
+		// Cards holding a `DeckCore` slot at its floor are not candidates. Filtering here rather
+		// than rejecting the finished mutant is what makes proposals legal by construction — see
+		// DeckCore.ProtectedIn for why the rejecting version freezes a deck solid.
 		var names = deck
 			.Spells.Keys.Where(n => !string.Equals(n, exclude, StringComparison.Ordinal))
+			.Where(n => protectedNames is null || !protectedNames.Contains(n))
 			.ToList();
 		if (names.Count == 0)
 			return null;
@@ -732,6 +845,18 @@ public static class DeckBuilder
 	/// 17-in-53 (32%) at 20 lands and 23-in-53 (43%) at 26. See Draft.DefaultMaxSpells for the
 	/// same argument measured in limited.
 	/// </summary>
+	/// <summary>
+	/// Land count for a deck defined by a concept rather than a curve band — the concept's own
+	/// average cost, clamped into the target range. Exactly what <see cref="SeedConcept"/> does,
+	/// factored out so <see cref="EngineDiscovery"/> cannot drift into a second land rule.
+	/// </summary>
+	internal static int LandsForConcept(IEnumerable<Card> cards, Random rng)
+	{
+		var list = cards.ToList();
+		var curve = list.Count == 0 ? MinCurveTarget : list.Average(c => c.ManaCost);
+		return LandsForCurve(Math.Clamp(curve, MinCurveTarget, MaxCurveTarget), rng);
+	}
+
 	private static int LandsForCurve(double curveTarget, Random rng)
 	{
 		var scaled =

@@ -79,6 +79,18 @@ public record ResolveSpellAction : GameAction
 		// EndResolutionScopeAction always last — clears SuppressPostProcessor
 		spawnedActions = spawnedActions.Add(new EndResolutionScopeAction());
 
-		return new ActionResult(state.SpawnActions(spawnedActions));
+		// **SpellResolvedEvent was declared and emitted by nobody**, so no instant or sorcery in
+		// the game had ever announced that it resolved. Found by an execution metric that reads
+		// the log: every permanent payoff registered and every spell payoff read zero, which looks
+		// exactly like a broken metric rather than a missing event.
+		//
+		// Deliberately on ActionResult.Events ONLY, not PendingGameEvents. Nothing triggers on
+		// this today, and staging it would put an event on the trigger feed for every spell
+		// resolution in the game for no benefit. **If a card ever wants to trigger on it, it has
+		// to go into PendingGameEvents too** — see "Events That Must Reach PendingGameEvents",
+		// which this is the sixth instance of.
+		return new ActionResult(state.SpawnActions(spawnedActions)).WithEvent(
+			new SpellResolvedEvent { CardId = CardId }
+		);
 	}
 }

@@ -18,9 +18,10 @@ Console.WriteLine("  3 - Draft");
 Console.WriteLine("  4 - Train draft pickers");
 Console.WriteLine("  5 - Inspect a saved scenario");
 Console.WriteLine("  6 - Evolve a constructed metagame");
+Console.WriteLine("  7 - Discover synergy engines in a pool (solitaire only, no battles)");
 Console.Write("Mode (default 1): ");
 var modeInput = Console.ReadLine()?.Trim() ?? "";
-var mode = modeInput is "2" or "3" or "4" or "5" or "6" ? int.Parse(modeInput) : 1;
+var mode = modeInput is "2" or "3" or "4" or "5" or "6" or "7" ? int.Parse(modeInput) : 1;
 Console.WriteLine();
 
 if (mode == 5)
@@ -32,11 +33,11 @@ if (mode == 5)
 // Depth 2 rather than 3: this mode plays far more games than any other, and every one of them
 // runs two AIs of equal strength, which is what the measurement requires — not that they be
 // strong. Raise it if a deck's line looks unplayed rather than unplayable.
-Console.Write(mode == 6 ? "AI depth? (default 2): " : "AI depth? (default 3): ");
+Console.Write(mode is 6 or 7 ? "AI depth? (default 2): " : "AI depth? (default 3): ");
 var depthInput = Console.ReadLine()?.Trim() ?? "";
 var aiDepth =
 	int.TryParse(depthInput, out var d) && d > 0 ? d
-	: mode == 6 ? 2
+	: mode is 6 or 7 ? 2
 	: 3;
 
 if (mode == 1)
@@ -290,6 +291,19 @@ else if (mode == 6)
 	var gauntletInput = Console.ReadLine()?.Trim() ?? "";
 	var gauntletGames = int.TryParse(gauntletInput, out var gg) && gg >= 0 ? gg : 0;
 
+	// Phase two. Seeds the top-LIFT archetypes from a mode 7 run into the field and holds each to
+	// its card POOL — not to a decklist, so the deck can still pick up removal and metagame
+	// answers without dissolving into the midrange pile every unconstrained run converges on.
+	// Engine slots are never culled: mode 7 already judged them on whether they ASSEMBLE, and a
+	// win-rate floor would delete exactly the decks this exists to keep.
+	Console.Write("Engine file from mode 7? (blank = none, e.g. sim_results/engines_all_*.json): ");
+	var enginesPath = Console.ReadLine()?.Trim();
+	if (!string.IsNullOrWhiteSpace(enginesPath) && !File.Exists(enginesPath))
+	{
+		Console.WriteLine($"  WARNING: {enginesPath} does not exist — running without engines.");
+		enginesPath = null;
+	}
+
 	new MetagameEvolver(
 		evolveSet,
 		deckCount: deckCount,
@@ -306,8 +320,56 @@ else if (mode == 6)
 		cullEnabled: cullDecks,
 		preSimDecks: presimDecks,
 		conceptSlots: conceptSlots,
-		gauntletGames: gauntletGames
+		gauntletGames: gauntletGames,
+		enginesPath: string.IsNullOrWhiteSpace(enginesPath) ? null : enginesPath
 	).Run();
+}
+else if (mode == 7)
+{
+	// Phase one of the synergy work: which engines does this pool support, and do they assemble?
+	// No battles at all — a half-built combo deck loses every game, so a win rate cannot answer
+	// this question and asking it anyway is what makes mode 6 converge on midrange piles.
+	var engineSet = ReadSet(includeCombined: true);
+
+	Console.Write("Solitaire games per engine? (default 10): ");
+	var engineGamesInput = Console.ReadLine()?.Trim() ?? "";
+	var engineGames = int.TryParse(engineGamesInput, out var eg) && eg > 0 ? eg : 10;
+
+	// Ranking cutoff for the report only. Every viable concept is probed either way — this is
+	// how many get their card lists printed and nothing more.
+	Console.Write("How many engines to highlight? (default 8): ");
+	var keepInput = Console.ReadLine()?.Trim() ?? "";
+	var engineKeep = int.TryParse(keepInput, out var ek) && ek > 0 ? ek : 8;
+
+	// Storm runs 12 lands, Zoo and Affinity 14. The 20 floor makes every one of them illegal,
+	// so an engine probed at the default is being asked to assemble out of a deck it cannot be.
+	if (Decklist.MinLands > 14)
+		Console.WriteLine(
+			$"  NOTE  MinLands is {Decklist.MinLands}. Set MTG_MIN_LANDS=12 — the hand-built "
+				+ "combo decks all run below this floor and cannot be reproduced above it."
+		);
+
+	var report = EngineDiscovery.Run(
+		engineSet,
+		gamesPerEngine: engineGames,
+		seed: ReadSeed() ?? new Random().Next(),
+		aiDepth: aiDepth
+	);
+
+	EngineDiscovery.Print(report, engineKeep);
+
+	var enginePath = EngineReportStore.PathFor(engineSet.Code);
+	EngineReportStore.Save(report, enginePath);
+
+	// Read it straight back. This file exists to be loaded by the evolver later, and a
+	// `Decklist`'s `ImmutableSortedDictionary` is exactly the shape that round-trips fine until
+	// it does not — better to fail here than in a run that has already spent an hour.
+	var reloaded = EngineReportStore.Load(enginePath);
+	Console.WriteLine(
+		reloaded?.Engines.Count == report.Engines.Count
+			? $"Saved {report.Engines.Count} engines to {enginePath}"
+			: $"  WARNING  {enginePath} did not round-trip — the evolver will not be able to read it"
+	);
 }
 else
 {

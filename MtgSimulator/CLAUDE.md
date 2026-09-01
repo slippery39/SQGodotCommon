@@ -13,9 +13,12 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | `Evolution/Decklist.cs` | `Decklist` (name → copies + land count), its invariants (60 cards, max 4, 20-26 lands), `Difference`, `Materialize`; `MetagameResult` + `DecklistStore` |
 | `Evolution/ConstructedValues.cs` | Card/pair values learned from constructed games, shrunk toward the draft model as prior; `Movers`/`SpearmanAgainstDraft` diff the two formats |
 | `Evolution/DeckBuilder.cs` | Seeding (anchor + synergy kernel + curve target) and the three mutation operators |
-| `Evolution/PoolFeatures.cs` | What each card ASKS of your deck and which cards ANSWER, read off the cards by reflection — no mechanic-to-meaning table. `Satisfaction`, `DeadCards` |
+| `Evolution/PoolFeatures.cs` | What each card ASKS of your deck and which cards ANSWER, read off the cards by reflection — no mechanic-to-meaning table. `Satisfaction`, `DeadCards`, `SpellsCastDemand` |
+| `Evolution/Goldfish.cs` | Solitaire against an inert opponent. Reports turns-to-kill (**descriptive only** — measured as the wrong fitness) and, given an `EngineProbe`, the assembly reading |
+| `Evolution/EngineProbe.cs` | **Did the payoff resolve with its support deployed?** Payoff/enabler sets out of `PoolFeatures`, read off one game's event log in a single pass |
+| `Evolution/EngineDiscovery.cs` | Console mode 7 — probe every concept in a pool, rank by whether the engine assembles, save `sim_results/engines_<set>_<stamp>.json` |
 | `Evolution/ConstructedGameSetup.cs` | Two decklists → pre-begin `GameState`; the constructed sibling of `DraftGameSetup` |
-| `Evolution/MetagameEvolver.cs` | Console mode 6 — the evolution loop, paired evaluation, culling, and the report |
+| `Evolution/MetagameEvolver.cs` | Console mode 6 — the evolution loop, paired evaluation, culling, and the report. `enginesPath` seeds discovered archetypes as pool-locked, cull-exempt slots |
 | `IAiStrategy.cs` | Interface: `SelectAction` + `ResolveChoice` — all AI implementations conform to this |
 | `RandomAiStrategy.cs` | Baseline AI — picks a random legal action; used as playout policy |
 | `DepthLimitedAiStrategy.cs` | Greedy depth-limited DFS AI — retained for comparison; not the default |
@@ -1012,6 +1015,849 @@ The opposite failure mode is real too: with all seats on one model, decks can co
 Measured results on the 600-draft model (16 800 games, 33 600 deck-games): Trained **82.2%** vs Curve ~30% vs Random ~35% over 288 evaluation games. Note that `Curve` scores *below* `Random` — its stats-per-mana metric systematically over-drafts big vanilla creatures (Craw Wurm, Mahamoti Djinn rank lowest in the learned data) over efficient spells and card advantage.
 
 Caveat: the model is trained and evaluated on the same card pool. It learns card quality within that pool; it does not generalise to new cards.
+
+## Engine Discovery (mode 7)
+
+**Phase one of the synergy work: what engines does this pool support, and do they assemble?** No
+battles, no win rate, no evolution — every viable concept gets a deck built for it by
+`DeckBuilder.SeedConcept` and plays solitaire games, and `EngineProbe` reports whether the payoff
+went off with its support already deployed. Output is a ranked report you READ, plus
+`sim_results/engines_<set>_<stamp>.json` for the evolver to seed from.
+
+**The split exists because win rate cannot judge an engine that is not built yet.** A
+half-assembled storm deck loses every game, so hill climbing on win rate walks away from it before
+it is finished — which is what every run of mode 6 has done, *correctly*, to the wrong question.
+Asking "does it assemble" first and "is it competitive" second is the only ordering where the
+first question has an answer.
+
+```bash
+export MTG_MIN_LANDS=12
+printf '7\n\n4\n10\n8\nengineseed\n' \
+  | dotnet run --project MtgSimulator.Console -c Release
+```
+
+**`export` it on its own line — `MTG_MIN_LANDS=12 printf ... | dotnet run` sets the variable for
+`printf` and NOT for `dotnet run`.** That form was documented here and in the handoff for a whole
+session, and it silently runs the discovery at the 20-land default. The tell is in the output: the
+console prints `NOTE MinLands is 20` when the floor is above 14, and every number in a run carrying
+that line is measuring decks the archetypes cannot legally be.
+
+Fields: mode, AI depth (blank = 2), set index (read the menu, it moves), solitaire games per
+engine, engines to highlight, seed. **Set `MTG_MIN_LANDS=12`** — Storm runs 12 lands, Zoo and
+Affinity 14, so at the 20 default every one of them is illegal and an engine is being asked to
+assemble out of a deck it cannot be. Mode 7 prints a NOTE when the floor is above 14.
+
+### A candidate is a payoff CARD and its whole demand conjunction, not one demand
+
+`EngineCandidate` used to be keyed on a single `DemandIndex`, and that unit is one level too low.
+**Dragonstorm asks two things at once** — `SpellsCastDemand` from `HasStorm`, and a Dragon filter
+from its `SelectCardFromLibraryAction` — so a demand-keyed loop probes "spells cast" and "Dragon"
+as two unrelated concepts, builds a deck for each, and neither of them is Dragonstorm. The card was
+structurally unable to be a candidate.
+
+**Nothing had to be discovered to fix this. `PoolFeatures.DemandsOf("Dragonstorm")` has returned
+both demands since the card was written; what was missing is the JOIN.** `DeckCore.For(features,
+payoff)` performs it: one payoff slot, then one support slot per informative demand.
+
+It also explains the standing asymmetry in what the search finds. A tribal deck is ONE demand with
+a large supplier set, which random mutation stumbles into; an N-card combo is a conjunction of
+narrow demands, which it never will. A conjunction has to be constructed, not searched.
+
+Three rules in `DeckCore.For`, each with a reason:
+
+- **The payoff slot takes cards whose demands are a SUBSET of the anchor's.** Redundancy without
+  naming anything: Tendrils belongs in a Dragonstorm core (it needs strictly less), Dragonstorm
+  does not belong in a Tendrils core (that core promises no Dragon, so it would resolve for
+  nothing — the dead-card rule).
+- **A payoff never supplies its own slot.** Slots are counted independently, so a card in two of
+  them satisfies both off one copy. It is also what gives tribal the right shape: 4 lords in the
+  payoff slot and N *other* goblins in the support slot.
+- **A thin slot CLAMPS rather than rejecting the core.** A count must not get to decide which
+  archetypes exist.
+
+#### Slot minimums are derived, and one family is still wrong
+
+`MinFor` replaced a flat 8 with two rules. **A demand carrying its own number uses it** —
+`SpellsCastDemand.Minimum` is harvested off `HasStorm`, and "m spells cast in ONE turn" is a density
+question (m−1 others in hand simultaneously), not a draw-one question. **Everything else is
+consistency**: the fewest copies giving ≥1 in hand by `TargetTurn` (5) with `TargetProbability`
+(0.90), hypergeometric over the SPELL population.
+
+**An opening hand is 7 cards with 3 lands by rule, so it holds only FOUR spells.** Counting seven
+overstates every deck's consistency and understates every count here.
+
+Enabler slots are held to `TargetTurn - 1`, because an outlet has to have resolved *before* the
+payoff is worth casting. On ALL that gives target 10x against enabler 11x — a small gap, but derived
+rather than invented.
+
+**A FETCHED demand is not counted as though it must be drawn**, and getting this right took two
+wrong answers worth recording.
+
+Dragonstorm searches its Dragons out of the library, so the consistency rule — "how many copies to
+DRAW one by turn 5" — asks a question the deck never has to answer. It produced **11x of the 7
+Dragons in the pool**, a deck nobody would build, and was a regression against the old flat 8 for
+every tutor.
+
+**"It only needs one to exist" is also wrong, and the reason is the interesting part.** Storm
+resolves the spell `Math.Max(SpellsCastThisTurn, 1)` times and Dragonstorm fetches **one Dragon per
+copy**, so a storm count of 4 wants four Dragons left in the library. The historical Standard list
+ran **six** — 4 Bogardan Hellkite + 2 Hunted Dragon — enough to turn a realistic storm count into
+lethal, plus redundancy for copies drawn dead.
+
+`CopiesThatSurvive(need, …)` implements it: the fewest copies leaving at least `need` UNDRAWN at
+`TargetProbability`, where `need` comes from the payoff's OTHER demand. **Two demands on one card
+that are not independent, and this is the only place the model expresses that.** Dragonstorm's
+Dragon slot went 11x → **3x**.
+
+**The floor is deliberately below the historical six, and that is the right relationship.** Deriving
+6 is out of reach — it comes from wanting lethal, which is not in the card data. A core is a floor
+with slack: `ProtectedIn` locks a slot only AT its minimum, so tuning stays free to find six. A floor
+of 3 permits the real list; a floor of 11 forces a fake one. **When a derived count looks low, check
+whether it is a floor before treating it as a bug.**
+
+The signal for "fetched" is the recorded origin — `OriginOf` names the action a demand came from
+(`SelectCardFromLibraryAction.Subtype`), marked `ponytail:` since a bool recorded at harvest time
+would be sturdier. `DemandZone` will NOT serve: a bare subtype spec matches in every zone of the
+probe fixture and returns null for exactly this demand.
+
+**Candidates are deduped on the payoff slot, and the dedupe is load-bearing.** On ALL, 783 spells
+give 203 cores but only **50 distinct** — ~64 payoffs that merely "target a creature" produce the
+byte-identical core, and probing each is 64 runs of one experiment.
+
+The deck built for a candidate is **the core plus good stuff**, which also makes LIFT cleaner than
+it was: the control is the same payoffs plus the same good stuff, so the only difference between
+the arms is the core's support slots. Depths are consequently much LOWER than the `SeedConcept`
+numbers recorded below — that method jammed the whole deck with concept cards, this one guarantees
+8 — so read `cover`, not `depth`, and do not compare the two eras' depth columns.
+
+**Still open: broad cores crowd the table.** Concepts with 450+ suppliers ("a creature entered")
+still generate cores, and a slot of 8 cards drawn from 465 constrains nothing. LIFT correctly rates
+them ~0.0, but they occupy the report.
+
+### LEVERAGE — what a payoff is worth with its demands answered
+
+`CardValueSandbox.MeasureLeverage` is a second arm on the existing sandbox: the same card cast into
+the same fixture twice, once bare and once with the demand's best suppliers stocked. **Both arms
+subtract their own control**, so the extra permanents cancel and what is left is the card's own
+gain from being supported. `LeverageSweepTests` drives it — **11s for all 783 cards**, so this is
+cheap enough to run before any discovery session.
+
+The stocking puts suppliers into **battlefield, graveyard, library and hand at once**, deliberately:
+a subtype filter reads the battlefield, a reanimation spec the graveyard, Dragonstorm's fetch the
+library, a rummage cost the hand — and dispatching per demand kind is the mechanic-to-meaning table
+this project refuses to write. `SpellsCastDemand` is the one exception, set on the counter, the same
+exception `PoolFeatures` already makes.
+
+Do not record the values here — run the sweep and read them. What is worth carrying is the **shape
+of the answer, which is not what was expected**:
+
+```
+payoff                     bare  supplied  LEVERAGE
+Drogskol Captain          11.67    105.67    +94.00     <- tribal lord
+Stromkirk Captain          9.00     77.67    +68.67     <- tribal lord
+Krenko, Mob Boss          12.00     50.80    +38.80     <- tribal lord
+Goblin Lackey              6.00     40.43    +34.43     <- tribal lord
+Dragonstorm                0.00     32.03    +32.03     <- combo payoff
+Archangel of Thune        64.31     15.90    -48.41     <- fixture artifact
+```
+
+**Raw leverage ranks TRIBAL above COMBO, which is backwards for the problem it was built for.** It
+is measuring two different things under one number:
+
+| signature | reads as | example |
+|---|---|---|
+| the card is a BLANK without support | **bare ≈ 0**, supplied high | Dragonstorm, Zombie Apocalypse, Spectral Tide |
+| the card SCALES with support | bare high, supplied higher | every lord in the pool |
+
+Both are real synergy. Only the first is the combo/engine class, and `bare` is what separates them
+— Dragonstorm is the only card in the top ten reading exactly 0.00 without its demands. **Sort or
+filter on `bare`, not on leverage alone**, and do not collapse them into one score on the strength
+of one run; that is the retune-on-intuition failure this file records three times already.
+
+**Large negatives at the bottom are a known fixture artifact, not anti-synergy.** Stocking two
+copies into four zones dilutes a hand and a library, and auras and equipment (Archangel of Thune,
+Angelic Destiny, Mark of the Vampire) price worse for it. Read the bottom of the table as "the
+stocking is wrong for this card", not as a finding.
+
+**Mode 7 now ranks BLANK-FIRST** — `EngineCandidate.BlankFirstKey`, lowest `bare` (clamped at 0),
+then most gained, with unmeasured candidates sorted last so a failed measurement cannot masquerade
+as a blank. LIFT is kept as a column. Measured at `MTG_MIN_LANDS=12`, 8 games:
+
+```
+concept                supp  assem  LIFT  kill    bare   supp'd
+Dragonstorm              91    62%  +1.5   6.0    0.00    32.03
+Zombie Apocalypse        79     0%   0.0   6.0    0.00    27.20
+Entomb                  492    62%   0.0   5.0    0.00     0.00
+Flameshadow Conjuring   453    50%   0.0   5.0    1.50    24.50
+Goblin Lackey            95    50%  +0.5   5.0    6.00    40.43
+Drogskol Captain         53    25%   0.0   5.0   11.67   105.67   <- was rank 1 under leverage
+```
+
+Two things to read off it rather than rediscover:
+
+- **`assem` and `bare` answer different questions and the pair is the diagnosis.** Zombie
+  Apocalypse is a perfect blank that gains 27 when supported and assembles **0%** of games — a real
+  payoff the deck cannot deploy, which is a mana or consistency problem, not a synergy one.
+  Dragonstorm is the same shape at 62%.
+- **A zero-leverage blank outranks a high-leverage near-blank** (Entomb 0.00/0.00 above Flameshadow
+  1.50/24.50). That is the strict lexicographic sort doing what was asked; `bare` is primary by
+  design. Fix it by reading the `supp'd` column, not by inventing a combined score on one run.
+
+### Speed was the wrong fitness, and execution is the replacement
+
+`Goldfish` measures turns-to-kill against an inert opponent, and it was built to be the combo
+fitness. **Measured on `ComboGradientTest`, the gradient points the wrong way**: dismantling Storm
+made it goldfish *faster* (5.0 → 4.0). Against an opponent that does nothing the quickest kill is
+cheap creatures attacking; a combo deck has to assemble first, so the instrument rewarded exactly
+what the search already converges on unaided. Storm's real edge is that Tendrils damage cannot be
+attacked, blocked or answered — **the goldfish removes interaction, and interaction-immunity is
+the property that matters**, so it is blind to it by construction.
+
+`EngineProbe` measures execution instead: *the payoff resolved, and when it did, the deck had
+already deployed the cards that make it worth resolving*. A pile of the format's best individual
+cards contains no payoff for any distinctive demand, so it reads **zero** here where it read best
+on the goldfish. `Goldfish` is retained as a description of a deck, never as a fitness.
+
+**Measured on `ComboGradientTest`, ALL pool, `MTG_MIN_LANDS=12`, 10 games per step.** `assem` is
+the share of games where a payoff resolved with support down; `depth` is the median number of
+enablers already deployed:
+
+| cards swapped for good stuff | Storm assem/depth | Reanimator | Affinity | goldfish (all three) |
+|---|---|---|---|---|
+| 0 (assembled) | **90% / 12.5** | **80% / 3.5** | **100% / 6.5** | 4.0–5.0 |
+| 4 | 0% / 0.0 | 60% / 3.0 | 100% / 6.0 | 4.0–7.0 |
+| 8 | 0% / 0.0 | 60% / 2.5 | 100% / 6.5 | 4.0–6.0 |
+| 12 | 0% / 0.0 | 20% / 0.0 | 100% / 5.0 | 4.5–5.0 |
+| 16 | 0% / 0.0 | 0% / 0.0 | 100% / 3.5 | 4.0–5.5 |
+| 24 | — | — | 50% / 1.0 | 4.0–5.0 |
+| 32+ (pure pile) | 0% / 0.0 | 0% / 0.0 | 0% / 0.0 | 4.0–5.0 |
+
+**The goldfish column has no trend at all** across three decks and thirty-odd steps — that is the
+blindness, measured, not argued. The engine column falls to zero on all three.
+
+**Storm falls off a CLIFF at four cards swapped, and that is a finding rather than a defect.** The
+interpolation cuts in `PickWeakest`'s ordering — worst individual card first — and Storm's payoffs
+are among the worst-rated cards in the format, so the very first cut takes them. **No local search
+on any fitness can walk back to Storm**; its payoff has to be seeded and then protected, which is
+exactly what the phase-two core lock is for. Reanimator and Affinity have real gradients and would
+be findable by hill climbing if anything measured them.
+
+Three rules inside `EngineProbe.Read`, each of which is silent when wrong and each pinned by a
+paired negative case in `EngineProbeTests`:
+
+- **Deployment is read generically, execution is not.** Any event carrying a `CardId` names that
+  card happening — being milled or discarded is a perfectly good way to deploy a reanimation
+  target — and that is the same positional reflection rule `PoolFeatures` harvests demands with,
+  so a new event works the day it is emitted. Execution cannot be generic: a Tendrils pitched to
+  Faithless Looting emits a `CardDiscardedEvent` carrying its id, and counting that as "the payoff
+  went off" scores a deck for throwing its combo away. `IsExecution` is a closed three-event list
+  (resolved, creature entered, permanent entered) and the comment says why.
+- **Enablers are distinct card INSTANCES.** One ritual cast, resolved and buried is three events
+  and one enabler.
+- **A payoff is credited before it is deployed**, so a card that is both — a Goblin lord asks for
+  Goblins and is one — never counts as its own support. Another copy landing earlier does, which
+  is correct. Same rule as `PoolFeatures.Satisfaction`.
+
+`Reading` carries `Depth` and `Payoffs` separately on purpose. Depth 0 with payoffs 0 means the
+deck never cast the card it is built around; depth 0 with payoffs 3 means it cast it into an empty
+board three times. Those are different failures, and **collapsing them into one number is how the
+goldfish managed to look correct**.
+
+### A targeting spec IS a demand when it aims at your own zones
+
+**Reanimator was a payoff for nothing.** `WithReanimate` builds
+`SingleTarget(IsCreatureInOwnGraveyardSpecification)`, so its demand lives on
+`TargetingStrategy.Specification` — the one property the harvest rule excluded outright, on the
+grounds that "what am I aiming at" is not "what does my deck need". That is right for Lightning
+Bolt, whose "any creature" is a question about the opponent's board. It is exactly backwards for
+Reanimate, a card that does nothing except ask your deck for creatures in your graveyard.
+
+The two are separated **empirically, not by a type list**: a spec is a demand about your deck when
+`GetCandidateIds` returns nothing on a battlefield. The battlefield is the shared board; hand,
+graveyard and library are where your own cards live. `ZoneSpecification` already implements this
+and composites already delegate to it, so `IsDeckScoped` is one loop and no new vocabulary. Empty
+means no — a spec that selects nothing in a fixture holding the whole pool cannot be shown to be
+about your deck, and adding fewer demands is the safe direction.
+
+Unlocked **6 new concepts** on ALL, all of them archetypes the mode could not previously express:
+instants-in-graveyard (100% assembly), cards-in-hand, creature-in-own-graveyard,
+creature-in-any-graveyard. This is the third demand found living somewhere the harvest did not
+look; the first two are storm and cast restrictions below.
+
+### Storm was structurally undiscoverable, and now is not
+
+`PoolFeatures` harvests a card's own filter objects, and storm has none — it is a `bool` that
+`ResolveSpellAction` multiplies by `MtgGame.SpellsCastThisTurn`. Same for
+`RequiresSpellsCastThisTurnRestriction`, whose question lives in `CanCast`. So the strongest deck
+in the precon round-robin (Traditional Storm, 63.1%) could not be found by a mode built to find
+archetypes.
+
+`PoolFeatures.SpellsCastDemand` is **the one demand in that file that is not the card's own filter
+object.** Harvested from `HasStorm` (minimum 2 — a storm spell counts itself, so a minimum of 1 is
+satisfied by casting nothing) and from the restriction's type. Supplied by every non-land pool card
+costing ≤ 2, because there is nothing to evaluate it against a fixture with: "a spell was cast" is
+an event in a turn, not a property of a card in a zone.
+
+It is **skipped by `ProbeCostDemands`**, and that guard is load-bearing. Its supplier set would
+otherwise pick a representative that is whichever qualifying card sorts first — and if that is an
+artifact, four copies on the battlefield move every affinity card's cost and the probe reports the
+entire artifact archetype as demanding "cast spells first". The cost probe reads a BOARD; this
+demand is about a turn.
+
+#### Supply is NET MANA, and the first attempt at it was pointed the wrong way
+
+Supply was "costs 2 or less" for one run, and it produced a storm deck of **Delver of Secrets,
+Llanowar Elves, Imposing Sovereign and Skyknight Vanguard** — cheap *creatures*, which are the
+opposite of a storm enabler. A two-mana creature costs you two mana to add one to the count. **The
+count is not the resource, the mana is.**
+
+`ProbeManaProfit` measures it: deploy each card into a fixture and read the controller's
+`CurrentMana` change minus what it cost. Nothing names an action type, so a mana source written
+tomorrow is found the day it exists. Two arms, on the split the engine already makes — a permanent
+is put onto the battlefield **and a turn is started**, because every mana rock and dork in this
+project produces from an upkeep trigger and a probe without the turn scores all of them zero; a
+non-permanent has its effects resolved directly.
+
+| | suppliers on ALL (783 cards) | resulting deck | rank |
+|---|---|---|---|
+| cost ≤ 2 | **335** | cheap creatures, no rituals | 21st of 39 |
+| net mana ≥ 0 | **16** | Lotus Bloom, Mox Pearl, Seething Song, Silt Ritual, Ornithopter Shard + 4 storm payoffs, 13 lands | **1st of 43, 100% assembly, depth 9.5** |
+
+**Cantrips come out negative and are excluded, deliberately.** Preordain genuinely does advance a
+storm turn by replacing itself, but counting "draws a card" as mana needs a conversion rate between
+two resources — a scoring decision, and nothing in this file scores anything. Understating is the
+safe direction for a rule that decides what a deck is built out of.
+
+### LIFT is the only column that tells a synergy from a coincidence
+
+The demand model measures **lexical co-occurrence** — cards that mention the same filter. On ALL,
+`EventTriggerCondition{CreatureEnteredBattlefield}` has **453 suppliers** and
+`IsCardTypeSpecification{Creature}` has **493**: every creature in the pool. A deck of creatures
+plus one ETB payoff satisfies those by accident and ranked near the top of the first reports while
+being an ordinary midrange pile. Most of the report was noise, and no amount of tuning the depth
+metric fixes that, because the deck really is assembling — it just isn't an archetype.
+
+**Lift is a contrast, and contrast is the only thing that answers it.** `GoodStuffControl` builds
+the concept's payoffs, at the same copy counts and land count, into a pile of the format's
+highest-`CardDelta` cards; the same probe runs against both under **common random numbers** (same
+seeds, so shuffle variance cancels in the difference). `Lift = depth - controlDepth`. If a payoff
+executes just as readily surrounded by the best cards in the format as by its own concept, the
+concept contributes nothing.
+
+Measured on ALL, and it separates cleanly:
+
+| | n | mean LIFT | mean control depth |
+|---|---|---|---|
+| broad concepts (>300 suppliers) | 14 | **−0.54** | 3.82 |
+| narrow concepts (<100 suppliers) | 19 | **+5.18** | 0.45 |
+
+`IsCardTypeSpecification{Creature}` lands at depth 4.0 against control 4.0 — **lift +0.0**, exactly
+the right answer. Ranking is on lift.
+
+#### It was vacuous TWICE before it worked, both times invisibly
+
+Worth recording because the failure looked identical to success both times: a plausible column of
+numbers that ranked the same as the thing it was supposed to correct.
+
+1. **The control excluded enablers from its filler**, to stop it "rebuilding the concept". That
+   guarantees it cannot deploy one, so control depth is 0 by construction. 18 of 43 controls
+   scored exactly 0.0.
+2. **`EngineProbe.FromConcept` derived enablers from the concept DECK.** A control holds different
+   cards, so it had no enablers under that definition either — same symptom, different cause,
+   surviving the first fix. Enablers are now **pool**-derived and payoffs deck-derived, so "depth"
+   means *how many demand-answering cards did this deck deploy*, a question any deck can be asked.
+
+`EngineDiscovery.Run` now **warns when no control scores above 2.0**, because a control that never
+scores is not a baseline and nothing else in the output says so. That check is the automated form
+of "verify a test fails when you break the thing it tests" — it would have caught both.
+
+### Ranking is on coverage, not raw depth
+
+Raw depth ranks broad concepts first for free: a deck with 30 enablers deploys more of them than a
+deck with 12 whether or not either is an archetype. `EngineCandidate.Coverage` is depth over the
+deck's own enabler copies — "how much of my support was down" — which is scale-free. Same bias
+`DeckBuilder.PickConcept`'s inverse weighting exists to correct, one step further down the pipe.
+
+**Every viable concept is probed, not a top slice.** Taking the N most distinctive gives N demands
+with exactly `MinConceptSuppliers` suppliers, which is the narrow tail rather than a survey, and
+the question this mode exists to answer is what the pool supports.
+
+### `SeedConcept` was building concept decks with no payoff in them
+
+**Found by the first mode 7 run, and it had been live for every `conceptSlots > 0` run before
+it.** The jam loop samples the whole candidate set — suppliers *and* askers together — so when a
+demand has 400 suppliers and 4 askers the askers are essentially never drawn. On the ALL pool
+**17 of 39 viable concepts came back with no payoff at all**, and the failures were systematic:
+the broader the demand, the rarer its payoff, and therefore the less likely it was to be built.
+That is the "24 artifacts and no Atog" failure the method's own contract rules out.
+
+`SeedConcept` now places askers FIRST, capped at a third of the spell slots, before the jam loop
+fills the rest. Measured on the same seed: **39 of 39 concepts build, payoffs per deck went 1–5 to
+3–6, and `SpellsCastDemand` went from unbuildable to 80% assembly at depth 6.0** — storm went from
+invisible to found in one change. `EngineDiscovery` now also NAMES any concept that produced no
+deck, because a report showing fewer rows than it probed is indistinguishable from a broken
+builder, which is how this survived its first run.
+
+### Known limitation: the cost probe over-attributes convoke
+
+`ProbeCostDemands` puts four copies of a demand's representative permanent on the battlefield and
+records every card whose cost moved. **Convoke reduces cost per creature of ANY kind**, so probing
+"Zombie creature you control" with four Zombies makes every convoke card look like a Zombie payoff.
+In the ALL report, Stoke the Flames and Devouring Light appear as payoffs under nearly every
+creature-subtype concept.
+
+Not fatal — those cards genuinely do want creatures, and the metric still measures a real thing —
+but it inflates tribal concepts and dilutes their payoff sets. The fix is a control probe:
+re-measure with a representative that does NOT match the demand, and attribute only the difference.
+Pre-existing, not introduced by mode 7; mode 7 is just the first thing that made it visible.
+
+### The engine record is a CARD POOL, not a decklist
+
+`EngineCandidate.Payoffs` and `.Enablers` are **pool-wide** — every card in the set that asks the
+demand, and every card that answers it. `Deck` is one sample from that pool, built by `SeedConcept`
+to take the measurements with; it is evidence the pool supports a deck, not a recommendation.
+
+**Payoffs were deck-derived and that hid most of every archetype.** Affinity listed Frogmite and
+not Myr Enforcer, Atog or Thoughtcast — cards asking exactly the same thing, absent purely because
+the seeder did not draw them. `PoolFeatures.AskersOf(demandIndex)` is the reverse lookup that was
+missing; nothing needed the direction until the report became a pool.
+
+This is also the better phase-2 contract: **lock the pool, not the list.** Evolution retunes freely
+inside the archetype instead of being frozen to twelve specific cards, which keeps the identity
+without the max-density failure (24.4% for jammed goblins against 55% for the AI's half-built one).
+
+### Four probe corrections, all found by reading a report rather than the code
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Banefire, Hangarback Walker read as free storm enablers | `ManaCost` is **0** for every X card; X lives on the cast action | `XCostComponent` ⇒ cost unknowable ⇒ cannot be shown profitable |
+| Past in Flames excluded from storm | probe counted cards **in hand**; it makes your GRAVEYARD castable | count castable cards anywhere — and note `IsInCastableZone` does **not** cover flashback, that is `MtgActionGenerator`'s job, so the graveyard clause is explicit |
+| Entomb filed as a graveyard PAYOFF | a `SelectCard*Action.Filter` names what the card **fetches**, not a precondition | if resolving a card moves another into the demand's zone, it SUPPLIES and is struck from the askers |
+| Stoke the Flames a payoff of every tribe | convoke discounts per creature of ANY kind, so 4 Zombies move its cost | control probe: attribute only if cost moves for the representative and **not** for a non-matching permanent |
+| Soul Warden supplied no life gain | `ProbeTriggers` played ONE card onto an EMPTY battlefield, so "whenever ANOTHER creature enters" was structurally unfireable | play a vanilla companion after the subject, stripping the companion's own events so it does not make every card a supplier |
+
+Measured after: Stoke is attributed only to genuinely creature-general demands, all sitting in the
+±3 lift band; Soul Warden went 0 → 20 concepts; the storm pool went to 85 cards holding Lotus
+Bloom, Mox Pearl, Rite of Flame, Seething Song, Silt Ritual, Faithless Looting, Ancestral Recall
+and Past in Flames, at lift **+12.5** and 100% assembly.
+
+**Two verification traps worth naming.** The card is `"Past in Flames"` — lowercase "in" — and
+three case-sensitive greps in a row reported the fix as failing when it had worked; `GetByName` is
+`OrdinalIgnoreCase` and hides the discrepancy. And `Satisfaction` **sums** across a card's demands,
+so Dragonstorm's satisfied storm count masked its starving Dragon count and it read as fully
+supported. `WeakestSatisfaction` is the per-demand form; `SupportScore` and `DeadCards` both use it
+now, and `EngineCandidate.DeadInDeck` reports what is starving in the sample.
+
+### Supply weighting: worked for reanimator, did NOT work for storm
+
+`SupplyOf` returned a flat 1 for almost everything, which made the candidate set correct and
+**unsortable** — every supplier scored the same through `SupportScore`, so `CardDelta` broke every
+tie and a 513-card reanimator pool got sampled for its best creatures rather than its dozen discard
+outlets. It now carries a magnitude per supply kind (net mana and cards for a spells-cast demand,
+cards moved for a graveyard one, bodies for a token maker, flat 1 for a plain filter match) and
+`SeedConcept` reads it at `ConceptSupplyWeight` 3.0.
+
+Two predictions were set before running it. **One passed:**
+
+| | before | after |
+|---|---|---|
+| Reanimator sample | Basri Ket, Crusader of Odric, Knight of Glory, Kytheon, Village Ironsmith | **Tome Dredger, Undead Alchemist, The Mere Gives Up Its Dead**, Despoiler of Souls, Endless Obedience |
+| depth | 3.5 | **4.5** |
+
+The self-mill and recursion cards arrived, which is exactly what the weight was built to do, so the
+signal demonstrably reaches the sampler.
+
+**One failed: storm still has no rituals.** The pool contains Lotus Bloom, Mox Pearl, Rite of
+Flame, Seething Song, Silt Ritual and Past in Flames, and the sample deck picked Rain of
+Revelation, Thought Scour, Chorus of Whispers and Uncomfortable Chill instead. Cause: `Mana` and
+`Cards` are **summed as interchangeable**, and they are not — for a storm turn mana is the binding
+resource, because a card you cannot cast does not advance the count. A draw-3 scores the same as a
+ritual and has a far better standalone rate.
+
+**Do not "fix" this by weighting mana above cards on instinct.** The engine metric currently rates
+the draw build at 90% assembly and lift **+16.5**, higher than the ritual build ever scored, so the
+measurement disagrees with the Magic-player prior and only a real deck-vs-deck result should settle
+it. The honest position is that discovery's deliverable is the POOL, the pool is correct, and which
+subset actually wins is a win-rate question for phase 2 rather than a softmax question here.
+
+### The live problem: a correct enabler SET, selected from by raw card value
+
+Both remaining failures are one cause, and it is now the highest-value thing to fix.
+
+The demand model is right: storm's enablers are the 69 mana-or-card-positive cards, reanimator's
+are the 513 cards that answer "a creature card in your graveyard" (every creature, plus the
+movement suppliers that actually fill a graveyard). But `SeedConcept` samples within the candidate
+set by `CardDelta + SupportScore`, i.e. **by how good each card is on its own**, and the genuinely
+enabling minority is swamped:
+
+| | before | after | what it cost |
+|---|---|---|---|
+| Storm | Lotus Bloom, Mox Pearl, Seething Song, Silt Ritual | Ancestral Recall, Sphinx of Uthuun, Llanowar Visionary, Sylvan Ranger | card draw arrived, **the rituals left** |
+| Reanimator | Reanimate + fat creatures | Reanimate + better creatures | still **no discard outlet**, lift −5.5 |
+
+Reanimator's 513-card enabler set contains perhaps a dozen cards that put a creature in a
+graveyard, so a value-ranked sample essentially never draws one. Storm's 69 contains ~16 rituals
+and Moxen against ~53 cantrips and card-draw creatures, and the draw cards have far better
+standalone rates.
+
+**`SupplyOf` already returns an int and nothing reads it as a weight.** The fix is to make supply
+strength mean something — a ritual or a discard outlet supplies a concept far more than a card
+that merely qualifies — and to have `SeedConcept`'s softmax include it. That keeps the "features
+generate, win rate judges" rule intact, since it changes what gets *proposed*, not what gets
+scored.
+
+### Causal supply IS built — this section used to say it was not
+
+**Do not re-derive this.** The movement rule lives in `PoolFeatures.Build` step 3a: `CardProfile`
+records how many OTHER cards a card moved into each non-battlefield zone, `DemandZone` finds the
+single zone a demand's candidates live in, and a card that moves cards there **supplies** the demand
+and is **struck from its askers** — a card does not demand what it creates. No filter match is
+required on the moved card, deliberately: a discard outlet is a graveyard enabler whatever it
+happened to pitch in one probe.
+
+Measured on ALL, `IsCreatureInOwnGraveyardSpecification`: **513 suppliers, 118 carrying weight above
+1**, and the top of the list is exactly the outlets —
+
+```
+The Mere Swallows All(7), Abyssal Dredger(5), Drown in the Mere(5), Flood the Vaults(5),
+Sunken Chorus(5), Unhallowed Rite(5), Grim Excavation(4), Mere-Drowned Scribe(4)
+```
+
+`CausalSupplyTests` dumps this per demand. Run it before believing any claim about what a slot
+contains.
+
+### The live limitation: SupplyOf merges channels that mean different things
+
+`SupplyOf` returns **one int** covering every way a card can answer a demand — net mana and cards
+for a spells-cast demand, cards moved for a graveyard one, bodies for a token maker, flat 1 for a
+plain filter match. They are summed and maxed into a single scalar, so nothing downstream can ask
+for one kind specifically.
+
+The cost is visible in the same table: `Grave Titan(5)`, `Hornet Queen(5)`, `Throne of Empires(5)`
+sit level with genuine self-mill in the graveyard demand's top twelve. A fatty and a mill spell are
+both "enablers" of *a creature card in your graveyard*, and a reanimator deck genuinely wants both
+— but it wants them in **different quantities and different roles**, and one merged weight cannot
+express that.
+
+**The causal channel is now recorded separately as well as merged** — `CausalSupplyOf` /
+`CausalSuppliersOf`, written only by the movement pass, because that is the one channel whose
+meaning is *this card CAUSES the thing* rather than *this card IS the thing*. `SupplyOf` is
+unchanged, so nothing that read the merged number moved.
+
+`DeckCore.For` splits on it, and the reanimator core is now the deck a human would describe:
+
+```
+Angel of Second Rites: 3 slots
+   4x Payoff                                             [23]
+   8x IsCreatureInOwnGraveyardSpecification             [458]   <- things to reanimate
+   8x IsCreatureInOwnGraveyardSpecification [enablers]   [42]   <- things that put them there
+```
+
+The two are **disjoint, with a card that does both filed as causal** — slots are counted
+independently, so an overlap would let one copy satisfy both, the same rule that strips payoffs from
+their own support slot.
+
+**"Causal is the scarcer role" is true for zones you have to work to fill, and NOT for the hand.**
+Selecting the demand with the most causal suppliers lands on *"a Goblin in your hand"*, where the
+causal side is 72 cards against 23 declarative: the movement rule deliberately requires no filter
+match on the card it moved, so every draw spell counts as putting a Goblin in your hand. Loose, not
+wrong — but it is why `AGraveyardCoreSeparatesTheTargetsFromTheOutlets` names the graveyard demand
+instead of picking by count.
+
+### Settled: this engine cannot contain an infinite combo, so stop looking for one
+
+**Do not rebuild the combo-discovery plan.** It was scoped, the cheap half was run, and the answer
+is structural rather than a matter of search budget.
+
+The produce/consume graph needs no new machinery — `A -> B` when A supplies a demand B asks, which
+is `SupplyOf` and `DemandsOf`, and a card is struck from the askers of any demand it supplies so
+self-loops cannot occur. `CausalSupplyTests.DumpProduceConsumeCycles` enumerates it. On ALL,
+restricted to demands with ≤60 suppliers: **16 narrow demands, 38 cards that both give and take,
+86 two-card cycles — and every one is a tribal membership loop.**
+
+```
+Arms Dealer      <-> Goblin Chieftain    (both ARE Goblins and WANT Goblins)
+Atog             <-> Frogmite            (both artifacts, both want artifacts)
+Cemetery Reaper  <-> Diregraf Captain    (Zombies)
+```
+
+That is not a combo, it is a tribe — the thing `DeckCore.For` already expresses as one slot. The
+mechanism is that a lord is in the SAME demand's supplier list and asker list at once (Goblin
+Chieftain IS a Goblin and WANTS Goblins), so every pair of lords points both ways automatically;
+eight goblin payoffs give 28 pairs that are all one archetype.
+
+**An asymmetry filter was tried and does not discriminate — do not retry it.** "Symmetric on one
+demand = tribe, different demands each way = combo" is the right idea and it reports 65/21 on ALL,
+but all 21 are false positives: `Subtype{Zombie}` and `And{Subtype{Zombie}, OnBattlefield,
+ControlledByYou}` are distinct demand OBJECTS meaning nearly the same thing, so a tribal pair reads
+as asymmetric. Same near-duplicate-concept problem this file already records for LIFT-ranked
+selection. Canonicalising the demands would fix the false positives and would not change the
+answer.
+
+**No graph over this vocabulary can find a combo**, canonicalised or not. The demands are
+membership predicates (subtype, card type, zone) and trigger events. There are no OPERATIONS in
+them, so the best a cycle can ever mean is "these two cards are in the same category and both like
+that category".
+
+**The reason is the engine's action vocabulary, not the cube's card list.** A Splinter Twin combo
+trades OPERATIONS: untap, copy, sacrifice. This engine has no untap effect and no copy action —
+`ExhaustCreatureAction` only taps, **only `StartTurnAction` clears `IsExhausted`**, and storm lives
+inside `ResolveSpellAction` rather than as a targetable copy. `CoresetCubeColourlessArtifacts.cs`
+already records the consequence on the card that needed it: Manifold Key's *"untap another target
+artifact"* was cut as unreachable.
+
+Without untap you cannot re-use a mana source; without copy you cannot loop a spell. **No infinite
+combo is expressible, so none can be discovered.** The verifier, the resource fingerprint and the
+dominance-cycle check are all cancelled — they would be correct code searching a space that is
+provably empty.
+
+If infinite combos are wanted, the lever is **building untap and/or copy as engine primitives**,
+which is the project's standing rule ("when a card needs something the engine lacks, build the
+mechanic") and a deliberate design decision, not a search problem.
+
+**And when that happens, the detector to build is the SIMULATION one, not this graph.** A rigged
+fixture plus a dominance check — same permanents, every resource ≥, at least one strictly up —
+reads real game state, so it needs no vocabulary at all and sees a mechanic the day it ships. That
+is also the only version that can answer the BALANCE question, which is a separate and standing
+use: *"did this set change accidentally print a two-card loop?"* is worth asking on every set
+change, whether or not anyone wants to build a combo deck.
+
+Two rules for building it, both already paid for elsewhere in this file:
+
+- **Plant a combo before trusting a zero.** A detector that reports "no loops in the cube" is
+  indistinguishable from a broken one. Assert it FINDS a deliberate two-card loop in a test-only
+  card set first, then assert it reports zero on the real pool.
+- **Key on a RESOURCE FINGERPRINT, not a `GameState` key.** Two iterations of a loop hold different
+  card instance ids, so state equality never fires. Use a multiset of (card name, tapped, counters)
+  plus mana, hand count, storm count, life and graveyard. And require reachable lethal inside
+  `GameRunner`'s 200-action cap — a loop that needs more iterations than that ends the game as a
+  DRAW, not a win.
+
+### LoopDetector — the balance instrument, built and validated
+
+`Evolution/LoopDetector.cs`. Depth-first over the controller's legal actions, comparing every
+reached position against every ancestor **on the current path**, and confirming by replay.
+`LoopDetectorTests` drives it; the pool sweep is `[Explicit]` and runs **783 cards in 658 ms**.
+
+**Measured: ALL, 783 cards, 0 looping, 0 threw.** That zero is only meaningful because
+`APlantedFreeLoop_IsFound` passes — a detector that never fires reports the same thing.
+
+Three defects were found while building it, and each produced a plausible result:
+
+1. **Dominance is not a loop.** Any one-shot gain produces a position that dominates the one before
+   it, so a single "gain 1 life" activation was indistinguishable from an unbounded one. `Repeats`
+   replays the cycle from where it ended and requires it to dominate *again*. This is the whole
+   feature — without it the detector flags every beneficial action.
+2. **`Describe` returned a bare type name**, so two vanilla creatures attacking both read
+   `"AttackAction"` and the replay of "attack" matched the OTHER creature. A board of two bears
+   reported a confirmed loop. Identity now carries `CardId`, `AbilityIndex` and `XValue` by
+   reflection — **the same defect as `ActionsMatch` re-finding an X-cost cast as X=0**, and the
+   same rule fixes it: anything that distinguishes two legal actions must be in the match.
+3. **`HasAttacked` belongs in the fingerprint alongside `IsExhausted`.** A creature that already
+   attacked is spent for the purpose of repeating a line.
+
+Four rules in the fingerprint, each pinned by a test:
+
+- **Not a `GameState` key.** Every loop iteration holds new instance ids, so state equality never
+  fires and a detector built on it reports zero forever while looking correct. This is why
+  `CLAUDE.md`'s deferred "GameState comparison key" is NOT the thing to build here.
+- **Dominance, not equality.** A token engine ends each iteration with strictly more permanents, so
+  an equality test misses every growing loop.
+- **Permanents keyed by name AND spent-state** (`U`/`T`/`A`). A line leaving a creature tapped where
+  it started untapped has spent something and is not repeatable.
+- **A grown graveyard is never the gain.** Every cast grows it, so counting it would make any two
+  casts look like an engine. Checked for non-decrease, excluded from "something increased".
+
+**`ActivatedAbilityComponent.MaxActivationsPerTurn` (default 1) is the engine's existing guard**,
+and `TheEnginesOwnActivationCap_ClosesTheLoop` pins that the same card at the default is not a loop.
+The realistic bug this catches on a set edit is that cap missing or set high enough not to bind.
+
+**The pair sweep is built and is cheap: 241 173 fixtures in 28 seconds, 0 loops, 0 threw.**
+
+```
+ALL: 783 cards, 306153 pairs, 241173 with a repeatable source (64980 pruned), 0 looping
+```
+
+The prune is a **necessary condition, not a heuristic**: a loop needs something repeatable, and
+casting is not repeatable because the card leaves your hand, so a pair where neither card has an
+`ActivatedAbilityComponent` or a `TriggeredAbilityComponent` cannot loop. The pruned count is
+printed, because a filter that quietly shrinks the search is how a sweep comes back clean for the
+wrong reason.
+
+**The fixture puts permanents on the battlefield and everything else in HAND.** The first version
+put every card on the battlefield, which leaves an instant sitting there doing nothing — so the
+sweep tested no spell at all and would have reported a clean pool for the wrong reason. Third time
+this class of bug appeared in one session; see the `Describe` and dominance-vs-loop entries above.
+
+**Read the zero as a BASELINE, not a proof.** What it is bounded by, all deliberate:
+
+| Bound | Consequence |
+|---|---|
+| depth 6, branching 8, node cap 4000 | a longer or wider line is missed |
+| `Repeats` matches steps by description | a line whose steps cannot be re-identified fails to confirm |
+| no counters in the fingerprint | a counter-only loop looks like an identical board |
+| two cards, one controller, 99 mana, turn already started | no three-card lines, no opponent interaction |
+
+Given the engine has no untap and no copy, zero is the EXPECTED answer and its value is as a
+regression baseline. **Re-run both sweeps the day an untap or copy primitive ships** — that is the
+moment the number should be able to move, and if it does not, suspect the detector before believing
+the pool.
+
+Nothing feeds `LoopDetector` from mode 6 or 7; it is a test-time instrument today.
+
+### Measured end to end: cores are NOT yet better than what they replaced
+
+`CoreVsConceptChallenge` builds the same payoff two ways — `DeckCore.For` + `Satisfy` + flex fill
+against `DeckBuilder.SeedConcept` — and plays both against the nine hand-built precons, 180 games
+per arm, 1 SE = 3.7pp. **Two independent samples:**
+
+```
+payoff                  CORE   CONCEPT   delta       delta (2nd sample)
+Dragonstorm             9.4%     6.1%    +3.3            +0.6
+Zombie Apocalypse      11.7%     3.9%    +7.8           +10.6
+Goblin Lackey          31.1%    26.1%    +5.0            -0.6
+Angel of Second Rites   4.4%     3.9%    +0.6            -2.2
+Atog (control)         18.3%    21.1%    -2.8            -8.9
+mean                                     +2.8            -0.5
+```
+
+**Three of five deltas change sign between samples, so the effect is smaller than this harness can
+see.** Only Zombie Apocalypse is consistently positive. Do not quote the mean of either run.
+
+**The two numbers that ARE robust:**
+
+| | |
+|---|---|
+| Best AI-built deck | 24–31% |
+| Worst hand-built precon | **38–41%** (Dragonstorm) |
+| Traditional Storm | **61–63%** |
+
+The gap to hand-built is ~25pp and dwarfs anything the builder change moved. **That is the number
+worth attacking, not the +3pp.**
+
+**The composition dump says where it goes** (`WhatDoesTheCoreBuilderActuallyBuild`, no games):
+
+```
+Dragonstorm            16 core / 26 flex     <- 61% good stuff: Atog, Frogmite, Kird Ape, Myr Enforcer
+Angel of Second Rites  36 core /  4 flex     <- derived minimums nearly fill the list; scored 3.9%
+```
+
+Two opposite failures from one flex fill. Ranking 26 free slots by standalone `CardDelta` produces
+a pile of three unrelated decks — **the good-stuff failure moved out of the core and into the flex
+half**, where nothing constrains it.
+
+#### The fix is a POOL LOCK on the flex slots, and cohesion is the metric to read
+
+`DeckCore.Complete` satisfies the core and then fills the rest **from the core's own slot cards**
+rather than from the whole format. Measured on Dragonstorm: **38% on-theme → 100%**, and the list
+stops being a pile:
+
+```
+Dragonstorm — 18 lands, 42 spells, 100% on-theme, 0 dead cards
+  4x [0] Inquisition of Kozilek   4x [1] Rite of Flame        4x [5] Thundermaw Hellkite
+  2x [0] Lotus Bloom              4x [3] Seething Song        4x [6] Bogardan Hellkite
+  4x [1] Ancestral Recall                                     4x [7] Hunted Dragon
+  4x [1] Careful Study                                        4x [7] Dragonstorm
+  4x [1] Faithless Looting
+```
+
+**Nothing was told this is a "mana engine deck".** That phrase is a human label for a relation the
+demand model already computes — `ProbeManaProfit` measures net mana and net cards, so storm's
+supplier set IS rituals, cantrips, draw and tutors (`Tide of Whispers(4)`, `Ancestral Recall(3)`,
+`Lotus Bloom(3)`, `Rain of Revelation(3)`). The archetype's card pool was always the answer to "what
+else should this deck play"; it simply was not being asked.
+
+**Do not try to widen the pool by one step of demand closure.** It was tried: for each core card,
+add everything supplying a demand it asks. Storm's 85 suppliers each ask demands answered by most of
+the pool, so one step returns the whole format and both arms came out byte-identical — a no-op
+dressed as a feature.
+
+**Cohesion is the metric, not win rate**, and `WhatDoesTheCoreBuilderActuallyBuild` reports it with
+no games: on-theme share, dead cards, payoff present, `Holds`. Win rate is what pulls decks back
+toward good stuff, because good stuff is the cheapest way to compete — so read cohesion first and
+judge competitiveness separately.
+
+**Still wrong: the fill has no notion of ENOUGH.** It tops up to 60 with the highest-valued on-theme
+cards, giving **12 Dragons** where the historical list ran 6 — the slot minimum is a floor with
+nothing above it, so a card that qualifies keeps getting added. A storm deck wants those slots on
+rituals and cantrips. The missing idea is diminishing returns per slot, not more constraint.
+
+#### Two harness bugs found by running it, both of which faked a result
+
+1. **`Satisfy` filled the payoff slot best-first and left the ANCHOR out.** The Dragonstorm core
+   built a deck holding Tendrils of Agony and four Dragons that nothing fetches — and `Holds`
+   returned **true** throughout, because the slot was satisfied even though the core was not. Fixed
+   by sorting the anchor first; pinned by `SatisfyAlwaysPlaysTheAnchor_NotJustSomethingFromItsSlot`.
+2. **`string.GetHashCode` is randomized per process**, so seeding the shuffle from it resampled the
+   whole experiment on every run. Caught because the CONCEPT arm — whose code path did not change —
+   moved 6.1% → 7.2% between two runs that should have been byte-identical. Same class as the
+   wall-clock bug that made mode 6 irreproducible: **when an unchanged arm moves, stop and find out
+   why before reading the arm that did change.**
+
+### Phase two: engine slots in mode 6, holding a POOL rather than a decklist
+
+`MetagameEvolver(enginesPath:)` seeds the top-**LIFT** archetypes from a mode 7 report into the
+first slots of the field. The console prompts for it: *"Engine file from mode 7? (blank = none)"*.
+
+```bash
+export MTG_MIN_LANDS=12
+printf '6\n\n4\n8\n25\n3\n6\n20\n0.45\n800\nY\nY\n0\n4\nsim_results/engines_all_<stamp>.json\nmyseed\n' \
+  | dotnet run --project MtgSimulator.Console -c Release
+```
+
+**`DeckBuilder.EngineIdentity` narrows the card pool `Mutate` draws from.** One clause at the top
+of `Mutate` filters `spells` to `Payoffs ∪ Enablers`, and every operator — Swap, Recount, Package,
+AdjustLands and the `Fill` they share — takes its candidates from that list, so nothing outside the
+archetype can enter by any path. No operator needed to learn about engines.
+
+#### It shipped first as a 60% quota, and the drift went straight into the allowance
+
+The reasoning was that a deck should be able to pick up metagame answers, so 40% of spells were
+left free. Measured on a real run, the storm slot spent all of it:
+
+```
+Steppe Lynx x3, Gravecrawler x3, Liliana of the Veil x2, Zombie Horde Leader x2,
+Cathartic Reunion x3, Incorrigible Youths x1     — 14 of 43 spells, and Tendrils gone
+```
+
+**29 of 43 in-pool = 67%, legal against the 60% floor the whole time**, so nothing reported a
+problem. A budget for drift gets spent on drift.
+
+Narrowing the pool is also strictly better mechanically than grading the result:
+
+- **Monotone.** A quota is checked after the fact, so a starting deck already below it freezes the
+  slot solid — every proposal rejected, forever, silently. `SeedConcept` tops up from the whole
+  pool when a concept cannot fill 36 slots, so impure starts are expected and that failure was
+  reachable.
+- **No wasted proposals.** A rejected mutant costs a mutation slot for that generation.
+- **It converges INWARD.** `PickWeakest` may still cut anything, and nothing outside can return, so
+  an impure start cleans itself up. `MetagameEvolver` prints starting purity for exactly this
+  reason — the first version's failure was invisible, and a number is what makes it checkable.
+
+Cutting stays unconstrained, so evolution can still discover that a storm deck wants fewer rituals.
+It cannot discover that it wants Steppe Lynx.
+
+`EngineIdentityTests` chains 60 generations and asserts nothing outside the pool ever appears, with
+a control confirming that unconstrained mutation *does* wander outside the same card set — without
+it the test would pass on a mutator that never changes anything.
+
+**Engine slots are never culled.** Mode 7 already judged the archetype on whether it ASSEMBLES; the
+win rate is here to tune it against the field, not to decide whether it deserves to exist. A
+half-built combo deck loses every game, so a viability floor would delete exactly the decks the
+feature exists to keep — which is what every unconstrained run has done. The rate is still reported.
+
+The last slot is never an engine: it is the permanent wildcard, and replacing the exploration arm
+with a fixed archetype removes the only slot that can find something nobody has thought of.
+
+**Known: LIFT-ranked selection can pick near-duplicate concepts.** The first real run took both
+`Subtype{Spirit}` and `Spirit ∧ OnBattlefield ∧ ControlledByYou` into adjacent slots. The seeded
+field still cleared the diversity floor, so this is untidy rather than broken; a distinctness pass
+over chosen concepts is the fix if it ever costs a slot that matters.
+
+**Re-baseline before any phase-two A/B.** Steppe Lynx, Liliana of the Veil and Chandra's Regulator
+were nerfed after every number in `HANDOFF-ConstructedEvolution.md` was measured. Phase one does
+not depend on this — a stale value table shifts which cards `SeedConcept` picks, not whether an
+engine assembles.
 
 ## Constructed Metagame Evolution
 

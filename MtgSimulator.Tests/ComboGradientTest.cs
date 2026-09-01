@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using MtgCore;
 
 namespace MtgSimulator.Tests;
@@ -19,6 +20,16 @@ namespace MtgSimulator.Tests;
 /// The path measured is the one the real search would have to walk: start from assembled Storm and
 /// progressively swap its pieces for the format's best individual cards, cutting the storm cards
 /// that look WORST on their own first — which is exactly what `DeckBuilder.PickWeakest` does.
+///
+/// **Measured, and the goldfish points the WRONG WAY.** Dismantling Storm made it goldfish faster
+/// (5.0 -> 4.0): against an inert opponent the quickest kill is cheap creatures attacking, and
+/// Storm's real edge is that Tendrils damage cannot be attacked, blocked or answered — the exact
+/// property a goldfish removes. So this fixture is now the GATE for its replacement,
+/// <see cref="EngineProbe"/>, which measures execution rather than speed.
+///
+/// **Pass condition for the engine columns: they fall as combo cards are swapped out, and read
+/// ~0 at the pure pile.** If they do not, the metric is wrong and nothing downstream should be
+/// built on it. The goldfish looked obviously correct too.
 /// </summary>
 [TestFixture]
 public class ComboGradientTest
@@ -61,11 +72,20 @@ public class ComboGradientTest
 			.Select(c => c.Name)
 			.ToList();
 
+		var probe = ProbeFor(comboDeck, spells);
+
 		Console.WriteLine();
 		Console.WriteLine($"=== {comboDeck}: assembled -> good-stuff pile ===");
 		Console.WriteLine($"  drifting toward: {string.Join(", ", goodStuff.Take(6))}");
+		Console.WriteLine(
+			$"  payoffs: {string.Join(", ", probe.Payoffs.Order(StringComparer.Ordinal))}"
+		);
+		Console.WriteLine($"  {probe.Enablers.Count} enablers in pool");
 		Console.WriteLine();
-		Console.WriteLine($"{"swapped", 8}{"median turns", 14}{"wins/10", 9}");
+		Console.WriteLine(
+			$"{"swapped", 8}{"median turns", 14}{"wins/10", 9}"
+				+ $"{"assem", 9}{"depth", 8}{"payoffs", 9}"
+		);
 
 		var comboSpellCount = comboCounts.Values.Sum();
 
@@ -105,8 +125,79 @@ public class ComboGradientTest
 				continue;
 			}
 
-			var (speed, _, wins) = Goldfish.Measure(deck, pool, games: 10, seed: 8_000);
-			Console.WriteLine($"{swapped, 8}{speed, 14:F1}{wins, 9}");
+			var (speed, _, wins, readings) = Goldfish.Measure(
+				deck,
+				pool,
+				games: 10,
+				seed: 8_000,
+				probe: probe
+			);
+			var (depth, _, rate) = EngineProbe.Summarise(readings);
+			var payoffs = readings.Average(r => r.Payoffs);
+
+			Console.WriteLine(
+				$"{swapped, 8}{speed, 14:F1}{wins, 9}" + $"{rate, 9:P0}{depth, 8:F1}{payoffs, 9:F1}"
+			);
 		}
+	}
+
+	/// <summary>
+	/// Hand-written payoff/enabler sets for the three known decks.
+	///
+	/// **Deliberately not built from `PoolFeatures`.** This fixture validates the METRIC, and
+	/// deriving the probe from the same extractor that will feed it in production would make the
+	/// test pass whenever the two agree with each other rather than whenever the metric is right.
+	/// `EngineDiscovery` is the path that uses `EngineProbe.FromConcept`.
+	///
+	/// Where the enabler set is mechanical it is read off the cards (cheap spells, artifacts)
+	/// rather than listed, so a balance pass that changes a cost is reflected instead of ignored.
+	/// </summary>
+	private static EngineProbe ProbeFor(string deckName, IReadOnlyList<Card> spells)
+	{
+		var (concept, payoffs, isEnabler) = deckName switch
+		{
+			// Storm wants cheap spells cast before the payoff. Nothing else about them matters.
+			"Traditional Storm" => (
+				"spells cast this turn",
+				new[] { "Tendrils of Agony", "Past In Flames" },
+				(Func<Card, bool>)(c => c.ManaCost <= 2)
+			),
+			// Reanimator wants a fatty in the graveyard: the discard outlets that put one there
+			// and the fatties themselves are both support for the reanimation spell.
+			"Reanimator" => (
+				"a creature card in your graveyard",
+				["Reanimate"],
+				c =>
+					c.Name
+						is "Careful Study"
+							or "Faithless Looting"
+							or "Hunted Dragon"
+							or "Carnage Tyrant"
+							or "Bloodghast"
+			),
+			// Affinity wants artifacts on the battlefield, for the cost reduction and for Atog,
+			// Cranial Plating and Disciple of the Vault to have anything to count.
+			"Affinity" => (
+				"artifacts you control",
+				[
+					"Frogmite",
+					"Myr Enforcer",
+					"Thoughtcast",
+					"Thought Monitor",
+					"Cranial Plating",
+					"Atog",
+					"Arcbound Ravager",
+					"Disciple of the Vault",
+				],
+				c => c.HasSubtype("Artifact")
+			),
+			_ => throw new ArgumentException($"no probe defined for {deckName}", nameof(deckName)),
+		};
+
+		return new EngineProbe(
+			concept,
+			payoffs.ToImmutableHashSet(StringComparer.Ordinal),
+			spells.Where(isEnabler).Select(c => c.Name).ToImmutableHashSet(StringComparer.Ordinal)
+		);
 	}
 }

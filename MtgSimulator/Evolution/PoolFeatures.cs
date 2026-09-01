@@ -69,8 +69,46 @@ public sealed class PoolFeatures
 	private static readonly HashSet<string> DemandProperties =
 		new(StringComparer.Ordinal) { "Filter", "AppliesTo" };
 
+	/// <summary>
+	/// "What am I aiming at" — a demand only when it aims at YOUR OWN cards.
+	///
+	/// **This was excluded outright and that cost the mode reanimator.** The exclusion is right
+	/// for Lightning Bolt, whose "any creature" is a question about the opponent's board. It is
+	/// exactly backwards for Reanimate, which is
+	/// `SingleTarget(IsCreatureInOwnGraveyardSpecification)` — a card that does nothing except ask
+	/// your deck for creatures in your graveyard, and which was therefore a payoff for nothing.
+	/// The whole reanimator archetype was unreachable, the third demand found living somewhere
+	/// the harvest rule did not look.
+	///
+	/// The two cases are separated empirically rather than by a card list or a type list: a spec
+	/// is a demand about your DECK when its candidates come from a non-battlefield zone. The
+	/// battlefield is the shared board and anything aimed there is a targeting clause; your hand,
+	/// graveyard and library are where your own cards live. `ZoneSpecification.GetCandidateIds`
+	/// already answers this and composites already delegate to it, so nothing new is needed —
+	/// see <see cref="IsDeckScoped"/>.
+	/// </summary>
+	private const string TargetingProperty = "Specification";
+
 	/// Depth cap on the object walk. Purely a runaway guard; the deepest real card is ~6.
 	private const int MaxWalkDepth = 12;
+
+	/// <summary>
+	/// "You must cast N spells before me this turn" — storm, prowess, Illusory Angel.
+	///
+	/// **The one demand here that is NOT the card's own filter object**, and it exists because the
+	/// question it asks is not written on the card at all: storm is a `bool` that
+	/// `ResolveSpellAction` multiplies by `MtgGame.SpellsCastThisTurn`, and
+	/// `RequiresSpellsCastThisTurnRestriction` reads the same counter from `CanCast`. Nothing in
+	/// either is a `TargetSpecification`, so the positional harvest rule cannot see them and
+	/// **Traditional Storm — the strongest deck in the precon round-robin — was undiscoverable.**
+	///
+	/// A record like every other demand, so value equality still dedupes it pool-wide and every
+	/// consumer works on indices without knowing this one is special.
+	/// </summary>
+	public sealed record SpellsCastDemand
+	{
+		public int Minimum { get; init; } = 1;
+	}
 
 	/// <summary>
 	/// Specs that ask about ONE SPECIFIC OBJECT rather than about a kind of card — this card
@@ -123,6 +161,7 @@ public sealed class PoolFeatures
 	private readonly List<string> _origins;
 	private readonly Dictionary<string, int[]> _demandsOf;
 	private readonly Dictionary<string, int>[] _supply;
+	private readonly Dictionary<string, int>[] _causalSupply;
 	private readonly bool[] _landSupply;
 
 	private PoolFeatures(
@@ -130,6 +169,7 @@ public sealed class PoolFeatures
 		List<string> origins,
 		Dictionary<string, int[]> demandsOf,
 		Dictionary<string, int>[] supply,
+		Dictionary<string, int>[] causalSupply,
 		bool[] landSupply,
 		IReadOnlyList<string> failures
 	)
@@ -138,6 +178,7 @@ public sealed class PoolFeatures
 		_origins = origins;
 		_demandsOf = demandsOf;
 		_supply = supply;
+		_causalSupply = causalSupply;
 		_landSupply = landSupply;
 		Failures = failures;
 	}
@@ -162,6 +203,36 @@ public sealed class PoolFeatures
 	public int SupplyOf(int demandIndex, string supplier) =>
 		_supply[demandIndex].GetValueOrDefault(supplier);
 
+	/// <summary>
+	/// How much this card CAUSES the demand, as opposed to matching it. 0 is "it does not".
+	///
+	/// **`SupplyOf` merges channels that mean different things, and this is the one that had to come
+	/// back out.** That number covers every way a card can answer a demand at once — net mana and
+	/// cards for a spells-cast demand, cards moved for a graveyard one, bodies for a token maker,
+	/// flat 1 for a plain filter match — so nothing downstream could ask for one kind specifically.
+	///
+	/// Measured on ALL, `IsCreatureInOwnGraveyardSpecification` has 513 suppliers, and merged they
+	/// are indistinguishable: `Grave Titan(5)` and `Hornet Queen(5)` sit level with `Drown in the
+	/// Mere(5)` and `Grim Excavation(4)`. A reanimator deck wants both a fatty to bring back and an
+	/// outlet to put it there, but in **different quantities and different roles**, and a value-
+	/// ranked sample from one merged list draws the fatties — which is exactly the "engine decks are
+	/// built badly" complaint.
+	///
+	/// Only the movement pass writes here, because it is the only channel whose meaning is causal:
+	/// resolving this card MOVED another card into the demand's zone. Everything else is a statement
+	/// about what a card IS.
+	/// </summary>
+	public int CausalSupplyOf(int demandIndex, string supplier) =>
+		_causalSupply[demandIndex].GetValueOrDefault(supplier);
+
+	/// Every pool card that CAUSES a demand, strongest first. Empty for most demands.
+	public IReadOnlyList<string> CausalSuppliersOf(int demandIndex) =>
+		_causalSupply[demandIndex]
+			.OrderByDescending(kv => kv.Value)
+			.ThenBy(kv => kv.Key, StringComparer.Ordinal)
+			.Select(kv => kv.Key)
+			.ToList();
+
 	/// How many distinct pool cards answer a demand — how much deck a concept could fill.
 	public int SuppliersInPool(int demandIndex) => _supply[demandIndex].Count;
 
@@ -185,8 +256,24 @@ public sealed class PoolFeatures
 	/// touch the case the rule exists for, since a pool that HAS dragons gives the demand real
 	/// suppliers and an actual dragonless deck still reads zero.
 	/// </summary>
-	private bool Informative(int demandIndex) =>
+	public bool Informative(int demandIndex) =>
 		_supply[demandIndex].Count > 0 || _landSupply[demandIndex];
+
+	/// <summary>
+	/// Every pool card that ASKS a demand — the archetype's payoff pool.
+	///
+	/// The mirror of <see cref="SuppliersOf"/>, and it did not exist because nothing needed the
+	/// reverse direction until the engine report became a card POOL rather than a decklist.
+	/// Deriving payoffs from a built deck instead reports only the ones the seeder happened to
+	/// draw: Frogmite was listed as an affinity payoff while Myr Enforcer, Cranial Plating,
+	/// Arcbound Ravager and Atog — which ask exactly the same thing — were not.
+	/// </summary>
+	public IReadOnlyList<string> AskersOf(int demandIndex) =>
+		_demandsOf
+			.Where(kv => kv.Value.Contains(demandIndex))
+			.Select(kv => kv.Key)
+			.OrderBy(n => n, StringComparer.Ordinal)
+			.ToList();
 
 	/// Every pool card answering a demand, best supply first. The candidate set for a concept.
 	public IReadOnlyList<string> SuppliersOf(int demandIndex) =>
@@ -245,12 +332,52 @@ public sealed class PoolFeatures
 	}
 
 	/// <summary>
+	/// The WORST-answered of a card's demands, rather than the total across all of them.
+	///
+	/// **A card with two demands is only as good as its starving one, and summing hid exactly the
+	/// case the dead-card rule is named after.** Dragonstorm asks two things — spells cast this
+	/// turn, and a Dragon to find — so in a storm deck the first is richly answered, the sum comes
+	/// out high, and `Satisfaction` reports a perfectly supported card that will resolve for
+	/// nothing because the deck contains no Dragons. It was seeded into the storm engine on
+	/// exactly that arithmetic.
+	///
+	/// <see cref="double.NaN"/> still means "asks nothing", as in <see cref="Satisfaction"/>.
+	/// </summary>
+	public double WeakestSatisfaction(string cardName, Decklist deck)
+	{
+		var demands = DemandsOf(cardName).Where(Informative).ToList();
+		if (demands.Count == 0)
+			return double.NaN;
+
+		var weakest = double.MaxValue;
+		foreach (var d in demands)
+		{
+			var total = 0.0;
+			var supplyOfD = _supply[d];
+			foreach (var (name, copies) in deck.Spells)
+			{
+				if (string.Equals(name, cardName, StringComparison.Ordinal))
+					continue;
+				if (supplyOfD.TryGetValue(name, out var per))
+					total += per * copies;
+			}
+			if (_landSupply[d])
+				total += deck.Lands;
+			weakest = Math.Min(weakest, total);
+		}
+		return weakest;
+	}
+
+	/// <summary>
 	/// Cards in the deck that ask for something and get nothing — the Dragonstorm-with-no-dragons
 	/// set. Cards asking nothing are never listed.
+	///
+	/// Reads the WEAKEST demand, not the sum: a card starving on one of two questions is a blank
+	/// holding a slot regardless of how well the other is answered.
 	/// </summary>
 	public IReadOnlyList<string> DeadCards(Decklist deck) =>
 		deck
-			.Spells.Keys.Where(n => Satisfaction(n, deck) == 0)
+			.Spells.Keys.Where(n => WeakestSatisfaction(n, deck) == 0)
 			.OrderBy(n => n, StringComparer.Ordinal)
 			.ToList();
 
@@ -384,11 +511,44 @@ public sealed class PoolFeatures
 
 		var failures = new List<string>();
 		var supply = new Dictionary<string, int>[demands.Count];
+		// The CAUSAL half of supply, kept alongside the merged total rather than replacing it. See
+		// `CausalSupplyOf` for why one number could not answer the question.
+		var causal = new Dictionary<string, int>[demands.Count];
 		var landSupply = new bool[demands.Count];
+
+		// One fixture per card, three answers. Shared because a demand is not known to need it
+		// until the loop reaches it and the probe is far too expensive to run per demand.
+		var profiles = ProbeCardProfiles(pool, failures);
 
 		for (var d = 0; d < demands.Count; d++)
 		{
 			supply[d] = new Dictionary<string, int>(StringComparer.Ordinal);
+			causal[d] = new Dictionary<string, int>(StringComparer.Ordinal);
+
+			// There is nothing to evaluate a SpellsCastDemand against: "a spell was cast" is an
+			// event in the turn, not a property of a card sitting in a zone. It is answered by the
+			// two resources a storm turn actually runs on.
+			//
+			// **A storm enabler is a card that does not reduce your ability to keep casting**, and
+			// that is two resources, not one. A ritual is mana-positive and card-negative; a
+			// cantrip is card-neutral and mana-negative; both keep the chain going. A creature is
+			// negative on both. Requiring EITHER is what admits Preordain alongside Seething Song
+			// without needing an exchange rate between cards and mana — which would be a scoring
+			// decision, and nothing in this file scores anything.
+			//
+			// Lands are left at false: a land is not a spell cast.
+			if (demands[d] is SpellsCastDemand)
+			{
+				// **Weighted by how much of each resource it leaves you**, not a flat yes. Every
+				// qualifying card scoring 1 made the supplier set correct and unsortable: a
+				// Seething Song and a break-even cantrip read identically, so `CardDelta` broke
+				// every tie and the storm deck came out as the format's best card-draw spells with
+				// no rituals in it. Lotus Bloom now scores 4, Ancestral Recall 3, a cantrip 1.
+				foreach (var (name, p) in profiles)
+					if (p.Mana >= 0 || p.Cards >= 0)
+						supply[d][name] = 1 + Math.Max(0, p.Mana) + Math.Max(0, p.Cards);
+				continue;
+			}
 
 			// Trigger demands are answered by the probe pass below, which has to PLAY a card to
 			// find out what it causes. Nothing here can answer them.
@@ -424,6 +584,43 @@ public sealed class PoolFeatures
 			}
 
 			landSupply[d] = Matches(LandKey);
+
+			// --- Movement supply: a card that PUTS things in the zone answers the zone ---
+			//
+			// **The demand model is declarative and this gap is causal.** "A creature card in your
+			// graveyard" is answered, on the reading above, by every creature card — which is true
+			// and useless, because nothing in a deck of creatures puts one in the graveyard.
+			// Reanimator built as Reanimate plus fat creatures with no discard outlet and no mill,
+			// and assembled 40% of games at depth 0.
+			//
+			// The other half of the same bug is that the enablers were filed as PAYOFFS. Entomb is
+			// `SelectCardFromZoneAction { Filter = creature }` followed by a move to the graveyard,
+			// and `Filter` is a demand property — so the card that FILLS your graveyard was
+			// recorded as a card that WANTS a full graveyard. A filter naming what a card fetches
+			// is not a precondition.
+			//
+			// Both are fixed by one test, and it needs no new vocabulary: if resolving a card moved
+			// another card into this demand's zone, that card SUPPLIES the demand — and is removed
+			// from its askers, because a card does not demand what it creates.
+			//
+			// No filter match is required on the moved card, deliberately. A discard outlet is a
+			// graveyard enabler whatever it happened to pitch in one probe, because in a real game
+			// you choose what to pitch.
+			var zone = DemandZone(demands[d], context);
+			if (zone is null)
+				continue;
+
+			foreach (var (name, p) in profiles)
+			{
+				if (!p.MovesInto.TryGetValue(zone.Value, out var movedCount))
+					continue;
+				supply[d][name] = Math.Max(supply[d].GetValueOrDefault(name), movedCount);
+				// **Recorded separately as well as merged.** This is the only channel that means
+				// "this card CAUSES the thing"; every other one means "this card IS the thing".
+				causal[d][name] = Math.Max(causal[d].GetValueOrDefault(name), movedCount);
+				if (demandsOf.TryGetValue(name, out var asks) && asks.Contains(d))
+					demandsOf[name] = [.. asks.Where(x => x != d)];
+			}
 		}
 
 		// --- 3b. Probe: which cards, when played, fire which trigger ---
@@ -433,10 +630,19 @@ public sealed class PoolFeatures
 		ProbeCostDemands(pool, demands, supply, demandsOf, failures);
 
 		// --- 4. Drop demands the whole pool answers: they cannot separate two decks ---
+		// Targeting specs are dropped here too unless they aim at the caster's own zones — see
+		// TargetingProperty. Done in the same pass as the uninformative filter so there is one
+		// remap rather than two.
 		var ceiling = pool.Count * UninformativeShare;
 		var keep = Enumerable
 			.Range(0, demands.Count)
-			.Where(d => supply[d].Count < ceiling)
+			.Where(d =>
+				supply[d].Count < ceiling
+				&& (
+					!origins[d].EndsWith(TargetingProperty, StringComparison.Ordinal)
+					|| IsDeckScoped(demands[d], context)
+				)
+			)
 			.ToList();
 
 		var remap = new int[demands.Count];
@@ -453,6 +659,7 @@ public sealed class PoolFeatures
 				StringComparer.Ordinal
 			),
 			keep.Select(d => supply[d]).ToArray(),
+			keep.Select(d => causal[d]).ToArray(),
 			keep.Select(d => landSupply[d]).ToArray(),
 			failures.Distinct(StringComparer.Ordinal).ToList()
 		);
@@ -520,6 +727,31 @@ public sealed class PoolFeatures
 				var landed = probed
 					.GetCardsInZone(ids.Player1BattlefieldId)
 					.LastOrDefault(c => string.Equals(c.Name, card.Name, StringComparison.Ordinal));
+
+				// **A third perturbation: something ELSE enters while the subject is in play.**
+				//
+				// Without it, "whenever ANOTHER creature you control enters" is structurally
+				// unfireable — the subject arrives on an empty battlefield, so there is no other
+				// creature and the trigger never gets a chance. Soul Warden therefore supplied no
+				// life gain at all and the life-gain concept came back as a pile of creatures that
+				// gain life on their OWN entry, with the actual engine piece missing.
+				//
+				// The companion's own events are stripped: it is scaffolding, and attributing its
+				// arrival to the subject would make every card in the pool a supplier of
+				// "a creature entered the battlefield".
+				var (withCompanion, companionEvents) = probed
+					.AddActions([new PutIntoBattlefieldAction { CardTemplate = Companion(ids) }])
+					.ProcessAllActions();
+
+				var companionId = withCompanion
+					.GetCardsInZone(ids.Player1BattlefieldId)
+					.LastOrDefault(c =>
+						string.Equals(c.Name, CompanionName, StringComparison.Ordinal)
+					)
+					?.Id;
+
+				probed = withCompanion;
+				events = events.AddRange(companionEvents.Where(e => CardIdOf(e) != companionId));
 
 				if (landed is not null)
 				{
@@ -617,6 +849,14 @@ public sealed class PoolFeatures
 
 		for (var d = 0; d < demands.Count; d++)
 		{
+			// A SpellsCastDemand is supplied by every cheap card in the pool, so its representative
+			// is whichever of those happens to sort first — and if that is an artifact, four copies
+			// on the battlefield move every affinity card's cost and this would report the entire
+			// artifact archetype as demanding "cast spells first". The probe reads a BOARD; this
+			// demand is about a turn, so it has nothing to say here.
+			if (demands[d] is SpellsCastDemand)
+				continue;
+
 			// A supplier that can sit on a battlefield. Cost reducers count permanents, so a
 			// representative that is only ever a spell tells us nothing.
 			var representative = supply[d]
@@ -627,22 +867,49 @@ public sealed class PoolFeatures
 			if (representative is null)
 				continue;
 
+			// **A control that does NOT answer this demand, and without it the probe cannot tell
+			// affinity from convoke.** Convoke discounts per creature of ANY kind, so four Zombies
+			// on the battlefield move every convoke card's cost — and Stoke the Flames and
+			// Devouring Light were therefore filed as payoffs of the Zombie concept, the Spirit
+			// concept, the Elf concept and every other creature demand in the pool. In the ALL
+			// report they appeared as payoffs of nearly every concept containing creatures.
+			//
+			// A card only demands THIS thing if its cost moves for the representative and does
+			// NOT move for a permanent that answers something else. Affinity passes (the control
+			// is not an artifact); convoke is correctly rejected as wanting creatures generally.
+			var control = pool.FirstOrDefault(c =>
+				c.HasComponent<PermanentComponent>() && !supply[d].ContainsKey(c.Name)
+			);
+
 			try
 			{
-				var state = empty;
-				for (var i = 0; i < Copies; i++)
-					(state, _) = state.AddObject(
-						representative with
-						{
-							OwnerId = ids.Player1Id,
-							ControllerId = ids.Player1Id,
-						},
-						parentId: ids.Player1BattlefieldId
-					);
+				GameState WithFour(Card template)
+				{
+					var s = empty;
+					for (var i = 0; i < Copies; i++)
+						(s, _) = s.AddObject(
+							template with
+							{
+								OwnerId = ids.Player1Id,
+								ControllerId = ids.Player1Id,
+							},
+							parentId: ids.Player1BattlefieldId
+						);
+					return s;
+				}
+
+				var state = WithFour(representative);
+				var controlState = control is null ? null : WithFour(control);
 
 				foreach (var card in pool)
 				{
 					if (CostIn(state, card) == baseline[card.Name])
+						continue;
+					// Moved for both: whatever it wants, it is not specifically this.
+					if (
+						controlState is not null
+						&& CostIn(controlState, card) != baseline[card.Name]
+					)
 						continue;
 					if (!extra.TryGetValue(card.Name, out var list))
 						extra[card.Name] = list = [];
@@ -689,6 +956,313 @@ public sealed class PoolFeatures
 	}
 
 	/// <summary>
+	/// How much mana each card LEAVES you, measured: mana gained minus mana paid.
+	///
+	/// **This replaces a cheapness test that was pointed the wrong way.** Supplying a
+	/// <see cref="SpellsCastDemand"/> from "costs 2 or less" produced a storm deck of Delver of
+	/// Secrets, Llanowar Elves, Imposing Sovereign and Skyknight Vanguard — cheap CREATURES, which
+	/// are the opposite of a storm enabler. A two-mana creature costs you two mana to add one to
+	/// the count; the count is not the resource, the mana is. What storm wants is cards that leave
+	/// you able to cast MORE than you could before: rituals, Moxen, Sol Ring, Lotus Bloom.
+	///
+	/// Measured rather than listed, so no action type is named here and a mana source written
+	/// tomorrow is found the day it exists. A permanent is put onto the battlefield and a turn is
+	/// started — which is what fires the upkeep triggers every mana rock and dork in this project
+	/// produces from, so a probe that skipped the turn would score every one of them at zero. A
+	/// non-permanent has its effects resolved directly, since it never sits on a battlefield.
+	///
+	/// **Cantrips come out negative and are excluded, and that is understated on purpose.**
+	/// Preordain genuinely does advance a storm turn by replacing itself. Counting "draws a card"
+	/// as mana needs a conversion rate between two resources, which is a scoring decision, and
+	/// nothing in this file scores anything. Understating is the safe direction for a rule that
+	/// decides what a deck gets built out of.
+	/// </summary>
+	private static Dictionary<string, CardProfile> ProbeCardProfiles(
+		IReadOnlyList<Card> pool,
+		List<string> failures
+	)
+	{
+		var profiles = new Dictionary<string, CardProfile>(StringComparer.Ordinal);
+
+		// Cards for the subject to act ON. A probe against empty zones measures nothing: a cantrip
+		// draws from an empty library and reads as card-negative, and Entomb searches a library
+		// with no creature in it and moves nothing. Taken from the pool in its own order so the
+		// filler is deterministic and is the kind of card these effects expect to find.
+		var filler = new List<Card>();
+		filler.AddRange(pool.Where(c => c.HasComponent<CreatureComponent>()).Take(3));
+		filler.AddRange(
+			pool.Where(c =>
+					!c.HasComponent<PermanentComponent>() && c.HasComponent<SpellComponent>()
+				)
+				.Take(3)
+		);
+		filler.Add(CardLibrary.Plains());
+
+		foreach (var card in pool)
+		{
+			if (card.HasSubtype("Land"))
+				continue;
+
+			try
+			{
+				var (fixture, ids) = MtgGameFactory.CreateForTesting();
+
+				var fillerIds = new List<int>();
+				// The GRAVEYARD is stocked too, and leaving it out cost the probe Past In Flames.
+				// A card that makes your graveyard castable adds nothing measurable against an empty
+				// one — it flashes back nothing, the castable count does not move, and the best card
+				// in a storm deck reads as pure loss. Same for every recursion card in the pool.
+				foreach (
+					var zone in new[]
+					{
+						ids.Player1LibraryId,
+						ids.Player1HandId,
+						ids.Player1GraveyardId,
+					}
+				)
+				foreach (var f in filler)
+				{
+					(fixture, var placed) = fixture.AddObject(
+						f with
+						{
+							OwnerId = ids.Player1Id,
+							ControllerId = ids.Player1Id,
+						},
+						parentId: zone
+					);
+					fillerIds.Add(placed.Id);
+				}
+
+				// CurrentMana only, not MaxMana. The question is "can I cast more spells THIS
+				// turn", and `CreateForTesting` starts both at 99 with CurrentMana already equal
+				// to MaxMana — so `StartTurnAction`'s refill is a no-op here and any movement is
+				// the card's doing.
+				int ManaOf(GameState s) =>
+					s.GetObject(ids.Player1Id) is MtgPlayer p ? p.CurrentMana : 0;
+				// **Castable cards ANYWHERE, not cards in hand.** Past In Flames adds nothing to
+				// your hand — it makes your GRAVEYARD castable — so a hand-size measure read the
+				// best card in a storm deck as card-negative and excluded it outright. Impulse
+				// draw has the same shape from exile. `IsInCastableZone` is the single "can you
+				// play this from where it is" predicate all four play actions consult, so asking
+				// it here cannot disagree with what the game will actually let you cast, and a
+				// future mechanic that widens castability is counted the day it ships.
+				// **Flashback is NOT in `IsInCastableZone`** — it is handled separately by
+				// `MtgActionGenerator.AddGraveyardFlashbackActions`, so the predicate covers hand,
+				// impulse-exile and library-top and stops. Asking it alone still missed Past In
+				// Flames, whose entire function is making your graveyard castable. Checked here
+				// rather than widened in the engine: that predicate gates cast LEGALITY and giving
+				// it a new true case would change what the game allows, for a measurement.
+				bool Castable(GameState s, int id) =>
+					s.IsInCastableZone(id, ids.Player1Id)
+					|| (
+						s.GetCardZoneId(id) == ids.Player1GraveyardId
+						&& s.GetObject(id) is Card c
+						&& c.HasComponent<FlashbackComponent>()
+					);
+
+				int CastableOf(GameState s) =>
+					new[] { ids.Player1HandId, ids.Player1GraveyardId, ids.Player1ExileId }
+						.Where(z => z != 0)
+						.SelectMany(s.GetChildrenIds)
+						.Count(id => Castable(s, id));
+
+				var manaBefore = ManaOf(fixture);
+				var castableBefore = CastableOf(fixture);
+				var zoneBefore = fillerIds.ToDictionary(id => id, id => ZoneOf(fixture, id));
+
+				var subject = card with { OwnerId = ids.Player1Id, ControllerId = ids.Player1Id };
+
+				GameState after;
+				if (card.HasComponent<PermanentComponent>())
+				{
+					// The turn is what fires the upkeep trigger every mana rock and dork in this
+					// project produces from. Without it they all read as zero and the probe would
+					// find nothing but rituals.
+					(after, _) = fixture
+						.AddActions(
+							[
+								new PutIntoBattlefieldAction { CardTemplate = subject },
+								new StartTurnAction
+								{
+									ActivePlayerId = ids.Player1Id,
+									BattlefieldId = ids.Player1BattlefieldId,
+									SkipDraw = true,
+								},
+							]
+						)
+						.ProcessAllActions();
+				}
+				else
+				{
+					var spell = subject.GetComponent<SpellComponent>();
+					if (spell is null || spell.Effects.Count == 0)
+						continue;
+
+					(after, _) = fixture
+						.AddActions(
+							[
+								new ResolveEffectAction
+								{
+									Effects = spell.Effects,
+									CastingPlayerId = ids.Player1Id,
+									SourceCardId = 0,
+								},
+							]
+						)
+						.ProcessAllActions();
+				}
+
+				// **An X card's ManaCost is 0 and that is not a discount.** X lives on the cast
+				// action, never on the card, so Banefire and Hangarback Walker both read
+				// `manaCost: 0` and came back as free spells that any storm deck should play.
+				// A cost that cannot be known cannot be shown to be profitable.
+				var cost = card.HasComponent<XCostComponent>() ? int.MaxValue / 2 : card.ManaCost;
+
+				// Counted, not just recorded. A mill-4 fills a graveyard four times as fast as a
+				// one-card tutor, and `SupplyOf` is the channel that difference travels down.
+				var moved = fillerIds
+					.Where(id => ZoneOf(after, id) != zoneBefore[id])
+					.Select(id => ZoneOf(after, id))
+					.Where(z => z is not null and not ZoneType.Battlefield)
+					.GroupBy(z => z!.Value)
+					.ToDictionary(g => g.Key, g => g.Count());
+
+				profiles[card.Name] = new CardProfile(
+					ManaOf(after) - manaBefore - cost,
+					// Minus one for the card itself: it was spent to do this. A cantrip comes out
+					// at exactly 0 — card-neutral, which is what makes it a storm enabler despite
+					// making no mana.
+					CastableOf(after)
+						- castableBefore
+						- 1,
+					moved
+				);
+			}
+			catch (Exception ex)
+			{
+				// Same rule as every other probe here: a card that cannot be deployed into a bare
+				// fixture answers nothing rather than killing the build, and is surfaced.
+				failures.Add($"card probe {card.Name} threw {ex.GetType().Name}");
+			}
+		}
+
+		return profiles;
+	}
+
+	private const string CompanionName = "__companion";
+
+	/// <summary>
+	/// A deliberately featureless 1/1 for the trigger probe to play alongside the subject. Vanilla
+	/// so it fires nothing of its own — the only thing it contributes is *existing*.
+	/// </summary>
+	private static Card Companion(MtgGameIds ids) =>
+		new()
+		{
+			Name = CompanionName,
+			OwnerId = ids.Player1Id,
+			ControllerId = ids.Player1Id,
+			Components = ImmutableArray.Create<GameComponent>(
+				new PermanentComponent(),
+				new CreatureComponent { Power = 1, Toughness = 1 }
+			),
+		};
+
+	/// The card an event names, by property, or null. Same positional rule as the demand harvest.
+	private static int? CardIdOf(GameEvent e) =>
+		e.GetType().GetProperty("CardId", BindingFlags.Public | BindingFlags.Instance)?.GetValue(e)
+		as int?;
+
+	private static ZoneType? ZoneOf(GameState state, int cardId) =>
+		state.HasObject(cardId) ? state.GetCardZone(cardId)?.ZoneType : null;
+
+	/// <summary>
+	/// The single non-battlefield zone a demand's candidates live in, or null.
+	///
+	/// This is what makes movement supply addressable: "a creature card in your graveyard" is a
+	/// question about the GRAVEYARD, so anything that puts cards there answers it. A demand whose
+	/// candidates are scattered (a plain subtype filter matches cards in every zone) has no single
+	/// zone and gets no movement supply — the concept of "putting a Goblin somewhere" is not what
+	/// a Goblin lord is asking for.
+	/// </summary>
+	private static ZoneType? DemandZone(object demand, TargetingContext context)
+	{
+		if (demand is not TargetSpecification spec)
+			return null;
+
+		try
+		{
+			ZoneType? found = null;
+			foreach (var id in spec.GetCandidateIds(context))
+			{
+				var zone = ZoneOf(context.GameState, id);
+				if (zone is null or ZoneType.Battlefield)
+					return null;
+				if (found is not null && found != zone)
+					return null;
+				found = zone;
+			}
+			return found;
+		}
+		catch
+		{
+			return null;
+		}
+	}
+
+	/// <summary>
+	/// What one card does to the two resources a deck runs on, and where it moves cards to.
+	/// </summary>
+	/// <param name="Mana">Mana left over after paying for it. A ritual is positive.</param>
+	/// <param name="Cards">Cards in hand afterwards, counting itself as spent. A cantrip is 0.</param>
+	/// <param name="MovesInto">
+	/// How many OTHER cards this card put into each non-battlefield zone.
+	/// </param>
+	private readonly record struct CardProfile(
+		int Mana,
+		int Cards,
+		IReadOnlyDictionary<ZoneType, int> MovesInto
+	);
+
+	/// <summary>
+	/// Does this targeting spec aim at the caster's OWN cards rather than at the board?
+	///
+	/// Asked of the fixture, where every pool card sits in all four zones, so the answer comes
+	/// from what the spec actually selects rather than from its type. A spec whose candidates
+	/// include anything on a battlefield is aiming at the shared board — "destroy target
+	/// permanent", "deal 3 damage to any target" — and says nothing about your deck. One whose
+	/// candidates are confined to hand, graveyard or library is asking your deck a question.
+	///
+	/// **Empty means no**, deliberately. A spec that selects nothing in a fixture holding the
+	/// whole pool cannot be shown to be about your deck, and the safe direction for a rule that
+	/// CREATES demands is to add fewer of them.
+	/// </summary>
+	private static bool IsDeckScoped(object demand, TargetingContext context)
+	{
+		if (demand is not TargetSpecification spec)
+			return false;
+
+		try
+		{
+			var any = false;
+			foreach (var id in spec.GetCandidateIds(context))
+			{
+				if (!context.GameState.HasObject(id))
+					continue;
+				if (context.GameState.GetCardZone(id).ZoneType == ZoneType.Battlefield)
+					return false;
+				any = true;
+			}
+			return any;
+		}
+		catch
+		{
+			// Same rule as the supply evaluation: a spec that cannot make sense of the fixture
+			// answers "no", it does not kill the build.
+			return false;
+		}
+	}
+
+	/// <summary>
 	/// Walks a card's object graph collecting demands and produced cards.
 	///
 	/// Generic rather than hand-navigated because the interesting filters are arbitrarily deep —
@@ -729,6 +1303,14 @@ public sealed class PoolFeatures
 
 		var owner = node.GetType().Name;
 
+		// The cast-restriction half of SpellsCastDemand. Caught at the node rather than in the
+		// property switch below because what carries the meaning is the restriction's TYPE — its
+		// only property is a bare int called `Minimum`, which is not a demand anywhere else.
+		if (node is RequiresSpellsCastThisTurnRestriction restriction)
+			demands.Add(
+				(new SpellsCastDemand { Minimum = restriction.Minimum }, $"{owner}.CanCast")
+			);
+
 		foreach (var prop in PropertiesOf(node.GetType()))
 		{
 			object? value;
@@ -748,9 +1330,19 @@ public sealed class PoolFeatures
 			{
 				// A filter IS the demand. Never recurse into it: its inner Subtype is part of the
 				// question being asked, not a second question.
+				//
+				// `TargetingStrategy.Specification` is the third case and it is DECIDED LATER, not
+				// here. "What am I aiming at" is usually not a demand — Lightning Bolt's "any
+				// creature" is about the opponent's board — but Reanimate's "a creature card in
+				// YOUR graveyard" is a question about your deck and nothing else. Which one a spec
+				// is cannot be read off the card; it is read off the ZONE its candidates come
+				// from, and that needs the fixture. Recorded with a marker origin and filtered in
+				// `Build`.
 				case TargetSpecification spec:
 					if (DemandProperties.Contains(prop.Name))
 						demands.Add((spec, $"{owner}.{prop.Name}"));
+					else if (prop.Name == TargetingProperty)
+						demands.Add((spec, $"{owner}.{TargetingProperty}"));
 					continue;
 
 				// **A trigger's demand is the WHOLE condition, not its Filter.** Taking the filter
@@ -762,6 +1354,13 @@ public sealed class PoolFeatures
 				// fire it), the same demand reads as the 237 creatures.
 				case TriggerCondition condition when prop.Name == "Condition":
 					demands.Add((condition, $"{owner}.Condition"));
+					continue;
+
+				// Storm. The count it multiplies by lives in `MtgGame`, so the card carries only
+				// this flag — 2 rather than 1 because a storm spell already counts itself, so a
+				// minimum of 1 would be satisfied by casting nothing at all.
+				case bool flag when prop.Name == "HasStorm" && flag:
+					demands.Add((new SpellsCastDemand { Minimum = 2 }, $"{owner}.HasStorm"));
 					continue;
 
 				// "Cards of this subtype qualify" — tutors, subtype counters, tribal P/T.

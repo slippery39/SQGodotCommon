@@ -42,8 +42,8 @@ public class GoldfishTests
 		fastDeck = fastDeck with { Lands = Decklist.DeckSize - fastDeck.SpellCount };
 		slowDeck = slowDeck with { Lands = Decklist.DeckSize - slowDeck.SpellCount };
 
-		var (fastSpeed, _, fastWins) = Goldfish.Measure(fastDeck, pool, games: 6, seed: 4_000);
-		var (slowSpeed, _, slowWins) = Goldfish.Measure(slowDeck, pool, games: 6, seed: 4_000);
+		var (fastSpeed, _, fastWins, _) = Goldfish.Measure(fastDeck, pool, games: 6, seed: 4_000);
+		var (slowSpeed, _, slowWins, _) = Goldfish.Measure(slowDeck, pool, games: 6, seed: 4_000);
 
 		Assert.That(
 			fastSpeed,
@@ -86,7 +86,7 @@ public class GoldfishTests
 				);
 			deck = deck with { Lands = Decklist.DeckSize - deck.SpellCount };
 
-			var (speed, score, wins) = Goldfish.Measure(deck, pool, games: 10, seed: 7_000);
+			var (speed, score, wins, _) = Goldfish.Measure(deck, pool, games: 10, seed: 7_000);
 			Console.WriteLine($"{info.Name, -22}{speed, 12:F1} {wins, 8}  {score, 10:F1}");
 		}
 	}

@@ -93,6 +93,24 @@ public static class CardValueSandbox
 	/// </summary>
 	public const int DefaultLookaheadTurns = 4;
 
+	/// <summary>
+	/// Cards stocked into every one of player 1's zones so a demand is ANSWERED, plus the storm
+	/// count if one is asked for.
+	///
+	/// **Every zone, deliberately, because dispatching per demand kind is the mechanic-to-meaning
+	/// table this project refuses to write.** A subtype filter reads the battlefield, a reanimation
+	/// spec reads the graveyard, Dragonstorm's fetch reads the library, and a rummage cost reads the
+	/// hand. Putting the suppliers in all four satisfies whichever it turns out to be, with nothing
+	/// here having to know which.
+	///
+	/// <paramref name="StormCount"/> is the one exception and it is the same exception
+	/// <see cref="PoolFeatures"/> already makes: "a spell was cast" is an event in a turn, not a
+	/// card in a zone, so there is nothing to stock and the counter is set directly.
+	/// </summary>
+	private sealed record Stocking(string Key, IReadOnlyList<Card> Cards, int StormCount);
+
+	private const int StockedCopies = 2;
+
 	public static IReadOnlyList<CardValue> Measure(
 		IReadOnlyList<Card> cards,
 		int lookaheadTurns = DefaultLookaheadTurns,
@@ -101,7 +119,8 @@ public static class CardValueSandbox
 	{
 		// Keyed by mana level as well as mode: the fixture's mana tracks the card's own cost, so
 		// the baseline a card is scored against must be the one at ITS level.
-		var controls = new Dictionary<(int Mana, OpponentSimulationMode Mode), float>();
+		var controls =
+			new Dictionary<(int Mana, OpponentSimulationMode Mode, string Stock), float>();
 		var results = new List<CardValue>(cards.Count);
 
 		foreach (var card in cards)
@@ -149,16 +168,119 @@ public static class CardValueSandbox
 		return results;
 	}
 
+	/// <summary>
+	/// **How much is this card worth WITH its demands answered, against a bare board?**
+	///
+	/// This is the signal that says "combo payoff" without anyone naming an archetype, and it is the
+	/// ranking `EngineDiscovery` needs: `DeckCore.For` generates a core for every card that asks
+	/// anything, which on ALL is 203 cores and 50 distinct — far more than a report can be read as,
+	/// and most of them are one broad demand ("a creature entered") that no deck has to be built
+	/// around.
+	///
+	/// Supplier count cannot separate them, because it cannot tell a broad demand with a real payoff
+	/// from a broad demand with a fake one. Leverage can:
+	///
+	/// | Card | bare | supplied | leverage |
+	/// |---|---|---|---|
+	/// | a good-stuff creature | high | high | **~0** — it does the same thing either way |
+	/// | an aura that targets a creature | high | high | **~0** |
+	/// | Dragonstorm | ~0, a blank | large | **large** |
+	///
+	/// **Both arms subtract their OWN control**, so the extra permanents a stocking puts on the
+	/// board cancel out and what is left is the card's own gain from being supported.
+	///
+	/// One arm only (`PassTurn`). Fragility is a separate axis and doubling the cost to measure it
+	/// here would be answering a question nobody asked of this table.
+	/// </summary>
+	public static IReadOnlyList<CardLeverage> MeasureLeverage(
+		IReadOnlyList<string> payoffs,
+		PoolFeatures features,
+		IReadOnlyDictionary<string, Card> pool,
+		int suppliersPerDemand = 2,
+		int lookaheadTurns = DefaultLookaheadTurns,
+		int seed = 7
+	)
+	{
+		var controls = new Dictionary<(int, OpponentSimulationMode, string), float>();
+		var results = new List<CardLeverage>(payoffs.Count);
+
+		foreach (var name in payoffs)
+		{
+			if (!pool.TryGetValue(name, out var card))
+				continue;
+
+			var demands = features.DemandsOf(name).Where(features.Informative).ToList();
+			if (demands.Count == 0)
+			{
+				results.Add(new CardLeverage(name, 0f, 0f, "asks nothing answerable"));
+				continue;
+			}
+
+			var stock = new List<Card>();
+			var storm = 0;
+			foreach (var d in demands)
+			{
+				if (features.Demands[d] is PoolFeatures.SpellsCastDemand s)
+				{
+					storm = Math.Max(storm, s.Minimum);
+					continue;
+				}
+				// Best supply first, and never the payoff itself — a card must not answer its own
+				// demand, the same rule `Satisfaction` and `EngineProbe.Read` apply.
+				stock.AddRange(
+					features
+						.SuppliersOf(d)
+						.Where(n => !string.Equals(n, name, StringComparison.Ordinal))
+						.Take(suppliersPerDemand)
+						.Where(pool.ContainsKey)
+						.Select(n => pool[n])
+				);
+			}
+
+			if (stock.Count == 0 && storm == 0)
+			{
+				results.Add(new CardLeverage(name, 0f, 0f, "nothing in the pool to stock"));
+				continue;
+			}
+
+			var mana = card.ManaCost + XBudget;
+			var bare = MeasureOne(
+				card,
+				mana,
+				OpponentSimulationMode.PassTurn,
+				lookaheadTurns,
+				seed,
+				controls
+			);
+			var supplied = MeasureOne(
+				card,
+				mana,
+				OpponentSimulationMode.PassTurn,
+				lookaheadTurns,
+				seed,
+				controls,
+				new Stocking(name, stock, storm)
+			);
+
+			results.Add(
+				new CardLeverage(name, bare.Value, supplied.Value, bare.Error ?? supplied.Error)
+			);
+		}
+
+		return results;
+	}
+
 	private static (float Value, string? Error) MeasureOne(
 		Card card,
 		int mana,
 		OpponentSimulationMode mode,
 		int lookaheadTurns,
 		int seed,
-		Dictionary<(int, OpponentSimulationMode), float> controls
+		Dictionary<(int, OpponentSimulationMode, string), float> controls,
+		Stocking? stocking = null
 	)
 	{
-		var (state, ids) = Table(mana);
+		var (state, ids) = Table(mana, stocking);
 		var ai = new MultiTurnBeamSearchAiStrategy(
 			ids,
 			lookaheadTurns: lookaheadTurns,
@@ -169,7 +291,11 @@ public static class CardValueSandbox
 		// The counterfactual. Without it the number is "N turns elapsed" PLUS the card, and the
 		// elapsed part swamps the signal — it is the same for every card at this mana level, which
 		// is exactly why it is worth computing once and subtracting.
-		if (!controls.TryGetValue((mana, mode), out var control))
+		// **Each stocking gets its OWN control, and that is what makes leverage a real difference.**
+		// A stocked fixture has more permanents, so it scores higher before the card is cast; charge
+		// the stocked arm against the bare control and the leverage number would be the board.
+		var stockKey = stocking?.Key ?? "";
+		if (!controls.TryGetValue((mana, mode, stockKey), out var control))
 		{
 			try
 			{
@@ -179,7 +305,7 @@ public static class CardValueSandbox
 			{
 				return (0f, "control threw");
 			}
-			controls[(mana, mode)] = control;
+			controls[(mana, mode, stockKey)] = control;
 		}
 
 		Card subject;
@@ -286,7 +412,7 @@ public static class CardValueSandbox
 	/// affordability from cost, which is right when mana is meant to cancel and wrong here, where
 	/// it is the variable being held constant.
 	/// </summary>
-	private static (GameState State, MtgGameIds Ids) Table(int mana)
+	private static (GameState State, MtgGameIds Ids) Table(int mana, Stocking? stocking = null)
 	{
 		var (state, ids) = MtgGameFactory.Create();
 		state = state.WithoutDeckingLoss();
@@ -331,6 +457,40 @@ public static class CardValueSandbox
 		// uncastable. Non-land so CardsInHandWeight counts them.
 		for (var i = 0; i < FillerHandSize; i++)
 			(state, _) = state.AddObject(Filler(ids.Player1Id), parentId: ids.Player1HandId);
+
+		if (stocking is not null)
+		{
+			int[] zones =
+			[
+				ids.Player1BattlefieldId,
+				ids.Player1GraveyardId,
+				ids.Player1LibraryId,
+				ids.Player1HandId,
+			];
+
+			foreach (var zone in zones.Where(z => z != 0))
+			foreach (var card in stocking.Cards)
+				for (var i = 0; i < StockedCopies; i++)
+					(state, _) = state.AddObject(
+						card with
+						{
+							OwnerId = ids.Player1Id,
+							ControllerId = ids.Player1Id,
+						},
+						parentId: zone
+					);
+
+			// Set rather than stocked: see `Stocking`. `CastSpellAction` increments this before
+			// resolution, so a card with storm sees count + 1, exactly as it would in a real turn.
+			if (stocking.StormCount > 0 && state.TryGetGame() is { } game)
+				state = state.UpdateObject(
+					game.Id,
+					game with
+					{
+						SpellsCastThisTurn = stocking.StormCount,
+					}
+				);
+		}
 
 		return (state, ids);
 	}
@@ -469,6 +629,25 @@ public sealed record CardValue(
 	/// means <see cref="Value"/> is describing a board the card will rarely be left alone on.
 	/// </summary>
 	public float Fragility => Value - StressValue;
+
+	public bool WasMeasured => NotMeasured == null;
+}
+
+/// <summary>
+/// What a payoff is worth with its demands answered, against the same card cast into a bare board.
+///
+/// **Near zero is the common and correct answer** — most of any pool is good-stuff cards that do
+/// the same thing whatever else is in play. A large positive is the signature of a combo payoff:
+/// a card that is a blank until its conditions are met.
+///
+/// A large NEGATIVE is worth reading rather than discarding. It means the stocked board made the
+/// card worse, which is either a genuine anti-synergy or — more likely at first — a fixture
+/// artifact, since stocking puts cards into four zones at once and some of those placements are
+/// nonsense for the card in question.
+/// </summary>
+public sealed record CardLeverage(string Name, float Bare, float Supplied, string? NotMeasured)
+{
+	public float Leverage => Supplied - Bare;
 
 	public bool WasMeasured => NotMeasured == null;
 }

@@ -38,6 +38,7 @@ public sealed class MetagameEvolver
 	private readonly int _conceptSlots;
 	private readonly int _gauntletGames;
 	private readonly IReadOnlyList<string> _gauntlet;
+	private readonly string? _enginesPath;
 
 	/// <summary>
 	/// How much longer a concept slot is left alone before it can be culled.
@@ -84,7 +85,8 @@ public sealed class MetagameEvolver
 		int preSimDecks = 300,
 		int preSimOpponents = 12,
 		int conceptSlots = 0,
-		int gauntletGames = 0
+		int gauntletGames = 0,
+		string? enginesPath = null
 	)
 	{
 		if (deckCount < 2)
@@ -115,6 +117,7 @@ public sealed class MetagameEvolver
 		_conceptSlots = Math.Clamp(conceptSlots, 0, Math.Max(0, deckCount - 1));
 		_gauntletGames = Math.Max(0, gauntletGames);
 		_gauntlet = _gauntletGames > 0 ? Gauntlet.For(set.Code) : [];
+		_enginesPath = enginesPath;
 	}
 
 	/// <summary>
@@ -148,6 +151,40 @@ public sealed class MetagameEvolver
 		public int Games;
 
 		public double Rate => Games == 0 ? 0 : (double)Wins / Games;
+	}
+
+	/// <summary>
+	/// Engine slots from a mode 7 report, paired with the field slots they occupy.
+	///
+	/// Highest LIFT first — that column is the only one distinguishing a synergy from a
+	/// coincidence, so taking the top of it is taking the archetypes most likely to be real. The
+	/// last slot is left alone: it is the permanent wildcard, and replacing the exploration arm
+	/// with a fixed archetype removes the only slot that can find something nobody discovered.
+	/// </summary>
+	private IEnumerable<(int Slot, EngineCandidate Engine)> LoadEngines()
+	{
+		if (string.IsNullOrWhiteSpace(_enginesPath))
+			yield break;
+
+		var report = EngineReportStore.Load(_enginesPath);
+		if (report is null)
+		{
+			Console.WriteLine($"  WARNING: no engine report at {_enginesPath} — running without.");
+			yield break;
+		}
+
+		var usable = Math.Max(0, _deckCount - 1);
+		var take = report.Engines.OrderByDescending(e => e.Lift).Take(usable).ToList();
+
+		Console.WriteLine($"  Engines: {take.Count} of {report.Engines.Count} from {_enginesPath}");
+		for (var i = 0; i < take.Count; i++)
+		{
+			Console.WriteLine(
+				$"    slot {i}: {take[i].Concept} (lift {take[i].Lift:+0.0;-0.0}, "
+					+ $"{take[i].Payoffs.Count + take[i].Enablers.Count} cards in pool)"
+			);
+			yield return (i, take[i]);
+		}
 	}
 
 	public MetagameResult Run()
@@ -222,6 +259,49 @@ public sealed class MetagameEvolver
 					+ "distinct. Lower the target, use fewer decks, or use a bigger pool."
 			);
 
+		// --- Engine slots: a discovered archetype, seeded from mode 7 and held to its card pool ---
+		//
+		// **The POOL is locked, not the decklist.** Freezing specific cards reproduces the
+		// max-density failure (jammed goblins 24.4% against the AI's half-built one at 55.0%);
+		// freezing nothing lets the deck dissolve into the midrange pile every unconstrained run
+		// converges on. A quota over the archetype's card pool keeps the identity while leaving
+		// ~40% of the spells free for removal and metagame answers.
+		var identities = new DeckCore?[_deckCount];
+		foreach (var (slot, engine) in LoadEngines())
+		{
+			var starting = engine.Deck with { Name = $"Engine-{engine.Concept}" };
+			var invalid = starting.Validate();
+			if (invalid is not null)
+			{
+				// Almost always the land floor: mode 7 is run at MTG_MIN_LANDS=12 because Storm
+				// and Affinity are illegal above it, and an evolution run at the 20 default cannot
+				// hold the deck that produced the engine.
+				Console.WriteLine($"  WARNING: engine '{engine.Concept}' unusable — {invalid}");
+				continue;
+			}
+
+			field[slot] = starting;
+			// **The core comes from the report, it is no longer rebuilt here.** This used to invent
+			// two slots — "Payoff" and "Enabler" — with minimums set to a third of whatever the
+			// sample deck happened to play, which made the constraint a function of one seeding
+			// draw. `DeckCore.For` derives it from the payoff card's own demands instead, so a
+			// Dragonstorm slot carries a Dragon floor and a storm floor as separate facts rather
+			// than one merged "Enabler" bucket that either could satisfy alone.
+			var identity = engine.Core;
+			identities[slot] = identity;
+
+			// **Reported, because the constraint failing is otherwise invisible.** The first
+			// version of this allowed 40% drift and the storm slot spent all of it on Steppe Lynx
+			// and Gravecrawler while reporting nothing. `SeedConcept` tops up from the whole pool
+			// when a concept cannot fill 36 slots, so a starting deck below 100% is expected and
+			// self-heals — but it must never FALL, and a number here is what makes that checkable.
+			var missing = identity.Missing(starting);
+			if (missing.Count > 0)
+				Console.WriteLine(
+					$"    slot {slot} starts BELOW its core: {string.Join(", ", missing)}"
+				);
+		}
+
 		var ages = new int[_deckCount];
 		var isWildcard = Enumerable.Range(0, _deckCount).Select(i => i == _deckCount - 1).ToArray();
 		var isConcept = Enumerable
@@ -260,7 +340,15 @@ public sealed class MetagameEvolver
 				var list = new List<Decklist?> { field[i] };
 				for (var m = 0; m < MutantsFor(lastRate[i]); m++)
 					list.Add(
-						DeckBuilder.Mutate(field[i], _spellPool, values, mutRng, history, features)
+						DeckBuilder.Mutate(
+							field[i],
+							_spellPool,
+							values,
+							mutRng,
+							history,
+							features,
+							identities[i]
+						)
 					);
 				candidates[i] = list;
 			}
@@ -388,6 +476,7 @@ public sealed class MetagameEvolver
 				ages,
 				isWildcard,
 				isConcept,
+				identities,
 				values,
 				features,
 				rng,
@@ -631,6 +720,7 @@ public sealed class MetagameEvolver
 		int[] ages,
 		bool[] isWildcard,
 		bool[] isConcept,
+		DeckCore?[] identities,
 		ConstructedValues values,
 		PoolFeatures? features,
 		Random rng,
@@ -653,6 +743,15 @@ public sealed class MetagameEvolver
 
 		for (var i = 0; i < _deckCount; i++)
 		{
+			// **An engine slot is never culled, and that is the whole premise of the two-phase
+			// split.** Its archetype was already judged in mode 7 by whether it ASSEMBLES; the
+			// win rate is here to tune it against the field, not to decide whether it deserves
+			// to exist. A half-built combo deck loses every game, so a viability floor would
+			// delete exactly the decks this feature was built to keep — which is what every
+			// unconstrained run has done. Its rate is still reported.
+			if (identities[i] is not null)
+				continue;
+
 			var grace = isConcept[i]
 				? _graceGenerations * ConceptGraceMultiplier
 				: _graceGenerations;

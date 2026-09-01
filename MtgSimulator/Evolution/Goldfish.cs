@@ -63,7 +63,12 @@ public static class Goldfish
 				.ToImmutableList();
 	}
 
-	public readonly record struct Result(int TurnsToWin, float FinalScore, bool Won)
+	public readonly record struct Result(
+		int TurnsToWin,
+		float FinalScore,
+		bool Won,
+		EngineProbe.Reading Engine = default
+	)
 	{
 		/// Lower is better and 99 means "never". Ranking on this alone makes a deck that wins on
 		/// turn 6 strictly better than one that wins on turn 7, which is the whole point.
@@ -75,12 +80,18 @@ public static class Goldfish
 	///
 	/// <paramref name="seed"/> varies the shuffle; average several, because a combo deck's speed
 	/// is a distribution and a single draw says very little about it.
+	///
+	/// **Pass a <paramref name="probe"/> to get the signal that actually works.** Speed is
+	/// retained because it is a useful description of a deck, but it is measurably the WRONG
+	/// fitness for assembling an engine — see <see cref="EngineProbe"/>. Null means the reading
+	/// comes back as all zeros, which is what every existing caller wants.
 	/// </summary>
 	public static Result Play(
 		Decklist deck,
 		IReadOnlyDictionary<string, Card> pool,
 		int seed,
-		int aiDepth = 2
+		int aiDepth = 2,
+		EngineProbe? probe = null
 	)
 	{
 		// The inert seat needs a legal deck; it never casts anything, so contents do not matter.
@@ -113,7 +124,11 @@ public static class Goldfish
 		// reanimator with a fatty in play on turn 4 has clearly assembled even if the kill is later.
 		var score = StateEvaluator.Evaluate(finalState, ids, ids.Player1Id);
 
-		return new Result(turns, score, won);
+		// Read inside this method and discarded with the frame. The log is the expensive thing to
+		// hold, not to walk — `MetagameEvolver.PlayBatch` drops it for exactly that reason.
+		var engine = probe?.Read(result.AllEvents, cardNames) ?? EngineProbe.Nothing;
+
+		return new Result(turns, score, won, engine);
 	}
 
 	/// <summary>
@@ -123,22 +138,30 @@ public static class Goldfish
 	/// drag a mean far more than it should; the median asks "how fast is this deck usually", which
 	/// is the question.
 	/// </summary>
-	public static (double MedianSpeed, double MeanScore, int Wins) Measure(
+	public static (
+		double MedianSpeed,
+		double MeanScore,
+		int Wins,
+		IReadOnlyList<EngineProbe.Reading> Readings
+	) Measure(
 		Decklist deck,
 		IReadOnlyDictionary<string, Card> pool,
 		int games = 10,
 		int seed = 50_000,
-		int aiDepth = 2
+		int aiDepth = 2,
+		EngineProbe? probe = null
 	)
 	{
 		var speeds = new List<int>(games);
+		var readings = new List<EngineProbe.Reading>(games);
 		var scores = 0.0;
 		var wins = 0;
 
 		for (var i = 0; i < games; i++)
 		{
-			var r = Play(deck, pool, seed + i * 11, aiDepth);
+			var r = Play(deck, pool, seed + i * 11, aiDepth, probe);
 			speeds.Add(r.Speed);
+			readings.Add(r.Engine);
 			scores += r.FinalScore;
 			if (r.Won)
 				wins++;
@@ -150,6 +173,6 @@ public static class Goldfish
 				? speeds[speeds.Count / 2]
 				: (speeds[speeds.Count / 2 - 1] + speeds[speeds.Count / 2]) / 2.0;
 
-		return (median, scores / games, wins);
+		return (median, scores / games, wins, readings);
 	}
 }
