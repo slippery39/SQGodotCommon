@@ -235,10 +235,15 @@ public sealed class MetagameEvolver
 			Console.WriteLine();
 		}
 
-		// Structural features are pool-derived and deterministic, so this is built once. Null
-		// when no concept slot was asked for, which leaves every scoring path exactly as it was.
+		// Structural features are pool-derived and deterministic, so this is built once.
+		//
+		// **Gated on concept slots ALONE this was null for every engine run, and the consequence was
+		// silent.** `SupportScore` returns 0 without features, so `DeadCardPenalty` never fires and
+		// nothing penalises a card whose demands the deck answers with nothing — a real 8-deck run
+		// finished holding a lone Cranial Plating in a list with two artifacts. Engines need the same
+		// scoring the concept slots do; ~20s once against a 26-minute run.
 		PoolFeatures? features = null;
-		if (_conceptSlots > 0)
+		if (_conceptSlots > 0 || !string.IsNullOrWhiteSpace(_enginesPath))
 		{
 			var featureTimer = Stopwatch.StartNew();
 			features = PoolFeatures.Build(_spellPool);
@@ -335,6 +340,19 @@ public sealed class MetagameEvolver
 			.Select(i => features is not null && i < _conceptSlots && !isWildcard[i])
 			.ToArray();
 
+		// **The band a slot must stay inside, kept for the whole run rather than used once at
+		// seeding.** Engine slots take `Any` because their core IS the constraint, and the wildcard
+		// takes `Any` because unconstrained drift is its entire job — stated explicitly rather than
+		// happening to every slot by omission.
+		var profiles = Enumerable
+			.Range(0, _deckCount)
+			.Select(i =>
+				identities[i] is not null
+					? DeckBuilder.DeckProfile.Any
+					: DeckBuilder.ProfileForSlot(i, _conceptSlots, isWildcard[i])
+			)
+			.ToArray();
+
 		var accumulator = new CardStatAccumulator();
 
 		// Per-slot history, which is what makes cutting synergy-aware. Reset when a slot is
@@ -373,7 +391,8 @@ public sealed class MetagameEvolver
 							mutRng,
 							history,
 							features,
-							identities[i]
+							identities[i],
+							profiles[i]
 						)
 					);
 				candidates[i] = list;

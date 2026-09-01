@@ -122,9 +122,19 @@ public static class DeckBuilder
 		DeckProfile.Control,
 	];
 
+	/// <summary>
+	/// Which profile a field slot gets. **Public because the evolver has to ENFORCE the same band the
+	/// seeder assigned**, and two copies of this cycling would drift into disagreeing about what
+	/// "Aggro-G" means.
+	/// </summary>
+	public static DeckProfile ProfileForSlot(int index, int conceptSlots, bool wildcard) =>
+		wildcard || index < conceptSlots
+			? DeckProfile.Any
+			: Profiles[(index - conceptSlots) % Profiles.Length];
+
 	/// Curve band per profile. Bands overlap, because the boundary between aggro and midrange is
 	/// a spectrum and a hard edge would just be a different arbitrary number.
-	private static (double Min, double Max) BandFor(DeckProfile profile) =>
+	internal static (double Min, double Max) BandFor(DeckProfile profile) =>
 		profile switch
 		{
 			DeckProfile.Aggro => (MinCurveTarget, 2.7),
@@ -463,7 +473,8 @@ public static class DeckBuilder
 		Random rng,
 		DeckHistory? history = null,
 		PoolFeatures? features = null,
-		DeckCore? core = null
+		DeckCore? core = null,
+		DeckProfile profile = DeckProfile.Any
 	)
 	{
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
@@ -491,9 +502,22 @@ public static class DeckBuilder
 				return null;
 		}
 
-		var curveTarget = deck.AverageCost(
-			spells.ToDictionary(c => c.Name, StringComparer.Ordinal)
-		);
+		var costs = spells.ToDictionary(c => c.Name, StringComparer.Ordinal);
+
+		// **A profile is a CONSTRAINT, not a starting label, and it used to be the latter.** The
+		// curve target was read off the deck's own current average, so after seeding nothing held a
+		// slot to its band and "Aggro-G" was a generation-0 name. A real run drifted into a Past in
+		// Flames card-advantage pile holding Wrath of God and Aetherspouts — and MORE generations
+		// makes that worse, not better, because the target follows wherever the deck went.
+		//
+		// Clamped rather than pinned to the band's midpoint: a deck already inside its band is free
+		// to sit anywhere in it, and the pull only appears once it leaves.
+		var curveTarget = deck.AverageCost(costs);
+		if (profile != DeckProfile.Any)
+		{
+			var (lo, hi) = BandFor(profile);
+			curveTarget = Math.Clamp(curveTarget, lo, hi);
+		}
 
 		// Weighted: swapping cards is the operator that actually explores the card pool, so it
 		// gets most of the budget. Land moves are one integer and converge quickly.
@@ -551,6 +575,29 @@ public static class DeckBuilder
 		// than merely likely.
 		if (core is not null && !core.Holds(mutated))
 			return null;
+
+		// **Enforced as "never move FURTHER out", not as "must be inside".**
+		//
+		// Seeding only TARGETS a band — the fill is weighted toward `curveTarget` and cheap cards
+		// score well on card value regardless, so an Aggro seed measures 1.65 against a band of
+		// 2.0-2.7. A membership test would therefore reject every mutant from generation 0 and
+		// freeze the slot solid, silently: exactly the failure the old 60% pool quota had, where a
+		// deck starting below the line could never propose a legal mutant again.
+		//
+		// Monotone instead, so it converges INWARD like the pool lock does. A deck inside its band
+		// may move anywhere inside it; a deck outside may only move toward it.
+		if (profile != DeckProfile.Any)
+		{
+			var (lo, hi) = BandFor(profile);
+			static double Outside(double cost, double lo, double hi) =>
+				Math.Max(0, Math.Max(lo - cost, cost - hi));
+
+			if (
+				Outside(mutated.AverageCost(costs), lo, hi)
+				> Outside(deck.AverageCost(costs), lo, hi)
+			)
+				return null;
+		}
 
 		return Decklist.Difference(deck, mutated) > 0 ? mutated : null;
 	}

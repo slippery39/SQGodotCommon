@@ -204,6 +204,91 @@ public class DeckCoreTests
 	}
 
 	[Test]
+	public void AProfiledSlotStaysInsideItsCurveBand()
+	{
+		// **A profile is an identity too, just a loosely defined one**, and it used to be a
+		// generation-0 label with nothing behind it: `Mutate` read its curve target off the deck's
+		// own current average, so an "Aggro" slot could drift anywhere and the report still called
+		// it Aggro. A real run produced a Past in Flames card-advantage pile holding Wrath of God
+		// and Aetherspouts under that name.
+		var (spells, values) = Pool();
+		var costs = spells.ToDictionary(c => c.Name, StringComparer.Ordinal);
+		var (lo, hi) = DeckBuilder.BandFor(DeckBuilder.DeckProfile.Aggro);
+
+		var deck = DeckBuilder.Seed(
+			"Aggro",
+			spells,
+			values,
+			new Random(5),
+			profile: DeckBuilder.DeckProfile.Aggro
+		);
+
+		var start = Math.Max(
+			0,
+			Math.Max(lo - deck.AverageCost(costs), deck.AverageCost(costs) - hi)
+		);
+		var worst = start;
+
+		for (var gen = 0; gen < 60; gen++)
+		{
+			deck =
+				DeckBuilder.Mutate(
+					deck,
+					spells,
+					values,
+					new Random(gen),
+					profile: DeckBuilder.DeckProfile.Aggro
+				) ?? deck;
+
+			var now = Outside(deck.AverageCost(costs), lo, hi);
+			Assert.That(
+				now,
+				Is.LessThanOrEqualTo(worst + 1e-9),
+				$"generation {gen} moved FURTHER outside the Aggro band"
+			);
+			worst = now;
+		}
+
+		Assert.That(
+			Outside(deck.AverageCost(costs), lo, hi),
+			Is.LessThan(start),
+			"60 generations under a band should pull the curve toward it, not merely hold it"
+		);
+
+		static double Outside(double cost, double lo, double hi) =>
+			Math.Max(0, Math.Max(lo - cost, cost - hi));
+	}
+
+	[Test]
+	public void AnUnprofiledSlotIsFreeToLeaveThatBand()
+	{
+		// The control, and the wildcard slot's whole purpose: unconstrained drift should be
+		// something a slot is ASKED for, not something that happens to every slot by omission.
+		// Without this the test above passes on a mutator that never moves the curve at all.
+		var (spells, values) = Pool();
+		var costs = spells.ToDictionary(c => c.Name, StringComparer.Ordinal);
+		var (lo, hi) = DeckBuilder.BandFor(DeckBuilder.DeckProfile.Aggro);
+
+		var deck = DeckBuilder.Seed(
+			"Free",
+			spells,
+			values,
+			new Random(5),
+			profile: DeckBuilder.DeckProfile.Aggro
+		);
+
+		var left = false;
+		for (var gen = 0; gen < 60 && !left; gen++)
+		{
+			deck = DeckBuilder.Mutate(deck, spells, values, new Random(gen)) ?? deck;
+			var cost = deck.AverageCost(costs);
+			left = cost < lo || cost > hi;
+		}
+
+		Assert.That(left, Is.True, "unconstrained mutation must be able to leave the band");
+	}
+
+	[Test]
 	public void WithoutACore_MutationWillHappilyCutTheThemeAway()
 	{
 		// The negative control for the constraint as a whole: the same 60 mutations, unconstrained,
