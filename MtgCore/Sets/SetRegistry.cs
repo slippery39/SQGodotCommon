@@ -27,6 +27,27 @@ public static class SetRegistry
 	/// The union of every registered set. Not itself registered — see <see cref="Combined"/>.
 	public const string CombinedCode = "ALL";
 
+	/// <summary>
+	/// Hollowmere plus the Core Set Cube — every DESIGNED set, with the Legacy pool left out.
+	///
+	/// **Legacy is not a designed set and it distorts anything measured across the union.** It is
+	/// the ad-hoc collection assembled to support the preconstructed decks, so it holds cards
+	/// written to make a specific combo work rather than to a rate: Ancestral Recall reads +11.86
+	/// and Steppe Lynx +14.32 in isolation, well clear of anything in HLM or CSC. A pool
+	/// containing them answers "which deck can abuse the broken cards" before it answers anything
+	/// about synergy.
+	///
+	/// It also carries most of the name collisions in <see cref="CombinedReplacements"/>: DES is
+	/// 711 cards against HLM 308 + CSC 408, so those two collide on **5** names while the full
+	/// union loses many more. Dropping Legacy removes most of the silent same-name substitution
+	/// as a side effect.
+	///
+	/// (The count in <see cref="Combined"/>'s comment below — "one HLM/CSC (Corpse Knight)" — is
+	/// stale; it predates cards being added to both sets. Read `CombinedReplacements` at runtime
+	/// rather than trusting either number.)
+	/// </summary>
+	public const string DesignedCode = "DES";
+
 	public static IReadOnlyList<CardSet> All { get; } =
 		[new CardSet(LegacyCode, "Legacy", CardLibrary.All), Hollowmere.Set, CoresetCube.Set];
 
@@ -34,18 +55,38 @@ public static class SetRegistry
 	public static CardSet Default => Get(LegacyCode);
 
 	public static CardSet Get(string code) =>
-		string.Equals(code, CombinedCode, StringComparison.OrdinalIgnoreCase)
-			? Combined
-			: All.FirstOrDefault(s =>
-				string.Equals(s.Code, code, StringComparison.OrdinalIgnoreCase)
-			)
-				?? throw new ArgumentException(
-					$"Unknown set: {code}. Known sets: {string.Join(", ", All.Select(s => s.Code))}, {CombinedCode}",
-					nameof(code)
-				);
+		string.Equals(code, CombinedCode, StringComparison.OrdinalIgnoreCase) ? Combined
+		: string.Equals(code, DesignedCode, StringComparison.OrdinalIgnoreCase) ? Designed
+		: All.FirstOrDefault(s => string.Equals(s.Code, code, StringComparison.OrdinalIgnoreCase))
+			?? throw new ArgumentException(
+				$"Unknown set: {code}. Known sets: {string.Join(", ", All.Select(s => s.Code))}, {CombinedCode}",
+				nameof(code)
+			);
 
-	/// Every set including <see cref="Combined"/> — what a mode offers as a menu.
-	public static IReadOnlyList<CardSet> AllIncludingCombined() => [.. All, Combined];
+	/// Every set including the two unions — what a mode offers as a menu.
+	public static IReadOnlyList<CardSet> AllIncludingCombined() => [.. All, Designed, Combined];
+
+	/// <summary>
+	/// The designed sets as one pool. Same machinery as <see cref="Combined"/>, one set fewer.
+	/// </summary>
+	public static CardSet Designed => DesignedBuilt.Value.Set;
+
+	private static readonly Lazy<(
+		CardSet Set,
+		IReadOnlyList<(string Name, string WinningSet)> Replaced
+	)> DesignedBuilt =
+		new(
+			() =>
+				BuildUnion(
+					DesignedCode,
+					"Designed Sets",
+					[
+						.. All.Where(s =>
+							!string.Equals(s.Code, LegacyCode, StringComparison.Ordinal)
+						),
+					]
+				)
+		);
 
 	/// <summary>
 	/// Every registered set as one pool — a larger "format" to build decks in, at no authoring
@@ -78,7 +119,14 @@ public static class SetRegistry
 		IReadOnlyList<(string Name, string WinningSet)> Replaced
 	)> Built = new(BuildCombined);
 
-	private static (CardSet, IReadOnlyList<(string, string)>) BuildCombined()
+	private static (CardSet, IReadOnlyList<(string, string)>) BuildCombined() =>
+		BuildUnion(CombinedCode, "All Sets", All);
+
+	private static (CardSet, IReadOnlyList<(string, string)>) BuildUnion(
+		string code,
+		string name,
+		IReadOnlyList<CardSet> sets
+	)
 	{
 		// Insertion-ordered so the pool is stable across runs; a later Set overwrites the
 		// value but keeps the original position, which is irrelevant to correctness and keeps
@@ -86,7 +134,7 @@ public static class SetRegistry
 		var byName = new Dictionary<string, Card>(StringComparer.OrdinalIgnoreCase);
 		var collisions = new List<(string, string)>();
 
-		foreach (var set in All)
+		foreach (var set in sets)
 		{
 			foreach (var card in set.Cards)
 			{
@@ -96,6 +144,6 @@ public static class SetRegistry
 			}
 		}
 
-		return (new CardSet(CombinedCode, "All Sets", byName.Values.ToList()), collisions);
+		return (new CardSet(code, name, byName.Values.ToList()), collisions);
 	}
 }

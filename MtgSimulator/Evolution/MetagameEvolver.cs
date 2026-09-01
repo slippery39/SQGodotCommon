@@ -53,6 +53,22 @@ public sealed class MetagameEvolver
 
 	private readonly bool _useWildcard;
 
+	/// How many blank-first candidates are eligible per slot to be sampled from. Wide enough that
+	/// consecutive seeds build different fields, narrow enough to stay inside the measured tier.
+	private const int TierBreadth = 3;
+
+	/// Share of one engine's card pool that may overlap an already-chosen one before it is skipped.
+	/// <summary>
+	/// Share of one engine's card pool that may overlap an already-chosen one before it is skipped.
+	///
+	/// **0.5 was too strict and cost half the field.** Asked for 6 engine slots on DES it filled 3,
+	/// because cores built on creature demands share most of the creature pool and any two of them
+	/// tripped the guard. The job here is only to stop two near-duplicates — two Spirit lords —
+	/// taking two slots, so it has to sit above the overlap that unrelated creature archetypes have
+	/// with each other by construction.
+	/// </summary>
+	private const double MaxEngineOverlap = 0.8;
+
 	/// <summary>
 	/// How much longer a concept slot is left alone before it can be culled.
 	///
@@ -196,9 +212,67 @@ public sealed class MetagameEvolver
 		}
 
 		var usable = Math.Clamp(_engineSlots, 0, _deckCount);
-		var take = report.Engines.Take(usable).ToList();
 
-		Console.WriteLine($"  Engines: {take.Count} of {report.Engines.Count} from {_enginesPath}");
+		// **Sampled from the BLANK TIER, not uniformly over the whole report.**
+		//
+		// Taking the top N always rebuilds the same field and never tests the report past the cut
+		// line, so sampling is right — but sampling UNIFORMLY throws away the measurement. Measured
+		// on DES: it drew Captain of the Watch (bare 39.20, a fine card on its own and definitionally
+		// not a combo payoff) plus two Spirit lords and two Parish cards, so six slots held about
+		// three archetypes, while every bare-0.00 payoff went unpicked — Zombie Apocalypse,
+		// Necromantic Summons, Illusory Angel, Echo of the Drowned, Ashen Rite.
+		//
+		// `bare` is a MEASUREMENT, not a hypothesis: a card worth nothing until its demands are met
+		// is the class hill climbing cannot reach, and that is the whole reason these slots exist.
+		// Variety comes from sampling WITHIN that tier rather than from ignoring it.
+		var eligible = report
+			.Engines.OrderBy(e => e.BlankFirstKey)
+			.Take(Math.Max(usable * TierBreadth, usable))
+			.ToList();
+
+		// Deterministic shuffle over the eligible tier — one RNG, not one per comparison, or the
+		// ordering depends on evaluation order rather than on the seed.
+		var pick = new Random(_seed + 909_091);
+		eligible = [.. eligible.OrderBy(_ => pick.Next())];
+
+		// **A distinctness guard, because two Spirit lords are one archetype in two slots.** Cores
+		// are already deduped when IDENTICAL; near-duplicates survive that and still waste a slot.
+		var take = new List<EngineCandidate>();
+		var claimed = new List<HashSet<string>>();
+		foreach (var candidate in eligible)
+		{
+			if (take.Count >= usable)
+				break;
+
+			var pool = candidate
+				.Core.Slots.SelectMany(sl => sl.Cards)
+				.ToHashSet(StringComparer.Ordinal);
+
+			if (
+				claimed.Any(other =>
+					pool.Count > 0
+					&& other.Count > 0
+					&& (double)pool.Intersect(other).Count() / Math.Min(pool.Count, other.Count)
+						> MaxEngineOverlap
+				)
+			)
+				continue;
+
+			take.Add(candidate);
+			claimed.Add(pool);
+		}
+
+		if (take.Count < usable)
+			Console.WriteLine(
+				$"  WARNING: asked for {usable} engine slots and the distinctness guard left "
+					+ $"{take.Count}. The rest of the field falls back to curve profiles."
+			);
+
+		Console.WriteLine(
+			$"  Engines: {take.Count} of {report.Engines.Count} from {_enginesPath} "
+				+ $"(sampled from the top {Math.Max(usable * TierBreadth, usable)} blank-first, "
+				+ "distinct archetypes only)"
+		);
 		for (var i = 0; i < take.Count; i++)
 		{
 			Console.WriteLine(
@@ -232,6 +306,11 @@ public sealed class MetagameEvolver
 				DraftTrainingData.Merge(values.Data, presim),
 				ConstructedValuesStore.LoadDraftPrior(_set.Code, _useDraftPrior)
 			);
+
+			// Persisted so the next run inherits it. Presim accumulates safely — random decks
+			// carry no selection pressure, so this is only ever more evidence about the same
+			// quantity. Evolved counts must never land here; see ConstructedValuesStore.
+			ConstructedValuesStore.SavePresim(presim, _set.Code);
 			Console.WriteLine();
 		}
 
@@ -968,9 +1047,25 @@ public sealed class MetagameEvolver
 		);
 		Console.WriteLine(
 			values.HasDraftPrior
-				? $"  Seeding prior: draft model. Constructed data so far: {values.ConstructedDeckGames} deck-games."
+				? $"  Seeding prior: draft model. Isolation data so far: {values.ConstructedDeckGames} deck-games."
 				: "  Seeding prior: NONE (quality-blind seeding, table builds from scratch)."
 		);
+
+		// **A card value now means "in a random deck", and an empty table is expected the first
+		// time.** Said out loud because the alternative is a run that silently seeds every card at
+		// exactly the prior and looks like it is working.
+		if (values.ConstructedDeckGames == 0 && _preSimDecks == 0)
+			Console.WriteLine(
+				"  WARNING: no isolation data and presim is OFF — every card scores at the prior. "
+					+ "Run once with presim > 0 to build "
+					+ ConstructedValuesStore.PresimPathFor(_set.Code)
+			);
+
+		if (File.Exists(ConstructedValuesStore.LegacyPathFor(_set.Code)))
+			Console.WriteLine(
+				$"  NOTE: {ConstructedValuesStore.LegacyPathFor(_set.Code)} is the pre-split table "
+					+ "and is no longer read — it mixed random and evolved games with no provenance."
+			);
 
 		if (string.Equals(_set.Code, SetRegistry.CombinedCode, StringComparison.OrdinalIgnoreCase))
 		{
@@ -1215,15 +1310,21 @@ public sealed class MetagameEvolver
 	{
 		var path = DecklistStore.PathFor(_set.Code);
 		DecklistStore.Save(result, path);
-		ConstructedValuesStore.SaveMerged(
-			DraftTrainingData.Merge(accumulator.ToData(), presim),
-			_set.Code
-		);
+
+		// **Evolved counts do NOT go into the value table**, and `presim` is deliberately not
+		// merged in here either — it was already persisted at the top of the run, where it was
+		// still separable. Mixing them is what put Goblin Chieftain 9.6pp above its draft rate
+		// and Thoughtcast 8.1pp below its own.
+		ConstructedValuesStore.SaveEvolved(accumulator.ToData(), _set.Code);
 
 		Console.WriteLine();
 		Console.WriteLine($"  Decklists -> {path}");
 		Console.WriteLine(
-			$"  Constructed values -> {ConstructedValuesStore.PathFor(_set.Code)} (merged)"
+			$"  Card values (isolation) -> {ConstructedValuesStore.PresimPathFor(_set.Code)}"
+		);
+		Console.WriteLine(
+			$"  Evolved-game counts (diagnostics only) -> "
+				+ ConstructedValuesStore.EvolvedPathFor(_set.Code)
 		);
 		Console.WriteLine(
 			"  Both are relative to the SHELL's working directory — run from the repo root."

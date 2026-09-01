@@ -43,12 +43,26 @@ public sealed record CoreSlot(
 	ImmutableHashSet<string> Cards,
 	int MinCopies,
 	int TargetCopies = int.MaxValue,
-	bool IsIdentity = false
+	bool IsIdentity = false,
+	ImmutableSortedDictionary<string, int>? Supply = null
 )
 {
 	public int CountIn(Decklist deck) => Cards.Sum(deck.CopiesOf);
 
 	public bool SatisfiedBy(Decklist deck) => CountIn(deck) >= MinCopies;
+
+	/// <summary>
+	/// **How well a card does THIS slot's job**, from `PoolFeatures.SupplyOf`. Higher is better;
+	/// 0 when unknown, which falls back to card value alone.
+	///
+	/// Inside a slot the question is not "how good is this card" but "how well does it fill this
+	/// role", and those have different answers. Rite of Flame supplies a storm demand at weight 4
+	/// (net mana, measured by `ProbeManaProfit`) and rates **−2.12 in isolation**, because a ritual
+	/// genuinely is bad in a random deck. Ordering by card value therefore built a storm deck out of
+	/// Cultivate and Borderland Ranger — ramp, which gives you mana NEXT turn — and it scored 7.3%,
+	/// last in a twelve-deck field.
+	/// </summary>
+	public int SupplyOf(string card) => Supply?.GetValueOrDefault(card) ?? 0;
 }
 
 /// <summary>
@@ -348,6 +362,15 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 			cards.Count * Decklist.MaxCopies
 		);
 
+		// Carried ON the slot rather than looked up later, because `Satisfy` and `Complete` have no
+		// access to `PoolFeatures` — and it serialises with the core, so the evolver reads the same
+		// weights the discovery run measured.
+		var supply = cards.ToImmutableSortedDictionary(
+			n => n,
+			n => features.SupplyOf(demandIndex, n),
+			StringComparer.Ordinal
+		);
+
 		// **A FETCHED slot is capped at its floor; everything else absorbs.** You search a Dragon out
 		// of the library, so once enough survive to be found, every further copy is a card you did
 		// not want to draw — measured, the uncapped version played 12 Dragons where a real list plays
@@ -359,7 +382,7 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 		// away from.
 		var target = IsFetched(features, demandIndex) ? min : int.MaxValue;
 
-		slots.Add(new CoreSlot(role, cards, min, target));
+		slots.Add(new CoreSlot(role, cards, min, target, Supply: supply));
 	}
 
 	/// <summary>
@@ -608,7 +631,8 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 
 		foreach (
 			var card in candidates
-				.OrderByDescending(c => values.CardDelta(c.Name))
+				.OrderByDescending(c => slotOf.GetValueOrDefault(c.Name)?.SupplyOf(c.Name) ?? 0)
+				.ThenByDescending(c => values.CardDelta(c.Name))
 				.ThenBy(c => c.Name, StringComparer.Ordinal)
 		)
 		{
@@ -654,6 +678,11 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 					// fetches: the mirror of the dead-card failure this whole structure prevents,
 					// and `Holds` returned true throughout.
 					.Cards.OrderByDescending(n => string.Equals(n, Name, StringComparison.Ordinal))
+					// **Supply before card value.** See `CoreSlot.SupplyOf` — inside a slot the
+					// question is how well a card does the job, and card value answers a different
+					// one. It stays as the tiebreak, so among equally-good rituals the better card
+					// still wins.
+					.ThenByDescending(slot.SupplyOf)
 					.ThenByDescending(values.CardDelta)
 					.ThenBy(n => n, StringComparer.Ordinal)
 			)

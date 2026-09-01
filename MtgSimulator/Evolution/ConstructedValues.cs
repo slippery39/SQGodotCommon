@@ -420,16 +420,70 @@ public sealed class ConstructedValues
 /// </summary>
 public static class ConstructedValuesStore
 {
-	public static string PathFor(string setCode) =>
+	/// <summary>
+	/// **What a card is worth in ISOLATION**, measured only in uniformly random decks.
+	///
+	/// This is the table everything reads. Nothing that came out of an evolved deck may enter it,
+	/// and that separation is the whole point — see <see cref="EvolvedPathFor"/>.
+	/// </summary>
+	public static string PresimPathFor(string setCode) =>
+		Path.Combine("sim_results", $"constructed_values_{setCode.ToLowerInvariant()}_presim.json");
+
+	/// <summary>
+	/// **Diagnostics only.** How cards performed inside evolved decks — never read back as a card
+	/// value, because it is a measurement of the decks as much as of the cards.
+	///
+	/// **Merging these two was a feedback loop with a ratchet on it, and the damage is measured.**
+	/// A card's rate here is `P(win | card in deck)`, which conflates the card's own contribution
+	/// with the quality of the decks that happened to play it. Against the unconfounded draft
+	/// table, over 509 874 accumulated deck-games:
+	///
+	/// | card | games | merged table | draft | gap |
+	/// |---|---|---|---|---|
+	/// | Goblin Chieftain | 15 476 | +13.43 | +3.81 | **+9.6** |
+	/// | Siege-Gang Commander | 23 446 | +10.22 | +2.02 | +8.2 |
+	/// | Tendrils of Agony | 32 788 | −6.62 | −0.32 | **−6.3** |
+	/// | Thoughtcast | 39 213 | −7.18 | +0.92 | **−8.1** |
+	///
+	/// Both directions hurt, and the second is the worse one. Inflation wastes slots: every deck
+	/// starts trying Goblin Chieftain because the table says it is strong, and it is a vanilla 2/2
+	/// outside a goblin deck. **Deflation makes an archetype unbuildable** — a payoff seeded into
+	/// decks that cannot support it loses, its rate sinks, and `Fill` and `SeedConcept` then never
+	/// pick it again. Storm's payoff sits at −6.62 and cannot be seeded, which is the exact failure
+	/// this whole mode has been fighting, self-inflicted by its own value table.
+	///
+	/// The draft prior does not save it. At 16 606 games it carries **0.15%** of the estimate and
+	/// at 139 786 games **0.02%**; shrinkage protects only cards nobody plays. And because runs
+	/// accumulate, no single run can move a card off a rate set by half a million deck-games.
+	///
+	/// **A payoff reading badly here is not a claim that the card is bad.** Dragonstorm is a dead
+	/// card in a normal deck and the engine of a dragonstorm deck; both are true, and only the
+	/// first is a question about isolation. Reachability is `DeckCore`'s job now — a stated
+	/// constraint — which is what frees this table to answer the narrower question honestly.
+	/// </summary>
+	public static string EvolvedPathFor(string setCode) =>
+		Path.Combine(
+			"sim_results",
+			$"constructed_values_{setCode.ToLowerInvariant()}_evolved.json"
+		);
+
+	/// <summary>
+	/// The pre-split path. **Read by nothing** — it holds presim and evolved games merged together
+	/// with no provenance, so the two cannot be separated retrospectively. Kept only so a run can
+	/// say why a familiar file stopped being used.
+	/// </summary>
+	public static string LegacyPathFor(string setCode) =>
 		Path.Combine("sim_results", $"constructed_values_{setCode.ToLowerInvariant()}.json");
 
 	/// <summary>
-	/// Builds the table for a set: whatever constructed data exists, over whatever draft model
-	/// exists. Both halves are optional and both degrade correctly when absent.
+	/// Builds the table for a set: isolation values over whatever draft model exists. Both halves
+	/// are optional and both degrade correctly when absent — with neither, every card scores at
+	/// exactly the prior, which is honest rather than wrong.
 	/// </summary>
 	public static ConstructedValues Load(string setCode, bool useDraftPrior = true)
 	{
-		var constructed = DraftTrainingStore.Load(PathFor(setCode)) ?? DraftTrainingData.Empty;
+		var constructed =
+			DraftTrainingStore.Load(PresimPathFor(setCode)) ?? DraftTrainingData.Empty;
 		var draft = useDraftPrior ? LoadDraftPrior(setCode) : null;
 		return new ConstructedValues(constructed, draft);
 	}
@@ -443,11 +497,29 @@ public static class ConstructedValuesStore
 	{
 		if (!enabled)
 			return null;
-		if (!string.Equals(setCode, SetRegistry.CombinedCode, StringComparison.OrdinalIgnoreCase))
+
+		var isCombined = string.Equals(
+			setCode,
+			SetRegistry.CombinedCode,
+			StringComparison.OrdinalIgnoreCase
+		);
+		var isDesigned = string.Equals(
+			setCode,
+			SetRegistry.DesignedCode,
+			StringComparison.OrdinalIgnoreCase
+		);
+		if (!isCombined && !isDesigned)
 			return DraftTrainingStore.Load(DraftTrainingStore.PathFor(setCode));
 
+		// A union's prior is the union of its members' models. Legacy is excluded from the
+		// designed pool, so its model must be excluded too — otherwise the pool drops Ancestral
+		// Recall while the prior keeps telling the seeder about it.
+		var members = SetRegistry.All.Where(s =>
+			isCombined || !string.Equals(s.Code, SetRegistry.LegacyCode, StringComparison.Ordinal)
+		);
+
 		DraftTrainingData? merged = null;
-		foreach (var set in SetRegistry.All)
+		foreach (var set in members)
 		{
 			var data = DraftTrainingStore.Load(DraftTrainingStore.PathFor(set.Code));
 			if (data is null)
@@ -457,10 +529,26 @@ public static class ConstructedValuesStore
 		return merged;
 	}
 
-	/// Merges this run's counts into whatever is on disk, so runs accumulate.
-	public static void SaveMerged(DraftTrainingData fresh, string setCode)
+	/// <summary>
+	/// Accumulates presimulation counts. **Safe to accumulate**, unlike evolved games: random
+	/// decks carry no selection pressure, so more of them is strictly more evidence about the
+	/// same quantity rather than a stronger opinion about the decks that won.
+	/// </summary>
+	public static void SavePresim(DraftTrainingData fresh, string setCode) =>
+		Accumulate(fresh, PresimPathFor(setCode));
+
+	/// <summary>
+	/// Accumulates evolved-game counts for the movers report. Never read as a card value.
+	///
+	/// **The diff between this and the presim table is worth more than either alone**: a card
+	/// doing far better here than in isolation is a card that wants a deck built around it, which
+	/// is a synergy signal that costs nothing to compute now that the two are kept apart.
+	/// </summary>
+	public static void SaveEvolved(DraftTrainingData fresh, string setCode) =>
+		Accumulate(fresh, EvolvedPathFor(setCode));
+
+	private static void Accumulate(DraftTrainingData fresh, string path)
 	{
-		var path = PathFor(setCode);
 		var merged = DraftTrainingData.Merge(
 			DraftTrainingStore.Load(path) ?? DraftTrainingData.Empty,
 			fresh
