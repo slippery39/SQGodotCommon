@@ -1135,6 +1135,13 @@ first.
 
 ### MEASURED: mode 7's GAME columns are not reproducible at a fixed seed
 
+> **FIXED — kept as the diagnosis, not as a live warning.** The cause was
+> `StringComparer.Ordinal.GetHashCode`, randomised per process, seeding each candidate's deck build;
+> the fix is `EngineDiscovery.StableHash` (FNV-1a), called from `Probe`. **Do not re-derive
+> this bug from the section below.** What still holds is the sampling caveat: at 10 games per engine
+> the standard error on `assem` is ~16pp, so a single run's LIFT is noisy even now that two runs at
+> one seed agree. Raise games-per-engine before ranking on it.
+
 **Three runs, identical seed (`comboseed`), identical binary, DES.** Half the table is deterministic
 and half is not:
 
@@ -2121,6 +2128,30 @@ the lists read as playsets rather than as odd counts.
 win rate is here to tune it against the field, not to decide whether it deserves to exist. A
 half-built combo deck loses every game, so a viability floor would delete exactly the decks the
 feature exists to keep — which is what every unconstrained run has done. The rate is still reported.
+
+**So the only way a dead engine leaves the field is the exclusion list**, and it has to leave,
+because it does not merely waste its own slot. Mere-Storm read 8.2% and 0.0% across two CMB runs and
+was **every other deck's best matchup** — the field spread, the viable count and every overall rate
+were partly measured against a punching bag. `MetagameEvolver(excludedEngines:)` takes concept names
+(console: *"Engines to exclude?"*), matched case-insensitively with a leading `Engine-` tolerated so
+a deck name pasted out of a previous report works. An excluded slot falls back to a curve deck,
+which is the honest control.
+
+Three properties, all deliberate:
+
+- **Excluded BEFORE the tier cut.** Filtering the chosen slots instead would let a dead archetype
+  consume one of `usable * TierBreadth` places, so the list would quietly narrow the field it exists
+  to widen.
+- **Named on the console, not counted.** A misspelt exclusion is indistinguishable from an effective
+  one in the final matrix, so unmatched names are warned about by name.
+- **The run prints its own next exclusion list** — engine slots that finished below the viability
+  floor, formatted ready to paste. Deciding an archetype is dead is still the reader's call; only
+  the retyping is removed.
+
+`EngineExclusionTests` pins it, with `WithoutAnExclusionList_EveryEngineIsStillSeeded` as the
+vacuity guard — a `LoadEngines` that returned nothing would pass the exclusion assertion alone.
+Cross-run persistence of the list is deliberately **not** built; the prompt plus the printed line is
+the whole feature.
 
 The last slot is never an engine: it is the permanent wildcard, and replacing the exploration arm
 with a fixed archetype removes the only slot that can find something nobody has thought of.

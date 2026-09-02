@@ -163,16 +163,19 @@ exist" trap gets made.
 
 ## 6. Next steps — the user's notes, with what is already known
 
-### (a) Prune dead engines across runs; do not fill slots that have no viable engine
+### (a) Prune dead engines — DONE
 
-A flag to start fresh or continue from previous data, with known-bad archetypes excluded. Mere-Storm
-is the worked example: 0.0% and 8.2% in two runs, and every other deck's best matchup was "vs
-Mere-Storm", which **inflates the entire field's numbers**. Viability = a very low win rate against
-the non-gauntlet field. If fewer viable engines exist than slots requested, leave the slots as curve
-decks rather than seeding a punching bag.
+`MetagameEvolver(excludedEngines:)`, console prompt *"Engines to exclude?"*, `EngineExclusionTests`.
+Excluded before the tier cut (filtering afterwards would let a dead archetype eat a tier place),
+unmatched names warned about by name, and the run prints its own next exclusion list from any engine
+slot that finished below the viability floor.
 
-Note the sampling window **scales with the request** — it read `top 18` at 6 engines and `top 48` at
-16 — so a prune list changes which archetypes are reachable at every slot count.
+"Leave the slots as curve decks" needed no code: `SeedField` fills every slot with a curve deck and
+engines overwrite, so an excluded engine simply leaves the curve deck standing.
+
+**Cross-run persistence was deliberately not built** — the prompt plus the printed line is the whole
+feature. Note the sampling window **scales with the request** (`top 18` at 6 engines, `top 48` at 16),
+so an exclusion list changes which archetypes are reachable at every slot count.
 
 ### (b) Why the drain combo never appeared — diagnosed, not yet fixed
 
@@ -181,15 +184,22 @@ each pool card **solo**, and nothing a card does on its own makes the OPPONENT l
 fixture — so the demand has no suppliers, is dropped as uninformative, and the card is in no core's
 payoff or support slot. It cannot be selected by anything.
 
-Two candidate fixes, the second more interesting:
+**CORRECTED after reading the code: the two "candidate fixes" below are the same fix, and the cheap
+one is a trap.**
 
-- **Let the trigger probe hurt the opponent** — stock the fixture so opponent life can drop. Narrow,
-  cheap, fixes this family only.
-- **A produce/consume graph over EVENTS.** `CLAUDE.md` records that the produce/consume graph over
-  membership predicates cannot find a combo, and that is still true — but Covenant PRODUCES
-  `PlayerLostLifeEvent` and Reciprocity CONSUMES it. That edge is real, mechanical, and needs no card
-  filter. This is the one structural direction that would reach combos joined by an event rather than
-  by a shared card type.
+- ~~**Let the trigger probe hurt the opponent**~~ — stocking the fixture so opponent life can drop
+  makes *every card in the pool* a supplier of that demand, which then trips the uninformative
+  filter (`supply[d].Count < pool.Count * UninformativeShare`, `PoolFeatures.Build` step 4) and drops
+  the demand anyway. Same outcome, more code.
+- **The real gap is a two-step chain.** Covenant only emits `PlayerLostLifeEvent` *after* something
+  gains you life, and `ProbeTriggers` plays each card solo. So the fix is a **second `ProbeTriggers`
+  pass seeded from the first**: replay each card with a known supplier of an already-harvested demand
+  in play, and record the newly-fired triggers. Depth 2 covers a two-card combo.
+
+That second pass *is* the produce/consume-over-events edge, reached from the cheap end — it needs no
+new graph, because `ProbeTriggers` already asks each condition's `IsSatisfiedBy` against each card's
+real event log. `CLAUDE.md`'s "no graph over this vocabulary can find a combo" still stands and is
+about membership predicates; events are a different vocabulary.
 
 ### (c) Flex slots converge to midrange piles
 
@@ -250,11 +260,19 @@ no Cover at all, and a mana engine whose supporting bodies die is a real failure
 
 ### (e) A gauntlet of hand-built expected decks
 
-**Mode 6 already supports this** — the `gauntlet` prompt (games per reference deck, default 0 = off)
-plays the field against `DeckRegistry` decks. Add hand-built Twin, Elves and Reanimator lists and
-read the gap: gauntlet decks overperforming means the builder still has work; even or slightly
-behind means it is doing its job. This is the cheapest high-value item on the list and needs no new
-machinery, only decklists.
+**CORRECTED: this is NOT "only decklists", and a DES run currently gets no gauntlet at all.**
+
+`Gauntlet.For` returns `[]` for every set except ALL and LEG, and DES is defined as every set
+*except* LEG — so the `gauntlet` prompt on a DES+CMB run produces a zero-deck gauntlet and the
+evolver prints its "no gauntlet" warning. The `DeckRegistry` decks are LEG-pool lists; `Gauntlet`'s
+own comment already records they are 0–5 of 13 cards on a non-LEG pool.
+
+Real cost: three deck factories built from DES/CMB cards (Twin, Elves, Reanimator), a `DeckRegistry`
+entry each, and one clause in `Gauntlet.For` returning them for DES. Still worth doing — it is the
+only external yardstick the mode has — but price it as half a session, not as a decklist paste.
+
+Read the gap: gauntlet decks overperforming means the builder still has work; even or slightly
+behind means it is doing its job.
 
 ### (f) Better slot picking
 
@@ -284,8 +302,11 @@ printf '7\n\n5\n10\n10\nseedword\n' | dotnet run --project MtgSimulator.Console 
 
 # Mode 6 — evolve.  Count the prompts; this list has been wrong twice.
 # mode, depth, set, decks, gens, mutants, games, finalGames, minDiff, presim,
-# cull, draftPrior, conceptSlots, gauntlet, enginesPath, engineSlots, seed
-printf '6\n\n5\n18\n12\n3\n6\n20\n0.35\n0\nY\nY\n0\n0\n<engines.json>\n16\nseedword\n' \
+# cull, draftPrior, conceptSlots, gauntlet, enginesPath, engineSlots, EXCLUDED, seed
+#
+# `engineSlots` and `EXCLUDED` are asked ONLY when enginesPath is non-blank.  EXCLUDED is
+# comma-separated concept names; the previous run prints the line ready to paste.
+printf '6\n\n5\n18\n12\n3\n6\n20\n0.35\n0\nY\nY\n0\n0\n<engines.json>\n16\nMere-Storm\nseedword\n' \
   | dotnet run --project MtgSimulator.Console -c Release
 
 # ALWAYS regenerate the engine report after changing anything DeckCore writes.

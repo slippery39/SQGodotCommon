@@ -309,6 +309,7 @@ else if (mode == 6)
 	// slots are read against: if a curve pile ends up looking like the themed decks, the themes
 	// were never identities. Blank keeps the old behaviour (every slot but the wildcard).
 	var engineSlots = -1;
+	string[] excludedEngines = [];
 	if (!string.IsNullOrWhiteSpace(enginesPath))
 	{
 		Console.Write(
@@ -317,6 +318,17 @@ else if (mode == 6)
 		);
 		if (int.TryParse(Console.ReadLine()?.Trim(), out var asked))
 			engineSlots = Math.Clamp(asked, 0, deckCount);
+
+		// An archetype a previous run measured as dead does not just waste its own slot — every
+		// other deck's best matchup becomes "vs that deck", so the field spread and every overall
+		// rate are partly a measurement against a punching bag. The previous run prints this list
+		// ready to paste; a slot left out becomes a curve deck instead.
+		Console.Write("Engines to exclude? (comma-separated concept names, blank = none): ");
+		excludedEngines =
+			Console
+				.ReadLine()
+				?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+			?? [];
 	}
 
 	new MetagameEvolver(
@@ -337,7 +349,8 @@ else if (mode == 6)
 		conceptSlots: conceptSlots,
 		gauntletGames: gauntletGames,
 		enginesPath: string.IsNullOrWhiteSpace(enginesPath) ? null : enginesPath,
-		engineSlots: engineSlots
+		engineSlots: engineSlots,
+		excludedEngines: excludedEngines
 	).Run();
 }
 else if (mode == 7)

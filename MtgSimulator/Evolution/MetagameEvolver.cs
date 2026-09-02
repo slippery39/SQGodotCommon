@@ -39,6 +39,7 @@ public sealed class MetagameEvolver
 	private readonly int _gauntletGames;
 	private readonly IReadOnlyList<string> _gauntlet;
 	private readonly string? _enginesPath;
+	private readonly HashSet<string> _excludedEngines;
 
 	/// <summary>
 	/// How many field slots are seeded from the engine report. The rest become curve-profile decks —
@@ -92,6 +93,20 @@ public sealed class MetagameEvolver
 	/// closed round-robin averages exactly 50% by construction, so this is a floor on the
 	/// WORST deck, never a target for every deck.
 	/// </param>
+	/// <param name="excludedEngines">
+	/// Archetypes a previous run measured as non-viable, named by concept. An excluded engine is
+	/// not seeded and its slot falls back to a curve deck.
+	///
+	/// **This exists because a dead engine does not merely waste its own slot — it inflates every
+	/// other number in the run.** Mere-Storm finished at 8.2% and 0.0% across two runs on CMB, and
+	/// every other deck's best matchup was "vs Mere-Storm": the field spread, the viable count and
+	/// each deck's overall rate are all measured partly against a punching bag. Leaving the slot as
+	/// a curve deck is the honest control; seeding an archetype the pool has already been shown not
+	/// to support is not.
+	///
+	/// Matched on <see cref="EngineCandidate.Concept"/>, case-insensitively, with a leading
+	/// "Engine-" tolerated so a deck name copied straight out of a previous report works.
+	/// </param>
 	/// <param name="graceGenerations">
 	/// How long a freshly seeded deck is immune from culling. A new seed starts bad by
 	/// definition; without a grace period the field culls its own replacements before they can
@@ -116,7 +131,8 @@ public sealed class MetagameEvolver
 		int conceptSlots = 0,
 		int gauntletGames = 0,
 		string? enginesPath = null,
-		int engineSlots = -1
+		int engineSlots = -1,
+		IReadOnlyList<string>? excludedEngines = null
 	)
 	{
 		if (deckCount < 2)
@@ -148,6 +164,10 @@ public sealed class MetagameEvolver
 		_gauntletGames = Math.Max(0, gauntletGames);
 		_gauntlet = _gauntletGames > 0 ? Gauntlet.For(set.Code) : [];
 		_enginesPath = enginesPath;
+		_excludedEngines = (excludedEngines ?? [])
+			.Select(NormaliseEngineName)
+			.Where(n => n.Length > 0)
+			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 		// -1 keeps the old behaviour: fill every slot but the wildcard.
 		_engineSlots =
 			engineSlots < 0 ? Math.Max(0, deckCount - 1) : Math.Clamp(engineSlots, 0, deckCount);
@@ -159,6 +179,18 @@ public sealed class MetagameEvolver
 	/// <see cref="Seed"/> unchanged (negative values still give distinct seeds) and keeps the
 	/// paired-evaluation guarantee intact, which is the property everything else depends on.
 	/// </summary>
+	/// <summary>
+	/// A concept name reduced to what an exclusion list matches on. The "Engine-" prefix is
+	/// stripped because that is how the name appears in the report a user reads it out of.
+	/// </summary>
+	private static string NormaliseEngineName(string name)
+	{
+		var trimmed = (name ?? string.Empty).Trim();
+		return trimmed.StartsWith("Engine-", StringComparison.OrdinalIgnoreCase)
+			? trimmed["Engine-".Length..]
+			: trimmed;
+	}
+
 	private static int GauntletOpponent(int gauntletIndex) => -1 - gauntletIndex;
 
 	private static bool IsGauntlet(int opponentIndex) => opponentIndex < 0;
@@ -199,7 +231,12 @@ public sealed class MetagameEvolver
 	/// The remaining slots are curve-profile decks (Aggro / Midrange / Control) — good-stuff piles by
 	/// design, and the control the themed slots are read against.
 	/// </summary>
-	private IEnumerable<(int Slot, EngineCandidate Engine)> LoadEngines()
+	/// <remarks>
+	/// `internal` so <c>EngineExclusionTests</c> can assert which archetypes are seeded without
+	/// playing a generation of games. Same reasoning as <c>ActionsMatch</c>: the invariant lives
+	/// here, and a test that has to run a whole evolution to see it would be too slow to keep.
+	/// </remarks>
+	internal IEnumerable<(int Slot, EngineCandidate Engine)> LoadEngines()
 	{
 		if (string.IsNullOrWhiteSpace(_enginesPath))
 			yield break;
@@ -213,6 +250,34 @@ public sealed class MetagameEvolver
 
 		var usable = Math.Clamp(_engineSlots, 0, _deckCount);
 
+		// **Excluded BEFORE the tier is cut, not after.** Filtering the chosen slots instead would
+		// let a dead archetype consume one of `usable * TierBreadth` places and shrink the pool the
+		// sampling draws from, so an exclusion list would quietly narrow the field it was meant to
+		// widen.
+		var offered = report.Engines.ToList();
+		if (_excludedEngines.Count > 0)
+		{
+			var kept = offered
+				.Where(e => !_excludedEngines.Contains(NormaliseEngineName(e.Concept)))
+				.ToList();
+
+			// Named, not counted. A silent filter is how a run comes back clean for the wrong
+			// reason, and a misspelt exclusion is indistinguishable from an effective one.
+			var dropped = offered.Select(e => NormaliseEngineName(e.Concept)).ToHashSet();
+			var unmatched = _excludedEngines.Where(n => !dropped.Contains(n)).ToList();
+			Console.WriteLine(
+				$"  Excluded {offered.Count - kept.Count} of {offered.Count} engines: "
+					+ string.Join(", ", _excludedEngines.Order(StringComparer.OrdinalIgnoreCase))
+			);
+			if (unmatched.Count > 0)
+				Console.WriteLine(
+					"    WARNING: no engine in this report is named "
+						+ $"{string.Join(", ", unmatched)} — check the spelling."
+				);
+
+			offered = kept;
+		}
+
 		// **Sampled from the BLANK TIER, not uniformly over the whole report.**
 		//
 		// Taking the top N always rebuilds the same field and never tests the report past the cut
@@ -225,8 +290,8 @@ public sealed class MetagameEvolver
 		// `bare` is a MEASUREMENT, not a hypothesis: a card worth nothing until its demands are met
 		// is the class hill climbing cannot reach, and that is the whole reason these slots exist.
 		// Variety comes from sampling WITHIN that tier rather than from ignoring it.
-		var eligible = report
-			.Engines.OrderBy(e => e.BlankFirstKey)
+		var eligible = offered
+			.OrderBy(e => e.BlankFirstKey)
 			.Take(Math.Max(usable * TierBreadth, usable))
 			.ToList();
 
@@ -264,8 +329,8 @@ public sealed class MetagameEvolver
 
 		if (take.Count < usable)
 			Console.WriteLine(
-				$"  WARNING: asked for {usable} engine slots and the distinctness guard left "
-					+ $"{take.Count}. The rest of the field falls back to curve profiles."
+				$"  WARNING: asked for {usable} engine slots and exclusion plus the distinctness "
+					+ $"guard left {take.Count}. The rest of the field falls back to curve profiles."
 			);
 
 		Console.WriteLine(
@@ -1214,6 +1279,29 @@ public sealed class MetagameEvolver
 					$"  {Truncate(result.Decks[i].Name, 12), -12} best matchup: "
 						+ $"{bestRate:P0} vs {result.Decks[best].Name}"
 				);
+		}
+
+		// **The exclusion list for the NEXT run, printed rather than transcribed.** An engine slot
+		// under the floor is the punching-bag case: it is never culled (mode 7 already judged the
+		// archetype on assembly), so it stays in the field for the whole run inflating every other
+		// deck's rate. Deciding it is dead is still the reader's call — this only removes the step
+		// where that decision is retyped from a matchup matrix by hand.
+		var dead = Enumerable
+			.Range(0, result.Decks.Count)
+			.Where(i =>
+				overall[i] < _viabilityFloor
+				&& result.Decks[i].Name.StartsWith("Engine-", StringComparison.Ordinal)
+			)
+			.Select(i => NormaliseEngineName(result.Decks[i].Name))
+			.ToList();
+		if (dead.Count > 0)
+		{
+			Console.WriteLine();
+			Console.WriteLine(
+				$"  {dead.Count} engine slot(s) finished below the {_viabilityFloor:P0} floor. To "
+					+ "leave them as curve decks next run, paste at the exclusion prompt:"
+			);
+			Console.WriteLine($"    {string.Join(", ", dead)}");
 		}
 
 		// Decklists
