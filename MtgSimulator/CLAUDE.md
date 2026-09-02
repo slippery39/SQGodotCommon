@@ -2651,13 +2651,50 @@ the budget is deliberately **zero**.
 This matters directly for the exclusion list: a run would have told you to permanently exclude two
 archetypes that were never optimised at all. **Check a slot's `dry` count before excluding it.**
 
-**Core pool size is not the only cause, and the other one is unidentified.** `Control-C` — a curve
-slot with no pool lock — was measured at 0 real proposals against 6 dry in the same family of runs.
-Something else in `Mutate` returns null; that is unexplained and is the next thing to measure, not to
-theorise about.
-
 `no-proposal` rows are now logged for exactly this reason. The finding had to be inferred from
 missing rows the first time, which is how it nearly went unnoticed.
+
+#### The bug: a mutation budget spent on calls rather than on mutants
+
+**`MutantsFor` returns "how many mutants to EVALUATE" and the loop spent it as "how many times to
+call a function that often fails".** `Mutate` rolls ONE operator and returns null whenever that
+operator cannot produce a legal, distinct, core-holding, profile-respecting list — and the slot was
+consumed either way. No retry.
+
+Null rates per single call, measured by `MutationYieldTests.WhereDoTheNullProposalsComeFrom` over
+600 mutations of each deck a real run produced (DES, `MTG_MIN_LANDS=12`):
+
+| condition | null rate |
+|---|---|
+| no core, profile `Any` | 3–9% |
+| `Control` profile, deck below its band | **34%** |
+| engine core, 508 cards in pool | 18% |
+| engine core, **5** cards in pool | **95%** |
+
+**Two independent causes, and the curve profile was the one nobody suspected.** A `Control` deck
+sitting below its band may only move toward it, so roughly every mutation that lowers the curve is
+discarded — an 11x multiplier on the null rate with no pool lock involved at all. That is what put
+a curve slot at 0 real proposals against 6 dry and made "narrow core pool" look like the whole story.
+
+`TryMutate` re-rolls up to `MutationRetries` (20). Same configuration before and after:
+
+| slot | before real/dry | after real/dry |
+|---|---|---|
+| Engine-Sanguine Reciprocity (5-card core) | **0 / 6** | 3 / 4 |
+| Control-C (no core, Control profile) | **0 / 6** | **5 / 1** |
+| Engine-Spirit Bonds (508-card core) | 8 / 1 | 9 / 0 |
+| Aggro-D, Midrange-E | 7 / 0, 5 / 0 | unchanged |
+
+20 proposals to 29; dry 13 to 5. Pinned by `ANarrowPoolStillYieldsProposals_RatherThanBurningTheBudgetOnNulls`,
+which measures 92/200 at one attempt against 200/200 at twenty.
+
+**It does NOT make a narrow core searchable and must not be read that way.** A five-card pool
+genuinely has few distinct legal lists — Sanguine Reciprocity still reads 4 dry — so re-rolling
+stops waste, it does not invent options. The `dry` column still reports what is left.
+
+**Runs before and after this are not comparable at a fixed seed.** A re-roll consumes more draws
+from the mutation RNG, so every downstream decision shifts. That is a behaviour change, not a
+regression; re-baseline rather than diffing across it.
 
 #### MEASURED: (d) is answered — never proposed, and NOT because of the pool lock
 

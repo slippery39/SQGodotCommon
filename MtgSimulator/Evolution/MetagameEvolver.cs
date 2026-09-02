@@ -534,9 +534,8 @@ public sealed class MetagameEvolver
 				var list = new List<Decklist?> { field[i] };
 				for (var m = 0; m < MutantsFor(lastRate[i]); m++)
 					list.Add(
-						DeckBuilder.Mutate(
+						TryMutate(
 							field[i],
-							_spellPool,
 							values,
 							mutRng,
 							history,
@@ -836,6 +835,75 @@ public sealed class MetagameEvolver
 	/// Rate is the deck's own win rate from the PREVIOUS generation, so generation 1 (no data
 	/// yet) proposes the full budget for everyone.
 	/// </summary>
+	/// <summary>
+	/// How many times a single mutation slot may re-roll before it is given up as dry.
+	///
+	/// **The budget means "mutants to EVALUATE", and it was implemented as "times to call a function
+	/// that often fails".** Those are different quantities and the gap is invisible without the
+	/// mutation log. `Mutate` rolls ONE operator and returns null whenever that operator cannot
+	/// produce a legal, distinct, core-holding, profile-respecting list — so a slot whose null rate
+	/// is high spent its whole budget on nothing and was then reported as a deck that refused its
+	/// improvements.
+	///
+	/// **Measured null rates per single call** (DES, `MTG_MIN_LANDS=12`, 600 mutations of each of a
+	/// real run's decks):
+	///
+	/// | deck | null rate |
+	/// |---|---|
+	/// | no core, profile `Any` | 3–9% |
+	/// | `Control` profile (deck below its band) | **34%** |
+	/// | engine core, 508 cards in pool | 18% |
+	/// | engine core, **5** cards in pool | **95%** |
+	///
+	/// At 95% a budget of 3 yields 0.15 proposals per generation — which is what put two engine
+	/// slots at 2 and 3 real proposals across twelve generations and then reported both NON-VIABLE.
+	/// With 20 re-rolls the same slot yields ~1.9.
+	///
+	/// **This does NOT make a narrow core fully searchable and must not be read as a fix for that.**
+	/// A five-card pool genuinely has few distinct legal lists; re-rolling stops the budget being
+	/// wasted, it does not create options that do not exist. The `dry` column still reports what is
+	/// left.
+	///
+	/// 20 is chosen to make the common cases certain rather than tuned: at a 34% null rate the odds
+	/// of 20 consecutive failures are ~1 in 40 000. Mutation is pure CPU with no games attached, so
+	/// the cost is noise against a generation's game batch.
+	/// </summary>
+	private const int MutationRetries = 20;
+
+	/// <summary>
+	/// Re-rolls <see cref="DeckBuilder.Mutate"/> until it yields a proposal or the retries run out.
+	///
+	/// Consumes <paramref name="rng"/> in order, so the sequence stays deterministic — a re-roll is
+	/// simply more draws from the same stream, exactly as an extra mutant would have been.
+	/// </summary>
+	private Decklist? TryMutate(
+		Decklist deck,
+		ConstructedValues values,
+		Random rng,
+		DeckHistory history,
+		PoolFeatures? features,
+		DeckCore? core,
+		DeckBuilder.DeckProfile profile
+	)
+	{
+		for (var attempt = 0; attempt < MutationRetries; attempt++)
+		{
+			var mutant = DeckBuilder.Mutate(
+				deck,
+				_spellPool,
+				values,
+				rng,
+				history,
+				features,
+				core,
+				profile
+			);
+			if (mutant is not null)
+				return mutant;
+		}
+		return null;
+	}
+
 	private int MutantsFor(double rate)
 	{
 		if (rate >= StableRate)

@@ -294,9 +294,36 @@ excluding an archetype that was never optimised is not the same decision as excl
 Check the `dry` column before excluding. `no-proposal` rows are now logged so this is visible rather
 than inferred from missing rows.
 
-**Core pool size is NOT the only cause.** `Control-C`, a curve slot with no pool lock at all, also
-measured 0 real against 6 dry. Something else in `Mutate` returns null and it has not been
-identified — measure it, do not theorise.
+**FOUND AND FIXED — and core pool size was not the only cause.**
+
+`MutantsFor` returns "how many mutants to EVALUATE"; the loop spent it as "how many times to call a
+function that often fails". `Mutate` rolls ONE operator and returns null when that operator cannot
+produce a legal, distinct, core-holding, profile-respecting list, and the slot was consumed either
+way. No retry.
+
+Null rate per single call, measured (`MutationYieldTests`, 600 mutations per deck):
+
+| condition | null rate |
+|---|---|
+| no core, profile `Any` | 3–9% |
+| **`Control` profile, deck below its band** | **34%** |
+| engine core, 508 cards in pool | 18% |
+| engine core, **5** cards in pool | **95%** |
+
+The curve profile is the cause nobody suspected: a deck below its band may only move toward it, so
+roughly every curve-lowering mutation is discarded — an 11x multiplier with no pool lock involved.
+That is what put `Control-C` at 0 real / 6 dry and made "narrow core" look like the whole story.
+
+`TryMutate` re-rolls up to 20 times. Same short configuration before and after:
+
+| slot | before | after |
+|---|---|---|
+| Engine-Sanguine Reciprocity | 0 real / 6 dry | 3 / 4 |
+| Control-C | 0 real / 6 dry | **5 / 1** |
+
+**It does not make a narrow core searchable** — a five-card pool genuinely has few legal lists, and
+Sanguine Reciprocity still reads 4 dry. It stops the waste. And **runs across this change are not
+comparable at a fixed seed**: a re-roll consumes more draws, so everything downstream shifts.
 
 **Survivability is worth checking directly, and the card data does NOT obviously implicate it.** All
 four CMB Elves carry **Cover 10**, verified from the rendered faces — including both that went
