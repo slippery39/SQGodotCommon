@@ -289,10 +289,22 @@ dork to ever surface.
 run — so each was offered ~36 attempts and used 3 and 2. **They were frozen at their seeded list for
 twelve generations and then reported as non-viable archetypes.**
 
-**This is a direct caveat on §6(a).** The exclusion list this run printed names both of them, and
-excluding an archetype that was never optimised is not the same decision as excluding one that was.
-Check the `dry` column before excluding. `no-proposal` rows are now logged so this is visible rather
-than inferred from missing rows.
+**RE-BASELINED after the fix — the verdicts held.** Same configuration re-run: the two frozen slots
+got 22 and 26 real proposals and moved +0.6pp and +2.8pp, finishing NON-VIABLE again at 26.7% and
+35.0%. They are genuinely weak in this field, not merely un-optimised, so excluding them is now a
+supported decision. **The general rule still stands — read the `dry` column before excluding** — but
+a slot with dry near zero has had its chance.
+
+Cost of the fix: 12 204 games in 19.3 minutes became 16 956 in 31.2. More real proposals means more
+games, which is what the budget always meant to buy.
+
+**And (d) survived the better search.** The elf slot went from 7 proposals to 18, touching 9 distinct
+cards instead of 5 — Wirewood Conduit still appears in **zero** rows. Not budget starvation: the
+selection heuristic, which is items (c) and (f).
+
+**Standing result worth carrying: the best deck in the field is a plain curve slot.** `Midrange-H`
+finished at **77.2%**, clear of every discovered engine (next best 67.2%), on 4 real proposals — it
+sat above `StableRate` almost throughout and was left alone by design.
 
 **FOUND AND FIXED — and core pool size was not the only cause.**
 

@@ -2696,6 +2696,34 @@ stops waste, it does not invent options. The `dry` column still reports what is 
 from the mutation RNG, so every downstream decision shifts. That is a behaviour change, not a
 regression; re-baseline rather than diffing across it.
 
+#### Re-baselined: the search now runs, and the verdicts did not move
+
+Same configuration re-run — 10 decks x 12 generations, DES, same engine report, Mere-Storm excluded,
+seed 7.
+
+| slot | core pool | real before | real after | rate before | rate after |
+|---|---|---|---|---|---|
+| Engine-Master of the Wild Hunt | 2 | **3** | **22** | 26.1% | **26.7%** |
+| Engine-Sanguine Reciprocity | 5 | **2** | **26** | 32.2% | **35.0%** |
+| Engine-Wirewood Herald | 24 | 7 | 18 | 59.4% | 48.3% |
+| Engine-Xathrid Necromancer | 130 | 6 | 9 | 62.8% | 67.2% |
+| Engine-Drogskol Captain | 54 | 33 | 36 | 46.1% | 40.0% |
+
+**The two frozen slots got a real search and stayed non-viable** — 22 and 26 proposals, and the rates
+moved +0.6pp and +2.8pp. So the caveat this file recorded against the exclusion list is **resolved
+for these two**: they are genuinely weak in this field, not merely un-optimised, and excluding them
+is now a supported decision rather than a guess. The general rule stands — **read the `dry` column
+before excluding** — but a slot with dry near zero has had its chance.
+
+**The fix costs time, which is the honest trade**: 12 204 games in 19.3 minutes became 16 956 in
+31.2. More real proposals means more games to evaluate them, and that is what the budget always
+meant to buy.
+
+**The best deck in the field is a plain curve slot.** `Midrange-H` finished at **77.2%**, clear of
+every discovered engine (next best 67.2%), on 4 real proposals — it sat above `StableRate` almost
+throughout and was deliberately left alone. That is the good-stuff-beats-archetype tension this
+whole mode exists to study, now measured with a search that actually runs.
+
 #### MEASURED: (d) is answered — never proposed, and NOT because of the pool lock
 
 Wirewood Conduit appears in **zero** rows across 12 generations, and it **is** one of the 24 cards in
@@ -2705,8 +2733,13 @@ Visionary, Yeva's Forcemage.
 
 So the handoff's "considered but not valued" is **wrong as stated** — it was never considered. The
 cause is the two selection points that both rank by standalone value (`Complete`'s fill at seeding and
-`Mutate`'s `Fill`), combined with a budget of ~7 proposals against a 24-card pool. A 1/1 mana dork
-never surfaces in either. **Survivability is not implicated**: the card was never in a deck to die.
+`Mutate`'s `Fill`). **Survivability is not implicated**: the card was never in a deck to die.
+
+**Confirmed under a working search.** The mutation-budget fix took the elf slot from 7 proposals to
+**18**, touching 9 distinct cards instead of 5 — and Wirewood Conduit still appears in **zero** rows
+across the whole run. So this is not budget starvation; it is the selection heuristic, and it is the
+same problem as items (c) and (f). A 1/1 mana dork never surfaces in a value-ranked fill however many
+attempts it gets.
 
 ### Deck profiles
 
