@@ -284,11 +284,12 @@ public class DeckCoreGeneratorTests
 		);
 
 		// **The GRAVEYARD demand specifically, not "whichever demand has the most causal
-		// suppliers".** Picking by count lands on "a Goblin in your hand", where the causal channel
-		// is 72 cards against 23 declarative — because the movement rule deliberately requires no
-		// filter match on the moved card, so every draw spell counts as putting a Goblin in your
-		// hand. That is loose but not wrong, and it means "causal is the scarcer role" holds for
-		// zones you have to work to fill and not for the one you draw from every turn.
+		// suppliers".** Picking by count used to land on "a Goblin in your hand", where the causal
+		// channel was 72 cards against 23 declarative — every draw spell counted as putting a
+		// Goblin in your hand. The likelihood gate in `PoolFeatures` now empties that slot, so this
+		// selector is no longer load-bearing for THAT case; it stays because naming the demand is
+		// still the honest way to ask this question, and because "causal is the scarcer role" is a
+		// claim about zones you work to fill rather than one you draw from every turn.
 		var reanimation = features
 			.Demands.Select((_, i) => i)
 			.Where(features.Informative)

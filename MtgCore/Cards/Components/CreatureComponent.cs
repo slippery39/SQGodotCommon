@@ -54,6 +54,17 @@ public record CreatureComponent : GameComponent
 	public int FrozenBySourceId { get; init; } = 0;
 
 	/// <summary>
+	/// **Is this creature held down by either kind of freeze?** The single rule for "does not
+	/// untap", shared by the untap step (<see cref="StartTurnAction"/>) and by
+	/// <see cref="UnexhaustCreatureAction"/>.
+	///
+	/// It lives here rather than beside either caller because a second copy would drift, and the
+	/// failure is silent in the worst direction: an untap effect that ignored the freeze would
+	/// quietly undo Dungeon Geists and every "doesn't untap" clause in the game.
+	/// </summary>
+	public bool IsFrozen => FrozenTurns > 0 || FrozenBySourceId != 0;
+
+	/// <summary>
 	/// COVER N — "this creature can't be attacked for N of your turns, or until it attacks".
 	///
 	/// The counterpart to Taunt, and the answer to the problem that a utility creature in a

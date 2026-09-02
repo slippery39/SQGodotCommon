@@ -833,6 +833,12 @@ public static class MtgCardMapper
 			RemoveCounterAdditionalCost r => r.Count == 1
 				? $"remove a {r.Kind} counter"
 				: $"remove {r.Count} {r.Kind} counters",
+			// The SAME failure as the line above, one type later: without this, Walking Ballista
+			// read "Fling Spore (free): Deal 1 damage to any target" — an unlimited free damage
+			// engine on the card face, with the counter that is its only limiter invisible.
+			RemovePlusOneCounterAdditionalCost p => p.Count == 1
+				? "remove a +1/+1 counter"
+				: $"remove {p.Count} +1/+1 counters",
 			ExileFromGraveyardAdditionalCost x => x.Count == 1
 				? "exile a card from your graveyard"
 				: $"exile {x.Count} cards from your graveyard",
@@ -1184,6 +1190,14 @@ public static class MtgCardMapper
 			// hurt their own controller, which is the opposite of what they do.
 			LoseLifeAction l => l.AmountContextKey == ContextKeys.RevealedCardManaCost
 				? "Lose life equal to its mana value"
+			// **The context-driven-amount trap, and `GainLifeAction` one line above already guards
+			// it.** Only the reveal key was special-cased, so any OTHER context key fell through to
+			// the literal `Amount`, which is 0 — Sanguine Bond printed "Your opponent loses 0 life",
+			// a card that reads as doing nothing while being half of a two-card kill. The gain half
+			// printed "that much life" correctly, which is what made the pair's faces disagree.
+			: !string.IsNullOrEmpty(l.AmountContextKey)
+				? TargetsSelf(effect) ? "Lose that much life"
+					: $"{Capitalise(t)} loses that much life"
 			: TargetsSelf(effect) ? $"Lose {l.Amount} life"
 			: $"{Capitalise(t)} loses {l.Amount} life",
 			CreateCardAction c => c.Count == 1
@@ -1223,6 +1237,12 @@ public static class MtgCardMapper
 				"Exile the top card of your library. You may play it this turn",
 			DestroyPermanentAction => $"Destroy {t}",
 			ExhaustCreatureAction e => DescribeExhaust(e, t),
+			// "Ready" is the engine's word for untapping — see DescribeExhaust's "does not ready
+			// on its controller's next turn". Never print "untap": there is no tapping here.
+			UnexhaustCreatureAction => $"Ready {t}",
+			CreateTokenCopyAction c => c.Count == 1
+				? $"Create a token that's a copy of {t}"
+				: $"Create {c.Count} tokens that are copies of {t}",
 			MoveCardToTopOfLibraryAction => $"Put {t} on top of its owner's library",
 			MoveCardToBottomOfLibraryAction => $"Put {t} on the bottom of its owner's library",
 			PutOnLibraryAction p => p.Bottom
@@ -2009,6 +2029,8 @@ public static class MtgCardMapper
 			ExhaustCreatureAction e => e.FreezeTurns > 0
 				? "exhaust it; it stays exhausted"
 				: "exhaust it",
+			UnexhaustCreatureAction => "ready it",
+			CreateTokenCopyAction => "create a token copy of it",
 			ReanimateManyAction => "return them to the battlefield",
 			// The trigger-safe verbs are pipelines that pick a target themselves, so their
 			// steps have to read as one sentence: "the opponent's best creature, destroy it".

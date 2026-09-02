@@ -244,8 +244,19 @@ public class EngineProbeTests
 		Assert.That(reading.Turn, Is.EqualTo(2));
 	}
 
+	/// <summary>
+	/// **Both depth and turn ignore games that never assembled; the RATE is what reports those.**
+	///
+	/// Depth used to be medianed over every game, and this test asserted that (`1.0`, "median of
+	/// 0,0,2,4"). The consequence was arithmetic: below 50% assembly the median falls on a zero, so
+	/// `MedianDepth` — and therefore `Lift` — was pinned to exactly 0 for every such engine.
+	/// Measured across 42 real engines, 22 of 22 under 50% read depth 0 and 0 of 20 above it did.
+	///
+	/// That silently made LIFT unable to score a COMBO deck, which assembles rarely by nature and
+	/// is the thing mode 7 exists to find.
+	/// </summary>
 	[Test]
-	public void SummariseReportsAssemblyRate_AndIgnoresFailedGamesInTheTurn()
+	public void SummariseIgnoresFailedGamesInBothDepthAndTurn()
 	{
 		var (depth, turn, rate) = EngineProbe.Summarise(
 			[new(4, 3, 1), new(0, 0, 0), new(2, 5, 1), new(0, 0, 2)]
@@ -253,11 +264,33 @@ public class EngineProbeTests
 
 		Assert.Multiple(() =>
 		{
-			Assert.That(rate, Is.EqualTo(0.5).Within(1e-9));
-			Assert.That(depth, Is.EqualTo(1.0).Within(1e-9), "median of 0,0,2,4");
+			Assert.That(rate, Is.EqualTo(0.5).Within(1e-9), "rate still counts every game");
+			Assert.That(
+				depth,
+				Is.EqualTo(3.0).Within(1e-9),
+				"median of the 4 and 2 that assembled — not of 0,0,2,4"
+			);
 			// Turn 0 from a game that never assembled would drag this to 2.5 and make a deck that
 			// half-works look faster than one that always works.
 			Assert.That(turn, Is.EqualTo(4.0).Within(1e-9), "median of the 3 and 5 that assembled");
+		});
+	}
+
+	/// <summary>
+	/// The paired negative: an engine that NEVER assembles must still report 0, not a median over
+	/// an empty set. Without this the fix above would throw or return garbage on the commonest
+	/// case in any real report.
+	/// </summary>
+	[Test]
+	public void SummariseReportsZeroWhenNothingAssembled()
+	{
+		var (depth, turn, rate) = EngineProbe.Summarise([new(0, 0, 0), new(0, 0, 0)]);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(rate, Is.EqualTo(0.0).Within(1e-9));
+			Assert.That(depth, Is.EqualTo(0.0).Within(1e-9));
+			Assert.That(turn, Is.EqualTo(0.0).Within(1e-9));
 		});
 	}
 }

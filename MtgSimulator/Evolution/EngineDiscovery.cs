@@ -290,6 +290,27 @@ public static class EngineDiscovery
 	/// measurement than it was under `SeedConcept`: the control is the same payoffs plus the same
 	/// good stuff, so the ONLY difference between the two arms is the core's support slots.
 	/// </summary>
+	/// <summary>
+	/// FNV-1a — stable across runs, processes and platforms, unlike <c>string.GetHashCode</c> and
+	/// <c>StringComparer.Ordinal.GetHashCode</c>, both of which .NET randomises per process.
+	///
+	/// **Any hash that seeds anything must be this one.** `MtgSimulator.Console/Program.cs` carries
+	/// an identical copy for turning a seed WORD into a number; it is duplicated rather than shared
+	/// only because that one lives in the executable. If a third caller appears, promote this to a
+	/// shared helper rather than writing a fourth.
+	/// </summary>
+	private static int StableHash(string s)
+	{
+		uint hash = 2166136261u;
+		foreach (var c in s)
+		{
+			hash ^= (byte)c;
+			hash *= 16777619u;
+		}
+		// Masked rather than Math.Abs: int.MinValue has no positive counterpart and Abs throws on it.
+		return (int)(hash & 0x7FFFFFFF);
+	}
+
 	private static EngineCandidate? Probe(
 		DeckCore core,
 		int slot,
@@ -305,7 +326,18 @@ public static class EngineDiscovery
 	{
 		// Derived from the core's identity rather than the loop index, so a candidate's seed does
 		// not move when an unrelated card is added to the pool and the dedupe reorders.
-		var stamp = Math.Abs(StringComparer.Ordinal.GetHashCode(core.Name)) % 100_003;
+		//
+		// **FNV-1a, never GetHashCode.** This line used `StringComparer.Ordinal.GetHashCode`, which
+		// .NET randomises PER PROCESS — so every run drew a different land count and a different
+		// deck, and mode 7's `assem`, `depth` and `LIFT` columns were not reproducible at a fixed
+		// seed. Measured before the fix, across three runs of one seed: Blood for Bones read LIFT
+		// +15.0, then 0.0; Ajani's Pridemate +4.0, then 0.0. The structural columns were stable
+		// throughout, which is exactly what made it look like ordinary sampling noise.
+		//
+		// This is the SECOND time this bug has been found in this project — see CLAUDE.md on the
+		// shuffle seeding that "resampled a whole experiment". The intent in the comment above was
+		// always right; only the hash was wrong.
+		var stamp = StableHash(core.Name) % 100_003;
 		var rng = new Random(seed + stamp * 1_009 + 17);
 
 		var coreCards = core.Slots.SelectMany(s => s.Cards).ToHashSet(StringComparer.Ordinal);

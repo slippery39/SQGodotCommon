@@ -131,7 +131,21 @@ public class AllSetsCardBugTests
 	{
 		// Deliberate payoffs for the tapper theme: removal that rewards setting a creature up,
 		// dead without one BY DESIGN. Anything else wanting an exhausted target is an accident.
-		var allowed = new[] { "Swift Response", "Gideon Jura" };
+		//
+		// The two CMB untappers are the same shape for a different reason, and it is the entire
+		// premise of that set: they are combo halves that do NOTHING on their own and only come
+		// alive beside a copier that exhausts itself to pay for its ability. "Blank without its
+		// partner" is what makes them a test of whether the deckbuilder can find a combo rather
+		// than of whether it can find a good card. See ComboProvingTwin.
+		//
+		// Listed by name rather than by set, so a genuine accident in CMB still fails this.
+		var allowed = new[]
+		{
+			"Swift Response",
+			"Gideon Jura",
+			"Mirevale Deceiver",
+			"Tidebinder Sprite",
+		};
 
 		var offenders = AllCards()
 			.Where(x =>

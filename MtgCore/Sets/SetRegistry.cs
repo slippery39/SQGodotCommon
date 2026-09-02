@@ -48,8 +48,22 @@ public static class SetRegistry
 	/// </summary>
 	public const string DesignedCode = "DES";
 
+	/// <summary>
+	/// **Registered LAST on purpose.** CMB is a combo test instrument meant to be played inside
+	/// <see cref="Designed"/> (HLM + CSC + CMB), not on its own — see <see cref="ComboProving"/> for
+	/// why a 60-card pool measures the fixture rather than the builder.
+	///
+	/// Adding it shifted the set MENU: it is now 1=LEG 2=HLM 3=CSC 4=CMB 5=DES 6=ALL. Any piped
+	/// console command written against the old numbering now runs a different set silently. Read the
+	/// menu — this exact trap is already recorded twice in `MtgSimulator/CLAUDE.md`.
+	/// </summary>
 	public static IReadOnlyList<CardSet> All { get; } =
-		[new CardSet(LegacyCode, "Legacy", CardLibrary.All), Hollowmere.Set, CoresetCube.Set];
+		[
+			new CardSet(LegacyCode, "Legacy", CardLibrary.All),
+			Hollowmere.Set,
+			CoresetCube.Set,
+			ComboProving.Set,
+		];
 
 	/// The set used when a caller does not specify one.
 	public static CardSet Default => Get(LegacyCode);

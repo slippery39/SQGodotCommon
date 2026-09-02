@@ -455,6 +455,11 @@ public sealed class PoolFeatures
 
 		var placements = new Dictionary<string, List<int>>(StringComparer.Ordinal);
 
+		// The caster's own battlefield copy, recorded by NAME rather than read back out of
+		// `placements` by index. The list's order is a positional contract nothing else depends on,
+		// and this project has already lost a session to `Slots[0]` meaning three different things.
+		var myBattlefield = new Dictionary<string, int>(StringComparer.Ordinal);
+
 		void Place(Card template, string key)
 		{
 			if (placements.ContainsKey(key))
@@ -470,6 +475,8 @@ public sealed class PoolFeatures
 					},
 					parentId: zone
 				);
+				if (zone == ids.Player1BattlefieldId)
+					myBattlefield[key] = placed.Id;
 				spots.Add(placed.Id);
 			}
 			placements[key] = spots;
@@ -477,6 +484,28 @@ public sealed class PoolFeatures
 
 		foreach (var card in pool)
 			Place(card, card.Name);
+
+		// **The control copy for the deck-scope question: the same card, on the OPPONENT's board.**
+		//
+		// Kept in its own map and deliberately NOT added to `placements`, because `placements` is
+		// what `Matches` walks to compute supply — putting an opponent-controlled copy in there
+		// would make every "creature an opponent controls" spec suddenly answered by the whole pool
+		// and would move every supply number in the file. See IsControlScoped for what this is for.
+		var theirBattlefield = new Dictionary<string, int>(StringComparer.Ordinal);
+		foreach (var card in pool)
+		{
+			if (theirBattlefield.ContainsKey(card.Name))
+				continue;
+			(state, var placed) = state.AddObject(
+				card with
+				{
+					OwnerId = ids.Player2Id,
+					ControllerId = ids.Player2Id,
+				},
+				parentId: ids.Player2BattlefieldId
+			);
+			theirBattlefield[card.Name] = placed.Id;
+		}
 
 		// A mana base is a scalar on Decklist, not entries in the spell pool, so nothing above can
 		// answer "discard a land card" — `DiscardAdditionalCost.Filter = Land` came back with zero
@@ -614,16 +643,51 @@ public sealed class PoolFeatures
 			if (zone is null)
 				continue;
 
+			// How much of the pool this demand's filter matches, read BEFORE the movement pass
+			// writes to `supply[d]` — so it is the declarative count and nothing else.
+			var density = supply[d].Count / (double)Math.Max(1, pool.Count);
+
 			foreach (var (name, p) in profiles)
 			{
 				if (!p.MovesInto.TryGetValue(zone.Value, out var movedCount))
 					continue;
+
+				// **"No filter match required" is right for a zone you FILL and wrong for one you
+				// DRAW from.** You choose what to pitch, so a discard outlet is a graveyard enabler
+				// whatever it moved in one probe. You do not choose what you draw — and Goblin
+				// Lackey asks for "a Goblin in your hand", so every draw spell in the pool was
+				// credited and the enabler slot came out at 72 cards against 23 actual Goblins.
+				//
+				// Two ways to be credited, and a mover needs either:
+				//
+				//  - **DIRECTED** — the mover's own card data names this demand, which is exactly
+				//    what Entomb's `SelectCardFromZoneAction.Filter` does. It chose a matching
+				//    card, so the count stands whatever the pool looks like. Same test the askers
+				//    strike below already makes, so a tutor keeps working.
+				//  - **LIKELY** — more often than not at least one card it moved matches:
+				//    `1 - (1 - density)^moved >= 0.5`. An outlet pitching two into a pool that is
+				//    58% creatures clears it; a cantrip drawing one from a pool 1.4% Goblins does
+				//    not.
+				//
+				// Understating is the safe direction, as everywhere else here: a card cut from the
+				// causal channel still sits in the DECLARATIVE slot if it matches the filter
+				// itself. The probe cannot answer this by inspection — its moved cards are a fixed
+				// seven-card filler, never a Goblin — so the expectation is the honest form.
+				//
+				// ponytail: density is measured over the POOL where what matters is density in the
+				// DECK — a built Zombie deck mills its own Zombies far more reliably than the pool
+				// share implies. No deck exists at harvest time; revisit if a real archetype is
+				// measured losing its enablers.
+				var directed = demandsOf.TryGetValue(name, out var asks) && asks.Contains(d);
+				if (!directed && 1.0 - Math.Pow(1.0 - density, movedCount) < 0.5)
+					continue;
+
 				supply[d][name] = Math.Max(supply[d].GetValueOrDefault(name), movedCount);
 				// **Recorded separately as well as merged.** This is the only channel that means
 				// "this card CAUSES the thing"; every other one means "this card IS the thing".
 				causal[d][name] = Math.Max(causal[d].GetValueOrDefault(name), movedCount);
-				if (demandsOf.TryGetValue(name, out var asks) && asks.Contains(d))
-					demandsOf[name] = [.. asks.Where(x => x != d)];
+				if (directed)
+					demandsOf[name] = [.. demandsOf[name].Where(x => x != d)];
 			}
 		}
 
@@ -634,7 +698,7 @@ public sealed class PoolFeatures
 		ProbeCostDemands(pool, demands, supply, demandsOf, failures);
 
 		// --- 4. Drop demands the whole pool answers: they cannot separate two decks ---
-		// Targeting specs are dropped here too unless they aim at the caster's own zones — see
+		// Targeting specs are dropped here too unless they aim at the caster's own cards — see
 		// TargetingProperty. Done in the same pass as the uninformative filter so there is one
 		// remap rather than two.
 		var ceiling = pool.Count * UninformativeShare;
@@ -645,6 +709,7 @@ public sealed class PoolFeatures
 				&& (
 					!origins[d].EndsWith(TargetingProperty, StringComparison.Ordinal)
 					|| IsDeckScoped(demands[d], context)
+					|| IsControlScoped(demands[d], context, myBattlefield, theirBattlefield)
 				)
 			)
 			.ToList();
@@ -1243,6 +1308,63 @@ public sealed class PoolFeatures
 	/// whole pool cannot be shown to be about your deck, and the safe direction for a rule that
 	/// CREATES demands is to add fewer of them.
 	/// </summary>
+	/// <summary>
+	/// **Does this targeting spec ask about cards YOU CONTROL on the battlefield?**
+	///
+	/// The zone rule above uses "not on a battlefield" as its proxy for "about your deck", on the
+	/// reasoning that the battlefield is the SHARED board. That is right for Lightning Bolt and
+	/// wrong for anything reading *"target Illusionist you control"* — which is a statement about
+	/// what you must BUILD, not about what the opponent happens to have. **Controlled-by-you is
+	/// what un-shares the battlefield.**
+	///
+	/// It cost the mode its first real combo. CMB's copiers read "target Illusionist you control";
+	/// measured, all four combo pieces harvested **zero** demands, so `DeckCore.For` returned null
+	/// and a two-card loop that `LoopDetector` finds in two actions was invisible to the builder.
+	/// Same class as the reanimator miss the zone rule was itself introduced to fix, one proxy down.
+	///
+	/// **Decided empirically, like every other rule in this file — no type list.** The same card is
+	/// placed on both battlefields; a spec is control-scoped when it accepts YOUR copy and rejects
+	/// the OPPONENT's. Nothing names `IsControlledByYouSpecification`, so a new way of expressing
+	/// "you control" works the day it is written.
+	///
+	/// **This deliberately widens the demand set**, admitting every "target creature you control"
+	/// pump spell. Those are answered by most of the creature pool, so `Informative` and
+	/// `DeckCore.HasANarrowSlot` are what stop them becoming archetypes — measured rather than
+	/// assumed, see `ComboProvingDiscoveryTests.DumpDemandAndCoreCounts`.
+	/// </summary>
+	private static bool IsControlScoped(
+		object demand,
+		TargetingContext context,
+		Dictionary<string, int> mine,
+		Dictionary<string, int> theirs
+	)
+	{
+		if (demand is not TargetSpecification spec)
+			return false;
+
+		foreach (var (name, myId) in mine)
+		{
+			if (!theirs.TryGetValue(name, out var theirId))
+				continue;
+
+			try
+			{
+				// One card that the spec accepts as yours and refuses as theirs is proof; a spec
+				// matching neither says nothing, which is why this asks for a witness rather than
+				// checking every card agrees.
+				if (spec.IsSatisfiedBy(myId, context) && !spec.IsSatisfiedBy(theirId, context))
+					return true;
+			}
+			catch
+			{
+				// Same rule as the supply evaluation: a spec that cannot make sense of the fixture
+				// answers "no" for this card, it does not kill the build.
+			}
+		}
+
+		return false;
+	}
+
 	private static bool IsDeckScoped(object demand, TargetingContext context)
 	{
 		if (demand is not TargetSpecification spec)

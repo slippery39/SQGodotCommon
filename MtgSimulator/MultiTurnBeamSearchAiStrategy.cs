@@ -50,6 +50,10 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	// always takes true.
 	private readonly bool _resolveChoicesOnExecute;
 
+	// The pre-search lethal pass. A field only so EvaluatorStrengthTests can play it against its
+	// own absence — see FindLethalAttacks. Production always takes true.
+	private readonly bool _lethalCheck;
+
 	/// <summary>
 	/// The evaluator every score in this search comes from. Defaults to
 	/// <c>WeightedStateEvaluator.Default</c>, which is exactly what the static
@@ -128,7 +132,8 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		bool preferFastestWin = true,
 		IStateEvaluator? evaluator = null,
 		bool resolveChoicesOnExecute = true,
-		CardValueTable? cardValues = null
+		CardValueTable? cardValues = null,
+		bool lethalCheck = true
 	)
 	{
 		_rolloutBudget = rolloutBudget;
@@ -147,6 +152,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		_cardValues = cardValues;
 		_preferFastestWin = preferFastestWin;
 		_resolveChoicesOnExecute = resolveChoicesOnExecute;
+		_lethalCheck = lethalCheck;
 		_eval = evaluator ?? WeightedStateEvaluator.Default;
 		_moveBudgetTimestampTicks = moveTimeBudget.HasValue
 			? (long)(moveTimeBudget.Value.TotalSeconds * Stopwatch.Frequency)
@@ -300,6 +306,23 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		var chainAction = TryConsumeCommittedAction(state, actions, playerId);
 		if (chainAction != null)
 			return chainAction;
+
+		// **Lethal on board is taken before anything else is considered.** See FindLethalAttacks.
+		if (_lethalCheck && FindLethalAttacks(state, playerId) is { } lethal)
+		{
+			if (_captureDecisions)
+			{
+				var desc = ActionDescriber.Describe(lethal[0], state);
+				LastDecision = new AiDecision(
+					desc,
+					StateEvaluator.WinScore,
+					[new AiActionCandidate($"LETHAL: {desc}", StateEvaluator.WinScore, true)],
+					StateBefore: _eval.Explain(state, _ids, playerId)
+				);
+			}
+			CommitChain(lethal, state, playerId);
+			return lethal[0];
+		}
 
 		// Level 0: execute each root action and score via multi-turn rollout.
 		// Pre-allocated array + Parallel.For gives deterministic ordering without AsOrdered buffering overhead.
@@ -1014,6 +1037,83 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	/// False restores the old FirstOrDefault behaviour, so <c>EvaluatorStrengthTests</c> can play
 	/// this against its own absence. Production never passes it.
 	/// </param>
+	/// <summary>
+	/// **"If attacking with everything kills them, do that."** A pre-search pass, and the reason it
+	/// has to exist is that <see cref="FindWinner"/> cannot substitute for it.
+	///
+	/// `FindWinner` only fires when a beam node's ROLLOUT reached a win, and the rollout completes
+	/// our turn with <see cref="PlayGreedyTurn"/> — which plays a land, exactly ONE other action,
+	/// then ends the turn. So a kill needing six swings is never simulated, no node scores as a win,
+	/// and the search falls through to greedy scoring. (`SimulateOpponentTurn` loops every attack
+	/// for the OPPONENT, so the model gives them a whole turn and us one action.)
+	///
+	/// **Measured consequence, and why a "the search assembles lethal incrementally" argument is not
+	/// enough.** `LethalDetectionTests` established that the beam reaches lethal one attack per
+	/// `SelectAction` call, because each individual swing is the best-scoring action available. That
+	/// holds only while nothing outscores a swing. A repeatable free ability is +1 creature at
+	/// evaluator weight 3.0 against a point of damage at life weight 0.2, so the incremental
+	/// assembly never starts: the CMB Twin deck assembled on turn 2, activated its copier **198
+	/// times**, and ended in `ActionLimitReached` — a draw — holding lethal the whole time.
+	///
+	/// Three things keep this cheap and honest:
+	///
+	/// - **A power gate first.** Effective power of everything we control against their life. It is
+	///   one battlefield walk and it fails immediately on the overwhelming majority of positions, so
+	///   the simulation below almost never runs. Deliberately loose (it ignores who can legally
+	///   attack) because a false POSITIVE only costs the simulation, while a false negative would
+	///   miss the win.
+	/// - **The sequence is simulated, not assumed.** Attacks are taken from
+	///   `MtgActionGenerator.GetLegalActions` each iteration, so summoning sickness, exhaustion,
+	///   Taunt, Flying and "can't attack" are all enforced by the generator rather than re-derived
+	///   here — the same rule that forbids a second copy of the combat rules in a UI.
+	/// - **It must actually kill.** The loop returns null unless the opponent is dead at the end, so
+	///   a board that merely looks lethal falls through to the ordinary search.
+	/// </summary>
+	private ImmutableList<GameAction>? FindLethalAttacks(GameState state, int playerId)
+	{
+		var opponentId = playerId == _ids.Player1Id ? _ids.Player2Id : _ids.Player1Id;
+		if (state.GetObject(opponentId) is not MtgPlayer opponent || opponent.Life <= 0)
+			return null;
+
+		var battlefieldId =
+			playerId == _ids.Player1Id ? _ids.Player1BattlefieldId : _ids.Player2BattlefieldId;
+
+		var power = state
+			.GetCardsInZone(battlefieldId)
+			.Where(c => c.HasComponent<CreatureComponent>())
+			.Sum(c => Math.Max(0, state.GetEffectivePower(c.Id)));
+
+		if (power < opponent.Life)
+			return null;
+
+		var sim = state;
+		var path = ImmutableList.CreateBuilder<GameAction>();
+
+		// Bounded by the creatures that could possibly swing; each iteration consumes one, since
+		// AttackAction sets HasAttacked and the generator stops offering it.
+		var cap = state.GetCardsInZone(battlefieldId).Count() + 1;
+
+		for (var i = 0; i < cap; i++)
+		{
+			if (sim.GetObject(opponentId) is not MtgPlayer current || current.Life <= 0)
+				break;
+
+			var attack = MtgActionGenerator
+				.GetLegalActions(sim, _ids, playerId)
+				.OfType<AttackAction>()
+				.FirstOrDefault(a => a.TargetId == opponentId);
+
+			if (attack is null)
+				break;
+
+			sim = ExecuteAction(sim, attack);
+			path.Add(attack);
+		}
+
+		var dead = sim.GetObject(opponentId) is not MtgPlayer end || end.Life <= 0;
+		return dead && path.Count > 0 ? path.ToImmutable() : null;
+	}
+
 	internal static BeamNode? FindWinner(List<BeamNode> beam, bool preferFastest = true)
 	{
 		BeamNode? best = null;

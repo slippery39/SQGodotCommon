@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -33,6 +34,19 @@ public record CountCardsWithSubtypeAction : GameAction
 	/// </summary>
 	public bool CreaturesOnly { get; init; } = false;
 
+	/// <summary>
+	/// Also emit the IDS of the cards counted, so a later pipeline step can act on them.
+	///
+	/// **Mass targeting cannot reach inside a pipeline** — `PipelineAction` is not an
+	/// `ITargetedAction`, so nothing can inject an "all valid" list into one of its steps. That is
+	/// why <see cref="CountGreatestPowerAction"/> emits an id list beside its number, and it is the
+	/// only shape in which "count your creatures, then pump exactly those creatures" is expressible.
+	/// A Craterhoof-style card needs both halves from one scan or the two could disagree.
+	///
+	/// Empty (the default) skips it entirely, so every existing caller is unaffected.
+	/// </summary>
+	public string CountedIdsOutputKey { get; init; } = "";
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var playerId = string.IsNullOrEmpty(PlayerIdContextKey)
@@ -48,10 +62,19 @@ public record CountCardsWithSubtypeAction : GameAction
 		if (CreaturesOnly)
 			cards = cards.Where(c => c.HasComponent<CreatureComponent>());
 
-		var count = string.IsNullOrEmpty(Subtype)
-			? cards.Count()
-			: cards.Count(c => c.HasSubtype(Subtype));
+		var matched = string.IsNullOrEmpty(Subtype)
+			? cards.ToList()
+			: cards.Where(c => c.HasSubtype(Subtype)).ToList();
 
-		return new ActionResult(gameState).WithOutput(OutputKey, count);
+		var result = new ActionResult(gameState).WithOutput(OutputKey, matched.Count);
+
+		// The ids come from the SAME filtered list the count came from, so the number and the
+		// targets cannot disagree — a second scan could see a different board if anything in
+		// between moved a permanent.
+		// ImmutableList<int>, matching CountGreatestPowerAction — that is the type
+		// EffectAction.TargetContextKey reads, so a plain List would silently target nothing.
+		return string.IsNullOrEmpty(CountedIdsOutputKey)
+			? result
+			: result.WithOutput(CountedIdsOutputKey, matched.Select(c => c.Id).ToImmutableList());
 	}
 }

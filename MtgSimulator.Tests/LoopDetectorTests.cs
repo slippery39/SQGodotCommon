@@ -115,6 +115,55 @@ public class LoopDetectorTests
 		Assert.That(LoopDetector.Find(state, ids, ids.Player1Id), Is.Null);
 	}
 
+	/// <summary>
+	/// **The first REAL loop this engine has ever been able to express, found by the detector.**
+	///
+	/// `MtgSimulator/CLAUDE.md` recorded, correctly at the time, that no infinite combo was
+	/// expressible here: without an untap effect you cannot re-use a permanent, so both sweeps
+	/// returned zero and that zero was a statement about the action vocabulary rather than about the
+	/// card list. `UnexhaustCreatureAction` and `CreateTokenCopyAction` shipped for the CMB set, and
+	/// this is the assertion that the zero can now move.
+	///
+	/// It is the counterpart to <see cref="APlantedFreeLoop_IsFound"/>: that plants a synthetic free
+	/// ability, this uses two REAL printed cards that ship in a set. If this stops finding a loop,
+	/// either the cards changed or the detector broke — and the sweeps below become untrustworthy
+	/// either way, because they would be reporting zero for the wrong reason again.
+	/// </summary>
+	[Test]
+	public void TheShippedTwinCombo_IsFound()
+	{
+		var copier = ComboProving.Cards.Single(c => c.Name == "Twinflame Artisan");
+		var untapper = ComboProving.Cards.Single(c => c.Name == "Mirevale Deceiver");
+
+		var (state, ids) = Board(copier, untapper);
+
+		var found = LoopDetector.Find(state, ids, ids.Player1Id);
+
+		Assert.That(found, Is.Not.Null, "the shipped two-card untap/copy loop was not detected");
+		TestContext.Out.WriteLine(
+			$"found in {found!.Iterations} action(s): {string.Join(" -> ", found.Line)}\n"
+				+ $"  gain per iteration: {found.Gain}"
+		);
+	}
+
+	/// <summary>
+	/// The control for the test above: EITHER piece alone must not loop, or "found a loop" would be
+	/// a statement about one card rather than about the pair.
+	/// </summary>
+	[Test]
+	public void NeitherHalfOfTheTwinCombo_LoopsAlone()
+	{
+		foreach (var name in new[] { "Twinflame Artisan", "Mirevale Deceiver" })
+		{
+			var (state, ids) = Board(ComboProving.Cards.Single(c => c.Name == name));
+			Assert.That(
+				LoopDetector.Find(state, ids, ids.Player1Id),
+				Is.Null,
+				$"{name} loops on its own — the pair result would say nothing"
+			);
+		}
+	}
+
 	[Test]
 	public void TheEnginesOwnActivationCap_ClosesTheLoop()
 	{

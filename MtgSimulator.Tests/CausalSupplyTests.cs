@@ -1,4 +1,5 @@
 using MtgCore;
+using MtgCore.Cards.Builders;
 
 namespace MtgSimulator.Tests;
 
@@ -23,6 +24,94 @@ public class CausalSupplyTests
 			var spells = SetRegistry.Combined.Cards.Where(c => !c.HasSubtype("Land")).ToList();
 			return (PoolFeatures.Build(spells), spells);
 		});
+
+	/// <summary>
+	/// **A blind mover only enables a demand it is likely to hit, and a filling mover still does.**
+	///
+	/// The movement rule requires no filter match on the card it moved, because you choose what to
+	/// pitch. You do NOT choose what you draw — so every draw spell in the pool was credited with
+	/// putting "a Goblin in your hand" and Goblin Lackey's enabler slot came out at 72 cards.
+	///
+	/// Both halves are asserted in ONE pool, and the second is the vacuity guard: a "fix" that
+	/// simply switched the causal channel off would pass the first assertion on its own.
+	/// </summary>
+	[Test]
+	public void ABlindDrawDoesNotEnableANarrowHandDemand_ButAMillStillEnablesTheGraveyard()
+	{
+		// Deliberately NOT a Goblin, so the pool holds exactly one card the hand demand matches.
+		var lackey = CardFactory
+			.Creature("Lackey", manaCost: 1, power: 1, toughness: 1)
+			.WithEtbTrigger(
+				"Lackey Trigger",
+				eb =>
+					eb.WithAction(
+						new PutIntoBattlefieldAction(),
+						TargetingStrategy.RandomTarget(
+							new IsInHandSpecification().And(
+								new IsSubtypeSpecification { Subtype = "Goblin" }
+							)
+						)
+					)
+			)
+			.Build();
+
+		var grunt = CardFactory
+			.Creature("Grunt", manaCost: 1, power: 1, toughness: 1)
+			.WithSubtype("Goblin")
+			.Build();
+
+		Card Bear(string name) =>
+			CardFactory.Creature(name, manaCost: 2, power: 2, toughness: 2).Build();
+
+		var divination = CardFactory.Spell("Divination", manaCost: 3).WithDraw(2).Build();
+		var millstone = CardFactory.Spell("Millstone", manaCost: 2).WithMill(2).Build();
+		var reanimate = CardFactory
+			.Spell("Reanimate", manaCost: 2)
+			.WithReanimate()
+			.WithTarget(TargetBuilder.Single().CreatureInYourGraveyard())
+			.Build();
+
+		var features = PoolFeatures.Build(
+			[
+				lackey,
+				grunt,
+				Bear("Bear1"),
+				Bear("Bear2"),
+				Bear("Bear3"),
+				divination,
+				millstone,
+				reanimate,
+			]
+		);
+
+		// Selected by what the demand SEPARATES rather than by how it is worded: only the Goblin
+		// filter tells Grunt apart from a Bear, and only the graveyard spec is answered by a Bear.
+		var handGoblin = features
+			.DemandsOf("Lackey")
+			.Single(d =>
+			{
+				var s = features.SuppliersOf(d);
+				return s.Contains("Grunt") && !s.Contains("Bear1");
+			});
+
+		var graveyard = features
+			.DemandsOf("Reanimate")
+			.Single(d => features.SuppliersOf(d).Contains("Bear1"));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				features.CausalSuppliersOf(handGoblin),
+				Does.Not.Contain("Divination"),
+				"a cantrip drawing 2 from a pool with one Goblin in it is not a Goblin enabler"
+			);
+			Assert.That(
+				features.CausalSuppliersOf(graveyard),
+				Does.Contain("Millstone"),
+				"self-mill into a pool that is mostly creatures IS a graveyard enabler"
+			);
+		});
+	}
 
 	/// <summary>
 	/// For every demand, the top suppliers ranked by <c>SupplyOf</c> — the weight that decides what

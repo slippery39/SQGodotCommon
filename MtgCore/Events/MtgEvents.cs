@@ -53,6 +53,31 @@ public record CreatureExhaustedEvent : GameEvent
 	public int CreatureId { get; init; }
 }
 
+/// <summary>
+/// A permanent's activated ability was activated and paid for.
+///
+/// **Added because activating an ability was the one way a card can DO something that emitted no
+/// event naming it.** `CreatureExhaustedEvent` is not a substitute: it fires only for a
+/// `RequiresTap` ability, it fires just as readily when an opponent's tapper exhausts your
+/// creature, and its property is `CreatureId` rather than `CardId`.
+///
+/// The gap was measured rather than theorised. `MtgSimulator`'s `EngineProbe` credits a payoff as
+/// having EXECUTED on spell resolution or on entering play — so for a creature whose engine is its
+/// activated ability, "execution" was recorded when the creature was CAST, before the ability could
+/// ever be used. A planted two-card combo whose whole function is activating a copier twenty times
+/// in one turn registered as a single execution at the moment the copier landed.
+///
+/// `CardId` rather than `CreatureId`, deliberately: the positional convention that an event about a
+/// card carries `CardId` is what lets `EngineProbe` and `PoolFeatures` find the subject generically,
+/// and a non-creature permanent can have an activated ability too.
+/// </summary>
+public record AbilityActivatedEvent : GameEvent
+{
+	public int CardId { get; init; }
+
+	public int AbilityIndex { get; init; }
+}
+
 public record SpellCastEvent : GameEvent
 {
 	public int CardId { get; init; }

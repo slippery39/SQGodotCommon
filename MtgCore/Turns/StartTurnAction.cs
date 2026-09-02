@@ -25,9 +25,11 @@ public record StartTurnAction : GameAction
 	/// <summary>
 	/// True when this creature must stay tapped through its own untap step — either it still owes
 	/// frozen turns, or something on the battlefield is holding it down.
+	///
+	/// Delegates to <see cref="CreatureComponent.IsFrozen"/> so the untap step and
+	/// <see cref="UnexhaustCreatureAction"/> cannot disagree about what a freeze means.
 	/// </summary>
-	private static bool StaysExhausted(CreatureComponent creature) =>
-		creature.FrozenTurns > 0 || creature.FrozenBySourceId != 0;
+	private static bool StaysExhausted(CreatureComponent creature) => creature.IsFrozen;
 
 	/// <summary>
 	/// Expires everything stamped UntilYourNextTurn on the given player and their board. Mirrors

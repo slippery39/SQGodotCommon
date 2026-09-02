@@ -104,6 +104,7 @@ public record EventTriggerCondition : TriggerCondition
 			PlayerDamagedEvent e => e.PlayerId,
 			PlayerGainedLifeEvent e => e.PlayerId,
 			PlayerLostLifeEvent e => e.PlayerId,
+			AbilityActivatedEvent e => e.CardId,
 			CardDrawnEvent e => e.CardId,
 			CardDiscardedEvent e => e.CardId,
 			// The milled/graveyard events report the CARD, not the player, so an

@@ -42,6 +42,10 @@ MtgCore/
 │                            #   when the library runs out. OutputKey writes the milled card IDs to pipeline context.
 │                            # ExhaustCreatureAction — EffectAction; "tap target creature". Sets
 │                            #   CreatureComponent.IsExhausted and emits CreatureExhaustedEvent. See "Exhaust".
+│                            # UnexhaustCreatureAction — EffectAction; "untap target creature", the mirror of the
+│                            #   above. Respects CreatureComponent.IsFrozen (a frozen creature does not ready) and
+│                            #   deliberately does NOT clear HasAttacked — readying is not vigilance. Emits no event:
+│                            #   nothing triggers on untapping, so the three-site event rule buys nothing yet.
 │                            # ExileTopCardPlayableAction — EffectAction; impulse draw. Exiles each target
 │                            #   PLAYER's top card and stamps ExiledPlayableComponent. See "Impulse Draw".
 │                            # DealDamageAction damages PLANESWALKERS as well as players and creatures —
@@ -1111,6 +1115,23 @@ summoning sickness; the ability was effectively free to repeat within a turn. It
 `CreatureExhaustedEvent` goes into `PendingGameEvents` so tapper payoffs (Gideon's Avenger) fire.
 `ExhaustCreatureAction` no-ops on an already-exhausted creature so payoffs cannot double-count.
 
+**`UnexhaustCreatureAction` is the untap step as an EFFECT, and it did not exist until the combo
+set needed it.** Until then `StartTurnAction` was the only thing in the solution that could clear
+`IsExhausted` — which is why Manifold Key's "untap another target artifact" was cut as unreachable,
+and why no combo trading in the untap operation (Splinter Twin, Kiki-Jiki, untap your mana
+creature) could be written at all.
+
+Two rules, both silent when wrong:
+
+- **A frozen creature does not ready.** The rule is `CreatureComponent.IsFrozen`, shared with the
+  untap step rather than restated — a second copy would drift, and an untap effect that ignored the
+  freeze would quietly undo Dungeon Geists and every "doesn't untap" clause in the game.
+- **`HasAttacked` is NOT cleared.** Untapping is not vigilance, and a mass-ready effect must not
+  become a second combat step by implication. A card that wants that should say so in its own text.
+
+`UnexhaustTests` pins both, plus the shape the primitive exists for: a tap ability used, readied,
+and used again in the same turn.
+
 ## Exalted
 
 `ExaltedComponent { Count }` on the creature, plus `GrantsExalted` on `StaticGrantKeywordAbility`
@@ -1650,6 +1671,15 @@ target list, and `ResolveEffectAction` injects that over any hardcoded `TargetId
 `ITargetedAction`. To affect the opponent from a trigger, use an action that derives them from
 context (`DrainLifeAction` with `PlayerIdContextKey = ContextKeys.CastingPlayerId`) or a real
 targeting strategy — not `NoTarget()` plus preset `TargetIds`.
+
+**Its twin, and the one that reads as a working card: `Single()` in a trigger targets NOTHING.**
+`TargetSelectionMode.UserSelect` is filled during the cast action's targeting step, and a trigger
+has no such step — so the list resolves empty and the effect silently hits nobody. A Sanguine Bond
+built with `Single().Opponent()` drained **0** and looked entirely correct on the card. Use
+`Random()` or `Best()` in a trigger; `Random()` is deterministic whenever there is one legal
+target, which is every "target opponent" clause in a two-player game. Same defect family as
+`SelectModeAction` downgrading `UserSelect` to `Random` — see "Auditing the bottom of the win-rate
+table", item 3.
 
 ## Creature Recursion from the Graveyard
 

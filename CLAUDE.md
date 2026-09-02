@@ -64,7 +64,19 @@ not in CLAUDE.md.
 
 ## Card Sets
 
-Two draftable sets exist, both registered in `SetRegistry`:
+**The set menu is 1=LEG 2=HLM 3=CSC 4=CMB 5=DES 6=ALL.** CMB was inserted, so any piped console
+command written against the older numbering now runs a different set silently. Read the menu.
+
+**Combo Proving Ground (CMB)** is a test instrument, not a draftable set — see
+`MtgCore/Sets/ComboProving/`. It plants combos with known answers so a run can distinguish "the
+builder cannot find combos" from "this pool has none", which is the discriminator the handoff names
+as the most valuable open item. It is a **supplement meant to be played inside DES**, never alone:
+at ~60 cards `DeckCore.MinPoolForBreadth` (100) switches the breadth gate off entirely, so a run
+over CMB by itself measures the fixture. Nothing in it is costed to a rate — read cohesion and
+assembly, never win rate.
+
+Two DRAFTABLE sets exist (CMB is registered but has no trained model and is not meant to be
+drafted), both registered in `SetRegistry`:
 - **Hollowmere (HLM)** — an original graveyard-themed set. See `MtgCore/Sets/Hollowmere/`.
 - **Core Set Cube (CSC)** — built from an external cube list
   (https://cubecobra.com/cube/list/magiccoreset20xx). **All five colours are complete — 335

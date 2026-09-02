@@ -299,6 +299,54 @@ From Cowling, Ward & Powley (2012) §D; their λ = 0.99 is calibrated for rollou
 terminal over 40–60 turns. Scope is narrow: it only fires when a terminal lands inside the
 lookahead, so it does not touch the oscillation or horizon-blindness defects.
 
+### The pre-search LETHAL check — and why FindWinner could not cover it
+
+`MultiTurnBeamSearchAiStrategy.FindLethalAttacks` runs before the beam: if the effective power of
+everything you control is at least the opponent's life, it simulates taking legal `AttackAction`s
+until they die, and commits that sequence if they do.
+
+**`LethalDetectionTests` originally concluded this was unnecessary, and the reasoning was sound at
+the time**: with no blocking, every individual attack scores well on its own, so the beam assembles
+lethal one swing per `SelectAction` call — `TwentyAttackersWithExactLethal_Wins` passes without any
+special handling.
+
+**That premise holds only while nothing OUTSCORES a swing.** A repeatable free ability is +1 creature
+at evaluator weight 3.0 against a point of damage at life weight 0.2, so the incremental assembly
+never starts. `FindWinner` cannot rescue it either: it fires only when a node's ROLLOUT reached a
+win, and the rollout completes our turn with `PlayGreedyTurn`, which plays a land, **exactly one**
+other action, then ends the turn — so a kill needing six swings is never simulated. Note the
+asymmetry that leaves: `SimulateOpponentTurn`'s BoardOnly mode LOOPS every attack, so the model gives
+the opponent a whole turn and us one action.
+
+Measured on CMB's planted Twin combo, before and after:
+
+| | before | after |
+|---|---|---|
+| Activations per game | **198** | 10–16 |
+| Game end | `ActionLimitReached` (a draw) | `Damage`, **win on turn 3–4** |
+| Mode 7 `kill` | **99.0 (never)** | **3.5** |
+| MtgSimulator suite runtime | 1m38s | **28s** |
+
+The deck assembled the combo on turn 2 and then held lethal while activating its copier to the
+200-action cap. The suite speedup is the same effect everywhere: games that were grinding now end.
+
+Three properties keep it cheap and honest, and all three are load-bearing:
+
+- **A power gate first**, one battlefield walk, deliberately loose — it ignores who can legally
+  attack, because a false positive costs only the simulation while a false negative misses the win.
+- **The sequence is SIMULATED, not assumed.** Attacks come from `MtgActionGenerator.GetLegalActions`
+  each iteration, so summoning sickness, exhaustion, Taunt, Flying and "can't attack" are enforced by
+  the generator rather than re-derived — the same rule that forbids a second copy of the combat rules
+  in a UI.
+- **It must actually kill.** Returns null unless the opponent is dead at the end, so a board that
+  merely looks lethal falls through to the ordinary search. `OneShortOfLethal_DoesNotWin` and the
+  burn/pump tests (which need the SEARCH, not raw attacks) still pass.
+
+`lethalCheck: false` on the constructor restores the old behaviour so `EvaluatorStrengthTests` can
+play it against its own absence. **That measurement has NOT been run** — the case for shipping it is
+a fixed defect (a held win never taken), not a demonstrated win rate, which is the same standing this
+file gives the terminal discount and fastest-win changes.
+
 #### Never compare a rollout score against WinScore
 
 **A discounted win is 9500 or 9025, so `>= WinScore` is false for every win the search will ever
@@ -1047,6 +1095,81 @@ engine, engines to highlight, seed. **Set `MTG_MIN_LANDS=12`** — Storm runs 12
 Affinity 14, so at the 20 default every one of them is illegal and an engine is being asked to
 assemble out of a deck it cannot be. Mode 7 prints a NOTE when the floor is above 14.
 
+### A combo deck can be built correctly, measured correctly, and STILL not assemble
+
+Three separate causes were found for one symptom — a planted two-card combo (CMB's Twin package)
+reading `depth 0.0, LIFT 0.0`. The first two were measurement bugs and are fixed; **the third is
+not a bug and is the important one.**
+
+1. **`Summarise` medianed depth over ALL games**, including the zeroes from games that never
+   assembled, so below 50% assembly `MedianDepth` was pinned to exactly 0 and `Lift` with it. 22 of
+   22 engines under 50% read depth 0; 0 of 20 above it did. Fixed — depth now filters to assembled
+   games, matching what turn always did. **Engines at depth 0 went 22/42 → 1/43.**
+2. **Activating an ability emitted no event naming the card**, so `IsExecution` credited an
+   activated-ability payoff when the creature ENTERED PLAY — before the ability could ever be used.
+   Fixed by `AbilityActivatedEvent`. Moved the whole table (Mere-Storm depth 7.5 → 22.0).
+3. **The deck wins without the combo.** After both fixes the Twin engine still reads
+   `assem 20%, depth 1.0` — and the reason is in the same report: **`wins 8 of 10`, goldfish kill
+   turn 6.** The flex slots are the format's best cards, the AI curves out and kills the inert
+   opponent, and the 4-mana 1/1 copier is simply a worse play than a planeswalker. The combo is
+   never needed, so it is never assembled.
+
+**This is the goldfish blindness, one level up.** That criticism is already recorded against
+`Goldfish` SPEED as a fitness — *"against an opponent that does nothing the quickest kill is cheap
+creatures attacking"* — and `EngineProbe` runs inside that same solitaire game. Its metric is
+better; its FIXTURE is the same one, and the game is decided before the engine matters.
+
+**So the open item for combo measurement is the fixture, not the metric.** Three costed directions,
+none tried:
+
+- **Ask whether the combo was AVAILABLE, not whether the AI used it.** `LoopDetector` already
+  answers this from a position and already finds this exact combo in two actions. Cost needs
+  measuring — its published figures are for two-card fixtures, not a mid-game board.
+- **Deny the deck its good stuff.** The Twin core's archetype pool is 4 cards, so `Complete` tops
+  up from the format; a combo-only fill would force the question. Risks measuring an unplayable
+  deck.
+- **Give the goldfish opponent a clock**, so curve-out beatdown is not automatically sufficient.
+
+Do not read a low `assem` on a combo core as "the builder failed" — check `Wins` in the same row
+first.
+
+### MEASURED: mode 7's GAME columns are not reproducible at a fixed seed
+
+**Three runs, identical seed (`comboseed`), identical binary, DES.** Half the table is deterministic
+and half is not:
+
+| Column | Stable? |
+|---|---|
+| `supp` / `pay` / `enab` — the core's structure | **identical every run** |
+| `bare` / `supp'd` — leverage | identical for almost every row |
+| `assem` / `depth` / `LIFT` / `cover` / `kill` | **swing wildly** |
+
+```
+                     run A                        run B
+Blood for Bones      60%  depth 15.0  LIFT +15.0  30%  depth 0.0  LIFT 0.0
+Wirewood Herald      50%  depth  1.5  LIFT  +0.5  80%  depth 6.0  LIFT +5.5
+Ajani's Pridemate    80%  depth  4.0  LIFT  +4.0  40%  depth 0.0  LIFT  0.0
+```
+
+**LIFT is the column the mode exists to produce, and it moved +15.0 → 0.0 for one concept between
+two runs of the same seed.** Deck construction and the leverage sandbox are seeded; the solitaire
+games are not, or not fully. At 10 games per engine the sampling error alone is ~16pp on `assem`, so
+even a correctly seeded run would need far more games before a single number meant anything.
+
+**How to read a mode 7 report until this is fixed:**
+
+- **Trust the structural columns.** `supp`, `pay` and `enab` say what the pool can support and are
+  exactly reproducible. So is the core listing underneath.
+- **Do not rank on a single run's LIFT**, and do not compare LIFT between runs. A concept that reads
+  +15 in one run and 0 in the next has told you nothing.
+- **A CONSISTENT zero across runs is still evidence.** Kilnmother Vess reads `depth 0.0, LIFT 0.0` in
+  every run — that is a real "never assembles", not noise.
+
+This is the same family as the two non-determinism bugs already recorded here (the parallel-batch
+draw disaster and `string.GetHashCode`), and the same diagnostic rule applies: **when two runs at
+one seed disagree, find out why before reading either.** Fixing it means threading the run seed into
+the solitaire games; raising games-per-engine reduces the noise but does not make runs comparable.
+
 ### A candidate is a payoff CARD and its whole demand conjunction, not one demand
 
 `EngineCandidate` used to be keyed on a single `DemandIndex`, and that unit is one level too low.
@@ -1278,6 +1401,44 @@ graveyard and library are where your own cards live. `ZoneSpecification` already
 and composites already delegate to it, so `IsDeckScoped` is one loop and no new vocabulary. Empty
 means no — a spec that selects nothing in a fixture holding the whole pool cannot be shown to be
 about your deck, and adding fewer demands is the safe direction.
+
+### …and when it aims at cards YOU CONTROL — the zone rule was one proxy too coarse
+
+**"Not on a battlefield" is a proxy for "about your deck", and it missed the first real combo this
+engine could express.** CMB's copiers read *"exhaust: create a token copy of target **Illusionist you
+control**"*. That is a statement about what you must BUILD — but its candidates are on the
+battlefield, so the zone rule classified it with Lightning Bolt and threw it away. Measured, all
+four combo pieces harvested **zero** demands, `DeckCore.For` returned null, and a two-card loop that
+`LoopDetector` finds in two actions was **invisible to the builder**. Exactly the same class as the
+reanimator miss the zone rule was itself introduced to fix, one level down.
+
+**Controlled-by-you is what un-shares the battlefield.** `IsControlScoped` decides it the same
+empirical way, with no type list: the same card is placed on BOTH battlefields, and a spec is
+control-scoped when it accepts your copy and rejects the opponent's. Nothing names
+`IsControlledByYouSpecification`, so a new way of writing "you control" works the day it ships.
+
+The opponent-side copies live in their own map and are deliberately **not** added to `placements` —
+that dictionary is what `Matches` walks to compute supply, so an opponent-controlled copy in it
+would make every "creature an opponent controls" spec answered by the whole pool and move every
+supply number in the file.
+
+**Measured before trusting, because the worry was a flood of "target creature you control" pump
+spells:**
+
+| | before | after |
+|---|---|---|
+| demands total | 63 | **68** |
+| demands informative | 43 | **48** |
+| cores built / distinct | 77 / 77 | **82 / 82** |
+
+**+5, and the reason is the reusable part: demands dedupe by VALUE pool-wide.** Every pump spell
+sharing one `CreatureControlledByYou` spec contributes a single demand between them, not one each —
+so widening a *classification* rule costs far less than widening a *card* rule would.
+`ComboProvingDiscoveryTests.DumpDemandAndCoreCounts` is the instrument; re-run it on both sides of
+any further change here.
+
+The combo's untappers still harvest zero demands, and that is correct: they are the SUPPLY side, not
+the payoff. Only the copier asks for anything.
 
 Unlocked **6 new concepts** on ALL, all of them archetypes the mode could not previously express:
 instants-in-graveyard (100% assembly), cards-in-hand, creature-in-own-graveyard,
@@ -1557,12 +1718,38 @@ The two are **disjoint, with a card that does both filed as causal** — slots a
 independently, so an overlap would let one copy satisfy both, the same rule that strips payoffs from
 their own support slot.
 
-**"Causal is the scarcer role" is true for zones you have to work to fill, and NOT for the hand.**
-Selecting the demand with the most causal suppliers lands on *"a Goblin in your hand"*, where the
-causal side is 72 cards against 23 declarative: the movement rule deliberately requires no filter
-match on the card it moved, so every draw spell counts as putting a Goblin in your hand. Loose, not
-wrong — but it is why `AGraveyardCoreSeparatesTheTargetsFromTheOutlets` names the graveyard demand
-instead of picking by count.
+**"Causal is the scarcer role" is true for zones you have to work to fill, and NOT for the hand —
+now gated by likelihood.** Selecting the demand with the most causal suppliers used to land on *"a
+Goblin in your hand"*, where the causal side was **72 cards against 23 declarative**: the movement
+rule requires no filter match on the card it moved, so every draw spell counted as putting a Goblin
+in your hand, and Lackey's core asked for 13 draw spells against 11 Goblins.
+
+**You choose what you pitch; you do not choose what you draw.** A mover is now credited only if it
+is **DIRECTED** — its own card data names this demand, which is what Entomb's
+`SelectCardFromZoneAction.Filter` does — or **LIKELY**: `1 - (1 - density)^moved >= 0.5`, i.e. more
+often than not at least one card it moved matches, where density is the demand's declarative share
+of the pool. Measured on ALL, the effect is surgical:
+
+| core | before | after |
+|---|---|---|
+| Goblin Lackey | 4 slots, 13x from a **72**-card enabler slot | **3 slots**, 10x from 23 real Goblins |
+| Angel of Second Rites (reanimator) | 458 declarative / **42** causal | 458 / **42**, byte-identical |
+
+The probe cannot answer this by inspection — its moved cards are a fixed seven-card filler and
+never a Goblin — so the expectation is the honest form. Understating stays the safe direction: a
+card cut from the causal channel still sits in the declarative slot if it matches the filter
+itself. `ABlindDrawDoesNotEnableANarrowHandDemand_ButAMillStillEnablesTheGraveyard` pins both
+halves in one pool, and the mill half is the vacuity guard — switching the channel off entirely
+would pass the draw half alone.
+
+**Known ceiling, marked `ponytail:` in the source: density is measured over the POOL where what
+matters is density in the DECK.** A built Zombie deck mills its own Zombies far more reliably than
+the pool share implies, so a narrow-tribe self-mill can fall below the gate. No deck exists at
+harvest time; revisit if a real archetype is measured losing its enablers.
+
+`AGraveyardCoreSeparatesTheTargetsFromTheOutlets` still names the graveyard demand rather than
+picking by count — the selector is no longer load-bearing for the Goblin case, but naming it is
+still the honest way to ask.
 
 ### Settled: this engine cannot contain an infinite combo, so stop looking for one
 
@@ -1599,21 +1786,27 @@ membership predicates (subtype, card type, zone) and trigger events. There are n
 them, so the best a cycle can ever mean is "these two cards are in the same category and both like
 that category".
 
-**The reason is the engine's action vocabulary, not the cube's card list.** A Splinter Twin combo
-trades OPERATIONS: untap, copy, sacrifice. This engine has no untap effect and no copy action —
-`ExhaustCreatureAction` only taps, **only `StartTurnAction` clears `IsExhausted`**, and storm lives
-inside `ResolveSpellAction` rather than as a targetable copy. `CoresetCubeColourlessArtifacts.cs`
-already records the consequence on the card that needed it: Manifold Key's *"untap another target
-artifact"* was cut as unreachable.
+**The reason was the engine's action vocabulary, not the cube's card list.** A Splinter Twin combo
+trades OPERATIONS: untap, copy, sacrifice. The engine had no untap effect and no copy action —
+`ExhaustCreatureAction` only taps, only `StartTurnAction` cleared `IsExhausted`, and storm lives
+inside `ResolveSpellAction` rather than as a targetable copy.
 
-Without untap you cannot re-use a mana source; without copy you cannot loop a spell. **No infinite
-combo is expressible, so none can be discovered.** The verifier, the resource fingerprint and the
-dominance-cycle check are all cancelled — they would be correct code searching a space that is
-provably empty.
+> **SUPERSEDED IN PART — `UnexhaustCreatureAction` SHIPPED.** The untap half of that argument is
+> gone: an untap effect now exists (see `MtgCore/CLAUDE.md` §"Exhaust"), so a creature with a tap
+> ability can be re-used within a turn and untap-trading combos ARE expressible. **Re-run both
+> `LoopDetector` sweeps** — single cards and the 241k pair sweep — because this is exactly the
+> moment their zero should be able to move, and if it does not, suspect the detector before
+> believing the pool. Copy is still absent as a targetable action, though a token template carrying
+> `CopyOnEnterComponent` reaches most of the same ground.
+>
+> The paragraph below remains correct about the **produce/consume graph**: that graph is built from
+> membership predicates and has no operations in it, so it still cannot find a combo no matter what
+> primitives exist. The simulation-based `LoopDetector` is the instrument, exactly as stated.
 
-If infinite combos are wanted, the lever is **building untap and/or copy as engine primitives**,
-which is the project's standing rule ("when a card needs something the engine lacks, build the
-mechanic") and a deliberate design decision, not a search problem.
+Without untap you could not re-use a mana source; without copy you cannot loop a spell. **No
+infinite combo was expressible, so none could be discovered.** The verifier, the resource
+fingerprint and the dominance-cycle check were all cancelled — they would have been correct code
+searching a space that was provably empty.
 
 **And when that happens, the detector to build is the SIMULATION one, not this graph.** A rigged
 fixture plus a dominance check — same permanents, every resource ≥, at least one strictly up —

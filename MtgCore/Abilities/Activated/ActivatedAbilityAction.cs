@@ -265,6 +265,17 @@ public record ActivateAbilityAction : GameAction
 				if (ability.Effects[i].TargetingStrategy.RequiresUserSelection)
 					targetIds = targetIds.Add(i, TargetIds);
 
+		// **Announce that the ability fired.** Every cost is paid by this point and the effect is
+		// about to be spawned, so this is the moment the card's text actually happens.
+		//
+		// Nothing triggers on it today; it exists because it was the one way a card can DO something
+		// that named the card in no event at all, which made an activated-ability engine invisible
+		// to anything reading a game log. Staged into PendingGameEvents as well as returned, per the
+		// standing rule — an event added only to the caller-visible list is silently inert the day
+		// someone writes a card that listens for it.
+		var activated = new AbilityActivatedEvent { CardId = CardId, AbilityIndex = AbilityIndex };
+		state = state with { PendingGameEvents = state.PendingGameEvents.Add(activated) };
+
 		return new ActionResult(
 			state.SpawnActions(
 				[
@@ -278,7 +289,10 @@ public record ActivateAbilityAction : GameAction
 					new EndResolutionScopeAction(),
 				]
 			)
-		);
+		)
+		{
+			Events = ImmutableList.Create<GameEvent>(activated),
+		};
 	}
 
 	private GameState PayAdditionalCosts(GameState state, ActivatedAbilityComponent ability)

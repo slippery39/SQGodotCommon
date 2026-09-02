@@ -164,6 +164,25 @@ public sealed record EngineProbe(
 	/// **Median for the turn, mean for nothing.** A game that never assembles reports turn 0, and
 	/// averaging those in would make a deck that assembles half the time on turn 4 look faster
 	/// than one that assembles every game on turn 5.
+	///
+	/// **DEPTH IS MEDIANED OVER ASSEMBLED GAMES TOO, and it was not.** The argument above is about
+	/// turn, and the same argument applies to depth — a game that never assembled contributes a
+	/// meaningless 0 — but the filter was only applied to one of them. The consequence was
+	/// arithmetic rather than subtle: below 50% assembly the median is taken over a majority of
+	/// zeroes, so **`MedianDepth` was forced to exactly 0**, and since `Lift = depth - controlDepth`
+	/// LIFT went to 0 with it.
+	///
+	/// Measured on a real DES report before the fix, across all 42 engines: **22 of 22 with
+	/// assembly under 50% read depth exactly 0, and 0 of 20 above it did.** That is a perfect split
+	/// on the median's own threshold, not a tendency.
+	///
+	/// It mattered most for exactly the decks mode 7 exists to find: a combo assembles rarely by
+	/// nature, so LIFT — the ranking column — was structurally incapable of scoring one. The
+	/// planted two-card Twin combo in CMB read `depth 0.0, LIFT 0.0` while holding 8 payoffs and 8
+	/// enablers with no dead cards.
+	///
+	/// Rate is unaffected and remains over ALL games, which is what makes "assembles 20% of the
+	/// time, but deeply when it does" a readable pair rather than one averaged number.
 	/// </summary>
 	public static (double MedianDepth, double MedianTurn, double AssemblyRate) Summarise(
 		IReadOnlyList<Reading> readings
@@ -176,7 +195,7 @@ public sealed record EngineProbe(
 		var rate = (double)assembled.Count / readings.Count;
 
 		return (
-			Median(readings.Select(r => (double)r.Depth)),
+			assembled.Count == 0 ? 0 : Median(assembled.Select(r => (double)r.Depth)),
 			assembled.Count == 0 ? 0 : Median(assembled.Select(r => (double)r.Turn)),
 			rate
 		);
@@ -210,11 +229,25 @@ public sealed record EngineProbe(
 	///
 	/// Resolution and entering play are the two ways a card's text happens here.
 	/// </summary>
+	/// <remarks>
+	/// **`AbilityActivatedEvent` is the third way, and leaving it out made every activated-ability
+	/// engine unmeasurable.** Resolution and entering play cover a spell and a permanent; a creature
+	/// whose engine is its ability does its work at neither. Execution was therefore credited when
+	/// the creature was CAST — before the ability could ever be used — so a planted two-card combo
+	/// that activates a copier twenty times in a turn scored one execution, at the moment the copier
+	/// landed with nothing yet deployed.
+	///
+	/// It does not weaken the closed-list rule this method exists for. That rule is about not
+	/// counting a card being THROWN AWAY as the card going off (a Tendrils pitched to Faithless
+	/// Looting emits an event carrying its id). Activating an ability is unambiguously the card's
+	/// text happening, which is exactly what the list is supposed to contain.
+	/// </remarks>
 	private static bool IsExecution(GameEvent e) =>
 		e
 			is SpellResolvedEvent
 				or CreatureEnteredBattlefieldEvent
-				or PermanentEnteredBattlefieldEvent;
+				or PermanentEnteredBattlefieldEvent
+				or AbilityActivatedEvent;
 
 	/// <summary>
 	/// The card an event is about, by reflection on the property name.

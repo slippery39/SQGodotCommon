@@ -604,6 +604,19 @@ public class CreatureCostBuilder
 	}
 
 	/// <summary>
+	/// "Remove a +1/+1 counter from this creature" as part of the cost — Walking Ballista.
+	///
+	/// Distinct from <see cref="RemoveCounterAdditionalCost"/>, which spends CHARGE counters. See
+	/// <see cref="RemovePlusOneCounterAdditionalCost"/> for why the two must not be merged, and for
+	/// why this has to be a cost rather than an effect.
+	/// </summary>
+	public CreatureCostBuilder RemovePlusOneCounter(int count = 1)
+	{
+		_costs.Add(new RemovePlusOneCounterAdditionalCost { Count = count });
+		return this;
+	}
+
+	/// <summary>
 	/// "Exile N cards from your graveyard" as part of the cost — Grim Lavamancer. What makes a
 	/// repeatable ability self-limiting: it consumes a finite resource, so the loop has a floor
 	/// and graveyard hate is live against it.
