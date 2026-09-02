@@ -260,13 +260,43 @@ different mechanisms with different fixes** — one is a selection-heuristic pro
 survivability problem — and the evolved report only shows the FINAL deck, so nothing measured here
 distinguishes them.
 
-**The instrument now exists: `MutationLog`, written to `sim_results/mutations_<set>_<stamp>.csv`.**
-Every proposal — generation, slot, cards added and removed, parent rate, candidate rate, delta,
-outcome — plus a per-card summary on the console. Filter the CSV on a card name and the two causes
-separate: proposed-and-rejected rows mean the selection heuristic sees it and the field disagrees;
-no rows at all mean it was never reached for; an accepted row followed by a removal means it was cut.
+**ANSWERED: never proposed — and NOT because of the pool lock.**
 
-**Not yet run against the elf question.** The discriminator is built, not answered.
+`MutationLog` (`sim_results/mutations_<set>_<stamp>.csv`) logs every proposal. Run: 10 decks x 12
+generations on DES, 12 204 games, 6 engine slots from a fresh mode 7 report, Mere-Storm excluded,
+`MTG_MIN_LANDS=12`, seed 7.
+
+Wirewood Conduit appears in **zero rows**, and it **is** one of the 24 cards in the Wirewood Herald
+core's pool — so the thing that excludes it is selection, not the lock. The elf slot got **7
+proposals across 12 generations**, touching five distinct cards (Fauna Shaman, Elvish Archdruid,
+Elvish Visionary, Llanowar Visionary, Yeva's Forcemage) out of 24 available.
+
+So **"considered but not valued" was wrong as stated** — it was never considered, and survivability
+is not implicated because the card was never in a deck to die. Both selection points rank by
+standalone value, and ~7 proposals against a 24-card pool is not enough exploration for a 1/1 mana
+dork to ever surface.
+
+**The bigger finding came out of the same run, and it was not what anyone was looking for.**
+
+| slot | core pool | real proposals | final |
+|---|---|---|---|
+| Engine-Watcher of the Spheres | 129 | **32** | 47.2% |
+| Engine-Drogskol Captain | 54 | **33** | 46.1% |
+| Engine-Master of the Wild Hunt | **2** | **3** | **26.1% NON-VIABLE** |
+| Engine-Sanguine Reciprocity | **5** | **2** | **32.2% NON-VIABLE** |
+
+`MutantsFor` gives a deck at or below 45% the FULL budget, and both non-viable slots sat there all
+run — so each was offered ~36 attempts and used 3 and 2. **They were frozen at their seeded list for
+twelve generations and then reported as non-viable archetypes.**
+
+**This is a direct caveat on §6(a).** The exclusion list this run printed names both of them, and
+excluding an archetype that was never optimised is not the same decision as excluding one that was.
+Check the `dry` column before excluding. `no-proposal` rows are now logged so this is visible rather
+than inferred from missing rows.
+
+**Core pool size is NOT the only cause.** `Control-C`, a curve slot with no pool lock at all, also
+measured 0 real against 6 dry. Something else in `Mutate` returns null and it has not been
+identified — measure it, do not theorise.
 
 **Survivability is worth checking directly, and the card data does NOT obviously implicate it.** All
 four CMB Elves carry **Cover 10**, verified from the rendered faces — including both that went

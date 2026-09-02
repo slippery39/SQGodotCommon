@@ -2627,8 +2627,49 @@ Culls are logged too (`reseeded`), with the full old→new diff — a cull is th
 search makes, and omitting it makes a card look never-tried when its whole deck was replaced under it.
 
 **Read the rejects first.** The accepted rows only say what worked; the rejects say what the mutator
-keeps reaching for and failing with. A five-deck, two-generation smoke run already showed
-`Nissa, Vastwood Seer` proposed in three different slots and kept in none.
+keeps reaching for and failing with.
+
+#### MEASURED: a slot can spend its whole mutation budget producing nothing
+
+**10 decks x 12 generations on DES, 12 204 games, 6 engine slots, `MTG_MIN_LANDS=12`, seed 7.**
+
+| slot | core pool | real proposals | final |
+|---|---|---|---|
+| Engine-Watcher of the Spheres | 129 | **32** | 47.2% |
+| Engine-Drogskol Captain | 54 | **33** | 46.1% |
+| Engine-Wirewood Herald | 24 | 7 | 59.4% |
+| Engine-Xathrid Necromancer | 130 | 6 | 62.8% |
+| Engine-Master of the Wild Hunt | **2** | **3** | **26.1% NON-VIABLE** |
+| Engine-Sanguine Reciprocity | **5** | **2** | **32.2% NON-VIABLE** |
+
+`MutantsFor` gives a deck at or below 45% the **full** budget, and both non-viable slots sat there
+all run — so each was offered ~36 mutation attempts and used 3 and 2 of them. **They were frozen at
+their seeded list for twelve generations and then reported as non-viable archetypes.** Xathrid and
+Wirewood are the other half of the rule: both spent most of the run above `StableRate` (0.60), where
+the budget is deliberately **zero**.
+
+This matters directly for the exclusion list: a run would have told you to permanently exclude two
+archetypes that were never optimised at all. **Check a slot's `dry` count before excluding it.**
+
+**Core pool size is not the only cause, and the other one is unidentified.** `Control-C` — a curve
+slot with no pool lock — was measured at 0 real proposals against 6 dry in the same family of runs.
+Something else in `Mutate` returns null; that is unexplained and is the next thing to measure, not to
+theorise about.
+
+`no-proposal` rows are now logged for exactly this reason. The finding had to be inferred from
+missing rows the first time, which is how it nearly went unnoticed.
+
+#### MEASURED: (d) is answered — never proposed, and NOT because of the pool lock
+
+Wirewood Conduit appears in **zero** rows across 12 generations, and it **is** one of the 24 cards in
+the Wirewood Herald core's pool — so the pool lock is not what excludes it. The elf slot's seven
+proposals touched five distinct cards: Fauna Shaman, Elvish Archdruid, Elvish Visionary, Llanowar
+Visionary, Yeva's Forcemage.
+
+So the handoff's "considered but not valued" is **wrong as stated** — it was never considered. The
+cause is the two selection points that both rank by standalone value (`Complete`'s fill at seeding and
+`Mutate`'s `Fill`), combined with a budget of ~7 proposals against a 24-card pool. A 1/1 mana dork
+never surfaces in either. **Survivability is not implicated**: the card was never in a deck to die.
 
 ### Deck profiles
 

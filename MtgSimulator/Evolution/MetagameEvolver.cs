@@ -674,7 +674,31 @@ public sealed class MetagameEvolver
 
 				for (var c = 1; c < candidates[i].Count; c++)
 				{
-					if (candidates[i][c] is not { } proposal || outcomes[c] is null)
+					// **A budget spent producing nothing is the single most diagnostic row here.**
+					// `Mutate` draws only from a pool-locked slot's core cards, so a core with a
+					// handful of cards in pool has almost no legal distinct edit and the slot sits
+					// frozen at its seed — while the matrix shows it losing and the report calls it
+					// non-viable. Left unlogged, that is indistinguishable from a deck that was
+					// offered improvements and refused them.
+					if (candidates[i][c] is not { } proposal)
+					{
+						_mutations.Add(
+							new MutationRow(
+								gen,
+								i,
+								field[i].Name,
+								"",
+								"",
+								parent.Rate,
+								parent.Rate,
+								0,
+								MutationLog.NoProposal
+							)
+						);
+						continue;
+					}
+
+					if (outcomes[c] is null)
 						continue;
 
 					var (added, removed) = MutationLog.Diff(field[i], proposal);
@@ -1072,7 +1096,43 @@ public sealed class MetagameEvolver
 		Console.WriteLine();
 		Console.WriteLine("  Mutations");
 
-		var proposals = rows.Where(r => r.Outcome != MutationLog.Reseeded).ToList();
+		// **Per slot, because the interesting failure is not visible in the total.** A slot that
+		// spends its whole budget producing nothing legal is frozen at its seed, and it reads in the
+		// matrix exactly like a deck that was offered improvements and refused them — opposite
+		// diagnoses.
+		//
+		// Measured on a 10-deck DES run: engine slots with core pools of 129 and 54 cards produced
+		// 32 and 33 real proposals on a full budget, while pools of 2 and 5 produced 3 and 2 — and
+		// both of the latter finished NON-VIABLE. **Core pool size is not the only cause**, though:
+		// a non-engine slot with no pool lock at all was also measured at 0 real against 6 dry, so
+		// something else in `Mutate` returns null too and has not been identified. Read this table
+		// as the observable, not as a diagnosis.
+		var dry = rows.Count(r => r.Outcome == MutationLog.NoProposal);
+		if (dry > 0)
+		{
+			Console.WriteLine(
+				$"    {dry} mutation attempts produced NO legal proposal — that slot was frozen at "
+					+ "its list, not offered changes and refusing them:"
+			);
+			Console.WriteLine($"    {"slot", -30}{"real", 7}{"dry", 6}{"kept", 6}");
+			foreach (
+				var g in rows.Where(r => r.Outcome != MutationLog.Reseeded)
+					.GroupBy(r => (r.Slot, r.Deck))
+					.OrderBy(g => g.Key.Slot)
+			)
+				Console.WriteLine(
+					$"    {Truncate(g.Key.Deck, 30), -30}"
+						+ $"{g.Count(r => r.Outcome != MutationLog.NoProposal), 7}"
+						+ $"{g.Count(r => r.Outcome == MutationLog.NoProposal), 6}"
+						+ $"{g.Count(r => r.Outcome == MutationLog.Accepted), 6}"
+				);
+			Console.WriteLine();
+		}
+
+		var proposals = rows.Where(r =>
+				r.Outcome != MutationLog.Reseeded && r.Outcome != MutationLog.NoProposal
+			)
+			.ToList();
 		var acceptedRows = proposals.Where(r => r.Outcome == MutationLog.Accepted).ToList();
 		var tooSimilar = proposals.Count(r => r.Outcome == MutationLog.TooSimilar);
 
@@ -1084,7 +1144,7 @@ public sealed class MetagameEvolver
 			$"    {proposals.Count} proposals, {acceptedRows.Count} accepted "
 				+ $"({(proposals.Count == 0 ? 0 : 100.0 * acceptedRows.Count / proposals.Count):F0}%), "
 				+ $"{tooSimilar} rejected on diversity, "
-				+ $"{rows.Count - proposals.Count} culls"
+				+ $"{rows.Count(r => r.Outcome == MutationLog.Reseeded)} culls"
 		);
 		if (acceptedRows.Count > 0)
 			Console.WriteLine(

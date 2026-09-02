@@ -50,8 +50,25 @@ public sealed class MutationLog
 	public const string Accepted = "accepted";
 	public const string Rejected = "rejected";
 	public const string TooSimilar = "too-similar";
-	public const string Cut = "cut";
 	public const string Reseeded = "reseeded";
+
+	/// <summary>
+	/// `Mutate` had a budget and returned nothing legal.
+	///
+	/// **This is the outcome that had to be INFERRED once, and inferring it is how the finding
+	/// nearly went unnoticed.** A silent null is indistinguishable from a deck that was offered
+	/// improvements and refused them, and those are opposite diagnoses.
+	///
+	/// Measured on a 10-deck DES run: engine slots with core pools of 129 and 54 cards produced 32
+	/// and 33 real proposals on a full budget, while pools of 2 and 5 produced 3 and 2 — and both of
+	/// the latter finished NON-VIABLE, having been frozen at their seed for the whole run.
+	///
+	/// **Core pool size is not the only cause and the other one is not identified.** A non-engine
+	/// slot, with no pool lock at all, was measured at 0 real proposals against 6 dry in the same
+	/// family of runs. Do not read this outcome as "the pool lock did it" — that is the prediction-
+	/// before-measurement trap this project keeps paying for. It is an observable.
+	/// </summary>
+	public const string NoProposal = "no-proposal";
 
 	private readonly List<MutationRow> _rows = [];
 
