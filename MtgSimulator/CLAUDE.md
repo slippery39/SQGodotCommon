@@ -1452,6 +1452,68 @@ instants-in-graveyard (100% assembly), cards-in-hand, creature-in-own-graveyard,
 creature-in-any-graveyard. This is the third demand found living somewhere the harvest did not
 look; the first two are storm and cast restrictions below.
 
+### …and when it asks about the OPPONENT inside a TRIGGER — the fourth instance of one shape
+
+**"Object-referential" was one proxy too coarse, in exactly the way the zone rule was.**
+`ObjectReferentialSpecs` held `IsControlledByOpponentSpecification`, and `IsObjectReferential`
+recurses into a trigger condition's `Filter` — so CMB's Sanguine Reciprocity, *"whenever an opponent
+loses life"*, **was never harvested as a demand at all.**
+
+That is a different failure from the one recorded for a whole session. The handoff and this file both
+said the demand had *no suppliers* and was dropped as uninformative. It did not exist. A demand with
+no suppliers is visible in a dump and reads as "nothing answers this"; an unharvested one is
+indistinguishable from a card that asks nothing, which is why the wrong diagnosis survived.
+
+The exclusion was right for its actual reason and the reason is entirely about the FIXTURE: the
+placement pass deliberately puts no cards on the opponent's battlefield (see `IsControlScoped`), so
+*"target creature an opponent controls"* is answered by nothing and every removal spell would read as
+a dead card. **A trigger condition is never evaluated against that fixture** — `ProbeTriggers` asks
+conditions against real EVENTS — so the reason does not transfer. `TargetingOnlyObjectReferentialSpecs`
+is the split, and `underTrigger` is set once on the way down so a composite cannot smuggle the old
+behaviour back.
+
+#### The chained trigger probe: some triggers cannot fire alone
+
+Harvesting the demand is only half. `ProbeTriggers` plays each card SOLO, and nothing a card does on
+its own makes an opponent lose life — Covenant of Thorns produces that event, but only *after*
+something gains you life. `PoolFeatures.ProbeChainedTriggers` is a second pass seeded from the first:
+for each card asking a trigger demand that already has suppliers, replay it with one of those
+suppliers and record what newly fires. Depth 2, which is what a two-card combo needs.
+
+Three properties, each load-bearing:
+
+- **The subject is played FIRST and the igniter second.** Covenant asks "whenever you gain life"; if
+  the life gain already happened when Covenant arrives it fires nothing and the pass measures the
+  same zero as before.
+- **Attribution is a DIFF against the igniter alone.** This is the whole reason the pass is not the
+  trap it was built to avoid: stocking the fixture so the opponent can lose life would make *every*
+  card a supplier, push `supply[d].Count` past `UninformativeShare`, and drop the demand anyway —
+  same outcome, more code. Same principle as `MeasureLeverage` subtracting its own control arm.
+- **One control run per igniter**, cached, not one per subject.
+
+**Measured on DES, and each half is separately necessary:**
+
+| | demands | informative | cores |
+|---|---|---|---|
+| before | 71 | 52 | 91 |
+| chained pass alone | **71** | **52** | **91** — a complete no-op |
+| both | 78 | 53 | 93 |
+
+Reciprocity's demand ends with four suppliers — Bloodhunter Bat, Corpse Knight, The Drowned
+Archfiend (all drain on ETB, found by the solo pass) and **Covenant of Thorns, which only the chain
+finds.** Disabling `ProbeChainedTriggers` drops Covenant and leaves the other three, which is the
+pool-level vacuity check; `ChainedTriggerProbeTests` pins the same thing on a three-card fixture,
+with `WithoutTheProducingCard_TheDemandStillHasNoSuppliers` as the guard against crediting everything.
+
+**+7 demands for the classification fix is small because demands dedupe by VALUE pool-wide** — the
+same reason `IsControlScoped` cost only +5. Widening a *classification* rule is far cheaper than
+widening a *card* rule.
+
+ponytail: an igniter whose events depend on the board will differ between the two arms and be
+credited to the subject. Over-attribution rather than under, which is the wrong direction for this
+file; tighten by comparing event SHAPES rather than satisfied demands if a real archetype is ever
+measured gaining a supplier it should not have.
+
 ### Storm was structurally undiscoverable, and now is not
 
 `PoolFeatures` harvests a card's own filter objects, and storm has none — it is a `bool` that

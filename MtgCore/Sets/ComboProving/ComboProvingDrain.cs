@@ -47,16 +47,33 @@ namespace MtgCore;
 /// triggers it fires, so "whenever you gain life" is answered by the twelve cards that gain life.
 /// The Covenant is therefore a normal, findable payoff with a real support slot.
 ///
-/// **Reciprocity is invisible, and the asymmetry is the finding.** Its trigger fires on an OPPONENT
-/// losing life, and the probe plays cards solo — nothing it can do makes the opponent lose life in
-/// that fixture, so the demand has no suppliers and is dropped. So the builder can find "a lifegain
-/// deck built around the Covenant" but cannot see that the second enchantment is what converts it
-/// into a kill.
+/// **SUPERSEDED — the pair is now discoverable, and BOTH halves of the recorded diagnosis were
+/// wrong.** Kept because the correction is worth more than the original claim.
 ///
-/// That is exactly the boundary worth marking: **conjunction-building joins a card to cards that
-/// ANSWER it, and these two are joined by one PRODUCING what the other CONSUMES.** No filter
-/// relates them. Reaching this pair needs the pair-statistics half of the evolver, or a
-/// produce/consume edge over events rather than over card membership.
+/// It read: *"its trigger fires on an OPPONENT losing life, and the probe plays cards solo — nothing
+/// it can do makes the opponent lose life in that fixture, so the demand has no suppliers and is
+/// dropped."* Two errors in one sentence:
+///
+/// 1. **The demand was never harvested at all**, so it had no suppliers because it did not exist.
+///    `PoolFeatures.IsObjectReferential` recurses into a trigger's `Filter`, and
+///    `IsControlledByOpponentSpecification` was disqualifying — a rule correct for *targeting*
+///    ("target creature an opponent controls" is answered by nothing in the placement fixture) and
+///    wrong for a trigger, which is asked against real events instead.
+/// 2. **Solo probing is a real limitation, but a separate one.** Fixing it needed
+///    `ProbeChainedTriggers`, a second pass that replays a card alongside a supplier of a demand it
+///    asks — Covenant fires only after something gains you life, so the chain has to be two deep.
+///
+/// Measured on DES: Reciprocity's demand now has four suppliers, and **Covenant of Thorns is
+/// reachable only through the chained pass** — disabling it leaves the three cards that drain on
+/// their own. Each fix alone changes nothing.
+///
+/// The boundary this package was built to mark still stands and is now crossed:
+/// **conjunction-building joins a card to cards that ANSWER it, and these two are joined by one
+/// PRODUCING what the other CONSUMES**, with no filter relating them.
+///
+/// **The lesson is the one section 5 of the handoff is entirely about**: a prediction written down
+/// before it was measured became something two later sessions reasoned FROM. Re-derive from the
+/// dump, not from this comment.
 /// </summary>
 public static class ComboProvingDrain
 {

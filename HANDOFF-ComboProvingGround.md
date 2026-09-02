@@ -24,7 +24,7 @@ construction.
 | combo | requirement expressible as a card filter? | outcome |
 |---|---|---|
 | **Twin** (untap + copy) | yes — the copier reads *"target Illusionist you control"* | found, seeded, **all 16 combo cards intact after 12 generations, 73.5%, 3rd of 18** |
-| **Drain** (Sanguine Bond + Exquisite Blood) | no — the second half wants an event the OPPONENT produces | half-built; the partner appears **zero times in the entire field**, in two independent runs |
+| **Drain** (Sanguine Bond + Exquisite Blood) | no — the second half wants an event the OPPONENT produces | half-built; the partner appears **zero times in the entire field**, in two independent runs. **Since fixed — see §6(b); the pair is now joined by the event one produces and the other consumes.** The field measurement above has NOT been re-run. |
 
 Same pool, same run, same machinery. The only difference is whether the requirement is a filter.
 That is the pool-limitation-vs-builder-failure discriminator §7(a) of the last handoff asked for,
@@ -177,12 +177,41 @@ engines overwrite, so an excluded engine simply leaves the curve deck standing.
 feature. Note the sampling window **scales with the request** (`top 18` at 6 engines, `top 48` at 16),
 so an exclusion list changes which archetypes are reachable at every slot count.
 
-### (b) Why the drain combo never appeared — diagnosed, not yet fixed
+### (b) Why the drain combo never appeared — FIXED, and the diagnosis below was wrong twice over
 
-`Sanguine Reciprocity` triggers on `PlayerLostLifeEvent` filtered to opponents. `ProbeTriggers` plays
-each pool card **solo**, and nothing a card does on its own makes the OPPONENT lose life in that
-fixture — so the demand has no suppliers, is dropped as uninformative, and the card is in no core's
-payoff or support slot. It cannot be selected by anything.
+**Two fixes, and the sentence below is the recorded diagnosis, kept so the correction is legible.**
+
+> `Sanguine Reciprocity` triggers on `PlayerLostLifeEvent` filtered to opponents. `ProbeTriggers`
+> plays each pool card **solo**, and nothing a card does on its own makes the OPPONENT lose life in
+> that fixture — so the demand has no suppliers, is dropped as uninformative, and the card is in no
+> core's payoff or support slot.
+
+1. **The demand was never harvested**, so "no suppliers" was measuring the wrong thing.
+   `IsObjectReferential` recurses into a trigger's `Filter`, and `IsControlledByOpponentSpecification`
+   was disqualifying. That rule is right for *targeting* — the placement fixture puts nothing on the
+   opponent's battlefield, so every removal spell would read as a dead card — and does not transfer
+   to a trigger, which is asked against real events. Split into
+   `TargetingOnlyObjectReferentialSpecs`.
+2. **Solo probing is real but separate.** `PoolFeatures.ProbeChainedTriggers` replays each card
+   alongside a supplier of a demand it asks, subject first so the igniter's event lands while the
+   subject is out, and credits only what fires that the igniter alone does not.
+
+**Measured on DES — each fix alone changes nothing:**
+
+| | demands | informative | cores |
+|---|---|---|---|
+| before | 71 | 52 | 91 |
+| chained pass alone | **71** | **52** | **91** |
+| both | 78 | 53 | 93 |
+
+Reciprocity's demand ends with four suppliers; **only the chain finds Covenant of Thorns** (the other
+three drain on their own). `ComboProvingDiscoveryTests.TheDrainPairIsNowJoinedByTheEventOneProducesAndTheOtherConsumes`
+and `ChainedTriggerProbeTests` pin both halves.
+
+**This is section 5's pattern again, one level worse**: the prediction was written down, then
+reasoned FROM by two later sessions as an established mechanism. An unharvested demand and a demand
+with zero suppliers look identical from outside, which is what let it stand — the dump that settled
+it took one minute.
 
 **CORRECTED after reading the code: the two "candidate fixes" below are the same fix, and the cheap
 one is a trap.**

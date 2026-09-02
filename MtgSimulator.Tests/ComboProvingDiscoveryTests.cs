@@ -257,4 +257,48 @@ public class ComboProvingDiscoveryTests
 			"the untapper is not in any support slot, so the core is not the combo"
 		);
 	}
+
+	/// <summary>
+	/// **The deliberate negative control, which is no longer negative.**
+	///
+	/// The drain pair is joined by one card PRODUCING what the other CONSUMES, with no filter
+	/// relating them, and it was the sharpest standing result in the set: Covenant of Thorns built a
+	/// core off twelve lifegain cards while Sanguine Reciprocity asked for nothing and appeared zero
+	/// times in an entire evolved field.
+	///
+	/// Two separate causes, and the recorded diagnosis named neither. **The demand did not have no
+	/// suppliers — it did not EXIST**: `IsObjectReferential` recurses into a trigger's `Filter`, and
+	/// `IsControlledByOpponentSpecification` was disqualifying, so "whenever an opponent loses life"
+	/// was never harvested. And once it is harvested, nothing supplies it in a solo probe either,
+	/// because Covenant only fires after something gains you life — which is what the chained pass
+	/// in `PoolFeatures.ProbeChainedTriggers` measures.
+	///
+	/// Both were needed. The classification fix alone leaves the demand at zero suppliers; the
+	/// chained pass alone was measured a complete no-op on DES (71/52/91/91 either way).
+	/// </summary>
+	[Test]
+	public void TheDrainPairIsNowJoinedByTheEventOneProducesAndTheOtherConsumes()
+	{
+		var features = Designed.Value;
+
+		var demand = features
+			.DemandsOf("Sanguine Reciprocity")
+			.FirstOrDefault(d => features.SuppliersInPool(d) > 0, -1);
+
+		Assert.That(
+			demand,
+			Is.GreaterThanOrEqualTo(0),
+			"Sanguine Reciprocity asks nothing any card in the pool answers"
+		);
+
+		TestContext.Out.WriteLine(
+			$"{features.Describe(demand)}\n  suppliers: {string.Join(", ", features.SuppliersOf(demand))}"
+		);
+
+		Assert.That(
+			features.SupplyOf(demand, "Covenant of Thorns"),
+			Is.GreaterThan(0),
+			"the card that PRODUCES the event is not credited as a supplier of it"
+		);
+	}
 }

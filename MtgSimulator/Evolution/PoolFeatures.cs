@@ -129,6 +129,30 @@ public sealed class PoolFeatures
 	[
 		typeof(IsSourceCardSpecification),
 		typeof(IsEquippedBySourceSpecification),
+	];
+
+	/// <summary>
+	/// Object-referential as a TARGETING question, and not as a TRIGGER condition.
+	///
+	/// **This was one proxy too coarse, and it is the third time in this file — the same shape as
+	/// the zone rule missing `IsControlScoped`.** As a targeting spec, "a creature an opponent
+	/// controls" is answered by nothing in the pool, because the placement fixture deliberately puts
+	/// no cards on the opponent's battlefield; without the exclusion every removal spell read as a
+	/// DEAD CARD. That reasoning is entirely about the fixture, and a trigger condition is not
+	/// evaluated against it — <see cref="ProbeTriggers"/> asks conditions against real EVENTS.
+	///
+	/// **Measured on CMB's drain pair, which is the fixture with a known answer.** Sanguine
+	/// Reciprocity reads *"whenever an opponent loses life"*: the condition's `Filter` is
+	/// `IsControlledByOpponentSpecification`, `IsObjectReferential` recurses into a trigger's filter,
+	/// and so the demand was **never harvested at all**. Not "harvested with no suppliers" —
+	/// absent, which is why the card asked nothing, built no core, and could not be selected by
+	/// anything in the builder.
+	///
+	/// "Whenever an opponent loses life" is not a question about one object. It is a question your
+	/// own deck answers by CAUSING the event, which is exactly what the chained probe measures.
+	/// </summary>
+	private static readonly HashSet<Type> TargetingOnlyObjectReferentialSpecs =
+	[
 		typeof(IsControlledByOpponentSpecification),
 	];
 
@@ -694,6 +718,12 @@ public sealed class PoolFeatures
 		// --- 3b. Probe: which cards, when played, fire which trigger ---
 		ProbeTriggers(pool, demands, supply, failures);
 
+		// --- 3b-ii. Probe again, CHAINED: a trigger that needs another card's event to fire ---
+		//
+		// Runs after 3b because it seeds from it — a demand with no suppliers has nothing to ignite
+		// the chain with, so the single-card pass has to have found them first.
+		ProbeChainedTriggers(pool, demands, supply, demandsOf, failures);
+
 		// --- 3c. Probe: whose COST moves when a demand is supplied ---
 		ProbeCostDemands(pool, demands, supply, demandsOf, failures);
 
@@ -859,6 +889,164 @@ public sealed class PoolFeatures
 	}
 
 	/// <summary>
+	/// Which trigger demands are satisfied by playing <paramref name="cards"/>, in order, into a
+	/// bare fixture. The unit the chained pass diffs.
+	/// </summary>
+	private static HashSet<int> SatisfiedTriggerDemands(
+		IReadOnlyList<Card> cards,
+		IReadOnlyList<int> triggerDemands,
+		IReadOnlyList<object> demands
+	)
+	{
+		var (fixture, ids) = MtgGameFactory.CreateForTesting();
+
+		// Same non-probe source as the single-card pass, for the same reason: a condition asking
+		// "not self" or "you control it" must answer about the DECK relationship, not identity.
+		(fixture, var source) = fixture.AddObject(
+			new Card
+			{
+				Name = "__source",
+				OwnerId = ids.Player1Id,
+				ControllerId = ids.Player1Id,
+			},
+			parentId: ids.Player1BattlefieldId
+		);
+
+		var events = ImmutableList<GameEvent>.Empty;
+		var state = fixture;
+		foreach (var card in cards)
+		{
+			var (next, fired) = state
+				.AddActions(
+					[
+						new PutIntoBattlefieldAction
+						{
+							CardTemplate = card with
+							{
+								OwnerId = ids.Player1Id,
+								ControllerId = ids.Player1Id,
+							},
+						},
+					]
+				)
+				.ProcessAllActions();
+			state = next;
+			events = events.AddRange(fired);
+		}
+
+		var context = new TriggerContext
+		{
+			GameState = state,
+			SourceCardId = source.Id,
+			ControllingPlayerId = ids.Player1Id,
+		};
+
+		return triggerDemands
+			.Where(d => events.Any(e => ((TriggerCondition)demands[d]).IsSatisfiedBy(e, context)))
+			.ToHashSet();
+	}
+
+	/// <summary>
+	/// **A second trigger pass, seeded from the first — because some triggers cannot fire alone.**
+	///
+	/// `ProbeTriggers` plays each card SOLO, so a trigger whose condition is an event another card
+	/// has to produce never gets a chance. CMB's drain pair is the worked example and the reason
+	/// this exists: Sanguine Reciprocity fires on an OPPONENT losing life, and the only thing in the
+	/// set that makes that happen is Covenant of Thorns — which itself only fires once you gain
+	/// life. Nothing a card does on its own reaches the second step, so Reciprocity's demand had no
+	/// suppliers, was dropped as uninformative, and the card sat in no core's payoff or support slot.
+	/// It could not be selected by anything.
+	///
+	/// So: for each card asking a trigger demand that already HAS suppliers, replay it with one of
+	/// those suppliers played after it, and record what newly fires. Depth 2, which is what a
+	/// two-card combo needs.
+	///
+	/// **The subject is played FIRST and the igniter second, and the order is the whole mechanism.**
+	/// Covenant asks "whenever you gain life"; if the life gain has already happened when Covenant
+	/// arrives, it fires nothing and the pass measures the same zero as before.
+	///
+	/// **Attribution is a DIFF against the igniter alone, and without it this pass is the trap it
+	/// was built to avoid.** Stocking the fixture so the opponent can lose life would make every
+	/// card in the pool a supplier of that demand, push `supply[d].Count` past
+	/// <see cref="UninformativeShare"/>, and drop the demand anyway — the same outcome for more
+	/// code. Crediting only demands satisfied WITH the subject and not WITHOUT it means the igniter's
+	/// own events cancel, exactly as `MeasureLeverage` subtracts its own control arm.
+	///
+	/// ponytail: an igniter whose events depend on the board (an ETB that scales with creature
+	/// count) will differ between the two arms and be credited to the subject. Bounded and rare —
+	/// the igniter is one card and the fixture is bare — but it is over-attribution, not under, which
+	/// is the wrong direction for this file. Tighten by comparing event SHAPES rather than satisfied
+	/// demands if a real archetype is ever measured gaining a supplier it should not have.
+	/// </summary>
+	private static void ProbeChainedTriggers(
+		IReadOnlyList<Card> pool,
+		List<object> demands,
+		Dictionary<string, int>[] supply,
+		Dictionary<string, int[]> demandsOf,
+		List<string> failures
+	)
+	{
+		var triggerDemands = Enumerable
+			.Range(0, demands.Count)
+			.Where(d => demands[d] is TriggerCondition)
+			.ToList();
+
+		if (triggerDemands.Count == 0)
+			return;
+
+		var byName = pool.ToDictionary(c => c.Name, StringComparer.Ordinal);
+
+		// One control run per igniter, not per subject — the igniter alone always fires the same
+		// thing, and this pass would otherwise pay for it once per card that asks its demand.
+		var controls = new Dictionary<string, HashSet<int>>(StringComparer.Ordinal);
+
+		foreach (var card in pool)
+		{
+			if (!demandsOf.TryGetValue(card.Name, out var asks))
+				continue;
+
+			foreach (var d in asks)
+			{
+				if (demands[d] is not TriggerCondition || supply[d].Count == 0)
+					continue;
+
+				// Ordinal-first rather than best-by-anything: this pass asks whether the chain is
+				// POSSIBLE, and nothing here scores. Sorting keeps it reproducible, which is the
+				// property the third non-determinism bug in this project cost a session to learn.
+				var igniterName = supply[d]
+					.Keys.Where(n => !string.Equals(n, card.Name, StringComparison.Ordinal))
+					.Order(StringComparer.Ordinal)
+					.FirstOrDefault();
+
+				if (igniterName is null || !byName.TryGetValue(igniterName, out var igniter))
+					continue;
+
+				try
+				{
+					if (!controls.TryGetValue(igniterName, out var control))
+					{
+						control = SatisfiedTriggerDemands([igniter], triggerDemands, demands);
+						controls[igniterName] = control;
+					}
+
+					var chained = SatisfiedTriggerDemands([card, igniter], triggerDemands, demands);
+
+					foreach (var t in chained.Where(t => !control.Contains(t)))
+						supply[t][card.Name] = 1;
+				}
+				catch (Exception ex)
+				{
+					// Same rule as every other probe here: a card that cannot be deployed into a
+					// bare fixture answers nothing rather than killing the build, and is surfaced.
+					failures.Add(
+						$"chain probe {card.Name} + {igniterName} threw {ex.GetType().Name}"
+					);
+				}
+			}
+		}
+	}
+
+	/// <summary>
 	/// Finds demands that live in ENGINE CODE rather than on the card, by watching what changes
 	/// the card's mana cost.
 	///
@@ -1006,22 +1194,32 @@ public sealed class PoolFeatures
 	/// True when a spec asks about one specific object rather than a kind of card. Walks
 	/// composites, so `And(IsSourceCard, …)` is caught as well as the bare form.
 	/// </summary>
-	private static bool IsObjectReferential(object demand)
+	/// <param name="underTrigger">
+	/// Whether this call is inside a <see cref="TriggerCondition"/>'s own filter. Set once on the
+	/// way down and never cleared, so `And(Or(IsControlledByOpponent, …))` nested under a trigger
+	/// is treated the same as the bare form — the question is what the OUTERMOST demand is, and a
+	/// composite does not change that.
+	/// </param>
+	private static bool IsObjectReferential(object demand, bool underTrigger = false)
 	{
-		if (ObjectReferentialSpecs.Contains(demand.GetType()))
+		var type = demand.GetType();
+		if (ObjectReferentialSpecs.Contains(type))
+			return true;
+		if (!underTrigger && TargetingOnlyObjectReferentialSpecs.Contains(type))
 			return true;
 
 		// Walks composites (And/Or/Not) and reaches a trigger condition's own Filter, which is how
 		// a death trigger — `EventTriggerCondition{Filter = IsSourceCardSpecification}` — is
 		// recognised as asking about ITSELF rather than about your deck.
-		foreach (var prop in PropertiesOf(demand.GetType()))
+		underTrigger |= demand is TriggerCondition;
+		foreach (var prop in PropertiesOf(type))
 		{
 			if (
 				!typeof(TargetSpecification).IsAssignableFrom(prop.PropertyType)
 				&& !typeof(TriggerCondition).IsAssignableFrom(prop.PropertyType)
 			)
 				continue;
-			if (prop.GetValue(demand) is { } inner && IsObjectReferential(inner))
+			if (prop.GetValue(demand) is { } inner && IsObjectReferential(inner, underTrigger))
 				return true;
 		}
 		return false;
