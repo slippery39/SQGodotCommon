@@ -2592,6 +2592,40 @@ dragons in it at all** — a literally blank card holding a slot for generations
 in decks with no artifacts. A card whose demands are satisfied at zero is dead, and nothing in the
 mode currently notices.
 
+### MEASURED: the DES field loses to hand-built references, 32.7%
+
+**10 decks x 12 generations, 21 846 games, 3 references x 20 games each.** The first run in which
+the Designed pool had a gauntlet at all.
+
+| | field wins | reference wins |
+|---|---|---|
+| CMB Twin | 25.0% | **75.0%** |
+| CMB Elves | 29.5% | **70.5%** |
+| CMB Reanimator | 43.5% | 56.5% |
+| **field overall** | **32.7%** | |
+
+Every internal metric read healthy at the same time: **8/10 viable, 47.8pp spread, 44% diversity**
+against a 35% floor. That is the closed-round-robin blindness this file already records for ALL
+(Zoo 66.2%), now measured on the pool all recent work has used.
+
+**The strongest single result is the controlled one.** `Engine-Wirewood Herald` was SEEDED with the
+elf core and evolved for twelve generations; the hand-built elf list beat it **65-35**. Same
+archetype, same pool, handed to the builder — and a human list of it wins. That is an optimiser
+result, not a card-power one, because the archetype was not something the search had to discover.
+
+**The serious confound, and it must be read alongside the table: CMB is a test instrument and its
+cards are deliberately not costed to a rate.** `ComboProvingReanimator` says so on the card — a
+one-mana reanimate for an eight-drop is "pushed far past cube rate, which is what the set is for".
+So the references are partly strong because their cards are strong. What that confound does NOT
+explain is the elf row above, where the builder had the same cards and lost anyway.
+
+**Do not read this as "the builder is 17pp bad" in general.** Read it as: on a pool containing
+planted, pushed archetypes, the search does not assemble them as well as a human does — including
+when it is seeded with one. The uncontaminated version of this measurement needs references built
+from HLM/CSC only, which do not exist yet.
+
+Cost: 36.9 minutes at 10 decks, against 31.2 without a gauntlet.
+
 ### The mutation log — what the search TRIED, not only what survived
 
 `MutationLog` records every proposal: generation, slot, the cards added and removed, the parent's

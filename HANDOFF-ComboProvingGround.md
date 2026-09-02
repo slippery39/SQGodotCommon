@@ -374,6 +374,32 @@ Real cost: three deck factories built from DES/CMB cards (Twin, Elves, Reanimato
 entry each, and one clause in `Gauntlet.For` returning them for DES. Still worth doing — it is the
 only external yardstick the mode has — but price it as half a session, not as a decklist paste.
 
+**BUILT AND MEASURED — the field loses 32.7%.** `DesignedGauntletDecks` (CMB Twin, CMB Elves, CMB
+Reanimator), `Gauntlet.For` split by pool, and `FinalGauntlet`/`PrintGauntlet` — the last because
+the gauntlet was counted in FITNESS while the report still printed a closed round-robin, so the gap
+it exists to produce was invisible.
+
+10 decks x 12 generations, 21 846 games, 20 games per reference:
+
+| | field wins | reference wins |
+|---|---|---|
+| CMB Twin | 25.0% | **75.0%** |
+| CMB Elves | 29.5% | **70.5%** |
+| CMB Reanimator | 43.5% | 56.5% |
+| **overall** | **32.7%** | |
+
+Internal metrics read healthy throughout: 8/10 viable, 47.8pp spread, 44% diversity against a 35%
+floor. Same blindness recorded for ALL, now measured on DES.
+
+**The controlled row is the sharp one.** `Engine-Wirewood Herald` was SEEDED with the elf core and
+evolved twelve generations; the hand-built elf list beat it **65-35**. Same archetype, same pool,
+handed to the builder.
+
+**Confound that must be read with it: CMB cards are deliberately not costed to a rate** — the set
+says so on its own cards. The references are partly strong because their cards are pushed. That does
+not explain the elf row. **An uncontaminated version needs references built from HLM/CSC only**, and
+that is the obvious next piece of work.
+
 Read the gap: gauntlet decks overperforming means the builder still has work; even or slightly
 behind means it is doing its job.
 
