@@ -19,11 +19,13 @@ namespace MtgSimulator;
 ///
 /// ### How the support was chosen, and why it is not hand-waved
 ///
-/// The combo cores are hand-picked (that is the point). The SUPPORT is drawn from cards the evolved
-/// field itself converged on across several runs — Nissa, Scavenging Ooze, Vampire Nighthawk, Snuff
-/// the Lantern, Barrin. Those are measured-competitive in this pool, so the comparison is "a human
-/// assembling a known combo out of cards the search already likes" against "what the search built".
-/// Picking support on taste would make a loss unreadable: bad deck, or bad archetype?
+/// The combo cores are hand-picked (that is the point). The SUPPORT is either the archetype's own
+/// shell — cantrips and burn for Twin, cantrips and a discard outlet for Reanimator — or cards the
+/// evolved field itself converged on across several runs (Scavenging Ooze, Snuff the Lantern,
+/// Barrin, Nissa, Elvish Archdruid). Both halves are measured-competitive in this pool rather than
+/// chosen on taste, so the comparison is "a human assembling a known archetype out of cards the
+/// search already likes" against "what the search built". Support picked on taste would make a loss
+/// unreadable: bad deck, or bad archetype?
 ///
 /// **The elf list deliberately plays Wirewood Conduit and Timberwatch Elder**, the two cards the
 /// builder has never once proposed in any measured run. That is the whole reason this deck is worth
