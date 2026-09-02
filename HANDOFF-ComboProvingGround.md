@@ -260,8 +260,13 @@ different mechanisms with different fixes** — one is a selection-heuristic pro
 survivability problem — and the evolved report only shows the FINAL deck, so nothing measured here
 distinguishes them.
 
-The cheap discriminator is a per-generation trace of one engine slot's decklist: if Conduit appears
-at generation 1 and is gone by 4, it was cut, not overlooked.
+**The instrument now exists: `MutationLog`, written to `sim_results/mutations_<set>_<stamp>.csv`.**
+Every proposal — generation, slot, cards added and removed, parent rate, candidate rate, delta,
+outcome — plus a per-card summary on the console. Filter the CSV on a card name and the two causes
+separate: proposed-and-rejected rows mean the selection heuristic sees it and the field disagrees;
+no rows at all mean it was never reached for; an accepted row followed by a removal means it was cut.
+
+**Not yet run against the elf question.** The discriminator is built, not answered.
 
 **Survivability is worth checking directly, and the card data does NOT obviously implicate it.** All
 four CMB Elves carry **Cover 10**, verified from the rendered faces — including both that went

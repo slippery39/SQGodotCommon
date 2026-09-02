@@ -18,7 +18,8 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | `Evolution/EngineProbe.cs` | **Did the payoff resolve with its support deployed?** Payoff/enabler sets out of `PoolFeatures`, read off one game's event log in a single pass |
 | `Evolution/EngineDiscovery.cs` | Console mode 7 — probe every concept in a pool, rank by whether the engine assembles, save `sim_results/engines_<set>_<stamp>.json` |
 | `Evolution/ConstructedGameSetup.cs` | Two decklists → pre-begin `GameState`; the constructed sibling of `DraftGameSetup` |
-| `Evolution/MetagameEvolver.cs` | Console mode 6 — the evolution loop, paired evaluation, culling, and the report. `enginesPath` seeds discovered archetypes as pool-locked, cull-exempt slots |
+| `Evolution/MetagameEvolver.cs` | Console mode 6 — the evolution loop, paired evaluation, culling, and the report. `enginesPath` seeds discovered archetypes as pool-locked, cull-exempt slots; `excludedEngines` drops archetypes a previous run measured as dead |
+| `Evolution/MutationLog.cs` | Every proposal the search considered — cards added/removed, parent vs candidate rate, generation, outcome. Summary to the console, whole log to `sim_results/mutations_*.csv` |
 | `IAiStrategy.cs` | Interface: `SelectAction` + `ResolveChoice` — all AI implementations conform to this |
 | `RandomAiStrategy.cs` | Baseline AI — picks a random legal action; used as playout policy |
 | `DepthLimitedAiStrategy.cs` | Greedy depth-limited DFS AI — retained for comparison; not the default |
@@ -2590,6 +2591,44 @@ The symptom to recognise: decks that read as halfway to an archetype. A Dragonst
 dragons in it at all** — a literally blank card holding a slot for generations — and Thoughtcast
 in decks with no artifacts. A card whose demands are satisfied at zero is dead, and nothing in the
 mode currently notices.
+
+### The mutation log — what the search TRIED, not only what survived
+
+`MutationLog` records every proposal: generation, slot, the cards added and removed, the parent's
+rate, the candidate's rate, and why it ended where it did. Printed as a summary plus a per-card
+table, and written whole to `sim_results/mutations_<set>_<stamp>.csv`.
+
+**It exists because a final decklist cannot answer the question that keeps being asked of it.**
+"Wirewood Conduit is not in the elf deck" has at least two causes with opposite fixes — never
+proposed (a selection-heuristic problem) or proposed, played and cut (a survivability problem) —
+and this document argued the first from the fill rule for a whole session with nothing measuring
+either. The CSV settles it with a sort.
+
+Four things about how it is computed, each of which would otherwise mislead:
+
+- **`ParentRate` is the parent's rate in the SAME generation.** Common random numbers make that a
+  paired comparison — the parent and all its mutants played identical opponents on identical
+  shuffles — so `Delta` is the mutation's effect with shuffle and search variance cancelled.
+  Against the previous generation's number it would be neither paired nor meaningful.
+- **`MeanDelta` per card is over PROPOSALS, not over accepted ones.** Acceptance is conditioned on
+  beating the parent, so averaging the accepted rows reports every card as positive by
+  construction — the same selection artifact this file records for card values measured inside the
+  decks that played them. A card tried three times and kept once is a card the search likes and the
+  field does not.
+- **`too-similar` is a separate outcome from `rejected`.** They are different failures: one is
+  losing on fitness, the other is a field pinned by its diversity floor rejecting proposals it
+  agreed were improvements. Collapsing them hides the run this file already records whose diversity
+  sat exactly on the constraint for all twelve generations while every other number read healthy.
+- **A recount is rendered as a change.** `Mutate` moves 3x to 4x far more often than it swaps a card
+  in, so a diff over card SETS would make the most-used operator invisible. Land changes likewise,
+  as a synthetic `Land` entry that `ByCard` filters back out.
+
+Culls are logged too (`reseeded`), with the full old→new diff — a cull is the largest edit the
+search makes, and omitting it makes a card look never-tried when its whole deck was replaced under it.
+
+**Read the rejects first.** The accepted rows only say what worked; the rejects say what the mutator
+keeps reaching for and failing with. A five-deck, two-generation smoke run already showed
+`Nissa, Vastwood Seer` proposed in three different slots and kept in none.
 
 ### Deck profiles
 

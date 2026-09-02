@@ -42,6 +42,12 @@ public sealed class MetagameEvolver
 	private readonly HashSet<string> _excludedEngines;
 
 	/// <summary>
+	/// Every proposal the search considered. A field rather than a parameter because `CullWorst`
+	/// writes to it too and that method already takes eleven arguments.
+	/// </summary>
+	private readonly MutationLog _mutations = new();
+
+	/// <summary>
 	/// How many field slots are seeded from the engine report. The rest become curve-profile decks —
 	/// Aggro, Midrange, Control — which are good-stuff piles BY DESIGN and are the control the themed
 	/// slots are read against.
@@ -629,22 +635,62 @@ public sealed class MetagameEvolver
 				var bestIndex = -1;
 				var bestRate = parent.Rate;
 
+				// Why each proposal ended where it did, decided in the same pass that decides it.
+				// Recorded here rather than reconstructed afterwards: the loop overwrites `bestRate`
+				// as it goes, so "was this rejected on fitness or on diversity" is knowable at this
+				// point and nowhere else.
+				var outcomes = new string[candidates[i].Count];
+
 				for (var c = 1; c < candidates[i].Count; c++)
 				{
 					var mutant = candidates[i][c];
 					if (mutant is null || tallies[i][c].Games == 0)
 						continue;
 					if (tallies[i][c].Rate <= bestRate)
+					{
+						outcomes[c] = MutationLog.Rejected;
 						continue;
+					}
 
 					// The diversity constraint applies to the field as it will be, so it is
 					// checked against every OTHER deck's current list.
 					var others = field.Where((_, j) => j != i).ToList();
 					if (DeckBuilder.MinDifference(mutant, others) < _minDifference)
+					{
+						outcomes[c] = MutationLog.TooSimilar;
 						continue;
+					}
 
+					// A proposal that leads now can still be beaten by a later one in this same
+					// generation, so the winner is stamped after the loop and everything else here
+					// is provisionally a reject.
+					outcomes[c] = MutationLog.Rejected;
 					bestIndex = c;
 					bestRate = tallies[i][c].Rate;
+				}
+
+				if (bestIndex >= 0)
+					outcomes[bestIndex] = MutationLog.Accepted;
+
+				for (var c = 1; c < candidates[i].Count; c++)
+				{
+					if (candidates[i][c] is not { } proposal || outcomes[c] is null)
+						continue;
+
+					var (added, removed) = MutationLog.Diff(field[i], proposal);
+					_mutations.Add(
+						new MutationRow(
+							gen,
+							i,
+							field[i].Name,
+							added,
+							removed,
+							parent.Rate,
+							tallies[i][c].Rate,
+							tallies[i][c].Games,
+							outcomes[c]
+						)
+					);
 				}
 
 				if (bestIndex >= 0)
@@ -955,6 +1001,7 @@ public sealed class MetagameEvolver
 
 		var others = field.Where((_, j) => j != worst).ToList();
 		var name = field[worst].Name;
+		var before = field[worst];
 
 		// A culled concept slot re-seeds on a CONCEPT, not on an anchor-and-kernel pile. The slot
 		// exists to explore archetypes; replacing it with a midrange deck silently retires the
@@ -980,10 +1027,96 @@ public sealed class MetagameEvolver
 		// pair record is not evidence about it.
 		slotHistory[worst] = new CardStatAccumulator();
 
+		// A cull is the largest single edit the search makes, and leaving it out of the log would
+		// make a card look like it was never tried when in fact its whole deck was replaced under it.
+		var (gained, lost) = MutationLog.Diff(before, field[worst]);
+		_mutations.Add(
+			new MutationRow(
+				gen,
+				worst,
+				name,
+				gained,
+				lost,
+				worstRate,
+				worstRate,
+				tallies[worst][0].Games,
+				MutationLog.Reseeded
+			)
+		);
+
 		Console.WriteLine(
 			$"    culled {field[worst].Name} at {worstRate:P1} (gen {gen}) — re-seeded"
 		);
 		return 1;
+	}
+
+	/// <summary>
+	/// **What the search actually tried, which no report used to say.**
+	///
+	/// A final decklist shows what SURVIVED. "Wirewood Conduit is not in the elf deck" has at least
+	/// two causes with opposite fixes — never proposed (a selection-heuristic problem) or proposed,
+	/// played and cut (a survivability problem) — and both were argued from the fill rule rather than
+	/// measured, because nothing distinguished them.
+	///
+	/// Three views, cheapest question first: how the operators are doing overall, which cards the
+	/// search keeps reaching for, and the whole log as CSV for anything else. The CSV is the real
+	/// deliverable — "when did card X enter and leave slot 3" is a sort, not a report, and building a
+	/// fixed view per question is how a report grows to a page nobody reads.
+	/// </summary>
+	private void PrintMutations()
+	{
+		var rows = _mutations.Rows;
+		if (rows.Count == 0)
+			return;
+
+		Console.WriteLine();
+		Console.WriteLine("  Mutations");
+
+		var proposals = rows.Where(r => r.Outcome != MutationLog.Reseeded).ToList();
+		var acceptedRows = proposals.Where(r => r.Outcome == MutationLog.Accepted).ToList();
+		var tooSimilar = proposals.Count(r => r.Outcome == MutationLog.TooSimilar);
+
+		// **`too-similar` is broken out because it is a different failure from losing on fitness.**
+		// A field pinned by its diversity floor is rejecting proposals it agreed were improvements,
+		// and this document already records a run whose diversity sat exactly on the constraint for
+		// all twelve generations — that reads as healthy in every other number.
+		Console.WriteLine(
+			$"    {proposals.Count} proposals, {acceptedRows.Count} accepted "
+				+ $"({(proposals.Count == 0 ? 0 : 100.0 * acceptedRows.Count / proposals.Count):F0}%), "
+				+ $"{tooSimilar} rejected on diversity, "
+				+ $"{rows.Count - proposals.Count} culls"
+		);
+		if (acceptedRows.Count > 0)
+			Console.WriteLine(
+				$"    accepted mutations gained {acceptedRows.Average(r => r.Delta) * 100:F1}pp on "
+					+ $"average; all proposals averaged {proposals.Average(r => r.Delta) * 100:F1}pp"
+			);
+
+		// Most-reached-for first. `mean` is over PROPOSALS — averaging the accepted ones alone would
+		// report every card as positive by construction, since acceptance is conditioned on beating
+		// the parent.
+		var byCard = _mutations.ByCard();
+		Console.WriteLine();
+		Console.WriteLine($"    {"card", -28}{"tried", 7}{"kept", 6}{"mean", 9}{"gens", 10}");
+		foreach (var c in byCard.Take(20))
+			Console.WriteLine(
+				$"    {Truncate(c.Card, 28), -28}{c.Proposed, 7}{c.Accepted, 6}"
+					+ $"{c.MeanDelta * 100, 8:+0.0;-0.0}{$"{c.FirstGen}-{c.LastGen}", 10}"
+			);
+
+		if (byCard.Count > 20)
+			Console.WriteLine($"    … {byCard.Count - 20} more cards in the CSV");
+
+		try
+		{
+			Console.WriteLine();
+			Console.WriteLine($"    Full log: {_mutations.Save(_set.Code)}");
+		}
+		catch (IOException ex)
+		{
+			// A report that cannot write its file must not lose the run's results with it.
+			Console.WriteLine($"    WARNING: could not write the mutation log — {ex.Message}");
+		}
 	}
 
 	/// <summary>
@@ -1280,6 +1413,8 @@ public sealed class MetagameEvolver
 						+ $"{bestRate:P0} vs {result.Decks[best].Name}"
 				);
 		}
+
+		PrintMutations();
 
 		// **The exclusion list for the NEXT run, printed rather than transcribed.** An engine slot
 		// under the floor is the punching-bag case: it is never culled (mode 7 already judged the
