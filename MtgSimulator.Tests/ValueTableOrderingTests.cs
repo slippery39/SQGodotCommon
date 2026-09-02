@@ -38,13 +38,38 @@ public class ValueTableOrderingTests
 		Directory.SetCurrentDirectory(dir!.FullName);
 	}
 
+	[TestCase("Mere-Storm", "DES")]
 	[TestCase("Dragonstorm")]
 	[TestCase("Tendrils of Agony")]
 	[TestCase("Atog")]
 	[Explicit("Diagnostic — builds one request from two value tables and diffs. No games.")]
-	public void TheIsolationTableIsComparedAgainstTheMixedOne(string payoff)
+	public void TheIsolationTableIsComparedAgainstTheMixedOne(string payoff, string setCode = "ALL")
 	{
 		ChdirToSolutionRoot();
+		if (setCode == "DES")
+		{
+			// A core built IN PROCESS carries its supply weights; one loaded from a report written
+			// before they existed does not, and silently orders by card value instead.
+			var desSpells = SetRegistry.Get("DES").Cards.Where(c => !c.HasSubtype("Land")).ToList();
+			var desFeatures = PoolFeatures.Build(desSpells);
+			var desValues = new ConstructedValues(
+				DraftTrainingStore.Load("sim_results/constructed_values_des_presim.json")!,
+				ConstructedValuesStore.LoadDraftPrior("DES")
+			);
+			var built = DeckRequest
+				.ForCards(payoff)
+				.Resolve(desFeatures, desSpells, desValues, 7)
+				.Deck;
+			Assert.That(built, Is.Not.Null);
+			Console.WriteLine($"=== {payoff} on DES, freshly built core ({built!.Lands} lands)");
+			foreach (
+				var (n, c) in built
+					.Spells.OrderByDescending(kv => kv.Value)
+					.ThenBy(kv => kv.Key, StringComparer.Ordinal)
+			)
+				Console.WriteLine($"      {c}x {n}");
+			return;
+		}
 
 		Assert.That(File.Exists(MixedPath), Is.True, $"{MixedPath} is gone — nothing to compare");
 		Assert.That(File.Exists(IsolationPath), Is.True, $"{IsolationPath} is missing");
