@@ -1143,6 +1143,141 @@ public sealed class MetagameEvolver
 	}
 
 	/// <summary>
+	/// **The field against the hand-built references, at final volume — the number a gauntlet
+	/// exists to produce, and which nothing printed.**
+	///
+	/// The gauntlet was already counted in fitness during evolution, so it shaped which mutants were
+	/// accepted; but `FinalRoundRobin` plays field-versus-field only, so the REPORT still showed a
+	/// closed round-robin that averages exactly 50% by construction. Adding a reference and then not
+	/// printing the gap reproduces the original defect one level up: the mode still could not tell
+	/// "my decks are good" from "my decks are equally mediocre".
+	///
+	/// Read the gap, not the rates. References overperforming means the builder still has work; even
+	/// or slightly behind means it is doing its job. These decks are not costed to a rate and have
+	/// never been tuned, so a large number in either direction is a finding about which side, and
+	/// the per-deck rows are what say which.
+	/// </summary>
+	private double[,] FinalGauntlet(IReadOnlyList<Decklist> field)
+	{
+		var schedule = new List<(int Deck, int Ref, int Seed, bool DeckOnPlay)>();
+		for (var i = 0; i < _deckCount; i++)
+		for (var r = 0; r < _gauntlet.Count; r++)
+		for (var k = 0; k < _finalGamesPerMatchup; k++)
+			schedule.Add((i, r, _seed + 8_000_000 + (i * 1009 + r) * 10_007 + k * 5, k % 2 == 0));
+
+		var results = new GameResult[schedule.Count];
+		Parallel.For(
+			0,
+			schedule.Count,
+			s =>
+			{
+				var (i, r, gameSeed, deckOnPlay) = schedule[s];
+				var name = _gauntlet[r];
+				var buildDeck = (int owner) => field[i].Materialize(owner, _poolIndex);
+				var buildRef = (int owner) => DeckRegistry.Build(name, owner);
+
+				var (state, ids, cardNames) = GameSetup.FromDecks(
+					deckOnPlay ? buildDeck : buildRef,
+					deckOnPlay ? buildRef : buildDeck
+				);
+				var aiRng = new Random(gameSeed + 4);
+				var runner = new GameRunner(
+					new MultiTurnBeamSearchAiStrategy(
+						ids,
+						_aiDepth,
+						rng: aiRng,
+						cardValues: AiCardValues.Current
+					),
+					new MultiTurnBeamSearchAiStrategy(
+						ids,
+						_aiDepth,
+						rng: aiRng,
+						cardValues: AiCardValues.Current
+					)
+				);
+				var (result, _) = runner.Run(
+					state,
+					ids,
+					cardNames,
+					shuffleSeed: gameSeed + 2,
+					gameRngSeed: gameSeed + 3
+				);
+				results[s] = result with { AllEvents = [] };
+			}
+		);
+
+		var wins = new int[_deckCount, _gauntlet.Count];
+		var games = new int[_deckCount, _gauntlet.Count];
+		for (var s = 0; s < schedule.Count; s++)
+		{
+			var (i, r, _, deckOnPlay) = schedule[s];
+			var result = results[s];
+			if (
+				result.EndReason
+				is GameEndReason.TimeLimitReached
+					or GameEndReason.UnhandledException
+			)
+				continue;
+
+			games[i, r]++;
+			if (deckOnPlay ? result.IsPlayer1Win : result.IsPlayer2Win)
+				wins[i, r]++;
+		}
+
+		var rates = new double[_deckCount, _gauntlet.Count];
+		for (var i = 0; i < _deckCount; i++)
+		for (var r = 0; r < _gauntlet.Count; r++)
+			rates[i, r] = games[i, r] == 0 ? -1 : (double)wins[i, r] / games[i, r];
+		return rates;
+	}
+
+	private void PrintGauntlet(IReadOnlyList<Decklist> field, double[,] rates)
+	{
+		Console.WriteLine();
+		Console.WriteLine(
+			$"  === The field against {_gauntlet.Count} hand-built references "
+				+ $"({_finalGamesPerMatchup} games each) ==="
+		);
+		Console.Write($"  {"", -14}");
+		foreach (var name in _gauntlet)
+			Console.Write($"{Abbrev(name), 14}");
+		Console.WriteLine($"{"vs refs", 10}");
+
+		var all = new List<double>();
+		for (var i = 0; i < field.Count; i++)
+		{
+			Console.Write($"  {Truncate(field[i].Name, 14), -14}");
+			var row = new List<double>();
+			for (var r = 0; r < _gauntlet.Count; r++)
+			{
+				var cell = rates[i, r];
+				Console.Write(cell < 0 ? $"{"--", 14}" : $"{cell, 14:P0}");
+				if (cell >= 0)
+					row.Add(cell);
+			}
+			Console.WriteLine(row.Count == 0 ? $"{"--", 10}" : $"{row.Average(), 10:P1}");
+			all.AddRange(row);
+		}
+
+		if (all.Count == 0)
+			return;
+
+		// **The headline, and the only number here that is about the FIELD rather than a deck.**
+		// Below 50% the evolved metagame loses to lists nobody tuned, which is the finding that
+		// invalidates reading any internal spread as health.
+		var mean = all.Average();
+		Console.WriteLine();
+		Console.WriteLine(
+			$"  Field vs references: {mean:P1}"
+				+ (
+					mean < 0.45 ? "  <- the field LOSES to untuned hand-built decks"
+					: mean > 0.55 ? "  <- the field beats them; the references are the weak side"
+					: "  <- even, which is what a healthy field looks like"
+				)
+		);
+	}
+
+	/// <summary>
 	/// **What the search actually tried, which no report used to say.**
 	///
 	/// A final decklist shows what SURVIVED. "Wirewood Conduit is not in the elf deck" has at least
@@ -1541,6 +1676,12 @@ public sealed class MetagameEvolver
 						+ $"{bestRate:P0} vs {result.Decks[best].Name}"
 				);
 		}
+
+		// The external yardstick. Printed before the mutation log because it is the number that
+		// decides whether anything else in this report is worth reading — an internal spread says
+		// nothing if the whole field loses to lists nobody tuned.
+		if (_gauntlet.Count > 0)
+			PrintGauntlet(result.Decks, FinalGauntlet(result.Decks));
 
 		PrintMutations();
 

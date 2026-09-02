@@ -17,6 +17,12 @@ public static class DeckRegistry
 			new DeckInfo("Valakut", ValakutDeckFactory.Build),
 			new DeckInfo("Jund", JundDeckFactory.Build),
 			new DeckInfo("Affinity", AffinityDeckFactory.Build),
+			// Designed-pool references. Every deck above is built from Legacy cards, and DES is
+			// defined as every set EXCEPT Legacy — so without these `Gauntlet.For("DES")` had
+			// nothing to return and the pool all recent work is measured in had no yardstick.
+			new DeckInfo(DesignedGauntletDecks.Twin, DesignedGauntletDecks.BuildTwin),
+			new DeckInfo(DesignedGauntletDecks.Elves, DesignedGauntletDecks.BuildElves),
+			new DeckInfo(DesignedGauntletDecks.Reanimator, DesignedGauntletDecks.BuildReanimator),
 		];
 
 	public static IReadOnlyList<Card> Build(string deckName, int ownerId)

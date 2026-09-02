@@ -31,12 +31,36 @@ public static class Gauntlet
 	/// registry deck is fully buildable (only Plains missing, which the mana base supplies), but
 	/// on CSC they are 0-5 of 13 cards each — Zoo 1/13, Traditional Storm 0/12, Affinity 1/13.
 	/// A CSC gauntlet has to be built from CSC cards; until it exists, CSC gets none.
+	///
+	/// **DES had none for exactly that reason and it was the pool everything was being measured
+	/// in.** Designed is every set EXCEPT Legacy, and all nine original decks are Legacy lists, so
+	/// the one absolute yardstick mode 6 has was silently absent from every recent run.
+	/// <see cref="DesignedGauntletDecks"/> fills it.
 	/// </summary>
-	public static IReadOnlyList<string> For(string setCode) =>
-		string.Equals(setCode, SetRegistry.CombinedCode, StringComparison.OrdinalIgnoreCase)
-		|| string.Equals(setCode, "LEG", StringComparison.OrdinalIgnoreCase)
-			? DeckRegistry.All.Select(d => d.Name).ToList()
-			: [];
+	public static IReadOnlyList<string> For(string setCode)
+	{
+		static bool Is(string a, string b) =>
+			string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+
+		// **The split is by which POOL each deck's cards come from, not by preference.** The nine
+		// original decks are built from Legacy cards and the three CMB ones from Designed cards;
+		// only the combined pool holds both. Offering a deck whose cards are absent is a benchmark
+		// the field can never converge on — measured on CSC, where every registry deck was 0-5 of
+		// 13 cards.
+		if (Is(setCode, SetRegistry.CombinedCode))
+			return DeckRegistry.All.Select(d => d.Name).ToList();
+
+		if (Is(setCode, SetRegistry.LegacyCode))
+			return DeckRegistry
+				.All.Select(d => d.Name)
+				.Except(DesignedGauntletDecks.Names, StringComparer.Ordinal)
+				.ToList();
+
+		if (Is(setCode, SetRegistry.DesignedCode))
+			return DesignedGauntletDecks.Names;
+
+		return [];
+	}
 
 	/// <summary>
 	/// Cards a gauntlet deck names that the pool does not have, so a run can report up front
