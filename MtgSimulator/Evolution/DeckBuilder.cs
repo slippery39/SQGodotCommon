@@ -475,7 +475,8 @@ public static class DeckBuilder
 		PoolFeatures? features = null,
 		DeckCore? core = null,
 		DeckProfile profile = DeckProfile.Any,
-		IReadOnlyDictionary<string, double>? contextValue = null
+		IReadOnlyDictionary<string, double>? contextValue = null,
+		bool exploring = false
 	)
 	{
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
@@ -533,7 +534,30 @@ public static class DeckBuilder
 		// **Two operators exist only under a core, and the roll is unchanged without one.** Mode 6's
 		// unconstrained slots must behave exactly as they did, or every existing measurement in this
 		// file becomes incomparable for a reason that has nothing to do with what was changed.
+		// **Exploration moves in PLAYSETS and never by one copy.**
+		//
+		// 59% of all proposals in a measured run moved exactly one copy, and those were the least
+		// accepted (22% against 50% for two-copy moves). The reason is not preference: a candidate
+		// plays ~66 games, so one standard error is ~6pp, while a one-copy change is ~2% of a deck
+		// and its true effect is a fraction of a point. Every such accept/reject is a coin flip —
+		// which is what the oscillation guard was really patching over, and why the same pair could
+		// swap back and forth scoring +6.1pp in BOTH directions.
+		//
+		// So `Recount` (±1 by construction) and `AdjustLands` (±1 land) are off during exploration.
+		// Trimming is the OTHER phase's job, and it is the phase that needs the deeper evaluation.
 		var roll = rng.Next(10);
+		if (exploring)
+			roll =
+				core is not null
+					// Swap or SwapWithinSlot. Rebalance moves ONE copy between roles and Recount moves
+					// one copy of one card, so both belong to the other phase.
+					? rng.Next(6)
+				// Swap (0-4) or Package (7-8), skipping Recount at 5-6 and AdjustLands at 9. Written
+				// as an explicit mapping rather than a narrowed range, because narrowing the range
+				// silently kept Recount in — the roll table is not ordered by step size.
+				: rng.Next(2) == 0 ? rng.Next(5)
+				: 7 + rng.Next(2);
+
 		var mutated =
 			core is not null
 				? roll switch
@@ -782,7 +806,8 @@ public static class DeckBuilder
 		DeckHistory? history,
 		PoolFeatures? features,
 		IReadOnlySet<string>? protectedNames = null,
-		IReadOnlyDictionary<string, double>? contextValue = null
+		IReadOnlyDictionary<string, double>? contextValue = null,
+		bool exploring = false
 	)
 	{
 		var outgoing = PickWeakest(
@@ -796,7 +821,11 @@ public static class DeckBuilder
 		if (outgoing is null)
 			return null;
 
-		var k = Math.Min(deck.CopiesOf(outgoing), 1 + rng.Next(Decklist.MaxCopies));
+		// Exploring cuts the card OUTRIGHT rather than shaving copies: the question in this phase is
+		// "does this card belong at all", and a deck holding 1 of something answers it with noise.
+		var k = exploring
+			? deck.CopiesOf(outgoing)
+			: Math.Min(deck.CopiesOf(outgoing), 1 + rng.Next(Decklist.MaxCopies));
 		var trimmed = deck.WithCopies(outgoing, deck.CopiesOf(outgoing) - k);
 		return Fill(
 			trimmed,
@@ -1023,7 +1052,8 @@ public static class DeckBuilder
 		double synergyWeight,
 		double temperature,
 		PoolFeatures? features,
-		IReadOnlyDictionary<string, double>? contextValue = null
+		IReadOnlyDictionary<string, double>? contextValue = null,
+		bool exploring = false
 	)
 	{
 		var guard = 0;
@@ -1058,7 +1088,10 @@ public static class DeckBuilder
 
 			var chosen = candidates[DraftPickers.SampleSoftmax(scores, temperature, rng)];
 			var room = Decklist.MaxCopies - deck.CopiesOf(chosen.Name);
-			var add = Math.Min(Math.Min(2 + rng.Next(3), room), need);
+			var add = Math.Min(
+				Math.Min(exploring ? Decklist.MaxCopies : 2 + rng.Next(3), room),
+				need
+			);
 			deck = deck.WithCopies(chosen.Name, deck.CopiesOf(chosen.Name) + add);
 		}
 

@@ -42,6 +42,25 @@ public sealed class MetagameEvolver
 	private readonly HashSet<string> _excludedEngines;
 
 	/// <summary>
+	/// Generations spent EXPLORING before optimisation begins. 0 is the previous behaviour.
+	///
+	/// **Two phases because a deck slot is answering two different questions, and one evaluation
+	/// budget cannot serve both.** Exploration asks *which cards belong at all*, and moves in
+	/// playsets — a one-copy change is ~2% of a deck and its effect is far below the ~6pp standard
+	/// error of a 66-game candidate evaluation, so accepting it is a coin flip. Optimisation asks
+	/// *how many copies*, which is genuinely a small-effect question and needs the deeper evaluation
+	/// that fewer, larger proposals free up.
+	///
+	/// **Culling is OFF while exploring, and that is not a tuning choice.** A deck mid-exploration is
+	/// deliberately half-built, and a viability floor deletes exactly those — the failure this file
+	/// already records for engine slots ("a half-built combo deck loses every game, so a viability
+	/// floor would delete exactly the decks the feature exists to keep"). Engine slots are permanently
+	/// cull-exempt for that reason; exploration extends the same exemption to every slot for as long
+	/// as every slot is in that state.
+	/// </summary>
+	private readonly int _explorationGenerations;
+
+	/// <summary>
 	/// Every proposal the search considered. A field rather than a parameter because `CullWorst`
 	/// writes to it too and that method already takes eleven arguments.
 	/// </summary>
@@ -138,7 +157,8 @@ public sealed class MetagameEvolver
 		int gauntletGames = 0,
 		string? enginesPath = null,
 		int engineSlots = -1,
-		IReadOnlyList<string>? excludedEngines = null
+		IReadOnlyList<string>? excludedEngines = null,
+		int explorationGenerations = 0
 	)
 	{
 		if (deckCount < 2)
@@ -170,6 +190,7 @@ public sealed class MetagameEvolver
 		_gauntletGames = Math.Max(0, gauntletGames);
 		_gauntlet = _gauntletGames > 0 ? Gauntlet.For(set.Code) : [];
 		_enginesPath = enginesPath;
+		_explorationGenerations = Math.Max(0, explorationGenerations);
 		_excludedEngines = (excludedEngines ?? [])
 			.Select(NormaliseEngineName)
 			.Where(n => n.Length > 0)
@@ -580,7 +601,8 @@ public sealed class MetagameEvolver
 							features,
 							identities[i],
 							profiles[i],
-							contextValues[i]
+							contextValues[i],
+							exploring: gen <= _explorationGenerations
 						)
 					);
 				candidates[i] = list;
@@ -951,7 +973,8 @@ public sealed class MetagameEvolver
 		PoolFeatures? features,
 		DeckCore? core,
 		DeckBuilder.DeckProfile profile,
-		IReadOnlyDictionary<string, double>? contextValue
+		IReadOnlyDictionary<string, double>? contextValue,
+		bool exploring
 	)
 	{
 		for (var attempt = 0; attempt < MutationRetries; attempt++)
@@ -965,7 +988,8 @@ public sealed class MetagameEvolver
 				features,
 				core,
 				profile,
-				contextValue
+				contextValue,
+				exploring
 			);
 			if (mutant is not null)
 				return mutant;
@@ -1227,7 +1251,13 @@ public sealed class MetagameEvolver
 		// real run culled at generation 28 of 30, and that deck was then reported NON-VIABLE at
 		// 35.7% having had two generations to improve — a verdict on the cull, not on the deck.
 		// A replacement the report cannot evaluate is worse than no replacement.
-		if (!_cullEnabled || gen > _generations - _graceGenerations)
+		// **No culling while exploring.** Every slot is deliberately half-built in that phase, and a
+		// viability floor deletes exactly the decks the phase exists to produce.
+		if (
+			!_cullEnabled
+			|| gen <= _explorationGenerations
+			|| gen > _generations - _graceGenerations
+		)
 			return 0;
 
 		var worst = -1;
