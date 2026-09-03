@@ -2613,12 +2613,50 @@ elf core and evolved for twelve generations; the hand-built elf list beat it **6
 archetype, same pool, handed to the builder — and a human list of it wins. That is an optimiser
 result, not a card-power one, because the archetype was not something the search had to discover.
 
-#### The elf row is fully controlled, and it is a SEARCH failure
+#### CAUSE FOUND, and it is neither card power nor the selection heuristic
 
-The obvious objection is that CMB cards are deliberately not costed to a rate — the set says so on
-its own cards — so the references win on card power. **That objection does not survive the elf
-decklists.** Both decks draw from the same 24-card core pool at the same 17 lands; only the choices
-differ. The builder's output after twelve generations:
+**Every CMB card was ABSENT from the constructed values table.** `constructed_values_des_presim.json`
+held 711 cards measured before the set existed; all 21 CMB cards scored exactly **0.00** while the
+HLM/CSC elves around them read up to **+17.17**:
+
+```
+Nissa, Vastwood Seer   +17.17      Wirewood Conduit     0.00   <- never played
+Sylvan Ranger          +15.55      Timberwatch Elder    0.00   <- never played
+Radha, Heart of Keld   +14.33      Wirewood Symbiont    0.00   <- never played
+Llanowar Elves         +12.90      (all 21 CMB cards absent from the table)
+```
+
+The run was launched with **`presim 0`**, so nothing generated isolation data for the new cards
+either. A card with no data scores zero on the fill's main term and loses to every measured card;
+`ExplorationBonus * Unmeasured(name)` exists to counteract exactly this and is nowhere near enough
+against +17.
+
+**This is the self-reinforcing blind spot this file already documents twice** — once for draft
+bootstrapping ("every new card would score 0 against known cards scoring up to +16.8, so they would
+be passed over every pick, never make a deck, and never accumulate data") and once for constructed
+("226 cards have no constructed data at all and will keep scoring at their draft prior forever"). It
+is the same failure in a third place, and a run that adds a set without a presim pass walks straight
+into it.
+
+**Operational rule: after adding cards to a pool, run mode 6 with `presim > 0` at least once, or the
+new cards are unplayable by construction.** Check with the one-liner rather than assuming:
+
+```
+python -c "
+import json;d=json.load(open('sim_results/constructed_values_<set>_presim.json'))
+have={c['Name'] for c in d['Cards']};print(len(have))"
+```
+
+**What this does and does not overturn.** The elf deck the builder produced IS weak — it lost 35-65
+from the same pool at the same land count, and that stands. What changes is the CAUSE: the run could
+not value the engine pieces, so it is not evidence that value-ranked filling is wrong. That
+hypothesis (items (c)/(f)) is untested by this run rather than confirmed by it.
+
+#### The elf decklists, which are what localised it
+
+Both decks draw from the same 24-card core pool at the same 17 lands; only the choices differ, so
+card power is controlled away and the loss is about selection. The builder's output after twelve
+generations:
 
 ```
 4x Dwynen's Elite      4x Llanowar Elves        4x Reclamation Sage
@@ -2633,17 +2671,13 @@ pieces of the archetype it was SEEDED with. The one it kept is the anchor, which
 so it could not be cut. In their place: four Reclamation Sage, a naturalize body that is near-vanilla
 against these decks, plus a stray 1x singleton of the sort a random walk leaves behind.
 
-So the failure is not "the search finds a slightly worse version of the archetype". It is handed an
-archetype, locked to its pool, and converges on generically-fine bodies while dropping every engine
-piece it is allowed to drop. **Card power is controlled away and the builder still loses 35-65.**
+Note the builder's bodies are BIGGER — Radha 3/3, Poison-Tip Archer 2/3, Dwynen 3/4 against a
+hand-built list of mostly 1/1s — and the curves are close (2.40 against 2.16). So it is not a curve
+failure and not a stats failure. **Those three names are exactly the cards the values table had never
+heard of**, which is what pointed at the cause above.
 
-The confound is real for the Twin and Reanimator rows, which are less controlled — those archetypes
-were not seeded this run and their references do hold pushed cards. It does not rescue the aggregate:
-those cards sat in the pool for twelve generations and the search never went near them.
-
-**References built from HLM/CSC only would still be worth having**, to separate "cannot assemble a
-pushed planted combo" from "builds weak decks generally". But the elf row already establishes the
-second on its own terms.
+**References built from HLM/CSC only are still worth having**, to separate "cannot assemble a pushed
+planted combo" from "builds weak decks generally". Neither is established yet.
 
 Cost: 36.9 minutes at 10 decks, against 31.2 without a gauntlet.
 

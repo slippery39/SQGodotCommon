@@ -407,12 +407,27 @@ with the elf core, pool-locked, and evolved twelve generations; the hand-built l
 pieces of the archetype it was handed. The one it kept is the anchor, locked by `ProtectedIn`. In
 their place four Reclamation Sage, near-vanilla here, and a 1x singleton.
 
-The card-power objection ("CMB cards are pushed, so the references win on rate") is real for the Twin
-and Reanimator rows and **does not apply here** — same pool, same land count, only the choices
-differ. It also does not rescue the aggregate: those cards were in the pool the whole time.
+**CAUSE FOUND, and it is a DATA problem, not a search one.** Every CMB card was **absent** from
+`constructed_values_des_presim.json` — 711 cards measured before the set existed — so all 21 scored
+exactly **0.00** while the HLM/CSC elves beside them read up to **+17.17**:
 
-References built from HLM/CSC only are still worth having, to separate "cannot assemble a pushed
-planted combo" from "builds weak decks generally". The elf row already establishes the second.
+```
+Nissa, Vastwood Seer   +17.17      Wirewood Conduit     0.00   <- never played
+Sylvan Ranger          +15.55      Timberwatch Elder    0.00   <- never played
+Radha, Heart of Keld   +14.33      Wirewood Symbiont    0.00   <- never played
+```
+
+The run used **`presim 0`**, so nothing measured them either. A zero-valued card loses every fill
+comparison; `ExplorationBonus * Unmeasured` exists for this and is nowhere near enough against +17.
+
+**Same self-reinforcing blind spot `MtgSimulator/CLAUDE.md` documents for draft bootstrapping**, in a
+third place. **Operational rule: after adding cards to a pool, run mode 6 with `presim > 0` at least
+once, or the new cards are unplayable by construction.**
+
+What stands: the builder's elf deck is weak, from the same pool at the same land count, and its
+bodies were BIGGER (Radha 3/3, Poison-Tip Archer 2/3) with a close curve (2.40 vs 2.16) — so neither
+curve nor stats explain it. What does NOT stand: that this shows value-ranked filling is wrong.
+Items (c)/(f) are untested by this run, not confirmed.
 
 Read the gap: gauntlet decks overperforming means the builder still has work; even or slightly
 behind means it is doing its job.
