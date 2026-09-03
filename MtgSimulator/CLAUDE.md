@@ -2613,16 +2613,37 @@ elf core and evolved for twelve generations; the hand-built elf list beat it **6
 archetype, same pool, handed to the builder — and a human list of it wins. That is an optimiser
 result, not a card-power one, because the archetype was not something the search had to discover.
 
-**The serious confound, and it must be read alongside the table: CMB is a test instrument and its
-cards are deliberately not costed to a rate.** `ComboProvingReanimator` says so on the card — a
-one-mana reanimate for an eight-drop is "pushed far past cube rate, which is what the set is for".
-So the references are partly strong because their cards are strong. What that confound does NOT
-explain is the elf row above, where the builder had the same cards and lost anyway.
+#### The elf row is fully controlled, and it is a SEARCH failure
 
-**Do not read this as "the builder is 17pp bad" in general.** Read it as: on a pool containing
-planted, pushed archetypes, the search does not assemble them as well as a human does — including
-when it is seeded with one. The uncontaminated version of this measurement needs references built
-from HLM/CSC only, which do not exist yet.
+The obvious objection is that CMB cards are deliberately not costed to a rate — the set says so on
+its own cards — so the references win on card power. **That objection does not survive the elf
+decklists.** Both decks draw from the same 24-card core pool at the same 17 lands; only the choices
+differ. The builder's output after twelve generations:
+
+```
+4x Dwynen's Elite      4x Llanowar Elves        4x Reclamation Sage
+3x Dwynen, Gilt-Leaf   4x Nissa, Vastwood Seer  4x Sylvan Ranger
+3x Elvish Archdruid    4x Poison-Tip Archer     4x Wirewood Herald
+4x Elvish Mystic       4x Radha, Heart of Keld
+1x Elvish Visionary
+```
+
+**Zero Wirewood Symbiont, zero Wirewood Conduit, zero Timberwatch Elder** — three of the four engine
+pieces of the archetype it was SEEDED with. The one it kept is the anchor, which `ProtectedIn` locks
+so it could not be cut. In their place: four Reclamation Sage, a naturalize body that is near-vanilla
+against these decks, plus a stray 1x singleton of the sort a random walk leaves behind.
+
+So the failure is not "the search finds a slightly worse version of the archetype". It is handed an
+archetype, locked to its pool, and converges on generically-fine bodies while dropping every engine
+piece it is allowed to drop. **Card power is controlled away and the builder still loses 35-65.**
+
+The confound is real for the Twin and Reanimator rows, which are less controlled — those archetypes
+were not seeded this run and their references do hold pushed cards. It does not rescue the aggregate:
+those cards sat in the pool for twelve generations and the search never went near them.
+
+**References built from HLM/CSC only would still be worth having**, to separate "cannot assemble a
+pushed planted combo" from "builds weak decks generally". But the elf row already establishes the
+second on its own terms.
 
 Cost: 36.9 minutes at 10 decks, against 31.2 without a gauntlet.
 

@@ -391,14 +391,28 @@ it exists to produce was invisible.
 Internal metrics read healthy throughout: 8/10 viable, 47.8pp spread, 44% diversity against a 35%
 floor. Same blindness recorded for ALL, now measured on DES.
 
-**The controlled row is the sharp one.** `Engine-Wirewood Herald` was SEEDED with the elf core and
-evolved twelve generations; the hand-built elf list beat it **65-35**. Same archetype, same pool,
-handed to the builder.
+**The elf row is fully controlled and it is a SEARCH failure.** `Engine-Wirewood Herald` was SEEDED
+with the elf core, pool-locked, and evolved twelve generations; the hand-built list beat it
+**65-35** at the same 17 lands from the same 24-card pool. What it built:
 
-**Confound that must be read with it: CMB cards are deliberately not costed to a rate** — the set
-says so on its own cards. The references are partly strong because their cards are pushed. That does
-not explain the elf row. **An uncontaminated version needs references built from HLM/CSC only**, and
-that is the obvious next piece of work.
+```
+4x Dwynen's Elite      4x Llanowar Elves        4x Reclamation Sage
+3x Dwynen, Gilt-Leaf   4x Nissa, Vastwood Seer  4x Sylvan Ranger
+3x Elvish Archdruid    4x Poison-Tip Archer     4x Wirewood Herald
+4x Elvish Mystic       4x Radha, Heart of Keld
+1x Elvish Visionary
+```
+
+**Zero Wirewood Symbiont, zero Wirewood Conduit, zero Timberwatch Elder** — three of the four engine
+pieces of the archetype it was handed. The one it kept is the anchor, locked by `ProtectedIn`. In
+their place four Reclamation Sage, near-vanilla here, and a 1x singleton.
+
+The card-power objection ("CMB cards are pushed, so the references win on rate") is real for the Twin
+and Reanimator rows and **does not apply here** — same pool, same land count, only the choices
+differ. It also does not rescue the aggregate: those cards were in the pool the whole time.
+
+References built from HLM/CSC only are still worth having, to separate "cannot assemble a pushed
+planted combo" from "builds weak decks generally". The elf row already establishes the second.
 
 Read the gap: gauntlet decks overperforming means the builder still has work; even or slightly
 behind means it is doing its job.
