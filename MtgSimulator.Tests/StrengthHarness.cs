@@ -220,6 +220,31 @@ public static class StrengthHarness
 				)
 		);
 
+	/// <summary>
+	/// A simulated own-turn that may take several actions instead of exactly one.
+	///
+	/// **The rollout was asymmetric in the wrong direction**: `SimulateOpponentTurn`'s `BoardOnly`
+	/// mode loops every attack while `PlayGreedyTurn` played a land and exactly ONE other action, so
+	/// the model gave the opponent a whole turn and us a single play. A mana engine's payoff turn is
+	/// *activate, cast, cast, cast* — unrepresentable at any lookahead depth.
+	///
+	/// Measured on 8 games with CMB Elves: Conduit casts 3 to 6, activations 1 to 3, and wall-clock
+	/// DOWN (6550 ms to 5488 ms), the same shape as the branching cap. **Playing the card more often
+	/// is not the same as playing better**, which is what this arm exists to settle.
+	/// </summary>
+	public static Arm WideRollout(int actions = 3, int turns = int.MaxValue) =>
+		new(
+			$"self-{actions}x{(turns == int.MaxValue ? "all" : turns.ToString())}",
+			(ids, rng) =>
+				new MultiTurnBeamSearchAiStrategy(
+					ids,
+					AiDepth,
+					rng: rng,
+					selfActionsPerTurn: actions,
+					selfGreedyTurns: turns
+				)
+		);
+
 	/// <summary>Terminal decay disabled — lambda 1.0 restores the pre-discount behaviour.</summary>
 	public static Arm NoTerminalDiscount() =>
 		new(

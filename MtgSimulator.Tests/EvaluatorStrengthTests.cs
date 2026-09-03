@@ -63,6 +63,44 @@ public class EvaluatorStrengthTests
 	}
 
 	/// <summary>
+	/// **Does a wider simulated own-turn actually play better, or just differently?**
+	///
+	/// The defect is established: `PlayGreedyTurn` took exactly one action per simulated turn while
+	/// the opponent's turn looped every attack, so a mana engine's payoff turn could not be
+	/// represented. Fixing it demonstrably changes BEHAVIOUR — Conduit casts doubled — but this
+	/// project has been burned repeatedly by "the AI now does the thing I wanted" standing in for
+	/// evidence, so the question here is only win rate.
+	///
+	/// Run `HarnessCanSeeADifference` and `DefaultAgainstItself_IsEven` first; a 50% here is
+	/// indistinguishable from "no effect" and the harness must be shown able to see 38.8% before a
+	/// null result means anything.
+	/// </summary>
+	[Test]
+	public void WiderRollout_Strength()
+	{
+		var outcome = StrengthHarness.Measure(
+			StrengthHarness.WideRollout(),
+			StrengthHarness.Default()
+		);
+		TestContext.Out.WriteLine(outcome);
+	}
+
+	/// <summary>
+	/// The cheap variant: only the turn immediately after the decision gets the wider budget, which
+	/// is where a setup play's payoff lands. Measured separately because if it matches the full
+	/// version it is the one to ship.
+	/// </summary>
+	[Test]
+	public void WiderRolloutFirstTurnOnly_Strength()
+	{
+		var outcome = StrengthHarness.Measure(
+			StrengthHarness.WideRollout(turns: 1),
+			StrengthHarness.Default()
+		);
+		TestContext.Out.WriteLine(outcome);
+	}
+
+	/// <summary>
 	/// Does the terminal discount actually help?
 	///
 	/// It shipped on reasoning — decaying terminals by how long they took makes a faster win and a
