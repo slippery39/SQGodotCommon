@@ -506,3 +506,46 @@ Diagnostics added this session, all `[Explicit]`:
 declares), `.DumpDemandAndCoreCounts` (the before/after instrument for any harvest-rule change),
 `TwinComboGoldfishDiagnostic.DumpWhatHappensInARealGame` (turn-by-turn timeline of a deck
 goldfishing), `ComboProvingRulesTextTests.DumpEveryCardFace`.
+
+---
+
+## 8. SOLVED: why the builder ignored certain cards — and what it did NOT fix
+
+**The question was never "does the AI play better".** It was why the deckbuilder never tries some
+cards. That is now answered end to end, with every link measured rather than argued:
+
+| link | evidence |
+|---|---|
+| `PlayGreedyTurn` took ONE action per simulated turn while the opponent's turn looped every attack | the code, and `SimulateOpponentTurn` beside it |
+| so a mana engine's payoff turn (*activate, cast, cast, cast*) was unrepresentable at any depth | — |
+| the activation is offered, gains 4 mana, and moves `StateEvaluator` by **0.00** | `ConduitBehaviourTests` |
+| attacking does NOT spend the tap, so the uses do not compete | same |
+| both payoff lines ARE found once the card is in play | same |
+| so the broken decision was CASTING it: **drawn 3, cast 0** | `ConduitActivationTests` |
+| widening the rollout: Conduit casts 3 → 6, activations 1 → 3 | same |
+| the probe then re-rates it: **−2.8 → +10.5**, crossing the median | `OutputProbeTests` |
+| **the builder proposes and keeps it** | mutation log, `MTG_SELF_ACTIONS=3` |
+
+The last row is the answer. Conduit went from **0 proposals in every prior run** to proposed once,
+accepted, and then **defended**: three separate generation-12 proposals tried to cut it and were
+rejected at −9.1, −9.1 and −1.5.
+
+### It did not make the decks better, and the cost is real
+
+| | baseline | `MTG_SELF_ACTIONS=3` |
+|---|---|---|
+| field vs references | 38.0% | **35.7%** |
+| `Engine-Wirewood Herald` | 31.7% | **23.3%** |
+| runtime | 48 min | **100 min** |
+
+**A correction worth carrying: an 8-game timing sample said the wider rollout ran FASTER** (6550 ms →
+5488 ms) and that is wrong at scale — it was measuring game-length variance. Read wall-clock beside
+actions/game, which this file already says three times.
+
+So `MTG_SELF_ACTIONS` stays **off by default**. What it bought is a diagnosis, not an improvement:
+the builder's blindness to activated-ability cards is explained and demonstrably fixable, and the
+fix as built costs 2x runtime for no measured deck quality.
+
+**Do not read "the card is now played" as success.** That is the confirmation trap this file's
+section 5 is about — the metric moved in the direction someone wanted, and the thing anyone actually
+cares about did not.
