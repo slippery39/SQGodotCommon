@@ -2636,6 +2636,55 @@ of items (c)/(f) available and it is now measured rather than argued.**
 It also rules out the cold-start reading recorded above: the blind spot was real and worth fixing,
 but closing it changed almost nothing.
 
+#### Context value: built, gated, and the gate found the real blocker
+
+`CardValueSandbox.MeasureInContext(candidates, context)` scores each candidate with the deck's own
+cards stocked on the battlefield, then reports **`OverAverage` = raw minus the MEDIAN of the measured
+population** — "how much better than the average card competing for this slot".
+
+Two properties, both inherited rather than invented:
+
+- **Per-mana controls already normalise the turn.** `MeasureOne` charges each card against a control
+  at its own mana level, so "N turns elapsed" is subtracted before comparison. The horizon bias that
+  makes an eight-drop look best is a BASELINE problem, not a lookahead problem, and the baseline was
+  already right.
+- **A fixed replacement level, not the argmax alternative.** Ranking each card against "the next best
+  other card" is O(n²), unstable (one strong addition moves every other value) and non-transitive.
+  Against a median it is O(n) and comparable — the WAR construction, and it rescales itself when the
+  pool's power level moves.
+
+Stocking is **battlefield-only** here, unlike leverage's four zones: a deck context is a BOARD, and
+diluting the hand and library with eight copies of other spells measures the dilution.
+
+**The gate failed, and it is not a tuning problem.** `ContextValueTests` asserts that in an elf shell
+Wirewood Conduit and Timberwatch Elder outrank Reclamation Sage and Poison-Tip Archer. Measured:
+
+```
+Poison-Tip Archer   +20.06        Wirewood Conduit    -0.70
+Reclamation Sage     +2.30        Timberwatch Elder   -0.70   <- identical
+Elvish Visionary     +0.70        Sylvan Ranger       -0.70   <- identical
+```
+
+Three identical readings is the tell: those cards produced **nothing the scorer can see**. Conduit is
+*"Exhaust: add mana equal to the number of Elves you control"* and Timberwatch taps for an
+until-end-of-turn pump — and `StateEvaluator` counts **`MaxMana` only** (temporary mana excluded) and
+**permanent power only** (`UntilEndOfTurn` excluded). Both exclusions are deliberate, both are correct
+for their original purpose, and together they make these cards score exactly the same as doing
+nothing. −0.70 is just the card leaving hand.
+
+**So the blocker is the substrate, not the conditioning.** Every state-impact metric built on
+`StateEvaluator` inherits this hole — and so does the AI piloting the deck, which can only find these
+lines through downstream rollout consequences. Two ways out, neither tried:
+
+- **Convert the effect into something visible.** A longer rollout with a hand the deck can actually
+  spend mana on turns temporary mana into board. Costs rollout depth and still fails for a pump.
+- **Use a different observable for that family.** `PoolFeatures.ProbeManaProfit` already measures net
+  mana and is what makes storm's enabler set correct. A composite — sandbox impact for board cards,
+  mana profit for mana engines — needs no new machinery.
+
+The vacuity guard `ContextValueDisagreesWithIsolationValue` **passes**: the context ranking is not the
+isolation ranking, so the measurement is doing something. It is simply not yet doing the thing.
+
 #### Leverage does NOT currently answer this, and it was built for a different question
 
 The obvious candidate is `CardValueSandbox.MeasureLeverage`, which already measures a card bare and

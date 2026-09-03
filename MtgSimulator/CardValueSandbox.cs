@@ -107,7 +107,21 @@ public static class CardValueSandbox
 	/// <see cref="PoolFeatures"/> already makes: "a spell was cast" is an event in a turn, not a
 	/// card in a zone, so there is nothing to stock and the counter is set directly.
 	/// </summary>
-	private sealed record Stocking(string Key, IReadOnlyList<Card> Cards, int StormCount);
+	/// <param name="BattlefieldOnly">
+	/// Put the stock on the battlefield and nowhere else.
+	///
+	/// **The four-zone default is right for a DEMAND and wrong for a DECK.** Leverage does not know
+	/// which zone a demand reads, so it stocks all of them; the cost is the documented artifact where
+	/// two copies in the hand and library dilute both and auras price negative. A deck context is a
+	/// BOARD — "what does this card do alongside the deck it lives in" — so diluting the hand with
+	/// eight copies of other spells measures the dilution rather than the card.
+	/// </param>
+	private sealed record Stocking(
+		string Key,
+		IReadOnlyList<Card> Cards,
+		int StormCount,
+		bool BattlefieldOnly = false
+	);
 
 	private const int StockedCopies = 2;
 
@@ -166,6 +180,100 @@ public static class CardValueSandbox
 		}
 
 		return results;
+	}
+
+	/// <summary>
+	/// **How much better than the AVERAGE candidate is this card, in the deck it would live in?**
+	///
+	/// The question deckbuilding actually asks is never "is this card good" but *"why would I add
+	/// this card instead of another one"* — value is relative by nature, because a deck slot has an
+	/// opportunity cost. `ConstructedValues.CardDelta` answers a different question honestly and
+	/// precisely: how a card does in a RANDOM deck. A synergy piece is defined by being weak alone
+	/// and strong in context, so no amount of data fixes that mismatch — measured on DES, Wirewood
+	/// Conduit reads 51.6% in random decks and is never played, while the hand-built elf deck holding
+	/// it beats the builder's own elf deck 65-35.
+	///
+	/// Two properties make this scale-free, and both are inherited rather than invented:
+	///
+	/// - **Per-mana controls.** <see cref="MeasureOne"/> already charges each card against a control
+	///   at ITS OWN mana level, so "N turns have elapsed" is subtracted before anything is compared.
+	///   That is what stops an eight-drop winning merely for costing eight — the horizon bias is a
+	///   BASELINE problem, not a lookahead problem, and the baseline was already right.
+	/// - **A fixed replacement level, not the argmax alternative.** Values are reported against the
+	///   MEDIAN of the measured population. Ranking each card against "the next best other card"
+	///   would be O(n²), unstable (one strong addition moves every other value) and non-transitive.
+	///   Against a median it is O(n), comparable, and cacheable — the WAR construction, and it
+	///   rescales automatically when the pool's power level moves.
+	///
+	/// **This proposes, it does not judge.** It exists to say which cards are worth trying in a
+	/// slot; whether the resulting deck is good is still a win-rate question, and this must never
+	/// become a fitness function — that is the rule that keeps `ArchetypeChallenge`'s maximum-density
+	/// goblin deck (24.4%) from being what the search optimises toward.
+	/// </summary>
+	/// <param name="context">
+	/// The cards that shape the board — in practice the deck being filled, or the core slot's own
+	/// pool. Stocked onto the BATTLEFIELD ONLY; see <see cref="Stocking.BattlefieldOnly"/>.
+	/// </param>
+	public static IReadOnlyList<ContextValue> MeasureInContext(
+		IReadOnlyList<Card> candidates,
+		IReadOnlyList<Card> context,
+		int lookaheadTurns = DefaultLookaheadTurns,
+		int seed = 7
+	)
+	{
+		var controls =
+			new Dictionary<(int Mana, OpponentSimulationMode Mode, string Stock), float>();
+
+		// Ordinal-sorted names rather than a hash: the control cache is keyed on this, and a
+		// randomised hash is the bug this project has now found three times.
+		var stocking = new Stocking(
+			string.Join("|", context.Select(c => c.Name).Order(StringComparer.Ordinal)),
+			context,
+			StormCount: 0,
+			BattlefieldOnly: true
+		);
+
+		var raw = new List<(string Name, float Value, string? Error)>(candidates.Count);
+		foreach (var card in candidates)
+		{
+			if (card.HasSubtype("Land"))
+			{
+				raw.Add((card.Name, 0f, "land"));
+				continue;
+			}
+
+			var (value, error) = MeasureOne(
+				card,
+				card.ManaCost + XBudget,
+				OpponentSimulationMode.BoardOnly,
+				lookaheadTurns,
+				seed,
+				controls,
+				stocking
+			);
+			raw.Add((card.Name, value, error));
+		}
+
+		// The median is taken over MEASURED cards only. Folding an unmeasurable card in as 0 would
+		// drag the baseline toward zero and quietly inflate everything else.
+		var measured = raw.Where(r => r.Error is null).Select(r => r.Value).Order().ToList();
+		if (measured.Count == 0)
+			return [.. raw.Select(r => new ContextValue(r.Name, r.Value, 0f, r.Error))];
+
+		var median =
+			measured.Count % 2 == 1
+				? measured[measured.Count / 2]
+				: (measured[measured.Count / 2 - 1] + measured[measured.Count / 2]) / 2f;
+
+		return
+		[
+			.. raw.Select(r => new ContextValue(
+				r.Name,
+				r.Value,
+				r.Error is null ? r.Value - median : 0f,
+				r.Error
+			)),
+		];
 	}
 
 	/// <summary>
@@ -460,13 +568,15 @@ public static class CardValueSandbox
 
 		if (stocking is not null)
 		{
-			int[] zones =
-			[
-				ids.Player1BattlefieldId,
-				ids.Player1GraveyardId,
-				ids.Player1LibraryId,
-				ids.Player1HandId,
-			];
+			int[] zones = stocking.BattlefieldOnly
+				? [ids.Player1BattlefieldId]
+				:
+				[
+					ids.Player1BattlefieldId,
+					ids.Player1GraveyardId,
+					ids.Player1LibraryId,
+					ids.Player1HandId,
+				];
 
 			foreach (var zone in zones.Where(z => z != 0))
 			foreach (var card in stocking.Cards)
@@ -645,6 +755,14 @@ public sealed record CardValue(
 /// artifact, since stocking puts cards into four zones at once and some of those placements are
 /// nonsense for the card in question.
 /// </summary>
+/// <param name="Raw">Score in the context, already net of a control at this card's mana level.</param>
+/// <param name="OverAverage">
+/// <paramref name="Raw"/> minus the median of every measured candidate — "how much better than the
+/// average card competing for this slot". The number the fill should rank on; positive means worth
+/// trying, and the scale moves with the pool's power level rather than against a fixed constant.
+/// </param>
+public sealed record ContextValue(string Name, float Raw, float OverAverage, string? NotMeasured);
+
 public sealed record CardLeverage(string Name, float Bare, float Supplied, string? NotMeasured)
 {
 	public float Leverage => Supplied - Bare;
