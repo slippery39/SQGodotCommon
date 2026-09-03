@@ -53,6 +53,21 @@ public sealed class MutationLog
 	public const string Reseeded = "reseeded";
 
 	/// <summary>
+	/// The proposal undoes a mutation this slot accepted a few generations ago.
+	///
+	/// **Measured, not anticipated.** One elf slot spent four of its accepted mutations swapping the
+	/// same pair back and forth — `+2x Wirewood Symbiont −2x Fauna Shaman` at +6.1pp, then the exact
+	/// reverse at +6.1pp, twice over — and 18 of its 27 proposals involved one card. Both directions
+	/// scored as improvements because ±6pp is inside the noise of a paired 6-game evaluation, so the
+	/// climb reads two coin flips as two gains and ends where it started.
+	///
+	/// Same shape as the equip oscillation `MtgCore/CLAUDE.md` records, where the evaluator rated
+	/// both directions of one move as better and there was no tie to break. There the fix was an
+	/// engine cap; here it is refusing the reversal.
+	/// </summary>
+	public const string Reversal = "reversal";
+
+	/// <summary>
 	/// `Mutate` had a budget and returned nothing legal.
 	///
 	/// **This is the outcome that had to be INFERRED once, and inferring it is how the finding
@@ -164,8 +179,14 @@ public sealed class MutationLog
 			.ToList();
 	}
 
+	/// <summary>
 	/// "2x Wirewood Conduit + 1x Land" -> the card names, dropping the synthetic land entry.
-	private static IEnumerable<string> NamesIn(string diff) =>
+	///
+	/// **Names only, counts deliberately discarded**, because the reversal check compares WHAT moved
+	/// rather than how much: the measured oscillation went out at 3 copies and came back at 1, and a
+	/// count-sensitive comparison would have missed it.
+	/// </summary>
+	public static IEnumerable<string> NamesIn(string diff) =>
 		diff.Split(" + ", StringSplitOptions.RemoveEmptyEntries)
 			.Select(part => part[(part.IndexOf(' ') + 1)..])
 			.Where(name => !string.Equals(name, "Land", StringComparison.Ordinal));

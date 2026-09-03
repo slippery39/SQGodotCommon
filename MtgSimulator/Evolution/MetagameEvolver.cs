@@ -512,6 +512,12 @@ public sealed class MetagameEvolver
 			}
 		}
 
+		// What each slot recently accepted, so the climb cannot spend its budget undoing itself.
+		var recentAccepts = Enumerable
+			.Range(0, _deckCount)
+			.Select(_ => new List<(int Gen, HashSet<string> Added, HashSet<string> Removed)>())
+			.ToArray();
+
 		var ages = new int[_deckCount];
 		var isWildcard = Enumerable
 			.Range(0, _deckCount)
@@ -673,6 +679,13 @@ public sealed class MetagameEvolver
 				// point and nowhere else.
 				var outcomes = new string[candidates[i].Count];
 
+				// Computed here rather than in the logging pass below, because the reversal guard
+				// needs the diff to make its DECISION and `field[i]` is replaced afterwards.
+				var diffs = new (string Added, string Removed)?[candidates[i].Count];
+				for (var c = 1; c < candidates[i].Count; c++)
+					if (candidates[i][c] is { } proposal)
+						diffs[c] = MutationLog.Diff(field[i], proposal);
+
 				for (var c = 1; c < candidates[i].Count; c++)
 				{
 					var mutant = candidates[i][c];
@@ -681,6 +694,17 @@ public sealed class MetagameEvolver
 					if (tallies[i][c].Rate <= bestRate)
 					{
 						outcomes[c] = MutationLog.Rejected;
+						continue;
+					}
+
+					// **Refuse to undo what this slot accepted a few generations ago.** Measured on
+					// one elf slot: four of its accepted mutations were the same pair swapped back
+					// and forth, each direction scoring +3 to +6pp, which is inside the noise of a
+					// paired 6-game evaluation. The climb read two coin flips as two gains and ended
+					// where it started, burning ~15% of the run's accepted mutations.
+					if (Reverses(recentAccepts[i], diffs[c], gen))
+					{
+						outcomes[c] = MutationLog.Reversal;
 						continue;
 					}
 
@@ -702,7 +726,17 @@ public sealed class MetagameEvolver
 				}
 
 				if (bestIndex >= 0)
+				{
 					outcomes[bestIndex] = MutationLog.Accepted;
+					recentAccepts[i]
+						.Add(
+							(
+								gen,
+								[.. MutationLog.NamesIn(diffs[bestIndex]!.Value.Added)],
+								[.. MutationLog.NamesIn(diffs[bestIndex]!.Value.Removed)]
+							)
+						);
+				}
 
 				for (var c = 1; c < candidates[i].Count; c++)
 				{
@@ -733,7 +767,7 @@ public sealed class MetagameEvolver
 					if (outcomes[c] is null)
 						continue;
 
-					var (added, removed) = MutationLog.Diff(field[i], proposal);
+					var (added, removed) = diffs[c]!.Value;
 					_mutations.Add(
 						new MutationRow(
 							gen,
@@ -995,6 +1029,43 @@ public sealed class MetagameEvolver
 
 	/// Shuffles per candidate. Three is enough to rank; it is not enough to quote a number from.
 	private const int ContextValueSeeds = 3;
+
+	/// <summary>
+	/// Generations an accepted mutation is protected from being undone.
+	///
+	/// **A window, never a permanent ban.** A swap that was wrong at generation 2 can be right at
+	/// generation 8 once the shell around it has changed, so this forbids the immediate flip-flop and
+	/// nothing more. Four is long enough to cover the measured oscillation (gen 5→6 and gen 11→12)
+	/// and short enough that the search can still change its mind about a card as the deck evolves.
+	/// </summary>
+	private const int ReversalMemory = 4;
+
+	/// <summary>
+	/// Whether a proposal undoes something this slot accepted inside <see cref="ReversalMemory"/>.
+	///
+	/// **Matched on NAMES, not counts.** The measured oscillation left at three copies and came back
+	/// at one; a count-sensitive comparison would have called that a different mutation and let it
+	/// through. Overlap rather than set equality for the same reason — a reversal bundled with an
+	/// unrelated edit is still a reversal.
+	/// </summary>
+	internal static bool Reverses(
+		List<(int Gen, HashSet<string> Added, HashSet<string> Removed)> history,
+		(string Added, string Removed)? diff,
+		int gen
+	)
+	{
+		if (diff is not { } d)
+			return false;
+
+		var added = MutationLog.NamesIn(d.Added).ToHashSet(StringComparer.Ordinal);
+		var removed = MutationLog.NamesIn(d.Removed).ToHashSet(StringComparer.Ordinal);
+		if (added.Count == 0 && removed.Count == 0)
+			return false;
+
+		return history.Any(h =>
+			gen - h.Gen <= ReversalMemory && added.Overlaps(h.Removed) && removed.Overlaps(h.Added)
+		);
+	}
 
 	private int MutantsFor(double rate)
 	{
