@@ -30,6 +30,26 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	private readonly OpponentSimulationMode _opponentMode;
 
 	/// <summary>
+	/// How many scoring actions a simulated OWN turn may take. 1 is the original behaviour and the
+	/// default; nothing changes for a caller that does not ask.
+	///
+	/// **Swappable rather than replaced, because the cost is unknown and the benefit is a
+	/// hypothesis.** The project rule is that a change is measurable only if a constructor parameter
+	/// turns it off — `terminalDiscount: 1.0f` and `preferFastestWin: false` exist for the same
+	/// reason. Note the precedent that this direction is not automatically slower: the branching cap
+	/// was expected to cost strength and ran 31% FASTER at equal strength, because better play ends
+	/// games sooner.
+	/// </summary>
+	private readonly int _selfActionsPerTurn;
+
+	/// <summary>
+	/// How many simulated own-turns get the wider budget, counted from the start of the rollout.
+	/// 1 is "only the turn immediately after the decision", which is where a setup play's payoff
+	/// lands and is the cheap variant worth measuring against the full one.
+	/// </summary>
+	private readonly int _selfGreedyTurns;
+
+	/// <summary>
 	/// Sandbox card values, consulted ONLY by ResolveChoice. Null disables the term entirely.
 	/// </summary>
 	private readonly CardValueTable? _cardValues;
@@ -133,7 +153,11 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		IStateEvaluator? evaluator = null,
 		bool resolveChoicesOnExecute = true,
 		CardValueTable? cardValues = null,
-		bool lethalCheck = true
+		bool lethalCheck = true,
+		// Appended rather than inserted: a positional caller must not silently start passing
+		// `concreteSlots` into a rollout knob.
+		int selfActionsPerTurn = 1,
+		int selfGreedyTurns = int.MaxValue
 	)
 	{
 		_rolloutBudget = rolloutBudget;
@@ -144,6 +168,8 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 		_lookaheadTurns = lookaheadTurns;
 		_concreteSlots = concreteSlots;
 		_opponentMode = opponentMode;
+		_selfActionsPerTurn = Math.Max(1, selfActionsPerTurn);
+		_selfGreedyTurns = Math.Max(0, selfGreedyTurns);
 		_potentialEvaluators = potentialEvaluators ?? [new FastManaPotentialEvaluator()];
 		_rng = rng ?? new Random();
 		_captureDecisions = captureDecisions;
@@ -749,7 +775,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 				break;
 			state =
 				g.ActivePlayerId == playerId
-					? PlayGreedyTurn(state, playerId)
+					? PlayGreedyTurn(state, playerId, t)
 					: SimulateOpponentTurn(state, playerId, opponentId);
 			halfTurns = t + 1;
 			if (StateEvaluator.IsDecisive(_eval.Evaluate(state, _ids, playerId)))
@@ -821,7 +847,7 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 
 			state =
 				game.ActivePlayerId == playerId
-					? PlayGreedyTurn(state, playerId)
+					? PlayGreedyTurn(state, playerId, t)
 					: SimulateOpponentTurn(state, playerId, opponentId);
 			halfTurns++;
 
@@ -839,9 +865,26 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 	}
 
 	/// <summary>
-	/// Plays one of our turns greedily: land drop then best scoring spell, then EndTurn.
+	/// Plays one of our turns greedily: land drop, then up to
+	/// <see cref="_selfActionsPerTurn"/> scoring actions, then EndTurn.
+	///
+	/// **The default of ONE action is an asymmetry, and it is why a mana engine is unplayable.**
+	/// `SimulateOpponentTurn`'s `BoardOnly` mode LOOPS every attack, so the model gives the opponent
+	/// a whole turn and us a single play. A mana engine's payoff turn is *activate, cast, cast, cast*
+	/// — a shape a one-action rollout cannot represent at ANY lookahead depth or evaluator weighting.
+	///
+	/// Measured on Wirewood Conduit (*"Exhaust: add mana equal to the number of Elves you control"*):
+	/// activating gains 4 mana and moves `StateEvaluator` by **0.00**, so the card prices as a 1/1
+	/// for 2 and the pilot leaves it in hand — drawn 3 times and cast 0 in one measured game. The
+	/// deploy-wide line IS found once it is already in play, so the broken decision is CASTING it,
+	/// where the payoff is a turn away and the rollout cannot see it.
+	///
+	/// **At `_selfActionsPerTurn == 1` this is byte-identical to the original**, deliberately: the
+	/// first action is still taken unconditionally by best score, and only the SECOND and later ones
+	/// require a strict improvement. Every measurement in this file was taken against that behaviour
+	/// and a default that drifted would make them incomparable for a reason unrelated to what changed.
 	/// </summary>
-	private GameState PlayGreedyTurn(GameState state, int playerId)
+	private GameState PlayGreedyTurn(GameState state, int playerId, int simulatedTurn = 0)
 	{
 		// Land drop first
 		var landAction = MtgActionGenerator
@@ -854,17 +897,32 @@ public class MultiTurnBeamSearchAiStrategy : ICapturingAiStrategy
 			state = ResolveAllChoices(state, playerId);
 		}
 
-		// Best non-land, non-EndTurn action by immediate StateEvaluator score
-		var spellActions = MtgActionGenerator
-			.GetLegalActions(state, _ids, playerId)
-			.Where(a => a is not EndTurnAction and not PlayLandAction)
-			.ToList();
+		// Only the first N simulated own-turns get the wider budget. The payoff of a setup play
+		// lands on the turn immediately after it, so the cheap variant buys most of the benefit.
+		var budget = simulatedTurn < _selfGreedyTurns ? _selfActionsPerTurn : 1;
 
-		if (spellActions.Count > 0)
+		for (var i = 0; i < budget; i++)
 		{
+			var spellActions = MtgActionGenerator
+				.GetLegalActions(state, _ids, playerId)
+				.Where(a => a is not EndTurnAction and not PlayLandAction)
+				.ToList();
+
+			if (spellActions.Count == 0)
+				break;
+
+			var before = _eval.Evaluate(state, _ids, playerId);
 			var best = spellActions.MaxBy(a =>
 				_eval.Evaluate(ExecuteAction(state, a), _ids, playerId)
 			)!;
+
+			// **A setup play scores FLAT, not positive** — that is the whole problem being fixed —
+			// so continuation requires "not worse" rather than "better". Strict improvement would
+			// stop at exactly the action this exists to simulate. The first action keeps the
+			// original unconditional behaviour so the default is unchanged.
+			if (i > 0 && _eval.Evaluate(ExecuteAction(state, best), _ids, playerId) < before)
+				break;
+
 			state = ExecuteAction(state, best);
 			state = ResolveAllChoices(state, playerId);
 		}
