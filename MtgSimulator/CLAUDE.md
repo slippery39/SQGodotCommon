@@ -2636,6 +2636,49 @@ of items (c)/(f) available and it is now measured rather than argued.**
 It also rules out the cold-start reading recorded above: the blind spot was real and worth fixing,
 but closing it changed almost nothing.
 
+#### SOLVED by changing the substrate: `OutputProbe`, and the gate now passes
+
+Solitaire with an opponent that **cannot die**, measuring accumulated OUTPUT instead of a position
+score. `Goldfish` already played a real `Decklist` against an inert seat; the additions are a
+permanent carrying `CannotLoseComponent` on that seat and a `maxTurns` cap on `GameRunner`.
+
+Two things fall out, and they are the two failures of the evaluator-based version:
+
+- **Damage is an OUTCOME, not a position score**, so `StateEvaluator`'s exclusions do not reach it.
+  If a mana elf buys a creature that attacks, the damage appears whether or not anything scores
+  temporary mana.
+- **The game never resolves**, so a longer horizon accumulates rather than cancelling. Verified in
+  the fixture: `damage 304, permanents 16, drawn 19, turns 13` — life is 284 past dead and the game
+  is still running.
+
+**Measured on the elf shell, 4 copies each, 3 shuffles, turn 8:**
+
+```
+                        raw   over avg          isolation rank
+Timberwatch Elder     248.3      +81.4          LAST of six
+Poison-Tip Archer     184.8      +17.9          3rd
+Wirewood Conduit      149.1      -17.9          4th
+Reclamation Sage       96.8      -70.2          5th
+```
+
+Both gate assertions pass, and the ranking **inverts** the isolation table on the card that matters:
+Timberwatch Elder is dead last by win rate in random decks and first here. That is the disagreement
+the whole exercise was for, in the direction the hand-built deck says is right.
+
+`OutputProbe.Score` weights damage 1, permanents 0.5, cards 0.25. **Deliberately crude and untuned**
+— a tuned aggregate is how a proxy becomes a fitness function. All three components stay on
+`DeckOutput` so a caller can see which is carrying a number.
+
+**Still a proposal generator, never a judge.** `Goldfish` SPEED was measured to be the wrong fitness
+(dismantling Storm made it goldfish *faster*) — that was about comparing DECKS, and this compares
+CARDS inside one fixed shell, which the confound does not transfer to cleanly. The weaker version
+does transfer: at a short horizon an immediate-damage card beats a long-term mana card, which is why
+turns is a parameter and `HowDoesTheRankingMoveWithTheHorizon` records the sensitivity rather than
+hiding it.
+
+**Not yet wired into the fill.** The metric passes its gate; whether using it produces better decks
+is a gauntlet question and is unmeasured.
+
 #### Context value: built, gated, and the gate found the real blocker
 
 `CardValueSandbox.MeasureInContext(candidates, context)` scores each candidate with the deck's own

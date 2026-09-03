@@ -71,11 +71,25 @@ public class GameRunner
 
 	private readonly IAiStrategy _player1Strategy;
 	private readonly IAiStrategy _player2Strategy;
+	private readonly int _maxTurns;
 
-	public GameRunner(IAiStrategy player1Strategy, IAiStrategy player2Strategy)
+	/// <param name="maxTurns">
+	/// Turn cap, defaulting to the standard 100.
+	///
+	/// **Only a measurement harness should lower this.** A game stopped early is not a game with an
+	/// outcome — it ends `TurnLimitReached`, which every trainer reads as "these two decks could not
+	/// finish". `OutputProbe` lowers it deliberately because it is measuring accumulated output at a
+	/// fixed turn and never reads the winner; nothing that reports win rates may.
+	/// </param>
+	public GameRunner(
+		IAiStrategy player1Strategy,
+		IAiStrategy player2Strategy,
+		int maxTurns = MaxTurns
+	)
 	{
 		_player1Strategy = player1Strategy;
 		_player2Strategy = player2Strategy;
+		_maxTurns = maxTurns;
 	}
 
 	// Packages all mutable state for a single game run, passed through helpers to avoid
@@ -134,7 +148,7 @@ public class GameRunner
 			{
 				var game = ctx.State.GetGame(ids.GameId);
 
-				if (game.TurnNumber > MaxTurns)
+				if (game.TurnNumber > _maxTurns)
 					return Terminate(ctx, ids, -1, GameEndReason.TurnLimitReached, game.TurnNumber);
 
 				var strategy =

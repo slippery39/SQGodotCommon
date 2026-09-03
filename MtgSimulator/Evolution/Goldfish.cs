@@ -40,7 +40,7 @@ public static class Goldfish
 	/// A passive opponent rather than an absent one because the engine has no concept of a solo
 	/// game: something has to hold the other seat, take turns and be killable.
 	/// </summary>
-	private sealed class InertStrategy : IAiStrategy
+	internal sealed class InertStrategy : IAiStrategy
 	{
 		public GameAction SelectAction(GameState state, MtgGameIds ids, int playerId)
 		{

@@ -38,7 +38,38 @@ public class ContextValueTests
 		"Elvish Archdruid",
 	];
 
-	private static IReadOnlyList<Row> Measure()
+	/// <summary>
+	/// **Does the separation appear if the cards are left IN PLAY for longer?**
+	///
+	/// A creature cast this turn is summoning sick, so a `RequiresTap` ability cannot fire until its
+	/// controller's next turn — and Wirewood Conduit's whole contribution is a tap ability. At the
+	/// 4-half-turn default the card has had at most one opportunity to use it, and `PlayGreedyTurn`
+	/// takes exactly ONE non-land action per simulated turn, so it may not have taken it at all.
+	///
+	/// One variable at a time: horizon only. If a longer rollout does not move the ordering, the
+	/// blocker is the evaluator's blindness to temporary mana rather than the amount of time.
+	/// </summary>
+	[Test]
+	[Explicit("Diagnostic — how the ranking moves with rollout length.")]
+	public void DoesALongerHorizonSeparateThem()
+	{
+		foreach (var turns in new[] { 4, 8, 12, 20 })
+		{
+			var rows = Measure(turns);
+			TestContext.Out.WriteLine(
+				$"  lookahead {turns, 2}: "
+					+ string.Join(
+						"  ",
+						rows.OrderByDescending(r => r.OverAverage)
+							.Select(r => $"{Abbrev(r.Name)} {r.OverAverage:+0.0;-0.0}")
+					)
+			);
+		}
+	}
+
+	private static string Abbrev(string name) => name.Split(',')[0].Split(' ')[^1];
+
+	private static IReadOnlyList<Row> Measure(int lookaheadTurns)
 	{
 		var pool = SetRegistry.Designed.Cards.ToDictionary(
 			c => c.Name,
@@ -61,7 +92,8 @@ public class ContextValueTests
 			.. CardValueSandbox
 				.MeasureInContext(
 					[.. candidates.Select(n => pool[n])],
-					[.. ElfContext.Select(n => pool[n])]
+					[.. ElfContext.Select(n => pool[n])],
+					lookaheadTurns
 				)
 				.Select(v => new Row(v.Name, v.OverAverage, v.NotMeasured)),
 		];
@@ -89,9 +121,10 @@ public class ContextValueTests
 	)]
 	public void InAnElfShell_TheEngineElvesOutrankTheGenericBodies()
 	{
-		var byName = Measure().ToDictionary(r => r.Name, r => r, StringComparer.Ordinal);
+		var byName = Measure(CardValueSandbox.DefaultLookaheadTurns)
+			.ToDictionary(r => r.Name, r => r, StringComparer.Ordinal);
 
-		foreach (var r in Measure())
+		foreach (var r in Measure(CardValueSandbox.DefaultLookaheadTurns))
 			TestContext.Out.WriteLine($"  {r.Name, -24}{r.OverAverage, 9:F2}  {r.NotMeasured}");
 
 		Assert.Multiple(() =>
@@ -123,7 +156,9 @@ public class ContextValueTests
 		);
 		var values = ConstructedValuesStore.Load(SetRegistry.Designed.Code, useDraftPrior: true);
 
-		var rows = Measure().Where(r => r.NotMeasured is null).ToList();
+		var rows = Measure(CardValueSandbox.DefaultLookaheadTurns)
+			.Where(r => r.NotMeasured is null)
+			.ToList();
 		Assert.That(rows, Has.Count.GreaterThan(3), "too few measured cards to compare rankings");
 
 		var byContext = rows.OrderByDescending(r => r.OverAverage).Select(r => r.Name).ToList();
