@@ -123,6 +123,45 @@ public class OutputProbeTests
 	}
 
 	/// <summary>
+	/// **A candidate that is ALREADY in the shell must still be measurable.**
+	///
+	/// This is the case that made the feature inert for a whole 10-deck run. A core's candidate list
+	/// is its own card pool, and the deck built from that core is made of the same cards — so the
+	/// overlap is the common case, not the edge case. Adding `copies` on top of what the shell held
+	/// produced 8 copies of a 4-of, every candidate threw identically, and every engine slot silently
+	/// fell back to isolation value. The run completed and reported a plausible number.
+	///
+	/// A uniform failure is the worst shape a bug can take: nothing looks wrong, and the measurement
+	/// simply is not there.
+	/// </summary>
+	[Test]
+	public void ACandidateAlreadyInTheShellIsStillMeasured()
+	{
+		var pool = SetRegistry.Designed.Cards.ToDictionary(
+			c => c.Name,
+			c => c,
+			StringComparer.OrdinalIgnoreCase
+		);
+
+		// Every candidate here is part of the shell, which is what a real core slot looks like.
+		var measured = OutputProbe.Compare(
+			Shell(),
+			Lands,
+			["Llanowar Elves", "Elvish Archdruid", "Nissa, Vastwood Seer"],
+			pool,
+			seeds: 1,
+			turns: 6
+		);
+
+		Assert.That(measured, Has.Count.EqualTo(3));
+		Assert.That(
+			measured.Select(m => m.Raw),
+			Is.Not.All.EqualTo(0.0),
+			"every candidate measured zero — the shell overlap is silently failing again"
+		);
+	}
+
+	/// <summary>
 	/// The gate. Asserted as an ORDERING rather than a threshold — the scale is arbitrary and a
 	/// threshold would need retuning whenever the shell or the turn count moves.
 	/// </summary>

@@ -142,12 +142,47 @@ public static class OutputProbe
 
 		foreach (var name in candidates)
 		{
-			var spells = shellSpells.ToDictionary(
-				kv => kv.Key,
-				kv => kv.Value,
-				StringComparer.Ordinal
-			);
-			spells[name] = spells.GetValueOrDefault(name) + copies;
+			// **The candidate is SET to `copies`, never added to what the shell already holds.**
+			// A core's candidate list and the deck built from it overlap heavily — an elf shell
+			// contains Wirewood Herald, which is also a candidate — so adding produced 8 copies of
+			// a 4-of and the list was rejected. It failed for EVERY candidate identically, which is
+			// the worst shape a bug can take: a whole run's worth of the feature was inert and only
+			// the caller's fallback warning made it visible.
+			var spells = shellSpells
+				.Where(kv => !string.Equals(kv.Key, name, StringComparison.Ordinal))
+				.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
+
+			// Resize the REST of the shell to leave exactly room for the candidate, so every
+			// candidate is measured in a deck of the same size rather than the caller having to
+			// pre-size one per candidate.
+			//
+			// **Both directions, and the grow half is the one that was missing.** Removing a
+			// candidate the shell already held leaves it short by `copies`, and a trim-only resize
+			// produced a 56-card list — rejected for every candidate identically, which is the same
+			// uniform-failure shape as the overlap bug it was introduced to fix.
+			var room = Decklist.DeckSize - lands - copies;
+			var order = spells.Keys.Order(StringComparer.Ordinal).ToList();
+
+			while (spells.Values.Sum() > room && spells.Count > 0)
+			{
+				var last = order.LastOrDefault(spells.ContainsKey);
+				if (last is null)
+					break;
+				if (--spells[last] <= 0)
+					spells.Remove(last);
+			}
+
+			for (var i = 0; spells.Values.Sum() < room; i = (i + 1) % Math.Max(1, order.Count))
+			{
+				if (order.Count == 0)
+					throw new ArgumentException($"no shell to measure {name} in");
+				var card = order[i];
+				if (spells.GetValueOrDefault(card) >= Decklist.MaxCopies)
+					continue;
+				spells[card] = spells.GetValueOrDefault(card) + 1;
+			}
+
+			spells[name] = copies;
 
 			var deck = new Decklist(
 				name,

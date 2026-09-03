@@ -968,28 +968,15 @@ public sealed class MetagameEvolver
 			.Order(StringComparer.Ordinal)
 			.ToList();
 
-		// The shell the candidates are measured in is the slot's CURRENT list minus the card under
-		// test, so every candidate is judged against the same deck.
-		var shellSpells = shell.Spells.ToDictionary(
-			kv => kv.Key,
-			kv => kv.Value,
-			StringComparer.Ordinal
-		);
-		const int copies = 4;
-		var room = Decklist.DeckSize - shell.Lands - copies;
-		while (shellSpells.Values.Sum() > room && shellSpells.Count > 0)
-		{
-			var last = shellSpells.Keys.Order(StringComparer.Ordinal).Last();
-			if (--shellSpells[last] <= 0)
-				shellSpells.Remove(last);
-		}
-
+		// `Compare` sizes the shell itself — it removes the candidate and trims the rest to leave
+		// exactly room for it, so every candidate is measured in a deck of the same size. Doing that
+		// here as well is how the counts got out of step in the first place.
 		var measured = OutputProbe.Compare(
-			shellSpells,
+			shell.Spells,
 			shell.Lands,
 			candidates,
 			_poolIndex,
-			copies: copies,
+			copies: 4,
 			seeds: ContextValueSeeds,
 			aiDepth: _aiDepth
 		);
