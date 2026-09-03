@@ -424,10 +424,31 @@ comparison; `ExplorationBonus * Unmeasured` exists for this and is nowhere near 
 third place. **Operational rule: after adding cards to a pool, run mode 6 with `presim > 0` at least
 once, or the new cards are unplayable by construction.**
 
-What stands: the builder's elf deck is weak, from the same pool at the same land count, and its
-bodies were BIGGER (Radha 3/3, Poison-Tip Archer 2/3) with a close curve (2.40 vs 2.16) — so neither
-curve nor stats explain it. What does NOT stand: that this shows value-ranked filling is wrong.
-Items (c)/(f) are untested by this run, not confirmed.
+**Re-run with `presim 300` and the gap barely moved: 32.7% → 35.8%.** Every CMB card now has real
+isolation data (table 711 → 732 cards) and the elf slot **still plays none of them**. So the blind
+spot was a genuine defect and not the cause.
+
+**(c)/(f) is CONFIRMED, and the finding is that the value table measures the wrong quantity:**
+
+| card | rate in RANDOM decks | in the builder's deck |
+|---|---|---|
+| Sylvan Ranger | 66.8% | 4x |
+| Radha, Heart of Keld | 63.1% | 4x |
+| Wirewood Conduit | **51.6%** | **0x** |
+| Wirewood Symbiont | **48.9%** | **0x** |
+| Timberwatch Elder | **47.8%** | **0x** |
+
+The valuations are *correct*. `PreSimulation` measures a card in RANDOM decks — value in isolation —
+and a 1/1 that pumps your other Elves genuinely is mediocre there. A synergy card is defined by being
+weak alone and strong in context, so more data measures the isolation value more precisely and never
+fixes it.
+
+**`MeasureLeverage` does not currently answer this** — measured on this exact case it returns
+identical numbers for all three elves (they share a demand and get the same two stocked suppliers),
+0.00 for four of six played cards, and negative gains that are the documented four-zone stocking
+artifact. It was built to ask "is this payoff a blank without support?" and does that job. What
+(c)/(f) needs is a card's marginal contribution to a REALISTIC deck state, not to a bare fixture:
+same rollout-and-subtract skeleton, different conditioning.
 
 Read the gap: gauntlet decks overperforming means the builder still has work; even or slightly
 behind means it is doing its job.

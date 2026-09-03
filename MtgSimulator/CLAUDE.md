@@ -2613,7 +2613,60 @@ elf core and evolved for twelve generations; the hand-built elf list beat it **6
 archetype, same pool, handed to the builder — and a human list of it wins. That is an optimiser
 result, not a card-power one, because the archetype was not something the search had to discover.
 
-#### CAUSE FOUND, and it is neither card power nor the selection heuristic
+#### CONFIRMED with the data gap closed: (c)/(f) is real, and the table measures the WRONG QUANTITY
+
+The presim re-run gave every CMB card real isolation data — the table went 711 to 732 cards — and
+**the elf slot still plays none of them.** The gauntlet gap moved 32.7% to 35.8%, i.e. barely.
+
+| card | rate in RANDOM decks | in the builder's deck |
+|---|---|---|
+| Sylvan Ranger | 66.8% | 4x |
+| Radha, Heart of Keld | 63.1% | 4x |
+| Nissa, Vastwood Seer | 59.4% | (4x previous run) |
+| Wirewood Conduit | **51.6%** | **0x** |
+| Wirewood Symbiont | **48.9%** | **0x** |
+| Timberwatch Elder | **47.8%** | **0x** |
+
+**The valuations are correct and that is the problem.** `PreSimulation` measures a card in RANDOM
+decks, which is value-in-isolation — and a 1/1 that pumps your other Elves genuinely IS mediocre in
+a random deck. A synergy card is *defined* by being weak alone and strong in context, so more data
+never fixes this: it measures the isolation value more precisely. **This is the cleanest statement
+of items (c)/(f) available and it is now measured rather than argued.**
+
+It also rules out the cold-start reading recorded above: the blind spot was real and worth fixing,
+but closing it changed almost nothing.
+
+#### Leverage does NOT currently answer this, and it was built for a different question
+
+The obvious candidate is `CardValueSandbox.MeasureLeverage`, which already measures a card bare and
+then with its demands' suppliers stocked. **Measured on exactly this case, it does not discriminate:**
+
+```
+                     winRate      bare   supplied     gain
+Wirewood Conduit      +0.90pp     6.00       2.59    -3.41
+Timberwatch Elder     -1.40pp     6.00       2.59    -3.41   <- identical
+Wirewood Symbiont     -0.92pp     6.00       2.59    -3.41   <- identical
+Poison-Tip Archer     +8.05pp    15.93      14.48    -1.45
+Nissa / Radha / Sylvan Ranger / Reclamation Sage    "asks nothing answerable"
+```
+
+Three failures, all structural rather than tuning:
+
+- **It is keyed on the DEMAND, not the card.** All three elves ask the same Elf subtype demand and
+  get the same two stocked suppliers, so they measure identically by construction.
+- **Four of six played cards return 0.00** — "asks nothing answerable" or "nothing in the pool to
+  stock" — so the column is blank for most of a deck.
+- **The gains are negative**, which is the fixture artifact this file already documents: stocking two
+  copies into four zones dilutes a hand and a library, and tribal bodies price worse for it.
+
+**So the machinery is not a drop-in.** It was built to ask "is this payoff a blank without support?"
+and answers that adequately for a Dragonstorm shape (bare 0.00, supplied 32.03). What (c)/(f) needs
+is a different measurement: **a card's marginal contribution to a REALISTIC deck state** — add it to
+a board and hand that look like the archetype, roll forward, subtract the control — rather than to a
+bare fixture stocked with two representatives. Same rollout-and-subtract skeleton, different
+conditioning.
+
+#### CAUSE OF THE EARLIER READING, kept because it was a real defect
 
 **Every CMB card was ABSENT from the constructed values table.** `constructed_values_des_presim.json`
 held 711 cards measured before the set existed; all 21 CMB cards scored exactly **0.00** while the
@@ -2647,10 +2700,9 @@ import json;d=json.load(open('sim_results/constructed_values_<set>_presim.json')
 have={c['Name'] for c in d['Cards']};print(len(have))"
 ```
 
-**What this does and does not overturn.** The elf deck the builder produced IS weak — it lost 35-65
-from the same pool at the same land count, and that stands. What changes is the CAUSE: the run could
-not value the engine pieces, so it is not evidence that value-ranked filling is wrong. That
-hypothesis (items (c)/(f)) is untested by this run rather than confirmed by it.
+**Superseded by the presim re-run above**, which closed this gap and changed almost nothing — so the
+blind spot was a real defect but not the cause of the elf failure. Keep the operational rule; drop
+the diagnosis.
 
 #### The elf decklists, which are what localised it
 
