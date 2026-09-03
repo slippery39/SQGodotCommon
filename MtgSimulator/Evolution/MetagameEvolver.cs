@@ -480,6 +480,38 @@ public sealed class MetagameEvolver
 				);
 		}
 
+		// --- Context value: what each core card is worth IN ITS OWN DECK ---
+		//
+		// **`CardDelta` measures a card in a RANDOM deck and that is the wrong question for a core
+		// slot.** Measured on DES: Wirewood Conduit reads 51.6% in random decks and is never once
+		// proposed in twelve generations, while the hand-built elf list holding it beats the
+		// builder's own elf deck 65-35 from the same 24-card pool at the same land count. A synergy
+		// card is weak alone by definition, so more isolation data measures the wrong quantity more
+		// precisely.
+		//
+		// Computed ONCE per engine slot, before any generation: it depends on the core's pool and
+		// the shell, neither of which moves during a run.
+		var contextValues = new Dictionary<string, double>?[_deckCount];
+		for (var i = 0; i < _deckCount; i++)
+		{
+			if (identities[i] is not { } core)
+				continue;
+			try
+			{
+				contextValues[i] = ContextValuesFor(core, field[i]);
+			}
+			catch (Exception ex)
+			{
+				// A slot that cannot be measured falls back to isolation value rather than taking
+				// the run down — and says so, because a silently absent term is indistinguishable
+				// from one that is present and doing nothing.
+				Console.WriteLine(
+					$"  WARNING: context values for {field[i].Name} threw {ex.GetType().Name} — "
+						+ "that slot falls back to isolation value."
+				);
+			}
+		}
+
 		var ages = new int[_deckCount];
 		var isWildcard = Enumerable
 			.Range(0, _deckCount)
@@ -541,7 +573,8 @@ public sealed class MetagameEvolver
 							history,
 							features,
 							identities[i],
-							profiles[i]
+							profiles[i],
+							contextValues[i]
 						)
 					);
 				candidates[i] = list;
@@ -883,7 +916,8 @@ public sealed class MetagameEvolver
 		DeckHistory history,
 		PoolFeatures? features,
 		DeckCore? core,
-		DeckBuilder.DeckProfile profile
+		DeckBuilder.DeckProfile profile,
+		IReadOnlyDictionary<string, double>? contextValue
 	)
 	{
 		for (var attempt = 0; attempt < MutationRetries; attempt++)
@@ -896,13 +930,84 @@ public sealed class MetagameEvolver
 				history,
 				features,
 				core,
-				profile
+				profile,
+				contextValue
 			);
 			if (mutant is not null)
 				return mutant;
 		}
 		return null;
 	}
+
+	/// <summary>
+	/// Points of `CardDelta`-equivalent that one standard deviation of measured output is worth.
+	///
+	/// **A scale choice, not a tuned value, and it must stay small.** `OutputProbe` is a PROPOSAL
+	/// generator — it says which cards are worth trying in a slot, and the win rate still judges
+	/// whether the resulting deck is good. Sized against `SupportBonus` (4.0) and `DeadCardPenalty`
+	/// (5.0) so it can lift a card the isolation table rates as merely average, and cannot rescue
+	/// one it rates as genuinely bad. Raising it until the metric decides the deck is how a proxy
+	/// becomes a fitness function, which this file records as the failure that produced a
+	/// maximum-density goblin deck at 24.4%.
+	/// </summary>
+	private const double ContextValueWeight = 6.0;
+
+	/// <summary>
+	/// Output value for every card in a core's pool, normalised to `CardDelta` units.
+	///
+	/// Standardised by the population's own spread rather than by a fixed divisor, so the term keeps
+	/// the same influence whether a slot's candidates differ by ten output points or a hundred —
+	/// the same reason the metric reports against a median rather than an absolute.
+	/// </summary>
+	private Dictionary<string, double> ContextValuesFor(DeckCore core, Decklist shell)
+	{
+		var candidates = core
+			.Slots.SelectMany(s => s.Cards)
+			.Distinct(StringComparer.Ordinal)
+			.Where(_poolIndex.ContainsKey)
+			.Order(StringComparer.Ordinal)
+			.ToList();
+
+		// The shell the candidates are measured in is the slot's CURRENT list minus the card under
+		// test, so every candidate is judged against the same deck.
+		var shellSpells = shell.Spells.ToDictionary(
+			kv => kv.Key,
+			kv => kv.Value,
+			StringComparer.Ordinal
+		);
+		const int copies = 4;
+		var room = Decklist.DeckSize - shell.Lands - copies;
+		while (shellSpells.Values.Sum() > room && shellSpells.Count > 0)
+		{
+			var last = shellSpells.Keys.Order(StringComparer.Ordinal).Last();
+			if (--shellSpells[last] <= 0)
+				shellSpells.Remove(last);
+		}
+
+		var measured = OutputProbe.Compare(
+			shellSpells,
+			shell.Lands,
+			candidates,
+			_poolIndex,
+			copies: copies,
+			seeds: ContextValueSeeds,
+			aiDepth: _aiDepth
+		);
+
+		var values = measured.Select(m => m.OverAverage).ToList();
+		var sd = Math.Sqrt(values.Sum(v => v * v) / Math.Max(1, values.Count));
+		if (sd <= double.Epsilon)
+			return [];
+
+		return measured.ToDictionary(
+			m => m.Name,
+			m => ContextValueWeight * m.OverAverage / sd,
+			StringComparer.Ordinal
+		);
+	}
+
+	/// Shuffles per candidate. Three is enough to rank; it is not enough to quote a number from.
+	private const int ContextValueSeeds = 3;
 
 	private int MutantsFor(double rate)
 	{

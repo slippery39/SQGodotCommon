@@ -474,7 +474,8 @@ public static class DeckBuilder
 		DeckHistory? history = null,
 		PoolFeatures? features = null,
 		DeckCore? core = null,
-		DeckProfile profile = DeckProfile.Any
+		DeckProfile profile = DeckProfile.Any,
+		IReadOnlyDictionary<string, double>? contextValue = null
 	)
 	{
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
@@ -537,7 +538,17 @@ public static class DeckBuilder
 			core is not null
 				? roll switch
 				{
-					< 4 => Swap(deck, spells, values, rng, curveTarget, history, features, locked),
+					< 4 => Swap(
+						deck,
+						spells,
+						values,
+						rng,
+						curveTarget,
+						history,
+						features,
+						locked,
+						contextValue
+					),
 					< 6 => SwapWithinSlot(deck, core, values, rng, history, features),
 					< 8 => Rebalance(deck, core, values, rng, history, features),
 					< 9 => Recount(
@@ -561,10 +572,53 @@ public static class DeckBuilder
 						locked
 					),
 				}
-			: roll < 5 ? Swap(deck, spells, values, rng, curveTarget, history, features, locked)
-			: roll < 7 ? Recount(deck, spells, values, rng, curveTarget, history, features, locked)
-			: roll < 9 ? Package(deck, spells, values, rng, history, rng.Next(3), features, locked)
-			: AdjustLands(deck, spells, values, rng, curveTarget, history, features, locked);
+			: roll < 5
+				? Swap(
+					deck,
+					spells,
+					values,
+					rng,
+					curveTarget,
+					history,
+					features,
+					locked,
+					contextValue
+				)
+			: roll < 7
+				? Recount(
+					deck,
+					spells,
+					values,
+					rng,
+					curveTarget,
+					history,
+					features,
+					locked,
+					contextValue
+				)
+			: roll < 9
+				? Package(
+					deck,
+					spells,
+					values,
+					rng,
+					history,
+					rng.Next(3),
+					features,
+					locked,
+					contextValue
+				)
+			: AdjustLands(
+				deck,
+				spells,
+				values,
+				rng,
+				curveTarget,
+				history,
+				features,
+				locked,
+				contextValue
+			);
 
 		if (mutated is null || mutated.Validate() is not null)
 			return null;
@@ -727,7 +781,8 @@ public static class DeckBuilder
 		double curveTarget,
 		DeckHistory? history,
 		PoolFeatures? features,
-		IReadOnlySet<string>? protectedNames = null
+		IReadOnlySet<string>? protectedNames = null,
+		IReadOnlyDictionary<string, double>? contextValue = null
 	)
 	{
 		var outgoing = PickWeakest(
@@ -743,7 +798,17 @@ public static class DeckBuilder
 
 		var k = Math.Min(deck.CopiesOf(outgoing), 1 + rng.Next(Decklist.MaxCopies));
 		var trimmed = deck.WithCopies(outgoing, deck.CopiesOf(outgoing) - k);
-		return Fill(trimmed, spells, values, rng, curveTarget, 1.0, MutateTemperature, features);
+		return Fill(
+			trimmed,
+			spells,
+			values,
+			rng,
+			curveTarget,
+			1.0,
+			MutateTemperature,
+			features,
+			contextValue
+		);
 	}
 
 	/// Shift one card's copy count by 1, compensating with another card.
@@ -755,7 +820,8 @@ public static class DeckBuilder
 		double curveTarget,
 		DeckHistory? history,
 		PoolFeatures? features,
-		IReadOnlySet<string>? protectedNames = null
+		IReadOnlySet<string>? protectedNames = null,
+		IReadOnlyDictionary<string, double>? contextValue = null
 	)
 	{
 		if (deck.DistinctSpells < 2)
@@ -780,7 +846,8 @@ public static class DeckBuilder
 				curveTarget,
 				1.0,
 				MutateTemperature,
-				features
+				features,
+				contextValue
 			);
 
 		var donor = PickWeakest(
@@ -825,7 +892,8 @@ public static class DeckBuilder
 		DeckHistory? history,
 		int partners,
 		PoolFeatures? features,
-		IReadOnlySet<string>? protectedNames = null
+		IReadOnlySet<string>? protectedNames = null,
+		IReadOnlyDictionary<string, double>? contextValue = null
 	)
 	{
 		var outside = spells.Where(c => deck.CopiesOf(c.Name) == 0).ToList();
@@ -890,7 +958,8 @@ public static class DeckBuilder
 				trimmed.AverageCost(spells.ToDictionary(c => c.Name, StringComparer.Ordinal)),
 				1.0,
 				MutateTemperature,
-				features
+				features,
+				contextValue
 			)
 			: trimmed;
 	}
@@ -904,7 +973,8 @@ public static class DeckBuilder
 		double curveTarget,
 		DeckHistory? history,
 		PoolFeatures? features,
-		IReadOnlySet<string>? protectedNames = null
+		IReadOnlySet<string>? protectedNames = null,
+		IReadOnlyDictionary<string, double>? contextValue = null
 	)
 	{
 		var up = rng.Next(2) == 0;
@@ -922,7 +992,8 @@ public static class DeckBuilder
 				curveTarget,
 				1.0,
 				MutateTemperature,
-				features
+				features,
+				contextValue
 			);
 
 		var donor = PickWeakest(
@@ -951,7 +1022,8 @@ public static class DeckBuilder
 		double curveTarget,
 		double synergyWeight,
 		double temperature,
-		PoolFeatures? features
+		PoolFeatures? features,
+		IReadOnlyDictionary<string, double>? contextValue = null
 	)
 	{
 		var guard = 0;
@@ -975,7 +1047,13 @@ public static class DeckBuilder
 					+ synergyWeight * values.DeckFit(card.Name, deck)
 					- CurvePenalty * Math.Abs(card.ManaCost - curveTarget)
 					+ ExplorationBonus * values.Unmeasured(card.Name)
-					+ SupportScore(card.Name, deck, features);
+					+ SupportScore(card.Name, deck, features)
+					// **What this card is worth IN THIS DECK, where `CardDelta` is what it is worth
+					// in a random one.** Measured by `OutputProbe`, already scaled into CardDelta's
+					// percentage-point units by the caller. Added rather than replacing: the
+					// isolation rate is a real signal about a card and this is a real signal about a
+					// fit, and the project's rule is that features PROPOSE while win rate judges.
+					+ (contextValue?.GetValueOrDefault(card.Name) ?? 0.0);
 			}
 
 			var chosen = candidates[DraftPickers.SampleSoftmax(scores, temperature, rng)];
@@ -998,7 +1076,8 @@ public static class DeckBuilder
 		DeckHistory? history = null,
 		string? exclude = null,
 		PoolFeatures? features = null,
-		IReadOnlySet<string>? protectedNames = null
+		IReadOnlySet<string>? protectedNames = null,
+		IReadOnlyDictionary<string, double>? contextValue = null
 	)
 	{
 		// Cards holding a `DeckCore` slot at its floor are not candidates. Filtering here rather

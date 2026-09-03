@@ -23,21 +23,44 @@ public class OutputProbeTests
 	private const string Sage = "Reclamation Sage";
 	private const string Archer = "Poison-Tip Archer";
 
-	/// 39 spells + 17 lands; each candidate adds 4 to make exactly 60.
-	private static readonly Dictionary<string, int> Shell =
-		new(StringComparer.Ordinal)
+	private const int Copies = 4;
+
+	/// <summary>
+	/// **Land count is read from `Decklist.MinLands`, never hardcoded.** `MTG_MIN_LANDS` overrides
+	/// it, so a fixture pinned at 17 passes under the evolution runs' 12 and fails a plain
+	/// `dotnet test` at the 20 default — an environment-dependent test, which is worse than none.
+	/// This project has lost measurements to that variable more than once.
+	/// </summary>
+	private static int Lands => Math.Max(Decklist.MinLands, 17);
+
+	private static readonly string[] ShellCards =
+	[
+		"Llanowar Elves",
+		"Elvish Mystic",
+		"Wirewood Herald",
+		"Wirewood Symbiont",
+		"Dwynen's Elite",
+		"Elvish Visionary",
+		"Elvish Archdruid",
+		"Nissa, Vastwood Seer",
+		"Sylvan Ranger",
+		"Radha, Heart of Keld",
+	];
+
+	/// The shell sized so that shell + `Copies` of one candidate is exactly a legal 60.
+	private static Dictionary<string, int> Shell()
+	{
+		var need = Decklist.DeckSize - Lands - Copies;
+		var shell = new Dictionary<string, int>(StringComparer.Ordinal);
+		for (var i = 0; shell.Values.Sum() < need; i++)
 		{
-			["Llanowar Elves"] = 4,
-			["Elvish Mystic"] = 4,
-			["Wirewood Herald"] = 4,
-			["Wirewood Symbiont"] = 4,
-			["Dwynen's Elite"] = 4,
-			["Elvish Visionary"] = 4,
-			["Elvish Archdruid"] = 4,
-			["Nissa, Vastwood Seer"] = 4,
-			["Sylvan Ranger"] = 4,
-			["Radha, Heart of Keld"] = 3,
-		};
+			var name = ShellCards[i % ShellCards.Length];
+			if (shell.GetValueOrDefault(name) >= Decklist.MaxCopies)
+				continue;
+			shell[name] = shell.GetValueOrDefault(name) + 1;
+		}
+		return shell;
+	}
 
 	private static IReadOnlyList<CardOutput> Measure(int turns = OutputProbe.DefaultTurns)
 	{
@@ -47,8 +70,8 @@ public class OutputProbeTests
 			StringComparer.OrdinalIgnoreCase
 		);
 		return OutputProbe.Compare(
-			Shell,
-			lands: 17,
+			Shell(),
+			Lands,
 			[Conduit, Timberwatch, Sage, Archer],
 			pool,
 			turns: turns
@@ -69,13 +92,13 @@ public class OutputProbeTests
 			c => c,
 			StringComparer.OrdinalIgnoreCase
 		);
-		var spells = Shell.ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
-		spells[Conduit] = 4;
+		var spells = Shell();
+		spells[Conduit] = Copies;
 
 		var deck = new Decklist(
 			"elves",
 			spells.ToImmutableSortedDictionary(StringComparer.Ordinal),
-			17
+			Lands
 		);
 		var output = OutputProbe.Play(deck, pool, seed: 1, turns: 12);
 
