@@ -49,6 +49,22 @@ public sealed record CardOutput(string Name, double Raw, double OverAverage);
 public static class OutputProbe
 {
 	/// <summary>
+	/// Actions a simulated own-turn may take, shared by every pilot in a deckbuilding run.
+	///
+	/// **An environment variable rather than a console prompt**, matching `MTG_MIN_LANDS`: the mode 6
+	/// prompt sequence has been documented wrongly twice, and a piped command that silently answers
+	/// the wrong question is worse than a knob nobody finds.
+	///
+	/// **It must reach the PROBE and not just the field games.** `OutputProbe` is where a card's
+	/// context value is measured, so measuring Wirewood Conduit with a pilot that cannot cast it
+	/// re-runs the original experiment with the original blind spot.
+	/// </summary>
+	public static int SelfActionsPerTurn =>
+		int.TryParse(Environment.GetEnvironmentVariable("MTG_SELF_ACTIONS"), out var n) && n > 0
+			? n
+			: 1;
+
+	/// <summary>
 	/// Turns simulated. Long enough that a mana engine has bought something and attacked with it,
 	/// short enough to run hundreds of times — and deliberately not a constant hidden inside the
 	/// measurement, because where it sits decides whether ramp or aggression wins.
@@ -102,7 +118,8 @@ public static class OutputProbe
 				ids,
 				aiDepth,
 				rng: new Random(seed + 1),
-				cardValues: AiCardValues.Current
+				cardValues: AiCardValues.Current,
+				selfActionsPerTurn: SelfActionsPerTurn
 			),
 			new Goldfish.InertStrategy(),
 			maxTurns: turns

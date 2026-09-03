@@ -1130,13 +1130,15 @@ public sealed class MetagameEvolver
 						ids,
 						_aiDepth,
 						rng: aiRng,
-						cardValues: AiCardValues.Current
+						cardValues: AiCardValues.Current,
+						selfActionsPerTurn: OutputProbe.SelfActionsPerTurn
 					),
 					new MultiTurnBeamSearchAiStrategy(
 						ids,
 						_aiDepth,
 						rng: aiRng,
-						cardValues: AiCardValues.Current
+						cardValues: AiCardValues.Current,
+						selfActionsPerTurn: OutputProbe.SelfActionsPerTurn
 					)
 				);
 
@@ -1349,13 +1351,15 @@ public sealed class MetagameEvolver
 						ids,
 						_aiDepth,
 						rng: aiRng,
-						cardValues: AiCardValues.Current
+						cardValues: AiCardValues.Current,
+						selfActionsPerTurn: OutputProbe.SelfActionsPerTurn
 					),
 					new MultiTurnBeamSearchAiStrategy(
 						ids,
 						_aiDepth,
 						rng: aiRng,
-						cardValues: AiCardValues.Current
+						cardValues: AiCardValues.Current,
+						selfActionsPerTurn: OutputProbe.SelfActionsPerTurn
 					)
 				);
 				var (result, _) = runner.Run(
@@ -1575,13 +1579,15 @@ public sealed class MetagameEvolver
 						ids,
 						_aiDepth,
 						rng: aiRng,
-						cardValues: AiCardValues.Current
+						cardValues: AiCardValues.Current,
+						selfActionsPerTurn: OutputProbe.SelfActionsPerTurn
 					),
 					new MultiTurnBeamSearchAiStrategy(
 						ids,
 						_aiDepth,
 						rng: aiRng,
-						cardValues: AiCardValues.Current
+						cardValues: AiCardValues.Current,
+						selfActionsPerTurn: OutputProbe.SelfActionsPerTurn
 					)
 				);
 				var (result, _) = runner.Run(
