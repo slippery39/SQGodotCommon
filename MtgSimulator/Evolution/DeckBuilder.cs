@@ -571,9 +571,10 @@ public static class DeckBuilder
 						history,
 						features,
 						locked,
-						contextValue
+						contextValue,
+						exploring
 					),
-					< 6 => SwapWithinSlot(deck, core, values, rng, history, features),
+					< 6 => SwapWithinSlot(deck, core, values, rng, history, features, exploring),
 					< 8 => Rebalance(deck, core, values, rng, history, features),
 					< 9 => Recount(
 						deck,
@@ -606,7 +607,8 @@ public static class DeckBuilder
 					history,
 					features,
 					locked,
-					contextValue
+					contextValue,
+					exploring
 				)
 			: roll < 7
 				? Recount(
@@ -630,7 +632,8 @@ public static class DeckBuilder
 					rng.Next(3),
 					features,
 					locked,
-					contextValue
+					contextValue,
+					exploring
 				)
 			: AdjustLands(
 				deck,
@@ -720,7 +723,8 @@ public static class DeckBuilder
 		ConstructedValues values,
 		Random rng,
 		DeckHistory? history,
-		PoolFeatures? features
+		PoolFeatures? features,
+		bool exploring = false
 	)
 	{
 		var usable = core.Slots.Where(s => s.Cards.Count > 1 && s.CountIn(deck) > 0).ToList();
@@ -740,8 +744,38 @@ public static class DeckBuilder
 		var outgoing = held.OrderBy(n => CutScore(n, deck, values, history, features)).First();
 		var incoming = absent[rng.Next(absent.Count)];
 
-		var copies = Math.Min(deck.CopiesOf(outgoing), Decklist.MaxCopies);
-		return deck.WithCopies(outgoing, 0).WithCopies(incoming, copies);
+		// Exploring tries the replacement as a PLAYSET rather than at whatever count the outgoing
+		// card happened to sit at. Carrying the count over is what kept one-ofs circulating through
+		// a phase whose whole question is "does this card belong": a 1-for-1 swap of two singletons
+		// is ~2% of a deck, far below what a generation's games can resolve. Measured on the first
+		// 15-generation exploration run — 70 of 183 proposals still moved a single copy.
+		var copies = exploring
+			? Decklist.MaxCopies
+			: Math.Min(deck.CopiesOf(outgoing), Decklist.MaxCopies);
+		var swapped = deck.WithCopies(outgoing, 0).WithCopies(incoming, copies);
+
+		// A playset in for fewer copies out overshoots the deck size; give the difference back by
+		// trimming the weakest cards outside this slot rather than rejecting the proposal.
+		var guard = 0;
+		while (swapped.SpellCount > Decklist.DeckSize - swapped.Lands)
+		{
+			if (guard++ > Decklist.DeckSize)
+				return null;
+			var cut = PickWeakest(
+				swapped,
+				values,
+				rng,
+				history,
+				exclude: incoming,
+				features: features,
+				protectedNames: core.ProtectedIn(swapped)
+			);
+			if (cut is null)
+				return null;
+			swapped = swapped.WithCopies(cut, swapped.CopiesOf(cut) - 1);
+		}
+
+		return swapped;
 	}
 
 	/// <summary>
@@ -827,16 +861,56 @@ public static class DeckBuilder
 			? deck.CopiesOf(outgoing)
 			: Math.Min(deck.CopiesOf(outgoing), 1 + rng.Next(Decklist.MaxCopies));
 		var trimmed = deck.WithCopies(outgoing, deck.CopiesOf(outgoing) - k);
+
+		// **Cutting outright is not the same as freeing a playset, and that gap is the whole bug.**
+		// `Fill` can only add as many copies as there is room for, so cutting a 1-of frees one slot
+		// and the "playset-sized" move comes back as `1x in, 1x out` — which is what a real
+		// 15-generation exploration run produced 70 times in 183 proposals. Keep cutting the
+		// weakest until a playset fits, so the fill has somewhere to put one.
+		if (exploring)
+		{
+			var guard = 0;
+			while (Decklist.DeckSize - trimmed.Lands - trimmed.SpellCount < Decklist.MaxCopies)
+			{
+				if (guard++ > Decklist.DeckSize)
+					break;
+				var extra = PickWeakest(
+					trimmed,
+					values,
+					rng,
+					history,
+					features: features,
+					protectedNames: protectedNames
+				);
+				// Nothing left that may legally be cut — the protected floors ARE the deck. Fill
+				// what room exists rather than abandoning the proposal.
+				if (extra is null)
+					break;
+				trimmed = trimmed.WithCopies(extra, trimmed.CopiesOf(extra) - 1);
+			}
+		}
+		// **A swap that can re-add what it just cut is a Recount wearing a Swap's name.** Cutting the
+		// card to 0 puts it back below `MaxCopies`, so it re-enters `Fill`'s candidate list and the
+		// softmax can simply return it — leaving the freed playset filled by the same card and the
+		// only net change being the extra copy trimmed above. Measured 2 of 116 exploration
+		// proposals arriving as one-copy moves that way, which is precisely the step size this phase
+		// exists to eliminate. Withheld only while exploring: outside it, re-adding fewer copies of
+		// the same card is a legitimate trim.
+		var fillPool = exploring
+			? spells.Where(c => !string.Equals(c.Name, outgoing, StringComparison.Ordinal)).ToList()
+			: spells;
+
 		return Fill(
 			trimmed,
-			spells,
+			fillPool,
 			values,
 			rng,
 			curveTarget,
 			1.0,
 			MutateTemperature,
 			features,
-			contextValue
+			contextValue,
+			exploring
 		);
 	}
 
@@ -922,7 +996,8 @@ public static class DeckBuilder
 		int partners,
 		PoolFeatures? features,
 		IReadOnlySet<string>? protectedNames = null,
-		IReadOnlyDictionary<string, double>? contextValue = null
+		IReadOnlyDictionary<string, double>? contextValue = null,
+		bool exploring = false
 	)
 	{
 		var outside = spells.Where(c => deck.CopiesOf(c.Name) == 0).ToList();
@@ -951,7 +1026,11 @@ public static class DeckBuilder
 					.ToList();
 
 		var incoming = chosen.Prepend(anchor.Name).ToList();
-		var copies = incoming.ToDictionary(n => n, _ => 2 + rng.Next(2), StringComparer.Ordinal);
+		var copies = incoming.ToDictionary(
+			n => n,
+			_ => exploring ? Decklist.MaxCopies : 2 + rng.Next(2),
+			StringComparer.Ordinal
+		);
 		var needed = copies.Values.Sum();
 
 		// Free the slots first, so the package lands as one atomic change.
@@ -988,7 +1067,8 @@ public static class DeckBuilder
 				1.0,
 				MutateTemperature,
 				features,
-				contextValue
+				contextValue,
+				exploring
 			)
 			: trimmed;
 	}

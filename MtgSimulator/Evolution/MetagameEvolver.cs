@@ -989,7 +989,19 @@ public sealed class MetagameEvolver
 				core,
 				profile,
 				contextValue,
-				exploring
+				// **Exploration is a PREFERENCE, not a hard restriction, and shipping it as one
+				// silenced two slots completely.** It cuts the operator table to Swap and
+				// SwapWithinSlot, and a core pool of 2-5 cards has essentially no distinct legal
+				// swap — so Recount and Rebalance, the only operators such a slot can satisfy, were
+				// exactly the ones removed. Measured over 15 generations: Master of the Wild Hunt
+				// (2-card pool) and Sanguine Reciprocity (5-card) logged 45 proposals and 45
+				// no-proposals each, finishing NON-VIABLE frozen at their seeds — undoing the
+				// mutation-budget fix that had bought them 22 and 26 real proposals.
+				//
+				// Falling back after half the retries fixes it without re-deriving any operator's
+				// preconditions here, which would drift the moment an operator changes. A slot with
+				// room to explore never reaches the fallback; one without it still gets a search.
+				exploring && attempt < MutationRetries / 2
 			);
 			if (mutant is not null)
 				return mutant;
@@ -1700,6 +1712,15 @@ public sealed class MetagameEvolver
 		Console.WriteLine(
 			$"  Diversity floor {_minDifference:P0}, viability floor {_viabilityFloor:P0}, "
 				+ $"culling {(_cullEnabled ? $"ON (grace {_graceGenerations}, settling {_graceGenerations})" : "OFF")}"
+		);
+		// Exploration is a MUTATION-OPERATOR change and a culling override, neither of which shows
+		// up anywhere else in the log — a run that cannot state its own phase split is not
+		// comparable to another one. Same reason the culling line above exists.
+		Console.WriteLine(
+			_explorationGenerations > 0
+				? $"  Exploration: generations 1-{_explorationGenerations} "
+					+ "(playset-sized moves only, no Recount/AdjustLands, culling suppressed)"
+				: "  Exploration: OFF (every generation optimises)"
 		);
 		Console.WriteLine(
 			$"  Pre-simulation {(_preSimDecks > 0 ? $"{_preSimDecks} decks x {_preSimOpponents} opponents" : "OFF")}; "

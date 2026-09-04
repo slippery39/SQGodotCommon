@@ -236,6 +236,13 @@ else if (mode == 6)
 	var evolveGenInput = Console.ReadLine()?.Trim() ?? "";
 	var evolveGens = int.TryParse(evolveGenInput, out var eg) && eg > 0 ? eg : 30;
 
+	// Exploration generations: playset-sized moves only (Recount and AdjustLands are off) and no
+	// culling. A +-1 trim is below what this many games can resolve, so early generations spent on
+	// them are noise; the phase exists to find WHICH cards belong before tuning HOW MANY.
+	Console.Write($"How many of those are exploration generations? (default 0 = off): ");
+	var exploreInput = Console.ReadLine()?.Trim() ?? "";
+	var explorationGens = int.TryParse(exploreInput, out var xg) && xg >= 0 ? xg : 0;
+
 	Console.Write("How many mutants per deck per generation? (default 3): ");
 	var mutantInput = Console.ReadLine()?.Trim() ?? "";
 	var mutants = int.TryParse(mutantInput, out var mu) && mu > 0 ? mu : 3;
@@ -350,7 +357,8 @@ else if (mode == 6)
 		gauntletGames: gauntletGames,
 		enginesPath: string.IsNullOrWhiteSpace(enginesPath) ? null : enginesPath,
 		engineSlots: engineSlots,
-		excludedEngines: excludedEngines
+		excludedEngines: excludedEngines,
+		explorationGenerations: explorationGens
 	).Run();
 }
 else if (mode == 7)

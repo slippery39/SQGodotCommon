@@ -17,10 +17,23 @@ namespace MtgSimulator.Tests;
 [TestFixture]
 public class ExplorationPhaseTests
 {
+	/// <summary>
+	/// **The pool must hold cards the deck does not play, or a playset move is unexpressible.**
+	///
+	/// This fixture was 11 cards for a deck that plays 11 at 4-of, so every card was saturated:
+	/// `Fill`'s only candidates were the card just cut and the single 3-of, and the biggest move it
+	/// could construct was `1x in / 1x out`. Both step-size tests passed against that — measuring
+	/// the fixture's ceiling, not the phase — while a real run produced 70 one-copy proposals.
+	///
+	/// Same trap as `TheSameMutationsStillExploreInsideThePool`, which previously used a six-card
+	/// pool where every swap was illegal and "the deck did not move" said nothing about the mutator.
+	/// </summary>
+	private const int InDeck = 11;
+
 	private static IReadOnlyList<Card> Spells() =>
 		[
 			.. Enumerable
-				.Range(1, 11)
+				.Range(1, 24)
 				.Select(i =>
 					CardFactory
 						.Creature($"Card {i:D2}", manaCost: 1 + i % 4, power: 2, toughness: 2)
@@ -34,7 +47,7 @@ public class ExplorationPhaseTests
 		var need = Decklist.DeckSize - lands;
 		for (var i = 0; copies.Values.Sum() < need; i++)
 		{
-			var name = spells[i % spells.Count].Name;
+			var name = spells[i % InDeck].Name;
 			if (copies.GetValueOrDefault(name) >= Decklist.MaxCopies)
 				continue;
 			copies[name] = copies.GetValueOrDefault(name) + 1;
@@ -148,6 +161,39 @@ public class ExplorationPhaseTests
 			Steps(exploring: true),
 			Has.Count.GreaterThan(40),
 			"exploration proposes almost nothing legal — it would freeze every slot"
+		);
+	}
+
+	/// <summary>
+	/// **The two tests above BOTH passed while the sizing half of the phase was not wired up.**
+	///
+	/// They measure operator SELECTION — exploration turns off `Recount` (±1 by construction) and
+	/// `AdjustLands`, which raises the mean step on its own — and never look at how big a move the
+	/// surviving operators make. `Swap`, `Package` and `Fill` each carry an `exploring` parameter and
+	/// none of them was ever passed one, so a 15-generation exploration run still produced **70 of
+	/// 183 proposals moving a single copy**, including straight `1x in / 1x out` swaps.
+	///
+	/// Asserted as an absolute floor rather than a comparison, because the comparison is exactly what
+	/// failed to notice. A one-copy trade is ~2% of a deck against a ~6pp standard error; the phase
+	/// exists so that no proposal in it is that small.
+	/// </summary>
+	[Test]
+	public void NoExplorationProposalMovesASingleCopy()
+	{
+		var steps = Steps(exploring: true);
+		Assert.That(steps, Is.Not.Empty);
+
+		var tiny = steps.Count(s => s <= 2);
+		TestContext.Out.WriteLine(
+			$"  exploring: {steps.Count} proposals, min step {steps.Min()}, "
+				+ $"mean {steps.Average():F1}, {tiny} of size <= 2"
+		);
+
+		Assert.That(
+			tiny,
+			Is.Zero,
+			$"{tiny} of {steps.Count} exploration proposals moved one copy for one copy — the "
+				+ "sizing half of the phase is not wired to the operators"
 		);
 	}
 }
