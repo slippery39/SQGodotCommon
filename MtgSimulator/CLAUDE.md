@@ -2759,6 +2759,28 @@ density is the thing every synergy attempt in this file has died on:
 disproved `synergyWeight` result was measured on the top row; nothing in this file has ever
 evaluated a synergy term on the bottom one.
 
+**The vacuity control passed, and it is the half worth trusting.** `Spearman ρ = 0.041` against the
+format-wide isolation ranking over the same 16 cards — essentially orthogonal, where this file's
+other readings are 0.874 (stable), 0.597 (healthy divergence) and 0.280 (ambiguous).
+
+**Do not read ρ ≈ 0 as the evidence, because a broken measurement produces it too** — that is the
+uniform-failure shape recorded three times above. The evidence is that the movement sorts BY
+MECHANIC:
+
+| rises | move | | falls | move |
+|---|---|---|---|---|
+| Timberwatch Elder (pump per Elf) | **+12** | | Sylvan Ranger (fetch a land) | **−14** |
+| Dwynen, Gilt-Leaf Daen (Elf lord) | **+9** | | Elvish Visionary (draw a card) | **−10** |
+| Wirewood Symbiont | **+7** | | Fauna Shaman (tutor) | −6 |
+| Elvish Archdruid (mana per Elf) | +3 | | Poison-Tip Archer (generic body) | −4 |
+
+Every riser is a tribal payoff; every faller is generic card advantage or mana smoothing. Noise does
+not sort by mechanic. Wirewood Herald is rank 1 in BOTH tables at +10.85pp over ~1350 games (~8 SE),
+so there is real signal rather than scatter.
+
+**Nothing was told what an Elf is.** The tribal-payoff-versus-good-stuff axis fell out of win rate in
+real games — the same property the demand model gets structurally, arrived at by measurement.
+
 **Triplets are still out.** C(16,3) is 560 against 120 pairs, and the density gain that makes pairs
 viable is exactly what disappears.
 
