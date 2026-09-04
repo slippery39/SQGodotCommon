@@ -16,6 +16,7 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | `Evolution/PoolFeatures.cs` | What each card ASKS of your deck and which cards ANSWER, read off the cards by reflection — no mechanic-to-meaning table. `Satisfaction`, `DeadCards`, `SpellsCastDemand` |
 | `Evolution/Goldfish.cs` | Solitaire against an inert opponent. Reports turns-to-kill (**descriptive only** — measured as the wrong fitness) and, given an `EngineProbe`, the assembly reading |
 | `Evolution/EngineProbe.cs` | **Did the payoff resolve with its support deployed?** Payoff/enabler sets out of `PoolFeatures`, read off one game's event log in a single pass |
+| `Evolution/PreSimulation.cs` | Uniform-random constructed decks played before evolution, to break the "needs data to get in a deck, needs a deck to get data" loop. `fixedLands`/`copiesPerCard` also make it the **pool-conditioned card value** sampler — see §"Pool-conditioned card value" |
 | `Evolution/EngineDiscovery.cs` | Console mode 7 — probe every concept in a pool, rank by whether the engine assembles, save `sim_results/engines_<set>_<stamp>.json` |
 | `Evolution/ConstructedGameSetup.cs` | Two decklists → pre-begin `GameState`; the constructed sibling of `DraftGameSetup` |
 | `Evolution/MetagameEvolver.cs` | Console mode 6 — the evolution loop, paired evaluation, culling, and the report. `enginesPath` seeds discovered archetypes as pool-locked, cull-exempt slots; `excludedEngines` drops archetypes a previous run measured as dead |
@@ -2678,6 +2679,97 @@ hiding it.
 
 **Not yet wired into the fill.** The metric passes its gate; whether using it produces better decks
 is a gauntlet question and is unmeasured.
+
+##### `Compare`'s shell resize could HANG, and only at the land floor the real runs use
+
+`Compare` removes the candidate from the shell and regrows the rest to leave exactly room for it, so
+every candidate is measured in a deck of one size. The grow loop cycled the remaining cards adding a
+copy at a time **with no progress check** — so once every one of them sat at `MaxCopies` with the sum
+still under `room`, it span forever.
+
+It is reachable from a real run: `MetagameEvolver` calls `Compare` with an engine slot's own shell,
+and a shell with few distinct spells caps out below `room`.
+
+**The land bound decides whether it fires, which is why a plain `dotnet test` never saw it:**
+
+| | spells needed | cards available | cap |
+|---|---|---|---|
+| `MTG_MIN_LANDS` unset (20 lands) | 36 | 9 | 36 — terminates exactly |
+| `MTG_MIN_LANDS=12` (17 lands) | **39** | 9 | **36 — hangs** |
+
+The symptom was not a failing test. Under 12 the suite reported **`Passed! 282, Failed 0,
+Skipped 0`** and looked healthier than the default's 348: `OutputProbeTests` wedged the host
+partway, vstest reported only what had completed, and the other **66 tests were silently never
+executed**. Test *discovery* was identical (421 both ways), so nothing anywhere said tests were
+missing.
+
+Two rules out of it:
+
+- **Read a suite's TOTAL, not the word `Passed`.** `Skipped: 0` does not mean nothing was lost. This
+  is the vacuity problem this file records for LIFT and for context values, now in the test harness
+  itself.
+- **A capacity guard THROWS rather than clamping.** A short shell measures a different deck for one
+  candidate than for the others, which destroys the comparability the resize exists to create — and
+  the caller already treats a throw as "fall back to isolation value" with a loud warning.
+
+`OutputProbeTests.ShellCards` is 12 names rather than 10 for the same reason: the fixture has to be
+legal at the FLOOR, not merely at the default. Both now pass at either bound.
+
+#### Pool-conditioned card value: the fourth substrate, and the first that measures WIN RATE
+
+**Same known answer, no proxy.** `PreSimulation.Run(pool, …, fixedLands:, copiesPerCard:)` samples
+random decks from ONE archetype's card pool at playset granularity and counts games-in-hand exactly
+as the format-wide bootstrap and `DraftTrainer` do. No evaluator, no fixture, no solitaire — the
+quantity measured is the one the builder actually selects on.
+
+Two parameters carry the whole idea, and both are load-bearing:
+
+- **`copiesPerCard: 4`.** At playset granularity a sampled deck plays ~11 of a 16-card pool and
+  **excludes the rest**, which is the presence/absence contrast a per-card win rate needs. Rolling
+  1–4 copies out of a small pool puts nearly every card in every deck, so only the COUNT varies and
+  "does this card belong here" has no control group.
+- **`fixedLands`.** Land count is a confound, not a variable: a 26-land and a 17-land sample of one
+  archetype are different decks.
+
+**Measured, elf pool (16 cards), 140 decks, 1668 games, 17.6m, 0 excluded, base rate 50.0%:**
+
+| | isolation (random FORMAT decks) | pool-conditioned |
+|---|---|---|
+| Sylvan Ranger | **66.8% — best of six** | **−2.38pp — worst of sixteen** |
+| Radha, Heart of Keld | 63.1% | +4.26pp |
+| Nissa, Vastwood Seer | 59.4% | −1.28pp |
+| Timberwatch Elder | **47.8% — worst** | **+6.64pp — 4th** |
+
+`PoolSampledValueTests` holds it to the same two orderings `ContextValueTests` demands. Both pass —
+but read the resolution before trusting either: at ~1600 games-in-hand one SE on a card rate is
+~1.25pp, so ~1.8pp on a difference. **Timberwatch > Archer is 6.93pp (~3.9 SE) and decisive;
+Conduit > Sage is 1.53pp (~0.86 SE) and is NOT resolved** — it passed on a coin flip that landed
+right. Still strictly better than the alternatives, which returned *identical* numbers for these
+cards, but do not quote the Conduit ordering as established.
+
+**The pool restriction is what makes PAIRS measurable, and this is the reusable finding.** Pair
+density is the thing every synergy attempt in this file has died on:
+
+| | pairs | median games/pair | clear the 50-game gate |
+|---|---|---|---|
+| format-wide presim (3587 games) | 38 792 | **6** | **0** |
+| 16-card pool (1668 games) | 120 | **754** | **120 of 120** |
+
+~125x the density at full coverage, from restricting the pool rather than from more games. The
+disproved `synergyWeight` result was measured on the top row; nothing in this file has ever
+evaluated a synergy term on the bottom one.
+
+**Triplets are still out.** C(16,3) is 560 against 120 pairs, and the density gain that makes pairs
+viable is exactly what disappears.
+
+**Cost: ~1.6 games/sec against the ~17/sec constructed average.** Elf go-wide boards are the
+documented worst case for the beam search, so budget a pool-conditioned sample of an aggro archetype
+at ~10x the per-game cost of presim.
+
+**Not wired into the builder.** The gate passes; whether selecting on it produces better decks is a
+gauntlet question and is unmeasured. The aggregation trap is the known risk — "top cards by win rate
+plus synergy" is the shape that cost win rate at every weight tested, and the fix this file already
+names is to confidence-gate the pair sum rather than to sum all of them.
 
 #### Context value: built, gated, and the gate found the real blocker
 

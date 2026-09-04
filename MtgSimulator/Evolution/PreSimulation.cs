@@ -34,9 +34,29 @@ public static class PreSimulation
 	/// Deliberately knows nothing: this is the control that measures the pool rather than
 	/// measuring the sampler.
 	/// </summary>
-	public static Decklist RandomDeck(string name, IReadOnlyList<Card> spells, Random rng)
+	/// <param name="fixedLands">
+	/// Pin the mana base instead of rolling it. Land count is a confound when the question is which
+	/// CARDS are carrying a deck — a 26-land sample and a 17-land sample of the same archetype are
+	/// different decks — so a pool-conditioned measurement holds it still. Null keeps the roll,
+	/// which is correct for the format-wide bootstrap where the pool is what is being measured.
+	/// </param>
+	/// <param name="copiesPerCard">
+	/// Deal in fixed blocks rather than 1-4 copies. **At playset granularity a sampled deck plays
+	/// roughly half of a small pool and EXCLUDES the other half**, which is the presence/absence
+	/// contrast a per-card win rate needs. Rolling 1-4 copies out of a 16-card pool puts nearly
+	/// every card in every deck, so the only thing that varies is the count and "does this card
+	/// belong here" has no control group to be answered against.
+	/// </param>
+	public static Decklist RandomDeck(
+		string name,
+		IReadOnlyList<Card> spells,
+		Random rng,
+		int? fixedLands = null,
+		int? copiesPerCard = null
+	)
 	{
-		var lands = Decklist.MinLands + rng.Next(Decklist.MaxLands - Decklist.MinLands + 1);
+		var lands =
+			fixedLands ?? Decklist.MinLands + rng.Next(Decklist.MaxLands - Decklist.MinLands + 1);
 		var deck = Decklist.Empty(name) with { Lands = lands };
 
 		var guard = 0;
@@ -51,7 +71,8 @@ public static class PreSimulation
 				continue;
 
 			var need = Decklist.DeckSize - lands - deck.SpellCount;
-			var add = Math.Min(Math.Min(1 + rng.Next(Decklist.MaxCopies), room), need);
+			var block = copiesPerCard ?? 1 + rng.Next(Decklist.MaxCopies);
+			var add = Math.Min(Math.Min(block, room), need);
 			deck = deck.WithCopies(card.Name, deck.CopiesOf(card.Name) + add);
 		}
 
@@ -72,7 +93,10 @@ public static class PreSimulation
 		int deckCount,
 		int opponentsPerDeck,
 		int seed,
-		int aiDepth
+		int aiDepth,
+		int? fixedLands = null,
+		int? copiesPerCard = null,
+		string label = "Pre-simulation"
 	)
 	{
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
@@ -81,7 +105,7 @@ public static class PreSimulation
 		var rng = new Random(seed);
 		var decks = Enumerable
 			.Range(0, deckCount)
-			.Select(i => RandomDeck($"R{i}", spells, rng))
+			.Select(i => RandomDeck($"R{i}", spells, rng, fixedLands, copiesPerCard))
 			.Where(d => d.IsValid)
 			.ToList();
 
@@ -101,7 +125,7 @@ public static class PreSimulation
 		}
 
 		Console.WriteLine(
-			$"  Pre-simulation: {decks.Count} random decks, {schedule.Count} games "
+			$"  {label}: {decks.Count} random decks, {schedule.Count} games "
 				+ $"(uniform sampling — measures the pool, not a picker)..."
 		);
 
