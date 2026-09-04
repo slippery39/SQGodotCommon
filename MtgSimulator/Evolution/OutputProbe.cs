@@ -189,6 +189,26 @@ public static class OutputProbe
 					spells.Remove(last);
 			}
 
+			// **The grow loop cannot make progress once every remaining card sits at `MaxCopies`, and
+			// without this it spins forever rather than failing.** Reachable from a real run:
+			// `MetagameEvolver` calls `Compare` with an engine slot's own shell, and a shell with few
+			// distinct spells caps out below `room`. Measured — at `MTG_MIN_LANDS=12` the elf fixture
+			// asks for 39 spells from 9 other cards that cap at 36, and the process hung with every
+			// core burning; under the 20 default the same shell needs 36 from 9 and terminates, which
+			// is why this survived a plain `dotnet test`.
+			//
+			// Thrown rather than clamped, because a short shell measures a different deck for this
+			// candidate than for the others and the whole point of the resize is that they are
+			// comparable. The caller already treats a throw as "fall back to isolation value" and
+			// warns loudly, which is the correct outcome; silently measuring a 56-card list is the
+			// uniform-failure shape this file's other comments are about.
+			var capacity = order.Count * Decklist.MaxCopies;
+			if (capacity < room)
+				throw new ArgumentException(
+					$"shell cannot be sized to measure {name}: {order.Count} other cards cap at "
+						+ $"{capacity} spells but {room} are needed at {lands} lands"
+				);
+
 			for (var i = 0; spells.Values.Sum() < room; i = (i + 1) % Math.Max(1, order.Count))
 			{
 				if (order.Count == 0)

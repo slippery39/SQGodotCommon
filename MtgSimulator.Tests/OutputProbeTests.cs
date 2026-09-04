@@ -33,6 +33,19 @@ public class OutputProbeTests
 	/// </summary>
 	private static int Lands => Math.Max(Decklist.MinLands, 17);
 
+	/// <summary>
+	/// **Wide enough that the shell is still resizable once a candidate is removed from it.**
+	///
+	/// `Compare` takes the candidate out and regrows the rest to leave exactly room for it, so the
+	/// remaining cards must be able to hold `DeckSize - lands - copies` between them at 4 copies
+	/// each. Ten names was not: at `MTG_MIN_LANDS=12` the shell is 17 lands, so a candidate already
+	/// in it leaves 9 cards asked to supply 39 spells against a 36 cap — and the grow loop had no
+	/// progress check, so the process HUNG rather than failing. Twelve names caps at 44 and clears
+	/// the widest legal shell (`MinLands` 12 → 44 spells needed).
+	///
+	/// The floor is the binding case, not the default: the same shell needs only 36 from 9 cards at
+	/// the 20 default and terminated fine, which is exactly why a plain `dotnet test` never saw it.
+	/// </summary>
 	private static readonly string[] ShellCards =
 	[
 		"Llanowar Elves",
@@ -45,6 +58,8 @@ public class OutputProbeTests
 		"Nissa, Vastwood Seer",
 		"Sylvan Ranger",
 		"Radha, Heart of Keld",
+		"Dwynen, Gilt-Leaf Daen",
+		"Fauna Shaman",
 	];
 
 	/// The shell sized so that shell + `Copies` of one candidate is exactly a legal 60.

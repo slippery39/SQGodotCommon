@@ -993,3 +993,38 @@ An A/B runs presim TWICE for identical inputs — both arms use the same set, se
 opponent count, so both compute a bit-identical result. Caching presim output keyed on those four
 values would halve the cost of every future comparison. Not built; noted because the A/B shape is
 now the standard way anything in this mode gets measured.
+
+## FIXED — `dotnet test` under `MTG_MIN_LANDS=12` silently ran 66 fewer tests
+
+> **Resolved in the same session it was found; kept as the diagnosis, not as a live warning.** The
+> cause was an unguarded grow loop in `OutputProbe.Compare` — see `MtgSimulator/CLAUDE.md`. The
+> suite now reports **348/348 with `MTG_MIN_LANDS` set to 12 and unset alike**. What still holds is
+> the reading rule at the bottom: check the TOTAL, not just the word `Passed`.
+
+Measured, same binary, MtgSimulator.Tests:
+
+| environment | discovered | executed | result |
+|---|---|---|---|
+| `MTG_MIN_LANDS` unset (default 20) | 421 | **348** | all pass, 42s |
+| `MTG_MIN_LANDS=12` | 421 | **282** | all pass, 23s — **and testhost never exits** |
+
+Discovery is identical, `Skipped` is 0 in both, and nothing fails. The 66 missing tests are simply
+never executed: `OutputProbeTests` wedges the host partway through, vstest reports only what had
+completed, and everything queued behind it is silently absent. Isolated by running the four
+game-playing fixtures separately under 12 — `ConduitBehaviourTests` (5 passed), `ContextValueTests`
+(1 passed) and `TwinComboPilotTests` (6 passed) all finish in seconds; `OutputProbeTests` never
+reports.
+
+Why the variable changes anything: `OutputProbeTests.Lands` is `Math.Max(Decklist.MinLands, 17)`,
+so the fixture is a 20-land deck at the default and a **17-land** deck under 12. The extra three
+spells are what tips it. The turn cap is enforced (`GameRunner` checks `TurnNumber > _maxTurns`
+every iteration), so this is not unbounded turns — the standing suspect is choice resolution, which
+this file already records as the one cost `TotalActions` does not count.
+
+**Read this as the reason a green suite is not proof.** A run under 12 reporting `Passed! 282` looks
+healthier than the default's 348 and is strictly less evidence. Same class as the two vacuity
+failures in `MtgSimulator/CLAUDE.md` — a uniformly-failing measurement produces a plausible number.
+
+Operational rule, and it outlives the bug: **read the TOTAL, not just the word `Passed`.** 348 is
+the number to expect on MtgSimulator.Tests; a run reporting fewer has lost tests somewhere, and
+`Skipped: 0` will not tell you.
