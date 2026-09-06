@@ -18,6 +18,7 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | `Evolution/EngineProbe.cs` | **Did the payoff resolve with its support deployed?** Payoff/enabler sets out of `PoolFeatures`, read off one game's event log in a single pass |
 | `Evolution/PreSimulation.cs` | Uniform-random constructed decks played before evolution, to break the "needs data to get in a deck, needs a deck to get data" loop. `fixedLands`/`copiesPerCard` also make it the **pool-conditioned card value** sampler — see §"Pool-conditioned card value" |
 | `Evolution/EngineDiscovery.cs` | Console mode 7 — probe every concept in a pool, rank by whether the engine assembles, save `sim_results/engines_<set>_<stamp>.json` |
+| `Evolution/CostInversion.cs` | **Mana arbitrage**: what a card costs against the best thing it puts onto the battlefield without paying. Independent of the demand model — see §"Cost inversion" |
 | `Evolution/ConstructedGameSetup.cs` | Two decklists → pre-begin `GameState`; the constructed sibling of `DraftGameSetup` |
 | `Evolution/MetagameEvolver.cs` | Console mode 6 — the evolution loop, paired evaluation, culling, and the report. `enginesPath` seeds discovered archetypes as pool-locked, cull-exempt slots; `excludedEngines` drops archetypes a previous run measured as dead |
 | `Evolution/MutationLog.cs` | Every proposal the search considered — cards added/removed, parent vs candidate rate, generation, outcome. Summary to the console, whole log to `sim_results/mutations_*.csv` |
@@ -2274,6 +2275,71 @@ over chosen concepts is the fix if it ever costs a slot that matters.
 were nerfed after every number in `HANDOFF-ConstructedEvolution.md` was measured. Phase one does
 not depend on this — a stale value table shifts which cards `SeedConcept` picks, not whether an
 engine assembles.
+
+## Cost inversion — mana arbitrage as a build-around signal
+
+**The demand model cannot express magnitude, and this is the way around that.** `Raise the Sunken`
+and `Gravedigger` ask the identical question — `IsCreatureInOwnGraveyardSpecification` — so
+`DeckCore` builds them the same core and `EngineDiscovery` dedupes them into ONE archetype. Measured
+on ALL: **24 cards share that identity key**, and the representative is chosen alphabetically, so
+the archetype is reported as *Angel of Second Rites* and `Reanimate` never appears by name.
+
+One costs 1 and puts ANY creature onto the battlefield. One costs 4 and returns a creature to your
+hand, where you still pay for it. Nothing in the demand model separates them, and **no threshold
+can**: the target slot has 470 candidates where only 46 cost 6 or more.
+
+`CostInversion.Rank(pool, features)` reads two numbers already on the cards: what you pay, and the
+cost of the most expensive pool card the cheat's own targeting spec accepts.
+
+**The discriminator is the ACTION TYPE, which is what keeps this structural rather than a
+mechanic-to-meaning table.** `PutIntoBattlefieldAction` is the single path a card takes to the
+battlefield without being cast; `ReturnToHandAction` is not a cheat. No card name, subtype or zone
+name is read anywhere.
+
+Measured on ALL — run `DumpCostInversionForARealPool` rather than trusting this table, which is
+here for its SHAPE:
+
+```
+card                       paid cheat  gap  cand  big  via
+Raise the Sunken              1     8    7   541   47  spell
+Reanimate                     1     8    7   541   47  spell
+Blood for Bones               3     8    5   541   47  spell
+Goblin Lackey                 1     5    4    25    0  triggered
+Obsessive Stitcher            7     8    1   541   47  activated
+Sun Titan                     6     7    1   400   12  triggered
+```
+
+Three things worth carrying:
+
+- **18 cards on ALL, 15 on DES.** A tight list against the 24-member undifferentiated blob, and
+  every return-to-hand card is correctly absent.
+- **It generalises past the graveyard on its own.** Goblin Lackey and Warren Instigator surface as
+  triggered cheats putting a Goblin from hand into play — an archetype the demand model files as
+  tribal. Nothing about graveyards is written into this.
+- **An activated cheat pays for the card AND the activation**, so Obsessive Stitcher is 3+4=7 and
+  ranks last rather than tying with a 1-mana sorcery. Without that every recursive creature reads
+  as Reanimate.
+
+**The MAXIMUM is the honest statistic**, not the mean: you choose what goes in your deck, so a cheat
+is worth the biggest thing it can reach. The other 500 candidates are choices you decline, not a
+dilution. `Big` carries the redundancy so a lone outlier is visible.
+
+Deliberately not read: cost reduction, alternative costs and "cast without paying its mana cost" are
+the same idea through a different mechanism. X cards are skipped — `ManaCost` is 0 for them because
+X lives on the cast action, the same rule `ProbeCardProfiles` already applies.
+
+**Nothing consumes this yet.** It is a ranking and two pinned tests; seeding is untouched until the
+list has been read against a run.
+
+### A synthetic pool needs cards that do NOT answer the demand
+
+`PoolFeatures` drops any demand answered by more than `UninformativeShare` (**0.99**) of the pool.
+In a fixture of three creatures, "a creature card in your graveyard" is answered by 3 of 3, so the
+demand vanishes and any feature built on it finds nothing.
+
+**The failure is silent** — `Demands.Count` is 0, `Failures` is empty, and nothing names the dropped
+card. It reads exactly like the feature under test being broken, and cost a debugging session here.
+`CostInversionTests.Ballast()` exists solely to keep test pools above that line.
 
 ## Constructed Metagame Evolution
 
