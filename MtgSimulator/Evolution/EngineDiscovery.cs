@@ -159,6 +159,11 @@ public static class EngineDiscovery
 		foreach (var failure in features.Failures)
 			writer.WriteLine($"  WARNING  {failure}");
 
+		// Mana arbitrage per card, used only to choose which member of an archetype names it.
+		var gap = CostInversion
+			.Rank(spells, features)
+			.ToDictionary(r => r.Card, r => r.Gap, StringComparer.Ordinal);
+
 		// **Candidates are payoff CARDS now, not demand indices.** Every card that asks something
 		// answerable gets the core its own demands describe; the majority of any pool asks nothing
 		// and drops out here.
@@ -185,7 +190,12 @@ public static class EngineDiscovery
 					),
 				StringComparer.Ordinal
 			)
-			.Select(g => g.OrderBy(c => c.Name, StringComparer.Ordinal).First())
+			// **The archetype is named for the card that CHEATS, not the one that sorts first.**
+			// A reanimation group holds 24 cards on ALL and was represented alphabetically, so the
+			// report called it "Angel of Second Rites" and `Reanimate` never appeared by name.
+			// Decks are named for the card that puts the big thing into play — Reanimator, Show and
+			// Tell, Through the Breach — because that card is what the deck is built to do.
+			.Select(g => Representative(g, gap))
 			.OrderBy(c => c.Name, StringComparer.Ordinal)
 			.ToList();
 
@@ -299,6 +309,31 @@ public static class EngineDiscovery
 	/// only because that one lives in the executable. If a third caller appears, promote this to a
 	/// shared helper rather than writing a fourth.
 	/// </summary>
+	/// <summary>
+	/// **Which card of an archetype gives it its name: the one that cheats hardest.**
+	///
+	/// Cards asking the same demands produce the byte-identical core and dedupe into one entry, so
+	/// one of them has to name it. Alphabetical order made that "Angel of Second Rites" for a
+	/// 24-card reanimation group on ALL, and `Reanimate` — the card the archetype IS — never
+	/// appeared in a report at all. Real decks are named for the card that puts the big thing into
+	/// play: Reanimator, Show and Tell, Through the Breach.
+	///
+	/// **Alphabetical order remains the tiebreak, and does all the work for non-combo archetypes.**
+	/// Every card in a tribal group has gap 0, so a lord group is ordered exactly as it was. This
+	/// only moves groups that contain a mana cheat.
+	///
+	/// `internal` so <c>EngineNamingTests</c> can assert the choice without running a discovery
+	/// pass, which plays games. Same reasoning as <c>DeckCore.For</c> being reachable from tests.
+	/// </summary>
+	internal static DeckCore Representative(
+		IEnumerable<DeckCore> group,
+		IReadOnlyDictionary<string, int> gap
+	) =>
+		group
+			.OrderByDescending(c => gap.GetValueOrDefault(c.Name))
+			.ThenBy(c => c.Name, StringComparer.Ordinal)
+			.First();
+
 	private static int StableHash(string s)
 	{
 		uint hash = 2166136261u;

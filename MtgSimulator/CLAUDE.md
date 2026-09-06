@@ -2328,6 +2328,25 @@ Deliberately not read: cost reduction, alternative costs and "cast without payin
 the same idea through a different mechanism. X cards are skipped — `ManaCost` is 0 for them because
 X lives on the cast action, the same rule `ProbeCardProfiles` already applies.
 
+### The archetype is NAMED for the card that cheats
+
+Cards asking the same demands produce the byte-identical core and dedupe into one entry, so one of
+them has to name it. That was alphabetical, which made a **24-card** reanimation group on ALL report
+as *Angel of Second Rites* while `Reanimate` never appeared in a report at all.
+
+Real decks are named for the card that puts the big thing into play — Reanimator, Show and Tell,
+Through the Breach. `EngineDiscovery.Representative` orders a group by cost-inversion gap, with
+alphabetical order as the tiebreak. Measured on ALL: the graveyard archetype is now **Raise the
+Sunken**, and the goblins-from-hand archetype is **Goblin Lackey** (gap 4).
+
+**Alphabetical order still does all the work for archetypes with no cheat in them**, since every
+card in a tribal group has gap 0 — Arms Dealer, Dwynen's Elite and Drogskol Captain are unmoved.
+`WithNoCheatInTheGroup_TheOrderIsUnchanged` is that guard, and it matters: without it this change
+could silently rename every archetype in the report.
+
+A true tie resolves alphabetically so the report stays reproducible — `Reanimate` and `Raise the
+Sunken` both read gap 7 on ALL, and the run must not pick a different one each time.
+
 ### The gap ranks a cheat's TARGET slot, and only that slot
 
 `PoolFeatures.CheatDemandsOf(card)` is the subset of `DemandsOf` a card answers by putting a card
