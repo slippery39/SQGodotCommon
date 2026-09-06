@@ -36,6 +36,10 @@ is now tooling; use it before proposing a scoring change.
 | Console **mode 7** | Discover synergy engines in a pool — solitaire only, no battles. "Does this archetype assemble?", asked before "is it competitive?" |
 | **Space** in game | Pause the AI — do this before F6 so you can click through candidates |
 
+**`RunningSimulations.md` at the solution root is how to actually run these** — build commands,
+verified piped field lists for every mode, where the output files land, and what to read before
+trusting a run. Start there rather than reconstructing a command from prose.
+
 Full detail in `MtgSimulator/CLAUDE.md`. Three rules worth carrying: a scenario is **serialized
 state**, not a `GameStateSnapshot` report; `StateEvaluator.Explain` is the implementation with
 `Evaluate` as the wrapper — never write a second copy of the sum for display; and **goldfish speed
@@ -61,6 +65,11 @@ A CLAUDE.md file exists at the root and in each active project (`ImmutableGameOb
 `DesignNotes.md` at the solution root is the companion watchlist: decisions that work for the
 current scope but will need revisiting. Deliberate deferrals go there with their costed options,
 not in CLAUDE.md.
+
+`RunningSimulations.md` at the solution root is the operator's runbook: how to run each console
+mode, the piped field lists, the output files and how to read a run. **A console prompt added or
+reordered invalidates it** — update it in the same step, and re-count the prompts against the real
+output rather than editing the list from memory.
 
 ## Card Sets
 
