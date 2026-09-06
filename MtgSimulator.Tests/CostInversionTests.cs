@@ -142,6 +142,71 @@ public class CostInversionTests
 	}
 
 	/// <summary>
+	/// **The point of the signal: a cheat's target slot is ranked by COST, and only that slot.**
+	///
+	/// `Raise` asks "a creature card in your graveyard", which every creature in the pool answers.
+	/// `SupplyOf` cannot separate them — a plain filter match is a flat 1 — so the order used to
+	/// fall through to card value and the deck was built around whichever creature rated best.
+	///
+	/// `Digger` is the control, and it is the whole test. It asks the IDENTICAL demand and returns
+	/// to hand, so its slot must NOT be cost-ranked. If both slots reorder, the change is keying on
+	/// the demand rather than on the payoff and `Gravedigger` decks would start playing eight-drops
+	/// they cannot cast.
+	/// </summary>
+	[Test]
+	public void OnlyACheatsTargetSlotIsRankedByCost()
+	{
+		var raise = CardFactory
+			.Spell("Raise", manaCost: 1)
+			.WithReanimate()
+			.WithTarget(TargetBuilder.Single().CreatureInYourGraveyard())
+			.Build();
+
+		var digger = CardFactory
+			.Spell("Digger", manaCost: 4)
+			.WithReturnCreatureFromGraveyard()
+			.Build();
+
+		// **Named so the two orderings DISAGREE, and the first version of this test was vacuous
+		// for want of that.** With cost ranking off the tiebreak is alphabetical, so naming the
+		// expensive card "Colossus" and the cheap one "Ogre" let the expensive card win BOTH ways
+		// and the control asserted nothing. Here the cheap card sorts first and the expensive card
+		// last, so alphabetical order and cost order point at different cards.
+		List<Card> pool = [raise, digger, Fatty("Zeppelin", 8), Fatty("Ancient", 3), .. Ballast()];
+		var features = PoolFeatures.Build(pool);
+
+		string? TopOfTargetSlot(string payoff)
+		{
+			var core = DeckCore.For(features, payoff);
+			var slot = core
+				?.Slots.Where(s => !s.IsIdentity && !s.Role.EndsWith("[enablers]"))
+				.FirstOrDefault(s => s.Cards.Contains("Zeppelin") && s.Cards.Contains("Ancient"));
+
+			// The order `Satisfy` would walk, minus the anchor rule, which cannot apply here.
+			return slot
+				?.Cards.OrderByDescending(slot.CostOf)
+				.ThenByDescending(slot.SupplyOf)
+				.ThenBy(n => n, StringComparer.Ordinal)
+				.FirstOrDefault();
+		}
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				TopOfTargetSlot("Raise"),
+				Is.EqualTo("Zeppelin"),
+				"a one-mana reanimation spell wants the EIGHT-drop; that is what it is for"
+			);
+			Assert.That(
+				TopOfTargetSlot("Digger"),
+				Is.EqualTo("Ancient"),
+				"return-to-hand is not a cheat, so its slot must fall back to the ordinary "
+					+ "ordering — cost-ranking it would key on the demand instead of the payoff"
+			);
+		});
+	}
+
+	/// <summary>
 	/// Read the ranking before wiring this into seeding. `MTG_SET` selects the pool.
 	/// </summary>
 	[Test]

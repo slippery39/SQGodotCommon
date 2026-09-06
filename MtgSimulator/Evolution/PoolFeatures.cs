@@ -187,6 +187,8 @@ public sealed class PoolFeatures
 	private readonly Dictionary<string, int>[] _supply;
 	private readonly Dictionary<string, int>[] _causalSupply;
 	private readonly bool[] _landSupply;
+	private readonly Dictionary<string, int[]> _cheatDemandsOf;
+	private readonly Dictionary<string, int> _cost;
 
 	private PoolFeatures(
 		List<object> demands,
@@ -195,6 +197,8 @@ public sealed class PoolFeatures
 		Dictionary<string, int>[] supply,
 		Dictionary<string, int>[] causalSupply,
 		bool[] landSupply,
+		Dictionary<string, int[]> cheatDemandsOf,
+		Dictionary<string, int> cost,
 		IReadOnlyList<string> failures
 	)
 	{
@@ -204,8 +208,24 @@ public sealed class PoolFeatures
 		_supply = supply;
 		_causalSupply = causalSupply;
 		_landSupply = landSupply;
+		_cheatDemandsOf = cheatDemandsOf;
+		_cost = cost;
 		Failures = failures;
 	}
+
+	/// <summary>
+	/// Demands this card answers by putting a card onto the battlefield **without paying for it**.
+	///
+	/// The subset of <see cref="DemandsOf"/> that is arbitrage rather than a question — see
+	/// <see cref="CostInversion"/> for why the two must be told apart, and why nothing else here
+	/// can tell them apart. `Reanimate` and `Gravedigger` ask the identical demand; only one of
+	/// them appears here.
+	/// </summary>
+	public IReadOnlyList<int> CheatDemandsOf(string cardName) =>
+		_cheatDemandsOf.TryGetValue(cardName, out var d) ? d : [];
+
+	/// Printed mana cost of a pool card; 0 when the name is not in this pool.
+	public int CostOf(string cardName) => _cost.GetValueOrDefault(cardName);
 
 	public IReadOnlyList<object> Demands => _demands;
 
@@ -749,6 +769,29 @@ public sealed class PoolFeatures
 		for (var i = 0; i < keep.Count; i++)
 			remap[keep[i]] = i;
 
+		// **Which of a card's demands it answers by CHEATING.** Recorded here rather than derived
+		// later because this is the one place that holds both the pool's cards and the demand
+		// index they map to; `DeckCore` sees names only. Specs are records, so the harvest's own
+		// dedupe index resolves a spec to its demand by value.
+		var cheatDemandsOf = new Dictionary<string, int[]>(StringComparer.Ordinal);
+		var cost = new Dictionary<string, int>(StringComparer.Ordinal);
+		foreach (var card in pool)
+		{
+			cost[card.Name] = card.ManaCost;
+
+			var mine = new List<int>();
+			foreach (var spec in CostInversion.PutIntoPlaySpecs(card))
+				if (
+					index.TryGetValue(spec, out var raw)
+					&& remap[raw] >= 0
+					&& !mine.Contains(remap[raw])
+				)
+					mine.Add(remap[raw]);
+
+			if (mine.Count > 0)
+				cheatDemandsOf[card.Name] = [.. mine];
+		}
+
 		return new PoolFeatures(
 			keep.Select(d => demands[d]).ToList(),
 			keep.Select(d => origins[d]).ToList(),
@@ -760,6 +803,8 @@ public sealed class PoolFeatures
 			keep.Select(d => supply[d]).ToArray(),
 			keep.Select(d => causal[d]).ToArray(),
 			keep.Select(d => landSupply[d]).ToArray(),
+			cheatDemandsOf,
+			cost,
 			failures.Distinct(StringComparer.Ordinal).ToList()
 		)
 		{

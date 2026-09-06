@@ -44,7 +44,8 @@ public sealed record CoreSlot(
 	int MinCopies,
 	int TargetCopies = int.MaxValue,
 	bool IsIdentity = false,
-	ImmutableSortedDictionary<string, int>? Supply = null
+	ImmutableSortedDictionary<string, int>? Supply = null,
+	ImmutableSortedDictionary<string, int>? Cost = null
 )
 {
 	public int CountIn(Decklist deck) => Cards.Sum(deck.CopiesOf);
@@ -63,6 +64,18 @@ public sealed record CoreSlot(
 	/// last in a twelve-deck field.
 	/// </summary>
 	public int SupplyOf(string card) => Supply?.GetValueOrDefault(card) ?? 0;
+
+	/// <summary>
+	/// **What this card is worth CHEATING INTO PLAY**, and 0 on every slot that is not the target
+	/// of a mana cheat — which is nearly all of them, so ordering by it is a no-op elsewhere.
+	///
+	/// A reanimation demand is answered by every creature in the pool, and `SupplyOf` cannot rank
+	/// them: a plain filter match is a flat 1, so the order fell through to card value and built
+	/// reanimator decks around whichever midrange creature rated best. The point of paying one mana
+	/// to put a creature onto the battlefield is that the creature costs eight. Cost IS the ranking
+	/// for this slot, and it is the only slot where that is true.
+	/// </summary>
+	public int CostOf(string card) => Cost?.GetValueOrDefault(card) ?? 0;
 }
 
 /// <summary>
@@ -235,7 +248,20 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 			// placeholder constant — decide which archetypes exist, and a guess must not have that
 			// power.
 			var role = features.Describe(d);
-			AddSlot(slots, declarative, role, features, d, demands, TargetTurn);
+			AddSlot(
+				slots,
+				declarative,
+				role,
+				features,
+				d,
+				demands,
+				TargetTurn,
+				// **Is this demand one the payoff CHEATS, rather than merely asks?** `Reanimate`
+				// and `Gravedigger` ask the identical demand, so the distinction cannot come from
+				// `d` alone — it is a fact about this payoff card, which is why `PoolFeatures`
+				// records it per card.
+				preferExpensive: features.CheatDemandsOf(payoff).Contains(d)
+			);
 			// **Enablers are asked for one turn earlier, and that is the whole reason the two slots
 			// do not get the same number.** An outlet has to have RESOLVED before the payoff is
 			// worth casting — a discard outlet on the turn you cast Reanimate is too late — so it
@@ -351,7 +377,8 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 		PoolFeatures features,
 		int demandIndex,
 		IReadOnlyList<int> payoffDemands,
-		int byTurn
+		int byTurn,
+		bool preferExpensive = false
 	)
 	{
 		if (cards.IsEmpty)
@@ -382,7 +409,14 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 		// away from.
 		var target = IsFetched(features, demandIndex) ? min : int.MaxValue;
 
-		slots.Add(new CoreSlot(role, cards, min, target, Supply: supply));
+		// Only for the slot a mana cheat AIMS at. Never for its enablers: a discard outlet wants to
+		// be cheap, and ranking those by cost would ask a reanimator deck to play the most
+		// expensive way of filling its own graveyard.
+		var cost = preferExpensive
+			? cards.ToImmutableSortedDictionary(n => n, features.CostOf, StringComparer.Ordinal)
+			: null;
+
+		slots.Add(new CoreSlot(role, cards, min, target, Supply: supply, Cost: cost));
 	}
 
 	/// <summary>
@@ -678,6 +712,13 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 					// fetches: the mirror of the dead-card failure this whole structure prevents,
 					// and `Holds` returned true throughout.
 					.Cards.OrderByDescending(n => string.Equals(n, Name, StringComparison.Ordinal))
+					// **Cost before supply, on the one slot where cost IS the job.** See
+					// `CoreSlot.CostOf`: it is 0 everywhere else, so this comparison is a no-op on
+					// every slot that is not a mana cheat's target and the ordering below is
+					// untouched. It has to come first rather than as a tiebreak, because supply is
+					// exactly the signal that misranks these cards — a token maker reads 5 on the
+					// merged channel and outranks the eight-drop the deck exists to cheat in.
+					.ThenByDescending(slot.CostOf)
 					// **Supply before card value.** See `CoreSlot.SupplyOf` — inside a slot the
 					// question is how well a card does the job, and card value answers a different
 					// one. It stays as the tiebreak, so among equally-good rituals the better card

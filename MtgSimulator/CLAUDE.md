@@ -2328,8 +2328,38 @@ Deliberately not read: cost reduction, alternative costs and "cast without payin
 the same idea through a different mechanism. X cards are skipped — `ManaCost` is 0 for them because
 X lives on the cast action, the same rule `ProbeCardProfiles` already applies.
 
-**Nothing consumes this yet.** It is a ranking and two pinned tests; seeding is untouched until the
-list has been read against a run.
+### The gap ranks a cheat's TARGET slot, and only that slot
+
+`PoolFeatures.CheatDemandsOf(card)` is the subset of `DemandsOf` a card answers by putting a card
+onto the battlefield without paying. `DeckCore.For` uses it to mark that demand's **declarative**
+slot cost-ranked, `CoreSlot.CostOf` carries the costs the way `Supply` already rides on the slot,
+and `Satisfy` orders by it **before** supply.
+
+**Before supply, not as a tiebreak**, because supply is the signal that misranks these cards: a
+token maker reads 5 on the merged channel and outranks the eight-drop the deck exists to cheat in.
+`CostOf` is 0 on every other slot, so the comparison is a no-op everywhere else and nothing that
+was not a mana cheat changed.
+
+Measured on DES, the top of each core's target slot:
+
+| payoff | cheat? | ranks first |
+|---|---|---|
+| Raise the Sunken | yes | Abyssal Tyrant(8), Aurex the Sevenfold(8), The Drowned Archfiend(8), Vilis(8) |
+| Necromantic Summons | yes | Abyssal Tyrant(8), Aurex(8), The Drowned Archfiend(8), Vilis(8) |
+| **Gravedigger** | **no** | Grave Titan(6), Hornet Queen(7), Throne of Empires(4), **Ajani(3)** |
+
+**Gravedigger is the control and it is in the same output**, asking the byte-identical demand. If it
+ever starts ranking by cost, the marking has moved from the payoff to the demand and every
+return-to-hand deck will begin playing eight-drops it cannot cast.
+
+**Enabler slots are never cost-ranked.** A discard outlet wants to be cheap; ranking those by cost
+would ask a reanimator deck to play the most expensive way of filling its own graveyard. Verified in
+the same dump: `costRanked=False` on every enabler slot, still ordered by supply.
+
+`OnlyACheatsTargetSlotIsRankedByCost` pins both directions. **Its fixture had to be renamed to mean
+anything**: with cost ranking off the tiebreak is alphabetical, so calling the expensive card
+"Colossus" and the cheap one "Ogre" let the expensive card win either way and the control asserted
+nothing. The cheap card must sort first alphabetically for the two orderings to disagree.
 
 ### A synthetic pool needs cards that do NOT answer the demand
 

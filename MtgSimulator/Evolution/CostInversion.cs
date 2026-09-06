@@ -152,6 +152,17 @@ public static class CostInversion
 			yield return (card.ManaCost, spec, ViaTriggered);
 	}
 
+	/// <summary>
+	/// Every spec this card can put onto the battlefield without paying, ignoring what it costs.
+	///
+	/// The cost-free half of <see cref="CheatSites"/>, shared with `PoolFeatures.Build` so the
+	/// definition of "this card cheats" lives in exactly one place. Two copies of it would drift,
+	/// and the drift would be invisible: the ranking and the seeding would disagree about which
+	/// cards are arbitrage, with nothing comparing them.
+	/// </summary>
+	public static IEnumerable<TargetSpecification> PutIntoPlaySpecs(Card card) =>
+		CheatSites(card).Select(s => s.Spec);
+
 	private static IEnumerable<TargetSpecification> SpecsPuttingIntoPlay(
 		IEnumerable<CardEffect> effects
 	) =>
