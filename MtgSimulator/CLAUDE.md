@@ -1758,6 +1758,51 @@ Sunken Chorus(5), Unhallowed Rite(5), Grim Excavation(4), Mere-Drowned Scribe(4)
 `CausalSupplyTests` dumps this per demand. Run it before believing any claim about what a slot
 contains.
 
+### FIXED: every discard outlet was invisible, because the probe stopped at the question
+
+**The reanimation enabler slot was self-mill only, and no rule in this file put it there.**
+`ProbeCardProfiles` ends in `ProcessAllActions`, which pauses on a `ChoiceAction` — and
+`WithDiscard` compiles to a `SelectCardsFromHandAction`. A looter therefore finished the probe with
+its discard still pending, moved nothing, and never got an entry in `MovesInto`. That lookup runs
+**before** the DIRECTED/LIKELY gate, so the looter was cut without either rule being consulted.
+
+Measured on ALL, `IsCreatureInOwnGraveyardSpecification`:
+
+| | causal suppliers |
+|---|---|
+| before | **44** — self-mill and directed tutors only |
+| after | **58** |
+
+All 14 additions are outlets: Faithless Looting, Careful Study, Cathartic Reunion, Tormenting
+Voice, Thrill of Possibility, Wild Guess, Rain of Revelation, Smallpox, Zombie Infestation,
+Tide of Whispers, Chorus of Whispers, Silt-Stained Ledger, Tomebound Lich, Cavalier of Gales.
+
+**Entomb passed throughout, and that is what made the gap look like a threshold.** It selects with
+a filter and asks no question, so the one enabler anybody spot-checked was the one that worked.
+The likelihood gate would have admitted Faithless Looting comfortably had it ever been reached —
+density 0.58, one card moved, 0.58 ≥ 0.5 — so **tuning the gate could never have found this**.
+
+`SettleChoices` answers with the first `MinChoices` enabled options, deterministically: the probe
+runs once per card and its answer is cached into a `CardProfile`, so an RNG or an AI here would
+make every demand, supplier and core differ between runs at one seed. Which option is taken does
+not matter — the existing rule already credits a mover with no filter match on what it moved,
+because in a real game you choose what to pitch. Bounded at `MaxProbeChoices` (32) so a
+non-advancing choice cannot wedge the harvest.
+
+Pinned by `ADiscardOutletEnablesTheGraveyard_EvenThoughItsDiscardIsAChoice`, which **fails without
+the fix** — checked, because a regression test that passes either way is worse than none. Its
+`Divination` half is the vacuity guard: a plain draw spell moves nothing to the graveyard, so a fix
+that assumed movement rather than observing it fails there.
+
+**The general shape, and it is the third instance in this file: a capability that was never
+exercised reads exactly like a parameter that needs tuning.** Same class as the vacuous LIFT
+column and the seeded-hash non-determinism — check that the code path RUNS before arguing about
+what it should return.
+
+The other `ProcessAllActions` calls in `PoolFeatures` — `ProbeTriggers`, `ProbeChainedTriggers`,
+`ProbeCostDemands` — have the same shape and have **not** been audited for it. A trigger whose
+effect asks a question is the obvious next candidate.
+
 ### The live limitation: SupplyOf merges channels that mean different things
 
 `SupplyOf` returns **one int** covering every way a card can answer a demand — net mana and cards
@@ -3199,13 +3244,27 @@ synergy slot narrows its own deck on purpose. And never on one run.
 ### Running it
 
 ```
-printf '6\n\n3\n8\n30\n3\n6\n20\nY\n<seed>\n' | dotnet run --project MtgSimulator.Console -c Release
+printf '6\n\n3\n8\n30\n0\n3\n6\n20\n\n300\nY\nY\n0\n0\n\n<seed>\n' | dotnet run --project MtgSimulator.Console -c Release
 ```
 
-Fields in order: mode, AI depth (blank = 2), set (the index printed by `ReadSet` — **read the
-menu, do not hardcode it**), decks, generations, mutants, games/matchup, final games/matchup,
-seed-from-draft-model, seed. Count the prompts in the output rather than trusting that list —
-mode 4's documented command was wrong for exactly this reason.
+**17 fields, and 19 when an engine file is supplied** — verified by running it, 2026-09-05. In
+order: mode, AI depth (blank = 2), set (the index printed by `ReadSet` — **read the menu, do not
+hardcode it**), decks, generations, **exploration generations**, mutants, games/matchup, final
+games/matchup, **min difference**, **pre-simulation decks**, **cull Y/n**, seed-from-draft-model,
+**concept slots**, **gauntlet games**, **engine file**, seed. A non-blank engine file adds two
+prompts immediately after it — engine slot count, then engines to exclude.
+
+**This command was wrong for seven prompts and stayed wrong**, in the same shape as mode 4's: the
+bolded fields above were all added after it was written, and each one shifted every later answer by
+one. Piping it fed `3` (mutants) to the exploration-generations prompt, `6` to mutants, and so on
+down the list, then ran out of stdin and took the default for everything past the seed — which the
+run reports as a perfectly ordinary configuration, because every value it used was legal.
+
+**Count the prompts in the output rather than trusting the list above**, including after the next
+prompt is added. A field list in prose cannot be made self-checking; the console's own output can.
+
+`RunningSimulations.md` at the solution root carries the same recipe with the per-field defaults
+and a worked engine-slot example.
 
 Reference cost: 8 decks x 30 generations x 3 mutants x 6 games = ~1 300 games/generation (a
 little under 1 344, because some mutation proposals return null and are not scheduled).

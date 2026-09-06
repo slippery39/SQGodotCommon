@@ -114,6 +114,70 @@ public class CausalSupplyTests
 	}
 
 	/// <summary>
+	/// **A discard outlet fills the graveyard by ASKING A QUESTION, and the probe used to stop at
+	/// the question.**
+	///
+	/// `ProbeCardProfiles` ends in `ProcessAllActions`, which pauses on a `ChoiceAction` — and
+	/// `WithDiscard` compiles to a `SelectCardsFromHandAction`. So a looter finished the probe with
+	/// its discard still pending, moved nothing, and was struck from the causal channel by the
+	/// `MovesInto` lookup that runs BEFORE the DIRECTED/LIKELY gate. Neither rule was ever
+	/// consulted, which is why tuning the gate could not have found this.
+	///
+	/// Measured on ALL when it was fixed: the reanimation enabler slot went 44 → 58 cards, and all
+	/// 14 additions were outlets (Faithless Looting, Careful Study, Cathartic Reunion, Tormenting
+	/// Voice, Thrill of Possibility, Wild Guess, Smallpox…). Entomb passed throughout — it selects
+	/// with a filter and asks nothing — which is exactly what made the gap look like a gate
+	/// threshold rather than a missing capability.
+	///
+	/// **`Divination` is the vacuity guard.** A "fix" that credited every spell, or that resolved
+	/// choices by crediting movement it never observed, passes the looter assertion on its own. A
+	/// plain draw spell moves nothing to the graveyard and must stay out.
+	/// </summary>
+	[Test]
+	public void ADiscardOutletEnablesTheGraveyard_EvenThoughItsDiscardIsAChoice()
+	{
+		Card Bear(string name) =>
+			CardFactory.Creature(name, manaCost: 2, power: 2, toughness: 2).Build();
+
+		// Draw-then-discard: the discard is a choice, which is the whole point of the fixture.
+		var looting = CardFactory
+			.Spell("Looting", manaCost: 1)
+			.WithDraw(2)
+			.WithDiscard()
+			.Build();
+		var divination = CardFactory.Spell("Divination", manaCost: 3).WithDraw(2).Build();
+		var reanimate = CardFactory
+			.Spell("Reanimate", manaCost: 2)
+			.WithReanimate()
+			.WithTarget(TargetBuilder.Single().CreatureInYourGraveyard())
+			.Build();
+
+		var features = PoolFeatures.Build(
+			[looting, divination, reanimate, Bear("Bear1"), Bear("Bear2"), Bear("Bear3")]
+		);
+
+		var graveyard = features
+			.DemandsOf("Reanimate")
+			.Single(d => features.SuppliersOf(d).Contains("Bear1"));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				features.CausalSuppliersOf(graveyard),
+				Does.Contain("Looting"),
+				"a discard outlet is the canonical reanimator enabler; if it is missing here the "
+					+ "probe is stopping at the choice again"
+			);
+			Assert.That(
+				features.CausalSuppliersOf(graveyard),
+				Does.Not.Contain("Divination"),
+				"a plain draw spell puts nothing in the graveyard — crediting it would mean "
+					+ "movement is being assumed rather than observed"
+			);
+		});
+	}
+
+	/// <summary>
 	/// For every demand, the top suppliers ranked by <c>SupplyOf</c> — the weight that decides what
 	/// `SeedConcept` and `DeckCore.Satisfy` actually pick. **Read the graveyard rows**: if the top
 	/// of that list is discard outlets and self-mill, causal supply is reaching the sampler. If it

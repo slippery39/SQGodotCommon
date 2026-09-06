@@ -1382,6 +1382,16 @@ public sealed class PoolFeatures
 						.ProcessAllActions();
 				}
 
+				// **A card whose effect asks a question moved nothing until this ran.**
+				// `ProcessAllActions` stops at a `ChoiceAction`, so every discard outlet in the pool
+				// finished the probe with its `SelectCardsFromHandAction` still pending and no card
+				// in the graveyard — and `MovesInto` is read BEFORE the DIRECTED/LIKELY gate, so a
+				// looter was struck from the causal channel without either rule being consulted.
+				// Measured on ALL: Faithless Looting and Careful Study were absent from the
+				// reanimation enabler slot while Entomb (which selects with a filter and needs no
+				// question) was present, so the slot was self-mill only.
+				after = SettleChoices(after);
+
 				// **An X card's ManaCost is 0 and that is not a discount.** X lives on the cast
 				// action, never on the card, so Banefire and Hangarback Walker both read
 				// `manaCost: 0` and came back as free spells that any storm deck should play.
@@ -1418,6 +1428,57 @@ public sealed class PoolFeatures
 
 		return profiles;
 	}
+
+	/// <summary>
+	/// Answers every choice a probed card raises, taking the FIRST <c>MinChoices</c> enabled
+	/// options in the order the state offers them.
+	///
+	/// **Deterministic by construction, and it has to be.** The probe runs once per card at harvest
+	/// time and its answer is cached into a `CardProfile`, so an RNG or an AI here would make the
+	/// whole feature table — every demand, supplier and core — differ between runs at one seed.
+	/// First-N is the cheapest rule that always advances.
+	///
+	/// **Which option is chosen does not matter, and that is the existing rule, not a new one.**
+	/// `PoolFeatures` already credits a mover with no filter match on what it moved, because in a
+	/// real game you choose what to pitch. The probe only needs the discard to HAPPEN.
+	///
+	/// Bounded so a choice that fails to advance cannot wedge the harvest: the same guarantee
+	/// `MaxChoiceResolutionIterations` gives the AI, at a fixed cost per card rather than per game.
+	/// </summary>
+	private static GameState SettleChoices(GameState state)
+	{
+		for (var i = 0; i < MaxProbeChoices && state.IsWaitingForChoice; i++)
+		{
+			var choice = state.GetPendingChoice();
+			var picks = choice
+				?.Options.Where(o => o.IsEnabled)
+				.Take(Math.Max(1, choice.MinChoices))
+				.Select(o => o.Id)
+				.ToImmutableList();
+
+			// No option to give it. Resolving with an empty list is still the right move — a
+			// "discard a card" with an empty hand is legally answered by discarding nothing — but
+			// if that does not advance the stack, stop rather than spin.
+			var before = state;
+			try
+			{
+				(state, _) = state.ResolveChoice(picks ?? []);
+			}
+			catch
+			{
+				return before;
+			}
+
+			if (ReferenceEquals(state, before))
+				return before;
+		}
+
+		return state;
+	}
+
+	/// One per card, not per game: a probe that needs more than this is not a card the harvest can
+	/// characterise, and stopping leaves it in the declarative channel rather than crediting it.
+	private const int MaxProbeChoices = 32;
 
 	private const string CompanionName = "__companion";
 
