@@ -3364,6 +3364,42 @@ across the whole run. So this is not budget starvation; it is the selection heur
 same problem as items (c) and (f). A 1/1 mana dork never surfaces in a value-ranked fill however many
 attempts it gets.
 
+### Exploration always mutates; only optimisation leaves winners alone
+
+`MutantsFor` returned 0 for any slot at or above `StableRate` (0.60). **That rule predates the
+exploration/optimisation split, and applying it during exploration inverts the phase's purpose** —
+exploration exists to find out WHICH CARDS BELONG, and the deck that is winning is the one whose
+list is most worth learning from.
+
+Measured on a 21-deck DES run before the fix:
+
+| slot | real | dry | kept | final rate |
+|---|---|---|---|---|
+| Engine-Kilnmother Vess (Twin) | **1** | 1 | **0** | **76.7% — first in the field** |
+
+`lastRate` starts at 0 so everyone explores once; Twin finished generation 1 at 76%, which put it
+above `StableRate`, and it was **never offered a change again**. The best deck in the field was
+frozen at its seed, so its win rate is a fact about seeding rather than about the search.
+
+`MutantsFor(rate, exploring)` now ignores the rate while exploring and keeps the rule for
+optimisation, which is where it belongs: once the card list is settled, re-tuning a deck that
+already clears the bar is what the rule exists to prevent.
+
+**This is NOT the narrow-core dry problem and the two are easy to confuse.** A slot below
+`StrugglingRate` already had the full budget and still produced nothing — that is `TryMutate`
+failing to find a legal move in a 2–5 card core pool. This rule silenced a slot for the opposite
+reason: for winning. Read the `real`/`dry`/`kept` columns together, since `real 1, dry 1` and
+`real 1, dry 7` have completely different causes.
+
+The run header reports which rule is in force, because a stale self-report is how this went
+unnoticed. Pinned by `MutationBudgetTests`, whose optimisation half is the control that keeps the
+exploration half a statement about the phase rather than about the rule being deleted.
+
+**Still open:** at the end of exploration the field is whatever the last accepted mutation left, not
+a list built from what exploration LEARNED. Per-deck card statistics already exist (`slotHistory`,
+a `CardStatAccumulator` per slot, feeding `DeckHistory`), so "build the best deck from this slot's
+own card win rates before optimisation begins" is reachable from data already collected. Not built.
+
 ### Deck profiles
 
 Every non-concept, non-wildcard slot cycles through `DeckBuilder.DeckProfile` — **Aggro** (curve

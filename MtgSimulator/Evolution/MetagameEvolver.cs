@@ -591,7 +591,7 @@ public sealed class MetagameEvolver
 				var mutRng = new Random(_seed + gen * 100_003 + i * 1_009);
 				var history = new DeckHistory(slotHistory[i].ToData());
 				var list = new List<Decklist?> { field[i] };
-				for (var m = 0; m < MutantsFor(lastRate[i]); m++)
+				for (var m = 0; m < MutantsFor(lastRate[i], gen <= _explorationGenerations); m++)
 					list.Add(
 						TryMutate(
 							field[i],
@@ -1103,8 +1103,32 @@ public sealed class MetagameEvolver
 		);
 	}
 
-	private int MutantsFor(double rate)
+	/// <summary>
+	/// How many mutants a slot is offered this generation.
+	///
+	/// **Exploration always gets the full budget, and the rate is not consulted.** The
+	/// leave-winners-alone rule predates the exploration/optimisation split and applying it during
+	/// exploration inverts the phase's purpose: exploration exists to find out WHICH CARDS BELONG,
+	/// and a deck that is winning is the one whose card list is most worth learning from. Measured
+	/// on a 21-deck DES run before this change: the Twin slot finished **first in the field at
+	/// 76.7%** having been offered **two mutations in six generations, both in generation 1** —
+	/// `lastRate` starts at 0 so everyone explores once, and from generation 2 its 76% rate put it
+	/// above <see cref="StableRate"/> and it was never offered a change again. The best deck in the
+	/// field was frozen at its seed, so its win rate is a fact about seeding rather than about the
+	/// search.
+	///
+	/// **Optimisation keeps the rule**, which is where it belongs: once the card list is settled,
+	/// spending a budget re-tuning a deck that already clears the bar is what the rule exists to
+	/// prevent.
+	///
+	/// Note this is not the same failure as a narrow core going dry. A slot below
+	/// <see cref="StrugglingRate"/> already had the full budget and still produced nothing —
+	/// see `TryMutate`. This rule silences a slot for the opposite reason: for winning.
+	/// </summary>
+	internal int MutantsFor(double rate, bool exploring)
 	{
+		if (exploring)
+			return _mutantsPerDeck;
 		if (rate >= StableRate)
 			return 0;
 		if (rate <= StrugglingRate)
@@ -1114,7 +1138,7 @@ public sealed class MetagameEvolver
 		return Math.Max(1, (int)Math.Round(_mutantsPerDeck * t));
 	}
 
-	/// At or above this a deck is left alone entirely.
+	/// At or above this a deck is left alone entirely — during OPTIMISATION only.
 	private const double StableRate = 0.60;
 
 	/// At or below this a deck gets the full mutation budget.
@@ -1719,12 +1743,14 @@ public sealed class MetagameEvolver
 		Console.WriteLine(
 			_explorationGenerations > 0
 				? $"  Exploration: generations 1-{_explorationGenerations} "
-					+ "(playset-sized moves only, no Recount/AdjustLands, culling suppressed)"
+					+ "(playset-sized moves only, no Recount/AdjustLands, culling suppressed, "
+					+ $"every slot gets all {_mutantsPerDeck} mutants regardless of win rate)"
 				: "  Exploration: OFF (every generation optimises)"
 		);
 		Console.WriteLine(
 			$"  Pre-simulation {(_preSimDecks > 0 ? $"{_preSimDecks} decks x {_preSimOpponents} opponents" : "OFF")}; "
-				+ $"adaptive mutation: 0 mutants at >={StableRate:P0}, {_mutantsPerDeck} at <={StrugglingRate:P0}"
+				+ $"adaptive mutation{(_explorationGenerations > 0 ? " (optimisation generations only)" : "")}: "
+				+ $"0 mutants at >={StableRate:P0}, {_mutantsPerDeck} at <={StrugglingRate:P0}"
 		);
 		Console.WriteLine(
 			values.HasDraftPrior
