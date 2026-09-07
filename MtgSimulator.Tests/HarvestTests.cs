@@ -138,6 +138,70 @@ public class HarvestTests
 	}
 
 	/// <summary>
+	/// **A narrow core must still harvest, and the pool lock is what nearly stopped it.**
+	///
+	/// `Mutate`'s lock is asymmetric — it constrains what may be ADDED and leaves cutting alone —
+	/// so a deck legitimately holds off-identity cards that seeding put there. Reading the lock as
+	/// a candidate filter means a 4-card core offers at most 16 spells against a 40-spell capacity,
+	/// the build cannot fill, and the harvest falls back. Measured on a 21-deck DES run: 16 of 21
+	/// slots harvested, and the three that did not were the 2-, 3- and 4-card cores — the slots the
+	/// engine mechanism exists for.
+	///
+	/// So a card already in the deck stays a candidate, capped at the count it already has: keeping
+	/// is free, adding stays locked.
+	/// </summary>
+	[Test]
+	public void ANarrowCoreHarvestsItsFlex_WithoutAddingOffIdentityCopies()
+	{
+		var identity = Spells.Take(2).ToList();
+		var flex = Spells.Skip(2).Take(10).ToList();
+
+		var core = new DeckCore(
+			"narrow",
+			[new CoreSlot("Payoff", [.. identity], 4, IsIdentity: true)]
+		);
+
+		// The seeded shape: the core plus off-identity flex, exactly what a pool-locked slot looks
+		// like in a real run. Two flex cards are held at ONE copy so the cap has something to bind
+		// on — a harvest that ignored it would happily take them to four.
+		var current = Decklist.Empty("Narrow") with { Lands = 20 };
+		foreach (var n in identity)
+			current = current.WithCopies(n, 4);
+		foreach (var n in flex.Take(8))
+			current = current.WithCopies(n, 4);
+		current = current.WithCopies(flex[8], 1).WithCopies(flex[9], 1);
+
+		var harvested = Evolver()
+			.Harvest(current, core, DeckBuilder.DeckProfile.Any, History(flex[9], flex[0]), Values());
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				harvested,
+				Is.Not.EqualTo(current),
+				"a 2-card core must still harvest its flex rather than falling back"
+			);
+			Assert.That(harvested.IsValid, Is.True);
+			Assert.That(core.Holds(harvested), Is.True, "the core survives the rebuild");
+
+			// The measured-best card is off-identity and held at one copy, so this is the exact
+			// case the cap governs.
+			Assert.That(
+				harvested.CopiesOf(flex[9]),
+				Is.LessThanOrEqualTo(1),
+				"an off-identity card may be KEPT but never added to — that would be the "
+					+ "good-stuff drift the pool lock exists to prevent"
+			);
+			foreach (var n in harvested.Spells.Keys.Where(n => !identity.Contains(n)))
+				Assert.That(
+					harvested.CopiesOf(n),
+					Is.LessThanOrEqualTo(current.CopiesOf(n)),
+					$"{n} is off-identity and grew beyond the count the deck already had"
+				);
+		});
+	}
+
+	/// <summary>
 	/// With nothing measured there is nothing to harvest, and the current deck stands. A step that
 	/// returned an empty or half-built list here would hand optimisation something worse than the
 	/// hill-climb endpoint it replaced.

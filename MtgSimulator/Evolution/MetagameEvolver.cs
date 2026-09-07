@@ -1205,10 +1205,28 @@ public sealed class MetagameEvolver
 			? null
 			: core.Slots.SelectMany(s => s.Cards).ToHashSet(StringComparer.Ordinal);
 
+		// **The pool lock is ASYMMETRIC, and reading it as a filter made the harvest fall back on
+		// exactly the slots it exists for.** `Mutate` locks what may be ADDED and leaves cutting
+		// unconstrained — "it converges INWARD" — so a deck legitimately holds off-identity cards
+		// that seeding put there. Filtering candidates to the identity alone means a 2-4 card core
+		// can offer at most 16 spells against a 40-spell capacity, so the build cannot fill, fails
+		// `IsValid`, and returns the current deck. Measured on a 21-deck DES run: 16 of 21 slots
+		// harvested and the three that did not were Wildwood Scourge (3-card core), Master of the
+		// Wild Hunt (2) and Kilnmother Vess (4).
+		//
+		// A card already in the deck is therefore always a candidate — it was measured like any
+		// other — but it is capped at the count it already has, so keeping is free and ADDING
+		// stays locked to the identity. That is the same rule `Mutate` follows, stated as a cap
+		// rather than as a filter.
+		int CapFor(string name) =>
+			allowed is null || allowed.Contains(name)
+				? Decklist.MaxCopies
+				: current.CopiesOf(name);
+
 		var candidates = history
 			.Names.Concat(current.Spells.Keys)
 			.Distinct(StringComparer.Ordinal)
-			.Where(n => _poolIndex.ContainsKey(n) && (allowed is null || allowed.Contains(n)))
+			.Where(n => _poolIndex.ContainsKey(n) && CapFor(n) > 0)
 			.ToList();
 
 		if (candidates.Count == 0)
@@ -1224,7 +1242,7 @@ public sealed class MetagameEvolver
 		while (built.SpellCount < capacity)
 		{
 			var best = candidates
-				.Where(n => built.CopiesOf(n) < Decklist.MaxCopies)
+				.Where(n => built.CopiesOf(n) < CapFor(n))
 				.OrderByDescending(n => history.KeepScore(n, built))
 				.ThenByDescending(n => history.GamesOf(n))
 				.ThenBy(n => n, StringComparer.Ordinal)
@@ -1233,7 +1251,10 @@ public sealed class MetagameEvolver
 			if (best is null)
 				break;
 
-			var room = Math.Min(Decklist.MaxCopies, capacity - built.SpellCount + built.CopiesOf(best));
+			var room = Math.Min(
+				CapFor(best),
+				capacity - built.SpellCount + built.CopiesOf(best)
+			);
 			built = built.WithCopies(best, room);
 		}
 
