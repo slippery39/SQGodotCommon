@@ -832,6 +832,12 @@ public sealed class MetagameEvolver
 			);
 
 			PrintGeneration(gen, field, tallies, accepted, culled, excluded, timer);
+
+			// **The exploration/optimisation boundary: rebuild each deck from what exploration
+			// LEARNED, rather than handing optimisation wherever the last accepted mutation left
+			// it.** See `Harvest`.
+			if (gen == _explorationGenerations && gen < _generations)
+				HarvestField(field, identities, profiles, slotHistory, values);
 		}
 
 		timer.Stop();
@@ -1125,6 +1131,129 @@ public sealed class MetagameEvolver
 	/// <see cref="StrugglingRate"/> already had the full budget and still produced nothing —
 	/// see `TryMutate`. This rule silences a slot for the opposite reason: for winning.
 	/// </summary>
+	/// <summary>
+	/// **Rebuild every slot from what exploration measured, at the boundary between the phases.**
+	///
+	/// Without this the field handed to optimisation is wherever the last accepted mutation
+	/// happened to leave it — a hill-climb endpoint, not a summary of the run's findings. Two
+	/// generations of evidence about which cards work in this shell is then thrown away, and
+	/// optimisation starts from an arbitrary point inside it.
+	///
+	/// The evidence is already collected and is better than it looks: **every scheduled
+	/// candidate's games are folded into its slot's history, including mutants that were
+	/// REJECTED**, so the pool here is every card exploration tried rather than only the ones that
+	/// survived a 4-game accept/reject decision.
+	///
+	/// **A harvest that fails a check keeps the current deck**, rather than shipping something
+	/// illegal or off-archetype. Reported per slot either way, because a step that silently does
+	/// nothing is indistinguishable from one that is not wired in.
+	/// </summary>
+	private void HarvestField(
+		List<Decklist> field,
+		IReadOnlyList<DeckCore?> identities,
+		IReadOnlyList<DeckBuilder.DeckProfile> profiles,
+		IReadOnlyList<CardStatAccumulator> slotHistory,
+		ConstructedValues values
+	)
+	{
+		Console.WriteLine();
+		Console.WriteLine(
+			"  --- Harvest: rebuilding each deck from its own measured card rates ---"
+		);
+
+		for (var i = 0; i < field.Count; i++)
+		{
+			var history = new DeckHistory(slotHistory[i].ToData());
+			var before = field[i];
+			var after = Harvest(before, identities[i], profiles[i], history, values);
+
+			var changed = Decklist.Difference(before, after);
+			field[i] = after;
+
+			Console.WriteLine(
+				changed <= 0
+					? $"    {Truncate(before.Name, 34),-34} unchanged"
+					: $"    {Truncate(before.Name, 34),-34} {changed:P0} different "
+						+ $"({history.DeckGames} deck-games of evidence)"
+			);
+		}
+		Console.WriteLine();
+	}
+
+	/// <summary>
+	/// One slot's harvest: satisfy the core, then fill by <see cref="DeckHistory.KeepScore"/>.
+	///
+	/// **Scored against the deck as it is being built, not against the old one.** `KeepScore` is
+	/// `CardDelta + PairDelta`, and the pair half is a question about the shell — so re-ranking
+	/// after each pick is what makes the result synergy-aware rather than twelve independent
+	/// choices.
+	///
+	/// **The candidate set is the POOL LOCK intersected with what was measured.** A card the slot
+	/// never played has no evidence and a card outside the core's identity is off-archetype;
+	/// `DeckBuilder.Mutate` applies the same lock, so a harvest cannot reach anywhere mutation
+	/// could not.
+	/// </summary>
+	internal Decklist Harvest(
+		Decklist current,
+		DeckCore? core,
+		DeckBuilder.DeckProfile profile,
+		DeckHistory history,
+		ConstructedValues values
+	)
+	{
+		var allowed = core is null
+			? null
+			: core.Slots.SelectMany(s => s.Cards).ToHashSet(StringComparer.Ordinal);
+
+		var candidates = history
+			.Names.Concat(current.Spells.Keys)
+			.Distinct(StringComparer.Ordinal)
+			.Where(n => _poolIndex.ContainsKey(n) && (allowed is null || allowed.Contains(n)))
+			.ToList();
+
+		if (candidates.Count == 0)
+			return current;
+
+		// Lands are not harvested: exploration runs with AdjustLands off, so the count carries
+		// over and this stays a question about which SPELLS the slot found.
+		var built = Decklist.Empty(current.Name) with { Lands = current.Lands };
+		if (core is not null)
+			built = core.Satisfy(built, values);
+
+		var capacity = Decklist.DeckSize - built.Lands;
+		while (built.SpellCount < capacity)
+		{
+			var best = candidates
+				.Where(n => built.CopiesOf(n) < Decklist.MaxCopies)
+				.OrderByDescending(n => history.KeepScore(n, built))
+				.ThenByDescending(n => history.GamesOf(n))
+				.ThenBy(n => n, StringComparer.Ordinal)
+				.FirstOrDefault();
+
+			if (best is null)
+				break;
+
+			var room = Math.Min(Decklist.MaxCopies, capacity - built.SpellCount + built.CopiesOf(best));
+			built = built.WithCopies(best, room);
+		}
+
+		// **Every check is a reason to keep the CURRENT deck, never to ship a broken one.** A
+		// harvest is a proposal built from statistics and nothing has played a game with it yet.
+		if (!built.IsValid)
+			return current;
+		if (core is not null && !core.Holds(built))
+			return current;
+		if (profile != DeckBuilder.DeckProfile.Any)
+		{
+			var (lo, hi) = DeckBuilder.BandFor(profile);
+			var cost = built.AverageCost(_poolIndex);
+			if (cost < lo || cost > hi)
+				return current;
+		}
+
+		return built;
+	}
+
 	internal int MutantsFor(double rate, bool exploring)
 	{
 		if (exploring)
