@@ -70,7 +70,13 @@ public sealed record EngineCandidate(
 	int Wins,
 	float Bare = 0f,
 	float Supplied = 0f,
-	bool LeverageMeasured = false
+	bool LeverageMeasured = false,
+	/// <summary>
+	/// This payoff plus its best suppliers assembles an UNBOUNDED loop, and neither does so alone.
+	/// See <see cref="ComboProbe"/> — leverage cannot answer this, because the rollout takes one
+	/// action per turn and prices an infinite loop as one activation a turn.
+	/// </summary>
+	bool Loops = false
 )
 {
 	/// How much the payoff gains from having its demands answered.
@@ -97,8 +103,28 @@ public sealed record EngineCandidate(
 	/// (0.00 → 0.00, an enabler wearing a payoff's clothes) ranked third, above Flameshadow
 	/// Conjuring at 1.50 → 24.50.
 	/// </remarks>
-	public (int Unmeasured, double Bare, double Leverage) BlankFirstKey =>
-		(LeverageMeasured && Leverage > 0f ? 0 : 1, Math.Max(Bare, 0f), -Leverage);
+	/// <remarks>
+	/// **An assembled LOOP outranks everything, and it has to be its own component.** A card whose
+	/// support turns it into an unbounded engine is the strongest instance of "a blank until
+	/// assembled" there is — but leverage scores it near zero, because the rollout takes one action
+	/// per simulated turn and an infinite loop prices as one activation a turn. Splinter Twin read
+	/// `bare 9.00, leverage 0.00` and ranked 31st of 44 while the hand-built Twin deck beats the
+	/// evolved field. Raising the rollout budget to fix that was measured and rejected — the
+	/// fixture decides itself and the whole report goes unmeasured. See `ComboProbe`.
+	///
+	/// It is deliberately a separate first component rather than a large fake leverage: a loop is a
+	/// STRUCTURAL fact about the pair, and folding it into a measured quantity would make the two
+	/// incomparable numbers trade off against each other.
+	///
+	/// **High precision, measured: 2 of 93 DES payoffs**, and both are the Twin copiers.
+	/// </remarks>
+	public (int NotALoop, int Unmeasured, double Bare, double Leverage) BlankFirstKey =>
+		(
+			Loops ? 0 : 1,
+			LeverageMeasured && Leverage > 0f ? 0 : 1,
+			Math.Max(Bare, 0f),
+			-Leverage
+		);
 }
 
 public sealed record EngineReport(
@@ -215,6 +241,27 @@ public static class EngineDiscovery
 			.MeasureLeverage(cores.Select(c => c.Name).ToList(), features, pool)
 			.ToDictionary(r => r.Name, r => r, StringComparer.Ordinal);
 
+		// **Does the payoff plus its support assemble an UNBOUNDED engine?** The question leverage
+		// structurally cannot answer — see `ComboProbe`. Sequential and cheap: 93 payoffs in ~3s on
+		// DES, against the game batch below.
+		writer.WriteLine($"Probing {cores.Count} payoffs for assembled loops...");
+		var loops = cores
+			.Where(c =>
+				pool.ContainsKey(c.Name)
+				&& ComboProbe.WithSupport(
+					pool[c.Name],
+					ComboProbe.SupportFor(c.Name, features, pool)
+				)
+					is not null
+			)
+			.Select(c => c.Name)
+			.ToHashSet(StringComparer.Ordinal);
+		writer.WriteLine(
+			loops.Count == 0
+				? "  none — this pool contains no assembled loop among its payoffs."
+				: $"  {loops.Count}: {string.Join(", ", loops.Order(StringComparer.Ordinal))}"
+		);
+
 		var probed = new EngineCandidate?[cores.Count];
 		var done = 0;
 
@@ -233,7 +280,8 @@ public static class EngineDiscovery
 					gamesPerEngine,
 					seed,
 					aiDepth,
-					leverage.GetValueOrDefault(cores[i].Name)
+					leverage.GetValueOrDefault(cores[i].Name),
+					loops.Contains(cores[i].Name)
 				);
 				var n = Interlocked.Increment(ref done);
 				if (n % 25 == 0)
@@ -356,7 +404,8 @@ public static class EngineDiscovery
 		int games,
 		int seed,
 		int aiDepth,
-		CardLeverage? leverage
+		CardLeverage? leverage,
+		bool loops
 	)
 	{
 		// Derived from the core's identity rather than the loop index, so a candidate's seed does
@@ -465,7 +514,8 @@ public static class EngineDiscovery
 			wins,
 			leverage?.Bare ?? 0f,
 			leverage?.Supplied ?? 0f,
-			leverage?.WasMeasured ?? false
+			leverage?.WasMeasured ?? false,
+			loops
 		);
 	}
 
@@ -583,7 +633,9 @@ public static class EngineDiscovery
 		foreach (var e in report.Engines)
 		{
 			rank++;
-			var mark = rank <= keep ? "*" : " ";
+			// A loop is the one property here that is structural rather than measured, so it gets
+			// its own mark instead of being inferred from a big number.
+			var mark = e.Loops ? "LOOP" : rank <= keep ? "*" : " ";
 			var concept = e.Concept.Length > 38 ? e.Concept[..38] : e.Concept;
 			writer.WriteLine(
 				$"{mark, -4}{concept, -40}{e.SuppliersInPool, 6}{e.Payoffs.Count, 5}{e.Enablers.Count, 6}"

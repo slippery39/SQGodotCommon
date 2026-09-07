@@ -18,6 +18,7 @@ Class library containing all AI strategies, game runners, deck factories, and re
 | `Evolution/EngineProbe.cs` | **Did the payoff resolve with its support deployed?** Payoff/enabler sets out of `PoolFeatures`, read off one game's event log in a single pass |
 | `Evolution/PreSimulation.cs` | Uniform-random constructed decks played before evolution, to break the "needs data to get in a deck, needs a deck to get data" loop. `fixedLands`/`copiesPerCard` also make it the **pool-conditioned card value** sampler — see §"Pool-conditioned card value" |
 | `Evolution/EngineDiscovery.cs` | Console mode 7 — probe every concept in a pool, rank by whether the engine assembles, save `sim_results/engines_<set>_<stamp>.json` |
+| `Evolution/ComboProbe.cs` | **Does the payoff plus its support assemble an UNBOUNDED loop?** `LoopDetector` behind the demand model — the question leverage structurally cannot answer |
 | `Evolution/CostInversion.cs` | **Mana arbitrage**: what a card costs against the best thing it puts onto the battlefield without paying. Independent of the demand model — see §"Cost inversion" |
 | `Evolution/ConstructedGameSetup.cs` | Two decklists → pre-begin `GameState`; the constructed sibling of `DraftGameSetup` |
 | `Evolution/MetagameEvolver.cs` | Console mode 6 — the evolution loop, paired evaluation, culling, and the report. `enginesPath` seeds discovered archetypes as pool-locked, cull-exempt slots; `excludedEngines` drops archetypes a previous run measured as dead |
@@ -1689,7 +1690,43 @@ because anything should raise it.
 
 **The reusable finding: more simulation cannot isolate a combo in a fixture that can end.** Telling
 an unbounded engine from a fixed effect wants `LoopDetector` — which already finds this exact combo,
-`TheShippedTwinCombo_IsFound` — rather than a longer rollout. That is the open route.
+`TheShippedTwinCombo_IsFound` — rather than a longer rollout. That is what `ComboProbe` does.
+
+### SOLVED by asking a different question: `ComboProbe`
+
+`ComboProbe.WithSupport(payoff, support)` puts the payoff and its best suppliers on a minimal board
+and asks `LoopDetector` whether a repeatable line exists. It is plumbing, not new detection — the
+detector already found this combo; nothing was consulting it.
+
+**The precondition is the whole design: the loop must NEED the support.** A payoff that loops alone
+is a balance bug, not an archetype (`NoSingleCardInThePoolLoops` is the sweep for those), and
+crediting it here would rank a broken card as the pool's best engine. `WithSupport` returns null
+unless the card fails to loop alone *and* succeeds with support — the control
+`NeitherHalfOfTheTwinCombo_LoopsAlone` applies by hand, made a precondition.
+
+`BlankFirstKey` gains a first component, `Loops ? 0 : 1`. Deliberately its own component rather
+than a large synthetic leverage: a loop is a **structural** fact about the pair, and folding it into
+a measured quantity would make two incomparable numbers trade off.
+
+Measured on DES:
+
+| | |
+|---|---|
+| payoffs assembling a loop | **2 of 93** (both Twin copiers), **1 of 44** after core dedupe |
+| cost | **~3s** for the whole pool |
+| Kilnmother Vess rank | **31 → 1** |
+| other cards moving ≥2 ranks | **1 of 44** |
+
+**Compare the rejected option above: 26 of 43 moved ≥5 ranks and 0 of 43 stayed measurable.** Every
+other engine here shifted down exactly one place with its relative order intact, which is what a
+targeted instrument looks like next to a re-baselining one.
+
+The minimal board is deliberate — the leverage fixture's dummy ladder and library filler multiply
+this search's branching for no gain, since the question is whether a repeatable line exists, not
+what it is worth.
+
+`ALoopOutranksABetterMeasuredCard` pins the ranking consequence directly, because the probe could
+otherwise be correct and change nothing.
 
 #### The sweep found a real bug: an unguarded control
 
