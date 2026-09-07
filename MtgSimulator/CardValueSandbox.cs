@@ -306,7 +306,8 @@ public static class CardValueSandbox
 		IReadOnlyDictionary<string, Card> pool,
 		int suppliersPerDemand = 2,
 		int lookaheadTurns = DefaultLookaheadTurns,
-		int seed = 7
+		int seed = 7,
+		int selfActionsPerTurn = LeverageSelfActions
 	)
 	{
 		var controls = new Dictionary<(int, OpponentSimulationMode, string), float>();
@@ -358,7 +359,8 @@ public static class CardValueSandbox
 				OpponentSimulationMode.PassTurn,
 				lookaheadTurns,
 				seed,
-				controls
+				controls,
+				selfActionsPerTurn: selfActionsPerTurn
 			);
 			var supplied = MeasureOne(
 				card,
@@ -367,7 +369,8 @@ public static class CardValueSandbox
 				lookaheadTurns,
 				seed,
 				controls,
-				new Stocking(name, stock, storm)
+				new Stocking(name, stock, storm),
+				selfActionsPerTurn
 			);
 
 			results.Add(
@@ -380,6 +383,55 @@ public static class CardValueSandbox
 
 	/// The one cast failure that carries information rather than reporting a broken measurement.
 	private const string NoLegalCast = "no legal cast action";
+
+	/// <summary>
+	/// Non-land actions the rollout may take per simulated turn **when measuring leverage**.
+	///
+	/// **A budget of 1 cannot represent a combo, and that is why Splinter Twin measured as an
+	/// ordinary creature.** `PlayGreedyTurn` plays a land and then this many actions; at 1, an
+	/// unbounded loop turns over once per turn, so "infinite tokens" prices as "one token a turn".
+	/// Measured on the stocked fixture for a copier with its Illusionists in play:
+	///
+	/// | selfActionsPerTurn | leverage |
+	/// |---|---|
+	/// | 1 | 7.60 |
+	/// | 4 | 11.40 |
+	/// | 8 | 35.40 |
+	/// | 16 | 71.40 |
+	///
+	/// **The monotone climb with no plateau IS the combo signature** — a card with a fixed effect
+	/// flattens out. Note the control climbs too (97 → 282 over that sweep), so this is not a free
+	/// gift to combo cards: it re-baselines both arms and only a card that keeps producing gains.
+	///
+	/// **And raising it does NOT work, which is why this is 1. Measured, on DES, 5 payoffs:**
+	///
+	/// | budget | measured | Kilnmother Vess (Twin) leverage |
+	/// |---|---|---|
+	/// | 1 | 5/5 | 0.00 |
+	/// | 2 | 5/5 | 2.67 |
+	/// | 3 | **2/5** | 11.50, but three cards lost to terminals |
+	/// | 4 | **0/5** | — |
+	/// | 8 | **0/5** | — |
+	///
+	/// Over the whole 43-engine DES report at budget 8: **0 of 43 measured**, against 43 of 44 at
+	/// budget 1. The fixture simply DECIDES ITSELF — give the player more actions per turn and it
+	/// kills the opponent inside the lookahead for every card, not only for combos, and
+	/// `IsDecisive` then excludes the lot. More simulation cannot isolate a combo here; it just
+	/// ends the game.
+	///
+	/// Budget 2 is the only setting that both measures and registers Twin at all, and 2.67 against
+	/// Zombie Apocalypse's 45.87 does not change its rank in any useful way — while sitting one
+	/// step from a cliff. A default must not be parked next to a catastrophic failure mode.
+	///
+	/// **The knob is kept because the sweep is the evidence**, not because anything should raise it.
+	/// Telling a combo from a fixed effect wants `LoopDetector`, which already finds this exact
+	/// combo, rather than a longer rollout.
+	///
+	/// **Leverage only.** <see cref="Measure"/> keeps the production default of 1 so
+	/// `card_values_*.json` — which feeds the live AI's `ResolveChoice` — does not move for a
+	/// change to an offline ranking.
+	/// </summary>
+	private const int LeverageSelfActions = 1;
 
 	/// <summary>
 	/// **A card that cannot be CAST without its support is not unmeasurable — it is bare zero.**
@@ -414,7 +466,8 @@ public static class CardValueSandbox
 		int lookaheadTurns,
 		int seed,
 		Dictionary<(int, OpponentSimulationMode, string), float> controls,
-		Stocking? stocking = null
+		Stocking? stocking = null,
+		int selfActionsPerTurn = 1
 	)
 	{
 		var (state, ids) = Table(mana, stocking);
@@ -422,7 +475,8 @@ public static class CardValueSandbox
 			ids,
 			lookaheadTurns: lookaheadTurns,
 			opponentMode: mode,
-			rng: new Random(seed)
+			rng: new Random(seed),
+			selfActionsPerTurn: selfActionsPerTurn
 		);
 
 		// The counterfactual. Without it the number is "N turns elapsed" PLUS the card, and the
@@ -431,7 +485,12 @@ public static class CardValueSandbox
 		// **Each stocking gets its OWN control, and that is what makes leverage a real difference.**
 		// A stocked fixture has more permanents, so it scores higher before the card is cast; charge
 		// the stocked arm against the bare control and the leverage number would be the board.
-		var stockKey = stocking?.Key ?? "";
+		// **The budget is part of the key.** A control is "this fixture, played out by THIS rollout",
+		// and the rollout's action budget changes it by a lot — 97.10 at 1 against 281.67 at 16 on
+		// the Twin fixture. Two budgets sharing one cache would charge one arm against the other's
+		// baseline. No caller mixes budgets within a call today; this makes that safe rather than
+		// merely true.
+		var stockKey = $"{stocking?.Key ?? ""}|{selfActionsPerTurn}";
 		if (!controls.TryGetValue((mana, mode, stockKey), out var control))
 		{
 			try
@@ -442,6 +501,20 @@ public static class CardValueSandbox
 			{
 				return (0f, "control threw");
 			}
+
+			// **A decided CONTROL poisons every card measured against it, and reports nothing.**
+			// The subject's own score is checked for decisiveness below and excluded by name; the
+			// control was not, so a fixture that resolves itself inside the lookahead produced a
+			// baseline of ±9000 and every value became `score - 9000`. Measured while sweeping the
+			// rollout budget: Raise the Sunken came back at **-8018.06 with no error at all**,
+			// which reads as a real measurement of a catastrophic card.
+			//
+			// Guarded here rather than clamped: if the fixture decides the game without the card
+			// in it, there is no counterfactual to subtract and the honest answer is that this
+			// measurement did not happen.
+			if (StateEvaluator.IsDecisive(control))
+				return (0f, "control reached a terminal inside the lookahead");
+
 			controls[(mana, mode, stockKey)] = control;
 		}
 

@@ -60,6 +60,45 @@ public class LeverageMeasurementTests
 	}
 
 	/// <summary>
+	/// **A measured leverage may never be of terminal magnitude.**
+	///
+	/// The subject's score is checked for decisiveness and excluded by name, but the CONTROL it is
+	/// subtracted from was not. A fixture that resolves itself inside the lookahead gave a baseline
+	/// of ±9000, so every card measured against it returned `score - 9000` — and returned it as a
+	/// clean result. Found while sweeping the rollout budget: Raise the Sunken came back at
+	/// **-8018.06 with no error**, which reads as a real measurement of a catastrophic card.
+	///
+	/// Driven at a budget high enough to make the fixture decide itself, because that is the only
+	/// state in which the bug appears. If the fixture ever stops deciding at this budget the test
+	/// fails loudly rather than passing vacuously — the assertion is on the invariant, not on the
+	/// count of failures.
+	/// </summary>
+	[Test]
+	public void ADecidedControlIsReportedAsUnmeasured_NeverAsANumber()
+	{
+		var spells = SetRegistry.Get("DES").Cards.Where(c => !c.HasSubtype("Land")).ToList();
+		var features = PoolFeatures.Build(spells);
+		var pool = spells
+			.GroupBy(c => c.Name, StringComparer.Ordinal)
+			.ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+		string[] probe = ["Kilnmother Vess", "Raise the Sunken", "Mere-Storm"];
+		var rows = CardValueSandbox.MeasureLeverage(probe, features, pool, selfActionsPerTurn: 6);
+
+		foreach (var r in rows)
+			TestContext.Out.WriteLine(
+				$"{r.Name,-20} lev {r.Leverage,10:F2} measured {r.WasMeasured}  {r.NotMeasured}"
+			);
+
+		Assert.That(
+			rows.Where(r => r.WasMeasured).Select(r => r.Leverage),
+			Has.All.Matches<float>(v => !StateEvaluator.IsDecisive(v)),
+			"a leverage of terminal magnitude means the control decided the game — that is a "
+				+ "failed measurement, not a card worth -8000"
+		);
+	}
+
+	/// <summary>
 	/// End to end on a pool where the answer is not in doubt: a one-mana reanimation spell cannot
 	/// be cast with an empty graveyard, and must still come back measured with bare 0 and positive
 	/// leverage — the combination that puts it in the blank tier.

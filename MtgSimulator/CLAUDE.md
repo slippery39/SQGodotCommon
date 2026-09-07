@@ -1650,6 +1650,61 @@ cards between the before and after runs (Raise the Sunken lift 16 → 7) and tha
 non-reproducibility of mode 7's game columns, not an effect of this fix. Only `bare`, `supplied` and
 the rank are comparable here.
 
+### TRIED AND REJECTED: a longer rollout does not make a combo measurable
+
+**Splinter Twin measures leverage 0.00 and it is not the detector's fault.** Traced end to end on a
+replica of the sandbox's stocked fixture: the copier IS cast, four Illusionists ARE on the
+battlefield, the Twin activation IS offered, and `TwinComboPilotTests` shows the production AI
+taking it and looping it repeatedly. It dies in `PlayGreedyTurn`, which plays a land and then
+`_selfActionsPerTurn` actions — **default 1**. An unbounded loop therefore turns over once per
+simulated turn, so "infinite tokens" prices as "one token a turn".
+
+Sweeping the budget on that fixture shows the loop plainly:
+
+| selfActionsPerTurn | subject | control | leverage |
+|---|---|---|---|
+| 1 | 104.70 | 97.10 | 7.60 |
+| 4 | 168.67 | 157.27 | 11.40 |
+| 8 | 232.67 | 197.27 | 35.40 |
+| 16 | 353.07 | 281.67 | 71.40 |
+
+**The monotone climb with no plateau is the combo signature.** So raising the budget was the
+obvious fix, and it does not work. Measured on DES, 5 payoffs:
+
+| budget | measured | Twin leverage |
+|---|---|---|
+| 1 | 5/5 | 0.00 |
+| 2 | 5/5 | 2.67 |
+| 3 | **0/5** | — |
+| 8 | **0/5** | — |
+
+Over the whole 43-engine report at budget 8: **0 of 43 measured**, against 43 of 44 at budget 1.
+**The fixture decides itself** — more actions per turn kills the opponent inside the lookahead for
+*every* card, not only for combos, and `IsDecisive` excludes the lot. Budget 2 is the only setting
+that both measures and registers Twin at all, and 2.67 against Zombie Apocalypse's 45.87 changes no
+rank worth changing, while sitting one step from the cliff.
+
+`LeverageSelfActions` stays **1**. The parameter is kept because the sweep is the evidence, not
+because anything should raise it.
+
+**The reusable finding: more simulation cannot isolate a combo in a fixture that can end.** Telling
+an unbounded engine from a fixed effect wants `LoopDetector` — which already finds this exact combo,
+`TheShippedTwinCombo_IsFound` — rather than a longer rollout. That is the open route.
+
+#### The sweep found a real bug: an unguarded control
+
+The subject's score is tested with `IsDecisive` and excluded by name. **The control it is
+subtracted from was not.** A fixture that resolves itself gave a baseline of ±9000, so every card
+measured against it returned `score - 9000` **as a clean result** — Raise the Sunken came back at
+`-8018.06` with no error, which reads as a real measurement of a catastrophic card.
+
+Guarded rather than clamped: with no counterfactual there is nothing to subtract, so the honest
+answer is that the measurement did not happen. Budgets 1 and 2 are byte-identical either way, so
+nothing in production moved. Pinned by
+`ADecidedControlIsReportedAsUnmeasured_NeverAsANumber`, which asserts the invariant — a measured
+leverage is never of terminal magnitude — rather than a count of failures, so it fails loudly if the
+fixture ever stops deciding.
+
 ### Ranking is on coverage, not raw depth
 
 Raw depth ranks broad concepts first for free: a deck with 30 enablers deploys more of them than a
