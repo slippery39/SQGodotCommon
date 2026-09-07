@@ -371,12 +371,41 @@ public static class CardValueSandbox
 			);
 
 			results.Add(
-				new CardLeverage(name, bare.Value, supplied.Value, bare.Error ?? supplied.Error)
+				new CardLeverage(name, bare.Value, supplied.Value, Unmeasured(bare.Error, supplied.Error))
 			);
 		}
 
 		return results;
 	}
+
+	/// The one cast failure that carries information rather than reporting a broken measurement.
+	private const string NoLegalCast = "no legal cast action";
+
+	/// <summary>
+	/// **A card that cannot be CAST without its support is not unmeasurable — it is bare zero.**
+	///
+	/// The bare arm plays the card into an empty fixture. A reanimation spell targets a creature in
+	/// your graveyard, so with an empty graveyard it has no legal target and no legal cast action,
+	/// and the arm fails. Marking the whole measurement unmeasured then threw away a perfectly good
+	/// SUPPLIED number and dropped the card into tier 1 of <c>BlankFirstKey</c>, below every card
+	/// whose bare arm happened to be castable.
+	///
+	/// **That inverted the ranking this key exists to produce.** `bare = 0` is the signature the
+	/// sort is built to promote — "a blank until assembled" — and a card that literally cannot be
+	/// cast alone is the purest instance of it. Measured on DES: Raise the Sunken (supplied 17.60,
+	/// Lift 16, assembly 100%) and Necromantic Summons (supplied 23.50) were both discarded this
+	/// way, while Zombie Apocalypse — bare 0.00 too, but castable with no Zombies because it simply
+	/// does nothing — measured fine and ranked first. The discriminator between rank 1 and rank 24
+	/// was whether the card is castable with no targets, which is a rules technicality and says
+	/// nothing about the archetype.
+	///
+	/// **A failed SUPPLIED arm is still fatal**, and that asymmetry is the whole rule: without it
+	/// there is no supplied number, so there is no leverage to report.
+	/// </summary>
+	internal static string? Unmeasured(string? bareError, string? suppliedError) =>
+		suppliedError is not null ? suppliedError
+		: bareError is null or NoLegalCast ? null
+		: bareError;
 
 	private static (float Value, string? Error) MeasureOne(
 		Card card,
@@ -439,7 +468,7 @@ public static class CardValueSandbox
 				.ToList();
 
 			if (all.Count == 0)
-				return (0f, "no legal cast action");
+				return (0f, NoLegalCast);
 
 			// The generator emits ONE ACTION PER TARGET, so taking any single one picks a target
 			// arbitrarily — and `PlayersOrCreatures` includes the caster's own face. That made every
@@ -456,7 +485,7 @@ public static class CardValueSandbox
 		}
 
 		var best = float.MinValue;
-		var lastError = "no legal cast action";
+		var lastError = NoLegalCast;
 
 		foreach (var candidate in candidates)
 		{

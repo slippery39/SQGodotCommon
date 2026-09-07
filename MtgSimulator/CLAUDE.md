@@ -1604,6 +1604,52 @@ numbers that ranked the same as the thing it was supposed to correct.
 scores is not a baseline and nothing else in the output says so. That check is the automated form
 of "verify a test fails when you break the thing it tests" — it would have caught both.
 
+### FIXED: the blank tier excluded exactly the cards it exists to promote
+
+`BlankFirstKey` sorts cards that are worth nothing alone to the front, because that is the class
+hill climbing cannot reach. **It was rejecting every card that could not be CAST alone**, which is
+the purest instance of the thing it looks for.
+
+`MeasureLeverage` plays the card into an empty fixture (bare) and into a stocked one (supplied). A
+reanimation spell targets a creature in your graveyard, so with an empty graveyard there is no legal
+target and no legal cast action — the bare arm fails. The result was then marked unmeasured on
+`bare.Error ?? supplied.Error`, discarding a perfectly good SUPPLIED number and dropping the card
+into tier 1, below every card whose bare arm happened to be castable.
+
+**The discriminator between rank 1 and rank 24 was whether a card is castable with no targets.**
+Zombie Apocalypse reads bare 0.00 too — but it is castable with no Zombies, because it simply does
+nothing — so it measured fine and ranked first, while Raise the Sunken was discarded.
+
+Measured on DES, before and after:
+
+| concept | rank before | after | bare | leverage |
+|---|---|---|---|---|
+| Necromantic Summons | 22 | **2** | 0.00 | 23.50 |
+| Illusory Angel | 23 | **3** | 0.00 | 20.33 |
+| Raise the Sunken | 24 | **4** | 0.00 | 17.60 |
+| Echo of the Drowned | 25 | **5** | 0.00 | 2.80 |
+
+`CardValueSandbox.Unmeasured` carries the rule, and the asymmetry is the whole of it: a failed BARE
+arm of exactly `NoLegalCast` becomes bare zero, while a failed SUPPLIED arm stays fatal, because
+without a supplied number there is no leverage to report. A bare arm that **threw** is still fatal
+too — a crash is broken, not informative, and laundering it to zero would put every failed
+measurement at the top of the report, which is the failure the `Unmeasured` tier was added to
+prevent in the first place.
+
+Pinned by `LeverageMeasurementTests`, which tests the rule directly on all four combinations as well
+as end to end on a reanimation spell.
+
+**This does NOT fix Splinter Twin.** Kilnmother Vess moved 32 → 31 and its numbers are unchanged:
+`bare 9.00, leverage 0.00`. Its bare arm was always castable, so it was never affected — the probe
+simply reports that it gains nothing from having its demands answered, which contradicts the
+gauntlet, where hand-built Twin beats the evolved field. That is a separate defect in what the
+stocking supplies, and it is open.
+
+**Do not read the LIFT and ASSEMBLY columns across two runs as a change.** They moved for these
+cards between the before and after runs (Raise the Sunken lift 16 → 7) and that is the documented
+non-reproducibility of mode 7's game columns, not an effect of this fix. Only `bare`, `supplied` and
+the rank are comparable here.
+
 ### Ranking is on coverage, not raw depth
 
 Raw depth ranks broad concepts first for free: a deck with 30 enablers deploys more of them than a
