@@ -1368,6 +1368,9 @@ public sealed class PoolFeatures
 				var subject = card with { OwnerId = ids.Player1Id, ControllerId = ids.Player1Id };
 
 				GameState after;
+				// The MOVEMENT arm, which for a spell is a second resolution rather than the same
+				// one. See the comment on the arms below for why they cannot share a state.
+				SpellComponent? spell = null;
 				if (card.HasComponent<PermanentComponent>())
 				{
 					// The turn is what fires the upkeep trigger every mana rock and dork in this
@@ -1389,7 +1392,7 @@ public sealed class PoolFeatures
 				}
 				else
 				{
-					var spell = subject.GetComponent<SpellComponent>();
+					spell = subject.GetComponent<SpellComponent>();
 					if (spell is null || spell.Effects.Count == 0)
 						continue;
 
@@ -1431,13 +1434,37 @@ public sealed class PoolFeatures
 				// and the deck that scored 1st of 43). Those two channels read the pre-activation
 				// state and are byte-identical to what they were, so any change in a run is
 				// attributable to movement alone. Same discipline as the leverage control arm.
-				var (afterActivation, fodderIds) = Activate(
-					after,
-					ids,
-					[.. genericFodder, .. matcher.For(card)],
-					card.Name,
-					failures
-				);
+				List<Card> fodderFor = [.. genericFodder, .. matcher.For(card)];
+
+				// **A permanent ACTIVATES; a spell PAYS ITS CAST COSTS.** Same gap on both sides of
+				// the branch — the cost or ability that moves a card is never executed — and it
+				// needs a different answer in each half. Measured: after activation shipped, 5 of
+				// the 13 cost-payers still credited with nothing were spells, and all five move a
+				// card as a cast cost (Blood for Bones, Goblin Grenade, Magmatic Insight).
+				//
+				// **The spell arm re-resolves from the fixture rather than reusing `after`, and
+				// that is the scoping rule again, not waste.** Paying Magmatic Insight's discard
+				// before drawing changes the CARD reading from +1 to 0, which would move the storm
+				// enabler set — the calibrated measurement this whole change is scoped around.
+				// Resolving twice keeps the mana and card channels reading a cost-free cast, so a
+				// run's movement is still attributable to production alone.
+				//
+				// ponytail: that leaves the card channel modelling a storm enabler as free when it
+				// is not. It is the honest reading of the cost, and worth taking — as its own
+				// change, with its own before/after on the enabler set, rather than smuggled in
+				// under a movement fix.
+				var (afterActivation, fodderIds) = card.HasComponent<PermanentComponent>()
+					? Activate(after, ids, fodderFor, card.Name, failures)
+					: PayThenResolve(
+						fixture,
+						after,
+						ids,
+						subject,
+						spell!,
+						fodderFor,
+						card.Name,
+						failures
+					);
 
 				// Counted, not just recorded. A mill-4 fills a graveyard four times as fast as a
 				// one-card tutor, and `SupplyOf` is the channel that difference travels down.
@@ -1627,6 +1654,109 @@ public sealed class PoolFeatures
 	}
 
 	/// <summary>
+	/// **Pay a spell's additional CAST costs, then resolve it — so what the cost moves is measured.**
+	///
+	/// The probe resolves `SpellComponent.Effects` directly and never casts, so
+	/// <c>Card.AdditionalCastCosts</c> were never paid. A spell that discards or sacrifices as a
+	/// cost therefore filled a graveyard nothing could see: Blood for Bones, Goblin Grenade,
+	/// Magmatic Insight, Bargain at the Crossroads, Rite of Second Drowning.
+	///
+	/// **Resolving is kept, and casting for real was rejected.** A cast goes through
+	/// `MtgActionGenerator`, which needs a legal target — and the fixture deliberately leaves the
+	/// opponent's battlefield empty, so every removal spell in the pool would stop producing
+	/// anything at all. That trades 5 cards for a few hundred. Paying the costs alongside the
+	/// existing resolution buys the missing half without giving up the half that works.
+	///
+	/// A cost that cannot be paid is SKIPPED rather than abandoning the probe: the spell still
+	/// resolves, which is exactly the old measurement, and the alternative is a card that reports
+	/// nothing because its fixture was one permanent short.
+	/// </summary>
+	private static (GameState State, IReadOnlyList<int> Fodder) PayThenResolve(
+		GameState state,
+		GameState resolvedWithoutCosts,
+		MtgGameIds ids,
+		Card subject,
+		SpellComponent spell,
+		IReadOnlyList<Card> fodderCards,
+		string cardName,
+		List<string> failures
+	)
+	{
+		var fodder = new List<int>();
+
+		// **The fallback is the ALREADY-RESOLVED state, never the bare fixture.** `state` here is
+		// the fixture before the spell resolved, so returning it for a spell with no cast cost
+		// would report every mill spell and every tutor in the pool as moving nothing — a far
+		// larger regression than the five cards this method exists to fix.
+		if (subject.AdditionalCastCosts.Count == 0)
+			return (resolvedWithoutCosts, fodder);
+
+		try
+		{
+			// Same reason as `Activate`: a sacrifice cost has nothing to pay with otherwise. The
+			// spell itself never reaches the battlefield, so unlike the permanent arm there is no
+			// subject to track — only what the cost consumes.
+			foreach (var f in fodderCards)
+			{
+				(state, var placed) = state.AddObject(
+					f with
+					{
+						OwnerId = ids.Player1Id,
+						ControllerId = ids.Player1Id,
+					},
+					parentId: ids.Player1BattlefieldId
+				);
+				fodder.Add(placed.Id);
+			}
+
+			foreach (var cost in subject.AdditionalCastCosts)
+			{
+				// `SourceCardId` 0: the spell is not an object in this fixture, and the id is only
+				// used to exclude the card being cast from its own payment — an exclusion that is
+				// already vacuous here.
+				var payments = ImmutableList<int>.Empty;
+				if (cost.RequiresSelection)
+				{
+					// First N valid, matching `MtgActionGenerator.BuildAdditionalCostPayments`.
+					// Duplicated rather than shared because that helper is private to the
+					// generator; if a third caller ever needs it, promote it rather than copying.
+					var valid = cost.GetValidPayments(state, ids.Player1Id, 0);
+					if (valid.Count < cost.RequiredPaymentCount)
+						continue;
+					payments = [.. valid.Take(cost.RequiredPaymentCount)];
+				}
+
+				if (!cost.Validate(state, ids.Player1Id, 0, payments).IsValid)
+					continue;
+
+				state = cost.Pay(state, ids.Player1Id, 0, payments);
+			}
+
+			var (resolved, _) = state
+				.AddActions(
+					[
+						new ResolveEffectAction
+						{
+							Effects = spell.Effects,
+							CastingPlayerId = ids.Player1Id,
+							SourceCardId = 0,
+						},
+					]
+				)
+				.ProcessAllActions();
+
+			return (resolved, fodder);
+		}
+		catch (Exception ex)
+		{
+			// Same rule as every other probe here, and the same fallback as `Activate`: the whole
+			// pre-payment state, never a half-paid one.
+			failures.Add($"cast-cost probe {cardName} threw {ex.GetType().Name}");
+			return (resolvedWithoutCosts, []);
+		}
+	}
+
+	/// <summary>
 	/// **Activate the probe subject's own abilities once each, so what they MOVE is measured.**
 	///
 	/// Actions come from <see cref="MtgActionGenerator.GetLegalActions"/> rather than being built
@@ -1672,6 +1802,30 @@ public sealed class PoolFeatures
 			// was stocked. Its starting zone is the battlefield, like the fodder's, so the
 			// non-battlefield filter at the call site does the rest.
 			fodder.AddRange(subject);
+
+			// **The OPPONENT gets a board too, and only here.** Most of what was still invisible
+			// after fodder is an ability that needs a target — "sacrifice this: deal 2 damage to
+			// target creature" — and damage in this project aims at the opponent's side, so with an
+			// empty opposing board the generator emits no action and the card reads as inert.
+			//
+			// This does NOT contradict the empty opponent battlefield that `IsControlScoped` and
+			// `TargetingOnlyObjectReferentialSpecs` rely on. That is the PLACEMENT fixture, whose
+			// emptiness stops "a creature an opponent controls" being answered by the whole pool.
+			// This is the card-profile fixture, which answers a different question and shares no
+			// state with it.
+			//
+			// Opponent cards are deliberately NOT tracked, and that asymmetry is the point:
+			// destroying their creature must not count as filling YOUR graveyard. They exist to
+			// make the ability legal, nothing more.
+			foreach (var f in fodderCards)
+				(state, _) = state.AddObject(
+					f with
+					{
+						OwnerId = ids.Player2Id,
+						ControllerId = ids.Player2Id,
+					},
+					parentId: ids.Player2BattlefieldId
+				);
 
 			// **A sacrifice cost needs something to sacrifice, and without this there is nothing.**
 			// The probe's filler is stocked into library, hand and graveyard, so the only permanent

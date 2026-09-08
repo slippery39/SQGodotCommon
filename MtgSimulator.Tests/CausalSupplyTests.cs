@@ -181,6 +181,64 @@ public class CausalSupplyTests
 	}
 
 	/// <summary>
+	/// **A spell that sacrifices as a CAST COST fills a graveyard — and one with no cost keeps
+	/// working.**
+	///
+	/// The probe resolves `SpellComponent.Effects` directly and never casts, so
+	/// `Card.AdditionalCastCosts` were never paid: Blood for Bones, Goblin Grenade and Magmatic
+	/// Insight all moved a card as a cost and were credited with nothing.
+	///
+	/// **The second assertion is the one that matters and it is not decoration.** The first draft
+	/// of the fix returned the bare fixture when a spell had no cast cost, instead of the state
+	/// where its effects had already resolved — which would have reported every mill spell and
+	/// every tutor in the pool as moving nothing. A far bigger regression than the five cards the
+	/// change exists to fix, and completely silent: those cards would simply have stopped being
+	/// enablers.
+	/// </summary>
+	[Test]
+	public void ASacrificeCastCost_FillsTheGraveyard_AndACostlessSpellStillMills()
+	{
+		var ritual = CardFactory
+			.Spell("Ritual of Bones", manaCost: 2)
+			.WithSacrificeCost(new IsCreatureSpecification())
+			.WithLifeGain(1)
+			.Build();
+
+		Card Bear(string name) =>
+			CardFactory.Creature(name, manaCost: 2, power: 2, toughness: 2).Build();
+
+		var millstone = CardFactory.Spell("Millstone", manaCost: 2).WithMill(2).Build();
+		var reanimate = CardFactory
+			.Spell("Reanimate", manaCost: 2)
+			.WithReanimate()
+			.WithTarget(TargetBuilder.Single().CreatureInYourGraveyard())
+			.Build();
+
+		var features = PoolFeatures.Build(
+			[ritual, millstone, Bear("Bear1"), Bear("Bear2"), Bear("Bear3"), reanimate]
+		);
+
+		var graveyard = features
+			.DemandsOf("Reanimate")
+			.Single(d => features.SuppliersOf(d).Contains("Bear1"));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				features.CausalSupplyOf(graveyard, "Ritual of Bones"),
+				Is.GreaterThan(0),
+				"sacrificing a creature to cast a spell puts a creature in your graveyard"
+			);
+			Assert.That(
+				features.CausalSupplyOf(graveyard, "Millstone"),
+				Is.GreaterThan(0),
+				"a spell with NO additional cost must keep the movement supply it always had — "
+					+ "this is the regression the cost arm's fallback state guards against"
+			);
+		});
+	}
+
+	/// <summary>
 	/// For every demand, the top suppliers ranked by <c>SupplyOf</c> — the weight that decides what
 	/// `SeedConcept` and `DeckCore.Satisfy` actually pick. **Read the graveyard rows**: if the top
 	/// of that list is discard outlets and self-mill, causal supply is reaching the sampler. If it
