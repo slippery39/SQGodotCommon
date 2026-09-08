@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using ImmutableGameObjects;
 using MtgCore;
 using MtgCore.Cards.Builders;
@@ -300,6 +300,15 @@ public static class CardValueSandbox
 	/// One arm only (`PassTurn`). Fragility is a separate axis and doubling the cost to measure it
 	/// here would be answering a question nobody asked of this table.
 	/// </summary>
+	/// <summary>
+	/// The fixture offered no legal way to cast the subject.
+	///
+	/// **Named because <see cref="MeasureLeverage"/> has to tell this reason apart from the others,
+	/// and a string literal compared in two places is how that goes quietly wrong.** On the BARE
+	/// arm this is not a failure — it is the measurement.
+	/// </summary>
+	public const string Uncastable = "no legal cast action";
+
 	public static IReadOnlyList<CardLeverage> MeasureLeverage(
 		IReadOnlyList<string> payoffs,
 		PoolFeatures features,
@@ -370,8 +379,32 @@ public static class CardValueSandbox
 				new Stocking(name, stock, storm)
 			);
 
+			// **A card that CANNOT BE CAST into an empty board is worth exactly nothing there, and
+			// that is a measurement rather than a failure.**
+			//
+			// The bare arm asks what a card is worth cast into an empty board. A reanimation spell
+			// with no creature in the graveyard, Goblin Grenade with no Goblin, Illusory Angel with
+			// no spell cast first — none of them can be cast there AT ALL, which is not a defect in
+			// the fixture, it is the definition of the class this whole mode exists to find.
+			//
+			// Treating it as unmeasured excluded exactly those cards, because
+			// `EngineCandidate.BlankFirstKey` sorts unmeasured candidates into the bottom tier so a
+			// failed arm's default `Bare` of 0 cannot masquerade as a blank. That rule is right and
+			// stays. Measured on ALL: 14 of 16 leverage failures were this one reason, every one of
+			// them a genuine conditional payoff, and the cost was that **no reanimation core had
+			// ever been seeded into a field** — Second Burial carries the highest supplied value in
+			// the whole DES report (51.67, above rank-1 Zombie Apocalypse's 51.10) and ranked 20th.
+			//
+			// **Only the bare arm gets this reading.** Uncastable WITH its demands answered means
+			// the stocking did not enable the card and nothing was measured, so `supplied.Error`
+			// still disqualifies it — the `??` below is what keeps that true. A card whose leverage
+			// comes out at zero is still not a payoff and still sorts last, by `BlankFirstKey`'s own
+			// `Leverage > 0` test; this changes which cards get a NUMBER, never what the number has
+			// to be worth.
+			var bareError = bare.Error == Uncastable ? null : bare.Error;
+
 			results.Add(
-				new CardLeverage(name, bare.Value, supplied.Value, bare.Error ?? supplied.Error)
+				new CardLeverage(name, bare.Value, supplied.Value, bareError ?? supplied.Error)
 			);
 		}
 
@@ -439,7 +472,7 @@ public static class CardValueSandbox
 				.ToList();
 
 			if (all.Count == 0)
-				return (0f, "no legal cast action");
+				return (0f, Uncastable);
 
 			// The generator emits ONE ACTION PER TARGET, so taking any single one picks a target
 			// arbitrarily — and `PlayersOrCreatures` includes the caster's own face. That made every
@@ -456,7 +489,7 @@ public static class CardValueSandbox
 		}
 
 		var best = float.MinValue;
-		var lastError = "no legal cast action";
+		var lastError = Uncastable;
 
 		foreach (var candidate in candidates)
 		{
