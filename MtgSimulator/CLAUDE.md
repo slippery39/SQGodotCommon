@@ -1207,6 +1207,46 @@ Three rules in `DeckCore.For`, each with a reason:
 - **A thin slot CLAMPS rather than rejecting the core.** A count must not get to decide which
   archetypes exist.
 
+#### The subset splits again on EQUALITY, and the pinned slot is the equivalence class
+
+The anchor used to get a slot of its own — `Required: {card}`, one card, `MinCopies` 4 — and **which
+card that was came from `EngineDiscovery`'s dedupe, which picks its representative with
+`OrderBy(Name)`.** A reanimator core was keyed on whichever reanimation spell sorted first and then
+pinned it for the whole run, so the cheaper spell was never allowed to compete.
+
+Two things made that worse than a bad label. `ProtectedIn` locks a slot at its floor, so an
+alphabetical tiebreak became a hard build constraint; and `DeckBuilder.SwapWithinSlot` skips any
+slot holding one card, so the slot was **structurally unswappable** — not "explored and kept",
+never proposed.
+
+So `interchangeable` splits in two, on demand-set **equality**:
+
+| relation to the anchor's demands | slot | floor |
+|---|---|---|
+| **equal** — the same engine, differing in cost and name | `Payoff` | `payoffCopies` |
+| **strictly less** — a cheaper rider that does not need the whole core | `Payoff [partial]` | 0 |
+
+Equality is what preserves the failure the anchor slot was built from. A Spirit Bonds slot once
+finished with **no Spirit Bonds in it**, because its payoff slot held 70 cards at `MinCopies` 0 and
+`Holds` never noticed — and those 70 ask strictly LESS, so they are partial now and its pinned slot
+stays at one card.
+
+Measured, mode 7 on DES, same seed both arms, 44 cores each:
+
+```
+pinned slot size    1: 28   2: 9   3: 3   5: 1   7: 2   19: 1
+```
+
+28 are equivalence classes of one and behave exactly as before. 16 widened, which is the choice
+being handed to measurement — `Blood for Bones` became `{Blood for Bones, Rite of Second Drowning,
+Second Burial}` with 81 subsumed cards demoted to partial; `Dwynen's Elite` became 7 elf lords.
+
+**The distinct-core COUNT did not move, and expecting it to was wrong.** The dedupe key is already
+the union of the identity slots, so equivalent payoffs were never separate rows. What was wrong is
+which one got pinned. A duplicate that survives dedupe is the *other* shape — two cards with
+overlapping-but-unequal demands — and collapsing those needs a subsumption pass (`coreB.Holds(deckA)`
+pairwise), which is **not built**.
+
 #### Slot minimums are derived, and one family is still wrong
 
 `MinFor` replaced a flat 8 with two rules. **A demand carrying its own number uses it** —
@@ -1757,6 +1797,64 @@ Sunken Chorus(5), Unhallowed Rite(5), Grim Excavation(4), Mere-Drowned Scribe(4)
 
 `CausalSupplyTests` dumps this per demand. Run it before believing any claim about what a slot
 contains.
+
+### The probe ACTIVATES the subject, and until it did, no outlet produced anything
+
+`ProbeCardProfiles` deploys a permanent and starts a turn — which is what fires the upkeep triggers
+every mana dork produces from — and then stopped. **It never activated anything.** Measured on ALL
+before the fix: **140 cards carry an activated ability and not one supplied any demand causally**,
+against 44 cards with causal supply pool-wide. Every aristocrats sacrifice outlet and every
+ability-based discard outlet in the pool was invisible on the production side, so `DeckCore.For`
+built reanimator and sacrifice cores with nothing to fill the graveyard.
+
+Actions come from `MtgActionGenerator.GetLegalActions`, never built by hand — the project's standing
+rule, and it is what makes cost payment, targeting, `MaxActivationsPerTurn`, summoning sickness and
+exhaust enforced by the engine rather than re-derived. The generator fills `AdditionalCostPayments`
+itself, so a discard or sacrifice cost is paid with no choice to resolve. **One activation per
+ability**: the generator emits an action per target, so taking every action would fire a targeted
+ability once per target and over-attribute what it moved.
+
+Four parts, each measured, each necessary and none sufficient:
+
+| | cards with causal supply |
+|---|---|
+| before | **44** |
+| activate only | 49 |
+| + sacrifice fodder | 63 |
+| + fodder matching a NARROW filter | 65 |
+| + track the subject itself | **71** |
+
+- **Fodder**, because the subject is otherwise the only permanent on the battlefield — the filler is
+  stocked into library, hand and graveyard — so a sacrifice cost had nothing to pay with.
+- **Narrow filters** (Goblin Grenade wants a Goblin, Devout Chaplain a Human, Atog an artifact) are
+  answered by **evaluating the filter against the pool**, never by a subtype list. The cost carries a
+  `TargetSpecification`; running it is the same thing `Build` does for demands.
+- **The subject is tracked**, because a card sacrificing ITSELF still puts a card in a graveyard —
+  Heartfire Immolator, Generator Servant, Brittle Effigy.
+
+**Scoped to the movement channel deliberately, and check this before touching it.** Activating costs
+mana and cards, so folding it into the mana/card readings would move the storm enabler set, which
+this file records as calibrated. Those channels read the **pre-activation** state and the storm slot
+is byte-identical across the change at 82 cards, min 6 — so any movement in a run is attributable to
+production alone. Fodder is placed inside the activation phase for the same reason rather than in the
+fixture: a board full of creatures changes what a card produces (Wirewood Conduit adds mana per
+creature you control).
+
+**19 cards throw, all planeswalker loyalty abilities.** They are surfaced by name and fall back to
+the *whole* pre-activation state, so they get exactly the old measurement rather than a partial one.
+
+**Still invisible, with named causes rather than a mystery** (13 of 38 cost-payers):
+
+- **5 are SPELLS whose cost is on the cast.** The probe resolves `spell.Effects` directly and never
+  casts, so `AdditionalCastCosts` are never paid — Blood for Bones, Goblin Grenade, Magmatic Insight.
+  A separate mechanism from activation and not addressed.
+- **8 need a target the bare fixture cannot provide**, because it deliberately puts nothing on the
+  opponent's battlefield (see `IsControlScoped`). Fixing that moves every other number in the file.
+
+`CausalSupplyTests.AnActivatedSacrificeOutlet_FillsTheGraveyard_AndAVanillaBodyDoesNot` pins it, with
+the vanilla half as the vacuity guard — a probe that credited every card it played would pass the
+first assertion alone. `CostAsProductionTests` is the `[Explicit]` diagnostic that sized the gap and
+that reports what is left.
 
 ### The live limitation: SupplyOf merges channels that mean different things
 
