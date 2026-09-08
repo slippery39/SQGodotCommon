@@ -1822,7 +1822,9 @@ Four parts, each measured, each necessary and none sufficient:
 | activate only | 49 |
 | + sacrifice fodder | 63 |
 | + fodder matching a NARROW filter | 65 |
-| + track the subject itself | **71** |
+| + track the subject itself | 71 |
+| + pay a spell's CAST costs | 76 |
+| + give the opponent a board | **79** |
 
 - **Fodder**, because the subject is otherwise the only permanent on the battlefield — the filler is
   stocked into library, hand and graveyard — so a sacrifice cost had nothing to pay with.
@@ -1843,18 +1845,44 @@ creature you control).
 **19 cards throw, all planeswalker loyalty abilities.** They are surfaced by name and fall back to
 the *whole* pre-activation state, so they get exactly the old measurement rather than a partial one.
 
-**Still invisible, with named causes rather than a mystery** (13 of 38 cost-payers):
+**Cast costs are the SPELL half of the same gap.** `ProbeCardProfiles` resolves `spell.Effects`
+directly and never casts, so `Card.AdditionalCastCosts` were never paid. Casting for real was
+**rejected, not overlooked**: a cast goes through the generator, which needs a legal target, and the
+fixture leaves the opponent's battlefield empty — so every removal spell in the pool would stop
+producing anything, trading 5 cards for a few hundred. Paying the costs beside the existing
+resolution buys the missing half without giving up the half that works.
 
-- **5 are SPELLS whose cost is on the cast.** The probe resolves `spell.Effects` directly and never
-  casts, so `AdditionalCastCosts` are never paid — Blood for Bones, Goblin Grenade, Magmatic Insight.
-  A separate mechanism from activation and not addressed.
-- **8 need a target the bare fixture cannot provide**, because it deliberately puts nothing on the
-  opponent's battlefield (see `IsControlScoped`). Fixing that moves every other number in the file.
+**That arm RE-RESOLVES from the fixture rather than reusing the cost-free state**, for the scoping
+rule above: paying Magmatic Insight's discard before drawing changes its card reading from +1 to 0.
+`ponytail:` which leaves the card channel modelling a storm enabler as free when it is not — worth
+taking as its own change with its own before/after on the enabler set, never folded into a movement
+fix.
 
-`CausalSupplyTests.AnActivatedSacrificeOutlet_FillsTheGraveyard_AndAVanillaBodyDoesNot` pins it, with
-the vanilla half as the vacuity guard — a probe that credited every card it played would pass the
-first assertion alone. `CostAsProductionTests` is the `[Explicit]` diagnostic that sized the gap and
-that reports what is left.
+**The opponent gets a board, and ONLY inside the activation phase.** Most of what remained is an
+ability needing a target ("sacrifice this: deal 2 damage to target creature"), and an empty opposing
+board means the generator emits no action at all. This does **not** contradict the empty opponent
+battlefield `IsControlScoped` and `TargetingOnlyObjectReferentialSpecs` depend on — that is the
+PLACEMENT fixture, whose emptiness stops "a creature an opponent controls" being answered by the
+whole pool. This is the card-profile fixture and shares no state with it. Opponent cards are
+deliberately **not tracked**, so destroying their creature never counts as filling YOUR graveyard.
+
+**Still invisible, 5 of 38 cost-payers, not diagnosed**: Arms Dealer, Demonic Embrace, Fauna Shaman,
+Generator Servant, Hanged Executioner.
+
+`CausalSupplyTests.AnActivatedSacrificeOutlet_FillsTheGraveyard_AndAVanillaBodyDoesNot` pins the
+ability half, with the vanilla body as the vacuity guard — a probe that credited every card it played
+would pass the first assertion alone. `ASacrificeCastCost_FillsTheGraveyard_AndACostlessSpellStillMills`
+pins the spell half, and **its second assertion is the load-bearing one**: the first draft of that arm
+returned the bare fixture when a spell had no cast cost, rather than the state where its effects had
+resolved — which would have reported every mill spell and every tutor in the pool as moving nothing,
+silently. Both pins were confirmed to fail with their arm disabled. `CostAsProductionTests` is the
+`[Explicit]` diagnostic that sized the gap and reports what is left.
+
+Mode 7 on DES holds at 44 cores across the whole change. One renames — Blood for Bones → Second
+Burial — because Blood for Bones now FILLS the graveyard it used to only ask for, so the "a card does
+not demand what it creates" rule moved it from payoff to enabler. The same reclassification Entomb
+got, firing on a newly visible producer; the archetype survives under the next member of its
+equivalence class.
 
 ### The live limitation: SupplyOf merges channels that mean different things
 
