@@ -1899,7 +1899,9 @@ public sealed class MetagameEvolver
 			_explorationGenerations > 0
 				? $"  Exploration: generations 1-{_explorationGenerations} "
 					+ "(playset-sized moves only, no Recount/AdjustLands, culling suppressed, "
-					+ $"every slot gets all {_mutantsPerDeck} mutants regardless of win rate)"
+					+ $"every slot gets all {_mutantsPerDeck} mutants regardless of win rate, "
+					+ $"card sampling at T={DeckBuilder.ExploreTemperature:0.#} "
+					+ $"against {DeckBuilder.MutateTemperature:0.#} when optimising)"
 				: "  Exploration: OFF (every generation optimises)"
 		);
 		Console.WriteLine(

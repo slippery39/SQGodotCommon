@@ -31,6 +31,42 @@ public static class DeckBuilder
 	/// Tighter than seeding: a mutation is a considered swap, not exploration.
 	public const double MutateTemperature = 2.0;
 
+	/// <summary>
+	/// Softmax temperature while EXPLORING, where the point is to sample the pool rather than to
+	/// pick the best card.
+	///
+	/// **At `MutateTemperature` the exploration phase was not exploring.** Scores are dominated by
+	/// `CardDelta`, which comes from pre-simulation — cards measured in uniformly RANDOM decks —
+	/// and at 2.0pp that softmax is nearly an argmax. Measured on DES: Zombie Horde Leader reads
+	/// +24.26pp against Skim the Surface's +2.18pp, a 22.1pp gap, which at T=2.0 is
+	/// **e^11.04 ≈ 62 000 : 1** odds. The Twin slot's eight proposals across a whole run were War
+	/// Horn three times, Zombie Horde Leader twice, and three other good-stuff creatures; not one
+	/// card-selection effect was ever offered, and its accept rate was 3/8 — ABOVE the field's.
+	/// The search was not rejecting the right cards, it was never shown them.
+	///
+	/// **This is the one bias exploration cannot afford, because presim structurally cannot price
+	/// a conditional card.** A cantrip does nothing in a random pile, so the table that steers
+	/// proposals is exactly the table that cannot see what a combo deck needs. More generations
+	/// samples the same distribution more times; only flattening it changes what is reachable.
+	///
+	/// The same peak explains the curve slots converging: six decks proposing from one table at
+	/// near-argmax all arrive at the same cards. Zombie Horde Leader ended up in all six.
+	///
+	/// **Not uniform, deliberately.** Flat over 732 spells makes most proposals junk and spends the
+	/// budget confirming that random cards are bad. At 25 the same 22.1pp gap is ~2.4:1 — a mild
+	/// pull toward playable cards rather than a verdict. Win rate still judges; this only decides
+	/// what gets to stand trial.
+	/// </summary>
+	/// <remarks>
+	/// Overridable via `MTG_EXPLORE_TEMP` so the value can be swept across real runs without a
+	/// rebuild — the same lever `MTG_MIN_LANDS` provides, and for the same reason: 25 is a starting
+	/// point argued from arithmetic, not a measured optimum.
+	/// </remarks>
+	public static double ExploreTemperature { get; set; } =
+		double.TryParse(Environment.GetEnvironmentVariable("MTG_EXPLORE_TEMP"), out var t) && t > 0
+			? t
+			: 25.0;
+
 	/// How many synergy partners form the kernel around the anchor.
 	public const int KernelSize = 4;
 
@@ -918,7 +954,7 @@ public static class DeckBuilder
 			rng,
 			curveTarget,
 			1.0,
-			MutateTemperature,
+			exploring ? ExploreTemperature : MutateTemperature,
 			features,
 			contextValue,
 			exploring
@@ -1015,10 +1051,12 @@ public static class DeckBuilder
 		if (outside.Count == 0)
 			return null;
 
+		// Package runs during exploration too (rolls 7-8), and its anchor is a card ENTERING the
+		// deck — the same choice `Swap`'s fill makes, so it takes the same phase temperature.
 		var anchor = outside[
 			DraftPickers.SampleSoftmax(
 				outside.Select(c => values.CardDelta(c.Name)).ToArray(),
-				MutateTemperature,
+				exploring ? ExploreTemperature : MutateTemperature,
 				rng
 			)
 		];
@@ -1076,7 +1114,7 @@ public static class DeckBuilder
 				rng,
 				trimmed.AverageCost(spells.ToDictionary(c => c.Name, StringComparer.Ordinal)),
 				1.0,
-				MutateTemperature,
+				exploring ? ExploreTemperature : MutateTemperature,
 				features,
 				contextValue,
 				exploring
