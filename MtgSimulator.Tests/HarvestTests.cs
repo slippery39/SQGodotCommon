@@ -147,11 +147,17 @@ public class HarvestTests
 	/// slots harvested, and the three that did not were the 2-, 3- and 4-card cores — the slots the
 	/// engine mechanism exists for.
 	///
-	/// So a card already in the deck stays a candidate, capped at the count it already has: keeping
-	/// is free, adding stays locked.
+	/// **A core that cannot fill a deck does not lock the slots it cannot reach**, so the flex is
+	/// exactly what a narrow-core slot searches: find the support cards that serve this engine. The
+	/// core's own minimums still carry the archetype.
+	///
+	/// This test previously asserted the opposite — that an off-identity card could be kept but
+	/// never added to — which was the rule that froze the 2-, 3- and 4-card cores. `DeckCore.Identity`
+	/// still binds strictly wherever the core CAN fill a deck; `ItNeverReachesOutsideAPoolLockedCore`
+	/// is that half.
 	/// </summary>
 	[Test]
-	public void ANarrowCoreHarvestsItsFlex_WithoutAddingOffIdentityCopies()
+	public void ANarrowCoreHarvestsItsFlex_AndCanPromoteTheBestSupport()
 	{
 		var identity = Spells.Take(2).ToList();
 		var flex = Spells.Skip(2).Take(10).ToList();
@@ -182,22 +188,20 @@ public class HarvestTests
 				"a 2-card core must still harvest its flex rather than falling back"
 			);
 			Assert.That(harvested.IsValid, Is.True);
-			Assert.That(core.Holds(harvested), Is.True, "the core survives the rebuild");
+			Assert.That(
+				core.Holds(harvested),
+				Is.True,
+				"the core's minimums are what carry the archetype once the lock is off"
+			);
 
-			// The measured-best card is off-identity and held at one copy, so this is the exact
-			// case the cap governs.
+			// `flex[9]` is off-identity, was held at ONE copy, and is the best-measured card in the
+			// slot's history. Promoting it is the whole point — this is the search finding support
+			// for the engine, and it is what the old cap forbade.
 			Assert.That(
 				harvested.CopiesOf(flex[9]),
-				Is.LessThanOrEqualTo(1),
-				"an off-identity card may be KEPT but never added to — that would be the "
-					+ "good-stuff drift the pool lock exists to prevent"
+				Is.GreaterThan(current.CopiesOf(flex[9])),
+				"a narrow core must be able to promote the support card its own games rated best"
 			);
-			foreach (var n in harvested.Spells.Keys.Where(n => !identity.Contains(n)))
-				Assert.That(
-					harvested.CopiesOf(n),
-					Is.LessThanOrEqualTo(current.CopiesOf(n)),
-					$"{n} is off-identity and grew beyond the count the deck already had"
-				);
 		});
 	}
 

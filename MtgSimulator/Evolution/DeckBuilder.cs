@@ -496,9 +496,20 @@ public static class DeckBuilder
 		// It converges INWARD: cutting stays unconstrained, so a deck that starts impure cleans
 		// itself up and nothing outside can return. Evolution may still discover a storm deck wants
 		// fewer rituals; it cannot discover that it wants Steppe Lynx.
-		if (core is not null)
+		// **The lock applies only when the core CAN fill a deck.** Otherwise it does not narrow the
+		// search, it stops it: a four-card identity reaches 16 of 45 spell slots and the other 29
+		// are whatever seeding put there, unchangeable forever. Measured on a 21-deck DES run, the
+		// 2-, 3- and 4-card cores accepted NOTHING across six generations while logging 5/5, 2/7
+		// and 6/2 real/dry proposals — decks that were frozen rather than bad.
+		//
+		// A frozen deck is worse than a drifting one, because it is not searching at all. What such
+		// a slot needs is exactly what the flex is for: find the support cards that serve this
+		// engine. `core.Holds` still enforces every slot minimum, so the archetype is carried by the
+		// core either way — the lock is a second, stronger constraint, and it earns its place only
+		// where the core can actually supply the deck.
+		if (core is not null && core.CanFillDeck(deck.Lands))
 		{
-			var identity = core.Slots.SelectMany(s => s.Cards).ToHashSet(StringComparer.Ordinal);
+			var identity = core.Identity.ToHashSet(StringComparer.Ordinal);
 			spells = spells.Where(c => identity.Contains(c.Name)).ToList();
 			if (spells.Count == 0)
 				return null;

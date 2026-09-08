@@ -565,6 +565,29 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 
 	public bool Holds(Decklist deck) => Slots.All(s => s.SatisfiedBy(deck));
 
+	/// Every distinct card this core names, across all its slots — the archetype's identity, and
+	/// the set a pool lock draws from.
+	public IReadOnlyCollection<string> Identity =>
+		[.. Slots.SelectMany(s => s.Cards).Distinct(StringComparer.Ordinal)];
+
+	/// <summary>
+	/// **Can this core's own cards fill a deck, or must the rest come from outside?**
+	///
+	/// A pool lock that admits only identity cards is right when the answer is yes: the deck can be
+	/// built entirely on-theme, and anything else is drift. When the answer is NO the same lock
+	/// freezes the deck solid — Splinter Twin's identity is FOUR cards, so 16 of its 45 spell slots
+	/// are reachable and the other 29 are whatever seeding happened to put there, permanently.
+	/// Measured on a 21-deck DES run: the 2-, 3- and 4-card cores logged 5/5, 2/7 and 6/2
+	/// real/dry proposals and accepted nothing across six generations.
+	///
+	/// Those decks are not bad, they are FROZEN, and freezing is worse than drift: a drifting deck
+	/// is at least searching. The core's own minimums still hold the archetype either way — that is
+	/// `Holds`, and it is the constraint that carries the identity. The lock is a second, stronger
+	/// constraint that only earns its place when the core can actually supply a deck.
+	/// </summary>
+	public bool CanFillDeck(int lands) =>
+		Identity.Count * Decklist.MaxCopies >= Decklist.DeckSize - lands;
+
 	/// Slots this deck fails, with what it has against what it needs. For the report, and for
 	/// telling "the constraint is binding" apart from "the constraint is broken".
 	public IReadOnlyList<string> Missing(Decklist deck) =>

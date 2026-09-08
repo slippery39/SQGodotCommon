@@ -1201,9 +1201,14 @@ public sealed class MetagameEvolver
 		ConstructedValues values
 	)
 	{
-		var allowed = core is null
-			? null
-			: core.Slots.SelectMany(s => s.Cards).ToHashSet(StringComparer.Ordinal);
+		// Same gate as `DeckBuilder.Mutate`: a core that cannot supply a deck does not get to lock
+		// the slots it cannot reach. Without this the caps below sum to exactly the spell capacity
+		// for such a deck, every card is forced to its cap, and the harvest reproduces its input —
+		// which is what "unchanged" meant for the three narrow cores in a measured run.
+		var allowed =
+			core is null || !core.CanFillDeck(current.Lands)
+				? null
+				: core.Identity.ToHashSet(StringComparer.Ordinal);
 
 		// **The pool lock is ASYMMETRIC, and reading it as a filter made the harvest fall back on
 		// exactly the slots it exists for.** `Mutate` locks what may be ADDED and leaves cutting
