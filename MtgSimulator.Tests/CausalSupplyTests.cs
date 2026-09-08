@@ -114,6 +114,73 @@ public class CausalSupplyTests
 	}
 
 	/// <summary>
+	/// **A sacrifice outlet written as an ACTIVATED ABILITY fills a graveyard, and the probe now
+	/// sees it.**
+	///
+	/// `ProbeCardProfiles` deploys a permanent and starts a turn — which fires the upkeep triggers
+	/// every mana dork produces from — and used to stop there, activating nothing. Measured on ALL
+	/// before this: **140 cards carry an activated ability and not one supplied any demand
+	/// causally**, against 44 cards with causal supply pool-wide. Every aristocrats sacrifice outlet
+	/// and every ability-based discard outlet in the pool was invisible on the production side, so
+	/// `DeckCore.For` built reanimator and sacrifice cores with nothing to fill the graveyard.
+	///
+	/// Two things beyond activating are load-bearing and both were measured separately:
+	/// the fixture stocks FODDER, because the subject is otherwise the only permanent on the
+	/// battlefield and a sacrifice cost has nothing to pay with; and the SUBJECT itself is tracked,
+	/// because a card sacrificing itself still puts a card in a graveyard.
+	/// </summary>
+	[Test]
+	public void AnActivatedSacrificeOutlet_FillsTheGraveyard_AndAVanillaBodyDoesNot()
+	{
+		var outlet = CardFactory
+			.Creature("Outlet", manaCost: 2, power: 1, toughness: 1)
+			.WithActivatedAbility(
+				"Devour",
+				manaCost: 0,
+				effect: eb => eb.WithLifeGain(1),
+				costs: cb => cb.Sacrifice(new IsCreatureSpecification())
+			)
+			.Build();
+
+		Card Bear(string name) =>
+			CardFactory.Creature(name, manaCost: 2, power: 2, toughness: 2).Build();
+
+		var reanimate = CardFactory
+			.Spell("Reanimate", manaCost: 2)
+			.WithReanimate()
+			.WithTarget(TargetBuilder.Single().CreatureInYourGraveyard())
+			.Build();
+
+		var features = PoolFeatures.Build(
+			[outlet, Bear("Bear1"), Bear("Bear2"), Bear("Bear3"), reanimate]
+		);
+
+		var graveyard = features
+			.DemandsOf("Reanimate")
+			.Single(d => features.SuppliersOf(d).Contains("Bear1"));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				features.CausalSupplyOf(graveyard, "Outlet"),
+				Is.GreaterThan(0),
+				"a sacrifice outlet puts a creature in your graveyard — this is the whole point, "
+					+ "and it read 0 for every such card in the pool before the probe activated"
+			);
+
+			// **The vacuity guard, and it is the half that matters.** A probe that credited every
+			// card it played would pass the assertion above on its own. A vanilla body moves
+			// nothing and must stay at zero.
+			Assert.That(
+				features.CausalSupplyOf(graveyard, "Bear1"),
+				Is.Zero,
+				"a vanilla creature CAUSES nothing — it only IS a creature in a graveyard, which "
+					+ "is the declarative channel"
+			);
+		});
+	}
+
+	/// <summary>
 	/// For every demand, the top suppliers ranked by <c>SupplyOf</c> — the weight that decides what
 	/// `SeedConcept` and `DeckCore.Satisfy` actually pick. **Read the graveyard rows**: if the top
 	/// of that list is discard outlets and self-mill, causal supply is reaching the sampler. If it

@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Immutable;
 using System.Reflection;
 using ImmutableGameObjects;
@@ -1268,6 +1268,31 @@ public sealed class PoolFeatures
 		);
 		filler.Add(CardLibrary.Plains());
 
+		// **Sacrifice fodder, placed on the battlefield only for the activation phase.** Creatures
+		// AND non-creature permanents, because the pool's sacrifice outlets eat both. Taken from
+		// the pool in its own order, like the filler, so it is deterministic.
+		var genericFodder = new List<Card>();
+		genericFodder.AddRange(pool.Where(c => c.HasComponent<CreatureComponent>()).Take(3));
+		genericFodder.AddRange(
+			pool.Where(c =>
+					c.HasComponent<PermanentComponent>() && !c.HasComponent<CreatureComponent>()
+				)
+				.Take(2)
+		);
+
+		// **A NARROW sacrifice cost needs fodder that satisfies it, and generic fodder does not.**
+		// Measured with generic fodder alone: 21 of 38 cost-payers were still credited with
+		// nothing, and they are the ones whose filter names something — Goblin Grenade and
+		// Siege-Gang want a Goblin, Devout Chaplain a Human, Atog and Bag of Holding an artifact.
+		// `GetValidPayments` finds none, `BuildAdditionalCostPayments` returns null, and the
+		// generator emits no action at all, so the card reads as doing nothing.
+		//
+		// Answered by EVALUATING THE FILTER, never by a subtype list: the cost carries a
+		// `TargetSpecification` and this file's whole rule is that a spec is a serializable
+		// predicate you run against the pool. A sacrifice cost using a mechanic nobody has written
+		// yet is served the day it ships.
+		var matcher = new FodderMatcher(pool, failures);
+
 		foreach (var card in pool)
 		{
 			if (card.HasSubtype("Land"))
@@ -1388,11 +1413,45 @@ public sealed class PoolFeatures
 				// A cost that cannot be known cannot be shown to be profitable.
 				var cost = card.HasComponent<XCostComponent>() ? int.MaxValue / 2 : card.ManaCost;
 
+				// **Movement is read AFTER the card's own abilities are activated, and the mana and
+				// card channels above are NOT.**
+				//
+				// Measured on ALL before this existed: 140 cards carry an activated ability and
+				// **not one of them supplied any demand causally**, against 44 cards with causal
+				// supply pool-wide. The probe deploys a permanent and starts a turn — which is what
+				// fires the upkeep triggers every mana dork produces from — and then stops, so a
+				// sacrifice or discard outlet written as an ability moved nothing, and every
+				// aristocrats and reanimator enabler in the pool was invisible on the production
+				// side. Viscera Seer, Bloodthrone Vampire, Atog, Arcbound Ravager, Fauna Shaman,
+				// Obsessive Stitcher — the archetypes this mode keeps failing to build.
+				//
+				// **Scoped to the movement channel deliberately.** Activating costs mana and cards,
+				// so folding it into `manaBefore`/`castableBefore` would move the storm enabler set
+				// — a measurement this file records as calibrated (net mana >= 0 gives 16 suppliers
+				// and the deck that scored 1st of 43). Those two channels read the pre-activation
+				// state and are byte-identical to what they were, so any change in a run is
+				// attributable to movement alone. Same discipline as the leverage control arm.
+				var (afterActivation, fodderIds) = Activate(
+					after,
+					ids,
+					[.. genericFodder, .. matcher.For(card)],
+					card.Name,
+					failures
+				);
+
 				// Counted, not just recorded. A mill-4 fills a graveyard four times as fast as a
 				// one-card tutor, and `SupplyOf` is the channel that difference travels down.
+				//
+				// Fodder starts on the BATTLEFIELD, so it is tracked the same way and the
+				// non-battlefield filter below is what makes it count: a sacrifice outlet moves it
+				// to the graveyard and is credited, an outlet that merely taps it moves nothing.
 				var moved = fillerIds
-					.Where(id => ZoneOf(after, id) != zoneBefore[id])
-					.Select(id => ZoneOf(after, id))
+					.Select(id => (Id: id, Before: zoneBefore[id]))
+					.Concat(
+						fodderIds.Select(id => (Id: id, Before: (ZoneType?)ZoneType.Battlefield))
+					)
+					.Where(x => ZoneOf(afterActivation, x.Id) != x.Before)
+					.Select(x => ZoneOf(afterActivation, x.Id))
 					.Where(z => z is not null and not ZoneType.Battlefield)
 					.GroupBy(z => z!.Value)
 					.ToDictionary(g => g.Key, g => g.Count());
@@ -1441,6 +1500,234 @@ public sealed class PoolFeatures
 	private static int? CardIdOf(GameEvent e) =>
 		e.GetType().GetProperty("CardId", BindingFlags.Public | BindingFlags.Instance)?.GetValue(e)
 		as int?;
+
+	/// <summary>
+	/// **Pool cards that satisfy a card's own sacrifice or discard FILTER**, so the probe can pay a
+	/// narrow cost and find out what the card actually does.
+	///
+	/// One scratch fixture holds every pool permanent on the battlefield and every pool card in
+	/// hand, built once; a filter is answered by running it against those with
+	/// <c>IsSatisfiedBy</c>. That is the same evaluation `Build` does for demands, and it is why
+	/// this needs no table mapping a mechanic to a meaning.
+	///
+	/// Results are cached per spec. `TargetSpecification` is a record, so two cards naming the same
+	/// filter share an entry with no key function written anywhere — the same value-equality that
+	/// dedupes demands pool-wide.
+	/// </summary>
+	private sealed class FodderMatcher
+	{
+		/// Enough to pay a cost asking for more than one, and few enough that a board wipe probed
+		/// this way reports a plausible magnitude rather than the size of the fixture.
+		private const int PerFilter = 2;
+
+		private readonly IReadOnlyList<Card> _pool;
+		private readonly List<string> _failures;
+		private readonly Dictionary<TargetSpecification, List<Card>> _cache = new();
+		private readonly List<(Card Card, int Id)> _placed = [];
+		private readonly TargetingContext _context;
+
+		public FodderMatcher(IReadOnlyList<Card> pool, List<string> failures)
+		{
+			_pool = pool;
+			_failures = failures;
+
+			var (state, ids) = MtgGameFactory.CreateForTesting();
+			foreach (var c in pool)
+			{
+				// Battlefield for a permanent (what a sacrifice cost reads), hand for everything
+				// else (what a discard cost reads). A land is neither — it is a scalar on
+				// `Decklist` and never a card in this model.
+				if (c.HasSubtype("Land"))
+					continue;
+
+				var zone = c.HasComponent<PermanentComponent>()
+					? ids.Player1BattlefieldId
+					: ids.Player1HandId;
+
+				(state, var placed) = state.AddObject(
+					c with
+					{
+						OwnerId = ids.Player1Id,
+						ControllerId = ids.Player1Id,
+					},
+					parentId: zone
+				);
+				_placed.Add((c, placed.Id));
+			}
+
+			_context = new TargetingContext
+			{
+				GameState = state,
+				SourceCardId = 0,
+				CastingPlayerId = ids.Player1Id,
+				// Asking what a cost COULD eat, not what is a legal target — same reason `Build`
+				// sets it when asking about deck composition.
+				IsNonTargeted = true,
+			};
+		}
+
+		/// Fodder for every filtered cost <paramref name="card"/> carries. Empty for the majority
+		/// of the pool, which pays no such cost.
+		public IEnumerable<Card> For(Card card)
+		{
+			foreach (var filter in FiltersOf(card))
+			foreach (var match in Matching(filter))
+				yield return match;
+		}
+
+		private static IEnumerable<TargetSpecification> FiltersOf(Card card)
+		{
+			foreach (var cost in card.AdditionalCastCosts)
+				if (FilterOf(cost) is { } f)
+					yield return f;
+
+			foreach (var ability in card.GetComponents<ActivatedAbilityComponent>())
+			foreach (var cost in ability.AdditionalCosts)
+				if (FilterOf(cost) is { } f)
+					yield return f;
+		}
+
+		/// <summary>
+		/// The two costs that consume a card you own. A null filter means "anything", which the
+		/// generic fodder already covers, so only a NAMED restriction reaches the matcher.
+		/// </summary>
+		private static TargetSpecification? FilterOf(AdditionalCost cost) =>
+			cost switch
+			{
+				SacrificeAdditionalCost s => s.Filter,
+				DiscardAdditionalCost d => d.Filter,
+				_ => null,
+			};
+
+		private List<Card> Matching(TargetSpecification filter)
+		{
+			if (_cache.TryGetValue(filter, out var cached))
+				return cached;
+
+			var found = new List<Card>(PerFilter);
+			foreach (var (card, id) in _placed)
+			{
+				if (found.Count == PerFilter)
+					break;
+				try
+				{
+					if (filter.IsSatisfiedBy(id, _context))
+						found.Add(card);
+				}
+				catch (Exception ex)
+				{
+					_failures.Add($"fodder match {filter} threw {ex.GetType().Name}");
+					break;
+				}
+			}
+
+			_cache[filter] = found;
+			return found;
+		}
+	}
+
+	/// <summary>
+	/// **Activate the probe subject's own abilities once each, so what they MOVE is measured.**
+	///
+	/// Actions come from <see cref="MtgActionGenerator.GetLegalActions"/> rather than being built
+	/// here — the same rule the rest of the project follows, and it is what makes cost payment,
+	/// targeting, <c>MaxActivationsPerTurn</c>, summoning sickness and exhaust enforced by the
+	/// engine instead of re-derived. The generator also fills `AdditionalCostPayments` itself, so
+	/// a discard or sacrifice cost is paid without any choice needing resolution.
+	///
+	/// **Only the subject can be activated**, because it is the only thing on the battlefield —
+	/// the filler is stocked into library, hand and graveyard. Filtering on the battlefield rather
+	/// than on a captured id keeps that true without threading the placed id out of the pipeline.
+	///
+	/// ponytail: ONE activation per ability, not a loop to exhaustion. A repeatable outlet
+	/// therefore reads as moving one card where a mill-4 spell reads as four, which understates
+	/// it — the safe direction everywhere else in this file, and it keeps the magnitude from
+	/// depending on an arbitrary iteration cap. Loop it if a real archetype is ever measured
+	/// losing its enablers to the difference.
+	/// </summary>
+	private static (GameState State, IReadOnlyList<int> Fodder) Activate(
+		GameState state,
+		MtgGameIds ids,
+		IReadOnlyList<Card> fodderCards,
+		string cardName,
+		List<string> failures
+	)
+	{
+		// Held so a throw mid-loop falls back to the WHOLE pre-activation state. Returning the
+		// partially advanced one would measure half a card, which is a third reading neither the
+		// old behaviour nor the new one.
+		var before = state;
+		var fodder = new List<int>();
+
+		try
+		{
+			var subject = state.GetChildrenIds(ids.Player1BattlefieldId).ToHashSet();
+			if (subject.Count == 0)
+				return (state, fodder);
+
+			// **The subject is tracked too, because a card that sacrifices ITSELF still fills a
+			// graveyard.** Heartfire Immolator, Generator Servant, Brittle Effigy and Vial of
+			// Dragonfire all pay by sacrificing themselves, so nothing else moves and they read as
+			// doing nothing — measured, they were the largest group still invisible after fodder
+			// was stocked. Its starting zone is the battlefield, like the fodder's, so the
+			// non-battlefield filter at the call site does the rest.
+			fodder.AddRange(subject);
+
+			// **A sacrifice cost needs something to sacrifice, and without this there is nothing.**
+			// The probe's filler is stocked into library, hand and graveyard, so the only permanent
+			// on the battlefield is the subject itself — which `moved` does not track. Measured:
+			// activating alone credited 5 of 140 activated-ability cards, and every sacrifice
+			// outlet in the pool stayed invisible for want of fodder.
+			//
+			// Placed HERE rather than in the fixture on purpose. A board full of creatures changes
+			// what a card produces — Wirewood Conduit adds mana per creature you control — so
+			// stocking the fixture would move the mana and card channels this change is scoped to
+			// leave alone.
+			foreach (var f in fodderCards)
+			{
+				(state, var placed) = state.AddObject(
+					f with
+					{
+						OwnerId = ids.Player1Id,
+						ControllerId = ids.Player1Id,
+					},
+					parentId: ids.Player1BattlefieldId
+				);
+				fodder.Add(placed.Id);
+			}
+
+			var mine = subject;
+
+			// One per ABILITY. The generator emits an action per target, exactly as it does for
+			// casts, so taking every action would activate a targeted ability once per target and
+			// over-attribute what it moved.
+			var activations = MtgActionGenerator
+				.GetLegalActions(state, ids.Player1Id)
+				.OfType<ActivateAbilityAction>()
+				.Where(a => mine.Contains(a.CardId))
+				.GroupBy(a => (a.CardId, a.AbilityIndex))
+				.Select(g => g.First())
+				.ToList();
+
+			foreach (var activation in activations)
+			{
+				// Re-processed one at a time: paying a cost or resolving an effect can make a later
+				// activation illegal, and the engine is the only thing that knows.
+				var (next, _) = state.AddActions([activation]).ProcessAllActions();
+				state = next;
+			}
+
+			return (state, fodder);
+		}
+		catch (Exception ex)
+		{
+			// Same rule as the probe around it: a card that cannot be activated in a bare fixture
+			// answers nothing rather than killing the build, and is surfaced. Falling back to the
+			// pre-activation state gives exactly the old measurement for that card.
+			failures.Add($"activation probe {cardName} threw {ex.GetType().Name}");
+			return (before, []);
+		}
+	}
 
 	private static ZoneType? ZoneOf(GameState state, int cardId) =>
 		state.HasObject(cardId) ? state.GetCardZone(cardId)?.ZoneType : null;

@@ -197,7 +197,11 @@ public static class EngineDiscovery
 
 		writer.WriteLine(
 			$"{features.Demands.Count} demands, {cores.Count} distinct cores "
-				+ $"({cores.Count(c => c.Slots.Count > 2)} with a conjunction), "
+				// A conjunction is more than one SUPPORT slot — the shape `DeckCore.For` exists to
+				// express, and the thing a demand-keyed candidate could never be. Counting total
+				// slots read 44 of 44 while the identity was always two slots and now is sometimes
+				// one, so it was reporting the identity's shape rather than the demand's.
+				+ $"({cores.Count(c => c.Slots.Count(s => !s.IsIdentity) > 1)} with a conjunction), "
 				+ $"{gamesPerEngine} solitaire games each ({cores.Count * gamesPerEngine * 2} games)."
 		);
 		writer.WriteLine();

@@ -92,6 +92,17 @@ public class CostAsProductionTests
 				+ $"  ...with causal supply: {activated.Count(c => HasCausalSupply(c.Name))}"
 		);
 
+		// A card that THREW during its probe is a different failure from one that was probed and
+		// produced nothing, and the two need opposite fixes. Same rule as `DrawDiagnostics`
+		// splitting a real draw from a harness limit.
+		var relevant = features
+			.Failures.Where(f => payers.Any(c => f.Contains(c.Name, StringComparison.Ordinal)))
+			.ToList();
+		Console.WriteLine();
+		Console.WriteLine($"Probe failures naming a cost-payer: {relevant.Count}");
+		foreach (var f in relevant)
+			Console.WriteLine($"  {f}");
+
 		// The control: if NO card in the pool has causal supply at all, the numbers above are
 		// measuring a broken probe rather than a cost gap.
 		var anyCausal = spells.Count(c => HasCausalSupply(c.Name));
