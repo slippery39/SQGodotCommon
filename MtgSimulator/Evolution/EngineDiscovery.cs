@@ -169,11 +169,17 @@ public static class EngineDiscovery
 			// same things produce the byte-identical core: on ALL, ~64 payoffs that merely target a
 			// creature collapse to one entry, and probing each separately would be 64 runs of the
 			// same experiment charged to the same budget.
-			// **Keyed on the union of the IDENTITY slots, not on `Slots[0]`.** Since the anchor got a
-			// slot of its own, `Slots[0]` holds exactly one card and every payoff keys uniquely —
+			// **Keyed on the union of the IDENTITY slots, not on `Slots[0]`.** When the anchor had a
+			// slot of its own, `Slots[0]` held exactly one card and every payoff keyed uniquely —
 			// nothing deduped, and the report went from 50 distinct cores to 97 copies of the same
 			// archetypes. The union is identical for two cards asking the same things, which is what
 			// "the same archetype" means.
+			//
+			// **The representative below is picked ALPHABETICALLY, and that is now cosmetic rather
+			// than structural.** Two cards in one equivalence class produce byte-identical cores —
+			// same pinned payoff set, same support — so the pick decides a display name and nothing
+			// about the deck. It used to decide which card got pinned at four copies for the whole
+			// run, which is how a reanimator core came back keyed on the five-mana spell.
 			.GroupBy(
 				c =>
 					string.Join(
@@ -407,7 +413,10 @@ public static class EngineDiscovery
 			deck.Name,
 			core,
 			core.Name,
-			string.Join(" + ", core.Slots.Skip(1).Select(s => s.Role)),
+			// `Where(!IsIdentity)`, never `Skip(1)`: the identity is one slot or two depending on
+			// whether the payoff has subsumed variants, and a positional read named the archetype
+			// after "Payoff [partial]" the moment it did.
+			string.Join(" + ", core.Slots.Where(s => !s.IsIdentity).Select(s => s.Role)),
 			support.Count,
 			deck,
 			// Pool-wide, NOT the probe's sets. The probe scopes payoffs to the deck because the

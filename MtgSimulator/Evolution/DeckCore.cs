@@ -154,6 +154,12 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 	/// (it needs strictly less), and Dragonstorm does not belong in a Tendrils core (it needs a
 	/// Dragon that core never promises).
 	///
+	/// **That subset splits into two slots, because a subset is not an equal.** Cards asking
+	/// EXACTLY the anchor's demands are one equivalence class — the same engine, differing only in
+	/// cost and name — and the class is pinned as a SET so exploration picks the member. Cards
+	/// asking strictly less are legal filler at a floor of zero and can never satisfy the identity
+	/// on their own. See the comment on the split for what this replaced and why.
+	///
 	/// Returns null when the card asks nothing answerable — that is a good-stuff card, not an
 	/// archetype, and it is the majority of any pool.
 	/// </summary>
@@ -165,38 +171,65 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 
 		var wanted = demands.ToHashSet();
 
-		var interchangeable = demands
-			.SelectMany(features.AskersOf)
-			.Distinct(StringComparer.Ordinal)
-			.Where(n =>
-			{
-				var theirs = features.DemandsOf(n).Where(features.Informative).ToList();
-				return theirs.Count > 0 && theirs.All(wanted.Contains);
-			})
-			.ToHashSet(StringComparer.Ordinal);
+		// **Interchangeable splits in two, and the line is demand-set EQUALITY.**
+		//
+		// A card asking a strict SUBSET of the anchor's demands is not the same card — it is a
+		// cheaper rider that does not need the whole core. Tendrils belongs in a Dragonstorm core
+		// because it needs strictly less, and a deck of four Tendrils satisfies nothing the Dragon
+		// slot exists to serve. A card asking EXACTLY the anchor's demands is the same card wearing
+		// a different name and cost, and choosing between those is a measurement, not a build-time
+		// decision.
+		//
+		// **This replaces an anchor slot pinning one card, which was picked ARBITRARILY.**
+		// `EngineDiscovery` dedupes cores alphabetically, so a reanimator core came back keyed on
+		// the five-mana reanimation spell rather than the one-mana one, and then pinned it at four
+		// copies for the whole run — the cheaper spell was never allowed to compete. The anchor slot
+		// also held exactly one card, and `DeckBuilder.SwapWithinSlot` skips any slot with
+		// `Cards.Count > 1` false, so the slot was structurally unswappable: not "explored and
+		// kept", never proposed.
+		//
+		// The lesson the anchor slot was built from still holds and is what the split preserves:
+		// measured on an 8-deck run, the Spirit Bonds slot finished with **no Spirit Bonds in it**,
+		// because its payoff slot held 70 cards at `MinCopies` 0 and `Holds` never noticed. Pinning
+		// the EQUIVALENCE CLASS keeps the floor that failure needed while leaving the choice inside
+		// it open; only a card that genuinely asks the same questions can satisfy it.
+		var equivalent = new HashSet<string>(StringComparer.Ordinal) { payoff };
+		var subsumed = new HashSet<string>(StringComparer.Ordinal);
 
-		// **The anchor gets a slot of its OWN, ahead of the interchangeable payoffs.**
-		//
-		// Sorting it first inside a shared payoff slot is enough at build time and not afterwards:
-		// `Satisfy` respects the order, and then mutation cuts the anchor and the slot stays
-		// satisfied by any of the other payoffs. Measured on an 8-deck run — the Spirit Bonds slot
-		// finished with **no Spirit Bonds in it**, because its payoff slot held 70 interchangeable
-		// cards and `Holds` never noticed.
-		//
-		// The rest of the core exists to serve THIS card's demands, so a deck without it carries
-		// slots answering a question nothing in the list asks.
+		foreach (var n in demands.SelectMany(features.AskersOf).Distinct(StringComparer.Ordinal))
+		{
+			if (string.Equals(n, payoff, StringComparison.Ordinal))
+				continue;
+
+			var theirs = features.DemandsOf(n).Where(features.Informative).ToHashSet();
+			if (theirs.Count == 0 || !theirs.All(wanted.Contains))
+				continue;
+
+			// Subset already established, so equal COUNTS mean equal SETS.
+			(theirs.Count == wanted.Count ? equivalent : subsumed).Add(n);
+		}
+
 		var slots = new List<CoreSlot>
 		{
-			new($"Required: {payoff}", [payoff], payoffCopies, IsIdentity: true),
 			new(
 				"Payoff",
-				interchangeable
-					.Where(n => !string.Equals(n, payoff, StringComparison.Ordinal))
-					.ToImmutableHashSet(StringComparer.Ordinal),
-				0,
+				equivalent.ToImmutableHashSet(StringComparer.Ordinal),
+				payoffCopies,
 				IsIdentity: true
 			),
 		};
+
+		// Floor of zero: these are legal cards for the archetype and `Complete` may reach for them,
+		// but they must never be the thing that satisfies the identity.
+		if (subsumed.Count > 0)
+			slots.Add(
+				new CoreSlot(
+					"Payoff [partial]",
+					subsumed.ToImmutableHashSet(StringComparer.Ordinal),
+					0,
+					IsIdentity: true
+				)
+			);
 
 		foreach (var d in demands)
 		{
@@ -206,7 +239,8 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 			// also produces the right shape for tribal — 4 lords in the payoff slot and 8 OTHER
 			// goblins in the demand slot, rather than one slot the lords satisfy by themselves.
 			var support = features.SuppliersOf(d).ToHashSet(StringComparer.Ordinal);
-			support.ExceptWith(interchangeable);
+			support.ExceptWith(equivalent);
+			support.ExceptWith(subsumed);
 			if (support.Count == 0)
 				continue;
 

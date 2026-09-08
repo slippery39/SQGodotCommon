@@ -1,4 +1,5 @@
 using MtgCore;
+using MtgCore.Cards.Builders;
 
 namespace MtgSimulator.Tests;
 
@@ -69,11 +70,94 @@ public class DeckCoreGeneratorTests
 				core!.Slots.Where(s => s.IsIdentity).SelectMany(s => s.Cards),
 				Does.Contain(Anchor)
 			);
-			// The anchor has a slot of its OWN, so mutation cannot satisfy the requirement with an
-			// interchangeable payoff and cut the card that was asked for.
+			// The anchor sits in a PINNED payoff slot, so mutation cannot satisfy the requirement
+			// with a card asking strictly less and cut the archetype away. It used to have a slot
+			// of its own holding one card; see `TheEquivalenceClassIsPinned_NotOneArbitraryMember`.
 			Assert.That(
-				core.Slots.Single(s => s.Role == $"Required: {Anchor}").MinCopies,
-				Is.GreaterThan(0)
+				core.Slots.Single(s => s.Role == "Payoff") is { MinCopies: > 0 } pinned
+					&& pinned.Cards.Contains(Anchor),
+				Is.True,
+				"the anchor must sit in a payoff slot with a floor above zero"
+			);
+		});
+	}
+
+	// ===== The payoff split: equal versus subsumed =====
+
+	/// <summary>
+	/// **A card asking strictly LESS is not the same engine and must not hold the floor.**
+	///
+	/// Tendrils asks only the storm half of Dragonstorm's conjunction, so a deck satisfying the
+	/// identity with four Tendrils leaves the Dragon slot answering a question nothing in the list
+	/// asks — the archetype dissolved while `Holds` still returned true.
+	/// </summary>
+	[Test]
+	public void ASubsumedPayoff_CannotSatisfyTheIdentityAlone()
+	{
+		var core = DeckCore.For(Features(), Anchor)!;
+		var pinned = core.Slots.Single(s => s.Role == "Payoff");
+		var partial = core.Slots.Single(s => s.Role == "Payoff [partial]");
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(pinned.Cards, Does.Contain(Anchor));
+			Assert.That(
+				pinned.Cards,
+				Does.Not.Contain(StormOnlyPayoff),
+				"Tendrils asks strictly less than Dragonstorm; it is not the same engine"
+			);
+			Assert.That(partial.Cards, Does.Contain(StormOnlyPayoff));
+			Assert.That(partial.MinCopies, Is.Zero, "a partial payoff is filler, never the floor");
+		});
+	}
+
+	/// <summary>
+	/// **Cards asking EXACTLY the same demands are one engine, and the whole class is pinned.**
+	///
+	/// This is the reanimator complaint in miniature: two spells that want the same deck, differing
+	/// only in cost. Pinning one of them — `EngineDiscovery` dedupes alphabetically, so which one is
+	/// arbitrary — froze the choice at four copies for a whole run, and the single-card slot it
+	/// produced was invisible to `DeckBuilder.SwapWithinSlot`, which skips slots holding one card.
+	/// Pinning the CLASS keeps the floor and hands the choice to measurement.
+	///
+	/// Cards are inline: the point is a demand-set relationship, not any printed card, and a balance
+	/// pass on the library must not be able to break it.
+	/// </summary>
+	[Test]
+	public void TheEquivalenceClassIsPinned_NotOneArbitraryMember()
+	{
+		string[] pair = ["Cheap Storm Bolt", "Costly Storm Bolt"];
+		var features = PoolFeatures.Build(
+			[
+				CardFactory.Spell(pair[0], manaCost: 2).WithStorm().WithDamage(2).Build(),
+				CardFactory.Spell(pair[1], manaCost: 6).WithStorm().WithDamage(2).Build(),
+				.. Rituals.Select(CardLibrary.GetByName),
+			]
+		);
+
+		var cheap = DeckCore.For(features, pair[0]);
+		var costly = DeckCore.For(features, pair[1]);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(cheap, Is.Not.Null);
+			Assert.That(costly, Is.Not.Null);
+
+			var pinned = cheap!.Slots.Single(s => s.Role == "Payoff");
+			Assert.That(
+				pinned.Cards,
+				Is.EquivalentTo(pair),
+				"both spells ask exactly the same thing, so both belong to the pinned slot"
+			);
+			Assert.That(pinned.MinCopies, Is.GreaterThan(0));
+
+			// The dedupe key in `EngineDiscovery` is the union of the identity slots, so identical
+			// identity slots collapse the two candidates into one engine — which is the fix. Anchor
+			// order must therefore not change the core at all.
+			Assert.That(
+				costly!.Slots.Where(s => s.IsIdentity).SelectMany(s => s.Cards),
+				Is.EquivalentTo(cheap.Slots.Where(s => s.IsIdentity).SelectMany(s => s.Cards)),
+				"whichever card anchors, the engine is the same engine"
 			);
 		});
 	}

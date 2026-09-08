@@ -105,11 +105,15 @@ public sealed record DeckRequest(
 				)
 			);
 
-			// The card's OWN derived support. Its payoff slot is dropped — the card is already
-			// guaranteed above, and keeping it would let an interchangeable payoff satisfy the
+			// The card's OWN derived support. Its payoff slots are dropped — the card is already
+			// guaranteed above, and keeping them would let an interchangeable payoff satisfy the
 			// requirement instead of the card that was actually asked for.
+			//
+			// `Where(!IsIdentity)`, never `Skip(1)`: this said "its payoff slot is dropped" while
+			// positionally dropping the ANCHOR slot and keeping the payoff slot behind it. Now that
+			// the identity is one slot or two, the stated intent and the code finally agree.
 			if (DeckCore.For(features, name) is { } derived)
-				slots.AddRange(derived.Slots.Skip(1));
+				slots.AddRange(derived.Slots.Where(s => !s.IsIdentity));
 			else
 				matched.Add($"'{name}' asks nothing answerable — contributing no support slots");
 		}
