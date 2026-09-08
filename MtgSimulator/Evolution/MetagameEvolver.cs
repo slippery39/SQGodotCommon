@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using MtgCore;
 
 namespace MtgSimulator;
@@ -29,6 +29,7 @@ public sealed class MetagameEvolver
 	private readonly int _seed;
 	private readonly int _aiDepth;
 	private readonly double _minDifference;
+	private readonly double _engineDifference;
 	private readonly double _viabilityFloor;
 	private readonly int _graceGenerations;
 	private readonly bool _useDraftPrior;
@@ -113,6 +114,29 @@ public sealed class MetagameEvolver
 	/// mutation acceptance — a constraint rather than a fitness penalty, because the
 	/// requirement is categorical and a penalty would let a strong deck buy past it.
 	/// </param>
+	/// <param name="engineDifference">
+	/// **The floor between two ENGINE decks, which is a different question.**
+	///
+	/// A curve deck has no identity to defend, so the only thing keeping the field from collapsing
+	/// into one pile is the distance requirement — that is what <paramref name="minDifference"/> is
+	/// for, and it stays. Two engine decks are already held apart by something stronger: each is
+	/// pool-locked to its own `DeckCore`, so a Zombie deck cannot drift into a reanimator deck
+	/// whatever the distance rule says.
+	///
+	/// Holding them to the same 35% actively fights that. Archetype pools OVERLAP — every
+	/// reanimation core draws from the same graveyard suppliers, so two genuinely different
+	/// archetypes can sit inside 35% of each other purely because they share enablers. The
+	/// constraint then rejects the second one for resembling the first, and what looks like a
+	/// diverse field is a field that could not seed the archetypes it was given.
+	///
+	/// Applies only when BOTH decks are engine slots. An engine against a curve deck is still held
+	/// to <paramref name="minDifference"/>, because the curve slots are the good-stuff control the
+	/// themed slots are read against and a control that has drifted into a themed deck is not a
+	/// control.
+	///
+	/// Defaults to <paramref name="minDifference"/>, so a caller that does not ask gets exactly the
+	/// behaviour it had.
+	/// </param>
 	/// <param name="viabilityFloor">
 	/// Overall win rate below which a deck is a non-viable list and gets replaced. Note that a
 	/// closed round-robin averages exactly 50% by construction, so this is a floor on the
@@ -158,7 +182,8 @@ public sealed class MetagameEvolver
 		string? enginesPath = null,
 		int engineSlots = -1,
 		IReadOnlyList<string>? excludedEngines = null,
-		int explorationGenerations = 0
+		int explorationGenerations = 0,
+		double? engineDifference = null
 	)
 	{
 		if (deckCount < 2)
@@ -180,6 +205,9 @@ public sealed class MetagameEvolver
 		_seed = seed;
 		_aiDepth = aiDepth;
 		_minDifference = minDifference;
+		// Never ABOVE the field floor: a tighter rule for engines would be a second, stricter
+		// constraint wearing the name of a relaxation, and the prompt offers it as a relaxation.
+		_engineDifference = Math.Min(engineDifference ?? minDifference, minDifference);
 		_viabilityFloor = viabilityFloor;
 		_graceGenerations = graceGenerations;
 		_useDraftPrior = useDraftPrior;
@@ -732,8 +760,22 @@ public sealed class MetagameEvolver
 
 					// The diversity constraint applies to the field as it will be, so it is
 					// checked against every OTHER deck's current list.
-					var others = field.Where((_, j) => j != i).ToList();
-					if (DeckBuilder.MinDifference(mutant, others) < _minDifference)
+					//
+					// **Per PAIR, not against a single minimum, because the floor depends on what
+					// the two slots ARE.** Two engine slots are already held apart by their pool
+					// locks, and their archetype pools overlap — so the field-wide floor rejects a
+					// second graveyard archetype for sharing enablers with the first. See
+					// `engineDifference`.
+					if (
+						!DiverseEnough(
+							mutant,
+							i,
+							field,
+							identities,
+							_minDifference,
+							_engineDifference
+						)
+					)
 					{
 						outcomes[c] = MutationLog.TooSimilar;
 						continue;
@@ -1075,6 +1117,47 @@ public sealed class MetagameEvolver
 	/// and short enough that the search can still change its mind about a card as the deck evolves.
 	/// </summary>
 	private const int ReversalMemory = 4;
+
+	/// <summary>
+	/// **Is this candidate far enough from every other deck, at the floor that PAIR is held to?**
+	///
+	/// Two engine slots use <see cref="_engineDifference"/>; every other pairing uses
+	/// <see cref="_minDifference"/>. `identities[j] is not null` is exactly "slot j is an engine" —
+	/// it is set only where <see cref="LoadEngines"/> placed a core, so nothing new has to be
+	/// tracked and the two cannot drift apart.
+	///
+	/// Written as a pairwise loop rather than through `DeckBuilder.MinDifference`, because that
+	/// takes a flat list and collapses the answer to one number — which is precisely the
+	/// information this needs: WHICH deck the candidate resembles decides the floor it must clear.
+	/// </summary>
+	/// <remarks>
+	/// Static and taking both floors explicitly so the decision can be tested without standing up
+	/// an evolver — getting the asymmetry backwards would relax exactly the constraint that is
+	/// supposed to hold, and would be silent.
+	/// </remarks>
+	internal static bool DiverseEnough(
+		Decklist candidate,
+		int slot,
+		IReadOnlyList<Decklist> field,
+		IReadOnlyList<DeckCore?> identities,
+		double minDifference,
+		double engineDifference
+	)
+	{
+		var mine = identities[slot] is not null;
+
+		for (var j = 0; j < field.Count; j++)
+		{
+			if (j == slot)
+				continue;
+
+			var floor = mine && identities[j] is not null ? engineDifference : minDifference;
+			if (Decklist.Difference(candidate, field[j]) < floor)
+				return false;
+		}
+
+		return true;
+	}
 
 	/// <summary>
 	/// Whether a proposal undoes something this slot accepted inside <see cref="ReversalMemory"/>.
@@ -1713,6 +1796,14 @@ public sealed class MetagameEvolver
 			$"  Diversity floor {_minDifference:P0}, viability floor {_viabilityFloor:P0}, "
 				+ $"culling {(_cullEnabled ? $"ON (grace {_graceGenerations}, settling {_graceGenerations})" : "OFF")}"
 		);
+		// Stated separately and only when it differs, because the reported "Min diversity" is a
+		// field-wide minimum and will sit BELOW the headline floor whenever this is lower — which
+		// reads as a violated constraint rather than a configured one unless the log says so.
+		if (_engineDifference < _minDifference)
+			Console.WriteLine(
+				$"    ...but {_engineDifference:P0} between two ENGINE decks — their pool locks "
+					+ "already hold them apart, and archetype pools overlap"
+			);
 		// Exploration is a MUTATION-OPERATOR change and a culling override, neither of which shows
 		// up anywhere else in the log — a run that cannot state its own phase split is not
 		// comparable to another one. Same reason the culling line above exists.

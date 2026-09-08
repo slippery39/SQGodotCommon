@@ -262,6 +262,18 @@ else if (mode == 6)
 	var diffInput = Console.ReadLine()?.Trim() ?? "";
 	var minDifference = double.TryParse(diffInput, out var md) && md > 0 && md < 1 ? md : 0.35;
 
+	// A separate, LOWER floor between two engine decks. They are already held apart by their pool
+	// locks, and archetype pools overlap — every reanimation core draws on the same graveyard
+	// suppliers — so the field-wide floor rejects a second graveyard archetype for resembling the
+	// first. Curve decks keep the full floor: they have no identity to defend and are the
+	// good-stuff control the themed slots are read against.
+	Console.Write(
+		$"Minimum difference between two ENGINE decks? (default {minDifference:0.##} = same as above): "
+	);
+	var engineDiffInput = Console.ReadLine()?.Trim() ?? "";
+	double? engineDifference =
+		double.TryParse(engineDiffInput, out var ed) && ed > 0 && ed < 1 ? ed : null;
+
 	// Measures the whole pool with uniformly-random decks before evolution, so a card's starting
 	// value does not depend on whether it happened to be picked up early. Without it, a card
 	// needs data to get into a deck and needs to be in a deck to get data.
@@ -358,7 +370,8 @@ else if (mode == 6)
 		enginesPath: string.IsNullOrWhiteSpace(enginesPath) ? null : enginesPath,
 		engineSlots: engineSlots,
 		excludedEngines: excludedEngines,
-		explorationGenerations: explorationGens
+		explorationGenerations: explorationGens,
+		engineDifference: engineDifference
 	).Run();
 }
 else if (mode == 7)
