@@ -88,6 +88,7 @@ public static class CoresetCubeRedSpells
 						new IsPlayerSpecification().And(new IsControlledByOpponentSpecification())
 					)
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// The exile-instead clause is a structural replacement the engine does not have.
 			CardFactory
@@ -142,6 +143,7 @@ public static class CoresetCubeRedSpells
 				.WithTarget(Single().OpponentCreatures())
 				.WithDamage(2)
 				.WithTarget(AllValid().Opponent())
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// Convoke: {1} less per ready creature, exhausting exactly that many. With a wide
 			// Goblin board this is routinely free, which is the card.
@@ -202,6 +204,7 @@ public static class CoresetCubeRedSpells
 				.WithCannotBeCountered(new SpellMasteryCondition())
 				.WithDamage(4)
 				.WithTarget(Single().PlayersOrCreatures())
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// Sprayed: 3 damage as three independent 1-damage hits, costing one less than printed.
 			CardFactory
@@ -239,6 +242,7 @@ public static class CoresetCubeRedSpells
 				.WithTarget(Random().OpponentOrOpponentCreatures())
 				.WithDamage(1)
 				.WithTarget(Random().OpponentOrOpponentCreatures())
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 		];
 }

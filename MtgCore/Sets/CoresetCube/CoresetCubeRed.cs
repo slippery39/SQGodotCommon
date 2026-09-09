@@ -342,6 +342,7 @@ public static class CoresetCubeRed
 					TriggerConditions.OnYouCastSpell(),
 					eb => eb.WithDamage(1).WithTarget(Single().Opponent())
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// Recursion keyed to the opponent losing life, which is red's most common board state.
 			// ActiveInZone = Graveyard is mandatory: the card is already there when this fires.
@@ -365,6 +366,7 @@ public static class CoresetCubeRed
 					ActiveInZone: ZoneType.Graveyard,
 					maxPerTurn: 1
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// Printed as a discard outlet that pings each opponent. Menace dropped.
 			CardFactory
@@ -405,6 +407,7 @@ public static class CoresetCubeRed
 						Filter = new IsSubtypeSpecification { Subtype = Goblin },
 					}
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// "Other Goblins attack each turn if able" is dropped with the rest of the forced
 			// attacks, and "+1/+0 for each other attacking Goblin" becomes "for each other Goblin
@@ -464,6 +467,7 @@ public static class CoresetCubeRed
 					},
 					eb => eb.WithDamage(2).WithTarget(Single().Opponent())
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// A permanent buff, so it is this engine's +1/+1 counter — see the note on counters in
 			// MtgCore/CLAUDE.md. Grows only on instants and sorceries, like every prowess payoff.
@@ -499,6 +503,7 @@ public static class CoresetCubeRed
 					},
 					eb => eb.WithDiscard(1).WithTarget(TargetingStrategy.Self())
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// Doubles the Goblin board every activation. Unlimited per turn would be an infinite
 			// loop with any sacrifice outlet, so it is once per turn and needs the tap.
@@ -518,6 +523,7 @@ public static class CoresetCubeRed
 						),
 					requiresTap: true
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// Haste on arrival is the half that matters here: it turns every creature you play into
 			// immediate damage, which is what the token strategies want.
@@ -555,6 +561,7 @@ public static class CoresetCubeRed
 								TargetingStrategy.NoTarget()
 							)
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			CardFactory
 				.Creature("Pia and Kiran Nalaar", manaCost: 4, power: 2, toughness: 2)
@@ -572,6 +579,7 @@ public static class CoresetCubeRed
 					costs: cb => cb.SacrificeSubtype("Artifact"),
 					maxPerTurn: 0
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// "Damage equal to the number of Goblins you control" — the payoff that makes a wide
 			// Goblin board answer a single large creature.
@@ -667,6 +675,7 @@ public static class CoresetCubeRed
 					costs: cb => cb.SacrificeSubtype(Goblin),
 					maxPerTurn: 0
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// Printed: "deals 1 damage to each creature with flying your opponents control, and
 			// those creatures don't untap next turn." Both halves are kept — the freeze is a real
@@ -699,6 +708,7 @@ public static class CoresetCubeRed
 									)
 							)
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// ===== SIX MANA =====
 
@@ -730,6 +740,7 @@ public static class CoresetCubeRed
 						),
 					maxPerTurn: 0
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// The graveyard ability is the reason to run it over a plain fatty: it keeps threatening
 			// from the bin. Impulse draw stands in for the printed "discard your hand, draw" shape,
@@ -744,6 +755,7 @@ public static class CoresetCubeRed
 					effect: eb => eb.WithImpulseDraw(),
 					maxPerTurn: 0
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// ===== SEVEN MANA =====
 
@@ -759,6 +771,7 @@ public static class CoresetCubeRed
 					TriggerConditions.OnSelfAttacks(),
 					eb => Spray(eb, 7)
 				)
+				.WithPips(ManaColor.Red, 3)
 				.Build(),
 		];
 

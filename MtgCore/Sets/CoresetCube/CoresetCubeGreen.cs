@@ -173,6 +173,7 @@ public static class CoresetCubeGreen
 						),
 					maxPerTurn: 1
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// Reach plus deathtouch is a genuine wall here — Flying restricts who may ATTACK, so
 			// reach really does catch flyers, and deathtouch makes every attack into it a trade.
@@ -272,6 +273,7 @@ public static class CoresetCubeGreen
 					TriggerConditions.OnYourUpkeep(),
 					eb => eb.WithSelfCounterMultiplier(2)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// The counter is a REAL counter, not a permanent P/T modifier: Scavenging Ooze is the
 			// card most likely to be sitting there when a Wildwood Scourge lands, and only
@@ -370,6 +372,7 @@ public static class CoresetCubeGreen
 						),
 					maxPerTurn: 1
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// A land card in the LIBRARY is a real card and goes to hand normally — it is only
 			// once played that it stops being a permanent. So the fetch-to-hand cards need no
@@ -428,6 +431,7 @@ public static class CoresetCubeGreen
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// Hexproof from black is unexpressible with no colours, so it becomes plain hexproof
 			// and the card costs one more. That is a real upgrade — untargetable by everything
@@ -442,6 +446,7 @@ public static class CoresetCubeGreen
 					TriggerConditions.OnSelfDealsCombatDamageToPlayer(),
 					eb => eb.WithDig(3)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			CardFactory
 				.Creature("Llanowar Visionary", manaCost: 3, power: 2, toughness: 2)
@@ -512,6 +517,7 @@ public static class CoresetCubeGreen
 						),
 					costs: cb => cb.SacrificeSelf()
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			CardFactory
 				.Creature("Yeva's Forcemage", manaCost: 3, power: 2, toughness: 2)
@@ -567,6 +573,7 @@ public static class CoresetCubeGreen
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// The cost reduction is the reason ConditionalCostReductionComponent gained AppliesTo.
 			// Every reduction before this one lived on the card being discounted and asked a
@@ -605,6 +612,7 @@ public static class CoresetCubeGreen
 									)
 							)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			CardFactory
 				.Creature("Llanowar Empath", manaCost: 4, power: 2, toughness: 2)
@@ -659,6 +667,7 @@ public static class CoresetCubeGreen
 						),
 					requiresTap: true
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// Protection from blue is unexpressible. The three activated keyword grants are the
 			// interesting half and they all survive; "this spell can't be countered" is kept
@@ -701,6 +710,7 @@ public static class CoresetCubeGreen
 						),
 					maxPerTurn: 0
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// "Reveal the top four and put all Elf cards into your hand" is a scaling tutor, and
 			// chaining four filtered searches is how the engine already expresses it — each step
@@ -751,6 +761,7 @@ public static class CoresetCubeGreen
 							)
 						)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// Vigilance is cut engine-wide and "or blocks" is inert with no blocking, so the
 			// trigger fires on attack only. That is a real downgrade on a card whose whole appeal
@@ -794,6 +805,7 @@ public static class CoresetCubeGreen
 							)
 						)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// The leave-the-battlefield trigger must be ActiveInZone = Graveyard — by the time
 			// CheckStateBasedEffectsAction scans, the card has already moved. It fires on ANY
@@ -848,6 +860,7 @@ public static class CoresetCubeGreen
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// "Nonlegendary GREEN creature card with mana value 3 or less" loses the colour word,
 			// which costs nothing in a mono-green section. The mana-value cap is the part that
@@ -881,6 +894,7 @@ public static class CoresetCubeGreen
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// ===== SEVEN MANA =====
 
@@ -893,6 +907,7 @@ public static class CoresetCubeGreen
 					"Swarm",
 					eb => eb.WithCreateTokens(CoresetCubeGreenTokens.Insect(), 4)
 				)
+				.WithPips(ManaColor.Green, 3)
 				.Build(),
 			CardFactory
 				.Creature("Pelakka Wurm", manaCost: 7, power: 7, toughness: 7)
@@ -900,6 +915,7 @@ public static class CoresetCubeGreen
 				.WithTrample()
 				.WithEtbTrigger("Vital Surge", eb => eb.WithLifeGain(7))
 				.WithDeathTrigger("Last Gasp", eb => eb.WithDraw(1))
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 		];
 }

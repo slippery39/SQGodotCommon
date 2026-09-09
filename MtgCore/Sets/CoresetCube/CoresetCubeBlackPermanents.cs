@@ -103,6 +103,7 @@ public static class CoresetCubeBlackPermanents
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// Every mode kept, including the fourth. onceEach strikes a mode off permanently once
 			// taken, so this is a four-turn clock that ends the game — which is the card. Without
@@ -160,6 +161,7 @@ public static class CoresetCubeBlackPermanents
 							)
 						)
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// "Whenever a creature attacks you or a planeswalker you control" — with no blocking
 			// there is no "attacks you" distinct from "attacks", so filtering the attacker to an
@@ -229,6 +231,7 @@ public static class CoresetCubeBlackPermanents
 						),
 					}
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			CardFactory
 				.Enchantment("Mark of the Vampire", manaCost: 4)
@@ -288,6 +291,7 @@ public static class CoresetCubeBlackPermanents
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// The +2 and -3 are both faithful; -3 is why SetLifeTotalAction exists, and it is
 			// deliberately not routed through the replacement engine, since a life-gain bonus
@@ -315,6 +319,7 @@ public static class CoresetCubeBlackPermanents
 					-7,
 					eb => eb.WithDestroy().WithTarget(AllValid().OpponentCreatures())
 				)
+				.WithPips(ManaColor.Black, 3)
 				.Build(),
 		];
 }

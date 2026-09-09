@@ -16,7 +16,7 @@ namespace MtgCore;
 ///   - TargetSelectionMode.Best lets the engine pick your side (your strongest creature) while the
 ///     opponent's side stays the player's choice, which is the half the card is actually about.
 ///   - FightAction gained a source fallback for when SourceCardId is not a creature. That also
-///     repairs Hollowmere's Set Upon the Pack, a shipped spell that was a silent no-op.
+///     repairs an earlier shipped fight spell that was a silent no-op.
 /// FightAction.OneSided covers Rabid Bite and Hunter's Edge, where no damage comes back.
 ///
 /// RAMP IS MANA, NOT LANDS. "Search your library for a basic land card and put it onto the
@@ -295,6 +295,7 @@ public static class CoresetCubeGreenSpells
 						)
 					)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// A real +1/+1 counter, not a permanent P/T modifier, because the counter is the
 			// printed word and only PlusOneCounterComponent feeds Wildwood Scourge.
@@ -329,6 +330,7 @@ public static class CoresetCubeGreenSpells
 				.WithTarget(AllValid().AllYourCreatures())
 				.WithGrantKeyword(trample: true)
 				.WithTarget(AllValid().AllYourCreatures())
+				.WithPips(ManaColor.Green, 3)
 				.Build(),
 			// Kept faithful rather than reskinned because Overrun is right above it — a reskin
 			// would have shipped the same card twice and the draft model, which is keyed by card
@@ -367,6 +369,7 @@ public static class CoresetCubeGreenSpells
 					},
 					TargetingStrategy.NoTarget()
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 		];
 }

@@ -63,6 +63,8 @@ public static class CoresetCubeMulticolour
 					// exactly one opponent to pick.
 					eb => eb.WithLoseLife(1).WithTarget(Random().Opponent())
 				)
+				.WithPips(ManaColor.Black)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// Printed: "At the beginning of your end step, if a creature died this turn, draw a
 			// card."
@@ -87,6 +89,8 @@ public static class CoresetCubeMulticolour
 							)
 							.NoTarget()
 				)
+				.WithPips(ManaColor.Black)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// ===== BLACK-RED — sacrifice your own creatures =====
 
@@ -130,6 +134,8 @@ public static class CoresetCubeMulticolour
 							),
 					costs: c => c.Sacrifice(TargetSpecification.OtherCreaturesYouControl())
 				)
+				.WithPips(ManaColor.Black)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			// Printed: "{1}, Sacrifice another creature: This deals 1 damage to any target."
 			// Faithful — a sacrifice outlet as an activated ability is exactly what the engine
@@ -146,6 +152,8 @@ public static class CoresetCubeMulticolour
 					costs: c => c.Sacrifice(TargetSpecification.OtherCreaturesYouControl()),
 					maxPerTurn: 0
 				)
+				.WithPips(ManaColor.Black)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			// Printed: "Menace. Whenever this attacks, you may sacrifice another creature. If you
 			// do, this gets +2/+2 until end of turn." Menace is cut; the rest becomes an activated
@@ -172,6 +180,8 @@ public static class CoresetCubeMulticolour
 						),
 					costs: c => c.Sacrifice(TargetSpecification.OtherCreaturesYouControl())
 				)
+				.WithPips(ManaColor.Black)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			// ===== BLUE-BLACK — card selection and the graveyard =====
 
@@ -197,6 +207,8 @@ public static class CoresetCubeMulticolour
 					effect: eb => eb.WithReanimate(),
 					costs: c => c.SacrificeSelf()
 				)
+				.WithPips(ManaColor.Blue)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// Printed: "Deathtouch. Lifelink. Whenever this enters or deals combat damage to a
 			// player, draw a card, then discard a card."
@@ -219,6 +231,8 @@ public static class CoresetCubeMulticolour
 					TriggerConditions.OnSelfDealsCombatDamageToPlayer(),
 					eb => eb.WithDraw(1).WithDiscard(1).WithTarget(TargetingStrategy.Self())
 				)
+				.WithPips(ManaColor.Blue)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// Printed: "When this enters, return target instant, sorcery, or creature card from
 			// your graveyard to your hand. If this would die, exile it instead."
@@ -236,6 +250,8 @@ public static class CoresetCubeMulticolour
 				.WithSubtype("Zombie")
 				.WithEtbTrigger("Dredge Up", eb => eb.WithAutoReturnSpell())
 				.WithTaunt()
+				.WithPips(ManaColor.Blue)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// ===== BLACK-WHITE — creatures entering, and life =====
 
@@ -256,6 +272,8 @@ public static class CoresetCubeMulticolour
 					},
 					eb => eb.WithLoseLife(1).WithTarget(Random().Opponent())
 				)
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// Printed: "As long as you control an enchantment, this gets +1/+1 and has lifelink."
 			//
@@ -279,6 +297,8 @@ public static class CoresetCubeMulticolour
 						Duration = ModifierDuration.Permanent,
 					}
 				)
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// Printed: "Flying. Lifelink. At the beginning of your end step, if you gained 3 or
 			// more life this turn, each opponent loses 3 life."
@@ -304,6 +324,8 @@ public static class CoresetCubeMulticolour
 					},
 					eb => eb.WithLoseLife(3).WithTarget(Random().Opponent())
 				)
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// ===== GREEN-RED — mana and big bodies =====
 
@@ -324,6 +346,8 @@ public static class CoresetCubeMulticolour
 					effect: eb => eb.WithCreateTokens(CoresetCubeRedTokens.Dragon()),
 					costs: c => c.SacrificeSelf()
 				)
+				.WithPips(ManaColor.Red)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// Printed: "During your turn, Radha has first strike. You may look at the top card of
 			// your library any time, and you may play lands from the top of your library.
@@ -360,6 +384,8 @@ public static class CoresetCubeMulticolour
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Red)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// Printed: "{T}: Add {G} for each creature with power 4 or greater you control.
 			// {7}{R}: This deals damage equal to its power to target player or planeswalker."
@@ -382,6 +408,8 @@ public static class CoresetCubeMulticolour
 					manaCost: 8,
 					effect: eb => eb.WithDamage(4).WithTarget(Single().Opponent())
 				)
+				.WithPips(ManaColor.Red)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// ===== GREEN-BLUE — counters and card flow =====
 
@@ -397,6 +425,8 @@ public static class CoresetCubeMulticolour
 					TriggerConditions.OnYouDraw(),
 					eb => eb.WithSelfCounters(1)
 				)
+				.WithPips(ManaColor.Blue)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// Printed: "Whenever this or another Elemental you control enters, look at the top card
 			// of your library. If it's a land, you may put it onto the battlefield tapped. If you
@@ -426,6 +456,8 @@ public static class CoresetCubeMulticolour
 					eb => eb.WithDraw(1).WithTarget(TargetingStrategy.Self()),
 					maxPerTurn: 1
 				)
+				.WithPips(ManaColor.Blue)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// Printed: "Flying. At the beginning of combat on your turn, you may pay {G}{U}. When
 			// you do, put a +1/+1 counter on another target creature you control, and that creature
@@ -451,6 +483,8 @@ public static class CoresetCubeMulticolour
 							.WithGrantKeyword(flying: true)
 							.WithTarget(Single().OtherCreaturesYouControl())
 				)
+				.WithPips(ManaColor.Blue)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// ===== GREEN-WHITE — counters and going wide =====
 
@@ -473,6 +507,8 @@ public static class CoresetCubeMulticolour
 					"Parting Gift",
 					eb => eb.WithLifeGain(2).WithTarget(TargetingStrategy.Self())
 				)
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// Printed: "Vigilance. Renown 2." Vigilance is unimplemented. WithRenown sets
 			// MaxTriggers = 1 — the LIFETIME cap, which is what "if it isn't renowned" means. A
@@ -484,6 +520,8 @@ public static class CoresetCubeMulticolour
 				// vigilance says nothing at all, so this card was paying a keyword tax for a blank.
 				.WithTaunt()
 				.WithRenown(2)
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// Printed: "Ironroot Warlord's power is equal to the number of creatures you control.
 			// {3}{G}{W}: Create a 1/1 white Soldier creature token."
@@ -501,6 +539,8 @@ public static class CoresetCubeMulticolour
 					effect: eb => eb.WithCreateTokens(CoresetCubeTokens.Soldier()),
 					maxPerTurn: 0
 				)
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// ===== BLUE-RED — spells in the graveyard =====
 
@@ -510,6 +550,8 @@ public static class CoresetCubeMulticolour
 				.WithSubtype("Elemental")
 				.WithFlying()
 				.WithHaste()
+				.WithPips(ManaColor.Blue)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			// Printed: "Flying. Enigma Drake's power is equal to the number of instant and sorcery
 			// cards in your graveyard."
@@ -533,6 +575,8 @@ public static class CoresetCubeMulticolour
 						Duration = ModifierDuration.Permanent,
 					}
 				)
+				.WithPips(ManaColor.Blue)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			// ===== RED-WHITE — attacking =====
 
@@ -553,6 +597,8 @@ public static class CoresetCubeMulticolour
 					TriggerConditions.OnSelfAttacks(),
 					eb => eb.WithCreateTokens(CoresetCubeTokens.HastySoldier())
 				)
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			// Printed: "Double strike." Faithful. Double strike is a premium keyword on a
 			// no-blocker board — every attack into a creature it can kill is a free trade — so a
@@ -561,6 +607,8 @@ public static class CoresetCubeMulticolour
 				.Creature("Iroas's Champion", manaCost: 3, power: 2, toughness: 2)
 				.WithSubtype("Soldier")
 				.WithDoubleStrike()
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			// ===== BLUE-WHITE — flying matters =====
 
@@ -604,6 +652,8 @@ public static class CoresetCubeMulticolour
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Blue)
 				.Build(),
 			// Printed: "Flying. Other creatures you control with flying get +1/+1."
 			//
@@ -626,6 +676,8 @@ public static class CoresetCubeMulticolour
 							.And(new HasFlyingSpecification()),
 					}
 				)
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Blue)
 				.Build(),
 			// Printed: "Flash. Flying. Other creatures you control with flying get +1/+1."
 			// Flash needs a priority window the engine does not have, so it is cut and the Wyvern
@@ -644,6 +696,8 @@ public static class CoresetCubeMulticolour
 							.And(new HasFlyingSpecification()),
 					}
 				)
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Blue)
 				.Build(),
 		];
 }

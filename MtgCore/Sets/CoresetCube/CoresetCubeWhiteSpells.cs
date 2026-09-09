@@ -160,6 +160,7 @@ public static class CoresetCubeWhiteSpells
 					new DestroyCreatureAction(),
 					TargetingStrategy.AllValid(TargetSpecification.Creatures())
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			// "You choose one of each type, each player sacrifices the rest" needs a per-player
 			// multi-type selection the choice system cannot express in one step. Implemented as
@@ -175,6 +176,7 @@ public static class CoresetCubeWhiteSpells
 							.And(new IsNotCheapestCreatureSpecification())
 					)
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			// X and convoke together, exactly as printed.
 			CardFactory
@@ -189,6 +191,7 @@ public static class CoresetCubeWhiteSpells
 					},
 					TargetingStrategy.NoTarget()
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			CardFactory
 				.Sorcery("Basri's Solidarity", manaCost: 2)

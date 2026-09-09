@@ -46,6 +46,8 @@ public static class CoresetCubeMulticolourSpells
 				.Sorcery("Experimental Overload", manaCost: 4)
 				.WithCreateTokens(CoresetCubeMulticolourTokens.Weird())
 				.WithAutoReturnSpell()
+				.WithPips(ManaColor.Blue)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			// Printed: "Create two 1/1 white Soldier creature tokens. Until end of turn, creatures
 			// you control get +1/+1 and gain haste."
@@ -71,6 +73,8 @@ public static class CoresetCubeMulticolourSpells
 				.WithTarget(AllValid().AllYourCreatures())
 				.WithGrantKeyword(haste: true)
 				.WithTarget(AllValid().AllYourCreatures())
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			// ===== PLANESWALKER =====
 
@@ -130,6 +134,8 @@ public static class CoresetCubeMulticolourSpells
 							.WithGrantKeyword(trample: true)
 							.WithTarget(AllValid().AllYourCreatures())
 				)
+				.WithPips(ManaColor.Black)
+				.WithPips(ManaColor.Green)
 				.Build(),
 		];
 }

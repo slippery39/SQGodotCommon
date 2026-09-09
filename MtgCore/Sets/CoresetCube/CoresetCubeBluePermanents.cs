@@ -102,6 +102,7 @@ public static class CoresetCubeBluePermanents
 							.WithDraw(1)
 							.WithTarget(TargetingStrategy.Self())
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			// ===== PLANESWALKERS =====
 
@@ -123,6 +124,7 @@ public static class CoresetCubeBluePermanents
 					-10,
 					eb => eb.WithMill(20).WithTarget(Single().Opponent())
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			CardFactory
 				.Planeswalker("Mu Yanling, Sky Dancer", manaCost: 3)
@@ -162,6 +164,7 @@ public static class CoresetCubeBluePermanents
 							TargetingStrategy.Self()
 						)
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			// Instant-speed loyalty and phasing are both cut. The -3 becomes a freeze, which is
 			// the closest thing to "treat it as though it doesn't exist until your next turn".
@@ -183,6 +186,7 @@ public static class CoresetCubeBluePermanents
 					-10,
 					eb => eb.WithExtraTurn(2)
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			CardFactory
 				.Planeswalker("Tezzeret, Artifice Master", manaCost: 5)
@@ -222,6 +226,7 @@ public static class CoresetCubeBluePermanents
 							TargetingStrategy.Self()
 						)
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 		];
 }

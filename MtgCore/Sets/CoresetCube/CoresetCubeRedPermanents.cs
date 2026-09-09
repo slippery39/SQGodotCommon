@@ -185,6 +185,7 @@ public static class CoresetCubeRedPermanents
 							.WithDamage(10)
 							.WithTarget(AllValid().OpponentCreatures())
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// Printed +1 is "discard your hand, then exile the top three cards; you may play them
 			// this turn". The discard-your-hand cost is dropped — there is no "discard your whole
@@ -235,6 +236,7 @@ public static class CoresetCubeRedPermanents
 							TargetingStrategy.Self()
 						)
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			// The +1's "spend this only on Dragon spells" is unexpressible — mana here is colourless
 			// and untyped — so it is plain ramp. AddTemporaryManaAction raises CurrentMana only, so
@@ -253,6 +255,7 @@ public static class CoresetCubeRedPermanents
 					-7,
 					eb => eb.WithCreateTokens(CoresetCubeRedTokens.Dragon(), 3)
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 		];
 }

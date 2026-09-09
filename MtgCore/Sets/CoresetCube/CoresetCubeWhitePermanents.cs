@@ -144,6 +144,7 @@ public static class CoresetCubeWhitePermanents
 						),
 					activeInZone: ZoneType.Graveyard
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			// "Activated abilities can't be activated" is dropped — there is no per-permanent
 			// ability lock. The can't-attack half and the life gain are both real.
@@ -163,6 +164,7 @@ public static class CoresetCubeWhitePermanents
 			CardFactory
 				.Enchantment("Glorious Anthem", manaCost: 3)
 				.WithStaticBoost(1, 1, TargetSpecification.CreatureControlledByYou())
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			// ===== EQUIPMENT =====
 
@@ -202,6 +204,7 @@ public static class CoresetCubeWhitePermanents
 					-8,
 					eb => eb.WithCreateTokens(CoresetCubeTokens.Cat(), count: 4)
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			CardFactory
 				.Planeswalker("Ajani Steadfast", manaCost: 4)
@@ -247,6 +250,7 @@ public static class CoresetCubeWhitePermanents
 							TargetingStrategy.Self()
 						)
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			CardFactory
 				.Planeswalker("Gideon Jura", manaCost: 5)
@@ -296,6 +300,7 @@ public static class CoresetCubeWhitePermanents
 					0,
 					eb => eb.WithCreateTokens(CoresetCubeTokens.GideonAvatar())
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			CardFactory
 				.Planeswalker("Basri Ket", manaCost: 3)

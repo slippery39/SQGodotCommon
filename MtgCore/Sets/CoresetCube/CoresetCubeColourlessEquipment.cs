@@ -14,7 +14,7 @@ namespace MtgCore;
 /// THE FIVE RINGS ARE THE REASON IsEquippedBySourceSpecification EXISTS. Each is printed as a
 /// keyword grant plus "at the beginning of your upkeep, put a +1/+1 counter on equipped creature if
 /// it's [colour]". The colour gate is unreachable, and with it gone the five would be near-identical
-/// vanilla equipment — which the Hollowmere rate rule forbids outright, and which would be five
+/// vanilla equipment — which the set rate rule forbids outright, and which would be five
 /// wasted slots in a 450-card cube. Keeping the upkeep counter is what makes them distinct, and
 /// keeping it requires an attachment to be able to name its own wearer from its own trigger.
 /// TargetingContext already carried SourceCardId; nothing else was needed.

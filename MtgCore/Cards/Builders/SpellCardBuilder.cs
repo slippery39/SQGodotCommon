@@ -13,6 +13,23 @@ public class SpellCardBuilder
 {
 	private readonly string _name;
 	private readonly int _manaCost;
+	private ManaPool _colorPips = ManaPool.Empty;
+
+	/// <summary>
+	/// Adds coloured pips to the cost. Accumulates, so a gold card reads
+	/// <c>.WithPips(ManaColor.White).WithPips(ManaColor.Blue)</c> and a committed mono-colour card
+	/// reads <c>.WithPips(ManaColor.White, 2)</c>.
+	///
+	/// Only needed when a card's pips differ from its set's default — the colour sections stamp
+	/// one pip of their own colour on everything that leaves them, so the common case is silence.
+	/// Pips set here win over that default.
+	/// </summary>
+	public SpellCardBuilder WithPips(ManaColor color, int count = 1)
+	{
+		_colorPips = _colorPips.Add(color, count);
+		return this;
+	}
+
 	private readonly List<AdditionalCost> _castCosts = new();
 	private readonly List<CardEffect> _effects = new();
 	private readonly List<GameComponent> _extraComponents = new();
@@ -390,7 +407,7 @@ public class SpellCardBuilder
 	/// half silently hits nobody. DrainLifeAction derives both players from context instead,
 	/// which is the only shape that works from a trigger.
 	///
-	/// It was hand-rolled at roughly ten call sites in Hollowmere before this, each one an
+	/// It was hand-rolled at roughly ten call sites in a since-retired set before this, each one an
 	/// opportunity to forget PlayerIdContextKey and get a card that does nothing.
 	/// </summary>
 	public SpellCardBuilder WithDrain(int amount)
@@ -836,7 +853,7 @@ public class SpellCardBuilder
 	// A triggered ability spawns ResolveEffectAction with no TargetIds, so a UserSelect
 	// targeting strategy resolves to an EMPTY target list and the effect silently does
 	// nothing. Every one of these picks its target itself, so it works from a trigger.
-	// HollowmereCardBugTests.TriggeredAbilities_DoNotUseUserSelectTargeting enforces the rule.
+	// AllSetsCardBugTests.TriggeredAbilities_DoNotUseUserSelectTargeting enforces the rule.
 
 	/// Reanimates the first creature found in your graveyard.
 	public SpellCardBuilder WithAutoReanimate() =>
@@ -1274,6 +1291,7 @@ public class SpellCardBuilder
 		{
 			Name = _name,
 			ManaCost = _manaCost,
+			ColorPips = _colorPips,
 			Types = _types,
 			AdditionalCastCosts = _castCosts.ToImmutableList(),
 			Components = components.ToImmutable(),

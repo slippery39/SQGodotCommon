@@ -95,7 +95,11 @@ public static class CoresetCubeBlueSpells
 				.Instant("Unsubstantiate", manaCost: 2)
 				.AsCounterTrap(returnToHandInstead: true)
 				.Build(),
-			CardFactory.Instant("Dissipate", manaCost: 2).AsCounterTrap(exileInstead: true).Build(),
+			CardFactory
+				.Instant("Dissipate", manaCost: 2)
+				.AsCounterTrap(exileInstead: true)
+				.WithPips(ManaColor.Blue, 2)
+				.Build(),
 			CardFactory
 				.Instant("Frost Breath", manaCost: 3)
 				.WithFreeze(1)
@@ -126,6 +130,7 @@ public static class CoresetCubeBlueSpells
 			CardFactory
 				.Instant("Bone to Ash", manaCost: 4)
 				.AsCounterTrap(targetTypes: CardType.Creature, drawOnCounter: 1)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			CardFactory
 				.Instant("Rain of Revelation", manaCost: 4)
@@ -141,6 +146,7 @@ public static class CoresetCubeBlueSpells
 					new PutOnLibraryAction { Bottom = false },
 					TargetingStrategy.AllValid(TargetSpecification.OpponentCreatures())
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			// ===== SORCERIES =====
 
@@ -182,6 +188,7 @@ public static class CoresetCubeBlueSpells
 					},
 					TargetingStrategy.NoTarget()
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			CardFactory
 				.Sorcery("Anchor to the Aether", manaCost: 3)
@@ -197,11 +204,17 @@ public static class CoresetCubeBlueSpells
 				.WithDraw(2)
 				.WithTarget(TargetingStrategy.Self())
 				.Build(),
-			CardFactory.Sorcery("Drawn from Dreams", manaCost: 3).WithDig(7).WithDig(7).Build(),
+			CardFactory
+				.Sorcery("Drawn from Dreams", manaCost: 3)
+				.WithDig(7)
+				.WithDig(7)
+				.WithPips(ManaColor.Blue, 2)
+				.Build(),
 			CardFactory
 				.Sorcery("Sleep", manaCost: 1)
 				.WithFreeze(1)
 				.WithTarget(AllValid().OpponentCreatures())
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			// Casting from an opponent's library has no path — no player can cast another's
 			// cards. Reskinned to the mill half plus card draw, which is the same tempo swing.
@@ -213,11 +226,16 @@ public static class CoresetCubeBlueSpells
 					new SpellMasteryCondition(),
 					new DrawCardsAction { Amount = 2 }
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			CardFactory
 				.Sorcery("Talrand's Invocation", manaCost: 4)
 				.WithCreateTokens(CoresetCubeBlueTokens.Drake(), count: 2)
 				.Build(),
-			CardFactory.Sorcery("Time Warp", manaCost: 5).WithExtraTurn().Build(),
+			CardFactory
+				.Sorcery("Time Warp", manaCost: 5)
+				.WithExtraTurn()
+				.WithPips(ManaColor.Blue, 2)
+				.Build(),
 		];
 }

@@ -243,6 +243,7 @@ public static class CoresetCubeGreenPermanents
 							.WithGrantKeyword(trample: true)
 							.WithTarget(AllValid().AllYourCreatures())
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// REBUILT AROUND WHAT SURVIVES. All three printed abilities animate lands into 4/4
 			// trample Elementals, and there are no land permanents — so the Elemental becomes a
@@ -271,6 +272,7 @@ public static class CoresetCubeGreenPermanents
 							)
 							.WithCreateTokens(CoresetCubeGreenTokens.Elemental(), 3)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 			// The -3 keeps all three printed targets: artifact, enchantment, or creature with
 			// flying. HasFlyingSpecification exists (red's Earthquake needed it), so the flying
@@ -336,6 +338,7 @@ public static class CoresetCubeGreenPermanents
 							TargetingStrategy.Self()
 						)
 				)
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
 		];
 }

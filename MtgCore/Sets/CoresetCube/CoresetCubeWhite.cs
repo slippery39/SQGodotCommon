@@ -10,7 +10,7 @@ namespace MtgCore;
 ///
 /// All 38 white creatures, in the cube's own order (by mana value, then name).
 ///
-/// Two engine facts drive every rate, exactly as in Hollowmere:
+/// Two engine facts drive every rate:
 ///   - Combat has no blockers, so a body alone is only a clock. First strike is unusually strong
 ///     here — an attack into a creature it can kill is a free trade — and is priced accordingly.
 ///   - Draft.BuildDeck takes the first 27 picks in PICK ORDER, not the best 27 by curve, so
@@ -151,6 +151,7 @@ public static class CoresetCubeWhite
 						Filter = TargetSpecification.OtherCreaturesYouControl(),
 					}
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			// "Creatures your opponents control enter tapped" — an ETB trigger that exhausts the
 			// entering creature, so it cannot attack on its controller's next turn.
@@ -203,6 +204,7 @@ public static class CoresetCubeWhite
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			// Discard a card,  gain indestructible.
 			CardFactory
@@ -226,6 +228,7 @@ public static class CoresetCubeWhite
 				.WithSubtype(Angel)
 				.WithFlying()
 				.WithCastRestriction(new MinimumRoundCastRestriction { MinimumRound = 4 })
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			CardFactory
 				.Creature("Stormfront Pegasus", manaCost: 2, power: 2, toughness: 1)
@@ -353,6 +356,7 @@ public static class CoresetCubeWhite
 					manaCost: 5,
 					effect: eb => eb.WithBoost(2, 2).WithTarget(Single().YourCreatures())
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			// Vigilance dropped; the death trigger is the real card.
 			CardFactory
@@ -546,6 +550,7 @@ public static class CoresetCubeWhite
 							)
 						)
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			// Protection from Demons and Dragons is real — subtype protection is implementable
 			// even though colour protection is not.
@@ -556,6 +561,7 @@ public static class CoresetCubeWhite
 				.WithFirstStrike()
 				.WithLifelink()
 				.WithProtectionFrom("Demon", "Dragon")
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			// Vigilance dropped; the anthem and the three bodies are the card.
 			CardFactory
@@ -580,6 +586,7 @@ public static class CoresetCubeWhite
 					"Muster the Watch",
 					eb => eb.WithCreateTokens(CoresetCubeTokens.Soldier(), count: 3)
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			// The power comparison on the sacrifice ability is implemented — a pumped Lena
 			// protects more of the board.
@@ -650,6 +657,7 @@ public static class CoresetCubeWhite
 									)
 							)
 				)
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 		];
 }

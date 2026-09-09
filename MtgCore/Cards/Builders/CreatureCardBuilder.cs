@@ -11,6 +11,23 @@ public class CreatureCardBuilder
 {
 	private readonly string _name;
 	private readonly int _manaCost;
+	private ManaPool _colorPips = ManaPool.Empty;
+
+	/// <summary>
+	/// Adds coloured pips to the cost. Accumulates, so a gold card reads
+	/// <c>.WithPips(ManaColor.White).WithPips(ManaColor.Blue)</c> and a committed mono-colour card
+	/// reads <c>.WithPips(ManaColor.White, 2)</c>.
+	///
+	/// Only needed when a card's pips differ from its set's default — the colour sections stamp
+	/// one pip of their own colour on everything that leaves them, so the common case is silence.
+	/// Pips set here win over that default.
+	/// </summary>
+	public CreatureCardBuilder WithPips(ManaColor color, int count = 1)
+	{
+		_colorPips = _colorPips.Add(color, count);
+		return this;
+	}
+
 	private readonly int _power;
 	private readonly int _toughness;
 
@@ -550,6 +567,7 @@ public class CreatureCardBuilder
 		{
 			Name = _name,
 			ManaCost = _manaCost,
+			ColorPips = _colorPips,
 			Types = CardType.Creature | _extraTypes,
 			AdditionalCastCosts = _castCosts.ToImmutableList(),
 			Subtypes = _subtypes.ToImmutableHashSet(StringComparer.OrdinalIgnoreCase),

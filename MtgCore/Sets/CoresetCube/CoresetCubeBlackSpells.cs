@@ -59,6 +59,7 @@ public static class CoresetCubeBlackSpells
 				.Instant("Grasp of Darkness", manaCost: 2)
 				.WithWeaken(4, 4)
 				.WithTarget(Single().OpponentCreatures())
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// "Green or white" is unexpressible; the planeswalker half is not, since planeswalkers
 			// exist here — DestroyPermanentAction covers both in one clause where the printed card
@@ -91,6 +92,7 @@ public static class CoresetCubeBlackSpells
 				.WithTarget(Single().Players())
 				.WithLoseLife(2)
 				.WithTarget(Single().Players())
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// Land sacrifice becomes -1 MaxMana: lands are consumed into MaxMana rather than
 			// existing as permanents, so that IS the land. Every clause is symmetric as printed,
@@ -102,6 +104,7 @@ public static class CoresetCubeBlackSpells
 				.WithDiscard(1)
 				.WithSymmetricEdict()
 				.WithAction(new GainPermanentManaAction { Amount = -1 }, AllValid().Players())
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// ===== THREE MANA =====
 
@@ -109,11 +112,13 @@ public static class CoresetCubeBlackSpells
 				.Instant("Cower in Fear", manaCost: 3)
 				.WithWeaken(1, 1)
 				.WithTarget(AllValid().OpponentCreatures())
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			CardFactory
 				.Instant("Murder", manaCost: 3)
 				.WithDestroy()
 				.WithTarget(Single().OpponentCreatures())
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// The unrestricted search is why SelectCardFromLibraryAction gained
 			// SelectBestByManaCost. Library order is random, so a first-match search with no
@@ -127,6 +132,7 @@ public static class CoresetCubeBlackSpells
 				.Sorcery("Grim Tutor", manaCost: 1)
 				.WithSearchLibrary()
 				.WithLoseLife(3)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			CardFactory
 				.Sorcery("Read the Bones", manaCost: 3)
@@ -151,6 +157,7 @@ public static class CoresetCubeBlackSpells
 				.Sorcery("Languish", manaCost: 4)
 				.WithWeaken(4, 4)
 				.WithTarget(AllValid().Creatures())
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// ===== FIVE MANA AND UP =====
 
@@ -168,6 +175,7 @@ public static class CoresetCubeBlackSpells
 						TargetContextKey = ContextKeys.CastingPlayerId,
 					}
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// Spell mastery's "two additional +1/+1 counters" must land on the SAME creature the
 			// reanimation chose. Both effects therefore carry the identical targeting strategy:
@@ -208,6 +216,7 @@ public static class CoresetCubeBlackSpells
 				.WithTarget(Single().OpponentCreatures())
 				.WithWeaken(2, 0)
 				.WithTarget(AllValid().OpponentCreatures())
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 		];
 }

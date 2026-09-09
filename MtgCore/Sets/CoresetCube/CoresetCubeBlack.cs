@@ -234,6 +234,7 @@ public static class CoresetCubeBlack
 						),
 					}
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// Bloodthirst 1. "An opponent was dealt damage this turn" reads LifeLostThisTurn, so
 			// it counts drain as well as damage — a shade wider than printed, and every black
@@ -360,6 +361,7 @@ public static class CoresetCubeBlack
 					TriggerConditions.OnSelfDealsCombatDamageToPlayer(),
 					eb => eb.WithOpponentDiscard(1)
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			CardFactory
 				.Creature("Liliana's Specter", manaCost: 3, power: 2, toughness: 1)
@@ -382,6 +384,7 @@ public static class CoresetCubeBlack
 					TriggerConditions.OnCreatureYouControlDies(),
 					eb => eb.WithCreateTokens(CoresetCubeBlackTokens.Zombie())
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// "Can't be blocked by white creatures" is doubly dead — no blocking, no colours.
 			CardFactory
@@ -406,6 +409,7 @@ public static class CoresetCubeBlack
 					TriggerConditions.OnYourUpkeep(),
 					eb => eb.WithDiscard(1)
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// Printed as "destroy target TAPPED creature". Attacking does not exhaust in this
 			// engine, so the only tapped creatures are ones a tapper set up — and white owns every
@@ -431,6 +435,7 @@ public static class CoresetCubeBlack
 						),
 					requiresTap: true
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			CardFactory
 				.Creature("Vampire Nighthawk", manaCost: 3, power: 2, toughness: 3)
@@ -439,6 +444,7 @@ public static class CoresetCubeBlack
 				.WithFlying()
 				.WithDeathtouch()
 				.WithLifelink()
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// "Whenever this or another Human you control dies" — the subtype filter reads the
 			// dead card, which still carries its ControllerId and Subtypes in the graveyard.
@@ -574,6 +580,7 @@ public static class CoresetCubeBlack
 							)
 						)
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			CardFactory
 				.Creature("Gravedigger", manaCost: 4, power: 2, toughness: 2)
@@ -627,6 +634,7 @@ public static class CoresetCubeBlack
 									)
 							)
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// "Draw a card unless target opponent sacrifices a creature or pays 3 life" is an
 			// opponent-chooses clause with no window to choose in. Resolved as the option the
@@ -641,6 +649,7 @@ public static class CoresetCubeBlack
 					TriggerConditions.OnYourUpkeep(),
 					eb => eb.WithAction(new LoseLifeAction { Amount = 3 }, AllValid().Opponent())
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			CardFactory
 				.Creature("Priest of the Blood Rite", manaCost: 5, power: 2, toughness: 2)
@@ -655,6 +664,7 @@ public static class CoresetCubeBlack
 					TriggerConditions.OnYourUpkeep(),
 					eb => eb.WithLoseLife(2)
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			// "Whenever this enters OR attacks" is one printed trigger covering two events; the
 			// engine needs one per event, so it is two abilities with the same effect.
@@ -671,6 +681,7 @@ public static class CoresetCubeBlack
 					TriggerConditions.OnSelfAttacks(),
 					eb => eb.WithCreateTokens(CoresetCubeBlackTokens.Zombie(), count: 2)
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			CardFactory
 				.Creature("Massacre Wurm", manaCost: 6, power: 6, toughness: 5)
@@ -684,6 +695,7 @@ public static class CoresetCubeBlack
 					TriggerConditions.OnOpponentCreatureDies(),
 					eb => eb.WithDrain(2)
 				)
+				.WithPips(ManaColor.Black, 3)
 				.Build(),
 			// "Whenever you lose life, draw that many cards" is why ContextKeys.TriggerAmount
 			// exists — before it, a trigger could only act on a number baked into the card, so
@@ -713,6 +725,7 @@ public static class CoresetCubeBlack
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 		];
 }

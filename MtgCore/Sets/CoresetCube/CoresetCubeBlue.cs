@@ -106,6 +106,7 @@ public static class CoresetCubeBlue
 					"Tidal Return",
 					eb => eb.WithBounce().WithTarget(Random().OpponentCreatures())
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			// The flip to Jace, Telepath Unbound is cut — creature to planeswalker crosses the
 			// cast-routing split. The looter is the half that plays.
@@ -197,6 +198,7 @@ public static class CoresetCubeBlue
 									)
 							)
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			// "X = the number of +1/+1 counters" is read as effective power instead. A permanent
 			// modifier IS the counter here, and Skulker's power is always 1 + counters, so the
@@ -303,6 +305,7 @@ public static class CoresetCubeBlue
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			// ===== FOUR MANA =====
 
@@ -318,6 +321,7 @@ public static class CoresetCubeBlue
 				.WithSubtype(Spirit)
 				.WithFlying()
 				.WithEtbTrigger("Imprison", eb => eb.WithFreeze(1, whileSourceRemains: true))
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			CardFactory
 				.Creature("Talrand, Sky Summoner", manaCost: 4, power: 2, toughness: 2)
@@ -351,6 +355,7 @@ public static class CoresetCubeBlue
 					eb => eb.WithDraw(3).WithTarget(TargetingStrategy.Self()).WithDiscard(2)
 				)
 				.WithDeathTrigger("Return to the Winds", eb => eb.WithScry(2))
+				.WithPips(ManaColor.Blue, 3)
 				.Build(),
 			CardFactory
 				.Creature("Soulblade Djinn", manaCost: 5, power: 4, toughness: 3)
@@ -361,6 +366,7 @@ public static class CoresetCubeBlue
 					TriggerConditions.OnYouCastSpell(),
 					eb => eb.WithBoost(1, 1).WithTarget(AllValid().AllYourCreatures())
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			CardFactory
 				.Creature("Stormwing Entity", manaCost: 5, power: 3, toughness: 3)
@@ -373,6 +379,7 @@ public static class CoresetCubeBlue
 					eb => eb.WithProwessBuff()
 				)
 				.WithEtbTrigger("Storm Sight", eb => eb.WithScry(2))
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			// The ward ("counter that spell unless {2}") is cut: targeting is not interceptable,
 			// and hand traps are a different mechanism. The freeze half is the body of the card.
@@ -385,6 +392,7 @@ public static class CoresetCubeBlue
 					TriggerConditions.OnSelfAttacks(),
 					eb => eb.WithFreeze(1)
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			CardFactory
 				.Creature("Agent of Treachery", manaCost: 7, power: 2, toughness: 3)
@@ -397,6 +405,7 @@ public static class CoresetCubeBlue
 					eb => eb.WithDraw(3).WithTarget(TargetingStrategy.Self()),
 					maxPerTurn: 1
 				)
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			// "An opponent separates them into two piles" cannot be expressed — the choice system
 			// has no opponent-made partition. Drawing two of five keeps the shape and the rate.
@@ -405,6 +414,7 @@ public static class CoresetCubeBlue
 				.WithSubtype(Sphinx)
 				.WithFlying()
 				.WithEtbTrigger("Fateful Vision", eb => eb.WithDig(5).WithDig(5))
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 		];
 }
