@@ -64,12 +64,14 @@ public record CastSpellAction : GameAction
 			if (!restriction.CanCast(gameState, CastingPlayerId))
 				return ValidationResult.Invalid(restriction.Describe());
 
-		var player = gameState.GetPlayer(CastingPlayerId);
 		var effectiveCost = ComputeEffectiveCost(gameState, card, CastingPlayerId);
-		if (player.CurrentMana < effectiveCost)
-			return ValidationResult.Invalid(
-				$"Not enough mana (have {player.CurrentMana}, need {effectiveCost})"
-			);
+		var manaResult = gameState.ValidateManaPayment(
+			CastingPlayerId,
+			effectiveCost,
+			card.ColorPips
+		);
+		if (!manaResult.IsValid)
+			return manaResult;
 
 		var costsResult = ValidateAdditionalCosts(gameState, card);
 		if (!costsResult.IsValid)
@@ -83,21 +85,16 @@ public record CastSpellAction : GameAction
 		var card = (Card)gameState.GetObject(CardId);
 		var state = PayAdditionalCosts(gameState, card);
 
-		var player = state.GetPlayer(CastingPlayerId);
-
 		// Convoke's reduction is measured before mana is spent, so the same number of creatures
 		// that paid are the ones exhausted below.
 		var convokeUsed = card.HasComponent<ConvokeComponent>()
 			? Math.Min(state.CountConvokers(CastingPlayerId), card.ManaCost + XValue)
 			: 0;
 
-		state = state.UpdateObject(
+		state = state.PayMana(
 			CastingPlayerId,
-			player with
-			{
-				CurrentMana =
-					player.CurrentMana - ComputeEffectiveCost(state, card, CastingPlayerId),
-			}
+			ComputeEffectiveCost(state, card, CastingPlayerId),
+			card.ColorPips
 		);
 
 		state = ExhaustConvokers(state, card, CastingPlayerId, convokeUsed);

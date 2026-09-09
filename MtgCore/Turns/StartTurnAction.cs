@@ -93,6 +93,7 @@ public record StartTurnAction : GameAction
 		var updatedPlayer = player with
 		{
 			CurrentMana = player.MaxMana,
+			CurrentColorMana = player.MaxColorMana,
 			LandsPlayedThisTurn = 0,
 			LifeGainedThisTurn = 0,
 		};

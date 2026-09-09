@@ -49,6 +49,63 @@ public static class CostEngine
 	}
 
 	/// <summary>
+	/// Can this player pay <paramref name="genericCost"/> generic AND <paramref name="pips"/>?
+	///
+	/// The two tracks are checked independently and never substitute for each other — that is the
+	/// whole reason casting needs no payment-ordering solver. See <see cref="ManaPool"/>.
+	///
+	/// Every cast path calls this rather than comparing CurrentMana itself, so the colour rule
+	/// cannot be missed by one of them, and MtgActionGenerator inherits the check for free: it
+	/// offers spells through TryAddAction, which runs ValidateAdd.
+	/// </summary>
+	public static ValidationResult ValidateManaPayment(
+		this GameState state,
+		int playerId,
+		int genericCost,
+		ManaPool pips
+	)
+	{
+		var player = state.GetPlayer(playerId);
+
+		if (player.CurrentMana < genericCost)
+			return ValidationResult.Invalid(
+				$"Not enough mana (have {player.CurrentMana}, need {genericCost})"
+			);
+
+		if (!player.CurrentColorMana.Covers(pips))
+			return ValidationResult.Invalid(
+				$"Not enough coloured mana (need {pips.ToPipString()}, "
+					+ $"have {player.CurrentColorMana.ToPipString()})"
+			);
+
+		return ValidationResult.Valid;
+	}
+
+	/// <summary>
+	/// Deducts both tracks. Callers are expected to have passed <see cref="ValidateManaPayment"/>
+	/// first; the coloured side floors at zero rather than going negative, because a negative
+	/// colour count would silently unlock every later cast that turn.
+	/// </summary>
+	public static GameState PayMana(
+		this GameState state,
+		int playerId,
+		int genericCost,
+		ManaPool pips
+	)
+	{
+		var player = state.GetPlayer(playerId);
+
+		return state.UpdateObject(
+			playerId,
+			player with
+			{
+				CurrentMana = player.CurrentMana - genericCost,
+				CurrentColorMana = player.CurrentColorMana.Subtract(pips),
+			}
+		);
+	}
+
+	/// <summary>
 	/// Conditional reductions, from two sources.
 	///
 	/// The first is the card's own — "this spell costs {1} less if …" (Winged Words). The second

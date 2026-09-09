@@ -55,21 +55,7 @@ public record PlayLandAction : GameAction
 
 		var card = state.GetObject(CardId) as Card;
 
-		var bonus = card?.GetComponent<BonusManaLandComponent>();
-		var totalMana = 1 + (bonus?.ExtraMana ?? 0);
-		var manaThisTurn = bonus?.Deferred == true ? 0 : totalMana;
-
-		var player = state.GetPlayer(CastingPlayerId);
-		state = state.UpdateObject(
-			CastingPlayerId,
-			player with
-			{
-				MaxMana = player.MaxMana + totalMana,
-				CurrentMana = player.CurrentMana + manaThisTurn,
-				LandsPlayedThisTurn = player.LandsPlayedThisTurn + 1,
-				LandsPlayedTotal = player.LandsPlayedTotal + 1,
-			}
-		);
+		state = state.GrantLandMana(CastingPlayerId, card, countsAsLandDrop: true);
 
 		var grantEmblem = card?.GetComponent<GrantEmblemComponent>();
 		if (grantEmblem != null)

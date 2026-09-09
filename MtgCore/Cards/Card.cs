@@ -18,6 +18,20 @@ namespace MtgCore;
 public record Card : GameObject
 {
 	public int ManaCost { get; init; }
+
+	/// <summary>
+	/// The card's coloured requirement — its pips. "1W" is ManaCost 1 with ColorPips {White=1};
+	/// "3WW" is ManaCost 3 with {White=2}. Empty means colourless, which is why an artifact needs
+	/// no marker.
+	///
+	/// Paid from a SEPARATE track to ManaCost and never substitutable with it, so casting has no
+	/// payment-ordering choice. Cost reductions (affinity, convoke, Goreclaw) reduce ManaCost only
+	/// and never touch pips, matching MTG — a spell reduced to 0 generic still needs its colours.
+	///
+	/// Colour IDENTITY is derived from this rather than stored: a card is white iff its pips
+	/// contain White. A second field would be a second source of truth to keep in step.
+	/// </summary>
+	public ManaPool ColorPips { get; init; } = ManaPool.Empty;
 	public ImmutableList<AdditionalCost> AdditionalCastCosts { get; init; } =
 		ImmutableList<AdditionalCost>.Empty;
 	public int OwnerId { get; init; }

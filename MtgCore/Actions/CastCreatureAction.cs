@@ -54,12 +54,14 @@ public record CastCreatureAction : GameAction
 			if (!restriction.CanCast(gameState, CastingPlayerId))
 				return ValidationResult.Invalid(restriction.Describe());
 
-		var player = gameState.GetPlayer(CastingPlayerId);
 		var effectiveCost = ComputeEffectiveCost(gameState, card, CastingPlayerId);
-		if (player.CurrentMana < effectiveCost)
-			return ValidationResult.Invalid(
-				$"Not enough mana (have {player.CurrentMana}, need {effectiveCost})"
-			);
+		var manaResult = gameState.ValidateManaPayment(
+			CastingPlayerId,
+			effectiveCost,
+			card.ColorPips
+		);
+		if (!manaResult.IsValid)
+			return manaResult;
 
 		for (int i = 0; i < card.AdditionalCastCosts.Count; i++)
 		{
@@ -81,14 +83,10 @@ public record CastCreatureAction : GameAction
 		var card = (Card)gameState.GetObject(CardId);
 		var state = PayAdditionalCosts(gameState, card);
 
-		var player = state.GetPlayer(CastingPlayerId);
-		state = state.UpdateObject(
+		state = state.PayMana(
 			CastingPlayerId,
-			player with
-			{
-				CurrentMana =
-					player.CurrentMana - ComputeEffectiveCost(state, card, CastingPlayerId),
-			}
+			ComputeEffectiveCost(state, card, CastingPlayerId),
+			card.ColorPips
 		);
 		state = state.MoveObject(CardId, state.GetStackId());
 

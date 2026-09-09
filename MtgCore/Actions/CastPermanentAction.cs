@@ -81,12 +81,14 @@ public record CastPermanentAction : GameAction
 				return ValidationResult.Invalid("Invalid target for this Aura");
 		}
 
-		var player = gameState.GetPlayer(CastingPlayerId);
 		var effectiveCost = gameState.ComputeEffectiveCost(card, CastingPlayerId);
-		if (player.CurrentMana < effectiveCost)
-			return ValidationResult.Invalid(
-				$"Not enough mana (have {player.CurrentMana}, need {effectiveCost})"
-			);
+		var manaResult = gameState.ValidateManaPayment(
+			CastingPlayerId,
+			effectiveCost,
+			card.ColorPips
+		);
+		if (!manaResult.IsValid)
+			return manaResult;
 
 		for (int i = 0; i < card.AdditionalCastCosts.Count; i++)
 		{
@@ -108,14 +110,10 @@ public record CastPermanentAction : GameAction
 		var card = (Card)gameState.GetObject(CardId);
 		var state = PayAdditionalCosts(gameState, card);
 
-		var player = state.GetPlayer(CastingPlayerId);
-		state = state.UpdateObject(
+		state = state.PayMana(
 			CastingPlayerId,
-			player with
-			{
-				CurrentMana =
-					player.CurrentMana - state.ComputeEffectiveCost(card, CastingPlayerId),
-			}
+			state.ComputeEffectiveCost(card, CastingPlayerId),
+			card.ColorPips
 		);
 		state = state.MoveObject(CardId, state.GetStackId());
 

@@ -2171,22 +2171,42 @@ public static class CardLibrary
 	// ===== LAND =====
 
 	/// <summary>
-	/// Plains — basic land.
-	/// Playing a land from hand permanently increases MaxMana and CurrentMana by 1.
-	/// Behavior is handled entirely by PlayLandAction; the card has no components.
+	/// A basic land. Playing one permanently adds 1 generic mana and 1 mana of its colour.
+	///
+	/// One factory rather than five accessors: the five differ only by colour, and per-card
+	/// static accessors are being retired in favour of GetByName. Everything else about a land
+	/// lives in PlayLandAction and ManaEngine.
 	/// </summary>
-	public static Card Plains() =>
+	public static Card BasicLand(ManaColor color) =>
 		new()
 		{
-			Name = "Plains",
+			Name = BasicLandName(color),
 			ManaCost = 0,
 			Subtypes = ImmutableHashSet.Create(
 				StringComparer.OrdinalIgnoreCase,
 				LandSubtype,
 				"Basic"
 			),
-			Components = ImmutableArray<GameComponent>.Empty,
+			Components = [new LandColorComponent { Produces = ManaPool.Empty.Add(color, 1) }],
 		};
+
+	public static string BasicLandName(ManaColor color) =>
+		color switch
+		{
+			ManaColor.White => "Plains",
+			ManaColor.Blue => "Island",
+			ManaColor.Black => "Swamp",
+			ManaColor.Red => "Mountain",
+			ManaColor.Green => "Forest",
+			_ => "Wastes",
+		};
+
+	/// <summary>
+	/// Retained because the existing manabase builders (CardPool, Draft.BuildDeck, the deck
+	/// factories) all pad with Plains. Those become colour-aware in the deckbuilding phase;
+	/// until then this keeps every caller compiling and every existing test green.
+	/// </summary>
+	public static Card Plains() => BasicLand(ManaColor.White);
 
 	/// <summary>
 	/// Valakut, the Molten Pinnacle — special land.

@@ -50,11 +50,16 @@ public record CastFromGraveyardAction : GameAction
 		if (spellComponent == null && !isCreature)
 			return ValidationResult.Invalid("Card is neither a spell nor a creature");
 
-		var player = gameState.GetPlayer(CastingPlayerId);
-		if (player.CurrentMana < flashback.FlashbackManaCost)
-			return ValidationResult.Invalid(
-				$"Not enough mana for Flashback (have {player.CurrentMana}, need {flashback.FlashbackManaCost})"
-			);
+		// Flashback reuses the card's printed COLOURS and overrides only the generic part.
+		// ponytail: every flashback card in the sets keeps its colours; give FlashbackComponent
+		// its own ColorPips if one ever needs to differ.
+		var manaResult = gameState.ValidateManaPayment(
+			CastingPlayerId,
+			flashback.FlashbackManaCost,
+			card.ColorPips
+		);
+		if (!manaResult.IsValid)
+			return manaResult;
 
 		var costResult = ValidateAdditionalCosts(gameState, flashback);
 		if (!costResult.IsValid)
@@ -90,14 +95,7 @@ public record CastFromGraveyardAction : GameAction
 		var card = (Card)gameState.GetObject(CardId);
 		var flashback = card.GetComponent<FlashbackComponent>()!;
 
-		var player = gameState.GetPlayer(CastingPlayerId);
-		var state = gameState.UpdateObject(
-			CastingPlayerId,
-			player with
-			{
-				CurrentMana = player.CurrentMana - flashback.FlashbackManaCost,
-			}
-		);
+		var state = gameState.PayMana(CastingPlayerId, flashback.FlashbackManaCost, card.ColorPips);
 
 		// Additional costs are paid BEFORE the card leaves the graveyard, matching the cast
 		// actions. It matters here in a way it does not there: a cost that exiles cards from

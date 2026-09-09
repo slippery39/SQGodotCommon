@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace MtgCore;
@@ -43,6 +43,18 @@ public record MtgPlayer : GameObject
 	public bool AttemptedDrawFromEmptyLibrary { get; init; } = false;
 	public int CurrentMana { get; init; } = 0;
 	public int MaxMana { get; init; } = 0;
+
+	/// <summary>
+	/// Coloured mana, the second and independent half of the cost system. MaxColorMana is what
+	/// the player's lands produce; CurrentColorMana is what is left this turn and is refilled to
+	/// MaxColorMana by StartTurnAction alongside CurrentMana.
+	///
+	/// A cost of "1W" spends 1 from CurrentMana AND 1 White from CurrentColorMana — the two
+	/// tracks never substitute for each other, which is what makes payment unambiguous. See
+	/// <see cref="ManaPool"/> for why that matters.
+	/// </summary>
+	public ManaPool MaxColorMana { get; init; } = ManaPool.Empty;
+	public ManaPool CurrentColorMana { get; init; } = ManaPool.Empty;
 	public int LandsPlayedThisTurn { get; init; } = 0;
 	public int LandsPlayedTotal { get; init; } = 0;
 	public ImmutableList<Emblem> Emblems { get; init; } = ImmutableList<Emblem>.Empty;

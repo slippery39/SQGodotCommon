@@ -19,6 +19,10 @@ namespace MtgCore;
 public record ActivatedAbilityComponent : GameComponent
 {
 	public string Name { get; init; } = "";
+
+	// ponytail: activation costs are GENERIC only — an ability has no ColorPips, so "R: deal 1
+	// damage" costs 1 generic here. Add a ManaPool alongside this and pass it to
+	// CostEngine.ValidateManaPayment/PayMana when a card actually needs a coloured activation.
 	public int ManaCost { get; init; }
 	public ImmutableList<AdditionalCost> AdditionalCosts { get; init; } =
 		ImmutableList<AdditionalCost>.Empty;
