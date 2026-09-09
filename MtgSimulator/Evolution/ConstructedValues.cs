@@ -73,6 +73,7 @@ public sealed class ConstructedValues
 
 	private readonly DraftTrainingData _constructed;
 	private readonly DraftTrainingData? _draft;
+	private readonly IdentityValues? _identities;
 
 	private readonly Dictionary<string, double> _draftRates;
 	private readonly Dictionary<string, CardStat> _constructedCards;
@@ -81,10 +82,15 @@ public sealed class ConstructedValues
 
 	private readonly double _prior;
 
-	public ConstructedValues(DraftTrainingData constructed, DraftTrainingData? draft)
+	public ConstructedValues(
+		DraftTrainingData constructed,
+		DraftTrainingData? draft,
+		IdentityValues? identities = null
+	)
 	{
 		_constructed = constructed;
 		_draft = draft;
+		_identities = identities;
 
 		// The base rate every delta is quoted against. Constructed data owns it once it exists,
 		// because that is the population being scored; before then, fall back to the draft
@@ -135,6 +141,28 @@ public sealed class ConstructedValues
 	/// DraftPickers scores in, so a softmax temperature means the same thing here.
 	/// </summary>
 	public double CardDelta(string name) => 100.0 * (RateOf(name) - _prior);
+
+	/// <summary>
+	/// The same figure, conditioned on the colour identity the deck is being built in.
+	///
+	/// Falls back to <see cref="CardDelta(string)"/> exactly when there is no identity table, no
+	/// identity, or no games for that card in it — the pooled answer IS the no-evidence answer, so
+	/// this needs no special case.
+	///
+	/// **Not additive with CardDelta.** Callers pick one; adding both counts the same games twice.
+	/// </summary>
+	public double CardDelta(string name, string? identity) =>
+		identity == null || _identities == null
+			? CardDelta(name)
+			: 100.0 * (_identities.RateOf(identity, name, RateOf(name)) - _prior);
+
+	/// <summary>Games behind the identity-conditioned figure, so a caller can gate on evidence.</summary>
+	public int IdentityGames(string name, string identity) =>
+		_identities?.GamesFor(identity, name) ?? 0;
+
+	/// <summary>Attaches the per-identity table. Presim data only — see IdentityValues.</summary>
+	public ConstructedValues WithIdentities(IdentityValues identities) =>
+		new(_constructed, _draft, identities);
 
 	/// <summary>
 	/// How unmeasured a card is in CONSTRUCTED, from 1 (never played) to 0 (well established).
@@ -536,6 +564,53 @@ public static class ConstructedValuesStore
 	/// </summary>
 	public static void SavePresim(DraftTrainingData fresh, string setCode) =>
 		Accumulate(fresh, PresimPathFor(setCode));
+
+	/// <summary>
+	/// The per-colour-identity table: the same presim games, split by the identity of the deck that
+	/// played them. Persisted beside the pooled table and accumulated on the same terms — random
+	/// decks carry no selection pressure, so more of them is only more evidence.
+	/// </summary>
+	public static string PresimIdentityPathFor(string setCode) =>
+		Path.Combine(
+			"sim_results",
+			$"constructed_values_{setCode.ToLowerInvariant()}_presim_identity.json"
+		);
+
+	public static void SavePresimIdentity(
+		IReadOnlyDictionary<string, DraftTrainingData> fresh,
+		string setCode
+	)
+	{
+		var path = PresimIdentityPathFor(setCode);
+		var merged = IdentityValues.Merge(LoadPresimIdentityData(setCode), fresh);
+
+		var dir = Path.GetDirectoryName(path);
+		if (!string.IsNullOrEmpty(dir))
+			Directory.CreateDirectory(dir);
+		File.WriteAllText(
+			path,
+			System.Text.Json.JsonSerializer.Serialize(
+				merged,
+				new System.Text.Json.JsonSerializerOptions { WriteIndented = true }
+			)
+		);
+	}
+
+	public static IdentityValues LoadPresimIdentity(string setCode) =>
+		new(LoadPresimIdentityData(setCode));
+
+	private static IReadOnlyDictionary<string, DraftTrainingData> LoadPresimIdentityData(
+		string setCode
+	)
+	{
+		var path = PresimIdentityPathFor(setCode);
+		if (!File.Exists(path))
+			return new Dictionary<string, DraftTrainingData>(StringComparer.Ordinal);
+
+		return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, DraftTrainingData>>(
+				File.ReadAllText(path)
+			) ?? new Dictionary<string, DraftTrainingData>(StringComparer.Ordinal);
+	}
 
 	/// <summary>
 	/// Accumulates evolved-game counts for the movers report. Never read as a card value.

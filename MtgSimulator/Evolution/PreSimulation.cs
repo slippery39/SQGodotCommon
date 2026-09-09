@@ -106,7 +106,23 @@ public static class PreSimulation
 	/// How many opponents each deck faces. Games scale as deckCount * opponentsPerDeck / 2, so
 	/// this is the main cost knob.
 	/// </param>
-	public static DraftTrainingData Run(
+	/// <summary>
+	/// What a presimulation measured: the pooled table every card value reads, plus the same games
+	/// split by the colour identity of the deck that played them.
+	///
+	/// The split is free — every perspective already knows which deck it came from, and each deck
+	/// already carries an identity — so this is one accumulation pass, not a second run.
+	/// </summary>
+	public sealed record Result(
+		DraftTrainingData Overall,
+		IReadOnlyDictionary<string, DraftTrainingData> ByIdentity
+	)
+	{
+		public static Result Empty { get; } =
+			new(DraftTrainingData.Empty, new Dictionary<string, DraftTrainingData>());
+	}
+
+	public static Result Run(
 		IReadOnlyList<Card> pool,
 		int deckCount,
 		int opponentsPerDeck,
@@ -232,7 +248,29 @@ public static class PreSimulation
 		timer.Stop();
 
 		var accumulator = new CardStatAccumulator();
+		var perIdentity = new Dictionary<string, CardStatAccumulator>(StringComparer.Ordinal);
+		var identityOf = built.Select(b => b.Identity?.Code).ToList();
 		var excluded = 0;
+
+		void Record(
+			int deckIndex,
+			IReadOnlyList<string> drawn,
+			IReadOnlyList<string> spells,
+			bool won
+		)
+		{
+			accumulator.Add(drawn, spells, won);
+
+			// The SAME perspective also lands in its identity's table. These are one population
+			// viewed two ways, never two populations — which is why the identity rate is later
+			// shrunk TOWARD the pooled rate rather than added to it.
+			var code = identityOf[deckIndex];
+			if (code == null)
+				return;
+			if (!perIdentity.TryGetValue(code, out var acc))
+				perIdentity[code] = acc = new CardStatAccumulator();
+			acc.Add(drawn, spells, won);
+		}
 		foreach (var (g, result) in schedule.Zip(results))
 		{
 			if (
@@ -245,12 +283,14 @@ public static class PreSimulation
 				continue;
 			}
 
-			accumulator.Add(
+			Record(
+				g.Deck1,
 				result.Player1DrawnCards,
 				decks[g.Deck1].Spells.Keys.ToList(),
 				result.IsPlayer1Win
 			);
-			accumulator.Add(
+			Record(
+				g.Deck2,
 				result.Player2DrawnCards,
 				decks[g.Deck2].Spells.Keys.ToList(),
 				result.IsPlayer2Win
@@ -293,6 +333,31 @@ public static class PreSimulation
 				)
 		);
 
-		return data;
+		var byIdentity = perIdentity.ToDictionary(
+			kv => kv.Key,
+			kv => kv.Value.ToData(),
+			StringComparer.Ordinal
+		);
+
+		// **This distribution is the calibration input for IdentityValues.IdentityShrinkK, and it
+		// must be read rather than guessed.** Setting a games threshold by analogy is exactly how
+		// MinPairGames came to be 200 against a busiest-pair of 166, silently disabling every
+		// synergy path in the mode while the tests still passed.
+		if (byIdentity.Count > 0)
+		{
+			var perCard = byIdentity
+				.SelectMany(kv => kv.Value.Cards.Select(c => c.Games))
+				.OrderBy(g => g)
+				.ToList();
+			var thin = byIdentity.Values.Sum(d => d.Cards.Count(c => c.Games < 30));
+			Console.WriteLine(
+				$"    {byIdentity.Count} identities, {perCard.Count} (card, identity) cells, median "
+					+ $"{(perCard.Count > 0 ? perCard[perCard.Count / 2] : 0)} games/cell, "
+					+ $"p10 {(perCard.Count > 0 ? perCard[perCard.Count / 10] : 0)}, "
+					+ $"{thin} cells under 30 games."
+			);
+		}
+
+		return new Result(data, byIdentity);
 	}
 }

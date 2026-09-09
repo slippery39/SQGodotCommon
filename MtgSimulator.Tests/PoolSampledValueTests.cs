@@ -93,16 +93,18 @@ public class PoolSampledValueTests
 
 		var pool = ElfPool.Select(n => byName[n]).ToList();
 
-		var data = PreSimulation.Run(
-			pool,
-			decks,
-			opponents,
-			seed,
-			aiDepth: 2,
-			fixedLands: Lands,
-			copiesPerCard: Decklist.MaxCopies,
-			label: "Pool sample (elf archetype)"
-		);
+		var data = PreSimulation
+			.Run(
+				pool,
+				decks,
+				opponents,
+				seed,
+				aiDepth: 2,
+				fixedLands: Lands,
+				copiesPerCard: Decklist.MaxCopies,
+				label: "Pool sample (elf archetype)"
+			)
+			.Overall;
 
 		// Same shrink and the same k the rest of the project uses, so this column is directly
 		// comparable to `CardDelta`. Reported in percentage points against the sample's own base

@@ -158,6 +158,34 @@ So **"neutral" now means random WITHIN a manabase that can cast the card**, not 
 pool. Three-colour identities are deliberately excluded from the pooled table: their manabases fail
 often enough that the games would measure the mana rather than the card.
 
+### The three win-rate tables
+
+Card value is looked up in three places, weighed against the feature scores (`DeckFit`,
+`SupportScore`) which are theoretical rather than win-rate based:
+
+| table | what it answers | scope |
+|---|---|---|
+| `ConstructedValues.CardDelta(name)` | worth in a random deck of its colours | persisted |
+| `CardDelta(name, identity)` — `IdentityValues` | worth in mono-red as against red-white | persisted |
+| `contextValue` from `OutputProbe` | worth in THIS deck | run-scoped, discarded |
+
+**The identity rate is shrunk TOWARD the pooled rate, never added to it.** They are one population
+viewed two ways — every game in an identity's table is also in the pooled table — so summing would
+count the same evidence twice and inflate exactly the cards that already have the most data.
+Shrinking makes it a delta by construction: no identity games means the pooled answer, unchanged.
+
+**Both persisted tables come only from PRESIM random decks.** Nothing from an evolved deck may
+enter either, or the builder's own output feeds back into the values steering it —
+`ConstructedValuesStore.EvolvedPathFor` records what that cost when it happened (Goblin Chieftain
++13.43 against an unconfounded +3.81; Thoughtcast −7.18 against +0.92, and *"deflation makes an
+archetype unbuildable"*). The run-scoped table is allowed to see built decks precisely because it
+is thrown away.
+
+`IdentityValues.IdentityShrinkK` is **provisional and must be calibrated**, not guessed —
+`PreSimulation.Run` prints the median and p10 games-per-(card, identity) cell for that purpose.
+Guessing a games constant by analogy is how `MinPairGames` came to be 200 against a busiest pair of
+166, silently disabling every synergy path while the tests passed.
+
 **Assignment status: every live set is assigned and verified** — CSC (`CoresetCubeColorTests`),
 LEG and CMB (`LegacyAndComboColorTests`). HLM was retired rather than coloured.
 

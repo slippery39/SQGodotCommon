@@ -417,7 +417,7 @@ public sealed class MetagameEvolver
 		// identity can cast. Without it a random deck is a five-colour pile whose manabase cannot
 		// cast a double pip, and every committed card in the format would measure deflated — the
 		// failure ConstructedValuesStore documents, reached from a different direction.
-		var presim = DraftTrainingData.Empty;
+		var presim = PreSimulation.Result.Empty;
 		if (_preSimDecks > 0)
 		{
 			presim = PreSimulation.Run(
@@ -428,15 +428,21 @@ public sealed class MetagameEvolver
 				_aiDepth,
 				identities: ColorIdentity.Standard
 			);
-			values = new ConstructedValues(
-				DraftTrainingData.Merge(values.Data, presim),
-				ConstructedValuesStore.LoadDraftPrior(_set.Code, _useDraftPrior)
-			);
+			// Persisted BEFORE being read back, so the identity table the run uses is the
+			// accumulated one across every run rather than only this run's slice — a single run
+			// splits its games 15 ways and would otherwise start from almost nothing.
+			//
+			// Presim accumulates safely: random decks carry no selection pressure, so this is only
+			// ever more evidence about the same quantity. Evolved counts must never land in either
+			// table; see ConstructedValuesStore.
+			ConstructedValuesStore.SavePresim(presim.Overall, _set.Code);
+			ConstructedValuesStore.SavePresimIdentity(presim.ByIdentity, _set.Code);
 
-			// Persisted so the next run inherits it. Presim accumulates safely — random decks
-			// carry no selection pressure, so this is only ever more evidence about the same
-			// quantity. Evolved counts must never land here; see ConstructedValuesStore.
-			ConstructedValuesStore.SavePresim(presim, _set.Code);
+			values = new ConstructedValues(
+				DraftTrainingData.Merge(values.Data, presim.Overall),
+				ConstructedValuesStore.LoadDraftPrior(_set.Code, _useDraftPrior),
+				ConstructedValuesStore.LoadPresimIdentity(_set.Code)
+			);
 			Console.WriteLine();
 		}
 
@@ -902,7 +908,7 @@ public sealed class MetagameEvolver
 		);
 
 		PrintReport(result2, values, accumulator, totalGames, totalExcluded, timer.Elapsed, ages);
-		Save(result2, accumulator, presim);
+		Save(result2, accumulator, presim.Overall);
 
 		return result2;
 	}
