@@ -939,6 +939,9 @@ public sealed class MetagameEvolver
 				slotHistory
 			);
 
+			// Downstream of every writer this generation — accepted mutants and the cull alike.
+			ValidateFieldIdentities(field, colors);
+
 			PrintGeneration(gen, field, tallies, accepted, culled, excluded, timer);
 		}
 
@@ -1402,6 +1405,48 @@ public sealed class MetagameEvolver
 	/// <param name="profiles">
 	/// The curve band each slot must keep, for the same reason.
 	/// </param>
+	/// <summary>
+	/// **Every deck in the field plays only what its slot's colours allow.**
+	///
+	/// Checked over the WHOLE FIELD rather than at each place a deck is assigned, because the
+	/// assignment sites are the thing that keeps being missed: seeding and mutation both enforced
+	/// the identity and the CULL path did not, so eight of sixteen slots quietly stopped being the
+	/// archetype they were named for and a 100-minute run produced standings that could not be read.
+	/// One check downstream of every writer cannot be forgotten by a future one.
+	///
+	/// **Thrown, not warned.** A warning inside a run that prints thousands of lines is a warning
+	/// nobody reads, and a contaminated run is worse than no run — every column looks normal and
+	/// every label still says U-Midrange.
+	///
+	/// **Nothing else would catch it, because the scoring PROTECTS the contaminant.** A card
+	/// illegal in an identity has zero games in that cell — presim never plays it there — so the
+	/// identity lookup falls back to the pooled rate. Measured on this pool: Baneslayer Angel reads
+	/// +5.90 inside a mono-blue slot, better than every legal blue card, so cut scoring keeps it
+	/// forever. The pool lock stops a bad card ENTERING; nothing makes it leave.
+	/// </summary>
+	private void ValidateFieldIdentities(IReadOnlyList<Decklist> field, ColorIdentity?[] colors)
+	{
+		for (var i = 0; i < field.Count; i++)
+		{
+			if (colors[i] is not { } required)
+				continue;
+
+			var illegal = field[i]
+				.Spells.Keys.Where(n =>
+					_poolIndex.TryGetValue(n, out var card) && !required.Allows(card)
+				)
+				.ToList();
+
+			if (illegal.Count > 0)
+				throw new InvalidOperationException(
+					$"Slot {field[i].Name} is {required.Code} but holds "
+						+ $"{string.Join(", ", illegal.Take(4))}"
+						+ (illegal.Count > 4 ? $" (+{illegal.Count - 4} more)" : "")
+						+ " — a colour identity did not survive somewhere it is assigned."
+				);
+		}
+	}
+
 	private int CullWorst(
 		List<Decklist> field,
 		Tally[][] tallies,
@@ -1490,29 +1535,6 @@ public sealed class MetagameEvolver
 				profile: profiles[worst],
 				identity: colors[worst]
 			);
-		// **The invariant, checked rather than trusted.** A slot that comes back from a cull
-		// playing colours it cannot cast is invisible in every report — the label still says
-		// U-Midrange — and it corrupts the whole field's meaning. Measured once: eight of sixteen
-		// slots drifted to white this way and the run's standings could not be read at all.
-		//
-		// Thrown, not warned. A warning in a run that prints thousands of lines is a warning
-		// nobody reads, and the results of a contaminated run are worse than no results.
-		if (colors[worst] is { } required)
-		{
-			var illegal = field[worst]
-				.Spells.Keys.Where(n =>
-					_poolIndex.TryGetValue(n, out var card) && !required.Allows(card)
-				)
-				.ToList();
-
-			if (illegal.Count > 0)
-				throw new InvalidOperationException(
-					$"Re-seeded slot {name} is {required.Code} but holds "
-						+ $"{string.Join(", ", illegal.Take(4))} — the slot's colour identity did "
-						+ "not survive its re-seed."
-				);
-		}
-
 		ages[worst] = 0;
 		// The replacement shares almost nothing with what it replaced, so its predecessor's
 		// pair record is not evidence about it.

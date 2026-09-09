@@ -526,6 +526,17 @@ public static class DeckBuilder
 		// It converges INWARD: cutting stays unconstrained, so a deck that starts impure cleans
 		// itself up and nothing outside can return. Evolution may still discover a storm deck wants
 		// fewer rituals; it cannot discover that it wants Steppe Lynx.
+		//
+		// **THAT SELF-HEALING DOES NOT HOLD FOR COLOUR, and assuming it did cost a whole run.** An
+		// off-colour card has zero games in the slot's identity cell — presim never plays it there
+		// — so the identity-scoped lookup falls back to the POOLED rate, and a strong card judged
+		// out of context scores better than the legal ones. Measured: Baneslayer Angel reads +5.90
+		// inside a mono-blue slot, above every playable blue card, so cut scoring protects it
+		// indefinitely. A deck that becomes impure in COLOUR stays impure.
+		//
+		// The lock stops a card entering; nothing makes it leave. That is why the colour invariant
+		// is enforced over the whole field in MetagameEvolver.ValidateFieldIdentities rather than
+		// being left to converge.
 		if (core is not null)
 		{
 			var archetype = core.Slots.SelectMany(s => s.Cards).ToHashSet(StringComparer.Ordinal);
