@@ -115,7 +115,29 @@ Engine detail lives in `MtgCore/CLAUDE.md`. Three things worth carrying:
 
 - **`ManaBase.Build` (MtgSimulator) is the only place a manabase is made.** Draft, random pools and
   `Decklist.Materialize` all route through it. Every one of them used to pad with Plains, which was
-  fine with no colours and silently fatal with them.
+  fine with no colours and silently fatal with them. It allocates by MEASURED DEMAND — sources
+  needed to cast a card on the turn it costs — not by raw pip count.
+
+**A double pip is effectively a mono-colour card, and that is where the whole colour constraint
+lives.** Measured in this engine (`ManaBaseCalibrationTests`), sources of one colour needed in a
+60-card, 24-land deck for a 90% on-curve cast:
+
+| pips | cost 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| 1 | 13 | 12 | 11 | 10 | 9 | 9 |
+| 2 | – | 18 | 17 | 17 | 15 | 15 |
+| 3 | – | – | 22 | 22 | 21 | 20 |
+
+A two-colour deck split 12/12 casts a single pip **89% on turn one and 94% by turn three**, but a
+double pip only **65% by turn three** — 17 of its 24 lands would have to be one colour. So
+single-pip greed is barely taxed and double pips carry the constraint. Expect `WW` cards to belong
+to mono decks, and treat the pip depth of a card as its real colour commitment.
+
+**Paper Magic's manabase tables do not transfer here** and must not be used. The opening hand is
+guaranteed to contain exactly three lands (`SetupGameAction.OpeningHandLandCount`) drawn uniformly
+from the manabase, which makes early colour access far more reliable than a real seven-card draw;
+a borrowed table systematically over-builds. Re-run `ManaBaseCalibrationTests` if the opening-hand,
+land-drop or deck-size rules ever change.
 - **`CardValueSandbox` grants every colour** at the generic depth. A measurement table that handed
   out generic only would score coloured cards as uncastable and rewrite the value tables into a
   report about colour screw.

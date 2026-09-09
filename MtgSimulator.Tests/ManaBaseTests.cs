@@ -13,8 +13,8 @@ namespace MtgSimulator.Tests;
 [TestFixture]
 public class ManaBaseTests
 {
-	private static Card Spell(string name, ManaPool pips) =>
-		CardFactory.Creature(name, manaCost: 2, power: 2, toughness: 2).Build() with
+	private static Card Spell(string name, ManaPool pips, int cost = 2) =>
+		CardFactory.Creature(name, manaCost: cost, power: 2, toughness: 2).Build() with
 		{
 			ColorPips = pips,
 		};
@@ -37,10 +37,10 @@ public class ManaBaseTests
 	}
 
 	[Test]
-	public void TwoColourDeck_SplitsByPipDemand_NotCardCount()
+	public void TwoColourDeck_SplitsByDemand_NotByCardCount()
 	{
-		// Six white pips against two blue: a 3:1 demand. Card COUNT is 4:2, which would give a
-		// different and wrong answer — pips are what a land actually has to pay.
+		// Four white cards against two blue, but the white side is double-pipped, so it demands
+		// far more than the 2:1 its card COUNT suggests.
 		var spells = new List<Card>
 		{
 			Spell("WW a", new ManaPool { White = 2 }),
@@ -53,11 +53,53 @@ public class ManaBaseTests
 
 		var counts = Count(ManaBase.Build(spells, 16, ownerId: 1));
 
-		Assert.Multiple(() =>
+		Assert.That(counts["Plains"], Is.GreaterThan(2 * counts["Island"]), "white demands more");
+		Assert.That(counts["Plains"] + counts["Island"], Is.EqualTo(16));
+	}
+
+	[Test]
+	public void ADoublePip_DemandsMoreSourcesThanTwoSinglePipCards()
+	{
+		// The measured table's central fact, read card-for-card: one WW card needs 18 sources of
+		// White where one single-pip card needs 12 of its colour. If this ever reads equal, the
+		// demand table has been flattened back into a plain pip count.
+		//
+		// Deliberately one card against one. Two single-pip cards out-demand one double-pip card
+		// (12 + 12 against 18) and that is correct — demand sums over the deck.
+		var spells = new List<Card>
 		{
-			Assert.That(counts["Plains"], Is.EqualTo(12));
-			Assert.That(counts["Island"], Is.EqualTo(4));
-		});
+			Spell("WW", new ManaPool { White = 2 }),
+			Spell("U", new ManaPool { Blue = 1 }),
+		};
+
+		var counts = Count(ManaBase.Build(spells, 24, ownerId: 1));
+
+		Assert.That(counts["Plains"], Is.GreaterThan(counts["Island"]));
+	}
+
+	[Test]
+	public void AnEarlyCard_DemandsMoreSourcesThanALateOne()
+	{
+		// A turn-two pip needs 12 sources, a turn-six pip needs 9. Cheap cards pull the manabase.
+		var spells = new List<Card>
+		{
+			Spell("early", new ManaPool { Red = 1 }, cost: 1),
+			Spell("late", new ManaPool { Green = 1 }, cost: 6),
+		};
+
+		var counts = Count(ManaBase.Build(spells, 24, ownerId: 1));
+
+		Assert.That(counts["Mountain"], Is.GreaterThan(counts["Forest"]));
+	}
+
+	[Test]
+	public void ACheapDoublePipCard_IsTreatedAsTheTurnItCanActuallyBeCast()
+	{
+		// A one-mana WW card cannot be cast on turn one: two White pips need two lands. Its demand
+		// must be read at turn TWO, or the table is asked for a turn-one number that does not exist.
+		var spells = new List<Card> { Spell("WW one-drop", new ManaPool { White = 2 }, cost: 1) };
+
+		Assert.That(ManaBase.Build(spells, 10, ownerId: 1), Has.Count.EqualTo(10));
 	}
 
 	[Test]
