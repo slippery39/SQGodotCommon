@@ -64,8 +64,9 @@ not in CLAUDE.md.
 
 ## Card Sets
 
-**The set menu is 1=LEG 2=HLM 3=CSC 4=CMB 5=DES 6=ALL.** CMB was inserted, so any piped console
-command written against the older numbering now runs a different set silently. Read the menu.
+**The set menu is 1=LEG 2=CSC 3=CMB 4=DES 5=ALL.** It has now shifted TWICE — CMB was inserted,
+then HLM was retired — so any piped console command written against either older numbering runs a
+different set silently. Read the menu.
 
 **Combo Proving Ground (CMB)** is a test instrument, not a draftable set — see
 `MtgCore/Sets/ComboProving/`. It plants combos with known answers so a run can distinguish "the
@@ -75,9 +76,13 @@ at ~60 cards `DeckCore.MinPoolForBreadth` (100) switches the breadth gate off en
 over CMB by itself measures the fixture. Nothing in it is costed to a rate — read cohesion and
 assembly, never win rate.
 
-Two DRAFTABLE sets exist (CMB is registered but has no trained model and is not meant to be
-drafted), both registered in `SetRegistry`:
-- **Hollowmere (HLM)** — an original graveyard-themed set. See `MtgCore/Sets/Hollowmere/`.
+**Hollowmere (HLM) was RETIRED** along with its cards, tests and trained model. It served its
+purpose but was designed around the engine having no colours — "ten overlapping themes stand in for
+colours" — and its tribes do not map onto five colours evenly, so colouring it would have meant
+redesigning it. A new set built WITH colours from the start is the intended successor.
+
+ONE DRAFTABLE set exists (CMB is registered but has no trained model and is not meant to be
+drafted), registered in `SetRegistry`:
 - **Core Set Cube (CSC)** — built from an external cube list
   (https://cubecobra.com/cube/list/magiccoreset20xx). **All five colours are complete — 335
   cards.** The colourless (50) and multicolour (53) sections are what remain. See
@@ -96,6 +101,39 @@ Sets sourced from a real cube exist to force new mechanics: the card list drives
 than the engine driving the list. When a card needs something the engine lacks, **build the
 mechanic** — dropping the ability defeats the exercise. Only cut text when the concept is
 structurally absent (no colours, no blocking, no planeswalkers), and comment the cut on the card.
+
+## Colours
+
+Colour is a **second, independent mana track**. A land grants 1 generic AND its colours; a cost of
+"1W" spends 1 generic and 1 White. The two never substitute for each other, so payment is fully
+determined — no ordering choice, no solver, no manual tapping. **Coloured mana DEPLETES and refills
+each turn, exactly like generic** — it is not an Eternal-style permanent threshold. That is the
+whole design: a five-colour manabase caps you at one single-pip spell per colour per turn, so greed
+costs throughput while focus costs nothing.
+
+Engine detail lives in `MtgCore/CLAUDE.md`. Three things worth carrying:
+
+- **`ManaBase.Build` (MtgSimulator) is the only place a manabase is made.** Draft, random pools and
+  `Decklist.Materialize` all route through it. Every one of them used to pad with Plains, which was
+  fine with no colours and silently fatal with them.
+- **`CardValueSandbox` grants every colour** at the generic depth. A measurement table that handed
+  out generic only would score coloured cards as uncastable and rewrite the value tables into a
+  report about colour screw.
+- **`MtgGameFactory.CreateForTesting` grants 99 of every colour.** A test about a mechanic should
+  not fail on colour; a test about colour zeroes it explicitly (see `ManaColorTests`).
+
+**Assignment status: every live set is assigned and verified** — CSC (`CoresetCubeColorTests`),
+LEG and CMB (`LegacyAndComboColorTests`). HLM was retired rather than coloured.
+
+Artifacts and lands stay colourless on purpose: an artifact's real colour IS colourless, and a
+land's colour is what it PRODUCES (`LandColorComponent`), not what it costs. CMB's counters package
+is artifact creatures and so is colourless too.
+
+**Beware name-anchored bulk edits.** The first pass at assigning LEG and CSC anchored insertion on
+any quoted occurrence of a card's name, and card names appear in other cards' doc comments — so
+pips landed on whatever card was defined next. Llanowar Elves came out needing UUBRG and Lotus
+Bloom, a colourless artifact, needed UU, and every existing test still passed. Anchor on the
+FACTORY CALL, and assert an expected pip table.
 
 ## Serialization Rule
 

@@ -105,7 +105,8 @@ MtgCore/
 │                            # EquipmentComponent (PowerBonus, ToughnessBonus, EquippedToCardId — tracks attachment state)
 │                            # ExtraLandPerTurnComponent — marker; presence on a controlled battlefield permanent grants +1 land play per turn (used by Exploration)
 │                            # LandPlayEffectComponent { Effect: CardEffect } — spawns a ResolveEffectAction when the land is played or put into play; used by Glimmervoid (gain 2 life) and Simic Growth Chamber (return exile land to hand)
-│                            # BonusManaLandComponent { ExtraMana, Deferred } — overrides land mana production: adds (1+ExtraMana) to MaxMana; if Deferred=true, CurrentMana is unchanged (mana usable next turn only); used by Simic Growth Chamber
+│                            # BonusManaLandComponent { ExtraMana, Deferred } — overrides land GENERIC mana production: adds (1+ExtraMana) to MaxMana; if Deferred=true, CurrentMana AND CurrentColorMana are unchanged (usable next turn only); used by Simic Growth Chamber and by tap lands
+│                            # LandColorComponent { Produces: ManaPool } — which COLOURS a land adds. Independent of BonusManaLandComponent: the two axes combine to express basic / dual / tap land / colourless
 │                            # TransformComponent (OtherFaceName, OtherFaceSubtypes, OtherFaceComponents) — stores the other face of a double-faced card; TransformAction swaps Name/Subtypes/Components in place, preserving the card's ID and carrying creature state across
 │                            # AffinityComponent — marker (no data); when present on a card, CastCreatureAction and CastSpellAction reduce ManaCost by the number of artifact permanents the casting player controls (min 0). Used by Frogmite, Myr Enforcer, Thoughtcast.
 │                            # ExiledPlayableComponent — marker; this exiled card may still be played this
@@ -117,7 +118,12 @@ MtgCore/
 │                            #   LandPlayedEvent { PlayerId, CardId } emitted by both PlayLandAction and PutLandIntoPlayAction; triggers Steppe Lynx landfall)
 │                            #   ArtifactLeftBattlefieldEvent { CardId, OwnerId } — emitted by SacrificeAdditionalCost when the sacrificed permanent HasSubtype("Artifact");
 │                            #   fired in addition to PermanentLeftBattlefieldEvent. Used by Disciple of the Vault and OnAnyArtifactDies() trigger condition.
+├── Mana/                    # ManaColor (the five colours; colourless is the ABSENCE of a pip, not a sixth member)
+│                            # ManaPool — five ints, used for card pips, land production, and a player's colour max/current.
+│                            #   Add/Subtract/Covers/ToPipString. Flat ints so StateJson round-trips it with no converter.
 ├── Extensions/              # CreatureEvaluator (P/T aggregation extension methods), StaticAbilityEngine (push-model ETB/LTB logic)
+│                            # ManaEngine.GrantLandMana(playerId, card, countsAsLandDrop) — the SINGLE place a land's
+│                            #   mana (generic + coloured + deferred) reaches a player. Mirrors CostEngine at the other end.
 │                            # ReplacementEngine.ApplyReplacements(evt, playerId, amount) — call this at every site
 │                            #   that produces a replaceable number. Multipliers apply before additions; result clamped at 0.
 │                            # CostEngine.ComputeEffectiveCost(card, playerId) — the SINGLE place mana cost is
@@ -163,10 +169,6 @@ MtgCore/
 │   │                        #   CoresetCubeColourlessEquipment.cs 14 equipment (5 of them Rings)
 │   │                        #   CoresetCubeMulticolour.cs         27 creatures
 │   │                        #   CoresetCubeMulticolourSpells.cs   2 sorceries + Garruk
-│   └── Hollowmere/          # The HLM graveyard set. Hollowmere.cs assembles 11 theme files + subtype constants;
-│                            # HollowmereTokens.cs holds token templates (excluded from the card list).
-│                            # Read the header of Hollowmere.cs before adding cards — it states the rate bar and
-│                            # why no-blocker combat drives every cost in the set.
 │                            # A draftable card pool. Cards do NOT know their set — the set owns the list.
 │                            # No SetCode on Card, no rarity, no pack-composition rules; packs stay uniform
 │                            # random samples, which is what a cube wants. Add those only when a set needs them.
@@ -176,6 +178,7 @@ MtgCore/
 ├── Players/                 # MtgPlayer (GameObject subclass) — fields: Life, StartingLife (set alongside Life by
 │                            #   MtgGameFactory; read by LifeAboveStartingCondition), LifeGainedThisTurn (resets
 │                            #   each turn; read by LifeGainedThisTurnCondition), MaxMana, CurrentMana,
+│                            #   MaxColorMana/CurrentColorMana (ManaPool; the coloured track, refilled by StartTurnAction),
 │                            #   LandsPlayedThisTurn (resets each turn), LandsPlayedTotal (never resets; used by
 │                            #   Terravore and by the land-count conditions), Emblems
 ├── Targeting/               # TargetSpecification (base), ZoneSpecification (abstract base for zone specs), TargetingContext, TargetingStrategy
@@ -284,13 +287,61 @@ Applied via `AddModifierAction`. `UntilEndOfTurn` modifiers are cleared by `Star
 
 ## Mana System
 
-Land-based. Both players start at `MaxMana = 0`, `CurrentMana = 0`. All permanent mana comes from playing land cards.
+Land-based, on **two independent tracks**. Both players start at `MaxMana = 0`, `CurrentMana = 0`
+and an empty `MaxColorMana` / `CurrentColorMana`. All permanent mana comes from playing land cards.
 
-- **Playing a land** (`PlayLandAction`): `MaxMana++`, `CurrentMana++`, `LandsPlayedThisTurn++`, `LandsPlayedTotal++`. If the card has `GrantEmblemComponent`, adds the emblem to the player before emitting the event (so the emblem is active when the LandPlayedEvent triggers are evaluated). Card moves Hand → Exile. Emits `LandPlayedEvent`.
-- **Effect-sourced lands** (`PutLandIntoPlayAction`): same MaxMana/CurrentMana/LandsPlayedTotal increments (and same `GrantEmblemComponent` check), but does NOT increment `LandsPlayedThisTurn` (doesn't consume the land-per-turn). Used by Rampant Growth and Primeval Titan ETB.
-- `StartTurnAction` refills `CurrentMana = MaxMana` and resets `LandsPlayedThisTurn = 0`. It does **not** auto-increment `MaxMana`.
+**Generic and coloured mana never substitute for each other.** A land grants 1 generic AND its
+colours; a cost of "1W" spends 1 generic and 1 White. Because a generic pip can never be paid with
+coloured mana, payment is fully determined — there is no ordering choice, so casting needs no
+solver and no manual tapping. See `Mana/ManaPool.cs` for the consequences that fall out of this
+(mono-colour decks are never colour-limited; a five-colour manabase caps you at one single-pip
+spell per colour per turn; a double pip is a real commitment marker).
+
+- **`ManaEngine.GrantLandMana`** (`Extensions/ManaEngine.cs`) is the SINGLE place a land's mana
+  reaches a player — generic, coloured and deferred alike. `PlayLandAction` and
+  `PutLandIntoPlayAction` both call it and differ only by a `countsAsLandDrop` flag. They
+  previously held byte-identical copies of this logic; with colour added, that duplication would
+  have meant a played Forest making green and a fetched one not, with nothing to report it.
+- **Land shapes** are two independent axes — `LandColorComponent.Produces` (which colours) and
+  `BonusManaLandComponent` (how much generic, and whether deferred): basic = 1 generic + 1 colour;
+  dual = 1 generic + 1 of EACH of two colours; tap land = either, but `Deferred` so neither track
+  gets anything until the refill; colourless = 1 generic, no `LandColorComponent`. A dual is not a
+  strict upgrade — generic still caps total spend, so the second colour buys breadth, never mana.
+- `CardLibrary.BasicLand(ManaColor)` builds all five basics. `Plains()` remains as a thin alias
+  because the manabase builders (`CardPool`, `Draft.BuildDeck`, the deck factories) still pad with
+  Plains; those become colour-aware in the deckbuilding phase.
+- **Playing a land** (`PlayLandAction`): via `GrantLandMana`, plus `LandsPlayedThisTurn++`. If the
+  card has `GrantEmblemComponent`, adds the emblem to the player before emitting the event (so the
+  emblem is active when the LandPlayedEvent triggers are evaluated). Card moves Hand → Exile.
+  Emits `LandPlayedEvent`.
+- **Effect-sourced lands** (`PutLandIntoPlayAction`): same `GrantLandMana` call and same
+  `GrantEmblemComponent` check, but does NOT increment `LandsPlayedThisTurn` (doesn't consume the
+  land-per-turn). Used by Rampant Growth and Primeval Titan ETB.
+- `StartTurnAction` refills `CurrentMana = MaxMana` AND `CurrentColorMana = MaxColorMana`, and
+  resets `LandsPlayedThisTurn = 0`. It does **not** auto-increment `MaxMana`.
 - **Land limit**: one land play per turn. Each permanent with `ExtraLandPerTurnComponent` controlled by the player adds +1. Limit is computed dynamically in `PlayLandAction.ValidateAdd` — no stored `LandsAllowedThisTurn` field.
-- `CastCreatureAction` and `CastSpellAction` validate sufficient mana in `ValidateAdd` and deduct `ManaCost` in `Execute`.
+- **Paying** goes through `CostEngine.ValidateManaPayment(playerId, genericCost, pips)` and
+  `CostEngine.PayMana(...)` — the single pair used by all four cast paths (`CastCreatureAction`,
+  `CastSpellAction`, `CastPermanentAction`, `CastFromGraveyardAction`). No cast path compares
+  `CurrentMana` itself, so none can miss the colour rule. **`MtgActionGenerator` needs no colour
+  gate of its own**: it offers spells through `TryAddAction`, which runs `ValidateAdd`.
+- **`Card.ColorPips`** is the requirement — "1W" is `ManaCost 1` + `{White=1}`, "3WW" is
+  `ManaCost 3` + `{White=2}`. Colour IDENTITY is derived from it rather than stored separately.
+- **Cost reductions reduce generic ONLY and never touch pips** (matching MTG: a spell reduced to 0
+  by affinity still needs its colours). `ComputeEffectiveCost` never sees `ColorPips`, so this is
+  structural rather than a rule someone has to remember. Guarded by
+  `CostReduction_ReducesGenericOnly_AndNeverThePips`.
+- **Flashback** reuses the card's printed pips and overrides only the generic part.
+- **Assigning colour to a card**: `builder.WithPips(ManaColor.X, count)`, accumulating. The cube's
+  colour sections stamp one pip automatically via `CardColorExtensions.InColor` at
+  `CoresetCube.Cards`, so only exceptions (double pips, gold cards) say anything. `InColor` skips
+  lands and anything that already declared its own pips.
+- **Set colour status: everything live is assigned and verified.** CSC by `CoresetCubeColorTests`;
+  LEG and CMB by `LegacyAndComboColorTests`. HLM was retired rather than coloured. Artifacts and
+  lands stay colourless deliberately — an artifact's real colour IS colourless, and a land's colour
+  is what it PRODUCES (`LandColorComponent`), not what it costs.
+- **Activated abilities are generic-only** — `ActivatedAbilityComponent` has no pips yet. See the
+  `ponytail:` note there for the upgrade.
 - **Fast mana** (`AddTemporaryManaAction`) adds to `CurrentMana` only — `MaxMana` is unchanged, so the bonus evaporates at the start of the next turn. Used by Rite of Flame, Seething Song, Lotus Bloom.
 - `MtgGameFactory.CreateForTesting()` gives both players `MaxMana = 99` / `CurrentMana = 99` — use in all unit tests not specifically testing the land system.
 
@@ -1691,7 +1742,7 @@ On an instant or sorcery the component still means one-shot Flashback (resolve, 
 `MtgActionGenerator.AddGraveyardFlashbackActions` generates the creature case with no target
 enumeration, since creatures carry no `SpellComponent`.
 
-## Card Builder Additions for Hollowmere
+## Card Builder Additions (originally for Hollowmere, now set-agnostic)
 
 `CreatureCardBuilder`: `WithDeathtouch()`, `WithThreshold(power, toughness, minimum, …)`,
 `WithGraveyardRecursion(manaCost)`, and `WithDeathTrigger(name, effect)` — the last sets
@@ -1727,10 +1778,11 @@ begun repeating each other at different mana costs: `WithWeaken(p, t)` (-X/-X, k
 zero-toughness rule), `WithBounce()`, `WithFight()`, `WithEdict()` (picks by mana cost, so it
 answers Hexproof and Shroud), `WithTutor(subtype)`, `WithDig(n)`.
 
-**Card design floors live in `MtgCore.Tests/HollowmereRateTests.cs`** — an ability-less
-creature must meet a stats-plus-keywords rate floor, and no pure token-maker may be strictly
-worse than another. Both exist because real cards failed them. Keep the comparisons to things
-code can judge honestly; whether a card is *interesting* is a human review job.
+**The card design floors were `MtgCore.Tests/HollowmereRateTests.cs`, and went with that set.**
+The RULES are still the right ones and a new set should re-establish them: an ability-less creature
+must meet a stats-plus-keywords rate floor, and no pure token-maker may be strictly worse than
+another. Both existed because real cards failed them. Keep the comparisons to things code can judge
+honestly; whether a card is *interesting* is a human review job.
 
 `TargetBuilder`: `Players()`, `Opponent()`, `AllYourCreatures()`, `CreaturesInYourGraveyard()`,
 `OtherCreaturesYouControl()`.

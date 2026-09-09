@@ -515,6 +515,11 @@ depends on anyone having run a training pass.
 
 ### Measured: Hollowmere (HLM), 300 cards
 
+> **HLM IS RETIRED.** Every Hollowmere number in this file is a historical record of a pool that no
+> longer exists — the set, its tests and its trained model were deleted. The METHOD still applies;
+> the figures cannot be reproduced. DES is now CSC + CMB.
+
+
 600 drafts, 16 800 games, 33 600 deck-games, ~112 deck-games per card (the Legacy model has
 410/card off the same run size — pair and card density both fall as the pool grows). Evaluated
 over 72 games at 9 seats:
@@ -833,7 +838,7 @@ python -c "import json;d=json.load(open('sim_results/draft_training_csc.json'));
 Reference rate, measured: 5 drafts = 140 games = 28s, so ~5.6 games/sec. 300 drafts ≈ 8 400 games
 ≈ 25 minutes.
 
-**Card text is part of making a set playable, not a cosmetic afterthought.** A pack is read, not glanced at, and `MtgCardMapper.GetRulesText` silently omits any mechanic it does not know — invisible in a screenshot, but it makes the card undraftable. `SQGodotCommon.Tests/MtgGameTests/HollowmereRulesTextTests.cs` and `CoresetCubeRulesTextTests.cs` pin one card per mechanic and assert no card *with a mechanic* renders blank. Extend both when adding a mechanic.
+**Card text is part of making a set playable, not a cosmetic afterthought.** A pack is read, not glanced at, and `MtgCardMapper.GetRulesText` silently omits any mechanic it does not know — invisible in a screenshot, but it makes the card undraftable. `SQGodotCommon.Tests/MtgGameTests/CoresetCubeRulesTextTests.cs` and `ComboProvingRulesTextTests.cs` pin one card per mechanic and assert no card *with a mechanic* renders blank. Extend them when adding a mechanic. (Hollowmere had a third; it was retired with that set.)
 
 This is not a hypothetical. Wiring the Core Set Cube into the draft UI produced **22 completely
 blank card faces** on the first run of that test — every freeze effect, every bounce-to-library,
@@ -858,7 +863,7 @@ A card face is built from three `MtgCardMapper` calls, not one — each renders 
 
 **The card face is a fixed budget, and text is generated, so verbosity is a bug not a style question.** The rules box shrinks its font to fit and then clips at a 14pt readability floor; a clipped card is invisible in a screenshot but stops telling you what it does. Every place that joins rendered fragments goes through `CombineParts`, which squeezes out the two ways generated text repeats itself — a sequence authored twice over (`"take the opponent's best creature, destroy it"` × 2 → `"… — twice"`) and consecutive clauses differing only in their verb (`"Each creature you control gets +2/+2 …"` + `"… gains Flying …"` → one sentence). The clause merge only combines **predicates**: merging noun middles distributed a shared trailing noun and turned four tokens into two. Failing to merge costs a line; merging wrongly misprints the card, so `IsMergeableVerb` is a closed list.
 
-`HollowmereRulesTextTests` pins the budget set-wide (≤6 rendered lines, ≤24-char type lines, no merged noun clauses) without naming cards, so retuning card balance cannot break it.
+That budget was pinned set-wide by `HollowmereRulesTextTests` (≤6 rendered lines, ≤24-char type lines, no merged noun clauses) without naming cards, so retuning card balance could not break it. **That test went with Hollowmere — a new set should re-establish the same set-wide budget.**
 
 P/T used to be printed by `GetRulesText` *and* drawn by a `BoardCard` overlay label, from printed and effective stats respectively — so a lord-buffed creature read "2/2" in its box and "4/4" in its corner. Keep it single-sourced.
 
@@ -866,7 +871,11 @@ P/T used to be printed by `GetRulesText` *and* drawn by a `BoardCard` overlay la
 
 The event log is a collapsible overlay on its own `CanvasLayer`, closed by default, with an unread count on its toggle so an AI turn cannot pass unnoticed. Nothing reclaims its space automatically — `BoardUI.SetBoardWidth` moves `MainColumn`'s right anchor between 0.78 and 1.0. The hand's drop target is synced from `BoardUI.GetPlayerBattlefieldRect()` rather than hardcoded, since the board changes width when the log opens.
 
-`MtgCardTheme` colours the frame by card type and the name plate by tribe, via `SelfModulate` so the tint cannot bleed onto the labels. It is the only per-card visual differentiation the engine can support: there is no colour, faction or rarity field, so `Card.Subtypes` and component presence are all there is to key on.
+`MtgCardTheme` colours the **frame by the card's COLOUR** (`Card.ColorPips` — WUBRG, gold for two or more, grey for colourless, brown for lands) and the **name plate by tribe**, via `SelfModulate` so the tint cannot bleed onto the labels.
+
+Frame-by-colour replaced frame-by-card-TYPE, which was all this could do before the engine had colours. Type is already stated in words on the type line, so spending the strongest visual channel on it spent it twice; colour is what decides whether a card is castable in a drafter's deck, which is the first question they ask of a pack. Order inside `FrameColor` is load-bearing and commented: lands first (a land has no pips — its colour is what it PRODUCES), then pips before the artifact subtype so a coloured artifact takes its colour.
+
+**Every frame value must stay light.** It is MULTIPLIED against the frame art, so black is a violet-grey rather than black — `MtgCardThemeTests` pins a luminance floor precisely because "black" invites someone to use an actually-black value and turn the art to mud.
 
 Card art is keyed by a slug of the card name (`CardArtLoader`). Hollowmere has essentially none, which degrades to the card scene's default artwork rather than failing — `Details.ApplyTo` assigns the texture unconditionally and the setter falls back, so a reused node cannot inherit the previous card's art.
 
