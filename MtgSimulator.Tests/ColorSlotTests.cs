@@ -61,15 +61,19 @@ public class ColorSlotTests
 	{
 		// The pool lock re-applied at mutation. Without it a slot leaks a card at a time and
 		// nothing reports it — the deck stays legal, it just stops being the archetype it claims.
+		//
+		// Mutate is NOT told the identity: it reads it off the deck, which is what makes it
+		// impossible for a caller to forget.
 		var identity = ColorIdentity.Standard.Single(i => i.Code == "R");
 		var values = Values();
 		var rng = new Random(9);
 		var deck = DeckBuilder.Seed("R", Pool, values, rng, identity: identity);
+		Assert.That(deck.Identity, Is.EqualTo("R"), "the seed must stamp the deck");
 
 		var mutations = 0;
 		for (var i = 0; i < 60; i++)
 		{
-			var mutant = DeckBuilder.Mutate(deck, Pool, values, rng, identity: identity);
+			var mutant = DeckBuilder.Mutate(deck, Pool, values, rng);
 			if (mutant == null)
 				continue;
 

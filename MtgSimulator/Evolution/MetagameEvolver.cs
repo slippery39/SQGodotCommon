@@ -637,22 +637,14 @@ public sealed class MetagameEvolver
 			)
 			.ToArray();
 
-		// **The colours a slot must stay inside, kept for the whole run and re-applied at every
-		// mutation.** Seeding alone is not enough: a slot that seeds mono-red and then mutates
-		// freely drifts out of its colours one swap at a time, and the field stops covering the
-		// format — the same failure the profile bands exist to prevent, in a different dimension.
+		// **There is deliberately NO parallel array of slot colours here any more.** Each deck
+		// carries its own identity (Decklist.Identity), stamped when it was seeded, so mutation,
+		// culling and validation all read it from the deck. The array version had to be threaded
+		// into every builder call, and the one call that forgot — the cull's re-seed — silently
+		// retired eight of sixteen slots.
 		//
-		// Engine slots keep their own pool lock and take no colour identity: their core already
-		// decides what they may draw from, and two locks could contradict each other.
-		var colors = Enumerable
-			.Range(0, _deckCount)
-			.Select(i =>
-				identities[i] is not null
-					? null
-					: DeckBuilder.IdentityForSlot(i, _deckCount, isWildcard[i])
-			)
-			.ToArray();
-
+		// Engine slots carry no identity: their DeckCore is already a pool lock, and two locks
+		// could contradict each other.
 		var accumulator = new CardStatAccumulator();
 
 		// Per-slot history, which is what makes cutting synergy-aware. Reset when a slot is
@@ -693,8 +685,7 @@ public sealed class MetagameEvolver
 							identities[i],
 							profiles[i],
 							contextValues[i],
-							exploring: gen <= _explorationGenerations,
-							color: colors[i]
+							exploring: gen <= _explorationGenerations
 						)
 					);
 				candidates[i] = list;
@@ -930,7 +921,6 @@ public sealed class MetagameEvolver
 				isWildcard,
 				isConcept,
 				identities,
-				colors,
 				profiles,
 				values,
 				features,
@@ -940,7 +930,7 @@ public sealed class MetagameEvolver
 			);
 
 			// Downstream of every writer this generation — accepted mutants and the cull alike.
-			ValidateFieldIdentities(field, colors);
+			ValidateFieldIdentities(field, identities, isWildcard);
 
 			PrintGeneration(gen, field, tallies, accepted, culled, excluded, timer);
 		}
@@ -1085,8 +1075,7 @@ public sealed class MetagameEvolver
 		DeckCore? core,
 		DeckBuilder.DeckProfile profile,
 		IReadOnlyDictionary<string, double>? contextValue,
-		bool exploring,
-		ColorIdentity? color = null
+		bool exploring
 	)
 	{
 		for (var attempt = 0; attempt < MutationRetries; attempt++)
@@ -1113,8 +1102,7 @@ public sealed class MetagameEvolver
 				// Falling back after half the retries fixes it without re-deriving any operator's
 				// preconditions here, which would drift the moment an operator changes. A slot with
 				// room to explore never reaches the fallback; one without it still gets a search.
-				exploring && attempt < MutationRetries / 2,
-				color
+				exploring && attempt < MutationRetries / 2
 			);
 			if (mutant is not null)
 				return mutant;
@@ -1396,14 +1384,9 @@ public sealed class MetagameEvolver
 	/// At most one per generation: the field has to be re-measured after any replacement, and
 	/// culling several at once churns faster than the measurement can follow.
 	/// </summary>
-	/// <param name="colors">
-	/// The colour identity each slot must keep. **A re-seed that omits this silently retires the
-	/// slot**: it rebuilds unconstrained and drifts to whatever the format's strongest colour is,
-	/// so the field stops covering the identities it is named for while every label still says it
-	/// does.
-	/// </param>
 	/// <param name="profiles">
-	/// The curve band each slot must keep, for the same reason.
+	/// The curve band each slot must keep. The colour identity needs no parameter — the outgoing
+	/// deck carries it, and the replacement inherits it from there.
 	/// </param>
 	/// <summary>
 	/// **Every deck in the field plays only what its slot's colours allow.**
@@ -1424,13 +1407,35 @@ public sealed class MetagameEvolver
 	/// +5.90 inside a mono-blue slot, better than every legal blue card, so cut scoring keeps it
 	/// forever. The pool lock stops a bad card ENTERING; nothing makes it leave.
 	/// </summary>
-	private void ValidateFieldIdentities(IReadOnlyList<Decklist> field, ColorIdentity?[] colors)
+	private void ValidateFieldIdentities(
+		IReadOnlyList<Decklist> field,
+		DeckCore?[] identities,
+		bool[] isWildcard
+	)
 	{
 		for (var i = 0; i < field.Count; i++)
 		{
-			if (colors[i] is not { } required)
+			// What the SLOT is supposed to be, recomputed rather than remembered. Engine slots and
+			// the wildcard are legitimately unconstrained.
+			var expected = identities[i] is not null
+				? null
+				: DeckBuilder.IdentityForSlot(i, field.Count, isWildcard[i]);
+
+			if (expected is null)
 				continue;
 
+			// **Checked BEFORE the card check, because a lost identity is invisible to it.** A deck
+			// whose identity went missing reads as unconstrained, so validating the deck against
+			// its own identity would wave it through — which is exactly what happened when this
+			// check trusted the deck alone: the re-seed dropped the identity and the guard saw a
+			// wildcard. The slot's expectation is the spec; the deck's identity is the state.
+			if (!string.Equals(field[i].Identity, expected.Code, StringComparison.Ordinal))
+				throw new InvalidOperationException(
+					$"Slot {i} ({field[i].Name}) should be {expected.Code} but its deck carries "
+						+ $"{field[i].Identity ?? "no identity"} — an operator dropped it."
+				);
+
+			var required = expected;
 			var illegal = field[i]
 				.Spells.Keys.Where(n =>
 					_poolIndex.TryGetValue(n, out var card) && !required.Allows(card)
@@ -1454,7 +1459,6 @@ public sealed class MetagameEvolver
 		bool[] isWildcard,
 		bool[] isConcept,
 		DeckCore?[] identities,
-		ColorIdentity?[] colors,
 		DeckBuilder.DeckProfile[] profiles,
 		ConstructedValues values,
 		PoolFeatures? features,
@@ -1533,7 +1537,9 @@ public sealed class MetagameEvolver
 				// named U-Midrange or RG-Control. Decks never culled kept their colours exactly, so
 				// age separated the clean field from the contaminated one perfectly.
 				profile: profiles[worst],
-				identity: colors[worst]
+				// From the OUTGOING deck, so the slot's identity cannot be sourced from the wrong
+				// place. A replacement is the same slot; it inherits what that slot is.
+				identity: ColorIdentity.ForCode(before.Identity)
 			);
 		ages[worst] = 0;
 		// The replacement shares almost nothing with what it replaced, so its predecessor's

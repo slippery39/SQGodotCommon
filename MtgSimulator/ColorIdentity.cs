@@ -41,6 +41,19 @@ public sealed record ColorIdentity(string Code, ImmutableArray<ManaColor> Colors
 	private static ColorIdentity Of(params ManaColor[] colors) =>
 		new(string.Concat(colors.Select(ManaPool.Symbol)), [.. colors]);
 
+	/// <summary>
+	/// The identity with this code, or null for null/unknown. Decks carry the CODE rather than the
+	/// object so a decklist stays trivially serialisable.
+	///
+	/// A linear scan of fifteen, deliberately: a static lookup dictionary declared here initialises
+	/// BEFORE `Standard` does and comes out null, which is a startup crash traded for a comparison
+	/// nobody can measure.
+	/// </summary>
+	public static ColorIdentity? ForCode(string? code) =>
+		code == null
+			? null
+			: Standard.FirstOrDefault(i => string.Equals(i.Code, code, StringComparison.Ordinal));
+
 	/// The five single-colour identities.
 	public static IReadOnlyList<ColorIdentity> Mono { get; } =
 		[.. ManaPool.Colors.Select(c => Of(c))];

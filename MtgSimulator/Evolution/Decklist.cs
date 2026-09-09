@@ -20,7 +20,23 @@ namespace MtgSimulator;
 /// engine (Plains) and no colours, so a mana base is a scalar. If duals or colours ever land,
 /// this becomes a second dictionary and <see cref="Difference"/> keeps ignoring it.
 /// </summary>
-public sealed record Decklist(string Name, ImmutableSortedDictionary<string, int> Spells, int Lands)
+/// <param name="Identity">
+/// The colour identity this deck is built in, as a <see cref="ColorIdentity"/> CODE, or null for an
+/// unconstrained deck.
+///
+/// **On the deck rather than passed alongside it, because passing it alongside is what failed.**
+/// The constraint used to live in a parallel array in the evolver and be threaded into every
+/// builder call; seeding and mutation passed it and the cull path did not, so eight of sixteen
+/// slots silently stopped being the archetype they were named for. A deck that carries its own
+/// identity cannot be handed to an operator that forgets to constrain it, and `with` expressions
+/// preserve it for free.
+/// </param>
+public sealed record Decklist(
+	string Name,
+	ImmutableSortedDictionary<string, int> Spells,
+	int Lands,
+	string? Identity = null
+)
 {
 	public const int DeckSize = 60;
 

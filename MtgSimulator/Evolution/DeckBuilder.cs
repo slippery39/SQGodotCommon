@@ -436,7 +436,13 @@ public static class DeckBuilder
 		var curveTarget = bandMin + rng.NextDouble() * (bandMax - bandMin);
 		var lands = LandsForCurve(curveTarget, rng);
 
-		var deck = Decklist.Empty(name) with { Lands = lands };
+		// The identity is stamped ON the deck, so every later operator reads it from the deck
+		// rather than being handed it — see Decklist.Identity for what being handed it cost.
+		var deck = Decklist.Empty(name) with
+		{
+			Lands = lands,
+			Identity = identity?.Code,
+		};
 
 		// 1. Anchor — the concept the deck is about.
 		var anchor = wildcard
@@ -500,12 +506,14 @@ public static class DeckBuilder
 		DeckCore? core = null,
 		DeckProfile profile = DeckProfile.Any,
 		IReadOnlyDictionary<string, double>? contextValue = null,
-		bool exploring = false,
-		ColorIdentity? identity = null
+		bool exploring = false
 	)
 	{
-		// The same pool lock the seed applied, re-applied here because mutation is where a slot
-		// would otherwise drift out of its colours one swap at a time.
+		// **Read off the DECK, never passed in.** The same pool lock the seed applied, re-applied
+		// here because mutation is where a slot would otherwise drift out of its colours one swap
+		// at a time — and taking it as a parameter is precisely how the cull path came to omit it.
+		var identity = ColorIdentity.ForCode(deck.Identity);
+
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
 		if (identity != null)
 			spells = [.. identity.Playable(spells)];
