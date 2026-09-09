@@ -11,7 +11,6 @@ public static class DelverDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 16, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Delver of Secrets"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Ancestral Recall"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Lightning Bolt"));
@@ -23,6 +22,11 @@ public static class DelverDeckFactory
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Gut Shot"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Lightning Helix"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Snapcaster Mage"));
+		// Lands LAST, and coloured to match what the deck actually plays: this list used
+		// to open with 16 Plains, which was free while the engine had no colours and
+		// uncastable the moment it did.
+		deck.AddRange(ManaBase.Build(deck, 16, ownerId));
+
 		return deck;
 	}
 

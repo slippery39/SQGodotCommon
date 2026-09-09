@@ -20,16 +20,20 @@ namespace MtgCore;
 /// discard outlet and no self-mill assembles nothing, and it is what the mode built before causal
 /// supply existed.
 ///
-/// **DES supplies most of the package already, which is deliberate.** Faithless Looting is in HLM
-/// and the graveyard theme there is deep in self-mill and recursion, so the enabler half is mostly
-/// pre-existing and the run measures selection rather than availability. What DES does NOT have is
-/// a tutor that puts a creature straight into the graveyard — **Entomb is Legacy-only, so it is
-/// absent from HLM+CSC+CMB entirely** — and it has no reanimation spell cheap enough to be a turn-two
-/// play. Those two, plus the payoff, are what this file adds.
+/// **THIS PACKAGE'S ENABLER ASSUMPTION NO LONGER HOLDS — read a Reanimator result carefully.**
+/// It was written against a DES that included Hollowmere, whose graveyard theme was deep in
+/// self-mill and recursion; the file adds only a tutor and a cheap reanimation spell BECAUSE the
+/// outlets and self-mill were assumed to be pre-existing. Hollowmere is retired, so DES is now
+/// CSC + CMB and that enabler base is largely gone: CSC's graveyard support is thin by comparison.
+///
+/// The consequence is that a failed Reanimator assembly now has a third explanation on top of the
+/// two this set exists to separate — not "the builder missed it" or "the manabase failed", but
+/// "the pool genuinely lacks the outlets". Either add enablers here or read the arm as measuring
+/// availability rather than selection. Entomb remains Legacy-only and so is still absent from DES.
 ///
 /// ### Names
 ///
-/// None of these reuse a printed name from HLM or CSC. Calling the tutor "Entomb" would have
+/// None of these reuse a printed name from CSC. Calling the tutor "Entomb" would have
 /// collided with the Legacy pool, where `SetRegistry` resolves last-registered-wins — CMB registers
 /// last, so it would have silently replaced Legacy's Entomb in the ALL union. `ComboProvingTests`
 /// asserts the whole set is collision-free.
@@ -78,6 +82,7 @@ public static class ComboProvingReanimator
 					},
 					TargetingStrategy.NoTarget()
 				)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// Reanimate at one mana. The payoff below costs eight, so this is a seven-mana discount
 			// on turn two — pushed far past cube rate, which is what the set is for.
@@ -85,6 +90,7 @@ public static class ComboProvingReanimator
 				.Sorcery("Raise the Sunken", manaCost: 1)
 				.WithReanimate()
 				.WithTarget(Single().CreatureInYourGraveyard())
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// The payoff. Eight mana is unreachable by casting in any deck this format can build, so
 			// the card exists only to be cheated in — which is what makes it a combo piece rather
@@ -101,6 +107,7 @@ public static class ComboProvingReanimator
 				.WithTrample()
 				.WithTaunt()
 				.WithEtbTrigger("Sevenfold", eb => eb.WithDraw(7))
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// **A second, cheaper target, and it is a control rather than filler.** The user's
 			// prediction was that a real reanimator deck plays backup targets; with only one
@@ -116,6 +123,7 @@ public static class ComboProvingReanimator
 				.WithLifeGainBonus(10)
 				.WithEtbTrigger("", eb => eb.WithDraw(2))
 				.WithEtbTrigger("Dredge", eb => eb.WithMill(4).WithTarget(TargetingStrategy.Self()))
+				.WithPips(ManaColor.Blue)
 				.Build(),
 		];
 }

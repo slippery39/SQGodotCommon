@@ -11,7 +11,6 @@ public static class ReanimatorDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 18, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Ancestral Recall"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Bloodghast"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Tarmogoyf"));
@@ -24,6 +23,11 @@ public static class ReanimatorDeckFactory
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Faithless Looting"));
 		AddCopies(deck, ownerId, 3, () => CardLibrary.GetByName("Careful Study"));
 		AddCopies(deck, ownerId, 2, () => CardLibrary.GetByName("Wrath of God"));
+		// Lands LAST, and coloured to match what the deck actually plays: this list used
+		// to open with 18 Plains, which was free while the engine had no colours and
+		// uncastable the moment it did.
+		deck.AddRange(ManaBase.Build(deck, 18, ownerId));
+
 		return deck;
 	}
 

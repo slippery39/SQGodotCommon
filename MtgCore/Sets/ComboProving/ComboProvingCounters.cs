@@ -96,6 +96,7 @@ public static class ComboProvingCounters
 			CardFactory
 				.Enchantment("Ironscale Rite", manaCost: 1)
 				.WithComponent(new CounterBonusComponent { Amount = 1 })
+				.WithPips(ManaColor.Green)
 				.Build(),
 			// Walking Ballista. Printed 0/0 with X counters, so it IS its counters — which makes it
 			// the cleanest possible test of whether the multiplier is being valued: every extra
@@ -162,6 +163,7 @@ public static class ComboProvingCounters
 						),
 					}
 				)
+				.WithPips(ManaColor.Green)
 				.Build(),
 		];
 }

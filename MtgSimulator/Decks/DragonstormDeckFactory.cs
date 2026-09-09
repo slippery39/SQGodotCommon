@@ -35,7 +35,6 @@ public static class DragonstormDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 20, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, CardLibrary.BogardanHellkite);
 		AddCopies(deck, ownerId, 4, CardLibrary.HuntedDragon);
 		AddCopies(deck, ownerId, 4, CardLibrary.Dragonstorm);
@@ -46,6 +45,11 @@ public static class DragonstormDeckFactory
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Faithless Looting"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Mox Pearl"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Lightning Bolt"));
+		// Lands LAST, and coloured to match what the deck actually plays: this list used
+		// to open with 20 Plains, which was free while the engine had no colours and
+		// uncastable the moment it did.
+		deck.AddRange(ManaBase.Build(deck, 20, ownerId));
+
 		return deck;
 	}
 

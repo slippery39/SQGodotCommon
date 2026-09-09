@@ -30,7 +30,6 @@ public static class ZooDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 14, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, CardLibrary.WildNacatl);
 		AddCopies(deck, ownerId, 4, CardLibrary.KirdApe);
 		AddCopies(deck, ownerId, 4, CardLibrary.LoamLion);
@@ -43,6 +42,11 @@ public static class ZooDeckFactory
 		AddCopies(deck, ownerId, 4, CardLibrary.SteppeLynx);
 		AddCopies(deck, ownerId, 4, CardLibrary.TribalFlames);
 		AddCopies(deck, ownerId, 4, CardLibrary.AncestralRecall);
+		// Lands LAST, and coloured to match what the deck actually plays: this list used
+		// to open with 14 Plains, which was free while the engine had no colours and
+		// uncastable the moment it did.
+		deck.AddRange(ManaBase.Build(deck, 14, ownerId));
+
 		return deck;
 	}
 

@@ -26,7 +26,6 @@ public static class JundDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 16, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 3, () => CardLibrary.GetByName("Mox Pearl"));
 		AddCopies(deck, ownerId, 2, () => CardLibrary.GetByName("Sol Ring"));
 		AddCopies(deck, ownerId, 3, () => CardLibrary.GetByName("Lightning Bolt"));
@@ -40,6 +39,11 @@ public static class JundDeckFactory
 		AddCopies(deck, ownerId, 1, () => CardLibrary.GetByName("Phyrexian Arena"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Liliana of the Veil"));
 		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Siege Rhino"));
+		// Lands LAST, and coloured to match what the deck actually plays: this list used
+		// to open with 16 Plains, which was free while the engine had no colours and
+		// uncastable the moment it did.
+		deck.AddRange(ManaBase.Build(deck, 16, ownerId));
+
 		return deck;
 	}
 

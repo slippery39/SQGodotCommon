@@ -73,6 +73,7 @@ public static class ComboProvingElves
 		CardFactory
 			.Creature(name, manaCost: manaCost, power: 1, toughness: 1)
 			.WithSubtype(Elf)
+			.WithPips(ManaColor.Green)
 			.WithCover(10);
 
 	public static IReadOnlyList<Card> Cards { get; } =
@@ -260,6 +261,7 @@ public static class ComboProvingElves
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Green)
 				.Build(),
 		];
 }

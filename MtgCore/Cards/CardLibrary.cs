@@ -28,6 +28,7 @@ public static class CardLibrary
 				.Spell("Lightning Bolt", manaCost: 1)
 				.WithDamage(3)
 				.WithTarget(Single().PlayersOrCreatures())
+				.WithPips(ManaColor.Red)
 				.Build(),
 			CardFactory
 				.Spell("Gut Shot", manaCost: 0)
@@ -39,17 +40,21 @@ public static class CardLibrary
 				.WithDamage(2)
 				.WithTarget(Single().PlayersOrCreatures())
 				.WithFlashback(2)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			CardFactory
 				.Spell("Lightning Helix", manaCost: 2)
 				.WithDamage(3)
 				.WithTarget(Single().PlayersOrCreatures())
 				.WithLifeGain(3)
+				.WithPips(ManaColor.White)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			new()
 			{
 				Name = "Careful Study",
 				ManaCost = 1,
+				ColorPips = new ManaPool { Blue = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -87,6 +92,7 @@ public static class CardLibrary
 			{
 				Name = "Faithless Looting",
 				ManaCost = 1,
+				ColorPips = new ManaPool { Red = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -125,6 +131,7 @@ public static class CardLibrary
 			{
 				Name = "Telling Time",
 				ManaCost = 1,
+				ColorPips = new ManaPool { Blue = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -195,6 +202,7 @@ public static class CardLibrary
 			{
 				Name = "Dark Confidant",
 				ManaCost = 2,
+				ColorPips = new ManaPool { Black = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 1, Toughness = 4 },
@@ -237,12 +245,18 @@ public static class CardLibrary
 				.WithSubtype("Elf")
 				.WithSubtype("Druid")
 				.WithActivatedAbility("Mana Ramp", manaCost: 0, effect: eb => eb.WithAddMana(1))
+				.WithPips(ManaColor.Green)
 				.Build(),
-			CardFactory.Spell("Doom Blade", manaCost: 2).WithDestroy().Build(),
+			CardFactory
+				.Spell("Doom Blade", manaCost: 2)
+				.WithDestroy()
+				.WithPips(ManaColor.Black)
+				.Build(),
 			CardFactory
 				.Spell("Wrath of God", manaCost: 4)
 				.WithDestroy()
 				.WithTarget(AllValid().Creatures())
+				.WithPips(ManaColor.White, 2)
 				.Build(),
 			new()
 			{
@@ -288,6 +302,7 @@ public static class CardLibrary
 			{
 				Name = "Glorious Anthem",
 				ManaCost = 2,
+				ColorPips = new ManaPool { White = 2 },
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Enchantment"),
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
@@ -303,6 +318,7 @@ public static class CardLibrary
 			{
 				Name = "Phyrexian Arena",
 				ManaCost = 2,
+				ColorPips = new ManaPool { Black = 1 },
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Enchantment"),
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
@@ -434,6 +450,7 @@ public static class CardLibrary
 			CardFactory
 				.Creature("Prodigal Sorcerer", manaCost: 2, power: 1, toughness: 1)
 				.WithActivatedAbility("Ping", manaCost: 0, effect: eb => eb.WithDamage(1))
+				.WithPips(ManaColor.Blue)
 				.Build(),
 			CardFactory
 				.Creature("Throne of Bone", manaCost: 1, power: 1, toughness: 1)
@@ -443,10 +460,12 @@ public static class CardLibrary
 			CardFactory
 				.Spell("Giant Growth", manaCost: 1)
 				.WithBoost(power: 4, toughness: 4)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			CardFactory
 				.Spell("Unholy Strength", manaCost: 1)
 				.WithBoost(power: 3, toughness: 2, ModifierDuration.Permanent)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// ===== GOBLINS DECK CARDS =====
 			CardFactory
@@ -454,11 +473,13 @@ public static class CardLibrary
 				.WithSubtype(GoblinSubtype)
 				.WithSubtype("Scout")
 				.WithHaste()
+				.WithPips(ManaColor.Red)
 				.Build(),
 			new()
 			{
 				Name = "Goblin Lackey",
 				ManaCost = 1,
+				ColorPips = new ManaPool { Red = 1 },
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, GoblinSubtype),
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
@@ -487,6 +508,7 @@ public static class CardLibrary
 			{
 				Name = "Warren Instigator",
 				ManaCost = 2,
+				ColorPips = new ManaPool { Red = 2 },
 				Subtypes = ImmutableHashSet.Create(
 					StringComparer.OrdinalIgnoreCase,
 					GoblinSubtype,
@@ -524,6 +546,7 @@ public static class CardLibrary
 			{
 				Name = "Goblin Chieftain",
 				ManaCost = 3,
+				ColorPips = new ManaPool { Red = 2 },
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, GoblinSubtype),
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
@@ -564,11 +587,13 @@ public static class CardLibrary
 					effect: eb => eb.WithDamage(2).WithTarget(Single().PlayersOrCreatures()),
 					costs: cb => cb.SacrificeSubtype(GoblinSubtype)
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			new()
 			{
 				Name = "Krenko, Mob Boss",
 				ManaCost = 3,
+				ColorPips = new ManaPool { Red = 2 },
 				Subtypes = ImmutableHashSet.Create(
 					StringComparer.OrdinalIgnoreCase,
 					GoblinSubtype,
@@ -609,6 +634,7 @@ public static class CardLibrary
 				.WithSacrificeSubtypeCost(GoblinSubtype)
 				.WithDamage(6)
 				.WithTarget(Single().PlayersOrCreatures())
+				.WithPips(ManaColor.Red)
 				.Build(),
 			CardFactory
 				.Creature("Mogg War Marshal", manaCost: 1, power: 1, toughness: 1)
@@ -631,6 +657,7 @@ public static class CardLibrary
 						ActiveInZone = ZoneType.Graveyard,
 					}
 				)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			CardFactory
 				.Creature("Goblin Matron", manaCost: 1, power: 1, toughness: 1)
@@ -658,6 +685,7 @@ public static class CardLibrary
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			CardFactory
 				.Creature("Goblin Ringleader", manaCost: 3, power: 2, toughness: 2)
@@ -707,21 +735,25 @@ public static class CardLibrary
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			// ===== ZOO DECK CARDS =====
 			CardFactory
 				.Creature("Wild Nacatl", manaCost: 1, power: 3, toughness: 3)
 				.WithSubtype("Cat")
 				.WithSubtype("Warrior")
+				.WithPips(ManaColor.Green)
 				.Build(),
 			CardFactory
 				.Creature("Kird Ape", manaCost: 1, power: 2, toughness: 3)
 				.WithSubtype("Ape")
+				.WithPips(ManaColor.Red)
 				.Build(),
 			new()
 			{
 				Name = "Tarmogoyf",
 				ManaCost = 2,
+				ColorPips = new ManaPool { Green = 1 },
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Lhurgoyf"),
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
@@ -733,12 +765,18 @@ public static class CardLibrary
 				.Spell("Path to Exile", manaCost: 1)
 				.WithExile()
 				.WithTarget(Single().OpponentCreatures())
+				.WithPips(ManaColor.White)
 				.Build(),
-			CardFactory.Spell("Tribal Flames", manaCost: 2).WithDamage(5).Build(),
+			CardFactory
+				.Spell("Tribal Flames", manaCost: 2)
+				.WithDamage(5)
+				.WithPips(ManaColor.Red)
+				.Build(),
 			new()
 			{
 				Name = "Qasali Pridemage",
 				ManaCost = 2,
+				ColorPips = new ManaPool { White = 1, Green = 1 },
 				Subtypes = ImmutableHashSet.Create(
 					StringComparer.OrdinalIgnoreCase,
 					"Cat",
@@ -764,16 +802,19 @@ public static class CardLibrary
 			CardFactory
 				.Creature("Loam Lion", manaCost: 1, power: 2, toughness: 3)
 				.WithSubtype("Cat")
+				.WithPips(ManaColor.White)
 				.Build(),
 			CardFactory
 				.Spell("Slagstorm", manaCost: 3)
 				.WithDamage(3)
 				.WithTarget(AllValid().PlayersOrCreatures())
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			new()
 			{
 				Name = "Geist of Saint Traft",
 				ManaCost = 3,
+				ColorPips = new ManaPool { White = 1, Blue = 1 },
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Spirit"),
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
@@ -836,20 +877,32 @@ public static class CardLibrary
 				.Creature("Wall of Roots", manaCost: 3, power: 2, toughness: 5)
 				.WithSubtype("Plant")
 				.WithTaunt()
+				.WithPips(ManaColor.Green)
 				.Build(),
 			CardFactory
 				.Creature("Raging Goblin", manaCost: 1, power: 1, toughness: 1)
 				.WithSubtype(GoblinSubtype)
 				.WithHaste()
+				.WithPips(ManaColor.Red)
 				.Build(),
-			CardFactory.Creature("Hill Giant", manaCost: 3, power: 3, toughness: 4).Build(),
+			CardFactory
+				.Creature("Hill Giant", manaCost: 3, power: 3, toughness: 4)
+				.WithPips(ManaColor.Red)
+				.Build(),
 			CardFactory
 				.Creature("Snapcaster Mage", manaCost: 1, power: 2, toughness: 1)
 				.WithSubtype("Wizard")
 				.WithEtbTrigger("ETB Flashback", e => e.WithGiveFlashback())
+				.WithPips(ManaColor.Blue)
 				.Build(),
-			CardFactory.Creature("Grizzly Bears", manaCost: 2, power: 2, toughness: 2).Build(),
-			CardFactory.Creature("Kalonian Tusker", manaCost: 2, power: 3, toughness: 3).Build(),
+			CardFactory
+				.Creature("Grizzly Bears", manaCost: 2, power: 2, toughness: 2)
+				.WithPips(ManaColor.Green)
+				.Build(),
+			CardFactory
+				.Creature("Kalonian Tusker", manaCost: 2, power: 3, toughness: 3)
+				.WithPips(ManaColor.Green, 2)
+				.Build(),
 			CardFactory
 				.Creature("Iron Golem", manaCost: 4, power: 5, toughness: 5)
 				.WithSubtype("Golem")
@@ -857,18 +910,25 @@ public static class CardLibrary
 			CardFactory
 				.Creature("Craw Wurm", manaCost: 6, power: 8, toughness: 4)
 				.WithSubtype("Wurm")
+				.WithPips(ManaColor.Green, 2)
 				.Build(),
-			CardFactory.Spell("Ancestral Recall", manaCost: 1).WithDraw(3).Build(),
+			CardFactory
+				.Spell("Ancestral Recall", manaCost: 1)
+				.WithDraw(3)
+				.WithPips(ManaColor.Blue)
+				.Build(),
 			CardFactory.Spell("Gitaxian Probe", manaCost: 0).WithDraw(1).Build(),
 			CardFactory
 				.Creature("Mahamoti Djinn", manaCost: 6, power: 6, toughness: 7)
 				.WithSubtype("Djinn")
 				.WithFlying()
+				.WithPips(ManaColor.Blue, 2)
 				.Build(),
 			new()
 			{
 				Name = "Delver of Secrets",
 				ManaCost = 1,
+				ColorPips = new ManaPool { Blue = 1 },
 				Subtypes = ImmutableHashSet.Create(
 					StringComparer.OrdinalIgnoreCase,
 					"Human",
@@ -918,6 +978,7 @@ public static class CardLibrary
 			{
 				Name = "Sleight of Hand",
 				ManaCost = 1,
+				ColorPips = new ManaPool { Blue = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -972,6 +1033,7 @@ public static class CardLibrary
 			{
 				Name = "Rite of Flame",
 				ManaCost = 1,
+				ColorPips = new ManaPool { Red = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -1002,13 +1064,18 @@ public static class CardLibrary
 					}
 				),
 			},
-			CardFactory.Spell("Seething Song", manaCost: 3).WithAddMana(5).Build(),
+			CardFactory
+				.Spell("Seething Song", manaCost: 3)
+				.WithAddMana(5)
+				.WithPips(ManaColor.Red)
+				.Build(),
 			CardFactory
 				.Creature("Hunted Dragon", manaCost: 7, power: 8, toughness: 8)
 				.WithSubtype(DragonSubtype)
 				.WithSubtype("Lizard")
 				.WithFlying()
 				.WithHaste()
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			CardFactory
 				.Creature("Bogardan Hellkite", manaCost: 6, power: 6, toughness: 6)
@@ -1020,11 +1087,13 @@ public static class CardLibrary
 					effect: eb =>
 						eb.WithDamage(6).WithTarget(Random().OpponentOrOpponentCreatures())
 				)
+				.WithPips(ManaColor.Red, 2)
 				.Build(),
 			new()
 			{
 				Name = "Dragonstorm",
 				ManaCost = 7,
+				ColorPips = new ManaPool { Red = 2 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -1060,17 +1129,20 @@ public static class CardLibrary
 				.WithLoseLife(2)
 				.WithTarget(Single().PlayersOrCreatures())
 				.WithLifeGain(2)
+				.WithPips(ManaColor.Black, 2)
 				.Build(),
 			CardFactory
 				.Spell("Past in Flames", manaCost: 4)
 				.WithFlashback(6)
 				.WithAction(new GiveFlashbackAction(), AllValid().InstantOrSorceryInYourGraveyard())
+				.WithPips(ManaColor.Red)
 				.Build(),
 			// ===== LAND-ADJACENT CARDS =====
 			new()
 			{
 				Name = "Rampant Growth",
 				ManaCost = 2,
+				ColorPips = new ManaPool { Green = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -1103,6 +1175,7 @@ public static class CardLibrary
 			{
 				Name = "Primeval Titan",
 				ManaCost = 6,
+				ColorPips = new ManaPool { Green = 2 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 6, Toughness = 6 },
@@ -1152,6 +1225,7 @@ public static class CardLibrary
 			{
 				Name = "Exploration",
 				ManaCost = 2,
+				ColorPips = new ManaPool { Green = 1 },
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, "Artifact"),
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
@@ -1176,6 +1250,7 @@ public static class CardLibrary
 			{
 				Name = "Steppe Lynx",
 				ManaCost = 1,
+				ColorPips = new ManaPool { White = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 0, Toughness = 2 },
@@ -1217,6 +1292,7 @@ public static class CardLibrary
 			{
 				Name = "Terravore",
 				ManaCost = 3,
+				ColorPips = new ManaPool { Green = 2 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 0, Toughness = 0 },
@@ -1227,6 +1303,7 @@ public static class CardLibrary
 			{
 				Name = "Cultivate",
 				ManaCost = 2,
+				ColorPips = new ManaPool { Green = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -1272,6 +1349,17 @@ public static class CardLibrary
 				ManaCost = 0,
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, LandSubtype),
 				Components = ImmutableArray.Create<GameComponent>(
+					new LandColorComponent
+					{
+						Produces = new ManaPool
+						{
+							White = 1,
+							Blue = 1,
+							Black = 1,
+							Red = 1,
+							Green = 1,
+						},
+					},
 					new LandPlayEffectComponent
 					{
 						Effect = new CardEffect
@@ -1317,6 +1405,10 @@ public static class CardLibrary
 				ManaCost = 0,
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, LandSubtype),
 				Components = ImmutableArray.Create<GameComponent>(
+					new LandColorComponent
+					{
+						Produces = new ManaPool { Blue = 1, Green = 1 },
+					},
 					new BonusManaLandComponent { ExtraMana = 0, Deferred = true },
 					new LandPlayEffectComponent
 					{
@@ -1349,11 +1441,13 @@ public static class CardLibrary
 			CardFactory
 				.Spell("Reanimate", manaCost: 1)
 				.WithAction(new PutIntoBattlefieldAction(), Single().CreatureInYourGraveyard())
+				.WithPips(ManaColor.Black)
 				.Build(),
 			new()
 			{
 				Name = "Bloodghast",
 				ManaCost = 2,
+				ColorPips = new ManaPool { Black = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 1, Toughness = 1 },
@@ -1377,6 +1471,7 @@ public static class CardLibrary
 			{
 				Name = "Carnage Tyrant",
 				ManaCost = 7,
+				ColorPips = new ManaPool { Green = 2 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent
@@ -1440,11 +1535,13 @@ public static class CardLibrary
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Green)
 				.Build(),
 			new()
 			{
 				Name = "Thoughtseize",
 				ManaCost = 1,
+				ColorPips = new ManaPool { Black = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -1474,6 +1571,7 @@ public static class CardLibrary
 			{
 				Name = "Inquisition of Kozilek",
 				ManaCost = 0,
+				ColorPips = new ManaPool { Black = 1 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new SpellComponent
 					{
@@ -1503,6 +1601,7 @@ public static class CardLibrary
 			{
 				Name = "Liliana of the Veil",
 				ManaCost = 3,
+				ColorPips = new ManaPool { Black = 2 },
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent { Power = 2, Toughness = 2 },
@@ -1555,6 +1654,12 @@ public static class CardLibrary
 			{
 				Name = "Siege Rhino",
 				ManaCost = 4,
+				ColorPips = new ManaPool
+				{
+					White = 1,
+					Black = 1,
+					Green = 1,
+				},
 				Components = ImmutableArray.Create<GameComponent>(
 					new PermanentComponent(),
 					new CreatureComponent
@@ -1587,6 +1692,7 @@ public static class CardLibrary
 				ManaCost = 0,
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, LandSubtype),
 				Components = ImmutableArray.Create<GameComponent>(
+					new LandColorComponent { Produces = new ManaPool { Red = 1 } },
 					new GrantEmblemComponent
 					{
 						Emblem = new Emblem
@@ -1620,6 +1726,7 @@ public static class CardLibrary
 							TargetingStrategy.NoTarget()
 						)
 				)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			CardFactory
 				.Creature("Arcbound Ravager", manaCost: 2, power: 2, toughness: 2)
@@ -1676,6 +1783,7 @@ public static class CardLibrary
 						},
 					}
 				)
+				.WithPips(ManaColor.Red)
 				.Build(),
 			CardFactory
 				.Creature("Frogmite", manaCost: 4, power: 4, toughness: 4)
@@ -1698,6 +1806,7 @@ public static class CardLibrary
 				.Spell("Thoughtcast", manaCost: 4)
 				.WithDraw(2)
 				.WithComponent(new AffinityComponent())
+				.WithPips(ManaColor.Blue)
 				.Build(),
 			// ===== AFFINITY LANDS =====
 
@@ -1707,6 +1816,7 @@ public static class CardLibrary
 				ManaCost = 0,
 				Subtypes = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, LandSubtype),
 				Components = ImmutableArray.Create<GameComponent>(
+					new LandColorComponent { Produces = new ManaPool { Blue = 1 } },
 					new LandPlayEffectComponent
 					{
 						Effect = new CardEffect
@@ -1749,6 +1859,7 @@ public static class CardLibrary
 					},
 					TargetingStrategy.NoTarget()
 				)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// Affinity fuel: a cheap artifact that replaces itself twice, so flooding the board
 			// with artifacts costs no cards. Weak on rate alone; strong only where artifact COUNT

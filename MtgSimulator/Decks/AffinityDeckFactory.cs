@@ -30,7 +30,13 @@ public static class AffinityDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 14, CardLibrary.VaultOfIngenuity);
+		// 10 Seats (blue) plus 4 Glimmervoid (every colour), rather than 14 Seats. Affinity plays
+		// blue, black and red cards off an all-artifact manabase, which worked while lands made
+		// colourless mana and strands Disciple, Atog and Bolt now that they do not. Glimmervoid is
+		// the card that fixes exactly this in paper, and lands are exiled here rather than sitting
+		// on the battlefield, so swapping four costs the deck no artifact count.
+		AddCopies(deck, ownerId, 10, CardLibrary.VaultOfIngenuity);
+		AddCopies(deck, ownerId, 4, () => CardLibrary.GetByName("Glimmervoid"));
 		AddCopies(deck, ownerId, 4, CardLibrary.DiscipleOfTheVault);
 		AddCopies(deck, ownerId, 4, CardLibrary.ArcboundRavager);
 		AddCopies(deck, ownerId, 4, CardLibrary.Atog);

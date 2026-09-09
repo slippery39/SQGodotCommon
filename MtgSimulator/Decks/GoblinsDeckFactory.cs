@@ -16,7 +16,6 @@ public static class GoblinsDeckFactory
 	public static IReadOnlyList<Card> Build(int ownerId)
 	{
 		var deck = new List<Card>();
-		AddCopies(deck, ownerId, 16, CardLibrary.Plains);
 		AddCopies(deck, ownerId, 4, CardLibrary.GoblinLackey);
 		AddCopies(deck, ownerId, 4, CardLibrary.MoggWarmaster);
 		AddCopies(deck, ownerId, 4, CardLibrary.LightningBolt);
@@ -29,6 +28,11 @@ public static class GoblinsDeckFactory
 		AddCopies(deck, ownerId, 4, CardLibrary.KrenkoMobBoss);
 		AddCopies(deck, ownerId, 2, CardLibrary.GloriousAnthem);
 		AddCopies(deck, ownerId, 2, CardLibrary.GoblinRingleader);
+		// Lands LAST, and coloured to match what the deck actually plays: this list used
+		// to open with 16 Plains, which was free while the engine had no colours and
+		// uncastable the moment it did.
+		deck.AddRange(ManaBase.Build(deck, 16, ownerId));
+
 		return deck;
 	}
 

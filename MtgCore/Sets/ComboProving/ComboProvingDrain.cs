@@ -99,6 +99,7 @@ public static class ComboProvingDrain
 						},
 					}
 				)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// "Whenever an opponent loses life, you gain that much life."
 			//
@@ -127,9 +128,10 @@ public static class ComboProvingDrain
 						},
 					}
 				)
+				.WithPips(ManaColor.Black)
 				.Build(),
 			// A cheap, unremarkable life-gain outlet so the pair has something to ignite it that is
-			// not already in HLM/CSC. Deliberately a weak card on its own — the point is that a deck
+			// not already in CSC. Deliberately a weak card on its own — the point is that a deck
 			// wanting it is a deck that already holds both halves.
 			CardFactory
 				.Creature("Almsgiver Acolyte", manaCost: 1, power: 1, toughness: 1)
@@ -138,6 +140,7 @@ public static class ComboProvingDrain
 					"Alms",
 					eb => eb.WithLifeGain(2).WithTarget(TargetingStrategy.Self())
 				)
+				.WithPips(ManaColor.White)
 				.Build(),
 		];
 }

@@ -69,6 +69,7 @@ public static class ComboProvingTwin
 		CardFactory
 			.Creature(name, manaCost: 2, power: power, toughness: toughness)
 			.WithSubtype(ComboProving.Illusionist)
+			.WithPips(ManaColor.Blue)
 			.WithEtbTrigger(
 				"Ready",
 				eb =>
@@ -107,6 +108,7 @@ public static class ComboProvingTwin
 			// controller to untap with a 4-drop still alive. That is a different, far worse card,
 			// and the difference is invisible from the card definition.
 			.WithHaste()
+			.WithPips(ManaColor.Red)
 			.WithActivatedAbility(
 				"Twin",
 				manaCost: 0,
