@@ -52,6 +52,12 @@ public class CardValueSweep
 
 	private static void Sweep(CardSet set)
 	{
+		// Write to the REPOSITORY's sim_results, not the test binary's. Without this the table
+		// lands beside the binary, where the readers only find it if nothing else in the run has
+		// moved the working directory — so the sweep appears to work and three unrelated tests
+		// then fail as though the data were missing. See TestPaths.
+		TestPaths.ChdirToSolutionRoot();
+
 		var values = CardValueSandbox.Measure(set.Cards);
 		CardValueSandbox.Save(CardValueSandbox.PathFor(set.Code), values);
 

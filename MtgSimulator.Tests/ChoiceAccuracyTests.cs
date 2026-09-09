@@ -28,6 +28,17 @@ namespace MtgSimulator.Tests;
 public class ChoiceAccuracyTests
 {
 	/// <summary>
+	/// Anchors sim_results on the repository rather than the test binary's folder.
+	///
+	/// **Without this the fixture passes or fails according to what ran BEFORE it.** The card-value
+	/// table is read by a path relative to the working directory, and other fixtures move that
+	/// directory process-wide — so running alone and running in the suite looked at two different
+	/// places, and one of them was empty.
+	/// </summary>
+	[OneTimeSetUp]
+	public void AnchorSimResults() => TestPaths.ChdirToSolutionRoot();
+
+	/// <summary>
 	/// Pairs where the better card is not a matter of taste IN THIS ENGINE. Planeswalkers rate
 	/// poorly here because there is no blocking and they can be attacked freely; equipment needs a
 	/// body already on board. Each pair is same-cost so only quality separates them.

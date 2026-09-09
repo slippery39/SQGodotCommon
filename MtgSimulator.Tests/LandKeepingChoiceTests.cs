@@ -34,6 +34,17 @@ namespace MtgSimulator.Tests;
 [TestFixture]
 public class LandKeepingChoiceTests
 {
+	/// <summary>
+	/// Anchors sim_results on the repository rather than the test binary's folder.
+	///
+	/// **Without this the fixture passes or fails according to what ran BEFORE it.** The card-value
+	/// table is read by a path relative to the working directory, and other fixtures move that
+	/// directory process-wide — so running alone and running in the suite looked at two different
+	/// places, and one of them was empty.
+	/// </summary>
+	[OneTimeSetUp]
+	public void AnchorSimResults() => TestPaths.ChdirToSolutionRoot();
+
 	/// <summary>Real four-drops, so the values are the ones the sandbox actually measured.</summary>
 	private static readonly string[] FourDrops =
 	[
