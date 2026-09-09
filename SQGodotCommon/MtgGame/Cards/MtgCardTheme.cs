@@ -6,14 +6,22 @@ using MtgCore;
 namespace MtgGame;
 
 /// <summary>
-/// Per-card colouring. The engine has no colour, faction or rarity field — Hollowmere
-/// deliberately replaced colours with themes — so the only categorical signals available are
-/// component presence (card type) and <see cref="Card.Subtypes"/> (tribe). Those drive a frame
-/// tint and a name-plate tint respectively, which is what keeps a Zombie from looking exactly
-/// like a Spirit at battlefield size.
+/// Per-card colouring, on two independent channels: the FRAME carries the card's colour
+/// (<see cref="Card.ColorPips"/>) and the NAME PLATE carries its tribe.
 ///
-/// Values are multiplied against the frame art via SelfModulate, so they must stay light —
-/// a dark colour multiplies the frame into mud.
+/// Frame-by-colour is how a Magic player actually reads a card, and it is the signal that decides
+/// whether a card is castable in their deck — which since colours became a real constraint is the
+/// first question a drafter asks of a pack. It replaced frame-by-card-TYPE, which was what this
+/// file could do back when the engine had no colour field at all: type is already stated in words
+/// on the type line, so spending the strongest visual channel on it was spending it twice.
+///
+/// Tribe keeps the name plate because it is the second question ("does it go in my deck?") and
+/// the two never compete for the same pixels.
+///
+/// **Black cannot be black.** Values are multiplied against the frame art via SelfModulate, so
+/// every one of them must stay light — a dark colour multiplies the frame into mud. Black is a
+/// desaturated violet-grey rather than the colour it names, which is the same compromise every
+/// real Magic frame makes for exactly the same reason.
 /// </summary>
 public static class MtgCardTheme
 {
@@ -21,7 +29,17 @@ public static class MtgCardTheme
 	/// Strings that live in <see cref="Card.Subtypes"/> but name a card type rather than a tribe.
 	/// Filtered out of the type line's tribe list, since the type line already states the type.
 	/// </summary>
-	private static readonly string[] Supertypes = { "Land", "Basic", "Artifact", "Enchantment" };
+	private static readonly string[] Supertypes =
+	{
+		"Land",
+		"Basic",
+		"Artifact",
+		"Enchantment",
+		// A card type that rides in Subtypes, like the others here. Without it every planeswalker
+		// reads "Planeswalker — Planeswalker".
+		"Planeswalker",
+		"Equipment",
+	};
 
 	/// <summary>
 	/// Tribe display and colour order. Cards are commonly multi-tribe (Chapel Longbowman is
@@ -30,19 +48,38 @@ public static class MtgCardTheme
 	/// </summary>
 	private static readonly string[] TribePriority =
 	{
+		// Races first, ordered by how much they identify a deck in the live sets. This list was
+		// written for Hollowmere and was almost entirely its tribes; those cards are retired, so
+		// the order now follows what CSC, CMB and Legacy actually print — Goblin and Elf are the
+		// two real tribal decks in this pool and Human is the most common subtype by a distance.
+		"Goblin",
+		"Elf",
+		"Dragon",
+		"Angel",
+		"Demon",
 		"Zombie",
 		"Vampire",
 		"Spirit",
-		"Werewolf",
-		"Angel",
-		"Demon",
 		"Horror",
+		"Elemental",
+		"Werewolf",
+		"Cat",
+		"Merfolk",
+		"Giant",
+		"Beast",
 		"Insect",
 		"Human",
+		// Classes last: a Goblin Wizard is read as a Goblin.
 		"Wizard",
+		"Shaman",
+		"Druid",
+		"Knight",
 		"Cleric",
 		"Soldier",
+		"Warrior",
+		"Berserker",
 		"Rogue",
+		"Scout",
 	};
 
 	private static readonly Dictionary<string, Color> TribeColors =
@@ -61,23 +98,73 @@ public static class MtgCardTheme
 			["Cleric"] = new Color(0.96f, 0.96f, 0.90f),
 			["Soldier"] = new Color(0.78f, 0.80f, 0.84f),
 			["Rogue"] = new Color(0.60f, 0.62f, 0.68f),
+			["Goblin"] = new Color(0.90f, 0.58f, 0.42f),
+			["Elf"] = new Color(0.66f, 0.86f, 0.62f),
+			["Dragon"] = new Color(0.88f, 0.52f, 0.40f),
+			["Elemental"] = new Color(0.74f, 0.84f, 0.86f),
+			["Cat"] = new Color(0.92f, 0.80f, 0.52f),
+			["Merfolk"] = new Color(0.60f, 0.84f, 0.86f),
+			["Giant"] = new Color(0.76f, 0.72f, 0.62f),
+			["Beast"] = new Color(0.80f, 0.74f, 0.52f),
+			["Shaman"] = new Color(0.78f, 0.70f, 0.90f),
+			["Druid"] = new Color(0.70f, 0.84f, 0.66f),
+			["Knight"] = new Color(0.86f, 0.86f, 0.92f),
+			["Warrior"] = new Color(0.88f, 0.74f, 0.66f),
+			["Berserker"] = new Color(0.90f, 0.66f, 0.58f),
+			["Scout"] = new Color(0.74f, 0.82f, 0.70f),
 		};
 
-	private static readonly Color CreatureFrame = new(1.00f, 0.94f, 0.82f);
-	private static readonly Color SpellFrame = new(0.78f, 0.86f, 1.00f);
-	private static readonly Color LandFrame = new(0.86f, 0.76f, 0.60f);
-	private static readonly Color ArtifactFrame = new(0.84f, 0.88f, 0.92f);
+	/// <summary>
+	/// Frame tint by COLOUR. Light throughout — see the type remarks on SelfModulate.
+	///
+	/// Black is a violet-grey rather than black, and white is a cream rather than white, for the
+	/// same reason: one would multiply the frame art into mud and the other would not read as a
+	/// tint at all.
+	/// </summary>
+	private static readonly Color WhiteFrame = new(0.99f, 0.97f, 0.88f);
+	private static readonly Color BlueFrame = new(0.66f, 0.81f, 0.96f);
+	private static readonly Color BlackFrame = new(0.70f, 0.68f, 0.75f);
+	private static readonly Color RedFrame = new(0.97f, 0.71f, 0.63f);
+	private static readonly Color GreenFrame = new(0.71f, 0.88f, 0.70f);
 
-	/// <summary>Frame tint by card type. Every card matches exactly one branch.</summary>
+	/// Two or more colours. One gold frame rather than a blend: a blend of blue and red is a
+	/// muddy purple that reads as a third colour rather than as "this needs both".
+	private static readonly Color GoldFrame = new(0.96f, 0.87f, 0.58f);
+
+	private static readonly Color LandFrame = new(0.86f, 0.76f, 0.60f);
+	private static readonly Color ColorlessFrame = new(0.84f, 0.88f, 0.92f);
+
+	/// <summary>
+	/// Frame tint by the card's colour. Every card matches exactly one branch.
+	///
+	/// Order matters. Lands are checked FIRST because a land's colour is what it produces, not
+	/// what it costs — it has no pips at all, and letting it fall through to colourless would put
+	/// every land in the artifact frame. Pips are then checked BEFORE the artifact subtype, so a
+	/// coloured artifact (Ancestral Blade is {1}{W}) takes its colour rather than grey, which is
+	/// what the real card does too.
+	/// </summary>
 	public static Color FrameColor(Card card)
 	{
 		if (card.HasSubtype("Land"))
 			return LandFrame;
-		if (card.HasSubtype("Artifact"))
-			return ArtifactFrame;
-		if (card.HasComponent<CreatureComponent>())
-			return CreatureFrame;
-		return SpellFrame;
+
+		var pips = card.ColorPips;
+		if (pips.IsEmpty)
+			return ColorlessFrame;
+
+		var colors = ManaPool.Colors.Where(c => pips[c] > 0).ToList();
+		if (colors.Count > 1)
+			return GoldFrame;
+
+		return colors[0] switch
+		{
+			ManaColor.White => WhiteFrame,
+			ManaColor.Blue => BlueFrame,
+			ManaColor.Black => BlackFrame,
+			ManaColor.Red => RedFrame,
+			ManaColor.Green => GreenFrame,
+			_ => ColorlessFrame,
+		};
 	}
 
 	/// <summary>
