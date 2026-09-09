@@ -18,6 +18,13 @@ namespace MtgSimulator;
 /// same reason recorded there: **a model must be seeded by something card-agnostic, or it
 /// measures the picker rather than the card.**
 ///
+/// **"Uniformly" now means uniformly WITHIN A COLOUR IDENTITY, and that change was forced.** A
+/// deck sampled across the whole pool is a five-colour pile whose manabase gives about five
+/// sources per colour, so a double-pip card reads as unplayable however strong it is. Sampling
+/// without an identity would therefore deflate every committed card in the format — the failure
+/// `ConstructedValuesStore` documents, arrived at from a different direction. The control is still
+/// card-agnostic; it has simply stopped assuming a manabase no real deck would play.
+///
 /// **Card coverage is excellent and pair coverage is not**, and that is arithmetic rather than
 /// a tuning problem: a 60-card deck holds ~15 distinct cards, which is 105 pairs out of the
 /// ~83 000 a 408-card pool can form. Cards get hundreds of games each in minutes; pairs need
@@ -47,14 +54,25 @@ public static class PreSimulation
 	/// every card in every deck, so the only thing that varies is the count and "does this card
 	/// belong here" has no control group to be answered against.
 	/// </param>
+	/// <param name="identity">
+	/// Restricts sampling to cards this identity can cast. Null keeps the old five-colour-pile
+	/// behaviour, which is only correct for a colourless pool — see <see cref="ColorIdentity"/>
+	/// for why an unrestricted random deck stopped being a neutral control.
+	/// </param>
 	public static Decklist RandomDeck(
 		string name,
 		IReadOnlyList<Card> spells,
 		Random rng,
 		int? fixedLands = null,
-		int? copiesPerCard = null
+		int? copiesPerCard = null,
+		ColorIdentity? identity = null
 	)
 	{
+		if (identity != null)
+			spells = identity.Playable(spells);
+		if (spells.Count == 0)
+			return Decklist.Empty(name);
+
 		var lands =
 			fixedLands ?? Decklist.MinLands + rng.Next(Decklist.MaxLands - Decklist.MinLands + 1);
 		var deck = Decklist.Empty(name) with { Lands = lands };
@@ -96,18 +114,52 @@ public static class PreSimulation
 		int aiDepth,
 		int? fixedLands = null,
 		int? copiesPerCard = null,
-		string label = "Pre-simulation"
+		string label = "Pre-simulation",
+		IReadOnlyList<ColorIdentity>? identities = null
 	)
 	{
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
 		var index = ConstructedGameSetup.PoolIndex(spells);
 
 		var rng = new Random(seed);
-		var decks = Enumerable
+
+		// Identities are dealt round-robin rather than sampled, so a run of any length covers them
+		// evenly instead of leaving one under-measured by chance.
+		var built = Enumerable
 			.Range(0, deckCount)
-			.Select(i => RandomDeck($"R{i}", spells, rng, fixedLands, copiesPerCard))
-			.Where(d => d.IsValid)
+			.Select(i =>
+			{
+				var identity = identities is { Count: > 0 }
+					? identities[i % identities.Count]
+					: null;
+				var name = identity == null ? $"R{i}" : $"R{i}-{identity.Code}";
+				return (
+					Identity: identity,
+					Deck: RandomDeck(name, spells, rng, fixedLands, copiesPerCard, identity)
+				);
+			})
+			.Where(d => d.Deck.IsValid)
 			.ToList();
+
+		var decks = built.Select(d => d.Deck).ToList();
+
+		if (identities is { Count: > 0 })
+		{
+			var covered = built
+				.Where(d => d.Identity != null)
+				.GroupBy(d => d.Identity!.Code)
+				.OrderBy(g => g.Count())
+				.ToList();
+			var thinnest = covered.FirstOrDefault();
+			Console.WriteLine(
+				$"  {label}: {covered.Count}/{identities.Count} identities represented"
+					+ (
+						thinnest == null
+							? ""
+							: $", thinnest {thinnest.Key} with {thinnest.Count()} decks"
+					)
+			);
+		}
 
 		var schedule = new List<ScheduledGame>();
 		var gameIndex = 0;
@@ -126,7 +178,11 @@ public static class PreSimulation
 
 		Console.WriteLine(
 			$"  {label}: {decks.Count} random decks, {schedule.Count} games "
-				+ $"(uniform sampling — measures the pool, not a picker)..."
+				+ (
+					identities is { Count: > 0 }
+						? "(random WITHIN a colour identity — measures the pool, not a picker)..."
+						: "(uniform sampling — measures the pool, not a picker)..."
+				)
 		);
 
 		var results = new GameResult[schedule.Count];

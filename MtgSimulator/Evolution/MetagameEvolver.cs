@@ -412,6 +412,11 @@ public sealed class MetagameEvolver
 
 		// Measure the pool with random decks before any selection pressure exists, so a card's
 		// starting value does not depend on whether it happened to be picked up early.
+		//
+		// Each random deck is seeded with a COLOUR IDENTITY and sampled only from cards that
+		// identity can cast. Without it a random deck is a five-colour pile whose manabase cannot
+		// cast a double pip, and every committed card in the format would measure deflated — the
+		// failure ConstructedValuesStore documents, reached from a different direction.
 		var presim = DraftTrainingData.Empty;
 		if (_preSimDecks > 0)
 		{
@@ -420,7 +425,8 @@ public sealed class MetagameEvolver
 				_preSimDecks,
 				_preSimOpponents,
 				_seed + 3_000_000,
-				_aiDepth
+				_aiDepth,
+				identities: ColorIdentity.Standard
 			);
 			values = new ConstructedValues(
 				DraftTrainingData.Merge(values.Data, presim),

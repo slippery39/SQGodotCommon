@@ -144,6 +144,20 @@ land-drop or deck-size rules ever change.
 - **`MtgGameFactory.CreateForTesting` grants 99 of every colour.** A test about a mechanic should
   not fail on colour; a test about colour zeroes it explicitly (see `ManaColorTests`).
 
+**Presim random decks are seeded to a COLOUR IDENTITY** (`ColorIdentity`, 5 mono + 10 pairs) and
+sample only cards that identity can cast. This is not a refinement — it repairs a bias colour
+introduced. A deck sampled across the whole pool is a five-colour pile: measured on CSC it plays
+**4.8 colours and gives a card 5.8 sources of its own colour**, against **1.7 and 16.2** when
+scoped. Against the table above that is a double pip castable on curve ~23% of the time versus
+~86%, and 29% of a random deck's coloured cards are double-pipped. Unscoped, the presim would
+deflate every committed card in the format — precisely the failure `ConstructedValuesStore`
+documents, reached from a different direction, and its note that *"deflation makes an archetype
+unbuildable"* is what makes it serious rather than cosmetic.
+
+So **"neutral" now means random WITHIN a manabase that can cast the card**, not random across the
+pool. Three-colour identities are deliberately excluded from the pooled table: their manabases fail
+often enough that the games would measure the mana rather than the card.
+
 **Assignment status: every live set is assigned and verified** — CSC (`CoresetCubeColorTests`),
 LEG and CMB (`LegacyAndComboColorTests`). HLM was retired rather than coloured.
 
