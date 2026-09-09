@@ -7,7 +7,7 @@ const int BaseDelayMs = 200;
 const int MaxRetries = 4;
 
 // Usage: MtgArtScraper [outputPath] [setCode]
-// The set defaults to Legacy so the original invocation is unchanged. Pass HLM for Hollowmere.
+// The set defaults to Legacy so the original invocation is unchanged. Pass CSC for the cube.
 var outputPath =
 	args.Length > 0 ? args[0] : Path.Combine(Directory.GetCurrentDirectory(), "card_art");
 Directory.CreateDirectory(outputPath);

@@ -3,7 +3,7 @@ using MtgCore;
 namespace MtgSimulator;
 
 /// <summary>
-/// **Hand-built reference decks for the DESIGNED pool (HLM + CSC + CMB).**
+/// **Hand-built reference decks for the DESIGNED pool (CSC + CMB).**
 ///
 /// `Gauntlet` existed but returned nothing for DES: every `DeckRegistry` deck is built from Legacy
 /// cards, and DES is defined as every set EXCEPT Legacy. So the one absolute yardstick mode 6 has
@@ -70,8 +70,11 @@ public static class DesignedGauntletDecks
 			(4, "Preordain"),
 			(4, "Opt"),
 			(4, "Lightning Bolt"),
-			(4, "Snuff the Lantern"),
-			(4, "Scavenging Ooze"),
+			// Was Snuff the Lantern (HLM, retired) and Scavenging Ooze. Incinerate keeps the burn
+			// shell's removal at the same slot; the Ooze went because it was GREEN in a blue-red
+			// deck — free while the engine had no colours, a third of a manabase once it did.
+			(4, "Incinerate"),
+			(4, "Mana Leak"),
 			(3, "Barrin, Tolarian Archmage")
 		);
 
@@ -118,13 +121,18 @@ public static class DesignedGauntletDecks
 			(4, "Raise the Sunken"),
 			(4, "Ponder"),
 			(4, "Preordain"),
-			(4, "Faithless Looting"),
-			(4, "Drowned Acolyte"),
-			(4, "Drown in the Mere"),
-			(4, "Consult the Drowned"),
+			// Five HLM slots rebuilt from CSC when that set was retired, keeping each slot's JOB:
+			// Faithless Looting -> Merfolk Looter (the discard outlet, now repeatable),
+			// Drowned Acolyte -> Gravedigger (a body that also rebuys a target),
+			// Drown in the Mere -> Doom Blade (the removal), Consult the Drowned -> Rain of
+			// Revelation and Corpse Harvest -> Read the Bones (the digging).
+			(4, "Merfolk Looter"),
+			(4, "Gravedigger"),
+			(4, "Doom Blade"),
+			(4, "Rain of Revelation"),
 			(4, "Aurex, the Sevenfold"),
 			(4, "Sunken Colossus"),
-			(3, "Corpse Harvest")
+			(3, "Read the Bones")
 		);
 
 	/// <summary>

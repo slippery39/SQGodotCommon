@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace SQGodotCommon.Tests;
 
 /// <summary>
-/// The Core Set Cube's counterpart to HollowmereRulesTextTests.
+/// The Core Set Cube's rules-text sweep. (Hollowmere had a counterpart; that set is retired.)
 ///
 /// A pack is READ, not glanced at. `MtgCardMapper.GetRulesText` silently omits any mechanic it
 /// does not know — invisible in a screenshot, but it makes the card undraftable. This set added
@@ -293,7 +293,7 @@ public class CoresetCubeRulesTextTests
 	/// The rules box shrinks to fit and then clips at a 14pt readability floor. A clipped card is
 	/// not visibly broken in a screenshot — it just quietly stops telling you what it does.
 	///
-	/// The budget is looser than Hollowmere's six lines: this set's cards genuinely have more
+	/// The budget is looser than the six lines an earlier set used: this set's cards genuinely have more
 	/// text (planeswalkers carry three abilities), and the trap wording is deliberately explicit
 	/// because the mechanic is unfamiliar.
 	/// </summary>
@@ -793,7 +793,7 @@ public class CoresetCubeRulesTextTests
 				"it is a */4 — only its power scales"
 			);
 			// The unfiltered case must be unchanged. Asserted against the component directly rather
-			// than a card, because the Tarmogoyf-shaped cards live in Hollowmere and CardLibrary —
+			// than a card, because the Tarmogoyf-shaped cards live in CardLibrary —
 			// the Core Set Cube's only user is the filtered one.
 			Assert.That(
 				MtgCardMapper.GetRulesText(

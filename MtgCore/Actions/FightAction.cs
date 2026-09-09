@@ -22,7 +22,7 @@ namespace MtgCore;
 ///
 /// SOURCE FALLBACK: on a SPELL, ContextKeys.SourceCardId is the spell card, which has no
 /// CreatureComponent — so before this fallback existed, every fight spell bailed out silently and
-/// did nothing at all. Hollowmere's Set Upon the Pack shipped in that state. When the source is
+/// did nothing at all — a fight spell shipped in that state once. When the source is
 /// not a creature the caster's strongest creature fights instead, chosen by the same picker
 /// TargetSelectionMode.Best uses so a card that buffs then fights cannot pick two different
 /// creatures.

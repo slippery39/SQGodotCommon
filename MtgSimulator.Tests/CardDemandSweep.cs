@@ -408,7 +408,7 @@ public class CardDemandSweep
 		);
 
 	/// <summary>
-	/// The combined pool is the real target — LGC + HLM + CSC as one format. Separate from the CSC
+	/// The combined pool is the real target — LGC + CSC + CMB as one format. Separate from the CSC
 	/// dump because it is the one that has to stay affordable as sets are added, and because the
 	/// cross-set demands only exist here: Atog is in LGC and every artifact it wants is in CSC, a
 	/// pair no amount of measured co-occurrence could ever have data for.

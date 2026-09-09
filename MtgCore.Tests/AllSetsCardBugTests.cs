@@ -13,7 +13,7 @@ namespace MtgCore.Tests;
 /// catches that — the per-set fixtures only assert a card reaches the battlefield.
 ///
 /// THIS ITERATES SetRegistry.All ON PURPOSE, and that is the entire point of the file. It began as
-/// CoresetCubeCardBugTests, scoped to one set, and HollowmereCardBugTests already had the same
+/// CoresetCubeCardBugTests, scoped to one set, and the retired HollowmereCardBugTests had the same
 /// user-select-in-a-trigger rule scoped to ITS set — so when the Core Set Cube reintroduced the
 /// bug, the existing test simply was not looking. A set-scoped structural fixture is worth almost
 /// nothing to the set that comes after it. Adding a new set to SetRegistry must automatically

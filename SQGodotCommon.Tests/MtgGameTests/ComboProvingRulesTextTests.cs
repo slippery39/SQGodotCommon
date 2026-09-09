@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace SQGodotCommon.Tests;
 
 /// <summary>
-/// CMB's counterpart to <c>HollowmereRulesTextTests</c> and <c>CoresetCubeRulesTextTests</c>.
+/// CMB's counterpart to <c>CoresetCubeRulesTextTests</c>.
 ///
 /// **This set is not drafted, and it still needs this.** `MtgCardMapper.GetRulesText` silently omits
 /// any mechanic it does not know, and CMB introduced four things that render — readying a creature,

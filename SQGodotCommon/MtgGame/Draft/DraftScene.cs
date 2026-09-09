@@ -22,8 +22,8 @@ public partial class DraftScene : Control
 	private const int PackCount = 3;
 
 	/// Which set this scene drafts. Change this one line to draft a different set —
-	/// SetRegistry.Default is the Legacy pool, Hollowmere.Set is the graveyard set,
-	/// CoresetCube.Set is the cube-sourced set (white + blue + black).
+	/// SetRegistry.Default is the Legacy pool and CoresetCube.Set is the cube-sourced set.
+	/// (Hollowmere was retired; a replacement designed WITH colours is the intended successor.)
 	private static readonly CardSet DraftedSet = CoresetCube.Set;
 
 	/// Derived from DraftTrainingStore.PathFor so the asset filename and the filename the
@@ -75,8 +75,11 @@ public partial class DraftScene : Control
 
 	/// <summary>
 	/// Bots use the trained model when it is available and Curve when it is not. Those are not
-	/// equivalent — on Hollowmere, Trained measures 75% against Curve's 37.5% — so the
-	/// difference is shown in the header rather than hidden.
+	/// equivalent — the gap measured 75% against Curve's 37.5% on the since-retired Hollowmere —
+	/// so the difference is shown in the header rather than hidden.
+	///
+	/// NOTE: neither picker knows about COLOUR yet. Colour commitment is the core drafting skill,
+	/// so both will happily build unplayable five-colour piles until the pickers learn it.
 	/// </summary>
 	private List<DraftPicker> BuildPickers(out string pickerName)
 	{

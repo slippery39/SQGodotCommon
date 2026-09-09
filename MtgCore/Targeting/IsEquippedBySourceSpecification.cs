@@ -14,7 +14,7 @@ namespace MtgCore;
 ///
 /// No new context key was needed: TargetingContext already carries SourceCardId, which is exactly
 /// the equipment. Without this spec the Rings collapse into five near-identical vanilla equipment,
-/// which the Hollowmere rate rule forbids.
+/// which the set rate rule forbids.
 ///
 /// Works for Auras as well as Equipment — EquipmentComponent.IsAura is the only difference between
 /// the two and it does not change where EquippedToCardId points.

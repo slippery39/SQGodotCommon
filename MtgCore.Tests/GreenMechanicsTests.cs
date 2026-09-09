@@ -557,14 +557,22 @@ public class GreenMechanicsTests
 	}
 
 	/// <summary>
-	/// Set Upon the Pack is a fight SPELL, so its SourceCardId is the spell — which has no
-	/// CreatureComponent. FightAction bailed out silently, and the card was a complete no-op at
-	/// full price for its whole shipped life.
+	/// A fight SPELL has a SourceCardId that is the spell — which has no CreatureComponent, so
+	/// FightAction used to bail out silently and the card was a complete no-op at full price.
+	/// The source fallback is what fixes it; this is the guard.
+	///
+	/// The card is built inline. It was originally Hollowmere's Set Upon the Pack, and when that
+	/// set was retired the guard would have gone with it — but the ENGINE behaviour it protects
+	/// is still live, and CSC's Primal Might and Wild Instincts both depend on it.
 	/// </summary>
 	[Test]
-	public void SetUponThePack_ActuallyFights()
+	public void AFightSpell_ActuallyFights()
 	{
-		var template = Hollowmere.Cards.First(c => c.Name == "Set Upon the Pack");
+		var template = CardFactory
+			.Sorcery("Fight Spell", manaCost: 2)
+			.WithFight()
+			.WithTarget(Single().OpponentCreatures())
+			.Build();
 
 		var (state, mine) = PutOnBattlefield(MakeCreature("Mine", 5, 5));
 		var (withTheirs, theirs) = AddToBattlefield(
