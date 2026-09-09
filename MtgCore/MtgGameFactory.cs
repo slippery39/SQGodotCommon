@@ -221,8 +221,35 @@ public static class MtgGameFactory
 		var p1 = state.GetPlayer(ids.Player1Id);
 		var p2 = state.GetPlayer(ids.Player2Id);
 
-		state = state.UpdateObject(ids.Player1Id, p1 with { CurrentMana = 99, MaxMana = 99 });
-		state = state.UpdateObject(ids.Player2Id, p2 with { CurrentMana = 99, MaxMana = 99 });
+		// 99 of EVERY COLOUR as well as 99 generic. The point of this factory is that a test
+		// need not build a manabase, and colour is part of a manabase: without this, every test
+		// casting a real set card would fail on colour rather than on the mechanic it is about.
+		// A test that IS about colour zeroes these itself — see ManaColorTests.
+		var everyColour = ManaPool.Colors.Aggregate(
+			ManaPool.Empty,
+			(pool, colour) => pool.Add(colour, 99)
+		);
+
+		state = state.UpdateObject(
+			ids.Player1Id,
+			p1 with
+			{
+				CurrentMana = 99,
+				MaxMana = 99,
+				MaxColorMana = everyColour,
+				CurrentColorMana = everyColour,
+			}
+		);
+		state = state.UpdateObject(
+			ids.Player2Id,
+			p2 with
+			{
+				CurrentMana = 99,
+				MaxMana = 99,
+				MaxColorMana = everyColour,
+				CurrentColorMana = everyColour,
+			}
+		);
 
 		return (state.WithoutDeckingLoss(), ids);
 	}

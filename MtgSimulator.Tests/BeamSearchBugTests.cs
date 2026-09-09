@@ -16,6 +16,9 @@ namespace MtgSimulator.Tests;
 [TestFixture]
 public class BeamSearchBugTests
 {
+	private static ManaPool EveryColour(int amount) =>
+		ManaPool.Colors.Aggregate(ManaPool.Empty, (pool, c) => pool.Add(c, amount));
+
 	private GameState _state;
 	private MtgGameIds _ids;
 	private BeamSearchAiStrategy _ai;
@@ -47,7 +50,18 @@ public class BeamSearchBugTests
 	public void FastMana_WithNoPayoffInHand_EndsTurnInsteadOfPlayingFastMana()
 	{
 		var p1 = _state.GetPlayer(_ids.Player1Id);
-		_state = _state.UpdateObject(_ids.Player1Id, p1 with { MaxMana = 3, CurrentMana = 3 });
+		_state = _state.UpdateObject(
+			_ids.Player1Id,
+			p1 with
+			{
+				MaxMana = 3,
+				CurrentMana = 3,
+				// Every colour at the same depth: these fixtures are about what the AI
+				// CHOOSES, so a colour it happens to lack must never be the reason.
+				MaxColorMana = EveryColour(3),
+				CurrentColorMana = EveryColour(3),
+			}
+		);
 
 		// Opponent has a card in library so they draw after EndTurn — creates score tie
 		var libraryFiller = CardLibrary.GrizzlyBears() with
@@ -87,7 +101,18 @@ public class BeamSearchBugTests
 	public void FastMana_WithPayoffInHand_PlaysFastManaThenPayoff()
 	{
 		var p1 = _state.GetPlayer(_ids.Player1Id);
-		_state = _state.UpdateObject(_ids.Player1Id, p1 with { MaxMana = 1, CurrentMana = 1 });
+		_state = _state.UpdateObject(
+			_ids.Player1Id,
+			p1 with
+			{
+				MaxMana = 1,
+				CurrentMana = 1,
+				// Every colour at the same depth: these fixtures are about what the AI
+				// CHOOSES, so a colour it happens to lack must never be the reason.
+				MaxColorMana = EveryColour(1),
+				CurrentColorMana = EveryColour(1),
+			}
+		);
 
 		var lotusBoom = CardLibrary.LotusBoom() with
 		{

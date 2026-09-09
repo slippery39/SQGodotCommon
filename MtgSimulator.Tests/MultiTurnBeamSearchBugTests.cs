@@ -13,6 +13,9 @@ namespace MtgSimulator.Tests;
 [TestFixture]
 public class MultiTurnBeamSearchBugTests
 {
+	private static ManaPool EveryColour(int amount) =>
+		ManaPool.Colors.Aggregate(ManaPool.Empty, (pool, c) => pool.Add(c, amount));
+
 	private GameState _state;
 	private MtgGameIds _ids;
 	private MultiTurnBeamSearchAiStrategy _ai;
@@ -69,11 +72,33 @@ public class MultiTurnBeamSearchBugTests
 	{
 		// Player 1 (AI): exactly enough mana for Tarmogoyf (2)
 		var p1 = _state.GetPlayer(_ids.Player1Id);
-		_state = _state.UpdateObject(_ids.Player1Id, p1 with { MaxMana = 2, CurrentMana = 2 });
+		_state = _state.UpdateObject(
+			_ids.Player1Id,
+			p1 with
+			{
+				MaxMana = 2,
+				CurrentMana = 2,
+				// Every colour at the same depth: this fixture is about what the AI
+				// CHOOSES, so a colour it happens to lack must never be the reason.
+				MaxColorMana = EveryColour(2),
+				CurrentColorMana = EveryColour(2),
+			}
+		);
 
 		// Player 2 (opponent): enough mana to cast Doom Blade (2) on their simulated turn
 		var p2 = _state.GetPlayer(_ids.Player2Id);
-		_state = _state.UpdateObject(_ids.Player2Id, p2 with { MaxMana = 2, CurrentMana = 2 });
+		_state = _state.UpdateObject(
+			_ids.Player2Id,
+			p2 with
+			{
+				MaxMana = 2,
+				CurrentMana = 2,
+				// Every colour at the same depth: this fixture is about what the AI
+				// CHOOSES, so a colour it happens to lack must never be the reason.
+				MaxColorMana = EveryColour(2),
+				CurrentColorMana = EveryColour(2),
+			}
+		);
 
 		// Populate Player 1's graveyard so Tarmogoyf is clearly worth deploying (10/11)
 		for (var i = 0; i < 10; i++)
@@ -257,7 +282,18 @@ public class MultiTurnBeamSearchBugTests
 	{
 		// Player 1 (AI): enough mana for Tarmogoyf, empty graveyard so it's a 0/1
 		var p1 = _state.GetPlayer(_ids.Player1Id);
-		_state = _state.UpdateObject(_ids.Player1Id, p1 with { MaxMana = 2, CurrentMana = 2 });
+		_state = _state.UpdateObject(
+			_ids.Player1Id,
+			p1 with
+			{
+				MaxMana = 2,
+				CurrentMana = 2,
+				// Every colour at the same depth: this fixture is about what the AI
+				// CHOOSES, so a colour it happens to lack must never be the reason.
+				MaxColorMana = EveryColour(2),
+				CurrentColorMana = EveryColour(2),
+			}
+		);
 
 		var tarmogoyf = CardLibrary.Tarmogoyf() with
 		{

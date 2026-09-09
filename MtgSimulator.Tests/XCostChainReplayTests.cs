@@ -91,6 +91,9 @@ public class XCostChainReplayTests
 			{
 				CurrentMana = 6,
 				MaxMana = 6,
+				// The Hydra is GG; this fixture is about X, not about colour.
+				MaxColorMana = new ManaPool { Green = 6 },
+				CurrentColorMana = new ManaPool { Green = 6 },
 			}
 		);
 

@@ -124,9 +124,9 @@ public sealed record Decklist(string Name, ImmutableSortedDictionary<string, int
 		}
 
 		// Pad to DeckSize rather than adding exactly Lands, so a deck referencing a card the
-		// pool lacks still plays 60. Same padding idiom as Draft.BuildDeck.
-		while (deck.Count < DeckSize)
-			deck.Add(CardLibrary.Plains() with { OwnerId = ownerId, ControllerId = ownerId });
+		// pool lacks still plays 60. Same padding idiom as Draft.BuildDeck — and, like it, the
+		// padding is coloured to match the spells that made it in.
+		deck.AddRange(ManaBase.Build(deck, DeckSize - deck.Count, ownerId));
 
 		return deck;
 	}

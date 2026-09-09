@@ -287,6 +287,9 @@ public class GreenLowWinRateAuditTests
 			{
 				MaxMana = 6,
 				CurrentMana = 6,
+				// Green sources to match — this fixture is about X, not about colour.
+				MaxColorMana = new ManaPool { Green = 6 },
+				CurrentColorMana = new ManaPool { Green = 6 },
 			}
 		);
 
@@ -328,6 +331,8 @@ public class GreenLowWinRateAuditTests
 			{
 				MaxMana = 4,
 				CurrentMana = 4,
+				MaxColorMana = new ManaPool { Green = 4 },
+				CurrentColorMana = new ManaPool { Green = 4 },
 			}
 		);
 

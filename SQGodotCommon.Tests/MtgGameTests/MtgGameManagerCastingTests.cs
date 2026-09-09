@@ -21,6 +21,9 @@ namespace SQGodotCommon.Tests;
 [TestFixture]
 public class MtgGameManagerCastingTests
 {
+	private static ManaPool EveryColour(int amount) =>
+		ManaPool.Colors.Aggregate(ManaPool.Empty, (pool, c) => pool.Add(c, amount));
+
 	private static MtgGameManager ManagerWith(params string[] cardNames)
 	{
 		var cards = cardNames.Select(n => CoresetCube.Cards.Single(c => c.Name == n)).ToList();
@@ -60,6 +63,10 @@ public class MtgGameManagerCastingTests
 			{
 				CurrentMana = 20,
 				MaxMana = 20,
+				// Every colour too: these fixtures are about the manager's casting API, so a
+				// colour the hand happens to lack must never be why a cast is refused.
+				MaxColorMana = EveryColour(20),
+				CurrentColorMana = EveryColour(20),
 			}
 		);
 
@@ -221,6 +228,10 @@ public class MtgGameManagerCastingTests
 			{
 				CurrentMana = 20,
 				MaxMana = 20,
+				// Every colour too: these fixtures are about the manager's casting API, so a
+				// colour the hand happens to lack must never be why a cast is refused.
+				MaxColorMana = EveryColour(20),
+				CurrentColorMana = EveryColour(20),
 			}
 		);
 		manager.DebugSetState(state);

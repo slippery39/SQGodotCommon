@@ -433,10 +433,9 @@ public static class CardPool
 		var nonLands = pool.Where(c => !c.HasSubtype("Land"))
 			.OrderBy(_ => rng.Next())
 			.Take(nonLandCount)
-			.Select(template => template with { OwnerId = ownerId, ControllerId = ownerId });
-		var lands = Enumerable
-			.Range(0, landCount)
-			.Select(_ => CardLibrary.Plains() with { OwnerId = ownerId, ControllerId = ownerId });
+			.Select(template => template with { OwnerId = ownerId, ControllerId = ownerId })
+			.ToList();
+		var lands = ManaBase.Build(nonLands, landCount, ownerId);
 		return nonLands.Concat(lands).ToList();
 	}
 

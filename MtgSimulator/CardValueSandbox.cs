@@ -567,7 +567,25 @@ public static class CardValueSandbox
 		foreach (var (pid, lib, battlefield) in seats)
 		{
 			var player = state.GetPlayer(pid);
-			state = state.UpdateObject(pid, player with { MaxMana = mana, CurrentMana = mana });
+
+			// Colour is granted in EVERY colour, at the same depth as the generic mana. The
+			// sandbox measures a card, not a manabase: a table that handed out generic mana only
+			// would score every coloured card as uncastable and quietly rewrite the value tables
+			// as a report about colour screw.
+			var everyColour = ManaPool.Colors.Aggregate(
+				ManaPool.Empty,
+				(pool, colour) => pool.Add(colour, mana)
+			);
+			state = state.UpdateObject(
+				pid,
+				player with
+				{
+					MaxMana = mana,
+					CurrentMana = mana,
+					MaxColorMana = everyColour,
+					CurrentColorMana = everyColour,
+				}
+			);
 
 			// Library filler: turns draw, and a decking loss would swamp the signal.
 			for (var i = 0; i < LibraryFiller; i++)

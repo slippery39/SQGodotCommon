@@ -222,9 +222,7 @@ public static class Draft
 			.Take(maxSpells)
 			.Select(template => template with { OwnerId = ownerId, ControllerId = ownerId })
 			.ToList();
-		var lands = Enumerable
-			.Range(0, Math.Max(0, deckSize - spells.Count))
-			.Select(_ => CardLibrary.Plains() with { OwnerId = ownerId, ControllerId = ownerId });
+		var lands = ManaBase.Build(spells, Math.Max(0, deckSize - spells.Count), ownerId);
 		return spells.Concat(lands).ToList();
 	}
 }

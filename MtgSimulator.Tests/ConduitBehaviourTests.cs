@@ -41,7 +41,21 @@ public class ConduitBehaviourTests
 		state = state.WithoutDeckingLoss();
 
 		var p1 = state.GetPlayer(ids.Player1Id);
-		state = state.UpdateObject(ids.Player1Id, p1 with { CurrentMana = mana, MaxMana = mana });
+		// Every colour at the same depth — this fixture is about the Conduit, not about mana.
+		var everyColour = ManaPool.Colors.Aggregate(
+			ManaPool.Empty,
+			(pool, colour) => pool.Add(colour, mana)
+		);
+		state = state.UpdateObject(
+			ids.Player1Id,
+			p1 with
+			{
+				CurrentMana = mana,
+				MaxMana = mana,
+				MaxColorMana = everyColour,
+				CurrentColorMana = everyColour,
+			}
+		);
 
 		var conduitId = 0;
 		foreach (

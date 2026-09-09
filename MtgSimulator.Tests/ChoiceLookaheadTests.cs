@@ -15,6 +15,9 @@ namespace MtgSimulator.Tests;
 [TestFixture]
 public class ChoiceLookaheadTests
 {
+	private static ManaPool EveryColour(int amount) =>
+		ManaPool.Colors.Aggregate(ManaPool.Empty, (pool, c) => pool.Add(c, amount));
+
 	private GameState _state;
 	private MtgGameIds _ids;
 	private BeamSearchAiStrategy _ai;
@@ -42,7 +45,18 @@ public class ChoiceLookaheadTests
 	{
 		// 2 mana: 1 for Careful Study, 1 left over for Reanimate
 		var p1 = _state.GetPlayer(_ids.Player1Id);
-		_state = _state.UpdateObject(_ids.Player1Id, p1 with { MaxMana = 2, CurrentMana = 2 });
+		_state = _state.UpdateObject(
+			_ids.Player1Id,
+			p1 with
+			{
+				MaxMana = 2,
+				CurrentMana = 2,
+				// Every colour at the same depth: these fixtures are about what the AI
+				// CHOOSES, so a colour it happens to lack must never be the reason.
+				MaxColorMana = EveryColour(2),
+				CurrentColorMana = EveryColour(2),
+			}
+		);
 
 		// BigCreature (5/5, cost 5) is in hand — too expensive to cast, but a great Reanimate target
 		// Reanimate has no valid target yet (graveyard empty), so it cannot be cast first
@@ -167,7 +181,18 @@ public class ChoiceLookaheadTests
 	{
 		// 1 mana: just enough to cast Faithless Looting
 		var p1 = _state.GetPlayer(_ids.Player1Id);
-		_state = _state.UpdateObject(_ids.Player1Id, p1 with { MaxMana = 1, CurrentMana = 1 });
+		_state = _state.UpdateObject(
+			_ids.Player1Id,
+			p1 with
+			{
+				MaxMana = 1,
+				CurrentMana = 1,
+				// Every colour at the same depth: these fixtures are about what the AI
+				// CHOOSES, so a colour it happens to lack must never be the reason.
+				MaxColorMana = EveryColour(1),
+				CurrentColorMana = EveryColour(1),
+			}
+		);
 
 		// Hand: Faithless Looting + Bloodghast — no Plains in hand so land-first override won't fire
 		var faithlessLooting = CardLibrary.GetByName("Faithless Looting") with
@@ -248,7 +273,18 @@ public class ChoiceLookaheadTests
 	{
 		// 3 mana: 1 for Sleight of Hand, 2 remaining to cast Grizzly Bears
 		var p1 = _state.GetPlayer(_ids.Player1Id);
-		_state = _state.UpdateObject(_ids.Player1Id, p1 with { MaxMana = 3, CurrentMana = 3 });
+		_state = _state.UpdateObject(
+			_ids.Player1Id,
+			p1 with
+			{
+				MaxMana = 3,
+				CurrentMana = 3,
+				// Every colour at the same depth: these fixtures are about what the AI
+				// CHOOSES, so a colour it happens to lack must never be the reason.
+				MaxColorMana = EveryColour(3),
+				CurrentColorMana = EveryColour(3),
+			}
+		);
 
 		// Hand: only Sleight of Hand
 		var sleightOfHand = CardLibrary.SleightOfHand() with
@@ -302,7 +338,18 @@ public class ChoiceLookaheadTests
 	{
 		// 2 mana: 1 for Faithless Looting, 1 left for Path to Exile
 		var p1 = _state.GetPlayer(_ids.Player1Id);
-		_state = _state.UpdateObject(_ids.Player1Id, p1 with { MaxMana = 2, CurrentMana = 2 });
+		_state = _state.UpdateObject(
+			_ids.Player1Id,
+			p1 with
+			{
+				MaxMana = 2,
+				CurrentMana = 2,
+				// Every colour at the same depth: these fixtures are about what the AI
+				// CHOOSES, so a colour it happens to lack must never be the reason.
+				MaxColorMana = EveryColour(2),
+				CurrentColorMana = EveryColour(2),
+			}
+		);
 
 		// P2 battlefield: 10/10 — lethal threat, clearable by Path to Exile
 		var bigThreat = new Card
