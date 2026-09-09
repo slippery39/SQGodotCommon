@@ -22,18 +22,32 @@ namespace MtgSimulator;
 public sealed class IdentityValues
 {
 	/// <summary>
-	/// Shrinkage for a (card, identity) cell, in games.
+	/// Shrinkage for a (card, identity) cell, in games. **Calibrated against a measured run rather
+	/// than chosen by analogy** — `PresimCalibrationHarness` produced these from 300
+	/// identity-scoped decks over CSC (1 800 games, 404 cards, 1 995 cells):
 	///
-	/// **Provisional and deliberately equal to <see cref="ConstructedValues.CardShrinkK"/> until a
-	/// real run reports the distribution to calibrate it against.** Setting a games constant by
-	/// analogy is precisely how `MinPairGames` came to be 200 against a busiest-pair of 166,
-	/// silently disabling every synergy path while the tests passed. `PreSimulation.Run` now prints
-	/// the median and p10 games-per-cell for exactly this purpose — read it, then set this.
+	/// | | p10 | p25 | median | p75 | p90 | max |
+	/// |---|---|---|---|---|---|---|
+	/// | games per cell | 9 | 15 | **24** | 36 | 50 | 125 |
 	///
-	/// It should almost certainly end up HIGHER than the pooled constant, not equal: a cell holds a
-	/// fraction of a card's games, so it needs proportionally more shrinkage to say the same thing.
+	/// A cell's own evidence carries weight `games / (games + k)`, so k IS the number of games at
+	/// which a cell is believed halfway. At the pooled constant of 25 the MEDIAN cell would carry
+	/// 49% — half its rating decided by 24 games, whose standard error is about ten percentage
+	/// points. That is noise speaking confidently, which is the direction that made merging the
+	/// evolved table so damaging.
+	///
+	/// | k | p10 (9) | median (24) | p90 (50) | three runs (72) |
+	/// |---|---|---|---|---|
+	/// | 25 | 26% | 49% | 67% | 74% |
+	/// | **75** | **11%** | **24%** | **40%** | **49%** |
+	///
+	/// **The table accumulates across runs, which is what makes a high constant safe rather than
+	/// merely timid.** At ~24 games per cell per run, three runs reach the halfway point and the
+	/// identity signal earns its weight instead of being handed it. What it shrinks toward is the
+	/// card's own pooled rate — an unusually good prior, being the same card — so demanding real
+	/// evidence before departing from it costs little.
 	/// </summary>
-	public const int IdentityShrinkK = 25;
+	public const int IdentityShrinkK = 75;
 
 	private readonly IReadOnlyDictionary<string, DraftTrainingData> _data;
 	private readonly Dictionary<string, Dictionary<string, CardStat>> _cards;

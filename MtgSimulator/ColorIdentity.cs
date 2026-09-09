@@ -63,12 +63,26 @@ public sealed record ColorIdentity(string Code, ImmutableArray<ManaColor> Colors
 	/// <summary>
 	/// Every card in <paramref name="pool"/> this identity can cast.
 	///
-	/// ponytail: exposure is uneven and it is arithmetic, not a bug. A colourless card is legal in
-	/// all 15 identities, a mono-colour card in 5 (its own plus its four pairs), and a GOLD card in
-	/// exactly 1 — so with decks split evenly, gold cards accumulate about a fifteenth of the games
-	/// a colourless card does and shrinkage will hold them at the prior forever. The fix is to
-	/// allocate more decks to pair identities than to mono ones; do it once a run has measured the
-	/// games-per-card spread, rather than guessing the ratio now.
+	/// Exposure is uneven by arithmetic: a colourless card is legal in all 15 identities, a
+	/// mono-colour card in 5 (its own plus its four pairs), and a GOLD card in exactly 1. Measured
+	/// over 300 identity-scoped decks on CSC:
+	///
+	/// | kind | cards | cells | median games per CARD | median games per CELL |
+	/// |---|---|---|---|---|
+	/// | colourless | 43 | 558 | 370 | 26 |
+	/// | mono | 335 | 1 411 | 112 | 23 |
+	/// | gold | 26 | 26 | **27** | **27** |
+	///
+	/// **This hurts the POOLED table, not the identity one — the opposite of what was predicted
+	/// here before it was measured.** A gold card's single cell is as well sampled as anybody's, 27
+	/// games against a median of 24, because all of its games land in one place. What it lacks is
+	/// TOTAL games: 27 against mono's 112 and colourless's 370, so its POOLED rating rests on about
+	/// a quarter of a mono card's evidence and a fourteenth of a colourless card's.
+	///
+	/// ponytail: the fix is to allocate more presim decks to pair identities than to mono ones.
+	/// Deferred because the pooled rate shrinks toward the draft prior anyway, so the failure mode
+	/// is a gold card reading unremarkable rather than wrong — worth doing before gold cards are
+	/// expected to compete, not before the first run.
 	/// </summary>
 	public IReadOnlyList<Card> Playable(IReadOnlyList<Card> pool) => [.. pool.Where(Allows)];
 }

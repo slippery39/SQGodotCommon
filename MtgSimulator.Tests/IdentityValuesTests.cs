@@ -109,6 +109,29 @@ public class IdentityValuesTests
 		Assert.That(values.CardDelta("Split", "U"), Is.LessThan(values.CardDelta("Split")));
 	}
 
+	/// <summary>
+	/// The calibration, pinned. A MEASURED run over CSC put the median cell at 24 games, p10 at 9
+	/// and p90 at 50, and `IdentityShrinkK` is 75 so a median cell speaks at about a quarter volume
+	/// rather than the half it would get at the pooled constant of 25.
+	///
+	/// Lower the constant and these move together, and this test says so. Half a card's rating
+	/// decided by 24 games — standard error around ten percentage points — is noise speaking
+	/// confidently, which is the direction that made merging the evolved table damaging.
+	/// </summary>
+	[TestCase(9, 0.05, 0.18, TestName = "A p10 cell is nearly ignored")]
+	[TestCase(24, 0.15, 0.35, TestName = "A median cell speaks at about a quarter volume")]
+	[TestCase(72, 0.40, 0.60, TestName = "Three runs of evidence reach roughly half")]
+	public void ACellsWeight_MatchesTheMeasuredCalibration(int games, double low, double high)
+	{
+		// A cell that wins every game pulls the rate from the pooled 0.50 toward 1.0; how far it
+		// gets IS the weight its own evidence carries.
+		var values = Table("W", ("Card", games, games));
+
+		var weight = (values.RateOf("W", "Card", pooledRate: 0.50) - 0.50) / 0.50;
+
+		Assert.That(weight, Is.InRange(low, high));
+	}
+
 	[Test]
 	public void MergingAccumulatesPerIdentity_AndKeepsIdentitiesApart()
 	{

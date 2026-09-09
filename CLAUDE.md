@@ -205,10 +205,19 @@ enter either, or the builder's own output feeds back into the values steering it
 archetype unbuildable"*). The run-scoped table is allowed to see built decks precisely because it
 is thrown away.
 
-`IdentityValues.IdentityShrinkK` is **provisional and must be calibrated**, not guessed —
-`PreSimulation.Run` prints the median and p10 games-per-(card, identity) cell for that purpose.
-Guessing a games constant by analogy is how `MinPairGames` came to be 200 against a busiest pair of
-166, silently disabling every synergy path while the tests passed.
+`IdentityValues.IdentityShrinkK` is **75, calibrated against a measured run** rather than guessed
+(`PresimCalibrationHarness`; 300 identity-scoped decks over CSC gave 1 995 cells at p10 9, median
+**24**, p90 50 games). A cell's evidence carries `games / (games + k)`, so at the pooled constant of
+25 a median cell would carry 49% — half a rating decided by 24 games, whose standard error is ~10pp.
+At 75 it carries 24%, and reaches half only around 75 games, which the table accrues over about
+three runs. Guessing such a constant by analogy is how `MinPairGames` came to be 200 against a
+busiest pair of 166, silently disabling every synergy path while the tests passed.
+
+**Gold cards are under-sampled in the POOLED table, not the identity one** — measured: 27 median
+games per card against mono's 112 and colourless's 370, because a gold card is legal in exactly one
+identity. Its single cell is as well sampled as anyone's (27 against a median of 24). The fix is to
+weight presim deck allocation toward pair identities; deferred, since the pooled rate shrinks toward
+the draft prior and the failure mode is "reads unremarkable" rather than "reads wrong".
 
 **Assignment status: every live set is assigned and verified** — CSC (`CoresetCubeColorTests`),
 LEG and CMB (`LegacyAndComboColorTests`). HLM was retired rather than coloured.
