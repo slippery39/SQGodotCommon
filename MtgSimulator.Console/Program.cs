@@ -228,9 +228,12 @@ else if (mode == 6)
 {
 	var evolveSet = ReadSet(includeCombined: true);
 
-	Console.Write("How many decks in the metagame? (default 8): ");
+	// 16 = the fifteen colour identities plus one unconstrained wildcard, matching
+	// DeckBuilder.IdentityForSlot. Fewer slots simply leaves the tail of the identity list
+	// uncovered, so the field stops being a colour-pair tier list.
+	Console.Write("How many decks in the metagame? (default 16 = 15 identities + wildcard): ");
 	var deckInput = Console.ReadLine()?.Trim() ?? "";
-	var deckCount = int.TryParse(deckInput, out var dc) && dc >= 2 ? dc : 8;
+	var deckCount = int.TryParse(deckInput, out var dc) && dc >= 2 ? dc : 16;
 
 	Console.Write("How many generations? (default 30): ");
 	var evolveGenInput = Console.ReadLine()?.Trim() ?? "";
@@ -258,9 +261,11 @@ else if (mode == 6)
 	// Raising this is the lever against a field that converges on one concentrated pool of
 	// cards. It costs accepted mutations — a mutant that improves but drifts toward another
 	// deck is rejected — so expect slower climbing on a small pool.
-	Console.Write("Minimum deck difference? (default 0.35, e.g. 0.6 for a wider field): ");
+	// Relaxed with colour slots: identity separates the field structurally now, and the old 0.35
+	// actively fought it — mono-red and red-white legitimately share most of their red cards.
+	Console.Write("Minimum deck difference? (default 0.15, e.g. 0.6 for a wider field): ");
 	var diffInput = Console.ReadLine()?.Trim() ?? "";
-	var minDifference = double.TryParse(diffInput, out var md) && md > 0 && md < 1 ? md : 0.35;
+	var minDifference = double.TryParse(diffInput, out var md) && md > 0 && md < 1 ? md : 0.15;
 
 	// A separate, LOWER floor between two engine decks. They are already held apart by their pool
 	// locks, and archetype pools overlap — every reanimation core draws on the same graveyard
