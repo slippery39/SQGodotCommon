@@ -415,10 +415,18 @@ public static class DeckBuilder
 		IReadOnlyList<Card> pool,
 		ConstructedValues values,
 		Random rng,
+		// **Required, and placed here BEFORE the optional parameters so it has to be.** It used to
+		// be optional and trailing, and twice a caller simply left it off — the evolver's cull
+		// re-seed, and SeedDistinct's own last-resort branch three lines below its correct one.
+		// Both compiled, both silently built an unconstrained deck from the whole pool, and one of
+		// them cost a 100-minute run. Omitting it is now a compile error.
+		//
+		// Pass null explicitly for a deliberately unconstrained deck — the wildcard slot, and any
+		// caller that does not care about colour.
+		ColorIdentity? identity,
 		bool wildcard = false,
 		PoolFeatures? features = null,
-		DeckProfile profile = DeckProfile.Any,
-		ColorIdentity? identity = null
+		DeckProfile profile = DeckProfile.Any
 	)
 	{
 		// **A POOL LOCK, exactly like DeckCore's, and for the reason recorded there: a budget for
@@ -1424,10 +1432,10 @@ public static class DeckBuilder
 					rng,
 					field,
 					minDifference,
+					identity,
 					wildcard,
 					features: features,
-					profile: profile,
-					identity: identity
+					profile: profile
 				)
 			);
 		}
@@ -1495,11 +1503,11 @@ public static class DeckBuilder
 		Random rng,
 		IReadOnlyList<Decklist> others,
 		double minDifference,
+		ColorIdentity? identity,
 		bool wildcard = false,
-		int attempts = 30,
 		PoolFeatures? features = null,
 		DeckProfile profile = DeckProfile.Any,
-		ColorIdentity? identity = null
+		int attempts = 30
 	)
 	{
 		Decklist? best = null;
@@ -1507,7 +1515,7 @@ public static class DeckBuilder
 
 		for (var i = 0; i < attempts; i++)
 		{
-			var candidate = Seed(name, pool, values, rng, wildcard, features, profile, identity);
+			var candidate = Seed(name, pool, values, rng, identity, wildcard, features, profile);
 			if (candidate.Validate() is not null)
 				continue;
 
@@ -1518,7 +1526,7 @@ public static class DeckBuilder
 				(best, bestGap) = (candidate, gap);
 		}
 
-		return best ?? Seed(name, pool, values, rng, wildcard, features, profile);
+		return best ?? Seed(name, pool, values, rng, identity, wildcard, features, profile);
 	}
 
 	/// Smallest difference between a deck and any of a field. 1.0 against an empty field.

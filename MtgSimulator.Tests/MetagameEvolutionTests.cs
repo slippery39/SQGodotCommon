@@ -39,7 +39,7 @@ public class MetagameEvolutionTests
 	public void Materialize_ProducesExactlySixtyCards_StampedWithTheOwner()
 	{
 		var pool = Pool();
-		var deck = DeckBuilder.Seed("D", pool, NoData(), new Random(1));
+		var deck = DeckBuilder.Seed("D", pool, NoData(), new Random(1), identity: null);
 
 		var cards = deck.Materialize(ownerId: 7, Index(pool));
 
@@ -147,8 +147,8 @@ public class MetagameEvolutionTests
 	public void Seed_IsDeterministicForAFixedSeed()
 	{
 		var pool = Pool();
-		var a = DeckBuilder.Seed("D", pool, NoData(), new Random(42));
-		var b = DeckBuilder.Seed("D", pool, NoData(), new Random(42));
+		var a = DeckBuilder.Seed("D", pool, NoData(), new Random(42), identity: null);
+		var b = DeckBuilder.Seed("D", pool, NoData(), new Random(42), identity: null);
 
 		Assert.That(Decklist.Difference(a, b), Is.EqualTo(0).Within(1e-9));
 		Assert.That(a.Lands, Is.EqualTo(b.Lands));
@@ -160,7 +160,7 @@ public class MetagameEvolutionTests
 		var pool = Pool();
 		for (var s = 0; s < 25; s++)
 		{
-			var deck = DeckBuilder.Seed("D", pool, NoData(), new Random(s));
+			var deck = DeckBuilder.Seed("D", pool, NoData(), new Random(s), identity: null);
 			Assert.That(deck.Validate(), Is.Null, $"seed {s}: {deck.Validate()}");
 		}
 	}
@@ -190,7 +190,7 @@ public class MetagameEvolutionTests
 	{
 		var pool = Pool();
 		var values = NoData();
-		var deck = DeckBuilder.Seed("D", pool, values, new Random(11));
+		var deck = DeckBuilder.Seed("D", pool, values, new Random(11), identity: null);
 		var rng = new Random(11);
 
 		var produced = 0;
@@ -218,7 +218,7 @@ public class MetagameEvolutionTests
 		// climbed, and the paired comparison then measures two unrelated decks.
 		var pool = Pool();
 		var values = NoData();
-		var deck = DeckBuilder.Seed("D", pool, values, new Random(5));
+		var deck = DeckBuilder.Seed("D", pool, values, new Random(5), identity: null);
 		var rng = new Random(5);
 
 		for (var i = 0; i < 200; i++)
@@ -1331,7 +1331,8 @@ public class MetagameEvolutionTests
 					pool,
 					NoData(),
 					new Random(seed),
-					features: on ? features : null
+					features: on ? features : null,
+					identity: null
 				);
 				var support = features.Satisfaction("Lord", deck);
 				total += deck.CopiesOf("Lord") > 0 && !double.IsNaN(support) ? support : 0;
@@ -1391,7 +1392,14 @@ public class MetagameEvolutionTests
 			{
 				var deck = concept
 					? DeckBuilder.SeedConcept("C", pool, NoData(), features, new Random(seed))
-					: DeckBuilder.Seed("D", pool, NoData(), new Random(seed), features: features);
+					: DeckBuilder.Seed(
+						"D",
+						pool,
+						NoData(),
+						new Random(seed),
+						features: features,
+						identity: null
+					);
 				if (deck is null)
 					continue;
 				total += deck
@@ -1477,7 +1485,7 @@ public class MetagameEvolutionTests
 			var total = 0.0;
 			for (var seed = 0; seed < 25; seed++)
 				total += DeckBuilder
-					.Seed("D", pool, NoData(), new Random(seed), profile: profile)
+					.Seed("D", pool, NoData(), new Random(seed), identity: null, profile: profile)
 					.AverageCost(index);
 			return total / 25;
 		}
@@ -1503,10 +1511,24 @@ public class MetagameEvolutionTests
 		// Land count follows the curve through LandsForCurve, so the profile has to move the mana
 		// base too or "aggro" is only a spell mix.
 		var aggroLands = DeckBuilder
-			.Seed("A", pool, NoData(), new Random(3), profile: DeckBuilder.DeckProfile.Aggro)
+			.Seed(
+				"A",
+				pool,
+				NoData(),
+				new Random(3),
+				identity: null,
+				profile: DeckBuilder.DeckProfile.Aggro
+			)
 			.Lands;
 		var controlLands = DeckBuilder
-			.Seed("C", pool, NoData(), new Random(3), profile: DeckBuilder.DeckProfile.Control)
+			.Seed(
+				"C",
+				pool,
+				NoData(),
+				new Random(3),
+				identity: null,
+				profile: DeckBuilder.DeckProfile.Control
+			)
 			.Lands;
 		Assert.That(
 			aggroLands,

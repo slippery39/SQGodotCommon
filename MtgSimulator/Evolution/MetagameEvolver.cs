@@ -1389,23 +1389,25 @@ public sealed class MetagameEvolver
 	/// deck carries it, and the replacement inherits it from there.
 	/// </param>
 	/// <summary>
-	/// **Every deck in the field plays only what its slot's colours allow.**
+	/// **The SECOND line of defence, not the mechanism.** Enforcement is `DeckBuilder.Seed`'s
+	/// required `identity` parameter: omitting it is a compile error, which is what the two bugs
+	/// this file records would have been.
 	///
-	/// Checked over the WHOLE FIELD rather than at each place a deck is assigned, because the
-	/// assignment sites are the thing that keeps being missed: seeding and mutation both enforced
-	/// the identity and the CULL path did not, so eight of sixteen slots quietly stopped being the
-	/// archetype they were named for and a 100-minute run produced standings that could not be read.
-	/// One check downstream of every writer cannot be forgotten by a future one.
+	/// What a compile error cannot check is whether a slot got the RIGHT identity rather than
+	/// merely some identity, so this compares the slot's expectation against the deck's state once
+	/// a generation. It is also what caught a hole in its own predecessor: validating a deck
+	/// against the identity the deck carries cannot see a deck whose identity went missing, since
+	/// that reads as a legitimately unconstrained wildcard.
 	///
 	/// **Thrown, not warned.** A warning inside a run that prints thousands of lines is a warning
 	/// nobody reads, and a contaminated run is worse than no run — every column looks normal and
 	/// every label still says U-Midrange.
 	///
-	/// **Nothing else would catch it, because the scoring PROTECTS the contaminant.** A card
+	/// **Nothing downstream would notice, because the scoring PROTECTS a contaminant.** A card
 	/// illegal in an identity has zero games in that cell — presim never plays it there — so the
 	/// identity lookup falls back to the pooled rate. Measured on this pool: Baneslayer Angel reads
 	/// +5.90 inside a mono-blue slot, better than every legal blue card, so cut scoring keeps it
-	/// forever. The pool lock stops a bad card ENTERING; nothing makes it leave.
+	/// forever. The pool filter stops a bad card ENTERING; nothing makes it leave.
 	/// </summary>
 	private void ValidateFieldIdentities(
 		IReadOnlyList<Decklist> field,
@@ -1529,17 +1531,15 @@ public sealed class MetagameEvolver
 				rng,
 				others,
 				_minDifference,
+				// **The slot's constraints must survive its own re-seeding**, taken from the
+				// OUTGOING deck so they cannot be sourced from the wrong place — a replacement is
+				// the same slot. Measured when they did not survive: eight of sixteen slots were
+				// culled at least once and every one came back playing white, the format's
+				// strongest colour, while still being named U-Midrange or RG-Control.
+				ColorIdentity.ForCode(before.Identity),
 				isWildcard[worst],
 				features: features,
-				// **The slot's constraints must survive its own re-seeding.** Measured when they
-				// did not: eight of sixteen slots were culled at least once, and every one of them
-				// came back playing white — the format's strongest colour — while still being
-				// named U-Midrange or RG-Control. Decks never culled kept their colours exactly, so
-				// age separated the clean field from the contaminated one perfectly.
-				profile: profiles[worst],
-				// From the OUTGOING deck, so the slot's identity cannot be sourced from the wrong
-				// place. A replacement is the same slot; it inherits what that slot is.
-				identity: ColorIdentity.ForCode(before.Identity)
+				profile: profiles[worst]
 			);
 		ages[worst] = 0;
 		// The replacement shares almost nothing with what it replaced, so its predecessor's

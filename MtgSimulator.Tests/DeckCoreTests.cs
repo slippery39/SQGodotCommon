@@ -220,7 +220,8 @@ public class DeckCoreTests
 			spells,
 			values,
 			new Random(5),
-			profile: DeckBuilder.DeckProfile.Aggro
+			profile: DeckBuilder.DeckProfile.Aggro,
+			identity: null
 		);
 
 		var start = Math.Max(
@@ -274,7 +275,8 @@ public class DeckCoreTests
 			spells,
 			values,
 			new Random(5),
-			profile: DeckBuilder.DeckProfile.Aggro
+			profile: DeckBuilder.DeckProfile.Aggro,
+			identity: null
 		);
 
 		var left = false;
