@@ -930,6 +930,8 @@ public sealed class MetagameEvolver
 				isWildcard,
 				isConcept,
 				identities,
+				colors,
+				profiles,
 				values,
 				features,
 				rng,
@@ -1391,6 +1393,15 @@ public sealed class MetagameEvolver
 	/// At most one per generation: the field has to be re-measured after any replacement, and
 	/// culling several at once churns faster than the measurement can follow.
 	/// </summary>
+	/// <param name="colors">
+	/// The colour identity each slot must keep. **A re-seed that omits this silently retires the
+	/// slot**: it rebuilds unconstrained and drifts to whatever the format's strongest colour is,
+	/// so the field stops covering the identities it is named for while every label still says it
+	/// does.
+	/// </param>
+	/// <param name="profiles">
+	/// The curve band each slot must keep, for the same reason.
+	/// </param>
 	private int CullWorst(
 		List<Decklist> field,
 		Tally[][] tallies,
@@ -1398,6 +1409,8 @@ public sealed class MetagameEvolver
 		bool[] isWildcard,
 		bool[] isConcept,
 		DeckCore?[] identities,
+		ColorIdentity?[] colors,
+		DeckBuilder.DeckProfile[] profiles,
 		ConstructedValues values,
 		PoolFeatures? features,
 		Random rng,
@@ -1468,8 +1481,38 @@ public sealed class MetagameEvolver
 				others,
 				_minDifference,
 				isWildcard[worst],
-				features: features
+				features: features,
+				// **The slot's constraints must survive its own re-seeding.** Measured when they
+				// did not: eight of sixteen slots were culled at least once, and every one of them
+				// came back playing white — the format's strongest colour — while still being
+				// named U-Midrange or RG-Control. Decks never culled kept their colours exactly, so
+				// age separated the clean field from the contaminated one perfectly.
+				profile: profiles[worst],
+				identity: colors[worst]
 			);
+		// **The invariant, checked rather than trusted.** A slot that comes back from a cull
+		// playing colours it cannot cast is invisible in every report — the label still says
+		// U-Midrange — and it corrupts the whole field's meaning. Measured once: eight of sixteen
+		// slots drifted to white this way and the run's standings could not be read at all.
+		//
+		// Thrown, not warned. A warning in a run that prints thousands of lines is a warning
+		// nobody reads, and the results of a contaminated run are worse than no results.
+		if (colors[worst] is { } required)
+		{
+			var illegal = field[worst]
+				.Spells.Keys.Where(n =>
+					_poolIndex.TryGetValue(n, out var card) && !required.Allows(card)
+				)
+				.ToList();
+
+			if (illegal.Count > 0)
+				throw new InvalidOperationException(
+					$"Re-seeded slot {name} is {required.Code} but holds "
+						+ $"{string.Join(", ", illegal.Take(4))} — the slot's colour identity did "
+						+ "not survive its re-seed."
+				);
+		}
+
 		ages[worst] = 0;
 		// The replacement shares almost nothing with what it replaced, so its predecessor's
 		// pair record is not evidence about it.
