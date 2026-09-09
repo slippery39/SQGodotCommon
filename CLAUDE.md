@@ -182,6 +182,24 @@ one slot per identity it cannot converge. The old 0.35 would actively fight the 
 mono-red and red-white legitimately share most of their red cards. Cost is quadratic in deck count,
 so a 16-slot run is ~4x an 8-slot one; the field is also a colour-pair tier list for the format.
 
+### Detectors know whether an archetype can be BUILT
+
+`DeckCore.PlayableIdentities(pool)` answers which of the fifteen identities a core can be assembled
+in, and **empty means the archetype needs more than two colours and no ordinary deck can play it**.
+Mode 7's report carries it as a `cols` column — read it before reading LIFT, because an unbuildable
+archetype still posts a healthy lift. The evolver drops unbuildable engines before cutting the tier,
+and names them rather than dropping them silently.
+
+A slot's colour cost is **the cheapest way to fill it, not the union of its members** — a slot holds
+interchangeable cards by definition, so a Twin slot offering a red copier and a blue one costs
+whichever the deck can cast. The floor is in COPIES, so an 8-copy slot needs two distinct playable
+members, not one.
+
+**Null identities mean "not computed", empty means "computed and unbuildable".** A report saved
+before the colour column carries null; treating that as unbuildable empties the entire engine field
+and the run comes back clean having seeded nothing. Re-run discovery rather than inferring anything
+from an absent column.
+
 ### The three win-rate tables
 
 Card value is looked up in three places, weighed against the feature scores (`DeckFit`,

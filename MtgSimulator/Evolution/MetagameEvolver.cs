@@ -320,6 +320,31 @@ public sealed class MetagameEvolver
 		// sampling draws from, so an exclusion list would quietly narrow the field it was meant to
 		// widen.
 		var offered = report.Engines.ToList();
+
+		// **An archetype that cannot be built in two colours must not take a slot.** It is not a
+		// hard deck to find, it is an impossible one to play, and before colour existed the two
+		// were the same row. Dropped BEFORE the tier is cut, for the same reason the exclusion list
+		// below is: filtering afterwards lets a dead archetype consume one of the tier's places and
+		// narrows the pool the sampling draws from.
+		//
+		// Reported by name, never silently — a run that quietly drops half its engines comes back
+		// clean for the wrong reason, and a pool with no buildable engines is a finding about the
+		// SET rather than about the evolver.
+		//
+		// A report predating the colour column carries NO identities, which is "unknown" rather
+		// than "unbuildable" — see EngineCandidate.IsBuildable. Such a report passes through
+		// untouched; re-run discovery to populate it.
+		var unbuildable = offered.Where(e => !e.IsBuildable).ToList();
+		if (unbuildable.Count > 0)
+		{
+			offered = [.. offered.Where(e => e.IsBuildable)];
+			Console.WriteLine(
+				$"  {unbuildable.Count} engine(s) need more than two colours and cannot be built: "
+					+ string.Join(", ", unbuildable.Select(e => e.Concept).Take(6))
+					+ (unbuildable.Count > 6 ? ", ..." : "")
+			);
+		}
+
 		if (_excludedEngines.Count > 0)
 		{
 			var kept = offered

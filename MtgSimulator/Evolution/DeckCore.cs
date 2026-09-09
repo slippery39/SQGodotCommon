@@ -163,6 +163,48 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 	/// Returns null when the card asks nothing answerable — that is a good-stuff card, not an
 	/// archetype, and it is the majority of any pool.
 	/// </summary>
+	/// <summary>
+	/// Can a deck in <paramref name="identity"/> meet every slot's floor?
+	///
+	/// **A slot's colour cost is the cheapest way to fill it, not the union of its members.** The
+	/// slot holds interchangeable cards by definition, so a Twin slot offering a red copier and a
+	/// blue one costs whichever the deck can actually cast — taking the union would call almost
+	/// every core five-colour and unbuildable.
+	///
+	/// The floor is in COPIES and a card contributes at most `Decklist.MaxCopies`, so a slot
+	/// needing 8 copies needs two distinct playable members, not one.
+	/// </summary>
+	public bool AssemblableIn(ColorIdentity identity, IReadOnlyDictionary<string, Card> pool)
+	{
+		foreach (var slot in Slots)
+		{
+			if (slot.MinCopies <= 0)
+				continue;
+
+			var playable = slot.Cards.Count(name =>
+				pool.TryGetValue(name, out var card) && identity.Allows(card)
+			);
+
+			if (playable * Decklist.MaxCopies < slot.MinCopies)
+				return false;
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// Which of the standard identities this core can actually be built in. **Empty means the
+	/// archetype needs more than two colours and no ordinary deck can assemble it.**
+	///
+	/// This is the question `EngineDiscovery` exists to ask — "does this archetype assemble?" —
+	/// carried one step further now that colour is a real constraint. A core whose payoff is red
+	/// and whose only enablers are blue and green is not a hard archetype to find, it is an
+	/// impossible one to play, and before this the two were indistinguishable in the report.
+	/// </summary>
+	public IReadOnlyList<ColorIdentity> PlayableIdentities(
+		IReadOnlyDictionary<string, Card> pool
+	) => [.. ColorIdentity.Standard.Where(i => AssemblableIn(i, pool))];
+
 	public static DeckCore? For(PoolFeatures features, string payoff, int payoffCopies = 4)
 	{
 		var demands = features.DemandsOf(payoff).Where(features.Informative).ToList();

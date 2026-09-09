@@ -70,9 +70,33 @@ public sealed record EngineCandidate(
 	int Wins,
 	float Bare = 0f,
 	float Supplied = 0f,
-	bool LeverageMeasured = false
+	bool LeverageMeasured = false,
+	IReadOnlyList<string>? Identities = null
 )
 {
+	/// <summary>
+	/// The colour identities this core can actually be built in, or EMPTY for an archetype that
+	/// needs more than two colours.
+	///
+	/// **An empty list means the report has found something unplayable, not something hard.**
+	/// Before colour existed the two were the same row; a payoff whose only enablers live in three
+	/// other colours would post a healthy lift and never be buildable, and nothing said so.
+	/// Read this column before reading LIFT.
+	/// </summary>
+	public IReadOnlyList<string> Colors => Identities ?? [];
+
+	/// <summary>
+	/// **Null and empty mean opposite things here and both arrive.** Null is "not computed" — a
+	/// report saved before this column existed — and empty is "computed, and no legal manabase can
+	/// cast it". Only the second is a reason to drop an engine.
+	///
+	/// Collapsing them was a real bug for the few minutes it existed: every engine in an older
+	/// report deserialises with a null here, so treating null as unbuildable silently emptied the
+	/// entire engine field and the run came back clean having seeded nothing. Re-run discovery to
+	/// populate the column rather than inferring anything from its absence.
+	/// </summary>
+	public bool IsBuildable => Identities is null || Identities.Count > 0;
+
 	/// How much the payoff gains from having its demands answered.
 	public float Leverage => Supplied - Bare;
 
@@ -443,7 +467,11 @@ public static class EngineDiscovery
 			wins,
 			leverage?.Bare ?? 0f,
 			leverage?.Supplied ?? 0f,
-			leverage?.WasMeasured ?? false
+			leverage?.WasMeasured ?? false,
+			// Asked of the CORE rather than of the sampled deck: the deck is one draw from the
+			// archetype's pool, and a slot the deck happened to fill in red may be fillable in
+			// white too. The core is what has to be buildable.
+			[.. core.PlayableIdentities(pool).Select(i => i.Code)]
 		);
 	}
 
@@ -540,6 +568,15 @@ public static class EngineDiscovery
 		writer.WriteLine(
 			"          the deck is a good-stuff pile that happens to share a keyword."
 		);
+		writer.WriteLine(
+			"  cols  = colour identities this core can be BUILT in; blank means it needs more"
+		);
+		writer.WriteLine(
+			"          than two colours and no ordinary deck can assemble it — read this FIRST,"
+		);
+		writer.WriteLine(
+			"          because an unbuildable archetype can still post a healthy lift."
+		);
 		writer.WriteLine("  kill  = median goldfish turns (99 = never) — DESCRIPTIVE ONLY");
 		writer.WriteLine("  bare  = what the payoff is worth cast into an EMPTY board");
 		writer.WriteLine("  supp'd= the same card with its demands answered");
@@ -553,7 +590,7 @@ public static class EngineDiscovery
 		writer.WriteLine("          is a tribal lord, which the ordinary search already finds.");
 		writer.WriteLine();
 		writer.WriteLine(
-			$"{"", -4}{"concept", -40}{"supp", 6}{"pay", 5}{"enab", 6}"
+			$"{"", -4}{"concept", -34}{"cols", -14}{"supp", 6}{"pay", 5}{"enab", 6}"
 				+ $"{"assem", 8}{"depth", 7}{"LIFT", 7}{"cover", 7}{"kill", 6}{"bare", 9}{"supp'd", 9}"
 		);
 
@@ -562,9 +599,16 @@ public static class EngineDiscovery
 		{
 			rank++;
 			var mark = rank <= keep ? "*" : " ";
-			var concept = e.Concept.Length > 38 ? e.Concept[..38] : e.Concept;
+			var concept = e.Concept.Length > 32 ? e.Concept[..32] : e.Concept;
+
+			// "-" rather than an empty cell: a blank column reads as missing data, and this is a
+			// finding — the archetype cannot be built at all.
+			var colors = e.Colors.Count == 0 ? "UNBUILDABLE" : string.Join("/", e.Colors.Take(3));
+			if (e.Colors.Count > 3)
+				colors += "+";
+
 			writer.WriteLine(
-				$"{mark, -4}{concept, -40}{e.SuppliersInPool, 6}{e.Payoffs.Count, 5}{e.Enablers.Count, 6}"
+				$"{mark, -4}{concept, -34}{colors, -14}{e.SuppliersInPool, 6}{e.Payoffs.Count, 5}{e.Enablers.Count, 6}"
 					+ $"{e.AssemblyRate, 8:P0}{e.MedianDepth, 7:F1}"
 					+ $"{e.Lift, 7:+0.0;-0.0; 0.0}{e.Coverage, 7:P0}{e.MedianSpeed, 6:F1}"
 					+ (
