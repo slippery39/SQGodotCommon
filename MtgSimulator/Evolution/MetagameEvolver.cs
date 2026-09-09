@@ -163,14 +163,24 @@ public sealed class MetagameEvolver
 	/// </param>
 	public MetagameEvolver(
 		CardSet set,
-		int deckCount = 8,
+		// 16 = the fifteen colour identities (five mono, ten pairs) plus one unconstrained
+		// wildcard. Cost is quadratic — every candidate plays the frozen field — so this is about
+		// four times the old 8-deck run. The field is now a colour-pair tier list for the format,
+		// which is worth the time on its own.
+		int deckCount = 16,
 		int generations = 30,
 		int mutantsPerDeck = 3,
 		int gamesPerMatchup = 6,
 		int finalGamesPerMatchup = 20,
 		int seed = 0,
 		int aiDepth = 2,
-		double minDifference = 0.35,
+		// **Relaxed from 0.35 because colour identity now does this job structurally.** The floor
+		// existed to stop the field converging; with one slot per identity it cannot. What it does
+		// still catch is pathological duplication, so it stays as a low backstop rather than being
+		// switched off. It would otherwise actively FIGHT the slots: mono-red and red-white
+		// legitimately share most of their red cards, and the old floor would reject the pair — the
+		// same overlap `engineDifference` already exists to forgive between two engine slots.
+		double minDifference = 0.15,
 		double viabilityFloor = 0.40,
 		int graceGenerations = 5,
 		bool useDraftPrior = true,
@@ -602,6 +612,22 @@ public sealed class MetagameEvolver
 			)
 			.ToArray();
 
+		// **The colours a slot must stay inside, kept for the whole run and re-applied at every
+		// mutation.** Seeding alone is not enough: a slot that seeds mono-red and then mutates
+		// freely drifts out of its colours one swap at a time, and the field stops covering the
+		// format — the same failure the profile bands exist to prevent, in a different dimension.
+		//
+		// Engine slots keep their own pool lock and take no colour identity: their core already
+		// decides what they may draw from, and two locks could contradict each other.
+		var colors = Enumerable
+			.Range(0, _deckCount)
+			.Select(i =>
+				identities[i] is not null
+					? null
+					: DeckBuilder.IdentityForSlot(i, _deckCount, isWildcard[i])
+			)
+			.ToArray();
+
 		var accumulator = new CardStatAccumulator();
 
 		// Per-slot history, which is what makes cutting synergy-aware. Reset when a slot is
@@ -642,7 +668,8 @@ public sealed class MetagameEvolver
 							identities[i],
 							profiles[i],
 							contextValues[i],
-							exploring: gen <= _explorationGenerations
+							exploring: gen <= _explorationGenerations,
+							color: colors[i]
 						)
 					);
 				candidates[i] = list;
@@ -1028,7 +1055,8 @@ public sealed class MetagameEvolver
 		DeckCore? core,
 		DeckBuilder.DeckProfile profile,
 		IReadOnlyDictionary<string, double>? contextValue,
-		bool exploring
+		bool exploring,
+		ColorIdentity? color = null
 	)
 	{
 		for (var attempt = 0; attempt < MutationRetries; attempt++)
@@ -1055,7 +1083,8 @@ public sealed class MetagameEvolver
 				// Falling back after half the retries fixes it without re-deriving any operator's
 				// preconditions here, which would drift the moment an operator changes. A slot with
 				// room to explore never reaches the fallback; one without it still gets a search.
-				exploring && attempt < MutationRetries / 2
+				exploring && attempt < MutationRetries / 2,
+				color
 			);
 			if (mutant is not null)
 				return mutant;

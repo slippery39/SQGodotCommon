@@ -158,6 +158,30 @@ So **"neutral" now means random WITHIN a manabase that can cast the card**, not 
 pool. Three-colour identities are deliberately excluded from the pooled table: their manabases fail
 often enough that the games would measure the mana rather than the card.
 
+### Colour slots
+
+The evolver's field is **16 slots: the fifteen identities (five mono, ten pairs) plus one
+unconstrained wildcard**, assigned by `DeckBuilder.IdentityForSlot`. The identity is a POOL LOCK —
+a colour a deck cannot cast never enters its candidate list — which is the same mechanism
+`DeckCore` uses and for the reason recorded there: *"a budget for drift gets spent on drift."*
+
+**Enforced at mutation as well as at seeding.** A slot that seeds mono-red and then mutates freely
+drifts out of its colours one swap at a time, and the field silently stops covering the format.
+
+`ConstructedValues.For(identity)` returns a SCOPED view whose every lookup answers in that
+identity's terms. `DeckBuilder` reads `CardDelta` from seven places; conditioning at the source
+rather than per call site is what keeps fill and cut agreeing — one missed site would let the
+builder add a card its own cut scoring then wants gone, churning the slot forever.
+
+**The wildcard slot is the control**, not a curiosity: if a deck allowed any colours consistently
+loses to the constrained slots, colour is doing real work; if it wins, the manabase model is too
+generous.
+
+`minDifference` is relaxed to **0.15** because colour now separates the field structurally — with
+one slot per identity it cannot converge. The old 0.35 would actively fight the slots, since
+mono-red and red-white legitimately share most of their red cards. Cost is quadratic in deck count,
+so a 16-slot run is ~4x an 8-slot one; the field is also a colour-pair tier list for the format.
+
 ### The three win-rate tables
 
 Card value is looked up in three places, weighed against the feature scores (`DeckFit`,

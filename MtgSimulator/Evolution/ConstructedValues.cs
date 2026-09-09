@@ -74,6 +74,7 @@ public sealed class ConstructedValues
 	private readonly DraftTrainingData _constructed;
 	private readonly DraftTrainingData? _draft;
 	private readonly IdentityValues? _identities;
+	private readonly string? _scope;
 
 	private readonly Dictionary<string, double> _draftRates;
 	private readonly Dictionary<string, CardStat> _constructedCards;
@@ -85,12 +86,14 @@ public sealed class ConstructedValues
 	public ConstructedValues(
 		DraftTrainingData constructed,
 		DraftTrainingData? draft,
-		IdentityValues? identities = null
+		IdentityValues? identities = null,
+		string? scope = null
 	)
 	{
 		_constructed = constructed;
 		_draft = draft;
 		_identities = identities;
+		_scope = scope;
 
 		// The base rate every delta is quoted against. Constructed data owns it once it exists,
 		// because that is the population being scored; before then, fall back to the draft
@@ -131,10 +134,36 @@ public sealed class ConstructedValues
 	public double RateOf(string name)
 	{
 		var prior = _draftRates.GetValueOrDefault(name, _prior);
-		return _constructedCards.TryGetValue(name, out var c)
+		var pooled = _constructedCards.TryGetValue(name, out var c)
 			? DraftTrainingData.Shrink(c.Wins, c.Games, prior, CardShrinkK)
 			: prior;
+
+		// A SCOPED view answers every question in its identity's terms. Conditioning here rather
+		// than at each caller is what keeps fill and cut agreeing: DeckBuilder reads CardDelta from
+		// seven places, and one of them left on the pooled rate would let the builder add a card
+		// that its own cut scoring then wants gone, churning the slot forever.
+		return _scope != null && _identities != null
+			? _identities.RateOf(_scope, name, pooled)
+			: pooled;
 	}
+
+	/// <summary>
+	/// The same values, answered for one colour identity — see <see cref="IdentityValues"/>.
+	///
+	/// Returns this instance unchanged when there is nothing to scope to, so a caller can pass a
+	/// null identity without branching.
+	///
+	/// <see cref="Unmeasured"/> deliberately stays POOLED. It drives the exploration bonus and asks
+	/// "has anyone tried this card at all"; asking it per identity would call almost every card
+	/// unmeasured early on and drown the scoring in exploration.
+	/// </summary>
+	public ConstructedValues For(ColorIdentity? identity) =>
+		identity == null || _identities == null
+			? this
+			: new ConstructedValues(_constructed, _draft, _identities, identity.Code);
+
+	/// The identity this view answers for, or null if it is the pooled view.
+	public string? Scope => _scope;
 
 	/// <summary>
 	/// How much better than average a card is, in PERCENTAGE POINTS — the same units
@@ -154,7 +183,14 @@ public sealed class ConstructedValues
 	public double CardDelta(string name, string? identity) =>
 		identity == null || _identities == null
 			? CardDelta(name)
-			: 100.0 * (_identities.RateOf(identity, name, RateOf(name)) - _prior);
+			: 100.0
+				* (
+					_identities.RateOf(
+						identity,
+						name,
+						new ConstructedValues(_constructed, _draft).RateOf(name)
+					) - _prior
+				);
 
 	/// <summary>Games behind the identity-conditioned figure, so a caller can gate on evidence.</summary>
 	public int IdentityGames(string name, string identity) =>

@@ -127,6 +127,22 @@ public static class DeckBuilder
 	/// seeder assigned**, and two copies of this cycling would drift into disagreeing about what
 	/// "Aggro-G" means.
 	/// </summary>
+	/// <summary>
+	/// Which colour identity a field slot builds in. **Public because the evolver has to enforce
+	/// the same identity at MUTATION**, exactly like <see cref="ProfileForSlot"/> — a slot that
+	/// seeds as mono-red and then mutates freely drifts out of its colours one swap at a time, and
+	/// the field stops covering the format.
+	///
+	/// Returns null for the wildcard slot, which is deliberately unconstrained. It is the CONTROL:
+	/// if a deck allowed to play any colours consistently loses to the constrained slots, the
+	/// colour constraint is doing real work, and if it wins the manabase model is too generous.
+	///
+	/// With fewer slots than identities the tail of the list is simply not covered, which is a
+	/// reason to run the full 16 rather than a reason to sample them.
+	/// </summary>
+	public static ColorIdentity? IdentityForSlot(int index, int count, bool wildcard) =>
+		wildcard || index >= ColorIdentity.Standard.Count ? null : ColorIdentity.Standard[index];
+
 	public static DeckProfile ProfileForSlot(int index, int conceptSlots, bool wildcard) =>
 		wildcard || index < conceptSlots
 			? DeckProfile.Any
@@ -401,10 +417,18 @@ public static class DeckBuilder
 		Random rng,
 		bool wildcard = false,
 		PoolFeatures? features = null,
-		DeckProfile profile = DeckProfile.Any
+		DeckProfile profile = DeckProfile.Any,
+		ColorIdentity? identity = null
 	)
 	{
+		// **A POOL LOCK, exactly like DeckCore's, and for the reason recorded there: a budget for
+		// drift gets spent on drift.** A colour a deck cannot cast is not a card it should be
+		// weighing at all, so it never enters the candidate list rather than being penalised inside
+		// it. Scoping `values` in the same breath keeps fill and cut answering in the same terms.
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
+		if (identity != null)
+			spells = [.. identity.Playable(spells)];
+		values = values.For(identity);
 		if (spells.Count == 0)
 			throw new ArgumentException("Card pool has no non-land cards.", nameof(pool));
 
@@ -476,10 +500,16 @@ public static class DeckBuilder
 		DeckCore? core = null,
 		DeckProfile profile = DeckProfile.Any,
 		IReadOnlyDictionary<string, double>? contextValue = null,
-		bool exploring = false
+		bool exploring = false,
+		ColorIdentity? identity = null
 	)
 	{
+		// The same pool lock the seed applied, re-applied here because mutation is where a slot
+		// would otherwise drift out of its colours one swap at a time.
 		var spells = pool.Where(c => !c.HasSubtype("Land")).ToList();
+		if (identity != null)
+			spells = [.. identity.Playable(spells)];
+		values = values.For(identity);
 
 		// **A core narrows what mutation may DRAW FROM, not just what it may cut.**
 		//
@@ -498,8 +528,8 @@ public static class DeckBuilder
 		// fewer rituals; it cannot discover that it wants Steppe Lynx.
 		if (core is not null)
 		{
-			var identity = core.Slots.SelectMany(s => s.Cards).ToHashSet(StringComparer.Ordinal);
-			spells = spells.Where(c => identity.Contains(c.Name)).ToList();
+			var archetype = core.Slots.SelectMany(s => s.Cards).ToHashSet(StringComparer.Ordinal);
+			spells = spells.Where(c => archetype.Contains(c.Name)).ToList();
 			if (spells.Count == 0)
 				return null;
 		}
@@ -1358,8 +1388,12 @@ public static class DeckBuilder
 					var (n, k) => Profiles[k % n],
 				};
 
+			// Colour identity leads the name, because it is the thing that now separates one slot
+			// from another — the curve band is a secondary label on top of it.
+			var identity = IdentityForSlot(i, count, wildcard);
 			var name =
 				wildcard ? "Wildcard"
+				: identity != null ? $"{identity.Code}-{profile}"
 				: profile == DeckProfile.Any ? $"Deck {(char)('A' + i)}"
 				: $"{profile}-{(char)('A' + i)}";
 
@@ -1373,7 +1407,8 @@ public static class DeckBuilder
 					minDifference,
 					wildcard,
 					features: features,
-					profile: profile
+					profile: profile,
+					identity: identity
 				)
 			);
 		}
@@ -1444,7 +1479,8 @@ public static class DeckBuilder
 		bool wildcard = false,
 		int attempts = 30,
 		PoolFeatures? features = null,
-		DeckProfile profile = DeckProfile.Any
+		DeckProfile profile = DeckProfile.Any,
+		ColorIdentity? identity = null
 	)
 	{
 		Decklist? best = null;
@@ -1452,7 +1488,7 @@ public static class DeckBuilder
 
 		for (var i = 0; i < attempts; i++)
 		{
-			var candidate = Seed(name, pool, values, rng, wildcard, features, profile);
+			var candidate = Seed(name, pool, values, rng, wildcard, features, profile, identity);
 			if (candidate.Validate() is not null)
 				continue;
 
