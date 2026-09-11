@@ -174,22 +174,85 @@ public sealed record DeckCore(string Name, IReadOnlyList<CoreSlot> Slots)
 	/// The floor is in COPIES and a card contributes at most `Decklist.MaxCopies`, so a slot
 	/// needing 8 copies needs two distinct playable members, not one.
 	/// </summary>
-	public bool AssemblableIn(ColorIdentity identity, IReadOnlyDictionary<string, Card> pool)
+	public bool AssemblableIn(ColorIdentity identity, IReadOnlyDictionary<string, Card> pool) =>
+		CheapestFill(identity, pool) is not null;
+
+	/// <summary>
+	/// The cheapest legal way to fill every floor in <paramref name="identity"/>, or null if some
+	/// floor cannot be met. "Cheapest" is by COLOUR demand, matching the rule above — a slot offering
+	/// a red copier and a blue one costs whichever the deck can actually cast.
+	///
+	/// One entry per DISTINCT card the fill needs, not per copy: a slot needing 8 copies needs two
+	/// members, and both of them have to be castable.
+	/// </summary>
+	private List<Card>? CheapestFill(ColorIdentity identity, IReadOnlyDictionary<string, Card> pool)
 	{
+		var fill = new List<Card>();
+
 		foreach (var slot in Slots)
 		{
 			if (slot.MinCopies <= 0)
 				continue;
 
-			var playable = slot.Cards.Count(name =>
-				pool.TryGetValue(name, out var card) && identity.Allows(card)
-			);
+			var playable = slot
+				.Cards.Where(name => pool.TryGetValue(name, out var card) && identity.Allows(card))
+				.Select(name => pool[name])
+				.ToList();
 
-			if (playable * Decklist.MaxCopies < slot.MinCopies)
-				return false;
+			if (playable.Count * Decklist.MaxCopies < slot.MinCopies)
+				return null;
+
+			var distinct = (slot.MinCopies + Decklist.MaxCopies - 1) / Decklist.MaxCopies;
+			fill.AddRange(
+				playable
+					.OrderBy(c => ManaBase.Requirements([c]).Total)
+					.ThenBy(c => c.Name, StringComparer.Ordinal)
+					.Take(distinct)
+			);
 		}
 
-		return true;
+		return fill;
+	}
+
+	/// <summary>
+	/// How well a manabase can actually serve this core in <paramref name="identity"/>: 1.0 when
+	/// every card in the cheapest fill gets the sources it wants, falling toward 0 as the colours
+	/// fight each other. Returns 0 when the core cannot be assembled here at all.
+	///
+	/// **This is reported, not used as a gate, and that is deliberate.** The tempting move is to
+	/// call a core unbuildable when its colours do not fit — but measured, they never fit: a real
+	/// two-colour deck needs 27-31 sources against 24, because any double pip alone wants 17-18
+	/// (see DesignNotes.md). Gating on that would empty every engine's identity list, and
+	/// `EngineCandidate.IsBuildable` reads an empty list as "computed and unbuildable" — so
+	/// discovery would come back clean having found nothing, which is precisely the failure mode
+	/// the null-vs-empty rule in HANDOFF-Colours.md §5 exists to warn about. An RR payoff beside a
+	/// UU enabler scores 0.67 here: a genuinely worse deck than a mono one, and still a deck.
+	///
+	/// Read it next to LIFT. A core that assembles at 0.95 and one that assembles at 0.6 are not
+	/// the same finding, and before this the report could not tell them apart.
+	/// </summary>
+	public double ManaFeasibility(ColorIdentity identity, IReadOnlyDictionary<string, Card> pool)
+	{
+		var fill = CheapestFill(identity, pool);
+		if (fill is null)
+			return 0;
+		if (fill.Count == 0)
+			return 1;
+
+		var sources = ManaBase.SourcesFor(fill, ManaBase.ReferenceLands);
+		return fill.Min(c => ManaBase.Castability(c, sources, ManaBase.ReferenceLands));
+	}
+
+	/// <summary>
+	/// The best <see cref="ManaFeasibility"/> across every identity this core can be built in —
+	/// what the archetype scores when played in its best colours. 0 when it cannot be built at all.
+	/// </summary>
+	public double BestManaFeasibility(IReadOnlyDictionary<string, Card> pool)
+	{
+		var best = 0.0;
+		foreach (var identity in ColorIdentity.Standard)
+			best = Math.Max(best, ManaFeasibility(identity, pool));
+		return best;
 	}
 
 	/// <summary>

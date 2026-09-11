@@ -71,7 +71,8 @@ public sealed record EngineCandidate(
 	float Bare = 0f,
 	float Supplied = 0f,
 	bool LeverageMeasured = false,
-	IReadOnlyList<string>? Identities = null
+	IReadOnlyList<string>? Identities = null,
+	double ManaFeasibility = 0
 )
 {
 	/// <summary>
@@ -96,6 +97,24 @@ public sealed record EngineCandidate(
 	/// populate the column rather than inferring anything from its absence.
 	/// </summary>
 	public bool IsBuildable => Identities is null || Identities.Count > 0;
+
+	/// <summary>
+	/// How well a manabase serves this core in its BEST colours — 1.0 when every card in the
+	/// cheapest fill gets the sources it wants, lower as the colours fight each other. 0 means
+	/// unbuildable, matching <see cref="Colors"/> being empty.
+	///
+	/// **Not a filter, a column.** Every real two-colour deck needs 27-31 sources against 24, so
+	/// gating on "the colours fit" would empty the field — see DeckCore.ManaFeasibility. What this
+	/// separates is the core that assembles cleanly from the one that assembles only on paper: an
+	/// RR payoff beside a UU enabler reads about 0.67, and it is a worse archetype than its lift
+	/// alone suggests.
+	///
+	/// Defaults to 0 for a report written before the column existed, which is indistinguishable
+	/// from a measured 0 — unlike Identities, where null and empty had to be told apart. That is
+	/// tolerable only because nothing DROPS an engine on this number; if anything ever does, it
+	/// needs the nullable treatment first.
+	/// </summary>
+	public double Mana => ManaFeasibility;
 
 	/// How much the payoff gains from having its demands answered.
 	public float Leverage => Supplied - Bare;
@@ -471,7 +490,8 @@ public static class EngineDiscovery
 			// Asked of the CORE rather than of the sampled deck: the deck is one draw from the
 			// archetype's pool, and a slot the deck happened to fill in red may be fillable in
 			// white too. The core is what has to be buildable.
-			[.. core.PlayableIdentities(pool).Select(i => i.Code)]
+			[.. core.PlayableIdentities(pool).Select(i => i.Code)],
+			core.BestManaFeasibility(pool)
 		);
 	}
 
@@ -577,6 +597,19 @@ public static class EngineDiscovery
 		writer.WriteLine(
 			"          because an unbuildable archetype can still post a healthy lift."
 		);
+		writer.WriteLine(
+			"  mana  = how well a manabase serves the core in its best colours: 1.00 is every"
+		);
+		writer.WriteLine(
+			"          card fully supported, and a two-colour core with double pips on both"
+		);
+		writer.WriteLine(
+			"          sides reads about 0.67. NOT a filter — every real two-colour deck wants"
+		);
+		writer.WriteLine(
+			"          more sources than 24 lands hold — but a low LIFT at 0.65 and the same"
+		);
+		writer.WriteLine("          LIFT at 0.95 are different findings.");
 		writer.WriteLine("  kill  = median goldfish turns (99 = never) — DESCRIPTIVE ONLY");
 		writer.WriteLine("  bare  = what the payoff is worth cast into an EMPTY board");
 		writer.WriteLine("  supp'd= the same card with its demands answered");
@@ -590,7 +623,7 @@ public static class EngineDiscovery
 		writer.WriteLine("          is a tribal lord, which the ordinary search already finds.");
 		writer.WriteLine();
 		writer.WriteLine(
-			$"{"", -4}{"concept", -34}{"cols", -14}{"supp", 6}{"pay", 5}{"enab", 6}"
+			$"{"", -4}{"concept", -34}{"cols", -14}{"mana", 6}{"supp", 6}{"pay", 5}{"enab", 6}"
 				+ $"{"assem", 8}{"depth", 7}{"LIFT", 7}{"cover", 7}{"kill", 6}{"bare", 9}{"supp'd", 9}"
 		);
 
@@ -608,7 +641,7 @@ public static class EngineDiscovery
 				colors += "+";
 
 			writer.WriteLine(
-				$"{mark, -4}{concept, -34}{colors, -14}{e.SuppliersInPool, 6}{e.Payoffs.Count, 5}{e.Enablers.Count, 6}"
+				$"{mark, -4}{concept, -34}{colors, -14}{e.Mana, 6:F2}{e.SuppliersInPool, 6}{e.Payoffs.Count, 5}{e.Enablers.Count, 6}"
 					+ $"{e.AssemblyRate, 8:P0}{e.MedianDepth, 7:F1}"
 					+ $"{e.Lift, 7:+0.0;-0.0; 0.0}{e.Coverage, 7:P0}{e.MedianSpeed, 6:F1}"
 					+ (

@@ -205,4 +205,99 @@ public class DeckCoreColorTests
 
 		Assert.That(core.PlayableIdentities(pool), Is.Not.Empty);
 	}
+
+	private static Card Deep(string name, ManaColor color) =>
+		CardFactory.Creature(name, manaCost: 2, power: 2, toughness: 2).Build() with
+		{
+			ColorPips = ManaPool.Empty.Add(color, 2),
+		};
+
+	/// <summary>
+	/// The gap colour LEGALITY cannot see: two double-pipped halves in different colours are both
+	/// legal in the pair that covers them, and the pair cannot cast either reliably. A WW payoff
+	/// with a single-pip blue enabler is a real deck; a WW payoff with a UU enabler is two decks
+	/// wearing one name.
+	/// </summary>
+	[Test]
+	public void DepthSeparatesCoresThatLegalityCallsIdentical()
+	{
+		var shallow = Pool(
+			Deep("Payoff", ManaColor.White),
+			Card("Enabler", new ManaPool { Blue = 1 })
+		);
+		var deep = Pool(Deep("Payoff", ManaColor.White), Deep("Enabler", ManaColor.Blue));
+		var core = new DeckCore(
+			"Azorius",
+			[Slot("Payoff", 4, "Payoff"), Slot("Enabler", 4, "Enabler")]
+		);
+		var wu = ColorIdentity.ForCode("WU")!;
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(core.AssemblableIn(wu, shallow), Is.True, "legality says yes to both");
+			Assert.That(core.AssemblableIn(wu, deep), Is.True);
+			Assert.That(core.ManaFeasibility(wu, shallow), Is.GreaterThan(0.75));
+			Assert.That(core.ManaFeasibility(wu, deep), Is.LessThan(0.75));
+		});
+	}
+
+	/// A mono core is served perfectly — every land can be its colour.
+	[Test]
+	public void AMonoCore_IsFullyCastable()
+	{
+		var pool = Pool(Deep("Payoff", ManaColor.Red), Card("Enabler", new ManaPool { Red = 1 }));
+		var core = new DeckCore(
+			"Mono",
+			[Slot("Payoff", 4, "Payoff"), Slot("Enabler", 4, "Enabler")]
+		);
+
+		Assert.That(core.ManaFeasibility(ColorIdentity.ForCode("R")!, pool), Is.EqualTo(1.0));
+	}
+
+	/// <summary>
+	/// A core that cannot be ASSEMBLED scores 0, which is a different statement from a core that
+	/// assembles badly — and the caller must be able to tell them apart.
+	/// </summary>
+	[Test]
+	public void AnUnassemblableCore_ScoresZero()
+	{
+		var pool = Pool(
+			Card("Payoff", new ManaPool { Red = 1 }),
+			Card("Enabler", new ManaPool { Blue = 1 })
+		);
+		var core = new DeckCore(
+			"Izzet",
+			[Slot("Payoff", 4, "Payoff"), Slot("Enabler", 4, "Enabler")]
+		);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				core.ManaFeasibility(ColorIdentity.ForCode("W")!, pool),
+				Is.Zero,
+				"not legal"
+			);
+			Assert.That(
+				core.ManaFeasibility(ColorIdentity.ForCode("UR")!, pool),
+				Is.GreaterThan(0.9)
+			);
+			Assert.That(core.BestManaFeasibility(pool), Is.GreaterThan(0.9));
+		});
+	}
+
+	/// <summary>
+	/// The cheapest fill is what gets priced, matching AssemblableIn's own rule — a slot holding a
+	/// mono-white option and a gold one costs the white one to a white deck.
+	/// </summary>
+	[Test]
+	public void TheCheapestMemberOfASlotIsWhatGetsPriced()
+	{
+		var pool = Pool(
+			Card("Cheap", new ManaPool { White = 1 }),
+			Card("Gold", new ManaPool { White = 1, Blue = 1 })
+		);
+		var core = new DeckCore("Slot", [Slot("Payoff", 4, "Cheap", "Gold")]);
+
+		Assert.That(core.ManaFeasibility(ColorIdentity.ForCode("W")!, pool), Is.EqualTo(1.0));
+	}
 }
