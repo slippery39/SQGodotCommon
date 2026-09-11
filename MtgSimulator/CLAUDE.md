@@ -536,7 +536,14 @@ for constructed, and it arrived the moment decks stopped being five-colour piles
 model gave those same three cards 3 762-4 444 games — deep numbers measured in a world where every
 deck played every colour, so they are not a fallback, they are differently wrong.
 
-**CSC ships anyway at 216 median**, above the 100-game floor and roughly a third of a mono card's
+**Splashing does NOT repair this, measured rather than assumed.** Retraining under splash-enabled
+selection moved the gold median 216 -> 223 and the minimum 127 -> 158, both inside seed noise. The
+mechanism is real — a W deck splashing U can play a WU card — but only 3 of 200 decks splash, so the
+extra exposure is negligible. The fix, if gold ratings ever matter, is on the TRAINING side:
+allocate drafts across identities deliberately, the same remedy `ColorIdentity.Playable` defers for
+the constructed pooled table.
+
+**CSC ships anyway at ~220 median**, above the 100-game floor and roughly a third of a mono card's
 evidence; its gold values are weak, not noise. **LEG was NOT re-shipped**: at 5-33 games the new
 values are noise, the set is not player-facing (`DraftScene.DraftedSet` is CSC), and 10x the drafts
 — four hours — would buy 330 games on three cards. Re-measure with `GoldCardSamplingDiagnostic`
