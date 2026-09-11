@@ -516,6 +516,32 @@ answering `n` to *"draft with the existing model?"* sets the bootstrap to null, 
 the merge prompt and replaces — so the only way to add depth under an unchanged policy is a bigger
 single run.
 
+**Identity-scoped deck assembly starves GOLD cards of draft data, and it is structural.** A
+two-colour card is legal in exactly one of the fifteen identities and a three-colour card in none,
+so it only reaches a deck when the seat's chosen identity happens to be its pair. Measured on the
+retrained models:
+
+| set | kind | cards | median games |
+|---|---|---|---|
+| CSC | colourless | 43 | 1 138 |
+| CSC | mono | 335 | 590 |
+| CSC | **gold (2)** | 30 | **216** |
+| LEG | colourless | 15 | 2 295 |
+| LEG | mono | 66 | 1 422 |
+| LEG | **gold (2)** | 3 | **33** — Geist of Saint Traft got **5** |
+| LEG | **gold (3+)** | 1 | **11** — Siege Rhino, playable in NO identity |
+
+This is the draft-side twin of the pooled-table problem `ColorIdentity.Playable` already documents
+for constructed, and it arrived the moment decks stopped being five-colour piles. The old Legacy
+model gave those same three cards 3 762-4 444 games — deep numbers measured in a world where every
+deck played every colour, so they are not a fallback, they are differently wrong.
+
+**CSC ships anyway at 216 median**, above the 100-game floor and roughly a third of a mono card's
+evidence; its gold values are weak, not noise. **LEG was NOT re-shipped**: at 5-33 games the new
+values are noise, the set is not player-facing (`DraftScene.DraftedSet` is CSC), and 10x the drafts
+— four hours — would buy 330 games on three cards. Re-measure with `GoldCardSamplingDiagnostic`
+before trusting any gold card's rating in either model.
+
 **Shipping a model is three steps, and the tests enforce two of them.** Strip the pairs, copy to
 `MtgGame/Assets/`, and run `ModelComparisonDiagnostic` first — it drafts the new model against the
 shipped one AT THE SAME TABLE and plays the pools, which is the only thing that says the retrain
