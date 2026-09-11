@@ -116,6 +116,18 @@ public sealed record EngineCandidate(
 	/// </summary>
 	public double Mana => ManaFeasibility;
 
+	/// <summary>
+	/// The mana column as it should be READ: "—" when the number was never computed, rather than
+	/// 0.00, which in this column means "cannot be built at all".
+	///
+	/// A report saved before the column existed deserialises with 0, and 0 is also a real measured
+	/// value — so the two are told apart by the one thing that cannot be faked: an engine that
+	/// genuinely scores 0 has no playable identities either. A healthy row with an empty Colors
+	/// list is impossible; a healthy row with an absent mana figure is just an old report.
+	/// </summary>
+	public string ManaLabel =>
+		ManaFeasibility <= 0 && Colors.Count > 0 ? "—" : $"{ManaFeasibility:F2}";
+
 	/// How much the payoff gains from having its demands answered.
 	public float Leverage => Supplied - Bare;
 
@@ -641,7 +653,7 @@ public static class EngineDiscovery
 				colors += "+";
 
 			writer.WriteLine(
-				$"{mark, -4}{concept, -34}{colors, -14}{e.Mana, 6:F2}{e.SuppliersInPool, 6}{e.Payoffs.Count, 5}{e.Enablers.Count, 6}"
+				$"{mark, -4}{concept, -34}{colors, -14}{e.ManaLabel, 6}{e.SuppliersInPool, 6}{e.Payoffs.Count, 5}{e.Enablers.Count, 6}"
 					+ $"{e.AssemblyRate, 8:P0}{e.MedianDepth, 7:F1}"
 					+ $"{e.Lift, 7:+0.0;-0.0; 0.0}{e.Coverage, 7:P0}{e.MedianSpeed, 6:F1}"
 					+ (

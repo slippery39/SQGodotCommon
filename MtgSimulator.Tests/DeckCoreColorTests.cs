@@ -300,4 +300,40 @@ public class DeckCoreColorTests
 
 		Assert.That(core.ManaFeasibility(ColorIdentity.ForCode("W")!, pool), Is.EqualTo(1.0));
 	}
+
+	/// <summary>
+	/// An old report has no mana figure and must not read as "unbuildable". The tell is that a real
+	/// 0 comes with no playable identities — see EngineCandidate.ManaLabel.
+	/// </summary>
+	[Test]
+	public void AnUncomputedManaFigureReadsAsAbsent_NotAsZero()
+	{
+		var healthy = new EngineCandidate(
+			"Old report",
+			new DeckCore("Core", []),
+			"Concept",
+			"Origin",
+			0,
+			new Decklist("Deck", ImmutableSortedDictionary<string, int>.Empty, 17),
+			[],
+			[],
+			[],
+			AssemblyRate: 0,
+			MedianDepth: 0,
+			Coverage: 0,
+			ControlDepth: 0,
+			Lift: 0,
+			MedianTurn: 0,
+			MedianSpeed: 0,
+			Wins: 0,
+			Identities: ["R", "UR"]
+		);
+		var unbuildable = healthy with { Identities = [] };
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(healthy.ManaLabel, Is.EqualTo("—"), "not computed");
+			Assert.That(unbuildable.ManaLabel, Is.EqualTo("0.00"), "measured, and it is zero");
+		});
+	}
 }

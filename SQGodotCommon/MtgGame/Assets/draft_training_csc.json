@@ -1,2454 +1,2454 @@
 {
-  "Perspectives": 16798,
-  "Wins": 8399,
+  "Perspectives": 28000,
+  "Wins": 14000,
   "Cards": [
     {
       "Name": "Abbot of Keral Keep",
-      "Games": 383,
-      "Wins": 207,
-      "DeckGames": 868
+      "Games": 574,
+      "Wins": 310,
+      "DeckGames": 1379
     },
     {
       "Name": "Acidic Slime",
-      "Games": 327,
-      "Wins": 136,
-      "DeckGames": 756
+      "Games": 479,
+      "Wins": 238,
+      "DeckGames": 1141
     },
     {
       "Name": "Adaptive Automaton",
-      "Games": 299,
-      "Wins": 158,
-      "DeckGames": 755
+      "Games": 1066,
+      "Wins": 549,
+      "DeckGames": 2520
     },
     {
       "Name": "Aether Adept",
-      "Games": 236,
-      "Wins": 121,
-      "DeckGames": 643
+      "Games": 657,
+      "Wins": 341,
+      "DeckGames": 1498
     },
     {
       "Name": "Aether Gust",
-      "Games": 404,
-      "Wins": 219,
-      "DeckGames": 972
+      "Games": 680,
+      "Wins": 325,
+      "DeckGames": 1519
     },
     {
       "Name": "Aether Tunnel",
-      "Games": 477,
-      "Wins": 262,
-      "DeckGames": 1190
+      "Games": 648,
+      "Wins": 292,
+      "DeckGames": 1414
     },
     {
       "Name": "Aetherspouts",
-      "Games": 295,
-      "Wins": 171,
-      "DeckGames": 728
+      "Games": 577,
+      "Wins": 317,
+      "DeckGames": 1183
     },
     {
       "Name": "Agent of Treachery",
-      "Games": 316,
-      "Wins": 187,
-      "DeckGames": 812
+      "Games": 581,
+      "Wins": 306,
+      "DeckGames": 1288
     },
     {
       "Name": "Ajani Steadfast",
-      "Games": 301,
-      "Wins": 155,
-      "DeckGames": 672
+      "Games": 576,
+      "Wins": 300,
+      "DeckGames": 1379
     },
     {
       "Name": "Ajani's Pridemate",
-      "Games": 444,
-      "Wins": 240,
-      "DeckGames": 987
+      "Games": 684,
+      "Wins": 375,
+      "DeckGames": 1638
     },
     {
       "Name": "Ajani, Caller of the Pride",
-      "Games": 296,
-      "Wins": 172,
-      "DeckGames": 707
+      "Games": 570,
+      "Wins": 303,
+      "DeckGames": 1393
     },
     {
       "Name": "Akroma's Memorial",
-      "Games": 312,
-      "Wins": 134,
-      "DeckGames": 812
+      "Games": 1004,
+      "Wins": 505,
+      "DeckGames": 2380
     },
     {
       "Name": "Ancestral Blade",
-      "Games": 395,
-      "Wins": 206,
-      "DeckGames": 952
+      "Games": 592,
+      "Wins": 325,
+      "DeckGames": 1407
     },
     {
       "Name": "Anchor to the Aether",
-      "Games": 427,
-      "Wins": 212,
-      "DeckGames": 1022
+      "Games": 768,
+      "Wins": 404,
+      "DeckGames": 1813
     },
     {
       "Name": "Angel of Vitality",
-      "Games": 337,
-      "Wins": 161,
-      "DeckGames": 840
+      "Games": 506,
+      "Wins": 269,
+      "DeckGames": 1225
     },
     {
       "Name": "Angelic Destiny",
-      "Games": 380,
-      "Wins": 254,
-      "DeckGames": 839
+      "Games": 561,
+      "Wins": 363,
+      "DeckGames": 1302
     },
     {
       "Name": "Anointer of Champions",
-      "Games": 352,
-      "Wins": 180,
-      "DeckGames": 868
+      "Games": 556,
+      "Wins": 317,
+      "DeckGames": 1393
     },
     {
       "Name": "Arachnus Web",
-      "Games": 333,
-      "Wins": 160,
-      "DeckGames": 790
+      "Games": 627,
+      "Wins": 320,
+      "DeckGames": 1449
     },
     {
       "Name": "Arcane Encyclopedia",
-      "Games": 371,
-      "Wins": 164,
-      "DeckGames": 931
+      "Games": 1141,
+      "Wins": 601,
+      "DeckGames": 2765
     },
     {
       "Name": "Archangel of Thune",
-      "Games": 370,
-      "Wins": 209,
-      "DeckGames": 882
+      "Games": 530,
+      "Wins": 306,
+      "DeckGames": 1295
     },
     {
       "Name": "Arms Dealer",
-      "Games": 381,
-      "Wins": 189,
-      "DeckGames": 889
+      "Games": 518,
+      "Wins": 257,
+      "DeckGames": 1309
     },
     {
       "Name": "Attended Knight",
-      "Games": 443,
-      "Wins": 238,
-      "DeckGames": 1022
+      "Games": 717,
+      "Wins": 435,
+      "DeckGames": 1715
     },
     {
       "Name": "Avaricious Dragon",
-      "Games": 450,
-      "Wins": 267,
-      "DeckGames": 1113
+      "Games": 668,
+      "Wins": 371,
+      "DeckGames": 1575
     },
     {
       "Name": "Bag of Holding",
-      "Games": 465,
-      "Wins": 217,
-      "DeckGames": 1148
+      "Games": 1161,
+      "Wins": 564,
+      "DeckGames": 2709
     },
     {
       "Name": "Banefire",
-      "Games": 439,
-      "Wins": 230,
-      "DeckGames": 1022
+      "Games": 669,
+      "Wins": 351,
+      "DeckGames": 1491
     },
     {
       "Name": "Baneslayer Angel",
-      "Games": 483,
-      "Wins": 290,
-      "DeckGames": 1190
+      "Games": 738,
+      "Wins": 443,
+      "DeckGames": 1771
     },
     {
       "Name": "Barkhide Troll",
-      "Games": 357,
-      "Wins": 218,
-      "DeckGames": 882
+      "Games": 599,
+      "Wins": 319,
+      "DeckGames": 1435
     },
     {
       "Name": "Barrage of Expendables",
-      "Games": 418,
-      "Wins": 192,
-      "DeckGames": 1015
+      "Games": 598,
+      "Wins": 247,
+      "DeckGames": 1400
     },
     {
       "Name": "Barrin, Tolarian Archmage",
-      "Games": 336,
-      "Wins": 185,
-      "DeckGames": 826
+      "Games": 568,
+      "Wins": 298,
+      "DeckGames": 1239
     },
     {
       "Name": "Basri Ket",
-      "Games": 310,
-      "Wins": 211,
-      "DeckGames": 798
+      "Games": 644,
+      "Wins": 440,
+      "DeckGames": 1610
     },
     {
       "Name": "Basri's Acolyte",
-      "Games": 320,
-      "Wins": 149,
-      "DeckGames": 846
+      "Games": 611,
+      "Wins": 332,
+      "DeckGames": 1351
     },
     {
       "Name": "Basri's Lieutenant",
-      "Games": 481,
-      "Wins": 276,
-      "DeckGames": 1085
+      "Games": 634,
+      "Wins": 364,
+      "DeckGames": 1519
     },
     {
       "Name": "Basri's Solidarity",
-      "Games": 390,
-      "Wins": 199,
-      "DeckGames": 966
+      "Games": 679,
+      "Wins": 335,
+      "DeckGames": 1687
     },
     {
       "Name": "Birds of Paradise",
-      "Games": 319,
-      "Wins": 165,
-      "DeckGames": 770
+      "Games": 533,
+      "Wins": 297,
+      "DeckGames": 1253
     },
     {
       "Name": "Blazing Hellhound",
-      "Games": 459,
-      "Wins": 236,
-      "DeckGames": 1099
+      "Games": 259,
+      "Wins": 125,
+      "DeckGames": 623
     },
     {
       "Name": "Blood Burglar",
-      "Games": 425,
-      "Wins": 250,
-      "DeckGames": 1064
+      "Games": 561,
+      "Wins": 305,
+      "DeckGames": 1218
     },
     {
       "Name": "Blood Reckoning",
-      "Games": 315,
-      "Wins": 133,
-      "DeckGames": 742
+      "Games": 576,
+      "Wins": 229,
+      "DeckGames": 1302
     },
     {
       "Name": "Blood Seeker",
-      "Games": 337,
-      "Wins": 157,
-      "DeckGames": 826
+      "Games": 565,
+      "Wins": 282,
+      "DeckGames": 1316
     },
     {
       "Name": "Blood for Bones",
-      "Games": 339,
-      "Wins": 125,
-      "DeckGames": 882
+      "Games": 583,
+      "Wins": 247,
+      "DeckGames": 1407
     },
     {
       "Name": "Blood-Cursed Knight",
-      "Games": 420,
-      "Wins": 231,
-      "DeckGames": 1021
+      "Games": 229,
+      "Wins": 113,
+      "DeckGames": 518
     },
     {
       "Name": "Bloodhunter Bat",
-      "Games": 280,
-      "Wins": 139,
-      "DeckGames": 784
+      "Games": 577,
+      "Wins": 297,
+      "DeckGames": 1351
     },
     {
       "Name": "Boggart Brute",
-      "Games": 413,
-      "Wins": 205,
-      "DeckGames": 1029
+      "Games": 707,
+      "Wins": 348,
+      "DeckGames": 1624
     },
     {
       "Name": "Bone to Ash",
-      "Games": 327,
-      "Wins": 138,
-      "DeckGames": 847
+      "Games": 651,
+      "Wins": 290,
+      "DeckGames": 1449
     },
     {
       "Name": "Borderland Marauder",
-      "Games": 414,
-      "Wins": 213,
-      "DeckGames": 987
+      "Games": 647,
+      "Wins": 337,
+      "DeckGames": 1498
     },
     {
       "Name": "Borderland Ranger",
-      "Games": 411,
-      "Wins": 207,
-      "DeckGames": 972
+      "Games": 583,
+      "Wins": 327,
+      "DeckGames": 1421
     },
     {
       "Name": "Bramblecrush",
-      "Games": 288,
-      "Wins": 122,
-      "DeckGames": 707
+      "Games": 507,
+      "Wins": 226,
+      "DeckGames": 1253
     },
     {
       "Name": "Brash Taunter",
-      "Games": 339,
-      "Wins": 216,
-      "DeckGames": 791
+      "Games": 451,
+      "Wins": 285,
+      "DeckGames": 1064
     },
     {
       "Name": "Brawl-Bash Ogre",
-      "Games": 434,
-      "Wins": 223,
-      "DeckGames": 1099
+      "Games": 256,
+      "Wins": 123,
+      "DeckGames": 630
     },
     {
       "Name": "Brittle Effigy",
-      "Games": 439,
-      "Wins": 220,
-      "DeckGames": 1085
+      "Games": 1282,
+      "Wins": 663,
+      "DeckGames": 3220
     },
     {
       "Name": "Burning Anger",
-      "Games": 372,
-      "Wins": 162,
-      "DeckGames": 875
+      "Games": 478,
+      "Wins": 239,
+      "DeckGames": 1148
     },
     {
       "Name": "Call to the Grave",
-      "Games": 280,
-      "Wins": 110,
-      "DeckGames": 700
+      "Games": 556,
+      "Wins": 250,
+      "DeckGames": 1337
     },
     {
       "Name": "Captain of the Watch",
-      "Games": 353,
-      "Wins": 173,
-      "DeckGames": 819
+      "Games": 495,
+      "Wins": 286,
+      "DeckGames": 1113
     },
     {
       "Name": "Capture Sphere",
-      "Games": 396,
-      "Wins": 178,
-      "DeckGames": 847
+      "Games": 622,
+      "Wins": 303,
+      "DeckGames": 1407
     },
     {
       "Name": "Cavalier of Gales",
-      "Games": 502,
-      "Wins": 300,
+      "Games": 500,
+      "Wins": 268,
       "DeckGames": 1197
     },
     {
       "Name": "Chandra Nalaar",
-      "Games": 346,
-      "Wins": 188,
-      "DeckGames": 826
+      "Games": 542,
+      "Wins": 271,
+      "DeckGames": 1295
     },
     {
       "Name": "Chandra's Outrage",
-      "Games": 308,
-      "Wins": 155,
-      "DeckGames": 735
+      "Games": 466,
+      "Wins": 259,
+      "DeckGames": 1148
     },
     {
       "Name": "Chandra's Phoenix",
-      "Games": 346,
-      "Wins": 213,
-      "DeckGames": 805
-    },
-    {
-      "Name": "Chandra's Regulator",
-      "Games": 422,
-      "Wins": 273,
-      "DeckGames": 1078
-    },
-    {
-      "Name": "Chandra, Fire of Kaladesh",
-      "Games": 320,
-      "Wins": 178,
-      "DeckGames": 798
-    },
-    {
-      "Name": "Chandra, Heart of Fire",
-      "Games": 313,
-      "Wins": 145,
-      "DeckGames": 784
-    },
-    {
-      "Name": "Chandra, Pyromaster",
-      "Games": 283,
-      "Wins": 141,
-      "DeckGames": 672
-    },
-    {
-      "Name": "Chasm Skulker",
-      "Games": 281,
-      "Wins": 141,
-      "DeckGames": 700
-    },
-    {
-      "Name": "Chronomaton",
-      "Games": 308,
-      "Wins": 172,
-      "DeckGames": 763
-    },
-    {
-      "Name": "Citadel Castellan",
-      "Games": 332,
-      "Wins": 174,
-      "DeckGames": 819
-    },
-    {
-      "Name": "Clash of Wills",
-      "Games": 441,
-      "Wins": 239,
-      "DeckGames": 1071
-    },
-    {
-      "Name": "Claustrophobia",
-      "Games": 294,
-      "Wins": 145,
-      "DeckGames": 707
-    },
-    {
-      "Name": "Clone",
-      "Games": 305,
-      "Wins": 141,
-      "DeckGames": 721
-    },
-    {
-      "Name": "Cloudkin Seer",
-      "Games": 318,
-      "Wins": 173,
-      "DeckGames": 777
-    },
-    {
-      "Name": "Conclave Mentor",
-      "Games": 475,
-      "Wins": 259,
-      "DeckGames": 1092
-    },
-    {
-      "Name": "Condemn",
-      "Games": 544,
-      "Wins": 339,
-      "DeckGames": 1288
-    },
-    {
-      "Name": "Cone of Flame",
-      "Games": 338,
-      "Wins": 171,
-      "DeckGames": 791
-    },
-    {
-      "Name": "Corpse Knight",
-      "Games": 385,
-      "Wins": 215,
-      "DeckGames": 938
-    },
-    {
-      "Name": "Cower in Fear",
-      "Games": 335,
-      "Wins": 157,
-      "DeckGames": 783
-    },
-    {
-      "Name": "Crippling Blight",
-      "Games": 480,
-      "Wins": 254,
-      "DeckGames": 1190
-    },
-    {
-      "Name": "Crown of Empires",
-      "Games": 348,
-      "Wins": 201,
-      "DeckGames": 875
-    },
-    {
-      "Name": "Cruel Sadist",
-      "Games": 358,
-      "Wins": 203,
-      "DeckGames": 875
-    },
-    {
-      "Name": "Crusader of Odric",
-      "Games": 294,
-      "Wins": 140,
-      "DeckGames": 735
-    },
-    {
-      "Name": "Crypt Lurker",
-      "Games": 446,
-      "Wins": 224,
-      "DeckGames": 1092
-    },
-    {
-      "Name": "Crystal Ball",
-      "Games": 382,
-      "Wins": 184,
-      "DeckGames": 1008
-    },
-    {
-      "Name": "Cultivate",
-      "Games": 299,
-      "Wins": 150,
-      "DeckGames": 749
-    },
-    {
-      "Name": "Dark Petition",
-      "Games": 381,
-      "Wins": 175,
-      "DeckGames": 903
-    },
-    {
-      "Name": "Dark Tutelage",
-      "Games": 422,
-      "Wins": 184,
-      "DeckGames": 1029
-    },
-    {
-      "Name": "Day of Judgment",
-      "Games": 317,
-      "Wins": 182,
-      "DeckGames": 756
-    },
-    {
-      "Name": "Deadly Recluse",
-      "Games": 322,
-      "Wins": 171,
-      "DeckGames": 749
-    },
-    {
-      "Name": "Deathbloom Thallid",
-      "Games": 423,
-      "Wins": 231,
-      "DeckGames": 1029
-    },
-    {
-      "Name": "Demonic Embrace",
-      "Games": 330,
-      "Wins": 179,
-      "DeckGames": 762
-    },
-    {
-      "Name": "Demonic Pact",
-      "Games": 310,
-      "Wins": 117,
-      "DeckGames": 769
-    },
-    {
-      "Name": "Despoiler of Souls",
-      "Games": 461,
-      "Wins": 273,
-      "DeckGames": 1141
-    },
-    {
-      "Name": "Devouring Light",
-      "Games": 345,
-      "Wins": 185,
-      "DeckGames": 833
-    },
-    {
-      "Name": "Devout Decree",
-      "Games": 400,
-      "Wins": 235,
-      "DeckGames": 938
-    },
-    {
-      "Name": "Diamond Knight",
-      "Games": 304,
-      "Wins": 151,
-      "DeckGames": 770
-    },
-    {
-      "Name": "Dire Fleet Warmonger",
-      "Games": 504,
-      "Wins": 267,
-      "DeckGames": 1204
-    },
-    {
-      "Name": "Diregraf Ghoul",
-      "Games": 459,
-      "Wins": 273,
-      "DeckGames": 1113
-    },
-    {
-      "Name": "Disciple of Bolas",
-      "Games": 315,
-      "Wins": 145,
-      "DeckGames": 763
-    },
-    {
-      "Name": "Disenchant",
-      "Games": 463,
-      "Wins": 241,
-      "DeckGames": 1134
-    },
-    {
-      "Name": "Disfigure",
-      "Games": 466,
-      "Wins": 249,
-      "DeckGames": 1099
-    },
-    {
-      "Name": "Disperse",
-      "Games": 409,
-      "Wins": 202,
-      "DeckGames": 994
-    },
-    {
-      "Name": "Dissipate",
-      "Games": 409,
-      "Wins": 208,
-      "DeckGames": 1008
-    },
-    {
-      "Name": "Distress",
-      "Games": 362,
-      "Wins": 177,
-      "DeckGames": 889
-    },
-    {
-      "Name": "Doom Blade",
-      "Games": 456,
-      "Wins": 257,
-      "DeckGames": 1092
-    },
-    {
-      "Name": "Draconic Disciple",
-      "Games": 338,
-      "Wins": 158,
-      "DeckGames": 805
-    },
-    {
-      "Name": "Dragon's Hoard",
-      "Games": 488,
-      "Wins": 237,
-      "DeckGames": 1239
-    },
-    {
-      "Name": "Drakuseth, Maw of Flames",
-      "Games": 509,
-      "Wins": 250,
-      "DeckGames": 1113
-    },
-    {
-      "Name": "Drawn from Dreams",
-      "Games": 345,
-      "Wins": 171,
-      "DeckGames": 874
-    },
-    {
-      "Name": "Dread Presence",
-      "Games": 350,
-      "Wins": 185,
-      "DeckGames": 819
-    },
-    {
-      "Name": "Druidic Satchel",
-      "Games": 361,
-      "Wins": 163,
-      "DeckGames": 833
-    },
-    {
-      "Name": "Dungeon Geists",
-      "Games": 366,
-      "Wins": 215,
-      "DeckGames": 917
-    },
-    {
-      "Name": "Duskhunter Bat",
-      "Games": 322,
-      "Wins": 163,
-      "DeckGames": 798
-    },
-    {
-      "Name": "Dwynen's Elite",
-      "Games": 374,
-      "Wins": 216,
-      "DeckGames": 987
-    },
-    {
-      "Name": "Dwynen, Gilt-Leaf Daen",
-      "Games": 422,
-      "Wins": 237,
-      "DeckGames": 1092
-    },
-    {
-      "Name": "Earthquake",
-      "Games": 482,
-      "Wins": 251,
+      "Games": 501,
+      "Wins": 266,
       "DeckGames": 1155
     },
     {
-      "Name": "Elder Gargaroth",
-      "Games": 521,
-      "Wins": 312,
+      "Name": "Chandra's Regulator",
+      "Games": 665,
+      "Wins": 330,
+      "DeckGames": 1575
+    },
+    {
+      "Name": "Chandra, Fire of Kaladesh",
+      "Games": 502,
+      "Wins": 230,
+      "DeckGames": 1232
+    },
+    {
+      "Name": "Chandra, Heart of Fire",
+      "Games": 515,
+      "Wins": 229,
+      "DeckGames": 1183
+    },
+    {
+      "Name": "Chandra, Pyromaster",
+      "Games": 470,
+      "Wins": 239,
+      "DeckGames": 1127
+    },
+    {
+      "Name": "Chasm Skulker",
+      "Games": 667,
+      "Wins": 325,
+      "DeckGames": 1456
+    },
+    {
+      "Name": "Chronomaton",
+      "Games": 1077,
+      "Wins": 619,
+      "DeckGames": 2765
+    },
+    {
+      "Name": "Citadel Castellan",
+      "Games": 212,
+      "Wins": 113,
+      "DeckGames": 539
+    },
+    {
+      "Name": "Clash of Wills",
+      "Games": 503,
+      "Wins": 240,
+      "DeckGames": 1183
+    },
+    {
+      "Name": "Claustrophobia",
+      "Games": 593,
+      "Wins": 300,
+      "DeckGames": 1309
+    },
+    {
+      "Name": "Clone",
+      "Games": 648,
+      "Wins": 317,
+      "DeckGames": 1414
+    },
+    {
+      "Name": "Cloudkin Seer",
+      "Games": 596,
+      "Wins": 319,
+      "DeckGames": 1358
+    },
+    {
+      "Name": "Conclave Mentor",
+      "Games": 237,
+      "Wins": 135,
+      "DeckGames": 651
+    },
+    {
+      "Name": "Condemn",
+      "Games": 674,
+      "Wins": 360,
+      "DeckGames": 1554
+    },
+    {
+      "Name": "Cone of Flame",
+      "Games": 454,
+      "Wins": 253,
+      "DeckGames": 1071
+    },
+    {
+      "Name": "Corpse Knight",
+      "Games": 238,
+      "Wins": 133,
+      "DeckGames": 546
+    },
+    {
+      "Name": "Cower in Fear",
+      "Games": 574,
+      "Wins": 287,
+      "DeckGames": 1323
+    },
+    {
+      "Name": "Crippling Blight",
+      "Games": 574,
+      "Wins": 276,
+      "DeckGames": 1379
+    },
+    {
+      "Name": "Crown of Empires",
+      "Games": 1201,
+      "Wins": 606,
+      "DeckGames": 2926
+    },
+    {
+      "Name": "Cruel Sadist",
+      "Games": 550,
+      "Wins": 302,
+      "DeckGames": 1330
+    },
+    {
+      "Name": "Crusader of Odric",
+      "Games": 567,
+      "Wins": 294,
+      "DeckGames": 1344
+    },
+    {
+      "Name": "Crypt Lurker",
+      "Games": 568,
+      "Wins": 267,
+      "DeckGames": 1365
+    },
+    {
+      "Name": "Crystal Ball",
+      "Games": 1138,
+      "Wins": 528,
+      "DeckGames": 2786
+    },
+    {
+      "Name": "Cultivate",
+      "Games": 591,
+      "Wins": 328,
+      "DeckGames": 1351
+    },
+    {
+      "Name": "Dark Petition",
+      "Games": 486,
+      "Wins": 207,
+      "DeckGames": 1211
+    },
+    {
+      "Name": "Dark Tutelage",
+      "Games": 524,
+      "Wins": 247,
+      "DeckGames": 1330
+    },
+    {
+      "Name": "Day of Judgment",
+      "Games": 591,
+      "Wins": 344,
+      "DeckGames": 1288
+    },
+    {
+      "Name": "Deadly Recluse",
+      "Games": 503,
+      "Wins": 273,
+      "DeckGames": 1302
+    },
+    {
+      "Name": "Deathbloom Thallid",
+      "Games": 520,
+      "Wins": 285,
+      "DeckGames": 1302
+    },
+    {
+      "Name": "Demonic Embrace",
+      "Games": 480,
+      "Wins": 255,
+      "DeckGames": 1190
+    },
+    {
+      "Name": "Demonic Pact",
+      "Games": 516,
+      "Wins": 207,
       "DeckGames": 1260
     },
     {
-      "Name": "Elvish Archdruid",
-      "Games": 375,
-      "Wins": 186,
-      "DeckGames": 952
+      "Name": "Despoiler of Souls",
+      "Games": 521,
+      "Wins": 240,
+      "DeckGames": 1239
     },
     {
-      "Name": "Elvish Mystic",
-      "Games": 376,
-      "Wins": 225,
-      "DeckGames": 910
+      "Name": "Devouring Light",
+      "Games": 582,
+      "Wins": 340,
+      "DeckGames": 1351
     },
     {
-      "Name": "Elvish Visionary",
-      "Games": 317,
-      "Wins": 168,
-      "DeckGames": 749
+      "Name": "Devout Decree",
+      "Games": 703,
+      "Wins": 410,
+      "DeckGames": 1694
     },
     {
-      "Name": "Empyrean Eagle",
-      "Games": 353,
-      "Wins": 185,
-      "DeckGames": 868
+      "Name": "Diamond Knight",
+      "Games": 1059,
+      "Wins": 568,
+      "DeckGames": 2527
     },
     {
-      "Name": "Endless Obedience",
-      "Games": 298,
-      "Wins": 158,
-      "DeckGames": 714
+      "Name": "Dire Fleet Warmonger",
+      "Games": 215,
+      "Wins": 97,
+      "DeckGames": 532
     },
     {
-      "Name": "Enigma Drake",
-      "Games": 390,
-      "Wins": 197,
-      "DeckGames": 860
+      "Name": "Diregraf Ghoul",
+      "Games": 596,
+      "Wins": 336,
+      "DeckGames": 1386
     },
     {
-      "Name": "Essence Scatter",
-      "Games": 388,
-      "Wins": 207,
-      "DeckGames": 980
+      "Name": "Disciple of Bolas",
+      "Games": 537,
+      "Wins": 248,
+      "DeckGames": 1239
     },
     {
-      "Name": "Evolutionary Leap",
-      "Games": 322,
-      "Wins": 169,
-      "DeckGames": 833
+      "Name": "Disenchant",
+      "Games": 677,
+      "Wins": 353,
+      "DeckGames": 1694
     },
     {
-      "Name": "Experimental Overload",
-      "Games": 340,
-      "Wins": 162,
-      "DeckGames": 805
+      "Name": "Disfigure",
+      "Games": 580,
+      "Wins": 292,
+      "DeckGames": 1365
     },
     {
-      "Name": "Exquisite Firecraft",
-      "Games": 360,
-      "Wins": 187,
-      "DeckGames": 860
+      "Name": "Disperse",
+      "Games": 603,
+      "Wins": 276,
+      "DeckGames": 1344
     },
     {
-      "Name": "Faith's Fetters",
-      "Games": 337,
-      "Wins": 193,
-      "DeckGames": 839
+      "Name": "Dissipate",
+      "Games": 610,
+      "Wins": 274,
+      "DeckGames": 1414
     },
     {
-      "Name": "Fauna Shaman",
-      "Games": 445,
-      "Wins": 225,
-      "DeckGames": 1120
+      "Name": "Distress",
+      "Games": 530,
+      "Wins": 261,
+      "DeckGames": 1295
     },
     {
-      "Name": "Feat of Resistance",
-      "Games": 415,
-      "Wins": 197,
-      "DeckGames": 1043
+      "Name": "Doom Blade",
+      "Games": 584,
+      "Wins": 330,
+      "DeckGames": 1344
     },
     {
-      "Name": "Fencing Ace",
-      "Games": 374,
-      "Wins": 184,
-      "DeckGames": 902
+      "Name": "Draconic Disciple",
+      "Games": 161,
+      "Wins": 80,
+      "DeckGames": 385
     },
     {
-      "Name": "Feral Invocation",
-      "Games": 429,
-      "Wins": 203,
-      "DeckGames": 986
+      "Name": "Dragon's Hoard",
+      "Games": 1235,
+      "Wins": 587,
+      "DeckGames": 2940
     },
     {
-      "Name": "Fireshrieker",
-      "Games": 429,
-      "Wins": 211,
-      "DeckGames": 1001
+      "Name": "Drakuseth, Maw of Flames",
+      "Games": 685,
+      "Wins": 296,
+      "DeckGames": 1617
     },
     {
-      "Name": "Flames of the Firebrand",
-      "Games": 434,
-      "Wins": 224,
-      "DeckGames": 1064
+      "Name": "Drawn from Dreams",
+      "Games": 574,
+      "Wins": 268,
+      "DeckGames": 1246
     },
     {
-      "Name": "Flameshadow Conjuring",
-      "Games": 331,
-      "Wins": 180,
-      "DeckGames": 833
-    },
-    {
-      "Name": "Fleshbag Marauder",
-      "Games": 378,
-      "Wins": 178,
-      "DeckGames": 910
-    },
-    {
-      "Name": "Fog",
-      "Games": 494,
-      "Wins": 265,
-      "DeckGames": 1197
-    },
-    {
-      "Name": "Fog Bank",
-      "Games": 323,
-      "Wins": 158,
-      "DeckGames": 826
-    },
-    {
-      "Name": "Fortify",
-      "Games": 405,
-      "Wins": 206,
-      "DeckGames": 1001
-    },
-    {
-      "Name": "Frenzied Goblin",
-      "Games": 332,
-      "Wins": 177,
-      "DeckGames": 805
-    },
-    {
-      "Name": "Frost Breath",
-      "Games": 366,
-      "Wins": 175,
-      "DeckGames": 861
-    },
-    {
-      "Name": "Frost Lynx",
-      "Games": 356,
-      "Wins": 168,
-      "DeckGames": 910
-    },
-    {
-      "Name": "Frost Titan",
-      "Games": 459,
-      "Wins": 252,
-      "DeckGames": 1092
-    },
-    {
-      "Name": "Fry",
-      "Games": 262,
-      "Wins": 146,
-      "DeckGames": 707
-    },
-    {
-      "Name": "Fungal Rebirth",
-      "Games": 328,
-      "Wins": 144,
-      "DeckGames": 833
-    },
-    {
-      "Name": "Gallant Cavalry",
-      "Games": 354,
-      "Wins": 158,
-      "DeckGames": 846
-    },
-    {
-      "Name": "Garruk Wildspeaker",
-      "Games": 301,
-      "Wins": 167,
-      "DeckGames": 763
-    },
-    {
-      "Name": "Garruk's Harbinger",
-      "Games": 446,
-      "Wins": 255,
-      "DeckGames": 1099
-    },
-    {
-      "Name": "Garruk, Apex Predator",
-      "Games": 352,
-      "Wins": 185,
-      "DeckGames": 826
-    },
-    {
-      "Name": "Generator Servant",
-      "Games": 311,
-      "Wins": 164,
-      "DeckGames": 777
-    },
-    {
-      "Name": "Giant Growth",
-      "Games": 510,
-      "Wins": 237,
+      "Name": "Dread Presence",
+      "Games": 480,
+      "Wins": 254,
       "DeckGames": 1225
     },
     {
+      "Name": "Druidic Satchel",
+      "Games": 1012,
+      "Wins": 461,
+      "DeckGames": 2506
+    },
+    {
+      "Name": "Dungeon Geists",
+      "Games": 650,
+      "Wins": 337,
+      "DeckGames": 1428
+    },
+    {
+      "Name": "Duskhunter Bat",
+      "Games": 555,
+      "Wins": 281,
+      "DeckGames": 1302
+    },
+    {
+      "Name": "Dwynen's Elite",
+      "Games": 599,
+      "Wins": 335,
+      "DeckGames": 1610
+    },
+    {
+      "Name": "Dwynen, Gilt-Leaf Daen",
+      "Games": 587,
+      "Wins": 310,
+      "DeckGames": 1442
+    },
+    {
+      "Name": "Earthquake",
+      "Games": 687,
+      "Wins": 370,
+      "DeckGames": 1638
+    },
+    {
+      "Name": "Elder Gargaroth",
+      "Games": 617,
+      "Wins": 324,
+      "DeckGames": 1526
+    },
+    {
+      "Name": "Elvish Archdruid",
+      "Games": 495,
+      "Wins": 248,
+      "DeckGames": 1295
+    },
+    {
+      "Name": "Elvish Mystic",
+      "Games": 629,
+      "Wins": 339,
+      "DeckGames": 1526
+    },
+    {
+      "Name": "Elvish Visionary",
+      "Games": 537,
+      "Wins": 301,
+      "DeckGames": 1344
+    },
+    {
+      "Name": "Empyrean Eagle",
+      "Games": 214,
+      "Wins": 111,
+      "DeckGames": 511
+    },
+    {
+      "Name": "Endless Obedience",
+      "Games": 588,
+      "Wins": 279,
+      "DeckGames": 1365
+    },
+    {
+      "Name": "Enigma Drake",
+      "Games": 190,
+      "Wins": 94,
+      "DeckGames": 441
+    },
+    {
+      "Name": "Essence Scatter",
+      "Games": 689,
+      "Wins": 345,
+      "DeckGames": 1540
+    },
+    {
+      "Name": "Evolutionary Leap",
+      "Games": 630,
+      "Wins": 304,
+      "DeckGames": 1435
+    },
+    {
+      "Name": "Experimental Overload",
+      "Games": 206,
+      "Wins": 106,
+      "DeckGames": 427
+    },
+    {
+      "Name": "Exquisite Firecraft",
+      "Games": 632,
+      "Wins": 334,
+      "DeckGames": 1365
+    },
+    {
+      "Name": "Faith's Fetters",
+      "Games": 532,
+      "Wins": 296,
+      "DeckGames": 1330
+    },
+    {
+      "Name": "Fauna Shaman",
+      "Games": 617,
+      "Wins": 326,
+      "DeckGames": 1568
+    },
+    {
+      "Name": "Feat of Resistance",
+      "Games": 623,
+      "Wins": 286,
+      "DeckGames": 1561
+    },
+    {
+      "Name": "Fencing Ace",
+      "Games": 520,
+      "Wins": 299,
+      "DeckGames": 1225
+    },
+    {
+      "Name": "Feral Invocation",
+      "Games": 574,
+      "Wins": 303,
+      "DeckGames": 1428
+    },
+    {
+      "Name": "Fireshrieker",
+      "Games": 1264,
+      "Wins": 649,
+      "DeckGames": 3066
+    },
+    {
+      "Name": "Flames of the Firebrand",
+      "Games": 650,
+      "Wins": 329,
+      "DeckGames": 1505
+    },
+    {
+      "Name": "Flameshadow Conjuring",
+      "Games": 531,
+      "Wins": 285,
+      "DeckGames": 1302
+    },
+    {
+      "Name": "Fleshbag Marauder",
+      "Games": 619,
+      "Wins": 292,
+      "DeckGames": 1491
+    },
+    {
+      "Name": "Fog",
+      "Games": 740,
+      "Wins": 386,
+      "DeckGames": 1666
+    },
+    {
+      "Name": "Fog Bank",
+      "Games": 629,
+      "Wins": 293,
+      "DeckGames": 1365
+    },
+    {
+      "Name": "Fortify",
+      "Games": 748,
+      "Wins": 350,
+      "DeckGames": 1736
+    },
+    {
+      "Name": "Frenzied Goblin",
+      "Games": 543,
+      "Wins": 302,
+      "DeckGames": 1281
+    },
+    {
+      "Name": "Frost Breath",
+      "Games": 592,
+      "Wins": 282,
+      "DeckGames": 1351
+    },
+    {
+      "Name": "Frost Lynx",
+      "Games": 620,
+      "Wins": 299,
+      "DeckGames": 1372
+    },
+    {
+      "Name": "Frost Titan",
+      "Games": 613,
+      "Wins": 327,
+      "DeckGames": 1456
+    },
+    {
+      "Name": "Fry",
+      "Games": 488,
+      "Wins": 273,
+      "DeckGames": 1176
+    },
+    {
+      "Name": "Fungal Rebirth",
+      "Games": 646,
+      "Wins": 308,
+      "DeckGames": 1561
+    },
+    {
+      "Name": "Gallant Cavalry",
+      "Games": 526,
+      "Wins": 303,
+      "DeckGames": 1295
+    },
+    {
+      "Name": "Garruk Wildspeaker",
+      "Games": 547,
+      "Wins": 325,
+      "DeckGames": 1225
+    },
+    {
+      "Name": "Garruk's Harbinger",
+      "Games": 632,
+      "Wins": 349,
+      "DeckGames": 1491
+    },
+    {
+      "Name": "Garruk, Apex Predator",
+      "Games": 260,
+      "Wins": 137,
+      "DeckGames": 616
+    },
+    {
+      "Name": "Generator Servant",
+      "Games": 525,
+      "Wins": 249,
+      "DeckGames": 1274
+    },
+    {
+      "Name": "Giant Growth",
+      "Games": 695,
+      "Wins": 320,
+      "DeckGames": 1540
+    },
+    {
       "Name": "Gideon Jura",
-      "Games": 226,
-      "Wins": 113,
-      "DeckGames": 644
+      "Games": 505,
+      "Wins": 275,
+      "DeckGames": 1176
     },
     {
       "Name": "Gideon's Avenger",
-      "Games": 296,
-      "Wins": 142,
-      "DeckGames": 791
+      "Games": 578,
+      "Wins": 320,
+      "DeckGames": 1351
     },
     {
       "Name": "Gideon's Lawkeeper",
-      "Games": 371,
-      "Wins": 211,
-      "DeckGames": 896
+      "Games": 545,
+      "Wins": 310,
+      "DeckGames": 1358
     },
     {
       "Name": "Gift of Paradise",
-      "Games": 315,
-      "Wins": 146,
-      "DeckGames": 742
+      "Games": 633,
+      "Wins": 316,
+      "DeckGames": 1540
     },
     {
       "Name": "Gilded Lotus",
-      "Games": 329,
-      "Wins": 140,
-      "DeckGames": 819
+      "Games": 1028,
+      "Wins": 444,
+      "DeckGames": 2569
     },
     {
       "Name": "Gilt-Leaf Winnower",
-      "Games": 335,
-      "Wins": 183,
-      "DeckGames": 826
+      "Games": 530,
+      "Wins": 279,
+      "DeckGames": 1316
     },
     {
       "Name": "Glint-Horn Buccaneer",
+      "Games": 652,
+      "Wins": 376,
+      "DeckGames": 1561
+    },
+    {
+      "Name": "Glorious Anthem",
+      "Games": 564,
+      "Wins": 283,
+      "DeckGames": 1358
+    },
+    {
+      "Name": "Goblin Arsonist",
+      "Games": 555,
+      "Wins": 277,
+      "DeckGames": 1400
+    },
+    {
+      "Name": "Goblin Balloon Brigade",
+      "Games": 587,
+      "Wins": 292,
+      "DeckGames": 1421
+    },
+    {
+      "Name": "Goblin Chieftain",
+      "Games": 569,
+      "Wins": 307,
+      "DeckGames": 1421
+    },
+    {
+      "Name": "Goblin Fireslinger",
+      "Games": 527,
+      "Wins": 303,
+      "DeckGames": 1302
+    },
+    {
+      "Name": "Goblin Glory Chaser",
+      "Games": 539,
+      "Wins": 282,
+      "DeckGames": 1386
+    },
+    {
+      "Name": "Goblin Instigator",
+      "Games": 515,
+      "Wins": 291,
+      "DeckGames": 1267
+    },
+    {
+      "Name": "Goblin Piledriver",
+      "Games": 559,
+      "Wins": 280,
+      "DeckGames": 1358
+    },
+    {
+      "Name": "Goblin Rabblemaster",
+      "Games": 579,
+      "Wins": 309,
+      "DeckGames": 1323
+    },
+    {
+      "Name": "Gods Willing",
+      "Games": 725,
+      "Wins": 358,
+      "DeckGames": 1743
+    },
+    {
+      "Name": "Golos, Tireless Pilgrim",
+      "Games": 1052,
+      "Wins": 515,
+      "DeckGames": 2520
+    },
+    {
+      "Name": "Goreclaw, Terror of Qal Sisma",
+      "Games": 649,
+      "Wins": 308,
+      "DeckGames": 1645
+    },
+    {
+      "Name": "Gorgon Flail",
+      "Games": 1125,
+      "Wins": 550,
+      "DeckGames": 2639
+    },
+    {
+      "Name": "Grand Abolisher",
+      "Games": 628,
+      "Wins": 334,
+      "DeckGames": 1512
+    },
+    {
+      "Name": "Grasp of Darkness",
+      "Games": 556,
+      "Wins": 298,
+      "DeckGames": 1337
+    },
+    {
+      "Name": "Grave Titan",
+      "Games": 581,
+      "Wins": 321,
+      "DeckGames": 1470
+    },
+    {
+      "Name": "Gravedigger",
+      "Games": 626,
+      "Wins": 297,
+      "DeckGames": 1302
+    },
+    {
+      "Name": "Greatsword",
+      "Games": 1122,
+      "Wins": 522,
+      "DeckGames": 2737
+    },
+    {
+      "Name": "Grim Lavamancer",
+      "Games": 647,
+      "Wins": 327,
+      "DeckGames": 1554
+    },
+    {
+      "Name": "Grim Tutor",
+      "Games": 523,
+      "Wins": 246,
+      "DeckGames": 1225
+    },
+    {
+      "Name": "Guardian Automaton",
+      "Games": 1541,
+      "Wins": 773,
+      "DeckGames": 3703
+    },
+    {
+      "Name": "Guttersnipe",
+      "Games": 494,
+      "Wins": 238,
+      "DeckGames": 1218
+    },
+    {
+      "Name": "Hangarback Walker",
+      "Games": 1092,
+      "Wins": 654,
+      "DeckGames": 2639
+    },
+    {
+      "Name": "Hanged Executioner",
+      "Games": 521,
+      "Wins": 300,
+      "DeckGames": 1197
+    },
+    {
+      "Name": "Harbinger of the Tides",
+      "Games": 582,
+      "Wins": 323,
+      "DeckGames": 1295
+    },
+    {
+      "Name": "Harm's Way",
+      "Games": 726,
+      "Wins": 361,
+      "DeckGames": 1764
+    },
+    {
+      "Name": "Haunted Plate Mail",
+      "Games": 1004,
+      "Wins": 548,
+      "DeckGames": 2464
+    },
+    {
+      "Name": "Heartfire Immolator",
+      "Games": 613,
+      "Wins": 327,
+      "DeckGames": 1449
+    },
+    {
+      "Name": "Heroic Reinforcements",
+      "Games": 176,
+      "Wins": 93,
+      "DeckGames": 406
+    },
+    {
+      "Name": "Hooded Blightfang",
+      "Games": 557,
+      "Wins": 324,
+      "DeckGames": 1323
+    },
+    {
+      "Name": "Hornet Queen",
+      "Games": 497,
+      "Wins": 268,
+      "DeckGames": 1225
+    },
+    {
+      "Name": "Hunter's Edge",
+      "Games": 534,
+      "Wins": 264,
+      "DeckGames": 1232
+    },
+    {
+      "Name": "Hunter's Insight",
+      "Games": 589,
+      "Wins": 305,
+      "DeckGames": 1379
+    },
+    {
+      "Name": "Hypnotic Specter",
+      "Games": 526,
+      "Wins": 272,
+      "DeckGames": 1204
+    },
+    {
+      "Name": "Illusory Angel",
+      "Games": 648,
+      "Wins": 344,
+      "DeckGames": 1393
+    },
+    {
+      "Name": "Imposing Sovereign",
+      "Games": 650,
+      "Wins": 389,
+      "DeckGames": 1624
+    },
+    {
+      "Name": "Incinerate",
+      "Games": 560,
+      "Wins": 301,
+      "DeckGames": 1386
+    },
+    {
+      "Name": "Indulgent Tormentor",
+      "Games": 496,
+      "Wins": 271,
+      "DeckGames": 1197
+    },
+    {
+      "Name": "Indulging Patrician",
+      "Games": 127,
+      "Wins": 71,
+      "DeckGames": 364
+    },
+    {
+      "Name": "Inferno Titan",
+      "Games": 686,
+      "Wins": 385,
+      "DeckGames": 1631
+    },
+    {
+      "Name": "Inspired Charge",
+      "Games": 618,
+      "Wins": 305,
+      "DeckGames": 1526
+    },
+    {
+      "Name": "Into the Wilds",
+      "Games": 596,
+      "Wins": 290,
+      "DeckGames": 1365
+    },
+    {
+      "Name": "Intrepid Hero",
+      "Games": 526,
+      "Wins": 260,
+      "DeckGames": 1260
+    },
+    {
+      "Name": "Iroas's Champion",
+      "Games": 194,
+      "Wins": 114,
+      "DeckGames": 462
+    },
+    {
+      "Name": "Ironroot Warlord",
+      "Games": 174,
+      "Wins": 102,
+      "DeckGames": 455
+    },
+    {
+      "Name": "Jace Beleren",
+      "Games": 593,
+      "Wins": 277,
+      "DeckGames": 1344
+    },
+    {
+      "Name": "Jace's Phantasm",
+      "Games": 722,
+      "Wins": 386,
+      "DeckGames": 1596
+    },
+    {
+      "Name": "Jace, Vryn's Prodigy",
+      "Games": 669,
+      "Wins": 304,
+      "DeckGames": 1407
+    },
+    {
+      "Name": "Jeskai Elder",
+      "Games": 658,
+      "Wins": 331,
+      "DeckGames": 1428
+    },
+    {
+      "Name": "Jhessian Thief",
+      "Games": 648,
+      "Wins": 326,
+      "DeckGames": 1386
+    },
+    {
+      "Name": "Kitesail Freebooter",
+      "Games": 546,
+      "Wins": 322,
+      "DeckGames": 1260
+    },
+    {
+      "Name": "Knight of Glory",
+      "Games": 626,
+      "Wins": 385,
+      "DeckGames": 1477
+    },
+    {
+      "Name": "Knight of Infamy",
+      "Games": 541,
+      "Wins": 297,
+      "DeckGames": 1330
+    },
+    {
+      "Name": "Knight of the Ebon Legion",
+      "Games": 558,
+      "Wins": 346,
+      "DeckGames": 1302
+    },
+    {
+      "Name": "Knight of the White Orchid",
+      "Games": 669,
+      "Wins": 364,
+      "DeckGames": 1568
+    },
+    {
+      "Name": "Krenko's Command",
+      "Games": 611,
+      "Wins": 335,
+      "DeckGames": 1449
+    },
+    {
+      "Name": "Krenko, Mob Boss",
+      "Games": 569,
+      "Wins": 289,
+      "DeckGames": 1309
+    },
+    {
+      "Name": "Kytheon's Irregulars",
+      "Games": 752,
+      "Wins": 417,
+      "DeckGames": 1778
+    },
+    {
+      "Name": "Kytheon, Hero of Akros",
+      "Games": 652,
+      "Wins": 389,
+      "DeckGames": 1659
+    },
+    {
+      "Name": "Languish",
+      "Games": 529,
+      "Wins": 278,
+      "DeckGames": 1190
+    },
+    {
+      "Name": "Leafkin Avenger",
+      "Games": 307,
+      "Wins": 158,
+      "DeckGames": 721
+    },
+    {
+      "Name": "Lena, Selfless Champion",
+      "Games": 530,
+      "Wins": 273,
+      "DeckGames": 1253
+    },
+    {
+      "Name": "Leyline of Vitality",
+      "Games": 620,
+      "Wins": 305,
+      "DeckGames": 1491
+    },
+    {
+      "Name": "Lightning Bolt",
+      "Games": 607,
+      "Wins": 321,
+      "DeckGames": 1477
+    },
+    {
+      "Name": "Lightning Stormkin",
+      "Games": 263,
+      "Wins": 131,
+      "DeckGames": 567
+    },
+    {
+      "Name": "Liliana Vess",
+      "Games": 535,
+      "Wins": 286,
+      "DeckGames": 1295
+    },
+    {
+      "Name": "Liliana's Specter",
+      "Games": 607,
+      "Wins": 340,
+      "DeckGames": 1400
+    },
+    {
+      "Name": "Liliana, Heretical Healer",
       "Games": 512,
       "Wins": 297,
       "DeckGames": 1218
     },
     {
-      "Name": "Glorious Anthem",
-      "Games": 367,
-      "Wins": 182,
-      "DeckGames": 861
-    },
-    {
-      "Name": "Goblin Arsonist",
-      "Games": 367,
-      "Wins": 199,
-      "DeckGames": 875
-    },
-    {
-      "Name": "Goblin Balloon Brigade",
-      "Games": 351,
-      "Wins": 174,
-      "DeckGames": 826
-    },
-    {
-      "Name": "Goblin Chieftain",
-      "Games": 416,
-      "Wins": 231,
-      "DeckGames": 1029
-    },
-    {
-      "Name": "Goblin Fireslinger",
-      "Games": 341,
-      "Wins": 180,
-      "DeckGames": 832
-    },
-    {
-      "Name": "Goblin Glory Chaser",
-      "Games": 351,
-      "Wins": 193,
-      "DeckGames": 910
-    },
-    {
-      "Name": "Goblin Instigator",
-      "Games": 293,
-      "Wins": 157,
-      "DeckGames": 727
-    },
-    {
-      "Name": "Goblin Piledriver",
-      "Games": 331,
-      "Wins": 153,
-      "DeckGames": 784
-    },
-    {
-      "Name": "Goblin Rabblemaster",
-      "Games": 310,
-      "Wins": 160,
-      "DeckGames": 721
-    },
-    {
-      "Name": "Gods Willing",
-      "Games": 491,
-      "Wins": 246,
-      "DeckGames": 1127
-    },
-    {
-      "Name": "Golos, Tireless Pilgrim",
-      "Games": 337,
-      "Wins": 171,
-      "DeckGames": 812
-    },
-    {
-      "Name": "Goreclaw, Terror of Qal Sisma",
-      "Games": 522,
-      "Wins": 270,
-      "DeckGames": 1183
-    },
-    {
-      "Name": "Gorgon Flail",
-      "Games": 488,
-      "Wins": 230,
-      "DeckGames": 1113
-    },
-    {
-      "Name": "Grand Abolisher",
-      "Games": 403,
-      "Wins": 206,
-      "DeckGames": 994
-    },
-    {
-      "Name": "Grasp of Darkness",
-      "Games": 407,
-      "Wins": 224,
-      "DeckGames": 980
-    },
-    {
-      "Name": "Grave Titan",
-      "Games": 469,
-      "Wins": 285,
-      "DeckGames": 1148
-    },
-    {
-      "Name": "Gravedigger",
-      "Games": 270,
-      "Wins": 126,
-      "DeckGames": 693
-    },
-    {
-      "Name": "Greatsword",
-      "Games": 373,
-      "Wins": 183,
-      "DeckGames": 889
-    },
-    {
-      "Name": "Grim Lavamancer",
-      "Games": 379,
-      "Wins": 201,
-      "DeckGames": 889
-    },
-    {
-      "Name": "Grim Tutor",
-      "Games": 437,
-      "Wins": 234,
-      "DeckGames": 1092
-    },
-    {
-      "Name": "Guardian Automaton",
-      "Games": 330,
-      "Wins": 168,
-      "DeckGames": 735
-    },
-    {
-      "Name": "Guttersnipe",
-      "Games": 368,
-      "Wins": 179,
-      "DeckGames": 882
-    },
-    {
-      "Name": "Hangarback Walker",
-      "Games": 310,
-      "Wins": 178,
-      "DeckGames": 749
-    },
-    {
-      "Name": "Hanged Executioner",
-      "Games": 356,
-      "Wins": 182,
-      "DeckGames": 833
-    },
-    {
-      "Name": "Harbinger of the Tides",
-      "Games": 440,
-      "Wins": 276,
-      "DeckGames": 1015
-    },
-    {
-      "Name": "Harm's Way",
-      "Games": 442,
-      "Wins": 228,
-      "DeckGames": 1022
-    },
-    {
-      "Name": "Haunted Plate Mail",
-      "Games": 359,
-      "Wins": 186,
-      "DeckGames": 832
-    },
-    {
-      "Name": "Heartfire Immolator",
-      "Games": 371,
-      "Wins": 180,
-      "DeckGames": 917
-    },
-    {
-      "Name": "Heroic Reinforcements",
-      "Games": 343,
-      "Wins": 184,
-      "DeckGames": 896
-    },
-    {
-      "Name": "Hooded Blightfang",
-      "Games": 360,
-      "Wins": 182,
-      "DeckGames": 945
-    },
-    {
-      "Name": "Hornet Queen",
-      "Games": 365,
-      "Wins": 177,
-      "DeckGames": 903
-    },
-    {
-      "Name": "Hunter's Edge",
-      "Games": 341,
-      "Wins": 184,
-      "DeckGames": 847
-    },
-    {
-      "Name": "Hunter's Insight",
-      "Games": 371,
-      "Wins": 176,
-      "DeckGames": 903
-    },
-    {
-      "Name": "Hypnotic Specter",
-      "Games": 303,
-      "Wins": 154,
-      "DeckGames": 721
-    },
-    {
-      "Name": "Illusory Angel",
-      "Games": 458,
-      "Wins": 252,
-      "DeckGames": 1204
-    },
-    {
-      "Name": "Imposing Sovereign",
-      "Games": 332,
-      "Wins": 191,
-      "DeckGames": 868
-    },
-    {
-      "Name": "Incinerate",
-      "Games": 360,
-      "Wins": 195,
-      "DeckGames": 860
-    },
-    {
-      "Name": "Indulgent Tormentor",
-      "Games": 448,
-      "Wins": 244,
-      "DeckGames": 1085
-    },
-    {
-      "Name": "Indulging Patrician",
-      "Games": 353,
-      "Wins": 173,
-      "DeckGames": 889
-    },
-    {
-      "Name": "Inferno Titan",
-      "Games": 448,
-      "Wins": 248,
-      "DeckGames": 1106
-    },
-    {
-      "Name": "Inspired Charge",
-      "Games": 413,
-      "Wins": 195,
-      "DeckGames": 1050
-    },
-    {
-      "Name": "Into the Wilds",
-      "Games": 319,
-      "Wins": 153,
-      "DeckGames": 812
-    },
-    {
-      "Name": "Intrepid Hero",
-      "Games": 314,
-      "Wins": 129,
-      "DeckGames": 777
-    },
-    {
-      "Name": "Iroas's Champion",
-      "Games": 347,
-      "Wins": 190,
-      "DeckGames": 776
-    },
-    {
-      "Name": "Ironroot Warlord",
-      "Games": 338,
-      "Wins": 199,
-      "DeckGames": 847
-    },
-    {
-      "Name": "Jace Beleren",
-      "Games": 333,
-      "Wins": 143,
-      "DeckGames": 791
-    },
-    {
-      "Name": "Jace's Phantasm",
-      "Games": 318,
-      "Wins": 170,
-      "DeckGames": 770
-    },
-    {
-      "Name": "Jace, Vryn's Prodigy",
-      "Games": 272,
-      "Wins": 113,
-      "DeckGames": 700
-    },
-    {
-      "Name": "Jeskai Elder",
-      "Games": 299,
-      "Wins": 146,
-      "DeckGames": 735
-    },
-    {
-      "Name": "Jhessian Thief",
-      "Games": 341,
-      "Wins": 168,
-      "DeckGames": 798
-    },
-    {
-      "Name": "Kitesail Freebooter",
-      "Games": 363,
-      "Wins": 221,
-      "DeckGames": 861
-    },
-    {
-      "Name": "Knight of Glory",
-      "Games": 360,
-      "Wins": 246,
-      "DeckGames": 875
-    },
-    {
-      "Name": "Knight of Infamy",
-      "Games": 363,
-      "Wins": 199,
-      "DeckGames": 854
-    },
-    {
-      "Name": "Knight of the Ebon Legion",
-      "Games": 391,
-      "Wins": 248,
-      "DeckGames": 973
-    },
-    {
-      "Name": "Knight of the White Orchid",
-      "Games": 470,
-      "Wins": 266,
-      "DeckGames": 1008
-    },
-    {
-      "Name": "Krenko's Command",
-      "Games": 422,
-      "Wins": 234,
-      "DeckGames": 973
-    },
-    {
-      "Name": "Krenko, Mob Boss",
-      "Games": 329,
-      "Wins": 155,
-      "DeckGames": 840
-    },
-    {
-      "Name": "Kytheon's Irregulars",
-      "Games": 498,
-      "Wins": 260,
-      "DeckGames": 1211
-    },
-    {
-      "Name": "Kytheon, Hero of Akros",
-      "Games": 465,
-      "Wins": 291,
-      "DeckGames": 1127
-    },
-    {
-      "Name": "Languish",
-      "Games": 330,
-      "Wins": 171,
-      "DeckGames": 770
-    },
-    {
-      "Name": "Leafkin Avenger",
-      "Games": 387,
-      "Wins": 216,
-      "DeckGames": 945
-    },
-    {
-      "Name": "Lena, Selfless Champion",
-      "Games": 314,
-      "Wins": 142,
-      "DeckGames": 791
-    },
-    {
-      "Name": "Leyline of Vitality",
-      "Games": 344,
-      "Wins": 153,
-      "DeckGames": 847
-    },
-    {
-      "Name": "Lightning Bolt",
-      "Games": 529,
-      "Wins": 292,
-      "DeckGames": 1302
-    },
-    {
-      "Name": "Lightning Stormkin",
-      "Games": 422,
-      "Wins": 262,
-      "DeckGames": 1120
-    },
-    {
-      "Name": "Liliana Vess",
-      "Games": 324,
-      "Wins": 162,
-      "DeckGames": 840
-    },
-    {
-      "Name": "Liliana's Specter",
-      "Games": 359,
-      "Wins": 191,
-      "DeckGames": 784
-    },
-    {
-      "Name": "Liliana, Heretical Healer",
-      "Games": 358,
-      "Wins": 205,
-      "DeckGames": 798
-    },
-    {
       "Name": "Llanowar Elves",
-      "Games": 373,
-      "Wins": 220,
-      "DeckGames": 895
+      "Games": 606,
+      "Wins": 330,
+      "DeckGames": 1526
     },
     {
       "Name": "Llanowar Empath",
-      "Games": 300,
-      "Wins": 163,
-      "DeckGames": 756
+      "Games": 569,
+      "Wins": 276,
+      "DeckGames": 1428
     },
     {
       "Name": "Llanowar Visionary",
-      "Games": 274,
-      "Wins": 161,
-      "DeckGames": 700
+      "Games": 592,
+      "Wins": 339,
+      "DeckGames": 1449
     },
     {
       "Name": "Lorescale Coatl",
-      "Games": 366,
-      "Wins": 200,
-      "DeckGames": 888
+      "Games": 192,
+      "Wins": 90,
+      "DeckGames": 413
     },
     {
       "Name": "Magmatic Insight",
-      "Games": 474,
-      "Wins": 239,
-      "DeckGames": 1120
+      "Games": 649,
+      "Wins": 309,
+      "DeckGames": 1561
     },
     {
       "Name": "Mana Leak",
-      "Games": 398,
-      "Wins": 220,
-      "DeckGames": 980
+      "Games": 667,
+      "Wins": 310,
+      "DeckGames": 1498
     },
     {
       "Name": "Managorger Hydra",
-      "Games": 333,
-      "Wins": 148,
-      "DeckGames": 805
-    },
-    {
-      "Name": "Manifold Key",
-      "Games": 532,
-      "Wins": 288,
-      "DeckGames": 1232
-    },
-    {
-      "Name": "Mark of the Vampire",
-      "Games": 377,
-      "Wins": 188,
-      "DeckGames": 959
-    },
-    {
-      "Name": "Massacre Wurm",
-      "Games": 532,
-      "Wins": 345,
-      "DeckGames": 1246
-    },
-    {
-      "Name": "Master of Diversion",
-      "Games": 353,
-      "Wins": 182,
-      "DeckGames": 875
-    },
-    {
-      "Name": "Master of the Wild Hunt",
-      "Games": 355,
-      "Wins": 198,
-      "DeckGames": 868
-    },
-    {
-      "Name": "Merfolk Looter",
-      "Games": 271,
-      "Wins": 130,
-      "DeckGames": 693
-    },
-    {
-      "Name": "Meteorite",
-      "Games": 348,
-      "Wins": 148,
-      "DeckGames": 749
-    },
-    {
-      "Name": "Might of Oaks",
-      "Games": 332,
-      "Wins": 166,
-      "DeckGames": 798
-    },
-    {
-      "Name": "Mind Spring",
-      "Games": 463,
-      "Wins": 245,
-      "DeckGames": 1155
-    },
-    {
-      "Name": "Mistral Singer",
-      "Games": 349,
-      "Wins": 186,
-      "DeckGames": 812
-    },
-    {
-      "Name": "Molten Vortex",
-      "Games": 470,
-      "Wins": 207,
-      "DeckGames": 1162
-    },
-    {
-      "Name": "Mu Yanling, Sky Dancer",
-      "Games": 339,
-      "Wins": 195,
-      "DeckGames": 784
-    },
-    {
-      "Name": "Murder",
-      "Games": 292,
-      "Wins": 159,
-      "DeckGames": 742
-    },
-    {
-      "Name": "Mystic Archaeologist",
-      "Games": 378,
-      "Wins": 194,
-      "DeckGames": 931
-    },
-    {
-      "Name": "Necromantic Summons",
-      "Games": 321,
-      "Wins": 146,
-      "DeckGames": 784
-    },
-    {
-      "Name": "Negate",
-      "Games": 382,
-      "Wins": 163,
-      "DeckGames": 959
-    },
-    {
-      "Name": "Nissa, Vastwood Seer",
-      "Games": 308,
-      "Wins": 172,
-      "DeckGames": 749
-    },
-    {
-      "Name": "Nissa, Worldwaker",
-      "Games": 253,
-      "Wins": 142,
-      "DeckGames": 693
-    },
-    {
-      "Name": "Noxious Grasp",
-      "Games": 442,
-      "Wins": 268,
-      "DeckGames": 987
-    },
-    {
-      "Name": "Oblivion Ring",
-      "Games": 330,
-      "Wins": 185,
-      "DeckGames": 798
-    },
-    {
-      "Name": "Obsessive Stitcher",
-      "Games": 366,
-      "Wins": 177,
-      "DeckGames": 861
-    },
-    {
-      "Name": "Odric, Master Tactician",
-      "Games": 450,
-      "Wins": 251,
-      "DeckGames": 1133
-    },
-    {
-      "Name": "Ogre Battledriver",
-      "Games": 310,
-      "Wins": 193,
-      "DeckGames": 784
-    },
-    {
-      "Name": "Opt",
-      "Games": 416,
-      "Wins": 238,
-      "DeckGames": 1064
-    },
-    {
-      "Name": "Overrun",
-      "Games": 340,
-      "Wins": 178,
-      "DeckGames": 791
-    },
-    {
-      "Name": "Overwhelming Stampede",
-      "Games": 248,
-      "Wins": 126,
-      "DeckGames": 609
-    },
-    {
-      "Name": "Pacifism",
-      "Games": 411,
-      "Wins": 219,
-      "DeckGames": 987
-    },
-    {
-      "Name": "Path of Bravery",
-      "Games": 287,
-      "Wins": 179,
-      "DeckGames": 742
-    },
-    {
-      "Name": "Patient Rebuilding",
-      "Games": 326,
-      "Wins": 162,
-      "DeckGames": 812
-    },
-    {
-      "Name": "Pegasus Courser",
-      "Games": 300,
-      "Wins": 119,
-      "DeckGames": 686
-    },
-    {
-      "Name": "Pelakka Wurm",
-      "Games": 617,
-      "Wins": 301,
-      "DeckGames": 1582
-    },
-    {
-      "Name": "Perilous Vault",
-      "Games": 276,
-      "Wins": 142,
-      "DeckGames": 699
-    },
-    {
-      "Name": "Phantasmal Image",
-      "Games": 376,
-      "Wins": 190,
-      "DeckGames": 945
-    },
-    {
-      "Name": "Phyrexian Revoker",
-      "Games": 374,
-      "Wins": 210,
-      "DeckGames": 945
-    },
-    {
-      "Name": "Pia and Kiran Nalaar",
-      "Games": 355,
-      "Wins": 208,
-      "DeckGames": 812
-    },
-    {
-      "Name": "Plague Mare",
-      "Games": 341,
-      "Wins": 183,
-      "DeckGames": 798
-    },
-    {
-      "Name": "Platinum Angel",
-      "Games": 326,
-      "Wins": 140,
-      "DeckGames": 742
-    },
-    {
-      "Name": "Poison-Tip Archer",
-      "Games": 337,
-      "Wins": 174,
-      "DeckGames": 854
-    },
-    {
-      "Name": "Polymorphist's Jest",
-      "Games": 329,
-      "Wins": 154,
-      "DeckGames": 798
-    },
-    {
-      "Name": "Ponder",
-      "Games": 443,
-      "Wins": 234,
-      "DeckGames": 1078
-    },
-    {
-      "Name": "Possessed Skaab",
-      "Games": 300,
-      "Wins": 167,
-      "DeckGames": 790
-    },
-    {
-      "Name": "Preordain",
-      "Games": 465,
-      "Wins": 261,
-      "DeckGames": 1141
-    },
-    {
-      "Name": "Priest of the Blood Rite",
-      "Games": 364,
-      "Wins": 185,
-      "DeckGames": 840
-    },
-    {
-      "Name": "Primal Might",
-      "Games": 498,
-      "Wins": 264,
-      "DeckGames": 1162
-    },
-    {
-      "Name": "Primeval Titan",
-      "Games": 501,
-      "Wins": 282,
-      "DeckGames": 1281
-    },
-    {
-      "Name": "Primordial Hydra",
-      "Games": 321,
-      "Wins": 159,
-      "DeckGames": 798
-    },
-    {
-      "Name": "Public Execution",
-      "Games": 314,
-      "Wins": 144,
-      "DeckGames": 756
-    },
-    {
-      "Name": "Pulse of Murasa",
-      "Games": 313,
-      "Wins": 152,
-      "DeckGames": 735
-    },
-    {
-      "Name": "Rabid Bite",
-      "Games": 404,
-      "Wins": 204,
-      "DeckGames": 994
-    },
-    {
-      "Name": "Radha, Heart of Keld",
-      "Games": 483,
-      "Wins": 302,
-      "DeckGames": 1134
-    },
-    {
-      "Name": "Rain of Revelation",
-      "Games": 263,
-      "Wins": 130,
-      "DeckGames": 679
-    },
-    {
-      "Name": "Rampant Growth",
-      "Games": 465,
-      "Wins": 216,
-      "DeckGames": 1071
-    },
-    {
-      "Name": "Rancor",
-      "Games": 454,
-      "Wins": 237,
-      "DeckGames": 1022
-    },
-    {
-      "Name": "Ranger's Guile",
-      "Games": 469,
-      "Wins": 207,
-      "DeckGames": 1197
-    },
-    {
-      "Name": "Ravaging Blaze",
-      "Games": 469,
-      "Wins": 300,
-      "DeckGames": 1113
-    },
-    {
-      "Name": "Ravenous Rats",
-      "Games": 297,
-      "Wins": 144,
-      "DeckGames": 727
-    },
-    {
-      "Name": "Read the Bones",
-      "Games": 358,
-      "Wins": 180,
-      "DeckGames": 833
-    },
-    {
-      "Name": "Reassembling Skeleton",
-      "Games": 417,
-      "Wins": 235,
-      "DeckGames": 973
-    },
-    {
-      "Name": "Reclamation Sage",
-      "Games": 288,
-      "Wins": 137,
-      "DeckGames": 672
-    },
-    {
-      "Name": "Resplendent Angel",
-      "Games": 474,
-      "Wins": 298,
-      "DeckGames": 1113
-    },
-    {
-      "Name": "Return to Nature",
-      "Games": 408,
-      "Wins": 195,
-      "DeckGames": 1106
-    },
-    {
-      "Name": "Return to the Ranks",
-      "Games": 459,
-      "Wins": 206,
-      "DeckGames": 1043
-    },
-    {
-      "Name": "Ring of Evos Isle",
-      "Games": 379,
-      "Wins": 194,
-      "DeckGames": 959
-    },
-    {
-      "Name": "Ring of Kalonia",
-      "Games": 412,
-      "Wins": 190,
-      "DeckGames": 987
-    },
-    {
-      "Name": "Ring of Thune",
-      "Games": 405,
-      "Wins": 200,
-      "DeckGames": 1036
-    },
-    {
-      "Name": "Ring of Valkas",
-      "Games": 435,
-      "Wins": 206,
-      "DeckGames": 1056
-    },
-    {
-      "Name": "Ring of Xathrid",
-      "Games": 330,
-      "Wins": 158,
-      "DeckGames": 833
-    },
-    {
-      "Name": "Risen Reef",
-      "Games": 287,
-      "Wins": 134,
-      "DeckGames": 735
-    },
-    {
-      "Name": "Rotting Regisaur",
-      "Games": 444,
-      "Wins": 266,
-      "DeckGames": 1141
-    },
-    {
-      "Name": "Royal Assassin",
-      "Games": 329,
-      "Wins": 172,
-      "DeckGames": 791
-    },
-    {
-      "Name": "Rummaging Goblin",
-      "Games": 319,
-      "Wins": 170,
-      "DeckGames": 777
-    },
-    {
-      "Name": "Safe Passage",
-      "Games": 316,
-      "Wins": 158,
-      "DeckGames": 784
-    },
-    {
-      "Name": "Sarkhan, Fireblood",
-      "Games": 309,
-      "Wins": 144,
-      "DeckGames": 756
-    },
-    {
-      "Name": "Scab-Clan Berserker",
-      "Games": 331,
-      "Wins": 160,
-      "DeckGames": 854
-    },
-    {
-      "Name": "Scavenging Ooze",
-      "Games": 393,
-      "Wins": 267,
-      "DeckGames": 958
-    },
-    {
-      "Name": "Scepter of Empires",
-      "Games": 464,
-      "Wins": 217,
-      "DeckGames": 1155
-    },
-    {
-      "Name": "Scorch Spitter",
-      "Games": 430,
-      "Wins": 242,
-      "DeckGames": 994
-    },
-    {
-      "Name": "Scorching Dragonfire",
-      "Games": 391,
-      "Wins": 214,
-      "DeckGames": 1043
-    },
-    {
-      "Name": "Scuttlemutt",
-      "Games": 366,
-      "Wins": 175,
-      "DeckGames": 931
-    },
-    {
-      "Name": "Seasoned Hallowblade",
-      "Games": 411,
-      "Wins": 238,
-      "DeckGames": 966
-    },
-    {
-      "Name": "Send to Sleep",
-      "Games": 444,
-      "Wins": 192,
-      "DeckGames": 1112
-    },
-    {
-      "Name": "Sensory Deprivation",
-      "Games": 449,
-      "Wins": 236,
-      "DeckGames": 1127
-    },
-    {
-      "Name": "Serra Avenger",
-      "Games": 474,
-      "Wins": 270,
-      "DeckGames": 1113
-    },
-    {
-      "Name": "Shadows of the Past",
-      "Games": 503,
-      "Wins": 247,
-      "DeckGames": 1148
-    },
-    {
-      "Name": "Shared Summons",
-      "Games": 340,
-      "Wins": 155,
-      "DeckGames": 833
-    },
-    {
-      "Name": "Shifting Ceratops",
-      "Games": 530,
-      "Wins": 289,
-      "DeckGames": 1183
-    },
-    {
-      "Name": "Short Sword",
-      "Games": 464,
-      "Wins": 229,
-      "DeckGames": 1134
-    },
-    {
-      "Name": "Siege-Gang Commander",
-      "Games": 366,
-      "Wins": 183,
-      "DeckGames": 868
-    },
-    {
-      "Name": "Sign in Blood",
-      "Games": 416,
-      "Wins": 207,
-      "DeckGames": 979
-    },
-    {
-      "Name": "Skinshifter",
-      "Games": 331,
-      "Wins": 161,
-      "DeckGames": 783
-    },
-    {
-      "Name": "Skyknight Vanguard",
-      "Games": 341,
-      "Wins": 202,
-      "DeckGames": 812
-    },
-    {
-      "Name": "Skyrider Patrol",
-      "Games": 285,
-      "Wins": 144,
-      "DeckGames": 679
-    },
-    {
-      "Name": "Skyscanner",
-      "Games": 362,
-      "Wins": 173,
-      "DeckGames": 881
-    },
-    {
-      "Name": "Sleep",
-      "Games": 448,
-      "Wins": 222,
-      "DeckGames": 1008
-    },
-    {
-      "Name": "Smallpox",
-      "Games": 341,
-      "Wins": 188,
-      "DeckGames": 875
-    },
-    {
-      "Name": "Solemn Simulacrum",
-      "Games": 366,
-      "Wins": 170,
-      "DeckGames": 812
-    },
-    {
-      "Name": "Sorin Markov",
-      "Games": 282,
-      "Wins": 142,
-      "DeckGames": 742
-    },
-    {
-      "Name": "Soul Sear",
-      "Games": 246,
-      "Wins": 125,
-      "DeckGames": 595
-    },
-    {
-      "Name": "Soul Warden",
-      "Games": 304,
-      "Wins": 160,
-      "DeckGames": 749
-    },
-    {
-      "Name": "Soul of Shandalar",
-      "Games": 505,
-      "Wins": 257,
-      "DeckGames": 1204
-    },
-    {
-      "Name": "Soulblade Djinn",
-      "Games": 344,
-      "Wins": 175,
-      "DeckGames": 860
-    },
-    {
-      "Name": "Speaker of the Heavens",
-      "Games": 359,
-      "Wins": 191,
-      "DeckGames": 875
-    },
-    {
-      "Name": "Spectral Sailor",
-      "Games": 294,
-      "Wins": 157,
-      "DeckGames": 770
-    },
-    {
-      "Name": "Spellgorger Weird",
-      "Games": 293,
-      "Wins": 149,
-      "DeckGames": 735
-    },
-    {
-      "Name": "Sphinx of Uthuun",
-      "Games": 399,
-      "Wins": 189,
-      "DeckGames": 980
-    },
-    {
-      "Name": "Spirit Bonds",
-      "Games": 448,
-      "Wins": 226,
-      "DeckGames": 1001
-    },
-    {
-      "Name": "Spirit Mantle",
-      "Games": 436,
-      "Wins": 205,
-      "DeckGames": 1057
-    },
-    {
-      "Name": "Stab Wound",
-      "Games": 289,
-      "Wins": 165,
-      "DeckGames": 692
-    },
-    {
-      "Name": "Staff of Nin",
-      "Games": 335,
-      "Wins": 177,
-      "DeckGames": 777
-    },
-    {
-      "Name": "Steadfast Sentry",
-      "Games": 387,
-      "Wins": 220,
-      "DeckGames": 994
-    },
-    {
-      "Name": "Stoke the Flames",
-      "Games": 313,
-      "Wins": 148,
-      "DeckGames": 756
-    },
-    {
-      "Name": "Stormblood Berserker",
-      "Games": 310,
-      "Wins": 147,
-      "DeckGames": 763
-    },
-    {
-      "Name": "Stormfront Pegasus",
-      "Games": 389,
-      "Wins": 203,
-      "DeckGames": 952
-    },
-    {
-      "Name": "Stormwing Entity",
-      "Games": 365,
-      "Wins": 201,
-      "DeckGames": 840
-    },
-    {
-      "Name": "Sublime Archangel",
-      "Games": 436,
-      "Wins": 287,
-      "DeckGames": 1120
-    },
-    {
-      "Name": "Sun Titan",
-      "Games": 445,
-      "Wins": 251,
-      "DeckGames": 1099
-    },
-    {
-      "Name": "Swift Response",
-      "Games": 386,
-      "Wins": 181,
-      "DeckGames": 994
-    },
-    {
-      "Name": "Swiftfoot Boots",
-      "Games": 403,
-      "Wins": 212,
-      "DeckGames": 1057
-    },
-    {
-      "Name": "Sword of Vengeance",
-      "Games": 357,
-      "Wins": 186,
-      "DeckGames": 917
-    },
-    {
-      "Name": "Sword of the Animist",
-      "Games": 368,
-      "Wins": 180,
-      "DeckGames": 910
-    },
-    {
-      "Name": "Sylvan Messenger",
-      "Games": 332,
-      "Wins": 174,
-      "DeckGames": 798
-    },
-    {
-      "Name": "Sylvan Ranger",
-      "Games": 357,
-      "Wins": 185,
-      "DeckGames": 903
-    },
-    {
-      "Name": "Talent of the Telepath",
-      "Games": 347,
-      "Wins": 173,
-      "DeckGames": 839
-    },
-    {
-      "Name": "Talrand's Invocation",
-      "Games": 277,
-      "Wins": 157,
-      "DeckGames": 644
-    },
-    {
-      "Name": "Talrand, Sky Summoner",
-      "Games": 309,
-      "Wins": 143,
-      "DeckGames": 763
-    },
-    {
-      "Name": "Tectonic Rift",
-      "Games": 365,
-      "Wins": 152,
-      "DeckGames": 917
-    },
-    {
-      "Name": "Teferi's Tutelage",
-      "Games": 333,
-      "Wins": 144,
-      "DeckGames": 798
-    },
-    {
-      "Name": "Teferi, Master of Time",
-      "Games": 333,
-      "Wins": 175,
-      "DeckGames": 812
-    },
-    {
-      "Name": "Tezzeret, Artifice Master",
-      "Games": 310,
-      "Wins": 152,
-      "DeckGames": 770
-    },
-    {
-      "Name": "Thragtusk",
-      "Games": 512,
-      "Wins": 299,
-      "DeckGames": 1253
-    },
-    {
-      "Name": "Thrashing Brontodon",
-      "Games": 522,
-      "Wins": 286,
+      "Games": 570,
+      "Wins": 272,
       "DeckGames": 1218
     },
     {
-      "Name": "Thrill of Possibility",
-      "Games": 437,
-      "Wins": 219,
-      "DeckGames": 1084
+      "Name": "Manifold Key",
+      "Games": 1153,
+      "Wins": 616,
+      "DeckGames": 2912
     },
     {
-      "Name": "Throne of Empires",
-      "Games": 275,
-      "Wins": 120,
-      "DeckGames": 686
+      "Name": "Mark of the Vampire",
+      "Games": 476,
+      "Wins": 250,
+      "DeckGames": 1141
     },
     {
-      "Name": "Thunderclap Wyvern",
-      "Games": 381,
-      "Wins": 203,
-      "DeckGames": 896
+      "Name": "Massacre Wurm",
+      "Games": 492,
+      "Wins": 274,
+      "DeckGames": 1183
     },
     {
-      "Name": "Thundermaw Hellkite",
-      "Games": 547,
-      "Wins": 389,
+      "Name": "Master of Diversion",
+      "Games": 518,
+      "Wins": 282,
+      "DeckGames": 1295
+    },
+    {
+      "Name": "Master of the Wild Hunt",
+      "Games": 641,
+      "Wins": 336,
+      "DeckGames": 1526
+    },
+    {
+      "Name": "Merfolk Looter",
+      "Games": 596,
+      "Wins": 274,
+      "DeckGames": 1323
+    },
+    {
+      "Name": "Meteorite",
+      "Games": 1062,
+      "Wins": 504,
+      "DeckGames": 2534
+    },
+    {
+      "Name": "Might of Oaks",
+      "Games": 587,
+      "Wins": 300,
+      "DeckGames": 1393
+    },
+    {
+      "Name": "Mind Spring",
+      "Games": 614,
+      "Wins": 302,
+      "DeckGames": 1372
+    },
+    {
+      "Name": "Mistral Singer",
+      "Games": 689,
+      "Wins": 352,
+      "DeckGames": 1561
+    },
+    {
+      "Name": "Molten Vortex",
+      "Games": 668,
+      "Wins": 293,
+      "DeckGames": 1589
+    },
+    {
+      "Name": "Mu Yanling, Sky Dancer",
+      "Games": 548,
+      "Wins": 313,
+      "DeckGames": 1246
+    },
+    {
+      "Name": "Murder",
+      "Games": 535,
+      "Wins": 287,
+      "DeckGames": 1239
+    },
+    {
+      "Name": "Mystic Archaeologist",
+      "Games": 689,
+      "Wins": 327,
+      "DeckGames": 1470
+    },
+    {
+      "Name": "Necromantic Summons",
+      "Games": 580,
+      "Wins": 273,
+      "DeckGames": 1358
+    },
+    {
+      "Name": "Negate",
+      "Games": 662,
+      "Wins": 270,
+      "DeckGames": 1498
+    },
+    {
+      "Name": "Nissa, Vastwood Seer",
+      "Games": 600,
+      "Wins": 335,
+      "DeckGames": 1491
+    },
+    {
+      "Name": "Nissa, Worldwaker",
+      "Games": 640,
+      "Wins": 378,
+      "DeckGames": 1414
+    },
+    {
+      "Name": "Noxious Grasp",
+      "Games": 638,
+      "Wins": 361,
+      "DeckGames": 1484
+    },
+    {
+      "Name": "Oblivion Ring",
+      "Games": 519,
+      "Wins": 297,
       "DeckGames": 1309
     },
     {
-      "Name": "Time Warp",
-      "Games": 302,
-      "Wins": 147,
-      "DeckGames": 728
+      "Name": "Obsessive Stitcher",
+      "Games": 216,
+      "Wins": 84,
+      "DeckGames": 469
     },
     {
-      "Name": "Timely Reinforcements",
-      "Games": 335,
-      "Wins": 176,
-      "DeckGames": 756
+      "Name": "Odric, Master Tactician",
+      "Games": 644,
+      "Wins": 352,
+      "DeckGames": 1568
     },
     {
-      "Name": "Titan's Strength",
-      "Games": 564,
-      "Wins": 275,
+      "Name": "Ogre Battledriver",
+      "Games": 533,
+      "Wins": 334,
+      "DeckGames": 1246
+    },
+    {
+      "Name": "Opt",
+      "Games": 600,
+      "Wins": 289,
+      "DeckGames": 1358
+    },
+    {
+      "Name": "Overrun",
+      "Games": 512,
+      "Wins": 281,
+      "DeckGames": 1162
+    },
+    {
+      "Name": "Overwhelming Stampede",
+      "Games": 587,
+      "Wins": 283,
+      "DeckGames": 1337
+    },
+    {
+      "Name": "Pacifism",
+      "Games": 668,
+      "Wins": 374,
+      "DeckGames": 1617
+    },
+    {
+      "Name": "Path of Bravery",
+      "Games": 535,
+      "Wins": 326,
+      "DeckGames": 1302
+    },
+    {
+      "Name": "Patient Rebuilding",
+      "Games": 621,
+      "Wins": 278,
+      "DeckGames": 1379
+    },
+    {
+      "Name": "Pegasus Courser",
+      "Games": 563,
+      "Wins": 299,
+      "DeckGames": 1302
+    },
+    {
+      "Name": "Pelakka Wurm",
+      "Games": 884,
+      "Wins": 450,
+      "DeckGames": 2156
+    },
+    {
+      "Name": "Perilous Vault",
+      "Games": 1158,
+      "Wins": 645,
+      "DeckGames": 2653
+    },
+    {
+      "Name": "Phantasmal Image",
+      "Games": 671,
+      "Wins": 326,
+      "DeckGames": 1561
+    },
+    {
+      "Name": "Phyrexian Revoker",
+      "Games": 1139,
+      "Wins": 610,
+      "DeckGames": 2688
+    },
+    {
+      "Name": "Pia and Kiran Nalaar",
+      "Games": 559,
+      "Wins": 320,
       "DeckGames": 1288
     },
     {
-      "Name": "Tomebound Lich",
-      "Games": 334,
-      "Wins": 153,
-      "DeckGames": 784
+      "Name": "Plague Mare",
+      "Games": 574,
+      "Wins": 311,
+      "DeckGames": 1337
     },
     {
-      "Name": "Topan Freeblade",
-      "Games": 411,
-      "Wins": 238,
-      "DeckGames": 1015
+      "Name": "Platinum Angel",
+      "Games": 1045,
+      "Wins": 564,
+      "DeckGames": 2492
     },
     {
-      "Name": "Tormented Soul",
-      "Games": 389,
-      "Wins": 210,
-      "DeckGames": 896
+      "Name": "Poison-Tip Archer",
+      "Games": 211,
+      "Wins": 98,
+      "DeckGames": 476
     },
     {
-      "Name": "Track Down",
-      "Games": 453,
-      "Wins": 210,
-      "DeckGames": 1071
+      "Name": "Polymorphist's Jest",
+      "Games": 670,
+      "Wins": 316,
+      "DeckGames": 1484
     },
     {
-      "Name": "Tragic Arrogance",
-      "Games": 319,
-      "Wins": 160,
-      "DeckGames": 784
+      "Name": "Ponder",
+      "Games": 624,
+      "Wins": 291,
+      "DeckGames": 1379
     },
     {
-      "Name": "Trumpet Blast",
-      "Games": 368,
-      "Wins": 160,
-      "DeckGames": 861
+      "Name": "Possessed Skaab",
+      "Games": 192,
+      "Wins": 82,
+      "DeckGames": 441
     },
     {
-      "Name": "Turn to Frog",
-      "Games": 433,
-      "Wins": 202,
+      "Name": "Preordain",
+      "Games": 628,
+      "Wins": 281,
+      "DeckGames": 1407
+    },
+    {
+      "Name": "Priest of the Blood Rite",
+      "Games": 564,
+      "Wins": 286,
+      "DeckGames": 1358
+    },
+    {
+      "Name": "Primal Might",
+      "Games": 635,
+      "Wins": 336,
+      "DeckGames": 1575
+    },
+    {
+      "Name": "Primeval Titan",
+      "Games": 653,
+      "Wins": 356,
+      "DeckGames": 1666
+    },
+    {
+      "Name": "Primordial Hydra",
+      "Games": 470,
+      "Wins": 247,
       "DeckGames": 1134
     },
     {
-      "Name": "Twinblade Assassins",
-      "Games": 464,
+      "Name": "Public Execution",
+      "Games": 555,
+      "Wins": 272,
+      "DeckGames": 1218
+    },
+    {
+      "Name": "Pulse of Murasa",
+      "Games": 676,
+      "Wins": 340,
+      "DeckGames": 1547
+    },
+    {
+      "Name": "Rabid Bite",
+      "Games": 663,
+      "Wins": 342,
+      "DeckGames": 1568
+    },
+    {
+      "Name": "Radha, Heart of Keld",
+      "Games": 260,
+      "Wins": 143,
+      "DeckGames": 623
+    },
+    {
+      "Name": "Rain of Revelation",
+      "Games": 656,
+      "Wins": 299,
+      "DeckGames": 1491
+    },
+    {
+      "Name": "Rampant Growth",
+      "Games": 720,
+      "Wins": 345,
+      "DeckGames": 1589
+    },
+    {
+      "Name": "Rancor",
+      "Games": 643,
+      "Wins": 318,
+      "DeckGames": 1589
+    },
+    {
+      "Name": "Ranger's Guile",
+      "Games": 614,
+      "Wins": 274,
+      "DeckGames": 1484
+    },
+    {
+      "Name": "Ravaging Blaze",
+      "Games": 660,
+      "Wins": 370,
+      "DeckGames": 1568
+    },
+    {
+      "Name": "Ravenous Rats",
+      "Games": 541,
+      "Wins": 302,
+      "DeckGames": 1288
+    },
+    {
+      "Name": "Read the Bones",
+      "Games": 528,
+      "Wins": 233,
+      "DeckGames": 1218
+    },
+    {
+      "Name": "Reassembling Skeleton",
+      "Games": 524,
+      "Wins": 262,
+      "DeckGames": 1267
+    },
+    {
+      "Name": "Reclamation Sage",
+      "Games": 568,
+      "Wins": 291,
+      "DeckGames": 1435
+    },
+    {
+      "Name": "Resplendent Angel",
+      "Games": 654,
+      "Wins": 376,
+      "DeckGames": 1561
+    },
+    {
+      "Name": "Return to Nature",
+      "Games": 634,
+      "Wins": 289,
+      "DeckGames": 1428
+    },
+    {
+      "Name": "Return to the Ranks",
+      "Games": 872,
+      "Wins": 417,
+      "DeckGames": 2037
+    },
+    {
+      "Name": "Ring of Evos Isle",
+      "Games": 1153,
+      "Wins": 583,
+      "DeckGames": 2828
+    },
+    {
+      "Name": "Ring of Kalonia",
+      "Games": 1150,
+      "Wins": 477,
+      "DeckGames": 2814
+    },
+    {
+      "Name": "Ring of Thune",
+      "Games": 1198,
+      "Wins": 641,
+      "DeckGames": 2849
+    },
+    {
+      "Name": "Ring of Valkas",
+      "Games": 1190,
+      "Wins": 580,
+      "DeckGames": 2807
+    },
+    {
+      "Name": "Ring of Xathrid",
+      "Games": 1021,
+      "Wins": 506,
+      "DeckGames": 2499
+    },
+    {
+      "Name": "Risen Reef",
+      "Games": 244,
+      "Wins": 124,
+      "DeckGames": 560
+    },
+    {
+      "Name": "Rotting Regisaur",
+      "Games": 631,
+      "Wins": 369,
+      "DeckGames": 1484
+    },
+    {
+      "Name": "Royal Assassin",
+      "Games": 576,
+      "Wins": 280,
+      "DeckGames": 1316
+    },
+    {
+      "Name": "Rummaging Goblin",
+      "Games": 574,
+      "Wins": 297,
+      "DeckGames": 1379
+    },
+    {
+      "Name": "Safe Passage",
+      "Games": 509,
+      "Wins": 272,
+      "DeckGames": 1239
+    },
+    {
+      "Name": "Sarkhan, Fireblood",
+      "Games": 536,
+      "Wins": 253,
+      "DeckGames": 1267
+    },
+    {
+      "Name": "Scab-Clan Berserker",
+      "Games": 548,
+      "Wins": 271,
+      "DeckGames": 1337
+    },
+    {
+      "Name": "Scavenging Ooze",
+      "Games": 742,
+      "Wins": 513,
+      "DeckGames": 1736
+    },
+    {
+      "Name": "Scepter of Empires",
+      "Games": 1205,
+      "Wins": 537,
+      "DeckGames": 2793
+    },
+    {
+      "Name": "Scorch Spitter",
+      "Games": 657,
+      "Wins": 332,
+      "DeckGames": 1547
+    },
+    {
+      "Name": "Scorching Dragonfire",
+      "Games": 618,
+      "Wins": 335,
+      "DeckGames": 1505
+    },
+    {
+      "Name": "Scuttlemutt",
+      "Games": 1169,
+      "Wins": 635,
+      "DeckGames": 2751
+    },
+    {
+      "Name": "Seasoned Hallowblade",
+      "Games": 610,
+      "Wins": 337,
+      "DeckGames": 1533
+    },
+    {
+      "Name": "Send to Sleep",
+      "Games": 701,
+      "Wins": 318,
+      "DeckGames": 1498
+    },
+    {
+      "Name": "Sensory Deprivation",
+      "Games": 694,
+      "Wins": 329,
+      "DeckGames": 1540
+    },
+    {
+      "Name": "Serra Avenger",
+      "Games": 827,
+      "Wins": 473,
+      "DeckGames": 1939
+    },
+    {
+      "Name": "Shadows of the Past",
+      "Games": 564,
+      "Wins": 255,
+      "DeckGames": 1400
+    },
+    {
+      "Name": "Shared Summons",
+      "Games": 603,
+      "Wins": 300,
+      "DeckGames": 1442
+    },
+    {
+      "Name": "Shifting Ceratops",
+      "Games": 699,
+      "Wins": 381,
+      "DeckGames": 1638
+    },
+    {
+      "Name": "Short Sword",
+      "Games": 1139,
+      "Wins": 564,
+      "DeckGames": 2821
+    },
+    {
+      "Name": "Siege-Gang Commander",
+      "Games": 461,
+      "Wins": 230,
+      "DeckGames": 1071
+    },
+    {
+      "Name": "Sign in Blood",
+      "Games": 519,
+      "Wins": 243,
+      "DeckGames": 1232
+    },
+    {
+      "Name": "Skinshifter",
+      "Games": 571,
+      "Wins": 276,
+      "DeckGames": 1316
+    },
+    {
+      "Name": "Skyknight Vanguard",
+      "Games": 193,
+      "Wins": 128,
+      "DeckGames": 462
+    },
+    {
+      "Name": "Skyrider Patrol",
+      "Games": 177,
+      "Wins": 79,
+      "DeckGames": 420
+    },
+    {
+      "Name": "Skyscanner",
+      "Games": 1114,
+      "Wins": 575,
+      "DeckGames": 2604
+    },
+    {
+      "Name": "Sleep",
+      "Games": 603,
+      "Wins": 271,
+      "DeckGames": 1295
+    },
+    {
+      "Name": "Smallpox",
+      "Games": 553,
+      "Wins": 258,
+      "DeckGames": 1379
+    },
+    {
+      "Name": "Solemn Simulacrum",
+      "Games": 1080,
+      "Wins": 586,
+      "DeckGames": 2541
+    },
+    {
+      "Name": "Sorin Markov",
+      "Games": 541,
+      "Wins": 244,
+      "DeckGames": 1253
+    },
+    {
+      "Name": "Soul Sear",
+      "Games": 571,
+      "Wins": 304,
+      "DeckGames": 1295
+    },
+    {
+      "Name": "Soul Warden",
+      "Games": 563,
+      "Wins": 333,
+      "DeckGames": 1491
+    },
+    {
+      "Name": "Soul of Shandalar",
+      "Games": 669,
+      "Wins": 352,
+      "DeckGames": 1631
+    },
+    {
+      "Name": "Soulblade Djinn",
+      "Games": 633,
+      "Wins": 298,
+      "DeckGames": 1393
+    },
+    {
+      "Name": "Speaker of the Heavens",
+      "Games": 587,
+      "Wins": 346,
+      "DeckGames": 1421
+    },
+    {
+      "Name": "Spectral Sailor",
+      "Games": 603,
+      "Wins": 309,
+      "DeckGames": 1295
+    },
+    {
+      "Name": "Spellgorger Weird",
+      "Games": 568,
+      "Wins": 284,
+      "DeckGames": 1316
+    },
+    {
+      "Name": "Sphinx of Uthuun",
+      "Games": 651,
+      "Wins": 302,
+      "DeckGames": 1484
+    },
+    {
+      "Name": "Spirit Bonds",
+      "Games": 585,
+      "Wins": 324,
+      "DeckGames": 1463
+    },
+    {
+      "Name": "Spirit Mantle",
+      "Games": 713,
+      "Wins": 372,
+      "DeckGames": 1687
+    },
+    {
+      "Name": "Stab Wound",
+      "Games": 542,
+      "Wins": 338,
+      "DeckGames": 1239
+    },
+    {
+      "Name": "Staff of Nin",
+      "Games": 1099,
+      "Wins": 534,
+      "DeckGames": 2555
+    },
+    {
+      "Name": "Steadfast Sentry",
+      "Games": 646,
+      "Wins": 356,
+      "DeckGames": 1519
+    },
+    {
+      "Name": "Stoke the Flames",
+      "Games": 588,
+      "Wins": 315,
+      "DeckGames": 1337
+    },
+    {
+      "Name": "Stormblood Berserker",
+      "Games": 489,
+      "Wins": 251,
+      "DeckGames": 1211
+    },
+    {
+      "Name": "Stormfront Pegasus",
+      "Games": 611,
+      "Wins": 344,
+      "DeckGames": 1435
+    },
+    {
+      "Name": "Stormwing Entity",
+      "Games": 613,
+      "Wins": 322,
+      "DeckGames": 1337
+    },
+    {
+      "Name": "Sublime Archangel",
+      "Games": 677,
+      "Wins": 432,
+      "DeckGames": 1722
+    },
+    {
+      "Name": "Sun Titan",
+      "Games": 742,
+      "Wins": 402,
+      "DeckGames": 1722
+    },
+    {
+      "Name": "Swift Response",
+      "Games": 641,
+      "Wins": 303,
+      "DeckGames": 1512
+    },
+    {
+      "Name": "Swiftfoot Boots",
+      "Games": 1116,
+      "Wins": 560,
+      "DeckGames": 2660
+    },
+    {
+      "Name": "Sword of Vengeance",
+      "Games": 1180,
+      "Wins": 604,
+      "DeckGames": 2744
+    },
+    {
+      "Name": "Sword of the Animist",
+      "Games": 1170,
+      "Wins": 532,
+      "DeckGames": 2695
+    },
+    {
+      "Name": "Sylvan Messenger",
+      "Games": 559,
+      "Wins": 293,
+      "DeckGames": 1358
+    },
+    {
+      "Name": "Sylvan Ranger",
+      "Games": 518,
+      "Wins": 289,
+      "DeckGames": 1309
+    },
+    {
+      "Name": "Talent of the Telepath",
+      "Games": 563,
+      "Wins": 236,
+      "DeckGames": 1218
+    },
+    {
+      "Name": "Talrand's Invocation",
+      "Games": 729,
+      "Wins": 389,
+      "DeckGames": 1547
+    },
+    {
+      "Name": "Talrand, Sky Summoner",
+      "Games": 586,
+      "Wins": 283,
+      "DeckGames": 1288
+    },
+    {
+      "Name": "Tectonic Rift",
+      "Games": 556,
+      "Wins": 275,
+      "DeckGames": 1302
+    },
+    {
+      "Name": "Teferi's Tutelage",
+      "Games": 702,
+      "Wins": 361,
+      "DeckGames": 1491
+    },
+    {
+      "Name": "Teferi, Master of Time",
+      "Games": 645,
+      "Wins": 316,
+      "DeckGames": 1421
+    },
+    {
+      "Name": "Tezzeret, Artifice Master",
+      "Games": 664,
+      "Wins": 310,
+      "DeckGames": 1428
+    },
+    {
+      "Name": "Thragtusk",
+      "Games": 725,
+      "Wins": 422,
+      "DeckGames": 1666
+    },
+    {
+      "Name": "Thrashing Brontodon",
+      "Games": 591,
+      "Wins": 319,
+      "DeckGames": 1421
+    },
+    {
+      "Name": "Thrill of Possibility",
+      "Games": 628,
+      "Wins": 339,
+      "DeckGames": 1526
+    },
+    {
+      "Name": "Throne of Empires",
+      "Games": 1043,
+      "Wins": 464,
+      "DeckGames": 2450
+    },
+    {
+      "Name": "Thunderclap Wyvern",
+      "Games": 250,
+      "Wins": 129,
+      "DeckGames": 595
+    },
+    {
+      "Name": "Thundermaw Hellkite",
+      "Games": 726,
+      "Wins": 459,
+      "DeckGames": 1568
+    },
+    {
+      "Name": "Time Warp",
+      "Games": 642,
+      "Wins": 281,
+      "DeckGames": 1435
+    },
+    {
+      "Name": "Timely Reinforcements",
+      "Games": 538,
+      "Wins": 291,
+      "DeckGames": 1309
+    },
+    {
+      "Name": "Titan's Strength",
+      "Games": 663,
+      "Wins": 313,
+      "DeckGames": 1540
+    },
+    {
+      "Name": "Tomebound Lich",
+      "Games": 252,
+      "Wins": 117,
+      "DeckGames": 511
+    },
+    {
+      "Name": "Topan Freeblade",
+      "Games": 700,
+      "Wins": 399,
+      "DeckGames": 1610
+    },
+    {
+      "Name": "Tormented Soul",
+      "Games": 513,
+      "Wins": 275,
+      "DeckGames": 1274
+    },
+    {
+      "Name": "Track Down",
+      "Games": 627,
+      "Wins": 321,
+      "DeckGames": 1505
+    },
+    {
+      "Name": "Tragic Arrogance",
+      "Games": 488,
       "Wins": 259,
       "DeckGames": 1211
     },
     {
+      "Name": "Trumpet Blast",
+      "Games": 561,
+      "Wins": 251,
+      "DeckGames": 1295
+    },
+    {
+      "Name": "Turn to Frog",
+      "Games": 619,
+      "Wins": 285,
+      "DeckGames": 1393
+    },
+    {
+      "Name": "Twinblade Assassins",
+      "Games": 235,
+      "Wins": 116,
+      "DeckGames": 567
+    },
+    {
       "Name": "Ugin, the Spirit Dragon",
-      "Games": 334,
-      "Wins": 155,
-      "DeckGames": 833
+      "Games": 977,
+      "Wins": 474,
+      "DeckGames": 2359
     },
     {
       "Name": "Ulcerate",
-      "Games": 446,
-      "Wins": 230,
-      "DeckGames": 1085
+      "Games": 573,
+      "Wins": 281,
+      "DeckGames": 1421
     },
     {
       "Name": "Uncaged Fury",
-      "Games": 312,
-      "Wins": 158,
-      "DeckGames": 763
+      "Games": 540,
+      "Wins": 277,
+      "DeckGames": 1267
     },
     {
       "Name": "Unchained Berserker",
-      "Games": 388,
-      "Wins": 227,
-      "DeckGames": 959
+      "Games": 590,
+      "Wins": 312,
+      "DeckGames": 1407
     },
     {
       "Name": "Uncomfortable Chill",
-      "Games": 285,
-      "Wins": 134,
-      "DeckGames": 693
+      "Games": 657,
+      "Wins": 323,
+      "DeckGames": 1456
     },
     {
       "Name": "Unsubstantiate",
-      "Games": 436,
-      "Wins": 214,
-      "DeckGames": 994
+      "Games": 586,
+      "Wins": 260,
+      "DeckGames": 1428
     },
     {
       "Name": "Unsummon",
-      "Games": 487,
-      "Wins": 234,
-      "DeckGames": 1190
+      "Games": 624,
+      "Wins": 299,
+      "DeckGames": 1323
     },
     {
       "Name": "Vampire Nighthawk",
-      "Games": 357,
-      "Wins": 223,
-      "DeckGames": 854
+      "Games": 581,
+      "Wins": 330,
+      "DeckGames": 1323
     },
     {
       "Name": "Vampire Outcasts",
-      "Games": 306,
-      "Wins": 151,
-      "DeckGames": 728
+      "Games": 601,
+      "Wins": 296,
+      "DeckGames": 1351
     },
     {
       "Name": "Vampire of the Dire Moon",
-      "Games": 338,
-      "Wins": 195,
-      "DeckGames": 819
+      "Games": 593,
+      "Wins": 335,
+      "DeckGames": 1323
     },
     {
       "Name": "Veil of Summer",
-      "Games": 468,
-      "Wins": 233,
-      "DeckGames": 1225
+      "Games": 641,
+      "Wins": 306,
+      "DeckGames": 1547
     },
     {
       "Name": "Veteran Swordsmith",
-      "Games": 358,
-      "Wins": 185,
-      "DeckGames": 931
+      "Games": 694,
+      "Wins": 385,
+      "DeckGames": 1561
     },
     {
       "Name": "Vial of Dragonfire",
-      "Games": 382,
-      "Wins": 181,
-      "DeckGames": 966
+      "Games": 1131,
+      "Wins": 522,
+      "DeckGames": 2688
     },
     {
       "Name": "Vilis, Broker of Blood",
-      "Games": 480,
-      "Wins": 213,
-      "DeckGames": 1211
+      "Games": 502,
+      "Wins": 229,
+      "DeckGames": 1274
     },
     {
       "Name": "Viscera Seer",
-      "Games": 354,
-      "Wins": 165,
-      "DeckGames": 952
+      "Games": 541,
+      "Wins": 254,
+      "DeckGames": 1295
     },
     {
       "Name": "Vivien Reid",
-      "Games": 334,
-      "Wins": 165,
-      "DeckGames": 770
+      "Games": 581,
+      "Wins": 281,
+      "DeckGames": 1344
     },
     {
       "Name": "Void Snare",
-      "Games": 493,
-      "Wins": 244,
-      "DeckGames": 1169
+      "Games": 706,
+      "Wins": 340,
+      "DeckGames": 1442
     },
     {
       "Name": "Volley Veteran",
-      "Games": 331,
-      "Wins": 159,
-      "DeckGames": 784
+      "Games": 547,
+      "Wins": 286,
+      "DeckGames": 1337
     },
     {
       "Name": "Vryn Wingmare",
-      "Games": 403,
-      "Wins": 224,
-      "DeckGames": 1001
+      "Games": 604,
+      "Wins": 345,
+      "DeckGames": 1519
     },
     {
       "Name": "Wall of Frost",
-      "Games": 373,
-      "Wins": 198,
-      "DeckGames": 917
+      "Games": 630,
+      "Wins": 318,
+      "DeckGames": 1407
     },
     {
       "Name": "War Horn",
-      "Games": 395,
-      "Wins": 194,
-      "DeckGames": 973
+      "Games": 1248,
+      "Wins": 593,
+      "DeckGames": 2905
     },
     {
       "Name": "Watcher of the Spheres",
-      "Games": 430,
-      "Wins": 252,
-      "DeckGames": 1008
+      "Games": 240,
+      "Wins": 127,
+      "DeckGames": 518
     },
     {
       "Name": "Whirler Rogue",
-      "Games": 388,
-      "Wins": 205,
-      "DeckGames": 931
+      "Games": 623,
+      "Wins": 325,
+      "DeckGames": 1407
     },
     {
       "Name": "Whispersilk Cloak",
-      "Games": 373,
-      "Wins": 150,
-      "DeckGames": 903
+      "Games": 1172,
+      "Wins": 506,
+      "DeckGames": 2730
     },
     {
       "Name": "Wild Instincts",
-      "Games": 354,
-      "Wins": 179,
-      "DeckGames": 833
+      "Games": 573,
+      "Wins": 269,
+      "DeckGames": 1309
     },
     {
       "Name": "Wildwood Scourge",
-      "Games": 321,
-      "Wins": 141,
-      "DeckGames": 789
+      "Games": 571,
+      "Wins": 274,
+      "DeckGames": 1309
     },
     {
       "Name": "Winged Words",
-      "Games": 320,
-      "Wins": 167,
-      "DeckGames": 784
+      "Games": 648,
+      "Wins": 331,
+      "DeckGames": 1505
     },
     {
       "Name": "Wolfrider's Saddle",
-      "Games": 317,
-      "Wins": 170,
-      "DeckGames": 783
+      "Games": 637,
+      "Wins": 332,
+      "DeckGames": 1414
     },
     {
       "Name": "Woodland Bellower",
-      "Games": 462,
-      "Wins": 241,
-      "DeckGames": 1092
+      "Games": 588,
+      "Wins": 291,
+      "DeckGames": 1442
     },
     {
       "Name": "Xathrid Necromancer",
-      "Games": 282,
-      "Wins": 150,
-      "DeckGames": 742
+      "Games": 526,
+      "Wins": 274,
+      "DeckGames": 1232
     },
     {
       "Name": "Xathrid Slyblade",
-      "Games": 347,
-      "Wins": 185,
-      "DeckGames": 868
+      "Games": 538,
+      "Wins": 274,
+      "DeckGames": 1260
     },
     {
       "Name": "Yeva's Forcemage",
-      "Games": 353,
-      "Wins": 189,
-      "DeckGames": 819
+      "Games": 595,
+      "Wins": 303,
+      "DeckGames": 1456
     },
     {
       "Name": "Yeva, Nature's Herald",
-      "Games": 479,
-      "Wins": 243,
-      "DeckGames": 1106
+      "Games": 641,
+      "Wins": 343,
+      "DeckGames": 1554
     },
     {
       "Name": "Young Pyromancer",
-      "Games": 367,
-      "Wins": 185,
-      "DeckGames": 847
+      "Games": 585,
+      "Wins": 314,
+      "DeckGames": 1386
     }
   ],
   "Pairs": [],
