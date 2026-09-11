@@ -507,6 +507,23 @@ CSC now has 82 560 — **11.5 MB against 46.8 KB stripped**. `synergyWeight` def
 are never read at pick time. `sim_results/` is gitignored, so keep the full file there for any
 future synergy experiment and commit only the stripped copy to `MtgGame/Assets/`.
 
+**300 drafts is not enough for CSC.** `ShippedDraftModelTests` requires every card to hold at
+least 100 games — the test that tells a from-scratch retrain apart from a merge, which trains old
+cards deeply and new ones thinly. A 300-draft run over the 408-card set came back with a median of
+352 games per card and **one card at 91** (Heroic Reinforcements), which fails the floor on its
+own. 500 drafts is the size that clears it. The console cannot do "from scratch AND merge" —
+answering `n` to *"draft with the existing model?"* sets the bootstrap to null, which also skips
+the merge prompt and replaces — so the only way to add depth under an unchanged policy is a bigger
+single run.
+
+**Shipping a model is three steps, and the tests enforce two of them.** Strip the pairs, copy to
+`MtgGame/Assets/`, and run `ModelComparisonDiagnostic` first — it drafts the new model against the
+shipped one AT THE SAME TABLE and plays the pools, which is the only thing that says the retrain
+is an improvement rather than merely newer. The first CSC retrain measured **53.6% +/- 2.0 over
+640 games**, and the gain came from decks now being ASSEMBLED castably rather than from any change
+in how the trainer drafts: a from-scratch run uses Curve/Random drafters, so `DraftPickers`' lane
+term is not involved in training at all.
+
 **That safety rests on a RUNTIME default sitting a long way from a BUILD-TIME deletion**, so it is
 pinned rather than trusted: `StrippedModelTests` asserts a stripped model drafts identically to a
 full one over 50 seeds, and — because a vacuous test would pass just as well — a second test raises
