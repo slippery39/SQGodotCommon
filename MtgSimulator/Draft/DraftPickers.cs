@@ -251,9 +251,17 @@ public static class DraftPickers
 		return sorted.Count == 0 ? 0.0 : sorted[sorted.Count / 2];
 	}
 
-	/// Order-independent key so (A,B) and (B,A) are the same pair.
+	/// <summary>
+	/// Order-independent key so (A,B) and (B,A) are the same pair. The separator is NUL because no
+	/// card name can contain one, which makes the key collision-proof for free.
+	///
+	/// **Written as the escape `\0`, never as a literal NUL byte.** It was a literal one, and git
+	/// treats any file with a NUL in its first 8 KB as BINARY — so `git diff` on this file printed
+	/// `Bin 9044 -> 13002 bytes` and showed nothing. Every change to the picker had been invisible
+	/// to review. The runtime value is identical; only the bytes on disk differ.
+	/// </summary>
 	internal static string PairKey(string a, string b) =>
-		string.CompareOrdinal(a, b) <= 0 ? $"{a} {b}" : $"{b} {a}";
+		string.CompareOrdinal(a, b) <= 0 ? $"{a}\0{b}" : $"{b}\0{a}";
 
 	/// <summary>
 	/// Samples an index with probability proportional to exp(score / temperature).
