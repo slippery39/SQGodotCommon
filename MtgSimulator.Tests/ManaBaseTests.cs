@@ -161,4 +161,121 @@ public class ManaBaseTests
 			Assert.That(land.GetComponent<LandColorComponent>()!.Produces.Black, Is.EqualTo(1));
 		});
 	}
+
+	/// <summary>
+	/// The claim the whole colour-feasibility layer rests on: a requirement is the MAX over the
+	/// deck's cards, not the sum. Both these decks are entirely legal in UW by
+	/// <see cref="ColorIdentity.Allows"/> — only depth separates them.
+	/// </summary>
+	[Test]
+	public void DoublePips_InTwoColours_DoNotFit_ButSinglePipsDo()
+	{
+		var deep = new[]
+		{
+			Spell("WW", new ManaPool { White = 2 }),
+			Spell("UU", new ManaPool { Blue = 2 }),
+		};
+		var shallow = new[]
+		{
+			Spell("W", new ManaPool { White = 1 }),
+			Spell("U", new ManaPool { Blue = 1 }),
+		};
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ManaBase.Requirements(deep).Total, Is.EqualTo(36), "18 + 18");
+			Assert.That(ManaBase.Shortfall(deep), Is.EqualTo(12));
+			Assert.That(ManaBase.Requirements(shallow).Total, Is.EqualTo(24), "12 + 12");
+			Assert.That(ManaBase.Shortfall(shallow), Is.Zero);
+		});
+	}
+
+	/// A second copy of the same demand adds nothing; a deeper one raises the bar.
+	[Test]
+	public void Requirements_TakeTheMax_NotTheSum()
+	{
+		var one = new[] { Spell("W a", new ManaPool { White = 1 }) };
+		var three = new[]
+		{
+			Spell("W a", new ManaPool { White = 1 }),
+			Spell("W b", new ManaPool { White = 1 }),
+			Spell("W c", new ManaPool { White = 1 }, cost: 5),
+		};
+		var deeper = three.Append(Spell("WW d", new ManaPool { White = 2 })).ToList();
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ManaBase.Requirements(one).White, Is.EqualTo(12));
+			Assert.That(
+				ManaBase.Requirements(three).White,
+				Is.EqualTo(12),
+				"still one card's worth"
+			);
+			Assert.That(ManaBase.Requirements(deeper).White, Is.EqualTo(18), "the WW sets the bar");
+		});
+	}
+
+	/// Colourless decks ask nothing, so they always fit — the artifact deck must not read broken.
+	[Test]
+	public void ColourlessDeck_HasNoRequirement()
+	{
+		var spells = new[] { Spell("Artifact", ManaPool.Empty, cost: 4) };
+
+		Assert.That(ManaBase.Shortfall(spells), Is.Zero);
+		Assert.That(ManaBase.Requirements(spells).IsEmpty, Is.True);
+	}
+
+	/// <summary>
+	/// The splash is UNDER-SERVED, and this test pins that rather than wishing it away. Twenty white
+	/// cards and one red one: the red card needs ten sources by the table and gets about two, because
+	/// allocation is proportional to summed demand. See the comment on ManaBase.Allocate for why the
+	/// fix does not belong there — a deck whose colours do not fit has no good allocation, so the
+	/// splash must be priced by whoever builds the deck.
+	///
+	/// If this test starts failing because the splash gets MORE, that is the threshold allocator
+	/// coming back; make sure a head-to-head justified it before updating the number.
+	/// </summary>
+	[Test]
+	public void ASplashedCard_IsUnderServed_AndThatIsADeckbuildingProblem()
+	{
+		var spells = Enumerable
+			.Range(0, 20)
+			.Select(i => Spell($"W {i}", new ManaPool { White = 1 }))
+			.Append(Spell("R splash", new ManaPool { Red = 1 }, cost: 4))
+			.ToList();
+
+		var counts = Count(ManaBase.Build(spells, 24, ownerId: 1));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ManaBase.Requirements(spells).Red, Is.EqualTo(10), "what it needs");
+			Assert.That(counts["Mountain"], Is.LessThan(5), "what it gets");
+			Assert.That(counts["Plains"] + counts["Mountain"], Is.EqualTo(24));
+		});
+	}
+
+	/// <summary>
+	/// When the colours do not fit, no split rescues the deck — Shortfall says so — and the lands
+	/// are still split by demand. WW plus UU is 36 against 24, and the deck is the problem.
+	/// </summary>
+	[Test]
+	public void UnmeetableColours_StillSplitByDemand()
+	{
+		var spells = new List<Card>
+		{
+			Spell("WW a", new ManaPool { White = 2 }),
+			Spell("WW b", new ManaPool { White = 2 }),
+			Spell("WW c", new ManaPool { White = 2 }),
+			Spell("UU d", new ManaPool { Blue = 2 }),
+		};
+
+		var counts = Count(ManaBase.Build(spells, 24, ownerId: 1));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(ManaBase.Shortfall(spells), Is.EqualTo(12), "not buildable at all");
+			Assert.That(counts["Plains"], Is.GreaterThan(2 * counts["Island"]), "3:1 by demand");
+			Assert.That(counts["Plains"] + counts["Island"], Is.EqualTo(24));
+		});
+	}
 }

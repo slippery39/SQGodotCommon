@@ -1028,3 +1028,39 @@ failures in `MtgSimulator/CLAUDE.md` — a uniformly-failing measurement produce
 Operational rule, and it outlives the bug: **read the TOTAL, not just the word `Passed`.** 348 is
 the number to expect on MtgSimulator.Tests; a run reporting fewer has lost tests somewhere, and
 `Skipped: 0` will not tell you.
+
+---
+
+## The splash gets 2.1 of 17 lands, and the allocator is not where that gets fixed
+
+`ManaBase.Requirements` / `Shortfall` (new) price a deck's colours as the MAX per colour rather than
+the sum: a WW two-drop beside a W five-drop needs eighteen white sources, not twenty-seven. Summing
+across colours is valid only because a basic produces one colour, so the lands serving each demand
+are disjoint — **dual lands break that function specifically.**
+
+Threshold-first allocation was then built into `ManaBase.Allocate`, measured, and removed. The
+intuition is right and the pathology is real — measured over 400 mono-plus-two-card-splash decks on
+CSC, the splash colour gets **2.1 of 17 lands** for a card the table says needs nine or ten. What the
+measurement killed was fixing it *there*:
+
+| sample (CSC, 23 spells, 17 lands) | decks whose requirement fits in 24 |
+|---|---|
+| random within an identity | 200/600 — and all 200 are the mono identities, where allocation is trivial |
+| mono core + two-card splash | **0/400** |
+
+Any 21-card mono core already contains a double pip worth 17-18 sources on its own, so every
+realistic two-colour deck totals 27-31 against a 24-land budget. **No allocation serves both
+colours.** Handing the splash its threshold means taking two lands off a main colour full of double
+pips, and which of those decks wins is empirical — the allocator cannot answer it, so it stays
+demand-proportional and the choice moves to whoever builds the deck, priced with `Shortfall`.
+
+Two things to carry:
+
+- **A gate that never fired passed the entire suite.** 410/410 green with the branch dead in every
+  realistic deck shape. The measurement, not the tests, is what caught it — same family as the
+  `MinPairGames = 200` scar in HANDOFF-Colours.md §5.
+- This is more evidence for run B's "decks collapse to mono inside a two-colour identity". A splash
+  that cannot be paid for should not be drafted or built, which is a **builder** rule, not a mana
+  rule. If steps 3-5 of the colour work enforce it, the threshold allocator may never be needed;
+  revisit only with a head-to-head showing the trade wins, or when dual lands arrive and change the
+  arithmetic above.

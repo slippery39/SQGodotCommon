@@ -59,6 +59,102 @@ public static class ManaBase
 	}
 
 	/// <summary>
+	/// The land count <see cref="SourcesNeeded"/> was measured at. Requirements are expressed in
+	/// these units, which is what makes the feasibility test below independent of deck size: a
+	/// 40-card limited deck runs 17 lands in 40 (42.5%) against 24 in 60 (40%), so the DENSITY a
+	/// colour needs is very nearly the same and only the absolute count differs.
+	/// </summary>
+	public const int ReferenceLands = 24;
+
+	/// <summary>
+	/// What a whole deck needs from each colour, in sources per <see cref="ReferenceLands"/>.
+	///
+	/// **The MAXIMUM over the cards, not the sum.** A WW two-drop (18 sources) beside a W five-drop
+	/// (9) needs eighteen white sources, not twenty-seven — the most demanding card sets the bar and
+	/// every cheaper demand is met on the way. <see cref="Build"/> deliberately sums instead, because
+	/// it is choosing PROPORTIONS and a colour asked for by more cards should get more lands; that is
+	/// a weight, and this is a requirement. Do not confuse the two.
+	///
+	/// Summing ACROSS colours is right, because a basic produces exactly one colour, so the lands
+	/// serving each demand are disjoint. Dual lands break that and this is the function they will
+	/// break — see the manabase item in HANDOFF-Colours.md §6.
+	/// </summary>
+	public static ManaPool Requirements(IEnumerable<Card> spells)
+	{
+		var required = ManaPool.Empty;
+		foreach (var card in spells)
+		{
+			var demand = DemandOf(card);
+			foreach (var color in ManaPool.Colors)
+				if (demand[color] > required[color])
+					required = required.With(color, demand[color]);
+		}
+		return required;
+	}
+
+	/// <summary>
+	/// How many sources short of casting all of <paramref name="spells"/> on curve a manabase is,
+	/// in <see cref="ReferenceLands"/> units. Zero means the colours fit; positive means they do not
+	/// and no allocation of basics can rescue it.
+	///
+	/// This is the arithmetic behind the headline of HANDOFF-Colours.md §2. WW plus UU is 18 + 18 =
+	/// 36 against 24 — six lands' worth of impossible — while W plus U is 12 + 12 = 24 and fits
+	/// exactly. Both pairs pass <see cref="ColorIdentity.Allows"/> identically, which is why legality
+	/// was never enough on its own.
+	///
+	/// **Returned as a NUMBER rather than a bool on purpose.** Requiring every card on curve 90% of
+	/// the time is stricter than any real deck is built to — decks cast their greediest card late and
+	/// accept it. So the tolerance belongs to the caller: a detector asking whether an archetype can
+	/// exist should allow a few sources of slack, a draft picker wants the gradient rather than a
+	/// cliff, and neither wants this function to have decided for them.
+	/// </summary>
+	public static int Shortfall(IEnumerable<Card> spells) =>
+		Math.Max(0, Requirements(spells).Total - ReferenceLands);
+
+	/// <summary>
+	/// How much of a card survives the manabase it is going into: 1 when every colour it needs has
+	/// the sources <see cref="Requirements"/> asks for, falling toward 0 as they thin out. The WORST
+	/// colour decides — a gold card is only as castable as its scarcer half.
+	///
+	/// This is the graded answer <see cref="Shortfall"/> deliberately does not give. Shortfall says
+	/// "these colours do not all fit in 24 lands", which is true of nearly every real two-colour deck
+	/// and so cannot be used as a gate; this says HOW BADLY, which can.
+	///
+	/// ponytail: linear in the ratio of sources HAD to sources NEEDED. The truthful curve is the
+	/// hypergeometric one measured in <see cref="SourcesNeeded"/>, and it is an S rather than a line,
+	/// so this over-rates a card sitting at half its sources. Upgrade path is to interpolate that
+	/// table instead of the ratio.
+	/// </summary>
+	public static double Castability(Card card, ManaPool sources, int landCount)
+	{
+		if (card.ColorPips.IsEmpty || landCount <= 0)
+			return 1.0;
+
+		var needed = Requirements([card]);
+		var worst = 1.0;
+
+		foreach (var color in ManaPool.Colors)
+		{
+			if (needed[color] <= 0)
+				continue;
+
+			// Requirements are per ReferenceLands, so scale them to this deck's land count.
+			var want = (double)needed[color] * landCount / ReferenceLands;
+			worst = Math.Min(worst, Math.Min(1.0, sources[color] / want));
+		}
+
+		return worst;
+	}
+
+	/// <summary>The colour sources a manabase of this size would hold for these spells.</summary>
+	public static ManaPool SourcesFor(IEnumerable<Card> spells, int landCount) =>
+		Build(spells, landCount, ownerId: 0)
+			.Aggregate(
+				ManaPool.Empty,
+				(sum, land) => sum.Add(land.GetComponent<LandColorComponent>()!.Produces)
+			);
+
+	/// <summary>
 	/// What one card asks of each colour, in units of "sources needed to cast it on curve".
 	///
 	/// The card's curve position is <c>max(ManaCost, total pips)</c>, not ManaCost alone. Generic
@@ -118,13 +214,27 @@ public static class ManaBase
 	}
 
 	/// <summary>
-	/// Splits <paramref name="landCount"/> across the colours in proportion to their demand.
+	/// Splits <paramref name="landCount"/> across the colours in proportion to their SUMMED demand.
 	///
-	/// ponytail: proportional, where the real question is a threshold one — a splashed card needs
-	/// its 9 sources or it is a dead draw, and does not care that it is only two cards of the deck.
-	/// Proportional allocation under-serves a small splash and over-serves a large one. Upgrade
-	/// path is to satisfy demands in priority order and only fall back to proportional when they
-	/// cannot all be met; do it when a measured run shows splashes failing, not before.
+	/// **Threshold-first allocation was built here, measured, and removed.** The intuition — that a
+	/// splashed card needs its nine sources rather than its share of the card count — is correct,
+	/// and the pathology is real: measured over 400 mono-plus-two-card-splash decks on CSC, the
+	/// splash colour gets **2.1 of 17 lands** for a card the table says needs nine or ten. It is a
+	/// dead draw, exactly as HANDOFF-Colours.md §6 predicted.
+	///
+	/// What the measurement killed was fixing it HERE. A deck's <see cref="Requirements"/> exceed
+	/// <see cref="ReferenceLands"/> in every realistic shape — 400 of 400 splash decks and 400 of
+	/// 400 two-colour decks, because any 21-card mono core already contains a double pip worth 17-18
+	/// sources on its own. So there is no allocation that serves both colours; someone is starved
+	/// whatever this function does, and CHOOSING WHO is a deckbuilding decision. Handing the splash
+	/// its threshold means taking two lands off a main colour full of double pips, and which of
+	/// those decks wins is an empirical question this function cannot answer.
+	///
+	/// The decision therefore belongs to whoever assembles the deck, priced with
+	/// <see cref="Shortfall"/> — a splash that cannot be paid for should not be drafted or built in
+	/// the first place, which is also what run B's "decks collapse to mono inside a two-colour
+	/// identity" was telling us. Do not rebuild the threshold gate here without a head-to-head
+	/// showing the trade wins; a gate that never fires passed every test in the suite.
 	/// </summary>
 	private static List<(ManaColor Color, int Count)> Allocate(ManaPool demand, int landCount)
 	{
