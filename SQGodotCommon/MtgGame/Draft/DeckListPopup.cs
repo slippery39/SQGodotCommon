@@ -175,11 +175,15 @@ public partial class DeckListPopup : CanvasLayer
 
 	private void Render()
 	{
-		// Mirrors Draft.BuildDeck's split so this shows the deck that was really played, not a
-		// second guess at it. Owner stamping is irrelevant here — nothing is entering a game.
+		// Calls Draft's own selection so this shows the deck that was really played, not a second
+		// guess at it. Owner stamping is irrelevant here — nothing is entering a game.
 		var spells = _pool.Where(c => !c.HasSubtype("Land")).ToList();
-		var maindeck = spells.Take(Draft.DefaultMaxSpells).ToList();
-		var sideboard = spells.Skip(Draft.DefaultMaxSpells).ToList();
+		var maindeck = Draft.ChooseSpells(_pool).ToList();
+		// Removed one instance at a time, not with Except: Card is a record, so two copies of the
+		// same template compare equal and Except would delete both from the sideboard.
+		var sideboard = new List<Card>(spells);
+		foreach (var card in maindeck)
+			sideboard.Remove(card);
 		var lands = 40 - maindeck.Count;
 
 		_title.Text = $"{_drafterName} — drafted deck";
@@ -196,7 +200,7 @@ public partial class DeckListPopup : CanvasLayer
 			return;
 		}
 
-		_deckHeader.Text = $"Deck ({maindeck.Count} spells + {lands} Plains)";
+		_deckHeader.Text = $"Deck ({maindeck.Count} spells + {lands} lands)";
 		_sideHeader.Text = $"Sideboard ({sideboard.Count})";
 		CardListView.Fill(_deckList, maindeck);
 		CardListView.Fill(_sideList, sideboard, dim: true);

@@ -245,6 +245,95 @@ public class DraftTests
 		});
 	}
 
+	private static Card Pip(string name, ManaColor color, int pips = 1, int cost = 2) =>
+		C(name, cost) with
+		{
+			ColorPips = ManaPool.Empty.Add(color, pips),
+		};
+
+	/// <summary>
+	/// The failure this selection exists to stop: a seat commits to a lane, then takes the best
+	/// card from every other colour once its lane dries up, and PICK ORDER puts all of them in the
+	/// deck. Twenty red picks followed by twenty-five off-colour ones must produce a RED deck.
+	///
+	/// It keeps every red card and then fills the last three slots with blue, which is deliberate
+	/// rather than wandering: the alternative is a 21st, 22nd and 23rd land, and a card that casts
+	/// a quarter of the time beats a land that does nothing. What it can never do is take a THIRD
+	/// colour, because selection happens inside one identity — that is the property that turns a
+	/// five-colour pile into a deck.
+	/// </summary>
+	[Test]
+	public void ChooseSpells_KeepsTheLane_WhenLatePicksWander()
+	{
+		var pool = Enumerable
+			.Range(0, 20)
+			.Select(i => Pip($"Red{i}", ManaColor.Red, pips: i % 2 + 1))
+			.Concat(Enumerable.Range(0, 25).Select(i => Pip($"Blue{i}", ManaColor.Blue, pips: 2)))
+			.ToList();
+
+		var deck = Draft.ChooseSpells(pool);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(deck.Count(c => c.ColorPips.Red > 0), Is.EqualTo(20), "every red card");
+			Assert.That(
+				deck.Count(c => c.ColorPips.Blue > 0),
+				Is.EqualTo(3),
+				"blue only fills the last three slots"
+			);
+		});
+	}
+
+	/// <summary>
+	/// Pick order still decides INSIDE the lane — the early picks are the ones kept when a lane
+	/// holds more than 23 playables.
+	/// </summary>
+	[Test]
+	public void ChooseSpells_PrefersEarlyPicks_WithinTheLane()
+	{
+		var pool = Enumerable.Range(0, 45).Select(i => Pip($"Green{i}", ManaColor.Green)).ToList();
+
+		var deck = Draft.ChooseSpells(pool);
+
+		Assert.That(
+			deck.Select(c => c.Name),
+			Is.EqualTo(Enumerable.Range(0, 23).Select(i => $"Green{i}"))
+		);
+	}
+
+	/// <summary>
+	/// A splash is allowed when the mana can pay for it. Two single-pip white cards beside a
+	/// single-pip red core cost 12 + 12 = 24 and fit exactly, so the deck plays both colours —
+	/// the selection is not simply "always mono".
+	/// </summary>
+	[Test]
+	public void ChooseSpells_TakesASplash_WhenItsColoursFit()
+	{
+		var pool = Enumerable
+			.Range(0, 21)
+			.Select(i => Pip($"Red{i}", ManaColor.Red))
+			.Concat([Pip("White bomb", ManaColor.White), Pip("White two", ManaColor.White)])
+			.ToList();
+
+		var deck = Draft.ChooseSpells(pool);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(deck.Count(c => c.ColorPips.White > 0), Is.EqualTo(2), "splash played");
+			Assert.That(ManaBase.Shortfall(deck), Is.Zero, "and payable");
+		});
+	}
+
+	/// A colourless pool is legal in every identity and must still play its first 23 picks.
+	[Test]
+	public void ChooseSpells_ColourlessPool_IsUnchanged()
+	{
+		Assert.That(
+			Draft.ChooseSpells(Pool(45)).Select(c => c.Name),
+			Is.EqualTo(Enumerable.Range(0, 23).Select(i => $"Card{i}"))
+		);
+	}
+
 	// ===== Pickers =====
 
 	[Test]

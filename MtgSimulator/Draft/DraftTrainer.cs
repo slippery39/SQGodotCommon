@@ -265,12 +265,13 @@ public class DraftTrainer
 		return schedule;
 	}
 
-	/// The cards that actually make the deck — must mirror Draft.BuildDeck's selection.
+	/// <summary>
+	/// The cards that actually make the deck. Calls the same selection BuildDeck does rather than
+	/// mirroring it — it used to be a second copy of "first N non-lands", and colour-aware
+	/// selection would have made the model count cards the deck never played.
+	/// </summary>
 	private static IReadOnlyList<string> DeckSpellsOf(IReadOnlyList<Card> pool) =>
-		pool.Where(c => !c.HasSubtype("Land"))
-			.Take(Draft.DefaultMaxSpells)
-			.Select(c => c.Name)
-			.ToList();
+		[.. Draft.ChooseSpells(pool).Select(c => c.Name)];
 
 	private static void PrintSummary(
 		DraftTrainingData data,

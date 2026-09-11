@@ -217,12 +217,117 @@ public static class Draft
 		int maxSpells = DefaultMaxSpells
 	)
 	{
-		var spells = draftPool
-			.Where(c => !c.HasSubtype("Land"))
-			.Take(maxSpells)
+		var (chosen, identity) = ChooseDeck(draftPool, maxSpells, deckSize);
+		var spells = chosen
 			.Select(template => template with { OwnerId = ownerId, ControllerId = ownerId })
 			.ToList();
-		var lands = ManaBase.Build(spells, Math.Max(0, deckSize - spells.Count), ownerId);
+
+		// The manabase serves the CORE, not the filler. A card outside the deck's identity was
+		// taken because it beats a surplus land, not because the deck can support it, and giving it
+		// sources would come straight out of the colours the deck actually plays.
+		var core = identity is null ? spells : [.. spells.Where(identity.Allows)];
+		var lands = ManaBase.Build(
+			core.Count > 0 ? core : spells,
+			Math.Max(0, deckSize - spells.Count),
+			ownerId
+		);
 		return spells.Concat(lands).ToList();
+	}
+
+	/// <summary>
+	/// The spells a pool actually plays: the best <paramref name="maxSpells"/> the pool can CAST,
+	/// chosen inside one <see cref="ColorIdentity"/>.
+	///
+	/// **This used to be the first N non-lands in pick order, and that is a five-colour pile.** A
+	/// drafter who commits to a lane and then takes the best card from every other colour late
+	/// played all of them, because arrival time was the only thing selecting the deck. Measured on
+	/// 200 real CSC drafts: 4.97 colours per deck, and 20.9 of 23 cards uncastable.
+	///
+	/// Pick order is the only quality signal available here — a seat picked its first card first
+	/// because it wanted it most, and threading a trained model into deck assembly would couple
+	/// every caller to one. So each card an identity can play is worth <c>1 - index/poolSize</c>,
+	/// the first pick being worth about one card and the last nearly nothing.
+	///
+	/// **That weight is then multiplied by how castable the card actually is in the manabase this
+	/// deck would really build**, which is what stops the choice being a free lunch: a pair can only
+	/// play more cards by splitting its sources, so every card it adds makes its other cards
+	/// slightly worse. The trade prices itself and there is no coin to calibrate.
+	///
+	/// **A shortfall PENALTY was tried here first and was wrong twice over.** A mono deck's
+	/// requirement can never exceed 22, so mono scored a zero penalty BY CONSTRUCTION while every
+	/// pair paid 6-10 — and the standard being missed ("every card on curve 90% of the time") is one
+	/// no real two-colour deck has ever met. The result was 1.03 colours per deck: the selector
+	/// could not build a two-colour deck at all. Measured on one seat's pool, mono-white scored 8.9
+	/// on 15 cards against WB's 2.1 on 22, when WB was plainly the better deck.
+	/// </summary>
+	public static IReadOnlyList<Card> ChooseSpells(
+		IReadOnlyList<Card> draftPool,
+		int maxSpells = DefaultMaxSpells,
+		int deckSize = 40
+	) => ChooseDeck(draftPool, maxSpells, deckSize).Spells;
+
+	/// <summary>
+	/// <see cref="ChooseSpells"/>, plus the identity it chose — which is what <see cref="BuildDeck"/>
+	/// needs, because the MANABASE is built from the core alone and not from the filler below.
+	/// </summary>
+	internal static (IReadOnlyList<Card> Spells, ColorIdentity? Identity) ChooseDeck(
+		IReadOnlyList<Card> draftPool,
+		int maxSpells = DefaultMaxSpells,
+		int deckSize = 40
+	)
+	{
+		var candidates = draftPool.Where(c => !c.HasSubtype("Land")).ToList();
+		if (candidates.Count == 0)
+			return ([], null);
+
+		// The deck plays maxSpells whatever happens (see the filler below), so every identity is
+		// judged against the SAME land count. Judging each against its own would pay a shallow lane
+		// for being shallow: fewer spells, more lands, better castability, higher score.
+		var landCount = Math.Max(0, deckSize - Math.Min(maxSpells, candidates.Count));
+
+		List<int> best = [];
+		ColorIdentity? bestIdentity = null;
+		var bestScore = double.NegativeInfinity;
+
+		// Ties resolve to ColorIdentity.Standard's order (mono before pairs), so a pool that gains
+		// nothing from a second colour stays mono and the result is deterministic.
+		foreach (var identity in ColorIdentity.Standard)
+		{
+			var picked = new List<int>(maxSpells);
+			for (var i = 0; i < candidates.Count && picked.Count < maxSpells; i++)
+				if (identity.Allows(candidates[i]))
+					picked.Add(i);
+
+			if (picked.Count == 0)
+				continue;
+
+			var sources = ManaBase.SourcesFor(picked.Select(i => candidates[i]), landCount);
+
+			var score = 0.0;
+			foreach (var i in picked)
+				score +=
+					(1.0 - (double)i / candidates.Count)
+					* ManaBase.Castability(candidates[i], sources, landCount);
+
+			if (score > bestScore)
+				(best, bestIdentity, bestScore) = (picked, identity, score);
+		}
+
+		// **Short lane? Play the cards anyway.** A deck is maxSpells spells and the rest lands, and
+		// a pool only ever holds enough cards for that — an identity holding 19 playables used to
+		// produce a 19-spell deck with 21 lands, which is not a deckbuilding decision anybody would
+		// make. Above about 18 lands almost any card beats another land, including one this deck
+		// casts badly, so the remaining slots go to the best picks left regardless of colour.
+		//
+		// They are appended, never interleaved, and they DO NOT get sources — BuildDeck builds the
+		// manabase from the core alone. That is what real limited does with its last few cards, and
+		// it is what stops three filler cards dragging a 9/8 manabase into an 8/7/2 one.
+		var chosen = best.ToHashSet();
+		var spells = best.Select(i => candidates[i]).ToList();
+		for (var i = 0; i < candidates.Count && spells.Count < maxSpells; i++)
+			if (!chosen.Contains(i))
+				spells.Add(candidates[i]);
+
+		return (spells, bestIdentity);
 	}
 }
