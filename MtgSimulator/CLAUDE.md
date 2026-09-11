@@ -618,6 +618,18 @@ Key rules:
 - **Picks are indices into `Seat.Offer`, never `Card` values.** `Card` is a record, so two copies of one template in a pack compare equal and picking by value would remove the wrong card.
 - **Packs exclude lands** — `Draft.BuildDeck` supplies the mana base through `ManaBase.Build`: 23 spells + **17 lands** in a 40-card deck. See `Draft.DefaultMaxSpells` for why 17 rather than 13. It stamps `OwnerId`/`ControllerId`, so it must be called **per game**, not once per seat.
 - **The deck is chosen inside one `ColorIdentity`, not taken in pick order.** Pick order alone is a five-colour pile — measured on 200 CSC drafts, 4.97 colours per deck and **20.9 of 23 cards uncastable**. `Draft.ChooseSpells` scores all fifteen identities by the pick equity they keep (`1 - index/poolSize` per card) multiplied by each card's CASTABILITY in the manabase that deck would really build. The multiplication is what makes it a real choice: a pair can only play more cards by splitting its sources. A shortfall PENALTY was tried first and forced mono — a mono deck's requirement can never exceed 22, so it scored zero penalty by construction while every pair paid 6-10.
+- **A deck may SPLASH one extra colour, up to `Draft.MaxSplash` cards, WITH real mana support.** The
+  splash is in the manabase — that is what separates it from filler — so every source it takes comes
+  out of the main colours and the whole deck's castability pays for it. One extra colour only: a
+  four-colour manabase would let the search rediscover the five-colour pile.
+  **The curve decides what a splash costs, and no curve heuristic is coded.** It falls out of
+  `ManaBase.SourcesNeeded`: a one-drop single pip wants 13 sources of 24 and a five-drop wants 9, so
+  a cheap deck's own colours already claim the manabase. Measured pick position at which a deck stops
+  taking the splash (`SplashEconomicsDiagnostic`): **cost 1 -> top 9 picks, cost 3 -> top 12, cost 5
+  -> top 15.** An aggressive deck demands a near-first-pick bomb; an expensive deck will take the
+  15th-best card in its pool. Measured over 200 CSC drafts, 3 of 200 decks end three-colour, each
+  giving the splash 2-3 of 17 sources — the format has no fixing, so a splash gets the leftovers and
+  has to be worth having at roughly 40% castability.
 - **A short lane fills to 23 anyway, and the filler gets no sources.** An identity holding 19 playables used to yield a 19-spell deck with 21 lands; above ~18 lands almost any card beats another land. The remaining slots take the best picks left regardless of colour, and `BuildDeck` builds the manabase from the identity-legal CORE only, so filler cannot drag a 9/8 into an 8/7/2.
 - **`DraftPickers.Trained` commits to a colour lane** (`DefaultLaneWeight = 2.0`), scoring a card +/- that many points for being inside the seat's two most-invested colours, ramped in over the first 10 picks. Commitment is measured by VALUE invested, not card count, so late filler cannot define the lane. **Measured 537-423, 55.9% +/- 1.6 over 960 games** against the same picker with the term off, drafting at the same table. Seats unable to field 23 playables in their own identity fall from **18% to 1%**, and colour concentration rises from 0.22 (0.20 is an even five-colour spread).
 - **Selection lives in exactly one place.** `DraftTrainer.DeckSpellsOf` (which decides what the model counts) and Godot's `DeckListPopup` both call `Draft.ChooseSpells`; they used to carry their own copies of "first N non-lands", so colour-aware selection would have silently desynced the training data from the decks actually played.

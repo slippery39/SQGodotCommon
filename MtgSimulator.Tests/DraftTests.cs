@@ -334,6 +334,74 @@ public class DraftTests
 		);
 	}
 
+	/// <summary>
+	/// **An aggressive deck demands a better card before it splashes, and nobody coded that rule.**
+	/// It falls out of ManaBase.SourcesNeeded: a one-drop single pip wants 13 sources of 24 and a
+	/// five-drop wants 9, so a cheap deck's own colours already claim most of the manabase and every
+	/// land diverted to a splash costs it real castability. Measured flip points, by the pick
+	/// position at which the deck stops taking the splash (SplashEconomicsDiagnostic):
+	///
+	///     cost 1 -> top 9 picks only     cost 3 -> top 12     cost 5 -> top 15
+	///
+	/// This test sits at pick 13, where the two curves genuinely disagree. Both pools are identical
+	/// but for their mana costs, and the red lane is 25 deep so the splash is always a choice.
+	/// </summary>
+	[Test]
+	public void AnAggressiveDeckDeclinesASplashAnExpensiveDeckTakes()
+	{
+		static IReadOnlyList<Card> PoolAtCost(int cost)
+		{
+			var pool = new List<Card>();
+			for (var i = 0; i < 26; i++)
+			{
+				if (i == 12)
+					pool.Add(Pip("Splash", ManaColor.Blue, cost: cost));
+				pool.Add(Pip($"Red{i}", ManaColor.Red, cost: cost));
+			}
+			return pool;
+		}
+
+		static bool Splashed(Draft.ChosenDeck deck) =>
+			deck.Spells.Take(deck.Supported).Any(c => c.ColorPips.Blue > 0);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				Splashed(Draft.ChooseDeck(PoolAtCost(5))),
+				Is.True,
+				"an expensive deck has the sources to spare"
+			);
+			Assert.That(
+				Splashed(Draft.ChooseDeck(PoolAtCost(1))),
+				Is.False,
+				"a one-drop deck needs its own colours far more"
+			);
+		});
+	}
+
+	/// <summary>
+	/// A splash is a few cards with real support, not a third colour. Twenty red cards beside
+	/// twenty blue and twenty green must not produce a three-colour pile.
+	/// </summary>
+	[Test]
+	public void ASplashIsCappedAndNeverBecomesAFourthColour()
+	{
+		var pool = Enumerable
+			.Range(0, 20)
+			.Select(i => Pip($"Red{i}", ManaColor.Red, cost: 3))
+			.Concat(Enumerable.Range(0, 20).Select(i => Pip($"White{i}", ManaColor.White, cost: 3)))
+			.Concat(Enumerable.Range(0, 20).Select(i => Pip($"Blue{i}", ManaColor.Blue, cost: 3)))
+			.Concat(Enumerable.Range(0, 20).Select(i => Pip($"Green{i}", ManaColor.Green, cost: 3)))
+			.ToList();
+
+		var deck = Draft.ChooseDeck(pool);
+		var colors = ManaPool
+			.Colors.Where(c => deck.Spells.Take(deck.Supported).Any(x => x.ColorPips[c] > 0))
+			.ToList();
+
+		Assert.That(colors, Has.Count.LessThanOrEqualTo(3), "two colours plus at most one splash");
+	}
+
 	// ===== Pickers =====
 
 	[Test]

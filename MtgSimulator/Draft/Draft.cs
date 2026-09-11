@@ -217,17 +217,17 @@ public static class Draft
 		int maxSpells = DefaultMaxSpells
 	)
 	{
-		var (chosen, identity) = ChooseDeck(draftPool, maxSpells, deckSize);
+		var chosen = ChooseDeck(draftPool, maxSpells, deckSize);
 		var spells = chosen
-			.Select(template => template with { OwnerId = ownerId, ControllerId = ownerId })
+			.Spells.Select(template => template with { OwnerId = ownerId, ControllerId = ownerId })
 			.ToList();
 
-		// The manabase serves the CORE, not the filler. A card outside the deck's identity was
-		// taken because it beats a surplus land, not because the deck can support it, and giving it
-		// sources would come straight out of the colours the deck actually plays.
-		var core = identity is null ? spells : [.. spells.Where(identity.Allows)];
+		// The manabase serves the SUPPORTED cards — the identity plus its splash — and not the
+		// filler. A filler card was taken because it beats a surplus land, not because the deck can
+		// cast it, and giving it sources would come straight out of the colours the deck plays.
+		var supported = spells.Take(chosen.Supported).ToList();
 		var lands = ManaBase.Build(
-			core.Count > 0 ? core : spells,
+			supported.Count > 0 ? supported : spells,
 			Math.Max(0, deckSize - spells.Count),
 			ownerId
 		);
@@ -270,7 +270,25 @@ public static class Draft
 	/// <see cref="ChooseSpells"/>, plus the identity it chose — which is what <see cref="BuildDeck"/>
 	/// needs, because the MANABASE is built from the core alone and not from the filler below.
 	/// </summary>
-	internal static (IReadOnlyList<Card> Spells, ColorIdentity? Identity) ChooseDeck(
+	/// <summary>
+	/// How many off-colour cards a deck may SPLASH — play with real mana support behind them,
+	/// rather than as the unsupported filler below.
+	///
+	/// Three because a splash is a few cards, not a third colour: past that the manabase stops
+	/// being a two-colour deck with a splash and starts being a bad three-colour deck.
+	/// </summary>
+	private const int MaxSplash = 3;
+
+	/// <summary>
+	/// The spells a pool plays, and how many of them the manabase actually serves.
+	///
+	/// The first <c>Supported</c> entries are the identity's cards plus any splash, and the
+	/// manabase is built from exactly those. Anything after them is filler — played because a
+	/// 21st land is worse, not because the deck can cast it.
+	/// </summary>
+	internal readonly record struct ChosenDeck(IReadOnlyList<Card> Spells, int Supported);
+
+	internal static ChosenDeck ChooseDeck(
 		IReadOnlyList<Card> draftPool,
 		int maxSpells = DefaultMaxSpells,
 		int deckSize = 40
@@ -278,29 +296,29 @@ public static class Draft
 	{
 		var candidates = draftPool.Where(c => !c.HasSubtype("Land")).ToList();
 		if (candidates.Count == 0)
-			return ([], null);
+			return new ChosenDeck([], 0);
 
-		// The deck plays maxSpells whatever happens (see the filler below), so every identity is
+		// The deck plays maxSpells whatever happens (see the filler below), so every candidate is
 		// judged against the SAME land count. Judging each against its own would pay a shallow lane
 		// for being shallow: fewer spells, more lands, better castability, higher score.
 		var landCount = Math.Max(0, deckSize - Math.Min(maxSpells, candidates.Count));
 
 		List<int> best = [];
-		ColorIdentity? bestIdentity = null;
 		var bestScore = double.NegativeInfinity;
 
-		// Ties resolve to ColorIdentity.Standard's order (mono before pairs), so a pool that gains
-		// nothing from a second colour stays mono and the result is deterministic.
+		// Ties resolve to ColorIdentity.Standard's order and to no splash before a splash, so a
+		// pool that gains nothing from more colours stays put and the result is deterministic.
 		foreach (var identity in ColorIdentity.Standard)
+		foreach (var splash in Splashes(identity))
+		foreach (var splashLimit in splash is null ? NoSplash : SplashSizes)
 		{
-			var picked = new List<int>(maxSpells);
-			for (var i = 0; i < candidates.Count && picked.Count < maxSpells; i++)
-				if (identity.Allows(candidates[i]))
-					picked.Add(i);
-
+			var picked = Fill(candidates, identity, splash, splashLimit, maxSpells);
 			if (picked.Count == 0)
 				continue;
 
+			// The splash is IN the manabase here — that is what makes it a splash rather than a
+			// dead card, and what makes it cost something. Every source it takes comes out of the
+			// main colours, so the whole deck's castability pays for it.
 			var sources = ManaBase.SourcesFor(picked.Select(i => candidates[i]), landCount);
 
 			var score = 0.0;
@@ -310,24 +328,83 @@ public static class Draft
 					* ManaBase.Castability(candidates[i], sources, landCount);
 
 			if (score > bestScore)
-				(best, bestIdentity, bestScore) = (picked, identity, score);
+				(best, bestScore) = (picked, score);
 		}
 
 		// **Short lane? Play the cards anyway.** A deck is maxSpells spells and the rest lands, and
 		// a pool only ever holds enough cards for that — an identity holding 19 playables used to
 		// produce a 19-spell deck with 21 lands, which is not a deckbuilding decision anybody would
 		// make. Above about 18 lands almost any card beats another land, including one this deck
-		// casts badly, so the remaining slots go to the best picks left regardless of colour.
+		// cannot cast at all, so the remaining slots go to the best picks left regardless of colour.
 		//
-		// They are appended, never interleaved, and they DO NOT get sources — BuildDeck builds the
-		// manabase from the core alone. That is what real limited does with its last few cards, and
-		// it is what stops three filler cards dragging a 9/8 manabase into an 8/7/2 one.
+		// They are appended, never interleaved, and they get NO sources — unlike a splash, which
+		// earned its. That is what real limited does with its last few cards, and it is what stops
+		// three filler cards dragging a 9/8 manabase into an 8/7/2 one.
+		var supported = best.Count;
 		var chosen = best.ToHashSet();
 		var spells = best.Select(i => candidates[i]).ToList();
 		for (var i = 0; i < candidates.Count && spells.Count < maxSpells; i++)
 			if (!chosen.Contains(i))
 				spells.Add(candidates[i]);
 
-		return (spells, bestIdentity);
+		return new ChosenDeck(spells, supported);
+	}
+
+	private static readonly int[] NoSplash = [0];
+	private static readonly int[] SplashSizes = [1, 2, 3];
+
+	/// <summary>
+	/// No splash, then each colour the identity does not already have. ONE extra colour, never two
+	/// — a four-colour manabase is not a deck anyone builds, and allowing it would let the search
+	/// rediscover the five-colour pile this whole selection exists to prevent.
+	/// </summary>
+	private static IEnumerable<ManaColor?> Splashes(ColorIdentity identity)
+	{
+		yield return null;
+		foreach (var color in ManaPool.Colors)
+			if (!identity.Colors.Contains(color))
+				yield return color;
+	}
+
+	/// <summary>
+	/// Indices of the cards this identity plays, in pick order, taking at most
+	/// <paramref name="splashLimit"/> cards that need the splash colour.
+	/// </summary>
+	private static List<int> Fill(
+		IReadOnlyList<Card> candidates,
+		ColorIdentity identity,
+		ManaColor? splash,
+		int splashLimit,
+		int maxSpells
+	)
+	{
+		var picked = new List<int>(maxSpells);
+		var splashed = 0;
+
+		for (var i = 0; i < candidates.Count && picked.Count < maxSpells; i++)
+		{
+			var card = candidates[i];
+			if (identity.Allows(card))
+			{
+				picked.Add(i);
+				continue;
+			}
+
+			if (splash is null || splashed >= splashLimit)
+				continue;
+
+			// Legal on the splash only if the splash colour is the ONLY thing it adds — a card
+			// needing two colours the identity lacks is a second splash wearing one card's name.
+			var needsOnly = ManaPool.Colors.All(c =>
+				card.ColorPips[c] == 0 || c == splash || identity.Colors.Contains(c)
+			);
+			if (!needsOnly)
+				continue;
+
+			picked.Add(i);
+			splashed++;
+		}
+
+		return picked;
 	}
 }
