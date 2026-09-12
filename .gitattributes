@@ -1,1 +1,8 @@
 graphify-out/graph.json merge=graphify
+
+# Instruction files must stay LF: CRLF in a rule file's YAML frontmatter
+# stops it loading at all, with no error. See .claude/check-docs.py
+.claude/rules/*.md text eol=lf
+.claude/skills/**/SKILL.md text eol=lf
+CLAUDE.md text eol=lf
+**/CLAUDE.md text eol=lf

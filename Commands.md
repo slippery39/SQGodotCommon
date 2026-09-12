@@ -100,3 +100,90 @@ detector".
 ```
 node inspect-draft-training.js sim_results/draft_training_csc.json
 ```
+
+
+## Training and evolution runs
+
+### Train a draft model (mode 4)
+
+Mode 4 is interactive, but the console reads plain `Console.ReadLine()`, so it drives fine from
+stdin — no CLI-argument path was added because piping needs no shipped code:
+
+```
+printf '4\n\n\n300\n8\n1\n3\nn\ncscfinal\n' | dotnet run --project MtgSimulator.Console -c Release
+```
+
+Fields in order: mode, AI depth (blank = 3), format (blank = Booster), drafts, seats, generations,
+**set choice** (the index printed by `ReadSet`, which changes as sets are registered — read the
+menu, do not hardcode it), **train-from-scratch**, seed.
+
+**The `n` is load-bearing and this command was missing it.** Once a model file exists, the trainer
+asks "Draft with the existing model? (Y/n — n trains from scratch)" and then "Merge into it rather
+than replace? (Y/n)", and an exhausted stdin answers **Y to both**. Adding a colour and running
+the old command therefore merged the new cards into the previous colour's model instead of
+retraining — the exact bootstrapping failure the section above warns about, arrived at by
+following the documented command. Answering `n` skips the merge prompt entirely and replaces the
+file, so the field count differs between the two paths; count the prompts in the output, do not
+assume.
+
+The final `Console.ReadKey` throws `InvalidOperationException` when stdin is redirected. It fires
+*after* the model is written, so the file is safe; ignore it.
+
+**Verify the console's `bin/` timestamps before trusting a training run.** `dotnet build
+MtgSimulator.Console.csproj -c Release` can report success while leaving a stale copy of
+`MtgCore.dll` / `MtgSimulator.dll` in `MtgSimulator.Console/bin/Release/net10.0/`, and
+`dotnet run --no-build` then measures code that is not in the binary. This cost two full training
+runs and three wrong conclusions in one session: a fix was declared ineffective twice when it had
+simply never been compiled in. The tell is maddening — unit tests pass (the test projects rebuild
+correctly) while the training run disagrees, which reads exactly like a real bug in the fix.
+
+It is the same class as the `sim_results/` trap below, one level down: the thing you are measuring
+is not the thing you changed.
+
+```
+rm -rf MtgSimulator.Console/bin MtgSimulator.Console/obj MtgSimulator/bin MtgSimulator/obj        MtgCore/bin MtgCore/obj
+dotnet build MtgSimulator.Console/MtgSimulator.Console.csproj -c Release --no-incremental
+ls -la MtgSimulator.Console/bin/Release/net10.0/MtgCore.dll   # must be newer than your edit
+```
+
+**When a training run contradicts a passing unit test, suspect the binary before the diagnosis.**
+
+**`sim_results/` is relative to the SHELL's working directory, not the project's.** `dotnet run`
+does not chdir into the project, so running from the repo root writes `./sim_results/` while
+running from inside `MtgSimulator.Console/` writes `MtgSimulator.Console/sim_results/`. Two
+directories with the same filename in them is how a freshly trained model gets silently
+overwritten by a stale one — which happened, and the only symptom was every card's learned value
+being byte-identical after a retrain that had clearly produced different summary numbers.
+
+Always run from the repo root, and check `Prior` against the run's reported base win rate before
+shipping a model:
+
+```
+python -c "import json;d=json.load(open('sim_results/draft_training_csc.json'));print(d['Prior'],d['Perspectives'])"
+```
+
+Reference rate, measured: 5 drafts = 140 games = 28s, so ~5.6 games/sec. 300 drafts ≈ 8 400 games
+≈ 25 minutes.
+
+### Evolve a constructed metagame (mode 6)
+
+```
+printf '6\n\n3\n8\n30\n3\n6\n20\nY\n<seed>\n' | dotnet run --project MtgSimulator.Console -c Release
+```
+
+Fields in order: mode, AI depth (blank = 2), set (the index printed by `ReadSet` — **read the
+menu, do not hardcode it**), decks, generations, mutants, games/matchup, final games/matchup,
+seed-from-draft-model, seed. Count the prompts in the output rather than trusting that list —
+mode 4's documented command was wrong for exactly this reason.
+
+Reference cost: 8 decks x 30 generations x 3 mutants x 6 games = ~1 300 games/generation (a
+little under 1 344, because some mutation proposals return null and are not scheduled).
+
+**Measured at ~1 000 games/minute on the default configuration**, i.e. ~1.3 minutes per
+generation and **~40 minutes for a 30-generation run**. Constructed games are much faster than
+drafted ones — the reference rate elsewhere in this document is 5.6 games/sec for draft training,
+and these are ~17/sec, because 60-card decks with a real curve end sooner than 40-card limited
+decks and nothing here pays for the draft itself.
+
+Both output files are relative to the **shell's** working directory — run from the repo root, and
+verify `bin/` timestamps before trusting a run. Same two traps as draft training.

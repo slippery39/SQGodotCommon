@@ -6,101 +6,77 @@
 SQGodotCommon/
 ├── ImmutableGameObjects/
 │   ├── ImmutableGameObjects/        # Immutable game state library (GameState, GameAction, PipelineAction)
-│   ├── ImmutableGameObjects.Tests/  # Library unit tests
+│   ├── ImmutableGameObjects.Tests/
 │   └── ImmutableGameObjects.Benchmarks/
 ├── MtgCore/                         # MTG card game engine (actions, cards, turns, combat, targeting)
-├── MtgCore.Tests/                   # MTG engine unit tests
+├── MtgCore.Tests/
 ├── MtgConsole/                      # Console presentation layer (ConsoleGameLoop, ConsoleRenderer)
-├── MtgSimulator/                    # Simulator library — AI strategies, runners, deck factories (referenced by Godot + tests)
-│   ├── Scenarios/                   # Saved positions: GameState↔JSON, scenario store, multi-strategy comparison
-│   └── Evolution/                   # Constructed metagame evolution: Decklist, seeding/mutation, the loop
-├── MtgSimulator.Console/            # Thin console entry point (Program.cs only — references MtgSimulator)
+├── MtgSimulator/                    # AI strategies, runners, deck factories (referenced by Godot + tests)
+│   ├── Scenarios/                   # Saved positions: GameState↔JSON, scenario store, strategy comparison
+│   └── Evolution/                   # Constructed metagame evolution + engine discovery
+├── MtgSimulator.Console/            # Thin console entry point (Program.cs only)
 └── SQGodotCommon/                   # Godot project — reusable utilities (Common/, Project/)
     └── MtgGame/                     # MTG front end: board, deck select, draft + tournament
 ```
 
 The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only through
-`MtgGameManager` (plain C#, no Godot types) — see `MtgSimulator/CLAUDE.md` for the draft path.
+`MtgGameManager` (plain C#, no Godot types).
 
-## Seeing what the AI is doing
+## Where the detail lives
 
-Evaluation changes were argued rather than watched for two sessions, and several were wrong. There
-is now tooling; use it before proposing a scoring change.
+**This file holds only what is true on every task.** Everything else loads on demand:
 
-| | |
-|---|---|
-| **F6** in game | AI inspector overlay — every ranked action, and the chosen one's score split into evaluator terms |
-| **F7** in game | Save the live position to `user://scenarios/` |
-| Console **mode 5** | Load a scenario and have several strategies decide in it, side by side |
-| Console **mode 6** | Evolve a constructed metagame — AI-built decks, matchup matrix, and a constructed-vs-limited card value diff |
-| Console **mode 7** | Discover synergy engines in a pool — solitaire only, no battles. "Does this archetype assemble?", asked before "is it competitive?" |
-| **Space** in game | Pause the AI — do this before F6 so you can click through candidates |
+| Kind | Location | Loads |
+|---|---|---|
+| Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
+| Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |
+| Procedures | skills (`/add-card`, `/ai-inspect`, `/regen-card-values`) | when invoked or relevant |
+| Commands | `Commands.md` | read it |
+| Deferred decisions | `DesignNotes.md` | read it |
 
-Full detail in `MtgSimulator/CLAUDE.md`. Three rules worth carrying: a scenario is **serialized
-state**, not a `GameStateSnapshot` report; `StateEvaluator.Explain` is the implementation with
-`Evaluate` as the wrapper — never write a second copy of the sum for display; and **goldfish speed
-is measured to be the wrong fitness for a combo deck** — dismantling Storm makes it goldfish
-*faster*. Use `EngineProbe`, which asks whether the payoff resolved with its support deployed.
+Each project's `CLAUDE.md` is a map to its own rules — start there, not here.
 
 ## Platform
 
-C# on .NET.
+C# on .NET. Windows.
 
 ## General Principles
 
 - SOLID where applicable; no oversized files
-- Use functional or OOP as the problem dictates — not dogmatic about either
-- Game Logic and UI Logic must be completely separated; no game logic in presentation layers
-- Make changes in small, reviewable steps; never large all-at-once changes
-- Never assume on vague requirements — confirm before implementing
+- Functional or OOP as the problem dictates — not dogmatic about either
+- **Game logic and UI logic stay completely separated; no game logic in presentation layers**
+- Small, reviewable steps; never large all-at-once changes
+- **Never assume on vague requirements — confirm before implementing**
+- **Verify a primitive fires before relying on it.** An inert card throws no error; four silent no-op engine bugs were found only by testing the consequence.
 
-## CLAUDE.md Maintenance
+## Seeing what the AI is doing
 
-A CLAUDE.md file exists at the root and in each active project (`ImmutableGameObjects/ImmutableGameObjects/`, `MtgCore/`, `MtgSimulator/`). When code changes affect the architecture, patterns, rules, or known issues described in these files — update the relevant CLAUDE.md in the same step. Source maps in particular go stale quickly; keep them accurate as files are added or removed.
+Evaluation changes were argued rather than watched for two sessions, and several were wrong. **Use
+the tooling before proposing a scoring change.**
 
-`DesignNotes.md` at the solution root is the companion watchlist: decisions that work for the
-current scope but will need revisiting. Deliberate deferrals go there with their costed options,
-not in CLAUDE.md.
+| | |
+|---|---|
+| **Space** in game | Pause the AI — do this *before* F6 so you can click through candidates |
+| **F6** in game | AI inspector overlay — every ranked action, and the chosen one's score by evaluator term |
+| **F7** in game | Save the live position to `user://scenarios/` |
+| Console **mode 5** | Load a scenario, have several strategies decide in it side by side |
+| Console **mode 6** | Evolve a constructed metagame |
+| Console **mode 7** | Discover synergy engines in a pool — solitaire only. "Does this archetype assemble?", asked before "is it competitive?" |
+
+Three rules worth carrying: a scenario is **serialized state**, not a `GameStateSnapshot` report;
+`StateEvaluator.Explain` is the implementation with `Evaluate` as the wrapper — never write a second
+copy of the sum for display; and **goldfish speed is measured to be the wrong fitness for a combo
+deck** — dismantling Storm makes it goldfish *faster*. Use `EngineProbe`.
 
 ## Card Sets
 
-**The set menu is 1=LEG 2=CSC 3=CMB 4=DES 5=ALL.** It has now shifted TWICE — CMB was inserted,
-then HLM was retired — so any piped console command written against either older numbering runs a
-different set silently. Read the menu.
+**The set menu is 1=LEG 2=CSC 3=CMB 4=DES 5=ALL.** It has shifted TWICE — CMB was inserted, then HLM
+retired — so any piped console command written against either older numbering runs a different set
+silently. **Read the menu; never hardcode the index.**
 
-**Combo Proving Ground (CMB)** is a test instrument, not a draftable set — see
-`MtgCore/Sets/ComboProving/`. It plants combos with known answers so a run can distinguish "the
-builder cannot find combos" from "this pool has none", which is the discriminator the handoff names
-as the most valuable open item. It is a **supplement meant to be played inside DES**, never alone:
-at ~60 cards `DeckCore.MinPoolForBreadth` (100) switches the breadth gate off entirely, so a run
-over CMB by itself measures the fixture. Nothing in it is costed to a rate — read cohesion and
-assembly, never win rate.
-
-**Hollowmere (HLM) was RETIRED** along with its cards, tests and trained model. It served its
-purpose but was designed around the engine having no colours — "ten overlapping themes stand in for
-colours" — and its tribes do not map onto five colours evenly, so colouring it would have meant
-redesigning it. A new set built WITH colours from the start is the intended successor.
-
-ONE DRAFTABLE set exists (CMB is registered but has no trained model and is not meant to be
-drafted), registered in `SetRegistry`:
-- **Core Set Cube (CSC)** — built from an external cube list
-  (https://cubecobra.com/cube/list/magiccoreset20xx). **All five colours are complete — 335
-  cards.** The colourless (50) and multicolour (53) sections are what remain. See
-  `MtgCore/Sets/CoresetCube/`.
-
-  The cube is 450 cards: 67 per colour, 50 colourless, 53 multicolour. Verify a colour's card list
-  by downloading `cubecobra.com/cube/download/csv/magiccoreset20xx` and filtering on the `Color`
-  and `board` columns — the HTML page is a SPA and cannot be scraped.
-
-  **CSC is the set the Godot draft mode plays** (`DraftScene.DraftedSet`). Making a set playable
-  is three things, not one: the cards, the rules text that renders them, and a trained draft
-  model. See `MtgSimulator/CLAUDE.md` — a set with correct cards and no rules text is
-  undraftable, and the failure is invisible in a screenshot.
-
-Sets sourced from a real cube exist to force new mechanics: the card list drives the engine rather
-than the engine driving the list. When a card needs something the engine lacks, **build the
-mechanic** — dropping the ability defeats the exercise. Only cut text when the concept is
-structurally absent (no colours, no blocking, no planeswalkers), and comment the cut on the card.
+One draftable set exists: **Core Set Cube (CSC)**, 335 cards, what the Godot draft mode plays. **CMB**
+(Combo Proving Ground) is a registered test instrument with no trained model, meant to be played
+inside DES rather than alone. **HLM is retired.** Per-set detail is in `.claude/rules/mtg-cards.md`.
 
 ## Colours
 
@@ -111,15 +87,8 @@ each turn, exactly like generic** — it is not an Eternal-style permanent thres
 whole design: a five-colour manabase caps you at one single-pip spell per colour per turn, so greed
 costs throughput while focus costs nothing.
 
-Engine detail lives in `MtgCore/CLAUDE.md`. Three things worth carrying:
-
-- **`ManaBase.Build` (MtgSimulator) is the only place a manabase is made.** Draft, random pools and
-  `Decklist.Materialize` all route through it. Every one of them used to pad with Plains, which was
-  fine with no colours and silently fatal with them. It allocates by MEASURED DEMAND — sources
-  needed to cast a card on the turn it costs — not by raw pip count.
-
 **A double pip is effectively a mono-colour card, and that is where the whole colour constraint
-lives.** Measured in this engine (`ManaBaseCalibrationTests`), sources of one colour needed in a
+lives.** Measured in this engine (`ManaBaseCalibrationTests`) — sources of one colour needed in a
 60-card, 24-land deck for a 90% on-curve cast:
 
 | pips | cost 1 | 2 | 3 | 4 | 5 | 6 |
@@ -130,151 +99,90 @@ lives.** Measured in this engine (`ManaBaseCalibrationTests`), sources of one co
 
 A two-colour deck split 12/12 casts a single pip **89% on turn one and 94% by turn three**, but a
 double pip only **65% by turn three** — 17 of its 24 lands would have to be one colour. So
-single-pip greed is barely taxed and double pips carry the constraint. Expect `WW` cards to belong
-to mono decks, and treat the pip depth of a card as its real colour commitment.
+single-pip greed is barely taxed and double pips carry the constraint. **Treat the pip depth of a
+card as its real colour commitment**, and expect `WW` cards to belong to mono decks.
 
-**Paper Magic's manabase tables do not transfer here** and must not be used. The opening hand is
+**Paper Magic's manabase tables do not transfer here and must not be used.** The opening hand is
 guaranteed to contain exactly three lands (`SetupGameAction.OpeningHandLandCount`) drawn uniformly
-from the manabase, which makes early colour access far more reliable than a real seven-card draw;
-a borrowed table systematically over-builds. Re-run `ManaBaseCalibrationTests` if the opening-hand,
+from the manabase, which makes early colour access far more reliable than a real seven-card draw; a
+borrowed table systematically over-builds. Re-run `ManaBaseCalibrationTests` if the opening-hand,
 land-drop or deck-size rules ever change.
-- **`CardValueSandbox` grants every colour** at the generic depth. A measurement table that handed
-  out generic only would score coloured cards as uncastable and rewrite the value tables into a
-  report about colour screw.
-- **`MtgGameFactory.CreateForTesting` grants 99 of every colour.** A test about a mechanic should
-  not fail on colour; a test about colour zeroes it explicitly (see `ManaColorTests`).
 
-**Presim random decks are seeded to a COLOUR IDENTITY** (`ColorIdentity`, 5 mono + 10 pairs) and
-sample only cards that identity can cast. This is not a refinement — it repairs a bias colour
-introduced. A deck sampled across the whole pool is a five-colour pile: measured on CSC it plays
-**4.8 colours and gives a card 5.8 sources of its own colour**, against **1.7 and 16.2** when
-scoped. Against the table above that is a double pip castable on curve ~23% of the time versus
-~86%, and 29% of a random deck's coloured cards are double-pipped. Unscoped, the presim would
-deflate every committed card in the format — precisely the failure `ConstructedValuesStore`
-documents, reached from a different direction, and its note that *"deflation makes an archetype
-unbuildable"* is what makes it serious rather than cosmetic.
+`ManaBase.Build` is the only place a manabase is made. `CardValueSandbox` grants every colour at the
+generic depth — a table handing out generic only would score coloured cards as uncastable and
+rewrite the value tables into a report about colour screw. `MtgGameFactory.CreateForTesting` grants
+99 of every colour: a test about a mechanic should not fail on colour, and a test about colour zeroes
+it explicitly (`ManaColorTests`).
 
-So **"neutral" now means random WITHIN a manabase that can cast the card**, not random across the
-pool. Three-colour identities are deliberately excluded from the pooled table: their manabases fail
-often enough that the games would measure the mana rather than the card.
-
-### Colour slots
-
-The evolver's field is **16 slots: the fifteen identities (five mono, ten pairs) plus one
-unconstrained wildcard**, assigned by `DeckBuilder.IdentityForSlot`. The identity is a POOL LOCK —
-a colour a deck cannot cast never enters its candidate list — which is the same mechanism
-`DeckCore` uses and for the reason recorded there: *"a budget for drift gets spent on drift."*
-
-**Enforced at mutation as well as at seeding.** A slot that seeds mono-red and then mutates freely
-drifts out of its colours one swap at a time, and the field silently stops covering the format.
-
-`ConstructedValues.For(identity)` returns a SCOPED view whose every lookup answers in that
-identity's terms. `DeckBuilder` reads `CardDelta` from seven places; conditioning at the source
-rather than per call site is what keeps fill and cut agreeing — one missed site would let the
-builder add a card its own cut scoring then wants gone, churning the slot forever.
-
-**The wildcard slot is the control**, not a curiosity: if a deck allowed any colours consistently
-loses to the constrained slots, colour is doing real work; if it wins, the manabase model is too
-generous.
-
-`minDifference` is relaxed to **0.15** because colour now separates the field structurally — with
-one slot per identity it cannot converge. The old 0.35 would actively fight the slots, since
-mono-red and red-white legitimately share most of their red cards. Cost is quadratic in deck count,
-so a 16-slot run is ~4x an 8-slot one; the field is also a colour-pair tier list for the format.
-
-### Detectors know whether an archetype can be BUILT
-
-`DeckCore.PlayableIdentities(pool)` answers which of the fifteen identities a core can be assembled
-in, and **empty means the archetype needs more than two colours and no ordinary deck can play it**.
-Mode 7's report carries it as a `cols` column — read it before reading LIFT, because an unbuildable
-archetype still posts a healthy lift. The evolver drops unbuildable engines before cutting the tier,
-and names them rather than dropping them silently.
-
-A slot's colour cost is **the cheapest way to fill it, not the union of its members** — a slot holds
-interchangeable cards by definition, so a Twin slot offering a red copier and a blue one costs
-whichever the deck can cast. The floor is in COPIES, so an 8-copy slot needs two distinct playable
-members, not one.
-
-**Null identities mean "not computed", empty means "computed and unbuildable".** A report saved
-before the colour column carries null; treating that as unbuildable empties the entire engine field
-and the run comes back clean having seeded nothing. Re-run discovery rather than inferring anything
-from an absent column.
-
-### The three win-rate tables
-
-Card value is looked up in three places, weighed against the feature scores (`DeckFit`,
-`SupportScore`) which are theoretical rather than win-rate based:
-
-| table | what it answers | scope |
-|---|---|---|
-| `ConstructedValues.CardDelta(name)` | worth in a random deck of its colours | persisted |
-| `CardDelta(name, identity)` — `IdentityValues` | worth in mono-red as against red-white | persisted |
-| `contextValue` from `OutputProbe` | worth in THIS deck | run-scoped, discarded |
-
-**The identity rate is shrunk TOWARD the pooled rate, never added to it.** They are one population
-viewed two ways — every game in an identity's table is also in the pooled table — so summing would
-count the same evidence twice and inflate exactly the cards that already have the most data.
-Shrinking makes it a delta by construction: no identity games means the pooled answer, unchanged.
-
-**Both persisted tables come only from PRESIM random decks.** Nothing from an evolved deck may
-enter either, or the builder's own output feeds back into the values steering it —
-`ConstructedValuesStore.EvolvedPathFor` records what that cost when it happened (Goblin Chieftain
-+13.43 against an unconfounded +3.81; Thoughtcast −7.18 against +0.92, and *"deflation makes an
-archetype unbuildable"*). The run-scoped table is allowed to see built decks precisely because it
-is thrown away.
-
-`IdentityValues.IdentityShrinkK` is **75, calibrated against a measured run** rather than guessed
-(`PresimCalibrationHarness`; 300 identity-scoped decks over CSC gave 1 995 cells at p10 9, median
-**24**, p90 50 games). A cell's evidence carries `games / (games + k)`, so at the pooled constant of
-25 a median cell would carry 49% — half a rating decided by 24 games, whose standard error is ~10pp.
-At 75 it carries 24%, and reaches half only around 75 games, which the table accrues over about
-three runs. Guessing such a constant by analogy is how `MinPairGames` came to be 200 against a
-busiest pair of 166, silently disabling every synergy path while the tests passed.
-
-**Gold cards are under-sampled in the POOLED table, not the identity one** — measured: 27 median
-games per card against mono's 112 and colourless's 370, because a gold card is legal in exactly one
-identity. Its single cell is as well sampled as anyone's (27 against a median of 24). The fix is to
-weight presim deck allocation toward pair identities; deferred, since the pooled rate shrinks toward
-the draft prior and the failure mode is "reads unremarkable" rather than "reads wrong".
-
-**Assignment status: every live set is assigned and verified** — CSC (`CoresetCubeColorTests`),
-LEG and CMB (`LegacyAndComboColorTests`). HLM was retired rather than coloured.
-
-Artifacts and lands stay colourless on purpose: an artifact's real colour IS colourless, and a
-land's colour is what it PRODUCES (`LandColorComponent`), not what it costs. CMB's counters package
-is artifact creatures and so is colourless too.
-
-**Beware name-anchored bulk edits.** The first pass at assigning LEG and CSC anchored insertion on
-any quoted occurrence of a card's name, and card names appear in other cards' doc comments — so
-pips landed on whatever card was defined next. Llanowar Elves came out needing UUBRG and Lotus
-Bloom, a colourless artifact, needed UU, and every existing test still passed. Anchor on the
-FACTORY CALL, and assert an expected pip table.
+Engine detail is in `MtgCore/CLAUDE.md`. How colour shapes the evolver's field, the three win-rate
+tables and the identity-scoped presim are in `.claude/rules/sim-evolution.md`.
 
 ## Regenerating the measured tables
 
-`sim_results/` is **untracked and disposable**, but four tests need the card-value table in it. To
-rebuild after clearing it:
+`sim_results/` is **untracked and disposable**, but four tests need the card-value table in it:
 
 ```
 dotnet test MtgSimulator.Tests --filter "FullyQualifiedName~CardValueSweep.SweepTheCoreSetCube"
 ```
 
-**`sim_results/` resolves against the WORKING DIRECTORY, which under `dotnet test` starts as the
-test binary's folder, not the repository.** Anything reading or writing it must call
-`TestPaths.ChdirToSolutionRoot()` first. Getting this wrong does not look like a path bug: a table
-loaded from the wrong place is empty, every card reads 0.00pp, and the tests fail exactly as though
-the data were missing — while passing in isolation, because alone nothing has moved the directory.
+**`sim_results/` resolves against the WORKING DIRECTORY, which under `dotnet test` starts as the test
+binary's folder, not the repository.** Anything reading or writing it must call
+`TestPaths.ChdirToSolutionRoot()` first. Getting this wrong does not look like a path bug: the table
+loads empty, every card reads 0.00pp, and the tests fail exactly as though the data were missing —
+while passing in isolation, because alone nothing has moved the directory.
 
-The identity presim table is rebuilt by a full evolution run, or measured on its own with
-`PresimCalibrationHarness` (Explicit; `MTG_PRESIM_DECKS` / `MTG_PRESIM_OPPONENTS` size it).
+**Never quote a card's win rate from memory or from a CLAUDE.md — compute it from `sim_results/*.json`
+every time.**
 
 ## Serialization Rule
 
-All objects stored in `GameState` must be fully serializable at all times. Delegates (`Func<>`, `Action<>`), lambdas, and expression trees are **forbidden** on any type that lives in `GameState`, including all `GameObject` and `GameAction` subclasses and their data. If a delegate seems necessary, make the case explicitly before implementing — there is almost always a data-oriented alternative.
+All objects stored in `GameState` must be fully serializable at all times. Delegates (`Func<>`,
+`Action<>`), lambdas and expression trees are **forbidden** on any type that lives in `GameState`,
+including all `GameObject` and `GameAction` subclasses and their data. If a delegate seems necessary,
+make the case explicitly before implementing — there is almost always a data-oriented alternative.
 
-**This rule is now enforced rather than aspirational.** `MtgSimulator/Scenarios/StateJson.cs`
-round-trips a whole `GameState` through JSON and `StateJsonTests` asserts the result scores
-identically, offers the same legal actions, and produces the same AI decision. A delegate on a
-`GameState` type breaks those tests instead of being discovered years later, and any new abstract
-type is picked up automatically by reflection — but a **metadata value** of an untagged type
-throws by design, naming the type and telling you to use a component instead.
+**This is enforced, not aspirational.** `MtgSimulator/Scenarios/StateJson.cs` round-trips a whole
+`GameState` through JSON and `StateJsonTests` asserts the result scores identically, offers the same
+legal actions, and produces the same AI decision. Any new abstract type is picked up automatically by
+reflection — but a **metadata value** of an untagged type throws by design, naming the type and
+telling you to use a component instead.
+
+## Maintaining these files
+
+When a change affects the architecture, patterns, rules or known issues described here — update the
+relevant file **in the same step**. Source maps go stale fastest; keep them accurate as files are
+added or removed.
+
+**Route new content by what it is, not by where you happen to be:**
+
+| What you are writing | Goes in |
+|---|---|
+| A rule that applies to every task | this file |
+| A rule about one subsystem | `.claude/rules/<subsystem>.md` |
+| Numbers a run produced | `docs/findings/<subsystem>.md` — never a `CLAUDE.md` |
+| A command and its traps | `Commands.md` |
+| A repeatable procedure | a skill under `.claude/skills/` |
+| "Fine now, revisit later", with costed options | `DesignNotes.md` |
+
+**Budget: 200 lines per `CLAUDE.md`.** A `PostToolUse` hook (`.claude/check-docs.py`) warns when one
+goes over. Over budget means content is in the wrong file, not that the budget is wrong — move it
+down, don't delete it. When a rule's evidence moves to `docs/findings/`, leave the rule and a
+one-line pointer behind: the rule without its evidence gets re-litigated, and the evidence without
+its rule never gets read.
+
+**A rule file fails SILENTLY — it simply never loads, with no error anywhere.** Two ways, both
+measured on Claude Code 2.1.116 and both now caught by the same hook:
+
+- **CRLF in the YAML frontmatter.** The `paths:` block does not parse and the rule is inert. `.gitattributes` pins these files to LF; keep it that way.
+- **`**` in a glob matches nothing.** `MtgCore/Sets/**/*.cs` matched zero files while `MtgCore/Sets/*/*.cs` matched 34. Write the levels out explicitly.
+
+Verify a new or edited rule actually loads rather than assuming — same instinct as testing that a
+card's effect fires:
+
+```
+claude -p "Read <a file the rule claims>. Then WITHOUT opening any other file: is the text of
+.claude/rules/<rule>.md already in your context? Reply exactly LOADED or NOT LOADED." --allowedTools Read
+```
+
+Then repeat with a file the rule should NOT match — a rule that answers LOADED to everything has
+lost its `paths:` and is costing context in every session.
