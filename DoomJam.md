@@ -237,6 +237,20 @@ is the deliverable for "how flexible is this engine?"**
   draw**, so declining to play the card does not dodge the price. That also made death checkable at
   turn START as well as end.
 
+**After the preview and the console (24 tests green):**
+
+- **The doom preview runs the REAL transform and diffs the decks** (`DoomPreviewer.Preview`). It does
+  not describe each scenario in its own words — a second hand-written account of Flood would drift
+  from Flood and the player would be playing around a lie. Same rule as MTG's `Explain`/`Evaluate`.
+  Every future scenario is previewable for free.
+- **`Run.BuildBattle` + `BeginBattle` was a trap and is now one call, `Run.StartBattle`.** A built
+  but unbegun battle looks ready and has an empty hand; three tests passed only because `EndTurn`
+  spawns `StartTurn` and drew on the second loop. Nothing ever wants an unbegun battle.
+- `StartBattle` returns the opening events, because the first hand can already hurt you — an
+  Irradiated card costs a life the moment it is drawn.
+- **The console is the remote surface and it works**: play, attack, block, end, and the whole
+  countdown-to-doom loop, verified by running it rather than by reasoning about it.
+
 Rules settled while building, beyond the design doc: hand is **drawn to 5 and discarded every turn**
 (STS), units have **no summoning sickness** (a 2-5 turn battle cannot afford it), dead units go to
 Discard and **cycle back into the deck** — only a doom transform can remove a card from a run.

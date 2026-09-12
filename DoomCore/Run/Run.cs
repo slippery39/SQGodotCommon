@@ -42,11 +42,18 @@ public record Run
 		cards.Aggregate(this, (run, card) => run.WithCard(card));
 
 	/// <summary>
-	/// Builds a fresh battle GameState from this run: the whole deck into Draw, the given enemies
-	/// into the enemy zone. Life comes from the run, so damage taken in the last battle is still on
-	/// the player — there is no automatic healing between battles.
+	/// Builds a fresh battle from this run AND begins it: the whole deck into Draw, the given
+	/// enemies into the enemy zone, shuffled, turn 1 started and the opening hand drawn. Life comes
+	/// from the run, so damage taken in the last battle is still on the player — there is no
+	/// automatic healing between battles.
+	///
+	/// Building and beginning are deliberately ONE call. A built-but-unbegun battle looks ready and
+	/// has an empty hand, and nothing ever wants one — two steps only bought a silent trap.
+	///
+	/// Returns the opening events because they can already matter: an Irradiated card costs a life
+	/// the moment it is drawn, so the first hand can damage you before you act.
 	/// </summary>
-	public GameState BuildBattle(
+	public (GameState State, ImmutableList<GameEvent> Events) StartBattle(
 		DoomScenario scenario,
 		int countdown,
 		IEnumerable<Enemy> enemies,
@@ -87,7 +94,7 @@ public record Run
 		foreach (var enemy in enemies)
 			(state, _) = state.AddObject(enemy, enemyZoneId);
 
-		return state;
+		return state.BeginBattle();
 	}
 
 	/// <summary>

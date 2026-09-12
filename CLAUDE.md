@@ -24,6 +24,7 @@ SQGodotCommon/
 │   ├── Run/                         # Run + RunCard (OUTSIDE GameState); DoomTransforms
 │   └── DoomBattleFactory.cs         # one GameState per battle; DoomStateExtensions is the API
 ├── DoomCore.Tests/                  # NUnit; inline card definitions only
+├── DoomConsole/                     # terminal front end — THE REMOTE SURFACE, needs no Godot
 └── SQGodotCommon/                   # Godot project
     ├── Common/                      # reusable utilities — Cards/2D is game-agnostic, use it
     ├── Project/                     # GameManager, main menu

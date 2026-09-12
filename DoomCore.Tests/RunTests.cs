@@ -72,7 +72,7 @@ public class RunTests
 			IntentAmount = 4,
 		};
 
-		var state = run.BuildBattle(DoomScenario.Zombie, countdown: 2, [enemy]);
+		(var state, _) = run.StartBattle(DoomScenario.Zombie, countdown: 2, [enemy]);
 		state = PlayOutBattle(state);
 
 		var after = run.AfterBattle(state);
@@ -85,7 +85,7 @@ public class RunTests
 	public void ADeckBuiltIntoABattleKeepsItsRunCardIds()
 	{
 		var run = new Run().WithCards([Unit("A", 1, 1), Unit("B", 2, 2)]);
-		var state = run.BuildBattle(DoomScenario.Flood, countdown: 3, [Idler()]);
+		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 3, [Idler()]);
 
 		var ids = state
 			.CardsIn(ZoneType.Draw)
@@ -106,7 +106,7 @@ public class RunTests
 		);
 		var committedId = run.Deck[0].RunCardId;
 
-		var state = run.BuildBattle(DoomScenario.Flood, countdown: 2, [Idler()]);
+		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 2, [Idler()]);
 		state = PlayOutBattle(state, committedId);
 
 		var after = run.AfterBattle(state);
@@ -135,7 +135,7 @@ public class RunTests
 			]
 		);
 
-		var state = run.BuildBattle(DoomScenario.Flood, countdown: 2, [Idler()]);
+		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 2, [Idler()]);
 		state = PlayOutBattle(state);
 
 		var after = run.AfterBattle(state);
@@ -160,7 +160,7 @@ public class RunTests
 			IntentAmount = 3,
 		};
 
-		var state = run.BuildBattle(DoomScenario.Zombie, countdown: 3, [enemy]);
+		(var state, _) = run.StartBattle(DoomScenario.Zombie, countdown: 3, [enemy]);
 
 		// Block with Fragile every turn it is in hand — it dies, cycles back, and dies again.
 		while (!state.GetBattle().IsOver)
@@ -203,7 +203,7 @@ public class RunTests
 		var run = new Run { Life = 40, MaxLife = 40 }.WithCards([Unit("Exposed", 3, 3, cost: 0)]);
 		var exposedId = run.Deck[0].RunCardId;
 
-		var state = run.BuildBattle(DoomScenario.Nuclear, countdown: 2, [Idler()]);
+		(var state, _) = run.StartBattle(DoomScenario.Nuclear, countdown: 2, [Idler()]);
 		state = PlayOutBattle(state, exposedId);
 
 		var after = run.AfterBattle(state);
@@ -214,8 +214,7 @@ public class RunTests
 		Assert.That(card.HasTag(DoomTransforms.IrradiatedTag), Is.True);
 
 		// The price is paid on the DRAW, so declining to play it does not dodge it.
-		var next = after.BuildBattle(DoomScenario.Zombie, countdown: 3, [Idler()]);
-		var (started, events) = next.BeginBattle();
+		var (started, events) = after.StartBattle(DoomScenario.Zombie, countdown: 3, [Idler()]);
 
 		Assert.That(events.OfType<IrradiatedDrawnEvent>().Count(), Is.EqualTo(1));
 		Assert.That(started.GetPlayer().Life, Is.EqualTo(after.Life - 1));
@@ -226,7 +225,7 @@ public class RunTests
 	{
 		var run = new Run { Life = 40, MaxLife = 40 }.WithCards([Unit("Sheltered", 3, 3, cost: 0)]);
 
-		var state = run.BuildBattle(DoomScenario.Nuclear, countdown: 2, [Idler()]);
+		(var state, _) = run.StartBattle(DoomScenario.Nuclear, countdown: 2, [Idler()]);
 		state = PlayOutBattle(state);
 
 		var after = run.AfterBattle(state);
@@ -241,7 +240,7 @@ public class RunTests
 	public void RaptureThrowsRatherThanSilentlyDoingNothing()
 	{
 		var run = new Run().WithCards([Unit("Offering", 1, 1)]);
-		var state = run.BuildBattle(DoomScenario.Rapture, countdown: 1, [Idler()]);
+		(var state, _) = run.StartBattle(DoomScenario.Rapture, countdown: 1, [Idler()]);
 		state = PlayOutBattle(state);
 
 		Assert.Throws<NotSupportedException>(() => run.AfterBattle(state));
@@ -261,7 +260,7 @@ public class RunTests
 			IntentAmount = 3,
 		};
 
-		var state = run.BuildBattle(DoomScenario.Flood, countdown: 3, [enemy]);
+		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 3, [enemy]);
 		state = PlayOutBattle(state);
 
 		var after = run.AfterBattle(state);
