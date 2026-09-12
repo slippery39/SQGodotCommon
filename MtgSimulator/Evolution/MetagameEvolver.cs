@@ -8,8 +8,8 @@ namespace MtgSimulator;
 ///
 /// Each generation, every deck proposes a few mutants; every candidate plays the FROZEN field
 /// on an identical seed schedule; the best mutant that beats its parent and stays distinct
-/// from the rest of the field is accepted. Decks that cannot clear the viability floor against
-/// the field are culled and re-seeded, which is what keeps the metagame turning over.
+/// from the rest of the field is accepted. **Every slot keeps brewing for the whole run** — there
+/// is no culling, and the viability floor only FLAGS a deck in the report.
 ///
 /// Phases mirror DraftTrainer exactly and for the same reasons: proposals are built
 /// sequentially (cheap, must stay deterministic), all games run in ONE parallel batch into a
@@ -31,9 +31,7 @@ public sealed class MetagameEvolver
 	private readonly double _minDifference;
 	private readonly double _engineDifference;
 	private readonly double _viabilityFloor;
-	private readonly int _graceGenerations;
 	private readonly bool _useDraftPrior;
-	private readonly bool _cullEnabled;
 	private readonly int _preSimDecks;
 	private readonly int _preSimOpponents;
 	private readonly int _conceptSlots;
@@ -62,8 +60,7 @@ public sealed class MetagameEvolver
 	private readonly int _explorationGenerations;
 
 	/// <summary>
-	/// Every proposal the search considered. A field rather than a parameter because `CullWorst`
-	/// writes to it too and that method already takes eleven arguments.
+	/// Every proposal the search considered.
 	/// </summary>
 	private readonly MutationLog _mutations = new();
 
@@ -97,7 +94,7 @@ public sealed class MetagameEvolver
 	private const double MaxEngineOverlap = 0.8;
 
 	/// <summary>
-	/// How much longer a concept slot is left alone before it can be culled.
+	/// How much longer a concept slot is left alone before its candidate set counts as exhausted.
 	///
 	/// **A proxy for "the candidate set is exhausted", which is the honest abandon rule and is
 	/// not built.** A human drops an archetype once the pool has no more cards that could fix it,
@@ -156,11 +153,6 @@ public sealed class MetagameEvolver
 	/// Matched on <see cref="EngineCandidate.Concept"/>, case-insensitively, with a leading
 	/// "Engine-" tolerated so a deck name copied straight out of a previous report works.
 	/// </param>
-	/// <param name="graceGenerations">
-	/// How long a freshly seeded deck is immune from culling. A new seed starts bad by
-	/// definition; without a grace period the field culls its own replacements before they can
-	/// climb, and never converges.
-	/// </param>
 	public MetagameEvolver(
 		CardSet set,
 		// 16 = the fifteen colour identities (five mono, ten pairs) plus one unconstrained
@@ -182,9 +174,7 @@ public sealed class MetagameEvolver
 		// same overlap `engineDifference` already exists to forgive between two engine slots.
 		double minDifference = 0.15,
 		double viabilityFloor = 0.40,
-		int graceGenerations = 5,
 		bool useDraftPrior = true,
-		bool cullEnabled = true,
 		int preSimDecks = 300,
 		int preSimOpponents = 12,
 		int conceptSlots = 0,
@@ -219,9 +209,7 @@ public sealed class MetagameEvolver
 		// constraint wearing the name of a relaxation, and the prompt offers it as a relaxation.
 		_engineDifference = Math.Min(engineDifference ?? minDifference, minDifference);
 		_viabilityFloor = viabilityFloor;
-		_graceGenerations = graceGenerations;
 		_useDraftPrior = useDraftPrior;
-		_cullEnabled = cullEnabled;
 		_preSimDecks = preSimDecks;
 		_preSimOpponents = preSimOpponents;
 		_conceptSlots = Math.Clamp(conceptSlots, 0, Math.Max(0, deckCount - 1));
@@ -701,11 +689,10 @@ public sealed class MetagameEvolver
 			// **Two tallies, and the split is deliberate.** `tallies` is field + gauntlet and
 			// drives ACCEPTANCE: that is the whole point, since a mutant that beats the field but
 			// loses to the gauntlet is not an improvement. `fieldTallies` is field-only and drives
-			// CULLING and the viability floor, because the floor means "competitive in this field".
+			// the REPORTED viability floor, because the floor means "competitive in this field".
 			// Judging viability on the combined rate would put every deck under 40% on day one
-			// against a gauntlet that beats the field 66-34, and `CullWorst` would replace a deck
-			// every generation forever — resetting its DeckHistory each time, which this document
-			// records as the thing culled slots never recover from.
+			// against a gauntlet that beats the field 66-34 — which, back when the floor also
+			// CULLED, replaced a deck every generation forever and reset its DeckHistory each time.
 			var tallies = new Tally[_deckCount][];
 			var fieldTallies = new Tally[_deckCount][];
 			for (var i = 0; i < _deckCount; i++)
@@ -913,26 +900,10 @@ public sealed class MetagameEvolver
 			for (var i = 0; i < _deckCount; i++)
 				lastRate[i] = tallies[i][0].Games > 0 ? tallies[i][0].Rate : lastRate[i];
 
-			// --- Cull: at most one per generation, past its grace period ---
-			var culled = CullWorst(
-				field,
-				fieldTallies,
-				ages,
-				isWildcard,
-				isConcept,
-				identities,
-				profiles,
-				values,
-				features,
-				rng,
-				gen,
-				slotHistory
-			);
-
-			// Downstream of every writer this generation — accepted mutants and the cull alike.
+			// Downstream of every writer this generation.
 			ValidateFieldIdentities(field, identities, isWildcard);
 
-			PrintGeneration(gen, field, tallies, accepted, culled, excluded, timer);
+			PrintGeneration(gen, field, tallies, accepted, excluded, timer);
 		}
 
 		timer.Stop();
@@ -1454,121 +1425,6 @@ public sealed class MetagameEvolver
 		}
 	}
 
-	private int CullWorst(
-		List<Decklist> field,
-		Tally[][] tallies,
-		int[] ages,
-		bool[] isWildcard,
-		bool[] isConcept,
-		DeckCore?[] identities,
-		DeckBuilder.DeckProfile[] profiles,
-		ConstructedValues values,
-		PoolFeatures? features,
-		Random rng,
-		int gen,
-		CardStatAccumulator[] slotHistory
-	)
-	{
-		// **Settling period.** Culling stops for the last graceGenerations, so every deck in
-		// the reported field has had at least its full grace period to climb.
-		//
-		// Without this the run reports decks mid-climb and calls them non-viable: the first
-		// real run culled at generation 28 of 30, and that deck was then reported NON-VIABLE at
-		// 35.7% having had two generations to improve — a verdict on the cull, not on the deck.
-		// A replacement the report cannot evaluate is worse than no replacement.
-		// **No culling while exploring.** Every slot is deliberately half-built in that phase, and a
-		// viability floor deletes exactly the decks the phase exists to produce.
-		if (
-			!_cullEnabled
-			|| gen <= _explorationGenerations
-			|| gen > _generations - _graceGenerations
-		)
-			return 0;
-
-		var worst = -1;
-		var worstRate = _viabilityFloor;
-
-		for (var i = 0; i < _deckCount; i++)
-		{
-			// **An engine slot is never culled, and that is the whole premise of the two-phase
-			// split.** Its archetype was already judged in mode 7 by whether it ASSEMBLES; the
-			// win rate is here to tune it against the field, not to decide whether it deserves
-			// to exist. A half-built combo deck loses every game, so a viability floor would
-			// delete exactly the decks this feature was built to keep — which is what every
-			// unconstrained run has done. Its rate is still reported.
-			if (identities[i] is not null)
-				continue;
-
-			var grace = isConcept[i]
-				? _graceGenerations * ConceptGraceMultiplier
-				: _graceGenerations;
-			if (ages[i] < grace || tallies[i][0].Games == 0)
-				continue;
-			if (tallies[i][0].Rate < worstRate)
-				(worst, worstRate) = (i, tallies[i][0].Rate);
-		}
-
-		if (worst < 0)
-			return 0;
-
-		var others = field.Where((_, j) => j != worst).ToList();
-		var name = field[worst].Name;
-		var before = field[worst];
-
-		// A culled concept slot re-seeds on a CONCEPT, not on an anchor-and-kernel pile. The slot
-		// exists to explore archetypes; replacing it with a midrange deck silently retires the
-		// exploration arm, which is how the wildcard slot stopped contributing anything.
-		field[worst] =
-			(
-				isConcept[worst] && features is not null
-					? DeckBuilder.SeedConcept(name, _spellPool, values, features, rng)
-					: null
-			)
-			?? DeckBuilder.SeedDistinct(
-				name,
-				_spellPool,
-				values,
-				rng,
-				others,
-				_minDifference,
-				// **The slot's constraints must survive its own re-seeding**, taken from the
-				// OUTGOING deck so they cannot be sourced from the wrong place — a replacement is
-				// the same slot. Measured when they did not survive: eight of sixteen slots were
-				// culled at least once and every one came back playing white, the format's
-				// strongest colour, while still being named U-Midrange or RG-Control.
-				ColorIdentity.ForCode(before.Identity),
-				isWildcard[worst],
-				features: features,
-				profile: profiles[worst]
-			);
-		ages[worst] = 0;
-		// The replacement shares almost nothing with what it replaced, so its predecessor's
-		// pair record is not evidence about it.
-		slotHistory[worst] = new CardStatAccumulator();
-
-		// A cull is the largest single edit the search makes, and leaving it out of the log would
-		// make a card look like it was never tried when in fact its whole deck was replaced under it.
-		var (gained, lost) = MutationLog.Diff(before, field[worst]);
-		_mutations.Add(
-			new MutationRow(
-				gen,
-				worst,
-				name,
-				gained,
-				lost,
-				worstRate,
-				worstRate,
-				tallies[worst][0].Games,
-				MutationLog.Reseeded
-			)
-		);
-
-		Console.WriteLine(
-			$"    culled {field[worst].Name} at {worstRate:P1} (gen {gen}) — re-seeded"
-		);
-		return 1;
-	}
-
 	/// <summary>
 	/// **The field against the hand-built references, at final volume — the number a gauntlet
 	/// exists to produce, and which nothing printed.**
@@ -1926,12 +1782,11 @@ public sealed class MetagameEvolver
 				+ $"{_gamesPerMatchup} games/matchup, AI depth {_aiDepth}, seed {_seed}"
 		);
 		Console.WriteLine($"  {AiCardValues.Describe()}");
-		// A run log has to record its own configuration. "culled 0" on every line is
-		// indistinguishable from a field that simply never fell below the floor, and the
-		// difference decides whether the run is comparable to another one.
+		// A run log has to record its own configuration, so a reader can tell whether two runs are
+		// comparable at all.
 		Console.WriteLine(
-			$"  Diversity floor {_minDifference:P0}, viability floor {_viabilityFloor:P0}, "
-				+ $"culling {(_cullEnabled ? $"ON (grace {_graceGenerations}, settling {_graceGenerations})" : "OFF")}"
+			$"  Diversity floor {_minDifference:P0}, viability floor {_viabilityFloor:P0} "
+				+ "(reported, never enforced — culling was removed)"
 		);
 		// Stated separately and only when it differs, because the reported "Min diversity" is a
 		// field-wide minimum and will sit BELOW the headline floor whenever this is lower — which
@@ -2033,7 +1888,6 @@ public sealed class MetagameEvolver
 		IReadOnlyList<Decklist> field,
 		Tally[][] tallies,
 		int accepted,
-		int culled,
 		int excluded,
 		Stopwatch timer
 	)
@@ -2049,7 +1903,7 @@ public sealed class MetagameEvolver
 
 		Console.WriteLine(
 			$"  gen {gen, 3}: spread {rates.Min():P1}-{rates.Max():P1} ({spread * 100:F1}pp), "
-				+ $"diversity {minDiff:P0}, accepted {accepted}/{_deckCount}, culled {culled}, "
+				+ $"diversity {minDiff:P0}, accepted {accepted}/{_deckCount}, "
 				+ $"excluded {excluded}, {timer.Elapsed.TotalMinutes:F1}m"
 		);
 	}
@@ -2134,9 +1988,9 @@ public sealed class MetagameEvolver
 		PrintMutations();
 
 		// **The exclusion list for the NEXT run, printed rather than transcribed.** An engine slot
-		// under the floor is the punching-bag case: it is never culled (mode 7 already judged the
-		// archetype on assembly), so it stays in the field for the whole run inflating every other
-		// deck's rate. Deciding it is dead is still the reader's call — this only removes the step
+		// under the floor is the punching-bag case: mode 7 already judged the archetype on whether
+		// it ASSEMBLES, so it stays in the field for the whole run inflating every other deck's
+		// rate. Deciding it is dead is still the reader's call — this only removes the step
 		// where that decision is retyped from a matchup matrix by hand.
 		var dead = Enumerable
 			.Range(0, result.Decks.Count)

@@ -286,13 +286,6 @@ else if (mode == 6)
 	var presimInput = Console.ReadLine()?.Trim() ?? "";
 	var presimDecks = int.TryParse(presimInput, out var pd) && pd >= 0 ? pd : 300;
 
-	// Culling resets that slot's DeckHistory, which is now the main improvement mechanism — so
-	// a culled deck restarts not just bad but BLIND. Measured over 100 generations: the two
-	// slots culled once reached age 78/95 and finished best, while the slots culled 10 and 13
-	// times never recovered.
-	Console.Write("Cull non-viable decks? (Y/n — n lets every deck keep brewing): ");
-	var cullDecks = Console.ReadLine()?.Trim().ToLowerInvariant() != "n";
-
 	// The control arm for "is this just building draft decks". With no prior every card scores
 	// exactly average, so seeding is quality-blind and the constructed table builds from
 	// nothing — slower, but it cannot inherit a limited valuation it never read.
@@ -366,9 +359,6 @@ else if (mode == 6)
 		aiDepth: aiDepth,
 		minDifference: minDifference,
 		useDraftPrior: useDraftPrior,
-		// The floor stays 0.40 either way — with culling off it still flags a non-viable deck
-		// in the report, it just stops replacing it.
-		cullEnabled: cullDecks,
 		preSimDecks: presimDecks,
 		conceptSlots: conceptSlots,
 		gauntletGames: gauntletGames,

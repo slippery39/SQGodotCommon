@@ -1064,3 +1064,25 @@ Two things to carry:
   rule. If steps 3-5 of the colour work enforce it, the threshold allocator may never be needed;
   revisit only with a head-to-head showing the trade wins, or when dual lands arrive and change the
   arithmetic above.
+
+---
+
+## `StateJsonTests.ARoundTrippedState_ProducesTheSameAiDecision` is intermittently flaky
+
+Observed once in three consecutive full runs of `MtgSimulator.Tests` (421 tests), passing in
+isolation and passing on both re-runs. Cause not identified. It was NOT investigated further
+because the failing run produced no assertion detail and could not be reproduced.
+
+Two candidates worth checking if it recurs, both consistent with the working-directory scar already
+recorded in the root `CLAUDE.md`:
+
+- `AiCardValues` loads from `sim_results/` relative to the CURRENT directory. Anything that calls
+  `TestPaths.ChdirToSolutionRoot()` mutates process-wide state while other fixtures may be running,
+  and a table loaded from the wrong place is EMPTY rather than absent — every card reads 0.00pp and
+  the AI makes a different decision. The diagnostics added recently all call it, but all are
+  `[Explicit]` and so should not run in a normal suite; verify that assumption before dismissing it.
+- The same family as the `OutputProbeTests` entry above: this suite has a history of tests
+  interfering through the shared host rather than through their own logic.
+
+**Read a single green run as weak evidence on this test.** It is the one test whose failure would
+otherwise look like a real serialization regression.

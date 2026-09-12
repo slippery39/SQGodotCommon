@@ -11,19 +11,19 @@ namespace MtgSimulator.Tests;
 /// colours they could not cast — U-Midrange holding fourteen white cards, RG-Control holding
 /// twenty-four — because the cull path re-seeded without passing the slot's identity. Seeding and
 /// mutation were both covered by passing tests; the third path was not, and nothing in the report
-/// said so. Deck AGE separated the clean slots from the contaminated ones perfectly: every deck
-/// that survived from generation 1 kept its colours, every re-seeded deck lost them.
+/// said so.
+///
+/// **Culling has since been removed entirely**, so the path that caused that failure is gone and
+/// this test no longer forces it. What remains under test is the invariant itself over a real run:
+/// mutation must not drift a slot out of its colours either, which is the surviving half of the
+/// same bug and the reason MetagameEvolver.ValidateFieldIdentities runs every generation.
 /// </summary>
 [TestFixture]
 public class ColorSlotSurvivalTests
 {
-	/// <summary>
-	/// Culling is forced by an impossible viability floor and no grace period, so several slots
-	/// re-seed within a handful of generations. Kept deliberately tiny — the invariant is
-	/// structural, so it does not need a realistic field to show up.
-	/// </summary>
+	/// Kept deliberately tiny — the invariant is structural, so it does not need a realistic field.
 	[Test]
-	public void EveryDeckStaysInsideItsColours_EvenAfterBeingCulledAndReseeded()
+	public void EveryDeckStaysInsideItsColours_AcrossAWholeRun()
 	{
 		var evolver = new MetagameEvolver(
 			CoresetCube.Set,
@@ -34,10 +34,6 @@ public class ColorSlotSurvivalTests
 			finalGamesPerMatchup: 1,
 			seed: 4242,
 			aiDepth: 1,
-			// Nothing can clear a 99% floor, so a slot is culled every generation it is allowed to
-			// be — which is the path under test.
-			viabilityFloor: 0.99,
-			graceGenerations: 0,
 			preSimDecks: 0,
 			useDraftPrior: false
 		);
@@ -45,7 +41,7 @@ public class ColorSlotSurvivalTests
 		var result = evolver.Run();
 		var pool = CoresetCube.Set.Cards.ToDictionary(c => c.Name, StringComparer.Ordinal);
 
-		var reseeded = 0;
+		var constrained = 0;
 		for (var i = 0; i < result.Decks.Count; i++)
 		{
 			var identity = DeckBuilder.IdentityForSlot(i, result.Decks.Count, wildcard: i == 5);
@@ -60,9 +56,9 @@ public class ColorSlotSurvivalTests
 						$"{result.Decks[i].Name} holds {name}, which {identity.Code} cannot cast"
 					);
 
-			reseeded++;
+			constrained++;
 		}
 
-		Assert.That(reseeded, Is.GreaterThan(0), "the run must have produced constrained slots");
+		Assert.That(constrained, Is.GreaterThan(0), "the run must have produced constrained slots");
 	}
 }
