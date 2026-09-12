@@ -1074,7 +1074,7 @@ isolation and passing on both re-runs. Cause not identified. It was NOT investig
 because the failing run produced no assertion detail and could not be reproduced.
 
 Two candidates worth checking if it recurs, both consistent with the working-directory scar already
-recorded in the root `CLAUDE.md`:
+recorded in `docs/mtg/measured-tables.md`:
 
 - `AiCardValues` loads from `sim_results/` relative to the CURRENT directory. Anything that calls
   `TestPaths.ChdirToSolutionRoot()` mutates process-wide state while other fixtures may be running,

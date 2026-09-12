@@ -1,6 +1,6 @@
 # Handoff — Colours: a second mana track, and what the first two evolution runs said
 
-**Read this, then the `## Colours` section of the root `CLAUDE.md`, then `MtgCore/CLAUDE.md`
+**Read this, then `docs/mtg/colours.md`, then `MtgCore/CLAUDE.md`
 section "Mana System".**
 
 Supersedes nothing. `HANDOFF-DeckIdentity.md` and `HANDOFF-ConstructedEvolution.md` remain correct on

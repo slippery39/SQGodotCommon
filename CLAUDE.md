@@ -1,26 +1,38 @@
-# SQGodotCommon Solution
+# DOOMJAM
+
+**This repo's active project is DOOMJAM, a Godot Wild Jam entry. It is NOT the MTG game.**
+
+A solitaire roguelike deckbuilder: each battle is a doomsday scenario on a countdown that permanently
+rewrites your deck. **Read `DoomJam.md` first** — it is the design doc and the source of truth.
+
+The second goal is a measurement: **how hard is it to build a completely different card game on
+`ImmutableGameObjects`?** Anything we wish we could lift out of `MtgCore` is a finding — record it in
+`DoomJam.md` under "Engine findings" *before* reimplementing it.
 
 ## Solution Map
 
 ```
 SQGodotCommon/
 ├── ImmutableGameObjects/
-│   ├── ImmutableGameObjects/        # Immutable game state library (GameState, GameAction, PipelineAction)
+│   ├── ImmutableGameObjects/        # THE ENGINE — GameState, GameAction, PipelineAction. Game-agnostic.
 │   ├── ImmutableGameObjects.Tests/
 │   └── ImmutableGameObjects.Benchmarks/
-├── MtgCore/                         # MTG card game engine (actions, cards, turns, combat, targeting)
-├── MtgCore.Tests/
-├── MtgConsole/                      # Console presentation layer (ConsoleGameLoop, ConsoleRenderer)
-├── MtgSimulator/                    # AI strategies, runners, deck factories (referenced by Godot + tests)
-│   ├── Scenarios/                   # Saved positions: GameState↔JSON, scenario store, strategy comparison
-│   └── Evolution/                   # Constructed metagame evolution + engine discovery
-├── MtgSimulator.Console/            # Thin console entry point (Program.cs only)
-└── SQGodotCommon/                   # Godot project — reusable utilities (Common/, Project/)
-    └── MtgGame/                     # MTG front end: board, deck select, draft + tournament
+├── DoomCore/                        # DOOMJAM rules engine — battle, combat, countdown
+│   ├── Actions/                     # StartBattle/StartTurn/PlayCard/Assign/EndTurn/ResolveDoom
+│   ├── Cards/ Components/           # DoomCard; UnitComponent (Power/Toughness/Assignment)
+│   ├── Enemies/ Zones/              # Enemy + telegraphed Intent; Zone/ZoneType
+│   └── DoomBattleFactory.cs         # one GameState per battle; DoomStateExtensions is the API
+├── DoomCore.Tests/                  # NUnit; inline card definitions only
+└── SQGodotCommon/                   # Godot project
+    ├── Common/                      # reusable utilities — Cards/2D is game-agnostic, use it
+    ├── Project/                     # GameManager, main menu
+    └── DoomGame/                    # DOOMJAM front end                           (not yet created)
 ```
 
-The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only through
-`MtgGameManager` (plain C#, no Godot types).
+**The MTG projects (`MtgCore`, `MtgCore.Tests`, `MtgConsole`, `MtgSimulator`, `MtgSimulator.Console`,
+`MtgSimulator.Tests`, `SQGodotCommon/MtgGame/`) are still in the tree but are OFF LIMITS.** This
+project must stay a clean no-op for them. Copy nothing from them. Their docs are listed below so
+nothing is orphaned — you should not need any of it.
 
 ## Where the detail lives
 
@@ -28,13 +40,18 @@ The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only 
 
 | Kind | Location | Loads |
 |---|---|---|
+| Design doc — read first | `DoomJam.md` | read it |
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
 | Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |
-| Procedures | skills (`/add-card`, `/ai-inspect`, `/regen-card-values`) | when invoked or relevant |
 | Commands | `Commands.md` | read it |
 | Deferred decisions | `DesignNotes.md` | read it |
 
 Each project's `CLAUDE.md` is a map to its own rules — start there, not here.
+
+**MTG-only docs, kept for the archive:** `docs/mtg/colours.md`, `docs/mtg/card-sets.md`,
+`docs/mtg/ai-tooling.md`, `docs/mtg/measured-tables.md`, `MtgCore/CLAUDE.md`,
+`MtgSimulator/CLAUDE.md`, and every `.claude/rules/mtg-*.md` and `sim-*.md`. All of those rule files
+are path-gated to MTG directories, so none of them load on this project.
 
 ## Platform
 
@@ -47,92 +64,8 @@ C# on .NET. Windows.
 - **Game logic and UI logic stay completely separated; no game logic in presentation layers**
 - Small, reviewable steps; never large all-at-once changes
 - **Never assume on vague requirements — confirm before implementing**
-- **Verify a primitive fires before relying on it.** An inert card throws no error; four silent no-op engine bugs were found only by testing the consequence.
-
-## Seeing what the AI is doing
-
-Evaluation changes were argued rather than watched for two sessions, and several were wrong. **Use
-the tooling before proposing a scoring change.**
-
-| | |
-|---|---|
-| **Space** in game | Pause the AI — do this *before* F6 so you can click through candidates |
-| **F6** in game | AI inspector overlay — every ranked action, and the chosen one's score by evaluator term |
-| **F7** in game | Save the live position to `user://scenarios/` |
-| Console **mode 5** | Load a scenario, have several strategies decide in it side by side |
-| Console **mode 6** | Evolve a constructed metagame |
-| Console **mode 7** | Discover synergy engines in a pool — solitaire only. "Does this archetype assemble?", asked before "is it competitive?" |
-
-Three rules worth carrying: a scenario is **serialized state**, not a `GameStateSnapshot` report;
-`StateEvaluator.Explain` is the implementation with `Evaluate` as the wrapper — never write a second
-copy of the sum for display; and **goldfish speed is measured to be the wrong fitness for a combo
-deck** — dismantling Storm makes it goldfish *faster*. Use `EngineProbe`.
-
-## Card Sets
-
-**The set menu is 1=LEG 2=CSC 3=CMB 4=DES 5=ALL.** It has shifted TWICE — CMB was inserted, then HLM
-retired — so any piped console command written against either older numbering runs a different set
-silently. **Read the menu; never hardcode the index.**
-
-One draftable set exists: **Core Set Cube (CSC)**, 335 cards, what the Godot draft mode plays. **CMB**
-(Combo Proving Ground) is a registered test instrument with no trained model, meant to be played
-inside DES rather than alone. **HLM is retired.** Per-set detail is in `.claude/rules/mtg-cards.md`.
-
-## Colours
-
-Colour is a **second, independent mana track**. A land grants 1 generic AND its colours; a cost of
-"1W" spends 1 generic and 1 White. The two never substitute for each other, so payment is fully
-determined — no ordering choice, no solver, no manual tapping. **Coloured mana DEPLETES and refills
-each turn, exactly like generic** — it is not an Eternal-style permanent threshold. That is the
-whole design: a five-colour manabase caps you at one single-pip spell per colour per turn, so greed
-costs throughput while focus costs nothing.
-
-**A double pip is effectively a mono-colour card, and that is where the whole colour constraint
-lives.** Measured in this engine (`ManaBaseCalibrationTests`) — sources of one colour needed in a
-60-card, 24-land deck for a 90% on-curve cast:
-
-| pips | cost 1 | 2 | 3 | 4 | 5 | 6 |
-|---|---|---|---|---|---|---|
-| 1 | 13 | 12 | 11 | 10 | 9 | 9 |
-| 2 | – | 18 | 17 | 17 | 15 | 15 |
-| 3 | – | – | 22 | 22 | 21 | 20 |
-
-A two-colour deck split 12/12 casts a single pip **89% on turn one and 94% by turn three**, but a
-double pip only **65% by turn three** — 17 of its 24 lands would have to be one colour. So
-single-pip greed is barely taxed and double pips carry the constraint. **Treat the pip depth of a
-card as its real colour commitment**, and expect `WW` cards to belong to mono decks.
-
-**Paper Magic's manabase tables do not transfer here and must not be used.** The opening hand is
-guaranteed to contain exactly three lands (`SetupGameAction.OpeningHandLandCount`) drawn uniformly
-from the manabase, which makes early colour access far more reliable than a real seven-card draw; a
-borrowed table systematically over-builds. Re-run `ManaBaseCalibrationTests` if the opening-hand,
-land-drop or deck-size rules ever change.
-
-`ManaBase.Build` is the only place a manabase is made. `CardValueSandbox` grants every colour at the
-generic depth — a table handing out generic only would score coloured cards as uncastable and
-rewrite the value tables into a report about colour screw. `MtgGameFactory.CreateForTesting` grants
-99 of every colour: a test about a mechanic should not fail on colour, and a test about colour zeroes
-it explicitly (`ManaColorTests`).
-
-Engine detail is in `MtgCore/CLAUDE.md`. How colour shapes the evolver's field, the three win-rate
-tables and the identity-scoped presim are in `.claude/rules/sim-evolution.md`.
-
-## Regenerating the measured tables
-
-`sim_results/` is **untracked and disposable**, but four tests need the card-value table in it:
-
-```
-dotnet test MtgSimulator.Tests --filter "FullyQualifiedName~CardValueSweep.SweepTheCoreSetCube"
-```
-
-**`sim_results/` resolves against the WORKING DIRECTORY, which under `dotnet test` starts as the test
-binary's folder, not the repository.** Anything reading or writing it must call
-`TestPaths.ChdirToSolutionRoot()` first. Getting this wrong does not look like a path bug: the table
-loads empty, every card reads 0.00pp, and the tests fail exactly as though the data were missing —
-while passing in isolation, because alone nothing has moved the directory.
-
-**Never quote a card's win rate from memory or from a CLAUDE.md — compute it from `sim_results/*.json`
-every time.**
+- **Verify a primitive fires before relying on it.** An inert card throws no error; four silent no-op
+  engine bugs were found only by testing the consequence, not the construction.
 
 ## Serialization Rule
 
@@ -141,11 +74,10 @@ All objects stored in `GameState` must be fully serializable at all times. Deleg
 including all `GameObject` and `GameAction` subclasses and their data. If a delegate seems necessary,
 make the case explicitly before implementing — there is almost always a data-oriented alternative.
 
-**This is enforced, not aspirational.** `MtgSimulator/Scenarios/StateJson.cs` round-trips a whole
-`GameState` through JSON and `StateJsonTests` asserts the result scores identically, offers the same
-legal actions, and produces the same AI decision. Any new abstract type is picked up automatically by
-reflection — but a **metadata value** of an untagged type throws by design, naming the type and
-telling you to use a component instead.
+This is not style. The MTG side enforced it with a JSON round-trip test that asserts a rebuilt state
+scores identically and produces the same decisions; a **metadata value** of an untagged type throws
+by design, naming the type and telling you to use a component instead. Whatever DOOMJAM needs to
+serialize — and the run deck crossing battles means it will — the same constraint applies.
 
 ## Maintaining these files
 
@@ -158,6 +90,7 @@ added or removed.
 | What you are writing | Goes in |
 |---|---|
 | A rule that applies to every task | this file |
+| Game design — mechanics, scenarios, scope | `DoomJam.md` |
 | A rule about one subsystem | `.claude/rules/<subsystem>.md` |
 | Numbers a run produced | `docs/findings/<subsystem>.md` — never a `CLAUDE.md` |
 | A command and its traps | `Commands.md` |

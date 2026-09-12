@@ -18,6 +18,11 @@ editing it. Measured results are in `docs/findings/`, which never loads on its o
 | Constructed evolution (mode 6) | `.claude/rules/sim-evolution.md` | `docs/findings/evolution.md` |
 | Scenarios, snapshots, inspector | `.claude/rules/sim-scenarios.md` | — |
 
+**The root `CLAUDE.md` no longer describes MTG** — the repo's active project is DOOMJAM. What used to
+live there is now in `docs/mtg/`: `ai-tooling.md` (Space/F6/F7, console modes 5-7),
+`measured-tables.md` (regenerating `sim_results/` and the working-directory trap), `card-sets.md`
+(the set menu, which has shifted twice), `colours.md` (pips and the manabase tables).
+
 Commands to run any of it: `Commands.md` at the solution root.
 
 **Before proposing an evaluator or scoring change, read the findings file first.** Four evaluator

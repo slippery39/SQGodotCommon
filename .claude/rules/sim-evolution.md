@@ -692,7 +692,7 @@ synergy slot narrows its own deck on purpose. And never on one run.
 sample only cards that identity can cast. This is not a refinement — it repairs a bias colour
 introduced. A deck sampled across the whole pool is a five-colour pile: measured on CSC it plays
 **4.8 colours and gives a card 5.8 sources of its own colour**, against **1.7 and 16.2** when
-scoped. Against the pip table in the root `CLAUDE.md` that is a double pip castable on curve ~23%
+scoped. Against the pip table in `docs/mtg/colours.md` that is a double pip castable on curve ~23%
 of the time versus ~86%, and 29% of a random deck's coloured cards are double-pipped. Unscoped, the
 presim would deflate every committed card in the format — precisely the failure
 `ConstructedValuesStore` documents, reached from a different direction, and its note that

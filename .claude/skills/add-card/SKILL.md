@@ -56,7 +56,7 @@ Anchor on the `CardFactory.Creature(` / `.Spell(` call itself, and add an expect
 Artifacts and lands stay **colourless**: an artifact's real colour is colourless, and a land's
 colour is what it PRODUCES (`LandColorComponent`), not what it costs.
 
-**Check the pip depth against the table in the root `CLAUDE.md` before committing to it.** A double
+**Check the pip depth against the table in `docs/mtg/colours.md` before committing to it.** A double
 pip is effectively a mono-colour card — a two-colour deck casts `WW` on curve only 65% of the time
 by turn three. If the card isn't meant to be a mono-deck card, it shouldn't be double-pipped.
 

@@ -10,6 +10,11 @@ This file is the map and the always-true rules. Detail loads **only when you ope
 | Card builder API, per-colour Core Set Cube mechanics, creation cookbook | `.claude/rules/mtg-cards.md` |
 | Adding a card, step by step | the `add-card` skill (`/add-card`) |
 | Godot rendering of cards and boards | `.claude/rules/mtg-presentation.md` |
+| Colours, pips and the manabase tables | `docs/mtg/colours.md` |
+| Card sets and the set menu | `docs/mtg/card-sets.md` |
+
+**The root `CLAUDE.md` no longer describes MTG** — the repo's active project is DOOMJAM. Everything
+MTG that used to live there is in `docs/mtg/`, listed above and in `MtgSimulator/CLAUDE.md`.
 
 ## Source Map
 
@@ -135,7 +140,7 @@ Designed but not implemented. **Do not re-implement or work around these planned
 (`RequiresTap` now exhausts), first strike, indestructible, exalted, subtype protection, numeric
 replacement effects, activation conditions, cast restrictions; from the colourless pass —
 `AnimateAction`, charge counters, `PlayFromLibraryTopComponent`, `CannotLoseComponent`. **Colour is
-now implemented** — see the root `CLAUDE.md`.
+now implemented** — see `docs/mtg/colours.md`.
 
 **+1/+1 counters WERE a "won't do", and green fired the stated trigger.** Three green cards do
 arithmetic on them — Primordial Hydra doubles, Wildwood Scourge reacts, Barkhide Troll enters with
