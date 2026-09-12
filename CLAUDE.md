@@ -21,6 +21,7 @@ SQGodotCommon/
 │   ├── Actions/                     # StartBattle/StartTurn/PlayCard/Assign/EndTurn/ResolveDoom
 │   ├── Cards/ Components/           # DoomCard; UnitComponent (Power/Toughness/Assignment)
 │   ├── Enemies/ Zones/              # Enemy + telegraphed Intent; Zone/ZoneType
+│   ├── Run/                         # Run + RunCard (OUTSIDE GameState); DoomTransforms
 │   └── DoomBattleFactory.cs         # one GameState per battle; DoomStateExtensions is the API
 ├── DoomCore.Tests/                  # NUnit; inline card definitions only
 └── SQGodotCommon/                   # Godot project

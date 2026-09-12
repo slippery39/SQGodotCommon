@@ -42,8 +42,23 @@ public record PlayCardAction : GameAction
 
 		// A unit enters the Field ready — there is no summoning sickness. With only 2-5 turns in a
 		// battle, a turn of nothing would make half the units unplayable.
-		var destination = card.HasComponent<UnitComponent>() ? ZoneType.Field : ZoneType.Discard;
+		var isUnit = card.HasComponent<UnitComponent>();
+		var destination = isUnit ? ZoneType.Field : ZoneType.Discard;
 		state = state.MoveObject(CardId, state.ZoneId(destination));
+
+		// Recorded at the moment of commitment, not read off the Field at the end — a unit that was
+		// summoned and then died still counts as committed. Flood pays on commitment.
+		if (isUnit)
+		{
+			var battle = state.GetBattle();
+			state = state.UpdateObject(
+				battle.Id,
+				battle with
+				{
+					SummonedRunCardIds = battle.SummonedRunCardIds.Add(card.RunCardId),
+				}
+			);
+		}
 
 		return new ActionResult(state).WithEvent(
 			new CardPlayedEvent

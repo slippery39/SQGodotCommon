@@ -159,6 +159,15 @@ public record EndTurnAction : GameAction
 				}
 			);
 			state = state.MoveObject(card.Id, state.ZoneId(ZoneType.Discard));
+
+			var battle = state.GetBattle();
+			state = state.UpdateObject(
+				battle.Id,
+				battle with
+				{
+					DiedRunCardIds = battle.DiedRunCardIds.Add(card.RunCardId),
+				}
+			);
 		}
 
 		foreach (

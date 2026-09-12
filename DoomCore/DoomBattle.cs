@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace DoomCore;
@@ -29,6 +30,20 @@ public record DoomBattle : GameObject
 
 	/// <summary>Set once the doom has resolved. The battle is over at that point, win or lose.</summary>
 	public bool IsOver { get; init; } = false;
+
+	/// <summary>
+	/// RunCardIds of units played to the Field this battle, and of units that DIED this battle.
+	///
+	/// These exist because a doom transform rewrites the RUN deck, and the run outlives this
+	/// GameState. "Duplicate everything you summoned" cannot be asked of battle objects — their ids
+	/// are thrown away when the battle ends — so the battle records the run identities as it goes.
+	///
+	/// Died is a LIST, not a set: a card can cycle back out of Discard and die twice in one battle,
+	/// and Zombie pays per death rather than per card.
+	/// </summary>
+	public ImmutableHashSet<int> SummonedRunCardIds { get; init; } = ImmutableHashSet<int>.Empty;
+
+	public ImmutableList<int> DiedRunCardIds { get; init; } = ImmutableList<int>.Empty;
 
 	/// <summary>
 	/// True when the player hit 0 life. Distinct from <see cref="IsOver"/> because surviving to the

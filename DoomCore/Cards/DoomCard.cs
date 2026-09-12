@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace DoomCore;
@@ -20,4 +21,13 @@ public record DoomCard : GameObject
 	/// that forces this: it reads the battle and rewrites the run.
 	/// </summary>
 	public int RunCardId { get; init; }
+
+	/// <summary>
+	/// Marks left by apocalypses, copied from the run card. Read at battle time — "Irradiated"
+	/// costs a life when drawn. See <see cref="RunCard.Tags"/>.
+	/// </summary>
+	public ImmutableHashSet<string> Tags { get; init; } =
+		ImmutableHashSet.Create<string>(StringComparer.OrdinalIgnoreCase);
+
+	public bool HasTag(string tag) => Tags.Contains(tag);
 }

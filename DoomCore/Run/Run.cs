@@ -1,0 +1,117 @@
+using System.Collections.Immutable;
+using ImmutableGameObjects;
+
+namespace DoomCore;
+
+/// <summary>
+/// The run: life and deck carried across battles, plus where you are on the map.
+///
+/// **This is the layer MtgCore has no equivalent of.** MtgCore has exactly one GameState per game
+/// and nothing above it. Here a GameState is one BATTLE, and the run outlives it — so the run is a
+/// plain immutable record, not a GameObject, and each battle is built fresh from it.
+///
+/// That split is what makes every apocalypse expressible as data: a scenario reads the finished
+/// battle and returns a new Run. Nothing mutates in place.
+/// </summary>
+public record Run
+{
+	public int Life { get; init; } = 60;
+	public int MaxLife { get; init; } = 60;
+
+	/// <summary>1-based position on the act's 20-floor map. Not every floor is a battle.</summary>
+	public int Floor { get; init; } = 1;
+
+	public ImmutableList<RunCard> Deck { get; init; } = ImmutableList<RunCard>.Empty;
+
+	/// <summary>Hands out RunCardIds. Doom transforms mint new cards and must never reuse an id.</summary>
+	public int NextRunCardId { get; init; } = 1;
+
+	public int RngSeed { get; init; } = 1;
+
+	public bool IsOver => Life <= 0;
+
+	/// <summary>Adds a card, assigning it the next free RunCardId.</summary>
+	public Run WithCard(RunCard card) =>
+		this with
+		{
+			Deck = Deck.Add(card with { RunCardId = NextRunCardId }),
+			NextRunCardId = NextRunCardId + 1,
+		};
+
+	public Run WithCards(IEnumerable<RunCard> cards) =>
+		cards.Aggregate(this, (run, card) => run.WithCard(card));
+
+	/// <summary>
+	/// Builds a fresh battle GameState from this run: the whole deck into Draw, the given enemies
+	/// into the enemy zone. Life comes from the run, so damage taken in the last battle is still on
+	/// the player — there is no automatic healing between battles.
+	/// </summary>
+	public GameState BuildBattle(
+		DoomScenario scenario,
+		int countdown,
+		IEnumerable<Enemy> enemies,
+		int maxEnergy = 3
+	)
+	{
+		var state = DoomBattleFactory.Create(
+			scenario,
+			countdown,
+			life: Life,
+			maxLife: MaxLife,
+			maxEnergy: maxEnergy,
+			rngSeed: RngSeed
+		);
+
+		var drawId = state.ZoneId(ZoneType.Draw);
+		foreach (var runCard in Deck)
+		{
+			var card = new DoomCard
+			{
+				Name = runCard.Name,
+				Description = runCard.Description,
+				Cost = runCard.Cost,
+				RunCardId = runCard.RunCardId,
+				Tags = runCard.Tags,
+			};
+
+			if (runCard.IsUnit)
+				card = (DoomCard)
+					card.WithComponent(
+						new UnitComponent { Power = runCard.Power, Toughness = runCard.Toughness }
+					);
+
+			(state, _) = state.AddObject(card, drawId);
+		}
+
+		var enemyZoneId = state.ZoneId(ZoneType.Enemies);
+		foreach (var enemy in enemies)
+			(state, _) = state.AddObject(enemy, enemyZoneId);
+
+		return state;
+	}
+
+	/// <summary>
+	/// Carries the finished battle back into the run: life as it ended, then the apocalypse's
+	/// transform, then the floor advances.
+	///
+	/// Call this once, on a battle whose doom has resolved. A run whose player died is returned
+	/// with the death intact and no transform applied — the apocalypse does not tidy up after you.
+	/// </summary>
+	public Run AfterBattle(GameState finishedBattle)
+	{
+		var battle = finishedBattle.GetBattle();
+		var run = this with
+		{
+			Life = finishedBattle.GetPlayer().Life,
+			RngSeed = finishedBattle.RngSeed,
+		};
+
+		if (battle.PlayerIsDead)
+			return run;
+
+		return DoomTransforms.Apply(run, finishedBattle) with
+		{
+			Floor = Floor + 1,
+		};
+	}
+}

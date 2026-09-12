@@ -220,6 +220,23 @@ is the deliverable for "how flexible is this engine?"**
   in MtgCore turned out not to matter — the rules here are different enough that shared code would
   have been wrong anyway.
 
+**After building the run layer (19 tests green):**
+
+- **`Run` is a plain immutable record, not a `GameObject`.** It holds life, deck, floor and the
+  RunCardId counter, and lives entirely outside `GameState`. `Run.BuildBattle` makes a fresh
+  GameState; `Run.AfterBattle` reads the finished one back. Nothing in the engine had to change to
+  allow a layer above it — it simply never assumed it was the top.
+- **`RunCardId` is the whole bridge.** Battle object ids die with the battle, so the battle records
+  `SummonedRunCardIds` / `DiedRunCardIds` as it goes and the transform names deck entries by those.
+  Flood is what forced it: "duplicate what you summoned" is unsayable in battle ids.
+- **Every apocalypse really is one function**, `(run, finished battle) -> run`, in
+  `DoomTransforms.Apply`. Zombie, Nuclear and Flood are ~10 lines each. The hook held.
+- **Rapture throws instead of no-opping** — it needs a sacrifice mechanic that does not exist, and
+  an apocalypse that silently does nothing looks exactly like one that worked.
+- Nuclear needed one battle-time rule to not be a pure upside: Irradiated costs 1 life **on the
+  draw**, so declining to play the card does not dodge the price. That also made death checkable at
+  turn START as well as end.
+
 Rules settled while building, beyond the design doc: hand is **drawn to 5 and discarded every turn**
 (STS), units have **no summoning sickness** (a 2-5 turn battle cannot afford it), dead units go to
 Discard and **cycle back into the deck** — only a doom transform can remove a card from a run.

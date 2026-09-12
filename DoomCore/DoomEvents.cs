@@ -57,5 +57,13 @@ public record DoomResolvedEvent : GameEvent
 	public DoomScenario Scenario { get; init; }
 }
 
+/// <summary>Nuclear's price: an Irradiated card cost a life just to draw it.</summary>
+public record IrradiatedDrawnEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public string CardName { get; init; } = "";
+	public int LifeRemaining { get; init; }
+}
+
 /// <summary>Life hit 0. This ends the RUN, not just the battle.</summary>
 public record PlayerDiedEvent : GameEvent;
