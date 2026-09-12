@@ -23,6 +23,12 @@ public record Run
 
 	public ImmutableList<RunCard> Deck { get; init; } = ImmutableList<RunCard>.Empty;
 
+	/// <summary>
+	/// TAG ALONG. Deliberately NOT part of the deck — that is what makes it untouchable by every
+	/// doom transform, since all of them operate on <see cref="Deck"/>.
+	/// </summary>
+	public Companion Companion { get; init; } = new();
+
 	/// <summary>Hands out RunCardIds. Doom transforms mint new cards and must never reuse an id.</summary>
 	public int NextRunCardId { get; init; } = 1;
 
@@ -113,6 +119,30 @@ public record Run
 			(state, _) = state.AddObject(card, drawId);
 		}
 
+		// The companion is on the field before the first card is drawn, free, every battle. It is
+		// given RunCardId 0, which no deck card can hold (ids start at 1), so nothing that maps a
+		// battle unit back to a deck entry can ever find it.
+		var (withCompanion, _) = state.AddObject(
+			(DoomCard)
+				new DoomCard
+				{
+					Name = Companion.FullName,
+					Description = Companion.Description,
+					Cost = 0,
+					RunCardId = 0,
+				}
+					.WithComponent(
+						new UnitComponent
+						{
+							Power = Companion.Power,
+							Toughness = Companion.Toughness,
+						}
+					)
+					.WithComponent(new CompanionComponent()),
+			state.ZoneId(ZoneType.Field)
+		);
+		state = withCompanion;
+
 		var enemyZoneId = state.ZoneId(ZoneType.Enemies);
 		foreach (var enemy in enemies)
 			(state, _) = state.AddObject(enemy, enemyZoneId);
@@ -139,9 +169,11 @@ public record Run
 		if (battle.PlayerIsDead)
 			return run;
 
+		// The mark is the whole point of TAG ALONG: it survived this, and it carries that forward.
 		return DoomTransforms.Apply(run, finishedBattle) with
 		{
 			Floor = Floor + 1,
+			Companion = Companion.Marked(battle.Scenario),
 		};
 	}
 }

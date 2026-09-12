@@ -23,13 +23,17 @@ public static class StarterContent
 			_ => 3,
 		};
 
-	/// <summary>Rapture is excluded — it has no transform yet and would throw on resolution.</summary>
-	public static readonly ImmutableArray<DoomScenario> Playable =
-	[
-		DoomScenario.Zombie,
-		DoomScenario.Nuclear,
-		DoomScenario.Flood,
-	];
+	/// <summary>
+	/// Scenarios are TIERED by floor. Flood removes every unit you did not commit, which on a
+	/// 10-card starter deck can end a run outright — the loss only becomes an interesting cost
+	/// once there is a deck worth losing. Rapture is excluded everywhere: no transform yet.
+	/// </summary>
+	public const int FloodUnlocksAtFloor = 8;
+
+	public static ImmutableArray<DoomScenario> PlayableOn(int floor) =>
+		floor < FloodUnlocksAtFloor
+			? [DoomScenario.Zombie, DoomScenario.Nuclear]
+			: [DoomScenario.Zombie, DoomScenario.Nuclear, DoomScenario.Flood];
 
 	private static RunCard Unit(string name, int cost, int power, int toughness, string text) =>
 		new()
@@ -42,12 +46,23 @@ public static class StarterContent
 			Toughness = toughness,
 		};
 
+	/// <summary>The starting companion. One for now; picking between several is a later job.</summary>
+	public static Companion StarterCompanion =>
+		new()
+		{
+			Name = "Ash",
+			Description = "Followed you out of the first one. Has not left since.",
+			BasePower = 1,
+			BaseToughness = 3,
+		};
+
 	public static Run NewRun(int seed = 1) =>
 		new Run
 		{
 			Life = 60,
 			MaxLife = 60,
 			RngSeed = seed,
+			Companion = StarterCompanion,
 		}.WithCards(
 			[
 				Unit("Scavenger", 1, 2, 2, "Takes what is left."),
@@ -83,6 +98,9 @@ public static class StarterContent
 	/// Which apocalypse waits on a floor. Deterministic from the seed so a run is reproducible —
 	/// the console prints the seed, which is what makes a bug report actionable.
 	/// </summary>
-	public static DoomScenario ScenarioFor(int seed, int floor) =>
-		Playable[new Random(seed * 7919 + floor).Next(Playable.Length)];
+	public static DoomScenario ScenarioFor(int seed, int floor)
+	{
+		var pool = PlayableOn(floor);
+		return pool[new Random(seed * 7919 + floor).Next(pool.Length)];
+	}
 }

@@ -40,6 +40,7 @@ public static class Program
 			Console.WriteLine(
 				$"  Survived. Floor {run.Floor}/{Run.ActLength}, deck {run.Deck.Count} cards, {run.Life} life."
 			);
+			Renderer.DrawCompanion(run);
 			Renderer.DrawDeck(run);
 		}
 
@@ -83,6 +84,7 @@ public static class Program
 					break;
 
 				case "d":
+					Renderer.DrawCompanion(run);
 					Renderer.DrawDeck(run);
 					break;
 

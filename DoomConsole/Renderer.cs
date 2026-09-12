@@ -114,8 +114,9 @@ public static class Renderer
 				_ => "unassigned",
 			};
 			var hurt = unit.Damage > 0 ? $" (damaged {unit.Damage})" : "";
+			var tag = card.HasComponent<CompanionComponent>() ? "@" : " ";
 			Console.WriteLine(
-				$"   [{card.Id}] {card.Name}  {unit.Power}/{unit.RemainingToughness}{hurt}  — {order}"
+				$"  {tag}[{card.Id}] {card.Name}  {unit.Power}/{unit.RemainingToughness}{hurt}  — {order}"
 			);
 		}
 	}
@@ -154,12 +155,35 @@ public static class Renderer
 		);
 		Console.WriteLine("  e                       end turn (the countdown ticks)");
 		Console.WriteLine("  d                       show the deck as it stands");
+		Console.WriteLine("  c                       show your companion and its marks");
 		Console.WriteLine("  ?                       this help");
 		Console.WriteLine("  q                       quit");
 		Console.WriteLine();
 		Console.WriteLine("  A unit ATTACKS or BLOCKS, never both. Blocking reduces damage, never");
 		Console.WriteLine("  prevents it. The countdown cannot be stopped.");
 		Console.WriteLine();
+	}
+
+	/// <summary>
+	/// The companion between battles. This is where TAG ALONG pays off — the marks are the run's
+	/// history written on the one thing that survived it, so show them plainly.
+	/// </summary>
+	public static void DrawCompanion(Run run)
+	{
+		var c = run.Companion;
+		Console.WriteLine();
+		Console.WriteLine($" COMPANION  {c.Name}  {c.Power}/{c.Toughness}");
+
+		if (c.Marks.IsEmpty)
+		{
+			Console.WriteLine("   unmarked — it has not been through anything yet");
+			return;
+		}
+
+		foreach (var mark in c.Marks)
+			Console.WriteLine(
+				$"   {mark.Name, -12} +{mark.Power}/+{mark.Toughness}   (survived {mark.From})"
+			);
 	}
 
 	public static void DrawDeck(Run run)

@@ -52,6 +52,11 @@ in two forms, and every scenario trades on that one axis.
 Countdown length varies per scenario on purpose: it is free texture, and it makes each apocalypse feel
 different before the player reads a word of its text.
 
+**Scenarios are TIERED by floor.** Flood does not appear before floor 8
+(`StarterContent.FloodUnlocksAtFloor`). On a 10-card starter deck it can delete everything and end a
+run outright; losing cards is only an interesting cost once there is a deck worth losing. Expect more
+scenarios to want tiering as they are added — it is a property of the floor, not of the scenario.
+
 ## Combat
 
 Enemies are **STS-style, not units**: HP plus an **intent telegraphed a turn ahead**. They do not
@@ -84,17 +89,23 @@ apocalypse should be a desperate move, not routine.
 
 **Life does not heal automatically (STS-style).** 0 life ends the run.
 
-## TAG ALONG — the Companion
+## TAG ALONG — the Companion  [BUILT]
 
 **The only thing the doom cannot touch — but it keeps a mark from every apocalypse it survives.**
 
 - On the board free at the start of every battle, no summoning cost. Also solves "short round and I
-  drew badly".
-- Immune to zombification, irradiation, the flood.
-- Each doom survived **stamps it**: part-undead, then glowing, then barnacled. Mechanically an
-  accumulating component list.
-- By the last battle it is a patchwork of every ending you lived through — **the record of your run**,
-  and the one thing you carried out.
+  drew badly" — the board is never empty.
+- **Immune by construction, not by a special case:** the companion lives on `Run.Companion` and is
+  not in `Run.Deck`, and every transform operates on the deck. Nothing had to be taught to skip it.
+- Its battle card carries `RunCardId = 0`, which no deck card can hold (ids start at 1), so nothing
+  mapping a battle unit back to a deck entry can find it.
+- **A companion death is not a deck event.** It leaves the battle outright rather than going to
+  Discard, and does not feed Zombie — otherwise chump-blocking with it minted a free card every turn.
+  It returns next battle.
+- Each doom survived **stamps it**, permanently and cumulatively: Gravemarked +0/+2 (Zombie),
+  Glowing +2/+0 (Nuclear), Barnacled +1/+1 (Flood).
+- By the last floor it is a patchwork of every ending you lived through — **the record of your run**,
+  and the one thing you carried out. `Companion.FullName` renders it: "Ash — Gravemarked, Glowing".
 
 ## Run structure
 
@@ -189,10 +200,15 @@ doom-preview dial can be built as the jam intends.
 
 ## Open questions
 
+- **Does an empty deck still end the run now that the companion exists?** It used to be strictly
+  unwinnable; with a companion you always have one blocker, so it is merely grim. Currently still an
+  instant loss (`Run.HasNoCards`).
+- Should Flood have a floor — never removing your last N units — rather than only being tiered late?
 - Do reinforcements arrive mid-battle? (lean: no — fixed at battle start, reinforcements as one
   scenario's gimmick)
 - How many battles is a full run?
-- Does the Companion have an activated ability, or only its accumulated marks?
+- Does the Companion have an activated ability, or only its accumulated marks? (currently marks only)
+- Should the player choose between several companions at run start? (currently one, "Ash" 1/3)
 - Deck size and starting deck composition
 - Does anything let you *change* the countdown, or is it strictly fixed? (lean: strictly fixed, except
   the rare card keyword that burns it)
@@ -250,6 +266,16 @@ is the deliverable for "how flexible is this engine?"**
   Irradiated card costs a life the moment it is drawn.
 - **The console is the remote surface and it works**: play, attack, block, end, and the whole
   countdown-to-doom loop, verified by running it rather than by reasoning about it.
+
+**After the Companion (34 tests green):**
+
+- **TAG ALONG cost almost nothing because of where the run/battle split already was.** The companion
+  is immune to every apocalypse without a single special case, purely by living on `Run.Companion`
+  rather than in `Run.Deck` — the transforms all operate on the deck and never saw it.
+- The one real interaction needing a guard was the reverse direction: a companion DYING fed Zombie a
+  free card, because deaths are counted by run id. Guarded in `ClearTheDead`.
+- Marks are a plain `ImmutableList<CompanionMark>` summed into Power/Toughness. No engine feature
+  was needed — this is the "accumulating component list" the design predicted, and it is simpler.
 
 Rules settled while building, beyond the design doc: hand is **drawn to 5 and discarded every turn**
 (STS), units have **no summoning sickness** (a 2-5 turn battle cannot afford it), dead units go to

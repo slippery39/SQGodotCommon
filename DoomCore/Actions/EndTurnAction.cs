@@ -158,6 +158,16 @@ public record EndTurnAction : GameAction
 					CardName = card.Name,
 				}
 			);
+
+			// The companion is not a card. It leaves the battle outright rather than going to
+			// Discard (it would be drawable), and its death is NOT a deck event — letting it feed
+			// Zombie would mint a free card every time it chump-blocked. It returns next battle.
+			if (card.HasComponent<CompanionComponent>())
+			{
+				state = state.RemoveObject(card.Id);
+				continue;
+			}
+
 			state = state.MoveObject(card.Id, state.ZoneId(ZoneType.Discard));
 
 			var battle = state.GetBattle();
