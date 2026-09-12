@@ -28,7 +28,30 @@ public record Run
 
 	public int RngSeed { get; init; } = 1;
 
-	public bool IsOver => Life <= 0;
+	/// <summary>Floors in an act. Not every floor is a battle — rests and events fill the rest.</summary>
+	public const int ActLength = 20;
+
+	public bool IsDead => Life <= 0;
+
+	/// <summary>
+	/// No cards left. Reachable today: Flood removes every unit you did not commit, so committing
+	/// nothing to a Flood can empty a starter deck outright.
+	///
+	/// It is a LOSS, not a stuck state. With no deck there are no blockers and no attackers, so the
+	/// run cannot be won and continuing would only be a slow walk to the same place.
+	/// Whether Flood should be ABLE to do this is a balance question, not a rules one.
+	/// </summary>
+	public bool HasNoCards => Deck.IsEmpty;
+
+	public bool IsActComplete => Floor > ActLength;
+
+	public bool IsOver => IsDead || HasNoCards || IsActComplete;
+
+	public string OverReason =>
+		IsDead ? "You ran out of life."
+		: HasNoCards ? "You ran out of deck — nothing of yours survived."
+		: IsActComplete ? "You walked out the other side of the act."
+		: "";
 
 	/// <summary>Adds a card, assigning it the next free RunCardId.</summary>
 	public Run WithCard(RunCard card) =>

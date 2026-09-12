@@ -269,4 +269,40 @@ public class RunTests
 		Assert.That(after.Floor, Is.EqualTo(1), "the run stopped where it died");
 		Assert.That(after.Deck.Count, Is.EqualTo(1), "Flood never ran");
 	}
+
+	// ===== A run has to be able to END =====
+
+	[Test]
+	public void AnEmptyDeckEndsTheRunRatherThanLeavingItUnwinnable()
+	{
+		var run = new Run { Life = 50, MaxLife = 50 }.WithCards([Unit("Hoarded", 1, 1, cost: 0)]);
+
+		// Commit nothing to a Flood and it takes everything.
+		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 2, [Idler()]);
+		state = PlayOutBattle(state);
+
+		var after = run.AfterBattle(state);
+
+		Assert.That(after.Deck, Is.Empty);
+		Assert.That(after.IsDead, Is.False, "still alive, but with nothing to play");
+		Assert.That(after.IsOver, Is.True);
+		Assert.That(after.OverReason, Does.Contain("deck"));
+	}
+
+	[Test]
+	public void TheActEndsAfterItsLastFloor()
+	{
+		var run = new Run { Floor = Run.ActLength }.WithCards([Unit("Survivor", 1, 1, cost: 0)]);
+		var survivorId = run.Deck[0].RunCardId;
+
+		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 2, [Idler()]);
+		state = PlayOutBattle(state, survivorId);
+
+		var after = run.AfterBattle(state);
+
+		Assert.That(after.Floor, Is.EqualTo(Run.ActLength + 1));
+		Assert.That(after.IsActComplete, Is.True);
+		Assert.That(after.IsOver, Is.True);
+		Assert.That(after.IsDead, Is.False, "finishing an act is not dying");
+	}
 }

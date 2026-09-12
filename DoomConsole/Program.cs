@@ -37,12 +37,16 @@ public static class Program
 				break;
 
 			Console.WriteLine();
-			Console.WriteLine($"  Survived. Deck is now {run.Deck.Count} cards, {run.Life} life.");
+			Console.WriteLine(
+				$"  Survived. Floor {run.Floor}/{Run.ActLength}, deck {run.Deck.Count} cards, {run.Life} life."
+			);
 			Renderer.DrawDeck(run);
 		}
 
 		Console.WriteLine();
-		Console.WriteLine($"  The run ended on floor {run.Floor}.");
+		Console.WriteLine(
+			$"  The run ended on floor {run.Floor} of {Run.ActLength}. {run.OverReason}"
+		);
 		Console.WriteLine();
 	}
 
