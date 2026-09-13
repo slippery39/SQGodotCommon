@@ -78,20 +78,39 @@ public static class StarterContent
 			]
 		);
 
-	/// <summary>One enemy per battle for now — the 6-enemy cap is designed for, not used yet.</summary>
-	public static Enemy EnemyFor(int floor)
+	/// <summary>
+	/// The enemies for a floor, already placed in lanes.
+	///
+	/// **Lanes need more than one enemy to be a decision.** One enemy across five lanes is covered
+	/// by a single unit and the battle is over as a threat; the count is what makes "which lanes do
+	/// I contest" cost something. Fixed at battle start — nothing arrives mid-battle.
+	///
+	/// Enemies are spread from the outside in, so the companion's centre lane is the LAST one
+	/// contested. A free blocker that happened to be pre-matched with the only enemy would make the
+	/// opening turn decide itself.
+	/// </summary>
+	public static IReadOnlyList<Enemy> EnemiesFor(int floor)
 	{
-		var health = 8 + floor * 4;
-		var attack = 3 + floor;
+		var count = Math.Min(2 + floor / 3, DoomBattle.LaneCount);
 
-		return new Enemy
-		{
-			Name = floor % 3 == 0 ? "Herald of the End" : "Wretch",
-			Health = health,
-			MaxHealth = health,
-			Intent = IntentKind.Attack,
-			IntentAmount = attack,
-		};
+		// Health is per-enemy, so it must fall as the count rises or floor 8 is unkillable.
+		var health = 5 + floor * 2;
+		var attack = 2 + floor / 2;
+
+		int[] order = [0, 4, 1, 3, 2];
+
+		return Enumerable
+			.Range(0, count)
+			.Select(i => new Enemy
+			{
+				Name = floor % 3 == 0 && i == 0 ? "Herald of the End" : "Wretch",
+				Health = health,
+				MaxHealth = health,
+				Intent = IntentKind.Attack,
+				IntentAmount = attack,
+				Lane = order[i],
+			})
+			.ToList();
 	}
 
 	/// <summary>

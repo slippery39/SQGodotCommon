@@ -38,9 +38,10 @@ not build a second mechanism.
 a misery engine players quit, and it makes progressively harder enemies unbalanceable. Tradeoffs mean
 the apocalypses *are* the power curve — no separate progression system is needed.
 
-Currency insight: **blocking reduces damage rather than preventing it, so toughness IS life.** A 1/1
-in front of a 5-damage attack is worth exactly 1 life. Creature bodies and life are the same currency
-in two forms, and every scenario trades on that one axis.
+Currency insight: **a unit absorbs rather than prevents, so toughness IS life.** A 1/1 standing in
+front of a 5-damage attack is worth exactly 1 life. Creature bodies and life are the same currency in
+two forms, and every scenario trades on that one axis. **This survived the move to lanes unchanged**,
+which is the test any future combat change has to pass — it is what makes the dooms tradeable.
 
 | Scenario | Reads | Transform | Countdown |
 |---|---|---|---|
@@ -57,31 +58,42 @@ different before the player reads a word of its text.
 run outright; losing cards is only an interesting cost once there is a deck worth losing. Expect more
 scenarios to want tiering as they are added — it is a property of the floor, not of the scenario.
 
-## Combat
+## Combat — FIVE LANES, resolved automatically
 
-Enemies are **STS-style, not units**: HP plus an **intent telegraphed a turn ahead**. They do not
-block. Max **6** on screen.
+**The board is five lanes. One of your units and one enemy per lane. They fight each other
+automatically.** There is no targeting anywhere in the game and no attack-or-block choice: you pick
+a lane when you play a card, and that is the entire decision.
 
-Your units are real units — they are what the doom reads.
-
-**The core decision: each unit may attack OR block, never both.** Attack = kill an enemy sooner,
-removing all its future damage. Block = absorb damage now. Investment vs. survival, every turn, on a
-2-5 turn horizon.
+Enemies keep their **intent telegraphed a turn ahead** — an enemy that is winding up shows the
+number it will hit its lane for. Do not hide an intent.
 
 Two global rules, deliberately not keywords:
 
-- **Blocking reduces damage, never prevents it.** Excess hits your face. No keyword to teach, no card
-  that lacks it, and stalling is impossible by construction.
-- **Blockers deal no damage.** Pure absorption. Keeps attack-vs-block a clean either/or and strips all
-  trade math out of a game that must resolve in seconds.
+- **A unit absorbs up to its remaining toughness and the excess hits your face.** So a body in a lane
+  is worth exactly its toughness in life. No keyword to teach, and stalling is impossible by
+  construction.
+- **An open lane costs you the enemy's whole attack.** Covering a lane is the only defence, and you
+  cannot cover five lanes with three energy.
 
-**Turn shape** (single phase, matching how the engine already models a turn):
+Damage **persists for the whole battle** on both sides — units carry marked damage, enemies carry
+lost HP — so a lane is a grind you can win over two or three turns rather than a single comparison.
 
-1. Enemy intents already visible
-2. Draw, spend Energy
-3. Assign each ready unit: attack an enemy, or block an incoming attack
-4. Resolve — your attacks hit enemies; enemy attacks hit blockers, excess to your face
-5. Countdown ticks; enemies declare next intents
+**Turn shape:**
+
+1. Enemy intents already visible, per lane
+2. Draw, spend Energy, place units into lanes
+3. Resolve every lane at once — both sides deal damage, excess and open lanes hit your face
+4. Countdown ticks; enemies declare next intents
+
+**What this replaced, and why it is not a loss.** Combat used to be "each unit may attack OR block,
+never both", which was the stated core decision. Lanes delete it and replace it with *which lanes do
+I contest, knowing the rest hit my face* — the same investment-vs-survival squeeze, expressed
+spatially, readable at a glance and with no targeting UI to build. "Blockers deal no damage" went
+with it: it existed only to keep attack-vs-block a clean either/or, and there is no such choice left
+to protect. **The currency insight survived intact**, which is what mattered — see below.
+
+**Lanes give the dooms a spatial axis to read** ("everything in lane 3 is Irradiated") that did not
+exist before. That is free content, and it is the main reason to prefer lanes beyond simplicity.
 
 **Energy: 3/turn, refills.** Deletes mana, lands and colours entirely. "Burn a turn off the countdown
 to cast this now" stays a **rare card keyword**, never the base economy — accelerating your own
@@ -135,8 +147,9 @@ The tension here is inevitability, not surprise — so show the future.
 
 ## MVP (build this first)
 
-**One enemy per battle. One battle per scenario. No acts, no multi-battle chains.** The 6-enemy cap is
-what the UI and engine are designed for, not what the MVP uses.
+**A few enemies per battle, one battle per scenario. No acts, no multi-battle chains.** Lanes need
+2-4 enemies to be a decision — one enemy across five lanes is covered by one unit and stops being a
+threat — so `StarterContent.EnemiesFor` scales the count with the floor up to the 5-lane cap.
 
 Cut from v1, revisit only after playtesting: scenario/enemy pairing, scenarios as multi-battle "acts",
 relics, multiple companions.
@@ -205,13 +218,33 @@ doom-preview dial can be built as the jam intends.
   instant loss (`Run.HasNoCards`).
 - Should Flood have a floor — never removing your last N units — rather than only being tiered late?
 - Do reinforcements arrive mid-battle? (lean: no — fixed at battle start, reinforcements as one
-  scenario's gimmick)
+  scenario's gimmick). **This is now also the escape hatch** for the dead-air problem below, if
+  filling lanes turns out not to be enough on its own.
+- Should enemies be able to SHIFT lanes between turns, so a defender can be dodged? Costs a movement
+  rule to telegraph; buys a reason to keep reacting after the lanes are covered.
 - How many battles is a full run?
 - Does the Companion have an activated ability, or only its accumulated marks? (currently marks only)
 - Should the player choose between several companions at run start? (currently one, "Ash" 1/3)
 - Deck size and starting deck composition
 - Does anything let you *change* the countdown, or is it strictly fixed? (lean: strictly fixed, except
   the rare card keyword that burns it)
+
+## Clearing the enemies early must not be dead air
+
+Lanes make it plausible to kill everything before the countdown ends, and the one rule that must not
+bend says the battle cannot end early. So those turns have to be worth playing.
+
+**They already are, in principle:** enemies threaten your LIFE, the doom edits your DECK. Clearing
+the lanes removes the first and none of the second, so the remaining turns are spent positioning for
+what the doom reads — which is exactly the squeeze the design is built on.
+
+**The cheap way to make that true in practice: make the dooms read LANES, not just the board.** An
+empty lane at countdown 0 is a wasted slot, so you are racing to fill all five whether or not
+anything is still attacking. Zero new mechanics — it makes lanes load-bearing for the doom rather
+than only for combat. Reinforcements stay in reserve as the escape hatch if playtesting says it is
+still flat.
+
+**Not yet built.** The scenarios currently read the board without caring where anything stands.
 
 ## Engine findings
 
@@ -276,6 +309,25 @@ is the deliverable for "how flexible is this engine?"**
   free card, because deaths are counted by run id. Guarded in `ClearTheDead`.
 - Marks are a plain `ImmutableList<CompanionMark>` summed into Power/Toughness. No engine feature
   was needed — this is the "accumulating component list" the design predicted, and it is simpler.
+
+**After switching combat to five lanes (39 tests green):**
+
+- **Changing the core combat rule was a NET DELETION.** `AssignAction` (64 lines) and the whole
+  assignment model went; the two resolve passes (~78 lines) collapsed into one loop over five lanes.
+  Nothing in `ImmutableGameObjects` had to change, again — a `GameAction` that takes a lane instead
+  of a target is the same shape of action.
+- **The run layer did not notice.** Transforms, the preview, the companion and `RunCardId` all read
+  *what died / what was left / what you committed*, none of which is a combat concept. The run/battle
+  split paid for itself a second time: rewriting combat touched no file above `DoomCore/Actions/`.
+- **The preview caught the regression for free.** `DoomPreviewer` runs the real transform, so the
+  moment lanes changed what ends up on the board the preview followed with no work — the "never write
+  a second account of the rules" decision continues to pay.
+- **One subtlety worth keeping: read both sides of a lane BEFORE writing either.** Resolving a lane
+  by applying the unit's damage and then re-reading the enemy would let whoever resolved second swing
+  with stats the first had already reduced. `AUnitAndAnEnemyThatKillEachOtherBothDie` pins it.
+- The only thing that needed a real decision rather than a mechanical port was the **companion's
+  lane** — it holds the centre, so `EnemiesFor` spreads enemies outside-in and the free blocker is the
+  last lane contested rather than pre-matched with the only enemy.
 
 Rules settled while building, beyond the design doc: hand is **drawn to 5 and discarded every turn**
 (STS), units have **no summoning sickness** (a 2-5 turn battle cannot afford it), dead units go to

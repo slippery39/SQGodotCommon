@@ -57,7 +57,7 @@ public static class Program
 		var (state, events) = run.StartBattle(
 			scenario,
 			StarterContent.CountdownFor(scenario),
-			[StarterContent.EnemyFor(run.Floor)]
+			StarterContent.EnemiesFor(run.Floor)
 		);
 		Renderer.DrawEvents(events);
 
@@ -89,33 +89,10 @@ public static class Program
 					break;
 
 				case "p":
-					state = Submit(state, parts, ids => new PlayCardAction { CardId = ids[0] }, 1);
-					break;
-
-				case "a":
 					state = Submit(
 						state,
 						parts,
-						ids => new AssignAction
-						{
-							UnitId = ids[0],
-							EnemyId = ids[1],
-							Assignment = Assignment.Attack,
-						},
-						2
-					);
-					break;
-
-				case "b":
-					state = Submit(
-						state,
-						parts,
-						ids => new AssignAction
-						{
-							UnitId = ids[0],
-							EnemyId = ids[1],
-							Assignment = Assignment.Block,
-						},
+						ids => new PlayCardAction { CardId = ids[0], Lane = ids[1] },
 						2
 					);
 					break;

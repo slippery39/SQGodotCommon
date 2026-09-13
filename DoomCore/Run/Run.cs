@@ -136,6 +136,10 @@ public record Run
 						{
 							Power = Companion.Power,
 							Toughness = Companion.Toughness,
+
+							// The centre lane. It holds one of the five for free every battle,
+							// which is the "the board is never empty" promise made concrete.
+							Lane = DoomBattle.LaneCount / 2,
 						}
 					)
 					.WithComponent(new CompanionComponent()),

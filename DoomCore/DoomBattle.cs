@@ -12,6 +12,13 @@ namespace DoomCore;
 public record DoomBattle : GameObject
 {
 	/// <summary>
+	/// The board is five lanes, 0-4. One of your units and one enemy per lane; they fight
+	/// automatically. Lane choice is the only positional decision in the game, so this number is
+	/// load-bearing for both the UI and the doom scenarios that read the board.
+	/// </summary>
+	public const int LaneCount = 5;
+
+	/// <summary>
 	/// Turns left before the doom resolves. Ticks down at the end of every turn.
 	///
 	/// **Nothing may prevent this reaching zero.** If clearing the enemies could end a battle early

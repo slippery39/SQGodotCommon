@@ -26,5 +26,13 @@ public record Enemy : GameObject
 	/// <summary>Damage the telegraphed attack will deal. Meaningless when Intent is Wait.</summary>
 	public int IntentAmount { get; init; }
 
+	/// <summary>
+	/// Which of the five lanes this enemy occupies, 0-4.
+	///
+	/// An enemy only ever fights the unit in its own lane, and only ever hits your face from its own
+	/// lane. One enemy per lane: the lane IS the matchup.
+	/// </summary>
+	public int Lane { get; init; }
+
 	public bool IsDead => Health <= 0;
 }

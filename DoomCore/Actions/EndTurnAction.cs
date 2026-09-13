@@ -4,7 +4,7 @@ using ImmutableGameObjects;
 namespace DoomCore;
 
 /// <summary>
-/// Resolves the turn: your attacks, then theirs, then deaths, then the countdown.
+/// Resolves the turn: every lane trades, then deaths, then the countdown.
 ///
 /// **The countdown ticks here unconditionally.** Nothing in this action can stop it, and nothing
 /// should ever be added that can. Clearing the enemies does not end a battle early — if it did,
@@ -17,8 +17,7 @@ public record EndTurnAction : GameAction
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
 
-		state = ResolvePlayerAttacks(state);
-		(state, events) = ResolveEnemyAttacks(state, events);
+		(state, events) = ResolveLanes(state, events);
 		(state, events) = ClearTheDead(state, events);
 
 		state = DiscardHand(state);
@@ -57,83 +56,89 @@ public record EndTurnAction : GameAction
 		return new ActionResult(state).WithEvents(events);
 	}
 
-	private static GameState ResolvePlayerAttacks(GameState state)
-	{
-		foreach (var card in state.Units().ToList())
-		{
-			var unit = card.Unit();
-			if (unit.Assignment != Assignment.Attack || unit.IsDead)
-				continue;
-
-			if (state.GetObject(unit.AssignedEnemyId) is not Enemy enemy || enemy.IsDead)
-				continue;
-
-			state = state.UpdateObject(enemy.Id, enemy with { Health = enemy.Health - unit.Power });
-		}
-
-		return state;
-	}
-
 	/// <summary>
-	/// **Blocking reduces damage, it never prevents it.** Blockers absorb up to their remaining
-	/// toughness and the excess hits the player, so a body in front of an attack is worth exactly
-	/// its toughness in life. That makes stalling impossible by construction and needs no keyword.
+	/// Every lane resolves on its own, automatically. No assignment, no targeting — a unit fights
+	/// whatever shares its lane, and both sides hit at once.
 	///
-	/// **Blockers deal no damage** — pure absorption. It keeps attack-vs-block a clean either/or.
+	/// **A unit absorbs up to its remaining toughness and the excess hits your face**, so a body in
+	/// a lane is worth exactly its toughness in life. That is the same rule blocking used to
+	/// enforce, and it is what keeps toughness and life the same currency — every doom scenario
+	/// trades on that axis, so it must stay exact. An empty lane absorbs nothing: the enemy's whole
+	/// attack lands on you.
+	///
+	/// Both sides deal damage. The old "blockers deal no damage" rule existed to keep attack-vs-block
+	/// a clean either/or; with no such choice left there is nothing for it to protect.
+	///
+	/// Damage is dealt from the state as it was at the START of the exchange, so a unit and an enemy
+	/// that kill each other both die. Resolving one lane before the other must never decide who
+	/// swings first.
 	/// </summary>
-	private static (GameState, ImmutableList<GameEvent>) ResolveEnemyAttacks(
+	private static (GameState, ImmutableList<GameEvent>) ResolveLanes(
 		GameState state,
 		ImmutableList<GameEvent> events
 	)
 	{
-		foreach (var enemy in state.LivingEnemies().ToList())
+		for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
 		{
-			if (enemy.Intent != IntentKind.Attack)
+			var enemy = state.EnemyInLane(lane);
+			if (enemy is null)
 				continue;
 
-			var incoming = enemy.IntentAmount;
-			var absorbed = 0;
+			var card = state.UnitInLane(lane);
+			var attack = enemy.Intent == IntentKind.Attack ? enemy.IntentAmount : 0;
 
-			foreach (var card in state.Units().ToList())
+			if (card is null)
 			{
-				if (incoming <= 0)
-					break;
-
-				var unit = card.Unit();
-				if (
-					unit.Assignment != Assignment.Block
-					|| unit.AssignedEnemyId != enemy.Id
-					|| unit.IsDead
-				)
-					continue;
-
-				var soak = Math.Min(incoming, unit.RemainingToughness);
-				incoming -= soak;
-				absorbed += soak;
-
-				state = state.UpdateObject(
-					card.Id,
-					card.WithComponentReplaced(unit with { Damage = unit.Damage + soak })
-				);
+				if (attack > 0)
+					(state, events) = DamagePlayer(state, events, attack, absorbed: 0);
+				continue;
 			}
 
-			if (incoming <= 0)
+			var unit = card.Unit();
+
+			// Read both sides first: the unit's power must not depend on damage it is taking in
+			// this same exchange, or whoever resolves second is silently weaker.
+			state = state.UpdateObject(enemy.Id, enemy with { Health = enemy.Health - unit.Power });
+
+			if (attack <= 0)
 				continue;
 
-			var player = state.GetPlayer();
-			var life = player.Life - incoming;
-			state = state.UpdateObject(player.Id, player with { Life = life });
-			events = events.Add(
-				new PlayerDamagedEvent
-				{
-					Amount = incoming,
-					Absorbed = absorbed,
-					LifeRemaining = life,
-				}
+			var soak = Math.Min(attack, unit.RemainingToughness);
+			state = state.UpdateObject(
+				card.Id,
+				card.WithComponentReplaced(unit with { Damage = unit.Damage + soak })
 			);
+
+			var excess = attack - soak;
+			if (excess > 0)
+				(state, events) = DamagePlayer(state, events, excess, absorbed: soak);
 		}
 
 		return (state, events);
+	}
+
+	private static (GameState, ImmutableList<GameEvent>) DamagePlayer(
+		GameState state,
+		ImmutableList<GameEvent> events,
+		int amount,
+		int absorbed
+	)
+	{
+		var player = state.GetPlayer();
+		var life = player.Life - amount;
+		state = state.UpdateObject(player.Id, player with { Life = life });
+
+		return (
+			state,
+			events.Add(
+				new PlayerDamagedEvent
+				{
+					Amount = amount,
+					Absorbed = absorbed,
+					LifeRemaining = life,
+				}
+			)
+		);
 	}
 
 	/// <summary>

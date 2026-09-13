@@ -42,6 +42,24 @@ public static class DoomStateExtensions
 		?? throw new InvalidOperationException($"{card.Name} is not a unit");
 
 	/// <summary>
+	/// Your living unit in a lane, or null. At most one — <see cref="PlayCardAction"/> refuses to
+	/// play into an occupied lane, so anything reading a lane can assume a single occupant.
+	///
+	/// Dead units are excluded rather than removed: a unit that died this turn is still on the
+	/// Field until <c>ClearTheDead</c> runs, and it must not soak another lane's attack.
+	/// </summary>
+	public static DoomCard? UnitInLane(this GameState s, int lane) =>
+		s.Units().FirstOrDefault(c => !c.Unit().IsDead && c.Unit().Lane == lane);
+
+	/// <summary>The living enemy in a lane, or null.</summary>
+	public static Enemy? EnemyInLane(this GameState s, int lane) =>
+		s.LivingEnemies().FirstOrDefault(e => e.Lane == lane);
+
+	/// <summary>Lanes with no living unit of yours. These are what an enemy attack lands through.</summary>
+	public static IEnumerable<int> OpenLanes(this GameState s) =>
+		Enumerable.Range(0, DoomBattle.LaneCount).Where(l => s.UnitInLane(l) is null);
+
+	/// <summary>
 	/// Starts the battle: opening hand drawn, turn 1 begun. Single entry point for every
 	/// presentation layer — nobody constructs StartBattleAction directly.
 	/// </summary>

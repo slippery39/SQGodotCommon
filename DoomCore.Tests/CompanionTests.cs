@@ -40,7 +40,11 @@ public class CompanionTests
 			Toughness = toughness,
 		};
 
-	private static Enemy Enemy(int attack, int health = 50) =>
+	/// <summary>
+	/// Defaults to the COMPANION'S lane, because every test here is about the companion. An enemy
+	/// parked anywhere else would never meet it and the test would pass by not happening.
+	/// </summary>
+	private static Enemy Enemy(int attack, int health = 50, int lane = DoomBattle.LaneCount / 2) =>
 		new()
 		{
 			Name = attack > 0 ? "Wretch" : "Idler",
@@ -48,6 +52,7 @@ public class CompanionTests
 			MaxHealth = health,
 			Intent = attack > 0 ? IntentKind.Attack : IntentKind.Wait,
 			IntentAmount = attack,
+			Lane = lane,
 		};
 
 	private static GameState PlayOut(GameState state)
@@ -156,15 +161,6 @@ public class CompanionTests
 		var (state, _) = run.StartBattle(DoomScenario.Zombie, countdown: 2, [Enemy(9)]);
 
 		var companion = state.Units().Single(u => u.HasComponent<CompanionComponent>());
-		(state, _) = Do(
-			state,
-			new AssignAction
-			{
-				UnitId = companion.Id,
-				EnemyId = state.LivingEnemies().First().Id,
-				Assignment = Assignment.Block,
-			}
-		);
 
 		(state, var events) = Do(state, new EndTurnAction());
 
@@ -201,15 +197,6 @@ public class CompanionTests
 		var (state, _) = run.StartBattle(DoomScenario.Zombie, countdown: 3, [Enemy(5)]);
 
 		var companion = state.Units().Single(u => u.HasComponent<CompanionComponent>());
-		(state, _) = Do(
-			state,
-			new AssignAction
-			{
-				UnitId = companion.Id,
-				EnemyId = state.LivingEnemies().First().Id,
-				Assignment = Assignment.Block,
-			}
-		);
 		(state, _) = Do(state, new EndTurnAction());
 
 		Assert.That(state.GetPlayer().Life, Is.EqualTo(58), "3 toughness absorbed 3 of 5");

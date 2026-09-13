@@ -20,24 +20,9 @@ public record StartTurnAction : GameAction
 
 		state = state.UpdateObject(player.Id, player with { Energy = player.MaxEnergy });
 
-		// Assignments are per-turn. A unit that blocked last turn is free to attack this one.
-		foreach (var unit in state.Units().ToList())
-		{
-			var u = unit.Unit();
-			if (u.Assignment == Assignment.None)
-				continue;
-
-			state = state.UpdateObject(
-				unit.Id,
-				unit.WithComponentReplaced(
-					u with
-					{
-						Assignment = Assignment.None,
-						AssignedEnemyId = 0,
-					}
-				)
-			);
-		}
+		// Nothing per-turn to reset on a unit. A lane is chosen once, when the unit is played, and
+		// held until it dies — there is no assignment to clear and no damage to wipe, since damage
+		// persists for the whole battle.
 
 		ImmutableList<GameEvent> events;
 		(state, events) = DrawCards(state, HandSize);

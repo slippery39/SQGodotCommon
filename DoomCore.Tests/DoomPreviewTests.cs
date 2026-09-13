@@ -72,8 +72,12 @@ public class DoomPreviewTests
 		var before = DoomPreviewer.Preview(run, state);
 		Assert.That(before.Removed.Count, Is.EqualTo(3), "commit nothing and lose everything");
 
+		// One per lane, so two committed units need two lanes.
 		foreach (var card in state.CardsIn(ZoneType.Hand).Take(2).ToList())
-			(state, _) = Do(state, new PlayCardAction { CardId = card.Id });
+			(state, _) = Do(
+				state,
+				new PlayCardAction { CardId = card.Id, Lane = state.OpenLanes().First() }
+			);
 
 		var after = DoomPreviewer.Preview(run, state);
 		Assert.That(after.Removed.Count, Is.EqualTo(1), "two committed, one still to drown");

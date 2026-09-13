@@ -25,8 +25,7 @@ public static class Renderer
 		);
 		Console.WriteLine(new string('-', 72));
 
-		DrawEnemies(state);
-		DrawField(state);
+		DrawLanes(state);
 		DrawHand(state);
 
 		Console.WriteLine(new string('=', 72));
@@ -70,55 +69,63 @@ public static class Renderer
 	private static string Stats(RunCard card) =>
 		card.IsUnit ? $"{card.Power}/{card.Toughness}" : "rite";
 
-	private static void DrawEnemies(GameState state)
+	/// <summary>
+	/// The board as FIVE LANES, because a lane is the matchup and the matchup is the whole game.
+	/// Enemy above, your unit below, one column each. Two separate lists would hide the only thing
+	/// the player actually decides.
+	/// </summary>
+	private static void DrawLanes(GameState state)
 	{
-		Console.WriteLine(" ENEMIES");
-		var enemies = state.LivingEnemies().ToList();
+		Console.WriteLine(" LANES");
 
-		if (enemies.Count == 0)
-		{
-			Console.WriteLine("   (none left — the countdown does not care)");
-			return;
-		}
+		var header = "  ";
+		var enemyRow = "  ";
+		var unitRow = "  ";
 
-		foreach (var enemy in enemies)
+		for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
 		{
-			var intent =
-				enemy.Intent == IntentKind.Attack
-					? $"about to hit for {enemy.IntentAmount}"
-					: "waiting";
-			Console.WriteLine(
-				$"   [{enemy.Id}] {enemy.Name}  {enemy.Health}/{enemy.MaxHealth} hp  — {intent}"
+			var enemy = state.EnemyInLane(lane);
+			var card = state.UnitInLane(lane);
+
+			header += Cell($"L{lane}");
+
+			enemyRow += Cell(enemy is null ? "-" : $"{Short(enemy.Name)} {enemy.Health}hp");
+
+			unitRow += Cell(
+				card is null
+					? "-"
+					: $"{(card.HasComponent<CompanionComponent>() ? "@" : "")}{Short(card.Name)} {card.Unit().Power}/{card.Unit().RemainingToughness}"
 			);
 		}
+
+		Console.WriteLine(header);
+		Console.WriteLine(enemyRow + "   <- them");
+		Console.WriteLine(unitRow + "   <- you");
+
+		// The damage an OPEN lane will let through. This is the number the player is actually
+		// playing against, and making them add it up per enemy is how a lane game becomes a chore.
+		var incoming = 0;
+		foreach (var lane in state.OpenLanes())
+		{
+			var enemy = state.EnemyInLane(lane);
+			if (enemy is { Intent: IntentKind.Attack })
+				incoming += enemy.IntentAmount;
+		}
+
+		if (incoming > 0)
+			Console.WriteLine($"   open lanes will cost you {incoming} life this turn");
 	}
 
-	private static void DrawField(GameState state)
+	private static string Cell(string s) => s.PadRight(13)[..13];
+
+	/// <summary>
+	/// A name that fits a lane column. Trims the punctuation a cut leaves dangling — the companion
+	/// renders as "Ash — Glowing, Barnacled", and a blind 6-char slice showed "Ash — ".
+	/// </summary>
+	private static string Short(string name)
 	{
-		Console.WriteLine(" YOUR FIELD");
-		var units = state.Units().ToList();
-
-		if (units.Count == 0)
-		{
-			Console.WriteLine("   (empty)");
-			return;
-		}
-
-		foreach (var card in units)
-		{
-			var unit = card.Unit();
-			var order = unit.Assignment switch
-			{
-				Assignment.Attack => $"ATTACK -> [{unit.AssignedEnemyId}]",
-				Assignment.Block => $"BLOCK  -> [{unit.AssignedEnemyId}]",
-				_ => "unassigned",
-			};
-			var hurt = unit.Damage > 0 ? $" (damaged {unit.Damage})" : "";
-			var tag = card.HasComponent<CompanionComponent>() ? "@" : " ";
-			Console.WriteLine(
-				$"  {tag}[{card.Id}] {card.Name}  {unit.Power}/{unit.RemainingToughness}{hurt}  — {order}"
-			);
-		}
+		var cut = name.Length <= 6 ? name : name[..6];
+		return cut.TrimEnd(' ', '-', '—', ',');
 	}
 
 	private static void DrawHand(GameState state)
@@ -148,19 +155,18 @@ public static class Renderer
 	public static void DrawHelp()
 	{
 		Console.WriteLine();
-		Console.WriteLine("  p <cardId>              play a card from hand");
-		Console.WriteLine("  a <unitId> <enemyId>    attack — kills sooner, removes future damage");
-		Console.WriteLine(
-			"  b <unitId> <enemyId>    block — absorbs damage now, excess still hits you"
-		);
+		Console.WriteLine("  p <cardId> <lane>       play a card into a lane (0-4)");
 		Console.WriteLine("  e                       end turn (the countdown ticks)");
 		Console.WriteLine("  d                       show the deck as it stands");
 		Console.WriteLine("  c                       show your companion and its marks");
 		Console.WriteLine("  ?                       this help");
 		Console.WriteLine("  q                       quit");
 		Console.WriteLine();
-		Console.WriteLine("  A unit ATTACKS or BLOCKS, never both. Blocking reduces damage, never");
-		Console.WriteLine("  prevents it. The countdown cannot be stopped.");
+		Console.WriteLine(
+			"  Combat is automatic. A unit fights whatever shares its lane, both ways."
+		);
+		Console.WriteLine("  It absorbs up to its toughness and the EXCESS hits you; an open lane");
+		Console.WriteLine("  costs you the enemy's full attack. The countdown cannot be stopped.");
 		Console.WriteLine();
 	}
 

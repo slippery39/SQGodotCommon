@@ -45,7 +45,15 @@ public class RunTests
 				if (!wanted.Contains(card.RunCardId))
 					continue;
 
-				var (next, ok) = state.TryAddAction(new PlayCardAction { CardId = card.Id });
+				// First open lane. Which lane is not what these tests are about — they care that
+				// the unit reached the Field at all.
+				var lane = state.OpenLanes().FirstOrDefault(-1);
+				if (lane < 0)
+					continue;
+
+				var (next, ok) = state.TryAddAction(
+					new PlayCardAction { CardId = card.Id, Lane = lane }
+				);
 				if (ok)
 					(state, _) = next.ProcessAllActions();
 			}
@@ -166,20 +174,9 @@ public class RunTests
 		while (!state.GetBattle().IsOver)
 		{
 			var inHand = state.CardsIn(ZoneType.Hand).FirstOrDefault(c => c.Name == "Fragile");
-			if (inHand is not null)
-			{
-				(state, _) = Do(state, new PlayCardAction { CardId = inHand.Id });
-				var unit = state.Units().First(u => u.Name == "Fragile");
-				(state, _) = Do(
-					state,
-					new AssignAction
-					{
-						UnitId = unit.Id,
-						EnemyId = state.LivingEnemies().First().Id,
-						Assignment = Assignment.Block,
-					}
-				);
-			}
+			// Lane 0 is where the Crusher is, so standing there is what kills it.
+			if (inHand is not null && state.UnitInLane(0) is null)
+				(state, _) = Do(state, new PlayCardAction { CardId = inHand.Id, Lane = 0 });
 
 			(state, _) = Do(state, new EndTurnAction());
 		}
