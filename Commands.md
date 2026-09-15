@@ -26,6 +26,16 @@ godot-mono --path SQGodotCommon DoomGame/doom_board.tscn    # the battle screen
 are initialised no matter which scene you start. It logs `Initial scene: <name>` at boot, which is
 the quickest way to confirm what actually loaded.
 
+**Screenshot the running game** — no code needed, and it works from a remote session:
+
+```
+godot-mono --path SQGodotCommon --write-movie shots/doom.png --fixed-fps 10 --quit-after 14   DoomGame/doom_board.tscn
+```
+
+Writes a numbered PNG per frame (and a stray .wav). Take a LATE frame: the container layout and the
+card tweens have not settled on frame 0. Needs a real renderer, so it opens a window briefly —
+`--headless` cannot render at all.
+
 Headless prints shader-compiler errors about `custom_samplers` when the card scene loads. That is
 the dummy renderer failing to compile the card outline shader, not a broken scene — the run still
 exits 0. Ignore them headless; judge the cards on a real renderer.
