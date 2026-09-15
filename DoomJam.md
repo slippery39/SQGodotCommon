@@ -444,6 +444,33 @@ so the patch is not reinvented for a problem that no longer exists.
 What `ImmutableGameObjects` gives us for free, and what had to be built. **Fill this in as we go — it
 is the deliverable for "how flexible is this engine?"**
 
+**On reusing MtgCore's effect system (asked 2026-09-15, answered by reading it):**
+
+DOOMJAM has no card effects at all — every `DoomCard` is a vanilla body, Cost/Power/Toughness — so
+the obvious question is why we do not lift MtgCore's. **This is exactly the finding the project
+exists to produce, so it is recorded rather than quietly acted on.**
+
+- **`MtgCore/Effects/CardEffect.cs` is 22 LINES**, and it is only a pairing: a `TargetingStrategy`
+  plus a `GameAction` template. On resolve the engine resolves targets, injects ids and spawns the
+  action. **That shape is genuinely reusable, and it is tiny.**
+- **The size is all targeting.** `TargetingStrategy` (175) + `TargetSpecifications` (348) is 523
+  lines of choosing what a spell points at — the exact thing this design deleted. There is no
+  targeting anywhere in DOOMJAM; you pick a lane and combat resolves itself.
+- **The machinery is already shared and already reused.** `GameAction`, `ActionResult`,
+  `ValidationResult` and the spawn queue are 163 lines in `ImmutableGameObjects`, and DoomCore is
+  built on them with no engine change at all. `PlayCardAction` already spawns follow-ups — that IS
+  the effect pipeline.
+
+So a DOOMJAM effect system is **not a port**: it is a serializable effect record on `DoomCard` plus
+a case in `PlayCardAction` that spawns the matching action. With no targets to choose, the strategy
+half collapses to nothing. Estimate 40-60 lines.
+
+**The answer to "isn't that what the engine was designed for?" is yes, and it worked** — the
+reusable layer is `ImmutableGameObjects`, and it carried a completely different card game unchanged.
+What does not transfer is the MTG rules layer above it, and that is not the design failing: it is
+the boundary showing itself in the right place.
+
+
 **After building the battle layer (DoomCore, 10 tests green):**
 
 - **`ImmutableGameObjects` needed no changes at all.** `GameState`, `GameObject`, components,
