@@ -48,10 +48,10 @@ Five bands, top to bottom. Each region names the state it reads and the event th
 | Band | Region | Reads | Animated by |
 |---|---|---|---|
 | 1 | Scenario name + countdown | `Battle.Scenario`, `Battle.CountdownRemaining` | `CountdownTickedEvent`, `DoomResolvedEvent` |
-| 1 | Flavour line | static per scenario | — |
-| 1 | **The dial (GO SPINNY)** | `DoomPreviewer.Preview(run, state)` | scroll input |
+| 1 | What the doom does | static per scenario — see below | — |
 | 2 | Opponent silhouette + health bar | `GetOpponent().Health` / `.MaxHealth` | `OpponentDamagedEvent`, `OpponentDefeatedEvent` |
 | 3 | Enemy lane slots x5 | `EnemyInLane(n)` — name, `Health`, `Intent`, `IntentAmount` | `EnemySummonedEvent`, `EnemyDiedEvent` |
+| 3 | Summon telegraph symbol | `GetOpponent().NextSummon` — its `Lane` | `EnemyTelegraphedEvent` |
 | 4 | Your lane slots x5 | `UnitInLane(n)` — name, `Power`, `RemainingToughness` | `CardPlayedEvent`, `UnitDiedEvent` |
 | 4 | Companion ring | `HasComponent<CompanionComponent>()` | — |
 | 5 | Status strip | `Run.Floor`, `Player.Life/MaxLife`, `Player.Energy/MaxEnergy`, `Battle.TurnNumber` | `PlayerDamagedEvent`, `IrradiatedDrawnEvent`, `PlayerDiedEvent` |
@@ -66,35 +66,39 @@ console prints `can't: Lane 2 is already held by Ash`; the UI must not silently 
 click that does nothing is the worst bug a card game front end can have** — that is how the `c`
 command shipped unwired for two sessions.
 
-## What the mockup is missing
+## Decided against the mockup (2026-09-14)
 
-The mockup is a good skeleton and the bands are right. These four readouts exist in the console and
-have no home in it. Three are load-bearing.
+The mockup's bands are right. Four console readouts had no home in it; three were cut deliberately.
 
-1. **The dial has no readout.** It is drawn as a pretty gauge with nothing to say. The whole point of
-   GO SPINNY is `preview.Summary` — *"Flood: 1 swept off the board — nothing permanent"* — plus the
-   LOSE / GAIN / CHANGE lists for permanent scenarios. **A dial without its preview is decoration,
-   and the sub-theme stops earning its place.** Put the readout in a panel that opens off the dial.
-2. **No summon telegraph.** `Opponent.NextSummon` announces a body a turn ahead, and the handoff is
-   explicit that this delay is load-bearing rather than polish — a lane that refilled instantly
-   makes the Opponent unreachable. Draw it **as a ghost card in the target lane slot**: dashed gold
-   outline, stats shown, clearly not yet real. Spatial beats the console's text line.
-3. **No outgoing total.** *"your open lanes will hit the Opponent for 3."* Put it on the Opponent's
-   health bar as an arrow and a number.
-4. **No incoming total.** *"open lanes will cost you 5 life this turn."* Put it on the life value in
-   the status strip, same treatment.
+**The doom banner says what the doom DOES, statically.** Scenario name, countdown, and a fixed
+per-scenario description — *"The water takes whatever is still standing in it."* That is the whole
+band. **No live preview, no dial**: GO SPINNY is dropped, and the reasoning is recorded in
+`DoomJam.md` under Sub-themes. `DoomPreviewer` keeps running in the console and loses only its UI
+surface.
 
-3 and 4 are per-lane information the player *could* add up themselves. The console added them for a
-reason, recorded in `Renderer.cs`: **making the player total it per lane is how a lane game becomes a
-chore.**
+**The summon telegraph is one symbol in the lane it is coming to.** `Opponent.NextSummon` announces
+a body a turn ahead, and the handoff is explicit that this delay is load-bearing rather than polish —
+a lane that refilled the instant you cleared it makes the Opponent unreachable. So the warning must
+be on screen, but it does not need stats: a marker in the target lane says *this is closing next
+turn*, which is the only thing the player acts on.
+
+**The two damage totals are cut.** The console prints *"your open lanes will hit the Opponent for
+3"* and *"open lanes will cost you 5 life this turn"*; `Renderer.cs` argues that totalling five
+lanes by hand is how a lane game becomes a chore. Overruled for the UI, and the reason is that the
+console had no better option: a terminal cannot draw a line from a lane to a face, so it had to sum.
+**A screen can show the relationship spatially.** Each unit's power and each enemy's intent are
+already in their lane, so the arithmetic is visible rather than absent.
+
+Revisit only if play shows people miscounting — and if it does, the fix is making the per-lane
+numbers read better, not adding a total back.
 
 ## Not decided
 
 - Where the discard and draw piles are shown, or whether they are. The console does not show them
   and has not missed them.
 - Whether the 3D scenario backdrop (PERSPECTIVE SHIFT) ships. It is flagged "if time survives" in
-  `DoomJam.md`. The flat style makes a per-apocalypse backdrop cheap — three geometric layers — so
-  it may survive after all.
+  `DoomJam.md`, and it is now the only optional sub-theme left — GO SPINNY is dropped. The flat
+  style makes a per-apocalypse backdrop cheap, three geometric layers, so it may survive after all.
 - Card art. Currently one flat icon per card. Twenty of those is a real afternoon.
 - Whether `Common/Cards/2D/` (`CardUI2D` + `Hand2D`, ~1600 lines of drag/hover/fan with no MTG in
   it) is reused as-is or trimmed. It is free and it is the reason the hand band is not a build task.

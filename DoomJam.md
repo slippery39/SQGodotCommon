@@ -1,7 +1,8 @@
 # DOOMJAM — Godot Wild Jam design doc
 
 **Branch `GWJ-ImminentDoom` is NOT the MTG game.** Theme: IMMINENT DOOM. Sub-themes: TAG ALONG
-(required), GO SPINNY, PERSPECTIVE SHIFT. 9-day jam.
+(required), GO SPINNY, PERSPECTIVE SHIFT. 9-day jam. **That is what the jam OFFERED — see
+Sub-themes for which are actually being built.**
 
 The second goal is a measurement: **how hard is it to build a completely different card game on
 `ImmutableGameObjects`?** Whatever we end up wishing we could lift out of `MtgCore` is the finding.
@@ -280,15 +281,25 @@ apocalypse should be a desperate move, not routine.
 | Theme | How | Priority |
 |---|---|---|
 | TAG ALONG | the Companion, above — structurally load-bearing | required |
-| GO SPINNY | scroll the doom dial to **preview what the next firing would do right now** | high — it earns its place |
 | PERSPECTIVE SHIFT | 2D cards over a 3D scenario backdrop that changes per apocalypse | if time survives |
 
-The spinny dial acts on the principle that **certainty is permission to show the player everything**.
-The tension here is inevitability, not surprise — so show the future.
+**Certainty is still permission to show the player everything.** The tension is inevitability, not
+surprise, so the screen says which apocalypse is coming, when, and what it does. That principle
+survives; only the instrument changed.
 
-Recurring dooms make the dial **better**: it is consulted before every firing rather than once a
-battle, so the sub-theme stops being decoration and becomes the instrument you actually plan with.
-That is also why the preview must learn to describe battle-only scenarios — see Open questions.
+> **GO SPINNY — DROPPED (2026-09-14), during UI design.** It was a dial you scrolled to see what the
+> next firing would do to your deck *right now*, and this doc rated it "high — it earns its place".
+>
+> **Why it went:** the screen only needs to say WHAT THE DOOM DOES, and a static per-scenario
+> description does that in one line. As drawn it was a second countdown sitting beside a countdown
+> already rendered in 60pt type. Its one real payload was the live deck diff, and that was buying a
+> whole input mode to deliver information the player can simply be told.
+>
+> **`DoomPreviewer` is NOT deleted.** `DoomConsole` prints it every turn, it is what caught the
+> lanes regression for free, and it has tests. It loses its UI surface, nothing more. If a preview
+> ever returns to the screen it must still be `DoomPreviewer.Preview` — never a second hand-written
+> account of a scenario, which would drift from the scenario and have the player planning around a
+> lie.
 
 ## MVP (build this first)
 
@@ -357,8 +368,8 @@ every export, and it keeps the off-limits MTG code compiling alongside ours. Dro
 requires excluding `SQGodotCommon/MtgGame/` from compilation, since it depends on them — a real task,
 not a one-liner. Low priority with no mobile target; do it if build times bite or before shipping.
 
-**GO SPINNY is unconstrained** now that phone is not a target — a real mouse wheel is available, so the
-doom-preview dial can be built as the jam intends.
+**GO SPINNY was unconstrained** once phone stopped being a target — a real mouse wheel was
+available. Moot now: the sub-theme is dropped (see Sub-themes), so no input mode is needed for it.
 
 ## Open questions
 
