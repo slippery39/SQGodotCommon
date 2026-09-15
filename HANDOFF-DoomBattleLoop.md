@@ -124,6 +124,23 @@ the reasoning is easier to follow as one story than as four diffs.
 **Dodging is currently unreachable, so the newest rule has no teeth.** Floor 1, seed 42, a decent
 aggressive line:
 
+> **SUPERSEDED — RE-MEASURED 2026-09-15**, in the Godot front end, with the dead-unit-replay bug
+> fixed and `SummonInterval` at 3. A greedy line (fill every free lane every turn), seed 42, floor 1:
+>
+> | turn | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+> |---|---|---|---|---|---|---|---|
+> | Opponent | 26 | 23 | 20 | 19 | 16 | 10 | dead |
+>
+> Flood fired ONCE, on turn 5. **Dodging is now close but not free**: the Opponent was on 16 when
+> the clock ran out, so a sharper line plausibly gets there — which is what the design wants, since
+> dodging costs the transform and the companion mark.
+>
+> **The pressure is the real problem, not the clock.** Life fell 60 -> 57 across seven turns. Floor
+> 1 barely threatens a player who simply fills lanes, so `EnemiesFor` and `OpponentHealthFor` want
+> looking at well before `SummonInterval` does.
+>
+> The old table below is kept for its cause of death only.
+>
 > **THIS TABLE PREDATES THE DEAD-UNIT-REPLAY FIX (§4) AND IS SUSPECT.** It was measured while a
 > replayed unit that had died once silently did nothing — a card and an energy vanishing per
 > occurrence, which on a 10-card deck starts around turn 3. The board was emptier than the player's

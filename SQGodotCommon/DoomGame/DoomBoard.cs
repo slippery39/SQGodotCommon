@@ -40,6 +40,11 @@ public partial class DoomBoard : Node2D
 	private readonly List<string> _log = [];
 	private Button _endTurnButton;
 	private DoomHandView _hand;
+	private DoomIntermission _intermission;
+	private Label _doomFlash;
+
+	/// <summary>Stops AfterBattle being applied twice: Render runs on every action, IsOver latches.</summary>
+	private bool _battleResolved;
 
 	private readonly DoomLaneCell[] _enemyLanes = new DoomLaneCell[DoomBattle.LaneCount];
 	private readonly DoomLaneCell[] _unitLanes = new DoomLaneCell[DoomBattle.LaneCount];
@@ -53,6 +58,18 @@ public partial class DoomBoard : Node2D
 	private void StartRun()
 	{
 		_run = StarterContent.NewRun(Seed);
+		StartBattleOnCurrentFloor();
+	}
+
+	/// <summary>
+	/// Begins the battle for whatever floor the run is on. The run outlives the battle — deck, life,
+	/// floor and companion all persist — so this is the only thing a new floor needs.
+	/// </summary>
+	private void StartBattleOnCurrentFloor()
+	{
+		_battleResolved = false;
+		_intermission.Hide();
+
 		var scenario = StarterContent.ScenarioFor(Seed, _run.Floor);
 
 		var (state, events) = _run.StartBattle(
@@ -64,6 +81,32 @@ public partial class DoomBoard : Node2D
 
 		_state = state;
 		Render(events);
+	}
+
+	/// <summary>
+	/// The battle ended, so the RUN takes over. Until this existed a battle stopped and that was
+	/// that: no next floor, no transform, no companion mark — the apocalypses are meant to BE the
+	/// power curve, and they were landing on a deck nobody ever played again.
+	/// </summary>
+	private void ResolveBattle()
+	{
+		_battleResolved = true;
+
+		var battle = _state.GetBattle();
+		if (battle.PlayerIsDead)
+		{
+			_intermission.ShowRunOver(_run.AfterBattle(_state));
+			return;
+		}
+
+		var before = _run;
+		var after = _run.AfterBattle(_state);
+		_run = after;
+
+		if (after.IsOver)
+			_intermission.ShowRunOver(after);
+		else
+			_intermission.ShowFloorCleared(before, after, battle.DoomsFired);
 	}
 
 	private void OnEndTurn()
@@ -134,9 +177,12 @@ public partial class DoomBoard : Node2D
 			$"{battle.Scenario.ToString().ToUpperInvariant()} — {battle.CountdownRemaining} {turnWord}";
 		_descriptionLabel.Text = StarterContent.DescriptionFor(battle.Scenario);
 
+		// Clamped for DISPLAY only. Overkill leaves real health negative, which is correct in the
+		// engine and reads as a bug on a health bar: the last hit showed "-1 / 26".
+		var shown = System.Math.Max(opponent.Health, 0);
 		_opponentHealthBar.MaxValue = opponent.MaxHealth;
-		_opponentHealthBar.Value = opponent.Health;
-		_opponentHealthLabel.Text = $"{opponent.Health} / {opponent.MaxHealth}";
+		_opponentHealthBar.Value = shown;
+		_opponentHealthLabel.Text = $"{shown} / {opponent.MaxHealth}";
 
 		for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
 			RenderLane(lane, opponent);
@@ -151,7 +197,11 @@ public partial class DoomBoard : Node2D
 
 		_endTurnButton.Disabled = battle.IsOver;
 		if (battle.IsOver)
+		{
 			_endTurnButton.Text = battle.PlayerIsDead ? "YOU DIED" : "OPPONENT DOWN";
+			if (!_battleResolved)
+				ResolveBattle();
+		}
 	}
 
 	private void RenderLane(int lane, Opponent opponent)
@@ -195,7 +245,7 @@ public partial class DoomBoard : Node2D
 				EnemyTelegraphedEvent g => $"they are bringing up {g.EnemyName} for L{g.Lane}",
 				OpponentDamagedEvent o => $"hit the Opponent for {o.Amount}",
 				OpponentDefeatedEvent => "THE OPPONENT IS DOWN",
-				DoomResolvedEvent d => $"*** {d.Scenario.ToString().ToUpperInvariant()} LANDS ***",
+				DoomResolvedEvent d => FlashDoom(d),
 				PlayerDiedEvent => "*** YOU DIED ***",
 				_ => null,
 			};
@@ -203,6 +253,27 @@ public partial class DoomBoard : Node2D
 			if (line is not null)
 				Report(line);
 		}
+	}
+
+	/// <summary>
+	/// The apocalypse gets the screen for a moment.
+	///
+	/// A player fought and won an entire battle and could not say afterwards whether the doom had
+	/// fired at all. It was announced by one line in a log that is hidden by default, and the
+	/// countdown banner simply reset. **This is the centrepiece of the game and it was happening in
+	/// silence.**
+	/// </summary>
+	private string FlashDoom(DoomResolvedEvent fired)
+	{
+		var name = fired.Scenario.ToString().ToUpperInvariant();
+
+		_doomFlash.Text = $"{name} LANDS";
+		_doomFlash.Modulate = Colors.White;
+		_doomFlash.Visible = true;
+
+		CreateTween().TweenProperty(_doomFlash, "modulate:a", 0f, 2.2f).SetDelay(0.8);
+
+		return $"*** {name} LANDS (#{fired.FiringNumber}) ***";
 	}
 
 	// ===== Layout =====
@@ -264,6 +335,14 @@ public partial class DoomBoard : Node2D
 		//
 		// Every Control here is presentation: the cards are Node2D, and the only thing on this
 		// screen that wants a click is the End Turn button. So everything else steps out of the way.
+		_doomFlash = DoomPalette.Text("", 88, DoomPalette.Red);
+		_doomFlash.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+		_doomFlash.VerticalAlignment = VerticalAlignment.Center;
+		_doomFlash.Visible = false;
+		layer.AddChild(_doomFlash);
+
+		_intermission = new DoomIntermission(layer, StartBattleOnCurrentFloor);
+
 		MakeTransparentToMouse(layer);
 	}
 
