@@ -69,10 +69,17 @@ public class BattleTests
 
 	// ===== The rule that must not bend =====
 
+	/// <summary>
+	/// The doom is a METRONOME, not a wall. It fires on schedule no matter what the board looks
+	/// like, resets its own clock, and the battle carries on.
+	///
+	/// This test used to assert the opposite — that the countdown ENDED the battle. That rule is
+	/// superseded (see DoomJam.md): it made a cleared board into dead air.
+	/// </summary>
 	[Test]
-	public void TheDoomResolvesEvenWhenEveryEnemyIsAlreadyDead()
+	public void TheDoomFiresOnScheduleAndTheBattleCarriesOn()
 	{
-		var state = DoomBattleFactory.Create(DoomScenario.Flood, countdown: 3);
+		var state = DoomBattleFactory.Create(DoomScenario.Flood, countdown: 2, opponentHealth: 500);
 		(state, _) = AddEnemy(state, "Husk", health: 1, attack: 0, lane: 0);
 		(state, var unitId) = AddUnit(state, "Stray", power: 9, toughness: 1);
 
@@ -81,21 +88,30 @@ public class BattleTests
 
 		(state, _) = Do(state, new EndTurnAction());
 		Assert.That(state.LivingEnemies().Count(), Is.Zero, "enemy should be dead");
+		Assert.That(state.GetBattle().DoomsFired, Is.Zero, "not yet");
+
+		var (afterFirst, events) = Do(state, new EndTurnAction());
+		state = afterFirst;
+
+		Assert.That(state.GetBattle().DoomsFired, Is.EqualTo(1), "the doom landed");
+		Assert.That(events.OfType<DoomResolvedEvent>().Single().FiringNumber, Is.EqualTo(1));
 		Assert.That(
 			state.GetBattle().IsOver,
 			Is.False,
-			"clearing the board must NOT end the battle"
+			"and the battle CARRIES ON — nothing ends on a counter"
 		);
-
-		(state, _) = Do(state, new EndTurnAction());
-		Assert.That(state.GetBattle().IsOver, Is.False);
-
-		var (final, events) = Do(state, new EndTurnAction());
-		Assert.That(final.GetBattle().IsOver, Is.True, "the doom must land on schedule regardless");
 		Assert.That(
-			events.OfType<DoomResolvedEvent>().Single().Scenario,
-			Is.EqualTo(DoomScenario.Flood)
+			state.GetBattle().CountdownRemaining,
+			Is.EqualTo(2),
+			"the clock reset rather than stopping"
 		);
+
+		// And it keeps happening.
+		(state, _) = Do(state, new EndTurnAction());
+		(state, _) = Do(state, new EndTurnAction());
+
+		Assert.That(state.GetBattle().DoomsFired, Is.EqualTo(2));
+		Assert.That(state.GetBattle().Firings, Has.Count.EqualTo(2));
 	}
 
 	// ===== Toughness is life =====

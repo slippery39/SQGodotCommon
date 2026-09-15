@@ -43,15 +43,32 @@ public record EndTurnAction : GameAction
 			return new ActionResult(state).WithEvents(events.Add(new PlayerDiedEvent()));
 		}
 
-		if (remaining <= 0)
-			state = state.SpawnAction(new ResolveDoomAction());
-		else
+		// Checked AFTER the player's death, so a turn that kills both is still a loss — the run
+		// ending outranks winning the battle. Checked BEFORE the doom, so killing the Opponent on
+		// the same turn the countdown expires means you got out first and no apocalypse lands.
+		if (state.GetOpponent().IsDead)
 		{
 			battle = state.GetBattle();
-			state = state
-				.UpdateObject(battle.Id, battle with { TurnNumber = battle.TurnNumber + 1 })
-				.SpawnAction(new StartTurnAction());
+			state = state.UpdateObject(
+				battle.Id,
+				battle with
+				{
+					IsOver = true,
+					OpponentDefeated = true,
+				}
+			);
+			return new ActionResult(state).WithEvents(events.Add(new OpponentDefeatedEvent()));
 		}
+
+		// The doom fires and the battle CARRIES ON. Reaching zero resets the clock; it never ends a
+		// battle. Only the Opponent's death or yours does.
+		battle = state.GetBattle();
+		if (remaining <= 0)
+			state = state.SpawnAction(new ResolveDoomAction { TurnNumber = battle.TurnNumber });
+
+		state = state
+			.UpdateObject(battle.Id, battle with { TurnNumber = battle.TurnNumber + 1 })
+			.SpawnAction(new StartTurnAction());
 
 		return new ActionResult(state).WithEvents(events);
 	}
@@ -81,10 +98,17 @@ public record EndTurnAction : GameAction
 		for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
 		{
 			var enemy = state.EnemyInLane(lane);
-			if (enemy is null)
-				continue;
-
 			var card = state.UnitInLane(lane);
+
+			// A lane you hold with nothing opposing it lands on the Opponent. This is the only way
+			// to win a battle, which is what makes holding a lane offence as well as defence.
+			if (enemy is null)
+			{
+				if (card is { } unopposed && unopposed.Unit().Power > 0)
+					(state, events) = DamageOpponent(state, events, unopposed.Unit().Power);
+				continue;
+			}
+
 			var attack = enemy.Intent == IntentKind.Attack ? enemy.IntentAmount : 0;
 
 			if (card is null)
@@ -115,6 +139,22 @@ public record EndTurnAction : GameAction
 		}
 
 		return (state, events);
+	}
+
+	private static (GameState, ImmutableList<GameEvent>) DamageOpponent(
+		GameState state,
+		ImmutableList<GameEvent> events,
+		int amount
+	)
+	{
+		var opponent = state.GetOpponent();
+		var health = opponent.Health - amount;
+		state = state.UpdateObject(opponent.Id, opponent with { Health = health });
+
+		return (
+			state,
+			events.Add(new OpponentDamagedEvent { Amount = amount, HealthRemaining = health })
+		);
 	}
 
 	private static (GameState, ImmutableList<GameEvent>) DamagePlayer(

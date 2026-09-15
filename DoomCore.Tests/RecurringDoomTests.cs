@@ -1,0 +1,182 @@
+using System.Collections.Immutable;
+using DoomCore;
+using ImmutableGameObjects;
+
+namespace DoomCore.Tests;
+
+/// <summary>
+/// The doom fires repeatedly, and each firing reads the board as it was AT THAT MOMENT.
+///
+/// These guard the reason <see cref="DoomFiring"/> exists at all. A transform applied once at the
+/// end, or one reading a cumulative list, both look correct until a battle runs long.
+/// </summary>
+public class RecurringDoomTests
+{
+	private static (GameState State, ImmutableList<GameEvent> Events) Do(
+		GameState state,
+		GameAction action
+	) => state.AddAction(action).ProcessAllActions();
+
+	private static Enemy Killer(int lane, int attack) =>
+		new()
+		{
+			Name = "Crusher",
+			Health = 500,
+			MaxHealth = 500,
+			Intent = IntentKind.Attack,
+			IntentAmount = attack,
+			Lane = lane,
+		};
+
+	/// <summary>
+	/// A death is paid for ONCE, by the firing that read it. If `DiedRunCardIds` were left on the
+	/// battle instead of consumed, every later firing would mint a Zombie for the same corpse and a
+	/// long battle would end in an exponential pile of them.
+	/// </summary>
+	[Test]
+	public void ADeathIsPaidForByExactlyOneFiring()
+	{
+		var run = new Run { Life = 200, MaxLife = 200 }.WithCards(
+			[
+				new RunCard
+				{
+					Name = "Fragile",
+					Cost = 0,
+					IsUnit = true,
+					Power = 0,
+					Toughness = 1,
+				},
+			]
+		);
+
+		// Countdown 1, so the doom fires at the end of every turn.
+		var (state, _) = run.StartBattle(
+			DoomScenario.Zombie,
+			countdown: 1,
+			[Killer(lane: 0, attack: 9)],
+			opponentHealth: 500
+		);
+
+		// Turn 1: stand Fragile in front of the Crusher. It dies.
+		var fragile = state.CardsIn(ZoneType.Hand).First(c => c.Name == "Fragile");
+		(state, _) = Do(state, new PlayCardAction { CardId = fragile.Id, Lane = 0 });
+		(state, _) = Do(state, new EndTurnAction());
+
+		// Turns 2 and 3: play nothing, so nothing dies.
+		(state, _) = Do(state, new EndTurnAction());
+		(state, _) = Do(state, new EndTurnAction());
+
+		var firings = state.GetBattle().Firings;
+		Assert.That(firings, Has.Count.EqualTo(3), "one firing per turn at countdown 1");
+		Assert.That(firings[0].DiedRunCardIds, Has.Count.EqualTo(1), "it died before firing 1");
+		Assert.That(firings[1].DiedRunCardIds, Is.Empty, "and must not be paid for again");
+		Assert.That(firings[2].DiedRunCardIds, Is.Empty);
+
+		var after = run.AfterBattle(state);
+
+		Assert.That(
+			after.Deck.Count(c => c.Name == "Zombie"),
+			Is.EqualTo(1),
+			"one corpse, one Zombie, however many apocalypses passed over it"
+		);
+	}
+
+	/// <summary>
+	/// Nuclear reads what was STANDING. Two firings over two different boards must irradiate each
+	/// board as it was — not the final board twice, which is what a single end-of-battle read gives.
+	/// </summary>
+	[Test]
+	public void EachFiringIrradiatesTheBoardItActuallySaw()
+	{
+		var run = new Run { Life = 200, MaxLife = 200 }.WithCards(
+			[
+				new RunCard
+				{
+					Name = "First",
+					Cost = 0,
+					IsUnit = true,
+					Power = 0,
+					Toughness = 9,
+				},
+				new RunCard
+				{
+					Name = "Second",
+					Cost = 0,
+					IsUnit = true,
+					Power = 0,
+					Toughness = 9,
+				},
+			]
+		);
+
+		var (state, _) = run.StartBattle(
+			DoomScenario.Nuclear,
+			countdown: 1,
+			[],
+			opponentHealth: 500
+		);
+
+		// Firing 1 sees only First.
+		var first = state.CardsIn(ZoneType.Hand).First(c => c.Name == "First");
+		(state, _) = Do(state, new PlayCardAction { CardId = first.Id, Lane = 0 });
+		(state, _) = Do(state, new EndTurnAction());
+
+		// Firing 2 sees both.
+		var second = state.CardsIn(ZoneType.Hand).First(c => c.Name == "Second");
+		(state, _) = Do(state, new PlayCardAction { CardId = second.Id, Lane = 1 });
+		(state, _) = Do(state, new EndTurnAction());
+
+		var firings = state.GetBattle().Firings;
+		Assert.That(firings[0].OnFieldRunCardIds, Has.Count.EqualTo(1));
+		Assert.That(firings[1].OnFieldRunCardIds, Has.Count.EqualTo(2));
+
+		var after = run.AfterBattle(state);
+
+		// First stood through both firings: +2/+2 twice. Second stood through one: +2/+2 once.
+		Assert.That(after.Deck.Single(c => c.Name == "First").Toughness, Is.EqualTo(13));
+		Assert.That(after.Deck.Single(c => c.Name == "Second").Toughness, Is.EqualTo(11));
+	}
+
+	/// <summary>
+	/// The dial says what the NEXT firing would do, not what the recorded ones already did — and it
+	/// uses the same capture the real firing uses, so it cannot disagree with the apocalypse.
+	/// </summary>
+	[Test]
+	public void ThePreviewStillDescribesTheNextFiringAfterOneHasAlreadyLanded()
+	{
+		var run = new Run { Life = 200, MaxLife = 200 }.WithCards(
+			[
+				new RunCard
+				{
+					Name = "Exposed",
+					Cost = 0,
+					IsUnit = true,
+					Power = 0,
+					Toughness = 9,
+				},
+			]
+		);
+
+		var (state, _) = run.StartBattle(
+			DoomScenario.Nuclear,
+			countdown: 1,
+			[],
+			opponentHealth: 500
+		);
+
+		var card = state.CardsIn(ZoneType.Hand).First(c => c.Name == "Exposed");
+		(state, _) = Do(state, new PlayCardAction { CardId = card.Id, Lane = 0 });
+		(state, _) = Do(state, new EndTurnAction());
+
+		Assert.That(state.GetBattle().DoomsFired, Is.EqualTo(1), "one has landed");
+
+		var preview = DoomPreviewer.Preview(run, state);
+
+		Assert.That(
+			preview.Changed,
+			Has.Count.EqualTo(1),
+			"the dial still answers 'what would the next one do', not 'what did the last one do'"
+		);
+		Assert.That(preview.Summary, Does.Contain("1 changed"));
+	}
+}

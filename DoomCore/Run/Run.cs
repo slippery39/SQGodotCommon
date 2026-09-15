@@ -86,7 +86,8 @@ public record Run
 		DoomScenario scenario,
 		int countdown,
 		IEnumerable<Enemy> enemies,
-		int maxEnergy = 3
+		int maxEnergy = 3,
+		int opponentHealth = 40
 	)
 	{
 		var state = DoomBattleFactory.Create(
@@ -95,7 +96,8 @@ public record Run
 			life: Life,
 			maxLife: MaxLife,
 			maxEnergy: maxEnergy,
-			rngSeed: RngSeed
+			rngSeed: RngSeed,
+			opponentHealth: opponentHealth
 		);
 
 		var drawId = state.ZoneId(ZoneType.Draw);
@@ -172,6 +174,12 @@ public record Run
 
 		if (battle.PlayerIsDead)
 			return run;
+
+		// Killing the Opponent before the first firing means no apocalypse happened. Applying a
+		// transform anyway would rewrite the deck for an event the player never saw — and it would
+		// read as a bug, because the doom preview would have shown it coming and then it didn't.
+		if (battle.DoomsFired == 0)
+			return run with { Floor = Floor + 1 };
 
 		// The mark is the whole point of TAG ALONG: it survived this, and it carries that forward.
 		return DoomTransforms.Apply(run, finishedBattle) with

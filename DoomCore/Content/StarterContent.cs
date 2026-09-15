@@ -24,16 +24,29 @@ public static class StarterContent
 		};
 
 	/// <summary>
-	/// Scenarios are TIERED by floor. Flood removes every unit you did not commit, which on a
-	/// 10-card starter deck can end a run outright — the loss only becomes an interesting cost
-	/// once there is a deck worth losing. Rapture is excluded everywhere: no transform yet.
+	/// What a scenario is allowed to change. **A fixed property of its design**, and the thing that
+	/// decides which hook implements it — see <see cref="DoomScope"/>.
 	/// </summary>
-	public const int FloodUnlocksAtFloor = 8;
+	public static DoomScope ScopeOf(DoomScenario scenario) =>
+		scenario switch
+		{
+			DoomScenario.Flood => DoomScope.Battle,
+			_ => DoomScope.Permanent,
+		};
 
+	/// <summary>
+	/// Which scenarios a floor may roll. **Scope is the difficulty curve**: early floors get
+	/// battle-only apocalypses you merely navigate, later floors get ones that leave marks.
+	///
+	/// Flood used to be gated to floor 8+ because it removed cards from the run deck, which meant
+	/// it did not exist at all for the first seven floors. It is a battle-scope board wash now, so
+	/// it leads instead — it teaches the player what an apocalypse feels like before one can cost
+	/// them anything. Rapture is excluded everywhere: no transform yet.
+	/// </summary>
 	public static ImmutableArray<DoomScenario> PlayableOn(int floor) =>
-		floor < FloodUnlocksAtFloor
-			? [DoomScenario.Zombie, DoomScenario.Nuclear]
-			: [DoomScenario.Zombie, DoomScenario.Nuclear, DoomScenario.Flood];
+		floor < 3
+			? [DoomScenario.Flood]
+			: [DoomScenario.Flood, DoomScenario.Zombie, DoomScenario.Nuclear];
 
 	private static RunCard Unit(string name, int cost, int power, int toughness, string text) =>
 		new()
@@ -77,6 +90,14 @@ public static class StarterContent
 				Unit("Lantern Bearer", 0, 1, 1, "Small light, long night."),
 			]
 		);
+
+	/// <summary>
+	/// The Opponent's HP for a floor. This is the battle's real length dial: you win by cutting it
+	/// down through lanes nothing is contesting, so it prices how long you must hold the board.
+	///
+	/// Provisional — it wants tuning against real play, not reasoning. See DoomJam.md.
+	/// </summary>
+	public static int OpponentHealthFor(int floor) => 20 + floor * 6;
 
 	/// <summary>
 	/// The enemies for a floor, already placed in lanes.

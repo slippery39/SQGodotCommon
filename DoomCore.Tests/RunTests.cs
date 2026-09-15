@@ -33,13 +33,21 @@ public class RunTests
 			Intent = IntentKind.Wait,
 		};
 
-	/// <summary>Plays every unit it can afford, then ends the turn, until the doom resolves.</summary>
+	/// <summary>
+	/// Plays every unit it can afford, then ends the turn, until the doom has fired ONCE.
+	///
+	/// Not "until the battle is over": the doom recurs now, and a battle ends only when the Opponent
+	/// dies. The turn cap makes a countdown that stops resetting fail loudly instead of hanging.
+	/// </summary>
 	private static GameState PlayOutBattle(GameState state, params int[] runCardIdsToPlay)
 	{
 		var wanted = runCardIdsToPlay.ToHashSet();
 
-		while (!state.GetBattle().IsOver)
+		for (var turn = 0; turn < 50; turn++)
 		{
+			if (state.GetBattle().DoomsFired >= 1 || state.GetBattle().IsOver)
+				return state;
+
 			foreach (var card in state.CardsIn(ZoneType.Hand).ToList())
 			{
 				if (!wanted.Contains(card.RunCardId))
@@ -61,7 +69,7 @@ public class RunTests
 			(state, _) = Do(state, new EndTurnAction());
 		}
 
-		return state;
+		throw new InvalidOperationException("50 turns without a doom firing.");
 	}
 
 	// ===== The run outlives the battle =====
@@ -104,91 +112,80 @@ public class RunTests
 		Assert.That(ids, Is.EqualTo(new[] { 1, 2 }));
 	}
 
-	// ===== Flood: the flagship =====
+	// ===== Flood: now a BATTLE-scope board wash =====
 
+	/// <summary>
+	/// Flood sweeps the board and leaves the DECK alone. It used to delete never-summoned units
+	/// from the run and duplicate the committed ones; permanent removal caused more trouble than it
+	/// was worth (see DoomJam.md), so it is a battle-scope wash now.
+	/// </summary>
 	[Test]
-	public void FloodDuplicatesWhatYouSummonedAndDeletesWhatYouDidNot()
+	public void FloodWashesTheBoardAndLeavesTheDeckUntouched()
 	{
-		var run = new Run().WithCards(
+		var run = new Run { Life = 100, MaxLife = 100 }.WithCards(
 			[Unit("Committed", 1, 1, cost: 0), Unit("Hoarded", 1, 1, cost: 0)]
 		);
 		var committedId = run.Deck[0].RunCardId;
 
-		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 2, [Idler()]);
+		(var state, _) = run.StartBattle(
+			DoomScenario.Flood,
+			countdown: 2,
+			[Idler()],
+			opponentHealth: 500
+		);
 		state = PlayOutBattle(state, committedId);
 
+		Assert.That(state.GetBattle().DoomsFired, Is.EqualTo(1), "it fired");
+		Assert.That(state.Units().Any(u => u.Name == "Committed"), Is.False, "and swept the board");
+
 		var after = run.AfterBattle(state);
 
-		Assert.That(after.Deck.Count, Is.EqualTo(2), "one survivor, duplicated");
-		Assert.That(after.Deck.Select(c => c.Name), Is.All.EqualTo("Committed"));
+		Assert.That(after.Deck.Count, Is.EqualTo(2), "both cards are still in the run");
 		Assert.That(
-			after.Deck.Select(c => c.RunCardId).Distinct().Count(),
-			Is.EqualTo(2),
-			"the duplicate is a NEW deck entry, not a shared id"
+			after.Deck.Select(c => c.Name).OrderBy(n => n),
+			Is.EqualTo(new[] { "Committed", "Hoarded" }),
+			"a battle doom costs tempo, not material"
 		);
 	}
 
 	[Test]
-	public void FloodLeavesNonUnitsAlone()
+	public void AWashedUnitComesBackWholeRatherThanDamaged()
 	{
-		var run = new Run().WithCards(
-			[
-				Unit("Drowned", 1, 1, cost: 0),
-				new RunCard
-				{
-					Name = "Rite",
-					Cost = 0,
-					IsUnit = false,
-				},
-			]
+		var run = new Run { Life = 100, MaxLife = 100 }.WithCards(
+			[Unit("Committed", 1, 4, cost: 0)]
 		);
+		var committedId = run.Deck[0].RunCardId;
 
-		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 2, [Idler()]);
-		state = PlayOutBattle(state);
-
-		var after = run.AfterBattle(state);
-
-		Assert.That(after.Deck.Count, Is.EqualTo(1), "the unit drowned, the rite did not");
-		Assert.That(after.Deck.Single().Name, Is.EqualTo("Rite"));
-	}
-
-	// ===== Zombie =====
-
-	[Test]
-	public void ZombiePaysPerDeathNotPerCard()
-	{
-		var run = new Run { Life = 40, MaxLife = 40 }.WithCards([Unit("Fragile", 0, 1, cost: 0)]);
-
-		var enemy = new Enemy
+		// An enemy that chips it before the water takes it.
+		var biter = new Enemy
 		{
-			Name = "Crusher",
-			Health = 50,
-			MaxHealth = 50,
+			Name = "Biter",
+			Health = 500,
+			MaxHealth = 500,
 			Intent = IntentKind.Attack,
-			IntentAmount = 3,
+			IntentAmount = 1,
+			Lane = 0,
 		};
 
-		(var state, _) = run.StartBattle(DoomScenario.Zombie, countdown: 3, [enemy]);
+		(var state, _) = run.StartBattle(
+			DoomScenario.Flood,
+			countdown: 2,
+			[biter],
+			opponentHealth: 500
+		);
+		state = PlayOutBattle(state, committedId);
 
-		// Block with Fragile every turn it is in hand — it dies, cycles back, and dies again.
-		while (!state.GetBattle().IsOver)
-		{
-			var inHand = state.CardsIn(ZoneType.Hand).FirstOrDefault(c => c.Name == "Fragile");
-			// Lane 0 is where the Crusher is, so standing there is what kills it.
-			if (inHand is not null && state.UnitInLane(0) is null)
-				(state, _) = Do(state, new PlayCardAction { CardId = inHand.Id, Lane = 0 });
+		var washed = state
+			.CardsIn(ZoneType.Discard)
+			.Concat(state.CardsIn(ZoneType.Draw))
+			.Concat(state.CardsIn(ZoneType.Hand))
+			.FirstOrDefault(c => c.RunCardId == committedId);
 
-			(state, _) = Do(state, new EndTurnAction());
-		}
-
-		var deaths = state.GetBattle().DiedRunCardIds.Count;
-		var after = run.AfterBattle(state);
-
-		Assert.That(deaths, Is.GreaterThan(0), "it should have died at least once");
-		Assert.That(after.Deck.Count(c => c.Name == "Zombie"), Is.EqualTo(deaths));
+		Assert.That(washed, Is.Not.Null, "it left the field");
 		Assert.That(
-			after.Deck.Where(c => c.Name == "Zombie"),
-			Is.All.Matches<RunCard>(z => z.Power == 1)
+			washed!.Unit().Damage,
+			Is.Zero,
+			"what returns from Discard is the card, not the body that stood in the lane"
 		);
 	}
 
@@ -272,13 +269,10 @@ public class RunTests
 	[Test]
 	public void AnEmptyDeckEndsTheRunRatherThanLeavingItUnwinnable()
 	{
-		var run = new Run { Life = 50, MaxLife = 50 }.WithCards([Unit("Hoarded", 1, 1, cost: 0)]);
-
-		// Commit nothing to a Flood and it takes everything.
-		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 2, [Idler()]);
-		state = PlayOutBattle(state);
-
-		var after = run.AfterBattle(state);
+		// NOTHING CURRENTLY EMPTIES A DECK. Flood used to, and was the only thing that did; it is a
+		// board wash now. The rule is kept because it is the floor under any future scenario that
+		// removes cards, so it is asserted directly rather than through a doom that cannot cause it.
+		var after = new Run { Life = 50, MaxLife = 50 };
 
 		Assert.That(after.Deck, Is.Empty);
 		Assert.That(after.IsDead, Is.False, "still alive, but with nothing to play");

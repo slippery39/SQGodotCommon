@@ -16,7 +16,8 @@ public static class DoomBattleFactory
 		int life = 60,
 		int maxLife = 60,
 		int maxEnergy = 3,
-		int rngSeed = 0
+		int rngSeed = 0,
+		int opponentHealth = 40
 	)
 	{
 		var state = new GameState { RngSeed = rngSeed };
@@ -37,7 +38,19 @@ public static class DoomBattleFactory
 			parentId: battle.Id
 		);
 
-		var (s3, player) = s2.AddObject(
+		// The Opponent owns the enemy units and is the only way to WIN a battle. It belongs to the
+		// battle rather than the enemy zone: the zone holds units, and it is not one.
+		var (s2b, opponent) = s2.AddObject(
+			new Opponent
+			{
+				Name = "The Opponent",
+				Health = opponentHealth,
+				MaxHealth = opponentHealth,
+			},
+			parentId: battle.Id
+		);
+
+		var (s3, player) = s2b.AddObject(
 			new DoomPlayer
 			{
 				Name = "Player",
@@ -68,6 +81,7 @@ public static class DoomBattleFactory
 
 		return s7.RegisterWellKnownId(DoomObjectKeys.Battle, battle.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Enemies, enemies.Id)
+			.RegisterWellKnownId(DoomObjectKeys.Opponent, opponent.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Player, player.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Draw, draw.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Hand, hand.Id)

@@ -38,7 +38,7 @@ public static class Program
 
 			Console.WriteLine();
 			Console.WriteLine(
-				$"  Survived. Floor {run.Floor}/{Run.ActLength}, deck {run.Deck.Count} cards, {run.Life} life."
+				$"  Opponent down. Floor {run.Floor}/{Run.ActLength}, deck {run.Deck.Count} cards, {run.Life} life."
 			);
 			Renderer.DrawCompanion(run);
 			Renderer.DrawDeck(run);
@@ -57,7 +57,8 @@ public static class Program
 		var (state, events) = run.StartBattle(
 			scenario,
 			StarterContent.CountdownFor(scenario),
-			StarterContent.EnemiesFor(run.Floor)
+			StarterContent.EnemiesFor(run.Floor),
+			opponentHealth: StarterContent.OpponentHealthFor(run.Floor)
 		);
 		Renderer.DrawEvents(events);
 

@@ -9,15 +9,17 @@ Record it under "Engine findings" as we hit it.
 
 ## State of play (2026-09-14)
 
-**BUILT:** five-lane automatic combat, the run layer, the four doom transforms, the doom preview,
-the Companion, `DoomConsole`. 39 tests green.
+**BUILT:** five-lane automatic combat; the run layer; the doom preview; the Companion;
+`DoomConsole`; **the Opponent and killing it as the win condition**; **recurring dooms** (the clock
+resets, the battle carries on); **scenario scope**, with Flood rewritten as a battle-scope board
+wash. 48 tests green, and the whole loop verified by playing it.
 
-**DESIGNED, NOT BUILT — this revision:** the Opponent entity and killing it as the win condition,
-recurring dooms (the clock resets rather than ending the battle), enemy refresh, and scenario SCOPE
-(battle-only vs permanent). Everything marked `[DESIGN — NOT BUILT]` below.
+**NOT BUILT:** enemy refresh — the Opponent does not yet summon into its empty lanes, so clearing
+its units leaves it defenceless. **This is the most load-bearing gap**: without it a battle is won
+by out-tempoing the opening board once, and the doom never gets to matter.
 
-**Today the battle still ends when the countdown hits zero.** The code has not caught up with this
-document yet — check before assuming.
+Also not built: more scenarios (the content, and the point of scope), and Rapture, which still
+throws for want of a sacrifice mechanic.
 
 ## Pitch
 
@@ -26,7 +28,7 @@ around you on a repeating clock. Every few turns a **doomsday scenario fires**, 
 or your deck, and the fight carries on. You win by killing the opponent — the only question is how
 many apocalypses you eat on the way.
 
-## The one rule that must not bend  [DESIGN — NOT BUILT]
+## The one rule that must not bend  [BUILT]
 
 **The doom always fires. It can never be prevented, only outrun.**
 
@@ -61,8 +63,8 @@ down *are* the timer. Irradiated costs life on the draw, an empty deck is alread
 
 ## The core hook
 
-*The hook is BUILT for permanent scenarios (`DoomTransforms`). Scope, the battle
-hook and the `ScopeOf` guard are DESIGN — not built.*
+*BUILT. `DoomTransforms` for permanent scenarios, `DoomBattleEffects` for battle ones,
+`StarterContent.ScopeOf` deciding which, and each hook throwing when handed the other kind.*
 
 > **The doom doesn't kill you. The doom edits your deck.**
 
@@ -145,7 +147,7 @@ a lane when you play a card, and that is the entire decision.
 Enemies keep their **intent telegraphed a turn ahead** — an enemy that is winding up shows the
 number it will hit its lane for. Do not hide an intent.
 
-### The Opponent — the board is symmetric  [DESIGN — NOT BUILT]
+### The Opponent — the board is symmetric  [BUILT, except enemy refresh]
 
 **The enemy units belong to someone.** The Opponent is an entity with its own HP, sitting behind the
 lanes the way you sit behind yours. **Killing it is how you win**, and it is the only way a battle
@@ -336,28 +338,31 @@ doom-preview dial can be built as the jam intends.
 
 **Raised by the recurring-doom model, and unresolved:**
 
-- **The Companion is marked per doom survived — that now happens several times a BATTLE.** Four
-  firings would make Ash a 9/11 by floor 3. Marks probably become once per battle, or come only from
-  the last doom you survive. **This must be settled before recurring dooms ship** or the companion
-  breaks the difficulty curve on its own.
+- ~~The Companion is marked per doom survived~~ **RESOLVED, and it needed no code.** `Marked` is
+  called once, in `Run.AfterBattle`, not per firing — so it was already once-per-battle by
+  construction. Verified in play: three Nuclear firings in one battle, one Glowing mark. The
+  run/battle split protected it, the same way it protects the companion from transforms.
 - **What exactly makes the first firing unraceable?** A minimum Opponent HP, a guaranteed early
   first interval, or both. The rule depends on it and nothing enforces it yet.
 - **Does a battle-only doom hit the board, the hand, and the draw pile — or only the board?** Flood
   as written only washes the board. Scenarios that reach into the draw pile mid-battle are a
   different and more dangerous class.
-- **Does `DoomPreviewer` still work?** It runs the real transform and diffs the DECKS, so a
-  battle-only scenario changes nothing and the preview reads "nothing would change" — indistinguishable
-  from broken. It has to preview board effects too, or say plainly *"this one passes through"*.
-  GO SPINNY is built on that dial; a dial that says nothing for six floors is a dead sub-theme.
+- ~~Does `DoomPreviewer` still work?~~ **RESOLVED.** A battle-scope preview runs the real board
+  effect and diffs the FIELD — "2 swept off the board — nothing permanent" — rather than diffing a
+  deck it never touches. Same rule as before: never a second, hand-written account of a scenario.
+  Both the preview and the real firing build their snapshot with `DoomFiring.Capture`, so the dial
+  cannot disagree with the apocalypse it predicts.
 - **Does the Opponent attack on its own**, or only through its units? Currently only units exist.
 - **Is Opponent HP the difficulty dial, or the doom interval?** Probably both, but one should lead.
 
 **Older, still open:**
 
-- **Does an empty deck still end the run now that the companion exists?** It used to be strictly
-  unwinnable; with a companion you always have one blocker, so it is merely grim. Currently still an
-  instant loss (`Run.HasNoCards`). **Now load-bearing** — deck attrition is what ends a battle that
-  will not end.
+- **NOTHING CURRENTLY EMPTIES A DECK.** Flood was the only thing that removed cards and it is a
+  board wash now, so `Run.HasNoCards` is unreachable. The rule is kept as the floor under any future
+  scenario that removes cards, and its test asserts it directly rather than through a doom that can
+  no longer cause it. It also means **deck attrition is no longer the backstop** for a battle that
+  will not end — Irradiated's life-on-draw is, and that only applies on Nuclear floors. An
+  unwinnable battle against an Opponent you cannot out-damage currently has no ending at all.
 - Should enemies be able to SHIFT lanes between turns, so a defender can be dodged? Costs a movement
   rule to telegraph; buys a reason to keep reacting after the lanes are covered.
 - How many battles is a full run?
@@ -444,6 +449,32 @@ is the deliverable for "how flexible is this engine?"**
   free card, because deaths are counted by run id. Guarded in `ClearTheDead`.
 - Marks are a plain `ImmutableList<CompanionMark>` summed into Power/Toughness. No engine feature
   was needed — this is the "accumulating component list" the design predicted, and it is simpler.
+
+**After the Opponent, recurring dooms and scope (48 tests green):**
+
+- **The run/battle split paid a third time, and this time it answered a question for free.** The
+  Companion was supposed to need work — marked per doom survived, with dooms now firing several
+  times a battle. It needed none: `Marked` is called in `Run.AfterBattle`, not per firing, so it was
+  already once-per-battle. Twice now the split has made a feared interaction a non-event.
+- **Changing the rule that a counter ends the battle broke six tests, and every one of them was
+  RIGHT to break.** They asserted the superseded rule. The suite behaved as a design record: it told
+  us exactly which beliefs the change invalidated, and rewriting them was the honest cost.
+- **A recurring doom cannot be a single end-of-battle read.** `DoomFiring` captures what each firing
+  saw, in RUN ids, and the run folds them. Without it a Nuclear that fired twice would irradiate the
+  final board twice and the earlier board never — correct-looking until a battle runs long.
+- **Deaths must be CONSUMED by the firing that reads them.** A cumulative list pays Zombie for the
+  same corpse on every later firing, so a long battle mints an exponential pile. Found by reasoning
+  about it, pinned by `ADeathIsPaidForByExactlyOneFiring` — the sort of bug that is invisible at
+  countdown 2 and ruinous at countdown 1.
+- **The preview and the firing must share one capture.** Both call `DoomFiring.Capture`. Two copies
+  would drift and the player would plan around a dial that no longer matched the apocalypse — the
+  same rule that already stops the preview describing scenarios in its own words.
+- **Two hooks split by what they may touch is not a second mechanism**, but it does create a silent
+  failure: a scenario in the wrong one does nothing. Both throw instead, following the precedent
+  Rapture set.
+- **The console found the bug the tests could not.** `OpponentDamagedEvent` was raised and never
+  rendered, so the Opponent's health dropped with nothing on screen saying why. Tests asserted the
+  state and passed. Playing it took ten seconds to notice. Same class as the blank card faces.
 
 **After switching combat to five lanes (39 tests green):**
 

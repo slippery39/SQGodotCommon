@@ -19,11 +19,12 @@ public record DoomBattle : GameObject
 	public const int LaneCount = 5;
 
 	/// <summary>
-	/// Turns left before the doom resolves. Ticks down at the end of every turn.
+	/// Turns until the next firing. Ticks down at the end of every turn, and RESETS to
+	/// <see cref="CountdownTotal"/> when it fires — the doom is a metronome, not a wall.
 	///
-	/// **Nothing may prevent this reaching zero.** If clearing the enemies could end a battle early
-	/// the player has beaten the apocalypse, and it is an obstacle rather than doom. Cards that
-	/// BURN the countdown (spend it to cast something now) only ever make it smaller.
+	/// **Nothing may prevent this reaching zero, and reaching zero does not end the battle.**
+	/// A battle ends when the Opponent dies or the player does. Cards that BURN the countdown
+	/// (spend it to cast something now) only ever make it smaller.
 	/// </summary>
 	public int CountdownRemaining { get; init; }
 
@@ -35,7 +36,7 @@ public record DoomBattle : GameObject
 
 	public int TurnNumber { get; init; } = 1;
 
-	/// <summary>Set once the doom has resolved. The battle is over at that point, win or lose.</summary>
+	/// <summary>Set when the battle is over, win or lose. The countdown never sets it.</summary>
 	public bool IsOver { get; init; } = false;
 
 	/// <summary>
@@ -53,8 +54,31 @@ public record DoomBattle : GameObject
 	public ImmutableList<int> DiedRunCardIds { get; init; } = ImmutableList<int>.Empty;
 
 	/// <summary>
-	/// True when the player hit 0 life. Distinct from <see cref="IsOver"/> because surviving to the
-	/// doom is the NORMAL end of a battle — only this one ends the run.
+	/// True when the player hit 0 life. Distinct from <see cref="IsOver"/>, which a win also sets —
+	/// only this one ends the run.
 	/// </summary>
 	public bool PlayerIsDead { get; init; } = false;
+
+	/// <summary>
+	/// True when the Opponent was killed. **This is the only winning end of a battle.**
+	/// Distinct from <see cref="IsOver"/>, which a loss also sets.
+	/// </summary>
+	public bool OpponentDefeated { get; init; } = false;
+
+	/// <summary>
+	/// How many times the doom has fired this battle.
+	///
+	/// The run reads it to decide whether a doom transform applies at all: killing the Opponent
+	/// before the first firing means no apocalypse happened, and a transform that ran anyway would
+	/// rewrite the deck for an event the player never saw.
+	/// </summary>
+	public int DoomsFired { get; init; } = 0;
+
+	/// <summary>
+	/// Every firing this battle, with what it read at that instant. The run replays these.
+	///
+	/// A LIST because the doom recurs: one entry per firing, in order. See <see cref="DoomFiring"/>
+	/// for why a single end-of-battle read is not enough.
+	/// </summary>
+	public ImmutableList<DoomFiring> Firings { get; init; } = ImmutableList<DoomFiring>.Empty;
 }

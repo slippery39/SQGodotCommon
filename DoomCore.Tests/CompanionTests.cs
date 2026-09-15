@@ -55,11 +55,26 @@ public class CompanionTests
 			Lane = lane,
 		};
 
-	private static GameState PlayOut(GameState state)
+	/// <summary>
+	/// Ends turns until the doom has fired once.
+	///
+	/// NOT "until the battle is over" — the doom recurs and a battle only ends when the Opponent
+	/// dies, so that loop never terminates. The cap turns a rules regression into a failed test
+	/// rather than a hung suite, which is how this was found in the first place.
+	/// </summary>
+	private static GameState PlayOut(GameState state, int firings = 1)
 	{
-		while (!state.GetBattle().IsOver)
+		for (var turn = 0; turn < 50; turn++)
+		{
+			if (state.GetBattle().DoomsFired >= firings || state.GetBattle().IsOver)
+				return state;
+
 			(state, _) = Do(state, new EndTurnAction());
-		return state;
+		}
+
+		throw new InvalidOperationException(
+			$"50 turns without {firings} doom firing(s) — the countdown is not resetting."
+		);
 	}
 
 	[Test]
@@ -125,16 +140,27 @@ public class CompanionTests
 
 	// ===== The doom cannot touch it =====
 
+	/// <summary>
+	/// Flood sweeps every unit off the board. The companion stays: it is not a card and has nowhere
+	/// to be discarded TO — sending it to Discard would make it drawable.
+	/// </summary>
 	[Test]
-	public void FloodCannotDrownTheCompanion()
+	public void FloodCannotWashAwayTheCompanion()
 	{
 		var run = RunWith(Dog, Unit("Hoarded", 1, 1));
 
 		var (state, _) = run.StartBattle(DoomScenario.Flood, countdown: 2, [Enemy(0)]);
-		var after = run.AfterBattle(PlayOut(state));
+		state = PlayOut(state);
 
-		Assert.That(after.Deck, Is.Empty, "the deck drowned");
-		Assert.That(after.Companion.Name, Is.EqualTo("Ash"), "the companion did not");
+		Assert.That(state.GetBattle().DoomsFired, Is.EqualTo(1), "it fired");
+		Assert.That(
+			state.Units().Any(u => u.HasComponent<CompanionComponent>()),
+			Is.True,
+			"the water took the board; it did not take Ash"
+		);
+
+		var after = run.AfterBattle(state);
+		Assert.That(after.Companion.Name, Is.EqualTo("Ash"));
 		Assert.That(after.Companion.BaseToughness, Is.EqualTo(3));
 	}
 

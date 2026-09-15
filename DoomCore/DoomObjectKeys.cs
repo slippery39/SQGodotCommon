@@ -13,4 +13,5 @@ public static class DoomObjectKeys
 	public const string Discard = "Discard";
 	public const string Field = "Field";
 	public const string Enemies = "Enemies";
+	public const string Opponent = "Opponent";
 }

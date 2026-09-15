@@ -55,6 +55,9 @@ public record CountdownTickedEvent : GameEvent
 public record DoomResolvedEvent : GameEvent
 {
 	public DoomScenario Scenario { get; init; }
+
+	/// <summary>1 for the first firing of the battle, 2 for the second, and so on.</summary>
+	public int FiringNumber { get; init; }
 }
 
 /// <summary>Nuclear's price: an Irradiated card cost a life just to draw it.</summary>
@@ -64,6 +67,16 @@ public record IrradiatedDrawnEvent : GameEvent
 	public string CardName { get; init; } = "";
 	public int LifeRemaining { get; init; }
 }
+
+/// <summary>A lane you held with nothing opposing it landed on the Opponent.</summary>
+public record OpponentDamagedEvent : GameEvent
+{
+	public int Amount { get; init; }
+	public int HealthRemaining { get; init; }
+}
+
+/// <summary>The Opponent died. The only way a battle is WON.</summary>
+public record OpponentDefeatedEvent : GameEvent;
 
 /// <summary>Life hit 0. This ends the RUN, not just the battle.</summary>
 public record PlayerDiedEvent : GameEvent;

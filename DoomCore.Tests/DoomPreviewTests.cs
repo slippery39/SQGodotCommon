@@ -33,55 +33,90 @@ public class DoomPreviewTests
 			Intent = IntentKind.Wait,
 		};
 
+	/// <summary>
+	/// The dial and the apocalypse must agree. Both run the same transform over the same captured
+	/// firing, so the only way they can differ is if someone writes a second account of a scenario.
+	/// </summary>
 	[Test]
 	public void ThePreviewMatchesWhatTheDoomActuallyDoes()
 	{
-		var run = new Run().WithCards([Unit("Committed", 2, 2), Unit("Hoarded", 1, 1)]);
-		var committedId = run.Deck[0].RunCardId;
+		var run = new Run { Life = 100, MaxLife = 100 }.WithCards(
+			[Unit("Exposed", 2, 2), Unit("Hoarded", 1, 1)]
+		);
+		var exposedId = run.Deck[0].RunCardId;
 
-		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 2, [Idler()]);
+		(var state, _) = run.StartBattle(
+			DoomScenario.Nuclear,
+			countdown: 2,
+			[Idler()],
+			opponentHealth: 500
+		);
 
-		var toPlay = state.CardsIn(ZoneType.Hand).First(c => c.RunCardId == committedId);
-		(state, _) = Do(state, new PlayCardAction { CardId = toPlay.Id });
+		var toPlay = state.CardsIn(ZoneType.Hand).First(c => c.RunCardId == exposedId);
+		(state, _) = Do(state, new PlayCardAction { CardId = toPlay.Id, Lane = 0 });
 
 		// Taken one turn BEFORE the doom lands — this is what the player is shown and plays around.
 		var preview = DoomPreviewer.Preview(run, state);
 
 		(state, _) = Do(state, new EndTurnAction());
 		(state, _) = Do(state, new EndTurnAction());
-		Assert.That(state.GetBattle().IsOver, Is.True);
+
+		// The doom fired; the battle is still going, because only the Opponent's death ends one.
+		Assert.That(state.GetBattle().DoomsFired, Is.EqualTo(1));
 
 		var actual = run.AfterBattle(state);
 
 		Assert.That(
-			actual.Deck.Select(c => c.Name).OrderBy(n => n),
-			Is.EqualTo(new[] { "Committed", "Committed" }),
-			"sanity: Flood duplicated the committed unit and drowned the other"
+			actual.Deck.Single(c => c.Name == "Exposed").Power,
+			Is.EqualTo(4),
+			"sanity: Nuclear irradiated what was standing"
 		);
-		Assert.That(preview.Removed.Select(c => c.Name), Is.EqualTo(new[] { "Hoarded" }));
-		Assert.That(preview.Added.Count, Is.EqualTo(1));
-		Assert.That(preview.Summary, Does.Contain("-1 LOST").And.Contain("+1 gained"));
+		Assert.That(
+			preview.Changed.Select(c => c.Before.Name),
+			Is.EqualTo(new[] { "Exposed" }),
+			"and the preview said exactly that, a turn earlier"
+		);
+		Assert.That(preview.Changed.Single().After.Power, Is.EqualTo(4));
+		Assert.That(preview.Summary, Does.Contain("1 changed"));
 	}
 
+	/// <summary>
+	/// A BATTLE-scope scenario changes no deck, so a deck diff would report "nothing would change" —
+	/// true, and indistinguishable from a broken preview. It reports the board instead and says
+	/// plainly that nothing permanent is coming.
+	/// </summary>
 	[Test]
-	public void ThePreviewTracksTheBoardAsThePlayerChangesIt()
+	public void ABattleScopeDoomPreviewsTheBoardAndSaysNothingIsPermanent()
 	{
-		var run = new Run().WithCards([Unit("A", 1, 1), Unit("B", 1, 1), Unit("C", 1, 1)]);
-		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 3, [Idler()]);
+		var run = new Run { Life = 100, MaxLife = 100 }.WithCards(
+			[Unit("A", 1, 1), Unit("B", 1, 1)]
+		);
 
-		var before = DoomPreviewer.Preview(run, state);
-		Assert.That(before.Removed.Count, Is.EqualTo(3), "commit nothing and lose everything");
+		(var state, _) = run.StartBattle(
+			DoomScenario.Flood,
+			countdown: 3,
+			[Idler()],
+			opponentHealth: 500
+		);
 
-		// One per lane, so two committed units need two lanes.
+		var empty = DoomPreviewer.Preview(run, state);
+		Assert.That(empty.IsPermanent, Is.False);
+		Assert.That(empty.Removed, Is.Empty, "it takes nothing from the deck, ever");
+		Assert.That(empty.Summary, Does.Contain("nothing permanent"));
+
+		// The companion is already standing, so the wash has something to take from the start.
+		Assert.That(empty.UnitsSwept, Is.Zero, "the companion rides it out");
+
 		foreach (var card in state.CardsIn(ZoneType.Hand).Take(2).ToList())
 			(state, _) = Do(
 				state,
 				new PlayCardAction { CardId = card.Id, Lane = state.OpenLanes().First() }
 			);
 
-		var after = DoomPreviewer.Preview(run, state);
-		Assert.That(after.Removed.Count, Is.EqualTo(1), "two committed, one still to drown");
-		Assert.That(after.Added.Count, Is.EqualTo(2));
+		var committed = DoomPreviewer.Preview(run, state);
+
+		Assert.That(committed.UnitsSwept, Is.EqualTo(2), "the more you commit, the more it takes");
+		Assert.That(committed.Summary, Does.Contain("2 swept"));
 	}
 
 	[Test]

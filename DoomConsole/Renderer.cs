@@ -42,10 +42,17 @@ public static class Renderer
 	{
 		var preview = DoomPreviewer.Preview(run, state);
 
+		// The doom RECURS, so the banner has to say which one is coming, not just that one is.
+		var already =
+			battle.DoomsFired == 0 ? ""
+			: battle.DoomsFired == 1 ? "   (1 has already landed)"
+			: $"   ({battle.DoomsFired} have already landed)";
+
 		Console.WriteLine(
-			$" *** {battle.Scenario.ToString().ToUpperInvariant()} IN {battle.CountdownRemaining} "
-				+ $"TURN{(battle.CountdownRemaining == 1 ? "" : "S")} ***   {preview.Flavour}"
+			$" *** {battle.Scenario.ToString().ToUpperInvariant()} AGAIN IN {battle.CountdownRemaining} "
+				+ $"TURN{(battle.CountdownRemaining == 1 ? "" : "S")} ***{already}"
 		);
+		Console.WriteLine($"   {preview.Flavour}");
 		Console.WriteLine($"   If it landed now: {preview.Summary}");
 
 		foreach (var card in preview.Removed.Take(6))
@@ -76,7 +83,10 @@ public static class Renderer
 	/// </summary>
 	private static void DrawLanes(GameState state)
 	{
-		Console.WriteLine(" LANES");
+		var opponent = state.GetOpponent();
+		Console.WriteLine(
+			$" OPPONENT  {opponent.Health}/{opponent.MaxHealth} hp   <- kill this to win"
+		);
 
 		var header = "  ";
 		var enemyRow = "  ";
@@ -101,6 +111,16 @@ public static class Renderer
 		Console.WriteLine(header);
 		Console.WriteLine(enemyRow + "   <- them");
 		Console.WriteLine(unitRow + "   <- you");
+
+		// The damage YOUR uncontested lanes will land on the Opponent. Same reasoning as the
+		// incoming figure below: making the player add it up per lane turns the game into a chore.
+		var outgoing = 0;
+		for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
+			if (state.EnemyInLane(lane) is null && state.UnitInLane(lane) is { } free)
+				outgoing += free.Unit().Power;
+
+		if (outgoing > 0)
+			Console.WriteLine($"   your open lanes will hit the Opponent for {outgoing}");
 
 		// The damage an OPEN lane will let through. This is the number the player is actually
 		// playing against, and making them add it up per enemy is how a lane game becomes a chore.
@@ -166,7 +186,10 @@ public static class Renderer
 			"  Combat is automatic. A unit fights whatever shares its lane, both ways."
 		);
 		Console.WriteLine("  It absorbs up to its toughness and the EXCESS hits you; an open lane");
-		Console.WriteLine("  costs you the enemy's full attack. The countdown cannot be stopped.");
+		Console.WriteLine(
+			"  costs you the enemy's full attack. The doom fires on its clock, over and"
+		);
+		Console.WriteLine("  over, and never ends the battle — only killing them does.");
 		Console.WriteLine();
 	}
 
@@ -217,9 +240,12 @@ public static class Renderer
 				EnemyDiedEvent x => $"  + {x.EnemyName} is dead",
 				IrradiatedDrawnEvent i =>
 					$"  ! drawing {i.CardName} cost 1 life — {i.LifeRemaining} left",
+				OpponentDamagedEvent o =>
+					$"  > hit the Opponent for {o.Amount} — {o.HealthRemaining} left",
+				OpponentDefeatedEvent => "  *** THE OPPONENT IS DOWN — you win the battle ***",
 				CountdownTickedEvent c => $"  . countdown {c.Remaining}",
 				DoomResolvedEvent d =>
-					$"  *** {d.Scenario.ToString().ToUpperInvariant()} LANDS ***",
+					$"  *** {d.Scenario.ToString().ToUpperInvariant()} LANDS (#{d.FiringNumber}) ***",
 				PlayerDiedEvent => "  *** YOU DIED ***",
 				_ => null,
 			};

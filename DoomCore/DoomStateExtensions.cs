@@ -14,6 +14,9 @@ public static class DoomStateExtensions
 	public static DoomPlayer GetPlayer(this GameState s) =>
 		(DoomPlayer)s.GetObject(s.GetWellKnownId(DoomObjectKeys.Player));
 
+	public static Opponent GetOpponent(this GameState s) =>
+		(Opponent)s.GetObject(s.GetWellKnownId(DoomObjectKeys.Opponent));
+
 	public static int ZoneId(this GameState s, ZoneType zone) =>
 		s.GetWellKnownId(
 			zone switch
