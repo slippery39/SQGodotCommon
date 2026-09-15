@@ -32,8 +32,13 @@ public record Opponent : GameObject
 	/// Turns between summons. **This is the rate limit that decides whether the player can get
 	/// ahead**: refreshing every turn matches a player killing one unit a turn exactly, and the
 	/// board would never open. Bigger than 1 is what makes breaking through possible.
+	///
+	/// Raised 2 -> 3 (2026-09-14) because dodging an apocalypse was unreachable at 2 — the summons
+	/// closed damage lanes faster than the player could open them, so the Opponent could not be
+	/// killed before the first firing and "apocalypses are dodgeable" was a rule with no teeth.
+	/// Under playtest; see DoomJam.md.
 	/// </summary>
-	public int SummonInterval { get; init; } = 2;
+	public int SummonInterval { get; init; } = 3;
 
 	public int TurnsUntilSummon { get; init; } = 1;
 
