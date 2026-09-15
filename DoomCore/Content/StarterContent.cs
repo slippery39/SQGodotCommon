@@ -109,6 +109,55 @@ public static class StarterContent
 		);
 
 	/// <summary>
+	/// What a cleared floor can offer. **This is the only progression that works from floor 1.**
+	///
+	/// The dooms are supposed to BE the power curve, but `PlayableOn` gives battle-scope Flood only
+	/// below floor 3, and a battle-scope doom changes nothing permanent — so a deck could not
+	/// improve at all until floor 3 while enemy health more than doubled. Rewards close that gap.
+	///
+	/// Plain bodies for now: there is no card effect system, so a card varies by cost and stats and
+	/// nothing else. See DoomJam.md's engine findings for what adding one would cost.
+	///
+	/// The pool is FLAT — floor 10 offers the same cards as floor 1. Accumulating bodies is the
+	/// progression; tiers are a tuning job for after this is measured.
+	/// </summary>
+	public static ImmutableArray<RunCard> RewardPool =>
+		[
+			Unit("Scrapper", 1, 3, 1, "Fast, and does not last."),
+			Unit("Shieldbearer", 1, 0, 5, "Holds the line and nothing else."),
+			Unit("Tunneller", 1, 2, 3, "Comes up where it is needed."),
+			Unit("Rust Golem", 2, 2, 6, "Slow. Very hard to move."),
+			Unit("Feral Pack", 2, 4, 2, "Hungry, and there are several."),
+			Unit("Stray", 0, 1, 2, "Followed the noise."),
+			Unit("Siege Ram", 3, 7, 2, "One job, done once."),
+			Unit("Warden", 3, 4, 6, "The last thing still standing."),
+			Unit("Ash Walker", 2, 3, 3, "Walked out of the last one."),
+			Unit("Bonepicker", 2, 5, 1, "Arrives after the fighting."),
+			Unit("Bulwark", 1, 0, 4, "Stands in the way."),
+			Unit("Long Watcher", 3, 3, 8, "Has seen four of these."),
+		];
+
+	/// <summary>
+	/// Three distinct cards to choose between, deterministic from the seed and floor so a run
+	/// replays exactly — the same property that makes a bug report actionable.
+	/// </summary>
+	public static ImmutableArray<RunCard> RewardsFor(int seed, int floor, int count = 3)
+	{
+		var pool = RewardPool.ToList();
+		var rng = new Random(seed * 104729 + floor * 31);
+		var picked = new List<RunCard>();
+
+		for (var i = 0; i < count && pool.Count > 0; i++)
+		{
+			var index = rng.Next(pool.Count);
+			picked.Add(pool[index]);
+			pool.RemoveAt(index);
+		}
+
+		return [.. picked];
+	}
+
+	/// <summary>
 	/// The Opponent's HP for a floor. This is the battle's real length dial: you win by cutting it
 	/// down through lanes nothing is contesting, so it prices how long you must hold the board.
 	///

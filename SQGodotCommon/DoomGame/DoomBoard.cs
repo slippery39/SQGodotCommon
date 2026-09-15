@@ -104,9 +104,27 @@ public partial class DoomBoard : Node2D
 		_run = after;
 
 		if (after.IsOver)
+		{
 			_intermission.ShowRunOver(after);
-		else
-			_intermission.ShowFloorCleared(before, after, battle.DoomsFired);
+			return;
+		}
+
+		_intermission.ShowFloorCleared(before, after, battle.DoomsFired);
+		_intermission.OfferRewards(
+			StarterContent.RewardsFor(Seed, after.Floor),
+			StarterContent.ScenarioFor(Seed, after.Floor),
+			after.Floor
+		);
+	}
+
+	/// <summary>
+	/// Adds the chosen card to the RUN deck and descends. The run owns the deck, so the card is
+	/// there for every battle after this one — it does not join the fight that just ended.
+	/// </summary>
+	private void TakeReward(RunCard card)
+	{
+		_run = _run.WithCard(card);
+		StartBattleOnCurrentFloor();
 	}
 
 	private void OnEndTurn()
@@ -347,7 +365,7 @@ public partial class DoomBoard : Node2D
 		_doomFlash.Visible = false;
 		layer.AddChild(_doomFlash);
 
-		_intermission = new DoomIntermission(layer, StartBattleOnCurrentFloor);
+		_intermission = new DoomIntermission(layer, StartBattleOnCurrentFloor, TakeReward);
 
 		MakeTransparentToMouse(layer);
 	}

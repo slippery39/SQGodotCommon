@@ -24,8 +24,11 @@ public sealed class DoomIntermission
 	private readonly Label _title;
 	private readonly Label _body;
 	private readonly Button _continue;
+	private readonly Label _coming;
+	private readonly HBoxContainer _offers;
+	private readonly Action<RunCard> _onTake;
 
-	public DoomIntermission(CanvasLayer parent, Action onContinue)
+	public DoomIntermission(CanvasLayer parent, Action onContinue, Action<RunCard> onTake)
 	{
 		_root = new PanelContainer { Visible = false };
 		_root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -45,10 +48,23 @@ public sealed class DoomIntermission
 		rows.AddThemeConstantOverride("separation", 20);
 		card.AddChild(rows);
 
+		_onTake = onTake;
+
 		_title = DoomPalette.Text("", 42, DoomPalette.Bone);
 		_body = DoomPalette.Text("", 20, DoomPalette.Bone);
 		rows.AddChild(_title);
 		rows.AddChild(_body);
+
+		// **The next apocalypse, BEFORE the reward is chosen.** Free tension at zero cost: it turns
+		// picking a card into a decision about the fight you are walking into rather than a shopping
+		// trip. DoomJam.md has wanted this since the run structure was written.
+		_coming = DoomPalette.Text("", 22, DoomPalette.Red);
+		rows.AddChild(_coming);
+
+		_offers = new HBoxContainer();
+		_offers.AddThemeConstantOverride("separation", 14);
+		_offers.Alignment = BoxContainer.AlignmentMode.Center;
+		rows.AddChild(_offers);
 
 		_continue = new Button { Text = "DESCEND", CustomMinimumSize = new Vector2(0, 66) };
 		_continue.AddThemeFontSizeOverride("font_size", 24);
@@ -85,9 +101,46 @@ public sealed class DoomIntermission
 		);
 
 		_body.Text = string.Join("\n", lines);
-		_continue.Text = "DESCEND";
+		_continue.Text = "DESCEND WITH NOTHING";
 		_continue.Visible = true;
 		_root.Visible = true;
+	}
+
+	/// <summary>
+	/// Offers three cards, and names the apocalypse waiting below before you choose.
+	///
+	/// **Skipping is a real option**, which is why the continue button says so out loud instead of
+	/// being hidden: you draw five a turn from a deck that never shrinks, so a card you will not
+	/// play is a card crowding out one you would. Taking nothing is sometimes correct, and a reward
+	/// screen that cannot be declined is not a decision.
+	/// </summary>
+	public void OfferRewards(IEnumerable<RunCard> cards, DoomScenario next, int nextFloor)
+	{
+		_coming.Text =
+			$"Floor {nextFloor} below:  {next.ToString().ToUpperInvariant()}  —  "
+			+ StarterContent.DescriptionFor(next);
+
+		foreach (var child in _offers.GetChildren())
+		{
+			_offers.RemoveChild(child);
+			child.QueueFree();
+		}
+
+		foreach (var card in cards)
+		{
+			var offer = new Button
+			{
+				Text = $"{card.Name}\ncost {card.Cost}\n{card.Power} / {card.Toughness}",
+				CustomMinimumSize = new Vector2(210, 118),
+			};
+			offer.AddThemeFontSizeOverride("font_size", 18);
+
+			var taken = card;
+			offer.Pressed += () => _onTake(taken);
+			_offers.AddChild(offer);
+		}
+
+		_offers.Visible = true;
 	}
 
 	public void ShowRunOver(Run run)
@@ -97,8 +150,11 @@ public sealed class DoomIntermission
 			$"{run.OverReason}\n\nYou reached floor {run.Floor} of {Run.ActLength}.\n"
 			+ $"Your companion came out as {run.Companion.FullName}.";
 
-		// Nowhere to descend to. A button that did nothing would be worse than no button.
+		// Nowhere to descend to, and nothing to pick. A button that did nothing would be worse than
+		// no button.
 		_continue.Visible = false;
+		_coming.Text = "";
+		_offers.Visible = false;
 		_root.Visible = true;
 	}
 
