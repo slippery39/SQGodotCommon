@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Common.Cards;
+using DoomCore;
+using Godot;
+using ImmutableGameObjects;
+
+namespace DoomGame;
+
+/// <summary>
+/// The hand, drawn with the shared `Hand2D` / `CardUI2D` fan from `Common/Cards/2D`. That code is
+/// game-agnostic — roughly 1600 lines of drag, hover and fan with no MTG in it — so DOOMJAM gets
+/// the whole interaction for the cost of filling in a `Details` per card.
+///
+/// **Presentation only.** It never decides whether a play is legal: it hands a card id and a lane
+/// to the board, and the board asks the engine. What comes back is the engine's own refusal text.
+/// </summary>
+public sealed class DoomHandView
+{
+	private readonly Hand2D _hand;
+
+	/// <summary>Which lane a drop point lands in, or null if it missed every lane.</summary>
+	private readonly Func<Vector2, int?> _laneAt;
+
+	/// <summary>Plays the card. Returns null when it worked, or the engine's reason when it did not.</summary>
+	private readonly Func<int, int, string> _tryPlay;
+
+	private readonly Action<string> _report;
+
+	public DoomHandView(
+		Node parent,
+		Vector2 position,
+		Func<Vector2, int?> laneAt,
+		Func<int, int, string> tryPlay,
+		Action<string> report
+	)
+	{
+		_laneAt = laneAt;
+		_tryPlay = tryPlay;
+		_report = report;
+
+		// The scene, not `new Hand2D()` — Hand.tscn already carries the position curves, the card
+		// scene and the LeftMostPoint / RightMostPoint anchors that Hand2D looks up by name.
+		_hand = GD.Load<PackedScene>("res://Common/Cards/2D/Hand2D/Hand.tscn")
+			.Instantiate<Hand2D>();
+		_hand.Position = position;
+		parent.AddChild(_hand);
+
+		// AFTER AddChild: Hand2D._Ready assigns its own handler to CardDragEnd, so setting this
+		// earlier would be overwritten. Taking CardDragEnd rather than the
+		// IsDragSuccess/OnDragSuccess pair is deliberate — the pair would make us resolve the lane
+		// twice and would leave nowhere to surface WHY a play was refused.
+		_hand.CardDragEnd = OnCardDropped;
+	}
+
+	private void OnCardDropped(Hand2D.DragEndContext context)
+	{
+		var card = context.CardUI2D;
+
+		if (!int.TryParse(card.Id, out var cardId))
+		{
+			_hand.LerpCardTransform(card);
+			return;
+		}
+
+		var lane = _laneAt(context.DragEndPoint);
+		if (lane is null)
+		{
+			_hand.LerpCardTransform(card);
+			_report("drop a card on one of your lanes");
+			return;
+		}
+
+		var refusal = _tryPlay(cardId, lane.Value);
+		if (refusal is null)
+			return; // It played. The board re-renders, and Sync takes the card out of the fan.
+
+		// **Never swallow a refused drag.** A card that silently slides back tells the player
+		// nothing, and a click that does nothing is the worst bug a card game front end can have.
+		_hand.LerpCardTransform(card);
+		_report(refusal);
+	}
+
+	/// <summary>
+	/// Brings the fan into line with the Hand zone. Cards are matched by GameState id, so replaying
+	/// the same hand does not rebuild every card and restart its tween.
+	/// </summary>
+	public void Sync(IReadOnlyList<DoomCard> cards, int energy)
+	{
+		var wanted = cards.ToDictionary(c => c.Id.ToString());
+
+		foreach (var ui in _hand.GetCards().ToList())
+			if (ui.Id is null || !wanted.ContainsKey(ui.Id))
+				_hand.DiscardCard(ui.Id ?? "");
+
+		var present = _hand.GetCards().Select(c => c.Id).ToHashSet();
+		foreach (var card in cards)
+			if (!present.Contains(card.Id.ToString()))
+				_hand.DrawCard().Id = card.Id.ToString();
+
+		// SetCardsDetails applies positionally, so the list has to be ordered the way the fan
+		// currently holds its cards rather than the way the zone holds them.
+		var inFanOrder = _hand.GetCards();
+		_hand.SetCardsDetails(inFanOrder.Select(ui => DetailsFor(wanted[ui.Id])).ToList());
+
+		// Affordability is shown by dimming rather than by hiding: an unaffordable card is still
+		// information — it is what you are playing around this turn.
+		foreach (var ui in inFanOrder)
+			ui.Modulate = wanted[ui.Id].Cost <= energy ? Colors.White : new Color(1, 1, 1, 0.45f);
+	}
+
+	private static InternalCardUI2D.Details DetailsFor(DoomCard card)
+	{
+		var unit = card.GetComponent<UnitComponent>();
+
+		return new InternalCardUI2D.Details
+		{
+			Id = card.Id.ToString(),
+			CardName = card.Name,
+			ManaCost = card.Cost.ToString(),
+			TypeLine = unit is null ? "Rite" : "Unit",
+			PowerToughness = unit is null ? "" : $"{unit.Power}/{unit.Toughness}",
+			RulesText = card.Tags.IsEmpty ? "" : string.Join(", ", card.Tags),
+		};
+	}
+}

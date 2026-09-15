@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Linq;
 using DoomCore;
 using Godot;
 using ImmutableGameObjects;
@@ -29,6 +30,7 @@ public partial class DoomBoard : Node2D
 	private Label _statusLabel;
 	private Label _logLabel;
 	private Button _endTurnButton;
+	private DoomHandView _hand;
 
 	private readonly PanelContainer[] _enemySlots = new PanelContainer[DoomBattle.LaneCount];
 	private readonly Label[] _enemyLabels = new Label[DoomBattle.LaneCount];
@@ -68,6 +70,45 @@ public partial class DoomBoard : Node2D
 		Render(events);
 	}
 
+	/// <summary>
+	/// Which of YOUR lane slots a dropped card landed on, or null if it missed.
+	///
+	/// Hit-tested against the slot rectangles rather than through Area2D drop targets: the lanes are
+	/// laid out by containers, so their rects are already the truth, and physics bodies would have
+	/// to be kept in step with them on every resize. The hand lives in the same CanvasLayer as the
+	/// board, so a card's global position and a slot's global rect are in the same space.
+	/// </summary>
+	private int? LaneAt(Vector2 point)
+	{
+		for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
+			if (_unitSlots[lane].GetGlobalRect().HasPoint(point))
+				return lane;
+
+		return null;
+	}
+
+	/// <summary>
+	/// Plays a card into a lane. Returns null when it worked, or the ENGINE'S refusal text when it
+	/// did not — this never decides legality for itself, and never invents a message. The console
+	/// prints the same strings: "Lane 2 is already held by Ash", "Not enough energy for Bulwark".
+	/// </summary>
+	private string TryPlay(int cardId, int lane)
+	{
+		if (_state.GetBattle().IsOver)
+			return "the battle is over";
+
+		var action = new PlayCardAction { CardId = cardId, Lane = lane };
+
+		var validation = action.ValidateAdd(_state);
+		if (!validation.IsValid)
+			return validation.Reason;
+
+		var (state, events) = _state.AddAction(action).ProcessAllActions();
+		_state = state;
+		Render(events);
+		return null;
+	}
+
 	// ===== Rendering =====
 
 	/// <summary>
@@ -99,6 +140,7 @@ public partial class DoomBoard : Node2D
 			+ $"ENERGY {player.Energy} / {player.MaxEnergy}     TURN {battle.TurnNumber}";
 
 		RenderLog(events);
+		_hand.Sync(_state.CardsIn(ZoneType.Hand).ToList(), player.Energy);
 
 		_endTurnButton.Disabled = battle.IsOver;
 		if (battle.IsOver)
@@ -200,6 +242,21 @@ public partial class DoomBoard : Node2D
 		column.AddChild(BuildLaneRow(_unitSlots, _unitLabels, null));
 		column.AddChild(BuildStatusStrip());
 		column.AddChild(BuildFooter());
+
+		// The fan is a Node2D and draws where it is told, so the column reserves the space rather
+		// than containing it. Added to the same CanvasLayer so that a dragged card's global
+		// position and a lane slot's global rect share one coordinate space — see LaneAt.
+		var handSpace = new Control { CustomMinimumSize = new Vector2(0, 240) };
+		column.AddChild(handSpace);
+
+		var viewport = GetViewportRect().Size;
+		_hand = new DoomHandView(
+			layer,
+			new Vector2(viewport.X / 2, viewport.Y - 120),
+			LaneAt,
+			TryPlay,
+			message => _logLabel.Text = message + "\n" + _logLabel.Text
+		);
 	}
 
 	private Control BuildBanner()

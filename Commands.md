@@ -26,6 +26,10 @@ godot-mono --path SQGodotCommon DoomGame/doom_board.tscn    # the battle screen
 are initialised no matter which scene you start. It logs `Initial scene: <name>` at boot, which is
 the quickest way to confirm what actually loaded.
 
+Headless prints shader-compiler errors about `custom_samplers` when the card scene loads. That is
+the dummy renderer failing to compile the card outline shader, not a broken scene — the run still
+exits 0. Ignore them headless; judge the cards on a real renderer.
+
 Headless works for checking the battle drives correctly:
 
 ```
