@@ -49,6 +49,7 @@ nothing is orphaned — you should not need any of it.
 |---|---|---|
 | Design doc — read first | `DoomJam.md` | read it |
 | Where the last session got to | `HANDOFF-DoomBattleLoop.md` | read it when picking the work back up |
+| UI design — layout contract | `DoomUI.md` | read it before touching `SQGodotCommon/DoomGame/` |
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
 | Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |
 | Commands | `Commands.md` | read it |
