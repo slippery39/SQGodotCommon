@@ -33,7 +33,12 @@ SQGodotCommon/
 └── SQGodotCommon/                   # Godot project
     ├── Common/                      # reusable utilities — Cards/2D is game-agnostic, use it
     ├── Project/                     # GameManager, main menu
-    └── DoomGame/                    # DOOMJAM front end                           (not yet created)
+    └── DoomGame/                    # DOOMJAM front end — reads DoomCore, decides nothing
+        ├── DoomBoard.cs             #   the battle screen; layout contract lives in DoomUI.md
+        ├── DoomLaneCell.cs          #   one lane slot: silhouette + attack/life pips
+        ├── DoomHandView.cs          #   the fan, on Common/Cards/2D; drag -> PlayCardAction
+        ├── DoomArt.cs               #   generated flat art — card faces, figures, badges
+        └── DoomPalette.cs           #   the five colours; gold and red are reserved
 ```
 
 **The MTG projects (`MtgCore`, `MtgCore.Tests`, `MtgConsole`, `MtgSimulator`, `MtgSimulator.Console`,

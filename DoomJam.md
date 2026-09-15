@@ -19,9 +19,15 @@ wash. 48 tests green, and the whole loop verified by playing it.
 turn, one every `SummonInterval` (2) turns, into the lowest free lane. Reinforcements scale on the
 TURN NUMBER, not the floor, so a stalled battle is not a safe one.
 
+**THE GODOT FRONT END IS BUILT (2026-09-15), and a full battle has been fought and won in it.**
+Board, hand, drag a card into a lane, end turn — see `DoomUI.md` for the layout contract. The main
+menu leads with DOOMJAM. `DoomConsole` is still the remote surface and still the faster way to test
+a rules change.
+
 **NOT BUILT:** more scenarios — the content, and the whole point of scope. Rapture still throws for
-want of a sacrifice mechanic. The Godot front end does not exist; `DoomConsole` is the only way to
-play.
+want of a sacrifice mechanic. **The RUN does not continue in the UI**: killing the Opponent ends the
+battle and stops there, with no next floor, no reward and no `Run.AfterBattle` — so the apocalypses
+that are supposed to be the power curve never actually land on a deck you keep playing.
 
 **Measured by playing floor 1** (seed 42, a deliberately lazy line — two units committed, then
 nothing): Opponent 26 → 8 over six turns while life fell 60 → 36, Flood washed the board on turn 5,

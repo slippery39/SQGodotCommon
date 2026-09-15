@@ -3,7 +3,8 @@
 **Read `DoomJam.md` first.** This doc is downstream of it: the game design decides what is true, this
 decides how it is shown. Where they disagree, `DoomJam.md` wins.
 
-Status: **design only. `SQGodotCommon/DoomGame/` does not exist yet.**
+Status: **BUILT and played.** A full battle has been fought and won in the Godot front end — board,
+hand, drag-to-lane, end turn. The layout contract below is what it implements.
 
 ## The rule this doc exists to enforce
 
