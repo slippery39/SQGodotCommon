@@ -1,5 +1,15 @@
 # Handoff — DOOMJAM: the battle loop, from attack-or-block to a race against a recurring apocalypse
 
+> **SUPERSEDED (2026-09-15) by `HANDOFF-DoomFrontEndAndEffects.md`. Read that one first.**
+>
+> **§5 "What to do next" is DONE and will mislead you**: the Godot front end exists, scenarios are
+> content now, and the tuning numbers in §7 predate two content rewrites.
+>
+> Kept for §4, whose scars are still true and still bite — deaths consumed by exactly one firing,
+> the preview and the firing sharing one capture, a scenario in the wrong hook doing nothing, and
+> the reinforcement telegraph being load-bearing rather than polish.
+
+
 **Read this, then `DoomJam.md` in full.** That doc is the source of truth and it is CURRENT — this
 handoff deliberately does not restate it. What follows is the session's shape, the things that will
 bite you, and what to do next.
