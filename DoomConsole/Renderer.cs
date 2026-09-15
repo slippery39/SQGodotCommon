@@ -110,6 +110,12 @@ public static class Renderer
 
 		Console.WriteLine(header);
 		Console.WriteLine(enemyRow + "   <- them");
+
+		if (opponent.NextSummon is { } coming)
+			Console.WriteLine(
+				$"   incoming: {coming.Name} {coming.Health}hp/{coming.Attack}atk into L{coming.Lane} at end of turn"
+			);
+
 		Console.WriteLine(unitRow + "   <- you");
 
 		// The damage YOUR uncontested lanes will land on the Opponent. Same reasoning as the
@@ -240,6 +246,8 @@ public static class Renderer
 				EnemyDiedEvent x => $"  + {x.EnemyName} is dead",
 				IrradiatedDrawnEvent i =>
 					$"  ! drawing {i.CardName} cost 1 life — {i.LifeRemaining} left",
+				EnemySummonedEvent s => $"  < {s.EnemyName} drops into L{s.Lane}",
+				EnemyTelegraphedEvent g => $"  ~ they are bringing up {g.EnemyName} for L{g.Lane}",
 				OpponentDamagedEvent o =>
 					$"  > hit the Opponent for {o.Amount} — {o.HealthRemaining} left",
 				OpponentDefeatedEvent => "  *** THE OPPONENT IS DOWN — you win the battle ***",

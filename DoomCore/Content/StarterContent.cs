@@ -100,6 +100,24 @@ public static class StarterContent
 	public static int OpponentHealthFor(int floor) => 20 + floor * 6;
 
 	/// <summary>
+	/// What the Opponent puts back into a lane, scaled by how long the battle has already run.
+	///
+	/// Scaling on the TURN rather than the floor is what stops a stalled battle being safe: the
+	/// longer you fail to break through, the worse the bodies you have to break through. It is the
+	/// pressure that replaces the old countdown ending the fight.
+	///
+	/// Provisional — wants tuning against real play, not reasoning.
+	/// </summary>
+	public static PendingSummon SummonFor(int turnNumber, int lane) =>
+		new()
+		{
+			Name = "Revenant",
+			Health = 4 + turnNumber / 2,
+			Attack = 1 + turnNumber / 4,
+			Lane = lane,
+		};
+
+	/// <summary>
 	/// The enemies for a floor, already placed in lanes.
 	///
 	/// **Lanes need more than one enemy to be a decision.** One enemy across five lanes is covered

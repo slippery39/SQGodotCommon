@@ -68,6 +68,21 @@ public record IrradiatedDrawnEvent : GameEvent
 	public int LifeRemaining { get; init; }
 }
 
+/// <summary>The Opponent put a body back in the line.</summary>
+public record EnemySummonedEvent : GameEvent
+{
+	public string EnemyName { get; init; } = "";
+	public int Lane { get; init; }
+	public int Attack { get; init; }
+}
+
+/// <summary>The Opponent announced what it will summon NEXT turn. Always shown, never hidden.</summary>
+public record EnemyTelegraphedEvent : GameEvent
+{
+	public string EnemyName { get; init; } = "";
+	public int Lane { get; init; }
+}
+
 /// <summary>A lane you held with nothing opposing it landed on the Opponent.</summary>
 public record OpponentDamagedEvent : GameEvent
 {

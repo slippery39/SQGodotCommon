@@ -14,52 +14,78 @@ Record it under "Engine findings" as we hit it.
 resets, the battle carries on); **scenario scope**, with Flood rewritten as a battle-scope board
 wash. 48 tests green, and the whole loop verified by playing it.
 
-**NOT BUILT:** enemy refresh — the Opponent does not yet summon into its empty lanes, so clearing
-its units leaves it defenceless. **This is the most load-bearing gap**: without it a battle is won
-by out-tempoing the opening board once, and the doom never gets to matter.
+**ENEMY REFRESH IS BUILT.** The Opponent announces a summon a turn ahead and lands it at end of
+turn, one every `SummonInterval` (2) turns, into the lowest free lane. Reinforcements scale on the
+TURN NUMBER, not the floor, so a stalled battle is not a safe one.
 
-Also not built: more scenarios (the content, and the point of scope), and Rapture, which still
-throws for want of a sacrifice mechanic.
+**NOT BUILT:** more scenarios — the content, and the whole point of scope. Rapture still throws for
+want of a sacrifice mechanic. The Godot front end does not exist; `DoomConsole` is the only way to
+play.
+
+**Measured by playing floor 1** (seed 42, a deliberately lazy line — two units committed, then
+nothing): Opponent 26 → 8 over six turns while life fell 60 → 36, Flood washed the board on turn 5,
+and progress stalled at 8 the moment the board was empty. Losable and winnable; the numbers want
+real tuning, not more reasoning.
 
 ## Pitch
 
 A solitaire roguelike deckbuilder. You face an **opponent** across five lanes while the world ends
 around you on a repeating clock. Every few turns a **doomsday scenario fires**, reshapes the board
-or your deck, and the fight carries on. You win by killing the opponent — the only question is how
-many apocalypses you eat on the way.
+or your deck, and the fight carries on. You win by killing the opponent — and the real question is
+how many apocalypses you take on the way, because the apocalypses are also the only thing that
+makes your deck stronger.
 
-## The one rule that must not bend  [BUILT]
+**On the theme.** A doom you can outrun is *more* imminent than one you cannot, not less: a
+guaranteed apocalypse produces resignation, a raceable one produces urgency. The countdown is
+something you are playing against every turn rather than waiting out.
 
-**The doom always fires. It can never be prevented, only outrun.**
+## The doom is a clock you can outrun — at a price  [BUILT]
 
-> **SUPERSEDED (2026-09-14):** this rule used to read *"the countdown always runs out, the doom
-> always resolves"*, and the countdown ENDED the battle. Clearing the enemies early was therefore
-> forbidden — it would mean the player had "beaten" the apocalypse. That model made a cleared board
-> into dead air: nothing to do but press end-turn until the dial hit zero. It is gone. Do not
-> reintroduce a battle that ends because a counter ran out.
+**The doom fires on its interval, repeatedly. Kill the Opponent first and it never lands at all.**
 
-The doom is now a **metronome, not a wall**:
+> **SUPERSEDED TWICE.** This section used to be called "the one rule that must not bend", and it
+> has now bent twice. Both changes are recorded because the reasoning matters more than the rule:
+>
+> **v1 — "the countdown always runs out and ENDS the battle."** Clearing the enemies early was
+> forbidden: it would mean beating the apocalypse. It made a cleared board into dead air, nothing to
+> do but press end-turn. Gone. Do not reintroduce a battle that ends because a counter ran out.
+>
+> **v2 — "the doom always fires; the first firing is unraceable."** The doom recurred and the battle
+> ended on the Opponent's death, but you could never dodge an apocalypse entirely. Gone too: making
+> inevitability a GLOBAL rule meant every battle had to be tuned so no opening could ever be fast
+> enough, which prices every future card against one constraint forever.
 
-- The doom fires on an interval (every 3-5 turns), **repeatedly**, for as long as the battle lasts.
-- The battle ends when **the opponent dies** — or when you do. Not when a counter expires.
-- **The first firing is unraceable.** No opening may kill an opponent before doom #1 lands, so you
-  never dodge an apocalypse. You only ever choose how many *more* to take.
+**Inevitability is now a per-battle design choice, not a law.** A doom you cannot dodge is one the
+battle was *built* to make undodgeable — a big Opponent, or an enemy that cannot be killed before
+the countdown. That is content, and it can differ floor to floor, which the global rule could never
+allow.
 
-That last point is what preserves the original intent. Waiting for one doom was passive. Deciding
-how many to absorb is a decision you make every turn.
+### Dodging is not free, and that is what balances it
 
-**The squeeze:** kill fast and your deck survives intact but you had less time to build; grind it
-out and the apocalypses rewrite you. Speed is priced in apocalypses.
+Killing the Opponent before the first firing skips `DoomTransforms` **and**
+`Companion.Marked` — `Run.AfterBattle` returns early on `DoomsFired == 0`, so both are missed.
+
+| | your deck | your companion |
+|---|---|---|
+| **dodge it** | unchanged — clean, thin, and no stronger than it started | **unmarked** |
+| **eat it** | rewritten: stronger and more distorted | marked |
+
+**The apocalypses ARE the power curve** — there is no separate progression system, by design. So a
+player who dodges everything arrives at floor 15 with a starter deck and an Ash that survived
+nothing. Speed buys safety and costs power, and the choice is real in both directions.
+
+That is the self-correction. Enemy HP and enemy abilities are for *tuning* which battles can be
+outrun, not for holding the whole structure up.
 
 | you kill the opponent in | dooms you eat | outcome |
 |---|---|---|
-| ~3 turns | 1 | deck barely touched |
+| before the first firing | 0 | untouched deck, unmarked companion, no power gained |
 | ~8 turns | 2 | rewritten twice |
-| ~15 turns | 4+ | unrecognisable |
+| ~15 turns | 4+ | unrecognisable, and probably very strong |
 
-**Nothing else stops a battle.** There is deliberately no turn limit — the dooms grinding your deck
-down *are* the timer. Irradiated costs life on the draw, an empty deck is already a loss
-(`Run.HasNoCards`). A battle that will not end kills you by attrition, which is the correct ending.
+**Nothing ends a battle but a death.** No turn limit. The pressure on a battle that will not end is
+reinforcements scaling on the turn number: the longer you fail to break through, the worse the
+bodies you have to break through.
 
 ## The core hook
 
@@ -147,7 +173,7 @@ a lane when you play a card, and that is the entire decision.
 Enemies keep their **intent telegraphed a turn ahead** — an enemy that is winding up shows the
 number it will hit its lane for. Do not hide an intent.
 
-### The Opponent — the board is symmetric  [BUILT, except enemy refresh]
+### The Opponent — the board is symmetric  [BUILT]
 
 **The enemy units belong to someone.** The Opponent is an entity with its own HP, sitting behind the
 lanes the way you sit behind yours. **Killing it is how you win**, and it is the only way a battle
@@ -342,8 +368,18 @@ doom-preview dial can be built as the jam intends.
   called once, in `Run.AfterBattle`, not per firing — so it was already once-per-battle by
   construction. Verified in play: three Nuclear firings in one battle, one Glowing mark. The
   run/battle split protected it, the same way it protects the companion from transforms.
-- **What exactly makes the first firing unraceable?** A minimum Opponent HP, a guaranteed early
-  first interval, or both. The rule depends on it and nothing enforces it yet.
+- ~~What makes the first firing unraceable?~~ **DROPPED as a rule (2026-09-14).** Apocalypses are
+  dodgeable; inevitability is per-battle content now. What replaces it as an open question:
+  **which battles should be undodgeable, and how is that expressed?** Opponent HP is the blunt
+  lever. The sharp one is an enemy ABILITY — "cannot be killed while the countdown is running" —
+  which makes a specific fight a guaranteed apocalypse without touching any other battle's tuning.
+  Not built; `Enemy` has no ability system at all yet.
+- **Is dodging ever strictly correct?** It should not be: it skips the transform AND the companion
+  mark, so it trades power for safety. Wants playtesting — if a dodged run beats a fed one, the
+  apocalypses are not paying enough.
+- **Is `SummonInterval` 2 the right rate?** It is the dial that decides whether a player can get
+  ahead at all: at 1 it exactly matches killing one unit a turn and the board never opens. Wants
+  playtesting.
 - **Does a battle-only doom hit the board, the hand, and the draw pile — or only the board?** Flood
   as written only washes the board. Scenarios that reach into the draw pile mid-battle are a
   different and more dangerous class.

@@ -19,6 +19,7 @@ public record EndTurnAction : GameAction
 
 		(state, events) = ResolveLanes(state, events);
 		(state, events) = ClearTheDead(state, events);
+		(state, events) = RefreshTheOpponentsLine(state, events);
 
 		state = DiscardHand(state);
 
@@ -139,6 +140,81 @@ public record EndTurnAction : GameAction
 		}
 
 		return (state, events);
+	}
+
+	/// <summary>
+	/// The Opponent puts a body back in the line, and announces the next one.
+	///
+	/// **Runs AFTER the dead are cleared**, so it can see the lane you just opened — but what it
+	/// places was telegraphed a turn ago, and what it announces now lands a turn from now. You
+	/// always get one full turn to shoot through a hole you made. Without that delay a lane closes
+	/// the instant it opens and the Opponent is unreachable.
+	///
+	/// The lane is the lowest free one, deliberately: predictable, and certainty is permission to
+	/// show the player everything. Randomising it would buy surprise in a game whose whole tension
+	/// is inevitability.
+	/// </summary>
+	private static (GameState, ImmutableList<GameEvent>) RefreshTheOpponentsLine(
+		GameState state,
+		ImmutableList<GameEvent> events
+	)
+	{
+		var opponent = state.GetOpponent();
+		if (opponent.IsDead)
+			return (state, events);
+
+		// What it announced last turn arrives now.
+		if (opponent.NextSummon is { } due && state.EnemyInLane(due.Lane) is null)
+		{
+			(state, _) = state.AddObject(due.ToEnemy(), state.ZoneId(ZoneType.Enemies));
+			events = events.Add(
+				new EnemySummonedEvent
+				{
+					EnemyName = due.Name,
+					Lane = due.Lane,
+					Attack = due.Attack,
+				}
+			);
+
+			opponent = state.GetOpponent() with { NextSummon = null };
+			state = state.UpdateObject(opponent.Id, opponent);
+		}
+
+		var turns = opponent.TurnsUntilSummon - 1;
+
+		// Nothing to announce while its line is full — the rate limit is on summoning, not waiting.
+		var lane = Enumerable
+			.Range(0, DoomBattle.LaneCount)
+			.Where(l => state.EnemyInLane(l) is null)
+			.Select(l => (int?)l)
+			.FirstOrDefault();
+
+		if (turns > 0 || opponent.NextSummon is not null || lane is null)
+			return (
+				state.UpdateObject(
+					opponent.Id,
+					opponent with
+					{
+						TurnsUntilSummon = Math.Max(turns, 0),
+					}
+				),
+				events
+			);
+
+		var next = StarterContent.SummonFor(state.GetBattle().TurnNumber, lane.Value);
+		state = state.UpdateObject(
+			opponent.Id,
+			opponent with
+			{
+				NextSummon = next,
+				TurnsUntilSummon = opponent.SummonInterval,
+			}
+		);
+
+		return (
+			state,
+			events.Add(new EnemyTelegraphedEvent { EnemyName = next.Name, Lane = next.Lane })
+		);
 	}
 
 	private static (GameState, ImmutableList<GameEvent>) DamageOpponent(

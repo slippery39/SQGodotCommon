@@ -89,6 +89,13 @@ public static class Program
 					Renderer.DrawDeck(run);
 					break;
 
+				// The help has advertised this since the companion shipped; it was never wired, so
+				// typing it printed "? for help". A command that silently does not exist is the
+				// same bug as a click that does nothing.
+				case "c":
+					Renderer.DrawCompanion(run);
+					break;
+
 				case "p":
 					state = Submit(
 						state,

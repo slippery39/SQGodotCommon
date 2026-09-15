@@ -6,10 +6,10 @@ namespace DoomCore;
 /// <summary>
 /// What the apocalypse would do to your deck if it landed RIGHT NOW.
 ///
-/// **Certainty is permission to show the player everything.** The tension in this game is
-/// inevitability, not surprise — the doom cannot be prevented, so hiding it buys nothing and only
-/// stops the player from playing around it. This is what the GO SPINNY countdown dial renders, and
-/// what the console prints every turn.
+/// **Certainty is permission to show the player everything.** The tension here is a race, not a
+/// surprise: the doom is coming on a known clock and you are deciding whether to take it or outrun
+/// it. Hiding what it would do buys nothing and only stops the player making that choice. This is
+/// what the GO SPINNY dial renders, and what the console prints every turn.
 /// </summary>
 public record DoomPreview
 {

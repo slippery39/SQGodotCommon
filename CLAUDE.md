@@ -2,8 +2,9 @@
 
 **This repo's active project is DOOMJAM, a Godot Wild Jam entry. It is NOT the MTG game.**
 
-A solitaire roguelike deckbuilder: each battle is a doomsday scenario on a countdown that permanently
-rewrites your deck. **Read `DoomJam.md` first** — it is the design doc and the source of truth.
+A solitaire roguelike deckbuilder: you kill an Opponent across five lanes while a doomsday scenario
+fires on a repeating clock, reshaping the board or permanently rewriting your deck. **Read
+`DoomJam.md` first** — it is the design doc and the source of truth.
 
 The second goal is a measurement: **how hard is it to build a completely different card game on
 `ImmutableGameObjects`?** Anything we wish we could lift out of `MtgCore` is a finding — record it in
@@ -17,11 +18,15 @@ SQGodotCommon/
 │   ├── ImmutableGameObjects/        # THE ENGINE — GameState, GameAction, PipelineAction. Game-agnostic.
 │   ├── ImmutableGameObjects.Tests/
 │   └── ImmutableGameObjects.Benchmarks/
-├── DoomCore/                        # DOOMJAM rules engine — battle, combat, countdown
-│   ├── Actions/                     # StartBattle/StartTurn/PlayCard/Assign/EndTurn/ResolveDoom
-│   ├── Cards/ Components/           # DoomCard; UnitComponent (Power/Toughness/Assignment)
-│   ├── Enemies/ Zones/              # Enemy + telegraphed Intent; Zone/ZoneType
-│   ├── Run/                         # Run + RunCard (OUTSIDE GameState); DoomTransforms
+├── DoomCore/                        # DOOMJAM rules engine — lanes, combat, the doom clock
+│   ├── Actions/                     # StartBattle/StartTurn/PlayCard/EndTurn/ResolveDoom
+│   ├── Cards/ Components/           # DoomCard; UnitComponent (Power/Toughness/Damage/Lane)
+│   ├── Enemies/ Zones/              # Enemy + telegraphed Intent; Opponent + PendingSummon; Zone
+│   ├── Run/                         # Run + RunCard (OUTSIDE GameState); DoomTransforms (permanent
+│   │                                #   scenarios), DoomBattleEffects (battle scope), DoomPreview
+│   ├── DoomFiring.cs                # what ONE firing read, in run ids. Capture is shared by the
+│   │                                #   real firing and the preview, so they cannot disagree
+│   ├── DoomScope.cs                 # Battle vs Permanent — a fixed property of each scenario
 │   └── DoomBattleFactory.cs         # one GameState per battle; DoomStateExtensions is the API
 ├── DoomCore.Tests/                  # NUnit; inline card definitions only
 ├── DoomConsole/                     # terminal front end — THE REMOTE SURFACE, needs no Godot
@@ -43,6 +48,7 @@ nothing is orphaned — you should not need any of it.
 | Kind | Location | Loads |
 |---|---|---|
 | Design doc — read first | `DoomJam.md` | read it |
+| Where the last session got to | `HANDOFF-DoomBattleLoop.md` | read it when picking the work back up |
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
 | Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |
 | Commands | `Commands.md` | read it |
@@ -93,6 +99,7 @@ added or removed.
 |---|---|
 | A rule that applies to every task | this file |
 | Game design — mechanics, scenarios, scope | `DoomJam.md` |
+| "here is where I left off, and what will bite you" | `HANDOFF-<Topic>.md` at the root |
 | A rule about one subsystem | `.claude/rules/<subsystem>.md` |
 | Numbers a run produced | `docs/findings/<subsystem>.md` — never a `CLAUDE.md` |
 | A command and its traps | `Commands.md` |
