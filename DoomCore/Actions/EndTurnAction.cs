@@ -216,7 +216,16 @@ public record EndTurnAction : GameAction
 				events
 			);
 
-		var next = StarterContent.SummonFor(state.GetBattle().TurnNumber, lane.Value);
+		// Asked of the OPPONENT, not of content. The body is whatever this Opponent fields; the
+		// scaling on top is on the TURN rather than the floor, which is what stops a stalled battle
+		// being a safe one.
+		var turn = state.GetBattle().TurnNumber;
+		var body = opponent.Reinforcement;
+		var next = body.ToSummon(lane.Value) with
+		{
+			Health = body.Health + turn / 2,
+			Attack = body.Attack + turn / 4,
+		};
 		state = state.UpdateObject(
 			opponent.Id,
 			opponent with

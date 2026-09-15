@@ -26,7 +26,7 @@ public static class Program
 		while (!run.IsOver)
 		{
 			var scenario = StarterContent.ScenarioFor(seed, run.Floor);
-			var result = PlayBattle(run, scenario);
+			var result = PlayBattle(run, scenario, seed);
 
 			if (result is null)
 				return; // quit
@@ -52,13 +52,13 @@ public static class Program
 	}
 
 	/// <summary>Returns the run after the battle, or null if the player quit.</summary>
-	private static Run? PlayBattle(Run run, DoomScenario scenario)
+	private static Run? PlayBattle(Run run, DoomScenario scenario, int seed)
 	{
 		var (state, events) = run.StartBattle(
 			scenario,
 			StarterContent.CountdownFor(scenario),
-			StarterContent.EnemiesFor(run.Floor),
-			opponentHealth: StarterContent.OpponentHealthFor(run.Floor)
+			StarterContent.EnemiesFor(run.Floor, seed),
+			opponent: StarterContent.OpponentFor(run.Floor)
 		);
 		Renderer.DrawEvents(events);
 

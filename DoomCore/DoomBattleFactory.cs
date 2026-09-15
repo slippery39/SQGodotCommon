@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace DoomCore;
@@ -17,7 +18,8 @@ public static class DoomBattleFactory
 		int maxLife = 60,
 		int maxEnergy = 3,
 		int rngSeed = 0,
-		int opponentHealth = 40
+		int opponentHealth = 40,
+		OpponentDefinition? opponent = null
 	)
 	{
 		var state = new GameState { RngSeed = rngSeed };
@@ -40,12 +42,19 @@ public static class DoomBattleFactory
 
 		// The Opponent owns the enemy units and is the only way to WIN a battle. It belongs to the
 		// battle rather than the enemy zone: the zone holds units, and it is not one.
-		var (s2b, opponent) = s2.AddObject(
+		// A definition wins when given; `opponentHealth` remains for tests and for anything that
+		// only cares how much there is to chew through.
+		var health = opponent?.Health ?? opponentHealth;
+		var (s2b, opponentObject) = s2.AddObject(
 			new Opponent
 			{
-				Name = "The Opponent",
-				Health = opponentHealth,
-				MaxHealth = opponentHealth,
+				Name = opponent?.Name ?? "The Opponent",
+				Description = opponent?.Description ?? "",
+				Health = health,
+				MaxHealth = health,
+				SummonInterval = opponent?.SummonInterval ?? 3,
+				Reinforcement = opponent?.Reinforcement ?? EnemyLibrary.Revenant,
+				Effects = opponent?.Effects ?? ImmutableList<DoomEffect>.Empty,
 			},
 			parentId: battle.Id
 		);
@@ -81,7 +90,7 @@ public static class DoomBattleFactory
 
 		return s7.RegisterWellKnownId(DoomObjectKeys.Battle, battle.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Enemies, enemies.Id)
-			.RegisterWellKnownId(DoomObjectKeys.Opponent, opponent.Id)
+			.RegisterWellKnownId(DoomObjectKeys.Opponent, opponentObject.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Player, player.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Draw, draw.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Hand, hand.Id)

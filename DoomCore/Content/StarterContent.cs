@@ -217,62 +217,71 @@ public static class StarterContent
 	}
 
 	/// <summary>
-	/// The Opponent's HP for a floor. This is the battle's real length dial: you win by cutting it
-	/// down through lanes nothing is contesting, so it prices how long you must hold the board.
+	/// Which Opponent waits on a floor — see <see cref="EnemyLibrary.ForFloor"/>.
 	///
-	/// Provisional — it wants tuning against real play, not reasoning. See DoomJam.md.
+	/// This used to be `20 + floor * 6`, which gave every floor the same faceless body with a bigger
+	/// number. An Opponent is content now: it has a name, a reinforcement of its own, and effects.
 	/// </summary>
-	public static int OpponentHealthFor(int floor) => 20 + floor * 6;
+	public static OpponentDefinition OpponentFor(int floor) => EnemyLibrary.ForFloor(floor);
 
 	/// <summary>
-	/// What the Opponent puts back into a lane, scaled by how long the battle has already run.
-	///
-	/// Scaling on the TURN rather than the floor is what stops a stalled battle being safe: the
-	/// longer you fail to break through, the worse the bodies you have to break through. It is the
-	/// pressure that replaces the old countdown ending the fight.
-	///
-	/// Provisional — wants tuning against real play, not reasoning.
+	/// Kept because the console and the tests still speak in plain health. Reads the definition
+	/// rather than recomputing a formula, so there is one answer to "how tough is this floor".
 	/// </summary>
-	public static PendingSummon SummonFor(int turnNumber, int lane) =>
-		new()
+	public static int OpponentHealthFor(int floor) => OpponentFor(floor).Health;
+
+	/// <summary>
+	/// What the Opponent puts back into an open lane, and it comes with its effects.
+	///
+	/// The BODY is content — whichever reinforcement this Opponent fields. The scaling on top is a
+	/// tuning dial, and it is on the TURN rather than the floor on purpose: that is what stops a
+	/// stalled battle being a safe one. The longer you fail to break through, the worse the thing
+	/// you have to break through.
+	/// </summary>
+	public static PendingSummon SummonFor(int turnNumber, int lane, int floor = 1)
+	{
+		var body = OpponentFor(floor).Reinforcement;
+
+		return body.ToSummon(lane) with
 		{
-			Name = "Revenant",
-			Health = 4 + turnNumber / 2,
-			Attack = 1 + turnNumber / 4,
-			Lane = lane,
+			Health = body.Health + turnNumber / 2,
+			Attack = body.Attack + turnNumber / 4,
 		};
+	}
 
 	/// <summary>
-	/// The enemies for a floor, already placed in lanes.
+	/// The enemies for a floor, already placed in lanes and carrying their own behaviour.
 	///
 	/// **Lanes need more than one enemy to be a decision.** One enemy across five lanes is covered
-	/// by a single unit and the battle is over as a threat; the count is what makes "which lanes do
-	/// I contest" cost something. Fixed at battle start — nothing arrives mid-battle.
+	/// by a single unit and stops being a threat; the count is what makes "which lanes do I contest"
+	/// cost something.
+	///
+	/// Bodies come from <see cref="EnemyLibrary"/> rather than from a health formula, so an enemy
+	/// has an identity and can do something. Which ones a floor may field is the difficulty curve,
+	/// written as content — see `EnemyLibrary.PlayableOn`.
 	///
 	/// Enemies are spread from the outside in, so the companion's centre lane is the LAST one
-	/// contested. A free blocker that happened to be pre-matched with the only enemy would make the
-	/// opening turn decide itself.
+	/// contested. A free blocker pre-matched with the only enemy would make the opening turn decide
+	/// itself.
 	/// </summary>
-	public static IReadOnlyList<Enemy> EnemiesFor(int floor)
+	public static IReadOnlyList<Enemy> EnemiesFor(int floor, int seed = 0)
 	{
 		var count = Math.Min(2 + floor / 3, DoomBattle.LaneCount);
-
-		// Health is per-enemy, so it must fall as the count rises or floor 8 is unkillable.
-		var health = 5 + floor * 2;
-		var attack = 2 + floor / 2;
+		var roster = EnemyLibrary.PlayableOn(floor);
+		var rng = new Random(seed * 7717 + floor);
 
 		int[] order = [0, 4, 1, 3, 2];
 
 		return Enumerable
 			.Range(0, count)
-			.Select(i => new Enemy
+			.Select(i =>
 			{
-				Name = floor % 3 == 0 && i == 0 ? "Herald of the End" : "Wretch",
-				Health = health,
-				MaxHealth = health,
-				Intent = IntentKind.Attack,
-				IntentAmount = attack,
-				Lane = order[i],
+				// The hardest thing the floor allows leads, so a new tier is felt the moment it
+				// unlocks rather than waiting on a lucky roll.
+				var definition =
+					i == 0 ? roster.MaxBy(e => e.MinFloor)! : roster[rng.Next(roster.Length)];
+
+				return definition.ToEnemy(order[i]);
 			})
 			.ToList();
 	}

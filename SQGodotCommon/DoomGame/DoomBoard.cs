@@ -75,8 +75,8 @@ public partial class DoomBoard : Node2D
 		var (state, events) = _run.StartBattle(
 			scenario,
 			StarterContent.CountdownFor(scenario),
-			StarterContent.EnemiesFor(_run.Floor),
-			opponentHealth: StarterContent.OpponentHealthFor(_run.Floor)
+			StarterContent.EnemiesFor(_run.Floor, Seed),
+			opponent: StarterContent.OpponentFor(_run.Floor)
 		);
 
 		_state = state;

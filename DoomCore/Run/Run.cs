@@ -87,7 +87,8 @@ public record Run
 		int countdown,
 		IEnumerable<Enemy> enemies,
 		int maxEnergy = 3,
-		int opponentHealth = 40
+		int opponentHealth = 40,
+		OpponentDefinition? opponent = null
 	)
 	{
 		var state = DoomBattleFactory.Create(
@@ -97,7 +98,8 @@ public record Run
 			maxLife: MaxLife,
 			maxEnergy: maxEnergy,
 			rngSeed: RngSeed,
-			opponentHealth: opponentHealth
+			opponentHealth: opponentHealth,
+			opponent: opponent
 		);
 
 		var drawId = state.ZoneId(ZoneType.Draw);

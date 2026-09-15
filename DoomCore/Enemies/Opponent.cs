@@ -44,6 +44,15 @@ public record Opponent : GameObject
 	public int TurnsUntilSummon { get; init; } = 1;
 
 	/// <summary>
+	/// The body this Opponent fields, as content.
+	///
+	/// Held HERE rather than looked up from `StarterContent` when a summon lands, so `EndTurnAction`
+	/// does not have to know what floor it is on or which content pack is loaded. The engine asks
+	/// the Opponent what it summons; the Opponent was told when the battle was built.
+	/// </summary>
+	public EnemyDefinition Reinforcement { get; init; } = new();
+
+	/// <summary>
 	/// What this Opponent does on its own, beyond its units. "Heals every turn", "summons two at
 	/// once", "cannot be killed while the countdown runs" — the per-battle inevitability lever
 	/// DoomJam.md has wanted since dodging became content rather than a rule.
@@ -64,6 +73,12 @@ public record PendingSummon
 	public int Attack { get; init; }
 	public int Lane { get; init; }
 
+	/// <summary>
+	/// Carried through the telegraph so a reinforcement arrives with its behaviour intact. Without
+	/// this a Herald summoned mid-battle would be a Herald in name and a plain body in fact.
+	/// </summary>
+	public ImmutableList<DoomEffect> Effects { get; init; } = ImmutableList<DoomEffect>.Empty;
+
 	public Enemy ToEnemy() =>
 		new()
 		{
@@ -73,5 +88,6 @@ public record PendingSummon
 			Intent = Attack > 0 ? IntentKind.Attack : IntentKind.Wait,
 			IntentAmount = Attack,
 			Lane = Lane,
+			Effects = Effects,
 		};
 }
