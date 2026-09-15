@@ -4,11 +4,15 @@ using ImmutableGameObjects;
 namespace DoomCore;
 
 /// <summary>
-/// **The core hook of the whole game: read the board at countdown 0, rewrite the run deck.**
+/// **The core hook for PERMANENT scenarios: read what a firing saw, rewrite the run deck.**
 ///
-/// Every apocalypse is one function of (run, finished battle) → run. There is deliberately no
-/// second mechanism — a new scenario is a new case here plus a value on
-/// <see cref="DoomScenario"/>, and nothing else in the engine changes.
+/// Every apocalypse is one function of (run, firing) → run, folded over every firing the battle
+/// recorded. There is deliberately no second mechanism — a new permanent scenario is a new case
+/// here plus a value on <see cref="DoomScenario"/> and a `ScopeOf` row.
+///
+/// Its sibling is <see cref="DoomBattleEffects"/>, which owns BATTLE-scope scenarios. The split is
+/// by what each may touch, and each throws when handed the other's kind: a scenario in the wrong
+/// hook does nothing at all and looks exactly like one that worked.
 ///
 /// **Every scenario must be a BARGAIN, never a pure tax.** It converts one resource into another,
 /// and a greedy line must exist. A deck that only ever gets worse is a misery engine players quit,

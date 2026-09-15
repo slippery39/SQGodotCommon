@@ -4,11 +4,16 @@ using ImmutableGameObjects;
 namespace DoomCore;
 
 /// <summary>
-/// Resolves the turn: every lane trades, then deaths, then the countdown.
+/// Resolves the turn: every lane trades, the dead clear, the Opponent reinforces, the clock ticks.
 ///
-/// **The countdown ticks here unconditionally.** Nothing in this action can stop it, and nothing
-/// should ever be added that can. Clearing the enemies does not end a battle early — if it did,
-/// the player would have beaten the apocalypse and it would be an obstacle rather than doom.
+/// **The clock ticks here unconditionally, and reaching zero does not end anything** — it fires the
+/// apocalypse and resets. A battle ends only when the Opponent dies or the player does.
+///
+/// The ordering in `Execute` is load-bearing and is not arbitrary:
+/// player death, then the Opponent's, then the doom. The player's loss outranks winning the battle,
+/// and the Opponent's death is checked BEFORE the doom, which is what makes an apocalypse
+/// DODGEABLE — kill them on the turn the countdown expires and nothing lands. See DoomJam.md;
+/// inevitability is per-battle content now, not a rule this action enforces.
 /// </summary>
 public record EndTurnAction : GameAction
 {

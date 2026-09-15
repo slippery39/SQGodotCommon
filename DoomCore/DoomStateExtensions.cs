@@ -36,7 +36,7 @@ public static class DoomStateExtensions
 	public static IEnumerable<Enemy> LivingEnemies(this GameState s) =>
 		s.GetChildren(s.ZoneId(ZoneType.Enemies)).OfType<Enemy>().Where(e => !e.IsDead);
 
-	/// <summary>Units on the Field. This is what a doom scenario reads at countdown 0.</summary>
+	/// <summary>Units on the Field. This is what a doom scenario reads each time it fires.</summary>
 	public static IEnumerable<DoomCard> Units(this GameState s) =>
 		s.CardsIn(ZoneType.Field).Where(c => c.HasComponent<UnitComponent>());
 

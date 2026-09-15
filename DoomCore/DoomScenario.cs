@@ -1,12 +1,17 @@
 namespace DoomCore;
 
 /// <summary>
-/// Which apocalypse ends a battle. Every scenario is the same mechanic — read the board at
-/// countdown 0, apply a permanent transform to the RUN deck — so adding one is data, not code.
+/// Which apocalypse fires, over and over, for as long as a battle lasts. **It does not end one** —
+/// only a death does. Every scenario is the same mechanic — read the board when it fires, then
+/// change something — so adding one is data, not code.
 ///
-/// Every scenario must be a BARGAIN, never a pure tax: it converts one resource into another. A
-/// deck that only ever gets worse is a misery engine, and it makes escalating enemies
-/// unbalanceable. See DoomJam.md.
+/// Each has a SCOPE (see <see cref="DoomScope"/>), fixed at design time, which decides both what it
+/// may touch and which hook implements it: `DoomBattleEffects` or `DoomTransforms`.
+///
+/// **PERMANENT scenarios must be a BARGAIN, never a pure tax**: they convert one resource into
+/// another, because a run deck that only ever gets worse is a misery engine and makes escalating
+/// enemies unbalanceable. Battle-scope scenarios are exempt — nothing carries forward, so they can
+/// be pure obstacles. See DoomJam.md.
 /// </summary>
 public enum DoomScenario
 {
@@ -19,7 +24,11 @@ public enum DoomScenario
 	/// <summary>Reads what was LEFT ON THE FIELD. Those become Irradiated: +2/+2, lose 1 life when drawn.</summary>
 	Nuclear,
 
-	/// <summary>Reads what you COMMITTED. Units summoned duplicate; units never summoned are removed.</summary>
+	/// <summary>
+	/// BATTLE scope. Reads what is STANDING and washes it all to Discard — you keep the cards and
+	/// lose the board. It used to delete never-summoned units from the run deck; permanent removal
+	/// caused more trouble than it was worth. See DoomJam.md.
+	/// </summary>
 	Flood,
 
 	/// <summary>Reads what you SACRIFICED. Sacrificed units return as life — the doom you want at 6 HP.</summary>
