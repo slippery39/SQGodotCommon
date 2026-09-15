@@ -7,58 +7,136 @@ The second goal is a measurement: **how hard is it to build a completely differe
 `ImmutableGameObjects`?** Whatever we end up wishing we could lift out of `MtgCore` is the finding.
 Record it under "Engine findings" as we hit it.
 
+## State of play (2026-09-14)
+
+**BUILT:** five-lane automatic combat, the run layer, the four doom transforms, the doom preview,
+the Companion, `DoomConsole`. 39 tests green.
+
+**DESIGNED, NOT BUILT — this revision:** the Opponent entity and killing it as the win condition,
+recurring dooms (the clock resets rather than ending the battle), enemy refresh, and scenario SCOPE
+(battle-only vs permanent). Everything marked `[DESIGN — NOT BUILT]` below.
+
+**Today the battle still ends when the countdown hits zero.** The code has not caught up with this
+document yet — check before assuming.
+
 ## Pitch
 
-A solitaire roguelike deckbuilder. Each battle is a **doomsday scenario on a countdown**. You fight
-the enemies in front of you while positioning for an apocalypse you cannot prevent — and when it
-lands, **it permanently rewrites your deck** based on what you did.
+A solitaire roguelike deckbuilder. You face an **opponent** across five lanes while the world ends
+around you on a repeating clock. Every few turns a **doomsday scenario fires**, reshapes the board
+or your deck, and the fight carries on. You win by killing the opponent — the only question is how
+many apocalypses you eat on the way.
 
-## The one rule that must not bend
+## The one rule that must not bend  [DESIGN — NOT BUILT]
 
-**The countdown always runs out. The doom always resolves. It can never be prevented.**
+**The doom always fires. It can never be prevented, only outrun.**
 
-If clearing the enemies could end a battle early, the player has *beaten* the apocalypse and it is an
-obstacle, not doom. So:
+> **SUPERSEDED (2026-09-14):** this rule used to read *"the countdown always runs out, the doom
+> always resolves"*, and the countdown ENDED the battle. Clearing the enemies early was therefore
+> forbidden — it would mean the player had "beaten" the apocalypse. That model made a cleared board
+> into dead air: nothing to do but press end-turn until the dial hit zero. It is gone. Do not
+> reintroduce a battle that ends because a counter ran out.
 
-- The doom is a **scheduled event**, not a threat. It costs no life directly.
-- The **enemies** are the threat. They hit your life total, the only fail state.
-- Fighting well and positioning for the doom **pull in opposite directions**. That squeeze is the game.
+The doom is now a **metronome, not a wall**:
+
+- The doom fires on an interval (every 3-5 turns), **repeatedly**, for as long as the battle lasts.
+- The battle ends when **the opponent dies** — or when you do. Not when a counter expires.
+- **The first firing is unraceable.** No opening may kill an opponent before doom #1 lands, so you
+  never dodge an apocalypse. You only ever choose how many *more* to take.
+
+That last point is what preserves the original intent. Waiting for one doom was passive. Deciding
+how many to absorb is a decision you make every turn.
+
+**The squeeze:** kill fast and your deck survives intact but you had less time to build; grind it
+out and the apocalypses rewrite you. Speed is priced in apocalypses.
+
+| you kill the opponent in | dooms you eat | outcome |
+|---|---|---|
+| ~3 turns | 1 | deck barely touched |
+| ~8 turns | 2 | rewritten twice |
+| ~15 turns | 4+ | unrecognisable |
+
+**Nothing else stops a battle.** There is deliberately no turn limit — the dooms grinding your deck
+down *are* the timer. Irradiated costs life on the draw, an empty deck is already a loss
+(`Run.HasNoCards`). A battle that will not end kills you by attrition, which is the correct ending.
 
 ## The core hook
 
+*The hook is BUILT for permanent scenarios (`DoomTransforms`). Scope, the battle
+hook and the `ScopeOf` guard are DESIGN — not built.*
+
 > **The doom doesn't kill you. The doom edits your deck.**
 
-Every scenario is one thing: **read the board at countdown 0, apply a permanent transform to the run
-deck.** One engine hook; every apocalypse after that is data. This is where content comes from — do
-not build a second mechanism.
+Every scenario is one thing: **read the board when the doom fires, then change something.** One
+engine hook; every apocalypse after that is data. This is where content comes from — do not build a
+second mechanism.
 
-## Design rule: bargain, not tax
+**A scenario has a SCOPE, fixed at design time:**
 
-**Every doom converts one resource into another. None are purely bad.** A deck that only gets worse is
-a misery engine players quit, and it makes progressively harder enemies unbalanceable. Tradeoffs mean
-the apocalypses *are* the power curve — no separate progression system is needed.
+| scope | changes | lives in |
+|---|---|---|
+| **Battle** | the current `GameState` — board, hand, draw pile | a hook holding the battle |
+| **Permanent** | the `Run` deck, forever | `DoomTransforms` |
+
+A scenario is **one** of these, never both, and never a tiered pair of the same idea. Variety comes
+from having MANY scenarios, not from re-tiering three of them.
+
+**Scope is the difficulty curve.** Early floors draw from battle-only scenarios — inconveniences you
+navigate, gone when the fight is. Later floors draw from permanent ones, where a firing leaves marks
+on the run. `PlayableOn(floor)` already does that gating and is the right mechanism.
+
+**A scenario added to the wrong hook silently does nothing**, and looks exactly like one that
+worked — the failure mode this codebase keeps rediscovering. So scope is an explicit `ScopeOf`
+lookup beside `CountdownFor`, and each hook **throws** when handed a scenario of the other scope.
+Rapture already sets that precedent by throwing rather than no-opping; follow it.
+
+**Dooms do not escalate within a battle by default.** The same scenario fires the same way every
+time, which is what makes it plannable. A scenario that escalates is one *designed* to escalate, and
+says so.
+
+## Design rule: bargain, not tax — PERMANENT scenarios only
+
+**Every PERMANENT doom converts one resource into another. None are purely bad.** A deck that only
+gets worse is a misery engine players quit, and it makes progressively harder enemies unbalanceable.
+Tradeoffs mean the apocalypses *are* the power curve — no separate progression system is needed.
+
+**Battle-only scenarios are exempt**, and that exemption is the point. Nothing carries forward, so a
+battle doom can be a pure obstacle — a puzzle for this fight rather than a tax on the run. That
+makes early-game content far cheaper to write: you only have to find a bargain for the ones that
+leave scars.
 
 Currency insight: **a unit absorbs rather than prevents, so toughness IS life.** A 1/1 standing in
 front of a 5-damage attack is worth exactly 1 life. Creature bodies and life are the same currency in
 two forms, and every scenario trades on that one axis. **This survived the move to lanes unchanged**,
 which is the test any future combat change has to pass — it is what makes the dooms tradeable.
 
-| Scenario | Reads | Transform | Countdown |
-|---|---|---|---|
-| **Zombie Apocalypse** | what died | deaths return as 1/1 Zombies in the deck — quantity bought with deck space | 3 |
-| **Nuclear** | what was left on board | those become **Irradiated**: permanent +2/+2, lose 1 life when drawn | 2 |
-| **Flood** | what you committed | creatures summoned this round **duplicate**; creatures never summoned are **removed from the deck** | 5 |
-| **Rapture** | what you sacrificed | sacrificed creatures return as life — the doom you *want* at 6 HP | 3 |
+| Scenario | Scope | Reads | Effect | Interval |
+|---|---|---|---|---|
+| **Flood** | battle | what is standing | everything in play is **washed to Discard** — you keep the cards, you lose the board and the energy you spent on it | 5 |
+| **Zombie Apocalypse** | permanent | what died | deaths return as 1/1 Zombies in the deck — quantity bought with deck space | 3 |
+| **Nuclear** | permanent | what was left on board | those become **Irradiated**: permanent +2/+2, lose 1 life when drawn | 2 |
+| **Rapture** | permanent | what you sacrificed | sacrificed creatures return as life — the doom you *want* at 6 HP | 3 |
 
-Countdown length varies per scenario on purpose: it is free texture, and it makes each apocalypse feel
+This is a **starting set, not the set.** The plan is many scenarios, each doing something distinct
+and creating a situation a battle has to be played around. Adding one should stay ~15 lines: an enum
+entry, a `ScopeOf` row, a `CountdownFor` row, a `PlayableOn` row, and one case in its scope's hook.
+
+Interval varies per scenario on purpose: it is free texture, and it makes each apocalypse feel
 different before the player reads a word of its text.
 
-**Scenarios are TIERED by floor.** Flood does not appear before floor 8
-(`StarterContent.FloodUnlocksAtFloor`). On a 10-card starter deck it can delete everything and end a
-run outright; losing cards is only an interesting cost once there is a deck worth losing. Expect more
-scenarios to want tiering as they are added — it is a property of the floor, not of the scenario.
+**Flood was rewritten (2026-09-14).** It used to delete never-summoned units from the run deck and
+duplicate the ones you played.
 
-## Combat — FIVE LANES, resolved automatically
+> **Why it changed:** permanent card REMOVAL causes more problems than it is worth. The old doc
+> already knew — it gated Flood behind `FloodUnlocksAtFloor = 8` because on a 10-card starter deck it
+> could delete everything and end a run outright. That gate meant Flood simply **did not exist** for
+> the first seven floors. Rewriting it as a board wash lets it appear from floor 1 and teaches its
+> fiction — *the water takes what is standing* — long before anything with teeth does. Removal may
+> return later as some other scenario's deliberate gimmick; it is not the baseline.
+
+Flood keeps the lane game honest: you can see it coming, so the question becomes *how much do I
+commit to a board that is about to be washed?*
+
+## Combat — FIVE LANES, resolved automatically  [BUILT]
 
 **The board is five lanes. One of your units and one enemy per lane. They fight each other
 automatically.** There is no targeting anywhere in the game and no attack-or-block choice: you pick
@@ -67,23 +145,54 @@ a lane when you play a card, and that is the entire decision.
 Enemies keep their **intent telegraphed a turn ahead** — an enemy that is winding up shows the
 number it will hit its lane for. Do not hide an intent.
 
+### The Opponent — the board is symmetric  [DESIGN — NOT BUILT]
+
+**The enemy units belong to someone.** The Opponent is an entity with its own HP, sitting behind the
+lanes the way you sit behind yours. **Killing it is how you win**, and it is the only way a battle
+ends in your favour.
+
+That makes every lane one of three cases, with no exceptions:
+
+```
+                    OPPONENT  38hp
+  L0        L1        L2        L3        L4
+[ Brute ] [   -    ] [ Brute ] [   -    ] [   -    ]   <- theirs
+[ 3/4   ] [ 2/2    ] [   -    ] [ 4/4    ] [   -    ]   <- yours
+   ↕ trade   → 2 face   ← 3 to you  → 4 face   (nothing)
+                    YOU  47hp
+```
+
+| lane | what happens |
+|---|---|
+| both filled | they fight each other, both ways |
+| yours only | **your unit hits the Opponent** |
+| theirs only | their unit hits you |
+| empty | nothing |
+
+**An open lane is now your win condition, not just a leak.** Holding a lane is offence and defence in
+the same act, and three energy will not cover five lanes — that tension is the whole battle.
+
+**The Opponent refreshes its units**, summoning into its open lanes to stop the bleeding. It is
+**telegraphed** like everything else: "summoning a 3/3 into L1" shows a turn ahead. Certainty is
+permission to show the player everything; the tension here is inevitability, not surprise.
+
 Two global rules, deliberately not keywords:
 
-- **A unit absorbs up to its remaining toughness and the excess hits your face.** So a body in a lane
-  is worth exactly its toughness in life. No keyword to teach, and stalling is impossible by
-  construction.
-- **An open lane costs you the enemy's whole attack.** Covering a lane is the only defence, and you
-  cannot cover five lanes with three energy.
+- **A unit absorbs up to its remaining toughness and the excess hits the face behind it.** So a body
+  in a lane is worth exactly its toughness in life. No keyword to teach, and stalling is impossible
+  by construction.
+- **An unheld lane delivers the full hit.** Both directions. No global blocking, no interception.
 
 Damage **persists for the whole battle** on both sides — units carry marked damage, enemies carry
 lost HP — so a lane is a grind you can win over two or three turns rather than a single comparison.
 
 **Turn shape:**
 
-1. Enemy intents already visible, per lane
+1. Enemy intents and the Opponent's next summon already visible, per lane
 2. Draw, spend Energy, place units into lanes
-3. Resolve every lane at once — both sides deal damage, excess and open lanes hit your face
-4. Countdown ticks; enemies declare next intents
+3. Resolve every lane at once — both sides deal damage; unheld lanes hit the face behind them
+4. The doom clock ticks; if it reaches zero the apocalypse fires and the clock resets
+5. Enemies declare next intents; the Opponent summons what it telegraphed
 
 **What this replaced, and why it is not a loss.** Combat used to be "each unit may attack OR block,
 never both", which was the stated core decision. Lanes delete it and replace it with *which lanes do
@@ -92,8 +201,9 @@ spatially, readable at a glance and with no targeting UI to build. "Blockers dea
 with it: it existed only to keep attack-vs-block a clean either/or, and there is no such choice left
 to protect. **The currency insight survived intact**, which is what mattered — see below.
 
-**Lanes give the dooms a spatial axis to read** ("everything in lane 3 is Irradiated") that did not
-exist before. That is free content, and it is the main reason to prefer lanes beyond simplicity.
+**Lanes give the dooms a spatial axis to read** ("everything in lane 3 is washed away") that did not
+exist before. That is free content for scenarios, though it is no longer load-bearing — it was once
+proposed as the fix for dead air, and the recurring-doom model deleted that problem instead.
 
 **Energy: 3/turn, refills.** Deletes mana, lands and colours entirely. "Burn a turn off the countdown
 to cast this now" stays a **rare card keyword**, never the base economy — accelerating your own
@@ -127,7 +237,10 @@ apocalypse should be a desperate move, not routine.
 - **Between battles: see the next apocalypse BEFORE choosing your reward.** Free tension, zero cost,
   turns the reward screen into a real decision.
 - **Branch: choose which doom you walk into.** Two options shown. Choosing your own apocalypse is a
-  great thing for this game to allow.
+  great thing for this game to allow — and it got **heavier** when dooms started recurring: you are
+  no longer picking the thing that happens once at the end, you are picking the thing that will hit
+  you three or four times. It is also the reason a battle runs ONE scenario on repeat rather than
+  cycling through several; a grab bag would make this choice meaningless.
 - Rewards are normal (card choice / relic). "You keep what you kill" is **one scenario's gimmick**,
   not a global rule.
 - **Weight reward offers toward the doom just taken or about to be walked into.** Tag cards by which
@@ -139,17 +252,25 @@ apocalypse should be a desperate move, not routine.
 | Theme | How | Priority |
 |---|---|---|
 | TAG ALONG | the Companion, above — structurally load-bearing | required |
-| GO SPINNY | scroll the countdown dial to **preview what the doom would do right now** | high — it earns its place |
+| GO SPINNY | scroll the doom dial to **preview what the next firing would do right now** | high — it earns its place |
 | PERSPECTIVE SHIFT | 2D cards over a 3D scenario backdrop that changes per apocalypse | if time survives |
 
 The spinny dial acts on the principle that **certainty is permission to show the player everything**.
 The tension here is inevitability, not surprise — so show the future.
 
+Recurring dooms make the dial **better**: it is consulted before every firing rather than once a
+battle, so the sub-theme stops being decoration and becomes the instrument you actually plan with.
+That is also why the preview must learn to describe battle-only scenarios — see Open questions.
+
 ## MVP (build this first)
 
-**A few enemies per battle, one battle per scenario. No acts, no multi-battle chains.** Lanes need
-2-4 enemies to be a decision — one enemy across five lanes is covered by one unit and stops being a
-threat — so `StarterContent.EnemiesFor` scales the count with the floor up to the 5-lane cap.
+**One Opponent per battle, one scenario per battle, repeating on its interval. No acts, no
+multi-battle chains.** Lanes need 2-4 enemy units to be a decision — one unit across five lanes is
+covered by one of yours and stops being a threat — so `StarterContent.EnemiesFor` scales the count
+with the floor up to the 5-lane cap, and the Opponent refreshes them as they die.
+
+**Build order:** Opponent entity + the win condition → recurring dooms (the clock resets instead of
+ending the battle) → the `ScopeOf` tag and its guard → then scenarios, which is where the content is.
 
 Cut from v1, revisit only after playtesting: scenario/enemy pairing, scenarios as multi-battle "acts",
 relics, multiple companions.
@@ -213,38 +334,52 @@ doom-preview dial can be built as the jam intends.
 
 ## Open questions
 
+**Raised by the recurring-doom model, and unresolved:**
+
+- **The Companion is marked per doom survived — that now happens several times a BATTLE.** Four
+  firings would make Ash a 9/11 by floor 3. Marks probably become once per battle, or come only from
+  the last doom you survive. **This must be settled before recurring dooms ship** or the companion
+  breaks the difficulty curve on its own.
+- **What exactly makes the first firing unraceable?** A minimum Opponent HP, a guaranteed early
+  first interval, or both. The rule depends on it and nothing enforces it yet.
+- **Does a battle-only doom hit the board, the hand, and the draw pile — or only the board?** Flood
+  as written only washes the board. Scenarios that reach into the draw pile mid-battle are a
+  different and more dangerous class.
+- **Does `DoomPreviewer` still work?** It runs the real transform and diffs the DECKS, so a
+  battle-only scenario changes nothing and the preview reads "nothing would change" — indistinguishable
+  from broken. It has to preview board effects too, or say plainly *"this one passes through"*.
+  GO SPINNY is built on that dial; a dial that says nothing for six floors is a dead sub-theme.
+- **Does the Opponent attack on its own**, or only through its units? Currently only units exist.
+- **Is Opponent HP the difficulty dial, or the doom interval?** Probably both, but one should lead.
+
+**Older, still open:**
+
 - **Does an empty deck still end the run now that the companion exists?** It used to be strictly
   unwinnable; with a companion you always have one blocker, so it is merely grim. Currently still an
-  instant loss (`Run.HasNoCards`).
-- Should Flood have a floor — never removing your last N units — rather than only being tiered late?
-- Do reinforcements arrive mid-battle? (lean: no — fixed at battle start, reinforcements as one
-  scenario's gimmick). **This is now also the escape hatch** for the dead-air problem below, if
-  filling lanes turns out not to be enough on its own.
+  instant loss (`Run.HasNoCards`). **Now load-bearing** — deck attrition is what ends a battle that
+  will not end.
 - Should enemies be able to SHIFT lanes between turns, so a defender can be dodged? Costs a movement
   rule to telegraph; buys a reason to keep reacting after the lanes are covered.
 - How many battles is a full run?
 - Does the Companion have an activated ability, or only its accumulated marks? (currently marks only)
 - Should the player choose between several companions at run start? (currently one, "Ash" 1/3)
 - Deck size and starting deck composition
-- Does anything let you *change* the countdown, or is it strictly fixed? (lean: strictly fixed, except
-  the rare card keyword that burns it)
+- Does anything let you *change* the doom interval, or is it strictly fixed? (lean: strictly fixed,
+  except the rare card keyword that burns it)
 
-## Clearing the enemies early must not be dead air
+**Closed by this revision:** whether reinforcements arrive mid-battle (yes — the Opponent refreshes,
+and it is core rather than one scenario's gimmick), and whether Flood needs a floor on how much it
+removes (moot — it no longer removes anything).
 
-Lanes make it plausible to kill everything before the countdown ends, and the one rule that must not
-bend says the battle cannot end early. So those turns have to be worth playing.
+## Dead air — SOLVED, kept as the reasoning
 
-**They already are, in principle:** enemies threaten your LIFE, the doom edits your DECK. Clearing
-the lanes removes the first and none of the second, so the remaining turns are spent positioning for
-what the doom reads — which is exactly the squeeze the design is built on.
+An earlier model had the countdown end the battle, which made a cleared board into dead air: nothing
+to do but press end-turn until the dial hit zero. Two fixes were considered — making the dooms read
+lanes so filling all five stayed urgent, and enemy reinforcements.
 
-**The cheap way to make that true in practice: make the dooms read LANES, not just the board.** An
-empty lane at countdown 0 is a wasted slot, so you are racing to fill all five whether or not
-anything is still attacking. Zero new mechanics — it makes lanes load-bearing for the doom rather
-than only for combat. Reinforcements stay in reserve as the escape hatch if playtesting says it is
-still flat.
-
-**Not yet built.** The scenarios currently read the board without caring where anything stands.
+**Neither was built, because the recurring-doom model removed the problem rather than patching it.**
+There is always an Opponent left to kill, so there is always something to do with a turn. Recorded
+so the patch is not reinvented for a problem that no longer exists.
 
 ## Engine findings
 
