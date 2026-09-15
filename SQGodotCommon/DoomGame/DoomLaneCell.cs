@@ -46,7 +46,14 @@ public sealed class DoomLaneCell
 		var rows = new VBoxContainer();
 		rows.AddThemeConstantOverride("separation", 2);
 
+		// CLIPPED, or the lane is not actually a fixed size. CustomMinimumSize is a MINIMUM: a label
+		// wider than the slot drags the whole row out of line, and the companion's name grows with
+		// every apocalypse it survives ("Ash — Barnacled, Glowing"), so this gets worse as a run
+		// goes on. The intermission shows the full name where there is room for it.
 		_name = DoomPalette.Text("", 15, DoomPalette.Bone);
+		_name.ClipText = true;
+		_name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
+		_name.CustomMinimumSize = new Vector2(Width - 16, 0);
 		rows.AddChild(_name);
 
 		_figure = new TextureRect

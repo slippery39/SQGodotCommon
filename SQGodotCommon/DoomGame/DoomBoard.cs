@@ -195,12 +195,18 @@ public partial class DoomBoard : Node2D
 		RenderLog(events);
 		_hand.Sync(_state.CardsIn(ZoneType.Hand).ToList(), player.Energy);
 
+		// Set on BOTH branches. Setting it only when the battle ends left "OPPONENT DOWN" on the
+		// button for the whole of the next floor.
 		_endTurnButton.Disabled = battle.IsOver;
 		if (battle.IsOver)
 		{
 			_endTurnButton.Text = battle.PlayerIsDead ? "YOU DIED" : "OPPONENT DOWN";
 			if (!_battleResolved)
 				ResolveBattle();
+		}
+		else
+		{
+			_endTurnButton.Text = "END TURN";
 		}
 	}
 
