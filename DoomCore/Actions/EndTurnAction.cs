@@ -26,6 +26,11 @@ public record EndTurnAction : GameAction
 		(state, events) = ClearTheDead(state, events);
 		(state, events) = RefreshTheOpponentsLine(state, events);
 
+		// Spawned BEFORE the doom is spawned below, so end-of-turn effects resolve before the
+		// apocalypse does. The spawn queue is FIFO, so the order things are queued here is the
+		// order they run.
+		state = FireTriggers(state, EffectTrigger.OnTurnEnd);
+
 		state = DiscardHand(state);
 
 		var battle = state.GetBattle();
@@ -70,7 +75,12 @@ public record EndTurnAction : GameAction
 		// battle. Only the Opponent's death or yours does.
 		battle = state.GetBattle();
 		if (remaining <= 0)
+		{
 			state = state.SpawnAction(new ResolveDoomAction { TurnNumber = battle.TurnNumber });
+
+			// AFTER the apocalypse, so anything reacting to it sees the board it left behind.
+			state = FireTriggers(state, EffectTrigger.OnDoomFires);
+		}
 
 		state = state
 			.UpdateObject(battle.Id, battle with { TurnNumber = battle.TurnNumber + 1 })
@@ -294,6 +304,7 @@ public record EndTurnAction : GameAction
 				continue;
 			}
 
+			state = FireEffects(state, card.Id, EffectTrigger.OnDeath, card.Effects);
 			state = state.MoveObject(card.Id, state.ZoneId(ZoneType.Discard));
 
 			var battle = state.GetBattle();
@@ -316,10 +327,57 @@ public record EndTurnAction : GameAction
 					new EnemyDiedEvent { EnemyId = enemy.Id, EnemyName = enemy.Name }
 				);
 				state = state.UpdateObject(enemy.Id, (Enemy)enemy.WithMeta("Mourned", true));
+
+				// Safe because a dead enemy is MARKED, not removed — it is still in the zone when
+				// the spawned effect resolves, so "self" and "my lane" still mean something.
+				state = FireEffects(state, enemy.Id, EffectTrigger.OnDeath, enemy.Effects);
 			}
 		}
 
 		return (state, events);
+	}
+
+	/// <summary>
+	/// Fires one trigger for everything on the board that carries effects — enemies, your units and
+	/// the Opponent.
+	///
+	/// **Deliberately not card-only.** A `DoomEffect` does not know what holds it, so the same
+	/// `DealDamageAction` serves a rite, a dying enemy and an Opponent that bleeds you every turn.
+	/// </summary>
+	private static GameState FireTriggers(GameState state, EffectTrigger trigger)
+	{
+		foreach (var enemy in state.LivingEnemies().ToList())
+			state = FireEffects(state, enemy.Id, trigger, enemy.Effects);
+
+		foreach (var unit in state.Units().Where(u => !u.Unit().IsDead).ToList())
+			state = FireEffects(state, unit.Id, trigger, unit.Effects);
+
+		var opponent = state.GetOpponent();
+		return FireEffects(state, opponent.Id, trigger, opponent.Effects);
+	}
+
+	/// <summary>
+	/// Queues one holder's effects for a trigger, and queues NOTHING when it has none for it — an
+	/// empty ResolveEffectsAction per object per turn would be noise in every action log.
+	/// </summary>
+	private static GameState FireEffects(
+		GameState state,
+		int sourceId,
+		EffectTrigger trigger,
+		ImmutableList<DoomEffect> effects
+	)
+	{
+		if (!effects.Any(e => e.Trigger == trigger))
+			return state;
+
+		return state.SpawnAction(
+			new ResolveEffectsAction
+			{
+				SourceId = sourceId,
+				Trigger = trigger,
+				Effects = effects,
+			}
+		);
 	}
 
 	private static GameState DiscardHand(GameState state)

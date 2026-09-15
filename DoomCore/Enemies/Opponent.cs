@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace DoomCore;
@@ -41,6 +42,13 @@ public record Opponent : GameObject
 	public int SummonInterval { get; init; } = 3;
 
 	public int TurnsUntilSummon { get; init; } = 1;
+
+	/// <summary>
+	/// What this Opponent does on its own, beyond its units. "Heals every turn", "summons two at
+	/// once", "cannot be killed while the countdown runs" — the per-battle inevitability lever
+	/// DoomJam.md has wanted since dodging became content rather than a rule.
+	/// </summary>
+	public ImmutableList<DoomEffect> Effects { get; init; } = ImmutableList<DoomEffect>.Empty;
 
 	public bool IsDead => Health <= 0;
 }

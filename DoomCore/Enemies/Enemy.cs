@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace DoomCore;
@@ -33,6 +34,12 @@ public record Enemy : GameObject
 	/// lane. One enemy per lane: the lane IS the matchup.
 	/// </summary>
 	public int Lane { get; init; }
+
+	/// <summary>
+	/// What this enemy does beyond hitting its lane. Same `DoomEffect` a card carries — that is the
+	/// point of it not being card-specific: one `DealDamageAction` serves a rite and a dying enemy.
+	/// </summary>
+	public ImmutableList<DoomEffect> Effects { get; init; } = ImmutableList<DoomEffect>.Empty;
 
 	public bool IsDead => Health <= 0;
 }
