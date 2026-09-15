@@ -119,7 +119,11 @@ public sealed class DoomHandView
 		var present = _hand.GetCards().Select(c => c.Id).ToHashSet();
 		foreach (var card in cards)
 			if (!present.Contains(card.Id.ToString()))
-				_hand.DrawCard().Id = card.Id.ToString();
+			{
+				var ui = _hand.DrawCard();
+				ui.Id = card.Id.ToString();
+				Flatten(ui);
+			}
 
 		// SetCardsDetails applies positionally, so the list has to be ordered the way the fan
 		// currently holds its cards rather than the way the zone holds them.
@@ -132,6 +136,25 @@ public sealed class DoomHandView
 			ui.Modulate = wanted[ui.Id].Cost <= energy ? Colors.White : new Color(1, 1, 1, 0.45f);
 	}
 
+	/// <summary>
+	/// The two pieces of the shared card that `Details` does not reach.
+	///
+	/// Both are plain nodes inside the card scene rather than swappable textures, so they are found
+	/// by name and restyled once, when the card is created. Reaching into another scene's tree is
+	/// not free — if either node is renamed this silently stops working, which is why it degrades to
+	/// doing nothing rather than throwing.
+	/// </summary>
+	private static void Flatten(CardUI2D ui)
+	{
+		// The "Unit" type band: a dark stripe straight across the card face. The reference card has
+		// no such band, and the type line is already implied by the stat badge.
+		if (ui.FindChild("TypeLineBand", true, false) is ColorRect band)
+			band.Color = Colors.Transparent;
+
+		if (ui.FindChild("PowerToughnessBadge", true, false) is Sprite2D badge)
+			badge.Texture = DoomCardArt.StatBadge;
+	}
+
 	private static InternalCardUI2D.Details DetailsFor(DoomCard card)
 	{
 		var unit = card.GetComponent<UnitComponent>();
@@ -141,9 +164,39 @@ public sealed class DoomHandView
 			Id = card.Id.ToString(),
 			CardName = card.Name,
 			ManaCost = card.Cost.ToString(),
-			TypeLine = unit is null ? "Rite" : "Unit",
+			// Blank: the reference card has no type line, and "Unit" floating across the face says
+			// nothing a stat badge does not already say. A Rite has no badge, which is the tell.
+			TypeLine = "",
 			PowerToughness = unit is null ? "" : $"{unit.Power}/{unit.Toughness}",
 			RulesText = card.Tags.IsEmpty ? "" : string.Join(", ", card.Tags),
+
+			// Every part of the shared card swapped for a flat one. The interaction is untouched —
+			// only the pixels change. See DoomCardArt.
+			MainFrameTexture = DoomCardArt.Frame,
+			NameFrameTexture = DoomCardArt.NamePlate,
+			ManaCostFrameTexture = DoomCardArt.CostBadge,
+
+			// The artwork covers the upper half and the rules plate the lower, so giving both the
+			// same block is what makes the card read as ONE flat colour rather than two stacked
+			// panels. The reference card is a single solid shape; this is how you get it out of a
+			// frame built for Magic.
+			ArtworkTexture = DoomCardArt.ArtBlock(DoomCardArt.ColourFor(card.Name)),
+			RulesTextFrameTexture = DoomCardArt.RulesBlock(DoomCardArt.ColourFor(card.Name)),
+
+			NameColor = DoomPalette.Bone,
+			ManaCostColor = DoomPalette.Bone,
+			RulesTextColor = DoomPalette.Bone,
+
+			// The border is painted into the frame texture, so the shader outline would only
+			// double it.
+			OutlineThickness = 0f,
+
+			// Explicitly OFF. The scene sets enable_holographic false, but UpdateHolographicShader
+			// rewrites the shader from the C# field at _Ready, so the scene's value does not
+			// survive. Left unset it laid a rainbow-noise wash over every card — invisible on
+			// saturated colours, and unmistakable on the flat mid-tones this design uses.
+			Holographic = false,
+			HolographicIntensity = 0f,
 		};
 	}
 }
