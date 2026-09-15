@@ -152,7 +152,7 @@ public sealed class DoomHandView
 			band.Color = Colors.Transparent;
 
 		if (ui.FindChild("PowerToughnessBadge", true, false) is Sprite2D badge)
-			badge.Texture = DoomCardArt.StatBadge;
+			badge.Texture = DoomArt.StatBadge;
 	}
 
 	private static InternalCardUI2D.Details DetailsFor(DoomCard card)
@@ -171,17 +171,17 @@ public sealed class DoomHandView
 			RulesText = card.Tags.IsEmpty ? "" : string.Join(", ", card.Tags),
 
 			// Every part of the shared card swapped for a flat one. The interaction is untouched —
-			// only the pixels change. See DoomCardArt.
-			MainFrameTexture = DoomCardArt.Frame,
-			NameFrameTexture = DoomCardArt.NamePlate,
-			ManaCostFrameTexture = DoomCardArt.CostBadge,
+			// only the pixels change. See DoomArt.
+			MainFrameTexture = DoomArt.Frame,
+			NameFrameTexture = DoomArt.NamePlate,
+			ManaCostFrameTexture = DoomArt.CostBadge,
 
 			// The artwork covers the upper half and the rules plate the lower, so giving both the
 			// same block is what makes the card read as ONE flat colour rather than two stacked
 			// panels. The reference card is a single solid shape; this is how you get it out of a
 			// frame built for Magic.
-			ArtworkTexture = DoomCardArt.ArtBlock(DoomCardArt.ColourFor(card.Name)),
-			RulesTextFrameTexture = DoomCardArt.RulesBlock(DoomCardArt.ColourFor(card.Name)),
+			ArtworkTexture = DoomArt.ArtBlock(DoomArt.ColourFor(card.Name)),
+			RulesTextFrameTexture = DoomArt.RulesBlock(DoomArt.ColourFor(card.Name)),
 
 			NameColor = DoomPalette.Bone,
 			ManaCostColor = DoomPalette.Bone,

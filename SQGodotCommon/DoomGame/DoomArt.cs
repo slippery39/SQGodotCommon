@@ -4,7 +4,7 @@ using Godot;
 namespace DoomGame;
 
 /// <summary>
-/// Flat card faces, generated rather than drawn.
+/// Flat art, generated rather than drawn — card faces and lane figures.
 ///
 /// `Card2D` is a stack of Sprite2Ds — frame, name plate, art window, cost badge, rules box — and
 /// every one of those textures is settable through `Details`. So DOOMJAM keeps the whole shared
@@ -17,7 +17,7 @@ namespace DoomGame;
 ///
 /// Colours are the five in <see cref="DoomPalette"/>. See DoomUI.md.
 /// </summary>
-public static class DoomCardArt
+public static class DoomArt
 {
 	private const int FrameW = 312;
 	private const int FrameH = 445;
@@ -95,6 +95,63 @@ public static class DoomCardArt
 			hash = (hash * 31 + c) & 0x7FFFFFFF;
 
 		return options[hash % options.Length];
+	}
+
+	// ===== Lane figures =====
+
+	private static readonly Dictionary<(Color, bool), Texture2D> Figures = new();
+
+	/// <summary>
+	/// The silhouette standing in a lane: a head and a hunched body, and two eyes if it is hostile.
+	///
+	/// **Silhouettes, not illustrations.** That is the whole reason the flat style was chosen over
+	/// the painted one — a shape like this is something one person can vary twenty times during a
+	/// jam, and commissioned creature art is not.
+	/// </summary>
+	public static Texture2D Figure(Color body, bool hostile)
+	{
+		if (Figures.TryGetValue((body, hostile), out var cached))
+			return cached;
+
+		const int size = 72;
+		var image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+
+		var headR = size * 0.20f;
+		var headX = size / 2f;
+		var headY = size * 0.28f;
+
+		for (var y = 0; y < size; y++)
+		for (var x = 0; x < size; x++)
+		{
+			var inHead = Mathf.Sqrt((x - headX) * (x - headX) + (y - headY) * (y - headY)) <= headR;
+
+			// The body is a trapezoid that widens towards the base, which is what makes the shape
+			// read as hunched and planted rather than as a floating lollipop.
+			var t = Mathf.Clamp((y - size * 0.44f) / (size * 0.52f), 0f, 1f);
+			var halfWidth = Mathf.Lerp(size * 0.16f, size * 0.34f, t);
+			var inBody = y >= size * 0.44f && y <= size * 0.96f && Mathf.Abs(x - headX) <= halfWidth;
+
+			image.SetPixel(x, y, inHead || inBody ? body : Colors.Transparent);
+		}
+
+		if (hostile)
+			foreach (var dx in new[] { -headR * 0.42f, headR * 0.42f })
+				Dot(image, headX + dx, headY, 2.2f, DoomPalette.Red);
+
+		return Figures[(body, hostile)] = ImageTexture.CreateFromImage(image);
+	}
+
+	private static void Dot(Image image, float cx, float cy, float radius, Color colour)
+	{
+		for (var y = (int)(cy - radius) - 1; y <= cy + radius + 1; y++)
+		for (var x = (int)(cx - radius) - 1; x <= cx + radius + 1; x++)
+		{
+			if (x < 0 || y < 0 || x >= image.GetWidth() || y >= image.GetHeight())
+				continue;
+
+			if (Mathf.Sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) <= radius)
+				image.SetPixel(x, y, colour);
+		}
 	}
 
 	// ===== Generation =====

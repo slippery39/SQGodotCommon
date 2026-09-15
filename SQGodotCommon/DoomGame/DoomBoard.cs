@@ -32,11 +32,8 @@ public partial class DoomBoard : Node2D
 	private Button _endTurnButton;
 	private DoomHandView _hand;
 
-	private readonly PanelContainer[] _enemySlots = new PanelContainer[DoomBattle.LaneCount];
-	private readonly Label[] _enemyLabels = new Label[DoomBattle.LaneCount];
-	private readonly Label[] _telegraphLabels = new Label[DoomBattle.LaneCount];
-	private readonly PanelContainer[] _unitSlots = new PanelContainer[DoomBattle.LaneCount];
-	private readonly Label[] _unitLabels = new Label[DoomBattle.LaneCount];
+	private readonly DoomLaneCell[] _enemyLanes = new DoomLaneCell[DoomBattle.LaneCount];
+	private readonly DoomLaneCell[] _unitLanes = new DoomLaneCell[DoomBattle.LaneCount];
 
 	public override void _Ready()
 	{
@@ -81,7 +78,7 @@ public partial class DoomBoard : Node2D
 	private int? LaneAt(Vector2 point)
 	{
 		for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
-			if (_unitSlots[lane].GetGlobalRect().HasPoint(point))
+			if (_unitLanes[lane].Root.GetGlobalRect().HasPoint(point))
 				return lane;
 
 		return null;
@@ -150,38 +147,23 @@ public partial class DoomBoard : Node2D
 	private void RenderLane(int lane, Opponent opponent)
 	{
 		var enemy = _state.EnemyInLane(lane);
-		_enemyLabels[lane].Text = enemy is null
-			? "-"
-			: $"{enemy.Name}\n{enemy.IntentAmount} atk    {enemy.Health} hp";
-		_enemySlots[lane]
-			.AddThemeStyleboxOverride(
-				"panel",
-				enemy is null
-					? DoomPalette.Box(DoomPalette.EmptySlot, DoomPalette.Slate)
-					: DoomPalette.Box(DoomPalette.Slate, DoomPalette.Red)
-			);
+		if (enemy is null)
+			_enemyLanes[lane].ShowEmpty();
+		else
+			_enemyLanes[lane].ShowEnemy(enemy);
 
-		// The summon telegraph: ONE symbol in the lane it is coming to. The delay between the
-		// announcement and the body landing is what keeps the Opponent reachable at all, so this
-		// marker is load-bearing rather than polish — see DoomUI.md. The player only acts on WHICH
-		// lane is closing, so it carries no stats.
-		_telegraphLabels[lane].Visible = opponent.NextSummon is { } summon && summon.Lane == lane;
+		// The summon telegraph: ONE marker in the lane it is coming to. The delay between the
+		// announcement and the body landing is what keeps the Opponent reachable at all, so this is
+		// load-bearing rather than polish — see DoomUI.md. The player only acts on WHICH lane is
+		// closing, so it carries no stats.
+		_enemyLanes[lane]
+			.SetTelegraph(opponent.NextSummon is { } summon && summon.Lane == lane);
 
 		var card = _state.UnitInLane(lane);
-		var isCompanion = card?.HasComponent<CompanionComponent>() == true;
-
-		_unitLabels[lane].Text = card is null
-			? "-"
-			: $"{card.Name}\n{card.Unit().Power} atk    {card.Unit().RemainingToughness} hp";
-		_unitLabels[lane]
-			.AddThemeColorOverride("font_color", isCompanion ? DoomPalette.Gold : DoomPalette.Bone);
-		_unitSlots[lane]
-			.AddThemeStyleboxOverride(
-				"panel",
-				card is null ? DoomPalette.Box(DoomPalette.EmptySlot, DoomPalette.Slate)
-					: isCompanion ? DoomPalette.Box(DoomPalette.Slate, DoomPalette.Gold, 3)
-					: DoomPalette.Box(DoomPalette.Slate, DoomPalette.Bone)
-			);
+		if (card is null)
+			_unitLanes[lane].ShowEmpty();
+		else
+			_unitLanes[lane].ShowUnit(card, card.HasComponent<CompanionComponent>());
 	}
 
 	/// <summary>
@@ -238,8 +220,8 @@ public partial class DoomBoard : Node2D
 
 		column.AddChild(BuildBanner());
 		column.AddChild(BuildOpponent());
-		column.AddChild(BuildLaneRow(_enemySlots, _enemyLabels, _telegraphLabels));
-		column.AddChild(BuildLaneRow(_unitSlots, _unitLabels, null));
+		column.AddChild(BuildLaneRow(_enemyLanes, showsTelegraph: true));
+		column.AddChild(BuildLaneRow(_unitLanes, showsTelegraph: false));
 		column.AddChild(BuildStatusStrip());
 		column.AddChild(BuildFooter());
 
@@ -304,38 +286,15 @@ public partial class DoomBoard : Node2D
 		return rows;
 	}
 
-	private Control BuildLaneRow(PanelContainer[] slots, Label[] labels, Label[] telegraphs)
+	private static Control BuildLaneRow(DoomLaneCell[] cells, bool showsTelegraph)
 	{
 		var row = new HBoxContainer();
 		row.AddThemeConstantOverride("separation", 10);
 
 		for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
 		{
-			var slot = new PanelContainer
-			{
-				SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-				CustomMinimumSize = new Vector2(0, 110),
-			};
-
-			var cell = new VBoxContainer();
-			var label = DoomPalette.Text("-", 18, DoomPalette.Bone);
-			label.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-			label.VerticalAlignment = VerticalAlignment.Center;
-			cell.AddChild(label);
-
-			if (telegraphs is not null)
-			{
-				var telegraph = DoomPalette.Text("INCOMING", 14, DoomPalette.Gold);
-				telegraph.Visible = false;
-				telegraphs[lane] = telegraph;
-				cell.AddChild(telegraph);
-			}
-
-			slot.AddChild(cell);
-			row.AddChild(slot);
-
-			slots[lane] = slot;
-			labels[lane] = label;
+			cells[lane] = new DoomLaneCell(showsTelegraph);
+			row.AddChild(cells[lane].Root);
 		}
 
 		return row;
