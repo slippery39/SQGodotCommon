@@ -172,7 +172,7 @@ Constrained optimisation. Win rate stays the judge; the constraint carries the i
 | Stage | State |
 |---|---|
 | 1 · `DeckCore` | **done**, 7/7 tests |
-| 2 · Core generators | threshold and mana-engine cores are buildable from data already on disk — `AskersOf` is a payoff set, `SuppliersOf` an enabler set, and `ProbeCardProfiles` net mana/cards give the ritual and cantrip sets |
+| 2 · Core gene cores are buildable rators | threshold and mana-enginefrom data already on disk — `AskersOf` is a payoff set, `SuppliersOf` an enabler set, and `ProbeCardProfiles` net mana/cards give the ritual and cantrip sets |
 | 3 · Threshold sweep | **run, inconclusive** — see §4 |
 | 4 · Cores into the evolver | wired but unproven |
 | 5 · Combo discovery | **not started** |

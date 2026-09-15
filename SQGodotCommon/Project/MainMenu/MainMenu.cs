@@ -4,16 +4,31 @@ namespace Project;
 
 public partial class MainMenu : Control
 {
-	// Exported array to define menu options
+	/// <summary>
+	/// The menu, in order, with the first one selected on open.
+	///
+	/// **DOOMJAM leads**: this branch is the jam entry, and "Start Game" used to mean the MTG deck
+	/// select, which left the actual game with no way in from the menu at all.
+	///
+	/// The MTG entries are kept and relabelled rather than deleted, because this branch is meant to
+	/// be a clean no-op for that work. They are the two lines to drop before shipping a jam build.
+	/// </summary>
 	[Export]
-	public string[] MenuOptions = { "Start Game", "Draft", "Options", "Quit" };
+	public string[] MenuOptions =
+	{
+		"DOOMJAM",
+		"MTG - Deck Select",
+		"MTG - Draft",
+		"Options",
+		"Quit",
+	};
 
 	private int _currentOptionIndex = 0; // Tracks the currently selected option
 	private List<Label> _menuLabels = new List<Label>(); // Holds references to menu option labels
 
-	// Colors for selected and unselected options
-	private Color _selectedColor = new Color(1, 1, 0); // Yellow
-	private Color _defaultColor = new Color(1, 1, 1); // White
+	// DOOMJAM's palette: gold means "yours", which is what a highlighted option is. See DoomUI.md.
+	private Color _selectedColor = Color.FromHtml("#E3B23C");
+	private Color _defaultColor = Color.FromHtml("#E8EEF2");
 
 	public override void _Ready()
 	{
@@ -128,12 +143,17 @@ public partial class MainMenu : Control
 		// Perform actions based on selected option
 		switch (MenuOptions[_currentOptionIndex])
 		{
-			case "Start Game":
+			case "DOOMJAM":
+				QueueFree();
+				GameManager.Instance.ChangeScene("res://DoomGame/doom_board.tscn");
+				break;
+
+			case "MTG - Deck Select":
 				QueueFree();
 				GameManager.Instance.ChangeScene("res://MtgGame/DeckSelect/DeckSelectScene.tscn");
 				break;
 
-			case "Draft":
+			case "MTG - Draft":
 				QueueFree();
 				GameManager.Instance.ChangeScene("res://MtgGame/Draft/DraftScene.tscn");
 				break;
