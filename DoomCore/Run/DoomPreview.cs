@@ -132,16 +132,9 @@ public static class DoomPreviewer
 	}
 
 	/// <summary>
-	/// Flavour only — never mechanics. Anything a player needs in order to decide comes from the
-	/// diff above, so this text going stale can mislead about tone but never about rules.
+	/// The scenario's one-line description. Lives in `StarterContent` beside the rest of the
+	/// per-scenario content, because the battle banner shows it too and two copies of a string the
+	/// player reads is one copy too many.
 	/// </summary>
-	private static string Flavour(DoomScenario scenario) =>
-		scenario switch
-		{
-			DoomScenario.Zombie => "The dead do not stay where you leave them.",
-			DoomScenario.Nuclear => "What stands in the open will be changed by it.",
-			DoomScenario.Flood => "The water takes whatever is still standing in it.",
-			DoomScenario.Rapture => "What you give up is not lost.",
-			_ => "",
-		};
+	private static string Flavour(DoomScenario scenario) => StarterContent.DescriptionFor(scenario);
 }

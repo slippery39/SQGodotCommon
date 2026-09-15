@@ -24,6 +24,23 @@ public static class StarterContent
 		};
 
 	/// <summary>
+	/// What the apocalypse does, in one line, for the banner that is always on screen.
+	///
+	/// **Flavour only — never mechanics.** Nothing a player needs in order to decide comes from
+	/// here, so this text going stale can mislead about tone but never about rules. The numbers
+	/// come from the board.
+	/// </summary>
+	public static string DescriptionFor(DoomScenario scenario) =>
+		scenario switch
+		{
+			DoomScenario.Zombie => "The dead do not stay where you leave them.",
+			DoomScenario.Nuclear => "What stands in the open will be changed by it.",
+			DoomScenario.Flood => "The water takes whatever is still standing in it.",
+			DoomScenario.Rapture => "What you give up is not lost.",
+			_ => "",
+		};
+
+	/// <summary>
 	/// What a scenario is allowed to change. **A fixed property of its design**, and the thing that
 	/// decides which hook implements it — see <see cref="DoomScope"/>.
 	/// </summary>

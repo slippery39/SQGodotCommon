@@ -12,6 +12,26 @@ dotnet test MtgSimulator.Tests
 dotnet test SQGodotCommon.Tests
 ```
 
+## DOOMJAM
+
+```
+dotnet test DoomCore.Tests                       # the rules engine
+dotnet run --project DoomConsole -c Debug 42     # play it in a terminal, seed 42
+godot-mono --path SQGodotCommon DoomGame/doom_board.tscn    # the battle screen
+```
+
+**`godot` on PATH cannot run C# at all** — it is the standard build. Use `godot-mono`.
+
+Launching the board scene directly spams `Singleton instance of GameManager is not initialized!`
+once per frame. That is the `DebugConsole` autoload, not the board, and it is harmless — the scene
+is being run without the main scene that creates the singleton.
+
+Headless works for checking the battle drives correctly, and prints nothing by default:
+
+```
+godot-mono --headless --quit-after 60 --path SQGodotCommon DoomGame/doom_board.tscn
+```
+
 ## Play in console
 
 ```
