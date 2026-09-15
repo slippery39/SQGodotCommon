@@ -18,6 +18,12 @@ namespace DoomGame;
 /// </summary>
 public sealed class DoomHandView
 {
+	/// <summary>How much a Card2D is shrunk to sit in one band of the board rather than fill a screen.</summary>
+	public const float CardScale = 0.75f;
+
+	/// <summary>Roughly how tall the scaled fan is, so the board can reserve room for it.</summary>
+	public const int BandHeight = 380;
+
 	private readonly Hand2D _hand;
 
 	/// <summary>Which lane a drop point lands in, or null if it missed every lane.</summary>
@@ -45,7 +51,23 @@ public sealed class DoomHandView
 		_hand = GD.Load<PackedScene>("res://Common/Cards/2D/Hand2D/Hand.tscn")
 			.Instantiate<Hand2D>();
 		_hand.Position = position;
+
+		// A Card2D is around 500px tall in the 1920x1080 base canvas — sized for a screen that is
+		// all hand. Here the hand is one band of six, so it is scaled to fit rather than the board
+		// being shrunk around it.
+		_hand.Scale = new Vector2(CardScale, CardScale);
+
+		// Spacing is in the hand's own space, so it has to out-pace the scale or the fan closes up
+		// and the names disappear under the next card.
+		_hand.CardSizeX = 290;
+
 		parent.AddChild(_hand);
+
+		// Hand.tscn spans its fan between these two anchors, and at +/-400 five DOOMJAM cards sit
+		// closer together than they are wide, so each one buries the next one's name. The board is
+		// 1920 across; spend more of it.
+		_hand.GetNode<Node2D>("LeftMostPoint").Position = new Vector2(-700, 38);
+		_hand.GetNode<Node2D>("RightMostPoint").Position = new Vector2(700, 27);
 
 		// AFTER AddChild: Hand2D._Ready assigns its own handler to CardDragEnd, so setting this
 		// earlier would be overwritten. Taking CardDragEnd rather than the

@@ -246,13 +246,15 @@ public partial class DoomBoard : Node2D
 		// The fan is a Node2D and draws where it is told, so the column reserves the space rather
 		// than containing it. Added to the same CanvasLayer so that a dragged card's global
 		// position and a lane slot's global rect share one coordinate space — see LaneAt.
-		var handSpace = new Control { CustomMinimumSize = new Vector2(0, 240) };
+		var handSpace = new Control { CustomMinimumSize = new Vector2(0, DoomHandView.BandHeight) };
 		column.AddChild(handSpace);
 
-		var viewport = GetViewportRect().Size;
+		// The BASE canvas, not the window: stretch mode is canvas_items, so this is 1920x1080 and
+		// the window scales it down. Placing the fan against the window size puts it off-screen.
+		var canvas = GetViewportRect().Size;
 		_hand = new DoomHandView(
 			layer,
-			new Vector2(viewport.X / 2, viewport.Y - 120),
+			new Vector2(canvas.X / 2, canvas.Y - DoomHandView.BandHeight / 2f),
 			LaneAt,
 			TryPlay,
 			message => _logLabel.Text = message + "\n" + _logLabel.Text
@@ -352,16 +354,25 @@ public partial class DoomBoard : Node2D
 	{
 		var row = new HBoxContainer();
 		row.AddThemeConstantOverride("separation", 16);
-		row.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
-
-		var logPanel = new PanelContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+		// NOT ExpandFill on the row: the log would eat every spare pixel and push the fan off the
+		// bottom of the screen, which is exactly what it did.
+		var logPanel = new PanelContainer
+		{
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+			CustomMinimumSize = new Vector2(0, 130),
+		};
 		logPanel.AddThemeStyleboxOverride("panel", DoomPalette.Box(DoomPalette.EmptySlot));
 		_logLabel = DoomPalette.Text("", 16, DoomPalette.Bone, HorizontalAlignment.Left);
 		_logLabel.VerticalAlignment = VerticalAlignment.Top;
 		logPanel.AddChild(_logLabel);
 		row.AddChild(logPanel);
 
-		_endTurnButton = new Button { Text = "END TURN", CustomMinimumSize = new Vector2(220, 0) };
+		_endTurnButton = new Button
+		{
+			Text = "END TURN",
+			CustomMinimumSize = new Vector2(260, 130),
+		};
+		_endTurnButton.AddThemeFontSizeOverride("font_size", 24);
 		_endTurnButton.Pressed += OnEndTurn;
 		row.AddChild(_endTurnButton);
 
