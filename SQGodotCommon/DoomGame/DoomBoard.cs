@@ -282,14 +282,14 @@ public partial class DoomBoard : Node2D
 		_opponentHealthLabel = DoomPalette.Text("", 18, DoomPalette.Bone);
 		stack.AddChild(_opponentHealthLabel);
 
-		rows.AddChild(stack);
+		rows.AddChild(Centred(stack));
 		return rows;
 	}
 
 	private static Control BuildLaneRow(DoomLaneCell[] cells, bool showsTelegraph)
 	{
 		var row = new HBoxContainer();
-		row.AddThemeConstantOverride("separation", 10);
+		row.AddThemeConstantOverride("separation", DoomLaneCell.Gap);
 
 		for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
 		{
@@ -297,7 +297,23 @@ public partial class DoomBoard : Node2D
 			row.AddChild(cells[lane].Root);
 		}
 
-		return row;
+		return Centred(row);
+	}
+
+	/// <summary>
+	/// Centres a band on the board's content column instead of letting it span the viewport.
+	///
+	/// The banner is the only thing that runs edge to edge. Everything the player reads during a
+	/// turn sits in one column the width of the lanes, so the eye has a single place to be.
+	/// </summary>
+	private static Control Centred(Control inner)
+	{
+		inner.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+		inner.CustomMinimumSize = new Vector2(DoomLaneCell.RowWidth, inner.CustomMinimumSize.Y);
+
+		var centre = new CenterContainer();
+		centre.AddChild(inner);
+		return centre;
 	}
 
 	private Control BuildStatusStrip()
@@ -306,7 +322,7 @@ public partial class DoomBoard : Node2D
 		panel.AddThemeStyleboxOverride("panel", DoomPalette.Box(DoomPalette.Slate));
 		_statusLabel = DoomPalette.Text("", 20, DoomPalette.Bone);
 		panel.AddChild(_statusLabel);
-		return panel;
+		return Centred(panel);
 	}
 
 	private Control BuildFooter()
@@ -335,6 +351,6 @@ public partial class DoomBoard : Node2D
 		_endTurnButton.Pressed += OnEndTurn;
 		row.AddChild(_endTurnButton);
 
-		return row;
+		return Centred(row);
 	}
 }

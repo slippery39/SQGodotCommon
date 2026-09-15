@@ -172,16 +172,18 @@ public sealed class DoomHandView
 
 			// Every part of the shared card swapped for a flat one. The interaction is untouched —
 			// only the pixels change. See DoomArt.
-			MainFrameTexture = DoomArt.Frame,
-			NameFrameTexture = DoomArt.NamePlate,
-			ManaCostFrameTexture = DoomArt.CostBadge,
+			// ONE solid shape. The frame is the whole card face; the name plate and rules box are
+			// cleared so nothing stacks on top of it and leaves a seam across the middle.
+			MainFrameTexture = DoomArt.Body(DoomArt.ColourFor(card.Name)),
+			NameFrameTexture = DoomArt.Blank(279, 53),
 
-			// The artwork covers the upper half and the rules plate the lower, so giving both the
-			// same block is what makes the card read as ONE flat colour rather than two stacked
-			// panels. The reference card is a single solid shape; this is how you get it out of a
-			// frame built for Magic.
-			ArtworkTexture = DoomArt.ArtBlock(DoomArt.ColourFor(card.Name)),
-			RulesTextFrameTexture = DoomArt.RulesBlock(DoomArt.ColourFor(card.Name)),
+			// The art FRAME as well as the plates. Leaving it unset let the shared card's stone
+			// window reappear as a brown rectangle behind the figure — a default returning is not
+			// the same as a value never set, and looks like a regression you did not make.
+			ArtFrameTexture = DoomArt.Blank(278, 198),
+			RulesTextFrameTexture = DoomArt.Blank(279, 158),
+			ManaCostFrameTexture = DoomArt.CostBadge,
+			ArtworkTexture = DoomArt.CardFigure(DoomArt.ColourFor(card.Name)),
 
 			NameColor = DoomPalette.Bone,
 			ManaCostColor = DoomPalette.Bone,

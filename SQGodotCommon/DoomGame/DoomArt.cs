@@ -23,19 +23,58 @@ public static class DoomArt
 	private const int FrameH = 445;
 	private const int PlateW = 279;
 
-	private static Texture2D _frame;
-	private static Texture2D _namePlate;
 	private static readonly Dictionary<Color, Texture2D> Rules = new();
 	private static Texture2D _costBadge;
 	private static Texture2D _statBadge;
 	private static readonly Dictionary<Color, Texture2D> Art = new();
 
-	/// <summary>The card body: flat slate with a bone edge, corners rounded like the reference.</summary>
-	public static Texture2D Frame =>
-		_frame ??= RoundedRect(FrameW, FrameH, DoomPalette.Slate, DoomPalette.Bone, 3, 20);
+	private static readonly Dictionary<Color, Texture2D> Bodies = new();
+	private static readonly Dictionary<Color, Texture2D> CardFigures = new();
 
-	public static Texture2D NamePlate =>
-		_namePlate ??= RoundedRect(PlateW, 53, DoomPalette.Navy, DoomPalette.Navy, 0, 8);
+	/// <summary>
+	/// The WHOLE card, in one colour with a bone edge.
+	///
+	/// The frame sits behind the art window and the rules box, so painting those two transparent
+	/// leaves this as the entire face — one solid rounded shape, which is what the reference card
+	/// actually is. Building the colour out of stacked panels instead left a seam across the middle
+	/// and read as three things glued together.
+	/// </summary>
+	public static Texture2D Body(Color colour)
+	{
+		if (!Bodies.TryGetValue(colour, out var texture))
+			Bodies[colour] = texture = RoundedRect(FrameW, FrameH, colour, DoomPalette.Bone, 3, 22);
+
+		return texture;
+	}
+
+	/// <summary>Nothing at all, at a given size — used to clear a sprite that would otherwise stack.</summary>
+	public static Texture2D Blank(int width, int height) =>
+		RoundedRect(width, height, Colors.Transparent, Colors.Transparent, 0, 0);
+
+	/// <summary>
+	/// The card's centre mark: the same silhouette that stands in a lane, in a darker shade of the
+	/// card's own colour. Reusing the lane figure is what makes a card and the body it becomes
+	/// legibly the same thing.
+	/// </summary>
+	public static Texture2D CardFigure(Color colour)
+	{
+		if (CardFigures.TryGetValue(colour, out var cached))
+			return cached;
+
+		var figure = Figure(colour.Darkened(0.45f), hostile: false).GetImage();
+		var canvas = Image.CreateEmpty(278, 198, false, Image.Format.Rgba8);
+		canvas.Fill(Colors.Transparent);
+
+		var scale = 150;
+		figure.Resize(scale, scale, Image.Interpolation.Nearest);
+		canvas.BlitRect(
+			figure,
+			new Rect2I(0, 0, scale, scale),
+			new Vector2I((278 - scale) / 2, (198 - scale) / 2)
+		);
+
+		return CardFigures[colour] = ImageTexture.CreateFromImage(canvas);
+	}
 
 	/// <summary>
 	/// The lower half of the card. Painted in the SAME colour as the art block above it, so the two
@@ -129,7 +168,8 @@ public static class DoomArt
 			// read as hunched and planted rather than as a floating lollipop.
 			var t = Mathf.Clamp((y - size * 0.44f) / (size * 0.52f), 0f, 1f);
 			var halfWidth = Mathf.Lerp(size * 0.16f, size * 0.34f, t);
-			var inBody = y >= size * 0.44f && y <= size * 0.96f && Mathf.Abs(x - headX) <= halfWidth;
+			var inBody =
+				y >= size * 0.44f && y <= size * 0.96f && Mathf.Abs(x - headX) <= halfWidth;
 
 			image.SetPixel(x, y, inHead || inBody ? body : Colors.Transparent);
 		}

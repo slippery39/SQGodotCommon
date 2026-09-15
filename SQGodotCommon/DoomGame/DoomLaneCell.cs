@@ -15,6 +15,13 @@ namespace DoomGame;
 /// </summary>
 public sealed class DoomLaneCell
 {
+	public const int Width = 188;
+	public const int Height = 176;
+
+	/// <summary>How wide the five lanes plus their gaps come to — the board's content column.</summary>
+	public const int RowWidth = (Width * DoomBattle.LaneCount) + (Gap * (DoomBattle.LaneCount - 1));
+	public const int Gap = 12;
+
 	public PanelContainer Root { get; }
 
 	private readonly Label _name;
@@ -27,10 +34,13 @@ public sealed class DoomLaneCell
 
 	public DoomLaneCell(bool showsTelegraph)
 	{
+		// Near-SQUARE and a fixed size, not ExpandFill. Letting the container divide the viewport
+		// gave five 363x132 letterboxes — a lane that wide reads as a row of banners rather than as
+		// a slot something stands in, and it is nothing like the reference.
 		Root = new PanelContainer
 		{
-			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-			CustomMinimumSize = new Vector2(0, 132),
+			SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter,
+			CustomMinimumSize = new Vector2(Width, Height),
 		};
 
 		var rows = new VBoxContainer();
@@ -44,7 +54,7 @@ public sealed class DoomLaneCell
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
 			SizeFlagsVertical = Control.SizeFlags.ExpandFill,
-			CustomMinimumSize = new Vector2(0, 56),
+			CustomMinimumSize = new Vector2(0, 74),
 		};
 		rows.AddChild(_figure);
 
