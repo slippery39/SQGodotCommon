@@ -182,8 +182,21 @@ public class RunTests
 			.FirstOrDefault(c => c.RunCardId == committedId);
 
 		Assert.That(washed, Is.Not.Null, "it left the field");
+
+		// Asserted where it MATTERS — back in play — rather than on the card sitting in Discard.
+		// Damage is cleared by PlayCardAction, at the single point every board unit enters through.
+		// It used to be cleared here on the way out instead, which left the death path never doing
+		// it: a unit that died once arrived back on the Field already dead and invisible.
+		state = state.MoveObject(washed!.Id, state.ZoneId(ZoneType.Hand));
+		var lane = state.OpenLanes().First();
+		(state, _) = state
+			.AddAction(new PlayCardAction { CardId = washed.Id, Lane = lane })
+			.ProcessAllActions();
+
+		var replayed = state.UnitInLane(lane);
+		Assert.That(replayed, Is.Not.Null, "it must actually reach the lane");
 		Assert.That(
-			washed!.Unit().Damage,
+			replayed!.Unit().Damage,
 			Is.Zero,
 			"what returns from Discard is the card, not the body that stood in the lane"
 		);

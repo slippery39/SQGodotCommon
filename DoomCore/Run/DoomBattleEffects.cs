@@ -55,12 +55,11 @@ public static class DoomBattleEffects
 			if (card.HasComponent<CompanionComponent>())
 				continue;
 
-			// Marked damage is washed off with everything else: the card comes back whole, because
-			// what returns from Discard is the card, not the body that was standing in the lane.
-			state = state.UpdateObject(
-				card.Id,
-				card.WithComponentReplaced(card.Unit() with { Damage = 0 })
-			);
+			// Marked damage needs no washing off here: `PlayCardAction` clears it when a unit next
+			// enters the Field, which is the single point every board unit comes through. This
+			// used to reset it itself, and that was the bug — the rule "what returns from Discard
+			// is the card, not the body that stood in the lane" lived at THIS call site only, so
+			// the death path never got it and a unit that died once could never be replayed.
 			state = state.MoveObject(card.Id, discardId);
 		}
 

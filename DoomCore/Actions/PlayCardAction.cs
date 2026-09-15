@@ -66,10 +66,16 @@ public record PlayCardAction : GameAction
 		var isUnit = card.HasComponent<UnitComponent>();
 		var destination = isUnit ? ZoneType.Field : ZoneType.Discard;
 
+		// Damage is cleared HERE, at the one point every board unit enters through, rather than at
+		// each exit from the Field. A card that died earlier this battle went to Discard still
+		// carrying the damage that killed it; recycled into hand and replayed it would arrive with
+		// IsDead already true, so `UnitInLane` would skip it and it would sit on the Field
+		// invisible and inert — hand and energy spent for nothing. **What returns from Discard is
+		// the card, not the body that was standing in the lane.**
 		if (isUnit)
 			state = state.UpdateObject(
 				CardId,
-				card.WithComponentReplaced(card.Unit() with { Lane = Lane })
+				card.WithComponentReplaced(card.Unit() with { Lane = Lane, Damage = 0 })
 			);
 
 		state = state.MoveObject(CardId, state.ZoneId(destination));

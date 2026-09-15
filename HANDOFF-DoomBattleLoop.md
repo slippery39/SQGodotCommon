@@ -70,6 +70,15 @@ that silently did nothing would look exactly like one that worked.
 - **The console found a bug the tests could not.** `OpponentDamagedEvent` was raised and never
   rendered — the Opponent's health fell with nothing on screen explaining why, and every state
   assertion passed. **Play it, do not just test it.** Same class as MTG's blank card faces.
+- **A unit that died once could never be replayed** (fixed 2026-09-14). `UnitComponent.Damage`
+  survived death -> Discard -> reshuffle -> hand, so replaying the card put a unit with `IsDead`
+  already true onto the Field. `UnitInLane` filters dead units, so it was invisible and inert — the
+  card left your hand and the energy was spent for nothing. **The rule already existed**, written
+  into Flood's board wash as "what returns from Discard is the card, not the body that stood in the
+  lane" — but it lived at that ONE call site, so the death path never got it. Now cleared in
+  `PlayCardAction`, the single point every board unit enters through. Pinned by
+  `AUnitThatDiedEarlierComesBackWholeWhenItIsReplayed`.
+- **Found by playing, not by testing — for the third time.** 54/54 passed with this live.
 - **The Companion needed no work at all**, twice running. `Marked` is called in `Run.AfterBattle`,
   not per firing, so it stayed once-per-battle by construction. The run/battle split keeps paying.
 
@@ -114,6 +123,12 @@ the reasoning is easier to follow as one story than as four diffs.
 
 **Dodging is currently unreachable, so the newest rule has no teeth.** Floor 1, seed 42, a decent
 aggressive line:
+
+> **THIS TABLE PREDATES THE DEAD-UNIT-REPLAY FIX (§4) AND IS SUSPECT.** It was measured while a
+> replayed unit that had died once silently did nothing — a card and an energy vanishing per
+> occurrence, which on a 10-card deck starts around turn 3. The board was emptier than the player's
+> plays deserved, so this reads as *harder* than the game actually is. `SummonInterval` was raised
+> 2 -> 3 on the strength of it. **Re-measure before trusting either number.**
 
 | turn | Opponent HP |
 |---|---|

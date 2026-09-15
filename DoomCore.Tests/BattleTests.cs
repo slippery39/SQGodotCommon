@@ -114,6 +114,42 @@ public class BattleTests
 		Assert.That(state.GetBattle().Firings, Has.Count.EqualTo(2));
 	}
 
+	/// <summary>
+	/// A unit that DIED earlier in the battle is a whole card again when it is replayed.
+	///
+	/// Dead units go to Discard and cycle back into the deck, and they used to take the damage that
+	/// killed them with them. Replaying one put a unit with IsDead already true onto the Field,
+	/// where `UnitInLane` skipped it: the card left your hand, the energy was spent, and the lane
+	/// stayed empty. Found by PLAYING it — every state assertion in this suite passed.
+	/// </summary>
+	[Test]
+	public void AUnitThatDiedEarlierComesBackWholeWhenItIsReplayed()
+	{
+		var state = DoomBattleFactory.Create(DoomScenario.Flood, countdown: 9, opponentHealth: 500);
+		(state, _) = AddEnemy(state, "Wretch", health: 20, attack: 5, lane: 0);
+		(state, var unitId) = AddUnit(state, "Scavenger", power: 2, toughness: 2);
+
+		(state, _) = state.BeginBattle();
+		(state, _) = Do(state, new PlayCardAction { CardId = unitId, Lane = 0 });
+		(state, _) = Do(state, new EndTurnAction());
+
+		Assert.That(state.UnitInLane(0), Is.Null, "it should have died off the board");
+		Assert.That(
+			state.GetParent(unitId),
+			Is.Not.EqualTo(state.ZoneId(ZoneType.Field)),
+			"and left the Field — it goes to Discard, and the next draw may recycle it straight back"
+		);
+
+		// Into hand the way a reshuffle delivers it, then played into a free lane.
+		state = state.MoveObject(unitId, state.ZoneId(ZoneType.Hand));
+		(state, _) = Do(state, new PlayCardAction { CardId = unitId, Lane = 3 });
+
+		var replayed = state.UnitInLane(3);
+		Assert.That(replayed, Is.Not.Null, "the lane must actually be held — this is the bug");
+		Assert.That(replayed!.Unit().Damage, Is.Zero, "it comes back whole");
+		Assert.That(replayed.Unit().RemainingToughness, Is.EqualTo(2));
+	}
+
 	// ===== Toughness is life =====
 
 	[Test]
