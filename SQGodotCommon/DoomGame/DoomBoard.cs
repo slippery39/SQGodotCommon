@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using DoomCore;
@@ -20,6 +21,9 @@ public partial class DoomBoard : Node2D
 {
 	private const int Seed = 42;
 
+	/// <summary>How much log to keep. Enough to watch a turn resolve, not enough to grow forever.</summary>
+	private const int LogLines = 40;
+
 	private Run _run;
 	private GameState _state;
 
@@ -32,6 +36,8 @@ public partial class DoomBoard : Node2D
 	private Label _turnLabel;
 	private HBoxContainer _energyPips;
 	private Label _logLabel;
+	private ScrollContainer _logScroll;
+	private readonly List<string> _log = [];
 	private Button _endTurnButton;
 	private DoomHandView _hand;
 
@@ -195,7 +201,7 @@ public partial class DoomBoard : Node2D
 			};
 
 			if (line is not null)
-				_logLabel.Text = line + "\n" + _logLabel.Text;
+				Report(line);
 		}
 	}
 
@@ -247,8 +253,29 @@ public partial class DoomBoard : Node2D
 			new Vector2(canvas.X / 2, canvas.Y - DoomHandView.BandHeight / 2f),
 			LaneAt,
 			TryPlay,
-			message => _logLabel.Text = message + "\n" + _logLabel.Text
+			Report
 		);
+
+		// LAST, and after every board Control exists. Godot runs GUI picking BEFORE physics
+		// picking, so any Control with MouseFilter.Stop under the cursor swallows the click and the
+		// cards' Area2D never sees it. No mouse_entered means CardUIManager never learns the card is
+		// hoverable, and the drag cannot start. The full-screen ground ColorRect alone did that
+		// everywhere on the board.
+		//
+		// Every Control here is presentation: the cards are Node2D, and the only thing on this
+		// screen that wants a click is the End Turn button. So everything else steps out of the way.
+		MakeTransparentToMouse(layer);
+	}
+
+	private static void MakeTransparentToMouse(Node node)
+	{
+		foreach (var child in node.GetChildren())
+		{
+			if (child is Control control and not Button)
+				control.MouseFilter = Control.MouseFilterEnum.Ignore;
+
+			MakeTransparentToMouse(child);
+		}
 	}
 
 	/// <summary>
@@ -487,22 +514,40 @@ public partial class DoomBoard : Node2D
 		}
 	}
 
+	/// <summary>
+	/// End Turn, and a debug log behind F3.
+	///
+	/// The log exists because OpponentDamagedEvent was once raised and never rendered: the
+	/// Opponent's health fell with nothing on screen saying why, and every state assertion passed.
+	/// It is a debugging tool rather than part of the game's face, so it stays hidden until asked
+	/// for. Animations will replace it, and then it can go.
+	/// </summary>
 	private Control BuildFooter()
 	{
 		var row = new HBoxContainer();
 		row.AddThemeConstantOverride("separation", 16);
-		// NOT ExpandFill on the row: the log would eat every spare pixel and push the fan off the
-		// bottom of the screen, which is exactly what it did.
-		var logPanel = new PanelContainer
+
+		// A Label grows its OWN minimum size with its content, so an append-only log pushed this row
+		// taller every turn and stretched the End Turn button with it. Fixed height, text scrolls
+		// inside it, and the line count is capped.
+		_logScroll = new ScrollContainer
 		{
 			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
 			CustomMinimumSize = new Vector2(0, 80),
+			Visible = false,
 		};
+
+		var logPanel = new PanelContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		logPanel.AddThemeStyleboxOverride("panel", DoomPalette.Box(DoomPalette.EmptySlot));
-		_logLabel = DoomPalette.Text("", 16, DoomPalette.Bone, HorizontalAlignment.Left);
+		_logLabel = DoomPalette.Text("", 15, DoomPalette.Bone, HorizontalAlignment.Left);
 		_logLabel.VerticalAlignment = VerticalAlignment.Top;
 		logPanel.AddChild(_logLabel);
-		row.AddChild(logPanel);
+		_logScroll.AddChild(logPanel);
+		row.AddChild(_logScroll);
+
+		// Holds the button's place whether or not the log is showing, so F3 never moves the one
+		// control the player actually uses.
+		row.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
 
 		_endTurnButton = new Button { Text = "END TURN", CustomMinimumSize = new Vector2(260, 80) };
 		_endTurnButton.AddThemeFontSizeOverride("font_size", 24);
@@ -510,5 +555,21 @@ public partial class DoomBoard : Node2D
 		row.AddChild(_endTurnButton);
 
 		return Centred(row);
+	}
+
+	public override void _Input(InputEvent @event)
+	{
+		if (@event is InputEventKey { Pressed: true, Keycode: Key.F3 })
+			_logScroll.Visible = !_logScroll.Visible;
+	}
+
+	/// <summary>Newest first, and CAPPED. An unbounded log is a memory leak with a user interface.</summary>
+	private void Report(string line)
+	{
+		_log.Insert(0, line);
+		if (_log.Count > LogLines)
+			_log.RemoveRange(LogLines, _log.Count - LogLines);
+
+		_logLabel.Text = string.Join("\n", _log);
 	}
 }
