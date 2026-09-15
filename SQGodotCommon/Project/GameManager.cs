@@ -77,11 +77,39 @@ public partial class GameManager : Singleton<GameManager>
 			ChangeScene(InitialScene);
 	}
 
+	/// <summary>
+	/// Runs from `_EnterTree`, and this is an AUTOLOAD, so it runs before whichever scene Godot is
+	/// opening — the main scene, or a single scene opened straight from the editor or the command
+	/// line.
+	///
+	/// **That is the point of it being an autoload.** Logging and the input map are set up here, so
+	/// a scene opened on its own used to get neither: `Log` wrote nowhere and `move_left` /
+	/// `move_right` did not exist. The visible symptom was `DebugConsole` printing "Singleton
+	/// instance of GameManager is not initialized!" once a frame, but the console was only the
+	/// loudest casualty of an app that was half booted.
+	/// </summary>
 	protected override void Initialize()
 	{
 		InitializeLogging();
 		InitializeInputs();
-		CallDeferred("LoadInitialScene");
+		CallDeferred(nameof(AdoptLoadedScene));
+	}
+
+	/// <summary>
+	/// Godot loads the first scene itself now, so the one on screen at startup is one this object
+	/// never created. Adopt it, or <see cref="CurrentScene"/> stays null until the first
+	/// <see cref="ChangeScene(string)"/> and the first scene is never freed when we leave it.
+	///
+	/// Deferred because `GetTree().CurrentScene` is not populated while autoloads are entering.
+	/// </summary>
+	private void AdoptLoadedScene()
+	{
+		CurrentScene ??= GetTree().CurrentScene;
+
+		// ChangeScene logs every other transition; without this the FIRST scene is the only one
+		// that arrives unannounced, which is exactly the one you want named when a scene is opened
+		// directly and you are wondering what actually booted.
+		Log.Information("Initial scene: {SceneName}", CurrentScene?.Name.ToString() ?? "none");
 	}
 
 	private void InitializeLogging()
@@ -114,12 +142,6 @@ public partial class GameManager : Singleton<GameManager>
 			InputMap.AddAction(actionName);
 			InputMap.ActionAddEvent(actionName, key);
 		}
-	}
-
-	private void LoadInitialScene()
-	{
-		Log.Information("Loading scene...");
-		GoToMainMenu();
 	}
 
 	// Service management - simplified but type-safe
