@@ -9,62 +9,31 @@ namespace DoomCore;
 /// </summary>
 public static class StarterContent
 {
-	/// <summary>
-	/// Countdown length per scenario. Varying it is free texture: each apocalypse feels different
-	/// before the player has read a word of its text. Nuclear is short because clearing your board
-	/// in two turns is genuinely hard; Flood is long because committing takes time.
-	/// </summary>
-	public static int CountdownFor(DoomScenario scenario) =>
-		scenario switch
-		{
-			DoomScenario.Nuclear => 2,
-			DoomScenario.Zombie => 3,
-			DoomScenario.Rapture => 3,
-			DoomScenario.Flood => 5,
-			_ => 3,
-		};
+	/// <summary>Countdown length per scenario — content, see <see cref="ScenarioLibrary"/>.</summary>
+	public static int CountdownFor(DoomScenario scenario) => ScenarioLibrary.Of(scenario).Countdown;
 
 	/// <summary>
 	/// What the apocalypse does, in one line, for the banner that is always on screen.
 	///
 	/// **Flavour only — never mechanics.** Nothing a player needs in order to decide comes from
-	/// here, so this text going stale can mislead about tone but never about rules. The numbers
-	/// come from the board.
+	/// here, so this going stale can mislead about tone but never about rules.
 	/// </summary>
 	public static string DescriptionFor(DoomScenario scenario) =>
-		scenario switch
-		{
-			DoomScenario.Zombie => "The dead do not stay where you leave them.",
-			DoomScenario.Nuclear => "What stands in the open will be changed by it.",
-			DoomScenario.Flood => "The water takes whatever is still standing in it.",
-			DoomScenario.Rapture => "What you give up is not lost.",
-			_ => "",
-		};
+		ScenarioLibrary.Of(scenario).Description;
 
 	/// <summary>
 	/// What a scenario is allowed to change. **A fixed property of its design**, and the thing that
 	/// decides which hook implements it — see <see cref="DoomScope"/>.
 	/// </summary>
-	public static DoomScope ScopeOf(DoomScenario scenario) =>
-		scenario switch
-		{
-			DoomScenario.Flood => DoomScope.Battle,
-			_ => DoomScope.Permanent,
-		};
+	public static DoomScope ScopeOf(DoomScenario scenario) => ScenarioLibrary.Of(scenario).Scope;
 
 	/// <summary>
-	/// Which scenarios a floor may roll. **Scope is the difficulty curve**: early floors get
-	/// battle-only apocalypses you merely navigate, later floors get ones that leave marks.
-	///
-	/// Flood used to be gated to floor 8+ because it removed cards from the run deck, which meant
-	/// it did not exist at all for the first seven floors. It is a battle-scope board wash now, so
-	/// it leads instead — it teaches the player what an apocalypse feels like before one can cost
-	/// them anything. Rapture is excluded everywhere: no transform yet.
+	/// Which apocalypses a floor may roll. **Scope is the difficulty curve**: early floors get
+	/// battle-only ones you merely navigate, later floors get ones that leave marks on the run.
+	/// Rapture is excluded everywhere by being flagged unimplemented.
 	/// </summary>
 	public static ImmutableArray<DoomScenario> PlayableOn(int floor) =>
-		floor < 3
-			? [DoomScenario.Flood]
-			: [DoomScenario.Flood, DoomScenario.Zombie, DoomScenario.Nuclear];
+		[.. ScenarioLibrary.PlayableOn(floor).Select(d => d.Scenario)];
 
 	/// <summary>
 	/// A card that is not a body. It resolves, does its thing, and goes to Discard.

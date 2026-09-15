@@ -15,52 +15,52 @@ namespace DoomCore;
 /// </summary>
 public static class DoomBattleEffects
 {
+	/// <summary>
+	/// Runs a battle apocalypse's authored effects against this GameState.
+	///
+	/// **This used to be a switch with one arm per scenario. It is a runner now** — what Flood does
+	/// is a list of DoomEffects in `ScenarioLibrary`, so a new battle-scope apocalypse is a single
+	/// library entry and no code at all.
+	///
+	/// Effects are EXECUTED inline rather than spawned, which is the one place this departs from how
+	/// effects run everywhere else. `DoomPreviewer` calls straight into here and diffs the board to
+	/// tell the player what the firing would do; a spawned action would not have run yet and the
+	/// preview would report that nothing happens. Inline keeps one definition of Flood serving both
+	/// the real firing and the dial that predicts it — which is the rule that stops the preview
+	/// drifting from the apocalypse.
+	/// </summary>
 	public static GameState Apply(GameState state, DoomScenario scenario)
 	{
-		if (StarterContent.ScopeOf(scenario) != DoomScope.Battle)
+		var definition = ScenarioLibrary.Of(scenario);
+
+		if (definition.Scope != DoomScope.Battle)
 			throw new InvalidOperationException(
-				$"{scenario} is a {StarterContent.ScopeOf(scenario)} scenario and belongs in "
-					+ "DoomTransforms, not here. A scenario in the wrong hook does nothing at all "
-					+ "and looks exactly like one that worked."
+				$"{scenario} is a {definition.Scope} scenario and belongs in DoomTransforms, not "
+					+ "here. A scenario in the wrong hook does nothing at all and looks exactly "
+					+ "like one that worked."
 			);
 
-		return scenario switch
+		if (definition.BattleEffects.IsEmpty)
+			throw new InvalidOperationException(
+				$"{scenario} is battle scope and declares no effects, so firing it would change "
+					+ "nothing. An apocalypse that silently does nothing is the failure this "
+					+ "codebase keeps rediscovering."
+			);
+
+		foreach (var effect in definition.BattleEffects)
 		{
-			DoomScenario.Flood => Flood(state),
-			_ => throw new ArgumentOutOfRangeException(nameof(scenario)),
-		};
-	}
+			// The doom is not an object on the board, so there is no source id — "self" and
+			// "my lane" correctly resolve to nothing for an apocalypse.
+			var targets = DoomTargeting.Resolve(state, effect.Target, sourceId: 0);
 
-	/// <summary>
-	/// **The water takes what is standing.** Every unit in play is washed to Discard — you keep the
-	/// cards, you lose the board and the energy you spent putting it there.
-	///
-	/// Flood used to delete never-summoned units from the run deck. Permanent card removal caused
-	/// more trouble than it was worth: on a starter deck it could empty a run outright, which is why
-	/// it had to be gated behind floor 8 and therefore did not exist for the first seven. As a wash
-	/// it appears from floor 1 and teaches its fiction long before anything with teeth does.
-	///
-	/// It costs tempo, not material, which is what makes it an obstacle rather than a tax — and it
-	/// is the question the lane game wants asked: how much do you commit to a board about to go
-	/// under?
-	/// </summary>
-	private static GameState Flood(GameState state)
-	{
-		var discardId = state.ZoneId(ZoneType.Discard);
+			var action = effect.Template is EffectAction typed
+				? typed with
+				{
+					TargetIds = targets,
+				}
+				: effect.Template;
 
-		foreach (var card in state.Units().ToList())
-		{
-			// The companion is not a card and has nowhere to be discarded TO — it would become
-			// drawable. It rides the flood out, the same way it rides out every other apocalypse.
-			if (card.HasComponent<CompanionComponent>())
-				continue;
-
-			// Marked damage needs no washing off here: `PlayCardAction` clears it when a unit next
-			// enters the Field, which is the single point every board unit comes through. This
-			// used to reset it itself, and that was the bug — the rule "what returns from Discard
-			// is the card, not the body that stood in the lane" lived at THIS call site only, so
-			// the death path never got it and a unit that died once could never be replayed.
-			state = state.MoveObject(card.Id, discardId);
+			state = action.Execute(state).GameState;
 		}
 
 		return state;

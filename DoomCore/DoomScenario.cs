@@ -33,4 +33,12 @@ public enum DoomScenario
 
 	/// <summary>Reads what you SACRIFICED. Sacrificed units return as life — the doom you want at 6 HP.</summary>
 	Rapture,
+
+	/// <summary>
+	/// BATTLE scope. Burns everything still standing and everyone behind it.
+	///
+	/// **Added as data alone** — an entry here and an entry in `ScenarioLibrary`, with no hook case,
+	/// no scope row and no countdown row. That is the whole point of scenarios being content.
+	/// </summary>
+	Ashfall,
 }

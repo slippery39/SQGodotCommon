@@ -102,3 +102,9 @@ public record LifeGainedEvent : GameEvent
 	public int Amount { get; init; }
 	public int LifeNow { get; init; }
 }
+
+/// <summary>An apocalypse swept the board. Carries the count so the UI need not work it out.</summary>
+public record FieldSweptEvent : GameEvent
+{
+	public int Count { get; init; }
+}

@@ -444,6 +444,32 @@ so the patch is not reinvented for a problem that no longer exists.
 What `ImmutableGameObjects` gives us for free, and what had to be built. **Fill this in as we go — it
 is the deliverable for "how flexible is this engine?"**
 
+**After porting effects and making enemies, Opponents and scenarios into content (75 tests green):**
+
+- **The ported effect system is ~250 lines, against MtgCore's ~1600.** `EffectAction`, `DoomEffect`,
+  `DoomTargeting`, `ResolveEffectsAction` and four concrete effects. The shape is MtgCore's exactly:
+  one action per effect holding all its targets, a resolver that resolves, injects and spawns.
+- **Everything that was expensive there was targeting, and targeting is a CHOICE.** MTG needs 523
+  lines because a player picks. DOOMJAM targets are RULES the board can answer — "the Opponent",
+  "every enemy", "your unit in this lane" — so `DoomTargeting` is one switch. **The saving did not
+  come from writing less; it came from the design having deleted targeting.**
+- **`DoomEffect` never learned what holds it**, and that is the whole return on putting it in its own
+  folder. Cards got effects first; giving them to `Enemy` and `Opponent` afterwards changed nothing
+  about `DoomEffect` and no existing effect needed rewriting.
+- **A battle apocalypse is now DATA and a permanent one cannot be.** This asymmetry is the finding.
+  A battle scenario changes this `GameState`, so it is a list of effects like anything else —
+  Ashfall was added as one enum entry and one library entry, with no case in any hook. A PERMANENT
+  one rewrites the run deck, and **the run deliberately lives outside `GameState`**, so it cannot be
+  a `GameAction` at all and stays a `(run, firing) -> run` function in `DoomTransforms`.
+- **That boundary is the same one that has paid off four times now** — it is why the Companion needed
+  no work, why rewriting combat touched nothing above `DoomCore/Actions/`, and why a doom can rewrite
+  a deck the battle never sees. The price of it is that the effect system stops at the edge of the
+  battle, and that is the right trade rather than a limitation to fix.
+- **`EndTurnAction` stopped reaching into `StarterContent`.** The Opponent carries its own
+  reinforcement, so the engine asks the Opponent what it fields. The old call had no way to learn
+  the floor, so tiered reinforcements were impossible before this.
+
+
 **On reusing MtgCore's effect system (asked 2026-09-15, answered by reading it):**
 
 DOOMJAM has no card effects at all — every `DoomCard` is a vanilla body, Cost/Power/Toughness — so
