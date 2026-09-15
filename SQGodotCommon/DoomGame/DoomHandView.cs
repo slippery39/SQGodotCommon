@@ -19,10 +19,10 @@ namespace DoomGame;
 public sealed class DoomHandView
 {
 	/// <summary>How much a Card2D is shrunk to sit in one band of the board rather than fill a screen.</summary>
-	public const float CardScale = 0.75f;
+	public const float CardScale = 0.68f;
 
 	/// <summary>Roughly how tall the scaled fan is, so the board can reserve room for it.</summary>
-	public const int BandHeight = 380;
+	public const int BandHeight = 340;
 
 	private readonly Hand2D _hand;
 
@@ -152,7 +152,13 @@ public sealed class DoomHandView
 			band.Color = Colors.Transparent;
 
 		if (ui.FindChild("PowerToughnessBadge", true, false) is Sprite2D badge)
+		{
 			badge.Texture = DoomArt.StatBadge;
+
+			// Pulled in off the corner. The shared card hangs this badge past its own edge, which
+			// was fine over a frame that bled outwards and clips against a flat one.
+			badge.Position += new Vector2(-10, -26);
+		}
 	}
 
 	private static InternalCardUI2D.Details DetailsFor(DoomCard card)

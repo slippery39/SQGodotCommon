@@ -90,7 +90,7 @@ public static class DoomArt
 
 	/// <summary>The cost badge, and the one circle on the card — it is what the eye goes to first.</summary>
 	public static Texture2D CostBadge =>
-		_costBadge ??= Circle(81, 83, DoomPalette.Navy, DoomPalette.Bone, 4);
+		_costBadge ??= Circle(81, 83, DoomPalette.Navy, DoomPalette.Bone, 2);
 
 	/// <summary>
 	/// The power/toughness badge. RED, because red means "the enemy, and life" everywhere else on
@@ -192,6 +192,61 @@ public static class DoomArt
 			if (Mathf.Sqrt((x - cx) * (x - cx) + (y - cy) * (y - cy)) <= radius)
 				image.SetPixel(x, y, colour);
 		}
+	}
+
+	private static Texture2D _hooded;
+
+	/// <summary>
+	/// The Opponent: a hood, rimmed in red, with no face. It is the thing you are trying to kill and
+	/// the only way a battle is won, so it gets the one figure on screen that is not a lane token.
+	///
+	/// No eyes, deliberately — the Wretches have those. What is under the hood is the one thing this
+	/// screen does not tell you.
+	/// </summary>
+	public static Texture2D Hooded()
+	{
+		if (_hooded is not null)
+			return _hooded;
+
+		const int size = 132;
+		var image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+
+		// The silhouette, tested at two scales: the gap between them is the rim.
+		static bool Inside(float x, float y, float scale)
+		{
+			var nx = ((x - 0.5f) / scale) + 0.5f;
+			var ny = y / scale;
+
+			if (ny is < 0.06f or > 1f)
+				return false;
+
+			// Half-width grows as a square root, which gives the shoulders a shrug rather than the
+			// straight flare of a cone.
+			var t = Mathf.Clamp((ny - 0.06f) / 0.94f, 0f, 1f);
+			return Mathf.Abs(nx - 0.5f) <= 0.46f * Mathf.Sqrt(t);
+		}
+
+		for (var y = 0; y < size; y++)
+		for (var x = 0; x < size; x++)
+		{
+			var u = x / (float)(size - 1);
+			var v = y / (float)(size - 1);
+
+			var outer = Inside(u, v, 1f);
+			var inner = Inside(u, v, 0.86f);
+
+			// DARKER than the ground it stands on. Filled with Navy it was invisible against a Navy
+			// board and read as a hollow red outline — a silhouette has to be darker than its sky.
+			image.SetPixel(
+				x,
+				y,
+				inner ? Color.FromHtml("#0C131B")
+					: outer ? DoomPalette.Red
+					: Colors.Transparent
+			);
+		}
+
+		return _hooded = ImageTexture.CreateFromImage(image);
 	}
 
 	// ===== Generation =====

@@ -27,7 +27,10 @@ public partial class DoomBoard : Node2D
 	private Label _descriptionLabel;
 	private Label _opponentHealthLabel;
 	private ProgressBar _opponentHealthBar;
-	private Label _statusLabel;
+	private Label _floorLabel;
+	private Label _lifeLabel;
+	private Label _turnLabel;
+	private HBoxContainer _energyPips;
 	private Label _logLabel;
 	private Button _endTurnButton;
 	private DoomHandView _hand;
@@ -132,9 +135,10 @@ public partial class DoomBoard : Node2D
 		for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
 			RenderLane(lane, opponent);
 
-		_statusLabel.Text =
-			$"FLOOR {_run.Floor}     LIFE {player.Life} / {player.MaxLife}     "
-			+ $"ENERGY {player.Energy} / {player.MaxEnergy}     TURN {battle.TurnNumber}";
+		_floorLabel.Text = $"FLOOR {_run.Floor}";
+		_lifeLabel.Text = $"{player.Life} / {player.MaxLife}";
+		_turnLabel.Text = $"TURN {battle.TurnNumber}";
+		RenderEnergy(player);
 
 		RenderLog(events);
 		_hand.Sync(_state.CardsIn(ZoneType.Hand).ToList(), player.Energy);
@@ -206,16 +210,20 @@ public partial class DoomBoard : Node2D
 		root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 		layer.AddChild(root);
 
+		// Between the ground colour and the content, so it sits behind the board and shows down the
+		// sides. Added to the layer rather than inside the ColorRect so the draw order is explicit.
+		layer.AddChild(BuildBackdrop(GetViewportRect().Size));
+
 		var margin = new MarginContainer();
 		margin.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 		margin.AddThemeConstantOverride("margin_left", 32);
 		margin.AddThemeConstantOverride("margin_right", 32);
-		margin.AddThemeConstantOverride("margin_top", 24);
-		margin.AddThemeConstantOverride("margin_bottom", 24);
-		root.AddChild(margin);
+		margin.AddThemeConstantOverride("margin_top", 18);
+		margin.AddThemeConstantOverride("margin_bottom", 18);
+		layer.AddChild(margin);
 
 		var column = new VBoxContainer();
-		column.AddThemeConstantOverride("separation", 14);
+		column.AddThemeConstantOverride("separation", 10);
 		margin.AddChild(column);
 
 		column.AddChild(BuildBanner());
@@ -243,13 +251,102 @@ public partial class DoomBoard : Node2D
 		);
 	}
 
+	/// <summary>
+	/// A drowned city, in flat layers, behind everything.
+	///
+	/// Polygons rather than a generated texture: a 1920x1080 image would be two million pixels of
+	/// per-pixel loop to draw a dozen rectangles. It is mostly hidden behind the content column and
+	/// shows down the sides, which is where the reference puts it too.
+	///
+	/// This is also the PERSPECTIVE SHIFT hook, if that sub-theme survives — swap the skyline per
+	/// apocalypse and the world behind the board changes with the doom.
+	/// </summary>
+	private static float Horizon(Vector2 canvas) => canvas.Y * 0.66f;
+
+	private static Node2D BuildBackdrop(Vector2 canvas)
+	{
+		var backdrop = new Node2D();
+		var skyline = Color.FromHtml("#192533");
+		var water = Color.FromHtml("#18242F");
+
+		var rng = new System.Random(7);
+		for (float x = -40; x < canvas.X + 40; )
+		{
+			var width = rng.Next(70, 190);
+			var height = rng.Next(70, 200);
+			var top = Horizon(canvas) - height;
+
+			backdrop.AddChild(
+				new Polygon2D
+				{
+					Color = skyline,
+					Polygon =
+					[
+						new Vector2(x, top),
+						new Vector2(x + width, top),
+						new Vector2(x + width, Horizon(canvas)),
+						new Vector2(x, Horizon(canvas)),
+					],
+				}
+			);
+
+			x += width + rng.Next(6, 26);
+		}
+
+		backdrop.AddChild(
+			new Polygon2D
+			{
+				Color = water,
+				Polygon =
+				[
+					new Vector2(0, Horizon(canvas)),
+					new Vector2(canvas.X, Horizon(canvas)),
+					new Vector2(canvas.X, canvas.Y),
+					new Vector2(0, canvas.Y),
+				],
+			}
+		);
+
+		// A few flat wave lines, because an unbroken block of colour does not read as water.
+		for (var i = 0; i < 5; i++)
+		{
+			var y = canvas.Y * (0.60f + i * 0.08f);
+			backdrop.AddChild(
+				new Line2D
+				{
+					DefaultColor = skyline,
+					Width = 3,
+					Points =
+					[
+						new Vector2(canvas.X * (0.04f + i * 0.02f), y),
+						new Vector2(canvas.X * (0.30f - i * 0.02f), y),
+					],
+				}
+			);
+			backdrop.AddChild(
+				new Line2D
+				{
+					DefaultColor = skyline,
+					Width = 3,
+					Points =
+					[
+						new Vector2(canvas.X * (0.70f + i * 0.02f), y),
+						new Vector2(canvas.X * (0.96f - i * 0.02f), y),
+					],
+				}
+			);
+		}
+
+		return backdrop;
+	}
+
 	private Control BuildBanner()
 	{
 		var panel = new PanelContainer();
 		panel.AddThemeStyleboxOverride("panel", DoomPalette.Box(DoomPalette.Slate));
 
 		var rows = new VBoxContainer();
-		_scenarioLabel = DoomPalette.Text("", 44, DoomPalette.Bone, HorizontalAlignment.Left);
+		_scenarioLabel = DoomPalette.Text("", 38, DoomPalette.Bone, HorizontalAlignment.Left);
 		_descriptionLabel = DoomPalette.Text("", 18, DoomPalette.Bone, HorizontalAlignment.Left);
 		_descriptionLabel.Modulate = new Color(1, 1, 1, 0.7f);
 
@@ -262,7 +359,19 @@ public partial class DoomBoard : Node2D
 	private Control BuildOpponent()
 	{
 		var rows = new VBoxContainer();
-		rows.AddChild(DoomPalette.Text("THE OPPONENT", 16, DoomPalette.Bone));
+		rows.AddThemeConstantOverride("separation", 4);
+
+		// The thing you are trying to kill, given a body. It was the words "THE OPPONENT" over a
+		// bar, which is the one place on this screen that had no picture of what it described.
+		rows.AddChild(
+			new TextureRect
+			{
+				Texture = DoomArt.Hooded(),
+				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+				StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+				CustomMinimumSize = new Vector2(0, 78),
+			}
+		);
 
 		var stack = new PanelContainer();
 		stack.AddThemeStyleboxOverride("panel", DoomPalette.Box(DoomPalette.Navy));
@@ -316,13 +425,66 @@ public partial class DoomBoard : Node2D
 		return centre;
 	}
 
+	/// <summary>
+	/// Floor, life, energy, turn — as discs where a disc means something, and text where it does not.
+	/// Energy is spent and refilled every turn, so it is shown as pips you can count rather than a
+	/// fraction you have to read.
+	/// </summary>
 	private Control BuildStatusStrip()
 	{
 		var panel = new PanelContainer();
 		panel.AddThemeStyleboxOverride("panel", DoomPalette.Box(DoomPalette.Slate));
-		_statusLabel = DoomPalette.Text("", 20, DoomPalette.Bone);
-		panel.AddChild(_statusLabel);
+
+		var row = new HBoxContainer();
+		row.AddThemeConstantOverride("separation", 18);
+		row.Alignment = BoxContainer.AlignmentMode.Center;
+
+		_floorLabel = DoomPalette.Text("", 20, DoomPalette.Bone);
+		row.AddChild(_floorLabel);
+
+		var (lifePip, lifeLabel) = DoomPalette.Pip(DoomPalette.Red, 18);
+		_lifeLabel = lifeLabel;
+		row.AddChild(lifePip);
+
+		_energyPips = new HBoxContainer();
+		_energyPips.AddThemeConstantOverride("separation", 6);
+		row.AddChild(_energyPips);
+
+		_turnLabel = DoomPalette.Text("", 20, DoomPalette.Bone);
+		row.AddChild(_turnLabel);
+
+		panel.AddChild(row);
 		return Centred(panel);
+	}
+
+	/// <summary>
+	/// One gold disc per point of MAX energy, dimmed once spent — so what you have left and what you
+	/// started with are the same picture. Rebuilt rather than tweened: max energy can change.
+	/// </summary>
+	private void RenderEnergy(DoomPlayer player)
+	{
+		foreach (var child in _energyPips.GetChildren())
+		{
+			_energyPips.RemoveChild(child);
+			child.QueueFree();
+		}
+
+		for (var i = 0; i < player.MaxEnergy; i++)
+		{
+			var spent = i >= player.Energy;
+			var dot = new Panel { CustomMinimumSize = new Vector2(20, 20) };
+
+			var box = DoomPalette.Box(
+				spent ? DoomPalette.EmptySlot : DoomPalette.Gold,
+				spent ? DoomPalette.Gold : DoomPalette.Gold,
+				spent ? 2 : 0
+			);
+			box.CornerRadiusTopLeft = box.CornerRadiusTopRight = 10;
+			box.CornerRadiusBottomLeft = box.CornerRadiusBottomRight = 10;
+			dot.AddThemeStyleboxOverride("panel", box);
+
+			_energyPips.AddChild(dot);
+		}
 	}
 
 	private Control BuildFooter()
@@ -334,7 +496,7 @@ public partial class DoomBoard : Node2D
 		var logPanel = new PanelContainer
 		{
 			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-			CustomMinimumSize = new Vector2(0, 130),
+			CustomMinimumSize = new Vector2(0, 80),
 		};
 		logPanel.AddThemeStyleboxOverride("panel", DoomPalette.Box(DoomPalette.EmptySlot));
 		_logLabel = DoomPalette.Text("", 16, DoomPalette.Bone, HorizontalAlignment.Left);
@@ -342,11 +504,7 @@ public partial class DoomBoard : Node2D
 		logPanel.AddChild(_logLabel);
 		row.AddChild(logPanel);
 
-		_endTurnButton = new Button
-		{
-			Text = "END TURN",
-			CustomMinimumSize = new Vector2(260, 130),
-		};
+		_endTurnButton = new Button { Text = "END TURN", CustomMinimumSize = new Vector2(260, 80) };
 		_endTurnButton.AddThemeFontSizeOverride("font_size", 24);
 		_endTurnButton.Pressed += OnEndTurn;
 		row.AddChild(_endTurnButton);

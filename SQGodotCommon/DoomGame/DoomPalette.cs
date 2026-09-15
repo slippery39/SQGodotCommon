@@ -51,6 +51,28 @@ public static class DoomPalette
 		return box;
 	}
 
+	/// <summary>
+	/// A number in a coloured disc. The board's one repeated unit: attack and life in a lane, energy
+	/// and life in the status strip. Same shape everywhere, so colour is the only thing carrying
+	/// meaning — navy is a number, red is life, gold is yours.
+	/// </summary>
+	public static (PanelContainer Panel, Label Label) Pip(Color fill, int fontSize = 15)
+	{
+		var box = Box(fill, fill);
+		box.CornerRadiusTopLeft = box.CornerRadiusTopRight = 16;
+		box.CornerRadiusBottomLeft = box.CornerRadiusBottomRight = 16;
+		box.ContentMarginLeft = box.ContentMarginRight = 10;
+		box.ContentMarginTop = box.ContentMarginBottom = 2;
+
+		var panel = new PanelContainer();
+		panel.AddThemeStyleboxOverride("panel", box);
+
+		var label = Text("", fontSize, Bone);
+		panel.AddChild(label);
+
+		return (panel, label);
+	}
+
 	public static Label Text(
 		string text,
 		int size,

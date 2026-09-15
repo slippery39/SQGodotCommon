@@ -16,7 +16,7 @@ namespace DoomGame;
 public sealed class DoomLaneCell
 {
 	public const int Width = 188;
-	public const int Height = 176;
+	public const int Height = 156;
 
 	/// <summary>How wide the five lanes plus their gaps come to — the board's content column.</summary>
 	public const int RowWidth = (Width * DoomBattle.LaneCount) + (Gap * (DoomBattle.LaneCount - 1));
@@ -54,15 +54,15 @@ public sealed class DoomLaneCell
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
 			SizeFlagsVertical = Control.SizeFlags.ExpandFill,
-			CustomMinimumSize = new Vector2(0, 74),
+			CustomMinimumSize = new Vector2(0, 62),
 		};
 		rows.AddChild(_figure);
 
 		// Attack on the left, life on the right, in every lane and on every card. Colour carries
 		// the meaning — red is life here as it is everywhere else on this screen.
 		var pips = new HBoxContainer();
-		(_attackPip, _attack) = Pip(DoomPalette.Navy);
-		(_lifePip, _life) = Pip(DoomPalette.Red);
+		(_attackPip, _attack) = DoomPalette.Pip(DoomPalette.Navy);
+		(_lifePip, _life) = DoomPalette.Pip(DoomPalette.Red);
 
 		pips.AddChild(_attackPip);
 		pips.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
@@ -81,23 +81,6 @@ public sealed class DoomLaneCell
 
 		Root.AddChild(rows);
 		ShowEmpty();
-	}
-
-	private static (PanelContainer, Label) Pip(Color fill)
-	{
-		var box = DoomPalette.Box(fill, fill);
-		box.CornerRadiusTopLeft = box.CornerRadiusTopRight = 16;
-		box.CornerRadiusBottomLeft = box.CornerRadiusBottomRight = 16;
-		box.ContentMarginLeft = box.ContentMarginRight = 10;
-		box.ContentMarginTop = box.ContentMarginBottom = 2;
-
-		var panel = new PanelContainer();
-		panel.AddThemeStyleboxOverride("panel", box);
-
-		var label = DoomPalette.Text("", 15, DoomPalette.Bone);
-		panel.AddChild(label);
-
-		return (panel, label);
 	}
 
 	/// <summary>An empty lane: a recessed socket, and nothing to read.</summary>
