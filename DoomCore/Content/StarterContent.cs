@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using ImmutableGameObjects;
 
 namespace DoomCore;
 
@@ -64,6 +65,32 @@ public static class StarterContent
 		floor < 3
 			? [DoomScenario.Flood]
 			: [DoomScenario.Flood, DoomScenario.Zombie, DoomScenario.Nuclear];
+
+	/// <summary>
+	/// A card that is not a body. It resolves, does its thing, and goes to Discard.
+	///
+	/// **The first cards in this game that are not units.** Effects are declared as data — a
+	/// trigger, a target rule and an action template — so a new one needs no engine change. See
+	/// DoomEffect.
+	/// </summary>
+	private static RunCard Rite(string name, int cost, string text, params DoomEffect[] effects) =>
+		new()
+		{
+			Name = name,
+			Cost = cost,
+			Description = text,
+			IsUnit = false,
+			Effects = [.. effects],
+		};
+
+	private static DoomEffect OnPlay(DoomTarget target, GameAction template, string text) =>
+		new()
+		{
+			Trigger = EffectTrigger.OnPlay,
+			Target = target,
+			Template = template,
+			Text = text,
+		};
 
 	private static RunCard Unit(string name, int cost, int power, int toughness, string text) =>
 		new()
@@ -135,6 +162,38 @@ public static class StarterContent
 			Unit("Bonepicker", 2, 5, 1, "Arrives after the fighting."),
 			Unit("Bulwark", 1, 0, 4, "Stands in the way."),
 			Unit("Long Watcher", 3, 3, 8, "Has seen four of these."),
+			Rite(
+				"Scavenged Rounds",
+				1,
+				"Spend it on something that is already close.",
+				OnPlay(
+					DoomTarget.AllEnemies,
+					new DealDamageAction { Amount = 2 },
+					"2 to every enemy"
+				)
+			),
+			Rite(
+				"Field Dressing",
+				1,
+				"It will hold. It will not heal.",
+				OnPlay(DoomTarget.Player, new GainLifeAction { Amount = 6 }, "gain 6 life")
+			),
+			Rite(
+				"Last Orders",
+				2,
+				"Everyone takes what they can carry.",
+				OnPlay(DoomTarget.Player, new DrawCardsAction { Amount = 3 }, "draw 3")
+			),
+			Rite(
+				"Breaching Charge",
+				2,
+				"Straight past whatever is in the way.",
+				OnPlay(
+					DoomTarget.Opponent,
+					new DealDamageAction { Amount = 5 },
+					"5 to the Opponent"
+				)
+			),
 		];
 
 	/// <summary>

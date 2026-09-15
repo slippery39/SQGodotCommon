@@ -159,12 +159,22 @@ public partial class DoomBoard : Node2D
 	/// did not — this never decides legality for itself, and never invents a message. The console
 	/// prints the same strings: "Lane 2 is already held by Ash", "Not enough energy for Bulwark".
 	/// </summary>
-	private string TryPlay(int cardId, int lane)
+	private string TryPlay(int cardId, int? lane)
 	{
 		if (_state.GetBattle().IsOver)
 			return "the battle is over";
 
-		var action = new PlayCardAction { CardId = cardId, Lane = lane };
+		// Only a body needs a lane. Asking the engine keeps this from being a second opinion about
+		// what a unit is.
+		var isUnit =
+			_state.HasObject(cardId)
+			&& _state.GetObject(cardId) is DoomCard card
+			&& card.HasComponent<UnitComponent>();
+
+		if (isUnit && lane is null)
+			return "drop a unit on one of your lanes";
+
+		var action = new PlayCardAction { CardId = cardId, Lane = lane ?? 0 };
 
 		var validation = action.ValidateAdd(_state);
 		if (!validation.IsValid)

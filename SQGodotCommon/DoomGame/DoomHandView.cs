@@ -29,8 +29,11 @@ public sealed class DoomHandView
 	/// <summary>Which lane a drop point lands in, or null if it missed every lane.</summary>
 	private readonly Func<Vector2, int?> _laneAt;
 
-	/// <summary>Plays the card. Returns null when it worked, or the engine's reason when it did not.</summary>
-	private readonly Func<int, int, string> _tryPlay;
+	/// <summary>
+	/// Plays the card into a lane, or with no lane at all for something that is not a body.
+	/// Returns null when it worked, or the engine's reason when it did not.
+	/// </summary>
+	private readonly Func<int, int?, string> _tryPlay;
 
 	private readonly Action<string> _report;
 
@@ -38,7 +41,7 @@ public sealed class DoomHandView
 		Node parent,
 		Vector2 position,
 		Func<Vector2, int?> laneAt,
-		Func<int, int, string> tryPlay,
+		Func<int, int?, string> tryPlay,
 		Action<string> report
 	)
 	{
@@ -86,15 +89,9 @@ public sealed class DoomHandView
 			return;
 		}
 
-		var lane = _laneAt(context.DragEndPoint);
-		if (lane is null)
-		{
-			_hand.LerpCardTransform(card);
-			_report("drop a card on one of your lanes");
-			return;
-		}
-
-		var refusal = _tryPlay(cardId, lane.Value);
+		// A lane is only meaningful for a body. A rite has no position, so it plays from wherever it
+		// was dropped — the board decides, because the board is the thing that knows.
+		var refusal = _tryPlay(cardId, _laneAt(context.DragEndPoint));
 		if (refusal is null)
 			return; // It played. The board re-renders, and Sync takes the card out of the fan.
 
@@ -173,8 +170,13 @@ public sealed class DoomHandView
 			// Blank: the reference card has no type line, and "Unit" floating across the face says
 			// nothing a stat badge does not already say. A Rite has no badge, which is the tell.
 			TypeLine = "",
+
+			// A rite's text is the only thing telling you what it does, so it goes where rules text
+			// goes. It is authored beside the effect it describes — see DoomEffect.Text.
+			RulesText = card.Effects.IsEmpty
+				? (card.Tags.IsEmpty ? "" : string.Join(", ", card.Tags))
+				: string.Join("\n", card.Effects.Select(e => e.Text)),
 			PowerToughness = unit is null ? "" : $"{unit.Power}/{unit.Toughness}",
-			RulesText = card.Tags.IsEmpty ? "" : string.Join(", ", card.Tags),
 
 			// Every part of the shared card swapped for a flat one. The interaction is untouched —
 			// only the pixels change. See DoomArt.

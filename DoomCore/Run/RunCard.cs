@@ -29,5 +29,13 @@ public record RunCard
 	public ImmutableHashSet<string> Tags { get; init; } =
 		ImmutableHashSet.Create<string>(StringComparer.OrdinalIgnoreCase);
 
+	/// <summary>
+	/// What the card DOES, beyond being a body. Empty for a plain unit.
+	///
+	/// Lives on the run card because it is part of the card's definition, and it is copied onto the
+	/// battle card each battle — the same way Power and Toughness are.
+	/// </summary>
+	public ImmutableList<DoomEffect> Effects { get; init; } = ImmutableList<DoomEffect>.Empty;
+
 	public bool HasTag(string tag) => Tags.Contains(tag);
 }

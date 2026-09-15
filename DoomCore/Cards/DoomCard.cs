@@ -29,5 +29,14 @@ public record DoomCard : GameObject
 	public ImmutableHashSet<string> Tags { get; init; } =
 		ImmutableHashSet.Create<string>(StringComparer.OrdinalIgnoreCase);
 
+	/// <summary>
+	/// What this card does when it is played, dies, or a doom fires. Copied from the run card.
+	///
+	/// A card with no <see cref="UnitComponent"/> and no effects does NOTHING — it costs energy and
+	/// goes to Discard. That is an authoring mistake, and `PlayCardAction` refuses it rather than
+	/// letting it look like a card that worked.
+	/// </summary>
+	public ImmutableList<DoomEffect> Effects { get; init; } = ImmutableList<DoomEffect>.Empty;
+
 	public bool HasTag(string tag) => Tags.Contains(tag);
 }

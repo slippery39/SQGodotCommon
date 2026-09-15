@@ -110,6 +110,7 @@ public record Run
 				Cost = runCard.Cost,
 				RunCardId = runCard.RunCardId,
 				Tags = runCard.Tags,
+				Effects = runCard.Effects,
 			};
 
 			if (runCard.IsUnit)

@@ -95,3 +95,10 @@ public record OpponentDefeatedEvent : GameEvent;
 
 /// <summary>Life hit 0. This ends the RUN, not just the battle.</summary>
 public record PlayerDiedEvent : GameEvent;
+
+/// <summary>Life came back. Rare enough to be worth announcing — nothing heals on its own.</summary>
+public record LifeGainedEvent : GameEvent
+{
+	public int Amount { get; init; }
+	public int LifeNow { get; init; }
+}

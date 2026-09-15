@@ -32,6 +32,12 @@ public record PlayCardAction : GameAction
 		if (gameState.GetPlayer().Energy < card.Cost)
 			return ValidationResult.Invalid($"Not enough energy for {card.Name}");
 
+		// A card that is neither a body nor an effect is inert: it would cost energy, leave your
+		// hand and change nothing. Refused here rather than allowed, because an inert card throws no
+		// error and looks exactly like one that worked — this codebase has lost four bugs that way.
+		if (!card.HasComponent<UnitComponent>() && card.Effects.IsEmpty)
+			return ValidationResult.Invalid($"{card.Name} does nothing");
+
 		if (card.HasComponent<UnitComponent>())
 		{
 			if (Lane < 0 || Lane >= DoomBattle.LaneCount)
@@ -93,6 +99,18 @@ public record PlayCardAction : GameAction
 				}
 			);
 		}
+
+		// Effects spawn AFTER the card has moved, so a unit's own OnPlay effect can already see it
+		// standing in its lane — "deal 1 to the enemy opposite" needs the lane to be occupied.
+		if (!card.Effects.IsEmpty)
+			state = state.SpawnAction(
+				new ResolveEffectsAction
+				{
+					SourceId = CardId,
+					Trigger = EffectTrigger.OnPlay,
+					Effects = card.Effects,
+				}
+			);
 
 		return new ActionResult(state).WithEvent(
 			new CardPlayedEvent
