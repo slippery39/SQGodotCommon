@@ -20,6 +20,12 @@ public record StartTurnAction : GameAction
 
 		state = state.UpdateObject(player.Id, player with { Energy = player.MaxEnergy });
 
+		// Cleared HERE rather than at end of turn, because the doom fires at the end of a turn and
+		// has to see that turn's dead. ResolveDoomAction is spawned before this action and the
+		// spawn queue is FIFO, so the firing is captured while this list is still full.
+		var turning = state.GetBattle();
+		state = state.UpdateObject(turning.Id, turning with { DiedThisTurnRunCardIds = [] });
+
 		// Nothing per-turn to reset on a unit. A lane is chosen once, when the unit is played, and
 		// held until it dies — there is no assignment to clear and no damage to wipe, since damage
 		// persists for the whole battle.

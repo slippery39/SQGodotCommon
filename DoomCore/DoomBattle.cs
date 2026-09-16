@@ -54,6 +54,16 @@ public record DoomBattle : GameObject
 	public ImmutableList<int> DiedRunCardIds { get; init; } = ImmutableList<int>.Empty;
 
 	/// <summary>
+	/// Deaths THIS TURN only, cleared when the next turn starts.
+	///
+	/// A narrower window than <see cref="DiedRunCardIds"/>, which holds everything since the last
+	/// firing. An apocalypse reading this one catches what is fresh on the field when it lands
+	/// rather than everything that has died in the three turns since it last looked — and on a
+	/// four-lane board over a long battle those are wildly different numbers.
+	/// </summary>
+	public ImmutableList<int> DiedThisTurnRunCardIds { get; init; } = ImmutableList<int>.Empty;
+
+	/// <summary>
 	/// True when the player hit 0 life. Distinct from <see cref="IsOver"/>, which a win also sets —
 	/// only this one ends the run.
 	/// </summary>

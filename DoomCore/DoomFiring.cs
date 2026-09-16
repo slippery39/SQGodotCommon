@@ -35,6 +35,9 @@ public record DoomFiring
 	/// </summary>
 	public ImmutableList<int> DiedRunCardIds { get; init; } = ImmutableList<int>.Empty;
 
+	/// <summary>Deaths on the turn it landed. The narrow window — see DoomBattle.</summary>
+	public ImmutableList<int> DiedThisTurnRunCardIds { get; init; } = ImmutableList<int>.Empty;
+
 	/// <summary>Units committed to the Field at any point before this firing.</summary>
 	public ImmutableHashSet<int> SummonedRunCardIds { get; init; } = ImmutableHashSet<int>.Empty;
 
@@ -56,6 +59,7 @@ public record DoomFiring
 			TurnNumber = turnNumber,
 			OnFieldRunCardIds = state.Units().Select(u => u.RunCardId).ToImmutableHashSet(),
 			DiedRunCardIds = battle.DiedRunCardIds,
+			DiedThisTurnRunCardIds = battle.DiedThisTurnRunCardIds,
 			SummonedRunCardIds = battle.SummonedRunCardIds,
 		};
 	}

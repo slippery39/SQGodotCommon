@@ -16,6 +16,13 @@ public enum FiringRead
 	/// </summary>
 	Died,
 
+	/// <summary>
+	/// Units that died on the turn the doom landed. The narrow window, and the one a doom that
+	/// MINTS cards wants: `Died` grows with the countdown and the board width, so on a five-lane
+	/// board it hands out several times as much.
+	/// </summary>
+	DiedThisTurn,
+
 	/// <summary>Units committed to the Field at any point this battle.</summary>
 	Summoned,
 
@@ -81,6 +88,16 @@ public record DoomTransform
 	public int? SetToughness { get; init; }
 	public int? SetCost { get; init; }
 
+	/// <summary>
+	/// One result per this many entries read, for <see cref="TransformVerb.AddCopies"/> and
+	/// <see cref="TransformVerb.Delete"/>. Two means every second death pays.
+	///
+	/// **The rate limit on any doom that adds or removes cards.** A stat buff has a natural ceiling
+	/// — a unit can only get so big before the board stops caring — but minting and deleting do
+	/// not, and a band fires its doom about ten times.
+	/// </summary>
+	public int PerN { get; init; } = 1;
+
 	/// <summary>Mark left on every entry modified. Empty leaves the tags alone.</summary>
 	public string Tag { get; init; } = "";
 
@@ -94,6 +111,7 @@ public record DoomTransform
 		{
 			FiringRead.Standing => firing.OnFieldRunCardIds.AsEnumerable(),
 			FiringRead.Died => firing.DiedRunCardIds,
+			FiringRead.DiedThisTurn => firing.DiedThisTurnRunCardIds,
 			FiringRead.Summoned => firing.SummonedRunCardIds,
 			FiringRead.NeverSummoned => run
 				.Deck.Where(c => !firing.SummonedRunCardIds.Contains(c.RunCardId))
@@ -122,7 +140,10 @@ public record DoomTransform
 		switch (Does)
 		{
 			case TransformVerb.AddCopies:
-				return run.WithCards(selected.Select(_ => Template));
+			{
+				var count = selected.Count / Math.Max(1, PerN);
+				return count == 0 ? run : run.WithCards(Enumerable.Repeat(Template, count));
+			}
 
 			case TransformVerb.Duplicate:
 			{
@@ -132,8 +153,15 @@ public record DoomTransform
 
 			case TransformVerb.Delete:
 			{
-				var set = selected.ToImmutableHashSet();
-				return run with { Deck = run.Deck.RemoveAll(c => set.Contains(c.RunCardId)) };
+				// Deck order, so which cards go is deterministic and a run replays exactly.
+				var set = selected.Take(selected.Count / Math.Max(1, PerN)).ToImmutableHashSet();
+				if (set.IsEmpty)
+					return run;
+
+				return run with
+				{
+					Deck = run.Deck.RemoveAll(c => set.Contains(c.RunCardId)),
+				};
 			}
 
 			case TransformVerb.Modify:

@@ -322,6 +322,7 @@ public record EndTurnAction : GameAction
 				battle with
 				{
 					DiedRunCardIds = battle.DiedRunCardIds.Add(card.RunCardId),
+					DiedThisTurnRunCardIds = battle.DiedThisTurnRunCardIds.Add(card.RunCardId),
 				}
 			);
 		}

@@ -38,6 +38,84 @@ public class DoomTransformTests
 		return (run, [.. run.Deck.Select(c => c.RunCardId)]);
 	}
 
+	[Test]
+	public void PerNRateLimitsWhatAMintingDoomHandsOut()
+	{
+		var (run, ids) = RunOf(Unit("A"), Unit("B"), Unit("C"));
+
+		var every = new DoomTransform
+		{
+			Reads = FiringRead.DiedThisTurn,
+			Does = TransformVerb.AddCopies,
+			Template = DoomTransforms.ZombieBody,
+		};
+
+		Assert.That(
+			every.Apply(run, FiringThisTurn(ids)).Deck.Count(c => c.Name == "Zombie"),
+			Is.EqualTo(3),
+			"one per death by default"
+		);
+
+		var everySecond = every with { PerN = 2 };
+		Assert.That(
+			everySecond.Apply(run, FiringThisTurn(ids)).Deck.Count(c => c.Name == "Zombie"),
+			Is.EqualTo(1),
+			"three deaths at one per two is one, rounded down"
+		);
+
+		Assert.That(
+			everySecond.Apply(run, FiringThisTurn([ids[0]])).Deck.Count(c => c.Name == "Zombie"),
+			Is.Zero,
+			"a single death under a rate limit of two mints nothing at all"
+		);
+	}
+
+	/// <summary>
+	/// The two death windows are different lists and must not be confused. `Died` holds everything
+	/// since the previous firing; `DiedThisTurn` only what the doom caught fresh.
+	/// </summary>
+	[Test]
+	public void TheTwoDeathWindowsAreReadSeparately()
+	{
+		var (run, ids) = RunOf(Unit("Old"), Unit("Fresh"));
+
+		var firing = new DoomFiring
+		{
+			Scenario = DoomScenario.Zombie,
+			TurnNumber = 3,
+			DiedRunCardIds = [.. ids],
+			DiedThisTurnRunCardIds = [ids[1]],
+		};
+
+		var mint = new DoomTransform
+		{
+			Does = TransformVerb.AddCopies,
+			Template = DoomTransforms.ZombieBody,
+		};
+
+		Assert.That(
+			(mint with { Reads = FiringRead.Died })
+				.Apply(run, firing)
+				.Deck.Count(c => c.Name == "Zombie"),
+			Is.EqualTo(2)
+		);
+		Assert.That(
+			(mint with { Reads = FiringRead.DiedThisTurn })
+				.Apply(run, firing)
+				.Deck.Count(c => c.Name == "Zombie"),
+			Is.EqualTo(1),
+			"the narrow window caught only the fresh one"
+		);
+	}
+
+	private static DoomFiring FiringThisTurn(IEnumerable<int> died) =>
+		new()
+		{
+			Scenario = DoomScenario.Zombie,
+			TurnNumber = 1,
+			DiedThisTurnRunCardIds = [.. died],
+		};
+
 	private static DoomFiring Firing(
 		IEnumerable<int>? standing = null,
 		IEnumerable<int>? died = null,
