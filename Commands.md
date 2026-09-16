@@ -53,8 +53,13 @@ dotnet run --project DoomConsole -c Release -- sim 1000          # 1000 runs, se
 dotnet run --project DoomConsole -c Release -- sim 200 Life=4    # override any eval weight
 ```
 
-**Release, always.** Debug is roughly 4x slower and the sim is the one thing here that is
-CPU-bound: ~130ms a run in Release on this machine, so 1000 runs is a bit over two minutes.
+**Release, always**, and the console project sets `ServerGarbageCollection`. The sim is ALLOCATION
+bound, not CPU bound — the engine rebuilds a GameState per action and the bot simulates a whole turn
+per candidate line — so workstation GC serialises every worker on one heap. Measured: the same
+300-run workload went 693s -> 224s on server GC, with byte-identical output.
+
+**A sim gets slower as the game gets better**, because a run that completes a 20-floor act is five
+times the work of one that dies on floor 3. Budget by `runs x mean floor`, not by runs.
 
 Writes every run to `doom_sim_results/sim-<timestamp>.json` (gitignored) and prints four tables:
 survival by floor, pressure, apocalypses, card value. **Quote the file, never the memory of a run**

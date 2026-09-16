@@ -582,3 +582,100 @@ covering for it.**
 **A build failed and the sim ran the stale binary**, because the command chained with `;` instead of
 `&&`. The card table was the tell: none of the themed cards appeared in it. Chain measurement behind
 a build with `&&`, always.
+
+---
+
+## Run 11 — the three acts brought into a band
+
+Three changes, each measured on its own, each confirming a diagnosis rather than guessing at one.
+
+| | first measured | after |
+|---|---|---|
+| The Long Emergency | 13.0% | **22.0%** |
+| The Reckoning | 58.0% | **22.0%** |
+| The Rising | 1.5% | **14.0%** |
+| deck size at the end | 48.0 | 27.9 |
+
+**Grey Goo, bounded.** Reading STANDING instead of SUMMONED caps a firing at two copies, because
+standing is capped at five lanes. End-of-run decks fell 48.0 -> 27.9 and the act's completion did
+not move, which confirms the 103-card decks were absurd but genuinely harmless — AI Uprising one
+band above makes everything a free 8/8, and a huge deck of free 8/8s draws perfectly well.
+
+**The Rising's cards, brought to the shared pool's curve.** Gravedigger -2.52 -> +0.55, Pyre Tender
+-1.59 -> +0.33, The Choirmaster -2.44 -> +0.06. **Fixing three statlines doubled the act's
+completion rate**, 7% -> 14%. The bodies had been priced below curve to pay for effects that could
+not cover it.
+
+**Judgement 6/6 -> 8/8, and nothing else.** 5% -> 22%. Famine was changed in the same pass as the
+6/6 and was deliberately left alone this time, which is the only reason the swing is attributable:
+**Famine was never the problem.** 10/10 upgraded a starter deck, 6/6 deleted the reward pool
+(Siege Ram is 18/6, Long Watcher 12/20), 8/8 humbles without erasing.
+
+### Confirmed at n=900
+
+300 runs per act, 783s once server GC landed:
+
+| act | n=300 | n=900 | mean floor |
+|---|---|---|---|
+| The Reckoning | 22.0% | **28.3%** | 18.22 |
+| The Long Emergency | 22.0% | **27.0%** | 17.83 |
+| The Rising | 14.0% | **17.7%** | 15.93 |
+| all three | 19.3% | **24.3%** | 17.33 |
+
+All three read about five points higher than at n=300. The n=300 seeds are a SUBSET of the n=900
+ones, so this is sampling, not a change — **trust the larger sample**. Steer at n=300, record at
+n=900.
+
+Every card in the game is positive, +0.13 to +3.41. The weakest four are all of The Rising's:
+Gravedigger +0.13, Pyre Tender +0.30, The Choirmaster +0.54, Blood Price +0.97, against +1.7 to
++2.3 for the other acts' cards. Bringing their statlines to curve took them from harmful to merely
+unexciting; **a one-shot trigger cannot be priced into competing with one that fires nineteen times
+a run.** That set needs repeating payoffs, not bigger ones.
+
+Outliers to watch: Scavenged Rounds at **+3.41** has been the best card in the game in every
+measurement, and Shieldbearer at +0.16 is dead.
+
+### What the whole arc says
+
+Every act is now inside a playable band and the aggregate finally means something because the parts
+agree. Three findings generalise past this game:
+
+1. **Never report one number across several acts.** 58 / 13 / 1.5 averaged to 24.2% against a 25%
+   target. The aggregate was not merely uninformative, it was actively reassuring while two of the
+   three acts were unplayable.
+2. **Trigger frequency dominates effect size.** A death trigger fires once; a doom trigger fires
+   about nineteen times a run. Cards costed as though those were comparable came out at -2.5.
+3. **A broken number can be invisible when another mechanic covers for it.** Grey Goo's exponential
+   decks showed up in the act with the BEST completion rate, and only the per-act deck-size
+   breakdown made it visible at all.
+
+---
+
+## The sim was allocation bound, not CPU bound
+
+Sims had grown from 2 minutes to over an hour across this project, because **the sim gets slower
+exactly as the game gets better** — a run that completes an act is fifteen battles where one that
+dies on floor 3 is three.
+
+At 16 logical cores it was running at **3.1x**. The obvious suspect was `Parallel.For`, which
+range-partitions: each worker takes a contiguous block of seeds, and with run costs this uneven one
+worker draws all the long runs while the rest idle. **That was wrong.** Chunking seeds one at a time
+measured 3.6x -> 3.1x, i.e. no change, and the speculative fix was reverted.
+
+The real constraint is the engine's own shape. **`ImmutableGameObjects` rebuilds a `GameState` for
+every action**, and `DoomBot` simulates an entire `EndTurnAction` per candidate line, so one turn of
+one battle allocates hundreds of states. A console app defaults to WORKSTATION GC: one shared heap,
+every thread contending on it.
+
+| same 300-run workload | time | per run |
+|---|---|---|
+| workstation GC | 693.5s | 2312ms |
+| **server GC** | **224.2s** | **747ms** |
+
+**3.1x, from two lines in `DoomConsole.csproj`.** The balance output was byte-identical across the
+change — same completions, same mean floors, same per-theme numbers — which is the property a
+performance change has to have before it can be trusted.
+
+**Any project that drives this engine in bulk wants `ServerGarbageCollection`.** That is a finding
+about `ImmutableGameObjects`, not about DOOMJAM: an immutable engine allocates per action by
+construction, so bulk simulation is allocation bound by construction.

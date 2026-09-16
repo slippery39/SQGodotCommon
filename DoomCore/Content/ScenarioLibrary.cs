@@ -339,10 +339,16 @@ public static class ScenarioLibrary
 				{
 					Reads = FiringRead.Standing,
 					Does = TransformVerb.Modify,
-					SetPower = 6,
-					SetToughness = 6,
+					// 10/10 measured at 1.2% deaths because it UPGRADED most of a starter deck —
+					// a levelling effect has to level down to be a doom at all. 6/6 then took the
+					// act from 58% completion to 5%, because it destroys the reward pool outright:
+					// Siege Ram is 18/6 and Long Watcher 12/20. 8/8 humbles a monster without
+					// deleting it. Famine was changed in the same pass as the 6/6 and is
+					// deliberately left alone here so this reads as one lever.
+					SetPower = 8,
+					SetToughness = 8,
 					Tag = "Judged",
-					Text = "every unit left standing becomes 6/6, no more and no less",
+					Text = "every unit left standing becomes 8/8, no more and no less",
 				},
 			],
 		};

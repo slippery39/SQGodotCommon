@@ -168,8 +168,15 @@ public static class RunSimulator
 	}
 
 	/// <summary>
-	/// Plays seeds 1..count. **Parallel.For into a pre-allocated array, not PLINQ** — same speed
-	/// and the results stay in seed order, so two sim files diff line for line.
+	/// Plays seeds 1..count. **Into a pre-allocated array, not PLINQ** — the results stay in seed
+	/// order, so two sim files diff line for line.
+	///
+	/// **The bottleneck here is the GC, not this loop.** Run cost varies enormously once an act is
+	/// winnable, so range partitioning looked like the culprit — it was not: chunking seeds one at
+	/// a time measured 3.6x -> 3.1x of 16 logical cores, i.e. nothing. The sim is ALLOCATION bound,
+	/// because `ImmutableGameObjects` rebuilds a GameState for every action and `DoomBot` simulates
+	/// a whole turn per candidate line. Server GC in `DoomConsole.csproj` took the same 300-run
+	/// workload from 693s to 224s; this loop was never the problem.
 	/// </summary>
 	public static RunResult[] PlayMany(int count, DoomEvalWeights? weights = null)
 	{

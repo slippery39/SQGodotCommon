@@ -6,6 +6,15 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>DoomConsole</RootNamespace>
+
+    <!--
+      The sim is ALLOCATION bound, not CPU bound: ImmutableGameObjects rebuilds a GameState for
+      every action, and `sim` runs hundreds of games at once. Workstation GC gives all of that one
+      shared heap and every thread contends on it. Measured at 3.1x of 16 logical cores before this.
+      Server GC gives a heap and a collector per core, which is what an immutable engine wants.
+    -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>
