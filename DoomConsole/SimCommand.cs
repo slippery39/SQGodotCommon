@@ -30,6 +30,7 @@ public static class SimCommand
 		);
 
 		var path = Write(results, weights);
+		Themes(results);
 		SurvivalCurve(results);
 		Pressure(results);
 		Scenarios(results);
@@ -38,6 +39,31 @@ public static class SimCommand
 		Console.WriteLine();
 		Console.WriteLine($"  Full results: {path}");
 		Console.WriteLine();
+	}
+
+	/// <summary>
+	/// Per theme, since a theme is a different act rather than a different coat of paint. **This is
+	/// the table that says whether the three are balanced against each other**, which the aggregate
+	/// numbers below will happily hide.
+	/// </summary>
+	private static void Themes(RunResult[] results)
+	{
+		Console.WriteLine();
+		Console.WriteLine("  THEMES");
+		Console.WriteLine("  theme                 runs   completed   mean floor   life/battle");
+
+		foreach (var group in results.GroupBy(r => r.Theme).OrderBy(g => g.Key))
+		{
+			var runs = group.ToList();
+			var floors = runs.SelectMany(r => r.Floors).ToList();
+			var complete = runs.Count(r => r.ActComplete);
+
+			Console.WriteLine(
+				$"  {group.Key, -18} {runs.Count, 6}   {100.0 * complete / runs.Count, 8:F1}%   "
+					+ $"{runs.Average(r => r.FloorReached), 10:F2}   "
+					+ $"{floors.Average(f => f.LifeLost), 11:F1}"
+			);
+		}
 	}
 
 	/// <summary>

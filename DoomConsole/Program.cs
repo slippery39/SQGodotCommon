@@ -39,7 +39,7 @@ public static class Program
 
 		while (!run.IsOver)
 		{
-			var scenario = StarterContent.ScenarioFor(seed, run.Floor);
+			var scenario = StarterContent.ScenarioFor(run.Theme, run.Floor);
 			var result = PlayBattle(run, scenario, seed);
 
 			if (result is null)

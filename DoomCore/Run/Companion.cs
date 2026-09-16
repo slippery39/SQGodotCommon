@@ -43,35 +43,9 @@ public record Companion
 	/// so a late-run companion is visibly the sum of what it went through.
 	/// </summary>
 	public static CompanionMark MarkFor(DoomScenario scenario) =>
-		scenario switch
+		ScenarioLibrary.Of(scenario).Mark with
 		{
-			DoomScenario.Zombie => new CompanionMark
-			{
-				From = scenario,
-				Name = "Gravemarked",
-				Toughness = 4,
-			},
-			DoomScenario.Nuclear => new CompanionMark
-			{
-				From = scenario,
-				Name = "Glowing",
-				Power = 4,
-			},
-			DoomScenario.Flood => new CompanionMark
-			{
-				From = scenario,
-				Name = "Barnacled",
-				Power = 2,
-				Toughness = 2,
-			},
-			DoomScenario.Rapture => new CompanionMark
-			{
-				From = scenario,
-				Name = "Chosen",
-				Power = 2,
-				Toughness = 2,
-			},
-			_ => new CompanionMark { From = scenario, Name = "Unscathed" },
+			From = scenario,
 		};
 
 	public Companion Marked(DoomScenario scenario) =>

@@ -152,19 +152,29 @@ public class ScenarioContentTests
 			);
 	}
 
+	/// <summary>
+	/// Scope is still the curve, but a THEME owns it now rather than a floor gate.
+	///
+	/// This used to assert that floor 1 could only roll battle-scope dooms, back when the doom was
+	/// drawn at random from everything legal. The schedule replaced the roll, and a theme may open
+	/// on a gentle permanent doom — The Rising opens on the dead coming back, which only ever ADDS
+	/// to your deck.
+	///
+	/// **Scope is not severity**, which is why nothing here asserts an escalating scope. An earlier
+	/// version of this test did, and it failed The Rising for putting a battle-scope doom after a
+	/// permanent one. The content was right and the rule was invented. What has to hold is only
+	/// this: the band before the boss rewrites the deck, so the run walks into the last fight
+	/// carrying what the act did to it.
+	/// </summary>
 	[Test]
-	public void ScopeIsTheDifficultyCurve()
+	public void EveryThemeRewritesTheDeckInTheBandBeforeTheBoss()
 	{
-		Assert.That(
-			StarterContent.PlayableOn(1).All(s => StarterContent.ScopeOf(s) == DoomScope.Battle),
-			Is.True,
-			"floor 1 may only roll apocalypses that leave no marks on the run"
-		);
-
-		Assert.That(
-			StarterContent.PlayableOn(5).Any(s => StarterContent.ScopeOf(s) == DoomScope.Permanent),
-			Is.True,
-			"and later floors must be able to rewrite the deck, or the power curve never starts"
-		);
+		foreach (var theme in ThemeLibrary.All)
+			Assert.That(
+				StarterContent.ScopeOf(theme.Bands[^1]),
+				Is.EqualTo(DoomScope.Permanent),
+				$"{theme.Name}'s last band before the boss is battle scope, so nothing it does "
+					+ "carries into the fight the run was built for"
+			);
 	}
 }

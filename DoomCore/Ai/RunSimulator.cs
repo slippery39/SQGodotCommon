@@ -25,6 +25,9 @@ public record RunResult
 {
 	public int Seed { get; init; }
 
+	/// <summary>Which apocalypse this run chose to live through.</summary>
+	public string Theme { get; init; } = "";
+
 	/// <summary>The last floor the run stood on. 20 means it walked out the other side.</summary>
 	public int FloorReached { get; init; }
 
@@ -63,7 +66,10 @@ public static class RunSimulator
 	public static RunResult Play(int seed, DoomEvalWeights? weights = null)
 	{
 		var w = weights ?? new DoomEvalWeights();
-		var run = StarterContent.NewRun(seed);
+		// Themes are dealt round-robin across seeds, so one `sim N` measures every act rather
+		// than needing a run per theme. Seed still decides enemies, rewards and Opponent traits.
+		var theme = ThemeLibrary.All[seed % ThemeLibrary.All.Length].Theme;
+		var run = StarterContent.NewRun(seed) with { Theme = theme };
 		var picker = new Random(seed);
 
 		var floors = ImmutableList.CreateBuilder<FloorResult>();
@@ -81,7 +87,7 @@ public static class RunSimulator
 				continue;
 			}
 
-			var scenario = StarterContent.ScenarioFor(seed, run.Floor);
+			var scenario = StarterContent.ScenarioFor(run.Theme, run.Floor);
 			var (state, _) = run.StartBattle(
 				scenario,
 				StarterContent.CountdownFor(scenario),
@@ -135,7 +141,7 @@ public static class RunSimulator
 
 			// Mirrors DoomBoard.ResolveBattle: the rewards offered are the ones for the floor you
 			// are about to walk into, not the one you just cleared.
-			var rewards = StarterContent.RewardsFor(seed, run.Floor);
+			var rewards = StarterContent.RewardsFor(run.Theme, seed, run.Floor);
 			if (!rewards.IsEmpty)
 			{
 				var pick = rewards[picker.Next(rewards.Length)];
@@ -147,6 +153,7 @@ public static class RunSimulator
 		return new RunResult
 		{
 			Seed = seed,
+			Theme = ThemeLibrary.Of(theme).Name,
 			// A death leaves the floor where it fell — `AfterBattle` only advances it on a clear —
 			// so this is already the floor the run reached. The clamp is for the act being walked
 			// out of, where Floor is one past the last one that existed.

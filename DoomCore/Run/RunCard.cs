@@ -37,5 +37,14 @@ public record RunCard
 	/// </summary>
 	public ImmutableList<DoomEffect> Effects { get; init; } = ImmutableList<DoomEffect>.Empty;
 
+	/// <summary>
+	/// Which act this card belongs to, or null for the shared core every act draws from.
+	///
+	/// **Not a <see cref="Tags"/> entry, deliberately.** Tags are marks an apocalypse LEAVES, and a
+	/// doom transform writes to them — a card could gain a theme by being irradiated. Identity and
+	/// damage do not belong in the same field.
+	/// </summary>
+	public DoomTheme? Theme { get; init; }
+
 	public bool HasTag(string tag) => Tags.Contains(tag);
 }

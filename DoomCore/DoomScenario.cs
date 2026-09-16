@@ -34,6 +34,39 @@ public enum DoomScenario
 	/// <summary>Reads what you SACRIFICED. Sacrificed units return as life — the doom you want at 6 HP.</summary>
 	Rapture,
 
+	// ===== Horror =====
+
+	/// <summary>BATTLE scope. The line feeds, and what it takes it takes from you.</summary>
+	Vampires,
+
+	/// <summary>Reads what was LEFT STANDING. Possessed: far stronger, and far easier to kill.</summary>
+	HellUprising,
+
+	/// <summary>BATTLE scope, boss floor. What you raised finishes turning, and turns on you.</summary>
+	TheLastHost,
+
+	// ===== The Reckoning =====
+
+	/// <summary>Reads what you NEVER COMMITTED. It starves; the rest learn to do with less.</summary>
+	Famine,
+
+	/// <summary>Reads what was LEFT STANDING. All are made equal before it, for better and worse.</summary>
+	Judgement,
+
+	// ===== Man-made =====
+
+	/// <summary>BATTLE scope. The crowd turns on your line and on you.</summary>
+	CivilUnrest,
+
+	/// <summary>Reads what was LEFT STANDING. Assimilated: uniform, and free to field.</summary>
+	AiUprising,
+
+	/// <summary>Reads what you COMMITTED. It replicates, and it does not stop replicating.</summary>
+	GreyGoo,
+
+	/// <summary>BATTLE scope, boss floor. The one they had been saving.</summary>
+	Detonation,
+
 	/// <summary>
 	/// BATTLE scope. Burns everything still standing and everyone behind it.
 	///

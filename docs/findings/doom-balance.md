@@ -500,3 +500,85 @@ passes tried to fix it by adjusting other cards and none of them worked. Fixing 
 in one.
 
 The apocalypses are level too: 5.2% to 7.7% deaths, a 2.5-point spread where run 1 had forty.
+
+---
+
+## Run 10 — themed acts, and what measuring them separately exposed
+
+The doom is a SCHEDULE now, not a roll: a theme is picked once and decides the whole sequence.
+Three acts, three bands of six floors each plus a boss-floor doom of its own.
+
+| act | 1-6 | 7-12 | 13-18 | boss |
+|---|---|---|---|---|
+| The Long Emergency | Civil Unrest | AI Uprising | Grey Goo | Detonation |
+| The Rising | The Rising | The Thirst | Hell Uprising | The Last Host |
+| The Reckoning | The Flood | Famine | Judgement | Brimstone |
+
+### The aggregate was a lie, and the per-theme table caught it
+
+First measurement of the three acts: **58.0% / 13.0% / 1.5%** — and the aggregate across them was
+**24.2%**, almost exactly the 25% target. **Three acts differing by 40x averaged to the number we
+were aiming for.** Any single completion figure covering more than one act is worthless; the
+per-theme breakdown went into `sim` on the strength of this and earned its place on the first run.
+
+### Every doom's real cost, once each owned a band
+
+Sequencing exposed what the random roll had been averaging away:
+
+| doom | death rate | life lost | turns |
+|---|---|---|---|
+| Vampires | 24.2% | 69.5 | 9.8 |
+| Hell Uprising | 25.6% | 39.6 | 6.0 |
+| Famine | **0.1%** | 15.5 | 6.0 |
+| Judgement | **1.2%** | 22.9 | 6.4 |
+| Grey Goo (as a board wipe) | 75.2% | 139.0 | 6.4 |
+
+**Famine and Judgement were net BUFFS.** Famine made survivors cheaper and deleted only cards the
+bot was not playing; Judgement setting everything standing to 10/10 UPGRADES most of a starter deck.
+A levelling effect has to level DOWN to be a doom. Judgement is 6/6 now and Famine takes one
+unplayed unit in two rather than one in four.
+
+Vampires was halved (enemies heal 8 -> 4) on the theory that healing the whole enemy line fights the
+only win condition the player has. **It did nothing** — The Rising went 1.5% -> 1.0%. Wrong lever.
+
+### Trigger frequency dominates effect size
+
+The first themed cards measured like this:
+
+| card | trigger | delta |
+|---|---|---|
+| Drone Swarm | on doom fires | **+3.52** |
+| Reactor Crew | on doom fires | +2.78 |
+| Gravedigger | on death | **-2.52** |
+| The Choirmaster | on doom fires, weak body | **-2.44** |
+| Pyre Tender | on death | -1.59 |
+
+**A death trigger fires once. A doom trigger fires about nineteen times a run.** Every card built
+around dying came out negative and every card built around the clock came out strongly positive.
+The bodies had been priced below the shared pool's curve to pay for effects that could not cover it
+— Gravedigger was a 4/4 for 1 where the shared Tunneller is 8/6 for 1.
+
+### Grey Goo was exponential
+
+Duplicating what you COMMITTED compounds: copies enter the deck, get played, become eligible to be
+copied again.
+
+| act | deck at floor 13 | deck at floor 18 |
+|---|---|---|
+| The Long Emergency | 19.0 | **102.9** |
+| The Rising | 24.7 | 28.3 |
+| The Reckoning | 10.6 | 14.6 |
+
+`PerN` only halves the BASE of an exponential. The fix is to bound the READ: duplicating what is
+STANDING caps a firing at two copies, because standing is capped at five lanes.
+
+It hid because AI Uprising in the band above makes everything standing a free 8/8, so a 103-card
+deck of free 8/8s draws perfectly well — that act had the BEST completion rate while its deck was
+five times the size of anyone else's. **A broken number can be invisible when another mechanic is
+covering for it.**
+
+### Process
+
+**A build failed and the sim ran the stale binary**, because the command chained with `;` instead of
+`&&`. The card table was the tell: none of the themed cards appeared in it. Chain measurement behind
+a build with `&&`, always.

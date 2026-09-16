@@ -14,8 +14,12 @@ public static class ContentCommand
 	/// <summary>Traits are rolled per run, so the floor table shows one example run.</summary>
 	private const int SampleSeed = 1;
 
+	/// <summary>The dooms are a schedule, not a roll, so the floor table shows one theme's.</summary>
+	private const DoomTheme SampleTheme = DoomTheme.LongEmergency;
+
 	public static void Execute()
 	{
+		Themes();
 		Floors();
 		Enemies();
 		Opponents();
@@ -29,12 +33,40 @@ public static class ContentCommand
 	/// a POOL, not a fixture — except the lead enemy, which is always the newest tier the floor
 	/// allows, and the Opponent, which is fixed.
 	/// </summary>
+	/// <summary>
+	/// The choice made once, at the start of a run. Each theme is a fixed escalation of dooms —
+	/// six floors a band, then the boss floor's own.
+	/// </summary>
+	private static void Themes()
+	{
+		Head("THEMES", $"{ThemeLibrary.All.Length} — chosen once, at the start of a run");
+		Console.WriteLine(
+			$"  name                 floors 1-{ThemeLibrary.FloorsPerBand}  "
+				+ $"{ThemeLibrary.FloorsPerBand + 1}-{ThemeLibrary.FloorsPerBand * 2}  "
+				+ $"{ThemeLibrary.FloorsPerBand * 2 + 1}-{ThemeLibrary.FloorsPerBand * 3}  "
+				+ $"floor {Run.ActLength}"
+		);
+
+		foreach (var t in ThemeLibrary.All)
+			Console.WriteLine(
+				$"  {t.Name, -18}  {string.Join("  ", t.Bands.Select(b => $"{b, -10}"))}  "
+					+ $"{t.FinalDoom} (boss only)"
+			);
+
+		Console.WriteLine();
+		Console.WriteLine("  The final doom is BATTLE scope by rule: a permanent one on the last");
+		Console.WriteLine("  floor would rewrite a deck the run never draws again.");
+	}
+
 	private static void Floors()
 	{
-		Head("THE ACT", $"{Run.ActLength} floors — Opponents shown for seed {SampleSeed}");
+		Head(
+			"THE ACT",
+			$"{Run.ActLength} floors — {ThemeLibrary.Of(SampleTheme).Name}, Opponents for seed {SampleSeed}"
+		);
 
 		Console.WriteLine(
-			"  floor  kind    Opponent                      foes  lead enemy          apocalypse pool"
+			"  floor  kind    Opponent                      foes  lead enemy          apocalypse"
 		);
 
 		for (var floor = 1; floor <= Run.ActLength; floor++)
@@ -51,11 +83,11 @@ public static class ContentCommand
 			var roster = EnemyLibrary.PlayableOn(floor);
 			var lead = roster.MaxBy(e => e.MinFloor)!;
 			var count = StarterContent.EnemiesFor(floor).Count;
-			var dooms = string.Join("/", StarterContent.PlayableOn(floor));
+			var doom = StarterContent.ScenarioFor(SampleTheme, floor);
 
 			Console.WriteLine(
 				$"  {floor, 5}  battle  {StarterContent.OpponentFor(floor, SampleSeed).Name, -28}  {count, 4}  "
-					+ $"{lead.Name, -18}  {dooms}"
+					+ $"{lead.Name, -18}  {doom}"
 			);
 		}
 
@@ -116,8 +148,7 @@ public static class ContentCommand
 
 		foreach (var d in ScenarioLibrary.All.OrderBy(d => d.MinFloor))
 		{
-			var what =
-				d.Scope == DoomScope.Battle ? Effects(d.BattleEffects) : Permanent(d.Scenario);
+			var what = d.Scope == DoomScope.Battle ? Effects(d.BattleEffects) : Permanent(d);
 
 			Console.WriteLine(
 				$"  {d.Scenario, -9}  f{d.MinFloor, -3}  {d.Scope, -9}  {d.Countdown, 5}  {what}"
@@ -131,21 +162,18 @@ public static class ContentCommand
 	}
 
 	/// <summary>
-	/// What a permanent scenario does, named here because it is CODE — a permanent transform
-	/// rewrites the run, which lives outside GameState, so it cannot be data like a battle one.
-	/// This is the one place in this dump that is not read from a library, and it is the same
-	/// asymmetry `ScenarioDefinition` documents.
+	/// What a permanent scenario does, read off its own transforms.
+	///
+	/// This used to be a switch with a case per scenario, written when Zombie and Nuclear were
+	/// hand-written methods. It printed BLANK for every doom authored since — four of them — which
+	/// is the documentation version of the silent no-op this codebase keeps rediscovering.
 	/// </summary>
-	private static string Permanent(DoomScenario scenario) =>
-		scenario switch
-		{
-			DoomScenario.Zombie => "every unit that DIED returns to the deck as a 2/2 Zombie",
-			DoomScenario.Nuclear =>
-				$"every unit LEFT STANDING gets +{DoomTransforms.IrradiatedBuff}/+{DoomTransforms.IrradiatedBuff} "
-					+ $"and costs {DoomTransforms.IrradiatedDrawCost} life to draw",
-			DoomScenario.Rapture => "NOT IMPLEMENTED — needs sacrifice; never offered",
-			_ => "",
-		};
+	private static string Permanent(ScenarioDefinition definition) =>
+		definition.Transforms.IsEmpty
+			? definition.Implemented
+				? "-"
+				: "NOT IMPLEMENTED — never offered"
+			: string.Join("; ", definition.Transforms.Select(t => t.Text));
 
 	private static void Cards()
 	{
@@ -168,10 +196,22 @@ public static class ContentCommand
 
 		Console.WriteLine();
 		Console.WriteLine(
-			$"  REWARD POOL — {StarterContent.RewardPool.Length} cards, 3 offered after each"
+			$"  SHARED POOL — {StarterContent.SharedPool.Length} cards, offered in every act"
 		);
-		Console.WriteLine("  battle, FLAT (floor 20 offers what floor 1 does)");
-		Table(StarterContent.RewardPool.Select(c => (c, 1)));
+		Console.WriteLine("  Still FLAT: floor 20 offers what floor 1 does.");
+		Table(StarterContent.SharedPool.Select(c => (c, 1)));
+
+		foreach (var theme in ThemeLibrary.All)
+		{
+			var own = StarterContent
+				.RewardPool(theme.Theme)
+				.Where(c => c.Theme == theme.Theme)
+				.ToList();
+
+			Console.WriteLine();
+			Console.WriteLine($"  {theme.Name.ToUpperInvariant()} — {own.Count} cards of its own");
+			Table(own.Select(c => (c, 1)));
+		}
 	}
 
 	private static void Table(IEnumerable<(RunCard Card, int Count)> cards)

@@ -34,6 +34,12 @@ public record Run
 
 	public int RngSeed { get; init; } = 1;
 
+	/// <summary>
+	/// The apocalypse you chose to live through, picked once at the start and fixed for the run.
+	/// It decides the whole sequence of dooms — see <see cref="ThemeLibrary"/>.
+	/// </summary>
+	public DoomTheme Theme { get; init; } = DoomTheme.LongEmergency;
+
 	/// <summary>Floors in an act. Not every floor is a battle — rests and events fill the rest.</summary>
 	public const int ActLength = 20;
 

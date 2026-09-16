@@ -81,7 +81,7 @@ public partial class DoomBoard : Node2D
 			return;
 		}
 
-		var scenario = StarterContent.ScenarioFor(Seed, _run.Floor);
+		var scenario = StarterContent.ScenarioFor(_run.Theme, _run.Floor);
 
 		var (state, events) = _run.StartBattle(
 			scenario,
@@ -122,8 +122,8 @@ public partial class DoomBoard : Node2D
 
 		_intermission.ShowFloorCleared(before, after, battle.DoomsFired);
 		_intermission.OfferRewards(
-			StarterContent.RewardsFor(Seed, after.Floor),
-			StarterContent.ScenarioFor(Seed, after.Floor),
+			StarterContent.RewardsFor(after.Theme, Seed, after.Floor),
+			StarterContent.ScenarioFor(after.Theme, after.Floor),
 			after.Floor
 		);
 	}

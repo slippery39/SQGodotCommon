@@ -28,9 +28,9 @@ public static class StarterContent
 	public static DoomScope ScopeOf(DoomScenario scenario) => ScenarioLibrary.Of(scenario).Scope;
 
 	/// <summary>
-	/// Which apocalypses a floor may roll. **Scope is the difficulty curve**: early floors get
-	/// battle-only ones you merely navigate, later floors get ones that leave marks on the run.
-	/// Rapture is excluded everywhere by being flagged unimplemented.
+	/// Which apocalypses a floor is ALLOWED to hold. Nothing selects with this any more — the
+	/// theme's schedule does — but it still answers "is this doom legal here", which is what the
+	/// schedule is validated against.
 	/// </summary>
 	public static ImmutableArray<DoomScenario> PlayableOn(int floor) =>
 		[.. ScenarioLibrary.PlayableOn(floor).Select(d => d.Scenario)];
@@ -56,6 +56,34 @@ public static class StarterContent
 		new()
 		{
 			Trigger = EffectTrigger.OnPlay,
+			Target = target,
+			Template = template,
+			Text = text,
+		};
+
+	/// <summary>A unit that DOES something. Every unit in the game was a vanilla body before this.</summary>
+	private static RunCard Unit(
+		string name,
+		int cost,
+		int power,
+		int toughness,
+		string text,
+		params DoomEffect[] effects
+	) => Unit(name, cost, power, toughness, text) with { Effects = [.. effects] };
+
+	private static DoomEffect On(DoomTarget target, GameAction template, string text) =>
+		new()
+		{
+			Trigger = EffectTrigger.OnDoomFires,
+			Target = target,
+			Template = template,
+			Text = text,
+		};
+
+	private static DoomEffect OnDeath(DoomTarget target, GameAction template, string text) =>
+		new()
+		{
+			Trigger = EffectTrigger.OnDeath,
 			Target = target,
 			Template = template,
 			Text = text,
@@ -128,7 +156,7 @@ public static class StarterContent
 	/// The pool is FLAT — floor 10 offers the same cards as floor 1. `MinFloor` on a RunCard is the
 	/// obvious next step.
 	/// </summary>
-	public static ImmutableArray<RunCard> RewardPool =>
+	public static ImmutableArray<RunCard> SharedPool =>
 		[
 			Unit("Scrapper", 1, 10, 4, "Fast, and does not last."),
 			Unit("Shieldbearer", 1, 4, 12, "Holds the line, and holds a spike."),
@@ -175,12 +203,186 @@ public static class StarterContent
 		];
 
 	/// <summary>
+	/// **The Long Emergency's own cards.** Its dooms read what is STANDING (AI Uprising) and what
+	/// you COMMITTED (Grey Goo), so the act rewards putting bodies down and keeping them there.
+	/// These lean into that: they want to still be on the field when the clock runs out.
+	/// </summary>
+	private static ImmutableArray<RunCard> LongEmergencyCards =>
+		[
+			Unit("Riot Shield", 1, 2, 14, "Issued for a crowd, not for this."),
+			Unit(
+				"Salvage Rig",
+				2,
+				4,
+				8,
+				"It keeps working through it. That is all it does.",
+				On(
+					DoomTarget.None,
+					new DrawCardsAction { Amount = 2 },
+					"when the doom fires: draw 2"
+				)
+			),
+			Unit(
+				"Drone Swarm",
+				2,
+				6,
+				6,
+				"Somebody's fleet, still flying the last order it got.",
+				On(
+					DoomTarget.AllEnemies,
+					new DealDamageAction { Amount = 6 },
+					"when the doom fires: 6 to every enemy"
+				)
+			),
+			Unit(
+				"Reactor Crew",
+				3,
+				8,
+				12,
+				"They stayed at the desk.",
+				On(
+					DoomTarget.Player,
+					new GainLifeAction { Amount = 10 },
+					"when the doom fires: gain 10"
+				)
+			),
+		];
+
+	/// <summary>
+	/// **The Rising's own cards**, and the act that asks for two opposite things. Zombie reads what
+	/// DIED, in the first band; Hell Uprising reads what was LEFT STANDING, in the last. So the
+	/// early game wants bodies worth losing and the late game wants bodies that hold — which is why
+	/// these are split between cards that pay out on death and one that pays out on surviving.
+	/// </summary>
+	private static ImmutableArray<RunCard> RisingCards =>
+		[
+			Unit(
+				"Gravedigger",
+				1,
+				8,
+				6,
+				"He has been busy. He is not finished.",
+				OnDeath(
+					DoomTarget.Opponent,
+					new DealDamageAction { Amount = 16 },
+					"on death: 16 to the Opponent"
+				)
+			),
+			Unit(
+				"Pyre Tender",
+				2,
+				10,
+				8,
+				"Burning them is the only thing that has worked.",
+				OnDeath(
+					DoomTarget.AllEnemies,
+					new DealDamageAction { Amount = 12 },
+					"on death: 12 to every enemy"
+				)
+			),
+			Unit(
+				"The Choirmaster",
+				3,
+				12,
+				18,
+				"Still conducting. Nobody told him.",
+				On(
+					DoomTarget.Player,
+					new GainLifeAction { Amount = 12 },
+					"when the doom fires: gain 12"
+				)
+			),
+			Rite(
+				"Blood Price",
+				1,
+				"It costs what it costs.",
+				OnPlay(
+					DoomTarget.AllEnemies,
+					new DealDamageAction { Amount = 10 },
+					"10 to every enemy"
+				)
+			),
+		];
+
+	/// <summary>
+	/// **The Reckoning's own cards.** Famine takes what you never played and Judgement flattens
+	/// everything standing to 6/6, so the act punishes hoarding and punishes monsters. Cheap and
+	/// plentiful is correct here, and nothing should be precious.
+	/// </summary>
+	private static ImmutableArray<RunCard> ReckoningCards =>
+		[
+			Unit("Penitent", 0, 4, 4, "Walked here. Will walk further."),
+			Unit(
+				"Almoner",
+				1,
+				2,
+				8,
+				"Gives away what little is left.",
+				new DoomEffect
+				{
+					Trigger = EffectTrigger.OnTurnEnd,
+					Target = DoomTarget.Player,
+					Template = new GainLifeAction { Amount = 2 },
+					Text = "each turn: gain 2",
+				}
+			),
+			Unit(
+				"Reliquary Guard",
+				2,
+				4,
+				10,
+				"Guarding a box nobody has opened.",
+				On(
+					DoomTarget.Player,
+					new GainLifeAction { Amount = 14 },
+					"when the doom fires: gain 14"
+				)
+			),
+			Rite(
+				"Tithe",
+				1,
+				"Give it up before it is taken.",
+				OnPlay(DoomTarget.None, new DrawCardsAction { Amount = 2 }, "draw 2")
+			),
+		];
+
+	/// <summary>
+	/// What a floor may offer: the shared core every act draws from, plus the act's own cards.
+	///
+	/// **Shared core plus a themed slice, not three separate pools.** Three pools would thin the
+	/// variety in each act, and if acts are ever chained into one run the pools would have to be
+	/// merged anyway — this composes for free.
+	/// </summary>
+	public static ImmutableArray<RunCard> RewardPool(DoomTheme theme) =>
+		[
+			.. SharedPool,
+			.. (
+				theme switch
+				{
+					DoomTheme.LongEmergency => LongEmergencyCards,
+					DoomTheme.Rising => RisingCards,
+					DoomTheme.Reckoning => ReckoningCards,
+					_ => throw new ArgumentOutOfRangeException(
+						nameof(theme),
+						$"No card slice for {theme}. A theme with no cards of its own would be a "
+							+ "reskin of the shared pool and nothing else."
+					),
+				}
+			).Select(c => c with { Theme = theme }),
+		];
+
+	/// <summary>
 	/// Three distinct cards to choose between, deterministic from the seed and floor so a run
 	/// replays exactly — the same property that makes a bug report actionable.
 	/// </summary>
-	public static ImmutableArray<RunCard> RewardsFor(int seed, int floor, int count = 3)
+	public static ImmutableArray<RunCard> RewardsFor(
+		DoomTheme theme,
+		int seed,
+		int floor,
+		int count = 3
+	)
 	{
-		var pool = RewardPool.ToList();
+		var pool = RewardPool(theme).ToList();
 		var rng = new Random(seed * 104729 + floor * 31);
 		var picked = new List<RunCard>();
 
@@ -321,12 +523,10 @@ public static class StarterContent
 	}
 
 	/// <summary>
-	/// Which apocalypse waits on a floor. Deterministic from the seed so a run is reproducible —
-	/// the console prints the seed, which is what makes a bug report actionable.
+	/// Which apocalypse waits on a floor. **Decided by the theme's schedule, not by a roll** — a
+	/// run of a theme always faces the same escalation, which is what makes it a story. The seed
+	/// still varies the enemies, the rewards and the Opponent traits.
 	/// </summary>
-	public static DoomScenario ScenarioFor(int seed, int floor)
-	{
-		var pool = PlayableOn(floor);
-		return pool[new Random(seed * 7919 + floor).Next(pool.Length)];
-	}
+	public static DoomScenario ScenarioFor(DoomTheme theme, int floor) =>
+		ThemeLibrary.ScenarioFor(theme, floor);
 }

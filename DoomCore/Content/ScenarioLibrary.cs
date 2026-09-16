@@ -47,6 +47,13 @@ public record ScenarioDefinition
 	public ImmutableList<DoomTransform> Transforms { get; init; } =
 		ImmutableList<DoomTransform>.Empty;
 
+	/// <summary>
+	/// What surviving this leaves on the companion. **Content, not a switch** — MarkFor used to
+	/// dispatch on the enum with a fallback, so every apocalypse added after it was written would
+	/// have handed out a mark that did nothing and said "Unscathed".
+	/// </summary>
+	public CompanionMark Mark { get; init; } = new() { Name = "Unscathed" };
+
 	/// <summary>False when nothing implements it yet — see Rapture.</summary>
 	public bool Implemented { get; init; } = true;
 }
@@ -65,6 +72,12 @@ public static class ScenarioLibrary
 			Countdown = 4,
 			Scope = DoomScope.Battle,
 			MinFloor = 1,
+			Mark = new()
+			{
+				Name = "Barnacled",
+				Power = 2,
+				Toughness = 2,
+			},
 			BattleEffects =
 			[
 				new DoomEffect
@@ -83,15 +96,21 @@ public static class ScenarioLibrary
 			Description = "The dead do not stay where you leave them.",
 			Countdown = 3,
 			Scope = DoomScope.Permanent,
-			MinFloor = 3,
+			MinFloor = 1,
+			Mark = new() { Name = "Gravemarked", Toughness = 4 },
 			Transforms =
 			[
 				new()
 				{
-					Reads = FiringRead.Died,
+					// THE TURN IT LANDS, not everything since it last looked. `Died` grows with
+					// the countdown and the board width: six floors of it took a deck from 15
+					// cards to 53, and a hand drawn from 53 cards of chaff cannot kill anything,
+					// so battles ran to 12 turns and the life went with them. The bill for that
+					// was paid two bands later. See docs/findings/doom-balance.md.
+					Reads = FiringRead.DiedThisTurn,
 					Does = TransformVerb.AddCopies,
 					Template = DoomTransforms.ZombieBody,
-					Text = "every unit that died returns to the deck as a 2/2 Zombie",
+					Text = "the dead it catches return to the deck as 2/2 Zombies",
 				},
 			],
 		};
@@ -104,6 +123,7 @@ public static class ScenarioLibrary
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = 3,
+			Mark = new() { Name = "Glowing", Power = 4 },
 			Transforms =
 			[
 				new()
@@ -164,6 +184,302 @@ public static class ScenarioLibrary
 			],
 		};
 
+	// ===== Horror =====
+
+	/// <summary>Battle scope: the enemy line drinks, and what it gains comes straight off you.</summary>
+	public static readonly ScenarioDefinition Vampires =
+		new()
+		{
+			Scenario = DoomScenario.Vampires,
+			Description = "They have been thirsty for a long time.",
+			Countdown = 3,
+			Scope = DoomScope.Battle,
+			MinFloor = 7,
+			Mark = new() { Name = "Bloodless", Power = 4 },
+			BattleEffects =
+			[
+				new DoomEffect
+				{
+					Target = DoomTarget.AllEnemies,
+					Template = new DealDamageAction { Amount = -4 },
+					Text = "every enemy heals 4",
+				},
+				new DoomEffect
+				{
+					Target = DoomTarget.Player,
+					Template = new DealDamageAction { Amount = 8 },
+					Text = "8 to you",
+				},
+			],
+		};
+
+	/// <summary>
+	/// Power for fragility. The bargain is sharp both ways: a possessed line hits far harder and
+	/// folds to anything that hits back.
+	/// </summary>
+	public static readonly ScenarioDefinition HellUprising =
+		new()
+		{
+			Scenario = DoomScenario.HellUprising,
+			Description = "Something else is wearing them now.",
+			Countdown = 3,
+			Scope = DoomScope.Permanent,
+			MinFloor = 13,
+			Mark = new() { Name = "Wreathed", Power = 6 },
+			Transforms =
+			[
+				new()
+				{
+					Reads = FiringRead.Standing,
+					Does = TransformVerb.Modify,
+					PowerDelta = 6,
+					ToughnessDelta = -2,
+					Tag = "Possessed",
+					Text = "every unit left standing is possessed: +6 power, -2 toughness",
+				},
+			],
+		};
+
+	/// <summary>
+	/// The finale of The Rising, and the end of its own story rather than a louder version of the
+	/// middle. The act goes: the dead come back, they get hungry, something else starts wearing
+	/// them. This is where the wearing finishes — what you raised turns, and it turns on you.
+	///
+	/// **The Opponent gains nothing from it.** That is what keeps it distinct from The Thirst, which
+	/// is the band-2 doom and the one that feeds.
+	/// </summary>
+	public static readonly ScenarioDefinition TheLastHost =
+		new()
+		{
+			Scenario = DoomScenario.TheLastHost,
+			Description = "There is nothing left wearing you but this.",
+			Countdown = 2,
+			Scope = DoomScope.Battle,
+			MinFloor = Run.ActLength,
+			Mark = new()
+			{
+				Name = "Hollowed",
+				Power = 4,
+				Toughness = 4,
+			},
+			BattleEffects =
+			[
+				new DoomEffect
+				{
+					Target = DoomTarget.YourUnits,
+					Template = new SweepFieldAction(),
+					Text = "everything you hold finishes turning",
+				},
+				new DoomEffect
+				{
+					Target = DoomTarget.Player,
+					Template = new DealDamageAction { Amount = 16 },
+					Text = "and comes for you: 16",
+				},
+			],
+		};
+
+	// ===== The Reckoning =====
+
+	/// <summary>
+	/// Takes what you did not use and makes the rest cheaper. **PerN is doing the work** — without
+	/// it a band of ten firings would strip every unplayed unit in the first one.
+	/// </summary>
+	public static readonly ScenarioDefinition Famine =
+		new()
+		{
+			Scenario = DoomScenario.Famine,
+			Description = "What you did not use, you no longer have.",
+			Countdown = 3,
+			Scope = DoomScope.Permanent,
+			MinFloor = 7,
+			Mark = new()
+			{
+				Name = "Gaunt",
+				Power = 2,
+				Toughness = 2,
+			},
+			Transforms =
+			[
+				new()
+				{
+					Reads = FiringRead.NeverSummoned,
+					Does = TransformVerb.Delete,
+					PerN = 2,
+					Text = "one unit in two you never played starves",
+				},
+				new()
+				{
+					Reads = FiringRead.Standing,
+					Does = TransformVerb.Modify,
+					CostDelta = -1,
+					ToughnessDelta = -2,
+					Tag = "Lean",
+					Text = "and everything that stood is leaner: 1 cheaper, 2 less toughness",
+				},
+			],
+		};
+
+	/// <summary>
+	/// All are made equal. It lifts your worst and humbles your best, so it is a bargain for a wide
+	/// cheap deck and a disaster for one built around a single monster.
+	/// </summary>
+	public static readonly ScenarioDefinition Judgement =
+		new()
+		{
+			Scenario = DoomScenario.Judgement,
+			Description = "It does not weigh them differently.",
+			Countdown = 3,
+			Scope = DoomScope.Permanent,
+			MinFloor = 13,
+			Mark = new() { Name = "Weighed", Toughness = 6 },
+			Transforms =
+			[
+				new()
+				{
+					Reads = FiringRead.Standing,
+					Does = TransformVerb.Modify,
+					SetPower = 6,
+					SetToughness = 6,
+					Tag = "Judged",
+					Text = "every unit left standing becomes 6/6, no more and no less",
+				},
+			],
+		};
+
+	// ===== Man-made =====
+
+	public static readonly ScenarioDefinition CivilUnrest =
+		new()
+		{
+			Scenario = DoomScenario.CivilUnrest,
+			Description = "It stopped being about the sky some time ago.",
+			Countdown = 4,
+			Scope = DoomScope.Battle,
+			MinFloor = 1,
+			Mark = new() { Name = "Hardened", Toughness = 4 },
+
+			// A riot is people, and it comes for YOU. Ashfall is fire and takes the board. These
+			// two had identical numbers when first authored, which made one of them pointless.
+			BattleEffects =
+			[
+				new DoomEffect
+				{
+					Target = DoomTarget.Player,
+					Template = new DealDamageAction { Amount = 10 },
+					Text = "10 to you, and nothing to the board",
+				},
+			],
+		};
+
+	/// <summary>
+	/// Uniformity, free. It ERASES what Fallout built two bands earlier, which is the point: the
+	/// machines do not care what you mutated into.
+	/// </summary>
+	public static readonly ScenarioDefinition AiUprising =
+		new()
+		{
+			Scenario = DoomScenario.AiUprising,
+			Description = "It has decided what you should be.",
+			Countdown = 3,
+			Scope = DoomScope.Permanent,
+			MinFloor = 7,
+			Mark = new()
+			{
+				Name = "Rewritten",
+				Power = 3,
+				Toughness = 3,
+			},
+			Transforms =
+			[
+				new()
+				{
+					Reads = FiringRead.Standing,
+					Does = TransformVerb.Modify,
+					SetPower = 8,
+					SetToughness = 8,
+					SetCost = 0,
+					Tag = "Assimilated",
+					Text = "every unit left standing is assimilated: 8/8, and free to field",
+				},
+			],
+		};
+
+	/// <summary>
+	/// It replicates. **The only doom that uses `Duplicate`**, and the name finally matches the
+	/// mechanic — it was a board wipe wearing a nanotech title until this.
+	///
+	/// PerN 2 because replication is the one verb with no ceiling at all: a band fires ten times,
+	/// and doubling ten times is not a bargain, it is a joke.
+	/// </summary>
+	public static readonly ScenarioDefinition GreyGoo =
+		new()
+		{
+			Scenario = DoomScenario.GreyGoo,
+			Description = "It is still eating. It does not do anything else.",
+			Countdown = 3,
+			Scope = DoomScope.Permanent,
+			MinFloor = 13,
+			Mark = new()
+			{
+				Name = "Replicated",
+				Power = 3,
+				Toughness = 3,
+			},
+			Transforms =
+			[
+				new()
+				{
+					// STANDING, not Summoned. Copying what you committed compounds: copies enter
+					// the deck, get played, and become eligible to be copied again. Measured at
+					// 19 cards on floor 13 and 103 by floor 18. PerN only halves the base of an
+					// exponential. Standing is capped at five lanes, so a firing mints at most two.
+					Reads = FiringRead.Standing,
+					Does = TransformVerb.Duplicate,
+					PerN = 2,
+					Text = "one unit in two left standing is copied into your deck",
+				},
+			],
+		};
+
+	/// <summary>
+	/// The Long Emergency's finale: the thing every other man-made doom was the long tail of.
+	///
+	/// **Battle scope, because a permanent doom on the boss floor does nothing** — the run ends
+	/// before the deck is drawn again. Fallout is the aftermath and belongs in a band; the
+	/// detonation itself is an event inside the last fight.
+	/// </summary>
+	public static readonly ScenarioDefinition Detonation =
+		new()
+		{
+			Scenario = DoomScenario.Detonation,
+			Description = "The one they had been saving.",
+			Countdown = 2,
+			Scope = DoomScope.Battle,
+			MinFloor = Run.ActLength,
+			Mark = new()
+			{
+				Name = "Shadowcast",
+				Power = 4,
+				Toughness = 4,
+			},
+			BattleEffects =
+			[
+				new DoomEffect
+				{
+					Target = DoomTarget.YourUnits,
+					Template = new SweepFieldAction(),
+					Text = "the board is gone",
+				},
+				new DoomEffect
+				{
+					Target = DoomTarget.Player,
+					Template = new DealDamageAction { Amount = 14 },
+					Text = "and 14 to you",
+				},
+			],
+		};
+
 	public static readonly ImmutableArray<ScenarioDefinition> All =
 	[
 		Flood,
@@ -171,6 +487,15 @@ public static class ScenarioLibrary
 		Zombie,
 		Nuclear,
 		Rapture,
+		Vampires,
+		HellUprising,
+		TheLastHost,
+		Detonation,
+		Famine,
+		Judgement,
+		CivilUnrest,
+		AiUprising,
+		GreyGoo,
 	];
 
 	public static ScenarioDefinition Of(DoomScenario scenario) =>
