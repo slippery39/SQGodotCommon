@@ -20,6 +20,7 @@ SQGodotCommon/
 │   └── ImmutableGameObjects.Benchmarks/
 ├── DoomCore/                        # DOOMJAM rules engine — lanes, combat, the doom clock
 │   ├── Actions/                     # StartBattle/StartTurn/PlayCard/EndTurn/ResolveDoom
+│   ├── Ai/                          # DoomBot (plays a turn), RunSimulator (plays a run + records)
 │   ├── Cards/ Components/           # DoomCard; UnitComponent (Power/Toughness/Damage/Lane)
 │   ├── Enemies/ Zones/              # Enemy + telegraphed Intent; Opponent + PendingSummon; Zone
 │   ├── Run/                         # Run + RunCard (OUTSIDE GameState); DoomTransforms (permanent
@@ -30,6 +31,7 @@ SQGodotCommon/
 │   └── DoomBattleFactory.cs         # one GameState per battle; DoomStateExtensions is the API
 ├── DoomCore.Tests/                  # NUnit; inline card definitions only
 ├── DoomConsole/                     # terminal front end — THE REMOTE SURFACE, needs no Godot
+│   └── SimCommand.cs                #   `sim N` — balance tables out of DoomCore/Ai
 └── SQGodotCommon/                   # Godot project
     ├── Common/                      # reusable utilities — Cards/2D is game-agnostic, use it
     ├── Project/                     # GameManager, main menu
@@ -58,6 +60,7 @@ nothing is orphaned — you should not need any of it.
 | UI design — layout contract | `DoomUI.md` | read it before touching `SQGodotCommon/DoomGame/` |
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
 | Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |
+| Balance, as measured | `docs/findings/doom-balance.md` | read before changing life, floors or rewards |
 | Commands | `Commands.md` | read it |
 | Deferred decisions | `DesignNotes.md` | read it |
 

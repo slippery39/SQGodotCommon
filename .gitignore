@@ -9,6 +9,7 @@ simulator.speedscope.json
 
 flagged_games/
 sim_results/
+doom_sim_results/
 
 # graphify generated knowledge graph (regenerate with /graphify)
 # Everything here is derivable for free EXCEPT cache/semantic, which holds the

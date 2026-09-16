@@ -14,6 +14,20 @@ public static class Program
 {
 	public static void Main(string[] args)
 	{
+		// `sim N` plays runs with DoomBot instead of a person. Same content, same seeds, no Godot.
+		if (args.Length > 0 && args[0].Equals("sim", StringComparison.OrdinalIgnoreCase))
+		{
+			SimCommand.Execute(args);
+			return;
+		}
+
+		// `content` dumps every enemy, Opponent, apocalypse and card, read from the libraries.
+		if (args.Length > 0 && args[0].Equals("content", StringComparison.OrdinalIgnoreCase))
+		{
+			ContentCommand.Execute();
+			return;
+		}
+
 		var seed = args.Length > 0 && int.TryParse(args[0], out var s) ? s : Environment.TickCount;
 
 		Console.WriteLine();

@@ -46,6 +46,28 @@ Headless works for checking the battle drives correctly:
 godot-mono --headless --quit-after 60 --path SQGodotCommon DoomGame/doom_board.tscn
 ```
 
+## Measure the balance (the bot)
+
+```
+dotnet run --project DoomConsole -c Release -- sim 1000          # 1000 runs, seeds 1-1000
+dotnet run --project DoomConsole -c Release -- sim 200 Life=4    # override any eval weight
+```
+
+**Release, always.** Debug is roughly 4x slower and the sim is the one thing here that is
+CPU-bound: ~130ms a run in Release on this machine, so 1000 runs is a bit over two minutes.
+
+Writes every run to `doom_sim_results/sim-<timestamp>.json` (gitignored) and prints four tables:
+survival by floor, pressure, apocalypses, card value. **Quote the file, never the memory of a run**
+— the tables go stale the moment content changes.
+
+`sim N <Weight>=<value> ...` overrides anything on `DoomEvalWeights` by name, and the override is
+stamped into the results file's version string. Sweeping a weight is how you check the bot is near
+its own ceiling: if a weight change moves the survival curve a lot, the curve is measuring the bot
+and not the game. See `docs/findings/doom-balance.md`.
+
+**n matters more than you think.** The card-value table splits ~1000 runs into "took it" and "did
+not" groups of ~160, and at 200 runs the deltas are indistinguishable from noise.
+
 ## Play in console
 
 ```

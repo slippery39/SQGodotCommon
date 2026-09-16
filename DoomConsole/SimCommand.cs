@@ -1,0 +1,232 @@
+using System.Diagnostics;
+using System.Text.Json;
+using DoomCore;
+
+namespace DoomConsole;
+
+/// <summary>
+/// `dotnet run --project DoomConsole -- sim [count]` — plays N runs with <see cref="DoomBot"/> and
+/// prints what they say about the balance.
+///
+/// **Read the tables, never the memory of them.** Every run is written to `doom_sim_results/`; the
+/// numbers here go stale the moment content changes, and a quoted win rate from an old build is
+/// worse than no number at all.
+/// </summary>
+public static class SimCommand
+{
+	public static void Execute(string[] args)
+	{
+		var count = args.Length > 1 && int.TryParse(args[1], out var n) ? n : 200;
+		var weights = Tune(new DoomEvalWeights(), args);
+
+		Console.WriteLine($"  Simulating {count} runs, seeds 1-{count}, {weights.Version}...");
+
+		var clock = Stopwatch.StartNew();
+		var results = RunSimulator.PlayMany(count, weights);
+		clock.Stop();
+
+		Console.WriteLine(
+			$"  {clock.Elapsed.TotalSeconds:F1}s  ({clock.ElapsedMilliseconds / (double)count:F0}ms a run)"
+		);
+
+		var path = Write(results, weights);
+		SurvivalCurve(results);
+		Pressure(results);
+		Scenarios(results);
+		CardValue(results);
+
+		Console.WriteLine();
+		Console.WriteLine($"  Full results: {path}");
+		Console.WriteLine();
+	}
+
+	/// <summary>
+	/// How far runs get, and what stopped them. **The headline number**: a floor where the reach
+	/// column collapses is where the curve is wrong, and that reading survives a mediocre bot in a
+	/// way an absolute win rate does not.
+	/// </summary>
+	private static void SurvivalCurve(RunResult[] results)
+	{
+		Console.WriteLine();
+		Console.WriteLine("  SURVIVAL — how far the bot gets");
+		Console.WriteLine("  floor  reached   cleared   died  stalled   avg life on entry");
+
+		for (var floor = 1; floor <= Run.ActLength; floor++)
+		{
+			var attempts = results.SelectMany(r => r.Floors).Where(f => f.Floor == floor).ToList();
+
+			if (attempts.Count == 0)
+				continue;
+
+			var cleared = attempts.Count(f => f.Outcome == "Cleared");
+			var died = attempts.Count(f => f.Outcome == "Died");
+			var stalled = attempts.Count(f => f.Outcome == "Stalled");
+
+			Console.WriteLine(
+				$"  {floor, 5}  {attempts.Count, 7}   {cleared, 7}   {died, 4}  {stalled, 7}   {attempts.Average(f => f.LifeBefore), 17:F1}"
+			);
+		}
+
+		var complete = results.Count(r => r.ActComplete);
+		Console.WriteLine();
+		Console.WriteLine(
+			$"  Act completed: {complete}/{results.Length} ({100.0 * complete / results.Length:F1}%)   "
+				+ $"mean floor reached {results.Average(r => r.FloorReached):F2}"
+		);
+
+		foreach (var group in results.GroupBy(r => r.EndReason).OrderByDescending(g => g.Count()))
+			Console.WriteLine($"    {group.Count(), 5}  {group.Key}");
+	}
+
+	/// <summary>Turn length and the rate life actually drains — the pressure the handoff flagged.</summary>
+	private static void Pressure(RunResult[] results)
+	{
+		var floors = results.SelectMany(r => r.Floors).ToList();
+
+		Console.WriteLine();
+		Console.WriteLine("  PRESSURE");
+		Console.WriteLine($"    turns per battle      {floors.Average(f => f.Turns):F1}");
+		Console.WriteLine($"    life lost per battle  {floors.Average(f => f.LifeLost):F1}");
+		Console.WriteLine(
+			$"    dooms fired per run   {results.Average(r => r.Floors.Sum(f => f.DoomsFired)):F1}"
+		);
+		Console.WriteLine(
+			$"    dooms dodged          {floors.Count(f => f.DoomsFired == 0)}/{floors.Count} battles"
+		);
+		Console.WriteLine(
+			$"    deck size at the end  {results.Average(r => r.FinalDeck.Count):F1}"
+		);
+	}
+
+	/// <summary>
+	/// Which apocalypse a run was under when it died. Tests the design's claim that the dooms ARE
+	/// the power curve — a scenario that never appears on a losing floor is not pulling its weight.
+	///
+	/// **Read the floor column before the death column.** `PlayableOn` gates permanent-scope
+	/// scenarios to later floors, so they face a harder board by construction; a death rate here is
+	/// scenario AND depth mixed together, and the two only separate on a floor both can appear on.
+	/// </summary>
+	private static void Scenarios(RunResult[] results)
+	{
+		Console.WriteLine();
+		Console.WriteLine("  APOCALYPSES");
+		Console.WriteLine(
+			"  scenario     faced   died   death%   avg life lost   avg turns   avg floor"
+		);
+
+		foreach (
+			var group in results
+				.SelectMany(r => r.Floors)
+				.GroupBy(f => f.Scenario)
+				.OrderByDescending(g => g.Count())
+		)
+		{
+			var died = group.Count(f => f.Outcome != "Cleared");
+			Console.WriteLine(
+				$"  {group.Key, -10} {group.Count(), 7} {died, 6}  {100.0 * died / group.Count(), 6:F1}%"
+					+ $"  {group.Average(f => f.LifeLost), 14:F1}  {group.Average(f => f.Turns), 10:F1}"
+					+ $"  {group.Average(f => f.Floor), 10:F1}"
+			);
+		}
+	}
+
+	/// <summary>
+	/// Mean floor reached by runs that took a card, against runs that did not.
+	///
+	/// **Unbiased only because the picker is random** — see <see cref="RunSimulator"/>. Starter
+	/// cards never appear here: every run holds them, so there is no "without" group to compare to.
+	/// Treat a delta with a small n as noise; this is the table that needs the most runs.
+	/// </summary>
+	private static void CardValue(RunResult[] results)
+	{
+		Console.WriteLine();
+		Console.WriteLine("  CARD VALUE — mean floor reached, took it vs did not");
+		Console.WriteLine("  card                taken    with   without    delta");
+
+		var names = results.SelectMany(r => r.TakenRewards).Distinct().OrderBy(n => n);
+
+		foreach (var name in names)
+		{
+			var with = results.Where(r => r.TakenRewards.Contains(name)).ToList();
+			var without = results.Where(r => !r.TakenRewards.Contains(name)).ToList();
+
+			if (with.Count == 0 || without.Count == 0)
+				continue;
+
+			var delta = with.Average(r => r.FloorReached) - without.Average(r => r.FloorReached);
+
+			Console.WriteLine(
+				$"  {name, -18} {with.Count, 5}  {with.Average(r => r.FloorReached), 6:F2}   "
+					+ $"{without.Average(r => r.FloorReached), 6:F2}   {delta, +6:F2}"
+			);
+		}
+	}
+
+	/// <summary>
+	/// `sim 200 Life=4 OpponentHealth=2` — overrides any eval weight by name.
+	///
+	/// Sweeping a weight is how you find out whether the bot is anywhere near its own ceiling, and
+	/// that question comes back every time the eval or the content changes. Reflection rather than
+	/// a flag per weight, so a new weight is sweepable the moment it exists.
+	/// </summary>
+	private static DoomEvalWeights Tune(DoomEvalWeights weights, string[] args)
+	{
+		foreach (var arg in args.Where(a => a.Contains('=')))
+		{
+			var parts = arg.Split('=', 2);
+			var property = typeof(DoomEvalWeights).GetProperty(
+				parts[0],
+				System.Reflection.BindingFlags.Public
+					| System.Reflection.BindingFlags.Instance
+					| System.Reflection.BindingFlags.IgnoreCase
+			);
+
+			if (property is null)
+			{
+				Console.WriteLine($"  no such weight: {parts[0]}");
+				continue;
+			}
+
+			property.SetValue(weights, Convert.ChangeType(parts[1], property.PropertyType));
+
+			// The version stamp travels with the numbers, so a swept file can never be mistaken for
+			// a default-weights one when it is read back months later.
+			weights = weights with
+			{
+				Version = $"{weights.Version} {arg}",
+			};
+		}
+
+		return weights;
+	}
+
+	private static string Write(RunResult[] results, DoomEvalWeights weights)
+	{
+		var dir = Path.Combine(
+			AppContext.BaseDirectory,
+			"..",
+			"..",
+			"..",
+			"..",
+			"doom_sim_results"
+		);
+		Directory.CreateDirectory(dir);
+
+		var path = Path.GetFullPath(Path.Combine(dir, $"sim-{DateTime.Now:yyyyMMdd-HHmmss}.json"));
+
+		File.WriteAllText(
+			path,
+			JsonSerializer.Serialize(
+				new
+				{
+					Recorded = DateTime.Now,
+					Weights = weights,
+					Runs = results,
+				},
+				new JsonSerializerOptions { WriteIndented = true }
+			)
+		);
+
+		return path;
+	}
+}
