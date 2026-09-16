@@ -58,7 +58,7 @@ public static class Program
 			scenario,
 			StarterContent.CountdownFor(scenario),
 			StarterContent.EnemiesFor(run.Floor, seed),
-			opponent: StarterContent.OpponentFor(run.Floor)
+			opponent: StarterContent.OpponentFor(run.Floor, seed)
 		);
 		Renderer.DrawEvents(events);
 

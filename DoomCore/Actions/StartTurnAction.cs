@@ -121,7 +121,7 @@ public record StartTurnAction : GameAction
 			if (state.GetObject(top) is DoomCard card && card.HasTag(DoomTransforms.IrradiatedTag))
 			{
 				var player = state.GetPlayer();
-				var life = player.Life - 1;
+				var life = player.Life - DoomTransforms.IrradiatedDrawCost;
 				state = state.UpdateObject(player.Id, player with { Life = life });
 				events = events.Add(
 					new IrradiatedDrawnEvent

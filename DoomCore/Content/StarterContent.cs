@@ -78,29 +78,29 @@ public static class StarterContent
 		{
 			Name = "Ash",
 			Description = "Followed you out of the first one. Has not left since.",
-			BasePower = 1,
-			BaseToughness = 3,
+			BasePower = 2,
+			BaseToughness = 6,
 		};
 
 	public static Run NewRun(int seed = 1) =>
 		new Run
 		{
-			Life = 60,
-			MaxLife = 60,
+			Life = 200,
+			MaxLife = 200,
 			RngSeed = seed,
 			Companion = StarterCompanion,
 		}.WithCards(
 			[
-				Unit("Scavenger", 1, 2, 2, "Takes what is left."),
-				Unit("Scavenger", 1, 2, 2, "Takes what is left."),
-				Unit("Scavenger", 1, 2, 2, "Takes what is left."),
-				Unit("Scavenger", 1, 2, 2, "Takes what is left."),
-				Unit("Bulwark", 1, 0, 4, "Stands in the way."),
-				Unit("Bulwark", 1, 0, 4, "Stands in the way."),
-				Unit("Bulwark", 1, 0, 4, "Stands in the way."),
-				Unit("Ash Walker", 2, 3, 3, "Walked out of the last one."),
-				Unit("Ash Walker", 2, 3, 3, "Walked out of the last one."),
-				Unit("Lantern Bearer", 0, 1, 1, "Small light, long night."),
+				Unit("Scavenger", 1, 6, 6, "Takes what is left."),
+				Unit("Scavenger", 1, 6, 6, "Takes what is left."),
+				Unit("Scavenger", 1, 6, 6, "Takes what is left."),
+				Unit("Scavenger", 1, 6, 6, "Takes what is left."),
+				Unit("Bulwark", 1, 2, 10, "Stands in the way."),
+				Unit("Bulwark", 1, 2, 10, "Stands in the way."),
+				Unit("Bulwark", 1, 2, 10, "Stands in the way."),
+				Unit("Ash Walker", 2, 8, 10, "Walked out of the last one."),
+				Unit("Ash Walker", 2, 8, 10, "Walked out of the last one."),
+				Unit("Lantern Bearer", 0, 4, 4, "Small light, long night."),
 			]
 		);
 
@@ -111,41 +111,50 @@ public static class StarterContent
 	/// below floor 3, and a battle-scope doom changes nothing permanent — so a deck could not
 	/// improve at all until floor 3 while enemy health more than doubled. Rewards close that gap.
 	///
-	/// Plain bodies for now: there is no card effect system, so a card varies by cost and stats and
-	/// nothing else. See DoomJam.md's engine findings for what adding one would cost.
+	/// **Every entry must beat a starter card**, which is why Ash Walker and Bulwark are no longer
+	/// in here: they ARE starter cards, so drawing them as a reward was an upgrade of nothing. The
+	/// deck you build has to be visibly better than the deck you were handed.
 	///
-	/// The pool is FLAT — floor 10 offers the same cards as floor 1. Accumulating bodies is the
-	/// progression; tiers are a tuning job for after this is measured.
+	/// **Power, not toughness.** Toughness absorbs damage once and never heals; power removes the
+	/// source of it permanently. Measured: every purely defensive body in the old pool was worth
+	/// nothing at all — see `docs/findings/doom-balance.md`. The walls kept their toughness and were
+	/// given enough power to matter.
+	///
+	/// **This pool moves whenever the starter deck moves.** Buffing the starters to 3/3 and 4/5 left
+	/// half of these below the cards they were supposed to replace, and the measured value of the
+	/// whole pool collapsed toward zero — a reward you would not play is not a reward. The benchmark
+	/// is the starter card of the same cost, beaten clearly, with the surplus in POWER.
+	///
+	/// The pool is FLAT — floor 10 offers the same cards as floor 1. `MinFloor` on a RunCard is the
+	/// obvious next step.
 	/// </summary>
 	public static ImmutableArray<RunCard> RewardPool =>
 		[
-			Unit("Scrapper", 1, 3, 1, "Fast, and does not last."),
-			Unit("Shieldbearer", 1, 0, 5, "Holds the line and nothing else."),
-			Unit("Tunneller", 1, 2, 3, "Comes up where it is needed."),
-			Unit("Rust Golem", 2, 2, 6, "Slow. Very hard to move."),
-			Unit("Feral Pack", 2, 4, 2, "Hungry, and there are several."),
-			Unit("Stray", 0, 1, 2, "Followed the noise."),
-			Unit("Siege Ram", 3, 7, 2, "One job, done once."),
-			Unit("Warden", 3, 4, 6, "The last thing still standing."),
-			Unit("Ash Walker", 2, 3, 3, "Walked out of the last one."),
-			Unit("Bonepicker", 2, 5, 1, "Arrives after the fighting."),
-			Unit("Bulwark", 1, 0, 4, "Stands in the way."),
-			Unit("Long Watcher", 3, 3, 8, "Has seen four of these."),
+			Unit("Scrapper", 1, 10, 4, "Fast, and does not last."),
+			Unit("Shieldbearer", 1, 4, 12, "Holds the line, and holds a spike."),
+			Unit("Tunneller", 1, 8, 6, "Comes up where it is needed."),
+			Unit("Rust Golem", 2, 10, 14, "Slow. Very hard to move."),
+			Unit("Feral Pack", 2, 12, 8, "Hungry, and there are several."),
+			Unit("Stray", 0, 6, 6, "Followed the noise."),
+			Unit("Siege Ram", 3, 18, 6, "One job, done once."),
+			Unit("Warden", 3, 12, 16, "The last thing still standing."),
+			Unit("Bonepicker", 2, 14, 4, "Arrives after the fighting."),
+			Unit("Long Watcher", 3, 12, 20, "Has seen four of these."),
 			Rite(
 				"Scavenged Rounds",
 				1,
 				"Spend it on something that is already close.",
 				OnPlay(
 					DoomTarget.AllEnemies,
-					new DealDamageAction { Amount = 2 },
-					"2 to every enemy"
+					new DealDamageAction { Amount = 6 },
+					"6 to every enemy"
 				)
 			),
 			Rite(
 				"Field Dressing",
 				1,
 				"It will hold. It will not heal.",
-				OnPlay(DoomTarget.Player, new GainLifeAction { Amount = 6 }, "gain 6 life")
+				OnPlay(DoomTarget.Player, new GainLifeAction { Amount = 12 }, "gain 12 life")
 			),
 			Rite(
 				"Last Orders",
@@ -159,8 +168,8 @@ public static class StarterContent
 				"Straight past whatever is in the way.",
 				OnPlay(
 					DoomTarget.Opponent,
-					new DealDamageAction { Amount = 5 },
-					"5 to the Opponent"
+					new DealDamageAction { Amount = 14 },
+					"14 to the Opponent"
 				)
 			),
 		];
@@ -186,18 +195,69 @@ public static class StarterContent
 	}
 
 	/// <summary>
+	/// What is on a floor. **Every fourth floor is a rest, plus the one before the boss, and the
+	/// last floor never is** — the act has to end on the thing you came for.
+	///
+	/// The rest at `ActLength - 1` is the campfire before the boss, and it is not decoration:
+	/// floors 17-20 were four unbroken battles at the hardest tier and clear rates fell to 22% by
+	/// the end. You should arrive at the last thing having had a moment to bind what is bleeding.
+	///
+	/// Five rests across twenty floors means fifteen battles. That ratio is the single biggest lever
+	/// on whether an act can be finished at all, because it sets both how many fights the life
+	/// budget must cover and how much of it comes back.
+	/// </summary>
+	public static FloorKind FloorKindFor(int floor) =>
+		(floor % 4 == 0 || floor == Run.ActLength - 1) && floor != Run.ActLength
+			? FloorKind.Rest
+			: FloorKind.Battle;
+
+	/// <summary>
+	/// What a rest gives back: 30% of max, the Slay the Spire number.
+	///
+	/// A FRACTION of max rather than a flat amount, so it keeps its meaning if the life budget ever
+	/// moves again — and it has moved twice already.
+	/// </summary>
+	public static int RestHealFor(int maxLife) => maxLife * 3 / 10;
+
+	/// <summary>
 	/// Which Opponent waits on a floor — see <see cref="EnemyLibrary.ForFloor"/>.
 	///
 	/// This used to be `20 + floor * 6`, which gave every floor the same faceless body with a bigger
 	/// number. An Opponent is content now: it has a name, a reinforcement of its own, and effects.
 	/// </summary>
-	public static OpponentDefinition OpponentFor(int floor) => EnemyLibrary.ForFloor(floor);
+	public static OpponentDefinition OpponentFor(int floor, int seed)
+	{
+		var body = EnemyLibrary.ForFloor(floor);
+		var traits = EnemyLibrary.TraitsFor(seed);
+
+		// How many battles this Opponent has already fielded, including this one. Counting the
+		// floors below rather than tracking history keeps this a PURE function of (floor, seed) —
+		// the front end and the simulator can each ask it cold and get the same answer.
+		// Max(0) because a REST floor fields nobody: the count comes back zero there and the
+		// subtraction would run off the end of the trait list. Asking a rest floor who its
+		// Opponent is should answer, not throw.
+		var nth = Math.Max(
+			0,
+			Enumerable
+				.Range(1, floor)
+				.Count(f =>
+					FloorKindFor(f) == FloorKind.Battle
+					&& EnemyLibrary.ForFloor(f).Name == body.Name
+				) - 1
+		);
+
+		// **No Opponent is fought twice with the same trait.** The longest any Opponent holds the
+		// curve is six battles and there are six traits, so within a run nth never wraps. If a
+		// future roster gives one Opponent more floors than there are traits, it wraps rather than
+		// throwing — a repeated fight is worse content, not a broken run.
+		return traits[nth % traits.Length].ApplyTo(body);
+	}
 
 	/// <summary>
 	/// Kept because the console and the tests still speak in plain health. Reads the definition
 	/// rather than recomputing a formula, so there is one answer to "how tough is this floor".
 	/// </summary>
-	public static int OpponentHealthFor(int floor) => OpponentFor(floor).Health;
+	public static int OpponentHealthFor(int floor) => EnemyLibrary.ForFloor(floor).Health;
 
 	/// <summary>
 	/// What the Opponent puts back into an open lane, and it comes with its effects.
@@ -209,12 +269,12 @@ public static class StarterContent
 	/// </summary>
 	public static PendingSummon SummonFor(int turnNumber, int lane, int floor = 1)
 	{
-		var body = OpponentFor(floor).Reinforcement;
+		var body = EnemyLibrary.ForFloor(floor).Reinforcement;
 
 		return body.ToSummon(lane) with
 		{
-			Health = body.Health + turnNumber / 2,
-			Attack = body.Attack + turnNumber / 4,
+			Health = body.Health + turnNumber,
+			Attack = body.Attack + turnNumber / 2,
 		};
 	}
 
@@ -224,6 +284,11 @@ public static class StarterContent
 	/// **Lanes need more than one enemy to be a decision.** One enemy across five lanes is covered
 	/// by a single unit and stops being a threat; the count is what makes "which lanes do I contest"
 	/// cost something.
+	///
+	/// **The ramp was `floor / 3`, which filled all five lanes by floor 9.** Energy is a flat 3 and
+	/// never grows, so a five-lane board cannot be contested at all — two lanes leaked every turn
+	/// and late battles cost 20 life apiece regardless of play. `floor / 6` reaches five lanes at
+	/// floor 18 instead. See `docs/findings/doom-balance.md`.
 	///
 	/// Bodies come from <see cref="EnemyLibrary"/> rather than from a health formula, so an enemy
 	/// has an identity and can do something. Which ones a floor may field is the difficulty curve,
@@ -235,7 +300,7 @@ public static class StarterContent
 	/// </summary>
 	public static IReadOnlyList<Enemy> EnemiesFor(int floor, int seed = 0)
 	{
-		var count = Math.Min(2 + floor / 3, DoomBattle.LaneCount);
+		var count = Math.Min(2 + floor / 6, DoomBattle.LaneCount);
 		var roster = EnemyLibrary.PlayableOn(floor);
 		var rng = new Random(seed * 7717 + floor);
 

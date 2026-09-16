@@ -49,27 +49,27 @@ public record Companion
 			{
 				From = scenario,
 				Name = "Gravemarked",
-				Toughness = 2,
+				Toughness = 4,
 			},
 			DoomScenario.Nuclear => new CompanionMark
 			{
 				From = scenario,
 				Name = "Glowing",
-				Power = 2,
+				Power = 4,
 			},
 			DoomScenario.Flood => new CompanionMark
 			{
 				From = scenario,
 				Name = "Barnacled",
-				Power = 1,
-				Toughness = 1,
+				Power = 2,
+				Toughness = 2,
 			},
 			DoomScenario.Rapture => new CompanionMark
 			{
 				From = scenario,
 				Name = "Chosen",
-				Power = 1,
-				Toughness = 1,
+				Power = 2,
+				Toughness = 2,
 			},
 			_ => new CompanionMark { From = scenario, Name = "Unscathed" },
 		};

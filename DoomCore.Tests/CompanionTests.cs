@@ -86,8 +86,8 @@ public class CompanionTests
 		var companion = state.Units().Single(u => u.HasComponent<CompanionComponent>());
 
 		Assert.That(companion.Name, Does.StartWith("Ash"));
-		Assert.That(companion.Unit().Power, Is.EqualTo(1));
-		Assert.That(companion.Unit().Toughness, Is.EqualTo(3));
+		Assert.That(companion.Unit().Power, Is.EqualTo(Dog.BasePower));
+		Assert.That(companion.Unit().Toughness, Is.EqualTo(Dog.BaseToughness));
 		Assert.That(state.CardsIn(ZoneType.Hand).Any(c => c.Name.StartsWith("Ash")), Is.False);
 	}
 
@@ -100,8 +100,12 @@ public class CompanionTests
 		var after = run.AfterBattle(PlayOut(state));
 
 		Assert.That(after.Companion.Marks.Select(m => m.Name), Is.EqualTo(new[] { "Glowing" }));
-		Assert.That(after.Companion.Power, Is.EqualTo(3), "base 1 +2 from Glowing");
-		Assert.That(after.Companion.Toughness, Is.EqualTo(3), "unchanged");
+		Assert.That(
+			after.Companion.Power,
+			Is.EqualTo(Dog.BasePower + Companion.MarkFor(DoomScenario.Nuclear).Power),
+			"base plus Glowing"
+		);
+		Assert.That(after.Companion.Toughness, Is.EqualTo(Dog.BaseToughness), "unchanged");
 		Assert.That(after.Companion.FullName, Is.EqualTo("Ash — Glowing"));
 	}
 
@@ -119,8 +123,16 @@ public class CompanionTests
 		}
 
 		Assert.That(run.Companion.Marks.Count, Is.EqualTo(3));
-		Assert.That(run.Companion.Power, Is.EqualTo(3), "1 base + 2 Glowing");
-		Assert.That(run.Companion.Toughness, Is.EqualTo(7), "3 base + 2 + 2 Gravemarked");
+		Assert.That(
+			run.Companion.Power,
+			Is.EqualTo(Dog.BasePower + Companion.MarkFor(DoomScenario.Nuclear).Power),
+			"base plus Glowing"
+		);
+		Assert.That(
+			run.Companion.Toughness,
+			Is.EqualTo(Dog.BaseToughness + Companion.MarkFor(DoomScenario.Zombie).Toughness * 2),
+			"base plus both marks"
+		);
 		Assert.That(run.Companion.FullName, Does.Contain("Glowing").And.Contain("Gravemarked"));
 	}
 
@@ -135,7 +147,11 @@ public class CompanionTests
 		var (second, _) = run.StartBattle(DoomScenario.Zombie, countdown: 2, [Enemy(0)]);
 		var companion = second.Units().Single(u => u.HasComponent<CompanionComponent>());
 
-		Assert.That(companion.Unit().Power, Is.EqualTo(3), "it walked out of the last one changed");
+		Assert.That(
+			companion.Unit().Power,
+			Is.EqualTo(Dog.BasePower + Companion.MarkFor(DoomScenario.Nuclear).Power),
+			"it walked out of the last one changed"
+		);
 	}
 
 	// ===== The doom cannot touch it =====
@@ -161,7 +177,7 @@ public class CompanionTests
 
 		var after = run.AfterBattle(state);
 		Assert.That(after.Companion.Name, Is.EqualTo("Ash"));
-		Assert.That(after.Companion.BaseToughness, Is.EqualTo(3));
+		Assert.That(after.Companion.BaseToughness, Is.EqualTo(Dog.BaseToughness));
 	}
 
 	[Test]
@@ -175,7 +191,11 @@ public class CompanionTests
 		// The companion was on the field the whole time — exactly what Nuclear reads.
 		Assert.That(after.Deck.Any(c => c.HasTag(DoomTransforms.IrradiatedTag)), Is.False);
 		Assert.That(after.Companion.Marks.Single().Name, Is.EqualTo("Glowing"));
-		Assert.That(after.Companion.Power, Is.EqualTo(3), "marked, not irradiated");
+		Assert.That(
+			after.Companion.Power,
+			Is.EqualTo(Dog.BasePower + Companion.MarkFor(DoomScenario.Nuclear).Power),
+			"marked, not irradiated"
+		);
 	}
 
 	[Test]

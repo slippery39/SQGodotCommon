@@ -18,10 +18,10 @@ public enum DoomScenario
 	/// <summary>No doom. Test scaffolding only — a real battle always has one.</summary>
 	None = 0,
 
-	/// <summary>Reads what DIED. Deaths return as 1/1 Zombies: quantity bought with deck space.</summary>
+	/// <summary>Reads what DIED. Deaths return as 2/2 Zombies: quantity bought with deck space.</summary>
 	Zombie,
 
-	/// <summary>Reads what was LEFT ON THE FIELD. Those become Irradiated: +2/+2, lose 1 life when drawn.</summary>
+	/// <summary>Reads what was LEFT ON THE FIELD. Those become Irradiated: +4/+4, lose 2 life when drawn.</summary>
 	Nuclear,
 
 	/// <summary>

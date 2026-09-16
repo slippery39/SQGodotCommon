@@ -70,13 +70,24 @@ public partial class DoomBoard : Node2D
 		_battleResolved = false;
 		_intermission.Hide();
 
+		// Not every floor is a battle. The front end asks the SAME content function the simulator
+		// does — if these two ever disagree about what a floor is, every measured number is about
+		// a game nobody plays.
+		if (StarterContent.FloorKindFor(_run.Floor) == FloorKind.Rest)
+		{
+			var rested = _run.Rest(StarterContent.RestHealFor(_run.MaxLife));
+			_intermission.ShowRest(_run, rested);
+			_run = rested;
+			return;
+		}
+
 		var scenario = StarterContent.ScenarioFor(Seed, _run.Floor);
 
 		var (state, events) = _run.StartBattle(
 			scenario,
 			StarterContent.CountdownFor(scenario),
 			StarterContent.EnemiesFor(_run.Floor, Seed),
-			opponent: StarterContent.OpponentFor(_run.Floor)
+			opponent: StarterContent.OpponentFor(_run.Floor, Seed)
 		);
 
 		_state = state;

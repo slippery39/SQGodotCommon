@@ -213,7 +213,7 @@ public class OpponentTests
 
 		Assert.That(
 			after.Deck.Single(c => c.Name == "Exposed").Power,
-			Is.EqualTo(2),
+			Is.EqualTo(DoomTransforms.IrradiatedBuff),
 			"Nuclear irradiated what was standing"
 		);
 		Assert.That(after.Companion.Marks, Is.Not.Empty, "and the companion took its mark");

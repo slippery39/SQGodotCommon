@@ -25,6 +25,15 @@ public static class DoomTransforms
 	public const string IrradiatedTag = "Irradiated";
 
 	/// <summary>
+	/// What Irradiated adds, in both directions. **Named because tests were restating it**: a
+	/// literal in six assertions turned a balance pass into six false failures.
+	/// </summary>
+	public const int IrradiatedBuff = 4;
+
+	/// <summary>Life an Irradiated card costs when it is DRAWN. Named for the same reason.</summary>
+	public const int IrradiatedDrawCost = 2;
+
+	/// <summary>
 	/// Replays every firing of the battle against the run, in order.
 	///
 	/// **A fold, because the doom recurs.** Each firing carries its own snapshot of what it read
@@ -40,99 +49,54 @@ public static class DoomTransforms
 			.Where(f => StarterContent.ScopeOf(f.Scenario) == DoomScope.Permanent)
 			.Aggregate(run, ApplyFiring);
 
+	/// <summary>
+	/// The body Zombie mints. Named so the scenario entry can point at it and the test can read it
+	/// rather than restating 2/2 in a third place.
+	/// </summary>
+	public static readonly RunCard ZombieBody =
+		new()
+		{
+			Name = "Zombie",
+			Description = "Shambles back. 2/2.",
+			Cost = 0,
+			IsUnit = true,
+			Power = 2,
+			Toughness = 2,
+			Tags = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, ZombieTag),
+		};
+
+	/// <summary>
+	/// Replays ONE firing onto the run by running the scenario's transforms in order.
+	///
+	/// **There is no per-scenario code here any more.** Zombie and Nuclear were hand-written
+	/// methods and a themed act wants a dozen more; both are now entries in `ScenarioLibrary` made
+	/// of a read and a verb. Adding a permanent apocalypse is content, exactly as adding a
+	/// battle-scope one has been since Ashfall.
+	/// </summary>
 	public static Run ApplyFiring(Run run, DoomFiring firing)
 	{
-		if (StarterContent.ScopeOf(firing.Scenario) != DoomScope.Permanent)
+		var definition = ScenarioLibrary.Of(firing.Scenario);
+
+		if (definition.Scope != DoomScope.Permanent)
 			throw new InvalidOperationException(
 				$"{firing.Scenario} is a Battle scenario and belongs in DoomBattleEffects, not "
 					+ "here. A scenario in the wrong hook does nothing at all and looks exactly "
 					+ "like one that worked."
 			);
 
-		return firing.Scenario switch
-		{
-			DoomScenario.None => run,
-			DoomScenario.Zombie => Zombie(run, firing),
-			DoomScenario.Nuclear => Nuclear(run, firing),
-			DoomScenario.Flood => Flood(run, firing),
+		// Rapture is the case this guards: it needs a sacrifice mechanic that does not exist, and
+		// an apocalypse that quietly rewrote nothing would look exactly like one that worked.
+		if (!definition.Implemented)
+			throw new NotSupportedException(
+				$"{firing.Scenario} is flagged unimplemented. Do not offer it as a floor yet."
+			);
 
-			// Rapture needs a sacrifice mechanic, which does not exist yet. Throwing beats a silent
-			// no-op: an apocalypse that quietly does nothing looks exactly like one that worked.
-			DoomScenario.Rapture => throw new NotSupportedException(
-				"Rapture needs sacrifice, which is not implemented. Do not offer it as a floor yet."
-			),
+		if (definition.Transforms.IsEmpty)
+			throw new InvalidOperationException(
+				$"{firing.Scenario} is Permanent scope and declares no transforms, so firing it "
+					+ "would rewrite nothing. Give it transforms or make it Battle scope."
+			);
 
-			_ => throw new ArgumentOutOfRangeException(nameof(firing.Scenario)),
-		};
-	}
-
-	/// <summary>
-	/// Reads what DIED. Every death returns as a 1/1 Zombie in the deck.
-	///
-	/// The bargain is quantity for quality: bodies are life (toughness absorbs damage), but each
-	/// one dilutes the deck. Feeding it your good units is the greedy line and the trap at once.
-	/// </summary>
-	private static Run Zombie(Run run, DoomFiring firing) =>
-		run.WithCards(
-			firing.DiedRunCardIds.Select(_ => new RunCard
-			{
-				Name = "Zombie",
-				Description = "Shambles back. 1/1.",
-				Cost = 0,
-				IsUnit = true,
-				Power = 1,
-				Toughness = 1,
-				Tags = ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase, ZombieTag),
-			})
-		);
-
-	/// <summary>
-	/// Reads what was LEFT ON THE FIELD. Those units become Irradiated: permanently +2/+2, and you
-	/// lose 1 life every time you draw one.
-	///
-	/// The bargain is a stronger, sicker deck. Leaving your best unit exposed is a temptation, not
-	/// a mistake — the thing that saves life costs life, which is the torch from Darkest Dungeon.
-	/// Already-Irradiated units stack the buff and the drawback both.
-	/// </summary>
-	private static Run Nuclear(Run run, DoomFiring firing)
-	{
-		var exposed = firing.OnFieldRunCardIds;
-
-		return run with
-		{
-			Deck = run
-				.Deck.Select(card =>
-					!exposed.Contains(card.RunCardId)
-						? card
-						: card with
-						{
-							Power = card.Power + 2,
-							Toughness = card.Toughness + 2,
-							Tags = card.Tags.Add(IrradiatedTag),
-						}
-				)
-				.ToImmutableList(),
-		};
-	}
-
-	/// <summary>
-	/// Reads what you COMMITTED. Units summoned this battle are duplicated; units never summoned
-	/// are removed from the deck entirely.
-	///
-	/// The flagship scenario and the one that forced the whole run layer to exist. It is pure
-	/// bargain — thin the deck violently and double down on what you played — and it is the only
-	/// thing in the game that can permanently REMOVE a card from a run.
-	///
-	/// Non-units are untouched: the flood takes the living.
-	/// </summary>
-	private static Run Flood(Run run, DoomFiring firing)
-	{
-		var survivors = run
-			.Deck.Where(card => !card.IsUnit || firing.SummonedRunCardIds.Contains(card.RunCardId))
-			.ToImmutableList();
-
-		var duplicated = survivors.Where(card => card.IsUnit).ToList();
-
-		return (run with { Deck = survivors }).WithCards(duplicated);
+		return definition.Transforms.Aggregate(run, (current, t) => t.Apply(current, firing));
 	}
 }

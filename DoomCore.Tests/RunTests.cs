@@ -216,15 +216,22 @@ public class RunTests
 		var after = run.AfterBattle(state);
 		var card = after.Deck.Single();
 
-		Assert.That(card.Power, Is.EqualTo(5), "+2/+2");
-		Assert.That(card.Toughness, Is.EqualTo(5));
+		Assert.That(
+			card.Power,
+			Is.EqualTo(3 + DoomTransforms.IrradiatedBuff),
+			"irradiated by the authored amount"
+		);
+		Assert.That(card.Toughness, Is.EqualTo(3 + DoomTransforms.IrradiatedBuff));
 		Assert.That(card.HasTag(DoomTransforms.IrradiatedTag), Is.True);
 
 		// The price is paid on the DRAW, so declining to play it does not dodge it.
 		var (started, events) = after.StartBattle(DoomScenario.Zombie, countdown: 3, [Idler()]);
 
 		Assert.That(events.OfType<IrradiatedDrawnEvent>().Count(), Is.EqualTo(1));
-		Assert.That(started.GetPlayer().Life, Is.EqualTo(after.Life - 1));
+		Assert.That(
+			started.GetPlayer().Life,
+			Is.EqualTo(after.Life - DoomTransforms.IrradiatedDrawCost)
+		);
 	}
 
 	[Test]

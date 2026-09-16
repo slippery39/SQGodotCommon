@@ -132,9 +132,11 @@ public class RecurringDoomTests
 
 		var after = run.AfterBattle(state);
 
-		// First stood through both firings: +2/+2 twice. Second stood through one: +2/+2 once.
-		Assert.That(after.Deck.Single(c => c.Name == "First").Toughness, Is.EqualTo(13));
-		Assert.That(after.Deck.Single(c => c.Name == "Second").Toughness, Is.EqualTo(11));
+		// First stood through both firings and took the buff twice; Second stood through one.
+		// The COUNT is what this test is about, so the amount is read rather than restated.
+		var buff = DoomTransforms.IrradiatedBuff;
+		Assert.That(after.Deck.Single(c => c.Name == "First").Toughness, Is.EqualTo(9 + buff * 2));
+		Assert.That(after.Deck.Single(c => c.Name == "Second").Toughness, Is.EqualTo(9 + buff));
 	}
 
 	/// <summary>

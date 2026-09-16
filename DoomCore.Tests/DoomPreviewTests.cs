@@ -68,7 +68,7 @@ public class DoomPreviewTests
 
 		Assert.That(
 			actual.Deck.Single(c => c.Name == "Exposed").Power,
-			Is.EqualTo(4),
+			Is.EqualTo(2 + DoomTransforms.IrradiatedBuff),
 			"sanity: Nuclear irradiated what was standing"
 		);
 		Assert.That(
@@ -76,7 +76,10 @@ public class DoomPreviewTests
 			Is.EqualTo(new[] { "Exposed" }),
 			"and the preview said exactly that, a turn earlier"
 		);
-		Assert.That(preview.Changed.Single().After.Power, Is.EqualTo(4));
+		Assert.That(
+			preview.Changed.Single().After.Power,
+			Is.EqualTo(2 + DoomTransforms.IrradiatedBuff)
+		);
 		Assert.That(preview.Summary, Does.Contain("1 changed"));
 	}
 
@@ -134,7 +137,7 @@ public class DoomPreviewTests
 		Assert.That(preview.Removed, Is.Empty);
 		Assert.That(preview.Changed.Count, Is.EqualTo(1));
 		Assert.That(preview.Changed[0].Before.Power, Is.EqualTo(3));
-		Assert.That(preview.Changed[0].After.Power, Is.EqualTo(5));
+		Assert.That(preview.Changed[0].After.Power, Is.EqualTo(3 + DoomTransforms.IrradiatedBuff));
 		Assert.That(preview.Summary, Does.Contain("1 changed"));
 	}
 

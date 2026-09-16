@@ -38,6 +38,15 @@ public record ScenarioDefinition
 	/// </summary>
 	public ImmutableList<DoomEffect> BattleEffects { get; init; } = ImmutableList<DoomEffect>.Empty;
 
+	/// <summary>
+	/// What it does to the RUN when it fires, in order. Empty for a battle-scope scenario, whose
+	/// fallout is a list of <see cref="BattleEffects"/> instead.
+	///
+	/// **Order is significant** — see <see cref="DoomTransform"/>.
+	/// </summary>
+	public ImmutableList<DoomTransform> Transforms { get; init; } =
+		ImmutableList<DoomTransform>.Empty;
+
 	/// <summary>False when nothing implements it yet — see Rapture.</summary>
 	public bool Implemented { get; init; } = true;
 }
@@ -53,7 +62,7 @@ public static class ScenarioLibrary
 		{
 			Scenario = DoomScenario.Flood,
 			Description = "The water takes whatever is still standing in it.",
-			Countdown = 5,
+			Countdown = 4,
 			Scope = DoomScope.Battle,
 			MinFloor = 1,
 			BattleEffects =
@@ -75,6 +84,16 @@ public static class ScenarioLibrary
 			Countdown = 3,
 			Scope = DoomScope.Permanent,
 			MinFloor = 3,
+			Transforms =
+			[
+				new()
+				{
+					Reads = FiringRead.Died,
+					Does = TransformVerb.AddCopies,
+					Template = DoomTransforms.ZombieBody,
+					Text = "every unit that died returns to the deck as a 2/2 Zombie",
+				},
+			],
 		};
 
 	public static readonly ScenarioDefinition Nuclear =
@@ -85,6 +104,18 @@ public static class ScenarioLibrary
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = 3,
+			Transforms =
+			[
+				new()
+				{
+					Reads = FiringRead.Standing,
+					Does = TransformVerb.Modify,
+					PowerDelta = DoomTransforms.IrradiatedBuff,
+					ToughnessDelta = DoomTransforms.IrradiatedBuff,
+					Tag = DoomTransforms.IrradiatedTag,
+					Text = "every unit left standing is irradiated",
+				},
+			],
 		};
 
 	/// <summary>
@@ -113,7 +144,7 @@ public static class ScenarioLibrary
 		{
 			Scenario = DoomScenario.Ashfall,
 			Description = "It falls on everything, and it is still warm.",
-			Countdown = 4,
+			Countdown = 3,
 			Scope = DoomScope.Battle,
 			MinFloor = 2,
 			BattleEffects =
@@ -121,14 +152,14 @@ public static class ScenarioLibrary
 				new DoomEffect
 				{
 					Target = DoomTarget.YourUnits,
-					Template = new DealDamageAction { Amount = 2 },
-					Text = "2 to every unit you hold",
+					Template = new DealDamageAction { Amount = 4 },
+					Text = "4 to every unit you hold",
 				},
 				new DoomEffect
 				{
 					Target = DoomTarget.Player,
-					Template = new DealDamageAction { Amount = 3 },
-					Text = "3 to you",
+					Template = new DealDamageAction { Amount = 6 },
+					Text = "6 to you",
 				},
 			],
 		};

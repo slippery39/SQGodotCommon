@@ -35,7 +35,16 @@ public record DealDamageAction : EffectAction
 			{
 				case Enemy enemy:
 				{
-					var hurt = enemy with { Health = enemy.Health - Amount };
+					// A NEGATIVE amount is how healing is written, and a thing that feeds can end
+					// up above where it started. The maximum RISES with it rather than clamping it:
+					// the lane cell draws health against MaxHealth, so capping would hide the
+					// growth and clamping the bar would show a lie. It genuinely got bigger.
+					var healed = enemy.Health - Amount;
+					var hurt = enemy with
+					{
+						Health = healed,
+						MaxHealth = Math.Max(enemy.MaxHealth, healed),
+					};
 					state = state.UpdateObject(id, hurt);
 
 					if (hurt.IsDead)
@@ -49,7 +58,14 @@ public record DealDamageAction : EffectAction
 				case Opponent opponent:
 				{
 					var health = opponent.Health - Amount;
-					state = state.UpdateObject(id, opponent with { Health = health });
+					state = state.UpdateObject(
+						id,
+						opponent with
+						{
+							Health = health,
+							MaxHealth = Math.Max(opponent.MaxHealth, health),
+						}
+					);
 					events = events.Add(
 						new OpponentDamagedEvent { Amount = Amount, HealthRemaining = health }
 					);

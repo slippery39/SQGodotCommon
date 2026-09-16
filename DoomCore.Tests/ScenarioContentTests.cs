@@ -31,6 +31,13 @@ public class ScenarioContentTests
 		return (s, added.Id);
 	}
 
+	/// <summary>What Ashfall is authored to do to one target, read off the library entry.</summary>
+	private static int Amount(DoomTarget target) =>
+		(
+			(DealDamageAction)
+				ScenarioLibrary.Ashfall.BattleEffects.Single(e => e.Target == target).Template
+		).Amount;
+
 	/// <summary>
 	/// The whole slice in one test. Ashfall exists only in ScenarioLibrary — no hook case, no scope
 	/// row, no countdown row — and it has to do exactly what it says when the clock runs out.
@@ -53,16 +60,22 @@ public class ScenarioContentTests
 
 		(state, _) = state.AddAction(new EndTurnAction()).ProcessAllActions();
 
+		// Both amounts come from the library entry itself. The test is that a scenario added as
+		// DATA ALONE fires and hits both targets — not what this month's numbers happen to be.
+		var burn = Amount(DoomTarget.Player);
+		var chip = Amount(DoomTarget.YourUnits);
+
 		Assert.That(state.GetBattle().DoomsFired, Is.EqualTo(1), "it should have landed");
+		Assert.That(burn, Is.Not.Zero, "Ashfall is authored to do nothing to you");
 		Assert.That(
 			state.GetPlayer().Life,
-			Is.EqualTo(37),
-			"3 to you, straight from the library entry"
+			Is.EqualTo(40 - burn),
+			"straight from the library entry"
 		);
 		Assert.That(
 			state.UnitInLane(0)!.Unit().Damage,
-			Is.EqualTo(2),
-			"and 2 to the unit — chipped, not swept: a different question from Flood"
+			Is.EqualTo(chip),
+			"and the unit is chipped, not swept: a different question from Flood"
 		);
 	}
 

@@ -35,26 +35,98 @@ public class ContentDefinitionTests
 	/// The roster IS the curve, so a floor that unlocks a tier must actually lead with it —
 	/// otherwise a new enemy might not be seen for several floors and the curve would be a lie.
 	/// </summary>
+	/// <summary>
+	/// **No fight repeats inside a run.** Four Opponents crossed with six traits covers sixteen
+	/// battles, and this is the assertion that keeps that true as either list changes — add a
+	/// fifth Opponent tier that spans seven floors and this fails before anyone plays it.
+	/// </summary>
+	[Test]
+	public void NoOpponentIsFoughtTwiceWearingTheSameTrait()
+	{
+		foreach (var seed in new[] { 1, 7, 42, 1000 })
+		{
+			var fought = Enumerable
+				.Range(1, Run.ActLength)
+				.Where(f => StarterContent.FloorKindFor(f) == FloorKind.Battle)
+				.Select(f => StarterContent.OpponentFor(f, seed).Name)
+				.ToList();
+
+			Assert.That(
+				fought,
+				Is.Unique,
+				$"seed {seed} fought the same Opponent twice: "
+					+ string.Join(
+						", ",
+						fought.GroupBy(n => n).Where(g => g.Count() > 1).Select(g => g.Key)
+					)
+			);
+		}
+	}
+
+	/// <summary>The act has to end on something that only appears there.</summary>
+	[Test]
+	public void TheActEndsOnABossFoughtNowhereElse()
+	{
+		var boss = StarterContent.OpponentFor(Run.ActLength, seed: 1);
+
+		Assert.That(
+			EnemyLibrary.AllOpponents.Max(o => o.MinFloor),
+			Is.EqualTo(Run.ActLength),
+			"nothing is gated to the final floor, so the act ends on an ordinary fight"
+		);
+		Assert.That(
+			Enumerable
+				.Range(1, Run.ActLength - 1)
+				.Where(f => StarterContent.FloorKindFor(f) == FloorKind.Battle)
+				.Select(f => EnemyLibrary.ForFloor(f).Name),
+			Has.None.EqualTo(EnemyLibrary.ForFloor(Run.ActLength).Name),
+			"the boss turns up before the last floor"
+		);
+		Assert.That(boss.Effects, Is.Not.Empty, "a boss that does nothing is just a bigger number");
+	}
+
+	/// <summary>
+	/// Asserts the RULE, not the roster. These used to name "Herald of the End" on floor 3 and
+	/// "The Choir" on floor 4, and a balance pass that moved a `MinFloor` broke them while the
+	/// mechanism was working perfectly — the same reason cards are defined inline in these tests.
+	/// </summary>
 	[Test]
 	public void AFloorLeadsWithTheHardestThingItAllows()
 	{
-		Assert.That(StarterContent.EnemiesFor(1).First().Name, Is.EqualTo("Wretch"));
-		Assert.That(StarterContent.EnemiesFor(3).First().Name, Is.EqualTo("Herald of the End"));
-		Assert.That(StarterContent.EnemiesFor(6).First().Name, Is.EqualTo("Siege Hulk"));
+		foreach (var floor in Enumerable.Range(1, Run.ActLength))
+		{
+			var lead = StarterContent.EnemiesFor(floor).First();
+			var hardest = EnemyLibrary.PlayableOn(floor).Max(e => e.MinFloor);
+
+			// EnemiesFor hands back placed Enemy objects, which carry no MinFloor — the tier has
+			// to come back from the definition the name belongs to.
+			var tier = EnemyLibrary.All.First(e => e.Name == lead.Name).MinFloor;
+
+			Assert.That(
+				tier,
+				Is.EqualTo(hardest),
+				$"floor {floor} led with {lead.Name}, which is not from the newest tier it allows"
+			);
+		}
 	}
 
 	[Test]
 	public void AnOpponentIsChosenFromContentAndCarriesItsOwnReinforcement()
 	{
-		Assert.That(StarterContent.OpponentFor(1).Name, Is.EqualTo("The Opponent"));
-		Assert.That(StarterContent.OpponentFor(4).Name, Is.EqualTo("The Choir"));
-		Assert.That(StarterContent.OpponentFor(9).Name, Is.EqualTo("The Last Warden"));
+		foreach (var floor in Enumerable.Range(1, Run.ActLength))
+		{
+			var opponent = StarterContent.OpponentFor(floor, seed: 1);
 
-		Assert.That(
-			StarterContent.OpponentFor(9).Reinforcement.Name,
-			Is.EqualTo("Siege Hulk"),
-			"the Opponent decides what it fields; EndTurnAction asks IT, not the content tables"
-		);
+			Assert.That(opponent.MinFloor, Is.LessThanOrEqualTo(floor));
+			Assert.That(
+				EnemyLibrary.AllOpponents.Where(o => o.MinFloor <= floor).Max(o => o.MinFloor),
+				Is.EqualTo(opponent.MinFloor),
+				$"floor {floor} fielded {opponent.Name} while a later Opponent was already legal"
+			);
+
+			// The Opponent decides what it fields; EndTurnAction asks IT, not the content tables.
+			Assert.That(opponent.Reinforcement.Name, Is.Not.Empty);
+		}
 	}
 
 	/// <summary>
@@ -71,8 +143,12 @@ public class ContentDefinitionTests
 					Name = "Executioner",
 					Cost = 0,
 					IsUnit = true,
-					Power = 20,
-					Toughness = 20,
+
+					// Sized off the Herald itself so it one-shots whatever the library says it is.
+					// A literal 20 stopped killing it the moment its health moved, and the test
+					// then failed for a reason that had nothing to do with on-death effects.
+					Power = EnemyLibrary.HeraldOfTheEnd.Health,
+					Toughness = EnemyLibrary.HeraldOfTheEnd.Attack * 2,
 				},
 			]
 		);
@@ -90,13 +166,25 @@ public class ContentDefinitionTests
 			.ProcessAllActions();
 
 		var lifeBefore = state.GetPlayer().Life;
+
+		// Read the cost off the DEFINITION rather than restating it. This asserted a literal 4 and
+		// broke on a balance pass that moved the Herald's burn to 2, while the thing under test —
+		// that an authored on-death effect fires at all — was working the whole time.
+		var burn = -(
+			(DealDamageAction)
+				EnemyLibrary
+					.HeraldOfTheEnd.Effects.Single(e => e.Trigger == EffectTrigger.OnDeath)
+					.Template
+		).Amount;
+
 		(state, _) = state.AddAction(new EndTurnAction()).ProcessAllActions();
 
 		Assert.That(state.LivingEnemies(), Is.Empty, "the Herald should be dead");
+		Assert.That(burn, Is.Not.Zero, "the Herald's on-death effect is authored to do nothing");
 		Assert.That(
 			state.GetPlayer().Life,
-			Is.EqualTo(lifeBefore - 4),
-			"and its authored on-death effect should have cost 4 — content, not a code branch"
+			Is.EqualTo(lifeBefore + burn),
+			"its authored on-death effect should have fired — content, not a code branch"
 		);
 	}
 

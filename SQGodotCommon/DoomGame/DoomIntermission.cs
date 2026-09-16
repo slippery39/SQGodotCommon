@@ -107,6 +107,34 @@ public sealed class DoomIntermission
 	}
 
 	/// <summary>
+	/// A rest floor. No fight, no reward, no decision — you heal and you walk on.
+	///
+	/// It reads the healed run rather than computing the heal, the same rule every other panel
+	/// follows: `Run.Rest` did the arithmetic and this says what happened.
+	/// </summary>
+	public void ShowRest(Run before, Run after)
+	{
+		_title.Text = $"FLOOR {before.Floor} — NOTHING HERE";
+
+		_body.Text = string.Join(
+			"\n",
+			"Quiet, for once. Long enough to bind what is bleeding.",
+			"",
+			$"Life  {before.Life}  ->  {after.Life} / {after.MaxLife}",
+			$"Deck  {after.Deck.Count} cards",
+			$"Companion  {after.Companion.FullName}  ({after.Companion.Power}/{after.Companion.Toughness})"
+		);
+
+		_coming.Text = "";
+		foreach (var child in _offers.GetChildren())
+			child.QueueFree();
+
+		_continue.Text = "WALK ON";
+		_continue.Visible = true;
+		_root.Visible = true;
+	}
+
+	/// <summary>
 	/// Offers three cards, and names the apocalypse waiting below before you choose.
 	///
 	/// **Skipping is a real option**, which is why the continue button says so out loud instead of

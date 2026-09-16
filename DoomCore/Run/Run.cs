@@ -160,6 +160,19 @@ public record Run
 	}
 
 	/// <summary>
+	/// Takes the rest and walks on. Heals, capped at <see cref="MaxLife"/>, and advances the floor.
+	///
+	/// The floor still advances — a rest COSTS a floor of the act, which is the whole trade. Twenty
+	/// floors with four rests is sixteen battles, and that is what makes the life budget stretch.
+	/// </summary>
+	public Run Rest(int heal) =>
+		this with
+		{
+			Life = Math.Min(MaxLife, Life + heal),
+			Floor = Floor + 1,
+		};
+
+	/// <summary>
 	/// Carries the finished battle back into the run: life as it ended, then the apocalypse's
 	/// transform, then the floor advances.
 	///
