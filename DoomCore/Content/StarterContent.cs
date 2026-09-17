@@ -196,7 +196,7 @@ public static class StarterContent
 					Trigger = EffectTrigger.OnTurnStart,
 					Target = DoomTarget.Self,
 					Template = new BuffAction { Power = 2, PerEach = CountOf.DiedLastTurn },
-					Text = "+2/+0 for each unit that died last turn",
+					Text = "+2/+0 per Loss",
 				},
 			],
 		};
@@ -240,79 +240,64 @@ public static class StarterContent
 	/// <summary>
 	/// What a cleared floor can offer. **This is the only progression that works from floor 1.**
 	///
-	/// The dooms are supposed to BE the power curve, but `PlayableOn` gives battle-scope Flood only
-	/// below floor 3, and a battle-scope doom changes nothing permanent — so a deck could not
-	/// improve at all until floor 3 while enemy health more than doubled. Rewards close that gap.
+	/// **RE-CUT FOR COMBAT v3 (2026-09-17). Two measured rules decided nearly all of it:**
 	///
-	/// **Every entry must beat a starter card**, which is why Ash Walker and Bulwark are no longer
-	/// in here: they ARE starter cards, so drawing them as a reward was an upgrade of nothing. The
-	/// deck you build has to be visibly better than the deck you were handed.
+	/// **1. NOTHING COSTS 3.** Energy is 3 a turn and a lane is the resource, so a 3-cost spends the
+	/// whole turn holding ONE lane where two 1-costs hold two. Run 15 measured the consequence and it
+	/// is brutal: Siege Ram +0.30, The Choirmaster +0.67, Long Watcher +2.51, against +5.12 for a
+	/// 0-cost 4/4 and +4.81 for a 1-cost. Every 3-cost is now a 2-cost with smaller numbers.
 	///
-	/// **Power, not toughness.** Toughness absorbs damage once and never heals; power removes the
-	/// source of it permanently. Measured: every purely defensive body in the old pool was worth
-	/// nothing at all — see `docs/findings/doom-balance.md`. The walls kept their toughness and were
-	/// given enough power to matter.
+	/// **2. ON-DEATH TRIGGERS ARE DEAD, but READING deaths is not.** A unit withdraws at end of turn
+	/// (see DoomJam.md "Combat v3"), so it rarely dies, so Gravedigger — "on death: 16 to the
+	/// Opponent" — measured **-0.26**, the only negative card in the game. Replaced throughout by
+	/// <see cref="CountOf.DiedLastTurn"/>, which reads what the ENEMY killed across your whole board
+	/// instead of requiring this particular card to be the thing that died.
 	///
-	/// **This pool moves whenever the starter deck moves.** Buffing the starters to 3/3 and 4/5 left
-	/// half of these below the cards they were supposed to replace, and the measured value of the
-	/// whole pool collapsed toward zero — a reward you would not play is not a reward. The benchmark
-	/// is the starter card of the same cost, beaten clearly, with the surplus in POWER.
+	/// **Card NAMES are deliberately unchanged.** `DoomArt` resolves art by name from 52 authored
+	/// SVGs, so renaming a card silently downgrades it to a generated figure. Re-stat and re-ability
+	/// the names that exist; a genuinely new name is an art debt and should be taken knowingly.
 	///
-	/// The pool is WEIGHTED BY RARITY and not gated by floor — floor 1 can offer anything floor 20
-	/// can, just less often. See <see cref="WeightOf"/> for why it is not a gate.
+	/// **Every entry must beat a starter card**, which is why Ash Walker and Bulwark are not in here:
+	/// they ARE starter cards. **Power, not toughness** — measured repeatedly, and still true in v3.
+	///
+	/// Weighted by rarity, never gated by floor — see <see cref="WeightOf"/>.
 	/// </summary>
 	public static ImmutableArray<RunCard> SharedPool =>
 		[
-			Unit("Scrapper", 1, 10, 4, "Fast, and does not last."),
-			Unit("Shieldbearer", 1, 4, 12, "Holds the line, and holds a spike."),
-			Unit("Tunneller", 1, 8, 6, "Comes up where it is needed."),
-			Unit("Rust Golem", 2, 10, 14, "Slow. Very hard to move.") with
-			{
-				Rarity = DoomRarity.Uncommon,
-			},
-			Unit("Feral Pack", 2, 12, 8, "Hungry, and there are several.") with
-			{
-				Rarity = DoomRarity.Uncommon,
-			},
 			Unit("Stray", 0, 6, 6, "Followed the noise."),
-			Unit("Siege Ram", 3, 18, 6, "One job, done once.") with
-			{
-				Rarity = DoomRarity.Uncommon,
-			},
-			Unit("Warden", 3, 12, 16, "The last thing still standing.") with
-			{
-				Rarity = DoomRarity.Uncommon,
-			},
-			Unit("Bonepicker", 2, 14, 4, "Arrives after the fighting."),
-			Unit("Long Watcher", 3, 12, 20, "Has seen four of these.") with
-			{
-				Rarity = DoomRarity.Rare,
-			},
-			Rite(
-				"Scavenged Rounds",
-				1,
-				"Spend it on something that is already close.",
-				OnPlay(
-					DoomTarget.AllEnemies,
-					new DealDamageAction { Amount = 6 },
-					"6 to every enemy"
-				)
-			) with
-			{
-				Rarity = DoomRarity.Rare,
-			},
+			Unit("Scrapper", 1, 10, 4, "Fast, and does not last."),
+			Unit("Tunneller", 1, 8, 6, "Comes up where it is needed."),
+			// Was 4/12 and measured +0.59 — the worst body in the pool. Toughness blocks for one
+			// turn and power removes the thing permanently; v3 did not change which of those pays.
+			Unit("Shieldbearer", 1, 6, 12, "Holds the line, and holds a spike."),
 			Rite(
 				"Field Dressing",
 				1,
 				"It will hold. It will not heal.",
 				OnPlay(DoomTarget.Player, new GainLifeAction { Amount = 12 }, "gain 12 life")
 			),
+			// **The volume axis, and the first card that makes ORDER WITHIN A TURN a decision.**
+			// It counts itself, so it is never worse than 3 to every enemy — but held back until
+			// after two cheap bodies it is 9. Nothing in this game has ever rewarded sequencing.
 			Rite(
-				"Last Orders",
-				2,
-				"Everyone takes what they can carry.",
-				OnPlay(DoomTarget.Player, new DrawCardsAction { Amount = 3 }, "draw 3")
+				"Scavenged Rounds",
+				1,
+				"Spend it on something that is already close.",
+				OnPlay(
+					DoomTarget.AllEnemies,
+					new DealDamageAction { Amount = 3, PerEach = CountOf.CardsPlayedThisTurn },
+					"3 to every enemy per card this turn"
+				)
 			) with
+			{
+				Rarity = DoomRarity.Rare,
+			},
+			Unit("Bonepicker", 2, 14, 4, "Arrives after the fighting."),
+			Unit("Feral Pack", 2, 12, 8, "Hungry, and there are several.") with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
+			Unit("Rust Golem", 2, 10, 14, "Slow. Very hard to move.") with
 			{
 				Rarity = DoomRarity.Uncommon,
 			},
@@ -329,23 +314,80 @@ public static class StarterContent
 			{
 				Rarity = DoomRarity.Uncommon,
 			},
+			Rite(
+				"Last Orders",
+				2,
+				"Everyone takes what they can carry.",
+				OnPlay(DoomTarget.Player, new DrawCardsAction { Amount = 3 }, "draw 3")
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
+			// **Adjacency, offensive.** Was a 3-cost 18/6. Where you put it now matters more than
+			// what it is: dropped between two enemies it is 12 extra damage, on the edge it is 6.
+			Unit(
+				"Siege Ram",
+				2,
+				14,
+				6,
+				"One job, done once.",
+				OnPlay(
+					DoomTarget.EnemiesInAdjacentLanes,
+					new DealDamageAction { Amount = 6 },
+					"6 to Adjacent enemies"
+				)
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
+			// **Adjacency, defensive.** Was a 3-cost 12/16. Toughness is worth one turn of blocking,
+			// so handing it to the neighbours is worth more than holding it.
+			Unit(
+				"Warden",
+				2,
+				8,
+				16,
+				"The last thing still standing.",
+				OnPlay(
+					DoomTarget.YourUnitsInAdjacentLanes,
+					new BuffAction { Toughness = 4 },
+					"Adjacent units get +0/+4"
+				)
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
+			// **The clock axis: it pays for apocalypses you ATE.** Was a 3-cost 12/20 vanilla. A
+			// deck that races sees this as a 10/18; a deck that has taken four firings sees a
+			// 18/26. That is the dodge-vs-eat bargain expressed on a card for the first time.
+			Unit(
+				"Long Watcher",
+				2,
+				10,
+				18,
+				"Has seen four of these.",
+				OnPlay(
+					DoomTarget.Self,
+					new BuffAction
+					{
+						Power = 2,
+						Toughness = 2,
+						PerEach = CountOf.DoomsFired,
+					},
+					"+2/+2 per Doom fired"
+				)
+			) with
+			{
+				Rarity = DoomRarity.Rare,
+			},
 		];
 
 	/// <summary>
-	/// **The Long Emergency's own cards.** Its dooms read what is STANDING (AI Uprising) and what
-	/// you COMMITTED (Grey Goo), so the act rewards putting bodies down and keeping them there.
-	/// These lean into that: they want to still be on the field when the clock runs out.
+	/// **The Long Emergency's own cards.** Its dooms read what is STANDING, so the act rewards
+	/// committing on the firing turn. These lean into the clock: they want the apocalypse to land.
 	/// </summary>
 	private static ImmutableArray<RunCard> LongEmergencyCards =>
 		[
-			// **Was a 1-cost 2/14 and measured −0.45** — the only card in the game with a negative
-			// delta, over 215 takes. Not a pricing problem: 16 total stats beats the 6/6 starter
-			// on paper. It is that 2 power never threatens anything, and the pool has said twice
-			// that POWER is what pays and toughness barely does — Shieldbearer at 4/12 is +0.16
-			// and equally dead, while Tunneller at 8/6 is +1.82.
-			//
-			// 8/10 clears the starter in the direction that matters and keeps the body that this
-			// act wants standing when the clock runs out.
 			Unit("Riot Shield", 1, 8, 10, "Issued for a crowd, not for this."),
 			Unit(
 				"Salvage Rig",
@@ -373,13 +415,20 @@ public static class StarterContent
 			{
 				Rarity = DoomRarity.Uncommon,
 			},
+			// Was a 3-cost with "Doom: gain 10", which paid only if you were still holding it when
+			// the clock ran out. It now pays for every firing you have ALREADY survived, so it is
+			// a reward for having eaten apocalypses rather than a bet on the next one.
 			Unit(
 				"Reactor Crew",
-				3,
-				8,
-				12,
+				2,
+				6,
+				10,
 				"They stayed at the desk.",
-				On(DoomTarget.Player, new GainLifeAction { Amount = 10 }, "Doom: gain 10")
+				OnPlay(
+					DoomTarget.Player,
+					new GainLifeAction { Amount = 5, PerEach = CountOf.DoomsFired },
+					"gain 5 per Doom fired"
+				)
 			) with
 			{
 				Rarity = DoomRarity.Rare,
@@ -387,65 +436,68 @@ public static class StarterContent
 		];
 
 	/// <summary>
-	/// **The Rising's own cards**, and the act that asks for two opposite things. Zombie reads what
-	/// DIED, in the first band; Hell Uprising reads what was LEFT STANDING, in the last. So the
-	/// early game wants bodies worth losing and the late game wants bodies that hold — which is why
-	/// these are split between cards that pay out on death and one that pays out on surviving.
+	/// **The Rising — your losses are ammunition.**
+	///
+	/// This act was built on death: Zombie reads what died, and its cards triggered on their own
+	/// deaths. **Combat v3 broke all of it**, because a unit withdraws at end of turn instead of
+	/// dying — Gravedigger measured -0.26, the only negative card in the game, and Pyre Tender
+	/// +0.57.
+	///
+	/// **The fix is not a trigger but a READ.** `CountOf.DiedLastTurn` counts what the enemy
+	/// actually killed across your whole board, so these pay off attrition without needing to be
+	/// the thing that died. The act keeps its identity and loses the mechanic that no longer works.
+	///
+	/// They are deliberately blank on turn one — nothing has died yet — and enormous in a grinding
+	/// fight. That is the act, and it is the same axis Ash's ability reads.
 	/// </summary>
 	private static ImmutableArray<RunCard> RisingCards =>
 		[
-			// **The death trigger is here on EVIDENCE, not by default.** It was swapped for
-			// "each turn: 3 to the Opponent" on the frequency argument — a turn trigger fires far
-			// more often than a death — and measured −2.77 against this card's +0.43. Restoring
-			// the body alone did not recover it, so the trigger was the damage.
-			//
-			// Why the frequency argument failed here: **OnTurnEnd only pays if the unit is still
-			// standing at the end of the turn.** A 1-cost body in a contested lane usually is not,
-			// so the "40-50 firings a run" this was costed at never happened. Almoner is the card
-			// that makes the trigger look good and it is a 2/8 — the toughness IS the engine.
 			Unit(
 				"Gravedigger",
 				1,
 				8,
 				6,
 				"He has been busy. He is not finished.",
-				OnDeath(
+				OnPlay(
 					DoomTarget.Opponent,
-					new DealDamageAction { Amount = 16 },
-					"on death: 16 to the Opponent"
+					new DealDamageAction { Amount = 8, PerEach = CountOf.DiedLastTurn },
+					"8 to the Opponent per Loss"
 				)
 			),
-			// Restored alongside Gravedigger, same measurement and same reason: "each turn: 3 to
-			// every enemy" read −1.30 against this card's +0.86, because a 2-cost body in a
-			// contested lane is rarely alive at end of turn to fire it.
 			Unit(
 				"Pyre Tender",
 				2,
 				10,
 				8,
 				"Burning them is the only thing that has worked.",
-				OnDeath(
+				OnPlay(
 					DoomTarget.AllEnemies,
-					new DealDamageAction { Amount = 12 },
-					"on death: 12 to every enemy"
+					new DealDamageAction { Amount = 6, PerEach = CountOf.DiedLastTurn },
+					"6 to every enemy per Loss"
 				)
 			) with
 			{
 				Rarity = DoomRarity.Uncommon,
 			},
-			// The act keeps ONE doom payoff — it is the act's own clock and something should pay
-			// off it. What it lacked was anything between firings, so the per-turn line is added
-			// rather than swapped in: 3 a turn is the Almoner lesson (a 1-cost gaining 2 a turn
-			// measured +1.83, against this card's +0.40 for gaining 12 on the doom).
+			// Was a 3-cost 12/18 with "Doom: gain 12; each turn: gain 3" — and the second half was
+			// a lie, because an ephemeral unit never sees a second turn. It is now the act's payoff
+			// body: small after a clean turn, a monster after a bad one.
 			Unit(
 				"The Choirmaster",
-				3,
+				2,
+				8,
 				12,
-				18,
 				"Still conducting. Nobody told him.",
-				On(DoomTarget.Player, new GainLifeAction { Amount = 12 }, "Doom: gain 12"),
-				// Was `EachTurn(... "each turn: gain 3")` — same lie as Almoner's.
-				OnPlay(DoomTarget.Player, new GainLifeAction { Amount = 3 }, "gain 3")
+				OnPlay(
+					DoomTarget.Self,
+					new BuffAction
+					{
+						Power = 4,
+						Toughness = 4,
+						PerEach = CountOf.DiedLastTurn,
+					},
+					"+4/+4 per Loss"
+				)
 			) with
 			{
 				Rarity = DoomRarity.Rare,
@@ -466,41 +518,54 @@ public static class StarterContent
 		];
 
 	/// <summary>
-	/// **The Reckoning's own cards.** Famine takes what you never played and Judgement flattens
-	/// everything standing to 6/6, so the act punishes hoarding and punishes monsters. Cheap and
-	/// plentiful is correct here, and nothing should be precious.
+	/// **The Reckoning — cheap, plentiful, and nothing is precious.** Famine takes what you never
+	/// played and Judgement flattens everything standing, so hoarding and monsters are both
+	/// punished. The act's axis is VOLUME: how many cards you got out this turn.
 	/// </summary>
 	private static ImmutableArray<RunCard> ReckoningCards =>
 		[
 			Unit("Penitent", 0, 4, 4, "Walked here. Will walk further."),
+			// Was a 1-cost 2/8 whose text said "each turn: gain 2" and fired ONCE — v3 withdraws
+			// the unit that would have fired it again. Now it pays for a wide turn instead, which
+			// is honest and is the act's own axis.
 			Unit(
 				"Almoner",
 				1,
-				2,
+				4,
 				8,
 				"Gives away what little is left.",
-				// Was `EachTurn(... "each turn: gain 2")`, which fired once and said otherwise.
-				OnPlay(DoomTarget.Player, new GainLifeAction { Amount = 2 }, "gain 2")
+				OnPlay(
+					DoomTarget.Player,
+					new GainLifeAction { Amount = 2, PerEach = CountOf.CardsPlayedThisTurn },
+					"gain 2 per card this turn"
+				)
 			),
-			Unit(
-				"Reliquary Guard",
-				2,
-				4,
-				10,
-				"Guarding a box nobody has opened.",
-				On(DoomTarget.Player, new GainLifeAction { Amount = 14 }, "Doom: gain 14")
-			) with
-			{
-				Rarity = DoomRarity.Rare,
-			},
 			Rite(
 				"Tithe",
 				1,
 				"Give it up before it is taken.",
-				OnPlay(DoomTarget.None, new DrawCardsAction { Amount = 2 }, "draw 2")
+				OnPlay(DoomTarget.Player, new DrawCardsAction { Amount = 2 }, "draw 2")
 			) with
 			{
 				Rarity = DoomRarity.Uncommon,
+			},
+			// Was a 2-cost 4/10 with "Doom: gain 14". The act wants a WIDE board, so its rare now
+			// pays the board rather than the player — and Judgement flattening everything standing
+			// is the tension that keeps it from being free.
+			Unit(
+				"Reliquary Guard",
+				2,
+				6,
+				10,
+				"Guarding a box nobody has opened.",
+				OnPlay(
+					DoomTarget.YourUnits,
+					new BuffAction { Power = 2, Toughness = 2 },
+					"every unit you hold gets +2/+2"
+				)
+			) with
+			{
+				Rarity = DoomRarity.Rare,
 			},
 		];
 

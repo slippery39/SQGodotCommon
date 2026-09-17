@@ -260,28 +260,57 @@ public class ThemedCardTests
 	[Test]
 	public void AUnitsDoomTriggerFiresWhenTheApocalypseLands()
 	{
-		var crew = StarterContent
+		// **Selected BY TRIGGER, not by name.** This test used to name Reactor Crew, and the v3
+		// pool re-cut gave that card an OnPlay effect instead — so the test failed with "healed
+		// nothing", which reads like a broken trigger rather than a renamed one. Asking the act
+		// for a card that still has the trigger means a re-cut can move abilities around freely,
+		// and the assertion below fails LOUDLY and correctly if the act ever has none.
+		var doomCard = StarterContent
 			.RewardPool(DoomTheme.LongEmergency)
-			.Single(c => c.Name == "Reactor Crew");
+			.FirstOrDefault(c =>
+				c.IsUnit && c.Effects.Any(e => e.Trigger == EffectTrigger.OnDoomFires)
+			);
 
-		var run = new Run { Life = 100, MaxLife = 200 }.WithCards([crew]);
+		Assert.That(
+			doomCard,
+			Is.Not.Null,
+			"The Long Emergency has no unit with a Doom trigger at all. That is the act's whole "
+				+ "identity — its dooms read what is STANDING — so either restore one or this "
+				+ "test is asserting a design that no longer exists."
+		);
 
-		// Countdown 1, so ending one turn lands the apocalypse.
-		var (state, _) = run.StartBattle(DoomScenario.Flood, countdown: 1, [], opponentHealth: 500);
+		var run = new Run { Life = 100, MaxLife = 200 }.WithCards([doomCard!]);
 
-		var card = state.CardsIn(ZoneType.Hand).Single(c => c.Name == "Reactor Crew");
+		// Countdown 1, so ending one turn lands the apocalypse. An enemy to be hit by whatever the
+		// trigger does, in a lane the unit is not holding.
+		var (state, _) = run.StartBattle(
+			DoomScenario.Flood,
+			countdown: 1,
+			[EnemyLibrary.SiegeHulk.ToEnemy(lane: 0)],
+			opponentHealth: 500
+		);
+
+		var card = state.CardsIn(ZoneType.Hand).Single(c => c.Name == doomCard!.Name);
 		(state, _) = state
 			.AddAction(new PlayCardAction { CardId = card.Id, Lane = 2 })
 			.ProcessAllActions();
 
-		var before = state.GetPlayer().Life;
+		// Snapshot everything the trigger could plausibly move, so this does not have to know
+		// WHICH doom card the act happens to ship.
+		var life = state.GetPlayer().Life;
+		var enemyHealth = state.LivingEnemies().Sum(e => e.Health);
+		var hand = state.CardsIn(ZoneType.Hand).Count();
+
 		(state, _) = state.AddAction(new EndTurnAction()).ProcessAllActions();
 
 		Assert.That(state.GetBattle().DoomsFired, Is.EqualTo(1), "the doom should have landed");
 		Assert.That(
-			state.GetPlayer().Life,
-			Is.GreaterThan(before),
-			"the Reactor Crew was standing when the doom fired and healed nothing"
+			state.GetPlayer().Life != life
+				|| state.LivingEnemies().Sum(e => e.Health) != enemyHealth
+				|| state.CardsIn(ZoneType.Hand).Count() != hand,
+			Is.True,
+			$"{doomCard!.Name} was standing when the doom fired and nothing happened — "
+				+ "life, enemy health and hand size were all unchanged"
 		);
 	}
 }

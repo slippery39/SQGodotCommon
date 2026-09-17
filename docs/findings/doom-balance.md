@@ -1190,3 +1190,83 @@ A stronger companion cannot fix an act that never comes online — it just delay
 - **`OnTurnStart` is now unusable by cards** and a test enforces it: the field is empty when it
   fires, so a card carrying it would be silently inert. The companion is the one legal holder, which
   is exactly what Ash uses.
+
+---
+
+## Run 17 — 2026-09-17 — the pool re-cut for v3, and a table that was lying
+
+**`bot-1/v3`, 150 runs, 50 per act.** The card pool rebuilt around what v3 actually rewards: no
+3-costs, deaths READ rather than triggered, and three synergy axes that could not be written before
+the `CountOf` / `BuffAction` / adjacency primitives existed.
+
+| act | run 16 | run 17 | |
+|---|---|---|---|
+| The Long Emergency | 82% | 78% | too easy |
+| The Reckoning | 68% | **90%** | far too easy |
+| **The Rising** | 20% | **28%** | **in band at last** |
+
+The Rising has now gone **0% → 2% → 6% → 20% → 28%** across four changes. Target is 25-50%, so for
+the first time since v3 landed, every act is in band or above it. **The problem is now that two acts
+are too easy**, which is a much better problem than an unplayable one.
+
+### THE CARD VALUE TABLE LIES ACROSS ACTS, and it nearly cost a good redesign
+
+The headline table said The Rising's four cards were the four worst in the game: Pyre Tender **-2.96**,
+Blood Price **-2.72**, The Choirmaster **-2.36**, Gravedigger **-1.90**. Every one negative. Read at
+face value, the re-cut had failed.
+
+**It had not. The table was measuring the act.** An act-specific card is only ever taken inside its
+own act, so its "with" average is that act alone while its "without" average is all three. The
+Rising's mean floor is 15.74 against 19.46 and 19.78 — a gap of nearly four floors that gets charged
+to every card the act ships.
+
+Recomputed **within** The Rising:
+
+| card | across acts | within its act |
+|---|---|---|
+| Gravedigger | -1.90 | **+2.51** |
+| Blood Price | -2.72 | +0.58 |
+| The Choirmaster | -2.36 | +0.45 |
+| Pyre Tender | -2.96 | -0.05 |
+
+**This is the same disease as "never report one balance number across more than one act", in a table
+nobody had audited for it.** Compare a themed card only against runs of its own theme. A shared-pool
+card is safe to read across all three; a themed one is not, ever.
+
+### Deaths as a READ, not a trigger — the redesign is vindicated
+
+Gravedigger was **-0.26 in run 15, the only negative card in the game**, carrying "on death: 16 to
+the Opponent" — a trigger v3 broke, because a unit withdraws at end of turn instead of dying. Rebuilt
+as "8 to the Opponent per Loss", reading `CountOf.DiedLastTurn` across your whole board rather than
+requiring this card to be the corpse, it is **+2.51 within its act** and the most valuable card The
+Rising ships.
+
+**The mechanic was not the problem; the direction of it was.** Nothing needed to die *itself* — the
+act needed to be paid for having *lost* things.
+
+### What the re-cut did
+
+- **Nothing costs 3.** Every 3-cost became a 2-cost with smaller numbers. Run 15 measured why: a
+  3-cost spends the whole turn holding ONE lane where two 1-costs hold two.
+- **Three axes that were previously unsayable.** Adjacency (Siege Ram, Warden), volume (Scavenged
+  Rounds, Almoner), and the clock (Long Watcher, Reactor Crew). All positive within their acts.
+- **Card NAMES were deliberately not changed.** `DoomArt` resolves art by name from 52 authored
+  SVGs, so a rename silently downgrades a card to a generated figure. Re-stat and re-ability the
+  names that exist; treat a new name as an art debt taken knowingly.
+- **Card text was too long and got shortened onto keywords.** "8 to the Opponent for each unit that
+  died last turn" does not fit a card face — `Loss` and `Adjacent` are keywords now, with reminder
+  text on hover, and the text reads "8 to the Opponent per Loss". DoomJam.md's rule: when the text
+  does not fit, the text is wrong, not the box.
+- **Warden and Rust Golem were both 2-cost 10/14**, one with an ability, which made the vanilla one
+  strictly worse. Caught by reading the rendered content dump, not by any test. Warden is 8/16 now.
+
+### A test that named a card, and why that was the bug
+
+`AUnitsDoomTriggerFiresWhenTheApocalypseLands` loaded **Reactor Crew** by name and asserted life went
+up. The re-cut gave that card an OnPlay effect, and the test failed with "healed nothing" — which
+reads like a broken trigger rather than a moved ability. It now selects whichever card in the act
+*has* the trigger and asserts the precondition explicitly, so a future re-cut is free to move
+abilities and a genuinely missing trigger still fails loudly.
+
+The neighbouring Gravedigger test defines its card **inline** and kept passing throughout, which is
+exactly why that rule exists.

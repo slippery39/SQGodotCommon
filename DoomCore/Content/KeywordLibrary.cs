@@ -74,6 +74,24 @@ public static class KeywordLibrary
 		},
 		new Keyword
 		{
+			Name = "Loss",
+			Text =
+				"A unit of yours the enemy KILLED last turn. A unit that simply left the board at "
+				+ "the end of the turn is not a Loss — only something that was taken from you "
+				+ "counts, which is what makes feeding a lane a real decision.",
+			Aliases = ["loss", "per loss", "losses"],
+		},
+		new Keyword
+		{
+			Name = "Adjacent",
+			Text =
+				"The lanes immediately either side of this one. A lane at the edge of the board "
+				+ "has only one neighbour, so the middle is worth more to anything that reaches "
+				+ "sideways.",
+			Aliases = ["adjacent", "either side"],
+		},
+		new Keyword
+		{
 			Name = "Power",
 			Text =
 				"The number beside the sword: what this body deals each turn. An open lane "
