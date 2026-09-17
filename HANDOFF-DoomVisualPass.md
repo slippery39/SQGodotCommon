@@ -1,5 +1,10 @@
 # Handoff — DOOMJAM: the visual pass, and what looking at it kept finding
 
+> **SUPERSEDED IN PART by the v3 design pass (2026-09-17).** A playtest found three problems —
+> Ash is irrelevant, board stalls are common, and cards and enemies are all just stats — and the
+> answer was to make units EPHEMERAL. Read `DoomJam.md` "Combat v3" and "Build order for v3" FIRST.
+> The visual findings below all still hold; the balance numbers in them describe the v2 game.
+
 **Read this, then `DoomJam.md`, then `DoomUI.md`.** `HANDOFF-DoomPacingAndRewards.md` is the previous
 session and is superseded — read only its §4 scars.
 

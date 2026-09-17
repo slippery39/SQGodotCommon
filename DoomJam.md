@@ -19,6 +19,17 @@ the win condition; recurring dooms; scenario scope; all three acts reachable fro
 weighted by rarity; the full front end — board, hand, drag-to-lane, reward screen, intermission,
 animation, a keyword glossary on hover. **113 tests green.**
 
+**A DESIGN PASS ON 2026-09-17 SUPERSEDED THE COMBAT MODEL, AND NONE OF IT IS BUILT YET.** Units
+become ephemeral, persistence becomes a premium keyword, enemies get intent patterns, and the
+Companion becomes the run's engine. Read **"Combat v3"**, **"Enemies must have PATTERNS"** and
+**"TAG ALONG"** before touching `DoomCore/Actions/` or any content number. Everything this file
+still marks BUILT is the v2 game that is in the repo today.
+
+**`docs/findings/doom-balance.md` measures the v2 game, and v3 invalidates every absolute number in
+it.** Keep the file: the methodology and the transferable findings — tune against the dodge rate,
+never report one number across acts, power pays and toughness barely does — all survive. The
+numbers do not.
+
 **NOT BUILT, and this is where a design pass should look:**
 
 - **Rapture** still has no implementation and is gated to floor 99 so it is never offered. Ship it or
@@ -166,6 +177,11 @@ entry, a `ScopeOf` row, a `CountdownFor` row, a `PlayableOn` row, and one case i
 Interval varies per scenario on purpose: it is free texture, and it makes each apocalypse feel
 different before the player reads a word of its text.
 
+> **FLOOD IS A NO-OP UNDER v3 and must change or be cut (2026-09-17).** It washes the board to
+> Discard, and in v3 the board washes itself at the end of every turn. It is the scenario that
+> teaches the fiction on floor 1, so a replacement is worth more than a deletion — wash the HAND, or
+> take next turn's draw. Everything below is the v2 reasoning, kept because the *why* still holds.
+
 **Flood was rewritten (2026-09-14).** It used to delete never-summoned units from the run deck and
 duplicate the ones you played.
 
@@ -178,6 +194,159 @@ duplicate the ones you played.
 
 Flood keeps the lane game honest: you can see it coming, so the question becomes *how much do I
 commit to a board that is about to be washed?*
+
+## Combat v3 — UNITS ARE EPHEMERAL  [DESIGNED 2026-09-17, NOT BUILT]
+
+> **SUPERSEDES the permanent board described in "Combat — FIVE LANES" below.** Lanes, automatic
+> resolution, absorption-with-excess and "no targeting anywhere" all survive untouched. What changes
+> is how long a unit stays.
+
+**A unit you play leaves the field at the end of the turn.** You rebuild the board every turn from a
+fresh hand. Persistence is a premium keyword that a few cards and every Companion carry.
+
+### Why: the game had two contradictory economies stapled together
+
+The hand was Slay the Spire — drawn to 5, discarded every turn, ephemeral by design. The board was
+Hearthstone — pay once, keep forever, damage persists all battle. **The stall was the seam between
+them.** An ephemeral hand keeps feeding a permanent board until the board saturates, and then the
+hand has nowhere to go: you draw five units, every lane is held by a healthy unit of your own,
+`PlayCardAction` refuses all five, and the only legal move is End Turn.
+
+Said plainly, from the playtest that found it: *committing permanent resources while drawing five new
+permanent resources a turn creates a board the enemies cannot clear faster than you refill it.*
+
+**The stall was therefore the reward for playing well** — clear the lanes, your units stop dying, the
+board locks. Negative feedback on success, and it bit hardest on EASY floors, where two enemies
+contest two lanes and your other units are immortal.
+
+Ephemeral units do not patch that. They delete the conditions for it, the same way the recurring-doom
+model deleted dead air rather than fixing it.
+
+### The second reason, which is the better one
+
+> *"which lanes do I contest, knowing the rest hit my face — that tension is the whole battle"*
+
+That decision happened on turn one and then decayed to nothing. **v3 makes the doc's own stated core
+decision happen every turn instead of once.** It is not a new pillar; it makes the existing one
+load-bearing.
+
+### The rules
+
+- **A unit withdraws at end of turn** and goes to Discard. It is not dead: no `OnDeath` triggers, it
+  feeds no scenario read, and it counts as no death anywhere.
+- **Dead means 0 toughness**, ephemeral or persistent. That fires `OnDeath` and feeds Zombie.
+  Withdrawn ≠ dead is the whole distinction, and it is load-bearing — it is what lets a Companion pay
+  off "units that died last turn" without paying for its own board wiping itself every turn.
+- **Any unit may be placed into ANY lane. Whatever was there goes to Discard, and there is no
+  refund.** This is a law, not a convenience. It is what stops `Persistent` reintroducing the stall in
+  miniature: persistence must mean *it stays if you leave it*, never *you may not use this lane*. The
+  cost of overwriting is already exact — you are throwing away something you paid for.
+- **The doom fires BEFORE the withdrawal**, so a firing reads the board you committed this turn. Six
+  scenarios use `FiringRead.Standing`; sweeping first would make every one of them silently read an
+  empty board, which is precisely the silent no-op this codebase keeps rediscovering. Pin it with a
+  test that a firing sees a non-empty field.
+
+### Persistent — premium, and the Companion is the glimpse
+
+**`Persistent`: this unit stays in its lane, and keeps its damage.** Ephemeral units arrive fresh
+every turn; a persistent 4/8 is 8 absorption once, then 5, then 2, then it is gone. **The permanent
+thing is the thing that accumulates scars**, which is the game's entire fiction. Damage clears
+between battles — it erodes inside a fight and is whole for the next one.
+
+**It is premium and sparing, at uncommon and rare only.** The teaching problem that would normally
+force a keyword into the starter deck is already solved: **the Companion is persistent, so every
+player plays alongside one from floor 1**, and a persistent card in a reward screen reads as "another
+Ash" — a thing you already know you want.
+
+**The pricing dial is the BREAK-EVEN TURN** — how many turns a persistent unit needs to beat an
+ephemeral one of the same cost. At 2 it is an auto-include and stops being premium; at 4, against
+enemies that kill it in 3, it is a trap that feels bad to draw. **Target 3, and give it its own line
+in the balance table** — it decides whether a whole card class is playable, and completion rate will
+not show it. Same lesson as `dooms dodged`.
+
+**A persistent unit parked in an uncontested lane with a per-turn trigger is an engine with no off
+switch** — the stall returning as a win condition. The answer is on the enemy side, not a nerf: see
+Piercing and Shifting below. **Build those two intents BEFORE the first persistent card**, or the
+first one will look balanced and be an auto-win.
+
+### What v3 costs, recorded before it is paid
+
+- **Every number in the game moves.** A 6/6 in an open lane used to deal 6 a turn for ever for one
+  energy paid once; now that 6 costs a card and an energy every turn. Per-turn output collapses to
+  roughly what 3 energy buys. Opponent health, enemy health, card power and costs are all re-derived.
+  `sim` measures it — do not hand-tune the Godot build first.
+- **Costs must compress toward 0-2.** Five cards and 3 energy at costs 0-3 means you play two and bin
+  three, every turn, and now you bin a board slot with them. STS lands on 0-2 for this reason.
+- **Keep the end-of-turn hand discard.** Two ephemeral economies that match is the entire point.
+- **Flat energy, and SCALING IS A DECKBUILDING OUTCOME — never a property of the board.** This is a
+  rule, established 2026-09-17, and it is the STS model: a Strike/Defend deck does not scale, and a
+  long fight is lost by the deck that could not close it. **Do not add an in-battle energy ramp**, or
+  anything else that hands the player growth for simply surviving turns — that is the board doing the
+  deck's job, which is exactly what v2 was doing by accident.
+
+  **v2 was scaling you for free and nobody noticed.** A permanent board is a stockpile: a 6/6 played
+  on turn 1 hits for 6 every turn after, so output grew with time on flat energy and a long battle
+  was self-correcting. v3 deletes that, and it should.
+
+  **Two consequences follow, and both matter more than the rule.**
+
+  First — **the dodge-vs-eat bargain finally has teeth.** The doc has always promised that dodging
+  buys safety and costs power, but in v2 a dodged deck could still grind out a long fight on a
+  stockpile it got for nothing. It cannot now: scaling comes from doom transforms and companion
+  marks, which you only get by EATING apocalypses. The relic slot in this game is occupied by the
+  dooms, and this is what makes that true rather than merely stated.
+
+  Second — **"it is up to your deck" is not true yet, because no card in the game can grow.** Every
+  card is a fixed stat line and every effect amount is a literal (`DealDamageAction { Amount = 6 }`).
+  So count-based amounts and a buff action are no longer synergy nice-to-haves: **they are what makes
+  a long battle winnable at all.** Build them alongside v3, not after it.
+
+  The tail is a PACING problem, not a correctness one. Reinforcements arrive at `Health + turn/2`,
+  `Attack + turn/4`, so enemy attack grows without bound against flat absorption — a battle you
+  cannot close ends with you losing it, the same floor STS has. If `sim` shows that taking 40 turns,
+  steepen the reinforcement scaling. Do not reach for a new mechanism.
+- **Flood must change or be cut.** It washes a board that now washes itself.
+- **One-turn bodies are less memorable than permanent ones.** The risk of v3 is trading boring turns
+  for a boring deck. The Companion's ability is what carries deckbuilding identity instead — if that
+  does not land, v3 has not landed.
+
+### Six scenarios get sharper for free
+
+`FiringRead.Standing` is the most-used read in the game — Nuclear, Hell Uprising, Famine, Judgement,
+AI Uprising and Grey Goo. Today it reads whatever accumulated over eight turns, which the player
+never chose. In v3 it reads **the Companion plus exactly what you committed on the firing turn**, so
+each of the six poses a different question as the clock hits 1: Nuclear (+2/+2, a life on draw) wants
+your best cards standing; Judgement (everything flattened to 6/6) wants your worst. **A commit-or-hold
+decision on every firing turn, and it costs nothing to build.**
+
+## Enemies must have PATTERNS, not a number  [DESIGNED 2026-09-17, NOT BUILT]
+
+**`Enemy.Intent` is set once at creation and never changes.** Every enemy attacks for the same number
+every turn, for ever, and `IntentKind` has two values of which one is unused. That barely matters in
+v2, where your board is already built and the intent is arithmetic you solved on turn one. **In v3 it
+is the only thing that makes this turn's puzzle different from last turn's.**
+
+So an intent becomes a SEQUENCE the enemy advances through each turn, cycling — a list and an index,
+data, no engine change. Without it, per-turn placement is the same bin-packing problem every turn:
+**v3 guarantees a decision, not an interesting one**, and this is what makes it interesting. It is
+also why the telegraph finally earns its place: today it shows a number that never changes.
+
+| Intent | What it does | What it makes you do |
+|---|---|---|
+| **Wind-up** | `0, 0, 24` | bank real toughness for turn three |
+| **Piercing** | ignores toughness, hits your face | **kill it — a body cannot answer it** |
+| **Shifting** | moves to your emptiest lane, then attacks | never leave a hole, never park |
+| **Splash** | hits its lane and both adjacent | stop clumping |
+| **Reaping** | attack scales with units you placed this turn | stop going wide |
+| **Growing** | +3 attack each turn it lives | a clock inside the clock |
+
+**Piercing is the one that matters most.** Everything else is answered by placing a body; an enemy a
+body cannot answer forces you to spend POWER instead of toughness, which flips that lane from defence
+to offence. **Piercing and Shifting are also the guard on persistence** — between them, no lane is
+ever safe to park in indefinitely.
+
+Existing enemy effects are all chip damage or healing, which is a bigger number rather than a
+different plan. An enemy should punish a BEHAVIOUR, the way STS does — that is what these are for.
 
 ## Combat — FIVE LANES, resolved automatically  [BUILT]
 
@@ -254,23 +423,113 @@ apocalypse should be a desperate move, not routine.
 
 **Life does not heal automatically (STS-style).** 0 life ends the run.
 
-## TAG ALONG — the Companion  [BUILT]
+## TAG ALONG — the Companion  [v2 BUILT; v3 DESIGNED 2026-09-17, NOT BUILT]
 
-**The only thing the doom cannot touch — but it keeps a mark from every apocalypse it survives.**
+**The only thing the doom cannot touch — and, from v3, the engine your deck is built around.**
+
+### What v2 built, and what survives
 
 - On the board free at the start of every battle, no summoning cost. Also solves "short round and I
   drew badly" — the board is never empty.
 - **Immune by construction, not by a special case:** the companion lives on `Run.Companion` and is
   not in `Run.Deck`, and every transform operates on the deck. Nothing had to be taught to skip it.
 - Its battle card carries `RunCardId = 0`, which no deck card can hold (ids start at 1), so nothing
-  mapping a battle unit back to a deck entry can find it.
-- **A companion death is not a deck event.** It leaves the battle outright rather than going to
-  Discard, and does not feed Zombie — otherwise chump-blocking with it minted a free card every turn.
-  It returns next battle.
-- Each doom survived **stamps it**, permanently and cumulatively: Gravemarked +0/+2 (Zombie),
-  Glowing +2/+0 (Nuclear), Barnacled +1/+1 (Flood).
-- By the last floor it is a patchwork of every ending you lived through — **the record of your run**,
-  and the one thing you carried out. `Companion.FullName` renders it: "Ash — Gravemarked, Glowing".
+  mapping a battle unit back to a deck entry can find it. **This guard holds even if the companion
+  is ever put into the deck**, which is what makes the resummon options below safe.
+- **A companion death is not a deck event.** It does not feed Zombie — otherwise chump-blocking with
+  it minted a free card every turn.
+- Each doom survived **stamps it**, permanently and cumulatively. By the last floor it is a patchwork
+  of every ending you lived through — **the record of your run**, and the one thing you carried out.
+  `Companion.FullName` renders it, collapsing repeats: "Ash — Hardened x3, Rewritten x4".
+
+### v3: the Companion is the synergy driver
+
+**The ability is the build declaration, and it is chosen at run start.** This resolves the open
+question about choosing between several companions: yes, and it is the game's character select. A
+companion is one record with a `DoomEffect` list, and the effect system already does not care what
+holds it — so a roster is cheap content, not a system.
+
+**The reward screen becomes a conversation with your companion.** Which cards are good is answered by
+who you brought, which is exactly the deckbuilding depth v2 lacked: every card was a vanilla body and
+nothing made one reward better than another except its stat line.
+
+**Design the ability to change how you PLACE, not what you draft.** "Bonus when you play Scavengers"
+is a checklist you satisfy at the reward screen and then forget. "Power for each unit that died last
+turn" makes you feed losing lanes on purpose, every turn. Placement is the only decision the game
+has, and the companion is the only thing on the board that persists long enough to see a pattern.
+
+Six axes, so a roster does not go samey — each makes a **different reward screen correct**:
+
+| Axis | Ability shape | What it makes you do |
+|---|---|---|
+| **spatial** | adjacent lanes +1/+1 | clump, concede the flanks |
+| **attrition** | power per unit that DIED last turn | feed losing lanes on purpose |
+| **survival** | power per unit that LIVED last turn | overcommit toughness, play safe |
+| **volume** | bonus per card played this turn | cheap cards, wide turns |
+| **the clock** | grows on every firing, or stronger near zero | eat apocalypses instead of dodging |
+| **the face** | pays off when a lane hits the Opponent | race, leave lanes open |
+
+**The attrition axis only works because withdrawn ≠ dead.** "Units that died last turn" has to mean
+units the enemy killed, not the four that walked off at end of turn. That rule was tidiness when it
+was written and is load-bearing now.
+
+### v3: it is placed, it is persistent, and it can die
+
+- **`Persistent` by default**, and it is the only persistent thing most runs will own — see Combat
+  v3. It keeps its damage inside a battle and is whole again for the next one.
+- **You choose its lane every turn, free.** Not pinned to lane 2. Everything else on the board is
+  fluid, so a statue in the middle would be the one strange exception, and "where does Ash stand this
+  turn" is a real decision that costs nothing and cannot be drawn badly. It is the issue-#1 fix that
+  needs no new system at all.
+- **It can die, and it must be able to.** Under v3 every other body costs a card and an energy every
+  turn. A companion that cannot die is a free unkillable permanent unit in a game where nothing else
+  is permanent — the strongest thing in the game by a distance, and a set-and-forget engine with no
+  off switch. It is also *fair* now in a way it was not: you pick its lane, so its death is your read
+  going wrong rather than the shuffler's fault.
+
+**The best tension in the design, and it costs nothing to build: your engine is also your best
+blocker, and you cannot have both.** Park it safe and it holds nothing; put it where it is needed and
+you grind down the thing your deck is built around. Piercing and Shifting mean no lane is safe for
+ever.
+
+### v3: death and resummon — the COMMANDER model
+
+**It dies, and you may resummon it for a cost. The cost takes part of your turn, so it is never
+free.** Exact cost TBD; the shape is MTG's commander tax, and the tax is what prices out the exploit
+below.
+
+- **Marks and every run-scope gain survive its death.** It returns next battle carrying everything.
+  Losing a run's accumulated identity to one bad lane read is the worst outcome this design can
+  produce, and it would happen to new players first. Battle-scope effects die with the body; the
+  run/battle split already draws exactly this line everywhere else.
+- **The escalating cost is not flavour — it prices out suicide-to-heal.** A companion that returns
+  fresh makes dying a way to clear its damage. Rising resummon cost within a battle (1, then 2, then
+  3) kills that loop with one integer on the battle record, and it is the same reason MTG escalates.
+- **Heals to full between battles.** Arriving at floor 15 permanently at 3 toughness is misery, and
+  it matches how persistent cards work: erode inside a fight, whole for the next.
+- **The board must SAY it is down and what it costs.** An empty lane and a silently missing ability
+  is the class of bug this codebase keeps rediscovering.
+
+Where it goes while dead was the one live choice. Recorded so it is not re-litigated:
+
+| | cost of dying | verdict |
+|---|---|---|
+| **to hand, exempt from the discard, pay to redeploy** | one turn of the ability, plus energy | **chosen.** Deterministic, short, and a decision — pay now, or spend on the lane about to kill you |
+| shuffled into the deck | several turns, plus a draw | random recovery for the thing the whole deck is built around, against the doc's own "certainty is permission" principle. Technically safe (`RunCardId = 0` still protects it), just worse |
+| returns automatically after N turns | a wait | simplest, and fits the telegraph — but it is a wait, not a decision |
+
+### Cut: attachments and upgrade cards
+
+**Considered and dropped in the same pass.** Cards that upgrade a unit you already hold were the
+answer to dead turns on a saturated board — and v3 deletes saturated boards, so they answer a
+question that no longer exists. Worse, an attachment on an ephemeral unit buffs something that leaves
+at end of turn, so they would have collapsed into "premium persistent targets only", i.e. the
+companion.
+
+**The simplification that falls out: marks stay plain stat bumps.** Marks-as-effects was proposed to
+give the companion an identity it did not have. The ABILITY is the identity now, so the marks can
+stay the cheap thing they already are — the ability is who your companion is, the marks are how much
+of the run it has eaten.
 
 ## Run structure
 
@@ -315,7 +574,29 @@ survives; only the instrument changed.
 > account of a scenario, which would drift from the scenario and have the player planning around a
 > lie.
 
-## MVP (build this first)
+## Build order for v3  [the next thing to do]
+
+The v3 pass changes combat, so build it the way the lane switch was built: rules first in `DoomCore`,
+measured in `DoomConsole`, and only then into Godot. The lane rewrite was a **net deletion** that
+touched no file above `DoomCore/Actions/` — expect the same shape here.
+
+1. **Units withdraw at end of turn**, and the doom fires BEFORE the withdrawal. Withdrawn ≠ dead.
+   Pin the ordering with a test that a firing sees a non-empty field.
+2. **Any lane is always playable; the held unit goes to Discard, no refund.** Delete the refusal in
+   `PlayCardAction.ValidateAdd`.
+3. **Rescale with `sim`, not by reasoning.** Everything moves. Expect Opponent health to fall hard
+   and costs to compress toward 0-2. Add the persistence break-even turn as its own table line.
+4. **Intent sequences, with Piercing and Shifting first.** Without these the turn is the same
+   bin-packing problem every turn, and persistence has no counterplay.
+5. **`Persistent`, at uncommon and rare only.** After step 4, never before it.
+6. **The Companion: ability, chosen lane each turn, death and resummon.** Marks stay stat bumps.
+7. **Flood's replacement**, and a pass over the six `FiringRead.Standing` scenarios to check what
+   each now asks on a firing turn.
+
+Then re-read the front end: `DoomBoard` shows a board that empties every turn, `DoomLaneCell` needs a
+persistent/ephemeral tell, and the companion needs a visible down-and-resummonable state.
+
+## MVP — v1, kept as the record of how the battle layer was built
 
 **One Opponent per battle, one scenario per battle, repeating on its interval. No acts, no
 multi-battle chains.** Lanes need 2-4 enemy units to be a decision — one unit across five lanes is
@@ -430,7 +711,7 @@ available. Moot now: the sub-theme is dropped (see Sub-themes), so no input mode
 - **Does the Opponent attack on its own**, or only through its units? Currently only units exist.
 - **Is Opponent HP the difficulty dial, or the doom interval?** Probably both, but one should lead.
 
-**Older, still open:**
+**Older, still open (pre-v3):**
 
 - **NOTHING CURRENTLY EMPTIES A DECK.** Flood was the only thing that removed cards and it is a
   board wash now, so `Run.HasNoCards` is unreachable. The rule is kept as the floor under any future
@@ -438,11 +719,40 @@ available. Moot now: the sub-theme is dropped (see Sub-themes), so no input mode
   no longer cause it. It also means **deck attrition is no longer the backstop** for a battle that
   will not end — Irradiated's life-on-draw is, and that only applies on Nuclear floors. An
   unwinnable battle against an Opponent you cannot out-damage currently has no ending at all.
-- Should enemies be able to SHIFT lanes between turns, so a defender can be dodged? Costs a movement
-  rule to telegraph; buys a reason to keep reacting after the lanes are covered.
+- ~~Should enemies be able to SHIFT lanes between turns?~~ **RESOLVED — YES, and it is now
+  REQUIRED (2026-09-17).** Shifting is one of the two intents that guard persistence: without it,
+  a persistent unit can be parked in a quiet lane for ever. See "Enemies must have PATTERNS".
 - How many battles is a full run?
-- Does the Companion have an activated ability, or only its accumulated marks? (currently marks only)
-- Should the player choose between several companions at run start? (currently one, "Ash" 1/3)
+- ~~Does the Companion have an activated ability, or only its accumulated marks?~~ **RESOLVED
+  (2026-09-17): it has an ABILITY, and the ability is the point.** It is the synergy driver and
+  the build declaration — see "TAG ALONG". Marks stay plain stat bumps.
+- ~~Should the player choose between several companions at run start?~~ **RESOLVED — YES
+  (2026-09-17).** It is the game's character select and its primary build declaration, made before
+  floor 1. A companion is one record with a `DoomEffect` list, so a roster is content, not a system.
+**Raised by the v3 design pass (2026-09-17), and unresolved:**
+
+- **What does resummoning the Companion cost?** Decided: it costs something, it takes part of your
+  turn, and it ESCALATES within a battle so suicide-to-heal is never correct. The numbers are open.
+  The commander tax is the model.
+- **What replaces Flood?** Decided: it changes or it is cut — washing the board is a no-op once the
+  board washes itself. Candidates: wash the HAND, or skip next turn's draw. It is the scenario that
+  teaches the fiction on floor 1, so a replacement is worth more than a deletion.
+- **Does the whole hand still discard every turn?** Lean: yes. Two ephemeral economies that match is
+  the entire point of v3, and banking cards reintroduces the hoarding Famine already punishes.
+- ~~Flat energy, or a ramp inside a long battle?~~ **RESOLVED (2026-09-17): flat, and scaling is a
+  deckbuilding outcome.** No energy ramp, ever — see the rule in Combat v3. What is still open is
+  whether reinforcement scaling is STEEP enough to end an unwinnable battle promptly; that is a
+  pacing number for `sim`, not a mechanism.
+- **How many persistent cards should a 20-floor act put in a deck?** At uncommon and rare only, the
+  answer is roughly three to five, which means the Companion is the only persistent body for most of
+  a run. That is intended — but it is the assumption the whole synergy layer rests on, so measure it
+  rather than believing it.
+- **Which intent patterns does each enemy get?** Piercing and Shifting must exist before the first
+  persistent card ships. The rest is content.
+- **Does the Opponent itself get an intent pattern**, now that enemies have one?
+
+**Older, still open:**
+
 - Deck size and starting deck composition
 - Does anything let you *change* the doom interval, or is it strictly fixed? (lean: strictly fixed,
   except the rare card keyword that burns it)
@@ -450,6 +760,12 @@ available. Moot now: the sub-theme is dropped (see Sub-themes), so no input mode
 **Closed by this revision:** whether reinforcements arrive mid-battle (yes — the Opponent refreshes,
 and it is core rather than one scenario's gimmick), and whether Flood needs a floor on how much it
 removes (moot — it no longer removes anything).
+
+**Closed by the v3 pass (2026-09-17):** whether units persist (no, by default), whether a lane can be
+replayed into (yes, always, no refund), whether the Companion can die (yes, and it must be able to),
+where it goes when it does (to hand, resummoned for an escalating cost), whether attachments are
+built (no — cut in the same pass that removed the problem they solved), and whether marks become
+effects (no — the ability carries identity now).
 
 ## Dead air — SOLVED, kept as the reasoning
 
