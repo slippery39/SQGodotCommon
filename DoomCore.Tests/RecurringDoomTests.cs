@@ -128,15 +128,126 @@ public class RecurringDoomTests
 
 		var firings = state.GetBattle().Firings;
 		Assert.That(firings[0].OnFieldRunCardIds, Has.Count.EqualTo(1));
-		Assert.That(firings[1].OnFieldRunCardIds, Has.Count.EqualTo(2));
+		Assert.That(
+			firings[1].OnFieldRunCardIds,
+			Has.Count.EqualTo(1),
+			"**Combat v3**: the second firing sees what you committed on ITS turn, not an "
+				+ "accumulated pile. First withdrew at the end of turn 1 and was not standing."
+		);
+		Assert.That(
+			firings[0].OnFieldRunCardIds,
+			Is.Not.EqualTo(firings[1].OnFieldRunCardIds),
+			"and the two firings read different boards, which is why DoomFiring exists"
+		);
 
 		var after = run.AfterBattle(state);
 
-		// First stood through both firings and took the buff twice; Second stood through one.
+		// Each stood through exactly one firing, so each took the buff once. Before v3 First was
+		// still standing at the second firing and took it twice — the thing that changed is what a
+		// board IS, not how firings are counted.
 		// The COUNT is what this test is about, so the amount is read rather than restated.
 		var buff = DoomTransforms.IrradiatedBuff;
-		Assert.That(after.Deck.Single(c => c.Name == "First").Toughness, Is.EqualTo(9 + buff * 2));
+		Assert.That(after.Deck.Single(c => c.Name == "First").Toughness, Is.EqualTo(9 + buff));
 		Assert.That(after.Deck.Single(c => c.Name == "Second").Toughness, Is.EqualTo(9 + buff));
+	}
+
+	/// <summary>
+	/// **The guard on the whole of Combat v3, and it will not announce itself if it breaks.**
+	///
+	/// `EndTurnAction` SPAWNS `ResolveDoomAction` rather than resolving it inline, and the spawn
+	/// queue is FIFO. So withdrawing units anywhere inside `EndTurnAction.Execute` would empty the
+	/// field BEFORE the apocalypse read it — and all six scenarios that read `FiringRead.Standing`
+	/// would quietly do nothing while looking exactly like scenarios that worked.
+	///
+	/// If this ever fails, do not fix the assertion: `WithdrawUnitsAction` has been moved ahead of
+	/// the doom.
+	/// </summary>
+	[Test]
+	public void ADoomFiringSeesTheBoardYouCommitted()
+	{
+		var run = new Run { Life = 200, MaxLife = 200 }.WithCards(
+			[
+				new RunCard
+				{
+					Name = "Committed",
+					Cost = 0,
+					IsUnit = true,
+					Power = 0,
+					Toughness = 9,
+				},
+			]
+		);
+
+		var (state, _) = run.StartBattle(
+			DoomScenario.Nuclear,
+			countdown: 1,
+			[],
+			opponentHealth: 500
+		);
+
+		var card = state.CardsIn(ZoneType.Hand).First(c => c.Name == "Committed");
+		(state, _) = Do(state, new PlayCardAction { CardId = card.Id, Lane = 0 });
+		(state, _) = Do(state, new EndTurnAction());
+
+		var firing = state.GetBattle().Firings.Single();
+
+		Assert.That(
+			firing.OnFieldRunCardIds,
+			Is.Not.Empty,
+			"the apocalypse read an EMPTY board — withdrawal is running before the doom"
+		);
+		Assert.That(firing.OnFieldRunCardIds, Does.Contain(card.RunCardId));
+
+		// And it really landed on the deck, not just on the record of what it saw.
+		var after = run.AfterBattle(state);
+		Assert.That(
+			after.Deck.Single(c => c.Name == "Committed").Toughness,
+			Is.EqualTo(9 + DoomTransforms.IrradiatedBuff)
+		);
+	}
+
+	/// <summary>
+	/// A unit the APOCALYPSE killed died, and was not quietly swept away as a withdrawal.
+	///
+	/// The dead are cleared early in `EndTurnAction`, and the doom resolves after that — so a unit
+	/// the firing killed is still standing when `WithdrawUnitsAction` runs. Withdrawing it would
+	/// move it to Discard as a survivor: no `OnDeath`, nothing in `DiedRunCardIds`, and Zombie
+	/// paid nothing for a corpse it is owed. Hence the second clear-the-dead pass.
+	/// </summary>
+	[Test]
+	public void AUnitTheApocalypseKilledCountsAsADeath()
+	{
+		var run = new Run { Life = 200, MaxLife = 200 }.WithCards(
+			[
+				new RunCard
+				{
+					Name = "Frail",
+					Cost = 0,
+					IsUnit = true,
+					Power = 0,
+					Toughness = 1,
+				},
+			]
+		);
+
+		// Ashfall chips every unit you hold when it lands, which is lethal to a 0/1.
+		var (state, _) = run.StartBattle(
+			DoomScenario.Ashfall,
+			countdown: 1,
+			[],
+			opponentHealth: 500
+		);
+
+		var card = state.CardsIn(ZoneType.Hand).First(c => c.Name == "Frail");
+		(state, _) = Do(state, new PlayCardAction { CardId = card.Id, Lane = 0 });
+		(state, var events) = Do(state, new EndTurnAction());
+
+		Assert.That(
+			events.OfType<UnitDiedEvent>().Any(e => e.CardId == card.Id),
+			Is.True,
+			"the apocalypse killed it, so it DIED — it did not withdraw"
+		);
+		Assert.That(state.GetBattle().DiedRunCardIds, Does.Contain(card.RunCardId));
 	}
 
 	/// <summary>
@@ -171,6 +282,13 @@ public class RecurringDoomTests
 		(state, _) = Do(state, new EndTurnAction());
 
 		Assert.That(state.GetBattle().DoomsFired, Is.EqualTo(1), "one has landed");
+
+		// **Combat v3: the board is empty at the start of a turn, so the dial has to be asked
+		// about a board you have actually committed.** Re-place the card before previewing — the
+		// preview answers "what would the next firing do to what is standing NOW", and what is
+		// standing now is whatever you just played.
+		var replayed = state.CardsIn(ZoneType.Hand).First(c => c.Name == "Exposed");
+		(state, _) = Do(state, new PlayCardAction { CardId = replayed.Id, Lane = 0 });
 
 		var preview = DoomPreviewer.Preview(run, state);
 

@@ -72,8 +72,12 @@ public class ScenarioContentTests
 			Is.EqualTo(40 - burn),
 			"straight from the library entry"
 		);
+		// **Read off the CARD, not off the lane.** Combat v3 withdraws units at the end of the
+		// turn, so by the time we look the unit is in Discard — but the damage the apocalypse
+		// marked on it is still on the component, and that is what says Ashfall chipped rather
+		// than swept. (It clears when the card is next played; see `PlayCardAction`.)
 		Assert.That(
-			state.UnitInLane(0)!.Unit().Damage,
+			((DoomCard)state.GetObject(unitId)).Unit().Damage,
 			Is.EqualTo(chip),
 			"and the unit is chipped, not swept: a different question from Flood"
 		);

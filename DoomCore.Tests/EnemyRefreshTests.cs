@@ -106,7 +106,26 @@ public class EnemyRefreshTests
 		Assert.That(state.EnemyInLane(0), Is.Null, "lane 0 is open");
 		var afterKill = state.GetOpponent().Health;
 
-		// Turn 2: the lane is open, so the Striker goes through.
+		// **Combat v3: the Striker withdrew with the turn, so shooting through the hole costs
+		// another card.** The promise this test guards is unchanged — the Opponent does not plug a
+		// lane the instant you open it, and you get a full turn to use it — but the hole is now an
+		// opportunity you have to pay to take rather than one a standing board takes for free.
+		Assert.That(state.UnitInLane(0), Is.Null, "it held the lane for its turn, then left");
+
+		var (s3, fresh) = state.AddObject(
+			(DoomCard)
+				new DoomCard
+				{
+					Name = "Striker",
+					Cost = 0,
+					RunCardId = 0,
+				}.WithComponent(new UnitComponent { Power = 5, Toughness = 5 }),
+			state.ZoneId(ZoneType.Hand)
+		);
+		state = s3;
+		(state, _) = Do(state, new PlayCardAction { CardId = fresh.Id, Lane = 0 });
+
+		// Turn 2: the lane is still open, so the Striker goes through.
 		(state, _) = Do(state, new EndTurnAction());
 
 		Assert.That(

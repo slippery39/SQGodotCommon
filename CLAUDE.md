@@ -70,6 +70,7 @@ nothing is orphaned — you should not need any of it.
 | Kind | Location | Loads |
 |---|---|---|
 | Design doc — read first | `DoomJam.md` | read it |
+| **The next thing to build — v3** | `DoomV3Plan.md` | read it before starting any v3 phase |
 | Where the last session got to | `HANDOFF-DoomVisualPass.md` | read it when picking the work back up |
 | Credits — **must ship** | `CREDITS.md` | before release, and when adding any third-party asset |
 | Earlier handoff, superseded | `HANDOFF-DoomPacingAndRewards.md` | read only for its scars (§4) |

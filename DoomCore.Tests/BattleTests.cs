@@ -309,8 +309,16 @@ public class BattleTests
 		);
 	}
 
+	/// <summary>
+	/// A unit holds its lane for ONE turn and then leaves. **Combat v3.**
+	///
+	/// This test used to be `AUnitHoldsItsLaneAcrossTurns` and asserted the opposite. The rule is
+	/// superseded (see DoomJam.md "Combat v3"): a permanent board fed by an ephemeral hand
+	/// saturates, and then a drawn hand of units has nowhere to go and End Turn is the only legal
+	/// move. Units are pieces you place each turn now, which is what makes every turn a decision.
+	/// </summary>
 	[Test]
-	public void AUnitHoldsItsLaneAcrossTurns()
+	public void AUnitWithdrawsAtTheEndOfTheTurn()
 	{
 		var state = DoomBattleFactory.Create(DoomScenario.Flood, countdown: 5);
 		(state, _) = AddEnemy(state, "Idler", health: 20, attack: 0, lane: 3);
@@ -318,11 +326,43 @@ public class BattleTests
 
 		(state, _) = state.BeginBattle();
 		(state, _) = Do(state, new PlayCardAction { CardId = unitId, Lane = 3 });
-		(state, _) = Do(state, new EndTurnAction());
 
-		var unit = ((DoomCard)state.GetObject(unitId)).Unit();
-		Assert.That(unit.Lane, Is.EqualTo(3), "a lane is chosen once, not re-picked every turn");
-		Assert.That(state.UnitInLane(3)!.Id, Is.EqualTo(unitId));
+		Assert.That(state.UnitInLane(3)!.Id, Is.EqualTo(unitId), "it holds the lane this turn");
+
+		(state, var events) = Do(state, new EndTurnAction());
+
+		Assert.That(state.UnitInLane(3), Is.Null, "and the lane is empty again next turn");
+		Assert.That(events.OfType<UnitsWithdrewEvent>().Single().Count, Is.EqualTo(1));
+
+		// It is a card again, not a corpse — the deck keeps it and it can be drawn and replayed.
+		Assert.That(state.HasObject(unitId), Is.True);
+		Assert.That(state.GetParent(unitId), Is.Not.EqualTo(state.ZoneId(ZoneType.Field)));
+	}
+
+	/// <summary>
+	/// **Withdrawn is not dead, and everything downstream depends on the difference.** A unit that
+	/// walked off at the end of the turn fires no death trigger and is recorded as no death, so a
+	/// scenario that reads what died is not paid for a board wiping itself every turn — and neither
+	/// is a companion whose ability counts your losses.
+	/// </summary>
+	[Test]
+	public void AWithdrawnUnitDidNotDie()
+	{
+		var state = DoomBattleFactory.Create(
+			DoomScenario.Zombie,
+			countdown: 9,
+			opponentHealth: 500
+		);
+		(state, var unitId) = AddUnit(state, "Survivor", power: 1, toughness: 9);
+
+		(state, _) = state.BeginBattle();
+		(state, _) = Do(state, new PlayCardAction { CardId = unitId, Lane = 2 });
+		(state, var events) = Do(state, new EndTurnAction());
+
+		Assert.That(state.UnitInLane(2), Is.Null, "it withdrew");
+		Assert.That(events.OfType<UnitDiedEvent>(), Is.Empty, "but nothing died");
+		Assert.That(state.GetBattle().DiedRunCardIds, Is.Empty);
+		Assert.That(state.GetBattle().DiedThisTurnRunCardIds, Is.Empty);
 	}
 
 	// ===== Economy and upkeep =====

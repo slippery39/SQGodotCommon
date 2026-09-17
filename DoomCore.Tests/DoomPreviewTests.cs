@@ -52,13 +52,19 @@ public class DoomPreviewTests
 			opponentHealth: 500
 		);
 
+		// Burn the first turn; the doom lands at the end of the SECOND.
+		(state, _) = Do(state, new EndTurnAction());
+
 		var toPlay = state.CardsIn(ZoneType.Hand).First(c => c.RunCardId == exposedId);
 		(state, _) = Do(state, new PlayCardAction { CardId = toPlay.Id, Lane = 0 });
 
-		// Taken one turn BEFORE the doom lands — this is what the player is shown and plays around.
+		// **Taken on the FIRING TURN, and in v3 that is the only turn it is true on.** The preview
+		// answers "what would happen if it fired against what is standing right now", and in v3
+		// nothing is standing a turn from now — so a preview taken a turn early describes a board
+		// that will not exist. See DoomV3Plan.md: the front end must not show this as a forecast on
+		// any turn but the last one, or the player is planning around a lie.
 		var preview = DoomPreviewer.Preview(run, state);
 
-		(state, _) = Do(state, new EndTurnAction());
 		(state, _) = Do(state, new EndTurnAction());
 
 		// The doom fired; the battle is still going, because only the Opponent's death ends one.

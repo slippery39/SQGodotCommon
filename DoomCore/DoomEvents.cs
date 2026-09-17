@@ -108,3 +108,14 @@ public record FieldSweptEvent : GameEvent
 {
 	public int Count { get; init; }
 }
+
+/// <summary>
+/// The units you placed this turn left the field at the end of it — Combat v3.
+///
+/// **Distinct from <see cref="UnitDiedEvent"/> on purpose.** Withdrawing is not dying, and the front
+/// end must not animate it as a death: one is the turn ending, the other is something you lost.
+/// </summary>
+public record UnitsWithdrewEvent : GameEvent
+{
+	public int Count { get; init; }
+}

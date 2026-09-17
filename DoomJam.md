@@ -920,6 +920,40 @@ the boundary showing itself in the right place.
   rendered, so the Opponent's health dropped with nothing on screen saying why. Tests asserted the
   state and passed. Playing it took ten seconds to notice. Same class as the blank card faces.
 
+**After v3 phase 1 — units withdraw at end of turn (116 tests green):**
+
+- **The engine needed nothing, for the third combat rewrite running.** One new `GameAction`, one
+  `SpawnAction` line, and a method made `internal`. `ImmutableGameObjects` was not touched, and
+  neither was anything above `DoomCore/Actions/` — the run layer, the transforms, the preview and
+  the companion all carried on. **That is now three combat models on one engine with zero engine
+  changes**, which is a much stronger claim than the lane switch made on its own.
+- **The spawn queue is an ORDERING mechanism, and that is a two-sided finding.** Being able to say
+  "this happens after the apocalypse" is just `SpawnAction` in the right place — free. But the
+  FIFO queue also means the *natural* implementation is silently wrong: withdrawing units inline in
+  `EndTurnAction.Execute` runs before the spawned `ResolveDoomAction`, so six scenarios would have
+  read an empty board and done nothing. **The engine cannot warn about this**, because both
+  orderings are valid action sequences. An ordering guarantee in a spawn queue is only ever as good
+  as the test holding it — `ADoomFiringSeesTheBoardYouCommitted` is that test.
+- **A "leaves the board" step must clear the dead FIRST, and the tests did not catch it — a
+  NullReferenceException did.** The dead are cleared early in `EndTurnAction`, and the apocalypse
+  resolves after that, so a unit the doom KILLED was still standing when withdrawal ran. It was
+  being discarded as a survivor: no `OnDeath`, nothing in `DiedRunCardIds`, and Zombie never paid
+  for a corpse it was owed. **The fix was to call the existing `ClearTheDead` a second time rather
+  than to write a second account of dying** — same rule as the preview never re-describing a
+  scenario. Generalises: **any new step that empties a zone has to ask what the engine had not yet
+  finished doing to the things in it.**
+- **Six tests broke and every one was right to break**, exactly as the lane switch found. They
+  asserted the accumulating board — a unit holding its lane across turns, a firing seeing two units,
+  a hole you shot through for free. The suite behaved as a design record again and named precisely
+  which beliefs the change invalidated.
+- **The preview changed MEANING without changing code, and that is the dangerous kind.**
+  `DoomPreviewer` still runs the real transform, so it is still not a second account of anything —
+  but "what would the next firing do" used to be stable for several turns and is now true only on
+  the turn the doom actually lands, because the board it reads no longer survives the turn. Nothing
+  failed; two tests simply started describing a board that will not exist. **A correct function can
+  become a lie when the thing underneath it changes lifetime**, and no test asks that question on
+  its own.
+
 **After switching combat to five lanes (39 tests green):**
 
 - **Changing the core combat rule was a NET DELETION.** `AssignAction` (64 lines) and the whole

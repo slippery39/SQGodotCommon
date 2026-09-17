@@ -82,6 +82,14 @@ public record EndTurnAction : GameAction
 			state = FireTriggers(state, EffectTrigger.OnDoomFires);
 		}
 
+		// **QUEUED LAST, AND THE ORDER IS THE POINT.** Combat v3: your units hold the lane for one
+		// turn and then leave. The spawn queue is FIFO and nothing above resolves inline, so
+		// queueing the withdrawal here — after the doom — is what lets an apocalypse read the board
+		// you committed. Withdrawing inside this method instead would empty the field before
+		// `ResolveDoomAction` ever ran, and all six `FiringRead.Standing` scenarios would read
+		// nothing and look exactly like scenarios that worked. See `WithdrawUnitsAction`.
+		state = state.SpawnAction(new WithdrawUnitsAction());
+
 		state = state
 			.UpdateObject(battle.Id, battle with { TurnNumber = battle.TurnNumber + 1 })
 			.SpawnAction(new StartTurnAction());
@@ -284,8 +292,15 @@ public record EndTurnAction : GameAction
 	/// <summary>
 	/// Dead units go to Discard so they are still in the run deck — a unit dying in a battle does
 	/// not remove it from your deck. Only a doom transform can do that.
+	///
+	/// **Called TWICE a turn, and the second call is not optional.** `WithdrawUnitsAction` runs it
+	/// again before withdrawing, because the apocalypse resolves AFTER this one — so anything the
+	/// doom killed would otherwise be swept to Discard as a withdrawal and never register as a
+	/// death at all: no `OnDeath`, nothing recorded, and Zombie never paid. Idempotent by
+	/// construction (it only looks at units still on the Field), so the second pass costs nothing
+	/// when the doom did not fire.
 	/// </summary>
-	private static (GameState, ImmutableList<GameEvent>) ClearTheDead(
+	internal static (GameState, ImmutableList<GameEvent>) ClearTheDead(
 		GameState state,
 		ImmutableList<GameEvent> events
 	)
