@@ -54,9 +54,38 @@ public record Companion
 			Marks = Marks.Add(MarkFor(scenario)),
 		};
 
-	/// <summary>"Ash, the Last Dog — Gravemarked, Glowing" — what the run did to it, at a glance.</summary>
-	public string FullName =>
-		Marks.IsEmpty ? Name : $"{Name} — {string.Join(", ", Marks.Select(m => m.Name))}";
+	/// <summary>
+	/// "Ash — Hardened x3, Rewritten x4" — what the run did to it, at a glance.
+	///
+	/// **Repeats are COLLAPSED with a count.** Marks are cumulative and an act fires the same
+	/// apocalypse for six floors at a time, so by floor 19 this was
+	/// "Ash — Hardened, Hardened, Hardened, Rewritten, Rewritten, Rewritten, Rewritten,
+	/// Replicated, Replicated, Replicated, Replicated, Replicated" — a name that grew without
+	/// limit and pushed the intermission panel off the side of the screen.
+	///
+	/// This is PRESENTATION ONLY. Every mark is still in <see cref="Marks"/> and still counts
+	/// toward <see cref="Power"/> and <see cref="Toughness"/>; only the rendering groups them. The
+	/// length is now bounded by the number of distinct apocalypses rather than by the length of the
+	/// run — still long, and the companion's naming remains a design question of its own.
+	/// </summary>
+	public string FullName
+	{
+		get
+		{
+			if (Marks.IsEmpty)
+				return Name;
+
+			// Grouped in the order each mark was FIRST taken, so the name still reads as a history
+			// rather than being re-sorted into something alphabetical.
+			var counted = Marks
+				.Select(m => m.Name)
+				.Distinct()
+				.Select(name => (Name: name, Count: Marks.Count(m => m.Name == name)))
+				.Select(g => g.Count > 1 ? $"{g.Name} x{g.Count}" : g.Name);
+
+			return $"{Name} — {string.Join(", ", counted)}";
+		}
+	}
 }
 
 /// <summary>

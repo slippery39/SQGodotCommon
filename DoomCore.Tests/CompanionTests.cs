@@ -247,4 +247,55 @@ public class CompanionTests
 
 		Assert.That(state.GetPlayer().Life, Is.EqualTo(58), "3 toughness absorbed 3 of 5");
 	}
+
+	[Test]
+	public void RepeatedMarksAreCollapsedInTheName()
+	{
+		// An act fires the same apocalypse for six floors at a time, so a repeat is the NORMAL case
+		// and not an edge one. Uncollapsed, floor 19 produced "Ash — Hardened, Hardened, Hardened,
+		// Rewritten, Rewritten, ..." and pushed the intermission panel off the side of the screen.
+		var marked = StarterContent
+			.StarterCompanion.Marked(DoomScenario.CivilUnrest)
+			.Marked(DoomScenario.CivilUnrest)
+			.Marked(DoomScenario.CivilUnrest);
+
+		var mark = Companion.MarkFor(DoomScenario.CivilUnrest).Name;
+
+		Assert.That(marked.FullName, Does.Contain($"{mark} x3"));
+		Assert.That(
+			marked.FullName.Split(mark).Length - 1,
+			Is.EqualTo(1),
+			"the mark should be named once, with a count — not repeated."
+		);
+	}
+
+	[Test]
+	public void CollapsingTheNameDoesNotChangeTheStats()
+	{
+		// **The point of the change.** Three of the same mark still stack three times; only the
+		// rendering groups them. If this fails, a display tweak has become a balance change.
+		var plain = StarterContent.StarterCompanion;
+		var once = plain.Marked(DoomScenario.CivilUnrest);
+		var thrice = once.Marked(DoomScenario.CivilUnrest).Marked(DoomScenario.CivilUnrest);
+
+		Assert.That(thrice.Marks, Has.Count.EqualTo(3));
+		Assert.That(
+			thrice.Toughness - plain.Toughness,
+			Is.EqualTo((once.Toughness - plain.Toughness) * 3)
+		);
+	}
+
+	[Test]
+	public void DistinctMarksAreNamedInTheOrderTheyWereTaken()
+	{
+		// The name is a history, so it is not re-sorted into something alphabetical.
+		var marked = StarterContent
+			.StarterCompanion.Marked(DoomScenario.CivilUnrest)
+			.Marked(DoomScenario.AiUprising);
+
+		var first = Companion.MarkFor(DoomScenario.CivilUnrest).Name;
+		var second = Companion.MarkFor(DoomScenario.AiUprising).Name;
+
+		Assert.That(marked.FullName.IndexOf(first), Is.LessThan(marked.FullName.IndexOf(second)));
+	}
 }

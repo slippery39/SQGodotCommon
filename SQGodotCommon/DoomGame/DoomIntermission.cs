@@ -79,11 +79,22 @@ public sealed class DoomIntermission
 		rows.AddChild(_title);
 		rows.AddChild(_body);
 
+		// **WRAP, or the panel leaves the screen.** A Control's size is at least its content's
+		// minimum size, and an unwrapped Label's minimum width is its whole single line — so the
+		// panel's anchors were only ever a suggestion. On floor 19 the companion's name ran to a
+		// dozen marks and pushed the panel off the right-hand edge, taking the title with it.
+		//
+		// With wrapping on, the minimum width collapses and the anchors decide the width, which is
+		// what they were always meant to do. Nothing here may be allowed to set its own width.
+		Wrap(_body);
+
 		// **The next apocalypse, BEFORE the reward is chosen.** Free tension at zero cost: it turns
 		// picking a card into a decision about the fight you are walking into rather than a shopping
 		// trip. DoomJam.md has wanted this since the run structure was written.
 		_coming = DoomPalette.Text("", 22, DoomPalette.Red);
 		rows.AddChild(_coming);
+		Wrap(_coming);
+		Wrap(_title);
 
 		// **Outside the panel**, anchored near the bottom, so it sits BELOW the cards rather than
 		// behind them. It is the way past the decision, so it goes after it.
@@ -99,6 +110,20 @@ public sealed class DoomIntermission
 		// AFTER the panel, so the cards draw over the dimmed background rather than under it.
 		_offers = new Node2D { Visible = false };
 		parent.AddChild(_offers);
+	}
+
+	/// <summary>
+	/// Lets a label wrap, and stops it demanding a width of its own.
+	///
+	/// `CustomMinimumSize.X = 1` is the part that matters: autowrap alone still reports a minimum
+	/// width, and a container will honour it. Told it may be one pixel wide, the label wraps to
+	/// whatever the panel's anchors give it instead.
+	/// </summary>
+	private static void Wrap(Label label)
+	{
+		label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		label.CustomMinimumSize = new Vector2(1, 0);
+		label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
 	}
 
 	public void Hide()

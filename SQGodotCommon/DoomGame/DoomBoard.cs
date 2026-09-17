@@ -106,6 +106,17 @@ public partial class DoomBoard : Node2D
 			if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--reward") >= 0)
 			{
 				_hand.SetVisible(false);
+
+				// The WORST case, not a tidy one — the same principle as the card preview scene.
+				// A companion carries a mark from every apocalypse it survives, and that name is
+				// what pushed this panel off the screen on floor 19.
+				//
+				// Read from the library rather than listed here, so a new apocalypse widens this
+				// test the day it is authored instead of the day somebody remembers to.
+				foreach (var definition in ScenarioLibrary.All)
+				foreach (var _ in new[] { 0, 1, 2 })
+					_run = _run with { Companion = _run.Companion.Marked(definition.Scenario) };
+
 				_intermission.ShowFloorCleared(_run, _run, doomsFired: 1);
 				_intermission.OfferRewards(
 					StarterContent.RewardsFor(_run.Theme, _seed, _run.Floor),
