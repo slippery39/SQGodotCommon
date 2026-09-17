@@ -148,7 +148,7 @@ public static class ContentCommand
 
 		foreach (var d in ScenarioLibrary.All.OrderBy(d => d.MinFloor))
 		{
-			var what = d.Scope == DoomScope.Battle ? Effects(d.BattleEffects) : Permanent(d);
+			var what = ScenarioLibrary.EffectTextOf(d);
 
 			Console.WriteLine(
 				$"  {d.Scenario, -9}  f{d.MinFloor, -3}  {d.Scope, -9}  {d.Countdown, 5}  {what}"
@@ -160,20 +160,6 @@ public static class ContentCommand
 			"  Battle scope changes this fight only. Permanent rewrites the run deck."
 		);
 	}
-
-	/// <summary>
-	/// What a permanent scenario does, read off its own transforms.
-	///
-	/// This used to be a switch with a case per scenario, written when Zombie and Nuclear were
-	/// hand-written methods. It printed BLANK for every doom authored since — four of them — which
-	/// is the documentation version of the silent no-op this codebase keeps rediscovering.
-	/// </summary>
-	private static string Permanent(ScenarioDefinition definition) =>
-		definition.Transforms.IsEmpty
-			? definition.Implemented
-				? "-"
-				: "NOT IMPLEMENTED — never offered"
-			: string.Join("; ", definition.Transforms.Select(t => t.Text));
 
 	private static void Cards()
 	{

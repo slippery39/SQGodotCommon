@@ -513,6 +513,34 @@ public static class ScenarioLibrary
 		GreyGoo,
 	];
 
+	/// <summary>
+	/// What this apocalypse DOES, in one line, read off its own authored effect text.
+	///
+	/// **One account, for the console and the board both.** `ContentCommand` derived this itself and
+	/// the banner showed flavour instead — so the terminal could tell you Civil Unrest deals 10 to
+	/// you while the game said "It stopped being about the sky some time ago", which is the same
+	/// class of split the keyword glossary exists to prevent.
+	///
+	/// A permanent scenario reads its transforms and a battle one reads its effects, because those
+	/// are different lists for a real reason: a battle doom changes this GameState and a permanent
+	/// one rewrites the run, which lives outside it.
+	/// </summary>
+	public static string EffectTextOf(DoomScenario scenario) => EffectTextOf(Of(scenario));
+
+	public static string EffectTextOf(ScenarioDefinition definition)
+	{
+		if (!definition.Implemented)
+			return "not implemented";
+
+		var parts =
+			definition.Scope == DoomScope.Battle
+				? definition.BattleEffects.Select(e => e.Text)
+				: definition.Transforms.Select(t => t.Text);
+
+		var text = string.Join("; ", parts.Where(t => !string.IsNullOrWhiteSpace(t)));
+		return text.Length == 0 ? "-" : text;
+	}
+
 	public static ScenarioDefinition Of(DoomScenario scenario) =>
 		All.FirstOrDefault(d => d.Scenario == scenario)
 		?? throw new ArgumentOutOfRangeException(

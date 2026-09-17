@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Ash Crow: 6/6, cheap and fast. A bird shape, so it is not another biped. -->
+  <path d="M120 176 L108 232" stroke="#0C131B" stroke-width="9" stroke-linecap="round"/>
+  <path d="M140 176 L152 232" stroke="#0C131B" stroke-width="9" stroke-linecap="round"/>
+  <path d="M92 236 L124 228 L118 240 z" fill="#0C131B"/>
+  <path d="M164 236 L134 228 L140 240 z" fill="#0C131B"/>
+  <!-- wings, spread and angular -->
+  <path d="M112 112 L16 86 L44 120 L18 130 L108 150 z" fill="#0C131B"/>
+  <path d="M146 112 L242 86 L214 120 L240 130 L150 150 z" fill="#0C131B"/>
+  <!-- body -->
+  <path d="M104 96 q24 -14 48 0 L146 180 q-18 8 -36 0 z" fill="#0C131B"/>
+  <!-- head and beak -->
+  <circle cx="128" cy="76" r="30" fill="#0C131B"/>
+  <path d="M128 66 L196 84 L128 96 z" fill="#1B2836"/>
+  <circle cx="116" cy="68" r="7" fill="#C73E3A"/>
+</svg>

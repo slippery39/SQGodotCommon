@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- The Opponent. The only way to win a battle is to kill one, so it gets the one figure on the
+       board that is not a lane token: a hood, rimmed in red, with NOTHING under it. The Wretches
+       have eyes; what is inside this is the one thing the screen does not tell you. -->
+  <!-- the red rim, drawn as a larger silhouette behind the black one -->
+  <path d="M128 8
+           q58 0 78 78
+           q12 46 14 154
+           L36 240
+           q2 -108 14 -154
+           q20 -78 78 -78 z" fill="#C73E3A"/>
+  <!-- the hood itself, darker than any ground it stands on -->
+  <path d="M128 26
+           q50 0 67 68
+           q10 40 12 132
+           L49 226
+           q2 -92 12 -132
+           q17 -68 67 -68 z" fill="#0C131B"/>
+  <!-- the opening: a void, slightly off-centre so it does not read as a face -->
+  <path d="M128 72
+           q34 0 42 44
+           q6 32 -4 70
+           q-38 12 -76 0
+           q-10 -38 -4 -70
+           q8 -44 42 -44 z" fill="#060A0F"/>
+  <!-- shoulders, so it has a body and not just a cone -->
+  <path d="M40 236 q36 -26 88 -26 q52 0 88 26 z" fill="#C73E3A"/>
+</svg>

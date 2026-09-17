@@ -29,6 +29,7 @@ public sealed class DoomLaneCell
 
 	private readonly Label _name;
 	private readonly TextureRect _figure;
+	private readonly PanelContainer _plinth;
 	private readonly Label _attack;
 	private readonly Label _life;
 
@@ -64,6 +65,15 @@ public sealed class DoomLaneCell
 		_name.CustomMinimumSize = new Vector2(Width - 16, 0);
 		rows.AddChild(_name);
 
+		// The drawing stands on a plinth in its own colour — the SAME mid-tone the card's art window
+		// uses. **This is what makes a card and the body it becomes legibly the same thing**, which
+		// the design doc has asked for since the style was chosen: you play a picture and that exact
+		// picture is what holds the lane.
+		//
+		// It is also what makes the drawings readable here at all. They are near-black silhouettes;
+		// on the lane's slate panel they were a dark shape on a dark shape.
+		_plinth = new PanelContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+
 		_figure = new TextureRect
 		{
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
@@ -71,7 +81,8 @@ public sealed class DoomLaneCell
 			SizeFlagsVertical = Control.SizeFlags.ExpandFill,
 			CustomMinimumSize = new Vector2(0, 84),
 		};
-		rows.AddChild(_figure);
+		_plinth.AddChild(_figure);
+		rows.AddChild(_plinth);
 
 		// Attack on the left, life on the right, in every lane and on every card — and now in the
 		// same two SHAPES as well. A sword with a bare number for what it deals, a red disc for what
@@ -120,6 +131,7 @@ public sealed class DoomLaneCell
 	{
 		_name.Text = "";
 		_figure.Texture = null;
+		_plinth.Visible = false;
 		_attackPip.Visible = false;
 		_attackIcon.Visible = false;
 		_lifePip.Visible = false;
@@ -133,7 +145,10 @@ public sealed class DoomLaneCell
 	public void ShowEnemy(Enemy enemy)
 	{
 		_name.Text = enemy.Name;
-		_figure.Texture = DoomArt.Figure(DoomPalette.Navy, hostile: true);
+		// **One plinth colour for every enemy.** Your cards carry a per-name hue because a deck is
+		// something you build and recognise; the enemy row is a wall of threats and giving each one
+		// its own colour made it read as a second hand of cards.
+		Stand(enemy.Name, DoomArt.Figure(DoomPalette.Navy, hostile: true), DoomArt.EnemyGround);
 
 		// The telegraphed intent, not a guess.
 		//
@@ -161,9 +176,10 @@ public sealed class DoomLaneCell
 		var unit = card.Unit();
 
 		_name.Text = card.Name;
-		_figure.Texture = DoomArt.Figure(
-			isCompanion ? DoomPalette.Gold : DoomPalette.Bone,
-			hostile: false
+		Stand(
+			card.Name,
+			DoomArt.Figure(isCompanion ? DoomPalette.Gold : DoomPalette.Bone, hostile: false),
+			DoomArt.ColourFor(card.Name)
 		);
 
 		_attackPip.Visible = true;
@@ -192,6 +208,30 @@ public sealed class DoomLaneCell
 	{
 		if (_telegraph is not null)
 			_telegraph.Visible = incoming;
+	}
+
+	/// <summary>
+	/// Puts a body in the lane: its authored drawing if one exists, else the generated silhouette.
+	///
+	/// **Missing art stays cheap and stays legible.** The pool grows faster than the drawings do, so
+	/// a subject nobody has drawn yet falls back to the shape this game has always used rather than
+	/// to an empty slot — and the plinth goes flat behind it, because a fallback silhouette is
+	/// already bone on slate and does not need the contrast.
+	/// </summary>
+	private void Stand(string subject, Texture2D fallback, Color ground)
+	{
+		var drawing = DoomArt.Drawing(subject);
+
+		_plinth.Visible = true;
+		_figure.Texture = drawing ?? fallback;
+
+		var box = DoomPalette.Box(
+			drawing is null ? Colors.Transparent : ground,
+			Colors.Transparent,
+			0
+		);
+		box.ContentMarginTop = box.ContentMarginBottom = 0;
+		_plinth.AddThemeStyleboxOverride("panel", box);
 	}
 
 	private void Style(Color fill, Color border, int width) =>

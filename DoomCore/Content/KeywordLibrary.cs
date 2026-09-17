@@ -119,8 +119,11 @@ public static class KeywordLibrary
 		StringComparer.OrdinalIgnoreCase
 	);
 
-	public static Keyword Find(string name) =>
-		name is not null && ByName.TryGetValue(name, out var found) ? found : null;
+	public static bool TryFind(string name, out Keyword keyword)
+	{
+		keyword = null!;
+		return name is not null && ByName.TryGetValue(name, out keyword!);
+	}
 
 	/// <summary>
 	/// Every keyword mentioned in a piece of text, in the order this library declares them.

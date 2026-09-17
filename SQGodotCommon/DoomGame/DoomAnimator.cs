@@ -47,6 +47,9 @@ public static class DoomAnimator
 	/// </summary>
 	public static bool Instant => Speed <= 0f;
 
+	private static Tween _shake;
+	private static Vector2 _shakeHome;
+
 	private static double Seconds(double authored) => authored / Mathf.Max(Speed, 0.0001f);
 
 	/// <summary>The settings key, so the speed survives a restart. See DoomBoard for the live toggle.</summary>
@@ -161,8 +164,17 @@ public static class DoomAnimator
 		if (layer is null || !GodotObject.IsInstanceValid(layer) || Instant)
 			return;
 
-		var home = layer.Offset;
-		var tween = layer.CreateTween();
+		// **One shake at a time, always.** A second shake starting while the first is running
+		// captures a home that is already displaced, and the board can be left permanently
+		// off-centre. Callers are expected to shake once per batch; this is the belt as well.
+		if (_shake is not null && _shake.IsValid())
+		{
+			_shake.Kill();
+			layer.Offset = _shakeHome;
+		}
+
+		var home = _shakeHome = layer.Offset;
+		var tween = _shake = layer.CreateTween();
 
 		foreach (var offset in new[] { pixels, -pixels * 0.72f, pixels * 0.4f, 0f })
 			tween.TweenProperty(layer, "offset", home + new Vector2(offset, 0), Seconds(0.05));

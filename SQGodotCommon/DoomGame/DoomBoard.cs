@@ -38,6 +38,7 @@ public partial class DoomBoard : Node2D
 
 	private Label _scenarioLabel;
 	private DoomClockDial _clockDial;
+	private TextureRect _opponentFigure;
 	private Label _descriptionLabel;
 	private Label _opponentHealthLabel;
 	private ProgressBar _opponentHealthBar;
@@ -284,11 +285,20 @@ public partial class DoomBoard : Node2D
 		// two readouts of one number is how they come to disagree — the banner says WHAT is coming,
 		// the dial says HOW LONG.
 		_scenarioLabel.Text = DoomPalette.Caps(battle.Scenario.ToString());
-		_descriptionLabel.Text = StarterContent.DescriptionFor(battle.Scenario);
+
+		// **What it DOES, not what it feels like.** The banner showed the scenario's flavour line —
+		// "It stopped being about the sky some time ago" — which told a player nothing about the
+		// thing on the clock above their board. Flavour belongs on the act picker, where you are
+		// choosing; here the only question is what lands when the dial reaches zero.
+		_descriptionLabel.Text = ScenarioLibrary.EffectTextOf(battle.Scenario);
 		_clockDial.Show(battle.CountdownRemaining, battle.CountdownTotal);
 
 		// Clamped for DISPLAY only. Overkill leaves real health negative, which is correct in the
 		// engine and reads as a bug on a health bar: the last hit showed "-1 / 26".
+		// Each Opponent gets its own drawing where one has been made, and the generated hood where
+		// none has. `The Choir` and `The Last Warden` are still on the fallback.
+		_opponentFigure.Texture = DoomArt.Drawing(opponent.Name) ?? DoomArt.Hooded();
+
 		var shown = System.Math.Max(opponent.Health, 0);
 		_opponentHealthBar.MaxValue = opponent.MaxHealth;
 		_opponentHealthBar.Value = shown;
@@ -389,34 +399,39 @@ public partial class DoomBoard : Node2D
 		if (DoomAnimator.Instant || _firstPaint)
 			return;
 
-		foreach (var e in events)
-			switch (e)
-			{
-				case OpponentDamagedEvent hit:
-					DoomAnimator.Float(
-						_overlay,
-						_opponentHealthBar,
-						$"-{hit.Amount}",
-						DoomPalette.Bone
-					);
-					DoomAnimator.Flash(_opponentHealthBar, new Color(1.9f, 1.9f, 1.9f));
-					break;
+		// **Damage is SUMMED over the batch, not floated per event.**
+		//
+		// `EndTurnAction` damages the player once per attacking enemy lane and the Opponent once per
+		// open lane, so a single End Turn can raise five PlayerDamagedEvents and five
+		// OpponentDamagedEvents. Floated one each, they spawn at the same point in the same frame
+		// and overlap into an unreadable smear — which is exactly what the playtest reported: the
+		// numbers bunch up and you cannot see what you dealt.
+		//
+		// It also fixes the shake looking random. Each Shake captured the layer's CURRENT offset as
+		// its home, so the second one in a frame captured a home that the first had already moved,
+		// and they fought: sometimes a jolt, sometimes nothing, sometimes a board left off-centre.
+		// One total, one number, one shake.
+		var dealt = events.OfType<OpponentDamagedEvent>().Sum(e => e.Amount);
+		var taken = events.OfType<PlayerDamagedEvent>().Sum(e => e.Amount);
+		var drained = events.OfType<IrradiatedDrawnEvent>().Count();
+		var healed = events.OfType<LifeGainedEvent>().Sum(e => e.Amount);
 
-				// Losing life gets the shake as well as the number. It is the only counter in the
-				// game that cannot be rebuilt, so it is the one that never scrolls past quietly.
-				case PlayerDamagedEvent hurt:
-					DoomAnimator.Float(_overlay, _lifePip, $"-{hurt.Amount}", DoomPalette.Red);
-					DoomAnimator.Shake(_layer);
-					break;
+		if (dealt > 0)
+		{
+			DoomAnimator.Float(_overlay, _opponentHealthBar, $"-{dealt}", DoomPalette.Bone);
+			DoomAnimator.Flash(_opponentHealthBar, new Color(1.9f, 1.9f, 1.9f));
+		}
 
-				case IrradiatedDrawnEvent:
-					DoomAnimator.Float(_overlay, _lifePip, "-1", DoomPalette.Red);
-					break;
+		// Losing life gets the shake as well as the number. It is the only counter in the game that
+		// cannot be rebuilt, so it is the one that never scrolls past quietly.
+		if (taken + drained > 0)
+		{
+			DoomAnimator.Float(_overlay, _lifePip, $"-{taken + drained}", DoomPalette.Red);
+			DoomAnimator.Shake(_layer);
+		}
 
-				case LifeGainedEvent gained:
-					DoomAnimator.Float(_overlay, _lifePip, $"+{gained.Amount}", DoomPalette.Bone);
-					break;
-			}
+		if (healed > 0)
+			DoomAnimator.Float(_overlay, _lifePip, $"+{healed}", DoomPalette.Bone);
 	}
 
 	/// <summary>
@@ -731,15 +746,15 @@ public partial class DoomBoard : Node2D
 
 		// It was the words "THE OPPONENT" over a bar — the one thing on this screen with no picture
 		// of what it described.
-		rows.AddChild(
-			new TextureRect
-			{
-				Texture = DoomArt.Hooded(),
-				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-				StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-				CustomMinimumSize = new Vector2(0, 120),
-			}
-		);
+		// The texture is set in Render, not here: BuildUi runs before there IS an Opponent, and each
+		// one is a different thing wearing the same hood.
+		_opponentFigure = new TextureRect
+		{
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			CustomMinimumSize = new Vector2(0, 120),
+		};
+		rows.AddChild(_opponentFigure);
 
 		var stack = new PanelContainer { CustomMinimumSize = new Vector2(OpponentBarWidth, 0) };
 		stack.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;

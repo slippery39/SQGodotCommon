@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Revenant: what the Opponent keeps sending back. Tattered, and it does not stop. -->
+  <path d="M78 244 L96 168 L116 174 L108 244 z" fill="#0C131B"/>
+  <path d="M178 244 L160 168 L140 174 L148 244 z" fill="#0C131B"/>
+  <!-- shroud: a torso with a torn hem -->
+  <path d="M90 186 L100 100 q28 -14 56 0 L166 186
+           l-14 -16 -12 18 -14 -20 -14 20 -12 -18 z" fill="#0C131B"/>
+  <path d="M100 112 L68 182" stroke="#0C131B" stroke-width="16" stroke-linecap="round"/>
+  <path d="M156 112 L188 182" stroke="#0C131B" stroke-width="16" stroke-linecap="round"/>
+  <!-- skull-ish head -->
+  <path d="M100 102 q-6 -46 28 -46 q34 0 28 46 q-28 12 -56 0 z" fill="#0C131B"/>
+  <path d="M106 92 q22 -12 44 0 q-4 22 -22 22 q-18 0 -22 -22 z" fill="#2B4054"/>
+  <circle cx="117" cy="92" r="6" fill="#C73E3A"/>
+  <circle cx="139" cy="92" r="6" fill="#C73E3A"/>
+  <g stroke="#0C131B" stroke-width="4"><path d="M120 108 L120 116"/><path d="M136 108 L136 116"/></g>
+</svg>

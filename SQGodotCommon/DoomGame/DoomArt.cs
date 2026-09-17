@@ -77,10 +77,22 @@ public static class DoomArt
 		return Drawn[key] = ResourceLoader.Exists(path) ? GD.Load<Texture2D>(path) : null;
 	}
 
-	/// <summary>`Ash Walker` -> `ash_walker`. The art file is named after the card, so that adding a
-	/// drawing is dropping a file in and nothing else.</summary>
-	private static string FileName(string subject) =>
-		(subject ?? "").ToLowerInvariant().Replace(" ", "_").Replace("'", "").Replace("-", "_");
+	/// <summary>
+	/// `Ash Walker` -> `ash_walker`. The art file is named after the subject, so adding a drawing is
+	/// dropping a file in and nothing else.
+	///
+	/// **Everything after a comma or an em dash is a MODIFIER, and is dropped.** Names in this game
+	/// grow: a trait renames an Opponent to `The Opponent, Relentless`, and the companion collects
+	/// an apocalypse mark every time it survives one — `Ash — Barnacled, Glowing`. Keyed on the
+	/// whole string, the Opponent silently lost its drawing the moment it got a trait, which is
+	/// every battle. The base name is the thing that has a picture; the rest is what happened to it.
+	/// </summary>
+	private static string FileName(string subject)
+	{
+		var name = (subject ?? "").Split(',')[0].Split('—')[0].Split('-')[0].Trim();
+
+		return name.ToLowerInvariant().Replace(" ", "_").Replace("'", "");
+	}
 
 	/// <summary>
 	/// The card's centre mark: the authored drawing if there is one, else the same silhouette that
@@ -261,6 +273,14 @@ public static class DoomArt
 
 		return texture;
 	}
+
+	/// <summary>
+	/// The ground every enemy drawing stands on — one colour for all of them.
+	///
+	/// Light enough that a near-black silhouette reads, and uniform so the enemy row stays a wall
+	/// rather than turning into a second hand of cards.
+	/// </summary>
+	public static readonly Color EnemyGround = Color.FromHtml("#36495E");
 
 	/// <summary>The card body for a unit — a body you put in a lane.</summary>
 	public static readonly Color UnitCard = Color.FromHtml("#243748");

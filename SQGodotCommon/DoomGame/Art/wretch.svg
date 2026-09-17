@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Wretch: the first thing in your way. Thin, stooped, too many joints. -->
+  <path d="M70 244 L96 170 L114 178 L102 244 z" fill="#0C131B"/>
+  <path d="M186 244 L160 170 L142 178 L154 244 z" fill="#0C131B"/>
+  <!-- torso, narrow and hunched forward -->
+  <path d="M96 178 L104 104 q24 -12 48 0 L160 178 q-32 12 -64 0 z" fill="#0C131B"/>
+  <!-- long arms, hanging past the knees -->
+  <path d="M104 116 L74 196" stroke="#0C131B" stroke-width="15" stroke-linecap="round"/>
+  <path d="M152 116 L182 196" stroke="#0C131B" stroke-width="15" stroke-linecap="round"/>
+  <!-- head, low between raised shoulders -->
+  <path d="M104 106 q-4 -44 24 -44 q28 0 24 44 q-24 10 -48 0 z" fill="#0C131B"/>
+  <path d="M96 104 q10 -22 32 -22 q22 0 32 22 q-32 -8 -64 0 z" fill="#1B2836"/>
+  <circle cx="117" cy="88" r="6" fill="#C73E3A"/>
+  <circle cx="139" cy="88" r="6" fill="#C73E3A"/>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Husk: hollowed out. Wider than a Wretch and mostly shell. -->
+  <rect x="82" y="186" width="30" height="58" rx="10" fill="#0C131B"/>
+  <rect x="144" y="186" width="30" height="58" rx="10" fill="#0C131B"/>
+  <!-- barrel torso -->
+  <path d="M74 192 L84 108 q44 -18 88 0 L182 192 q-54 16 -108 0 z" fill="#0C131B"/>
+  <!-- the hollow: a ribcage gap, the whole point of the name -->
+  <path d="M104 132 q24 -10 48 0 l-6 44 q-18 8 -36 0 z" fill="#1B2836"/>
+  <g stroke="#0C131B" stroke-width="6">
+    <path d="M104 146 L152 146"/><path d="M106 162 L150 162"/>
+  </g>
+  <!-- stub arms -->
+  <path d="M84 122 L60 176" stroke="#0C131B" stroke-width="18" stroke-linecap="round"/>
+  <path d="M172 122 L196 176" stroke="#0C131B" stroke-width="18" stroke-linecap="round"/>
+  <!-- head, sunk -->
+  <path d="M100 110 q-2 -40 28 -40 q30 0 28 40 q-28 10 -56 0 z" fill="#0C131B"/>
+  <circle cx="116" cy="92" r="6" fill="#C73E3A"/>
+  <circle cx="140" cy="92" r="6" fill="#C73E3A"/>
+</svg>
