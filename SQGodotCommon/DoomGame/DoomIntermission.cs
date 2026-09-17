@@ -233,6 +233,25 @@ public sealed class DoomIntermission
 			// a reward to anyway.
 			ui.DragEnabled = () => false;
 
+			// **And the hover LIFT off, which is not the same thing.** CardUI2D.StartHover moves the
+			// hovered card to `viewportHeight - cardHeight/2` — it is written for a hand along the
+			// bottom of the screen, where lifting a card clear of the edge is exactly right. A
+			// reward sits in the middle of the screen, so hovering one yanked it down over the
+			// DESCEND button.
+			//
+			// `IsPosLerping` is the shared card's own early-out in StartHover, so this suppresses
+			// the lift while leaving CardUIManager free to mark the card as hovered — which is what
+			// Clicked depends on. Nothing ever clears it here, which is the point.
+			ui.IsPosLerping = true;
+
+			// The card is already at full size, so the hover cue is an outline rather than a lift.
+			// Without one nothing on this screen looks clickable, which DoomUI.md forbids.
+			if (ui.FindChild("HoverArea", true, false) is Area2D area)
+			{
+				area.MouseEntered += ui.Highlight;
+				area.MouseExited += ui.NoHighlight;
+			}
+
 			var taken = offered[i];
 			ui.Clicked += _ => _onTake(taken);
 		}

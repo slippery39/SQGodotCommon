@@ -518,7 +518,7 @@ public partial class DoomBoard : Node2D
 
 		// Between the ground colour and the content, so it sits behind the board and shows down the
 		// sides. Added to the layer rather than inside the ColorRect so the draw order is explicit.
-		layer.AddChild(BuildBackdrop(GetViewportRect().Size));
+		layer.AddChild(BuildBackdrop());
 
 		var margin = new MarginContainer();
 		margin.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -633,91 +633,30 @@ public partial class DoomBoard : Node2D
 	}
 
 	/// <summary>
-	/// A drowned city, in flat layers, behind everything.
+	/// The drowned city behind the board.
 	///
-	/// Polygons rather than a generated texture: a 1920x1080 image would be two million pixels of
-	/// per-pixel loop to draw a dozen rectangles. It is mostly hidden behind the content column and
-	/// shows down the sides, which is where the reference puts it too.
+	/// **A painted image now, not eighty lines of polygons.** The procedural version existed because
+	/// there was no art; it drew a dozen rectangles and five wave lines and was mostly hidden behind
+	/// the content column anyway. The real thing is one file.
 	///
-	/// This is also the PERSPECTIVE SHIFT hook, if that sub-theme survives — swap the skyline per
-	/// apocalypse and the world behind the board changes with the doom.
+	/// `KeepAspectCovered` rather than `Stretch`: the image is 16:9 and the window may not be, and a
+	/// backdrop that squashes is worse than one that crops. The crop is safe because the composition
+	/// deliberately keeps its subject in the outer thirds — see docs/mockups/backdrop-prompt.md.
+	///
+	/// Falls back to the flat ground colour if nobody has dropped an image in, which is also what a
+	/// missing `--headless --import` looks like.
 	/// </summary>
-	private static float Horizon(Vector2 canvas) => canvas.Y * 0.66f;
-
-	private static Node2D BuildBackdrop(Vector2 canvas)
+	private static Control BuildBackdrop()
 	{
-		var backdrop = new Node2D();
-		var skyline = Color.FromHtml("#192533");
-		var water = Color.FromHtml("#18242F");
-
-		var rng = new System.Random(7);
-		for (float x = -40; x < canvas.X + 40; )
+		var backdrop = new TextureRect
 		{
-			var width = rng.Next(70, 190);
-			var height = rng.Next(70, 200);
-			var top = Horizon(canvas) - height;
+			Texture = DoomArt.Backdrop,
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
 
-			backdrop.AddChild(
-				new Polygon2D
-				{
-					Color = skyline,
-					Polygon =
-					[
-						new Vector2(x, top),
-						new Vector2(x + width, top),
-						new Vector2(x + width, Horizon(canvas)),
-						new Vector2(x, Horizon(canvas)),
-					],
-				}
-			);
-
-			x += width + rng.Next(6, 26);
-		}
-
-		backdrop.AddChild(
-			new Polygon2D
-			{
-				Color = water,
-				Polygon =
-				[
-					new Vector2(0, Horizon(canvas)),
-					new Vector2(canvas.X, Horizon(canvas)),
-					new Vector2(canvas.X, canvas.Y),
-					new Vector2(0, canvas.Y),
-				],
-			}
-		);
-
-		// A few flat wave lines, because an unbroken block of colour does not read as water.
-		for (var i = 0; i < 5; i++)
-		{
-			var y = canvas.Y * (0.60f + i * 0.08f);
-			backdrop.AddChild(
-				new Line2D
-				{
-					DefaultColor = skyline,
-					Width = 3,
-					Points =
-					[
-						new Vector2(canvas.X * (0.04f + i * 0.02f), y),
-						new Vector2(canvas.X * (0.30f - i * 0.02f), y),
-					],
-				}
-			);
-			backdrop.AddChild(
-				new Line2D
-				{
-					DefaultColor = skyline,
-					Width = 3,
-					Points =
-					[
-						new Vector2(canvas.X * (0.70f + i * 0.02f), y),
-						new Vector2(canvas.X * (0.96f - i * 0.02f), y),
-					],
-				}
-			);
-		}
-
+		backdrop.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 		return backdrop;
 	}
 

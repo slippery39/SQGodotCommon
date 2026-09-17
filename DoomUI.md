@@ -350,9 +350,14 @@ layout and card tweens have not settled on frame 0.
 
 - Where the discard and draw piles are shown, or whether they are. The console does not show them
   and has not missed them.
-- Whether the 3D scenario backdrop (PERSPECTIVE SHIFT) ships. It is flagged "if time survives" in
-  `DoomJam.md`, and it is now the only optional sub-theme left — GO SPINNY is dropped. The flat
-  style makes a per-apocalypse backdrop cheap, three geometric layers, so it may survive after all.
+- ~~The backdrop.~~ **Done 2026-09-17:** a painted flat-vector drowned city at
+  `SQGodotCommon/DoomGame/Art/background.png`, generated from
+  `docs/mockups/backdrop-prompt.md`. It replaced eighty lines of procedural polygons.
+  **The constraint that made it usable is the empty middle** — measured before wiring it in, the
+  centre 60% has a per-channel standard deviation of 4 to 10, which is flat enough to draw five
+  lanes over. Any replacement has to meet that; check it, do not eyeball it.
+- Whether a PER-APOCALYPSE backdrop ships — one image per act rather than one for the game. The
+  prompt file carries the three variants. Cheap now that the mechanism exists.
 - ~~Card art.~~ **Done 2026-09-17:** hand-authored flat SVG in `SQGodotCommon/DoomGame/Art/`, one
   file per subject name, falling back to the generated silhouette for anything undrawn. **Every card,
   enemy and Opponent in the game is drawn** — 52 files. The only named content without a drawing is

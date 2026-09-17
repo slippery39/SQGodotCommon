@@ -77,6 +77,34 @@ public static class DoomArt
 		return Drawn[key] = ResourceLoader.Exists(path) ? GD.Load<Texture2D>(path) : null;
 	}
 
+	private static Texture2D _backdrop;
+	private static bool _backdropLooked;
+
+	/// <summary>
+	/// The board's backdrop image, or null if none has been dropped in.
+	///
+	/// A PNG rather than an SVG, and the one asset in this folder that is not vector: it is a scene
+	/// painted once, not a subject that gets tinted or re-scaled per card. See
+	/// `docs/mockups/backdrop-prompt.md` for how it is made and the constraint that matters most —
+	/// **the centre 60% stays nearly empty**, because the lanes are drawn over it.
+	///
+	/// The miss is cached as well as the hit: with no image, this is asked once per board rather
+	/// than once per frame.
+	/// </summary>
+	public static Texture2D Backdrop
+	{
+		get
+		{
+			if (_backdropLooked)
+				return _backdrop;
+
+			_backdropLooked = true;
+			const string path = "res://DoomGame/Art/background.png";
+
+			return _backdrop = ResourceLoader.Exists(path) ? GD.Load<Texture2D>(path) : null;
+		}
+	}
+
 	/// <summary>
 	/// `Ash Walker` -> `ash_walker`. The art file is named after the subject, so adding a drawing is
 	/// dropping a file in and nothing else.
