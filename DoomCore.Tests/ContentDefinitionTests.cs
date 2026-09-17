@@ -12,6 +12,58 @@ namespace DoomCore.Tests;
 /// </summary>
 public class ContentDefinitionTests
 {
+	/// <summary>
+	/// **No card may declare `OnTurnStart`, because it could never fire.**
+	///
+	/// Combat v3 empties the field at the end of every turn, so when `StartTurnAction` fires this
+	/// trigger the only thing standing is the companion. A card carrying it would be silently inert
+	/// — declared, never fired, and indistinguishable from one that worked, which is the exact
+	/// failure this repo keeps rediscovering.
+	///
+	/// The companion is the one legal holder, and Ash uses it deliberately.
+	///
+	/// **This becomes legal for a `Persistent` card** (v3 phase 6), which really does survive into
+	/// the next turn. Narrow the assertion to non-persistent cards then rather than deleting it.
+	/// </summary>
+	[Test]
+	public void NoCardDeclaresOnTurnStart()
+	{
+		var cards = Enum.GetValues<DoomTheme>()
+			.SelectMany(theme => StarterContent.RewardPool(theme).AsEnumerable())
+			.Concat(StarterContent.NewRun().Deck)
+			.ToList();
+
+		Assert.That(cards, Is.Not.Empty, "sanity: the pools loaded");
+
+		foreach (var card in cards)
+			Assert.That(
+				card.Effects.Any(e => e.Trigger == EffectTrigger.OnTurnStart),
+				Is.False,
+				$"{card.Name} declares OnTurnStart, and the field is empty when that fires — "
+					+ "it would never happen and would look exactly like a card that worked"
+			);
+	}
+
+	/// <summary>
+	/// The companion's ability actually reaches the battle. A `DoomEffect` sitting on the run's
+	/// companion record and never copied onto its battle card is the same silent no-op.
+	/// </summary>
+	[Test]
+	public void TheCompanionCarriesItsAbilityIntoBattle()
+	{
+		var run = StarterContent.NewRun();
+		Assert.That(run.Companion.Effects, Is.Not.Empty, "Ash is authored with an ability");
+
+		var (state, _) = run.StartBattle(DoomScenario.Flood, countdown: 9, [], opponentHealth: 500);
+		var ash = state.Units().Single(u => u.HasComponent<CompanionComponent>());
+
+		Assert.That(
+			ash.Effects,
+			Is.EqualTo(run.Companion.Effects),
+			"the ability has to be ON the battle card, or it never fires"
+		);
+	}
+
 	[Test]
 	public void AFloorOnlyFieldsEnemiesItIsAllowed()
 	{

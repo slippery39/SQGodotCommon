@@ -115,9 +115,19 @@ public static class StarterContent
 		};
 
 	/// <summary>
-	/// **The most frequent trigger in the game.** A turn effect fires 40-50 times in a run against
-	/// 5-10 for a doom effect and 5-10 for a death — see `docs/findings/doom-balance.md` run 12.
-	/// Price accordingly: small numbers, over and over.
+	/// End of turn, once the lanes have resolved.
+	///
+	/// **Combat v3 made this fire exactly ONCE for an ordinary unit, and the text must not say
+	/// "each turn".** A unit withdraws at the end of the turn it was played, so an `OnTurnEnd`
+	/// effect on it is an `OnPlay` that happens later — Almoner and The Choirmaster both shipped
+	/// saying "each turn: gain N" and both were lying on the card face. Rules text is not cosmetic.
+	///
+	/// The trigger itself is kept, and becomes honest again for a `Persistent` unit that really
+	/// does survive into the next turn. **Until persistence exists, do not author "each turn" text
+	/// against it.**
+	///
+	/// Was: "the most frequent trigger in the game, 40-50 firings a run" — true of v2, where a unit
+	/// held its lane until something killed it.
 	/// </summary>
 	private static DoomEffect EachTurn(DoomTarget target, GameAction template, string text) =>
 		new()
@@ -148,14 +158,47 @@ public static class StarterContent
 			Toughness = toughness,
 		};
 
-	/// <summary>The starting companion. One for now; picking between several is a later job.</summary>
+	/// <summary>
+	/// The starting companion, and **the first card in this game with an ability that a deck can be
+	/// built around**.
+	///
+	/// **The body was 2/6 and is 6/12.** It was a third of a one-drop — the pool scaled up over
+	/// eleven balance passes and the companion never came with it, so the one permanent thing on
+	/// the board was also the least relevant. 6/12 puts it beside a 1-cost.
+	///
+	/// **The ability: +2/+0 for every unit of yours the enemy killed last turn, and it STACKS
+	/// within a battle.** Two readings were possible and this is the cheap one on purpose:
+	///
+	/// - *cumulative* (this) — a triggered `BuffAction`, which the effect system already does. Ash
+	///   grows through a grinding battle and resets when the next one starts. No new machinery.
+	/// - *recalculated* — a bonus that rises and falls with what died each turn. That is a
+	///   CONTINUOUS effect, which means a layer system this game has deliberately not built.
+	///
+	/// **It only means anything because withdrawn ≠ dead** (combat v3): it reads units the enemy
+	/// took, not the four that walked off the board at end of turn. That rule was tidiness when it
+	/// was written and is load-bearing now.
+	///
+	/// **OnTurnStart is the right trigger and the companion is the ONLY thing that can use it** —
+	/// the field is empty when a turn begins, so a card carrying this trigger would never fire.
+	/// `NoCardDeclaresOnTurnStart` holds that.
+	/// </summary>
 	public static Companion StarterCompanion =>
 		new()
 		{
 			Name = "Ash",
 			Description = "Followed you out of the first one. Has not left since.",
-			BasePower = 2,
-			BaseToughness = 6,
+			BasePower = 6,
+			BaseToughness = 12,
+			Effects =
+			[
+				new DoomEffect
+				{
+					Trigger = EffectTrigger.OnTurnStart,
+					Target = DoomTarget.Self,
+					Template = new BuffAction { Power = 2, PerEach = CountOf.DiedLastTurn },
+					Text = "+2/+0 for each unit that died last turn",
+				},
+			],
 		};
 
 	/// <summary>
@@ -401,7 +444,8 @@ public static class StarterContent
 				18,
 				"Still conducting. Nobody told him.",
 				On(DoomTarget.Player, new GainLifeAction { Amount = 12 }, "Doom: gain 12"),
-				EachTurn(DoomTarget.Player, new GainLifeAction { Amount = 3 }, "each turn: gain 3")
+				// Was `EachTurn(... "each turn: gain 3")` — same lie as Almoner's.
+				OnPlay(DoomTarget.Player, new GainLifeAction { Amount = 3 }, "gain 3")
 			) with
 			{
 				Rarity = DoomRarity.Rare,
@@ -435,7 +479,8 @@ public static class StarterContent
 				2,
 				8,
 				"Gives away what little is left.",
-				EachTurn(DoomTarget.Player, new GainLifeAction { Amount = 2 }, "each turn: gain 2")
+				// Was `EachTurn(... "each turn: gain 2")`, which fired once and said otherwise.
+				OnPlay(DoomTarget.Player, new GainLifeAction { Amount = 2 }, "gain 2")
 			),
 			Unit(
 				"Reliquary Guard",

@@ -128,6 +128,17 @@ public record PlayCardAction : GameAction
 			);
 		}
 
+		// Counted for every card, unit or rite — the volume axis reads "cards played", not "bodies
+		// placed". Incremented BEFORE effects spawn, so a card that scales on it counts itself.
+		var played = state.GetBattle();
+		state = state.UpdateObject(
+			played.Id,
+			played with
+			{
+				CardsPlayedThisTurn = played.CardsPlayedThisTurn + 1,
+			}
+		);
+
 		// Effects spawn AFTER the card has moved, so a unit's own OnPlay effect can already see it
 		// standing in its lane — "deal 1 to the enemy opposite" needs the lane to be occupied.
 		if (!card.Effects.IsEmpty)

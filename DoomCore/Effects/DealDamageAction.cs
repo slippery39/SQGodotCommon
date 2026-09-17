@@ -24,6 +24,13 @@ public record DealDamageAction : EffectAction
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
 
+		// Scaled ONCE, before the loop, so every target takes the same number. Reading the count
+		// per target would let the effect shrink as it killed things — "damage equal to enemies
+		// standing" would deal less to each successive enemy, which is not what the card says.
+		var amount = Scaled(state, Amount);
+		if (amount == 0)
+			return new ActionResult(state);
+
 		foreach (var id in TargetIds)
 		{
 			// Skipped, not fatal: things die between an effect being queued and resolving, and that
@@ -39,7 +46,7 @@ public record DealDamageAction : EffectAction
 					// up above where it started. The maximum RISES with it rather than clamping it:
 					// the lane cell draws health against MaxHealth, so capping would hide the
 					// growth and clamping the bar would show a lie. It genuinely got bigger.
-					var healed = enemy.Health - Amount;
+					var healed = enemy.Health - amount;
 					var hurt = enemy with
 					{
 						Health = healed,
@@ -57,7 +64,7 @@ public record DealDamageAction : EffectAction
 
 				case Opponent opponent:
 				{
-					var health = opponent.Health - Amount;
+					var health = opponent.Health - amount;
 					state = state.UpdateObject(
 						id,
 						opponent with
@@ -67,7 +74,7 @@ public record DealDamageAction : EffectAction
 						}
 					);
 					events = events.Add(
-						new OpponentDamagedEvent { Amount = Amount, HealthRemaining = health }
+						new OpponentDamagedEvent { Amount = amount, HealthRemaining = health }
 					);
 					break;
 				}
@@ -76,17 +83,17 @@ public record DealDamageAction : EffectAction
 				{
 					state = state.UpdateObject(
 						id,
-						card.WithComponentReplaced(unit with { Damage = unit.Damage + Amount })
+						card.WithComponentReplaced(unit with { Damage = unit.Damage + amount })
 					);
 					break;
 				}
 
 				case DoomPlayer player:
 				{
-					var life = player.Life - Amount;
+					var life = player.Life - amount;
 					state = state.UpdateObject(id, player with { Life = life });
 					events = events.Add(
-						new PlayerDamagedEvent { Amount = Amount, LifeRemaining = life }
+						new PlayerDamagedEvent { Amount = amount, LifeRemaining = life }
 					);
 					break;
 				}

@@ -125,6 +125,10 @@ public record Run
 					Description = Companion.Description,
 					Cost = 0,
 					RunCardId = 0,
+
+					// The ability rides on the battle card like any other holder's. Nothing in the
+					// effect system knows or cares that this one is the companion.
+					Effects = Companion.Effects,
 				}
 					.WithComponent(
 						new UnitComponent

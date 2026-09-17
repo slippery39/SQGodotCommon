@@ -45,6 +45,19 @@ public enum DoomTarget
 
 	/// <summary>Every unit you have on the field, companion included.</summary>
 	YourUnits,
+
+	/// <summary>
+	/// Your units in the lanes either side of the source. **The spatial axis, and it was free.**
+	///
+	/// Lane choice is the only decision this game has, and until this existed it was very nearly
+	/// arbitrary: any open lane was as good as any other, so "which lane" was a question with no
+	/// wrong answer. An effect that reads the lanes NEXT DOOR turns the board into a shape you
+	/// arrange rather than five interchangeable slots.
+	/// </summary>
+	YourUnitsInAdjacentLanes,
+
+	/// <summary>The enemies in the lanes either side of the source. Splash, from your side.</summary>
+	EnemiesInAdjacentLanes,
 }
 
 /// <summary>

@@ -64,6 +64,25 @@ public record DoomBattle : GameObject
 	public ImmutableList<int> DiedThisTurnRunCardIds { get; init; } = ImmutableList<int>.Empty;
 
 	/// <summary>
+	/// What died LAST turn, held so a card played this turn can still read it.
+	///
+	/// <see cref="DiedThisTurnRunCardIds"/> is cleared when a turn starts, so by the time you are
+	/// choosing plays it is already empty — a card that scales on "what died last turn" would
+	/// always read zero and look exactly like a card that worked. `StartTurnAction` rolls one into
+	/// the other before clearing.
+	///
+	/// **Deaths only. A unit that withdrew at the end of the turn is not in here**, which is the
+	/// whole point of the attrition axis: it counts what the enemy took from you, not your own
+	/// board doing what it does every turn.
+	/// </summary>
+	public ImmutableList<int> DiedLastTurnRunCardIds { get; init; } = ImmutableList<int>.Empty;
+
+	/// <summary>
+	/// Cards played so far this turn, reset each turn. The volume axis — see <see cref="CountOf"/>.
+	/// </summary>
+	public int CardsPlayedThisTurn { get; init; }
+
+	/// <summary>
 	/// True when the player hit 0 life. Distinct from <see cref="IsOver"/>, which a win also sets —
 	/// only this one ends the run.
 	/// </summary>

@@ -1119,3 +1119,74 @@ Uprising are supposed to PAY.
   values, never restate them" buys. Twelve broke the last time that rule was violated.
 - `sim 150` is 50 runs an act and ~6 minutes. Enough to separate 28% from 0%; not enough to argue
   about 20% against 25%.
+
+---
+
+## Run 16 — 2026-09-17 — Ash gets an ability, and it is worth more than DOUBLING his body
+
+**`bot-1/v3`, 150 runs, 50 per act, three configurations.** The first measurement of a companion that
+does something. Ash was a 2/6 with no ability — a third of a one-drop, in the lane nothing contests,
+whose "upgrades" were stat trickle chosen for him.
+
+| Ash | The Long Emergency | The Reckoning | The Rising |
+|---|---|---|---|
+| **2/6, no ability** (run 15) | 28% | 20% | 6% |
+| **6/12, no ability** | 50% | 30% | 12% |
+| **6/12, +2/+0 per unit that died last turn** | **82%** | **68%** | **20%** |
+
+Target band is 25-50%.
+
+### The ability is worth more than the body, by a long way
+
+Doubling Ash's stats bought **+22 / +10 / +6** points of act completion. Adding the ability on top
+bought **+32 / +38 / +8** more.
+
+**That is the answer to "Ash is irrelevant to gameplay".** One card went from an afterthought to the
+most important thing in a run — more important than a stat line twice its size. It is also far too
+strong: two acts blew straight through the top of the band.
+
+**Both numbers were needed.** Shipping the body and the ability together would have left it
+impossible to say which mattered, and "the companion is now good" would have been indistinguishable
+from "the companion is now bigger". Isolating cost one extra `sim` run.
+
+### Why the cumulative reading is the strong one
+
+The ability was specified as *"+2/+0 per unit that died last turn"*, and that has two readings:
+
+- **Recalculated** — a bonus that rises and falls with each turn's deaths. Needs a CONTINUOUS effect
+  layer, which this game deliberately does not have.
+- **Cumulative** — a triggered `BuffAction` that stacks within a battle and resets between them.
+  Free, using the effect system as it already is. **This is what shipped.**
+
+It was chosen as the cheap one, and the measurement says it is also **much** the stronger one: a
+grinding six-turn battle can hand Ash +12 power. If the ability needs to come down, the recalculated
+reading is not merely "the other option" — it is a different power level, and the one originally
+described.
+
+### It only works because withdrawn ≠ dead
+
+The ability reads units the enemy KILLED, not the four that walk off the board at the end of every
+turn. That rule was written as tidiness in v3 phase 1 and is load-bearing now: without it, a
+companion that pays for your losses would be paid every single turn by your own board doing what it
+always does. `WithdrawingDoesNotFeedAsh` pins it.
+
+### The Rising is still the weak act, and this is more evidence for the deck diagnosis
+
+20% against 82% and 68%, having gained the least from Ash in both steps (+6 then +8, against +22/+32
+and +10/+38). **Ash helps least in the act whose problem is its deck**, which is what run 15 said:
+The Rising's apocalypses do not pay the deck, and v3 made the deck the whole of your per-turn output.
+A stronger companion cannot fix an act that never comes online — it just delays the bill.
+
+### Also landed, and not yet measured
+
+- **`CountOf`** — effect amounts can be multiplied by something the board answers. Every amount in
+  the game was a literal before this, which is most of why the pool had no synergies: they were not
+  *unwritten*, they were **unsayable**.
+- **`BuffAction`** — stat changes, triggered and one-shot. No continuous layer, on purpose.
+- **`AdjacentLanes`** targeting — the first reason in the game's history to prefer one lane to
+  another. Lane choice is the only decision here and it was very nearly arbitrary.
+- **Two cards stopped lying.** Almoner and The Choirmaster said "each turn: gain N" and fired
+  **once** — v3 withdraws the unit that would have fired them again. Rules text is not cosmetic.
+- **`OnTurnStart` is now unusable by cards** and a test enforces it: the field is empty when it
+  fires, so a card carrying it would be silently inert. The companion is the one legal holder, which
+  is exactly what Ash uses.

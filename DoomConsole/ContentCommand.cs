@@ -171,9 +171,18 @@ public static class ContentCommand
 		Console.WriteLine(
 			$"  COMPANION — free, in the centre lane, every battle, untouchable by any doom"
 		);
+		// The ABILITY first, because it is the thing a deck is built around now — the marks are
+		// growth, the ability is identity. Read off the companion rather than restated here, or
+		// this becomes a second account of what Ash does and drifts from the real one.
+		var ability = companion.Effects.IsEmpty
+			? "no ability"
+			: string.Join("; ", companion.Effects.Select(e => e.Text));
+
 		Console.WriteLine(
-			$"    {companion.Name, -18}  {companion.BasePower}/{companion.BaseToughness}   "
-				+ "gains a mark from every apocalypse it survives"
+			$"    {companion.Name, -18}  {companion.BasePower}/{companion.BaseToughness}   {ability}"
+		);
+		Console.WriteLine(
+			$"    {"", -18}         and gains a mark from every apocalypse it survives"
 		);
 
 		Console.WriteLine();

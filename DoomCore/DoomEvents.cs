@@ -119,3 +119,15 @@ public record UnitsWithdrewEvent : GameEvent
 {
 	public int Count { get; init; }
 }
+
+/// <summary>
+/// A unit's stats changed. Carries the DELTA, not the new totals, because that is what the front
+/// end animates and what a log line wants to say.
+/// </summary>
+public record UnitBuffedEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public string CardName { get; init; } = "";
+	public int Power { get; init; }
+	public int Toughness { get; init; }
+}

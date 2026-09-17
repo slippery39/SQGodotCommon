@@ -19,12 +19,16 @@ public record GainLifeAction : EffectAction
 		var state = gameState;
 		var events = ImmutableList<GameEvent>.Empty;
 
+		var amount = Scaled(state, Amount);
+		if (amount == 0)
+			return new ActionResult(state);
+
 		foreach (var id in TargetIds)
 		{
 			if (!state.HasObject(id) || state.GetObject(id) is not DoomPlayer player)
 				continue;
 
-			var life = Math.Min(player.Life + Amount, player.MaxLife);
+			var life = Math.Min(player.Life + amount, player.MaxLife);
 			state = state.UpdateObject(id, player with { Life = life });
 			events = events.Add(
 				new LifeGainedEvent { Amount = life - player.Life, LifeNow = life }

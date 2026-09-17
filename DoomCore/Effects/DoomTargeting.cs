@@ -60,6 +60,20 @@ public static class DoomTargeting
 					: ImmutableList<int>.Empty;
 			}
 
+			case DoomTarget.YourUnitsInAdjacentLanes:
+				return AdjacentLanes(state, sourceId)
+					.Select(state.UnitInLane)
+					.Where(u => u is not null && !u.Unit().IsDead)
+					.Select(u => u!.Id)
+					.ToImmutableList();
+
+			case DoomTarget.EnemiesInAdjacentLanes:
+				return AdjacentLanes(state, sourceId)
+					.Select(state.EnemyInLane)
+					.Where(e => e is not null && !e.IsDead)
+					.Select(e => e!.Id)
+					.ToImmutableList();
+
 			default:
 				throw new ArgumentOutOfRangeException(
 					nameof(target),
@@ -68,5 +82,33 @@ public static class DoomTargeting
 						+ "exactly like one that worked."
 				);
 		}
+	}
+
+	/// <summary>
+	/// The lanes either side of the source, in bounds. Empty when the source is not a unit — a rite
+	/// played from hand has no lane, so "next door" means nothing and resolves to nothing rather
+	/// than guessing at lane 0. Same rule <see cref="DoomTarget.EnemyInSourceLane"/> already uses.
+	///
+	/// **A lane at the edge of the board has ONE neighbour, not two, and that is content rather
+	/// than a limitation** — it makes the middle lane worth more than the outside ones to anything
+	/// that reads adjacency, which is the first reason this game has ever had to prefer one lane
+	/// over another.
+	/// </summary>
+	private static IEnumerable<int> AdjacentLanes(GameState state, int sourceId)
+	{
+		if (!state.HasObject(sourceId))
+			yield break;
+
+		if (state.GetObject(sourceId) is not DoomCard card)
+			yield break;
+
+		if (card.GetComponent<UnitComponent>() is not { } unit)
+			yield break;
+
+		if (unit.Lane - 1 >= 0)
+			yield return unit.Lane - 1;
+
+		if (unit.Lane + 1 < DoomBattle.LaneCount)
+			yield return unit.Lane + 1;
 	}
 }

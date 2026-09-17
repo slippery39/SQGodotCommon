@@ -37,6 +37,20 @@ public abstract record EffectAction : GameAction, ITargetedAction
 	/// <summary>The object this effect came from — the card played, the enemy that died.</summary>
 	public int SourceId { get; init; }
 
+	/// <summary>
+	/// What this effect's amount is multiplied by, read off the board when it resolves.
+	///
+	/// **On the base rather than on each action**, because "scales with something" is a property of
+	/// an effect and not of damage in particular — healing, drawing and buffing all want it. Default
+	/// <see cref="CountOf.None"/> means a multiplier of 1, so every effect authored before this
+	/// existed still deals exactly what it says.
+	/// </summary>
+	public CountOf PerEach { get; init; } = CountOf.None;
+
+	/// <summary>The authored amount times what the board says. Use this, never a raw Amount.</summary>
+	protected int Scaled(GameState state, int amount) =>
+		amount * DoomCounts.Multiplier(state, PerEach);
+
 	public GameAction WithTargets(ImmutableList<int> targetIds) =>
 		this with
 		{

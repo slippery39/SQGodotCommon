@@ -24,7 +24,18 @@ public record StartTurnAction : GameAction
 		// has to see that turn's dead. ResolveDoomAction is spawned before this action and the
 		// spawn queue is FIFO, so the firing is captured while this list is still full.
 		var turning = state.GetBattle();
-		state = state.UpdateObject(turning.Id, turning with { DiedThisTurnRunCardIds = [] });
+		state = state.UpdateObject(
+			turning.Id,
+			turning with
+			{
+				// ROLLED, not dropped. A card that scales on what the enemy killed last turn has to
+				// be able to read it while you are choosing plays, and this list is emptied before
+				// you get a hand. See DoomBattle.DiedLastTurnRunCardIds.
+				DiedLastTurnRunCardIds = turning.DiedThisTurnRunCardIds,
+				DiedThisTurnRunCardIds = [],
+				CardsPlayedThisTurn = 0,
+			}
+		);
 
 		// Nothing per-turn to reset on a unit. A lane is chosen once, when the unit is played, and
 		// held until it dies — there is no assignment to clear and no damage to wipe, since damage
