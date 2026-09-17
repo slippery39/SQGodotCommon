@@ -111,23 +111,7 @@ public record Run
 		var drawId = state.ZoneId(ZoneType.Draw);
 		foreach (var runCard in Deck)
 		{
-			var card = new DoomCard
-			{
-				Name = runCard.Name,
-				Description = runCard.Description,
-				Cost = runCard.Cost,
-				RunCardId = runCard.RunCardId,
-				Tags = runCard.Tags,
-				Effects = runCard.Effects,
-			};
-
-			if (runCard.IsUnit)
-				card = (DoomCard)
-					card.WithComponent(
-						new UnitComponent { Power = runCard.Power, Toughness = runCard.Toughness }
-					);
-
-			(state, _) = state.AddObject(card, drawId);
+			(state, _) = state.AddObject(runCard.ToDoomCard(), drawId);
 		}
 
 		// The companion is on the field before the first card is drawn, free, every battle. It is

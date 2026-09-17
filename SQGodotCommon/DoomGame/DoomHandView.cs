@@ -76,6 +76,17 @@ public sealed class DoomHandView
 		_hand.CardDragEnd = OnCardDropped;
 	}
 
+	/// <summary>
+	/// Shows or hides the whole fan.
+	///
+	/// **The intermission needs this.** Its dim overlay is a Control, and Hand2D gives every card a
+	/// ZIndex of its own — which beats tree order — so the hand drew straight through the dimmed
+	/// screen and over the reward cards. Hiding it is also the right reading: between floors the
+	/// hand is not yours to play, and a hand you cannot use should not be on screen looking like
+	/// one you can.
+	/// </summary>
+	public void SetVisible(bool visible) => _hand.Visible = visible;
+
 	private void OnCardDropped(Hand2D.DragEndContext context)
 	{
 		var card = context.CardUI2D;

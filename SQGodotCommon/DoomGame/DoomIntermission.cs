@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Common.Cards;
 using DoomCore;
 using Godot;
 
@@ -20,32 +21,55 @@ namespace DoomGame;
 /// </summary>
 public sealed class DoomIntermission
 {
-	private readonly PanelContainer _root;
+	private readonly ColorRect _root;
 	private readonly Label _title;
 	private readonly Label _body;
 	private readonly Button _continue;
 	private readonly Label _coming;
-	private readonly HBoxContainer _offers;
+
+	/// <summary>
+	/// The offered cards.
+	///
+	/// A `CardUI2D` is a Node2D, and a Control container will not lay a Node2D out — it leaves it at
+	/// the origin. So the row is positioned by hand, and lives beside the panel rather than in it.
+	/// </summary>
+	private readonly Node2D _offers;
+
 	private readonly Action<RunCard> _onTake;
+
+	/// <summary>Where the DESCEND button sits, in canvas pixels from the top.</summary>
+	private const int ButtonY = 900;
+
+	/// <summary>
+	/// How large a reward card is drawn. **Bigger than in hand**, because this is the one moment in
+	/// a run where a card is the entire decision and there is nothing else on screen to read.
+	/// </summary>
+	private const float OfferScale = 1.05f;
 
 	public DoomIntermission(CanvasLayer parent, Action onContinue, Action<RunCard> onTake)
 	{
-		_root = new PanelContainer { Visible = false };
+		// **A ColorRect, not a PanelContainer.** A Container OVERRIDES its children's anchors and
+		// positions on every layout pass — so the panel stretched to the full screen and the DESCEND
+		// button, anchored near the bottom, was dragged up behind the reward cards. Both looked like
+		// placement bugs and were one: the wrong node type at the root.
+		_root = new ColorRect { Visible = false, Color = new Color(0, 0, 0, 0.82f) };
 		_root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-		_root.AddThemeStyleboxOverride("panel", DoomPalette.Box(new Color(0, 0, 0, 0.82f)));
 
-		var centre = new CenterContainer();
-		_root.AddChild(centre);
-
+		// Text at the top, the decision in the middle, the way out at the bottom.
 		var card = new PanelContainer();
 		card.AddThemeStyleboxOverride(
 			"panel",
 			DoomPalette.Box(DoomPalette.Slate, DoomPalette.Gold, 3)
 		);
-		centre.AddChild(card);
+		card.SetAnchorsPreset(Control.LayoutPreset.TopWide);
+		card.OffsetLeft = 420;
+		card.OffsetRight = -420;
+		card.OffsetTop = 36;
+		card.OffsetBottom = 36; // Grown by the content's minimum size, not fixed here.
+		_root.AddChild(card);
 
-		var rows = new VBoxContainer { CustomMinimumSize = new Vector2(760, 0) };
-		rows.AddThemeConstantOverride("separation", 20);
+		var rows = new VBoxContainer();
+		rows.AddThemeConstantOverride("separation", 14);
 		card.AddChild(rows);
 
 		_onTake = onTake;
@@ -61,20 +85,39 @@ public sealed class DoomIntermission
 		_coming = DoomPalette.Text("", 22, DoomPalette.Red);
 		rows.AddChild(_coming);
 
-		_offers = new HBoxContainer();
-		_offers.AddThemeConstantOverride("separation", 14);
-		_offers.Alignment = BoxContainer.AlignmentMode.Center;
-		rows.AddChild(_offers);
-
-		_continue = new Button { Text = "DESCEND", CustomMinimumSize = new Vector2(0, 66) };
+		// **Outside the panel**, anchored near the bottom, so it sits BELOW the cards rather than
+		// behind them. It is the way past the decision, so it goes after it.
+		_continue = new Button { Text = "DESCEND", CustomMinimumSize = new Vector2(420, 66) };
 		_continue.AddThemeFontSizeOverride("font_size", 24);
 		_continue.Pressed += onContinue;
-		rows.AddChild(_continue);
+		_continue.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
+		_continue.Position = new Vector2(-210, ButtonY);
+		_root.AddChild(_continue);
 
 		parent.AddChild(_root);
+
+		// AFTER the panel, so the cards draw over the dimmed background rather than under it.
+		_offers = new Node2D { Visible = false };
+		parent.AddChild(_offers);
 	}
 
-	public void Hide() => _root.Visible = false;
+	public void Hide()
+	{
+		_root.Visible = false;
+		_offers.Visible = false;
+	}
+
+	/// <summary>Throws the offered cards away. They are rebuilt per floor and never reused.</summary>
+	private void ClearOffers()
+	{
+		foreach (var child in _offers.GetChildren())
+		{
+			_offers.RemoveChild(child);
+			child.QueueFree();
+		}
+
+		_offers.Visible = false;
+	}
 
 	/// <summary>
 	/// A floor cleared. Says what the apocalypses took and gave, and what the companion carries now.
@@ -126,8 +169,7 @@ public sealed class DoomIntermission
 		);
 
 		_coming.Text = "";
-		foreach (var child in _offers.GetChildren())
-			child.QueueFree();
+		ClearOffers();
 
 		_continue.Text = "WALK ON";
 		_continue.Visible = true;
@@ -144,31 +186,73 @@ public sealed class DoomIntermission
 	/// </summary>
 	public void OfferRewards(IEnumerable<RunCard> cards, DoomScenario next, int nextFloor)
 	{
+		// What it DOES, as on the banner. This line exists to make the reward a decision about the
+		// fight below, and flavour cannot do that — "It stopped being about the sky some time ago"
+		// does not help you choose between a wall and a burst of damage.
 		_coming.Text =
 			$"Floor {nextFloor} below:  {DoomPalette.Caps(next.ToString())}  —  "
-			+ StarterContent.DescriptionFor(next);
+			+ ScenarioLibrary.EffectTextOf(next);
 
-		foreach (var child in _offers.GetChildren())
+		ClearOffers();
+
+		// **Real cards, not buttons describing cards.** A reward used to be a rectangle reading
+		// "Scrapper / cost 1 / 10 / 4", which asked the player to picture the card they were being
+		// offered — and made the one screen where a card IS the whole decision the one screen that
+		// would not show you one. The genre settled this years ago: the offer is the card, at full
+		// size, and taking it is clicking it.
+		//
+		// Drawn through DoomCardFace, like the hand and the preview, so a reward can never look like
+		// a different card from the one that joins the deck.
+		var offered = cards.ToList();
+
+		for (var i = 0; i < offered.Count; i++)
 		{
-			_offers.RemoveChild(child);
-			child.QueueFree();
-		}
+			var shown = offered[i].ToDoomCard();
 
-		foreach (var card in cards)
-		{
-			var offer = new Button
-			{
-				Text = $"{card.Name}\ncost {card.Cost}\n{card.Power} / {card.Toughness}",
-				CustomMinimumSize = new Vector2(210, 118),
-			};
-			offer.AddThemeFontSizeOverride("font_size", 18);
+			var ui = GD.Load<PackedScene>("res://Common/Cards/2D/Card2D/card_2d_canvasgroup.tscn")
+				.Instantiate<CardUI2D>();
 
-			var taken = card;
-			offer.Pressed += () => _onTake(taken);
-			_offers.AddChild(offer);
+			_offers.AddChild(ui);
+
+			// AFTER AddChild, and in this order: Style reaches into the card's own tree by node
+			// name, so the scene has to be built first.
+			DoomCardFace.Style(ui);
+			ui.ApplyTo(DoomCardFace.For(shown));
+			DoomCardFace.ApplyStats(ui, shown);
+
+			ui.Position = OfferPosition(i, offered.Count);
+			ui.Scale *= OfferScale;
+
+			// Above everything the board draws. Hand2D hands out per-card ZIndex and z beats tree
+			// order, so without this a reward could sit under a card from the battle just won.
+			ui.ZIndex = 400 + i;
+
+			// **Dragging OFF, or clicking cannot work at all.** CardUI2D raises Clicked only while
+			// it is the hovered card, and beginning a drag clears the hovered card on the same
+			// press — so a card that can be dragged can never be clicked. There is nowhere to drag
+			// a reward to anyway.
+			ui.DragEnabled = () => false;
+
+			var taken = offered[i];
+			ui.Clicked += _ => _onTake(taken);
 		}
 
 		_offers.Visible = true;
+	}
+
+	/// <summary>
+	/// Where the nth of several offered cards sits, in canvas coordinates.
+	///
+	/// Spread about the centre rather than packed from one side, so two offers and four offers both
+	/// look deliberate. The pool hands out three today; nothing in the content promises that forever.
+	/// </summary>
+	private static Vector2 OfferPosition(int index, int count)
+	{
+		const float spacing = 340f;
+		const float centreX = 960f;
+		const float centreY = 660f;
+
+		return new Vector2(centreX + ((index - ((count - 1) / 2f)) * spacing), centreY);
 	}
 
 	public void ShowRunOver(Run run)
@@ -182,7 +266,7 @@ public sealed class DoomIntermission
 		// no button.
 		_continue.Visible = false;
 		_coming.Text = "";
-		_offers.Visible = false;
+		ClearOffers();
 		_root.Visible = true;
 	}
 

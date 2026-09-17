@@ -496,3 +496,4 @@ $RECYCLE.BIN/
 
 # Screenshot captures from the --write-movie loop. Regenerated on demand; never reviewed as code.
 SQGodotCommon/shots*/
+SQGodotCommon/shots_reward/

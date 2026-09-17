@@ -100,6 +100,22 @@ public partial class DoomBoard : Node2D
 			// from a still board**: nothing moves until state changes, so every capture of a fresh
 			// battle shows a settled screen and proves nothing. This drives real turns through the
 			// real engine so a capture catches damage numbers, pops and flashes mid-flight.
+			// `-- --autostart --reward` opens the reward screen on the opening position. The screen
+			// is only reachable by WINNING a floor, which a capture cannot do, so without this the
+			// one screen where a card is the whole decision is the one screen never looked at.
+			if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--reward") >= 0)
+			{
+				_hand.SetVisible(false);
+				_intermission.ShowFloorCleared(_run, _run, doomsFired: 1);
+				_intermission.OfferRewards(
+					StarterContent.RewardsFor(_run.Theme, _seed, _run.Floor),
+					StarterContent.ScenarioFor(_run.Theme, _run.Floor),
+					_run.Floor
+				);
+
+				return;
+			}
+
 			if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--autoturn") >= 0)
 			{
 				var ticker = new Timer { WaitTime = 1.6, Autostart = true };
@@ -132,6 +148,7 @@ public partial class DoomBoard : Node2D
 	{
 		_battleResolved = false;
 		_intermission.Hide();
+		_hand?.SetVisible(true);
 
 		// A new battle is a new board, not a change to the old one. Without this every lane of the
 		// opening position pops in and the last floor's dead bodies flash on a field they were
@@ -172,6 +189,9 @@ public partial class DoomBoard : Node2D
 	private void ResolveBattle()
 	{
 		_battleResolved = true;
+
+		// The hand is not yours to play between floors, and it drew over the intermission.
+		_hand.SetVisible(false);
 
 		var battle = _state.GetBattle();
 		if (battle.PlayerIsDead)

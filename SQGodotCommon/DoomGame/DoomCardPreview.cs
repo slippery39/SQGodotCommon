@@ -45,25 +45,6 @@ public partial class DoomCardPreview : Node2D
 			.Concat(StarterContent.RewardPool(DoomTheme.LongEmergency))
 			.ToList();
 
-		DoomCard Made(RunCard run) =>
-			run.IsUnit
-				? (DoomCard)
-					Card(run)
-						.WithComponent(
-							new UnitComponent { Power = run.Power, Toughness = run.Toughness }
-						)
-				: Card(run);
-
-		static DoomCard Card(RunCard run) =>
-			new()
-			{
-				Name = run.Name,
-				Description = run.Description,
-				Cost = run.Cost,
-				RunCardId = run.RunCardId,
-				Effects = run.Effects,
-			};
-
 		// Named rather than taken by index: the pool is reordered every balance pass, and a preview
 		// that silently starts showing five different cards is a preview nobody trusts.
 		string[] wanted =
@@ -85,7 +66,7 @@ public partial class DoomCardPreview : Node2D
 			if (found is null)
 				GD.PushWarning($"DoomCardPreview: no card named '{name}' in the pool any more.");
 			else
-				yield return Made(found);
+				yield return found.ToDoomCard();
 		}
 	}
 

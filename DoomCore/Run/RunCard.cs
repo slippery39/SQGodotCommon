@@ -68,4 +68,34 @@ public record RunCard
 	public DoomRarity Rarity { get; init; } = DoomRarity.Common;
 
 	public bool HasTag(string tag) => Tags.Contains(tag);
+
+	/// <summary>
+	/// This card as it enters a battle.
+	///
+	/// **One conversion, used everywhere.** `Run.StartBattle` builds the deck with it, and the front
+	/// end needs the same thing to DRAW a card outside a battle — the reward screen offers cards
+	/// that are not in play yet, and the preview scene draws cards with no battle at all. Written
+	/// twice, the two would eventually disagree about what a run card becomes, and the surface
+	/// nobody was looking at would be the one that was wrong.
+	///
+	/// The returned card has no GameState id: it gets one from `AddObject` when it is really added,
+	/// and display code never needs one.
+	/// </summary>
+	public DoomCard ToDoomCard()
+	{
+		var card = new DoomCard
+		{
+			Name = Name,
+			Description = Description,
+			Cost = Cost,
+			RunCardId = RunCardId,
+			Tags = Tags,
+			Effects = Effects,
+		};
+
+		return IsUnit
+			? (DoomCard)
+				card.WithComponent(new UnitComponent { Power = Power, Toughness = Toughness })
+			: card;
+	}
 }
