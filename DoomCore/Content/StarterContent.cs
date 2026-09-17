@@ -96,6 +96,15 @@ public static class StarterContent
 		params DoomEffect[] effects
 	) => Unit(name, cost, power, toughness, text) with { Effects = [.. effects] };
 
+	/// <summary>
+	/// An effect that fires when the apocalypse lands.
+	///
+	/// **Its text starts "Doom:", not "when the doom fires:".** The long form did not fit a card —
+	/// "when the doom fires: 6 to every enemy" needed three lines in a two-line box and rendered
+	/// TRUNCATED, which is the one thing DoomUI.md forbids outright: when text does not fit, the
+	/// text is wrong, not the box. "Doom" is a keyword with reminder text in `KeywordLibrary`, so
+	/// the short form still explains itself on hover — which is exactly what the glossary is for.
+	/// </summary>
 	private static DoomEffect On(DoomTarget target, GameAction template, string text) =>
 		new()
 		{
@@ -301,11 +310,7 @@ public static class StarterContent
 				4,
 				8,
 				"It keeps working through it. That is all it does.",
-				On(
-					DoomTarget.None,
-					new DrawCardsAction { Amount = 2 },
-					"when the doom fires: draw 2"
-				)
+				On(DoomTarget.None, new DrawCardsAction { Amount = 2 }, "Doom: draw 2")
 			) with
 			{
 				Rarity = DoomRarity.Uncommon,
@@ -319,7 +324,7 @@ public static class StarterContent
 				On(
 					DoomTarget.AllEnemies,
 					new DealDamageAction { Amount = 6 },
-					"when the doom fires: 6 to every enemy"
+					"Doom: 6 to every enemy"
 				)
 			) with
 			{
@@ -331,11 +336,7 @@ public static class StarterContent
 				8,
 				12,
 				"They stayed at the desk.",
-				On(
-					DoomTarget.Player,
-					new GainLifeAction { Amount = 10 },
-					"when the doom fires: gain 10"
-				)
+				On(DoomTarget.Player, new GainLifeAction { Amount = 10 }, "Doom: gain 10")
 			) with
 			{
 				Rarity = DoomRarity.Rare,
@@ -399,11 +400,7 @@ public static class StarterContent
 				12,
 				18,
 				"Still conducting. Nobody told him.",
-				On(
-					DoomTarget.Player,
-					new GainLifeAction { Amount = 12 },
-					"when the doom fires: gain 12"
-				),
+				On(DoomTarget.Player, new GainLifeAction { Amount = 12 }, "Doom: gain 12"),
 				EachTurn(DoomTarget.Player, new GainLifeAction { Amount = 3 }, "each turn: gain 3")
 			) with
 			{
@@ -446,11 +443,7 @@ public static class StarterContent
 				4,
 				10,
 				"Guarding a box nobody has opened.",
-				On(
-					DoomTarget.Player,
-					new GainLifeAction { Amount = 14 },
-					"when the doom fires: gain 14"
-				)
+				On(DoomTarget.Player, new GainLifeAction { Amount = 14 }, "Doom: gain 14")
 			) with
 			{
 				Rarity = DoomRarity.Rare,

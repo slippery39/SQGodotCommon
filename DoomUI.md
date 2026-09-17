@@ -181,6 +181,11 @@ tax, and the only reliable check is a screenshot.
 **When text does not fit, the text is wrong, not the box.** Shrinking to fit is forbidden. A card
 whose rules text cannot be said in the space gets a keyword instead — see *Hover and explanation*.
 
+This rule has now been applied for real: `"when the doom fires: 6 to every enemy"` needed three lines
+in a two-line box and rendered TRUNCATED. The prefix was the same nineteen characters on every
+doom-triggered card, so it became the keyword `Doom:` — shorter on the card, and still explained on
+hover. **Reach for the glossary before reaching for a smaller font.**
+
 ### Type
 
 One family, three weights, and no exceptions. A jam with two typefaces reads as a jam.
@@ -285,16 +290,30 @@ The rule is **two layers, and a card never carries the second one**.
 - The enlarged card and its panel are **one hover target between them** — moving the mouse from the
   card onto the panel must not dismiss it.
 
-### Small windows
+### Small windows — measured 2026-09-17
 
-The game must be readable in a half-screen window; jam judges do not play fullscreen.
+**The supported minimum is 1280x720, and the 16px floor does not hold there.** That is a measured
+limitation, recorded rather than papered over.
 
-- `canvas_items` stretch stays. It is doing the right thing; the bug is that the board is laid out to
-  crowd left and leave a third of the frame empty.
-- **Below 1280 wide, the hand fan tightens and the lane cells lose their flavour line, in that
-  order.** Nothing carrying a number is ever dropped — a cell shrinks, it does not shed facts.
-- **The 16px floor is measured at the smallest supported size, not the design size.** A budget that
-  only holds at 1600x900 is not a budget.
+`canvas_items` stretch scales the whole canvas, so every text size scales with the window. At
+1280x720 the factor is 0.667 against the 1920 canvas, so a 20-canvas-pixel label lands at 13 real
+pixels. Nothing CLIPS, overflows or falls off at 720p — the layout holds — but the smallest text is
+below the floor.
+
+What was bought back rather than left:
+
+| | was | now | at 1600x900 | at 1280x720 |
+|---|---|---|---|---|
+| Card rules text | 20 canvas | **22** | 18.3px | 14.7px |
+| Doom banner description | 22 canvas | **24** | 20px | 16px |
+
+Going further costs more than it buys: the rules box cannot hold three lines of anything larger, and
+**`--resolution` on the command line does not change this** — `window/size/window_*_override` in
+`project.godot` wins, so a capture that looks smaller may not be. Check the PNG's actual size before
+believing a small-window screenshot.
+
+- **Nothing carrying a number is ever dropped** at any size — a cell shrinks, it does not shed facts.
+- If the floor has to hold at 720p later, the answer is a UI scale setting, not smaller margins.
 
 ### The glossary
 

@@ -86,6 +86,7 @@ public static class DoomCardFace
 		// them now; the text that fits is the text a card is allowed to have (DoomUI.md).
 		if (ui.FindChild("RulesTextLabel", true, false) is Label rules)
 		{
+			rules.OffsetTop = -82f;
 			rules.OffsetBottom = 22f;
 			rules.VerticalAlignment = VerticalAlignment.Center;
 		}
@@ -96,13 +97,13 @@ public static class DoomCardFace
 		// text at 20 canvas px is the 16 real px minimum at 1600x900 and must not go lower.
 		Enlarge(ui, "NameLabel", Pt(26));
 		Enlarge(ui, "ManaCostLabel", Pt(34));
-		Enlarge(ui, "RulesTextLabel", Pt(20));
+		Enlarge(ui, "RulesTextLabel", Pt(22));
 		Enlarge(ui, "PowerToughnessLabel", Pt(30));
 		Enlarge(ui, AttackLabelName, Pt(30));
 	}
 
 	/// <summary>Where the art window's centre sits for each of the two heights, in card space.</summary>
-	private const int ShortArtCentre = -58;
+	private const int ShortArtCentre = -71;
 
 	private const int TallArtCentre = -14;
 
@@ -263,8 +264,14 @@ public static class DoomCardFace
 		return card.Tags.IsEmpty ? "" : string.Join(", ", card.Tags);
 	}
 
-	/// <summary>The art window on a card that has something to say.</summary>
-	private const int ShortArt = 198;
+	/// <summary>
+	/// The art window on a card that has something to say.
+	///
+	/// Shortened from 198 to buy the rules box room for a THIRD line. The text had to grow — at
+	/// 20 canvas px it fell to 13 real pixels in a 1280x720 window — and the longest authored
+	/// effect ("when the doom fires: 6 to every enemy") needs three lines once it does.
+	/// </summary>
+	private const int ShortArt = 172;
 
 	/// <summary>
 	/// The art window on a card that does not. It runs from under the name plate to just above the

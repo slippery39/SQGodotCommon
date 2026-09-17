@@ -49,6 +49,7 @@ public partial class DoomCardPreview : Node2D
 		// that silently starts showing five different cards is a preview nobody trusts.
 		string[] wanted =
 		[
+			"Drone Swarm", // the LONGEST authored effect text — three lines, and the box must hold it
 			"Salvage Rig", // a unit with a doom-triggered effect — the keyword panel's real case
 			"Long Watcher", // 12/20 — the widest statline the badge must hold
 			"Scavenger", // a vanilla body: flavour is all it has to say

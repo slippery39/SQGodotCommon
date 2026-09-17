@@ -731,7 +731,7 @@ public partial class DoomBoard : Node2D
 
 		var rows = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		_scenarioLabel = DoomPalette.Text("", 40, DoomPalette.Bone, HorizontalAlignment.Left);
-		_descriptionLabel = DoomPalette.Text("", 22, DoomPalette.Bone, HorizontalAlignment.Left);
+		_descriptionLabel = DoomPalette.Text("", 24, DoomPalette.Bone, HorizontalAlignment.Left);
 		_descriptionLabel.Modulate = new Color(1, 1, 1, 0.75f);
 
 		rows.AddChild(_scenarioLabel);
@@ -833,7 +833,7 @@ public partial class DoomBoard : Node2D
 		box.CornerRadiusTopLeft = box.CornerRadiusTopRight = 14;
 		box.CornerRadiusBottomLeft = box.CornerRadiusBottomRight = 14;
 		box.ContentMarginLeft = box.ContentMarginRight = 14;
-		box.ContentMarginTop = box.ContentMarginBottom = 8;
+		box.ContentMarginTop = box.ContentMarginBottom = 6;
 		panel.AddThemeStyleboxOverride("panel", box);
 
 		var rows = new VBoxContainer();
