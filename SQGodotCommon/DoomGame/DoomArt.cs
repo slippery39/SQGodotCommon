@@ -26,7 +26,7 @@ public static class DoomArt
 	private static readonly Dictionary<Color, Texture2D> Rules = new();
 	private static Texture2D _costBadge;
 	private static Texture2D _statBadge;
-	private static readonly Dictionary<Color, Texture2D> Art = new();
+	private static readonly Dictionary<(Color, int), Texture2D> Art = new();
 
 	private static readonly Dictionary<Color, Texture2D> Bodies = new();
 	private static readonly Dictionary<Color, Texture2D> CardFigures = new();
@@ -99,30 +99,38 @@ public static class DoomArt
 	/// stands in a lane, in a darker shade of the card's own colour. Reusing the lane figure is what
 	/// makes a card and the body it becomes legibly the same thing.
 	/// </summary>
-	public static Texture2D CardArt(string cardName, Color colour)
+	public static Texture2D CardArt(string cardName, Color colour, int height)
 	{
 		var drawing = Drawing(cardName);
 		if (drawing is null)
 			return CardFigure(colour);
 
-		if (CardDrawings.TryGetValue(cardName, out var cached))
+		if (CardDrawings.TryGetValue((cardName, height), out var cached))
 			return cached;
 
 		// Composed onto the art window's OWN dimensions rather than handed over at its native size.
 		// The card scene positions this sprite for a 278x198 texture, and a square 256x256 dropped
 		// in its place overflows the window and rides up over the name plate.
-		var canvas = Image.CreateEmpty(278, 198, false, Image.Format.Rgba8);
+		var canvas = Image.CreateEmpty(ArtWidth, height, false, Image.Format.Rgba8);
 		canvas.Fill(Colors.Transparent);
 
+		// Square, fitted to whichever side is smaller, and centred. A card with no rules text gets a
+		// TALLER window (see DoomCardFace), so the drawing has to grow into it rather than sit at
+		// the top of a box that is now half empty.
+		var side = Mathf.Min(ArtWidth, height);
 		var art = drawing.GetImage();
 		art.Convert(Image.Format.Rgba8);
-		art.Resize(198, 198, Image.Interpolation.Lanczos);
-		canvas.BlitRect(art, new Rect2I(0, 0, 198, 198), new Vector2I((278 - 198) / 2, 0));
+		art.Resize(side, side, Image.Interpolation.Lanczos);
+		canvas.BlitRect(
+			art,
+			new Rect2I(0, 0, side, side),
+			new Vector2I((ArtWidth - side) / 2, (height - side) / 2)
+		);
 
-		return CardDrawings[cardName] = ImageTexture.CreateFromImage(canvas);
+		return CardDrawings[(cardName, height)] = ImageTexture.CreateFromImage(canvas);
 	}
 
-	private static readonly Dictionary<string, Texture2D> CardDrawings = new();
+	private static readonly Dictionary<(string, int), Texture2D> CardDrawings = new();
 
 	private static Texture2D CardFigure(Color colour)
 	{
@@ -266,13 +274,16 @@ public static class DoomArt
 	/// The art window as a single flat colour block. There is no card art yet, and a flat block is
 	/// not a placeholder for it — it is the reference's own treatment.
 	/// </summary>
-	public static Texture2D ArtBlock(Color colour)
+	public static Texture2D ArtBlock(Color colour, int height)
 	{
-		if (!Art.TryGetValue(colour, out var texture))
-			Art[colour] = texture = RoundedRect(278, 198, colour, colour, 0, 0);
+		if (!Art.TryGetValue((colour, height), out var texture))
+			Art[(colour, height)] = texture = RoundedRect(ArtWidth, height, colour, colour, 0, 0);
 
 		return texture;
 	}
+
+	/// <summary>The art window's width. Fixed by the card scene; only the HEIGHT varies.</summary>
+	public const int ArtWidth = 278;
 
 	/// <summary>
 	/// The ground every enemy drawing stands on — one colour for all of them.

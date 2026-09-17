@@ -101,6 +101,11 @@ public static class DoomCardFace
 		Enlarge(ui, AttackLabelName, Pt(30));
 	}
 
+	/// <summary>Where the art window's centre sits for each of the two heights, in card space.</summary>
+	private const int ShortArtCentre = -58;
+
+	private const int TallArtCentre = -14;
+
 	private const string AttackLabelName = "DoomAttackLabel";
 	private const string AttackIconName = "DoomAttackIcon";
 
@@ -177,6 +182,16 @@ public static class DoomCardFace
 	{
 		var unit = card.GetComponent<UnitComponent>();
 
+		// **Re-centre the art window, per card.** A Sprite2D draws its texture centred on its own
+		// position, so a taller art texture alone would grow upward into the name and downward into
+		// the stats. `Style` cannot do this — it runs once when the card is created, and a card in
+		// the fan is recycled for whatever the hand holds next.
+		if (ui.FindChild("ArtFrame", true, false) is Sprite2D frame)
+			frame.Position = new Vector2(
+				2,
+				ArtHeightFor(card) == TallArt ? TallArtCentre : ShortArtCentre
+			);
+
 		// **Long names get a smaller type, rather than an ellipsis.** "Breaching Charge" does not
 		// fit the name row at full size and never will; the alternatives were truncating it or
 		// widening a box that has the cost disc on one side and the card edge on the other. This
@@ -227,26 +242,38 @@ public static class DoomCardFace
 	}
 
 	/// <summary>
-	/// What the card's text box says, in priority order: what it DOES, then what it is marked with,
-	/// then what it is.
+	/// What the card's text box says: what it DOES, or what an apocalypse has MARKED it with.
 	///
-	/// **A card is never blank.** Every card in the game authors a `Description` — it comes down
-	/// from `RunCard` and is already on the battle card — so the vanilla units that used to render
-	/// an empty box have had a line waiting for them the whole time. Flavour is not rules, but a
-	/// vanilla body's rules ARE its stat badge, and an empty box reads as a broken card.
+	/// **Flavour is not rules and no longer appears here.** `Description` used to be the fallback,
+	/// which meant a vanilla body carried "Takes what is left." in the rules box — words that read
+	/// as rules, sat where rules go, and said nothing about how to play the card. Playtested and
+	/// cut.
+	///
+	/// A card with no ability now returns EMPTY on purpose, and the face grows its art into the
+	/// space instead (see <see cref="ArtHeightFor"/>). The useful consequence: a text box that is
+	/// present means this card does something, which is worth knowing at a glance across a hand.
 	/// </summary>
 	public static string RulesTextFor(DoomCard card)
 	{
 		if (!card.Effects.IsEmpty)
 			return string.Join("\n", card.Effects.Select(e => e.Text));
 
-		// A tag is a mark an apocalypse LEFT on the card, so it outranks flavour — "Irradiated"
-		// costs a life when drawn and the player has to be able to see that coming.
-		if (!card.Tags.IsEmpty)
-			return string.Join(", ", card.Tags);
-
-		return card.Description ?? "";
+		// A tag is a mark an apocalypse LEFT on the card, so it is genuinely rules — "Irradiated"
+		// costs a life when drawn and the player has to see that coming.
+		return card.Tags.IsEmpty ? "" : string.Join(", ", card.Tags);
 	}
+
+	/// <summary>The art window on a card that has something to say.</summary>
+	private const int ShortArt = 198;
+
+	/// <summary>
+	/// The art window on a card that does not. It runs from under the name plate to just above the
+	/// stats — the whole face, minus the two rows that carry numbers.
+	/// </summary>
+	private const int TallArt = 284;
+
+	private static int ArtHeightFor(DoomCard card) =>
+		RulesTextFor(card).Length == 0 ? TallArt : ShortArt;
 
 	public static InternalCardUI2D.Details For(DoomCard card)
 	{
@@ -290,10 +317,14 @@ public static class DoomCardFace
 			// Leaving this unset is not an option — the shared card's stone window reappears as a
 			// brown rectangle behind the figure. A default returning is not the same as a value
 			// never set, and it looks like a regression you did not make.
-			ArtFrameTexture = DoomArt.ArtBlock(DoomArt.ColourFor(card.Name)),
+			ArtFrameTexture = DoomArt.ArtBlock(DoomArt.ColourFor(card.Name), ArtHeightFor(card)),
 			RulesTextFrameTexture = DoomArt.Blank(279, 158),
 			ManaCostFrameTexture = DoomArt.CostBadge,
-			ArtworkTexture = DoomArt.CardArt(card.Name, DoomArt.ColourFor(card.Name)),
+			ArtworkTexture = DoomArt.CardArt(
+				card.Name,
+				DoomArt.ColourFor(card.Name),
+				ArtHeightFor(card)
+			),
 
 			NameColor = DoomPalette.Bone,
 			ManaCostColor = DoomPalette.Bone,
