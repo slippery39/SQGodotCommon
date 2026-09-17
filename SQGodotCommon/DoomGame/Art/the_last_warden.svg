@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- The Last Warden. The hood, but barred — a thing standing in a doorway that does not open. -->
+  <path d="M128 10 q60 0 80 80 q12 46 14 152 L34 242 q2 -106 14 -152 q20 -80 80 -80 z" fill="#C73E3A"/>
+  <path d="M128 28 q51 0 68 69 q10 40 12 131 L48 228 q2 -91 12 -131 q17 -69 68 -69 z" fill="#0C131B"/>
+  <!-- the opening -->
+  <path d="M128 72 q35 0 43 46 q7 33 -4 74 q-39 12 -78 0 q-11 -41 -4 -74 q8 -46 43 -46 z" fill="#060A0F"/>
+  <!-- BARS across it. Nothing gets past, and nothing looks out. -->
+  <g fill="#C73E3A">
+    <rect x="86" y="96" width="84" height="11" rx="5"/>
+    <rect x="82" y="126" width="92" height="11" rx="5"/>
+    <rect x="86" y="156" width="84" height="11" rx="5"/>
+  </g>
+  <g fill="#0C131B">
+    <rect x="104" y="80" width="12" height="104" rx="5"/>
+    <rect x="140" y="80" width="12" height="104" rx="5"/>
+  </g>
+  <!-- heavy shoulders -->
+  <path d="M30 238 q42 -30 98 -30 q56 0 98 30 z" fill="#C73E3A"/>
+  <rect x="24" y="234" width="208" height="14" rx="7" fill="#0C131B"/>
+</svg>

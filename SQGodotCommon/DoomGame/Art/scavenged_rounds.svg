@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Scavenged Rounds — a Rite: 6 to every enemy. Spend it on something already close. -->
+  <!-- spent brass, scattered along the bottom -->
+  <g fill="#2B4054">
+    <rect x="22" y="212" width="40" height="15" rx="7" transform="rotate(-14 42 219)"/>
+    <rect x="76" y="222" width="36" height="14" rx="7" transform="rotate(8 94 229)"/>
+    <rect x="186" y="214" width="42" height="15" rx="7" transform="rotate(18 207 221)"/>
+  </g>
+  <!-- three loaded rounds, standing, the middle one tallest -->
+  <g fill="#0C131B">
+    <rect x="46" y="112" width="42" height="86" rx="8"/>
+    <rect x="106" y="86" width="44" height="112" rx="8"/>
+    <rect x="168" y="112" width="42" height="86" rx="8"/>
+  </g>
+  <!-- bullet tips -->
+  <path d="M46 114 q21 -34 42 0 z" fill="#2B4054"/>
+  <path d="M106 88 q22 -38 44 0 z" fill="#C73E3A"/>
+  <path d="M168 114 q21 -34 42 0 z" fill="#2B4054"/>
+  <!-- rims -->
+  <g fill="#2B4054">
+    <rect x="42" y="186" width="50" height="12" rx="5"/>
+    <rect x="102" y="186" width="52" height="12" rx="5"/>
+    <rect x="164" y="186" width="50" height="12" rx="5"/>
+  </g>
+</svg>

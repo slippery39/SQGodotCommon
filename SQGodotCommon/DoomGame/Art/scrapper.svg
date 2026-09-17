@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Scrapper, 10/4. Fast and does not last. Built from parts: the first version was one polygon
+       and read as a blob with a stick. -->
+  <!-- back leg, driving -->
+  <rect x="56" y="168" width="22" height="66" rx="10" fill="#2B4054" transform="rotate(28 67 201)"/>
+  <!-- front leg, planted forward -->
+  <rect x="128" y="172" width="22" height="64" rx="10" fill="#0C131B" transform="rotate(-16 139 204)"/>
+  <!-- boots -->
+  <rect x="36" y="222" width="44" height="13" rx="6" fill="#2B4054"/>
+  <rect x="134" y="226" width="46" height="13" rx="6" fill="#0C131B"/>
+  <!-- torso: a clear wedge, leaning into the run -->
+  <path d="M80 182 L98 108 q26 -10 48 4 L150 186 q-36 10 -70 -4 z" fill="#0C131B"/>
+  <!-- trailing arm, thrown back -->
+  <path d="M98 126 L48 148" stroke="#0C131B" stroke-width="16" stroke-linecap="round"/>
+  <!-- leading arm, out straight with the blade -->
+  <path d="M146 122 L200 100" stroke="#0C131B" stroke-width="16" stroke-linecap="round"/>
+  <!-- scrap blade: a long jagged shard, clearly separate from the arm -->
+  <path d="M196 96 L252 66 L236 92 L250 98 L202 116 z" fill="#2B4054"/>
+  <!-- head, forward of the shoulders -->
+  <circle cx="134" cy="92" r="25" fill="#0C131B"/>
+  <path d="M112 84 q22 -12 44 0 q-4 -22 -22 -22 q-18 0 -22 22 z" fill="#2B4054"/>
+  <circle cx="145" cy="92" r="6" fill="#C73E3A"/>
+</svg>

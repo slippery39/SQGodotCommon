@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Siege Ram, 18/6. One job, done once. Not a body — a machine pointed at a wall. -->
+  <!-- frame -->
+  <path d="M36 176 L220 176 L206 210 L50 210 z" fill="#0C131B"/>
+  <!-- wheels -->
+  <circle cx="74" cy="216" r="26" fill="#0C131B"/>
+  <circle cx="74" cy="216" r="10" fill="#2B4054"/>
+  <circle cx="182" cy="216" r="26" fill="#0C131B"/>
+  <circle cx="182" cy="216" r="10" fill="#2B4054"/>
+  <!-- the beam, slung -->
+  <path d="M46 116 L86 168" stroke="#2B4054" stroke-width="9" stroke-linecap="round"/>
+  <path d="M188 116 L162 168" stroke="#2B4054" stroke-width="9" stroke-linecap="round"/>
+  <rect x="34" y="112" width="176" height="42" rx="12" fill="#0C131B"/>
+  <rect x="34" y="126" width="176" height="10" fill="#2B4054"/>
+  <!-- the head: a blunt iron cap, pointing right -->
+  <path d="M206 104 L246 116 L246 150 L206 162 z" fill="#2B4054"/>
+  <circle cx="226" cy="133" r="9" fill="#C73E3A"/>
+  <!-- gantry -->
+  <path d="M60 112 L60 78 L196 78 L196 112" stroke="#0C131B" stroke-width="11" fill="none"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Warden, 12/16. The last thing still standing: heavy, planted, holding a halberd. -->
+  <path d="M196 20 L196 244" stroke="#0C131B" stroke-width="12" stroke-linecap="round"/>
+  <path d="M196 28 L232 44 L196 74 z" fill="#2B4054"/>
+  <path d="M196 44 L168 56 L196 66 z" fill="#2B4054"/>
+  <!-- legs, wide and armoured -->
+  <rect x="70" y="180" width="34" height="62" rx="10" fill="#0C131B"/>
+  <rect x="126" y="180" width="34" height="62" rx="10" fill="#0C131B"/>
+  <rect x="60" y="232" width="52" height="14" rx="6" fill="#2B4054"/>
+  <rect x="118" y="232" width="52" height="14" rx="6" fill="#2B4054"/>
+  <!-- torso: a broad plate -->
+  <path d="M60 186 L70 96 q60 -22 120 0 L166 186 q-54 14 -106 0 z" fill="#0C131B"/>
+  <path d="M70 130 q58 -16 114 0" stroke="#2B4054" stroke-width="10" fill="none"/>
+  <!-- pauldrons -->
+  <path d="M34 108 L74 90 L78 132 L38 138 z" fill="#0C131B"/>
+  <path d="M186 90 L226 108 L222 138 L182 132 z" fill="#0C131B"/>
+  <!-- helm with a visor slit -->
+  <path d="M98 96 q-4 -46 30 -46 q34 0 30 46 q-30 12 -60 0 z" fill="#0C131B"/>
+  <rect x="102" y="70" width="52" height="11" rx="5" fill="#C73E3A"/>
+</svg>

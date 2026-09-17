@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- The Choir. Not one of them — several, shoulder to shoulder. Same red-rimmed hood language as
+       The Opponent, because it is the same KIND of thing; the count is what changed. -->
+  <!-- two behind, smaller, rimmed -->
+  <g fill="#C73E3A">
+    <path d="M62 78 q34 0 44 46 q7 27 8 90 L10 214 q1 -63 8 -90 q10 -46 44 -46 z"/>
+    <path d="M194 78 q34 0 44 46 q7 27 8 90 L142 214 q1 -63 8 -90 q10 -46 44 -46 z"/>
+  </g>
+  <g fill="#0C131B">
+    <path d="M62 92 q28 0 37 39 q6 23 7 76 L18 207 q1 -53 7 -76 q9 -39 37 -39 z"/>
+    <path d="M194 92 q28 0 37 39 q6 23 7 76 L150 207 q1 -53 7 -76 q9 -39 37 -39 z"/>
+  </g>
+  <!-- their openings: voids, no faces -->
+  <path d="M62 120 q19 0 23 25 q4 18 -2 39 q-21 7 -42 0 q-6 -21 -2 -39 q4 -25 23 -25 z" fill="#060A0F"/>
+  <path d="M194 120 q19 0 23 25 q4 18 -2 39 q-21 7 -42 0 q-6 -21 -2 -39 q4 -25 23 -25 z" fill="#060A0F"/>
+  <!-- the one in front, larger, overlapping both -->
+  <path d="M128 44 q44 0 58 60 q9 35 10 118 L60 222 q1 -83 10 -118 q14 -60 58 -60 z" fill="#C73E3A"/>
+  <path d="M128 60 q37 0 49 51 q8 30 9 100 L70 211 q1 -70 9 -100 q12 -51 49 -51 z" fill="#0C131B"/>
+  <path d="M128 98 q25 0 31 33 q5 24 -3 52 q-28 9 -56 0 q-8 -28 -3 -52 q6 -33 31 -33 z" fill="#060A0F"/>
+  <!-- shoulders -->
+  <path d="M52 218 q34 -22 76 -22 q42 0 76 22 z" fill="#C73E3A"/>
+</svg>

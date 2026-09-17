@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Bonepicker, 14/4. Arrives after the fighting: a carrion bird, hunched over. -->
+  <!-- folded wings, high on the shoulders -->
+  <path d="M78 116 L26 92 L48 132 L28 148 L86 162 z" fill="#0C131B"/>
+  <path d="M170 116 L222 92 L200 132 L220 148 L162 162 z" fill="#0C131B"/>
+  <!-- body -->
+  <path d="M92 108 q36 -18 72 0 L152 196 q-24 10 -48 0 z" fill="#0C131B"/>
+  <!-- legs and claws -->
+  <path d="M112 196 L106 232" stroke="#0C131B" stroke-width="10" stroke-linecap="round"/>
+  <path d="M146 196 L152 232" stroke="#0C131B" stroke-width="10" stroke-linecap="round"/>
+  <path d="M88 236 L120 228 L112 242 z" fill="#0C131B"/>
+  <path d="M170 236 L138 228 L146 242 z" fill="#0C131B"/>
+  <!-- neck, bare, and a hooked head turned aside -->
+  <path d="M112 104 q16 -34 34 -34 l6 18 q-18 4 -26 24 z" fill="#2B4054"/>
+  <circle cx="152" cy="64" r="26" fill="#0C131B"/>
+  <path d="M170 56 L226 68 L168 82 z" fill="#2B4054"/>
+  <circle cx="144" cy="58" r="6" fill="#C73E3A"/>
+  <!-- what it arrived for -->
+  <rect x="46" y="222" width="52" height="10" rx="5" fill="#2B4054" transform="rotate(-12 72 227)"/>
+</svg>

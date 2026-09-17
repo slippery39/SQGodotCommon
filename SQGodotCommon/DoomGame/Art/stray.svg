@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Stray, 0-cost 6/6. Followed the noise. A hound, alone and smaller than the pack. -->
+  <path d="M56 130 q-22 -10 -26 -40" stroke="#0C131B" stroke-width="11" stroke-linecap="round" fill="none"/>
+  <rect x="52" y="124" width="112" height="42" rx="19" fill="#0C131B"/>
+  <circle cx="72" cy="144" r="25" fill="#0C131B"/>
+  <circle cx="148" cy="144" r="22" fill="#0C131B"/>
+  <rect x="64" y="160" width="15" height="52" rx="7" fill="#0C131B"/>
+  <rect x="88" y="160" width="15" height="46" rx="7" fill="#0C131B"/>
+  <rect x="136" y="160" width="15" height="52" rx="7" fill="#0C131B"/>
+  <rect x="156" y="160" width="15" height="46" rx="7" fill="#0C131B"/>
+  <!-- neck and head, LIFTED — it is listening, not hunting -->
+  <path d="M142 126 L168 88 L190 104 L162 140 z" fill="#0C131B"/>
+  <path d="M166 82 L214 96 L216 112 L174 112 z" fill="#0C131B"/>
+  <path d="M168 80 L166 48 L186 70 z" fill="#0C131B"/>
+  <path d="M188 84 L192 54 L208 76 z" fill="#0C131B"/>
+  <circle cx="186" cy="96" r="6" fill="#E3B23C"/>
+  <rect x="50" y="208" width="132" height="11" rx="5" fill="#0C131B"/>
+</svg>

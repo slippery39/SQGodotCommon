@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- The Last Morning. The final Opponent: light coming up behind the hood — the one bright thing
+       in this game. Drawn as RAYS, not a disc: a disc the size of the light was almost entirely
+       hidden behind the hood and read as a brown smudge at its shoulders. -->
+  <!-- rays, well clear of the silhouette on both sides -->
+  <g stroke="#8A4038" stroke-width="13" stroke-linecap="round">
+    <path d="M40 176 L6 156"/>
+    <path d="M216 176 L250 156"/>
+    <path d="M34 128 L4 112"/>
+    <path d="M222 128 L252 112"/>
+    <path d="M52 86 L28 56"/>
+    <path d="M204 86 L228 56"/>
+  </g>
+  <g stroke="#C73E3A" stroke-width="11" stroke-linecap="round">
+    <path d="M44 152 L12 136"/>
+    <path d="M212 152 L244 136"/>
+    <path d="M70 62 L52 32"/>
+    <path d="M186 62 L204 32"/>
+    <path d="M128 22 L128 0"/>
+  </g>
+  <!-- the horizon it is coming over -->
+  <rect x="0" y="206" width="256" height="12" rx="6" fill="#8A4038"/>
+  <rect x="0" y="228" width="256" height="16" rx="8" fill="#16212E"/>
+  <!-- the hood, black against all of it -->
+  <path d="M128 18 q54 0 72 74 q11 42 13 132 L43 224 q2 -90 13 -132 q18 -74 72 -74 z" fill="#C73E3A"/>
+  <path d="M128 34 q45 0 60 64 q9 36 11 114 L57 212 q2 -78 11 -114 q15 -64 60 -64 z" fill="#0C131B"/>
+  <!-- the opening -->
+  <path d="M128 78 q29 0 36 39 q6 28 -3 62 q-33 10 -66 0 q-9 -34 -3 -62 q7 -39 36 -39 z" fill="#060A0F"/>
+  <!-- shoulders -->
+  <path d="M40 222 q40 -24 88 -24 q48 0 88 24 z" fill="#C73E3A"/>
+</svg>

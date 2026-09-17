@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Long Watcher, 12/20. Has seen four of these: a tall sentinel that does not move. -->
+  <!-- the stave, planted -->
+  <path d="M62 34 L62 244" stroke="#0C131B" stroke-width="12" stroke-linecap="round"/>
+  <circle cx="62" cy="30" r="14" fill="#2B4054"/>
+  <!-- a very long robe: the whole lower half is one shape -->
+  <path d="M86 244 L96 116 q34 -18 68 0 L184 244 z" fill="#0C131B"/>
+  <path d="M86 244 q44 -14 98 0 z" fill="#2B4054"/>
+  <!-- arms folded across -->
+  <path d="M100 148 L164 164" stroke="#0C131B" stroke-width="18" stroke-linecap="round"/>
+  <path d="M160 140 L100 168" stroke="#16212E" stroke-width="12" stroke-linecap="round"/>
+  <!-- deep hood, drawn far forward -->
+  <path d="M94 122 q-10 -64 36 -64 q46 0 36 64 q-36 16 -72 0 z" fill="#0C131B"/>
+  <path d="M106 88 q24 -14 48 0 q-6 32 -24 32 q-18 0 -24 -32 z" fill="#16212E"/>
+  <!-- ONE eye, because it has been watching a long time -->
+  <circle cx="130" cy="96" r="8" fill="#C73E3A"/>
+  <!-- four marks cut into the stave: four of these -->
+  <g stroke="#2B4054" stroke-width="5">
+    <path d="M52 170 L72 170"/><path d="M52 184 L72 184"/>
+    <path d="M52 198 L72 198"/><path d="M52 212 L72 212"/>
+  </g>
+</svg>

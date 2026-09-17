@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Shieldbearer, 4/12. Holds the line, and holds a spike. -->
+  <!-- the spike, braced behind the shield -->
+  <path d="M188 40 L200 232" stroke="#0C131B" stroke-width="12" stroke-linecap="round"/>
+  <path d="M188 40 L176 62 L200 62 z" fill="#2B4054"/>
+  <!-- legs, planted wide -->
+  <path d="M74 238 L92 178 L114 184 L104 238 z" fill="#0C131B"/>
+  <path d="M158 238 L142 178 L120 184 L130 238 z" fill="#0C131B"/>
+  <!-- head over the rim -->
+  <path d="M96 66 q0 -24 20 -24 q20 0 20 24 q0 20 -20 20 q-20 0 -20 -20 z" fill="#0C131B"/>
+  <!-- tower shield: tall, flat-topped, the whole card -->
+  <path d="M46 68 L166 68 L166 190 q-24 28 -60 36 q-36 -8 -60 -36 z" fill="#1B2836" stroke="#0C131B" stroke-width="9"/>
+  <rect x="42" y="62" width="128" height="16" rx="6" fill="#0C131B"/>
+  <!-- a single bone band, so it is not a blank slab -->
+  <rect x="58" y="120" width="96" height="14" rx="6" fill="#E8EEF2"/>
+  <rect x="58" y="152" width="96" height="14" rx="6" fill="#E8EEF2" opacity="1"/>
+</svg>

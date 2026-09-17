@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Last Orders — a Rite: draw 3. Everyone takes what they can carry. -->
+  <!-- three sheets, fanned, the front one square on -->
+  <g fill="#1B2836" stroke="#0C131B" stroke-width="7">
+    <rect x="34" y="52" width="110" height="146" rx="8" transform="rotate(-13 89 125)"/>
+    <rect x="76" y="48" width="110" height="146" rx="8" transform="rotate(-2 131 121)"/>
+  </g>
+  <rect x="96" y="46" width="118" height="156" rx="8" fill="#2B4054" stroke="#0C131B" stroke-width="7"/>
+  <!-- written lines -->
+  <g fill="#0C131B">
+    <rect x="114" y="74" width="82" height="11" rx="5"/>
+    <rect x="114" y="98" width="82" height="11" rx="5"/>
+    <rect x="114" y="122" width="56" height="11" rx="5"/>
+  </g>
+  <!-- the seal: red, and the only round thing on the card -->
+  <circle cx="176" cy="170" r="24" fill="#C73E3A"/>
+  <path d="M176 156 L182 168 L194 170 L184 179 L187 192 L176 185 L165 192 L168 179 L158 170 L170 168 z" fill="#0C131B"/>
+</svg>

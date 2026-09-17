@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Field Dressing — a Rite: gain 12 life. It will hold. It will not heal. -->
+  <!-- the rolled bandage, unspooling -->
+  <path d="M66 150 q-46 20 -50 74 l40 0 q2 -34 34 -48 z" fill="#2B4054"/>
+  <circle cx="106" cy="126" r="66" fill="#0C131B"/>
+  <circle cx="106" cy="126" r="40" fill="#1B2836"/>
+  <circle cx="106" cy="126" r="16" fill="#0C131B"/>
+  <!-- wrap seams -->
+  <g stroke="#0C131B" stroke-width="7" fill="none">
+    <path d="M70 100 q36 -14 72 0"/>
+    <path d="M68 152 q38 14 76 0"/>
+  </g>
+  <!-- the cross: bone, and the one bright mark -->
+  <rect x="168" y="66" width="34" height="98" rx="8" fill="#E8EEF2"/>
+  <rect x="136" y="98" width="98" height="34" rx="8" fill="#E8EEF2"/>
+</svg>

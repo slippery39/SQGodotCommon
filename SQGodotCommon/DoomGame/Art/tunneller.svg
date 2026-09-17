@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Tunneller, 8/6. Comes up where it is needed — half out of the ground.
+       The first version buried the arms under the ground line and read as a mushroom. The ground
+       is LOW now, the figure is above it, and the arms are clear of both. -->
+  <!-- spoil heaps, behind and small -->
+  <path d="M10 216 q34 -30 66 0 z" fill="#2B4054"/>
+  <path d="M180 216 q34 -30 66 0 z" fill="#2B4054"/>
+  <!-- torso, well above the lip -->
+  <path d="M96 214 L100 106 q28 -14 56 0 L160 214 q-32 10 -64 0 z" fill="#0C131B"/>
+  <!-- arms braced OUT to the sides, ending above the ground line -->
+  <path d="M102 128 L56 176" stroke="#0C131B" stroke-width="17" stroke-linecap="round"/>
+  <path d="M154 128 L200 176" stroke="#0C131B" stroke-width="17" stroke-linecap="round"/>
+  <!-- hands gripping the lip -->
+  <rect x="38" y="172" width="34" height="16" rx="8" fill="#0C131B"/>
+  <rect x="184" y="172" width="34" height="16" rx="8" fill="#0C131B"/>
+  <!-- helmet with a lamp -->
+  <path d="M100 112 q-4 -48 28 -48 q32 0 28 48 q-28 12 -56 0 z" fill="#0C131B"/>
+  <rect x="94" y="62" width="68" height="15" rx="7" fill="#2B4054"/>
+  <circle cx="128" cy="58" r="12" fill="#E3B23C"/>
+  <!-- the ground it is coming through, LAST so it crosses the body -->
+  <rect x="4" y="212" width="248" height="16" rx="8" fill="#16212E"/>
+  <rect x="4" y="226" width="248" height="14" rx="7" fill="#0C131B"/>
+</svg>
