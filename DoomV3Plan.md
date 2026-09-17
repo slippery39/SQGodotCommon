@@ -91,7 +91,24 @@ rule — rewrite it as `AUnitWithdrawsAtTheEndOfTheTurn`.
 
 ---
 
-## Phase 2 — any lane is playable, no refund
+## Phase 2 — any lane is playable, no refund  ✅ DONE
+
+**118 tests green.** `sim 30` returned numbers **identical to phase 1** — 16.7% completion, mean
+floor 11.43, 5.4 turns a battle, 21.8 life a battle.
+
+**That identity IS the result, and it is the argument for phase 3.** The bot never replaces a unit
+because `Candidates` only offers `OpenLanes()`, so the rule that was just added is invisible to the
+only thing measuring the game. Any balance number taken before phase 3 is measuring v2-with-extra-steps.
+
+**One thing the plan did not anticipate: the companion had to be exempted.** It is a unit in a lane,
+so "replace whatever is there" would have discarded it — and it has nowhere to be discarded TO,
+because Discard is drawable and the companion is meant to be the one thing that cannot be taken from
+you. `SweepFieldAction` already spares it for the same reason. Playing into its lane is refused, and
+that can never cause a dead turn because the other four lanes are always open. **Phase 7 deletes this
+exemption** by making the companion something you place, at which point the question is where you put
+it rather than whether you may build over it.
+
+### What it took
 
 **Files:** `DoomCore/Actions/PlayCardAction.cs`.
 

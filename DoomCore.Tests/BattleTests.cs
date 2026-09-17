@@ -269,8 +269,19 @@ public class BattleTests
 
 	// ===== One unit per lane =====
 
+	/// <summary>
+	/// **A lane is always playable, and the unit that was there is discarded. No refund.**
+	///
+	/// This test used to be `ALaneHoldsOneUnitAndRefusesASecond`. The refusal is superseded: a board
+	/// you cannot play into is how five drawn units end a turn with End Turn as the only legal
+	/// move, and under `Persistent` it would have been a lane denied for the whole battle. One unit
+	/// per lane still holds — the second one replaces the first rather than stacking on it.
+	///
+	/// The cost is real and needs no penalty bolted on: you spent the energy and threw away a body
+	/// that was absorbing damage.
+	/// </summary>
 	[Test]
-	public void ALaneHoldsOneUnitAndRefusesASecond()
+	public void ALaneAcceptsASecondUnitAndDiscardsTheFirst()
 	{
 		var state = DoomBattleFactory.Create(DoomScenario.Flood, countdown: 5, maxEnergy: 5);
 		(state, var first) = AddUnit(state, "First", power: 1, toughness: 1);
@@ -278,14 +289,88 @@ public class BattleTests
 
 		(state, _) = state.BeginBattle();
 		(state, _) = Do(state, new PlayCardAction { CardId = first, Lane = 2 });
+		(state, _) = Do(state, new PlayCardAction { CardId = second, Lane = 2 });
 
-		var (after, ok) = state.TryAddAction(new PlayCardAction { CardId = second, Lane = 2 });
-
-		Assert.That(ok, Is.False, "stacking would make the matchup unreadable");
+		Assert.That(state.UnitInLane(2)!.Id, Is.EqualTo(second), "the newcomer holds the lane");
+		Assert.That(state.Units().Count(), Is.EqualTo(1), "one unit per lane, still");
 		Assert.That(
-			after.CardsIn(ZoneType.Hand).Any(c => c.Id == second),
-			Is.True,
-			"still in hand"
+			state.GetParent(first),
+			Is.EqualTo(state.ZoneId(ZoneType.Discard)),
+			"and the one it replaced is a card again, not a corpse"
+		);
+	}
+
+	/// <summary>
+	/// **Replaced is not dead**, the same way withdrawn is not. Overwriting your own unit must not
+	/// fire its death trigger or feed a scenario that reads what died — otherwise replacing a body
+	/// every turn would mint Zombies for units nothing ever killed.
+	/// </summary>
+	[Test]
+	public void AReplacedUnitDidNotDie()
+	{
+		var state = DoomBattleFactory.Create(DoomScenario.Zombie, countdown: 9, maxEnergy: 5);
+		(state, var first) = AddUnit(state, "First", power: 1, toughness: 9);
+		(state, var second) = AddUnit(state, "Second", power: 1, toughness: 9);
+
+		(state, _) = state.BeginBattle();
+		(state, _) = Do(state, new PlayCardAction { CardId = first, Lane = 2 });
+		(state, var events) = Do(state, new PlayCardAction { CardId = second, Lane = 2 });
+
+		Assert.That(events.OfType<UnitDiedEvent>(), Is.Empty);
+		Assert.That(state.GetBattle().DiedRunCardIds, Is.Empty);
+		Assert.That(state.GetBattle().DiedThisTurnRunCardIds, Is.Empty);
+	}
+
+	/// <summary>
+	/// The companion holds its lane against your own cards, and this is not a balance decision: it
+	/// is not a card and has nowhere to be discarded TO. Discarding it would make it drawable, and
+	/// it is meant to be the one thing that cannot be taken from you.
+	///
+	/// It can never produce a dead turn — the other four lanes are always open.
+	/// </summary>
+	[Test]
+	public void YouCannotBuildOverYourOwnCompanion()
+	{
+		var run = new Run
+		{
+			Life = 100,
+			MaxLife = 100,
+			Companion = new Companion
+			{
+				Name = "Ash",
+				BasePower = 1,
+				BaseToughness = 5,
+			},
+		}.WithCards(
+			[
+				new RunCard
+				{
+					Name = "Pushy",
+					Cost = 0,
+					IsUnit = true,
+					Power = 1,
+					Toughness = 1,
+				},
+			]
+		);
+
+		var (state, _) = run.StartBattle(DoomScenario.Flood, countdown: 9, [], opponentHealth: 500);
+
+		var companionLane = state.Units().Single().Unit().Lane;
+		var card = state.CardsIn(ZoneType.Hand).First(c => c.Name == "Pushy");
+
+		var (after, ok) = state.TryAddAction(
+			new PlayCardAction { CardId = card.Id, Lane = companionLane }
+		);
+
+		Assert.That(ok, Is.False, "the companion is not something you may discard");
+		Assert.That(after.CardsIn(ZoneType.Hand).Any(c => c.Id == card.Id), Is.True);
+
+		// And every other lane still takes it, so the refusal costs the player nothing.
+		var elsewhere = Enumerable.Range(0, DoomBattle.LaneCount).First(l => l != companionLane);
+		Assert.That(
+			state.TryAddAction(new PlayCardAction { CardId = card.Id, Lane = elsewhere }).Item2,
+			Is.True
 		);
 	}
 

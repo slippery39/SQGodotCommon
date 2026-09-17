@@ -45,10 +45,20 @@ public record PlayCardAction : GameAction
 					$"Lane must be 0-{DoomBattle.LaneCount - 1}, got {Lane}"
 				);
 
-			// One unit per lane. Silently stacking would make a lane's matchup unreadable, and
-			// silently replacing would throw away a unit the player had already paid for.
-			if (gameState.UnitInLane(Lane) is { } held)
-				return ValidationResult.Invalid($"Lane {Lane} is already held by {held.Name}");
+			// **A held lane is NOT a refusal — see Execute.** One unit per lane still holds; what
+			// changed is that playing into an occupied lane replaces the occupant rather than
+			// being rejected. This used to read "silently replacing would throw away a unit the
+			// player had already paid for", and it does — that IS the cost, and it is exact.
+			//
+			// The ONE exception is the companion, and it is not a balance decision: the companion
+			// is not a card and has nowhere to be discarded TO. Putting it in Discard would make it
+			// drawable, and it is meant to be the one thing that cannot be taken from you —
+			// `SweepFieldAction` already spares it for exactly this reason. It holds its lane and
+			// the other four are always open, so this refusal can never produce a dead turn.
+			// **Phase 7 replaces this**: the companion becomes something you place each turn, and
+			// then the question is where you put IT rather than whether you may build over it.
+			if (gameState.UnitInLane(Lane)?.HasComponent<CompanionComponent>() == true)
+				return ValidationResult.Invalid($"Lane {Lane} is held by your companion");
 		}
 
 		return ValidationResult.Valid;
@@ -71,6 +81,24 @@ public record PlayCardAction : GameAction
 		// battle, a turn of nothing would make half the units unplayable.
 		var isUnit = card.HasComponent<UnitComponent>();
 		var destination = isUnit ? ZoneType.Field : ZoneType.Discard;
+
+		// **ANY LANE IS ALWAYS PLAYABLE, AND WHATEVER WAS THERE IS DISCARDED. No refund.**
+		//
+		// This is a law rather than a convenience, and it is what stops `Persistent` bringing the
+		// stall back in miniature later: persistence must mean "it stays if you leave it", never
+		// "you may not use this lane". A board you cannot play into is how five drawn units end a
+		// turn with End Turn as the only legal move — see DoomJam.md "Combat v3".
+		//
+		// **Replaced is not dead**, exactly as withdrawn is not: no `OnDeath` fires and nothing is
+		// recorded as having died. You did not lose it in the lane, you took it off the board.
+		// The cost needs no penalty bolted on — you spent the energy and threw away a body that
+		// was absorbing damage, and that is already sharp enough to make overwriting a decision.
+		// Nothing kills a unit during YOUR turn today — damage lands in `EndTurnAction` and the dead
+		// are cleared there — so a replaced unit is always a live one. If something ever does kill
+		// mid-turn, this would discard a corpse without firing its death, which is the silent kind
+		// of loss. Guard it then, at the point that creates the corpse.
+		if (isUnit && state.UnitInLane(Lane) is { } held && held.Id != CardId)
+			state = state.MoveObject(held.Id, state.ZoneId(ZoneType.Discard));
 
 		// Damage is cleared HERE, at the one point every board unit enters through, rather than at
 		// each exit from the Field. A card that died earlier this battle went to Discard still
