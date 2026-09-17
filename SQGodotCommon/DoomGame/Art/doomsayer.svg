@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Doomsayer. Ten attack and it hits you when the doom lands: it was right, and it is armed. -->
+  <path d="M60 244 L74 140 q34 -16 68 0 L156 244 z" fill="#0C131B"/>
+  <path d="M74 146 q-8 -54 34 -54 q42 0 34 54 q-34 14 -68 0 z" fill="#0C131B"/>
+  <circle cx="94" cy="104" r="6" fill="#C73E3A"/>
+  <circle cx="122" cy="104" r="6" fill="#C73E3A"/>
+  <!-- the placard, held up on a pole -->
+  <path d="M176 244 L176 96" stroke="#0C131B" stroke-width="12" stroke-linecap="round"/>
+  <path d="M142 150 L176 132" stroke="#0C131B" stroke-width="15" stroke-linecap="round"/>
+  <rect x="118" y="20" width="118" height="86" rx="8" fill="#2B4054" stroke="#0C131B" stroke-width="7"/>
+  <!-- what the sign says, in marks rather than letters -->
+  <g fill="#0C131B">
+    <rect x="132" y="38" width="90" height="11" rx="5"/>
+    <rect x="132" y="58" width="90" height="11" rx="5"/>
+    <rect x="132" y="78" width="54" height="11" rx="5"/>
+  </g>
+  <path d="M74 158 L44 206" stroke="#0C131B" stroke-width="15" stroke-linecap="round"/>
+</svg>

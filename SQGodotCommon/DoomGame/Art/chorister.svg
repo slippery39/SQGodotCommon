@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Chorister. On death the Opponent heals: it is singing for something else. -->
+  <path d="M84 244 L96 132 q32 -16 64 0 L172 244 z" fill="#0C131B"/>
+  <path d="M96 138 q-8 -54 32 -54 q40 0 32 54 q-32 14 -64 0 z" fill="#0C131B"/>
+  <!-- the open mouth: the whole point of the thing -->
+  <ellipse cx="128" cy="114" rx="15" ry="22" fill="#C73E3A"/>
+  <circle cx="110" cy="88" r="6" fill="#C73E3A"/>
+  <circle cx="146" cy="88" r="6" fill="#C73E3A"/>
+  <!-- hands held together at the chest -->
+  <path d="M100 152 L124 176" stroke="#0C131B" stroke-width="15" stroke-linecap="round"/>
+  <path d="M156 152 L132 176" stroke="#0C131B" stroke-width="15" stroke-linecap="round"/>
+  <!-- three notes rising, the only light marks -->
+  <g fill="#2B4054">
+    <circle cx="196" cy="86" r="10"/><rect x="202" y="52" width="6" height="38" rx="3"/>
+    <circle cx="216" cy="130" r="8"/><rect x="221" y="102" width="5" height="30" rx="2"/>
+    <circle cx="182" cy="42" r="7"/><rect x="186" y="18" width="5" height="26" rx="2"/>
+  </g>
+</svg>

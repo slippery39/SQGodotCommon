@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Gravecaller. Heals four a turn: arms up, calling something back. -->
+  <path d="M84 244 L96 140 q32 -16 64 0 L172 244 z" fill="#0C131B"/>
+  <!-- both arms RAISED, the read of the whole card -->
+  <path d="M100 150 L52 70" stroke="#0C131B" stroke-width="17" stroke-linecap="round"/>
+  <path d="M156 150 L204 70" stroke="#0C131B" stroke-width="17" stroke-linecap="round"/>
+  <circle cx="48" cy="62" r="13" fill="#0C131B"/>
+  <circle cx="208" cy="62" r="13" fill="#0C131B"/>
+  <path d="M96 146 q-8 -52 32 -52 q40 0 32 52 q-32 14 -64 0 z" fill="#0C131B"/>
+  <circle cx="112" cy="104" r="6" fill="#C73E3A"/>
+  <circle cx="144" cy="104" r="6" fill="#C73E3A"/>
+  <!-- what is coming back: hands out of the ground -->
+  <g fill="#2B4054">
+    <path d="M40 244 L40 208 q10 -8 18 0 L58 244 z"/>
+    <path d="M198 244 L198 214 q10 -8 18 0 L216 244 z"/>
+  </g>
+  <rect x="8" y="238" width="240" height="12" rx="6" fill="#0C131B"/>
+</svg>

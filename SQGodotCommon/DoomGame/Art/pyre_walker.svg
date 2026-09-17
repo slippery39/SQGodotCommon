@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Pyre Walker. On death it burns everything you hold.
+       The fire flanks and rises PAST the figure — a single cone above the head read as a hat. -->
+  <g fill="#8A4038">
+    <path d="M62 236 q-16 -56 6 -96 q6 40 22 54 q-8 -46 18 -78 q-6 58 14 78 q10 -24 6 -50 q30 44 22 92 z"/>
+    <path d="M194 236 q16 -52 -4 -90 q-6 38 -22 50 q10 -44 -14 -74 q4 56 -14 74 q-10 -22 -6 -48 q-28 42 -20 88 z"/>
+  </g>
+  <g fill="#C73E3A">
+    <path d="M78 236 q-10 -40 4 -66 q4 28 16 38 q-6 -32 12 -54 q-4 40 10 54 q6 -16 4 -34 q20 30 14 62 z"/>
+    <path d="M178 236 q10 -38 -2 -62 q-4 26 -16 36 q6 -30 -10 -52 q4 38 -10 52 q-6 -16 -4 -34 q-20 30 -14 60 z"/>
+  </g>
+  <!-- the walker, black, straight through the middle of it -->
+  <path d="M92 244 L102 132 q26 -12 52 0 L164 244 z" fill="#0C131B"/>
+  <path d="M102 138 q-8 -50 26 -50 q34 0 26 50 q-26 14 -52 0 z" fill="#0C131B"/>
+  <path d="M104 148 L76 202" stroke="#0C131B" stroke-width="16" stroke-linecap="round"/>
+  <path d="M152 148 L180 202" stroke="#0C131B" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="117" cy="102" r="6" fill="#E3B23C"/>
+  <circle cx="139" cy="102" r="6" fill="#E3B23C"/>
+  <rect x="80" y="238" width="96" height="12" rx="6" fill="#0C131B"/>
+</svg>

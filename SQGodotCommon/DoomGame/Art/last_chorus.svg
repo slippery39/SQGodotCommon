@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Last Chorus. On death every enemy still standing heals: it is a Chorister that became several. -->
+  <!-- two lesser heads on the shoulders -->
+  <circle cx="58" cy="122" r="34" fill="#0C131B"/>
+  <ellipse cx="58" cy="132" rx="11" ry="15" fill="#C73E3A"/>
+  <circle cx="48" cy="112" r="5" fill="#C73E3A"/>
+  <circle cx="198" cy="122" r="34" fill="#0C131B"/>
+  <ellipse cx="198" cy="132" rx="11" ry="15" fill="#C73E3A"/>
+  <circle cx="208" cy="112" r="5" fill="#C73E3A"/>
+  <!-- the body -->
+  <path d="M70 244 L86 140 q42 -18 84 0 L186 244 z" fill="#0C131B"/>
+  <!-- the main head, larger, mouth wide -->
+  <path d="M86 146 q-10 -60 42 -60 q52 0 42 60 q-42 18 -84 0 z" fill="#0C131B"/>
+  <ellipse cx="128" cy="116" rx="18" ry="26" fill="#C73E3A"/>
+  <circle cx="106" cy="86" r="6" fill="#C73E3A"/>
+  <circle cx="150" cy="86" r="6" fill="#C73E3A"/>
+  <!-- a third mouth low on the chest, because there is no limit to this -->
+  <ellipse cx="128" cy="196" rx="14" ry="20" fill="#2B4054"/>
+</svg>

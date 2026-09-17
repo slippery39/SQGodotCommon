@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Cinder Hound. A Scav Hound that is still burning. -->
+  <path d="M54 128 q-22 -12 -26 -42" stroke="#0C131B" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <rect x="48" y="120" width="116" height="44" rx="20" fill="#0C131B"/>
+  <circle cx="70" cy="142" r="26" fill="#0C131B"/>
+  <circle cx="148" cy="142" r="23" fill="#0C131B"/>
+  <rect x="60" y="158" width="15" height="54" rx="7" fill="#0C131B"/>
+  <rect x="84" y="158" width="15" height="48" rx="7" fill="#0C131B"/>
+  <rect x="134" y="158" width="15" height="54" rx="7" fill="#0C131B"/>
+  <rect x="154" y="158" width="15" height="48" rx="7" fill="#0C131B"/>
+  <path d="M140 122 L172 82 L194 100 L164 136 z" fill="#0C131B"/>
+  <path d="M168 76 L222 92 L226 108 L178 108 z" fill="#0C131B"/>
+  <path d="M170 74 L166 42 L188 64 z" fill="#0C131B"/>
+  <path d="M190 78 L194 48 L210 70 z" fill="#0C131B"/>
+  <circle cx="188" cy="90" r="7" fill="#C73E3A"/>
+  <!-- embers along the spine -->
+  <g fill="#C73E3A">
+    <path d="M78 120 l8 -26 l8 26 z"/><path d="M104 116 l9 -32 l9 32 z"/><path d="M132 120 l8 -26 l8 26 z"/>
+  </g>
+  <rect x="46" y="208" width="132" height="11" rx="5" fill="#0C131B"/>
+</svg>

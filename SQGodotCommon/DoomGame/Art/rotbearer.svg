@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Rotbearer. Two to you every turn, just by standing there. Bloated, and leaking. -->
+  <rect x="80" y="196" width="32" height="48" rx="12" fill="#0C131B"/>
+  <rect x="144" y="196" width="32" height="48" rx="12" fill="#0C131B"/>
+  <!-- a heavy, sagging body -->
+  <path d="M60 196 q-6 -96 68 -96 q74 0 68 96 q-68 22 -136 0 z" fill="#0C131B"/>
+  <!-- the swelling, a shade lighter so the shape reads -->
+  <ellipse cx="128" cy="160" rx="46" ry="34" fill="#2B4054"/>
+  <!-- what it is leaking -->
+  <g fill="#C73E3A">
+    <circle cx="96" cy="206" r="7"/><circle cx="128" cy="214" r="9"/><circle cx="160" cy="204" r="6"/>
+    <circle cx="112" cy="232" r="5"/><circle cx="146" cy="236" r="6"/>
+  </g>
+  <!-- stubby arms -->
+  <path d="M70 140 L40 190" stroke="#0C131B" stroke-width="20" stroke-linecap="round"/>
+  <path d="M186 140 L216 190" stroke="#0C131B" stroke-width="20" stroke-linecap="round"/>
+  <!-- small head, sunk into the mass -->
+  <circle cx="128" cy="76" r="30" fill="#0C131B"/>
+  <circle cx="117" cy="72" r="6" fill="#C73E3A"/>
+  <circle cx="139" cy="72" r="6" fill="#C73E3A"/>
+</svg>

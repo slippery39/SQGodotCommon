@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Rampart. 40 health, 4 attack: it is a wall that happens to have legs. -->
+  <rect x="76" y="198" width="32" height="46" rx="10" fill="#0C131B"/>
+  <rect x="148" y="198" width="32" height="46" rx="10" fill="#0C131B"/>
+  <!-- the wall: crenellated, edge to edge -->
+  <rect x="20" y="70" width="216" height="134" rx="10" fill="#0C131B"/>
+  <g fill="#0C131B">
+    <rect x="20" y="42" width="40" height="34" rx="6"/>
+    <rect x="84" y="42" width="40" height="34" rx="6"/>
+    <rect x="148" y="42" width="40" height="34" rx="6"/>
+    <rect x="212" y="42" width="24" height="34" rx="6"/>
+  </g>
+  <!-- courses, so it reads as stone rather than a black box -->
+  <g fill="#2B4054">
+    <rect x="30" y="108" width="196" height="9" rx="4"/>
+    <rect x="30" y="146" width="196" height="9" rx="4"/>
+  </g>
+  <!-- an arrow slit, and what is behind it -->
+  <rect x="112" y="166" width="32" height="30" rx="8" fill="#16212E"/>
+  <circle cx="121" cy="181" r="5" fill="#C73E3A"/>
+  <circle cx="135" cy="181" r="5" fill="#C73E3A"/>
+</svg>

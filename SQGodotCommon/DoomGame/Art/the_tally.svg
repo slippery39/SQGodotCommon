@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- The Tally. Two to you every turn, and it is counting. -->
+  <path d="M74 244 L88 128 q40 -18 80 0 L182 244 z" fill="#0C131B"/>
+  <path d="M88 134 q-8 -54 40 -54 q48 0 40 54 q-40 16 -80 0 z" fill="#0C131B"/>
+  <circle cx="112" cy="94" r="6" fill="#C73E3A"/>
+  <circle cx="144" cy="94" r="6" fill="#C73E3A"/>
+  <!-- the marks it has cut into itself: five-bar gates, the read of the card -->
+  <g stroke="#2B4054" stroke-width="7" stroke-linecap="round">
+    <path d="M98 158 L98 190"/><path d="M112 158 L112 190"/><path d="M126 158 L126 190"/>
+    <path d="M140 158 L140 190"/><path d="M94 194 L146 154"/>
+    <path d="M100 206 L100 234"/><path d="M114 206 L114 234"/><path d="M128 206 L128 234"/>
+    <path d="M142 206 L142 234"/><path d="M96 238 L148 202"/>
+  </g>
+  <!-- the stylus it cuts with -->
+  <path d="M170 140 L216 96" stroke="#0C131B" stroke-width="15" stroke-linecap="round"/>
+  <path d="M212 92 L242 62 L250 72 L222 102 z" fill="#2B4054"/>
+</svg>
