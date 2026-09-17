@@ -19,7 +19,16 @@ namespace DoomGame;
 /// </summary>
 public partial class DoomBoard : Node2D
 {
-	private const int Seed = 42;
+	/// <summary>
+	/// Rolled once per run, and SHOWN on the theme-select screen so a run can be named and replayed.
+	///
+	/// It was a const 42, which made every playthrough of the build byte-identical: same Opponents,
+	/// same traits, same three cards offered on every floor. The schedule is meant to be the fixed
+	/// part; the enemies and the rewards are what the seed is for.
+	///
+	/// Kept small so `RewardsFor`'s `seed * 104729` stays a long way from overflowing.
+	/// </summary>
+	private int _seed;
 
 	/// <summary>How much log to keep. Enough to watch a turn resolve, not enough to grow forever.</summary>
 	private const int LogLines = 40;
@@ -28,11 +37,30 @@ public partial class DoomBoard : Node2D
 	private GameState _state;
 
 	private Label _scenarioLabel;
+	private DoomClockDial _clockDial;
 	private Label _descriptionLabel;
 	private Label _opponentHealthLabel;
 	private ProgressBar _opponentHealthBar;
 	private Label _floorLabel;
 	private Label _lifeLabel;
+	private Control _lifePip;
+	private CanvasLayer _layer;
+	private Control _overlay;
+
+	/// <summary>
+	/// Who was standing in each lane at the LAST repaint, by object id.
+	///
+	/// The board animates a lane by comparing this to what is there now: gained a body, pop it;
+	/// lost one, flash it. The alternative was putting a `Lane` on `UnitDiedEvent` and
+	/// `EnemyDiedEvent` purely to serve the front end, and a death event does not otherwise need to
+	/// know where it happened.
+	///
+	/// **This is not the UI computing a game fact.** It decides nothing and nothing reads it but the
+	/// animator; it is bookkeeping about what this screen drew last time, which is the one kind of
+	/// state a view is entitled to keep.
+	/// </summary>
+	private readonly int[] _lastEnemyInLane = new int[DoomBattle.LaneCount];
+	private readonly int[] _lastUnitInLane = new int[DoomBattle.LaneCount];
 	private Label _turnLabel;
 	private HBoxContainer _energyPips;
 	private Label _logLabel;
@@ -41,6 +69,8 @@ public partial class DoomBoard : Node2D
 	private Button _endTurnButton;
 	private DoomHandView _hand;
 	private DoomIntermission _intermission;
+	private DoomCardInspector _inspector;
+	private DoomThemeSelect _themeSelect;
 	private Label _doomFlash;
 
 	/// <summary>Stops AfterBattle being applied twice: Render runs on every action, IsOver latches.</summary>
@@ -51,13 +81,45 @@ public partial class DoomBoard : Node2D
 
 	public override void _Ready()
 	{
+		// Before BuildUi: the theme-select screen shows the seed, and a run you cannot name is a
+		// run you cannot report a bug about.
+		_seed = (int)GD.RandRange(1, 9999);
+		DoomAnimator.LoadConfiguredSpeed();
+
 		BuildUi();
-		StartRun();
+
+		// `-- --autostart` skips the picker and drops straight into floor 1 of the default act.
+		// This is here for the screenshot loop: `--write-movie` cannot click a button, so without
+		// it every capture of this project is a picture of the theme select screen.
+		if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--autostart") >= 0)
+		{
+			StartRun(DoomTheme.LongEmergency);
+
+			// `-- --autostart --autoturn` ends a turn on a timer. **Animation cannot be verified
+			// from a still board**: nothing moves until state changes, so every capture of a fresh
+			// battle shows a settled screen and proves nothing. This drives real turns through the
+			// real engine so a capture catches damage numbers, pops and flashes mid-flight.
+			if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--autoturn") >= 0)
+			{
+				var ticker = new Timer { WaitTime = 1.6, Autostart = true };
+				ticker.Timeout += OnEndTurn;
+				AddChild(ticker);
+			}
+
+			return;
+		}
+
+		_themeSelect.Show();
 	}
 
-	private void StartRun()
+	/// <summary>
+	/// Starts the run on the chosen apocalypse. **The theme is picked once and fixed** — it decides
+	/// the whole sequence of dooms, so nothing after this point may change it.
+	/// </summary>
+	private void StartRun(DoomTheme theme)
 	{
-		_run = StarterContent.NewRun(Seed);
+		_themeSelect.Hide();
+		_run = StarterContent.NewRun(_seed) with { Theme = theme };
 		StartBattleOnCurrentFloor();
 	}
 
@@ -69,6 +131,13 @@ public partial class DoomBoard : Node2D
 	{
 		_battleResolved = false;
 		_intermission.Hide();
+
+		// A new battle is a new board, not a change to the old one. Without this every lane of the
+		// opening position pops in and the last floor's dead bodies flash on a field they were
+		// never on — the animator would be describing a transition that did not happen.
+		_firstPaint = true;
+		System.Array.Clear(_lastEnemyInLane);
+		System.Array.Clear(_lastUnitInLane);
 
 		// Not every floor is a battle. The front end asks the SAME content function the simulator
 		// does — if these two ever disagree about what a floor is, every measured number is about
@@ -86,8 +155,8 @@ public partial class DoomBoard : Node2D
 		var (state, events) = _run.StartBattle(
 			scenario,
 			StarterContent.CountdownFor(scenario),
-			StarterContent.EnemiesFor(_run.Floor, Seed),
-			opponent: StarterContent.OpponentFor(_run.Floor, Seed)
+			StarterContent.EnemiesFor(_run.Floor, _seed),
+			opponent: StarterContent.OpponentFor(_run.Floor, _seed)
 		);
 
 		_state = state;
@@ -122,7 +191,7 @@ public partial class DoomBoard : Node2D
 
 		_intermission.ShowFloorCleared(before, after, battle.DoomsFired);
 		_intermission.OfferRewards(
-			StarterContent.RewardsFor(after.Theme, Seed, after.Floor),
+			StarterContent.RewardsFor(after.Theme, _seed, after.Floor),
 			StarterContent.ScenarioFor(after.Theme, after.Floor),
 			after.Floor
 		);
@@ -211,10 +280,12 @@ public partial class DoomBoard : Node2D
 		var player = _state.GetPlayer();
 		var opponent = _state.GetOpponent();
 
-		var turnWord = battle.CountdownRemaining == 1 ? "TURN" : "TURNS";
-		_scenarioLabel.Text =
-			$"{battle.Scenario.ToString().ToUpperInvariant()} — {battle.CountdownRemaining} {turnWord}";
+		// The countdown is the DIAL's job now. It was also spelled out at the end of this line, and
+		// two readouts of one number is how they come to disagree — the banner says WHAT is coming,
+		// the dial says HOW LONG.
+		_scenarioLabel.Text = DoomPalette.Caps(battle.Scenario.ToString());
 		_descriptionLabel.Text = StarterContent.DescriptionFor(battle.Scenario);
+		_clockDial.Show(battle.CountdownRemaining, battle.CountdownTotal);
 
 		// Clamped for DISPLAY only. Overkill leaves real health negative, which is correct in the
 		// engine and reads as a bug on a health bar: the last hit showed "-1 / 26".
@@ -225,6 +296,8 @@ public partial class DoomBoard : Node2D
 
 		for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
 			RenderLane(lane, opponent);
+
+		AnimateEvents(events);
 
 		_floorLabel.Text = $"FLOOR {_run.Floor}";
 		_lifeLabel.Text = $"{player.Life} / {player.MaxLife}";
@@ -247,6 +320,10 @@ public partial class DoomBoard : Node2D
 		{
 			_endTurnButton.Text = "END TURN";
 		}
+
+		// LAST. Everything above it asks "is this the opening position", and the answer has to stay
+		// true for the whole of that repaint.
+		_firstPaint = false;
 	}
 
 	private void RenderLane(int lane, Opponent opponent)
@@ -256,6 +333,8 @@ public partial class DoomBoard : Node2D
 			_enemyLanes[lane].ShowEmpty();
 		else
 			_enemyLanes[lane].ShowEnemy(enemy);
+
+		AnimateLane(_enemyLanes[lane].Root, _lastEnemyInLane, lane, enemy?.Id ?? 0);
 
 		// The summon telegraph: ONE marker in the lane it is coming to. The delay between the
 		// announcement and the body landing is what keeps the Opponent reachable at all, so this is
@@ -269,6 +348,75 @@ public partial class DoomBoard : Node2D
 			_unitLanes[lane].ShowEmpty();
 		else
 			_unitLanes[lane].ShowUnit(card, card.HasComponent<CompanionComponent>());
+
+		AnimateLane(_unitLanes[lane].Root, _lastUnitInLane, lane, card?.Id ?? 0);
+	}
+
+	/// <summary>
+	/// Marks a lane that changed hands, and records who holds it now.
+	///
+	/// A body ARRIVING pops; a body LEAVING flashes red. The same two cases cover a card you played,
+	/// an enemy the Opponent dropped in, a unit that died and an enemy you killed — which is why
+	/// this is driven by occupancy rather than by four separate events.
+	/// </summary>
+	private void AnimateLane(Control cell, int[] previous, int lane, int occupant)
+	{
+		var before = previous[lane];
+		previous[lane] = occupant;
+
+		// First paint of a battle. Everything would "arrive" at once and the board would jitter its
+		// way in, so the opening position is simply drawn.
+		if (_firstPaint)
+			return;
+
+		if (occupant != 0 && occupant != before)
+			DoomAnimator.Pop(cell);
+		else if (occupant == 0 && before != 0)
+			DoomAnimator.Flash(cell, DoomPalette.Red);
+	}
+
+	private bool _firstPaint = true;
+
+	/// <summary>
+	/// The numbers that moved, floated off the thing they came out of.
+	///
+	/// Lane changes are NOT handled here — see <see cref="AnimateLane"/>. What is left is the
+	/// arithmetic a player would otherwise have to notice by watching a bar: damage to the
+	/// Opponent, damage to you, and life coming back.
+	/// </summary>
+	private void AnimateEvents(ImmutableList<GameEvent> events)
+	{
+		if (DoomAnimator.Instant || _firstPaint)
+			return;
+
+		foreach (var e in events)
+			switch (e)
+			{
+				case OpponentDamagedEvent hit:
+					DoomAnimator.Float(
+						_overlay,
+						_opponentHealthBar,
+						$"-{hit.Amount}",
+						DoomPalette.Bone
+					);
+					DoomAnimator.Flash(_opponentHealthBar, new Color(1.9f, 1.9f, 1.9f));
+					break;
+
+				// Losing life gets the shake as well as the number. It is the only counter in the
+				// game that cannot be rebuilt, so it is the one that never scrolls past quietly.
+				case PlayerDamagedEvent hurt:
+					DoomAnimator.Float(_overlay, _lifePip, $"-{hurt.Amount}", DoomPalette.Red);
+					DoomAnimator.Shake(_layer);
+					break;
+
+				case IrradiatedDrawnEvent:
+					DoomAnimator.Float(_overlay, _lifePip, "-1", DoomPalette.Red);
+					break;
+
+				case LifeGainedEvent gained:
+					DoomAnimator.Float(_overlay, _lifePip, $"+{gained.Amount}", DoomPalette.Bone);
+					break;
+			}
 	}
 
 	/// <summary>
@@ -310,7 +458,7 @@ public partial class DoomBoard : Node2D
 	/// </summary>
 	private string FlashDoom(DoomResolvedEvent fired)
 	{
-		var name = fired.Scenario.ToString().ToUpperInvariant();
+		var name = DoomPalette.Caps(fired.Scenario.ToString());
 
 		_doomFlash.Text = $"{name} LANDS";
 		_doomFlash.Modulate = Colors.White;
@@ -326,6 +474,7 @@ public partial class DoomBoard : Node2D
 	private void BuildUi()
 	{
 		var layer = new CanvasLayer();
+		_layer = layer;
 		AddChild(layer);
 
 		var root = new ColorRect { Color = DoomPalette.Navy };
@@ -345,15 +494,17 @@ public partial class DoomBoard : Node2D
 		layer.AddChild(margin);
 
 		var column = new VBoxContainer();
-		column.AddThemeConstantOverride("separation", 10);
+
+		// 6, not 10. The bands came to 1096 of 1080 once the Opponent and the lane frame grew;
+		// four gaps at four pixels each is the cheapest 16px on the board. `WarnIfColumnOverflows`
+		// is what found it, and is what will find the next one.
+		column.AddThemeConstantOverride("separation", 6);
 		margin.AddChild(column);
 
 		column.AddChild(BuildBanner());
 		column.AddChild(BuildOpponent());
-		column.AddChild(BuildLaneRow(_enemyLanes, showsTelegraph: true));
-		column.AddChild(BuildLaneRow(_unitLanes, showsTelegraph: false));
+		column.AddChild(BuildLaneGrid());
 		column.AddChild(BuildStatusStrip());
-		column.AddChild(BuildFooter());
 
 		// The fan is a Node2D and draws where it is told, so the column reserves the space rather
 		// than containing it. Added to the same CanvasLayer so that a dragged card's global
@@ -380,15 +531,59 @@ public partial class DoomBoard : Node2D
 		//
 		// Every Control here is presentation: the cards are Node2D, and the only thing on this
 		// screen that wants a click is the End Turn button. So everything else steps out of the way.
+		layer.AddChild(BuildLogOverlay());
+
+		// Floating damage numbers live here: a full-rect layer above the board that never takes a
+		// click. Parenting them to the thing they describe would let a container clip them the
+		// moment they rose past its edge.
+		_overlay = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
+		_overlay.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+		layer.AddChild(_overlay);
+
 		_doomFlash = DoomPalette.Text("", 88, DoomPalette.Red);
 		_doomFlash.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 		_doomFlash.VerticalAlignment = VerticalAlignment.Center;
 		_doomFlash.Visible = false;
 		layer.AddChild(_doomFlash);
 
+		_inspector = new DoomCardInspector(layer, new Vector2(1500, 740));
 		_intermission = new DoomIntermission(layer, StartBattleOnCurrentFloor, TakeReward);
+		_themeSelect = new DoomThemeSelect(layer, _seed, StartRun);
 
 		MakeTransparentToMouse(layer);
+		WarnIfColumnOverflows(column);
+	}
+
+	/// <summary>
+	/// Shouts if the bands no longer fit the canvas.
+	///
+	/// **This has now gone wrong three times in one session**, and every time the symptom was the
+	/// same and told you nothing: the hand quietly slid under the status strip, because the fan is
+	/// positioned against the bottom of the screen while the column grows downward from the top.
+	/// Nothing errors, nothing logs, and the band that actually grew is not the band that looks
+	/// broken — the last time it was the Opponent's hood, four regions away.
+	///
+	/// Deferred a frame because a Control has no size until the container has laid it out.
+	/// </summary>
+	private void WarnIfColumnOverflows(Control column)
+	{
+		Callable
+			.From(() =>
+			{
+				var canvas = GetViewportRect().Size.Y;
+
+				// The column ALREADY contains the reserved hand space as its last child, so adding
+				// BandHeight again counts the fan twice — the first version of this check reported
+				// 1456 of 1080 for a board that was sixteen pixels over.
+				var used = column.Size.Y;
+
+				if (used > canvas)
+					GD.PushWarning(
+						$"DoomBoard: the bands need {used:0}px of {canvas:0}. The hand will be "
+							+ $"{used - canvas:0}px under the status strip. Shrink a band."
+					);
+			})
+			.CallDeferred();
 	}
 
 	private static void MakeTransparentToMouse(Node node)
@@ -496,54 +691,123 @@ public partial class DoomBoard : Node2D
 		var panel = new PanelContainer();
 		panel.AddThemeStyleboxOverride("panel", DoomPalette.Box(DoomPalette.Slate));
 
-		var rows = new VBoxContainer();
-		_scenarioLabel = DoomPalette.Text("", 38, DoomPalette.Bone, HorizontalAlignment.Left);
-		_descriptionLabel = DoomPalette.Text("", 18, DoomPalette.Bone, HorizontalAlignment.Left);
-		_descriptionLabel.Modulate = new Color(1, 1, 1, 0.7f);
+		var across = new HBoxContainer();
+		across.AddThemeConstantOverride("separation", 24);
+
+		var rows = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+		_scenarioLabel = DoomPalette.Text("", 40, DoomPalette.Bone, HorizontalAlignment.Left);
+		_descriptionLabel = DoomPalette.Text("", 22, DoomPalette.Bone, HorizontalAlignment.Left);
+		_descriptionLabel.Modulate = new Color(1, 1, 1, 0.75f);
 
 		rows.AddChild(_scenarioLabel);
 		rows.AddChild(_descriptionLabel);
-		panel.AddChild(rows);
+		across.AddChild(rows);
+
+		// The corner the mockup reserves for it, and nothing else goes there.
+		_clockDial = new DoomClockDial { SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
+		across.AddChild(_clockDial);
+
+		panel.AddChild(across);
 		return panel;
 	}
 
+	/// <summary>
+	/// The thing you are trying to kill: a hood standing behind its own health bar.
+	///
+	/// **The bar is a centred pill, not a full-width slab.** Spanning the board it was the loudest
+	/// object on screen — a solid red bar the width of five lanes, for a number that changes a few
+	/// times a turn — and it flattened the hood into a decoration sitting above a wall. Sized to
+	/// roughly a third of the board it reads as *this creature's* health, which is what it is.
+	///
+	/// The figure OVERLAPS the bar, by a negative separation. That is the mockup's arrangement and
+	/// it is doing real work: the two are one object, and stacked with a gap they were two.
+	/// </summary>
 	private Control BuildOpponent()
 	{
 		var rows = new VBoxContainer();
-		rows.AddThemeConstantOverride("separation", 4);
+		// Enough overlap that the two read as one object, not so much that the hood becomes a sliver
+		// poking over a bar — at -20 against a 104px figure it had all but disappeared.
+		rows.AddThemeConstantOverride("separation", -16);
 
-		// The thing you are trying to kill, given a body. It was the words "THE OPPONENT" over a
-		// bar, which is the one place on this screen that had no picture of what it described.
+		// It was the words "THE OPPONENT" over a bar — the one thing on this screen with no picture
+		// of what it described.
 		rows.AddChild(
 			new TextureRect
 			{
 				Texture = DoomArt.Hooded(),
 				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 				StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-				CustomMinimumSize = new Vector2(0, 78),
+				CustomMinimumSize = new Vector2(0, 120),
 			}
 		);
 
-		var stack = new PanelContainer();
-		stack.AddThemeStyleboxOverride("panel", DoomPalette.Box(DoomPalette.Navy));
+		var stack = new PanelContainer { CustomMinimumSize = new Vector2(OpponentBarWidth, 0) };
+		stack.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
 
 		_opponentHealthBar = new ProgressBar
 		{
 			ShowPercentage = false,
-			CustomMinimumSize = new Vector2(0, 30),
+			CustomMinimumSize = new Vector2(OpponentBarWidth, 40),
 		};
 		_opponentHealthBar.AddThemeStyleboxOverride(
 			"background",
-			DoomPalette.Box(DoomPalette.EmptySlot)
+			Pill(DoomPalette.EmptySlot, DoomPalette.Navy)
 		);
-		_opponentHealthBar.AddThemeStyleboxOverride("fill", DoomPalette.Box(DoomPalette.Red));
+		_opponentHealthBar.AddThemeStyleboxOverride("fill", Pill(DoomPalette.Red, DoomPalette.Red));
 		stack.AddChild(_opponentHealthBar);
 
-		_opponentHealthLabel = DoomPalette.Text("", 18, DoomPalette.Bone);
+		_opponentHealthLabel = DoomPalette.Text("", 24, DoomPalette.Bone);
 		stack.AddChild(_opponentHealthLabel);
 
-		rows.AddChild(Centred(stack));
+		// **NOT `Centred`.** That helper forces its child to the lane row's width, which is exactly
+		// the full-width slab this rework exists to undo — it would have quietly stretched the pill
+		// straight back to 1548 and made the change look like it had not been applied.
+		var centre = new CenterContainer();
+		centre.AddChild(stack);
+		rows.AddChild(centre);
+
 		return rows;
+	}
+
+	/// <summary>Roughly a third of the board — the mockup's proportion, and enough for "120 / 120".</summary>
+	private const int OpponentBarWidth = 560;
+
+	/// <summary>A fully rounded bar end. A pill, not a rectangle with soft corners.</summary>
+	private static StyleBoxFlat Pill(Color fill, Color border)
+	{
+		var box = DoomPalette.Box(fill, border, 3);
+		box.CornerRadiusTopLeft = box.CornerRadiusBottomLeft = 20;
+		box.CornerRadiusTopRight = box.CornerRadiusBottomRight = 20;
+		box.ContentMarginLeft = box.ContentMarginRight = 0;
+		return box;
+	}
+
+	/// <summary>
+	/// Both rows inside one panel.
+	///
+	/// The mockup frames the ten slots as a single object rather than as two loose rows, and that is
+	/// the correct reading of the game: your row and their row are one board, and a lane is a COLUMN
+	/// through both. Framed together, the eye travels up and down a lane; framed apart, it travels
+	/// along each row and has to do the pairing itself.
+	/// </summary>
+	private Control BuildLaneGrid()
+	{
+		var panel = new PanelContainer();
+
+		var box = DoomPalette.Box(new Color(0, 0, 0, 0.22f), DoomPalette.Slate, 2);
+		box.CornerRadiusTopLeft = box.CornerRadiusTopRight = 14;
+		box.CornerRadiusBottomLeft = box.CornerRadiusBottomRight = 14;
+		box.ContentMarginLeft = box.ContentMarginRight = 14;
+		box.ContentMarginTop = box.ContentMarginBottom = 8;
+		panel.AddThemeStyleboxOverride("panel", box);
+
+		var rows = new VBoxContainer();
+		rows.AddThemeConstantOverride("separation", 10);
+		rows.AddChild(BuildLaneRow(_enemyLanes, showsTelegraph: true));
+		rows.AddChild(BuildLaneRow(_unitLanes, showsTelegraph: false));
+		panel.AddChild(rows);
+
+		return Centred(panel);
 	}
 
 	private static Control BuildLaneRow(DoomLaneCell[] cells, bool showsTelegraph)
@@ -588,21 +852,32 @@ public partial class DoomBoard : Node2D
 
 		var row = new HBoxContainer();
 		row.AddThemeConstantOverride("separation", 18);
-		row.Alignment = BoxContainer.AlignmentMode.Center;
 
-		_floorLabel = DoomPalette.Text("", 20, DoomPalette.Bone);
+		_floorLabel = DoomPalette.Text("", 24, DoomPalette.Bone);
 		row.AddChild(_floorLabel);
 
-		var (lifePip, lifeLabel) = DoomPalette.Pip(DoomPalette.Red, 18);
+		var (lifePip, lifeLabel) = DoomPalette.Pip(DoomPalette.Red, 24);
 		_lifeLabel = lifeLabel;
+		_lifePip = lifePip;
 		row.AddChild(lifePip);
 
 		_energyPips = new HBoxContainer();
 		_energyPips.AddThemeConstantOverride("separation", 6);
 		row.AddChild(_energyPips);
 
-		_turnLabel = DoomPalette.Text("", 20, DoomPalette.Bone);
+		_turnLabel = DoomPalette.Text("", 24, DoomPalette.Bone);
 		row.AddChild(_turnLabel);
+
+		// **End Turn lives here now.** It had a band of its own, 80px tall and otherwise empty, and
+		// the column was already 50px over the 1080 canvas because of it — which is why the hand
+		// was pressed against the bottom edge with its stat badges half off-screen. The one control
+		// the player clicks belongs beside the state it acts on, not in a row by itself.
+		row.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
+
+		_endTurnButton = new Button { Text = "END TURN", CustomMinimumSize = new Vector2(240, 62) };
+		_endTurnButton.AddThemeFontSizeOverride("font_size", 26);
+		_endTurnButton.Pressed += OnEndTurn;
+		row.AddChild(_endTurnButton);
 
 		panel.AddChild(row);
 		return Centred(panel);
@@ -646,45 +921,71 @@ public partial class DoomBoard : Node2D
 	/// It is a debugging tool rather than part of the game's face, so it stays hidden until asked
 	/// for. Animations will replace it, and then it can go.
 	/// </summary>
-	private Control BuildFooter()
+	private Control BuildLogOverlay()
 	{
-		var row = new HBoxContainer();
-		row.AddThemeConstantOverride("separation", 16);
-
-		// A Label grows its OWN minimum size with its content, so an append-only log pushed this row
-		// taller every turn and stretched the End Turn button with it. Fixed height, text scrolls
-		// inside it, and the line count is capped.
+		// An OVERLAY, not a band. As a row in the column it cost 80px of a budget that was already
+		// over, for a panel that is hidden in normal play — a debugging tool was charging the game
+		// rent. Anchored to a corner it costs nothing until F3 asks for it.
+		//
+		// A Label grows its OWN minimum size with its content, so an append-only log stretched
+		// whatever contained it. Fixed height, text scrolls inside it, line count capped.
 		_logScroll = new ScrollContainer
 		{
-			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-			CustomMinimumSize = new Vector2(0, 80),
+			CustomMinimumSize = new Vector2(620, 240),
 			Visible = false,
 		};
+		_logScroll.SetAnchorsPreset(Control.LayoutPreset.TopLeft);
+		_logScroll.Position = new Vector2(32, 120);
 
 		var logPanel = new PanelContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
 		logPanel.AddThemeStyleboxOverride("panel", DoomPalette.Box(DoomPalette.EmptySlot));
-		_logLabel = DoomPalette.Text("", 15, DoomPalette.Bone, HorizontalAlignment.Left);
+		_logLabel = DoomPalette.Text("", 17, DoomPalette.Bone, HorizontalAlignment.Left);
 		_logLabel.VerticalAlignment = VerticalAlignment.Top;
 		logPanel.AddChild(_logLabel);
 		_logScroll.AddChild(logPanel);
-		row.AddChild(_logScroll);
 
-		// Holds the button's place whether or not the log is showing, so F3 never moves the one
-		// control the player actually uses.
-		row.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
+		return _logScroll;
+	}
 
-		_endTurnButton = new Button { Text = "END TURN", CustomMinimumSize = new Vector2(260, 80) };
-		_endTurnButton.AddThemeFontSizeOverride("font_size", 24);
-		_endTurnButton.Pressed += OnEndTurn;
-		row.AddChild(_endTurnButton);
+	/// <summary>
+	/// Keeps the keyword panel pointed at whatever the cursor is over.
+	///
+	/// Per frame, because that is the rate `CardUIManager` recomputes the hovered card at — hooking
+	/// a signal instead would mean a second opinion about which of several overlapping cards is the
+	/// one being read. The panel itself does nothing when the answer has not changed.
+	/// </summary>
+	public override void _Process(double delta)
+	{
+		if (_state is null || _inspector is null)
+			return;
 
-		return Centred(row);
+		_inspector.Follow(_state.CardsIn(ZoneType.Hand).ToDictionary(c => c.Id.ToString()));
 	}
 
 	public override void _Input(InputEvent @event)
 	{
 		if (@event is InputEventKey { Pressed: true, Keycode: Key.F3 })
 			_logScroll.Visible = !_logScroll.Visible;
+
+		// F4 cycles the animation speed live. The configured value in ProjectSettings is the one
+		// that ships; this is for deciding what that value should BE, which cannot be done by
+		// reasoning about it — you have to watch a turn at each speed.
+		if (@event is InputEventKey { Pressed: true, Keycode: Key.F4 })
+		{
+			DoomAnimator.Speed = DoomAnimator.Speed switch
+			{
+				>= 2f => 0f,
+				>= 1f => 2f,
+				> 0f => 1f,
+				_ => 1f,
+			};
+
+			Report(
+				DoomAnimator.Instant
+					? "animation OFF"
+					: $"animation speed {DoomAnimator.Speed:0.##}x"
+			);
+		}
 	}
 
 	/// <summary>Newest first, and CAPPED. An unbounded log is a memory leak with a user interface.</summary>

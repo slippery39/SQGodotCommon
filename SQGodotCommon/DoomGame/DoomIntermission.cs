@@ -145,7 +145,7 @@ public sealed class DoomIntermission
 	public void OfferRewards(IEnumerable<RunCard> cards, DoomScenario next, int nextFloor)
 	{
 		_coming.Text =
-			$"Floor {nextFloor} below:  {next.ToString().ToUpperInvariant()}  —  "
+			$"Floor {nextFloor} below:  {DoomPalette.Caps(next.ToString())}  —  "
 			+ StarterContent.DescriptionFor(next);
 
 		foreach (var child in _offers.GetChildren())

@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Godot;
 
 namespace DoomGame;
@@ -72,6 +73,16 @@ public static class DoomPalette
 
 		return (panel, label);
 	}
+
+	/// <summary>
+	/// A PascalCase content name as display text: `AiUprising` -> "AI UPRISING".
+	///
+	/// Formatting, not content. The scenarios have no authored display name and do not need one —
+	/// but `AIUPRISING` on a screen is a bug in the typography, and two screens spelling the same
+	/// doom differently is worse.
+	/// </summary>
+	public static string Caps(string pascalCase) =>
+		Regex.Replace(pascalCase, "(?<!^)([A-Z])", " $1").ToUpperInvariant();
 
 	public static Label Text(
 		string text,
