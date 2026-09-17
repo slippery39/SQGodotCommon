@@ -36,6 +36,60 @@ Writes a numbered PNG per frame (and a stray .wav). Take a LATE frame: the conta
 card tweens have not settled on frame 0. Needs a real renderer, so it opens a window briefly —
 `--headless` cannot render at all.
 
+**New art must be IMPORTED before the game can see it.** Godot only imports assets when the editor
+runs, and the game launched with `--path` does not do it — so a new `.svg` silently does not appear
+and `ResourceLoader.Exists` returns false with no error anywhere:
+
+```
+godot-mono --path SQGodotCommon --headless --import
+```
+
+Run it after adding or renaming anything in `SQGodotCommon/DoomGame/Art/`. It writes the `.import`
+files beside each asset; if those are missing, that is the symptom.
+
+**Pin the window to one monitor** so a capture cannot land on top of other work — and never drive it
+with synthetic clicks (see `HANDOFF-DoomPacingAndRewards.md` §4):
+
+```
+godot-mono --path SQGodotCommon --position 1920,0 --resolution 1600x900   --write-movie shots/doom.png --fixed-fps 10 --quit-after 40   DoomGame/doom_board.tscn -- --autostart
+```
+
+`--position` takes virtual-desktop coordinates, so `1920,0` is the second monitor on a side-by-side
+pair. **`-- --autostart` skips the theme picker** and drops straight into floor 1 — without it every
+capture is a picture of the menu, because `--write-movie` cannot click a button. `shots/` must exist
+first or Godot writes nothing and only complains about the `.wav`.
+
+**Add `--autoturn` to see ANIMATION.** It ends a turn every 1.6s through the real engine:
+
+```
+... --fixed-fps 20 --quit-after 140 DoomGame/doom_board.tscn -- --autostart --autoturn
+```
+
+**A still board proves nothing about motion** — nothing moves until state changes, so a capture of a
+fresh battle is always a settled screen. This is what caught `Hand2D` drawing every card in from
+global x=0, which had been true for three sessions and had never once been seen.
+
+To find the interesting frames, diff them against a settled one rather than guessing at the timing:
+
+```python
+from PIL import Image, ImageChops
+import glob
+fs = sorted(glob.glob('shots_anim/*.png'))
+base = Image.open(fs[10]).convert('RGB')
+for f in fs[25:130]:
+    d = ImageChops.difference(Image.open(f).convert('RGB'), base).convert('L')
+    print(sum(i * c for i, c in enumerate(d.histogram())) / 1e6, f)
+```
+
+**The card preview needs no battle at all**, and is the right loop for card work:
+
+```
+godot-mono --path SQGodotCommon --position 1920,0 --resolution 1600x900   --write-movie shots_cards/cards.png --fixed-fps 10 --quit-after 25   DoomGame/doom_card_preview.tscn
+```
+
+It loads the cards that BREAK the layout — widest statline, longest name, a Rite with no stat badge
+— at hand scale and at hover scale. Three card bugs were found in it that the board had never shown.
+
 Headless prints shader-compiler errors about `custom_samplers` when the card scene loads. That is
 the dummy renderer failing to compile the card outline shader, not a broken scene — the run still
 exits 0. Ignore them headless; judge the cards on a real renderer.
