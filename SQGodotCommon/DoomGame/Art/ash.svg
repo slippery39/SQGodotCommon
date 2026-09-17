@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Ash, the Companion. The ONE gold figure in the game — that is what makes it findable across
+       five lanes. No glow: flat means flat, and a soft halo is a gradient wearing a hat. -->
+  <!-- a shouldered stave, behind, so the silhouette is not a plain bell -->
+  <path d="M170 244 L146 60" stroke="#E3B23C" stroke-width="11" stroke-linecap="round"/>
+  <circle cx="145" cy="54" r="13" fill="#E3B23C"/>
+  <!-- body, flared -->
+  <path d="M74 240 L92 142 q36 -18 72 0 L182 240 z" fill="#E3B23C"/>
+  <!-- hood -->
+  <path d="M92 146 q-12 -58 36 -58 q48 0 36 58 q-36 16 -72 0 z" fill="#E3B23C"/>
+  <!-- the face is dark, and it HAS eyes: it is on your side, and it looks back -->
+  <path d="M104 114 q24 -12 48 0 q-4 30 -24 30 q-20 0 -24 -30 z" fill="#16212E"/>
+  <circle cx="117" cy="122" r="6" fill="#E3B23C"/>
+  <circle cx="139" cy="122" r="6" fill="#E3B23C"/>
+  <!-- hem, so it plants rather than floats -->
+  <rect x="70" y="232" width="116" height="12" rx="6" fill="#E3B23C"/>
+</svg>

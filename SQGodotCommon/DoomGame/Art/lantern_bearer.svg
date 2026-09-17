@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Lantern Bearer: small light, long night. Gold is legal here — the light is YOURS.
+       The light is shown by RAYS, not by a soft glow. Flat style, and it survives any renderer. -->
+  <g stroke="#E3B23C" stroke-width="9" stroke-linecap="round">
+    <path d="M176 40 L176 20"/>
+    <path d="M222 62 L238 50"/>
+    <path d="M226 116 L246 116"/>
+    <path d="M132 54 L120 40"/>
+  </g>
+  <!-- figure, turned toward the lantern -->
+  <path d="M62 240 L78 144 q28 -16 56 0 L150 240 z" fill="#0C131B"/>
+  <path d="M78 148 q-10 -52 28 -52 q38 0 28 52 q-28 14 -56 0 z" fill="#0C131B"/>
+  <path d="M120 100 q14 18 10 40 L92 152 q18 -26 10 -50 z" fill="#2B4054"/>
+  <!-- the raised arm -->
+  <path d="M130 152 L168 110" stroke="#0C131B" stroke-width="18" stroke-linecap="round"/>
+  <!-- lantern: hanger, cage, flame -->
+  <path d="M176 70 q0 -16 -13 -16" stroke="#0C131B" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <rect x="150" y="68" width="52" height="13" rx="6" fill="#0C131B"/>
+  <path d="M154 81 L198 81 L203 130 L149 130 z" fill="#0C131B"/>
+  <rect x="146" y="128" width="60" height="13" rx="6" fill="#0C131B"/>
+  <path d="M176 90 q13 14 9 27 q-4 11 -9 11 q-5 0 -9 -11 q-4 -13 9 -27 z" fill="#E3B23C"/>
+</svg>

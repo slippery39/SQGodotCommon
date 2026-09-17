@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Scavenger. Sack held OUT to one side so it reads as a separate mass, not a lump on the body. -->
+  <!-- the hooked pole, behind, leaning -->
+  <g stroke="#2B4054" fill="none" stroke-linecap="round">
+    <path d="M186 240 L146 44" stroke-width="10"/>
+    <path d="M146 44 q-4 -22 -26 -18 q-18 4 -14 22" stroke-width="10"/>
+  </g>
+  <!-- the sack, dragged in the near hand -->
+  <path d="M28 236 q-14 -46 8 -70 q22 -24 48 -4 q22 18 12 74 z" fill="#2B4054"/>
+  <path d="M40 166 q22 -16 44 -4" stroke="#16212E" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <!-- arm to the sack -->
+  <path d="M96 150 L62 172" stroke="#0C131B" stroke-width="16" stroke-linecap="round"/>
+  <!-- body: narrow at the shoulders, flared at the hem -->
+  <path d="M84 240 L100 138 q28 -14 56 0 L172 240 z" fill="#0C131B"/>
+  <!-- hood, pulled forward over the face -->
+  <path d="M100 142 q-10 -56 28 -56 q38 0 28 56 q-28 12 -56 0 z" fill="#0C131B"/>
+  <path d="M148 96 q14 18 8 40 L128 148 q14 -26 4 -54 z" fill="#16212E"/>
+  <!-- the face is a hole, with one eye -->
+  <path d="M112 112 q16 -10 32 0 q-4 24 -16 24 q-12 0 -16 -24 z" fill="#2B4054"/>
+  <circle cx="127" cy="118" r="6" fill="#C73E3A"/>
+  <!-- ground line -->
+  <rect x="20" y="232" width="164" height="10" rx="5" fill="#0C131B"/>
+</svg>

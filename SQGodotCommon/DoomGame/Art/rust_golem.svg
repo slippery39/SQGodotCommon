@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Rust Golem: slow, very hard to move. All right angles and mass. -->
+  <g fill="#0C131B">
+    <!-- legs: short, wide, planted -->
+    <rect x="72" y="182" width="42" height="56" rx="4"/>
+    <rect x="142" y="182" width="42" height="56" rx="4"/>
+    <rect x="62" y="226" width="62" height="14" rx="5"/>
+    <rect x="132" y="226" width="62" height="14" rx="5"/>
+    <!-- torso block -->
+    <rect x="66" y="98" width="124" height="88" rx="8"/>
+    <!-- shoulder pauldrons, oversized -->
+    <path d="M32 106 L72 92 L72 154 L36 148 z"/>
+    <path d="M224 106 L184 92 L184 154 L220 148 z"/>
+    <!-- arms, hanging -->
+    <rect x="28" y="144" width="34" height="68" rx="6"/>
+    <rect x="194" y="144" width="34" height="68" rx="6"/>
+    <!-- small head, sunk between the shoulders -->
+    <rect x="104" y="58" width="48" height="44" rx="6"/>
+  </g>
+  <!-- plating seam and rivets, slate -->
+  <rect x="66" y="136" width="124" height="8" fill="#233444"/>
+  <g fill="#233444">
+    <circle cx="82" cy="114" r="6"/><circle cx="174" cy="114" r="6"/>
+    <circle cx="82" cy="166" r="6"/><circle cx="174" cy="166" r="6"/>
+  </g>
+  <!-- one lit slit -->
+  <rect x="114" y="76" width="28" height="9" rx="4" fill="#C73E3A"/>
+</svg>

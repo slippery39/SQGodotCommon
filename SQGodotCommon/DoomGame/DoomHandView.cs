@@ -18,11 +18,8 @@ namespace DoomGame;
 /// </summary>
 public sealed class DoomHandView
 {
-	/// <summary>How much a Card2D is shrunk to sit in one band of the board rather than fill a screen.</summary>
-	public const float CardScale = 0.68f;
-
 	/// <summary>Roughly how tall the scaled fan is, so the board can reserve room for it.</summary>
-	public const int BandHeight = 340;
+	public const int BandHeight = 360;
 
 	private readonly Hand2D _hand;
 
@@ -58,7 +55,7 @@ public sealed class DoomHandView
 		// A Card2D is around 500px tall in the 1920x1080 base canvas — sized for a screen that is
 		// all hand. Here the hand is one band of six, so it is scaled to fit rather than the board
 		// being shrunk around it.
-		_hand.Scale = new Vector2(CardScale, CardScale);
+		_hand.Scale = new Vector2(DoomCardFace.CardScale, DoomCardFace.CardScale);
 
 		// Spacing is in the hand's own space, so it has to out-pace the scale or the fan closes up
 		// and the names disappear under the next card.
@@ -117,96 +114,29 @@ public sealed class DoomHandView
 		foreach (var card in cards)
 			if (!present.Contains(card.Id.ToString()))
 			{
-				var ui = _hand.DrawCard();
+				// **From below the fan, not from the far left.** The parameterless `DrawCard` starts a
+				// card at global x=0 — the screen's left edge — so every draw flew in sideways
+				// across the whole board. It was invisible for three sessions because nothing ever
+				// captured a turn in flight; it only showed up once the screenshot loop could end
+				// a turn by itself. Cards now rise into the hand from under the bottom edge.
+				var ui = _hand.DrawCard(_hand.GlobalPosition + new Vector2(0, 340));
 				ui.Id = card.Id.ToString();
-				Flatten(ui);
+				DoomCardFace.Style(ui);
 			}
 
 		// SetCardsDetails applies positionally, so the list has to be ordered the way the fan
 		// currently holds its cards rather than the way the zone holds them.
 		var inFanOrder = _hand.GetCards();
-		_hand.SetCardsDetails(inFanOrder.Select(ui => DetailsFor(wanted[ui.Id])).ToList());
+		_hand.SetCardsDetails(inFanOrder.Select(ui => DoomCardFace.For(wanted[ui.Id])).ToList());
+
+		// AFTER the details: power lives on a node the shared `Details` does not know about, and a
+		// card recycled into a new hand would otherwise keep the last card's number.
+		foreach (var ui in inFanOrder)
+			DoomCardFace.ApplyStats(ui, wanted[ui.Id]);
 
 		// Affordability is shown by dimming rather than by hiding: an unaffordable card is still
 		// information — it is what you are playing around this turn.
 		foreach (var ui in inFanOrder)
 			ui.Modulate = wanted[ui.Id].Cost <= energy ? Colors.White : new Color(1, 1, 1, 0.45f);
-	}
-
-	/// <summary>
-	/// The two pieces of the shared card that `Details` does not reach.
-	///
-	/// Both are plain nodes inside the card scene rather than swappable textures, so they are found
-	/// by name and restyled once, when the card is created. Reaching into another scene's tree is
-	/// not free — if either node is renamed this silently stops working, which is why it degrades to
-	/// doing nothing rather than throwing.
-	/// </summary>
-	private static void Flatten(CardUI2D ui)
-	{
-		// The "Unit" type band: a dark stripe straight across the card face. The reference card has
-		// no such band, and the type line is already implied by the stat badge.
-		if (ui.FindChild("TypeLineBand", true, false) is ColorRect band)
-			band.Color = Colors.Transparent;
-
-		if (ui.FindChild("PowerToughnessBadge", true, false) is Sprite2D badge)
-		{
-			badge.Texture = DoomArt.StatBadge;
-
-			// Pulled in off the corner. The shared card hangs this badge past its own edge, which
-			// was fine over a frame that bled outwards and clips against a flat one.
-			badge.Position += new Vector2(-10, -26);
-		}
-	}
-
-	private static InternalCardUI2D.Details DetailsFor(DoomCard card)
-	{
-		var unit = card.GetComponent<UnitComponent>();
-
-		return new InternalCardUI2D.Details
-		{
-			Id = card.Id.ToString(),
-			CardName = card.Name,
-			ManaCost = card.Cost.ToString(),
-			// Blank: the reference card has no type line, and "Unit" floating across the face says
-			// nothing a stat badge does not already say. A Rite has no badge, which is the tell.
-			TypeLine = "",
-
-			// A rite's text is the only thing telling you what it does, so it goes where rules text
-			// goes. It is authored beside the effect it describes — see DoomEffect.Text.
-			RulesText = card.Effects.IsEmpty
-				? (card.Tags.IsEmpty ? "" : string.Join(", ", card.Tags))
-				: string.Join("\n", card.Effects.Select(e => e.Text)),
-			PowerToughness = unit is null ? "" : $"{unit.Power}/{unit.Toughness}",
-
-			// Every part of the shared card swapped for a flat one. The interaction is untouched —
-			// only the pixels change. See DoomArt.
-			// ONE solid shape. The frame is the whole card face; the name plate and rules box are
-			// cleared so nothing stacks on top of it and leaves a seam across the middle.
-			MainFrameTexture = DoomArt.Body(DoomArt.ColourFor(card.Name)),
-			NameFrameTexture = DoomArt.Blank(279, 53),
-
-			// The art FRAME as well as the plates. Leaving it unset let the shared card's stone
-			// window reappear as a brown rectangle behind the figure — a default returning is not
-			// the same as a value never set, and looks like a regression you did not make.
-			ArtFrameTexture = DoomArt.Blank(278, 198),
-			RulesTextFrameTexture = DoomArt.Blank(279, 158),
-			ManaCostFrameTexture = DoomArt.CostBadge,
-			ArtworkTexture = DoomArt.CardFigure(DoomArt.ColourFor(card.Name)),
-
-			NameColor = DoomPalette.Bone,
-			ManaCostColor = DoomPalette.Bone,
-			RulesTextColor = DoomPalette.Bone,
-
-			// The border is painted into the frame texture, so the shader outline would only
-			// double it.
-			OutlineThickness = 0f,
-
-			// Explicitly OFF. The scene sets enable_holographic false, but UpdateHolographicShader
-			// rewrites the shader from the C# field at _Ready, so the scene's value does not
-			// survive. Left unset it laid a rainbow-noise wash over every card — invisible on
-			// saturated colours, and unmistakable on the flat mid-tones this design uses.
-			Holographic = false,
-			HolographicIntensity = 0f,
-		};
 	}
 }

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Breaching Charge: straight past whatever is in the way. A rite, so the blast IS the art. -->
+  <!-- blast rays, behind -->
+  <g stroke="#1B2836" stroke-width="12" stroke-linecap="round">
+    <path d="M128 36 L128 66"/><path d="M40 84 L66 100"/><path d="M216 84 L190 100"/>
+    <path d="M34 186 L62 176"/><path d="M222 186 L194 176"/>
+  </g>
+  <!-- the charge: a strapped block -->
+  <rect x="72" y="106" width="112" height="96" rx="10" fill="#0C131B"/>
+  <rect x="72" y="136" width="112" height="16" fill="#233444"/>
+  <rect x="112" y="106" width="16" height="96" fill="#233444"/>
+  <!-- clamp feet -->
+  <rect x="64" y="196" width="24" height="24" rx="5" fill="#0C131B"/>
+  <rect x="168" y="196" width="24" height="24" rx="5" fill="#0C131B"/>
+  <!-- fuse, curling up -->
+  <path d="M150 106 q10 -34 -14 -44 q-22 -10 -14 -32" stroke="#0C131B" stroke-width="10" fill="none" stroke-linecap="round"/>
+  <!-- the spark -->
+  <path d="M122 30 L132 6 L138 26 L156 20 L142 38 L156 50 L134 48 L128 68 L120 48 L102 52 L112 36 L100 24 z" fill="#C73E3A"/>
+  <!-- armed light -->
+  <circle cx="98" cy="172" r="9" fill="#C73E3A"/>
+</svg>

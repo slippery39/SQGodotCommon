@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Ash Walker: wrapped, masked, mid-stride. Built from parts so the arms do not merge into
+       the coat — the first version read as a penguin for exactly that reason. -->
+  <!-- the wrap, streaming back off the shoulder -->
+  <path d="M92 124 L28 150 L46 162 L34 180 L96 156 z" fill="#2B4054"/>
+  <!-- back leg, trailing -->
+  <rect x="98" y="182" width="22" height="62" rx="9" fill="#2B4054" transform="rotate(12 109 213)"/>
+  <!-- front leg, planted forward -->
+  <rect x="140" y="182" width="22" height="62" rx="9" fill="#0C131B" transform="rotate(-11 151 213)"/>
+  <!-- coat: a clear trapezoid, hem well above the boots -->
+  <path d="M96 196 L104 126 q24 -12 48 0 L164 196 z" fill="#0C131B"/>
+  <!-- arms, OUTSIDE the coat silhouette on both sides -->
+  <path d="M100 136 L72 184" stroke="#0C131B" stroke-width="18" stroke-linecap="round"/>
+  <path d="M158 136 L190 176" stroke="#0C131B" stroke-width="18" stroke-linecap="round"/>
+  <!-- shoulders and hood -->
+  <path d="M100 130 q-8 -50 28 -50 q36 0 28 50 q-28 12 -56 0 z" fill="#0C131B"/>
+  <!-- goggle band and respirator: the one mid-tone, and why it reads as a survivor -->
+  <rect x="98" y="84" width="60" height="12" rx="6" fill="#2B4054"/>
+  <path d="M110 100 q18 -8 36 0 l-5 24 q-13 7 -26 0 z" fill="#2B4054"/>
+  <circle cx="128" cy="112" r="8" fill="#16212E"/>
+  <!-- boots -->
+  <rect x="88" y="236" width="40" height="13" rx="6" fill="#2B4054"/>
+  <rect x="140" y="236" width="42" height="13" rx="6" fill="#0C131B"/>
+</svg>

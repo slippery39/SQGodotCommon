@@ -42,7 +42,10 @@ public static class DoomArt
 	public static Texture2D Body(Color colour)
 	{
 		if (!Bodies.TryGetValue(colour, out var texture))
-			Bodies[colour] = texture = RoundedRect(FrameW, FrameH, colour, DoomPalette.Bone, 3, 22);
+			// Border 5, not 3. The mockup's card is edged in a clear bone line that separates it from
+			// both the board behind it and the next card in the fan; at 3 the cards bled together
+			// where they overlap.
+			Bodies[colour] = texture = RoundedRect(FrameW, FrameH, colour, DoomPalette.Bone, 5, 22);
 
 		return texture;
 	}
@@ -51,12 +54,65 @@ public static class DoomArt
 	public static Texture2D Blank(int width, int height) =>
 		RoundedRect(width, height, Colors.Transparent, Colors.Transparent, 0, 0);
 
+	private static readonly Dictionary<string, Texture2D> Drawn = new();
+
 	/// <summary>
-	/// The card's centre mark: the same silhouette that stands in a lane, in a darker shade of the
-	/// card's own colour. Reusing the lane figure is what makes a card and the body it becomes
-	/// legibly the same thing.
+	/// The authored SVG for a subject, or null if nobody has drawn it yet.
+	///
+	/// **Godot 4 imports SVG natively**, which is the whole reason this style is affordable: a card
+	/// subject is a ~1KB file of geometry on the palette, there is no atlas, no build step, and
+	/// re-tinting the entire set is a find-and-replace on five hex codes. See DoomUI.md, "Art".
+	///
+	/// Missing is NORMAL and must stay cheap — the pool grows faster than the art does, and a card
+	/// with no drawing falls back to the generated silhouette rather than to a broken texture. The
+	/// null is cached too, or every unauthored card retries a failed load on every single render.
 	/// </summary>
-	public static Texture2D CardFigure(Color colour)
+	public static Texture2D Drawing(string subject)
+	{
+		var key = FileName(subject);
+		if (Drawn.TryGetValue(key, out var cached))
+			return cached;
+
+		var path = $"res://DoomGame/Art/{key}.svg";
+		return Drawn[key] = ResourceLoader.Exists(path) ? GD.Load<Texture2D>(path) : null;
+	}
+
+	/// <summary>`Ash Walker` -> `ash_walker`. The art file is named after the card, so that adding a
+	/// drawing is dropping a file in and nothing else.</summary>
+	private static string FileName(string subject) =>
+		(subject ?? "").ToLowerInvariant().Replace(" ", "_").Replace("'", "").Replace("-", "_");
+
+	/// <summary>
+	/// The card's centre mark: the authored drawing if there is one, else the same silhouette that
+	/// stands in a lane, in a darker shade of the card's own colour. Reusing the lane figure is what
+	/// makes a card and the body it becomes legibly the same thing.
+	/// </summary>
+	public static Texture2D CardArt(string cardName, Color colour)
+	{
+		var drawing = Drawing(cardName);
+		if (drawing is null)
+			return CardFigure(colour);
+
+		if (CardDrawings.TryGetValue(cardName, out var cached))
+			return cached;
+
+		// Composed onto the art window's OWN dimensions rather than handed over at its native size.
+		// The card scene positions this sprite for a 278x198 texture, and a square 256x256 dropped
+		// in its place overflows the window and rides up over the name plate.
+		var canvas = Image.CreateEmpty(278, 198, false, Image.Format.Rgba8);
+		canvas.Fill(Colors.Transparent);
+
+		var art = drawing.GetImage();
+		art.Convert(Image.Format.Rgba8);
+		art.Resize(198, 198, Image.Interpolation.Lanczos);
+		canvas.BlitRect(art, new Rect2I(0, 0, 198, 198), new Vector2I((278 - 198) / 2, 0));
+
+		return CardDrawings[cardName] = ImageTexture.CreateFromImage(canvas);
+	}
+
+	private static readonly Dictionary<string, Texture2D> CardDrawings = new();
+
+	private static Texture2D CardFigure(Color colour)
 	{
 		if (CardFigures.TryGetValue(colour, out var cached))
 			return cached;
@@ -96,9 +152,103 @@ public static class DoomArt
 	/// The power/toughness badge. RED, because red means "the enemy, and life" everywhere else on
 	/// this screen and a unit's toughness IS life — the same currency in two forms. The shared card
 	/// ships a blue one.
+	///
+	/// **A pill, not a disc, and the size is load-bearing.** A 64px circle could not hold `2/10`, so
+	/// Bulwark showed `2/1` — the wrong stats on screen, not merely a cramped badge. The pool runs
+	/// to Long Watcher at 12/20, so this is sized against five glyphs, per DoomUI.md's rule that a
+	/// numeric container is built for the longest value its content can produce.
 	/// </summary>
+	public const int StatBadgeWidth = 116;
+
+	public const int StatBadgeHeight = 60;
+
 	public static Texture2D StatBadge =>
-		_statBadge ??= Circle(64, 64, DoomPalette.Red, DoomPalette.Bone, 3);
+		_statBadge ??= RoundedRect(
+			StatBadgeWidth,
+			StatBadgeHeight,
+			DoomPalette.Red,
+			DoomPalette.Bone,
+			3,
+			StatBadgeHeight / 2
+		);
+
+	private static Texture2D _lifeDisc;
+
+	/// <summary>
+	/// Toughness, as a red disc — the mockup's treatment, and the same shape the lane already uses
+	/// for a body's remaining life. A card and the body it becomes now show their two numbers in the
+	/// same two places, in the same two colours.
+	///
+	/// Sized for two digits: the pool reaches 20 toughness.
+	/// </summary>
+	public static Texture2D LifeDisc =>
+		_lifeDisc ??= Circle(72, 72, DoomPalette.Red, DoomPalette.Bone, 3);
+
+	/// <summary>
+	/// The attack mark: a sword, bone, on nothing at all.
+	///
+	/// **Power gets an icon and no disc; toughness gets a disc and no icon.** Two identical pips
+	/// side by side made the eye stop and read both to tell them apart, which is the one thing a
+	/// lane game cannot afford five times a row. Different shape, different colour, no ambiguity.
+	///
+	/// game-icons.net, CC BY 3.0 — see Art/CREDITS.md.
+	/// </summary>
+	public static Texture2D AttackIcon => Drawing("icons/attack");
+
+	private static readonly Dictionary<(int, int), Texture2D> Dashed = new();
+
+	/// <summary>
+	/// An empty lane: a DASHED outline and nothing inside it.
+	///
+	/// The mockup draws a held lane and an empty one as different KINDS of thing, not as two shades
+	/// of the same panel — solid border for a body, dashes for a socket waiting to be filled. It is
+	/// the clearest "you can drop here" a board can give without a hover state, and it reads across
+	/// five lanes at a glance.
+	///
+	/// Godot's StyleBoxFlat has no dashed border, so this is a generated texture behind a
+	/// StyleBoxTexture. Cheap, because lane cells are a fixed size — see DoomLaneCell.
+	/// </summary>
+	public static Texture2D DashedSlot(int width, int height)
+	{
+		if (Dashed.TryGetValue((width, height), out var cached))
+			return cached;
+
+		const int dash = 14;
+		const int gap = 10;
+		const int thickness = 3;
+		const int radius = 8;
+
+		var image = Image.CreateEmpty(width, height, false, Image.Format.Rgba8);
+		image.Fill(Colors.Transparent);
+
+		// Walked as a perimeter rather than drawn as four sides, so the dashes stay evenly spaced
+		// round the corners instead of bunching where the sides meet.
+		void Stroke(int x, int y, int along)
+		{
+			if (along % (dash + gap) >= dash)
+				return;
+
+			for (var ty = 0; ty < thickness; ty++)
+			for (var tx = 0; tx < thickness; tx++)
+			{
+				var px = Mathf.Clamp(x + tx, 0, width - 1);
+				var py = Mathf.Clamp(y + ty, 0, height - 1);
+				image.SetPixel(px, py, DoomPalette.Slate);
+			}
+		}
+
+		var step = 0;
+		for (var x = radius; x < width - radius; x++, step++)
+			Stroke(x, 0, step);
+		for (var y = radius; y < height - radius; y++, step++)
+			Stroke(width - thickness, y, step);
+		for (var x = width - radius - 1; x >= radius; x--, step++)
+			Stroke(x, height - thickness, step);
+		for (var y = height - radius - 1; y >= radius; y--, step++)
+			Stroke(0, y, step);
+
+		return Dashed[(width, height)] = ImageTexture.CreateFromImage(image);
+	}
 
 	/// <summary>
 	/// The art window as a single flat colour block. There is no card art yet, and a flat block is
@@ -112,19 +262,38 @@ public static class DoomArt
 		return texture;
 	}
 
+	/// <summary>The card body for a unit — a body you put in a lane.</summary>
+	public static readonly Color UnitCard = Color.FromHtml("#243748");
+
 	/// <summary>
-	/// Which flat colour a card's art block gets. Stable per name, so a Scavenger is always the same
-	/// colour and the hand stays readable at a glance — the block is doing the job an icon would.
+	/// The card body for a Rite. **Card colour carries ROLE, and nothing else.**
+	///
+	/// It used to hash the card's NAME into one of five hues, which spent the strongest signal a
+	/// card has on noise: two Scavengers sharing a colour is a coincidence that looks like
+	/// information, and a Rite — which has no body, resolves at once and goes to Discard — was
+	/// distinguishable from a unit only by the absence of a stat badge. One glance at the hand now
+	/// answers "which of these are bodies", which is the first question a turn asks. See DoomUI.md.
+	/// </summary>
+	public static readonly Color RiteCard = Color.FromHtml("#43355C");
+
+	/// <summary>
+	/// The ground a card's drawing stands on. Per-name, so the hand keeps its variety — but the
+	/// variety lives in the art window, where variety belongs, rather than in the frame, where it
+	/// was pretending to mean something.
+	///
+	/// **Every one of these is a mid-tone on purpose.** The drawings are near-black silhouettes, so
+	/// a dark ground makes them vanish; these are chosen light enough that `#0C131B` reads on all
+	/// five without a per-card check.
 	/// </summary>
 	public static Color ColourFor(string cardName)
 	{
 		Color[] options =
 		[
-			Color.FromHtml("#2B4257"),
-			Color.FromHtml("#6E3630"),
-			Color.FromHtml("#2F5450"),
-			Color.FromHtml("#3B3A63"),
-			Color.FromHtml("#5A4A2C"),
+			Color.FromHtml("#41627C"),
+			Color.FromHtml("#8A554C"),
+			Color.FromHtml("#43786F"),
+			Color.FromHtml("#5A5588"),
+			Color.FromHtml("#87703F"),
 		];
 
 		// Seeded with the length so that names of the same shape do not collide — Scavenger and

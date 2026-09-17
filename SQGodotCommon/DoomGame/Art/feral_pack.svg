@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Feral Pack. Built from parts, not one polygon: body, four legs, wedge head, ears, tail. -->
+  <defs>
+    <g id="hound">
+      <!-- tail, up and stiff -->
+      <path d="M-58 -18 q-22 -14 -26 -44" stroke-width="11" stroke-linecap="round" fill="none"/>
+      <!-- body -->
+      <rect x="-60" y="-24" width="104" height="40" rx="18"/>
+      <!-- haunch and shoulder -->
+      <circle cx="-40" cy="-6" r="24"/>
+      <circle cx="28" cy="-6" r="21"/>
+      <!-- legs -->
+      <rect x="-50" y="8" width="13" height="46" rx="6"/>
+      <rect x="-30" y="8" width="13" height="40" rx="6"/>
+      <rect x="18"  y="8" width="13" height="46" rx="6"/>
+      <rect x="36"  y="8" width="13" height="40" rx="6"/>
+      <!-- neck -->
+      <path d="M22 -20 L50 -52 L68 -36 L44 -6 z"/>
+      <!-- head: a wedge, muzzle forward -->
+      <path d="M46 -56 L92 -44 L96 -30 L58 -26 z"/>
+      <!-- ears -->
+      <path d="M48 -58 L44 -84 L62 -66 z"/>
+      <path d="M64 -54 L64 -80 L80 -60 z"/>
+    </g>
+  </defs>
+  <!-- two behind, slate, smaller -->
+  <g fill="#2B4054" stroke="#2B4054">
+    <use href="#hound" transform="translate(74 104) scale(0.62)"/>
+    <use href="#hound" transform="translate(196 112) scale(0.55) scale(-1 1)"/>
+  </g>
+  <g fill="#C73E3A"><circle cx="126" cy="76" r="4"/><circle cx="152" cy="87" r="4"/></g>
+  <!-- the front one, black, big -->
+  <g fill="#0C131B" stroke="#0C131B">
+    <use href="#hound" transform="translate(110 182) scale(1.02)"/>
+  </g>
+  <!-- eye and open jaw on the lead hound -->
+  <path d="M158 138 L202 148 L196 158 L162 152 z" fill="#0C131B"/>
+  <circle cx="163" cy="128" r="6" fill="#C73E3A"/>
+</svg>
