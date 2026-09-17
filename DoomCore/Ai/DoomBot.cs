@@ -9,8 +9,15 @@ namespace DoomCore;
 /// </summary>
 public record DoomEvalWeights
 {
-	/// <summary>Bumped whenever a weight or the search changes. Old result files keep the old id.</summary>
-	public string Version { get; init; } = "bot-1";
+	/// <summary>
+	/// Bumped whenever a weight or the search changes. Old result files keep the old id.
+	///
+	/// **`/v3` marks a change to the GAME, not to the bot.** A win rate is a property of
+	/// (game, bot), and combat v3 made units ephemeral — so a v3 number and a v2 number are not
+	/// comparable even though the search and every weight here are untouched. Without this, run 14
+	/// reads as a catastrophic regression against run 13 rather than as a different game.
+	/// </summary>
+	public string Version { get; init; } = "bot-1/v3";
 
 	public double Win { get; init; } = 250;
 	public double Death { get; init; } = -5000;
@@ -100,6 +107,16 @@ public static class DoomBot
 	/// **Identical cards collapse to one candidate.** A starter hand holds four Scavengers, and
 	/// without this the search explores 24 orderings of the same board. Lanes do NOT collapse —
 	/// each holds a different enemy, so the lane is the decision.
+	///
+	/// **Combat v3 lets you play into a HELD lane, and this deliberately does not offer it.** Not
+	/// an oversight: the board is empty at the start of every turn, so the only thing holding a
+	/// lane mid-turn is something this search placed a moment ago — and replacing that is strictly
+	/// worse than not having played it, since you paid twice for one lane. The companion's lane is
+	/// refused outright. So open lanes ARE the legal, non-dominated set.
+	///
+	/// **This stops being true in phase 6**, when a persistent unit can survive into a turn you did
+	/// not place it on and overwriting it becomes a real choice. Widen it then — and measure the
+	/// node budget when you do, because the branching factor is what pays for it.
 	/// </summary>
 	private static IEnumerable<GameAction> Candidates(GameState s)
 	{
@@ -157,6 +174,12 @@ public static class DoomBot
 		score -= s.GetOpponent().Health * w.OpponentHealth;
 		score += s.GetPlayer().Life * w.Life;
 
+		// **Under v3 this prices the COMPANION and almost nothing else, and that is correct.** The
+		// score is taken after `EndTurnAction` has run, and by then your units have withdrawn — so
+		// a board is worth nothing once the turn is over, which is exactly what v3 made true. What
+		// a unit was WORTH is already counted: damage it dealt shows up in OpponentHealth and
+		// EnemyHealth, damage it soaked shows up in Life. Do not re-add a board term to make the
+		// bot "value its board"; it would be paying twice for the same turn.
 		foreach (var card in s.Units())
 		{
 			var unit = card.Unit();

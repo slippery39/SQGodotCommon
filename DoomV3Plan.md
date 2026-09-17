@@ -124,7 +124,35 @@ lane bounds are still a real error.
 
 ---
 
-## Phase 3 — the bot, BEFORE any rescale
+## Phase 3 — the bot, BEFORE any rescale  ✅ DONE, and it was almost entirely unnecessary
+
+**The plan was wrong about this phase, and measuring is what showed it.** Both feared problems were
+checked and neither exists. What shipped is a version stamp and three comments.
+
+**1. The node budget does not bind.** `sim 30 NodeBudget=200000` — ten times the default — returned
+*identical* numbers: 16.7% completion, mean floor 11.43, 5.4 turns a battle, 21.8 life a battle. Only
+runtime moved (2.4s → 3.9s a run). The search is not truncating, so the 2.4s is the cost of more
+legal lines, not evidence of a cliff. **Zero code, and it settled the question the plan wanted a
+prune written for.**
+
+**2. `OpenLanes()` is already the correct candidate set.** The board is empty at the start of every
+turn, so the only thing holding a lane mid-turn is something the search placed a moment ago —
+replacing that is strictly worse than never playing the first card, because you paid twice for one
+lane. The companion's lane is refused outright. So open lanes are the legal, non-dominated set, and
+a prune would have been machinery guarding nothing. **This stops being true in phase 6**, when a
+persistent unit can survive into a turn you did not place it on; widen it then and re-measure the
+budget.
+
+**3. The eval did not need re-pricing either.** `ScoreEndingTurnHere` scores the state *after*
+`EndTurnAction`, and by then units have withdrawn — so the board term already prices only the
+companion, which is exactly right: a board is worth nothing once the turn is over. What a unit was
+worth is counted in `OpponentHealth`, `EnemyHealth` and `Life`. **Do not re-add a board term** to
+make the bot "value its board"; it would pay twice for the same turn.
+
+**Shipped:** `Version` is now `bot-1/v3` — the bot is unchanged, the GAME changed, and without the
+stamp run 14 reads as a catastrophic regression against run 13 rather than as a different game.
+
+### What the plan said to do
 
 **This is the phase that will feel skippable and is not.** Every balance number comes from
 `DoomBot`, and two things in it are now wrong. A rescale measured on a broken bot is thirteen runs of
