@@ -182,7 +182,54 @@ exhaustion rate — if it is high, the numbers are not readable.
 
 ---
 
-## Phase 4 — rescale, with `sim`, not by reasoning
+## Phase 4 — rescale  ⚠️ PART DONE, and it is not a rescale
+
+**Full numbers in `docs/findings/doom-balance.md` run 15.** The headline: the total rescale this
+plan predicted **was not needed**. Two acts landed in the 25-50% target band with no tuning at all.
+
+| act | before | after | note |
+|---|---|---|---|
+| The Long Emergency | 28.0% | 28.0% | in band, untouched |
+| The Reckoning | 20.0% | 20.0% | just under, untouched |
+| The Rising | **0.0%** | **6.0%** | Vampires fixed; the act is not |
+
+**Done:** Vampires, which was the single worst thing in the game — 42.1% of battles facing it ended
+in death against 0.9-12.3% for every other non-boss doom. Countdown 2→3, heal 4→2, damage 8→6 took it
+to 24.6%, in line with the rest. The other two acts returned numerically identical results at every
+step, which is what makes it a clean single-variable result.
+
+**Also measured, and the doc's prediction was backwards: the stalemate tail HALVED** — worst battle
+50/49/55 turns in v2, **33** in v3, median 5, p95 9, and every long battle now ends in `Died`.
+Ephemeral units fixed the tail as a side effect of fixing the stall, because an impenetrable wall is
+no longer possible. **Delete the energy-ramp worry from DoomJam.md's cost list when convenient.**
+
+### NOT done, and it is content rather than a knob — DECIDE BEFORE TUNING
+
+**The Rising does not have a difficulty problem, it has a deck problem.** Life lost per battle after
+the deck should have come online:
+
+| floor | 10 | 11 | 13 | 15 | 18 |
+|---|---|---|---|---|---|
+| The Long Emergency | **-0.1** | **-0.4** | 1.7 | 3.4 | 14.1 |
+| The Rising | 30.3 | 22.9 | 23.5 | 23.0 | 22.2 |
+
+One act stops paying for battles; the other pays ~23 life a battle for ever. **v3 raised the stakes
+on deck quality enormously** — the deck IS your per-turn output now — so an apocalypse that fails to
+improve it costs you every remaining floor. The Long Emergency's dooms hand the deck something
+(AI Uprising rewrites, Grey Goo replicates). The Rising's do not: **Zombie** dilutes with 2/2s,
+**Vampires** is battle scope and leaves nothing, **Hell Uprising** is +6 power and **-2 toughness**
+when toughness is now your blocking every single turn.
+
+The rule that diagnoses it is the doc's own: *every permanent doom converts one resource into
+another, none are purely bad.* **Decide what Zombie and Hell Uprising should PAY before tuning The
+Rising further** — run 12 already tried the obvious fix here and made it worse.
+
+**Then sweep healing.** Seven effects remain (`Gravecaller` 4/turn, `The Choir` 2, `The Last Morning`
+4, `Zealous` 4, `Shepherd` 4 to every enemy, `Chorister`, `Last Chorus`). Healing is priced against
+damage per turn, and v3 collapsed damage per turn — **every one of them got stronger**, and run 13
+already had stacked healing as the prime suspect for the v2 tail.
+
+### What the plan originally said
 
 **Files:** `DoomCore/Content/EnemyLibrary.cs`, `DoomCore/Content/StarterContent.cs`,
 `docs/findings/doom-balance.md`.

@@ -1013,3 +1013,109 @@ never the constraint. Prime suspect is stacked healing: `The Choir` heals 2 a tu
 the `Zealous` trait another 4, against roughly 12 damage a turn through two open lanes. **The mean
 is healthy and only the worst case is broken**, which points at a cap on how much healing can stack
 on one Opponent rather than at any of the numbers individually.
+
+---
+
+## Run 15 — 2026-09-17 — COMBAT v3, and the act that lives or dies on its DECK
+
+**`bot-1/v3`, 150 runs, 50 per act.** The first measurement of combat v3: units withdraw at the end
+of the turn, any lane is playable, the held unit is discarded with no refund.
+
+**The `/v3` in the weights id marks a change to the GAME, not the bot.** The search and every weight
+are untouched from `bot-1`. **Nothing below is comparable to runs 1-14** — a win rate is a property
+of (game, bot) and the game changed underneath.
+
+### v3 did NOT need the total rescale it was predicted to need
+
+| act | completed | mean floor | per-floor clear, bands 2/3/4 |
+|---|---|---|---|
+| The Long Emergency | **28.0%** | 11.64 | 77% / 97% / 94% |
+| The Reckoning | 20.0% | 13.42 | 87% / 97% / 82% |
+| The Rising | **0.0%** | 8.86 | 71% / 69% / 67% |
+
+Target band is 25-50%. **Two acts landed in or beside it with no tuning at all**, against a plan that
+said every number in the game would move. Per-turn output did collapse exactly as predicted; the acts
+absorbed it far better than predicted.
+
+**The aggregate was 16.0%, and it is a lie in both directions** — it says "everything needs work"
+when two acts are fine and one is dead. This is the third time that rule has earned its place.
+
+### The stalemate tail HALVED, and the prediction was backwards
+
+| | v2 (run 13) | v3 |
+|---|---|---|
+| worst battle | 50 / 49 / 55 turns | **33 turns** |
+| median | — | 5 |
+| p95 | — | 9 |
+
+**Every long battle now ends in `Died`.** The design doc predicted v3 would make the tail worse:
+flat per-turn output against reinforcements that scale on turn number. The mechanism was right and
+**the sign was wrong**. In v2 a saturated board absorbed indefinitely while the Opponent healed, so
+nothing resolved; v3 makes an impenetrable wall impossible, so the damage gets through and the battle
+*ends*. A battle you cannot win is now a battle you lose in 30 turns rather than one that grinds for
+55. **Ephemeral units fixed the tail as a side effect of fixing the stall.**
+
+### Vampires was the single worst thing in the game, and it took an act with it
+
+| | deaths | life lost |
+|---|---|---|
+| Vampires, as authored (countdown 2, heal 4, 8 to you) | **42.1%** | 46.0 |
+| countdown 3 | 32.2% | 38.5 |
+| countdown 3, heal 2, 6 to you | **24.6%** | 34.3 |
+
+Against 0.9-12.3% and ~20 life for every other non-boss apocalypse. The Rising is the only act that
+fields it, so each step was a genuinely single-variable experiment — and the other two acts returned
+**numerically identical** results all three times, which is what says so.
+
+**Why v3 broke it specifically: healing is priced against your damage PER TURN, and v3 collapsed
+damage per turn to whatever 3 energy buys.** A v2 board accumulated and shrugged off 4 an enemy; a
+v3 board cannot. On a 2-clock it also landed three times in a six-turn battle — 24 unblockable life
+before an enemy swung.
+
+**This generalises and the rest has not been swept yet.** Seven healing effects remain — `Gravecaller`
+4 a turn, `The Choir` 2, `The Last Morning` 4, the `Zealous` trait 4, `Shepherd` 4 to every enemy,
+`Chorister` and `Last Chorus` on death. Run 13 already had stacked healing as the prime suspect for
+the v2 tail. **Every one of them got stronger when output went flat.** Sweep them as one pass.
+
+The Rising went 0.0% → 2.0% → **6.0%**, mean floor 8.86 → 9.66 → **10.52**. Better, and not fixed.
+
+### What is actually wrong with The Rising, and it is not difficulty
+
+Life lost per battle, by floor, after the deck should have come online:
+
+| floor | 9 | 10 | 11 | 13 | 14 | 15 | 17 | 18 |
+|---|---|---|---|---|---|---|---|---|
+| **The Long Emergency** | 14.3 | **-0.1** | **-0.4** | 1.7 | 10.7 | 3.4 | 16.3 | 14.1 |
+| **The Rising** | 37.2 | 30.3 | 22.9 | 23.5 | 22.6 | 23.0 | 25.0 | 22.2 |
+
+**The Long Emergency stops paying for battles. The Rising pays ~23 life a battle for ever.** That is
+not a difficulty curve, it is a deck that never comes online — and no amount of tuning Vampires
+touches it, because the leak is on floors Vampires does not reach.
+
+**v3 raised the stakes on deck quality enormously.** In v2 an accumulated board could carry a weak
+deck; in v3 the deck IS your entire per-turn output, so an apocalypse that fails to improve it costs
+you every remaining floor.
+
+Read against the acts' own apocalypses:
+
+- **The Long Emergency** — AI Uprising rewrites what is standing, Grey Goo replicates it. Both hand
+  the deck something. Life per battle falls to nothing and the act clears 28%.
+- **The Rising** — **Zombie** adds 2/2 Zombies, which is quantity that dilutes a deck you now draw
+  your whole turn from; **Vampires** is battle scope and leaves nothing behind at all; **Hell
+  Uprising** is +6 power and **-2 toughness**, and in v3 toughness is your blocking *every single
+  turn*, so it is close to a straight downgrade.
+
+**The doc's own rule is the diagnosis: "every PERMANENT doom converts one resource into another,
+none are purely bad."** The Rising's do not, and v3 is what made that fatal rather than merely weak.
+It was already the weak act at 20.7% in v2 for this reason; v3 took it to 0.
+
+**So the fix is content, not a knob**, and it is the same one run 12 got wrong by reaching for the
+obvious per-turn rewrite. Do not tune The Rising further before deciding what Zombie and Hell
+Uprising are supposed to PAY.
+
+### Method notes
+
+- A content rebalance of this size broke **zero** of 118 tests, which is what "tests read authored
+  values, never restate them" buys. Twelve broke the last time that rule was violated.
+- `sim 150` is 50 runs an act and ~6 minutes. Enough to separate 28% from 0%; not enough to argue
+  about 20% against 25%.

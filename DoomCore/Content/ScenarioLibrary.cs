@@ -195,29 +195,48 @@ public static class ScenarioLibrary
 
 	// ===== Horror =====
 
-	/// <summary>Battle scope: the enemy line drinks, and what it gains comes straight off you.</summary>
+	/// <summary>
+	/// Battle scope: the enemy line drinks, and what it gains comes straight off you.
+	///
+	/// **Countdown was 2 and is 3 under combat v3 (2026-09-17).** It was the single worst thing in
+	/// the game and it took a whole act down with it: 42.1% of battles facing it ended in death
+	/// against 0.9-12.3% for every other non-boss apocalypse, at 46.0 life a battle against ~20.
+	/// The Rising is the only act that fields it and completed **0 runs in 50**.
+	///
+	/// **Why v3 broke it specifically:** healing every enemy 4 is priced against your damage per
+	/// turn, and v3 collapsed damage per turn to whatever 3 energy buys. A v2 board accumulated and
+	/// shrugged this off; a v3 board cannot. On a countdown of 2 it also landed three times in a
+	/// 6-turn battle — 24 unblockable life before a single enemy swung. Every other battle-scope
+	/// doom sits at 2.5-3 direct a turn; this was at 4 plus a healing term.
+	///
+	/// One number rather than three, because the interval divides BOTH terms at once.
+	/// </summary>
 	public static readonly ScenarioDefinition Vampires =
 		new()
 		{
 			Scenario = DoomScenario.Vampires,
 			Description = "They have been thirsty for a long time.",
-			Countdown = 2,
+			Countdown = 3,
 			Scope = DoomScope.Battle,
 			MinFloor = 7,
 			Mark = new() { Name = "Bloodless", Power = 4 },
 			BattleEffects =
 			[
+				// **Heal was 4 and damage was 8.** Second pass at the same target: the countdown
+				// alone took it from 42.1% deaths / 46.0 life to 32.2% / 38.5, which is still
+				// double the next-worst non-boss apocalypse. These bring it into line with the
+				// other battle-scope dooms — CivilUnrest is 10 on a 4-clock, Ashfall 6 on a 2.
 				new DoomEffect
 				{
 					Target = DoomTarget.AllEnemies,
-					Template = new DealDamageAction { Amount = -4 },
-					Text = "every enemy heals 4",
+					Template = new DealDamageAction { Amount = -2 },
+					Text = "every enemy heals 2",
 				},
 				new DoomEffect
 				{
 					Target = DoomTarget.Player,
-					Template = new DealDamageAction { Amount = 8 },
-					Text = "8 to you",
+					Template = new DealDamageAction { Amount = 6 },
+					Text = "6 to you",
 				},
 			],
 		};
