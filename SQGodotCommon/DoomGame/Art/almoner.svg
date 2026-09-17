@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Almoner, 2/8. Gains you two every turn: 8 toughness is the engine, so it is built to STAND. -->
+  <path d="M70 244 L84 130 q44 -18 88 0 L186 244 z" fill="#0C131B"/>
+  <path d="M84 136 q-10 -56 44 -56 q54 0 44 56 q-44 16 -88 0 z" fill="#0C131B"/>
+  <circle cx="110" cy="94" r="6" fill="#C73E3A"/>
+  <circle cx="146" cy="94" r="6" fill="#C73E3A"/>
+  <!-- both hands out, holding a broad bowl -->
+  <path d="M96 150 L66 182" stroke="#0C131B" stroke-width="16" stroke-linecap="round"/>
+  <path d="M160 150 L190 182" stroke="#0C131B" stroke-width="16" stroke-linecap="round"/>
+  <path d="M50 178 L206 178 q-14 52 -78 52 q-64 0 -78 -52 z" fill="#2B4054"/>
+  <rect x="44" y="170" width="168" height="14" rx="7" fill="#0C131B"/>
+  <!-- what is in it, going out -->
+  <g fill="#E3B23C">
+    <circle cx="100" cy="200" r="11"/><circle cx="128" cy="208" r="11"/><circle cx="156" cy="200" r="11"/>
+  </g>
+</svg>

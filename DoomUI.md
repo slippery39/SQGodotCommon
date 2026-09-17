@@ -229,6 +229,9 @@ Godot 4 imports SVG natively, so there is no build step and no atlas.
   down, the lane figure — a card and the body it becomes must be legibly the same thing.
 - **Three tones and no more:** a near-black silhouette `#0C131B`, one mid tone for interior form
   (`#233444` or `#2B4054`), and at most one accent — red for hostile, gold for yours.
+- **Draw order is composition.** A thing a figure HOLDS goes down after the figure, not before it.
+  Reliquary Guard was drawn box-first and the body covered it completely — it read as a plain hooded
+  figure and nothing else. The same rule put the ground line over Tunneller rather than under it.
 - **Build creatures from named parts and `<use>` them**, never from one hand-written polygon. The
   first Feral Pack was a single 20-point path and rendered as a blob; the same subject built as
   body / haunch / four legs / wedge head / ears read instantly. Mechanical subjects survive a single
@@ -350,9 +353,11 @@ layout and card tweens have not settled on frame 0.
 - Whether the 3D scenario backdrop (PERSPECTIVE SHIFT) ships. It is flagged "if time survives" in
   `DoomJam.md`, and it is now the only optional sub-theme left — GO SPINNY is dropped. The flat
   style makes a per-apocalypse backdrop cheap, three geometric layers, so it may survive after all.
-- ~~Card art.~~ **Decided 2026-09-17:** hand-authored flat SVG in `SQGodotCommon/DoomGame/Art/`,
-  one file per card name, falling back to the generated silhouette where nobody has drawn one yet.
-  Eight exist. Mechanical subjects take about five minutes, organic ones about twelve — budget by
-  subject, not by card count.
+- ~~Card art.~~ **Done 2026-09-17:** hand-authored flat SVG in `SQGodotCommon/DoomGame/Art/`, one
+  file per subject name, falling back to the generated silhouette for anything undrawn. **Every card,
+  enemy and Opponent in the game is drawn** — 52 files. The only named content without a drawing is
+  the fourteen apocalypse SCENARIOS, which have no art slot in the UI; giving them one is a feature,
+  not a gap. Budget by subject rather than by count: mechanical subjects land first try in about five
+  minutes, organic ones need a second pass and take about twelve.
 - Whether `Common/Cards/2D/` (`CardUI2D` + `Hand2D`, ~1600 lines of drag/hover/fan with no MTG in
   it) is reused as-is or trimmed. It is free and it is the reason the hand band is not a build task.

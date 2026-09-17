@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- The Choirmaster, 12/18 rare. It does not sing; it conducts, and the gain never stops. -->
+  <path d="M68 244 L84 124 q44 -20 88 0 L188 244 z" fill="#0C131B"/>
+  <path d="M84 130 q-10 -58 44 -58 q54 0 44 58 q-44 18 -88 0 z" fill="#0C131B"/>
+  <!-- a closed mouth: a flat bar. It is the one that stays silent. -->
+  <rect x="112" y="102" width="32" height="8" rx="4" fill="#2B4054"/>
+  <circle cx="108" cy="80" r="6" fill="#C73E3A"/>
+  <circle cx="148" cy="80" r="6" fill="#C73E3A"/>
+  <!-- the raised baton arm -->
+  <path d="M164 142 L204 96" stroke="#0C131B" stroke-width="16" stroke-linecap="round"/>
+  <path d="M202 94 L248 40" stroke="#2B4054" stroke-width="8" stroke-linecap="round"/>
+  <path d="M90 142 L54 190" stroke="#0C131B" stroke-width="16" stroke-linecap="round"/>
+  <!-- the notes it is pulling out of the others -->
+  <g fill="#E3B23C">
+    <circle cx="36" cy="88" r="10"/><rect x="42" y="54" width="6" height="38" rx="3"/>
+    <circle cx="20" cy="140" r="8"/><rect x="25" y="112" width="5" height="30" rx="2"/>
+  </g>
+</svg>

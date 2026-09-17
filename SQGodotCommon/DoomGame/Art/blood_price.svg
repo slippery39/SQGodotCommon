@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Blood Price — a Rite: 10 to every enemy. It is paid, not cast. -->
+  <!-- the knife, point down -->
+  <rect x="118" y="20" width="20" height="26" rx="6" fill="#0C131B"/>
+  <rect x="98" y="44" width="60" height="14" rx="6" fill="#2B4054"/>
+  <path d="M112 58 L144 58 L132 150 L128 162 L124 150 z" fill="#2B4054"/>
+  <path d="M128 58 L144 58 L132 150 L128 162 z" fill="#0C131B"/>
+  <!-- what it costs, falling -->
+  <g fill="#C73E3A">
+    <path d="M128 172 q14 18 14 28 q0 14 -14 14 q-14 0 -14 -14 q0 -10 14 -28 z"/>
+    <path d="M86 196 q10 13 10 20 q0 10 -10 10 q-10 0 -10 -10 q0 -7 10 -20 z"/>
+    <path d="M170 196 q10 13 10 20 q0 10 -10 10 q-10 0 -10 -10 q0 -7 10 -20 z"/>
+    <circle cx="106" cy="238" r="8"/><circle cx="150" cy="238" r="8"/><circle cx="128" cy="244" r="6"/>
+  </g>
+</svg>

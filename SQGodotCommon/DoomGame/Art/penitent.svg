@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Penitent, 0-cost 4/4. Walked here. Will walk further. Head down, barefoot, still going. -->
+  <!-- back leg, trailing -->
+  <rect x="72" y="176" width="20" height="58" rx="9" fill="#2B4054" transform="rotate(20 82 205)"/>
+  <!-- front leg, forward -->
+  <rect x="132" y="178" width="20" height="56" rx="9" fill="#0C131B" transform="rotate(-14 142 206)"/>
+  <!-- bare feet -->
+  <rect x="52" y="226" width="42" height="12" rx="6" fill="#2B4054"/>
+  <rect x="140" y="230" width="44" height="12" rx="6" fill="#0C131B"/>
+  <!-- a plain robe, worn short -->
+  <path d="M84 190 L98 116 q30 -12 56 0 L164 190 q-40 12 -80 0 z" fill="#0C131B"/>
+  <!-- arms hanging, not carrying anything -->
+  <path d="M98 132 L78 190" stroke="#0C131B" stroke-width="15" stroke-linecap="round"/>
+  <path d="M154 132 L174 190" stroke="#0C131B" stroke-width="15" stroke-linecap="round"/>
+  <!-- head, bowed -->
+  <path d="M98 122 q-6 -46 28 -46 q34 0 28 46 q-28 12 -56 0 z" fill="#0C131B"/>
+  <path d="M104 110 q22 12 44 0 q-6 18 -22 18 q-16 0 -22 -18 z" fill="#16212E"/>
+  <!-- the road behind -->
+  <g fill="#2B4054">
+    <rect x="6" y="240" width="46" height="8" rx="4"/>
+    <rect x="66" y="246" width="40" height="8" rx="4"/>
+  </g>
+</svg>

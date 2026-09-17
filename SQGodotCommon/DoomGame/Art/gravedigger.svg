@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Gravedigger, 8/6. On death: 16 to the Opponent. It digs one either way. -->
+  <path d="M74 244 L88 138 q34 -16 68 0 L170 244 z" fill="#0C131B"/>
+  <path d="M88 144 q-8 -52 34 -52 q42 0 34 52 q-34 14 -68 0 z" fill="#0C131B"/>
+  <circle cx="108" cy="102" r="6" fill="#C73E3A"/>
+  <circle cx="136" cy="102" r="6" fill="#C73E3A"/>
+  <!-- the spade, held across -->
+  <path d="M96 168 L206 96" stroke="#0C131B" stroke-width="14" stroke-linecap="round"/>
+  <path d="M196 78 q26 -6 30 18 q4 24 -22 30 q-20 -20 -8 -48 z" fill="#2B4054"/>
+  <!-- the hole, and the mound beside it -->
+  <rect x="8" y="212" width="96" height="34" rx="8" fill="#060A0F"/>
+  <path d="M104 246 q26 -40 60 0 z" fill="#2B4054"/>
+  <rect x="4" y="206" width="248" height="10" rx="5" fill="#0C131B"/>
+</svg>

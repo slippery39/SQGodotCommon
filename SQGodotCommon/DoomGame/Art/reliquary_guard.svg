@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Reliquary Guard, 4/10 rare. Doom: gain 14. It is not guarding you — it is guarding the box.
+       DRAW ORDER MATTERS: the guard goes down first and the reliquary on top of it. The other way
+       round, the body covered the box completely and this read as a plain hooded figure. -->
+  <!-- the guard -->
+  <path d="M52 244 L64 118 q64 -26 128 0 L204 244 z" fill="#0C131B"/>
+  <path d="M64 124 q-10 -60 64 -60 q74 0 64 60 q-64 22 -128 0 z" fill="#0C131B"/>
+  <rect x="92" y="82" width="72" height="13" rx="6" fill="#C73E3A"/>
+  <!-- arms coming round from behind -->
+  <path d="M70 146 L100 206" stroke="#0C131B" stroke-width="21" stroke-linecap="round"/>
+  <path d="M186 146 L156 206" stroke="#0C131B" stroke-width="21" stroke-linecap="round"/>
+  <!-- the reliquary, ON TOP, held against the chest -->
+  <path d="M76 152 L128 110 L180 152 z" fill="#2B4054"/>
+  <rect x="72" y="146" width="112" height="15" rx="6" fill="#16212E"/>
+  <rect x="80" y="158" width="96" height="76" rx="8" fill="#2B4054"/>
+  <rect x="118" y="158" width="20" height="76" fill="#16212E"/>
+  <rect x="80" y="186" width="96" height="16" fill="#16212E"/>
+  <circle cx="128" cy="194" r="18" fill="#E3B23C"/>
+  <!-- the hands that are actually holding it -->
+  <rect x="62" y="206" width="34" height="17" rx="8" fill="#0C131B"/>
+  <rect x="160" y="206" width="34" height="17" rx="8" fill="#0C131B"/>
+</svg>

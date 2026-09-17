@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Riot Shield, 8/10. Issued for a crowd, not for this. -->
+  <path d="M84 238 L96 176 L118 182 L110 238 z" fill="#0C131B"/>
+  <path d="M170 238 L158 176 L136 182 L144 238 z" fill="#0C131B"/>
+  <path d="M104 62 q0 -26 24 -26 q24 0 24 26 q0 22 -24 22 q-24 0 -24 -22 z" fill="#0C131B"/>
+  <rect x="100" y="52" width="56" height="14" rx="6" fill="#2B4054"/>
+  <!-- the shield: a tall clear panel, so it is banded rather than solid -->
+  <rect x="52" y="74" width="152" height="130" rx="14" fill="#1B2836" stroke="#0C131B" stroke-width="9"/>
+  <g fill="#2B4054">
+    <rect x="62" y="92" width="132" height="10" rx="5"/>
+    <rect x="62" y="122" width="132" height="10" rx="5"/>
+    <rect x="62" y="152" width="132" height="10" rx="5"/>
+  </g>
+  <!-- the crack it was not issued for -->
+  <path d="M150 74 L138 128 L166 140 L146 204" stroke="#0C131B" stroke-width="7" fill="none" stroke-linecap="round"/>
+</svg>

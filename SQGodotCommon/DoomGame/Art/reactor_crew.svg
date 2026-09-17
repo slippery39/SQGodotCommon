@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Reactor Crew, 8/12 rare. Doom: gain 10. They are still down there keeping it running. -->
+  <!-- the core behind them, in flat rings -->
+  <circle cx="128" cy="104" r="72" fill="#2B4054"/>
+  <circle cx="128" cy="104" r="46" fill="#8A4038"/>
+  <circle cx="128" cy="104" r="22" fill="#E3B23C"/>
+  <!-- two figures, front and back, in suits -->
+  <path d="M28 244 L42 146 q28 -14 56 0 L112 244 z" fill="#0C131B"/>
+  <path d="M42 152 q-6 -46 28 -46 q34 0 28 46 q-28 12 -56 0 z" fill="#0C131B"/>
+  <ellipse cx="70" cy="128" rx="18" ry="14" fill="#2B4054"/>
+  <path d="M144 244 L158 146 q28 -14 56 0 L228 244 z" fill="#0C131B"/>
+  <path d="M158 152 q-6 -46 28 -46 q34 0 28 46 q-28 12 -56 0 z" fill="#0C131B"/>
+  <ellipse cx="186" cy="128" rx="18" ry="14" fill="#2B4054"/>
+  <!-- hoses back to the core -->
+  <path d="M96 176 q32 16 64 0" stroke="#0C131B" stroke-width="10" fill="none"/>
+</svg>

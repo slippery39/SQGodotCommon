@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Pyre Tender, 10/8. On death: 12 to every enemy. It is keeping the fire ready. -->
+  <!-- the pyre, stacked -->
+  <g fill="#0C131B">
+    <rect x="58" y="196" width="140" height="15" rx="7"/>
+    <rect x="66" y="214" width="124" height="15" rx="7"/>
+    <rect x="74" y="232" width="108" height="15" rx="7"/>
+  </g>
+  <!-- flame rising out of the stack -->
+  <path d="M128 52 q40 56 32 100 q-6 32 -32 44 q-26 -12 -32 -44 q-8 -44 32 -100 z" fill="#8A4038"/>
+  <path d="M128 96 q22 34 18 60 q-4 20 -18 28 q-14 -8 -18 -28 q-4 -26 18 -60 z" fill="#C73E3A"/>
+  <path d="M128 136 q10 18 8 30 q-2 10 -8 14 q-6 -4 -8 -14 q-2 -12 8 -30 z" fill="#E3B23C"/>
+  <!-- the tender, small, at the side, feeding it -->
+  <path d="M14 244 L22 164 q22 -12 44 0 L74 244 z" fill="#0C131B"/>
+  <path d="M22 168 q-6 -36 22 -36 q28 0 22 36 q-22 10 -44 0 z" fill="#0C131B"/>
+  <path d="M60 178 L102 160" stroke="#0C131B" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="36" cy="148" r="5" fill="#C73E3A"/>
+</svg>

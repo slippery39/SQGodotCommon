@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Tithe — a Rite: draw 2. What is owed, handed over. -->
+  <!-- the plate -->
+  <path d="M26 148 L230 148 q-18 62 -102 62 q-84 0 -102 -62 z" fill="#2B4054"/>
+  <rect x="18" y="138" width="220" height="16" rx="8" fill="#0C131B"/>
+  <!-- stacked coins on it -->
+  <g fill="#E3B23C">
+    <ellipse cx="94" cy="132" rx="34" ry="12"/>
+    <rect x="60" y="112" width="68" height="20"/>
+    <ellipse cx="94" cy="112" rx="34" ry="12"/>
+    <ellipse cx="164" cy="136" rx="28" ry="10"/>
+    <rect x="136" y="122" width="56" height="14"/>
+    <ellipse cx="164" cy="122" rx="28" ry="10"/>
+  </g>
+  <!-- a hand from above, letting one fall -->
+  <path d="M112 16 q30 -10 44 14 q-20 22 -46 10 z" fill="#0C131B"/>
+  <circle cx="132" cy="70" r="15" fill="#E3B23C"/>
+</svg>
