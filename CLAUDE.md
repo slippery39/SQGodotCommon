@@ -39,6 +39,7 @@ SQGodotCommon/
     ├── Common/                      # reusable utilities — Cards/2D is game-agnostic, use it
     ├── Project/                     # GameManager, main menu
     └── DoomGame/                    # DOOMJAM front end — reads DoomCore, decides nothing
+        ├── DoomThemeSelect.cs       #   run start: pick the act, its whole schedule shown
         ├── DoomBoard.cs             #   the battle screen; layout contract lives in DoomUI.md
         ├── DoomLaneCell.cs          #   one lane slot: silhouette + attack/life pips
         ├── DoomHandView.cs          #   the fan, on Common/Cards/2D; drag -> PlayCardAction
@@ -58,7 +59,8 @@ nothing is orphaned — you should not need any of it.
 | Kind | Location | Loads |
 |---|---|---|
 | Design doc — read first | `DoomJam.md` | read it |
-| Where the last session got to | `HANDOFF-DoomBalanceAndThemes.md` | read it when picking the work back up |
+| Where the last session got to | `HANDOFF-DoomPacingAndRewards.md` | read it when picking the work back up |
+| Earlier handoff, superseded | `HANDOFF-DoomBalanceAndThemes.md` | read only for its scars (§4) |
 | Earlier handoff, superseded | `HANDOFF-DoomFrontEndAndEffects.md` | read only for its scars (§4) |
 | Earlier still, superseded | `HANDOFF-DoomBattleLoop.md` | read only for its scars (§4) |
 | UI design — layout contract | `DoomUI.md` | read it before touching `SQGodotCommon/DoomGame/` |

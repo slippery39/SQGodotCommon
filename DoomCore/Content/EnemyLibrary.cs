@@ -38,7 +38,7 @@ public static class EnemyLibrary
 		{
 			Name = "Wretch",
 			Description = "It was somebody, before.",
-			Health = 14,
+			Health = 10,
 			Attack = 2,
 			MinFloor = 1,
 		};
@@ -48,7 +48,7 @@ public static class EnemyLibrary
 		{
 			Name = "Scav Hound",
 			Description = "Fast, and it does not stop.",
-			Health = 10,
+			Health = 8,
 			Attack = 4,
 			MinFloor = 1,
 		};
@@ -58,7 +58,7 @@ public static class EnemyLibrary
 		{
 			Name = "Revenant",
 			Description = "Sent up to fill the gap.",
-			Health = 18,
+			Health = 12,
 			Attack = 4,
 			MinFloor = 2,
 		};
@@ -69,7 +69,7 @@ public static class EnemyLibrary
 		{
 			Name = "Herald of the End",
 			Description = "It has been counting down since before you arrived.",
-			Health = 26,
+			Health = 18,
 			Attack = 4,
 			MinFloor = 5,
 			Effects =
@@ -89,7 +89,7 @@ public static class EnemyLibrary
 		{
 			Name = "Rotbearer",
 			Description = "Whatever it carries is catching.",
-			Health = 32,
+			Health = 22,
 			Attack = 4,
 			MinFloor = 7,
 			Effects =
@@ -108,7 +108,7 @@ public static class EnemyLibrary
 		{
 			Name = "Siege Hulk",
 			Description = "Built to take a building down.",
-			Health = 44,
+			Health = 30,
 			Attack = 6,
 			MinFloor = 10,
 		};
@@ -118,7 +118,7 @@ public static class EnemyLibrary
 		{
 			Name = "Husk",
 			Description = "Stands where it fell.",
-			Health = 18,
+			Health = 12,
 			Attack = 2,
 			MinFloor = 1,
 		};
@@ -128,7 +128,7 @@ public static class EnemyLibrary
 		{
 			Name = "Ash Crow",
 			Description = "Comes down fast and does not pull up.",
-			Health = 8,
+			Health = 6,
 			Attack = 6,
 			MinFloor = 2,
 		};
@@ -139,7 +139,7 @@ public static class EnemyLibrary
 		{
 			Name = "Chorister",
 			Description = "It is singing something, and it is not for you.",
-			Health = 20,
+			Health = 14,
 			Attack = 4,
 			MinFloor = 3,
 			Effects =
@@ -158,7 +158,7 @@ public static class EnemyLibrary
 		{
 			Name = "Cinder Hound",
 			Description = "It has been burning the whole time.",
-			Health = 14,
+			Health = 10,
 			Attack = 6,
 			MinFloor = 4,
 		};
@@ -169,7 +169,7 @@ public static class EnemyLibrary
 		{
 			Name = "Pyre Walker",
 			Description = "Whatever it was carrying went up with it.",
-			Health = 26,
+			Health = 18,
 			Attack = 6,
 			MinFloor = 7,
 			Effects =
@@ -189,7 +189,7 @@ public static class EnemyLibrary
 		{
 			Name = "Gravecaller",
 			Description = "It keeps putting itself back together.",
-			Health = 30,
+			Health = 20,
 			Attack = 4,
 			MinFloor = 8,
 			Effects =
@@ -209,7 +209,7 @@ public static class EnemyLibrary
 		{
 			Name = "Tollman",
 			Description = "It counts what the sky takes.",
-			Health = 34,
+			Health = 24,
 			Attack = 6,
 			MinFloor = 9,
 			Effects =
@@ -228,7 +228,7 @@ public static class EnemyLibrary
 		{
 			Name = "Rampart",
 			Description = "It was a wall. It is still a wall.",
-			Health = 56,
+			Health = 40,
 			Attack = 4,
 			MinFloor = 11,
 		};
@@ -238,7 +238,7 @@ public static class EnemyLibrary
 		{
 			Name = "The Tally",
 			Description = "It has your number and it is not finished reading.",
-			Health = 40,
+			Health = 28,
 			Attack = 8,
 			MinFloor = 14,
 			Effects =
@@ -258,7 +258,7 @@ public static class EnemyLibrary
 		{
 			Name = "Last Chorus",
 			Description = "When one stops, the others get louder.",
-			Health = 48,
+			Health = 34,
 			Attack = 8,
 			MinFloor = 15,
 			Effects =
@@ -277,7 +277,7 @@ public static class EnemyLibrary
 		{
 			Name = "Doomsayer",
 			Description = "It told you. It is still telling you.",
-			Health = 38,
+			Health = 26,
 			Attack = 10,
 			MinFloor = 17,
 			Effects =
@@ -323,7 +323,7 @@ public static class EnemyLibrary
 		{
 			Name = "The Opponent",
 			Description = "It has not moved since you walked in.",
-			Health = 64,
+			Health = 44,
 			SummonInterval = 3,
 			Reinforcement = Revenant,
 			MinFloor = 1,
@@ -334,7 +334,7 @@ public static class EnemyLibrary
 		{
 			Name = "The Choir",
 			Description = "It is not one thing, and it is not finished.",
-			Health = 96,
+			Health = 68,
 			SummonInterval = 3,
 			Reinforcement = HeraldOfTheEnd,
 			MinFloor = 5,
@@ -354,7 +354,7 @@ public static class EnemyLibrary
 		{
 			Name = "The Last Warden",
 			Description = "Still holding a door that is no longer there.",
-			Health = 140,
+			Health = 98,
 			SummonInterval = 3,
 			Reinforcement = SiegeHulk,
 			MinFloor = 10,
@@ -369,7 +369,7 @@ public static class EnemyLibrary
 		{
 			Name = "The Last Morning",
 			Description = "It has been waiting at the end of every one of these.",
-			Health = 200,
+			Health = 140,
 			SummonInterval = 2,
 			Reinforcement = Doomsayer,
 			MinFloor = Run.ActLength,

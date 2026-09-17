@@ -64,6 +64,15 @@ public record ScenarioDefinition
 /// </summary>
 public static class ScenarioLibrary
 {
+	// **THE FUSE SHORTENS AS THE ACT ESCALATES.** Band-1 dooms run a 3-4 turn clock; everything
+	// from band 2 on runs 2. That is not a tuning accident, it is what keeps the design's FIRST
+	// outcome alive — "kill the Opponent before the first firing, and walk away with an untouched
+	// deck". A flat 2-turn clock against a 4.7-turn battle took dodging from 24.3% of battles to
+	// 9.7%: the early floors are meant to be races you can win, the late ones inevitable.
+	//
+	// `docs/findings/doom-balance.md` run 14. Move an opener's clock and check the dodge rate, not
+	// the completion rate — completion barely notices this and the dodge is the whole point.
+
 	public static readonly ScenarioDefinition Flood =
 		new()
 		{
@@ -148,7 +157,7 @@ public static class ScenarioLibrary
 		{
 			Scenario = DoomScenario.Rapture,
 			Description = "What you give up is not lost.",
-			Countdown = 3,
+			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = 99,
 			Implemented = false,
@@ -164,7 +173,7 @@ public static class ScenarioLibrary
 		{
 			Scenario = DoomScenario.Ashfall,
 			Description = "It falls on everything, and it is still warm.",
-			Countdown = 3,
+			Countdown = 2,
 			Scope = DoomScope.Battle,
 			MinFloor = 2,
 			BattleEffects =
@@ -192,7 +201,7 @@ public static class ScenarioLibrary
 		{
 			Scenario = DoomScenario.Vampires,
 			Description = "They have been thirsty for a long time.",
-			Countdown = 3,
+			Countdown = 2,
 			Scope = DoomScope.Battle,
 			MinFloor = 7,
 			Mark = new() { Name = "Bloodless", Power = 4 },
@@ -222,7 +231,7 @@ public static class ScenarioLibrary
 		{
 			Scenario = DoomScenario.HellUprising,
 			Description = "Something else is wearing them now.",
-			Countdown = 3,
+			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = 13,
 			Mark = new() { Name = "Wreathed", Power = 6 },
@@ -290,7 +299,7 @@ public static class ScenarioLibrary
 		{
 			Scenario = DoomScenario.Famine,
 			Description = "What you did not use, you no longer have.",
-			Countdown = 3,
+			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = 7,
 			Mark = new()
@@ -329,7 +338,7 @@ public static class ScenarioLibrary
 		{
 			Scenario = DoomScenario.Judgement,
 			Description = "It does not weigh them differently.",
-			Countdown = 3,
+			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = 13,
 			Mark = new() { Name = "Weighed", Toughness = 6 },
@@ -387,7 +396,7 @@ public static class ScenarioLibrary
 		{
 			Scenario = DoomScenario.AiUprising,
 			Description = "It has decided what you should be.",
-			Countdown = 3,
+			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = 7,
 			Mark = new()
@@ -423,7 +432,7 @@ public static class ScenarioLibrary
 		{
 			Scenario = DoomScenario.GreyGoo,
 			Description = "It is still eating. It does not do anything else.",
-			Countdown = 3,
+			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = 13,
 			Mark = new()

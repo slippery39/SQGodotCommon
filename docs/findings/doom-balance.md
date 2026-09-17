@@ -679,3 +679,337 @@ performance change has to have before it can be trusted.
 **Any project that drives this engine in bulk wants `ServerGarbageCollection`.** That is a finding
 about `ImmutableGameObjects`, not about DOOMJAM: an immutable engine allocates per action by
 construction, so bulk simulation is allocation bound by construction.
+
+---
+
+## Run 9 — 2026-09-16, `bot-1`, 900 runs, seeds 1-900 — reward tiers, THE ROAD NOT TAKEN
+
+> **This design was built, measured, and rejected. `MinFloor` is not in the code.** It is recorded
+> because the measurements are real and two of them are traps anyone touching rewards will hit. What
+> shipped is rarity weighting — run 10 below.
+>
+> **Why it was rejected, and it is not a balance reason:** floor-gating the rares makes an early
+> rare impossible, and an early rare you get to build the rest of the run around is where a
+> memorable run comes from. Slay the Spire lets a rare turn up on floor 1 for exactly that reason.
+> The tidier difficulty curve below was bought with the best runs in the game, which is a bad
+> trade at any completion rate. `ARareCanBeOfferedOnTheFirstFloor` now holds that decision.
+
+`RunCard.MinFloor` gated what a floor may OFFER: two-cost from floor 7, three-cost from floor 13,
+and **Scavenged Rounds from floor 13 despite costing 1** — the one card whose gate disagreed with
+its cost.
+
+Compared against Run 8, same bot, same seeds, flat pool:
+
+| act | flat (run 8) | tiered | Δ | mean floor, flat → tiered |
+|---|---|---|---|---|
+| The Long Emergency | 27.0% | **18.0%** | −9.0 | 17.83 → 14.26 |
+| The Reckoning | 28.3% | **22.3%** | −6.0 | 18.22 → 14.93 |
+| The Rising | 17.7% | **26.7%** | +9.0 | 15.93 → 15.26 |
+
+Band width **10.6 → 8.7 points**, and the act that was the outlier is no longer the outlier. Overall
+22.3%, against the 25% target. 796s. Dooms fired 21.0 a run. Deck 25.7 at the end.
+
+### Tiering is a CONCENTRATION change, not an ordering change
+
+This was backwards from the prediction. Gating cards out of early floors does not merely delay
+them — it **shrinks the early bag**, and a smaller bag offers its best card more often. Floor 1 went
+from a 14-card pool to a 7-card one, and the first measurement (tiers by cost alone, Scavenged
+Rounds left on floor 1) came out at **35 / 43 / 29%** — every act far EASIER, because the best card
+in the game had just had its offer rate roughly doubled.
+
+**The flat pool's dilution was doing balance work nobody had accounted for.** Gating Scavenged
+Rounds to floor 13 is what brought it back to target. That single card is worth 10-20 points of
+completion depending on how early it can be offered:
+
+| Scavenged Rounds gate | LE | Reckoning | Rising | spread |
+|---|---|---|---|---|
+| floor 1 (cost tier) | 35.0% | 43.0% | 29.0% | 14 |
+| floor 7 | 30.0% | 26.0% | 18.0% | 12 |
+| **floor 13** | 25.0% | 20.0% | 19.0% | **6** |
+
+*(that table is n=300 — see the next finding before trusting its ordering)*
+
+### 100 runs per act cannot RANK the acts
+
+The n=300 steer read **25.0 / 20.0 / 19.0** (LE best, Rising worst). The n=900 record of the same
+build read **18.0 / 22.3 / 26.7** — the exact reverse order. Nothing changed but the sample.
+
+At 100 runs per act the standard error on a ~20% rate is about 4 points, so a 6-point gap between
+acts is barely one and a half of them. The handoff's rule was "steer at n=300, record at n=900,
+they read about five points apart"; the sharper version is that **at n=300 the five points are
+enough to reorder the acts, so n=300 can say whether a change moved the game and must not be used
+to say which act is worst.** Both n=300 conclusions above survive — tiering helps, the gate is worth
+a lot — because both are before/after diffs on the same sample. The ranking did not survive.
+
+### MinFloor breaks the card-value table
+
+A gated card can only be taken by a run that already reached its gate, so its "with" mean is bounded
+below by that floor. Warden reads **+5.50** and Long Watcher **+5.41** — both floor-13 cards, and
+both numbers are mostly the gate, not the card. The table was always confounded with run length
+(every card reads positive); tiering makes it uninterpretable across tiers.
+
+**Compare cards within a tier, or not at all.** Ranking the whole pool by delta is now wrong.
+
+### Riot Shield is the only negative card in the game, and tiering made it matter
+
+Riot Shield: **−0.45** over 215 takes, the one card whose delta is below zero.
+
+It is also The Long Emergency's only cheap themed card, so concentrating the early pool concentrated
+LE's offers onto its own dud — which is the most likely reason LE fell 9 points while The Rising
+rose 9. The Rising has two one-cost cards that pay (Gravedigger, Blood Price) and gained from the
+same mechanism. **The next lever is Riot Shield's statline, and it is a one-card change with a
+clean prediction attached: LE should come back up without touching the other two acts.**
+
+### Pacing regressed, and completion cannot see it
+
+Mean floor fell about three floors in every act (17.8 → 14.3, 18.2 → 14.9, 15.9 → 15.3) while
+completion stayed near target. Reaching floor 20 at all went 58% → 48%; clearing it once there went
+33% → 47%. A losing run ended mid-band-three rather than at the boss, so **a player who lost saw
+less of the act than before** — same difficulty, less content. Completion rate is blind to this by
+construction.
+
+**Rarity weighting (run 10) costs almost none of this**, which is the strongest practical argument
+for it over gating: mean floor −1 floor instead of −3, for a comparable difficulty change. Gating
+shortens the run; weighting only makes the deck more ordinary.
+
+---
+
+## Run 10 — 2026-09-16, `bot-1`, 900 runs, seeds 1-900 — rarity weighting (SHIPPED)
+
+`RunCard.Rarity` — Common / Uncommon / Rare, weighted **6 / 3 / 1** in `StarterContent.WeightOf`,
+drawn without replacement so the three offers stay distinct. **A weight, never a gate: every card is
+offerable on every floor.** 5 rares, 11 uncommons, 10 commons.
+
+| act | flat (run 8) | gated (run 9, rejected) | **rarity (shipped)** | mean floor, flat → rarity |
+|---|---|---|---|---|
+| The Long Emergency | 27.0% | 18.0% | **16.7%** | 17.83 → 16.77 |
+| The Reckoning | 28.3% | 22.3% | **23.7%** | 18.22 → 17.33 |
+| The Rising | 17.7% | 26.7% | **16.7%** | 15.93 → 14.92 |
+
+Band width **10.6 → 7.0 points**, the tightest of the three designs. Overall 19.0%, against a 25%
+target — the game is now about five points too hard. 947s, 20.7 dooms a run, deck 27.7 at the end.
+
+### Weighting costs pacing that gating spent
+
+This is the reason to prefer it, and it is not a difficulty argument — both designs land in a
+similar band. It is that **mean floor fell one floor under weighting and three under gating**, for
+comparable completion. Reaching floor 20 at all: 58% flat, 48% gated, **55% weighted.**
+
+Gating shortens the run, because a floor-1 player is drawing from a deliberately worse bag and dies
+earlier for it. Weighting leaves the whole pool reachable and only makes the average draw more
+ordinary, so the player still walks nearly the full act — with a more ordinary deck.
+
+### The offer odds, computed from the pool rather than measured
+
+Weighted draw without replacement, three offers, per act composition:
+
+| act | rare in a given screen | ≥1 rare in the first 5 screens | ≥1 rare in a run |
+|---|---|---|---|
+| The Long Emergency | 13.5% | 51.4% | 86.8% |
+| The Rising | 13.5% | 51.4% | 86.8% |
+| The Reckoning | 12.9% | 49.9% | 85.6% |
+
+**Half of all runs are offered a rare inside the first five reward screens**, ~87% see one at some
+point, about 1.8 rare offers a run. That is the intended shape: an early rare is an event, not a
+guarantee and not a lottery. Compute these from the authored pool — do not read them off take
+counts, which confound the offer rate with whether the bot wanted the card.
+
+### Why the game got harder
+
+Under the flat pool every card was 1-in-14, so **Scavenged Rounds — the best card in the game in
+every measurement ever taken — was offered as often as Shieldbearer**, which is dead. Flat
+completion rates were quietly propped up by handing out the best card at common frequency. It is now
+1 ticket in 69, and the 8-point drop across acts is almost entirely that correction.
+
+So 19.0% is not a regression to fix by re-tuning weights. It is the first honest reading of the
+reward pool, and the levers that should close the gap to 25% are content and life budget:
+
+1. **Riot Shield at −0.45 is the only negative card in the game** and it is The Long Emergency's
+   cheap themed card — LE is also the worst act at 16.7%. One statline, targeted at the worst act.
+2. The life budget, if still short after that. `mean floor = life budget ÷ life lost per battle`
+   has held for ten runs; life lost per battle is 29.6 and has barely moved across all three
+   reward designs.
+
+---
+
+## Run 11 — 2026-09-16, `bot-1`, 900 runs, seeds 1-900 — Riot Shield, and a free control
+
+One card. **Riot Shield 1-cost 2/14 → 8/10**, the only negative-delta card in the game.
+
+| act | run 10 | run 11 | Δ |
+|---|---|---|---|
+| The Long Emergency | 16.7% | **20.7%** | **+4.0** |
+| The Reckoning | 23.7% | 23.7% | **0.0** |
+| The Rising | 16.7% | 16.7% | **0.0** |
+
+Riot Shield itself: **−0.45 → +1.85**. Mean floor for LE 16.77 → 17.09. Overall 20.4%.
+
+### An unchanged act replays EXACTLY, and that is a regression test
+
+The two control acts did not come back close. They came back **identical, to the decimal** — same
+completion, same mean floor, same life per battle. Riot Shield is a Long Emergency card and is not
+in the other two pools, so those 600 runs are the same 600 runs, replayed.
+
+That is worth more than the error bar it was run to measure:
+
+- **A themed-card change is perfectly attributable.** No sampling noise to argue about, because
+  there is no resampling — the unaffected acts are a byte-identical replay.
+- **Any drift in an act that does not hold the card is a LEAK, not noise.** Shared state, an
+  RNG stream crossing themes, a "themed" card that reached the shared pool. This control costs
+  nothing and should be read on every themed-card change.
+- It does not generalise to shared-pool cards or to life-budget changes, which resample everything.
+  There the n=300-cannot-rank-acts finding from run 9 still governs.
+
+### The statline finding held a third time
+
+Power pays and toughness barely does. 2/14 → 8/10 is **two fewer total stats** and the card went
+from the worst in the game to comfortably positive. Shieldbearer (1-cost 4/12, +0.16) is the same
+shape and the same dead card, and is now the obvious next candidate — the prediction is that
+shifting it toward power lifts every act at once, since it is shared.
+
+---
+
+## Run 12 — The Rising's per-turn rewrite, and why it FAILED
+
+Gravedigger and Pyre Tender were moved from `OnDeath` to `OnTurnEnd` on a frequency argument: a
+turn trigger fires ~40-50 times a run against 5-10 for a death. The Rising went **16.7% → 12.0%**.
+
+| card | was | became | |
+|---|---|---|---|
+| Gravedigger | 8/6, on death: 16 | 6/6, each turn: 3 | +0.43 → **−2.77** |
+| Pyre Tender | 10/8, on death: 12 | 8/8, each turn: 3 | +0.86 → **−1.30** |
+| The Choirmaster | 12/18, doom only | **stats unchanged**, per-turn ADDED | +0.40 → **+0.91** |
+
+**`OnTurnEnd` only pays if the unit is still standing at the end of the turn.** The 40-50 figure
+assumed survival. A 1-cost body in a contested lane usually does not survive, so the trigger fired a
+fraction of the costed number. Almoner — the card that makes this trigger look strong at +1.83 — is
+a **2/8**: the toughness IS the engine, and that is the opposite of the vanilla-body rule that power
+pays and toughness barely does. **Both rules are true, for different cards.** A body that fights
+wants power; a body that hosts a repeating effect wants to survive to fire it.
+
+Two process notes:
+
+- **I moved two levers again.** Both failed cards had statline AND trigger changed together.
+  Restoring the statlines alone left it at 12.0%, which is what identified the trigger — but that
+  cost an entire 900-run measurement to learn what one lever would have told me directly.
+- **The Choirmaster was an accidental control** and it is the only reason the experiment produced
+  anything: stats untouched, effect added, +0.51. Without it the whole run would have read as
+  "per-turn triggers are bad", which is false.
+
+Gravedigger and Pyre Tender are reverted; The Choirmaster keeps its added line.
+
+---
+
+## Run 13 — 2026-09-16 — the battles were too long, and it was structural
+
+**Found by hand-play, not by the harness.** Battles ran 8-9 turns from floor 5 on, with individual
+battles of 40-55 turns. The sim had been reporting `turns per battle 7.9` for ten runs and nobody
+read it as a defect.
+
+**The mechanism.** You damage the Opponent only through OPEN lanes — a lane where your unit faces
+no enemy. Enemy count is `2 + floor/6`, capped at the lane count, 5.
+
+| | floor 1 | floor 6 | floor 13 | floor 18+ |
+|---|---|---|---|---|
+| enemies | 2 | 3 | 4 | **5** |
+| open lanes | 3 | 2 | 1 | **0** |
+
+**At five enemies there are no open lanes and the Opponent cannot be damaged at all** until you kill
+something, while it heals 2-8 a turn. That is the 55-turn tail.
+
+Enemy and Opponent health were both cut **30%**, and then the life budget from 200 to **120**:
+
+| | before | health −30% | +life 120 |
+|---|---|---|---|
+| turns per battle | 7.9 | 5.1 | **4.9** |
+| floors 5-7 | 7.9 / 8.9 / 9.0 | 5.4 / 5.9 / 5.8 | — |
+| life lost per battle | 29.6 | 22.2 | **17.0** |
+| dooms fired per run | 20.6 | 14.6 | **12.1** |
+| **dooms DODGED** | **6.4%** | 21.3% | **24.3%** |
+| completion | 20.7 / 23.7 / 12.0 | 86.7 / 64.0 / 71.3 | **28.0 / 33.3 / 18.7** |
+
+### The dodge was the real bug
+
+`DoomJam.md` promises three outcomes: kill before the first firing (untouched deck, no power), ~8
+turns (rewritten twice), ~15 turns (unrecognisable). At 6.4% **the first row did not exist** — every
+battle was the middle one. The game had one lane where the design called for three, and no single
+number said so. Battle length was the symptom; the missing choice was the defect.
+
+### Life budget moves difficulty WITHOUT moving battle length
+
+Turns per battle went 5.1 → 4.9 across a 40% life cut: unchanged. That is what makes it the right
+difficulty lever once pacing is set — pacing and difficulty are separable here, and the life budget
+is the knob that only touches the second.
+
+It overshot its own prediction (mean floor ~17.9, predicted ~15) because **life lost per battle fell
+too**, 22.2 → 17.0. Fewer and shorter battles mean fewer dooms (14.6 → 12.1) and dooms do direct
+damage. `mean floor = life budget / life lost per battle` still holds, but the denominator is not
+independent of the numerator — cutting life cuts the bill as well as the wallet.
+
+### Still open
+
+**The stalemate tail survived.** Max turns per battle is still 55/44/40 on the floors that field
+five enemies. Cutting health lowered the mean and left the tail, because the tail is the zero-open-
+lane structure, not the health totals. **Capping enemies at 4 is the targeted fix** and is one
+constant.
+
+---
+
+## Run 14 — 2026-09-16 — the doom clock SCALES, and that is what saved the dodge
+
+Asked for: dooms more often, battles shorter. Delivered both, and nearly lost the design's first
+outcome doing it.
+
+**Step 1, flat clock.** Every countdown cut by 1 (floor 2) and enemies capped at 4:
+
+| | before | flat clock + cap |
+|---|---|---|
+| dooms fired per run | 12.1 | **18.6** |
+| turns per battle | 4.9 | 4.7 |
+| **dooms DODGED** | **24.3%** | **9.7%** |
+
+More dooms and shorter battles, both as asked — and **dodging collapsed**. Against a 4.7-turn battle
+a 2-turn fuse fires before you can finish, so "kill it before the first firing" stopped existing for
+the second time this session.
+
+**Step 2, scale the fuse by band.** Band-1 openers back to their original clocks, band 2 and 3 left
+short:
+
+| band | dooms | clock |
+|---|---|---|
+| 1 | Flood, CivilUnrest | 4 |
+| 1 | Zombie | 3 |
+| 2-3 | everything else | 2 |
+
+| | before | flat | **scaling** |
+|---|---|---|---|
+| dooms fired per run | 12.1 | 18.6 | **16.7** |
+| turns per battle | 4.9 | 4.7 | **4.8** |
+| dooms dodged | 24.3% | 9.7% | **22.4%** |
+| completion | 28.0 / 33.3 / 18.7 | 32.3 / 35.7 / 18.0 | **34.3 / 29.0 / 20.7** |
+
+**+38% dooms over baseline with the dodge intact.** The flat clock was not buying frequency with
+difficulty — it was buying it with an OUTCOME, and completion barely moved either way (about four
+points across both steps) while the dodge halved and doubled.
+
+### Tune the clock against the DODGE RATE, never completion
+
+This is the transferable finding. Completion rate is nearly blind to the doom clock: it moved 4
+points while the dodge went 24.3 → 9.7 → 22.4. A tuner watching the headline number would have
+shipped the flat clock and never seen that one of the three promised outcomes had been deleted.
+
+**Any number that is the whole point of a mechanic needs its own line in the table.** `dooms dodged`
+has been printed all along; run 13 is where it was first read as a design metric rather than trivia.
+
+### The enemy cap worked, and did not fix the tail
+
+`2 + floor/6` capped at `LaneCount - 1` so one lane is always open. On the floors that used to field
+five it is decisive — **floor 18's worst battle went 14 turns to 11, floor 20's 18 to 12**, and
+those are now among the shortest battles in the act.
+
+**The tail moved to the middle and is a different bug.** Worst battles are now **50 turns on floor
+6, 49 on floor 10, 32 on floor 7** — floors that field two or three enemies, where open lanes were
+never the constraint. Prime suspect is stacked healing: `The Choir` heals 2 a turn, `Gravecaller` 4,
+the `Zealous` trait another 4, against roughly 12 damage a turn through two open lanes. **The mean
+is healthy and only the worst case is broken**, which points at a cap on how much healing can stack
+on one Opponent rather than at any of the numbers individually.

@@ -3,8 +3,10 @@
 **Read this, then `DoomJam.md`, then `docs/findings/doom-balance.md`.** The findings file is the
 evidence for every number below; this file is the shape of what happened and what will bite you.
 
-State at handoff: **DoomCore.Tests 100/100 green, working tree clean, Godot project builds.**
-Five commits this session (`git log --oneline d3fb7cf..HEAD`). MTG projects untouched.
+**SUPERSEDED by `HANDOFF-DoomPacingAndRewards.md`.** Read that one to pick the work back up; read
+this one for its §4 scars, which still hold.
+
+State at the time: DoomCore.Tests 100/100 green, working tree clean, Godot project builds.
 
 ---
 
@@ -94,7 +96,9 @@ add it to that table before you add it to anything else.
 
 **In this order.**
 
-1. **The Godot front end only plays ONE act.** `DoomBoard` reads `_run.Theme` but never sets it, so
+1. ~~**The Godot front end only plays ONE act.**~~ **DONE 2026-09-16** — `DoomThemeSelect` picks the
+   act at run start and shows all three schedules; the seed is rolled per run and shown with them.
+   Original note, for the reasoning: `DoomBoard` reads `_run.Theme` but never sets it, so
    it always gets the `LongEmergency` default. **Two of the three acts exist only in the simulator.**
    A theme-select screen is the single highest-value thing on this list, and the design already
    wants it: the whole schedule can be shown at run start, which is the theme picker, the difficulty
@@ -107,8 +111,23 @@ add it to that table before you add it to anything else.
    zone scanned by `FireTriggers` alongside enemies, units and the Opponent. `IHasEffects` and the
    whole effect pipeline already exist, so it is roughly one enum entry and one line in the scan.
    Unique, rarity-weighted, one per elite.
-4. **Reward tiers.** `RunCard` has no `MinFloor`; the pool is still FLAT, floor 20 offering what
-   floor 1 does. One field plus a filter in `RewardsFor`.
+4. ~~**Reward tiers.**~~ **DONE 2026-09-16, as RARITY — not floor tiers.** `RunCard.Rarity`,
+   weighted 6/3/1, drawn without replacement. **Every card is offerable on every floor**; rarity
+   only weights the bag, so a rare can turn up on floor 1 and half of all runs are offered one
+   inside the first five screens. That is deliberate and it is a DESIGN decision, not a balance
+   one — an early rare to build a run around is where a memorable run comes from, and
+   `ARareCanBeOfferedOnTheFirstFloor` is the test that holds it.
+
+   Floor gating (`MinFloor`) was built and measured first and is recorded in
+   `docs/findings/doom-balance.md` run 9 as the road not taken. **Read its three findings before
+   touching rewards**, two are traps: **gating CONCENTRATES rather than delays** (the first cut
+   measured 35/43/29 — far EASIER — because a smaller early bag offers its best card more often);
+   **n=300 cannot rank the acts**, it read them in exactly the reverse order of n=900; and a gate
+   **breaks the card-value table**, since a gated card can only be taken by a run that reached it.
+
+   Shipped numbers, n=900: **16.7 / 23.7 / 16.7%**, band 10.6 → 7.0 points wide, mean floor down
+   only one floor (gating cost three). Overall 19.0% against a 25% target — see run 10 for why
+   that is the first honest reading of the pool rather than a regression.
 5. **Events.** A new `FloorKind` and a definition record. The cost is UI: `DoomIntermission` only
    knows one-button panels and a card row, and this would be the fourth time it needed widening —
    generalise it once instead.
@@ -116,9 +135,20 @@ add it to that table before you add it to anything else.
    what would need changing is `ScenarioFor` and `FloorKindFor`, which both take an ABSOLUTE floor
    and would need a floor-within-act.
 
-**Known outliers, not yet acted on:** Scavenged Rounds at **+3.41** has been the best card in the
-game in every single measurement. Shieldbearer at +0.16 is dead. `Rapture` is still unimplemented
+**Known outliers:** Scavenged Rounds is handled — it is a RARE now, 1 ticket in 69 rather than
+1 card in 14, and that correction alone is most of the 8-point difficulty change in run 10.
+Riot Shield is fixed — 2/14 → 8/10, **−0.45 → +1.85**, and LE 16.7% → 20.7% with the other two
+acts replaying IDENTICALLY (run 11: a themed-card change is perfectly attributable, and drift in an
+act that does not hold the card means the change leaked). **Shieldbearer at +0.16 is the same shape
+of dead card** — a 1-cost 4/12 — and it is SHARED, so the same fix should lift all three acts at
+once. Power pays; toughness barely does, and that has now held three times. `Rapture` is still unimplemented
 and gated to floor 99 so it is never offered — decide whether it ships or gets cut.
+
+## 5b. SUPERSEDED — the 2026-09-16 session
+
+That session shipped the theme picker, rarity-weighted rewards and a pacing rebalance, and its
+account lives in **`HANDOFF-DoomPacingAndRewards.md`**. Everything below in this file describes the
+content as it was BEFORE that work — the numbers in §6 in particular are stale.
 
 ## 6. The measurement that matters
 

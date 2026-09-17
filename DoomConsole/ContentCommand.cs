@@ -74,7 +74,7 @@ public static class ContentCommand
 			if (StarterContent.FloorKindFor(floor) == FloorKind.Rest)
 			{
 				Console.WriteLine(
-					$"  {floor, 5}  REST    heal {StarterContent.RestHealFor(160)} "
+					$"  {floor, 5}  REST    heal {StarterContent.RestHealFor(StarterContent.StartingLife)} "
 						+ "(30% of max), costs a floor"
 				);
 				continue;
@@ -198,7 +198,15 @@ public static class ContentCommand
 		Console.WriteLine(
 			$"  SHARED POOL — {StarterContent.SharedPool.Length} cards, offered in every act"
 		);
-		Console.WriteLine("  Still FLAT: floor 20 offers what floor 1 does.");
+		Console.WriteLine(
+			"  NOT gated by floor — every card is offerable everywhere, rarity only weights the "
+				+ "bag."
+		);
+		Console.WriteLine(
+			$"  A rare is offered {StarterContent.WeightOf(DoomRarity.Common)
+				/ StarterContent.WeightOf(DoomRarity.Rare)}x less often than a common, so an early "
+				+ "rare is uncommon rather than impossible."
+		);
 		Table(StarterContent.SharedPool.Select(c => (c, 1)));
 
 		foreach (var theme in ThemeLibrary.All)
@@ -216,7 +224,7 @@ public static class ContentCommand
 
 	private static void Table(IEnumerable<(RunCard Card, int Count)> cards)
 	{
-		Console.WriteLine("    n  cost  name                stats  does");
+		Console.WriteLine("    n  cost  name                stats  rarity     does");
 
 		foreach (var (card, count) in cards.OrderBy(c => c.Item1.Cost).ThenBy(c => c.Item1.Name))
 		{
@@ -224,7 +232,8 @@ public static class ContentCommand
 			var does = card.Effects.IsEmpty ? card.Description : Effects(card.Effects);
 
 			Console.WriteLine(
-				$"  {count, 3}  {card.Cost, 4}  {card.Name, -18}  {stats, 5}  {does}"
+				$"  {count, 3}  {card.Cost, 4}  {card.Name, -18}  {stats, 5}  "
+					+ $"{card.Rarity, -9}  {does}"
 			);
 		}
 	}

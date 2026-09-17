@@ -97,6 +97,45 @@ public class ThemeTests
 	}
 
 	/// <summary>
+	/// The bands the theme-select screen shows must be the act the player actually walks.
+	///
+	/// Asserted as a COVER — every floor from 1 to the boss falls in exactly one band, and that
+	/// band names the doom `ScenarioFor` gives that floor. A gap or an overlap here is a screen
+	/// that advertises the wrong run, and nothing else in the game would notice.
+	/// </summary>
+	[Test]
+	public void EveryFloorFallsInExactlyOneBandThatNamesItsDoom()
+	{
+		foreach (var theme in ThemeLibrary.All)
+		{
+			var bands = ThemeLibrary.BandsOf(theme.Theme);
+
+			Assert.That(bands, Is.Not.Empty, $"{theme.Name} banded into nothing");
+			Assert.That(bands[0].FirstFloor, Is.EqualTo(1), $"{theme.Name} does not start on 1");
+			Assert.That(
+				bands[^1].LastFloor,
+				Is.EqualTo(Run.ActLength),
+				$"{theme.Name} stops before the boss floor"
+			);
+
+			foreach (var (band, next) in bands.Zip(bands.Skip(1)))
+				Assert.That(
+					next.FirstFloor,
+					Is.EqualTo(band.LastFloor + 1),
+					$"{theme.Name} has a gap or an overlap after floor {band.LastFloor}"
+				);
+
+			foreach (var band in bands)
+			foreach (var floor in Enumerable.Range(1, band.LastFloor - band.FirstFloor + 1))
+				Assert.That(
+					StarterContent.ScenarioFor(theme.Theme, band.FirstFloor + floor - 1),
+					Is.EqualTo(band.Doom),
+					$"{theme.Name} bands floor {band.FirstFloor + floor - 1} as {band.Doom}"
+				);
+		}
+	}
+
+	/// <summary>
 	/// Whatever a theme schedules must be legal where it lands. `MinFloor` no longer SELECTS
 	/// anything, but it still records where a doom was designed to be seen, and a schedule that
 	/// ignores it is putting an apocalypse somewhere it was never balanced for.

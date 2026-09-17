@@ -3,6 +3,21 @@ using System.Collections.Immutable;
 namespace DoomCore;
 
 /// <summary>
+/// How often a card is OFFERED, not how strong it is — though the two had better agree.
+///
+/// **Rarity weights the bag; it never gates a floor.** A rare can turn up on floor 1, and that is
+/// the point: an early rare you get to build the rest of the run around is where a memorable run
+/// comes from. Slay the Spire does exactly this, and a floor gate would trade those runs away for
+/// a tidier difficulty curve.
+/// </summary>
+public enum DoomRarity
+{
+	Common = 0,
+	Uncommon,
+	Rare,
+}
+
+/// <summary>
 /// A card as it exists in the RUN deck — the definition, not an instance in a battle.
 ///
 /// Deliberately NOT a GameObject. The run lives outside GameState entirely, so a run card carries
@@ -45,6 +60,12 @@ public record RunCard
 	/// damage do not belong in the same field.
 	/// </summary>
 	public DoomTheme? Theme { get; init; }
+
+	/// <summary>
+	/// How often this card is offered. See <see cref="DoomRarity"/> — it is a WEIGHT, not a gate,
+	/// and <see cref="StarterContent.WeightOf"/> is where the weights live.
+	/// </summary>
+	public DoomRarity Rarity { get; init; } = DoomRarity.Common;
 
 	public bool HasTag(string tag) => Tags.Contains(tag);
 }

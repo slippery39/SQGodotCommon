@@ -48,6 +48,19 @@ public record ThemeDefinition
 }
 
 /// <summary>
+/// A stretch of the act that holds one apocalypse, inclusive at both ends.
+/// </summary>
+public record DoomBand
+{
+	public int FirstFloor { get; init; }
+	public int LastFloor { get; init; }
+	public DoomScenario Doom { get; init; }
+
+	/// <summary>True when the band is a single floor — the boss, today.</summary>
+	public bool IsOneFloor => FirstFloor == LastFloor;
+}
+
+/// <summary>
 /// Every theme, and the schedule that turns a floor into an apocalypse.
 ///
 /// **The doom is a SCHEDULE, not a roll.** It used to be drawn at random from everything legal for
@@ -133,6 +146,42 @@ public static class ThemeLibrary
 	/// Which apocalypse waits on a floor. **Deterministic and seedless** — the schedule is the
 	/// same every run of a theme, which is what makes it a story rather than a shuffle.
 	/// </summary>
+	/// <summary>
+	/// The whole act as FLOOR BANDS: each run of consecutive floors that share an apocalypse, in
+	/// order. This is what the theme-select screen shows, and it is the entire pitch — the doom is
+	/// a schedule, so the player can be told all of it before drawing a card.
+	///
+	/// It asks <see cref="ScenarioFor"/> for every floor and collapses the repeats rather than
+	/// reading <see cref="ThemeDefinition.Bands"/> and redoing the band arithmetic. A second copy
+	/// of that arithmetic is a second schedule, and the first time the two disagreed the screen
+	/// would be advertising a run nobody plays.
+	/// </summary>
+	public static ImmutableArray<DoomBand> BandsOf(DoomTheme theme)
+	{
+		var bands = ImmutableArray.CreateBuilder<DoomBand>();
+		var first = 1;
+
+		for (var floor = 1; floor <= Run.ActLength; floor++)
+		{
+			var doom = ScenarioFor(theme, floor);
+
+			if (floor < Run.ActLength && ScenarioFor(theme, floor + 1) == doom)
+				continue;
+
+			bands.Add(
+				new DoomBand
+				{
+					FirstFloor = first,
+					LastFloor = floor,
+					Doom = doom,
+				}
+			);
+			first = floor + 1;
+		}
+
+		return bands.ToImmutable();
+	}
+
 	public static DoomScenario ScenarioFor(DoomTheme theme, int floor)
 	{
 		var definition = Of(theme);

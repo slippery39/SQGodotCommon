@@ -9,6 +9,31 @@ namespace DoomCore;
 /// </summary>
 public static class StarterContent
 {
+	/// <summary>
+	/// How many tickets a card of each rarity puts in the reward bag.
+	///
+	/// **A weight, never a gate.** Every card is offerable on every floor; a rare is simply a
+	/// sixth as likely to come up as a common. That is what keeps an early rare possible, and an
+	/// early rare you build the rest of the run around is the memorable run — see
+	/// <see cref="DoomRarity"/>. Floor-gating the rares was measured and thrown away: it made the
+	/// early bag small enough to CONCENTRATE the best card instead of hiding it, and it cost the
+	/// runs worth remembering. `docs/findings/doom-balance.md` run 9 has the numbers.
+	///
+	/// With roughly seven commons, eight uncommons and three rares in an act's pool that puts a
+	/// rare in a three-card offer about one screen in eight.
+	/// </summary>
+	public static int WeightOf(DoomRarity rarity) =>
+		rarity switch
+		{
+			DoomRarity.Common => 6,
+			DoomRarity.Uncommon => 3,
+			DoomRarity.Rare => 1,
+			_ => throw new ArgumentOutOfRangeException(
+				nameof(rarity),
+				$"No weight for {rarity}, so a card of that rarity would never be offered at all"
+			),
+		};
+
 	/// <summary>Countdown length per scenario — content, see <see cref="ScenarioLibrary"/>.</summary>
 	public static int CountdownFor(DoomScenario scenario) => ScenarioLibrary.Of(scenario).Countdown;
 
@@ -80,6 +105,20 @@ public static class StarterContent
 			Text = text,
 		};
 
+	/// <summary>
+	/// **The most frequent trigger in the game.** A turn effect fires 40-50 times in a run against
+	/// 5-10 for a doom effect and 5-10 for a death — see `docs/findings/doom-balance.md` run 12.
+	/// Price accordingly: small numbers, over and over.
+	/// </summary>
+	private static DoomEffect EachTurn(DoomTarget target, GameAction template, string text) =>
+		new()
+		{
+			Trigger = EffectTrigger.OnTurnEnd,
+			Target = target,
+			Template = template,
+			Text = text,
+		};
+
 	private static DoomEffect OnDeath(DoomTarget target, GameAction template, string text) =>
 		new()
 		{
@@ -110,11 +149,25 @@ public static class StarterContent
 			BaseToughness = 6,
 		};
 
+	/// <summary>
+	/// The life budget, and **the single biggest number in the game**.
+	///
+	/// `mean floor = life budget / life lost per battle` has held across every content change for
+	/// eleven measured runs, which makes this the one lever that moves difficulty without touching
+	/// how a battle plays. It was 200 while a battle cost 29.6 life; cutting enemy and Opponent
+	/// health by 30% took the bill to 22.2 a battle and completion to 74% against a 25% target —
+	/// the same budget simply buys a third more battles now.
+	///
+	/// Rests heal a FRACTION of max (see <see cref="RestHealFor"/>), so they follow this down on
+	/// their own and the ratio of healing to damage is preserved.
+	/// </summary>
+	public const int StartingLife = 120;
+
 	public static Run NewRun(int seed = 1) =>
 		new Run
 		{
-			Life = 200,
-			MaxLife = 200,
+			Life = StartingLife,
+			MaxLife = StartingLife,
 			RngSeed = seed,
 			Companion = StarterCompanion,
 		}.WithCards(
@@ -153,21 +206,36 @@ public static class StarterContent
 	/// whole pool collapsed toward zero — a reward you would not play is not a reward. The benchmark
 	/// is the starter card of the same cost, beaten clearly, with the surplus in POWER.
 	///
-	/// The pool is FLAT — floor 10 offers the same cards as floor 1. `MinFloor` on a RunCard is the
-	/// obvious next step.
+	/// The pool is WEIGHTED BY RARITY and not gated by floor — floor 1 can offer anything floor 20
+	/// can, just less often. See <see cref="WeightOf"/> for why it is not a gate.
 	/// </summary>
 	public static ImmutableArray<RunCard> SharedPool =>
 		[
 			Unit("Scrapper", 1, 10, 4, "Fast, and does not last."),
 			Unit("Shieldbearer", 1, 4, 12, "Holds the line, and holds a spike."),
 			Unit("Tunneller", 1, 8, 6, "Comes up where it is needed."),
-			Unit("Rust Golem", 2, 10, 14, "Slow. Very hard to move."),
-			Unit("Feral Pack", 2, 12, 8, "Hungry, and there are several."),
+			Unit("Rust Golem", 2, 10, 14, "Slow. Very hard to move.") with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
+			Unit("Feral Pack", 2, 12, 8, "Hungry, and there are several.") with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
 			Unit("Stray", 0, 6, 6, "Followed the noise."),
-			Unit("Siege Ram", 3, 18, 6, "One job, done once."),
-			Unit("Warden", 3, 12, 16, "The last thing still standing."),
+			Unit("Siege Ram", 3, 18, 6, "One job, done once.") with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
+			Unit("Warden", 3, 12, 16, "The last thing still standing.") with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
 			Unit("Bonepicker", 2, 14, 4, "Arrives after the fighting."),
-			Unit("Long Watcher", 3, 12, 20, "Has seen four of these."),
+			Unit("Long Watcher", 3, 12, 20, "Has seen four of these.") with
+			{
+				Rarity = DoomRarity.Rare,
+			},
 			Rite(
 				"Scavenged Rounds",
 				1,
@@ -177,7 +245,10 @@ public static class StarterContent
 					new DealDamageAction { Amount = 6 },
 					"6 to every enemy"
 				)
-			),
+			) with
+			{
+				Rarity = DoomRarity.Rare,
+			},
 			Rite(
 				"Field Dressing",
 				1,
@@ -189,7 +260,10 @@ public static class StarterContent
 				2,
 				"Everyone takes what they can carry.",
 				OnPlay(DoomTarget.Player, new DrawCardsAction { Amount = 3 }, "draw 3")
-			),
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
 			Rite(
 				"Breaching Charge",
 				2,
@@ -199,7 +273,10 @@ public static class StarterContent
 					new DealDamageAction { Amount = 14 },
 					"14 to the Opponent"
 				)
-			),
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
 		];
 
 	/// <summary>
@@ -209,7 +286,15 @@ public static class StarterContent
 	/// </summary>
 	private static ImmutableArray<RunCard> LongEmergencyCards =>
 		[
-			Unit("Riot Shield", 1, 2, 14, "Issued for a crowd, not for this."),
+			// **Was a 1-cost 2/14 and measured −0.45** — the only card in the game with a negative
+			// delta, over 215 takes. Not a pricing problem: 16 total stats beats the 6/6 starter
+			// on paper. It is that 2 power never threatens anything, and the pool has said twice
+			// that POWER is what pays and toughness barely does — Shieldbearer at 4/12 is +0.16
+			// and equally dead, while Tunneller at 8/6 is +1.82.
+			//
+			// 8/10 clears the starter in the direction that matters and keeps the body that this
+			// act wants standing when the clock runs out.
+			Unit("Riot Shield", 1, 8, 10, "Issued for a crowd, not for this."),
 			Unit(
 				"Salvage Rig",
 				2,
@@ -221,7 +306,10 @@ public static class StarterContent
 					new DrawCardsAction { Amount = 2 },
 					"when the doom fires: draw 2"
 				)
-			),
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
 			Unit(
 				"Drone Swarm",
 				2,
@@ -233,7 +321,10 @@ public static class StarterContent
 					new DealDamageAction { Amount = 6 },
 					"when the doom fires: 6 to every enemy"
 				)
-			),
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
 			Unit(
 				"Reactor Crew",
 				3,
@@ -245,7 +336,10 @@ public static class StarterContent
 					new GainLifeAction { Amount = 10 },
 					"when the doom fires: gain 10"
 				)
-			),
+			) with
+			{
+				Rarity = DoomRarity.Rare,
+			},
 		];
 
 	/// <summary>
@@ -256,6 +350,15 @@ public static class StarterContent
 	/// </summary>
 	private static ImmutableArray<RunCard> RisingCards =>
 		[
+			// **The death trigger is here on EVIDENCE, not by default.** It was swapped for
+			// "each turn: 3 to the Opponent" on the frequency argument — a turn trigger fires far
+			// more often than a death — and measured −2.77 against this card's +0.43. Restoring
+			// the body alone did not recover it, so the trigger was the damage.
+			//
+			// Why the frequency argument failed here: **OnTurnEnd only pays if the unit is still
+			// standing at the end of the turn.** A 1-cost body in a contested lane usually is not,
+			// so the "40-50 firings a run" this was costed at never happened. Almoner is the card
+			// that makes the trigger look good and it is a 2/8 — the toughness IS the engine.
 			Unit(
 				"Gravedigger",
 				1,
@@ -268,6 +371,9 @@ public static class StarterContent
 					"on death: 16 to the Opponent"
 				)
 			),
+			// Restored alongside Gravedigger, same measurement and same reason: "each turn: 3 to
+			// every enemy" read −1.30 against this card's +0.86, because a 2-cost body in a
+			// contested lane is rarely alive at end of turn to fire it.
 			Unit(
 				"Pyre Tender",
 				2,
@@ -279,7 +385,14 @@ public static class StarterContent
 					new DealDamageAction { Amount = 12 },
 					"on death: 12 to every enemy"
 				)
-			),
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
+			// The act keeps ONE doom payoff — it is the act's own clock and something should pay
+			// off it. What it lacked was anything between firings, so the per-turn line is added
+			// rather than swapped in: 3 a turn is the Almoner lesson (a 1-cost gaining 2 a turn
+			// measured +1.83, against this card's +0.40 for gaining 12 on the doom).
 			Unit(
 				"The Choirmaster",
 				3,
@@ -290,8 +403,12 @@ public static class StarterContent
 					DoomTarget.Player,
 					new GainLifeAction { Amount = 12 },
 					"when the doom fires: gain 12"
-				)
-			),
+				),
+				EachTurn(DoomTarget.Player, new GainLifeAction { Amount = 3 }, "each turn: gain 3")
+			) with
+			{
+				Rarity = DoomRarity.Rare,
+			},
 			Rite(
 				"Blood Price",
 				1,
@@ -301,7 +418,10 @@ public static class StarterContent
 					new DealDamageAction { Amount = 10 },
 					"10 to every enemy"
 				)
-			),
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
 		];
 
 	/// <summary>
@@ -318,13 +438,7 @@ public static class StarterContent
 				2,
 				8,
 				"Gives away what little is left.",
-				new DoomEffect
-				{
-					Trigger = EffectTrigger.OnTurnEnd,
-					Target = DoomTarget.Player,
-					Template = new GainLifeAction { Amount = 2 },
-					Text = "each turn: gain 2",
-				}
+				EachTurn(DoomTarget.Player, new GainLifeAction { Amount = 2 }, "each turn: gain 2")
 			),
 			Unit(
 				"Reliquary Guard",
@@ -337,13 +451,19 @@ public static class StarterContent
 					new GainLifeAction { Amount = 14 },
 					"when the doom fires: gain 14"
 				)
-			),
+			) with
+			{
+				Rarity = DoomRarity.Rare,
+			},
 			Rite(
 				"Tithe",
 				1,
 				"Give it up before it is taken.",
 				OnPlay(DoomTarget.None, new DrawCardsAction { Amount = 2 }, "draw 2")
-			),
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
 		];
 
 	/// <summary>
@@ -386,9 +506,17 @@ public static class StarterContent
 		var rng = new Random(seed * 104729 + floor * 31);
 		var picked = new List<RunCard>();
 
+		// WEIGHTED, and without replacement so the three offers stay distinct. Every card is in
+		// the bag on every floor — rarity only decides how many tickets it holds, so an early rare
+		// is uncommon rather than impossible.
 		for (var i = 0; i < count && pool.Count > 0; i++)
 		{
-			var index = rng.Next(pool.Count);
+			var roll = rng.Next(pool.Sum(card => WeightOf(card.Rarity)));
+			var index = 0;
+
+			while (roll >= WeightOf(pool[index].Rarity))
+				roll -= WeightOf(pool[index++].Rarity);
+
 			picked.Add(pool[index]);
 			pool.RemoveAt(index);
 		}
@@ -502,7 +630,12 @@ public static class StarterContent
 	/// </summary>
 	public static IReadOnlyList<Enemy> EnemiesFor(int floor, int seed = 0)
 	{
-		var count = Math.Min(2 + floor / 6, DoomBattle.LaneCount);
+		// **LaneCount - 1, so one lane is always open.** At five enemies across five lanes there
+		// is no open lane at all and the Opponent cannot be damaged until you kill something,
+		// while it heals every turn — that is where the 40-55 turn battles came from. Cutting
+		// health lowered the average battle and left that tail untouched, because the tail is this
+		// structure rather than any health total.
+		var count = Math.Min(2 + floor / 6, DoomBattle.LaneCount - 1);
 		var roster = EnemyLibrary.PlayableOn(floor);
 		var rng = new Random(seed * 7717 + floor);
 
