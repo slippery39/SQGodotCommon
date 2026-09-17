@@ -23,7 +23,8 @@ SQGodotCommon/
 │   ├── Ai/                          # DoomBot (plays a turn), RunSimulator (plays a run + records)
 │   ├── Cards/ Components/           # DoomCard; UnitComponent (Power/Toughness/Damage/Lane)
 │   ├── Enemies/ Zones/              # Enemy + telegraphed Intent; Opponent + PendingSummon; Zone
-│   ├── Content/                     # ThemeLibrary (the acts + floor→doom SCHEDULE), Enemy/Scenario
+│   ├── Content/                     # ThemeLibrary (the acts + floor→doom SCHEDULE), Enemy/Scenario,
+│   │                                #   KeywordLibrary (the glossary, as DATA — console and UI share it)
 │   ├── Run/                         # Run + RunCard (OUTSIDE GameState); DoomTransform (the
 │   │                                #   permanent-doom language: a read × a verb), DoomTransforms,
 │   │                                #   DoomBattleEffects (battle scope), FloorKind, DoomPreview
@@ -41,10 +42,20 @@ SQGodotCommon/
     └── DoomGame/                    # DOOMJAM front end — reads DoomCore, decides nothing
         ├── DoomThemeSelect.cs       #   run start: pick the act, its whole schedule shown
         ├── DoomBoard.cs             #   the battle screen; layout contract lives in DoomUI.md
-        ├── DoomLaneCell.cs          #   one lane slot: silhouette + attack/life pips
+        ├── DoomLaneCell.cs          #   one lane slot: art on a plinth + attack/life marks
         ├── DoomHandView.cs          #   the fan, on Common/Cards/2D; drag -> PlayCardAction
-        ├── DoomArt.cs               #   generated flat art — card faces, figures, badges
-        └── DoomPalette.cs           #   the five colours; gold and red are reserved
+        ├── DoomCardFace.cs          #   THE CARD'S LOOK, in one place. Hand, preview and rewards
+        │                            #   all draw through it — two copies would drift in a day
+        ├── DoomCardPreview.cs       #   doom_card_preview.tscn — a card rack with no battle behind
+        │                            #   it, loading the cards that BREAK the layout
+        ├── DoomCardInspector.cs     #   the hover panel: full rules text, then keywords
+        ├── DoomAnimator.cs          #   float/pop/flash/shake on one Speed dial; F4 cycles it
+        ├── DoomClockDial.cs         #   the doom clock as a ring of segments
+        ├── DoomIntermission.cs      #   between floors: what the doom took, and the card rewards
+        ├── DoomArt.cs               #   art by NAME convention from Art/, else a generated figure
+        ├── DoomPalette.cs           #   the five colours; gold and red are reserved
+        └── Art/                     #   52 authored SVGs + background.png + icons/ (CC BY — see
+                                     #   CREDITS.md). New files need `--headless --import` to exist
 ```
 
 **The MTG projects (`MtgCore`, `MtgCore.Tests`, `MtgConsole`, `MtgSimulator`, `MtgSimulator.Console`,
@@ -59,11 +70,14 @@ nothing is orphaned — you should not need any of it.
 | Kind | Location | Loads |
 |---|---|---|
 | Design doc — read first | `DoomJam.md` | read it |
-| Where the last session got to | `HANDOFF-DoomPacingAndRewards.md` | read it when picking the work back up |
+| Where the last session got to | `HANDOFF-DoomVisualPass.md` | read it when picking the work back up |
+| Credits — **must ship** | `CREDITS.md` | before release, and when adding any third-party asset |
+| Earlier handoff, superseded | `HANDOFF-DoomPacingAndRewards.md` | read only for its scars (§4) |
 | Earlier handoff, superseded | `HANDOFF-DoomBalanceAndThemes.md` | read only for its scars (§4) |
 | Earlier handoff, superseded | `HANDOFF-DoomFrontEndAndEffects.md` | read only for its scars (§4) |
 | Earlier still, superseded | `HANDOFF-DoomBattleLoop.md` | read only for its scars (§4) |
-| UI design — layout contract | `DoomUI.md` | read it before touching `SQGodotCommon/DoomGame/` |
+| UI design — layout contract AND the visual language | `DoomUI.md` | read it before touching `SQGodotCommon/DoomGame/` |
+| The mockup, and the backdrop prompt | `docs/mockups/` | when changing layout or generating art |
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
 | Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |
 | Balance, as measured | `docs/findings/doom-balance.md` | read before changing life, floors or rewards |
@@ -90,6 +104,12 @@ C# on .NET. Windows.
 - **Never assume on vague requirements — confirm before implementing**
 - **Verify a primitive fires before relying on it.** An inert card throws no error; four silent no-op
   engine bugs were found only by testing the consequence, not the construction.
+- **"It looks a bit off" is a bug report, and never about what it looks like.** Text that looked too
+  small was empty; a cramped badge was showing the WRONG number; a panel whose title ran off screen
+  was overflowing because of a label at its foot. Find the cause before fixing the resemblance.
+- **Check `git status` before writing a file you believe is new.** A `cat >` over an existing
+  `CompanionTests.cs` destroyed eight tests, and the only tell was the count going DOWN after tests
+  were added. A wrong number looks exactly like a large one — read it, do not skim it.
 - **Never report one balance number across more than one act.** Three acts at 58/13/1.5% averaged to
   24.2% against a 25% target — the aggregate reassured while two were unplayable. See
   `docs/findings/doom-balance.md`.

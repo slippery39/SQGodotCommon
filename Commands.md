@@ -81,6 +81,15 @@ for f in fs[25:130]:
     print(sum(i * c for i, c in enumerate(d.histogram())) / 1e6, f)
 ```
 
+**`--reward` opens the reward screen**, which is otherwise reachable only by winning a floor:
+
+```
+... --quit-after 30 DoomGame/doom_board.tscn -- --autostart --reward
+```
+
+It marks the Companion with every apocalypse in the library, three times each, so the panel is shown
+its worst case — a name that long is what pushed the intermission off the screen on floor 19.
+
 **The card preview needs no battle at all**, and is the right loop for card work:
 
 ```

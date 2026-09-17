@@ -1,5 +1,9 @@
 # Handoff — DOOMJAM: the game got played, and playing it found what measuring it could not
 
+> **SUPERSEDED by `HANDOFF-DoomVisualPass.md` (2026-09-17).** Read that first. This is kept for its
+> §4 scars and its §7 measurements, which are still the current balance numbers — but §5 "what to do
+> next" and §6 "committing this" are both done and are history now.
+
 **Read this, then `DoomJam.md`, then `docs/findings/doom-balance.md` runs 9-14.** That findings file
 is the evidence for every number below. `HANDOFF-DoomBalanceAndThemes.md` is the previous session
 and is superseded — read only its §4 scars.

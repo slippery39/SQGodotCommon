@@ -8,31 +8,39 @@ The second goal is a measurement: **how hard is it to build a completely differe
 `ImmutableGameObjects`?** Whatever we end up wishing we could lift out of `MtgCore` is the finding.
 Record it under "Engine findings" as we hit it.
 
-## State of play (2026-09-14)
+## State of play (2026-09-17)
 
-**BUILT:** five-lane automatic combat; the run layer; the doom preview; the Companion;
-`DoomConsole`; **the Opponent and killing it as the win condition**; **recurring dooms** (the clock
-resets, the battle carries on); **scenario scope**, with Flood rewritten as a battle-scope board
-wash. 48 tests green, and the whole loop verified by playing it.
+**The whole loop is built and playable in Godot.** Pick an act, fight down twenty floors, take
+rewards between them, eat or dodge the apocalypse on the clock, die or finish. `DoomConsole` is
+still the remote surface and still the faster way to test a rules change.
 
-**ENEMY REFRESH IS BUILT.** The Opponent announces a summon a turn ahead and lands it at end of
-turn, one every `SummonInterval` (2) turns, into the lowest free lane. Reinforcements scale on the
-TURN NUMBER, not the floor, so a stalled battle is not a safe one.
+**BUILT:** five-lane automatic combat; the run layer; the Companion; the Opponent and killing it as
+the win condition; recurring dooms; scenario scope; all three acts reachable from a picker; rewards
+weighted by rarity; the full front end — board, hand, drag-to-lane, reward screen, intermission,
+animation, a keyword glossary on hover. **113 tests green.**
 
-**THE GODOT FRONT END IS BUILT (2026-09-15), and a full battle has been fought and won in it.**
-Board, hand, drag a card into a lane, end turn — see `DoomUI.md` for the layout contract. The main
-menu leads with DOOMJAM. `DoomConsole` is still the remote surface and still the faster way to test
-a rules change.
+**NOT BUILT, and this is where a design pass should look:**
 
-**NOT BUILT:** more scenarios — the content, and the whole point of scope. Rapture still throws for
-want of a sacrifice mechanic. **The RUN does not continue in the UI**: killing the Opponent ends the
-battle and stops there, with no next floor, no reward and no `Run.AfterBattle` — so the apocalypses
-that are supposed to be the power curve never actually land on a deck you keep playing.
+- **Rapture** still has no implementation and is gated to floor 99 so it is never offered. Ship it or
+  cut it.
+- **Elites, salvage, events and multi-act runs.** None exist. `DoomIntermission` is the screen they
+  would live on and should be generalised ONCE, when events actually need it.
+- **Ashfall leaves no mark on the Companion** — see "Open questions". It is playable content with a
+  silent no-op in it.
+- **The stalemate tail.** The mean battle is healthy; the worst case is not. See
+  `docs/findings/doom-balance.md` and the pacing handoff.
+- **The Rising is the weak act** at 20.7% completion against 34.3% and 29.0%. Its cards pay once.
+  Read findings run 12 before redesigning them — the obvious fix was tried and made it worse.
 
-**Measured by playing floor 1** (seed 42, a deliberately lazy line — two units committed, then
-nothing): Opponent 26 → 8 over six turns while life fell 60 → 36, Flood washed the board on turn 5,
-and progress stalled at 8 the moment the board was empty. Losable and winnable; the numbers want
-real tuning, not more reasoning.
+**Two content rules the front end now depends on**, both established 2026-09-17:
+
+- **Effect text is short and leans on keywords.** `"Doom: 6 to every enemy"`, not `"when the doom
+  fires: 6 to every enemy"` — the long form did not fit a card and rendered truncated. `Doom` is a
+  keyword in `KeywordLibrary` with reminder text on hover. **Reach for the glossary before reaching
+  for a smaller font.**
+- **`Description` is flavour and is no longer shown on a card.** A card with no ability shows no text
+  box at all and its art grows into the space, which makes "this card does something" readable at a
+  glance across a hand. Flavour still appears in `DoomConsole`'s content dump.
 
 ## Pitch
 
@@ -287,7 +295,7 @@ apocalypse should be a desperate move, not routine.
 | Theme | How | Priority |
 |---|---|---|
 | TAG ALONG | the Companion, above — structurally load-bearing | required |
-| PERSPECTIVE SHIFT | 2D cards over a 3D scenario backdrop that changes per apocalypse | if time survives |
+| PERSPECTIVE SHIFT | 2D cards over a painted backdrop | **partly shipped** — one flat backdrop, not 3D and not yet per-apocalypse |
 
 **Certainty is still permission to show the player everything.** The tension is inevitability, not
 surprise, so the screen says which apocalypse is coming, when, and what it does. That principle
@@ -405,6 +413,20 @@ available. Moot now: the sub-theme is dropped (see Sub-themes), so no input mode
   deck it never touches. Same rule as before: never a second, hand-written account of a scenario.
   Both the preview and the real firing build their snapshot with `DoomFiring.Capture`, so the dial
   cannot disagree with the apocalypse it predicts.
+- **Ashfall leaves the Companion no mark, and that is content, not a preference.** Of fourteen
+  apocalypses, only Rapture (unimplemented, never offered) and **Ashfall** author no
+  `CompanionMark`. Ashfall is playable — floor 2 of The Reckoning — so surviving it hands the
+  Companion a 0/0 mark literally named "Unscathed" that does nothing and clutters its name.
+  **This is the exact silent no-op `ScenarioDefinition` already warns about**: its own comment says
+  `MarkFor` was moved off an enum switch precisely because new apocalypses were "handed a mark that
+  did nothing and said Unscathed" — and the DEFAULT VALUE still does it. Found 2026-09-17 by
+  rendering the maximal companion name; not fixed, because choosing the stats is a balance decision
+  and it moves The Reckoning's curve. Fix it with a test that every implemented scenario authors a
+  mark, or the next one added will do the same thing.
+- **The Companion's name grows without limit.** Repeats are collapsed for display now
+  (`Ash — Hardened x3`), which stops it leaving the screen, but the length is still bounded only by
+  the number of distinct apocalypses. A name is not a good place to store a run's history; a list
+  on the intermission might be.
 - **Does the Opponent attack on its own**, or only through its units? Currently only units exist.
 - **Is Opponent HP the difficulty dial, or the doom interval?** Probably both, but one should lead.
 

@@ -1086,3 +1086,49 @@ recorded in `docs/mtg/measured-tables.md`:
 
 **Read a single green run as weak evidence on this test.** It is the one test whose failure would
 otherwise look like a real serialization regression.
+
+---
+
+## The 16px text floor does not hold below 1600x900
+
+**Concern:** `canvas_items` stretch scales every label with the window, so at 1280x720 the factor is
+0.667 against the 1920 canvas and card rules text lands at ~14.7 real pixels against a documented
+16px floor. Measured 2026-09-17, not estimated.
+
+**Why it's fine now:** nothing clips, overflows or falls off at 720p — the layout holds, and the two
+smallest elements were raised as far as the card's own geometry allows. 1600x900 is the stated
+minimum for the floor to hold.
+
+**Watch for:** a jam judge playing windowed on a laptop and saying the cards are hard to read. The
+answer then is a **UI scale setting**, not smaller margins and not a smaller font — the margins have
+already been spent. See `DoomUI.md`, "Small windows".
+
+---
+
+## One backdrop for the whole game, not one per act
+
+**Concern:** `PERSPECTIVE SHIFT` in `DoomJam.md` wants a backdrop that changes per apocalypse. One
+image ships; `DoomArt.Backdrop` hard-codes `background.png`.
+
+**Why it's fine now:** the one backdrop suits all three acts, and the acts are already distinguished
+by their schedule, their cards and their Opponents.
+
+**Cost to finish:** small. `docs/mockups/backdrop-prompt.md` already carries the Long Emergency and
+Rising variants with their palette swaps, and the loading mechanism exists — it becomes a lookup by
+act name with the current image as the fallback. The generation is the slow part, not the code.
+
+---
+
+## The Companion's name is where its history is stored
+
+**Concern:** `Companion.FullName` concatenates every mark. Repeats are collapsed for display
+(`Ash — Hardened x3`), which is what stopped it running off the screen on floor 19, but the length is
+still bounded only by the number of distinct apocalypses — fourteen.
+
+**Why it's fine now:** the intermission wraps, so no length can break the layout again, and the
+collapsed form is readable.
+
+**Watch for:** the design pass. A name is a poor container for a run's history; the intermission
+could show the marks as a list with their stat contributions, which would also make the Companion's
+growth legible instead of implied. **The stats must not change** — `CompanionTests` holds that line,
+and if it ever fails a display tweak has become a balance change.

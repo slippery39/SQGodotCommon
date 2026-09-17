@@ -3,8 +3,10 @@
 **Read `DoomJam.md` first.** This doc is downstream of it: the game design decides what is true, this
 decides how it is shown. Where they disagree, `DoomJam.md` wins.
 
-Status: **BUILT and played.** A full battle has been fought and won in the Godot front end — board,
-hand, drag-to-lane, end turn. The layout contract below is what it implements.
+Status: **BUILT, and given a full visual pass on 2026-09-17.** Board, hand, drag-to-lane, reward
+screen, intermission, animation, hover glossary, painted backdrop, and art for every card, enemy and
+Opponent in the game. The layout contract below is what it implements; the visual language section
+further down is what it looks like, and a screen that disagrees with that section is wrong.
 
 ## The rule this doc exists to enforce
 
