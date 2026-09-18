@@ -1,5 +1,8 @@
 # Handoff — DOOMJAM: the visual pass, and what looking at it kept finding
 
+> **SUPERSEDED by `HANDOFF-DoomCombatV3.md` (2026-09-18) — read that first.** The §4 scars below
+> are all still true and are the reason to keep this file.
+>
 > **SUPERSEDED IN PART by the v3 design pass (2026-09-17).** A playtest found three problems —
 > Ash is irrelevant, board stalls are common, and cards and enemies are all just stats — and the
 > answer was to make units EPHEMERAL. Read `DoomJam.md` "Combat v3" and "Build order for v3" FIRST.
