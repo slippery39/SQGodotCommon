@@ -55,9 +55,11 @@ godot-mono --path SQGodotCommon --position 1920,0 --resolution 1600x900   --writ
 ```
 
 `--position` takes virtual-desktop coordinates, so `1920,0` is the second monitor on a side-by-side
-pair. **`-- --autostart` skips the theme picker** and drops straight into floor 1 — without it every
-capture is a picture of the menu, because `--write-movie` cannot click a button. `shots/` must exist
-first or Godot writes nothing and only complains about the `.wav`.
+pair. **`--autostart` is now a no-op and is kept only so these commands keep working** — the theme
+picker was deleted on 2026-09-18 and the game opens on floor 1 by itself. It used to be load-bearing:
+`--write-movie` cannot click a button, so without it every
+capture was a picture of the menu. `shots/` must exist first or Godot writes nothing and only
+complains about the `.wav`.
 
 **Add `--autoturn` to see ANIMATION.** It ends a turn every 1.6s through the real engine:
 

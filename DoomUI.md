@@ -44,6 +44,26 @@ in life — the same currency in two forms. One colour for both says that withou
 Gold being unique to the Companion is what makes it findable in a five-lane board, the same job the
 `@` prefix does in the console today.
 
+## ~~The first screen — theme select~~ — DELETED 2026-09-18
+
+> **The game opens on floor 1. There is no first screen.**
+>
+> Chaining the three acts into one run deleted the only thing this screen chose: a run is every act,
+> in the fixed order in `ActMap.Order`, and `Run.Theme` is derived from the floor you stand on. The
+> screen went on showing three columns and taking a pick that was ignored, which is worse than not
+> having it — **a screen that appears to choose something and does not is a lie to the player.**
+>
+> **The SEED moved to the status strip** (`FLOOR n   ACT n   SEED nnnn`) and did not go with it. A
+> run you cannot name is a run you cannot report a bug about, and that was the one thing here the
+> game still needed.
+>
+> `ThemeLibrary.BandsOf` now has no caller but its test. It is kept because the invariant it asserts
+> — every floor falls in exactly one band that names its doom — is about the CONTENT rather than the
+> screen, and because the next run-start screen will want it: **if one returns it should pick the
+> COMPANION**, which is the only thing that now declares what a deck is going to be.
+>
+> Everything below described that screen and is kept for the reasoning only.
+
 ## The first screen — theme select, built 2026-09-16
 
 **Three columns, one per act, each showing its whole schedule.** The doom is a schedule rather than

@@ -72,7 +72,6 @@ public partial class DoomBoard : Node2D
 	private DoomIntermission _intermission;
 	private DoomShop _shop;
 	private DoomCardInspector _inspector;
-	private DoomThemeSelect _themeSelect;
 	private Label _doomFlash;
 
 	/// <summary>Stops AfterBattle being applied twice: Render runs on every action, IsOver latches.</summary>
@@ -83,19 +82,19 @@ public partial class DoomBoard : Node2D
 
 	public override void _Ready()
 	{
-		// Before BuildUi: the theme-select screen shows the seed, and a run you cannot name is a
-		// run you cannot report a bug about.
+		// A run you cannot name is a run you cannot report a bug about, so the seed is rolled here
+		// and shown on the status strip — it used to live on the theme-select screen, which is gone.
 		_seed = (int)GD.RandRange(1, 9999);
 		DoomAnimator.LoadConfiguredSpeed();
 
 		BuildUi();
 
-		// `-- --autostart` skips the picker and drops straight into floor 1 of the default act.
-		// This is here for the screenshot loop: `--write-movie` cannot click a button, so without
-		// it every capture of this project is a picture of the theme select screen.
-		if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--autostart") >= 0)
+		// **The game just starts.** There used to be a screen here asking which act to walk into,
+		// and chaining the acts made that choice vanish — a run is all three, in a fixed order — so
+		// it had been showing a decision that did nothing. `--autostart` is kept and now does
+		// nothing either, because every capture command in Commands.md passes it.
 		{
-			StartRun(DoomTheme.LongEmergency);
+			StartRun();
 
 			// `-- --autostart --autoturn` ends a turn on a timer. **Animation cannot be verified
 			// from a still board**: nothing moves until state changes, so every capture of a fresh
@@ -150,27 +149,20 @@ public partial class DoomBoard : Node2D
 				ticker.Timeout += OnEndTurn;
 				AddChild(ticker);
 			}
-
-			return;
 		}
-
-		_themeSelect.Show();
 	}
 
 	/// <summary>
-	/// Starts the run. **A run is now ALL THREE ACTS, in the fixed order in `ActMap.Order`**, so
-	/// there is no theme left to choose — `Run.Theme` is derived from the floor you are standing on.
+	/// Starts the run. **A run is ALL THREE ACTS, in the fixed order in `ActMap.Order`** — the theme
+	/// is derived from the floor you are standing on, so there has been nothing to choose since the
+	/// acts were chained.
 	///
-	/// **`DoomThemeSelect` is therefore vestigial and its pick is ignored.** That is deliberately
-	/// visible here rather than quietly dropped: a screen that appears to choose something and does
-	/// not is a lie to the player, and this comment is the reminder that it still has to be dealt
-	/// with. Repurpose it — the companion picker is what the run start actually needs now, since a
-	/// companion's ability is the build declaration — or cut it and open on the first floor.
+	/// `DoomThemeSelect` was deleted rather than left showing a choice that did nothing. **If a run
+	/// start ever needs a screen again it should pick the COMPANION**, which is the one thing that
+	/// actually declares what a deck is going to be.
 	/// </summary>
-	private void StartRun(DoomTheme theme)
+	private void StartRun()
 	{
-		_ = theme;
-		_themeSelect.Hide();
 		_run = StarterContent.NewRun(_seed);
 		StartBattleOnCurrentFloor();
 	}
@@ -412,7 +404,7 @@ public partial class DoomBoard : Node2D
 
 		AnimateEvents(events);
 
-		_floorLabel.Text = $"FLOOR {_run.Floor}";
+		_floorLabel.Text = $"FLOOR {_run.Floor}   ACT {_run.ActIndex + 1}   SEED {_seed}";
 		_lifeLabel.Text = $"{player.Life} / {player.MaxLife}";
 		_turnLabel.Text = $"TURN {battle.TurnNumber}";
 		RenderEnergy(player);
@@ -671,7 +663,6 @@ public partial class DoomBoard : Node2D
 		// its own Run would be a second account of the gold and the deck, and it would drift from
 		// the one the game actually uses after the first purchase.
 		_shop = new DoomShop(layer, () => _run, BuyCard, RemoveCard, BuyHeal, LeaveShop);
-		_themeSelect = new DoomThemeSelect(layer, _seed, StartRun);
 
 		MakeTransparentToMouse(layer);
 		WarnIfColumnOverflows(column);
