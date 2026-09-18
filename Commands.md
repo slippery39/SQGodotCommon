@@ -90,6 +90,19 @@ for f in fs[25:130]:
 It marks the Companion with every apocalypse in the library, three times each, so the panel is shown
 its worst case — a name that long is what pushed the intermission off the screen on floor 19.
 
+**The shop, and the card grid inside it:**
+
+```
+... --quit-after 22 DoomGame/doom_board.tscn -- --autostart --shop
+... --quit-after 22 DoomGame/doom_board.tscn -- --autostart --shop --remove
+```
+
+`--shop` forces 400 gold and doubles the whole reward pool into the deck, so both screens are drawn
+at the worst case they have to handle. `--remove` opens the removal grid, which is the layout that
+actually breaks: it sizes itself to a deck that can be forty-six cards, and the first version ran off
+the top AND bottom of the screen, drew over the panel, and buried the BACK button behind the cards.
+**A grid that fits twelve cards tells you nothing about one that has to fit forty-six.**
+
 **The card preview needs no battle at all**, and is the right loop for card work:
 
 ```

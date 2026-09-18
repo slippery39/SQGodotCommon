@@ -70,6 +70,7 @@ public partial class DoomBoard : Node2D
 	private Button _endTurnButton;
 	private DoomHandView _hand;
 	private DoomIntermission _intermission;
+	private DoomShop _shop;
 	private DoomCardInspector _inspector;
 	private DoomThemeSelect _themeSelect;
 	private Label _doomFlash;
@@ -127,6 +128,28 @@ public partial class DoomBoard : Node2D
 				return;
 			}
 
+			// `-- --autostart --shop` opens the shop on the opening position. Like `--reward`, the
+			// screen is otherwise only reachable by playing to a shop floor, which a capture cannot
+			// do — so without this the layout would ship having never been looked at.
+			//
+			// Gold and a deck are forced to the WORST case the screen has to draw: enough to afford
+			// everything, and a deck large enough to test the removal grid's sizing.
+			if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--shop") >= 0)
+			{
+				_hand.SetVisible(false);
+				_run = _run with { Gold = 400 };
+
+				foreach (var card in StarterContent.RewardPool(_run.Theme))
+					_run = _run.WithCard(card).WithCard(card);
+
+				_shop.Show(
+					StarterContent.ShopFor(_run.Theme, _seed, _run.Floor, _run.CardsRemoved),
+					removing: System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--remove") >= 0
+				);
+
+				return;
+			}
+
 			if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--autoturn") >= 0)
 			{
 				var ticker = new Timer { WaitTime = 1.6, Autostart = true };
@@ -166,6 +189,10 @@ public partial class DoomBoard : Node2D
 	{
 		_battleResolved = false;
 		_intermission.Hide();
+
+		// Hidden here as well as on the way out of the shop: this is the one path every floor goes
+		// through, so a screen left up by any route is taken down by this one.
+		_shop?.Hide();
 		_hand?.SetVisible(true);
 
 		// A new battle is a new board, not a change to the old one. Without this every lane of the
@@ -178,11 +205,20 @@ public partial class DoomBoard : Node2D
 		// Not every floor is a battle. The front end asks the SAME content function the simulator
 		// does — if these two ever disagree about what a floor is, every measured number is about
 		// a game nobody plays.
-		if (StarterContent.FloorKindFor(_run.Floor) == FloorKind.Rest)
+		var kind = StarterContent.FloorKindFor(_run.Floor);
+
+		if (kind == FloorKind.Rest)
 		{
 			var rested = _run.Rest(StarterContent.RestHealFor(_run.MaxLife));
 			_intermission.ShowRest(_run, rested);
 			_run = rested;
+			return;
+		}
+
+		if (kind == FloorKind.Shop)
+		{
+			_hand.SetVisible(false);
+			_shop.Show(StarterContent.ShopFor(_run.Theme, _seed, _run.Floor, _run.CardsRemoved));
 			return;
 		}
 
@@ -234,6 +270,41 @@ public partial class DoomBoard : Node2D
 			StarterContent.ScenarioFor(after.Theme, after.Floor),
 			after.Floor
 		);
+	}
+
+	/// <summary>
+	/// Buys a card. **The RUN decides whether it can be afforded**, not this screen — the same rule
+	/// that keeps the reward screen from computing a deck diff of its own.
+	/// </summary>
+	private void BuyCard(RunCard card)
+	{
+		var offer = StarterContent.ShopFor(_run.Theme, _seed, _run.Floor, _run.CardsRemoved);
+		_run = _run.BuyCard(card, offer.CardPrice);
+	}
+
+	/// <summary>
+	/// Takes a card out of the run for good — the first thing other than an apocalypse that can.
+	/// `Run.RemoveCard` refuses below `Run.MinDeckSize`, so the floor is enforced where the rule
+	/// lives rather than by the button being greyed out.
+	/// </summary>
+	private void RemoveCard(int runCardId)
+	{
+		var offer = StarterContent.ShopFor(_run.Theme, _seed, _run.Floor, _run.CardsRemoved);
+		_run = _run.RemoveCard(runCardId, offer.RemovalPrice);
+	}
+
+	private void BuyHeal()
+	{
+		var offer = StarterContent.ShopFor(_run.Theme, _seed, _run.Floor, _run.CardsRemoved);
+		_run = _run.BuyHeal(offer.HealPrice, offer.HealAmount);
+	}
+
+	/// <summary>Walks out of the shop and onto the next floor.</summary>
+	private void LeaveShop()
+	{
+		_shop.Hide();
+		_run = _run with { Floor = _run.Floor + 1 };
+		StartBattleOnCurrentFloor();
 	}
 
 	/// <summary>
@@ -601,6 +672,11 @@ public partial class DoomBoard : Node2D
 
 		_inspector = new DoomCardInspector(layer, new Vector2(1500, 740));
 		_intermission = new DoomIntermission(layer, StartBattleOnCurrentFloor, TakeReward);
+
+		// **Reads the run through a callback rather than being handed a copy.** A shop that held
+		// its own Run would be a second account of the gold and the deck, and it would drift from
+		// the one the game actually uses after the first purchase.
+		_shop = new DoomShop(layer, () => _run, BuyCard, RemoveCard, BuyHeal, LeaveShop);
 		_themeSelect = new DoomThemeSelect(layer, _seed, StartRun);
 
 		MakeTransparentToMouse(layer);
