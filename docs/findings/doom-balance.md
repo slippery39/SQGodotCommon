@@ -1481,3 +1481,75 @@ A full restore at each act break made the run three independent acts — nothing
 cost you in act 2, so the only floor that could kill you was whichever one spiked. It is half of max
 now. With that plus the ordinary-floor correction, life lost per battle is 9.6 and the budget
 finally binds somewhere other than a boss.
+
+---
+
+## Run 22 — 2026-09-18 — a boss per act, and gold with somewhere to go
+
+**`bot-1/v3`, 120 runs, 45 floors.** Two changes: each act ends on its own authored boss, and shops
+sell cards, healing and **card removal**.
+
+| | run 21 | **run 22** |
+|---|---|---|
+| act completed | 24.2% | **25.8%** |
+| mean floor of 45 | 28.12 | **33.56** |
+| deck at end | 31.9 | 31.6 |
+
+Deaths spread across floor 9 (17), 15 (7), 23-24 (7), 30 (6), 38-39 (23), 43-45 (22). Mid-act-1,
+mid-act-3 and the finale — which is the shape a three-act run should have.
+
+### Deleting a dial beat tuning it
+
+`BossScaleFor` is **gone**. It existed only because one Opponent fought all three finales, separated
+by a multiplier — and a boss is a race, so that multiplier sat on a cliff rather than a slope
+(run 21: a 25% change swung act 1 from 6.2% deaths to 42.2%).
+
+Three authored bosses replaced it, and the numbers immediately said things a multiplier could not:
+
+| | first pass | corrected | deaths now |
+|---|---|---|---|
+| The Last Warden (act 1) | 150 | 210 | 6.9% |
+| The Choir (act 2) | 220 | 250 | 7.2% |
+| The Last Morning (act 3) | 260 | **190** | 36.7% |
+
+**Act 3's boss had to get SMALLER than the others, not bigger.** The Last Host — that act's
+apocalypse — costs 80.4 life on its own, so the body standing behind it is not what makes the fight.
+No multiplier could ever have expressed that; it is only sayable because the three numbers are
+independent.
+
+**No boss heals**, and that is now a rule with a test behind it. Healing makes a finale a threshold,
+and thresholds cannot be tuned.
+
+### Splitting the rosters broke two things, and both were right to break
+
+Bosses were in `AllOpponents`, so act 1's boss was also the ordinary Opponent for floors 10-14 — you
+fought the finale five times before reaching it — and the untraited boss collided with the untraited
+ordinary instance of itself. `TheActEndsOnABossFoughtNowhereElse` and
+`NoOpponentIsFoughtTwiceWearingTheSameTrait` caught both.
+
+That leaves **one ordinary Opponent**, so its identity now comes entirely from traits — and seven
+could not cover an act's ten ordinary battles. Three were added. The rule the old doc stated ("at
+least as many traits as the longest span any one Opponent holds") survived the restructure and is
+what flagged the shortfall.
+
+**Adding a second ordinary tier back needs authored art.** There are four Opponent SVGs and the
+three bosses hold the other three.
+
+### The shop
+
+Cards, healing, and card removal — the first thing other than an apocalypse that can take a card out
+of a run. Removal is priced to rise with each use (`Run.CardsRemoved`), because thinning is the
+strongest thing gold can buy under combat v3 and a flat price would make it the only purchase worth
+making. `Run.MinDeckSize` floors it at 8: `HasNoCards` is a LOSS, and removal is the first thing a
+player can choose that could reach it.
+
+**The bot now shops, on a crude priority** — thin, then heal if badly hurt, then buy. That is a floor
+on how well shopping can go, not a model of how a player shops, and it is the second guess in
+`RunSimulator` after the reward skip rate.
+
+### Still open
+
+- **Act 1's finale still LOSES the player 3.4 life on average** — you leave it healthier than you
+  arrived. 6.9% deaths is survivable but a finale should cost something.
+- **No Godot shop screen.** The shop is engine, content and bot only, so it is measurable but not
+  yet playable.

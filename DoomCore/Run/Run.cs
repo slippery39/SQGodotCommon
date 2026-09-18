@@ -59,6 +59,13 @@ public record Run
 	/// </summary>
 	public int Gold { get; init; }
 
+	/// <summary>
+	/// How many cards this run has paid to remove. **Only the PRICE reads it** — each removal costs
+	/// more than the last, so thinning is a few deliberate decisions rather than the only thing
+	/// gold is ever spent on.
+	/// </summary>
+	public int CardsRemoved { get; init; }
+
 	/// <summary>Which act this floor is in, 0-based. Derived; never stored, so it cannot drift.</summary>
 	public int ActIndex => ActMap.ActIndexFor(Floor);
 
@@ -179,6 +186,55 @@ public record Run
 
 		return state.BeginBattle();
 	}
+
+	/// <summary>
+	/// The fewest cards a run may be thinned to.
+	///
+	/// **`HasNoCards` is a LOSS**, and until a shop existed nothing a player chose could reach it —
+	/// only Flood could, and Flood does not remove cards any more. Removal makes it reachable by
+	/// choice, so it needs a floor: a deck this small already draws its whole self every turn, and
+	/// going lower buys nothing while risking a run that cannot be played.
+	/// </summary>
+	public const int MinDeckSize = 8;
+
+	/// <summary>Buys a card and puts it in the deck. Refuses if it is not affordable.</summary>
+	public Run BuyCard(RunCard card, int price) =>
+		Gold < price ? this : WithCard(card) with { Gold = Gold - price };
+
+	/// <summary>
+	/// **Takes a card out of the run, permanently.** The first thing in the game other than an
+	/// apocalypse that can.
+	///
+	/// Refuses when it is unaffordable, when the card is not in the deck, or when the deck is
+	/// already at <see cref="MinDeckSize"/> — a refusal rather than a throw, because a shop offering
+	/// something it will not do is a UI problem to fix at the button, not a crash.
+	/// </summary>
+	public Run RemoveCard(int runCardId, int price)
+	{
+		if (Gold < price || Deck.Count <= MinDeckSize)
+			return this;
+
+		var card = Deck.FirstOrDefault(c => c.RunCardId == runCardId);
+		if (card is null)
+			return this;
+
+		return this with
+		{
+			Deck = Deck.Remove(card),
+			Gold = Gold - price,
+			CardsRemoved = CardsRemoved + 1,
+		};
+	}
+
+	/// <summary>Buys life back, capped at <see cref="MaxLife"/>.</summary>
+	public Run BuyHeal(int price, int amount) =>
+		Gold < price
+			? this
+			: this with
+			{
+				Gold = Gold - price,
+				Life = Math.Min(MaxLife, Life + amount),
+			};
 
 	/// <summary>
 	/// Takes the rest and walks on. Heals, capped at <see cref="MaxLife"/>, and advances the floor.

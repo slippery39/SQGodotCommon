@@ -669,6 +669,37 @@ public static class StarterContent
 	}
 
 	/// <summary>
+	/// What a shop floor is selling. **Deterministic from (seed, floor)**, like a reward screen.
+	///
+	/// Prices scale with the act, the same way <see cref="GoldFor"/> does, so a shop in act 3 is
+	/// reachable on act 3's earnings rather than on everything banked since act 1.
+	///
+	/// Every number here is a guess. Roughly: an act pays 200-280 gold across its battles and holds
+	/// two shops, so you can afford two or three things an act.
+	/// </summary>
+	public static ShopOffer ShopFor(DoomTheme theme, int seed, int floor, int cardsRemoved)
+	{
+		var act = ActMap.ActIndexFor(floor);
+
+		// Offset from the reward stream so a shop does not stock the three cards you were just
+		// offered — the floor is nudged by a constant rather than reseeded, which keeps it a pure
+		// function of (seed, floor).
+		var cards = RewardsFor(theme, seed, floor + 977, count: 3);
+
+		return new ShopOffer
+		{
+			Cards = cards,
+			CardPrice = 55 + 15 * act,
+
+			// **Each removal costs more than the last.** Thinning is the strongest thing gold can
+			// buy under combat v3, and a flat price would make it the only thing worth buying.
+			RemovalPrice = 70 + 20 * act + 30 * cardsRemoved,
+			HealPrice = 40 + 10 * act,
+			HealAmount = StartingLife / 4,
+		};
+	}
+
+	/// <summary>
 	/// What is on a floor. **Read straight off <see cref="ActMap.Layout"/>** — it was
 	/// `floor % 4 == 0 || floor == ActLength - 1`, which made "put a shop on 5" a puzzle instead of
 	/// an edit, and kept the act's length and its shape in two places that had to agree by hand.
@@ -687,8 +718,7 @@ public static class StarterContent
 	/// 10.9 life apiece against 21.9 in a single-act run. An act cost about 90 life and the rests
 	/// plus the act break handed all of it back, so the life budget never bound anywhere.
 	/// </summary>
-	public static double HealthScaleFor(int floor) =>
-		ActMap.IsBossFloor(floor) ? BossScaleFor(floor) : 1.0 + 0.9 * ActMap.ActIndexFor(floor);
+	public static double HealthScaleFor(int floor) => 1.0 + 0.9 * ActMap.ActIndexFor(floor);
 
 	/// <summary>
 	/// **The base is above 1.0 on purpose.** Ordinary floors were costing 9.4 life against a 120
@@ -696,8 +726,7 @@ public static class StarterContent
 	/// whole run's difficulty sat on its last floor. The act multiplier could not fix that — act 1
 	/// has a multiplier of one by definition, and act 1 was the problem.
 	/// </summary>
-	public static double AttackScaleFor(int floor) =>
-		ActMap.IsBossFloor(floor) ? BossScaleFor(floor) : 1.2 + 0.45 * ActMap.ActIndexFor(floor);
+	public static double AttackScaleFor(int floor) => 1.2 + 0.45 * ActMap.ActIndexFor(floor);
 
 	/// <summary>
 	/// **A boss floor scales far more gently, and run 20 is why.** Death rates on the three act
@@ -711,22 +740,9 @@ public static class StarterContent
 	///
 	/// **Ordinary floors and boss floors needed opposite corrections, so they get separate dials.**
 	/// </summary>
-	/// <summary>
-	/// **It starts BELOW one and climbs, which looks wrong until you read the measurements.**
-	///
-	/// A flat `1 + 0.25 x act` fixed the late acts and left act 1 untouched, because act 1's
-	/// multiplier is one whatever the coefficient — and act 1's boss was the wall: 42.2% deaths at
-	/// 54.1 life, against 5.4% and 7.1% for acts 2 and 3. The finale was never scaled wrong; it was
-	/// authored as the end of a whole game and act 1 meets it eight battles in.
-	///
-	/// So the first one is knocked DOWN and the curve climbs from there.
-	///
-	/// **This dial is unstable and a better fix is content.** A boss is a race, so it flips from
-	/// unwinnable to trivial over a small change — Detonation went 74.6% deaths to 5.4% on a move
-	/// from 1.7 to 1.25. One Opponent (`TheLastMorning`) fights all three finales; giving each act
-	/// its own is the real answer, and then this multiplier can go.
-	/// </summary>
-	private static double BossScaleFor(int floor) => 0.85 + 0.3 * ActMap.ActIndexFor(floor);
+	// **`BossScaleFor` lived here and is gone.** It existed only because one Opponent fought all
+	// three finales; each act authors its own now, so there is nothing left for a multiplier to do.
+	// Deleting a dial is a better outcome than finding the right value for it.
 
 	private static int Scaled(int value, double scale) =>
 		Math.Max(1, (int)Math.Round(value * scale));
@@ -771,12 +787,24 @@ public static class StarterContent
 		// roster's tiers were authored against one act's length, so choosing on the run-wide floor
 		// would pin every floor from act 2 onward to the last tier — one Opponent for thirty floors.
 		var inAct = ActMap.FloorInAct(floor);
-		var body = EnemyLibrary.ForFloor(inAct);
 		var traits = EnemyLibrary.TraitsFor(seed);
+
+		// **A boss floor fields the ACT'S OWN boss, at the numbers it was authored with.** No
+		// multiplier: three fights written at the right size beat one fight times a coefficient,
+		// and the coefficient could not work anyway — a boss is a race, and a race has a cliff.
+		if (ActMap.IsBossFloor(floor))
+			return ThemeLibrary.Of(ActMap.ThemeFor(floor)).Boss;
+
+		var body = EnemyLibrary.ForFloor(inAct);
+
+		// **The ordinary Opponent also ramps WITHIN the act**, now that the tier list is one entry.
+		// Without it floor 14 would field exactly what floor 1 did; the traits keep each fight
+		// distinct, but they do not make it bigger.
+		var withinAct = 1.0 + 0.08 * (inAct - 1);
 
 		body = body with
 		{
-			Health = Scaled(body.Health, HealthScaleFor(floor)),
+			Health = Scaled(body.Health, HealthScaleFor(floor) * withinAct),
 			Reinforcement = body.Reinforcement with
 			{
 				Health = Scaled(body.Reinforcement.Health, HealthScaleFor(floor)),
@@ -813,8 +841,7 @@ public static class StarterContent
 	/// Kept because the console and the tests still speak in plain health. Reads the definition
 	/// rather than recomputing a formula, so there is one answer to "how tough is this floor".
 	/// </summary>
-	public static int OpponentHealthFor(int floor) =>
-		Scaled(EnemyLibrary.ForFloor(ActMap.FloorInAct(floor)).Health, HealthScaleFor(floor));
+	public static int OpponentHealthFor(int floor) => OpponentFor(floor, seed: 0).Health;
 
 	/// <summary>
 	/// What the Opponent puts back into an open lane, and it comes with its effects.

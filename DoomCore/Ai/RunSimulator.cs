@@ -73,6 +73,43 @@ public static class RunSimulator
 	/// </summary>
 	public const int MaxTurnsPerBattle = 60;
 
+	/// <summary>
+	/// Spends gold at a shop. **A deliberately crude priority, and the second guess in this file.**
+	///
+	/// Thinning first, because combat v3 makes the deck the whole of your per-turn output and the
+	/// worst card in a deck you draw five from every turn is doing active harm. Then healing when
+	/// badly hurt, then a card if there is still gold.
+	///
+	/// It removes the cheapest-looking card by the same crude `CardValue` the evaluator uses, which
+	/// is a stat sum and not a measurement. **This is a floor on how well shopping can go, not a
+	/// model of how a player shops** — a picker that reads the measured card table would replace it
+	/// and would move every number that follows.
+	/// </summary>
+	private static Run Shop(Run run, int seed)
+	{
+		var offer = StarterContent.ShopFor(run.Theme, seed, run.Floor, run.CardsRemoved);
+
+		if (run.Deck.Count > Run.MinDeckSize && run.Gold >= offer.RemovalPrice)
+		{
+			var worst = run.Deck.OrderBy(Worth).First();
+			run = run.RemoveCard(worst.RunCardId, offer.RemovalPrice);
+		}
+
+		if (run.Life < run.MaxLife / 2 && run.Gold >= offer.HealPrice)
+			run = run.BuyHeal(offer.HealPrice, offer.HealAmount);
+
+		if (!offer.Cards.IsEmpty && run.Gold >= offer.CardPrice)
+			run = run.BuyCard(offer.Cards.MaxBy(Worth)!, offer.CardPrice);
+
+		return run with
+		{
+			Floor = run.Floor + 1,
+		};
+
+		static int Worth(RunCard card) =>
+			card.IsUnit ? card.Power + card.Toughness - card.Cost * 4 : 12 - card.Cost * 4;
+	}
+
 	public static RunResult Play(int seed, DoomEvalWeights? weights = null)
 	{
 		var w = weights ?? new DoomEvalWeights();
@@ -101,11 +138,16 @@ public static class RunSimulator
 				continue;
 			}
 
-			// **A shop is walked past, not used.** The bot cannot spend gold yet, so it banks it —
-			// which means every number measured until a shopping bot exists describes a run that
-			// never bought or removed a card. Recorded rather than faked: pretending to shop with a
-			// random pick would put noise in the table and call it a measurement.
-			if (kind is FloorKind.Shop or FloorKind.Event)
+			if (kind == FloorKind.Shop)
+			{
+				run = Shop(run, seed);
+				continue;
+			}
+
+			// An event floor is walked past because events do not exist. None are placed in
+			// `ActMap.Layout` either, so this is unreachable today and is here so that adding one
+			// cannot silently behave like a rest.
+			if (kind == FloorKind.Event)
 			{
 				run = run with { Floor = run.Floor + 1 };
 				continue;

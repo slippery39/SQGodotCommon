@@ -45,6 +45,16 @@ public record ThemeDefinition
 	/// happy accident.
 	/// </summary>
 	public DoomScenario FinalDoom { get; init; } = DoomScenario.None;
+
+	/// <summary>
+	/// **The thing waiting on this act's last floor.**
+	///
+	/// One Opponent used to fight all three finales, and the only thing separating them was a
+	/// multiplier — which could not work, because a boss is a race and a race has a cliff rather
+	/// than a slope. `BossScaleFor` was deleted when this arrived: three fights authored at the
+	/// numbers they should be is both more tunable and more interesting than one fight times 1.45.
+	/// </summary>
+	public OpponentDefinition Boss { get; init; } = new();
 }
 
 /// <summary>
@@ -114,6 +124,7 @@ public static class ThemeLibrary
 		new()
 		{
 			Theme = DoomTheme.LongEmergency,
+			Boss = EnemyLibrary.TheChoir,
 			Name = "The Long Emergency",
 			Description = "It did not arrive. It accumulated.",
 			Bands = [DoomScenario.CivilUnrest, DoomScenario.AiUprising, DoomScenario.GreyGoo],
@@ -133,6 +144,7 @@ public static class ThemeLibrary
 		new()
 		{
 			Theme = DoomTheme.Rising,
+			Boss = EnemyLibrary.TheLastMorning,
 			Name = "The Rising",
 			Description = "They did not stay where you left them.",
 			Bands = [DoomScenario.Zombie, DoomScenario.Vampires, DoomScenario.HellUprising],
@@ -151,6 +163,7 @@ public static class ThemeLibrary
 		new()
 		{
 			Theme = DoomTheme.Reckoning,
+			Boss = EnemyLibrary.TheLastWarden,
 			Name = "The Reckoning",
 			Description = "It has read the whole ledger.",
 			Bands = [DoomScenario.Flood, DoomScenario.Famine, DoomScenario.Judgement],

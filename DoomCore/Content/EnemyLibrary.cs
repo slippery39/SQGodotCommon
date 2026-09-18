@@ -329,63 +329,84 @@ public static class EnemyLibrary
 			MinFloor = 1,
 		};
 
+	/// <summary>
+	/// **ACT 2's boss.** It does not heal, and none of the three bosses do — see
+	/// <see cref="TheLastMorning"/> for why that is a rule now rather than a preference.
+	///
+	/// Its fight is the WIDE BOARD: two damage to everything you hold, every turn. Combat v3 rebuilds
+	/// the board from scratch each turn, so this taxes the turns where you commit most and leaves the
+	/// cautious ones alone.
+	/// </summary>
 	public static readonly OpponentDefinition TheChoir =
 		new()
 		{
 			Name = "The Choir",
 			Description = "It is not one thing, and it is not finished.",
-			Health = 68,
+			// 220 killed 6.3%. Detonation costs only 16.6 life, so again the body is the fight.
+			Health = 250,
 			SummonInterval = 3,
 			Reinforcement = HeraldOfTheEnd,
-			MinFloor = 5,
+			MinFloor = Run.ActLength,
 			Effects =
 			[
 				On(
-					EffectTrigger.OnTurnStart,
-					DoomTarget.Opponent,
-					new DealDamageAction { Amount = -2 },
-					"each turn: heals 2"
+					EffectTrigger.OnTurnEnd,
+					DoomTarget.YourUnits,
+					new DealDamageAction { Amount = 2 },
+					"each turn: 2 to every unit you hold"
 				),
 			],
 		};
 
+	/// <summary>
+	/// **ACT 1's boss.** Its fight is the CLOSING DOOR: it reinforces every other turn, so the lane
+	/// you open is the lane you have to keep taking. No gimmick beyond that, deliberately — the first
+	/// finale a player meets should be legible.
+	/// </summary>
 	public static readonly OpponentDefinition TheLastWarden =
 		new()
 		{
 			Name = "The Last Warden",
 			Description = "Still holding a door that is no longer there.",
-			Health = 98,
-			SummonInterval = 3,
+			// 150 killed 3.3% and LOST the player 8.7 life — a finale you leave healthier than you
+			// arrived. Ashfall, the act's doom, is mild, so the body has to carry this fight.
+			Health = 210,
+			SummonInterval = 2,
 			Reinforcement = SiegeHulk,
-			MinFloor = 10,
+			MinFloor = Run.ActLength,
+			Effects =
+			[
+				On(
+					EffectTrigger.OnDoomFires,
+					DoomTarget.YourUnits,
+					new DealDamageAction { Amount = 6 },
+					"when the doom fires: 6 to every unit you hold"
+				),
+			],
 		};
 
 	/// <summary>
-	/// The last thing in the act. Reachable only on the final floor, and it is the only Opponent
-	/// that makes the apocalypse itself the weapon rather than the weather.
+	/// **ACT 3's boss, and the last thing in the game.** Its fight is the CLOCK: the apocalypse
+	/// itself is the weapon rather than the weather.
+	///
+	/// **It used to heal 4 a turn, and that is why boss difficulty could not be tuned.** A heal makes
+	/// the fight a threshold — out-damage it and the boss folds, fall short and it cannot be killed —
+	/// so a 25% change in its health swung act 1's finale from 6.2% deaths to 42.2%, and Detonation
+	/// from 74.6% to 5.4%. A health total is linear and tunable. **No boss in this game heals.**
 	/// </summary>
 	public static readonly OpponentDefinition TheLastMorning =
 		new()
 		{
 			Name = "The Last Morning",
 			Description = "It has been waiting at the end of every one of these.",
+			// **260 killed 47.5% at 90.8 life a battle, and the body was not what did it.** The
+			// Last Host — this act's doom — is the most punishing in the game, so the boss standing
+			// behind it has to be SMALLER than the others, not bigger. The numbers are independent
+			// per act now, which is exactly what makes that sayable.
+			Health = 190,
 			SummonInterval = 2,
 			Reinforcement = Doomsayer,
 			MinFloor = Run.ActLength,
-			// **The per-turn heal was removed, and the health raised to pay for it.**
-			//
-			// It made every act finale a THRESHOLD rather than a fight: out-damage 4 a turn and the
-			// boss folds, fall short and it is unkillable. That is why the boss dial was unstable —
-			// scaling it 1.7 to 1.25 swung Detonation from 74.6% deaths to 5.4%, and 0.8 to 1.0
-			// swung Ashfall from 6.2% to 42.2%. A health total is linear and tunable; a heal race
-			// is a cliff, and no multiplier can sit on a cliff.
-			//
-			// It keeps the doom punish, which is the fight's identity: this is the Opponent that
-			// makes the apocalypse the weapon rather than the weather.
-			// 140 with a 4-a-turn heal; the heal was worth roughly 28 over a seven-turn fight, and
-			// 200 overpaid for it by thirty — act 1's finale went from 42.2% deaths to 47.5%, which
-			// is the opposite of the intended correction.
-			Health = 170,
 			Effects =
 			[
 				On(
@@ -397,13 +418,21 @@ public static class EnemyLibrary
 			],
 		};
 
-	public static readonly ImmutableArray<OpponentDefinition> AllOpponents =
-	[
-		TheOpponent,
-		TheChoir,
-		TheLastWarden,
-		TheLastMorning,
-	];
+	/// <summary>
+	/// The Opponents an ORDINARY floor may field. **The three bosses are deliberately not here.**
+	///
+	/// They used to be, and it produced two bugs at once: act 1's boss was also the Opponent for
+	/// floors 10-14, so you fought the finale five times before reaching it, and the boss — which
+	/// wears no trait — collided with the untraited ordinary instance of itself.
+	/// `TheActEndsOnABossFoughtNowhereElse` and `NoOpponentIsFoughtTwiceWearingTheSameTrait` caught
+	/// both. A boss is the act's content and lives on its `ThemeDefinition`.
+	///
+	/// **That leaves one ordinary Opponent, and the identity comes from the seven traits** rather
+	/// than from a tier list — seven distinct fights an act, which is about how many battles an act
+	/// has. Adding a second tier back needs a name with authored art; there are four Opponent SVGs
+	/// and the three bosses hold the other three.
+	/// </summary>
+	public static readonly ImmutableArray<OpponentDefinition> AllOpponents = [TheOpponent];
 
 	/// <summary>The hardest Opponent this floor allows — the curve, chosen from content.</summary>
 	public static OpponentDefinition ForFloor(int floor) =>
@@ -488,6 +517,53 @@ public static class EnemyLibrary
 					DoomTarget.AllEnemies,
 					new DealDamageAction { Amount = -4 },
 					"each turn: every enemy heals 4"
+				),
+			],
+		},
+		// **Three added when the boss left the ordinary roster.** One Opponent now holds a whole
+		// act, so the trait list alone has to cover every ordinary battle in it — ten, against the
+		// seven that existed. `NoOpponentIsFoughtTwiceWearingTheSameTrait` failed the moment the
+		// rosters split, which is precisely the rule it was written to hold: there must be at least
+		// as many traits as the longest span any one Opponent covers.
+		new()
+		{
+			Name = "Corrosive",
+			Text = "3 to every unit you hold, at the start of your turn",
+			Effects =
+			[
+				On(
+					EffectTrigger.OnTurnStart,
+					DoomTarget.YourUnits,
+					new DealDamageAction { Amount = 3 },
+					"each turn: 3 to every unit you hold"
+				),
+			],
+		},
+		new()
+		{
+			Name = "Vindictive",
+			Text = "6 to every unit you hold whenever the doom fires",
+			Effects =
+			[
+				On(
+					EffectTrigger.OnDoomFires,
+					DoomTarget.YourUnits,
+					new DealDamageAction { Amount = 6 },
+					"when the doom fires: 6 to every unit you hold"
+				),
+			],
+		},
+		new()
+		{
+			Name = "Draining",
+			Text = "3 to you at the start of your turn",
+			Effects =
+			[
+				On(
+					EffectTrigger.OnTurnStart,
+					DoomTarget.Player,
+					new DealDamageAction { Amount = 3 },
+					"each turn: 3 to you"
 				),
 			],
 		},

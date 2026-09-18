@@ -88,9 +88,14 @@ public class ContentDefinitionTests
 	/// otherwise a new enemy might not be seen for several floors and the curve would be a lie.
 	/// </summary>
 	/// <summary>
-	/// **No fight repeats inside a run.** Four Opponents crossed with six traits covers sixteen
-	/// battles, and this is the assertion that keeps that true as either list changes — add a
-	/// fifth Opponent tier that spans seven floors and this fails before anyone plays it.
+	/// **No ordinary fight repeats inside an act.** One Opponent crossed with its traits has to
+	/// cover every ordinary battle in the act, and this is the assertion that keeps that true as
+	/// either list changes — it failed the moment bosses left the ordinary roster, because seven
+	/// traits could not cover ten battles.
+	///
+	/// **The boss floor is excluded**: a boss wears no trait, so it would collide with the untraited
+	/// ordinary fight. That collision is what forced bosses out of `AllOpponents` in the first
+	/// place — act 1's boss was also the Opponent for floors 10-14.
 	/// </summary>
 	[Test]
 	public void NoOpponentIsFoughtTwiceWearingTheSameTrait()
@@ -98,7 +103,7 @@ public class ContentDefinitionTests
 		foreach (var seed in new[] { 1, 7, 42, 1000 })
 		{
 			var fought = Enumerable
-				.Range(1, Run.ActLength)
+				.Range(1, Run.ActLength - 1)
 				.Where(f => StarterContent.FloorKindFor(f) == FloorKind.Battle)
 				.Select(f => StarterContent.OpponentFor(f, seed).Name)
 				.ToList();
@@ -119,22 +124,33 @@ public class ContentDefinitionTests
 	[Test]
 	public void TheActEndsOnABossFoughtNowhereElse()
 	{
-		var boss = StarterContent.OpponentFor(Run.ActLength, seed: 1);
+		// **Checked for EVERY act, because every act has its own boss now.** It used to be one
+		// Opponent gated by MinFloor; the boss is the act's content and lives on its theme.
+		foreach (var (theme, index) in ActMap.Order.Select((t, i) => (t, i)))
+		{
+			var bossFloor = (index + 1) * ActMap.ActLength;
+			var boss = StarterContent.OpponentFor(bossFloor, seed: 1);
 
-		Assert.That(
-			EnemyLibrary.AllOpponents.Max(o => o.MinFloor),
-			Is.EqualTo(Run.ActLength),
-			"nothing is gated to the final floor, so the act ends on an ordinary fight"
-		);
-		Assert.That(
-			Enumerable
-				.Range(1, Run.ActLength - 1)
-				.Where(f => StarterContent.FloorKindFor(f) == FloorKind.Battle)
-				.Select(f => EnemyLibrary.ForFloor(f).Name),
-			Has.None.EqualTo(EnemyLibrary.ForFloor(Run.ActLength).Name),
-			"the boss turns up before the last floor"
-		);
-		Assert.That(boss.Effects, Is.Not.Empty, "a boss that does nothing is just a bigger number");
+			Assert.That(
+				boss.Effects,
+				Is.Not.Empty,
+				$"{boss.Name} does nothing, which makes it just a bigger number"
+			);
+
+			// **The boss must not be fought on the way to itself.** It was: act 1's boss was also
+			// the Opponent for floors 10-14, so the finale turned up five times before the finale.
+			var ordinary = Enumerable
+				.Range(1, ActMap.ActLength - 1)
+				.Where(f => ActMap.Layout[f - 1] == FloorKind.Battle)
+				.Select(f => StarterContent.OpponentFor(index * ActMap.ActLength + f, seed: 1).Name)
+				.ToList();
+
+			Assert.That(
+				ordinary,
+				Has.None.Contains(ThemeLibrary.Of(theme).Boss.Name),
+				$"act {index + 1} fights its boss before the last floor"
+			);
+		}
 	}
 
 	/// <summary>
@@ -165,7 +181,9 @@ public class ContentDefinitionTests
 	[Test]
 	public void AnOpponentIsChosenFromContentAndCarriesItsOwnReinforcement()
 	{
-		foreach (var floor in Enumerable.Range(1, Run.ActLength))
+		// **Boss floors are skipped: they bypass the roster entirely** and field the act's own
+		// boss, which is content on the theme rather than a tier gated by MinFloor.
+		foreach (var floor in Enumerable.Range(1, Run.ActLength - 1))
 		{
 			var opponent = StarterContent.OpponentFor(floor, seed: 1);
 
@@ -179,6 +197,14 @@ public class ContentDefinitionTests
 			// The Opponent decides what it fields; EndTurnAction asks IT, not the content tables.
 			Assert.That(opponent.Reinforcement.Name, Is.Not.Empty);
 		}
+
+		// And the boss floor does field a boss, with a reinforcement of its own.
+		var last = StarterContent.OpponentFor(Run.ActLength, seed: 1);
+		Assert.That(
+			last.Name,
+			Is.EqualTo(ThemeLibrary.Of(ActMap.ThemeFor(Run.ActLength)).Boss.Name)
+		);
+		Assert.That(last.Reinforcement.Name, Is.Not.Empty);
 	}
 
 	/// <summary>

@@ -64,6 +64,61 @@ public class ActChainTests
 	}
 
 	/// <summary>
+	/// **Every act ends on its OWN boss, and no two acts fight the same one.**
+	///
+	/// One Opponent used to fight all three finales, separated only by a multiplier — which could
+	/// not work, because a boss is a race and a race has a cliff rather than a slope. Three authored
+	/// fights replaced the dial entirely.
+	/// </summary>
+	[Test]
+	public void EachActHasItsOwnBoss()
+	{
+		var bosses = ActMap.Order.Select(theme => ThemeLibrary.Of(theme).Boss).ToList();
+
+		Assert.That(
+			bosses.Select(b => b.Name).Distinct().Count(),
+			Is.EqualTo(bosses.Count),
+			"two acts end on the same Opponent, which is what the per-act boss replaced"
+		);
+
+		foreach (var boss in bosses)
+		{
+			Assert.That(boss.Name, Is.Not.Empty, "an act shipped with no boss authored");
+			Assert.That(boss.Health, Is.GreaterThan(0));
+
+			// **No boss heals**, and this is a rule rather than a preference: healing makes the
+			// fight a threshold, and a 25% change in health then swings the outcome sevenfold.
+			// See EnemyLibrary.TheLastMorning.
+			var heals = boss.Effects.Any(e => e.Template is DealDamageAction { Amount: < 0 });
+			Assert.That(
+				heals,
+				Is.False,
+				$"{boss.Name} heals — that makes its fight a cliff rather than a dial"
+			);
+		}
+	}
+
+	/// <summary>
+	/// The boss actually reaches the battle. A boss authored on the theme and never asked for on the
+	/// boss floor is the same silent no-op as an effect that never fires.
+	/// </summary>
+	[Test]
+	public void TheBossFloorFieldsTheActsBoss()
+	{
+		foreach (var (theme, index) in ActMap.Order.Select((t, i) => (t, i)))
+		{
+			var bossFloor = (index + 1) * ActMap.ActLength;
+			var expected = ThemeLibrary.Of(theme).Boss;
+
+			Assert.That(
+				StarterContent.OpponentFor(bossFloor, seed: 7).Name,
+				Does.StartWith(expected.Name),
+				$"act {index + 1}'s last floor did not field its own boss"
+			);
+		}
+	}
+
+	/// <summary>
 	/// **Later acts are harder, and they have to be**: content is chosen by the floor's position
 	/// within its act, so without scaling act 2 floor 1 would field act 1 floor 1 and the run would
 	/// get easier every time you cleared an act.
