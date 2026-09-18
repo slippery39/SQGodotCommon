@@ -1553,3 +1553,44 @@ on how well shopping can go, not a model of how a player shops, and it is the se
   arrived. 6.9% deaths is survivable but a finale should cost something.
 - **No Godot shop screen.** The shop is engine, content and bot only, so it is measurable but not
   yet playable.
+
+---
+
+## Run 23 — 2026-09-18 — cutting the companion's marks took a third of the run with it
+
+**`bot-1/v3`, 10 runs, same seeds before and after.** A small sample and enough: the shift is not
+subtle.
+
+| | with marks | **marks cut** |
+|---|---|---|
+| act completed | 10% | **0%** |
+| mean floor of 45 | 33.5 | **23.0** |
+
+**Marks were doing far more work than they looked like they were doing.** Each apocalypse survived
+stamped +4 or +6 on the companion, and a 45-floor run eats roughly twenty firings — so Ash finished
+a run at something like 6+40 power and 12+60 toughness. A stat trickle nobody noticed choosing was
+quietly the largest single source of power in the game.
+
+That is also the argument for cutting it. **A mechanic contributing that much while reading as
+bookkeeping is a design problem, not a feature** — the player's own note was "I never liked this
+mechanic", and the numbers say it was carrying the late game while doing it.
+
+**The run needs retuning and has not been retuned here.** Recorded rather than patched, so the next
+pass starts from a known state rather than from a number chosen to hide this one.
+
+### Field Dressing: exhaust works, the card is just strong
+
+Reported as *"I'm not sure it exhausts"*. **It does** — verified end to end against the SHIPPED card
+rather than an inline one (`ExhaustContentTests`), including that a one-card deck cannot replay it
+and that the flag survives `ToDoomCard`.
+
+The card is simply strong: **1.69 copies per deck by the act-1 finale, at 12 life each, against 8.9
+life lost per battle.** A typical deck heals more per fight than the fight costs, and drawing it —
+not exhaust — is the only thing limiting it. Left alone; see `DesignNotes.md` for the condition
+under which that stops being acceptable.
+
+### Method note
+
+The first version of the exhaust test measured LIFE across six turns and failed — life went *down*,
+because the Opponent reinforces into an empty line and those bodies attack. **It was measuring the
+battle, not the card.** Counting replays instead makes it a test of the one thing it is about.

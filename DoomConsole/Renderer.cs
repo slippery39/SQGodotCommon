@@ -209,16 +209,10 @@ public static class Renderer
 		Console.WriteLine();
 		Console.WriteLine($" COMPANION  {c.Name}  {c.Power}/{c.Toughness}");
 
-		if (c.Marks.IsEmpty)
-		{
-			Console.WriteLine("   unmarked — it has not been through anything yet");
-			return;
-		}
-
-		foreach (var mark in c.Marks)
-			Console.WriteLine(
-				$"   {mark.Name, -12} +{mark.Power}/+{mark.Toughness}   (survived {mark.From})"
-			);
+		// **It used to list the marks it had collected, and marks are cut.** What is worth printing
+		// now is what it DOES — the ability is the whole of a companion's identity.
+		foreach (var effect in c.Effects)
+			Console.WriteLine($"   {effect.Text}");
 	}
 
 	public static void DrawDeck(Run run)

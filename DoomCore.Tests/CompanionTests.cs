@@ -91,75 +91,21 @@ public class CompanionTests
 		Assert.That(state.CardsIn(ZoneType.Hand).Any(c => c.Name.StartsWith("Ash")), Is.False);
 	}
 
-	[Test]
-	public void SurvivingAnApocalypseLeavesAPermanentMark()
-	{
-		var run = RunWith(Dog, Unit("Filler", 1, 1));
-
-		var (state, _) = run.StartBattle(DoomScenario.Nuclear, countdown: 2, [Enemy(0)]);
-		var after = run.AfterBattle(PlayOut(state));
-
-		Assert.That(after.Companion.Marks.Select(m => m.Name), Is.EqualTo(new[] { "Glowing" }));
-		Assert.That(
-			after.Companion.Power,
-			Is.EqualTo(Dog.BasePower + Companion.MarkFor(DoomScenario.Nuclear).Power),
-			"base plus Glowing"
-		);
-		Assert.That(after.Companion.Toughness, Is.EqualTo(Dog.BaseToughness), "unchanged");
-		Assert.That(after.Companion.FullName, Is.EqualTo("Ash — Glowing"));
-	}
-
-	[Test]
-	public void MarksAccumulateAcrossAWholeRun()
-	{
-		var run = RunWith(Dog, Unit("Filler", 1, 1));
-
-		foreach (
-			var scenario in new[] { DoomScenario.Nuclear, DoomScenario.Zombie, DoomScenario.Zombie }
-		)
-		{
-			var (state, _) = run.StartBattle(scenario, countdown: 2, [Enemy(0)]);
-			run = run.AfterBattle(PlayOut(state));
-		}
-
-		Assert.That(run.Companion.Marks.Count, Is.EqualTo(3));
-		Assert.That(
-			run.Companion.Power,
-			Is.EqualTo(Dog.BasePower + Companion.MarkFor(DoomScenario.Nuclear).Power),
-			"base plus Glowing"
-		);
-		Assert.That(
-			run.Companion.Toughness,
-			Is.EqualTo(Dog.BaseToughness + Companion.MarkFor(DoomScenario.Zombie).Toughness * 2),
-			"base plus both marks"
-		);
-		Assert.That(run.Companion.FullName, Does.Contain("Glowing").And.Contain("Gravemarked"));
-	}
-
-	[Test]
-	public void TheMarksAreCarriedIntoTheNextBattlesStatline()
-	{
-		var run = RunWith(Dog, Unit("Filler", 1, 1));
-
-		var (first, _) = run.StartBattle(DoomScenario.Nuclear, countdown: 2, [Enemy(0)]);
-		run = run.AfterBattle(PlayOut(first));
-
-		var (second, _) = run.StartBattle(DoomScenario.Zombie, countdown: 2, [Enemy(0)]);
-		var companion = second.Units().Single(u => u.HasComponent<CompanionComponent>());
-
-		Assert.That(
-			companion.Unit().Power,
-			Is.EqualTo(Dog.BasePower + Companion.MarkFor(DoomScenario.Nuclear).Power),
-			"it walked out of the last one changed"
-		);
-	}
-
 	// ===== The doom cannot touch it =====
 
 	/// <summary>
 	/// Flood sweeps every unit off the board. The companion stays: it is not a card and has nowhere
 	/// to be discarded TO — sending it to Discard would make it drawable.
 	/// </summary>
+	// **Six tests lived here and were cut with the mechanic they described (2026-09-18):** marks
+	// accumulating, being carried into the next battle's stat line, and being collapsed in the
+	// companion's name. Every apocalypse survived used to stamp a permanent +N/+N on the companion.
+	// It was cut on playtest feedback — "I never liked this mechanic" — and it was a stat trickle
+	// nobody chose attached to a name that grew until it had to be collapsed to stay on screen.
+	//
+	// What SURVIVES below is everything about the companion that was never about marks: it is on the
+	// board free, no transform can touch it, and its death is not a deck event.
+
 	[Test]
 	public void FloodCannotWashAwayTheCompanion()
 	{
@@ -188,13 +134,14 @@ public class CompanionTests
 		var (state, _) = run.StartBattle(DoomScenario.Nuclear, countdown: 2, [Enemy(0)]);
 		var after = run.AfterBattle(PlayOut(state));
 
-		// The companion was on the field the whole time — exactly what Nuclear reads.
+		// The companion was on the field the whole time — exactly what Nuclear reads — and it must
+		// still be untouched by it. **This is the assertion that mattered all along**: the mark it
+		// used to take instead was the decoration on top.
 		Assert.That(after.Deck.Any(c => c.HasTag(DoomTransforms.IrradiatedTag)), Is.False);
-		Assert.That(after.Companion.Marks.Single().Name, Is.EqualTo("Glowing"));
 		Assert.That(
 			after.Companion.Power,
-			Is.EqualTo(Dog.BasePower + Companion.MarkFor(DoomScenario.Nuclear).Power),
-			"marked, not irradiated"
+			Is.EqualTo(Dog.BasePower),
+			"the apocalypse changed the companion's stats, which nothing may do"
 		);
 	}
 
@@ -246,56 +193,5 @@ public class CompanionTests
 		(state, _) = Do(state, new EndTurnAction());
 
 		Assert.That(state.GetPlayer().Life, Is.EqualTo(58), "3 toughness absorbed 3 of 5");
-	}
-
-	[Test]
-	public void RepeatedMarksAreCollapsedInTheName()
-	{
-		// An act fires the same apocalypse for six floors at a time, so a repeat is the NORMAL case
-		// and not an edge one. Uncollapsed, floor 19 produced "Ash — Hardened, Hardened, Hardened,
-		// Rewritten, Rewritten, ..." and pushed the intermission panel off the side of the screen.
-		var marked = StarterContent
-			.StarterCompanion.Marked(DoomScenario.CivilUnrest)
-			.Marked(DoomScenario.CivilUnrest)
-			.Marked(DoomScenario.CivilUnrest);
-
-		var mark = Companion.MarkFor(DoomScenario.CivilUnrest).Name;
-
-		Assert.That(marked.FullName, Does.Contain($"{mark} x3"));
-		Assert.That(
-			marked.FullName.Split(mark).Length - 1,
-			Is.EqualTo(1),
-			"the mark should be named once, with a count — not repeated."
-		);
-	}
-
-	[Test]
-	public void CollapsingTheNameDoesNotChangeTheStats()
-	{
-		// **The point of the change.** Three of the same mark still stack three times; only the
-		// rendering groups them. If this fails, a display tweak has become a balance change.
-		var plain = StarterContent.StarterCompanion;
-		var once = plain.Marked(DoomScenario.CivilUnrest);
-		var thrice = once.Marked(DoomScenario.CivilUnrest).Marked(DoomScenario.CivilUnrest);
-
-		Assert.That(thrice.Marks, Has.Count.EqualTo(3));
-		Assert.That(
-			thrice.Toughness - plain.Toughness,
-			Is.EqualTo((once.Toughness - plain.Toughness) * 3)
-		);
-	}
-
-	[Test]
-	public void DistinctMarksAreNamedInTheOrderTheyWereTaken()
-	{
-		// The name is a history, so it is not re-sorted into something alphabetical.
-		var marked = StarterContent
-			.StarterCompanion.Marked(DoomScenario.CivilUnrest)
-			.Marked(DoomScenario.AiUprising);
-
-		var first = Companion.MarkFor(DoomScenario.CivilUnrest).Name;
-		var second = Companion.MarkFor(DoomScenario.AiUprising).Name;
-
-		Assert.That(marked.FullName.IndexOf(first), Is.LessThan(marked.FullName.IndexOf(second)));
 	}
 }

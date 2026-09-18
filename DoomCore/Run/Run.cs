@@ -155,7 +155,7 @@ public record Run
 			(DoomCard)
 				new DoomCard
 				{
-					Name = Companion.FullName,
+					Name = Companion.Name,
 					Description = Companion.Description,
 					Cost = 0,
 					RunCardId = 0,
@@ -281,13 +281,7 @@ public record Run
 		if (battle.DoomsFired == 0)
 			return Advance(run);
 
-		// The mark is the whole point of TAG ALONG: it survived this, and it carries that forward.
-		return Advance(
-			DoomTransforms.Apply(run, finishedBattle) with
-			{
-				Companion = Companion.Marked(battle.Scenario),
-			}
-		);
+		return Advance(DoomTransforms.Apply(run, finishedBattle));
 	}
 
 	/// <summary>

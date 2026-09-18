@@ -165,7 +165,7 @@ public sealed class DoomIntermission
 		lines.Add("");
 		lines.Add($"Life  {after.Life} / {after.MaxLife}        Deck  {after.Deck.Count} cards");
 		lines.Add(
-			$"Companion  {after.Companion.FullName}  ({after.Companion.Power}/{after.Companion.Toughness})"
+			$"Companion  {after.Companion.Name}  ({after.Companion.Power}/{after.Companion.Toughness})"
 		);
 
 		_body.Text = string.Join("\n", lines);
@@ -190,7 +190,7 @@ public sealed class DoomIntermission
 			"",
 			$"Life  {before.Life}  ->  {after.Life} / {after.MaxLife}",
 			$"Deck  {after.Deck.Count} cards",
-			$"Companion  {after.Companion.FullName}  ({after.Companion.Power}/{after.Companion.Toughness})"
+			$"Companion  {after.Companion.Name}  ({after.Companion.Power}/{after.Companion.Toughness})"
 		);
 
 		_coming.Text = "";
@@ -304,7 +304,7 @@ public sealed class DoomIntermission
 		_title.Text = run.IsDead ? "YOU DIED" : "THE ACT IS OVER";
 		_body.Text =
 			$"{run.OverReason}\n\nYou reached floor {run.Floor} of {Run.ActLength}.\n"
-			+ $"Your companion came out as {run.Companion.FullName}.";
+			+ $"Your companion came out as {run.Companion.Name}.";
 
 		// Nowhere to descend to, and nothing to pick. A button that did nothing would be worse than
 		// no button.

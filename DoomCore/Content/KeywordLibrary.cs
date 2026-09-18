@@ -52,8 +52,8 @@ public static class KeywordLibrary
 		{
 			Name = "Companion",
 			Text =
-				"Yours, and free. It stands in the centre lane at the start of every battle and "
-				+ "carries its scars between them. It is the only gold thing on the board.",
+				"Yours, and free. It stands in the centre lane at the start of every battle. "
+				+ "No apocalypse can touch it.",
 			Aliases = ["companion"],
 		},
 		new Keyword
@@ -69,25 +69,23 @@ public static class KeywordLibrary
 			Name = "Doom",
 			Text =
 				"The apocalypse on the clock above. It fires when the countdown reaches zero, "
-				+ "then the clock reloads — it is a metronome, not a deadline.",
+				+ "then the clock reloads and it fires again.",
 			Aliases = ["doom", "when the doom fires", "the doom"],
 		},
 		new Keyword
 		{
 			Name = "Exhaust",
 			Text =
-				"Played once, then out of this battle — it is not shuffled back in when the draw "
-				+ "pile runs dry. You get it back in the next fight; nothing but an apocalypse "
-				+ "ever removes a card from your run.",
+				"Played once, then out of this battle. It is not shuffled back in when the draw "
+				+ "pile runs dry, and you get it back in the next fight.",
 			Aliases = ["exhaust", "exhausts", "exhausted"],
 		},
 		new Keyword
 		{
 			Name = "Loss",
 			Text =
-				"A unit of yours the enemy KILLED last turn. A unit that simply left the board at "
-				+ "the end of the turn is not a Loss — only something that was taken from you "
-				+ "counts, which is what makes feeding a lane a real decision.",
+				"A unit of yours the enemy KILLED last turn. A unit that left the board at the end "
+				+ "of the turn is not a Loss.",
 			Aliases = ["loss", "per loss", "losses"],
 		},
 		new Keyword
@@ -95,8 +93,7 @@ public static class KeywordLibrary
 			Name = "Adjacent",
 			Text =
 				"The lanes immediately either side of this one. A lane at the edge of the board "
-				+ "has only one neighbour, so the middle is worth more to anything that reaches "
-				+ "sideways.",
+				+ "has only one neighbour.",
 			Aliases = ["adjacent", "either side"],
 		},
 		new Keyword
@@ -112,7 +109,7 @@ public static class KeywordLibrary
 			Name = "Toughness",
 			Text =
 				"The number in the red disc: what this body can absorb before it dies. Damage "
-				+ "beyond it hits the face behind — a body in a lane is worth its toughness in life.",
+				+ "beyond it hits the face behind.",
 			Aliases = ["toughness"],
 		},
 		new Keyword
@@ -127,8 +124,8 @@ public static class KeywordLibrary
 		{
 			Name = "Incoming",
 			Text =
-				"The Opponent has announced a body for this lane next turn. The delay is your "
-				+ "window — a lane that refilled instantly would make the Opponent unreachable.",
+				"The Opponent has announced a body for this lane next turn. You have one turn "
+				+ "before it arrives.",
 			Aliases = ["incoming", "telegraph"],
 		},
 		new Keyword

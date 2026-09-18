@@ -43,6 +43,16 @@ public sealed class DoomShop
 	/// <summary>True while the deck is shown for removal rather than the stock.</summary>
 	private bool _removing;
 
+	/// <summary>
+	/// Which of the offered cards have already been bought this visit. **Stock depletes** — a card
+	/// can be bought once and then it is gone.
+	///
+	/// Per-visit view state, and legitimately so: a shop floor is entered once and never returned
+	/// to, so what has been taken off the shelf does not outlive the screen. Anything that DOES have
+	/// to outlive it — the gold, the deck — is read from the run and never copied here.
+	/// </summary>
+	private readonly HashSet<int> _bought = [];
+
 	private const float CentreX = 960f;
 	private const int ButtonY = 900;
 
@@ -168,6 +178,7 @@ public sealed class DoomShop
 	{
 		_offer = offer;
 		_removing = removing;
+		_bought.Clear();
 		_root.Visible = true;
 		Refresh();
 	}
@@ -223,6 +234,8 @@ public sealed class DoomShop
 			_removing ? ""
 			: run.Deck.Count <= Run.MinDeckSize
 				? $"Your deck is down to {Run.MinDeckSize}. Nothing more can be taken out of it."
+			: _bought.Count == _offer.Cards.Length && _offer.Cards.Length > 0
+				? "You have taken everything worth taking."
 			: run.Gold < _offer.CardPrice && !canRemove ? "Not enough gold for anything here."
 			: "";
 
@@ -239,8 +252,13 @@ public sealed class DoomShop
 
 		var stock = _offer.Cards.ToList();
 
+		// **Bought cards leave the shelf**, and the ones left keep their original slot rather than
+		// the row re-centring — buying one must not slide the others out from under the cursor.
 		for (var i = 0; i < stock.Count; i++)
 		{
+			if (_bought.Contains(i))
+				continue;
+
 			var card = stock[i];
 			var affordable = run.Gold >= _offer.CardPrice;
 
@@ -253,11 +271,15 @@ public sealed class DoomShop
 			if (!affordable)
 				ui.Modulate = new Color(1, 1, 1, 0.45f);
 			else
+			{
+				var slot = i;
 				ui.Clicked += _ =>
 				{
 					_onBuy(card);
+					_bought.Add(slot);
 					Refresh();
 				};
+			}
 
 			// **Beside the card, never INSIDE it.** `card_2d_canvasgroup.tscn` carries a scale of
 			// its own and this screen adds another, so a raw point size parented to a card is

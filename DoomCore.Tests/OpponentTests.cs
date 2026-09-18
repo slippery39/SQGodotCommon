@@ -173,9 +173,9 @@ public class OpponentTests
 
 		Assert.That(after.Floor, Is.EqualTo(2), "the floor still advances — you won");
 		Assert.That(
-			after.Companion.Marks,
-			Is.Empty,
-			"and the companion survived nothing, so it carries no mark"
+			after.Deck,
+			Is.EqualTo(run.Deck),
+			"and nothing was rewritten, because no apocalypse landed"
 		);
 	}
 
@@ -216,6 +216,10 @@ public class OpponentTests
 			Is.EqualTo(DoomTransforms.IrradiatedBuff),
 			"Nuclear irradiated what was standing"
 		);
-		Assert.That(after.Companion.Marks, Is.Not.Empty, "and the companion took its mark");
+		Assert.That(
+			after.Companion,
+			Is.EqualTo(run.Companion),
+			"and the companion came through it unchanged, which is the whole of TAG ALONG"
+		);
 	}
 }

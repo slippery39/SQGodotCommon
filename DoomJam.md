@@ -93,8 +93,8 @@ Killing the Opponent before the first firing skips `DoomTransforms` **and**
 
 | | your deck | your companion |
 |---|---|---|
-| **dodge it** | unchanged — clean, thin, and no stronger than it started | **unmarked** |
-| **eat it** | rewritten: stronger and more distorted | marked |
+| **dodge it** | unchanged — clean, thin, and no stronger than it started |
+| **eat it** | rewritten: stronger and more distorted |
 
 **The apocalypses ARE the power curve** — there is no separate progression system, by design. So a
 player who dodges everything arrives at floor 15 with a starter deck and an Ash that survived
@@ -105,7 +105,7 @@ outrun, not for holding the whole structure up.
 
 | you kill the opponent in | dooms you eat | outcome |
 |---|---|---|
-| before the first firing | 0 | untouched deck, unmarked companion, no power gained |
+| before the first firing | 0 | untouched deck, no power gained |
 | ~8 turns | 2 | rewritten twice |
 | ~15 turns | 4+ | unrecognisable, and probably very strong |
 
@@ -425,6 +425,19 @@ apocalypse should be a desperate move, not routine.
 
 ## TAG ALONG — the Companion  [v2 BUILT; v3 DESIGNED 2026-09-17, NOT BUILT]
 
+> **COMPANION MARKS ARE CUT (2026-09-18).** Every apocalypse survived used to stamp a permanent
+> +N/+N on the companion — Gravemarked, Glowing, Barnacled — and that "record of your run" is gone,
+> along with `CompanionMark`, `ScenarioDefinition.Mark` and the collapsed `FullName`.
+>
+> **Cut on playtest feedback: "I never liked this mechanic."** It read as a stat trickle nobody
+> chose, attached to a name that grew until it had to be collapsed to stay on screen. The companion
+> is its ABILITY now, and nothing else.
+>
+> **Everything below about marks is superseded.** What survives is the part that was never about
+> them: the companion is on the board free, no transform can touch it, and its death is not a deck
+> event. The dodge-vs-eat bargain still holds — it is the DECK that an apocalypse rewrites, which
+> was always the larger half.
+
 **The only thing the doom cannot touch — and, from v3, the engine your deck is built around.**
 
 ### What v2 built, and what survives
@@ -694,6 +707,10 @@ available. Moot now: the sub-theme is dropped (see Sub-themes), so no input mode
   deck it never touches. Same rule as before: never a second, hand-written account of a scenario.
   Both the preview and the real firing build their snapshot with `DoomFiring.Capture`, so the dial
   cannot disagree with the apocalypse it predicts.
+- ~~Ashfall leaves the Companion no mark~~ **MOOT (2026-09-18): marks are cut.** The finding it
+  recorded is still worth keeping, because it was never really about Ashfall — a DEFAULT VALUE that
+  looks like content is a silent no-op, and `ScenarioDefinition.Mark` defaulting to "Unscathed" is
+  how one shipped. Original entry:
 - **Ashfall leaves the Companion no mark, and that is content, not a preference.** Of fourteen
   apocalypses, only Rapture (unimplemented, never offered) and **Ashfall** author no
   `CompanionMark`. Ashfall is playable — floor 2 of The Reckoning — so surviving it hands the

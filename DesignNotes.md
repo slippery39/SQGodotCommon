@@ -1119,6 +1119,11 @@ act name with the current image as the fallback. The generation is the slow part
 
 ---
 
+## ~~The Companion's name is where its history is stored~~ — RESOLVED BY DELETION (2026-09-18)
+
+Marks are cut. The name is a name. Everything below is kept only because the reasoning is still
+sound about where a run's history should live if it ever needs to live anywhere.
+
 ## The Companion's name is where its history is stored
 
 **Concern:** `Companion.FullName` concatenates every mark. Repeats are collapsed for display
@@ -1132,3 +1137,82 @@ collapsed form is readable.
 could show the marks as a list with their stat contributions, which would also make the Companion's
 growth legible instead of implied. **The stats must not change** — `CompanionTests` holds that line,
 and if it ever fails a display tweak has become a balance change.
+
+---
+
+## A 2-drop is never worth it, and the maths says so
+
+**Concern**, raised from a playthrough (2026-09-18): *"there were very few situations, almost 0,
+where playing a 2 drop was actually better than just playing 2 1 drops."*
+
+The numbers agree, and it is not close. With 3 energy:
+
+| you spend 2 energy on | stats | lanes held |
+|---|---|---|
+| Scrapper + Tunneller (two 1-drops) | **18 / 10** | **2** |
+| Bonepicker (best 2-drop body) | 14 / 4 | 1 |
+| Feral Pack | 12 / 8 | 1 |
+| Rust Golem | 10 / 14 | 1 |
+| Long Watcher (RARE) | 10 / 18 | 1 |
+
+**Two 1-drops beat every 2-drop in the game on raw stats AND cover twice the board.** A 2-drop is
+currently a strictly worse purchase unless its effect carries the whole card.
+
+**The reason is that the LANE is the scarce resource, not the energy** — and the pricing was written
+as though energy were. Four lanes are contestable and 3 energy buys at most three plays, so you
+almost never run out of lanes to fill; concentrating stats into one lane gives up a lane and buys
+nothing. Combat v3 sharpened this: the board empties every turn, so there is no accumulated
+position that a single big body protects.
+
+**Cost to fix:** small in code, a whole pass in content. The benchmark a 2-drop has to clear is
+"two 1-drops in one lane", so ~18/10 is the FLOOR, not the target — and it should be higher, because
+it is also giving up a lane. Today's best is 14/4.
+
+**Watch for:** fixing this by nerfing 1-drops instead. They are correctly priced against 0-drops, and
+the measured card table has cheap bodies as the best cards in the game for the same structural
+reason. Raise the 2-drops.
+
+**Related, and the same root:** 3-drops were deleted entirely in the v3 pool re-cut for this exact
+maths taken one step further — see `docs/findings/doom-balance.md` run 17.
+
+---
+
+## Field Dressing may be the reason the run is easy
+
+**Concern**, from the same playthrough: *"I got past act 1 pretty easily, I had 100 health at the
+end. A lot of that was mainly because of Field Dressing."*
+
+**Exhaust is working** — verified end to end against the shipped card, not an inline one
+(`ExhaustContentTests`). It cannot be replayed within a battle even from a one-card deck.
+
+**The card is just strong.** Measured at 1.69 copies per deck by the act-1 finale, at 12 life each,
+against **8.9 life lost per battle**. So a typical deck heals more per fight than the fight costs,
+and healing is not even the card's constraint — drawing it is.
+
+**Why it's fine now:** the pool is 26 cards. Every copy taken is a copy of the best card available,
+and that concentration falls as the pool grows.
+
+**Watch for:** the pool passing ~40 cards without this getting weaker. If it is still 1.7 copies a
+deck then, the frequency argument was wrong and the number has to come down.
+
+---
+
+## The boss does not feel like a boss
+
+**Concern** (2026-09-18): *"The boss didn't feel like a boss... I didn't feel like there was some
+unique mechanic to prepare for."*
+
+Each act now has its own boss with its own effect — The Last Warden reinforces every other turn, The
+Choir taxes a wide board, The Last Morning makes the apocalypse the weapon. **But none of them is
+something you can PREPARE for**, which is what the note is really about: an ability that taxes you
+during the fight is not the same as one that makes you build differently on the way to it.
+
+Compare the reference: a Slay the Spire boss is known before you reach it and changes what you pick
+at the three floors preceding it.
+
+**Cost to fix:** medium, and mostly UI. The boss is deterministic from the act, so it can be NAMED
+on the intermission and the reward screen for the floors leading up to it — "The Choir waits below"
+— which turns the last three reward picks into preparation. The mechanic can stay as it is; what is
+missing is that the player learns about it while they can still act on it.
+
+**Also open:** act 1's finale currently LOSES the player life on average (-3.4). See run 22.

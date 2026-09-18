@@ -47,13 +47,6 @@ public record ScenarioDefinition
 	public ImmutableList<DoomTransform> Transforms { get; init; } =
 		ImmutableList<DoomTransform>.Empty;
 
-	/// <summary>
-	/// What surviving this leaves on the companion. **Content, not a switch** — MarkFor used to
-	/// dispatch on the enum with a fallback, so every apocalypse added after it was written would
-	/// have handed out a mark that did nothing and said "Unscathed".
-	/// </summary>
-	public CompanionMark Mark { get; init; } = new() { Name = "Unscathed" };
-
 	/// <summary>False when nothing implements it yet — see Rapture.</summary>
 	public bool Implemented { get; init; } = true;
 }
@@ -81,12 +74,6 @@ public static class ScenarioLibrary
 			Countdown = 4,
 			Scope = DoomScope.Battle,
 			MinFloor = 1,
-			Mark = new()
-			{
-				Name = "Barnacled",
-				Power = 2,
-				Toughness = 2,
-			},
 			BattleEffects =
 			[
 				new DoomEffect
@@ -106,7 +93,6 @@ public static class ScenarioLibrary
 			Countdown = 3,
 			Scope = DoomScope.Permanent,
 			MinFloor = 1,
-			Mark = new() { Name = "Gravemarked", Toughness = 4 },
 			Transforms =
 			[
 				new()
@@ -132,7 +118,6 @@ public static class ScenarioLibrary
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = 3,
-			Mark = new() { Name = "Glowing", Power = 4 },
 			Transforms =
 			[
 				new()
@@ -219,7 +204,6 @@ public static class ScenarioLibrary
 			Countdown = 3,
 			Scope = DoomScope.Battle,
 			MinFloor = ThemeLibrary.BandStartsAt(1),
-			Mark = new() { Name = "Bloodless", Power = 4 },
 			BattleEffects =
 			[
 				// **Heal was 4 and damage was 8.** Second pass at the same target: the countdown
@@ -253,7 +237,6 @@ public static class ScenarioLibrary
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = ThemeLibrary.BandStartsAt(2),
-			Mark = new() { Name = "Wreathed", Power = 6 },
 			Transforms =
 			[
 				new()
@@ -284,25 +267,19 @@ public static class ScenarioLibrary
 			Countdown = 2,
 			Scope = DoomScope.Battle,
 			MinFloor = Run.ActLength,
-			Mark = new()
-			{
-				Name = "Hollowed",
-				Power = 4,
-				Toughness = 4,
-			},
 			BattleEffects =
 			[
 				new DoomEffect
 				{
 					Target = DoomTarget.YourUnits,
 					Template = new SweepFieldAction(),
-					Text = "everything you hold finishes turning",
+					Text = "everything you hold is taken",
 				},
 				new DoomEffect
 				{
 					Target = DoomTarget.Player,
 					Template = new DealDamageAction { Amount = 16 },
-					Text = "and comes for you: 16",
+					Text = "and 16 to you",
 				},
 			],
 		};
@@ -321,12 +298,6 @@ public static class ScenarioLibrary
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = ThemeLibrary.BandStartsAt(1),
-			Mark = new()
-			{
-				Name = "Gaunt",
-				Power = 2,
-				Toughness = 2,
-			},
 			Transforms =
 			[
 				new()
@@ -360,7 +331,6 @@ public static class ScenarioLibrary
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = ThemeLibrary.BandStartsAt(2),
-			Mark = new() { Name = "Weighed", Toughness = 6 },
 			Transforms =
 			[
 				new()
@@ -376,7 +346,7 @@ public static class ScenarioLibrary
 					SetPower = 8,
 					SetToughness = 8,
 					Tag = "Judged",
-					Text = "every unit left standing becomes 8/8, no more and no less",
+					Text = "every unit left standing becomes 8/8",
 				},
 			],
 		};
@@ -391,7 +361,6 @@ public static class ScenarioLibrary
 			Countdown = 4,
 			Scope = DoomScope.Battle,
 			MinFloor = 1,
-			Mark = new() { Name = "Hardened", Toughness = 4 },
 
 			// A riot is people, and it comes for YOU. Ashfall is fire and takes the board. These
 			// two had identical numbers when first authored, which made one of them pointless.
@@ -401,7 +370,7 @@ public static class ScenarioLibrary
 				{
 					Target = DoomTarget.Player,
 					Template = new DealDamageAction { Amount = 10 },
-					Text = "10 to you, and nothing to the board",
+					Text = "10 to you",
 				},
 			],
 		};
@@ -418,12 +387,6 @@ public static class ScenarioLibrary
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = ThemeLibrary.BandStartsAt(1),
-			Mark = new()
-			{
-				Name = "Rewritten",
-				Power = 3,
-				Toughness = 3,
-			},
 			Transforms =
 			[
 				new()
@@ -434,7 +397,7 @@ public static class ScenarioLibrary
 					SetToughness = 8,
 					SetCost = 0,
 					Tag = "Assimilated",
-					Text = "every unit left standing is assimilated: 8/8, and free to field",
+					Text = "every unit left standing becomes a free 8/8",
 				},
 			],
 		};
@@ -454,12 +417,6 @@ public static class ScenarioLibrary
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
 			MinFloor = ThemeLibrary.BandStartsAt(2),
-			Mark = new()
-			{
-				Name = "Replicated",
-				Power = 3,
-				Toughness = 3,
-			},
 			Transforms =
 			[
 				new()
@@ -491,12 +448,6 @@ public static class ScenarioLibrary
 			Countdown = 2,
 			Scope = DoomScope.Battle,
 			MinFloor = Run.ActLength,
-			Mark = new()
-			{
-				Name = "Shadowcast",
-				Power = 4,
-				Toughness = 4,
-			},
 			BattleEffects =
 			[
 				new DoomEffect
