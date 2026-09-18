@@ -1330,3 +1330,39 @@ is seen over and over. A 1-cost "gain 12 life" came back roughly every other tur
 being a decision. `Exhaust` sends a card to its own zone for the rest of the battle — **battle scope,
 so the run deck is untouched and it is back next fight.** Nothing but a doom transform may remove a
 card from a run, and that rule was not bent for this.
+
+---
+
+## Run 19 — 2026-09-17 — the bot never declined a reward, and runs 1-18 were measured on that
+
+`RunSimulator` took a card after **every** battle. The Godot reward screen has always offered a skip
+— `DoomIntermission.OfferRewards` says so out loud — but the sim never used it, so **every number in
+this file up to run 18 describes the most bloated deck the game can produce**, not the one a player
+builds.
+
+With a flat 25% decline:
+
+| | deck at end, before | after |
+|---|---|---|
+| The Long Emergency | 46.4 | 42.7 |
+| The Reckoning | 16.0 | 14.4 |
+| The Rising | 22.0 | 19.1 |
+
+**Completion barely moved** — 86/82/20 to 86/80/22. Four fewer cards is not what decides these runs,
+which is worth knowing before building any deck-thinning mechanism: **bloat at this level is not the
+constraint.** It will matter more once acts chain, where never declining would build a fifty-card
+deck nobody would own.
+
+The skip rate is a flat guess and the only guess in that file. A picker that reads the measured
+card-value table would replace both it and the random pick — and would make the per-card numbers
+mean something different, so it needs its own run when it lands.
+
+### Method note
+
+The first attempt at this measurement **silently did not run**. The command chained
+`dotnet build | grep -c error && dotnet run`, and `grep -c` exits non-zero when it matches nothing —
+so "0 errors" short-circuited the sim and the analysis read the PREVIOUS results file. It was caught
+only because the deck size came back byte-identical to the run before it.
+
+**An unchanged number is evidence of a change that did not happen, not of a change that did
+nothing.** Check the results file is new before reading it.

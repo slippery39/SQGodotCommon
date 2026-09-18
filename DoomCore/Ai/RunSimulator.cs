@@ -57,6 +57,16 @@ public record RunResult
 public static class RunSimulator
 {
 	/// <summary>
+	/// Extra tickets in the reward bag that mean "take nothing", so the bot declines roughly one
+	/// offer in four. **A guess, and the only guess in this file** — a real player declines far more
+	/// deliberately than this, weighing the card against a deck they can picture.
+	///
+	/// It exists because taking a card after EVERY battle is not neutral: it is the most bloated
+	/// deck the game can produce, and it was silently the baseline for runs 1-18.
+	/// </summary>
+	private const int SkipWeight = 1;
+
+	/// <summary>
 	/// A battle nobody can finish. Reachable: an Opponent that heals faster than a stalled board
 	/// can hit it. Recorded as Stalled rather than looping forever — and a Stalled floor in the
 	/// results is itself a balance finding, not just a guard.
@@ -144,9 +154,27 @@ public static class RunSimulator
 			var rewards = StarterContent.RewardsFor(run.Theme, seed, run.Floor);
 			if (!rewards.IsEmpty)
 			{
-				var pick = rewards[picker.Next(rewards.Length)];
-				taken.Add(pick.Name);
-				run = run.WithCard(pick);
+				// **SKIPPING IS A LEGAL MOVE AND THE BOT USED TO NEVER MAKE IT.** The Godot reward
+				// screen has always offered it — `DoomIntermission.OfferRewards` says so out loud —
+				// but this loop took a card after every single battle, so every number ever
+				// measured described a deck growing by one card a floor with no declines. That is
+				// the WORST case a player can construct, not the one they play.
+				//
+				// It matters far more under combat v3: you draw five a turn and the deck IS your
+				// per-turn output, so a card you would not play is actively crowding out one you
+				// would. It matters more again once acts chain, where never declining would build
+				// a deck of fifty-plus that nobody would ever own.
+				//
+				// **Still deliberately not a GREEDY picker.** Random-with-a-skip keeps the per-card
+				// table measuring cards rather than the picker's taste — see the class comment.
+				// The skip rate is a flat guess, not a strategy; a picker that reads the measured
+				// table is the obvious next step and would replace both.
+				var pick = picker.Next(rewards.Length + SkipWeight);
+				if (pick < rewards.Length)
+				{
+					taken.Add(rewards[pick].Name);
+					run = run.WithCard(rewards[pick]);
+				}
 			}
 		}
 
