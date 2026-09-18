@@ -238,8 +238,13 @@ public record Run
 	/// Steps onto the next floor — and **restores you to full at an act break**.
 	///
 	/// A life budget tuned for fifteen battles does not stretch over twenty-four, and an act break
-	/// is the natural place to give it back: you have just killed the thing the act was built
-	/// around, and the world changes over. Slay the Spire does the same.
+	/// is the natural place to give some back: you have just killed the thing the act was built
+	/// around, and the world changes over.
+	///
+	/// **It was a FULL heal and is now partial — see `StarterContent.ActBreakHealFor`.** Restoring
+	/// everything meant the life budget never bound: an act cost about 90 life, the two rests gave
+	/// back 72 of it, and the break returned whatever was left. Run 20 measured one death in roughly
+	/// fourteen hundred ordinary battles as a result.
 	///
 	/// Gold is deliberately NOT cleared — banking through to the next act's shop is a decision, and
 	/// wiping it would delete one.
@@ -249,7 +254,10 @@ public record Run
 			? run with
 			{
 				Floor = run.Floor + 1,
-				Life = run.MaxLife,
+				Life = Math.Min(
+					run.MaxLife,
+					run.Life + StarterContent.ActBreakHealFor(run.MaxLife)
+				),
 			}
 			: run with
 			{

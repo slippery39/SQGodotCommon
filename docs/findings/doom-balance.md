@@ -1417,3 +1417,67 @@ wanted more, the late bosses far less.
 `RunSimulator` **walks past shops without spending**, because the bot cannot shop. Every number here
 therefore describes a run that never bought or removed a card — recorded rather than faked, since a
 random purchase would put noise in the table and call it a measurement. Gold accumulates unspent.
+
+---
+
+## Run 21 — 2026-09-17 — the curve pass, and a boss that was a cliff rather than a dial
+
+**`bot-1/v3`, 120 runs, 45 floors.** Four iterations on the chained run's difficulty. Run 20 left
+every ordinary floor free and every boss a wall.
+
+| | run 20 | **run 21** |
+|---|---|---|
+| act completed | 5.8% | **24.2%** |
+| mean floor of 45 | 26.04 | 28.12 |
+| act 1 boss deaths | 39.3% | **11.2%** |
+| act 2 boss deaths | 74.6% | **6.0%** |
+| act 3 boss deaths | 61.1% | **14.7%** |
+
+Deaths are spread now instead of concentrated: floors 7-9 (34), 15 (9), 23-30 (8), 37-39 (21),
+41-45 (11). The pressure points are the middle of act 1 and the middle of act 3, with the finales as
+real but survivable spikes. Target band is 25-50%; 24.2% is marginally under and close enough to
+leave until the shop exists, since gold is currently unspendable.
+
+### The sim had stopped showing two thirds of the run
+
+`SimCommand`'s survival table looped `floor <= Run.ActLength`. Chaining acts changed what `ActLength`
+means, so the table quietly printed **only floors 1-15** while looking like a complete table — act
+2's and act 3's curves were invisible, and act 2's boss was being tuned blind for two iterations.
+
+**A table that silently narrows is worse than one that errors.** It was found by noticing that a
+45-floor run had no rows past 15.
+
+### One multiplier cannot serve a floor and a finale
+
+Run 20 applied a single act multiplier to both. They needed opposite corrections, so they now have
+separate dials — `HealthScaleFor` / `AttackScaleFor` for ordinary floors, `BossScaleFor` for the last
+floor of an act. The ordinary attack scale also needed a base ABOVE 1.0 (1.2), because act 1's
+multiplier is 1.0 by definition and act 1 was where the problem was.
+
+### The boss was a THRESHOLD, and no multiplier can sit on a threshold
+
+`TheLastMorning` — the Opponent on all three finales — healed 4 a turn. That makes the fight a race
+with a cliff: out-damage the heal and it folds, fall short and it is unkillable. The measurements
+show the cliff plainly:
+
+| boss scale | act 1 finale deaths |
+|---|---|
+| 0.8 | 6.2% |
+| 1.0 | 42.2% |
+
+**A 25% change in one dial swung the outcome sevenfold.** Detonation did the same going 1.7 → 1.25:
+74.6% → 5.4%.
+
+So the heal was removed and health raised to pay for it — **a health total is linear and tunable; a
+heal race is a cliff.** The first attempt overpaid, 140 → 200 when the heal was worth about 28 over a
+seven-turn fight, and act 1's finale got *worse* (42.2% → 47.5%). At 170 it lands at 11.2%.
+
+**The dial is now stable, and the real fix is still content.** One Opponent fights all three finales.
+Giving each act its own boss would let `BossScaleFor` be deleted rather than tuned.
+
+### Healing had to come down before anything else could be read
+
+A full restore at each act break made the run three independent acts — nothing spent in act 1 could
+cost you in act 2, so the only floor that could kill you was whichever one spiked. It is half of max
+now. With that plus the ordinary-floor correction, life lost per battle is 9.6 and the budget
+finally binds somewhere other than a boss.

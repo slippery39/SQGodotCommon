@@ -80,8 +80,11 @@ public class ActChainTests
 	}
 
 	/// <summary>
-	/// Clearing the boss of a non-final act restores you to full and walks you into the next one.
-	/// A life budget tuned for one act does not stretch over three.
+	/// Clearing the boss of a non-final act heals you and walks you into the next one.
+	///
+	/// **Partial, not full** — a full restore made the run three independent acts, because nothing
+	/// spent in act 1 could cost you in act 2. The amount is READ from `ActBreakHealFor` rather than
+	/// restated, so retuning the curve does not break a test about the rule.
 	/// </summary>
 	[Test]
 	public void AnActBreakRestoresLifeAndGoldSurvivesIt()
@@ -97,10 +100,23 @@ public class ActChainTests
 			Gold = 55,
 		}.WithCards([Unit()]);
 
+		var before = run.Life;
 		var after = Clear(run);
+		var heal = StarterContent.ActBreakHealFor(run.MaxLife);
 
 		Assert.That(after.Floor, Is.EqualTo(bossFloor + 1));
-		Assert.That(after.Life, Is.EqualTo(120), "the break heals you to full");
+		Assert.That(after.Life, Is.GreaterThan(before), "the break heals you");
+		Assert.That(
+			after.Life,
+			Is.LessThanOrEqualTo(before + heal),
+			"but not by more than the act break is authored to give"
+		);
+		Assert.That(
+			heal,
+			Is.LessThan(run.MaxLife),
+			"a FULL restore would make each act independent of the last — damage must carry a debt "
+				+ "forward or a long run is not one run"
+		);
 		Assert.That(after.IsOver, Is.False, "and the run carries on into the next act");
 		Assert.That(
 			after.Gold,

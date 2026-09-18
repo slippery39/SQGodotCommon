@@ -77,7 +77,10 @@ public static class SimCommand
 		Console.WriteLine("  SURVIVAL — how far the bot gets");
 		Console.WriteLine("  floor  reached   cleared   died  stalled   avg life on entry");
 
-		for (var floor = 1; floor <= Run.ActLength; floor++)
+		// **RunLength, not ActLength.** A run is all three acts now, and this loop quietly kept
+		// printing only the first fifteen floors — so the curve past act 1 was invisible while
+		// looking like a complete table. Act 2's boss was being tuned blind.
+		for (var floor = 1; floor <= Run.RunLength; floor++)
 		{
 			var attempts = results.SelectMany(r => r.Floors).Where(f => f.Floor == floor).ToList();
 

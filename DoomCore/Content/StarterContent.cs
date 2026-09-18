@@ -676,21 +676,57 @@ public static class StarterContent
 	public static FloorKind FloorKindFor(int floor) => ActMap.KindFor(floor);
 
 	/// <summary>
-	/// How much harder an act is than the one before it. **Acts 2 and 3 reuse act 1's roster with
-	/// these on top**, rather than the game authoring forty more enemies it does not have.
+	/// How much harder an act is than the one before it, **for an ORDINARY floor**.
 	///
-	/// It is needed because content is chosen by the floor's position WITHIN its act. Without a
-	/// multiplier, act 2 floor 1 would field act 1 floor 1's enemies and the run would get easier
-	/// every time you cleared an act — and selecting on the run-wide floor instead is worse still,
-	/// because the roster's hardest tier unlocks at the act length and would then be every floor
-	/// from act 2 onward.
+	/// Acts 2 and 3 reuse act 1's roster with this on top rather than the game authoring forty more
+	/// enemies it does not have. That is necessary because content is chosen by the floor's position
+	/// WITHIN its act — without a multiplier, act 2 floor 1 would field act 1 floor 1 and the run
+	/// would get easier every time you cleared an act.
 	///
-	/// **Both are guesses and want `sim`.** Health leads because it decides how long a battle runs;
-	/// attack decides how much it costs, and moving both at once would make neither readable.
+	/// **Raised from 0.7 after run 20.** One death in roughly fourteen hundred ordinary battles, at
+	/// 10.9 life apiece against 21.9 in a single-act run. An act cost about 90 life and the rests
+	/// plus the act break handed all of it back, so the life budget never bound anywhere.
 	/// </summary>
-	public static double HealthScaleFor(int floor) => 1.0 + 0.7 * ActMap.ActIndexFor(floor);
+	public static double HealthScaleFor(int floor) =>
+		ActMap.IsBossFloor(floor) ? BossScaleFor(floor) : 1.0 + 0.9 * ActMap.ActIndexFor(floor);
 
-	public static double AttackScaleFor(int floor) => 1.0 + 0.35 * ActMap.ActIndexFor(floor);
+	/// <summary>
+	/// **The base is above 1.0 on purpose.** Ordinary floors were costing 9.4 life against a 120
+	/// budget with two rests and an act break on top, so nothing in an act could kill you and the
+	/// whole run's difficulty sat on its last floor. The act multiplier could not fix that — act 1
+	/// has a multiplier of one by definition, and act 1 was the problem.
+	/// </summary>
+	public static double AttackScaleFor(int floor) =>
+		ActMap.IsBossFloor(floor) ? BossScaleFor(floor) : 1.2 + 0.45 * ActMap.ActIndexFor(floor);
+
+	/// <summary>
+	/// **A boss floor scales far more gently, and run 20 is why.** Death rates on the three act
+	/// finales were 39.3%, 74.6% and 61.1% while ordinary floors killed almost nobody — the entire
+	/// run's difficulty lived on three floors out of forty-five.
+	///
+	/// The cause was applying ONE multiplier to both. A boss floor already carries two things an
+	/// ordinary floor does not: the act's FinalDoom, each of which was authored as the end of a
+	/// whole game, and `TheLastMorning`, which is the Opponent on every act's last floor. Multiplying
+	/// that by the ordinary curve as well took act 3's boss to 336 health and 113 life a battle.
+	///
+	/// **Ordinary floors and boss floors needed opposite corrections, so they get separate dials.**
+	/// </summary>
+	/// <summary>
+	/// **It starts BELOW one and climbs, which looks wrong until you read the measurements.**
+	///
+	/// A flat `1 + 0.25 x act` fixed the late acts and left act 1 untouched, because act 1's
+	/// multiplier is one whatever the coefficient — and act 1's boss was the wall: 42.2% deaths at
+	/// 54.1 life, against 5.4% and 7.1% for acts 2 and 3. The finale was never scaled wrong; it was
+	/// authored as the end of a whole game and act 1 meets it eight battles in.
+	///
+	/// So the first one is knocked DOWN and the curve climbs from there.
+	///
+	/// **This dial is unstable and a better fix is content.** A boss is a race, so it flips from
+	/// unwinnable to trivial over a small change — Detonation went 74.6% deaths to 5.4% on a move
+	/// from 1.7 to 1.25. One Opponent (`TheLastMorning`) fights all three finales; giving each act
+	/// its own is the real answer, and then this multiplier can go.
+	/// </summary>
+	private static double BossScaleFor(int floor) => 0.85 + 0.3 * ActMap.ActIndexFor(floor);
 
 	private static int Scaled(int value, double scale) =>
 		Math.Max(1, (int)Math.Round(value * scale));
@@ -710,6 +746,18 @@ public static class StarterContent
 	/// moves again — and it has moved twice already.
 	/// </summary>
 	public static int RestHealFor(int maxLife) => maxLife * 3 / 10;
+
+	/// <summary>
+	/// What clearing an act gives back: **half of max, not all of it.**
+	///
+	/// A full restore made the run three independent acts rather than one run — nothing you spent
+	/// in act 1 could ever cost you in act 2, so the only floor that could kill you was the one
+	/// whose numbers happened to spike. Half keeps the act break a real relief while letting damage
+	/// carry a debt forward, which is the only thing that makes a long run feel like one run.
+	///
+	/// A fraction of max, like the rest, so it keeps its meaning if the life budget moves again.
+	/// </summary>
+	public static int ActBreakHealFor(int maxLife) => maxLife / 2;
 
 	/// <summary>
 	/// Which Opponent waits on a floor — see <see cref="EnemyLibrary.ForFloor"/>.
@@ -815,7 +863,10 @@ public static class StarterContent
 		// health lowered the average battle and left that tail untouched, because the tail is this
 		// structure rather than any health total.
 		var inAct = ActMap.FloorInAct(floor);
-		var count = Math.Min(2 + inAct / 5, DoomBattle.LaneCount - 1);
+		// Reaches the four-lane cap by the middle of an act rather than only at its end. With 15
+		// floors and 8 battles there is not room for a slow ramp, and run 20 measured the result:
+		// ordinary floors killed nobody.
+		var count = Math.Min(2 + inAct / 4, DoomBattle.LaneCount - 1);
 		var roster = EnemyLibrary.PlayableOn(inAct);
 		var rng = new Random(seed * 7717 + floor);
 

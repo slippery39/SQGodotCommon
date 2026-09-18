@@ -369,10 +369,23 @@ public static class EnemyLibrary
 		{
 			Name = "The Last Morning",
 			Description = "It has been waiting at the end of every one of these.",
-			Health = 140,
 			SummonInterval = 2,
 			Reinforcement = Doomsayer,
 			MinFloor = Run.ActLength,
+			// **The per-turn heal was removed, and the health raised to pay for it.**
+			//
+			// It made every act finale a THRESHOLD rather than a fight: out-damage 4 a turn and the
+			// boss folds, fall short and it is unkillable. That is why the boss dial was unstable —
+			// scaling it 1.7 to 1.25 swung Detonation from 74.6% deaths to 5.4%, and 0.8 to 1.0
+			// swung Ashfall from 6.2% to 42.2%. A health total is linear and tunable; a heal race
+			// is a cliff, and no multiplier can sit on a cliff.
+			//
+			// It keeps the doom punish, which is the fight's identity: this is the Opponent that
+			// makes the apocalypse the weapon rather than the weather.
+			// 140 with a 4-a-turn heal; the heal was worth roughly 28 over a seven-turn fight, and
+			// 200 overpaid for it by thirty — act 1's finale went from 42.2% deaths to 47.5%, which
+			// is the opposite of the intended correction.
+			Health = 170,
 			Effects =
 			[
 				On(
@@ -380,12 +393,6 @@ public static class EnemyLibrary
 					DoomTarget.Player,
 					new DealDamageAction { Amount = 10 },
 					"when the doom fires: 10 to you"
-				),
-				On(
-					EffectTrigger.OnTurnStart,
-					DoomTarget.Opponent,
-					new DealDamageAction { Amount = -4 },
-					"each turn: heals 4"
 				),
 			],
 		};
