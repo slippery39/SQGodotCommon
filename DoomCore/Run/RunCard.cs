@@ -33,6 +33,20 @@ public record RunCard
 	public int Cost { get; init; }
 
 	public bool IsUnit { get; init; }
+
+	/// <summary>
+	/// **Exhaust: this card leaves the battle when played, instead of going to Discard.**
+	///
+	/// Combat v3 discards your hand every turn and reshuffles Discard the moment Draw runs dry, so
+	/// a small deck is seen over and over — a 1-cost "gain 12 life" came back roughly every other
+	/// turn and healing stopped being a decision. Found in a playtest: *"Field Dressing needs
+	/// exhaust."*
+	///
+	/// **Battle scope. The run deck is untouched** and the card is back next fight, because every
+	/// battle is built fresh from `Run.Deck`. Only a doom transform may remove a card from a run,
+	/// and that rule is not being bent for this.
+	/// </summary>
+	public bool Exhausts { get; init; }
 	public int Power { get; init; }
 	public int Toughness { get; init; }
 
@@ -91,6 +105,7 @@ public record RunCard
 			RunCardId = RunCardId,
 			Tags = Tags,
 			Effects = Effects,
+			Exhausts = Exhausts,
 		};
 
 		return IsUnit

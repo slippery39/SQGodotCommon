@@ -74,6 +74,15 @@ public static class KeywordLibrary
 		},
 		new Keyword
 		{
+			Name = "Exhaust",
+			Text =
+				"Played once, then out of this battle — it is not shuffled back in when the draw "
+				+ "pile runs dry. You get it back in the next fight; nothing but an apocalypse "
+				+ "ever removes a card from your run.",
+			Aliases = ["exhaust", "exhausts", "exhausted"],
+		},
+		new Keyword
+		{
 			Name = "Loss",
 			Text =
 				"A unit of yours the enemy KILLED last turn. A unit that simply left the board at "

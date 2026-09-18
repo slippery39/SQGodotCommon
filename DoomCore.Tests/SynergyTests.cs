@@ -378,7 +378,15 @@ public class SynergyTests
 		);
 	}
 
-	/// <summary>It STACKS within a battle — a grinding fight makes Ash a different creature.</summary>
+	/// <summary>
+	/// **The bonus lasts ONE TURN and unwinds itself.** It shipped cumulative and a playtest called
+	/// it OP within one session — three deaths across three turns used to leave Ash +6 for good.
+	///
+	/// There is no duration system: the expiry is the same buff negated on the opposite trigger.
+	/// That only works because `DiedLastTurn` cannot change within a turn — both firings read the
+	/// same number, so the unwind is exact. **Do not copy the pattern for a count that moves
+	/// mid-turn**, such as cards played, or it would apply a small buff and remove a large one.
+	/// </summary>
 	[Test]
 	public void AshKeepsWhatItGained()
 	{
@@ -427,10 +435,21 @@ public class SynergyTests
 			(state, _) = Do(state, new EndTurnAction());
 		}
 
+		// One death happened last turn, so Ash is carrying exactly one turn's worth right now —
+		// NOT three turns of it. The cumulative version read basePower + 6 here.
 		Assert.That(
 			((DoomCard)state.GetObject(ashId)).Unit().Power,
-			Is.EqualTo(basePower + 6),
-			"three deaths across three turns, +2 each, kept"
+			Is.EqualTo(basePower + 2),
+			"the bonus is this turn's Losses only — it must not have stacked across three turns"
+		);
+
+		// And a clean turn takes it all the way back down.
+		(state, _) = Do(state, new EndTurnAction());
+
+		Assert.That(
+			((DoomCard)state.GetObject(ashId)).Unit().Power,
+			Is.EqualTo(basePower),
+			"nothing died last turn, so Ash is back to base"
 		);
 	}
 
@@ -478,6 +497,164 @@ public class SynergyTests
 			((DoomCard)state.GetObject(ashId)).Unit().Power,
 			Is.EqualTo(basePower),
 			"and Ash was paid nothing for it"
+		);
+	}
+
+	// ===== Healing, and the bug a playtest found =====
+
+	/// <summary>
+	/// **Healing cannot raise the ceiling.** It used to: an overheal pushed `MaxHealth` up to meet
+	/// it, so `Gravecaller` — which heals 4 a turn and sits at full health — grew by 4 EVERY TURN,
+	/// without bound, for the whole battle. The `Shepherd` trait did it to a whole enemy line.
+	///
+	/// Reported from a playtest as "they can heal past their original health, which makes them
+	/// super hard to beat". The old rule was argued from DISPLAY (the health bar draws against
+	/// MaxHealth) and cost the game its difficulty curve.
+	/// </summary>
+	[Test]
+	public void HealingCannotGrowAnEnemyPastItsMaximum()
+	{
+		var state = DoomBattleFactory.Create(DoomScenario.Flood, countdown: 9, opponentHealth: 500);
+		(state, var enemyId) = AddEnemy(state, health: 20, attack: 0, lane: 0);
+		(state, _) = state.BeginBattle();
+
+		// Heal it three times while it is already full.
+		for (var i = 0; i < 3; i++)
+			(state, _) = Do(state, new DealDamageAction { TargetIds = [enemyId], Amount = -6 });
+
+		var enemy = (Enemy)state.GetObject(enemyId);
+		Assert.That(enemy.Health, Is.EqualTo(20), "topped up, not grown");
+		Assert.That(enemy.MaxHealth, Is.EqualTo(20), "and the ceiling did not move");
+	}
+
+	/// <summary>Healing a WOUNDED enemy still works — the cap must not break the mechanic.</summary>
+	[Test]
+	public void HealingStillRestoresAWoundedEnemy()
+	{
+		var state = DoomBattleFactory.Create(DoomScenario.Flood, countdown: 9, opponentHealth: 500);
+		(state, var enemyId) = AddEnemy(state, health: 20, attack: 0, lane: 0);
+		(state, _) = state.BeginBattle();
+
+		(state, _) = Do(state, new DealDamageAction { TargetIds = [enemyId], Amount = 15 });
+		Assert.That(((Enemy)state.GetObject(enemyId)).Health, Is.EqualTo(5));
+
+		(state, _) = Do(state, new DealDamageAction { TargetIds = [enemyId], Amount = -9 });
+
+		var enemy = (Enemy)state.GetObject(enemyId);
+		Assert.That(enemy.Health, Is.EqualTo(14), "healed 9 of the 15 it had taken");
+		Assert.That(enemy.MaxHealth, Is.EqualTo(20));
+	}
+
+	// ===== Exhaust =====
+
+	/// <summary>
+	/// **An exhausted card leaves the battle and is NOT reshuffled.** v3 discards your hand every
+	/// turn and reshuffles Discard the moment Draw runs dry, so a 1-cost heal in a small deck came
+	/// back every other turn and healing stopped being a decision. Found in a playtest.
+	/// </summary>
+	[Test]
+	public void AnExhaustedCardDoesNotComeBackThisBattle()
+	{
+		var run = new Run { Life = 100, MaxLife = 200 }.WithCards(
+			[
+				new RunCard
+				{
+					Name = "Field Dressing",
+					Cost = 0,
+					IsUnit = false,
+					Exhausts = true,
+					Effects =
+					[
+						new DoomEffect
+						{
+							Trigger = EffectTrigger.OnPlay,
+							Target = DoomTarget.Player,
+							Template = new GainLifeAction { Amount = 5 },
+							Text = "gain 5, Exhaust",
+						},
+					],
+				},
+			]
+		);
+
+		var (state, _) = run.StartBattle(
+			DoomScenario.Flood,
+			countdown: 99,
+			[],
+			opponentHealth: 500
+		);
+
+		var card = state.CardsIn(ZoneType.Hand).Single(c => c.Name == "Field Dressing");
+		(state, _) = Do(state, new PlayCardAction { CardId = card.Id });
+
+		Assert.That(state.GetPlayer().Life, Is.EqualTo(105), "it resolved");
+		Assert.That(
+			state.GetParent(card.Id),
+			Is.EqualTo(state.ZoneId(ZoneType.Exhausted)),
+			"and went out of the battle rather than to Discard"
+		);
+
+		// The deck is a single card, so if it were recycled it would be drawn immediately.
+		for (var turn = 0; turn < 3; turn++)
+			(state, _) = Do(state, new EndTurnAction());
+
+		Assert.That(
+			state.CardsIn(ZoneType.Hand).Any(c => c.Id == card.Id),
+			Is.False,
+			"a one-card deck redrew the exhausted card — it is being reshuffled"
+		);
+		Assert.That(
+			state.GetParent(card.Id),
+			Is.EqualTo(state.ZoneId(ZoneType.Exhausted)),
+			"it should still be sitting in the exhaust pile"
+		);
+	}
+
+	/// <summary>
+	/// Exhaust is BATTLE scope. The run deck is untouched, so the card is there next fight — only a
+	/// doom transform may remove a card from a run.
+	/// </summary>
+	[Test]
+	public void ExhaustDoesNotRemoveTheCardFromTheRun()
+	{
+		var run = new Run { Life = 100, MaxLife = 200 }.WithCards(
+			[
+				new RunCard
+				{
+					Name = "Field Dressing",
+					Cost = 0,
+					IsUnit = false,
+					Exhausts = true,
+					Effects =
+					[
+						new DoomEffect
+						{
+							Trigger = EffectTrigger.OnPlay,
+							Target = DoomTarget.Player,
+							Template = new GainLifeAction { Amount = 5 },
+							Text = "gain 5, Exhaust",
+						},
+					],
+				},
+			]
+		);
+
+		var (state, _) = run.StartBattle(
+			DoomScenario.Flood,
+			countdown: 99,
+			[],
+			opponentHealth: 500
+		);
+		var card = state.CardsIn(ZoneType.Hand).Single();
+		(state, _) = Do(state, new PlayCardAction { CardId = card.Id });
+
+		Assert.That(run.Deck, Has.Count.EqualTo(1), "the run deck never lost it");
+
+		var (next, _) = run.StartBattle(DoomScenario.Flood, countdown: 99, [], opponentHealth: 500);
+		Assert.That(
+			next.CardsIn(ZoneType.Hand).Any(c => c.Name == "Field Dressing"),
+			Is.True,
+			"and it is back in hand next battle"
 		);
 	}
 

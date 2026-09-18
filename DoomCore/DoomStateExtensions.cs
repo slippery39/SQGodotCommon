@@ -26,6 +26,7 @@ public static class DoomStateExtensions
 				ZoneType.Discard => DoomObjectKeys.Discard,
 				ZoneType.Field => DoomObjectKeys.Field,
 				ZoneType.Enemies => DoomObjectKeys.Enemies,
+				ZoneType.Exhausted => DoomObjectKeys.Exhausted,
 				_ => throw new ArgumentOutOfRangeException(nameof(zone)),
 			}
 		);

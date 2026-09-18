@@ -166,13 +166,16 @@ public static class StarterContent
 	/// eleven balance passes and the companion never came with it, so the one permanent thing on
 	/// the board was also the least relevant. 6/12 puts it beside a 1-cost.
 	///
-	/// **The ability: +2/+0 for every unit of yours the enemy killed last turn, and it STACKS
-	/// within a battle.** Two readings were possible and this is the cheap one on purpose:
+	/// **The ability: +2/+0 for every unit of yours the enemy killed last turn, for THAT TURN ONLY.**
 	///
-	/// - *cumulative* (this) — a triggered `BuffAction`, which the effect system already does. Ash
-	///   grows through a grinding battle and resets when the next one starts. No new machinery.
-	/// - *recalculated* — a bonus that rises and falls with what died each turn. That is a
-	///   CONTINUOUS effect, which means a layer system this game has deliberately not built.
+	/// It shipped cumulative — stacking for the whole battle — and a playtest called it immediately.
+	/// Run 16 had already measured the ability alone as worth +32/+38/+8 points of act completion,
+	/// more than doubling Ash's stats was worth, and stacking it across a grinding fight made him a
+	/// monster. Single-turn is what was asked for originally; cumulative was chosen because it
+	/// looked cheaper to build.
+	///
+	/// **It was not cheaper.** See the second effect below: an expiring bonus is the same buff
+	/// negated on the opposite trigger, which needs no duration system and no continuous layer.
 	///
 	/// **It only means anything because withdrawn ≠ dead** (combat v3): it reads units the enemy
 	/// took, not the four that walked off the board at end of turn. That rule was tidiness when it
@@ -197,6 +200,34 @@ public static class StarterContent
 					Target = DoomTarget.Self,
 					Template = new BuffAction { Power = 2, PerEach = CountOf.DiedLastTurn },
 					Text = "+2/+0 per Loss",
+				},
+				// **THE SAME BUFF, NEGATED, ON THE OPPOSITE TRIGGER — and that is the whole
+				// duration system.** The bonus lasts exactly one turn and then unwinds itself.
+				//
+				// It shipped CUMULATIVE and a playtest called it immediately: stacking +2 a Loss
+				// across a grinding battle made Ash a monster, and run 16 measured the ability
+				// alone as worth +32/+38/+8 points of act completion. A single-turn bonus is what
+				// was asked for originally; the cumulative reading was chosen because it looked
+				// cheaper to build.
+				//
+				// It was not cheaper. An expiring effect needs no duration machinery and no
+				// continuous layer — it needs a symmetric pair of triggers.
+				//
+				// **THE CONSTRAINT, and it is sharp: this only works for a count that cannot
+				// change within a turn.** `DiedLastTurn` is written once, by `StartTurnAction`, and
+				// is fixed until the next one, so both firings read the same number and the unwind
+				// is exact. Doing this with `CardsPlayedThisTurn` would apply a small buff and
+				// remove a large one, quietly draining the unit. Check the count before copying
+				// this pattern.
+				//
+				// Ordering is safe: OnTurnEnd fires after the lanes have resolved, so Ash swings
+				// with the bonus and gives it back afterwards.
+				new DoomEffect
+				{
+					Trigger = EffectTrigger.OnTurnEnd,
+					Target = DoomTarget.Self,
+					Template = new BuffAction { Power = -2, PerEach = CountOf.DiedLastTurn },
+					Text = "",
 				},
 			],
 		};
@@ -270,12 +301,22 @@ public static class StarterContent
 			// Was 4/12 and measured +0.59 — the worst body in the pool. Toughness blocks for one
 			// turn and power removes the thing permanently; v3 did not change which of those pays.
 			Unit("Shieldbearer", 1, 6, 12, "Holds the line, and holds a spike."),
+			// **Exhausts.** A 1-cost heal in a ~20 card deck that discards its hand every turn came
+			// back roughly every other turn, so healing stopped being a decision and became an
+			// income stream. Found in a playtest. Battle scope — it is back next fight.
 			Rite(
 				"Field Dressing",
 				1,
 				"It will hold. It will not heal.",
-				OnPlay(DoomTarget.Player, new GainLifeAction { Amount = 12 }, "gain 12 life")
-			),
+				OnPlay(
+					DoomTarget.Player,
+					new GainLifeAction { Amount = 12 },
+					"gain 12 life, Exhaust"
+				)
+			) with
+			{
+				Exhausts = true,
+			},
 			// **The volume axis, and the first card that makes ORDER WITHIN A TURN a decision.**
 			// It counts itself, so it is never worse than 3 to every enemy — but held back until
 			// after two cheap bodies it is 9. Nothing in this game has ever rewarded sequencing.

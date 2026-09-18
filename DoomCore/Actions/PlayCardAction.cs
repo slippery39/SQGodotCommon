@@ -80,7 +80,14 @@ public record PlayCardAction : GameAction
 		// A unit enters the Field ready — there is no summoning sickness. With only 2-5 turns in a
 		// battle, a turn of nothing would make half the units unplayable.
 		var isUnit = card.HasComponent<UnitComponent>();
-		var destination = isUnit ? ZoneType.Field : ZoneType.Discard;
+
+		// **Exhaust sends it out of the battle instead of to Discard**, so it is not reshuffled
+		// when Draw runs dry. Units are exempt: a unit already leaves the board by withdrawing, and
+		// exhausting one would be a second, differently-named removal for the same act.
+		var destination =
+			isUnit ? ZoneType.Field
+			: card.Exhausts ? ZoneType.Exhausted
+			: ZoneType.Discard;
 
 		// **ANY LANE IS ALWAYS PLAYABLE, AND WHATEVER WAS THERE IS DISCARDED. No refund.**
 		//

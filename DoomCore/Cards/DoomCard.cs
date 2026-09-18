@@ -38,5 +38,8 @@ public record DoomCard : GameObject
 	/// </summary>
 	public ImmutableList<DoomEffect> Effects { get; init; } = ImmutableList<DoomEffect>.Empty;
 
+	/// <summary>Leaves the battle when played rather than going to Discard. See <see cref="RunCard.Exhausts"/>.</summary>
+	public bool Exhausts { get; init; }
+
 	public bool HasTag(string tag) => Tags.Contains(tag);
 }

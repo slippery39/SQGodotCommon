@@ -152,11 +152,17 @@ public class HolderEffectTests
 	{
 		var state = DoomBattleFactory.Create(DoomScenario.Flood, countdown: 1, opponentHealth: 60);
 
+		// **Wounded first, and that is not incidental.** This used to start the Opponent at full
+		// health and assert it healed to 70 — past its own maximum. Healing cannot raise the
+		// ceiling any more: an overheal that grew MaxHealth let `Gravecaller` and the `Shepherd`
+		// trait grow by 4 a turn without bound, which a playtest found the hard way. A heal needs
+		// somewhere to go for this test to say anything about triggers.
 		var opponent = state.GetOpponent();
 		state = state.UpdateObject(
 			opponent.Id,
 			opponent with
 			{
+				Health = 50,
 				Effects =
 				[
 					On(
@@ -174,7 +180,7 @@ public class HolderEffectTests
 		Assert.That(state.GetBattle().DoomsFired, Is.EqualTo(1), "the doom should have landed");
 		Assert.That(
 			state.GetOpponent().Health,
-			Is.EqualTo(70),
+			Is.EqualTo(60),
 			"and it should have fed on it — negative damage heals, which is the same action reused"
 		);
 	}

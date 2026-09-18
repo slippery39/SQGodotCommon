@@ -1270,3 +1270,63 @@ abilities and a genuinely missing trigger still fails loudly.
 
 The neighbouring Gravedigger test defines its card **inline** and kept passing throughout, which is
 exactly why that rule exists.
+
+---
+
+## Run 18 — 2026-09-17 — three fixes from a real playtest, one of them a genuine bug
+
+**`bot-1/v3`, 150 runs.** A human played it. Everything below came from that session, and the second
+item is something no amount of `sim` was going to surface.
+
+| act | run 17 | run 18 |
+|---|---|---|
+| The Long Emergency | 78% | 86% |
+| The Reckoning | 90% | 82% |
+| The Rising | 28% | 20% |
+
+Three changes pulling in different directions: capping healing made enemies weaker, and the Ash nerf
+plus Field Dressing's exhaust made the player weaker. **The Rising fell furthest because it leans on
+Ash's attrition synergy hardest** — the act built around losses lost the most when the thing that
+paid for losses was cut. The spread 86/82/20 is now the problem rather than any single number.
+
+### Healing could raise its own ceiling, and that was a real bug
+
+`DealDamageAction` set `MaxHealth = Math.Max(MaxHealth, healed)`, so an overheal **moved the
+maximum up**. `Gravecaller` heals 4 a turn and sits at full health, so it grew by 4 every turn,
+without bound, for the whole battle — and the `Shepherd` trait did it to an entire enemy line at
+once. The Choir, The Last Morning and the `Zealous` trait did it to the Opponent.
+
+Reported as *"they can heal past their original health, which makes them super hard to beat,
+especially when they start to take over all the lanes."*
+
+**The old behaviour was argued from DISPLAY** — the lane cell draws health against MaxHealth, so
+clamping the bar "would show a lie". That reasoning was about a health bar and it cost the game its
+difficulty curve. **Healing restores; if something should get bigger, that is a `BuffAction`, which
+says so on the card.**
+
+Run 15 had already flagged that seven healing effects were systemically over-priced under v3 and
+needed a sweep. This was the sharp end of it and it was not a pricing problem at all.
+
+**The player named the wrong enemy** — Herald of the End has no healing, only "on death: 4 to you".
+The diagnosis was still exactly right. *What* a player reports is often wrong; *that* they hit
+something is not.
+
+### An expiring buff needs no duration system
+
+Ash's ability shipped cumulative and was called OP in one session, which matches run 16 measuring it
+at +32/+38/+8 points. It is now one turn only, and the implementation is **the same buff negated on
+the opposite trigger** — `OnTurnStart` +2 per Loss, `OnTurnEnd` -2 per Loss. No duration field, no
+continuous layer, no new action.
+
+**The constraint is sharp and worth writing down: this only works for a count that cannot change
+within a turn.** `DiedLastTurn` is written once by `StartTurnAction` and fixed until the next, so
+both firings read the same number and the unwind is exact. The same pattern with
+`CardsPlayedThisTurn` would apply a small buff and remove a large one, quietly draining the unit.
+
+### Exhaust, and why a small deck needed it
+
+v3 discards the hand every turn and reshuffles Discard the moment Draw runs dry, so a ~20 card deck
+is seen over and over. A 1-cost "gain 12 life" came back roughly every other turn and healing stopped
+being a decision. `Exhaust` sends a card to its own zone for the rest of the battle — **battle scope,
+so the run deck is untouched and it is back next fight.** Nothing but a doom transform may remove a
+card from a run, and that rule was not bent for this.

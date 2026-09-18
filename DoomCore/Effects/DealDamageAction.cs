@@ -42,16 +42,21 @@ public record DealDamageAction : EffectAction
 			{
 				case Enemy enemy:
 				{
-					// A NEGATIVE amount is how healing is written, and a thing that feeds can end
-					// up above where it started. The maximum RISES with it rather than clamping it:
-					// the lane cell draws health against MaxHealth, so capping would hide the
-					// growth and clamping the bar would show a lie. It genuinely got bigger.
-					var healed = enemy.Health - amount;
-					var hurt = enemy with
-					{
-						Health = healed,
-						MaxHealth = Math.Max(enemy.MaxHealth, healed),
-					};
+					// **HEALING CANNOT EXCEED MAXHEALTH, and this used to be the other way round.**
+					//
+					// A negative amount is how healing is written. The old rule let the maximum
+					// RISE to meet an overheal, reasoning that the lane cell draws health against
+					// MaxHealth so clamping the bar would show a lie. That was a DISPLAY argument
+					// and it produced a balance disaster: `Gravecaller` heals 4 a turn and sits at
+					// full health, so it grew by 4 every turn **without bound for the whole
+					// battle** — and the `Shepherd` trait did it to an entire enemy line at once.
+					// Found in a playtest: "they can heal past their original health, which makes
+					// them super hard to beat, especially when they start to take over all lanes."
+					//
+					// If something should genuinely get BIGGER, that is a `BuffAction`, which says
+					// so on the card. Healing restores; it does not grow.
+					var healed = Math.Min(enemy.Health - amount, enemy.MaxHealth);
+					var hurt = enemy with { Health = healed };
 					state = state.UpdateObject(id, hurt);
 
 					if (hurt.IsDead)
@@ -64,15 +69,12 @@ public record DealDamageAction : EffectAction
 
 				case Opponent opponent:
 				{
-					var health = opponent.Health - amount;
-					state = state.UpdateObject(
-						id,
-						opponent with
-						{
-							Health = health,
-							MaxHealth = Math.Max(opponent.MaxHealth, health),
-						}
-					);
+					// Same rule, and this is where it bit hardest: The Choir heals 2 a turn, The Last
+					// Morning 4, and the `Zealous` trait another 4 on top. At full health each of
+					// those raised the ceiling instead of topping up, so a healing Opponent could
+					// outgrow anything you were able to do to it.
+					var health = Math.Min(opponent.Health - amount, opponent.MaxHealth);
+					state = state.UpdateObject(id, opponent with { Health = health });
 					events = events.Add(
 						new OpponentDamagedEvent { Amount = amount, HealthRemaining = health }
 					);

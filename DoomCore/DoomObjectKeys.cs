@@ -11,6 +11,7 @@ public static class DoomObjectKeys
 	public const string Draw = "Draw";
 	public const string Hand = "Hand";
 	public const string Discard = "Discard";
+	public const string Exhausted = "Exhausted";
 	public const string Field = "Field";
 	public const string Enemies = "Enemies";
 	public const string Opponent = "Opponent";
