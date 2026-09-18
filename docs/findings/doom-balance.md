@@ -1366,3 +1366,54 @@ only because the deck size came back byte-identical to the run before it.
 
 **An unchanged number is evidence of a change that did not happen, not of a change that did
 nothing.** Check the results file is new before reading it.
+
+---
+
+## Run 20 — 2026-09-17 — three acts in one run, and a curve that is all boss
+
+**`bot-1/v3`, 120 runs, 45 floors each.** A run is now every act in a fixed order — The Reckoning,
+The Long Emergency, The Rising — with 15 floors an act, 8 battles, two shops, two rests, full heal at
+each act break and gold that survives it.
+
+**The structure works.** Runs reach floor 45, each act runs its own doom schedule from its own first
+band, and mean floor reached is 26.04 of 45. **The difficulty curve does not.**
+
+### Every ordinary floor is free and every boss is a wall
+
+| floor | what | deaths |
+|---|---|---|
+| 1-13 | ordinary | **1 death in ~1,400 battles** |
+| 15 | act 1 boss, Ashfall | 46 of 117 — **39.3%**, 40.3 life |
+| 30 | act 2 boss, Detonation | 53 of 71 — **74.6%**, 104.6 life |
+| 45 | act 3 boss, The Last Host | 11 of 18 — **61.1%**, 113.2 life |
+
+Life lost per ordinary battle is **10.9**, down from 21.9 in a single-act run. Turns per battle fell
+5.5 → 4.3. **113 of 120 runs died, and essentially all of them died on a boss floor.**
+
+Two causes, and they compound:
+
+1. **Ordinary floors got easier and healing got more generous.** Content is chosen by the floor's
+   position within its act, so act 2 restarts at act 1's early roster with only a stat multiplier on
+   top — and now there is a full heal at every act break as well as the rests.
+2. **The boss floors got the multiplier too, on top of numbers already tuned to be a finale.**
+   `TheLastMorning` is the Opponent on every act's last floor (`MinFloor = ActLength`), so act 3
+   fights it at 2.4x health *and* eats The Last Host, which was authored as the end of a whole run.
+
+**A guessed multiplier applied uniformly is the mistake.** `HealthScaleFor` moves the ordinary
+floors and the boss by the same factor, and they needed opposite corrections — the ordinary floors
+wanted more, the late bosses far less.
+
+### What to do next, in order
+
+- **Scale the ordinary floors up and the boss floors down**, separately. They are not one dial.
+- **Reconsider the full heal at an act break.** With 8 battles an act at 10.9 life apiece, an act
+  costs ~90 of 120 life and then hands all of it back; the budget does not bind anywhere except the
+  boss. A partial restore is the obvious first thing to try.
+- **A per-act Opponent for the boss floor.** One Opponent for all three finales is the root of the
+  spike; it is content, not a number.
+
+### Note on the sim itself
+
+`RunSimulator` **walks past shops without spending**, because the bot cannot shop. Every number here
+therefore describes a run that never bought or removed a card — recorded rather than faked, since a
+random purchase would put noise in the table and call it a measurement. Gold accumulates unspent.

@@ -141,13 +141,20 @@ public partial class DoomBoard : Node2D
 	}
 
 	/// <summary>
-	/// Starts the run on the chosen apocalypse. **The theme is picked once and fixed** — it decides
-	/// the whole sequence of dooms, so nothing after this point may change it.
+	/// Starts the run. **A run is now ALL THREE ACTS, in the fixed order in `ActMap.Order`**, so
+	/// there is no theme left to choose — `Run.Theme` is derived from the floor you are standing on.
+	///
+	/// **`DoomThemeSelect` is therefore vestigial and its pick is ignored.** That is deliberately
+	/// visible here rather than quietly dropped: a screen that appears to choose something and does
+	/// not is a lie to the player, and this comment is the reminder that it still has to be dealt
+	/// with. Repurpose it — the companion picker is what the run start actually needs now, since a
+	/// companion's ability is the build declaration — or cut it and open on the first floor.
 	/// </summary>
 	private void StartRun(DoomTheme theme)
 	{
+		_ = theme;
 		_themeSelect.Hide();
-		_run = StarterContent.NewRun(_seed) with { Theme = theme };
+		_run = StarterContent.NewRun(_seed);
 		StartBattleOnCurrentFloor();
 	}
 

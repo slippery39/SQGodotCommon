@@ -73,7 +73,31 @@ public static class ThemeLibrary
 	/// <summary>
 	/// Floors per band. Twenty floors is three bands of six plus the rest and the boss.
 	/// </summary>
-	public const int FloorsPerBand = 6;
+	/// <summary>
+	/// Floors an apocalypse holds before the next one takes over.
+	///
+	/// **Was 6, for a 20-floor act.** At 15 floors that left the THIRD band holding floors 13-14
+	/// and nothing else, because the boss floor overrides it — an act's final apocalypse would have
+	/// been seen twice before the thing it was building to. Five gives 1-5, 6-10, 11-14, boss.
+	///
+	/// Derived rather than hand-set, so changing `ActMap.Layout` cannot silently squeeze a band out
+	/// of existence again. The last band absorbs the remainder.
+	/// </summary>
+	public static int FloorsPerBand => Math.Max(1, Run.ActLength / 3);
+
+	/// <summary>
+	/// The first floor of a band, 0-based. **Content should say which BAND it belongs to, not which
+	/// floor number that happened to be.**
+	///
+	/// Every scenario's `MinFloor` was 1, 7 or 13 — the band starts for a 20-floor act with 6-floor
+	/// bands, written out as literals. Shortening the act to 15 moved the bands to 1, 6 and 11 and
+	/// left six scenarios claiming to be designed for a floor later than the one they now fire on.
+	/// `NoThemeSchedulesADoomBelowItsMinFloor` caught it, which is exactly its job.
+	///
+	/// Same rule as "tests read authored values, never restate them", applied to content reading
+	/// layout.
+	/// </summary>
+	public static int BandStartsAt(int band) => 1 + band * FloorsPerBand;
 
 	/// <summary>
 	/// **Man-made.** It stops being about the sky almost immediately.

@@ -52,22 +52,34 @@ public class ThemeTests
 	/// Bands are six floors each: 1-6, 7-12, 13-18, and the boss floor on its own. Floor 19 is a
 	/// rest and holds no battle, so it is not asserted here.
 	/// </summary>
+	/// <summary>
+	/// **Band boundaries are READ from `FloorsPerBand`, not restated as 6.** They were, and when the
+	/// act went from 20 floors to 15 this test failed while the code was right — the same trap as
+	/// restating an authored card value.
+	///
+	/// What it actually guards: three bands in order, each one holding floors, and the boss floor
+	/// belonging to the final doom rather than to a band.
+	/// </summary>
 	[Test]
-	public void TheScheduleSplitsTheActIntoSixFloorBands()
+	public void TheScheduleSplitsTheActIntoBands()
 	{
 		var theme = ThemeLibrary.LongEmergency;
+		var band = ThemeLibrary.FloorsPerBand;
 
-		foreach (var floor in Enumerable.Range(1, 6))
+		Assert.That(band, Is.GreaterThan(1), "a one-floor band is not a schedule");
+
+		foreach (var floor in Enumerable.Range(1, band))
 			Assert.That(
 				StarterContent.ScenarioFor(theme.Theme, floor),
 				Is.EqualTo(theme.Bands[0]),
 				$"floor {floor} should be in the first band"
 			);
 
-		foreach (var floor in Enumerable.Range(7, 6))
+		foreach (var floor in Enumerable.Range(band + 1, band))
 			Assert.That(StarterContent.ScenarioFor(theme.Theme, floor), Is.EqualTo(theme.Bands[1]));
 
-		foreach (var floor in Enumerable.Range(13, 6))
+		// The last band runs to the floor BEFORE the boss, which belongs to the final doom.
+		foreach (var floor in Enumerable.Range(band * 2 + 1, Run.ActLength - band * 2 - 1))
 			Assert.That(StarterContent.ScenarioFor(theme.Theme, floor), Is.EqualTo(theme.Bands[2]));
 
 		Assert.That(

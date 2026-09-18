@@ -76,10 +76,12 @@ public static class RunSimulator
 	public static RunResult Play(int seed, DoomEvalWeights? weights = null)
 	{
 		var w = weights ?? new DoomEvalWeights();
-		// Themes are dealt round-robin across seeds, so one `sim N` measures every act rather
-		// than needing a run per theme. Seed still decides enemies, rewards and Opponent traits.
-		var theme = ThemeLibrary.All[seed % ThemeLibrary.All.Length].Theme;
-		var run = StarterContent.NewRun(seed) with { Theme = theme };
+
+		// **Every run now plays all three acts, in order.** Themes used to be dealt round-robin
+		// across seeds so one `sim N` covered every act; a run IS every act now, so the theme is a
+		// question about which floor you are standing on. Seed still decides enemies, rewards and
+		// Opponent traits.
+		var run = StarterContent.NewRun(seed);
 		var picker = new Random(seed);
 
 		var floors = ImmutableList.CreateBuilder<FloorResult>();
@@ -91,9 +93,21 @@ public static class RunSimulator
 		{
 			// A rest floor is not a battle and records no FloorResult, so the survival table simply
 			// has no row for floors 4, 8, 12 and 16. That absence is the honest reading.
-			if (StarterContent.FloorKindFor(run.Floor) == FloorKind.Rest)
+			var kind = StarterContent.FloorKindFor(run.Floor);
+
+			if (kind == FloorKind.Rest)
 			{
 				run = run.Rest(StarterContent.RestHealFor(run.MaxLife));
+				continue;
+			}
+
+			// **A shop is walked past, not used.** The bot cannot spend gold yet, so it banks it —
+			// which means every number measured until a shopping bot exists describes a run that
+			// never bought or removed a card. Recorded rather than faked: pretending to shop with a
+			// random pick would put noise in the table and call it a measurement.
+			if (kind is FloorKind.Shop or FloorKind.Event)
+			{
+				run = run with { Floor = run.Floor + 1 };
 				continue;
 			}
 
@@ -181,11 +195,14 @@ public static class RunSimulator
 		return new RunResult
 		{
 			Seed = seed,
-			Theme = ThemeLibrary.Of(theme).Name,
+
+			// The act the run ENDED in, which is what a survival table wants to group by. It is no
+			// longer a property of the run — every run walks all three.
+			Theme = ThemeLibrary.Of(ActMap.ThemeFor(run.Floor)).Name,
 			// A death leaves the floor where it fell — `AfterBattle` only advances it on a clear —
 			// so this is already the floor the run reached. The clamp is for the act being walked
 			// out of, where Floor is one past the last one that existed.
-			FloorReached = Math.Min(run.Floor, Run.ActLength),
+			FloorReached = Math.Min(run.Floor, Run.RunLength),
 			ActComplete = run.IsActComplete,
 			EndReason = stalled ? $"Stalled after {MaxTurnsPerBattle} turns" : run.OverReason,
 			TotalTurns = totalTurns,

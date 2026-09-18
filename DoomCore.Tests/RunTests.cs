@@ -300,10 +300,16 @@ public class RunTests
 		Assert.That(after.OverReason, Does.Contain("deck"));
 	}
 
+	/// <summary>
+	/// **The RUN ends after the last floor of the LAST act.** A run used to be one act; it is all
+	/// three now, so clearing floor 15 finishes act 1 and walks you into act 2. `IsActComplete`
+	/// keeps its name and means "there is no floor below this one" — what every caller already
+	/// wanted it for.
+	/// </summary>
 	[Test]
-	public void TheActEndsAfterItsLastFloor()
+	public void TheRunEndsAfterTheLastFloorOfTheLastAct()
 	{
-		var run = new Run { Floor = Run.ActLength }.WithCards([Unit("Survivor", 1, 1, cost: 0)]);
+		var run = new Run { Floor = Run.RunLength }.WithCards([Unit("Survivor", 1, 1, cost: 0)]);
 		var survivorId = run.Deck[0].RunCardId;
 
 		(var state, _) = run.StartBattle(DoomScenario.Flood, countdown: 2, [Idler()]);
@@ -311,9 +317,9 @@ public class RunTests
 
 		var after = run.AfterBattle(state);
 
-		Assert.That(after.Floor, Is.EqualTo(Run.ActLength + 1));
+		Assert.That(after.Floor, Is.EqualTo(Run.RunLength + 1));
 		Assert.That(after.IsActComplete, Is.True);
 		Assert.That(after.IsOver, Is.True);
-		Assert.That(after.IsDead, Is.False, "finishing an act is not dying");
+		Assert.That(after.IsDead, Is.False, "finishing a run is not dying");
 	}
 }

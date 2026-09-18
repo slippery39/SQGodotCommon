@@ -22,4 +22,20 @@ public enum FloorKind
 	/// there is a second thing worth doing with the stop.
 	/// </summary>
 	Rest,
+
+	/// <summary>
+	/// Somewhere to spend gold: cards to buy, and **a card to remove**.
+	///
+	/// Removal is the reason this exists. Combat v3 makes the deck your entire per-turn output, so
+	/// a card you would not play crowds out one you would — and until now nothing but an apocalypse
+	/// could take one out of a run.
+	/// </summary>
+	Shop,
+
+	/// <summary>
+	/// A choice with consequences and no fight. **NOT IMPLEMENTED — see <see cref="ActMap.Layout"/>,
+	/// which deliberately does not place any yet.** A floor that silently behaves like a rest is
+	/// indistinguishable from one that works, which is the failure this codebase keeps repeating.
+	/// </summary>
+	Event,
 }

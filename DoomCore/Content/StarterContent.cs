@@ -669,21 +669,39 @@ public static class StarterContent
 	}
 
 	/// <summary>
-	/// What is on a floor. **Every fourth floor is a rest, plus the one before the boss, and the
-	/// last floor never is** — the act has to end on the thing you came for.
-	///
-	/// The rest at `ActLength - 1` is the campfire before the boss, and it is not decoration:
-	/// floors 17-20 were four unbroken battles at the hardest tier and clear rates fell to 22% by
-	/// the end. You should arrive at the last thing having had a moment to bind what is bleeding.
-	///
-	/// Five rests across twenty floors means fifteen battles. That ratio is the single biggest lever
-	/// on whether an act can be finished at all, because it sets both how many fights the life
-	/// budget must cover and how much of it comes back.
+	/// What is on a floor. **Read straight off <see cref="ActMap.Layout"/>** — it was
+	/// `floor % 4 == 0 || floor == ActLength - 1`, which made "put a shop on 5" a puzzle instead of
+	/// an edit, and kept the act's length and its shape in two places that had to agree by hand.
 	/// </summary>
-	public static FloorKind FloorKindFor(int floor) =>
-		(floor % 4 == 0 || floor == Run.ActLength - 1) && floor != Run.ActLength
-			? FloorKind.Rest
-			: FloorKind.Battle;
+	public static FloorKind FloorKindFor(int floor) => ActMap.KindFor(floor);
+
+	/// <summary>
+	/// How much harder an act is than the one before it. **Acts 2 and 3 reuse act 1's roster with
+	/// these on top**, rather than the game authoring forty more enemies it does not have.
+	///
+	/// It is needed because content is chosen by the floor's position WITHIN its act. Without a
+	/// multiplier, act 2 floor 1 would field act 1 floor 1's enemies and the run would get easier
+	/// every time you cleared an act — and selecting on the run-wide floor instead is worse still,
+	/// because the roster's hardest tier unlocks at the act length and would then be every floor
+	/// from act 2 onward.
+	///
+	/// **Both are guesses and want `sim`.** Health leads because it decides how long a battle runs;
+	/// attack decides how much it costs, and moving both at once would make neither readable.
+	/// </summary>
+	public static double HealthScaleFor(int floor) => 1.0 + 0.7 * ActMap.ActIndexFor(floor);
+
+	public static double AttackScaleFor(int floor) => 1.0 + 0.35 * ActMap.ActIndexFor(floor);
+
+	private static int Scaled(int value, double scale) =>
+		Math.Max(1, (int)Math.Round(value * scale));
+
+	/// <summary>
+	/// Gold for clearing a floor. **Scales with the ACT, not the run-wide floor** — a shop in act 3
+	/// should be reachable on act 3's earnings, and the prices there scale the same way.
+	///
+	/// A guess. Roughly 160 an act at eight battles, which buys about two things at a shop.
+	/// </summary>
+	public static int GoldFor(int floor) => 20 + ActMap.ActIndexFor(floor) * 8;
 
 	/// <summary>
 	/// What a rest gives back: 30% of max, the Slay the Spire number.
@@ -701,8 +719,22 @@ public static class StarterContent
 	/// </summary>
 	public static OpponentDefinition OpponentFor(int floor, int seed)
 	{
-		var body = EnemyLibrary.ForFloor(floor);
+		// **Selected on the floor's position WITHIN its act, scaled by which act that is.** The
+		// roster's tiers were authored against one act's length, so choosing on the run-wide floor
+		// would pin every floor from act 2 onward to the last tier — one Opponent for thirty floors.
+		var inAct = ActMap.FloorInAct(floor);
+		var body = EnemyLibrary.ForFloor(inAct);
 		var traits = EnemyLibrary.TraitsFor(seed);
+
+		body = body with
+		{
+			Health = Scaled(body.Health, HealthScaleFor(floor)),
+			Reinforcement = body.Reinforcement with
+			{
+				Health = Scaled(body.Reinforcement.Health, HealthScaleFor(floor)),
+				Attack = Scaled(body.Reinforcement.Attack, AttackScaleFor(floor)),
+			},
+		};
 
 		// How many battles this Opponent has already fielded, including this one. Counting the
 		// floors below rather than tracking history keeps this a PURE function of (floor, seed) —
@@ -710,13 +742,15 @@ public static class StarterContent
 		// Max(0) because a REST floor fields nobody: the count comes back zero there and the
 		// subtraction would run off the end of the trait list. Asking a rest floor who its
 		// Opponent is should answer, not throw.
+		// Counted WITHIN the act, matching how the Opponent was selected. Counting across the whole
+		// run would make act 2 continue act 1's trait sequence for a different curve entirely.
 		var nth = Math.Max(
 			0,
 			Enumerable
-				.Range(1, floor)
+				.Range(1, inAct)
 				.Count(f =>
-					FloorKindFor(f) == FloorKind.Battle
-					&& EnemyLibrary.ForFloor(f).Name == body.Name
+					ActMap.Layout[f - 1] == FloorKind.Battle
+					&& EnemyLibrary.ForFloor(f).Name == EnemyLibrary.ForFloor(inAct).Name
 				) - 1
 		);
 
@@ -731,7 +765,8 @@ public static class StarterContent
 	/// Kept because the console and the tests still speak in plain health. Reads the definition
 	/// rather than recomputing a formula, so there is one answer to "how tough is this floor".
 	/// </summary>
-	public static int OpponentHealthFor(int floor) => EnemyLibrary.ForFloor(floor).Health;
+	public static int OpponentHealthFor(int floor) =>
+		Scaled(EnemyLibrary.ForFloor(ActMap.FloorInAct(floor)).Health, HealthScaleFor(floor));
 
 	/// <summary>
 	/// What the Opponent puts back into an open lane, and it comes with its effects.
@@ -743,12 +778,12 @@ public static class StarterContent
 	/// </summary>
 	public static PendingSummon SummonFor(int turnNumber, int lane, int floor = 1)
 	{
-		var body = EnemyLibrary.ForFloor(floor).Reinforcement;
+		var body = EnemyLibrary.ForFloor(ActMap.FloorInAct(floor)).Reinforcement;
 
 		return body.ToSummon(lane) with
 		{
-			Health = body.Health + turnNumber,
-			Attack = body.Attack + turnNumber / 2,
+			Health = Scaled(body.Health, HealthScaleFor(floor)) + turnNumber,
+			Attack = Scaled(body.Attack, AttackScaleFor(floor)) + turnNumber / 2,
 		};
 	}
 
@@ -779,8 +814,9 @@ public static class StarterContent
 		// while it heals every turn — that is where the 40-55 turn battles came from. Cutting
 		// health lowered the average battle and left that tail untouched, because the tail is this
 		// structure rather than any health total.
-		var count = Math.Min(2 + floor / 6, DoomBattle.LaneCount - 1);
-		var roster = EnemyLibrary.PlayableOn(floor);
+		var inAct = ActMap.FloorInAct(floor);
+		var count = Math.Min(2 + inAct / 5, DoomBattle.LaneCount - 1);
+		var roster = EnemyLibrary.PlayableOn(inAct);
 		var rng = new Random(seed * 7717 + floor);
 
 		int[] order = [0, 4, 1, 3, 2];
@@ -794,6 +830,13 @@ public static class StarterContent
 				var definition =
 					i == 0 ? roster.MaxBy(e => e.MinFloor)! : roster[rng.Next(roster.Length)];
 
+				// Act-relative selection, act-scaled body. See HealthScaleFor.
+				definition = definition with
+				{
+					Health = Scaled(definition.Health, HealthScaleFor(floor)),
+					Attack = Scaled(definition.Attack, AttackScaleFor(floor)),
+				};
+
 				return definition.ToEnemy(order[i]);
 			})
 			.ToList();
@@ -804,6 +847,10 @@ public static class StarterContent
 	/// run of a theme always faces the same escalation, which is what makes it a story. The seed
 	/// still varies the enemies, the rewards and the Opponent traits.
 	/// </summary>
+	/// <summary>
+	/// Which apocalypse waits on a floor. **The floor is run-wide; the schedule is act-relative** —
+	/// each act walks its own three bands and ends on its own final doom.
+	/// </summary>
 	public static DoomScenario ScenarioFor(DoomTheme theme, int floor) =>
-		ThemeLibrary.ScenarioFor(theme, floor);
+		ThemeLibrary.ScenarioFor(theme, ActMap.FloorInAct(floor));
 }

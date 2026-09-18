@@ -97,18 +97,26 @@ public class BotTests
 		foreach (var result in RunSimulator.PlayMany(5))
 		{
 			Assert.That(result.EndReason, Is.Not.Empty);
-			Assert.That(result.FloorReached, Is.InRange(1, Run.ActLength));
+			Assert.That(result.FloorReached, Is.InRange(1, Run.RunLength));
 
-			// One reward taken per floor cleared, which is what makes the card-value table's
-			// "took it vs did not" split mean anything. A run that ends AS it clears — the act
-			// walked out of, or a Flood that emptied the deck — is offered nothing, so one short
-			// is legal and two short is a bug.
+			// **Was "one reward taken per floor cleared", and that stopped being true when the bot
+			// learned to decline.** Skipping is a legal move — the Godot reward screen has always
+			// offered it — so the count is now bounded above by the clears rather than equal to
+			// them. What still has to hold: it cannot take MORE than it cleared, and a run of any
+			// length must take something, or the reward path is not running at all.
 			var cleared = result.Floors.Count(f => f.Outcome == "Cleared");
 			Assert.That(
 				result.TakenRewards.Count,
-				Is.InRange(Math.Max(cleared - 1, 0), cleared),
-				$"seed {result.Seed} cleared floors without being offered a reward"
+				Is.InRange(0, cleared),
+				$"seed {result.Seed} took more rewards than it cleared floors"
 			);
+
+			if (cleared >= 5)
+				Assert.That(
+					result.TakenRewards,
+					Is.Not.Empty,
+					$"seed {result.Seed} cleared {cleared} floors and was never offered a reward"
+				);
 		}
 	}
 }

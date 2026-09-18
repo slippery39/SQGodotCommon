@@ -218,7 +218,7 @@ public static class ScenarioLibrary
 			Description = "They have been thirsty for a long time.",
 			Countdown = 3,
 			Scope = DoomScope.Battle,
-			MinFloor = 7,
+			MinFloor = ThemeLibrary.BandStartsAt(1),
 			Mark = new() { Name = "Bloodless", Power = 4 },
 			BattleEffects =
 			[
@@ -252,7 +252,7 @@ public static class ScenarioLibrary
 			Description = "Something else is wearing them now.",
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
-			MinFloor = 13,
+			MinFloor = ThemeLibrary.BandStartsAt(2),
 			Mark = new() { Name = "Wreathed", Power = 6 },
 			Transforms =
 			[
@@ -320,7 +320,7 @@ public static class ScenarioLibrary
 			Description = "What you did not use, you no longer have.",
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
-			MinFloor = 7,
+			MinFloor = ThemeLibrary.BandStartsAt(1),
 			Mark = new()
 			{
 				Name = "Gaunt",
@@ -359,7 +359,7 @@ public static class ScenarioLibrary
 			Description = "It does not weigh them differently.",
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
-			MinFloor = 13,
+			MinFloor = ThemeLibrary.BandStartsAt(2),
 			Mark = new() { Name = "Weighed", Toughness = 6 },
 			Transforms =
 			[
@@ -417,7 +417,7 @@ public static class ScenarioLibrary
 			Description = "It has decided what you should be.",
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
-			MinFloor = 7,
+			MinFloor = ThemeLibrary.BandStartsAt(1),
 			Mark = new()
 			{
 				Name = "Rewritten",
@@ -453,7 +453,7 @@ public static class ScenarioLibrary
 			Description = "It is still eating. It does not do anything else.",
 			Countdown = 2,
 			Scope = DoomScope.Permanent,
-			MinFloor = 13,
+			MinFloor = ThemeLibrary.BandStartsAt(2),
 			Mark = new()
 			{
 				Name = "Replicated",

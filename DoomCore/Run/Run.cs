@@ -35,13 +35,35 @@ public record Run
 	public int RngSeed { get; init; } = 1;
 
 	/// <summary>
-	/// The apocalypse you chose to live through, picked once at the start and fixed for the run.
-	/// It decides the whole sequence of dooms — see <see cref="ThemeLibrary"/>.
+	/// The act you are standing in. **DERIVED from the floor, not chosen and not stored.**
+	///
+	/// A run used to be one act, picked at the start. It is all three now, in the fixed order in
+	/// <see cref="ActMap.Order"/> — so the theme is a question about where you are, and storing it
+	/// alongside the floor would simply be two facts that could disagree.
 	/// </summary>
-	public DoomTheme Theme { get; init; } = DoomTheme.LongEmergency;
+	public DoomTheme Theme => ActMap.ThemeFor(Floor);
 
-	/// <summary>Floors in an act. Not every floor is a battle — rests and events fill the rest.</summary>
-	public const int ActLength = 20;
+	/// <summary>
+	/// Floors in an act. **Derived from <see cref="ActMap.Layout"/>** so the length and the shape
+	/// can never disagree — it was a hand-maintained `const 20` beside a `floor % 4` rule, and the
+	/// two had to be kept in step by hand.
+	/// </summary>
+	public static int ActLength => ActMap.ActLength;
+
+	/// <summary>Floors in the whole run, all acts chained.</summary>
+	public static int RunLength => ActMap.RunLength;
+
+	/// <summary>
+	/// Spent at a shop. **Survives an act break** — banking through to the next act's shop is a
+	/// real decision, and clearing it would delete that.
+	/// </summary>
+	public int Gold { get; init; }
+
+	/// <summary>Which act this floor is in, 0-based. Derived; never stored, so it cannot drift.</summary>
+	public int ActIndex => ActMap.ActIndexFor(Floor);
+
+	/// <summary>The act's position within itself, 1-based — what content should ask about.</summary>
+	public int FloorInAct => ActMap.FloorInAct(Floor);
 
 	public bool IsDead => Life <= 0;
 
@@ -55,7 +77,12 @@ public record Run
 	/// </summary>
 	public bool HasNoCards => Deck.IsEmpty;
 
-	public bool IsActComplete => Floor > ActLength;
+	/// <summary>
+	/// **The whole RUN is done, all three acts.** Named for what it has always meant to callers —
+	/// "there is no floor below this one" — rather than renamed across the console, the simulator
+	/// and the front end for a structural change none of them care about.
+	/// </summary>
+	public bool IsActComplete => Floor > RunLength;
 
 	public bool IsOver => IsDead || HasNoCards || IsActComplete;
 
@@ -185,17 +212,47 @@ public record Run
 		if (battle.PlayerIsDead)
 			return run;
 
+		// Paid for clearing, not for surviving — a battle you lost pays nothing, and the line above
+		// has already returned by then.
+		run = run with
+		{
+			Gold = run.Gold + StarterContent.GoldFor(Floor),
+		};
+
 		// Killing the Opponent before the first firing means no apocalypse happened. Applying a
 		// transform anyway would rewrite the deck for an event the player never saw — and it would
 		// read as a bug, because the doom preview would have shown it coming and then it didn't.
 		if (battle.DoomsFired == 0)
-			return run with { Floor = Floor + 1 };
+			return Advance(run);
 
 		// The mark is the whole point of TAG ALONG: it survived this, and it carries that forward.
-		return DoomTransforms.Apply(run, finishedBattle) with
-		{
-			Floor = Floor + 1,
-			Companion = Companion.Marked(battle.Scenario),
-		};
+		return Advance(
+			DoomTransforms.Apply(run, finishedBattle) with
+			{
+				Companion = Companion.Marked(battle.Scenario),
+			}
+		);
 	}
+
+	/// <summary>
+	/// Steps onto the next floor — and **restores you to full at an act break**.
+	///
+	/// A life budget tuned for fifteen battles does not stretch over twenty-four, and an act break
+	/// is the natural place to give it back: you have just killed the thing the act was built
+	/// around, and the world changes over. Slay the Spire does the same.
+	///
+	/// Gold is deliberately NOT cleared — banking through to the next act's shop is a decision, and
+	/// wiping it would delete one.
+	/// </summary>
+	private Run Advance(Run run) =>
+		ActMap.IsActBreak(run.Floor)
+			? run with
+			{
+				Floor = run.Floor + 1,
+				Life = run.MaxLife,
+			}
+			: run with
+			{
+				Floor = run.Floor + 1,
+			};
 }
