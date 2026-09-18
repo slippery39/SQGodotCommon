@@ -1594,3 +1594,83 @@ under which that stops being acceptable.
 The first version of the exhaust test measured LIFE across six turns and failed — life went *down*,
 because the Opponent reinforces into an empty line and those bodies attack. **It was measuring the
 battle, not the card.** Counting replays instead makes it a test of the one thing it is about.
+
+---
+
+## Run 24 — 2026-09-18 — buying back what the marks were paying for, and the 2-drop pass
+
+**`bot-1/v3`, 25 runs a step.** Two jobs: make a 2-drop worth playing, and give back the power that
+cutting the companion's marks took out of the run (run 23).
+
+| | run 23 (marks cut) | **run 24** |
+|---|---|---|
+| mean floor of 45 | 23.0 | **36.00** |
+| act completed | 0% | **12%** |
+| life lost per battle | 11.1 | 8.7 |
+
+**Mean floor is now better than it was WITH marks** (33.5). Completion is 12% against a 25-50%
+target — recovered, not finished.
+
+### The 2-drop rule, and it is about lanes rather than energy
+
+A card costs energy AND a lane, and the lane is the scarce one. Three 1-drops fill three lanes for
+about 42 total stats; a 2-drop plus a 1-drop fills two for (2-drop) + 14. **A 2-drop therefore needs
+~28 total just to break even, and more to pay for the lane it gives up.** Every 2-drop in the game
+was at 16-24. Vanilla 2-drops are 26-36 now; ones carrying an effect sit lower because the effect is
+the rest of the card.
+
+**It narrowed the gap and did not close it.** Mean card delta within the run: **1-cost +7.63,
+2-cost +3.89, 0-cost +4.80.**
+
+### And the reason is not "buff them more" — it is WHICH 2-drops
+
+Among the well-sampled ones:
+
+| card | line | delta |
+|---|---|---|
+| Bonepicker | 18/8 | **-7.20** |
+| Feral Pack | 16/12 | **-4.38** |
+| Rust Golem | 12/20 | +0.49 |
+| Warden | 10/20 | +6.49 |
+
+**Power-heavy 2-drops are still bad; toughness-heavy ones are fine** — and that REVERSES the v2
+finding that "power pays and toughness barely does" (runs 8-12).
+
+It reverses because v3 changed what a stat is worth. A unit now deals its power once and absorbs up
+to its toughness once, in the same single turn — so the two are symmetric per play, and act scaling
+put far more incoming damage on the board than there is Opponent health to chew through. Toughness
+saves life every turn; power only shortens a fight you were winning anyway.
+
+**Do not treat the v2 card-value findings as current.** They were measured on a board that
+accumulated, where a surviving body dealt its power again every turn and its toughness was spent
+once. That asymmetry is what v3 deleted.
+
+**Caveat, and it matters:** 25 runs, and these deltas compare a card's runs against the runs that
+skipped it. Bonepicker was taken in 22 of 25, so its "without" group is three runs. Treat the
+DIRECTION as the finding and re-measure the size at a larger n.
+
+### Three floors were doing all the killing
+
+Deaths by act, before this pass: act 1 **2 of 24 runs**, act 2 six (all on its boss), act 3 fourteen.
+Difficulty was backloaded, not uniformly wrong.
+
+- **Enemy health scaling: base 0.82, step 0.9 -> 0.55.** Your output is flat — 3 energy, every turn,
+  for the whole run — so an act multiplying enemy health by 2.6 is not harder, it is a game where
+  nothing you do arrives in time. Act 3 cleared 100% of its first band and 33% of its third.
+- **The base was tried at 0.95** to put teeth in act 1, and **cost more than the back half gained**
+  (mean floor 34.3 -> 31.1). Reverted. Act 1 being gentle is a PACING problem and the act multiplier
+  is the wrong dial for it.
+- **Vampires lost its heal**, for the third cutback this scenario has had. Healing is priced against
+  damage per turn and v3 collapsed that; act scaling then multiplied the health it had to chew
+  through. 61.5 life a battle -> 26.4, deaths 33% of its band -> 17.6%.
+- **The last floor was double-dipping.** The Last Host deals face damage on a 2-clock, and The Last
+  Morning — the only Opponent it is ever fought beside — also carries "when the doom fires: 10 to
+  you". One firing was 26 unblockable; the fight killed 60% of the runs that reached it at 93 life.
+  16 -> 10 on the doom, sweep untouched: **60% -> 40%.**
+- The Choir (act 2's boss) 205 -> 175, and it was the single worst floor in that act.
+
+### Still open
+
+Completion is 12%, not 25%. The remaining killers are Vampires (17.6% of its band) and the final
+floor (40%), and only five runs in twenty-five reach floor 45 — so that last number is thin and
+should not be tuned again on this sample.

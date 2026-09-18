@@ -262,7 +262,7 @@ public static class StarterContent
 				Unit("Bulwark", 1, 2, 10, "Stands in the way."),
 				Unit("Bulwark", 1, 2, 10, "Stands in the way."),
 				Unit("Bulwark", 1, 2, 10, "Stands in the way."),
-				Unit("Ash Walker", 2, 8, 10, "Walked out of the last one."),
+				Unit("Ash Walker", 2, 12, 14, "Walked out of the last one."),
 				Unit("Ash Walker", 2, 8, 10, "Walked out of the last one."),
 				Unit("Lantern Bearer", 0, 4, 4, "Small light, long night."),
 			]
@@ -290,6 +290,24 @@ public static class StarterContent
 	///
 	/// **Every entry must beat a starter card**, which is why Ash Walker and Bulwark are not in here:
 	/// they ARE starter cards. **Power, not toughness** — measured repeatedly, and still true in v3.
+	///
+	/// **THE COST RULE, and it decides every stat line below (2026-09-18).**
+	///
+	/// A card costs energy AND a lane, and the LANE is the scarce one — that is what the pricing had
+	/// wrong. Three 1-drops fill three lanes for about 42 total stats; a 2-drop plus a 1-drop fills
+	/// two for (2-drop) + 14. **So a 2-drop needs ~28 total just to break even on stats, and MORE
+	/// than that to pay for the lane it gives up.**
+	///
+	/// Every 2-drop in the game was at 16-24 and the best two 1-drops came to 18/10 across two lanes,
+	/// so a playthrough found "almost 0 situations where playing a 2 drop was better than 2 1 drops".
+	/// It was not close and it was structural, not a rounding error.
+	///
+	/// Vanilla 2-drops now land 26-36 total. Ones carrying an effect land lower, because the effect
+	/// is the rest of the card.
+	///
+	/// **Do not fix this by nerfing 1-drops.** They are correctly priced against 0-drops, and the
+	/// measured table has cheap bodies as the best cards in the game for the same structural reason.
+	/// 3-drops were deleted outright for this rule taken one step further — see run 17.
 	///
 	/// Weighted by rarity, never gated by floor — see <see cref="WeightOf"/>.
 	/// </summary>
@@ -333,12 +351,12 @@ public static class StarterContent
 			{
 				Rarity = DoomRarity.Rare,
 			},
-			Unit("Bonepicker", 2, 14, 4, "Arrives after the fighting."),
-			Unit("Feral Pack", 2, 12, 8, "Hungry, and there are several.") with
+			Unit("Bonepicker", 2, 18, 8, "Arrives after the fighting."),
+			Unit("Feral Pack", 2, 16, 12, "Hungry, and there are several.") with
 			{
 				Rarity = DoomRarity.Uncommon,
 			},
-			Unit("Rust Golem", 2, 10, 14, "Slow. Very hard to move.") with
+			Unit("Rust Golem", 2, 12, 20, "Slow. Very hard to move.") with
 			{
 				Rarity = DoomRarity.Uncommon,
 			},
@@ -369,8 +387,8 @@ public static class StarterContent
 			Unit(
 				"Siege Ram",
 				2,
-				14,
-				6,
+				16,
+				10,
 				"One job, done once.",
 				OnPlay(
 					DoomTarget.EnemiesInAdjacentLanes,
@@ -386,8 +404,8 @@ public static class StarterContent
 			Unit(
 				"Warden",
 				2,
-				8,
-				16,
+				10,
+				20,
 				"The last thing still standing.",
 				OnPlay(
 					DoomTarget.YourUnitsInAdjacentLanes,
@@ -404,8 +422,8 @@ public static class StarterContent
 			Unit(
 				"Long Watcher",
 				2,
-				10,
-				18,
+				14,
+				22,
 				"Has seen four of these.",
 				OnPlay(
 					DoomTarget.Self,
@@ -433,8 +451,8 @@ public static class StarterContent
 			Unit(
 				"Salvage Rig",
 				2,
-				4,
 				8,
+				12,
 				"It keeps working through it. That is all it does.",
 				On(DoomTarget.None, new DrawCardsAction { Amount = 2 }, "Doom: draw 2")
 			) with
@@ -444,8 +462,8 @@ public static class StarterContent
 			Unit(
 				"Drone Swarm",
 				2,
-				6,
-				6,
+				10,
+				10,
 				"Somebody's fleet, still flying the last order it got.",
 				On(
 					DoomTarget.AllEnemies,
@@ -462,8 +480,8 @@ public static class StarterContent
 			Unit(
 				"Reactor Crew",
 				2,
-				6,
 				10,
+				14,
 				"They stayed at the desk.",
 				OnPlay(
 					DoomTarget.Player,
@@ -508,8 +526,8 @@ public static class StarterContent
 			Unit(
 				"Pyre Tender",
 				2,
-				10,
-				8,
+				14,
+				12,
 				"Burning them is the only thing that has worked.",
 				OnPlay(
 					DoomTarget.AllEnemies,
@@ -526,8 +544,8 @@ public static class StarterContent
 			Unit(
 				"The Choirmaster",
 				2,
-				8,
 				12,
+				16,
 				"Still conducting. Nobody told him.",
 				OnPlay(
 					DoomTarget.Self,
@@ -596,8 +614,8 @@ public static class StarterContent
 			Unit(
 				"Reliquary Guard",
 				2,
-				6,
 				10,
+				14,
 				"Guarding a box nobody has opened.",
 				OnPlay(
 					DoomTarget.YourUnits,
@@ -718,7 +736,30 @@ public static class StarterContent
 	/// 10.9 life apiece against 21.9 in a single-act run. An act cost about 90 life and the rests
 	/// plus the act break handed all of it back, so the life budget never bound anywhere.
 	/// </summary>
-	public static double HealthScaleFor(int floor) => 1.0 + 0.9 * ActMap.ActIndexFor(floor);
+	/// <summary>
+	/// **The base dropped from 1.0 to 0.82 when the companion's marks were cut (2026-09-18).**
+	///
+	/// Marks were worth roughly +40 power and +60 toughness on Ash by the end of a run, and removing
+	/// them took act completion from 10% to 0% and mean floor from 33.5 to 23.0 on the same seeds —
+	/// see run 23. The player lost a large, permanent source of power, so the thing they are hitting
+	/// comes down to meet them.
+	/// </summary>
+	/// **The per-act step dropped from 0.9 to 0.72 as well.** Your damage output is flat — 3 energy,
+	/// every turn, for the whole run — so an act that multiplies enemy health by 2.6 is not "harder",
+	/// it is a different game where nothing you do arrives in time. Act 3 was clearing 100% of its
+	/// first band and 33% of its third for that reason.
+	/// **Base 0.82, step 0.55, and both numbers were argued out of measurements (2026-09-18).**
+	///
+	/// The STEP came down from 0.9 because your damage output is flat — 3 energy, every turn, for the
+	/// whole run — so an act that multiplied enemy health by 2.6 was not "harder", it was a different
+	/// game where nothing you did arrived in time. Act 3 cleared 100% of its first band and 33% of
+	/// its third.
+	///
+	/// The BASE was tried at 0.95, to put teeth in an act 1 that killed 2 runs in 24 across fifteen
+	/// floors. **It cost more than the back half gained** — mean floor fell 34.3 to 31.1 — so it went
+	/// back to 0.82. Act 1 being gentle is a PACING problem and this is the wrong dial for it: the
+	/// fix is a curve inside the act, not a bigger opening number.
+	public static double HealthScaleFor(int floor) => 0.82 + 0.55 * ActMap.ActIndexFor(floor);
 
 	/// <summary>
 	/// **The base is above 1.0 on purpose.** Ordinary floors were costing 9.4 life against a 120

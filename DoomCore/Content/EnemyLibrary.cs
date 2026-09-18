@@ -343,7 +343,9 @@ public static class EnemyLibrary
 			Name = "The Choir",
 			Description = "It is not one thing, and it is not finished.",
 			// 220 killed 6.3%. Detonation costs only 16.6 life, so again the body is the fight.
-			Health = 250,
+			// 250 before the marks were cut, then 205 — which still killed 6 of 22 runs that reached
+			// it, the single worst floor in act 2 at 43 life a battle.
+			Health = 175,
 			SummonInterval = 3,
 			Reinforcement = HeraldOfTheEnd,
 			MinFloor = Run.ActLength,
@@ -370,7 +372,8 @@ public static class EnemyLibrary
 			Description = "Still holding a door that is no longer there.",
 			// 150 killed 3.3% and LOST the player 8.7 life — a finale you leave healthier than you
 			// arrived. Ashfall, the act's doom, is mild, so the body has to carry this fight.
-			Health = 210,
+			// 210 before the companion's marks were cut; see StarterContent.HealthScaleFor.
+			Health = 175,
 			SummonInterval = 2,
 			Reinforcement = SiegeHulk,
 			MinFloor = Run.ActLength,
@@ -403,7 +406,8 @@ public static class EnemyLibrary
 			// Last Host — this act's doom — is the most punishing in the game, so the boss standing
 			// behind it has to be SMALLER than the others, not bigger. The numbers are independent
 			// per act now, which is exactly what makes that sayable.
-			Health = 190,
+			// 190 before the marks were cut.
+			Health = 155,
 			SummonInterval = 2,
 			Reinforcement = Doomsayer,
 			MinFloor = Run.ActLength,

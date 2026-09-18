@@ -210,12 +210,18 @@ public static class ScenarioLibrary
 				// alone took it from 42.1% deaths / 46.0 life to 32.2% / 38.5, which is still
 				// double the next-worst non-boss apocalypse. These bring it into line with the
 				// other battle-scope dooms — CivilUnrest is 10 on a 4-clock, Ashfall 6 on a 2.
-				new DoomEffect
-				{
-					Target = DoomTarget.AllEnemies,
-					Template = new DealDamageAction { Amount = -2 },
-					Text = "every enemy heals 2",
-				},
+				// **The heal is gone, and this is the third time this scenario has been cut back.**
+				//
+				// Healing is priced against your damage PER TURN, and combat v3 collapsed that to
+				// whatever 3 energy buys — then act scaling multiplied the enemy health it has to
+				// chew through by 2.6. A heal that looked trivial at 2 a body was restoring ~24 HP
+				// across a battle against an output that never grew.
+				//
+				// Measured in act 3: clear rates fell 94% -> 73% -> 55% -> 33% across its four
+				// floors, at up to 61.5 life a battle, and no run in 25 finished the game.
+				//
+				// It is pure direct damage now: linear, and tunable by one number. Same lesson the
+				// boss heals taught — a heal race is a cliff, not a dial.
 				new DoomEffect
 				{
 					Target = DoomTarget.Player,
@@ -278,8 +284,16 @@ public static class ScenarioLibrary
 				new DoomEffect
 				{
 					Target = DoomTarget.Player,
-					Template = new DealDamageAction { Amount = 16 },
-					Text = "and 16 to you",
+					// **16 before, and the last floor was double-dipping.** The Last Morning — the only
+					// Opponent this doom is ever fought beside — also carries "when the doom fires:
+					// 10 to you", so a single firing was 26 unblockable and a 2-clock made it 52
+					// across a five-turn fight. 60% of the runs that reached floor 45 died there, at
+					// 93 life a battle.
+					//
+					// The fight's identity is the board being TAKEN, not the face damage stapled to
+					// it. The sweep is untouched; the number beside it is not the point.
+					Template = new DealDamageAction { Amount = 10 },
+					Text = "and 10 to you",
 				},
 			],
 		};
