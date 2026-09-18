@@ -28,7 +28,7 @@ SQGodotCommon/
 │   ├── Enemies/ Zones/              # Enemy + telegraphed Intent; Opponent + PendingSummon; Zone
 │   ├── Content/                     # ThemeLibrary (the acts + floor→doom SCHEDULE), Enemy/Scenario,
 │   │                                #   KeywordLibrary (the glossary, as DATA — console and UI share it)
-│   ├── Run/                         # Run + RunCard (OUTSIDE GameState); DoomTransform (the
+│   ├── Run/                         # Run + RunCard (OUTSIDE GameState); ActMap; ShopOffer; DoomTransform (the
 │   │                                #   permanent-doom language: a read × a verb), DoomTransforms,
 │   │                                #   DoomBattleEffects (battle scope), FloorKind, DoomPreview
 │   ├── DoomFiring.cs                # what ONE firing read, in run ids. Capture is shared by the
@@ -43,7 +43,6 @@ SQGodotCommon/
     ├── Common/                      # reusable utilities — Cards/2D is game-agnostic, use it
     ├── Project/                     # GameManager, main menu
     └── DoomGame/                    # DOOMJAM front end — reads DoomCore, decides nothing
-        ├── DoomThemeSelect.cs       #   run start: pick the act, its whole schedule shown
         ├── DoomBoard.cs             #   the battle screen; layout contract lives in DoomUI.md
         ├── DoomLaneCell.cs          #   one lane slot: art on a plinth + attack/life marks
         ├── DoomHandView.cs          #   the fan, on Common/Cards/2D; drag -> PlayCardAction
@@ -55,6 +54,7 @@ SQGodotCommon/
         ├── DoomAnimator.cs          #   float/pop/flash/shake on one Speed dial; F4 cycles it
         ├── DoomClockDial.cs         #   the doom clock as a ring of segments
         ├── DoomIntermission.cs      #   between floors: what the doom took, and the card rewards
+        ├── DoomShop.cs              #   a shop floor: buy, patch up, and REMOVE a card
         ├── DoomArt.cs               #   art by NAME convention from Art/, else a generated figure
         ├── DoomPalette.cs           #   the five colours; gold and red are reserved
         └── Art/                     #   52 authored SVGs + background.png + icons/ (CC BY — see
