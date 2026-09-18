@@ -32,6 +32,16 @@ public partial class MainMenu : Control
 	/// theme picker was telling, and it goes for the same reason. Put it back when there is
 	/// something behind it — the animation speed dial (F4 on the board) is the obvious first thing.
 	/// </summary>
+	/// <summary>
+	/// **The game's name, and it is the only place the player sees one.**
+	///
+	/// The codebase keeps its `Doom*` prefixes — `DoomCore`, `DoomBoard`, `DoomJam.md` — because
+	/// renaming a solution is churn with no gameplay in it, and the jam's working title is not worth
+	/// a thousand-line diff. This constant and `project.godot`'s `config/name` are the two places
+	/// that face outward.
+	/// </summary>
+	private const string Title = "ENDLING";
+
 	private static readonly string[] Options = ["DESCEND", "QUIT"];
 
 	private readonly List<Label> _labels = [];
@@ -88,31 +98,10 @@ public partial class MainMenu : Control
 		rows.SetAnchorsPreset(LayoutPreset.FullRect);
 		AddChild(rows);
 
-		rows.AddChild(Centred(DoomPalette.Text("DOOMJAM", 96, DoomPalette.Bone)));
-
-		// **The hook, in the one colour reserved for a doom that rewrites your deck.** It is the
-		// whole pitch and it is one line — see DoomJam.md's core hook.
-		rows.AddChild(
-			Centred(
-				DoomPalette.Text(
-					"The doom does not kill you. It edits your deck.",
-					26,
-					DoomPalette.Red
-				)
-			)
-		);
-
-		rows.AddChild(new Control { CustomMinimumSize = new Vector2(0, 26) });
-
-		rows.AddChild(
-			Centred(
-				DoomPalette.Text(
-					"Three acts.  Forty-five floors.  One thing that follows you down.",
-					20,
-					DoomPalette.Slate.Lightened(0.45f)
-				)
-			)
-		);
+		// **The title, and nothing under it.** There were two lines of description here — the hook
+		// and a summary of the run's shape — and both were the kind of copy that explains a game to
+		// someone who has not started it yet. A menu is not where that argument gets won.
+		rows.AddChild(Centred(DoomPalette.Text(Title, 104, DoomPalette.Bone)));
 
 		rows.AddChild(new Control { CustomMinimumSize = new Vector2(0, 64) });
 

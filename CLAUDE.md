@@ -2,6 +2,9 @@
 
 **This repo's active project is DOOMJAM, a Godot Wild Jam entry. It is NOT the MTG game.**
 
+**The game is called *ENDLING* to a player; DOOMJAM is the working title and the code prefix.** Only
+`MainMenu.Title` and `project.godot`'s `config/name` face outward — do not rename the solution.
+
 A solitaire roguelike deckbuilder: you kill an Opponent across five lanes while a doomsday scenario
 fires on a repeating clock, reshaping the board or permanently rewriting your deck. **Read
 `DoomJam.md` first** — it is the design doc and the source of truth.

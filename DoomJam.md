@@ -8,6 +8,14 @@ The second goal is a measurement: **how hard is it to build a completely differe
 `ImmutableGameObjects`?** Whatever we end up wishing we could lift out of `MtgCore` is the finding.
 Record it under "Engine findings" as we hit it.
 
+> **THE GAME IS CALLED *ENDLING* (2026-09-18).** An endling is the last surviving member of a
+> species, which is what you and the thing following you are by floor 45.
+>
+> **"DOOMJAM" was the jam working title and stays as the CODEBASE prefix** — `DoomCore`, `DoomBoard`,
+> `DoomJam.md`, `doom-balance.md`. Renaming a solution is churn with no gameplay in it. The two
+> places that face a player are `MainMenu.Title` and `project.godot`'s `config/name`; if a third
+> ever appears, it reads from one of those rather than hard-coding a fourth.
+
 ## State of play (2026-09-17)
 
 **The whole loop is built and playable in Godot.** Pick an act, fight down twenty floors, take
