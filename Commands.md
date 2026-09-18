@@ -51,20 +51,24 @@ files beside each asset; if those are missing, that is the symptom.
 with synthetic clicks (see `HANDOFF-DoomPacingAndRewards.md` §4):
 
 ```
-godot-mono --path SQGodotCommon --position 1920,0 --resolution 1600x900   --write-movie shots/doom.png --fixed-fps 10 --quit-after 40   DoomGame/doom_board.tscn -- --autostart
+godot-mono --path SQGodotCommon --position 1920,0 --resolution 1600x900   --write-movie shots/doom.png --fixed-fps 10 --quit-after 40   DoomGame/doom_board.tscn
 ```
 
 `--position` takes virtual-desktop coordinates, so `1920,0` is the second monitor on a side-by-side
-pair. **`--autostart` is now a no-op and is kept only so these commands keep working** — the theme
-picker was deleted on 2026-09-18 and the game opens on floor 1 by itself. It used to be load-bearing:
-`--write-movie` cannot click a button, so without it every
-capture was a picture of the menu. `shots/` must exist first or Godot writes nothing and only
-complains about the `.wav`.
+pair.
+
+**`--autostart` is gone from these commands and from the code (2026-09-18).** It existed because
+`--write-movie` cannot click a button: the board used to open on a theme picker, so every capture
+without the flag was a picture of that menu. The picker was deleted and the board opens on floor 1
+by itself, so there is nothing left for the flag to skip. `--reward`, `--shop` and `--autoturn` are
+unaffected and still do real work.
+
+`shots/` must exist first or Godot writes nothing and only complains about the `.wav`.
 
 **Add `--autoturn` to see ANIMATION.** It ends a turn every 1.6s through the real engine:
 
 ```
-... --fixed-fps 20 --quit-after 140 DoomGame/doom_board.tscn -- --autostart --autoturn
+... --fixed-fps 20 --quit-after 140 DoomGame/doom_board.tscn -- --autoturn
 ```
 
 **A still board proves nothing about motion** — nothing moves until state changes, so a capture of a
@@ -86,7 +90,7 @@ for f in fs[25:130]:
 **`--reward` opens the reward screen**, which is otherwise reachable only by winning a floor:
 
 ```
-... --quit-after 30 DoomGame/doom_board.tscn -- --autostart --reward
+... --quit-after 30 DoomGame/doom_board.tscn -- --reward
 ```
 
 It marks the Companion with every apocalypse in the library, three times each, so the panel is shown
@@ -95,8 +99,8 @@ its worst case — a name that long is what pushed the intermission off the scre
 **The shop, and the card grid inside it:**
 
 ```
-... --quit-after 22 DoomGame/doom_board.tscn -- --autostart --shop
-... --quit-after 22 DoomGame/doom_board.tscn -- --autostart --shop --remove
+... --quit-after 22 DoomGame/doom_board.tscn -- --shop
+... --quit-after 22 DoomGame/doom_board.tscn -- --shop --remove
 ```
 
 `--shop` forces 400 gold and doubles the whole reward pool into the deck, so both screens are drawn

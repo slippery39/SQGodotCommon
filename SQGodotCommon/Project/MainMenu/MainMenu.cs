@@ -1,170 +1,234 @@
 using System.Collections.Generic;
+using DoomGame;
+using Godot;
 
 namespace Project;
 
+/// <summary>
+/// The way into the game, and the first thing anyone sees.
+///
+/// **Built in code, like every other DOOMJAM screen**, and for the same reason: the layout is a
+/// contract and a contract reviews better as text than as a scene diff. The scene is now a bare root
+/// Control — it used to carry a MarginContainer, a CenterContainer and a default-themed
+/// `PanelContainer`, and that untouched panel theme was the grey box the menu sat in.
+///
+/// **It reads DOOMJAM's own palette rather than inventing one.** Gold means "yours" everywhere else
+/// in the game — the Companion, your energy — so gold is what a highlighted option is. Red is
+/// reserved for the enemy and for life, so it carries the one line about the doom and nothing else.
+/// See DoomUI.md.
+/// </summary>
 public partial class MainMenu : Control
 {
 	/// <summary>
-	/// The menu, in order, with the first one selected on open.
+	/// The menu, in order, with the first selected on open.
 	///
-	/// **DOOMJAM leads**: this branch is the jam entry, and "Start Game" used to mean the MTG deck
-	/// select, which left the actual game with no way in from the menu at all.
+	/// **The MTG entries are gone (2026-09-18).** They opened `MtgGame` scenes that this jam branch
+	/// does not use, and a menu is the wrong place to keep a bookmark for other work. **Nothing in
+	/// `MtgGame` was touched** — the scenes are all still there and still load; they simply have no
+	/// entry from here. Putting the two lines back is a two-line change.
 	///
-	/// The MTG entries are kept and relabelled rather than deleted, because this branch is meant to
-	/// be a clean no-op for that work. They are the two lines to drop before shipping a jam build.
+	/// **"Options" went too, and that is not the same kind of deletion.** It printed to the console
+	/// and did nothing else. A menu entry that looks like a choice and is not is the same lie the
+	/// theme picker was telling, and it goes for the same reason. Put it back when there is
+	/// something behind it — the animation speed dial (F4 on the board) is the obvious first thing.
 	/// </summary>
-	[Export]
-	public string[] MenuOptions =
-	{
-		"DOOMJAM",
-		"MTG - Deck Select",
-		"MTG - Draft",
-		"Options",
-		"Quit",
-	};
+	private static readonly string[] Options = ["DESCEND", "QUIT"];
 
-	private int _currentOptionIndex = 0; // Tracks the currently selected option
-	private List<Label> _menuLabels = new List<Label>(); // Holds references to menu option labels
-
-	// DOOMJAM's palette: gold means "yours", which is what a highlighted option is. See DoomUI.md.
-	private Color _selectedColor = Color.FromHtml("#E3B23C");
-	private Color _defaultColor = Color.FromHtml("#E8EEF2");
+	private readonly List<Label> _labels = [];
+	private int _index;
 
 	public override void _Ready()
 	{
-		// Create menu option labels
-		var vBox = new VBoxContainer();
-		AddChild(vBox);
+		BuildBackdrop();
+		BuildMenu();
+		UpdateVisuals();
+	}
 
-		for (int i = 0; i < MenuOptions.Length; i++)
+	/// <summary>
+	/// The painted backdrop the board already uses, darkened, with a flat navy fall-back.
+	///
+	/// **The ground is a plain `ColorRect` underneath rather than the image's own background**, so a
+	/// missing or not-yet-imported PNG degrades to the right colour instead of to nothing. New art
+	/// does not exist until `--headless --import` has run, and `ResourceLoader.Exists` returns false
+	/// silently until it does.
+	/// </summary>
+	private void BuildBackdrop()
+	{
+		var ground = new ColorRect { Color = DoomPalette.Navy };
+		ground.SetAnchorsPreset(LayoutPreset.FullRect);
+		AddChild(ground);
+
+		if (DoomArt.Backdrop is { } texture)
 		{
-			var label = new Label
+			var art = new TextureRect
 			{
-				Text = MenuOptions[i],
-				Modulate = i == _currentOptionIndex ? _selectedColor : _defaultColor,
-				HorizontalAlignment = HorizontalAlignment.Center,
-			};
-			label.LabelSettings = new LabelSettings { FontSize = 40 };
-			_menuLabels.Add(label);
-			vBox.AddChild(label);
-		}
+				Texture = texture,
+				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
 
-		// Center menu
-		vBox.AnchorLeft = 0.5f;
-		vBox.AnchorRight = 0.5f;
-		vBox.AnchorTop = 0.5f;
-		vBox.AnchorBottom = 0.5f;
-		vBox.Alignment = BoxContainer.AlignmentMode.Center;
+				// Pushed well down so the title and the options read cleanly over it. The board
+				// dims its own copy for the same reason.
+				Modulate = new Color(1, 1, 1, 0.35f),
+			};
+			art.SetAnchorsPreset(LayoutPreset.FullRect);
+			AddChild(art);
+		}
+	}
+
+	private void BuildMenu()
+	{
+		// **A VBox at FullRect with centred alignment**, rather than a container nested three deep.
+		// A Container overrides its children's anchors on every layout pass, which is what made the
+		// old structure hard to reason about — here there is one, and it owns the whole screen.
+		var rows = new VBoxContainer
+		{
+			Alignment = BoxContainer.AlignmentMode.Center,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		rows.AddThemeConstantOverride("separation", 10);
+		rows.SetAnchorsPreset(LayoutPreset.FullRect);
+		AddChild(rows);
+
+		rows.AddChild(Centred(DoomPalette.Text("DOOMJAM", 96, DoomPalette.Bone)));
+
+		// **The hook, in the one colour reserved for a doom that rewrites your deck.** It is the
+		// whole pitch and it is one line — see DoomJam.md's core hook.
+		rows.AddChild(
+			Centred(
+				DoomPalette.Text(
+					"The doom does not kill you. It edits your deck.",
+					26,
+					DoomPalette.Red
+				)
+			)
+		);
+
+		rows.AddChild(new Control { CustomMinimumSize = new Vector2(0, 26) });
+
+		rows.AddChild(
+			Centred(
+				DoomPalette.Text(
+					"Three acts.  Forty-five floors.  One thing that follows you down.",
+					20,
+					DoomPalette.Slate.Lightened(0.45f)
+				)
+			)
+		);
+
+		rows.AddChild(new Control { CustomMinimumSize = new Vector2(0, 64) });
+
+		foreach (var option in Options)
+		{
+			var label = DoomPalette.Text(option, 40, DoomPalette.Bone);
+
+			// **Each option takes mouse input, and the VBox above does not.** Hit-testing used to
+			// walk every label's rect on every mouse move; a Control that answers for itself is
+			// both less code and correct when the layout changes.
+			label.MouseFilter = MouseFilterEnum.Stop;
+			rows.AddChild(Centred(label));
+			_labels.Add(label);
+		}
+	}
+
+	/// <summary>
+	/// Makes a label span the row so it centres against the SCREEN rather than against its own text
+	/// width — without this every line is centred on a box exactly as wide as the words in it, and
+	/// a VBox stacks them left-aligned to each other.
+	/// </summary>
+	private static Label Centred(Label label)
+	{
+		label.HorizontalAlignment = HorizontalAlignment.Center;
+		label.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		return label;
 	}
 
 	public override void _Input(InputEvent @event)
 	{
-		// Handle keyboard input
-		if (@event is InputEventKey keyEvent && keyEvent.Pressed)
+		if (@event is InputEventKey { Pressed: true } key)
 		{
-			if (keyEvent.Keycode == Key.Down)
+			switch (key.Keycode)
 			{
-				ChangeOption(1);
-			}
-			else if (keyEvent.Keycode == Key.Up)
-			{
-				ChangeOption(-1);
-			}
-			else if (keyEvent.Keycode == Key.Enter)
-			{
-				SelectOption();
+				case Key.Down
+				or Key.S:
+					Move(1);
+					break;
+				case Key.Up
+				or Key.W:
+					Move(-1);
+					break;
+				case Key.Enter
+				or Key.KpEnter
+				or Key.Space:
+					Select();
+					break;
+				case Key.Escape:
+					GetTree().Quit();
+					break;
 			}
 		}
 
 		if (@event is InputEventMouseMotion)
-		{
-			UpdateOptionOnHover();
-		}
+			HoverUnderMouse();
 
-		if (@event is InputEventMouseButton mouseEvent && mouseEvent.Pressed)
+		if (@event is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
 		{
-			if (mouseEvent.ButtonIndex == MouseButton.Left)
+			if (HoverUnderMouse())
+				Select();
+		}
+	}
+
+	/// <summary>Moves the highlight to whatever the cursor is over. True if it found something.</summary>
+	private bool HoverUnderMouse()
+	{
+		for (var i = 0; i < _labels.Count; i++)
+		{
+			if (!_labels[i].GetGlobalRect().HasPoint(GetGlobalMousePosition()))
+				continue;
+
+			if (_index != i)
 			{
-				for (int i = 0; i < _menuLabels.Count; i++)
-				{
-					if (_menuLabels[i].GetGlobalRect().HasPoint(GetGlobalMousePosition()))
-					{
-						_currentOptionIndex = i;
-						UpdateMenuVisuals();
-						SelectOption();
-						break;
-					}
-				}
+				_index = i;
+				UpdateVisuals();
 			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	private void Move(int direction)
+	{
+		_index = (_index + direction + _labels.Count) % _labels.Count;
+		UpdateVisuals();
+	}
+
+	private void UpdateVisuals()
+	{
+		for (var i = 0; i < _labels.Count; i++)
+		{
+			var selected = i == _index;
+
+			// Gold for the selection, and a marker either side of it. Colour alone is a poor cue at
+			// a glance and the board already uses gold for several things that are not this.
+			_labels[i]
+				.AddThemeColorOverride(
+					"font_color",
+					selected ? DoomPalette.Gold : DoomPalette.Bone
+				);
+			_labels[i].Text = selected ? $"[  {Options[i]}  ]" : Options[i];
 		}
 	}
 
-	private void UpdateOptionOnHover()
+	private void Select()
 	{
-		for (int i = 0; i < _menuLabels.Count; i++)
+		switch (Options[_index])
 		{
-			if (_menuLabels[i].GetGlobalRect().HasPoint(GetGlobalMousePosition()))
-			{
-				if (_currentOptionIndex != i)
-				{
-					_currentOptionIndex = i;
-					UpdateMenuVisuals();
-				}
-				break;
-			}
-		}
-	}
-
-	private void ChangeOption(int direction)
-	{
-		_currentOptionIndex += direction;
-
-		// Wrap around the options
-		if (_currentOptionIndex < 0)
-			_currentOptionIndex = MenuOptions.Length - 1;
-		else if (_currentOptionIndex >= MenuOptions.Length)
-			_currentOptionIndex = 0;
-
-		UpdateMenuVisuals();
-	}
-
-	private void UpdateMenuVisuals()
-	{
-		for (int i = 0; i < _menuLabels.Count; i++)
-		{
-			_menuLabels[i].Modulate = i == _currentOptionIndex ? _selectedColor : _defaultColor;
-		}
-	}
-
-	private void SelectOption()
-	{
-		GD.Print($"Selected option: {MenuOptions[_currentOptionIndex]}");
-
-		// Perform actions based on selected option
-		switch (MenuOptions[_currentOptionIndex])
-		{
-			case "DOOMJAM":
+			case "DESCEND":
 				QueueFree();
 				GameManager.Instance.ChangeScene("res://DoomGame/doom_board.tscn");
 				break;
 
-			case "MTG - Deck Select":
-				QueueFree();
-				GameManager.Instance.ChangeScene("res://MtgGame/DeckSelect/DeckSelectScene.tscn");
-				break;
-
-			case "MTG - Draft":
-				QueueFree();
-				GameManager.Instance.ChangeScene("res://MtgGame/Draft/DraftScene.tscn");
-				break;
-
-			case "Options":
-				// Load the options scene or handle options logic
-				GD.Print("Options selected!");
-				break;
-
-			case "Quit":
-				// Quit the game
+			case "QUIT":
 				GetTree().Quit();
 				break;
 		}

@@ -91,16 +91,19 @@ public partial class DoomBoard : Node2D
 
 		// **The game just starts.** There used to be a screen here asking which act to walk into,
 		// and chaining the acts made that choice vanish — a run is all three, in a fixed order — so
-		// it had been showing a decision that did nothing. `--autostart` is kept and now does
-		// nothing either, because every capture command in Commands.md passes it.
+		// it had been showing a decision that did nothing.
+		//
+		// `--autostart` went with it. It existed only because `--write-movie` cannot click a button,
+		// so a capture without it was a picture of that menu; there is nothing left to skip. The
+		// capture flags below still do real work.
 		{
 			StartRun();
 
-			// `-- --autostart --autoturn` ends a turn on a timer. **Animation cannot be verified
+			// `-- --autoturn` ends a turn on a timer. **Animation cannot be verified
 			// from a still board**: nothing moves until state changes, so every capture of a fresh
 			// battle shows a settled screen and proves nothing. This drives real turns through the
 			// real engine so a capture catches damage numbers, pops and flashes mid-flight.
-			// `-- --autostart --reward` opens the reward screen on the opening position. The screen
+			// `-- --reward` opens the reward screen on the opening position. The screen
 			// is only reachable by WINNING a floor, which a capture cannot do, so without this the
 			// one screen where a card is the whole decision is the one screen never looked at.
 			if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "--reward") >= 0)
@@ -121,7 +124,7 @@ public partial class DoomBoard : Node2D
 				return;
 			}
 
-			// `-- --autostart --shop` opens the shop on the opening position. Like `--reward`, the
+			// `-- --shop` opens the shop on the opening position. Like `--reward`, the
 			// screen is otherwise only reachable by playing to a shop floor, which a capture cannot
 			// do — so without this the layout would ship having never been looked at.
 			//
