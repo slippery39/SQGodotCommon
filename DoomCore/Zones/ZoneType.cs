@@ -26,4 +26,17 @@ public enum ZoneType
 	/// debug later.
 	/// </summary>
 	Exhausted,
+
+	/// <summary>
+	/// Cards the water took. **Out of circulation, and coming back** — which is the one thing
+	/// <see cref="Exhausted"/> never does, so it is a second zone rather than a flag on the first.
+	///
+	/// A card here is in no deck at all: not drawable, not reshuffled, not on the board. It returns
+	/// to Discard at the start of the turn stamped on its <see cref="TakenComponent"/>.
+	///
+	/// **This is what Flood takes now.** Washing the board to Discard stopped meaning anything the
+	/// moment combat v3 made the board wash itself every turn — so the doom takes the CARD instead,
+	/// which is the only thing left that was not leaving anyway.
+	/// </summary>
+	Taken,
 }

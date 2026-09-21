@@ -31,7 +31,13 @@ public record DoomPreview
 	/// </summary>
 	public bool IsPermanent { get; init; } = true;
 
-	/// <summary>Units the apocalypse would sweep off the board. Battle-scope scenarios only.</summary>
+	/// <summary>
+	/// Units the apocalypse would take off the board. Battle-scope scenarios only.
+	///
+	/// Computed by running the real effect and diffing the FIELD, so it needs no knowledge of
+	/// whether a scenario sweeps, takes or kills — which is what has kept it honest through two
+	/// rewrites of what Flood does.
+	/// </summary>
 	public int UnitsSwept { get; init; }
 
 	public string Flavour { get; init; } = "";
@@ -39,7 +45,7 @@ public record DoomPreview
 	/// <summary>One line, safe to print anywhere. Counts are computed, never hand-written.</summary>
 	public string Summary =>
 		!IsAvailable ? $"{Scenario}: no transform implemented"
-		: !IsPermanent ? $"{Scenario}: {UnitsSwept} swept off the board — nothing permanent"
+		: !IsPermanent ? $"{Scenario}: {UnitsSwept} taken off the board — nothing permanent"
 		: Added.IsEmpty && Removed.IsEmpty && Changed.IsEmpty ? $"{Scenario}: nothing would change"
 		: $"{Scenario}: "
 			+ string.Join(
@@ -84,7 +90,7 @@ public static class DoomPreviewer
 		if (StarterContent.ScopeOf(scenario) == DoomScope.Battle)
 		{
 			var standing = battle.Units().Count();
-			var left = DoomBattleEffects.Apply(battle, scenario).Units().Count();
+			var left = DoomBattleEffects.Apply(battle, scenario).State.Units().Count();
 
 			return new DoomPreview
 			{

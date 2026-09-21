@@ -41,8 +41,14 @@ public record StartTurnAction : GameAction
 		// held until it dies — there is no assignment to clear and no damage to wipe, since damage
 		// persists for the whole battle.
 
-		ImmutableList<GameEvent> events;
-		(state, events) = DrawCards(state, HandSize);
+		// **Before the draw, so a card that comes back this turn can be drawn this turn.** Taken
+		// cards are in no deck at all while they are gone — see `TakeCardsAction`.
+		ImmutableList<GameEvent> events = ImmutableList<GameEvent>.Empty;
+		(state, events) = TakeCardsAction.ReturnWhatIsDue(state, events);
+
+		ImmutableList<GameEvent> drawn;
+		(state, drawn) = DrawCards(state, HandSize);
+		events = events.AddRange(drawn);
 
 		// Irradiated cards can kill you on the draw, so death is checked HERE as well as at end of
 		// turn. Without this the player keeps playing at 0 life until the turn happens to end.

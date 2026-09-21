@@ -553,6 +553,17 @@ public partial class DoomBoard : Node2D
 				OpponentDamagedEvent o => $"hit the Opponent for {o.Amount}",
 				OpponentDefeatedEvent => "THE OPPONENT IS DOWN",
 				DoomResolvedEvent d => FlashDoom(d),
+
+				// The two halves of a taking. They reach the board at all only because
+				// `DoomBattleEffects` stopped throwing away the events its firings raise — before
+				// that, an apocalypse could change the board and say nothing, which is the one
+				// thing DoomUI.md forbids outright.
+				CardsTakenEvent t when t.Count > 0 => t.Count == 1
+					? $"the water took 1 card for {t.Turns} turns"
+					: $"the water took {t.Count} cards for {t.Turns} turns",
+				CardsReturnedEvent r => r.Count == 1
+					? "1 card the water took comes back"
+					: $"{r.Count} cards the water took come back",
 				PlayerDiedEvent => "*** YOU DIED ***",
 				_ => null,
 			};

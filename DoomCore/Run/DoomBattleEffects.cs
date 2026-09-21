@@ -28,8 +28,17 @@ public static class DoomBattleEffects
 	/// preview would report that nothing happens. Inline keeps one definition of Flood serving both
 	/// the real firing and the dial that predicts it — which is the rule that stops the preview
 	/// drifting from the apocalypse.
+	///
+	/// **It returns the EVENTS as well, and that was a real bug for as long as it did not.** Running
+	/// an action inline and keeping only its state threw away everything the firing raised — the
+	/// damage Detonation deals, the cards Flood takes — so the board had no way to animate an
+	/// apocalypse and DoomUI.md's standing rule (nothing may change without saying so) could not be
+	/// met by a battle doom at all. Found when a taking raised an event nobody could see.
 	/// </summary>
-	public static GameState Apply(GameState state, DoomScenario scenario)
+	public static (GameState State, ImmutableList<GameEvent> Events) Apply(
+		GameState state,
+		DoomScenario scenario
+	)
 	{
 		var definition = ScenarioLibrary.Of(scenario);
 
@@ -47,6 +56,8 @@ public static class DoomBattleEffects
 					+ "codebase keeps rediscovering."
 			);
 
+		var events = ImmutableList<GameEvent>.Empty;
+
 		foreach (var effect in definition.BattleEffects)
 		{
 			// The doom is not an object on the board, so there is no source id — "self" and
@@ -60,9 +71,11 @@ public static class DoomBattleEffects
 				}
 				: effect.Template;
 
-			state = action.Execute(state).GameState;
+			var result = action.Execute(state);
+			state = result.GameState;
+			events = events.AddRange(result.Events);
 		}
 
-		return state;
+		return (state, events);
 	}
 }

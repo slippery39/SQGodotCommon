@@ -178,7 +178,7 @@ which is the test any future combat change has to pass — it is what makes the 
 
 | Scenario | Scope | Reads | Effect | Interval |
 |---|---|---|---|---|
-| **Flood** | battle | what is standing | everything in play is **washed to Discard** — you keep the cards, you lose the board and the energy you spent on it | 5 |
+| **Flood** | battle | what is standing | what is standing is **Taken** — gone from every deck for two turns, then handed back to Discard | 4 |
 | **Zombie Apocalypse** | permanent | what died | deaths return as 1/1 Zombies in the deck — quantity bought with deck space | 3 |
 | **Nuclear** | permanent | what was left on board | those become **Irradiated**: permanent +2/+2, lose 1 life when drawn | 2 |
 | **Rapture** | permanent | what you sacrificed | sacrificed creatures return as life — the doom you *want* at 6 HP | 3 |
@@ -190,10 +190,19 @@ entry, a `ScopeOf` row, a `CountdownFor` row, a `PlayableOn` row, and one case i
 Interval varies per scenario on purpose: it is free texture, and it makes each apocalypse feel
 different before the player reads a word of its text.
 
-> **FLOOD IS A NO-OP UNDER v3 and must change or be cut (2026-09-17).** It washes the board to
-> Discard, and in v3 the board washes itself at the end of every turn. It is the scenario that
-> teaches the fiction on floor 1, so a replacement is worth more than a deletion — wash the HAND, or
-> take next turn's draw. Everything below is the v2 reasoning, kept because the *why* still holds.
+> **FLOOD WAS A NO-OP UNDER v3, AND IS FIXED (2026-09-19).** It washed the board to Discard, and v3
+> made the board wash itself to Discard at the end of every turn — so a scenario that had shipped
+> since v1 did nothing at all while telling the player it had taken everything. **It takes the CARD
+> now**: what is standing goes to the `Taken` zone, out of every deck, and returns to Discard two
+> turns later. Under v3 the body was leaving regardless, so the card is the only thing left worth
+> taking — and taking it temporarily is a cost the player can see coming and play around.
+>
+> **The Last Host and Detonation were half-inert the same way** and now take as well. All three said
+> "the board is gone" about a board that was going anyway.
+>
+> **Nothing below this line has been re-measured.** Every number in `docs/findings/doom-balance.md`
+> was taken with Flood doing nothing, so act 1 is now harder than any table in that file says.
+> Everything else below is the v2 reasoning, kept because the *why* still holds.
 
 **Flood was rewritten (2026-09-14).** It used to delete never-summoned units from the run deck and
 duplicate the ones you played.

@@ -103,8 +103,21 @@ public record LifeGainedEvent : GameEvent
 	public int LifeNow { get; init; }
 }
 
-/// <summary>An apocalypse swept the board. Carries the count so the UI need not work it out.</summary>
-public record FieldSweptEvent : GameEvent
+/// <summary>
+/// An apocalypse TOOK cards — off the board and out of every deck for a number of turns.
+///
+/// Carries the count and the wait so the UI need not work either out. **It replaced
+/// `FieldSweptEvent`**, which described washing the board to Discard — an act combat v3 made
+/// meaningless, since the board goes to Discard by itself at the end of every turn.
+/// </summary>
+public record CardsTakenEvent : GameEvent
+{
+	public int Count { get; init; }
+	public int Turns { get; init; }
+}
+
+/// <summary>Cards the water took have come back to your discard pile.</summary>
+public record CardsReturnedEvent : GameEvent
 {
 	public int Count { get; init; }
 }

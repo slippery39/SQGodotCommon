@@ -125,7 +125,7 @@ public class DoomPreviewTests
 		var committed = DoomPreviewer.Preview(run, state);
 
 		Assert.That(committed.UnitsSwept, Is.EqualTo(2), "the more you commit, the more it takes");
-		Assert.That(committed.Summary, Does.Contain("2 swept"));
+		Assert.That(committed.Summary, Does.Contain("2 taken"));
 	}
 
 	[Test]

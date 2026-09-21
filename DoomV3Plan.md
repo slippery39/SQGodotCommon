@@ -308,10 +308,18 @@ assert the fixed lane and the return-next-battle rule and will need rework.
 
 ---
 
-## Phase 8 — Flood, and the six `Standing` scenarios
+## Phase 8 — Flood  ✅ DONE (2026-09-19); the six `Standing` scenarios still to re-read
 
-Flood washes a board that now washes itself. Replace it (wash the HAND, or take next turn's draw) —
-it teaches the fiction on floor 1, so a replacement is worth more than a deletion.
+**Flood takes the CARD.** `TakeCardsAction` moves what is standing into a new `ZoneType.Taken` and
+stamps a `TakenComponent` with the turn it comes back; `StartTurnAction` hands back what is due,
+BEFORE the draw, so a card that returns this turn can be drawn this turn. `SweepFieldAction` is
+deleted — it had no other users, and The Last Host and Detonation take now too.
+
+**It turned up a second silent bug on the way.** `DoomBattleEffects.Apply` executed its effects
+inline and kept only the state, dropping every event they raised — so no battle-scope apocalypse
+could be animated, Detonation's 14 damage included. It returns events now.
+
+**Not re-measured.** Every table in `docs/findings/doom-balance.md` was taken with Flood inert.
 
 Then re-read Nuclear, Hell Uprising, Famine, Judgement, AI Uprising and Grey Goo and write down what
 each now asks on a firing turn. They changed meaning without changing code.

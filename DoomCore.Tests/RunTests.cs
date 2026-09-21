@@ -115,12 +115,14 @@ public class RunTests
 	// ===== Flood: now a BATTLE-scope board wash =====
 
 	/// <summary>
-	/// Flood sweeps the board and leaves the DECK alone. It used to delete never-summoned units
-	/// from the run and duplicate the committed ones; permanent removal caused more trouble than it
-	/// was worth (see DoomJam.md), so it is a battle-scope wash now.
+	/// Flood TAKES what is standing and leaves the RUN deck alone. It used to delete never-summoned
+	/// units from the run and duplicate the committed ones; permanent removal caused more trouble
+	/// than it was worth (see DoomJam.md). It then washed the board to Discard, which combat v3
+	/// turned into a no-op — so it now takes the CARD out of circulation for two turns, inside the
+	/// battle, and the run deck is still none of its business.
 	/// </summary>
 	[Test]
-	public void FloodWashesTheBoardAndLeavesTheDeckUntouched()
+	public void FloodTakesTheBoardAndLeavesTheRunDeckUntouched()
 	{
 		var run = new Run { Life = 100, MaxLife = 100 }.WithCards(
 			[Unit("Committed", 1, 1, cost: 0), Unit("Hoarded", 1, 1, cost: 0)]
@@ -136,7 +138,12 @@ public class RunTests
 		state = PlayOutBattle(state, committedId);
 
 		Assert.That(state.GetBattle().DoomsFired, Is.EqualTo(1), "it fired");
-		Assert.That(state.Units().Any(u => u.Name == "Committed"), Is.False, "and swept the board");
+		Assert.That(state.Units().Any(u => u.Name == "Committed"), Is.False, "and took the board");
+		Assert.That(
+			state.CardsIn(ZoneType.Taken).Any(c => c.Name == "Committed"),
+			Is.True,
+			"TAKEN, not washed to Discard — the wash is what v3 made meaningless"
+		);
 
 		var after = run.AfterBattle(state);
 
@@ -149,7 +156,7 @@ public class RunTests
 	}
 
 	[Test]
-	public void AWashedUnitComesBackWholeRatherThanDamaged()
+	public void ATakenUnitComesBackWholeRatherThanDamaged()
 	{
 		var run = new Run { Life = 100, MaxLife = 100 }.WithCards(
 			[Unit("Committed", 1, 4, cost: 0)]
@@ -175,10 +182,14 @@ public class RunTests
 		);
 		state = PlayOutBattle(state, committedId);
 
+		// Taken is searched too: the water now holds the card for two turns before handing it back,
+		// and this test is about what the card is like when it RETURNS TO PLAY, not about which
+		// pile it waited in.
 		var washed = state
 			.CardsIn(ZoneType.Discard)
 			.Concat(state.CardsIn(ZoneType.Draw))
 			.Concat(state.CardsIn(ZoneType.Hand))
+			.Concat(state.CardsIn(ZoneType.Taken))
 			.FirstOrDefault(c => c.RunCardId == committedId);
 
 		Assert.That(washed, Is.Not.Null, "it left the field");

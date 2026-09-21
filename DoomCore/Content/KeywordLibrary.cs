@@ -82,6 +82,14 @@ public static class KeywordLibrary
 		},
 		new Keyword
 		{
+			Name = "Taken",
+			Text =
+				"Out of every deck — not drawable, not shuffled back. It returns to your discard "
+				+ "when the turns are up.",
+			Aliases = ["taken", "takes", "is taken"],
+		},
+		new Keyword
+		{
 			Name = "Sacrifice",
 			Text =
 				"Your own unit dies on the spot. It is a Loss, and everything that reads Losses "

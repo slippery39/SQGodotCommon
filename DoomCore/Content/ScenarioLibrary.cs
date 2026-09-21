@@ -79,8 +79,8 @@ public static class ScenarioLibrary
 				new DoomEffect
 				{
 					Target = DoomTarget.YourUnits,
-					Template = new SweepFieldAction(),
-					Text = "everything standing is washed to Discard",
+					Template = new TakeCardsAction { Turns = 2 },
+					Text = "what is standing is Taken for 2 turns",
 				},
 			],
 		};
@@ -278,8 +278,8 @@ public static class ScenarioLibrary
 				new DoomEffect
 				{
 					Target = DoomTarget.YourUnits,
-					Template = new SweepFieldAction(),
-					Text = "everything you hold is taken",
+					Template = new TakeCardsAction { Turns = 2 },
+					Text = "everything you hold is Taken for 2 turns",
 				},
 				new DoomEffect
 				{
@@ -467,8 +467,8 @@ public static class ScenarioLibrary
 				new DoomEffect
 				{
 					Target = DoomTarget.YourUnits,
-					Template = new SweepFieldAction(),
-					Text = "the board is gone",
+					Template = new TakeCardsAction { Turns = 2 },
+					Text = "what is standing is Taken for 2 turns",
 				},
 				new DoomEffect
 				{

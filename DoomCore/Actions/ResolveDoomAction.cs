@@ -34,10 +34,10 @@ public record ResolveDoomAction : GameAction
 		// A BATTLE-scope apocalypse happens right here, to this GameState. A PERMANENT one is only
 		// recorded; the run replays it once the battle is over, because it rewrites a deck that
 		// outlives this state. The firing is captured BEFORE either, so both read the same board.
-		var gs =
+		var (gs, firingEvents) =
 			StarterContent.ScopeOf(battle.Scenario) == DoomScope.Battle
 				? DoomBattleEffects.Apply(gameState, battle.Scenario)
-				: gameState;
+				: (gameState, ImmutableList<GameEvent>.Empty);
 
 		var state = gs.UpdateObject(
 			battle.Id,
@@ -55,12 +55,16 @@ public record ResolveDoomAction : GameAction
 			}
 		);
 
-		return new ActionResult(state).WithEvent(
-			new DoomResolvedEvent
-			{
-				Scenario = battle.Scenario,
-				FiringNumber = battle.DoomsFired + 1,
-			}
-		);
+		// The firing's own events travel with it — what it took, what it damaged — so the board can
+		// animate an apocalypse rather than showing numbers that changed for no stated reason.
+		return new ActionResult(state)
+			.WithEvent(
+				new DoomResolvedEvent
+				{
+					Scenario = battle.Scenario,
+					FiringNumber = battle.DoomsFired + 1,
+				}
+			)
+			.WithEvents(firingEvents);
 	}
 }

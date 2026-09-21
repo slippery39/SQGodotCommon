@@ -91,8 +91,12 @@ public static class DoomBattleFactory
 			new Zone { Name = "Exhausted", ZoneType = ZoneType.Exhausted },
 			parentId: player.Id
 		);
+		var (s9, taken) = s8.AddObject(
+			new Zone { Name = "Taken", ZoneType = ZoneType.Taken },
+			parentId: player.Id
+		);
 
-		return s8.RegisterWellKnownId(DoomObjectKeys.Battle, battle.Id)
+		return s9.RegisterWellKnownId(DoomObjectKeys.Battle, battle.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Enemies, enemies.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Opponent, opponentObject.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Player, player.Id)
@@ -100,6 +104,7 @@ public static class DoomBattleFactory
 			.RegisterWellKnownId(DoomObjectKeys.Hand, hand.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Discard, discard.Id)
 			.RegisterWellKnownId(DoomObjectKeys.Field, field.Id)
-			.RegisterWellKnownId(DoomObjectKeys.Exhausted, exhausted.Id);
+			.RegisterWellKnownId(DoomObjectKeys.Exhausted, exhausted.Id)
+			.RegisterWellKnownId(DoomObjectKeys.Taken, taken.Id);
 	}
 }
