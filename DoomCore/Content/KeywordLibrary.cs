@@ -43,41 +43,33 @@ public static class KeywordLibrary
 		new Keyword
 		{
 			Name = "Irradiated",
-			Text =
-				"Drawing this card costs you 1 life. The mark is permanent — it stays on the "
-				+ "card for the rest of the run.",
+			Text = "Drawing this card costs 1 life, for the rest of the run.",
 			Aliases = ["irradiated"],
 		},
 		new Keyword
 		{
 			Name = "Companion",
-			Text =
-				"Yours, and free. It stands in the centre lane at the start of every battle. "
-				+ "No apocalypse can touch it.",
+			Text = "Free, and starts in the centre lane every battle. No doom can touch it.",
 			Aliases = ["companion"],
 		},
 		new Keyword
 		{
 			Name = "Rite",
-			Text =
-				"Not a body. It resolves the moment you play it and goes to the discard pile — "
-				+ "it never holds a lane.",
+			Text = "Resolves when you play it. It never holds a lane.",
 			Aliases = ["rite"],
 		},
 		new Keyword
 		{
 			Name = "Doom",
 			Text =
-				"The apocalypse on the clock above. It fires when the countdown reaches zero, "
-				+ "then the clock reloads and it fires again.",
+				"The apocalypse on the clock above. It fires at zero, then reloads and fires "
+				+ "again.",
 			Aliases = ["doom", "when the doom fires", "the doom"],
 		},
 		new Keyword
 		{
 			Name = "Exhaust",
-			Text =
-				"Played once, then out of this battle. It is not shuffled back in when the draw "
-				+ "pile runs dry, and you get it back in the next fight.",
+			Text = "Played once, then out of this battle. You get it back in the next fight.",
 			Aliases = ["exhaust", "exhausts", "exhausted"],
 		},
 		new Keyword
@@ -91,9 +83,7 @@ public static class KeywordLibrary
 		new Keyword
 		{
 			Name = "Adjacent",
-			Text =
-				"The lanes immediately either side of this one. A lane at the edge of the board "
-				+ "has only one neighbour.",
+			Text = "The lanes immediately either side. An edge lane has only one.",
 			Aliases = ["adjacent", "either side"],
 		},
 		new Keyword
@@ -108,32 +98,30 @@ public static class KeywordLibrary
 		{
 			Name = "Toughness",
 			Text =
-				"The number in the red disc: what this body can absorb before it dies. Damage "
-				+ "beyond it hits the face behind.",
+				"The number in the red disc: damage it absorbs before dying. Damage beyond it "
+				+ "hits the face behind.",
 			Aliases = ["toughness"],
 		},
 		new Keyword
 		{
 			Name = "Intent",
 			Text =
-				"What an enemy will do on its turn, shown a turn ahead and never hidden. A "
-				+ "greyed sword means it is waiting this turn.",
+				"What an enemy will do on its turn, shown a turn ahead. A greyed sword "
+				+ "means it is waiting.",
 			Aliases = ["intent"],
 		},
 		new Keyword
 		{
 			Name = "Incoming",
-			Text =
-				"The Opponent has announced a body for this lane next turn. You have one turn "
-				+ "before it arrives.",
+			Text = "The Opponent has announced a body for this lane next turn.",
 			Aliases = ["incoming", "telegraph"],
 		},
 		new Keyword
 		{
 			Name = "Energy",
 			Text =
-				"The gold pips in the status strip. Spent to play cards and refilled in full "
-				+ "every turn — it never carries over, so unspent energy is wasted.",
+				"The gold pips. Spent to play cards, refilled in full every turn, never "
+				+ "carried over.",
 			Aliases = ["energy"],
 		},
 	];

@@ -12,6 +12,21 @@ public partial class DraggableNode2D : Node2D
 	private bool _dragging = false;
 	private Vector2 _dragOffset = new Vector2();
 
+	/// <summary>
+	/// A press that landed on this object but could not start a drag YET.
+	///
+	/// **On a touchscreen the finger's first contact IS the press.** Area2D picking has not run,
+	/// so nothing is hovered, so a <see cref="CanDrag"/> that asks "am I the hovered one?" is
+	/// false at exactly the moment the press arrives — and the press is then gone forever. Hover
+	/// resolves a frame later, which is why a card could be dragged only when a PREVIOUS touch had
+	/// already left it hovered.
+	///
+	/// So a press only arms the drag; the first motion starts it, by which time hover has picked a
+	/// winner out of an overlapping fan. Desktop is unaffected — there the pointer has been over
+	/// the object for many frames and the press path still wins.
+	/// </summary>
+	private bool _pressArmedDrag = false;
+
 	[Export]
 	public bool UseOffset { get; set; } = true;
 
@@ -169,6 +184,13 @@ public partial class DraggableNode2D : Node2D
 
 	public override void _Input(InputEvent @event)
 	{
+		// Disarm on ANY release, including one outside this area — otherwise a press on empty space
+		// stays armed and the next drag that happens to pass over this object would grab it.
+		if (@event is InputEventMouseButton { Pressed: false })
+		{
+			_pressArmedDrag = false;
+		}
+
 		if (
 			@event is InputEventMouseButton mouseButton
 			&& MouseIsInArea(mouseButton.GlobalPosition)
@@ -180,20 +202,11 @@ public partial class DraggableNode2D : Node2D
 				{
 					if (!CanDrag())
 					{
+						_pressArmedDrag = true;
 						return;
 					}
 
-					CurrentlyDraggingObject = this;
-					_dragging = true;
-					if (UseOffset)
-					{
-						_dragOffset = DraggableObject.GlobalPosition - mouseButton.GlobalPosition;
-					}
-					else
-					{
-						_dragOffset = new Vector2(0, 0);
-					}
-					OnDragBegin?.Invoke(this);
+					StartDrag(mouseButton.GlobalPosition);
 				}
 			}
 			else
@@ -204,14 +217,37 @@ public partial class DraggableNode2D : Node2D
 
 				CurrentlyDraggingObject = null;
 				_dragging = false;
+				_pressArmedDrag = false;
 				OnDragEnd?.Invoke(this);
 			}
 		}
 
-		if (@event is InputEventMouseMotion mouseMotion && _dragging)
+		if (@event is InputEventMouseMotion mouseMotion)
 		{
-			DraggableObject.GlobalPosition = mouseMotion.GlobalPosition + _dragOffset;
+			if (_dragging)
+			{
+				DraggableObject.GlobalPosition = mouseMotion.GlobalPosition + _dragOffset;
+			}
+			else if (
+				_pressArmedDrag
+				&& CurrentlyDraggingObject == null
+				&& mouseMotion.ButtonMask.HasFlag(MouseButtonMask.Left)
+				&& MouseIsInArea(mouseMotion.GlobalPosition)
+				&& CanDrag()
+			)
+			{
+				StartDrag(mouseMotion.GlobalPosition);
+			}
 		}
+	}
+
+	private void StartDrag(Vector2 pointer)
+	{
+		CurrentlyDraggingObject = this;
+		_dragging = true;
+		_pressArmedDrag = false;
+		_dragOffset = UseOffset ? DraggableObject.GlobalPosition - pointer : new Vector2(0, 0);
+		OnDragBegin?.Invoke(this);
 	}
 
 	private bool MouseIsInArea(Vector2 mousePos)

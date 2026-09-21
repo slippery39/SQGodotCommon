@@ -74,7 +74,8 @@ nothing is orphaned — you should not need any of it.
 |---|---|---|
 | Design doc — read first | `DoomJam.md` | read it |
 | **The next thing to build — v3** | `DoomV3Plan.md` | read it before starting any v3 phase |
-| Where the last session got to | `HANDOFF-DoomCombatV3.md` | read it when picking the work back up |
+| Where the last session got to | `HANDOFF-DoomAndroidAndText.md` | read it when picking the work back up |
+| Earlier handoff, superseded | `HANDOFF-DoomCombatV3.md` | read only for its scars (§4) |
 | Earlier handoff, superseded | `HANDOFF-DoomVisualPass.md` | read only for its scars (§4) |
 | Credits — **must ship** | `CREDITS.md` | before release, and when adding any third-party asset |
 | Earlier handoff, superseded | `HANDOFF-DoomPacingAndRewards.md` | read only for its scars (§4) |
@@ -118,6 +119,11 @@ C# on .NET. Windows.
 - **Never report one balance number across more than one act.** Three acts at 58/13/1.5% averaged to
   24.2% against a 25% target — the aggregate reassured while two were unplayable. See
   `docs/findings/doom-balance.md`.
+- **Player-facing text says the rule ONCE.** Cut any clause the player can derive from the clause
+  before it — Rite said "not a body", "goes to the discard pile" AND "never holds a lane" for one
+  fact. Keep a second clause only when it adds a rule nothing else states (Toughness' spillover
+  does; Energy's "so it is wasted" does not). `ReminderTextStaysTight` holds the SHAPE — 20 words,
+  2 sentences — because the derivable-clause rule itself is a judgement no test can make.
 - **Tests read authored values, never restate them.** A literal copied out of content breaks on every
   balance pass while the code is right; twelve did at once.
 

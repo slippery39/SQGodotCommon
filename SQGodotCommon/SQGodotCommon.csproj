@@ -1,7 +1,10 @@
 <Project Sdk="Godot.NET.Sdk/4.6.3">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!-- Android publish emits deps.json for each referenced project in both the RID and non-RID
+         output dirs; without this NETSDK1152 fails the export. Contents are identical. -->
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\DoomCore\DoomCore.csproj" />
