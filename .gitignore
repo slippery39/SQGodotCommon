@@ -498,3 +498,6 @@ $RECYCLE.BIN/
 SQGodotCommon/shots*/
 SQGodotCommon/shots_reward/
 SQGodotCommon/shots_small/
+
+# The Android APK and its signature. 106 MB per build, rebuilt by Build-Apk.ps1.
+build/

@@ -140,6 +140,79 @@ Headless works for checking the battle drives correctly:
 godot-mono --headless --quit-after 60 --path SQGodotCommon DoomGame/doom_board.tscn
 ```
 
+## Android build (phone)
+
+```
+./Build-Apk.ps1                                          # USE THIS
+cd build; python -m http.server 8000 --bind 127.0.0.1    # then tunnel it, or serve on the LAN
+```
+
+**`Build-Apk.ps1` exists because the raw export ships stale and broken APKs while exiting 0.** It
+pins the two SDK paths Godot only reads from editor settings, deletes the ExportRelease output so
+the C# is always recompiled, runs the export, and then refuses the result if the APK carries no
+assemblies or if any source file is newer than the assembly that was built. ~16 minutes, most of it
+the export itself. The raw command below is what it wraps, and the traps under it are why nothing
+should call it directly:
+
+```
+godot-mono --headless --path SQGodotCommon --export-release "Android"   C:/SQGodotHelperApps/SQGodotCommon/build/endling.apk
+```
+
+~106 MB, arm64 only, signed with a local debug keystore. Play Protect warns on install; that is
+normal for a sideload. **Chat/file transfer caps at 30 MiB, so the APK cannot be sent that way** —
+serve it on the LAN or use `adb install`.
+
+**`export_presets.cfg` is gitignored**, so a fresh clone has no Android preset and the export fails
+with no preset named "Android". It is local-only by Godot's own default; recreate it rather than
+committing it.
+
+**The whole Godot dependency chain is pinned to `net9.0`** — `SQGodotCommon`, `DoomCore`,
+`ImmutableGameObjects`, `MtgCore`, `MtgSimulator`. The prebuilt Android template supports net9.0 and
+nothing else; the export refuses outright on net10.0. Raising any of those TFMs breaks the phone
+build, not the desktop one, so it fails somewhere you are not looking.
+
+**Godot 4.6 takes the Java and Android SDK paths from EDITOR SETTINGS ONLY** — it does not read
+`JAVA_HOME` or `ANDROID_HOME`, and this machine's settings have come back empty twice on their own
+(a headless run that saves settings on exit is enough to lose them). The symptom is
+`A valid Android SDK path is required in Editor Settings` on a machine where the SDK is plainly
+installed, and there is no command-line flag for it. `Build-Apk.ps1` writes both into
+`~/scoop/persist/godot-mono/editor_data/editor_settings-4.6.tres` before every export.
+
+**FIVE ways this export fails, all of them quiet.** The fifth was measured on 2026-09-19 and is the
+worst, because a clean build and a green test suite both say nothing about it:
+
+- **The export SKIPS the C# build when its own output is newer than your source — and an edit made
+  while an export is RUNNING lands inside exactly that window.** `DoomBoard.cs` was saved at 00:55:14
+  with an export mid-flight; that export compiled at 00:55:15 without the change, and every later
+  export then saw a `.dll` one second newer than the `.cs` and skipped the rebuild. Exit 0, 184
+  assemblies, correct size, shipping code from before the edit — for as many rebuilds as you care to
+  run. The Debug assembly had the change the whole time, so `dotnet build` confirms nothing.
+
+  ```
+  rm -rf SQGodotCommon/.godot/mono/temp/bin/ExportRelease SQGodotCommon/.godot/mono/temp/obj/ExportRelease
+  ```
+
+  **Never edit project sources while an export is running**, and when a symbol you just added is
+  missing from the APK, clear that directory before looking anywhere else. Verify by extracting the
+  assembly and searching for a string you just wrote — UTF-16LE, since that is how .NET stores them.
+
+The other four:
+
+- **Godot refuses Android export unless `rendering/textures/vram_compression/import_etc2_astc=true`,
+  and says NOTHING.** `has_valid_export_configuration` sets `valid = false` with no message
+  appended (`platform/android/export/export_plugin.cpp`), so the only symptom is a bare
+  "configuration errors:" followed by the unrelated "C#/.NET is experimental" line.
+- **A missing solution produces a SUCCESSFUL APK with zero C# assemblies in it.** The `.sln` lives
+  one directory above the Godot project, so `dotnet/project/solution_directory=".."` is required.
+  Without it the export prints one C# stack trace mid-log, exits 0, and ships a game with no code.
+  **Check the build: `unzip -l build/endling.apk | grep -c '\.dll'` must be ~184, never 0.**
+- **`NETSDK1152`, duplicate publish outputs.** Each referenced project emits `deps.json` in both the
+  RID and non-RID output dir. `ErrorOnDuplicatePublishOutputFiles=false` in `SQGodotCommon.csproj`.
+- **Anything imported into the project ships in the APK, at ETC2 size, not on-disk size.** The 367
+  `--write-movie` frames in `shots*/` were 122 MB of the APK until each got a `.gdignore`; MtgGame's
+  card art is 34 MB of JPG that imports to **145 MB** of texture and is excluded by
+  `exclude_filter="MtgGame/*"`. Check the breakdown before blaming the engine for the size.
+
 ## Measure the balance (the bot)
 
 ```
