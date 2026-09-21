@@ -64,6 +64,16 @@ public static class DoomStateExtensions
 		Enumerable.Range(0, DoomBattle.LaneCount).Where(l => s.UnitInLane(l) is null);
 
 	/// <summary>
+	/// Lanes you hold with something a Devour card is allowed to eat — so, not the companion's.
+	/// `PlayCardAction` refuses to build over the companion, and offering that lane would be
+	/// offering an invalid move.
+	/// </summary>
+	public static IEnumerable<int> HeldLanes(this GameState s) =>
+		Enumerable
+			.Range(0, DoomBattle.LaneCount)
+			.Where(l => s.UnitInLane(l) is { } held && !held.HasComponent<CompanionComponent>());
+
+	/// <summary>
 	/// Starts the battle: opening hand drawn, turn 1 begun. Single entry point for every
 	/// presentation layer — nobody constructs StartBattleAction directly.
 	/// </summary>

@@ -40,8 +40,20 @@ public enum DoomTarget
 	Opponent,
 	AllEnemies,
 
-	/// <summary>The enemy sharing the source's lane, if there is one.</summary>
+	/// <summary>
+	/// The enemy sharing the source's lane, if there is one.
+	///
+	/// **For a rite, "the source's lane" is the lane you dropped it on** — see
+	/// <see cref="DoomTargeting"/>. A rite played into a lane is this game's targeted card, and it
+	/// needs no targeting UI because the drop IS the choice.
+	/// </summary>
 	EnemyInSourceLane,
+
+	/// <summary>
+	/// YOUR unit in the source's lane. For a unit that is itself; for a rite it is whatever you
+	/// dropped the rite on — a buff, an extra strike, or a sacrifice.
+	/// </summary>
+	UnitInSourceLane,
 
 	/// <summary>Every unit you have on the field, companion included.</summary>
 	YourUnits,

@@ -254,10 +254,22 @@ public static class DoomCardFace
 	/// space instead (see <see cref="ArtHeightFor"/>). The useful consequence: a text box that is
 	/// present means this card does something, which is worth knowing at a glance across a hand.
 	/// </summary>
+	/// <summary>
+	/// Does this card have to be dropped ON a lane? True for a body, and true for a rite whose
+	/// effects read a lane — Gallows Feast sacrifices "the unit in this lane", so a drop anywhere
+	/// else would silently mean lane 0 and eat the wrong unit.
+	/// </summary>
+	public static bool NeedsALane(DoomCard card) =>
+		card.HasComponent<UnitComponent>()
+		|| card.Effects.Any(e => DoomTargeting.IsLaneScoped(e.Target));
+
 	public static string RulesTextFor(DoomCard card)
 	{
-		if (!card.Effects.IsEmpty)
-			return string.Join("\n", card.Effects.Select(e => e.Text));
+		// Assembled in DoomCore so the console dump cannot disagree with the card face — and so a
+		// keyword that is a FLAG rather than an effect (Devour) appears on both.
+		var lines = DoomRulesText.Lines(card).ToList();
+		if (lines.Count > 0)
+			return string.Join("\n", lines);
 
 		// A tag is a mark an apocalypse LEFT on the card, so it is genuinely rules — "Irradiated"
 		// costs a life when drawn and the player has to see that coming.

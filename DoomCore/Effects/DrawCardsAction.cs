@@ -16,7 +16,10 @@ public record DrawCardsAction : EffectAction
 
 	public override ActionResult Execute(GameState gameState)
 	{
-		var (state, events) = StartTurnAction.DrawCards(gameState, Amount);
+		// **Scaled, like every other amount.** It read raw `Amount` until 2026-09-18, so a
+		// `PerEach` on a draw was a silent no-op — the card would have drawn its base number and
+		// looked exactly like a card that worked.
+		var (state, events) = StartTurnAction.DrawCards(gameState, Scaled(gameState, Amount));
 		return new ActionResult(state).WithEvents(events);
 	}
 }

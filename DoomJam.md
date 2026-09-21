@@ -38,6 +38,11 @@ it.** Keep the file: the methodology and the transferable findings — tune agai
 never report one number across acts, power pays and toughness barely does — all survive. The
 numbers do not.
 
+**A CARD DESIGN PASS IS RUNNING (2026-09-18).** See "Card design pass" below: the keywords, the
+cards, the enemies that punish them, and the order. Cluster 1 (sacrifice, Devour, lane-targeted
+rites) is BUILT; thorns and strikes are next. Two arguments recorded there overturn earlier
+reasoning in this file — thorns and multi-attack are NOT redundant with what combat already does.
+
 **NOT BUILT, and this is where a design pass should look:**
 
 - **Rapture** still has no implementation and is gated to floor 99 so it is never offered. Ship it or
@@ -355,6 +360,240 @@ ever safe to park in indefinitely.
 
 Existing enemy effects are all chip damage or healing, which is a bigger number rather than a
 different plan. An enemy should punish a BEHAVIOUR, the way STS does — that is what these are for.
+
+## Card design pass — 2026-09-18  [DESIGNED; BUILDING FROM THE TOP]
+
+**The pool is ~24 cards and nearly all of them are a stat line plus one number.** This pass is the
+content plan that fixes that: the mechanics a deck can be built AROUND, the enemies that punish
+building around them, and the order to build it in.
+
+**Two corrections to earlier reasoning, recorded because both were used to argue a card was
+impossible and both were wrong:**
+
+- **Thorns is NOT "every unit already does that".** Your unit's power always hits the enemy sharing
+  its lane, true — but thorns is damage that does not come from the intent, so it lands ON TOP of
+  the trade. A 6/12 wall soaks a telegraphed 8 and you take nothing; against thorns the same wall
+  takes 8 + thorns and the excess spills to your face. **It is the only thing in the game that makes
+  a big toughness body an unsafe answer.**
+- **Strikes twice is NOT "double power".** It is a hook, not a number: thorns hits it twice, an
+  on-strike trigger fires twice, a buff applied mid-combat counts twice. It collapses to double
+  power ONLY in a game with no per-hit rules — which is the game this pass is ending.
+
+**The standing rule this pass runs on: we are exploring what is fun, not enforcing what is written.**
+Every rule in this document is a note from a previous pass. A new mechanic that breaks one is a
+design decision to be made on its merits, not an error. The doc's job is to record what we chose and
+why, so a later pass can break it on purpose too.
+
+### The unlock: a rite played into a LANE is a targeted card
+
+`PlayCardAction` already carries a `Lane` and only units validate it. **So a rite dropped on a lane
+targets whatever is in that lane** — single-target buffs, single-target sacrifice, an extra strike,
+lane-shaped removal — using the drag the player already knows, with no targeting UI and no choice
+prompt anywhere. It is the cheapest expansion of the design space available and it is what makes
+half the cards below sayable.
+
+The rule stays intact: **nothing ever ASKS the player anything.** A lane drop is a placement, and
+placement is the one decision this game has.
+
+### The keywords
+
+| Keyword | Rule | Cost |
+|---|---|---|
+| **Sacrifice** | Destroy a unit you hold. It DIES — fires `OnDeath`, feeds every death read. | `DestroyAction`, routed through `ClearTheDead` |
+| **Devour** | The unit this replaces dies instead of leaving. The lane IS the sacrifice choice. | one flag read in `PlayCardAction` |
+| **Thorns N** | When this is attacked, deal N to the attacker. Both sides. | a field, one branch in `ResolveLanes` |
+| **Strikes N** | Deals its damage N times in the exchange. Both sides. | loop the exchange |
+| **On strike** | Fires per hit, so it stacks with Strikes. | an `EffectTrigger` + a fire point |
+| **Breakthrough** | Excess power past the enemy's health carries to the Opponent. | one branch |
+| **Piercing** | Ignores toughness. Both sides. | one branch (designed in "Enemies must have PATTERNS") |
+| **Weaken N** | That enemy attacks for N less, permanently. `IntentAmount` never re-declares, so it sticks. | one action |
+| **Power** | A card with no body and no lane that keeps triggering all battle. | a zone + one loop in `FireTriggers` |
+
+**Thorns and Strikes are anti-synergistic on purpose.** A double-striker into a thorns wall is the
+read the enemy side exists to punish, and it is the first time placing a unit has been a question
+about WHICH unit rather than which lane.
+
+### Cluster 1 — death and sacrifice  [BUILT 2026-09-18, 155 tests green]
+
+The Rising was built on death and combat v3 broke all of it: a unit withdraws instead of dying, so
+`OnDeath` almost never fires. `CountOf.DiedLastTurn` fixed the READS. Sacrifice fixes the SUPPLY —
+it is the only way to make a unit die on demand, and it turns the attrition axis from something the
+enemy does to you into something you drive.
+
+**`CountOf.DiedThisTurn` is what makes it a combo rather than a setup.** `DiedThisTurnRunCardIds`
+already exists and is cleared at turn start, so during your play phase it holds exactly what you
+sacrificed this turn. One enum case. Both windows now exist and they are different cards:
+`DiedLastTurn` pays for what the ENEMY took, `DiedThisTurn` pays for what YOU spent.
+
+| Card | Cost | Line | Text |
+|---|---|---|---|
+| Pyre Keeper | 1 | 6/8 | Devour. |
+| Gallows Feast | 1 | rite | Sacrifice the unit in this lane. Draw 2, gain 10 life. |
+| Butcher's Bill | 2 | rite | Sacrifice every unit you hold. 8 to every enemy per Loss this turn. |
+| Revenant | 1 | 4/4 | When this dies, return it to your hand. |
+
+**The companion can never be sacrificed.** `DestroyAction` skips it, the same way `SweepFieldAction`
+and `PlayCardAction`'s overwrite rule already do. It is the one thing the game promises cannot be
+taken from you, and a sacrifice outlet that eats it would make that promise conditional.
+
+Deferred from this cluster, both wanting machinery that does not exist yet: **Ossuary** (a Power:
+whenever a unit of yours dies, 4 to the Opponent) needs the Powers zone, and **Grave Tide** (summon
+a 4/4 per Loss) needs a token summon.
+
+**Revenant was renamed Twice Buried**: `EnemyLibrary` already fields an enemy called Revenant, and
+two things with one name is a battle log nobody can read. **It has no hyphen for a second reason** —
+`DoomArt.FileName` cuts a name at the first hyphen, so "Twice-Buried" would have looked for
+`twice.svg`, missed, and fallen back to a generated figure with no error anywhere.
+
+**All four are drawn**: `pyre_keeper`, `gallows_feast`, `butchers_bill`, `twice_buried`. The
+procedure is now the `draw-card-art` skill, and the step that earned it is rendering the SVG and
+LOOKING at it — the first cleaver read unmistakably as a frying pan, and the markup said nothing.
+
+#### What it took, and the three things it turned up
+
+`DestroyAction`, `ReturnToHandAction`, `CountOf.DiedThisTurn`, `DoomTarget.UnitInSourceLane`, a lane
+carried through `ResolveEffectsAction`, and a `Devours` flag. ~200 lines with comments, no engine
+change in `ImmutableGameObjects`, and **eight tests that assert a death happened rather than that an
+effect was declared.**
+
+- **`DrawCardsAction` ignored `PerEach` entirely** — it read the raw `Amount` while every other
+  effect action ran it through `Scaled`. A scaling draw would have drawn its base number and looked
+  exactly like a card that worked. Found by writing the card, not by reading the code.
+- **A keyword that is a FLAG has no renderer.** Every rules-text surface built its text from
+  `Effects.Select(e => e.Text)`, so Devour — a bool, not an effect — would have rendered on no
+  surface at all: a card that silently eats your unit and never says so. Fixed by moving the
+  assembly into `DoomCore.DoomRulesText`, which the card face and the console dump now share.
+- **One existing test asserted the OLD rule as a virtue**: `ALaneTargetFromSomethingWithNoLaneHitsNothing`
+  proved a rite could never use a lane rule. It is now `ALaneTargetWithNoLaneAtAllHitsNothing` and
+  guards what is left — a doom's battle effect, which has neither a body nor a drop.
+
+**`DoomBot` had to be taught two moves**, or `sim` would have measured both keywords as blanks: a
+lane-scoped rite is offered into all five lanes (including held ones — Gallows Feast wants a lane you
+hold), and a Devour card is offered into held lanes, which the bot had always refused as strictly
+worse. Both are branching-factor costs; watch the node budget as the clusters land.
+
+**First measurement, `sim 25`, and it is a smoke test rather than a result**: The Rising 27.8% of 18
+runs, against 6.0% in run 15. Right direction, far too small a sample, and the other two acts drew
+6 and 1 runs. A real pass belongs in `docs/findings/doom-balance.md`, per act.
+
+### Cluster 2 — thorns
+
+| Card | Cost | Line | Text |
+|---|---|---|---|
+| Bramblehide | 1 | 2/12 | Thorns 6. |
+| Spikewall | 2 | 4/22 | Thorns 10. |
+| Barbed Standard | 1 | rite | Your units gain Thorns 4 this turn. |
+| Hedge Witch | 2 | 6/12 | Adjacent units gain Thorns 5. |
+
+**Price thorns under power.** It is blank in an open lane, so a thorns deck survives without closing
+and has to draft its own finisher. That is the trade, and it is what stops walls being universal.
+
+### Cluster 3 — strikes and on-strike
+
+| Card | Cost | Line | Text |
+|---|---|---|---|
+| Twin Blades | 2 | 8/10 | Strikes twice. |
+| Whetstone | 0 | rite | The unit in this lane gets +3/+0 and strikes twice this turn. |
+| Scattergun Crew | 2 | 8/10 | On strike: 3 to Adjacent enemies. |
+| Berserker | 2 | 6/10 | Strikes twice. On strike: 2 to the Opponent. |
+| Executioner | 1 | 10/4 | Breakthrough. |
+
+**Whetstone at 0 is the glue and the test of the cluster.** It is a blank without a body worth
+doubling and absurd on the right one — which is what a build-around enabler is supposed to feel like.
+
+### Cluster 4 — weaken, and the clock
+
+| Card | Cost | Line | Text |
+|---|---|---|---|
+| Lamplighter | 1 | 6/6 | On play: Weaken 4 in this lane. |
+| Chainbinder | 2 | 6/14 | On play: Weaken 3 to Adjacent enemies. |
+| Stopwatch | 1 | rite | The countdown does not tick this turn. |
+| Hasten | 1 | rite | The countdown ticks twice. Draw 2. |
+
+Weaken is the answer to Wind-up and Growing, and it reads perfectly because the telegraph shows the
+number fall. **Hasten is the dodge-vs-eat bargain as a card** — pay a turn of apocalypse for tempo.
+
+### Cluster 5 — Powers, the build-around class
+
+A Power is an effect holder with **no body and no lane**. `FireTriggers` already loops anything
+carrying `DoomEffect`s and does not care what holds it, so this is a zone plus one loop plus a
+destination branch in `PlayCardAction`.
+
+| Card | Cost | Text |
+|---|---|---|
+| Watchfire | 2 | End of turn: 4 to every enemy. |
+| Rationing | 1 | Draw an extra card each turn. |
+| Generator | 2, rare | +1 energy each turn. |
+| Doomsayer | 2, rare | Doom: Ash gets +3/+3, permanently. |
+
+**Powers do not need Piercing or Shifting to be safe, and `Persistent` does.** A Power holds no lane,
+so it cannot wall the board and cannot reintroduce the stall — which makes it the cheapest route to
+per-turn triggers and to scaling content, and it can ship before phase 5.
+
+**The doc's own "no growth for surviving turns" rule is not violated, and it is worth restating**:
+that rule forbids the BOARD handing you growth. A Power cost a card and a turn's energy out of a
+deck you drafted, which is the same side of the line the rule's second half already blesses —
+*scaling is a deckbuilding outcome*.
+
+### Cluster 6 — enemies that punish a behaviour
+
+Each of these answers a cluster above. Build them alongside, not after: content designed against a
+board where every enemy is one fixed number is balanced against a board we are deleting.
+
+| Enemy | What it does | What it makes you do |
+|---|---|---|
+| **Razorback** | Thorns 10 | do not trade your best body into it — burn it, or feed it a Stray |
+| **Flail Knight** | Strikes twice | a thorns wall shreds it; a plain wall does not |
+| **Gravewatcher** | +4/+0 whenever one of your units dies | the sacrifice deck's nemesis |
+| **Tithe-Collector** | you draw one fewer card next turn | kill it — a body cannot answer it |
+| **Static Choir** | you have 1 less energy next turn | as above, harder |
+| **Doomherald** | the countdown ticks twice while it lives | you are racing it, not surviving it |
+
+**Enemy debuffs must hit your ECONOMY, never your units.** Your units leave every turn, so a stat
+debuff on one is nearly free; your energy, your draw and your companion are the only things on your
+side that persist. The asymmetry runs the other way too: **your** Weaken on an enemy is permanent,
+because enemies persist and their intent is never re-declared. Design with the asymmetry, not around
+it.
+
+### Relics — the consistency layer, reopened
+
+This doc cut relics from v1 and put the relic slot in the dooms' hands. **Reopened by this pass**,
+with one constraint that keeps the pillar intact: **relics change RULES, not numbers.** A relic that
+adds stats is a second power curve competing with doom transforms, which is what the original
+objection was actually about. A relic that changes what a turn is worth is a deckbuilding input.
+
+| Relic | Effect |
+|---|---|
+| Rusted Crown | Your first card each turn costs 0. |
+| Ash's Collar | Ash keeps its buffs between turns. |
+| Bone Ledger | The first time a unit of yours dies each turn, draw a card. |
+| Field Anvil | Units you play into the edge lanes get +2/+2. |
+| Broken Watch | Countdowns are 1 longer; doom transforms hit twice. |
+
+**Mechanically a relic is a Power with run scope** — same holder, same triggers, a `Run.Relics` list
+instead of a battle zone. So Powers first: relics are then almost free, and if Powers do not land,
+nothing was spent.
+
+### Archetypes this is aiming at
+
+- **Early** — Stray, Bramblehide, Lamplighter: cheap bodies and cheap answers that stop scaling by floor 10.
+- **Scaling** — Powers, Long Watcher, Doomsayer: want a long fight and want to eat apocalypses.
+- **Build-around** — Ossuary + sacrifice outlets; Whetstone + on-strike; thorns + Barbed Standard.
+- **Energy** — Generator, and a burst "gain 2 energy this turn" ritual.
+- **Glue** — Whetstone, Barbed Standard, Gallows Feast: fine in two decks, excellent in one.
+
+### Build order
+
+1. **Cluster 1** — `DestroyAction`, `CountOf.DiedThisTurn`, lane-targeted rites, Devour. Smallest
+   pile of engine work on the page, and it lights up every death read already in the pool.
+2. **Thorns and Strikes** — one branch each in `ResolveLanes`, and they unlock the unit cluster and
+   the enemy cluster together.
+3. **Intent sequences** (v3 phase 5) with Piercing and Shifting, plus Razorback and Flail Knight.
+4. **Powers**, then `Persistent` (v3 phase 6), which phase 5 makes safe.
+5. **Relics**, if Powers land.
+
+**Numbers on every card above are first guesses in scale with the current pool** (1-drop ≈ 14 total
+stats, 2-drop 26-36, costs 0-2). `sim` decides them, per act, never one number across acts.
 
 ## Combat — FIVE LANES, resolved automatically  [BUILT]
 

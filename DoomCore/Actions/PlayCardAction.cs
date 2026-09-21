@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace DoomCore;
@@ -100,12 +101,38 @@ public record PlayCardAction : GameAction
 		// recorded as having died. You did not lose it in the lane, you took it off the board.
 		// The cost needs no penalty bolted on — you spent the energy and threw away a body that
 		// was absorbing damage, and that is already sharp enough to make overwriting a decision.
-		// Nothing kills a unit during YOUR turn today — damage lands in `EndTurnAction` and the dead
-		// are cleared there — so a replaced unit is always a live one. If something ever does kill
-		// mid-turn, this would discard a corpse without firing its death, which is the silent kind
-		// of loss. Guard it then, at the point that creates the corpse.
+		// **Things DO kill a unit during your own turn now** — `DestroyAction` (sacrifice) and the
+		// Devour branch below. Both clear the dead inline at the point that creates the corpse, so
+		// the assumption this comment used to state — that a replaced unit is always a live one —
+		// still holds here. Anything else that kills mid-turn must do the same.
+		var deathEvents = ImmutableList<GameEvent>.Empty;
+
 		if (isUnit && state.UnitInLane(Lane) is { } held && held.Id != CardId)
-			state = state.MoveObject(held.Id, state.ZoneId(ZoneType.Discard));
+		{
+			// **Devour: the unit it replaces DIES instead of leaving.** The only difference between
+			// the two branches is whether a death happened — and that difference is the whole
+			// keyword, because it is what feeds Ash, Zombie and every `Loss` read in the pool.
+			//
+			// **The lane is the sacrifice choice**, which is why this needs no targeting of any
+			// kind: you pick what to eat by picking where to stand.
+			//
+			// Marked dead and cleared through `ClearTheDead` — the one account of dying, the same
+			// one `WithdrawUnitsAction` and `DestroyAction` use. It runs INLINE so no corpse is
+			// left in the lane the incoming unit is about to take.
+			if (card.Devours)
+			{
+				var eaten = held.Unit();
+				state = state.UpdateObject(
+					held.Id,
+					held.WithComponentReplaced(eaten with { Damage = eaten.Toughness })
+				);
+				(state, deathEvents) = EndTurnAction.ClearTheDead(state, deathEvents);
+			}
+			else
+			{
+				state = state.MoveObject(held.Id, state.ZoneId(ZoneType.Discard));
+			}
+		}
 
 		// Damage is cleared HERE, at the one point every board unit enters through, rather than at
 		// each exit from the Field. A card that died earlier this battle went to Discard still
@@ -148,6 +175,10 @@ public record PlayCardAction : GameAction
 
 		// Effects spawn AFTER the card has moved, so a unit's own OnPlay effect can already see it
 		// standing in its lane — "deal 1 to the enemy opposite" needs the lane to be occupied.
+		// **The lane goes with them, and that is what makes a rite a targeted card.** A unit knows
+		// its own lane from its component; a rite has no body, so the lane it was dropped on is
+		// carried here instead. No targeting UI, no prompt — the drop IS the choice, which is the
+		// only kind of decision this game makes.
 		if (!card.Effects.IsEmpty)
 			state = state.SpawnAction(
 				new ResolveEffectsAction
@@ -155,16 +186,19 @@ public record PlayCardAction : GameAction
 					SourceId = CardId,
 					Trigger = EffectTrigger.OnPlay,
 					Effects = card.Effects,
+					PlayedLane = Lane,
 				}
 			);
 
-		return new ActionResult(state).WithEvent(
-			new CardPlayedEvent
-			{
-				CardId = CardId,
-				CardName = card.Name,
-				EnergySpent = card.Cost,
-			}
-		);
+		return new ActionResult(state)
+			.WithEvents(deathEvents)
+			.WithEvent(
+				new CardPlayedEvent
+				{
+					CardId = CardId,
+					CardName = card.Name,
+					EnergySpent = card.Cost,
+				}
+			);
 	}
 }

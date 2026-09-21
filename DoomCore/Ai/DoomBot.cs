@@ -138,12 +138,35 @@ public static class DoomBot
 
 			if (unit is null)
 			{
-				yield return new PlayCardAction { CardId = card.Id };
+				// **A rite that reads a lane is a targeted card** — the lane it is dropped on IS
+				// the choice — so each lane is a different play and all five have to be offered.
+				// Not just the open ones: Gallows Feast wants a lane you are HOLDING.
+				if (card.Effects.Any(e => DoomTargeting.IsLaneScoped(e.Target)))
+				{
+					for (var lane = 0; lane < DoomBattle.LaneCount; lane++)
+						yield return new PlayCardAction { CardId = card.Id, Lane = lane };
+				}
+				else
+				{
+					yield return new PlayCardAction { CardId = card.Id };
+				}
+
 				continue;
 			}
 
 			foreach (var lane in openLanes)
 				yield return new PlayCardAction { CardId = card.Id, Lane = lane };
+
+			// **Devour is the one reason to play into a lane you already hold.** The comment above
+			// is right that overwriting is otherwise strictly worse — you paid twice for one lane —
+			// but a Devour card is buying a DEATH with that second payment, and every `Loss` read
+			// in the pool pays for it. Without this the bot never devours and `sim` measures the
+			// keyword as a blank.
+			if (card.Devours)
+			{
+				foreach (var lane in s.HeldLanes())
+					yield return new PlayCardAction { CardId = card.Id, Lane = lane };
+			}
 		}
 	}
 

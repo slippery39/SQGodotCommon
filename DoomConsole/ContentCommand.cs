@@ -224,7 +224,8 @@ public static class ContentCommand
 		foreach (var (card, count) in cards.OrderBy(c => c.Item1.Cost).ThenBy(c => c.Item1.Name))
 		{
 			var stats = card.IsUnit ? $"{card.Power}/{card.Toughness}" : "rite";
-			var does = card.Effects.IsEmpty ? card.Description : Effects(card.Effects);
+			var rules = string.Join("; ", DoomRulesText.Lines(card));
+			var does = rules.Length == 0 ? card.Description : rules;
 
 			Console.WriteLine(
 				$"  {count, 3}  {card.Cost, 4}  {card.Name, -18}  {stats, 5}  "

@@ -351,6 +351,17 @@ public static class StarterContent
 			{
 				Rarity = DoomRarity.Rare,
 			},
+			// **The cross-synergy card of the sacrifice cluster.** A fine 1-cost body on its own,
+			// and renewable fodder in a deck that wants deaths — it comes back for another card
+			// and another energy, which is the throttle on every loop it enables.
+			Unit(
+				"Twice Buried",
+				1,
+				4,
+				4,
+				"It has not noticed yet.",
+				OnDeath(DoomTarget.Self, new ReturnToHandAction(), "Dies: return it to your hand")
+			),
 			Unit("Bonepicker", 2, 18, 8, "Arrives after the fighting."),
 			Unit("Feral Pack", 2, 16, 12, "Hungry, and there are several.") with
 			{
@@ -511,6 +522,60 @@ public static class StarterContent
 	/// </summary>
 	private static ImmutableArray<RunCard> RisingCards =>
 		[
+			// **The sacrifice cluster — the act's SUPPLY of deaths.** `CountOf.DiedLastTurn` fixed
+			// the reads; until these existed, every one of them was fed only by what the enemy
+			// chose to kill, which made the whole act a passenger in its own theme.
+			//
+			// Pyre Keeper's lane is its choice of what to eat: Devour makes the unit it replaces
+			// die rather than leave. Play it over a Stray you no longer need and Ash swings four
+			// points harder next turn.
+			Unit("Pyre Keeper", 1, 6, 8, "It carries the fire to them.") with
+			{
+				Devours = true,
+			},
+			// **Scaled on the sacrifice rather than validated against it.** With an empty lane the
+			// Destroy resolves to nothing, `DiedThisTurn` stays at zero and the card gives you
+			// nothing — so it cannot be cashed in as a 1-cost draw-and-heal, and no new validation
+			// rule was needed to stop that.
+			Rite(
+				"Gallows Feast",
+				1,
+				"Nothing is wasted. Nothing ever was.",
+				OnPlay(
+					DoomTarget.UnitInSourceLane,
+					new DestroyAction(),
+					"Sacrifice the unit in this lane"
+				),
+				OnPlay(
+					DoomTarget.Player,
+					new DrawCardsAction { Amount = 2, PerEach = CountOf.DiedThisTurn },
+					"draw 2"
+				),
+				OnPlay(
+					DoomTarget.Player,
+					new GainLifeAction { Amount = 10, PerEach = CountOf.DiedThisTurn },
+					"gain 10 life"
+				)
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
+			// The board you built, spent all at once. **Ash is spared** — `DestroyAction` skips the
+			// companion, which is what keeps "no doom can touch it" true of your own cards too.
+			Rite(
+				"Butcher's Bill",
+				2,
+				"Everyone pays it eventually.",
+				OnPlay(DoomTarget.YourUnits, new DestroyAction(), "Sacrifice every unit you hold"),
+				OnPlay(
+					DoomTarget.AllEnemies,
+					new DealDamageAction { Amount = 8, PerEach = CountOf.DiedThisTurn },
+					"8 to every enemy per Loss this turn"
+				)
+			) with
+			{
+				Rarity = DoomRarity.Uncommon,
+			},
 			Unit(
 				"Gravedigger",
 				1,

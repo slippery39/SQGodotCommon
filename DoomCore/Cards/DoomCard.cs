@@ -41,5 +41,8 @@ public record DoomCard : GameObject
 	/// <summary>Leaves the battle when played rather than going to Discard. See <see cref="RunCard.Exhausts"/>.</summary>
 	public bool Exhausts { get; init; }
 
+	/// <summary>**Devour** — the unit this replaces dies instead of leaving. See <see cref="RunCard.Devours"/>.</summary>
+	public bool Devours { get; init; }
+
 	public bool HasTag(string tag) => Tags.Contains(tag);
 }

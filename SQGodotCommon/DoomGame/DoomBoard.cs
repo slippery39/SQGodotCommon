@@ -343,15 +343,16 @@ public partial class DoomBoard : Node2D
 		if (_state.GetBattle().IsOver)
 			return "the battle is over";
 
-		// Only a body needs a lane. Asking the engine keeps this from being a second opinion about
-		// what a unit is.
-		var isUnit =
+		// A body needs a lane — and so does a rite that READS a lane, since the lane it lands on is
+		// what it acts upon. Asking `DoomCardFace` keeps this from being a second opinion about
+		// which cards those are; the rule itself lives in `DoomTargeting`.
+		var needsLane =
 			_state.HasObject(cardId)
 			&& _state.GetObject(cardId) is DoomCard card
-			&& card.HasComponent<UnitComponent>();
+			&& DoomCardFace.NeedsALane(card);
 
-		if (isUnit && lane is null)
-			return "drop a unit on one of your lanes";
+		if (needsLane && lane is null)
+			return "drop this on one of your lanes";
 
 		var action = new PlayCardAction { CardId = cardId, Lane = lane ?? 0 };
 

@@ -47,6 +47,20 @@ public record RunCard
 	/// and that rule is not being bent for this.
 	/// </summary>
 	public bool Exhausts { get; init; }
+
+	/// <summary>
+	/// **Devour: the unit this replaces dies instead of leaving.**
+	///
+	/// Playing into a held lane already discards the occupant with no refund, and the doc is
+	/// explicit that *replaced is not dead*. Devour flips exactly that one bit — and it is the
+	/// whole keyword, because a death feeds Ash, Zombie and every `Loss` read in the pool while a
+	/// discard feeds nothing.
+	///
+	/// **A sacrifice outlet that needs no targeting**: you choose what to eat by choosing where to
+	/// stand, which is the only decision this game asks for anywhere.
+	/// </summary>
+	public bool Devours { get; init; }
+
 	public int Power { get; init; }
 	public int Toughness { get; init; }
 
@@ -106,6 +120,7 @@ public record RunCard
 			Tags = Tags,
 			Effects = Effects,
 			Exhausts = Exhausts,
+			Devours = Devours,
 		};
 
 		return IsUnit

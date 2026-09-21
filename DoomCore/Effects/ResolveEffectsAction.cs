@@ -24,6 +24,13 @@ public record ResolveEffectsAction : GameAction
 
 	public ImmutableList<DoomEffect> Effects { get; init; } = ImmutableList<DoomEffect>.Empty;
 
+	/// <summary>
+	/// The lane the source was dropped on, for a source that has no body of its own.
+	/// **This is what makes a rite a targeted card** — see <see cref="DoomTargeting.Resolve"/>.
+	/// Null everywhere else, and every lane-scoped target then resolves to nothing.
+	/// </summary>
+	public int? PlayedLane { get; init; }
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
@@ -39,7 +46,7 @@ public record ResolveEffectsAction : GameAction
 						+ "resolves to nothing looks exactly like one that worked."
 				);
 
-			var targets = DoomTargeting.Resolve(state, effect.Target, SourceId);
+			var targets = DoomTargeting.Resolve(state, effect.Target, SourceId, PlayedLane);
 
 			// A rule that came back empty is a legitimate outcome — no enemy in that lane — so it
 			// is skipped rather than throwing. The throw above is for a MALFORMED effect, which is

@@ -76,9 +76,23 @@ public static class KeywordLibrary
 		{
 			Name = "Loss",
 			Text =
-				"A unit of yours the enemy KILLED last turn. A unit that left the board at the end "
-				+ "of the turn is not a Loss.",
+				"A unit of yours that DIED — killed, or sacrificed. Leaving at end of turn is "
+				+ "not a Loss.",
 			Aliases = ["loss", "per loss", "losses"],
+		},
+		new Keyword
+		{
+			Name = "Sacrifice",
+			Text =
+				"Your own unit dies on the spot. It is a Loss, and everything that reads Losses "
+				+ "pays.",
+			Aliases = ["sacrifice", "sacrificed"],
+		},
+		new Keyword
+		{
+			Name = "Devour",
+			Text = "The unit this replaces dies instead of leaving, so it counts as a Loss.",
+			Aliases = ["devour", "devours"],
 		},
 		new Keyword
 		{

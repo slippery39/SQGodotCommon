@@ -35,6 +35,17 @@ public enum CountOf
 	/// </summary>
 	DiedLastTurn,
 
+	/// <summary>
+	/// Your units that have died SO FAR THIS TURN — which, while you are still choosing plays,
+	/// means exactly what you have sacrificed. Combat has not happened yet.
+	///
+	/// **This is what makes sacrifice a combo rather than a setup.** <see cref="DiedLastTurn"/>
+	/// pays for what the enemy took from you; this pays for what you spent, in the turn you spend
+	/// it. The counter it reads — <see cref="DoomBattle.DiedThisTurnRunCardIds"/> — already existed
+	/// for the dooms and simply had no reader.
+	/// </summary>
+	DiedThisTurn,
+
 	/// <summary>Cards you have played so far this turn. The volume axis.</summary>
 	CardsPlayedThisTurn,
 
@@ -64,6 +75,7 @@ public static class DoomCounts
 			CountOf.YourUnits => state.Units().Count(u => !u.Unit().IsDead),
 			CountOf.LivingEnemies => state.LivingEnemies().Count(),
 			CountOf.DiedLastTurn => state.GetBattle().DiedLastTurnRunCardIds.Count,
+			CountOf.DiedThisTurn => state.GetBattle().DiedThisTurnRunCardIds.Count,
 			CountOf.CardsPlayedThisTurn => state.GetBattle().CardsPlayedThisTurn,
 			CountOf.DoomsFired => state.GetBattle().DoomsFired,
 			_ => throw new ArgumentOutOfRangeException(

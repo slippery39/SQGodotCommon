@@ -158,22 +158,33 @@ public class EffectTests
 	}
 
 	/// <summary>
-	/// A rite is not a unit, so "the enemy in my lane" has no answer. It must resolve to nothing
-	/// rather than quietly picking lane 0.
+	/// A lane rule with no lane must hit nobody rather than quietly picking lane 0.
+	///
+	/// **Rewritten 2026-09-18.** It used to prove a RITE could never use a lane rule, because a
+	/// rite has no body and therefore no lane. A rite now carries the lane it was dropped on — that
+	/// is the whole targeting model, see `DoomTargeting.Resolve` — so the case this guards is what
+	/// is left: a holder with neither a body nor a drop, which is how a doom's battle effect
+	/// resolves (`DoomBattleEffects` passes `sourceId: 0`). That still has to hit nothing.
 	/// </summary>
 	[Test]
-	public void ALaneTargetFromSomethingWithNoLaneHitsNothing()
+	public void ALaneTargetWithNoLaneAtAllHitsNothing()
 	{
 		var state = DoomBattleFactory.Create(DoomScenario.Flood, countdown: 9, opponentHealth: 500);
 		(state, _) = AddEnemy(state, health: 5, lane: 0);
-		(state, var riteId) = AddRite(
-			state,
-			cost: 0,
-			OnPlay(DoomTarget.EnemyInSourceLane, new DealDamageAction { Amount = 99 })
-		);
 
 		(state, _) = state.BeginBattle();
-		(state, _) = Do(state, new PlayCardAction { CardId = riteId });
+		(state, _) = Do(
+			state,
+			new ResolveEffectsAction
+			{
+				SourceId = 0,
+				Trigger = EffectTrigger.OnPlay,
+				Effects =
+				[
+					OnPlay(DoomTarget.EnemyInSourceLane, new DealDamageAction { Amount = 99 }),
+				],
+			}
+		);
 
 		Assert.That(
 			state.LivingEnemies().Single().Health,
