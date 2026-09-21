@@ -151,21 +151,27 @@ public sealed class DoomIntermission
 	{
 		_title.Text = $"FLOOR {before.Floor} CLEARED";
 
+		// **One line for what happened, then the numbers.** This screen used to say a dodge three
+		// times — "nothing was rewritten", "nothing was gained", "your deck is exactly as you
+		// brought it" — which is the same fluff generator the keyword text had: state the fact,
+		// then restate it as a consequence. The deck line is the one that survives, because it is
+		// COMPUTED from the two decks rather than narrated from the scenario.
 		var lines = new List<string>
 		{
-			doomsFired == 0
-				? "You got out before it landed. Nothing was rewritten - and nothing was gained."
+			doomsFired == 0 ? "You got out before it landed — the deck is untouched."
 			: doomsFired == 1 ? "One apocalypse survived."
 			: $"{doomsFired} apocalypses survived.",
-			"",
 		};
 
-		lines.AddRange(DeckChanges(before, after));
+		// **A dodge cannot have changed the deck** — `Run.AfterBattle` returns early on
+		// `DoomsFired == 0` — so asking is a line that can only ever repeat the one above it.
+		if (doomsFired > 0)
+			lines.AddRange(DeckChanges(before, after));
 
 		lines.Add("");
-		lines.Add($"Life  {after.Life} / {after.MaxLife}        Deck  {after.Deck.Count} cards");
 		lines.Add(
-			$"Companion  {after.Companion.Name}  ({after.Companion.Power}/{after.Companion.Toughness})"
+			$"Life  {after.Life} / {after.MaxLife}        Deck  {after.Deck.Count} cards"
+				+ $"        {after.Companion.Name}  {after.Companion.Power}/{after.Companion.Toughness}"
 		);
 
 		_body.Text = string.Join("\n", lines);
@@ -334,6 +340,8 @@ public sealed class DoomIntermission
 			yield return "Your deck is exactly as you brought it.";
 			yield break;
 		}
+
+		yield return "";
 
 		foreach (var group in gained.GroupBy(c => c.Name))
 			yield return $"+  {group.Count()}x {group.Key} joined the deck";
