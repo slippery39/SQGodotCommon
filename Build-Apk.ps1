@@ -6,7 +6,7 @@
 .DESCRIPTION
     Godot's Android export SKIPS the C# build when its own output is newer than your sources, and an
     edit saved while an export is running lands inside exactly that window. Measured 2026-09-19:
-    DoomBoard.cs was saved at 00:55:14 with an export in flight, that export compiled at 00:55:15
+    KinBoard.cs was saved at 00:55:14 with an export in flight, that export compiled at 00:55:15
     without the change, and every later export then saw a .dll one second newer than the .cs and
     skipped the rebuild — exit 0, 184 assemblies, plausible size, shipping pre-edit code
     indefinitely. `dotnet build` said nothing, because only the ExportRelease assembly was stale.
@@ -43,7 +43,7 @@ $assembly = Join-Path $project '.godot/mono/temp/bin/ExportRelease/android-arm64
 # MTG projects are in the chain too, but nothing in this game edits them.
 $sourceRoots = @(
     $project
-    Join-Path $PSScriptRoot 'DoomCore'
+    Join-Path $PSScriptRoot 'KinCore'
     Join-Path $PSScriptRoot 'ImmutableGameObjects'
 )
 

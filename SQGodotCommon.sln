@@ -29,11 +29,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MtgSimulator.Tests", "MtgSi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MtgArtScraper", "MtgArtScraper\MtgArtScraper.csproj", "{0CB8A45E-2046-4536-83EF-B5409F541E62}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DoomCore", "DoomCore\DoomCore.csproj", "{1838EF9F-C903-41B3-95D0-7500F56DC913}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KinCore", "KinCore\KinCore.csproj", "{1838EF9F-C903-41B3-95D0-7500F56DC913}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DoomCore.Tests", "DoomCore.Tests\DoomCore.Tests.csproj", "{52C1A503-C3AE-4D28-BBF8-E03BBE028FA3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KinCore.Tests", "KinCore.Tests\KinCore.Tests.csproj", "{52C1A503-C3AE-4D28-BBF8-E03BBE028FA3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DoomConsole", "DoomConsole\DoomConsole.csproj", "{898F385E-F042-432C-86DA-DCD5B33AC760}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KinConsole", "KinConsole\KinConsole.csproj", "{898F385E-F042-432C-86DA-DCD5B33AC760}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -15,9 +15,9 @@ dotnet test SQGodotCommon.Tests
 ## DOOMJAM
 
 ```
-dotnet test DoomCore.Tests                       # the rules engine
-dotnet run --project DoomConsole -c Debug 42     # play it in a terminal, seed 42
-godot-mono --path SQGodotCommon DoomGame/doom_board.tscn    # the battle screen
+dotnet test KinCore.Tests                       # the rules engine
+dotnet run --project KinConsole -c Debug 42     # play it in a terminal, seed 42
+godot-mono --path SQGodotCommon KinGame/kin_board.tscn    # the battle screen
 ```
 
 **`godot` on PATH cannot run C# at all** — it is the standard build. Use `godot-mono`.
@@ -29,7 +29,7 @@ the quickest way to confirm what actually loaded.
 **Screenshot the running game** — no code needed, and it works from a remote session:
 
 ```
-godot-mono --path SQGodotCommon --write-movie shots/doom.png --fixed-fps 10 --quit-after 14   DoomGame/doom_board.tscn
+godot-mono --path SQGodotCommon --write-movie shots/doom.png --fixed-fps 10 --quit-after 14   KinGame/kin_board.tscn
 ```
 
 Writes a numbered PNG per frame (and a stray .wav). Take a LATE frame: the container layout and the
@@ -44,7 +44,7 @@ and `ResourceLoader.Exists` returns false with no error anywhere:
 godot-mono --path SQGodotCommon --headless --import
 ```
 
-Run it after adding or renaming anything in `SQGodotCommon/DoomGame/Art/`. It writes the `.import`
+Run it after adding or renaming anything in `SQGodotCommon/KinGame/Art/`. It writes the `.import`
 files beside each asset; if those are missing, that is the symptom.
 
 **Look at art before believing it.** `art_check.gd` renders subjects to PNG on the board's navy, at
@@ -60,10 +60,10 @@ re-imported renders the previous version and looks exactly like an edit that did
 procedure in the `draw-card-art` skill.
 
 **Pin the window to one monitor** so a capture cannot land on top of other work — and never drive it
-with synthetic clicks (see `HANDOFF-DoomPacingAndRewards.md` §4):
+with synthetic clicks (see `HANDOFF-KinPacingAndRewards.md` §4):
 
 ```
-godot-mono --path SQGodotCommon --position 1920,0 --resolution 1600x900   --write-movie shots/doom.png --fixed-fps 10 --quit-after 40   DoomGame/doom_board.tscn
+godot-mono --path SQGodotCommon --position 1920,0 --resolution 1600x900   --write-movie shots/doom.png --fixed-fps 10 --quit-after 40   KinGame/kin_board.tscn
 ```
 
 `--position` takes virtual-desktop coordinates, so `1920,0` is the second monitor on a side-by-side
@@ -80,7 +80,7 @@ unaffected and still do real work.
 **Add `--autoturn` to see ANIMATION.** It ends a turn every 1.6s through the real engine:
 
 ```
-... --fixed-fps 20 --quit-after 140 DoomGame/doom_board.tscn -- --autoturn
+... --fixed-fps 20 --quit-after 140 KinGame/kin_board.tscn -- --autoturn
 ```
 
 **A still board proves nothing about motion** — nothing moves until state changes, so a capture of a
@@ -102,7 +102,7 @@ for f in fs[25:130]:
 **`--reward` opens the reward screen**, which is otherwise reachable only by winning a floor:
 
 ```
-... --quit-after 30 DoomGame/doom_board.tscn -- --reward
+... --quit-after 30 KinGame/kin_board.tscn -- --reward
 ```
 
 It marks the Companion with every apocalypse in the library, three times each, so the panel is shown
@@ -111,8 +111,8 @@ its worst case — a name that long is what pushed the intermission off the scre
 **The shop, and the card grid inside it:**
 
 ```
-... --quit-after 22 DoomGame/doom_board.tscn -- --shop
-... --quit-after 22 DoomGame/doom_board.tscn -- --shop --remove
+... --quit-after 22 KinGame/kin_board.tscn -- --shop
+... --quit-after 22 KinGame/kin_board.tscn -- --shop --remove
 ```
 
 `--shop` forces 400 gold and doubles the whole reward pool into the deck, so both screens are drawn
@@ -124,7 +124,7 @@ the top AND bottom of the screen, drew over the panel, and buried the BACK butto
 **The card preview needs no battle at all**, and is the right loop for card work:
 
 ```
-godot-mono --path SQGodotCommon --position 1920,0 --resolution 1600x900   --write-movie shots_cards/cards.png --fixed-fps 10 --quit-after 25   DoomGame/doom_card_preview.tscn
+godot-mono --path SQGodotCommon --position 1920,0 --resolution 1600x900   --write-movie shots_cards/cards.png --fixed-fps 10 --quit-after 25   KinGame/kin_card_preview.tscn
 ```
 
 It loads the cards that BREAK the layout — widest statline, longest name, a Rite with no stat badge
@@ -137,7 +137,7 @@ exits 0. Ignore them headless; judge the cards on a real renderer.
 Headless works for checking the battle drives correctly:
 
 ```
-godot-mono --headless --quit-after 60 --path SQGodotCommon DoomGame/doom_board.tscn
+godot-mono --headless --quit-after 60 --path SQGodotCommon KinGame/kin_board.tscn
 ```
 
 ## Android build (phone)
@@ -166,7 +166,7 @@ serve it on the LAN or use `adb install`.
 with no preset named "Android". It is local-only by Godot's own default; recreate it rather than
 committing it.
 
-**The whole Godot dependency chain is pinned to `net9.0`** — `SQGodotCommon`, `DoomCore`,
+**The whole Godot dependency chain is pinned to `net9.0`** — `SQGodotCommon`, `KinCore`,
 `ImmutableGameObjects`, `MtgCore`, `MtgSimulator`. The prebuilt Android template supports net9.0 and
 nothing else; the export refuses outright on net10.0. Raising any of those TFMs breaks the phone
 build, not the desktop one, so it fails somewhere you are not looking.
@@ -182,7 +182,7 @@ installed, and there is no command-line flag for it. `Build-Apk.ps1` writes both
 worst, because a clean build and a green test suite both say nothing about it:
 
 - **The export SKIPS the C# build when its own output is newer than your source — and an edit made
-  while an export is RUNNING lands inside exactly that window.** `DoomBoard.cs` was saved at 00:55:14
+  while an export is RUNNING lands inside exactly that window.** `KinBoard.cs` was saved at 00:55:14
   with an export mid-flight; that export compiled at 00:55:15 without the change, and every later
   export then saw a `.dll` one second newer than the `.cs` and skipped the rebuild. Exit 0, 184
   assemblies, correct size, shipping code from before the edit — for as many rebuilds as you care to
@@ -216,8 +216,8 @@ The other four:
 ## Measure the balance (the bot)
 
 ```
-dotnet run --project DoomConsole -c Release -- sim 1000          # 1000 runs, seeds 1-1000
-dotnet run --project DoomConsole -c Release -- sim 200 Life=4    # override any eval weight
+dotnet run --project KinConsole -c Release -- sim 1000          # 1000 runs, seeds 1-1000
+dotnet run --project KinConsole -c Release -- sim 200 Life=4    # override any eval weight
 ```
 
 **Release, always**, and the console project sets `ServerGarbageCollection`. The sim is ALLOCATION
@@ -232,7 +232,7 @@ Writes every run to `doom_sim_results/sim-<timestamp>.json` (gitignored) and pri
 survival by floor, pressure, apocalypses, card value. **Quote the file, never the memory of a run**
 — the tables go stale the moment content changes.
 
-`sim N <Weight>=<value> ...` overrides anything on `DoomEvalWeights` by name, and the override is
+`sim N <Weight>=<value> ...` overrides anything on `KinEvalWeights` by name, and the override is
 stamped into the results file's version string. Sweeping a weight is how you check the bot is near
 its own ceiling: if a weight change moves the survival curve a lot, the curve is measuring the bot
 and not the game. See `docs/findings/doom-balance.md`.

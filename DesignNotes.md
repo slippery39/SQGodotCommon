@@ -1101,14 +1101,14 @@ minimum for the floor to hold.
 
 **Watch for:** a jam judge playing windowed on a laptop and saying the cards are hard to read. The
 answer then is a **UI scale setting**, not smaller margins and not a smaller font — the margins have
-already been spent. See `DoomUI.md`, "Small windows".
+already been spent. See `KinUI.md`, "Small windows".
 
 ---
 
 ## One backdrop for the whole game, not one per act
 
-**Concern:** `PERSPECTIVE SHIFT` in `DoomJam.md` wants a backdrop that changes per apocalypse. One
-image ships; `DoomArt.Backdrop` hard-codes `background.png`.
+**Concern:** `PERSPECTIVE SHIFT` in `KinJam.md` wants a backdrop that changes per apocalypse. One
+image ships; `KinArt.Backdrop` hard-codes `background.png`.
 
 **Why it's fine now:** the one backdrop suits all three acts, and the acts are already distinguished
 by their schedule, their cards and their Opponents.

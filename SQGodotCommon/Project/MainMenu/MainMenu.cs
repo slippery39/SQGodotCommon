@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using DoomGame;
 using Godot;
+using KinGame;
 
 namespace Project;
 
@@ -15,7 +15,7 @@ namespace Project;
 /// **It reads DOOMJAM's own palette rather than inventing one.** Gold means "yours" everywhere else
 /// in the game — the Companion, your energy — so gold is what a highlighted option is. Red is
 /// reserved for the enemy and for life, so it carries the one line about the doom and nothing else.
-/// See DoomUI.md.
+/// See KinUI.md.
 /// </summary>
 public partial class MainMenu : Control
 {
@@ -35,10 +35,9 @@ public partial class MainMenu : Control
 	/// <summary>
 	/// **The game's name, and it is the only place the player sees one.**
 	///
-	/// The codebase keeps its `Doom*` prefixes — `DoomCore`, `DoomBoard`, `DoomJam.md` — because
-	/// renaming a solution is churn with no gameplay in it, and the jam's working title is not worth
-	/// a thousand-line diff. This constant and `project.godot`'s `config/name` are the two places
-	/// that face outward.
+	/// The codebase carries a `Kin*` prefix — `KinCore`, `KinBoard`, `Kin.md` — which is a codename
+	/// and deliberately NOT this title: the prefix should survive a re-theme, and `Doom*` did not.
+	/// This constant and `project.godot`'s `config/name` are the two places that face outward.
 	/// </summary>
 	private const string Title = "ENDLING";
 
@@ -64,11 +63,11 @@ public partial class MainMenu : Control
 	/// </summary>
 	private void BuildBackdrop()
 	{
-		var ground = new ColorRect { Color = DoomPalette.Navy };
+		var ground = new ColorRect { Color = KinPalette.Navy };
 		ground.SetAnchorsPreset(LayoutPreset.FullRect);
 		AddChild(ground);
 
-		if (DoomArt.Backdrop is { } texture)
+		if (KinArt.Backdrop is { } texture)
 		{
 			var art = new TextureRect
 			{
@@ -101,13 +100,13 @@ public partial class MainMenu : Control
 		// **The title, and nothing under it.** There were two lines of description here — the hook
 		// and a summary of the run's shape — and both were the kind of copy that explains a game to
 		// someone who has not started it yet. A menu is not where that argument gets won.
-		rows.AddChild(Centred(DoomPalette.Text(Title, 104, DoomPalette.Bone)));
+		rows.AddChild(Centred(KinPalette.Text(Title, 104, KinPalette.Bone)));
 
 		rows.AddChild(new Control { CustomMinimumSize = new Vector2(0, 64) });
 
 		foreach (var option in Options)
 		{
-			var label = DoomPalette.Text(option, 40, DoomPalette.Bone);
+			var label = KinPalette.Text(option, 40, KinPalette.Bone);
 
 			// **Each option takes mouse input, and the VBox above does not.** Hit-testing used to
 			// walk every label's rect on every mouse move; a Control that answers for itself is
@@ -200,10 +199,7 @@ public partial class MainMenu : Control
 			// Gold for the selection, and a marker either side of it. Colour alone is a poor cue at
 			// a glance and the board already uses gold for several things that are not this.
 			_labels[i]
-				.AddThemeColorOverride(
-					"font_color",
-					selected ? DoomPalette.Gold : DoomPalette.Bone
-				);
+				.AddThemeColorOverride("font_color", selected ? KinPalette.Gold : KinPalette.Bone);
 			_labels[i].Text = selected ? $"[  {Options[i]}  ]" : Options[i];
 		}
 	}
@@ -214,7 +210,7 @@ public partial class MainMenu : Control
 		{
 			case "DESCEND":
 				QueueFree();
-				GameManager.Instance.ChangeScene("res://DoomGame/doom_board.tscn");
+				GameManager.Instance.ChangeScene("res://KinGame/kin_board.tscn");
 				break;
 
 			case "QUIT":

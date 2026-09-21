@@ -7,7 +7,7 @@
     <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DoomCore\DoomCore.csproj" />
+    <ProjectReference Include="..\KinCore\KinCore.csproj" />
     <ProjectReference Include="..\MtgCore\MtgCore.csproj" />
     <ProjectReference Include="..\MtgSimulator\MtgSimulator.csproj" />
   </ItemGroup>

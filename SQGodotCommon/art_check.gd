@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Renders authored card art to PNG so it can be LOOKED AT — at 256, and at 40, which is the
-# lane-figure size DoomUI.md says a subject has to survive.
+# lane-figure size KinUI.md says a subject has to survive.
 #
 # **Kept, because you cannot tell what an SVG looks like by reading it.** A cleaver drawn with a
 # curved blade rendered as a frying pan and the markup said nothing. See the `draw-card-art` skill
@@ -11,7 +11,7 @@ func _initialize():
 	var out = OS.get_environment("ART_OUT")
 	var names = OS.get_environment("ART_NAMES").split(",")
 	for name in names:
-		var tex = load("res://DoomGame/Art/%s.svg" % name)
+		var tex = load("res://KinGame/Art/%s.svg" % name)
 		if tex == null:
 			print("MISSING ", name)
 			continue

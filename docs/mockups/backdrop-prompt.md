@@ -66,5 +66,5 @@ like one game.
    colour count in the tens of thousands.
 3. If the count is high but the image is otherwise right, it can be **palette-locked** to the six
    colours in Pillow rather than regenerated. Ask and I will write that — it is about 20 lines.
-4. Drop the result in `SQGodotCommon/DoomGame/Art/` and run
+4. Drop the result in `SQGodotCommon/KinGame/Art/` and run
    `godot-mono --path SQGodotCommon --headless --import`, or the game will not see it.

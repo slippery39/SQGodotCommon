@@ -55,10 +55,10 @@ debug={
 ]
 }
 
-[doom]
+[kin]
 
 ; How fast the board animates. 1 is authored speed, 2 is twice as fast, 0 turns animation off
-; entirely (skipped, not merely quick — see DoomAnimator). F4 cycles it while playing.
+; entirely (skipped, not merely quick — see KinAnimator). F4 cycles it while playing.
 animation_speed=1.0
 
 [rendering]

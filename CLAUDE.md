@@ -1,17 +1,30 @@
-# DOOMJAM
+# KIN
 
-**This repo's active project is DOOMJAM, a Godot Wild Jam entry. It is NOT the MTG game.**
+**This repo's active project is KIN. It is NOT the MTG game.** It began as DOOMJAM, a Godot Wild
+Jam entry; the jam is over and the game pivoted.
 
-**The game is called *ENDLING* to a player; DOOMJAM is the working title and the code prefix.** Only
-`MainMenu.Title` and `project.godot`'s `config/name` face outward — do not rename the solution.
+**`Kin` is the CODE PREFIX and a codename, deliberately not the player-facing title.** The title is
+still `ENDLING` in `MainMenu.Title` and `project.godot`'s `config/name`, and it is expected to
+change with the re-theme — the prefix is chosen to survive that. Those two constants are the only
+things that face outward.
 
-A solitaire roguelike deckbuilder: you kill an Opponent across five lanes while a doomsday scenario
-fires on a repeating clock, reshaping the board or permanently rewriting your deck. **Read
-`DoomJam.md` first** — it is the design doc and the source of truth.
+A solitaire roguelike deckbuilder: you kill an Opponent across five lanes, with one COMPANION on the
+board free every battle whose ability is what the deck is built around. **Read `KinJam.md` first** —
+it is the design doc and the source of truth.
+
+> **THE DOOM LAYER WAS DELETED (2026-09-21) and the top-down theme is being replaced.** Scenarios,
+> transforms, the clock, the per-theme doom schedule and ~1,300 lines with them. The new direction
+> is monster-collecting-adjacent and deliberately NOT dark; the grimy card names, enemies and 56
+> SVGs are all still to be re-themed.
+>
+> **The deleted dooms WERE the power curve, and nothing has replaced it yet.** Measured right after:
+> act completion 0.0% over 200 runs, against 20–34% before. That is expected, recorded in
+> `docs/findings/kin-balance.md`, and it is what the companion roster is meant to fix. **Do not
+> tune balance until a progression system exists.**
 
 The second goal is a measurement: **how hard is it to build a completely different card game on
 `ImmutableGameObjects`?** Anything we wish we could lift out of `MtgCore` is a finding — record it in
-`DoomJam.md` under "Engine findings" *before* reimplementing it.
+`KinJam.md` under "Engine findings" *before* reimplementing it.
 
 ## Solution Map
 
@@ -21,42 +34,39 @@ SQGodotCommon/
 │   ├── ImmutableGameObjects/        # THE ENGINE — GameState, GameAction, PipelineAction. Game-agnostic.
 │   ├── ImmutableGameObjects.Tests/
 │   └── ImmutableGameObjects.Benchmarks/
-├── DoomCore/                        # DOOMJAM rules engine — lanes, combat, the doom clock
-│   ├── Actions/                     # StartBattle/StartTurn/PlayCard/EndTurn/ResolveDoom
-│   ├── Ai/                          # DoomBot (plays a turn), RunSimulator (plays a run + records)
-│   ├── Cards/ Components/           # DoomCard; UnitComponent (Power/Toughness/Damage/Lane)
+├── KinCore/                         # KIN rules engine — lanes, combat, the run
+│   ├── Actions/                     # StartBattle/StartTurn/PlayCard/EndTurn/WithdrawUnits
+│   ├── Ai/                          # KinBot (plays a turn), RunSimulator (plays a run + records)
+│   ├── Cards/ Components/           # KinCard; UnitComponent (Power/Toughness/Damage/Lane)
 │   ├── Enemies/ Zones/              # Enemy + telegraphed Intent; Opponent + PendingSummon; Zone
-│   ├── Content/                     # ThemeLibrary (the acts + floor→doom SCHEDULE), Enemy/Scenario,
+│   ├── Content/                     # ThemeLibrary (the three acts and their bosses), EnemyLibrary,
+│   │                                #   StarterContent (cards + the COMPANION ROSTER),
 │   │                                #   KeywordLibrary (the glossary, as DATA — console and UI share it)
-│   ├── Run/                         # Run + RunCard (OUTSIDE GameState); ActMap; ShopOffer; DoomTransform (the
-│   │                                #   permanent-doom language: a read × a verb), DoomTransforms,
-│   │                                #   DoomBattleEffects (battle scope), FloorKind, DoomPreview
-│   ├── DoomFiring.cs                # what ONE firing read, in run ids. Capture is shared by the
-│   │                                #   real firing and the preview, so they cannot disagree
-│   ├── DoomScope.cs                 # Battle vs Permanent — a fixed property of each scenario
-│   └── DoomBattleFactory.cs         # one GameState per battle; DoomStateExtensions is the API
-├── DoomCore.Tests/                  # NUnit; inline card definitions only
-├── DoomConsole/                     # terminal front end — THE REMOTE SURFACE, needs no Godot
-│   ├── SimCommand.cs                #   `sim N` — balance tables out of DoomCore/Ai. PER-ACT first
-│   └── ContentCommand.cs            #   `content` — every act, doom, enemy and card, read from source
+│   ├── Run/                         # Run + RunCard (OUTSIDE GameState); Companion; ActMap;
+│   │                                #   ShopOffer; FloorKind
+│   └── KinBattleFactory.cs          # one GameState per battle; KinStateExtensions is the API
+├── KinCore.Tests/                  # NUnit; inline card definitions only
+├── KinConsole/                     # terminal front end — THE REMOTE SURFACE, needs no Godot
+│   ├── SimCommand.cs                #   `sim N` — balance tables out of KinCore/Ai. PER-ACT first
+│   └── ContentCommand.cs            #   `content` — every act, enemy and card, read from source
 └── SQGodotCommon/                   # Godot project
     ├── Common/                      # reusable utilities — Cards/2D is game-agnostic, use it
     ├── Project/                     # GameManager, main menu
-    └── DoomGame/                    # DOOMJAM front end — reads DoomCore, decides nothing
-        ├── DoomBoard.cs             #   the battle screen; layout contract lives in DoomUI.md
-        ├── DoomLaneCell.cs          #   one lane slot: art on a plinth + attack/life marks
-        ├── DoomHandView.cs          #   the fan, on Common/Cards/2D; drag -> PlayCardAction
-        ├── DoomCardFace.cs          #   THE CARD'S LOOK, in one place. Hand, preview and rewards
+    └── KinGame/                    # DOOMJAM front end — reads KinCore, decides nothing
+        ├── KinBoard.cs             #   the battle screen; layout contract lives in KinUI.md
+        ├── KinLaneCell.cs          #   one lane slot: art on a plinth + attack/life marks
+        ├── KinHandView.cs          #   the fan, on Common/Cards/2D; drag -> PlayCardAction
+        ├── KinCardFace.cs          #   THE CARD'S LOOK, in one place. Hand, preview and rewards
         │                            #   all draw through it — two copies would drift in a day
-        ├── DoomCardPreview.cs       #   doom_card_preview.tscn — a card rack with no battle behind
+        ├── KinCardPreview.cs       #   kin_card_preview.tscn — a card rack with no battle behind
         │                            #   it, loading the cards that BREAK the layout
-        ├── DoomCardInspector.cs     #   the hover panel: full rules text, then keywords
-        ├── DoomAnimator.cs          #   float/pop/flash/shake on one Speed dial; F4 cycles it
-        ├── DoomClockDial.cs         #   the doom clock as a ring of segments
-        ├── DoomIntermission.cs      #   between floors: what the doom took, and the card rewards
-        ├── DoomShop.cs              #   a shop floor: buy, patch up, and REMOVE a card
-        ├── DoomArt.cs               #   art by NAME convention from Art/, else a generated figure
-        ├── DoomPalette.cs           #   the five colours; gold and red are reserved
+        ├── KinCardInspector.cs     #   the hover panel: full rules text, then keywords
+        ├── KinAnimator.cs          #   float/pop/flash/shake on one Speed dial; F4 cycles it
+        ├── KinCompanionSelect.cs    #   RUN START — pick the companion. The only build declaration
+        ├── KinIntermission.cs       #   between floors: the deck diff, and the card rewards
+        ├── KinShop.cs              #   a shop floor: buy, patch up, and REMOVE a card
+        ├── KinArt.cs               #   art by NAME convention from Art/, else a generated figure
+        ├── KinPalette.cs           #   the five colours; gold and red are reserved
         └── Art/                     #   52 authored SVGs + background.png + icons/ (CC BY — see
                                      #   CREDITS.md). New files need `--headless --import` to exist
 ```
@@ -72,18 +82,19 @@ nothing is orphaned — you should not need any of it.
 
 | Kind | Location | Loads |
 |---|---|---|
-| Design doc — read first | `DoomJam.md` | read it |
-| **The next thing to build — v3** | `DoomV3Plan.md` | read it before starting any v3 phase |
-| Where the last session got to | `HANDOFF-DoomCardsAndFlood.md` | read it when picking the work back up |
-| Earlier handoff, superseded | `HANDOFF-DoomAndroidAndText.md` | read only for its scars (§3) |
-| Earlier handoff, superseded | `HANDOFF-DoomCombatV3.md` | read only for its scars (§4) |
-| Earlier handoff, superseded | `HANDOFF-DoomVisualPass.md` | read only for its scars (§4) |
+| Design doc — read first | `KinJam.md` | read it |
+| **The next thing to build — v3** | `KinV3Plan.md` | read it before starting any v3 phase |
+| Where the last session got to | `HANDOFF-KinPivot.md` | read it when picking the work back up |
+| Earlier handoff, superseded | `HANDOFF-KinCardsAndFlood.md` | read only for its scars (§4) |
+| Earlier handoff, superseded | `HANDOFF-KinAndroidAndText.md` | read only for its scars (§3) |
+| Earlier handoff, superseded | `HANDOFF-KinCombatV3.md` | read only for its scars (§4) |
+| Earlier handoff, superseded | `HANDOFF-KinVisualPass.md` | read only for its scars (§4) |
 | Credits — **must ship** | `CREDITS.md` | before release, and when adding any third-party asset |
-| Earlier handoff, superseded | `HANDOFF-DoomPacingAndRewards.md` | read only for its scars (§4) |
-| Earlier handoff, superseded | `HANDOFF-DoomBalanceAndThemes.md` | read only for its scars (§4) |
-| Earlier handoff, superseded | `HANDOFF-DoomFrontEndAndEffects.md` | read only for its scars (§4) |
-| Earlier still, superseded | `HANDOFF-DoomBattleLoop.md` | read only for its scars (§4) |
-| UI design — layout contract AND the visual language | `DoomUI.md` | read it before touching `SQGodotCommon/DoomGame/` |
+| Earlier handoff, superseded | `HANDOFF-KinPacingAndRewards.md` | read only for its scars (§4) |
+| Earlier handoff, superseded | `HANDOFF-KinBalanceAndThemes.md` | read only for its scars (§4) |
+| Earlier handoff, superseded | `HANDOFF-KinFrontEndAndEffects.md` | read only for its scars (§4) |
+| Earlier still, superseded | `HANDOFF-KinBattleLoop.md` | read only for its scars (§4) |
+| UI design — layout contract AND the visual language | `KinUI.md` | read it before touching `SQGodotCommon/KinGame/` |
 | The mockup, and the backdrop prompt | `docs/mockups/` | when changing layout or generating art |
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
 | Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |
@@ -151,7 +162,7 @@ added or removed.
 | What you are writing | Goes in |
 |---|---|
 | A rule that applies to every task | this file |
-| Game design — mechanics, scenarios, scope | `DoomJam.md` |
+| Game design — mechanics, scenarios, scope | `KinJam.md` |
 | "here is where I left off, and what will bite you" | `HANDOFF-<Topic>.md` at the root |
 | A rule about one subsystem | `.claude/rules/<subsystem>.md` |
 | Numbers a run produced | `docs/findings/<subsystem>.md` — never a `CLAUDE.md` |

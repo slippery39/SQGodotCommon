@@ -23,7 +23,7 @@ Built for [Godot Wild Jam](https://godotwildjam.com/).
 ## Art
 
 **Card, creature and Opponent art is original to this project** — flat vector SVG drawn against a
-fixed six-colour palette. See `DoomUI.md` under "Art" for the rules every asset follows.
+fixed six-colour palette. See `KinUI.md` under "Art" for the rules every asset follows.
 
 ### Icons — [game-icons.net](https://game-icons.net/), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)
 

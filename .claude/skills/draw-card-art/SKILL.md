@@ -1,11 +1,11 @@
 ---
 name: draw-card-art
-description: Draw the art for a DOOMJAM/ENDLING card, enemy or opponent as a flat SVG, import it, and LOOK at it before believing it. Use when a new card has no art, when art "falls back to the generated figure", when a subject reads wrong or unrecognisably, or when adding any file to SQGodotCommon/DoomGame/Art/. Covers the filename rule that silently resolves a card to the wrong drawing, and the render-and-look loop that is the only way to find out what a shape actually looks like.
+description: Draw the art for a DOOMJAM/ENDLING card, enemy or opponent as a flat SVG, import it, and LOOK at it before believing it. Use when a new card has no art, when art "falls back to the generated figure", when a subject reads wrong or unrecognisably, or when adding any file to SQGodotCommon/KinGame/Art/. Covers the filename rule that silently resolves a card to the wrong drawing, and the render-and-look loop that is the only way to find out what a shape actually looks like.
 ---
 
 # Drawing card art
 
-Art is **authored flat SVG**, 256x256, on the five-colour palette. The style rules are `DoomUI.md`
+Art is **authored flat SVG**, 256x256, on the five-colour palette. The style rules are `KinUI.md`
 under "Art" — read them; this skill is the order of operations and the checks, not a second copy.
 
 **The central fact: you cannot tell what an SVG looks like by reading it.** A cleaver drawn with a
@@ -14,7 +14,7 @@ rendered and looked at, twice — at 256 and at 40.
 
 ## 1. Get the filename right, or the card silently has no art
 
-`DoomArt.FileName` lowercases, replaces spaces with `_`, strips apostrophes, **and cuts the name at
+`KinArt.FileName` lowercases, replaces spaces with `_`, strips apostrophes, **and cuts the name at
 the first comma, em dash or HYPHEN**:
 
 ```csharp
@@ -75,9 +75,9 @@ Fix, re-import, re-render. Two rounds is normal.
 ## 5. Credit and cleanliness
 
 - Original work needs no credit row. **An icon taken from game-icons.net needs a row in the ROOT
-  `CREDITS.md`** — the CC BY licence is per-icon. `DoomGame/Art/CREDITS.md` is only a pointer.
+  `CREDITS.md`** — the CC BY licence is per-icon. `KinGame/Art/CREDITS.md` is only a pointer.
 - Commit the `.svg` AND its generated `.svg.import`, the way every existing piece is committed.
-- Delete nothing else from `Art/`; `DoomArt` resolves by name and a rename is a silent downgrade to
+- Delete nothing else from `Art/`; `KinArt` resolves by name and a rename is a silent downgrade to
   the generated figure.
 
 ## Done when
