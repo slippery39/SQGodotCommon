@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Twice Buried, 4/4. Dies: return it to your hand — so the card is the arm coming back up. -->
+  <!-- the first grave, behind and slate: this is the "twice" -->
+  <path d="M58 200 L58 122 q26 -30 52 0 L110 200 z" fill="#2B4054"/>
+  <rect x="70" y="146" width="28" height="9" rx="4" fill="#16212E"/>
+  <!-- the second stone, black, nearer -->
+  <path d="M120 214 L120 104 q34 -38 68 0 L188 214 z" fill="#0C131B"/>
+  <rect x="136" y="134" width="36" height="10" rx="5" fill="#2B4054"/>
+  <rect x="136" y="158" width="36" height="10" rx="5" fill="#2B4054"/>
+  <!-- the ground, and what is coming back through it -->
+  <rect x="4" y="212" width="248" height="14" rx="7" fill="#0C131B"/>
+  <path d="M28 244 L28 176 q14 -12 26 0 L54 244 z" fill="#2B4054"/>
+  <path d="M28 182 L16 156" stroke="#2B4054" stroke-width="11" stroke-linecap="round"/>
+  <path d="M42 176 L42 148" stroke="#2B4054" stroke-width="11" stroke-linecap="round"/>
+  <path d="M54 182 L66 158" stroke="#2B4054" stroke-width="11" stroke-linecap="round"/>
+  <path d="M196 244 q28 -30 56 0 z" fill="#0C131B"/>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Pyre Keeper, 6/8. Devour — it carries the fire to whatever is already standing there. -->
+  <!-- the brand, held high and forward: the read at 40px is the flame above the shoulder -->
+  <path d="M150 120 L206 62" stroke="#0C131B" stroke-width="15" stroke-linecap="round"/>
+  <path d="M212 18 q34 46 22 78 q-8 22 -30 28 q-22 -6 -30 -28 q-12 -32 38 -78 z" fill="#8A4038"/>
+  <path d="M212 50 q18 28 12 48 q-4 14 -12 18 q-8 -4 -12 -18 q-6 -20 12 -48 z" fill="#C73E3A"/>
+  <path d="M212 82 q8 14 6 24 q-2 8 -6 10 q-4 -2 -6 -10 q-2 -10 6 -24 z" fill="#E3B23C"/>
+  <!-- the keeper: robe, hood, one arm up to the brand -->
+  <path d="M62 244 L76 136 q34 -16 68 0 L158 244 z" fill="#0C131B"/>
+  <path d="M76 142 q-8 -52 34 -52 q42 0 34 52 q-34 14 -68 0 z" fill="#0C131B"/>
+  <circle cx="96" cy="100" r="6" fill="#C73E3A"/>
+  <circle cx="124" cy="100" r="6" fill="#C73E3A"/>
+  <!-- what it has already fed to the fire, at its feet -->
+  <g fill="#2B4054">
+    <rect x="24" y="222" width="70" height="12" rx="6"/>
+    <rect x="34" y="204" width="52" height="12" rx="6" transform="rotate(-8 60 210)"/>
+  </g>
+  <rect x="4" y="238" width="248" height="12" rx="6" fill="#0C131B"/>
+</svg>

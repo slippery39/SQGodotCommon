@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Gallows Feast — a Rite: sacrifice the unit in this lane, draw 2, gain 10 life. -->
+  <!-- the gallows: post and beam. The noose loop is what reads at 40px, so nothing crosses it. -->
+  <rect x="34" y="26" width="18" height="212" rx="6" fill="#0C131B"/>
+  <rect x="34" y="26" width="148" height="18" rx="8" fill="#0C131B"/>
+  <path d="M52 44 L76 74" stroke="#0C131B" stroke-width="12" stroke-linecap="round"/>
+  <!-- the rope, and the empty loop at the end of it -->
+  <path d="M170 44 L170 96" stroke="#2B4054" stroke-width="11" stroke-linecap="round"/>
+  <circle cx="170" cy="126" r="30" fill="none" stroke="#2B4054" stroke-width="11"/>
+  <rect x="158" y="92" width="24" height="16" rx="5" fill="#2B4054"/>
+  <!-- what is taken from it: the meal, in gold, because this one pays YOU -->
+  <path d="M120 214 q50 -26 100 0 z" fill="#0C131B"/>
+  <rect x="112" y="212" width="116" height="14" rx="7" fill="#0C131B"/>
+  <path d="M152 196 q8 -16 0 -28" stroke="#E3B23C" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <path d="M188 196 q8 -16 0 -28" stroke="#E3B23C" stroke-width="7" stroke-linecap="round" fill="none"/>
+  <rect x="4" y="238" width="248" height="12" rx="6" fill="#0C131B"/>
+</svg>

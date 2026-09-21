@@ -47,6 +47,18 @@ godot-mono --path SQGodotCommon --headless --import
 Run it after adding or renaming anything in `SQGodotCommon/DoomGame/Art/`. It writes the `.import`
 files beside each asset; if those are missing, that is the symptom.
 
+**Look at art before believing it.** `art_check.gd` renders subjects to PNG on the board's navy, at
+256 and at the 40px lane-figure size — the only way to find out that a curved blade reads as a
+frying pan:
+
+```
+ART_OUT=/tmp/art ART_NAMES=pyre_keeper,gravedigger   godot-mono --headless --path SQGodotCommon --script art_check.gd
+```
+
+Import first, every time: the script loads the IMPORTED resource, so an edited SVG that has not been
+re-imported renders the previous version and looks exactly like an edit that did nothing. Full
+procedure in the `draw-card-art` skill.
+
 **Pin the window to one monitor** so a capture cannot land on top of other work — and never drive it
 with synthetic clicks (see `HANDOFF-DoomPacingAndRewards.md` §4):
 
