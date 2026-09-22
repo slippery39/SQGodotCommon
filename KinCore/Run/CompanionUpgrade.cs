@@ -10,11 +10,14 @@ namespace KinCore;
 /// progression system" — and the measurement after they went was 0.0% act completion. This is the
 /// separate progression system, arriving late and on purpose.
 ///
-/// **IT IS A CHOICE AT A SCREEN, NEVER A TRICKLE, and that is not a style preference.** Companion
-/// MARKS did exactly this job by stamping an automatic +N/+N for every apocalypse survived, and
-/// they were cut on the playtest note *"I never liked this mechanic"* — a stat trickle nobody chose,
-/// attached to a name that grew until it left the screen. See <see cref="Companion"/>. Anything
-/// added here must be picked over two rejected alternatives, or it is the same mistake again.
+/// **It is a choice at a screen rather than a trickle, and here is the evidence for that — not a
+/// rule.** Companion MARKS did this job automatically, stamping +N/+N for every apocalypse
+/// survived, and were cut on the playtest note *"I never liked this mechanic"*: a stat trickle
+/// nobody chose. See <see cref="Companion"/>.
+///
+/// That is ONE playtest note about ONE implementation, and the game is still exploratory — see the
+/// root `CLAUDE.md`. If a future pass wants growth that is not a pick, the thing to weigh is why
+/// marks felt bad, not that a doc once said no.
 ///
 /// **Pure data, no delegates** — see the serialization rule in CLAUDE.md. An upgrade is stat deltas
 /// plus effects to append, and <see cref="Companion.With"/> is the whole of applying one.

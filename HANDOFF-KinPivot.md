@@ -9,6 +9,34 @@ real phone. **Seven commits on `kin-pivot`, nothing pushed, working tree clean.*
 
 ---
 
+## 0. THE GAME IS EXPLORATORY — read this before quoting any doc at anyone
+
+**No mechanic is settled, and how the companion should work is the most open question in the
+project.** Until Shayne says otherwise, every design rule in this repo — including everything in
+this file — is a note from a past session, not a constraint on the next idea.
+
+**This was raised as direct feedback at the end of this session**, and it was earned. Ideas were
+being answered with quotations: *"several companions would delete lane scarcity, because `KinJam.md`
+says lane choice is the only decision."* That sentence treats a past session's design note as
+physics. The honest version is the COST — five lanes minus the companions' own leaves fewer to
+contest, bringing three axes at once flattens the reward screen, the upgrade curve needs
+re-deriving — and then building it if that is the call.
+
+Worth remembering how impermanent these notes are: **the doom was "the core hook"** and is deleted.
+**Marks were "the record of your run"** and are cut. Both were written as firmly as anything still
+standing here.
+
+This is now in the root `CLAUDE.md` so it loads every session. Two places where this handoff's own
+author over-stated a case have been softened: `CompanionUpgrade`'s "or it is the same mistake again"
+and `KinSettingSketches`' "not a tuning choice". Both now record the evidence and leave the door
+open.
+
+The card pass already had this rule and it was buried in a superseded handoff: *we are exploring
+what is fun, not enforcing what is written. Breaking a rule on purpose is a design decision, not an
+error.*
+
+---
+
 ## 1. What this session did
 
 **The jam is over and the game pivoted top-down.** The doom theme was judged the weakest part of the
@@ -190,6 +218,9 @@ is blocked on 7b, not on tooling. About 35 minutes of GPU for 168 candidates at 
   to sit on top of.
 - **Companions unlocked between runs** — where the collecting fantasy lives given one companion.
   Nothing exists.
+- **Everything about the companion is still open** (see §0): several at once, swapping mid-run,
+  collecting a stable, a party that replaces ordinary units, persistence rules. One companion is
+  what is BUILT because it was cheapest to test, not because it was decided.
 - **The top band is half-empty** where the clock dial sat, and floor/act prints twice.
 - **Lane polish**: the bottom stat scrim clips a standing subject's feet; the floating damage number
   sits half outside the smaller cell; enemy silhouettes are dark on a dark ground.

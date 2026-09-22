@@ -106,14 +106,28 @@ nothing is orphaned — you should not need any of it.
 
 Each project's `CLAUDE.md` is a map to its own rules — start there, not here.
 
-**MTG-only docs, kept for the archive:** `docs/mtg/colours.md`, `docs/mtg/card-sets.md`,
-`docs/mtg/ai-tooling.md`, `docs/mtg/measured-tables.md`, `MtgCore/CLAUDE.md`,
-`MtgSimulator/CLAUDE.md`, and every `.claude/rules/mtg-*.md` and `sim-*.md`. All of those rule files
-are path-gated to MTG directories, so none of them load on this project.
+**MTG-only docs are inventoried in `docs/mtg/README.md`.** All are path-gated to MTG directories,
+so none load here.
 
 ## Platform
 
 C# on .NET. Windows.
+
+## THE GAME IS IN AN EXPLORATORY PHASE — this outranks every design note below
+
+**No mechanic is settled. Until Shayne says otherwise, every design rule here is a NOTE FROM A PAST
+SESSION, not a constraint on the next idea.** The doom was "the core hook" and is deleted; marks
+were "the record of your run" and are cut. Both were written as firmly as anything still standing.
+
+**Do not answer a design idea with a quotation.** Say what it would COST — which code it touches,
+which measurement it invalidates, what it trades away — then help build it if that is the call.
+"`KinJam.md` says lane choice is the only decision" is not an argument; "three companions leaves two
+open lanes, and here is what that does to the reward screen" is. A past playtest note is evidence,
+never a veto. **How the companion should work is the most open question in the project.**
+
+The card pass's own standing rule, promoted here from a superseded handoff: *we are exploring what
+is fun, not enforcing what is written. Breaking a rule on purpose is a design decision, not an
+error.*
 
 ## General Principles
 
@@ -178,19 +192,6 @@ down, don't delete it. When a rule's evidence moves to `docs/findings/`, leave t
 one-line pointer behind: the rule without its evidence gets re-litigated, and the evidence without
 its rule never gets read.
 
-**A rule file fails SILENTLY — it simply never loads, with no error anywhere.** Two ways, both
-measured on Claude Code 2.1.116 and both now caught by the same hook:
-
-- **CRLF in the YAML frontmatter.** The `paths:` block does not parse and the rule is inert. `.gitattributes` pins these files to LF; keep it that way.
-- **`**` in a glob matches nothing.** `MtgCore/Sets/**/*.cs` matched zero files while `MtgCore/Sets/*/*.cs` matched 34. Write the levels out explicitly.
-
-Verify a new or edited rule actually loads rather than assuming — same instinct as testing that a
-card's effect fires:
-
-```
-claude -p "Read <a file the rule claims>. Then WITHOUT opening any other file: is the text of
-.claude/rules/<rule>.md already in your context? Reply exactly LOADED or NOT LOADED." --allowedTools Read
-```
-
-Then repeat with a file the rule should NOT match — a rule that answers LOADED to everything has
-lost its `paths:` and is costing context in every session.
+**A rule file fails SILENTLY when its frontmatter or globs are wrong** — it simply never loads,
+with no error anywhere. Both known causes, and the way to VERIFY a rule loads rather than assume it,
+are in `docs/authoring-rules.md`. Read it before adding or editing anything in `.claude/rules/`.

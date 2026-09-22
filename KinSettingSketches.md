@@ -2,11 +2,16 @@
 
 **Status: PROPOSAL, PARKED. The frame is deliberately NOT chosen yet.**
 
+> **THE WHOLE GAME IS EXPLORATORY, the companion most of all.** Nothing below or in any other design
+> doc is settled. See the root `CLAUDE.md` — a past note is evidence, never a veto.
+
 > **Decided 2026-09-22, and all three cost nothing because they are what the code already does:**
 >
-> - **One companion.** Not a tuning choice — several would delete lane scarcity (five lanes, and
->   lane choice is the only decision the game has), collapse the build-around premise (bring three
->   axes and no reward is more correct than another), and invalidate the upgrade curve.
+> - **One companion, FOR NOW, because it is the cheapest thing to test.** What several would cost,
+>   so the trade is on the table rather than closed: five lanes minus the companions' own leaves
+>   fewer to contest; bringing three axes at once means no reward is more correct than another,
+>   which was the build-around premise; and the upgrade curve would need re-deriving. All three are
+>   costs to pay or design around, not reasons it cannot be done.
 > - **Decks accumulate**, and rewards should lean toward the current region rather than resetting.
 > - **The Opponent stays as it is** — a thing that summons reinforcements and telegraphs. Nobody is
 >   sold on what it IS fictionally; that is an open question to answer by playing, not by writing.
