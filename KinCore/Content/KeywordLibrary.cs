@@ -25,7 +25,7 @@ public sealed record Keyword
 /// The terms this game expects a player to know, and what each one means.
 ///
 /// **In KinCore, not in the front end.** The console and the board must explain a word the same
-/// way; two glossaries is how a game ends up telling a player two different things about Irradiated.
+/// way; two glossaries is how a game ends up telling a player two different things about a rule.
 /// This is also why it is not simply a dictionary in `KinBoard`.
 ///
 /// **Data only — no delegates, ever.** The serialization rule in the root `CLAUDE.md` applies: these
@@ -40,12 +40,6 @@ public static class KeywordLibrary
 {
 	public static readonly ImmutableArray<Keyword> All =
 	[
-		new Keyword
-		{
-			Name = "Irradiated",
-			Text = "Drawing this card costs 1 life, for the rest of the run.",
-			Aliases = ["irradiated"],
-		},
 		new Keyword
 		{
 			Name = "Companion",

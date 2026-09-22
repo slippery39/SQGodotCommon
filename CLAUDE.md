@@ -101,7 +101,7 @@ nothing is orphaned — you should not need any of it.
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
 | Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |
 | Balance, as measured | `docs/findings/doom-balance.md` | read before changing life, floors or rewards |
-| Commands | `Commands.md` | read it |
+| Commands — **run scenes via `Run-Godot.ps1`** | `Commands.md` | read it |
 | Deferred decisions | `DesignNotes.md` | read it |
 
 Each project's `CLAUDE.md` is a map to its own rules — start there, not here.

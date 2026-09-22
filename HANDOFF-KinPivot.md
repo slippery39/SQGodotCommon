@@ -1,257 +1,209 @@
 # Handoff — the doom comes out, the prefix becomes Kin, and the companion becomes the point
 
 **Read this, then `KinJam.md`'s header, then `docs/findings/kin-balance.md`'s header.**
-`HANDOFF-KinCardsAndFlood.md` is the previous session and is superseded — read only its §4 scars,
-which all still hold.
+`HANDOFF-KinCardsAndFlood.md` is the previous session and is superseded — read only its §4 scars.
 
-State at handoff: **122 tests green in 14s** (was 159 in 3m52s), the solution builds, `KinConsole`
-builds and runs, the Godot project imports and plays. **Nothing committed — the whole pivot is in
-the working tree**, 243 deletions, 18 modifications, 18 new files.
-
----
-
-## 1. The headline
-
-**The jam is over and the game pivoted top-down.** The doom theme was judged the weakest part and
-the companion the strongest, so the doom layer is gone and the companion is the spine. The new
-register is monster-collecting-adjacent and deliberately not dark — but **no fiction has been
-chosen yet**, and the 56 grimy SVGs, card names and enemy names are all still to be re-themed.
-
-**The `Doom*` prefix is now `Kin*`**, chosen as a codename that survives the re-theme rather than as
-the game's title. `ENDLING` is still the player-facing name in `MainMenu.Title` and
-`project.godot`, and is also expected to change.
-
-**A companion roster and a run-start select screen exist.** Five companions, five axes, all five
-verified to actually fire.
-
-**The game is currently unbalanced to 0% act completion, and that is measured, expected and
-recorded.** See §3 — it is the single most important thing in this file.
+State at handoff: **131 tests green in ~37s** (was 159 in 3m52s before the pivot). Solution builds,
+`KinConsole` runs, the Godot project imports and plays, and an Android APK was built and played on a
+real phone. **Seven commits on `kin-pivot`, nothing pushed, working tree clean.**
 
 ---
 
-## 2. What changed
+## 1. What this session did
 
-### Deleted (~1,300 lines, net deletion)
+**The jam is over and the game pivoted top-down.** The doom theme was judged the weakest part of the
+design and the companion the strongest, so the doom layer is gone and the companion is the spine.
 
-`KinScenario`, `ScenarioLibrary` (14 scenarios), `KinTransform`, `KinTransforms`,
-`KinBattleEffects`, `KinPreview`, `KinFiring`, `KinScope`, `ResolveKinAction`, `KinClockDial`, and
-five test files. Stripped rather than deleted: the countdown and firing record off `KinBattle`, the
-doom branch in `Run.AfterBattle`, `EffectTrigger.OnDoomFires`, `CountOf.DoomsFired`, the `Doom`
-keyword, `Bands`/`FinalDoom` off `ThemeDefinition`, and the clock and scenario banner off
-`KinBoard`.
+1. **Deleted the doom layer** — ~1,300 lines, net deletion.
+2. **Renamed `Doom*` to `Kin*`** across projects, namespaces, scenes, docs and settings.
+3. **Added a companion roster and a run-start select screen** — five companions, five axes.
+4. **Made lane slots square** so generated art fills them, which deletes the transparency problem.
+5. **Rebuilt the power curve as companion upgrades** — 0.0% to 23.0% act completion, measured.
+6. **Installed local image generation** and proved the pipeline end to end.
+7. **Fixed two bugs found by playing**, one of them latent since before the pivot.
 
-**`ThemeLibrary` was KEPT, not deleted.** Acts still need names and bosses; only the doom schedule
-went. `DiedRunCardIds` and `SummonedRunCardIds` went too — written by two actions, read by nothing
-but the transforms.
+---
 
-### Kept deliberately
+## 2. What changed, in detail
 
-**`TakeCardsAction` and `ZoneType.Taken` have NO caller in content.** They are the "something takes
-your cards for N turns" primitive, which is the shape a boss ability wants later — you named that
-use case directly. `TakenCardTests` was rewired to drive the action **directly** rather than through
-Flood, so it cannot rot silently. Deleting a tested primitive to re-add it in a month is the wrong
-kind of lazy; leaving it untested would have been worse.
+### Deleted
 
-### Rehomed rather than deleted
+`KinScenario`, `ScenarioLibrary` (14 scenarios), `KinTransform(s)`, `KinBattleEffects`, `KinPreview`,
+`KinFiring`, `KinScope`, `ResolveKinAction`, `KinClockDial`, five test files, and the `Irradiated`
+keyword — which survived the first sweep and was still telling the player *"drawing this card costs
+1 life"* about a rule that no longer exists.
 
-Six `OnDoomFires` effects became `OnTurnEnd`: enemies Tollman and Doomsayer, bosses The Last Warden
-and The Last Morning, and Opponent traits Cruel and Vindictive. **Numbers were divided down** — the
-doom fired roughly every three turns and these now fire every turn. Four cards (Salvage Rig, Drone
-Swarm, Reactor Crew, Long Watcher) moved to `OnPlay`; the two that scaled on `DoomsFired` now read
-`CountOf.YourUnits` and carry a `ponytail:` comment saying so — **those are stand-in reads, not
-designs**, and want a real one in the card pass.
+Stripped rather than deleted: the countdown and firing record off `KinBattle`, the doom branch in
+`Run.AfterBattle`, `EffectTrigger.OnDoomFires`, `CountOf.DoomsFired`, `Bands`/`FinalDoom` off
+`ThemeDefinition`, and the clock and scenario banner off `KinBoard`.
+
+**`ThemeLibrary` was KEPT** — acts still need names and bosses; only the schedule went.
+
+### Kept deliberately, with no caller
+
+**`TakeCardsAction` and `ZoneType.Taken`.** The "something takes your cards for N turns" primitive,
+which is the shape a boss ability wants later. `TakenCardTests` drives the action **directly** rather
+than through the deleted Flood, so it cannot rot silently.
 
 ### Added
 
-- **Square lane slots, art edge to edge** (`KinLaneCell`, 296x156 -> 175x175). Chosen over card
-  ratio, which measured 493px over the canvas. **This deletes the transparency requirement**:
-  generated art is opaque 1024x1024 and a square slot takes it with no crop and no matting. Two
-  framing branches — opaque drawings cover, transparent fallback silhouettes stay centred on a
-  ground. See `KinUI.md`.
-- **`KinArt.Drawing()` tries `.png` before `.svg`** — it hardcoded `.svg`, so no generated art could
-  load at all.
-- **`StarterContent.Roster`** — five companions: Ash (attrition), Bramble (survival), Tally
-  (volume), Pike (the face), Moss (spatial).
-- **`KinCompanionSelect`** — the run-start screen. `KinBoard` had predicted this exact screen in a
-  comment; it reads `StarterContent.Roster` rather than holding a list of its own.
-- **`tools/gen_art.py`** — drives a local ComfyUI to generate card art. See §5.
+- **`StarterContent.Roster`** — Ash (attrition), Bramble (survival), Tally (volume), Pike (the
+  face), Moss (spatial). Each has a test proving it actually fires.
+- **`KinCompanionSelect`** — the run-start screen `KinBoard` had predicted in a comment.
+- **`CompanionUpgrade` + `UpgradePool`** — the power curve. See §3.
+- **Square 175x175 lane slots**, art edge to edge. Card ratio was tried first and measured **493px
+  over** the 1080 canvas, because there are two lane rows.
+- **`KinCardTap`** — one tap takes a card, on a phone as well as a mouse.
+- **`tools/gen_art.py`** and the **`generate-card-art` skill**.
+- **`Run-Godot.ps1`** — runs a scene on the second monitor, with `godot-mono`, creating the capture
+  directory.
 
 ---
 
-## 3. THE POWER CURVE — rebuilt as companion upgrades, and measured
+## 3. The power curve — rebuilt, and the dial is non-linear
 
-**FIXED. Act completion 0.0% -> 23.0% against a 25% target.** Three upgrades offered every second
-cleared floor, take one; `StarterContent.UpgradePool` holds seven. Per-act clear rates 68.5% /
-60.6% / 55.4%, which is smooth descending attrition and a better shape than the game had before
-the pivot.
+`KinJam.md` said it and it was true: *"the apocalypses ARE the power curve — there is no separate
+progression system."* Deleting them cashed that in, and companion upgrades replace it.
 
-**`FloorsPerUpgrade` is the dial and it is violently non-linear** — every floor measured 82.5%,
-every second 23.0%, every third 1.5%. Measure it, never interpolate it.
-
-**`OffersUpgradeOn` is asked in ONE place** so the front end and the simulator cannot drift; gating
-it in `RunSimulator` alone would have measured a curve no player receives.
-
-**The trap in `Companion.With`, and it is silent:** `EchoesAbility` copies EVERY effect, not the
-first. Ash's ability is a symmetric pair — a buff at turn start and the same buff negated at turn
-end — so copying only the first would double the buff, leave the unwind single, and hand Ash
-permanent growth with nothing reporting an error. `EchoDoublesAnAbilityWithoutBreakingItsUnwind`
-asserts the NET after a full turn; a test that counted effects would pass on the broken version.
-
-### The original hole, kept for the reasoning
-
-`KinJam.md` said it outright and it was true: *"the apocalypses ARE the power curve — there is no
-separate progression system, by design."* Deleting them cashed that in.
-
-| state | act completion | mean floor |
+| `FloorsPerUpgrade` | upgrades a run | act completion |
 |---|---|---|
-| before (run 20) | 20.7–34.3% by act | — |
-| after, unchanged | **0.0%** | 12.72 |
-| after, `StartingLife` 120 → 180 | **0.0%** | 14.57 |
-| after, the six rehomed effects neutralised | **0.0%** | 14.84 |
+| every floor (1) | 24 | **82.5%** |
+| **every second floor (2)** | 12 | **23.0%** — chosen, target 25% |
+| every third floor (3) | 8 | **1.5%** |
 
-**Both controls were run rather than reasoned about, and both matter:**
+**Per-act clear rates at the chosen setting: 68.5% / 60.6% / 55.4%.** Smooth descending attrition,
+no act unplayable and none trivial — a better shape than the pre-pivot 20.7 / 34.3 / 29.0, which was
+not even monotonic. Reported per act because the single 23.0% would hide exactly the failure this
+repo's own rule was written about.
 
-1. **Life is not the lever here.** This repo's own rule — `mean floor = life budget / life lost per
-   battle` — still holds, but the denominator moved *with* the numerator: life lost per battle went
-   18.4 → 28.1 as the budget rose, because the bot spends slack on tempo. `StartingLife` is back at
-   120; do not reach for it first.
-2. **The hole is structural.** Neutralising every effect rehomed off the doom trigger still measured
-   0.0%, so the rehoming is a ~2-floor contributor and not the cause. The deck no longer gains power
-   while `HealthScaleFor` and `AttackScaleFor` keep climbing per act.
+**Three-to-one on frequency is 82.5% to 1.5%.** Upgrades compound, and Echo compounds hardest
+because its value is whatever you already took. **Measure this dial, never interpolate it.**
 
-**Do not tune balance until a progression system exists.** Numbers measured before that lands get
-thrown away. The companion is the intended answer — and per `Companion.cs`, companion growth must be
-a **decision at a screen**, never an automatic trickle: marks were already cut once on the playtest
-note *"I never liked this mechanic"* for exactly that reason.
-
-A human plays far better than `bot-1/v3`, and the bot was tuned against the old game — so 0% is a
-trend, not a literal claim that the game is unwinnable. The trend is real.
+**`OffersUpgradeOn` is asked in ONE place** so the front end and the simulator cannot drift.
 
 ---
 
 ## 4. Two bugs found by PLAYING, which no test had caught
 
-Both came out of one Android playtest. Neither was findable from a screenshot or a sim run, and
-one had been latent since before the pivot.
-
 **A card that killed the Opponent did not end the battle.** `IsOver` was set in `EndTurnAction` and
 nowhere else, so lethal from a direct-damage card left the fight running until End Turn was pressed
-on a corpse. Invisible while every point of damage came from lanes trading; direct-damage cards
-made it reachable. Fixed at the root: `KinStateExtensions.SettleBattleEnd` is now the ONE account
-of a battle ending, idempotent, and called from `DealDamageAction` — the single chokepoint every
-mid-turn packet passes through, player, Opponent, enemy and unit alike. Guarding there rather than
-per-card is what stops the next direct-damage card reopening it. Three tests, and **all three were
-confirmed to fail with the fix reverted** rather than assumed to cover it.
+on a corpse. Fixed at the root: `KinStateExtensions.SettleBattleEnd` is the ONE account of a battle
+ending, idempotent, called from `DealDamageAction` — the single chokepoint every mid-turn packet
+passes through. **All three new tests were confirmed to fail with the fix reverted.**
 
 **Reward cards needed TWO taps on a phone.** `CardUI2D` raises `Clicked` only while it is the
-hovered card, and a finger has no hover — so the first tap registered the hover and the second one
-took the card, working even slightly off the card because it was still marked hovered. The hand was
-never affected because a card there is DRAGGED and a drag begins on the press; only the screens
-that CLICK a card had it. `KinCardTap.OnFirstPress` now wires the hover area's own input alongside
-`Clicked`, with a latch because on a desktop both fire for one press and a reward taken twice would
-deck two cards and advance the floor twice. Three call sites — the reward offer and both of the
-shop's — go through it.
+*hovered* card, and a finger has no hover. The hand was never affected because cards there are
+dragged. `KinCardTap` wires the hover area's own input instead — `HoverArea.input_pickable` is true
+and its shape is 232x315, verified on the scene rather than assumed.
 
-**The wrong diagnosis, recorded because it cost the most time.** The obvious suspect was the
-upgrade row making the intermission panel taller and overlapping the cards. Measured instead of
-assumed: panel ends at y=393, cards start at y=427, and the panel is `MouseFilter.Ignore` anyway.
-A 34px gap and no overlap. The geometry was never the problem.
+**The wrong diagnosis, recorded because it cost the most time.** The obvious suspect was the new
+upgrade row making the panel overlap the cards. Measured: panel ends at y=393, cards start at 427,
+and the panel is `MouseFilter.Ignore` anyway. The geometry was never involved.
 
 ---
 
 ## 5. Scars worth not re-earning
 
-- **`godot` on PATH is the NON-.NET build and cannot load C# at all.** It reports `4.6.2.stable`
-  with no `.mono`, fails every script load on import, and the errors look exactly like a broken
-  project. Use `godot-mono`, as `Commands.md` line 23 already says. Cost ~15 minutes of chasing
-  phantom rename damage.
-- **`--write-movie` needs its output directory to already exist.** It exits 0, prints "Done
-  recording movie at path: …", and writes nothing. The tell is `ERROR: Condition "f_wav.is_null()"`
-  buried in the output.
-- **A `Button` with `Flat = true` draws no stylebox** — panel, border and hover all vanish silently.
-  The first companion-select capture was five columns of loose text floating on the background.
-- **`git mv` on a directory refuses if anything inside it is a staged deletion** ("fatal: bad
-  source"). Plain `mv` plus `git add -A` is fine; git detects the renames by content.
-- **`\bDoom` does not match `ToDoomCard`.** The word-boundary regex that renamed 164 files missed
-  every internal occurrence. Audit with a case-insensitive `\w*doom\w*` sweep afterwards, not the
-  same pattern you renamed with.
-- **A heal at full life is clamped to nothing**, so the obvious test for a life-gain ability asserts
-  0 and passes for the wrong reason. `BramblePaysLifeForWhatSurvived` starts the run hurt on purpose.
-- **The field is EMPTY at `OnTurnStart`** — units withdraw at end of turn. Two of the five
-  companions would have been silent no-ops written on the obvious trigger. Anything reading your
-  board has to pay at `OnTurnEnd`, and `CardsPlayedThisTurn` is likewise zero at turn start.
+- **`godot` on PATH is the NON-.NET build and cannot load C# at all.** Use `Run-Godot.ps1`, which
+  uses `godot-mono`. Cost ~15 minutes chasing phantom rename damage.
+- **`--write-movie` needs its output directory to exist.** Exits 0, prints "Done recording movie at
+  path: ...", writes nothing. `Run-Godot.ps1` creates it.
+- **A `Button` with `Flat = true` draws no stylebox** — panel, border and hover vanish silently.
+- **`git mv` on a directory refuses if anything inside it is a staged deletion.** Plain `mv` plus
+  `git add -A` is fine; git detects renames by content.
+- **A word-boundary rename misses `ToDoomCard`.** Audit a rename with a case-insensitive
+  `\w*doom\w*` sweep afterwards, not the pattern you renamed with. The lowercase `[doom]` section in
+  `project.godot` slipped through the same way and would have failed silently.
+- **A heal at full life is clamped to nothing**, so the obvious life-gain test asserts 0 and passes
+  for the wrong reason.
+- **The field is EMPTY at `OnTurnStart`** — units withdraw at end of turn. Two of five companions
+  would have been silent no-ops on the obvious trigger. `CardsPlayedThisTurn` is zero there too.
+- **A guard invented to cover your own second wire is not a guard.** `KinCardTap` shipped with two
+  input paths and a latch to dedupe them; the latch only existed because of the second wire.
 
 ---
 
-## 6. Local image generation — installed and working
+## 6. Local image generation — working
 
-**ComfyUI 0.37.0 portable at `D:\AI\ComfyUI_windows_portable`** (C: had only 22GB free; D: has
-1.7TB). torch 2.13+cu130, CUDA sees the RTX 3060 Ti's 8GB.
+**ComfyUI 0.37.0 portable at `D:\AI\ComfyUI_windows_portable`**, torch 2.13+cu130 on an RTX 3060 Ti.
+`dreamshaperXL_turbo.safetensors` is the measured choice. **~12s per 1024x1024 image.**
 
-- **`dreamshaperXL_turbo.safetensors`** — 6.6GB, downloaded and working. 8 steps, CFG 2.0.
-- **`illustriousXL_v01.safetensors`** — was still downloading at handoff; check it completed.
-- Start it: `D:\AI\ComfyUI_windows_portable\python_embeded\python.exe -s ComfyUI\main.py --port 8188`
+The full procedure, including detecting whether any of it is installed and walking a user through
+setting it up, is the **`generate-card-art` skill**. The findings that skill exists to carry:
 
-**Measured: 13.7s per 1024×1024 image.** Quality is good — flat vector, centred full body, plain
-background, no text leakage.
-
-**The 40px test passed, against expectation.** Downscaled to the lane-cell size the silhouettes
-still read — heron, dog, toad and tortoise all identifiable. This was the risk that would have
-killed the idea and it did not.
-
-**Two gaps before this can ship into the game:**
-
-1. **Backgrounds are not transparent**, and `KinArt.Drawing` composites RGBA figures over a card
-   body and a lane plinth. Needs a matting pass (`rembg`) — untested so far.
-2. **"Plain solid background" leaks scenery** — the tortoise and toad came back standing on grass,
-   and the background hue differs per image. Prompt and negatives need tightening before a batch.
-
-### Settled: DreamShaper + `flat`, 8 steps, CFG 2.0, 3 variants, cull by eye
-
-**Illustrious is unusable with natural-language prompts** — 27 images over 9 seeds produced abstract
-triangles, blank frames, and a heron with garbled text baked in. It is booru-TAG trained and wants
-`tortoise, moss, simple background` style tags, not English sentences. That is a prompt-language
-mismatch rather than a bad model, but it is a discipline to learn for a style that leans anime-
-monster, and DreamShaper works first try. Delete the checkpoint unless someone wants to learn tags.
-
-### Three defects found, and what each one actually was
-
-**None of these were caught by a contact sheet. All three were caught by a person looking at the
-full-size image**, after the sheet had been declared clean twice.
-
-1. **Two-headed tortoise — a SEED lottery with a per-subject base rate.** One seed was originally
-   locked across the whole comparison so a batch would "look like one artist"; that made a single
-   bad seed fail every style and both checkpoints *identically*, which is the worst failure mode
-   because the output stays consistent and reads as deliberate. Fixed: `subject_seed()` varies per
-   subject, `--variants` defaults to 3. **Culling is not optional** — "a mossy tortoise" in the
-   storybook style doubled on 2 of 3 seeds, while the heron never doubled on any.
-2. **Low-poly faceted skin — MY PROMPT.** The flat style said `simple geometric shapes`, which read
-   as *build the creature out of geometric shapes* and produced flat-shaded 3D mesh facets on every
-   body, every seed. A/B'd on fixed seeds: removing the phrase cleared it; negating
-   `low poly, faceted, triangulated` on top of the original phrase did NOT.
-3. **Negative prompts are nearly inert at CFG 2.** Anatomy negatives did not fix the two heads, and
-   background negatives (`grass, forest, trees`) did not remove scenery. Tested CFG 3.5 / 5.0 / 7.0
-   at 20 steps — the malformed seed stayed malformed. **Fix the positive prompt, not the negative.**
-
-### Subject wording drives the background
-
-`a mossy tortoise` drags in a forest in every style; `a heron` never does. Background is what breaks
-both the 40px read and the matting pass, so subject phrasing needs a convention before a batch.
-
-`tools/gen_art.py` locks the checkpoint and style suffix — which is what actually makes a set
-coherent — and varies the seed. Three styles are defined (`flat`, `storybook`, `chunky`); `flat` is
-the recommendation on 40px readability and on having the plainest backgrounds.
+- **Malformed anatomy is a SEED lottery with a per-subject base rate.** Generate 3+, cull ~1 in 3.
+- **Low-poly faceted skin was the POSITIVE prompt** — "simple geometric shapes". Negating "low
+  poly, faceted" did not fix it; removing the phrase did.
+- **Negatives are nearly inert at CFG 2.** Anatomy negatives did not fix the heads, and CFG 3.5/5/7
+  left the malformed seed malformed.
+- **A contact sheet is not an inspection.** Check at 500px or more.
+- **Illustrious is the wrong tool** with natural-language prompts: 27 images, 9 seeds, mostly
+  abstract shapes and blank frames. It is booru-tag trained. `illustriousXL_v01.safetensors` is
+  still on disk (6.6GB) and can be deleted.
 
 ---
 
-## 7. What to do next
+## 7. NOT DONE — the work this session leaves behind
 
-1. **Pick the fiction.** Everything below is blocked on it, and it is a decision only you can make.
-2. **Decide the progression system**, then balance. Not before. The companion is the candidate.
-3. **Lock an art style** — generate the same three subjects across all three styles and compare, then
-   solve transparency.
-4. **Re-theme the content** — card names, enemy names, act names, the palette, and the 56 SVGs.
-5. Cosmetic leftovers on the board: the top band is half-empty where the clock dial sat; floor/act
-   prints twice (banner *and* status strip); the lane's bottom stat scrim clips a standing
-   subject's feet; the floating damage number sits half outside the smaller cell; enemy
-   silhouettes are dark on a dark ground.
+### 7a. The card design pass — **the biggest gap, and it is a fun problem not a theme one**
+
+**26 distinct units and 8 rites, and only about 15 units carry an effect at all.** The rest are
+vanilla stat lines. There are no combos to find and nothing to build toward beyond the companion.
+
+The vocabulary already exists and is barely used:
+
+| | available | used by |
+|---|---|---|
+| triggers | `OnPlay`, `OnDeath`, `OnTurnStart`, `OnTurnEnd` | mostly `OnPlay` |
+| actions | Buff, DealDamage, Destroy, DrawCards, GainLife, ReturnToHand, **TakeCards** | TakeCards has no caller at all |
+| reads | `YourUnits`, `LivingEnemies`, `DiedLastTurn`, `DiedThisTurn`, `CardsPlayedThisTurn` | a handful |
+| targets | self, player, opponent, all enemies, lane, **adjacent lanes** both sides | adjacency barely used |
+| keywords | Sacrifice, Devour, Exhaust, Rite, Taken, Adjacent | Cluster 1 only |
+
+`KinJam.md`'s "Card design pass" has clusters 2-6 designed and unbuilt: thorns, strikes/on-strike,
+weaken, Powers, and the six enemies that punish a behaviour. **Two arguments recorded there overturn
+earlier reasoning — thorns and multi-attack are NOT redundant with what combat already does.**
+
+Two stand-in reads to replace while doing this: Reactor Crew and Long Watcher were rehomed off
+`CountOf.DoomsFired` onto `CountOf.YourUnits` and carry `ponytail:` comments saying so.
+
+### 7b. The setting and re-theme — **parked deliberately**
+
+`KinSettingSketches.md` has three frames with regions, and the decisions taken. Blocked on nothing
+but a choice. What it unblocks: card names, enemy names, act names, the palette, all 56 SVGs, and
+the title (`ENDLING` is still the grimmest word in the project).
+
+**Two code prerequisites if regions become real places:** enemies are NOT act-scoped
+(`PlayableOn(floor)` is run-wide, so act 3 draws act 1's creatures), and `ActMap.Order` is a fixed
+array with no pool to draw variants from.
+
+### 7c. The art pass
+
+56 authored SVGs, all in the grimy register. The pipeline is proven and the skill is written; this
+is blocked on 7b, not on tooling. About 35 minutes of GPU for 168 candidates at 3 variants each.
+
+### 7d. Smaller, known, and deliberately left
+
+- **`Tags` / `HasTag` on `RunCard` and `KinCard` has ZERO writers** — it existed for the doom marks.
+  Inert, not lying. Delete it, or give it a use in the card pass.
+- **Evolutions at act breaks** — wanted, and now sensible because there is a tuned per-floor curve
+  to sit on top of.
+- **Companions unlocked between runs** — where the collecting fantasy lives given one companion.
+  Nothing exists.
+- **The top band is half-empty** where the clock dial sat, and floor/act prints twice.
+- **Lane polish**: the bottom stat scrim clips a standing subject's feet; the floating damage number
+  sits half outside the smaller cell; enemy silhouettes are dark on a dark ground.
+- **`KinV3Plan.md` phases** about intent patterns and `Persistent` are still live and unbuilt.
+- **`CREDITS.md`** must ship and may credit art that is about to be replaced.
+- **The branch is `kin-pivot`, nothing is pushed.**
+
+---
+
+## 8. What I would do next
+
+1. **Play it more.** Both real bugs this session came from one phone session, not from 131 tests, a
+   200-run sim, or any screenshot. The four questions worth answering: does the companion change how
+   you draft, is the upgrade pick a decision or a formality, is the battle boring without the clock,
+   and do the square slots read at arm's length.
+2. **The card design pass (7a)** — it needs no setting, and it is where "is this fun" actually lives.
+3. **The setting (7b)**, then the art (7c), in that order.
