@@ -24,9 +24,27 @@
 >    trigger still measured 0.0%. The deck no longer gains power while `HealthScaleFor` and
 >    `AttackScaleFor` keep climbing per act, so the player is static against a rising curve.
 >
-> **Do not tune against this file until a progression system exists.** The companion roster is the
-> intended replacement; balance is downstream of that decision and re-measuring before it lands
-> would produce numbers that are thrown away.
+> ## The curve was rebuilt, and these are the numbers that matter now (2026-09-21)
+>
+> **Companion upgrades: three offered every second cleared floor, take one.** `UpgradePool` is seven
+> entries — stat bumps, three effect grants, and Echo, which copies everything the companion already
+> has.
+>
+> | `FloorsPerUpgrade` | upgrades a run | act completion |
+> |---|---|---|
+> | every floor (1) | 24 | **82.5%** |
+> | **every second floor (2)** | 12 | **23.0%** |
+> | every third floor (3) | 8 | **1.5%** |
+>
+> **The dial is violently non-linear and that is the finding.** Twenty-four upgrades to eight is not
+> a threefold change in difficulty, it is 82.5% to 1.5% — compounding, and Echo compounds hardest
+> because its value is whatever you already took. Do not interpolate this dial; measure it.
+>
+> **Per-act clear rates at the chosen setting: 68.5% / 60.6% / 55.4%** (200 entered act 1, 137
+> cleared it, 83 cleared act 2, 46 cleared act 3). Smooth descending attrition, no act unplayable
+> and none trivial — a better shape than the pre-pivot 20.7 / 34.3 / 29.0, which was not even
+> monotonic. Reported per act because the single 23.0% would hide exactly the failure this file's
+> own rule was written about.
 >
 > Everything below is the v2 game, kept for its METHOD — tune against the dodge rate, never report
 > one number across acts, power pays and toughness barely does. The methodology survives; the

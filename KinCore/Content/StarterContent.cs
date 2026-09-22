@@ -250,7 +250,11 @@ public static class StarterContent
 				{
 					Trigger = EffectTrigger.OnTurnEnd,
 					Target = KinTarget.Opponent,
-					Template = new DealDamageAction { Amount = 3, PerEach = CountOf.CardsPlayedThisTurn },
+					Template = new DealDamageAction
+					{
+						Amount = 3,
+						PerEach = CountOf.CardsPlayedThisTurn,
+					},
 					Text = "end of turn: 3 to the Opponent per card you played",
 				},
 			],
@@ -791,6 +795,145 @@ public static class StarterContent
 	/// Three distinct cards to choose between, deterministic from the seed and floor so a run
 	/// replays exactly — the same property that makes a bug report actionable.
 	/// </summary>
+	/// <summary>
+	/// Everything a companion can become. **Three are offered per cleared floor; you take one.**
+	///
+	/// Deliberately mixed: pure stat upgrades that any companion wants, and EFFECT upgrades that
+	/// only some companions want. That mix is what stops the pick being arithmetic — Warding on a
+	/// Bramble already gaining life is redundant, while on Pike it is the only healing in the run.
+	///
+	/// **Echo is the rare and it is the build-around.** It copies everything the companion has, so
+	/// its value is whatever you have already chosen — worthless first, enormous last.
+	/// </summary>
+	public static ImmutableArray<CompanionUpgrade> UpgradePool =>
+		[
+			new()
+			{
+				Name = "Thickset",
+				Text = "+0/+8",
+				Toughness = 8,
+			},
+			new()
+			{
+				Name = "Sharpened",
+				Text = "+5/+0",
+				Power = 5,
+			},
+			new()
+			{
+				Name = "Steady",
+				Text = "+3/+4",
+				Power = 3,
+				Toughness = 4,
+			},
+			new()
+			{
+				Name = "Barbed",
+				Text = "end of turn: 3 to the enemies either side of it",
+				Rarity = KinRarity.Uncommon,
+				Effects =
+				[
+					new KinEffect
+					{
+						Trigger = EffectTrigger.OnTurnEnd,
+						Target = KinTarget.EnemiesInAdjacentLanes,
+						Template = new DealDamageAction { Amount = 3 },
+						Text = "end of turn: 3 to the enemies either side of it",
+					},
+				],
+			},
+			new()
+			{
+				Name = "Warding",
+				Text = "end of turn: gain 3 life",
+				Rarity = KinRarity.Uncommon,
+				Effects =
+				[
+					new KinEffect
+					{
+						Trigger = EffectTrigger.OnTurnEnd,
+						Target = KinTarget.Player,
+						Template = new GainLifeAction { Amount = 3 },
+						Text = "end of turn: gain 3 life",
+					},
+				],
+			},
+			new()
+			{
+				Name = "Goring",
+				Text = "end of turn: 4 to the Opponent",
+				Rarity = KinRarity.Uncommon,
+				Effects =
+				[
+					new KinEffect
+					{
+						Trigger = EffectTrigger.OnTurnEnd,
+						Target = KinTarget.Opponent,
+						Template = new DealDamageAction { Amount = 4 },
+						Text = "end of turn: 4 to the Opponent",
+					},
+				],
+			},
+			new()
+			{
+				Name = "Echo",
+				Text = "everything it does, it does twice",
+				Rarity = KinRarity.Rare,
+				EchoesAbility = true,
+			},
+		];
+
+	/// <summary>
+	/// How often an upgrade is offered, in floors. **The power curve's single biggest dial.**
+	///
+	/// Offering one after EVERY cleared battle measured 82.5% act completion against a 25% target —
+	/// twenty-four upgrades in a run compound far past anything the enemy curve answers. Every
+	/// third floor is eight a run, which also makes each pick a bigger moment than a stat tick.
+	/// </summary>
+	public const int FloorsPerUpgrade = 2;
+
+	/// <summary>
+	/// Whether this floor offers a companion upgrade at all.
+	///
+	/// **Asked in ONE place so the front end and the simulator cannot disagree.** Gating this in
+	/// `RunSimulator` alone would have measured a curve no player ever receives — the exact class
+	/// of silent divergence this codebase keeps rediscovering.
+	/// </summary>
+	public static bool OffersUpgradeOn(int floor) => floor % FloorsPerUpgrade == 0;
+
+	/// <summary>
+	/// The three upgrades offered on a floor, or NOTHING on a floor that offers none — see
+	/// <see cref="OffersUpgradeOn"/>. Weighted by rarity and without replacement, exactly as
+	/// <see cref="RewardsFor"/> does it.
+	///
+	/// A DIFFERENT seed mix from the card rewards, or the same floor would correlate the two
+	/// offers and a run would feel narrower than it is.
+	/// </summary>
+	public static ImmutableArray<CompanionUpgrade> UpgradesFor(int seed, int floor, int count = 3)
+	{
+		if (!OffersUpgradeOn(floor))
+			return [];
+
+		var pool = UpgradePool.ToList();
+		var rng = new Random(seed * 65537 + floor * 97 + 13);
+		var picked = new List<CompanionUpgrade>();
+
+		for (var i = 0; i < count && pool.Count > 0; i++)
+		{
+			var roll = rng.Next(pool.Sum(u => WeightOf(u.Rarity)));
+			var index = 0;
+
+			while (roll >= WeightOf(pool[index].Rarity))
+				roll -= WeightOf(pool[index++].Rarity);
+
+			picked.Add(pool[index]);
+			pool.RemoveAt(index);
+		}
+
+		return [.. picked];
+	}
+
+	/// <summary>Three cards for a floor, weighted by rarity.</summary>
 	public static ImmutableArray<RunCard> RewardsFor(
 		KinTheme theme,
 		int seed,

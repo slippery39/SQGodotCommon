@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using KinCore;
 using Godot;
 using ImmutableGameObjects;
+using KinCore;
 
 namespace KinGame;
 
@@ -110,6 +110,13 @@ public partial class KinBoard : Node2D
 				_hand.SetVisible(false);
 
 				_intermission.ShowFloorCleared(_run, _run);
+
+				// **Forced to a floor that actually offers upgrades**, the same way `--shop` forces
+				// gold and a big deck: a capture's job is the fullest case the screen has to draw,
+				// and floor 1 is never an upgrade floor so the row would never appear in a capture.
+				_intermission.OfferUpgrades(
+					StarterContent.UpgradesFor(_seed, StarterContent.FloorsPerUpgrade)
+				);
 				_intermission.OfferRewards(
 					StarterContent.RewardsFor(_run.Theme, _seed, _run.Floor),
 					_run.Floor
@@ -266,6 +273,11 @@ public partial class KinBoard : Node2D
 		}
 
 		_intermission.ShowFloorCleared(before, after);
+
+		// Mirrors RunSimulator: the offers are for the floor you are about to walk into, not the
+		// one just cleared. `UpgradesFor` returns nothing on a floor that offers none, so the
+		// frequency dial lives in content and this screen never has to know it.
+		_intermission.OfferUpgrades(StarterContent.UpgradesFor(_seed, after.Floor));
 		_intermission.OfferRewards(
 			StarterContent.RewardsFor(after.Theme, _seed, after.Floor),
 			after.Floor
@@ -316,6 +328,12 @@ public partial class KinBoard : Node2D
 		_run = _run.WithCard(card);
 		StartBattleOnCurrentFloor();
 	}
+
+	/// <summary>
+	/// Takes a companion upgrade. **Does NOT advance the floor** — unlike a card, which closes the
+	/// screen, this is one of two independent decisions on it and DESCEND is the way down.
+	/// </summary>
+	private void TakeUpgrade(CompanionUpgrade upgrade) => _run = _run.WithCompanionUpgrade(upgrade);
 
 	private void OnEndTurn()
 	{
@@ -644,7 +662,12 @@ public partial class KinBoard : Node2D
 		layer.AddChild(_overlay);
 
 		_inspector = new KinCardInspector(layer, new Vector2(1500, 740));
-		_intermission = new KinIntermission(layer, StartBattleOnCurrentFloor, TakeReward);
+		_intermission = new KinIntermission(
+			layer,
+			StartBattleOnCurrentFloor,
+			TakeReward,
+			TakeUpgrade
+		);
 		_companionSelect = new KinCompanionSelect(layer, BeginRunWith);
 
 		// **Reads the run through a callback rather than being handed a copy.** A shop that held
@@ -1018,9 +1041,7 @@ public partial class KinBoard : Node2D
 			};
 
 			Report(
-				KinAnimator.Instant
-					? "animation OFF"
-					: $"animation speed {KinAnimator.Speed:0.##}x"
+				KinAnimator.Instant ? "animation OFF" : $"animation speed {KinAnimator.Speed:0.##}x"
 			);
 		}
 	}

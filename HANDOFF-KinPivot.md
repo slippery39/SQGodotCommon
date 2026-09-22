@@ -78,7 +78,26 @@ designs**, and want a real one in the card pass.
 
 ---
 
-## 3. THE BIG ONE: there is no power curve, and it measures 0%
+## 3. THE POWER CURVE — rebuilt as companion upgrades, and measured
+
+**FIXED. Act completion 0.0% -> 23.0% against a 25% target.** Three upgrades offered every second
+cleared floor, take one; `StarterContent.UpgradePool` holds seven. Per-act clear rates 68.5% /
+60.6% / 55.4%, which is smooth descending attrition and a better shape than the game had before
+the pivot.
+
+**`FloorsPerUpgrade` is the dial and it is violently non-linear** — every floor measured 82.5%,
+every second 23.0%, every third 1.5%. Measure it, never interpolate it.
+
+**`OffersUpgradeOn` is asked in ONE place** so the front end and the simulator cannot drift; gating
+it in `RunSimulator` alone would have measured a curve no player receives.
+
+**The trap in `Companion.With`, and it is silent:** `EchoesAbility` copies EVERY effect, not the
+first. Ash's ability is a symmetric pair — a buff at turn start and the same buff negated at turn
+end — so copying only the first would double the buff, leave the unwind single, and hand Ash
+permanent growth with nothing reporting an error. `EchoDoublesAnAbilityWithoutBreakingItsUnwind`
+asserts the NET after a full turn; a test that counted effects would pass on the broken version.
+
+### The original hole, kept for the reasoning
 
 `KinJam.md` said it outright and it was true: *"the apocalypses ARE the power curve — there is no
 separate progression system, by design."* Deleting them cashed that in.

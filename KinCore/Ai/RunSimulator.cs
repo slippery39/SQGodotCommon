@@ -38,6 +38,9 @@ public record RunResult
 	/// <summary>Reward cards taken, in order. **The only unbiased handle on card value** — see RunSimulator.</summary>
 	public ImmutableList<string> TakenRewards { get; init; } = ImmutableList<string>.Empty;
 
+	/// <summary>Companion upgrades taken, in order. The run's power curve, as a list.</summary>
+	public ImmutableList<string> TakenUpgrades { get; init; } = ImmutableList<string>.Empty;
+
 	public ImmutableList<string> FinalDeck { get; init; } = ImmutableList<string>.Empty;
 }
 
@@ -121,6 +124,7 @@ public static class RunSimulator
 
 		var floors = ImmutableList.CreateBuilder<FloorResult>();
 		var taken = ImmutableList.CreateBuilder<string>();
+		var takenUpgrades = ImmutableList.CreateBuilder<string>();
 		var totalTurns = 0;
 		var stalled = false;
 
@@ -225,6 +229,19 @@ public static class RunSimulator
 					run = run.WithCard(rewards[pick]);
 				}
 			}
+
+			// **The companion upgrade, and it is NOT skippable the way a card is.** A card you do
+			// not want crowds out one you do, which is why declining is modelled above; an upgrade
+			// only ever adds to the one thing that is free on the board every battle, so there is
+			// no deck cost to weigh and a player declining it would simply be choosing to be
+			// weaker. Random among the three, for the same reason the card picker is random.
+			var upgrades = StarterContent.UpgradesFor(seed, run.Floor);
+			if (!upgrades.IsEmpty)
+			{
+				var upgrade = upgrades[picker.Next(upgrades.Length)];
+				takenUpgrades.Add(upgrade.Name);
+				run = run.WithCompanionUpgrade(upgrade);
+			}
 		}
 
 		return new RunResult
@@ -243,6 +260,7 @@ public static class RunSimulator
 			TotalTurns = totalTurns,
 			Floors = floors.ToImmutable(),
 			TakenRewards = taken.ToImmutable(),
+			TakenUpgrades = takenUpgrades.ToImmutable(),
 			FinalDeck = [.. run.Deck.Select(c => c.Name)],
 		};
 	}

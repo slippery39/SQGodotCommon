@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Common.Cards;
-using KinCore;
 using Godot;
+using KinCore;
 
 namespace KinGame;
 
@@ -36,6 +36,11 @@ public sealed class KinIntermission
 	private readonly Node2D _offers;
 
 	private readonly Action<RunCard> _onTake;
+	private readonly Action<CompanionUpgrade> _onUpgrade;
+
+	/// <summary>The three companion upgrades, when the floor offers any. Controls, so the panel lays them out.</summary>
+	private readonly HBoxContainer _upgradeRow;
+	private readonly Label _upgradeHeading;
 
 	/// <summary>Where the DESCEND button sits, in canvas pixels from the top.</summary>
 	private const int ButtonY = 900;
@@ -46,7 +51,12 @@ public sealed class KinIntermission
 	/// </summary>
 	private const float OfferScale = 1.05f;
 
-	public KinIntermission(CanvasLayer parent, Action onContinue, Action<RunCard> onTake)
+	public KinIntermission(
+		CanvasLayer parent,
+		Action onContinue,
+		Action<RunCard> onTake,
+		Action<CompanionUpgrade> onUpgrade
+	)
 	{
 		// **A ColorRect, not a PanelContainer.** A Container OVERRIDES its children's anchors and
 		// positions on every layout pass — so the panel stretched to the full screen and the DESCEND
@@ -73,6 +83,7 @@ public sealed class KinIntermission
 		card.AddChild(rows);
 
 		_onTake = onTake;
+		_onUpgrade = onUpgrade;
 
 		_title = KinPalette.Text("", 42, KinPalette.Bone);
 		_body = KinPalette.Text("", 20, KinPalette.Bone);
@@ -91,6 +102,17 @@ public sealed class KinIntermission
 		// **The next apocalypse, BEFORE the reward is chosen.** Free tension at zero cost: it turns
 		// picking a card into a decision about the fight you are walking into rather than a shopping
 		// trip. KinJam.md has wanted this since the run structure was written.
+		// **The companion upgrade, ABOVE the cards.** It is the run's power curve and the card is
+		// the run's texture; putting the smaller decision first would bury the larger one. Unlike
+		// the cards these are Controls, so the panel lays them out and they need no hand-placing.
+		_upgradeHeading = KinPalette.Text("", 24, KinPalette.Gold);
+		_upgradeHeading.Visible = false;
+		rows.AddChild(_upgradeHeading);
+
+		_upgradeRow = new HBoxContainer { Visible = false };
+		_upgradeRow.AddThemeConstantOverride("separation", 12);
+		rows.AddChild(_upgradeRow);
+
 		_coming = KinPalette.Text("", 22, KinPalette.Red);
 		rows.AddChild(_coming);
 		Wrap(_coming);
@@ -203,6 +225,62 @@ public sealed class KinIntermission
 	/// play is a card crowding out one you would. Taking nothing is sometimes correct, and a reward
 	/// screen that cannot be declined is not a decision.
 	/// </summary>
+	/// <summary>
+	/// The companion upgrades for this floor, or nothing on a floor that offers none.
+	///
+	/// **Taking one disables the row rather than closing the screen.** The card choice below is a
+	/// separate decision and either may be skipped, so neither may advance the floor on its own —
+	/// DESCEND is still the only way down.
+	/// </summary>
+	public void OfferUpgrades(IEnumerable<CompanionUpgrade> upgrades)
+	{
+		foreach (var child in _upgradeRow.GetChildren())
+		{
+			_upgradeRow.RemoveChild(child);
+			child.QueueFree();
+		}
+
+		var offered = upgrades.ToList();
+		_upgradeRow.Visible = offered.Count > 0;
+		_upgradeHeading.Visible = offered.Count > 0;
+		_upgradeHeading.Text = "YOUR COMPANION GROWS — TAKE ONE";
+
+		foreach (var upgrade in offered)
+			_upgradeRow.AddChild(UpgradeButton(upgrade));
+	}
+
+	private Button UpgradeButton(CompanionUpgrade upgrade)
+	{
+		var button = new Button
+		{
+			Text = $"{upgrade.Name.ToUpperInvariant()}\n{upgrade.Text}",
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+			CustomMinimumSize = new Vector2(0, 76),
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+		};
+		button.AddThemeFontSizeOverride("font_size", 18);
+		button.AddThemeStyleboxOverride(
+			"normal",
+			KinPalette.Box(KinPalette.Navy, KinPalette.Bone, 2)
+		);
+		button.AddThemeStyleboxOverride(
+			"hover",
+			KinPalette.Box(KinPalette.Navy, KinPalette.Gold, 3)
+		);
+
+		button.Pressed += () =>
+		{
+			_onUpgrade(upgrade);
+
+			// One per floor. Hiding the row rather than disabling the buttons, because a row of
+			// greyed choices reads as a screen that is still asking something.
+			_upgradeRow.Visible = false;
+			_upgradeHeading.Text = $"{upgrade.Name.ToUpperInvariant()} TAKEN";
+		};
+
+		return button;
+	}
+
 	public void OfferRewards(IEnumerable<RunCard> cards, int nextFloor)
 	{
 		_coming.Text = $"Floor {nextFloor} below";

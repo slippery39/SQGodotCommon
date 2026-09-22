@@ -47,6 +47,29 @@ public record Companion
 	/// it, so nothing else has to change to add another companion.
 	/// </summary>
 	public ImmutableList<KinEffect> Effects { get; init; } = ImmutableList<KinEffect>.Empty;
+
+	/// <summary>
+	/// Applies an upgrade and returns the companion it becomes. The whole of progression.
+	///
+	/// **`EchoesAbility` is read off the CURRENT effects, so order matters between upgrades** — an
+	/// echo taken after another upgrade's effect copies that one too. That is intended: it is what
+	/// makes a late echo worth more than an early one, and it is the only interaction between
+	/// upgrades in the system.
+	/// </summary>
+	public Companion With(CompanionUpgrade upgrade)
+	{
+		var effects = Effects.AddRange(upgrade.Effects);
+
+		if (upgrade.EchoesAbility)
+			effects = effects.AddRange(effects);
+
+		return this with
+		{
+			BasePower = BasePower + upgrade.Power,
+			BaseToughness = BaseToughness + upgrade.Toughness,
+			Effects = effects,
+		};
+	}
 }
 
 /// <summary>

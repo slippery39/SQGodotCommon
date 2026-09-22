@@ -288,4 +288,151 @@ public class CompanionTests
 			}
 		});
 	}
+
+	// ===== Upgrades — the run's power curve =====
+
+	[Test]
+	public void AStatUpgradeRaisesTheCompanionForTheNextBattle()
+	{
+		var run = RunWith(StarterContent.Bramble)
+			.WithCompanionUpgrade(new CompanionUpgrade { Power = 5, Toughness = 8 });
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(run.Companion.Power, Is.EqualTo(StarterContent.Bramble.Power + 5));
+			Assert.That(run.Companion.Toughness, Is.EqualTo(StarterContent.Bramble.Toughness + 8));
+		});
+
+		// The board is what matters, not the record — read it off the unit that actually stands.
+		var (state, _) = run.StartBattle([Enemy(attack: 0, lane: 0)], opponentHealth: 500);
+		var companion = state.Units().Single(u => u.HasComponent<CompanionComponent>()).Unit();
+
+		Assert.That(companion.Power, Is.EqualTo(StarterContent.Bramble.Power + 5));
+	}
+
+	/// <summary>
+	/// **Echo must copy EVERY effect, and Ash is the case that proves it.**
+	///
+	/// Ash's ability is a symmetric pair — a buff at turn start and the same buff negated at turn
+	/// end — which is the entire duration system. Copying only the first effect would double the
+	/// buff and leave the unwind single, so Ash would gain 2 power every turn and never give it
+	/// back. Nothing would throw; the companion would just quietly run away with the game.
+	///
+	/// So this asserts the NET after a full turn, not the list length. A test that counted effects
+	/// would pass on the broken version.
+	/// </summary>
+	[Test]
+	public void EchoDoublesAnAbilityWithoutBreakingItsUnwind()
+	{
+		var echoed = StarterContent.StarterCompanion.With(
+			new CompanionUpgrade { EchoesAbility = true }
+		);
+
+		var run = RunWith(echoed);
+		var (state, _) = run.StartBattle([Enemy(attack: 0, lane: 0)], opponentHealth: 500);
+
+		var before = Companion(state).Power;
+
+		// A full turn with nothing dying: the buff reads zero, so an intact pair nets zero.
+		(state, _) = Do(state, new EndTurnAction());
+		(state, _) = Do(state, new EndTurnAction());
+
+		Assert.That(
+			Companion(state).Power,
+			Is.EqualTo(before),
+			"an echoed pair must still unwind to nothing — a doubled buff with a single unwind "
+				+ "drifts upward every turn and nothing reports it"
+		);
+	}
+
+	[Test]
+	public void EchoCopiesWhatTheCompanionHasAtTheTimeItIsTaken()
+	{
+		var barbed = StarterContent.UpgradePool.Single(u => u.Name == "Barbed");
+		var echo = StarterContent.UpgradePool.Single(u => u.Name == "Echo");
+
+		var early = StarterContent.Pike.With(echo).With(barbed);
+		var late = StarterContent.Pike.With(barbed).With(echo);
+
+		Assert.That(
+			late.Effects,
+			Has.Count.GreaterThan(early.Effects.Count),
+			"an echo taken later copies more, which is the only interaction between upgrades"
+		);
+	}
+
+	[Test]
+	public void EveryOfferedUpgradeIsDistinctAndSaysWhatItDoes()
+	{
+		var floor = StarterContent.FloorsPerUpgrade;
+		Assume.That(StarterContent.OffersUpgradeOn(floor), Is.True);
+
+		var offered = StarterContent.UpgradesFor(seed: 4, floor);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(offered, Has.Length.EqualTo(3));
+			Assert.That(
+				offered.Select(u => u.Name).Distinct().Count(),
+				Is.EqualTo(3),
+				"three offers without replacement, or a floor can offer the same thing twice"
+			);
+
+			foreach (var upgrade in offered)
+			{
+				Assert.That(upgrade.Text, Is.Not.Empty, $"{upgrade.Name} tells the player nothing");
+				Assert.That(
+					upgrade.Power != 0
+						|| upgrade.Toughness != 0
+						|| !upgrade.Effects.IsEmpty
+						|| upgrade.EchoesAbility,
+					Is.True,
+					$"{upgrade.Name} does nothing at all"
+				);
+			}
+		});
+	}
+
+	/// <summary>Every upgrade in the pool must actually change the companion it is applied to.</summary>
+	[Test]
+	public void MostFloorsOfferNoUpgradeAtAll()
+	{
+		// Read from the dial, never restated — the frequency is a balance number and will move.
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				StarterContent.UpgradesFor(1, StarterContent.FloorsPerUpgrade),
+				Is.Not.Empty
+			);
+			Assert.That(
+				StarterContent.UpgradesFor(1, StarterContent.FloorsPerUpgrade + 1),
+				Is.Empty,
+				"an upgrade every floor measured 82.5% completion against a 25% target"
+			);
+		});
+	}
+
+	[Test]
+	public void NoUpgradeInThePoolIsInert()
+	{
+		Assert.Multiple(() =>
+		{
+			foreach (var upgrade in StarterContent.UpgradePool)
+			{
+				var before = StarterContent.StarterCompanion;
+				var after = before.With(upgrade);
+
+				Assert.That(
+					after.Power != before.Power
+						|| after.Toughness != before.Toughness
+						|| after.Effects.Count != before.Effects.Count,
+					Is.True,
+					$"{upgrade.Name} left the companion identical"
+				);
+			}
+		});
+	}
+
+	private static UnitComponent Companion(GameState state) =>
+		state.Units().Single(u => u.HasComponent<CompanionComponent>()).Unit();
 }

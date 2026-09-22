@@ -111,6 +111,18 @@ public record Run
 		cards.Aggregate(this, (run, card) => run.WithCard(card));
 
 	/// <summary>
+	/// Takes a companion upgrade. **The run's only progression**, since the dooms went.
+	///
+	/// The companion lives on the run and not in the deck, so this changes nothing about the deck
+	/// and nothing in any battle already built — the next `StartBattle` reads the new one.
+	/// </summary>
+	public Run WithCompanionUpgrade(CompanionUpgrade upgrade) =>
+		this with
+		{
+			Companion = Companion.With(upgrade),
+		};
+
+	/// <summary>
 	/// Builds a fresh battle from this run AND begins it: the whole deck into Draw, the given
 	/// enemies into the enemy zone, shuffled, turn 1 started and the opening hand drawn. Life comes
 	/// from the run, so damage taken in the last battle is still on the player — there is no

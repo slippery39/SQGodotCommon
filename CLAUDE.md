@@ -17,10 +17,11 @@ it is the design doc and the source of truth.
 > is monster-collecting-adjacent and deliberately NOT dark; the grimy card names, enemies and 56
 > SVGs are all still to be re-themed.
 >
-> **The deleted dooms WERE the power curve, and nothing has replaced it yet.** Measured right after:
-> act completion 0.0% over 200 runs, against 20–34% before. That is expected, recorded in
-> `docs/findings/kin-balance.md`, and it is what the companion roster is meant to fix. **Do not
-> tune balance until a progression system exists.**
+> **The deleted dooms WERE the power curve. COMPANION UPGRADES replace them** — three offered every
+> second cleared floor, take one, on `StarterContent.UpgradePool`. That took act completion from
+> 0.0% back to 23.0% against a 25% target, with per-act clear rates of 68.5% / 60.6% / 55.4%.
+> `StarterContent.FloorsPerUpgrade` is the dial and it is violently non-linear — every floor
+> measured 82.5%, every third 1.5%. See `docs/findings/kin-balance.md`.
 
 The second goal is a measurement: **how hard is it to build a completely different card game on
 `ImmutableGameObjects`?** Anything we wish we could lift out of `MtgCore` is a finding — record it in
