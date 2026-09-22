@@ -345,6 +345,55 @@ public class CompanionTests
 		);
 	}
 
+	/// <summary>
+	/// **Echo has to double the OUTPUT, and nothing proved that until this test.**
+	///
+	/// `EchoDoublesAnAbilityWithoutBreakingItsUnwind` asserts a symmetric pair still nets zero,
+	/// which an entirely INERT Echo also passes, and
+	/// `EchoCopiesWhatTheCompanionHasAtTheTimeItIsTaken` counts list entries — the exact shape
+	/// this repo keeps rediscovering, a test that proves the construction rather than the
+	/// consequence. So this reads the Opponent's health, which is the only thing that settles it.
+	///
+	/// Pike is the case worth using: a flat 6 to the Opponent at end of turn, no board reads, so
+	/// the number cannot come from anywhere else.
+	/// </summary>
+	[Test]
+	public void EchoActuallyDoublesWhatTheCompanionDealsToTheOpponent()
+	{
+		var echo = StarterContent.UpgradePool.Single(u => u.Name == "Echo");
+
+		var plain = Damage(StarterContent.Pike);
+		var echoed = Damage(StarterContent.Pike.With(echo));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(plain, Is.EqualTo(6), "Pike deals a flat 6 at end of turn");
+			Assert.That(
+				echoed,
+				Is.EqualTo(12),
+				"an echoed Pike must deal it TWICE — an Echo that changes no number on the board "
+					+ "is a rare that costs the player a pick and does nothing"
+			);
+		});
+	}
+
+	/// <summary>
+	/// What one end of turn takes off the Opponent, from the ABILITY alone.
+	///
+	/// **The enemy in the companion's lane is the whole point of this helper.** An open lane sends
+	/// the companion's power straight at the Opponent, so without a blocker this reads 8 + 6 = 14
+	/// for Pike and the ability's share is buried in it. A wall that outlives the turn absorbs the
+	/// body and leaves only the ability's damage on the Opponent.
+	/// </summary>
+	private static int Damage(Companion companion)
+	{
+		var (state, _) = RunWith(companion)
+			.StartBattle([Enemy(attack: 0, health: 500)], opponentHealth: 500);
+		var before = state.GetOpponent().Health;
+		(state, _) = Do(state, new EndTurnAction());
+		return before - state.GetOpponent().Health;
+	}
+
 	[Test]
 	public void EchoCopiesWhatTheCompanionHasAtTheTimeItIsTaken()
 	{

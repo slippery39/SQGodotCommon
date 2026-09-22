@@ -1726,3 +1726,71 @@ Difficulty was backloaded, not uniformly wrong.
 Completion is 12%, not 25%. The remaining killers are Vampires (17.6% of its band) and the final
 floor (40%), and only five runs in twenty-five reach floor 45 — so that last number is thin and
 should not be tuned again on this sample.
+
+---
+
+## Run 25 — 2026-09-22 — is the upgrade curve one exponential card? NO
+
+**`bot-1/v3`, 200 runs a side, seeds 1-200, A/B on the upgrade pool itself.** The hypothesis was
+that `FloorsPerUpgrade`'s violently non-linear dial — 82.5% / 23.0% / 1.5% for every floor, every
+second, every third — was not a curve at all but **Echo**, the one upgrade that compounds
+multiplicatively. `Companion.With` does `effects = effects.AddRange(effects)`, nothing filters an
+already-taken upgrade out of the offer, so two Echoes is 4x and four is 16x.
+
+**The hypothesis was wrong, and the A/B is unambiguous about it.**
+
+| | act 1 | act 2 | act 3 | run complete |
+|---|---|---|---|---|
+| Echo in the pool | 69.0% | 63.0% | 49.4% | **21.5%** |
+| **Echo removed** | 68.5% | **73.7%** | 47.5% | **24.0%** |
+
+Removing the only exponential upgrade did not lower completion. It **raised** it 2.5pp — and on 200
+runs the binomial standard error at p≈0.22 is ~2.9pp, so **the honest reading is no detectable
+effect in either direction**, not "Echo is bad". Act 2's 10.7pp swing is ~2.6σ and the most likely
+real number on the page, but it is one of three acts compared at once.
+
+**So the `FloorsPerUpgrade` cliff is genuine compounding of twenty-four versus twelve versus eight
+STAT upgrades, and the dial can be trusted as measured.** It still must never be interpolated.
+
+### Echo does fire, and nothing proved that until this run
+
+Verified on the board, not in the list: an echoed Pike deals **12** to the Opponent at end of turn
+against a plain Pike's **6**. `EchoActuallyDoublesWhatTheCompanionDealsToTheOpponent` asserts it and
+was confirmed to fail — reading 6 — with the `EchoesAbility` branch commented out.
+
+**The two tests that existed could not have caught an inert Echo.** One asserts a symmetric
+buff/unwind pair still nets zero, which is exactly what an Echo that does nothing produces; the
+other counts `Effects` entries. Construction, not consequence — the shape this repo keeps
+rediscovering.
+
+**The helper that measures it needs an enemy in the companion's lane**, and the first version of the
+test did not have one. An open lane sends the companion's power at the Opponent, so it read 14 and
+20 rather than 6 and 12, and the ability's share was buried inside the body's.
+
+### What the picks actually look like, which is the bigger finding
+
+Upgrades taken across the 200 baseline runs, mean 11.0 a run:
+
+| Steady | Thickset | Sharpened | Goring | Warding | Barbed | Echo |
+|---|---|---|---|---|---|---|
+| 460 | 436 | 418 | 266 | 263 | 252 | 98 |
+
+**Three flat stat bumps are 60% of every pick made in the game.** The pool is seven items and a run
+takes eleven, and `UpgradesFor` rebuilds the pool from the full list every floor — so the same stat
+bump is re-taken about 2.3 times a run. **The handoff asked whether the upgrade pick is a decision
+or a formality. Measured, it is mostly a formality.**
+
+Echo stacking, baseline: 63.5% of runs took none, 27.5% one, **6.5% two, 1.5% three, 1.0% four.**
+So 16x happened in two runs of two hundred.
+
+### The one thing the sim cannot see
+
+**`RunSimulator` picks an upgrade uniformly at random among the three and never declines**
+(`RunSimulator.cs`, and the comment there says why declining is not modelled). So every number above
+is what a RANDOM picker achieves. A player who understands that Echo is worth most taken last will
+take it last, and the 2^n ceiling is reachable on purpose rather than by accident.
+
+**That is a ceiling nobody designed, not a measured problem.** The measurement says Echo is not
+breaking balance today; it says nothing about a competent player, because the bot is not one. Any
+future greedy or measured-value picker changes what this whole table means — see the
+`KinEvalWeights.Version` rule.
