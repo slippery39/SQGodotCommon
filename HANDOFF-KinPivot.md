@@ -129,7 +129,37 @@ trend, not a literal claim that the game is unwinnable. The trend is real.
 
 ---
 
-## 4. Scars worth not re-earning
+## 4. Two bugs found by PLAYING, which no test had caught
+
+Both came out of one Android playtest. Neither was findable from a screenshot or a sim run, and
+one had been latent since before the pivot.
+
+**A card that killed the Opponent did not end the battle.** `IsOver` was set in `EndTurnAction` and
+nowhere else, so lethal from a direct-damage card left the fight running until End Turn was pressed
+on a corpse. Invisible while every point of damage came from lanes trading; direct-damage cards
+made it reachable. Fixed at the root: `KinStateExtensions.SettleBattleEnd` is now the ONE account
+of a battle ending, idempotent, and called from `DealDamageAction` — the single chokepoint every
+mid-turn packet passes through, player, Opponent, enemy and unit alike. Guarding there rather than
+per-card is what stops the next direct-damage card reopening it. Three tests, and **all three were
+confirmed to fail with the fix reverted** rather than assumed to cover it.
+
+**Reward cards needed TWO taps on a phone.** `CardUI2D` raises `Clicked` only while it is the
+hovered card, and a finger has no hover — so the first tap registered the hover and the second one
+took the card, working even slightly off the card because it was still marked hovered. The hand was
+never affected because a card there is DRAGGED and a drag begins on the press; only the screens
+that CLICK a card had it. `KinCardTap.OnFirstPress` now wires the hover area's own input alongside
+`Clicked`, with a latch because on a desktop both fire for one press and a reward taken twice would
+deck two cards and advance the floor twice. Three call sites — the reward offer and both of the
+shop's — go through it.
+
+**The wrong diagnosis, recorded because it cost the most time.** The obvious suspect was the
+upgrade row making the intermission panel taller and overlapping the cards. Measured instead of
+assumed: panel ends at y=393, cards start at y=427, and the panel is `MouseFilter.Ignore` anyway.
+A 34px gap and no overlap. The geometry was never the problem.
+
+---
+
+## 5. Scars worth not re-earning
 
 - **`godot` on PATH is the NON-.NET build and cannot load C# at all.** It reports `4.6.2.stable`
   with no `.mono`, fails every script load on import, and the errors look exactly like a broken
@@ -153,7 +183,7 @@ trend, not a literal claim that the game is unwinnable. The trend is real.
 
 ---
 
-## 5. Local image generation — installed and working
+## 6. Local image generation — installed and working
 
 **ComfyUI 0.37.0 portable at `D:\AI\ComfyUI_windows_portable`** (C: had only 22GB free; D: has
 1.7TB). torch 2.13+cu130, CUDA sees the RTX 3060 Ti's 8GB.
@@ -214,7 +244,7 @@ the recommendation on 40px readability and on having the plainest backgrounds.
 
 ---
 
-## 6. What to do next
+## 7. What to do next
 
 1. **Pick the fiction.** Everything below is blocked on it, and it is a decision only you can make.
 2. **Decide the progression system**, then balance. Not before. The companion is the candidate.

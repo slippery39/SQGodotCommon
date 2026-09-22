@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace KinCore;
@@ -75,12 +76,52 @@ public static class KinStateExtensions
 			.Where(l => s.UnitInLane(l) is { } held && !held.HasComponent<CompanionComponent>());
 
 	/// <summary>
+	/// **Ends the battle if somebody just died, and it is the ONE account of a battle ending.**
+	///
+	/// This used to live inline in `EndTurnAction` and nowhere else, which meant a battle could
+	/// only end when a turn ended. That was invisible while all damage came from lanes trading —
+	/// and then direct-damage cards arrived, and killing the Opponent with one left the fight
+	/// running until the player pressed End Turn on a corpse. **Found by playing, not by a test.**
+	///
+	/// So it is called from `DealDamageAction` too, which is the single place every mid-turn point
+	/// of damage passes through — player, Opponent, enemy and unit alike. Guarding there rather
+	/// than in each card is what stops the next direct-damage card reopening this.
+	///
+	/// **Idempotent**: a battle already over is left exactly as it is, so calling it after every
+	/// packet of damage costs nothing and cannot double-fire the events.
+	///
+	/// **Order is a rule, not a preference.** The player's death is checked FIRST, so a packet that
+	/// would kill both is a loss — the run ending outranks winning the battle.
+	/// </summary>
+	public static (GameState State, ImmutableList<GameEvent> Events) SettleBattleEnd(
+		this GameState s
+	)
+	{
+		var battle = s.GetBattle();
+		if (battle.IsOver)
+			return (s, ImmutableList<GameEvent>.Empty);
+
+		if (s.GetPlayer().Life <= 0)
+			return (
+				s.UpdateObject(battle.Id, battle with { IsOver = true, PlayerIsDead = true }),
+				[new PlayerDiedEvent()]
+			);
+
+		if (s.GetOpponent().IsDead)
+			return (
+				s.UpdateObject(battle.Id, battle with { IsOver = true, OpponentDefeated = true }),
+				[new OpponentDefeatedEvent()]
+			);
+
+		return (s, ImmutableList<GameEvent>.Empty);
+	}
+
+	/// <summary>
 	/// Starts the battle: opening hand drawn, turn 1 begun. Single entry point for every
 	/// presentation layer — nobody constructs StartBattleAction directly.
 	/// </summary>
-	public static (
-		GameState State,
-		System.Collections.Immutable.ImmutableList<GameEvent> Events
-	) BeginBattle(this GameState s, int openingHand = 5) =>
-		s.AddAction(new StartBattleAction { OpeningHandSize = openingHand }).ProcessAllActions();
+	public static (GameState State, ImmutableList<GameEvent> Events) BeginBattle(
+		this GameState s,
+		int openingHand = 5
+	) => s.AddAction(new StartBattleAction { OpeningHandSize = openingHand }).ProcessAllActions();
 }

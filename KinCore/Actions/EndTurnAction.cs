@@ -27,39 +27,15 @@ public record EndTurnAction : GameAction
 
 		state = DiscardHand(state);
 
+		// **One account of a battle ending, shared with mid-turn damage** — see `SettleBattleEnd`.
+		// It used to be written out twice right here and nowhere else, which is precisely why a
+		// card that killed the Opponent on your own turn did not end the fight.
+		ImmutableList<GameEvent> ending;
+		(state, ending) = state.SettleBattleEnd();
+		if (!ending.IsEmpty)
+			return new ActionResult(state).WithEvents(events.AddRange(ending));
+
 		var battle = state.GetBattle();
-
-		// The run ending outranks the battle ending, so the player's death is checked first.
-		if (state.GetPlayer().Life <= 0)
-		{
-			battle = state.GetBattle();
-			state = state.UpdateObject(
-				battle.Id,
-				battle with
-				{
-					IsOver = true,
-					PlayerIsDead = true,
-				}
-			);
-			return new ActionResult(state).WithEvents(events.Add(new PlayerDiedEvent()));
-		}
-
-		// Checked AFTER the player's death, so a turn that kills both is still a loss.
-		if (state.GetOpponent().IsDead)
-		{
-			battle = state.GetBattle();
-			state = state.UpdateObject(
-				battle.Id,
-				battle with
-				{
-					IsOver = true,
-					OpponentDefeated = true,
-				}
-			);
-			return new ActionResult(state).WithEvents(events.Add(new OpponentDefeatedEvent()));
-		}
-
-		battle = state.GetBattle();
 
 		// **QUEUED, NOT INLINE, AND THE ORDER IS THE POINT.** Combat v3: your units hold the lane
 		// for one turn and then leave. The spawn queue is FIFO and nothing above resolves inline,

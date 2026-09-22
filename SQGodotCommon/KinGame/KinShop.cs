@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Common.Cards;
-using KinCore;
 using Godot;
+using KinCore;
 
 namespace KinGame;
 
@@ -273,12 +273,15 @@ public sealed class KinShop
 			else
 			{
 				var slot = i;
-				ui.Clicked += _ =>
-				{
-					_onBuy(card);
-					_bought.Add(slot);
-					Refresh();
-				};
+				KinCardTap.OnFirstPress(
+					ui,
+					() =>
+					{
+						_onBuy(card);
+						_bought.Add(slot);
+						Refresh();
+					}
+				);
 			}
 
 			// **Beside the card, never INSIDE it.** `card_2d_canvasgroup.tscn` carries a scale of
@@ -355,12 +358,15 @@ public sealed class KinShop
 			ui.Scale *= chosen;
 
 			var id = card.RunCardId;
-			ui.Clicked += _ =>
-			{
-				_onRemove(id);
-				_removing = false;
-				Refresh();
-			};
+			KinCardTap.OnFirstPress(
+				ui,
+				() =>
+				{
+					_onRemove(id);
+					_removing = false;
+					Refresh();
+				}
+			);
 		}
 
 		_cards.Visible = true;
@@ -373,6 +379,9 @@ public sealed class KinShop
 	/// `CardUI2D` raises Clicked only while it is the hovered card and starting a drag clears that on
 	/// the same press, so a draggable card can never be clicked; and `StartHover` yanks the card to
 	/// the bottom of the viewport, which is right for a hand and wrong for anything else.
+	///
+	/// The press itself is wired by the callers through <see cref="KinCardTap"/>, which is what
+	/// makes a single tap enough on a phone.
 	/// </summary>
 	private CardUI2D Build(KinCard shown, int index)
 	{

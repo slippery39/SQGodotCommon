@@ -344,8 +344,10 @@ public sealed class KinIntermission
 				area.MouseExited += ui.NoHighlight;
 			}
 
+			// First press, finger or mouse — see KinCardTap. This screen used to need two taps on
+			// a phone because `Clicked` waits for a hover.
 			var taken = offered[i];
-			ui.Clicked += _ => _onTake(taken);
+			KinCardTap.OnFirstPress(ui, () => _onTake(taken));
 		}
 
 		_offers.Visible = true;

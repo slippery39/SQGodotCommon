@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
-using KinCore;
 using ImmutableGameObjects;
+using KinCore;
 
 namespace KinCore.Tests;
 
@@ -475,9 +475,7 @@ public class BattleTests
 	[Test]
 	public void AWithdrawnUnitDidNotDie()
 	{
-		var state = KinBattleFactory.Create(
-			opponentHealth: 500
-		);
+		var state = KinBattleFactory.Create(opponentHealth: 500);
 		(state, var unitId) = AddUnit(state, "Survivor", power: 1, toughness: 9);
 
 		(state, _) = state.BeginBattle();
@@ -504,5 +502,93 @@ public class BattleTests
 		Assert.That(events.OfType<UnitDiedEvent>(), Is.Empty);
 		Assert.That(state.GetBattle().DiedThisTurnRunCardIds, Is.Empty);
 		Assert.That(state.GetBattle().DiedThisTurnRunCardIds, Is.Empty);
+	}
+
+	// ===== A kill mid-turn ends the battle immediately =====
+
+	/// <summary>
+	/// **Found by playing, not by a test, and this is the test that was missing.**
+	///
+	/// Every point of damage used to come from lanes trading at end of turn, so checking for a
+	/// dead Opponent only in `EndTurnAction` was indistinguishable from checking properly. Direct
+	/// damage broke that: a card that killed the Opponent on your own turn left the fight running,
+	/// and the player had to press End Turn on a corpse to win.
+	///
+	/// It asserts the battle is over BEFORE any End Turn is issued — which is the whole point, and
+	/// what a test written after an End Turn would have missed.
+	/// </summary>
+	[Test]
+	public void KillingTheOpponentWithACardEndsTheBattleWithoutEndingTheTurn()
+	{
+		var state = KinBattleFactory.Create(opponentHealth: 6);
+		(state, _) = state.BeginBattle();
+
+		Assume.That(state.GetBattle().IsOver, Is.False, "the battle has to be running first");
+
+		var opponent = state.GetOpponent();
+		(state, var events) = state
+			.AddAction(new DealDamageAction { Amount = 6, TargetIds = [opponent.Id] })
+			.ProcessAllActions();
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(state.GetOpponent().IsDead, Is.True, "6 into 6 health");
+			Assert.That(
+				state.GetBattle().IsOver,
+				Is.True,
+				"the battle must end on the damage, not on the next End Turn"
+			);
+			Assert.That(state.GetBattle().OpponentDefeated, Is.True);
+			Assert.That(
+				events.OfType<OpponentDefeatedEvent>().Any(),
+				Is.True,
+				"and it must SAY so"
+			);
+		});
+	}
+
+	/// <summary>
+	/// The same guard for the player, because `SettleBattleEnd` checks their death FIRST — a packet
+	/// that would end both is a loss, since the run ending outranks winning the battle.
+	/// </summary>
+	[Test]
+	public void DamageThatKillsThePlayerMidTurnLosesTheBattleImmediately()
+	{
+		var state = KinBattleFactory.Create(life: 4, maxLife: 4, opponentHealth: 500);
+		(state, _) = state.BeginBattle();
+
+		var player = state.GetPlayer();
+		(state, var events) = state
+			.AddAction(new DealDamageAction { Amount = 4, TargetIds = [player.Id] })
+			.ProcessAllActions();
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(state.GetBattle().IsOver, Is.True);
+			Assert.That(state.GetBattle().PlayerIsDead, Is.True);
+			Assert.That(state.GetBattle().OpponentDefeated, Is.False, "a loss is not a win");
+			Assert.That(events.OfType<PlayerDiedEvent>().Any(), Is.True);
+		});
+	}
+
+	[Test]
+	public void SettlingAnAlreadyFinishedBattleChangesNothing()
+	{
+		var state = KinBattleFactory.Create(opponentHealth: 3);
+		(state, _) = state.BeginBattle();
+
+		var opponent = state.GetOpponent();
+		(state, _) = state
+			.AddAction(new DealDamageAction { Amount = 3, TargetIds = [opponent.Id] })
+			.ProcessAllActions();
+
+		// Idempotent, or every later damage packet in a finished battle re-announces the win.
+		var (again, events) = state.SettleBattleEnd();
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(events, Is.Empty, "a finished battle must not end a second time");
+			Assert.That(again.GetBattle().IsOver, Is.True);
+		});
 	}
 }

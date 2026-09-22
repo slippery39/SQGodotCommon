@@ -102,6 +102,13 @@ public record DealDamageAction : EffectAction
 			}
 		}
 
-		return new ActionResult(state).WithEvents(events);
+		// **A kill mid-turn ends the battle HERE, not at end of turn.** Direct-damage cards made
+		// that difference visible: lethal from a card left the fight running until End Turn was
+		// pressed on a dead Opponent. See `SettleBattleEnd`, which is idempotent, so this costs
+		// nothing on the overwhelming majority of damage packets that kill nobody.
+		ImmutableList<GameEvent> ending;
+		(state, ending) = state.SettleBattleEnd();
+
+		return new ActionResult(state).WithEvents(events.AddRange(ending));
 	}
 }
