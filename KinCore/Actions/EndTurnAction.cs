@@ -83,8 +83,10 @@ public record EndTurnAction : GameAction
 			// to win a battle, which is what makes holding a lane offence as well as defence.
 			if (enemy is null)
 			{
-				if (card is { } unopposed && unopposed.Unit().Power > 0)
-					(state, events) = DamageOpponent(state, events, unopposed.Unit().Power);
+				// Strikes counts here too. An open lane is still the exchange, so a double-striker
+				// with nothing in front of it puts its power into the Opponent twice.
+				if (card is { } unopposed && unopposed.Unit() is { Power: > 0 } free)
+					(state, events) = DamageOpponent(state, events, free.Power * free.Strikes);
 				continue;
 			}
 
@@ -92,27 +94,51 @@ public record EndTurnAction : GameAction
 
 			if (card is null)
 			{
+				// An undefended lane eats every strike, for the same reason.
 				if (attack > 0)
-					(state, events) = DamagePlayer(state, events, attack, absorbed: 0);
+					(state, events) = DamagePlayer(
+						state,
+						events,
+						attack * enemy.Strikes,
+						absorbed: 0
+					);
 				continue;
 			}
 
 			var unit = card.Unit();
 
-			// Read both sides first: the unit's power must not depend on damage it is taking in
-			// this same exchange, or whoever resolves second is silently weaker.
-			state = state.UpdateObject(enemy.Id, enemy with { Health = enemy.Health - unit.Power });
+			// **Every number below is read before ANY of them is applied**, which is the rule this
+			// exchange has always run on: the unit's power must not depend on damage it is taking
+			// in the same exchange, or whoever resolves second is silently weaker. Thorns and
+			// Strikes do not change that — they change how many times each side lands, so they are
+			// multipliers on numbers read at the same instant as before.
+			var incoming = attack * enemy.Strikes;
 
-			if (attack <= 0)
+			// **Thorns answers a HIT, so it fires once per strike of whatever hit it** — and only
+			// if it was actually hit. A unit with no power never attacked, and an enemy that is
+			// Waiting never attacked, so neither draws blood from the other's spikes.
+			var thornsOnUnit = unit.Power > 0 ? enemy.Thorns * unit.Strikes : 0;
+			var thornsOnEnemy = incoming > 0 ? unit.Thorns * enemy.Strikes : 0;
+
+			// One update, because two would have to re-read the enemy in between and the second
+			// read would see health the first had already taken off.
+			var toEnemy = unit.Power * unit.Strikes + thornsOnEnemy;
+			state = state.UpdateObject(enemy.Id, enemy with { Health = enemy.Health - toEnemy });
+
+			// **Thorns lands ON TOP of the intent rather than replacing part of it**, so it is
+			// added before the soak is worked out and its excess spills to your face like any
+			// other overflow. That is what makes a big toughness body an unsafe answer to spikes.
+			var total = incoming + thornsOnUnit;
+			if (total <= 0)
 				continue;
 
-			var soak = Math.Min(attack, unit.RemainingToughness);
+			var soak = Math.Min(total, unit.RemainingToughness);
 			state = state.UpdateObject(
 				card.Id,
 				card.WithComponentReplaced(unit with { Damage = unit.Damage + soak })
 			);
 
-			var excess = attack - soak;
+			var excess = total - soak;
 			if (excess > 0)
 				(state, events) = DamagePlayer(state, events, excess, absorbed: soak);
 		}

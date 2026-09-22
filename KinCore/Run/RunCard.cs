@@ -64,6 +64,15 @@ public record RunCard
 	public int Power { get; init; }
 	public int Toughness { get; init; }
 
+	/// <summary>**Thorns N** — see <see cref="UnitComponent.Thorns"/>. Copied onto the unit.</summary>
+	public int Thorns { get; init; }
+
+	/// <summary>
+	/// **Strikes N** — see <see cref="UnitComponent.Strikes"/>. Copied onto the unit, and 1 here
+	/// for the same reason it is 1 there.
+	/// </summary>
+	public int Strikes { get; init; } = 1;
+
 	/// <summary>
 	/// What the card DOES, beyond being a body. Empty for a plain unit.
 	///
@@ -110,7 +119,15 @@ public record RunCard
 
 		return IsUnit
 			? (KinCard)
-				card.WithComponent(new UnitComponent { Power = Power, Toughness = Toughness })
+				card.WithComponent(
+					new UnitComponent
+					{
+						Power = Power,
+						Toughness = Toughness,
+						Thorns = Thorns,
+						Strikes = Strikes,
+					}
+				)
 			: card;
 	}
 }

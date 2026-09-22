@@ -43,7 +43,8 @@ public static class KeywordLibrary
 		new Keyword
 		{
 			Name = "Companion",
-			Text = "Free, and starts in the centre lane every battle. No doom can touch it.",
+			Text =
+				"Free, and starts in the centre lane every battle. Nothing can take it from you.",
 			Aliases = ["companion"],
 		},
 		new Keyword
@@ -87,6 +88,22 @@ public static class KeywordLibrary
 			Name = "Devour",
 			Text = "The unit this replaces dies instead of leaving, so it counts as a Loss.",
 			Aliases = ["devour", "devours"],
+		},
+		new Keyword
+		{
+			Name = "Thorns",
+			Text =
+				"When this is attacked, the attacker takes this much. It adds to the attack, so "
+				+ "the excess reaches you.",
+			Aliases = ["thorns"],
+		},
+		new Keyword
+		{
+			Name = "Strikes",
+			Text =
+				"This deals its damage that many times. Each hit is separate, so Thorns answers "
+				+ "every one.",
+			Aliases = ["strikes twice", "strikes", "strike"],
 		},
 		new Keyword
 		{
