@@ -7,7 +7,7 @@ public enum ZoneType
 	Hand,
 	Discard,
 
-	/// <summary>The player's units in play. This is what a doom scenario reads.</summary>
+	/// <summary>The player's units in play. Emptied every turn — units withdraw, see combat v3.</summary>
 	Field,
 
 	/// <summary>The enemies. Owned by the battle, not the player.</summary>

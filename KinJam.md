@@ -422,6 +422,14 @@ different plan. An enemy should punish a BEHAVIOUR, the way STS does — that is
 
 ## Card design pass — 2026-09-18  [DESIGNED; BUILDING FROM THE TOP]
 
+> **PRUNED 2026-09-22.** The pivot deleted the doom layer and with it the countdown, so every card
+> below that priced a countdown or a doom trigger is gone from this plan: **Stopwatch**, **Hasten**,
+> **Doomsayer** (the card — the ENEMY of that name is still live content), **Doomherald**, and
+> **Broken Watch**. They are recorded here as deleted rather than silently dropped, because the
+> mechanics they were built on no longer exist and re-deriving them from a stale table is exactly
+> the mistake this note prevents. **Clusters 2 and 3 — thorns and strikes — survive untouched**, and
+> they are the live front of this pass.
+
 **The pool is ~24 cards and nearly all of them are a stat line plus one number.** This pass is the
 content plan that fixes that: the mechanics a deck can be built AROUND, the enemies that punish
 building around them, and the order to build it in.
@@ -560,17 +568,19 @@ and has to draft its own finisher. That is the trade, and it is what stops walls
 **Whetstone at 0 is the glue and the test of the cluster.** It is a blank without a body worth
 doubling and absurd on the right one — which is what a build-around enabler is supposed to feel like.
 
-### Cluster 4 — weaken, and the clock
+### Cluster 4 — weaken
 
 | Card | Cost | Line | Text |
 |---|---|---|---|
 | Lamplighter | 1 | 6/6 | On play: Weaken 4 in this lane. |
 | Chainbinder | 2 | 6/14 | On play: Weaken 3 to Adjacent enemies. |
-| Stopwatch | 1 | rite | The countdown does not tick this turn. |
-| Hasten | 1 | rite | The countdown ticks twice. Draw 2. |
 
 Weaken is the answer to Wind-up and Growing, and it reads perfectly because the telegraph shows the
-number fall. **Hasten is the dodge-vs-eat bargain as a card** — pay a turn of apocalypse for tempo.
+number fall.
+
+**Stopwatch and Hasten are cut** — both were countdown cards, and Hasten was the dodge-vs-eat
+bargain as a card. Nothing in the game spans turns for a rite to bargain with any more, which is
+the same hole `KinBot`'s deleted deck term left — that class's doc records it.
 
 ### Cluster 5 — Powers, the build-around class
 
@@ -583,7 +593,11 @@ destination branch in `PlayCardAction`.
 | Watchfire | 2 | End of turn: 4 to every enemy. |
 | Rationing | 1 | Draw an extra card each turn. |
 | Generator | 2, rare | +1 energy each turn. |
-| Doomsayer | 2, rare | Doom: Ash gets +3/+3, permanently. |
+
+**The fourth Power was Doomsayer — "Doom: Ash gets +3/+3, permanently" — and it is cut twice over.**
+Its trigger is deleted, and `EnemyLibrary` fields a live enemy of that name, so it was the
+Revenant/Twice Buried collision again. A scaling rare still wants to exist here; it needs a trigger
+that fires, and the companion upgrade pool is where that kind of permanent growth now lives.
 
 **Powers do not need Piercing or Shifting to be safe, and `Persistent` does.** A Power holds no lane,
 so it cannot wall the board and cannot reintroduce the stall — which makes it the cheapest route to
@@ -606,7 +620,6 @@ board where every enemy is one fixed number is balanced against a board we are d
 | **Gravewatcher** | +4/+0 whenever one of your units dies | the sacrifice deck's nemesis |
 | **Tithe-Collector** | you draw one fewer card next turn | kill it — a body cannot answer it |
 | **Static Choir** | you have 1 less energy next turn | as above, harder |
-| **Doomherald** | the countdown ticks twice while it lives | you are racing it, not surviving it |
 
 **Enemy debuffs must hit your ECONOMY, never your units.** Your units leave every turn, so a stat
 debuff on one is nearly free; your energy, your draw and your companion are the only things on your
@@ -618,8 +631,11 @@ it.
 
 This doc cut relics from v1 and put the relic slot in the dooms' hands. **Reopened by this pass**,
 with one constraint that keeps the pillar intact: **relics change RULES, not numbers.** A relic that
-adds stats is a second power curve competing with doom transforms, which is what the original
-objection was actually about. A relic that changes what a turn is worth is a deckbuilding input.
+adds stats is a second power curve competing with the one that already exists, which is what the
+original objection was actually about — it was written against doom transforms, and **it now points
+at companion upgrades instead, which makes it sharper rather than stale**: upgrades ARE the measured
+power curve, and a stat relic would be a second, unmeasured one. A relic that changes what a turn is
+worth is a deckbuilding input.
 
 | Relic | Effect |
 |---|---|
@@ -627,7 +643,6 @@ objection was actually about. A relic that changes what a turn is worth is a dec
 | Ash's Collar | Ash keeps its buffs between turns. |
 | Bone Ledger | The first time a unit of yours dies each turn, draw a card. |
 | Field Anvil | Units you play into the edge lanes get +2/+2. |
-| Broken Watch | Countdowns are 1 longer; doom transforms hit twice. |
 
 **Mechanically a relic is a Power with run scope** — same holder, same triggers, a `Run.Relics` list
 instead of a battle zone. So Powers first: relics are then almost free, and if Powers do not land,
@@ -636,7 +651,8 @@ nothing was spent.
 ### Archetypes this is aiming at
 
 - **Early** — Stray, Bramblehide, Lamplighter: cheap bodies and cheap answers that stop scaling by floor 10.
-- **Scaling** — Powers, Long Watcher, Doomsayer: want a long fight and want to eat apocalypses.
+- **Scaling** — Powers, Long Watcher: want a long fight. **What they wanted to eat is deleted**, so
+  what makes a long fight pay is now an open question rather than a designed one.
 - **Build-around** — Ossuary + sacrifice outlets; Whetstone + on-strike; thorns + Barbed Standard.
 - **Energy** — Generator, and a burst "gain 2 energy this turn" ritual.
 - **Glue** — Whetstone, Barbed Standard, Gallows Feast: fine in two decks, excellent in one.

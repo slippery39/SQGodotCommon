@@ -1,8 +1,8 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Common.Cards;
-using KinCore;
 using Godot;
+using KinCore;
 
 namespace KinGame;
 
@@ -159,13 +159,7 @@ public sealed class KinCardInspector
 
 		// A Rite says so nowhere on its face — the absence of a stat badge is the only tell — so the
 		// word is fed in here rather than hoped for in the text.
-		foreach (
-			var keyword in KeywordLibrary.In(
-				rules,
-				string.Join(" ", card.Tags),
-				unit is null ? "Rite" : ""
-			)
-		)
+		foreach (var keyword in KeywordLibrary.In(rules, unit is null ? "Rite" : ""))
 		{
 			var entry = new VBoxContainer();
 			entry.AddThemeConstantOverride("separation", 2);

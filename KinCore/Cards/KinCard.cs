@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace KinCore;
@@ -15,22 +15,16 @@ public record KinCard : GameObject
 	/// <summary>
 	/// Identity of this card in the RUN deck, stable across battles.
 	///
-	/// This is the bridge a doom transform needs. Battle objects get fresh GameState ids every
-	/// battle, so "duplicate every unit summoned this battle" cannot be expressed against them —
-	/// it has to name entries in the run deck, which outlives the GameState. Flood is the case
-	/// that forces this: it reads the battle and rewrites the run.
+	/// **The thing that forced this — a doom transform rewriting the run deck from what happened in
+	/// a battle — is deleted, and the field is still load-bearing.** Battle objects get fresh
+	/// GameState ids every battle, so anything that has to name a card ACROSS battles names it by
+	/// this instead: `KinBattle.DiedLastTurnRunCardIds` and `DiedThisTurnRunCardIds` are what the
+	/// attrition reads count, and they count run card ids.
 	/// </summary>
 	public int RunCardId { get; init; }
 
 	/// <summary>
-	/// Marks left by apocalypses, copied from the run card. Read at battle time — "Irradiated"
-	/// costs a life when drawn. See <see cref="RunCard.Tags"/>.
-	/// </summary>
-	public ImmutableHashSet<string> Tags { get; init; } =
-		ImmutableHashSet.Create<string>(StringComparer.OrdinalIgnoreCase);
-
-	/// <summary>
-	/// What this card does when it is played, dies, or a doom fires. Copied from the run card.
+	/// What this card does when it is played or dies. Copied from the run card.
 	///
 	/// A card with no <see cref="UnitComponent"/> and no effects does NOTHING — it costs energy and
 	/// goes to Discard. That is an authoring mistake, and `PlayCardAction` refuses it rather than
@@ -43,6 +37,4 @@ public record KinCard : GameObject
 
 	/// <summary>**Devour** — the unit this replaces dies instead of leaving. See <see cref="RunCard.Devours"/>.</summary>
 	public bool Devours { get; init; }
-
-	public bool HasTag(string tag) => Tags.Contains(tag);
 }

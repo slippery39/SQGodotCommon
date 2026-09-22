@@ -1,5 +1,5 @@
+﻿using ImmutableGameObjects;
 using KinCore;
-using ImmutableGameObjects;
 
 namespace KinConsole;
 
@@ -16,7 +16,6 @@ public static class Renderer
 
 		Console.WriteLine();
 		Console.WriteLine(new string('=', 72));
-
 
 		Console.WriteLine(new string('-', 72));
 		Console.WriteLine(
@@ -127,11 +126,8 @@ public static class Renderer
 		{
 			var unit = card.GetComponent<UnitComponent>();
 			var stats = unit is null ? "rite" : $"{unit.Power}/{unit.Toughness}";
-			var tags = card.Tags.IsEmpty ? "" : $" [{string.Join(",", card.Tags)}]";
 			var affordable = card.Cost <= energy ? " " : "x";
-			Console.WriteLine(
-				$"  {affordable}[{card.Id}] {card.Name} — cost {card.Cost}, {stats}{tags}"
-			);
+			Console.WriteLine($"  {affordable}[{card.Id}] {card.Name} — cost {card.Cost}, {stats}");
 		}
 	}
 

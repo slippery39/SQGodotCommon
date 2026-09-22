@@ -12,7 +12,6 @@ namespace KinCore.Tests;
 /// </summary>
 public class BotTests
 {
-
 	[Test]
 	public void BotClearsTheFirstFloor()
 	{
@@ -107,7 +106,7 @@ public class BotTests
 			opponent: StarterContent.OpponentFor(1, 7)
 		);
 
-		var played = KinBot.PlayTurn(state, run);
+		var played = KinBot.PlayTurn(state);
 
 		// The companion is already on the field, so "the bot played something" is strictly more
 		// than one unit standing.

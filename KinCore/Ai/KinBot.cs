@@ -1,4 +1,4 @@
-using ImmutableGameObjects;
+﻿using ImmutableGameObjects;
 
 namespace KinCore;
 
@@ -16,6 +16,13 @@ public record KinEvalWeights
 	/// (game, bot), and combat v3 made units ephemeral — so a v3 number and a v2 number are not
 	/// comparable even though the search and every weight here are untouched. Without this, run 14
 	/// reads as a catastrophic regression against run 13 rather than as a different game.
+	///
+	/// **NOT bumped when the deck term was deleted on 2026-09-22, and that is deliberate.** The
+	/// term had become a constant — with the dooms gone a battle cannot touch the run deck, so
+	/// `Run.AfterBattle(s).Deck` was `run.Deck` for every line scored — and a constant added to
+	/// every sibling cannot move an argmax. Verified rather than argued: `sim 30` before and after,
+	/// and all 88 lines of output matched except the wall clock. Numbers measured either side of it
+	/// ARE comparable, so bumping would have thrown that comparability away for nothing.
 	/// </summary>
 	public string Version { get; init; } = "bot-1/v3";
 
@@ -33,9 +40,6 @@ public record KinEvalWeights
 	public double EnemyHealth { get; init; } = 1;
 	public double EnemyAttack { get; init; } = 1.5;
 
-	/// <summary>Per point of deck value. This is what prices taking the apocalypse vs outrunning it.</summary>
-	public double DeckCard { get; init; } = 1.0;
-
 	/// <summary>Nodes one turn's search may expand. Hit only by a wide hand; see KinBot.</summary>
 	public int NodeBudget { get; init; } = 20000;
 }
@@ -49,10 +53,12 @@ public record KinEvalWeights
 /// simulation rather than by a hand-written board heuristic is what stops there being a second,
 /// drifting account of what combat does — the same reason `KinPreviewer` runs the real transform.
 ///
-/// **It sees one turn.** The doom clock is a multi-turn race and the bot does not search it; what
-/// keeps it from being blind is that the eval prices the RUN DECK through <see cref="Run.AfterBattle"/>,
-/// so a line that lets the apocalypse land pays for the cards it would cost, with the real
-/// transform doing the pricing.
+/// **It sees one turn, and nothing now corrects for that.** The doom clock was the multi-turn race
+/// the bot could not search, and the eval answered it by pricing the run deck through
+/// `Run.AfterBattle` — a line that let an apocalypse land paid for the cards it would cost. With
+/// the dooms deleted a battle cannot touch the run deck at all, so that term became a constant
+/// added to every sibling line and was removed. **If a mechanic ever spans turns again, this is
+/// where it has to be priced**, and a constant is not how.
 /// </summary>
 public static class KinBot
 {
@@ -60,11 +66,11 @@ public static class KinBot
 	/// Returns the state after the best sequence of plays this turn. **Does not end the turn** —
 	/// the caller does, so the simulator and any future front end share one turn boundary.
 	/// </summary>
-	public static GameState PlayTurn(GameState state, Run run, KinEvalWeights? weights = null)
+	public static GameState PlayTurn(GameState state, KinEvalWeights? weights = null)
 	{
 		var w = weights ?? new KinEvalWeights();
 		var budget = w.NodeBudget;
-		return Search(state, run, w, ref budget).State;
+		return Search(state, w, ref budget).State;
 	}
 
 	/// <summary>
@@ -73,12 +79,11 @@ public static class KinBot
 	/// </summary>
 	private static (double Score, GameState State) Search(
 		GameState s,
-		Run run,
 		KinEvalWeights w,
 		ref int budget
 	)
 	{
-		var best = (Score: ScoreEndingTurnHere(s, run, w), State: s);
+		var best = (Score: ScoreEndingTurnHere(s, w), State: s);
 
 		if (--budget <= 0 || s.GetBattle().IsOver)
 			return best;
@@ -89,7 +94,7 @@ public static class KinBot
 				continue;
 
 			var (next, _) = s.AddAction(action).ProcessAllActions();
-			var child = Search(next, run, w, ref budget);
+			var child = Search(next, w, ref budget);
 
 			if (child.Score > best.Score)
 				best = child;
@@ -171,19 +176,19 @@ public static class KinBot
 	}
 
 	/// <summary>
-	/// What this line is worth if the turn ends right now — combat, deaths, the Opponent's
-	/// reinforcement and any doom firing all resolved by the engine itself on a throwaway copy.
+	/// What this line is worth if the turn ends right now — combat, deaths and the Opponent's
+	/// reinforcement all resolved by the engine itself on a throwaway copy.
 	/// </summary>
-	private static double ScoreEndingTurnHere(GameState s, Run run, KinEvalWeights w)
+	private static double ScoreEndingTurnHere(GameState s, KinEvalWeights w)
 	{
 		if (s.GetBattle().IsOver)
-			return Score(s, run, w);
+			return Score(s, w);
 
 		var (after, _) = s.AddAction(new EndTurnAction()).ProcessAllActions();
-		return Score(after, run, w);
+		return Score(after, w);
 	}
 
-	private static double Score(GameState s, Run run, KinEvalWeights w)
+	private static double Score(GameState s, KinEvalWeights w)
 	{
 		var battle = s.GetBattle();
 		if (battle.PlayerIsDead)
@@ -218,26 +223,6 @@ public static class KinBot
 			score -= (enemy.Intent == IntentKind.Attack ? enemy.IntentAmount : 0) * w.EnemyAttack;
 		}
 
-		// THE DOOM TERM. Replaying the firings through the real transform is what makes the bot
-		// play the countdown race at all: a line that eats an apocalypse pays here, in the cards it
-		// actually costs, priced by the same code the game uses. Firings already banked appear in
-		// every sibling line, so they cancel and only a NEW firing moves the comparison.
-		var deck = run.AfterBattle(s).Deck;
-		if (deck.IsEmpty)
-			return w.Death; // Flood can empty a deck outright, and an empty deck is a lost run.
-
-		score += deck.Sum(CardValue) * w.DeckCard;
-
 		return score;
 	}
-
-	/// <summary>
-	/// What a deck entry is worth, roughly.
-	///
-	/// ponytail: crude stat sum — it only has to rank "lost a card" against "gained one" so the
-	/// doom term has a sign. Replace it with the measured per-card numbers out of
-	/// `doom_sim_results/` once there are some, which is the whole point of running the sim.
-	/// </summary>
-	private static double CardValue(RunCard card) =>
-		card.IsUnit ? card.Power + card.Toughness - card.Cost : 4 - card.Cost;
 }

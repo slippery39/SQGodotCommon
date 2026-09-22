@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace KinCore;
 
@@ -65,14 +65,6 @@ public record RunCard
 	public int Toughness { get; init; }
 
 	/// <summary>
-	/// Marks left by apocalypses — "Zombie", "Irradiated". Free-form so a new scenario needs no
-	/// engine change, and readable by reward weighting so the game can offer you answers to the
-	/// doom you actually took.
-	/// </summary>
-	public ImmutableHashSet<string> Tags { get; init; } =
-		ImmutableHashSet.Create<string>(StringComparer.OrdinalIgnoreCase);
-
-	/// <summary>
 	/// What the card DOES, beyond being a body. Empty for a plain unit.
 	///
 	/// Lives on the run card because it is part of the card's definition, and it is copied onto the
@@ -82,10 +74,6 @@ public record RunCard
 
 	/// <summary>
 	/// Which act this card belongs to, or null for the shared core every act draws from.
-	///
-	/// **Not a <see cref="Tags"/> entry, deliberately.** Tags are marks an apocalypse LEAVES, and a
-	/// doom transform writes to them — a card could gain a theme by being irradiated. Identity and
-	/// damage do not belong in the same field.
 	/// </summary>
 	public KinTheme? Theme { get; init; }
 
@@ -94,8 +82,6 @@ public record RunCard
 	/// and <see cref="StarterContent.WeightOf"/> is where the weights live.
 	/// </summary>
 	public KinRarity Rarity { get; init; } = KinRarity.Common;
-
-	public bool HasTag(string tag) => Tags.Contains(tag);
 
 	/// <summary>
 	/// This card as it enters a battle.
@@ -117,7 +103,6 @@ public record RunCard
 			Description = Description,
 			Cost = Cost,
 			RunCardId = RunCardId,
-			Tags = Tags,
 			Effects = Effects,
 			Exhausts = Exhausts,
 			Devours = Devours,

@@ -1,8 +1,8 @@
-using System.Linq;
+﻿using System.Linq;
 using Common.Cards;
-using KinCore;
 using Godot;
 using ImmutableGameObjects;
+using KinCore;
 
 namespace KinGame;
 
@@ -267,13 +267,7 @@ public static class KinCardFace
 	{
 		// Assembled in KinCore so the console dump cannot disagree with the card face — and so a
 		// keyword that is a FLAG rather than an effect (Devour) appears on both.
-		var lines = KinRulesText.Lines(card).ToList();
-		if (lines.Count > 0)
-			return string.Join("\n", lines);
-
-		// A tag is a mark an apocalypse LEFT on the card, so it is genuinely rules — "Irradiated"
-		// costs a life when drawn and the player has to see that coming.
-		return card.Tags.IsEmpty ? "" : string.Join(", ", card.Tags);
+		return string.Join("\n", KinRulesText.Lines(card));
 	}
 
 	/// <summary>

@@ -1,13 +1,17 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace KinCore;
 
 /// <summary>
-/// Which apocalypse you chose to live through. **Picked once, at the start of a run.**
+/// Which act you are in. **One per act, in a fixed order — see `ActMap`.**
 ///
-/// A theme is not a reskin: it decides the whole SEQUENCE of dooms you face, and eventually the
-/// enemies and cards you see with them. It is the closest thing this game has to picking a
-/// character, and it does the job without a character existing.
+/// It used to be a CHOICE made once at the start of a run, and what it chose was the sequence of
+/// dooms you would face. **That sequence is deleted.** What a theme still decides is the act's
+/// name, its boss and its card rewards, which is why it was kept — but it is no longer the
+/// closest thing to picking a character. **The companion is**, and it is picked for real.
+///
+/// The three names below are still the grimy register the re-theme is replacing; see
+/// `KinSettingSketches.md`.
 /// </summary>
 public enum KinTheme
 {
@@ -22,7 +26,7 @@ public enum KinTheme
 }
 
 /// <summary>
-/// One theme: the dooms it walks you through, in order, and the one waiting at the end.
+/// One act: its name, the boss on its last floor, and the cards it adds to the reward pool.
 /// </summary>
 public record ThemeDefinition
 {

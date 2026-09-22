@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 using ImmutableGameObjects;
 
 namespace KinCore;
@@ -81,8 +81,9 @@ public static class RunSimulator
 	/// worst card in a deck you draw five from every turn is doing active harm. Then healing when
 	/// badly hurt, then a card if there is still gold.
 	///
-	/// It removes the cheapest-looking card by the same crude `CardValue` the evaluator uses, which
-	/// is a stat sum and not a measurement. **This is a floor on how well shopping can go, not a
+	/// It removes the cheapest-looking card by `Worth` below — a stat sum, not a measurement. That
+	/// used to be the evaluator's `CardValue` too; the evaluator's copy went with the deck term, so
+	/// this is now the only one. **This is a floor on how well shopping can go, not a
 	/// model of how a player shops** — a picker that reads the measured card table would replace it
 	/// and would move every number that follows.
 	/// </summary>
@@ -163,7 +164,7 @@ public static class RunSimulator
 			var turns = 0;
 			while (!state.GetBattle().IsOver && turns < MaxTurnsPerBattle)
 			{
-				state = KinBot.PlayTurn(state, run, w);
+				state = KinBot.PlayTurn(state, w);
 				(state, _) = state.AddAction(new EndTurnAction()).ProcessAllActions();
 				turns++;
 			}
