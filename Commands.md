@@ -59,15 +59,33 @@ Import first, every time: the script loads the IMPORTED resource, so an edited S
 re-imported renders the previous version and looks exactly like an edit that did nothing. Full
 procedure in the `draw-card-art` skill.
 
-**Pin the window to one monitor** so a capture cannot land on top of other work — and never drive it
-with synthetic clicks (see `HANDOFF-KinPacingAndRewards.md` §4):
+## Running a scene — USE THE SCRIPT
+
+```
+./Run-Godot.ps1 KinGame/kin_board.tscn                                     # just run it
+./Run-Godot.ps1 KinGame/kin_board.tscn -Capture shots -Seconds 3 -GameArgs '--autoturn'
+./Run-Godot.ps1 KinGame/kin_board.tscn -Capture shots -GameArgs '--reward'
+./Run-Godot.ps1 KinGame/kin_board.tscn -Headless -Seconds 2                # log-only check
+```
+
+**`Run-Godot.ps1` exists for the same reason `Build-Apk.ps1` does: three things go wrong every time
+and none of them are memorable.** It uses `godot-mono` (the plain `godot` on PATH cannot load C# at
+all), it DETECTS the second monitor rather than hardcoding a position, and it creates the capture
+directory — which `--write-movie` needs, and without which it exits 0, prints "Done recording movie
+at path: ...", and writes nothing.
+
+**Every raw invocation below omits `--position` and will open on top of whatever you are working
+on.** Eight of the ten in this file did, which is exactly how it keeps being got wrong — prefer the
+script, and pass `--position` by hand only when you cannot.
+
+`--position` takes virtual-desktop coordinates, so `1920,0` is the second monitor on a side-by-side
+pair. The script reads the real layout instead, so rearranging displays cannot stale it.
+
+**Never drive a capture with synthetic clicks** — see `HANDOFF-KinPacingAndRewards.md` §4.
 
 ```
 godot-mono --path SQGodotCommon --position 1920,0 --resolution 1600x900   --write-movie shots/doom.png --fixed-fps 10 --quit-after 40   KinGame/kin_board.tscn
 ```
-
-`--position` takes virtual-desktop coordinates, so `1920,0` is the second monitor on a side-by-side
-pair.
 
 **`--autostart` is gone from these commands and from the code (2026-09-18).** It existed because
 `--write-movie` cannot click a button: the board used to open on a theme picker, so every capture

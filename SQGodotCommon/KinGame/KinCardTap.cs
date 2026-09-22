@@ -27,39 +27,40 @@ namespace KinGame;
 public static class KinCardTap
 {
 	/// <summary>
-	/// Calls <paramref name="take"/> at most once, on the first press of this card.
+	/// Calls <paramref name="take"/> on the first press of this card.
 	///
-	/// Both routes are wired — the hover area's own input, which is what works under a finger, and
-	/// `Clicked`, which is what a mouse has always used. On a desktop both can fire for a single
-	/// press, so the latch is not defensive: without it a reward would be taken twice, putting two
-	/// cards in the deck and advancing the floor twice.
+	/// **ONE route, deliberately.** This first shipped wiring the area press AND `Clicked`, with a
+	/// latch to stop the two firing twice for one mouse press — which is a guard invented to cover
+	/// a second wire that did not need to exist. The area alone serves both inputs:
+	/// `InputEventMouseButton` is the mouse and `InputEventScreenTouch` is the finger.
+	///
+	/// Measured on the scene rather than assumed, because the whole fix rests on it:
+	/// `HoverArea.input_pickable` is **true** and its shape is **232x315**, which is the card. So
+	/// the area's coverage IS the clickable region — the same region that lights the hover
+	/// highlight, which is what tells the player what they are about to press.
+	///
+	/// `monitoring = false` on that area is not a problem: it governs detecting other areas and
+	/// bodies, not input picking.
+	///
+	/// Throws if the area is missing, rather than silently wiring nothing and shipping a card that
+	/// cannot be taken at all.
 	/// </summary>
 	public static void OnFirstPress(CardUI2D ui, Action take)
 	{
-		var claimed = false;
+		if (ui.FindChild("HoverArea", true, false) is not Area2D area)
+			throw new InvalidOperationException(
+				"CardUI2D has no HoverArea, so nothing would be clickable. The card scene changed "
+					+ "under KinCardTap."
+			);
 
-		void Once()
+		area.InputEvent += (_, e, _) =>
 		{
-			if (claimed)
-				return;
-
-			claimed = true;
-			take();
-		}
-
-		if (ui.FindChild("HoverArea", true, false) is Area2D area)
-		{
-			area.InputEvent += (_, e, _) =>
-			{
-				if (
-					e
-					is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }
-						or InputEventScreenTouch { Pressed: true }
-				)
-					Once();
-			};
-		}
-
-		ui.Clicked += _ => Once();
+			if (
+				e
+				is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left }
+					or InputEventScreenTouch { Pressed: true }
+			)
+				take();
+		};
 	}
 }
