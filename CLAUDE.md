@@ -84,7 +84,7 @@ nothing is orphaned — you should not need any of it.
 | Kind | Location | Loads |
 |---|---|---|
 | Design doc — read first | `KinJam.md` | read it |
-| **The setting — UNDECIDED, and it blocks the re-theme** | `KinSettingSketches.md` | read it before naming any content |
+| **The setting — GENERIC FANTASY substrate; themes swappable on top** | `KinSettingSketches.md` | read it before naming any content |
 | **The next thing to build — v3** | `KinV3Plan.md` | read it before starting any v3 phase |
 | Where the last session got to | `HANDOFF-KinPivot.md` | read it when picking the work back up |
 | Earlier handoff, superseded | `HANDOFF-KinCardsAndFlood.md` | read only for its scars (§4) |

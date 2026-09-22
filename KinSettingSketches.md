@@ -1,11 +1,44 @@
-# Setting sketches — three frames to choose between
+# Setting — GENERIC FANTASY as a substrate, and three frames kept for later
 
-**Status: PROPOSAL, PARKED. The frame is deliberately NOT chosen yet.**
+**Status: DECIDED 2026-09-22 — and what was decided is deliberately NOT one of the three frames
+below.**
+
+> **The direction is generic fantasy, in the MTG register: enough to get started, and permissive
+> enough to try different themes on top of.** Goblins, knights, undead, beasts, a rival mage with a
+> line of creatures. Legible without explanation, cheap to draw, and it commits to nothing.
+>
+> **This is a SUBSTRATE, not a frame, and that is the point.** Each of the three frames below is
+> high-concept and each one narrows what content is allowed to exist — a circuit of small-town
+> contests cannot field a lich, a herd migration cannot field a rival wizard. A neutral fantasy
+> vocabulary unblocks every naming job — cards, enemies, acts, palette, the 56 SVGs, the title —
+> **without making the setting decision at all**, which is the right shape for a game whose
+> mechanics are still open.
+>
+> **What it costs, recorded honestly:** generic fantasy is the least distinctive option on this
+> page, and it is NOT the "monster-collecting-adjacent, warm, not cosy" register this document had
+> already settled on. That register is not abandoned — it is deferred. A substrate can carry a
+> register later; a frame has to be chosen up front.
+>
+> **The three frames are therefore NOT deleted.** They stop being a choice and become candidate
+> THEMES to drop onto the substrate once themes are swappable — which is what the next bullet makes
+> real.
+>
+> **The two code prerequisites below are no longer conditional.** "If regions become real places"
+> was the hypothetical; "allows us to try out different themes" is the requirement. So both are now
+> features to build, not caveats:
+>
+> - **Enemies are not act-scoped.** `PlayableOn(floor)` is `MinFloor <= floor` and run-wide, so act
+>   3 still draws act 1's creatures.
+> - **`ActMap.Order` is a fixed array of three** with no pool to draw a variant from.
 
 > **THE WHOLE GAME IS EXPLORATORY, the companion most of all.** Nothing below or in any other design
 > doc is settled. See the root `CLAUDE.md` — a past note is evidence, never a veto.
 
-> **Decided 2026-09-22, and all three cost nothing because they are what the code already does:**
+> **Decided 2026-09-22, and all three cost nothing because they are what the code already does.**
+> **Two parts of this block are SUPERSEDED by the header above** — "the re-theme waits until the
+> game has been played by hand" (it is being done now, on a substrate rather than a frame), and
+> "nobody is sold on what the Opponent IS" (generic fantasy answers it: a rival mage with a line of
+> creatures, which is what the code already models). The rest stands.
 >
 > - **One companion, FOR NOW, because it is the cheapest thing to test.** What several would cost,
 >   so the trade is on the table rather than closed: five lanes minus the companions' own leaves
@@ -25,11 +58,13 @@
 > companion you bring, more unlocked over time) and **vertically WITHIN one** (it grows). Both
 > already fit what is built.
 
-Pick a frame when there is a reason to. It folds into `KinJam.md` as settled design and the other
-two get deleted.
+**Everything from here down is the earlier three-frame proposal, kept as candidate themes.** The
+per-frame rename tables are still the most useful thing on the page: they are worked examples of
+what a themed pass over the card pool looks like, and the generic-fantasy pass can crib their shape
+without taking their words.
 
-The game's register is already chosen: **monster-collecting-adjacent, warm, not cartoonish and not
-cosy — just not the ash-and-gallows tone the content is written in today.**
+The register these were written for — **monster-collecting-adjacent, warm, not cartoonish and not
+cosy** — is deferred with them, not cancelled.
 
 ---
 
