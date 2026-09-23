@@ -52,6 +52,15 @@ public record KinBattle : GameObject
 	public int CardsPlayedThisTurn { get; init; }
 
 	/// <summary>
+	/// **Damage your units soaked in the lanes THIS turn** — the part of an attack, or of an
+	/// enemy's Thorns, that a body took instead of your face. Cleared when a turn starts.
+	///
+	/// Lane combat only, deliberately: a trait that chips every unit is not something you CHOSE to
+	/// stand in front of. Feeds <see cref="CountOf.AbsorbedThisTurn"/>, which is Bramble.
+	/// </summary>
+	public int AbsorbedThisTurn { get; init; }
+
+	/// <summary>
 	/// True when the player hit 0 life. Distinct from <see cref="IsOver"/>, which a win also sets —
 	/// only this one ends the run.
 	/// </summary>

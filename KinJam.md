@@ -32,8 +32,14 @@
 > Thorns, Strikes, Breakthrough and Flier; nine cards in `StarterContent.Archetypes.cs`; Harpy,
 > Razorback and Flail Knight as the triangle that tests them; companion starters; and a trait strip
 > on the lane so an enemy's behaviour is visible at all. Measured in `docs/findings/kin-balance.md`
-> run 26 — **Bramble is 62% on her own and must be fixed before Bulwark can be judged**, Pike's
-> starter lifts act 1 by 18pp. Tally, Moss and Ash's archetypes are next, once the slice is played.
+> run 26 — Bramble measured 62% on her own, Pike's starter lifted act 1 by 18pp.
+>
+> **Bramble REWORKED the same day, unmeasured on purpose (we are exploring, not tuning):** "end of
+> turn: the Opponent takes what your units absorbed", replacing a repeatable heal. Chosen because a
+> longer fight pays it by ENDING SOONER — it cannot be farmed — and because it makes the triangle
+> bite: a Flier gives it nothing, a Flail Knight feeds it twice. The Flail Knight moved to floor 7
+> so it no longer leads floor 6 of every act. Tally, Moss and Ash's archetypes are next, once the
+> slice is played.
 
 > # THE DOOM LAYER IS DELETED (2026-09-21). MOST OF THIS FILE IS HISTORY.
 >

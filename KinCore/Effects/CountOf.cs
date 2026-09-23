@@ -49,6 +49,12 @@ public enum CountOf
 	/// <summary>Cards you have played so far this turn. The volume axis.</summary>
 	CardsPlayedThisTurn,
 
+	/// <summary>
+	/// Damage your units soaked in the lanes this turn. **The Bulwark axis, and it is anti-stall by
+	/// construction**: it pays in damage to the Opponent, so a longer fight pays it by ending
+	/// sooner, never by being farmed. See <see cref="KinBattle.AbsorbedThisTurn"/>.
+	/// </summary>
+	AbsorbedThisTurn,
 }
 
 /// <summary>
@@ -75,6 +81,7 @@ public static class KinCounts
 			CountOf.DiedLastTurn => state.GetBattle().DiedLastTurnRunCardIds.Count,
 			CountOf.DiedThisTurn => state.GetBattle().DiedThisTurnRunCardIds.Count,
 			CountOf.CardsPlayedThisTurn => state.GetBattle().CardsPlayedThisTurn,
+			CountOf.AbsorbedThisTurn => state.GetBattle().AbsorbedThisTurn,
 			_ => throw new ArgumentOutOfRangeException(
 				nameof(count),
 				$"No reading for {count}. A new CountOf without a case here would scale every "

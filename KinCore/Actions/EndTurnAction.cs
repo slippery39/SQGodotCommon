@@ -157,6 +157,15 @@ public record EndTurnAction : GameAction
 				card.WithComponentReplaced(unit with { Damage = unit.Damage + soak })
 			);
 
+			var battle = state.GetBattle();
+			state = state.UpdateObject(
+				battle.Id,
+				battle with
+				{
+					AbsorbedThisTurn = battle.AbsorbedThisTurn + soak,
+				}
+			);
+
 			var excess = total - soak;
 			if (excess > 0)
 				(state, events) = DamagePlayer(state, events, excess, absorbed: soak);

@@ -137,7 +137,7 @@ public static class KeywordLibrary
 			Text =
 				"The number in the red disc: damage it absorbs before dying. Damage beyond it "
 				+ "hits the face behind.",
-			Aliases = ["toughness"],
+			Aliases = ["toughness", "absorbed", "absorbs"],
 		},
 		new Keyword
 		{

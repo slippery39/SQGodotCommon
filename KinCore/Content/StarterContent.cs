@@ -210,7 +210,20 @@ public static partial class StarterContent
 	public static ImmutableArray<Companion> Roster =>
 		[StarterCompanion, Bramble, Tally, Pike, Moss];
 
-	/// <summary>**SURVIVAL.** Pays for what LIVED, so it wants toughness and a board that holds.</summary>
+	/// <summary>
+	/// **BULWARK. Pays the Opponent for what your units ABSORBED** — hold the line, and every blow
+	/// the line takes comes back at the thing that sent it.
+	///
+	/// **Reworked 2026-09-22 from "end of turn: 2 life per unit still standing"**, which measured
+	/// life GAINED per battle on most act-1 floors (`docs/findings/kin-balance.md` run 26). A
+	/// repeatable heal in a game about keeping life across a run is a stall engine: a longer fight
+	/// paid it more. This pays in damage to the Opponent instead, so a longer fight pays it by
+	/// ENDING SOONER — the test every ability now has to pass (root `CLAUDE.md`).
+	///
+	/// It also gives Bulwark the finisher a Thorns deck otherwise has to draft, and it makes each
+	/// counter mean something: a Flier gives it nothing (the wall absorbs nothing), a Flail Knight
+	/// feeds it twice, and a Razorback's spikes on your striker feed it too.
+	/// </summary>
 	public static Companion Bramble =>
 		new()
 		{
@@ -222,15 +235,19 @@ public static partial class StarterContent
 			BaseToughness = 16,
 			Effects =
 			[
-				// **End of turn, not start** — this counts what survived the lanes, and at turn
-				// start there is nothing on the field to count. Itself included, so it is never
-				// a blank.
+				// **End of turn, after the lanes** — the only moment the turn's absorption is known.
+				// Bramble's own soak counts: she stands in the centre and is the biggest wall on
+				// the board.
 				new KinEffect
 				{
 					Trigger = EffectTrigger.OnTurnEnd,
-					Target = KinTarget.Player,
-					Template = new GainLifeAction { Amount = 2, PerEach = CountOf.YourUnits },
-					Text = "end of turn: 2 life per unit still standing",
+					Target = KinTarget.Opponent,
+					Template = new DealDamageAction
+					{
+						Amount = 1,
+						PerEach = CountOf.AbsorbedThisTurn,
+					},
+					Text = "end of turn: the Opponent takes what your units absorbed",
 				},
 			],
 		};

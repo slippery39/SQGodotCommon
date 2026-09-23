@@ -116,7 +116,10 @@ public static class EnemyLibrary
 			Description = "The second blow is the one that was meant.",
 			Health = 20,
 			Attack = 5,
-			MinFloor = 6,
+			// 7, not 6: alone at 6 it LED floor 6 of every act, and a counter you are certain to
+			// meet is a tax rather than a matchup (run 26). At 7 it ties Pyre Walker, which is
+			// earlier in `All` and keeps the lead, so this one rolls like any other.
+			MinFloor = 7,
 			Strikes = 2,
 		};
 
@@ -368,7 +371,7 @@ public static class EnemyLibrary
 		LastChorus,
 		Doomsayer,
 		// Last, so a tie on MinFloor leaves the existing lead in place — `EnemiesFor` leads with
-		// the FIRST enemy of the highest tier. Flail Knight is alone at 6 and does lead floor 6.
+		// the FIRST enemy of the highest tier. None of these three leads a floor.
 		Harpy,
 		Razorback,
 		FlailKnight,

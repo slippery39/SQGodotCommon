@@ -170,29 +170,65 @@ public class CompanionTests
 	/// field (units withdraw at end of turn) and a zeroed `CardsPlayedThisTurn`, so Bramble and
 	/// Tally both have to pay at turn END. That is exactly the mistake this test exists to catch.
 	/// </summary>
+	/// <summary>
+	/// **Bramble pays the Opponent for what her line ABSORBED** — reworked from a repeatable heal
+	/// that measured life GAINED per battle (findings run 26). The enemy stands in her own lane, so
+	/// she is the wall and every point of its attack is hers to soak.
+	/// </summary>
 	[Test]
-	public void BramblePaysLifeForWhatSurvived()
+	public void BrambleSendsTheOpponentWhatHerLineAbsorbed()
 	{
-		// **Starts HURT on purpose.** A heal at full life is clamped away, so the obvious version
-		// of this test asserts 0 and passes for the wrong reason — which is the exact failure
-		// shape these tests exist to catch.
-		var run = new Run
-		{
-			Life = 40,
-			MaxLife = 60,
-			Companion = StarterContent.Bramble,
-		};
-		var (state, _) = run.StartBattle([Enemy(attack: 0, lane: 0)], opponentHealth: 500);
+		const int attack = 6;
+		var run = RunWith(StarterContent.Bramble);
+		var (state, _) = run.StartBattle([Enemy(attack)], opponentHealth: 500);
 
-		var before = state.GetPlayer().Life;
 		(state, _) = Do(state, new EndTurnAction());
 
-		// The companion is the only unit standing, so exactly one unit is counted.
-		Assert.That(
-			state.GetPlayer().Life - before,
-			Is.EqualTo(2),
-			"2 life per unit still standing, and the companion is one"
+		Assert.That(state.GetOpponent().Health, Is.EqualTo(500 - attack));
+	}
+
+	/// <summary>
+	/// **The Flier is Bulwark's counter, and this is why** — its attack goes over the wall, so
+	/// nothing is absorbed and Bramble has nothing to send back.
+	/// </summary>
+	[Test]
+	public void AFlierGivesBrambleNothingToSendBack()
+	{
+		var run = RunWith(StarterContent.Bramble);
+		var (state, _) = run.StartBattle(
+			[Enemy(attack: 6) with { Flies = true }],
+			opponentHealth: 500
 		);
+
+		(state, _) = Do(state, new EndTurnAction());
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(state.GetOpponent().Health, Is.EqualTo(500), "the wall absorbed nothing");
+			Assert.That(state.GetPlayer().Life, Is.EqualTo(run.Life - 6), "it went over, onto you");
+		});
+	}
+
+	/// <summary>
+	/// **Per TURN, not per battle.** Two turns of the same 6 must send 12. If the counter were never
+	/// cleared the second turn would send 12 on its own and the total would read 18 — a quiet
+	/// runaway that a one-turn test cannot see.
+	/// </summary>
+	[Test]
+	public void WhatBrambleAbsorbedIsCountedFreshEachTurn()
+	{
+		const int attack = 6;
+		var run = RunWith(StarterContent.Bramble);
+		var (state, _) = run.StartBattle([Enemy(attack)], opponentHealth: 500);
+
+		(state, _) = Do(state, new EndTurnAction());
+		(state, _) = Do(state, new EndTurnAction());
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(state.GetOpponent().Health, Is.EqualTo(500 - attack * 2));
+			Assert.That(state.GetBattle().AbsorbedThisTurn, Is.Zero, "cleared at turn start");
+		});
 	}
 
 	[Test]

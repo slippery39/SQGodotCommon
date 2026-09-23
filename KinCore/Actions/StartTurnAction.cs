@@ -33,6 +33,7 @@ public record StartTurnAction : GameAction
 				DiedLastTurnRunCardIds = turning.DiedThisTurnRunCardIds,
 				DiedThisTurnRunCardIds = [],
 				CardsPlayedThisTurn = 0,
+				AbsorbedThisTurn = 0,
 			}
 		);
 
@@ -64,9 +65,7 @@ public record StartTurnAction : GameAction
 
 		var battle = state.GetBattle();
 		return new ActionResult(state).WithEvents(
-			events.Add(
-				new TurnStartedEvent { TurnNumber = battle.TurnNumber }
-			)
+			events.Add(new TurnStartedEvent { TurnNumber = battle.TurnNumber })
 		);
 	}
 
