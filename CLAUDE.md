@@ -89,15 +89,8 @@ nothing is orphaned — you should not need any of it.
 | **The setting — GENERIC FANTASY substrate; themes swappable on top** | `KinSettingSketches.md` | read it before naming any content |
 | **The next thing to build — v3** | `KinV3Plan.md` | read it before starting any v3 phase |
 | Where the last session got to | `HANDOFF-KinPivot.md` | read it when picking the work back up |
-| Earlier handoff, superseded | `HANDOFF-KinCardsAndFlood.md` | read only for its scars (§4) |
-| Earlier handoff, superseded | `HANDOFF-KinAndroidAndText.md` | read only for its scars (§3) |
-| Earlier handoff, superseded | `HANDOFF-KinCombatV3.md` | read only for its scars (§4) |
-| Earlier handoff, superseded | `HANDOFF-KinVisualPass.md` | read only for its scars (§4) |
+| Earlier handoffs, superseded — every other `HANDOFF-Kin*.md` | root | read only for their scars (§3/§4) |
 | Credits — **must ship** | `CREDITS.md` | before release, and when adding any third-party asset |
-| Earlier handoff, superseded | `HANDOFF-KinPacingAndRewards.md` | read only for its scars (§4) |
-| Earlier handoff, superseded | `HANDOFF-KinBalanceAndThemes.md` | read only for its scars (§4) |
-| Earlier handoff, superseded | `HANDOFF-KinFrontEndAndEffects.md` | read only for its scars (§4) |
-| Earlier still, superseded | `HANDOFF-KinBattleLoop.md` | read only for its scars (§4) |
 | UI design — layout contract AND the visual language | `KinUI.md` | read it before touching `SQGodotCommon/KinGame/` |
 | The mockup, and the backdrop prompt | `docs/mockups/` | when changing layout or generating art |
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
@@ -130,6 +123,14 @@ never a veto. **How the companion should work is the most open question in the p
 The card pass's own standing rule, promoted here from a superseded handoff: *we are exploring what
 is fun, not enforcing what is written. Breaking a rule on purpose is a design decision, not an
 error.*
+
+**EXPLORING or TUNING — name which one a task is, and spend accordingly (Shayne, 2026-09-22).**
+- **Exploring** (now): design and build to find what is fun. Tests prove a mechanic FIRES — always,
+  they are cheap and never go stale. **No sims**: every design change invalidates the last one, and
+  a session spent 50 minutes of sim on numbers the next change deleted. Broken numbers are fine.
+- **Tuning** (later, when Shayne calls it): the design holds still, and `sim` decides numbers per act.
+- Judge by principle instead. **Repeatable healing is too strong** in a game about keeping life
+  across a run: *does a longer battle pay this ability more?* If yes, it is a stall engine.
 
 ## General Principles
 
