@@ -351,6 +351,9 @@ public record PushAction : CardStep
 /// </summary>
 public record SwapAction : CardStep
 {
+	/// <summary>Damage to BOTH swapped foes, after the swap — Cyclone.</summary>
+	public int Damage { get; init; }
+
 	public override bool NeedsSpace => true;
 
 	public override string? SpaceRefusal(GameState s, Ally owner, int space)
@@ -370,21 +373,61 @@ public record SwapAction : CardStep
 
 		s = s.UpdateObject(foe.Id, Unbalanced(foe, owner) with { Space = other.Space });
 		s = s.UpdateObject(other.Id, Unbalanced(other, owner) with { Space = foe.Space });
-		return new ActionResult(s).WithEvents(
-			[
-				new FoeMovedEvent
+		ImmutableList<GameEvent> events =
+		[
+			new FoeMovedEvent
+			{
+				FoeId = foe.Id,
+				From = foe.Space,
+				To = other.Space,
+			},
+			new FoeMovedEvent
+			{
+				FoeId = other.Id,
+				From = other.Space,
+				To = foe.Space,
+			},
+		];
+
+		// Cyclone: the two are flung past each other and both take the hit — Off-Balance already on.
+		if (Damage > 0)
+			foreach (var id in new[] { foe.Id, other.Id })
+				if (!s.GetParty().IsOver && (Foe)s.GetObject(id) is { IsDead: false } struck)
 				{
-					FoeId = foe.Id,
-					From = foe.Space,
-					To = other.Space,
-				},
-				new FoeMovedEvent
-				{
-					FoeId = other.Id,
-					From = other.Space,
-					To = foe.Space,
-				},
-			]
+					ImmutableList<GameEvent> hit;
+					(s, hit) = PartyState.HitFoe(s, struck, Damage);
+					events = events.AddRange(hit);
+				}
+
+		return new ActionResult(s).WithEvents(events);
+	}
+}
+
+/// <summary>
+/// **The foe ahead is Off-Balance without being moved** — Downdraft: set up a hit on a foe you want
+/// to leave exactly where it is.
+/// </summary>
+public record UnbalanceAction : CardStep
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var owner = Owner(s);
+		return s.FoeAt(owner.Space) is { } foe
+			? new ActionResult(s.UpdateObject(foe.Id, Unbalanced(foe, owner)))
+			: new ActionResult(s);
+	}
+}
+
+/// <summary>Momentum without a step — Quickstep's second half.</summary>
+public record MomentumAction : CardStep
+{
+	public int Amount { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		var owner = Owner(s);
+		return new ActionResult(
+			s.UpdateObject(owner.Id, owner with { Momentum = owner.Momentum + Amount })
 		);
 	}
 }
@@ -405,6 +448,12 @@ public record StrikeAction : CardStep
 	/// <summary>Double against a foe with no foe beside it — Flank: pick off the straggler.</summary>
 	public bool DoubleIfAlone { get; init; }
 
+	/// <summary>Adds the owner's Thorns — Briar Burst: Bramble cashes in what she has built up.</summary>
+	public bool AddThorns { get; init; }
+
+	/// <summary>Goes straight through a foe's Block — Pierce: the answer to a Preen.</summary>
+	public bool IgnoreBlock { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var owner = Owner(s);
@@ -412,7 +461,11 @@ public record StrikeAction : CardStep
 		// Momentum rides on the whole attack — every column a sweep hits — and is spent by it, hit
 		// or miss. "Your next attack" means the next one you make, not the next one that connects.
 		var damage =
-			Amount + (AddPower ? owner.Power : 0) + (AddBlock ? owner.Block : 0) + owner.Momentum;
+			Amount
+			+ (AddPower ? owner.Power : 0)
+			+ (AddBlock ? owner.Block : 0)
+			+ (AddThorns ? owner.TotalThorns : 0)
+			+ owner.Momentum;
 		if (owner.Momentum > 0)
 			s = s.UpdateObject(owner.Id, owner with { Momentum = 0 });
 
@@ -425,7 +478,12 @@ public record StrikeAction : CardStep
 			var alone = s.FoeAt(foe.Space - 1) is null && s.FoeAt(foe.Space + 1) is null;
 
 			ImmutableList<GameEvent> hit;
-			(s, hit) = PartyState.HitFoe(s, foe, DoubleIfAlone && alone ? damage * 2 : damage);
+			(s, hit) = PartyState.HitFoe(
+				s,
+				foe,
+				DoubleIfAlone && alone ? damage * 2 : damage,
+				IgnoreBlock
+			);
 			events = events.AddRange(hit);
 		}
 

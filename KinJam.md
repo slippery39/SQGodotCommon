@@ -36,6 +36,18 @@
 > the fallback if the row plays flat); **your attacks fire straight ahead from your space**, so a
 > move both dodges and aims; 2–3 enemies per fight.
 >
+> **THE RUN, v1 (decided by Shayne, 2026-09-23):** five battles in a row, no map yet. **You start
+> with ONE companion** (Bramble, Pike or Gale) **and the other two join after battles 1 and 2** — a
+> stand-in for catching that shows the team growing without deciding HOW catching works. HP carries
+> between battles; **a knocked-out companion revives at a quarter of its max HP**; **one rest, before
+> the last battle, heals each companion 30% of max** (fixed per run, so it passes the stall test).
+> After each win: pick one of three cards, each for a companion on the team.
+> **BUILT the same day** (`PartyRun`, outside GameState like the lane game's `Run`): five encounters
+> ending at **the Old Tusker** (boss — Gore 14 one-wide, Stampede 7 three-wide, Snort 10 Block: an
+> exam of position), three reward cards per companion (Bramble: Bristle, Taunt, Briar Burst; Pike:
+> Quickstep, Pierce, Whirling Strike; Gale: Tailwind, Downdraft, Cyclone). COMPANIONS on the menu is
+> the run; PRACTICE is the fixed scenarios. Unplayed.
+>
 > **DEFERRED (Shayne, 2026-09-23): HOW you catch** — a card, or some other action. There will be one.
 >
 > **Open:** the catchable/uncatchable split; what survives of the run

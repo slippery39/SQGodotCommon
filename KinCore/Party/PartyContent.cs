@@ -20,7 +20,14 @@ public record PartyCompanion(
 	int Unbalances = 0
 );
 
-public record PlacedCompanion(PartyCompanion Companion, int Space);
+/// <summary>A companion on the board. `Hp` is where a RUN left it; null = full.</summary>
+public record PlacedCompanion(PartyCompanion Companion, int Space, int? Hp = null);
+
+/// <summary>One fight of a run: who you face, and where they stand.</summary>
+public record Encounter(string Name, ImmutableList<Foe> Foes);
+
+/// <summary>A card on offer after a win, and the companion whose deck it joins.</summary>
+public record RewardCard(string Companion, KinCard Card);
 
 /// <summary>
 /// One battle to play. `OpeningHand` names cards to put on top of the shuffled deck, so a first
@@ -201,6 +208,43 @@ public static class PartyContent
 			],
 		};
 
+	/// <summary>
+	/// **The Old Tusker — the run's boss, and an exam of POSITION.** Its Gore is huge and one column
+	/// wide (step out of it, or let Bramble take it on Thorns); its Stampede is three wide and cannot
+	/// be stepped out of from the middle, so it asks for Block or a push.
+	/// </summary>
+	public static Foe OldTusker(int space) =>
+		new()
+		{
+			Name = "Old Tusker",
+			Hp = 48,
+			MaxHp = 48,
+			Space = space,
+			Pattern =
+			[
+				new Intent
+				{
+					Name = "Gore",
+					Kind = IntentType.Attack,
+					Amount = 14,
+					Offsets = Ahead,
+				},
+				new Intent
+				{
+					Name = "Stampede",
+					Kind = IntentType.Attack,
+					Amount = 7,
+					Offsets = ThreeWide,
+				},
+				new Intent
+				{
+					Name = "Snort",
+					Kind = IntentType.Block,
+					Amount = 10,
+				},
+			],
+		};
+
 	public static Foe Wisp(int space) =>
 		new()
 		{
@@ -252,6 +296,105 @@ public static class PartyContent
 		};
 
 	/// <summary>Pike's five cards twice over — the deck is ten either way.</summary>
+	// ===== THE RUN, v1 — KinJam.md "THE RUN"
+
+	/// <summary>Every companion, in the order the ones you did not start with join.</summary>
+	public static readonly ImmutableList<PartyCompanion> Roster = [Bramble, Pike, Gale];
+
+	/// <summary>
+	/// **What each companion can be offered after a win** — three per companion, each pushing that
+	/// companion's OWN goal further (the `design-card` skill). Offers come only from the team you have.
+	/// </summary>
+	public static readonly ImmutableDictionary<string, ImmutableList<KinCard>> Rewards =
+		new Dictionary<string, ImmutableList<KinCard>>
+		{
+			["Bramble"] =
+			[
+				Card(
+					"Bristle",
+					0,
+					"Gain 2 Thorns this turn. Draw a card.",
+					new ThornsAction { Amount = 2 },
+					new DrawAction { Count = 1 }
+				),
+				Card(
+					"Taunt",
+					1,
+					"Step 1. Gain 4 Block.",
+					new StepAction(),
+					new GuardAction { Amount = 4 }
+				),
+				Card(
+					"Briar Burst",
+					2,
+					"Deal your Thorns ahead and to both sides.",
+					new StrikeAction
+					{
+						AddPower = false,
+						AddThorns = true,
+						Offsets = ThreeWide,
+					}
+				),
+			],
+			["Pike"] =
+			[
+				Card(
+					"Quickstep",
+					0,
+					"Step 1. Gain 2 Momentum.",
+					new StepAction(),
+					new MomentumAction { Amount = 2 }
+				),
+				Card(
+					"Pierce",
+					1,
+					"Deal 3 + Power ahead, ignoring Block.",
+					new StrikeAction { Amount = 3, IgnoreBlock = true }
+				),
+				Card(
+					"Whirling Strike",
+					2,
+					"Deal 2 + Power ahead and to both sides.",
+					new StrikeAction { Amount = 2, Offsets = ThreeWide }
+				),
+			],
+			["Gale"] =
+			[
+				Card(
+					"Tailwind",
+					1,
+					"Push the foe ahead. Draw a card.",
+					new PushAction(),
+					new DrawAction { Count = 1 }
+				),
+				Card(
+					"Downdraft",
+					0,
+					"The foe ahead is Off-Balance this turn.",
+					new UnbalanceAction()
+				),
+				Card(
+					"Cyclone",
+					2,
+					"Swap the foe ahead with the one beside it. Both take 3.",
+					new SwapAction { Damage = 3 }
+				),
+			],
+		}.ToImmutableDictionary();
+
+	/// <summary>
+	/// **Five fights, harder each time, the Old Tusker last.** Placed for a team that grows from one
+	/// to three: the first fight is a single foe in front of a lone starter.
+	/// </summary>
+	public static readonly ImmutableList<Encounter> Encounters =
+	[
+		new("A wild Boar", [Boar(2)]),
+		new("Boar and Wisp", [Boar(1), Wisp(3)]),
+		new("The Stonebeak's perch", [Stonebeak(2), Wisp(4)]),
+		new("Three at once", [Boar(1), Wisp(2), Stonebeak(4)]),
+		new("The Old Tusker", [OldTusker(2), Wisp(4)]),
+	];
+
 	public static readonly PartyScenario Alone =
 		new(
 			"One against two",
@@ -317,13 +460,13 @@ public static class PartyBattleFactory
 			.RegisterWellKnownId(KinObjectKeys.Hand, hand.Id)
 			.RegisterWellKnownId(KinObjectKeys.Discard, discard.Id);
 
-		foreach (var (companion, space) in scenario.Companions)
+		foreach (var (companion, space, hp) in scenario.Companions)
 		{
 			(s, var ally) = s.AddObject(
 				new Ally
 				{
 					Name = companion.Name,
-					Hp = companion.Hp,
+					Hp = hp ?? companion.Hp,
 					MaxHp = companion.Hp,
 					Power = companion.Power,
 					Speed = companion.Speed,

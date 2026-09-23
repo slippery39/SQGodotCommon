@@ -45,7 +45,7 @@ public partial class MainMenu : Control
 	/// **COMPANIONS is THE COMPANION GAME slice (2026-09-23)**, first because it is the direction the
 	/// game is going. DESCEND is still the lane/unit game, kept until the slice proves out.
 	/// </summary>
-	private static readonly string[] Options = ["COMPANIONS", "DESCEND", "QUIT"];
+	private static readonly string[] Options = ["COMPANIONS", "PRACTICE", "DESCEND", "QUIT"];
 
 	private readonly List<Label> _labels = [];
 	private int _index;
@@ -213,6 +213,13 @@ public partial class MainMenu : Control
 		switch (Options[_index])
 		{
 			case "COMPANIONS":
+				QueueFree();
+				GameManager.Instance.ChangeScene("res://KinGame/kin_party.tscn");
+				break;
+
+			// The fixed scenarios, one battle at a time — for trying a companion or a card.
+			case "PRACTICE":
+				KinPartyBoard.Practice = true;
 				QueueFree();
 				GameManager.Instance.ChangeScene("res://KinGame/kin_party.tscn");
 				break;

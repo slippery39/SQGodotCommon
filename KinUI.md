@@ -207,6 +207,9 @@ could not see what a card did."**
   flat style) — a companion's portrait is also the art on every one of its cards. Local, so no
   `CREDITS.md` entry. Stonebeak needed a stone-FIRST prompt: "a heavy grey bird with a stone beak"
   gave three plain grey birds.
+- **The run's screens** (`KinPartyRunScreens`) are an overlay of Buttons over the board, and the
+  board HIDES THE HAND while one shows (the fan's ZIndex draws over any overlay). Every tile line
+  wraps, the title too — "WHIRLING STRIKE (2)" unwrapped dragged its column past the tile edge.
 - **A companion's passive is its own line** on the cell, live ("THORNS 5 this turn"); clicking the
   companion states the passive's rule in the hint strip.
 - **The move shows itself**: a companion's cell says MOVE READY (click); clicking it lights the spaces

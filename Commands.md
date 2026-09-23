@@ -65,7 +65,9 @@ procedure in the `draw-card-art` skill.
 REAL clicks to those spaces of your row, in order — select a companion, then step it. Capture-only:
 `--focus=N` lights the owner of hand card N as a hover would (a capture CANNOT hover — this shows the
 look, not that hovering triggers it); `--play=N` plays hand card N through the drop path;
-`--end-turn` ends the turn at 1.6s, to capture the foes' turn animating.
+`--end-turn` ends the turn at 1.6s, to capture the foes' turn animating. The RUN (no `--scenario`):
+`--starter=N` skips choosing (Roster[N]); `--screen=between|over` then ends battle 1 through
+`PartyState.DebugEndBattle` to capture the screen after it — capture harness only, never in play.
 
 ```
 ./Run-Godot.ps1 KinGame/kin_board.tscn                                     # just run it

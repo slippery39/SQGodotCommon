@@ -23,6 +23,20 @@ public partial class KinPartyBoard : Node2D
 	private GameState _state;
 	private int _scenario;
 
+	/// <summary>
+	/// **Set by the main menu's PRACTICE** before the scene loads: the fixed scenarios, with their
+	/// buttons, instead of a run. Any `--scenario=` flag means practice too. Read once, then cleared.
+	/// </summary>
+	public static bool Practice { get; set; }
+
+	private bool _practice;
+
+	/// <summary>THE RUN (KinJam.md). Null in practice.</summary>
+	private PartyRun _run;
+
+	private KinPartyRunScreens _screens;
+	private readonly List<Button> _practiceButtons = new();
+
 	/// <summary>The companion clicked last, whose move targets are lit. 0 = none.</summary>
 	private int _selectedAllyId;
 
@@ -59,7 +73,20 @@ public partial class KinPartyBoard : Node2D
 				arg.StartsWith("--scenario=")
 				&& int.TryParse(arg["--scenario=".Length..], out var n)
 			)
+			{
 				_scenario = Mathf.Clamp(n, 0, PartyContent.Scenarios.Count - 1);
+				_practice = true;
+			}
+
+			// Capture-only, for the run's screens: `--starter=1` skips choosing (Roster[1]),
+			// `--screen=between|over` then ends the first battle through `DebugEndBattle` so the
+			// screen after it can be captured without playing a whole battle.
+			if (
+				arg.StartsWith("--starter=") && int.TryParse(arg["--starter=".Length..], out var st)
+			)
+				_captureStarter = st;
+			if (arg.StartsWith("--screen="))
+				_captureScreen = arg["--screen=".Length..];
 
 			// `-- --click-space=3,4` sends REAL left clicks to those spaces of your row, in order,
 			// through the viewport — every mouse filter included. A capture cannot click, and a
@@ -88,7 +115,85 @@ public partial class KinPartyBoard : Node2D
 				GetTree().CreateTimer(1.6).Timeout += OnEndTurn;
 		}
 
-		StartScenario(_scenario);
+		_practice |= Practice;
+		Practice = false;
+		foreach (var button in _practiceButtons)
+			button.Visible = _practice;
+
+		if (_practice)
+			StartScenario(_scenario);
+		else if (_captureStarter is { } starter)
+		{
+			BeginRun(PartyContent.Roster[starter]);
+			if (_captureScreen is { } screen)
+				GetTree().CreateTimer(0.5).Timeout += () =>
+				{
+					_state = _state.DebugEndBattle(won: screen == "between");
+					BattleOver();
+				};
+		}
+		else
+			ShowStarters();
+	}
+
+	private int? _captureStarter;
+	private string _captureScreen;
+
+	// ===== THE RUN
+
+	private void ShowStarters()
+	{
+		_hand.SetVisible(false);
+		_screens.ShowStarters(BeginRun);
+	}
+
+	private void BeginRun(PartyCompanion starter)
+	{
+		_run = PartyRun.Start(starter, (int)GD.RandRange(1, 9999));
+		NextBattle();
+	}
+
+	private void NextBattle()
+	{
+		_screens.Hide();
+		_hand.SetVisible(true);
+		_selectedAllyId = 0;
+		_logLines.Clear();
+		_state = _run.StartBattle();
+		Render(ImmutableList<GameEvent>.Empty);
+	}
+
+	/// <summary>
+	/// **A run battle has ended: read it into the run and show what comes next.** Called after a
+	/// pause so the last blows finish animating before the screen covers them.
+	/// </summary>
+	private void BattleOver()
+	{
+		if (_run is null || _screens.IsShowing)
+			return;
+
+		var beaten = _state.GetParty().Name;
+		(_run, var report) = _run.AfterBattle(_state);
+		_hand.SetVisible(false);
+
+		if (_run.IsOver)
+			_screens.ShowOver(
+				_run,
+				ShowStarters,
+				() => Project.GameManager.Instance.GoToMainMenu()
+			);
+		else
+			_screens.ShowBetween(
+				_run,
+				report,
+				beaten,
+				reward =>
+				{
+					_run = _run.Take(reward);
+					NextBattle();
+				},
+				NextBattle
+			);
 	}
 
 	private int HandCard(int index) => _state.CardsIn(ZoneType.Hand).ElementAt(index).Id;
@@ -137,6 +242,9 @@ public partial class KinPartyBoard : Node2D
 		_state = state;
 		_hint.Text = HowToPlay;
 		Render(events);
+
+		if (_run is not null && _state.GetParty().IsOver)
+			GetTree().CreateTimer(1.4).Timeout += BattleOver;
 	}
 
 	private const string HowToPlay =
@@ -186,7 +294,11 @@ public partial class KinPartyBoard : Node2D
 			is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } click
 		)
 			return;
-		if (_state is null || Common.Cards.CardUIManager.DraggingCard is not null)
+		if (
+			_state is null
+			|| _screens.IsShowing
+			|| Common.Cards.CardUIManager.DraggingCard is not null
+		)
 			return;
 		if (SpaceAt(click.Position) is not { } space)
 			return;
@@ -631,6 +743,9 @@ public partial class KinPartyBoard : Node2D
 		layer.AddChild(_overlay);
 
 		MakeTransparentToMouse(layer);
+
+		// AFTER the pass above, which would switch its click-blocking ground off.
+		_screens = new KinPartyRunScreens(layer);
 	}
 
 	private Control BuildBanner()
@@ -656,6 +771,7 @@ public partial class KinPartyBoard : Node2D
 			var button = new Button { Text = PartyContent.Scenarios[i].Name.ToUpperInvariant() };
 			button.AddThemeFontSizeOverride("font_size", 18);
 			button.Pressed += () => StartScenario(index);
+			_practiceButtons.Add(button);
 			across.AddChild(button);
 		}
 

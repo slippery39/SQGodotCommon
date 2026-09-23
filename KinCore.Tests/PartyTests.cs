@@ -617,6 +617,95 @@ public class PartyTests
 		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(43 - 5), "Off-Balance is gone next turn");
 	}
 
+	// ===== Reward cards — the primitives they added
+
+	[Test]
+	public void BriarBurstDealsHerThornsAcrossThreeColumns()
+	{
+		var hide = Card("Thornhide", 0, new ThornsAction { Amount = 3 });
+		var burst = Card(
+			"Briar Burst",
+			0,
+			new StrikeAction
+			{
+				AddPower = false,
+				AddThorns = true,
+				Offsets = [-1, 0, 1],
+			}
+		);
+		var s = Battle([new(Thorny(2, hide, burst), 2)], Foe(1), Foe(2), Foe(3));
+
+		s = Play(s, "Thornhide");
+		s = Play(s, "Briar Burst");
+
+		Assert.That(new[] { 1, 2, 3 }.Select(c => FoeIn(s, c).Hp), Is.All.EqualTo(45));
+	}
+
+	[Test]
+	public void PierceIgnoresBlock()
+	{
+		var pierce = Card(
+			"Pierce",
+			0,
+			new StrikeAction
+			{
+				Amount = 5,
+				AddPower = false,
+				IgnoreBlock = true,
+			}
+		);
+		var preen = new Intent
+		{
+			Name = "Preen",
+			Kind = IntentType.Block,
+			Amount = 10,
+		};
+		var s = Battle([new(Nimble(0, pierce), 2)], Foe(2, 50, preen));
+
+		s = Do(s, new EndPartyTurnAction());
+		s = Play(s, "Pierce");
+
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(45));
+	}
+
+	[Test]
+	public void QuickstepBuildsMomentumTwice()
+	{
+		var quick = Card("Quickstep", 0, new StepAction(), new MomentumAction { Amount = 2 });
+		var jab = Card("Jab", 0, new StrikeAction { Amount = 1, AddPower = false });
+		var s = Battle([new(Nimble(2, quick, jab), 1)], Foe(2));
+
+		s = Play(s, "Quickstep", space: 2);
+		s = Play(s, "Jab");
+
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - (1 + 2 + 2)));
+	}
+
+	[Test]
+	public void DowndraftUnbalancesWithoutMoving()
+	{
+		var down = Card("Downdraft", 0, new UnbalanceAction());
+		var jab = Card("Jab", 0, new StrikeAction { Amount = 5, AddPower = false });
+		var s = Battle([new(Windy(2, down, jab), 2)], Foe(2));
+
+		s = Play(s, "Downdraft");
+		s = Play(s, "Jab");
+
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(43));
+	}
+
+	[Test]
+	public void CycloneSwapsAndHurtsBoth()
+	{
+		var cyclone = Card("Cyclone", 0, new SwapAction { Damage = 3 });
+		var s = Battle([new(Windy(0, cyclone), 2)], Foe(2, hp: 10), Foe(3, hp: 20));
+
+		s = Play(s, "Cyclone", space: 3);
+
+		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(7));
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(17));
+	}
+
 	// ===== The telegraph is the truth
 
 	[Test]

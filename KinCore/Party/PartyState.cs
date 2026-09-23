@@ -121,6 +121,24 @@ public static class PartyState
 			.ToImmutableDictionary(a => a.Id, a => a.Hp - ((Ally)after.GetObject(a.Id)).Hp);
 	}
 
+	/// <summary>
+	/// **CAPTURE HARNESS ONLY — never called in play.** Ends the battle as a win or a loss, so a
+	/// capture can reach the screens that follow a battle without playing one. Every foe (on a win)
+	/// or companion (on a loss) goes to 0 HP, so what reads the result reads real HP.
+	/// </summary>
+	public static GameState DebugEndBattle(this GameState s, bool won)
+	{
+		if (won)
+			foreach (var foe in s.LivingFoes().ToList())
+				s = s.UpdateObject(foe.Id, foe with { Hp = 0 });
+		else
+			foreach (var ally in s.LivingAllies().ToList())
+				s = s.UpdateObject(ally.Id, ally with { Hp = 0 });
+
+		var party = s.GetParty();
+		return s.UpdateObject(party.Id, party with { IsOver = true, Won = won });
+	}
+
 	/// <summary>Damage to a companion: Block first, then HP.</summary>
 	internal static (GameState, ImmutableList<GameEvent>) HitAlly(
 		GameState s,
@@ -154,12 +172,17 @@ public static class PartyState
 	}
 
 	/// <summary>Damage to a foe: Block first, then HP. Ends the battle when the last one falls.</summary>
-	internal static (GameState, ImmutableList<GameEvent>) HitFoe(GameState s, Foe foe, int amount)
+	internal static (GameState, ImmutableList<GameEvent>) HitFoe(
+		GameState s,
+		Foe foe,
+		int amount,
+		bool ignoreBlock = false
+	)
 	{
 		// Off-Balance rides on every hit, whoever lands it — Pike's strike and Bramble's Thorns alike.
 		amount += foe.OffBalance;
 
-		var blocked = Math.Min(amount, foe.Block);
+		var blocked = ignoreBlock ? 0 : Math.Min(amount, foe.Block);
 		var hit = foe with
 		{
 			Block = foe.Block - blocked,
