@@ -92,7 +92,9 @@
 >   **OFF-BALANCE +2** (a foe it moves takes +2 from every hit this turn — Thorns included), so Gale
 >   SETS UP the others and the ORDER of plays is the decision. Gust ×2, Slam (push into a foe: both
 >   take 5), Whirlwind (swap two foes), Buffet. Victim: homing attacks (the Wisp) — no push re-aims
->   them. BUILT the same day, with "Three against three" (all three companions); unplayed.
+>   them. BUILT the same day, with "Three against three" (all three companions). **First play
+>   (Shayne): "feels cool I guess, interesting — we'll see when we play more."** Undecided, not
+>   rejected: one battle is too little play to judge a setup companion.
 >
 > **ART (2026-09-23):** all six slice monsters have generated portraits, and the board cell was
 > rebuilt so the monster FILLS it — the first build showed an 80px thumbnail between six text lines.
