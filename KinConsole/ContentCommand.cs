@@ -53,9 +53,7 @@ public static class ContentCommand
 			$"{Run.ActLength} floors — {ThemeLibrary.Of(SampleTheme).Name}, Opponents for seed {SampleSeed}"
 		);
 
-		Console.WriteLine(
-			"  floor  kind    Opponent                      foes  lead enemy"
-		);
+		Console.WriteLine("  floor  kind    Opponent                      foes  lead enemy");
 
 		for (var floor = 1; floor <= Run.ActLength; floor++)
 		{
@@ -96,7 +94,7 @@ public static class ContentCommand
 
 		foreach (var e in EnemyLibrary.All.OrderBy(e => e.MinFloor).ThenBy(e => e.Health))
 			Console.WriteLine(
-				$"  {e.Name, -18}  f{e.MinFloor, -3}  {e.Health, 6}  {e.Attack, 6}  {Effects(e.Effects)}"
+				$"  {e.Name, -18}  f{e.MinFloor, -3}  {e.Health, 6}  {e.Attack, 6}  {Rules(KinRulesText.Lines(e))}"
 			);
 	}
 
@@ -133,28 +131,44 @@ public static class ContentCommand
 		Head("CARDS", "energy is 3 a turn, hand is 5, and the hand is discarded each turn");
 
 		var starter = StarterContent.NewRun(seed: 1);
-		var companion = starter.Companion;
 
+		// **The whole roster, and what each one starts with** — a companion is an archetype now,
+		// so which one you pick changes three cards of the opening deck. Read off the roster rather
+		// than restated, or this becomes a second account of what each one does.
 		Console.WriteLine(
-			$"  COMPANION — free, in the centre lane, every battle"
+			$"  COMPANIONS — {StarterContent.Roster.Length}, free in the centre lane every battle"
 		);
-		// The ABILITY first, because it is the thing a deck is built around now — the marks are
-		// growth, the ability is identity. Read off the companion rather than restated here, or
-		// this becomes a second account of what Ash does and drifts from the real one.
-		var ability = companion.Effects.IsEmpty
-			? "no ability"
-			: string.Join("; ", companion.Effects.Select(e => e.Text));
-
-		Console.WriteLine(
-			$"    {companion.Name, -18}  {companion.BasePower}/{companion.BaseToughness}   {ability}"
-		);
-		Console.WriteLine(
-			$"    {"", -18}         and gains a mark from every apocalypse it survives"
-		);
+		foreach (var companion in StarterContent.Roster)
+		{
+			Console.WriteLine(
+				$"    {companion.Name, -10}  {companion.BasePower, 2}/{companion.BaseToughness, -3}  "
+					+ Rules(companion.Effects.Select(e => e.Text))
+			);
+			Console.WriteLine(
+				$"    {"", -10}  starts with "
+					+ (
+						companion.Starter.IsEmpty
+							? "the generic three — no archetype yet"
+							: string.Join(", ", companion.Starter.Select(c => c.Name))
+					)
+			);
+		}
 
 		Console.WriteLine();
-		Console.WriteLine($"  STARTING DECK — {starter.Deck.Count} cards");
+		Console.WriteLine(
+			$"  STARTING DECK — {starter.Deck.Count} cards, as {starter.Companion.Name}. Seven are the "
+				+ "same for everyone; the companion decides the other three."
+		);
 		Table(starter.Deck.GroupBy(c => c.Name).Select(g => (g.First(), g.Count())));
+
+		// **The design goal, as a number.** Every card should create a decision; a unit with no
+		// rule at all creates none. Kept honest here so a content pass can see it move.
+		var pool = StarterContent.RewardPool(ThemeLibrary.All[0].Theme);
+		var vanilla = pool.Count(c => c.IsUnit && !KinRulesText.Lines(c).Any());
+		Console.WriteLine();
+		Console.WriteLine(
+			$"  VANILLA — {vanilla} of the {pool.Length} cards you can be offered do nothing but stand there"
+		);
 
 		Console.WriteLine();
 		Console.WriteLine(
@@ -179,9 +193,22 @@ public static class ContentCommand
 				.ToList();
 
 			Console.WriteLine();
-			Console.WriteLine($"  {theme.Name.ToUpperInvariant()} — {own.Count} cards of its own");
+			Console.WriteLine(
+				$"  {theme.Name.ToUpperInvariant()} — {own.Count} cards tagged to this act, "
+					+ "offered in every act (act-exclusive pools are off)"
+			);
 			Table(own.Select(c => (c, 1)));
 		}
+
+		Console.WriteLine();
+		Console.WriteLine(
+			$"  BULWARK — Bramble's archetype, {StarterContent.BulwarkCards.Length} cards"
+		);
+		Table(StarterContent.BulwarkCards.Select(c => (c, 1)));
+
+		Console.WriteLine();
+		Console.WriteLine($"  FACE — Pike's archetype, {StarterContent.FaceCards.Length} cards");
+		Table(StarterContent.FaceCards.Select(c => (c, 1)));
 	}
 
 	private static void Table(IEnumerable<(RunCard Card, int Count)> cards)
@@ -199,6 +226,12 @@ public static class ContentCommand
 					+ $"{card.Rarity, -9}  {does}"
 			);
 		}
+	}
+
+	private static string Rules(IEnumerable<string> lines)
+	{
+		var text = string.Join("; ", lines.Where(t => !string.IsNullOrEmpty(t)));
+		return text.Length == 0 ? "-" : text;
 	}
 
 	private static string Effects(IEnumerable<KinEffect> effects)

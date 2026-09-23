@@ -114,21 +114,40 @@ public record EndTurnAction : GameAction
 			// multipliers on numbers read at the same instant as before.
 			var incoming = attack * enemy.Strikes;
 
+			// **A Flier's attack goes over your unit**, so none of it is the unit's to soak — and a
+			// unit that was never attacked has nothing for its Thorns to answer.
+			var atUnit = enemy.Flies ? 0 : incoming;
+			var overhead = incoming - atUnit;
+
 			// **Thorns answers a HIT, so it fires once per strike of whatever hit it** — and only
 			// if it was actually hit. A unit with no power never attacked, and an enemy that is
 			// Waiting never attacked, so neither draws blood from the other's spikes.
+			var swing = unit.Power * unit.Strikes;
 			var thornsOnUnit = unit.Power > 0 ? enemy.Thorns * unit.Strikes : 0;
-			var thornsOnEnemy = incoming > 0 ? unit.Thorns * enemy.Strikes : 0;
+			var thornsOnEnemy = atUnit > 0 ? unit.Thorns * enemy.Strikes : 0;
 
 			// One update, because two would have to re-read the enemy in between and the second
 			// read would see health the first had already taken off.
-			var toEnemy = unit.Power * unit.Strikes + thornsOnEnemy;
-			state = state.UpdateObject(enemy.Id, enemy with { Health = enemy.Health - toEnemy });
+			state = state.UpdateObject(
+				enemy.Id,
+				enemy with
+				{
+					Health = enemy.Health - swing - thornsOnEnemy,
+				}
+			);
+
+			// **Breakthrough reads the enemy's health at the START of the exchange** and counts
+			// only the swing — the same instant every other number here is read at.
+			if (unit.Breakthrough && swing > enemy.Health)
+				(state, events) = DamageOpponent(state, events, swing - Math.Max(0, enemy.Health));
+
+			if (overhead > 0)
+				(state, events) = DamagePlayer(state, events, overhead, absorbed: 0);
 
 			// **Thorns lands ON TOP of the intent rather than replacing part of it**, so it is
 			// added before the soak is worked out and its excess spills to your face like any
 			// other overflow. That is what makes a big toughness body an unsafe answer to spikes.
-			var total = incoming + thornsOnUnit;
+			var total = atUnit + thornsOnUnit;
 			if (total <= 0)
 				continue;
 

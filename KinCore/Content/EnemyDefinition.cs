@@ -26,6 +26,15 @@ public record EnemyDefinition
 	/// </summary>
 	public int MinFloor { get; init; } = 1;
 
+	/// <summary>See <see cref="Enemy.Thorns"/>.</summary>
+	public int Thorns { get; init; }
+
+	/// <summary>See <see cref="Enemy.Strikes"/>. 1, or a definition that says nothing strikes zero times.</summary>
+	public int Strikes { get; init; } = 1;
+
+	/// <summary>See <see cref="Enemy.Flies"/>.</summary>
+	public bool Flies { get; init; }
+
 	public ImmutableList<KinEffect> Effects { get; init; } = ImmutableList<KinEffect>.Empty;
 
 	public Enemy ToEnemy(int lane) =>
@@ -38,6 +47,9 @@ public record EnemyDefinition
 			Intent = Attack > 0 ? IntentKind.Attack : IntentKind.Wait,
 			IntentAmount = Attack,
 			Lane = lane,
+			Thorns = Thorns,
+			Strikes = Strikes,
+			Flies = Flies,
 			Effects = Effects,
 		};
 
@@ -48,6 +60,9 @@ public record EnemyDefinition
 			Health = Health,
 			Attack = Attack,
 			Lane = lane,
+			Thorns = Thorns,
+			Strikes = Strikes,
+			Flies = Flies,
 			Effects = Effects,
 		};
 }

@@ -1794,3 +1794,68 @@ take it last, and the 2^n ceiling is reachable on purpose rather than by acciden
 breaking balance today; it says nothing about a competent player, because the bot is not one. Any
 future greedy or measured-value picker changes what this whole table means — see the
 `KinEvalWeights.Version` rule.
+
+---
+
+## Run 26 — 2026-09-22 — the Bulwark/Face vertical slice, and the first sim of anyone but Ash
+
+**`bot-1/v3`, 200 runs a side, seeds 1-200.** The slice: Thorns, Strikes, Breakthrough, Flier;
+nine archetype cards (five Bulwark, four Face); Harpy, Razorback and Flail Knight; companion
+starters (seven generic cards + three of the companion's archetype); and the act pools folded
+into one. `sim N companion=<Name>` is new, and **every results file before this run is Ash** —
+`RunSimulator` called `NewRun(seed)` and never passed a companion.
+
+| | act 1 | act 2 | act 3 | run complete |
+|---|---|---|---|---|
+| Ash, run 25 (before the slice) | 69.0% | 63.0% | 49.4% | 21.5% |
+| **Ash, after** | 49.0% | 56.1% | 43.6% | **12.0%** |
+| Bramble, generic starter (control) | 94.5% | 94.2% | 69.7% | 62.0% |
+| **Bramble, Bulwark starter** | 95.5% | 97.9% | 71.1% | **66.5%** |
+| Pike, generic starter (control) | 64.0% | 50.8% | 46.2% | 15.0% |
+| **Pike, Face starter** | **82.0%** | 53.7% | 39.8% | **17.5%** |
+
+The controls are the same build with `Companion.Starter` ignored, so each pair differs ONLY in the
+three starter cards.
+
+### Bramble is broken by herself, and always was
+
+**62.0% on the generic starter, against a 25% target.** The Bulwark starter adds 4.5pp, inside
+the ~3.4pp standard error at that rate — so the slice is not what broke her. She was never
+measured: the previous session's roster had one test per companion proving each ability FIRES,
+and no sim of any of them. Life lost per cleared battle on floors 1-9 reads 0.9, -0.1, 2.3, -0.2,
+3.7, 3.0, 0.1, 4.5 — **she heals more than act 1 deals on most floors**, floors 1 and 2 included,
+where no counter exists yet. "End of turn: 2 life per unit still standing" at four units is 8 a
+turn against a battle that costs ~10.
+
+**Nothing about Bulwark can be judged in play until she is fixed** — a playtest cannot find out
+whether Thorns creates decisions in a run that cannot be lost.
+
+### Pike's starter works, and does what a starter should
+
+Act 1 **64.0% -> 82.0%**, +18pp on 200 runs, well outside noise. Act 3 is within noise of the
+control. Three archetype cards matter most when they are three of ten, and matter less as the deck
+grows — which is the shape wanted. Pike overall (17.5%) is the closest of the three to target and
+has the healthiest per-act descent.
+
+### Ash got harder, and floor 6 is where
+
+Ash's starter is byte-identical to before, so the drop is the new enemies and the diluted pool.
+Deaths moved to floors 8-9 (0 -> 14, 23 -> 56), the last battles before the floor-10 rest — so it
+is attrition across act 1. Life lost per cleared battle, before -> after:
+
+| f1 | f2 | f3 | f4 | **f6** | f7 | f8 | f9 |
+|---|---|---|---|---|---|---|---|
+| 6.7 -> 6.5 | 5.1 -> 5.5 | 8.7 -> 10.1 | 10.5 -> 11.5 | **11.6 -> 19.9** | 14.2 -> 17.4 | 11.5 -> 14.5 | 17.3 -> 15.7 |
+
+**Floor 6 is the Flail Knight, and it LEADS there** — it is alone at `MinFloor` 6 and
+`EnemiesFor` always leads with the highest tier a floor allows, so it is guaranteed in lane 0 on
+floor 6 of every act. A deck with no Thorns eats ~8 extra life there three times a run. That is
+the counter working as designed, but a GUARANTEED counter is not a matchup you prepare for — it is
+a tax again, which is what the design philosophy says an enemy must not be.
+
+### Still unmeasured
+
+Tally and Moss have never been simulated. The reward picker is still uniform-random, so no number
+here says how an archetype plays when you DRAFT toward it — only what its starter and its
+companion are worth.
+

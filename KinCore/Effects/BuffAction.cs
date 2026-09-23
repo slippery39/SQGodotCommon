@@ -26,6 +26,15 @@ public record BuffAction : EffectAction
 	public int Power { get; init; }
 	public int Toughness { get; init; }
 
+	/// <summary>Thorns GRANTED, added to what the unit already has. See <see cref="UnitComponent.Thorns"/>.</summary>
+	public int Thorns { get; init; }
+
+	/// <summary>
+	/// EXTRA strikes, added to the unit's count — so 1 turns a single-striker into a double. A
+	/// delta rather than a set, for the same reason Power is: two Whetstones on one body stack.
+	/// </summary>
+	public int Strikes { get; init; }
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
@@ -33,10 +42,11 @@ public record BuffAction : EffectAction
 
 		var power = Scaled(state, Power);
 		var toughness = Scaled(state, Toughness);
+		var thorns = Scaled(state, Thorns);
 
 		// A buff of nothing is not an error — "+2/+0 for each unit that died last turn" on a turn
 		// nothing died is a real and common case, and it should be quiet rather than noisy.
-		if (power == 0 && toughness == 0)
+		if (power == 0 && toughness == 0 && thorns == 0 && Strikes == 0)
 			return new ActionResult(state);
 
 		foreach (var id in TargetIds)
@@ -54,6 +64,10 @@ public record BuffAction : EffectAction
 			{
 				Power = Math.Max(0, unit.Power + power),
 				Toughness = Math.Max(1, unit.Toughness + toughness),
+				Thorns = Math.Max(0, unit.Thorns + thorns),
+				// Floored at 1: a unit that strikes zero times has had its power deleted by a rule
+				// nobody can see on the card.
+				Strikes = Math.Max(1, unit.Strikes + Strikes),
 			};
 
 			state = state.UpdateObject(id, card.WithComponentReplaced(buffed));

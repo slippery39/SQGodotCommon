@@ -26,8 +26,14 @@
 > all 10 Opponent traits were taxes. The one real archetype, Loss, was locked to act 2.
 >
 > **Act-exclusive card pools are OFF for now** — one shared pool, so an archetype can be built for
-> the whole run rather than one act of it. Being built as a vertical slice first: Bulwark + Face and
-> the enemies that test them, then the other three.
+> the whole run rather than one act of it.
+>
+> **VERTICAL SLICE BUILT (2026-09-22), not yet playtested.** Bulwark (Bramble) and Face (Pike):
+> Thorns, Strikes, Breakthrough and Flier; nine cards in `StarterContent.Archetypes.cs`; Harpy,
+> Razorback and Flail Knight as the triangle that tests them; companion starters; and a trait strip
+> on the lane so an enemy's behaviour is visible at all. Measured in `docs/findings/kin-balance.md`
+> run 26 — **Bramble is 62% on her own and must be fixed before Bulwark can be judged**, Pike's
+> starter lifts act 1 by 18pp. Tally, Moss and Ash's archetypes are next, once the slice is played.
 
 > # THE DOOM LAYER IS DELETED (2026-09-21). MOST OF THIS FILE IS HISTORY.
 >

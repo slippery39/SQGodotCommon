@@ -49,6 +49,16 @@ public record Companion
 	public ImmutableList<KinEffect> Effects { get; init; } = ImmutableList<KinEffect>.Empty;
 
 	/// <summary>
+	/// **The three cards of this companion's archetype that a run STARTS with.** Empty means the
+	/// generic three — see `StarterContent.NewRun`.
+	///
+	/// Ten vanilla starters meant the first several floors held no decision at all, and a
+	/// companion whose plan you cannot act on until floor 6 has not declared a plan. With these,
+	/// floor 1 already has one.
+	/// </summary>
+	public ImmutableList<RunCard> Starter { get; init; } = ImmutableList<RunCard>.Empty;
+
+	/// <summary>
 	/// Applies an upgrade and returns the companion it becomes. The whole of progression.
 	///
 	/// **`EchoesAbility` is read off the CURRENT effects, so order matters between upgrades** — an

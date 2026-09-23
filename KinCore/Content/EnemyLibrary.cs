@@ -63,6 +63,63 @@ public static class EnemyLibrary
 			MinFloor = 2,
 		};
 
+	// ===== The enemies that ASK what is in your deck =====
+	//
+	// Every enemy above is a tax — it hurts you or heals something, and is good against no deck
+	// in particular. These three are the first with a VICTIM and an ANSWER, which is the design
+	// philosophy at the top of KinJam.md. Together they are a triangle over the two archetypes in
+	// the vertical slice: Bulwark beats the Flail Knight and loses to the Harpy; Face beats the
+	// Harpy and loses to the Razorback.
+	//
+	// Thorns, Strikes and Flies are NOT act-scaled the way Health and Attack are — they are
+	// properties, not numbers on a curve. If act 3's Razorback feels toothless, that is why.
+
+	/// <summary>
+	/// **Punishes Bulwark.** Its attack goes over the wall, so toughness is no answer and your
+	/// Thorns never fire. Fragile on purpose: the answer is to kill it, and a Face deck does.
+	/// </summary>
+	public static readonly EnemyDefinition Harpy =
+		new()
+		{
+			Name = "Harpy",
+			Description = "It does not come at you through the front.",
+			Health = 10,
+			Attack = 5,
+			MinFloor = 3,
+			Flies = true,
+		};
+
+	/// <summary>
+	/// **Punishes Face.** Every strike walks into its spikes, so a Blademaster that would clear any
+	/// other lane bleeds itself — and you — here. Answered by burn, which is not an attack, or by
+	/// one big hit rather than many small ones.
+	/// </summary>
+	public static readonly EnemyDefinition Razorback =
+		new()
+		{
+			Name = "Razorback",
+			Description = "Every bristle an argument against touching it.",
+			Health = 16,
+			Attack = 4,
+			MinFloor = 4,
+			Thorns = 6,
+		};
+
+	/// <summary>
+	/// **Loses to Bulwark.** It swings twice, so a thorns wall answers it twice — and against a
+	/// plain wall it lands twice as much as its intent reads, which is the lesson it teaches.
+	/// </summary>
+	public static readonly EnemyDefinition FlailKnight =
+		new()
+		{
+			Name = "Flail Knight",
+			Description = "The second blow is the one that was meant.",
+			Health = 20,
+			Attack = 5,
+			MinFloor = 6,
+			Strikes = 2,
+		};
+
 	/// <summary>The first enemy that does something. Killing it is no longer free.</summary>
 	public static readonly EnemyDefinition HeraldOfTheEnd =
 		new()
@@ -310,6 +367,11 @@ public static class EnemyLibrary
 		TheTally,
 		LastChorus,
 		Doomsayer,
+		// Last, so a tie on MinFloor leaves the existing lead in place — `EnemiesFor` leads with
+		// the FIRST enemy of the highest tier. Flail Knight is alone at 6 and does lead floor 6.
+		Harpy,
+		Razorback,
+		FlailKnight,
 	];
 
 	/// <summary>The roster a floor may draw from. Empty is impossible — Wretch has MinFloor 1.</summary>

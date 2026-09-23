@@ -52,6 +52,16 @@ public record UnitComponent : GameComponent
 	/// </summary>
 	public int Strikes { get; init; } = 1;
 
+	/// <summary>
+	/// **Breakthrough — power past the enemy's health carries on to the Opponent.** Measured
+	/// against the enemy's health at the START of the exchange, like everything else in it, and
+	/// only the POWER counts: Thorns is an answer, not a swing.
+	///
+	/// It is the Face deck's way through a blocked lane. Without it a lane with an enemy in it is
+	/// a lane that deals nothing to the Opponent, however hard you hit.
+	/// </summary>
+	public bool Breakthrough { get; init; }
+
 	public int RemainingToughness => Toughness - Damage;
 
 	public bool IsDead => Damage >= Toughness;

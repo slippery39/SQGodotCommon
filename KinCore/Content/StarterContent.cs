@@ -7,7 +7,7 @@ namespace KinCore;
 /// Placeholder content so the game is playable. Balance here is a guess, not a measurement —
 /// every number is meant to be changed after the first real playtest.
 /// </summary>
-public static class StarterContent
+public static partial class StarterContent
 {
 	/// <summary>
 	/// How many tickets a card of each rarity puts in the reward bag.
@@ -215,6 +215,8 @@ public static class StarterContent
 		new()
 		{
 			Name = "Bramble",
+			// BULWARK. See StarterContent.Archetypes.cs.
+			Starter = [BriarSentinel, BriarSentinel, BarbedBanner],
 			Description = "Slow to start, harder to move every year.",
 			BasePower = 4,
 			BaseToughness = 16,
@@ -265,6 +267,8 @@ public static class StarterContent
 		new()
 		{
 			Name = "Pike",
+			// FACE. See StarterContent.Archetypes.cs.
+			Starter = [Whetstone, Whetstone, Berserker],
 			Description = "Only ever looking at the one thing.",
 			BasePower = 8,
 			BaseToughness = 9,
@@ -320,27 +324,43 @@ public static class StarterContent
 	/// </summary>
 	public const int StartingLife = 120;
 
-	public static Run NewRun(int seed = 1, Companion? companion = null) =>
-		new Run
+	/// <summary>
+	/// **Seven generic cards plus three of the companion's archetype** — see
+	/// <see cref="Companion.Starter"/>. A companion with no archetype set yet brings the three
+	/// generic cards it always had, so its run is exactly what it was before the slice.
+	/// </summary>
+	public static Run NewRun(int seed = 1, Companion? companion = null)
+	{
+		var chosen = companion ?? StarterCompanion;
+
+		ImmutableList<RunCard> generic =
+		[
+			Unit("Scavenger", 1, 6, 6, "Takes what is left."),
+			Unit("Scavenger", 1, 6, 6, "Takes what is left."),
+			Unit("Scavenger", 1, 6, 6, "Takes what is left."),
+			Unit("Bulwark", 1, 2, 10, "Stands in the way."),
+			Unit("Bulwark", 1, 2, 10, "Stands in the way."),
+			Unit("Bulwark", 1, 2, 10, "Stands in the way."),
+			Unit("Ash Walker", 2, 12, 14, "Walked out of the last one."),
+		];
+
+		ImmutableList<RunCard> archetype = chosen.Starter.IsEmpty
+			?
+			[
+				Unit("Scavenger", 1, 6, 6, "Takes what is left."),
+				Unit("Ash Walker", 2, 8, 10, "Walked out of the last one."),
+				Unit("Lantern Bearer", 0, 4, 4, "Small light, long night."),
+			]
+			: chosen.Starter;
+
+		return new Run
 		{
 			Life = StartingLife,
 			MaxLife = StartingLife,
 			RngSeed = seed,
-			Companion = companion ?? StarterCompanion,
-		}.WithCards(
-			[
-				Unit("Scavenger", 1, 6, 6, "Takes what is left."),
-				Unit("Scavenger", 1, 6, 6, "Takes what is left."),
-				Unit("Scavenger", 1, 6, 6, "Takes what is left."),
-				Unit("Scavenger", 1, 6, 6, "Takes what is left."),
-				Unit("Bulwark", 1, 2, 10, "Stands in the way."),
-				Unit("Bulwark", 1, 2, 10, "Stands in the way."),
-				Unit("Bulwark", 1, 2, 10, "Stands in the way."),
-				Unit("Ash Walker", 2, 12, 14, "Walked out of the last one."),
-				Unit("Ash Walker", 2, 8, 10, "Walked out of the last one."),
-				Unit("Lantern Bearer", 0, 4, 4, "Small light, long night."),
-			]
-		);
+			Companion = chosen,
+		}.WithCards([.. generic, .. archetype]);
+	}
 
 	/// <summary>
 	/// What a cleared floor can offer. **This is the only progression that works from floor 1.**
@@ -773,22 +793,21 @@ public static class StarterContent
 	/// variety in each act, and if acts are ever chained into one run the pools would have to be
 	/// merged anyway — this composes for free.
 	/// </summary>
+	/// <remarks>
+	/// **ONE pool for every act, since 2026-09-22 — act-exclusive pools are off for now.** The
+	/// Loss archetype lived entirely in The Rising, so it could be built for 15 floors of 45, and
+	/// an archetype you can only draft in one act is not something a companion can declare. The
+	/// act slices are still TAGGED with their act, so the content dump can group them and the
+	/// decision is cheap to reverse; `theme` is kept on the signature for the same reason.
+	/// </remarks>
 	public static ImmutableArray<RunCard> RewardPool(KinTheme theme) =>
 		[
 			.. SharedPool,
-			.. (
-				theme switch
-				{
-					KinTheme.LongEmergency => LongEmergencyCards,
-					KinTheme.Rising => RisingCards,
-					KinTheme.Reckoning => ReckoningCards,
-					_ => throw new ArgumentOutOfRangeException(
-						nameof(theme),
-						$"No card slice for {theme}. A theme with no cards of its own would be a "
-							+ "reskin of the shared pool and nothing else."
-					),
-				}
-			).Select(c => c with { Theme = theme }),
+			.. LongEmergencyCards.Select(c => c with { Theme = KinTheme.LongEmergency }),
+			.. RisingCards.Select(c => c with { Theme = KinTheme.Rising }),
+			.. ReckoningCards.Select(c => c with { Theme = KinTheme.Reckoning }),
+			.. BulwarkCards,
+			.. FaceCards,
 		];
 
 	/// <summary>

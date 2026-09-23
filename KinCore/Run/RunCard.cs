@@ -73,6 +73,9 @@ public record RunCard
 	/// </summary>
 	public int Strikes { get; init; } = 1;
 
+	/// <summary>**Breakthrough** — see <see cref="UnitComponent.Breakthrough"/>. Copied onto the unit.</summary>
+	public bool Breakthrough { get; init; }
+
 	/// <summary>
 	/// What the card DOES, beyond being a body. Empty for a plain unit.
 	///
@@ -126,6 +129,7 @@ public record RunCard
 						Toughness = Toughness,
 						Thorns = Thorns,
 						Strikes = Strikes,
+						Breakthrough = Breakthrough,
 					}
 				)
 			: card;

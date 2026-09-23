@@ -23,6 +23,14 @@ public record RunResult
 {
 	public int Seed { get; init; }
 
+	/// <summary>
+	/// **Which companion played the run, stamped on every result.** A win rate is a property of
+	/// (game, bot) and, since companions became archetypes, of the companion too — an Ash number
+	/// and a Pike number are not comparable, and a results file that did not say which it was
+	/// would be read as the other in six weeks.
+	/// </summary>
+	public string Companion { get; init; } = "";
+
 	/// <summary>Which apocalypse this run chose to live through.</summary>
 	public string Theme { get; init; } = "";
 
@@ -112,7 +120,11 @@ public static class RunSimulator
 			card.IsUnit ? card.Power + card.Toughness - card.Cost * 4 : 12 - card.Cost * 4;
 	}
 
-	public static RunResult Play(int seed, KinEvalWeights? weights = null)
+	public static RunResult Play(
+		int seed,
+		KinEvalWeights? weights = null,
+		Companion? companion = null
+	)
 	{
 		var w = weights ?? new KinEvalWeights();
 
@@ -120,7 +132,7 @@ public static class RunSimulator
 		// across seeds so one `sim N` covered every act; a run IS every act now, so the theme is a
 		// question about which floor you are standing on. Seed still decides enemies, rewards and
 		// Opponent traits.
-		var run = StarterContent.NewRun(seed);
+		var run = StarterContent.NewRun(seed, companion);
 		var picker = new Random(seed);
 
 		var floors = ImmutableList.CreateBuilder<FloorResult>();
@@ -248,6 +260,7 @@ public static class RunSimulator
 		return new RunResult
 		{
 			Seed = seed,
+			Companion = run.Companion.Name,
 
 			// The act the run ENDED in, which is what a survival table wants to group by. It is no
 			// longer a property of the run — every run walks all three.
@@ -277,10 +290,14 @@ public static class RunSimulator
 	/// a whole turn per candidate line. Server GC in `KinConsole.csproj` took the same 300-run
 	/// workload from 693s to 224s; this loop was never the problem.
 	/// </summary>
-	public static RunResult[] PlayMany(int count, KinEvalWeights? weights = null)
+	public static RunResult[] PlayMany(
+		int count,
+		KinEvalWeights? weights = null,
+		Companion? companion = null
+	)
 	{
 		var results = new RunResult[count];
-		Parallel.For(0, count, i => results[i] = Play(i + 1, weights));
+		Parallel.For(0, count, i => results[i] = Play(i + 1, weights, companion));
 		return results;
 	}
 }

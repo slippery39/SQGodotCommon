@@ -123,8 +123,20 @@ for f in fs[25:130]:
 ... --quit-after 30 KinGame/kin_board.tscn -- --reward
 ```
 
-It marks the Companion with every apocalypse in the library, three times each, so the panel is shown
-its worst case — a name that long is what pushed the intermission off the screen on floor 19.
+**`--companion=<Name>`, `--floor=<N>` and `--seed=<N>` pick the board a capture opens on.** A
+capture cannot click the companion select screen, and floor 1 fields no enemy with a trait, so
+without them the archetype starters and the Flier / Thorns / Strikes strip are the one thing no
+screenshot could show. Seed 36, floor 6 fields a Flail Knight, a Harpy and a Razorback at once:
+
+```
+./Run-Godot.ps1 KinGame/kin_board.tscn -Capture shots/slice -Seconds 3 `
+  -GameArgs '--companion=Pike','--floor=6','--seed=36'
+```
+
+
+**Godot run from the command line uses the PREBUILT assemblies.** Build `SQGodotCommon.csproj`
+first — a flag added after the last build silently does nothing, and the capture looks exactly like
+one where the flag is broken. `--seed` cost a capture this way on 2026-09-22.
 
 **The shop, and the card grid inside it:**
 
@@ -249,6 +261,10 @@ times the work of one that dies on floor 3. Budget by `runs x mean floor`, not b
 Writes every run to `doom_sim_results/sim-<timestamp>.json` (gitignored) and prints four tables:
 survival by floor, pressure, apocalypses, card value. **Quote the file, never the memory of a run**
 — the tables go stale the moment content changes.
+
+`sim N companion=Pike` plays every run as that companion — **each companion is an archetype with its
+own starter, so a number means nothing without the companion that produced it**, and every results
+file now records it per run. An unknown name throws rather than quietly measuring Ash.
 
 `sim N <Weight>=<value> ...` overrides anything on `KinEvalWeights` by name, and the override is
 stamped into the results file's version string. Sweeping a weight is how you check the bot is near

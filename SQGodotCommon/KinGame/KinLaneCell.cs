@@ -1,5 +1,7 @@
-using KinCore;
+using System.Collections.Generic;
+using System.Linq;
 using Godot;
+using KinCore;
 
 namespace KinGame;
 
@@ -49,6 +51,19 @@ public sealed class KinLaneCell
 	/// <summary>Dark strips behind the name and the pips, so text stays readable over any art.</summary>
 	private readonly ColorRect _topScrim;
 	private readonly ColorRect _bottomScrim;
+
+	/// <summary>
+	/// **The keywords that decide a matchup — FLIER, THORNS 6, STRIKES TWICE — one per line, under
+	/// the name.** Enemies had no text on the board at all, so a Flier and a Wretch looked
+	/// identical and a counter to either was luck. KinUI.md: a fact needed to choose a lane is on
+	/// the board, never only on hover.
+	///
+	/// One line per trait rather than one joined line, because two traits on one body do not fit
+	/// 175px and the rule is that nothing carrying a number is ever dropped.
+	/// </summary>
+	private readonly Label _traits;
+	private readonly ColorRect _traitScrim;
+	private const int TraitLine = 24;
 	private readonly Label _attack;
 	private readonly Label _life;
 
@@ -109,6 +124,20 @@ public sealed class KinLaneCell
 		_bottomScrim.OffsetTop = -38;
 		inner.AddChild(_bottomScrim);
 
+		_traitScrim = new ColorRect { Color = new Color(0, 0, 0, 0.62f), Visible = false };
+		_traitScrim.SetAnchorsPreset(Control.LayoutPreset.TopWide);
+		_traitScrim.OffsetTop = 30;
+		inner.AddChild(_traitScrim);
+
+		// 20 canvas px is ~16.7 real at 1600x900 — the floor for anything a player must read.
+		_traits = KinPalette.Text("", 20, KinPalette.Gold);
+		_traits.Visible = false;
+		_traits.SetAnchorsPreset(Control.LayoutPreset.TopWide);
+		_traits.OffsetLeft = 6;
+		_traits.OffsetRight = -6;
+		_traits.OffsetTop = 30;
+		inner.AddChild(_traits);
+
 		_name = KinPalette.Text("", 19, KinPalette.Bone);
 		_name.ClipText = true;
 		_name.TextOverrunBehavior = TextServer.OverrunBehavior.TrimEllipsis;
@@ -165,12 +194,14 @@ public sealed class KinLaneCell
 		}
 
 		Root.AddChild(inner);
+
 		ShowEmpty();
 	}
 
 	/// <summary>An empty lane: a recessed socket, and nothing to read.</summary>
 	public void ShowEmpty()
 	{
+		ShowTraits([]);
 		_name.Text = "";
 		_figure.Texture = null;
 		_ground.Visible = false;
@@ -188,6 +219,7 @@ public sealed class KinLaneCell
 
 	public void ShowEnemy(Enemy enemy)
 	{
+		ShowTraits(KinRulesText.Traits(enemy));
 		_name.Text = enemy.Name;
 		// **One plinth colour for every enemy.** Your cards carry a per-name hue because a deck is
 		// something you build and recognise; the enemy row is a wall of threats and giving each one
@@ -203,7 +235,10 @@ public sealed class KinLaneCell
 		var attacking = enemy.Intent == IntentKind.Attack;
 		_attackPip.Visible = true;
 		_attackIcon.Visible = true;
-		_attack.Text = attacking ? enemy.IntentAmount.ToString() : "—";
+		// **"6×2", not "6", for a double-striker** — the pip is the number read across the board at
+		// speed, and 6 on a Flail Knight that lands 12 is the wrong number to read at a glance. Both
+		// facts are shown as they are; nothing is multiplied here, so the UI still computes none.
+		_attack.Text = attacking ? Swing(enemy.IntentAmount, enemy.Strikes) : "—";
 
 		// A waiting enemy keeps its sword but greys it, so the lane still says "this one deals
 		// damage, just not this turn" rather than going silent.
@@ -219,6 +254,7 @@ public sealed class KinLaneCell
 	{
 		var unit = card.Unit();
 
+		ShowTraits(KinRulesText.Traits(card));
 		_name.Text = card.Name;
 		Stand(
 			card.Name,
@@ -229,22 +265,34 @@ public sealed class KinLaneCell
 		_attackPip.Visible = true;
 		_attackIcon.Visible = true;
 		_attackIcon.Modulate = Colors.White;
-		_attack.Text = unit.Power.ToString();
+		_attack.Text = Swing(unit.Power, unit.Strikes);
 
 		// REMAINING toughness, not printed toughness — a body in a lane is worth what it has left.
 		_lifePip.Visible = true;
 		_life.Text = unit.RemainingToughness.ToString();
 
-		_name.AddThemeColorOverride(
-			"font_color",
-			isCompanion ? KinPalette.Gold : KinPalette.Bone
-		);
+		_name.AddThemeColorOverride("font_color", isCompanion ? KinPalette.Gold : KinPalette.Bone);
 
 		Style(
 			KinPalette.Slate,
 			isCompanion ? KinPalette.Gold : KinPalette.Bone,
 			isCompanion ? 3 : 2
 		);
+	}
+
+	private static string Swing(int amount, int strikes) =>
+		strikes > 1 ? $"{amount}×{strikes}" : amount.ToString();
+
+	/// <summary>Read from KinCore's own account of the body, so the lane and the card cannot disagree.</summary>
+	private void ShowTraits(IEnumerable<string> traits)
+	{
+		var lines = traits.Select(t => t.ToUpperInvariant()).ToList();
+
+		_traits.Text = string.Join("\n", lines);
+		_traits.Visible = lines.Count > 0;
+		_traitScrim.Visible = lines.Count > 0;
+		_traitScrim.OffsetBottom = 30 + TraitLine * lines.Count + 4;
+		_traits.OffsetBottom = 30 + TraitLine * lines.Count + 4;
 	}
 
 	/// <summary>The Opponent has announced a body for this lane. One marker; it carries no stats.</summary>
@@ -275,10 +323,9 @@ public sealed class KinLaneCell
 		_bottomScrim.Visible = true;
 		_figure.Texture = drawing ?? fallback;
 
-		_figure.StretchMode =
-			drawing is null
-				? TextureRect.StretchModeEnum.KeepAspectCentered
-				: TextureRect.StretchModeEnum.KeepAspectCovered;
+		_figure.StretchMode = drawing is null
+			? TextureRect.StretchModeEnum.KeepAspectCentered
+			: TextureRect.StretchModeEnum.KeepAspectCovered;
 
 		// The ground only exists to sit behind a transparent fallback. A filled drawing hides it
 		// completely, so painting it there would be dead pixels.

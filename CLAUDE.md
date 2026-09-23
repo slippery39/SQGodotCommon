@@ -13,9 +13,10 @@ board free every battle whose ability is what the deck is built around. **Read `
 it is the design doc and the source of truth.
 
 > **THE DOOM LAYER WAS DELETED (2026-09-21) and the top-down theme is being replaced.** Scenarios,
-> transforms, the clock, the per-theme doom schedule and ~1,300 lines with them. The new direction
-> is monster-collecting-adjacent and deliberately NOT dark; the grimy card names, enemies and 56
-> SVGs are all still to be re-themed.
+> transforms, the clock, the per-theme doom schedule and ~1,300 lines with them. The new setting
+> is a GENERIC FANTASY substrate (`KinSettingSketches.md`); the grimy card names, enemies and 56
+> SVGs are all still to be re-themed. **The design philosophy is at the top of `KinJam.md` — every
+> card and enemy must create a decision; each companion is an archetype.**
 >
 > **The deleted dooms WERE the power curve. COMPANION UPGRADES replace them** — three offered every
 > second cleared floor, take one, on `StarterContent.UpgradePool`. That took act completion from
@@ -41,7 +42,8 @@ SQGodotCommon/
 │   ├── Cards/ Components/           # KinCard; UnitComponent (Power/Toughness/Damage/Lane)
 │   ├── Enemies/ Zones/              # Enemy + telegraphed Intent; Opponent + PendingSummon; Zone
 │   ├── Content/                     # ThemeLibrary (the three acts and their bosses), EnemyLibrary,
-│   │                                #   StarterContent (cards + the COMPANION ROSTER),
+│   │                                #   StarterContent (cards + the COMPANION ROSTER; its
+│   │                                #   .Archetypes.cs holds each companion's archetype cards),
 │   │                                #   KeywordLibrary (the glossary, as DATA — console and UI share it)
 │   ├── Run/                         # Run + RunCard (OUTSIDE GameState); Companion; ActMap;
 │   │                                #   ShopOffer; FloorKind
@@ -55,7 +57,7 @@ SQGodotCommon/
     ├── Project/                     # GameManager, main menu
     └── KinGame/                    # DOOMJAM front end — reads KinCore, decides nothing
         ├── KinBoard.cs             #   the battle screen; layout contract lives in KinUI.md
-        ├── KinLaneCell.cs          #   one lane slot: art on a plinth + attack/life marks
+        ├── KinLaneCell.cs          #   one lane slot: art, attack/life marks, TRAIT strip
         ├── KinHandView.cs          #   the fan, on Common/Cards/2D; drag -> PlayCardAction
         ├── KinCardFace.cs          #   THE CARD'S LOOK, in one place. Hand, preview and rewards
         │                            #   all draw through it — two copies would drift in a day
@@ -68,7 +70,7 @@ SQGodotCommon/
         ├── KinShop.cs              #   a shop floor: buy, patch up, and REMOVE a card
         ├── KinArt.cs               #   art by NAME convention from Art/, else a generated figure
         ├── KinPalette.cs           #   the five colours; gold and red are reserved
-        └── Art/                     #   52 authored SVGs + background.png + icons/ (CC BY — see
+        └── Art/                     #   56 authored SVGs + background.png + icons/ (CC BY — see
                                      #   CREDITS.md). New files need `--headless --import` to exist
 ```
 

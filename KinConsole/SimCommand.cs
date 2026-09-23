@@ -17,12 +17,21 @@ public static class SimCommand
 	public static void Execute(string[] args)
 	{
 		var count = args.Length > 1 && int.TryParse(args[1], out var n) ? n : 200;
-		var weights = Tune(new KinEvalWeights(), args);
 
-		Console.WriteLine($"  Simulating {count} runs, seeds 1-{count}, {weights.Version}...");
+		// `companion=Pike` picks who plays. Taken out BEFORE `Tune`, which reads every key=value
+		// as a bot weight and would report "no such weight: companion".
+		var companion = CompanionFrom(args);
+		var weights = Tune(
+			new KinEvalWeights(),
+			[.. args.Where(a => !a.StartsWith("companion=", StringComparison.OrdinalIgnoreCase))]
+		);
+
+		Console.WriteLine(
+			$"  Simulating {count} runs, seeds 1-{count}, {weights.Version}, {companion.Name}..."
+		);
 
 		var clock = Stopwatch.StartNew();
-		var results = RunSimulator.PlayMany(count, weights);
+		var results = RunSimulator.PlayMany(count, weights, companion);
 		clock.Stop();
 
 		Console.WriteLine(
@@ -159,6 +168,28 @@ public static class SimCommand
 	/// that question comes back every time the eval or the content changes. Reflection rather than
 	/// a flag per weight, so a new weight is sweepable the moment it exists.
 	/// </summary>
+	/// <summary>
+	/// The companion named by `companion=`, or the starter. **An unknown name is an error, not a
+	/// silent default** — a typo that quietly measured Ash would be read as a Pike number.
+	/// </summary>
+	private static Companion CompanionFrom(string[] args)
+	{
+		var named = args.FirstOrDefault(a =>
+			a.StartsWith("companion=", StringComparison.OrdinalIgnoreCase)
+		);
+		if (named is null)
+			return StarterContent.StarterCompanion;
+
+		var name = named["companion=".Length..];
+		return StarterContent.Roster.FirstOrDefault(c =>
+				c.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
+			)
+			?? throw new ArgumentException(
+				$"No companion called '{name}'. The roster is: "
+					+ string.Join(", ", StarterContent.Roster.Select(c => c.Name))
+			);
+	}
+
 	private static KinEvalWeights Tune(KinEvalWeights weights, string[] args)
 	{
 		foreach (var arg in args.Where(a => a.Contains('=')))

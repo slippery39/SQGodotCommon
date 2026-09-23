@@ -83,7 +83,10 @@ public partial class KinBoard : Node2D
 	{
 		// A run you cannot name is a run you cannot report a bug about, so the seed is rolled here
 		// and shown on the status strip — it used to live on the theme-select screen, which is gone.
-		_seed = (int)GD.RandRange(1, 9999);
+		// `-- --seed=N` pins it, so a capture of a particular board can be taken twice.
+		_seed = int.TryParse(UserArg("--seed="), out var pinned)
+			? pinned
+			: (int)GD.RandRange(1, 9999);
 		KinAnimator.LoadConfiguredSpeed();
 
 		BuildUi();
@@ -177,7 +180,7 @@ public partial class KinBoard : Node2D
 	{
 		if (OS.GetCmdlineUserArgs().Length > 0)
 		{
-			BeginRunWith(StarterContent.StarterCompanion);
+			BeginRunWith(CaptureCompanion(), CaptureFloor());
 			return;
 		}
 
@@ -186,12 +189,45 @@ public partial class KinBoard : Node2D
 	}
 
 	/// <summary>Takes the choice and starts the first floor. The only way past the select screen.</summary>
-	private void BeginRunWith(Companion companion)
+	private void BeginRunWith(Companion companion, int floor = 1)
 	{
 		_companionSelect.Hide();
-		_run = StarterContent.NewRun(_seed, companion);
+		_run = StarterContent.NewRun(_seed, companion) with { Floor = floor };
 		StartBattleOnCurrentFloor();
 	}
+
+	/// <summary>
+	/// `-- --companion=Pike` plays a capture as someone other than the starter. **A capture cannot
+	/// click the select screen**, so without this the archetype starters are the one thing no
+	/// screenshot could show. An unknown name falls back to the starter and says so in the log.
+	/// </summary>
+	private static Companion CaptureCompanion()
+	{
+		var name = UserArg("--companion=");
+		if (name is null)
+			return StarterContent.StarterCompanion;
+
+		var found = StarterContent.Roster.FirstOrDefault(c =>
+			c.Name.Equals(name, System.StringComparison.OrdinalIgnoreCase)
+		);
+		if (found is null)
+			GD.PushWarning($"--companion={name}: no such companion, using the starter");
+
+		return found ?? StarterContent.StarterCompanion;
+	}
+
+	/// <summary>
+	/// `-- --floor=6` opens on floor 6. **Floor 1 fields no enemy with a trait**, so a capture of the
+	/// opening position could never show a Flier, a Razorback or a Flail Knight on the board — the
+	/// same reason `--reward` forces an upgrade floor.
+	/// </summary>
+	private static int CaptureFloor() =>
+		int.TryParse(UserArg("--floor="), out var floor) && floor >= 1 ? floor : 1;
+
+	private static string UserArg(string prefix) =>
+		OS.GetCmdlineUserArgs()
+			.FirstOrDefault(a => a.StartsWith(prefix, System.StringComparison.Ordinal))
+			?[prefix.Length..];
 
 	/// <summary>
 	/// Begins the battle for whatever floor the run is on. The run outlives the battle — deck, life,
@@ -668,7 +704,7 @@ public partial class KinBoard : Node2D
 			TakeReward,
 			TakeUpgrade
 		);
-		_companionSelect = new KinCompanionSelect(layer, BeginRunWith);
+		_companionSelect = new KinCompanionSelect(layer, c => BeginRunWith(c));
 
 		// **Reads the run through a callback rather than being handed a copy.** A shop that held
 		// its own Run would be a second account of the gold and the deck, and it would drift from

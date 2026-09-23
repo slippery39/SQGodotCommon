@@ -79,6 +79,16 @@ public record PendingSummon
 	/// </summary>
 	public ImmutableList<KinEffect> Effects { get; init; } = ImmutableList<KinEffect>.Empty;
 
+	/// <summary>
+	/// **Carried through the telegraph for the same reason Effects are** — a Razorback summoned
+	/// mid-battle with its Thorns dropped on the way would be a Razorback in name only.
+	/// </summary>
+	public int Thorns { get; init; }
+
+	public int Strikes { get; init; } = 1;
+
+	public bool Flies { get; init; }
+
 	public Enemy ToEnemy() =>
 		new()
 		{
@@ -88,6 +98,9 @@ public record PendingSummon
 			Intent = Attack > 0 ? IntentKind.Attack : IntentKind.Wait,
 			IntentAmount = Attack,
 			Lane = Lane,
+			Thorns = Thorns,
+			Strikes = Strikes,
+			Flies = Flies,
 			Effects = Effects,
 		};
 }

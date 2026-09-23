@@ -91,9 +91,9 @@ Five bands, top to bottom. Each region names the state it reads and the event th
 |---|---|---|---|
 | 1 | Act name + floor | `ThemeLibrary.Of(Run.Act).Name`, `Run.Floor` | — |
 | 2 | Opponent silhouette + health bar | `GetOpponent().Health` / `.MaxHealth` | `OpponentDamagedEvent`, `OpponentDefeatedEvent` |
-| 3 | Enemy lane slots x5 | `EnemyInLane(n)` — name, `Health`, `Intent`, `IntentAmount` | `EnemySummonedEvent`, `EnemyDiedEvent` |
+| 3 | Enemy lane slots x5 | `EnemyInLane(n)` — name, `Health`, `Intent`, `IntentAmount` × `Strikes`, and `KinRulesText.Traits` | `EnemySummonedEvent`, `EnemyDiedEvent` |
 | 3 | Summon telegraph symbol | `GetOpponent().NextSummon` — its `Lane` | `EnemyTelegraphedEvent` |
-| 4 | Your lane slots x5 | `UnitInLane(n)` — name, `Power`, `RemainingToughness` | `CardPlayedEvent`, `UnitDiedEvent` |
+| 4 | Your lane slots x5 | `UnitInLane(n)` — name, `Power` × `Strikes`, `RemainingToughness`, `KinRulesText.Traits` | `CardPlayedEvent`, `UnitDiedEvent` |
 | 4 | Companion ring | `HasComponent<CompanionComponent>()` | — |
 | 5 | Status strip | `Run.Floor`, `Player.Life/MaxLife`, `Player.Energy/MaxEnergy`, `Battle.TurnNumber` | `PlayerDamagedEvent`, `PlayerDiedEvent` |
 | 5 | Hand | `CardsIn(ZoneType.Hand)` — `Cost`, `Name`, `UnitComponent`, `Tags` | `CardPlayedEvent` |
@@ -126,6 +126,17 @@ silently overwritten every time.
 Known rough edges, deliberately not fixed yet: the bottom stat scrim clips a standing subject's
 feet; the floating damage number sits half outside the smaller cell; enemy silhouettes are dark on a
 dark ground.
+
+**The TRAIT strip (2026-09-22): FLIER, THORNS 6, STRIKES TWICE — one per line, gold, under the
+name.** Enemies had NO text on the board before it, so a Flier and a Wretch were indistinguishable
+and countering either was luck. It shows only the keyword FIELDS (`KinRulesText.Traits`), never
+effect sentences — a lane has room for a word. **Still invisible, and known:** effect-text enemies
+("on death: the Opponent heals 6"), and the Opponent's own trait (a Corrosive Opponent shaves 3 off
+every unit at turn start with nothing on screen saying why). Both want an enemy hover in the
+inspector, which follows only the hand today.
+
+A double-striker's attack reads **`6×2`**, not 6: the pip is read at a glance and 6 is the wrong
+number for a body that lands 12. Both facts are shown; nothing is multiplied in the UI.
 
 **Input is one verb.** Drag a card onto a lane slot, or click card then lane. There is no targeting
 anywhere in this game and no attack-or-block step — the lane IS the decision. Do not build a

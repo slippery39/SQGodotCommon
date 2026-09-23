@@ -107,6 +107,18 @@ public static class KeywordLibrary
 		},
 		new Keyword
 		{
+			Name = "Breakthrough",
+			Text = "Power past the enemy's health carries on to the Opponent.",
+			Aliases = ["breakthrough"],
+		},
+		new Keyword
+		{
+			Name = "Flier",
+			Text = "Its attack goes over the unit in its lane and lands on you.",
+			Aliases = ["flier", "flies", "flying"],
+		},
+		new Keyword
+		{
 			Name = "Adjacent",
 			Text = "The lanes immediately either side. An edge lane has only one.",
 			Aliases = ["adjacent", "either side"],

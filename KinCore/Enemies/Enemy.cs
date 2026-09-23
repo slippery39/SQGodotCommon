@@ -62,6 +62,17 @@ public record Enemy : GameObject
 	public int Strikes { get; init; } = 1;
 
 	/// <summary>
+	/// **Flier — its attack goes OVER the unit in its lane and lands on you.** Your unit still hits
+	/// it, and still takes its Thorns if it has any, but soaks nothing of its attack — and since
+	/// your unit was never attacked, your Thorns never fire either.
+	///
+	/// **It exists to be the Bulwark deck's problem.** A wall is the universal answer to an attack
+	/// only while attacks have to go through it; a Flier is the enemy that asks you to KILL rather
+	/// than absorb.
+	/// </summary>
+	public bool Flies { get; init; }
+
+	/// <summary>
 	/// What this enemy does beyond hitting its lane. Same `KinEffect` a card carries — that is the
 	/// point of it not being card-specific: one `DealDamageAction` serves a rite and a dying enemy.
 	/// </summary>

@@ -1,5 +1,5 @@
-using KinCore;
 using ImmutableGameObjects;
+using KinCore;
 
 namespace KinCore.Tests;
 
@@ -12,16 +12,34 @@ namespace KinCore.Tests;
 /// </summary>
 public class ThemedCardTests
 {
+	/// <summary>
+	/// **This test used to assert the OPPOSITE rule** — `AnActOnlyEverOffersItsOwnCardsOrTheSharedCore`
+	/// — and it failed the moment act-exclusive pools were turned off on 2026-09-22, which is the
+	/// test working. It now guards what replaced that rule: every act offers the same pool, so an
+	/// archetype a companion declares can be drafted for the whole run rather than one act of it.
+	/// </summary>
 	[Test]
-	public void AnActOnlyEverOffersItsOwnCardsOrTheSharedCore()
+	public void EveryActOffersTheSamePoolIncludingEveryOtherActsCards()
 	{
+		var first = StarterContent.RewardPool(ThemeLibrary.All[0].Theme).Select(c => c.Name);
+
 		foreach (var theme in ThemeLibrary.All.Select(t => t.Theme))
 		{
-			foreach (var card in StarterContent.RewardPool(theme))
+			var pool = StarterContent.RewardPool(theme);
+
+			Assert.That(
+				pool.Select(c => c.Name),
+				Is.EquivalentTo(first),
+				$"{theme}'s pool differs"
+			);
+
+			// Every act's slice is still tagged and still reaches the pool — the tag is what keeps
+			// reversing this decision cheap.
+			foreach (var other in ThemeLibrary.All.Select(t => t.Theme))
 				Assert.That(
-					card.Theme,
-					Is.Null.Or.EqualTo(theme),
-					$"{theme} offers {card.Name}, which belongs to {card.Theme}"
+					pool.Select(c => c.Theme),
+					Has.Some.EqualTo(other),
+					$"{theme} no longer offers any of {other}'s cards"
 				);
 
 			// And the slice is actually reaching the offer, not just the pool.
