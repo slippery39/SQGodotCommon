@@ -35,12 +35,6 @@ public sealed class KinLaneCell
 
 	public PanelContainer Root { get; }
 
-	/// <summary>
-	/// A left press or a tap on this slot. Only the board knows what it means — for your own row,
-	/// "move the companion here" — so the cell just reports it.
-	/// </summary>
-	public event System.Action Clicked;
-
 	private readonly Label _name;
 	private readonly TextureRect _figure;
 
@@ -79,6 +73,19 @@ public sealed class KinLaneCell
 	private readonly MarginContainer _attackPip;
 	private readonly TextureRect _attackIcon;
 	private readonly PanelContainer _lifePip;
+
+	/// <summary>
+	/// **The companion's GUARD: a shield and a number, mirroring the sword and attack on the left.**
+	/// The first build reused the red toughness disc, so "Guard 16" read as "toughness 16" and
+	/// nothing on the companion looked different from a unit (playtest: "it felt exactly the
+	/// same"). The second wrote the word GUARD on the pip and the cell clipped it to "GUARD 1" — a
+	/// wrong number, which is worse than an ugly one. An icon never outgrows the slot.
+	/// </summary>
+	private readonly HBoxContainer _guardPip;
+	private readonly Label _guard;
+
+	/// <summary>Where a number about the companion's Guard floats up from.</summary>
+	public Control GuardAnchor => _guardPip;
 	private readonly Label _telegraph; // null on the row that never shows one
 
 	public KinLaneCell(bool showsTelegraph)
@@ -175,10 +182,31 @@ public sealed class KinLaneCell
 
 		(_lifePip, _life) = KinPalette.Pip(KinPalette.Red, 22);
 
+		_guardPip = new HBoxContainer
+		{
+			Visible = false,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		_guardPip.AddThemeConstantOverride("separation", 4);
+		_guardPip.AddChild(
+			new TextureRect
+			{
+				Texture = KinArt.GuardIcon,
+				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+				StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+				CustomMinimumSize = new Vector2(24, 24),
+				SizeFlagsVertical = Control.SizeFlags.ShrinkCenter,
+				MouseFilter = Control.MouseFilterEnum.Ignore,
+			}
+		);
+		_guard = KinPalette.Text("", 22, KinPalette.Bone);
+		_guardPip.AddChild(_guard);
+
 		pips.AddChild(_attackIcon);
 		pips.AddChild(_attackPip);
 		pips.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
 		pips.AddChild(_lifePip);
+		pips.AddChild(_guardPip);
 		pips.SetAnchorsPreset(Control.LayoutPreset.BottomWide);
 		pips.OffsetLeft = 6;
 		pips.OffsetRight = -6;
@@ -201,19 +229,6 @@ public sealed class KinLaneCell
 
 		Root.AddChild(inner);
 
-		// **The scrims must not eat the click.** A ColorRect stops mouse input by default, so a tap
-		// on the name band or the pip band would land on a scrim and never reach Root — a slot that
-		// works when you tap its middle and silently does nothing at its edges.
-		_topScrim.MouseFilter = Control.MouseFilterEnum.Ignore;
-		_bottomScrim.MouseFilter = Control.MouseFilterEnum.Ignore;
-		_traitScrim.MouseFilter = Control.MouseFilterEnum.Ignore;
-
-		Root.GuiInput += input =>
-		{
-			if (input is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
-				Clicked?.Invoke();
-		};
-
 		ShowEmpty();
 	}
 
@@ -221,6 +236,7 @@ public sealed class KinLaneCell
 	public void ShowEmpty()
 	{
 		ShowTraits([]);
+		_guardPip.Visible = false;
 		_name.Text = "";
 		_figure.Texture = null;
 		_ground.Visible = false;
@@ -239,6 +255,7 @@ public sealed class KinLaneCell
 	public void ShowEnemy(Enemy enemy)
 	{
 		ShowTraits(KinRulesText.Traits(enemy));
+		_guardPip.Visible = false;
 		_name.Text = enemy.Name;
 		// **One plinth colour for every enemy.** Your cards carry a per-name hue because a deck is
 		// something you build and recognise; the enemy row is a wall of threats and giving each one
@@ -287,10 +304,12 @@ public sealed class KinLaneCell
 		_attack.Text = Swing(unit.Power, unit.Strikes);
 
 		// REMAINING toughness, not printed toughness — a body in a lane is worth what it has left.
-		// **The companion shows its GUARD instead**: it has no body to wear down, and what matters
-		// this turn is how much of the attack in its lane it will soak before your life pays.
-		_lifePip.Visible = true;
-		_life.Text = (isCompanion ? unit.Guard : unit.RemainingToughness).ToString();
+		// **The companion shows its GUARD instead**, on its own bone pip: it has no body to wear
+		// down, and what matters this turn is how much of the attack in its lane it will soak.
+		_lifePip.Visible = !isCompanion;
+		_guardPip.Visible = isCompanion;
+		_life.Text = unit.RemainingToughness.ToString();
+		_guard.Text = unit.Guard.ToString();
 
 		_name.AddThemeColorOverride("font_color", isCompanion ? KinPalette.Gold : KinPalette.Bone);
 

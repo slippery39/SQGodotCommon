@@ -259,4 +259,75 @@ public class GuardAndMoveTests
 
 		Assert.That(played.Companion()!.Unit().Lane, Is.Zero);
 	}
+
+	// ===== What the board shows =====
+
+	/// <summary>
+	/// **The forecast is the real answer, not an estimate.** Open lanes, the companion's own lane past
+	/// its Guard, a Flier over it — the number the board shows must be exactly what ending the turn
+	/// then costs, or it is a second rules engine that is wrong the first time it matters.
+	/// </summary>
+	[Test]
+	public void TheForecastIsExactlyWhatEndingTheTurnCosts()
+	{
+		var run = RunWith(Wall(5));
+		var (state, _) = run.StartBattle(
+			[Enemy(9), Enemy(4, lane: 0), Enemy(3, lane: 4, flies: true)],
+			opponent: Idle
+		);
+
+		var forecast = state.LifeLostIfTurnEndsNow();
+		var before = state.GetPlayer().Life;
+		(state, _) = Do(state, new EndTurnAction());
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(forecast, Is.EqualTo(before - state.GetPlayer().Life));
+			Assert.That(
+				forecast,
+				Is.EqualTo((9 - 5) + 4 + 3),
+				"4 past the Guard, 4 open, 3 flying"
+			);
+		});
+	}
+
+	/// <summary>**This is what makes the move a decision you can read**: step in front, and it drops.</summary>
+	[Test]
+	public void MovingTheCompanionChangesTheForecast()
+	{
+		var run = RunWith(Wall(30));
+		var (state, _) = run.StartBattle([Enemy(15, lane: 0)], opponent: Idle);
+
+		var staying = state.LifeLostIfTurnEndsNow();
+		(state, _) = Do(state, new MoveCompanionAction { Lane = 0 });
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(staying, Is.EqualTo(15));
+			Assert.That(state.LifeLostIfTurnEndsNow(), Is.Zero);
+		});
+	}
+
+	/// <summary>
+	/// **A fully-soaked attack must still leave a trace**, or a companion being hit every turn looks
+	/// like one nobody touches — the playtest said exactly that.
+	/// </summary>
+	[Test]
+	public void AStruckGuardSaysSoEvenWhenNothingGetsThrough()
+	{
+		var run = RunWith(Wall(10));
+		var (state, _) = run.StartBattle([Enemy(6)], opponent: Idle);
+
+		(state, var events) = Do(state, new EndTurnAction());
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(events.OfType<GuardSoakedEvent>().Sum(e => e.Amount), Is.EqualTo(6));
+			Assert.That(
+				events.OfType<PlayerDamagedEvent>(),
+				Is.Empty,
+				"and none of it reached you"
+			);
+		});
+	}
 }

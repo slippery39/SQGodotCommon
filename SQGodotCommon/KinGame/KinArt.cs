@@ -76,7 +76,9 @@ public static class KinArt
 		// PNG first, then SVG. Generated art arrives as PNG and authored art is SVG; trying the
 		// raster first means a generated drawing can be dropped in beside the SVG it replaces
 		// without deleting anything, which is what makes an A/B possible at all.
-		foreach (var path in new[] { $"res://KinGame/Art/{key}.png", $"res://KinGame/Art/{key}.svg" })
+		foreach (
+			var path in new[] { $"res://KinGame/Art/{key}.png", $"res://KinGame/Art/{key}.svg" }
+		)
 		{
 			if (ResourceLoader.Exists(path))
 				return Drawn[key] = GD.Load<Texture2D>(path);
@@ -250,6 +252,12 @@ public static class KinArt
 	/// game-icons.net, CC BY 3.0 — see Art/CREDITS.md.
 	/// </summary>
 	public static Texture2D AttackIcon => Drawing("icons/attack");
+
+	/// <summary>
+	/// The companion's Guard, paired with the sword so attack and Guard read as two shapes. Drawn
+	/// in-house (not game-icons.net), so it adds nothing to CREDITS.md.
+	/// </summary>
+	public static Texture2D GuardIcon => Drawing("icons/shield");
 
 	private static readonly Dictionary<(int, int), Texture2D> Dashed = new();
 

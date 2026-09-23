@@ -44,6 +44,16 @@ public partial class KinBoard : Node2D
 	private Label _floorLabel;
 	private Label _lifeLabel;
 	private Control _lifePip;
+
+	/// <summary>
+	/// **What ending the turn now would cost your life**, beside the life pill — Slay the Spire's
+	/// "incoming". Recomputed on every repaint, so a card played or a companion move changes it; that
+	/// is what makes the move a decision you can read. Hidden when nothing is coming.
+	///
+	/// It rode on a health bar drawn on the companion for one build. The playtest found that made
+	/// life HARDER to read ("put it back where it was"), so life is the status strip's again.
+	/// </summary>
+	private Label _incomingLabel;
 	private CanvasLayer _layer;
 	private Control _overlay;
 
@@ -106,6 +116,50 @@ public partial class KinBoard : Node2D
 			// pip are the one board state no screenshot could show.
 			if (int.TryParse(UserArg("--move="), out var moveTo))
 				Report(TryMoveCompanion(moveTo) ?? $"moved to lane {moveTo}");
+
+			// `-- --click-lane=0` sends a REAL left click to the middle of that lane cell through
+			// the viewport's input pipeline, once layout has settled. Unlike `--move` it goes
+			// through every mouse filter on the board — which is the part that was broken.
+			// `-- --catchers-at=960,564` lists every visible Control that catches the mouse at that
+			// canvas point. **Card hover is physics picking, and any such Control blocks it** — this
+			// is what made reward cards unhoverable over the lane row. A synthetic mouse move does not
+			// drive picking the way a real one does, so the CAUSE is what gets checked.
+			if (
+				UserArg("--catchers-at=")?.Split(',') is [var cx, var cy]
+				&& float.TryParse(cx, out var catchX)
+				&& float.TryParse(cy, out var catchY)
+			)
+			{
+				var probeAt = new Vector2(catchX, catchY);
+				var prober = new Timer
+				{
+					WaitTime = 0.8,
+					OneShot = true,
+					Autostart = true,
+				};
+				prober.Timeout += () =>
+				{
+					var catchers = new List<string>();
+					Catchers(_layer, probeAt, catchers);
+					GD.Print(
+						$"CATCHERS at {probeAt}: "
+							+ (catchers.Count == 0 ? "none" : string.Join(" | ", catchers))
+					);
+				};
+				AddChild(prober);
+			}
+
+			if (int.TryParse(UserArg("--click-lane="), out var clickLane))
+			{
+				var clicker = new Timer
+				{
+					WaitTime = 0.6,
+					OneShot = true,
+					Autostart = true,
+				};
+				clicker.Timeout += () => ClickLane(clickLane);
+				AddChild(clicker);
+			}
 
 			// `-- --autoturn` ends a turn on a timer. **Animation cannot be verified
 			// from a still board**: nothing moves until state changes, so every capture of a fresh
@@ -437,6 +491,23 @@ public partial class KinBoard : Node2D
 		return null;
 	}
 
+	private void ClickLane(int lane)
+	{
+		var at = _unitLanes[lane].Root.GetGlobalRect().GetCenter();
+		foreach (var pressed in new[] { true, false })
+			GetViewport()
+				.PushInput(
+					new InputEventMouseButton
+					{
+						ButtonIndex = MouseButton.Left,
+						Pressed = pressed,
+						Position = at,
+						GlobalPosition = at,
+					},
+					true
+				);
+	}
+
 	/// <summary>
 	/// **Click an empty lane in your row and the companion moves there** — its one free move a turn.
 	/// Returns null when it moved, or the ENGINE'S refusal, exactly as <see cref="TryPlay"/> does.
@@ -490,6 +561,13 @@ public partial class KinBoard : Node2D
 		_opponentHealthBar.MaxValue = opponent.MaxHealth;
 		_opponentHealthBar.Value = shown;
 		_opponentHealthLabel.Text = $"{shown} / {opponent.MaxHealth}";
+
+		// Asked of the engine, never summed from intents here — see LifeLostIfTurnEndsNow.
+		var incoming = _state.LifeLostIfTurnEndsNow();
+		_incomingLabel.Visible = incoming > 0;
+		// Just the number: "incoming" is already the glossary word for a telegraphed summon, and the word
+		// also pushed the strip wider than the board.
+		_incomingLabel.Text = $"−{incoming}";
 
 		for (var lane = 0; lane < KinBattle.LaneCount; lane++)
 			RenderLane(lane, opponent);
@@ -601,6 +679,12 @@ public partial class KinBoard : Node2D
 		var dealt = events.OfType<OpponentDamagedEvent>().Sum(e => e.Amount);
 		var taken = events.OfType<PlayerDamagedEvent>().Sum(e => e.Amount);
 		var healed = events.OfType<LifeGainedEvent>().Sum(e => e.Amount);
+		var soaked = events.OfType<GuardSoakedEvent>().Sum(e => e.Amount);
+
+		// **A hit that reaches your life still flashes the COMPANION** — its life is yours — while the
+		// number floats from the life pill, where the number actually changes. Guard soaked floats
+		// from the companion's shield.
+		var companion = _state.Companion() is { } c ? _unitLanes[c.Unit().Lane] : null;
 
 		if (dealt > 0)
 		{
@@ -613,7 +697,17 @@ public partial class KinBoard : Node2D
 		if (taken > 0)
 		{
 			KinAnimator.Float(_overlay, _lifePip, $"-{taken}", KinPalette.Red);
+			if (companion is not null)
+				KinAnimator.Flash(companion.Root, KinPalette.Red);
 			KinAnimator.Shake(_layer);
+		}
+
+		// The shield taking a hit that never reached you — without this a fully-soaked attack left no
+		// trace, and a companion struck every turn looked untouched.
+		if (soaked > 0 && companion is not null)
+		{
+			KinAnimator.Float(_overlay, companion.GuardAnchor, $"-{soaked}", KinPalette.Bone);
+			KinAnimator.Pop(companion.Root);
 		}
 
 		if (healed > 0)
@@ -632,6 +726,7 @@ public partial class KinBoard : Node2D
 			var line = e switch
 			{
 				PlayerDamagedEvent d => $"took {d.Amount} - {d.LifeRemaining} life left",
+				GuardSoakedEvent g => $"guard soaked {g.Amount}",
 				UnitDiedEvent u => $"{u.CardName} died",
 				EnemyDiedEvent x => $"{x.EnemyName} is dead",
 				EnemySummonedEvent s => $"{s.EnemyName} drops into L{s.Lane}",
@@ -741,6 +836,11 @@ public partial class KinBoard : Node2D
 		// the one the game actually uses after the first purchase.
 		_shop = new KinShop(layer, () => _run, BuyCard, RemoveCard, BuyHeal, LeaveShop);
 
+		// **Nothing on the board catches the mouse — lane clicks included.** Card hover is physics
+		// picking, and ANY Control that catches the mouse blocks picking underneath it. The move
+		// first set the lane cells to catch clicks, and the reward screen's cards sit right over
+		// that row, so hovering the top half of a reward card silently failed (playtest: "hovering
+		// is inconsistent"). Lane clicks are read in `_UnhandledInput` instead — see there.
 		MakeTransparentToMouse(layer);
 		WarnIfColumnOverflows(column);
 	}
@@ -775,6 +875,22 @@ public partial class KinBoard : Node2D
 					);
 			})
 			.CallDeferred();
+	}
+
+	private static void Catchers(Node node, Vector2 at, List<string> found)
+	{
+		foreach (var child in node.GetChildren())
+		{
+			if (
+				child is Control { Visible: true } control
+				&& control.IsVisibleInTree()
+				&& control.MouseFilter != Control.MouseFilterEnum.Ignore
+				&& control.GetGlobalRect().HasPoint(at)
+			)
+				found.Add($"{control.GetType().Name}:{control.Name} ({control.MouseFilter})");
+
+			Catchers(child, at, found);
+		}
 	}
 
 	private static void MakeTransparentToMouse(Node node)
@@ -933,17 +1049,6 @@ public partial class KinBoard : Node2D
 		rows.AddChild(BuildLaneRow(_unitLanes, showsTelegraph: false));
 		panel.AddChild(rows);
 
-		// Your row answers a click by moving the companion there. The enemy row answers nothing.
-		for (var lane = 0; lane < KinBattle.LaneCount; lane++)
-		{
-			var target = lane;
-			_unitLanes[lane].Clicked += () =>
-			{
-				if (TryMoveCompanion(target) is { } refusal)
-					Report(refusal);
-			};
-		}
-
 		return Centred(panel);
 	}
 
@@ -997,6 +1102,10 @@ public partial class KinBoard : Node2D
 		_lifeLabel = lifeLabel;
 		_lifePip = lifePip;
 		row.AddChild(lifePip);
+
+		_incomingLabel = KinPalette.Text("", 24, new Color(1f, 0.55f, 0.5f));
+		_incomingLabel.Visible = false;
+		row.AddChild(_incomingLabel);
 
 		_energyPips = new HBoxContainer();
 		_energyPips.AddThemeConstantOverride("separation", 6);
@@ -1097,6 +1206,42 @@ public partial class KinBoard : Node2D
 			return;
 
 		_inspector.Follow(_state.CardsIn(ZoneType.Hand).ToDictionary(c => c.Id.ToString()));
+	}
+
+	/// <summary>
+	/// **A click on one of your lanes moves the companion there**, hit-tested against the slot
+	/// rectangles exactly as a card drop is (<see cref="LaneAt"/>).
+	///
+	/// Read here rather than by letting the cells catch the mouse, which blocked card hover under
+	/// them. `_UnhandledInput` runs after the GUI and after a hand card has claimed its own click, and
+	/// only a PRESS counts, so the release that ends a card drag over a lane is never read as a move.
+	/// Nothing happens while a screen is up over the board or the battle is already decided.
+	/// </summary>
+	public override void _UnhandledInput(InputEvent @event)
+	{
+		if (
+			@event
+			is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } click
+		)
+			return;
+
+		if (_state is null || _battleResolved || _state.GetBattle().IsOver)
+			return;
+
+		if (
+			_intermission.IsShowing
+			|| _shop.IsShowing
+			|| Common.Cards.CardUIManager.DraggingCard is not null
+		)
+			return;
+
+		if (LaneAt(click.Position) is not { } lane)
+			return;
+
+		if (TryMoveCompanion(lane) is { } refusal)
+			Report(refusal);
+
+		GetViewport().SetInputAsHandled();
 	}
 
 	public override void _Input(InputEvent @event)

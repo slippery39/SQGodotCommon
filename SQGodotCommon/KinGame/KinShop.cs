@@ -162,6 +162,9 @@ public sealed class KinShop
 		label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
 	}
 
+	/// <summary>Whether this screen is up. The board must not treat a click on it as a lane click.</summary>
+	public bool IsShowing => _root.Visible;
+
 	public void Hide()
 	{
 		_root.Visible = false;

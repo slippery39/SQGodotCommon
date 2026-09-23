@@ -179,6 +179,9 @@ public record EndTurnAction : GameAction
 				}
 			);
 
+			if (isCompanion && fromGuard > 0)
+				events = events.Add(new GuardSoakedEvent { CardId = card.Id, Amount = fromGuard });
+
 			var excess = total - soak;
 			if (excess > 0)
 				(state, events) = DamagePlayer(state, events, excess, absorbed: soak);

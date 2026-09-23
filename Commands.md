@@ -135,8 +135,15 @@ screenshot could show. Seed 53, floor 9 fields a Flail Knight, a Harpy and a Raz
   -GameArgs '--companion=Pike','--floor=9','--seed=53'
 ```
 
-**`--move=<lane>`** moves the companion on the opening position through the same path a click takes,
-so a capture can show a moved companion and its Guard pip.
+**`--click-lane=<lane>`** sends a REAL left click to that lane cell through the viewport, so it goes
+through every mouse filter on the board. **Use this to verify anything clicked.** `--move=<lane>`
+calls the move directly and skips the click — it "verified" a move that no player could make.
+Add `--autoturn` to catch the hit numbers landing on the companion mid-flight.
+
+**`--catchers-at=<x>,<y>`** (canvas px, 1920x1080) prints every visible Control that catches the mouse
+at that point. Card hover is physics picking, and any such Control silently blocks it — so this is
+how a hover bug is checked. **A synthetic mouse move does not drive physics picking**; a probe that
+pushes one reports "nothing hovered" everywhere, including where hover works.
 
 **Godot run from the command line uses the PREBUILT assemblies.** Build `SQGodotCommon.csproj`
 first — a flag added after the last build silently does nothing, and the capture looks exactly like

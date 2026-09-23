@@ -103,6 +103,11 @@ public record DealDamageAction : EffectAction
 						)
 					);
 
+					if (fromGuard > 0)
+						events = events.Add(
+							new GuardSoakedEvent { CardId = id, Amount = fromGuard }
+						);
+
 					var through = amount - fromGuard;
 					if (through > 0)
 					{

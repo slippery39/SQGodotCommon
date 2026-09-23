@@ -135,12 +135,33 @@ effect sentences — a lane has room for a word. **Still invisible, and known:**
 every unit at turn start with nothing on screen saying why). Both want an enemy hover in the
 inspector, which follows only the hand today.
 
-**The companion's pip shows its GUARD, not its toughness (2026-09-22)** — how much of the attack in
-its lane it will soak this turn before your life pays. **Click an empty lane in your row and the
-companion moves there**, once a turn. Clicking is otherwise unused on the board (cards are dragged),
-so one click is safe; a refused move is reported, never swallowed. The lane cell's three scrims are
-`MouseFilter.Ignore`, or a tap on the name or pip band would land on a scrim and do nothing.
-**Known rough edge:** the Guard pip is the same red disc as a unit's toughness; it wants a shield.
+**THE COMPANION ON THE BOARD (2026-09-22, two playtests in one day).** The first build changed the
+rules and nothing on screen ("it felt exactly the same"). What stuck:
+
+- **Guard is a shield icon and a number on the companion's cell**, mirroring the sword and attack. It
+  was the red toughness disc (read as toughness), then the word GUARD, which the 175px cell clipped
+  to "GUARD 1" — a wrong number. Guard soaked floats bone from the shield (`GuardSoakedEvent`).
+- **A hit that reaches your life flashes the companion** and floats red from the life pill.
+- **Life stays in the status strip, with a red `−N` beside it: what ending the turn now would cost**,
+  asked of `LifeLostIfTurnEndsNow` (a real end of turn on a copy), never summed from intents here.
+  Just the number — "incoming" is the glossary word for a telegraphed summon.
+
+**Tried and reverted: life as a health bar ON the companion's cell.** The playtest said it made life
+harder to read — squeezed into 175px it competed with the art. Keep life where it is easy to find.
+
+**Click an empty lane in your row and the companion moves there**, once a turn — read by `KinBoard`'s
+`_UnhandledInput` and hit-tested with `LaneAt`, exactly like a card drop. **NOTHING on the board may
+catch the mouse**, and that rule was learned twice in one day:
+
+1. `MakeTransparentToMouse` turns the whole board off to the mouse, and the move first shipped behind
+   it: the cells were wired and could never fire ("I couldn't move my companion").
+2. The fix set the lane cells to `Stop` — and **card hover is physics picking, which any Control
+   catching the mouse blocks.** The reward screen's cards sit over the lane row, so the top half of
+   every reward card stopped hovering ("hovering is inconsistent").
+
+**Verify input with `--click-lane` (a real click), and a hover problem with `--catchers-at`** (lists
+every Control catching the mouse at a point). A synthetic mouse move does NOT drive physics picking,
+so a hover can only be checked through its cause. `--move` skips the click and proved nothing.
 
 A double-striker's attack reads **`6×2`**, not 6: the pip is read at a glance and 6 is the wrong
 number for a body that lands 12. Both facts are shown; nothing is multiplied in the UI.

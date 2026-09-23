@@ -41,6 +41,17 @@ public record PlayerDamagedEvent : GameEvent
 	public int Absorbed { get; init; }
 }
 
+/// <summary>
+/// **The companion's Guard took a hit** — damage stopped before it reached your life. Raised so the
+/// board can show the shield being struck; without it a fully-soaked attack left no trace at all,
+/// and a companion that is being attacked every turn looked like one nobody was touching.
+/// </summary>
+public record GuardSoakedEvent : GameEvent
+{
+	public int CardId { get; init; }
+	public int Amount { get; init; }
+}
+
 /// <summary>The Opponent put a body back in the line.</summary>
 public record EnemySummonedEvent : GameEvent
 {

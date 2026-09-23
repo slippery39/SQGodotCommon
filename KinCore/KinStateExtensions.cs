@@ -57,6 +57,26 @@ public static class KinStateExtensions
 	public static KinCard? UnitInLane(this GameState s, int lane) =>
 		s.Units().FirstOrDefault(c => !c.Unit().IsDead && c.Unit().Lane == lane);
 
+	/// <summary>
+	/// **What your life will lose if you end the turn right now** — Slay the Spire's "incoming".
+	///
+	/// Played out on a throwaway copy by the engine itself, so it is the REAL answer: every lane,
+	/// Guard, Fliers, Thorns spilling over, the Opponent's traits, and the start of your next turn.
+	/// KinUI.md's rule is that the UI never computes a game fact, so the board asks this rather than
+	/// adding up intents — a sum of intents would be a second rules engine and wrong the first time
+	/// a Flier or a Guard card got involved. The same trick `KinBot` scores its lines with.
+	///
+	/// It is what makes the companion's move a decision you can READ: move it and this changes.
+	/// </summary>
+	public static int LifeLostIfTurnEndsNow(this GameState s)
+	{
+		if (s.GetBattle().IsOver)
+			return 0;
+
+		var (after, _) = s.AddAction(new EndTurnAction()).ProcessAllActions();
+		return Math.Max(0, s.GetPlayer().Life - after.GetPlayer().Life);
+	}
+
 	/// <summary>The companion on the field, or null in a battle built without one.</summary>
 	public static KinCard? Companion(this GameState s) =>
 		s.Units().FirstOrDefault(c => c.HasComponent<CompanionComponent>());

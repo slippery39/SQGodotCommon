@@ -88,8 +88,8 @@ nothing is orphaned — you should not need any of it.
 | Design doc — read first | `KinJam.md` | read it |
 | **The setting — GENERIC FANTASY substrate; themes swappable on top** | `KinSettingSketches.md` | read it before naming any content |
 | **The next thing to build — v3** | `KinV3Plan.md` | read it before starting any v3 phase |
-| Where the last session got to | `HANDOFF-KinPivot.md` | read it when picking the work back up |
-| Earlier handoffs, superseded — every other `HANDOFF-Kin*.md` | root | read only for their scars (§3/§4) |
+| Where the last session got to | `HANDOFF-KinCompanionGuard.md` | read it when picking the work back up |
+| Earlier handoffs, superseded — every other `HANDOFF-Kin*.md` | root | read only for their scars section |
 | Credits — **must ship** | `CREDITS.md` | before release, and when adding any third-party asset |
 | UI design — layout contract AND the visual language | `KinUI.md` | read it before touching `SQGodotCommon/KinGame/` |
 | The mockup, and the backdrop prompt | `docs/mockups/` | when changing layout or generating art |
