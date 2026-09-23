@@ -155,7 +155,7 @@ public static partial class StarterContent
 					Trigger = EffectTrigger.OnTurnStart,
 					Target = KinTarget.Self,
 					Template = new BuffAction { Power = 2, PerEach = CountOf.DiedLastTurn },
-					Text = "+2/+0 per Loss",
+					Text = "each turn: +2/+0 per Loss last turn",
 				},
 				// **THE SAME BUFF, NEGATED, ON THE OPPOSITE TRIGGER — and that is the whole
 				// duration system.** The bonus lasts exactly one turn and then unwinds itself.
@@ -437,11 +437,12 @@ public static partial class StarterContent
 				"Field Dressing",
 				1,
 				"It will hold. It will not heal.",
-				OnPlay(
-					KinTarget.Player,
-					new GainLifeAction { Amount = 12 },
-					"gain 12 life, Exhaust"
-				)
+				// **The only heal left in the pool, kept on purpose as the BASELINE (2026-09-22).**
+				// Repeatable healing is a stall engine in a game about keeping life across a run, so
+				// every other heal was cut. Exhaust makes this one once per battle per copy, and 12
+				// made it an auto-pick in every deck — at 6 it wants a deck that defends well enough
+				// to be worth patching, which is a choice rather than a default.
+				OnPlay(KinTarget.Player, new GainLifeAction { Amount = 6 }, "gain 6 life, Exhaust")
 			) with
 			{
 				Exhausts = true,
@@ -473,12 +474,12 @@ public static partial class StarterContent
 				"It has not noticed yet.",
 				OnDeath(KinTarget.Self, new ReturnToHandAction(), "Dies: return it to your hand")
 			),
-			Unit("Bonepicker", 2, 18, 8, "Arrives after the fighting."),
-			Unit("Feral Pack", 2, 16, 12, "Hungry, and there are several.") with
+			Unit("Bonepicker", 2, 24, 12, "Arrives after the fighting."),
+			Unit("Feral Pack", 2, 22, 18, "Hungry, and there are several.") with
 			{
 				Rarity = KinRarity.Uncommon,
 			},
-			Unit("Rust Golem", 2, 12, 20, "Slow. Very hard to move.") with
+			Unit("Rust Golem", 2, 18, 26, "Slow. Very hard to move.") with
 			{
 				Rarity = KinRarity.Uncommon,
 			},
@@ -509,8 +510,8 @@ public static partial class StarterContent
 			Unit(
 				"Siege Ram",
 				2,
-				16,
-				10,
+				20,
+				14,
 				"One job, done once.",
 				OnPlay(
 					KinTarget.EnemiesInAdjacentLanes,
@@ -526,8 +527,8 @@ public static partial class StarterContent
 			Unit(
 				"Warden",
 				2,
-				10,
-				20,
+				12,
+				26,
 				"The last thing still standing.",
 				OnPlay(
 					KinTarget.YourUnitsInAdjacentLanes,
@@ -544,8 +545,8 @@ public static partial class StarterContent
 			Unit(
 				"Long Watcher",
 				2,
-				14,
-				22,
+				16,
+				28,
 				"Has seen four of these.",
 				OnPlay(
 					KinTarget.Self,
@@ -573,8 +574,8 @@ public static partial class StarterContent
 			Unit(
 				"Salvage Rig",
 				2,
-				8,
 				12,
+				16,
 				"It keeps working through it. That is all it does.",
 				OnPlay(KinTarget.None, new DrawCardsAction { Amount = 2 }, "draw 2")
 			) with
@@ -584,8 +585,8 @@ public static partial class StarterContent
 			Unit(
 				"Drone Swarm",
 				2,
-				10,
-				10,
+				14,
+				14,
 				"Somebody's fleet, still flying the last order it got.",
 				OnPlay(
 					KinTarget.AllEnemies,
@@ -596,23 +597,9 @@ public static partial class StarterContent
 			{
 				Rarity = KinRarity.Uncommon,
 			},
-			// ponytail: rehomed off the deleted doom clock onto board width — a stand-in read, not
-			// a design. Wants a real one in the card pass.
-			Unit(
-				"Reactor Crew",
-				2,
-				10,
-				14,
-				"They stayed at the desk.",
-				OnPlay(
-					KinTarget.Player,
-					new GainLifeAction { Amount = 5, PerEach = CountOf.YourUnits },
-					"gain 5 per unit you hold"
-				)
-			) with
-			{
-				Rarity = KinRarity.Rare,
-			},
+			// Reactor Crew CUT (2026-09-22): "gain 5 per unit you hold", replayed every time it was
+			// drawn, measured the strongest card in the game (+7.6 floors, findings run 26) for the
+			// reason every heal but Field Dressing was cut — see Field Dressing.
 		];
 
 	/// <summary>
@@ -656,15 +643,12 @@ public static partial class StarterContent
 					new DestroyAction(),
 					"Sacrifice the unit in this lane"
 				),
+				// The "gain 10 life" that was here is CUT (2026-09-22) with every heal but Field
+				// Dressing. The card stays: it is one of the few sacrifice outlets Loss has.
 				OnPlay(
 					KinTarget.Player,
 					new DrawCardsAction { Amount = 2, PerEach = CountOf.DiedThisTurn },
 					"draw 2"
-				),
-				OnPlay(
-					KinTarget.Player,
-					new GainLifeAction { Amount = 10, PerEach = CountOf.DiedThisTurn },
-					"gain 10 life"
 				)
 			) with
 			{
@@ -701,8 +685,8 @@ public static partial class StarterContent
 			Unit(
 				"Pyre Tender",
 				2,
-				14,
-				12,
+				18,
+				16,
 				"Burning them is the only thing that has worked.",
 				OnPlay(
 					KinTarget.AllEnemies,
@@ -719,8 +703,8 @@ public static partial class StarterContent
 			Unit(
 				"The Choirmaster",
 				2,
-				12,
 				16,
+				20,
 				"Still conducting. Nobody told him.",
 				OnPlay(
 					KinTarget.Self,
@@ -759,21 +743,8 @@ public static partial class StarterContent
 	private static ImmutableArray<RunCard> ReckoningCards =>
 		[
 			Unit("Penitent", 0, 4, 4, "Walked here. Will walk further."),
-			// Was a 1-cost 2/8 whose text said "each turn: gain 2" and fired ONCE — v3 withdraws
-			// the unit that would have fired it again. Now it pays for a wide turn instead, which
-			// is honest and is the act's own axis.
-			Unit(
-				"Almoner",
-				1,
-				4,
-				8,
-				"Gives away what little is left.",
-				OnPlay(
-					KinTarget.Player,
-					new GainLifeAction { Amount = 2, PerEach = CountOf.CardsPlayedThisTurn },
-					"gain 2 per card this turn"
-				)
-			),
+			// Almoner CUT (2026-09-22): "gain 2 per card played this turn" was a heal, and the
+			// third-strongest card in the game (findings run 26). See Field Dressing.
 			Rite(
 				"Tithe",
 				1,
@@ -789,8 +760,8 @@ public static partial class StarterContent
 			Unit(
 				"Reliquary Guard",
 				2,
-				10,
 				14,
+				18,
 				"Guarding a box nobody has opened.",
 				OnPlay(
 					KinTarget.YourUnits,
@@ -834,12 +805,13 @@ public static partial class StarterContent
 	/// <summary>
 	/// Everything a companion can become. **Three are offered per cleared floor; you take one.**
 	///
-	/// Deliberately mixed: pure stat upgrades that any companion wants, and EFFECT upgrades that
-	/// only some companions want. That mix is what stops the pick being arithmetic — Warding on a
-	/// Bramble already gaining life is redundant, while on Pike it is the only healing in the run.
+	/// Deliberately mixed: pure stat upgrades that any companion wants, and EFFECT upgrades.
 	///
-	/// **Echo is the rare and it is the build-around.** It copies everything the companion has, so
-	/// its value is whatever you have already chosen — worthless first, enormous last.
+	/// **Cut 2026-09-22: Warding** ("end of turn: gain 3 life" — repeatable healing on the one unit
+	/// that never leaves, and the strongest upgrade measured) **and Echo** (it doubled every
+	/// effect, compounded 2^n across picks, and measured no better than average). That leaves five
+	/// and no rare — twelve picks a run from five makes the pick more of a formality, which is the
+	/// case for companion-specific upgrades rather than a reason to keep either.
 	/// </summary>
 	public static ImmutableArray<CompanionUpgrade> UpgradePool =>
 		[
@@ -862,35 +834,22 @@ public static partial class StarterContent
 				Power = 3,
 				Toughness = 4,
 			},
+			// Was "3 to the enemies either side of it" — the weakest upgrade measured (findings
+			// run 26), because the companion cannot move off the centre, so it only ever reached
+			// lanes 1 and 3. Moss's own ability has the same restriction; see KinJam.md.
 			new()
 			{
 				Name = "Barbed",
-				Text = "end of turn: 3 to the enemies either side of it",
+				Text = "end of turn: 3 to every enemy",
 				Rarity = KinRarity.Uncommon,
 				Effects =
 				[
 					new KinEffect
 					{
 						Trigger = EffectTrigger.OnTurnEnd,
-						Target = KinTarget.EnemiesInAdjacentLanes,
+						Target = KinTarget.AllEnemies,
 						Template = new DealDamageAction { Amount = 3 },
-						Text = "end of turn: 3 to the enemies either side of it",
-					},
-				],
-			},
-			new()
-			{
-				Name = "Warding",
-				Text = "end of turn: gain 3 life",
-				Rarity = KinRarity.Uncommon,
-				Effects =
-				[
-					new KinEffect
-					{
-						Trigger = EffectTrigger.OnTurnEnd,
-						Target = KinTarget.Player,
-						Template = new GainLifeAction { Amount = 3 },
-						Text = "end of turn: gain 3 life",
+						Text = "end of turn: 3 to every enemy",
 					},
 				],
 			},
@@ -909,13 +868,6 @@ public static partial class StarterContent
 						Text = "end of turn: 4 to the Opponent",
 					},
 				],
-			},
-			new()
-			{
-				Name = "Echo",
-				Text = "everything it does, it does twice",
-				Rarity = KinRarity.Rare,
-				EchoesAbility = true,
 			},
 		];
 

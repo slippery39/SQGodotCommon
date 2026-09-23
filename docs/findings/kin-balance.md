@@ -1859,3 +1859,70 @@ Tally and Moss have never been simulated. The reward picker is still uniform-ran
 here says how an archetype plays when you DRAFT toward it — only what its starter and its
 companion are worth.
 
+---
+
+## Run 27 — 2026-09-22 — how good does a 2-drop have to be? Stats cannot get it there
+
+**`bot-1/v3`, Release, 200 runs per companion x all five = 1000, seeds 1-200.** Changed since run
+26: every heal but Field Dressing cut (Reactor Crew, Almoner, Gallows Feast's life, the Warding
+upgrade); Field Dressing 12 -> 6; Echo deleted; Barbed upgrade -> 3 to every enemy; Bramble
+reworked (run 26 predates it); Flail Knight to floor 7; and **every 2-cost unit bumped** — the
+three vanilla ones SPREAD to 36 / 40 / 44 total stats on purpose, every effect one ~+8 total, 2-cost
+rites untouched as the control. This was a tuning-style sim asked for explicitly, to answer one
+question.
+
+### The run is now nearly unwinnable, and healing was why it was not
+
+| | act 1 | act 2 | act 3 | complete |
+|---|---|---|---|---|
+| Ash | 46.0% | 2.2% | 0.0% | 0.0% |
+| Bramble (reworked) | 99.5% | 61.8% | 5.7% | 3.5% |
+| Tally (first ever measured) | 75.5% | 4.0% | 0.0% | 0.0% |
+| Pike | 76.5% | 3.3% | 0.0% | 0.0% |
+| Moss (first ever measured) | 53.5% | 3.7% | 0.0% | 0.0% |
+
+Deaths now cluster on floors **21-24**, the middle of act 2 before its rest. Life entering act 2 is
+**85-92 against 106** in run 26. **The heals were act 2's power curve** — exactly as the dooms were
+the whole run's before them. That is a TUNING problem (enemy damage, the life budget, the one
+act-break heal that already exists), not a reason to bring repeatable healing back.
+
+**Consequence for everything below:** runs are short, so a card's value is mostly its value in
+act 1 and early act 2, and every number is squeezed toward zero. **Compare tiers and ranks, not
+magnitudes, and compare run 26 -> 27 only loosely** — the game got shorter underneath them.
+
+### The answer: extra stats inside one lane are worth nothing
+
+| vanilla 2-drop | line | total | power |
+|---|---|---|---|
+| Bonepicker | 24/12 | 36 | -0.60 (n=417) |
+| Feral Pack | 22/18 | 40 | -0.95 (n=239) |
+| Rust Golem | 18/26 | 44 | -1.17 (n=229) |
+| *vanilla 1-drops, average* | | ~14 | *+0.77* |
+
+**From 36 to 44 total bought nothing measurable** (the differences are ~1 standard error, and the
+trend points the wrong way), and at 44 — three times a 1-drop's stats — a vanilla 2-drop is still
+below an average vanilla 1-drop. **The mechanism is overkill.** A lane's value is capped by what is
+IN it: power past the enemy's health is wasted, and toughness past what is aimed at that lane is
+wasted. A 1-drop already nearly reaches that cap, so the second energy has nothing to buy inside
+one lane.
+
+**What does work is reach.** The 2-drops that rose are the ones that act outside their own lane:
+
+| 2-drop | reach | power |
+|---|---|---|
+| Drone Swarm | 6 to every enemy | **+2.6** — best 2-drop, third-best card |
+| Shieldwall Captain | 3 to the Opponent per unit you hold | +1.4 |
+| Siege Ram | 6 to adjacent enemies | +0.6 |
+| Pyre Tender | 6 to every enemy per Loss | +0.4 |
+
+**The rule this suggests: a 2-drop should be a 1-drop's body plus a card's worth of REACH** — every
+enemy, adjacent lanes, or the Opponent. Drone Swarm (14/14, 6 to every enemy) is the template.
+
+Tier means, relative power: 0-cost **+2.2**, 1-cost unit +0.4, 1-cost rite -0.2, 2-cost rite -0.4,
+2-cost unit with an effect -0.4, 2-cost vanilla **-0.9**.
+
+### Two smaller reads
+
+- **Field Dressing +3.2 -> -0.4.** At 6 it is no longer an auto-pick, which was the intent.
+- **Blademaster is still last (-3.0)** and Twinblade Duelist below average: under a RANDOM picker a
+  striker rarely meets Whetstone, so the Face payoffs cannot be judged by this sim at all.

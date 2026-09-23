@@ -33,7 +33,7 @@ public static partial class StarterContent
 		};
 
 	public static RunCard IronbarkTreant =>
-		Unit("Ironbark Treant", 2, 4, 22, "Older than the road, and in the way of it.") with
+		Unit("Ironbark Treant", 2, 6, 28, "Older than the road, and in the way of it.") with
 		{
 			Thorns = 10,
 			Rarity = KinRarity.Uncommon,
@@ -64,8 +64,8 @@ public static partial class StarterContent
 		Unit(
 			"Hedge Witch",
 			2,
-			6,
-			12,
+			10,
+			16,
 			"Knows which thorns to coax.",
 			OnPlay(
 				KinTarget.YourUnitsInAdjacentLanes,
@@ -86,8 +86,8 @@ public static partial class StarterContent
 		Unit(
 			"Shieldwall Captain",
 			2,
-			8,
-			14,
+			12,
+			18,
 			"Counts the shields still up, and sends the bill.",
 			EachTurn(
 				KinTarget.Opponent,
@@ -109,7 +109,7 @@ public static partial class StarterContent
 	// kills); its problem is the Razorback, whose Thorns answer every one of those strikes.
 
 	public static RunCard TwinbladeDuelist =>
-		Unit("Twinblade Duelist", 2, 8, 10, "Two edges, one opinion.") with
+		Unit("Twinblade Duelist", 2, 11, 13, "Two edges, one opinion.") with
 		{
 			Strikes = 2,
 			Rarity = KinRarity.Uncommon,
@@ -138,7 +138,7 @@ public static partial class StarterContent
 		};
 
 	public static RunCard Blademaster =>
-		Unit("Blademaster", 2, 6, 10, "Never the same cut twice. Or three times.") with
+		Unit("Blademaster", 2, 8, 14, "Never the same cut twice. Or three times.") with
 		{
 			Strikes = 3,
 			Rarity = KinRarity.Rare,

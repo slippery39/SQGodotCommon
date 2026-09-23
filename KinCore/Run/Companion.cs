@@ -61,25 +61,16 @@ public record Companion
 	/// <summary>
 	/// Applies an upgrade and returns the companion it becomes. The whole of progression.
 	///
-	/// **`EchoesAbility` is read off the CURRENT effects, so order matters between upgrades** — an
-	/// echo taken after another upgrade's effect copies that one too. That is intended: it is what
-	/// makes a late echo worth more than an early one, and it is the only interaction between
-	/// upgrades in the system.
+	/// Upgrades only ADD — stats and effects — so the order they are taken in does not matter. Echo,
+	/// which copied the effects already held and so made order matter, was cut on 2026-09-22.
 	/// </summary>
-	public Companion With(CompanionUpgrade upgrade)
-	{
-		var effects = Effects.AddRange(upgrade.Effects);
-
-		if (upgrade.EchoesAbility)
-			effects = effects.AddRange(effects);
-
-		return this with
+	public Companion With(CompanionUpgrade upgrade) =>
+		this with
 		{
 			BasePower = BasePower + upgrade.Power,
 			BaseToughness = BaseToughness + upgrade.Toughness,
-			Effects = effects,
+			Effects = Effects.AddRange(upgrade.Effects),
 		};
-	}
 }
 
 /// <summary>

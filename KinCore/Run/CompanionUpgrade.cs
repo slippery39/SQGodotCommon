@@ -37,17 +37,9 @@ public record CompanionUpgrade
 	/// <summary>Effects appended to the companion's own. Empty for a pure stat upgrade.</summary>
 	public ImmutableList<KinEffect> Effects { get; init; } = ImmutableList<KinEffect>.Empty;
 
-	/// <summary>
-	/// Append a second copy of **every** effect the companion already has.
-	///
-	/// **Every, not the first — and the difference is a silent bug.** Ash's ability is a SYMMETRIC
-	/// PAIR: a buff on turn start and the same buff negated on turn end, which is the entire
-	/// duration system (see <see cref="StarterContent.StarterCompanion"/>). Duplicating only the
-	/// first effect would double the buff and leave the unwind single, so Ash would gain power
-	/// every turn and never give it back — a companion that quietly runs away with the game, with
-	/// nothing anywhere reporting an error.
-	///
-	/// Copying the whole list keeps any such pair balanced, whatever a future companion declares.
-	/// </summary>
-	public bool EchoesAbility { get; init; }
+	// Echo ("everything it does, it does twice") lived here as `EchoesAbility` and was cut on
+	// 2026-09-22. Its one scar is worth keeping for anything that copies effects later: Ash's
+	// ability is a SYMMETRIC PAIR — a buff at turn start and the same buff negated at turn end —
+	// so a copy of only the first half makes him gain power every turn and never give it back,
+	// with nothing reporting an error. Copy the whole list or none of it.
 }
