@@ -16,7 +16,8 @@ public record PartyCompanion(
 	string Passive = "",
 	string PassiveRule = "",
 	int Thorns = 0,
-	int MomentumPerStep = 0
+	int MomentumPerStep = 0,
+	int Unbalances = 0
 );
 
 public record PlacedCompanion(PartyCompanion Companion, int Space);
@@ -135,9 +136,43 @@ public static class PartyContent
 					new StrikeAction { Amount = 3, DoubleIfAlone = true }
 				),
 			],
-			Passive: "MOMENTUM +2 per step",
+			Passive: "MOMENTUM +2/step",
 			PassiveRule: "Each step this turn adds 2 to its next attack.",
 			MomentumPerStep: 2
+		);
+
+	/// <summary>
+	/// **Gale, the Controller — wants the FOES where it chooses** (KITS v2, KinJam.md). Every intent
+	/// is a shape anchored on the foe's column, so moving a foe re-aims its attack; and a foe Gale
+	/// moves is Off-Balance, so Gale sets up the others' hits. The decision is the ORDER of plays.
+	/// Weak against homing attacks (the Wisp), which no push re-aims.
+	/// </summary>
+	public static readonly PartyCompanion Gale =
+		new(
+			"Gale",
+			Hp: 22,
+			Power: 2,
+			Speed: 2,
+			[
+				Card("Gust", 1, "Push the foe ahead one column.", new PushAction()),
+				Card("Gust", 1, "Push the foe ahead one column.", new PushAction()),
+				Card(
+					"Slam",
+					1,
+					"Push the foe ahead. If a foe is there, both take 5.",
+					new PushAction { Collision = 5 }
+				),
+				Card(
+					"Whirlwind",
+					1,
+					"Swap the foe ahead with the one beside it.",
+					new SwapAction()
+				),
+				Card("Buffet", 1, "Deal 2 + Power ahead.", new StrikeAction { Amount = 2 }),
+			],
+			Passive: "OFF-BALANCE +2",
+			PassiveRule: "A foe it moves takes 2 more from every hit this turn.",
+			Unbalances: 2
 		);
 
 	public static Foe Boar(int space) =>
@@ -235,7 +270,17 @@ public static class PartyContent
 			["Draw Fire", "Thornhide", "Bark Skin", "Feint", "Lunge"]
 		);
 
-	public static readonly ImmutableList<PartyScenario> Scenarios = [Alone, Pair];
+	/// <summary>The full team: the Wall, the Controller and the Skirmisher, each wanting something else.</summary>
+	public static readonly PartyScenario Trio =
+		new(
+			"Three against three",
+			"Bramble, Gale and Pike against a Boar, a Wisp and a Stonebeak.",
+			[new(Bramble, 0), new(Gale, 2), new(Pike, 4)],
+			[Boar(2), Wisp(3), Stonebeak(4)],
+			["Gust", "Slam", "Thornhide", "Lunge", "Flank"]
+		);
+
+	public static readonly ImmutableList<PartyScenario> Scenarios = [Alone, Pair, Trio];
 }
 
 /// <summary>Builds one battle's GameState from a scenario and deals the first hand.</summary>
@@ -287,6 +332,7 @@ public static class PartyBattleFactory
 					PassiveRule = companion.PassiveRule,
 					Thorns = companion.Thorns,
 					MomentumPerStep = companion.MomentumPerStep,
+					Unbalances = companion.Unbalances,
 				},
 				battle.Id
 			);

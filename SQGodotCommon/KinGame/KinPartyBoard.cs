@@ -155,6 +155,17 @@ public partial class KinPartyBoard : Node2D
 	}
 
 	/// <summary>Which of YOUR spaces a point is over. The foe row is never a drop target.</summary>
+	/// <summary>A drop on EITHER row names that column — a push is naturally aimed at the foe row.</summary>
+	private int? DropSpaceAt(Vector2 point)
+	{
+		if (SpaceAt(point) is { } mine)
+			return mine;
+		for (var i = 0; i < PartyBattle.Spaces; i++)
+			if (_foeCells[i].Root.GetGlobalRect().HasPoint(point))
+				return i;
+		return null;
+	}
+
 	private int? SpaceAt(Vector2 point)
 	{
 		for (var i = 0; i < PartyBattle.Spaces; i++)
@@ -293,19 +304,52 @@ public partial class KinPartyBoard : Node2D
 				? card
 				: null;
 
+		// **Where the card under the cursor can be dropped — asked of the ENGINE, space by space**, so
+		// the lit spaces can never disagree with what a drop will do. A step lands on YOUR row; a push
+		// or a swap is about where a FOE ends up, so it lights the foe row.
+		var drops = new HashSet<int>();
+		if (focus is not null && focus.NeedsASpace())
+			for (var i = 0; i < PartyBattle.Spaces; i++)
+				if (
+					new PlayPartyCardAction { CardId = focus.Id, Space = i }
+						.ValidateAdd(_state)
+						.IsValid
+				)
+					drops.Add(i);
+		var onFoeRow = focus is not null && !focus.Effects.Any(e => e.Template is StepAction);
+
 		for (var i = 0; i < PartyBattle.Spaces; i++)
 		{
-			RenderFoe(i);
-			RenderAlly(i, threats.GetValueOrDefault(i), forecast, selected, focus);
+			RenderFoe(i, onFoeRow && drops.Contains(i) ? focus : null);
+			RenderAlly(
+				i,
+				threats.GetValueOrDefault(i),
+				forecast,
+				selected,
+				focus,
+				!onFoeRow && drops.Contains(i)
+			);
 		}
 	}
 
-	private void RenderFoe(int space)
+	private void RenderFoe(int space, KinCard dropHere)
 	{
 		var cell = _foeCells[space];
 		if (_state.FoeAt(space) is not { } foe)
 		{
-			cell.ShowEmpty();
+			if (dropHere is not null)
+				cell.Show(
+					"DROP HERE",
+					null,
+					"",
+					"",
+					$"{dropHere.Name.ToUpperInvariant()} it here",
+					"",
+					KinPalette.EmptySlot,
+					KinPalette.Gold
+				);
+			else
+				cell.ShowEmpty();
 			return;
 		}
 
@@ -325,10 +369,14 @@ public partial class KinPartyBoard : Node2D
 			Art(foe.Name, hostile: true),
 			$"HP {foe.Hp}/{foe.MaxHp}" + (foe.Block > 0 ? $"  ·  BLOCK {foe.Block}" : ""),
 			attacks ? "" : says.ToUpperInvariant(),
-			"",
+			dropHere is not null ? $"▼ {dropHere.Name.ToUpperInvariant()} HERE"
+				: foe.OffBalance > 0 ? $"OFF-BALANCE +{foe.OffBalance}"
+				: "",
 			attacks ? says.ToUpperInvariant() : "",
 			KinArt.EnemyGround,
-			attacks ? KinPalette.Red : null
+			dropHere is not null ? KinPalette.Gold
+				: attacks ? KinPalette.Red
+				: null
 		);
 	}
 
@@ -337,7 +385,8 @@ public partial class KinPartyBoard : Node2D
 		List<string> threats,
 		ImmutableDictionary<int, int> forecast,
 		Ally selected,
-		KinCard focus
+		KinCard focus,
+		bool canDropHere
 	)
 	{
 		var cell = _allyCells[space];
@@ -345,14 +394,8 @@ public partial class KinPartyBoard : Node2D
 		var canStepHere =
 			selected is { MoveReadyIn: 0 } && _state.StepRefusal(selected, space) is null;
 
-		// The card under the cursor: who plays it, and — for a card that moves its owner — where it
-		// can be dropped.
+		// The card under the cursor, and who plays it.
 		var actor = focus is null ? null : _state.Owner(focus);
-		var canDropHere =
-			focus is not null
-			&& focus.MovesItsOwner()
-			&& actor is { IsKnockedOut: false }
-			&& _state.StepRefusal(actor, space) is null;
 
 		if (_state.AllyAt(space) is not { } ally)
 		{
@@ -390,12 +433,15 @@ public partial class KinPartyBoard : Node2D
 		cell.Show(
 			ally.Name.ToUpperInvariant(),
 			Art(ally.Name, hostile: false),
-			$"HP {ally.Hp}/{ally.MaxHp}" + (ally.Block > 0 ? $"  ·  BLOCK {ally.Block}" : ""),
-			$"POW {ally.Power}  ·  SPD {ally.Speed}",
+			// FOUR lines at most over the art — six covered Pike to the ears. Speed is not printed: its
+			// only effect is the move line below it ("moves in 2"), and clicking states the rules.
+			$"HP {ally.Hp}/{ally.MaxHp} · POW {ally.Power}"
+				+ (ally.Block > 0 ? $" · BLOCK {ally.Block}" : ""),
+			"",
 			acts ? $"▲ PLAYS {focus.Name.ToUpperInvariant()}"
-				: ally.MoveReadyIn == 0 ? "MOVE READY (click)"
-				: $"can move in {ally.MoveReadyIn}",
-			loses > 0 ? $"▼ −{loses} HP if you end turn"
+				: ally.MoveReadyIn == 0 ? "MOVE READY"
+				: $"moves in {ally.MoveReadyIn}",
+			loses > 0 ? $"▼ −{loses} HP if turn ends"
 				: threats is not null ? "▼ blocked"
 				: "",
 			KinPalette.Companion(ally.Name),
@@ -460,6 +506,16 @@ public partial class KinPartyBoard : Node2D
 						KinPalette.Bone
 					),
 				AllyMovedEvent moved => () => KinAnimator.Pop(_allyCells[moved.To].Root),
+				FoeMovedEvent moved => () =>
+				{
+					KinAnimator.Pop(_foeCells[moved.To].Root);
+					KinAnimator.Float(
+						_overlay,
+						_foeCells[moved.To].Root,
+						moved.To < moved.From ? "◀" : "▶",
+						KinPalette.Bone
+					);
+				},
 				_ => null,
 			};
 
@@ -497,6 +553,8 @@ public partial class KinPartyBoard : Node2D
 			FoeHitEvent hit => $"{Who(hit.FoeId)} takes {hit.Damage}"
 				+ (hit.Blocked > 0 ? $" ({hit.Blocked} blocked)" : ""),
 			CardPlayedEvent played => $"Played {played.CardName}",
+			FoeMovedEvent moved =>
+				$"{Who(moved.FoeId)} is pushed {(moved.To < moved.From ? "left" : "right")}",
 			PartyBattleEndedEvent end => end.Won
 				? "Every foe is down. VICTORY."
 				: "Every companion is down. DEFEAT.",
@@ -563,7 +621,7 @@ public partial class KinPartyBoard : Node2D
 		_hand = new KinHandView(
 			layer,
 			new Vector2(canvas.X / 2, canvas.Y - KinHandView.BandHeight / 2f),
-			SpaceAt,
+			DropSpaceAt,
 			TryPlay,
 			Report
 		);

@@ -38,9 +38,12 @@ public static class PartyState
 	public static Ally Owner(this GameState s, KinCard card) =>
 		(Ally)s.GetObject(card.GetComponent<OwnedBy>()!.AllyId);
 
-	/// <summary>A card that moves its owner, so it must be dropped on a space the owner can step to.</summary>
-	public static bool MovesItsOwner(this KinCard card) =>
-		card.Effects.Any(e => e.Template is StepAction);
+	/// <summary>
+	/// A card that must be dropped ON a space — a step, a push, a swap. Which spaces are legal is
+	/// the play's own validation; the board asks `PlayPartyCardAction` space by space.
+	/// </summary>
+	public static bool NeedsASpace(this KinCard card) =>
+		card.Effects.Any(e => e.Template is CardStep { NeedsSpace: true });
 
 	/// <summary>
 	/// **Why this companion cannot step to that space, or null if it can.** One step, into an empty
@@ -153,6 +156,9 @@ public static class PartyState
 	/// <summary>Damage to a foe: Block first, then HP. Ends the battle when the last one falls.</summary>
 	internal static (GameState, ImmutableList<GameEvent>) HitFoe(GameState s, Foe foe, int amount)
 	{
+		// Off-Balance rides on every hit, whoever lands it — Pike's strike and Bramble's Thorns alike.
+		amount += foe.OffBalance;
+
 		var blocked = Math.Min(amount, foe.Block);
 		var hit = foe with
 		{

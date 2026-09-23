@@ -524,6 +524,99 @@ public class PartyTests
 		Assert.That(FoeIn(crowded, 2).Hp, Is.EqualTo(46));
 	}
 
+	// ===== Gale, the Controller — moving foes
+
+	private static PartyCompanion Windy(int unbalances, params KinCard[] cards) =>
+		new("Gale", 22, 0, 2, [.. cards], Unbalances: unbalances);
+
+	private static readonly KinCard Gust = Card("Gust", 0, new PushAction());
+
+	[Test]
+	public void AGustReAimsTheFoesAttack()
+	{
+		var s = Battle([new(Windy(0, Gust), 2)], Foe(2, 50, Hit(9)));
+
+		s = Play(s, "Gust", space: 3);
+		s = Do(s, new EndPartyTurnAction());
+
+		Assert.That(s.LivingFoes().Single().Space, Is.EqualTo(3));
+		Assert.That(Named(s, "Gale").Hp, Is.EqualTo(22), "the Charge now lands on an empty space");
+	}
+
+	[Test]
+	public void AGustNeedsAFoeAheadAndAnOpenColumnBesideIt()
+	{
+		var s = Battle([new(Windy(0, Gust), 2)], Foe(2), Foe(3));
+		var id = InHand(s, "Gust").Id;
+
+		Assert.That(
+			new PlayPartyCardAction { CardId = id, Space = 3 }
+				.ValidateAdd(s)
+				.Reason,
+			Does.Contain("in the way")
+		);
+		Assert.That(
+			new PlayPartyCardAction { CardId = id, Space = 0 }
+				.ValidateAdd(s)
+				.IsValid,
+			Is.False
+		);
+		Assert.That(
+			new PlayPartyCardAction { CardId = id, Space = 1 }
+				.ValidateAdd(s)
+				.IsValid,
+			Is.True
+		);
+
+		var empty = Battle([new(Windy(0, Gust), 2)], Foe(4));
+		Assert.That(
+			new PlayPartyCardAction { CardId = InHand(empty, "Gust").Id, Space = 3 }
+				.ValidateAdd(empty)
+				.Reason,
+			Does.Contain("no foe ahead")
+		);
+	}
+
+	[Test]
+	public void ASlamIntoAFoeHurtsBothAndMovesNeither()
+	{
+		var slam = Card("Slam", 0, new PushAction { Collision = 5 });
+		var s = Battle([new(Windy(0, slam), 2)], Foe(2), Foe(3));
+
+		s = Play(s, "Slam", space: 3);
+
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(45));
+		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(45));
+	}
+
+	[Test]
+	public void AWhirlwindSwapsTwoFoes()
+	{
+		var whirl = Card("Whirlwind", 0, new SwapAction());
+		var s = Battle([new(Windy(0, whirl), 2)], Foe(2, hp: 10), Foe(1, hp: 20));
+
+		s = Play(s, "Whirlwind", space: 1);
+
+		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(10));
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(20));
+	}
+
+	[Test]
+	public void AFoeGaleMovesIsOffBalanceUntilYourNextTurn()
+	{
+		var jab = Card("Jab", 0, new StrikeAction { Amount = 5, AddPower = false });
+		var later = Card("Jab Later", 0, new StrikeAction { Amount = 5, AddPower = false });
+		var s = Battle([new(Windy(2, Gust), 2), new(Nimble(0, jab, later), 3)], Foe(2));
+
+		s = Play(s, "Gust", space: 3); // pushed in front of Pike
+		s = Play(s, "Jab");
+		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(50 - (5 + 2)));
+
+		s = Do(s, new EndPartyTurnAction());
+		s = Play(s, "Jab Later");
+		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(43 - 5), "Off-Balance is gone next turn");
+	}
+
 	// ===== The telegraph is the truth
 
 	[Test]

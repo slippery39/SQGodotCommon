@@ -75,8 +75,15 @@
 > - **Pike, the Skirmisher — wants to never be where the attack lands.** Passive **Momentum** (each
 >   step this turn adds +2 to its next attack). The decision is the ROUTE. Feint, Lunge, Hit and
 >   Run (strike, then step), Flank (double on a foe with no neighbours), Jab.
-> - **A third, the Controller — moves the FOES.** Every intent is a shape anchored on the foe's
->   column, so pushing the Boar one space makes its Charge land on nothing. Unnamed, unbuilt.
+> - **Gale, the Controller — wants the FOES where it chooses.** Every intent is a shape anchored on
+>   the foe's column, so pushing the Boar one space makes its Charge land on nothing. Passive
+>   **OFF-BALANCE +2** (a foe it moves takes +2 from every hit this turn — Thorns included), so Gale
+>   SETS UP the others and the ORDER of plays is the decision. Gust ×2, Slam (push into a foe: both
+>   take 5), Whirlwind (swap two foes), Buffet. Victim: homing attacks (the Wisp) — no push re-aims
+>   them. BUILT the same day, with "Three against three" (all three companions); unplayed.
+>
+> **ART (2026-09-23):** all six slice monsters have generated portraits, and the board cell was
+> rebuilt so the monster FILLS it — the first build showed an 80px thumbnail between six text lines.
 >
 > The principles behind this live in the `design-card` skill (`.claude/skills/design-card/`).
 >

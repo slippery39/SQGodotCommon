@@ -38,15 +38,16 @@ judge by principle, prove by test, then look at it.
 | Lever | Examples | Primitive today |
 |---|---|---|
 | **Position** — shapes, columns, neighbours, steps | Sweep (3 wide), Flank (lone foe), Root Wall (neighbours), Lunge | `StrikeAction.Offsets`, `DoubleIfAlone`, `GuardAction.AndBeside`, `StepAction` |
-| **The telegraph** — react to or change an intent | Draw Fire (redirect a single hit) | `DrawFireAction`; *changing/cancelling/pushing intents: not built* |
+| **The telegraph** — react to or change an intent | Draw Fire (redirect a single hit) | `DrawFireAction`; *changing/cancelling an intent: not built* |
+| **Moving foes** — re-aims their attacks | Gust, Slam, Whirlwind (Gale) | `PushAction` (`Collision`), `SwapAction` |
 | **Ownership** — who plays it, cross-companion combos | Draw Fire protects a neighbour | *"if X acted this turn": not built* |
 | **Stats** — Power, Block, Speed | Retaliate (= Block), "+ Power" | `AddPower`, `AddBlock`; *cooldown reset: not built* |
-| **Passives** | Thorns, Momentum | `Ally.Thorns`/`BonusThorns`, `MomentumPerStep`/`Momentum` |
+| **Passives** | Thorns, Momentum, Off-Balance | `Ally.Thorns`/`BonusThorns`, `MomentumPerStep`/`Momentum`, `Unbalances` → `Foe.OffBalance` |
 | **The deck** | Feint draws | `DrawAction` |
 | **Knockouts** | a fallen friend's cards are dead | *cards that care: not built* |
 
-**Moving FOES is the biggest unbuilt lever**: every intent is a shape anchored on the foe's column,
-so pushing a foe re-aims its attack. It is the planned third companion (the Controller).
+**The biggest unbuilt lever is the telegraph itself** — cancelling, delaying or changing an intent.
+Moving foes is built (Gale); cross-companion "if X acted" combos are not.
 
 ## 3. The checklist — before a card is done
 
@@ -62,9 +63,10 @@ so pushing a foe re-aims its attack. It is the planned third companion (the Cont
 
 - **Content** — `KinCore/Party/PartyContent.cs`. A card is `Card(name, cost, text, steps...)`: steps
   are `CardStep` templates resolved IN ORDER by its owner (`Lunge` = step, then strike; `Hit and
-  Run` = strike, then step). A card whose steps include `StepAction` must be dropped on a space its
-  owner can step to (`MovesItsOwner`). The card is discarded AFTER its steps — so a draw can never
-  draw the card itself.
+  Run` = strike, then step). A step played ON a space overrides `NeedsSpace` and `SpaceRefusal`
+  (step, push, swap do); the play's validation asks each, and the board lights exactly the spaces
+  validation accepts — never a second opinion. The card is discarded AFTER its steps — so a draw can
+  never draw the card itself.
 - **A new mechanic** = a new `CardStep` record in `PartyActions.cs`, or a field on an existing one.
   Records only, no delegates (the Serialization Rule in the root `CLAUDE.md`). A passive = a field on
   `Ally` + `PartyCompanion`, copied by `PartyBattleFactory`, plus a `Passive` tag and a
@@ -83,8 +85,9 @@ so pushing a foe re-aims its attack. It is the planned third companion (the Cont
 ```
 
 Flags are in `Commands.md` (`--play`, `--focus`, `--click-space`, `--end-turn`). Then READ the frame:
-- **Does the whole rules line show?** The shared fitter assumes a 112px box; text that does not fit
-  is CLIPPED with no error. Root Wall lost "Block." this way.
+- **Does the whole rules line show?** The shared fitter measures without line spacing, so text it
+  judges to fit can still be CLIPPED with no error — Root Wall lost "Block.", Flank "lone foe.".
+  Cards with no stat row now get the stat row's room; keep text short anyway.
 - **Does the companion cell still fit** (passive, move, forecast lines)? A wrapped line pushes the
   forecast off the bottom.
 - **Is the owner obvious** from across the room?

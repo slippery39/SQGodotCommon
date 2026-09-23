@@ -193,8 +193,20 @@ could not see what a card did."**
   staggered so the foes' turn reads in the order they acted.
 - **Rules text gets two lines.** Root Wall ran to three and silently lost "Block." at the bottom
   of the box. **The cause was a size mismatch**: the shared `FitRulesTextToBox` assumes a 112px box
-  and `KinCardFace` had cut it to 104, so text that "fit" was clipped. The box is 112 now; keep text
-  short anyway, and never shrink the box again without the fitter.
+  and `KinCardFace` had cut it to 104, so text that "fit" was clipped. The box is 112 now — and the
+  fitter also measures WITHOUT line spacing, so Flank still lost "lone foe." at 112. **A card with no
+  stat row (every companion card) takes the stat row's room** (`ApplyStats`). Keep text short anyway.
+- **A push or swap lights the FOE row** ("DROP HERE" / "▼ SLAM HERE"), a step lights yours — only
+  the spaces `PlayPartyCardAction` accepts. A drop on either row names that column.
+- **The monster IS the cell** (`KinPartyCell`): art covers the whole space, the name on a dark band
+  at the top, the numbers on a band at the foot in the companion's colour, darkened. **Four lines at
+  most over the art** — six covered Pike to the ears; Speed is not printed (the move line shows its
+  effect). The foot sits in a full-rect VBox: anchored to the bottom and grown upward it grew DOWN
+  and the clip ate the forecast.
+- **Six generated portraits** (`Art/bramble|pike|gale|boar|wisp|stonebeak.png`, DreamShaper XL Turbo,
+  flat style) — a companion's portrait is also the art on every one of its cards. Local, so no
+  `CREDITS.md` entry. Stonebeak needed a stone-FIRST prompt: "a heavy grey bird with a stone beak"
+  gave three plain grey birds.
 - **A companion's passive is its own line** on the cell, live ("THORNS 5 this turn"); clicking the
   companion states the passive's rule in the hint strip.
 - **The move shows itself**: a companion's cell says MOVE READY (click); clicking it lights the spaces

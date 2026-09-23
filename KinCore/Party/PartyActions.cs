@@ -32,10 +32,15 @@ public record PlayPartyCardAction : GameAction
 		if (party.Energy < card.Cost)
 			return ValidationResult.Invalid($"Not enough energy for {card.Name}");
 
-		if (card.MovesItsOwner() && s.StepRefusal(owner, Space) is not null)
-			return ValidationResult.Invalid(
-				$"Drop {card.Name} on an empty space next to {owner.Name}"
-			);
+		// Each step of the card that is played ON a space says why this space will not do. Read
+		// from where things stand NOW, so a card whose space step comes after a move would be judged
+		// from before the move — none does yet.
+		foreach (var effect in card.Effects)
+			if (
+				effect.Template is CardStep { NeedsSpace: true } needs
+				&& needs.SpaceRefusal(s, owner, Space) is { } refusal
+			)
+				return ValidationResult.Invalid(refusal);
 
 		return ValidationResult.Valid;
 	}
@@ -251,6 +256,9 @@ public record StartPartyTurnAction : GameAction
 				}
 			);
 
+		foreach (var foe in s.LivingFoes().Where(f => f.OffBalance > 0).ToList())
+			s = s.UpdateObject(foe.Id, foe with { OffBalance = 0 });
+
 		(s, _) = StartTurnAction.DrawCards(s, HandSize);
 		return new ActionResult(s).WithEvent(
 			new TurnStartedEvent { TurnNumber = party.TurnNumber }
@@ -266,7 +274,119 @@ public abstract record CardStep : GameAction
 	public int AllyId { get; init; }
 	public int Space { get; init; } = -1;
 
+	/// <summary>True for a step that is played ON a space — a step, a push, a swap.</summary>
+	public virtual bool NeedsSpace => false;
+
+	/// <summary>Why the card cannot be dropped on that space, or null if it can.</summary>
+	public virtual string? SpaceRefusal(GameState s, Ally owner, int space) => null;
+
 	protected Ally Owner(GameState s) => (Ally)s.GetObject(AllyId);
+
+	/// <summary>A foe this companion moved: Off-Balance, if the companion has the passive.</summary>
+	protected static Foe Unbalanced(Foe foe, Ally by) =>
+		foe with
+		{
+			OffBalance = Math.Max(foe.OffBalance, by.Unbalances),
+		};
+}
+
+/// <summary>
+/// **Push the foe AHEAD one column — to the space the card was dropped on.** Every intent is a shape
+/// anchored on the foe's column, so this re-aims its attack. With <see cref="Collision"/>, a push
+/// into another foe does not move it: both take that much instead (Slam).
+/// </summary>
+public record PushAction : CardStep
+{
+	public int Collision { get; init; }
+
+	public override bool NeedsSpace => true;
+
+	public override string? SpaceRefusal(GameState s, Ally owner, int space)
+	{
+		if (s.FoeAt(owner.Space) is not { } foe)
+			return $"There is no foe ahead of {owner.Name}";
+		if (space < 0 || space >= PartyBattle.Spaces || Math.Abs(space - owner.Space) != 1)
+			return $"Drop it one column left or right of the {foe.Name}";
+		if (Collision == 0 && s.FoeAt(space) is { } other)
+			return $"The {other.Name} is in the way";
+		return null;
+	}
+
+	public override ActionResult Execute(GameState s)
+	{
+		var owner = Owner(s);
+		if (s.FoeAt(owner.Space) is not { } foe)
+			return new ActionResult(s);
+
+		if (s.FoeAt(Space) is { } other)
+		{
+			// Slam: it is shoved into the other and neither moves.
+			s = s.UpdateObject(foe.Id, Unbalanced(foe, owner));
+			var events = ImmutableList<GameEvent>.Empty;
+			foreach (var id in new[] { foe.Id, other.Id })
+				if (!s.GetParty().IsOver && (Foe)s.GetObject(id) is { IsDead: false } struck)
+				{
+					ImmutableList<GameEvent> hit;
+					(s, hit) = PartyState.HitFoe(s, struck, Collision);
+					events = events.AddRange(hit);
+				}
+			return new ActionResult(s).WithEvents(events);
+		}
+
+		s = s.UpdateObject(foe.Id, Unbalanced(foe, owner) with { Space = Space });
+		return new ActionResult(s).WithEvent(
+			new FoeMovedEvent
+			{
+				FoeId = foe.Id,
+				From = foe.Space,
+				To = Space,
+			}
+		);
+	}
+}
+
+/// <summary>
+/// **Swap the foe ahead with the foe beside it** — dropped on that foe's column. Re-aims two attacks
+/// at once, and both are Off-Balance.
+/// </summary>
+public record SwapAction : CardStep
+{
+	public override bool NeedsSpace => true;
+
+	public override string? SpaceRefusal(GameState s, Ally owner, int space)
+	{
+		if (s.FoeAt(owner.Space) is not { } foe)
+			return $"There is no foe ahead of {owner.Name}";
+		if (Math.Abs(space - owner.Space) != 1 || s.FoeAt(space) is null)
+			return $"Drop it on a foe beside the {foe.Name}";
+		return null;
+	}
+
+	public override ActionResult Execute(GameState s)
+	{
+		var owner = Owner(s);
+		if (s.FoeAt(owner.Space) is not { } foe || s.FoeAt(Space) is not { } other)
+			return new ActionResult(s);
+
+		s = s.UpdateObject(foe.Id, Unbalanced(foe, owner) with { Space = other.Space });
+		s = s.UpdateObject(other.Id, Unbalanced(other, owner) with { Space = foe.Space });
+		return new ActionResult(s).WithEvents(
+			[
+				new FoeMovedEvent
+				{
+					FoeId = foe.Id,
+					From = foe.Space,
+					To = other.Space,
+				},
+				new FoeMovedEvent
+				{
+					FoeId = other.Id,
+					From = other.Space,
+					To = foe.Space,
+				},
+			]
+		);
+	}
 }
 
 /// <summary>
@@ -352,6 +472,11 @@ public record GuardAction : CardStep
 /// <summary>Moves the owner to the space the card was dropped on. Ignores the move cooldown.</summary>
 public record StepAction : CardStep
 {
+	public override bool NeedsSpace => true;
+
+	public override string? SpaceRefusal(GameState s, Ally owner, int space) =>
+		s.StepRefusal(owner, space);
+
 	public override ActionResult Execute(GameState s)
 	{
 		var owner = Owner(s);
@@ -414,6 +539,13 @@ public record BlockGainedEvent : GameEvent
 {
 	public int AllyId { get; init; }
 	public int Amount { get; init; }
+}
+
+public record FoeMovedEvent : GameEvent
+{
+	public int FoeId { get; init; }
+	public int From { get; init; }
+	public int To { get; init; }
 }
 
 public record FoeHitEvent : GameEvent

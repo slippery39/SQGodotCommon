@@ -35,7 +35,9 @@ public static class KinPalette
 		{
 			"Bramble" => Color.FromHtml("#2F6A3A"),
 			"Pike" => Color.FromHtml("#2A4F86"),
-			_ => Color.FromHtml("#5A3F80"),
+			"Gale" => Color.FromHtml("#5A3F80"),
+			// Dull on purpose: a companion without a colour should LOOK unfinished.
+			_ => Slate,
 		};
 
 	public static StyleBoxFlat Box(Color fill, Color? border = null, int borderWidth = 2)

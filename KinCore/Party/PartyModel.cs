@@ -79,6 +79,12 @@ public record Ally : GameObject
 	/// <summary>Built by steps, spent by the next attack, cleared when your next turn starts.</summary>
 	public int Momentum { get; init; }
 
+	/// <summary>
+	/// **Off-Balance — a foe this companion MOVES takes this much extra from every hit this turn.**
+	/// Gale's passive: the Controller sets up the others' hits, so the ORDER of plays is the decision.
+	/// </summary>
+	public int Unbalances { get; init; }
+
 	public int TotalThorns => Thorns + BonusThorns;
 
 	public bool IsKnockedOut => Hp <= 0;
@@ -132,6 +138,9 @@ public record Foe : GameObject
 	public int Space { get; init; }
 	public ImmutableList<Intent> Pattern { get; init; } = [];
 	public int PatternIndex { get; init; }
+
+	/// <summary>Extra damage this foe takes from every hit, from being moved. Cleared at your turn start.</summary>
+	public int OffBalance { get; init; }
 
 	public Intent Current => Pattern[PatternIndex % Pattern.Count];
 	public bool IsDead => Hp <= 0;

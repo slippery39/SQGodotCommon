@@ -196,6 +196,13 @@ public static class KinCardFace
 				ArtHeightFor(card) == TallArt ? TallArtCentre : ShortArtCentre
 			);
 
+		// **A card with no stat row gets the stat row's room for its text.** The shared fitter measures
+		// without the label's line spacing, so three lines it judged to fit 112px rendered taller and
+		// lost their last line (Flank lost "lone foe.", 2026-09-23). The box stops above the sword and
+		// disc only when there IS a sword and disc. Per card, because cards in the fan are recycled.
+		if (ui.FindChild("RulesTextLabel", true, false) is Label rules)
+			rules.OffsetBottom = unit is null ? 60f : 22f;
+
 		// **Long names get a smaller type, rather than an ellipsis.** "Breaching Charge" does not
 		// fit the name row at full size and never will; the alternatives were truncating it or
 		// widening a box that has the cost disc on one side and the card edge on the other. This
