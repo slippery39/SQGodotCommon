@@ -385,6 +385,145 @@ public class PartyTests
 		Assert.That(Named(s, "Pike").Space, Is.EqualTo(4));
 	}
 
+	// ===== KITS v2 — passives and signature mechanics
+
+	private static PartyCompanion Thorny(int thorns, params KinCard[] cards) =>
+		new("Bramble", 30, 0, 1, [.. cards], Thorns: thorns);
+
+	private static PartyCompanion Nimble(int perStep, params KinCard[] cards) =>
+		new("Pike", 20, 0, 3, [.. cards], MomentumPerStep: perStep);
+
+	[Test]
+	public void ThornsHurtWhateverAttacksHerEvenThroughBlock()
+	{
+		var bark = Card("Bark Skin", 0, new GuardAction { Amount = 50 });
+		var s = Battle([new(Thorny(2, bark), 1)], Foe(1, 50, Hit(9)));
+
+		s = Play(s, "Bark Skin");
+		s = Do(s, new EndPartyTurnAction());
+
+		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(48));
+		Assert.That(Named(s, "Bramble").Hp, Is.EqualTo(30), "the hit was fully blocked");
+	}
+
+	[Test]
+	public void ThornhideAddsThornsForThisTurnOnly()
+	{
+		var hide = Card("Thornhide", 0, new ThornsAction { Amount = 3 });
+		var s = Battle([new(Thorny(2, hide), 1)], Foe(1, 50, Hit(1)));
+
+		s = Play(s, "Thornhide");
+		s = Do(s, new EndPartyTurnAction());
+		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(50 - 5));
+
+		s = Do(s, new EndPartyTurnAction());
+		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(45 - 2), "back to the passive alone");
+	}
+
+	[Test]
+	public void ThornsCanWinTheBattleBeforeTheRestOfTheFoesAct()
+	{
+		var s = Battle(
+			[new(Thorny(5), 1), new(Mon("Pike", hp: 20), 3)],
+			Foe(1, 5, Hit(1)),
+			Foe(3, 5, Hit(9))
+		);
+		// Only the first foe attacks Bramble; the second would hit Pike if it ever acted.
+		s = Do(s, new EndPartyTurnAction());
+
+		Assert.That(FoeIn(s, 1).IsDead, Is.True);
+		Assert.That(s.GetParty().IsOver, Is.False, "one foe still stands");
+		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(11));
+
+		var last = Battle([new(Thorny(5), 1), new(Mon("Pike", hp: 20), 3)], Foe(1, 5, Hit(1)));
+		last = Do(last, new EndPartyTurnAction());
+		Assert.That(last.GetParty().IsOver && last.GetParty().Won, Is.True);
+	}
+
+	[Test]
+	public void RetaliateDealsHerBlock()
+	{
+		var bark = Card("Bark Skin", 0, new GuardAction { Amount = 7 });
+		var hit = Card("Retaliate", 0, new StrikeAction { AddPower = false, AddBlock = true });
+		var s = Battle([new(Thorny(0, bark, hit), 1)], Foe(1));
+
+		s = Play(s, "Bark Skin");
+		s = Play(s, "Retaliate");
+
+		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(43));
+	}
+
+	[Test]
+	public void EveryStepBuildsMomentumAndTheNextAttackSpendsIt()
+	{
+		var feint = Card("Feint", 0, new StepAction());
+		var jab = Card("Jab", 0, new StrikeAction { Amount = 1, AddPower = false });
+		var jab2 = Card("Jab Two", 0, new StrikeAction { Amount = 1, AddPower = false });
+		var s = Battle([new(Nimble(2, feint, jab, jab2), 1)], Foe(3));
+
+		s = Do(s, new MoveAllyAction { AllyId = Named(s, "Pike").Id, Space = 2 }); // free move
+		s = Play(s, "Feint", space: 3); // card step
+		s = Play(s, "Jab");
+		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(50 - (1 + 2 + 2)));
+
+		s = Play(s, "Jab Two");
+		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(45 - 1), "spent by the first attack");
+	}
+
+	[Test]
+	public void MomentumIsGoneNextTurn()
+	{
+		var jab = Card("Jab", 0, new StrikeAction { Amount = 1, AddPower = false });
+		var s = Battle([new(Nimble(2, jab), 1)], Foe(2));
+
+		s = Do(s, new MoveAllyAction { AllyId = Named(s, "Pike").Id, Space = 2 });
+		s = Do(s, new EndPartyTurnAction());
+		s = Play(s, "Jab");
+
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(49));
+	}
+
+	[Test]
+	public void HitAndRunStrikesFromWhereItStandsThenSteps()
+	{
+		var run = Card(
+			"Hit and Run",
+			0,
+			new StrikeAction { Amount = 5, AddPower = false },
+			new StepAction()
+		);
+		var s = Battle([new(Nimble(2, run), 2)], Foe(2), Foe(3));
+
+		s = Play(s, "Hit and Run", space: 3);
+
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(45));
+		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(50));
+		Assert.That(Named(s, "Pike").Space, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void FlankDoublesOnlyAgainstALoneFoe()
+	{
+		var flank = Card(
+			"Flank",
+			0,
+			new StrikeAction
+			{
+				Amount = 4,
+				AddPower = false,
+				DoubleIfAlone = true,
+			}
+		);
+		var alone = Battle([new(Nimble(0, flank), 2)], Foe(2), Foe(4));
+		var crowded = Battle([new(Nimble(0, flank), 2)], Foe(2), Foe(3));
+
+		alone = Play(alone, "Flank");
+		crowded = Play(crowded, "Flank");
+
+		Assert.That(FoeIn(alone, 2).Hp, Is.EqualTo(42));
+		Assert.That(FoeIn(crowded, 2).Hp, Is.EqualTo(46));
+	}
+
 	// ===== The telegraph is the truth
 
 	[Test]

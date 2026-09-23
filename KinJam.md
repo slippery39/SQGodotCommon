@@ -63,6 +63,28 @@
 > - **Playing a card did not show what happened** — who acted, and what it hit.
 > The three things it needs: **each monster its own artwork; cards unmistakably tied to their
 > monster; decisions that are distinct per monster.**
+>
+> **KITS v2 — card design session (Shayne, 2026-09-23): "same board, OPPOSITE goals."** The slice's
+> kits were the same card with different numbers (Thump / Jab), no companion had a passive, and
+> position asked both the same question. **A companion = stats + a PASSIVE + a signature mechanic
+> its cards build and spend**, and each wants something DIFFERENT from the same board:
+> - **Bramble, the Wall — wants to be HIT.** Passive **Thorns 2** (a foe that attacks her takes 2).
+>   She steps INTO the attacks Pike steps out of. Bark Skin, Thornhide (+Thorns this turn), Draw
+>   Fire, Root Wall, Retaliate (damage = her Block). Thorns only pays when struck — it ends fights,
+>   so it passes the stall test.
+> - **Pike, the Skirmisher — wants to never be where the attack lands.** Passive **Momentum** (each
+>   step this turn adds +2 to its next attack). The decision is the ROUTE. Feint, Lunge, Hit and
+>   Run (strike, then step), Flank (double on a foe with no neighbours), Jab.
+> - **A third, the Controller — moves the FOES.** Every intent is a shape anchored on the foe's
+>   column, so pushing the Boar one space makes its Charge land on nothing. Unnamed, unbuilt.
+>
+> The principles behind this live in the `design-card` skill (`.claude/skills/design-card/`).
+>
+> **BUILT the same day** — both kits in `PartyContent`, Thorns and Momentum as `Ally` fields, 8 tests.
+> The passive shows live on the companion's cell ("MOMENTUM: next hit +4"); clicking a companion
+> states its rule. **PLAYTESTED (Shayne, 2026-09-23): "the monsters feel completely different. I
+> like this direction."** — the first playtest's "monsters did not feel different" is answered by
+> opposite goals on one board plus a passive, not by stats.
 
 > # THE DESIGN PHILOSOPHY (2026-09-22) — Shayne's, stated directly, and it outranks the rest
 >

@@ -1,5 +1,8 @@
 # Paper play — the companion game, first slice (2026-09-23)
 
+> **HISTORY.** These are the v1 kits. The game now plays KITS v2 (Thorns / Momentum) — see
+> "KITS v2" in `KinJam.md`. The rules and the six questions still stand.
+
 Play this BY HAND before any code. Every number is a guess; the point is to find out whether the
 decisions are real. Rules are the "THE COMPANION GAME" block at the top of `KinJam.md`.
 

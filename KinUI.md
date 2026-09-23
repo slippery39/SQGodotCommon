@@ -192,7 +192,11 @@ could not see what a card did."**
   played it, then each hit (`−N`, or BLOCKED) and each `+N BLOCK` off the thing it happened to,
   staggered so the foes' turn reads in the order they acted.
 - **Rules text gets two lines.** Root Wall ran to three and silently lost "Block." at the bottom
-  of the box. Shorten the text; never shrink the box.
+  of the box. **The cause was a size mismatch**: the shared `FitRulesTextToBox` assumes a 112px box
+  and `KinCardFace` had cut it to 104, so text that "fit" was clipped. The box is 112 now; keep text
+  short anyway, and never shrink the box again without the fitter.
+- **A companion's passive is its own line** on the cell, live ("THORNS 5 this turn"); clicking the
+  companion states the passive's rule in the hint strip.
 - **The move shows itself**: a companion's cell says MOVE READY (click); clicking it lights the spaces
   it can step to. Nothing on the board catches the mouse — clicks are hit-tested in
   `_UnhandledInput`, exactly as `KinBoard` does.

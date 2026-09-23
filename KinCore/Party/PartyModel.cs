@@ -55,7 +55,41 @@ public record Ally : GameObject
 	/// <summary>Turns until the free move is ready. 0 = ready now.</summary>
 	public int MoveReadyIn { get; init; }
 
+	/// <summary>The passive, as the player reads it. Rules live in the fields below, never here.</summary>
+	public string Passive { get; init; } = "";
+
+	/// <summary>The passive's rule in a sentence — shown when the companion is clicked.</summary>
+	public string PassiveRule { get; init; } = "";
+
+	/// <summary>
+	/// **Thorns — a foe that ATTACKS this companion takes this much back**, blocked or not. Bramble's
+	/// passive: it pays only when she is struck, so it ENDS fights rather than stalling them.
+	/// </summary>
+	public int Thorns { get; init; }
+
+	/// <summary>Thorns added by cards this turn. Cleared when your next turn starts.</summary>
+	public int BonusThorns { get; init; }
+
+	/// <summary>
+	/// **Momentum — each step this companion takes adds this to its NEXT attack this turn.** Pike's
+	/// passive: the decision is the route. Free moves and card steps both count.
+	/// </summary>
+	public int MomentumPerStep { get; init; }
+
+	/// <summary>Built by steps, spent by the next attack, cleared when your next turn starts.</summary>
+	public int Momentum { get; init; }
+
+	public int TotalThorns => Thorns + BonusThorns;
+
 	public bool IsKnockedOut => Hp <= 0;
+
+	/// <summary>One step to a space — the ONE place a step builds Momentum, card or free move.</summary>
+	public Ally SteppedTo(int space) =>
+		this with
+		{
+			Space = space,
+			Momentum = Momentum + MomentumPerStep,
+		};
 }
 
 public enum IntentType

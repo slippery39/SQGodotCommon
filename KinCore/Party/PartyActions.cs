@@ -117,9 +117,8 @@ public record MoveAllyAction : GameAction
 		var ally = (Ally)s.GetObject(AllyId);
 		s = s.UpdateObject(
 			AllyId,
-			ally with
+			ally.SteppedTo(Space) with
 			{
-				Space = Space,
 				MoveReadyIn = CooldownAfterMove(ally.Speed),
 			}
 		);
@@ -161,11 +160,15 @@ public record EndPartyTurnAction : GameAction
 		var events = ImmutableList<GameEvent>.Empty;
 		foreach (var (foeId, targets) in plan)
 		{
+			// Thorns can kill a foe — the last one, even — before it gets to act.
+			if (s.GetParty().IsOver)
+				break;
+			if (((Foe)s.GetObject(foeId)).IsDead)
+				continue;
+
 			// A foe's Block lasts through your turn and drops when it next acts.
-			var foe = (Foe)s.GetObject(foeId) with
-			{
-				Block = 0,
-			};
+			s = s.UpdateObject(foeId, Current(s, foeId) with { Block = 0 });
+			var foe = Current(s, foeId);
 			var intent = foe.Current;
 
 			switch (intent.Kind)
@@ -177,21 +180,35 @@ public record EndPartyTurnAction : GameAction
 							ImmutableList<GameEvent> hit;
 							(s, hit) = PartyState.HitAlly(s, ally, intent.Amount, foe.Name);
 							events = events.AddRange(hit);
+
+							// **Thorns: attacking this companion hurts**, blocked or not.
+							if (
+								ally.TotalThorns > 0
+								&& Current(s, foeId) is { IsDead: false } struck
+							)
+							{
+								(s, hit) = PartyState.HitFoe(s, struck, ally.TotalThorns);
+								events = events.AddRange(hit);
+							}
 						}
 					break;
 
 				case IntentType.Block:
-					foe = foe with { Block = intent.Amount };
+					s = s.UpdateObject(foeId, Current(s, foeId) with { Block = intent.Amount });
 					break;
 
 				case IntentType.Move:
 					var to = foe.Space + intent.Amount;
 					if (to >= 0 && to < PartyBattle.Spaces && s.FoeAt(to) is null)
-						foe = foe with { Space = to };
+						s = s.UpdateObject(foeId, Current(s, foeId) with { Space = to });
 					break;
 			}
 
-			s = s.UpdateObject(foeId, foe with { PatternIndex = foe.PatternIndex + 1 });
+			var acted = Current(s, foeId);
+			s = s.UpdateObject(foeId, acted with { PatternIndex = acted.PatternIndex + 1 });
+
+			if (s.GetParty().IsOver)
+				return new ActionResult(s).WithEvents(events);
 
 			if (!s.LivingAllies().Any())
 			{
@@ -208,6 +225,8 @@ public record EndPartyTurnAction : GameAction
 		s = s.SpawnAction(new StartPartyTurnAction());
 		return new ActionResult(s).WithEvents(events);
 	}
+
+	private static Foe Current(GameState s, int foeId) => (Foe)s.GetObject(foeId);
 }
 
 /// <summary>Refills energy, drops your Block and Draw Fire, ticks move cooldowns, draws five.</summary>
@@ -226,6 +245,8 @@ public record StartPartyTurnAction : GameAction
 				ally with
 				{
 					Block = 0,
+					BonusThorns = 0,
+					Momentum = 0,
 					MoveReadyIn = Math.Max(0, ally.MoveReadyIn - 1),
 				}
 			);
@@ -258,23 +279,51 @@ public record StrikeAction : CardStep
 	public bool AddPower { get; init; } = true;
 	public ImmutableList<int> Offsets { get; init; } = [0];
 
+	/// <summary>Adds the owner's current Block — Retaliate: the Wall hits as hard as it is braced.</summary>
+	public bool AddBlock { get; init; }
+
+	/// <summary>Double against a foe with no foe beside it — Flank: pick off the straggler.</summary>
+	public bool DoubleIfAlone { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var owner = Owner(s);
-		var damage = Amount + (AddPower ? owner.Power : 0);
-		var events = ImmutableList<GameEvent>.Empty;
 
+		// Momentum rides on the whole attack — every column a sweep hits — and is spent by it, hit
+		// or miss. "Your next attack" means the next one you make, not the next one that connects.
+		var damage =
+			Amount + (AddPower ? owner.Power : 0) + (AddBlock ? owner.Block : 0) + owner.Momentum;
+		if (owner.Momentum > 0)
+			s = s.UpdateObject(owner.Id, owner with { Momentum = 0 });
+
+		var events = ImmutableList<GameEvent>.Empty;
 		foreach (var offset in Offsets)
 		{
 			if (s.GetParty().IsOver || s.FoeAt(owner.Space + offset) is not { } foe)
 				continue;
 
+			var alone = s.FoeAt(foe.Space - 1) is null && s.FoeAt(foe.Space + 1) is null;
+
 			ImmutableList<GameEvent> hit;
-			(s, hit) = PartyState.HitFoe(s, foe, damage);
+			(s, hit) = PartyState.HitFoe(s, foe, DoubleIfAlone && alone ? damage * 2 : damage);
 			events = events.AddRange(hit);
 		}
 
 		return new ActionResult(s).WithEvents(events);
+	}
+}
+
+/// <summary>Thorns for the owner until your next turn starts — Thornhide.</summary>
+public record ThornsAction : CardStep
+{
+	public int Amount { get; init; }
+
+	public override ActionResult Execute(GameState s)
+	{
+		var owner = Owner(s);
+		return new ActionResult(
+			s.UpdateObject(owner.Id, owner with { BonusThorns = owner.BonusThorns + Amount })
+		);
 	}
 }
 
@@ -306,7 +355,7 @@ public record StepAction : CardStep
 	public override ActionResult Execute(GameState s)
 	{
 		var owner = Owner(s);
-		s = s.UpdateObject(owner.Id, owner with { Space = Space });
+		s = s.UpdateObject(owner.Id, owner.SteppedTo(Space));
 		return new ActionResult(s).WithEvent(
 			new AllyMovedEvent
 			{

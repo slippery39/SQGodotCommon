@@ -188,9 +188,12 @@ public partial class KinPartyBoard : Node2D
 			Render(ImmutableList<GameEvent>.Empty);
 			if (_selectedAllyId != 0)
 				Report(
-					ally.MoveReadyIn == 0
-						? $"{ally.Name}: click a lit space to move there."
-						: $"{ally.Name} can move again in {ally.MoveReadyIn} turn{(ally.MoveReadyIn == 1 ? "" : "s")}."
+					$"{ally.Name}: {ally.PassiveRule} "
+						+ (
+							ally.MoveReadyIn == 0
+								? "Click a lit space to move."
+								: $"Moves again in {ally.MoveReadyIn} turn{(ally.MoveReadyIn == 1 ? "" : "s")}."
+						)
 				);
 			return;
 		}
@@ -400,6 +403,12 @@ public partial class KinPartyBoard : Node2D
 				: loses > 0 ? KinPalette.Red
 				: null
 		);
+
+		// The passive, with its live number when a card or a step has raised it this turn.
+		cell.Passive =
+			ally.Momentum > 0 ? $"MOMENTUM: next hit +{ally.Momentum}"
+			: ally.BonusThorns > 0 ? $"THORNS {ally.TotalThorns} this turn"
+			: ally.Passive;
 	}
 
 	/// <summary>A companion's figure is drawn in its own colour, matching its cards.</summary>

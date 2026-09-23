@@ -3,13 +3,20 @@ using ImmutableGameObjects;
 
 namespace KinCore.Party;
 
-/// <summary>A companion as authored: stats, and the cards it brings to the combined deck.</summary>
+/// <summary>
+/// A companion as authored: stats, a PASSIVE, and the cards it brings to the combined deck.
+/// `Passive` is the player-facing line; `Thorns` and `MomentumPerStep` are the rules it names.
+/// </summary>
 public record PartyCompanion(
 	string Name,
 	int Hp,
 	int Power,
 	int Speed,
-	ImmutableList<KinCard> Cards
+	ImmutableList<KinCard> Cards,
+	string Passive = "",
+	string PassiveRule = "",
+	int Thorns = 0,
+	int MomentumPerStep = 0
 );
 
 public record PlacedCompanion(PartyCompanion Companion, int Space);
@@ -49,7 +56,11 @@ public static class PartyContent
 	private static readonly ImmutableList<int> Ahead = [0];
 	private static readonly ImmutableList<int> ThreeWide = [-1, 0, 1];
 
-	/// <summary>The wall: slow, blocks, can't dodge often.</summary>
+	/// <summary>
+	/// **Bramble, the Wall — wants to be HIT** (KITS v2, KinJam.md). She steps INTO the attacks Pike
+	/// steps out of, pulls single hits off her neighbours, and punishes whatever strikes her. Her only
+	/// attack scales with how braced she is.
+	/// </summary>
 	public static readonly PartyCompanion Bramble =
 		new(
 			"Bramble",
@@ -57,9 +68,14 @@ public static class PartyContent
 			Power: 2,
 			Speed: 1,
 			[
-				Card("Thump", 1, "Deal 3 + Power ahead.", new StrikeAction { Amount = 3 }),
-				Card("Thump", 1, "Deal 3 + Power ahead.", new StrikeAction { Amount = 3 }),
 				Card("Bark Skin", 1, "Gain 6 Block.", new GuardAction { Amount = 6 }),
+				Card("Thornhide", 1, "Gain 3 Thorns this turn.", new ThornsAction { Amount = 3 }),
+				Card(
+					"Retaliate",
+					1,
+					"Deal your Block ahead.",
+					new StrikeAction { AddPower = false, AddBlock = true }
+				),
 				Card(
 					"Root Wall",
 					2,
@@ -72,10 +88,17 @@ public static class PartyContent
 					"This turn, single hits on a neighbour hit this instead.",
 					new DrawFireAction()
 				),
-			]
+			],
+			Passive: "THORNS 2",
+			PassiveRule: "A foe that attacks her takes 2, even if she blocks it.",
+			Thorns: 2
 		);
 
-	/// <summary>The skirmisher: fragile, dodges, aims.</summary>
+	/// <summary>
+	/// **Pike, the Skirmisher — wants to never be where the attack lands** (KITS v2). Every step
+	/// feeds the next attack, so the decision is the ROUTE: how far, in what order, and where it
+	/// ends the turn.
+	/// </summary>
 	public static readonly PartyCompanion Pike =
 		new(
 			"Pike",
@@ -84,7 +107,13 @@ public static class PartyContent
 			Speed: 3,
 			[
 				Card("Jab", 1, "Deal 2 + Power ahead.", new StrikeAction { Amount = 2 }),
-				Card("Jab", 1, "Deal 2 + Power ahead.", new StrikeAction { Amount = 2 }),
+				Card(
+					"Feint",
+					0,
+					"Step 1. Draw a card.",
+					new StepAction(),
+					new DrawAction { Count = 1 }
+				),
 				Card(
 					"Lunge",
 					1,
@@ -93,19 +122,22 @@ public static class PartyContent
 					new StrikeAction { Amount = 2 }
 				),
 				Card(
-					"Sweep",
-					2,
-					"Deal Power ahead and to both columns beside it.",
-					new StrikeAction { Amount = 0, Offsets = ThreeWide }
+					"Hit and Run",
+					1,
+					"Deal 2 + Power ahead, then step 1.",
+					new StrikeAction { Amount = 2 },
+					new StepAction()
 				),
 				Card(
-					"Feint",
-					0,
-					"Step 1. Draw a card.",
-					new StepAction(),
-					new DrawAction { Count = 1 }
+					"Flank",
+					1,
+					"Deal 3 + Power ahead. Double vs a lone foe.",
+					new StrikeAction { Amount = 3, DoubleIfAlone = true }
 				),
-			]
+			],
+			Passive: "MOMENTUM +2 per step",
+			PassiveRule: "Each step this turn adds 2 to its next attack.",
+			MomentumPerStep: 2
 		);
 
 	public static Foe Boar(int space) =>
@@ -200,7 +232,7 @@ public static class PartyContent
 			"Bramble and Pike against a Boar, a Wisp and a Stonebeak.",
 			[new(Bramble, 1), new(Pike, 3)],
 			[Boar(1), Wisp(3), Stonebeak(4)],
-			["Thump", "Bark Skin", "Jab", "Lunge", "Sweep"]
+			["Draw Fire", "Thornhide", "Bark Skin", "Feint", "Lunge"]
 		);
 
 	public static readonly ImmutableList<PartyScenario> Scenarios = [Alone, Pair];
@@ -251,6 +283,10 @@ public static class PartyBattleFactory
 					Power = companion.Power,
 					Speed = companion.Speed,
 					Space = space,
+					Passive = companion.Passive,
+					PassiveRule = companion.PassiveRule,
+					Thorns = companion.Thorns,
+					MomentumPerStep = companion.MomentumPerStep,
 				},
 				battle.Id
 			);

@@ -86,7 +86,10 @@ public static class KinCardFace
 		// them now; the text that fits is the text a card is allowed to have (KinUI.md).
 		if (ui.FindChild("RulesTextLabel", true, false) is Label rules)
 		{
-			rules.OffsetTop = -82f;
+			// **112 tall, because the shared fitter assumes 112** (`FitRulesTextToBox`, which MTG also
+			// uses, so it is not ours to change). At 104 the fitter chose a size that "fit" 112 and the
+			// box clipped the rest — Root Wall silently lost "Block." at its foot (2026-09-23).
+			rules.OffsetTop = -90f;
 			rules.OffsetBottom = 22f;
 			rules.VerticalAlignment = VerticalAlignment.Center;
 		}

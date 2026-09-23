@@ -12,7 +12,7 @@ namespace KinGame;
 public sealed class KinPartyCell
 {
 	public const int Width = 220;
-	public const int Height = 220;
+	public const int Height = 236;
 
 	public PanelContainer Root { get; }
 
@@ -20,6 +20,7 @@ public sealed class KinPartyCell
 	private readonly TextureRect _art;
 	private readonly Label _stats;
 	private readonly Label _detail;
+	private readonly Label _passive;
 	private readonly Label _move;
 	private readonly Label _note;
 
@@ -40,15 +41,16 @@ public sealed class KinPartyCell
 		{
 			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-			CustomMinimumSize = new Vector2(0, 92),
+			CustomMinimumSize = new Vector2(0, 80),
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 		};
 		_stats = KinPalette.Text("", 18, KinPalette.Bone);
 		_detail = KinPalette.Text("", 16, KinPalette.Bone);
+		_passive = KinPalette.Text("", 16, KinPalette.Bone);
 		_move = KinPalette.Text("", 16, KinPalette.Gold);
 		_note = KinPalette.Text("", 16, KinPalette.Red);
 
-		foreach (var label in new[] { _name, _stats, _detail, _move, _note })
+		foreach (var label in new[] { _name, _stats, _detail, _passive, _move, _note })
 		{
 			label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 			label.CustomMinimumSize = new Vector2(1, 0);
@@ -59,11 +61,18 @@ public sealed class KinPartyCell
 		column.AddChild(_art);
 		column.AddChild(_stats);
 		column.AddChild(_detail);
+		column.AddChild(_passive);
 		column.AddChild(_move);
 		column.AddChild(_note);
 	}
 
 	public void ShowEmpty() => Show("", null, "", "", "", "", KinPalette.EmptySlot, null);
+
+	/// <summary>A companion's passive, live — "THORNS 5 this turn", "MOMENTUM: next hit +4".</summary>
+	public string Passive
+	{
+		set => _passive.Text = value;
+	}
 
 	/// <summary>`move` is gold (something you can do); `note` is red (something coming at you).</summary>
 	public void Show(
@@ -84,6 +93,7 @@ public sealed class KinPartyCell
 		_detail.Text = detail;
 		_move.Text = move;
 		_note.Text = note;
+		_passive.Text = "";
 		Root.AddThemeStyleboxOverride(
 			"panel",
 			KinPalette.Box(fill, border, border is null ? 2 : 4)
