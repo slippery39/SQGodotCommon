@@ -1,5 +1,34 @@
 # KIN — design doc
 
+> # THE DESIGN PHILOSOPHY (2026-09-22) — Shayne's, stated directly, and it outranks the rest
+>
+> **Every card and every enemy should create a decision.** Synergies between cards, and card
+> choices that are RIGHT against a particular enemy or boss, are the game. A card that is only a
+> stat line, or an effect that is good in every deck, produces no decision and should be the
+> exception, not the pool.
+>
+> **This was hard to get across and kept being misconstrued**, so here is the concrete shape it
+> takes — agreed 2026-09-22:
+>
+> - **Each companion IS an archetype.** Picking one declares a plan, and the reward screen then has
+>   a question to answer: does this card serve the plan? Ash = Loss, Bramble = Bulwark (survive and
+>   spike), Tally = Volume, Pike = Face (race the Opponent), Moss = Formation (where you stand).
+> - **Enemies must ask what is in your deck.** An enemy effect that is only a tax — N damage to you,
+>   heal something — is good against no deck and bad against none. Each enemy property should have
+>   an ANSWER (the archetype it loses to) and a VICTIM (the archetype it punishes): Thorns punishes
+>   Face and loses to burn; a Flier punishes Bulwark's walls and loses to anything that kills it.
+> - **Bosses are exams** — one or two of those properties at scale, visible early enough that the
+>   reward picks leading up to them can prepare.
+> - **Vanilla cards are allowed as honest filler**, and only as that.
+>
+> **Measured starting point (`content`, 2026-09-22):** 13 of 30 distinct cards were vanilla, the
+> starting deck 10 of 10, ~8 more were generic value good in any deck, and all 17 enemy effects and
+> all 10 Opponent traits were taxes. The one real archetype, Loss, was locked to act 2.
+>
+> **Act-exclusive card pools are OFF for now** — one shared pool, so an archetype can be built for
+> the whole run rather than one act of it. Being built as a vertical slice first: Bulwark + Face and
+> the enemies that test them, then the other three.
+
 > # THE DOOM LAYER IS DELETED (2026-09-21). MOST OF THIS FILE IS HISTORY.
 >
 > The jam is over and the game pivoted top-down. **The doom was a top-down design decision, and the
