@@ -80,6 +80,11 @@ public static class KinTargeting
 					.Select(u => u!.Id)
 					.ToImmutableList();
 
+			case KinTarget.Companion:
+				return state.Companion() is { } companion
+					? ImmutableList.Create(companion.Id)
+					: ImmutableList<int>.Empty;
+
 			case KinTarget.EnemiesInAdjacentLanes:
 				return AdjacentLanes(state, sourceId, playedLane)
 					.Select(state.EnemyInLane)

@@ -35,6 +35,12 @@ public sealed class KinLaneCell
 
 	public PanelContainer Root { get; }
 
+	/// <summary>
+	/// A left press or a tap on this slot. Only the board knows what it means — for your own row,
+	/// "move the companion here" — so the cell just reports it.
+	/// </summary>
+	public event System.Action Clicked;
+
 	private readonly Label _name;
 	private readonly TextureRect _figure;
 
@@ -195,6 +201,19 @@ public sealed class KinLaneCell
 
 		Root.AddChild(inner);
 
+		// **The scrims must not eat the click.** A ColorRect stops mouse input by default, so a tap
+		// on the name band or the pip band would land on a scrim and never reach Root — a slot that
+		// works when you tap its middle and silently does nothing at its edges.
+		_topScrim.MouseFilter = Control.MouseFilterEnum.Ignore;
+		_bottomScrim.MouseFilter = Control.MouseFilterEnum.Ignore;
+		_traitScrim.MouseFilter = Control.MouseFilterEnum.Ignore;
+
+		Root.GuiInput += input =>
+		{
+			if (input is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
+				Clicked?.Invoke();
+		};
+
 		ShowEmpty();
 	}
 
@@ -268,8 +287,10 @@ public sealed class KinLaneCell
 		_attack.Text = Swing(unit.Power, unit.Strikes);
 
 		// REMAINING toughness, not printed toughness — a body in a lane is worth what it has left.
+		// **The companion shows its GUARD instead**: it has no body to wear down, and what matters
+		// this turn is how much of the attack in its lane it will soak before your life pays.
 		_lifePip.Visible = true;
-		_life.Text = unit.RemainingToughness.ToString();
+		_life.Text = (isCompanion ? unit.Guard : unit.RemainingToughness).ToString();
 
 		_name.AddThemeColorOverride("font_color", isCompanion ? KinPalette.Gold : KinPalette.Bone);
 

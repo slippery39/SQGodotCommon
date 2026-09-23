@@ -151,10 +151,23 @@ public record EndTurnAction : GameAction
 			if (total <= 0)
 				continue;
 
-			var soak = Math.Min(total, unit.RemainingToughness);
+			// **Guard first, then the body.** Only the companion carries Guard that matters, and the
+			// companion has NO body to spend: its health is your life, so whatever gets past its Guard
+			// goes straight to you rather than wearing it down. An ordinary unit soaks with its
+			// toughness exactly as before.
+			var isCompanion = card.HasComponent<CompanionComponent>();
+			var fromGuard = Math.Min(total, unit.Guard);
+			var fromBody = isCompanion ? 0 : Math.Min(total - fromGuard, unit.RemainingToughness);
+			var soak = fromGuard + fromBody;
 			state = state.UpdateObject(
 				card.Id,
-				card.WithComponentReplaced(unit with { Damage = unit.Damage + soak })
+				card.WithComponentReplaced(
+					unit with
+					{
+						Guard = unit.Guard - fromGuard,
+						Damage = unit.Damage + fromBody,
+					}
+				)
 			);
 
 			var battle = state.GetBattle();

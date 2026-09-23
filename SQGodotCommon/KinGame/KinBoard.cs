@@ -101,6 +101,12 @@ public partial class KinBoard : Node2D
 		{
 			StartRun();
 
+			// `-- --move=0` moves the companion on the opening position, through the same path a
+			// click takes. A capture cannot click, so without this the moved companion and its Guard
+			// pip are the one board state no screenshot could show.
+			if (int.TryParse(UserArg("--move="), out var moveTo))
+				Report(TryMoveCompanion(moveTo) ?? $"moved to lane {moveTo}");
+
 			// `-- --autoturn` ends a turn on a timer. **Animation cannot be verified
 			// from a still board**: nothing moves until state changes, so every capture of a fresh
 			// battle shows a settled screen and proves nothing. This drives real turns through the
@@ -421,6 +427,30 @@ public partial class KinBoard : Node2D
 
 		var action = new PlayCardAction { CardId = cardId, Lane = lane ?? 0 };
 
+		var validation = action.ValidateAdd(_state);
+		if (!validation.IsValid)
+			return validation.Reason;
+
+		var (state, events) = _state.AddAction(action).ProcessAllActions();
+		_state = state;
+		Render(events);
+		return null;
+	}
+
+	/// <summary>
+	/// **Click an empty lane in your row and the companion moves there** — its one free move a turn.
+	/// Returns null when it moved, or the ENGINE'S refusal, exactly as <see cref="TryPlay"/> does.
+	///
+	/// One click rather than pick-up-then-drop, because nothing else in this game is done by clicking
+	/// a lane: cards are dragged. A click on the companion's own lane, or on one of your units, is
+	/// refused by `MoveCompanionAction` and reported, never swallowed.
+	/// </summary>
+	private string TryMoveCompanion(int lane)
+	{
+		if (_state is null || _state.GetBattle().IsOver)
+			return null;
+
+		var action = new MoveCompanionAction { Lane = lane };
 		var validation = action.ValidateAdd(_state);
 		if (!validation.IsValid)
 			return validation.Reason;
@@ -902,6 +932,17 @@ public partial class KinBoard : Node2D
 		rows.AddChild(BuildLaneRow(_enemyLanes, showsTelegraph: true));
 		rows.AddChild(BuildLaneRow(_unitLanes, showsTelegraph: false));
 		panel.AddChild(rows);
+
+		// Your row answers a click by moving the companion there. The enemy row answers nothing.
+		for (var lane = 0; lane < KinBattle.LaneCount; lane++)
+		{
+			var target = lane;
+			_unitLanes[lane].Clicked += () =>
+			{
+				if (TryMoveCompanion(target) is { } refusal)
+					Report(refusal);
+			};
+		}
 
 		return Centred(panel);
 	}

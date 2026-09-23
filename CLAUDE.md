@@ -37,7 +37,7 @@ SQGodotCommon/
 │   ├── ImmutableGameObjects.Tests/
 │   └── ImmutableGameObjects.Benchmarks/
 ├── KinCore/                         # KIN rules engine — lanes, combat, the run
-│   ├── Actions/                     # StartBattle/StartTurn/PlayCard/EndTurn/WithdrawUnits
+│   ├── Actions/                     # StartBattle/StartTurn/PlayCard/EndTurn/WithdrawUnits/MoveCompanion
 │   ├── Ai/                          # KinBot (plays a turn), RunSimulator (plays a run + records)
 │   ├── Cards/ Components/           # KinCard; UnitComponent (Power/Toughness/Damage/Lane)
 │   ├── Enemies/ Zones/              # Enemy + telegraphed Intent; Opponent + PendingSummon; Zone

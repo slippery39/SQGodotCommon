@@ -120,40 +120,28 @@ public class CompanionTests
 		Assert.That(state.GetPlayer().Life, Is.EqualTo(58), "3 toughness absorbed 3 of 5");
 	}
 
+	/// <summary>
+	/// **The companion cannot die on its own any more — its health IS your life (2026-09-22).**
+	///
+	/// This test used to prove a companion killed in its lane left the battle and came back next
+	/// fight. Now it has no body to lose: its Guard soaks what it can, and whatever gets past goes to
+	/// you. A 1/3 companion in front of a 9 soaks 3 and passes 6 — and is still standing.
+	/// </summary>
 	[Test]
-	public void ADeadCompanionDoesNotFeedZombieAndReturnsNextBattle()
+	public void WhatGetsPastTheCompanionsGuardIsYourLifeAndTheCompanionStands()
 	{
 		var run = RunWith(Dog, Unit("Filler", 1, 1));
-
-		// 9 damage against a 1/3 companion blocking: it dies every time.
 		var (state, _) = run.StartBattle([Enemy(9)]);
-
 		var companion = state.Units().Single(u => u.HasComponent<CompanionComponent>());
 
 		(state, var events) = Do(state, new EndTurnAction());
 
-		Assert.That(events.OfType<UnitDiedEvent>().Any(e => e.CardName.StartsWith("Ash")), Is.True);
-		Assert.That(
-			state.GetBattle().DiedThisTurnRunCardIds,
-			Is.Empty,
-			"a companion death is not a deck event"
-		);
-		Assert.That(state.HasObject(companion.Id), Is.False, "it left the battle, not to Discard");
-
-		var after = run.AfterBattle(PlayOut(state));
-
-		Assert.That(
-			after.Deck.Any(c => c.Name == "Zombie"),
-			Is.False,
-			"no free Zombie from it dying"
-		);
-
-		var (next, _) = after.StartBattle([Enemy(0)]);
-		Assert.That(
-			next.Units().Any(u => u.HasComponent<CompanionComponent>()),
-			Is.True,
-			"it comes back"
-		);
+		Assert.Multiple(() =>
+		{
+			Assert.That(state.GetPlayer().Life, Is.EqualTo(run.Life - (9 - Dog.BaseToughness)));
+			Assert.That(events.OfType<UnitDiedEvent>(), Is.Empty, "nothing died");
+			Assert.That(state.HasObject(companion.Id), Is.True, "it is still on the field");
+		});
 	}
 
 	// ===== The roster =====

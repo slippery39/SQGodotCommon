@@ -67,6 +67,12 @@ public enum KinTarget
 
 	/// <summary>The enemies in the lanes either side of the source. Splash, from your side.</summary>
 	EnemiesInAdjacentLanes,
+
+	/// <summary>
+	/// **Your companion, wherever it stands.** What a guard card points at — the companion moves now,
+	/// so "the unit in the centre lane" would miss it the first time it stepped aside.
+	/// </summary>
+	Companion,
 }
 
 /// <summary>

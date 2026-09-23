@@ -433,6 +433,19 @@ public static partial class StarterContent
 			// **Exhausts.** A 1-cost heal in a ~20 card deck that discards its hand every turn came
 			// back roughly every other turn, so healing stopped being a decision and became an
 			// income stream. Found in a playtest. Battle scope — it is back next fight.
+			// **The first GUARD card, and a placeholder on purpose (2026-09-22)** — enough to feel
+			// the mechanic before the real family is designed together. Guard stacks on the
+			// companion's refreshed Guard for one turn, like block in Slay the Spire.
+			Rite(
+				"Brace",
+				1,
+				"Plant your feet. Take it on the shield.",
+				OnPlay(
+					KinTarget.Companion,
+					new BuffAction { Guard = 8 },
+					"your companion gains 8 Guard"
+				)
+			),
 			Rite(
 				"Field Dressing",
 				1,

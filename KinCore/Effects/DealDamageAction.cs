@@ -81,6 +81,47 @@ public record DealDamageAction : EffectAction
 					break;
 				}
 
+				// **Damage to the companion is damage to YOU, after its Guard.** "2 to every unit you
+				// hold" — Blighted, The Choir — used to wear the companion's body down; the companion
+				// has no body now, only Guard in front of your life. A heal aimed at it does nothing:
+				// there is no damage on it to restore, and healing your life is not on the table.
+				case KinCard card
+					when card.HasComponent<CompanionComponent>()
+						&& card.GetComponent<UnitComponent>() is { } guarded:
+				{
+					if (amount <= 0)
+						break;
+
+					var fromGuard = Math.Min(amount, guarded.Guard);
+					state = state.UpdateObject(
+						id,
+						card.WithComponentReplaced(
+							guarded with
+							{
+								Guard = guarded.Guard - fromGuard,
+							}
+						)
+					);
+
+					var through = amount - fromGuard;
+					if (through > 0)
+					{
+						var you = state.GetPlayer();
+						var left = you.Life - through;
+						state = state.UpdateObject(you.Id, you with { Life = left });
+						events = events.Add(
+							new PlayerDamagedEvent
+							{
+								Amount = through,
+								Absorbed = fromGuard,
+								LifeRemaining = left,
+							}
+						);
+					}
+
+					break;
+				}
+
 				case KinCard card when card.GetComponent<UnitComponent>() is { } unit:
 				{
 					state = state.UpdateObject(

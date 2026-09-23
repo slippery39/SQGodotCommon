@@ -34,8 +34,21 @@ public record StartTurnAction : GameAction
 				DiedThisTurnRunCardIds = [],
 				CardsPlayedThisTurn = 0,
 				AbsorbedThisTurn = 0,
+				CompanionMovedThisTurn = false,
 			}
 		);
+
+		// **Guard refreshes to the companion's Toughness every turn**, which is the whole point of
+		// it: the companion is a wall that stands back up, and your life is what it protects. Guard
+		// cards granted last turn are gone with it, the way block expires in Slay the Spire.
+		if (state.Companion() is { } companion)
+		{
+			var unit = companion.Unit();
+			state = state.UpdateObject(
+				companion.Id,
+				companion.WithComponentReplaced(unit with { Guard = unit.Toughness })
+			);
+		}
 
 		// Nothing per-turn to reset on a unit. A lane is chosen once, when the unit is played, and
 		// held until it dies — there is no assignment to clear and no damage to wipe, since damage

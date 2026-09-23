@@ -61,6 +61,12 @@ public record KinBattle : GameObject
 	public int AbsorbedThisTurn { get; init; }
 
 	/// <summary>
+	/// The companion gets ONE free move a turn — see <see cref="MoveCompanionAction"/>. Cleared when
+	/// a turn starts.
+	/// </summary>
+	public bool CompanionMovedThisTurn { get; init; }
+
+	/// <summary>
 	/// True when the player hit 0 life. Distinct from <see cref="IsOver"/>, which a win also sets —
 	/// only this one ends the run.
 	/// </summary>

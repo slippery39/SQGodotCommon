@@ -57,6 +57,10 @@ public static class KinStateExtensions
 	public static KinCard? UnitInLane(this GameState s, int lane) =>
 		s.Units().FirstOrDefault(c => !c.Unit().IsDead && c.Unit().Lane == lane);
 
+	/// <summary>The companion on the field, or null in a battle built without one.</summary>
+	public static KinCard? Companion(this GameState s) =>
+		s.Units().FirstOrDefault(c => c.HasComponent<CompanionComponent>());
+
 	/// <summary>The living enemy in a lane, or null.</summary>
 	public static Enemy? EnemyInLane(this GameState s, int lane) =>
 		s.LivingEnemies().FirstOrDefault(e => e.Lane == lane);

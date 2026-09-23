@@ -28,6 +28,36 @@
 > **Act-exclusive card pools are OFF for now** — one shared pool, so an archetype can be built for
 > the whole run rather than one act of it.
 >
+> **COMMITTED 2026-09-22: combat stays LANE-BASED, to keep the project short.** Other shapes were
+> weighed — Wildfrost's leader-on-board rows, Darkest Dungeon's ranks, a companion duel — and the
+> appeal of each (protecting a companion that matters) is to be found INSIDE lanes rather than by
+> rebuilding combat. **The goal now is to make the companion interesting within this framework.**
+>
+> **BUILT 2026-09-22 — the companion is the thing you protect.** Its health IS your life; the
+> player's life total stays as the number but it is the companion's. It has **Guard** — its
+> Toughness, refreshed every turn — which soaks the attack in ITS lane before your life pays; open
+> lanes and Fliers go straight to your life; guard cards stack on top for one turn, like block
+> (placeholder: **Brace**, 1, "your companion gains 8 Guard"). It **moves once a turn, free**, into a
+> lane you do not hold. It can no longer die on its own. So each turn asks: which attack does my
+> companion eat, or does it step into an open lane and hit the Opponent while another lane's attack
+> gets through? Chosen over "every open lane hits the companion" (which makes position
+> meaningless) and "it only takes damage in its own lane" (which makes every other enemy harmless).
+> Unit-damage traits and bosses now chip its Guard, where before they were nearly free.
+> **Not yet:** rival companions as Opponents, forge upgrade paths, cards that feed the companion.
+>
+> **The Opponent does NOT share the player's capabilities, and every move it makes is TELEGRAPHED
+> (Shayne, 2026-09-22 — the Slay the Spire intent model).** The free companion move is the PLAYER'S.
+> When rival companions are built, a rival that repositions does it as an announced intent, shaped
+> exactly like a telegraphed summon: shown a turn ahead, resolved at end of turn after the lanes,
+> so it is a thing to plan around rather than a surprise.
+>
+> **Where and when an enemy moves is AUTHORED PER ENEMY, never automatic (Shayne, 2026-09-22).**
+> No generic movement AI. Most enemies never move; the ones that do declare it in their own data,
+> the same way they declare an attack or an on-death effect — a Harpy that drifts a lane a turn, a
+> rival companion that repositions every third turn, a boss that always steps toward your companion.
+> Mechanically this is a MOVE INTENT in an enemy's intent pattern, which makes the unbuilt
+> intent-patterns phase in `KinV3Plan.md` the place it lands.
+>
 > **VERTICAL SLICE BUILT (2026-09-22), not yet playtested.** Bulwark (Bramble) and Face (Pike):
 > Thorns, Strikes, Breakthrough and Flier; nine cards in `StarterContent.Archetypes.cs`; Harpy,
 > Razorback and Flail Knight as the triangle that tests them; companion starters; and a trait strip

@@ -126,13 +126,17 @@ for f in fs[25:130]:
 **`--companion=<Name>`, `--floor=<N>` and `--seed=<N>` pick the board a capture opens on.** A
 capture cannot click the companion select screen, and floor 1 fields no enemy with a trait, so
 without them the archetype starters and the Flier / Thorns / Strikes strip are the one thing no
-screenshot could show. Seed 36, floor 6 fields a Flail Knight, a Harpy and a Razorback at once:
+screenshot could show. Seed 53, floor 9 fields a Flail Knight, a Harpy and a Razorback at once
+(it was seed 36, floor 6, until the Flail Knight moved to floor 7 and changed what floor 6 rolls —
+**a seed note goes stale whenever the enemy roster changes**, so re-find one rather than trust it):
 
 ```
 ./Run-Godot.ps1 KinGame/kin_board.tscn -Capture shots/slice -Seconds 3 `
-  -GameArgs '--companion=Pike','--floor=6','--seed=36'
+  -GameArgs '--companion=Pike','--floor=9','--seed=53'
 ```
 
+**`--move=<lane>`** moves the companion on the opening position through the same path a click takes,
+so a capture can show a moved companion and its Guard pip.
 
 **Godot run from the command line uses the PREBUILT assemblies.** Build `SQGodotCommon.csproj`
 first — a flag added after the last build silently does nothing, and the capture looks exactly like

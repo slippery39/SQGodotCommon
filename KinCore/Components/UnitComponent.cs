@@ -62,6 +62,22 @@ public record UnitComponent : GameComponent
 	/// </summary>
 	public bool Breakthrough { get; init; }
 
+	/// <summary>
+	/// **GUARD — what the COMPANION soaks this turn before its health, which is your life.**
+	///
+	/// Reset to the companion's Toughness at the start of every turn (`StartTurnAction`), and raised
+	/// on top of that by guard cards, the way block works in Slay the Spire. The attack in the
+	/// companion's own lane hits Guard first; whatever gets past it goes to your life. Open lanes and
+	/// Fliers never meet it at all.
+	///
+	/// **It refreshes; your life never does.** That is why it is not a heal and passes the stall
+	/// test in the root `CLAUDE.md` — a longer battle still only costs you.
+	///
+	/// Only the companion's Guard is refreshed. On an ordinary unit it would do nothing past the
+	/// turn it was granted, because the unit withdraws at the end of that turn anyway.
+	/// </summary>
+	public int Guard { get; init; }
+
 	public int RemainingToughness => Toughness - Damage;
 
 	public bool IsDead => Damage >= Toughness;

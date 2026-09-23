@@ -135,6 +135,13 @@ effect sentences — a lane has room for a word. **Still invisible, and known:**
 every unit at turn start with nothing on screen saying why). Both want an enemy hover in the
 inspector, which follows only the hand today.
 
+**The companion's pip shows its GUARD, not its toughness (2026-09-22)** — how much of the attack in
+its lane it will soak this turn before your life pays. **Click an empty lane in your row and the
+companion moves there**, once a turn. Clicking is otherwise unused on the board (cards are dragged),
+so one click is safe; a refused move is reported, never swallowed. The lane cell's three scrims are
+`MouseFilter.Ignore`, or a tap on the name or pip band would land on a scrim and do nothing.
+**Known rough edge:** the Guard pip is the same red disc as a unit's toughness; it wants a shield.
+
 A double-striker's attack reads **`6×2`**, not 6: the pip is read at a glance and 6 is the wrong
 number for a body that lands 12. Both facts are shown; nothing is multiplied in the UI.
 

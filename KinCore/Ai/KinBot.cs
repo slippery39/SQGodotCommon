@@ -69,8 +69,33 @@ public static class KinBot
 	public static GameState PlayTurn(GameState state, KinEvalWeights? weights = null)
 	{
 		var w = weights ?? new KinEvalWeights();
+
 		var budget = w.NodeBudget;
-		return Search(state, w, ref budget).State;
+		var best = Search(state, w, ref budget);
+
+		// **The companion's move is considered FIRST, and only first.** Staying put is one line and
+		// each legal move is another, and each gets its own search of the plays after it. Letting a
+		// move interleave anywhere in a line would multiply the search by every point it could go
+		// — and moving before you play is where it almost always belongs, since the move decides
+		// which lanes your cards should fill.
+		//
+		// ponytail: a move AFTER some plays is never tried, e.g. play into the companion's lane's
+		// neighbour first. Search it everywhere if play shows the bot missing those lines.
+		foreach (var lane in state.OpenLanes())
+		{
+			var move = new MoveCompanionAction { Lane = lane };
+			if (!move.ValidateAdd(state).IsValid)
+				continue;
+
+			var (moved, _) = state.AddAction(move).ProcessAllActions();
+			var laneBudget = w.NodeBudget;
+			var line = Search(moved, w, ref laneBudget);
+
+			if (line.Score > best.Score)
+				best = line;
+		}
+
+		return best.State;
 	}
 
 	/// <summary>

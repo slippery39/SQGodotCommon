@@ -44,7 +44,7 @@ public static class KeywordLibrary
 		{
 			Name = "Companion",
 			Text =
-				"Free, and starts in the centre lane every battle. Nothing can take it from you.",
+				"Its health is your life. It moves once a turn, free, into a lane you do not hold.",
 			Aliases = ["companion"],
 		},
 		new Keyword
@@ -88,6 +88,14 @@ public static class KeywordLibrary
 			Name = "Devour",
 			Text = "The unit this replaces dies instead of leaving, so it counts as a Loss.",
 			Aliases = ["devour", "devours"],
+		},
+		new Keyword
+		{
+			Name = "Guard",
+			Text =
+				"Your companion soaks the attack in its lane with this before its health. Refreshes "
+				+ "every turn.",
+			Aliases = ["guard"],
 		},
 		new Keyword
 		{

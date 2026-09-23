@@ -35,6 +35,12 @@ public record BuffAction : EffectAction
 	/// </summary>
 	public int Strikes { get; init; }
 
+	/// <summary>
+	/// **Guard GRANTED this turn** — see <see cref="UnitComponent.Guard"/>. Block, in Slay the Spire's
+	/// terms: it stacks on top of the companion's refreshed Guard and is gone next turn.
+	/// </summary>
+	public int Guard { get; init; }
+
 	public override ActionResult Execute(GameState gameState)
 	{
 		var state = gameState;
@@ -46,7 +52,9 @@ public record BuffAction : EffectAction
 
 		// A buff of nothing is not an error — "+2/+0 for each unit that died last turn" on a turn
 		// nothing died is a real and common case, and it should be quiet rather than noisy.
-		if (power == 0 && toughness == 0 && thorns == 0 && Strikes == 0)
+		var guard = Scaled(state, Guard);
+
+		if (power == 0 && toughness == 0 && thorns == 0 && Strikes == 0 && guard == 0)
 			return new ActionResult(state);
 
 		foreach (var id in TargetIds)
@@ -68,6 +76,12 @@ public record BuffAction : EffectAction
 				// Floored at 1: a unit that strikes zero times has had its power deleted by a rule
 				// nobody can see on the card.
 				Strikes = Math.Max(1, unit.Strikes + Strikes),
+				// **Toughness on the companion IS its Guard**, so "+0/+4" from a Warden beside it has
+				// to help THIS turn too, not only after the next refresh.
+				Guard = Math.Max(
+					0,
+					unit.Guard + guard + (card.HasComponent<CompanionComponent>() ? toughness : 0)
+				),
 			};
 
 			state = state.UpdateObject(id, card.WithComponentReplaced(buffed));
