@@ -292,6 +292,19 @@ public static class KinCardFace
 	{
 		var unit = card.GetComponent<UnitComponent>();
 
+		// **A companion's card is painted in ITS colour and carries ITS figure** — the playtest could
+		// not tell Bramble's cards from Pike's at a glance. The art is the owner's, so when a
+		// monster gets real art every one of its cards gets it too.
+		var owner = card.GetComponent<KinCore.Party.OwnedBy>()?.AllyName;
+		var frame =
+			owner is not null ? KinPalette.Companion(owner)
+			: unit is null ? KinArt.RiteCard
+			: KinArt.UnitCard;
+		var ground = owner is not null
+			? KinPalette.Companion(owner).Lightened(0.3f)
+			: KinArt.ColourFor(card.Name);
+		var subject = owner ?? card.Name;
+
 		return new InternalCardUI2D.Details
 		{
 			Id = card.Id.ToString(),
@@ -299,7 +312,11 @@ public static class KinCardFace
 			ManaCost = card.Cost.ToString(),
 			// Blank: the reference card has no type line, and "Unit" floating across the face says
 			// nothing a stat badge does not already say. A Rite has no badge, which is the tell.
-			TypeLine = "",
+			//
+			// **The companion game uses it for the OWNER** — only that companion can play the card,
+			// so who it belongs to is the first thing a hand has to say.
+			TypeLine =
+				card.GetComponent<KinCore.Party.OwnedBy>()?.AllyName.ToUpperInvariant() ?? "",
 
 			// A rite's text is the only thing telling you what it does, so it goes where rules text
 			// goes. It is authored beside the effect it describes — see KinEffect.Text.
@@ -319,7 +336,7 @@ public static class KinCardFace
 			// **The frame says what KIND of card this is** — a body you place, or a Rite that
 			// resolves and is gone. That is the first question a turn asks of a hand, and it used
 			// to be answerable only by noticing that a stat badge was missing.
-			MainFrameTexture = KinArt.Body(unit is null ? KinArt.RiteCard : KinArt.UnitCard),
+			MainFrameTexture = KinArt.Body(frame),
 			NameFrameTexture = KinArt.Blank(279, 53),
 
 			// The art window is a real window again, and it is a MID-TONE. The drawings are
@@ -330,14 +347,10 @@ public static class KinCardFace
 			// Leaving this unset is not an option — the shared card's stone window reappears as a
 			// brown rectangle behind the figure. A default returning is not the same as a value
 			// never set, and it looks like a regression you did not make.
-			ArtFrameTexture = KinArt.ArtBlock(KinArt.ColourFor(card.Name), ArtHeightFor(card)),
+			ArtFrameTexture = KinArt.ArtBlock(ground, ArtHeightFor(card)),
 			RulesTextFrameTexture = KinArt.Blank(279, 158),
 			ManaCostFrameTexture = KinArt.CostBadge,
-			ArtworkTexture = KinArt.CardArt(
-				card.Name,
-				KinArt.ColourFor(card.Name),
-				ArtHeightFor(card)
-			),
+			ArtworkTexture = KinArt.CardArt(subject, ground, ArtHeightFor(card)),
 
 			NameColor = KinPalette.Bone,
 			ManaCostColor = KinPalette.Bone,

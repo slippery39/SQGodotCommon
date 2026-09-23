@@ -8,9 +8,9 @@ still `ENDLING` in `MainMenu.Title` and `project.godot`'s `config/name`, and it 
 change with the re-theme — the prefix is chosen to survive that. Those two constants are the only
 things that face outward.
 
-A solitaire roguelike deckbuilder: you kill an Opponent across five lanes, with one COMPANION on the
-board free every battle whose ability is what the deck is built around. **Read `KinJam.md` first** —
-it is the design doc and the source of truth.
+**PIVOTING (2026-09-23) to a monster-companion deckbuilder: up to 3 companions ARE the board, units
+are cut, one combined deck of their cards.** One battle is playable (`kin_party.tscn`, `KinCore/Party/`),
+built BESIDE the lane game. **Read `KinJam.md` first** — "THE COMPANION GAME" at its top is the truth.
 
 > **THE DOOM LAYER WAS DELETED (2026-09-21) and the top-down theme is being replaced.** Scenarios,
 > transforms, the clock, the per-theme doom schedule and ~1,300 lines with them. The new setting
@@ -45,8 +45,8 @@ SQGodotCommon/
 │   │                                #   StarterContent (cards + the COMPANION ROSTER; its
 │   │                                #   .Archetypes.cs holds each companion's archetype cards),
 │   │                                #   KeywordLibrary (the glossary, as DATA — console and UI share it)
-│   ├── Run/                         # Run + RunCard (OUTSIDE GameState); Companion; ActMap;
-│   │                                #   ShopOffer; FloorKind
+│   ├── Run/                         # Run + RunCard (OUTSIDE GameState); Companion; ActMap; ShopOffer
+│   ├── Party/                       # THE COMPANION GAME slice — Ally/Foe/Intent, PartyState is its API
 │   └── KinBattleFactory.cs          # one GameState per battle; KinStateExtensions is the API
 ├── KinCore.Tests/                  # NUnit; inline card definitions only
 ├── KinConsole/                     # terminal front end — THE REMOTE SURFACE, needs no Godot
@@ -56,13 +56,13 @@ SQGodotCommon/
     ├── Common/                      # reusable utilities — Cards/2D is game-agnostic, use it
     ├── Project/                     # GameManager, main menu
     └── KinGame/                    # DOOMJAM front end — reads KinCore, decides nothing
+        ├── KinPartyBoard.cs        #   THE COMPANION GAME slice — kin_party.tscn; + KinPartyCell
         ├── KinBoard.cs             #   the battle screen; layout contract lives in KinUI.md
         ├── KinLaneCell.cs          #   one lane slot: art, attack/life marks, TRAIT strip
         ├── KinHandView.cs          #   the fan, on Common/Cards/2D; drag -> PlayCardAction
         ├── KinCardFace.cs          #   THE CARD'S LOOK, in one place. Hand, preview and rewards
         │                            #   all draw through it — two copies would drift in a day
-        ├── KinCardPreview.cs       #   kin_card_preview.tscn — a card rack with no battle behind
-        │                            #   it, loading the cards that BREAK the layout
+        ├── KinCardPreview.cs       #   kin_card_preview.tscn — the cards that BREAK the layout
         ├── KinCardInspector.cs     #   the hover panel: full rules text, then keywords
         ├── KinAnimator.cs          #   float/pop/flash/shake on one Speed dial; F4 cycles it
         ├── KinCompanionSelect.cs    #   RUN START — pick the companion. The only build declaration

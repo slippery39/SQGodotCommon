@@ -61,8 +61,16 @@ procedure in the `draw-card-art` skill.
 
 ## Running a scene — USE THE SCRIPT
 
+`kin_party.tscn` flags: `--scenario=N` (0 = one vs two, 1 = two vs three); `--click-space=3,2` sends
+REAL clicks to those spaces of your row, in order — select a companion, then step it. Capture-only:
+`--focus=N` lights the owner of hand card N as a hover would (a capture CANNOT hover — this shows the
+look, not that hovering triggers it); `--play=N` plays hand card N through the drop path;
+`--end-turn` ends the turn at 1.6s, to capture the foes' turn animating.
+
 ```
 ./Run-Godot.ps1 KinGame/kin_board.tscn                                     # just run it
+./Run-Godot.ps1 KinGame/kin_party.tscn                                     # THE COMPANION GAME slice
+./Run-Godot.ps1 KinGame/kin_party.tscn -Capture shots/party -Seconds 1.6 -GameArgs '--scenario=1','--click-space=3,2'
 ./Run-Godot.ps1 KinGame/kin_board.tscn -Capture shots -Seconds 3 -GameArgs '--autoturn'
 ./Run-Godot.ps1 KinGame/kin_board.tscn -Capture shots -GameArgs '--reward'
 ./Run-Godot.ps1 KinGame/kin_board.tscn -Headless -Seconds 2                # log-only check

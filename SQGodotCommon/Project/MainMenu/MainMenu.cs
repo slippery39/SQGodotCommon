@@ -41,7 +41,11 @@ public partial class MainMenu : Control
 	/// </summary>
 	private const string Title = "ENDLING";
 
-	private static readonly string[] Options = ["DESCEND", "QUIT"];
+	/// <summary>
+	/// **COMPANIONS is THE COMPANION GAME slice (2026-09-23)**, first because it is the direction the
+	/// game is going. DESCEND is still the lane/unit game, kept until the slice proves out.
+	/// </summary>
+	private static readonly string[] Options = ["COMPANIONS", "DESCEND", "QUIT"];
 
 	private readonly List<Label> _labels = [];
 	private int _index;
@@ -208,6 +212,11 @@ public partial class MainMenu : Control
 	{
 		switch (Options[_index])
 		{
+			case "COMPANIONS":
+				QueueFree();
+				GameManager.Instance.ChangeScene("res://KinGame/kin_party.tscn");
+				break;
+
 			case "DESCEND":
 				QueueFree();
 				GameManager.Instance.ChangeScene("res://KinGame/kin_board.tscn");

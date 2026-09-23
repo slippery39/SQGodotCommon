@@ -25,6 +25,19 @@ public static class KinPalette
 	/// <summary>An empty lane: darker than the frame, so a held lane reads as the exception.</summary>
 	public static readonly Color EmptySlot = Color.FromHtml("#1B2836");
 
+	/// <summary>
+	/// **Each companion's identity colour — its cards, its cell, anything that says "this one".**
+	/// Playtest (2026-09-23): every card looked the same, so a card played for Bramble was believed
+	/// to be Pike's. Never gold or red: those are reserved for "yours" and for the enemy.
+	/// </summary>
+	public static Color Companion(string name) =>
+		name switch
+		{
+			"Bramble" => Color.FromHtml("#2F6A3A"),
+			"Pike" => Color.FromHtml("#2A4F86"),
+			_ => Color.FromHtml("#5A3F80"),
+		};
+
 	public static StyleBoxFlat Box(Color fill, Color? border = null, int borderWidth = 2)
 	{
 		var box = new StyleBoxFlat

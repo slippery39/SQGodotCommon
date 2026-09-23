@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Common.Cards;
-using KinCore;
 using Godot;
 using ImmutableGameObjects;
+using KinCore;
 
 namespace KinGame;
 
@@ -101,7 +101,14 @@ public sealed class KinHandView
 		// was dropped — the board decides, because the board is the thing that knows.
 		var refusal = _tryPlay(cardId, _laneAt(context.DragEndPoint));
 		if (refusal is null)
-			return; // It played. The board re-renders, and Sync takes the card out of the fan.
+		{
+			// It played. The board re-renders, and Sync takes the card out of the fan — UNLESS the same
+			// card is back in hand (returned or redrawn), when Sync keeps it and it froze where it was
+			// dropped. Found in play with Feint drawing itself. Slide it home.
+			if (_hand.GetCards().Contains(card))
+				_hand.LerpCardTransform(card);
+			return;
+		}
 
 		// **Never swallow a refused drag.** A card that silently slides back tells the player
 		// nothing, and a click that does nothing is the worst bug a card game front end can have.

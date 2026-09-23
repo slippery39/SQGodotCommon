@@ -175,6 +175,28 @@ console prints `can't: Lane 2 is already held by Ash`; the UI must not silently 
 click that does nothing is the worst bug a card game front end can have** — that is how the `c`
 command shipped unwired for two sessions.
 
+## THE COMPANION GAME screen — `kin_party.tscn` (2026-09-23)
+
+The slice's battle screen, `KinPartyBoard` + `KinPartyCell`. Foes on the top row, your companions on
+the bottom, a combined hand. Built from the first playtest: **"every card looked the same" and "I
+could not see what a card did."**
+
+- **Each companion has an identity colour** (`KinPalette.Companion`), and it is on EVERYTHING of
+  theirs: the whole card face, the card's art window, the cell they stand in, their figure. Never
+  gold or red. The owner's name is also on the card's type line, but colour is what reads at a
+  distance.
+- **A card's art is its OWNER's**, so real monster art reaches every card at once.
+- **Hover or drag a card and its owner lights gold with "▲ PLAYS <CARD>"**; a card that moves its
+  owner also lights the spaces it can be dropped on ("DROP HERE").
+- **Every event is told, one beat at a time**: the card's name rises gold off the companion that
+  played it, then each hit (`−N`, or BLOCKED) and each `+N BLOCK` off the thing it happened to,
+  staggered so the foes' turn reads in the order they acted.
+- **Rules text gets two lines.** Root Wall ran to three and silently lost "Block." at the bottom
+  of the box. Shorten the text; never shrink the box.
+- **The move shows itself**: a companion's cell says MOVE READY (click); clicking it lights the spaces
+  it can step to. Nothing on the board catches the mouse — clicks are hit-tested in
+  `_UnhandledInput`, exactly as `KinBoard` does.
+
 ## Decided against the mockup (2026-09-14)
 
 The mockup's bands are right. Four console readouts had no home in it; three were cut deliberately.

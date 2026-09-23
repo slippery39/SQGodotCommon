@@ -1,5 +1,69 @@
 # KIN — design doc
 
+> # THE COMPANION GAME (Shayne, 2026-09-23) — DECIDED, NOT BUILT. Supersedes the unit game below.
+>
+> **Pokemon / Monster Rancher / Digimon, as a roguelike deckbuilder.** The playtest of Guard found
+> the unit game and the companion game pulling against each other: the companion was one unit among
+> ~40 unit cards, and every attempt to make it special (free every battle, your life as its health,
+> Guard, the free move) was a patch. **Units are cut. The creatures ARE the board, and the cards are
+> what they do.** Closest references: Roguebook (two heroes, combined deck, positions), Cobalt Core
+> (dodge a telegraphed shot by moving; each crew member brings its cards), Monster Rancher Battle
+> Card (three monsters, a deck of their techniques). Survey: `docs/research/companion-games.md`.
+>
+> **Decided:**
+> - **A team of up to 3 companions**, each with its own HP. **No player life total** — the run is
+>   lost when every companion is knocked out.
+> - **One combined deck; every card belongs to one companion.** You add and remove cards per
+>   companion. **Companions do nothing without cards.**
+> - **More spaces than companions**, so there is always somewhere to move. **Attacks — yours and
+>   the enemy's — hit one or more spaces, and dodging by moving is a decision.**
+> - **Enemies are creatures, played by telegraphed intents, never from a deck.** Some can be
+>   caught; a catchable enemy's signature intents match the cards it brings when caught.
+> - **Knocked out = its cards are unplayable** for the rest of that battle. Survive the battle and it
+>   revives at low HP for the next one.
+> - **Three stats, deliberately no more — each has one job, and it is there to make cards differ:**
+>   **HP**; **Power**, added to that companion's attack cards ("Tackle: 3 + Power" wants your
+>   bruiser); **Speed**, the move cooldown below, **capped at 3**.
+> - **Movement: a free move on a COOLDOWN set by Speed** — Speed 3 every turn, 2 every other turn,
+>   1 every third — so positioning is planned, not repeated every turn. **A move is ONE step** into
+>   an adjacent empty space, so an attack's SHAPE says whether it can be dodged (the edge of a 2-wide
+>   attack steps out; the middle of a 3-wide cannot). **Cards that move you ignore the cooldown**
+>   (Cobalt Core's *Lunge*: move 2, then shoot) — movement is card-design space, and fast companions
+>   are where it lives. Enemies move only by telegraphed intent. On screen: one countdown pip per
+>   companion.
+>
+> **Defaults for paper play, not yet decided:** a ROW of 5 spaces a side (a grid with a back row is
+> the fallback if the row plays flat); **your attacks fire straight ahead from your space**, so a
+> move both dodges and aims; 2–3 enemies per fight.
+>
+> **DEFERRED (Shayne, 2026-09-23): HOW you catch** — a card, or some other action. There will be one.
+>
+> **Open:** the catchable/uncatchable split; what survives of the run
+> layer's rewards once catching exists.
+>
+> **What it costs, stated before it is paid:** nearly all content (~40 unit cards, most starters,
+> most of the 56 SVGs), unit play, withdrawal, Guard, the player's life, reinforcement summons,
+> Breakthrough/Flier/Thorns as written, most of the 166 tests, `KinBot`'s scoring. **Kept:** the
+> engine, energy and the hand, drag-onto-a-space, telegraphed intents, the run/map/shop skeleton,
+> the companion roster and abilities, the upgrade system. It is also the strongest test yet of the
+> project's second goal — a second, genuinely different game on `ImmutableGameObjects`.
+>
+> **SLICE BUILT (2026-09-23) — playable in Godot: COMPANIONS on the main menu (`KinGame/kin_party.tscn`).** Exactly the paper
+> scenario (`docs/paper/companion-slice.md`): both scenarios, Bramble, Pike, Boar, Wisp, Stonebeak.
+> Engine in `KinCore/Party/`, built BESIDE the lane game, which still runs; 24 tests prove each
+> mechanic fires. Cards are ordinary `KinCard`s carrying new actions, so the hand, drag and card face
+> were reused unchanged. **Next: play it, and answer the six questions in the paper doc.**
+>
+> **FIRST PLAYTEST (Shayne, 2026-09-23): "definitely feels interesting" — it feels different, but
+> NOT yet like a monster game, and the monsters did not feel different from each other.** Judged a
+> visual, card and monster design problem, **not** an engine limit: "I could see this becoming a
+> monster feeling game." What went wrong was READING, not the rules:
+> - **Every card looked the same**, so a card played for Bramble was believed to be Pike's. The owner
+>   is written on the card, but not readable at a glance or from a distance.
+> - **Playing a card did not show what happened** — who acted, and what it hit.
+> The three things it needs: **each monster its own artwork; cards unmistakably tied to their
+> monster; decisions that are distinct per monster.**
+
 > # THE DESIGN PHILOSOPHY (2026-09-22) — Shayne's, stated directly, and it outranks the rest
 >
 > **Every card and every enemy should create a decision.** Synergies between cards, and card
@@ -28,6 +92,7 @@
 > **Act-exclusive card pools are OFF for now** — one shared pool, so an archetype can be built for
 > the whole run rather than one act of it.
 >
+> **SUPERSEDED 2026-09-23 by THE COMPANION GAME above** — kept for the reasoning.
 > **COMMITTED 2026-09-22: combat stays LANE-BASED, to keep the project short.** Other shapes were
 > weighed — Wildfrost's leader-on-board rows, Darkest Dungeon's ranks, a companion duel — and the
 > appeal of each (protecting a companion that matters) is to be found INSIDE lanes rather than by
