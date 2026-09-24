@@ -4,13 +4,16 @@ using ImmutableGameObjects;
 namespace KinCore.Party;
 
 /// <summary>
-/// Plays a card: its OWNER does what it says. `Space` is where it was dropped — only a card that
-/// moves you reads it, and it must be an empty space next to the owner.
+/// **Plays a card ON a space** — one of your monsters, a foe, or an empty foe space, as the card's
+/// steps say. No card belongs to a monster: the one it is dropped on is the one it acts on.
 /// </summary>
 public record PlayPartyCardAction : GameAction
 {
 	public int CardId { get; init; }
 	public int Space { get; init; } = -1;
+
+	/// <summary>Dropped on the FOE row, not yours.</summary>
+	public bool FoeRow { get; init; }
 
 	public override ValidationResult ValidateAdd(GameState s)
 	{
@@ -25,21 +28,13 @@ public record PlayPartyCardAction : GameAction
 		if (card.Effects.IsEmpty)
 			return ValidationResult.Invalid($"{card.Name} does nothing");
 
-		var owner = s.Owner(card);
-		if (owner.IsKnockedOut)
-			return ValidationResult.Invalid($"{owner.Name} is knocked out");
-
 		if (party.Energy < card.Cost)
 			return ValidationResult.Invalid($"Not enough energy for {card.Name}");
 
-		// Each step of the card that is played ON a space says why this space will not do. Read
-		// from where things stand NOW, so a card whose space step comes after a move would be judged
-		// from before the move — none does yet.
+		// Each step says why this space will not do — the board asks space by space to light the
+		// legal ones, so the lit spaces and the drop can never disagree.
 		foreach (var effect in card.Effects)
-			if (
-				effect.Template is CardStep { NeedsSpace: true } needs
-				&& needs.SpaceRefusal(s, owner, Space) is { } refusal
-			)
+			if (effect.Template is CardStep step && step.Refusal(s, Space, FoeRow) is { } refusal)
 				return ValidationResult.Invalid(refusal);
 
 		return ValidationResult.Valid;
@@ -48,21 +43,19 @@ public record PlayPartyCardAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var card = (KinCard)s.GetObject(CardId);
-		var owner = s.Owner(card);
 		var party = s.GetParty();
 
 		s = s.UpdateObject(party.Id, party with { Energy = party.Energy - card.Cost });
 
-		// In card order, so Lunge steps BEFORE it strikes — it attacks from where it lands. **The card
-		// is discarded LAST**: discarded first, Feint's draw reshuffled Discard into an empty Draw
-		// pile and drew Feint straight back (found in play).
+		// In card order. **The card is discarded LAST**: discarded first, a draw could reshuffle it
+		// straight back into the hand (found in play with Feint).
 		s = s.SpawnActions(
 			card.Effects.Select(e =>
 					e.Template is CardStep step
 						? step with
 						{
-							AllyId = owner.Id,
 							Space = Space,
+							FoeRow = FoeRow,
 						}
 						: e.Template
 				)
@@ -90,9 +83,9 @@ public record DiscardPlayedCardAction : GameAction
 }
 
 /// <summary>
-/// **The free move: one step into an adjacent empty space, then a cooldown set by Speed.** Speed 3
-/// moves every turn, 2 every other turn, 1 every third — so where you stand is planned, not
-/// re-chosen every turn. Cards that move you ignore this cooldown.
+/// **The free step: every monster, every turn, one space.** Position is AIM — every monster attacks
+/// straight ahead — so it is never locked to a card. A step into an ally SWAPS the two (the first
+/// run's lock: three in a row and nobody could move). Only the one stepping builds Momentum.
 /// </summary>
 public record MoveAllyAction : GameAction
 {
@@ -105,12 +98,7 @@ public record MoveAllyAction : GameAction
 			return ValidationResult.Invalid("The battle is over");
 
 		if (s.GetObject(AllyId) is not Ally { IsKnockedOut: false } ally)
-			return ValidationResult.Invalid("That companion cannot move");
-
-		if (ally.MoveReadyIn > 0)
-			return ValidationResult.Invalid(
-				$"{ally.Name} can move again in {ally.MoveReadyIn} turn{(ally.MoveReadyIn == 1 ? "" : "s")}"
-			);
+			return ValidationResult.Invalid("That monster cannot move");
 
 		return s.StepRefusal(ally, Space) is { } refusal
 			? ValidationResult.Invalid(refusal)
@@ -120,30 +108,47 @@ public record MoveAllyAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var ally = (Ally)s.GetObject(AllyId);
+		var events = ImmutableList<GameEvent>.Empty;
+
+		if (s.AllyAt(Space) is { } other)
+		{
+			s = s.UpdateObject(other.Id, other with { Space = ally.Space });
+			events = events.Add(
+				new AllyMovedEvent
+				{
+					AllyId = other.Id,
+					From = Space,
+					To = ally.Space,
+				}
+			);
+		}
+
 		s = s.UpdateObject(
 			AllyId,
-			ally.SteppedTo(Space) with
+			ally with
 			{
-				MoveReadyIn = CooldownAfterMove(ally.Speed),
+				Space = Space,
+				StepsLeft = ally.StepsLeft - 1,
+				Momentum = ally.Momentum + ally.MomentumPerStep,
 			}
 		);
-		return new ActionResult(s).WithEvent(
-			new AllyMovedEvent
-			{
-				AllyId = AllyId,
-				From = ally.Space,
-				To = Space,
-			}
+		return new ActionResult(s).WithEvents(
+			events.Insert(
+				0,
+				new AllyMovedEvent
+				{
+					AllyId = AllyId,
+					From = ally.Space,
+					To = Space,
+				}
+			)
 		);
 	}
-
-	/// <summary>Counted down once per turn start: Speed 3 → ready next turn, Speed 1 → in three.</summary>
-	public static int CooldownAfterMove(int speed) => 4 - Math.Clamp(speed, 1, 3);
 }
 
 /// <summary>
-/// Ends your turn: the hand is discarded, every foe does what it telegraphed, left to right, and
-/// your next turn starts.
+/// **Ends your turn: every creature plays its move, one at a time, fastest first** — yours and the
+/// foes' interleaved (<see cref="PartyState.ActingOrder"/>). Then your next turn starts.
 /// </summary>
 public record EndPartyTurnAction : GameAction
 {
@@ -157,84 +162,53 @@ public record EndPartyTurnAction : GameAction
 		foreach (var id in s.GetChildrenIds(s.ZoneId(ZoneType.Hand)).ToList())
 			s = s.MoveObject(id, s.ZoneId(ZoneType.Discard));
 
-		// **Targets are fixed BEFORE anyone acts**, from the same function the board draws the
-		// telegraph with. Otherwise a homing attack could re-aim after an earlier foe's hit changed
-		// who has the lowest HP, and the board would have shown the wrong target.
-		var plan = s.LivingFoes().Select(f => (f.Id, Targets: s.IntentTargets(f))).ToList();
+		// **Order and targets are fixed BEFORE anyone acts**, from the same functions the board draws
+		// the badges and the telegraph with. Otherwise a homing attack could re-aim after an earlier
+		// hit changed who has the lowest HP, and the board would have shown the wrong target.
+		var plan = s.ActingOrder().Select(c => (c.Id, Targets: s.IntentTargets(c))).ToList();
 
 		var events = ImmutableList<GameEvent>.Empty;
-		foreach (var (foeId, targets) in plan)
+		foreach (var (id, targets) in plan)
 		{
-			// Thorns can kill a foe — the last one, even — before it gets to act.
-			if (s.GetParty().IsOver)
-				break;
-			if (((Foe)s.GetObject(foeId)).IsDead)
-				continue;
-
-			// A foe's Block lasts through your turn and drops when it next acts.
-			s = s.UpdateObject(foeId, Current(s, foeId) with { Block = 0 });
-			var foe = Current(s, foeId);
-			var intent = foe.Current;
-
-			switch (intent.Kind)
-			{
-				case IntentType.Attack:
-					foreach (var space in targets)
-						if (s.AllyAt(space) is { } ally)
-						{
-							ImmutableList<GameEvent> hit;
-							(s, hit) = PartyState.HitAlly(s, ally, intent.Amount, foe.Name);
-							events = events.AddRange(hit);
-
-							// **Thorns: attacking this companion hurts**, blocked or not.
-							if (
-								ally.TotalThorns > 0
-								&& Current(s, foeId) is { IsDead: false } struck
-							)
-							{
-								(s, hit) = PartyState.HitFoe(s, struck, ally.TotalThorns);
-								events = events.AddRange(hit);
-							}
-						}
-					break;
-
-				case IntentType.Block:
-					s = s.UpdateObject(foeId, Current(s, foeId) with { Block = intent.Amount });
-					break;
-
-				case IntentType.Move:
-					var to = foe.Space + intent.Amount;
-					if (to >= 0 && to < PartyBattle.Spaces && s.FoeAt(to) is null)
-						s = s.UpdateObject(foeId, Current(s, foeId) with { Space = to });
-					break;
-			}
-
-			var acted = Current(s, foeId);
-			s = s.UpdateObject(foeId, acted with { PatternIndex = acted.PatternIndex + 1 });
-
 			if (s.GetParty().IsOver)
 				return new ActionResult(s).WithEvents(events);
 
-			if (!s.LivingAllies().Any())
+			switch (s.GetObject(id))
 			{
-				var lost = s.GetParty();
-				s = s.UpdateObject(lost.Id, lost with { IsOver = true, Won = false });
-				return new ActionResult(s).WithEvents(
-					events.Add(new PartyBattleEndedEvent { Won = false })
-				);
+				// Killed before its turn came — a faster monster got there first. That is Speed's job.
+				case Creature { IsDown: true }:
+				case Ally { HasActed: true }:
+					continue;
+
+				case Foe { Staggered: true } staggered:
+					s = s.UpdateObject(
+						id,
+						staggered with
+						{
+							Staggered = false,
+							PatternIndex = staggered.PatternIndex + 1,
+						}
+					);
+					events = events.Add(new FoeStaggeredEvent { FoeId = id });
+					continue;
 			}
+
+			ImmutableList<GameEvent> acted;
+			(s, acted) = PartyState.Act(s, id, targets);
+			events = events.AddRange(acted);
 		}
+
+		if (s.GetParty().IsOver)
+			return new ActionResult(s).WithEvents(events);
 
 		var party = s.GetParty();
 		s = s.UpdateObject(party.Id, party with { TurnNumber = party.TurnNumber + 1 });
 		s = s.SpawnAction(new StartPartyTurnAction());
 		return new ActionResult(s).WithEvents(events);
 	}
-
-	private static Foe Current(GameState s, int foeId) => (Foe)s.GetObject(foeId);
 }
 
-/// <summary>Refills energy, drops your Block and Draw Fire, ticks move cooldowns, draws five.</summary>
+/// <summary>Refills energy, drops your Block and this turn's buffs, gives every step back, draws five.</summary>
 public record StartPartyTurnAction : GameAction
 {
 	public const int HandSize = 5;
@@ -242,7 +216,7 @@ public record StartPartyTurnAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var party = s.GetParty();
-		s = s.UpdateObject(party.Id, party with { Energy = party.MaxEnergy, DrawFireAllyId = 0 });
+		s = s.UpdateObject(party.Id, party with { Energy = party.MaxEnergy });
 
 		foreach (var ally in s.Allies().ToList())
 			s = s.UpdateObject(
@@ -251,8 +225,10 @@ public record StartPartyTurnAction : GameAction
 				{
 					Block = 0,
 					BonusThorns = 0,
+					BonusPower = 0,
 					Momentum = 0,
-					MoveReadyIn = Math.Max(0, ally.MoveReadyIn - 1),
+					StepsLeft = 1,
+					HasActed = false,
 				}
 			);
 
@@ -266,287 +242,112 @@ public record StartPartyTurnAction : GameAction
 	}
 }
 
-// ===== What a card does. Each is a template on the card; the owner and drop space are filled in on play.
+// ===== What a card does. Each is a template on the card; the drop space is filled in on play.
 
-/// <summary>A step of a card, done BY its owner. <see cref="PlayPartyCardAction"/> fills both ids in.</summary>
+/// <summary>
+/// A step of a card, done to whatever it was dropped on. <see cref="PlayPartyCardAction"/> fills
+/// the space in. **By default a card is dropped on one of YOUR monsters** — override
+/// <see cref="Refusal"/> for a card aimed at the foes.
+/// </summary>
 public abstract record CardStep : GameAction
 {
-	public int AllyId { get; init; }
 	public int Space { get; init; } = -1;
+	public bool FoeRow { get; init; }
 
-	/// <summary>True for a step that is played ON a space — a step, a push, a swap.</summary>
-	public virtual bool NeedsSpace => false;
+	/// <summary>Why the card cannot be dropped there, or null if it can.</summary>
+	public virtual string? Refusal(GameState s, int space, bool foeRow) =>
+		!foeRow && s.AllyAt(space) is not null ? null : "Drop it on one of your monsters";
 
-	/// <summary>Why the card cannot be dropped on that space, or null if it can.</summary>
-	public virtual string? SpaceRefusal(GameState s, Ally owner, int space) => null;
+	/// <summary>The monster it was dropped on.</summary>
+	protected Ally Target(GameState s) => s.AllyAt(Space)!;
 
-	protected Ally Owner(GameState s) => (Ally)s.GetObject(AllyId);
-
-	/// <summary>A foe this companion moved: Off-Balance, if the companion has the passive.</summary>
-	protected static Foe Unbalanced(Foe foe, Ally by) =>
-		foe with
-		{
-			OffBalance = Math.Max(foe.OffBalance, by.Unbalances),
-		};
+	protected static ActionResult Update(GameState s, Ally ally) =>
+		new(s.UpdateObject(ally.Id, ally));
 }
 
-/// <summary>
-/// **Push the foe AHEAD one column — to the space the card was dropped on.** Every intent is a shape
-/// anchored on the foe's column, so this re-aims its attack. With <see cref="Collision"/>, a push
-/// into another foe does not move it: both take that much instead (Slam).
-/// </summary>
-public record PushAction : CardStep
+/// <summary>Block for the monster it is dropped on — Guard.</summary>
+public record GuardAction : CardStep
 {
-	public int Collision { get; init; }
-
-	public override bool NeedsSpace => true;
-
-	public override string? SpaceRefusal(GameState s, Ally owner, int space)
-	{
-		if (s.FoeAt(owner.Space) is not { } foe)
-			return $"There is no foe ahead of {owner.Name}";
-		if (space < 0 || space >= PartyBattle.Spaces || Math.Abs(space - owner.Space) != 1)
-			return $"Drop it one column left or right of the {foe.Name}";
-		if (Collision == 0 && s.FoeAt(space) is { } other)
-			return $"The {other.Name} is in the way";
-		return null;
-	}
+	public int Amount { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
-		var owner = Owner(s);
-		if (s.FoeAt(owner.Space) is not { } foe)
-			return new ActionResult(s);
-
-		if (s.FoeAt(Space) is { } other)
-		{
-			// Slam: it is shoved into the other and neither moves.
-			s = s.UpdateObject(foe.Id, Unbalanced(foe, owner));
-			var events = ImmutableList<GameEvent>.Empty;
-			foreach (var id in new[] { foe.Id, other.Id })
-				if (!s.GetParty().IsOver && (Foe)s.GetObject(id) is { IsDead: false } struck)
-				{
-					ImmutableList<GameEvent> hit;
-					(s, hit) = PartyState.HitFoe(s, struck, Collision);
-					events = events.AddRange(hit);
-				}
-			return new ActionResult(s).WithEvents(events);
-		}
-
-		s = s.UpdateObject(foe.Id, Unbalanced(foe, owner) with { Space = Space });
+		var ally = Target(s);
+		s = s.UpdateObject(ally.Id, ally with { Block = ally.Block + Amount });
 		return new ActionResult(s).WithEvent(
-			new FoeMovedEvent
-			{
-				FoeId = foe.Id,
-				From = foe.Space,
-				To = Space,
-			}
+			new BlockGainedEvent { AllyId = ally.Id, Amount = Amount }
 		);
 	}
 }
 
-/// <summary>
-/// **Swap the foe ahead with the foe beside it** — dropped on that foe's column. Re-aims two attacks
-/// at once, and both are Off-Balance.
-/// </summary>
-public record SwapAction : CardStep
-{
-	/// <summary>Damage to BOTH swapped foes, after the swap — Cyclone.</summary>
-	public int Damage { get; init; }
-
-	public override bool NeedsSpace => true;
-
-	public override string? SpaceRefusal(GameState s, Ally owner, int space)
-	{
-		if (s.FoeAt(owner.Space) is not { } foe)
-			return $"There is no foe ahead of {owner.Name}";
-		if (Math.Abs(space - owner.Space) != 1 || s.FoeAt(space) is null)
-			return $"Drop it on a foe beside the {foe.Name}";
-		return null;
-	}
-
-	public override ActionResult Execute(GameState s)
-	{
-		var owner = Owner(s);
-		if (s.FoeAt(owner.Space) is not { } foe || s.FoeAt(Space) is not { } other)
-			return new ActionResult(s);
-
-		s = s.UpdateObject(foe.Id, Unbalanced(foe, owner) with { Space = other.Space });
-		s = s.UpdateObject(other.Id, Unbalanced(other, owner) with { Space = foe.Space });
-		ImmutableList<GameEvent> events =
-		[
-			new FoeMovedEvent
-			{
-				FoeId = foe.Id,
-				From = foe.Space,
-				To = other.Space,
-			},
-			new FoeMovedEvent
-			{
-				FoeId = other.Id,
-				From = other.Space,
-				To = foe.Space,
-			},
-		];
-
-		// Cyclone: the two are flung past each other and both take the hit — Off-Balance already on.
-		if (Damage > 0)
-			foreach (var id in new[] { foe.Id, other.Id })
-				if (!s.GetParty().IsOver && (Foe)s.GetObject(id) is { IsDead: false } struck)
-				{
-					ImmutableList<GameEvent> hit;
-					(s, hit) = PartyState.HitFoe(s, struck, Damage);
-					events = events.AddRange(hit);
-				}
-
-		return new ActionResult(s).WithEvents(events);
-	}
-}
-
-/// <summary>
-/// **The foe ahead is Off-Balance without being moved** — Downdraft: set up a hit on a foe you want
-/// to leave exactly where it is.
-/// </summary>
-public record UnbalanceAction : CardStep
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var owner = Owner(s);
-		return s.FoeAt(owner.Space) is { } foe
-			? new ActionResult(s.UpdateObject(foe.Id, Unbalanced(foe, owner)))
-			: new ActionResult(s);
-	}
-}
-
-/// <summary>Momentum without a step — Quickstep's second half.</summary>
-public record MomentumAction : CardStep
-{
-	public int Amount { get; init; }
-
-	public override ActionResult Execute(GameState s)
-	{
-		var owner = Owner(s);
-		return new ActionResult(
-			s.UpdateObject(owner.Id, owner with { Momentum = owner.Momentum + Amount })
-		);
-	}
-}
-
-/// <summary>
-/// **Attacks fire straight ahead** from the owner's column: [0] is the foe opposite, [-1, 0, 1]
-/// sweeps it and both beside it. No foe in a column hit = that part misses.
-/// </summary>
-public record StrikeAction : CardStep
-{
-	public int Amount { get; init; }
-	public bool AddPower { get; init; } = true;
-	public ImmutableList<int> Offsets { get; init; } = [0];
-
-	/// <summary>Adds the owner's current Block — Retaliate: the Wall hits as hard as it is braced.</summary>
-	public bool AddBlock { get; init; }
-
-	/// <summary>Double against a foe with no foe beside it — Flank: pick off the straggler.</summary>
-	public bool DoubleIfAlone { get; init; }
-
-	/// <summary>Adds the owner's Thorns — Briar Burst: Bramble cashes in what she has built up.</summary>
-	public bool AddThorns { get; init; }
-
-	/// <summary>Goes straight through a foe's Block — Pierce: the answer to a Preen.</summary>
-	public bool IgnoreBlock { get; init; }
-
-	public override ActionResult Execute(GameState s)
-	{
-		var owner = Owner(s);
-
-		// Momentum rides on the whole attack — every column a sweep hits — and is spent by it, hit
-		// or miss. "Your next attack" means the next one you make, not the next one that connects.
-		var damage =
-			Amount
-			+ (AddPower ? owner.Power : 0)
-			+ (AddBlock ? owner.Block : 0)
-			+ (AddThorns ? owner.TotalThorns : 0)
-			+ owner.Momentum;
-		if (owner.Momentum > 0)
-			s = s.UpdateObject(owner.Id, owner with { Momentum = 0 });
-
-		var events = ImmutableList<GameEvent>.Empty;
-		foreach (var offset in Offsets)
-		{
-			if (s.GetParty().IsOver || s.FoeAt(owner.Space + offset) is not { } foe)
-				continue;
-
-			var alone = s.FoeAt(foe.Space - 1) is null && s.FoeAt(foe.Space + 1) is null;
-
-			ImmutableList<GameEvent> hit;
-			(s, hit) = PartyState.HitFoe(
-				s,
-				foe,
-				DoubleIfAlone && alone ? damage * 2 : damage,
-				IgnoreBlock
-			);
-			events = events.AddRange(hit);
-		}
-
-		return new ActionResult(s).WithEvents(events);
-	}
-}
-
-/// <summary>Thorns for the owner until your next turn starts — Thornhide.</summary>
+/// <summary>Thorns until your next turn starts — Thornhide. On Bramble it stacks on her own.</summary>
 public record ThornsAction : CardStep
 {
 	public int Amount { get; init; }
 
-	public override ActionResult Execute(GameState s)
-	{
-		var owner = Owner(s);
-		return new ActionResult(
-			s.UpdateObject(owner.Id, owner with { BonusThorns = owner.BonusThorns + Amount })
-		);
-	}
+	public override ActionResult Execute(GameState s) =>
+		Update(s, Target(s) with { BonusThorns = Target(s).BonusThorns + Amount });
 }
 
-/// <summary>Block for the owner — and, with <see cref="AndBeside"/>, for the companions next to it.</summary>
-public record GuardAction : CardStep
+/// <summary>Power until your next turn starts — Rally. It lands when the monster's attack does.</summary>
+public record PowerAction : CardStep
 {
 	public int Amount { get; init; }
-	public bool AndBeside { get; init; }
+
+	public override ActionResult Execute(GameState s) =>
+		Update(s, Target(s) with { BonusPower = Target(s).BonusPower + Amount });
+}
+
+/// <summary>More steps this turn — Dash. On Pike every one of them is Momentum.</summary>
+public record DashAction : CardStep
+{
+	public int Steps { get; init; } = 1;
+
+	public override ActionResult Execute(GameState s) =>
+		Update(s, Target(s) with { StepsLeft = Target(s).StepsLeft + Steps });
+}
+
+/// <summary>
+/// **The monster plays its move NOW instead of at the end of the turn** — Hasten. Then it can still
+/// step away: hit, then dodge. It does not act again at the end.
+/// </summary>
+public record HastenAction : CardStep
+{
+	public override string? Refusal(GameState s, int space, bool foeRow) =>
+		base.Refusal(s, space, foeRow)
+		?? (s.AllyAt(space)!.HasActed ? $"{s.AllyAt(space)!.Name} has already acted" : null);
 
 	public override ActionResult Execute(GameState s)
 	{
-		var owner = Owner(s);
-		var guarded = s.LivingAllies()
-			.Where(a => a.Id == owner.Id || (AndBeside && Math.Abs(a.Space - owner.Space) == 1))
-			.ToList();
-
-		foreach (var ally in guarded)
-			s = s.UpdateObject(ally.Id, ally with { Block = ally.Block + Amount });
-
-		return new ActionResult(s).WithEvents(
-			[.. guarded.Select(a => new BlockGainedEvent { AllyId = a.Id, Amount = Amount })]
+		var ally = Target(s);
+		var (after, events) = PartyState.Act(s, ally.Id, s.IntentTargets(ally));
+		after = after.UpdateObject(
+			ally.Id,
+			(Ally)after.GetObject(ally.Id) with
+			{
+				HasActed = true,
+			}
 		);
+		return new ActionResult(after).WithEvents(events);
 	}
 }
 
-/// <summary>Moves the owner to the space the card was dropped on. Ignores the move cooldown.</summary>
-public record StepAction : CardStep
+/// <summary>The monster strikes NOW, on top of its move — the deck's damage.</summary>
+public record StrikeAction : CardStep
 {
-	public override bool NeedsSpace => true;
-
-	public override string? SpaceRefusal(GameState s, Ally owner, int space) =>
-		s.StepRefusal(owner, space);
+	public int Amount { get; init; }
+	public ImmutableList<int> Offsets { get; init; } = [0];
 
 	public override ActionResult Execute(GameState s)
 	{
-		var owner = Owner(s);
-		s = s.UpdateObject(owner.Id, owner.SteppedTo(Space));
-		return new ActionResult(s).WithEvent(
-			new AllyMovedEvent
-			{
-				AllyId = owner.Id,
-				From = owner.Space,
-				To = Space,
-			}
+		var ally = Target(s);
+		var (after, events) = PartyState.AttackFoes(
+			s,
+			ally,
+			Amount,
+			Offsets.Select(o => ally.Space + o)
 		);
+		return new ActionResult(after).WithEvents(events);
 	}
 }
 
@@ -561,13 +362,47 @@ public record DrawAction : CardStep
 	}
 }
 
-/// <summary>This turn, single-target attacks on a companion beside the owner hit the owner.</summary>
-public record DrawFireAction : CardStep
+/// <summary>**Dropped on a FOE: it loses its next move** — Stagger. Its cycle still advances.</summary>
+public record StaggerAction : CardStep
 {
+	public override string? Refusal(GameState s, int space, bool foeRow) =>
+		foeRow && s.FoeAt(space) is not null ? null : "Drop it on a foe";
+
+	public override ActionResult Execute(GameState s) =>
+		s.FoeAt(Space) is { } foe
+			? new ActionResult(s.UpdateObject(foe.Id, foe with { Staggered = true }))
+			: new ActionResult(s);
+}
+
+/// <summary>
+/// **Dropped on an EMPTY foe space: the foe beside it is pushed in** — Gust. Every attack is a shape
+/// anchored on the foe's column, so this re-aims it — and lines it up with one of your monsters.
+/// </summary>
+public record PushAction : CardStep
+{
+	public override string? Refusal(GameState s, int space, bool foeRow)
+	{
+		if (!foeRow || space < 0 || space >= PartyBattle.Spaces)
+			return "Drop it on an empty space beside a foe";
+		if (s.FoeAt(space) is { } there)
+			return $"The {there.Name} is standing there";
+
+		var beside = Beside(s, space);
+		return beside.Count switch
+		{
+			0 => "Drop it on an empty space beside a foe",
+			1 => null,
+			_ => "Two foes are beside that space — drop it where only one is",
+		};
+	}
+
+	private static List<Foe> Beside(GameState s, int space) =>
+		[.. new[] { space - 1, space + 1 }.Select(s.FoeAt).OfType<Foe>()];
+
 	public override ActionResult Execute(GameState s)
 	{
-		var party = s.GetParty();
-		return new ActionResult(s.UpdateObject(party.Id, party with { DrawFireAllyId = AllyId }));
+		var (after, events) = PartyState.Push(s, Beside(s, Space).Single(), Space);
+		return new ActionResult(after).WithEvents(events);
 	}
 }
 
@@ -611,6 +446,11 @@ public record FoeHitEvent : GameEvent
 	public int FoeId { get; init; }
 	public int Damage { get; init; }
 	public int Blocked { get; init; }
+}
+
+public record FoeStaggeredEvent : GameEvent
+{
+	public int FoeId { get; init; }
 }
 
 public record PartyBattleEndedEvent : GameEvent

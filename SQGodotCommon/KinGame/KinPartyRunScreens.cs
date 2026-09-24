@@ -66,9 +66,21 @@ public sealed class KinPartyRunScreens
 						Wants.GetValueOrDefault(companion.Name, ""),
 						companion.Passive,
 						companion.PassiveRule,
+						"Moves: "
+							+ string.Join(
+								", ",
+								companion.Moves.Select(m =>
+									KinPartyCell.Says(
+										m,
+										m.Kind == IntentType.Attack
+											? m.Amount + companion.Power
+											: m.Amount
+									)
+								)
+							),
 						$"HP {companion.Hp} · POW {companion.Power} · SPD {companion.Speed}",
 					],
-					new Vector2(320, 500),
+					new Vector2(340, 580),
 					() => choose(companion)
 				)
 			);
@@ -78,7 +90,7 @@ public sealed class KinPartyRunScreens
 		PartyRun run,
 		RunReport report,
 		string beaten,
-		Action<RewardCard> take,
+		Action<KinCard> take,
 		Action skip
 	)
 	{
@@ -117,13 +129,10 @@ public sealed class KinPartyRunScreens
 		foreach (var reward in run.RewardOffer())
 			row.AddChild(
 				Tile(
-					KinPalette.Companion(reward.Companion),
-					KinArt.Drawing(reward.Companion),
-					$"{reward.Card.Name.ToUpperInvariant()}  ({reward.Card.Cost})",
-					[
-						string.Join(" ", KinRulesText.Lines(reward.Card)),
-						$"for {reward.Companion.ToUpperInvariant()}",
-					],
+					KinPalette.Slate,
+					KinArt.Drawing(reward.Name),
+					$"{reward.Name.ToUpperInvariant()}  ({reward.Cost})",
+					[string.Join(" ", KinRulesText.Lines(reward))],
 					new Vector2(280, 380),
 					() => take(reward)
 				)
@@ -233,7 +242,7 @@ public sealed class KinPartyRunScreens
 				Texture = art,
 				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 				StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-				CustomMinimumSize = new Vector2(0, size.Y * 0.4f),
+				CustomMinimumSize = new Vector2(0, Mathf.Min(size.Y * 0.4f, 200)),
 				MouseFilter = Control.MouseFilterEnum.Ignore,
 			}
 		);

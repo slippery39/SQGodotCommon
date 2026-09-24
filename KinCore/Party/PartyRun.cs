@@ -3,7 +3,7 @@ using ImmutableGameObjects;
 
 namespace KinCore.Party;
 
-/// <summary>A companion between battles: who it is (its deck included) and the HP it carries.</summary>
+/// <summary>A monster between battles: who it is and the HP it carries.</summary>
 public record RunCompanion(PartyCompanion Companion, int Hp);
 
 /// <summary>What happened between two battles, for the screen to tell.</summary>
@@ -13,7 +13,7 @@ public record RunReport(ImmutableList<string> Revived, string? Joined, bool Rest
 /// **THE RUN, v1** (KinJam.md "THE RUN"): five battles in a row. You start with ONE companion and
 /// the others join after battles 1 and 2; HP carries over; a knocked-out companion revives at a
 /// quarter of its max; one rest before the last battle heals 30% of max; after each win you take one
-/// of three cards for a companion on the team.
+/// of three cards into the trainer's deck.
 ///
 /// **Lives OUTSIDE GameState**, like the lane game's `Run`: a battle is built from it, played, and
 /// read back into it. Plain records only — the Serialization Rule holds here too.
@@ -29,8 +29,11 @@ public record PartyRun
 	public ImmutableList<PartyCompanion> Waiting { get; init; } = [];
 
 	public ImmutableList<Encounter> Encounters { get; init; } = [];
-	public ImmutableDictionary<string, ImmutableList<KinCard>> Rewards { get; init; } =
-		ImmutableDictionary<string, ImmutableList<KinCard>>.Empty;
+
+	/// <summary>**The trainer's deck** — one for the run, whoever is on the team.</summary>
+	public ImmutableList<KinCard> Deck { get; init; } = [];
+
+	public ImmutableList<KinCard> Rewards { get; init; } = [];
 
 	/// <summary>The index of the NEXT battle. Equal to the encounter count once the run is won.</summary>
 	public int Battle { get; init; }
@@ -48,13 +51,15 @@ public record PartyRun
 		int seed,
 		ImmutableList<PartyCompanion>? roster = null,
 		ImmutableList<Encounter>? encounters = null,
-		ImmutableDictionary<string, ImmutableList<KinCard>>? rewards = null
+		ImmutableList<KinCard>? deck = null,
+		ImmutableList<KinCard>? rewards = null
 	) =>
 		new()
 		{
 			Team = [new RunCompanion(starter, starter.Hp)],
 			Waiting = [.. (roster ?? PartyContent.Roster).Where(c => c.Name != starter.Name)],
 			Encounters = encounters ?? PartyContent.Encounters,
+			Deck = deck ?? PartyContent.StarterDeck,
 			Rewards = rewards ?? PartyContent.Rewards,
 			Seed = seed,
 		};
@@ -80,6 +85,7 @@ public record PartyRun
 			$"Battle {Battle + 1} of {Encounters.Count}",
 			[.. Team.Select((m, i) => new PlacedCompanion(m.Companion, spaces[i], m.Hp))],
 			Next.Foes,
+			Deck,
 			[]
 		);
 		return PartyBattleFactory.Create(scenario, Seed + Battle * 101);
@@ -147,39 +153,14 @@ public record PartyRun
 	}
 
 	/// <summary>
-	/// **Three cards to choose from, from the team's own pools** — deterministic per run and battle,
-	/// so a seed replays. Fewer than three only if the pools are that small.
+	/// **Three cards to choose from** — deterministic per run and battle, so a seed replays.
 	/// </summary>
-	public ImmutableList<RewardCard> RewardOffer()
+	public ImmutableList<KinCard> RewardOffer()
 	{
-		var pool = Team.SelectMany(m =>
-				Rewards.TryGetValue(m.Companion.Name, out var cards)
-					? cards.Select(c => new RewardCard(m.Companion.Name, c))
-					: []
-			)
-			.ToList();
-
 		var rng = new Random(Seed * 31 + Battle);
-		return [.. pool.OrderBy(_ => rng.Next()).Take(3)];
+		return [.. Rewards.OrderBy(_ => rng.Next()).Take(3)];
 	}
 
-	/// <summary>The chosen card joins its companion's part of the deck, for the rest of the run.</summary>
-	public PartyRun Take(RewardCard reward) =>
-		this with
-		{
-			Team =
-			[
-				.. Team.Select(m =>
-					m.Companion.Name == reward.Companion
-						? m with
-						{
-							Companion = m.Companion with
-							{
-								Cards = m.Companion.Cards.Add(reward.Card),
-							},
-						}
-						: m
-				),
-			],
-		};
+	/// <summary>The chosen card joins the deck for the rest of the run.</summary>
+	public PartyRun Take(KinCard reward) => this with { Deck = Deck.Add(reward) };
 }

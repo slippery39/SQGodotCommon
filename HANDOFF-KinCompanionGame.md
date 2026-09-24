@@ -7,6 +7,15 @@ and describes a game that no longer exists — read only its §5 scars.
 State at handoff (2026-09-23): **216 tests green**, solution and Godot project build, branch
 `kin-pivot`, **nothing pushed**. Check `git status` for anything written after the commits below.
 
+> **UPDATE 2026-09-24 — AUTO-BATTLE v1, uncommitted when written.** Shayne's first full run (lost
+> in battle 3) found a FLOW failure, and the owned-card deck was replaced: every creature plays its
+> own move cycle at end of turn in Speed order, the deck is the trainer's (generic cards dropped on a
+> monster or foe), every monster steps once a turn and a step into an ally swaps. Design and reasons:
+> "AUTO-BATTLE v1" at the top of `KinJam.md`. Much of §2–§3 below (OwnedBy, the move cooldown, Draw
+> Fire, per-companion rewards) no longer exists. 208 tests green. **Next: Shayne plays it.** Not
+> built: the bench (decided — see KinJam), catching, and area-based floors (DISCUSSED, not decided:
+> Monster Train style — pick one of two areas and get all of it; town → wild area → gym).
+
 ---
 
 ## 0. What changed, in one paragraph

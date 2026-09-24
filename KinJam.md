@@ -1,5 +1,48 @@
 # KIN — design doc
 
+> # AUTO-BATTLE v1 (Shayne, 2026-09-24) — THE MONSTERS FIGHT, YOU ARE THE TRAINER. Supersedes the
+> # owned-card rules in "THE COMPANION GAME" below; the board, intents and passives stand.
+>
+> **Why: the first full run (lost in battle 3) was a FLOW failure, not a rules one.** (1) Companions
+> in a row locked each other in: a step into an ally was refused. (2) Bramble's cards paid only when
+> a foe attacked HER, and foes spent turns on Block or Move — half her cards were dead draws at any
+> time. (3) Too few damage cards: whole turns of nothing relevant. (4) A knocked-out companion's
+> cards stayed in the deck, dead — "pretty much a death sentence." And one run was enough to say
+> **the combined deck of per-monster cards is disliked.** Causes 2–4 are the ownership model itself.
+>
+> **Decided (Shayne, 2026-09-24):**
+> - **Every creature has a CYCLE of moves and plays it on its own**, like a foe's intents — yours
+>   too. **Both sides are telegraphed**; you see your monsters' next moves as well as the foes'.
+>   Items and events will edit a cycle later (Monster Rancher training). **A foe's cycle is exactly
+>   what it brings when caught** — ally and foe are the same kind of creature.
+> - **Moves fire at END of turn, one creature at a time in SPEED order** — fastest first, both sides
+>   interleaved (ties: yours first). A fast monster can kill a foe before its blow lands. Speed's
+>   old job (the move cooldown) is gone; it now has one job.
+> - **Your deck is the TRAINER's: generic cards played ON a monster** — Guard, Rally, Dash, Hasten,
+>   Stagger, Gust. **No card belongs to a monster**, so none is ever dead because of who fainted or
+>   what a foe is doing. The passive decides what a card MEANS: Guard on Bramble is damage
+>   (Thorns), a step on Pike is damage (Momentum), a push beside Gale is damage (Off-Balance).
+>   Signature cards per monster: allowed, but rare, so the deck is not diluted. None yet.
+> - **A free step, EVERY monster, every turn** (Shayne pushed back on cards-only movement: position
+>   is AIM — every monster attacks straight ahead, and a monster in the wrong column wastes its
+>   turn). **A step into an ally swaps the two** — the lock is gone. Dash gives another step.
+> - **Monsters cost nothing to include**: a weak catch is not a penalty, just less good. That opens
+>   more monsters on the board (up to 5) and wider boards for some battles.
+> - **The BENCH (later, not in v1):** a party bigger than the board. It appears only once you have
+>   caught more than fit. **A zone of its own, NOT in the deck** — a monster card drawn with the board
+>   full is problem 4 again. A fainted monster is replaced from the bench for free; a voluntary swap
+>   costs energy or a Switch card. Lose when board and bench have all fainted.
+>
+> **Rejected: Monster Train's model** (summon monsters as cards into lanes, defend a health total).
+> It rebuilds the lane game the pivot left, brings deck dilution back as monster cards, and makes
+> monsters disposable where this game wants them to be YOURS.
+>
+> **Built as v1 (2026-09-24):** `KinCore/Party/` rewritten in place — `Creature` (Ally, Foe) with a
+> `Pattern`; `PartyState.ActingOrder`; generic `CardStep`s dropped on a space of either row.
+> Bramble: Bash / Sweep, Thorns 2, Speed 1. Pike: Jab / Jab / Flurry, Momentum, Speed 3.
+> Gale: Buffet / Gust ▶ (pushes the foe ahead), Off-Balance (any foe moved while Gale stands takes
+> +2 from every hit that turn), Speed 2. Unplayed.
+
 > # THE COMPANION GAME (Shayne, 2026-09-23) — DECIDED, NOT BUILT. Supersedes the unit game below.
 >
 > **Pokemon / Monster Rancher / Digimon, as a roguelike deckbuilder.** The playtest of Guard found

@@ -4,15 +4,15 @@ using ImmutableGameObjects;
 namespace KinCore.Party;
 
 /// <summary>
-/// A companion as authored: stats, a PASSIVE, and the cards it brings to the combined deck.
-/// `Passive` is the player-facing line; `Thorns` and `MomentumPerStep` are the rules it names.
+/// A monster as authored: stats, a PASSIVE, and the CYCLE of moves it plays on its own. No cards —
+/// the deck is the trainer's (AUTO-BATTLE v1, KinJam.md).
 /// </summary>
 public record PartyCompanion(
 	string Name,
 	int Hp,
 	int Power,
 	int Speed,
-	ImmutableList<KinCard> Cards,
+	ImmutableList<Intent> Moves,
 	string Passive = "",
 	string PassiveRule = "",
 	int Thorns = 0,
@@ -20,14 +20,11 @@ public record PartyCompanion(
 	int Unbalances = 0
 );
 
-/// <summary>A companion on the board. `Hp` is where a RUN left it; null = full.</summary>
+/// <summary>A monster on the board. `Hp` is where a RUN left it; null = full.</summary>
 public record PlacedCompanion(PartyCompanion Companion, int Space, int? Hp = null);
 
 /// <summary>One fight of a run: who you face, and where they stand.</summary>
 public record Encounter(string Name, ImmutableList<Foe> Foes);
-
-/// <summary>A card on offer after a win, and the companion whose deck it joins.</summary>
-public record RewardCard(string Companion, KinCard Card);
 
 /// <summary>
 /// One battle to play. `OpeningHand` names cards to put on top of the shuffled deck, so a first
@@ -38,12 +35,13 @@ public record PartyScenario(
 	string Description,
 	ImmutableList<PlacedCompanion> Companions,
 	ImmutableList<Foe> Foes,
+	ImmutableList<KinCard> Deck,
 	ImmutableList<string> OpeningHand
 );
 
 /// <summary>
-/// **The first slice, exactly as `docs/paper/companion-slice.md` states it.** Every number is a
-/// guess: this is exploring, not tuning — the question is whether the decisions are real.
+/// **AUTO-BATTLE v1 content.** Every number is a guess: this is exploring, not tuning — the question
+/// is whether the decisions are real.
 /// </summary>
 public static class PartyContent
 {
@@ -64,10 +62,18 @@ public static class PartyContent
 	private static readonly ImmutableList<int> Ahead = [0];
 	private static readonly ImmutableList<int> ThreeWide = [-1, 0, 1];
 
+	private static Intent Attack(string name, int amount, ImmutableList<int>? offsets = null) =>
+		new()
+		{
+			Name = name,
+			Kind = IntentType.Attack,
+			Amount = amount,
+			Offsets = offsets ?? Ahead,
+		};
+
 	/// <summary>
-	/// **Bramble, the Wall — wants to be HIT** (KITS v2, KinJam.md). She steps INTO the attacks Pike
-	/// steps out of, pulls single hits off her neighbours, and punishes whatever strikes her. Her only
-	/// attack scales with how braced she is.
+	/// **Bramble, the Wall — wants to be HIT.** Slow and tough: she acts last, so she swings at
+	/// whatever the others left standing, and every foe that strikes her pays for it.
 	/// </summary>
 	public static readonly PartyCompanion Bramble =
 		new(
@@ -75,37 +81,15 @@ public static class PartyContent
 			Hp: 30,
 			Power: 2,
 			Speed: 1,
-			[
-				Card("Bark Skin", 1, "Gain 6 Block.", new GuardAction { Amount = 6 }),
-				Card("Thornhide", 1, "Gain 3 Thorns this turn.", new ThornsAction { Amount = 3 }),
-				Card(
-					"Retaliate",
-					1,
-					"Deal your Block ahead.",
-					new StrikeAction { AddPower = false, AddBlock = true }
-				),
-				Card(
-					"Root Wall",
-					2,
-					"Gain 5 Block. So do neighbours.",
-					new GuardAction { Amount = 5, AndBeside = true }
-				),
-				Card(
-					"Draw Fire",
-					1,
-					"This turn, single hits on a neighbour hit this instead.",
-					new DrawFireAction()
-				),
-			],
+			[Attack("Bash", 4), Attack("Sweep", 1, ThreeWide)],
 			Passive: "THORNS 2",
 			PassiveRule: "A foe that attacks her takes 2, even if she blocks it.",
 			Thorns: 2
 		);
 
 	/// <summary>
-	/// **Pike, the Skirmisher — wants to never be where the attack lands** (KITS v2). Every step
-	/// feeds the next attack, so the decision is the ROUTE: how far, in what order, and where it
-	/// ends the turn.
+	/// **Pike, the Skirmisher — wants never to be where the hit lands.** Fastest on the board, and
+	/// its free step is damage — so the step is both the dodge and the aim.
 	/// </summary>
 	public static readonly PartyCompanion Pike =
 		new(
@@ -113,46 +97,16 @@ public static class PartyContent
 			Hp: 18,
 			Power: 3,
 			Speed: 3,
-			[
-				Card("Jab", 1, "Deal 2 + Power ahead.", new StrikeAction { Amount = 2 }),
-				Card(
-					"Feint",
-					0,
-					"Step 1. Draw a card.",
-					new StepAction(),
-					new DrawAction { Count = 1 }
-				),
-				Card(
-					"Lunge",
-					1,
-					"Step 1, then deal 2 + Power ahead.",
-					new StepAction(),
-					new StrikeAction { Amount = 2 }
-				),
-				Card(
-					"Hit and Run",
-					1,
-					"Deal 2 + Power ahead, then step 1.",
-					new StrikeAction { Amount = 2 },
-					new StepAction()
-				),
-				Card(
-					"Flank",
-					1,
-					"Deal 3 + Power ahead. Double vs a lone foe.",
-					new StrikeAction { Amount = 3, DoubleIfAlone = true }
-				),
-			],
+			[Attack("Jab", 2), Attack("Jab", 2), Attack("Flurry", 0, ThreeWide)],
 			Passive: "MOMENTUM +2/step",
 			PassiveRule: "Each step this turn adds 2 to its next attack.",
 			MomentumPerStep: 2
 		);
 
 	/// <summary>
-	/// **Gale, the Controller — wants the FOES where it chooses** (KITS v2, KinJam.md). Every intent
-	/// is a shape anchored on the foe's column, so moving a foe re-aims its attack; and a foe Gale
-	/// moves is Off-Balance, so Gale sets up the others' hits. The decision is the ORDER of plays.
-	/// Weak against homing attacks (the Wisp), which no push re-aims.
+	/// **Gale, the Controller — wants the FOES where it chooses.** Its Gust pushes the foe ahead, and
+	/// while Gale stands every foe you move is Off-Balance. Gale is in the middle of the order, so its
+	/// own Gust sets up only Bramble; a Gust CARD, played before anyone acts, sets up everyone.
 	/// </summary>
 	public static readonly PartyCompanion Gale =
 		new(
@@ -161,26 +115,53 @@ public static class PartyContent
 			Power: 2,
 			Speed: 2,
 			[
-				Card("Gust", 1, "Push the foe ahead one column.", new PushAction()),
-				Card("Gust", 1, "Push the foe ahead one column.", new PushAction()),
-				Card(
-					"Slam",
-					1,
-					"Push the foe ahead. If a foe is there, both take 5.",
-					new PushAction { Collision = 5 }
-				),
-				Card(
-					"Whirlwind",
-					1,
-					"Swap the foe ahead with the one beside it.",
-					new SwapAction()
-				),
-				Card("Buffet", 1, "Deal 2 + Power ahead.", new StrikeAction { Amount = 2 }),
+				Attack("Buffet", 1, ThreeWide),
+				new Intent
+				{
+					Name = "Gust",
+					Kind = IntentType.Push,
+					Amount = 1,
+				},
 			],
 			Passive: "OFF-BALANCE +2",
-			PassiveRule: "A foe it moves takes 2 more from every hit this turn.",
+			PassiveRule: "While Gale stands, a foe you move takes 2 more from every hit that turn.",
 			Unbalances: 2
 		);
+
+	/// <summary>
+	/// **The trainer's deck — every card is played ON something, and none belongs to a monster.** The
+	/// passive decides what a card means: Guard on Bramble is damage, a Dash on Pike is damage.
+	/// </summary>
+	public static readonly ImmutableList<KinCard> StarterDeck =
+	[
+		Card("Guard", 1, "Gain 6 Block.", new GuardAction { Amount = 6 }),
+		Card("Guard", 1, "Gain 6 Block.", new GuardAction { Amount = 6 }),
+		Card(
+			"Dash",
+			0,
+			"Take another step this turn. Draw a card.",
+			new DashAction(),
+			new DrawAction()
+		),
+		Card(
+			"Dash",
+			0,
+			"Take another step this turn. Draw a card.",
+			new DashAction(),
+			new DrawAction()
+		),
+		Card("Rally", 1, "+3 Power this turn.", new PowerAction { Amount = 3 }),
+		Card("Rally", 1, "+3 Power this turn.", new PowerAction { Amount = 3 }),
+		Card("Hasten", 1, "It plays its move now, not at end of turn.", new HastenAction()),
+		Card("Thornhide", 1, "Gain 3 Thorns this turn.", new ThornsAction { Amount = 3 }),
+		Card(
+			"Gust",
+			1,
+			"Drop on an empty foe space: the foe beside it moves in.",
+			new PushAction()
+		),
+		Card("Stagger", 1, "Drop on a foe: it loses its next move.", new StaggerAction()),
+	];
 
 	public static Foe Boar(int space) =>
 		new()
@@ -188,6 +169,7 @@ public static class PartyContent
 			Name = "Boar",
 			Hp = 22,
 			MaxHp = 22,
+			Speed = 1,
 			Space = space,
 			Pattern =
 			[
@@ -219,6 +201,7 @@ public static class PartyContent
 			Name = "Old Tusker",
 			Hp = 48,
 			MaxHp = 48,
+			Speed = 2,
 			Space = space,
 			Pattern =
 			[
@@ -245,22 +228,29 @@ public static class PartyContent
 			],
 		};
 
+	private static readonly Intent Zap =
+		new()
+		{
+			Name = "Zap",
+			Kind = IntentType.Attack,
+			Amount = 4,
+			Homing = true,
+		};
+
 	public static Foe Wisp(int space) =>
 		new()
 		{
 			Name = "Wisp",
 			Hp = 12,
 			MaxHp = 12,
+			Speed = 3,
 			Space = space,
+			// Foes attack on most turns — the first run's Bramble drew Block and Thorns for foes that
+			// were busy drifting and preening.
 			Pattern =
 			[
-				new Intent
-				{
-					Name = "Zap",
-					Kind = IntentType.Attack,
-					Amount = 4,
-					Homing = true,
-				},
+				Zap,
+				Zap,
 				new Intent
 				{
 					Name = "Drift",
@@ -276,16 +266,12 @@ public static class PartyContent
 			Name = "Stonebeak",
 			Hp = 16,
 			MaxHp = 16,
+			Speed = 2,
 			Space = space,
 			Pattern =
 			[
-				new Intent
-				{
-					Name = "Dive",
-					Kind = IntentType.Attack,
-					Amount = 7,
-					Offsets = [-1, 0],
-				},
+				Attack("Dive", 7, [-1, 0]),
+				Attack("Dive", 7, [-1, 0]),
 				new Intent
 				{
 					Name = "Preen",
@@ -295,92 +281,42 @@ public static class PartyContent
 			],
 		};
 
-	/// <summary>Pike's five cards twice over — the deck is ten either way.</summary>
 	// ===== THE RUN, v1 — KinJam.md "THE RUN"
 
 	/// <summary>Every companion, in the order the ones you did not start with join.</summary>
 	public static readonly ImmutableList<PartyCompanion> Roster = [Bramble, Pike, Gale];
 
 	/// <summary>
-	/// **What each companion can be offered after a win** — three per companion, each pushing that
-	/// companion's OWN goal further (the `design-card` skill). Offers come only from the team you have.
+	/// **What a win can offer — trainer cards, for the whole deck.** Three are offered; take one.
+	/// More damage than the starter deck, which the first run was short of.
 	/// </summary>
-	public static readonly ImmutableDictionary<string, ImmutableList<KinCard>> Rewards =
-		new Dictionary<string, ImmutableList<KinCard>>
-		{
-			["Bramble"] =
-			[
-				Card(
-					"Bristle",
-					0,
-					"Gain 2 Thorns this turn. Draw a card.",
-					new ThornsAction { Amount = 2 },
-					new DrawAction { Count = 1 }
-				),
-				Card(
-					"Taunt",
-					1,
-					"Step 1. Gain 4 Block.",
-					new StepAction(),
-					new GuardAction { Amount = 4 }
-				),
-				Card(
-					"Briar Burst",
-					2,
-					"Deal your Thorns ahead and to both sides.",
-					new StrikeAction
-					{
-						AddPower = false,
-						AddThorns = true,
-						Offsets = ThreeWide,
-					}
-				),
-			],
-			["Pike"] =
-			[
-				Card(
-					"Quickstep",
-					0,
-					"Step 1. Gain 2 Momentum.",
-					new StepAction(),
-					new MomentumAction { Amount = 2 }
-				),
-				Card(
-					"Pierce",
-					1,
-					"Deal 3 + Power ahead, ignoring Block.",
-					new StrikeAction { Amount = 3, IgnoreBlock = true }
-				),
-				Card(
-					"Whirling Strike",
-					2,
-					"Deal 2 + Power ahead and to both sides.",
-					new StrikeAction { Amount = 2, Offsets = ThreeWide }
-				),
-			],
-			["Gale"] =
-			[
-				Card(
-					"Tailwind",
-					1,
-					"Push the foe ahead. Draw a card.",
-					new PushAction(),
-					new DrawAction { Count = 1 }
-				),
-				Card(
-					"Downdraft",
-					0,
-					"The foe ahead is Off-Balance this turn.",
-					new UnbalanceAction()
-				),
-				Card(
-					"Cyclone",
-					2,
-					"Swap the foe ahead with the one beside it. Both take 3.",
-					new SwapAction { Damage = 3 }
-				),
-			],
-		}.ToImmutableDictionary();
+	public static readonly ImmutableList<KinCard> Rewards =
+	[
+		Card("Strike", 1, "It attacks ahead now: 3 + Power.", new StrikeAction { Amount = 3 }),
+		Card(
+			"Whirl",
+			2,
+			"It attacks now: 2 + Power, three wide.",
+			new StrikeAction { Amount = 2, Offsets = ThreeWide }
+		),
+		Card("Bulwark", 2, "Gain 12 Block.", new GuardAction { Amount = 12 }),
+		Card("Frenzy", 1, "+5 Power this turn.", new PowerAction { Amount = 5 }),
+		Card("Sprint", 0, "Take two more steps this turn.", new DashAction { Steps = 2 }),
+		Card(
+			"Tailwind",
+			1,
+			"Drop on an empty foe space: the foe beside it moves in. Draw a card.",
+			new PushAction(),
+			new DrawAction()
+		),
+		Card(
+			"Bristle",
+			0,
+			"Gain 2 Thorns this turn. Draw a card.",
+			new ThornsAction { Amount = 2 },
+			new DrawAction()
+		),
+	];
 
 	/// <summary>
 	/// **Five fights, harder each time, the Old Tusker last.** Placed for a team that grows from one
@@ -399,8 +335,9 @@ public static class PartyContent
 		new(
 			"One against two",
 			"Pike alone against a Boar and a Wisp.",
-			[new(Pike with { Cards = Pike.Cards.AddRange(Pike.Cards) }, 2)],
+			[new(Pike, 2)],
 			[Boar(1), Wisp(3)],
+			StarterDeck,
 			[]
 		);
 
@@ -410,7 +347,8 @@ public static class PartyContent
 			"Bramble and Pike against a Boar, a Wisp and a Stonebeak.",
 			[new(Bramble, 1), new(Pike, 3)],
 			[Boar(1), Wisp(3), Stonebeak(4)],
-			["Draw Fire", "Thornhide", "Bark Skin", "Feint", "Lunge"]
+			StarterDeck,
+			[]
 		);
 
 	/// <summary>The full team: the Wall, the Controller and the Skirmisher, each wanting something else.</summary>
@@ -420,7 +358,8 @@ public static class PartyContent
 			"Bramble, Gale and Pike against a Boar, a Wisp and a Stonebeak.",
 			[new(Bramble, 0), new(Gale, 2), new(Pike, 4)],
 			[Boar(2), Wisp(3), Stonebeak(4)],
-			["Gust", "Slam", "Thornhide", "Lunge", "Flank"]
+			StarterDeck,
+			["Gust", "Rally", "Guard", "Dash", "Stagger"]
 		);
 
 	public static readonly ImmutableList<PartyScenario> Scenarios = [Alone, Pair, Trio];
@@ -462,7 +401,7 @@ public static class PartyBattleFactory
 
 		foreach (var (companion, space, hp) in scenario.Companions)
 		{
-			(s, var ally) = s.AddObject(
+			(s, _) = s.AddObject(
 				new Ally
 				{
 					Name = companion.Name,
@@ -471,6 +410,7 @@ public static class PartyBattleFactory
 					Power = companion.Power,
 					Speed = companion.Speed,
 					Space = space,
+					Pattern = companion.Moves,
 					Passive = companion.Passive,
 					PassiveRule = companion.PassiveRule,
 					Thorns = companion.Thorns,
@@ -479,11 +419,10 @@ public static class PartyBattleFactory
 				},
 				battle.Id
 			);
-
-			var owner = new OwnedBy { AllyId = ally.Id, AllyName = ally.Name };
-			foreach (var card in companion.Cards)
-				(s, _) = s.AddObject(card with { Components = [owner] }, draw.Id);
 		}
+
+		foreach (var card in scenario.Deck)
+			(s, _) = s.AddObject(card, draw.Id);
 
 		foreach (var foe in scenario.Foes)
 			(s, _) = s.AddObject(foe, battle.Id);

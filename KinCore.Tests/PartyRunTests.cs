@@ -7,12 +7,12 @@ namespace KinCore.Tests;
 
 /// <summary>
 /// **THE RUN, v1 — every rule FIRES** (KinJam.md "THE RUN"): one starter, two joins, HP carried,
-/// knockouts revived at a quarter, one rest before the last battle, rewards from the team's pools.
+/// knockouts revived at a quarter, one rest before the last battle, rewards into the trainer's deck.
 /// Inline companions, foes, encounters and rewards only.
 /// </summary>
 public class PartyRunTests
 {
-	/// <summary>Hits every column for everything: any companion still standing can end a fight.</summary>
+	/// <summary>Hits every column for everything: dropped on any monster still standing, it ends a fight.</summary>
 	private static KinCard Wipe(string name) =>
 		new()
 		{
@@ -25,7 +25,6 @@ public class PartyRunTests
 					Template = new StrikeAction
 					{
 						Amount = 999,
-						AddPower = false,
 						Offsets = [-4, -3, -2, -1, 0, 1, 2, 3, 4],
 					},
 					Text = name,
@@ -34,7 +33,7 @@ public class PartyRunTests
 		};
 
 	private static PartyCompanion Mon(string name, int hp = 40) =>
-		new(name, hp, 0, 3, [Wipe($"{name} Wipe")]);
+		new(name, hp, 0, 1, [new Intent { Name = "Idle", Kind = IntentType.Block }]);
 
 	private static Foe Foe(int space, int hit = 0) =>
 		new()
@@ -42,6 +41,7 @@ public class PartyRunTests
 			Name = "Foe",
 			Hp = 50,
 			MaxHp = 50,
+			Speed = 3,
 			Space = space,
 			Pattern =
 			[
@@ -68,11 +68,8 @@ public class PartyRunTests
 			seed: 1,
 			roster: [A, B, C],
 			encounters: [.. encounters],
-			rewards: new Dictionary<string, ImmutableList<KinCard>>
-			{
-				["A"] = [Prize],
-				["B"] = [Wipe("B Prize")],
-			}.ToImmutableDictionary()
+			deck: [Wipe("Wipe")],
+			rewards: [Prize]
 		);
 
 	private static Encounter Fight(params Foe[] foes) => new("Fight", [.. foes]);
@@ -80,11 +77,14 @@ public class PartyRunTests
 	private static GameState Do(GameState s, GameAction a) =>
 		s.AddAction(a).ProcessAllActions().State;
 
-	/// <summary>Wins the battle with the first living companion's Wipe.</summary>
+	/// <summary>Wins the battle: the Wipe, dropped on the first monster still standing.</summary>
 	private static GameState Win(GameState s)
 	{
-		var wipe = s.CardsIn(ZoneType.Hand).First(c => !s.Owner(c).IsKnockedOut);
-		return Do(s, new PlayPartyCardAction { CardId = wipe.Id });
+		var wipe = s.CardsIn(ZoneType.Hand).First(c => c.Name == "Wipe");
+		return Do(
+			s,
+			new PlayPartyCardAction { CardId = wipe.Id, Space = s.LivingAllies().First().Space }
+		);
 	}
 
 	private static int Hp(PartyRun run, string name) =>
@@ -171,15 +171,13 @@ public class PartyRunTests
 	}
 
 	[Test]
-	public void RewardsComeOnlyFromTheTeamAndJoinTheirCompanionsDeck()
+	public void ATakenRewardJoinsTheDeck()
 	{
 		var run = Run(Fight(Foe(2)), Fight(Foe(2)));
 
-		var offer = run.RewardOffer();
-		Assert.That(offer.Select(r => r.Companion), Is.All.EqualTo("A"), "B has not joined yet");
-
-		run = run.Take(offer.Single());
+		run = run.Take(run.RewardOffer().Single());
 		var deck = run.StartBattle().CardsIn(ZoneType.Hand).Select(c => c.Name);
-		Assert.That(deck, Does.Contain("Prize"));
+
+		Assert.That(deck, Is.EquivalentTo(new[] { "Wipe", "Prize" }));
 	}
 }

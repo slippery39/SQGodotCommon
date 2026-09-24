@@ -106,6 +106,24 @@ public sealed class KinPartyCell
 		return band;
 	}
 
+	/// <summary>
+	/// **A move, as the player reads it** — on a cell's telegraph and on the starter screen. `amount`
+	/// is what it will actually deal (a monster's attack already carries Power).
+	/// </summary>
+	public static string Says(KinCore.Party.Intent intent, int amount) =>
+		intent.Kind switch
+		{
+			KinCore.Party.IntentType.Attack when intent.Homing =>
+				$"{intent.Name} {amount} → weakest",
+			KinCore.Party.IntentType.Attack => $"{intent.Name} {amount}"
+				+ (intent.Offsets.Count > 1 ? $" ({intent.Offsets.Count} wide)" : ""),
+			KinCore.Party.IntentType.Block => $"{intent.Name}: +{amount} block",
+			KinCore.Party.IntentType.Move =>
+				$"{intent.Name}: step {(amount < 0 ? "left" : "right")}",
+			KinCore.Party.IntentType.Push => $"{intent.Name}: push {(amount < 0 ? "◀" : "▶")}",
+			_ => intent.Name,
+		};
+
 	public void ShowEmpty() => Show("", null, "", "", "", "", KinPalette.EmptySlot, null);
 
 	/// <summary>A companion's passive, live — "THORNS 5 this turn", "MOMENTUM: next hit +4".</summary>

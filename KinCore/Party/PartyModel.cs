@@ -4,12 +4,12 @@ using ImmutableGameObjects;
 namespace KinCore.Party;
 
 /// <summary>
-/// **THE COMPANION GAME — the first slice (2026-09-23).** Built BESIDE the lane/unit game rather
-/// than over it, so the old game keeps running until this one proves out. Rules: "THE COMPANION
-/// GAME" at the top of `KinJam.md`; the scenario is `docs/paper/companion-slice.md`.
+/// **THE COMPANION GAME — AUTO-BATTLE v1 (2026-09-24).** Built BESIDE the lane/unit game rather
+/// than over it, so the old game keeps running until this one proves out. Rules: "AUTO-BATTLE v1" at
+/// the top of `KinJam.md`.
 ///
-/// The root of one battle. Your companions and the foes are its children; the deck zones hang off
-/// it too, under the same well-known keys the old game uses, so the shared draw code still works.
+/// The root of one battle. Your monsters and the foes are its children; the deck zones hang off it
+/// too, under the same well-known keys the old game uses, so the shared draw code still works.
 /// </summary>
 public record PartyBattle : GameObject
 {
@@ -21,48 +21,57 @@ public record PartyBattle : GameObject
 	public int MaxEnergy { get; init; } = 3;
 	public bool IsOver { get; init; }
 	public bool Won { get; init; }
-
-	/// <summary>
-	/// The companion that played Draw Fire this turn, or 0. Single-target attacks on a companion
-	/// BESIDE it hit it instead. Cleared when your next turn starts.
-	/// </summary>
-	public int DrawFireAllyId { get; init; }
 }
 
 /// <summary>
-/// One of YOUR companions. **Companions do nothing without cards** — every action they take is a
-/// card they own, except the free move.
+/// **Anything on the board — your monster or a foe. Both play a telegraphed CYCLE of moves on their
+/// own**, at the end of your turn, one creature at a time in Speed order. A foe's cycle is exactly
+/// what it would bring if caught.
 /// </summary>
-public record Ally : GameObject
+public abstract record Creature : GameObject
 {
 	public int Hp { get; init; }
 	public int MaxHp { get; init; }
-
-	/// <summary>Added to this companion's attack cards.</summary>
-	public int Power { get; init; }
-
-	/// <summary>
-	/// **The move cooldown, capped at 3.** Speed 3 moves every turn, 2 every other turn, 1 every
-	/// third. See <see cref="MoveAllyAction"/>.
-	/// </summary>
-	public int Speed { get; init; }
-
 	public int Space { get; init; }
 
-	/// <summary>Soaks damage before HP. Cleared when your next turn starts.</summary>
+	/// <summary>Soaks damage before HP.</summary>
 	public int Block { get; init; }
 
-	/// <summary>Turns until the free move is ready. 0 = ready now.</summary>
-	public int MoveReadyIn { get; init; }
+	/// <summary>**Turn order**: the fastest acts first, both sides interleaved. Ties: yours first.</summary>
+	public int Speed { get; init; }
+
+	public ImmutableList<Intent> Pattern { get; init; } = [];
+	public int PatternIndex { get; init; }
+
+	/// <summary>The move it plays at the end of this turn — the telegraph.</summary>
+	public Intent Current => Pattern[PatternIndex % Pattern.Count];
+
+	public bool IsDown => Hp <= 0;
+}
+
+/// <summary>One of YOUR monsters. It fights on its own; your cards move, buff and time it.</summary>
+public record Ally : Creature
+{
+	/// <summary>Added to this monster's attacks.</summary>
+	public int Power { get; init; }
+
+	/// <summary>Power added by cards this turn (Rally). Cleared when your next turn starts.</summary>
+	public int BonusPower { get; init; }
+
+	/// <summary>**The free step**: one every turn, more from Dash. A step into an ally swaps the two.</summary>
+	public int StepsLeft { get; init; }
+
+	/// <summary>Played its move early this turn (Hasten), so it does not act again at the end.</summary>
+	public bool HasActed { get; init; }
 
 	/// <summary>The passive, as the player reads it. Rules live in the fields below, never here.</summary>
 	public string Passive { get; init; } = "";
 
-	/// <summary>The passive's rule in a sentence — shown when the companion is clicked.</summary>
+	/// <summary>The passive's rule in a sentence — shown when the monster is clicked.</summary>
 	public string PassiveRule { get; init; } = "";
 
 	/// <summary>
-	/// **Thorns — a foe that ATTACKS this companion takes this much back**, blocked or not. Bramble's
+	/// **Thorns — a foe that ATTACKS this monster takes this much back**, blocked or not. Bramble's
 	/// passive: it pays only when she is struck, so it ENDS fights rather than stalling them.
 	/// </summary>
 	public int Thorns { get; init; }
@@ -71,8 +80,8 @@ public record Ally : GameObject
 	public int BonusThorns { get; init; }
 
 	/// <summary>
-	/// **Momentum — each step this companion takes adds this to its NEXT attack this turn.** Pike's
-	/// passive: the decision is the route. Free moves and card steps both count.
+	/// **Momentum — each step this monster takes adds this to its NEXT attack.** Pike's passive: the
+	/// free step is damage, so where Pike ends the turn is chosen, not drifted into.
 	/// </summary>
 	public int MomentumPerStep { get; init; }
 
@@ -80,40 +89,47 @@ public record Ally : GameObject
 	public int Momentum { get; init; }
 
 	/// <summary>
-	/// **Off-Balance — a foe this companion MOVES takes this much extra from every hit this turn.**
-	/// Gale's passive: the Controller sets up the others' hits, so the ORDER of plays is the decision.
+	/// **Off-Balance — while this monster stands, any foe you move takes this much extra from every
+	/// hit that turn.** Gale's passive: a push is set-up for everyone, so ORDER matters — Gale's own
+	/// Gust helps only the monsters slower than it.
 	/// </summary>
 	public int Unbalances { get; init; }
 
 	public int TotalThorns => Thorns + BonusThorns;
 
-	public bool IsKnockedOut => Hp <= 0;
+	public bool IsKnockedOut => IsDown;
 
-	/// <summary>One step to a space — the ONE place a step builds Momentum, card or free move.</summary>
-	public Ally SteppedTo(int space) =>
-		this with
-		{
-			Space = space,
-			Momentum = Momentum + MomentumPerStep,
-		};
+	/// <summary>What one of its attacks deals: the move's amount plus Power, Rally and Momentum.</summary>
+	public int AttackFor(int amount) => amount + Power + BonusPower + Momentum;
+}
+
+public record Foe : Creature
+{
+	/// <summary>Extra damage this foe takes from every hit, from being moved. Cleared at your turn start.</summary>
+	public int OffBalance { get; init; }
+
+	/// <summary>Stagger: it loses its next move (the cycle still advances).</summary>
+	public bool Staggered { get; init; }
+
+	public bool IsDead => IsDown;
 }
 
 public enum IntentType
 {
-	/// <summary>Damage to the spaces its shape covers, or to one companion if it homes.</summary>
+	/// <summary>Damage to the spaces its shape covers on the OTHER row, or to one creature if it homes.</summary>
 	Attack,
 
-	/// <summary>Gains Block, which holds through your next turn.</summary>
+	/// <summary>Gains Block. A foe's holds through your next turn.</summary>
 	Block,
 
 	/// <summary>Steps <see cref="Intent.Amount"/> spaces (negative = left), if the space is free.</summary>
 	Move,
+
+	/// <summary>Pushes the foe AHEAD <see cref="Intent.Amount"/> columns (negative = left) — Gale's Gust.</summary>
+	Push,
 }
 
-/// <summary>
-/// One telegraphed action. **Foes never play from a deck** — they cycle a fixed pattern of these,
-/// and the next one is always visible.
-/// </summary>
+/// <summary>One telegraphed move. **Nothing on the board plays from a deck but you.**</summary>
 public record Intent
 {
 	public string Name { get; init; } = "";
@@ -121,37 +137,11 @@ public record Intent
 	public int Amount { get; init; }
 
 	/// <summary>
-	/// Columns hit, relative to the foe's own. [0] is straight ahead; [-1, 0, 1] is three wide —
+	/// Columns hit, relative to the creature's own. [0] is straight ahead; [-1, 0, 1] is three wide —
 	/// and the middle of a three-wide attack cannot step out of it in one move.
 	/// </summary>
 	public ImmutableList<int> Offsets { get; init; } = [0];
 
-	/// <summary>Ignores the shape: hits the companion with the LOWEST HP, wherever it stands.</summary>
+	/// <summary>Ignores the shape: hits the creature with the LOWEST HP on the other side.</summary>
 	public bool Homing { get; init; }
-}
-
-public record Foe : GameObject
-{
-	public int Hp { get; init; }
-	public int MaxHp { get; init; }
-	public int Block { get; init; }
-	public int Space { get; init; }
-	public ImmutableList<Intent> Pattern { get; init; } = [];
-	public int PatternIndex { get; init; }
-
-	/// <summary>Extra damage this foe takes from every hit, from being moved. Cleared at your turn start.</summary>
-	public int OffBalance { get; init; }
-
-	public Intent Current => Pattern[PatternIndex % Pattern.Count];
-	public bool IsDead => Hp <= 0;
-}
-
-/// <summary>
-/// **Which companion a card belongs to.** One combined deck, and only the owner can play its cards
-/// — so a knocked-out companion's cards are dead draws. The name rides along for the card face.
-/// </summary>
-public record OwnedBy : GameComponent
-{
-	public int AllyId { get; init; }
-	public string AllyName { get; init; } = "";
 }

@@ -5,7 +5,7 @@ namespace KinCore.Party;
 
 /// <summary>
 /// The API boundary for the companion game. The Godot board reads everything through here and
-/// never computes a game fact itself — including where an attack will land.
+/// never computes a game fact itself — including where an attack will land and who acts when.
 /// </summary>
 public static class PartyState
 {
@@ -14,102 +14,90 @@ public static class PartyState
 	public static PartyBattle GetParty(this GameState s) =>
 		(PartyBattle)s.GetObject(s.GetWellKnownId(BattleKey));
 
-	/// <summary>Every companion, knocked out or not, in board order.</summary>
+	/// <summary>Every monster of yours, knocked out or not, in board order.</summary>
 	public static IEnumerable<Ally> Allies(this GameState s) =>
 		s.GetChildren(s.GetWellKnownId(BattleKey)).OfType<Ally>().OrderBy(a => a.Space);
 
 	public static IEnumerable<Ally> LivingAllies(this GameState s) =>
 		s.Allies().Where(a => !a.IsKnockedOut);
 
-	/// <summary>Every foe still standing, left to right — the order they act in.</summary>
+	/// <summary>Every foe still standing, left to right.</summary>
 	public static IEnumerable<Foe> LivingFoes(this GameState s) =>
 		s.GetChildren(s.GetWellKnownId(BattleKey))
 			.OfType<Foe>()
 			.Where(f => !f.IsDead)
 			.OrderBy(f => f.Space);
 
-	/// <summary>A knocked-out companion leaves the row, so its space is free.</summary>
+	/// <summary>A knocked-out monster leaves the row, so its space is free.</summary>
 	public static Ally? AllyAt(this GameState s, int space) =>
 		s.LivingAllies().FirstOrDefault(a => a.Space == space);
 
 	public static Foe? FoeAt(this GameState s, int space) =>
 		s.LivingFoes().FirstOrDefault(f => f.Space == space);
 
-	public static Ally Owner(this GameState s, KinCard card) =>
-		(Ally)s.GetObject(card.GetComponent<OwnedBy>()!.AllyId);
-
 	/// <summary>
-	/// A card that must be dropped ON a space — a step, a push, a swap. Which spaces are legal is
-	/// the play's own validation; the board asks `PlayPartyCardAction` space by space.
+	/// **Who acts at the end of the turn, in order**: fastest first, both sides interleaved; on a tie
+	/// yours go first, then left to right. The order badge on the board is this list.
 	/// </summary>
-	public static bool NeedsASpace(this KinCard card) =>
-		card.Effects.Any(e => e.Template is CardStep { NeedsSpace: true });
+	public static ImmutableList<Creature> ActingOrder(this GameState s) =>
+		[
+			.. s.LivingAllies()
+				.Cast<Creature>()
+				.Concat(s.LivingFoes())
+				.OrderByDescending(c => c.Speed)
+				.ThenBy(c => c is Ally ? 0 : 1)
+				.ThenBy(c => c.Space),
+		];
 
 	/// <summary>
-	/// **Why this companion cannot step to that space, or null if it can.** One step, into an empty
-	/// space on the row. Shared by the free move and by every card that moves you, so the two can
-	/// never disagree about what a legal step is.
+	/// **Why this monster cannot step to that space, or null if it can.** One step, to a space next
+	/// to it; a monster standing there swaps with it. Shared by the click and the board's lit spaces.
 	/// </summary>
 	public static string? StepRefusal(this GameState s, Ally ally, int space)
 	{
+		if (ally.StepsLeft <= 0)
+			return $"{ally.Name} has already stepped this turn";
+
 		if (space < 0 || space >= PartyBattle.Spaces)
 			return $"There is no space {space}";
 
 		if (Math.Abs(space - ally.Space) != 1)
 			return $"{ally.Name} can only step to a space next to it";
 
-		if (s.AllyAt(space) is { } there)
-			return $"{there.Name} is standing there";
-
 		return null;
 	}
 
 	/// <summary>
-	/// **The spaces on YOUR row this foe's intent will hit.** The telegraph the board draws and the
-	/// attack that resolves both come from here, so what you see is what happens.
+	/// **The spaces on the OTHER row this creature's move will hit.** The telegraph the board draws
+	/// and the attack that resolves both come from here, so what you see is what happens.
 	///
-	/// A shape is fixed columns, so it can be empty — that is a dodged attack. Homing picks the
-	/// lowest-HP companion (leftmost on a tie). Draw Fire pulls a single-target hit on a companion
-	/// beside it onto itself.
+	/// A shape is fixed columns, so it can be empty — that is a dodged attack, or a monster standing
+	/// in the wrong column. Homing picks the lowest-HP creature on the other side (leftmost on a tie).
 	/// </summary>
-	public static ImmutableList<int> IntentTargets(this GameState s, Foe foe)
+	public static ImmutableList<int> IntentTargets(this GameState s, Creature creature)
 	{
-		var intent = foe.Current;
+		var intent = creature.Current;
 		if (intent.Kind != IntentType.Attack)
 			return [];
 
-		ImmutableList<int> spaces;
 		if (intent.Homing)
 		{
-			var weakest = s.LivingAllies().OrderBy(a => a.Hp).ThenBy(a => a.Space).FirstOrDefault();
-			spaces = weakest is null ? [] : [weakest.Space];
-		}
-		else
-		{
-			spaces =
-			[
-				.. intent
-					.Offsets.Select(o => foe.Space + o)
-					.Where(c => c >= 0 && c < PartyBattle.Spaces),
-			];
+			IEnumerable<Creature> others = creature is Ally ? s.LivingFoes() : s.LivingAllies();
+			var weakest = others.OrderBy(c => c.Hp).ThenBy(c => c.Space).FirstOrDefault();
+			return weakest is null ? [] : [weakest.Space];
 		}
 
-		var party = s.GetParty();
-		if (
-			spaces.Count == 1
-			&& party.DrawFireAllyId != 0
-			&& s.GetObject(party.DrawFireAllyId) is Ally { IsKnockedOut: false } decoy
-			&& s.AllyAt(spaces[0]) is { } victim
-			&& Math.Abs(victim.Space - decoy.Space) == 1
-		)
-			return [decoy.Space];
-
-		return spaces;
+		return
+		[
+			.. intent
+				.Offsets.Select(o => creature.Space + o)
+				.Where(c => c >= 0 && c < PartyBattle.Spaces),
+		];
 	}
 
 	/// <summary>
-	/// **What each companion's HP will lose if you end the turn now**, played out on a throwaway
-	/// copy by the rules themselves — never a sum the UI adds up.
+	/// **What each creature's HP will lose if you end the turn now** — yours AND the foes' — played
+	/// out on a throwaway copy by the rules themselves, never a sum the UI adds up.
 	/// </summary>
 	public static ImmutableDictionary<int, int> HpLostIfTurnEndsNow(this GameState s)
 	{
@@ -117,14 +105,16 @@ public static class PartyState
 			return ImmutableDictionary<int, int>.Empty;
 
 		var (after, _) = s.AddAction(new EndPartyTurnAction()).ProcessAllActions();
-		return s.Allies()
-			.ToImmutableDictionary(a => a.Id, a => a.Hp - ((Ally)after.GetObject(a.Id)).Hp);
+		return s.LivingAllies()
+			.Cast<Creature>()
+			.Concat(s.LivingFoes())
+			.ToImmutableDictionary(c => c.Id, c => c.Hp - ((Creature)after.GetObject(c.Id)).Hp);
 	}
 
 	/// <summary>
 	/// **CAPTURE HARNESS ONLY — never called in play.** Ends the battle as a win or a loss, so a
 	/// capture can reach the screens that follow a battle without playing one. Every foe (on a win)
-	/// or companion (on a loss) goes to 0 HP, so what reads the result reads real HP.
+	/// or monster (on a loss) goes to 0 HP, so what reads the result reads real HP.
 	/// </summary>
 	public static GameState DebugEndBattle(this GameState s, bool won)
 	{
@@ -139,7 +129,147 @@ public static class PartyState
 		return s.UpdateObject(party.Id, party with { IsOver = true, Won = won });
 	}
 
-	/// <summary>Damage to a companion: Block first, then HP.</summary>
+	/// <summary>
+	/// **A creature plays its current move**, then its cycle advances. The end of the turn calls this
+	/// for each creature in <see cref="ActingOrder"/>; Hasten calls it early. `targets` were fixed by
+	/// the caller from <see cref="IntentTargets"/> — the telegraph — so nothing re-aims mid-turn.
+	/// </summary>
+	internal static (GameState, ImmutableList<GameEvent>) Act(
+		GameState s,
+		int creatureId,
+		ImmutableList<int> targets
+	)
+	{
+		var events = ImmutableList<GameEvent>.Empty;
+
+		// A foe's Block lasts through your turn and drops when it next acts.
+		if (s.GetObject(creatureId) is Foe { Block: > 0 } braced)
+			s = s.UpdateObject(creatureId, braced with { Block = 0 });
+
+		var creature = (Creature)s.GetObject(creatureId);
+		var intent = creature.Current;
+		ImmutableList<GameEvent> more;
+
+		switch (intent.Kind)
+		{
+			case IntentType.Attack when creature is Ally ally:
+				(s, more) = AttackFoes(s, ally, intent.Amount, targets);
+				events = events.AddRange(more);
+				break;
+
+			case IntentType.Attack:
+				foreach (var space in targets)
+				{
+					if (s.GetParty().IsOver || ((Foe)s.GetObject(creatureId)).IsDead)
+						break;
+					if (s.AllyAt(space) is not { } victim)
+						continue;
+
+					(s, more) = HitAlly(s, victim, intent.Amount, creature.Name);
+					events = events.AddRange(more);
+
+					// **Thorns: attacking this monster hurts**, blocked or not.
+					if (victim.TotalThorns > 0 && !s.GetParty().IsOver)
+					{
+						(s, more) = HitFoe(s, (Foe)s.GetObject(creatureId), victim.TotalThorns);
+						events = events.AddRange(more);
+					}
+				}
+				break;
+
+			case IntentType.Block:
+				s = s.UpdateObject(
+					creatureId,
+					creature with
+					{
+						Block = creature.Block + intent.Amount,
+					}
+				);
+				if (creature is Ally)
+					events = events.Add(
+						new BlockGainedEvent { AllyId = creatureId, Amount = intent.Amount }
+					);
+				break;
+
+			case IntentType.Move when creature is Foe foe:
+				var to = foe.Space + intent.Amount;
+				if (to >= 0 && to < PartyBattle.Spaces && s.FoeAt(to) is null)
+					s = s.UpdateObject(creatureId, foe with { Space = to });
+				break;
+
+			case IntentType.Push when creature is Ally && s.FoeAt(creature.Space) is { } ahead:
+				var dest = ahead.Space + intent.Amount;
+				if (dest >= 0 && dest < PartyBattle.Spaces && s.FoeAt(dest) is null)
+					(s, more) = Push(s, ahead, dest);
+				else
+					more = [];
+				events = events.AddRange(more);
+				break;
+		}
+
+		// The cycle advances even for a creature that died mid-move to Thorns — it is gone anyway.
+		var acted = (Creature)s.GetObject(creatureId);
+		s = s.UpdateObject(creatureId, acted with { PatternIndex = acted.PatternIndex + 1 });
+		return (s, events);
+	}
+
+	/// <summary>
+	/// **One of your monsters attacks the given foe-row spaces** — its move, or a card's strike.
+	/// Momentum rides on the whole attack and is spent by it, hit or miss.
+	/// </summary>
+	internal static (GameState, ImmutableList<GameEvent>) AttackFoes(
+		GameState s,
+		Ally ally,
+		int amount,
+		IEnumerable<int> spaces
+	)
+	{
+		var damage = ally.AttackFor(amount);
+		if (ally.Momentum > 0)
+			s = s.UpdateObject(ally.Id, ally with { Momentum = 0 });
+
+		var events = ImmutableList<GameEvent>.Empty;
+		foreach (var space in spaces)
+		{
+			if (s.GetParty().IsOver || s.FoeAt(space) is not { } foe)
+				continue;
+
+			ImmutableList<GameEvent> hit;
+			(s, hit) = HitFoe(s, foe, damage);
+			events = events.AddRange(hit);
+		}
+		return (s, events);
+	}
+
+	/// <summary>
+	/// A foe moved to an empty space — by Gust the card or Gale's move. **Off-Balance** while any
+	/// monster with the passive stands.
+	/// </summary>
+	internal static (GameState, ImmutableList<GameEvent>) Push(GameState s, Foe foe, int to)
+	{
+		var unbalance = s.LivingAllies().Select(a => a.Unbalances).DefaultIfEmpty(0).Max();
+		s = s.UpdateObject(
+			foe.Id,
+			foe with
+			{
+				Space = to,
+				OffBalance = Math.Max(foe.OffBalance, unbalance),
+			}
+		);
+		return (
+			s,
+			[
+				new FoeMovedEvent
+				{
+					FoeId = foe.Id,
+					From = foe.Space,
+					To = to,
+				},
+			]
+		);
+	}
+
+	/// <summary>Damage to a monster: Block first, then HP. Ends the battle when the last one falls.</summary>
 	internal static (GameState, ImmutableList<GameEvent>) HitAlly(
 		GameState s,
 		Ally ally,
@@ -168,21 +298,23 @@ public static class PartyState
 		if (hit.IsKnockedOut)
 			events = events.Add(new AllyKnockedOutEvent { AllyId = ally.Id });
 
+		if (!s.LivingAllies().Any())
+		{
+			var party = s.GetParty();
+			s = s.UpdateObject(party.Id, party with { IsOver = true, Won = false });
+			events = events.Add(new PartyBattleEndedEvent { Won = false });
+		}
+
 		return (s, events);
 	}
 
 	/// <summary>Damage to a foe: Block first, then HP. Ends the battle when the last one falls.</summary>
-	internal static (GameState, ImmutableList<GameEvent>) HitFoe(
-		GameState s,
-		Foe foe,
-		int amount,
-		bool ignoreBlock = false
-	)
+	internal static (GameState, ImmutableList<GameEvent>) HitFoe(GameState s, Foe foe, int amount)
 	{
-		// Off-Balance rides on every hit, whoever lands it — Pike's strike and Bramble's Thorns alike.
+		// Off-Balance rides on every hit, whoever lands it — Pike's jab and Bramble's Thorns alike.
 		amount += foe.OffBalance;
 
-		var blocked = ignoreBlock ? 0 : Math.Min(amount, foe.Block);
+		var blocked = Math.Min(amount, foe.Block);
 		var hit = foe with
 		{
 			Block = foe.Block - blocked,

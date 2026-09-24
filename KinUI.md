@@ -177,6 +177,20 @@ command shipped unwired for two sessions.
 
 ## THE COMPANION GAME screen — `kin_party.tscn` (2026-09-23)
 
+> **AUTO-BATTLE v1 (2026-09-24) changed what the cells say; the rules below about owners are
+> history.** No card has an owner, so cards are drawn plain and nothing lights "PLAYS". Now:
+> - **Every creature's name band carries its ORDER BADGE** ("1 · PIKE") — when it acts at the end
+>   of the turn, from `PartyState.ActingOrder`. A monster that has acted (Hasten) drops it.
+> - **A monster's second foot line is its NEXT MOVE, with the damage it will really deal** ("▲ JAB 5"
+>   includes Power, Rally and Momentum). "NEXT:" was cut: "BUFFET 3 (3 WIDE)" wrapped to a fifth line.
+> - **Foes show the forecast too** ("▲ −5 HP if turn ends") — your monsters' attacks are as
+>   telegraphed as theirs.
+> - **A hovered card lights every space on BOTH rows the engine accepts**: a monster ("▲ GUARD
+>   HERE"), a foe (Stagger), or an empty foe space (Gust: "GUST a foe in here"). The hand passes
+>   one int, so the board folds the row into it: 0–4 yours, 5–9 the foe's.
+> - **The step**: click a monster, and the spaces beside it light — "STEP HERE", or "▲ SWAP HERE" on
+>   an ally.
+
 The slice's battle screen, `KinPartyBoard` + `KinPartyCell`. Foes on the top row, your companions on
 the bottom, a combined hand. Built from the first playtest: **"every card looked the same" and "I
 could not see what a card did."**

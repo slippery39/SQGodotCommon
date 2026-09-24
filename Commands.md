@@ -62,9 +62,10 @@ procedure in the `draw-card-art` skill.
 ## Running a scene — USE THE SCRIPT
 
 `kin_party.tscn` flags: `--scenario=N` (0 = one vs two, 1 = two vs three, 2 = three vs three); `--click-space=3,2` sends
-REAL clicks to those spaces of your row, in order — select a companion, then step it. Capture-only:
-`--focus=N` lights the owner of hand card N as a hover would (a capture CANNOT hover — this shows the
-look, not that hovering triggers it); `--play=N` plays hand card N through the drop path;
+REAL clicks to those spaces of your row, in order — select a monster, then step it. Capture-only:
+`--focus=N` lights where hand card N can be dropped, as a hover would (a capture CANNOT hover — this
+shows the look, not that hovering triggers it); `--play=N` plays hand card N on the first space that
+takes it, `--play=N@3` on your space 3, `--play=N@f3` on the foe's — through the drop path;
 `--end-turn` ends the turn at 1.6s, to capture the foes' turn animating. The RUN (no `--scenario`):
 `--starter=N` skips choosing (Roster[N]); `--screen=between|over` then ends battle 1 through
 `PartyState.DebugEndBattle` to capture the screen after it — capture harness only, never in play.

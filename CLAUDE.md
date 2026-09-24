@@ -9,8 +9,10 @@ change with the re-theme — the prefix is chosen to survive that. Those two con
 things that face outward.
 
 **PIVOTING (2026-09-23) to a monster-companion deckbuilder: up to 3 companions ARE the board, units
-are cut, one combined deck of their cards.** One battle is playable (`kin_party.tscn`, `KinCore/Party/`),
-built BESIDE the lane game. **Read `KinJam.md` first** — "THE COMPANION GAME" at its top is the truth.
+are cut. AUTO-BATTLE v1 (2026-09-24): every monster plays its own move cycle in Speed order; the deck
+is the TRAINER's, generic cards played on a monster.** A run is playable (`kin_party.tscn`,
+`KinCore/Party/`), built BESIDE the lane game. **Read `KinJam.md` first** — "AUTO-BATTLE v1" at its
+top is the truth.
 
 > **THE DOOM LAYER WAS DELETED (2026-09-21) and the top-down theme is being replaced.** Scenarios,
 > transforms, the clock, the per-theme doom schedule and ~1,300 lines with them. The new setting
