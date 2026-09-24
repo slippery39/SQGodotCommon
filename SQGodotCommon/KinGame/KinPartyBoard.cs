@@ -167,10 +167,23 @@ public partial class KinPartyBoard : Node2D
 			StartScenario(_scenario);
 		else if (_captureStarter is { } starter)
 		{
+			// Capture-only: `--screen=areas` leaves the town; `find|deep|gym` jump along the first
+			// area's trail; `between|over` fight its first stop and end it through `DebugEndBattle`.
 			BeginRun(PartyContent.Roster[starter]);
 			if (_captureScreen is { } screen)
 				GetTree().CreateTimer(0.5).Timeout += () =>
 				{
+					Change(r => r.LeaveTown());
+					if (screen == "areas")
+						return;
+					if (screen is "find" or "deep" or "gym")
+					{
+						Change(r => r.ChooseArea(0) with { StopIndex = screen == "find" ? 2 : 3 });
+						if (screen == "gym")
+							Change(r => r.SkipDeep());
+						return;
+					}
+					Change(r => r.ChooseArea(0));
 					_state = _state.DebugEndBattle(won: screen == "between");
 					BattleOver();
 				};
@@ -193,7 +206,51 @@ public partial class KinPartyBoard : Node2D
 	private void BeginRun(PartyCompanion starter)
 	{
 		_run = PartyRun.Start(starter, (int)GD.RandRange(1, 9999));
-		NextBattle();
+		Continue();
+	}
+
+	/// <summary>A change to the run from a screen, then whatever comes next.</summary>
+	private void Change(System.Func<PartyRun, PartyRun> change)
+	{
+		_run = change(_run);
+		Continue();
+	}
+
+	/// <summary>
+	/// **Where the run is decides what shows** (`PartyRun.Phase`): the town, the choice of area, the
+	/// next stop on the trail — a fight, a find or the deeper path — the gym, or the end.
+	/// </summary>
+	private void Continue()
+	{
+		_hand.SetVisible(false);
+		switch (_run.Phase)
+		{
+			case RunPhase.Town:
+				_screens.ShowTown(_run, Change);
+				break;
+			case RunPhase.ChooseArea:
+				_screens.ShowAreas(_run, area => Change(r => r.ChooseArea(area)));
+				break;
+			case RunPhase.Trail when _run.CurrentStop.Kind == StopKind.Battle:
+				NextBattle();
+				break;
+			case RunPhase.Trail when _run.CurrentStop.Kind == StopKind.Find:
+				_screens.ShowFind(_run, () => Change(r => r.TakeFind()));
+				break;
+			case RunPhase.Trail:
+				_screens.ShowDeep(_run, NextBattle, () => Change(r => r.SkipDeep()));
+				break;
+			case RunPhase.Gym:
+				_screens.ShowGym(_run, NextBattle);
+				break;
+			default:
+				_screens.ShowOver(
+					_run,
+					ShowStarters,
+					() => Project.GameManager.Instance.GoToMainMenu()
+				);
+				break;
+		}
 	}
 
 	private void NextBattle()
@@ -220,11 +277,7 @@ public partial class KinPartyBoard : Node2D
 		_hand.SetVisible(false);
 
 		if (_run.IsOver)
-			_screens.ShowOver(
-				_run,
-				ShowStarters,
-				() => Project.GameManager.Instance.GoToMainMenu()
-			);
+			Continue();
 		else
 			ShowBetween(report, beaten);
 	}
@@ -235,12 +288,8 @@ public partial class KinPartyBoard : Node2D
 			_run,
 			report,
 			beaten,
-			reward =>
-			{
-				_run = _run.Take(reward);
-				NextBattle();
-			},
-			NextBattle,
+			reward => Change(r => r.Take(reward)),
+			Continue,
 			(team, bench) =>
 			{
 				_run = _run.Swap(team, bench);

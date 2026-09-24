@@ -45,6 +45,23 @@
 > fight; a fourth goes to the **BENCH**, and between battles you swap who fights (`PartyRun.Swap`).
 > In-battle bench (a fainted monster replaced from it) is NOT built yet.
 
+> **THE MAP v1 (Shayne, 2026-09-24): regions of a town, a CHOSEN area, and a gym.** From Monster
+> Train's floors (pick one of two, get all of it) and the classic monster-game loop (a town to stock
+> up, a wild area to fight and catch, a gym). **Two regions for now**, to feel the loop. Each:
+> - **Town** — everyone healed to FULL (bench too; once a region, so it passes the stall test), and
+>   a shop: Snares (30), three cards (50 each, once), remove a card (40). Gold: 60 to start; 20 a
+>   wild win, 35 the deeper path, 50 a gym, 40 from a find.
+> - **One of two wild areas, and each has its OWN POOL** (Shayne: random from a pool, the pool the
+>   area's). Choosing an area is choosing what you might catch. Its trail: two wild fights (1–2 foes
+>   in region 1, 2–3 in region 2), a find (a Snare, gold, or a 30% rest), then **the deeper path —
+>   optional**: one more foe, the area's RARE among them, and HP carries into the gym.
+> - **The gym** — a boss that cannot be caught: the Old Tusker, then the Old Mire (Deluge hits all
+>   five columns, so nobody steps out of it).
+> New creatures for the pools: **Mosshell** (armour, then a big Slam), **Briar Viper** (fast, two
+> wide, fragile), **Cinder Newt** (wide chip, then a Flare), **Bog Toad** (Tongue homes on the
+> weakest). `PartyWorld` holds the regions; `PartyRun.Phase` is the route. The flat five-fight run
+> and "the rest before the last battle" are gone.
+
 > **Rejected: Monster Train's model** (summon monsters as cards into lanes, defend a health total).
 > It rebuilds the lane game the pivot left, brings deck dilution back as monster cards, and makes
 > monsters disposable where this game wants them to be YOURS.

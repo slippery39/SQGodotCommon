@@ -69,7 +69,8 @@ takes it, `--play=N@3` on your space 3, `--play=N@f3` on the foe's — through t
 `--snare=N` weakens the foe in space N to catchable (`PartyState.DebugWeaken`, capture harness
 only) and arms the Snare; `--inspect=N` shows the hover panel for the creature in cell N (0–4 yours, 5–9 the foe's);
 `--end-turn` ends the turn at 1.6s, to capture the foes' turn animating. The RUN (no `--scenario`):
-`--starter=N` skips choosing (Roster[N]); `--screen=between|over` then ends battle 1 through
+`--starter=N` skips choosing (Roster[N]) and opens in the first town; `--screen=areas` leaves it,
+`--screen=find|deep|gym` jumps along the first area's trail, `--screen=between|over` ends its first fight through
 `PartyState.DebugEndBattle` to capture the screen after it — capture harness only, never in play.
 
 ```

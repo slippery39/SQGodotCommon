@@ -6,10 +6,9 @@ using KinCore.Party;
 namespace KinCore.Tests;
 
 /// <summary>
-/// **THE RUN — every rule FIRES** (KinJam.md "THE RUN", "CATCHING"): one starter, the rest caught,
-/// the bench, Snares carried, HP carried, knockouts revived at a quarter, one rest before the last
-/// battle, rewards into the trainer's deck.
-/// Inline companions, foes, encounters and rewards only.
+/// **THE RUN — every rule FIRES** (KinJam.md "THE MAP", "CATCHING"): towns, areas with their own
+/// pools, trails, the deeper path, gyms, gold and the shop; one starter and the rest caught, the
+/// bench, HP carried, knockouts revived. Inline monsters, foes, regions and rewards only.
 /// </summary>
 public class PartyRunTests
 {
@@ -36,10 +35,10 @@ public class PartyRunTests
 	private static PartyCompanion Mon(string name, int hp = 40) =>
 		new(name, hp, 0, 1, [new Intent { Name = "Idle", Kind = IntentType.Block }]);
 
-	private static Foe Foe(int space, int hit = 0) =>
+	private static Foe Foe(string name, int space = 2, int hit = 0) =>
 		new()
 		{
-			Name = "Foe",
+			Name = name,
 			Hp = 50,
 			MaxHp = 50,
 			Speed = 3,
@@ -61,18 +60,38 @@ public class PartyRunTests
 	private static readonly PartyCompanion B = Mon("B");
 	private static readonly PartyCompanion C = Mon("C");
 
-	private static readonly KinCard Prize = Wipe("Prize");
+	private static Area Area(string name) =>
+		new(name, "", [Foe($"{name}1"), Foe($"{name}2")], Foe($"{name} Rare"));
 
-	private static PartyRun Run(params Encounter[] encounters) =>
+	private static Region Region(string name) =>
+		new(name, [Area($"{name}North"), Area($"{name}South")], Fight(Foe($"{name} Gym")), 1, 2);
+
+	private static Encounter Fight(params Foe[] foes) => new("Fight", [.. foes]);
+
+	private static PartyRun Run() =>
 		PartyRun.Start(
 			A,
 			seed: 1,
-			encounters: [.. encounters],
+			regions: [Region("R1"), Region("R2")],
 			deck: [Wipe("Wipe")],
-			rewards: [Prize]
+			rewards: [Wipe("Prize1"), Wipe("Prize2"), Wipe("Prize3")]
 		);
 
-	private static Encounter Fight(params Foe[] foes) => new("Fight", [.. foes]);
+	/// <summary>A run on a trail of the given fights — for the rules that need a foe that hits.</summary>
+	private static PartyRun OnTrail(PartyRun run, params Encounter[] fights) =>
+		run with
+		{
+			Phase = RunPhase.Trail,
+			Area = Area("Test"),
+			Trail = [.. fights.Select(f => new Stop(StopKind.Battle, f))],
+			StopIndex = 0,
+		};
+
+	private static PartyRun WithTeam(PartyRun run, params PartyCompanion[] team) =>
+		run with
+		{
+			Team = [.. team.Select(c => new RunCompanion(c, c.Hp))],
+		};
 
 	private static GameState Do(GameState s, GameAction a) =>
 		s.AddAction(a).ProcessAllActions().State;
@@ -87,14 +106,8 @@ public class PartyRunTests
 		);
 	}
 
-	private static int Hp(PartyRun run, string name) =>
-		run.Team.Single(m => m.Companion.Name == name).Hp;
-
-	private static PartyRun WithTeam(PartyRun run, params PartyCompanion[] team) =>
-		run with
-		{
-			Team = [.. team.Select(c => new RunCompanion(c, c.Hp))],
-		};
+	private static (PartyRun, RunReport) WinNext(PartyRun run) =>
+		run.AfterBattle(Win(run.StartBattle()));
 
 	/// <summary>Weakens the foe in that space to `hp` and throws a Snare at it.</summary>
 	private static GameState Catch(GameState s, int space, int hp)
@@ -104,66 +117,174 @@ public class PartyRunTests
 		return Do(s, new UseSnareAction { FoeId = foe.Id });
 	}
 
-	[Test]
-	public void ARunStartsWithOneMonsterAndItsSnares()
-	{
-		var run = Run(Fight(Foe(2)));
+	private static int Hp(PartyRun run, string name) =>
+		run.Team.Single(m => m.Companion.Name == name).Hp;
 
+	// ===== The route
+
+	[Test]
+	public void ARunStartsInTheFirstTownWithOneMonsterSnaresAndGold()
+	{
+		var run = Run();
+
+		Assert.That(run.Phase, Is.EqualTo(RunPhase.Town));
+		Assert.That(run.Region.Name, Is.EqualTo("R1"));
 		Assert.That(run.Team.Select(m => m.Companion.Name), Is.EqualTo(new[] { "A" }));
 		Assert.That(run.Snares, Is.EqualTo(PartyRun.StartingSnares));
+		Assert.That(run.Gold, Is.EqualTo(PartyRun.StartingGold));
 	}
 
 	[Test]
-	public void ACaughtFoeJoinsWithItsCycleAndTheHpItWasCaughtAt()
+	public void AnAreasTrailIsTwoFightsAFindAndTheDeeperPathFromItsOwnPool()
 	{
-		var run = Run(Fight(Foe(2, hit: 6)), Fight(Foe(2)), Fight(Foe(2))); // three: no rest yet
+		for (var seed = 0; seed < 20; seed++)
+		{
+			var run = (Run() with { Seed = seed }).LeaveTown().ChooseArea(1);
+
+			Assert.That(
+				run.Trail.Select(s => s.Kind),
+				Is.EqualTo(new[] { StopKind.Battle, StopKind.Battle, StopKind.Find, StopKind.Deep })
+			);
+			var wild = run.Trail.Take(2).SelectMany(s => s.Encounter!.Foes).Select(f => f.Name);
+			Assert.That(wild, Is.All.AnyOf("R1South1", "R1South2"), $"seed {seed}");
+			Assert.That(
+				run.Trail[3].Encounter!.Foes.Select(f => f.Name),
+				Does.Contain("R1South Rare"),
+				"the rare lives down the deeper path"
+			);
+		}
+	}
+
+	[Test]
+	public void WinningAFightPaysGoldAndWalksOn()
+	{
+		var run = Run().LeaveTown().ChooseArea(0);
 
 		RunReport report;
-		(run, report) = run.AfterBattle(Catch(run.StartBattle(), 2, hp: 10));
+		(run, report) = WinNext(run);
 
-		Assert.That(report.Caught, Is.EqualTo(new[] { "Foe" }));
-		var caught = run.Team[1];
-		Assert.That(caught.Hp, Is.EqualTo(10));
-		Assert.That(caught.Companion.Moves.Single().Amount, Is.EqualTo(6), "its own move");
-		Assert.That(run.Snares, Is.EqualTo(PartyRun.StartingSnares - 1), "the Snare is spent");
+		Assert.That(report.Gold, Is.EqualTo(PartyRun.WildGold));
+		Assert.That(run.Gold, Is.EqualTo(PartyRun.StartingGold + PartyRun.WildGold));
+		Assert.That(run.StopIndex, Is.EqualTo(1));
+	}
 
-		var next = run.StartBattle();
-		Assert.That(next.Allies().Count(), Is.EqualTo(2), "and it fights");
+	[TestCase(FindKind.Snare)]
+	[TestCase(FindKind.Gold)]
+	[TestCase(FindKind.Rest)]
+	public void AFindIsPickedUp(FindKind kind)
+	{
+		var run = Run() with
+		{
+			Phase = RunPhase.Trail,
+			Team = [new RunCompanion(A, 10)],
+			Trail = [new Stop(StopKind.Find, Find: kind)],
+		};
+
+		var after = run.TakeFind();
+
+		Assert.That(after.Snares - run.Snares, Is.EqualTo(kind == FindKind.Snare ? 1 : 0));
+		Assert.That(
+			after.Gold - run.Gold,
+			Is.EqualTo(kind == FindKind.Gold ? PartyRun.FoundGold : 0)
+		);
+		Assert.That(Hp(after, "A"), Is.EqualTo(kind == FindKind.Rest ? 10 + 12 : 10), "30% of 40");
+		Assert.That(after.Phase, Is.EqualTo(RunPhase.Gym), "the trail's end is the gym");
 	}
 
 	[Test]
-	public void ACatchBeyondThreeGoesToTheBenchAndCanBeSwappedIn()
+	public void TurningBackFromTheDeeperPathGoesToTheGym()
 	{
-		var run = WithTeam(Run(Fight(Foe(1), Foe(3)), Fight(Foe(2))), A, B, C);
+		var run = Run().LeaveTown().ChooseArea(0);
+		run = WinNext(WinNext(run).Item1).Item1.TakeFind();
+		Assert.That(run.CurrentStop.Kind, Is.EqualTo(StopKind.Deep));
 
-		RunReport report;
-		(run, report) = run.AfterBattle(Win(Catch(run.StartBattle(), 3, hp: 5)));
+		run = run.SkipDeep();
 
-		Assert.That(report.ToBench, Is.EqualTo(new[] { "Foe" }));
-		Assert.That(run.Team, Has.Count.EqualTo(PartyRun.TeamSize));
-
-		run = run.Swap(teamIndex: 1, benchIndex: 0);
-		Assert.That(run.Team.Select(m => m.Companion.Name), Is.EqualTo(new[] { "A", "Foe", "C" }));
-		Assert.That(run.Bench.Single().Companion.Name, Is.EqualTo("B"));
+		Assert.That(run.Phase, Is.EqualTo(RunPhase.Gym));
+		Assert.That(run.NextFight.Foes.Single().Name, Is.EqualTo("R1 Gym"));
 	}
 
 	[Test]
-	public void HpCarriesIntoTheNextBattle()
+	public void WinningAGymHealsEveryoneInTheNextTown()
 	{
-		var run = Run(Fight(Foe(2, hit: 7)), Fight(Foe(1)), Fight(Foe(1)));
+		var run = WithTeam(Run(), A, B) with { Phase = RunPhase.Gym };
+		run = run with { Team = [.. run.Team.Select(m => m with { Hp = 5 })] };
 
-		var battle = Do(run.StartBattle(), new EndPartyTurnAction()); // A takes 7
-		(run, _) = run.AfterBattle(Win(battle));
+		(run, _) = WinNext(run);
+
+		Assert.That(run.Phase, Is.EqualTo(RunPhase.Town));
+		Assert.That(run.Region.Name, Is.EqualTo("R2"));
+		Assert.That(run.Team.Select(m => m.Hp), Is.All.EqualTo(40));
+	}
+
+	[Test]
+	public void WinningTheLastGymWinsTheRun()
+	{
+		var run = Run() with { RegionIndex = 1, Phase = RunPhase.Gym };
+
+		(run, _) = WinNext(run);
+
+		Assert.That(run.IsWon && run.IsOver, Is.True);
+	}
+
+	[Test]
+	public void LosingABattleEndsTheRun()
+	{
+		var run = OnTrail(Run(), Fight(Foe("Brute", hit: 99)));
+
+		(run, _) = run.AfterBattle(Do(run.StartBattle(), new EndPartyTurnAction()));
+
+		Assert.That(run.Phase, Is.EqualTo(RunPhase.Lost));
+		Assert.That(run.IsOver && !run.IsWon, Is.True);
+	}
+
+	[Test]
+	public void EveryRealAreaAndGymBuildsABattle()
+	{
+		foreach (var region in PartyWorld.Regions)
+		{
+			Assert.That(region.Gym.Foes.Any(f => !f.Catchable), Is.True, $"{region.Name}'s gym");
+			for (var a = 0; a < region.Areas.Count; a++)
+			{
+				var run = PartyRun.Start(PartyContent.Pike, seed: 5) with
+				{
+					RegionIndex = PartyWorld.Regions.IndexOf(region),
+				};
+				run = run.LeaveTown().ChooseArea(a);
+				foreach (var stop in run.Trail.Where(s => s.Encounter is not null))
+					Assert.That(
+						(run with { StopIndex = run.Trail.IndexOf(stop) })
+							.StartBattle()
+							.LivingFoes(),
+						Is.Not.Empty
+					);
+			}
+			var gym = PartyRun.Start(PartyContent.Pike, 5) with
+			{
+				RegionIndex = PartyWorld.Regions.IndexOf(region),
+				Phase = RunPhase.Gym,
+			};
+			Assert.That(gym.StartBattle().LivingFoes(), Is.Not.Empty);
+		}
+	}
+
+	// ===== HP across fights
+
+	[Test]
+	public void HpCarriesIntoTheNextFight()
+	{
+		var run = OnTrail(Run(), Fight(Foe("Brute", hit: 7)), Fight(Foe("Idle")));
+
+		(run, _) = run.AfterBattle(Win(Do(run.StartBattle(), new EndPartyTurnAction())));
 
 		Assert.That(Hp(run, "A"), Is.EqualTo(33));
-		Assert.That(run.StartBattle().Allies().Single(a => a.Name == "A").Hp, Is.EqualTo(33));
+		Assert.That(run.StartBattle().Allies().Single().Hp, Is.EqualTo(33));
 	}
 
 	[Test]
-	public void AKnockedOutCompanionRevivesAtAQuarterOfItsMax()
+	public void AKnockedOutMonsterRevivesAtAQuarterOfItsMax()
 	{
-		// Four fights, so the rest (before the last) does not land on the same step as the revive.
-		var run = WithTeam(Run(Fight(Foe(1, hit: 99)), Fight(Foe(1)), Fight(Foe(1))), A, B);
+		var run = OnTrail(WithTeam(Run(), A, B), Fight(Foe("Brute", 1, 99)), Fight(Foe("Idle")));
 
 		var battle = Do(run.StartBattle(), new EndPartyTurnAction()); // A at 1 is knocked out
 		Assert.That(battle.Allies().Single(a => a.Name == "A").IsKnockedOut, Is.True);
@@ -174,48 +295,89 @@ public class PartyRunTests
 		Assert.That(Hp(run, "A"), Is.EqualTo(10));
 	}
 
-	[Test]
-	public void LosingABattleEndsTheRun()
-	{
-		var run = Run(Fight(Foe(2, hit: 99)), Fight(Foe(2)));
-
-		(run, _) = run.AfterBattle(Do(run.StartBattle(), new EndPartyTurnAction()));
-
-		Assert.That(run.Lost && run.IsOver, Is.True);
-		Assert.That(run.IsWon, Is.False);
-	}
+	// ===== Catching
 
 	[Test]
-	public void TheTeamRestsOnceBeforeTheLastBattle()
+	public void ACaughtFoeJoinsWithItsCycleAndTheHpItWasCaughtAt()
 	{
-		var run = WithTeam(Run(Fight(Foe(1, hit: 20)), Fight(Foe(1))), A, B);
+		var run = OnTrail(Run(), Fight(Foe("Brute", hit: 6)), Fight(Foe("Idle")));
 
 		RunReport report;
-		(run, report) = run.AfterBattle(Win(Do(run.StartBattle(), new EndPartyTurnAction())));
+		(run, report) = run.AfterBattle(Catch(run.StartBattle(), 2, hp: 10));
 
-		Assert.That(report.Rested, Is.True);
-		Assert.That(Hp(run, "A"), Is.EqualTo(20 + 12), "30% of 40 back");
-		Assert.That(Hp(run, "B"), Is.EqualTo(40), "a companion never rests past its max");
+		Assert.That(report.Caught, Is.EqualTo(new[] { "Brute" }));
+		var caught = run.Team[1];
+		Assert.That(caught.Hp, Is.EqualTo(10));
+		Assert.That(caught.Companion.Moves.Single().Amount, Is.EqualTo(6), "its own move");
+		Assert.That(run.Snares, Is.EqualTo(PartyRun.StartingSnares - 1), "the Snare is spent");
+		Assert.That(run.StartBattle().Allies().Count(), Is.EqualTo(2), "and it fights");
 	}
 
 	[Test]
-	public void WinningTheLastBattleWinsTheRun()
+	public void ACatchBeyondThreeGoesToTheBenchAndCanBeSwappedIn()
 	{
-		var run = Run(Fight(Foe(2)));
+		var run = OnTrail(
+			WithTeam(Run(), A, B, C),
+			Fight(Foe("Brute", 1), Foe("Runt", 3)),
+			Fight(Foe("Idle"))
+		);
 
-		(run, _) = run.AfterBattle(Win(run.StartBattle()));
+		RunReport report;
+		(run, report) = run.AfterBattle(Win(Catch(run.StartBattle(), 3, hp: 5)));
 
-		Assert.That(run.IsWon && run.IsOver, Is.True);
+		Assert.That(report.ToBench, Is.EqualTo(new[] { "Runt" }));
+		Assert.That(run.Team, Has.Count.EqualTo(PartyRun.TeamSize));
+
+		run = run.Swap(teamIndex: 1, benchIndex: 0);
+		Assert.That(run.Team.Select(m => m.Companion.Name), Is.EqualTo(new[] { "A", "Runt", "C" }));
+		Assert.That(run.Bench.Single().Companion.Name, Is.EqualTo("B"));
 	}
+
+	// ===== Cards and the shop
 
 	[Test]
 	public void ATakenRewardJoinsTheDeck()
 	{
-		var run = Run(Fight(Foe(2)), Fight(Foe(2)));
+		var run = Run();
 
-		run = run.Take(run.RewardOffer().Single());
-		var deck = run.StartBattle().CardsIn(ZoneType.Hand).Select(c => c.Name);
+		run = run.Take(run.RewardOffer()[0]);
 
-		Assert.That(deck, Is.EquivalentTo(new[] { "Wipe", "Prize" }));
+		Assert.That(run.Deck, Has.Count.EqualTo(2));
+	}
+
+	[Test]
+	public void TheShopSellsSnaresForGold()
+	{
+		var run = Run().BuySnare();
+
+		Assert.That(run.Snares, Is.EqualTo(PartyRun.StartingSnares + 1));
+		Assert.That(run.Gold, Is.EqualTo(PartyRun.StartingGold - PartyRun.SnarePrice));
+
+		var broke = run with { Gold = PartyRun.SnarePrice - 1 };
+		Assert.That(broke.CanBuySnare, Is.False);
+		Assert.That(broke.BuySnare(), Is.EqualTo(broke), "nothing happens");
+	}
+
+	[Test]
+	public void AShopCardCanBeBoughtOnce()
+	{
+		var run = Run() with { Gold = 999 };
+
+		run = run.BuyCard(0);
+		Assert.That(run.Deck.Last(), Is.EqualTo(run.ShopCards()[0]));
+		Assert.That(run.CanBuyCard(0), Is.False);
+		Assert.That(run.CanBuyCard(1), Is.True);
+	}
+
+	[Test]
+	public void TheShopRemovesACardForGold()
+	{
+		var run = (Run() with { Gold = 999 }).Take(Wipe("Extra"));
+
+		run = run.Remove(0);
+
+		Assert.That(run.Deck.Select(c => c.Name), Is.EqualTo(new[] { "Extra" }));
+		Assert.That(run.Gold, Is.EqualTo(999 - PartyRun.RemovePrice));
+		Assert.That(run.CanRemove, Is.False, "never the last card");
 	}
 }

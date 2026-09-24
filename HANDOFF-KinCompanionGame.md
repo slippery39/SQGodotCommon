@@ -14,8 +14,13 @@ State at handoff (2026-09-23): **216 tests green**, solution and Godot project b
 > "AUTO-BATTLE v1" at the top of `KinJam.md`. Much of §2–§3 below (OwnedBy, the move cooldown, Draw
 > Fire, per-companion rewards) no longer exists. Then the same day: a hover INSPECTOR on every
 > creature, and **CATCHING v1** (the Snare item; the bench between battles — KinJam "CATCHING v1").
-> **Next: Shayne plays it.** Not built: the in-battle bench, and area-based floors (DISCUSSED, not
-> decided: Monster Train style — pick one of two areas and get all of it; town → wild area → gym).
+> Then **THE MAP v1**: two regions of town → one of two wild areas (each with its own pool) → gym
+> (KinJam "THE MAP v1"; `PartyWorld`, `PartyRun.Phase`). **Next: Shayne plays it.** Not built: the
+> in-battle bench, passives/colours for caught monsters.
+>
+> **Scar: Python text-mode writes CRLF on Windows.** Patch scripts that `open(p, 'w')` turned LF files
+> into CRLF and every commit rewrote every line. The repo MIXES endings per file — keep each file's
+> own: read with `newline=''`, normalise, write back in the file's original ending.
 
 ---
 

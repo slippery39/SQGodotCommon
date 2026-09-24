@@ -15,7 +15,7 @@ namespace KinGame;
 /// **Built of Buttons, and the board hides the hand while it shows.** Card hover is physics picking
 /// and the fan's cards carry their own ZIndex, so a hand left visible draws over any overlay.
 /// </summary>
-public sealed class KinPartyRunScreens
+public sealed partial class KinPartyRunScreens
 {
 	private readonly ColorRect _root;
 	private readonly VBoxContainer _column;
@@ -100,7 +100,7 @@ public sealed class KinPartyRunScreens
 	{
 		Begin(
 			$"VICTORY — {beaten.ToUpperInvariant()}",
-			$"Next: battle {run.Battle + 1} of {run.Encounters.Count}, {run.Next.Name}"
+			$"+{report.Gold} gold.   Next: {Ahead(run)}"
 		);
 
 		var news = new List<string>();
@@ -111,10 +111,6 @@ public sealed class KinPartyRunScreens
 				report.ToBench.Contains(name)
 					? $"Caught the {name}! The team is full, so it waits on the bench."
 					: $"Caught the {name}! It joins the team."
-			);
-		if (report.Rested)
-			news.Add(
-				$"The team rests before the last battle: +{(int)(PartyRun.RestHeal * 100)}% HP."
 			);
 		foreach (var line in news)
 			_column.AddChild(Label(line, 24, KinPalette.Gold));
@@ -144,8 +140,8 @@ public sealed class KinPartyRunScreens
 		Begin(
 			run.IsWon ? "THE RUN IS WON" : "DEFEAT",
 			run.IsWon
-				? $"All {run.Encounters.Count} battles, and the Old Tusker with them."
-				: $"The team fell in battle {run.Battle + 1} of {run.Encounters.Count}: {run.Next.Name}."
+				? $"Both gyms beaten, with {run.Team.Count + run.Bench.Count} monsters to your name."
+				: $"The team fell in {run.Region.Name}."
 		);
 
 		var buttons = Row();
@@ -159,9 +155,10 @@ public sealed class KinPartyRunScreens
 	/// </summary>
 	private void ShowTeam(PartyRun run, Action<int, int> swap)
 	{
+		var swapping = swap is not null && !run.Bench.IsEmpty;
 		_column.AddChild(
 			Label(
-				$"TEAM{(run.Bench.IsEmpty ? "" : " — pick one, then a benched monster to swap")}     SNARES ×{run.Snares}",
+				$"TEAM{(swapping ? " — pick one, then a benched monster to swap" : "")}     SNARES ×{run.Snares}     GOLD {run.Gold}",
 				20,
 				new Color(KinPalette.Bone, 0.8f)
 			)
@@ -172,8 +169,8 @@ public sealed class KinPartyRunScreens
 		for (var i = 0; i < run.Team.Count; i++)
 		{
 			var member = Monster(run.Team[i]);
-			member.ToggleMode = !run.Bench.IsEmpty;
-			member.ButtonGroup = run.Bench.IsEmpty ? null : group;
+			member.ToggleMode = swapping;
+			member.ButtonGroup = swapping ? group : null;
 			team.AddChild(member);
 		}
 
@@ -188,7 +185,7 @@ public sealed class KinPartyRunScreens
 			var sitter = Monster(run.Bench[b]);
 			sitter.Pressed += () =>
 			{
-				if (group.GetPressedButton() is { } picked)
+				if (swapping && group.GetPressedButton() is { } picked)
 					swap(picked.GetIndex(), benchIndex);
 			};
 			bench.AddChild(sitter);
@@ -274,6 +271,11 @@ public sealed class KinPartyRunScreens
 			KinPalette.Box(fill.Darkened(0.1f), KinPalette.Gold, 5)
 		);
 		tile.AddThemeStyleboxOverride("focus", KinPalette.Box(fill, KinPalette.Gold, 5));
+		// A tile you cannot take (a shop card you cannot afford) is dimmed, not Godot's dark default.
+		tile.AddThemeStyleboxOverride(
+			"disabled",
+			KinPalette.Box(fill.Darkened(0.35f), new Color(KinPalette.Bone, 0.3f), 2)
+		);
 		tile.Pressed += pressed;
 
 		var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -291,16 +293,18 @@ public sealed class KinPartyRunScreens
 		heading.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 		heading.CustomMinimumSize = new Vector2(1, 0);
 		column.AddChild(heading);
-		column.AddChild(
-			new TextureRect
-			{
-				Texture = art,
-				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-				StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-				CustomMinimumSize = new Vector2(0, Mathf.Min(size.Y * 0.4f, 200)),
-				MouseFilter = Control.MouseFilterEnum.Ignore,
-			}
-		);
+		// No art, no art gap: an empty window pushed a shop tile's text out of its bottom.
+		if (art is not null)
+			column.AddChild(
+				new TextureRect
+				{
+					Texture = art,
+					ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+					StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+					CustomMinimumSize = new Vector2(0, Mathf.Min(size.Y * 0.4f, 200)),
+					MouseFilter = Control.MouseFilterEnum.Ignore,
+				}
+			);
 		foreach (var line in lines.Where(l => l.Length > 0))
 		{
 			var label = Label(line, 20, KinPalette.Bone);

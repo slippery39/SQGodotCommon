@@ -320,19 +320,6 @@ public static class PartyContent
 		),
 	];
 
-	/// <summary>
-	/// **Five fights, harder each time, the Old Tusker last.** Placed for a team that grows from one
-	/// to three: the first fight is a single foe in front of a lone starter.
-	/// </summary>
-	public static readonly ImmutableList<Encounter> Encounters =
-	[
-		new("A wild Boar", [Boar(2)]),
-		new("Boar and Wisp", [Boar(1), Wisp(3)]),
-		new("The Stonebeak's perch", [Stonebeak(2), Wisp(4)]),
-		new("Three at once", [Boar(1), Wisp(2), Stonebeak(4)]),
-		new("The Old Tusker", [OldTusker(2), Wisp(4)]),
-	];
-
 	public static readonly PartyScenario Alone =
 		new(
 			"One against two",
