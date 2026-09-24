@@ -48,7 +48,7 @@ SQGodotCommon/
 │   │                                #   .Archetypes.cs holds each companion's archetype cards),
 │   │                                #   KeywordLibrary (the glossary, as DATA — console and UI share it)
 │   ├── Run/                         # Run + RunCard (OUTSIDE GameState); Companion; ActMap; ShopOffer
-│   ├── Party/                       # THE COMPANION GAME slice — Ally/Foe/Intent, PartyState is its API
+│   ├── Party/                       # THE COMPANION GAME — PartyState API; PartyWorld.Tiers tunes; PartySim
 │   └── KinBattleFactory.cs          # one GameState per battle; KinStateExtensions is the API
 ├── KinCore.Tests/                  # NUnit; inline card definitions only
 ├── KinConsole/                     # terminal front end — THE REMOTE SURFACE, needs no Godot
@@ -58,7 +58,7 @@ SQGodotCommon/
     ├── Common/                      # reusable utilities — Cards/2D is game-agnostic, use it
     ├── Project/                     # GameManager, main menu
     └── KinGame/                    # DOOMJAM front end — reads KinCore, decides nothing
-        ├── KinPartyBoard.cs        #   THE COMPANION GAME slice — kin_party.tscn; + KinPartyCell
+        ├── KinPartyBoard.cs        #   THE COMPANION GAME — kin_party.tscn; + Cell, Inspector, RunScreens(.Map)
         ├── KinBoard.cs             #   the battle screen; layout contract lives in KinUI.md
         ├── KinLaneCell.cs          #   one lane slot: art, attack/life marks, TRAIT strip
         ├── KinHandView.cs          #   the fan, on Common/Cards/2D; drag -> PlayCardAction
@@ -87,7 +87,7 @@ nothing is orphaned — you should not need any of it.
 
 | Kind | Location | Loads |
 |---|---|---|
-| Design doc — read first | `KinJam.md` | read it |
+| Design doc — read first; lessons for ANY deckbuilder | `KinJam.md`; `docs/design-principles.md` | read both |
 | **The setting — GENERIC FANTASY substrate; themes swappable on top** | `KinSettingSketches.md` | read it before naming any content |
 | **The next thing to build — v3** | `KinV3Plan.md` | read it before starting any v3 phase |
 | Where the last session got to | `HANDOFF-KinCompanionGame.md` | read it when picking the work back up |

@@ -1,133 +1,138 @@
-# Handoff — THE COMPANION GAME: the pivot, the slice, three companions
+# Handoff — THE COMPANION GAME: auto-battle, catching, the map, ten regions on a curve
 
-**Read this, then "THE COMPANION GAME" at the top of `KinJam.md`, then the `design-card` skill
-before touching any card, companion or foe.** `HANDOFF-KinCompanionGuard.md` is the previous session
-and describes a game that no longer exists — read only its §5 scars.
+**Read this, then the top of `KinJam.md` (its newest sections come first), then
+`docs/design-principles.md` (what we learned, with the evidence), then the `design-card` skill before
+touching any card, creature or foe.** Earlier `HANDOFF-Kin*.md` files describe games
+that no longer exist — read only their scars sections.
 
-State at handoff (2026-09-23): **216 tests green**, solution and Godot project build, branch
-`kin-pivot`, **nothing pushed**. Check `git status` for anything written after the commits below.
-
-> **UPDATE 2026-09-24 — AUTO-BATTLE v1, uncommitted when written.** Shayne's first full run (lost
-> in battle 3) found a FLOW failure, and the owned-card deck was replaced: every creature plays its
-> own move cycle at end of turn in Speed order, the deck is the trainer's (generic cards dropped on a
-> monster or foe), every monster steps once a turn and a step into an ally swaps. Design and reasons:
-> "AUTO-BATTLE v1" at the top of `KinJam.md`. Much of §2–§3 below (OwnedBy, the move cooldown, Draw
-> Fire, per-companion rewards) no longer exists. Then the same day: a hover INSPECTOR on every
-> creature, and **CATCHING v1** (the Snare item; the bench between battles — KinJam "CATCHING v1").
-> Then **THE MAP v1**: two regions of town → one of two wild areas (each with its own pool) → gym
-> (KinJam "THE MAP v1"; `PartyWorld`, `PartyRun.Phase`). Then **trainer health, the gym leader and
-> the in-battle bench** (KinJam "TRAINER HEALTH"). Then `party-sim` (a beam-search bot) and **ten
-> regions tuned to Shayne's curve** (KinJam "THE CURVE"). **Next: Shayne plays it.** Not built:
-> passives/colours for caught monsters; choosing who steps in from the bench.
->
-> **Scar: Python text-mode writes CRLF on Windows.** Patch scripts that `open(p, 'w')` turned LF files
-> into CRLF and every commit rewrote every line. The repo MIXES endings per file — keep each file's
-> own: read with `newline=''`, normalise, write back in the file's original ending.
+State at handoff (2026-09-24): branch **`kin-pivot` at `de65db9`**, **242 tests green**, solution
+and Godot project build, **nothing pushed**. `SQGodotCommon/project.godot` shows as modified — that
+predates this work (a headless import strips two comment lines); **leave it out of commits.**
 
 ---
 
-## 0. What changed, in one paragraph
+## 0. Where the game is, in one paragraph
 
-A playtest of Guard found the lane/unit game and the companion game fighting each other ("Slay the
-Spire with extra steps, not a true companion game"). **Shayne pivoted KIN to a monster-companion
-deckbuilder — Pokemon / Monster Rancher / Digimon as a roguelike.** Units are cut. Up to three
-companions ARE the board; one combined deck holds each companion's cards; foes are creatures playing
-telegraphed intents, never a deck. It is built as ONE BATTLE, beside the old game, and it plays.
-**The old lane game still exists and still runs** (DESCEND on the menu) — deleting it is a later,
-deliberate step (§6).
+KIN is a **monster-collecting roguelike deckbuilder** (Pokemon / Monster Rancher × Slay the Spire ×
+a dash of Monster Train). **Your monsters fight on their own** — every creature, yours and the foes',
+plays a telegraphed cycle of moves at the end of the turn, in Speed order. **You are the trainer**: a
+deck of generic cards dropped ON a monster or a foe (Guard, Rally, Dash, Hasten, Stagger, Gust…), and
+one free step per monster per turn to aim and dodge. **A foe's attack that finds no monster hits YOU**
+(30 health for the run). You start with one monster and **catch** the rest with Snares. A run is
+**ten regions** — town → one of two wild areas → a gym — tuned so the bot wins **25%**.
 
-## 1. Commits this session
+## 1. What this session did, in order
 
 | Commit | What |
 |---|---|
-| `8f16cef` | The last of the lane game: the Guard/move playtest fixes, committed as a clean point to return to |
-| `9b51e5a` | **The companion game slice** — `KinCore/Party/`, `kin_party.tscn`, COMPANIONS on the main menu, companion colours, hover-lights-the-owner, floating feedback, the pivot docs |
-| `f6ab8c0` | **KITS v2** — Bramble (Thorns) and Pike (Momentum): opposite goals on one board. The `design-card` skill |
-| `b6c09f0` | **Gale** (the Controller — pushes foes, Off-Balance), "Three against three", six generated portraits, the monster-fills-the-cell board |
+| `c46496b` | **AUTO-BATTLE v1** — owned cards replaced: move cycles in Speed order, a trainer's deck of generic cards, a free step (into an ally = swap) |
+| `b09171b` | **The hover inspector** — hover any creature: stats, when it acts, passive, its whole cycle in words |
+| `244641c` | **Catching v1** — the Snare (an item, not a card; a third of HP or less, certain, never a boss); the bench between battles |
+| `bf757dc` | **THE MAP v1** — towns (full heal, a shop), two areas per region each with its OWN pool, trails (2 fights, a find, an optional deeper path with the area's rare), gyms, gold. Five new creatures |
+| `229d380` | Portraits for Mosshell, Briar Viper, Cinder Newt, Bog Toad, Old Mire, Old Tusker |
+| `d9d1b08` | **Trainer health** (an attack that lands on no monster hits you), **the gym leader** (the mirror: your swing into an empty column hits them), **the in-battle bench** (first benched steps in when one faints) |
+| `dba8115` | **`party-sim`** — a beam-search bot that plays whole runs, reports per region |
+| `de65db9` | **Ten regions tuned to Shayne's curve** via a difficulty-tier table |
 
-## 2. The rules as built — the decided list lives in `KinJam.md`
+Every design decision, its reason and Shayne's words are in `KinJam.md`, newest first: "THE CURVE",
+"TRAINER HEALTH…", "THE MAP v1", "CATCHING v1", "AUTO-BATTLE v1". Why each exists is there — read it
+before changing one.
 
-- **Board:** a row of 5 spaces a side, column N faces column N. **Your attacks fire straight ahead.**
-- **Team of up to 3**, each with its own HP. **No player life** — all knocked out = defeat.
-- **Combined deck; every card belongs to one companion** (`OwnedBy`) and only it can play the card.
-  Knocked out = its cards are dead. Companions do nothing without cards.
-- **Stats:** HP, Power (added to attack cards), Speed (the free move's cooldown: 3 every turn, 2 every
-  other, 1 every third; a move is one step). **Cards that move you ignore the cooldown.**
-- **Foes** cycle a fixed intent pattern; every intent is a SHAPE anchored on the foe's column, or
-  homing. `PartyState.IntentTargets` is the ONE account of where an attack lands — the telegraph and
-  the resolution both read it.
-- **A card is discarded AFTER it resolves** — before that, Feint drew itself back (found in play).
+## 2. The rules as built
 
-**The three companions — "same board, opposite goals":**
-
-| | Wants | Passive | Signature cards |
-|---|---|---|---|
-| **Bramble** (green) | to be HIT | Thorns 2 | Thornhide, Retaliate (= her Block), Draw Fire, Root Wall |
-| **Pike** (blue) | never to be where the hit lands | Momentum +2/step | Feint, Lunge, Hit and Run, Flank |
-| **Gale** (purple) | the FOES where it chooses | Off-Balance +2 | Gust, Slam, Whirlwind |
-
-Playtests: v1 kits "did not feel different" (fixed by passives + opposite goals — "completely
-different"); v1 visuals "every card looked the same" (fixed by identity colour + owner portrait);
-Gale "interesting, we'll see" — undecided.
+- **Board:** a row of 5 spaces a side, column N faces column N. Attacks fire straight ahead (a shape
+  of offsets), or home on the lowest HP.
+- **A creature** (`Creature` → `Ally`, `Foe`): HP, Block, Speed, a `Pattern` (its cycle). Allies add
+  Power and a passive (Thorns / Momentum / Off-Balance). A caught foe becomes an ally with exactly its
+  cycle, Power 0, at the HP it was caught at, **and its region's scaling**.
+- **The turn:** play cards (3 energy, hand of 5), take free steps, throw Snares — then END TURN: every
+  creature acts once, fastest first, ties to you. Order and targets are fixed before anyone acts.
+- **Your health:** 30, healed only in towns. A foe attack that lands on NO monster hits you once. 0 =
+  the run is lost. All monsters (board and bench) down = lost.
+- **A gym:** a leader with health (90 × the region's HP tier); your swing that lands on no foe hits
+  them; 0 wins. No gym creature can be caught.
+- **The run:** `PartyRun.Phase` — Town → ChooseArea → Trail (Battle, Battle, Find, Deep?) → Gym → next
+  region's Town (everyone healed). Gold from wins buys Snares (30), cards (50), removals (40).
 
 ## 3. Where things are
 
-- **Engine** — `KinCore/Party/`: `PartyModel` (Ally, Foe, Intent, OwnedBy, PartyBattle),
-  `PartyActions` (play, move, end/start turn, every `CardStep`), `PartyState` (the API the board
-  reads), `PartyContent` (companions, foes, scenarios, rewards, encounters, `PartyBattleFactory`),
-  `PartyRun` (the run, outside GameState).
-- **Tests** — `KinCore.Tests/PartyTests.cs` and `PartyRunTests.cs`, 55 of the 216. Inline definitions only.
-- **Screen** — `KinPartyBoard` + `KinPartyCell`; reuses `KinHandView`, `KinCardFace`, `KinArt`,
-  `KinAnimator` unchanged except where noted in `KinUI.md` ("THE COMPANION GAME screen").
-- **Art** — `Art/{bramble,pike,gale,boar,wisp,stonebeak}.png`, generated locally. ComfyUI is
-  installed at `D:\AI\ComfyUI_windows_portable` with DreamShaper XL Turbo; it was running.
-- **Docs** — `KinJam.md` (design + playtests), `KinUI.md` (screen rules), `Commands.md` (flags:
-  `--scenario`, `--click-space`, `--focus`, `--play`, `--end-turn`), `docs/research/companion-games.md`
-  (the survey), `docs/paper/companion-slice.md` (v1, history).
+- **Engine — `KinCore/Party/`:** `PartyModel` (Creature/Ally/Foe/Intent/PartyBattle), `PartyActions`
+  (play a card, step, Snare, end/start turn, every `CardStep`, events), `PartyState` (THE API the
+  board reads: `ActingOrder`, `IntentTargets`, `ForecastIfTurnEndsNow`, `AimsAtTrainer/Leader`,
+  `StepRefusal`, `CatchRefusal`; `Act` resolves a move), `PartyContent` (starters, starter deck,
+  rewards, original foes, practice scenarios, `PartyBattleFactory`), `PartyWorld` (new creatures,
+  areas, gyms, **`Tiers` — THE TUNING TABLE**, `Regions`, `Trail`), `PartyRun` (the run, outside
+  GameState), `PartyBot` + `PartySim` (the sim).
+- **Tests — `KinCore.Tests/`:** `PartyTests` (battle rules), `PartyRunTests` (the run, the map, the
+  tiers), `PartyBotTests` (the bot fires). Inline definitions only; real content only in the
+  "every real area and gym builds a battle" check.
+- **Screen — `SQGodotCommon/KinGame/`:** `KinPartyBoard` (the battle; the run flow is `Continue()`,
+  dispatching on `PartyRun.Phase`), `KinPartyCell`, `KinPartyInspector`, `KinPartyRunScreens`
+  (starters, after a battle, the end) + `KinPartyRunScreens.Map.cs` (town/shop, areas, find, deeper
+  path, gym). Screen rules: `KinUI.md` "THE COMPANION GAME screen".
+- **Console — `KinConsole/PartySimCommand.cs`.** Numbers: `docs/findings/companion-balance.md`.
+- **Art — `SQGodotCommon/KinGame/Art/*.png`**, generated locally (ComfyUI at
+  `D:\AI\ComfyUI_windows_portable`, DreamShaper XL Turbo; the `generate-card-art` skill). Cards have
+  NO art yet — every card face is a placeholder silhouette.
 
-## 4. Scars worth not re-earning
+## 4. Tools
 
-1. **Splitting a mixed tree into commits** — scar 1 of the last handoff still holds (the hook
-   re-adds the whole working-tree file). What worked: format the tree with `dotnet-csharpier` FIRST,
-   `git worktree add -b split-temp <scratch> HEAD`, build commit 1's files there by script (cut the
-   later change's blocks out of the final files), build + test it, commit; copy every changed file
-   over for commit 2; verify byte-identity against the main tree; `git reset --mixed` onto it.
-2. **The shared card text fitter lies twice.** It assumes a 112px box (ours was 104 — Root Wall lost
-   "Block.") and it measures WITHOUT line spacing (Flank lost "lone foe." at 112). Companion cards
-   have no stat row and now take that room. **Read every new card's text in a capture.**
-3. **A capture cannot hover or drag.** `--focus=N` stands in for a hover, and `_Process` must treat it
-   as a FALLBACK or the next frame clears it. It shows the look, not that hovering triggers it.
-4. **A plain headless run does NOT import new art** — `godot-mono --path SQGodotCommon --headless
-   --import` does. Check `git diff SQGodotCommon/project.godot` after (it strips comments).
-5. **CSharpier reformats on commit, so a patch script written against pre-commit text stops
-   matching.** Read the current text before anchoring on it.
-6. **Anchoring a band to a Control's bottom and growing it upward grew it DOWN**, and the clip ate the
-   forecast line. A full-rect VBox (top band, expanding spacer, foot band) is what works.
-7. **Name clashes with the lane game**: `IntentKind` exists in `KinCore`, so the Party enum is
-   `IntentType`; a `Name(int)` helper on a `Node2D` collides with `Node.Name`.
-8. **Generated art: the subject noun decides the picture.** "a heavy grey bird with a stone beak"
-   gave three plain grey birds; "a bird carved from grey granite" gave stone. Inspect at 500px.
-9. **`cat > file` with no heredoc waits on stdin forever** in a Bash call — a probe hung until it was
-   killed. Write files with the Write tool.
+```
+dotnet run --project KinConsole -c Release -- party-sim 300       # ~4 min; per-region table vs the curve
+dotnet run --project KinConsole -c Release -- party-sim trace 7   # one run, every play and turn
+./Run-Godot.ps1 KinGame/kin_party.tscn -Capture shots/x -Seconds 1.2 -GameArgs '--starter=1','--screen=gymfight'
+```
+Capture flags (all in `Commands.md`): `--scenario`, `--click-space`, `--focus`, `--play=N[@S|@fS]`,
+`--inspect`, `--snare`, `--end-turn`, `--starter` + `--screen=areas|find|deep|gym|gymfight|between|over`.
 
-## 5. What was deferred, on purpose
+## 5. The curve, as measured (bot baseline — Shayne's call)
 
-- **HOW catching works** — a card or another action (Shayne: "defer it for now"). There will be one.
-- **Which enemies are catchable** — leaning "regular foes yes, bosses no"; a catchable foe's intents
-  should match the cards it brings.
-- **A grid instead of a row** — the fallback if the row plays flat. It has not.
+Target 90% through region 3 / 75% through 5 / 25% win. **Bot: 94% / 70% / 25.3%** (300 runs).
+Per-region survival and what it took: `docs/findings/companion-balance.md` (c). The one-line lesson:
+**HP and damage scaling did nothing — catches scale with their region. More foes than monsters (up to
+five) is the lever**, and every death since is your health on the trail. Known: **region 5 spikes**
+(77% vs 91%, the Ridge+Crags pools); **gyms barely kill**; racing the leader wins 42–82% of gyms.
 
-## 6. What I would do next — agreed with Shayne, in this order
+## 6. Scars worth not re-earning
 
-1. **The run — v1 BUILT at the end of this session, unplayed** (`KinCore/Party/PartyRun.cs`,
-   `KinPartyRunScreens`, KinJam.md "THE RUN"). Play it first. Then **catching** — the join after
-   battles 1 and 2 is its stand-in. The lane game's `Run`/`ActMap`/shop are prior art to read, not to
-   reuse blindly — they are built around a single companion and a life total.
-2. **More foes, and a boss** — every companion needs a foe it punishes and one that punishes it
-   (Gale has the Wisp; Bramble and Pike have nothing that singles them out yet). One boss as an exam.
-3. **The telegraph lever** — cards that cancel, delay or change an intent. The biggest unbuilt lever
-   in the `design-card` skill; probably a fourth companion's identity.
-4. **Delete the lane game** once the pivot is certain: `KinBoard`, units, the Opponent, Guard, most of
-   `StarterContent`, ~160 tests, the old-theme SVGs. Then fix the root `CLAUDE.md` solution map,
-   which still describes lanes.
-5. **A hover panel for foes and companions** — rules text today only appears on click.
+1. **Python text mode writes CRLF on Windows.** Patch scripts using `open(p, 'w')` turned LF files
+   CRLF and a commit rewrote every line. The repo MIXES endings per file (`CLAUDE.md` is CRLF): read
+   with `newline=''`, normalise, write back in the file's own ending. Check `git diff --stat` for
+   absurd counts before committing.
+2. **Splitting a mixed tree into commits:** the pre-commit hook runs CSharpier on each staged `.cs` and
+   re-adds it WHOLE — partial staging cannot survive it. What works: build each intermediate state as
+   files (forward-apply from HEAD, or reverse the later patches), commit them in turn in a scratch
+   `git worktree`, build + test each, then `git reset --mixed <tip>` in the main tree, run
+   `dotnet-csharpier` on the changed files and confirm `git diff` is empty (bar `project.godot`).
+3. **CSharpier reformats on commit**, so a patch anchored on pre-commit text stops matching. Read the
+   current text first.
+4. **Bash heredocs feeding Python break on quotes** — put scripts in files (scratchpad) and run them.
+   A `cat > file` with no input waits forever.
+5. **A capture cannot hover, drag, or click the FOE row.** `--focus`, `--inspect`, `--snare`, `--play`,
+   `--screen` stand in; they show the look, not the input path.
+6. **An unwrapped Label is as wide as its text** and drags its whole container with it — the hint strip
+   pushed END TURN off screen. `AutowrapMode` + `CustomMinimumSize.X = 1`. A wrapped label measured
+   before layout takes a word per line — the inspector re-fits every frame.
+7. **New art is not imported by a plain run:** `godot-mono --path SQGodotCommon --headless --import`.
+8. **Generated art:** the subject noun decides the picture; cull at 500px (two-headed vipers, four
+   tusks). Three candidates a creature.
+9. **The sim is a floor:** a one-move bot measured ITSELF (67%, all "hard"); the beam-search bot said
+   99%. Trace a run before believing a number. The bot sees what Dash will draw — a small peek.
+
+## 7. Not built / open
+
+- **In-battle bench choice** — the first benched steps in; the player does not choose.
+- **Caught monsters have no passive and no colour** of their own (they show as slate).
+- **Card art**, and signature cards per monster (allowed, rare — none exist).
+- **Regions 3–10 reuse four areas and two gyms**; new creatures come once the curve settles.
+- **The lane game still exists** (DESCEND on the menu) — deleting it is a deliberate later step.
+- **Items and events that edit a monster's cycle** (Monster Rancher training) — designed, not built.
+
+## 8. What comes next — agreed with Shayne
+
+1. **Shayne plays a full ten-region run** and compares himself to the bot. If he loses early where
+   the bot clears 94%, set the bot's targets above the player's (the curve is a PLAYER curve).
+2. **New creatures and areas** for regions 3–10, now that the curve holds (re-run `party-sim` after).
+3. Smooth **region 5**, and even out **the leader race** (a real choice, not a default).
+4. Passives / colours for caught monsters; choosing who steps in from the bench.
+5. When the pivot is certain: delete the lane game and fix the root `CLAUDE.md` solution map.

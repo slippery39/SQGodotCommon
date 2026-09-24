@@ -16,6 +16,9 @@ judge by principle, prove by test, then look at it.
 
 ## 1. The principles — judge every card by these
 
+These are the KIN-specific ones. The general lessons behind them, each with the evidence of what
+we tried and what happened, are in `docs/design-principles.md` — read it first.
+
 1. **Every card creates a decision.** A card that is only numbers is filler; filler is the
    exception. Ask: *when would I NOT play this, or play it differently?* No answer = no decision.
 2. **Each companion is an archetype with its OWN relationship to the board.** Same board, opposite
