@@ -188,6 +188,10 @@ command shipped unwired for two sessions.
 > - **A hovered card lights every space on BOTH rows the engine accepts**: a monster ("▲ GUARD
 >   HERE"), a foe (Stagger), or an empty foe space (Gust: "GUST a foe in here"). The hand passes
 >   one int, so the board folds the row into it: 0–4 yours, 5–9 the foe's.
+> - **Hover any creature for the INSPECTOR** (`KinPartyInspector`): stats, when it acts this turn,
+>   its passive's rule, statuses, and its whole cycle in words with the next move marked. Its
+>   labels wrap at a FIXED width and it re-fits every frame: measured at once, every word took a
+>   line and it ran the height of the screen. Hidden while a card is hovered or dragged.
 > - **The step**: click a monster, and the spaces beside it light — "STEP HERE", or "▲ SWAP HERE" on
 >   an ally.
 

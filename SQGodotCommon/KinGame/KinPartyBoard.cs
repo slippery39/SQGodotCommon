@@ -63,6 +63,16 @@ public partial class KinPartyBoard : Node2D
 	/// <summary>`--focus=N` only: stands in for a hover a capture cannot make.</summary>
 	private int _captureFocusId;
 
+	private KinPartyInspector _inspector;
+
+	/// <summary>The creature the inspector shows, and the state it was drawn from. 0 = hidden.</summary>
+	private int _inspectedId;
+
+	private GameState _inspectedState;
+
+	/// <summary>`--inspect=N` only: hovers a cell (0–4 yours, 5–9 the foe's) for a capture.</summary>
+	private int? _captureInspect;
+
 	public override void _Ready()
 	{
 		KinAnimator.LoadConfiguredSpeed();
@@ -125,6 +135,11 @@ public partial class KinPartyBoard : Node2D
 						Report(TryPlay(card, at) ?? "played");
 					};
 			}
+			if (
+				arg.StartsWith("--inspect=")
+				&& int.TryParse(arg["--inspect=".Length..], out var inspect)
+			)
+				_captureInspect = inspect;
 			if (arg == "--end-turn")
 				GetTree().CreateTimer(1.6).Timeout += OnEndTurn;
 		}
@@ -406,12 +421,63 @@ public partial class KinPartyBoard : Node2D
 		var ui =
 			Common.Cards.CardUIManager.DraggingCard
 			?? Common.Cards.CardUIManager.CurrentHoveredCard;
+		UpdateInspector(cardInPlay: ui is not null);
+
 		var id = int.TryParse(ui?.Id, out var parsed) ? parsed : _captureFocusId;
 		if (id == _focusCardId)
 			return;
 
 		_focusCardId = id;
 		RenderRows();
+	}
+
+	/// <summary>
+	/// **The creature under the mouse gets the inspector** — its stats, passive and whole cycle. Not
+	/// while a card is hovered or dragged (the lit drops matter more then) or a run screen shows.
+	/// Redrawn only when the creature or the state changes.
+	/// </summary>
+	private void UpdateInspector(bool cardInPlay)
+	{
+		_inspector.Fit();
+
+		var hovered =
+			cardInPlay || _screens.IsShowing
+				? null
+				: CreatureAt(GetViewport().GetMousePosition())
+					?? (_captureInspect is { } n ? CreatureInCell(n) : null);
+
+		if (hovered is null)
+		{
+			_inspector.Hide();
+			_inspectedId = 0;
+			return;
+		}
+		if (hovered.Value.Creature.Id == _inspectedId && _inspectedState == _state)
+			return;
+
+		var (creature, cell) = hovered.Value;
+		_inspectedId = creature.Id;
+		_inspectedState = _state;
+		var order = _state.ActingOrder().FindIndex(c => c.Id == creature.Id) + 1;
+		_inspector.Show(creature, order, cell.GetGlobalRect(), GetViewportRect().Size);
+	}
+
+	private (Creature Creature, Control Cell)? CreatureAt(Vector2 point)
+	{
+		for (var d = 0; d < PartyBattle.Spaces * 2; d++)
+			if (CreatureInCell(d) is { } found && found.Cell.GetGlobalRect().HasPoint(point))
+				return found;
+		return null;
+	}
+
+	/// <summary>The creature in a cell, in the drop numbering: 0–4 your row, 5–9 the foe's.</summary>
+	private (Creature Creature, Control Cell)? CreatureInCell(int d)
+	{
+		var space = d % PartyBattle.Spaces;
+		Creature creature = d < PartyBattle.Spaces ? _state.AllyAt(space) : _state.FoeAt(space);
+		return creature is null
+			? null
+			: (creature, (d < PartyBattle.Spaces ? _allyCells : _foeCells)[space].Root);
 	}
 
 	private void Render(ImmutableList<GameEvent> events)
@@ -797,6 +863,7 @@ public partial class KinPartyBoard : Node2D
 
 		// AFTER the pass above, which would switch its click-blocking ground off.
 		_screens = new KinPartyRunScreens(layer);
+		_inspector = new KinPartyInspector(layer);
 	}
 
 	private Control BuildBanner()
