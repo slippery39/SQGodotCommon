@@ -40,7 +40,7 @@ public sealed partial class KinPartyRunScreens
 	public void ShowTown(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
 	{
 		Begin(
-			$"TOWN — {run.Region.Name.ToUpperInvariant()}",
+			$"TOWN — {run.Region.Name.ToUpperInvariant()}  ({run.RegionIndex + 1} OF {run.Regions.Count})",
 			"Everyone is rested to full — you too. Spend your gold, then set out."
 		);
 
@@ -127,7 +127,7 @@ public sealed partial class KinPartyRunScreens
 	public void ShowAreas(PartyRun run, Action<int> choose)
 	{
 		Begin(
-			$"{run.Region.Name.ToUpperInvariant()} — CHOOSE AN AREA",
+			$"{run.Region.Name.ToUpperInvariant()} ({run.RegionIndex + 1} OF {run.Regions.Count}) — CHOOSE AN AREA",
 			"Each has its own creatures. Two wild fights, a find, then a deeper path — and the gym."
 		);
 

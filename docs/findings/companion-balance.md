@@ -6,6 +6,32 @@ the next; map rules are fixed (Snares to 2, one card if affordable, a random are
 only with two monsters and above 60% of your health and the team's HP). **A floor, not the game.**
 Read it for WHERE runs die and HOW they are won, per region.
 
+## 2026-09-24 (c) — TEN REGIONS, TUNED TO THE CURVE: 25.3% won (300 runs, seeds 1–300)
+
+**The curve (Shayne), for the bot as the baseline:** 90% through region 3, 75% through region 5,
+25% win all ten. Players get compared to the bot later. Regions 3–10 reuse the four areas and two
+gyms, scaled by `PartyWorld.Tiers` (foes per fight, HP ×, damage ×); leader health 60 → 90 base.
+
+| | Through 3 | Through 5 | Win |
+|---|---|---|---|
+| Target | 90% | 75% | 25% |
+| Bot | **94%** | **70%** | **25.3%** |
+
+Per region (survived / target): 98/97, 98/97, 98/97, 96/91, **77/91**, 92/80, 88/80, 76/80,
+68/80, 87/80. Pike 32%, Bramble 26%, Gale 18%. ~0.75 s a run; 300 runs ≈ 4 minutes.
+
+**What it took — and the finding that matters more than the numbers:**
+- **HP and damage scaling alone did NOTHING**: at 2.6× HP and 4.2× damage, 88% still won, your
+  health untouched (30/30 at every gym). Catches join at their region's scaling and fights had at
+  most three foes, so three monsters always covered every attack.
+- **More foes than monsters is the lever** (up to five from region 5; `Formation` now places 4 and
+  5). Nearly every death since is YOUR HEALTH running out on the trail — the rule trainer health
+  was added for, finally pressured.
+- **Region 5 is a spike** (77% vs 91%): the Emberwastes use the Ridge + Crags pools, whose wide
+  spitters punish uncovered columns. Area pools differ in difficulty; 3, 5 and 9 share them.
+- **Gyms barely kill** (a few in regions 1–4); the curve is made on the trails. Racing the leader
+  now wins 42–82% of gyms (was ~90%) — a real option, not yet an even one.
+
 ## 2026-09-24 (b) — THE SAME GAME, a better bot: 99.0% won (300 runs, seeds 1–300)
 
 Shayne doubted a 5-second sim; a trace showed the first bot played one move ahead, never held a foe

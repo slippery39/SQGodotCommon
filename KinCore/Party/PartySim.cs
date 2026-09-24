@@ -52,6 +52,29 @@ public static class PartySim
 {
 	public const int TurnLimit = 40;
 
+	/// <summary>
+	/// **THE CURVE (Shayne, 2026-09-24), for the BOT as a baseline**: the share of runs that should get
+	/// THROUGH each region — 90% through region 3, 75% through region 5, 25% win all ten. Between those
+	/// points the per-region survival is even (geometric). Players are compared to the bot later.
+	/// </summary>
+	public static readonly ImmutableList<double> Target = Curve(
+		[(0, 1.0), (3, 0.90), (5, 0.75), (10, 0.25)]
+	);
+
+	private static ImmutableList<double> Curve((int Region, double Through)[] anchors)
+	{
+		var curve = ImmutableList.CreateBuilder<double>();
+		for (var a = 1; a < anchors.Length; a++)
+		{
+			var (from, start) = anchors[a - 1];
+			var (to, end) = anchors[a];
+			var step = Math.Pow(end / start, 1.0 / (to - from));
+			for (var r = from + 1; r <= to; r++)
+				curve.Add(start * Math.Pow(step, r - from));
+		}
+		return curve.ToImmutable();
+	}
+
 	/// <summary>Deeper only with this much of your health and the team's HP left.</summary>
 	public const double DeepIfHealthy = 0.6;
 

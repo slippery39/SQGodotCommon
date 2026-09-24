@@ -140,8 +140,8 @@ public sealed partial class KinPartyRunScreens
 		Begin(
 			run.IsWon ? "THE RUN IS WON" : "DEFEAT",
 			run.IsWon
-				? $"Both gyms beaten, with {run.Team.Count + run.Bench.Count} monsters to your name."
-				: $"The team fell in {run.Region.Name}."
+				? $"All {run.Regions.Count} gyms beaten, with {run.Team.Count + run.Bench.Count} monsters to your name."
+				: $"The team fell in {run.Region.Name} — region {run.RegionIndex + 1} of {run.Regions.Count}."
 		);
 
 		var buttons = Row();

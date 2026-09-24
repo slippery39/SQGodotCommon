@@ -36,7 +36,8 @@ public record Area(string Name, string Description, ImmutableList<Foe> Pool, Foe
 
 /// <summary>
 /// **A region: a town, then one of two wild areas, then its gym** (KinJam.md "THE MAP"). Wild fights
-/// field between `MinFoes` and `MaxFoes` creatures from the chosen area's pool.
+/// field between `MinFoes` and `MaxFoes` creatures from the chosen area's pool. Its areas and gym are
+/// already scaled to the region's DIFFICULTY TIER (`PartyWorld.Tiers`).
 /// </summary>
 public record Region(
 	string Name,
@@ -160,59 +161,143 @@ public static class PartyWorld
 
 	private static Foe At(Foe foe, int space) => foe with { Space = space };
 
-	/// <summary>**The leader's health in a gym** — your swings into empty columns hit them.</summary>
-	public const int LeaderHp = 35;
+	/// <summary>
+	/// **The leader's health in a gym, before the tier.** Was 35: the first good-bot sim won nine gyms
+	/// in ten by racing it (docs/findings/companion-balance.md). Scales with the tier's HP.
+	/// </summary>
+	public const int LeaderHp = 90;
+
+	// ===== The areas and gyms the regions are built from. Unscaled — a region scales its copy.
+
+	private static readonly Area MossyHollow =
+		new(
+			"Mossy Hollow",
+			"Damp and green. Boars root here; wisps drift between the trees.",
+			[PartyContent.Boar(0), PartyContent.Wisp(0), Mosshell],
+			BriarViper
+		);
+
+	private static readonly Area StonyRidge =
+		new(
+			"Stony Ridge",
+			"Bare rock and wind. Stonebeaks nest on the crags.",
+			[PartyContent.Stonebeak(0), PartyContent.Boar(0), CinderNewt],
+			Mosshell
+		);
+
+	private static readonly Area MistyMarsh =
+		new(
+			"Misty Marsh",
+			"Fog over black water. Toads, wisps, and things that bite.",
+			[BogToad, PartyContent.Wisp(0), BriarViper],
+			CinderNewt
+		);
+
+	private static readonly Area EmberCrags =
+		new(
+			"Ember Crags",
+			"Hot stone and ash. Newts in every crack.",
+			[CinderNewt, PartyContent.Stonebeak(0), Mosshell],
+			BogToad
+		);
+
+	private static readonly Encounter TuskerGym =
+		new("The Old Tusker", [PartyContent.OldTusker(2), At(PartyContent.Wisp(0), 4)]);
+
+	private static readonly Encounter MireGym =
+		new("The Old Mire", [At(BogToad, 0), At(OldMire, 2), At(BriarViper, 4)]);
+
+	private static readonly Encounter LastGym =
+		new("The Last Stand", [At(PartyContent.OldTusker(0), 1), At(OldMire, 3)]);
 
 	/// <summary>
-	/// **A gym: a leader and their creatures.** None of them can be caught — they are the leader's,
-	/// not wild — and the leader has health of their own.
+	/// **A region's difficulty: foes per wild fight, and how much foes' HP and damage are multiplied.**
+	/// THE TUNING TABLE — the curve (90% through region 3, 75% through region 5, 25% win, Shayne,
+	/// 2026-09-24) is hit by changing these, measured with `party-sim` against `PartySim.Target`.
 	/// </summary>
-	private static Encounter Gym(string name, params Foe[] foes) =>
-		new(name, [.. foes.Select(f => f with { Catchable = false })], LeaderHp);
+	public record Tier(int MinFoes, int MaxFoes, double Hp, double Damage);
 
+	public static readonly ImmutableList<Tier> Tiers =
+	[
+		new(1, 2, 1.00, 1.00),
+		new(2, 3, 1.00, 1.15),
+		new(3, 4, 1.30, 1.60),
+		new(4, 4, 1.50, 1.80),
+		new(4, 5, 1.65, 2.00),
+		new(4, 5, 1.80, 2.30),
+		new(4, 5, 2.00, 2.60),
+		new(4, 5, 2.15, 2.80),
+		new(4, 5, 2.25, 2.75),
+		new(4, 5, 2.50, 3.30),
+	];
+
+	/// <summary>
+	/// **THE MAP — ten regions.** Regions 3-10 reuse the four areas and two gyms, scaled by their tier;
+	/// new creatures come once the curve is settled. The last gym fields both old bosses.
+	/// </summary>
 	public static readonly ImmutableList<Region> Regions =
 	[
-		new(
-			"The Greenwood",
-			[
-				new(
-					"Mossy Hollow",
-					"Damp and green. Boars root here; wisps drift between the trees.",
-					[PartyContent.Boar(0), PartyContent.Wisp(0), Mosshell],
-					BriarViper
-				),
-				new(
-					"Stony Ridge",
-					"Bare rock and wind. Stonebeaks nest on the crags.",
-					[PartyContent.Stonebeak(0), PartyContent.Boar(0), CinderNewt],
-					Mosshell
-				),
-			],
-			Gym("The Old Tusker", PartyContent.OldTusker(2), At(PartyContent.Wisp(0), 4)),
-			MinFoes: 1,
-			MaxFoes: 2
-		),
-		new(
-			"The Mirelands",
-			[
-				new(
-					"Misty Marsh",
-					"Fog over black water. Toads, wisps, and things that bite.",
-					[BogToad, PartyContent.Wisp(0), BriarViper],
-					CinderNewt
-				),
-				new(
-					"Ember Crags",
-					"Hot stone and ash. Newts in every crack.",
-					[CinderNewt, PartyContent.Stonebeak(0), Mosshell],
-					BogToad
-				),
-			],
-			Gym("The Old Mire", At(BogToad, 0), At(OldMire, 2), At(BriarViper, 4)),
-			MinFoes: 2,
-			MaxFoes: 3
-		),
+		Build(0, "The Greenwood", MossyHollow, StonyRidge, TuskerGym),
+		Build(1, "The Mirelands", MistyMarsh, EmberCrags, MireGym),
+		Build(2, "The Stonefells", StonyRidge, EmberCrags, TuskerGym),
+		Build(3, "The Deepwood", MossyHollow, MistyMarsh, MireGym),
+		Build(4, "The Emberwastes", EmberCrags, StonyRidge, TuskerGym),
+		Build(5, "The Sunken Vale", MistyMarsh, MossyHollow, MireGym),
+		Build(6, "The Thornmarch", MossyHollow, StonyRidge, TuskerGym),
+		Build(7, "The Ashen Steppe", EmberCrags, MistyMarsh, MireGym),
+		Build(8, "The High Crag", StonyRidge, EmberCrags, TuskerGym),
+		Build(9, "The Wyrm's Rest", MistyMarsh, MossyHollow, LastGym),
 	];
+
+	private static Region Build(int tier, string name, Area a, Area b, Encounter gym)
+	{
+		var t = Tiers[tier];
+		Area Scaled(Area area) =>
+			area with
+			{
+				Pool = [.. area.Pool.Select(f => Scale(f, t))],
+				Rare = Scale(area.Rare, t),
+			};
+		return new(
+			name,
+			[Scaled(a), Scaled(b)],
+			new(
+				gym.Name,
+				[.. gym.Foes.Select(f => Scale(f, t) with { Catchable = false })],
+				(int)Math.Round(LeaderHp * t.Hp)
+			),
+			t.MinFoes,
+			t.MaxFoes
+		);
+	}
+
+	/// <summary>
+	/// **A creature at a tier**: HP and Block by the tier's HP, attacks by its damage. A creature caught
+	/// here keeps it — a region-6 Boar is a stronger catch than a region-1 one.
+	/// </summary>
+	public static Foe Scale(Foe foe, Tier tier)
+	{
+		var hp = (int)Math.Round(foe.MaxHp * tier.Hp);
+		return foe with
+		{
+			Hp = hp,
+			MaxHp = hp,
+			Pattern =
+			[
+				.. foe.Pattern.Select(i =>
+					i.Kind switch
+					{
+						IntentType.Attack => i with
+						{
+							Amount = Math.Max(1, (int)Math.Round(i.Amount * tier.Damage)),
+						},
+						IntentType.Block => i with { Amount = (int)Math.Round(i.Amount * tier.Hp) },
+						_ => i,
+					}
+				),
+			],
+		};
+	}
 
 	/// <summary>
 	/// **An area's trail**: two wild fights from its pool, a find, then the optional deeper path —
@@ -241,7 +326,7 @@ public static class PartyWorld
 			new(StopKind.Battle, wild()),
 			new(StopKind.Battle, wild()),
 			new(StopKind.Find, Find: (FindKind)rng.Next(3)),
-			new(StopKind.Deep, Fight(Math.Min(3, region.MaxFoes + 1), area.Rare)),
+			new(StopKind.Deep, Fight(Math.Min(PartyBattle.Spaces, region.MaxFoes + 1), area.Rare)),
 		];
 	}
 }

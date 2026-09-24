@@ -82,6 +82,15 @@
 > is a second clock, not the thing the monsters exist to protect. More monsters now cover more
 > columns — catching and the 5-monster board gain a purpose.
 
+> **THE CURVE (Shayne, 2026-09-24): TEN regions, tuned for the BOT as a baseline** — 90% through
+> region 3, 75% through region 5, 25% win the run. "Lets players explore more early on, but gets
+> more difficult as the game goes on." No difficulty modifiers yet. `PartyWorld.Tiers` is the
+> tuning table (foes per fight, HP ×, damage ×; regions 3–10 reuse the four areas and two gyms,
+> the last gym fields both old bosses); `party-sim` shows each region against `PartySim.Target`.
+> **Tuned 2026-09-24: 94% / 70% / 25.3%.** The lever that worked was MORE FOES THAN MONSTERS
+> (up to five) — HP and damage scaling alone did nothing, because catches scale with their region.
+> See `docs/findings/companion-balance.md` (c).
+
 > **Rejected: Monster Train's model** (summon monsters as cards into lanes, defend a health total).
 > It rebuilds the lane game the pivot left, brings deck dilution back as monster cards, and makes
 > monsters disposable where this game wants them to be YOURS.

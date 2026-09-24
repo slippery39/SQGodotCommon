@@ -46,44 +46,46 @@ public static class PartySimCommand
 				$"    {starter.Key, -8} {Pct(starter.Count(r => r.End == RunEnd.Won), starter.Count())}"
 			);
 
+		// One row a region: how many got THROUGH it against the curve, how it went there, and the gym.
+		// One row a region: how many got THROUGH it against the curve, how it went there, and the gym.
 		var regions = PartyWorld.Regions;
+		Console.WriteLine();
+		Console.WriteLine(
+			"  REGION               THROUGH (target)   survived (target)  died trail/deep/gym (health)  "
+				+ "at gym: you  team  size  deeper  leader-won  turns"
+		);
+		var previous = 1.0;
 		for (var region = 0; region < regions.Count; region++)
 		{
-			var reached = runs.Where(r => r.Region > region || r.Region == region).ToList();
+			var reached = runs.Where(r => r.Region >= region).ToList();
 			var died = reached.Where(r => r.Region == region && r.End != RunEnd.Won).ToList();
-
-			Console.WriteLine();
-			Console.WriteLine(
-				$"  REGION {region + 1} — {regions[region].Name}: {reached.Count} runs reached it"
-			);
-			if (reached.Count == 0)
-				continue;
-			Console.WriteLine(
-				$"    survived it      {Pct(reached.Count - died.Count, reached.Count)}"
-			);
-			foreach (var end in new[] { RunEnd.Trail, RunEnd.Deep, RunEnd.Gym, RunEnd.Stalled })
-			{
-				var here = died.Where(r => r.End == end).ToList();
-				if (here.Count > 0)
-					Console.WriteLine(
-						$"    died: {end, -9} {Pct(here.Count, reached.Count)}"
-							+ $"   (your health ran out in {here.Count(r => r.KilledByTrainerHp)} of {here.Count})"
-					);
-			}
-
+			var through = (reached.Count - died.Count) / (double)count;
+			var target = PartySim.Target[region];
+			var survived =
+				reached.Count == 0 ? 0 : (reached.Count - died.Count) / (double)reached.Count;
 			var gyms = runs.SelectMany(r => r.Gyms).Where(g => g.Region == region).ToList();
-			if (gyms.Count > 0)
-				Console.WriteLine(
-					$"    at the gym: your health {gyms.Average(g => g.TrainerHp):F1}/{PartyRun.TrainerMaxHp}"
-						+ $", team HP {gyms.Average(g => g.TeamHpShare):P0}, team size {gyms.Average(g => g.TeamSize):F1}"
-						+ $", went deeper {Pct(gyms.Count(g => g.WentDeep), gyms.Count)}"
-				);
-			if (gyms.Count > 0)
-				Console.WriteLine(
-					$"    the gym fell to its LEADER's health in {Pct(gyms.Count(g => g.ByLeader), gyms.Count)}"
-						+ $", in {gyms.Average(g => g.Turns):F1} turns"
-				);
+
+			string Died(RunEnd end) => died.Count(r => r.End == end).ToString();
+			Console.WriteLine(
+				$"  {region + 1, 2} {regions[region].Name, -17} "
+					+ $"{through, 6:P0} ({target, 4:P0})   {survived, 6:P0} ({target / previous, 4:P0})   "
+					+ $"{Died(RunEnd.Trail), 4}/{Died(RunEnd.Deep), -3}/{Died(RunEnd.Gym), -3} ({died.Count(r => r.KilledByTrainerHp)} of {died.Count})"
+					+ (
+						gyms.Count == 0
+							? ""
+							: $"{"", 8}{gyms.Average(g => g.TrainerHp), 5:F1}  {gyms.Average(g => g.TeamHpShare), 4:P0}  "
+								+ $"{gyms.Average(g => g.TeamSize), 4:F1}  {gyms.Count(g => g.WentDeep) / (double)gyms.Count, 5:P0}  "
+								+ $"{gyms.Count(g => g.ByLeader) / (double)Math.Max(1, gyms.Count(g => g.Turns > 0)), 9:P0}  "
+								+ $"{gyms.Average(g => g.Turns), 5:F1}"
+					)
+			);
+			previous = target;
 		}
+		var stalled = runs.Count(r => r.End == RunEnd.Stalled);
+		if (stalled > 0)
+			Console.WriteLine(
+				$"  {stalled} runs STALLED — a battle ran past {PartySim.TurnLimit} turns."
+			);
 
 		Console.WriteLine();
 		Console.WriteLine(

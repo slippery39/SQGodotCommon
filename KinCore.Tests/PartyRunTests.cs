@@ -270,6 +270,49 @@ public class PartyRunTests
 		}
 	}
 
+	[Test]
+	public void ATierScalesAFoesHpBlockAndAttacks()
+	{
+		var foe = Foe("Brute", hit: 10) with
+		{
+			Pattern =
+			[
+				new Intent
+				{
+					Name = "Hit",
+					Kind = IntentType.Attack,
+					Amount = 10,
+				},
+				new Intent
+				{
+					Name = "Brace",
+					Kind = IntentType.Block,
+					Amount = 4,
+				},
+			],
+		};
+
+		var scaled = PartyWorld.Scale(foe, new PartyWorld.Tier(1, 1, Hp: 2.0, Damage: 1.5));
+
+		Assert.That(scaled.MaxHp, Is.EqualTo(foe.MaxHp * 2));
+		Assert.That(scaled.Pattern[0].Amount, Is.EqualTo(15));
+		Assert.That(scaled.Pattern[1].Amount, Is.EqualTo(8), "Block scales with HP");
+	}
+
+	[Test]
+	public void LaterRegionsFieldMoreAndTougherFoes()
+	{
+		var first = PartyWorld.Regions[0];
+		var last = PartyWorld.Regions[^1];
+
+		Assert.That(last.MaxFoes, Is.GreaterThan(first.MaxFoes));
+		Assert.That(
+			last.Areas.SelectMany(a => a.Pool).Max(f => f.MaxHp),
+			Is.GreaterThan(first.Areas.SelectMany(a => a.Pool).Max(f => f.MaxHp))
+		);
+		Assert.That(last.Gym.LeaderHp, Is.GreaterThan(first.Gym.LeaderHp));
+	}
+
 	// ===== HP across fights
 
 	[Test]

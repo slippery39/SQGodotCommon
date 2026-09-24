@@ -16,7 +16,8 @@ State at handoff (2026-09-23): **216 tests green**, solution and Godot project b
 > creature, and **CATCHING v1** (the Snare item; the bench between battles — KinJam "CATCHING v1").
 > Then **THE MAP v1**: two regions of town → one of two wild areas (each with its own pool) → gym
 > (KinJam "THE MAP v1"; `PartyWorld`, `PartyRun.Phase`). Then **trainer health, the gym leader and
-> the in-battle bench** (KinJam "TRAINER HEALTH"). **Next: Shayne plays it.** Not built:
+> the in-battle bench** (KinJam "TRAINER HEALTH"). Then `party-sim` (a beam-search bot) and **ten
+> regions tuned to Shayne's curve** (KinJam "THE CURVE"). **Next: Shayne plays it.** Not built:
 > passives/colours for caught monsters; choosing who steps in from the bench.
 >
 > **Scar: Python text-mode writes CRLF on Windows.** Patch scripts that `open(p, 'w')` turned LF files
