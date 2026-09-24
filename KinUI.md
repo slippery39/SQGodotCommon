@@ -192,6 +192,10 @@ command shipped unwired for two sessions.
 >   its passive's rule, statuses, and its whole cycle in words with the next move marked. Its
 >   labels wrap at a FIXED width and it re-fits every frame: measured at once, every word took a
 >   line and it ran the height of the screen. Hidden while a card is hovered or dragged.
+> - **Your health sits first in the status bar** ("YOU 30/30"), red with "▼9" when ending the turn
+>   would cost you. A foe attack that will land on no monster says "→ YOU"; in a gym, a monster's
+>   swing that will find no foe says "→ LEADER", and the line between the rows carries the
+>   leader's health. The hint strip WRAPS: unwrapped it pushed END TURN off screen.
 > - **The step**: click a monster, and the spaces beside it light — "STEP HERE", or "▲ SWAP HERE" on
 >   an ally.
 

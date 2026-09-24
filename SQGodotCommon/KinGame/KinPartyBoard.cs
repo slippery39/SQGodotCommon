@@ -49,6 +49,12 @@ public partial class KinPartyBoard : Node2D
 	private Label _subtitle;
 	private Label _energy;
 
+	/// <summary>YOUR health, and what ending the turn would cost it.</summary>
+	private Label _trainer;
+
+	/// <summary>The line between the rows — in a gym it names the leader and their health.</summary>
+	private Label _aimHint;
+
 	/// <summary>The Snare item: press it, then click a foe. Armed = the next foe click throws it.</summary>
 	private Button _snare;
 
@@ -176,11 +182,13 @@ public partial class KinPartyBoard : Node2D
 					Change(r => r.LeaveTown());
 					if (screen == "areas")
 						return;
-					if (screen is "find" or "deep" or "gym")
+					if (screen is "find" or "deep" or "gym" or "gymfight")
 					{
 						Change(r => r.ChooseArea(0) with { StopIndex = screen == "find" ? 2 : 3 });
-						if (screen == "gym")
+						if (screen.StartsWith("gym"))
 							Change(r => r.SkipDeep());
+						if (screen == "gymfight")
+							NextBattle();
 						return;
 					}
 					Change(r => r.ChooseArea(0));
@@ -369,7 +377,7 @@ public partial class KinPartyBoard : Node2D
 
 	private const string HowToPlay =
 		"Drag a card onto a monster (or a foe). Click a monster, then a lit space, to step. "
-		+ "Everyone acts when you END TURN, in the order shown.";
+		+ "Everyone acts at END TURN, in order. An attack that finds no monster hits YOU.";
 
 	/// <summary>The cell the last card was dropped on — the card's name rises off it.</summary>
 	private Control _lastDrop;
@@ -599,9 +607,11 @@ public partial class KinPartyBoard : Node2D
 			: $"{party.Name.ToUpperInvariant()}   ·   TURN {party.TurnNumber}";
 
 		var down = _state.Allies().Where(a => a.IsKnockedOut).Select(a => a.Name).ToList();
+		var bench = _state.BenchedAllies().Select(a => $"{a.Name} {a.Hp}/{a.MaxHp}").ToList();
 		_subtitle.Text =
 			party.Description
-			+ (down.Count > 0 ? $"   Knocked out: {string.Join(", ", down)}." : "");
+			+ (down.Count > 0 ? $"   Knocked out: {string.Join(", ", down)}." : "")
+			+ (bench.Count > 0 ? $"   Bench: {string.Join(", ", bench)}." : "");
 
 		_energy.Text = $"ENERGY {party.Energy}/{party.MaxEnergy}";
 		_snare.Text = $"SNARE ×{party.Snares}";
@@ -617,7 +627,23 @@ public partial class KinPartyBoard : Node2D
 
 	private void RenderRows()
 	{
-		var forecast = _state.HpLostIfTurnEndsNow();
+		var whole = _state.ForecastIfTurnEndsNow();
+		var forecast = whole.Hp;
+
+		// Your health, and in a gym the leader's — each with what ending the turn would cost.
+		var party = _state.GetParty();
+		_trainer.Text =
+			$"YOU {party.TrainerHp}/{PartyRun.TrainerMaxHp}"
+			+ (whole.Trainer > 0 ? $"  ▼{whole.Trainer}" : "");
+		_trainer.AddThemeColorOverride(
+			"font_color",
+			whole.Trainer > 0 ? KinPalette.Red : KinPalette.Bone
+		);
+		_aimHint.Text =
+			party.LeaderHp > 0
+				? $"▲ your attacks fire straight up their column — a swing that finds no foe hits the LEADER: {party.LeaderHp} HP"
+					+ (whole.Leader > 0 ? $"  (−{whole.Leader} if the turn ends)" : "")
+				: "▲ your attacks fire straight up their column";
 
 		// **The order badge**: who acts when at the end of the turn, straight from the engine.
 		var order = _state
@@ -695,7 +721,8 @@ public partial class KinPartyBoard : Node2D
 		var intent = foe.Current;
 		var says = foe.Staggered
 			? "STAGGERED — loses this move"
-			: KinPartyCell.Says(intent, intent.Amount).ToUpperInvariant();
+			: KinPartyCell.Says(intent, intent.Amount).ToUpperInvariant()
+				+ (_state.AimsAtTrainer(foe) ? " → YOU" : "");
 		var attacks = intent.Kind == IntentType.Attack && !foe.Staggered;
 		var loses = forecast.GetValueOrDefault(foe.Id);
 
@@ -776,7 +803,8 @@ public partial class KinPartyBoard : Node2D
 								? ally.AttackFor(next.Amount)
 								: next.Amount
 						)
-						.ToUpperInvariant(),
+						.ToUpperInvariant()
+					+ (_state.AimsAtLeader(ally) ? " → LEADER" : ""),
 			dropHere is not null ? $"▲ {dropHere.Name.ToUpperInvariant()} HERE"
 				: canStepHere ? "▲ SWAP HERE"
 				: "",
@@ -857,6 +885,18 @@ public partial class KinPartyBoard : Node2D
 						KinPalette.Bone
 					),
 				AllyMovedEvent moved => () => KinAnimator.Pop(_allyCells[moved.To].Root),
+				TrainerHitEvent hit => () =>
+				{
+					Struck(_trainer, hit.Damage);
+					KinAnimator.Shake(_layer, 10f);
+				},
+				LeaderHitEvent hit => () => Struck(_aimHint, hit.Damage),
+				AllySwappedInEvent swap => () =>
+				{
+					var cell = AllyCell(swap.AllyId);
+					KinAnimator.Pop(cell);
+					KinAnimator.Float(_overlay, cell, "IN!", KinPalette.Gold);
+				},
 				FoeMovedEvent moved => () =>
 				{
 					KinAnimator.Pop(_foeCells[moved.To].Root);
@@ -908,9 +948,10 @@ public partial class KinPartyBoard : Node2D
 				$"{Who(moved.FoeId)} is pushed {(moved.To < moved.From ? "left" : "right")}",
 			FoeStaggeredEvent staggered => $"{Who(staggered.FoeId)} is staggered",
 			FoeCaughtEvent caught => $"Caught the {Who(caught.FoeId)}!",
-			PartyBattleEndedEvent end => end.Won
-				? "Every foe is down. VICTORY."
-				: "Every monster is down. DEFEAT.",
+			TrainerHitEvent hit => $"{hit.By} gets through and hits YOU for {hit.Damage}",
+			LeaderHitEvent hit => $"{hit.By} hits the leader for {hit.Damage}",
+			AllySwappedInEvent swap => $"{Who(swap.AllyId)} steps in for {Who(swap.ForAllyId)}",
+			PartyBattleEndedEvent end => end.Won ? "VICTORY." : "DEFEAT.",
 			_ => null,
 		};
 
@@ -956,7 +997,11 @@ public partial class KinPartyBoard : Node2D
 		column.AddChild(BuildBanner());
 		column.AddChild(BuildRow(_foeCells));
 		column.AddChild(
-			KinPalette.Text("▲ your attacks fire straight up their column", 16, KinPalette.Bone)
+			_aimHint = KinPalette.Text(
+				"▲ your attacks fire straight up their column",
+				16,
+				KinPalette.Bone
+			)
 		);
 		column.AddChild(BuildRow(_allyCells));
 		column.AddChild(BuildStatus());
@@ -1054,8 +1099,13 @@ public partial class KinPartyBoard : Node2D
 		panel.AddChild(across);
 
 		_energy = KinPalette.Text("", 24, KinPalette.Gold);
+		_trainer = KinPalette.Text("", 24, KinPalette.Bone);
 		_hint = KinPalette.Text(HowToPlay, 18, KinPalette.Bone, HorizontalAlignment.Left);
 		_hint.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+		// Wraps, with a minimum width of 1: unwrapped, a long hint was as wide as its text and pushed
+		// END TURN — and the whole column with it — off the screen.
+		_hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		_hint.CustomMinimumSize = new Vector2(1, 0);
 
 		_endTurn = new Button { Text = "END TURN" };
 		_endTurn.AddThemeFontSizeOverride("font_size", 22);
@@ -1069,6 +1119,7 @@ public partial class KinPartyBoard : Node2D
 		_snare.AddThemeFontSizeOverride("font_size", 22);
 		_snare.Pressed += OnSnare;
 
+		across.AddChild(_trainer);
 		across.AddChild(_energy);
 		across.AddChild(_snare);
 		across.AddChild(_hint);

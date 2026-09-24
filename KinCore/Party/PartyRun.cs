@@ -48,6 +48,10 @@ public record PartyRun
 	public const int TeamSize = 3;
 
 	public const int StartingSnares = 3;
+
+	/// <summary>**Your health across the run.** Only a town heals it.</summary>
+	public const int TrainerMaxHp = PartyScenario.DefaultTrainerHp;
+
 	public const int StartingGold = 60;
 
 	public const int WildGold = 20;
@@ -88,6 +92,7 @@ public record PartyRun
 
 	public int Snares { get; init; }
 	public int Gold { get; init; }
+	public int TrainerHp { get; init; }
 
 	/// <summary>Shop cards bought in THIS town, by offer index — each can be bought once.</summary>
 	public ImmutableList<int> Sold { get; init; } = [];
@@ -115,6 +120,7 @@ public record PartyRun
 			Rewards = rewards ?? PartyContent.Rewards,
 			Snares = StartingSnares,
 			Gold = StartingGold,
+			TrainerHp = TrainerMaxHp,
 			Phase = RunPhase.Town,
 			Seed = seed,
 		};
@@ -197,11 +203,17 @@ public record PartyRun
 			Phase == RunPhase.Gym
 				? $"{Region.Name} — the gym"
 				: $"{Region.Name} — {Area!.Name}, stop {StopIndex + 1} of {Trail.Count}",
-			[.. Team.Select((m, i) => new PlacedCompanion(m.Companion, spaces[i], m.Hp))],
+			// The team on the board, then the bench off it (space -1) — in that order, so slots line up.
+			[
+				.. Team.Select((m, i) => new PlacedCompanion(m.Companion, spaces[i], m.Hp)),
+				.. Bench.Select(m => new PlacedCompanion(m.Companion, -1, m.Hp)),
+			],
 			NextFight.Foes,
 			Deck,
 			[],
-			Snares
+			Snares,
+			TrainerHp,
+			NextFight.LeaderHp
 		);
 		return PartyBattleFactory.Create(scenario, Seed + RegionIndex * 1009 + StopIndex * 101);
 	}
@@ -221,25 +233,32 @@ public record PartyRun
 		if (!party.Won)
 			return (this with { Phase = RunPhase.Lost }, new RunReport([], [], [], 0));
 
+		// Team and bench both come back by slot: a benched monster may have stepped in and fought.
 		var revived = ImmutableList<string>.Empty;
-		var team = Team.Select(
-				(member, slot) =>
-				{
-					var ally = finished.Allies().Single(a => a.Slot == slot);
-					if (!ally.IsKnockedOut)
-						return member with { Hp = ally.Hp };
+		RunCompanion After(RunCompanion member, int slot)
+		{
+			var ally = finished.Allies().Single(a => a.Slot == slot);
+			if (!ally.IsKnockedOut)
+				return member with { Hp = ally.Hp };
 
-					revived = revived.Add(ally.Name);
-					return member with { Hp = (int)Math.Ceiling(ally.MaxHp / 4.0) };
-				}
-			)
-			.ToImmutableList();
+			revived = revived.Add(ally.Name);
+			return member with { Hp = (int)Math.Ceiling(ally.MaxHp / 4.0) };
+		}
+		var team = Team.Select(After).ToImmutableList();
+		var bench = Bench.Select((m, i) => After(m, Team.Count + i)).ToImmutableList();
 
 		var gold =
 			Phase == RunPhase.Gym ? GymGold
 			: CurrentStop.Kind == StopKind.Deep ? DeepGold
 			: WildGold;
-		var run = this with { Team = team, Snares = party.Snares, Gold = Gold + gold };
+		var run = this with
+		{
+			Team = team,
+			Bench = bench,
+			Snares = party.Snares,
+			Gold = Gold + gold,
+			TrainerHp = party.TrainerHp,
+		};
 
 		var caught = ImmutableList<string>.Empty;
 		var toBench = ImmutableList<string>.Empty;
@@ -264,7 +283,7 @@ public record PartyRun
 		return (run, new RunReport(revived, caught, toBench, gold));
 	}
 
-	/// <summary>**A town heals everyone to full**, the bench too — once per region, so no stall.</summary>
+	/// <summary>**A town heals everyone to full** — the bench and you too — once per region, so no stall.</summary>
 	private PartyRun EnterTown(int region) =>
 		this with
 		{
@@ -276,6 +295,7 @@ public record PartyRun
 			Sold = [],
 			Team = Heal(Team, 1),
 			Bench = Heal(Bench, 1),
+			TrainerHp = TrainerMaxHp,
 		};
 
 	private static ImmutableList<RunCompanion> Heal(

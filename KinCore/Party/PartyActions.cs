@@ -497,6 +497,25 @@ public record FoeHitEvent : GameEvent
 	public int Blocked { get; init; }
 }
 
+public record TrainerHitEvent : GameEvent
+{
+	public int Damage { get; init; }
+	public string By { get; init; } = "";
+}
+
+public record LeaderHitEvent : GameEvent
+{
+	public int Damage { get; init; }
+	public string By { get; init; } = "";
+}
+
+/// <summary>A benched monster stepped into a fainted one's space.</summary>
+public record AllySwappedInEvent : GameEvent
+{
+	public int AllyId { get; init; }
+	public int ForAllyId { get; init; }
+}
+
 public record FoeCaughtEvent : GameEvent
 {
 	public int FoeId { get; init; }

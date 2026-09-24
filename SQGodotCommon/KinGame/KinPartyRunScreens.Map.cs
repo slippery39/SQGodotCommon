@@ -41,7 +41,7 @@ public sealed partial class KinPartyRunScreens
 	{
 		Begin(
 			$"TOWN — {run.Region.Name.ToUpperInvariant()}",
-			"Everyone is rested to full. Spend your gold, then set out."
+			"Everyone is rested to full — you too. Spend your gold, then set out."
 		);
 
 		ShowTeam(run, (team, bench) => change(r => r.Swap(team, bench)));
@@ -213,7 +213,7 @@ public sealed partial class KinPartyRunScreens
 	{
 		Begin(
 			$"THE GYM — {run.Region.Gym.Name.ToUpperInvariant()}",
-			"The region's exam. A gym's leader cannot be caught."
+			$"The leader has {run.Region.Gym.LeaderHp} health: a swing into an empty column hits them. Their creatures cannot be caught."
 		);
 
 		var row = Row();
@@ -223,10 +223,7 @@ public sealed partial class KinPartyRunScreens
 					KinPalette.Slate,
 					ArtFor(foe.Name),
 					foe.Name.ToUpperInvariant(),
-					[
-						$"HP {foe.MaxHp} · SPEED {foe.Speed}",
-						foe.Catchable ? "" : "Cannot be caught",
-					],
+					[$"HP {foe.MaxHp} · SPEED {foe.Speed}"],
 					new Vector2(220, 300),
 					fight
 				)

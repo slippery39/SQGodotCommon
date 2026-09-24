@@ -15,8 +15,9 @@ State at handoff (2026-09-23): **216 tests green**, solution and Godot project b
 > Fire, per-companion rewards) no longer exists. Then the same day: a hover INSPECTOR on every
 > creature, and **CATCHING v1** (the Snare item; the bench between battles — KinJam "CATCHING v1").
 > Then **THE MAP v1**: two regions of town → one of two wild areas (each with its own pool) → gym
-> (KinJam "THE MAP v1"; `PartyWorld`, `PartyRun.Phase`). **Next: Shayne plays it.** Not built: the
-> in-battle bench, passives/colours for caught monsters.
+> (KinJam "THE MAP v1"; `PartyWorld`, `PartyRun.Phase`). Then **trainer health, the gym leader and
+> the in-battle bench** (KinJam "TRAINER HEALTH"). **Next: Shayne plays it.** Not built:
+> passives/colours for caught monsters; choosing who steps in from the bench.
 >
 > **Scar: Python text-mode writes CRLF on Windows.** Patch scripts that `open(p, 'w')` turned LF files
 > into CRLF and every commit rewrote every line. The repo MIXES endings per file — keep each file's

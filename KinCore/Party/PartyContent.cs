@@ -20,11 +20,17 @@ public record PartyCompanion(
 	int Unbalances = 0
 );
 
-/// <summary>A monster on the board. `Hp` is where a RUN left it; null = full.</summary>
+/// <summary>
+/// A monster in a battle. `Hp` is where a RUN left it; null = full. A `Space` below 0 puts it on
+/// the BENCH, waiting to step in.
+/// </summary>
 public record PlacedCompanion(PartyCompanion Companion, int Space, int? Hp = null);
 
-/// <summary>One fight of a run: who you face, and where they stand.</summary>
-public record Encounter(string Name, ImmutableList<Foe> Foes);
+/// <summary>
+/// One fight of a run: who you face, and where they stand. `LeaderHp` above 0 makes it a GYM — a
+/// trainer stands behind the creatures, and your swings into empty columns hit them.
+/// </summary>
+public record Encounter(string Name, ImmutableList<Foe> Foes, int LeaderHp = 0);
 
 /// <summary>
 /// One battle to play. `OpeningHand` names cards to put on top of the shuffled deck, so a first
@@ -37,8 +43,13 @@ public record PartyScenario(
 	ImmutableList<Foe> Foes,
 	ImmutableList<KinCard> Deck,
 	ImmutableList<string> OpeningHand,
-	int Snares = 0
-);
+	int Snares = 0,
+	int TrainerHp = PartyScenario.DefaultTrainerHp,
+	int LeaderHp = 0
+)
+{
+	public const int DefaultTrainerHp = 30;
+}
 
 /// <summary>
 /// **AUTO-BATTLE v1 content.** Every number is a guess: this is exploring, not tuning — the question
@@ -371,6 +382,8 @@ public static class PartyBattleFactory
 				Description = scenario.Description,
 				Energy = 3,
 				Snares = scenario.Snares,
+				TrainerHp = scenario.TrainerHp,
+				LeaderHp = scenario.LeaderHp,
 			}
 		);
 		(s, var draw) = s.AddObject(
@@ -404,6 +417,7 @@ public static class PartyBattleFactory
 					Power = companion.Power,
 					Speed = companion.Speed,
 					Space = space,
+					Benched = space < 0,
 					Pattern = companion.Moves,
 					Passive = companion.Passive,
 					PassiveRule = companion.PassiveRule,

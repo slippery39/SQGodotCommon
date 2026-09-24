@@ -4,6 +4,12 @@ using ImmutableGameObjects;
 namespace KinCore.Party;
 
 /// <summary>
+/// What ending the turn now would cost: each creature's HP lost (by id), and the health you and the
+/// gym leader would lose.
+/// </summary>
+public record Forecast(ImmutableDictionary<int, int> Hp, int Trainer, int Leader);
+
+/// <summary>
 /// The API boundary for the companion game. The Godot board reads everything through here and
 /// never computes a game fact itself — including where an attack will land and who acts when.
 /// </summary>
@@ -18,8 +24,13 @@ public static class PartyState
 	public static IEnumerable<Ally> Allies(this GameState s) =>
 		s.GetChildren(s.GetWellKnownId(BattleKey)).OfType<Ally>().OrderBy(a => a.Space);
 
+	/// <summary>Your monsters ON THE BOARD and standing — not fainted, not on the bench.</summary>
 	public static IEnumerable<Ally> LivingAllies(this GameState s) =>
-		s.Allies().Where(a => !a.IsKnockedOut);
+		s.Allies().Where(a => !a.IsKnockedOut && !a.Benched);
+
+	/// <summary>The bench, in the order it steps in.</summary>
+	public static IEnumerable<Ally> BenchedAllies(this GameState s) =>
+		s.Allies().Where(a => a.Benched && !a.IsKnockedOut).OrderBy(a => a.Slot);
 
 	/// <summary>Every foe still standing — not beaten, not caught — left to right.</summary>
 	public static IEnumerable<Foe> LivingFoes(this GameState s) =>
@@ -121,20 +132,42 @@ public static class PartyState
 	}
 
 	/// <summary>
-	/// **What each creature's HP will lose if you end the turn now** — yours AND the foes' — played
-	/// out on a throwaway copy by the rules themselves, never a sum the UI adds up.
+	/// **What ending the turn now would cost** — each creature's HP, yours AND the foes', and the two
+	/// trainers' health — played out on a throwaway copy by the rules themselves, never a sum the UI
+	/// adds up.
 	/// </summary>
-	public static ImmutableDictionary<int, int> HpLostIfTurnEndsNow(this GameState s)
+	public static Forecast ForecastIfTurnEndsNow(this GameState s)
 	{
-		if (s.GetParty().IsOver)
-			return ImmutableDictionary<int, int>.Empty;
+		var party = s.GetParty();
+		if (party.IsOver)
+			return new Forecast(ImmutableDictionary<int, int>.Empty, 0, 0);
 
 		var (after, _) = s.AddAction(new EndPartyTurnAction()).ProcessAllActions();
-		return s.LivingAllies()
-			.Cast<Creature>()
-			.Concat(s.LivingFoes())
-			.ToImmutableDictionary(c => c.Id, c => c.Hp - ((Creature)after.GetObject(c.Id)).Hp);
+		var then = after.GetParty();
+		return new Forecast(
+			s.LivingAllies()
+				.Cast<Creature>()
+				.Concat(s.LivingFoes())
+				.ToImmutableDictionary(c => c.Id, c => c.Hp - ((Creature)after.GetObject(c.Id)).Hp),
+			party.TrainerHp - then.TrainerHp,
+			party.LeaderHp - then.LeaderHp
+		);
 	}
+
+	/// <summary>
+	/// **This foe's attack will land on no monster, so it will hit YOU** — as things stand now. The
+	/// telegraph says so ("→ YOU"); where it truly lands is decided when it resolves.
+	/// </summary>
+	public static bool AimsAtTrainer(this GameState s, Foe foe) =>
+		foe.Current.Kind == IntentType.Attack
+		&& !foe.Staggered
+		&& !s.IntentTargets(foe).Any(space => s.AllyAt(space) is not null);
+
+	/// <summary>**This monster's attack will land on no foe, so it will hit the gym LEADER.**</summary>
+	public static bool AimsAtLeader(this GameState s, Ally ally) =>
+		s.GetParty().LeaderHp > 0
+		&& ally.Current.Kind == IntentType.Attack
+		&& !s.IntentTargets(ally).Any(space => s.FoeAt(space) is not null);
 
 	/// <summary>
 	/// **CAPTURE HARNESS ONLY — never called in play.** Ends the battle as a win or a loss, so a
@@ -183,12 +216,15 @@ public static class PartyState
 				break;
 
 			case IntentType.Attack:
+				var landed = false;
 				foreach (var space in targets)
 				{
 					if (s.GetParty().IsOver || ((Foe)s.GetObject(creatureId)).IsDead)
 						break;
 					if (s.AllyAt(space) is not { } victim)
 						continue;
+
+					landed = true;
 
 					(s, more) = HitAlly(s, victim, intent.Amount, creature.Name);
 					events = events.AddRange(more);
@@ -199,6 +235,13 @@ public static class PartyState
 						(s, more) = HitFoe(s, (Foe)s.GetObject(creatureId), victim.TotalThorns);
 						events = events.AddRange(more);
 					}
+				}
+
+				// **An attack that lands on no monster hits the trainer** — once, whatever its shape.
+				if (!landed && !s.GetParty().IsOver && !((Foe)s.GetObject(creatureId)).IsDead)
+				{
+					(s, more) = HitTrainer(s, intent.Amount, creature.Name);
+					events = events.AddRange(more);
 				}
 				break;
 
@@ -256,13 +299,23 @@ public static class PartyState
 			s = s.UpdateObject(ally.Id, ally with { Momentum = 0 });
 
 		var events = ImmutableList<GameEvent>.Empty;
+		var landed = false;
 		foreach (var space in spaces)
 		{
 			if (s.GetParty().IsOver || s.FoeAt(space) is not { } foe)
 				continue;
 
+			landed = true;
 			ImmutableList<GameEvent> hit;
 			(s, hit) = HitFoe(s, foe, damage);
+			events = events.AddRange(hit);
+		}
+
+		// The mirror of the trainer rule: a swing that finds no foe hits the gym LEADER, if there is one.
+		if (!landed && s.GetParty() is { IsOver: false, LeaderHp: > 0 })
+		{
+			ImmutableList<GameEvent> hit;
+			(s, hit) = HitLeader(s, damage, ally.Name);
 			events = events.AddRange(hit);
 		}
 		return (s, events);
@@ -330,7 +383,19 @@ public static class PartyState
 			},
 		];
 		if (hit.IsKnockedOut)
+		{
 			events = events.Add(new AllyKnockedOutEvent { AllyId = ally.Id });
+
+			// **The bench steps in**, into the fainted monster's space. It arrives after this turn's
+			// order was fixed, so it acts from next turn — but it can be hit where it stands.
+			if (s.BenchedAllies().FirstOrDefault() is { } sub)
+			{
+				s = s.UpdateObject(sub.Id, sub with { Benched = false, Space = ally.Space });
+				events = events.Add(
+					new AllySwappedInEvent { AllyId = sub.Id, ForAllyId = ally.Id }
+				);
+			}
+		}
 
 		if (!s.LivingAllies().Any())
 		{
@@ -339,6 +404,46 @@ public static class PartyState
 			events = events.Add(new PartyBattleEndedEvent { Won = false });
 		}
 
+		return (s, events);
+	}
+
+	/// <summary>Damage to YOU. At 0 the battle is lost — and with it the run.</summary>
+	internal static (GameState, ImmutableList<GameEvent>) HitTrainer(
+		GameState s,
+		int amount,
+		string by
+	)
+	{
+		var party = s.GetParty();
+		var hp = Math.Max(0, party.TrainerHp - amount);
+		s = s.UpdateObject(party.Id, party with { TrainerHp = hp });
+
+		ImmutableList<GameEvent> events = [new TrainerHitEvent { Damage = amount, By = by }];
+		if (hp == 0)
+		{
+			s = s.UpdateObject(party.Id, s.GetParty() with { IsOver = true, Won = false });
+			events = events.Add(new PartyBattleEndedEvent { Won = false });
+		}
+		return (s, events);
+	}
+
+	/// <summary>Damage to the gym LEADER. At 0 the gym is won, whatever of its creatures still stand.</summary>
+	internal static (GameState, ImmutableList<GameEvent>) HitLeader(
+		GameState s,
+		int amount,
+		string by
+	)
+	{
+		var party = s.GetParty();
+		var hp = Math.Max(0, party.LeaderHp - amount);
+		s = s.UpdateObject(party.Id, party with { LeaderHp = hp });
+
+		ImmutableList<GameEvent> events = [new LeaderHitEvent { Damage = amount, By = by }];
+		if (hp == 0)
+		{
+			s = s.UpdateObject(party.Id, s.GetParty() with { IsOver = true, Won = true });
+			events = events.Add(new PartyBattleEndedEvent { Won = true });
+		}
 		return (s, events);
 	}
 

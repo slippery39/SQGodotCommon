@@ -243,7 +243,8 @@ public class PartyRunTests
 	{
 		foreach (var region in PartyWorld.Regions)
 		{
-			Assert.That(region.Gym.Foes.Any(f => !f.Catchable), Is.True, $"{region.Name}'s gym");
+			Assert.That(region.Gym.Foes.All(f => !f.Catchable), Is.True, $"{region.Name}'s gym");
+			Assert.That(region.Gym.LeaderHp, Is.GreaterThan(0), "a gym has a leader");
 			for (var a = 0; a < region.Areas.Count; a++)
 			{
 				var run = PartyRun.Start(PartyContent.Pike, seed: 5) with
@@ -265,6 +266,7 @@ public class PartyRunTests
 				Phase = RunPhase.Gym,
 			};
 			Assert.That(gym.StartBattle().LivingFoes(), Is.Not.Empty);
+			Assert.That(gym.StartBattle().GetParty().LeaderHp, Is.EqualTo(region.Gym.LeaderHp));
 		}
 	}
 
@@ -294,6 +296,47 @@ public class PartyRunTests
 		Assert.That(report.Revived, Is.EqualTo(new[] { "A" }));
 		Assert.That(Hp(run, "A"), Is.EqualTo(10));
 	}
+
+	// ===== The trainer's health, and the bench in battle
+
+	[Test]
+	public void TheTrainersHealthCarriesAndATownHealsIt()
+	{
+		// A dodged blow: A stands at 2, the Brute strikes column 0 — nobody there, so it hits you.
+		var run = OnTrail(Run(), Fight(Foe("Brute", 0, hit: 7)), Fight(Foe("Idle")));
+
+		(run, _) = run.AfterBattle(Win(Do(run.StartBattle(), new EndPartyTurnAction())));
+		Assert.That(run.TrainerHp, Is.EqualTo(PartyRun.TrainerMaxHp - 7));
+		Assert.That(run.StartBattle().GetParty().TrainerHp, Is.EqualTo(run.TrainerHp));
+
+		(run, _) = WinNext(run with { Phase = RunPhase.Gym });
+		Assert.That(run.Phase, Is.EqualTo(RunPhase.Town));
+		Assert.That(run.TrainerHp, Is.EqualTo(PartyRun.TrainerMaxHp));
+	}
+
+	[Test]
+	public void TheBenchFightsAndComesBackWithTheHpItHasLeft()
+	{
+		var run = OnTrail(
+			WithTeam(Run(), Mon("A", hp: 5)) with
+			{
+				Bench = [new RunCompanion(B, 40)],
+			},
+			Fight(Foe("Brute", hit: 9)),
+			Fight(Foe("Idle"))
+		);
+
+		var battle = EndTurnTwice(run.StartBattle()); // A faints, B steps in and takes a hit
+		RunReport report;
+		(run, report) = run.AfterBattle(Win(battle));
+
+		Assert.That(report.Revived, Is.EqualTo(new[] { "A" }));
+		Assert.That(run.Bench.Single().Hp, Is.EqualTo(40 - 9), "B stays on the bench, hurt");
+		Assert.That(run.Team.Single().Companion.Name, Is.EqualTo("A"), "the lineup is unchanged");
+	}
+
+	private static GameState EndTurnTwice(GameState s) =>
+		Do(Do(s, new EndPartyTurnAction()), new EndPartyTurnAction());
 
 	// ===== Catching
 

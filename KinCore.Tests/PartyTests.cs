@@ -630,10 +630,139 @@ public class PartyTests
 	{
 		var s = Battle([new(Mon("Pike", moves: Hit(4)), 2)], [], Foe(2, pattern: Hit(6)));
 
-		var forecast = s.HpLostIfTurnEndsNow();
+		var forecast = s.ForecastIfTurnEndsNow();
 
-		Assert.That(forecast[Named(s, "Pike").Id], Is.EqualTo(6));
-		Assert.That(forecast[FoeIn(s, 2).Id], Is.EqualTo(4));
+		Assert.That(forecast.Hp[Named(s, "Pike").Id], Is.EqualTo(6));
+		Assert.That(forecast.Hp[FoeIn(s, 2).Id], Is.EqualTo(4));
+	}
+
+	// ===== The trainer's health — dodging is not free
+
+	private static int TrainerHp(GameState s) => s.GetParty().TrainerHp;
+
+	[Test]
+	public void AnAttackThatLandsOnNoMonsterHitsTheTrainer()
+	{
+		var s = Battle([new(Mon("Pike"), 2)], [], Foe(2, pattern: Hit(9)));
+		Assert.That(s.AimsAtTrainer(FoeIn(s, 2)), Is.False, "Pike is in the way");
+
+		s = Step(s, "Pike", 3);
+		Assert.That(s.AimsAtTrainer(FoeIn(s, 2)), Is.True, "the telegraph says so");
+		Assert.That(s.ForecastIfTurnEndsNow().Trainer, Is.EqualTo(9));
+
+		s = EndTurn(s);
+		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20));
+		Assert.That(TrainerHp(s), Is.EqualTo(PartyScenario.DefaultTrainerHp - 9));
+	}
+
+	[Test]
+	public void AWideAttackThatCatchesAMonsterDoesNotAlsoHitTheTrainer()
+	{
+		var s = Battle([new(Mon("Pike"), 1)], [], Foe(2, pattern: Hit(4, -1, 0, 1)));
+
+		s = EndTurn(s);
+
+		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(16));
+		Assert.That(
+			TrainerHp(s),
+			Is.EqualTo(PartyScenario.DefaultTrainerHp),
+			"once, and it landed"
+		);
+	}
+
+	[Test]
+	public void TheTrainerAtZeroLosesTheBattle()
+	{
+		var s = Battle(
+			[new(Mon("Pike"), 0)],
+			[],
+			Foe(2, pattern: Hit(PartyScenario.DefaultTrainerHp))
+		);
+
+		s = EndTurn(s);
+
+		Assert.That(s.GetParty().IsOver && !s.GetParty().Won, Is.True);
+		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20), "every monster still standing");
+	}
+
+	// ===== The gym leader — the mirror
+
+	private static GameState Gym(GameState s, int leaderHp) =>
+		s.UpdateObject(s.GetParty().Id, s.GetParty() with { LeaderHp = leaderHp });
+
+	[Test]
+	public void ASwingIntoAnEmptyColumnHitsTheLeaderInAGym()
+	{
+		var s = Gym(Battle([new(Mon("Pike", power: 1, moves: Hit(4)), 0)], [], Foe(2)), 30);
+		Assert.That(s.AimsAtLeader(Named(s, "Pike")), Is.True);
+
+		s = EndTurn(s);
+
+		Assert.That(s.GetParty().LeaderHp, Is.EqualTo(30 - 5));
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50));
+	}
+
+	[Test]
+	public void InTheWildASwingIntoAnEmptyColumnIsWasted()
+	{
+		var s = Battle([new(Mon("Pike", moves: Hit(4)), 0)], [], Foe(2));
+		Assert.That(s.AimsAtLeader(Named(s, "Pike")), Is.False);
+
+		s = EndTurn(s);
+
+		Assert.That(s.GetParty().LeaderHp, Is.EqualTo(0));
+		Assert.That(s.GetParty().IsOver, Is.False);
+	}
+
+	[Test]
+	public void TheLeaderAtZeroWinsTheGym()
+	{
+		var s = Gym(Battle([new(Mon("Pike", moves: Hit(10)), 0)], [], Foe(2)), 10);
+
+		s = EndTurn(s);
+
+		Assert.That(s.GetParty().IsOver && s.GetParty().Won, Is.True);
+		Assert.That(s.LivingFoes(), Is.Not.Empty, "its creatures still stand");
+	}
+
+	// ===== The bench, in battle
+
+	[Test]
+	public void ABenchedMonsterIsOffTheBoardUntilOneFaints()
+	{
+		var s = Battle(
+			[new(Mon("Pike", hp: 5), 2), new(Mon("Boar", moves: Hit(3)), -1)],
+			[],
+			Foe(2, pattern: [Hit(9), Hit(1)])
+		);
+		Assert.That(s.LivingAllies().Select(a => a.Name), Is.EqualTo(new[] { "Pike" }));
+		Assert.That(s.ActingOrder().Any(c => c.Name == "Boar"), Is.False, "the bench does not act");
+
+		s = EndTurn(s);
+
+		Assert.That(Named(s, "Pike").IsKnockedOut, Is.True);
+		Assert.That(Named(s, "Boar").Space, Is.EqualTo(2), "it stepped into Pike's space");
+		Assert.That(s.GetParty().IsOver, Is.False, "so the battle goes on");
+		Assert.That(TrainerHp(s), Is.EqualTo(PartyScenario.DefaultTrainerHp));
+
+		s = EndTurn(s);
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - 3), "and it fights from the next turn");
+	}
+
+	[Test]
+	public void TheBattleIsLostOnlyWhenTheBenchIsGoneToo()
+	{
+		var s = Battle(
+			[new(Mon("Pike", hp: 5), 2), new(Mon("Boar", hp: 5), -1)],
+			[],
+			Foe(2, pattern: Hit(9))
+		);
+
+		s = EndTurn(s);
+		Assert.That(s.GetParty().IsOver, Is.False);
+
+		s = EndTurn(s);
+		Assert.That(s.GetParty().IsOver && !s.GetParty().Won, Is.True);
 	}
 
 	[Test]

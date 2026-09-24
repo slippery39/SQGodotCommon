@@ -158,7 +158,7 @@ public sealed partial class KinPartyRunScreens
 		var swapping = swap is not null && !run.Bench.IsEmpty;
 		_column.AddChild(
 			Label(
-				$"TEAM{(swapping ? " — pick one, then a benched monster to swap" : "")}     SNARES ×{run.Snares}     GOLD {run.Gold}",
+				$"TEAM{(swapping ? " — pick one, then a benched monster to swap" : "")}     YOU {run.TrainerHp}/{PartyRun.TrainerMaxHp}     SNARES ×{run.Snares}     GOLD {run.Gold}",
 				20,
 				new Color(KinPalette.Bone, 0.8f)
 			)

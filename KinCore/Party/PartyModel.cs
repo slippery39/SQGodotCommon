@@ -23,6 +23,19 @@ public record PartyBattle : GameObject
 	/// <summary>**Snares carried into this battle** — the run's item for catching. Used ones are gone.</summary>
 	public int Snares { get; init; }
 
+	/// <summary>
+	/// **YOUR health — the trainer's** (KinJam.md "TRAINER HEALTH"). A foe's attack that lands on no
+	/// monster hits you, so stepping out of a blow is no longer free: waiting has a price. At 0 the
+	/// battle — and the run — is lost.
+	/// </summary>
+	public int TrainerHp { get; init; }
+
+	/// <summary>
+	/// **The gym leader's health; 0 = no leader** (wild creatures have no trainer). The mirror of
+	/// yours: your attack that lands on no foe hits the leader, and at 0 the gym is won.
+	/// </summary>
+	public int LeaderHp { get; init; }
+
 	public bool IsOver { get; init; }
 	public bool Won { get; init; }
 }
@@ -70,6 +83,12 @@ public record Ally : Creature
 
 	/// <summary>Played its move early this turn (Hasten), so it does not act again at the end.</summary>
 	public bool HasActed { get; init; }
+
+	/// <summary>
+	/// **On the bench: off the board, waiting.** The first one steps into a fainted monster's space,
+	/// free — a fainted monster no longer leaves its column open to hit you for the rest of the fight.
+	/// </summary>
+	public bool Benched { get; init; }
 
 	/// <summary>The passive, as the player reads it. Rules live in the fields below, never here.</summary>
 	public string Passive { get; init; } = "";

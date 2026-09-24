@@ -62,6 +62,26 @@
 > weakest). `PartyWorld` holds the regions; `PartyRun.Phase` is the route. The flat five-fight run
 > and "the rest before the last battle" are gone.
 
+> **TRAINER HEALTH, THE GYM LEADER, THE BENCH IN BATTLE (Shayne, 2026-09-24).** The map run was
+> lost at the gym, and it found a hole: **foes never move, so dodging was free** — wait out a blow
+> in its column until the hand favoured you. Shayne: "If you can just wait something out
+> indefinitely so you can choose when to strike only when it favors you, then that makes the
+> gameplay predictable and boring." Brainstormed: trainer health, Rage on a whiff, foes that hunt,
+> a clock on the fight, rewards for taking hits, hits that spill over. Chosen, reluctantly and on
+> purpose — the tension between YOUR health and your MONSTERS':
+> - **You have 30 health for the run; only a town heals it.** A foe's attack that lands on **no
+>   monster at all** hits you — once, whatever its shape (a three-wide that catches one monster does
+>   not also hit you). At 0 the run is lost. The telegraph says "→ YOU"; the forecast counts it.
+> - **A gym has a LEADER with 35 health** — the mirror: your swing that lands on no foe hits the
+>   leader, and 0 wins the gym. Gyms become a race, wild fights stay a grind; a monster in an empty
+>   column is no longer wasted there. **No gym creature can be caught** (the leader's, not wild).
+> - **The bench steps in**: a fainted monster is replaced at once by the first on the bench (the
+>   order you set between fights), so a faint no longer leaves its column open to hit you. It acts
+>   from the next turn. The battle is lost only when board and bench are both down.
+> Why this and not Monster Train's Pyre wholesale: monsters stay persistent and yours; the trainer
+> is a second clock, not the thing the monsters exist to protect. More monsters now cover more
+> columns — catching and the 5-monster board gain a purpose.
+
 > **Rejected: Monster Train's model** (summon monsters as cards into lanes, defend a health total).
 > It rebuilds the lane game the pivot left, brings deck dilution back as monster cards, and makes
 > monsters disposable where this game wants them to be YOURS.

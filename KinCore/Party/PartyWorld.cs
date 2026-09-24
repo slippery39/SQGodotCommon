@@ -160,6 +160,16 @@ public static class PartyWorld
 
 	private static Foe At(Foe foe, int space) => foe with { Space = space };
 
+	/// <summary>**The leader's health in a gym** — your swings into empty columns hit them.</summary>
+	public const int LeaderHp = 35;
+
+	/// <summary>
+	/// **A gym: a leader and their creatures.** None of them can be caught — they are the leader's,
+	/// not wild — and the leader has health of their own.
+	/// </summary>
+	private static Encounter Gym(string name, params Foe[] foes) =>
+		new(name, [.. foes.Select(f => f with { Catchable = false })], LeaderHp);
+
 	public static readonly ImmutableList<Region> Regions =
 	[
 		new(
@@ -178,7 +188,7 @@ public static class PartyWorld
 					Mosshell
 				),
 			],
-			new("The Old Tusker", [PartyContent.OldTusker(2), At(PartyContent.Wisp(0), 4)]),
+			Gym("The Old Tusker", PartyContent.OldTusker(2), At(PartyContent.Wisp(0), 4)),
 			MinFoes: 1,
 			MaxFoes: 2
 		),
@@ -198,7 +208,7 @@ public static class PartyWorld
 					BogToad
 				),
 			],
-			new("The Old Mire", [At(BogToad, 0), At(OldMire, 2), At(BriarViper, 4)]),
+			Gym("The Old Mire", At(BogToad, 0), At(OldMire, 2), At(BriarViper, 4)),
 			MinFoes: 2,
 			MaxFoes: 3
 		),
