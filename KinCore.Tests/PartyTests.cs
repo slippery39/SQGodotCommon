@@ -544,6 +544,85 @@ public class PartyTests
 		Assert.That(s.CardsIn(ZoneType.Hand), Is.Empty);
 	}
 
+	// ===== Catching — a Snare is an item, thrown at a weakened foe
+
+	private static GameState WithSnares(GameState s, int snares) =>
+		s.UpdateObject(s.GetParty().Id, s.GetParty() with { Snares = snares });
+
+	private static bool CanSnare(GameState s, int space) =>
+		new UseSnareAction { FoeId = FoeIn(s, space).Id }
+			.ValidateAdd(s)
+			.IsValid;
+
+	private static GameState Snare(GameState s, int space) =>
+		Do(s, new UseSnareAction { FoeId = FoeIn(s, space).Id });
+
+	[Test]
+	public void AFoeCanBeCaughtOnlyAtAThirdOfItsHpOrLess()
+	{
+		var s = WithSnares(Battle([new(Mon("Pike"), 0)], [], Foe(2, hp: 30), Foe(3)), 1);
+		Assert.That(CanSnare(s, 2), Is.False, "30 of 30");
+
+		s = s.UpdateObject(FoeIn(s, 2).Id, FoeIn(s, 2) with { Hp = 10 });
+		Assert.That(CanSnare(s, 2), Is.True, "10 of 30");
+	}
+
+	[Test]
+	public void ACaughtFoeLeavesTheBoardAndCostsASnareAndEnergy()
+	{
+		var s = WithSnares(Battle([new(Mon("Pike"), 2)], [], Foe(2, hp: 3), Foe(3)), 2);
+		s = s.UpdateObject(FoeIn(s, 2).Id, FoeIn(s, 2) with { MaxHp = 30 });
+
+		s = Snare(s, 2);
+
+		Assert.That(s.LivingFoes().Select(f => f.Space), Is.EqualTo(new[] { 3 }));
+		Assert.That(s.CaughtFoes().Single().Hp, Is.EqualTo(3), "caught at the HP it had");
+		Assert.That(s.GetParty().Snares, Is.EqualTo(1));
+		Assert.That(s.GetParty().Energy, Is.EqualTo(3 - UseSnareAction.Cost));
+	}
+
+	[Test]
+	public void CatchingTheLastFoeWinsTheBattle()
+	{
+		var s = WithSnares(Battle([new(Mon("Pike"), 2)], [], Foe(2, hp: 3)), 1);
+		s = s.UpdateObject(FoeIn(s, 2).Id, FoeIn(s, 2) with { MaxHp = 30 });
+
+		s = Snare(s, 2);
+
+		Assert.That(s.GetParty().IsOver && s.GetParty().Won, Is.True);
+	}
+
+	[Test]
+	public void NoSnaresOrABossCannotBeCaught()
+	{
+		var s = Battle([new(Mon("Pike"), 2)], [], Foe(2, hp: 3), Foe(3, hp: 3));
+		s = s.UpdateObject(FoeIn(s, 2).Id, FoeIn(s, 2) with { MaxHp = 30 });
+		s = s.UpdateObject(FoeIn(s, 3).Id, FoeIn(s, 3) with { MaxHp = 30, Catchable = false });
+		Assert.That(CanSnare(s, 2), Is.False, "no Snares");
+
+		s = WithSnares(s, 1);
+		Assert.That(CanSnare(s, 2), Is.True);
+		Assert.That(CanSnare(s, 3), Is.False, "a boss");
+	}
+
+	[Test]
+	public void ACaughtWispDriftsOnYourRow()
+	{
+		var drift = new Intent
+		{
+			Name = "Drift",
+			Kind = IntentType.Move,
+			Amount = -1,
+		};
+		var s = Battle([new(Mon("Wisp", moves: drift), 3), new(Mon("Pike"), 1)], [], Foe(0));
+
+		s = EndTurn(s);
+		Assert.That(Named(s, "Wisp").Space, Is.EqualTo(2));
+
+		s = EndTurn(s);
+		Assert.That(Named(s, "Wisp").Space, Is.EqualTo(2), "Pike is in the way");
+	}
+
 	// ===== The battle's end, and what the board reads
 
 	[Test]

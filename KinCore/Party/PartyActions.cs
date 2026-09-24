@@ -73,6 +73,55 @@ public record PlayPartyCardAction : GameAction
 	}
 }
 
+/// <summary>
+/// **Throw a Snare at a foe: it is caught** — off the board at once, counted as beaten, and it joins
+/// the run with its own cycle if the battle is won. Only at a third of its HP or less, never a boss.
+/// An ITEM, not a card: Snares never dilute the deck, and they are carried between battles.
+/// </summary>
+public record UseSnareAction : GameAction
+{
+	public const int Cost = 1;
+
+	public int FoeId { get; init; }
+
+	public override ValidationResult ValidateAdd(GameState s)
+	{
+		if (s.GetParty().IsOver)
+			return ValidationResult.Invalid("The battle is over");
+		if (
+			!s.HasObject(FoeId)
+			|| s.GetObject(FoeId) is not Foe { IsDead: false, Caught: false } foe
+		)
+			return ValidationResult.Invalid("Throw it at a foe");
+		return s.CatchRefusal(foe) is { } refusal
+			? ValidationResult.Invalid(refusal)
+			: ValidationResult.Valid;
+	}
+
+	public override ActionResult Execute(GameState s)
+	{
+		var party = s.GetParty();
+		s = s.UpdateObject(
+			party.Id,
+			party with
+			{
+				Energy = party.Energy - Cost,
+				Snares = party.Snares - 1,
+			}
+		);
+		s = s.UpdateObject(FoeId, (Foe)s.GetObject(FoeId) with { Caught = true });
+
+		ImmutableList<GameEvent> events = [new FoeCaughtEvent { FoeId = FoeId }];
+		if (!s.LivingFoes().Any())
+		{
+			var won = s.GetParty();
+			s = s.UpdateObject(won.Id, won with { IsOver = true, Won = true });
+			events = events.Add(new PartyBattleEndedEvent { Won = true });
+		}
+		return new ActionResult(s).WithEvents(events);
+	}
+}
+
 /// <summary>The played card leaves the hand once everything it does has resolved.</summary>
 public record DiscardPlayedCardAction : GameAction
 {
@@ -446,6 +495,11 @@ public record FoeHitEvent : GameEvent
 	public int FoeId { get; init; }
 	public int Damage { get; init; }
 	public int Blocked { get; init; }
+}
+
+public record FoeCaughtEvent : GameEvent
+{
+	public int FoeId { get; init; }
 }
 
 public record FoeStaggeredEvent : GameEvent

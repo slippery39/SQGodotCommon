@@ -19,6 +19,10 @@ public record PartyBattle : GameObject
 	public int TurnNumber { get; init; } = 1;
 	public int Energy { get; init; }
 	public int MaxEnergy { get; init; } = 3;
+
+	/// <summary>**Snares carried into this battle** — the run's item for catching. Used ones are gone.</summary>
+	public int Snares { get; init; }
+
 	public bool IsOver { get; init; }
 	public bool Won { get; init; }
 }
@@ -52,6 +56,9 @@ public abstract record Creature : GameObject
 /// <summary>One of YOUR monsters. It fights on its own; your cards move, buff and time it.</summary>
 public record Ally : Creature
 {
+	/// <summary>Its place in the run's team — how the run finds it again after the battle.</summary>
+	public int Slot { get; init; }
+
 	/// <summary>Added to this monster's attacks.</summary>
 	public int Power { get; init; }
 
@@ -110,6 +117,12 @@ public record Foe : Creature
 
 	/// <summary>Stagger: it loses its next move (the cycle still advances).</summary>
 	public bool Staggered { get; init; }
+
+	/// <summary>False for a boss: an exam is not a catch.</summary>
+	public bool Catchable { get; init; } = true;
+
+	/// <summary>**Caught by a Snare** — off the board, beaten, and joining you when the battle is won.</summary>
+	public bool Caught { get; init; }
 
 	public bool IsDead => IsDown;
 }

@@ -36,7 +36,8 @@ public record PartyScenario(
 	ImmutableList<PlacedCompanion> Companions,
 	ImmutableList<Foe> Foes,
 	ImmutableList<KinCard> Deck,
-	ImmutableList<string> OpeningHand
+	ImmutableList<string> OpeningHand,
+	int Snares = 0
 );
 
 /// <summary>
@@ -201,6 +202,7 @@ public static class PartyContent
 			Name = "Old Tusker",
 			Hp = 48,
 			MaxHp = 48,
+			Catchable = false,
 			Speed = 2,
 			Space = space,
 			Pattern =
@@ -338,7 +340,8 @@ public static class PartyContent
 			[new(Pike, 2)],
 			[Boar(1), Wisp(3)],
 			StarterDeck,
-			[]
+			[],
+			Snares: 2
 		);
 
 	public static readonly PartyScenario Pair =
@@ -348,7 +351,8 @@ public static class PartyContent
 			[new(Bramble, 1), new(Pike, 3)],
 			[Boar(1), Wisp(3), Stonebeak(4)],
 			StarterDeck,
-			[]
+			[],
+			Snares: 2
 		);
 
 	/// <summary>The full team: the Wall, the Controller and the Skirmisher, each wanting something else.</summary>
@@ -359,7 +363,8 @@ public static class PartyContent
 			[new(Bramble, 0), new(Gale, 2), new(Pike, 4)],
 			[Boar(2), Wisp(3), Stonebeak(4)],
 			StarterDeck,
-			["Gust", "Rally", "Guard", "Dash", "Stagger"]
+			["Gust", "Rally", "Guard", "Dash", "Stagger"],
+			Snares: 2
 		);
 
 	public static readonly ImmutableList<PartyScenario> Scenarios = [Alone, Pair, Trio];
@@ -378,6 +383,7 @@ public static class PartyBattleFactory
 				Name = scenario.Name,
 				Description = scenario.Description,
 				Energy = 3,
+				Snares = scenario.Snares,
 			}
 		);
 		(s, var draw) = s.AddObject(
@@ -399,11 +405,12 @@ public static class PartyBattleFactory
 			.RegisterWellKnownId(KinObjectKeys.Hand, hand.Id)
 			.RegisterWellKnownId(KinObjectKeys.Discard, discard.Id);
 
-		foreach (var (companion, space, hp) in scenario.Companions)
+		foreach (var ((companion, space, hp), slot) in scenario.Companions.Select((c, i) => (c, i)))
 		{
 			(s, _) = s.AddObject(
 				new Ally
 				{
+					Slot = slot,
 					Name = companion.Name,
 					Hp = hp ?? companion.Hp,
 					MaxHp = companion.Hp,

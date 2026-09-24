@@ -48,6 +48,11 @@ public partial class KinPartyBoard : Node2D
 	private Label _title;
 	private Label _subtitle;
 	private Label _energy;
+
+	/// <summary>The Snare item: press it, then click a foe. Armed = the next foe click throws it.</summary>
+	private Button _snare;
+
+	private bool _snaring;
 	private Label _hint;
 	private Label _log;
 	private Button _endTurn;
@@ -140,6 +145,15 @@ public partial class KinPartyBoard : Node2D
 				&& int.TryParse(arg["--inspect=".Length..], out var inspect)
 			)
 				_captureInspect = inspect;
+			// Capture-only: `--snare=3` weakens the foe in space 3 to catchable (`DebugWeaken`) and
+			// arms the Snare, to capture what an armed Snare lights.
+			if (arg.StartsWith("--snare=") && int.TryParse(arg["--snare=".Length..], out var weak))
+				GetTree().CreateTimer(0.4).Timeout += () =>
+				{
+					_state = _state.DebugWeaken(weak);
+					Render(ImmutableList<GameEvent>.Empty);
+					OnSnare();
+				};
 			if (arg == "--end-turn")
 				GetTree().CreateTimer(1.6).Timeout += OnEndTurn;
 		}
@@ -212,18 +226,27 @@ public partial class KinPartyBoard : Node2D
 				() => Project.GameManager.Instance.GoToMainMenu()
 			);
 		else
-			_screens.ShowBetween(
-				_run,
-				report,
-				beaten,
-				reward =>
-				{
-					_run = _run.Take(reward);
-					NextBattle();
-				},
-				NextBattle
-			);
+			ShowBetween(report, beaten);
 	}
+
+	/// <summary>Redrawn after every bench swap, so the team shown is always the team that fights.</summary>
+	private void ShowBetween(RunReport report, string beaten) =>
+		_screens.ShowBetween(
+			_run,
+			report,
+			beaten,
+			reward =>
+			{
+				_run = _run.Take(reward);
+				NextBattle();
+			},
+			NextBattle,
+			(team, bench) =>
+			{
+				_run = _run.Swap(team, bench);
+				ShowBetween(report, beaten);
+			}
+		);
 
 	private int HandCard(int index) => _state.CardsIn(ZoneType.Hand).ElementAt(index).Id;
 
@@ -329,6 +352,26 @@ public partial class KinPartyBoard : Node2D
 		return null;
 	}
 
+	private int? FoeSpaceAt(Vector2 point)
+	{
+		for (var i = 0; i < PartyBattle.Spaces; i++)
+			if (_foeCells[i].Root.GetGlobalRect().HasPoint(point))
+				return i;
+		return null;
+	}
+
+	private void OnSnare()
+	{
+		_selectedAllyId = 0;
+		_snaring = !_snaring;
+		Report(
+			_snaring
+				? "Click a lit foe to catch it — a third of its HP or less. Click anywhere else to put the Snare away."
+				: HowToPlay
+		);
+		RenderRows();
+	}
+
 	private int? SpaceAt(Vector2 point)
 	{
 		for (var i = 0; i < PartyBattle.Spaces; i++)
@@ -356,6 +399,22 @@ public partial class KinPartyBoard : Node2D
 			|| Common.Cards.CardUIManager.DraggingCard is not null
 		)
 			return;
+
+		// **An armed Snare takes the next click**: a foe is a throw, anywhere else puts it away.
+		if (_snaring)
+		{
+			GetViewport().SetInputAsHandled();
+			_snaring = false;
+			if (FoeSpaceAt(click.Position) is { } at && _state.FoeAt(at) is { } target)
+				Apply(new UseSnareAction { FoeId = target.Id });
+			else
+			{
+				_hint.Text = HowToPlay;
+				RenderRows();
+			}
+			return;
+		}
+
 		if (SpaceAt(click.Position) is not { } space)
 			return;
 
@@ -403,6 +462,7 @@ public partial class KinPartyBoard : Node2D
 	private void OnEndTurn()
 	{
 		_selectedAllyId = 0;
+		_snaring = false;
 		Apply(new EndPartyTurnAction());
 	}
 
@@ -495,6 +555,8 @@ public partial class KinPartyBoard : Node2D
 			+ (down.Count > 0 ? $"   Knocked out: {string.Join(", ", down)}." : "");
 
 		_energy.Text = $"ENERGY {party.Energy}/{party.MaxEnergy}";
+		_snare.Text = $"SNARE ×{party.Snares}";
+		_snare.Disabled = party.IsOver || party.Snares == 0;
 		_endTurn.Disabled = party.IsOver;
 
 		foreach (var line in events.Select(Describe).Where(l => l is not null))
@@ -578,6 +640,9 @@ public partial class KinPartyBoard : Node2D
 			return;
 		}
 
+		var catchable = foe.Catchable && foe.Hp <= foe.CatchAt();
+		var throwHere = _snaring && _state.CatchRefusal(foe) is null;
+
 		var intent = foe.Current;
 		var says = foe.Staggered
 			? "STAGGERED — loses this move"
@@ -588,9 +653,12 @@ public partial class KinPartyBoard : Node2D
 		cell.Show(
 			$"{order.GetValueOrDefault(foe.Id)} · {foe.Name.ToUpperInvariant()}",
 			Art(foe.Name, hostile: true),
-			$"HP {foe.Hp}/{foe.MaxHp}" + (foe.Block > 0 ? $"  ·  BLOCK {foe.Block}" : ""),
+			$"HP {foe.Hp}/{foe.MaxHp}"
+				+ (foe.Block > 0 ? $" · BLOCK {foe.Block}" : "")
+				+ (catchable ? " · ◆ CATCH" : ""),
 			attacks ? "" : says,
-			dropHere is not null ? $"▼ {dropHere.Name.ToUpperInvariant()} HERE"
+			throwHere ? "◆ SNARE IT HERE"
+				: dropHere is not null ? $"▼ {dropHere.Name.ToUpperInvariant()} HERE"
 				: loses > 0
 					? $"▲ −{loses} HP if turn ends"
 						+ (foe.OffBalance > 0 ? $" (off-balance +{foe.OffBalance})" : "")
@@ -598,7 +666,7 @@ public partial class KinPartyBoard : Node2D
 				: "",
 			attacks ? says : "",
 			KinArt.EnemyGround,
-			dropHere is not null ? KinPalette.Gold
+			dropHere is not null || throwHere ? KinPalette.Gold
 				: attacks ? KinPalette.Red
 				: null
 		);
@@ -711,6 +779,12 @@ public partial class KinPartyBoard : Node2D
 						KinPalette.Gold
 					);
 				},
+				FoeCaughtEvent caught => () =>
+				{
+					var cell = _foeCells[((Foe)_state.GetObject(caught.FoeId)).Space].Root;
+					KinAnimator.Pop(cell);
+					KinAnimator.Float(_overlay, cell, "CAUGHT!", KinPalette.Gold);
+				},
 				FoeStaggeredEvent staggered => () =>
 					KinAnimator.Float(
 						_overlay,
@@ -784,6 +858,7 @@ public partial class KinPartyBoard : Node2D
 			FoeMovedEvent moved =>
 				$"{Who(moved.FoeId)} is pushed {(moved.To < moved.From ? "left" : "right")}",
 			FoeStaggeredEvent staggered => $"{Who(staggered.FoeId)} is staggered",
+			FoeCaughtEvent caught => $"Caught the {Who(caught.FoeId)}!",
 			PartyBattleEndedEvent end => end.Won
 				? "Every foe is down. VICTORY."
 				: "Every monster is down. DEFEAT.",
@@ -937,7 +1012,16 @@ public partial class KinPartyBoard : Node2D
 		_endTurn.AddThemeFontSizeOverride("font_size", 22);
 		_endTurn.Pressed += OnEndTurn;
 
+		_snare = new Button
+		{
+			Text = "SNARE",
+			TooltipText = "Catch a foe at a third of its HP or less. Costs 1 energy.",
+		};
+		_snare.AddThemeFontSizeOverride("font_size", 22);
+		_snare.Pressed += OnSnare;
+
 		across.AddChild(_energy);
+		across.AddChild(_snare);
 		across.AddChild(_hint);
 		across.AddChild(_endTurn);
 		return panel;

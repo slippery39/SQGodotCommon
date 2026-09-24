@@ -6,8 +6,9 @@ using KinCore.Party;
 namespace KinCore.Tests;
 
 /// <summary>
-/// **THE RUN, v1 — every rule FIRES** (KinJam.md "THE RUN"): one starter, two joins, HP carried,
-/// knockouts revived at a quarter, one rest before the last battle, rewards into the trainer's deck.
+/// **THE RUN — every rule FIRES** (KinJam.md "THE RUN", "CATCHING"): one starter, the rest caught,
+/// the bench, Snares carried, HP carried, knockouts revived at a quarter, one rest before the last
+/// battle, rewards into the trainer's deck.
 /// Inline companions, foes, encounters and rewards only.
 /// </summary>
 public class PartyRunTests
@@ -66,7 +67,6 @@ public class PartyRunTests
 		PartyRun.Start(
 			A,
 			seed: 1,
-			roster: [A, B, C],
 			encounters: [.. encounters],
 			deck: [Wipe("Wipe")],
 			rewards: [Prize]
@@ -90,22 +90,61 @@ public class PartyRunTests
 	private static int Hp(PartyRun run, string name) =>
 		run.Team.Single(m => m.Companion.Name == name).Hp;
 
-	[Test]
-	public void ARunStartsWithOneAndTheOthersJoinAfterTheFirstTwoWins()
+	private static PartyRun WithTeam(PartyRun run, params PartyCompanion[] team) =>
+		run with
+		{
+			Team = [.. team.Select(c => new RunCompanion(c, c.Hp))],
+		};
+
+	/// <summary>Weakens the foe in that space to `hp` and throws a Snare at it.</summary>
+	private static GameState Catch(GameState s, int space, int hp)
 	{
-		var run = Run(Fight(Foe(2)), Fight(Foe(2)), Fight(Foe(2)), Fight(Foe(2)));
+		var foe = s.LivingFoes().Single(f => f.Space == space);
+		s = s.UpdateObject(foe.Id, foe with { Hp = hp });
+		return Do(s, new UseSnareAction { FoeId = foe.Id });
+	}
+
+	[Test]
+	public void ARunStartsWithOneMonsterAndItsSnares()
+	{
+		var run = Run(Fight(Foe(2)));
+
 		Assert.That(run.Team.Select(m => m.Companion.Name), Is.EqualTo(new[] { "A" }));
+		Assert.That(run.Snares, Is.EqualTo(PartyRun.StartingSnares));
+	}
+
+	[Test]
+	public void ACaughtFoeJoinsWithItsCycleAndTheHpItWasCaughtAt()
+	{
+		var run = Run(Fight(Foe(2, hit: 6)), Fight(Foe(2)), Fight(Foe(2))); // three: no rest yet
 
 		RunReport report;
-		(run, report) = run.AfterBattle(Win(run.StartBattle()));
-		Assert.That(report.Joined, Is.EqualTo("B"));
+		(run, report) = run.AfterBattle(Catch(run.StartBattle(), 2, hp: 10));
 
-		(run, report) = run.AfterBattle(Win(run.StartBattle()));
-		Assert.That(report.Joined, Is.EqualTo("C"));
+		Assert.That(report.Caught, Is.EqualTo(new[] { "Foe" }));
+		var caught = run.Team[1];
+		Assert.That(caught.Hp, Is.EqualTo(10));
+		Assert.That(caught.Companion.Moves.Single().Amount, Is.EqualTo(6), "its own move");
+		Assert.That(run.Snares, Is.EqualTo(PartyRun.StartingSnares - 1), "the Snare is spent");
 
-		(run, report) = run.AfterBattle(Win(run.StartBattle()));
-		Assert.That(report.Joined, Is.Null);
-		Assert.That(run.Team, Has.Count.EqualTo(3));
+		var next = run.StartBattle();
+		Assert.That(next.Allies().Count(), Is.EqualTo(2), "and it fights");
+	}
+
+	[Test]
+	public void ACatchBeyondThreeGoesToTheBenchAndCanBeSwappedIn()
+	{
+		var run = WithTeam(Run(Fight(Foe(1), Foe(3)), Fight(Foe(2))), A, B, C);
+
+		RunReport report;
+		(run, report) = run.AfterBattle(Win(Catch(run.StartBattle(), 3, hp: 5)));
+
+		Assert.That(report.ToBench, Is.EqualTo(new[] { "Foe" }));
+		Assert.That(run.Team, Has.Count.EqualTo(PartyRun.TeamSize));
+
+		run = run.Swap(teamIndex: 1, benchIndex: 0);
+		Assert.That(run.Team.Select(m => m.Companion.Name), Is.EqualTo(new[] { "A", "Foe", "C" }));
+		Assert.That(run.Bench.Single().Companion.Name, Is.EqualTo("B"));
 	}
 
 	[Test]
@@ -124,10 +163,9 @@ public class PartyRunTests
 	public void AKnockedOutCompanionRevivesAtAQuarterOfItsMax()
 	{
 		// Four fights, so the rest (before the last) does not land on the same step as the revive.
-		var run = Run(Fight(Foe(2)), Fight(Foe(1, hit: 99)), Fight(Foe(1)), Fight(Foe(1)));
-		(run, _) = run.AfterBattle(Win(run.StartBattle())); // B joins: A at 1, B at 3
+		var run = WithTeam(Run(Fight(Foe(1, hit: 99)), Fight(Foe(1)), Fight(Foe(1))), A, B);
 
-		var battle = Do(run.StartBattle(), new EndPartyTurnAction()); // A is knocked out
+		var battle = Do(run.StartBattle(), new EndPartyTurnAction()); // A at 1 is knocked out
 		Assert.That(battle.Allies().Single(a => a.Name == "A").IsKnockedOut, Is.True);
 
 		RunReport report;
@@ -150,7 +188,7 @@ public class PartyRunTests
 	[Test]
 	public void TheTeamRestsOnceBeforeTheLastBattle()
 	{
-		var run = Run(Fight(Foe(2, hit: 20)), Fight(Foe(1)));
+		var run = WithTeam(Run(Fight(Foe(1, hit: 20)), Fight(Foe(1))), A, B);
 
 		RunReport report;
 		(run, report) = run.AfterBattle(Win(Do(run.StartBattle(), new EndPartyTurnAction())));

@@ -21,12 +21,37 @@ public static class PartyState
 	public static IEnumerable<Ally> LivingAllies(this GameState s) =>
 		s.Allies().Where(a => !a.IsKnockedOut);
 
-	/// <summary>Every foe still standing, left to right.</summary>
+	/// <summary>Every foe still standing — not beaten, not caught — left to right.</summary>
 	public static IEnumerable<Foe> LivingFoes(this GameState s) =>
 		s.GetChildren(s.GetWellKnownId(BattleKey))
 			.OfType<Foe>()
-			.Where(f => !f.IsDead)
+			.Where(f => !f.IsDead && !f.Caught)
 			.OrderBy(f => f.Space);
+
+	/// <summary>Every foe a Snare took this battle — they join the run if it is won.</summary>
+	public static IEnumerable<Foe> CaughtFoes(this GameState s) =>
+		s.GetChildren(s.GetWellKnownId(BattleKey)).OfType<Foe>().Where(f => f.Caught);
+
+	/// <summary>**The HP at or below which a foe can be caught: a third of its max.**</summary>
+	public static int CatchAt(this Foe foe) => foe.MaxHp / 3;
+
+	/// <summary>
+	/// **Why a Snare cannot take this foe now, or null if it can.** Shared by the throw and by the
+	/// board, which lights the foes a Snare would take.
+	/// </summary>
+	public static string? CatchRefusal(this GameState s, Foe foe)
+	{
+		var party = s.GetParty();
+		if (party.Snares <= 0)
+			return "You have no Snares left";
+		if (!foe.Catchable)
+			return $"The {foe.Name} cannot be caught";
+		if (foe.Hp > foe.CatchAt())
+			return $"Weaken the {foe.Name} first: {foe.CatchAt()} HP or less";
+		if (party.Energy < UseSnareAction.Cost)
+			return "Not enough energy for a Snare";
+		return null;
+	}
 
 	/// <summary>A knocked-out monster leaves the row, so its space is free.</summary>
 	public static Ally? AllyAt(this GameState s, int space) =>
@@ -191,10 +216,12 @@ public static class PartyState
 					);
 				break;
 
-			case IntentType.Move when creature is Foe foe:
-				var to = foe.Space + intent.Amount;
-				if (to >= 0 && to < PartyBattle.Spaces && s.FoeAt(to) is null)
-					s = s.UpdateObject(creatureId, foe with { Space = to });
+			case IntentType.Move:
+				// A caught Wisp still drifts — on your row now, and only into an empty space.
+				var to = creature.Space + intent.Amount;
+				var taken = creature is Ally ? s.AllyAt(to) is not null : s.FoeAt(to) is not null;
+				if (to >= 0 && to < PartyBattle.Spaces && !taken)
+					s = s.UpdateObject(creatureId, creature with { Space = to });
 				break;
 
 			case IntentType.Push when creature is Ally && s.FoeAt(creature.Space) is { } ahead:
@@ -268,6 +295,13 @@ public static class PartyState
 			]
 		);
 	}
+
+	/// <summary>
+	/// **CAPTURE HARNESS ONLY — never called in play.** Drops the foe in that space to the HP a Snare
+	/// can take, so a capture can show catching without playing the fight down to it.
+	/// </summary>
+	public static GameState DebugWeaken(this GameState s, int space) =>
+		s.FoeAt(space) is { } foe ? s.UpdateObject(foe.Id, foe with { Hp = foe.CatchAt() }) : s;
 
 	/// <summary>Damage to a monster: Block first, then HP. Ends the battle when the last one falls.</summary>
 	internal static (GameState, ImmutableList<GameEvent>) HitAlly(

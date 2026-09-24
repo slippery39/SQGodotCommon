@@ -53,7 +53,10 @@ public sealed class KinPartyRunScreens
 
 	public void ShowStarters(Action<PartyCompanion> choose)
 	{
-		Begin("CHOOSE YOUR STARTER", "The other two join after your first two wins.");
+		Begin(
+			"CHOOSE YOUR STARTER",
+			"Catch the rest: weaken a foe to a third of its HP, then throw a Snare."
+		);
 
 		var row = Row();
 		foreach (var companion in PartyContent.Roster)
@@ -91,7 +94,8 @@ public sealed class KinPartyRunScreens
 		RunReport report,
 		string beaten,
 		Action<KinCard> take,
-		Action skip
+		Action skip,
+		Action<int, int> swap
 	)
 	{
 		Begin(
@@ -102,8 +106,12 @@ public sealed class KinPartyRunScreens
 		var news = new List<string>();
 		foreach (var name in report.Revived)
 			news.Add($"{name} was knocked out, and is back at a quarter HP.");
-		if (report.Joined is { } joined)
-			news.Add($"{joined} joins the team!");
+		foreach (var name in report.Caught)
+			news.Add(
+				report.ToBench.Contains(name)
+					? $"Caught the {name}! The team is full, so it waits on the bench."
+					: $"Caught the {name}! It joins the team."
+			);
 		if (report.Rested)
 			news.Add(
 				$"The team rests before the last battle: +{(int)(PartyRun.RestHeal * 100)}% HP."
@@ -111,18 +119,7 @@ public sealed class KinPartyRunScreens
 		foreach (var line in news)
 			_column.AddChild(Label(line, 24, KinPalette.Gold));
 
-		_column.AddChild(
-			Label(
-				string.Join(
-					"     ",
-					run.Team.Select(m =>
-						$"{m.Companion.Name.ToUpperInvariant()} {m.Hp}/{m.Companion.Hp}"
-					)
-				),
-				24,
-				KinPalette.Bone
-			)
-		);
+		ShowTeam(run, swap);
 
 		_column.AddChild(Label("TAKE A CARD", 28, KinPalette.Bone));
 		var row = Row();
@@ -154,6 +151,64 @@ public sealed class KinPartyRunScreens
 		var buttons = Row();
 		buttons.AddChild(Button("NEW RUN", newRun));
 		buttons.AddChild(Button("MENU", menu));
+	}
+
+	/// <summary>
+	/// **The team, and the bench if there is one.** Pick a team member, then a benched monster, and
+	/// they swap — the team is who fights next. With no bench it is one line of HP.
+	/// </summary>
+	private void ShowTeam(PartyRun run, Action<int, int> swap)
+	{
+		_column.AddChild(
+			Label(
+				$"TEAM{(run.Bench.IsEmpty ? "" : " — pick one, then a benched monster to swap")}     SNARES ×{run.Snares}",
+				20,
+				new Color(KinPalette.Bone, 0.8f)
+			)
+		);
+
+		var group = new ButtonGroup { AllowUnpress = true };
+		var team = Row();
+		for (var i = 0; i < run.Team.Count; i++)
+		{
+			var member = Monster(run.Team[i]);
+			member.ToggleMode = !run.Bench.IsEmpty;
+			member.ButtonGroup = run.Bench.IsEmpty ? null : group;
+			team.AddChild(member);
+		}
+
+		if (run.Bench.IsEmpty)
+			return;
+
+		_column.AddChild(Label("BENCH", 20, new Color(KinPalette.Bone, 0.8f)));
+		var bench = Row();
+		for (var b = 0; b < run.Bench.Count; b++)
+		{
+			var benchIndex = b;
+			var sitter = Monster(run.Bench[b]);
+			sitter.Pressed += () =>
+			{
+				if (group.GetPressedButton() is { } picked)
+					swap(picked.GetIndex(), benchIndex);
+			};
+			bench.AddChild(sitter);
+		}
+	}
+
+	private static Button Monster(RunCompanion m)
+	{
+		var button = Button(
+			$"{m.Companion.Name.ToUpperInvariant()} {m.Hp}/{m.Companion.Hp}",
+			() => { }
+		);
+		var colour = KinPalette.Companion(m.Companion.Name);
+		button.AddThemeStyleboxOverride("normal", KinPalette.Box(colour, KinPalette.Bone, 2));
+		button.AddThemeStyleboxOverride(
+			"hover",
+			KinPalette.Box(colour.Lightened(0.12f), KinPalette.Gold, 3)
+		);
+		button.AddThemeStyleboxOverride("pressed", KinPalette.Box(colour, KinPalette.Gold, 5));
+		return button;
 	}
 
 	// ===== Pieces

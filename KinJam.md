@@ -33,6 +33,18 @@
 >   full is problem 4 again. A fainted monster is replaced from the bench for free; a voluntary swap
 >   costs energy or a Switch card. Lose when board and bench have all fainted.
 >
+> **CATCHING v1 (Shayne, 2026-09-24): an ITEM, the Snare, thrown at a weakened foe.** Not a deck
+> card, so it never dilutes the deck; a run carries a stock of them (3 to start — towns will sell
+> more). **A foe can be caught at a third of its max HP or less, never a boss**; a throw costs 1
+> energy, takes it off the board at once (it counts as beaten — the last one caught wins the battle)
+> and, if the battle is won, it JOINS the run with **exactly its foe cycle**, its Speed, its max HP,
+> Power 0, at the HP it was caught at. **Certain, not a roll** (Claude's call, not objected to): in a
+> game about reading telegraphs, a failed roll after the setup is a punishment for nothing. The
+> decision: finish a weak foe, or keep it alive — and still hitting you — long enough to Snare.
+> **The starters no longer join for free: you start with one and catch the rest.** Up to three
+> fight; a fourth goes to the **BENCH**, and between battles you swap who fights (`PartyRun.Swap`).
+> In-battle bench (a fainted monster replaced from it) is NOT built yet.
+
 > **Rejected: Monster Train's model** (summon monsters as cards into lanes, defend a health total).
 > It rebuilds the lane game the pivot left, brings deck dilution back as monster cards, and makes
 > monsters disposable where this game wants them to be YOURS.

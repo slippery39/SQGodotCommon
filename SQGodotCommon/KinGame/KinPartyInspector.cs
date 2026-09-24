@@ -151,6 +151,9 @@ public sealed class KinPartyInspector
 						? $"OFF-BALANCE: takes +{f.OffBalance} from every hit this turn."
 						: "",
 					f.Staggered ? "STAGGERED: loses its next move." : "",
+					!f.Catchable ? "Cannot be caught."
+					: f.Hp <= f.CatchAt() ? "◆ CAN BE CAUGHT NOW — throw a Snare."
+					: $"Can be caught at {f.CatchAt()} HP or less.",
 				}.Where(s => s.Length > 0),
 			],
 			_ => [],

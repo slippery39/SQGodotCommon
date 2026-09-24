@@ -66,7 +66,8 @@ REAL clicks to those spaces of your row, in order — select a monster, then ste
 `--focus=N` lights where hand card N can be dropped, as a hover would (a capture CANNOT hover — this
 shows the look, not that hovering triggers it); `--play=N` plays hand card N on the first space that
 takes it, `--play=N@3` on your space 3, `--play=N@f3` on the foe's — through the drop path;
-`--inspect=N` shows the hover panel for the creature in cell N (0–4 yours, 5–9 the foe's);
+`--snare=N` weakens the foe in space N to catchable (`PartyState.DebugWeaken`, capture harness
+only) and arms the Snare; `--inspect=N` shows the hover panel for the creature in cell N (0–4 yours, 5–9 the foe's);
 `--end-turn` ends the turn at 1.6s, to capture the foes' turn animating. The RUN (no `--scenario`):
 `--starter=N` skips choosing (Roster[N]); `--screen=between|over` then ends battle 1 through
 `PartyState.DebugEndBattle` to capture the screen after it — capture harness only, never in play.
