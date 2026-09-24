@@ -1,5 +1,5 @@
-using KinCore;
 using ImmutableGameObjects;
+using KinCore;
 
 namespace KinConsole;
 
@@ -18,6 +18,13 @@ public static class Program
 		if (args.Length > 0 && args[0].Equals("sim", StringComparison.OrdinalIgnoreCase))
 		{
 			SimCommand.Execute(args);
+			return;
+		}
+
+		// `party-sim N` plays THE COMPANION GAME's runs with PartyBot.
+		if (args.Length > 0 && args[0].Equals("party-sim", StringComparison.OrdinalIgnoreCase))
+		{
+			PartySimCommand.Execute(args);
 			return;
 		}
 

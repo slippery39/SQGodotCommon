@@ -272,6 +272,7 @@ The other four:
 
 ```
 dotnet run --project KinConsole -c Release -- sim 1000          # 1000 runs, seeds 1-1000
+dotnet run --project KinConsole -c Release -- party-sim 300     # THE COMPANION GAME: 300 runs, per region
 dotnet run --project KinConsole -c Release -- sim 200 Life=4    # override any eval weight
 ```
 
