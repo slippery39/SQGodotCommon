@@ -86,7 +86,15 @@ public static class PartyBot
 	private static GameState Do(GameState s, GameAction action)
 	{
 		Interlocked.Increment(ref Simulations);
-		return s.AddAction(action).ProcessAllActions().State;
+		s = s.AddAction(action).ProcessAllActions().State;
+
+		// ponytail: answers a hand choice with the first cards offered; score the options if the
+		// bot's discards ever matter to a measurement.
+		while (s.GetPendingChoice() is { } choice)
+			s = s.ResolveChoice(
+				[.. choice.Options.Take(choice.MinChoices).Select(o => o.Id)]
+			).State;
+		return s;
 	}
 
 	/// <summary>Every step, every distinct card on every drop, every Snare.</summary>

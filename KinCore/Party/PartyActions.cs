@@ -28,7 +28,7 @@ public record PlayPartyCardAction : GameAction
 		if (card.Effects.IsEmpty)
 			return ValidationResult.Invalid($"{card.Name} does nothing");
 
-		if (party.Energy < card.Cost)
+		if (party.Energy < s.CostOf(card))
 			return ValidationResult.Invalid($"Not enough energy for {card.Name}");
 
 		// Each step says why this space will not do — the board asks space by space to light the
@@ -45,10 +45,25 @@ public record PlayPartyCardAction : GameAction
 		var card = (KinCard)s.GetObject(CardId);
 		var party = s.GetParty();
 
-		s = s.UpdateObject(party.Id, party with { Energy = party.Energy - card.Cost });
+		var cost = s.CostOf(card);
+		s = s.UpdateObject(
+			party.Id,
+			party with
+			{
+				Energy = party.Energy - cost,
+				NextCardFree = false,
+				CardsPlayedThisTurn = party.CardsPlayedThisTurn + 1,
+				XPaid = card.HasComponent<SpendsAllEnergy>() ? cost : party.XPaid,
+			}
+		);
 
-		// In card order. **The card is discarded LAST**: discarded first, a draw could reshuffle it
-		// straight back into the hand (found in play with Feint).
+		// **It leaves the hand at once, onto the battle — in no zone — while it resolves**, so a
+		// choice from the hand ("discard a card") cannot pick the card being played. It is
+		// discarded LAST: discarded first, a draw could reshuffle it straight back into the hand
+		// (found in play with Feint).
+		s = s.MoveObject(CardId, party.Id);
+		if (card.IsSpell())
+			s = s.StageEvent(new SpellPlayedEvent());
 		s = s.SpawnActions(
 			card.Effects.Select(e =>
 					e.Template is CardStep step
@@ -110,6 +125,7 @@ public record UseSnareAction : GameAction
 			}
 		);
 		s = s.UpdateObject(FoeId, (Foe)s.GetObject(FoeId) with { Caught = true });
+		s = s.ReturnStolen(FoeId);
 
 		ImmutableList<GameEvent> events = [new FoeCaughtEvent { FoeId = FoeId }];
 		if (!s.LivingFoes().Any())
@@ -211,6 +227,9 @@ public record EndPartyTurnAction : GameAction
 		foreach (var id in s.GetChildrenIds(s.ZoneId(ZoneType.Hand)).ToList())
 			s = s.MoveObject(id, s.ZoneId(ZoneType.Discard));
 
+		var ending = s.GetParty();
+		s = s.UpdateObject(ending.Id, ending with { EndingTurn = true });
+
 		// **Order and targets are fixed BEFORE anyone acts**, from the same functions the board draws
 		// the badges and the telegraph with. Otherwise a homing attack could re-aim after an earlier
 		// hit changed who has the lowest HP, and the board would have shown the wrong target.
@@ -265,7 +284,31 @@ public record StartPartyTurnAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var party = s.GetParty();
-		s = s.UpdateObject(party.Id, party with { Energy = party.MaxEnergy });
+		// **The Glowmoth**: a monster left unhit last turn brings energy. Turn 1 had no last turn.
+		var unhit =
+			party.TurnNumber == 1
+				? 0
+				: s.LivingAllies()
+					.Where(a => !a.WasHit)
+					.SelectMany(a => a.GetComponents<EnergyIfUnhit>())
+					.Sum(e => e.Amount);
+
+		s = s.UpdateObject(
+			party.Id,
+			party with
+			{
+				Energy = Math.Max(0, party.MaxEnergy - party.EnergyDebt + unhit),
+				EnergyDebt = 0,
+				NextCardFree = false,
+				CardsPlayedThisTurn = 0,
+				FoesDefeatedThisTurn = 0,
+				EndingTurn = false,
+				DiscardedThisTurn = 0,
+				SpellDamageThisTurn = 0,
+				SpellsSplash = false,
+				LastSpell = null,
+			}
+		);
 
 		foreach (var ally in s.Allies().ToList())
 			s = s.UpdateObject(
@@ -276,6 +319,7 @@ public record StartPartyTurnAction : GameAction
 					BonusThorns = 0,
 					BonusPower = 0,
 					Momentum = 0,
+					WasHit = false,
 					StepsLeft = 1,
 					HasActed = false,
 				}
@@ -283,6 +327,11 @@ public record StartPartyTurnAction : GameAction
 
 		foreach (var foe in s.LivingFoes().Where(f => f.OffBalance > 0).ToList())
 			s = s.UpdateObject(foe.Id, foe with { OffBalance = 0 });
+
+		foreach (var id in s.Allies().Select(a => a.Id).Concat(s.LivingFoes().Select(f => f.Id)))
+			s = s.ResetTriggers(id);
+
+		s = PartySummon.Fade(s);
 
 		(s, _) = StartTurnAction.DrawCards(s, HandSize);
 		return new ActionResult(s).WithEvent(
@@ -387,13 +436,21 @@ public record StrikeAction : CardStep
 	public int Amount { get; init; }
 	public ImmutableList<int> Offsets { get; init; } = [0];
 
+	/// <summary>Page Storm: +1 for each card in your hand (the card played has already left it).</summary>
+	public bool PlusCardsInHand { get; init; }
+
+	/// <summary>Unleash: + this much for each energy its X paid.</summary>
+	public int PerX { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var ally = Target(s);
 		var (after, events) = PartyState.AttackFoes(
 			s,
 			ally,
-			Amount,
+			Amount
+				+ (PlusCardsInHand ? s.CardsIn(ZoneType.Hand).Count() : 0)
+				+ PerX * s.GetParty().XPaid,
 			Offsets.Select(o => ally.Space + o)
 		);
 		return new ActionResult(after).WithEvents(events);
@@ -404,10 +461,18 @@ public record DrawAction : CardStep
 {
 	public int Count { get; init; } = 1;
 
+	/// <summary>Reads how many from the pipeline instead — "draw that many" (MtgCore's AmountContextKey).</summary>
+	public string CountKey { get; init; } = "";
+
 	public override ActionResult Execute(GameState s)
 	{
-		(s, _) = StartTurnAction.DrawCards(s, Count);
-		return new ActionResult(s);
+		var count = CountKey.Length > 0 ? GetInput(CountKey, 0) : Count;
+		var before = s.CardsIn(ZoneType.Hand).Count();
+		(s, _) = StartTurnAction.DrawCards(s, count);
+		var drawn = s.CardsIn(ZoneType.Hand).Count() - before;
+		return new ActionResult(
+			drawn > 0 ? s.StageEvent(new CardsDrawnEvent { Count = drawn }) : s
+		);
 	}
 }
 
@@ -519,6 +584,12 @@ public record AllySwappedInEvent : GameEvent
 public record FoeCaughtEvent : GameEvent
 {
 	public int FoeId { get; init; }
+}
+
+public record CardStolenEvent : GameEvent
+{
+	public int FoeId { get; init; }
+	public string CardName { get; init; } = "";
 }
 
 public record FoeStaggeredEvent : GameEvent

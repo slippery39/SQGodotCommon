@@ -141,10 +141,23 @@ public record PartyRun
 
 	/// <summary>
 	/// **A caught foe as a monster of yours: exactly what it had.** Its cycle, its Speed, its max HP.
-	/// Power 0, because a foe's move amounts are already its whole damage.
+	/// Power 0, because a foe's move amounts are already its whole damage. **Its deck ability wakes
+	/// now**: the passive, triggers and monster deck it carried dormant. A wild trait (Thief) stays wild.
 	/// </summary>
 	public static PartyCompanion FromFoe(Foe foe) =>
-		new(foe.Name, foe.MaxHp, Power: 0, foe.Speed, foe.Pattern);
+		new(
+			foe.Name,
+			foe.MaxHp,
+			Power: 0,
+			foe.Speed,
+			[.. foe.Pattern.Select(i => i with { Steals = false })],
+			Passive: foe.CaughtPassive,
+			PassiveRule: foe.CaughtRule
+		)
+		{
+			Cards = foe.CaughtCards,
+			Abilities = foe.CaughtAbilities,
+		};
 
 	// ===== Moving along
 

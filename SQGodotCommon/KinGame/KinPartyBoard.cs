@@ -36,7 +36,9 @@ public partial class KinPartyBoard : Node2D
 	private PartyRun _run;
 
 	private KinPartyRunScreens _screens;
-	private readonly List<Button> _practiceButtons = new();
+
+	/// <summary>The practice scenarios, as one dropdown: a row of buttons pushed END TURN off screen at seven.</summary>
+	private OptionButton _practicePicker;
 
 	/// <summary>The monster clicked last, whose step targets are lit. 0 = none.</summary>
 	private int _selectedAllyId;
@@ -45,6 +47,9 @@ public partial class KinPartyBoard : Node2D
 	private readonly KinPartyCell[] _allyCells = new KinPartyCell[PartyBattle.Spaces];
 
 	private KinHandView _hand;
+
+	/// <summary>MTG's choice panel, reused as it is (see <see cref="Settle"/>).</summary>
+	private MtgGame.ChoicePanel _choice;
 	private Label _title;
 	private Label _subtitle;
 	private Label _energy;
@@ -166,8 +171,7 @@ public partial class KinPartyBoard : Node2D
 
 		_practice |= Practice;
 		Practice = false;
-		foreach (var button in _practiceButtons)
-			button.Visible = _practice;
+		_practicePicker.Visible = _practice;
 
 		if (_practice)
 			StartScenario(_scenario);
@@ -346,6 +350,7 @@ public partial class KinPartyBoard : Node2D
 	private void StartScenario(int index)
 	{
 		_scenario = index;
+		_practicePicker.Selected = index;
 		_selectedAllyId = 0;
 		_logLines.Clear();
 		_state = PartyBattleFactory.Create(
@@ -367,12 +372,34 @@ public partial class KinPartyBoard : Node2D
 		}
 
 		var (state, events) = _state.AddAction(action).ProcessAllActions();
+		Settle(state, events);
+	}
+
+	/// <summary>
+	/// **After the engine runs: render, or ask.** A card that pauses on a choice ("discard a card")
+	/// shows MTG's `ChoicePanel` — it depends only on the engine's `ChoiceOption`, so KIN uses it
+	/// as it is. Its backdrop blocks the board until the choice is answered.
+	/// </summary>
+	private void Settle(GameState state, ImmutableList<GameEvent> events)
+	{
 		_state = state;
 		_hint.Text = HowToPlay;
 		Render(events);
 
+		if (_state.GetPendingChoice() is { } choice)
+		{
+			_choice.ShowChoice(choice.Prompt, choice.Options, choice.MinChoices, choice.MaxChoices);
+			return;
+		}
+
 		if (_run is not null && _state.GetParty().IsOver)
 			GetTree().CreateTimer(1.4).Timeout += BattleOver;
+	}
+
+	private void OnChoiceConfirmed(ImmutableList<int> chosen)
+	{
+		var (state, events) = _state.ResolveChoice(chosen);
+		Settle(state, events);
 	}
 
 	private const string HowToPlay =
@@ -613,7 +640,10 @@ public partial class KinPartyBoard : Node2D
 			+ (down.Count > 0 ? $"   Knocked out: {string.Join(", ", down)}." : "")
 			+ (bench.Count > 0 ? $"   Bench: {string.Join(", ", bench)}." : "");
 
-		_energy.Text = $"ENERGY {party.Energy}/{party.MaxEnergy}";
+		// Borrowed energy (Surge) is a cost you pay later — it must be visible now.
+		_energy.Text =
+			$"ENERGY {party.Energy}/{party.MaxEnergy}"
+			+ (party.EnergyDebt > 0 ? $"  −{party.EnergyDebt} NEXT TURN" : "");
 		_snare.Text = $"SNARE ×{party.Snares}";
 		_snare.Disabled = party.IsOver || party.Snares == 0;
 		_endTurn.Disabled = party.IsOver;
@@ -621,7 +651,11 @@ public partial class KinPartyBoard : Node2D
 		foreach (var line in events.Select(Describe).Where(l => l is not null))
 			Log(line);
 
-		_hand.Sync(_state.CardsIn(ZoneType.Hand).ToList(), party.Energy);
+		// The badge shows what the card costs NOW (`CostOf`: Scrap Hammer after discards).
+		_hand.Sync(
+			[.. _state.CardsIn(ZoneType.Hand).Select(c => c with { Cost = _state.CostOf(c) })],
+			party.Energy
+		);
 		Animate(events);
 	}
 
@@ -819,7 +853,8 @@ public partial class KinPartyBoard : Node2D
 
 		// The passive, with its live number when a card or a step has raised it this turn.
 		cell.Passive =
-			ally.Momentum > 0 ? $"MOMENTUM: next hit +{ally.Momentum}"
+			ally.FadesIn > 0 ? $"TOKEN · FADES IN {ally.FadesIn}"
+			: ally.Momentum > 0 ? $"MOMENTUM: next hit +{ally.Momentum}"
 			: ally.BonusThorns > 0 ? $"THORNS {ally.TotalThorns} this turn"
 			: ally.Passive;
 	}
@@ -862,6 +897,13 @@ public partial class KinPartyBoard : Node2D
 					KinAnimator.Pop(cell);
 					KinAnimator.Float(_overlay, cell, "CAUGHT!", KinPalette.Gold);
 				},
+				CardStolenEvent stolen => () =>
+					KinAnimator.Float(
+						_overlay,
+						_foeCells[((Foe)_state.GetObject(stolen.FoeId)).Space].Root,
+						$"STOLE {stolen.CardName.ToUpperInvariant()}",
+						KinPalette.Red
+					),
 				FoeStaggeredEvent staggered => () =>
 					KinAnimator.Float(
 						_overlay,
@@ -947,6 +989,8 @@ public partial class KinPartyBoard : Node2D
 			FoeMovedEvent moved =>
 				$"{Who(moved.FoeId)} is pushed {(moved.To < moved.From ? "left" : "right")}",
 			FoeStaggeredEvent staggered => $"{Who(staggered.FoeId)} is staggered",
+			CardStolenEvent stolen => $"{Who(stolen.FoeId)} steals your {stolen.CardName}",
+			CardDiscardedEvent discarded => $"Discarded {Who(discarded.CardId)}",
 			FoeCaughtEvent caught => $"Caught the {Who(caught.FoeId)}!",
 			TrainerHitEvent hit => $"{hit.By} gets through and hits YOU for {hit.Damage}",
 			LeaderHitEvent hit => $"{hit.By} hits the leader for {hit.Damage}",
@@ -1015,6 +1059,16 @@ public partial class KinPartyBoard : Node2D
 		_log.Modulate = new Color(1, 1, 1, 0.8f);
 		layer.AddChild(_log);
 
+		_choice = new MtgGame.ChoicePanel();
+		AddChild(_choice);
+		_choice.Confirmed += OnChoiceConfirmed;
+		// Its panel has no background under KIN's theme — the options floated over the board.
+		foreach (var panel in _choice.FindChildren("*", nameof(PanelContainer), true, false))
+			((PanelContainer)panel).AddThemeStyleboxOverride(
+				"panel",
+				KinPalette.Box(KinPalette.Navy, KinPalette.Slate)
+			);
+
 		var canvas = GetViewportRect().Size;
 		_hand = new KinHandView(
 			layer,
@@ -1052,15 +1106,12 @@ public partial class KinPartyBoard : Node2D
 		text.AddChild(_subtitle);
 		across.AddChild(text);
 
+		_practicePicker = new OptionButton();
+		_practicePicker.AddThemeFontSizeOverride("font_size", 18);
 		for (var i = 0; i < PartyContent.Scenarios.Count; i++)
-		{
-			var index = i;
-			var button = new Button { Text = PartyContent.Scenarios[i].Name.ToUpperInvariant() };
-			button.AddThemeFontSizeOverride("font_size", 18);
-			button.Pressed += () => StartScenario(index);
-			_practiceButtons.Add(button);
-			across.AddChild(button);
-		}
+			_practicePicker.AddItem(PartyContent.Scenarios[i].Name.ToUpperInvariant(), i);
+		_practicePicker.ItemSelected += index => StartScenario((int)index);
+		across.AddChild(_practicePicker);
 
 		var menu = new Button { Text = "MENU" };
 		menu.AddThemeFontSizeOverride("font_size", 18);

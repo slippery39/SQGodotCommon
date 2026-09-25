@@ -36,6 +36,45 @@ public record PartyBattle : GameObject
 	/// </summary>
 	public int LeaderHp { get; init; }
 
+	/// <summary>
+	/// **Cards a card or ability discarded this turn** — MtgCore's `SpellsCastThisTurn` pattern:
+	/// counted in ONE place (`FirePartyTriggersAction`) from the staged events, so no discard path
+	/// can forget it. The end-of-turn discard is not counted. Scrap Hammer reads it.
+	/// </summary>
+	public int DiscardedThisTurn { get; init; }
+
+	/// <summary>Spell damage dealt this turn, after bonuses and wards — what Overload deals.</summary>
+	public int SpellDamageThisTurn { get; init; }
+
+	/// <summary>Focus was played: this turn's dropped spells also hit the foes beside the target.</summary>
+	public bool SpellsSplash { get; init; }
+
+	/// <summary>The last spell cast this turn, with where it was dropped — what an Echo repeats.</summary>
+	public SpellDamageAction? LastSpell { get; init; }
+
+	// ===== SURGE — energy and cost (PartySurge.cs)
+
+	/// <summary>Borrowed energy (Surge): taken off the NEXT turn's energy.</summary>
+	public int EnergyDebt { get; init; }
+
+	/// <summary>Quicken was played: the next card costs 0.</summary>
+	public bool NextCardFree { get; init; }
+
+	/// <summary>Cards played this turn — "the first card each turn" (the Hushcap) reads it.</summary>
+	public int CardsPlayedThisTurn { get; init; }
+
+	/// <summary>What the last X card paid — its X.</summary>
+	public int XPaid { get; init; }
+
+	/// <summary>Foes killed DURING your turn (Battle Cry). The end of the turn does not count.</summary>
+	public int FoesDefeatedThisTurn { get; init; }
+
+	/// <summary>
+	/// **True while the end of the turn resolves.** A kill then is not "during your turn": its energy
+	/// would arrive with nothing left to spend it on.
+	/// </summary>
+	public bool EndingTurn { get; init; }
+
 	public bool IsOver { get; init; }
 	public bool Won { get; init; }
 }
@@ -64,6 +103,12 @@ public abstract record Creature : GameObject
 	public Intent Current => Pattern[PatternIndex % Pattern.Count];
 
 	public bool IsDown => Hp <= 0;
+
+	/// <summary>
+	/// **A TOKEN: your turn starts left before it fades** (`PartySummon.Fade`). 0 = a real
+	/// creature, which never fades — and only real monsters keep a battle alive.
+	/// </summary>
+	public int FadesIn { get; init; }
 }
 
 /// <summary>One of YOUR monsters. It fights on its own; your cards move, buff and time it.</summary>
@@ -111,6 +156,9 @@ public record Ally : Creature
 	/// </summary>
 	public int MomentumPerStep { get; init; }
 
+	/// <summary>Attacked since your last turn began (blocked or not) — the Glowmoth's condition.</summary>
+	public bool WasHit { get; init; }
+
 	/// <summary>Built by steps, spent by the next attack, cleared when your next turn starts.</summary>
 	public int Momentum { get; init; }
 
@@ -143,6 +191,22 @@ public record Foe : Creature
 	/// <summary>**Caught by a Snare** — off the board, beaten, and joining you when the battle is won.</summary>
 	public bool Caught { get; init; }
 
+	/// <summary>
+	/// **A WILD trait, in words** — what its own abilities (triggers in `Components`) do while it
+	/// stands, e.g. the Hoard Drake's Block. "" = none. Shown by the inspector.
+	/// </summary>
+	public string Trait { get; init; } = "";
+
+	// ===== What it brings when CAUGHT — dormant while wild (KinJam.md: a wild creature shows only
+	// its cycle; its deck ability wakes when caught). `PartyRun.FromFoe` copies them.
+
+	public string CaughtPassive { get; init; } = "";
+	public string CaughtRule { get; init; } = "";
+	public ImmutableList<GameComponent> CaughtAbilities { get; init; } = [];
+
+	/// <summary>Its monster deck, once it is yours.</summary>
+	public ImmutableList<KinCard> CaughtCards { get; init; } = [];
+
 	public bool IsDead => IsDown;
 }
 
@@ -159,6 +223,15 @@ public enum IntentType
 
 	/// <summary>Pushes the foe AHEAD <see cref="Intent.Amount"/> columns (negative = left) — Gale's Gust.</summary>
 	Push,
+
+	/// <summary>
+	/// **Repeats the last spell you cast this turn**, on the same drop — the Echo Owl. It needs a
+	/// trainer, so a wild one's Echo does nothing.
+	/// </summary>
+	Echo,
+
+	/// <summary>Summons <see cref="Intent.Summons"/> into the nearest empty space on its own row.</summary>
+	Summon,
 }
 
 /// <summary>One telegraphed move. **Nothing on the board plays from a deck but you.**</summary>
@@ -176,4 +249,13 @@ public record Intent
 
 	/// <summary>Ignores the shape: hits the creature with the LOWEST HP on the other side.</summary>
 	public bool Homing { get; init; }
+
+	/// <summary>
+	/// **THIEF** (a wild trait): after the attack, a FOE takes the top card of your draw pile, and
+	/// holds it until it is beaten or caught. A caught thief loses it (`PartyRun.FromFoe`).
+	/// </summary>
+	public bool Steals { get; init; }
+
+	/// <summary>What a Summon move brings — the Broodvine's Grub.</summary>
+	public TokenTemplate? Summons { get; init; }
 }

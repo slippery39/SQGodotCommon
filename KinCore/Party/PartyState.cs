@@ -28,6 +28,78 @@ public static class PartyState
 	public static IEnumerable<Ally> LivingAllies(this GameState s) =>
 		s.Allies().Where(a => !a.IsKnockedOut && !a.Benched);
 
+	/// <summary>
+	/// **A monster's own deck joins the draw pile** — at the start of a battle it fights, or when it
+	/// steps in from the bench. Until then its cards wait under it, in no zone.
+	/// </summary>
+	public static GameState DeployDeck(this GameState s, int allyId)
+	{
+		foreach (var id in s.GetChildrenIds(allyId).ToList())
+			s = s.MoveObject(id, s.ZoneId(ZoneType.Draw));
+		return s;
+	}
+
+	/// <summary>
+	/// **When a monster faints, its cards leave every zone** and wait under it again — no dead
+	/// draws. Faints happen at END of turn, after the hand is discarded, so none leaves a hand.
+	/// </summary>
+	public static GameState WithdrawDeck(this GameState s, int allyId)
+	{
+		foreach (var zone in new[] { ZoneType.Draw, ZoneType.Hand, ZoneType.Discard })
+		foreach (var card in s.CardsIn(zone).Where(c => c.OwnerId == allyId).ToList())
+			s = s.MoveObject(card.Id, allyId);
+		return s;
+	}
+
+	/// <summary>
+	/// **What a card costs to play NOW — the one place a cost is adjusted** (MtgCore's CostEngine:
+	/// every reduction and tax goes through here, floored at 0). Paying, validating and the hand's
+	/// cost badge all read it, so they cannot disagree.
+	/// </summary>
+	public static int CostOf(this GameState s, KinCard card)
+	{
+		var party = s.GetParty();
+		if (party.NextCardFree)
+			return 0;
+		if (card.HasComponent<SpendsAllEnergy>())
+			return party.Energy;
+
+		var cost = card.Cost;
+		if (card.GetComponent<CostReduction>() is { } reduction)
+			cost -= reduction.PerDiscardThisTurn * party.DiscardedThisTurn;
+
+		// The first card each turn: monsters' discounts and foes' taxes, from both sides of the board.
+		var first =
+			party.CardsPlayedThisTurn == 0
+				? s.LivingAllies()
+					.Cast<Creature>()
+					.Concat(s.LivingFoes())
+					.SelectMany(c => c.GetComponents<FirstCardCost>())
+					.Select(f => f.Amount)
+					.ToList()
+				: [];
+
+		// MtgCore's order: reductions first, floored, THEN taxes — a card cut to 0 still pays a tax.
+		cost = Math.Max(0, cost + first.Where(a => a < 0).Sum());
+		return Math.Max(0, cost + first.Where(a => a > 0).Sum());
+	}
+
+	/// <summary>
+	/// **A thief's haul goes back to your discard pile** when it is beaten or caught. A card whose
+	/// monster has fainted goes back under it instead — no dead draws.
+	/// </summary>
+	public static GameState ReturnStolen(this GameState s, int foeId)
+	{
+		foreach (var card in s.GetChildren(foeId).OfType<KinCard>().ToList())
+			s = s.MoveObject(
+				card.Id,
+				card.OwnerId != 0 && ((Ally)s.GetObject(card.OwnerId)).IsKnockedOut
+					? card.OwnerId
+					: s.ZoneId(ZoneType.Discard)
+			);
+		return s;
+	}
+
 	/// <summary>The bench, in the order it steps in.</summary>
 	public static IEnumerable<Ally> BenchedAllies(this GameState s) =>
 		s.Allies().Where(a => a.Benched && !a.IsKnockedOut).OrderBy(a => a.Slot);
@@ -119,6 +191,9 @@ public static class PartyState
 		if (intent.Homing)
 		{
 			IEnumerable<Creature> others = creature is Ally ? s.LivingFoes() : s.LivingAllies();
+			// A Decoy draws every homing attack to itself.
+			if (others.FirstOrDefault(c => c.HasComponent<Lure>()) is { } lure)
+				return [lure.Space];
 			var weakest = others.OrderBy(c => c.Hp).ThenBy(c => c.Space).FirstOrDefault();
 			return weakest is null ? [] : [weakest.Space];
 		}
@@ -225,9 +300,17 @@ public static class PartyState
 						continue;
 
 					landed = true;
+					var overflow = intent.Amount - victim.Block - victim.Hp;
 
 					(s, more) = HitAlly(s, victim, intent.Amount, creature.Name);
 					events = events.AddRange(more);
+
+					// **TRAMPLE**: what fells the monster and more, the rest goes through to you.
+					if (overflow > 0 && creature.HasComponent<Trample>() && !s.GetParty().IsOver)
+					{
+						(s, more) = HitTrainer(s, overflow, creature.Name);
+						events = events.AddRange(more);
+					}
 
 					// **Thorns: attacking this monster hurts**, blocked or not.
 					if (victim.TotalThorns > 0 && !s.GetParty().IsOver)
@@ -243,6 +326,20 @@ public static class PartyState
 					(s, more) = HitTrainer(s, intent.Amount, creature.Name);
 					events = events.AddRange(more);
 				}
+
+				// **THIEF: then it takes the top card of your draw pile.** An empty pile is not reshuffled.
+				if (
+					intent.Steals
+					&& !s.GetParty().IsOver
+					&& !((Foe)s.GetObject(creatureId)).IsDead
+					&& s.CardsIn(ZoneType.Draw).FirstOrDefault() is { } top
+				)
+				{
+					s = s.MoveObject(top.Id, creatureId);
+					events = events.Add(
+						new CardStolenEvent { FoeId = creatureId, CardName = top.Name }
+					);
+				}
 				break;
 
 			case IntentType.Block:
@@ -253,7 +350,7 @@ public static class PartyState
 						Block = creature.Block + intent.Amount,
 					}
 				);
-				if (creature is Ally)
+				if (creature is Ally && intent.Amount > 0)
 					events = events.Add(
 						new BlockGainedEvent { AllyId = creatureId, Amount = intent.Amount }
 					);
@@ -275,6 +372,28 @@ public static class PartyState
 					more = [];
 				events = events.AddRange(more);
 				break;
+		}
+
+		// **Summon: a token into the nearest empty space on its own row** — yours, or a wild brood.
+		if (intent is { Kind: IntentType.Summon, Summons: { } brood })
+		{
+			var ally = creature is Ally;
+			if (PartySummon.NearestEmpty(s, creature.Space, ally) is { } at)
+				s = ally
+					? PartySummon.SummonAlly(s, brood, at)
+					: PartySummon.SummonFoe(s, brood, at);
+		}
+
+		// **Echo: your last spell again**, where it was dropped. Only an ally has spells to echo.
+		if (
+			intent.Kind == IntentType.Echo
+			&& creature is Ally
+			&& s.GetParty().LastSpell is { } spell
+		)
+		{
+			var echoed = spell.Execute(s);
+			s = echoed.GameState;
+			events = events.AddRange(echoed.Events);
 		}
 
 		// The cycle advances even for a creature that died mid-move to Thorns — it is gone anyway.
@@ -306,9 +425,23 @@ public static class PartyState
 				continue;
 
 			landed = true;
+			var overflow = damage + foe.OffBalance - foe.Block - foe.Hp;
 			ImmutableList<GameEvent> hit;
 			(s, hit) = HitFoe(s, foe, damage);
 			events = events.AddRange(hit);
+
+			// **TRAMPLE**, yours: what fells a foe and more carries on into a random other foe.
+			if (overflow > 0 && ally.HasComponent<Trample>() && !s.GetParty().IsOver)
+			{
+				var others = s.LivingFoes().ToList();
+				if (others.Count > 0)
+				{
+					var rng = new Random(s.RngSeed);
+					var next = others[rng.Next(others.Count)];
+					(s, hit) = HitFoe(s with { RngSeed = rng.Next() }, next, overflow);
+					events = events.AddRange(hit);
+				}
+			}
 		}
 
 		// The mirror of the trainer rule: a swing that finds no foe hits the gym LEADER, if there is one.
@@ -367,6 +500,7 @@ public static class PartyState
 		var blocked = Math.Min(amount, ally.Block);
 		var hit = ally with
 		{
+			WasHit = true,
 			Block = ally.Block - blocked,
 			Hp = Math.Max(0, ally.Hp - (amount - blocked)),
 		};
@@ -382,22 +516,31 @@ public static class PartyState
 				By = by,
 			},
 		];
-		if (hit.IsKnockedOut)
+		if (hit.IsKnockedOut && hit.FadesIn > 0)
+		{
+			// A token has no deck and no bench behind it: it is simply gone, with its faint effect.
+			events = events.Add(new AllyKnockedOutEvent { AllyId = ally.Id });
+			s = PartySummon.TokenFainted(s, hit);
+		}
+		else if (hit.IsKnockedOut)
 		{
 			events = events.Add(new AllyKnockedOutEvent { AllyId = ally.Id });
+			s = s.WithdrawDeck(ally.Id);
 
 			// **The bench steps in**, into the fainted monster's space. It arrives after this turn's
 			// order was fixed, so it acts from next turn — but it can be hit where it stands.
 			if (s.BenchedAllies().FirstOrDefault() is { } sub)
 			{
 				s = s.UpdateObject(sub.Id, sub with { Benched = false, Space = ally.Space });
+				s = KinRng.ShuffleZone(s.DeployDeck(sub.Id), s.ZoneId(ZoneType.Draw));
 				events = events.Add(
 					new AllySwappedInEvent { AllyId = sub.Id, ForAllyId = ally.Id }
 				);
 			}
 		}
 
-		if (!s.LivingAllies().Any())
+		// Tokens never keep a battle alive — only real monsters do.
+		if (!s.LivingAllies().Any(a => a.FadesIn == 0))
 		{
 			var party = s.GetParty();
 			s = s.UpdateObject(party.Id, party with { IsOver = true, Won = false });
@@ -460,6 +603,22 @@ public static class PartyState
 			Hp = Math.Max(0, foe.Hp - (amount - blocked)),
 		};
 		s = s.UpdateObject(foe.Id, hit);
+		if (hit.IsDead)
+		{
+			s = s.ReturnStolen(foe.Id);
+			var party = s.GetParty();
+			if (!party.EndingTurn)
+				s = s.UpdateObject(
+					party.Id,
+					party with
+					{
+						FoesDefeatedThisTurn = party.FoesDefeatedThisTurn + 1,
+					}
+				);
+			s = s.StageEvent(
+				new FoeDefeatedEvent { FoeId = foe.Id, DuringYourTurn = !party.EndingTurn }
+			);
+		}
 
 		ImmutableList<GameEvent> events =
 		[

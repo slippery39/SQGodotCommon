@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using ImmutableGameObjects;
 
 namespace KinCore.Party;
 
@@ -159,6 +160,308 @@ public static class PartyWorld
 		Catchable = false,
 	};
 
+	// ===== DISCARD + DRAW (round one, docs/paper/round-one-synergies.md). Each is a question when
+	// wild and an engine when caught; the tester, caught, becomes a bridge for what it punished.
+
+	/// <summary>
+	/// **Magpie — wild: a THIEF** (its Snatch takes the top card of your draw pile until it is
+	/// beaten). **Caught: the Discard engine** — every discard throws 2 at a random foe.
+	/// </summary>
+	public static readonly Foe Magpie = Creature(
+		"Magpie",
+		14,
+		3,
+		Attack("Snatch", 3) with
+		{
+			Steals = true,
+		},
+		new Intent
+		{
+			Name = "Hop",
+			Kind = IntentType.Move,
+			Amount = 1,
+		}
+	) with
+	{
+		CaughtPassive = "SCAVENGER",
+		CaughtRule = "When you discard a card, 2 damage to a random foe.",
+		CaughtAbilities =
+		[
+			new Trigger
+			{
+				Name = "Scavenger",
+				When = new OnCardDiscarded(),
+				Effects = [new DamageRandomFoeAction { Amount = 2 }],
+			},
+		],
+		CaughtCards = [PartyCards.Sift, PartyCards.Rummage],
+	};
+
+	/// <summary>
+	/// **Inkling — caught: the Draw engine, pairing Draw with Surge.** The first draw each turn is
+	/// an energy; Sift turns it on for nothing. Wild it is only a wide splash and an inky shell.
+	/// </summary>
+	public static readonly Foe Inkling = Creature(
+		"Inkling",
+		16,
+		2,
+		Attack("Splash", 2, ThreeWide),
+		Guard("Ink", 4)
+	) with
+	{
+		CaughtPassive = "INKWELL",
+		CaughtRule = "The first time a card draws each turn, +1 energy.",
+		CaughtAbilities =
+		[
+			new Trigger
+			{
+				Name = "Inkwell",
+				When = new OnCardsDrawn(),
+				Effects = [new GainEnergyAction()],
+				MaxPerTurn = 1,
+			},
+		],
+		CaughtCards = [PartyCards.Sift, PartyCards.Jot],
+	};
+
+	/// <summary>
+	/// **Hoard Drake — the Discard + Draw TESTER.** Wild, every draw or discard during your turn
+	/// thickens its hoard, so it becomes the foe to kill first. Caught, discarding shields it — a
+	/// bridge from Discard to Block.
+	/// </summary>
+	public static readonly Foe HoardDrake = Creature(
+		"Hoard Drake",
+		26,
+		1,
+		Guard("Hoard", 6),
+		Attack("Tail", 7)
+	) with
+	{
+		Trait = "HOARD: gains 2 Block whenever you draw or discard during your turn.",
+		Components =
+		[
+			new Trigger
+			{
+				Name = "Hoard",
+				When = new OnDrawOrDiscard(),
+				Effects = [new GainBlockAction { Amount = 2 }],
+			},
+		],
+		CaughtPassive = "HOARDER",
+		CaughtRule = "When you discard a card, it gains 3 Block.",
+		CaughtAbilities =
+		[
+			new Trigger
+			{
+				Name = "Hoarder",
+				When = new OnCardDiscarded(),
+				Effects = [new GainBlockAction { Amount = 3 }],
+			},
+		],
+		CaughtCards = [PartyCards.Ration, PartyCards.Sift],
+	};
+
+	// ===== SPELLCRAFT (round one)
+
+	/// <summary>
+	/// **Emberling — caught: the Spellcraft engine.** Your spells deal 2 more while it stands, on a
+	/// body of 12 HP: the strategy lives in a column you have to protect. Wild, a weak chip creature.
+	/// </summary>
+	public static readonly Foe Emberling = Creature(
+		"Emberling",
+		12,
+		2,
+		Attack("Ember", 2),
+		Attack("Ember", 2)
+	) with
+	{
+		CaughtPassive = "KINDLING +2",
+		CaughtRule = "Your spells deal 2 more while it stands.",
+		CaughtAbilities = [new SpellPower { Amount = 2 }],
+		CaughtCards = [PartyCards.Zap, PartyCards.SparkScroll],
+	};
+
+	/// <summary>
+	/// **Echo Owl — caught: pushed.** Speed 1, so it acts after your whole hand: its Echo repeats the
+	/// last spell you cast, and the decision is which spell to cast LAST. Wild, the Echo is empty.
+	/// </summary>
+	public static readonly Foe EchoOwl = Creature(
+		"Echo Owl",
+		16,
+		1,
+		new Intent { Name = "Echo", Kind = IntentType.Echo },
+		Attack("Peck", 3)
+	) with
+	{
+		// No passive line: its power IS its move, and the move already says it (the cell showed "ECHO" twice).
+		CaughtCards = [PartyCards.Zap, PartyCards.Arc],
+	};
+
+	/// <summary>
+	/// **Warden — the Spellcraft TESTER.** Wild, spells deal half to it: can your monsters kill
+	/// without your deck? Caught, every spell you play shields it — a bridge from Spellcraft to Block.
+	/// </summary>
+	public static readonly Foe Warden = Creature(
+		"Warden",
+		22,
+		1,
+		Guard("Shell", 6),
+		Attack("Slam", 8)
+	) with
+	{
+		Trait = "WARD: spells deal half to it.",
+		Components = [new SpellWard()],
+		CaughtPassive = "SPELLGUARD",
+		CaughtRule = "When you play a spell, it gains 3 Block.",
+		CaughtAbilities =
+		[
+			new Trigger
+			{
+				Name = "Spellguard",
+				When = new OnSpellPlayed(),
+				Effects = [new GainBlockAction { Amount = 3 }],
+			},
+		],
+		CaughtCards = [PartyCards.Zap, PartyCards.Jot],
+	};
+
+	// ===== SURGE (round one)
+
+	/// <summary>
+	/// **Glowmoth — caught: energy for keeping it safe.** Unhit last turn, +1 energy: protecting it
+	/// IS the energy, so position pays for your hand. Wild, fast, fragile and flitting.
+	/// </summary>
+	public static readonly Foe Glowmoth = Creature(
+		"Glowmoth",
+		10,
+		3,
+		Attack("Dust", 1, ThreeWide),
+		new Intent
+		{
+			Name = "Flutter",
+			Kind = IntentType.Move,
+			Amount = -1,
+		}
+	) with
+	{
+		CaughtPassive = "GLOW +1",
+		CaughtRule = "Unhit last turn: +1 energy at the start of your turn.",
+		CaughtAbilities = [new EnergyIfUnhit { Amount = 1 }],
+		CaughtCards = [PartyCards.Surge, PartyCards.Quicken],
+	};
+
+	/// <summary>
+	/// **Stormbuck — caught: a kill made with your hand is energy.** Only DURING your turn — a kill at
+	/// the end of the turn would bring energy with nothing to spend it on — so it bridges Surge to
+	/// Hasten, Strike and spells.
+	/// </summary>
+	public static readonly Foe Stormbuck = Creature(
+		"Stormbuck",
+		20,
+		2,
+		Attack("Antler", 5),
+		Guard("Rear", 4)
+	) with
+	{
+		CaughtPassive = "STORM",
+		CaughtRule = "When a foe dies during your turn, +1 energy.",
+		CaughtAbilities =
+		[
+			new Trigger
+			{
+				Name = "Storm",
+				When = new OnFoeDefeatedDuringYourTurn(),
+				Effects = [new GainEnergyAction()],
+			},
+		],
+		CaughtCards = [PartyCards.BattleCry, PartyCards.Zap],
+	};
+
+	/// <summary>
+	/// **Hushcap — the Surge TESTER.** Wild, your first card each turn costs 1 more: kill it first,
+	/// it is fragile. Caught, the same spores work for you: your first card costs 1 less.
+	/// </summary>
+	public static readonly Foe Hushcap = Creature(
+		"Hushcap",
+		14,
+		2,
+		new Intent
+		{
+			Name = "Spores",
+			Kind = IntentType.Attack,
+			Amount = 3,
+			Homing = true,
+		},
+		Guard("Cap", 4)
+	) with
+	{
+		Trait = "HUSH: your first card each turn costs 1 more.",
+		Components = [new FirstCardCost { Amount = 1 }],
+		CaughtPassive = "HUSH",
+		CaughtRule = "Your first card each turn costs 1 less.",
+		CaughtAbilities = [new FirstCardCost { Amount = -1 }],
+		CaughtCards = [PartyCards.Quicken, PartyCards.Surge],
+	};
+
+	// ===== SUMMON (round one)
+
+	/// <summary>
+	/// **Broodvine — its Brood summons a Grub beside it.** Caught, the grubs are yours: bodies for
+	/// Swarm and Offering. Wild, they fill the FOE row — a fight that grows, and asks for Arc.
+	/// </summary>
+	public static readonly Foe Broodvine = Creature(
+		"Broodvine",
+		24,
+		1,
+		new Intent
+		{
+			Name = "Brood",
+			Kind = IntentType.Summon,
+			Summons = PartyCards.Grub,
+		},
+		Attack("Lash", 4)
+	) with
+	{
+		CaughtPassive = "BROOD",
+		CaughtRule = "Its Brood summons a Grub (2 HP) beside it, for 2 turns.",
+		CaughtCards = [PartyCards.Sow, PartyCards.CallSparks],
+	};
+
+	/// <summary>**Howler — caught: the Summon engine.** Every token you summon arrives stronger.</summary>
+	public static readonly Foe Howler = Creature(
+		"Howler",
+		20,
+		2,
+		Attack("Bite", 4),
+		Guard("Snarl", 4)
+	) with
+	{
+		CaughtPassive = "PACK +2/+1",
+		CaughtRule = "Your tokens arrive with +2 HP and +1 Power.",
+		CaughtAbilities = [new TokenBoost { Hp = 2, Power = 1 }],
+		CaughtCards = [PartyCards.CallSparks, PartyCards.DecoyCard],
+	};
+
+	/// <summary>
+	/// **Ironhorn — the Summon TESTER.** Wild, TRAMPLE: what fells a monster and more comes through
+	/// to you, so a wall of 3-HP Sprouts is paper. Caught, its trample carries into another foe.
+	/// </summary>
+	public static readonly Foe Ironhorn = Creature(
+		"Ironhorn",
+		24,
+		1,
+		Attack("Charge", 8),
+		Attack("Stomp", 4, ThreeWide)
+	) with
+	{
+		Trait = "TRAMPLE: damage beyond what fells a monster hits YOU.",
+		Components = [new Trample()],
+		CaughtPassive = "TRAMPLE",
+		CaughtRule = "Damage beyond what fells a foe hits a random other foe.",
+		CaughtAbilities = [new Trample()],
+		CaughtCards = [PartyCards.Sow, PartyCards.Jot],
+	};
+
 	private static Foe At(Foe foe, int space) => foe with { Space = space };
 
 	/// <summary>
@@ -173,32 +476,32 @@ public static class PartyWorld
 		new(
 			"Mossy Hollow",
 			"Damp and green. Boars root here; wisps drift between the trees.",
-			[PartyContent.Boar(0), PartyContent.Wisp(0), Mosshell],
-			BriarViper
+			[PartyContent.Boar(0), PartyContent.Wisp(0), Mosshell, Hushcap, Broodvine],
+			Howler
 		);
 
 	private static readonly Area StonyRidge =
 		new(
 			"Stony Ridge",
-			"Bare rock and wind. Stonebeaks nest on the crags.",
-			[PartyContent.Stonebeak(0), PartyContent.Boar(0), CinderNewt],
-			Mosshell
+			"Bare rock and wind. Stonebeaks nest on the crags; a warden keeps the pass.",
+			[PartyContent.Stonebeak(0), PartyContent.Boar(0), CinderNewt, Warden, Stormbuck],
+			Glowmoth
 		);
 
 	private static readonly Area MistyMarsh =
 		new(
 			"Misty Marsh",
-			"Fog over black water. Toads, wisps, and things that bite.",
-			[BogToad, PartyContent.Wisp(0), BriarViper],
-			CinderNewt
+			"Fog over black water. Toads, thieving magpies, and a drake on its hoard.",
+			[BogToad, PartyContent.Wisp(0), BriarViper, Magpie, HoardDrake],
+			Inkling
 		);
 
 	private static readonly Area EmberCrags =
 		new(
 			"Ember Crags",
-			"Hot stone and ash. Newts in every crack.",
-			[CinderNewt, PartyContent.Stonebeak(0), Mosshell],
-			BogToad
+			"Hot stone and ash. Newts in every crack, embers that bite, and an owl that answers back.",
+			[CinderNewt, PartyContent.Stonebeak(0), Mosshell, Emberling, Ironhorn],
+			EchoOwl
 		);
 
 	private static readonly Encounter TuskerGym =

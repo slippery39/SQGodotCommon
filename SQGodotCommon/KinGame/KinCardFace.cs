@@ -302,11 +302,18 @@ public static class KinCardFace
 	{
 		var unit = card.GetComponent<UnitComponent>();
 
-		// The companion game's cards were painted in their owner's colour until AUTO-BATTLE v1
-		// (KinJam.md) made every card the trainer's — if signature cards return, so does that.
-		var frame = unit is null ? KinArt.RiteCard : KinArt.UnitCard;
-		var ground = KinArt.ColourFor(card.Name);
-		var subject = card.Name;
+		// **A monster-deck card is painted in its OWNER's colour and carries its figure** — it leaves
+		// the deck when that monster faints, so whose it is must read at a glance. Trainer cards
+		// stay plain.
+		var owner = card.OwnerName.Length > 0 ? card.OwnerName : null;
+		var frame =
+			owner is not null ? KinPalette.Companion(owner)
+			: unit is null ? KinArt.RiteCard
+			: KinArt.UnitCard;
+		var ground = owner is not null
+			? KinPalette.Companion(owner).Lightened(0.3f)
+			: KinArt.ColourFor(card.Name);
+		var subject = owner ?? card.Name;
 
 		return new InternalCardUI2D.Details
 		{
@@ -315,7 +322,8 @@ public static class KinCardFace
 			ManaCost = card.Cost.ToString(),
 			// Blank: the reference card has no type line, and "Unit" floating across the face says
 			// nothing a stat badge does not already say. A Rite has no badge, which is the tell.
-			TypeLine = "",
+			// **The companion game puts a monster-deck card's OWNER here.**
+			TypeLine = card.OwnerName.ToUpperInvariant(),
 
 			// A rite's text is the only thing telling you what it does, so it goes where rules text
 			// goes. It is authored beside the effect it describes — see KinEffect.Text.

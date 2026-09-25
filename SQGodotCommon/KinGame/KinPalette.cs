@@ -36,6 +36,20 @@ public static class KinPalette
 			"Bramble" => Color.FromHtml("#2F6A3A"),
 			"Pike" => Color.FromHtml("#2A4F86"),
 			"Gale" => Color.FromHtml("#5A3F80"),
+			"Magpie" => Color.FromHtml("#2E6F6A"),
+			"Inkling" => Color.FromHtml("#6A4A2A"),
+			"Hoard Drake" => Color.FromHtml("#5E6B2E"),
+			"Emberling" => Color.FromHtml("#8A4A2E"),
+			"Echo Owl" => Color.FromHtml("#4A3F6A"),
+			"Warden" => Color.FromHtml("#4F5A63"),
+			"Glowmoth" => Color.FromHtml("#6A6A2A"),
+			"Stormbuck" => Color.FromHtml("#2F4F6F"),
+			"Hushcap" => Color.FromHtml("#6A3A5A"),
+			"Broodvine" => Color.FromHtml("#3F5A2A"),
+			"Howler" => Color.FromHtml("#5A4A3A"),
+			"Ironhorn" => Color.FromHtml("#4A4A55"),
+			// Tokens: pale, so a body that fades reads as lesser than a monster.
+			"Sprout" or "Spark" or "Decoy" or "Grub" => Color.FromHtml("#56606A"),
 			// Dull on purpose: a companion without a colour should LOOK unfinished.
 			_ => Slate,
 		};

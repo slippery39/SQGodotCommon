@@ -116,11 +116,14 @@ public sealed class KinPartyCell
 			KinCore.Party.IntentType.Attack when intent.Homing =>
 				$"{intent.Name} {amount} → weakest",
 			KinCore.Party.IntentType.Attack => $"{intent.Name} {amount}"
-				+ (intent.Offsets.Count > 1 ? $" ({intent.Offsets.Count} wide)" : ""),
+				+ (intent.Offsets.Count > 1 ? $" ({intent.Offsets.Count} wide)" : "")
+				+ (intent.Steals ? " + steals" : ""),
 			KinCore.Party.IntentType.Block => $"{intent.Name}: +{amount} block",
 			KinCore.Party.IntentType.Move =>
 				$"{intent.Name}: step {(amount < 0 ? "left" : "right")}",
 			KinCore.Party.IntentType.Push => $"{intent.Name}: push {(amount < 0 ? "◀" : "▶")}",
+			KinCore.Party.IntentType.Echo => $"{intent.Name}: last spell",
+			KinCore.Party.IntentType.Summon => $"{intent.Name}: a {intent.Summons?.Creature.Name}",
 			_ => intent.Name,
 		};
 

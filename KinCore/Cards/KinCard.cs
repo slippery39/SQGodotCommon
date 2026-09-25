@@ -37,4 +37,13 @@ public record KinCard : GameObject
 
 	/// <summary>**Devour** — the unit this replaces dies instead of leaving. See <see cref="RunCard.Devours"/>.</summary>
 	public bool Devours { get; init; }
+
+	/// <summary>
+	/// **THE COMPANION GAME: the monster whose deck this card came from** (its `Ally` id). The card
+	/// is in play only while that monster fights. 0 = the trainer's own card.
+	/// </summary>
+	public int OwnerId { get; init; }
+
+	/// <summary>Its owner's name, for the card face — which sees the card and nothing else. "" = none.</summary>
+	public string OwnerName { get; init; } = "";
 }

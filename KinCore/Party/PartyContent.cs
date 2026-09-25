@@ -4,8 +4,8 @@ using ImmutableGameObjects;
 namespace KinCore.Party;
 
 /// <summary>
-/// A monster as authored: stats, a PASSIVE, and the CYCLE of moves it plays on its own. No cards —
-/// the deck is the trainer's (AUTO-BATTLE v1, KinJam.md).
+/// A monster as authored: stats, a PASSIVE, the CYCLE of moves it plays on its own, and a small
+/// MONSTER DECK that joins the trainer's while it fights (KinJam.md).
 /// </summary>
 public record PartyCompanion(
 	string Name,
@@ -18,7 +18,22 @@ public record PartyCompanion(
 	int Thorns = 0,
 	int MomentumPerStep = 0,
 	int Unbalances = 0
-);
+)
+{
+	/// <summary>
+	/// **Its MONSTER DECK** (Shayne, 2026-09-24): baseline cards that work with it, in your draw
+	/// pile only while it fights, so a monster is never on the board with nothing in the deck for
+	/// it. Small and never pushed; the payoffs come from rewards.
+	/// </summary>
+	public ImmutableList<KinCard> Cards { get; init; } = [];
+
+	/// <summary>
+	/// **What it does to how you PLAY** — a `Trigger` ("when you draw, gain energy") or a static
+	/// component ("your spells deal +2", MtgCore's StaticAbilityComponent idea). Put on its `Ally`
+	/// and active only while it stands on the board.
+	/// </summary>
+	public ImmutableList<GameComponent> Abilities { get; init; } = [];
+}
 
 /// <summary>
 /// A monster in a battle. `Hp` is where a RUN left it; null = full. A `Space` below 0 puts it on
@@ -58,18 +73,7 @@ public record PartyScenario(
 public static class PartyContent
 {
 	private static KinCard Card(string name, int cost, string text, params GameAction[] steps) =>
-		new()
-		{
-			Name = name,
-			Cost = cost,
-			// The text rides on the first step only — it is the card's one rules line.
-			Effects =
-			[
-				.. steps.Select(
-					(t, i) => new KinEffect { Template = t, Text = i == 0 ? text : "" }
-				),
-			],
-		};
+		PartyCards.Card(name, cost, text, steps);
 
 	private static readonly ImmutableList<int> Ahead = [0];
 	private static readonly ImmutableList<int> ThreeWide = [-1, 0, 1];
@@ -97,7 +101,20 @@ public static class PartyContent
 			Passive: "THORNS 2",
 			PassiveRule: "A foe that attacks her takes 2, even if she blocks it.",
 			Thorns: 2
-		);
+		)
+		{
+			Cards =
+			[
+				Card("Thornhide", 1, "Gain 3 Thorns this turn.", new ThornsAction { Amount = 3 }),
+				Card(
+					"Bristle",
+					0,
+					"Gain 2 Thorns this turn. Draw a card.",
+					new ThornsAction { Amount = 2 },
+					new DrawAction()
+				),
+			],
+		};
 
 	/// <summary>
 	/// **Pike, the Skirmisher — wants never to be where the hit lands.** Fastest on the board, and
@@ -113,7 +130,20 @@ public static class PartyContent
 			Passive: "MOMENTUM +2/step",
 			PassiveRule: "Each step this turn adds 2 to its next attack.",
 			MomentumPerStep: 2
-		);
+		)
+		{
+			Cards =
+			[
+				Card(
+					"Dash",
+					0,
+					"Take another step this turn. Draw a card.",
+					new DashAction(),
+					new DrawAction()
+				),
+				Card("Sprint", 0, "Take two more steps this turn.", new DashAction { Steps = 2 }),
+			],
+		};
 
 	/// <summary>
 	/// **Gale, the Controller — wants the FOES where it chooses.** Its Gust pushes the foe ahead, and
@@ -138,40 +168,41 @@ public static class PartyContent
 			Passive: "OFF-BALANCE +2",
 			PassiveRule: "While Gale stands, a foe you move takes 2 more from every hit that turn.",
 			Unbalances: 2
-		);
+		)
+		{
+			Cards =
+			[
+				Card(
+					"Gust",
+					1,
+					"Drop on an empty foe space: the foe beside it moves in.",
+					new PushAction()
+				),
+				Card(
+					"Tailwind",
+					1,
+					"Drop on an empty foe space: the foe beside it moves in. Draw a card.",
+					new PushAction(),
+					new DrawAction()
+				),
+			],
+		};
 
 	/// <summary>
-	/// **The trainer's deck — every card is played ON something, and none belongs to a monster.** The
-	/// passive decides what a card means: Guard on Bramble is damage, a Dash on Pike is damage.
+	/// **The trainer's BASIC deck — every card is played ON something, and none belongs to a
+	/// monster.** Each monster fighting adds its own deck on top (`PartyCompanion.Cards`), so the
+	/// starter's two cards make it ten. The passive decides what a card means: Guard on Bramble is
+	/// damage, a Dash on Pike is damage.
 	/// </summary>
 	public static readonly ImmutableList<KinCard> StarterDeck =
 	[
 		Card("Guard", 1, "Gain 6 Block.", new GuardAction { Amount = 6 }),
 		Card("Guard", 1, "Gain 6 Block.", new GuardAction { Amount = 6 }),
-		Card(
-			"Dash",
-			0,
-			"Take another step this turn. Draw a card.",
-			new DashAction(),
-			new DrawAction()
-		),
-		Card(
-			"Dash",
-			0,
-			"Take another step this turn. Draw a card.",
-			new DashAction(),
-			new DrawAction()
-		),
+		Card("Strike", 1, "It attacks ahead now: 3 + Power.", new StrikeAction { Amount = 3 }),
+		Card("Strike", 1, "It attacks ahead now: 3 + Power.", new StrikeAction { Amount = 3 }),
 		Card("Rally", 1, "+3 Power this turn.", new PowerAction { Amount = 3 }),
 		Card("Rally", 1, "+3 Power this turn.", new PowerAction { Amount = 3 }),
 		Card("Hasten", 1, "It plays its move now, not at end of turn.", new HastenAction()),
-		Card("Thornhide", 1, "Gain 3 Thorns this turn.", new ThornsAction { Amount = 3 }),
-		Card(
-			"Gust",
-			1,
-			"Drop on an empty foe space: the foe beside it moves in.",
-			new PushAction()
-		),
 		Card("Stagger", 1, "Drop on a foe: it loses its next move.", new StaggerAction()),
 	];
 
@@ -329,6 +360,26 @@ public static class PartyContent
 			new ThornsAction { Amount = 2 },
 			new DrawAction()
 		),
+		PartyCards.Sow,
+		PartyCards.CallSparks,
+		PartyCards.DecoyCard,
+		PartyCards.Swarm,
+		PartyCards.Offering,
+		PartyCards.Surge,
+		PartyCards.Quicken,
+		PartyCards.BattleCry,
+		PartyCards.Unleash,
+		PartyCards.Meteor,
+		PartyCards.Zap,
+		PartyCards.Arc,
+		PartyCards.SparkScroll,
+		PartyCards.Overload,
+		PartyCards.Focus,
+		PartyCards.Sift,
+		PartyCards.Rummage,
+		PartyCards.Ration,
+		PartyCards.ScrapHammer,
+		PartyCards.PageStorm,
 	];
 
 	public static readonly PartyScenario Alone =
@@ -365,7 +416,100 @@ public static class PartyContent
 			Snares: 2
 		);
 
-	public static readonly ImmutableList<PartyScenario> Scenarios = [Alone, Pair, Trio];
+	/// <summary>
+	/// **Discard + Draw, to try by hand** — round one builds a practice scenario per strategy so the
+	/// cards are played before they are cut. A caught Magpie and Inkling (their decks bring Sift,
+	/// Rummage and Jot); the payoffs in the deck; a Hoard Drake and a wild Magpie to test them.
+	/// A property, not a field: it reads `PartyWorld`, which reads this class.
+	/// </summary>
+	public static PartyScenario Looting =>
+		new(
+			"Draw and discard",
+			"Pike, a Magpie and an Inkling against a Hoard Drake and a wild Magpie.",
+			[
+				new(Pike, 0),
+				new(PartyRun.FromFoe(PartyWorld.Magpie), 2),
+				new(PartyRun.FromFoe(PartyWorld.Inkling), 4),
+			],
+			[PartyWorld.HoardDrake with { Space = 1 }, PartyWorld.Magpie with { Space = 3 }],
+			[.. StarterDeck, PartyCards.ScrapHammer, PartyCards.PageStorm, PartyCards.Ration],
+			["Sift"],
+			Snares: 2
+		);
+
+	/// <summary>
+	/// **Spellcraft, to try by hand.** A caught Emberling (+2 to spells) and Echo Owl against a
+	/// Warden (spells deal half) and the Wisp and Briar Viper — homing and moving, the foes spells
+	/// answer because they need no aim. A property: it reads `PartyWorld`.
+	/// </summary>
+	public static PartyScenario Spellcraft =>
+		new(
+			"Spellcraft",
+			"Bramble, an Emberling and an Echo Owl against a Warden, a Wisp and a Briar Viper.",
+			[
+				new(Bramble, 0),
+				new(PartyRun.FromFoe(PartyWorld.Emberling), 2),
+				new(PartyRun.FromFoe(PartyWorld.EchoOwl), 4),
+			],
+			[
+				PartyWorld.Warden with
+				{
+					Space = 0,
+				},
+				Wisp(2),
+				PartyWorld.BriarViper with
+				{
+					Space = 4,
+				},
+			],
+			[.. StarterDeck, PartyCards.Overload, PartyCards.Focus, PartyCards.SparkScroll],
+			["Zap", "Zap", "Focus"],
+			Snares: 2
+		);
+
+	/// <summary>
+	/// **Surge, to try by hand.** A caught Glowmoth (unhit: +1 energy) and Stormbuck (a kill during
+	/// your turn: +1 energy) against a Hushcap (your first card costs 1 more), whose homing Spores
+	/// find the fragile moth. A property: it reads `PartyWorld`.
+	/// </summary>
+	public static PartyScenario SurgeScenario =>
+		new(
+			"Surge",
+			"Pike, a Glowmoth and a Stormbuck against a Hushcap, a Boar and a Wisp.",
+			[
+				// The moth out of the Boar's column: the homing attacks still find it, which is the point.
+				new(Pike, 2),
+				new(PartyRun.FromFoe(PartyWorld.Glowmoth), 1),
+				new(PartyRun.FromFoe(PartyWorld.Stormbuck), 4),
+			],
+			[PartyWorld.Hushcap with { Space = 0 }, Boar(2), Wisp(4)],
+			[.. StarterDeck, PartyCards.Unleash, PartyCards.Meteor, PartyCards.BattleCry],
+			["Surge", "Quicken", "Unleash"],
+			Snares: 2
+		);
+
+	/// <summary>
+	/// **Summon, to try by hand.** A caught Broodvine (its Brood summons Grubs) and Howler (tokens
+	/// arrive +2/+1) against an Ironhorn, whose Trample makes a token wall paper, and a homing Wisp
+	/// for the Decoy to answer. A property: it reads `PartyWorld`.
+	/// </summary>
+	public static PartyScenario SummonScenario =>
+		new(
+			"Summon",
+			"Bramble, a Broodvine and a Howler against an Ironhorn, a Wisp and a Stonebeak.",
+			[
+				new(Bramble, 0),
+				new(PartyRun.FromFoe(PartyWorld.Broodvine), 2),
+				new(PartyRun.FromFoe(PartyWorld.Howler), 4),
+			],
+			[PartyWorld.Ironhorn with { Space = 1 }, Wisp(3), Stonebeak(4)],
+			[.. StarterDeck, PartyCards.Swarm, PartyCards.Offering, PartyCards.DecoyCard],
+			["Sow", "Call Sparks", "Swarm"],
+			Snares: 2
+		);
+
+	public static ImmutableList<PartyScenario> Scenarios =>
+		[Alone, Pair, Trio, Looting, Spellcraft, SurgeScenario, SummonScenario];
 }
 
 /// <summary>Builds one battle's GameState from a scenario and deals the first hand.</summary>
@@ -373,7 +517,11 @@ public static class PartyBattleFactory
 {
 	public static GameState Create(PartyScenario scenario, int seed = 0)
 	{
-		var s = new GameState { RngSeed = seed };
+		var s = new GameState
+		{
+			RngSeed = seed,
+			PostActionProcessor = new FirePartyTriggersAction(),
+		};
 
 		(s, var battle) = s.AddObject(
 			new PartyBattle
@@ -407,7 +555,7 @@ public static class PartyBattleFactory
 
 		foreach (var ((companion, space, hp), slot) in scenario.Companions.Select((c, i) => (c, i)))
 		{
-			(s, _) = s.AddObject(
+			(s, var ally) = s.AddObject(
 				new Ally
 				{
 					Slot = slot,
@@ -424,9 +572,23 @@ public static class PartyBattleFactory
 					Thorns = companion.Thorns,
 					MomentumPerStep = companion.MomentumPerStep,
 					Unbalances = companion.Unbalances,
+					Components = [.. companion.Abilities],
 				},
 				battle.Id
 			);
+
+			// Its deck waits UNDER it, and joins the draw pile only if it starts on the board.
+			foreach (var card in companion.Cards)
+				(s, _) = s.AddObject(
+					card with
+					{
+						OwnerId = ally.Id,
+						OwnerName = companion.Name,
+					},
+					ally.Id
+				);
+			if (space >= 0)
+				s = s.DeployDeck(ally.Id);
 		}
 
 		foreach (var card in scenario.Deck)

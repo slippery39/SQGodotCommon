@@ -749,6 +749,677 @@ public class PartyTests
 		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - 3), "and it fights from the next turn");
 	}
 
+	// ===== Monster decks
+
+	private static IEnumerable<string> InPlay(GameState s) =>
+		new[] { ZoneType.Draw, ZoneType.Hand, ZoneType.Discard }.SelectMany(z =>
+			s.CardsIn(z).Select(c => c.Name)
+		);
+
+	[Test]
+	public void AMonsterOnTheBoardBringsItsDeck()
+	{
+		var s = Battle(
+			[new(Mon("Pike") with { Cards = [Card("Feint", 0, new DashAction())] }, 2)],
+			[Card("Guard", 1, new GuardAction { Amount = 5 })],
+			Foe(2)
+		);
+
+		Assert.That(InPlay(s), Is.EquivalentTo(new[] { "Guard", "Feint" }));
+	}
+
+	[Test]
+	public void ABenchedMonstersDeckJoinsWhenItStepsIn()
+	{
+		var s = Battle(
+			[
+				new(Mon("Pike", hp: 5), 2),
+				new(Mon("Boar") with { Cards = [Card("Tusk", 0, new DashAction())] }, -1),
+			],
+			[],
+			Foe(2, pattern: Hit(9))
+		);
+		Assert.That(InPlay(s), Does.Not.Contain("Tusk"), "the bench's deck waits");
+
+		s = EndTurn(s);
+
+		Assert.That(Named(s, "Boar").Benched, Is.False);
+		Assert.That(s.CardsIn(ZoneType.Hand).Select(c => c.Name), Does.Contain("Tusk"));
+	}
+
+	[Test]
+	public void AFaintedMonstersCardsLeaveEveryZone()
+	{
+		var s = Battle(
+			[
+				new(Mon("Pike", hp: 5) with { Cards = [Card("Feint", 0, new DashAction())] }, 2),
+				new(Mon("Bramble"), 0),
+			],
+			[Card("Guard", 1, new GuardAction { Amount = 5 })],
+			Foe(2, pattern: Hit(9))
+		);
+		Assert.That(InPlay(s), Does.Contain("Feint"));
+
+		s = EndTurn(s);
+
+		Assert.That(Named(s, "Pike").IsKnockedOut, Is.True);
+		Assert.That(InPlay(s), Is.EquivalentTo(new[] { "Guard" }), "no dead draws");
+	}
+
+	// ===== Monsters that change how you play: triggers
+
+	[Test]
+	public void AMonstersDrawTriggerFiresOncePerTurnAndNotFromTheBench()
+	{
+		var energyOnDraw = new Trigger
+		{
+			When = new OnCardsDrawn(),
+			Effects = [new GainEnergyAction()],
+			MaxPerTurn = 1,
+		};
+		var peek = Card("Peek", 0, new DrawAction());
+		var s = PartyBattleFactory.Create(
+			new PartyScenario(
+				"Test",
+				"",
+				[
+					new(Mon("Inkling") with { Abilities = [energyOnDraw] }, 2),
+					new(Mon("Boar") with { Abilities = [energyOnDraw] }, -1),
+				],
+				[Foe(2)],
+				[peek, peek, .. Enumerable.Repeat(Card("Guard", 1, new GuardAction()), 6)],
+				["Peek", "Peek"]
+			)
+		);
+		Assert.That(s.GetParty().Energy, Is.EqualTo(3), "the opening hand is not a draw");
+
+		s = Play(s, "Peek", 2);
+		Assert.That(
+			s.GetParty().Energy,
+			Is.EqualTo(4),
+			"one from Inkling; the benched Boar is not active"
+		);
+
+		s = Play(s, "Peek", 2);
+		Assert.That(s.GetParty().Energy, Is.EqualTo(4), "once a turn");
+	}
+
+	[Test]
+	public void SiftDrawsThenDiscardsTheCardYouPickAndADiscardTriggerFires()
+	{
+		var energyOnDiscard = new Trigger
+		{
+			When = new OnCardDiscarded(),
+			Effects = [new GainEnergyAction { Amount = 2 }],
+		};
+		var s = PartyBattleFactory.Create(
+			new PartyScenario(
+				"Test",
+				"",
+				[new(Mon("Magpie") with { Abilities = [energyOnDiscard] }, 2)],
+				[Foe(2)],
+				[
+					Card("Sift", 0, PartyDiscard.DrawThenDiscard(2, 1)),
+					.. Enumerable.Repeat(Card("Guard", 1, new GuardAction()), 6),
+				],
+				["Sift"]
+			)
+		);
+
+		s = Play(s, "Sift", 2);
+
+		var choice = s.GetPendingChoice();
+		Assert.That(choice, Is.Not.Null, "it waits for the player");
+		Assert.That(choice!.Options.Select(o => o.DisplayText), Does.Not.Contain("Sift"));
+		Assert.That(
+			choice.Options,
+			Has.Count.EqualTo(4 + 2),
+			"the rest of the hand, plus the two drawn"
+		);
+
+		var discarded = choice.Options[0].Id;
+		s = s.ResolveChoice([discarded]).State;
+
+		Assert.That(s.GetParent(discarded), Is.EqualTo(s.ZoneId(ZoneType.Discard)));
+		Assert.That(s.CardsIn(ZoneType.Hand).Count(), Is.EqualTo(5));
+		Assert.That(s.CardsIn(ZoneType.Discard).Select(c => c.Name), Does.Contain("Sift"));
+		Assert.That(s.GetParty().Energy, Is.EqualTo(3 + 2), "the discard fired Magpie");
+	}
+
+	/// <summary>A battle whose deck is bigger than a hand, with the named cards dealt first.</summary>
+	private static GameState Deal(PlacedCompanion[] companions, KinCard[] top, params Foe[] foes) =>
+		PartyBattleFactory.Create(
+			new PartyScenario(
+				"Test",
+				"",
+				[.. companions],
+				[.. foes],
+				[.. top, .. Enumerable.Repeat(Card("Guard", 1, new GuardAction()), 6)],
+				[.. top.Select(c => c.Name)]
+			)
+		);
+
+	[Test]
+	public void RummageDrawsAsManyAsYouDiscard()
+	{
+		var s = Deal(
+			[new(Mon("Pike"), 2)],
+			[Card("Rummage", 0, PartyDiscard.DiscardThenDraw())],
+			Foe(2)
+		);
+		s = Play(s, "Rummage", 2);
+
+		var two = s.GetPendingChoice()!.Options.Take(2).Select(o => o.Id).ToList();
+		s = s.ResolveChoice([.. two]).State;
+
+		Assert.That(two.All(id => s.GetParent(id) == s.ZoneId(ZoneType.Discard)), Is.True);
+		Assert.That(
+			s.CardsIn(ZoneType.Hand).Count(),
+			Is.EqualTo(4),
+			"four left, two gone, two drawn"
+		);
+		Assert.That(s.GetParty().DiscardedThisTurn, Is.EqualTo(2));
+	}
+
+	[Test]
+	public void ATossFiresWhenACardDiscardsItButNotAtTheEndOfTheTurn()
+	{
+		var toss = Card("Flare", 5, new GuardAction()) with
+		{
+			Components =
+			[
+				new Trigger
+				{
+					When = new OnSelfDiscarded(),
+					Effects = [new DamageRandomFoeAction { Amount = 5 }],
+				},
+			],
+		};
+		var sift = Card("Sift", 0, PartyDiscard.DrawThenDiscard(1, 1));
+
+		var kept = Deal([new(Mon("Pike"), 2)], [toss], Foe(2));
+		kept = EndTurn(kept);
+		Assert.That(FoeIn(kept, 2).Hp, Is.EqualTo(50), "the end-of-turn discard is not discarding");
+
+		var s = Deal([new(Mon("Pike"), 2)], [sift, toss], Foe(2));
+		s = Play(s, "Sift", 2);
+		s = s.ResolveChoice([InHand(s, "Flare").Id]).State;
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - 5));
+	}
+
+	[Test]
+	public void ACostReductionReadsTheDiscardsThisTurn()
+	{
+		var hammer = Card("Hammer", 3, new StrikeAction { Amount = 6 }) with
+		{
+			Components = [new CostReduction { PerDiscardThisTurn = 1 }],
+		};
+		var s = Deal(
+			[new(Mon("Pike"), 2)],
+			[Card("Sift", 0, PartyDiscard.DrawThenDiscard(1, 1)), hammer],
+			Foe(2)
+		);
+		Assert.That(s.CostOf(InHand(s, "Hammer")), Is.EqualTo(3));
+
+		s = Play(s, "Sift", 2);
+		s = s.ResolveChoice([InHand(s, "Guard").Id]).State;
+
+		Assert.That(s.CostOf(InHand(s, "Hammer")), Is.EqualTo(2));
+		s = Play(s, "Hammer", 2);
+		Assert.That(s.GetParty().Energy, Is.EqualTo(3 - 2), "and it is paid at that cost");
+	}
+
+	[Test]
+	public void PageStormHitsForPowerPlusTheCardsLeftInHand()
+	{
+		var s = Deal(
+			[new(Mon("Pike", power: 2), 2)],
+			[Card("Storm", 0, new StrikeAction { Amount = 0, PlusCardsInHand = true })],
+			Foe(2)
+		);
+
+		s = Play(s, "Storm", 2);
+
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - (2 + 4)), "Power 2, four cards left in hand");
+	}
+
+	[Test]
+	public void AThiefStealsTheTopCardAndGivesItBackWhenBeaten()
+	{
+		var thief = Foe(2, hp: 10, pattern: Hit(1) with { Steals = true });
+		var s = Deal([new(Mon("Pike", hp: 30), 2)], [], thief);
+		var top = s.CardsIn(ZoneType.Draw).First().Id;
+
+		s = EndTurn(s);
+		Assert.That(s.GetParent(top), Is.EqualTo(FoeIn(s, 2).Id), "held by the thief");
+
+		s = Do(s, new StrikeAction { Amount = 99, Space = 2 });
+		Assert.That(s.GetParent(top), Is.EqualTo(s.ZoneId(ZoneType.Discard)));
+	}
+
+	[Test]
+	public void AWildTraitFiresForTheFoeWhileItStands()
+	{
+		var hoard = Foe(2) with
+		{
+			Components =
+			[
+				new Trigger
+				{
+					When = new OnDrawOrDiscard(),
+					Effects = [new GainBlockAction { Amount = 2 }],
+				},
+			],
+		};
+		var s = Deal([new(Mon("Pike"), 2)], [Card("Peek", 0, new DrawAction())], hoard);
+
+		s = Play(s, "Peek", 2);
+
+		Assert.That(FoeIn(s, 2).Block, Is.EqualTo(2));
+	}
+
+	[Test]
+	public void ACaughtCreatureWakesItsAbilityAndLeavesItsThieveryWild()
+	{
+		var discardEnergy = new Trigger
+		{
+			When = new OnCardDiscarded(),
+			Effects = [new GainEnergyAction()],
+		};
+		var wild = Foe(0, pattern: Hit(3) with { Steals = true }) with
+		{
+			CaughtPassive = "TEST",
+			CaughtAbilities = [discardEnergy],
+			CaughtCards = [Card("Gift", 0, new DashAction())],
+		};
+
+		var mine = PartyRun.FromFoe(wild);
+
+		Assert.That(mine.Passive, Is.EqualTo(wild.CaughtPassive));
+		Assert.That(mine.Abilities, Is.EqualTo(wild.CaughtAbilities));
+		Assert.That(mine.Cards, Is.EqualTo(wild.CaughtCards));
+		Assert.That(mine.Moves.Any(m => m.Steals), Is.False);
+	}
+
+	// ===== Spellcraft
+
+	private static KinCard Zap(int amount = 4) =>
+		Card("Zap", 1, new SpellDamageAction { Amount = amount });
+
+	[Test]
+	public void ASpellNeedsNoAimButMustBeDroppedOnAFoe()
+	{
+		var s = Deal([new(Mon("Pike"), 0)], [Zap()], Foe(4));
+
+		Assert.That(CanPlay(s, "Zap", 0), Is.False, "not on your own row");
+		s = Play(s, "Zap", 4, foeRow: true);
+
+		Assert.That(FoeIn(s, 4).Hp, Is.EqualTo(50 - 4), "nobody stands in front of it");
+	}
+
+	[Test]
+	public void SpellPowerCountsOnlyWhileTheMonsterIsOnTheBoard()
+	{
+		var ember = Mon("Ember") with { Abilities = [new SpellPower { Amount = 2 }] };
+		var benched = Deal([new(Mon("Pike"), 0), new(ember, -1)], [Zap()], Foe(4));
+		var fighting = Deal([new(Mon("Pike"), 0), new(ember, 2)], [Zap()], Foe(4));
+
+		Assert.That(FoeIn(Play(benched, "Zap", 4, true), 4).Hp, Is.EqualTo(50 - 4));
+		Assert.That(FoeIn(Play(fighting, "Zap", 4, true), 4).Hp, Is.EqualTo(50 - 6));
+	}
+
+	[Test]
+	public void AWardHalvesTheSpellAfterTheBonus()
+	{
+		var ember = Mon("Ember") with { Abilities = [new SpellPower { Amount = 2 }] };
+		var s = Deal([new(ember, 0)], [Zap()], Foe(4) with { Components = [new SpellWard()] });
+
+		s = Play(s, "Zap", 4, foeRow: true);
+
+		Assert.That(FoeIn(s, 4).Hp, Is.EqualTo(50 - (4 + 2) / 2));
+	}
+
+	[Test]
+	public void OverloadDealsTheSpellDamageAlreadyDealtThisTurn()
+	{
+		var overload = Card(
+			"Overload",
+			0,
+			new SpellDamageAction { FromSpellDamageThisTurn = true }
+		);
+		var s = Deal([new(Mon("Pike"), 0)], [Zap(), Zap(), overload], Foe(3), Foe(4));
+
+		s = Play(s, "Zap", 3, foeRow: true);
+		s = Play(s, "Zap", 3, foeRow: true);
+		s = Play(s, "Overload", 4, foeRow: true);
+
+		Assert.That(FoeIn(s, 4).Hp, Is.EqualTo(50 - 8));
+	}
+
+	[Test]
+	public void FocusMakesThisTurnsSpellsHitBesideTheTarget()
+	{
+		var focus = Card("Focus", 0, new SplashSpellsAction());
+		var s = Deal([new(Mon("Pike"), 0)], [focus, Zap()], Foe(1), Foe(2), Foe(3), Foe(4));
+
+		s = Play(s, "Focus", 0);
+		s = Play(s, "Zap", 2, foeRow: true);
+
+		Assert.That(new[] { 1, 2, 3 }.Select(c => FoeIn(s, c).Hp), Is.All.EqualTo(46));
+		Assert.That(FoeIn(s, 4).Hp, Is.EqualTo(50));
+	}
+
+	[Test]
+	public void AnEchoRepeatsTheLastSpellWhereItWasDroppedAndAWildOneDoesNothing()
+	{
+		var echo = new Intent { Name = "Echo", Kind = IntentType.Echo };
+		var s = Deal([new(Mon("Owl", moves: echo), 0)], [Zap()], Foe(3), Foe(4, pattern: echo));
+
+		s = Play(s, "Zap", 3, foeRow: true);
+		s = EndTurn(s);
+
+		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(50 - 4 - 4), "cast, then echoed");
+		Assert.That(FoeIn(s, 4).Hp, Is.EqualTo(50));
+		Assert.That(s.GetParty().LastSpell, Is.Null, "the next turn has cast nothing");
+	}
+
+	[Test]
+	public void PlayingASpellFiresASpellTrigger()
+	{
+		var guard = Mon("Warden") with
+		{
+			Abilities =
+			[
+				new Trigger
+				{
+					When = new OnSpellPlayed(),
+					Effects = [new GainBlockAction { Amount = 3 }],
+				},
+			],
+		};
+		var s = Deal(
+			[new(guard, 0)],
+			[Zap(), Card("Rally", 0, new PowerAction { Amount = 1 })],
+			Foe(4)
+		);
+
+		s = Play(s, "Rally", 0);
+		Assert.That(Named(s, "Warden").Block, Is.EqualTo(0), "not a spell");
+		s = Play(s, "Zap", 4, foeRow: true);
+		Assert.That(Named(s, "Warden").Block, Is.EqualTo(3));
+	}
+
+	// ===== Surge
+
+	[Test]
+	public void BorrowedEnergyComesOffNextTurn()
+	{
+		var surge = Card(
+			"Surge",
+			0,
+			new GainEnergyAction { Amount = 2 },
+			new BorrowEnergyAction { Amount = 1 }
+		);
+		var s = Deal([new(Mon("Pike"), 0)], [surge], Foe(4));
+
+		s = Play(s, "Surge", 0);
+		Assert.That(s.GetParty().Energy, Is.EqualTo(3 + 2));
+
+		s = EndTurn(s);
+		Assert.That(s.GetParty().Energy, Is.EqualTo(3 - 1));
+		Assert.That(EndTurn(s).GetParty().Energy, Is.EqualTo(3), "paid back once");
+	}
+
+	[Test]
+	public void QuickenMakesOnlyTheNextCardFree()
+	{
+		var s = Deal(
+			[new(Mon("Pike"), 0)],
+			[Card("Quicken", 1, new NextCardFreeAction()), Zap(), Zap()],
+			Foe(4)
+		);
+
+		s = Play(s, "Quicken", 0);
+		Assert.That(s.CostOf(InHand(s, "Zap")), Is.EqualTo(0));
+		s = Play(s, "Zap", 4, foeRow: true);
+
+		Assert.That(s.CostOf(InHand(s, "Zap")), Is.EqualTo(1));
+		Assert.That(s.GetParty().Energy, Is.EqualTo(3 - 1));
+	}
+
+	[Test]
+	public void TheFirstCardEachTurnPaysTaxesAfterDiscountsFlooredAtZero()
+	{
+		var hush = Foe(4) with { Components = [new FirstCardCost { Amount = 1 }] };
+		var free = Card("Free", 0, new GuardAction());
+		var s = Deal([new(Mon("Pike"), 0)], [free, free], hush);
+
+		Assert.That(s.CostOf(InHand(s, "Free")), Is.EqualTo(1), "taxed");
+		s = Play(s, "Free", 0);
+		Assert.That(s.CostOf(InHand(s, "Free")), Is.EqualTo(0), "only the first card");
+
+		var discount = Mon("Moth") with { Abilities = [new FirstCardCost { Amount = -1 }] };
+		var both = Deal([new(discount, 0)], [free], hush);
+		Assert.That(both.CostOf(InHand(both, "Free")), Is.EqualTo(1), "0 − 1 floors at 0, then +1");
+	}
+
+	[Test]
+	public void AKillDuringYourTurnPaysTheStormbuckAndAKillAtTheEndDoesNot()
+	{
+		var storm = Mon("Buck", moves: Hit(99)) with
+		{
+			Abilities =
+			[
+				new Trigger
+				{
+					When = new OnFoeDefeatedDuringYourTurn(),
+					Effects = [new GainEnergyAction()],
+				},
+			],
+		};
+		var battleCry = Card("Cry", 0, new GainEnergyIfFoeDiedAction { Amount = 2 });
+
+		var now = Deal([new(storm, 0)], [Zap(99), battleCry], Foe(4, hp: 5), Foe(3));
+		now = Play(now, "Zap", 4, foeRow: true);
+		Assert.That(now.GetParty().Energy, Is.EqualTo(3 - 1 + 1), "the Stormbuck");
+		now = Play(now, "Cry", 0);
+		Assert.That(
+			now.GetParty().Energy,
+			Is.EqualTo(3 - 1 + 1 + 2),
+			"and Battle Cry sees the kill"
+		);
+
+		var later = Deal([new(storm, 0)], [], Foe(0, hp: 5), Foe(3));
+		later = EndTurn(later);
+		Assert.That(FoeIn(later, 0).IsDead, Is.True);
+		Assert.That(later.GetParty().Energy, Is.EqualTo(3), "no energy from the end of the turn");
+	}
+
+	[Test]
+	public void AnUnhitGlowmothBringsEnergyNextTurn()
+	{
+		var moth = Mon("Moth") with { Abilities = [new EnergyIfUnhit { Amount = 1 }] };
+
+		var safe = EndTurn(Deal([new(moth, 0)], [], Foe(4, pattern: Hit(1))));
+		Assert.That(safe.GetParty().Energy, Is.EqualTo(3 + 1));
+
+		var struck = EndTurn(Deal([new(moth, 4)], [], Foe(4, pattern: Hit(1))));
+		Assert.That(struck.GetParty().Energy, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void AnXCardSpendsAllYourEnergyAndCountsIt()
+	{
+		var unleash = Card("Unleash", 0, new StrikeAction { PerX = 4 }) with
+		{
+			Components = [new SpendsAllEnergy()],
+		};
+		var s = Deal([new(Mon("Pike"), 2)], [unleash], Foe(2));
+
+		s = Play(s, "Unleash", 2);
+
+		Assert.That(s.GetParty().Energy, Is.EqualTo(0));
+		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - 4 * 3));
+	}
+
+	// ===== Summon — tokens
+
+	private static TokenTemplate Token(int hp = 3, int fades = 2, params Intent[] moves) =>
+		new(Mon("Tok", hp: hp, moves: moves), fades);
+
+	private static KinCard Summon(TokenTemplate token, int count = 1) =>
+		Card("Summon", 0, new SummonTokenAction { Token = token, Count = count });
+
+	private static Ally TokenAt(GameState s, int space) => s.AllyAt(space)!;
+
+	[Test]
+	public void ATokenLandsWhereDroppedActsAtTheEndOfTheTurnAndFades()
+	{
+		var s = Deal([new(Mon("Pike"), 0)], [Summon(Token(fades: 1, moves: Hit(2)))], Foe(3));
+
+		Assert.That(CanPlay(s, "Summon", 0), Is.False, "not on a monster");
+		s = Play(s, "Summon", 3);
+		Assert.That(TokenAt(s, 3).FadesIn, Is.EqualTo(1));
+
+		s = EndTurn(s);
+		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(50 - 2), "it acted");
+		Assert.That(s.AllyAt(3), Is.Null, "and faded at the start of the next turn");
+	}
+
+	[Test]
+	public void TokensNeverKeepABattleAlive()
+	{
+		var s = Deal(
+			[new(Mon("Pike", hp: 5), 0)],
+			[Summon(Token(hp: 30))],
+			Foe(0, pattern: Hit(9))
+		);
+		s = Play(s, "Summon", 3);
+
+		s = EndTurn(s);
+
+		Assert.That(s.GetParty().IsOver && !s.GetParty().Won, Is.True);
+	}
+
+	[Test]
+	public void AFaintedTokenBringsNoBenchButShieldsItsNeighbours()
+	{
+		var sprout = new TokenTemplate(
+			Mon("Sprout", hp: 3) with
+			{
+				Abilities = [new FaintShield { Amount = 3 }],
+			},
+			2
+		);
+		// A fast foe fells the sprout; a slow one then swings at Pike, into the shield.
+		var s = Deal(
+			[new(Mon("Pike"), 0), new(Mon("Boar"), -1)],
+			[Summon(sprout)],
+			Foe(1, speed: 3, pattern: Hit(9)),
+			Foe(0, speed: 1, pattern: Hit(3))
+		);
+		s = Play(s, "Summon", 1);
+
+		s = EndTurn(s);
+
+		Assert.That(s.AllyAt(1), Is.Null, "the sprout fell");
+		Assert.That(Named(s, "Boar").Benched, Is.True, "a token is not replaced from the bench");
+		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20), "the slower blow hit the shield");
+	}
+
+	[Test]
+	public void ADecoyDrawsEveryHomingAttack()
+	{
+		var decoy = new TokenTemplate(Mon("Decoy", hp: 30) with { Abilities = [new Lure()] }, 1);
+		var homing = new Intent
+		{
+			Name = "Zap",
+			Kind = IntentType.Attack,
+			Amount = 4,
+			Homing = true,
+		};
+		var s = Deal([new(Mon("Pike", hp: 5), 0)], [Summon(decoy)], Foe(4, pattern: homing));
+		s = Play(s, "Summon", 3);
+
+		s = EndTurn(s);
+
+		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(5), "the weakest was spared");
+	}
+
+	[Test]
+	public void TrampleCarriesTheRestOfTheBlowToYou()
+	{
+		var horn = Foe(3, pattern: Hit(8)) with { Components = [new Trample()] };
+		var s = Deal([new(Mon("Pike"), 0)], [Summon(Token(hp: 3))], horn);
+		s = Play(s, "Summon", 3);
+
+		s = EndTurn(s);
+
+		Assert.That(TrainerHp(s), Is.EqualTo(PartyScenario.DefaultTrainerHp - (8 - 3)));
+	}
+
+	[Test]
+	public void AWildBroodFillsTheFoeRowAndCannotBeCaught()
+	{
+		var brood = new Intent
+		{
+			Name = "Brood",
+			Kind = IntentType.Summon,
+			Summons = Token(hp: 2, fades: 2),
+		};
+		var s = Deal([new(Mon("Pike", hp: 30), 0)], [], Foe(2, pattern: brood));
+
+		s = EndTurn(s);
+
+		var grub = s.LivingFoes().Single(f => f.FadesIn > 0);
+		Assert.That(Math.Abs(grub.Space - 2), Is.EqualTo(1), "beside it");
+		Assert.That(grub.Catchable, Is.False);
+	}
+
+	[Test]
+	public void SwarmAttacksWithEveryTokenAndABoostArrivesWithThem()
+	{
+		var howler = Mon("Howler") with { Abilities = [new TokenBoost { Hp = 2, Power = 1 }] };
+		var s = Deal(
+			[new(howler, 0)],
+			[Summon(Token(), count: 2), Card("Swarm", 0, new TokensAttackAction { Amount = 2 })],
+			Foe(2),
+			Foe(3)
+		);
+
+		s = Play(s, "Summon", 3);
+		Assert.That(TokenAt(s, 3).Hp, Is.EqualTo(3 + 2));
+		s = Play(s, "Swarm", 0);
+
+		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(50 - (2 + 1)));
+		Assert.That(
+			FoeIn(s, 2).Hp,
+			Is.EqualTo(50 - (2 + 1)),
+			"the second: nearest empty, left on a tie"
+		);
+	}
+
+	[Test]
+	public void AnOfferingSpendsATokenForCardsAndEnergy()
+	{
+		var offering = Card(
+			"Offering",
+			0,
+			new SacrificeTokenAction(),
+			new DrawAction { Count = 2 },
+			new GainEnergyAction()
+		);
+		var s = Deal([new(Mon("Pike"), 0)], [Summon(Token()), offering], Foe(4));
+		s = Play(s, "Summon", 3);
+
+		Assert.That(CanPlay(s, "Offering", 0), Is.False, "only on a token");
+		s = Play(s, "Offering", 3);
+
+		Assert.That(s.AllyAt(3), Is.Null);
+		Assert.That(s.GetParty().Energy, Is.EqualTo(3 + 1));
+		Assert.That(s.CardsIn(ZoneType.Hand).Count(), Is.EqualTo(3 + 2));
+	}
+
 	[Test]
 	public void TheBattleIsLostOnlyWhenTheBenchIsGoneToo()
 	{

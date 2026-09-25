@@ -146,6 +146,7 @@ public sealed class KinPartyInspector
 			[
 				.. new[]
 				{
+					f.Trait,
 					f.Block > 0 ? $"BLOCK {f.Block} — drops when it next acts." : "",
 					f.OffBalance > 0
 						? $"OFF-BALANCE: takes +{f.OffBalance} from every hit this turn."
@@ -167,6 +168,8 @@ public sealed class KinPartyInspector
 		{
 			IntentType.Attack when move.Homing =>
 				$"{amount} damage to the lowest-HP {victims}, wherever it stands.",
+			IntentType.Attack when move.Steals =>
+				$"{amount} damage {Shape([.. move.Offsets])}, then steals the top card of your draw pile until it is beaten.",
 			IntentType.Attack => $"{amount} damage {Shape([.. move.Offsets])}.",
 			IntentType.Block => mine
 				? $"gains {amount} Block."
@@ -174,6 +177,11 @@ public sealed class KinPartyInspector
 			IntentType.Move => $"steps {Mathf.Abs(amount)} {(amount < 0 ? "left" : "right")}.",
 			IntentType.Push =>
 				$"pushes the foe ahead of it {Mathf.Abs(amount)} {(amount < 0 ? "left" : "right")}.",
+			IntentType.Summon =>
+				$"summons a {move.Summons?.Creature.Name} ({move.Summons?.Creature.Hp} HP) into the nearest empty space, for {move.Summons?.FadesIn} turns.",
+			IntentType.Echo => mine
+				? "repeats the last spell you cast this turn, where you dropped it."
+				: "does nothing: it echoes a trainer's spells, and it has no trainer.",
 			_ => "",
 		};
 	}
