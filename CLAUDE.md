@@ -10,25 +10,15 @@ things that face outward.
 
 **PIVOTING (2026-09-23) to a monster-companion deckbuilder: up to 3 companions ARE the board, units
 are cut. AUTO-BATTLE v1 (2026-09-24): every monster plays its own move cycle in Speed order; the deck
-is the TRAINER's, generic cards played on a monster.** A run is playable (`kin_party.tscn`,
-`KinCore/Party/`), built BESIDE the lane game. **Read `KinJam.md` first** — "AUTO-BATTLE v1" at its
-top is the truth.
-
-> **THE DOOM LAYER WAS DELETED (2026-09-21) and the top-down theme is being replaced.** Scenarios,
-> transforms, the clock, the per-theme doom schedule and ~1,300 lines with them. The new setting
-> is a GENERIC FANTASY substrate (`KinSettingSketches.md`); the grimy card names, enemies and 56
-> SVGs are all still to be re-themed. **The design philosophy is at the top of `KinJam.md` — every
-> card and enemy must create a decision; each companion is an archetype.**
->
-> **The deleted dooms WERE the power curve. COMPANION UPGRADES replace them** — three offered every
-> second cleared floor, take one, on `StarterContent.UpgradePool`. That took act completion from
-> 0.0% back to 23.0% against a 25% target, with per-act clear rates of 68.5% / 60.6% / 55.4%.
-> `StarterContent.FloorsPerUpgrade` is the dial and it is violently non-linear — every floor
-> measured 82.5%, every third 1.5%. See `docs/findings/kin-balance.md`.
+is the TRAINER's, generic cards played on a monster. DECK STRATEGIES + MONSTER DECKS (2026-09-24):
+monsters change how your cards play.** A run is playable (`kin_party.tscn`, `KinCore/Party/`), built
+BESIDE the lane game. **Read `KinJam.md` first** — its newest section, at the top, is the truth; the
+design philosophy is there too. The setting is a GENERIC FANTASY substrate (`KinSettingSketches.md`).
+The lane game's history (the deleted doom layer, companion upgrades) is in `docs/findings/kin-balance.md`.
 
 The second goal is a measurement: **how hard is it to build a completely different card game on
-`ImmutableGameObjects`?** Anything we wish we could lift out of `MtgCore` is a finding — record it in
-`KinJam.md` under "Engine findings" *before* reimplementing it.
+`ImmutableGameObjects`?** Anything lifted or adapted out of `MtgCore` is a finding — record it in
+`KinJam.md` under "Engine findings" as it is done.
 
 ## Solution Map
 
@@ -48,7 +38,7 @@ SQGodotCommon/
 │   │                                #   .Archetypes.cs holds each companion's archetype cards),
 │   │                                #   KeywordLibrary (the glossary, as DATA — console and UI share it)
 │   ├── Run/                         # Run + RunCard (OUTSIDE GameState); Companion; ActMap; ShopOffer
-│   ├── Party/                       # THE COMPANION GAME — PartyState API; PartyWorld.Tiers tunes; PartySim
+│   ├── Party/                       # THE COMPANION GAME — PartyState API; PartyWorld.Tiers; PartyCards + Discard/Spells/Surge/Summon/Triggers
 │   └── KinBattleFactory.cs          # one GameState per battle; KinStateExtensions is the API
 ├── KinCore.Tests/                  # NUnit; inline card definitions only
 ├── KinConsole/                     # terminal front end — THE REMOTE SURFACE, needs no Godot
@@ -77,9 +67,16 @@ SQGodotCommon/
 ```
 
 **The MTG projects (`MtgCore`, `MtgCore.Tests`, `MtgConsole`, `MtgSimulator`, `MtgSimulator.Console`,
-`MtgSimulator.Tests`, `SQGodotCommon/MtgGame/`) are still in the tree but are OFF LIMITS.** This
-project must stay a clean no-op for them. Copy nothing from them. Their docs are listed below so
-nothing is orphaned — you should not need any of it.
+`MtgSimulator.Tests`, `SQGodotCommon/MtgGame/`) are a TESTED LIBRARY TO REUSE — look there FIRST
+(Shayne, 2026-09-24/25).** This repo branched off MTG precisely so KIN could reuse what MTG already
+built and tested. **Copying MTG code into KIN, the engine or `Common/` is EXPECTED, not a finding to
+avoid:** triggers, choices, discard, effects, targeting, AI search, card and hand UI. Before building
+any mechanic, grep MTG for it; copy or adapt the tested version rather than writing a new one, and
+say which MTG file it came from. The one limit: **do not MODIFY the MTG projects** — they must still
+build and behave the same, and names lifted into the engine must not collide with theirs
+(`Trigger`, not `TriggeredAbilityComponent`). A 2026-09-12 rule said "copy nothing"; it was wrong,
+and it cost this project weeks of re-implementing tested code. Any older doc that says otherwise is
+superseded by this paragraph.
 
 ## Where the detail lives
 

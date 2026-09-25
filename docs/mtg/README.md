@@ -1,6 +1,7 @@
 # MTG archive
 
-**The MTG projects are OFF LIMITS for KIN work** — see the root `CLAUDE.md`. This file exists only
+**The MTG projects are a tested library for KIN to COPY FROM — never to modify.** See the root
+`CLAUDE.md`. This file exists only
 so the archived docs are inventoried somewhere rather than taking up room in a file that loads on
 every task.
 
