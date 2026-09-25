@@ -15,6 +15,7 @@ Immutable, ID-based flat object store with separate relationship maps (`ParentTo
 | `ChoiceActions/ChoiceAction.cs` | Player choice mid-resolution |
 | `GameEvents/GameEvent.cs` | Base event type |
 | `GameStateExtensions.cs` | Extension helpers on GameState |
+| `Triggers.cs` | Triggered abilities: `Trigger` component, `TriggerRule`, `StageEvent`, `FireTriggers` (call from a PostActionProcessor with the game's active objects). MtgCore still has its own older copy |
 
 ## Actions
 
