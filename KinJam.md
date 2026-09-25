@@ -1,5 +1,81 @@
 # KIN — design doc
 
+> # DECK STRATEGIES + MONSTER DECKS (Shayne, 2026-09-24): the monsters shape how you play cards
+>
+> **Why: everything felt bland.** Of 17 cards, not one was a payoff, and every payoff in the game was
+> a passive. Caught monsters had no passive at all. The design sessions had built mechanics, not
+> pieces. The draft, with every card classified, is `docs/paper/round-one-synergies.md`.
+>
+> **Decided:**
+> - **Reverse it: monsters on the board change how your CARDS work** (Shayne: spell damage,
+>   discard payoffs, conditions that grant energy), not only what happens on the board. A monster
+>   becomes a relic that fights, and because it stands in a column, aim and dodge protect your deck
+>   strategy too.
+> - **Deck strategies with enablers and payoffs:** Discard, Draw, direct damage (spells), Block,
+>   temporary energy, and Combat for the fighters. Round one: **Spellcraft, Discard + Draw, Surge,
+>   Summon**; Combat and Block reuse Pike and Bramble.
+> - **Every card is classified before it is built:** role (enabler / payoff / engine / bridge /
+>   answer / filler), 0–2 strategy tags, and power band (pushed / standard / narrow / filler).
+>   Shayne: otherwise "we are kind of just creating cards in the dark."
+> - **The end-of-turn discard does NOT count as discarding.** Only a card or an ability discards.
+> - **MONSTER DECKS (Shayne's idea).** Each monster brings a small deck of baseline cards that work
+>   with it. They are in the draw pile only while it fights: they join when it starts on the board
+>   or steps in from the bench, and leave every zone when it faints. They are never high power and
+>   never a way to park unwanted cards; the point is that no monster is ever in play with nothing
+>   in the deck to use it. **The run starts with basic cards plus the starter's monster deck.**
+>   BUILT 2026-09-24: Bramble brings Thornhide and Bristle, Pike Dash and Sprint, Gale Gust and
+>   Tailwind. The basic deck is Guard ×2, Strike ×2, Rally ×2, Hasten and Stagger. A monster-deck
+>   card is painted in its owner's colour, carries its portrait, and names it on the type line.
+>   Caught monsters have empty decks until round one gives them abilities.
+> - **Wild creatures show only their cycle.** A deck ability wakes when the creature is caught.
+>   BUILT: a `Foe` carries `CaughtPassive`/`CaughtRule`/`CaughtAbilities`/`CaughtCards` dormant, and
+>   `PartyRun.FromFoe` wakes them. A wild TRAIT (the Hoard Drake's hoard) is an ordinary trigger on
+>   the foe, active while it stands; a wild THIEF (`Intent.Steals`) stays wild when caught.
+> - **DISCARD + DRAW BUILT (2026-09-25)** — the round-one draft's cards and creatures, practice
+>   scenario "Draw and discard" (`--scenario=3`). Cards: Sift, Rummage, Jot, Ration (TOSS),
+>   Scrap Hammer, Page Storm. Creatures, all in Misty Marsh: **Magpie** (wild THIEF; caught
+>   SCAVENGER: a discard deals 2 to a random foe), **Inkling** (the rare; caught INKWELL: first
+>   draw each turn +1 energy), **Hoard Drake** (the tester: wild, +2 Block per draw or discard;
+>   caught, +3 Block per discard). Unplayed; numbers are guesses.
+> - **SPELLCRAFT BUILT (2026-09-25)** — practice scenario "Spellcraft" (`--scenario=4`). A SPELL is
+>   a card that deals damage by itself (`SpellDamageAction`: dropped on a foe, every foe, or a
+>   random one), so it needs no aim. Cards: Zap, Arc, Spark Scroll (TOSS), Overload, Focus.
+>   Creatures: **Emberling** (Ember Crags; caught KINDLING: your spells +2 while it stands — on a
+>   12-HP body the homing Wisp targets first), **Echo Owl** (Ember Crags' rare; its Echo move
+>   repeats your last spell where you dropped it; wild, the Echo is empty), **Warden** (Stony
+>   Ridge; the tester: spells deal half to it, and the halving comes AFTER your bonus; caught,
+>   +3 Block per spell played). A monster's `Abilities` now hold static components as well as
+>   triggers. Unplayed; numbers are guesses. Leaders are not built yet.
+> - **SURGE BUILT (2026-09-25)** — practice scenario "Surge" (`--scenario=5`). Cards: Surge (+2
+>   now, 1 less next turn — shown on the energy label), Quicken (next card free), Battle Cry (+2
+>   if a foe died this turn), Unleash (X: all your energy, 4 per energy, three wide), Meteor (4:
+>   14 and 4 beside). Creatures: **Glowmoth** (Stony Ridge's rare; caught GLOW: unhit last turn,
+>   +1 energy — the homing Spores and Zap find it first), **Stormbuck** (Stony Ridge; caught
+>   STORM: a kill DURING your turn is +1 energy), **Hushcap** (Mossy Hollow; the tester: wild,
+>   your first card each turn costs 1 more — it taxed a free Surge to 1 on screen; caught, 1
+>   less). Unplayed; numbers are guesses.
+> - **SUMMON BUILT (2026-09-25) — ROUND ONE IS COMPLETE.** Practice scenario "Summon"
+>   (`--scenario=6`). A TOKEN takes a column, steps and swaps, cannot be caught, never keeps a
+>   battle alive (only real monsters do), is not replaced from the bench, and FADES at the start
+>   of your turn (`Creature.FadesIn`; the cell says "TOKEN · FADES IN N"). Cards: Sow (a Sprout:
+>   3 HP, 2 turns; when it faints its neighbours gain 3 Block), Call Sparks (two 1-HP Speed-3
+>   hitters for one turn), Decoy (homing aims at it), Swarm (every token attacks now), Offering
+>   (a token faints: draw 2, +1 energy). Creatures: **Broodvine** (Mossy Hollow; its Brood move
+>   summons a Grub — for YOU caught, for the FOES wild, filling their row), **Howler** (Mossy
+>   Hollow's rare; caught PACK: tokens arrive +2 HP, +1 Power), **Ironhorn** (Ember Crags; the
+>   tester: wild TRAMPLE sends what fells a monster and more through to you; caught, into another
+>   foe). The Sprout's shield lands AT ONCE, not as a trigger: a trigger from the end of the turn
+>   fires after the next turn begins, and Block resets then — it would never have blocked
+>   anything. Unplayed; numbers are guesses.
+> - **Tokens fade** after N turns, so free bodies cannot fill the empty columns and undo trainer
+>   health.
+> - **Gym leaders are previewed from the region's town and drawn from a pool**, and play like Slay
+>   the Spire elites: strong, and each asks a particular question of your deck at that point in the
+>   run.
+> - **Types: undecided, and not added "just because."** Shayne's worry: an unbalanced chart makes
+>   the game about fielding the right type. Foes and leaders that test a strategy give the
+>   matchup-preparation part without that.
+
 > # AUTO-BATTLE v1 (Shayne, 2026-09-24) — THE MONSTERS FIGHT, YOU ARE THE TRAINER. Supersedes the
 > # owned-card rules in "THE COMPANION GAME" below; the board, intents and passives stand.
 >
@@ -1274,7 +1350,8 @@ including a remote session, with no Godot in the loop. It is also the fastest wa
 during a jam. Build it early.
 
 **`SQGodotCommon.csproj` references `MtgCore` and `MtgSimulator`.** Dead weight in every build and
-every export, and it keeps the off-limits MTG code compiling alongside ours. Dropping the references
+every export, and it keeps the MTG code compiling alongside ours (useful: KIN uses MTG's
+`ChoicePanel` directly). Dropping the references
 requires excluding `SQGodotCommon/MtgGame/` from compilation, since it depends on them — a real task,
 not a one-liner. Low priority with no mobile target; do it if build times bite or before shipping.
 
@@ -1400,6 +1477,60 @@ so the patch is not reinvented for a problem that no longer exists.
 
 What `ImmutableGameObjects` gives us for free, and what had to be built. **Fill this in as we go — it
 is the deliverable for "how flexible is this engine?"**
+
+**Triggers (2026-09-24, before building deck strategies):** the engine had the PLUMBING for
+triggered abilities (`PendingGameEvents`, the `PostActionProcessor` hook, components), but the
+evaluator that fires them (`TriggeredAbilityComponent`, `CheckStateBasedEffectsAction`) lived in
+MtgCore. **LIFTED into the engine (Shayne's call):** `ImmutableGameObjects/Triggers.cs` is `Trigger`
+(the component), `TriggerRule` (the data-only condition), `ITriggerBound` (an effect that needs its
+source and event), and `FireTriggers` / `StageEvent` / `ResetTriggers`, about 110 lines. What was
+MTG-only and stayed behind: the controlling player, battlefield/graveyard zones, the effect
+resolver. The game picks which objects are active; KIN's whole post-processor is one call. **MtgCore
+still uses its own copy** and is untouched; the engine names differ so nothing collides. Migrating
+MTG onto it is optional, later. Monster decks needed nothing new.
+
+**Discarding (2026-09-24) — lifted from MTG, as Shayne asked: "if MTG has already implemented
+something you should take a look there first."** Sift is MtgCore's Faithless Looting shape: a
+`PipelineAction` of draw → `ChooseFromHandAction` (MtgCore's `SelectCardsFromHandAction`, minus
+the player lookup) → `DiscardChosenAction` (reads the pick from `InputContext`, stages
+`CardDiscardedEvent`). The UI is **MTG's `ChoicePanel`, used unchanged** — it depends only on the
+engine's `ChoiceOption`; KIN only gives it a background. One KIN change it forced: **a played card
+now leaves the hand at once** (onto the battle, in no zone) so "discard a card" cannot offer the
+card being played. The bot answers choices with the first cards offered (`PartyBot.Do`).
+
+**The rest of Discard + Draw, copied from MTG the same way (2026-09-25):** "draw that many" is
+MtgCore's `AmountContextKey` (the discard step outputs a count, `DrawAction.CountKey` reads it); the
+cost reduction is MtgCore's `CostEngine` rule — **one function, `PartyState.CostOf`**, read by
+paying, validating and the hand's badge alike; `DiscardedThisTurn` is MtgCore's `SpellsCastThisTurn`
+/ `CountCreatureDeaths` pattern, counted once in the post-processor from the staged events; the
+random foe is `TargetingStrategy.Random` on the state's seed. **TOSS needed nothing new**: it is a
+`Trigger` on the card itself, and the post-processor adds each discarded card as a source.
+
+**Spellcraft (2026-09-25):** the damage modifiers are MtgCore's `ReplacementEngine` shape —
+components (`SpellPower` on a monster, `SpellWard` on a foe) scanned LIVE at the point of damage
+(`PartySpells.SpellDamageTo`), never cached, clamped at 0. One deliberate difference: MtgCore applies
+multipliers before additions; KIN adds your bonus first, then the target's ward halves it, because
+the Warden's question is "can your deck's bonus get through?". `SpellDamageThisTurn` and `LastSpell`
+(for the Echo) are per-turn fields reset with the rest.
+
+**Surge (2026-09-25):** all of it is MtgCore's CostEngine inside the one `CostOf` — Quicken's free
+card, the X card (MtgCore's XCostComponent: it costs all your energy and records the X it paid),
+and first-card discounts and taxes scanned from BOTH sides, reductions floored first and taxes
+after (a free card still pays the Hushcap). Borrowed energy is MtgCore's temporary mana plus a
+debt the next turn pays. **One engine-order trap, found by reading the executor:** spawned actions
+run BEFORE the post-processor, so the end of a turn's staged events are handled after the next
+turn has begun. A kill at the end of the turn would have paid the Stormbuck in the NEW turn. Fixed
+by stamping `FoeDefeatedEvent.DuringYourTurn` from `PartyBattle.EndingTurn`, not by relying on
+order.
+
+**Summon (2026-09-25):** `SummonTokenAction` is MtgCore's `CreateCardAction` shape — a template
+record and a count. The fade is KIN's own (MTG tokens do not fade). **The same engine-order trap
+decided how faint effects work:** a trigger fired by the end of the turn resolves after the next
+turn's Block reset, so the Sprout's shield is read at the point of the faint (a component, the
+ReplacementEngine way), not a `Trigger`. The rule it generalises to: **an effect that must matter
+DURING the end of the turn cannot be a trigger** — triggers from that resolution land next turn. A monster's cards
+wait as CHILDREN of its `Ally` object and move into the draw pile when it fights; parent/child did
+the whole job.
 
 **After porting effects and making enemies, Opponents and scenarios into content (75 tests green):**
 
@@ -1612,8 +1743,9 @@ Established before writing any code:
 
 ## Rules of engagement
 
-- **Do not touch `MtgCore`, `MtgSimulator`, `MtgConsole` or `SQGodotCommon/MtgGame/`.** This branch
+- **Do not MODIFY `MtgCore`, `MtgSimulator`, `MtgConsole` or `SQGodotCommon/MtgGame/`.** This branch
   must stay a clean no-op for the MTG work.
 - New game code lives in `KinCore/` (engine) and `SQGodotCommon/KinGame/` (Godot front end).
-- Copy nothing from `MtgCore`. If we want something from it, that want is a **finding** — write it down
-  above before reimplementing it.
+- ~~Copy nothing from `MtgCore`.~~ **SUPERSEDED (Shayne, 2026-09-25): copying tested MTG code is
+  EXPECTED** — look there first for any mechanic, copy or adapt it, and note the lift under "Engine
+  findings". See the root `CLAUDE.md`.

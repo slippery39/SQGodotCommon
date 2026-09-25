@@ -178,7 +178,9 @@ command shipped unwired for two sessions.
 ## THE COMPANION GAME screen — `kin_party.tscn` (2026-09-23)
 
 > **AUTO-BATTLE v1 (2026-09-24) changed what the cells say; the rules below about owners are
-> history.** No card has an owner, so cards are drawn plain and nothing lights "PLAYS". Now:
+> history.** Trainer cards are drawn plain and nothing lights "PLAYS". **MONSTER DECKS (same day)
+> brought owner colour back**: a card from a monster's deck is painted in its colour, carries its
+> portrait, and names it on the type line, because it leaves when that monster faints. Now:
 > - **Every creature's name band carries its ORDER BADGE** ("1 · PIKE") — when it acts at the end
 >   of the turn, from `PartyState.ActingOrder`. A monster that has acted (Hasten) drops it.
 > - **A monster's second foot line is its NEXT MOVE, with the damage it will really deal** ("▲ JAB 5"
@@ -196,6 +198,20 @@ command shipped unwired for two sessions.
 >   would cost you. A foe attack that will land on no monster says "→ YOU"; in a gym, a monster's
 >   swing that will find no foe says "→ LEADER", and the line between the rows carries the
 >   leader's health. The hint strip WRAPS: unwrapped it pushed END TURN off screen.
+> - **A choice mid-card** ("discard a card") opens MTG's `ChoicePanel` over a dimmed board; the
+>   board waits until it is confirmed (`KinPartyBoard.Settle`). KIN styles its panel (Navy, Slate
+>   border): unstyled, the options floated over the board.
+> - **A hand card's cost badge is what it costs NOW** (`PartyState.CostOf`), so Scrap Hammer
+>   drops as you discard. A thief's steal floats red ("STOLE GUARD") and its move says "+ steals".
+>   A foe's wild trait is the inspector's first status line.
+> - **Borrowed energy shows on the label** — "ENERGY 4/3  −1 NEXT TURN" — a cost paid later must
+>   be visible now. An X card's badge is your current energy.
+> - **A token's passive line is "TOKEN · FADES IN N"**, in a pale shared colour. Known: a token
+>   that will FADE (not die) still shows "−N HP if turn ends" — the forecast plays the next turn's
+>   start. The line above it says why.
+> - **The practice scenarios are one dropdown** (`OptionButton`): at seven, a row of buttons made
+>   the banner wider than the screen and pushed END TURN off it (scar 6 again — unwrapped text
+>   sets its container's width).
 > - **The step**: click a monster, and the spaces beside it light — "STEP HERE", or "▲ SWAP HERE" on
 >   an ally.
 

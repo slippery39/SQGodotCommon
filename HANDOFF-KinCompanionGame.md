@@ -1,13 +1,41 @@
-# Handoff — THE COMPANION GAME: auto-battle, catching, the map, ten regions on a curve
+# Handoff — THE COMPANION GAME: auto-battle, catching, the map, ten regions — and ROUND ONE
 
 **Read this, then the top of `KinJam.md` (its newest sections come first), then
-`docs/design-principles.md` (what we learned, with the evidence), then the `design-card` skill before
-touching any card, creature or foe.** Earlier `HANDOFF-Kin*.md` files describe games
+`docs/design-principles.md` (what we learned, with the evidence), then
+`docs/paper/round-one-synergies.md` (every round-one card and creature, classified), before touching
+any card, creature or foe.** The `design-card` skill is STALE (it still describes owned cards and
+Speed as a cooldown) — trust `KinJam.md` over it. Earlier `HANDOFF-Kin*.md` files describe games
 that no longer exist — read only their scars sections.
 
-State at handoff (2026-09-24): branch **`kin-pivot` at `de65db9`**, **242 tests green**, solution
-and Godot project build, **nothing pushed**. `SQGodotCommon/project.godot` shows as modified — that
-predates this work (a headless import strips two comment lines); **leave it out of commits.**
+State at handoff (2026-09-25): branch **`kin-pivot`**, **275 KinCore + 108 engine tests green**,
+solution and Godot project build, **nothing pushed**. `SQGodotCommon/project.godot` shows as
+modified — that predates this work (a headless import strips two comment lines); **leave it out of
+commits.**
+
+---
+
+## THE LATEST SESSION (2026-09-24/25): design — ROUND ONE of deck strategies
+
+**Why:** everything felt bland — of 17 cards not one was a payoff, and caught monsters had no
+ability at all. Shayne's reversal: **monsters change how you PLAY your cards** (spell damage,
+discard payoffs, energy), not only the board. Decided and built, all in `KinJam.md`'s top section:
+
+- **Monster decks** — each monster brings 2 baseline cards, in the draw pile only while it fights
+  (join on board / step-in, leave every zone on a faint). Painted in the owner's colour.
+- **Every card is classified** (role · strategy · power band) before it is built.
+- **Four strategies, each a practice scenario** (the dropdown in the banner, or `--scenario=N`):
+  3 **Discard + Draw** (Magpie, Inkling, Hoard Drake), 4 **Spellcraft** (Emberling, Echo Owl,
+  Warden), 5 **Surge** (Glowmoth, Stormbuck, Hushcap), 6 **Summon** (Broodvine, Howler,
+  Ironhorn; tokens that FADE). Each has a TESTER creature that punishes it wild and bridges it
+  caught. All twelve are in the area pools; none has art yet.
+- **A wild creature's deck ability sleeps until caught** (`Foe.Caught*`, woken by `FromFoe`).
+- **Triggers were lifted from MtgCore into the engine** (`ImmutableGameObjects/Triggers.cs`).
+- **THE ROOT `CLAUDE.md` RULE ON MTG WAS REVERSED:** copying tested MTG code is EXPECTED — look
+  there first. The old "copy nothing" rule (2026-09-12) cost the project weeks. Every lift this
+  session is recorded under "Engine findings" in `KinJam.md` with its MTG source.
+
+**Unplayed by a human.** Every number is a guess; the curve (`party-sim`) is invalid now that the
+pools changed, and was deliberately not re-run — this is EXPLORING.
 
 ---
 
@@ -95,6 +123,27 @@ five) is the lever**, and every death since is your health on the trail. Known: 
 
 ## 6. Scars worth not re-earning
 
+**New this session:**
+
+- **Look in MTG FIRST.** Triggers, discard choices (pipeline + `ChoiceAction` + MTG's `ChoicePanel`,
+  used unchanged), cost engine, X costs, temporary mana, replacement-style damage modifiers, token
+  creation — all already existed there, tested. Copy or adapt; never modify MTG itself.
+- **Engine names must not collide with MtgCore's** (`Trigger`, not `TriggeredAbilityComponent`):
+  an MTG file importing both namespaces would stop compiling.
+- **Spawned actions run BEFORE the post-processor**, so triggers from the end-of-turn resolution
+  fire after the NEXT turn has started (its energy and Block resets included). Consequences: stamp
+  events with `PartyBattle.EndingTurn` (the Stormbuck), and an effect that must matter DURING the
+  end of the turn is a component read at the point of use, never a trigger (the Sprout's shield).
+- **A played card leaves the hand at once** (onto the battle, in no zone), so "discard a card" can
+  never offer the card being played. It is still discarded LAST.
+- **`PartyContent` and `PartyWorld` must not initialise each other.** Shared cards live in the
+  dependency-free `PartyCards`; scenarios that read `PartyWorld` are PROPERTIES, not fields.
+- **Every cost goes through `PartyState.CostOf`** (MtgCore's CostEngine rule): paying, validating
+  and the hand's cost badge read the same number. Reductions first, floored, then taxes.
+- **A row of buttons is scar 6 again:** seven practice scenarios pushed END TURN off screen — now a
+  dropdown.
+- **Long Python patch scripts go in scratchpad FILES**, not a Bash heredoc — one broke on a quote.
+
 1. **Python text mode writes CRLF on Windows.** Patch scripts using `open(p, 'w')` turned LF files
    CRLF and a commit rewrote every line. The repo MIXES endings per file (`CLAUDE.md` is CRLF): read
    with `newline=''`, normalise, write back in the file's own ending. Check `git diff --stat` for
@@ -121,6 +170,19 @@ five) is the lever**, and every death since is your health on the trail. Known: 
 
 ## 7. Not built / open
 
+**From round one:**
+
+- **Gym leaders as elites** — previewed from the region's town, drawn from a pool, each with a rule
+  aimed at your deck (four designed in `docs/paper/round-one-synergies.md`). Not built.
+- **Monster-deck manipulation in towns** (Train, Teach, a reward into a monster's deck) and the
+  deck-size cap. Designed, not built.
+- **Art** for the twelve new creatures, the four token kinds, and every card.
+- **The bot answers choices naively** (first cards offered) — `PartyBot.Do`, marked `ponytail:`.
+- **A fading token shows "−N HP if turn ends"** — the forecast plays the next turn's start.
+- **Types: undecided** — not to be added "just because" (Shayne).
+
+**Older:**
+
 - **In-battle bench choice** — the first benched steps in; the player does not choose.
 - **Caught monsters have no passive and no colour** of their own (they show as slate).
 - **Card art**, and signature cards per monster (allowed, rare — none exist).
@@ -129,6 +191,12 @@ five) is the lever**, and every death since is your health on the trail. Known: 
 - **Items and events that edit a monster's cycle** (Monster Rancher training) — designed, not built.
 
 ## 8. What comes next — agreed with Shayne
+
+**Now:** Shayne playtests practice scenarios 3–6 and CUTS what does not spark ("can't say until I
+actually play with the cards"). Then gym leaders, then town deck manipulation, then art. Tuning
+(`party-sim`) waits until the design holds still.
+
+**Before round one (still standing where not superseded):**
 
 1. **Shayne plays a full ten-region run** and compares himself to the bot. If he loses early where
    the bot clears 94%, set the bot's targets above the player's (the curve is a PLAYER curve).
