@@ -12,8 +12,8 @@ namespace KinCore.Party;
 public record TokenTemplate(PartyCompanion Creature, int FadesIn);
 
 /// <summary>
-/// **Summons tokens onto your row** — MtgCore's `CreateCardAction` shape: a template and a count.
-/// The first lands on the space it was dropped on, the rest on the nearest empty spaces.
+/// **Summons tokens at the FRONT of your line** (R11) — MtgCore's `CreateCardAction` shape: a
+/// template and a count. Everyone else steps back; a full line takes no more.
 /// </summary>
 public record SummonTokenAction : CardStep
 {
@@ -21,15 +21,14 @@ public record SummonTokenAction : CardStep
 	public int Count { get; init; } = 1;
 
 	public override string? Refusal(GameState s, int space, bool foeRow) =>
-		!foeRow && space >= 0 && s.AllyAt(space) is null
-			? null
-			: "Drop it on an empty space of yours";
+		foeRow ? "Drop it on your line"
+		: s.LivingAllies().Count() >= PartyBattle.MaxLine ? "Your line is full"
+		: null;
 
 	public override ActionResult Execute(GameState s)
 	{
 		for (var i = 0; i < Count; i++)
-			if (PartySummon.NearestEmpty(s, Space, ally: true) is { } space)
-				s = PartySummon.SummonAlly(s, Token, space);
+			s = PartySummon.SummonAlly(s, Token);
 		return new(s);
 	}
 }
@@ -47,7 +46,7 @@ public record TokensAttackAction : GameAction
 			if (s.GetParty().IsOver || s.GetObject(token.Id) is not Ally { IsDown: false } now)
 				continue;
 			ImmutableList<GameEvent> hit;
-			(s, hit) = PartyState.AttackFoes(s, now, Amount, [now.Space]);
+			(s, hit) = PartyState.AttackFoes(s, now, Amount, PartyState.AimAt(s, now, Aim.Front));
 			events = events.AddRange(hit);
 		}
 		return new ActionResult(s).WithEvents(events);
@@ -62,6 +61,7 @@ public record SacrificeTokenAction : CardStep
 
 	public override ActionResult Execute(GameState s)
 	{
+		// Settled (out of the line) by the post-processor, like any fall.
 		var token = Target(s);
 		s = s.UpdateObject(token.Id, token with { Hp = 0 });
 		return new ActionResult(PartySummon.TokenFainted(s, token)).WithEvent(
@@ -76,7 +76,7 @@ public record FaintShield : GameComponent
 	public int Amount { get; init; }
 }
 
-/// <summary>**Homing attacks aim at this one** — the Decoy.</summary>
+/// <summary>**BACK and HUNT attacks aim at this one** — the Decoy.</summary>
 public record Lure : GameComponent;
 
 /// <summary>**Your tokens arrive stronger** — the Howler. Read when a token is summoned.</summary>
@@ -87,29 +87,23 @@ public record TokenBoost : GameComponent
 }
 
 /// <summary>
-/// **TRAMPLE: damage beyond what fells the target carries on** — a foe's to YOU (the Ironhorn,
-/// wild), your monster's to a random other foe (caught). One component; the side decides.
+/// **TRAMPLE: damage beyond what fells the target carries on into the one BEHIND it** — the
+/// Ironhorn's, wild or caught. A token wall in front is paper to it.
 /// </summary>
 public record Trample : GameComponent;
 
 public static class PartySummon
 {
-	/// <summary>The drop space if empty, else the nearest empty space on that row; null if full.</summary>
-	public static int? NearestEmpty(GameState s, int from, bool ally) =>
-		Enumerable
-			.Range(0, PartyBattle.Spaces)
-			.Where(c => ally ? s.AllyAt(c) is null : s.FoeAt(c) is null)
-			.OrderBy(c => Math.Abs(c - from))
-			.ThenBy(c => c)
-			.Cast<int?>()
-			.FirstOrDefault();
-
-	public static GameState SummonAlly(GameState s, TokenTemplate token, int space)
+	/// <summary>A token of yours at the FRONT; a full line takes no more.</summary>
+	public static GameState SummonAlly(GameState s, TokenTemplate token)
 	{
+		if (s.LivingAllies().Count() >= PartyBattle.MaxLine)
+			return s;
 		var boost = s.LivingAllies().SelectMany(a => a.GetComponents<TokenBoost>()).ToList();
 		var c = token.Creature;
 		var hp = c.Hp + boost.Sum(b => b.Hp);
-		(s, _) = s.AddObject(
+		return PartyState.InsertAtFront(
+			s,
 			new Ally
 			{
 				Slot = -1,
@@ -117,47 +111,46 @@ public static class PartySummon
 				Hp = hp,
 				MaxHp = hp,
 				Power = c.Power + boost.Sum(b => b.Power),
-				Speed = c.Speed,
-				Space = space,
 				Pattern = c.Moves,
 				FadesIn = token.FadesIn,
 				Components = [.. c.Abilities],
 			},
-			s.GetWellKnownId(PartyState.BattleKey)
+			foes: false
 		);
-		return s;
 	}
 
-	/// <summary>A wild creature's brood: an uncatchable foe that fades like any token.</summary>
-	public static GameState SummonFoe(GameState s, TokenTemplate token, int space)
+	/// <summary>A wild creature's brood: an uncatchable foe at the FRONT of their line, fading like any token.</summary>
+	public static GameState SummonFoe(GameState s, TokenTemplate token)
 	{
+		if (s.LivingFoes().Count() >= PartyBattle.MaxLine)
+			return s;
 		var c = token.Creature;
-		(s, _) = s.AddObject(
+		return PartyState.InsertAtFront(
+			s,
 			new Foe
 			{
 				Name = c.Name,
 				Hp = c.Hp,
 				MaxHp = c.Hp,
-				Speed = c.Speed,
-				Space = space,
 				Pattern = c.Moves,
 				FadesIn = token.FadesIn,
 				Catchable = false,
 				Trait = $"A {c.Name.ToUpperInvariant()}: fades in {token.FadesIn} turns.",
 			},
-			s.GetWellKnownId(PartyState.BattleKey)
+			foes: true
 		);
-		return s;
 	}
 
-	/// <summary>A token fainted (hit, or offered): the Sprout's shield goes to its neighbours.</summary>
+	/// <summary>A token fell (hit, or offered): the Sprout's shield goes to the ones ahead of and behind it.</summary>
 	public static GameState TokenFainted(GameState s, Ally token)
 	{
 		var shield = token.GetComponents<FaintShield>().Sum(f => f.Amount);
 		if (shield == 0)
 			return s;
 		foreach (
-			var ally in s.LivingAllies().Where(a => Math.Abs(a.Space - token.Space) == 1).ToList()
+			var ally in s.LivingAllies()
+				.Where(a => Math.Abs(a.Position - token.Position) == 1)
+				.ToList()
 		)
 			s = s.UpdateObject(ally.Id, ally with { Block = ally.Block + shield });
 		return s;
@@ -165,7 +158,7 @@ public static class PartySummon
 
 	/// <summary>
 	/// **Tokens fade at the start of your turn** — each start takes one off; at 0 it is gone. A
-	/// wild brood fading can end the fight.
+	/// wild brood fading can end the fight — `PartyState.Settle` decides that.
 	/// </summary>
 	public static GameState Fade(GameState s)
 	{
@@ -184,9 +177,6 @@ public static class PartySummon
 					Hp = c.FadesIn == 1 ? 0 : c.Hp,
 				}
 			);
-
-		if (!s.LivingFoes().Any() && s.GetParty() is { IsOver: false } party)
-			s = s.UpdateObject(party.Id, party with { IsOver = true, Won = true });
 		return s;
 	}
 }

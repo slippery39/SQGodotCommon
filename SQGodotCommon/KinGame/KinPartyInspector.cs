@@ -63,14 +63,14 @@ public sealed class KinPartyInspector
 		Line(creature.Name.ToUpperInvariant(), 26, KinPalette.Bone);
 		Line(
 			$"HP {creature.Hp}/{creature.MaxHp}"
-				+ (ally is null ? "" : $" · POWER {ally.Power + ally.BonusPower}")
-				+ $" · SPEED {creature.Speed}",
+				+ (ally is null ? "" : $" · POWER {ally.Power + ally.BonusPower}"),
 			18,
 			KinPalette.Bone
 		);
 		Line(
 			ally is { HasActed: true } ? "Has already acted this turn."
-				: order > 0 ? $"Acts {Ordinal(order)} when you end the turn — faster goes first."
+				: order > 0
+					? $"Acts {Ordinal(order)} when you end the turn — the lines act from the back."
 				: "",
 			16,
 			KinPalette.Bone
@@ -136,9 +136,8 @@ public sealed class KinPartyInspector
 				{
 					a.Block > 0 ? $"BLOCK {a.Block} — soaks damage until your next turn." : "",
 					a.BonusThorns > 0 ? $"THORNS {a.TotalThorns} this turn." : "",
-					a.Momentum > 0 ? $"MOMENTUM: its next attack deals +{a.Momentum}." : "",
-					a.StepsLeft > 0
-						? $"Can step {a.StepsLeft} more time{(a.StepsLeft == 1 ? "" : "s")} this turn."
+					a.FadesIn > 0
+						? $"A TOKEN: fades in {a.FadesIn} turn{(a.FadesIn == 1 ? "" : "s")}."
 						: "",
 				}.Where(s => s.Length > 0),
 			],
@@ -166,19 +165,19 @@ public sealed class KinPartyInspector
 		var victims = mine ? "foe" : "monster";
 		return move.Kind switch
 		{
-			IntentType.Attack when move.Homing =>
-				$"{amount} damage to the lowest-HP {victims}, wherever it stands.",
 			IntentType.Attack when move.Steals =>
-				$"{amount} damage {Shape([.. move.Offsets])}, then steals the top card of your draw pile until it is beaten.",
-			IntentType.Attack => $"{amount} damage {Shape([.. move.Offsets])}.",
+				$"{amount} damage to {Lands(move.Target, victims)}, then steals the top card of your draw pile until it is beaten.",
+			IntentType.Attack => $"{amount} damage to {Lands(move.Target, victims)}.",
+			IntentType.Block when move.Target == Aim.Ahead =>
+				$"gives the one ahead of it {amount} Block.",
 			IntentType.Block => mine
 				? $"gains {amount} Block."
 				: $"gains {amount} Block, which holds through your turn.",
-			IntentType.Move => $"steps {Mathf.Abs(amount)} {(amount < 0 ? "left" : "right")}.",
-			IntentType.Push =>
-				$"pushes the foe ahead of it {Mathf.Abs(amount)} {(amount < 0 ? "left" : "right")}.",
+			IntentType.Move =>
+				$"moves {Mathf.Abs(amount)} place{(Mathf.Abs(amount) == 1 ? "" : "s")} {(amount < 0 ? "forward" : "back")} in its line.",
+			IntentType.Shove => mine ? "swaps their front two." : "swaps YOUR front two.",
 			IntentType.Summon =>
-				$"summons a {move.Summons?.Creature.Name} ({move.Summons?.Creature.Hp} HP) into the nearest empty space, for {move.Summons?.FadesIn} turns.",
+				$"summons a {move.Summons?.Creature.Name} ({move.Summons?.Creature.Hp} HP) at the front of its line, for {move.Summons?.FadesIn} turns.",
 			IntentType.Echo => mine
 				? "repeats the last spell you cast this turn, where you dropped it."
 				: "does nothing: it echoes a trainer's spells, and it has no trainer.",
@@ -186,18 +185,15 @@ public sealed class KinPartyInspector
 		};
 	}
 
-	/// <summary>Which columns an attack covers, relative to the attacker's own.</summary>
-	private static string Shape(int[] offsets) =>
-		offsets switch
+	/// <summary>Who an attack lands on, spelled out.</summary>
+	private static string Lands(Aim aim, string victims) =>
+		aim switch
 		{
-			[0] => "straight ahead",
-			[-1, 0, 1] => "ahead and to both sides (3 wide)",
-			_ => string.Join(
-				" and ",
-				offsets.Select(o =>
-					o == 0 ? "ahead" : $"{Mathf.Abs(o)} {(o < 0 ? "left" : "right")}"
-				)
-			) + $" ({offsets.Length} wide)",
+			Aim.Back => $"the {victims} at the back",
+			Aim.Pierce => $"the front two {victims}s",
+			Aim.Sweep => $"every {victims}",
+			Aim.Hunt => $"the lowest-HP {victims}, wherever it stands",
+			_ => $"the {victims} in front",
 		};
 
 	private static string Ordinal(int n) =>

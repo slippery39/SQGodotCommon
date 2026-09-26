@@ -54,16 +54,13 @@ public record Region(
 /// </summary>
 public static class PartyWorld
 {
-	private static readonly ImmutableList<int> Ahead = [0];
-	private static readonly ImmutableList<int> ThreeWide = [-1, 0, 1];
-
-	private static Intent Attack(string name, int amount, ImmutableList<int>? offsets = null) =>
+	private static Intent Attack(string name, int amount, Aim aim = Aim.Front) =>
 		new()
 		{
 			Name = name,
 			Kind = IntentType.Attack,
 			Amount = amount,
-			Offsets = offsets ?? Ahead,
+			Target = aim,
 		};
 
 	private static Intent Guard(string name, int amount) =>
@@ -74,13 +71,12 @@ public static class PartyWorld
 			Amount = amount,
 		};
 
-	private static Foe Creature(string name, int hp, int speed, params Intent[] cycle) =>
+	private static Foe Creature(string name, int hp, params Intent[] cycle) =>
 		new()
 		{
 			Name = name,
 			Hp = hp,
 			MaxHp = hp,
-			Speed = speed,
 			Pattern = [.. cycle],
 		};
 
@@ -93,7 +89,6 @@ public static class PartyWorld
 	public static readonly Foe Mosshell = Creature(
 		"Mosshell",
 		26,
-		1,
 		Guard("Shell Up", 8),
 		Attack("Slam", 8)
 	);
@@ -105,9 +100,8 @@ public static class PartyWorld
 	public static readonly Foe BriarViper = Creature(
 		"Briar Viper",
 		10,
-		3,
-		Attack("Strike", 6, [0, 1]),
-		Attack("Strike", 6, [0, 1]),
+		Attack("Strike", 6, Aim.Pierce),
+		Attack("Strike", 6, Aim.Pierce),
 		new Intent
 		{
 			Name = "Slither",
@@ -120,8 +114,7 @@ public static class PartyWorld
 	public static readonly Foe CinderNewt = Creature(
 		"Cinder Newt",
 		14,
-		2,
-		Attack("Spit", 3, ThreeWide),
+		Attack("Spit", 3, Aim.Sweep),
 		Attack("Flare", 8)
 	);
 
@@ -132,16 +125,15 @@ public static class PartyWorld
 	public static readonly Foe BogToad = Creature(
 		"Bog Toad",
 		24,
-		1,
 		new Intent
 		{
 			Name = "Tongue",
 			Kind = IntentType.Attack,
 			Amount = 5,
-			Homing = true,
+			Target = Aim.Hunt,
 		},
 		Guard("Swell", 6),
-		Attack("Belly Flop", 6, ThreeWide)
+		Attack("Belly Flop", 6, Aim.Sweep)
 	);
 
 	/// <summary>
@@ -151,8 +143,7 @@ public static class PartyWorld
 	public static readonly Foe OldMire = Creature(
 		"Old Mire",
 		64,
-		1,
-		Attack("Deluge", 5, [-2, -1, 0, 1, 2]),
+		Attack("Deluge", 5, Aim.Sweep),
 		Attack("Swallow", 15),
 		Guard("Wallow", 12)
 	) with
@@ -170,7 +161,6 @@ public static class PartyWorld
 	public static readonly Foe Magpie = Creature(
 		"Magpie",
 		14,
-		3,
 		Attack("Snatch", 3) with
 		{
 			Steals = true,
@@ -204,8 +194,7 @@ public static class PartyWorld
 	public static readonly Foe Inkling = Creature(
 		"Inkling",
 		16,
-		2,
-		Attack("Splash", 2, ThreeWide),
+		Attack("Splash", 2, Aim.Sweep),
 		Guard("Ink", 4)
 	) with
 	{
@@ -232,7 +221,6 @@ public static class PartyWorld
 	public static readonly Foe HoardDrake = Creature(
 		"Hoard Drake",
 		26,
-		1,
 		Guard("Hoard", 6),
 		Attack("Tail", 7)
 	) with
@@ -270,7 +258,6 @@ public static class PartyWorld
 	public static readonly Foe Emberling = Creature(
 		"Emberling",
 		12,
-		2,
 		Attack("Ember", 2),
 		Attack("Ember", 2)
 	) with
@@ -288,7 +275,6 @@ public static class PartyWorld
 	public static readonly Foe EchoOwl = Creature(
 		"Echo Owl",
 		16,
-		1,
 		new Intent { Name = "Echo", Kind = IntentType.Echo },
 		Attack("Peck", 3)
 	) with
@@ -304,7 +290,6 @@ public static class PartyWorld
 	public static readonly Foe Warden = Creature(
 		"Warden",
 		22,
-		1,
 		Guard("Shell", 6),
 		Attack("Slam", 8)
 	) with
@@ -334,8 +319,7 @@ public static class PartyWorld
 	public static readonly Foe Glowmoth = Creature(
 		"Glowmoth",
 		10,
-		3,
-		Attack("Dust", 1, ThreeWide),
+		Attack("Dust", 1, Aim.Sweep),
 		new Intent
 		{
 			Name = "Flutter",
@@ -358,7 +342,6 @@ public static class PartyWorld
 	public static readonly Foe Stormbuck = Creature(
 		"Stormbuck",
 		20,
-		2,
 		Attack("Antler", 5),
 		Guard("Rear", 4)
 	) with
@@ -384,13 +367,12 @@ public static class PartyWorld
 	public static readonly Foe Hushcap = Creature(
 		"Hushcap",
 		14,
-		2,
 		new Intent
 		{
 			Name = "Spores",
 			Kind = IntentType.Attack,
 			Amount = 3,
-			Homing = true,
+			Target = Aim.Hunt,
 		},
 		Guard("Cap", 4)
 	) with
@@ -412,7 +394,6 @@ public static class PartyWorld
 	public static readonly Foe Broodvine = Creature(
 		"Broodvine",
 		24,
-		1,
 		new Intent
 		{
 			Name = "Brood",
@@ -431,7 +412,6 @@ public static class PartyWorld
 	public static readonly Foe Howler = Creature(
 		"Howler",
 		20,
-		2,
 		Attack("Bite", 4),
 		Guard("Snarl", 4)
 	) with
@@ -449,9 +429,8 @@ public static class PartyWorld
 	public static readonly Foe Ironhorn = Creature(
 		"Ironhorn",
 		24,
-		1,
 		Attack("Charge", 8),
-		Attack("Stomp", 4, ThreeWide)
+		Attack("Stomp", 4, Aim.Sweep)
 	) with
 	{
 		Trait = "TRAMPLE: damage beyond what fells a monster hits YOU.",
@@ -462,13 +441,8 @@ public static class PartyWorld
 		CaughtCards = [PartyCards.Sow, PartyCards.Jot],
 	};
 
-	private static Foe At(Foe foe, int space) => foe with { Space = space };
-
-	/// <summary>
-	/// **The leader's health in a gym, before the tier.** Was 35: the first good-bot sim won nine gyms
-	/// in ten by racing it (docs/findings/companion-balance.md). Scales with the tier's HP.
-	/// </summary>
-	public const int LeaderHp = 90;
+	/// <summary>A foe's place in its line; the factory closes the line up from these in order.</summary>
+	private static Foe At(Foe foe, int position) => foe with { Position = position };
 
 	// ===== The areas and gyms the regions are built from. Unscaled — a region scales its copy.
 
@@ -564,11 +538,7 @@ public static class PartyWorld
 		return new(
 			name,
 			[Scaled(a), Scaled(b)],
-			new(
-				gym.Name,
-				[.. gym.Foes.Select(f => Scale(f, t) with { Catchable = false })],
-				(int)Math.Round(LeaderHp * t.Hp)
-			),
+			new(gym.Name, [.. gym.Foes.Select(f => Scale(f, t) with { Catchable = false })]),
 			t.MinFoes,
 			t.MaxFoes
 		);
@@ -616,10 +586,10 @@ public static class PartyWorld
 					i == 0 && rare is not null ? rare : area.Pool[rng.Next(area.Pool.Count)]
 				)
 				.ToList();
-			var spaces = PartyRun.Formation(count);
+
 			return new(
 				"Wild " + string.Join(", ", foes.Select(f => f.Name)),
-				[.. foes.Select((f, i) => At(f, spaces[i]))]
+				[.. foes.Select((f, i) => At(f, i))]
 			);
 		}
 
@@ -629,7 +599,7 @@ public static class PartyWorld
 			new(StopKind.Battle, wild()),
 			new(StopKind.Battle, wild()),
 			new(StopKind.Find, Find: (FindKind)rng.Next(3)),
-			new(StopKind.Deep, Fight(Math.Min(PartyBattle.Spaces, region.MaxFoes + 1), area.Rare)),
+			new(StopKind.Deep, Fight(Math.Min(PartyBattle.MaxLine, region.MaxFoes + 1), area.Rare)),
 		];
 	}
 }

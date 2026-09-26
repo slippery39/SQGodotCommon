@@ -18,8 +18,8 @@ public enum SpellTarget
 	/// <summary>A random living foe (a TOSS has nowhere to be dropped).</summary>
 	Random,
 
-	/// <summary>The foes beside the drop, not on it — Meteor's splash.</summary>
-	Beside,
+	/// <summary>The foe behind the one it was dropped on — Meteor's splash.</summary>
+	Behind,
 }
 
 public record SpellDamageAction : CardStep
@@ -44,10 +44,14 @@ public record SpellDamageAction : CardStep
 		{
 			SpellTarget.All => [.. s.LivingFoes()],
 			SpellTarget.Random => RandomFoe(ref s),
-			SpellTarget.Beside => [.. s.LivingFoes().Where(f => Math.Abs(f.Space - Space) == 1)],
-			// Focus: this turn, a dropped spell also hits the foes beside its target.
+			SpellTarget.Behind => [.. s.LivingFoes().Where(f => f.Position == Space + 1)],
+			// Focus: this turn, a dropped spell also hits the foe behind its target.
 			_ when s.FoeAt(Space) is { } foe => party.SpellsSplash
-				? [.. s.LivingFoes().Where(f => Math.Abs(f.Space - foe.Space) <= 1)]
+				?
+				[
+					.. s.LivingFoes()
+						.Where(f => f.Position == foe.Position || f.Position == foe.Position + 1),
+				]
 				: [foe],
 			_ => [],
 		};
@@ -55,7 +59,7 @@ public record SpellDamageAction : CardStep
 		// Remembered for the Echo Owl, with the drop it was played on. A splash is not a spell of
 		// its own: Meteor's echo is the Meteor.
 		party = s.GetParty();
-		if (Target != SpellTarget.Beside)
+		if (Target != SpellTarget.Behind)
 			s = s.UpdateObject(party.Id, party with { LastSpell = this });
 
 		var events = new List<GameEvent>();
@@ -90,7 +94,7 @@ public record SpellDamageAction : CardStep
 	}
 }
 
-/// <summary>Focus: for the rest of the turn, your dropped spells also hit the foes beside the target.</summary>
+/// <summary>Focus: for the rest of the turn, your dropped spells also hit the foe behind the target.</summary>
 public record SplashSpellsAction : GameAction
 {
 	public override ActionResult Execute(GameState s)

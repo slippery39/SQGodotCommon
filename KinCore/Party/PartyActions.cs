@@ -4,15 +4,17 @@ using ImmutableGameObjects;
 namespace KinCore.Party;
 
 /// <summary>
-/// **Plays a card ON a space** — one of your monsters, a foe, or an empty foe space, as the card's
-/// steps say. No card belongs to a monster: the one it is dropped on is the one it acts on.
+/// **Plays a card ON a place in a line** — one of your monsters or one of theirs, as the card's steps
+/// say. No card belongs to a monster: the one it is dropped on is the one it acts on.
 /// </summary>
 public record PlayPartyCardAction : GameAction
 {
 	public int CardId { get; init; }
+
+	/// <summary>The POSITION it was dropped on, in the line <see cref="FoeRow"/> names.</summary>
 	public int Space { get; init; } = -1;
 
-	/// <summary>Dropped on the FOE row, not yours.</summary>
+	/// <summary>Dropped on THEIR line, not yours.</summary>
 	public bool FoeRow { get; init; }
 
 	public override ValidationResult ValidateAdd(GameState s)
@@ -31,8 +33,8 @@ public record PlayPartyCardAction : GameAction
 		if (party.Energy < s.CostOf(card))
 			return ValidationResult.Invalid($"Not enough energy for {card.Name}");
 
-		// Each step says why this space will not do — the board asks space by space to light the
-		// legal ones, so the lit spaces and the drop can never disagree.
+		// Each step says why this place will not do — the board asks place by place to light the
+		// legal ones, so the lit targets and the drop can never disagree.
 		foreach (var effect in card.Effects)
 			if (effect.Template is CardStep step && step.Refusal(s, Space, FoeRow) is { } refusal)
 				return ValidationResult.Invalid(refusal);
@@ -59,8 +61,7 @@ public record PlayPartyCardAction : GameAction
 
 		// **It leaves the hand at once, onto the battle — in no zone — while it resolves**, so a
 		// choice from the hand ("discard a card") cannot pick the card being played. It is
-		// discarded LAST: discarded first, a draw could reshuffle it straight back into the hand
-		// (found in play with Feint).
+		// discarded LAST: discarded first, a draw could reshuffle it straight back into the hand.
 		s = s.MoveObject(CardId, party.Id);
 		if (card.IsSpell())
 			s = s.StageEvent(new SpellPlayedEvent());
@@ -89,9 +90,9 @@ public record PlayPartyCardAction : GameAction
 }
 
 /// <summary>
-/// **Throw a Snare at a foe: it is caught** — off the board at once, counted as beaten, and it joins
-/// the run with its own cycle if the battle is won. Only at a third of its HP or less, never a boss.
-/// An ITEM, not a card: Snares never dilute the deck, and they are carried between battles.
+/// **Throw a Snare at a foe: it is caught** — out of the line at once, counted as beaten, and it
+/// joins the run with its own cycle if the battle is won. Their FRONT only, a third of its HP or
+/// less, never a boss. An ITEM, not a card: Snares never dilute the deck.
 /// </summary>
 public record UseSnareAction : GameAction
 {
@@ -126,15 +127,7 @@ public record UseSnareAction : GameAction
 		);
 		s = s.UpdateObject(FoeId, (Foe)s.GetObject(FoeId) with { Caught = true });
 		s = s.ReturnStolen(FoeId);
-
-		ImmutableList<GameEvent> events = [new FoeCaughtEvent { FoeId = FoeId }];
-		if (!s.LivingFoes().Any())
-		{
-			var won = s.GetParty();
-			s = s.UpdateObject(won.Id, won with { IsOver = true, Won = true });
-			events = events.Add(new PartyBattleEndedEvent { Won = true });
-		}
-		return new ActionResult(s).WithEvents(events);
+		return new ActionResult(s).WithEvent(new FoeCaughtEvent { FoeId = FoeId });
 	}
 }
 
@@ -148,72 +141,10 @@ public record DiscardPlayedCardAction : GameAction
 }
 
 /// <summary>
-/// **The free step: every monster, every turn, one space.** Position is AIM — every monster attacks
-/// straight ahead — so it is never locked to a card. A step into an ally SWAPS the two (the first
-/// run's lock: three in a row and nobody could move). Only the one stepping builds Momentum.
-/// </summary>
-public record MoveAllyAction : GameAction
-{
-	public int AllyId { get; init; }
-	public int Space { get; init; }
-
-	public override ValidationResult ValidateAdd(GameState s)
-	{
-		if (s.GetParty().IsOver)
-			return ValidationResult.Invalid("The battle is over");
-
-		if (s.GetObject(AllyId) is not Ally { IsKnockedOut: false } ally)
-			return ValidationResult.Invalid("That monster cannot move");
-
-		return s.StepRefusal(ally, Space) is { } refusal
-			? ValidationResult.Invalid(refusal)
-			: ValidationResult.Valid;
-	}
-
-	public override ActionResult Execute(GameState s)
-	{
-		var ally = (Ally)s.GetObject(AllyId);
-		var events = ImmutableList<GameEvent>.Empty;
-
-		if (s.AllyAt(Space) is { } other)
-		{
-			s = s.UpdateObject(other.Id, other with { Space = ally.Space });
-			events = events.Add(
-				new AllyMovedEvent
-				{
-					AllyId = other.Id,
-					From = Space,
-					To = ally.Space,
-				}
-			);
-		}
-
-		s = s.UpdateObject(
-			AllyId,
-			ally with
-			{
-				Space = Space,
-				StepsLeft = ally.StepsLeft - 1,
-				Momentum = ally.Momentum + ally.MomentumPerStep,
-			}
-		);
-		return new ActionResult(s).WithEvents(
-			events.Insert(
-				0,
-				new AllyMovedEvent
-				{
-					AllyId = AllyId,
-					From = ally.Space,
-					To = Space,
-				}
-			)
-		);
-	}
-}
-
-/// <summary>
-/// **Ends your turn: every creature plays its move, one at a time, fastest first** — yours and the
-/// foes' interleaved (<see cref="PartyState.ActingOrder"/>). Then your next turn starts.
+/// **Ends your turn: THE RELAY.** The lines act in STEPS, back to front, BOTH SIDES AT ONCE (R3):
+/// everything at the furthest-back position still to act goes together, each aiming from the state
+/// at the start of the step; then the step SETTLES (faints, the bench, the lines closing up). Then
+/// the next furthest back. A creature that acted early (Hasten) or arrived mid-round sits it out.
 /// </summary>
 public record EndPartyTurnAction : GameAction
 {
@@ -230,25 +161,37 @@ public record EndPartyTurnAction : GameAction
 		var ending = s.GetParty();
 		s = s.UpdateObject(ending.Id, ending with { EndingTurn = true });
 
-		// **Order and targets are fixed BEFORE anyone acts**, from the same functions the board draws
-		// the badges and the telegraph with. Otherwise a homing attack could re-aim after an earlier
-		// hit changed who has the lowest HP, and the board would have shown the wrong target.
-		var plan = s.ActingOrder().Select(c => (c.Id, Targets: s.IntentTargets(c))).ToList();
-
+		// Who acts this round is fixed now; WHEN is by position, re-read each step — a token summoned
+		// at the front pushes everyone back, so a loop over positions would skip whoever moved.
+		var toAct = s.ActingOrder().Select(c => c.Id).ToHashSet();
 		var events = ImmutableList<GameEvent>.Empty;
-		foreach (var (id, targets) in plan)
+		ImmutableList<GameEvent> more;
+
+		while (!s.GetParty().IsOver)
 		{
-			if (s.GetParty().IsOver)
-				return new ActionResult(s).WithEvents(events);
+			var waiting = s.LivingAllies()
+				.Cast<Creature>()
+				.Concat(s.LivingFoes())
+				.Where(c => toAct.Contains(c.Id))
+				.ToList();
+			if (waiting.Count == 0)
+				break;
 
-			switch (s.GetObject(id))
+			// Within a step, braces and other set-up land before blows — on BOTH sides, so a step stays
+			// symmetric: a same-step Brace meets the blow it braced for, whoever's it is.
+			var back = waiting.Max(c => c.Position);
+			var step = waiting
+				.Where(c => c.Position == back)
+				.OrderBy(c => c.Current.Kind == IntentType.Attack ? 1 : 0)
+				.ThenBy(c => c is Ally ? 0 : 1)
+				.Select(c => (c.Id, Targets: s.IntentTargets(c)))
+				.ToList();
+
+			foreach (var (id, targets) in step)
 			{
-				// Killed before its turn came — a faster monster got there first. That is Speed's job.
-				case Creature { IsDown: true }:
-				case Ally { HasActed: true }:
-					continue;
-
-				case Foe { Staggered: true } staggered:
+				toAct.Remove(id);
+				if (s.GetObject(id) is Foe { Staggered: true } staggered)
+				{
 					s = s.UpdateObject(
 						id,
 						staggered with
@@ -259,11 +202,14 @@ public record EndPartyTurnAction : GameAction
 					);
 					events = events.Add(new FoeStaggeredEvent { FoeId = id });
 					continue;
+				}
+
+				(s, more) = PartyState.Act(s, id, targets);
+				events = events.AddRange(more);
 			}
 
-			ImmutableList<GameEvent> acted;
-			(s, acted) = PartyState.Act(s, id, targets);
-			events = events.AddRange(acted);
+			(s, more) = s.Settle();
+			events = events.AddRange(more);
 		}
 
 		if (s.GetParty().IsOver)
@@ -276,7 +222,7 @@ public record EndPartyTurnAction : GameAction
 	}
 }
 
-/// <summary>Refills energy, drops your Block and this turn's buffs, gives every step back, draws five.</summary>
+/// <summary>Refills energy, drops your Block and this turn's buffs, fades tokens, draws five.</summary>
 public record StartPartyTurnAction : GameAction
 {
 	public const int HandSize = 5;
@@ -303,6 +249,7 @@ public record StartPartyTurnAction : GameAction
 				CardsPlayedThisTurn = 0,
 				FoesDefeatedThisTurn = 0,
 				EndingTurn = false,
+				AlliesActedThisRound = 0,
 				DiscardedThisTurn = 0,
 				SpellDamageThisTurn = 0,
 				SpellsSplash = false,
@@ -318,9 +265,7 @@ public record StartPartyTurnAction : GameAction
 					Block = 0,
 					BonusThorns = 0,
 					BonusPower = 0,
-					Momentum = 0,
 					WasHit = false,
-					StepsLeft = 1,
 					HasActed = false,
 				}
 			);
@@ -340,16 +285,18 @@ public record StartPartyTurnAction : GameAction
 	}
 }
 
-// ===== What a card does. Each is a template on the card; the drop space is filled in on play.
+// ===== What a card does. Each is a template on the card; the drop is filled in on play.
 
 /// <summary>
-/// A step of a card, done to whatever it was dropped on. <see cref="PlayPartyCardAction"/> fills
-/// the space in. **By default a card is dropped on one of YOUR monsters** — override
+/// A step of a card, done to whatever it was dropped on. <see cref="PlayPartyCardAction"/> fills the
+/// drop in. **By default a card is dropped on one of YOUR monsters** — override
 /// <see cref="Refusal"/> for a card aimed at the foes.
 /// </summary>
 public abstract record CardStep : GameAction
 {
+	/// <summary>The POSITION it was dropped on, in the line <see cref="FoeRow"/> names.</summary>
 	public int Space { get; init; } = -1;
+
 	public bool FoeRow { get; init; }
 
 	/// <summary>Why the card cannot be dropped there, or null if it can.</summary>
@@ -396,18 +343,9 @@ public record PowerAction : CardStep
 		Update(s, Target(s) with { BonusPower = Target(s).BonusPower + Amount });
 }
 
-/// <summary>More steps this turn — Dash. On Pike every one of them is Momentum.</summary>
-public record DashAction : CardStep
-{
-	public int Steps { get; init; } = 1;
-
-	public override ActionResult Execute(GameState s) =>
-		Update(s, Target(s) with { StepsLeft = Target(s).StepsLeft + Steps });
-}
-
 /// <summary>
-/// **The monster plays its move NOW instead of at the end of the turn** — Hasten. Then it can still
-/// step away: hit, then dodge. It does not act again at the end.
+/// **The monster plays its move NOW instead of at the end of the turn** — Hasten. It sits out its
+/// step, and it counts for the relay (a FINISHER behind it sees it).
 /// </summary>
 public record HastenAction : CardStep
 {
@@ -430,11 +368,11 @@ public record HastenAction : CardStep
 	}
 }
 
-/// <summary>The monster strikes NOW, on top of its move — the deck's damage.</summary>
+/// <summary>The monster strikes NOW, on top of its move — the deck's damage. Their front, unless aimed.</summary>
 public record StrikeAction : CardStep
 {
 	public int Amount { get; init; }
-	public ImmutableList<int> Offsets { get; init; } = [0];
+	public Aim Aim { get; init; }
 
 	/// <summary>Page Storm: +1 for each card in your hand (the card played has already left it).</summary>
 	public bool PlusCardsInHand { get; init; }
@@ -451,7 +389,7 @@ public record StrikeAction : CardStep
 			Amount
 				+ (PlusCardsInHand ? s.CardsIn(ZoneType.Hand).Count() : 0)
 				+ PerX * s.GetParty().XPaid,
-			Offsets.Select(o => ally.Space + o)
+			PartyState.AimAt(s, ally, Aim)
 		);
 		return new ActionResult(after).WithEvents(events);
 	}
@@ -488,34 +426,51 @@ public record StaggerAction : CardStep
 			: new ActionResult(s);
 }
 
-/// <summary>
-/// **Dropped on an EMPTY foe space: the foe beside it is pushed in** — Gust. Every attack is a shape
-/// anchored on the foe's column, so this re-aims it — and lines it up with one of your monsters.
-/// </summary>
-public record PushAction : CardStep
+// ===== The line verbs — the only way to reorder in a fight (R7).
+
+/// <summary>**Swap the monster it is dropped on with the one ahead of it** — Hold the Line.</summary>
+public record SwapAction : CardStep
 {
-	public override string? Refusal(GameState s, int space, bool foeRow)
-	{
-		if (!foeRow || space < 0 || space >= PartyBattle.Spaces)
-			return "Drop it on an empty space beside a foe";
-		if (s.FoeAt(space) is { } there)
-			return $"The {there.Name} is standing there";
+	public override string? Refusal(GameState s, int space, bool foeRow) =>
+		base.Refusal(s, space, foeRow) ?? (space == 0 ? "It is already at the front" : null);
 
-		var beside = Beside(s, space);
-		return beside.Count switch
-		{
-			0 => "Drop it on an empty space beside a foe",
-			1 => null,
-			_ => "Two foes are beside that space — drop it where only one is",
-		};
-	}
+	public override ActionResult Execute(GameState s) => new(s.MoveInLine(Target(s).Id, Space - 1));
+}
 
-	private static List<Foe> Beside(GameState s, int space) =>
-		[.. new[] { space - 1, space + 1 }.Select(s.FoeAt).OfType<Foe>()];
+/// <summary>
+/// **Send the monster it is dropped on to the FRONT** — Charge. Already there, it stays: the card's
+/// other steps (Charge's Power) still count.
+/// </summary>
+public record RallyAction : CardStep
+{
+	public override ActionResult Execute(GameState s) => new(s.MoveInLine(Target(s).Id, 0));
+}
+
+/// <summary>**Send the monster it is dropped on to the BACK.**</summary>
+public record RetreatAction : CardStep
+{
+	public override string? Refusal(GameState s, int space, bool foeRow) =>
+		base.Refusal(s, space, foeRow)
+		?? (space == s.LivingAllies().Count() - 1 ? "It is already at the back" : null);
+
+	public override ActionResult Execute(GameState s) =>
+		new(s.MoveInLine(Target(s).Id, PartyBattle.MaxLine));
+}
+
+/// <summary>
+/// **Dropped on their line: their front two swap** — Gust. The foes it moves are Off-Balance while
+/// Gale stands.
+/// </summary>
+public record GustAction : CardStep
+{
+	public override string? Refusal(GameState s, int space, bool foeRow) =>
+		!foeRow ? "Drop it on their line"
+		: s.LivingFoes().Count() < 2 ? "It needs two foes to swap"
+		: null;
 
 	public override ActionResult Execute(GameState s)
 	{
-		var (after, events) = PartyState.Push(s, Beside(s, Space).Single(), Space);
+		var (after, events) = PartyState.Shove(s, foes: true);
 		return new ActionResult(after).WithEvents(events);
 	}
 }
@@ -533,13 +488,6 @@ public record AllyHitEvent : GameEvent
 public record AllyKnockedOutEvent : GameEvent
 {
 	public int AllyId { get; init; }
-}
-
-public record AllyMovedEvent : GameEvent
-{
-	public int AllyId { get; init; }
-	public int From { get; init; }
-	public int To { get; init; }
 }
 
 public record BlockGainedEvent : GameEvent
@@ -562,19 +510,7 @@ public record FoeHitEvent : GameEvent
 	public int Blocked { get; init; }
 }
 
-public record TrainerHitEvent : GameEvent
-{
-	public int Damage { get; init; }
-	public string By { get; init; } = "";
-}
-
-public record LeaderHitEvent : GameEvent
-{
-	public int Damage { get; init; }
-	public string By { get; init; } = "";
-}
-
-/// <summary>A benched monster stepped into a fainted one's space.</summary>
+/// <summary>A benched monster joined the back of the line for a fallen one.</summary>
 public record AllySwappedInEvent : GameEvent
 {
 	public int AllyId { get; init; }

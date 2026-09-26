@@ -49,9 +49,6 @@ public record PartyRun
 
 	public const int StartingSnares = 3;
 
-	/// <summary>**Your health across the run.** Only a town heals it.</summary>
-	public const int TrainerMaxHp = PartyScenario.DefaultTrainerHp;
-
 	public const int StartingGold = 60;
 
 	public const int WildGold = 20;
@@ -92,7 +89,6 @@ public record PartyRun
 
 	public int Snares { get; init; }
 	public int Gold { get; init; }
-	public int TrainerHp { get; init; }
 
 	/// <summary>Shop cards bought in THIS town, by offer index — each can be bought once.</summary>
 	public ImmutableList<int> Sold { get; init; } = [];
@@ -120,27 +116,12 @@ public record PartyRun
 			Rewards = rewards ?? PartyContent.Rewards,
 			Snares = StartingSnares,
 			Gold = StartingGold,
-			TrainerHp = TrainerMaxHp,
 			Phase = RunPhase.Town,
 			Seed = seed,
 		};
 
 	/// <summary>
-	/// **Where a team of N stands**: one in the middle, two either side of it, three spread out — so
-	/// every size has a space to step into.
-	/// </summary>
-	public static ImmutableList<int> Formation(int size) =>
-		size switch
-		{
-			1 => [2],
-			2 => [1, 3],
-			3 => [0, 2, 4],
-			4 => [0, 1, 3, 4],
-			_ => [0, 1, 2, 3, 4],
-		};
-
-	/// <summary>
-	/// **A caught foe as a monster of yours: exactly what it had.** Its cycle, its Speed, its max HP.
+	/// **A caught foe as a monster of yours: exactly what it had.** Its cycle and its max HP.
 	/// Power 0, because a foe's move amounts are already its whole damage. **Its deck ability wakes
 	/// now**: the passive, triggers and monster deck it carried dormant. A wild trait (Thief) stays wild.
 	/// </summary>
@@ -149,7 +130,6 @@ public record PartyRun
 			foe.Name,
 			foe.MaxHp,
 			Power: 0,
-			foe.Speed,
 			[.. foe.Pattern.Select(i => i with { Steals = false })],
 			Passive: foe.CaughtPassive,
 			PassiveRule: foe.CaughtRule
@@ -212,23 +192,21 @@ public record PartyRun
 
 	public GameState StartBattle()
 	{
-		var spaces = Formation(Team.Count);
 		var scenario = new PartyScenario(
 			NextFight.Name,
 			Phase == RunPhase.Gym
 				? $"{Region.Name} — the gym"
 				: $"{Region.Name} — {Area!.Name}, stop {StopIndex + 1} of {Trail.Count}",
-			// The team on the board, then the bench off it (space -1) — in that order, so slots line up.
+			// **The team's order IS the line** (front first), then the bench off it (-1) — in that
+			// order, so slots line up.
 			[
-				.. Team.Select((m, i) => new PlacedCompanion(m.Companion, spaces[i], m.Hp)),
+				.. Team.Select((m, i) => new PlacedCompanion(m.Companion, i, m.Hp)),
 				.. Bench.Select(m => new PlacedCompanion(m.Companion, -1, m.Hp)),
 			],
 			NextFight.Foes,
 			Deck,
 			[],
-			Snares,
-			TrainerHp,
-			NextFight.LeaderHp
+			Snares
 		);
 		return PartyBattleFactory.Create(scenario, Seed + RegionIndex * 1009 + StopIndex * 101);
 	}
@@ -272,7 +250,6 @@ public record PartyRun
 			Bench = bench,
 			Snares = party.Snares,
 			Gold = Gold + gold,
-			TrainerHp = party.TrainerHp,
 		};
 
 		var caught = ImmutableList<string>.Empty;
@@ -310,7 +287,6 @@ public record PartyRun
 			Sold = [],
 			Team = Heal(Team, 1),
 			Bench = Heal(Bench, 1),
-			TrainerHp = TrainerMaxHp,
 		};
 
 	private static ImmutableList<RunCompanion> Heal(

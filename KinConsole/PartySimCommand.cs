@@ -51,8 +51,8 @@ public static class PartySimCommand
 		var regions = PartyWorld.Regions;
 		Console.WriteLine();
 		Console.WriteLine(
-			"  REGION               THROUGH (target)   survived (target)  died trail/deep/gym (health)  "
-				+ "at gym: you  team  size  deeper  leader-won  turns"
+			"  REGION               THROUGH (target)   survived (target)  died trail/deep/gym  "
+				+ "at gym: team  size  deeper  turns"
 		);
 		var previous = 1.0;
 		for (var region = 0; region < regions.Count; region++)
@@ -69,13 +69,12 @@ public static class PartySimCommand
 			Console.WriteLine(
 				$"  {region + 1, 2} {regions[region].Name, -17} "
 					+ $"{through, 6:P0} ({target, 4:P0})   {survived, 6:P0} ({target / previous, 4:P0})   "
-					+ $"{Died(RunEnd.Trail), 4}/{Died(RunEnd.Deep), -3}/{Died(RunEnd.Gym), -3} ({died.Count(r => r.KilledByTrainerHp)} of {died.Count})"
+					+ $"{Died(RunEnd.Trail), 4}/{Died(RunEnd.Deep), -3}/{Died(RunEnd.Gym), -3}"
 					+ (
 						gyms.Count == 0
 							? ""
-							: $"{"", 8}{gyms.Average(g => g.TrainerHp), 5:F1}  {gyms.Average(g => g.TeamHpShare), 4:P0}  "
+							: $"{"", 8}{gyms.Average(g => g.TeamHpShare), 4:P0}  "
 								+ $"{gyms.Average(g => g.TeamSize), 4:F1}  {gyms.Count(g => g.WentDeep) / (double)gyms.Count, 5:P0}  "
-								+ $"{gyms.Count(g => g.ByLeader) / (double)Math.Max(1, gyms.Count(g => g.Turns > 0)), 9:P0}  "
 								+ $"{gyms.Average(g => g.Turns), 5:F1}"
 					)
 			);

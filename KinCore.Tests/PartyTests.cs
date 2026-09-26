@@ -6,8 +6,8 @@ using KinCore.Party;
 namespace KinCore.Tests;
 
 /// <summary>
-/// **AUTO-BATTLE v1 — every mechanic FIRES** (KinJam.md). Exploring, not tuning: these read a
-/// number that moved, never a field that was set, and every monster, card and foe is inline.
+/// **THE RELAY — every rule FIRES** (`KinRelayPlan.md`). Exploring, not tuning: these read a number
+/// that moved, never a field that was set, and every monster, card and foe is inline.
 /// </summary>
 public class PartyTests
 {
@@ -27,31 +27,29 @@ public class PartyTests
 			Amount = 0,
 		};
 
-	private static Intent Hit(int amount, params int[] offsets) =>
+	private static Intent Hit(int amount, Aim aim = Aim.Front) =>
 		new()
 		{
 			Name = "Hit",
 			Kind = IntentType.Attack,
 			Amount = amount,
-			Offsets = offsets.Length > 0 ? [.. offsets] : [0],
+			Target = aim,
 		};
 
 	private static PartyCompanion Mon(
 		string name,
 		int hp = 20,
 		int power = 0,
-		int speed = 2,
 		params Intent[] moves
-	) => new(name, hp, power, speed, moves.Length > 0 ? [.. moves] : [Idle]);
+	) => new(name, hp, power, moves.Length > 0 ? [.. moves] : [Idle]);
 
-	private static Foe Foe(int space, int hp = 50, int speed = 2, params Intent[] pattern) =>
+	private static Foe Foe(int position, int hp = 50, params Intent[] pattern) =>
 		new()
 		{
 			Name = "Foe",
 			Hp = hp,
 			MaxHp = hp,
-			Speed = speed,
-			Space = space,
+			Position = position,
 			Pattern = pattern.Length > 0 ? [.. pattern] : [Idle],
 		};
 
@@ -65,32 +63,42 @@ public class PartyTests
 			new PartyScenario("Test", "", [.. companions], [.. foes], [.. deck], [])
 		);
 
+	/// <summary>A battle whose deck is bigger than a hand, with the named cards dealt first.</summary>
+	private static GameState Deal(PlacedCompanion[] companions, KinCard[] top, params Foe[] foes) =>
+		PartyBattleFactory.Create(
+			new PartyScenario(
+				"Test",
+				"",
+				[.. companions],
+				[.. foes],
+				[.. top, .. Enumerable.Repeat(Card("Guard", 1, new GuardAction()), 6)],
+				[.. top.Select(c => c.Name)]
+			)
+		);
+
 	private static GameState Do(GameState s, GameAction action) =>
 		s.AddAction(action).ProcessAllActions().State;
 
-	private static GameState Play(GameState s, string name, int space, bool foeRow = false) =>
+	private static GameState Play(GameState s, string name, int position, bool foeRow = false) =>
 		Do(
 			s,
 			new PlayPartyCardAction
 			{
 				CardId = InHand(s, name).Id,
-				Space = space,
+				Space = position,
 				FoeRow = foeRow,
 			}
 		);
 
-	private static bool CanPlay(GameState s, string name, int space, bool foeRow = false) =>
+	private static bool CanPlay(GameState s, string name, int position, bool foeRow = false) =>
 		new PlayPartyCardAction
 		{
 			CardId = InHand(s, name).Id,
-			Space = space,
+			Space = position,
 			FoeRow = foeRow,
 		}
 			.ValidateAdd(s)
 			.IsValid;
-
-	private static GameState Step(GameState s, string who, int space) =>
-		Do(s, new MoveAllyAction { AllyId = Named(s, who).Id, Space = space });
 
 	private static GameState EndTurn(GameState s) => Do(s, new EndPartyTurnAction());
 
@@ -99,225 +107,151 @@ public class PartyTests
 
 	private static Ally Named(GameState s, string name) => s.Allies().Single(a => a.Name == name);
 
-	private static Foe FoeIn(GameState s, int space) =>
-		s.GetChildren(s.GetWellKnownId(PartyState.BattleKey))
-			.OfType<Foe>()
-			.Single(f => f.Space == space);
+	/// <summary>The foe standing at that place in their line.</summary>
+	private static Foe FoeIn(GameState s, int position) =>
+		s.LivingFoes().Single(f => f.Position == position);
 
-	// ===== Monsters fight on their own
+	private static string Line(GameState s) =>
+		string.Join(",", s.LivingAllies().Select(a => a.Name));
 
-	[Test]
-	public void AMonsterAttacksAheadAtTheEndOfTheTurnWithItsPower()
-	{
-		var s = Battle([new(Mon("Pike", power: 3, moves: Hit(2)), 2)], [], Foe(2), Foe(3));
-
-		s = EndTurn(s);
-
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - (2 + 3)));
-		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(50), "only the column ahead is hit");
-	}
+	// ===== THE RELAY: two lines, the front holds, steps back to front
 
 	[Test]
-	public void AMonsterInTheWrongColumnMisses()
-	{
-		var s = Battle([new(Mon("Pike", moves: Hit(5)), 0)], [], Foe(2));
-
-		s = EndTurn(s);
-
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50));
-	}
-
-	[Test]
-	public void AThreeWideMoveHitsThreeColumns()
+	public void TheFrontTakesTheBlowAndEveryMonsterActs()
 	{
 		var s = Battle(
-			[new(Mon("Gale", moves: Hit(4, -1, 0, 1)), 2)],
+			[new(Mon("Bramble"), 0), new(Mon("Pike", moves: Hit(2)), 1)],
 			[],
-			Foe(1),
-			Foe(2),
-			Foe(3),
-			Foe(4)
+			Foe(0, pattern: Hit(5)),
+			Foe(1)
 		);
 
 		s = EndTurn(s);
 
-		Assert.That(new[] { 1, 2, 3 }.Select(c => FoeIn(s, c).Hp), Is.All.EqualTo(46));
-		Assert.That(FoeIn(s, 4).Hp, Is.EqualTo(50));
-	}
-
-	[Test]
-	public void TheCycleAdvancesEveryTurn()
-	{
-		var s = Battle([new(Mon("Pike", moves: [Hit(1), Hit(10)]), 2)], [], Foe(2));
-
-		s = EndTurn(s);
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(49));
+		Assert.That(Named(s, "Bramble").Hp, Is.EqualTo(20 - 5), "the front took it");
+		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20));
 		Assert.That(
-			Named(s, "Pike").Current.Amount,
-			Is.EqualTo(10),
-			"the next move is telegraphed"
+			FoeIn(s, 0).Hp,
+			Is.EqualTo(50 - 2),
+			"Pike, second in line, still hit their front"
 		);
-
-		s = EndTurn(s);
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(39));
 	}
 
 	[Test]
-	public void AFasterMonsterKillsAFoeBeforeItsBlowLands()
+	public void TheLinesActInStepsFromTheBackBothSidesAtOnce()
+	{
+		var s = Battle([new(Mon("A"), 0), new(Mon("B"), 1), new(Mon("C"), 2)], [], Foe(0), Foe(1));
+
+		var steps = s.ActingSteps()
+			.Select(step =>
+				string.Join(" ", step.Select(c => (c is Ally ? "A" : "F") + c.Position))
+			);
+
+		Assert.That(string.Join(" | ", steps), Is.EqualTo("A2 | A1 F1 | A0 F0"));
+	}
+
+	[Test]
+	public void AStepIsSimultaneousSoTheFrontsTrade()
 	{
 		var s = Battle(
-			[new(Mon("Pike", speed: 3, moves: Hit(10)), 2)],
+			[new(Mon("Pike", hp: 5, moves: Hit(99)), 0), new(Mon("Bramble"), 1)],
 			[],
-			Foe(2, hp: 10, speed: 2, pattern: Hit(7)),
-			Foe(4)
-		);
-
-		s = EndTurn(s);
-
-		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20), "the foe died before its turn came");
-	}
-
-	[Test]
-	public void ASlowerMonsterIsHitFirst()
-	{
-		var s = Battle(
-			[new(Mon("Bramble", speed: 1, moves: Hit(10)), 2)],
-			[],
-			Foe(2, hp: 10, speed: 2, pattern: Hit(7)),
-			Foe(4)
-		);
-
-		s = EndTurn(s);
-
-		Assert.That(Named(s, "Bramble").Hp, Is.EqualTo(13));
-		Assert.That(FoeIn(s, 2).IsDead, Is.True, "and still lands its own blow after");
-	}
-
-	[Test]
-	public void OnATieYoursActFirst()
-	{
-		var s = Battle([new(Mon("Pike", speed: 2), 0)], [], Foe(1, speed: 2), Foe(3, speed: 3));
-
-		var order = s.ActingOrder().Select(c => c.Speed + (c is Ally ? "A" : "F"));
-
-		Assert.That(order, Is.EqualTo(new[] { "3F", "2A", "2F" }));
-	}
-
-	[Test]
-	public void AKnockedOutMonsterDoesNotAct()
-	{
-		var s = Battle(
-			[new(Mon("Pike", hp: 5, speed: 1, moves: Hit(10)), 2), new(Mon("Bramble"), 0)],
-			[],
-			Foe(2, speed: 2, pattern: Hit(9))
+			Foe(0, hp: 5, pattern: Hit(99)),
+			Foe(1)
 		);
 
 		s = EndTurn(s);
 
 		Assert.That(Named(s, "Pike").IsKnockedOut, Is.True);
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50));
-	}
-
-	// ===== The free step
-
-	[Test]
-	public void EveryMonsterStepsOncePerTurn()
-	{
-		var s = Battle([new(Mon("Pike"), 2), new(Mon("Gale"), 4)], [], Foe(0));
-
-		s = Step(s, "Pike", 1);
-		s = Step(s, "Gale", 3);
-
-		Assert.That(Named(s, "Pike").Space, Is.EqualTo(1));
-		Assert.That(Named(s, "Gale").Space, Is.EqualTo(3));
-		Assert.That(
-			new MoveAllyAction { AllyId = Named(s, "Pike").Id, Space = 0 }
-				.ValidateAdd(s)
-				.IsValid,
-			Is.False,
-			"one step a turn"
-		);
-
-		s = EndTurn(s);
-		Assert.That(Step(s, "Pike", 0).Allies().First().Space, Is.EqualTo(0), "back next turn");
+		Assert.That(s.LivingFoes().Count(), Is.EqualTo(1), "both fronts fell in the same step");
 	}
 
 	[Test]
-	public void AStepIntoAnAllySwapsThem()
+	public void ABackLinerActsFirstAndCanDropYourFrontBeforeItSwings()
 	{
 		var s = Battle(
-			[new(Mon("Bramble"), 0), new(Mon("Gale"), 1), new(Mon("Pike"), 2)],
+			[new(Mon("Pike", hp: 5, moves: Hit(10)), 0), new(Mon("Bramble", hp: 30), 1)],
 			[],
-			Foe(0)
+			Foe(0),
+			Foe(1, pattern: Hit(99))
 		);
 
-		s = Step(s, "Gale", 2);
+		s = EndTurn(s);
 
-		Assert.That(Named(s, "Gale").Space, Is.EqualTo(2));
-		Assert.That(Named(s, "Pike").Space, Is.EqualTo(1));
-		Assert.That(Named(s, "Pike").StepsLeft, Is.EqualTo(1), "being swapped is not a step");
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50), "Pike never swung");
+		Assert.That(Named(s, "Bramble").Position, Is.EqualTo(0), "and the line closed up");
 	}
 
 	[Test]
-	public void SteppingOutOfAShapeDodgesIt()
+	public void ALaterBlowFindsTheNewFront()
 	{
-		var s = Battle([new(Mon("Pike"), 2)], [], Foe(2, pattern: Hit(9)));
+		var s = Battle(
+			[new(Mon("Pike", hp: 5), 0), new(Mon("Bramble", hp: 30), 1)],
+			[],
+			Foe(0, pattern: Hit(4)),
+			Foe(1, pattern: Hit(99))
+		);
 
-		s = EndTurn(Step(s, "Pike", 3));
+		s = EndTurn(s);
 
-		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20));
+		Assert.That(Named(s, "Bramble").Hp, Is.EqualTo(30 - 4));
 	}
 
 	[Test]
-	public void TheMiddleOfAThreeWideAttackCannotStepOut()
+	public void EachAimLandsWhereItSays()
 	{
-		var s = Battle([new(Mon("Pike"), 2)], [], Foe(2, pattern: Hit(5, -1, 0, 1)));
+		GameState Aimed(Aim aim) =>
+			EndTurn(
+				Battle(
+					[new(Mon("A"), 0), new(Mon("B"), 1), new(Mon("C", hp: 10), 2)],
+					[],
+					Foe(0, pattern: Hit(3, aim))
+				)
+			);
+		string Hurt(GameState s) =>
+			string.Join(",", s.Allies().Where(a => a.Hp < a.MaxHp).Select(a => a.Name));
 
-		s = EndTurn(Step(s, "Pike", 3));
-
-		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(15));
+		Assert.That(Hurt(Aimed(Aim.Front)), Is.EqualTo("A"));
+		Assert.That(Hurt(Aimed(Aim.Back)), Is.EqualTo("C"));
+		Assert.That(Hurt(Aimed(Aim.Pierce)), Is.EqualTo("A,B"));
+		Assert.That(Hurt(Aimed(Aim.Sweep)), Is.EqualTo("A,B,C"));
+		Assert.That(Hurt(Aimed(Aim.Hunt)), Is.EqualTo("C"), "the lowest HP");
 	}
 
 	[Test]
-	public void AHomingAttackFindsTheLowestHpMonsterWhereverItStands()
+	public void TheFinisherCashesEveryoneWhoActedBeforeIt()
 	{
-		var zap = new Intent
+		var pike = Mon("Pike", moves: Hit(2)) with { FinisherPerAlly = 2 };
+		var s = Battle([new(pike, 0), new(Mon("B"), 1), new(Mon("C"), 2)], [], Foe(0));
+
+		s = EndTurn(s);
+
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - (2 + 2 * 2)));
+	}
+
+	[Test]
+	public void AnAheadBlockShieldsTheOneAhead()
+	{
+		var shield = new Intent
 		{
-			Name = "Zap",
-			Kind = IntentType.Attack,
-			Amount = 4,
-			Homing = true,
+			Name = "Cover",
+			Kind = IntentType.Block,
+			Amount = 5,
+			Target = Aim.Ahead,
 		};
 		var s = Battle(
-			[new(Mon("Bramble", hp: 30), 0), new(Mon("Pike", hp: 12), 4)],
+			[new(Mon("Front"), 0), new(Mon("Back", moves: shield), 1)],
 			[],
-			Foe(2, pattern: zap)
+			Foe(0, pattern: Hit(5))
 		);
 
 		s = EndTurn(s);
 
-		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(8));
-		Assert.That(Named(s, "Bramble").Hp, Is.EqualTo(30));
+		Assert.That(Named(s, "Front").Hp, Is.EqualTo(20));
 	}
 
 	[Test]
-	public void AFoeMovesByIntent()
-	{
-		var drift = new Intent
-		{
-			Name = "Drift",
-			Kind = IntentType.Move,
-			Amount = -1,
-		};
-		var s = Battle([new(Mon("Pike"), 0)], [], Foe(3, pattern: drift));
-
-		s = EndTurn(s);
-
-		Assert.That(s.LivingFoes().Single().Space, Is.EqualTo(2));
-	}
-
-	[Test]
-	public void AFoesBlockHoldsThroughYourTurnAndDropsWhenItActs()
+	public void BracesLandBeforeBlowsInTheSameStepOnBothSides()
 	{
 		var brace = new Intent
 		{
@@ -325,44 +259,193 @@ public class PartyTests
 			Kind = IntentType.Block,
 			Amount = 6,
 		};
-		var s = Battle(
-			[new(Mon("Pike", speed: 1, moves: Hit(4)), 2)],
-			[],
-			Foe(2, speed: 3, pattern: [brace, Idle])
-		);
+		var s = Battle([new(Mon("Pike", moves: Hit(4)), 0)], [], Foe(0, pattern: [brace, Idle]));
 
-		s = EndTurn(s); // it braces first, then Pike hits the Block
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50));
-		Assert.That(FoeIn(s, 2).Block, Is.EqualTo(2), "held into your turn");
+		s = EndTurn(s);
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50), "its brace met Pike's blow");
+		Assert.That(FoeIn(s, 0).Block, Is.EqualTo(2), "and held into your turn");
 
-		s = EndTurn(s); // it acts first again, and its Block drops
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(46));
+		s = EndTurn(s);
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(46), "it dropped when the foe next acted");
 	}
 
-	// ===== Passives
+	[Test]
+	public void AFallLetsTheBenchJoinAtTheBackAndTheLineClosesUp()
+	{
+		var s = Battle(
+			[new(Mon("Pike", hp: 5), 0), new(Mon("Bramble"), 1), new(Mon("Boar"), -1)],
+			[],
+			Foe(0, pattern: Hit(9))
+		);
+		Assert.That(Line(s), Is.EqualTo("Pike,Bramble"), "the bench is not in the line");
+
+		s = EndTurn(s);
+
+		Assert.That(Line(s), Is.EqualTo("Bramble,Boar"));
+	}
+
+	[Test]
+	public void SwapRallyAndRetreatReorderYourLine()
+	{
+		var s = Battle(
+			[new(Mon("A"), 0), new(Mon("B"), 1), new(Mon("C"), 2)],
+			[
+				Card("Swap", 0, new SwapAction()),
+				Card("Rally", 0, new RallyAction()),
+				Card("Retreat", 0, new RetreatAction()),
+			],
+			Foe(0)
+		);
+		Assert.That(CanPlay(s, "Swap", 0), Is.False, "nobody is ahead of the front");
+
+		s = Play(s, "Swap", 2);
+		Assert.That(Line(s), Is.EqualTo("A,C,B"));
+		s = Play(s, "Rally", 2);
+		Assert.That(Line(s), Is.EqualTo("B,A,C"));
+		s = Play(s, "Retreat", 0);
+		Assert.That(Line(s), Is.EqualTo("A,C,B"));
+	}
+
+	[Test]
+	public void GustSwapsTheirFrontTwoAndGaleLeavesThemOffBalance()
+	{
+		var gale = Mon("Gale") with { Unbalances = 2 };
+		var s = Battle(
+			[new(Mon("Pike", moves: Hit(3)), 0), new(gale, 1)],
+			[Card("Gust", 1, new GustAction())],
+			Foe(0) with
+			{
+				Name = "Ahead",
+			},
+			Foe(1) with
+			{
+				Name = "Behind",
+			}
+		);
+		Assert.That(CanPlay(s, "Gust", 0), Is.False, "their line, not yours");
+
+		s = EndTurn(Play(s, "Gust", 0, foeRow: true));
+
+		Assert.That(FoeIn(s, 0).Name, Is.EqualTo("Behind"));
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - (3 + 2)));
+	}
+
+	[Test]
+	public void AFoesShoveSwapsYourFrontTwo()
+	{
+		var shove = new Intent { Name = "Shove", Kind = IntentType.Shove };
+		var s = Battle([new(Mon("A"), 0), new(Mon("B"), 1)], [], Foe(0, pattern: shove));
+
+		s = EndTurn(s);
+
+		Assert.That(Line(s), Is.EqualTo("B,A"));
+	}
+
+	[Test]
+	public void AMoveIntentMovesItThroughItsLine()
+	{
+		var drift = new Intent
+		{
+			Name = "Drift",
+			Kind = IntentType.Move,
+			Amount = 1,
+		};
+		var s = Battle(
+			[new(Mon("Pike"), 0)],
+			[],
+			Foe(0, pattern: drift) with
+			{
+				Name = "Drifter",
+			},
+			Foe(1)
+		);
+
+		s = EndTurn(s);
+
+		Assert.That(FoeIn(s, 1).Name, Is.EqualTo("Drifter"));
+	}
+
+	[Test]
+	public void ATokenArrivingMidRoundDoesNotMakeAnyoneSkipTheirStep()
+	{
+		var grub = new TokenTemplate(Mon("Grub", moves: Hit(1)), 2);
+		var brood = new Intent
+		{
+			Name = "Brood",
+			Kind = IntentType.Summon,
+			Summons = grub,
+		};
+		var s = Battle(
+			[new(Mon("Pike", moves: Hit(2)), 0), new(Mon("Vine", moves: brood), 1)],
+			[],
+			Foe(0)
+		);
+
+		s = EndTurn(s);
+
+		Assert.That(Line(s), Is.EqualTo("Grub,Pike,Vine"), "the grub arrived at the front");
+		Assert.That(
+			FoeIn(s, 0).Hp,
+			Is.EqualTo(50 - 2),
+			"Pike was pushed back and still acted; the grub waits"
+		);
+	}
+
+	[Test]
+	public void TheForecastMatchesTheRound()
+	{
+		var s = Battle([new(Mon("Pike", moves: Hit(4)), 0)], [], Foe(0, pattern: Hit(6)));
+
+		var forecast = s.ForecastIfTurnEndsNow();
+
+		Assert.That(forecast.Hp[Named(s, "Pike").Id], Is.EqualTo(6));
+		Assert.That(forecast.Hp[FoeIn(s, 0).Id], Is.EqualTo(4));
+	}
+
+	// ===== Cycles and passives
+
+	[Test]
+	public void TheCycleAdvancesEveryTurn()
+	{
+		var s = Battle([new(Mon("Pike", moves: [Hit(1), Hit(10)]), 0)], [], Foe(0));
+
+		s = EndTurn(s);
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(49));
+		Assert.That(
+			Named(s, "Pike").Current.Amount,
+			Is.EqualTo(10),
+			"the next move is telegraphed"
+		);
+
+		s = EndTurn(s);
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(39));
+	}
 
 	[Test]
 	public void ThornsHurtWhateverAttacksHerEvenThroughBlock()
 	{
-		var guard = Card("Guard", 1, new GuardAction { Amount = 10 });
 		var bramble = Mon("Bramble") with { Thorns = 2 };
-		var s = Battle([new(bramble, 2)], [guard], Foe(2, pattern: Hit(5)));
+		var s = Battle(
+			[new(bramble, 0)],
+			[Card("Guard", 1, new GuardAction { Amount = 10 })],
+			Foe(0, pattern: Hit(5))
+		);
 
-		s = EndTurn(Play(s, "Guard", 2));
+		s = EndTurn(Play(s, "Guard", 0));
 
 		Assert.That(Named(s, "Bramble").Hp, Is.EqualTo(20));
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(48));
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(48));
 	}
 
 	[Test]
-	public void ThornsCanWinTheBattleBeforeTheRestAct()
+	public void ThornsCanWinTheBattleOnTheirOwn()
 	{
 		var bramble = Mon("Bramble") with { Thorns = 5 };
 		var s = Battle(
-			[new(bramble, 2)],
+			[new(bramble, 0)],
 			[],
-			Foe(2, hp: 5, speed: 3, pattern: Hit(1)),
-			Foe(3, hp: 5, speed: 3, pattern: Hit(1, -1))
+			Foe(0, hp: 5, pattern: Hit(1)),
+			Foe(1, hp: 5, pattern: Hit(1))
 		);
 
 		s = EndTurn(s);
@@ -370,62 +453,18 @@ public class PartyTests
 		Assert.That(s.GetParty().IsOver && s.GetParty().Won, Is.True);
 	}
 
-	[Test]
-	public void EveryStepBuildsMomentumAndTheNextAttackSpendsIt()
-	{
-		var dash = Card("Dash", 0, new DashAction());
-		var pike = Mon("Pike", moves: Hit(1)) with { MomentumPerStep = 2 };
-		var s = Battle([new(pike, 2)], [dash], Foe(2));
-
-		s = Play(s, "Dash", 2);
-		s = Step(Step(s, "Pike", 3), "Pike", 2);
-		s = EndTurn(s);
-
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - (1 + 4)));
-		Assert.That(Named(s, "Pike").Momentum, Is.EqualTo(0));
-	}
-
-	[Test]
-	public void AFoeMovedWhileGaleStandsIsOffBalance()
-	{
-		var gust = Card("Gust", 1, new PushAction());
-		var gale = Mon("Gale") with { Unbalances = 2 };
-		var s = Battle([new(gale, 0), new(Mon("Pike", moves: Hit(3)), 3)], [gust], Foe(2));
-
-		s = EndTurn(Play(s, "Gust", 3, foeRow: true));
-
-		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(50 - (3 + 2)));
-	}
-
-	[Test]
-	public void GalesGustPushesTheFoeAhead()
-	{
-		var gust = new Intent
-		{
-			Name = "Gust",
-			Kind = IntentType.Push,
-			Amount = 1,
-		};
-		var s = Battle([new(Mon("Gale", moves: gust), 2)], [], Foe(2));
-
-		s = EndTurn(s);
-
-		Assert.That(s.LivingFoes().Single().Space, Is.EqualTo(3));
-	}
-
 	// ===== Trainer cards — played ON something, owned by nobody
 
 	[Test]
 	public void GuardBlocksForTheMonsterItIsDroppedOnAndIsGoneNextTurn()
 	{
-		var guard = Card("Guard", 1, new GuardAction { Amount = 6 });
 		var s = Battle(
-			[new(Mon("Bramble"), 1), new(Mon("Pike"), 2)],
-			[guard],
-			Foe(2, pattern: Hit(9))
+			[new(Mon("Pike"), 0), new(Mon("Bramble"), 1)],
+			[Card("Guard", 1, new GuardAction { Amount = 6 })],
+			Foe(0, pattern: Hit(9))
 		);
 
-		s = Play(s, "Guard", 2);
+		s = Play(s, "Guard", 0);
 		Assert.That(Named(s, "Bramble").Block, Is.EqualTo(0));
 
 		s = EndTurn(s);
@@ -436,73 +475,77 @@ public class PartyTests
 	[Test]
 	public void ACardForYourMonstersMustBeDroppedOnOne()
 	{
-		var guard = Card("Guard", 1, new GuardAction { Amount = 6 });
-		var s = Battle([new(Mon("Pike"), 2)], [guard], Foe(2));
+		var s = Battle(
+			[new(Mon("Pike"), 0)],
+			[Card("Guard", 1, new GuardAction { Amount = 6 })],
+			Foe(0)
+		);
 
-		Assert.That(CanPlay(s, "Guard", 2), Is.True);
-		Assert.That(CanPlay(s, "Guard", 3), Is.False, "an empty space");
-		Assert.That(CanPlay(s, "Guard", 2, foeRow: true), Is.False, "a foe");
+		Assert.That(CanPlay(s, "Guard", 0), Is.True);
+		Assert.That(CanPlay(s, "Guard", 1), Is.False, "nobody stands there");
+		Assert.That(CanPlay(s, "Guard", 0, foeRow: true), Is.False, "a foe");
 	}
 
 	[Test]
 	public void RallyAddsPowerToThisTurnsAttackOnly()
 	{
-		var rally = Card("Rally", 1, new PowerAction { Amount = 3 });
-		var s = Battle([new(Mon("Pike", moves: Hit(2)), 2)], [rally], Foe(2));
+		var s = Battle(
+			[new(Mon("Pike", moves: Hit(2)), 0)],
+			[Card("Rally", 1, new PowerAction { Amount = 3 })],
+			Foe(0)
+		);
 
-		s = EndTurn(Play(s, "Rally", 2));
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(45));
+		s = EndTurn(Play(s, "Rally", 0));
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(45));
 
 		s = EndTurn(s);
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(43));
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(43));
 	}
 
 	[Test]
-	public void HastenPlaysTheMoveNowAndNotAgainAtTheEnd()
+	public void HastenPlaysTheMoveNowAndCountsForTheRelay()
 	{
-		var hasten = Card("Hasten", 1, new HastenAction());
-		var s = Battle([new(Mon("Pike", moves: [Hit(5), Hit(1)]), 2)], [hasten], Foe(2));
+		var pike = Mon("Pike", moves: Hit(2)) with { FinisherPerAlly = 2 };
+		var s = Battle(
+			[new(pike, 0), new(Mon("Wisp", moves: [Hit(1), Hit(9)]), 1)],
+			[Card("Hasten", 1, new HastenAction())],
+			Foe(0)
+		);
 
-		s = Play(s, "Hasten", 2);
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(45), "at once");
+		s = Play(s, "Hasten", 1);
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(49), "at once");
 
 		s = EndTurn(s);
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(45), "and not again");
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(49 - (2 + 2)), "not again — and Pike counted it");
 	}
 
 	[Test]
-	public void HastenThenStepHitsAndDodges()
+	public void StrikeAttacksTheirFrontNowOnTopOfTheMove()
 	{
-		var hasten = Card("Hasten", 1, new HastenAction());
-		var s = Battle([new(Mon("Pike", moves: Hit(5)), 2)], [hasten], Foe(2, pattern: Hit(9)));
+		var s = Battle(
+			[new(Mon("Pike", power: 2, moves: Hit(1)), 0)],
+			[Card("Strike", 1, new StrikeAction { Amount = 3 })],
+			Foe(0)
+		);
 
-		s = EndTurn(Step(Play(s, "Hasten", 2), "Pike", 3));
-
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(45));
-		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20));
-	}
-
-	[Test]
-	public void StrikeAttacksNowOnTopOfTheMove()
-	{
-		var strike = Card("Strike", 1, new StrikeAction { Amount = 3 });
-		var s = Battle([new(Mon("Pike", power: 2, moves: Hit(1)), 2)], [strike], Foe(2));
-
-		s = Play(s, "Strike", 2);
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(45));
+		s = Play(s, "Strike", 0);
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(45));
 
 		s = EndTurn(s);
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(42));
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(42));
 	}
 
 	[Test]
 	public void StaggerCostsAFoeItsNextMove()
 	{
-		var stagger = Card("Stagger", 1, new StaggerAction());
-		var s = Battle([new(Mon("Pike"), 2)], [stagger], Foe(2, pattern: [Hit(9), Hit(1)]));
+		var s = Battle(
+			[new(Mon("Pike"), 0)],
+			[Card("Stagger", 1, new StaggerAction())],
+			Foe(0, pattern: [Hit(9), Hit(1)])
+		);
 
-		Assert.That(CanPlay(s, "Stagger", 2), Is.False, "it is dropped on a foe");
-		s = EndTurn(Play(s, "Stagger", 2, foeRow: true));
+		Assert.That(CanPlay(s, "Stagger", 0), Is.False, "it is dropped on a foe");
+		s = EndTurn(Play(s, "Stagger", 0, foeRow: true));
 		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20));
 
 		s = EndTurn(s);
@@ -510,72 +553,55 @@ public class PartyTests
 	}
 
 	[Test]
-	public void GustPullsTheFoeBesideAnEmptySpaceIntoItAndReAimsIt()
-	{
-		var gust = Card("Gust", 1, new PushAction());
-		var s = Battle([new(Mon("Pike"), 2)], [gust], Foe(2, pattern: Hit(9)));
-
-		s = EndTurn(Play(s, "Gust", 1, foeRow: true));
-
-		Assert.That(s.LivingFoes().Single().Space, Is.EqualTo(1));
-		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20));
-	}
-
-	[Test]
-	public void GustNeedsExactlyOneFoeBesideAnEmptySpace()
-	{
-		var gust = Card("Gust", 1, new PushAction());
-		var s = Battle([new(Mon("Pike"), 2)], [gust], Foe(1), Foe(3));
-
-		Assert.That(CanPlay(s, "Gust", 0, foeRow: true), Is.True);
-		Assert.That(CanPlay(s, "Gust", 2, foeRow: true), Is.False, "two foes beside it");
-		Assert.That(CanPlay(s, "Gust", 1, foeRow: true), Is.False, "a foe is there");
-		Assert.That(CanPlay(s, "Gust", 2), Is.False, "your own row");
-	}
-
-	[Test]
 	public void ACardThatDrawsCannotDrawItself()
 	{
-		var dash = Card("Dash", 0, new DashAction(), new DrawAction());
-		var s = Battle([new(Mon("Pike"), 2)], [dash], Foe(2));
+		var s = Battle([new(Mon("Pike"), 0)], [Card("Peek", 0, new DrawAction())], Foe(0));
 
-		s = Play(s, "Dash", 2);
+		s = Play(s, "Peek", 0);
 
 		Assert.That(s.CardsIn(ZoneType.Hand), Is.Empty);
 	}
 
-	// ===== Catching — a Snare is an item, thrown at a weakened foe
+	// ===== Catching — a Snare is an item, thrown at a weakened foe in their FRONT
 
 	private static GameState WithSnares(GameState s, int snares) =>
 		s.UpdateObject(s.GetParty().Id, s.GetParty() with { Snares = snares });
 
-	private static bool CanSnare(GameState s, int space) =>
-		new UseSnareAction { FoeId = FoeIn(s, space).Id }
+	private static GameState Weakened(GameState s, int position, int hp, int maxHp = 30) =>
+		s.UpdateObject(FoeIn(s, position).Id, FoeIn(s, position) with { Hp = hp, MaxHp = maxHp });
+
+	private static bool CanSnare(GameState s, int position) =>
+		new UseSnareAction { FoeId = FoeIn(s, position).Id }
 			.ValidateAdd(s)
 			.IsValid;
-
-	private static GameState Snare(GameState s, int space) =>
-		Do(s, new UseSnareAction { FoeId = FoeIn(s, space).Id });
 
 	[Test]
 	public void AFoeCanBeCaughtOnlyAtAThirdOfItsHpOrLess()
 	{
-		var s = WithSnares(Battle([new(Mon("Pike"), 0)], [], Foe(2, hp: 30), Foe(3)), 1);
-		Assert.That(CanSnare(s, 2), Is.False, "30 of 30");
+		var s = WithSnares(Battle([new(Mon("Pike"), 0)], [], Foe(0, hp: 30), Foe(1)), 1);
+		Assert.That(CanSnare(s, 0), Is.False, "30 of 30");
 
-		s = s.UpdateObject(FoeIn(s, 2).Id, FoeIn(s, 2) with { Hp = 10 });
-		Assert.That(CanSnare(s, 2), Is.True, "10 of 30");
+		s = Weakened(s, 0, 10);
+		Assert.That(CanSnare(s, 0), Is.True, "10 of 30");
 	}
 
 	[Test]
-	public void ACaughtFoeLeavesTheBoardAndCostsASnareAndEnergy()
+	public void ASnareOnlyReachesTheirFront()
 	{
-		var s = WithSnares(Battle([new(Mon("Pike"), 2)], [], Foe(2, hp: 3), Foe(3)), 2);
-		s = s.UpdateObject(FoeIn(s, 2).Id, FoeIn(s, 2) with { MaxHp = 30 });
+		var s = Weakened(WithSnares(Battle([new(Mon("Pike"), 0)], [], Foe(0), Foe(1)), 1), 1, 3);
 
-		s = Snare(s, 2);
+		Assert.That(CanSnare(s, 1), Is.False);
+		Assert.That(s.CatchRefusal(FoeIn(s, 1)), Does.Contain("front"));
+	}
 
-		Assert.That(s.LivingFoes().Select(f => f.Space), Is.EqualTo(new[] { 3 }));
+	[Test]
+	public void ACaughtFoeLeavesTheLineAndCostsASnareAndEnergy()
+	{
+		var s = Weakened(WithSnares(Battle([new(Mon("Pike"), 0)], [], Foe(0), Foe(1)), 2), 0, 3);
+
+		s = Do(s, new UseSnareAction { FoeId = FoeIn(s, 0).Id });
+
+		Assert.That(s.LivingFoes().Count(), Is.EqualTo(1), "the one behind stepped up");
 		Assert.That(s.CaughtFoes().Single().Hp, Is.EqualTo(3), "caught at the HP it had");
 		Assert.That(s.GetParty().Snares, Is.EqualTo(1));
 		Assert.That(s.GetParty().Energy, Is.EqualTo(3 - UseSnareAction.Cost));
@@ -584,10 +610,9 @@ public class PartyTests
 	[Test]
 	public void CatchingTheLastFoeWinsTheBattle()
 	{
-		var s = WithSnares(Battle([new(Mon("Pike"), 2)], [], Foe(2, hp: 3)), 1);
-		s = s.UpdateObject(FoeIn(s, 2).Id, FoeIn(s, 2) with { MaxHp = 30 });
+		var s = Weakened(WithSnares(Battle([new(Mon("Pike"), 0)], [], Foe(0)), 1), 0, 3);
 
-		s = Snare(s, 2);
+		s = Do(s, new UseSnareAction { FoeId = FoeIn(s, 0).Id });
 
 		Assert.That(s.GetParty().IsOver && s.GetParty().Won, Is.True);
 	}
@@ -595,214 +620,82 @@ public class PartyTests
 	[Test]
 	public void NoSnaresOrABossCannotBeCaught()
 	{
-		var s = Battle([new(Mon("Pike"), 2)], [], Foe(2, hp: 3), Foe(3, hp: 3));
-		s = s.UpdateObject(FoeIn(s, 2).Id, FoeIn(s, 2) with { MaxHp = 30 });
-		s = s.UpdateObject(FoeIn(s, 3).Id, FoeIn(s, 3) with { MaxHp = 30, Catchable = false });
-		Assert.That(CanSnare(s, 2), Is.False, "no Snares");
+		var s = Weakened(Battle([new(Mon("Pike"), 0)], [], Foe(0)), 0, 3);
+		Assert.That(CanSnare(s, 0), Is.False, "no Snares");
 
 		s = WithSnares(s, 1);
-		Assert.That(CanSnare(s, 2), Is.True);
-		Assert.That(CanSnare(s, 3), Is.False, "a boss");
+		Assert.That(CanSnare(s, 0), Is.True);
+
+		s = s.UpdateObject(FoeIn(s, 0).Id, FoeIn(s, 0) with { Catchable = false });
+		Assert.That(CanSnare(s, 0), Is.False, "a boss");
 	}
 
-	[Test]
-	public void ACaughtWispDriftsOnYourRow()
-	{
-		var drift = new Intent
-		{
-			Name = "Drift",
-			Kind = IntentType.Move,
-			Amount = -1,
-		};
-		var s = Battle([new(Mon("Wisp", moves: drift), 3), new(Mon("Pike"), 1)], [], Foe(0));
-
-		s = EndTurn(s);
-		Assert.That(Named(s, "Wisp").Space, Is.EqualTo(2));
-
-		s = EndTurn(s);
-		Assert.That(Named(s, "Wisp").Space, Is.EqualTo(2), "Pike is in the way");
-	}
-
-	// ===== The battle's end, and what the board reads
+	// ===== The bench and monster decks
 
 	[Test]
-	public void TheForecastCountsBothSides()
-	{
-		var s = Battle([new(Mon("Pike", moves: Hit(4)), 2)], [], Foe(2, pattern: Hit(6)));
-
-		var forecast = s.ForecastIfTurnEndsNow();
-
-		Assert.That(forecast.Hp[Named(s, "Pike").Id], Is.EqualTo(6));
-		Assert.That(forecast.Hp[FoeIn(s, 2).Id], Is.EqualTo(4));
-	}
-
-	// ===== The trainer's health — dodging is not free
-
-	private static int TrainerHp(GameState s) => s.GetParty().TrainerHp;
-
-	[Test]
-	public void AnAttackThatLandsOnNoMonsterHitsTheTrainer()
-	{
-		var s = Battle([new(Mon("Pike"), 2)], [], Foe(2, pattern: Hit(9)));
-		Assert.That(s.AimsAtTrainer(FoeIn(s, 2)), Is.False, "Pike is in the way");
-
-		s = Step(s, "Pike", 3);
-		Assert.That(s.AimsAtTrainer(FoeIn(s, 2)), Is.True, "the telegraph says so");
-		Assert.That(s.ForecastIfTurnEndsNow().Trainer, Is.EqualTo(9));
-
-		s = EndTurn(s);
-		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20));
-		Assert.That(TrainerHp(s), Is.EqualTo(PartyScenario.DefaultTrainerHp - 9));
-	}
-
-	[Test]
-	public void AWideAttackThatCatchesAMonsterDoesNotAlsoHitTheTrainer()
-	{
-		var s = Battle([new(Mon("Pike"), 1)], [], Foe(2, pattern: Hit(4, -1, 0, 1)));
-
-		s = EndTurn(s);
-
-		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(16));
-		Assert.That(
-			TrainerHp(s),
-			Is.EqualTo(PartyScenario.DefaultTrainerHp),
-			"once, and it landed"
-		);
-	}
-
-	[Test]
-	public void TheTrainerAtZeroLosesTheBattle()
+	public void ABenchedMonsterIsOutOfTheLineUntilOneFalls()
 	{
 		var s = Battle(
-			[new(Mon("Pike"), 0)],
+			[new(Mon("Pike", hp: 5), 0), new(Mon("Boar", moves: Hit(3)), -1)],
 			[],
-			Foe(2, pattern: Hit(PartyScenario.DefaultTrainerHp))
+			Foe(0, pattern: [Hit(9), Hit(1)])
 		);
-
-		s = EndTurn(s);
-
-		Assert.That(s.GetParty().IsOver && !s.GetParty().Won, Is.True);
-		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20), "every monster still standing");
-	}
-
-	// ===== The gym leader — the mirror
-
-	private static GameState Gym(GameState s, int leaderHp) =>
-		s.UpdateObject(s.GetParty().Id, s.GetParty() with { LeaderHp = leaderHp });
-
-	[Test]
-	public void ASwingIntoAnEmptyColumnHitsTheLeaderInAGym()
-	{
-		var s = Gym(Battle([new(Mon("Pike", power: 1, moves: Hit(4)), 0)], [], Foe(2)), 30);
-		Assert.That(s.AimsAtLeader(Named(s, "Pike")), Is.True);
-
-		s = EndTurn(s);
-
-		Assert.That(s.GetParty().LeaderHp, Is.EqualTo(30 - 5));
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50));
-	}
-
-	[Test]
-	public void InTheWildASwingIntoAnEmptyColumnIsWasted()
-	{
-		var s = Battle([new(Mon("Pike", moves: Hit(4)), 0)], [], Foe(2));
-		Assert.That(s.AimsAtLeader(Named(s, "Pike")), Is.False);
-
-		s = EndTurn(s);
-
-		Assert.That(s.GetParty().LeaderHp, Is.EqualTo(0));
-		Assert.That(s.GetParty().IsOver, Is.False);
-	}
-
-	[Test]
-	public void TheLeaderAtZeroWinsTheGym()
-	{
-		var s = Gym(Battle([new(Mon("Pike", moves: Hit(10)), 0)], [], Foe(2)), 10);
-
-		s = EndTurn(s);
-
-		Assert.That(s.GetParty().IsOver && s.GetParty().Won, Is.True);
-		Assert.That(s.LivingFoes(), Is.Not.Empty, "its creatures still stand");
-	}
-
-	// ===== The bench, in battle
-
-	[Test]
-	public void ABenchedMonsterIsOffTheBoardUntilOneFaints()
-	{
-		var s = Battle(
-			[new(Mon("Pike", hp: 5), 2), new(Mon("Boar", moves: Hit(3)), -1)],
-			[],
-			Foe(2, pattern: [Hit(9), Hit(1)])
-		);
-		Assert.That(s.LivingAllies().Select(a => a.Name), Is.EqualTo(new[] { "Pike" }));
 		Assert.That(s.ActingOrder().Any(c => c.Name == "Boar"), Is.False, "the bench does not act");
 
 		s = EndTurn(s);
-
-		Assert.That(Named(s, "Pike").IsKnockedOut, Is.True);
-		Assert.That(Named(s, "Boar").Space, Is.EqualTo(2), "it stepped into Pike's space");
+		Assert.That(Line(s), Is.EqualTo("Boar"));
 		Assert.That(s.GetParty().IsOver, Is.False, "so the battle goes on");
-		Assert.That(TrainerHp(s), Is.EqualTo(PartyScenario.DefaultTrainerHp));
 
 		s = EndTurn(s);
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - 3), "and it fights from the next turn");
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 3), "and it fights from the next round");
 	}
-
-	// ===== Monster decks
 
 	private static IEnumerable<string> InPlay(GameState s) =>
 		new[] { ZoneType.Draw, ZoneType.Hand, ZoneType.Discard }.SelectMany(z =>
 			s.CardsIn(z).Select(c => c.Name)
 		);
 
+	private static KinCard Plain(string name) => Card(name, 0, new GuardAction());
+
 	[Test]
-	public void AMonsterOnTheBoardBringsItsDeck()
+	public void AMonsterInTheLineBringsItsDeck()
 	{
 		var s = Battle(
-			[new(Mon("Pike") with { Cards = [Card("Feint", 0, new DashAction())] }, 2)],
-			[Card("Guard", 1, new GuardAction { Amount = 5 })],
-			Foe(2)
+			[new(Mon("Pike") with { Cards = [Plain("Feint")] }, 0)],
+			[Plain("Guard")],
+			Foe(0)
 		);
 
 		Assert.That(InPlay(s), Is.EquivalentTo(new[] { "Guard", "Feint" }));
 	}
 
 	[Test]
-	public void ABenchedMonstersDeckJoinsWhenItStepsIn()
+	public void ABenchedMonstersDeckJoinsWhenItComesIn()
 	{
 		var s = Battle(
-			[
-				new(Mon("Pike", hp: 5), 2),
-				new(Mon("Boar") with { Cards = [Card("Tusk", 0, new DashAction())] }, -1),
-			],
+			[new(Mon("Pike", hp: 5), 0), new(Mon("Boar") with { Cards = [Plain("Tusk")] }, -1)],
 			[],
-			Foe(2, pattern: Hit(9))
+			Foe(0, pattern: Hit(9))
 		);
 		Assert.That(InPlay(s), Does.Not.Contain("Tusk"), "the bench's deck waits");
 
 		s = EndTurn(s);
 
-		Assert.That(Named(s, "Boar").Benched, Is.False);
 		Assert.That(s.CardsIn(ZoneType.Hand).Select(c => c.Name), Does.Contain("Tusk"));
 	}
 
 	[Test]
-	public void AFaintedMonstersCardsLeaveEveryZone()
+	public void AFallenMonstersCardsLeaveEveryZone()
 	{
 		var s = Battle(
-			[
-				new(Mon("Pike", hp: 5) with { Cards = [Card("Feint", 0, new DashAction())] }, 2),
-				new(Mon("Bramble"), 0),
-			],
-			[Card("Guard", 1, new GuardAction { Amount = 5 })],
-			Foe(2, pattern: Hit(9))
+			[new(Mon("Pike", hp: 5) with { Cards = [Plain("Feint")] }, 0), new(Mon("Bramble"), 1)],
+			[Plain("Guard")],
+			Foe(0, pattern: Hit(9))
 		);
 		Assert.That(InPlay(s), Does.Contain("Feint"));
 
 		s = EndTurn(s);
 
-		Assert.That(Named(s, "Pike").IsKnockedOut, Is.True);
 		Assert.That(InPlay(s), Is.EquivalentTo(new[] { "Guard" }), "no dead draws");
 	}
 
@@ -818,29 +711,24 @@ public class PartyTests
 			MaxPerTurn = 1,
 		};
 		var peek = Card("Peek", 0, new DrawAction());
-		var s = PartyBattleFactory.Create(
-			new PartyScenario(
-				"Test",
-				"",
-				[
-					new(Mon("Inkling") with { Abilities = [energyOnDraw] }, 2),
-					new(Mon("Boar") with { Abilities = [energyOnDraw] }, -1),
-				],
-				[Foe(2)],
-				[peek, peek, .. Enumerable.Repeat(Card("Guard", 1, new GuardAction()), 6)],
-				["Peek", "Peek"]
-			)
+		var s = Deal(
+			[
+				new(Mon("Inkling") with { Abilities = [energyOnDraw] }, 0),
+				new(Mon("Boar") with { Abilities = [energyOnDraw] }, -1),
+			],
+			[peek, peek],
+			Foe(0)
 		);
 		Assert.That(s.GetParty().Energy, Is.EqualTo(3), "the opening hand is not a draw");
 
-		s = Play(s, "Peek", 2);
+		s = Play(s, "Peek", 0);
 		Assert.That(
 			s.GetParty().Energy,
 			Is.EqualTo(4),
 			"one from Inkling; the benched Boar is not active"
 		);
 
-		s = Play(s, "Peek", 2);
+		s = Play(s, "Peek", 0);
 		Assert.That(s.GetParty().Energy, Is.EqualTo(4), "once a turn");
 	}
 
@@ -852,21 +740,13 @@ public class PartyTests
 			When = new OnCardDiscarded(),
 			Effects = [new GainEnergyAction { Amount = 2 }],
 		};
-		var s = PartyBattleFactory.Create(
-			new PartyScenario(
-				"Test",
-				"",
-				[new(Mon("Magpie") with { Abilities = [energyOnDiscard] }, 2)],
-				[Foe(2)],
-				[
-					Card("Sift", 0, PartyDiscard.DrawThenDiscard(2, 1)),
-					.. Enumerable.Repeat(Card("Guard", 1, new GuardAction()), 6),
-				],
-				["Sift"]
-			)
+		var s = Deal(
+			[new(Mon("Magpie") with { Abilities = [energyOnDiscard] }, 0)],
+			[Card("Sift", 0, PartyDiscard.DrawThenDiscard(2, 1))],
+			Foe(0)
 		);
 
-		s = Play(s, "Sift", 2);
+		s = Play(s, "Sift", 0);
 
 		var choice = s.GetPendingChoice();
 		Assert.That(choice, Is.Not.Null, "it waits for the player");
@@ -886,28 +766,15 @@ public class PartyTests
 		Assert.That(s.GetParty().Energy, Is.EqualTo(3 + 2), "the discard fired Magpie");
 	}
 
-	/// <summary>A battle whose deck is bigger than a hand, with the named cards dealt first.</summary>
-	private static GameState Deal(PlacedCompanion[] companions, KinCard[] top, params Foe[] foes) =>
-		PartyBattleFactory.Create(
-			new PartyScenario(
-				"Test",
-				"",
-				[.. companions],
-				[.. foes],
-				[.. top, .. Enumerable.Repeat(Card("Guard", 1, new GuardAction()), 6)],
-				[.. top.Select(c => c.Name)]
-			)
-		);
-
 	[Test]
 	public void RummageDrawsAsManyAsYouDiscard()
 	{
 		var s = Deal(
-			[new(Mon("Pike"), 2)],
+			[new(Mon("Pike"), 0)],
 			[Card("Rummage", 0, PartyDiscard.DiscardThenDraw())],
-			Foe(2)
+			Foe(0)
 		);
-		s = Play(s, "Rummage", 2);
+		s = Play(s, "Rummage", 0);
 
 		var two = s.GetPendingChoice()!.Options.Take(2).Select(o => o.Id).ToList();
 		s = s.ResolveChoice([.. two]).State;
@@ -937,14 +804,13 @@ public class PartyTests
 		};
 		var sift = Card("Sift", 0, PartyDiscard.DrawThenDiscard(1, 1));
 
-		var kept = Deal([new(Mon("Pike"), 2)], [toss], Foe(2));
-		kept = EndTurn(kept);
-		Assert.That(FoeIn(kept, 2).Hp, Is.EqualTo(50), "the end-of-turn discard is not discarding");
+		var kept = EndTurn(Deal([new(Mon("Pike"), 0)], [toss], Foe(0)));
+		Assert.That(FoeIn(kept, 0).Hp, Is.EqualTo(50), "the end-of-turn discard is not discarding");
 
-		var s = Deal([new(Mon("Pike"), 2)], [sift, toss], Foe(2));
-		s = Play(s, "Sift", 2);
+		var s = Deal([new(Mon("Pike"), 0)], [sift, toss], Foe(0));
+		s = Play(s, "Sift", 0);
 		s = s.ResolveChoice([InHand(s, "Flare").Id]).State;
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - 5));
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 5));
 	}
 
 	[Test]
@@ -955,17 +821,17 @@ public class PartyTests
 			Components = [new CostReduction { PerDiscardThisTurn = 1 }],
 		};
 		var s = Deal(
-			[new(Mon("Pike"), 2)],
+			[new(Mon("Pike"), 0)],
 			[Card("Sift", 0, PartyDiscard.DrawThenDiscard(1, 1)), hammer],
-			Foe(2)
+			Foe(0)
 		);
 		Assert.That(s.CostOf(InHand(s, "Hammer")), Is.EqualTo(3));
 
-		s = Play(s, "Sift", 2);
+		s = Play(s, "Sift", 0);
 		s = s.ResolveChoice([InHand(s, "Guard").Id]).State;
 
 		Assert.That(s.CostOf(InHand(s, "Hammer")), Is.EqualTo(2));
-		s = Play(s, "Hammer", 2);
+		s = Play(s, "Hammer", 0);
 		Assert.That(s.GetParty().Energy, Is.EqualTo(3 - 2), "and it is paid at that cost");
 	}
 
@@ -973,34 +839,34 @@ public class PartyTests
 	public void PageStormHitsForPowerPlusTheCardsLeftInHand()
 	{
 		var s = Deal(
-			[new(Mon("Pike", power: 2), 2)],
+			[new(Mon("Pike", power: 2), 0)],
 			[Card("Storm", 0, new StrikeAction { Amount = 0, PlusCardsInHand = true })],
-			Foe(2)
+			Foe(0)
 		);
 
-		s = Play(s, "Storm", 2);
+		s = Play(s, "Storm", 0);
 
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - (2 + 4)), "Power 2, four cards left in hand");
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - (2 + 4)), "Power 2, four cards left in hand");
 	}
 
 	[Test]
 	public void AThiefStealsTheTopCardAndGivesItBackWhenBeaten()
 	{
-		var thief = Foe(2, hp: 10, pattern: Hit(1) with { Steals = true });
-		var s = Deal([new(Mon("Pike", hp: 30), 2)], [], thief);
+		var thief = Foe(0, hp: 10, pattern: Hit(1) with { Steals = true });
+		var s = Deal([new(Mon("Pike", hp: 30), 0)], [], thief);
 		var top = s.CardsIn(ZoneType.Draw).First().Id;
 
 		s = EndTurn(s);
-		Assert.That(s.GetParent(top), Is.EqualTo(FoeIn(s, 2).Id), "held by the thief");
+		Assert.That(s.GetParent(top), Is.EqualTo(FoeIn(s, 0).Id), "held by the thief");
 
-		s = Do(s, new StrikeAction { Amount = 99, Space = 2 });
+		s = Do(s, new StrikeAction { Amount = 99, Space = 0 });
 		Assert.That(s.GetParent(top), Is.EqualTo(s.ZoneId(ZoneType.Discard)));
 	}
 
 	[Test]
 	public void AWildTraitFiresForTheFoeWhileItStands()
 	{
-		var hoard = Foe(2) with
+		var hoard = Foe(0) with
 		{
 			Components =
 			[
@@ -1011,11 +877,11 @@ public class PartyTests
 				},
 			],
 		};
-		var s = Deal([new(Mon("Pike"), 2)], [Card("Peek", 0, new DrawAction())], hoard);
+		var s = Deal([new(Mon("Pike"), 0)], [Card("Peek", 0, new DrawAction())], hoard);
 
-		s = Play(s, "Peek", 2);
+		s = Play(s, "Peek", 0);
 
-		Assert.That(FoeIn(s, 2).Block, Is.EqualTo(2));
+		Assert.That(FoeIn(s, 0).Block, Is.EqualTo(2));
 	}
 
 	[Test]
@@ -1030,7 +896,7 @@ public class PartyTests
 		{
 			CaughtPassive = "TEST",
 			CaughtAbilities = [discardEnergy],
-			CaughtCards = [Card("Gift", 0, new DashAction())],
+			CaughtCards = [Plain("Gift")],
 		};
 
 		var mine = PartyRun.FromFoe(wild);
@@ -1047,36 +913,36 @@ public class PartyTests
 		Card("Zap", 1, new SpellDamageAction { Amount = amount });
 
 	[Test]
-	public void ASpellNeedsNoAimButMustBeDroppedOnAFoe()
+	public void ASpellReachesAnyFoeButMustBeDroppedOnOne()
 	{
-		var s = Deal([new(Mon("Pike"), 0)], [Zap()], Foe(4));
+		var s = Deal([new(Mon("Pike"), 0)], [Zap()], Foe(0), Foe(1));
 
-		Assert.That(CanPlay(s, "Zap", 0), Is.False, "not on your own row");
-		s = Play(s, "Zap", 4, foeRow: true);
+		Assert.That(CanPlay(s, "Zap", 0), Is.False, "not on your own line");
+		s = Play(s, "Zap", 1, foeRow: true);
 
-		Assert.That(FoeIn(s, 4).Hp, Is.EqualTo(50 - 4), "nobody stands in front of it");
+		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(50 - 4), "past their front");
 	}
 
 	[Test]
-	public void SpellPowerCountsOnlyWhileTheMonsterIsOnTheBoard()
+	public void SpellPowerCountsOnlyWhileTheMonsterIsInTheLine()
 	{
 		var ember = Mon("Ember") with { Abilities = [new SpellPower { Amount = 2 }] };
-		var benched = Deal([new(Mon("Pike"), 0), new(ember, -1)], [Zap()], Foe(4));
-		var fighting = Deal([new(Mon("Pike"), 0), new(ember, 2)], [Zap()], Foe(4));
+		var benched = Deal([new(Mon("Pike"), 0), new(ember, -1)], [Zap()], Foe(0));
+		var fighting = Deal([new(Mon("Pike"), 0), new(ember, 1)], [Zap()], Foe(0));
 
-		Assert.That(FoeIn(Play(benched, "Zap", 4, true), 4).Hp, Is.EqualTo(50 - 4));
-		Assert.That(FoeIn(Play(fighting, "Zap", 4, true), 4).Hp, Is.EqualTo(50 - 6));
+		Assert.That(FoeIn(Play(benched, "Zap", 0, true), 0).Hp, Is.EqualTo(50 - 4));
+		Assert.That(FoeIn(Play(fighting, "Zap", 0, true), 0).Hp, Is.EqualTo(50 - 6));
 	}
 
 	[Test]
 	public void AWardHalvesTheSpellAfterTheBonus()
 	{
 		var ember = Mon("Ember") with { Abilities = [new SpellPower { Amount = 2 }] };
-		var s = Deal([new(ember, 0)], [Zap()], Foe(4) with { Components = [new SpellWard()] });
+		var s = Deal([new(ember, 0)], [Zap()], Foe(0) with { Components = [new SpellWard()] });
 
-		s = Play(s, "Zap", 4, foeRow: true);
+		s = Play(s, "Zap", 0, foeRow: true);
 
-		Assert.That(FoeIn(s, 4).Hp, Is.EqualTo(50 - (4 + 2) / 2));
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - (4 + 2) / 2));
 	}
 
 	[Test]
@@ -1087,39 +953,44 @@ public class PartyTests
 			0,
 			new SpellDamageAction { FromSpellDamageThisTurn = true }
 		);
-		var s = Deal([new(Mon("Pike"), 0)], [Zap(), Zap(), overload], Foe(3), Foe(4));
+		var s = Deal([new(Mon("Pike"), 0)], [Zap(), Zap(), overload], Foe(0), Foe(1));
 
-		s = Play(s, "Zap", 3, foeRow: true);
-		s = Play(s, "Zap", 3, foeRow: true);
-		s = Play(s, "Overload", 4, foeRow: true);
+		s = Play(s, "Zap", 0, foeRow: true);
+		s = Play(s, "Zap", 0, foeRow: true);
+		s = Play(s, "Overload", 1, foeRow: true);
 
-		Assert.That(FoeIn(s, 4).Hp, Is.EqualTo(50 - 8));
+		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(50 - 8));
 	}
 
 	[Test]
-	public void FocusMakesThisTurnsSpellsHitBesideTheTarget()
+	public void FocusMakesThisTurnsSpellsHitTheOneBehindToo()
 	{
-		var focus = Card("Focus", 0, new SplashSpellsAction());
-		var s = Deal([new(Mon("Pike"), 0)], [focus, Zap()], Foe(1), Foe(2), Foe(3), Foe(4));
+		var s = Deal(
+			[new(Mon("Pike"), 0)],
+			[Card("Focus", 0, new SplashSpellsAction()), Zap()],
+			Foe(0),
+			Foe(1),
+			Foe(2),
+			Foe(3)
+		);
 
 		s = Play(s, "Focus", 0);
-		s = Play(s, "Zap", 2, foeRow: true);
+		s = Play(s, "Zap", 1, foeRow: true);
 
-		Assert.That(new[] { 1, 2, 3 }.Select(c => FoeIn(s, c).Hp), Is.All.EqualTo(46));
-		Assert.That(FoeIn(s, 4).Hp, Is.EqualTo(50));
+		Assert.That(s.LivingFoes().Select(f => f.Hp), Is.EqualTo(new[] { 50, 46, 46, 50 }));
 	}
 
 	[Test]
 	public void AnEchoRepeatsTheLastSpellWhereItWasDroppedAndAWildOneDoesNothing()
 	{
 		var echo = new Intent { Name = "Echo", Kind = IntentType.Echo };
-		var s = Deal([new(Mon("Owl", moves: echo), 0)], [Zap()], Foe(3), Foe(4, pattern: echo));
+		var s = Deal([new(Mon("Owl", moves: echo), 0)], [Zap()], Foe(0, pattern: echo), Foe(1));
 
-		s = Play(s, "Zap", 3, foeRow: true);
+		s = Play(s, "Zap", 1, foeRow: true);
 		s = EndTurn(s);
 
-		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(50 - 4 - 4), "cast, then echoed");
-		Assert.That(FoeIn(s, 4).Hp, Is.EqualTo(50));
+		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(50 - 4 - 4), "cast, then echoed");
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50));
 		Assert.That(s.GetParty().LastSpell, Is.Null, "the next turn has cast nothing");
 	}
 
@@ -1140,12 +1011,12 @@ public class PartyTests
 		var s = Deal(
 			[new(guard, 0)],
 			[Zap(), Card("Rally", 0, new PowerAction { Amount = 1 })],
-			Foe(4)
+			Foe(0)
 		);
 
 		s = Play(s, "Rally", 0);
 		Assert.That(Named(s, "Warden").Block, Is.EqualTo(0), "not a spell");
-		s = Play(s, "Zap", 4, foeRow: true);
+		s = Play(s, "Zap", 0, foeRow: true);
 		Assert.That(Named(s, "Warden").Block, Is.EqualTo(3));
 	}
 
@@ -1160,7 +1031,7 @@ public class PartyTests
 			new GainEnergyAction { Amount = 2 },
 			new BorrowEnergyAction { Amount = 1 }
 		);
-		var s = Deal([new(Mon("Pike"), 0)], [surge], Foe(4));
+		var s = Deal([new(Mon("Pike"), 0)], [surge], Foe(0));
 
 		s = Play(s, "Surge", 0);
 		Assert.That(s.GetParty().Energy, Is.EqualTo(3 + 2));
@@ -1176,12 +1047,12 @@ public class PartyTests
 		var s = Deal(
 			[new(Mon("Pike"), 0)],
 			[Card("Quicken", 1, new NextCardFreeAction()), Zap(), Zap()],
-			Foe(4)
+			Foe(0)
 		);
 
 		s = Play(s, "Quicken", 0);
 		Assert.That(s.CostOf(InHand(s, "Zap")), Is.EqualTo(0));
-		s = Play(s, "Zap", 4, foeRow: true);
+		s = Play(s, "Zap", 0, foeRow: true);
 
 		Assert.That(s.CostOf(InHand(s, "Zap")), Is.EqualTo(1));
 		Assert.That(s.GetParty().Energy, Is.EqualTo(3 - 1));
@@ -1190,7 +1061,7 @@ public class PartyTests
 	[Test]
 	public void TheFirstCardEachTurnPaysTaxesAfterDiscountsFlooredAtZero()
 	{
-		var hush = Foe(4) with { Components = [new FirstCardCost { Amount = 1 }] };
+		var hush = Foe(0) with { Components = [new FirstCardCost { Amount = 1 }] };
 		var free = Card("Free", 0, new GuardAction());
 		var s = Deal([new(Mon("Pike"), 0)], [free, free], hush);
 
@@ -1219,8 +1090,8 @@ public class PartyTests
 		};
 		var battleCry = Card("Cry", 0, new GainEnergyIfFoeDiedAction { Amount = 2 });
 
-		var now = Deal([new(storm, 0)], [Zap(99), battleCry], Foe(4, hp: 5), Foe(3));
-		now = Play(now, "Zap", 4, foeRow: true);
+		var now = Deal([new(storm, 0)], [Zap(99), battleCry], Foe(0, hp: 5), Foe(1));
+		now = Play(now, "Zap", 0, foeRow: true);
 		Assert.That(now.GetParty().Energy, Is.EqualTo(3 - 1 + 1), "the Stormbuck");
 		now = Play(now, "Cry", 0);
 		Assert.That(
@@ -1229,9 +1100,12 @@ public class PartyTests
 			"and Battle Cry sees the kill"
 		);
 
-		var later = Deal([new(storm, 0)], [], Foe(0, hp: 5), Foe(3));
-		later = EndTurn(later);
-		Assert.That(FoeIn(later, 0).IsDead, Is.True);
+		var later = EndTurn(Deal([new(storm, 0)], [], Foe(0, hp: 5), Foe(1)));
+		Assert.That(
+			later.LivingFoes().Count(),
+			Is.EqualTo(1),
+			"the front fell at the end of the turn"
+		);
 		Assert.That(later.GetParty().Energy, Is.EqualTo(3), "no energy from the end of the turn");
 	}
 
@@ -1240,10 +1114,10 @@ public class PartyTests
 	{
 		var moth = Mon("Moth") with { Abilities = [new EnergyIfUnhit { Amount = 1 }] };
 
-		var safe = EndTurn(Deal([new(moth, 0)], [], Foe(4, pattern: Hit(1))));
-		Assert.That(safe.GetParty().Energy, Is.EqualTo(3 + 1));
+		var safe = EndTurn(Deal([new(Mon("Pike"), 0), new(moth, 1)], [], Foe(0, pattern: Hit(1))));
+		Assert.That(safe.GetParty().Energy, Is.EqualTo(3 + 1), "behind the front, unhit");
 
-		var struck = EndTurn(Deal([new(moth, 4)], [], Foe(4, pattern: Hit(1))));
+		var struck = EndTurn(Deal([new(moth, 0)], [], Foe(0, pattern: Hit(1))));
 		Assert.That(struck.GetParty().Energy, Is.EqualTo(3));
 	}
 
@@ -1254,15 +1128,15 @@ public class PartyTests
 		{
 			Components = [new SpendsAllEnergy()],
 		};
-		var s = Deal([new(Mon("Pike"), 2)], [unleash], Foe(2));
+		var s = Deal([new(Mon("Pike"), 0)], [unleash], Foe(0));
 
-		s = Play(s, "Unleash", 2);
+		s = Play(s, "Unleash", 0);
 
 		Assert.That(s.GetParty().Energy, Is.EqualTo(0));
-		Assert.That(FoeIn(s, 2).Hp, Is.EqualTo(50 - 4 * 3));
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 4 * 3));
 	}
 
-	// ===== Summon — tokens
+	// ===== Summon — tokens enter at the FRONT
 
 	private static TokenTemplate Token(int hp = 3, int fades = 2, params Intent[] moves) =>
 		new(Mon("Tok", hp: hp, moves: moves), fades);
@@ -1270,20 +1144,18 @@ public class PartyTests
 	private static KinCard Summon(TokenTemplate token, int count = 1) =>
 		Card("Summon", 0, new SummonTokenAction { Token = token, Count = count });
 
-	private static Ally TokenAt(GameState s, int space) => s.AllyAt(space)!;
-
 	[Test]
-	public void ATokenLandsWhereDroppedActsAtTheEndOfTheTurnAndFades()
+	public void ATokenEntersAtTheFrontActsAndFades()
 	{
-		var s = Deal([new(Mon("Pike"), 0)], [Summon(Token(fades: 1, moves: Hit(2)))], Foe(3));
+		var s = Deal([new(Mon("Pike"), 0)], [Summon(Token(fades: 1, moves: Hit(2)))], Foe(0));
 
-		Assert.That(CanPlay(s, "Summon", 0), Is.False, "not on a monster");
-		s = Play(s, "Summon", 3);
-		Assert.That(TokenAt(s, 3).FadesIn, Is.EqualTo(1));
+		Assert.That(CanPlay(s, "Summon", 0, foeRow: true), Is.False, "your line");
+		s = Play(s, "Summon", 0);
+		Assert.That(Line(s), Is.EqualTo("Tok,Pike"));
 
 		s = EndTurn(s);
-		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(50 - 2), "it acted");
-		Assert.That(s.AllyAt(3), Is.Null, "and faded at the start of the next turn");
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 2), "it acted");
+		Assert.That(Line(s), Is.EqualTo("Pike"), "and faded at the start of the next turn");
 	}
 
 	[Test]
@@ -1292,9 +1164,9 @@ public class PartyTests
 		var s = Deal(
 			[new(Mon("Pike", hp: 5), 0)],
 			[Summon(Token(hp: 30))],
-			Foe(0, pattern: Hit(9))
+			Foe(0, pattern: Hit(9, Aim.Back))
 		);
-		s = Play(s, "Summon", 3);
+		s = Play(s, "Summon", 0);
 
 		s = EndTurn(s);
 
@@ -1302,7 +1174,7 @@ public class PartyTests
 	}
 
 	[Test]
-	public void AFaintedTokenBringsNoBenchButShieldsItsNeighbours()
+	public void AFallenTokenBringsNoBenchButShieldsTheOneBesideIt()
 	{
 		var sprout = new TokenTemplate(
 			Mon("Sprout", hp: 3) with
@@ -1311,35 +1183,31 @@ public class PartyTests
 			},
 			2
 		);
-		// A fast foe fells the sprout; a slow one then swings at Pike, into the shield.
 		var s = Deal(
 			[new(Mon("Pike"), 0), new(Mon("Boar"), -1)],
 			[Summon(sprout)],
-			Foe(1, speed: 3, pattern: Hit(9)),
-			Foe(0, speed: 1, pattern: Hit(3))
+			Foe(0, pattern: Hit(3)),
+			Foe(1, pattern: Hit(9))
 		);
-		s = Play(s, "Summon", 1);
+		s = Play(s, "Summon", 0);
 
+		// Their back fells the sprout first; then their front's blow finds Pike behind the shield.
 		s = EndTurn(s);
 
-		Assert.That(s.AllyAt(1), Is.Null, "the sprout fell");
-		Assert.That(Named(s, "Boar").Benched, Is.True, "a token is not replaced from the bench");
-		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20), "the slower blow hit the shield");
+		Assert.That(Line(s), Is.EqualTo("Pike"), "the sprout fell, and no bench came for a token");
+		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20), "the later blow hit the shield");
 	}
 
 	[Test]
-	public void ADecoyDrawsEveryHomingAttack()
+	public void ADecoyDrawsBackAndHuntingAttacks()
 	{
 		var decoy = new TokenTemplate(Mon("Decoy", hp: 30) with { Abilities = [new Lure()] }, 1);
-		var homing = new Intent
-		{
-			Name = "Zap",
-			Kind = IntentType.Attack,
-			Amount = 4,
-			Homing = true,
-		};
-		var s = Deal([new(Mon("Pike", hp: 5), 0)], [Summon(decoy)], Foe(4, pattern: homing));
-		s = Play(s, "Summon", 3);
+		var s = Deal(
+			[new(Mon("Pike", hp: 5), 0)],
+			[Summon(decoy)],
+			Foe(0, pattern: Hit(4, Aim.Hunt))
+		);
+		s = Play(s, "Summon", 0);
 
 		s = EndTurn(s);
 
@@ -1347,19 +1215,19 @@ public class PartyTests
 	}
 
 	[Test]
-	public void TrampleCarriesTheRestOfTheBlowToYou()
+	public void TrampleCarriesTheRestIntoTheOneBehind()
 	{
-		var horn = Foe(3, pattern: Hit(8)) with { Components = [new Trample()] };
+		var horn = Foe(0, pattern: Hit(8)) with { Components = [new Trample()] };
 		var s = Deal([new(Mon("Pike"), 0)], [Summon(Token(hp: 3))], horn);
-		s = Play(s, "Summon", 3);
+		s = Play(s, "Summon", 0);
 
 		s = EndTurn(s);
 
-		Assert.That(TrainerHp(s), Is.EqualTo(PartyScenario.DefaultTrainerHp - (8 - 3)));
+		Assert.That(Named(s, "Pike").Hp, Is.EqualTo(20 - (8 - 3)));
 	}
 
 	[Test]
-	public void AWildBroodFillsTheFoeRowAndCannotBeCaught()
+	public void AWildBroodPutsAGrubAtTheirFrontThatCannotBeCaught()
 	{
 		var brood = new Intent
 		{
@@ -1367,13 +1235,11 @@ public class PartyTests
 			Kind = IntentType.Summon,
 			Summons = Token(hp: 2, fades: 2),
 		};
-		var s = Deal([new(Mon("Pike", hp: 30), 0)], [], Foe(2, pattern: brood));
+		var s = EndTurn(Battle([new(Mon("Pike", hp: 30), 0)], [], Foe(0, pattern: brood)));
 
-		s = EndTurn(s);
-
-		var grub = s.LivingFoes().Single(f => f.FadesIn > 0);
-		Assert.That(Math.Abs(grub.Space - 2), Is.EqualTo(1), "beside it");
-		Assert.That(grub.Catchable, Is.False);
+		var front = FoeIn(s, 0);
+		Assert.That(front.FadesIn, Is.GreaterThan(0), "the grub is in front");
+		Assert.That(front.Catchable, Is.False);
 	}
 
 	[Test]
@@ -1383,20 +1249,15 @@ public class PartyTests
 		var s = Deal(
 			[new(howler, 0)],
 			[Summon(Token(), count: 2), Card("Swarm", 0, new TokensAttackAction { Amount = 2 })],
-			Foe(2),
-			Foe(3)
+			Foe(0)
 		);
 
-		s = Play(s, "Summon", 3);
-		Assert.That(TokenAt(s, 3).Hp, Is.EqualTo(3 + 2));
+		s = Play(s, "Summon", 0);
+		Assert.That(Line(s), Is.EqualTo("Tok,Tok,Howler"));
+		Assert.That(s.AllyAt(0)!.Hp, Is.EqualTo(3 + 2));
 		s = Play(s, "Swarm", 0);
 
-		Assert.That(FoeIn(s, 3).Hp, Is.EqualTo(50 - (2 + 1)));
-		Assert.That(
-			FoeIn(s, 2).Hp,
-			Is.EqualTo(50 - (2 + 1)),
-			"the second: nearest empty, left on a tie"
-		);
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 2 * (2 + 1)));
 	}
 
 	[Test]
@@ -1409,24 +1270,26 @@ public class PartyTests
 			new DrawAction { Count = 2 },
 			new GainEnergyAction()
 		);
-		var s = Deal([new(Mon("Pike"), 0)], [Summon(Token()), offering], Foe(4));
-		s = Play(s, "Summon", 3);
+		var s = Deal([new(Mon("Pike"), 0)], [Summon(Token()), offering], Foe(0));
+		s = Play(s, "Summon", 0);
 
-		Assert.That(CanPlay(s, "Offering", 0), Is.False, "only on a token");
-		s = Play(s, "Offering", 3);
+		Assert.That(CanPlay(s, "Offering", 1), Is.False, "only on a token");
+		s = Play(s, "Offering", 0);
 
-		Assert.That(s.AllyAt(3), Is.Null);
+		Assert.That(Line(s), Is.EqualTo("Pike"));
 		Assert.That(s.GetParty().Energy, Is.EqualTo(3 + 1));
 		Assert.That(s.CardsIn(ZoneType.Hand).Count(), Is.EqualTo(3 + 2));
 	}
+
+	// ===== How a battle ends
 
 	[Test]
 	public void TheBattleIsLostOnlyWhenTheBenchIsGoneToo()
 	{
 		var s = Battle(
-			[new(Mon("Pike", hp: 5), 2), new(Mon("Boar", hp: 5), -1)],
+			[new(Mon("Pike", hp: 5), 0), new(Mon("Boar", hp: 5), -1)],
 			[],
-			Foe(2, pattern: Hit(9))
+			Foe(0, pattern: Hit(9))
 		);
 
 		s = EndTurn(s);
@@ -1439,34 +1302,29 @@ public class PartyTests
 	[Test]
 	public void KillingTheLastFoeWins()
 	{
-		var s = Battle([new(Mon("Pike", moves: Hit(99)), 2)], [], Foe(2));
-
-		s = EndTurn(s);
+		var s = EndTurn(Battle([new(Mon("Pike", moves: Hit(99)), 0)], [], Foe(0)));
 
 		Assert.That(s.GetParty().IsOver && s.GetParty().Won, Is.True);
 	}
 
 	[Test]
-	public void EveryMonsterKnockedOutLoses()
+	public void EveryMonsterDownLoses()
 	{
-		var s = Battle([new(Mon("Pike", hp: 5), 2)], [], Foe(2, pattern: Hit(9)));
+		var s = EndTurn(Battle([new(Mon("Pike", hp: 5), 0)], [], Foe(0, pattern: Hit(9))));
 
-		s = EndTurn(s);
-
-		Assert.That(s.GetParty().IsOver, Is.True);
-		Assert.That(s.GetParty().Won, Is.False);
+		Assert.That(s.GetParty().IsOver && !s.GetParty().Won, Is.True);
 	}
 
 	[Test]
 	public void OneMonsterDownIsNotALoss()
 	{
-		var s = Battle(
-			[new(Mon("Pike", hp: 5), 2), new(Mon("Bramble"), 0)],
-			[],
-			Foe(2, pattern: Hit(9))
+		var s = EndTurn(
+			Battle(
+				[new(Mon("Pike", hp: 5), 0), new(Mon("Bramble"), 1)],
+				[],
+				Foe(0, pattern: Hit(9))
+			)
 		);
-
-		s = EndTurn(s);
 
 		Assert.That(s.GetParty().IsOver, Is.False);
 	}
@@ -1485,6 +1343,11 @@ public class PartyTests
 				s.Allies().All(a => a.Pattern.Count > 0),
 				Is.True,
 				"every monster has moves"
+			);
+			Assert.That(
+				s.LivingAllies().Select(a => a.Position),
+				Is.EqualTo(Enumerable.Range(0, s.LivingAllies().Count())),
+				"the line is contiguous from the front"
 			);
 		}
 	}

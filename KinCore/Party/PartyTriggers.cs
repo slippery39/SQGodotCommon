@@ -3,9 +3,10 @@ using ImmutableGameObjects;
 namespace KinCore.Party;
 
 /// <summary>
-/// **The companion game's PostActionProcessor: fires the abilities of whatever is ACTIVE** — your
-/// monsters on the board and standing (not benched, not fainted) and the living foes. The engine's
-/// <see cref="Triggers.FireTriggers"/> does the rest; this only says who counts.
+/// **The companion game's PostActionProcessor — MtgCore's CheckStateBasedEffectsAction for a line.**
+/// First it SETTLES (the fallen leave, the bench joins, the lines close up, the battle ends), then it
+/// fires the abilities of whatever is ACTIVE — your line and theirs. The engine's
+/// <see cref="Triggers.FireTriggers"/> does the firing; this only says who counts.
 /// </summary>
 public record FirePartyTriggersAction : GameAction
 {
@@ -13,8 +14,9 @@ public record FirePartyTriggersAction : GameAction
 
 	public override ActionResult Execute(GameState s)
 	{
+		(s, var settled) = s.Settle();
 		if (s.PendingGameEvents.IsEmpty)
-			return new(s);
+			return new ActionResult(s).WithEvents(settled);
 
 		// Counted here, from the staged events, like MtgCore's CountCreatureDeaths: every discard
 		// passes through this batch and none can bypass it.
@@ -35,14 +37,14 @@ public record FirePartyTriggersAction : GameAction
 		}
 
 		// A discarded card is a source too — for its own TOSS.
-		return new(
+		return new ActionResult(
 			s.FireTriggers(
 				s.LivingAllies()
 					.Select(a => a.Id)
 					.Concat(s.LivingFoes().Select(f => f.Id))
 					.Concat(discarded)
 			)
-		);
+		).WithEvents(settled);
 	}
 }
 

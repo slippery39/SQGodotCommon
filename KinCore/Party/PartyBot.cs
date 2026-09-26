@@ -5,16 +5,14 @@ namespace KinCore.Party;
 
 /// <summary>
 /// **The bot for `party-sim` — never for play.** Each turn it searches SEQUENCES of plays (a beam:
-/// the best few part-turns, each extended by every step, card and Snare), so it finds combos whose
-/// first card looks useless alone — Dash then a step, Gust then Rally. A plan is scored by what the
-/// ENGINE says ending the turn leaves, AND by the turn after with no plays, so where monsters are
-/// left standing matters. Still a heuristic: its win rate is a floor, not the game's.
+/// the best few part-turns, each extended by every card and Snare), so it finds combos whose first
+/// card looks useless alone — Charge then Rally, Gust then a Strike. A plan is scored by what the
+/// ENGINE says ending the turn leaves, AND by the turn after with no plays, so the order the line is
+/// left in matters. Still a heuristic: its win rate is a floor, not the game's. Not yet re-tuned
+/// for THE RELAY (exploring).
 /// </summary>
 public static class PartyBot
 {
-	/// <summary>How much your health is worth next to a monster's HP — it is the run's other clock.</summary>
-	public const double TrainerWeight = 1.5;
-
 	/// <summary>A catch is worth this much HP.</summary>
 	public const double CatchValue = 15;
 
@@ -97,16 +95,12 @@ public static class PartyBot
 		return s;
 	}
 
-	/// <summary>Every step, every distinct card on every drop, every Snare.</summary>
+	/// <summary>Every distinct card on every place in either line, every Snare.</summary>
 	private static IEnumerable<GameAction> Candidates(GameState s)
 	{
-		foreach (var ally in s.LivingAllies())
-		foreach (var to in new[] { ally.Space - 1, ally.Space + 1 })
-			yield return new MoveAllyAction { AllyId = ally.Id, Space = to };
-
 		// Two copies of Guard do the same thing — try one.
 		foreach (var card in s.CardsIn(ZoneType.Hand).DistinctBy(c => c.Name))
-			for (var space = 0; space < PartyBattle.Spaces; space++)
+			for (var space = 0; space < PartyBattle.MaxLine; space++)
 				foreach (var foeRow in new[] { false, true })
 					yield return new PlayPartyCardAction
 					{
@@ -149,8 +143,6 @@ public static class PartyBot
 				: 0;
 		return s.Allies().Where(a => !a.IsKnockedOut).Sum(a => a.Hp)
 			- s.LivingFoes().Sum(f => f.Hp)
-			+ party.TrainerHp * TrainerWeight
-			- party.LeaderHp
 			+ s.CaughtFoes().Count() * CatchValue
 			+ snaring;
 	}
@@ -163,16 +155,16 @@ public static class PartyBot
 			"|",
 			s.Allies()
 				.Select(a =>
-					$"{a.Id}:{a.Space}:{a.Hp}:{a.Block}:{a.BonusPower}:{a.BonusThorns}:{a.Momentum}:{a.StepsLeft}:{a.HasActed}:{a.PatternIndex}"
+					$"{a.Id}:{a.Position}:{a.Hp}:{a.Block}:{a.BonusPower}:{a.BonusThorns}:{a.HasActed}:{a.PatternIndex}"
 				)
 				.Concat(
 					s.GetChildren(s.GetWellKnownId(PartyState.BattleKey))
 						.OfType<Foe>()
 						.Select(f =>
-							$"{f.Id}:{f.Space}:{f.Hp}:{f.Block}:{f.Staggered}:{f.OffBalance}:{f.Caught}"
+							$"{f.Id}:{f.Position}:{f.Hp}:{f.Block}:{f.Staggered}:{f.OffBalance}:{f.Caught}"
 						)
 				)
-				.Append($"{party.Energy}:{party.Snares}:{party.TrainerHp}:{party.LeaderHp}")
+				.Append($"{party.Energy}:{party.Snares}:{party.NextCardFree}:{party.XPaid}")
 				.Append(string.Join(",", s.CardsIn(ZoneType.Hand).Select(c => c.Id)))
 		);
 	}
@@ -180,9 +172,8 @@ public static class PartyBot
 	private static string Describe(GameState s, GameAction action) =>
 		action switch
 		{
-			MoveAllyAction m => $"step: {s.GetObject(m.AllyId).Name} to space {m.Space}",
 			PlayPartyCardAction p =>
-				$"{s.GetObject(p.CardId).Name} on {(p.FoeRow ? "foe" : "your")} space {p.Space}",
+				$"{s.GetObject(p.CardId).Name} on {(p.FoeRow ? "their" : "your")} line at {p.Space}",
 			UseSnareAction u => $"SNARE at the {s.GetObject(u.FoeId).Name}",
 			_ => action.GetType().Name,
 		};

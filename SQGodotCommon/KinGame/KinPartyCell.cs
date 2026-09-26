@@ -107,24 +107,34 @@ public sealed class KinPartyCell
 	}
 
 	/// <summary>
-	/// **A move, as the player reads it** — on a cell's telegraph and on the starter screen. `amount`
-	/// is what it will actually deal (a monster's attack already carries Power).
+	/// **A move, as the player reads it** — on a creature's telegraph and on the starter screen.
+	/// `amount` is what it will actually deal (a monster's attack already carries Power).
 	/// </summary>
 	public static string Says(KinCore.Party.Intent intent, int amount) =>
 		intent.Kind switch
 		{
-			KinCore.Party.IntentType.Attack when intent.Homing =>
-				$"{intent.Name} {amount} → weakest",
-			KinCore.Party.IntentType.Attack => $"{intent.Name} {amount}"
-				+ (intent.Offsets.Count > 1 ? $" ({intent.Offsets.Count} wide)" : "")
+			KinCore.Party.IntentType.Attack => $"{intent.Name} {amount} → {Where(intent.Target)}"
 				+ (intent.Steals ? " + steals" : ""),
+			KinCore.Party.IntentType.Block when intent.Target == KinCore.Party.Aim.Ahead =>
+				$"{intent.Name}: +{amount} block ahead",
 			KinCore.Party.IntentType.Block => $"{intent.Name}: +{amount} block",
-			KinCore.Party.IntentType.Move =>
-				$"{intent.Name}: step {(amount < 0 ? "left" : "right")}",
-			KinCore.Party.IntentType.Push => $"{intent.Name}: push {(amount < 0 ? "◀" : "▶")}",
+			KinCore.Party.IntentType.Move => $"{intent.Name}: {(amount < 0 ? "forward" : "back")}",
+			KinCore.Party.IntentType.Shove => $"{intent.Name}: swap front two",
 			KinCore.Party.IntentType.Echo => $"{intent.Name}: last spell",
 			KinCore.Party.IntentType.Summon => $"{intent.Name}: a {intent.Summons?.Creature.Name}",
 			_ => intent.Name,
+		};
+
+	/// <summary>Where a move lands, in a word or two.</summary>
+	public static string Where(KinCore.Party.Aim aim) =>
+		aim switch
+		{
+			KinCore.Party.Aim.Back => "back",
+			KinCore.Party.Aim.Pierce => "front two",
+			KinCore.Party.Aim.Sweep => "all",
+			KinCore.Party.Aim.Hunt => "weakest",
+			KinCore.Party.Aim.Ahead => "ahead",
+			_ => "front",
 		};
 
 	public void ShowEmpty() => Show("", null, "", "", "", "", KinPalette.EmptySlot, null);

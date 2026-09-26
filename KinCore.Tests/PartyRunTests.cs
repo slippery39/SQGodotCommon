@@ -12,7 +12,7 @@ namespace KinCore.Tests;
 /// </summary>
 public class PartyRunTests
 {
-	/// <summary>Hits every column for everything: dropped on any monster still standing, it ends a fight.</summary>
+	/// <summary>Hits their whole line for everything: dropped on any monster still standing, it ends a fight.</summary>
 	private static KinCard Wipe(string name) =>
 		new()
 		{
@@ -22,27 +22,22 @@ public class PartyRunTests
 			[
 				new KinEffect
 				{
-					Template = new StrikeAction
-					{
-						Amount = 999,
-						Offsets = [-4, -3, -2, -1, 0, 1, 2, 3, 4],
-					},
+					Template = new StrikeAction { Amount = 999, Aim = Aim.Sweep },
 					Text = name,
 				},
 			],
 		};
 
 	private static PartyCompanion Mon(string name, int hp = 40) =>
-		new(name, hp, 0, 1, [new Intent { Name = "Idle", Kind = IntentType.Block }]);
+		new(name, hp, 0, [new Intent { Name = "Idle", Kind = IntentType.Block }]);
 
-	private static Foe Foe(string name, int space = 2, int hit = 0) =>
+	private static Foe Foe(string name, int position = 0, int hit = 0) =>
 		new()
 		{
 			Name = name,
 			Hp = 50,
 			MaxHp = 50,
-			Speed = 3,
-			Space = space,
+			Position = position,
 			Pattern =
 			[
 				hit > 0
@@ -102,17 +97,17 @@ public class PartyRunTests
 		var wipe = s.CardsIn(ZoneType.Hand).First(c => c.Name == "Wipe");
 		return Do(
 			s,
-			new PlayPartyCardAction { CardId = wipe.Id, Space = s.LivingAllies().First().Space }
+			new PlayPartyCardAction { CardId = wipe.Id, Space = s.LivingAllies().First().Position }
 		);
 	}
 
 	private static (PartyRun, RunReport) WinNext(PartyRun run) =>
 		run.AfterBattle(Win(run.StartBattle()));
 
-	/// <summary>Weakens the foe in that space to `hp` and throws a Snare at it.</summary>
-	private static GameState Catch(GameState s, int space, int hp)
+	/// <summary>Weakens the foe at that place in their line to `hp` and throws a Snare at it.</summary>
+	private static GameState Catch(GameState s, int position, int hp)
 	{
-		var foe = s.LivingFoes().Single(f => f.Space == space);
+		var foe = s.LivingFoes().Single(f => f.Position == position);
 		s = s.UpdateObject(foe.Id, foe with { Hp = hp });
 		return Do(s, new UseSnareAction { FoeId = foe.Id });
 	}
@@ -244,7 +239,6 @@ public class PartyRunTests
 		foreach (var region in PartyWorld.Regions)
 		{
 			Assert.That(region.Gym.Foes.All(f => !f.Catchable), Is.True, $"{region.Name}'s gym");
-			Assert.That(region.Gym.LeaderHp, Is.GreaterThan(0), "a gym has a leader");
 			for (var a = 0; a < region.Areas.Count; a++)
 			{
 				var run = PartyRun.Start(PartyContent.Pike, seed: 5) with
@@ -266,7 +260,6 @@ public class PartyRunTests
 				Phase = RunPhase.Gym,
 			};
 			Assert.That(gym.StartBattle().LivingFoes(), Is.Not.Empty);
-			Assert.That(gym.StartBattle().GetParty().LeaderHp, Is.EqualTo(region.Gym.LeaderHp));
 		}
 	}
 
@@ -310,7 +303,11 @@ public class PartyRunTests
 			last.Areas.SelectMany(a => a.Pool).Max(f => f.MaxHp),
 			Is.GreaterThan(first.Areas.SelectMany(a => a.Pool).Max(f => f.MaxHp))
 		);
-		Assert.That(last.Gym.LeaderHp, Is.GreaterThan(first.Gym.LeaderHp));
+		Assert.That(
+			last.Gym.Foes.Sum(f => f.MaxHp),
+			Is.GreaterThan(first.Gym.Foes.Sum(f => f.MaxHp)),
+			"a gym is a tougher line"
+		);
 	}
 
 	// ===== HP across fights
@@ -331,7 +328,7 @@ public class PartyRunTests
 	{
 		var run = OnTrail(WithTeam(Run(), A, B), Fight(Foe("Brute", 1, 99)), Fight(Foe("Idle")));
 
-		var battle = Do(run.StartBattle(), new EndPartyTurnAction()); // A at 1 is knocked out
+		var battle = Do(run.StartBattle(), new EndPartyTurnAction()); // A, in front, is knocked out
 		Assert.That(battle.Allies().Single(a => a.Name == "A").IsKnockedOut, Is.True);
 
 		RunReport report;
@@ -340,22 +337,7 @@ public class PartyRunTests
 		Assert.That(Hp(run, "A"), Is.EqualTo(10));
 	}
 
-	// ===== The trainer's health, and the bench in battle
-
-	[Test]
-	public void TheTrainersHealthCarriesAndATownHealsIt()
-	{
-		// A dodged blow: A stands at 2, the Brute strikes column 0 — nobody there, so it hits you.
-		var run = OnTrail(Run(), Fight(Foe("Brute", 0, hit: 7)), Fight(Foe("Idle")));
-
-		(run, _) = run.AfterBattle(Win(Do(run.StartBattle(), new EndPartyTurnAction())));
-		Assert.That(run.TrainerHp, Is.EqualTo(PartyRun.TrainerMaxHp - 7));
-		Assert.That(run.StartBattle().GetParty().TrainerHp, Is.EqualTo(run.TrainerHp));
-
-		(run, _) = WinNext(run with { Phase = RunPhase.Gym });
-		Assert.That(run.Phase, Is.EqualTo(RunPhase.Town));
-		Assert.That(run.TrainerHp, Is.EqualTo(PartyRun.TrainerMaxHp));
-	}
+	// ===== The bench in battle
 
 	[Test]
 	public void TheBenchFightsAndComesBackWithTheHpItHasLeft()
@@ -389,7 +371,7 @@ public class PartyRunTests
 		var run = OnTrail(Run(), Fight(Foe("Brute", hit: 6)), Fight(Foe("Idle")));
 
 		RunReport report;
-		(run, report) = run.AfterBattle(Catch(run.StartBattle(), 2, hp: 10));
+		(run, report) = run.AfterBattle(Catch(run.StartBattle(), 0, hp: 10));
 
 		Assert.That(report.Caught, Is.EqualTo(new[] { "Brute" }));
 		var caught = run.Team[1];
@@ -404,12 +386,12 @@ public class PartyRunTests
 	{
 		var run = OnTrail(
 			WithTeam(Run(), A, B, C),
-			Fight(Foe("Brute", 1), Foe("Runt", 3)),
+			Fight(Foe("Runt", 0), Foe("Brute", 1)),
 			Fight(Foe("Idle"))
 		);
 
 		RunReport report;
-		(run, report) = run.AfterBattle(Win(Catch(run.StartBattle(), 3, hp: 5)));
+		(run, report) = run.AfterBattle(Win(Catch(run.StartBattle(), 0, hp: 5)));
 
 		Assert.That(report.ToBench, Is.EqualTo(new[] { "Runt" }));
 		Assert.That(run.Team, Has.Count.EqualTo(PartyRun.TeamSize));

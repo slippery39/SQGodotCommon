@@ -43,8 +43,8 @@ public partial class KinPartyBoard : Node2D
 	/// <summary>The monster clicked last, whose step targets are lit. 0 = none.</summary>
 	private int _selectedAllyId;
 
-	private readonly KinPartyCell[] _foeCells = new KinPartyCell[PartyBattle.Spaces];
-	private readonly KinPartyCell[] _allyCells = new KinPartyCell[PartyBattle.Spaces];
+	private readonly KinPartyCell[] _foeCells = new KinPartyCell[PartyBattle.MaxLine];
+	private readonly KinPartyCell[] _allyCells = new KinPartyCell[PartyBattle.MaxLine];
 
 	private KinHandView _hand;
 
@@ -146,7 +146,7 @@ public partial class KinPartyBoard : Node2D
 						int? at =
 							parts.Length < 2 ? FirstDrop(card)
 							: parts[1].StartsWith('f')
-								? PartyBattle.Spaces + int.Parse(parts[1][1..])
+								? PartyBattle.MaxLine + int.Parse(parts[1][1..])
 							: int.Parse(parts[1]);
 						Report(TryPlay(card, at) ?? "played");
 					};
@@ -314,7 +314,7 @@ public partial class KinPartyBoard : Node2D
 	/// <summary>The first drop the engine accepts for this card, in the board's drop numbering.</summary>
 	private int? FirstDrop(int cardId) =>
 		Enumerable
-			.Range(0, PartyBattle.Spaces * 2)
+			.Range(0, PartyBattle.MaxLine * 2)
 			.Cast<int?>()
 			.FirstOrDefault(d => Play(cardId, d.Value).ValidateAdd(_state).IsValid);
 
@@ -326,8 +326,8 @@ public partial class KinPartyBoard : Node2D
 		new()
 		{
 			CardId = cardId,
-			Space = drop % PartyBattle.Spaces,
-			FoeRow = drop >= PartyBattle.Spaces,
+			Space = drop % PartyBattle.MaxLine,
+			FoeRow = drop >= PartyBattle.MaxLine,
 		};
 
 	private void ClickSpace(int space)
@@ -403,8 +403,8 @@ public partial class KinPartyBoard : Node2D
 	}
 
 	private const string HowToPlay =
-		"Drag a card onto a monster (or a foe). Click a monster, then a lit space, to step. "
-		+ "Everyone acts at END TURN, in order. An attack that finds no monster hits YOU.";
+		"Drag a card onto a monster (or a foe). At END TURN the lines act from the back, both sides "
+		+ "at once — the fronts clash last.";
 
 	/// <summary>The cell the last card was dropped on — the card's name rises off it.</summary>
 	private Control _lastDrop;
@@ -430,15 +430,15 @@ public partial class KinPartyBoard : Node2D
 	{
 		if (SpaceAt(point) is { } mine)
 			return mine;
-		for (var i = 0; i < PartyBattle.Spaces; i++)
+		for (var i = 0; i < PartyBattle.MaxLine; i++)
 			if (_foeCells[i].Root.GetGlobalRect().HasPoint(point))
-				return PartyBattle.Spaces + i;
+				return PartyBattle.MaxLine + i;
 		return null;
 	}
 
 	private int? FoeSpaceAt(Vector2 point)
 	{
-		for (var i = 0; i < PartyBattle.Spaces; i++)
+		for (var i = 0; i < PartyBattle.MaxLine; i++)
 			if (_foeCells[i].Root.GetGlobalRect().HasPoint(point))
 				return i;
 		return null;
@@ -458,7 +458,7 @@ public partial class KinPartyBoard : Node2D
 
 	private int? SpaceAt(Vector2 point)
 	{
-		for (var i = 0; i < PartyBattle.Spaces; i++)
+		for (var i = 0; i < PartyBattle.MaxLine; i++)
 			if (_allyCells[i].Root.GetGlobalRect().HasPoint(point))
 				return i;
 		return null;
@@ -504,38 +504,16 @@ public partial class KinPartyBoard : Node2D
 
 		GetViewport().SetInputAsHandled();
 
-		if (
-			Selected() is { } moving
-			&& space != moving.Space
-			&& _state.StepRefusal(moving, space) is null
-		)
-		{
-			_selectedAllyId = 0;
-			Apply(new MoveAllyAction { AllyId = moving.Id, Space = space });
-			return;
-		}
-
 		if (_state.AllyAt(space) is { } ally)
 		{
 			_selectedAllyId = _selectedAllyId == ally.Id ? 0 : ally.Id;
 			Render(ImmutableList<GameEvent>.Empty);
 			if (_selectedAllyId != 0)
-				Report(
-					$"{ally.Name}: {ally.PassiveRule} "
-						+ (
-							ally.StepsLeft > 0
-								? "Click a lit space to step — onto an ally to swap."
-								: "It has stepped this turn."
-						)
-				);
+				Report($"{ally.Name}: {ally.PassiveRule}");
 			return;
 		}
 
-		Report(
-			Selected() is { } s
-				? _state.StepRefusal(s, space)
-				: "Click one of your monsters first, then a space beside it."
-		);
+		Report("Click one of your monsters to read it.");
 	}
 
 	private Ally Selected() =>
@@ -608,7 +586,7 @@ public partial class KinPartyBoard : Node2D
 
 	private (Creature Creature, Control Cell)? CreatureAt(Vector2 point)
 	{
-		for (var d = 0; d < PartyBattle.Spaces * 2; d++)
+		for (var d = 0; d < PartyBattle.MaxLine * 2; d++)
 			if (CreatureInCell(d) is { } found && found.Cell.GetGlobalRect().HasPoint(point))
 				return found;
 		return null;
@@ -617,11 +595,11 @@ public partial class KinPartyBoard : Node2D
 	/// <summary>The creature in a cell, in the drop numbering: 0–4 your row, 5–9 the foe's.</summary>
 	private (Creature Creature, Control Cell)? CreatureInCell(int d)
 	{
-		var space = d % PartyBattle.Spaces;
-		Creature creature = d < PartyBattle.Spaces ? _state.AllyAt(space) : _state.FoeAt(space);
+		var space = d % PartyBattle.MaxLine;
+		Creature creature = d < PartyBattle.MaxLine ? _state.AllyAt(space) : _state.FoeAt(space);
 		return creature is null
 			? null
-			: (creature, (d < PartyBattle.Spaces ? _allyCells : _foeCells)[space].Root);
+			: (creature, (d < PartyBattle.MaxLine ? _allyCells : _foeCells)[space].Root);
 	}
 
 	private void Render(ImmutableList<GameEvent> events)
@@ -666,18 +644,8 @@ public partial class KinPartyBoard : Node2D
 
 		// Your health, and in a gym the leader's — each with what ending the turn would cost.
 		var party = _state.GetParty();
-		_trainer.Text =
-			$"YOU {party.TrainerHp}/{PartyRun.TrainerMaxHp}"
-			+ (whole.Trainer > 0 ? $"  ▼{whole.Trainer}" : "");
-		_trainer.AddThemeColorOverride(
-			"font_color",
-			whole.Trainer > 0 ? KinPalette.Red : KinPalette.Bone
-		);
-		_aimHint.Text =
-			party.LeaderHp > 0
-				? $"▲ your attacks fire straight up their column — a swing that finds no foe hits the LEADER: {party.LeaderHp} HP"
-					+ (whole.Leader > 0 ? $"  (−{whole.Leader} if the turn ends)" : "")
-				: "▲ your attacks fire straight up their column";
+		_trainer.Text = "";
+		_aimHint.Text = "◀ your line: the front is on the LEFT — the lines act from the back ▶";
 
 		// **The order badge**: who acts when at the end of the turn, straight from the engine.
 		var order = _state
@@ -688,7 +656,11 @@ public partial class KinPartyBoard : Node2D
 		// Which of your spaces each foe's move hits, and by whom — straight from the engine.
 		var threats = new Dictionary<int, List<string>>();
 		foreach (var foe in _state.LivingFoes().Where(f => !f.Staggered))
-		foreach (var space in _state.IntentTargets(foe))
+		foreach (
+			var space in _state
+				.IntentTargets(foe)
+				.Select(id => ((Creature)_state.GetObject(id)).Position)
+		)
 		{
 			if (!threats.TryGetValue(space, out var list))
 				threats[space] = list = new List<string>();
@@ -706,13 +678,13 @@ public partial class KinPartyBoard : Node2D
 		// both rows**, so the lit spaces can never disagree with what a drop will do.
 		var drops = new HashSet<int>();
 		if (focus is not null)
-			for (var d = 0; d < PartyBattle.Spaces * 2; d++)
+			for (var d = 0; d < PartyBattle.MaxLine * 2; d++)
 				if (Play(focus.Id, d).ValidateAdd(_state).IsValid)
 					drops.Add(d);
 
-		for (var i = 0; i < PartyBattle.Spaces; i++)
+		for (var i = 0; i < PartyBattle.MaxLine; i++)
 		{
-			RenderFoe(i, drops.Contains(PartyBattle.Spaces + i) ? focus : null, order, forecast);
+			RenderFoe(i, drops.Contains(PartyBattle.MaxLine + i) ? focus : null, order, forecast);
 			RenderAlly(
 				i,
 				threats.GetValueOrDefault(i),
@@ -755,8 +727,7 @@ public partial class KinPartyBoard : Node2D
 		var intent = foe.Current;
 		var says = foe.Staggered
 			? "STAGGERED — loses this move"
-			: KinPartyCell.Says(intent, intent.Amount).ToUpperInvariant()
-				+ (_state.AimsAtTrainer(foe) ? " → YOU" : "");
+			: KinPartyCell.Says(intent, intent.Amount).ToUpperInvariant();
 		var attacks = intent.Kind == IntentType.Attack && !foe.Staggered;
 		var loses = forecast.GetValueOrDefault(foe.Id);
 
@@ -793,10 +764,8 @@ public partial class KinPartyBoard : Node2D
 		var cell = _allyCells[space];
 		var threatText = threats is null ? "" : "▼ " + string.Join(", ", threats);
 		var selected = Selected();
-		var canStepHere =
-			selected is not null
-			&& selected.Space != space
-			&& _state.StepRefusal(selected, space) is null;
+		// THE RELAY: no free step (KinRelayPlan.md). The old board shows a line in its cells until Phase 4.
+		var canStepHere = false;
 
 		if (_state.AllyAt(space) is not { } ally)
 		{
@@ -837,8 +806,7 @@ public partial class KinPartyBoard : Node2D
 								? ally.AttackFor(next.Amount)
 								: next.Amount
 						)
-						.ToUpperInvariant()
-					+ (_state.AimsAtLeader(ally) ? " → LEADER" : ""),
+						.ToUpperInvariant(),
 			dropHere is not null ? $"▲ {dropHere.Name.ToUpperInvariant()} HERE"
 				: canStepHere ? "▲ SWAP HERE"
 				: "",
@@ -854,7 +822,6 @@ public partial class KinPartyBoard : Node2D
 		// The passive, with its live number when a card or a step has raised it this turn.
 		cell.Passive =
 			ally.FadesIn > 0 ? $"TOKEN · FADES IN {ally.FadesIn}"
-			: ally.Momentum > 0 ? $"MOMENTUM: next hit +{ally.Momentum}"
 			: ally.BonusThorns > 0 ? $"THORNS {ally.TotalThorns} this turn"
 			: ally.Passive;
 	}
@@ -893,26 +860,26 @@ public partial class KinPartyBoard : Node2D
 				},
 				FoeCaughtEvent caught => () =>
 				{
-					var cell = _foeCells[((Foe)_state.GetObject(caught.FoeId)).Space].Root;
+					var cell = _foeCells[((Foe)_state.GetObject(caught.FoeId)).Position].Root;
 					KinAnimator.Pop(cell);
 					KinAnimator.Float(_overlay, cell, "CAUGHT!", KinPalette.Gold);
 				},
 				CardStolenEvent stolen => () =>
 					KinAnimator.Float(
 						_overlay,
-						_foeCells[((Foe)_state.GetObject(stolen.FoeId)).Space].Root,
+						_foeCells[((Foe)_state.GetObject(stolen.FoeId)).Position].Root,
 						$"STOLE {stolen.CardName.ToUpperInvariant()}",
 						KinPalette.Red
 					),
 				FoeStaggeredEvent staggered => () =>
 					KinAnimator.Float(
 						_overlay,
-						_foeCells[((Foe)_state.GetObject(staggered.FoeId)).Space].Root,
+						_foeCells[((Foe)_state.GetObject(staggered.FoeId)).Position].Root,
 						"STAGGERED",
 						KinPalette.Bone
 					),
 				FoeHitEvent hit => () =>
-					Struck(_foeCells[((Foe)_state.GetObject(hit.FoeId)).Space].Root, hit.Damage),
+					Struck(_foeCells[((Foe)_state.GetObject(hit.FoeId)).Position].Root, hit.Damage),
 				AllyHitEvent hit => () =>
 				{
 					Struck(AllyCell(hit.AllyId), hit.Damage);
@@ -926,13 +893,6 @@ public partial class KinPartyBoard : Node2D
 						$"+{block.Amount} BLOCK",
 						KinPalette.Bone
 					),
-				AllyMovedEvent moved => () => KinAnimator.Pop(_allyCells[moved.To].Root),
-				TrainerHitEvent hit => () =>
-				{
-					Struck(_trainer, hit.Damage);
-					KinAnimator.Shake(_layer, 10f);
-				},
-				LeaderHitEvent hit => () => Struck(_aimHint, hit.Damage),
 				AllySwappedInEvent swap => () =>
 				{
 					var cell = AllyCell(swap.AllyId);
@@ -975,7 +935,8 @@ public partial class KinPartyBoard : Node2D
 		);
 	}
 
-	private Control AllyCell(int allyId) => _allyCells[((Ally)_state.GetObject(allyId)).Space].Root;
+	private Control AllyCell(int allyId) =>
+		_allyCells[((Ally)_state.GetObject(allyId)).Position].Root;
 
 	private string Describe(GameEvent e) =>
 		e switch
@@ -986,14 +947,11 @@ public partial class KinPartyBoard : Node2D
 			FoeHitEvent hit => $"{Who(hit.FoeId)} takes {hit.Damage}"
 				+ (hit.Blocked > 0 ? $" ({hit.Blocked} blocked)" : ""),
 			CardPlayedEvent played => $"Played {played.CardName}",
-			FoeMovedEvent moved =>
-				$"{Who(moved.FoeId)} is pushed {(moved.To < moved.From ? "left" : "right")}",
+			FoeMovedEvent moved => $"{Who(moved.FoeId)} is moved to place {moved.To + 1}",
 			FoeStaggeredEvent staggered => $"{Who(staggered.FoeId)} is staggered",
 			CardStolenEvent stolen => $"{Who(stolen.FoeId)} steals your {stolen.CardName}",
 			CardDiscardedEvent discarded => $"Discarded {Who(discarded.CardId)}",
 			FoeCaughtEvent caught => $"Caught the {Who(caught.FoeId)}!",
-			TrainerHitEvent hit => $"{hit.By} gets through and hits YOU for {hit.Damage}",
-			LeaderHitEvent hit => $"{hit.By} hits the leader for {hit.Damage}",
 			AllySwappedInEvent swap => $"{Who(swap.AllyId)} steps in for {Who(swap.ForAllyId)}",
 			PartyBattleEndedEvent end => end.Won ? "VICTORY." : "DEFEAT.",
 			_ => null,

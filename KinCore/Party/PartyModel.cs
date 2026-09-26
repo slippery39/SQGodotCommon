@@ -4,17 +4,16 @@ using ImmutableGameObjects;
 namespace KinCore.Party;
 
 /// <summary>
-/// **THE COMPANION GAME — AUTO-BATTLE v1 (2026-09-24).** Built BESIDE the lane/unit game rather
-/// than over it, so the old game keeps running until this one proves out. Rules: "AUTO-BATTLE v1" at
-/// the top of `KinJam.md`.
+/// **THE COMPANION GAME — THE RELAY (2026-09-25).** One line a side; position 0 is the FRONT. At the
+/// end of your turn the lines act in STEPS, back to front, both sides at once. Rules: `KinRelayPlan.md`.
 ///
 /// The root of one battle. Your monsters and the foes are its children; the deck zones hang off it
 /// too, under the same well-known keys the old game uses, so the shared draw code still works.
 /// </summary>
 public record PartyBattle : GameObject
 {
-	/// <summary>Spaces per side. Column N faces column N.</summary>
-	public const int Spaces = 5;
+	/// <summary>The longest a line can be — three monsters and room for tokens.</summary>
+	public const int MaxLine = 5;
 
 	public int TurnNumber { get; init; } = 1;
 	public int Energy { get; init; }
@@ -22,19 +21,6 @@ public record PartyBattle : GameObject
 
 	/// <summary>**Snares carried into this battle** — the run's item for catching. Used ones are gone.</summary>
 	public int Snares { get; init; }
-
-	/// <summary>
-	/// **YOUR health — the trainer's** (KinJam.md "TRAINER HEALTH"). A foe's attack that lands on no
-	/// monster hits you, so stepping out of a blow is no longer free: waiting has a price. At 0 the
-	/// battle — and the run — is lost.
-	/// </summary>
-	public int TrainerHp { get; init; }
-
-	/// <summary>
-	/// **The gym leader's health; 0 = no leader** (wild creatures have no trainer). The mirror of
-	/// yours: your attack that lands on no foe hits the leader, and at 0 the gym is won.
-	/// </summary>
-	public int LeaderHp { get; init; }
 
 	/// <summary>
 	/// **Cards a card or ability discarded this turn** — MtgCore's `SpellsCastThisTurn` pattern:
@@ -46,7 +32,7 @@ public record PartyBattle : GameObject
 	/// <summary>Spell damage dealt this turn, after bonuses and wards — what Overload deals.</summary>
 	public int SpellDamageThisTurn { get; init; }
 
-	/// <summary>Focus was played: this turn's dropped spells also hit the foes beside the target.</summary>
+	/// <summary>Focus was played: this turn's dropped spells also hit the foe behind the target.</summary>
 	public bool SpellsSplash { get; init; }
 
 	/// <summary>The last spell cast this turn, with where it was dropped — what an Echo repeats.</summary>
@@ -75,26 +61,34 @@ public record PartyBattle : GameObject
 	/// </summary>
 	public bool EndingTurn { get; init; }
 
+	/// <summary>
+	/// **Your monsters that have acted this round** — the relay's count. Pike's FINISHER reads it, so a
+	/// front that acts last cashes everything behind it. Reset when your turn starts; Hasten counts.
+	/// </summary>
+	public int AlliesActedThisRound { get; init; }
+
 	public bool IsOver { get; init; }
 	public bool Won { get; init; }
 }
 
 /// <summary>
-/// **Anything on the board — your monster or a foe. Both play a telegraphed CYCLE of moves on their
-/// own**, at the end of your turn, one creature at a time in Speed order. A foe's cycle is exactly
-/// what it would bring if caught.
+/// **Anything in a line — your monster or a foe. Both play a telegraphed CYCLE of moves on their
+/// own**, at the end of your turn, in steps from the back of the lines to the front. A foe's cycle is
+/// exactly what it would bring if caught.
 /// </summary>
 public abstract record Creature : GameObject
 {
 	public int Hp { get; init; }
 	public int MaxHp { get; init; }
-	public int Space { get; init; }
+
+	/// <summary>
+	/// **Its place in its line: 0 is the FRONT.** Kept contiguous by `PartyState.Settle`; −1 once it has
+	/// left the line (fallen, caught) or while it waits on the bench.
+	/// </summary>
+	public int Position { get; init; }
 
 	/// <summary>Soaks damage before HP.</summary>
 	public int Block { get; init; }
-
-	/// <summary>**Turn order**: the fastest acts first, both sides interleaved. Ties: yours first.</summary>
-	public int Speed { get; init; }
 
 	public ImmutableList<Intent> Pattern { get; init; } = [];
 	public int PatternIndex { get; init; }
@@ -111,7 +105,7 @@ public abstract record Creature : GameObject
 	public int FadesIn { get; init; }
 }
 
-/// <summary>One of YOUR monsters. It fights on its own; your cards move, buff and time it.</summary>
+/// <summary>One of YOUR monsters. It fights on its own; your cards order, buff and time it.</summary>
 public record Ally : Creature
 {
 	/// <summary>Its place in the run's team — how the run finds it again after the battle.</summary>
@@ -123,27 +117,24 @@ public record Ally : Creature
 	/// <summary>Power added by cards this turn (Rally). Cleared when your next turn starts.</summary>
 	public int BonusPower { get; init; }
 
-	/// <summary>**The free step**: one every turn, more from Dash. A step into an ally swaps the two.</summary>
-	public int StepsLeft { get; init; }
-
 	/// <summary>Played its move early this turn (Hasten), so it does not act again at the end.</summary>
 	public bool HasActed { get; init; }
 
 	/// <summary>
-	/// **On the bench: off the board, waiting.** The first one steps into a fainted monster's space,
-	/// free — a fainted monster no longer leaves its column open to hit you for the rest of the fight.
+	/// **On the bench: out of the line, waiting.** The first one joins at the BACK when a monster in
+	/// the line falls.
 	/// </summary>
 	public bool Benched { get; init; }
 
 	/// <summary>The passive, as the player reads it. Rules live in the fields below, never here.</summary>
 	public string Passive { get; init; } = "";
 
-	/// <summary>The passive's rule in a sentence — shown when the monster is clicked.</summary>
+	/// <summary>The passive's rule in a sentence — shown when the monster is inspected.</summary>
 	public string PassiveRule { get; init; } = "";
 
 	/// <summary>
 	/// **Thorns — a foe that ATTACKS this monster takes this much back**, blocked or not. Bramble's
-	/// passive: it pays only when she is struck, so it ENDS fights rather than stalling them.
+	/// passive: it pays only when she is struck, so she wants the FRONT.
 	/// </summary>
 	public int Thorns { get; init; }
 
@@ -151,21 +142,17 @@ public record Ally : Creature
 	public int BonusThorns { get; init; }
 
 	/// <summary>
-	/// **Momentum — each step this monster takes adds this to its NEXT attack.** Pike's passive: the
-	/// free step is damage, so where Pike ends the turn is chosen, not drifted into.
+	/// **FINISHER — this much more damage for each of your monsters that acted before it this round.**
+	/// Pike's passive: the relay's payoff, so it wants the front — where the blows land.
 	/// </summary>
-	public int MomentumPerStep { get; init; }
+	public int FinisherPerAlly { get; init; }
 
 	/// <summary>Attacked since your last turn began (blocked or not) — the Glowmoth's condition.</summary>
 	public bool WasHit { get; init; }
 
-	/// <summary>Built by steps, spent by the next attack, cleared when your next turn starts.</summary>
-	public int Momentum { get; init; }
-
 	/// <summary>
 	/// **Off-Balance — while this monster stands, any foe you move takes this much extra from every
-	/// hit that turn.** Gale's passive: a push is set-up for everyone, so ORDER matters — Gale's own
-	/// Gust helps only the monsters slower than it.
+	/// hit that round.** Gale's passive: it moves foes from the back, before the front swings.
 	/// </summary>
 	public int Unbalances { get; init; }
 
@@ -173,8 +160,8 @@ public record Ally : Creature
 
 	public bool IsKnockedOut => IsDown;
 
-	/// <summary>What one of its attacks deals: the move's amount plus Power, Rally and Momentum.</summary>
-	public int AttackFor(int amount) => amount + Power + BonusPower + Momentum;
+	/// <summary>What one of its attacks deals before the relay: the move's amount plus Power and Rally.</summary>
+	public int AttackFor(int amount) => amount + Power + BonusPower;
 }
 
 public record Foe : Creature
@@ -188,7 +175,7 @@ public record Foe : Creature
 	/// <summary>False for a boss: an exam is not a catch.</summary>
 	public bool Catchable { get; init; } = true;
 
-	/// <summary>**Caught by a Snare** — off the board, beaten, and joining you when the battle is won.</summary>
+	/// <summary>**Caught by a Snare** — out of the line, beaten, and joining you when the battle is won.</summary>
 	public bool Caught { get; init; }
 
 	/// <summary>
@@ -212,43 +199,62 @@ public record Foe : Creature
 
 public enum IntentType
 {
-	/// <summary>Damage to the spaces its shape covers on the OTHER row, or to one creature if it homes.</summary>
+	/// <summary>Damage to the creatures its <see cref="Intent.Target"/> names on the OTHER line.</summary>
 	Attack,
 
-	/// <summary>Gains Block. A foe's holds through your next turn.</summary>
+	/// <summary>Gains Block — itself, or the one AHEAD. A foe's holds through your next turn.</summary>
 	Block,
 
-	/// <summary>Steps <see cref="Intent.Amount"/> spaces (negative = left), if the space is free.</summary>
+	/// <summary>Moves itself <see cref="Intent.Amount"/> places toward the BACK (negative = forward).</summary>
 	Move,
 
-	/// <summary>Pushes the foe AHEAD <see cref="Intent.Amount"/> columns (negative = left) — Gale's Gust.</summary>
-	Push,
+	/// <summary>**Swaps the OTHER line's front two** — Gale's Gust, or a foe breaking your formation.</summary>
+	Shove,
 
 	/// <summary>
-	/// **Repeats the last spell you cast this turn**, on the same drop — the Echo Owl. It needs a
+	/// **Repeats the last spell you cast this turn**, on the same foe — the Echo Owl. It needs a
 	/// trainer, so a wild one's Echo does nothing.
 	/// </summary>
 	Echo,
 
-	/// <summary>Summons <see cref="Intent.Summons"/> into the nearest empty space on its own row.</summary>
+	/// <summary>Summons <see cref="Intent.Summons"/> at the FRONT of its own line.</summary>
 	Summon,
 }
 
-/// <summary>One telegraphed move. **Nothing on the board plays from a deck but you.**</summary>
+/// <summary>
+/// **Who a move lands on** — replaces columns, shapes and homing (`KinRelayPlan.md` R4). Chosen at the
+/// START of the step the creature acts in.
+/// </summary>
+public enum Aim
+{
+	/// <summary>The other line's front — the default.</summary>
+	Front,
+
+	/// <summary>The other line's back.</summary>
+	Back,
+
+	/// <summary>The other line's front two.</summary>
+	Pierce,
+
+	/// <summary>Everyone in the other line.</summary>
+	Sweep,
+
+	/// <summary>The lowest HP in the other line.</summary>
+	Hunt,
+
+	/// <summary>The one ahead of it in its OWN line — how the relay passes a buff forward.</summary>
+	Ahead,
+}
+
+/// <summary>One telegraphed move. **Nothing in a line plays from a deck but you.**</summary>
 public record Intent
 {
 	public string Name { get; init; } = "";
 	public IntentType Kind { get; init; }
 	public int Amount { get; init; }
 
-	/// <summary>
-	/// Columns hit, relative to the creature's own. [0] is straight ahead; [-1, 0, 1] is three wide —
-	/// and the middle of a three-wide attack cannot step out of it in one move.
-	/// </summary>
-	public ImmutableList<int> Offsets { get; init; } = [0];
-
-	/// <summary>Ignores the shape: hits the creature with the LOWEST HP on the other side.</summary>
-	public bool Homing { get; init; }
+	/// <summary>Who an Attack lands on; a Block with <see cref="Aim.Ahead"/> shields the one ahead.</summary>
+	public Aim Target { get; init; }
 
 	/// <summary>
 	/// **THIEF** (a wild trait): after the attack, a FOE takes the top card of your draw pile, and

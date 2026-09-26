@@ -197,7 +197,7 @@ public sealed partial class KinPartyRunScreens
 					KinPalette.Slate,
 					ArtFor(foe.Name),
 					(foe.Name == run.Area.Rare.Name ? "RARE · " : "") + foe.Name.ToUpperInvariant(),
-					[$"HP {foe.MaxHp} · SPEED {foe.Speed}"],
+					[$"HP {foe.MaxHp}"],
 					new Vector2(220, 300),
 					deeper
 				)
@@ -213,7 +213,7 @@ public sealed partial class KinPartyRunScreens
 	{
 		Begin(
 			$"THE GYM — {run.Region.Gym.Name.ToUpperInvariant()}",
-			$"The leader has {run.Region.Gym.LeaderHp} health: a swing into an empty column hits them. Their creatures cannot be caught."
+			"Beat their whole line to win. Their creatures cannot be caught."
 		);
 
 		var row = Row();
@@ -223,7 +223,7 @@ public sealed partial class KinPartyRunScreens
 					KinPalette.Slate,
 					ArtFor(foe.Name),
 					foe.Name.ToUpperInvariant(),
-					[$"HP {foe.MaxHp} · SPEED {foe.Speed}"],
+					[$"HP {foe.MaxHp}"],
 					new Vector2(220, 300),
 					fight
 				)

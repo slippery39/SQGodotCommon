@@ -21,11 +21,9 @@ public enum RunEnd
 }
 
 /// <summary>A team arriving at a gym: what it brought.</summary>
-public record GymArrival(int Region, int TrainerHp, double TeamHpShare, int TeamSize, bool WentDeep)
+public record GymArrival(int Region, double TeamHpShare, int TeamSize, bool WentDeep)
 {
-	/// <summary>Won by running the LEADER's health out (not by beating every creature), and in how many turns.</summary>
-	public bool ByLeader { get; init; }
-
+	/// <summary>How many turns the gym took.</summary>
 	public int Turns { get; init; }
 }
 
@@ -35,7 +33,6 @@ public record SimRun(
 	int Seed,
 	RunEnd End,
 	int Region,
-	bool KilledByTrainerHp,
 	ImmutableList<GymArrival> Gyms,
 	int Caught,
 	int Battles,
@@ -132,7 +129,6 @@ public static class PartySim
 						gyms = gyms.Add(
 							new GymArrival(
 								run.RegionIndex,
-								run.TrainerHp,
 								TeamShare(run),
 								run.Team.Count,
 								wentDeep
@@ -150,7 +146,6 @@ public static class PartySim
 					log?.Invoke(
 						$"  BATTLE {battles + 1} ({where}): {run.NextFight.Name} — team "
 							+ string.Join(", ", run.Team.Select(m => $"{m.Companion.Name} {m.Hp}"))
-							+ $", you {run.TrainerHp}"
 					);
 					var t = 0;
 					while (!battle.GetParty().IsOver && t < TurnLimit)
@@ -164,12 +159,6 @@ public static class PartySim
 									", ",
 									battle.LivingFoes().Select(f => $"{f.Name} {f.Hp}")
 								)
-								+ $" | you {battle.GetParty().TrainerHp}"
-								+ (
-									battle.GetParty().LeaderHp > 0
-										? $" | leader {battle.GetParty().LeaderHp}"
-										: ""
-								)
 						);
 						t++;
 					}
@@ -182,7 +171,6 @@ public static class PartySim
 							seed,
 							RunEnd.Stalled,
 							run.RegionIndex,
-							false,
 							gyms,
 							caught,
 							battles,
@@ -192,14 +180,7 @@ public static class PartySim
 					var party = battle.GetParty();
 					caught += battle.CaughtFoes().Count();
 					if (where == RunEnd.Gym)
-						gyms = gyms.SetItem(
-							gyms.Count - 1,
-							gyms[^1] with
-							{
-								ByLeader = party.Won && party.LeaderHp == 0,
-								Turns = t,
-							}
-						);
+						gyms = gyms.SetItem(gyms.Count - 1, gyms[^1] with { Turns = t });
 					var region = run.RegionIndex;
 					(run, _) = run.AfterBattle(battle);
 					log?.Invoke(
@@ -207,17 +188,7 @@ public static class PartySim
 					);
 
 					if (run.Phase == RunPhase.Lost)
-						return new(
-							starter.Name,
-							seed,
-							where,
-							region,
-							party.TrainerHp == 0,
-							gyms,
-							caught,
-							battles,
-							turns
-						);
+						return new(starter.Name, seed, where, region, gyms, caught, battles, turns);
 
 					if (!run.IsOver && run.RewardOffer() is [var card, ..])
 						run = run.Take(card);
@@ -225,23 +196,11 @@ public static class PartySim
 			}
 		}
 
-		return new(
-			starter.Name,
-			seed,
-			RunEnd.Won,
-			run.RegionIndex,
-			false,
-			gyms,
-			caught,
-			battles,
-			turns
-		);
+		return new(starter.Name, seed, RunEnd.Won, run.RegionIndex, gyms, caught, battles, turns);
 	}
 
 	private static bool Healthy(PartyRun run) =>
-		run.Team.Count >= DeepWithAtLeast
-		&& run.TrainerHp >= PartyRun.TrainerMaxHp * DeepIfHealthy
-		&& TeamShare(run) >= DeepIfHealthy;
+		run.Team.Count >= DeepWithAtLeast && TeamShare(run) >= DeepIfHealthy;
 
 	private static double TeamShare(PartyRun run) =>
 		run.Team.Sum(m => m.Hp) / (double)run.Team.Sum(m => m.Companion.Hp);

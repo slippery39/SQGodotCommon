@@ -73,8 +73,27 @@ public static class PartyCards
 	public static readonly KinCard Focus = Card(
 		"Focus",
 		1,
-		"This turn, your spells also hit the foes beside their target.",
+		"This turn, your spells also hit the foe behind their target.",
 		new SplashSpellsAction()
+	);
+
+	// ===== THE LINE — Gale's deck: reorder THEIR front.
+
+	/// <summary>Enabler (Control) · standard: their front two swap — Off-Balance while Gale stands.</summary>
+	public static readonly KinCard Gust = Card(
+		"Gust",
+		1,
+		"Their front two swap.",
+		new GustAction()
+	);
+
+	/// <summary>Enabler (Control, Draw) · standard.</summary>
+	public static readonly KinCard Tailwind = Card(
+		"Tailwind",
+		1,
+		"Their front two swap. Draw a card.",
+		new GustAction(),
+		new DrawAction()
 	);
 
 	// ===== SUMMON — tokens: bodies that fade.
@@ -98,7 +117,7 @@ public static class PartyCards
 	/// <summary>A wall that stays two turns, and shields its neighbours when it falls.</summary>
 	public static readonly TokenTemplate Sprout =
 		new(
-			new PartyCompanion("Sprout", 3, 0, 1, [Still("Rooted")])
+			new PartyCompanion("Sprout", 3, 0, [Still("Rooted")])
 			{
 				Abilities = [new FaintShield { Amount = 3 }],
 			},
@@ -107,24 +126,24 @@ public static class PartyCards
 
 	/// <summary>A spell that walks: fast, one hit, gone.</summary>
 	public static readonly TokenTemplate Spark =
-		new(new PartyCompanion("Spark", 1, 0, 3, [Hits("Spark", 2)]), FadesIn: 1);
+		new(new PartyCompanion("Spark", 1, 0, [Hits("Spark", 2)]), FadesIn: 1);
 
-	/// <summary>The answer to homing: every homing attack aims at it.</summary>
+	/// <summary>The answer to snipers and hunters: BACK and HUNT attacks aim at it.</summary>
 	public static readonly TokenTemplate Decoy =
 		new(
-			new PartyCompanion("Decoy", 5, 0, 1, [Still("Lure")]) { Abilities = [new Lure()] },
+			new PartyCompanion("Decoy", 5, 0, [Still("Lure")]) { Abilities = [new Lure()] },
 			FadesIn: 1
 		);
 
 	/// <summary>The Broodvine's brood — yours when it is yours, the foes' when it is wild.</summary>
 	public static readonly TokenTemplate Grub =
-		new(new PartyCompanion("Grub", 2, 0, 2, [Hits("Bite", 2)]), FadesIn: 2);
+		new(new PartyCompanion("Grub", 2, 0, [Hits("Bite", 2)]), FadesIn: 2);
 
 	/// <summary>Enabler (Summon, Block) · filler: a movable wall.</summary>
 	public static readonly KinCard Sow = Card(
 		"Sow",
 		1,
-		"Summon a Sprout (3 HP, 2 turns). When it faints, its neighbours gain 3 Block.",
+		"Summon a Sprout in front (3 HP, 2 turns). When it falls, the ones beside it gain 3 Block.",
 		new SummonTokenAction { Token = Sprout }
 	);
 
@@ -132,7 +151,7 @@ public static class PartyCards
 	public static readonly KinCard CallSparks = Card(
 		"Call Sparks",
 		1,
-		"Summon two Sparks (1 HP, Speed 3, hit 2). They fade at the end of the turn.",
+		"Summon two Sparks in front (1 HP, hit 2). They fade after this round.",
 		new SummonTokenAction { Token = Spark, Count = 2 }
 	);
 
@@ -140,7 +159,7 @@ public static class PartyCards
 	public static readonly KinCard DecoyCard = Card(
 		"Decoy",
 		1,
-		"Summon a Decoy (5 HP) for a turn. Homing attacks aim at it.",
+		"Summon a Decoy in front (5 HP) for a round. Back and hunting attacks aim at it.",
 		new SummonTokenAction { Token = Decoy }
 	);
 
@@ -148,7 +167,7 @@ public static class PartyCards
 	public static readonly KinCard Swarm = Card(
 		"Swarm",
 		2,
-		"Each of your tokens attacks ahead now: 2 + Power.",
+		"Each of your tokens attacks their front now: 2 + Power.",
 		new TokensAttackAction { Amount = 2 }
 	);
 
@@ -194,8 +213,8 @@ public static class PartyCards
 	public static readonly KinCard Unleash = Card(
 		"Unleash",
 		0,
-		"Costs all your energy. It attacks now: 4 per energy, three wide.",
-		new StrikeAction { PerX = 4, Offsets = [-1, 0, 1] }
+		"Costs all your energy. It attacks their whole line now: 4 per energy.",
+		new StrikeAction { PerX = 4, Aim = Aim.Sweep }
 	) with
 	{
 		Components = [new SpendsAllEnergy()],
@@ -205,9 +224,9 @@ public static class PartyCards
 	public static readonly KinCard Meteor = Card(
 		"Meteor",
 		4,
-		"Drop on a foe: deal 14, and 4 to each foe beside it.",
+		"Drop on a foe: deal 14, and 4 to the one behind it.",
 		new SpellDamageAction { Amount = 14 },
-		new SpellDamageAction { Amount = 4, Target = SpellTarget.Beside }
+		new SpellDamageAction { Amount = 4, Target = SpellTarget.Behind }
 	);
 
 	// ===== DISCARD + DRAW
@@ -263,7 +282,7 @@ public static class PartyCards
 	public static readonly KinCard ScrapHammer = Card(
 		"Scrap Hammer",
 		3,
-		"It attacks ahead now: 6 + Power. Costs 1 less per card discarded this turn.",
+		"It attacks their front now: 6 + Power. Costs 1 less per card discarded this turn.",
 		new StrikeAction { Amount = 6 }
 	) with
 	{
@@ -274,7 +293,7 @@ public static class PartyCards
 	public static readonly KinCard PageStorm = Card(
 		"Page Storm",
 		1,
-		"It attacks ahead now: Power + 1 per card in your hand.",
+		"It attacks their front now: Power + 1 per card in your hand.",
 		new StrikeAction { Amount = 0, PlusCardsInHand = true }
 	);
 }
