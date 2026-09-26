@@ -175,7 +175,44 @@ console prints `can't: Lane 2 is already held by Ash`; the UI must not silently 
 click that does nothing is the worst bug a card game front end can have** — that is how the `c`
 command shipped unwired for two sessions.
 
-## THE COMPANION GAME screen — `kin_party.tscn` (2026-09-23)
+## THE RELAY screen — `kin_party.tscn` (2026-09-25) — SUPERSEDES the cells below
+
+**Two lines of creatures facing each other, the FRONTS meeting in the middle** (`KinRelayPlan.md`,
+Phase 4). The rows of cells and everything below about columns, steps, trainer and leader health
+are history. The banner, the status strip, the hand band, the choice panel and the inspector stay.
+
+**The field** (`KinRelayField`, 1856 x 400 on the 1920 x 1080 canvas) replaces the two rows:
+
+```
+ ┌──────────── YOUR LINE ─────────────┐        ┌──────────── THEIR LINE ────────────┐
+ │  4      3      2      1    [0]     │  gap   │ [0]    1      2      3      4      │
+ │ back                     FRONT ──▶ │  96px  │ ◀── FRONT                   back   │
+ └──── 5 slots x 176px, 880px ────────┘        └──── 5 slots x 176px, 880px ────────┘
+```
+
+- **A creature is a VIEW keyed by its id, not a slot.** It stands at its line position and SLIDES
+  to a new one when the line changes (a faint, a swap, a token in front, deploy). The slide waits
+  until the turn's events have played, so a blow's number rises off the place it landed.
+- **The view, top to bottom** (`KinRelayCreature`, 176 wide): the NEXT MOVE with where it lands and
+  the order badge ("2 · JAB 5 → FRONT"; gold yours, red theirs); the SPRITE — a 150px medallion,
+  the portrait cropped round, or the silhouette for a creature not drawn yet, foes flipped to face
+  left — ringed in the owner's colour (red for foes, GOLD when it is a legal drop, the Snare's
+  target, or picked up in deploy); the NAME; an HP bar with "HP / MAX" and Block; one STATUS line
+  (the passive, "TOKEN · FADES IN 1", OFF-BALANCE, ◆ CATCH, STAGGERED); one NOTE line (the forecast
+  in red, or the drop hint in gold).
+- **A fallen creature fades where it fell** after the blows have played, then the line closes.
+- **Drops are slots, not creatures**: 0–4 your line, 5–9 theirs, so a Gust can be dropped anywhere
+  on theirs. The engine lights the legal ones; the field only draws. **A lit place must be a real
+  choice**: Summon first lit all five of your places though its token always arrives at the front,
+  so the engine now takes a summon only on your front.
+- **Deploy (R2): press a monster, drag it to a place in your line, release.** Clicking one and then a
+  place does the same (a capture cannot drag). The button reads FIGHT.
+- **Motion** (`KinAnimator`, one Speed dial): a blow LUNGES its attacker toward the other line
+  (0.12s out, 0.12s back), the target flashes and its number rises; the line slides (0.3s).
+- Sizes: move and HP 22, name 22, status and note 20 — authored on the 1920 canvas (x 0.833 on the
+  1600 window), so every line is at or over the 16px floor. Check them on a capture.
+
+## THE COMPANION GAME screen — `kin_party.tscn` (2026-09-23) — the lanes; history
 
 > **AUTO-BATTLE v1 (2026-09-24) changed what the cells say; the rules below about owners are
 > history.** Trainer cards are drawn plain and nothing lights "PLAYS". **MONSTER DECKS (same day)

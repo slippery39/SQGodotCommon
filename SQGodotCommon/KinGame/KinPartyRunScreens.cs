@@ -73,7 +73,7 @@ public sealed partial class KinPartyRunScreens
 							+ string.Join(
 								", ",
 								companion.Moves.Select(m =>
-									KinPartyCell.Says(
+									KinMoveText.Says(
 										m,
 										m.Kind == IntentType.Attack
 											? m.Amount + companion.Power

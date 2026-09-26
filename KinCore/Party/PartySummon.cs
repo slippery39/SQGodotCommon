@@ -20,8 +20,12 @@ public record SummonTokenAction : CardStep
 	public TokenTemplate Token { get; init; } = null!;
 	public int Count { get; init; } = 1;
 
+	/// <summary>
+	/// **Dropped on your FRONT — where the token will stand.** Lighting every place of your line
+	/// promised a choice of place the summon does not give.
+	/// </summary>
 	public override string? Refusal(GameState s, int space, bool foeRow) =>
-		foeRow ? "Drop it on your line"
+		foeRow || space != 0 ? "Drop it on your front: that is where it arrives"
 		: s.LivingAllies().Count() >= PartyBattle.MaxLine ? "Your line is full"
 		: null;
 

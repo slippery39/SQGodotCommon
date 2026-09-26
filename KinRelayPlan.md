@@ -94,26 +94,33 @@ or re-expressed in lines. The OLD board compiles and runs on it (cells = line po
       and run — **not tuned** (exploring)
 - [x] `PartyRunTests`, `PartyBotTests` updated
 
-### Phase 4 — the screen: sprites in a line (`SQGodotCommon/KinGame/`)
-- [ ] **`KinUI.md` first:** the new layout contract. Proposed: **your line on the left facing right, theirs
+### Phase 4 — the screen: sprites in a line (`SQGodotCommon/KinGame/`) — DONE 2026-09-25
+`KinRelayField` (the two lines) + `KinRelayCreature` (one creature's view); `KinPartyCell` deleted,
+its move text moved to `KinMoveText`. Checked on captures: the intro, a full round (lunges, floats,
+the line closing after the blows), deploy by clicks, a summon, a focused card, the inspector, and a
+run's gym. Fixed from them: labels touching their neighbours (padding), a lunge dragging the whole
+view (only the sprite lunges now), a refused card showing a generic reason (the engine's reason
+now), and **Summon lighting all five places** — it always arrives at the front, so the engine now
+takes it only on your front.
+- [x] **`KinUI.md` first:** the new layout contract. Proposed: **your line on the left facing right, theirs
       on the right facing left, the two FRONTS meeting in the middle**; banner and hand band unchanged;
       the status bar loses YOU and gains nothing
-- [ ] **A creature view**: start from `Common/Core/CharacterUI` (a Sprite2D, a `HealthBar`, a click area, a
+- [x] **A creature view** (a Control, not `CharacterUI`: the board is Controls and hit-tests rects): start from `Common/Core/CharacterUI` (a Sprite2D, a `HealthBar`, a click area, a
       shader `DamageFlashController`) — reuse it if it fits, adapt a copy if not. Shows: the sprite (flipped
       for foes), HP bar, Block, an ORDER badge (1, 2, 3…), the NEXT MOVE above its head with where it lands
       ("→ FRONT", "→ BACK", "→ ALL", "→ WEAKEST"), the passive / "FADES IN N" line, the forecast
-- [ ] **Placeholder sprites**: the 12 existing portraits (`Art/*.png`) as sprites; `KinArt.Figure` silhouettes
+- [x] **Placeholder sprites**: the 12 existing portraits (`Art/*.png`) as sprites; `KinArt.Figure` silhouettes
       for the rest (the round-one twelve and the tokens have no art)
-- [ ] **Card drops onto creatures**: hovering a card lights exactly the creatures the engine accepts (the
+- [x] **Card drops onto creatures**: hovering a card lights exactly the creatures the engine accepts (the
       rule that the lit targets and validation never disagree still holds)
-- [ ] **DEPLOY screen**: drag your creatures to reorder, a FIGHT button; their line visible
-- [ ] **Animations** (`KinAnimator`): the actor lunges toward its target, the target flashes, floats as now;
+- [x] **DEPLOY screen** (on the field itself: press-drag-release, or click then click): drag your creatures to reorder, a FIGHT button; their line visible
+- [x] **Animations** (`KinAnimator`; hit events carry `AttackerId` for the lunge): the actor lunges toward its target, the target flashes, floats as now;
       the line slides up after a faint; a swap slides both
-- [ ] `KinPartyInspector`: targets instead of shapes, no Speed; hovering a sprite opens it
-- [ ] Delete `KinPartyCell`, the rows, the aim hint, the step input; keep a move-text helper for the
+- [x] `KinPartyInspector`: targets instead of shapes, no Speed; hovering a sprite opens it
+- [x] Delete `KinPartyCell`, the rows, the aim hint, the step input; keep a move-text helper for the
       starter screen (`KinPartyRunScreens` calls `KinPartyCell.Says`)
-- [ ] `Commands.md`: capture flags for the new screen (`--play`, `--inspect`, `--deploy`…)
-- [ ] Captures of every screen, READ (scar 6: an unwrapped label sets its container's width)
+- [x] `Commands.md`: capture flags (`--fight`) for the new screen (`--play`, `--inspect`, `--deploy`…)
+- [x] Captures of every screen, READ (scar 6: an unwrapped label sets its container's width)
 
 ### Phase 5 — play it
 - [ ] Practice scenarios rebuilt: one intro (the three starters vs three foes) + the four strategies

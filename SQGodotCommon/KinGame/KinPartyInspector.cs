@@ -159,7 +159,7 @@ public sealed class KinPartyInspector
 			_ => [],
 		};
 
-	/// <summary>A move in words — the cell's short form (`KinPartyCell.Says`) spelled out.</summary>
+	/// <summary>A move in words — the short form (`KinMoveText.Says`) spelled out.</summary>
 	private static string Explain(Intent move, int amount, bool mine)
 	{
 		var victims = mine ? "foe" : "monster";

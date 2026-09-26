@@ -487,6 +487,9 @@ public record AllyHitEvent : GameEvent
 	public int Damage { get; init; }
 	public int Blocked { get; init; }
 	public string By { get; init; } = "";
+
+	/// <summary>The creature whose blow it was — the board lunges it. 0 = no body swung (Thorns, a spell).</summary>
+	public int AttackerId { get; init; }
 }
 
 public record AllyKnockedOutEvent : GameEvent
@@ -512,6 +515,9 @@ public record FoeHitEvent : GameEvent
 	public int FoeId { get; init; }
 	public int Damage { get; init; }
 	public int Blocked { get; init; }
+
+	/// <summary>The monster whose blow it was — the board lunges it. 0 = no body swung (a spell, Thorns).</summary>
+	public int AttackerId { get; init; }
 }
 
 /// <summary>A benched monster joined the back of the line for a fallen one.</summary>

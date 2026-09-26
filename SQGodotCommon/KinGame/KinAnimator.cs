@@ -183,4 +183,60 @@ public static class KinAnimator
 		// leaves the board permanently off-centre, and it only shows after several turns.
 		tween.TweenCallback(Callable.From(() => layer.Offset = home));
 	}
+
+	/// <summary>
+	/// **THE RELAY: a creature swings** — it jabs toward the other line and comes back. Read off the
+	/// hit events' attacker, so it plays exactly the blows the engine resolved.
+	/// </summary>
+	public static void Lunge(Control node, float towardX)
+	{
+		if (node is null || !GodotObject.IsInstanceValid(node) || Instant)
+			return;
+
+		var home = node.Position;
+		var tween = node.CreateTween();
+		tween
+			.TweenProperty(node, "position", home + new Vector2(towardX, 0), Seconds(0.12))
+			.SetTrans(Tween.TransitionType.Quad)
+			.SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(node, "position", home, Seconds(0.12));
+	}
+
+	/// <summary>
+	/// **A creature moves to its new place in the line** — after <paramref name="delay"/>, so the
+	/// turn's blows play where they landed before the line closes up. Only for a node no container
+	/// owns (a container would undo it on its next layout pass).
+	/// </summary>
+	public static void Slide(Control node, Vector2 to, double delay)
+	{
+		if (node is null || !GodotObject.IsInstanceValid(node))
+			return;
+		if (Instant)
+		{
+			node.Position = to;
+			return;
+		}
+
+		node.CreateTween()
+			.TweenProperty(node, "position", to, Seconds(0.3))
+			.SetDelay(delay)
+			.SetTrans(Tween.TransitionType.Quad)
+			.SetEase(Tween.EaseType.InOut);
+	}
+
+	/// <summary>A creature that left the line fades where it stood, after the blows, then is freed.</summary>
+	public static void FadeOut(Control node, double delay)
+	{
+		if (node is null || !GodotObject.IsInstanceValid(node))
+			return;
+		if (Instant)
+		{
+			node.QueueFree();
+			return;
+		}
+
+		var tween = node.CreateTween();
+		tween.TweenProperty(node, "modulate:a", 0f, Seconds(0.3)).SetDelay(delay);
+		tween.TweenCallback(Callable.From(node.QueueFree));
+	}
 }

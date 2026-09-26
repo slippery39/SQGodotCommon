@@ -491,7 +491,7 @@ public static class PartyState
 
 			var overflow = damage + foe.OffBalance - foe.Block - foe.Hp;
 			ImmutableList<GameEvent> hit;
-			(s, hit) = HitFoe(s, foe, damage);
+			(s, hit) = HitFoe(s, foe, damage, ally.Id);
 			events = events.AddRange(hit);
 
 			// **TRAMPLE**, yours: what fells a foe and more carries on into the one behind it.
@@ -520,7 +520,7 @@ public static class PartyState
 				continue;
 
 			var overflow = intent.Amount - victim.Block - victim.Hp;
-			(s, more) = HitAlly(s, victim, intent.Amount, attacker.Name);
+			(s, more) = HitAlly(s, victim, intent.Amount, attacker.Name, attacker.Id);
 			events = events.AddRange(more);
 
 			if (overflow > 0 && attacker.HasComponent<Trample>() && Behind(s, victim) is Ally next)
@@ -590,7 +590,8 @@ public static class PartyState
 		GameState s,
 		Ally ally,
 		int amount,
-		string by
+		string by,
+		int byId = 0
 	)
 	{
 		var blocked = Math.Min(amount, ally.Block);
@@ -610,6 +611,7 @@ public static class PartyState
 				Damage = amount - blocked,
 				Blocked = blocked,
 				By = by,
+				AttackerId = byId,
 			},
 		];
 		if (hit.IsKnockedOut && !ally.IsKnockedOut)
@@ -621,7 +623,12 @@ public static class PartyState
 	}
 
 	/// <summary>Damage to a foe: Block first, then HP. Falling is settled later (<see cref="Settle"/>).</summary>
-	internal static (GameState, ImmutableList<GameEvent>) HitFoe(GameState s, Foe foe, int amount)
+	internal static (GameState, ImmutableList<GameEvent>) HitFoe(
+		GameState s,
+		Foe foe,
+		int amount,
+		int byId = 0
+	)
 	{
 		// Off-Balance rides on every hit, whoever lands it — Pike's jab and Bramble's Thorns alike.
 		amount += foe.OffBalance;
@@ -658,6 +665,7 @@ public static class PartyState
 					FoeId = foe.Id,
 					Damage = amount - blocked,
 					Blocked = blocked,
+					AttackerId = byId,
 				},
 			]
 		);

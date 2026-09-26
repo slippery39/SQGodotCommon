@@ -1194,6 +1194,7 @@ public class PartyTests
 		var s = Deal([new(Mon("Pike"), 0)], [Summon(Token(fades: 1, moves: Hit(2)))], Foe(0));
 
 		Assert.That(CanPlay(s, "Summon", 0, foeRow: true), Is.False, "your line");
+		Assert.That(CanPlay(s, "Summon", 1), Is.False, "your FRONT — where it arrives");
 		s = Play(s, "Summon", 0);
 		Assert.That(Line(s), Is.EqualTo("Tok,Pike"));
 
