@@ -87,6 +87,16 @@ public static class KinArt
 		return Drawn[key] = null;
 	}
 
+	/// <summary>
+	/// **A creature's standing sprite** — full body, side-on, facing right, TRANSPARENT — or null.
+	/// `Art/sprites/<name>.png`, made by the recipe in `KinVisualDesign.md` ("The sprite pipeline").
+	/// A creature without one keeps its portrait in a medallion, so sprites can land one at a time.
+	/// </summary>
+	public static Texture2D Sprite(string creature) => Drawing("sprites/" + creature);
+
+	/// <summary>A region's battle backdrop, `Art/backdrops/<region>.png`, or null.</summary>
+	public static Texture2D RegionBackdrop(string region) => Drawing("backdrops/" + region);
+
 	private static Texture2D _backdrop;
 	private static bool _backdropLooked;
 
@@ -502,6 +512,19 @@ public static class KinArt
 		Color border,
 		int borderWidth,
 		int radius
+	) =>
+		ImageTexture.CreateFromImage(
+			RoundedRectImage(width, height, fill, border, borderWidth, radius)
+		);
+
+	/// <summary>A rounded rectangle as an IMAGE, so other generators can compose it (`KinCardKit`).</summary>
+	internal static Image RoundedRectImage(
+		int width,
+		int height,
+		Color fill,
+		Color border,
+		int borderWidth,
+		int radius
 	)
 	{
 		var image = Image.CreateEmpty(width, height, false, Image.Format.Rgba8);
@@ -528,10 +551,13 @@ public static class KinArt
 			image.SetPixel(x, y, onBorder ? border : fill);
 		}
 
-		return ImageTexture.CreateFromImage(image);
+		return image;
 	}
 
-	private static Texture2D Circle(int width, int height, Color fill, Color ring, int ringWidth)
+	private static Texture2D Circle(int width, int height, Color fill, Color ring, int ringWidth) =>
+		ImageTexture.CreateFromImage(CircleImage(width, height, fill, ring, ringWidth));
+
+	internal static Image CircleImage(int width, int height, Color fill, Color ring, int ringWidth)
 	{
 		var image = Image.CreateEmpty(width, height, false, Image.Format.Rgba8);
 		var cx = (width - 1) / 2f;
@@ -552,7 +578,7 @@ public static class KinArt
 			);
 		}
 
-		return ImageTexture.CreateFromImage(image);
+		return image;
 	}
 
 	/// <summary>True for pixels cut away by a rounded corner.</summary>

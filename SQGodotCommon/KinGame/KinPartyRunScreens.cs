@@ -18,6 +18,7 @@ namespace KinGame;
 public sealed partial class KinPartyRunScreens
 {
 	private readonly ColorRect _root;
+	private readonly TextureRect _scene;
 	private readonly VBoxContainer _column;
 
 	public bool IsShowing => _root.Visible;
@@ -33,10 +34,23 @@ public sealed partial class KinPartyRunScreens
 
 	public KinPartyRunScreens(Node parent)
 	{
-		_root = new ColorRect { Color = new Color(KinPalette.Navy, 0.96f), Visible = false };
+		_root = new ColorRect { Color = KinPalette.Navy, Visible = false };
 		_root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 		_root.MouseFilter = Control.MouseFilterEnum.Stop; // nothing under it takes a click
 		parent.AddChild(_root);
+
+		// **A PLACE behind every screen** (style D) — the town, the region's map, the title valley —
+		// not the navy void every run screen used to be. `Art/backdrops/<scene>.png`, dimmed so the
+		// kit's plates read over it; navy stays underneath for a scene not drawn yet.
+		_scene = new TextureRect
+		{
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			Modulate = new Color(0.55f, 0.58f, 0.64f),
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		_scene.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+		_root.AddChild(_scene);
 
 		var centre = new CenterContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
 		centre.SetAnchorsPreset(Control.LayoutPreset.FullRect);
@@ -55,7 +69,8 @@ public sealed partial class KinPartyRunScreens
 	{
 		Begin(
 			"CHOOSE YOUR STARTER",
-			"Catch the rest: weaken a foe to a third of its HP, then throw a Snare."
+			"Catch the rest: weaken a foe to a third of its HP, then throw a Snare.",
+			"title"
 		);
 
 		var row = Row();
@@ -63,7 +78,7 @@ public sealed partial class KinPartyRunScreens
 			row.AddChild(
 				Tile(
 					KinPalette.Companion(companion.Name),
-					KinArt.Drawing(companion.Name),
+					KinArt.Sprite(companion.Name) ?? KinArt.Drawing(companion.Name),
 					companion.Name.ToUpperInvariant(),
 					[
 						Wants.GetValueOrDefault(companion.Name, ""),
@@ -123,7 +138,7 @@ public sealed partial class KinPartyRunScreens
 			row.AddChild(
 				Tile(
 					KinPalette.Slate,
-					KinArt.Drawing(reward.Name),
+					CardArt(reward.Name),
 					$"{reward.Name.ToUpperInvariant()}  ({reward.Cost})",
 					[string.Join(" ", KinRulesText.Lines(reward))],
 					new Vector2(280, 380),
@@ -198,25 +213,26 @@ public sealed partial class KinPartyRunScreens
 			$"{m.Companion.Name.ToUpperInvariant()} {m.Hp}/{m.Companion.Hp}",
 			() => { }
 		);
-		var colour = KinPalette.Companion(m.Companion.Name);
-		button.AddThemeStyleboxOverride("normal", KinPalette.Box(colour, KinPalette.Bone, 2));
-		button.AddThemeStyleboxOverride(
-			"hover",
-			KinPalette.Box(colour.Lightened(0.12f), KinPalette.Gold, 3)
-		);
-		button.AddThemeStyleboxOverride("pressed", KinPalette.Box(colour, KinPalette.Gold, 5));
+		var tint = KinPalette.Companion(m.Companion.Name).Lightened(0.35f);
+		KinUiKit.Style(button, 22);
+		button.AddThemeStyleboxOverride("normal", KinUiKit.Plate("bone", tint));
+		button.AddThemeStyleboxOverride("hover", KinUiKit.Plate("gold", tint.Lightened(0.15f)));
+		// PRESSED is the picked team member in a swap: it must stay unmistakably lit.
+		button.AddThemeStyleboxOverride("pressed", KinUiKit.Plate("gold", KinPalette.Gold));
+		button.Icon = KinCardKit.Medallion(m.Companion.Name);
+		button.CustomMinimumSize = new Vector2(260, 88);
 		return button;
 	}
 
 	// ===== Pieces
 
-	private void Begin(string title, string subtitle)
+	private void Begin(string title, string subtitle, string scene = "greenwood")
 	{
 		foreach (var child in _column.GetChildren())
 			child.QueueFree();
-
-		_column.AddChild(Label(title, 48, KinPalette.Bone));
-		_column.AddChild(Label(subtitle, 22, new Color(KinPalette.Bone, 0.8f)));
+		_scene.Texture = KinArt.RegionBackdrop(scene) ?? KinArt.RegionBackdrop("greenwood");
+		_column.AddChild(Label(title, 56, KinPalette.Gold));
+		_column.AddChild(Label(subtitle, 24, KinPalette.Bone));
 		_root.Visible = true;
 	}
 
@@ -235,14 +251,28 @@ public sealed partial class KinPartyRunScreens
 	private static Label Label(string text, int size, Color colour)
 	{
 		var label = KinPalette.Text(text, size, colour);
+		label.LabelSettings = new LabelSettings
+		{
+			FontSize = size,
+			FontColor = colour,
+			OutlineSize = size >= 40 ? 10 : 6,
+			OutlineColor = new Color(0.04f, 0.06f, 0.09f),
+			ShadowSize = 4,
+			ShadowColor = new Color(0, 0, 0, 0.6f),
+			ShadowOffset = new Vector2(2, 3),
+		};
 		label.MouseFilter = Control.MouseFilterEnum.Ignore;
 		return label;
 	}
 
+	/// <summary>A card's action illustration for a tile, or its old subject art.</summary>
+	private static Texture2D CardArt(string card) =>
+		KinCardKit.Illustration(card, 172) ?? KinArt.Drawing(card);
+
 	private static Button Button(string text, Action pressed)
 	{
-		var button = new Button { Text = text, CustomMinimumSize = new Vector2(200, 56) };
-		button.AddThemeFontSizeOverride("font_size", 24);
+		var button = new Button { Text = text, CustomMinimumSize = new Vector2(220, 60) };
+		KinUiKit.Style(button, 24);
 		button.Pressed += pressed;
 		return button;
 	}
@@ -260,21 +290,18 @@ public sealed partial class KinPartyRunScreens
 		Action pressed
 	)
 	{
+		// The kit's bevelled plate, TINTED toward the tile's colour (a starter's own), so a tile is a
+		// material and still says whose it is. Slate means "no colour of its own": left untinted.
+		var tint = fill == KinPalette.Slate ? Colors.White : fill.Lightened(0.35f);
 		var tile = new Button { CustomMinimumSize = size };
-		tile.AddThemeStyleboxOverride("normal", KinPalette.Box(fill, KinPalette.Bone, 2));
-		tile.AddThemeStyleboxOverride(
-			"hover",
-			KinPalette.Box(fill.Lightened(0.12f), KinPalette.Gold, 5)
-		);
-		tile.AddThemeStyleboxOverride(
-			"pressed",
-			KinPalette.Box(fill.Darkened(0.1f), KinPalette.Gold, 5)
-		);
-		tile.AddThemeStyleboxOverride("focus", KinPalette.Box(fill, KinPalette.Gold, 5));
+		tile.AddThemeStyleboxOverride("normal", KinUiKit.Plate("bone", tint));
+		tile.AddThemeStyleboxOverride("hover", KinUiKit.Plate("gold", tint.Lightened(0.15f)));
+		tile.AddThemeStyleboxOverride("pressed", KinUiKit.Plate("gold", tint.Darkened(0.1f)));
+		tile.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
 		// A tile you cannot take (a shop card you cannot afford) is dimmed, not Godot's dark default.
 		tile.AddThemeStyleboxOverride(
 			"disabled",
-			KinPalette.Box(fill.Darkened(0.35f), new Color(KinPalette.Bone, 0.3f), 2)
+			KinUiKit.Plate("bone", new Color(0.5f, 0.5f, 0.55f, 0.8f))
 		);
 		tile.Pressed += pressed;
 
@@ -301,7 +328,12 @@ public sealed partial class KinPartyRunScreens
 					Texture = art,
 					ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
 					StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-					CustomMinimumSize = new Vector2(0, Mathf.Min(size.Y * 0.4f, 200)),
+					// A tile with little to say gives its art the room (the gym's foes were a small figure over an
+					// empty half tile).
+					CustomMinimumSize = new Vector2(
+						0,
+						Mathf.Min(size.Y * (lines.Length <= 1 ? 0.6f : 0.4f), 220)
+					),
 					MouseFilter = Control.MouseFilterEnum.Ignore,
 				}
 			);

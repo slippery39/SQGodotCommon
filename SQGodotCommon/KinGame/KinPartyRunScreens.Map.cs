@@ -14,7 +14,7 @@ namespace KinGame;
 public sealed partial class KinPartyRunScreens
 {
 	private static Texture2D ArtFor(string name) =>
-		KinArt.Drawing(name) ?? KinArt.Figure(KinArt.ColourFor(name), true);
+		KinArt.Sprite(name) ?? KinArt.Drawing(name) ?? KinArt.Figure(KinArt.ColourFor(name), true);
 
 	/// <summary>What comes after this point of the run, in a few words.</summary>
 	private static string Ahead(PartyRun run) =>
@@ -41,7 +41,8 @@ public sealed partial class KinPartyRunScreens
 	{
 		Begin(
 			$"TOWN — {run.Region.Name.ToUpperInvariant()}  ({run.RegionIndex + 1} OF {run.Regions.Count})",
-			"Everyone is rested to full — you too. Spend your gold, then set out."
+			"Everyone is rested to full — you too. Spend your gold, then set out.",
+			"town"
 		);
 
 		ShowTeam(run, (team, bench) => change(r => r.Swap(team, bench)));
@@ -51,10 +52,10 @@ public sealed partial class KinPartyRunScreens
 
 		var snare = Tile(
 			KinPalette.Slate,
-			null,
+			KinArt.Drawing("cards/snare"),
 			"SNARE",
 			["Catch a foe at a third of its HP or less.", $"{PartyRun.SnarePrice} GOLD"],
-			new Vector2(240, 220),
+			new Vector2(260, 400),
 			() => change(r => r.BuySnare())
 		);
 		snare.Disabled = !run.CanBuySnare;
@@ -64,9 +65,10 @@ public sealed partial class KinPartyRunScreens
 		for (var i = 0; i < cards.Count; i++)
 		{
 			var offer = i;
+			// The card's action picture (style D), as the reward screen shows it.
 			var tile = Tile(
 				KinPalette.Slate,
-				null,
+				run.Sold.Contains(offer) ? null : CardArt(cards[i].Name),
 				run.Sold.Contains(offer)
 					? "SOLD"
 					: $"{cards[i].Name.ToUpperInvariant()} ({cards[i].Cost})",
@@ -77,7 +79,7 @@ public sealed partial class KinPartyRunScreens
 						string.Join(" ", KinRulesText.Lines(cards[i])),
 						$"{PartyRun.CardPrice} GOLD",
 					],
-				new Vector2(240, 220),
+				new Vector2(260, 400),
 				() => change(r => r.BuyCard(offer))
 			);
 			tile.Disabled = !run.CanBuyCard(offer);
@@ -128,7 +130,8 @@ public sealed partial class KinPartyRunScreens
 	{
 		Begin(
 			$"{run.Region.Name.ToUpperInvariant()} ({run.RegionIndex + 1} OF {run.Regions.Count}) — CHOOSE AN AREA",
-			"Each has its own creatures. Two wild fights, a find, then a deeper path — and the gym."
+			"Each has its own creatures. Two wild fights, a find, then a deeper path — and the gym.",
+			"map"
 		);
 
 		var row = Row();
@@ -198,7 +201,7 @@ public sealed partial class KinPartyRunScreens
 					ArtFor(foe.Name),
 					(foe.Name == run.Area.Rare.Name ? "RARE · " : "") + foe.Name.ToUpperInvariant(),
 					[$"HP {foe.MaxHp}"],
-					new Vector2(220, 300),
+					new Vector2(260, 330),
 					deeper
 				)
 			);
@@ -213,7 +216,8 @@ public sealed partial class KinPartyRunScreens
 	{
 		Begin(
 			$"THE GYM — {run.Region.Gym.Name.ToUpperInvariant()}",
-			"Beat their whole line to win. Their creatures cannot be caught."
+			"Beat their whole line to win. Their creatures cannot be caught.",
+			"map"
 		);
 
 		var row = Row();
@@ -224,7 +228,7 @@ public sealed partial class KinPartyRunScreens
 					ArtFor(foe.Name),
 					foe.Name.ToUpperInvariant(),
 					[$"HP {foe.MaxHp}"],
-					new Vector2(220, 300),
+					new Vector2(260, 330),
 					fight
 				)
 			);

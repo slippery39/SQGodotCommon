@@ -125,6 +125,15 @@ public static class KinAnimator
 			return;
 
 		var label = KinPalette.Text(text, 40, colour);
+		// Outlined: the board stands on a painted backdrop now (style D), and a bare number on a
+		// forest was lost.
+		label.LabelSettings = new LabelSettings
+		{
+			FontSize = 44,
+			FontColor = colour == KinPalette.Red ? KinPalette.Red.Lightened(0.3f) : colour,
+			OutlineSize = 8,
+			OutlineColor = new Color(0.04f, 0.06f, 0.09f),
+		};
 		label.MouseFilter = Control.MouseFilterEnum.Ignore;
 		label.ZIndex = 200;
 

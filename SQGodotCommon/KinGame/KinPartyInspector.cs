@@ -48,7 +48,7 @@ public sealed class KinPartyInspector
 	private Vector2 _screen;
 
 	/// <summary>Shows the panel beside `cell` — to its right, or its left if it would run off screen.</summary>
-	public void Show(Creature creature, int order, Rect2 cell, Vector2 screen)
+	public void Show(Creature creature, int step, Rect2 cell, Vector2 screen)
 	{
 		foreach (var child in _lines.GetChildren())
 		{
@@ -69,8 +69,8 @@ public sealed class KinPartyInspector
 		);
 		Line(
 			ally is { HasActed: true } ? "Has already acted this turn."
-				: order > 0
-					? $"Acts {Ordinal(order)} when you end the turn — the lines act from the back."
+				: step > 0
+					? $"Acts in step {step} when you end the turn — both lines act from the back, at once."
 				: "",
 			16,
 			KinPalette.Bone
@@ -194,15 +194,6 @@ public sealed class KinPartyInspector
 			Aim.Sweep => $"every {victims}",
 			Aim.Hunt => $"the lowest-HP {victims}, wherever it stands",
 			_ => $"the {victims} in front",
-		};
-
-	private static string Ordinal(int n) =>
-		n switch
-		{
-			1 => "1st",
-			2 => "2nd",
-			3 => "3rd",
-			_ => $"{n}th",
 		};
 
 	private void Line(string text, int size, Color colour)

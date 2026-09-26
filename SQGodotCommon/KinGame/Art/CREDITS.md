@@ -9,6 +9,9 @@ What matters here, beside the assets:
 - Icons in `icons/` are **game-icons.net, CC BY 3.0**, modified (background plate removed, recoloured
   to the palette). Adding another icon means adding a row to the root `CREDITS.md` — the licence is
   per-icon.
+- `sprites/` and `backdrops/` are AI-generated for this project (ChatGPT image generation and a
+  local ComfyUI/SDXL model; `KinVisualDesign.md` has the recipe). They need no third-party
+  attribution. `backdrops/greenwood.png` is a PLACEHOLDER.
 - Everything else in this folder is original to the project. The rules for drawing a new one are in
   `KinUI.md` under "Art".
 - New files are invisible until `godot-mono --path SQGodotCommon --headless --import` has run.

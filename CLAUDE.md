@@ -91,6 +91,7 @@ superseded by this paragraph.
 | Earlier handoffs, superseded — every other `HANDOFF-Kin*.md` | root | read only for their scars section |
 | Credits — **must ship** | `CREDITS.md` | before release, and when adding any third-party asset |
 | UI design — layout contract AND the visual language | `KinUI.md` | read it before touching `SQGodotCommon/KinGame/` |
+| **The look — STYLE D chosen (2026-09-26): requirements, mockups, the sprite recipe** | `KinVisualDesign.md`; prompts in `docs/mockups/mockup-prompts.md` | read it before any visual work; it overrides `KinUI.md`'s style |
 | The mockup, and the backdrop prompt | `docs/mockups/` | when changing layout or generating art |
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
 | Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |

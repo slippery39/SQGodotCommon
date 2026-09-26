@@ -101,6 +101,10 @@ public static class KinCardFace
 		Enlarge(ui, "NameLabel", Pt(26));
 		Enlarge(ui, "ManaCostLabel", Pt(34));
 		Enlarge(ui, "RulesTextLabel", Pt(22));
+		// Dark ink on parchment (style D) needs no outline and no shadow: the shared settings carry a
+		// black outline AND a size-10 black shadow, which smeared the ink into a blot.
+		if (ui.FindChild("RulesTextLabel", true, false) is Label { LabelSettings: { } ink })
+			ink.OutlineSize = ink.ShadowSize = 0;
 		Enlarge(ui, "PowerToughnessLabel", Pt(30));
 		Enlarge(ui, AttackLabelName, Pt(30));
 	}
@@ -112,6 +116,7 @@ public static class KinCardFace
 
 	private const string AttackLabelName = "KinAttackLabel";
 	private const string AttackIconName = "KinAttackIcon";
+	private const string MedallionName = "KinOwnerMedallion";
 
 	/// <summary>
 	/// Splits the one `12/20` badge into the mockup's two marks: a bone SWORD with the power beside
@@ -150,6 +155,9 @@ public static class KinCardFace
 			|| container.FindChild(AttackIconName, true, false) is not null
 		)
 			return;
+
+		// The owner's face at the card's foot (style D): a monster-deck card leaves with its monster.
+		container.AddChild(new Sprite2D { Name = MedallionName, Position = new Vector2(0, 206) });
 
 		var icon = new Sprite2D
 		{
@@ -229,6 +237,9 @@ public static class KinCardFace
 		// frame colour carries the unit/rite distinction as well — one signal for it is not enough.
 		if (ui.FindChild(AttackIconName, true, false) is Sprite2D icon)
 			icon.Visible = unit is not null;
+
+		if (ui.FindChild(MedallionName, true, false) is Sprite2D medallion)
+			medallion.Texture = KinCardKit.Medallion(card.OwnerName);
 	}
 
 	/// <summary>
@@ -306,10 +317,8 @@ public static class KinCardFace
 		// the deck when that monster faints, so whose it is must read at a glance. Trainer cards
 		// stay plain.
 		var owner = card.OwnerName.Length > 0 ? card.OwnerName : null;
-		var frame =
-			owner is not null ? KinPalette.Companion(owner)
-			: unit is null ? KinArt.RiteCard
-			: KinArt.UnitCard;
+		// Style D: the EDGE is the owner's colour, neutral steel for a trainer card.
+		var edge = owner is not null ? KinPalette.Companion(owner) : KinCardKit.Neutral;
 		var ground = owner is not null
 			? KinPalette.Companion(owner).Lightened(0.3f)
 			: KinArt.ColourFor(card.Name);
@@ -318,12 +327,13 @@ public static class KinCardFace
 		return new InternalCardUI2D.Details
 		{
 			Id = card.Id.ToString(),
-			CardName = card.Name,
+			CardName = card.Name.ToUpperInvariant(),
 			ManaCost = card.Cost.ToString(),
 			// Blank: the reference card has no type line, and "Unit" floating across the face says
 			// nothing a stat badge does not already say. A Rite has no badge, which is the tell.
 			// **The companion game puts a monster-deck card's OWNER here.**
-			TypeLine = card.OwnerName.ToUpperInvariant(),
+			// Empty: the owner is the medallion at the card's foot now (style D).
+			TypeLine = "",
 
 			// A rite's text is the only thing telling you what it does, so it goes where rules text
 			// goes. It is authored beside the effect it describes — see KinEffect.Text.
@@ -343,8 +353,8 @@ public static class KinCardFace
 			// **The frame says what KIND of card this is** — a body you place, or a Rite that
 			// resolves and is gone. That is the first question a turn asks of a hand, and it used
 			// to be answerable only by noticing that a stat badge was missing.
-			MainFrameTexture = KinArt.Body(frame),
-			NameFrameTexture = KinArt.Blank(279, 53),
+			MainFrameTexture = KinCardKit.Frame(edge),
+			NameFrameTexture = KinCardKit.NamePlate,
 
 			// The art window is a real window again, and it is a MID-TONE. The drawings are
 			// near-black silhouettes: on the card body they were a dark shape on a dark shape and
@@ -355,13 +365,16 @@ public static class KinCardFace
 			// brown rectangle behind the figure. A default returning is not the same as a value
 			// never set, and it looks like a regression you did not make.
 			ArtFrameTexture = KinArt.ArtBlock(ground, ArtHeightFor(card)),
-			RulesTextFrameTexture = KinArt.Blank(279, 158),
-			ManaCostFrameTexture = KinArt.CostBadge,
-			ArtworkTexture = KinArt.CardArt(subject, ground, ArtHeightFor(card)),
+			RulesTextFrameTexture = KinCardKit.ParchmentBox,
+			ManaCostFrameTexture = KinCardKit.CostGem,
+			// The ACTION picture when there is one (style D); else the old subject art.
+			ArtworkTexture =
+				KinCardKit.Illustration(card.Name, ArtHeightFor(card))
+				?? KinArt.CardArt(subject, ground, ArtHeightFor(card)),
 
 			NameColor = KinPalette.Bone,
 			ManaCostColor = KinPalette.Bone,
-			RulesTextColor = KinPalette.Bone,
+			RulesTextColor = KinCardKit.Ink,
 
 			// The border is painted into the frame texture, so the shader outline would only
 			// double it.

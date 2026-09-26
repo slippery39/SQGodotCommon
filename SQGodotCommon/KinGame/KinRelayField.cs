@@ -8,10 +8,10 @@ using KinCore.Party;
 
 namespace KinGame;
 
-/// <summary>What the board knows that the field shows: the forecast, the order, what is lit, what is held.</summary>
+/// <summary>What the board knows that the field shows: the forecast, the steps, what is lit, what is held.</summary>
 public sealed record FieldContext(
 	ImmutableDictionary<int, int> Forecast,
-	Dictionary<int, int> Order,
+	Dictionary<int, int> Steps,
 	HashSet<int> Drops,
 	KinCard Focus,
 	bool Snaring,
@@ -32,11 +32,25 @@ public sealed record FieldContext(
 /// </summary>
 public sealed class KinRelayField
 {
+	/// <summary>The narrowest a place gets: five a side.</summary>
 	public const int Slot = KinRelayCreature.Width;
 	public const int Gap = 96;
 	public const int Half = Slot * PartyBattle.MaxLine;
 	public const int Width = Half * 2 + Gap;
-	public const int Height = 400;
+
+	/// <summary>A view grows to this with few creatures a side — the mockup's three-a-side size.</summary>
+	private const float MaxScale = 1.3f;
+	public const int Height = (int)(KinRelayCreature.Height * MaxScale) + 8;
+
+	/// <summary>
+	/// **The width of a place NOW: the longest line spread across its half**, as the style-D mockup
+	/// spreads three a side over the screen (never under five a side's 176). Safe because no drop
+	/// lands on an empty place beyond a line's end — a summon lands on your front, Gust swaps their
+	/// front two, deploy reorders who is there.
+	/// </summary>
+	private float _slot = Slot;
+
+	private float ViewScale => Mathf.Min(MaxScale, _slot / Slot);
 
 	public Control Root { get; }
 
@@ -60,38 +74,31 @@ public sealed class KinRelayField
 			var hint = KinPalette.Text("", 22, KinPalette.Gold);
 			hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 			hint.CustomMinimumSize = new Vector2(1, 0);
-			hint.Position = SlotRect(d).Position + new Vector2(0, 170);
 			hint.Size = new Vector2(Slot, 80);
 			hint.MouseFilter = Control.MouseFilterEnum.Ignore;
 			Root.AddChild(hint);
 			_hints[d] = hint;
 		}
 
-		// The one sentence the layout needs: which way is front.
-		var caption = KinPalette.Text(
-			"YOUR LINE  ▶  FRONT   ·   FRONT  ◀  THEIR LINE",
-			18,
-			KinPalette.Bone
-		);
-		caption.Modulate = new Color(1, 1, 1, 0.6f);
-		caption.Position = new Vector2(0, Height - 4);
-		caption.Size = new Vector2(Width, 24);
-		caption.MouseFilter = Control.MouseFilterEnum.Ignore;
-		Root.AddChild(caption);
+		// No "YOUR LINE ▶ FRONT" caption any more: the sprites stand facing each other, which says it.
 	}
 
 	// ===== Geometry
 
 	/// <summary>The place a drop number names, in field coordinates: your front nearest the middle.</summary>
-	public static Rect2 SlotRect(int drop) =>
+	public Rect2 SlotRect(int drop) =>
 		new(
 			drop < PartyBattle.MaxLine
-				? Half - (drop + 1) * Slot
-				: Half + Gap + (drop - PartyBattle.MaxLine) * Slot,
+				? Half - (drop + 1) * _slot
+				: Half + Gap + (drop - PartyBattle.MaxLine) * _slot,
 			0,
-			Slot,
+			_slot,
 			Height
 		);
+
+	/// <summary>Where a view stands in a place: centred, at the view's current scale.</summary>
+	private Vector2 ViewAt(int drop) =>
+		SlotRect(drop).Position + new Vector2((_slot - KinRelayCreature.Width * ViewScale) / 2, 0);
 
 	private Rect2 GlobalSlot(int drop) =>
 		new(Root.GetGlobalRect().Position + SlotRect(drop).Position, SlotRect(drop).Size);
@@ -133,6 +140,8 @@ public sealed class KinRelayField
 	{
 		_heldId = ctx.HeldId;
 		var standing = new HashSet<int>();
+		var longest = Mathf.Max(s.LivingAllies().Count(), s.LivingFoes().Count());
+		_slot = Mathf.Max(Slot, Half / (float)Mathf.Max(3, longest));
 
 		foreach (var ally in s.LivingAllies())
 			Place(ally, AllyLook(s, ally, ctx), ally.Position, standing);
@@ -148,6 +157,7 @@ public sealed class KinRelayField
 		for (var d = 0; d < _hints.Length; d++)
 		{
 			var empty = d < PartyBattle.MaxLine ? d >= allies : d - PartyBattle.MaxLine >= foes;
+			_hints[d].Position = SlotRect(d).Position + new Vector2((_slot - Slot) / 2, 220);
 			_hints[d].Text =
 				empty && ctx.Focus is not null && ctx.Drops.Contains(d)
 					? $"▲ {ctx.Focus.Name.ToUpperInvariant()} HERE"
@@ -158,7 +168,7 @@ public sealed class KinRelayField
 	private void Place(Creature c, CreatureLook look, int drop, HashSet<int> standing)
 	{
 		standing.Add(c.Id);
-		var at = SlotRect(drop).Position;
+		var at = ViewAt(drop);
 		if (!_views.TryGetValue(c.Id, out var view))
 		{
 			view = _views[c.Id] = new KinRelayCreature();
@@ -166,6 +176,7 @@ public sealed class KinRelayField
 			Root.AddChild(view.Root);
 			KinAnimator.Pop(view.Root);
 		}
+		view.Fit(ViewScale);
 		view.Show(look);
 		_targets[c.Id] = at;
 	}
@@ -193,14 +204,14 @@ public sealed class KinRelayField
 	public void Lunge(GameState s, int attackerId)
 	{
 		if (_views.TryGetValue(attackerId, out var view))
-			KinAnimator.Lunge(view.Sprite, s.GetObject(attackerId) is Ally ? 40 : -40);
+			KinAnimator.Lunge(view.Sprite, s.GetObject(attackerId) is Ally ? 48 : -48);
 	}
 
 	/// <summary>DEPLOY: the held creature follows the mouse until it is dropped.</summary>
 	public void Follow(int creatureId, Vector2 global)
 	{
 		if (_views.TryGetValue(creatureId, out var view))
-			view.Root.GlobalPosition = global - new Vector2(Slot / 2f, 140);
+			view.Root.GlobalPosition = global - new Vector2(_slot / 2f, 140 * ViewScale);
 	}
 
 	// ===== Looks — strings from facts
@@ -212,20 +223,20 @@ public sealed class KinRelayField
 		var loses = ctx.Forecast.GetValueOrDefault(ally.Id);
 		var colour = KinPalette.Companion(ally.Name);
 
+		var (move, icon) = ally.HasActed
+			? ("acted", null)
+			: KinMoveText.Short(
+				next,
+				next.Kind == IntentType.Attack ? ally.AttackFor(next.Amount) : next.Amount
+			);
+
 		return new CreatureLook(
-			ally.HasActed
-				? "ACTED THIS TURN"
-				: KinMoveText
-					.Says(
-						next,
-						next.Kind == IntentType.Attack ? ally.AttackFor(next.Amount) : next.Amount
-					)
-					.ToUpperInvariant(),
-			KinPalette.Gold,
+			move,
+			icon,
 			Art(ally.Name, colour.Lightened(0.45f), hostile: false),
-			KinArt.Drawing(ally.Name) is not null,
+			KinArt.Sprite(ally.Name) is not null,
 			FacesLeft: false,
-			ally.HasActed ? 0 : ctx.Order.GetValueOrDefault(ally.Id),
+			ally.HasActed ? 0 : ctx.Steps.GetValueOrDefault(ally.Id),
 			drop is not null || ally.Id == ctx.SelectedId || ally.Id == ctx.HeldId
 				? KinPalette.Gold
 				: colour,
@@ -241,7 +252,7 @@ public sealed class KinRelayField
 					: ally.Passive
 			),
 			drop is not null ? $"▲ {drop.Name.ToUpperInvariant()} HERE"
-				: loses > 0 ? $"▼ −{loses} this turn"
+				: loses > 0 ? $"−{loses}"
 				: "",
 			drop is not null ? KinPalette.Gold : KinPalette.Red
 		);
@@ -253,17 +264,17 @@ public sealed class KinRelayField
 		var drop = ctx.Drops.Contains(PartyBattle.MaxLine + foe.Position) ? ctx.Focus : null;
 		var snareHere = ctx.Snaring && s.CatchRefusal(foe) is null;
 		var loses = ctx.Forecast.GetValueOrDefault(foe.Id);
-		var attacks = intent.Kind == IntentType.Attack && !foe.Staggered;
+		var (move, icon) = foe.Staggered
+			? ("staggered", null)
+			: KinMoveText.Short(intent, intent.Amount);
 
 		return new CreatureLook(
-			foe.Staggered
-				? "STAGGERED"
-				: KinMoveText.Says(intent, intent.Amount).ToUpperInvariant(),
-			attacks ? KinPalette.Red : KinPalette.Bone,
+			move,
+			icon,
 			Art(foe.Name, KinArt.ColourFor(foe.Name), hostile: true),
-			KinArt.Drawing(foe.Name) is not null,
+			KinArt.Sprite(foe.Name) is not null,
 			FacesLeft: true,
-			ctx.Order.GetValueOrDefault(foe.Id),
+			ctx.Steps.GetValueOrDefault(foe.Id),
 			drop is not null || snareHere ? KinPalette.Gold : KinPalette.Red,
 			drop is not null || snareHere,
 			foe.Name.ToUpperInvariant(),
@@ -278,18 +289,21 @@ public sealed class KinRelayField
 			),
 			snareHere ? "◆ SNARE IT HERE"
 				: drop is not null ? $"▼ {drop.Name.ToUpperInvariant()} HERE"
-				: loses > 0 ? $"−{loses} this turn"
+				: loses > 0 ? $"−{loses}"
 				: "",
-			snareHere || drop is not null ? KinPalette.Gold : KinPalette.Bone
+			snareHere || drop is not null ? KinPalette.Gold : KinPalette.Red
 		);
 	}
 
 	private static string Join(params string[] parts) =>
 		string.Join(" · ", parts.Where(p => p.Length > 0));
 
-	/// <summary>A drawing if one exists, else the silhouette in the creature's colour.</summary>
+	/// <summary>
+	/// A standing sprite if one exists, else the portrait drawing, else the silhouette in the
+	/// creature's colour — the last two sit in the medallion.
+	/// </summary>
 	private static Texture2D Art(string name, Color colour, bool hostile) =>
-		KinArt.Drawing(name) ?? KinArt.Figure(colour, hostile);
+		KinArt.Sprite(name) ?? KinArt.Drawing(name) ?? KinArt.Figure(colour, hostile);
 }
 
 /// <summary>**A move, as the player reads it** — on a creature's telegraph and on the starter screen.</summary>
@@ -309,6 +323,29 @@ public static class KinMoveText
 			IntentType.Echo => $"{intent.Name}: last spell",
 			IntentType.Summon => $"{intent.Name}: a {intent.Summons?.Creature.Name}",
 			_ => intent.Name,
+		};
+
+	/// <summary>
+	/// **A move on the badge above a creature's head** — an icon and "6 → front", as the style-D
+	/// mockup has it. The move's NAME is dropped here (it did not fit a place at a readable size) and
+	/// kept in the inspector and on the starter screen, which use <see cref="Says"/>.
+	/// </summary>
+	public static (string Text, Texture2D Icon) Short(Intent intent, int amount) =>
+		intent.Kind switch
+		{
+			IntentType.Attack => (
+				$"{amount} → {Where(intent.Target)}" + (intent.Steals ? " + steal" : ""),
+				KinArt.AttackIcon
+			),
+			IntentType.Block => (
+				$"+{amount}" + (intent.Target == Aim.Ahead ? " ahead" : ""),
+				KinArt.GuardIcon
+			),
+			IntentType.Move => (amount < 0 ? "forward" : "back", null),
+			IntentType.Shove => ("swap front two", null),
+			IntentType.Echo => ("echo spell", null),
+			IntentType.Summon => ($"summon {intent.Summons?.Creature.Name}", null),
+			_ => (intent.Name, null),
 		};
 
 	/// <summary>Where a move lands, in a word or two.</summary>

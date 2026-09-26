@@ -55,6 +55,7 @@ public partial class KinPartyBoard : Node2D
 	private Label _title;
 	private Label _subtitle;
 	private Label _energy;
+	private Label _energyNote;
 
 	/// <summary>The Snare item: press it, then click a foe. Armed = the next foe click throws it.</summary>
 	private Button _snare;
@@ -630,8 +631,12 @@ public partial class KinPartyBoard : Node2D
 		var (creature, cell) = hovered.Value;
 		_inspectedId = creature.Id;
 		_inspectedState = _state;
-		var order = _state.ActingOrder().FindIndex(c => c.Id == creature.Id) + 1;
-		_inspector.Show(creature, order, cell.GetGlobalRect(), GetViewportRect().Size);
+		_inspector.Show(
+			creature,
+			StepOf(creature.Id),
+			cell.GetGlobalRect(),
+			GetViewportRect().Size
+		);
 	}
 
 	private void Render(ImmutableList<GameEvent> events)
@@ -651,9 +656,10 @@ public partial class KinPartyBoard : Node2D
 			+ (bench.Count > 0 ? $"   Bench: {string.Join(", ", bench)}." : "");
 
 		// Borrowed energy (Surge) is a cost you pay later — it must be visible now.
-		_energy.Text =
-			$"ENERGY {party.Energy}/{party.MaxEnergy}"
-			+ (party.EnergyDebt > 0 ? $"  −{party.EnergyDebt} NEXT TURN" : "");
+		_energy.Text = $"{party.Energy}/{party.MaxEnergy}";
+		_energyNote.Text = party.EnergyDebt > 0 ? $"−{party.EnergyDebt} NEXT TURN" : "ENERGY";
+		_energyNote.LabelSettings.FontColor =
+			party.EnergyDebt > 0 ? KinPalette.Red.Lightened(0.3f) : KinPalette.Bone;
 		_snare.Text = $"SNARE ×{party.Snares}";
 		_snare.Disabled = party.IsOver || party.Snares == 0;
 		_endTurn.Disabled = party.IsOver;
@@ -673,17 +679,24 @@ public partial class KinPartyBoard : Node2D
 		_field.Settle(Animate(events));
 	}
 
+	private Dictionary<int, int> Steps() =>
+		_state
+			.ActingSteps()
+			.SelectMany((step, i) => step.Select(c => (c.Id, Step: i + 1)))
+			.ToDictionary(p => p.Id, p => p.Step);
+
+	private int StepOf(int creatureId) => Steps().GetValueOrDefault(creatureId);
+
 	/// <summary>
 	/// **The field, drawn from state.** `settleAfter` null leaves the line where it stands (Render
 	/// slides it after the turn's blows); otherwise the line settles after that long.
 	/// </summary>
 	private void RenderRows(double? settleAfter = 0)
 	{
-		// **The order badge**: who acts when at the end of the turn, straight from the engine.
-		var order = _state
-			.ActingOrder()
-			.Select((c, i) => (c.Id, i))
-			.ToDictionary(p => p.Id, p => p.i + 1);
+		// **The step badge**: which step of the end of the turn each creature acts in, straight from
+		// the engine. Both sides act AT ONCE within a step, so a pair shares its number — the flat
+		// 1–6 order this replaced made simultaneous blows look sequential.
+		var steps = Steps();
 
 		var focus =
 			_focusCardId != 0
@@ -704,7 +717,7 @@ public partial class KinPartyBoard : Node2D
 			_state,
 			new FieldContext(
 				_state.ForecastIfTurnEndsNow().Hp,
-				order,
+				steps,
 				drops,
 				focus,
 				_snaring,
@@ -880,6 +893,26 @@ public partial class KinPartyBoard : Node2D
 		ground.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 		layer.AddChild(ground);
 
+		// **The stage** (style D): the lines stand on a painted ground, not in a navy void.
+		// ponytail: one backdrop for every battle; per-region when there are more than one.
+		if (KinArt.RegionBackdrop("greenwood") is { } backdrop)
+		{
+			var stage = new TextureRect
+			{
+				Texture = backdrop,
+				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+				StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+				MouseFilter = Control.MouseFilterEnum.Ignore,
+				// Lightly dimmed: every word on it is outlined, and the mockup's stage is bright.
+				Modulate = new Color(0.86f, 0.88f, 0.9f),
+			};
+			stage.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+			// Raised, so the backdrop's meadow is under the lines' feet rather than its mountains —
+			// the stage is taller than the screen and the sky is what gets cropped.
+			stage.OffsetTop = -StageLift;
+			layer.AddChild(stage);
+		}
+
 		var margin = new MarginContainer();
 		margin.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 		margin.AddThemeConstantOverride("margin_left", 32);
@@ -894,17 +927,21 @@ public partial class KinPartyBoard : Node2D
 
 		column.AddChild(BuildBanner());
 		_field = new KinRelayField();
-		// Centred in the room between the banner and the status strip, both ways.
+		// Centred in the room between the banner and the hint, both ways.
 		var centred = new CenterContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
 		centred.AddChild(_field.Root);
 		column.AddChild(centred);
-		column.AddChild(BuildStatus());
+		column.AddChild(BuildHint());
 		column.AddChild(new Control { CustomMinimumSize = new Vector2(0, KinHandView.BandHeight) });
+		BuildCorners(layer);
 
-		// The log sits to the right of the rows, where the board has room.
-		_log = KinPalette.Text("", 16, KinPalette.Bone, HorizontalAlignment.Left);
-		_log.Position = new Vector2(1560, 110);
-		_log.Size = new Vector2(340, 300);
+		// The log sits over END TURN, beside the fan: the field now spans the width (style D), and
+		// top-right it ran over the back foe's badge.
+		_log = Outlined("", 16, KinPalette.Bone);
+		_log.HorizontalAlignment = HorizontalAlignment.Left;
+		_log.VerticalAlignment = VerticalAlignment.Bottom;
+		_log.Position = new Vector2(1572, 690);
+		_log.Size = new Vector2(320, 190);
 		_log.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 		_log.Modulate = new Color(1, 1, 1, 0.8f);
 		layer.AddChild(_log);
@@ -939,36 +976,58 @@ public partial class KinPartyBoard : Node2D
 		_inspector = new KinPartyInspector(layer);
 	}
 
+	/// <summary>How far the backdrop is raised: ground at the feet line, sky cropped (tuned by capture).</summary>
+	private const int StageLift = 380;
+
+	/// <summary>A button in the kit (`KinUiKit`): textured, brightens on hover, dims when it cannot be pressed.</summary>
+	private static void StyleButton(Button button, int fontSize, bool hex = false) =>
+		KinUiKit.Style(button, fontSize, hex);
+
+	private static Label Outlined(string text, int size, Color colour)
+	{
+		var label = KinPalette.Text(text, size, colour);
+		label.LabelSettings = new LabelSettings
+		{
+			FontSize = size,
+			FontColor = colour,
+			OutlineSize = 6,
+			OutlineColor = new Color(0.04f, 0.06f, 0.09f),
+		};
+		return label;
+	}
+
 	private Control BuildBanner()
 	{
-		var panel = new PanelContainer();
-		panel.AddThemeStyleboxOverride("panel", KinPalette.Box(KinPalette.Slate));
-
 		var across = new HBoxContainer();
 		across.AddThemeConstantOverride("separation", 16);
-		panel.AddChild(across);
 
-		var text = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
-		_title = KinPalette.Text("", 30, KinPalette.Bone, HorizontalAlignment.Left);
+		// The region plate, top-left: as wide as its words, not the screen.
+		var plate = new PanelContainer { SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin };
+		plate.AddThemeStyleboxOverride("panel", KinUiKit.Plate("bone"));
+		var text = new VBoxContainer();
+		text.AddThemeConstantOverride("separation", 0);
+		_title = KinPalette.Text("", 28, KinPalette.Bone, HorizontalAlignment.Left);
 		_subtitle = KinPalette.Text("", 18, KinPalette.Bone, HorizontalAlignment.Left);
 		_subtitle.Modulate = new Color(1, 1, 1, 0.75f);
 		text.AddChild(_title);
 		text.AddChild(_subtitle);
-		across.AddChild(text);
+		plate.AddChild(text);
+		across.AddChild(plate);
+		across.AddChild(new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill });
 
-		_practicePicker = new OptionButton();
-		_practicePicker.AddThemeFontSizeOverride("font_size", 18);
+		_practicePicker = new OptionButton { SizeFlagsVertical = Control.SizeFlags.ShrinkBegin };
+		StyleButton(_practicePicker, 18);
 		for (var i = 0; i < PartyContent.Scenarios.Count; i++)
 			_practicePicker.AddItem(PartyContent.Scenarios[i].Name.ToUpperInvariant(), i);
 		_practicePicker.ItemSelected += index => StartScenario((int)index);
 		across.AddChild(_practicePicker);
 
-		var menu = new Button { Text = "MENU" };
-		menu.AddThemeFontSizeOverride("font_size", 18);
+		var menu = new Button { Text = "MENU", SizeFlagsVertical = Control.SizeFlags.ShrinkBegin };
+		StyleButton(menu, 18);
 		menu.Pressed += () => Project.GameManager.Instance.GoToMainMenu();
 		across.AddChild(menu);
 
-		return panel;
+		return across;
 	}
 
 	/// <summary>Esc goes back to the main menu, as the MENU button does.</summary>
@@ -978,40 +1037,71 @@ public partial class KinPartyBoard : Node2D
 			Project.GameManager.Instance.GoToMainMenu();
 	}
 
-	private Control BuildStatus()
+	/// <summary>
+	/// **The hint — how to play, the deploy instruction, and the engine's refusal of a play** — as
+	/// outlined words over the stage, where the status strip was. Wraps with a minimum width of 1:
+	/// unwrapped, a long hint was as wide as its text and pushed the column off the screen.
+	/// </summary>
+	private Control BuildHint()
 	{
-		var panel = new PanelContainer();
-		panel.AddThemeStyleboxOverride("panel", KinPalette.Box(KinPalette.Slate));
-
-		var across = new HBoxContainer();
-		across.AddThemeConstantOverride("separation", 24);
-		panel.AddChild(across);
-
-		_energy = KinPalette.Text("", 24, KinPalette.Gold);
-		_hint = KinPalette.Text(HowToPlay, 18, KinPalette.Bone, HorizontalAlignment.Left);
-		_hint.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-		// Wraps, with a minimum width of 1: unwrapped, a long hint was as wide as its text and pushed
-		// END TURN — and the whole column with it — off the screen.
+		_hint = Outlined(HowToPlay, 20, KinPalette.Bone);
 		_hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 		_hint.CustomMinimumSize = new Vector2(1, 0);
+		return _hint;
+	}
 
-		_endTurn = new Button { Text = "END TURN" };
-		_endTurn.AddThemeFontSizeOverride("font_size", 22);
-		_endTurn.Pressed += OnEndTurn;
+	/// <summary>
+	/// **The corners of the hand band, as the mockup has them**: the energy ORB with the Snares under
+	/// it bottom-left, END TURN bottom-right. Placed on the 1920x1080 canvas by hand — they sit
+	/// beside the fan, which no container lays out.
+	/// </summary>
+	private void BuildCorners(CanvasLayer layer)
+	{
+		var canvas = GetViewportRect().Size;
+		const int orb = 150;
+
+		// The orb is a picture (`Art/ui/orb.png`: a glossy sphere in a studded gold ring), not a
+		// round Panel — the flat disc was the plainest thing on the screen.
+		var disc = new TextureRect
+		{
+			Texture = KinArt.Drawing("ui/orb"),
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.Scale,
+			Position = new Vector2(38, canvas.Y - 272),
+			Size = new Vector2(orb + 20, orb + 20),
+		};
+		layer.AddChild(disc);
+
+		_energy = Outlined("", 48, KinPalette.Bone);
+		_energy.Position = new Vector2(10, 40);
+		_energy.Size = new Vector2(orb, 60);
+		disc.AddChild(_energy);
+		_energyNote = Outlined("ENERGY", 16, KinPalette.Bone);
+		_energyNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+		_energyNote.Position = new Vector2(20, 96);
+		_energyNote.Size = new Vector2(orb - 20, 40);
+		disc.AddChild(_energyNote);
 
 		_snare = new Button
 		{
 			Text = "SNARE",
 			TooltipText = "Catch a foe at a third of its HP or less. Costs 1 energy.",
+			Position = new Vector2(48, canvas.Y - 96),
+			Size = new Vector2(orb, 56),
 		};
-		_snare.AddThemeFontSizeOverride("font_size", 22);
+		StyleButton(_snare, 22);
 		_snare.Pressed += OnSnare;
+		layer.AddChild(_snare);
 
-		across.AddChild(_energy);
-		across.AddChild(_snare);
-		across.AddChild(_hint);
-		across.AddChild(_endTurn);
-		return panel;
+		_endTurn = new Button
+		{
+			Text = "END TURN",
+			Position = new Vector2(canvas.X - 48 - 300, canvas.Y - 190),
+			Size = new Vector2(300, 96),
+		};
+		StyleButton(_endTurn, 36, hex: true);
+		_endTurn.Pressed += OnEndTurn;
+		layer.AddChild(_endTurn);
 	}
 
 	/// <summary>Every Control but a Button steps out of the mouse's way — card hover needs it.</summary>

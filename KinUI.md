@@ -23,6 +23,9 @@ spec of the two** — it is the information set that survived real play, and it 
 
 ## Style — flat vector, chosen 2026-09-14
 
+> **REPLACED (2026-09-26) by style D, fine line art:** `KinVisualDesign.md`. The layout contract
+> and the readability rules in this file still stand; the style below does not.
+
 Two mockups were generated, painterly-grimy and flat-vector. **Flat vector wins on producibility:**
 silhouettes and a fixed palette are something one person can draw twenty more of during a jam.
 Painted creature art is not.
@@ -179,7 +182,15 @@ command shipped unwired for two sessions.
 
 **Two lines of creatures facing each other, the FRONTS meeting in the middle** (`KinRelayPlan.md`,
 Phase 4). The rows of cells and everything below about columns, steps, trainer and leader health
-are history. The banner, the status strip, the hand band, the choice panel and the inspector stay.
+are history. The hand band, the choice panel and the inspector stay.
+
+**The frame (style D, 2026-09-26)**: the full-width banner and status strip are GONE. Top-left, a
+region PLATE as wide as its words (title, and the subtitle that names the knocked-out and the
+bench); top-right, the practice picker and MENU as kit buttons. Bottom-left, the energy ORB
+("3/3", with ENERGY or "−1 NEXT TURN" under it) and SNARE ×N below it; bottom-right, a big
+framed END TURN (FIGHT while deploying). The hint — how to play, deploy, and the engine's refusal
+of a play — is outlined words above the hand. The kit is `Plate`/`StyleButton` in `KinPartyBoard`:
+navy at 0.92, a thin gold border (bone for information), gold text on hover.
 
 **The field** (`KinRelayField`, 1856 x 400 on the 1920 x 1080 canvas) replaces the two rows:
 
@@ -193,13 +204,27 @@ are history. The banner, the status strip, the hand band, the choice panel and t
 - **A creature is a VIEW keyed by its id, not a slot.** It stands at its line position and SLIDES
   to a new one when the line changes (a faint, a swap, a token in front, deploy). The slide waits
   until the turn's events have played, so a blow's number rises off the place it landed.
-- **The view, top to bottom** (`KinRelayCreature`, 176 wide): the NEXT MOVE with where it lands and
-  the order badge ("2 · JAB 5 → FRONT"; gold yours, red theirs); the SPRITE — a 150px medallion,
-  the portrait cropped round, or the silhouette for a creature not drawn yet, foes flipped to face
-  left — ringed in the owner's colour (red for foes, GOLD when it is a legal drop, the Snare's
-  target, or picked up in deploy); the NAME; an HP bar with "HP / MAX" and Block; one STATUS line
-  (the passive, "TOKEN · FADES IN 1", OFF-BALANCE, ◆ CATCH, STAGGERED); one NOTE line (the forecast
-  in red, or the drop hint in gold).
+- **The view, top to bottom** (`KinRelayCreature`, 176 wide — rebuilt to the style-D mockup
+  2026-09-26, `KinVisualDesign.md`): a BADGE ROW — a dark pill with an icon and the move in short
+  ("6 → front", `KinMoveText.Short`; the move's NAME lives in the inspector) bordered gold yours /
+  red theirs, and the STEP disc on its corner; the creature — a transparent STANDING sprite
+  (`Art/sprites/<name>.png`, feet on the ground line, mirrored for a foe) on a shadow that turns
+  GOLD when it is a legal drop, or, until its sprite exists, the old portrait MEDALLION with its
+  ring; the NAME; the HP bar; the NOTE (the forecast, "−18" in lifted red, or the drop hint in
+  gold); one STATUS line. **Every label is outlined through its own `LabelSettings`** — the view
+  stands on a painted backdrop now, and the theme's `outline_size` override drew nothing.
+- **The STEP badge is the step, not a queue place.** `ActingSteps` groups by position, both sides
+  at once, so a pair at the same depth shares its number (Gale and Wisp 1, Pike and Stonebeak 2,
+  Bramble and Boar 3). The flat 1–6 of `ActingOrder` made simultaneous blows look sequential.
+- **The stage**: `Art/backdrops/greenwood.png` behind everything, lightly dimmed and RAISED 240px
+  (`StageLift`) so its meadow is under the lines' feet. ComfyUI-made; one backdrop for every battle
+  until there are regions' worth.
+- **Places widen to fit the longest line** (290px at three a side, 176px at five) and the view
+  scales with them up to 1.3×, on an inner node (`KinAnimator.Pop` owns the root's scale).
+- **The card (style D, `KinCardKit`)**: dark body edged in the OWNER's colour (steel for a trainer
+  card), name in caps on a darker plate, a blue diamond cost gem, the ACTION illustration
+  (`Art/cards/<name>.png`, cover-cropped) — never the owner's portrait — a parchment text box in
+  dark ink (the shared label's outline AND shadow zeroed), and the owner's medallion at the foot.
 - **A fallen creature fades where it fell** after the blows have played, then the line closes.
 - **Drops are slots, not creatures**: 0–4 your line, 5–9 theirs, so a Gust can be dropped anywhere
   on theirs. The engine lights the legal ones; the field only draws. **A lit place must be a real
