@@ -51,11 +51,11 @@ public static class PartyState
 
 	/// <summary>The other side's line, as seen by this creature.</summary>
 	public static ImmutableList<Creature> Opponents(this GameState s, Creature c) =>
-		c is Ally ? [.. s.LivingFoes()] : [.. s.LivingAllies()];
+		[.. c is Ally ? s.LivingFoes().Cast<Creature>() : s.LivingAllies()];
 
 	/// <summary>This creature's own line.</summary>
 	public static ImmutableList<Creature> OwnLine(this GameState s, Creature c) =>
-		c is Ally ? [.. s.LivingAllies()] : [.. s.LivingFoes()];
+		[.. c is Ally ? s.LivingAllies().Cast<Creature>() : s.LivingFoes()];
 
 	/// <summary>
 	/// **A monster's own deck joins the draw pile** — at the start of a battle it fights, or when it
@@ -188,7 +188,12 @@ public static class PartyState
 		switch (intent.Kind)
 		{
 			case IntentType.Block when intent.Target == Aim.Ahead:
-				return [.. s.OwnLine(creature).Where(c => c.Position == creature.Position - 1).Select(c => c.Id)];
+				return
+				[
+					.. s.OwnLine(creature)
+						.Where(c => c.Position == creature.Position - 1)
+						.Select(c => c.Id),
+				];
 			case IntentType.Attack:
 				return AimAt(s, creature, intent.Target);
 			default:
@@ -200,12 +205,18 @@ public static class PartyState
 	public static ImmutableList<int> AimAt(GameState s, Creature from, Aim aim)
 	{
 		if (aim == Aim.Ahead)
-			return [.. s.OwnLine(from).Where(c => c.Position == from.Position - 1).Select(c => c.Id)];
+			return
+			[
+				.. s.OwnLine(from).Where(c => c.Position == from.Position - 1).Select(c => c.Id),
+			];
 
 		var line = s.Opponents(from);
 		if (line.IsEmpty)
 			return [];
-		if (aim is Aim.Back or Aim.Hunt && line.FirstOrDefault(c => c.HasComponent<Lure>()) is { } lure)
+		if (
+			aim is Aim.Back or Aim.Hunt
+			&& line.FirstOrDefault(c => c.HasComponent<Lure>()) is { } lure
+		)
 			return [lure.Id];
 
 		return aim switch
@@ -310,7 +321,12 @@ public static class PartyState
 		var events = ImmutableList<GameEvent>.Empty;
 		var root = s.GetWellKnownId(BattleKey);
 
-		foreach (var foe in s.GetChildren(root).OfType<Foe>().Where(f => (f.IsDead || f.Caught) && f.Position >= 0).ToList())
+		foreach (
+			var foe in s.GetChildren(root)
+				.OfType<Foe>()
+				.Where(f => (f.IsDead || f.Caught) && f.Position >= 0)
+				.ToList()
+		)
 			s = s.UpdateObject(foe.Id, foe with { Position = -1 });
 
 		var fallen = s.GetChildren(root)
@@ -394,9 +410,17 @@ public static class PartyState
 				foreach (var id in intent.Target == Aim.Ahead ? targets : [creatureId])
 				{
 					var shielded = (Creature)s.GetObject(id);
-					s = s.UpdateObject(id, shielded with { Block = shielded.Block + intent.Amount });
+					s = s.UpdateObject(
+						id,
+						shielded with
+						{
+							Block = shielded.Block + intent.Amount,
+						}
+					);
 					if (shielded is Ally && intent.Amount > 0)
-						events = events.Add(new BlockGainedEvent { AllyId = id, Amount = intent.Amount });
+						events = events.Add(
+							new BlockGainedEvent { AllyId = id, Amount = intent.Amount }
+						);
 				}
 				break;
 
@@ -411,7 +435,10 @@ public static class PartyState
 
 			// **Summon: a token at the FRONT of its own line** — yours, or a wild brood.
 			case IntentType.Summon when intent.Summons is { } brood:
-				s = creature is Ally ? PartySummon.SummonAlly(s, brood) : PartySummon.SummonFoe(s, brood);
+				s =
+					creature is Ally
+						? PartySummon.SummonAlly(s, brood)
+						: PartySummon.SummonFoe(s, brood);
 				break;
 
 			// **Echo: your last spell again**, on the same foe. Only an ally has spells to echo.
@@ -427,7 +454,13 @@ public static class PartyState
 		if (acted is Ally)
 		{
 			var party = s.GetParty();
-			s = s.UpdateObject(party.Id, party with { AlliesActedThisRound = party.AlliesActedThisRound + 1 });
+			s = s.UpdateObject(
+				party.Id,
+				party with
+				{
+					AlliesActedThisRound = party.AlliesActedThisRound + 1,
+				}
+			);
 		}
 		return (s, events);
 	}
@@ -444,7 +477,8 @@ public static class PartyState
 		IEnumerable<int> targets
 	)
 	{
-		var damage = ally.AttackFor(amount) + ally.FinisherPerAlly * s.GetParty().AlliesActedThisRound;
+		var damage =
+			ally.AttackFor(amount) + ally.FinisherPerAlly * s.GetParty().AlliesActedThisRound;
 		var events = ImmutableList<GameEvent>.Empty;
 		foreach (var id in targets)
 		{
@@ -528,8 +562,21 @@ public static class PartyState
 		foreach (var moved in before)
 		{
 			var now = (Foe)s.GetObject(moved.Id);
-			s = s.UpdateObject(now.Id, now with { OffBalance = Math.Max(now.OffBalance, unbalance) });
-			events = events.Add(new FoeMovedEvent { FoeId = now.Id, From = moved.Position, To = now.Position });
+			s = s.UpdateObject(
+				now.Id,
+				now with
+				{
+					OffBalance = Math.Max(now.OffBalance, unbalance),
+				}
+			);
+			events = events.Add(
+				new FoeMovedEvent
+				{
+					FoeId = now.Id,
+					From = moved.Position,
+					To = now.Position,
+				}
+			);
 		}
 		return (s, events);
 	}
