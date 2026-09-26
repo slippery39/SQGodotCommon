@@ -9,6 +9,12 @@ read back", but **the description is not a substitute for the file.**
 
 If you are an agent: you cannot write an image that only exists in a conversation to disk. Ask.
 
+## Round 1 (2026-09-25)
+
+`mockup-prompts.md` holds the STYLE + SCREEN prompt blocks for ChatGPT and Gemini, and
+`comfy-round1.json` holds the SDXL versions for `tools/gen_art.py --prompt-file`. Results go in `round1/`.
+The requirements and the rubric are in `KinVisualDesign.md`.
+
 ## The backdrop
 
 `backdrop-prompt.md` holds the image-generation prompt for the board backdrop, written to match the

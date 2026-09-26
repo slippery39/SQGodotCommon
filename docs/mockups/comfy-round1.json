@@ -1,0 +1,154 @@
+[
+ {
+  "label": "A_S1_battle",
+  "width": 1344,
+  "height": 768,
+  "negative": "text, watermark, signature, logo, blurry, photorealistic, deformed, extra heads, extra limbs, bad anatomy, cropped",
+  "prompt": "video game battle screenshot, side view, three fantasy creatures on the left facing right versus three wild creatures on the right facing left, standing on a forest clearing ground strip, card game user interface, hand of cards at the bottom, health bars, antique naturalist field guide illustration, brown ink linework, loose watercolour wash, visible paper grain, muted moss green, sepia, slate blue, warm cream"
+ },
+ {
+  "label": "A_S8_title",
+  "width": 1344,
+  "height": 768,
+  "negative": "text, watermark, signature, logo, blurry, photorealistic, deformed, extra heads, extra limbs, bad anatomy, cropped",
+  "prompt": "game title screen key art, three small fantasy creature companions seen from behind on a hilltop, a mossy tortoise golem, a stoat, a purple bird, overlooking a wide fantasy valley with forest, marsh, rocky ridges and a distant volcano, empty space top left for a logo, antique naturalist field guide illustration, brown ink linework, loose watercolour wash, visible paper grain, muted moss green, sepia, slate blue, warm cream"
+ },
+ {
+  "label": "A_BG_forest",
+  "width": 1344,
+  "height": 768,
+  "negative": "text, watermark, signature, logo, blurry, photorealistic, deformed, extra heads, extra limbs, bad anatomy, cropped, creatures, people, animals",
+  "prompt": "2D side-view game battle background, a forest clearing, mossy ground strip along the lower third, trees framing the left and right edges, calm open empty centre, soft distant layers, no characters, antique naturalist field guide illustration, brown ink linework, loose watercolour wash, visible paper grain, muted moss green, sepia, slate blue, warm cream"
+ },
+ {
+  "label": "A_C1_bramble",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, ground clutter, photorealistic, blurry",
+  "prompt": "a squat mossy tortoise golem creature, thorny leaves growing on its shell, full body, side view facing right, standing, game sprite, plain white background, antique naturalist field guide illustration, brown ink linework, loose watercolour wash, visible paper grain, muted moss green, sepia, slate blue, warm cream"
+ },
+ {
+  "label": "A_C1_pike",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, ground clutter, photorealistic, blurry",
+  "prompt": "a slim blue and cream stoat creature holding a thin spear, full body, side view facing right, standing, game sprite, plain white background, antique naturalist field guide illustration, brown ink linework, loose watercolour wash, visible paper grain, muted moss green, sepia, slate blue, warm cream"
+ },
+ {
+  "label": "A_C1_gale",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, ground clutter, photorealistic, blurry",
+  "prompt": "a purple bird of prey creature, wings half open, full body, side view facing right, standing, game sprite, plain white background, antique naturalist field guide illustration, brown ink linework, loose watercolour wash, visible paper grain, muted moss green, sepia, slate blue, warm cream"
+ },
+ {
+  "label": "B_S1_battle",
+  "width": 1344,
+  "height": 768,
+  "negative": "text, watermark, signature, logo, blurry, photorealistic, deformed, extra heads, extra limbs, bad anatomy, cropped",
+  "prompt": "video game battle screenshot, side view, three fantasy creatures on the left facing right versus three wild creatures on the right facing left, standing on a forest clearing ground strip, card game user interface, hand of cards at the bottom, health bars, bold stylised indie game art, thick dark outlines, flat colour with cel shading, chunky appealing shapes, big expressive eyes, warm saturated palette"
+ },
+ {
+  "label": "B_S8_title",
+  "width": 1344,
+  "height": 768,
+  "negative": "text, watermark, signature, logo, blurry, photorealistic, deformed, extra heads, extra limbs, bad anatomy, cropped",
+  "prompt": "game title screen key art, three small fantasy creature companions seen from behind on a hilltop, a mossy tortoise golem, a stoat, a purple bird, overlooking a wide fantasy valley with forest, marsh, rocky ridges and a distant volcano, empty space top left for a logo, bold stylised indie game art, thick dark outlines, flat colour with cel shading, chunky appealing shapes, big expressive eyes, warm saturated palette"
+ },
+ {
+  "label": "B_BG_forest",
+  "width": 1344,
+  "height": 768,
+  "negative": "text, watermark, signature, logo, blurry, photorealistic, deformed, extra heads, extra limbs, bad anatomy, cropped, creatures, people, animals",
+  "prompt": "2D side-view game battle background, a forest clearing, mossy ground strip along the lower third, trees framing the left and right edges, calm open empty centre, soft distant layers, no characters, bold stylised indie game art, thick dark outlines, flat colour with cel shading, chunky appealing shapes, big expressive eyes, warm saturated palette"
+ },
+ {
+  "label": "B_C1_bramble",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, ground clutter, photorealistic, blurry",
+  "prompt": "a squat mossy tortoise golem creature, thorny leaves growing on its shell, full body, side view facing right, standing, game sprite, plain white background, bold stylised indie game art, thick dark outlines, flat colour with cel shading, chunky appealing shapes, big expressive eyes, warm saturated palette"
+ },
+ {
+  "label": "B_C1_pike",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, ground clutter, photorealistic, blurry",
+  "prompt": "a slim blue and cream stoat creature holding a thin spear, full body, side view facing right, standing, game sprite, plain white background, bold stylised indie game art, thick dark outlines, flat colour with cel shading, chunky appealing shapes, big expressive eyes, warm saturated palette"
+ },
+ {
+  "label": "B_C1_gale",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, ground clutter, photorealistic, blurry",
+  "prompt": "a purple bird of prey creature, wings half open, full body, side view facing right, standing, game sprite, plain white background, bold stylised indie game art, thick dark outlines, flat colour with cel shading, chunky appealing shapes, big expressive eyes, warm saturated palette"
+ },
+ {
+  "label": "C_S1_battle",
+  "width": 1344,
+  "height": 768,
+  "negative": "text, watermark, signature, logo, blurry, photorealistic, deformed, extra heads, extra limbs, bad anatomy, cropped",
+  "prompt": "video game battle screenshot, side view, three fantasy creatures on the left facing right versus three wild creatures on the right facing left, standing on a forest clearing ground strip, card game user interface, hand of cards at the bottom, health bars, high definition pixel art, crisp pixels, 1 pixel dark outline, limited 32 colour palette, clean dithering, modern indie monster taming rpg"
+ },
+ {
+  "label": "C_S8_title",
+  "width": 1344,
+  "height": 768,
+  "negative": "text, watermark, signature, logo, blurry, photorealistic, deformed, extra heads, extra limbs, bad anatomy, cropped",
+  "prompt": "game title screen key art, three small fantasy creature companions seen from behind on a hilltop, a mossy tortoise golem, a stoat, a purple bird, overlooking a wide fantasy valley with forest, marsh, rocky ridges and a distant volcano, empty space top left for a logo, high definition pixel art, crisp pixels, 1 pixel dark outline, limited 32 colour palette, clean dithering, modern indie monster taming rpg"
+ },
+ {
+  "label": "C_BG_forest",
+  "width": 1344,
+  "height": 768,
+  "negative": "text, watermark, signature, logo, blurry, photorealistic, deformed, extra heads, extra limbs, bad anatomy, cropped, creatures, people, animals",
+  "prompt": "2D side-view game battle background, a forest clearing, mossy ground strip along the lower third, trees framing the left and right edges, calm open empty centre, soft distant layers, no characters, high definition pixel art, crisp pixels, 1 pixel dark outline, limited 32 colour palette, clean dithering, modern indie monster taming rpg"
+ },
+ {
+  "label": "C_C1_bramble",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, ground clutter, photorealistic, blurry",
+  "prompt": "a squat mossy tortoise golem creature, thorny leaves growing on its shell, full body, side view facing right, standing, game sprite, plain white background, high definition pixel art, crisp pixels, 1 pixel dark outline, limited 32 colour palette, clean dithering, modern indie monster taming rpg"
+ },
+ {
+  "label": "C_C1_pike",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, ground clutter, photorealistic, blurry",
+  "prompt": "a slim blue and cream stoat creature holding a thin spear, full body, side view facing right, standing, game sprite, plain white background, high definition pixel art, crisp pixels, 1 pixel dark outline, limited 32 colour palette, clean dithering, modern indie monster taming rpg"
+ },
+ {
+  "label": "C_C1_gale",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, ground clutter, photorealistic, blurry",
+  "prompt": "a purple bird of prey creature, wings half open, full body, side view facing right, standing, game sprite, plain white background, high definition pixel art, crisp pixels, 1 pixel dark outline, limited 32 colour palette, clean dithering, modern indie monster taming rpg"
+ },
+ {
+  "label": "D_S1_battle",
+  "width": 1344,
+  "height": 768,
+  "negative": "text, watermark, signature, logo, blurry, photorealistic, pixel art, painterly, deformed, extra heads, extra limbs, bad anatomy, cropped",
+  "prompt": "video game battle screenshot, side view, three fantasy creatures on the left facing right versus three wild creatures on the right facing left, standing on a forest clearing ground strip, card game user interface, hand of cards at the bottom, health bars, clean line art, fine even ink outlines, flat colours with two-tone hard cel shading, rim light, crisp hand-drawn 2D game art, polished indie card game, sharp, no texture, no pixels"
+ },
+ {
+  "label": "D_BG_forest",
+  "width": 1344,
+  "height": 768,
+  "negative": "text, watermark, signature, logo, blurry, photorealistic, pixel art, painterly, deformed, extra heads, extra limbs, bad anatomy, cropped, creatures, people, animals",
+  "prompt": "2D side-view game battle background, a forest clearing, mossy ground strip along the lower third, trees framing the left and right edges, calm open empty centre, soft low contrast, no characters, clean line art, fine even ink outlines, flat colours with two-tone hard cel shading, rim light, crisp hand-drawn 2D game art, polished indie card game, sharp, no texture, no pixels"
+ },
+ {
+  "label": "D_C1_bramble",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, photorealistic, blurry, pixel art, painterly, gradient background",
+  "prompt": "a squat mossy tortoise golem creature, thorny leaves growing on its shell, full body, side view facing right, standing, game sprite, flat pure white background, clean line art, fine even ink outlines, flat colours with two-tone hard cel shading, rim light, crisp hand-drawn 2D game art, polished indie card game, sharp, no texture, no pixels"
+ },
+ {
+  "label": "D_C1_pike",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, photorealistic, blurry, pixel art, painterly, gradient background",
+  "prompt": "a slim blue and cream stoat creature holding a thin spear, full body, side view facing right, standing, game sprite, flat pure white background, clean line art, fine even ink outlines, flat colours with two-tone hard cel shading, rim light, crisp hand-drawn 2D game art, polished indie card game, sharp, no texture, no pixels"
+ },
+ {
+  "label": "D_C1_gale",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, photorealistic, blurry, pixel art, painterly, gradient background",
+  "prompt": "a purple bird of prey creature, wings half open, full body, side view facing right, standing, game sprite, flat pure white background, clean line art, fine even ink outlines, flat colours with two-tone hard cel shading, rim light, crisp hand-drawn 2D game art, polished indie card game, sharp, no texture, no pixels"
+ },
+ {
+  "label": "D_C1_boar",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, photorealistic, blurry, pixel art, painterly, gradient background",
+  "prompt": "a brown tusked wild boar creature, full body, side view facing right, standing, game sprite, flat pure white background, clean line art, fine even ink outlines, flat colours with two-tone hard cel shading, rim light, crisp hand-drawn 2D game art, polished indie card game, sharp, no texture, no pixels"
+ },
+ {
+  "label": "D_C1_wisp",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, photorealistic, blurry, pixel art, painterly, gradient background",
+  "prompt": "a small teal glowing spirit flame creature with two eyes, full body, side view facing right, standing, game sprite, flat pure white background, clean line art, fine even ink outlines, flat colours with two-tone hard cel shading, rim light, crisp hand-drawn 2D game art, polished indie card game, sharp, no texture, no pixels"
+ },
+ {
+  "label": "D_C1_stonebeak",
+  "negative": "extra heads, two heads, extra limbs, extra legs, deformed, mutated, fused body parts, bad anatomy, text, watermark, logo, frame, multiple characters, cropped, scenery, landscape, photorealistic, blurry, pixel art, painterly, gradient background",
+  "prompt": "a grey eagle creature with a heavy stone beak, full body, side view facing right, standing, game sprite, flat pure white background, clean line art, fine even ink outlines, flat colours with two-tone hard cel shading, rim light, crisp hand-drawn 2D game art, polished indie card game, sharp, no texture, no pixels"
+ }
+]

@@ -5,6 +5,11 @@ description: Generate KIN card, enemy or companion art with a LOCAL image model 
 
 # Generating card art locally
 
+> **STYLE D (2026-09-26) supersedes the art half of this skill** — see the `match-mockup` skill.
+> Creatures are now TRANSPARENT standing sprites (img2img from a mockup crop + `tools/pixelate.py`'s
+> edge matte), cards carry action illustrations (`Art/cards/`), and the square-opaque rule below
+> belongs to the retired lane cells. The ComfyUI setup and the cull-and-look discipline still hold.
+
 Art can be **authored as flat SVG** (see the `draw-card-art` skill) or **generated with a local
 model**. This skill is the generated route. It is the right one for bulk — 56 subjects at ~12s each
 — and for creatures, which a model draws better than hand-written SVG geometry does.

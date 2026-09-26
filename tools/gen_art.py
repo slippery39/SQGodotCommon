@@ -21,6 +21,11 @@ or more before accepting a batch.
 Usage:
     python tools/gen_art.py --subjects "a badger,a heron,a frog" --out scratch/art
     python tools/gen_art.py --styles flat --variants 4 --subjects "a mossy tortoise" ...
+    python tools/gen_art.py --prompt-file docs/mockups/comfy-round1.json --out docs/mockups/round1/comfy
+
+--prompt-file takes a JSON list of {"label", "prompt", "width"?, "height"?, "negative"?}: whole
+prompts, no style suffix. It is for mockups and backdrops, which are not a subject plus a style.
+SDXL-native wide size is 1344x768.
 
 ponytail: talks to ComfyUI's HTTP API with urllib and polls /history. No websocket, no client lib.
 """
@@ -74,21 +79,21 @@ NEGATIVE = (
 )
 
 
-def workflow(subject, style, ckpt, seed, steps, cfg, size):
+def workflow(text, negative, ckpt, seed, steps, cfg, width, height):
     """A minimal SDXL txt2img graph, in ComfyUI's node format."""
     return {
         "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": ckpt}},
         "5": {
             "class_type": "EmptyLatentImage",
-            "inputs": {"width": size, "height": size, "batch_size": 1},
+            "inputs": {"width": width, "height": height, "batch_size": 1},
         },
         "6": {
             "class_type": "CLIPTextEncode",
-            "inputs": {"clip": ["4", 1], "text": f"{subject}, {STYLES[style]}"},
+            "inputs": {"clip": ["4", 1], "text": text},
         },
         "7": {
             "class_type": "CLIPTextEncode",
-            "inputs": {"clip": ["4", 1], "text": NEGATIVE},
+            "inputs": {"clip": ["4", 1], "text": negative},
         },
         "3": {
             "class_type": "KSampler",
@@ -144,10 +149,9 @@ def get(path):
     return json.loads(urllib.request.urlopen(f"{SERVER}{path}", timeout=60).read())
 
 
-def run_one(subject, style, ckpt, seed, steps, cfg, size, out_dir, label):
-    prompt_id = post("/prompt", {"prompt": workflow(subject, style, ckpt, seed, steps, cfg, size)})[
-        "prompt_id"
-    ]
+def run_one(text, negative, ckpt, seed, steps, cfg, width, height, out_dir, label):
+    graph = workflow(text, negative, ckpt, seed, steps, cfg, width, height)
+    prompt_id = post("/prompt", {"prompt": graph})["prompt_id"]
 
     started = time.time()
     while True:
@@ -155,7 +159,7 @@ def run_one(subject, style, ckpt, seed, steps, cfg, size, out_dir, label):
         if prompt_id in history:
             break
         if time.time() - started > 600:
-            raise TimeoutError(f"{subject}: no result after 10 minutes")
+            raise TimeoutError(f"{label}: no result after 10 minutes")
         time.sleep(1.5)
 
     entry = history[prompt_id]
@@ -179,7 +183,8 @@ def run_one(subject, style, ckpt, seed, steps, cfg, size, out_dir, label):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--subjects", required=True, help="comma-separated")
+    ap.add_argument("--subjects", default="", help="comma-separated")
+    ap.add_argument("--prompt-file", help="JSON list of whole prompts; replaces --subjects")
     ap.add_argument("--styles", default="flat", help="comma-separated; one image per style")
     ap.add_argument("--ckpt", default="dreamshaperXL_turbo.safetensors")
     ap.add_argument("--out", default="scratch/art")
@@ -195,21 +200,31 @@ def main():
     out_dir = pathlib.Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    subjects = [s.strip() for s in args.subjects.split(",") if s.strip()]
-    styles = [s.strip() for s in args.styles.split(",") if s.strip()]
+    if args.prompt_file:
+        jobs = [
+            (e["label"], e["prompt"], e.get("negative", NEGATIVE),
+             e.get("width", args.size), e.get("height", args.size))
+            for e in json.loads(pathlib.Path(args.prompt_file).read_text(encoding="utf-8"))
+        ]
+    else:
+        subjects = [s.strip() for s in args.subjects.split(",") if s.strip()]
+        styles = [s.strip() for s in args.styles.split(",") if s.strip()]
+        jobs = [
+            (f"{style}_{subject.replace(' ', '_')[:40]}", f"{subject}, {STYLES[style]}",
+             NEGATIVE, args.size, args.size)
+            for style in styles
+            for subject in subjects
+        ]
 
-    for style in styles:
-        for subject in subjects:
-            for v in range(args.variants):
-                seed = subject_seed(subject, args.seed, v)
-                label = f"{style}_{subject.replace(' ', '_')[:40]}"
-                if args.variants > 1:
-                    label += f"_v{v}"
-                saved, secs = run_one(
-                    subject, style, args.ckpt, seed, args.steps, args.cfg, args.size,
-                    out_dir, label,
-                )
-                print(f"{secs:5.1f}s  seed {seed:<12} {label}")
+    for name, text, negative, width, height in jobs:
+        for v in range(args.variants):
+            seed = subject_seed(name, args.seed, v)
+            label = f"{name}_v{v}" if args.variants > 1 else name
+            saved, secs = run_one(
+                text, negative, args.ckpt, seed, args.steps, args.cfg, width, height,
+                out_dir, label,
+            )
+            print(f"{secs:5.1f}s  seed {seed:<12} {label}")
 
 
 if __name__ == "__main__":
