@@ -402,6 +402,50 @@ public class PartyTests
 		Assert.That(forecast.Hp[FoeIn(s, 0).Id], Is.EqualTo(4));
 	}
 
+	// ===== Deploy (R2): order your line before the fight
+
+	[Test]
+	public void ADeployingBattleWaitsForFightAndOnlyThenKeepsItsOrder()
+	{
+		var s = PartyBattleFactory.Create(
+			new PartyScenario(
+				"Test",
+				"",
+				[new(Mon("A"), 0), new(Mon("B"), 1), new(Mon("C"), 2)],
+				[Foe(0, pattern: Hit(4))],
+				[Card("Guard", 1, new GuardAction())],
+				[],
+				Deploy: true
+			)
+		);
+		Assert.That(CanPlay(s, "Guard", 0), Is.False, "cards wait");
+		Assert.That(new EndPartyTurnAction().ValidateAdd(s).IsValid, Is.False, "so does the turn");
+
+		s = Do(s, new DeployMoveAction { AllyId = Named(s, "C").Id, To = 0 });
+		s = Do(s, new DeployMoveAction { AllyId = Named(s, "A").Id, To = 2 });
+		Assert.That(Line(s), Is.EqualTo("C,B,A"), "any monster to any place, as often as you like");
+
+		Assert.That(
+			s.ForecastIfTurnEndsNow().Hp[Named(s, "C").Id],
+			Is.EqualTo(4),
+			"the forecast plays the round in the order being set: C is the front now"
+		);
+
+		s = Do(s, new BeginFightAction());
+		Assert.That(CanPlay(s, "Guard", 0), Is.True);
+		Assert.That(
+			new DeployMoveAction { AllyId = Named(s, "A").Id, To = 0 }
+				.ValidateAdd(s)
+				.IsValid,
+			Is.False,
+			"after FIGHT only cards reorder"
+		);
+		Assert.That(
+			s.GetParty().DeployedOrder,
+			Is.EqualTo(new[] { Named(s, "C").Slot, Named(s, "B").Slot, Named(s, "A").Slot })
+		);
+	}
+
 	// ===== Cycles and passives
 
 	[Test]

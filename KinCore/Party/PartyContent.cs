@@ -54,7 +54,8 @@ public record PartyScenario(
 	ImmutableList<Foe> Foes,
 	ImmutableList<KinCard> Deck,
 	ImmutableList<string> OpeningHand,
-	int Snares = 0
+	int Snares = 0,
+	bool Deploy = false
 );
 
 /// <summary>
@@ -307,7 +308,8 @@ public static class PartyContent
 			[Boar(0), Wisp(1)],
 			StarterDeck,
 			[],
-			Snares: 2
+			Snares: 2,
+			Deploy: true
 		);
 
 	public static readonly PartyScenario Pair =
@@ -318,7 +320,8 @@ public static class PartyContent
 			[Boar(0), Stonebeak(1), Wisp(2)],
 			StarterDeck,
 			[],
-			Snares: 2
+			Snares: 2,
+			Deploy: true
 		);
 
 	/// <summary>
@@ -333,7 +336,8 @@ public static class PartyContent
 			[Boar(0), Stonebeak(1), Wisp(2)],
 			StarterDeck,
 			["Charge", "Gust", "Rally", "Guard", "Stagger"],
-			Snares: 2
+			Snares: 2,
+			Deploy: true
 		);
 
 	/// <summary>
@@ -353,7 +357,8 @@ public static class PartyContent
 			[PartyWorld.HoardDrake with { Position = 0 }, PartyWorld.Magpie with { Position = 1 }],
 			[.. StarterDeck, PartyCards.ScrapHammer, PartyCards.PageStorm, PartyCards.Ration],
 			["Sift"],
-			Snares: 2
+			Snares: 2,
+			Deploy: true
 		);
 
 	/// <summary>
@@ -382,7 +387,8 @@ public static class PartyContent
 			],
 			[.. StarterDeck, PartyCards.Overload, PartyCards.Focus, PartyCards.SparkScroll],
 			["Zap", "Zap", "Focus"],
-			Snares: 2
+			Snares: 2,
+			Deploy: true
 		);
 
 	/// <summary>
@@ -402,7 +408,8 @@ public static class PartyContent
 			[PartyWorld.Hushcap with { Position = 0 }, Boar(1), Wisp(2)],
 			[.. StarterDeck, PartyCards.Unleash, PartyCards.Meteor, PartyCards.BattleCry],
 			["Surge", "Quicken", "Unleash"],
-			Snares: 2
+			Snares: 2,
+			Deploy: true
 		);
 
 	/// <summary>
@@ -422,7 +429,8 @@ public static class PartyContent
 			[PartyWorld.Ironhorn with { Position = 0 }, Wisp(1), Stonebeak(2)],
 			[.. StarterDeck, PartyCards.Swarm, PartyCards.Offering, PartyCards.DecoyCard],
 			["Sow", "Call Sparks", "Swarm"],
-			Snares: 2
+			Snares: 2,
+			Deploy: true
 		);
 
 	public static ImmutableList<PartyScenario> Scenarios =>
@@ -530,6 +538,11 @@ public static class PartyBattleFactory
 			s = s.MoveObjectToFront(id, draw.Id);
 		}
 
-		return s.AddAction(new StartPartyTurnAction()).ProcessAllActions().State;
+		s = s.AddAction(new StartPartyTurnAction()).ProcessAllActions().State;
+
+		// DEPLOY (R2): the hand is dealt, and the fight waits for FIGHT.
+		return scenario.Deploy
+			? s.UpdateObject(s.GetParty().Id, s.GetParty() with { Deploying = true })
+			: s;
 	}
 }

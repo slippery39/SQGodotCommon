@@ -67,6 +67,16 @@ public record PartyBattle : GameObject
 	/// </summary>
 	public int AlliesActedThisRound { get; init; }
 
+	/// <summary>
+	/// **DEPLOY (R2): the fight has not begun.** You see their line and order yours; cards, Snares and
+	/// END TURN wait until FIGHT (`BeginFightAction`). The hand is already dealt, so the order can
+	/// answer it.
+	/// </summary>
+	public bool Deploying { get; init; }
+
+	/// <summary>The order your line was deployed in, by `Ally.Slot` — the run keeps it for the next fight.</summary>
+	public ImmutableList<int> DeployedOrder { get; init; } = [];
+
 	public bool IsOver { get; init; }
 	public bool Won { get; init; }
 }

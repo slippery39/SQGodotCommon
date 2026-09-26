@@ -41,6 +41,10 @@ public static class PartyBot
 	/// <summary>Plays one turn: the best plan it can find, then ends the turn. `log` hears each play.</summary>
 	public static GameState PlayTurn(GameState s, Action<string>? log = null)
 	{
+		// It keeps the order it was given (no deploying search yet — exploring).
+		if (s.GetParty().Deploying)
+			s = Do(s, new BeginFightAction());
+
 		foreach (var action in BestPlan(s))
 		{
 			log?.Invoke($"    plays {Describe(s, action)}");

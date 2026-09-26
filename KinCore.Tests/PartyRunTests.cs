@@ -88,8 +88,19 @@ public class PartyRunTests
 			Team = [.. team.Select(c => new RunCompanion(c, c.Hp))],
 		};
 
+	/// <summary>
+	/// Plays an action — pressing FIGHT first if the battle is still deploying (R2): a run's battle
+	/// opens deploying, and these tests are about what happens once it has begun.
+	/// </summary>
 	private static GameState Do(GameState s, GameAction a) =>
-		s.AddAction(a).ProcessAllActions().State;
+		(
+			s.GetParty().Deploying && a is not (DeployMoveAction or BeginFightAction)
+				? s.AddAction(new BeginFightAction()).ProcessAllActions().State
+				: s
+		)
+			.AddAction(a)
+			.ProcessAllActions()
+			.State;
 
 	/// <summary>Wins the battle: the Wipe, dropped on the first monster still standing.</summary>
 	private static GameState Win(GameState s)
@@ -335,6 +346,29 @@ public class PartyRunTests
 		(run, report) = run.AfterBattle(Win(battle)); // B wins it
 		Assert.That(report.Revived, Is.EqualTo(new[] { "A" }));
 		Assert.That(Hp(run, "A"), Is.EqualTo(10));
+	}
+
+	// ===== Deploy — the order is yours, and it is kept
+
+	[Test]
+	public void TheOrderYouDeployIsKeptForTheNextFight()
+	{
+		var run = OnTrail(WithTeam(Run(), A, B), Fight(Foe("Idle")), Fight(Foe("Idle")));
+
+		var battle = run.StartBattle();
+		Assert.That(battle.GetParty().Deploying, Is.True, "a run's battle opens deploying");
+		battle = Do(
+			battle,
+			new DeployMoveAction { AllyId = battle.Allies().Single(a => a.Name == "B").Id, To = 0 }
+		);
+		battle = Do(battle, new BeginFightAction());
+		(run, _) = run.AfterBattle(Win(battle));
+
+		Assert.That(run.Team.Select(m => m.Companion.Name), Is.EqualTo(new[] { "B", "A" }));
+		Assert.That(
+			run.StartBattle().LivingAllies().Select(a => a.Name),
+			Is.EqualTo(new[] { "B", "A" })
+		);
 	}
 
 	// ===== The bench in battle

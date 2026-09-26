@@ -198,7 +198,7 @@ public record PartyRun
 				? $"{Region.Name} — the gym"
 				: $"{Region.Name} — {Area!.Name}, stop {StopIndex + 1} of {Trail.Count}",
 			// **The team's order IS the line** (front first), then the bench off it (-1) — in that
-			// order, so slots line up.
+			// order, so slots line up. The battle opens DEPLOYING (R2): the order can change before FIGHT.
 			[
 				.. Team.Select((m, i) => new PlacedCompanion(m.Companion, i, m.Hp)),
 				.. Bench.Select(m => new PlacedCompanion(m.Companion, -1, m.Hp)),
@@ -206,7 +206,8 @@ public record PartyRun
 			NextFight.Foes,
 			Deck,
 			[],
-			Snares
+			Snares,
+			Deploy: true
 		);
 		return PartyBattleFactory.Create(scenario, Seed + RegionIndex * 1009 + StopIndex * 101);
 	}
@@ -238,6 +239,14 @@ public record PartyRun
 			return member with { Hp = (int)Math.Ceiling(ally.MaxHp / 4.0) };
 		}
 		var team = Team.Select(After).ToImmutableList();
+
+		// **The order you deployed is kept for the next fight** (R2) — not where the line ended up.
+		var deployed = party.DeployedOrder.Where(slot => slot < team.Count).ToList();
+		team =
+		[
+			.. deployed.Select(slot => team[slot]),
+			.. team.Where((_, slot) => !deployed.Contains(slot)),
+		];
 		var bench = Bench.Select((m, i) => After(m, Team.Count + i)).ToImmutableList();
 
 		var gold =

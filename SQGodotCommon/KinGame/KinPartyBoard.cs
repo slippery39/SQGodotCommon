@@ -504,6 +504,19 @@ public partial class KinPartyBoard : Node2D
 
 		GetViewport().SetInputAsHandled();
 
+		// DEPLOY (R2), stopgap until the Phase 4 screen: a monster, then the place it should stand.
+		if (
+			_state.GetParty().Deploying
+			&& Selected() is { } placing
+			&& space != placing.Position
+			&& space < _state.LivingAllies().Count()
+		)
+		{
+			_selectedAllyId = 0;
+			Apply(new DeployMoveAction { AllyId = placing.Id, To = space });
+			return;
+		}
+
 		if (_state.AllyAt(space) is { } ally)
 		{
 			_selectedAllyId = _selectedAllyId == ally.Id ? 0 : ally.Id;
@@ -525,7 +538,7 @@ public partial class KinPartyBoard : Node2D
 	{
 		_selectedAllyId = 0;
 		_snaring = false;
-		Apply(new EndPartyTurnAction());
+		Apply(_state.GetParty().Deploying ? new BeginFightAction() : new EndPartyTurnAction());
 	}
 
 	// ===== Rendering — a full repaint from state, every time
@@ -625,6 +638,10 @@ public partial class KinPartyBoard : Node2D
 		_snare.Text = $"SNARE ×{party.Snares}";
 		_snare.Disabled = party.IsOver || party.Snares == 0;
 		_endTurn.Disabled = party.IsOver;
+		_endTurn.Text = party.Deploying ? "FIGHT" : "END TURN";
+		if (party.Deploying)
+			_hint.Text =
+				"DEPLOY: click a monster, then the place it should stand — the front is on the left. Then FIGHT.";
 
 		foreach (var line in events.Select(Describe).Where(l => l is not null))
 			Log(line);

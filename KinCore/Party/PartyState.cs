@@ -238,6 +238,10 @@ public static class PartyState
 		if (s.GetParty().IsOver)
 			return new Forecast(ImmutableDictionary<int, int>.Empty);
 
+		// While DEPLOYING, the forecast is the first round in the order you have set — exactly what
+		// you are choosing the order by.
+		if (s.GetParty().Deploying)
+			s = s.AddAction(new BeginFightAction()).ProcessAllActions().State;
 		var (after, _) = s.AddAction(new EndPartyTurnAction()).ProcessAllActions();
 		return new Forecast(
 			s.LivingAllies()

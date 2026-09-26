@@ -80,9 +80,14 @@ or re-expressed in lines. The OLD board compiles and runs on it (cells = line po
 - [ ] The creatures' doc comments still describe columns in places — reword while playtesting
 - [ ] `docs/paper/round-one-synergies.md`: mark what changed
 
-### Phase 3 — the run (`PartyRun`, `PartyWorld`)
-- [ ] DEPLOY (R2): the battle opens `Deploying`; free reorders until FIGHT; cards wait
-- [ ] The team's order persists between fights (`PartyRun.Team` order = the line)
+### Phase 3 — the run (`PartyRun`, `PartyWorld`) — DONE 2026-09-25
+- [x] DEPLOY (R2): the battle opens `Deploying` (`PartyScenario.Deploy`; the run and the practice
+      scenarios use it); `DeployMoveAction` reorders freely until `BeginFightAction`; cards, Snares
+      and END TURN wait. **The forecast works while deploying** — it plays the first round in the
+      order being set, which is what the order is chosen by. The bot keeps the order it is given.
+      Stopgap input on the old board: click a monster, then its place; the button reads FIGHT.
+- [x] The team's order persists between fights — the DEPLOYED order (`PartyBattle.DeployedOrder`),
+      not where the line ended up after swaps and faints
 - [x] Gyms without leader health (R10): `Encounter.LeaderHp`, `PartyWorld.LeaderHp`, `Region.Build` scaling
 - [x] No trainer health anywhere: towns heal monsters only; a lost battle ends the run (R6)
 - [x] `PartyBot` (no steps; reorder cards; score without trainer HP) and `PartySim`/`PartySimCommand` compile
