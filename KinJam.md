@@ -1,5 +1,29 @@
 # KIN — design doc
 
+> # LANE COMBAT IS RETIRED (Shayne, 2026-09-25, after playing round one)
+>
+> "The lanes and moving around just isn't working for me. It still feels bad when you have a main
+> monster attacking all the enemies, and your other monsters just sit there attacking the opponent
+> trainer." The columns decided WHETHER a monster contributed, not HOW; positioning was per-turn
+> micro; the player watched. **A new combat system is being chosen** — the survey and the
+> candidates are in `docs/research/combat-systems.md`. What round one built (monster decks, the four
+> strategies, triggers, catching, the map) is meant to survive it. Monster Train's row of creatures
+> that all fight every round works, and must not be cloned.
+>
+> **DECIDED the same day (Shayne) — the new battle's constraints:**
+> - **One line a side**, a row of creatures that all fight every round — the Relay direction.
+> - **Monsters are NOT cards** (unlike Monster Train): the caught team is persistent and yours.
+> - **One level of play** — no floors, no rooms.
+> - **No trainer health** — not needed: with no columns there is nothing to dodge, so waiting has
+>   no free line to exploit.
+> - **No lanes, and no moving monsters around every turn.**
+> Shayne expects the depth to start low; the next step is brainstorming depth within these limits.
+>
+> **THE RELAY is chosen (Shayne, 2026-09-25):** the line acts BACK TO FRONT, so a setup in the back
+> feeds the finisher in front — where the blows land. **The UI is redone: creatures are sprites
+> standing in a line, not cards in cells** (placeholders for now). The rules, the order of work and
+> the checklist: `KinRelayPlan.md`.
+
 > # DECK STRATEGIES + MONSTER DECKS (Shayne, 2026-09-24): the monsters shape how you play cards
 >
 > **Why: everything felt bland.** Of 17 cards, not one was a payoff, and every payoff in the game was
