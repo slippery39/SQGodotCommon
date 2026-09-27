@@ -435,10 +435,26 @@ public record StaggerAction : CardStep
 /// <summary>**Swap the monster it is dropped on with the one ahead of it** — Hold the Line.</summary>
 public record SwapAction : CardStep
 {
-	public override string? Refusal(GameState s, int space, bool foeRow) =>
-		base.Refusal(s, space, foeRow) ?? (space == 0 ? "It is already at the front" : null);
+	/// <summary>
+	/// **The solo mode** (Shayne, 2026-09-27: "dead cards with one monster"): with nobody ahead to
+	/// swap with — at the front, or alone — it gains this much Block instead, so the card is never dead.
+	/// </summary>
+	public int AloneBlock { get; init; }
 
-	public override ActionResult Execute(GameState s) => new(s.MoveInLine(Target(s).Id, Space - 1));
+	public override string? Refusal(GameState s, int space, bool foeRow) =>
+		base.Refusal(s, space, foeRow)
+		?? (space == 0 && AloneBlock == 0 ? "It is already at the front" : null);
+
+	public override ActionResult Execute(GameState s)
+	{
+		if (Space > 0)
+			return new(s.MoveInLine(Target(s).Id, Space - 1));
+		var ally = Target(s);
+		s = s.UpdateObject(ally.Id, ally with { Block = ally.Block + AloneBlock });
+		return new ActionResult(s).WithEvent(
+			new BlockGainedEvent { AllyId = ally.Id, Amount = AloneBlock }
+		);
+	}
 }
 
 /// <summary>
@@ -467,13 +483,26 @@ public record RetreatAction : CardStep
 /// </summary>
 public record GustAction : CardStep
 {
+	/// <summary>
+	/// **The solo mode**: against a LONE foe there is nothing to swap, so the gust hits it for this
+	/// much instead — the card is never dead in a one-foe fight.
+	/// </summary>
+	public int AloneDamage { get; init; }
+
 	public override string? Refusal(GameState s, int space, bool foeRow) =>
 		!foeRow ? "Drop it on their line"
-		: s.LivingFoes().Count() < 2 ? "It needs two foes to swap"
+		: s.LivingFoes().Count() < 2 && AloneDamage == 0 ? "It needs two foes to swap"
 		: null;
 
 	public override ActionResult Execute(GameState s)
 	{
+		if (s.LivingFoes().Count() < 2)
+		{
+			if (s.LivingFoes().FirstOrDefault() is not { } lone)
+				return new(s);
+			var (hit, hitEvents) = PartyState.HitFoe(s, lone, AloneDamage);
+			return new ActionResult(hit).WithEvents(hitEvents);
+		}
 		var (after, events) = PartyState.Shove(s, foes: true);
 		return new ActionResult(after).WithEvents(events);
 	}

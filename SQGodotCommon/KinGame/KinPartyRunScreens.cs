@@ -96,7 +96,7 @@ public sealed partial class KinPartyRunScreens
 									)
 								)
 							),
-						$"HP {companion.Hp} · POW {companion.Power}",
+						$"LV {companion.Level} · HP {companion.Hp} · POW {companion.Power}",
 					],
 					new Vector2(340, 580),
 					() => choose(companion)
@@ -115,10 +115,11 @@ public sealed partial class KinPartyRunScreens
 	{
 		Begin(
 			$"VICTORY — {beaten.ToUpperInvariant()}",
-			$"+{report.Gold} gold.   Next: {Ahead(run)}"
+			$"+{report.Gold} gold.   +{report.Xp} XP each.   Next: {Ahead(run)}"
 		);
 
-		var news = new List<string>();
+		// Level-ups first: growing is the headline of a win (Shayne, 2026-09-27: levels + XP).
+		var news = new List<string>(report.LevelUps);
 		foreach (var name in report.Revived)
 			news.Add($"{name} was knocked out, and is back at a quarter HP.");
 		foreach (var name in report.Caught)
@@ -141,7 +142,7 @@ public sealed partial class KinPartyRunScreens
 					CardArt(reward.Name),
 					$"{reward.Name.ToUpperInvariant()}  ({reward.Cost})",
 					[string.Join(" ", KinRulesText.Lines(reward))],
-					new Vector2(280, 380),
+					new Vector2(280, 430),
 					() => take(reward)
 				)
 			);
@@ -210,7 +211,8 @@ public sealed partial class KinPartyRunScreens
 	private static Button Monster(RunCompanion m)
 	{
 		var button = Button(
-			$"{m.Companion.Name.ToUpperInvariant()} {m.Hp}/{m.Companion.Hp}",
+			$"{m.Companion.Name.ToUpperInvariant()}  LV {m.Level}  {m.Hp}/{m.MaxHp}\n"
+				+ $"XP {m.Xp}/{PartyLevels.XpToNext(m.Level)}",
 			() => { }
 		);
 		var tint = KinPalette.Companion(m.Companion.Name).Lightened(0.35f);

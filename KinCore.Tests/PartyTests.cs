@@ -1396,4 +1396,33 @@ public class PartyTests
 			);
 		}
 	}
+
+	// ===== The swap cards' SOLO MODE (Shayne, 2026-09-27: dead cards with one monster)
+
+	[Test]
+	public void HoldTheLineAtTheFrontGainsBlockInsteadOfBeingDead()
+	{
+		var hold = PartyContent.Pike.Cards.Single(c => c.Name == "Hold the Line");
+		var block = ((SwapAction)hold.Effects[0].Template).AloneBlock;
+		var s = Deal([new PlacedCompanion(Mon("Solo"), 0)], [hold], Foe(0, 50, Idle));
+
+		Assert.That(block, Is.GreaterThan(0));
+		Assert.That(CanPlay(s, "Hold the Line", 0), Is.True, "alone, it is no longer dead");
+		s = Play(s, "Hold the Line", 0);
+
+		Assert.That(Named(s, "Solo").Block, Is.EqualTo(block));
+	}
+
+	[Test]
+	public void GustAgainstALoneFoeHitsItInsteadOfBeingDead()
+	{
+		var damage = ((GustAction)PartyCards.Gust.Effects[0].Template).AloneDamage;
+		var s = Deal([new PlacedCompanion(Mon("Solo"), 0)], [PartyCards.Gust], Foe(0, 50, Idle));
+
+		Assert.That(damage, Is.GreaterThan(0));
+		Assert.That(CanPlay(s, "Gust", 0, foeRow: true), Is.True);
+		s = Play(s, "Gust", 0, foeRow: true);
+
+		Assert.That(s.LivingFoes().Single().Hp, Is.EqualTo(50 - damage));
+	}
 }

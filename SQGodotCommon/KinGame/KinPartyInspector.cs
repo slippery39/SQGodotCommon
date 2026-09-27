@@ -60,7 +60,7 @@ public sealed class KinPartyInspector
 		var colour = ally is null ? KinPalette.Red : KinPalette.Companion(ally.Name);
 		_root.AddThemeStyleboxOverride("panel", KinPalette.Box(KinPalette.Navy, colour, 3));
 
-		Line(creature.Name.ToUpperInvariant(), 26, KinPalette.Bone);
+		Line($"{creature.Name.ToUpperInvariant()}  LV {creature.Level}", 26, KinPalette.Bone);
 		Line(
 			$"HP {creature.Hp}/{creature.MaxHp}"
 				+ (ally is null ? "" : $" · POWER {ally.Power + ally.BonusPower}"),

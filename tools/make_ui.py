@@ -183,8 +183,11 @@ def main():
     save(compose(64, 28, hexagon(14), (255, 255, 255), (170, 170, 170), ((255, 255, 255), (230, 230, 230), (190, 190, 190)), 1), "bar_fill")
 
     # Step discs.
-    for rim in ("gold", "red"):
+    for rim in ("gold", "red", "bone"):
         save(compose(40, 40, circle(), *SLATE, RIMS[rim], 4), f"disc_{rim}")
+    # Route places: the same discs, big enough to hold a creature (KinRouteMap).
+    for rim in ("gold", "red", "bone"):
+        save(compose(128, 128, circle(), *SLATE, RIMS[rim], 8), f"node_{rim}")
 
     save(orb(), "orb")
     save(scrim(), "scrim")

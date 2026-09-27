@@ -3,30 +3,15 @@ using ImmutableGameObjects;
 
 namespace KinCore.Party;
 
-/// <summary>What a stop on an area's trail is.</summary>
-public enum StopKind
-{
-	/// <summary>A wild fight — its foes can be caught.</summary>
-	Battle,
-
-	/// <summary>Something lying on the path: see <see cref="FindKind"/>.</summary>
-	Find,
-
-	/// <summary>**The deeper path**: optional, harder, and the only place the area's rare lives.</summary>
-	Deep,
-}
-
+/// <summary>What a find on a route holds.</summary>
 public enum FindKind
 {
 	Snare,
 	Gold,
 
-	/// <summary>A quiet spot: every monster heals 30% of its max.</summary>
+	/// <summary>A quiet spot: every monster heals 30% of its max (a route's spring).</summary>
 	Rest,
 }
-
-/// <summary>One stop on a trail. A battle or deep stop carries its fight; a find, what is found.</summary>
-public record Stop(StopKind Kind, Encounter? Encounter = null, FindKind Find = FindKind.Snare);
 
 /// <summary>
 /// **A wild area: its own POOL of creatures** (Shayne, 2026-09-24 — random from a pool, and the pool
@@ -45,8 +30,17 @@ public record Region(
 	ImmutableList<Area> Areas,
 	Encounter Gym,
 	int MinFoes,
-	int MaxFoes
-);
+	int MaxFoes,
+	int MinLevel = PartyLevels.Base,
+	int MaxLevel = PartyLevels.Base,
+	int LeaderLevel = PartyLevels.Base
+)
+{
+	/// <summary>The rare's lair and trainers field monsters above the wild range.</summary>
+	public int RareLevel => MaxLevel + 2;
+
+	public int TrainerLevel => MaxLevel + 1;
+}
 
 /// <summary>
 /// **THE MAP v1 — two regions** (Shayne: "2 regions to get a feel for the gameplay loop"). Every
@@ -444,6 +438,38 @@ public static class PartyWorld
 	/// <summary>A foe's place in its line; the factory closes the line up from these in order.</summary>
 	private static Foe At(Foe foe, int position) => foe with { Position = position };
 
+	/// <summary>
+	/// **A wild fight from an area's pool**: `count` foes, the `rare` first if there is one, placed
+	/// front to back. Shared by the trail and the route (`PartyRoutes`).
+	/// </summary>
+	internal static Encounter WildFight(
+		Area area,
+		int count,
+		Foe? rare,
+		Random rng,
+		int minLevel = PartyLevels.Base,
+		int maxLevel = PartyLevels.Base,
+		int rareLevel = PartyLevels.Base
+	)
+	{
+		var foes = Enumerable
+			.Range(0, count)
+			.Select(i =>
+				i == 0 && rare is not null
+					? PartyLevels.Scale(rare, rareLevel)
+					: PartyLevels.Scale(
+						area.Pool[rng.Next(area.Pool.Count)],
+						rng.Next(minLevel, maxLevel + 1)
+					)
+			)
+			.ToList();
+
+		return new(
+			"Wild " + string.Join(", ", foes.Select(f => f.Name)),
+			[.. foes.Select((f, i) => At(f, i))]
+		);
+	}
+
 	// ===== The areas and gyms the regions are built from. Unscaled — a region scales its copy.
 
 	private static readonly Area MossyHollow =
@@ -488,24 +514,29 @@ public static class PartyWorld
 		new("The Last Stand", [At(PartyContent.OldTusker(0), 1), At(OldMire, 3)]);
 
 	/// <summary>
-	/// **A region's difficulty: foes per wild fight, and how much foes' HP and damage are multiplied.**
-	/// THE TUNING TABLE — the curve (90% through region 3, 75% through region 5, 25% win, Shayne,
-	/// 2026-09-24) is hit by changing these, measured with `party-sim` against `PartySim.Target`.
+	/// **A region's difficulty: foes per wild fight, and the LEVELS its wild creatures come at**
+	/// (`PartyLevels`; Shayne, 2026-09-27). THE TUNING TABLE. **Region 1 fields ONE foe** (the rare's
+	/// lair two) at Lv 2–4, under a Lv 5 starter — the start was far too hard with 1–2 full-strength
+	/// foes. The old HP/damage multipliers and their measured curve (94/70/25%) are retired.
 	/// </summary>
-	public record Tier(int MinFoes, int MaxFoes, double Hp, double Damage);
+	/// <summary>
+	/// `Leader` is the level of THIS town's leader — met at the end of the PREVIOUS region's route, so
+	/// it is set against that route and the team's level there (`party-sim` shows both).
+	/// </summary>
+	public record Tier(int MinFoes, int MaxFoes, int MinLevel, int MaxLevel, int Leader);
 
 	public static readonly ImmutableList<Tier> Tiers =
 	[
-		new(1, 2, 1.00, 1.00),
-		new(2, 3, 1.00, 1.15),
-		new(3, 4, 1.30, 1.60),
-		new(4, 4, 1.50, 1.80),
-		new(4, 5, 1.65, 2.00),
-		new(4, 5, 1.80, 2.30),
-		new(4, 5, 2.00, 2.60),
-		new(4, 5, 2.15, 2.80),
-		new(4, 5, 2.25, 2.75),
-		new(4, 5, 2.50, 3.30),
+		new(1, 1, 2, 4, 0),
+		new(2, 3, 5, 7, 5),
+		new(2, 3, 8, 10, 9),
+		new(4, 4, 11, 13, 13),
+		new(4, 4, 13, 15, 17),
+		new(4, 5, 17, 19, 20),
+		new(4, 5, 20, 22, 23),
+		new(4, 5, 23, 25, 27),
+		new(4, 5, 25, 27, 30),
+		new(5, 5, 28, 30, 33),
 	];
 
 	/// <summary>
@@ -515,8 +546,10 @@ public static class PartyWorld
 	public static readonly ImmutableList<Region> Regions =
 	[
 		Build(0, "The Greenwood", MossyHollow, StonyRidge, TuskerGym),
-		Build(1, "The Mirelands", MistyMarsh, EmberCrags, MireGym),
-		Build(2, "The Stonefells", StonyRidge, EmberCrags, TuskerGym),
+		// The FIRST leader is the Old Tusker's two: the Old Mire's three killed 7% of runs as a first
+		// exam (party-sim, 2026-09-27), the Tusker's two killed none. The Mire comes one town later.
+		Build(1, "The Mirelands", MistyMarsh, EmberCrags, TuskerGym),
+		Build(2, "The Stonefells", StonyRidge, EmberCrags, MireGym),
 		Build(3, "The Deepwood", MossyHollow, MistyMarsh, MireGym),
 		Build(4, "The Emberwastes", EmberCrags, StonyRidge, TuskerGym),
 		Build(5, "The Sunken Vale", MistyMarsh, MossyHollow, MireGym),
@@ -526,80 +559,48 @@ public static class PartyWorld
 		Build(9, "The Wyrm's Rest", MistyMarsh, MossyHollow, LastGym),
 	];
 
+	/// <summary>
+	/// **A region**: its two areas' pools stay at their BASE — a route scales each foe to the level it
+	/// rolls (`PartyRoutes`) — and its leader's line is scaled here, to the leader's level.
+	/// </summary>
 	private static Region Build(int tier, string name, Area a, Area b, Encounter gym)
 	{
 		var t = Tiers[tier];
-		Area Scaled(Area area) =>
-			area with
-			{
-				Pool = [.. area.Pool.Select(f => Scale(f, t))],
-				Rare = Scale(area.Rare, t),
-			};
-		return new(
+		// **A leader is met at the END of the route BEFORE its town**, so `t.Leader` is set against that
+		// route. The first build used this region's own range + 3: the first leader came at Lv 10
+		// straight after Lv 2–4 foes, and its first turn wiped the team (Shayne, 2026-09-27).
+		var region = new Region(
 			name,
-			[Scaled(a), Scaled(b)],
-			new(gym.Name, [.. gym.Foes.Select(f => Scale(f, t) with { Catchable = false })]),
+			[a, b],
+			gym,
 			t.MinFoes,
-			t.MaxFoes
+			t.MaxFoes,
+			t.MinLevel,
+			t.MaxLevel,
+			t.Leader
 		);
-	}
-
-	/// <summary>
-	/// **A creature at a tier**: HP and Block by the tier's HP, attacks by its damage. A creature caught
-	/// here keeps it — a region-6 Boar is a stronger catch than a region-1 one.
-	/// </summary>
-	public static Foe Scale(Foe foe, Tier tier)
-	{
-		var hp = (int)Math.Round(foe.MaxHp * tier.Hp);
-		return foe with
+		return region with
 		{
-			Hp = hp,
-			MaxHp = hp,
-			Pattern =
-			[
-				.. foe.Pattern.Select(i =>
-					i.Kind switch
-					{
-						IntentType.Attack => i with
+			Gym = new(
+				gym.Name,
+				[
+					.. gym.Foes.Select(f =>
+						PartyLevels.Scale(f, region.LeaderLevel) with
 						{
-							Amount = Math.Max(1, (int)Math.Round(i.Amount * tier.Damage)),
-						},
-						IntentType.Block => i with { Amount = (int)Math.Round(i.Amount * tier.Hp) },
-						_ => i,
-					}
-				),
-			],
+							Catchable = false,
+						}
+					),
+				]
+			),
 		};
 	}
 
 	/// <summary>
-	/// **An area's trail**: two wild fights from its pool, a find, then the optional deeper path —
-	/// one more foe than a wild fight, and the area's rare among them. Seeded, so a run replays.
+	/// **A creature's BASE, by name** — what a caught one's stats grow from. Null for a name no area
+	/// knows (a test's inline foe), which is then its own base.
 	/// </summary>
-	public static ImmutableList<Stop> Trail(Region region, Area area, Random rng)
-	{
-		Encounter Fight(int count, Foe? rare)
-		{
-			var foes = Enumerable
-				.Range(0, count)
-				.Select(i =>
-					i == 0 && rare is not null ? rare : area.Pool[rng.Next(area.Pool.Count)]
-				)
-				.ToList();
-
-			return new(
-				"Wild " + string.Join(", ", foes.Select(f => f.Name)),
-				[.. foes.Select((f, i) => At(f, i))]
-			);
-		}
-
-		var wild = () => Fight(rng.Next(region.MinFoes, region.MaxFoes + 1), null);
-		return
-		[
-			new(StopKind.Battle, wild()),
-			new(StopKind.Battle, wild()),
-			new(StopKind.Find, Find: (FindKind)rng.Next(3)),
-			new(StopKind.Deep, Fight(Math.Min(PartyBattle.MaxLine, region.MaxFoes + 1), area.Rare)),
-		];
-	}
+	public static Foe? Species(string name) =>
+		new[] { MossyHollow, StonyRidge, MistyMarsh, EmberCrags }
+			.SelectMany(a => a.Pool.Append(a.Rare))
+			.FirstOrDefault(f => f.Name == name);
 }

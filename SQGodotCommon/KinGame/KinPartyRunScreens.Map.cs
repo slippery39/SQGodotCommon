@@ -21,33 +21,67 @@ public sealed partial class KinPartyRunScreens
 		run.Phase switch
 		{
 			RunPhase.Town => $"the town of {run.Region.Name}",
-			RunPhase.Gym => $"the gym — {run.Region.Gym.Name}",
-			RunPhase.Trail => run.CurrentStop.Kind switch
-			{
-				StopKind.Battle => $"a wild fight in {run.Area!.Name}",
-				StopKind.Find => $"something on the path in {run.Area!.Name}",
-				_ => "the deeper path — or the gym",
-			},
+			RunPhase.Gym => $"the leader — {run.Region.Gym.Name}",
+			RunPhase.Route => "back to the route",
 			_ => "",
 		};
 
-	// ===== The town
+	// ===== The town's buildings (KinMapPlan.md §3) — each opened from the town map (KinTownMap)
 
 	/// <summary>
-	/// **The town: everyone is healed, and the shop is open** — Snares, three cards, and paying to
-	/// take a card out of the deck. The team (and bench) can be rearranged here too.
+	/// **Inside a building.** `back` returns to the town map; `fight` is the leader's hall's FIGHT.
+	/// A change made inside (a purchase, a heal, a swap) redraws the same building.
 	/// </summary>
-	public void ShowTown(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
+	public void ShowBuilding(
+		PartyRun run,
+		BuildingKind kind,
+		Action<Func<PartyRun, PartyRun>> change,
+		Action back,
+		Action fight
+	)
+	{
+		switch (kind)
+		{
+			case BuildingKind.Hospital:
+				ShowHospital(run, change);
+				break;
+			case BuildingKind.Shop:
+				ShowShop(run, change);
+				break;
+			case BuildingKind.Pen:
+				ShowPen(run, change);
+				break;
+			default:
+				ShowHall(run, fight);
+				break;
+		}
+		Row().AddChild(Button("◀ BACK TO TOWN", back));
+	}
+
+	/// <summary>**The hospital**: the team's HP, and healing everyone to full for gold.</summary>
+	private void ShowHospital(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
 	{
 		Begin(
-			$"TOWN — {run.Region.Name.ToUpperInvariant()}  ({run.RegionIndex + 1} OF {run.Regions.Count})",
-			"Everyone is rested to full — you too. Spend your gold, then set out.",
+			"HOSPITAL",
+			$"The team and the bench healed to full — {PartyRun.HospitalPrice} gold. Nowhere else heals fully.",
 			"town"
 		);
+		ShowTeam(run, null);
+		var heal = Button(
+			$"HEAL EVERYONE — {PartyRun.HospitalPrice} GOLD",
+			() => change(r => r.HealAtHospital())
+		);
+		heal.Disabled = run.CannotHeal is not null;
+		Row().AddChild(heal);
+		if (run.CannotHeal is { } why)
+			_column.AddChild(Label(why + ".", 22, KinPalette.Bone));
+	}
 
-		ShowTeam(run, (team, bench) => change(r => r.Swap(team, bench)));
+	/// <summary>**The shop**: Snares, three cards (each once), and paying to take a card out.</summary>
+	private void ShowShop(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
+	{
+		Begin("SHOP", $"You have {run.Gold} gold and {run.Snares} Snares.", "town");
 
-		_column.AddChild(Label("SHOP", 28, KinPalette.Bone));
 		var shop = Row();
 
 		var snare = Tile(
@@ -86,14 +120,25 @@ public sealed partial class KinPartyRunScreens
 			shop.AddChild(tile);
 		}
 
-		var buttons = Row();
 		var remove = Button(
 			$"REMOVE A CARD — {PartyRun.RemovePrice} GOLD",
 			() => ShowRemove(run, change)
 		);
 		remove.Disabled = !run.CanRemove;
-		buttons.AddChild(remove);
-		buttons.AddChild(Button("SET OUT ▶", () => change(r => r.LeaveTown())));
+		Row().AddChild(remove);
+	}
+
+	/// <summary>**The pen**: the team (front first — the line) and the bench, and swapping them.</summary>
+	private void ShowPen(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
+	{
+		Begin(
+			"THE PEN",
+			run.Bench.IsEmpty
+				? "Your team, front first. Catch more than three and the rest wait on the bench here."
+				: "Pick a team member, then a benched monster: they swap. The team fights next.",
+			"town"
+		);
+		ShowTeam(run, (team, bench) => change(r => r.Swap(team, bench)));
 	}
 
 	/// <summary>The deck, one button a card: the one pressed leaves the deck for good.</summary>
@@ -121,119 +166,35 @@ public sealed partial class KinPartyRunScreens
 		Row().AddChild(Button("BACK", () => change(r => r)));
 	}
 
-	// ===== The wild
+	// ===== The leader
 
-	/// <summary>
-	/// **Two areas, and what lives in each** — choosing an area is choosing what you might catch.
-	/// </summary>
-	public void ShowAreas(PartyRun run, Action<int> choose)
+	/// <summary>**The leader's hall**: their line, and FIGHT — or, once beaten, only that it is done.</summary>
+	private void ShowHall(PartyRun run, Action fight)
 	{
+		var gym = run.Region.Gym;
 		Begin(
-			$"{run.Region.Name.ToUpperInvariant()} ({run.RegionIndex + 1} OF {run.Regions.Count}) — CHOOSE AN AREA",
-			"Each has its own creatures. Two wild fights, a find, then a deeper path — and the gym.",
+			$"THE LEADER — {gym.Name.ToUpperInvariant()}",
+			run.LeaderBeaten
+				? "Beaten. The gate is open."
+				: "Beat their whole line to open the gate. Their creatures cannot be caught.",
 			"map"
 		);
 
 		var row = Row();
-		for (var i = 0; i < run.Region.Areas.Count; i++)
-		{
-			var index = i;
-			var area = run.Region.Areas[i];
-			row.AddChild(
-				Tile(
-					KinPalette.Slate,
-					ArtFor(area.Pool[0].Name),
-					area.Name.ToUpperInvariant(),
-					[
-						area.Description,
-						"Lives here: "
-							+ string.Join(", ", area.Pool.Select(f => f.Name).Distinct()),
-						$"Rare, down the deeper path: {area.Rare.Name}",
-					],
-					new Vector2(420, 520),
-					() => choose(index)
-				)
-			);
-		}
-	}
-
-	public void ShowFind(PartyRun run, Action take)
-	{
-		Begin(
-			$"{run.Area!.Name.ToUpperInvariant()} — A FIND",
-			$"Stop {run.StopIndex + 1} of {run.Trail.Count}"
-		);
-
-		_column.AddChild(
-			Label(
-				run.CurrentStop.Find switch
-				{
-					FindKind.Snare => "A Snare, dropped in the grass. +1 Snare.",
-					FindKind.Gold => $"A purse on the path. +{PartyRun.FoundGold} gold.",
-					_ =>
-						$"A quiet spot to rest. Every monster heals {(int)(PartyRun.RestHeal * 100)}% of its max HP.",
-				},
-				26,
-				KinPalette.Gold
-			)
-		);
-		ShowTeam(run, null);
-		Row().AddChild(Button("TAKE IT ▶", take));
-	}
-
-	/// <summary>
-	/// **The deeper path: optional, harder, and the only place the rare lives.** HP carries into the
-	/// gym, so this is the push-your-luck.
-	/// </summary>
-	public void ShowDeep(PartyRun run, Action deeper, Action turnBack)
-	{
-		var fight = run.CurrentStop.Encounter!;
-		Begin(
-			$"{run.Area!.Name.ToUpperInvariant()} — THE DEEPER PATH",
-			"A harder fight, and a rare creature to catch. Or turn back and face the gym as you are."
-		);
-
-		var row = Row();
-		foreach (var foe in fight.Foes)
-			row.AddChild(
-				Tile(
-					KinPalette.Slate,
-					ArtFor(foe.Name),
-					(foe.Name == run.Area.Rare.Name ? "RARE · " : "") + foe.Name.ToUpperInvariant(),
-					[$"HP {foe.MaxHp}"],
-					new Vector2(260, 330),
-					deeper
-				)
-			);
-
-		ShowTeam(run, null);
-		var buttons = Row();
-		buttons.AddChild(Button("GO DEEPER", deeper));
-		buttons.AddChild(Button("TURN BACK TO THE GYM", turnBack));
-	}
-
-	public void ShowGym(PartyRun run, Action fight)
-	{
-		Begin(
-			$"THE GYM — {run.Region.Gym.Name.ToUpperInvariant()}",
-			"Beat their whole line to win. Their creatures cannot be caught.",
-			"map"
-		);
-
-		var row = Row();
-		foreach (var foe in run.Region.Gym.Foes)
+		foreach (var foe in gym.Foes)
 			row.AddChild(
 				Tile(
 					KinPalette.Slate,
 					ArtFor(foe.Name),
 					foe.Name.ToUpperInvariant(),
-					[$"HP {foe.MaxHp}"],
+					[$"LV {foe.Level} · HP {foe.MaxHp}"],
 					new Vector2(260, 330),
-					fight
+					run.LeaderBeaten ? () => { } : fight
 				)
 			);
 
 		ShowTeam(run, null);
-		Row().AddChild(Button("FIGHT", fight));
+		if (!run.LeaderBeaten)
+			Row().AddChild(Button("FIGHT", fight));
 	}
 }

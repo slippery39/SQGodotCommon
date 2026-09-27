@@ -52,7 +52,7 @@ public static class PartySimCommand
 		Console.WriteLine();
 		Console.WriteLine(
 			"  REGION               THROUGH (target)   survived (target)  died trail/deep/gym  "
-				+ "at gym: team  size  deeper  turns"
+				+ "at gym: team  size  deeper  turns  lv (leader)"
 		);
 		var previous = 1.0;
 		for (var region = 0; region < regions.Count; region++)
@@ -76,6 +76,7 @@ public static class PartySimCommand
 							: $"{"", 8}{gyms.Average(g => g.TeamHpShare), 4:P0}  "
 								+ $"{gyms.Average(g => g.TeamSize), 4:F1}  {gyms.Count(g => g.WentDeep) / (double)gyms.Count, 5:P0}  "
 								+ $"{gyms.Average(g => g.Turns), 5:F1}"
+								+ $"  {gyms.Average(g => g.TeamLevel), 4:F1} ({regions[region].LeaderLevel})"
 					)
 			);
 			previous = target;

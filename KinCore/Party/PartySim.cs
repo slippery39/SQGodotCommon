@@ -8,12 +8,13 @@ public enum RunEnd
 {
 	Won,
 
-	/// <summary>Lost in a wild fight on the trail.</summary>
+	/// <summary>Lost in a fight on a route (named for the trail the route replaced).</summary>
 	Trail,
 
-	/// <summary>Lost down the deeper path.</summary>
+	/// <summary>Lost at a route's rare lair (the old deeper path).</summary>
 	Deep,
 
+	/// <summary>Lost to a town's leader.</summary>
 	Gym,
 
 	/// <summary>A battle that ran past <see cref="PartySim.TurnLimit"/> turns — the bot could not finish it.</summary>
@@ -25,6 +26,9 @@ public record GymArrival(int Region, double TeamHpShare, int TeamSize, bool Went
 {
 	/// <summary>How many turns the gym took.</summary>
 	public int Turns { get; init; }
+
+	/// <summary>The team's average level on arrival, against the leader's (`PartyLevels`).</summary>
+	public double TeamLevel { get; init; }
 }
 
 /// <summary>One simulated run.</summary>
@@ -104,24 +108,24 @@ public static class PartySim
 			switch (run.Phase)
 			{
 				case RunPhase.Town:
+					// Heal only when it matters: under the deeper-path threshold, and it can pay.
+					if (!Healthy(run) && run.CannotHeal is null)
+						run = run.HealAtHospital();
 					while (run.Snares < 2 && run.CanBuySnare)
 						run = run.BuySnare();
 					if (run.CanBuyCard(0))
 						run = run.BuyCard(0);
-					run = run.LeaveTown();
-					wentDeep = false;
+					if (run.CannotLeaveTown is not null)
+						run = run.FightLeader();
+					else
+					{
+						run = run.EnterRoute();
+						wentDeep = false;
+					}
 					break;
 
-				case RunPhase.ChooseArea:
-					run = run.ChooseArea(rng.Next(run.Region.Areas.Count));
-					break;
-
-				case RunPhase.Trail when run.CurrentStop.Kind == StopKind.Find:
-					run = run.TakeFind();
-					break;
-
-				case RunPhase.Trail when run.CurrentStop.Kind == StopKind.Deep && !Healthy(run):
-					run = run.SkipDeep();
+				case RunPhase.Route when run.HereIsCleared:
+					run = run.MoveTo(Walk(run, rng));
 					break;
 
 				default:
@@ -133,13 +137,16 @@ public static class PartySim
 								run.Team.Count,
 								wentDeep
 							)
+							{
+								TeamLevel = run.Team.Average(m => m.Level),
+							}
 						);
-					else if (run.CurrentStop.Kind == StopKind.Deep)
+					else if (run.Here.Kind == NodeKind.Rare)
 						wentDeep = true;
 
 					var where =
 						run.Phase == RunPhase.Gym ? RunEnd.Gym
-						: run.CurrentStop.Kind == StopKind.Deep ? RunEnd.Deep
+						: run.Here.Kind == NodeKind.Rare ? RunEnd.Deep
 						: RunEnd.Trail;
 
 					var battle = run.StartBattle();
@@ -199,9 +206,34 @@ public static class PartySim
 		return new(starter.Name, seed, RunEnd.Won, run.RegionIndex, gyms, caught, battles, turns);
 	}
 
+	/// <summary>
+	/// **Where the bot walks next on a route**: hurt, a spring or a find; healthy, the rare's lair
+	/// first, then any fight. Ties broken by the seed.
+	/// </summary>
+	private static int Walk(PartyRun run, Random rng)
+	{
+		var healthy = Healthy(run);
+		int Want(NodeKind kind) =>
+			kind switch
+			{
+				NodeKind.Rest => healthy ? 1 : 6,
+				NodeKind.Find => healthy ? 2 : 5,
+				NodeKind.Rare => healthy ? 6 : 0,
+				NodeKind.Wild => healthy ? 5 : 3,
+				NodeKind.Grass => healthy ? 4 : 2,
+				NodeKind.Trainer => healthy ? 3 : 1,
+				_ => 4,
+			};
+		return run.Route!.Next(run.NodeId)
+			.OrderByDescending(n => Want(n.Kind))
+			.ThenBy(_ => rng.Next())
+			.First()
+			.Id;
+	}
+
 	private static bool Healthy(PartyRun run) =>
 		run.Team.Count >= DeepWithAtLeast && TeamShare(run) >= DeepIfHealthy;
 
 	private static double TeamShare(PartyRun run) =>
-		run.Team.Sum(m => m.Hp) / (double)run.Team.Sum(m => m.Companion.Hp);
+		run.Team.Sum(m => m.Hp) / (double)run.Team.Sum(m => m.MaxHp);
 }

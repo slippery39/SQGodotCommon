@@ -83,16 +83,16 @@ public static class PartyCards
 	public static readonly KinCard Gust = Card(
 		"Gust",
 		1,
-		"Their front two swap.",
-		new GustAction()
+		"Their front two swap. A lone foe takes 5 instead.",
+		new GustAction { AloneDamage = 5 }
 	);
 
 	/// <summary>Enabler (Control, Draw) · standard.</summary>
 	public static readonly KinCard Tailwind = Card(
 		"Tailwind",
 		1,
-		"Their front two swap. Draw a card.",
-		new GustAction(),
+		"Their front two swap (a lone foe takes 3). Draw a card.",
+		new GustAction { AloneDamage = 3 },
 		new DrawAction()
 	);
 

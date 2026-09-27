@@ -32,6 +32,9 @@ public record PartyCompanion(
 	/// and active only while it stands in the line.
 	/// </summary>
 	public ImmutableList<GameComponent> Abilities { get; init; } = [];
+
+	/// <summary>The level these stats are at (`PartyLevels.Scale` sets it; the base is Lv 5).</summary>
+	public int Level { get; init; } = PartyLevels.Base;
 }
 
 /// <summary>
@@ -136,7 +139,12 @@ public static class PartyContent
 					new RallyAction(),
 					new PowerAction { Amount = 2 }
 				),
-				Card("Hold the Line", 0, "Swap it with the one ahead of it.", new SwapAction()),
+				Card(
+					"Hold the Line",
+					0,
+					"Swap it with the one ahead. At the front: gain 5 Block.",
+					new SwapAction { AloneBlock = 5 }
+				),
 			],
 		};
 
@@ -161,26 +169,27 @@ public static class PartyContent
 	/// <summary>
 	/// **The trainer's BASIC deck — every card is played ON something, and none belongs to a
 	/// monster.** Each monster fighting adds its own deck on top (`PartyCompanion.Cards`), so the
-	/// starter's two cards make it ten.
+	/// starter's two cards make it ten. Made clearly stronger on 2026-09-27 (Shayne: the early game
+	/// was far too hard) — Strike 3→5, Guard 6→8, Rally +3→+4.
 	/// </summary>
 	public static readonly ImmutableList<KinCard> StarterDeck =
 	[
-		Card("Guard", 1, "Gain 6 Block.", new GuardAction { Amount = 6 }),
-		Card("Guard", 1, "Gain 6 Block.", new GuardAction { Amount = 6 }),
+		Card("Guard", 1, "Gain 8 Block.", new GuardAction { Amount = 8 }),
+		Card("Guard", 1, "Gain 8 Block.", new GuardAction { Amount = 8 }),
 		Card(
 			"Strike",
 			1,
-			"It attacks their front now: 3 + Power.",
-			new StrikeAction { Amount = 3 }
+			"It attacks their front now: 5 + Power.",
+			new StrikeAction { Amount = 5 }
 		),
 		Card(
 			"Strike",
 			1,
-			"It attacks their front now: 3 + Power.",
-			new StrikeAction { Amount = 3 }
+			"It attacks their front now: 5 + Power.",
+			new StrikeAction { Amount = 5 }
 		),
-		Card("Rally", 1, "+3 Power this turn.", new PowerAction { Amount = 3 }),
-		Card("Rally", 1, "+3 Power this turn.", new PowerAction { Amount = 3 }),
+		Card("Rally", 1, "+4 Power this turn.", new PowerAction { Amount = 4 }),
+		Card("Rally", 1, "+4 Power this turn.", new PowerAction { Amount = 4 }),
 		Card("Hasten", 1, "It plays its move now, not at end of turn.", new HastenAction()),
 		Card("Stagger", 1, "Drop on a foe: it loses its next move.", new StaggerAction()),
 	];
@@ -485,6 +494,7 @@ public static class PartyBattleFactory
 				{
 					Slot = slot,
 					Name = companion.Name,
+					Level = companion.Level,
 					Hp = hp ?? companion.Hp,
 					MaxHp = companion.Hp,
 					Power = companion.Power,

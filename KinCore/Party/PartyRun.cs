@@ -3,8 +3,22 @@ using ImmutableGameObjects;
 
 namespace KinCore.Party;
 
-/// <summary>A monster between battles: who it is and the HP it carries.</summary>
-public record RunCompanion(PartyCompanion Companion, int Hp);
+/// <summary>
+/// **A monster between battles**: who it is (its BASE stats), the HP it carries, its LEVEL and the XP
+/// toward the next (`PartyLevels`).
+/// </summary>
+public record RunCompanion(
+	PartyCompanion Companion,
+	int Hp,
+	int Level = PartyLevels.Base,
+	int Xp = 0
+)
+{
+	/// <summary>Its stats at its level — what fights.</summary>
+	public PartyCompanion Stats => PartyLevels.Scale(Companion, Level);
+
+	public int MaxHp => Stats.Hp;
+}
 
 /// <summary>What happened in a battle just won, for the screen to tell.</summary>
 public record RunReport(
@@ -12,37 +26,46 @@ public record RunReport(
 	ImmutableList<string> Caught,
 	ImmutableList<string> ToBench,
 	int Gold
-);
+)
+{
+	/// <summary>XP each team member earned.</summary>
+	public int Xp { get; init; }
+
+	/// <summary>"Pike grew to Lv 6!" — one per monster that levelled.</summary>
+	public ImmutableList<string> LevelUps { get; init; } = [];
+}
 
 /// <summary>Where a run is. The screens are chosen from this and nothing else.</summary>
 public enum RunPhase
 {
-	/// <summary>In a region's town: healed on arrival; the shop is open.</summary>
+	/// <summary>In a region's town: a map of buildings — hospital, shop, pen; from the second town on, a
+	/// LEADER must be beaten before you can leave.</summary>
 	Town,
 
-	/// <summary>Choosing one of the region's two wild areas.</summary>
-	ChooseArea,
-
-	/// <summary>On the chosen area's trail, at <see cref="PartyRun.CurrentStop"/>.</summary>
-	Trail,
-
-	/// <summary>At the region's gym.</summary>
+	/// <summary>Fighting the town's leader (the region's `Gym` encounter).</summary>
 	Gym,
+
+	/// <summary>
+	/// **On a wild ROUTE** (`KinMapPlan.md`): walking a branching map toward the next town, at
+	/// <see cref="PartyRun.Here"/>.
+	/// </summary>
+	Route,
 
 	Won,
 	Lost,
 }
 
 /// <summary>
-/// **THE RUN** (KinJam.md "THE MAP", "CATCHING"): two regions, each a TOWN (full heal, a shop), then
-/// ONE of two wild AREAS — its trail of wild fights, a find and an optional deeper path — then the
-/// region's GYM. You start with one monster and catch the rest. HP carries between fights; a
-/// knocked-out monster revives at a quarter of its max; gold from every win buys Snares and cards.
+/// **THE RUN** (`KinMapPlan.md`): TOWN → wild ROUTE → next town → … Each town has a hospital (healing
+/// for gold) and a shop; from the second town on its LEADER must be beaten before you leave (the last town's leader
+/// wins the run). A route is a branching map of fights, finds and springs (`PartyRun.Route.cs`).
+/// You start with one monster and catch the rest. HP carries between fights; a knocked-out monster
+/// revives at a quarter of its max; gold from every win buys Snares and cards.
 ///
 /// **Lives OUTSIDE GameState**, like the lane game's `Run`: a battle is built from it, played, and
 /// read back into it. Plain records only — the Serialization Rule holds here too.
 /// </summary>
-public record PartyRun
+public partial record PartyRun
 {
 	/// <summary>How many fight. The rest wait on the bench.</summary>
 	public const int TeamSize = 3;
@@ -79,14 +102,6 @@ public record PartyRun
 	public int RegionIndex { get; init; }
 	public RunPhase Phase { get; init; }
 
-	/// <summary>The chosen area's trail, and where on it you are. Empty outside an area.</summary>
-	public ImmutableList<Stop> Trail { get; init; } = [];
-
-	public int StopIndex { get; init; }
-
-	/// <summary>The area chosen in this region, or null before choosing.</summary>
-	public Area? Area { get; init; }
-
 	public int Snares { get; init; }
 	public int Gold { get; init; }
 
@@ -95,10 +110,24 @@ public record PartyRun
 
 	public int Seed { get; init; }
 
+	/// <summary>The route being walked (`PartyRun.Route.cs`), or null off a route.</summary>
+	public RouteMap? Route { get; init; }
+
+	/// <summary>Where on the route you stand.</summary>
+	public int NodeId { get; init; }
+
+	/// <summary>Route places whose business is done: a find taken, a fight won.</summary>
+	public ImmutableList<int> Cleared { get; init; } = [];
+
 	public bool IsWon => Phase == RunPhase.Won;
 	public bool IsOver => Phase is RunPhase.Won or RunPhase.Lost;
 	public Region Region => Regions[RegionIndex];
-	public Stop CurrentStop => Trail[StopIndex];
+
+	/// <summary>From the second town on, a leader stands between you and the road out.</summary>
+	public bool HasLeader => RegionIndex >= 1;
+
+	/// <summary>Whether this town's leader has been beaten.</summary>
+	public bool LeaderBeaten { get; init; }
 
 	/// <summary>A new run: one starter, in the first region's town.</summary>
 	public static PartyRun Start(
@@ -124,13 +153,16 @@ public record PartyRun
 	/// **A caught foe as a monster of yours: exactly what it had.** Its cycle and its max HP.
 	/// Power 0, because a foe's move amounts are already its whole damage. **Its deck ability wakes
 	/// now**: the passive, triggers and monster deck it carried dormant. A wild trait (Thief) stays wild.
+	/// **Its stats are the species' BASE** (`PartyWorld.Species`); it joins at the level it was caught.
 	/// </summary>
-	public static PartyCompanion FromFoe(Foe foe) =>
-		new(
+	public static PartyCompanion FromFoe(Foe foe)
+	{
+		var basis = PartyWorld.Species(foe.Name) ?? foe;
+		return new(
 			foe.Name,
-			foe.MaxHp,
+			basis.MaxHp,
 			Power: 0,
-			[.. foe.Pattern.Select(i => i with { Steals = false })],
+			[.. basis.Pattern.Select(i => i with { Steals = false })],
 			Passive: foe.CaughtPassive,
 			PassiveRule: foe.CaughtRule
 		)
@@ -138,70 +170,50 @@ public record PartyRun
 			Cards = foe.CaughtCards,
 			Abilities = foe.CaughtAbilities,
 		};
-
-	// ===== Moving along
-
-	public PartyRun LeaveTown() => this with { Phase = RunPhase.ChooseArea, Sold = [] };
-
-	/// <summary>Into one of the region's areas: its trail is drawn now, from its own pool.</summary>
-	public PartyRun ChooseArea(int index)
-	{
-		var area = Region.Areas[index];
-		return this with
-		{
-			Area = area,
-			Trail = PartyWorld.Trail(Region, area, new Random(Seed * 17 + RegionIndex * 7 + index)),
-			StopIndex = 0,
-			Phase = RunPhase.Trail,
-		};
 	}
 
-	/// <summary>Picks up what a find stop holds, and walks on.</summary>
-	public PartyRun TakeFind() =>
-		(
-			CurrentStop.Find switch
-			{
-				FindKind.Snare => this with { Snares = Snares + 1 },
-				FindKind.Gold => this with { Gold = Gold + FoundGold },
-				_ => this with { Team = Heal(Team, RestHeal), Bench = Heal(Bench, RestHeal) },
-			}
-		).Walk();
+	// ===== Leaving town
 
-	/// <summary>Turns back from the deeper path, straight to the gym.</summary>
-	public PartyRun SkipDeep() => this with { Phase = RunPhase.Gym };
+	/// <summary>Why you cannot leave the town yet — or null if you can.</summary>
+	public string? CannotLeaveTown =>
+		Phase != RunPhase.Town ? "Not in a town"
+		: HasLeader && !LeaderBeaten ? "Beat the leader first"
+		: null;
 
-	/// <summary>The next stop, or the gym when the trail is done.</summary>
-	private PartyRun Walk() =>
-		StopIndex + 1 < Trail.Count
+	/// <summary>Into the leader's hall — the town's leader fight. Refused with no leader, or twice.</summary>
+	public PartyRun FightLeader() =>
+		Phase == RunPhase.Town && HasLeader && !LeaderBeaten
 			? this with
 			{
-				StopIndex = StopIndex + 1,
-			}
-			: this with
-			{
 				Phase = RunPhase.Gym,
-			};
+			}
+			: this;
 
 	// ===== Battles
 
 	/// <summary>The fight at this point of the run: the current stop's, or the gym's.</summary>
 	public Encounter NextFight =>
-		Phase == RunPhase.Gym
-			? Region.Gym
-			: CurrentStop.Encounter ?? throw new InvalidOperationException("No fight here");
+		Phase switch
+		{
+			RunPhase.Gym => Region.Gym,
+			RunPhase.Route => Here.Encounter,
+			_ => null,
+		} ?? throw new InvalidOperationException("No fight here");
 
 	public GameState StartBattle()
 	{
 		var scenario = new PartyScenario(
 			NextFight.Name,
-			Phase == RunPhase.Gym
-				? $"{Region.Name} — the gym"
-				: $"{Region.Name} — {Area!.Name}, stop {StopIndex + 1} of {Trail.Count}",
+			Phase switch
+			{
+				RunPhase.Gym => $"{Region.Name} — the leader",
+				_ => $"{Region.Name} — the route",
+			},
 			// **The team's order IS the line** (front first), then the bench off it (-1) — in that
 			// order, so slots line up. The battle opens DEPLOYING (R2): the order can change before FIGHT.
 			[
-				.. Team.Select((m, i) => new PlacedCompanion(m.Companion, i, m.Hp)),
-				.. Bench.Select(m => new PlacedCompanion(m.Companion, -1, m.Hp)),
+				.. Team.Select((m, i) => new PlacedCompanion(m.Stats, i, m.Hp)),
+				.. Bench.Select(m => new PlacedCompanion(m.Stats, -1, m.Hp)),
 			],
 			NextFight.Foes,
 			Deck,
@@ -209,14 +221,14 @@ public record PartyRun
 			Snares,
 			Deploy: true
 		);
-		return PartyBattleFactory.Create(scenario, Seed + RegionIndex * 1009 + StopIndex * 101);
+		return PartyBattleFactory.Create(scenario, Seed + RegionIndex * 1009 + NodeId * 37);
 	}
 
 	/// <summary>
 	/// **Reads a finished battle back into the run.** A loss ends it. A win carries HP over — a
 	/// knocked-out monster revives at a quarter of its max — keeps the Snares left, pays gold, and
-	/// every caught foe joins: the team if there is room, else the bench. Then the run walks on: the
-	/// next stop, the gym, or — after a gym — the next region's town, where everyone is healed.
+	/// every caught foe joins: the team if there is room, else the bench. On a route you stay on the
+	/// place you fought; after a leader you are back in its town with the road open.
 	/// </summary>
 	public (PartyRun Run, RunReport Report) AfterBattle(GameState finished)
 	{
@@ -249,10 +261,21 @@ public record PartyRun
 		];
 		var bench = Bench.Select((m, i) => After(m, Team.Count + i)).ToImmutableList();
 
-		var gold =
-			Phase == RunPhase.Gym ? GymGold
-			: CurrentStop.Kind == StopKind.Deep ? DeepGold
-			: WildGold;
+		var gold = Phase == RunPhase.Gym ? GymGold : RouteGold(Here.Kind);
+		// **XP to every monster on the team** — the line that fought (`PartyLevels.XpFor`).
+		var xp = PartyLevels.XpFor(NextFight.Foes, leader: Phase == RunPhase.Gym);
+		var levelUps = ImmutableList<string>.Empty;
+		team =
+		[
+			.. team.Select(m =>
+			{
+				var grown = PartyLevels.Gain(m, xp);
+				if (grown.Level > m.Level)
+					levelUps = levelUps.Add($"{m.Companion.Name} grew to Lv {grown.Level}!");
+				return grown;
+			}),
+		];
+
 		var run = this with
 		{
 			Team = team,
@@ -265,7 +288,7 @@ public record PartyRun
 		var toBench = ImmutableList<string>.Empty;
 		foreach (var foe in finished.CaughtFoes())
 		{
-			var joining = new RunCompanion(FromFoe(foe), foe.Hp);
+			var joining = new RunCompanion(FromFoe(foe), foe.Hp, foe.Level);
 			caught = caught.Add(foe.Name);
 			if (run.Team.Count < TeamSize)
 				run = run with { Team = run.Team.Add(joining) };
@@ -277,28 +300,38 @@ public record PartyRun
 		}
 
 		run =
-			Phase != RunPhase.Gym ? run.Walk()
+			// On a route you stay where you fought — the place is cleared, and the map is yours again.
+			Phase == RunPhase.Route
+				? run with
+				{
+					Cleared = run.Cleared.Add(NodeId),
+				}
+			// The leader beaten: back in its town, the road out open — or, the last one, the run won.
 			: RegionIndex + 1 >= Regions.Count ? run with { Phase = RunPhase.Won }
-			: run.EnterTown(RegionIndex + 1);
+			: run with { Phase = RunPhase.Town, LeaderBeaten = true };
 
-		return (run, new RunReport(revived, caught, toBench, gold));
+		return (
+			run,
+			new RunReport(revived, caught, toBench, gold) { Xp = xp, LevelUps = levelUps }
+		);
 	}
 
-	/// <summary>**A town heals everyone to full** — the bench and you too — once per region, so no stall.</summary>
-	private PartyRun EnterTown(int region) =>
+	/// <summary>
+	/// **Into a town.** Nobody is healed for free any more: the hospital sells it (`PartyRun.Town.cs`).
+	/// </summary>
+	internal PartyRun EnterTown(int region) =>
 		this with
 		{
 			RegionIndex = region,
 			Phase = RunPhase.Town,
-			Area = null,
-			Trail = [],
-			StopIndex = 0,
+			LeaderBeaten = false,
+			Route = null,
+			NodeId = 0,
+			Cleared = [],
 			Sold = [],
-			Team = Heal(Team, 1),
-			Bench = Heal(Bench, 1),
 		};
 
-	private static ImmutableList<RunCompanion> Heal(
+	internal static ImmutableList<RunCompanion> Heal(
 		ImmutableList<RunCompanion> monsters,
 		double share
 	) =>
@@ -306,7 +339,7 @@ public record PartyRun
 			.. monsters.Select(m =>
 				m with
 				{
-					Hp = Math.Min(m.Companion.Hp, m.Hp + (int)Math.Ceiling(m.Companion.Hp * share)),
+					Hp = Math.Min(m.MaxHp, m.Hp + (int)Math.Ceiling(m.MaxHp * share)),
 				}
 			),
 		];
@@ -324,7 +357,7 @@ public record PartyRun
 	/// <summary>**Three cards to choose from after a win** — seeded, so a run replays.</summary>
 	public ImmutableList<KinCard> RewardOffer()
 	{
-		var rng = new Random(Seed * 31 + RegionIndex * 13 + StopIndex);
+		var rng = new Random(Seed * 31 + RegionIndex * 13 + NodeId * 3 + (LeaderBeaten ? 1 : 0));
 		return [.. Rewards.OrderBy(_ => rng.Next()).Take(3)];
 	}
 

@@ -178,25 +178,50 @@ public partial class KinPartyBoard : Node2D
 			StartScenario(_scenario);
 		else if (_captureStarter is { } starter)
 		{
-			// Capture-only: `--screen=areas` leaves the town; `find|deep|gym` jump along the first
-			// area's trail; `between|over` fight its first stop and end it through `DebugEndBattle`.
+			// Capture-only: `--screen=route` sets out onto the first route, `route2` walks one place
+			// further; `town2` is the second town (its leader unbeaten), `gym|gymfight` that leader;
+			// `between|over` fight the route's first place and end it through `DebugEndBattle`.
 			BeginRun(PartyContent.Roster[starter]);
 			if (_captureScreen is { } screen)
 				GetTree().CreateTimer(0.5).Timeout += () =>
 				{
-					Change(r => r.LeaveTown());
-					if (screen == "areas")
-						return;
-					if (screen is "find" or "deep" or "gym" or "gymfight")
+					if (screen is "town2" or "gym" or "gymfight")
 					{
-						Change(r => r.ChooseArea(0) with { StopIndex = screen == "find" ? 2 : 3 });
-						if (screen.StartsWith("gym"))
-							Change(r => r.SkipDeep());
+						Change(r => r with { RegionIndex = 1 });
+						if (screen == "gym")
+							OpenBuilding(BuildingKind.Hall);
 						if (screen == "gymfight")
+						{
+							_run = _run.FightLeader();
 							NextBattle();
+						}
 						return;
 					}
-					Change(r => r.ChooseArea(0));
+					if (screen is "hospital" or "shop" or "pen")
+					{
+						// A hurt starter, so the hospital has something to sell.
+						Change(r => r with { Team = [r.Team[0] with { Hp = r.Team[0].Hp / 2 }] });
+						OpenBuilding(System.Enum.Parse<BuildingKind>(screen, ignoreCase: true));
+						return;
+					}
+					Change(r => r.EnterRoute());
+					if (screen == "route")
+						return;
+					if (screen == "route2")
+					{
+						var find = _run.Route!.Nodes.FirstOrDefault(n => !n.IsFight && n.Row > 0);
+						Change(r =>
+							r with
+							{
+								NodeId = find?.Id ?? 0,
+								Cleared = [.. r.Cleared, find?.Id ?? 0],
+							}
+						);
+						return;
+					}
+					Change(r => r.MoveTo(r.Route!.Next(0).First().Id));
+					if (screen == "routefight")
+						return;
 					_state = _state.DebugEndBattle(won: screen == "between");
 					BattleOver();
 				};
@@ -204,6 +229,15 @@ public partial class KinPartyBoard : Node2D
 		else
 			ShowStarters();
 	}
+
+	private KinRouteMap _route;
+	private KinTownMap _town;
+
+	/// <summary>
+	/// The building open in town, or null on the town's map. Screen state, not run state: which
+	/// door you are standing in changes nothing the run must remember.
+	/// </summary>
+	private BuildingKind? _building;
 
 	private int? _captureStarter;
 	private string _captureScreen;
@@ -230,31 +264,46 @@ public partial class KinPartyBoard : Node2D
 	}
 
 	/// <summary>
-	/// **Where the run is decides what shows** (`PartyRun.Phase`): the town, the choice of area, the
-	/// next stop on the trail — a fight, a find or the deeper path — the gym, or the end.
+	/// **Where the run is decides what shows** (`PartyRun.Phase`): the town's map — or the building
+	/// you walked into — the route map, or the fight on the place you just walked to, or the end.
 	/// </summary>
 	private void Continue()
 	{
 		_hand.SetVisible(false);
+		_route.Hide();
+		_town.Hide();
 		switch (_run.Phase)
 		{
+			case RunPhase.Town when _building is { } inside:
+				_screens.ShowBuilding(
+					_run,
+					inside,
+					Change,
+					() =>
+					{
+						_building = null;
+						Continue();
+					},
+					() =>
+					{
+						_run = _run.FightLeader();
+						NextBattle();
+					}
+				);
+				break;
 			case RunPhase.Town:
-				_screens.ShowTown(_run, Change);
+				_screens.Hide();
+				_town.Show(_run, OpenBuilding);
 				break;
-			case RunPhase.ChooseArea:
-				_screens.ShowAreas(_run, area => Change(r => r.ChooseArea(area)));
-				break;
-			case RunPhase.Trail when _run.CurrentStop.Kind == StopKind.Battle:
+			case RunPhase.Route when !_run.HereIsCleared && _run.Here.IsFight:
 				NextBattle();
 				break;
-			case RunPhase.Trail when _run.CurrentStop.Kind == StopKind.Find:
-				_screens.ShowFind(_run, () => Change(r => r.TakeFind()));
-				break;
-			case RunPhase.Trail:
-				_screens.ShowDeep(_run, NextBattle, () => Change(r => r.SkipDeep()));
+			case RunPhase.Route:
+				_screens.Hide();
+				_route.Show(_run, id => Change(r => r.MoveTo(id)));
 				break;
 			case RunPhase.Gym:
-				_screens.ShowGym(_run, NextBattle);
+				NextBattle();
 				break;
 			default:
 				_screens.ShowOver(
@@ -266,9 +315,24 @@ public partial class KinPartyBoard : Node2D
 		}
 	}
 
+	/// <summary>Into a building — or, through the gate, out onto the route.</summary>
+	private void OpenBuilding(BuildingKind kind)
+	{
+		if (kind == BuildingKind.Gate)
+		{
+			Change(r => r.EnterRoute());
+			return;
+		}
+		_building = kind;
+		Continue();
+	}
+
 	private void NextBattle()
 	{
+		_building = null;
 		_screens.Hide();
+		_route.Hide();
+		_town.Hide();
 		_hand.SetVisible(true);
 		_selectedAllyId = 0;
 		_logLines.Clear();
@@ -973,6 +1037,8 @@ public partial class KinPartyBoard : Node2D
 
 		// AFTER the pass above, which would switch its click-blocking ground off.
 		_screens = new KinPartyRunScreens(layer);
+		_route = new KinRouteMap(layer);
+		_town = new KinTownMap(layer);
 		_inspector = new KinPartyInspector(layer);
 	}
 

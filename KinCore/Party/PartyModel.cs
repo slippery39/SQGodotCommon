@@ -91,6 +91,9 @@ public abstract record Creature : GameObject
 	public int Hp { get; init; }
 	public int MaxHp { get; init; }
 
+	/// <summary>Its LEVEL (`PartyLevels`) — shown; its stats already carry it.</summary>
+	public int Level { get; init; } = PartyLevels.Base;
+
 	/// <summary>
 	/// **Its place in its line: 0 is the FRONT.** Kept contiguous by `PartyState.Settle`; −1 once it has
 	/// left the line (fallen, caught) or while it waits on the bench.

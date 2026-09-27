@@ -241,7 +241,7 @@ public sealed class KinRelayField
 				? KinPalette.Gold
 				: colour,
 			drop is not null || ally.Id == ctx.SelectedId || ally.Id == ctx.HeldId,
-			ally.Name.ToUpperInvariant(),
+			$"{ally.Name.ToUpperInvariant()}  LV {ally.Level}",
 			ally.Hp,
 			ally.MaxHp,
 			colour.Lightened(0.25f),
@@ -277,7 +277,7 @@ public sealed class KinRelayField
 			ctx.Steps.GetValueOrDefault(foe.Id),
 			drop is not null || snareHere ? KinPalette.Gold : KinPalette.Red,
 			drop is not null || snareHere,
-			foe.Name.ToUpperInvariant(),
+			$"{foe.Name.ToUpperInvariant()}  LV {foe.Level}",
 			foe.Hp,
 			foe.MaxHp,
 			KinPalette.Red,
