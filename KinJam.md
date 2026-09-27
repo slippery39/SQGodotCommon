@@ -1,5 +1,48 @@
 # KIN — design doc
 
+> # LEVELS + XP, AND AN EASIER START (Shayne, 2026-09-27, after playing the journey)
+>
+> "The early game difficulty is way too hard. The enemies are around the same power level as your
+> starting monster, and as soon as floor 2 you could be fighting multiples." And: "the swapping
+> cards don't do much with one monster". **Decided, and built:**
+> - **LEVELS** (`PartyLevels`): every creature has one; HP, Power, Block and attacks are its base ×
+>   `0.6 + 0.08 × level`. **The content's own numbers are Lv 5**, so nothing authored moved. A region
+>   sets its wild level range (`PartyWorld.Tiers`, now foes + levels — the HP/damage multipliers and
+>   their measured 94/70/25% curve are RETIRED); the rare's lair is +2, trainers +1, the leader +3.
+>   **This is the balancing handle**: "route 3 is Lv 8–10" is a sentence you can design against.
+> - **XP**: each monster on the team gains 12 × the foes' average level from a win (a leader ×2) and
+>   needs 30 × its level to grow. A level raises max HP and current HP alike. A catch joins at its
+>   level from its species' base. Shown: "LV n" on every name, XP on team buttons, level-ups first
+>   on the victory screen.
+> - **Region 1 fields ONE foe** (the rare's lair two), at Lv 2–4 under a Lv 5 starter.
+> - **The basic deck, clearly stronger**: Strike 3→5 + Power, Guard 6→8, Rally +3→+4.
+> - **Solo modes, so no card is dead with one monster**: Hold the Line at the front gains 5 Block;
+>   Gust against a lone foe hits it for 5 (Tailwind 3).
+> Every number is a guess to play against, not a tuned value.
+> - **Then measured (Shayne asked for a sim, 2026-09-27)**: the first leader wiped the team because
+>   its level came from the route AHEAD. Leaders now carry their own level in `Tiers` (set against
+>   the route you reach them by); the FIRST leader is the Old Tusker's two (the Mire comes a town
+>   later); XP is 22 × level. **Early game on the curve; late game too easy — leaders never kill
+>   after the first (their lines are small), and late routes split by pool.** Full table:
+>   `docs/findings/companion-balance.md` (2026-09-27).
+
+> # THE JOURNEY (Shayne, 2026-09-26): TOWNS and WILD ROUTES as interactive MAPS
+>
+> "I don't want the simple screens. A town you walk around — hospital, shop, training — and on the
+> second town you fight the town leader to progress. After it a wild route where you catch monsters
+> and find things. Then the next town… and repeat." **The plan and its decisions: `KinMapPlan.md`.**
+> - **BUILT (2026-09-26): the ROUTE.** A branching map (Slay-the-Spire-style node map) from one town
+>   to the next: the first fork is one VISIBLE wild fight per area (choosing a side is choosing what
+>   you can catch), then tall grass (a hidden fight), finds, springs, trainers (uncatchable, pay
+>   more) and one RARE lair. A fight must be won before you walk on. HP carries; only a town heals.
+> - **BUILT: the LEADER gate.** From the second town on, the town's leader (the region's old gym
+>   encounter) must be beaten before you can set out; the last town's leader wins the run.
+> - **RETIRED: the trail** — choosing one of two areas, the fixed four stops, the deeper path, and the
+>   gym AFTER the area. The areas live on as the two sides of each route.
+> - **BUILT: the TOWN as a map** — hospital, shop, the pen, the leader's hall (town 2 on) and the
+>   gate, each a building you walk to. **Healing costs gold now** (25, the hospital); arriving heals
+>   nobody, so healing competes with Snares and cards. Unplayed; the price is a guess.
+
 > # LANE COMBAT IS RETIRED (Shayne, 2026-09-25, after playing round one)
 >
 > "The lanes and moving around just isn't working for me. It still feels bad when you have a main

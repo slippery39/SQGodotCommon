@@ -220,6 +220,33 @@ They must read as one consistent set by one artist. Each must have a distinct si
 
 ---
 
+### S19 — Town map (KinMapPlan.md)
+```
+SCREEN: The TOWN MAP of a PC card game, 16:9 landscape. A cosy fantasy village painted from a high
+three-quarter view, filling the screen: cobbled streets, a small river with a bridge, trees. Six
+distinct buildings, each with a small floating name plate: HOSPITAL (white walls, a red cross sign),
+SHOP (market stall with an awning), TRAINING GROUNDS (a fenced sparring yard with dummies), THE PEN
+(a barn with a paddock), LEADER'S HALL (a large stone hall with banners, glowing gold outline because
+it is the goal), and a town gate at the top edge marked "ROUTE 2 ▶", shown locked with a padlock. A
+small trainer token with three tiny creatures stands in the town square. TOP-LEFT: a banner
+"MOSSBROOK · TOWN 2". TOP-RIGHT: "GOLD 120 · SNARES 3". BOTTOM: a strip of the team's three creature
+portraits with HP bars.
+```
+
+### S20 — Wild route map (KinMapPlan.md)
+```
+SCREEN: The WILD ROUTE MAP of a PC card game, 16:9 landscape. An illustrated overhead map of wild
+land, a forest on the left half and rocky crags on the right half, a river between. A branching path
+of about ten round nodes runs from a small town at the bottom to a larger town at the top, with
+forks. Node types, each a distinct icon in a round plate: a creature silhouette (a visible wild
+monster — two show a boar and a grey eagle), tall grass with a "?", a treasure chest, a healing
+spring, a crossed-swords trainer, and one glowing gold star node off to the side labelled "RARE".
+Dotted lines connect the nodes. Nodes already visited are dimmed; the two nodes reachable next glow
+gold. A small trainer token with three tiny creatures stands on the current node. TOP-LEFT: "ROUTE 2
+— THE GREENWOOD TRAIL". TOP-RIGHT: "GOLD 120 · SNARES 3". BOTTOM: the team's three portraits with HP
+bars.
+```
+
 ## After a round: what to record
 
 In `KinVisualDesign.md`, under a new "Round 1 results" section: which generator did which

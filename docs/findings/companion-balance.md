@@ -6,6 +6,49 @@ the next; map rules are fixed (Snares to 2, one card if affordable, a random are
 only with two monsters and above 60% of your health and the team's HP). **A floor, not the game.**
 Read it for WHERE runs die and HOW they are won, per region.
 
+## 2026-09-27 — THE JOURNEY with LEVELS: early game on target, late game too easy (300 runs, seeds 1–300)
+
+The run is now town → route MAP → town with a LEADER, and every creature has a LEVEL
+(`PartyLevels`, `PartyWorld.Tiers`). The bot walks routes (spring or find when hurt, the rare's lair
+when healthy) and pays the hospital when hurt. **The 2026-09-24 tables below measured a different
+game** (trails, the deeper path, HP/damage tiers); do not compare against them.
+
+Shayne's playtest: "the first town leader's first turn was enough to wipe out all my monsters."
+**Cause: its level came from the route AHEAD (Lv 10), not the one you reach it by (Lv 2–4).** The
+team arrives at 4.7 on average (a Lv 5 starter and Lv 2–4 catches).
+
+| pass | change | won | region 2 (1st leader) | worst early | late (6–10) survived |
+|---|---|---|---|---|---|
+| 1 | leader = route-before + 2 (Lv 6), XP 30×L | 49.0% | 87% (31 died at the leader) | region 3 85%, region 5 81% | 89–100% |
+| 2 | explicit leader levels, XP 22×L | 52.3% | 91% (21 at the leader) | region 3 85%, region 5 82% | 90–98% |
+| 3 | FIRST LEADER = Old Tusker's two (was the Old Mire's three); routes 3 and 5 one foe fewer | 63.0% | **96% (1 at the leader)** | all ≥ 99% | 84–100% |
+| 4 (kept) | regions 4–10 and their leaders +1–3 levels | **57.7%** | 96% (1) | region 5 94% | **80–100%** |
+
+Pass 4, per region — THROUGH (target) / survived here (target):
+```
+ 1 Greenwood   100% (97%)  100% (97%)
+ 2 Mirelands    96% (93%)   96% (97%)   first leader Lv 5, team 4.7
+ 3 Stonefells   95% (90%)   99% (97%)   leader Lv 9,  team 7.8
+ 4 Deepwood     94% (82%)   99% (91%)   leader Lv 13, team 11.1
+ 5 Emberwastes  88% (75%)   94% (91%)   leader Lv 17, team 14.3
+ 6 Sunken Vale  84% (60%)   95% (80%)
+ 7 Thornmarch   67% (48%)   80% (80%)   46 died on the route
+ 8 Ashen Steppe 64% (39%)   95% (80%)
+ 9 High Crag    58% (31%)   90% (80%)
+10 Wyrm's Rest  58% (25%)  100% (80%)
+```
+
+**What the numbers say, and what they cannot fix:**
+- **The early game (regions 1–3) is on the curve** — the thing Shayne's playtest asked for.
+- **After the first, LEADERS NEVER KILL, even 3 levels above the team.** A leader fields 2–3 foes; a
+  late route fields 4–5; the team arrives healed (the hospital) with a big deck. **A content problem,
+  not a level one**: leaders need bigger or rule-bending lines (the planned gym-leader rules).
+- **Late routes split by POOL, not level**: regions drawing Ember Crags / Stony Ridge kill (7: 46,
+  9: 19), regions drawing Misty Marsh / Mossy Hollow barely (8: 10, 10: 0). Only four areas feed ten
+  regions; new areas are the fix.
+- So the run is still won 58% against a 25% target — the late game is the next balancing job, and it
+  is a design job first.
+
 ## 2026-09-24 (c) — TEN REGIONS, TUNED TO THE CURVE: 25.3% won (300 runs, seeds 1–300)
 
 **The curve (Shayne), for the bot as the baseline:** 90% through region 3, 75% through region 5,

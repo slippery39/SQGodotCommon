@@ -237,6 +237,27 @@ navy at 0.92, a thin gold border (bone for information), gold text on hover.
 - Sizes: move and HP 22, name 22, status and note 20 — authored on the 1920 canvas (x 0.833 on the
   1600 window), so every line is at or over the 16px floor. Check them on a capture.
 
+## THE TOWN MAP — `KinTownMap` (2026-09-26, `KinMapPlan.md`)
+
+A village green (`backdrops/town_ground.png`) with each building's cut-out sprite
+(`buildings/<kind>.png`) placed from `PartyRun.Town` data, on a soft contact shadow, a name plate
+under it (gold for the leader's hall while the leader stands, red "SHUT ·" on a closed gate), and
+a tooltip. The lead monster waits by the well and walks to the door you click; the building's
+screen opens (`ShowBuilding`) with BACK TO TOWN. A shut gate does not open — the note says why.
+Known: the generated green has houses of its own painted at the edges, which are not buildings.
+
+## THE ROUTE MAP — `KinRouteMap` (2026-09-26, `KinMapPlan.md`)
+
+A route's places drawn from their DATA on a painted map (`backdrops/route.png`): `Row` bottom (the
+town you left) to top (the next town), `X` across (left of centre is the region's first area, right
+its second). Each place is a disc (`ui/node_gold|red|bone`): **gold = you can walk there** (the
+battle's legal-drop language), red = a fight, bone = anything else. Inside: a visible fight's lead
+species, the rare's creature, "?" for tall grass, the trainer's sword, the spring's heart, a find's
+Snare or "$". A caption under each, a tooltip on hover. Dashed paths, each over a dark casing so it
+reads on forest, meadow and water; gold from where you stand. The lead monster is the token and
+walks (0.4s) before the run moves. Places behind you fade. Top-left the region, top-right the purse,
+bottom-left the team, bottom-centre what you just found.
+
 ## THE COMPANION GAME screen — `kin_party.tscn` (2026-09-23) — the lanes; history
 
 > **AUTO-BATTLE v1 (2026-09-24) changed what the cells say; the rules below about owners are
