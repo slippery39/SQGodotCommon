@@ -213,6 +213,10 @@ navy at 0.92, a thin gold border (bone for information), gold text on hover.
   ring; the NAME; the HP bar; the NOTE (the forecast, "−18" in lifted red, or the drop hint in
   gold); one STATUS line. **Every label is outlined through its own `LabelSettings`** — the view
   stands on a painted backdrop now, and the theme's `outline_size` override drew nothing.
+- **Families (2026-09-27, `KinFamiliesPlan.md`)**: the status line leads with the FAMILY ("GROVE ·
+  NURSERY"), then Block (with "(n ROOTED)") and GROW; the LEVEL rides in the HP bar ("LV5 · 24/24").
+  A card shows its family on the type line under the art. EMBER's KINDLE is orange text over the
+  energy orb, hidden at 0.
 - **The STEP badge is the step, not a queue place.** `ActingSteps` groups by position, both sides
   at once, so a pair at the same depth shares its number (Gale and Wisp 1, Pike and Stonebeak 2,
   Bramble and Boar 3). The flat 1–6 of `ActingOrder` made simultaneous blows look sequential.

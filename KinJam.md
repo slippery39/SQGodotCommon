@@ -1,5 +1,17 @@
 # KIN — design doc
 
+> # FAMILIES — monsters as engines, cards as fuel (Shayne, 2026-09-27, from a design interview)
+>
+> "Our cards and monsters just feel kind of generic. The fun part of card games is figuring out and
+> achieving combos and synergies." **The interview, the brief and the design: `KinFamiliesPlan.md`.**
+> In short: Slay the Spire × a monster team; an engine that snowballs into a huge turn; MONSTERS
+> ARE THE ENGINE; four families (types without a weakness chart); builds emerge from catches.
+> - **BUILT: the first slice, GROVE + EMBER.** Grove's engine is time (GROW, ROOTED Block, Thornwall);
+>   Ember's is spell count (KINDLE). Ten monster kits, ten new cards, rewards leaning to your families.
+> - **The big finishers (Harvest, Flashpoint) are an EXPERIMENT** — plain cards, easy to drop.
+> - Next: Shayne plays the slice (practice scenarios 4 and 6, and a run); then the leader exams, then
+>   Storm and Mire.
+
 > # LEVELS + XP, AND AN EASIER START (Shayne, 2026-09-27, after playing the journey)
 >
 > "The early game difficulty is way too hard. The enemies are around the same power level as your
