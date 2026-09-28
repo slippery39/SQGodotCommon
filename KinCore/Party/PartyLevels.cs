@@ -61,6 +61,35 @@ public static class PartyLevels
 		};
 	}
 
+	/// <summary>
+	/// **An EXAM made tougher than its level** — HP times `hp`, every attack (its phase's too) times
+	/// `hit`. Levels move a foe ~7% a level, too gentle to make a boss a threat (party-sim,
+	/// 2026-09-28); this is the tuning knob for bosses and elites.
+	/// </summary>
+	public static Foe Toughen(Foe foe, double hp, double hit)
+	{
+		int Times(int amount, double by) => amount <= 0 ? amount : (int)Math.Round(amount * by);
+		ImmutableList<Intent> Harder(ImmutableList<Intent> moves) =>
+			[
+				.. moves.Select(i =>
+					i.Kind == IntentType.Attack ? i with { Amount = Times(i.Amount, hit) } : i
+				),
+			];
+		var max = Times(foe.MaxHp, hp);
+		return foe with
+		{
+			Hp = max,
+			MaxHp = max,
+			Pattern = Harder(foe.Pattern),
+			Components =
+			[
+				.. foe.Components.Select(c =>
+					c is Phase phase ? phase with { Pattern = Harder(phase.Pattern) } : c
+				),
+			],
+		};
+	}
+
 	/// <summary>**A monster of yours at a level**: HP, Power and its moves scaled.</summary>
 	public static PartyCompanion Scale(PartyCompanion companion, int level) =>
 		companion with

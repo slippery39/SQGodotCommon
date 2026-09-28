@@ -530,13 +530,22 @@ public static class PartyWorld
 	/// </summary>
 	public record Tier(int MinFoes, int MaxFoes, int MinLevel, int MaxLevel, int Elite, int Boss);
 
+	/// <summary>
+	/// **How much tougher than its level an exam is** — HP and hits (`PartyLevels.Toughen`). Shayne,
+	/// 2026-09-28: "way too easy"; the bot should win about half its runs, losing mostly to these.
+	/// </summary>
+	public const double BossHp = 2.0,
+		BossHit = 1.3,
+		EliteHp = 2.0,
+		EliteHit = 1.4;
+
 	public static readonly ImmutableList<Tier> Tiers =
 	[
-		new(1, 2, 3, 5, 6, 7),
-		new(2, 2, 6, 8, 9, 10),
-		new(2, 3, 10, 12, 13, 14),
-		new(2, 3, 14, 16, 17, 18),
-		new(3, 3, 18, 20, 21, 22),
+		new(1, 2, 3, 5, 7, 8),
+		new(2, 2, 7, 9, 11, 13),
+		new(2, 3, 11, 13, 16, 18),
+		new(2, 3, 15, 17, 21, 24),
+		new(3, 3, 19, 21, 26, 29),
 	];
 
 	private static readonly ImmutableList<Encounter> Region1 =
@@ -593,13 +602,18 @@ public static class PartyWorld
 	)
 	{
 		var t = Tiers[tier];
-		ImmutableList<Encounter> Scaled(IEnumerable<Encounter> lines, int level) =>
+		ImmutableList<Encounter> Scaled(
+			IEnumerable<Encounter> lines,
+			int level,
+			double hp,
+			double hit
+		) =>
 			[
 				.. lines.Select(line => new Encounter(
 					line.Name,
 					[
 						.. line.Foes.Select(f =>
-							PartyLevels.Scale(f, level) with
+							PartyLevels.Toughen(PartyLevels.Scale(f, level), hp, hit) with
 							{
 								Catchable = false,
 							}
@@ -610,8 +624,8 @@ public static class PartyWorld
 		return new Region(
 			name,
 			[a, b],
-			Scaled(bosses, t.Boss),
-			Scaled(elites, t.Elite),
+			Scaled(bosses, t.Boss, BossHp, BossHit),
+			Scaled(elites, t.Elite, EliteHp, EliteHit),
 			t.MinFoes,
 			t.MaxFoes,
 			t.MinLevel,

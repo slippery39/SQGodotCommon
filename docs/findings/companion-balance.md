@@ -6,6 +6,27 @@ the next; map rules are fixed (Snares to 2, one card if affordable, a random are
 only with two monsters and above 60% of your health and the team's HP). **A floor, not the game.**
 Read it for WHERE runs die and HOW they are won, per region.
 
+## 2026-09-28 (c) — "WAY TOO EASY": exams toughened, the bot at 57% — and a 90/23 starter split (300 runs)
+
+Shayne played (Pike) and agreed: way too easy — bosses, elites, and out-levelling. Target: **the bot
+wins ~50%**. Levers chosen: **stronger exams** and **tougher wild fights** (not slower XP, not less
+healing). Levels alone barely move a foe (~7% a level), so `PartyLevels.Toughen` multiplies an exam's
+HP and hits on top: `PartyWorld.BossHp/BossHit`, `EliteHp/EliteHit`.
+
+| pass | exams | won | Bramble | Pike | deaths to elite / boss | boss fight turns R1→R5 |
+|---|---|---|---|---|---|---|
+| levels +2–4 only | ×1 | 87.0% | 98.7% | 75.3% | 7 / 3 | 2.7 → 5.4 |
+| boss ×2.0 HP ×1.3 hits, elite ×1.6/×1.2 | | 64.0% | 90.7% | 37.3% | 17 / 77 | 5.1 → 11.6 |
+| **+ elite ×2.0/×1.4, later bosses +2–3 levels** | | **56.7%** | **90.0%** | **23.3%** | 49 / 69 | 4.8 → 13.5 |
+
+- **At the target overall, and the deaths are in the right place** — elites and bosses (118 of 130).
+- **But it is two games: Bramble 90%, Pike 23%.** Pike dies 35 times in region 1 and 39 in region 2.
+  **Shayne played Pike and found it too easy** — so the BOT misplays Ember (it looks one turn ahead;
+  Kindle pays over a fight), and Pike's numbers here are a floor, not a verdict on Ember.
+- Survival still falls off early and flattens late: regions 4–5 let 94–97% through.
+- Late boss fights run long (13.5 turns in region 5) — HP ×2 at high levels.
+- Wild chip 4–6%: the tougher wild tiers did less than the exams.
+
 ## 2026-09-28 (b) — THE EXAMS for regions 1–2: the wall is gone, and now it is too easy (300 runs)
 
 The designed bosses and elites (`PartyExams`), catches at half HP, boss relics and a full heal after
