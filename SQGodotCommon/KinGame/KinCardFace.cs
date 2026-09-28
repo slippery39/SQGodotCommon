@@ -238,8 +238,9 @@ public static class KinCardFace
 		if (ui.FindChild(AttackIconName, true, false) is Sprite2D icon)
 			icon.Visible = unit is not null;
 
+		// No card belongs to a monster any more (monster decks dropped, 2026-09-28).
 		if (ui.FindChild(MedallionName, true, false) is Sprite2D medallion)
-			medallion.Texture = KinCardKit.Medallion(card.OwnerName);
+			medallion.Texture = null;
 	}
 
 	/// <summary>
@@ -320,32 +321,40 @@ public static class KinCardFace
 	private static int ArtHeightFor(KinCard card) =>
 		RulesTextFor(card).Length == 0 ? TallArt : ShortArt;
 
-	public static InternalCardUI2D.Details For(KinCard card) => For(card, 0, 0);
+	public static InternalCardUI2D.Details For(KinCard card) => For(card, 0);
+
+	/// <summary>
+	/// **A card's FAMILY and, above common, its RARITY** — "GROVE · RARE". The family line on the
+	/// face and the reward tiles both say it; "" for a colourless common.
+	/// </summary>
+	public static string Tag(KinCard card) =>
+		string.Join(
+				" · ",
+				new[]
+				{
+					card.Family == KinCore.Party.Family.None ? "" : card.Family.ToString(),
+					card.Rarity == KinCore.Party.Rarity.Common ? "" : card.Rarity.ToString(),
+				}.Where(p => p.Length > 0)
+			)
+			.ToUpperInvariant();
 
 	/// <summary>
 	/// **The card as it plays NOW** (Shayne, 2026-09-28: the playtest could not tell whether Ember
-	/// ever fired): its kin on the family line, and a spell's damage with the Kindle already added —
-	/// in green, the way a boosted number reads in Slay the Spire.
+	/// ever fired): a spell's damage with the Kindle already added — in green, the way a boosted
+	/// number reads in Slay the Spire.
 	/// </summary>
-	public static InternalCardUI2D.Details For(KinCard card, int kin, int spellBonus)
+	public static InternalCardUI2D.Details For(KinCard card, int spellBonus)
 	{
 		var unit = card.GetComponent<UnitComponent>();
 
-		// **A monster-deck card is painted in its OWNER's colour and carries its figure** — it leaves
-		// the deck when that monster faints, so whose it is must read at a glance. Trainer cards
-		// stay plain.
-		var owner = card.OwnerName.Length > 0 ? card.OwnerName : null;
-		// Style D: the EDGE is the owner's colour, neutral steel for a trainer card.
-		// The FAMILY wins the edge (2026-09-28); the medallion still says whose deck it is from.
+		// Style D: the EDGE is the card's FAMILY colour (2026-09-28), neutral steel for colourless.
 		var edge =
-			card.Family != KinCore.Party.Family.None ? KinPalette.Family(card.Family)
-			: owner is not null ? KinPalette.Companion(owner)
-			: KinCardKit.Neutral;
+			card.Family != KinCore.Party.Family.None
+				? KinPalette.Family(card.Family)
+				: KinCardKit.Neutral;
 		var boosted = spellBonus > 0 && KinCore.Party.PartySpells.IsSpell(card);
-		var ground = owner is not null
-			? KinPalette.Companion(owner).Lightened(0.3f)
-			: KinArt.ColourFor(card.Name);
-		var subject = owner ?? card.Name;
+		var ground = KinArt.ColourFor(card.Name);
+		var subject = card.Name;
 
 		return new InternalCardUI2D.Details
 		{
@@ -354,13 +363,8 @@ public static class KinCardFace
 			ManaCost = card.Cost.ToString(),
 			// Blank: the reference card has no type line, and "Unit" floating across the face says
 			// nothing a stat badge does not already say. A Rite has no badge, which is the tell.
-			// **The companion game puts a monster-deck card's OWNER here.**
-			// Empty: the owner is the medallion at the card's foot now (style D).
-			// The card's FAMILY (`KinFamiliesPlan.md`): rewards lean to your team's, so it must show.
-			TypeLine =
-				card.Family == KinCore.Party.Family.None
-					? ""
-					: card.Family.ToString().ToUpperInvariant() + (kin > 0 ? $" · KIN ×{kin}" : ""),
+			// **The companion game puts the card's FAMILY and rarity here** ("GROVE · RARE").
+			TypeLine = Tag(card),
 
 			// A rite's text is the only thing telling you what it does, so it goes where rules text
 			// goes. It is authored beside the effect it describes — see KinEffect.Text.

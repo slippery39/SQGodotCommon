@@ -291,7 +291,10 @@ public sealed class KinRelayField
 				foe.Block > 0 ? $"BLOCK {foe.Block}" : "",
 				foe.OffBalance > 0 ? $"OFF-BALANCE +{foe.OffBalance}" : "",
 				foe.FadesIn > 0 ? $"FADES IN {foe.FadesIn}" : "",
-				foe.Catchable && foe.Hp <= foe.CatchAt() ? "◆ CATCHABLE" : ""
+					// Your kind is marked all fight (one family per run, 2026-09-28): what to weaken, not kill.
+					!s.IsYourKind(foe) ? ""
+					: foe.Hp <= foe.CatchAt() ? "◆ CATCHABLE"
+					: $"◇ CATCH AT {foe.CatchAt()}"
 			),
 			snareHere ? "◆ SNARE IT HERE"
 				: drop is not null ? $"▼ {drop.Name.ToUpperInvariant()} HERE"

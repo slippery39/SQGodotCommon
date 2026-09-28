@@ -58,28 +58,6 @@ public static class PartyState
 		[.. c is Ally ? s.LivingAllies().Cast<Creature>() : s.LivingFoes()];
 
 	/// <summary>
-	/// **A monster's own deck joins the draw pile** — at the start of a battle it fights, or when it
-	/// joins from the bench. Until then its cards wait under it, in no zone.
-	/// </summary>
-	public static GameState DeployDeck(this GameState s, int allyId)
-	{
-		foreach (var id in s.GetChildrenIds(allyId).ToList())
-			s = s.MoveObject(id, s.ZoneId(ZoneType.Draw));
-		return s;
-	}
-
-	/// <summary>
-	/// **When a monster falls, its cards leave every zone** and wait under it again — no dead draws.
-	/// </summary>
-	public static GameState WithdrawDeck(this GameState s, int allyId)
-	{
-		foreach (var zone in new[] { ZoneType.Draw, ZoneType.Hand, ZoneType.Discard })
-		foreach (var card in s.CardsIn(zone).Where(c => c.OwnerId == allyId).ToList())
-			s = s.MoveObject(card.Id, allyId);
-		return s;
-	}
-
-	/// <summary>
 	/// **What a card costs to play NOW — the one place a cost is adjusted** (MtgCore's CostEngine:
 	/// every reduction and tax goes through here, floored at 0). Paying, validating and the hand's
 	/// cost badge all read it, so they cannot disagree.
@@ -113,19 +91,24 @@ public static class PartyState
 	}
 
 	/// <summary>
-	/// **A thief's haul goes back to your discard pile** when it is beaten or caught. A card whose
-	/// monster has fallen goes back under it instead — no dead draws.
+	/// **A thief's haul goes back to your discard pile** when it is beaten or caught.
 	/// </summary>
 	public static GameState ReturnStolen(this GameState s, int foeId)
 	{
 		foreach (var card in s.GetChildren(foeId).OfType<KinCard>().ToList())
-			s = s.MoveObject(
-				card.Id,
-				card.OwnerId != 0 && ((Ally)s.GetObject(card.OwnerId)).IsKnockedOut
-					? card.OwnerId
-					: s.ZoneId(ZoneType.Discard)
-			);
+			s = s.MoveObject(card.Id, s.ZoneId(ZoneType.Discard));
 		return s;
+	}
+
+	/// <summary>
+	/// **Whether this foe could EVER be yours**: catchable, and of your run's family or colourless
+	/// (`KinFamiliesPlan.md`, round 2). A practice fight (no family) catches anything.
+	/// </summary>
+	public static bool IsYourKind(this GameState s, Foe foe)
+	{
+		var family = s.GetParty().Family;
+		return foe.Catchable
+			&& (family == Family.None || foe.Family == Family.None || foe.Family == family);
 	}
 
 	/// <summary>**The HP at or below which a foe can be caught: a third of its max.**</summary>
@@ -143,6 +126,8 @@ public static class PartyState
 			return "You have no Snares left";
 		if (!foe.Catchable)
 			return $"The {foe.Name} cannot be caught";
+		if (!s.IsYourKind(foe))
+			return $"Not your family: you catch {party.Family} and colourless monsters";
 		if (foe.Position != 0)
 			return "A Snare only reaches their front";
 		if (foe.Hp > foe.CatchAt())
@@ -356,7 +341,6 @@ public static class PartyState
 					Position = s.LivingAllies().Count(),
 				}
 			);
-			s = KinRng.ShuffleZone(s.DeployDeck(sub.Id), s.ZoneId(ZoneType.Draw));
 			events = events.Add(new AllySwappedInEvent { AllyId = sub.Id, ForAllyId = ally.Id });
 		}
 
@@ -623,7 +607,8 @@ public static class PartyState
 		if (hit.IsKnockedOut && !ally.IsKnockedOut)
 		{
 			events = events.Add(new AllyKnockedOutEvent { AllyId = ally.Id });
-			s = hit.FadesIn > 0 ? PartySummon.TokenFainted(s, hit) : s.WithdrawDeck(ally.Id);
+			if (hit.FadesIn > 0)
+				s = PartySummon.TokenFainted(s, hit);
 		}
 		return (s, events);
 	}

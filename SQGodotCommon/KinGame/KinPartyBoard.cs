@@ -743,8 +743,8 @@ public partial class KinPartyBoard : Node2D
 		_hand.Sync(
 			[.. _state.CardsIn(ZoneType.Hand).Select(c => c with { Cost = _state.CostOf(c) })],
 			party.Energy,
-			// LIVE: kin standing for its family, and a spell's numbers with the Kindle already in.
-			c => KinCardFace.For(c, _state.KinOf(c.Family).Count(), _state.SpellBonus())
+			// LIVE: a spell's numbers with the Kindle already in.
+			c => KinCardFace.For(c, _state.SpellBonus())
 		);
 		_field.Settle(Animate(events));
 	}

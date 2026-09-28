@@ -10,8 +10,8 @@ things that face outward.
 
 **PIVOTING (2026-09-23) to a monster-companion deckbuilder: up to 3 companions ARE the board, units
 are cut. AUTO-BATTLE v1 (2026-09-24): every monster plays its own move cycle in Speed order; the deck
-is the TRAINER's, generic cards played on a monster. DECK STRATEGIES + MONSTER DECKS (2026-09-24):
-monsters change how your cards play.** A run is playable (`kin_party.tscn`, `KinCore/Party/`), built
+is the TRAINER's, generic cards played on a monster. ONE FAMILY PER RUN (2026-09-28): the starter's
+family is the run's class — rewards and catches are it plus colourless; monster decks are gone.** A run is playable (`kin_party.tscn`, `KinCore/Party/`), built
 BESIDE the lane game. **Read `KinJam.md` first** — its newest section, at the top, is the truth; the
 design philosophy is there too. The setting is a GENERIC FANTASY substrate (`KinSettingSketches.md`).
 The lane game's history (the deleted doom layer, companion upgrades) is in `docs/findings/kin-balance.md`.

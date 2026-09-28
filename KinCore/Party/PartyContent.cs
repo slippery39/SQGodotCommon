@@ -4,8 +4,8 @@ using ImmutableGameObjects;
 namespace KinCore.Party;
 
 /// <summary>
-/// A monster as authored: stats, a PASSIVE, the CYCLE of moves it plays on its own, and a small
-/// MONSTER DECK that joins the trainer's while it fights (KinJam.md).
+/// A monster as authored: stats, a PASSIVE and the CYCLE of moves it plays on its own. Monster decks
+/// are gone (2026-09-28): every card comes from the trainer's deck and its rewards.
 /// </summary>
 public record PartyCompanion(
 	string Name,
@@ -19,13 +19,6 @@ public record PartyCompanion(
 	int Unbalances = 0
 )
 {
-	/// <summary>
-	/// **Its MONSTER DECK** (Shayne, 2026-09-24): baseline cards that work with it, in your draw
-	/// pile only while it fights, so a monster is never in the line with nothing in the deck for it.
-	/// Small and never pushed; the payoffs come from rewards.
-	/// </summary>
-	public ImmutableList<KinCard> Cards { get; init; } = [];
-
 	/// <summary>
 	/// **What it does to how you PLAY** — a `Trigger` ("when you draw, gain energy") or a static
 	/// component ("your spells deal +2", MtgCore's StaticAbilityComponent idea). Put on its `Ally`
@@ -61,7 +54,8 @@ public record PartyScenario(
 	ImmutableList<KinCard> Deck,
 	ImmutableList<string> OpeningHand,
 	int Snares = 0,
-	bool Deploy = false
+	bool Deploy = false,
+	Family Family = Family.None
 );
 
 /// <summary>
@@ -107,17 +101,6 @@ public static class PartyContent
 		{
 			Family = Family.Grove,
 			Abilities = [new Thornwall()],
-			Cards =
-			[
-				Card("Thornhide", 1, "Gain 3 Thorns this turn.", new ThornsAction { Amount = 3 }),
-				Card(
-					"Bristle",
-					0,
-					"Gain 2 Thorns this turn. Draw a card.",
-					new ThornsAction { Amount = 2 },
-					new DrawAction()
-				),
-			],
 		};
 
 	/// <summary>
@@ -137,22 +120,6 @@ public static class PartyContent
 		{
 			Family = Family.Ember,
 			Abilities = [new KindleFinisher()],
-			Cards =
-			[
-				Card(
-					"Charge",
-					1,
-					"Send it to the front. +2 Power this turn.",
-					new RallyAction(),
-					new PowerAction { Amount = 2 }
-				),
-				Card(
-					"Hold the Line",
-					0,
-					"Swap it with the one ahead. At the front: gain 5 Block.",
-					new SwapAction { AloneBlock = 5 }
-				),
-			],
 		};
 
 	/// <summary>
@@ -171,36 +138,73 @@ public static class PartyContent
 		)
 		{
 			Family = Family.Storm,
-			Cards = [PartyCards.Gust, PartyCards.Tailwind],
 		};
 
+	private static readonly KinCard BasicGuard = Card(
+		"Guard",
+		1,
+		"Gain 8 Block.",
+		new GuardAction { Amount = 8 }
+	);
+
+	private static readonly KinCard BasicStrike = Card(
+		"Strike",
+		1,
+		"It attacks their front now: 5 + Power.",
+		new StrikeAction { Amount = 5 }
+	);
+
+	private static readonly KinCard Rally = Card(
+		"Rally",
+		1,
+		"+4 Power this turn.",
+		new PowerAction { Amount = 4 }
+	);
+
+	private static readonly KinCard Hasten = Card(
+		"Hasten",
+		1,
+		"It plays its move now, not at end of turn.",
+		new HastenAction()
+	);
+
+	private static readonly KinCard Stagger = Card(
+		"Stagger",
+		1,
+		"Drop on a foe: it loses its next move.",
+		new StaggerAction()
+	);
+
 	/// <summary>
-	/// **The trainer's BASIC deck — every card is played ON something, and none belongs to a
-	/// monster.** Each monster fighting adds its own deck on top (`PartyCompanion.Cards`), so the
-	/// starter's two cards make it ten. Made clearly stronger on 2026-09-27 (Shayne: the early game
-	/// was far too hard) — Strike 3→5, Guard 6→8, Rally +3→+4.
+	/// **The BASICS — 4 Strike, 4 Guard** (Shayne, 2026-09-28: "8 basics + 2 family"). Every card is
+	/// played ON something. Practice scenarios deal these plus their own cards.
 	/// </summary>
 	public static readonly ImmutableList<KinCard> StarterDeck =
 	[
-		Card("Guard", 1, "Gain 8 Block.", new GuardAction { Amount = 8 }),
-		Card("Guard", 1, "Gain 8 Block.", new GuardAction { Amount = 8 }),
-		Card(
-			"Strike",
-			1,
-			"It attacks their front now: 5 + Power.",
-			new StrikeAction { Amount = 5 }
-		),
-		Card(
-			"Strike",
-			1,
-			"It attacks their front now: 5 + Power.",
-			new StrikeAction { Amount = 5 }
-		),
-		Card("Rally", 1, "+4 Power this turn.", new PowerAction { Amount = 4 }),
-		Card("Rally", 1, "+4 Power this turn.", new PowerAction { Amount = 4 }),
-		Card("Hasten", 1, "It plays its move now, not at end of turn.", new HastenAction()),
-		Card("Stagger", 1, "Drop on a foe: it loses its next move.", new StaggerAction()),
+		BasicStrike,
+		BasicStrike,
+		BasicStrike,
+		BasicStrike,
+		BasicGuard,
+		BasicGuard,
+		BasicGuard,
+		BasicGuard,
 	];
+
+	/// <summary>
+	/// **A run's first deck: the basics and two small cards of its FAMILY** that show the engine on
+	/// turn one — STS's Bash. A family with none yet (Storm, Mire) gets the basics alone.
+	/// </summary>
+	public static ImmutableList<KinCard> StartingDeck(Family family) =>
+		[
+			.. StarterDeck,
+			.. family switch
+			{
+				Family.Grove => [PartyCards.Root, PartyCards.Sow],
+				Family.Ember => [PartyCards.Zap, PartyCards.Stoke],
+				_ => ImmutableList<KinCard>.Empty,
+			},
+		];
 
 	private static Foe Creature(string name, int hp, params Intent[] cycle) =>
 		new()
@@ -270,12 +274,24 @@ public static class PartyContent
 
 	// ===== THE RUN
 
-	/// <summary>Every companion, in the order the ones you did not start with join.</summary>
-	public static readonly ImmutableList<PartyCompanion> Roster = [Bramble, Pike, Gale];
+	/// <summary>
+	/// **The starters — choosing one IS choosing the run's family.** Grove and Ember only: Storm and
+	/// Mire are shelved until built (`KinFamiliesPlan.md`, round 2). Gale stays for the practice fights.
+	/// </summary>
+	public static readonly ImmutableList<PartyCompanion> Roster = [Bramble, Pike];
 
-	/// <summary>**What a win can offer — trainer cards, for the whole deck.** Three are offered; take one.</summary>
+	/// <summary>
+	/// **Every card a win or a shop can offer.** A run sees only its family's and the colourless ones
+	/// (`PartyRun.RewardOffer`); Storm's and Mire's wait here, shelved, for their families.
+	/// </summary>
 	public static readonly ImmutableList<KinCard> Rewards =
 	[
+		// ----- Colourless
+		Rally,
+		Hasten,
+		Stagger,
+		PartyCards.Charge,
+		PartyCards.HoldTheLine,
 		Card(
 			"Strike",
 			1,
@@ -287,17 +303,15 @@ public static class PartyContent
 			2,
 			"It attacks their whole line now: 2 + Power.",
 			new StrikeAction { Amount = 2, Aim = Aim.Sweep }
-		),
+		) with
+		{
+			Rarity = Rarity.Uncommon,
+		},
 		Card("Bulwark", 2, "Gain 12 Block.", new GuardAction { Amount = 12 }),
 		Card("Frenzy", 1, "+5 Power this turn.", new PowerAction { Amount = 5 }),
 		PartyCards.Tailwind,
-		Card(
-			"Bristle",
-			0,
-			"Gain 2 Thorns this turn. Draw a card.",
-			new ThornsAction { Amount = 2 },
-			new DrawAction()
-		),
+		PartyCards.Thornhide,
+		PartyCards.Bristle,
 		PartyCards.Sow,
 		PartyCards.CallSparks,
 		PartyCards.DecoyCard,
@@ -364,15 +378,15 @@ public static class PartyContent
 			"Bramble, Pike and Gale against a Boar, a Stonebeak and a Wisp.",
 			[new(Bramble, 0), new(Pike, 1), new(Gale, 2)],
 			[Boar(0), Stonebeak(1), Wisp(2)],
-			StarterDeck,
+			[.. StarterDeck, PartyCards.Charge, PartyCards.Gust, Rally, Stagger],
 			["Charge", "Gust", "Rally", "Guard", "Stagger"],
 			Snares: 2,
 			Deploy: true
 		);
 
 	/// <summary>
-	/// **Discard + Draw, to try by hand.** A caught Magpie and Inkling (their decks bring Sift,
-	/// Rummage and Jot); the payoffs in the deck; a Hoard Drake and a wild Magpie to test them.
+	/// **Discard + Draw, to try by hand.** A caught Magpie and Inkling, with Sift, Rummage and Jot
+	/// dealt in; the payoffs in the deck; a Hoard Drake and a wild Magpie to test them.
 	/// A property, not a field: it reads `PartyWorld`, which reads this class.
 	/// </summary>
 	public static PartyScenario Looting =>
@@ -385,7 +399,15 @@ public static class PartyContent
 				new(PartyRun.FromFoe(PartyWorld.Inkling), 2),
 			],
 			[PartyWorld.HoardDrake with { Position = 0 }, PartyWorld.Magpie with { Position = 1 }],
-			[.. StarterDeck, PartyCards.ScrapHammer, PartyCards.PageStorm, PartyCards.Ration],
+			[
+				.. StarterDeck,
+				PartyCards.Sift,
+				PartyCards.Rummage,
+				PartyCards.Jot,
+				PartyCards.ScrapHammer,
+				PartyCards.PageStorm,
+				PartyCards.Ration,
+			],
 			["Sift"],
 			Snares: 2,
 			Deploy: true
@@ -415,7 +437,14 @@ public static class PartyContent
 					Position = 2,
 				},
 			],
-			[.. StarterDeck, PartyCards.Overload, PartyCards.Focus, PartyCards.SparkScroll],
+			[
+				.. StarterDeck,
+				PartyCards.Stoke,
+				PartyCards.Zap,
+				PartyCards.Overload,
+				PartyCards.Focus,
+				PartyCards.SparkScroll,
+			],
 			["Stoke", "Zap", "Spark Scroll"],
 			Snares: 2,
 			Deploy: true
@@ -436,7 +465,14 @@ public static class PartyContent
 				new(PartyRun.FromFoe(PartyWorld.Glowmoth), 2),
 			],
 			[PartyWorld.Hushcap with { Position = 0 }, Boar(1), Wisp(2)],
-			[.. StarterDeck, PartyCards.Unleash, PartyCards.Meteor, PartyCards.BattleCry],
+			[
+				.. StarterDeck,
+				PartyCards.Surge,
+				PartyCards.Quicken,
+				PartyCards.Unleash,
+				PartyCards.Meteor,
+				PartyCards.BattleCry,
+			],
 			["Surge", "Quicken", "Unleash"],
 			Snares: 2,
 			Deploy: true
@@ -457,7 +493,15 @@ public static class PartyContent
 				new(PartyRun.FromFoe(PartyWorld.Howler), 2),
 			],
 			[PartyWorld.Ironhorn with { Position = 0 }, Wisp(1), Stonebeak(2)],
-			[.. StarterDeck, PartyCards.Swarm, PartyCards.Offering, PartyCards.DecoyCard],
+			[
+				.. StarterDeck,
+				PartyCards.Sow,
+				PartyCards.Graft,
+				PartyCards.Harvest,
+				PartyCards.Swarm,
+				PartyCards.Offering,
+				PartyCards.DecoyCard,
+			],
 			["Sow", "Graft", "Harvest"],
 			Snares: 2,
 			Deploy: true
@@ -485,6 +529,7 @@ public static class PartyBattleFactory
 				Description = scenario.Description,
 				Energy = 3,
 				Snares = scenario.Snares,
+				Family = scenario.Family,
 			}
 		);
 		(s, var draw) = s.AddObject(
@@ -510,7 +555,7 @@ public static class PartyBattleFactory
 			var ((companion, position, hp), slot) in scenario.Companions.Select((c, i) => (c, i))
 		)
 		{
-			(s, var ally) = s.AddObject(
+			(s, _) = s.AddObject(
 				new Ally
 				{
 					Slot = slot,
@@ -532,19 +577,6 @@ public static class PartyBattleFactory
 				},
 				battle.Id
 			);
-
-			// Its deck waits UNDER it, and joins the draw pile only if it starts in the line.
-			foreach (var card in companion.Cards)
-				(s, _) = s.AddObject(
-					card with
-					{
-						OwnerId = ally.Id,
-						OwnerName = companion.Name,
-					},
-					ally.Id
-				);
-			if (position >= 0)
-				s = s.DeployDeck(ally.Id);
 		}
 
 		foreach (var foe in scenario.Foes)

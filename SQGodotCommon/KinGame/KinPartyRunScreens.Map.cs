@@ -110,7 +110,7 @@ public sealed partial class KinPartyRunScreens
 					? []
 					:
 					[
-						KinLine(run, cards[i]),
+						KinCardFace.Tag(cards[i]),
 						string.Join(" ", KinRulesText.Lines(cards[i])),
 						$"{PartyRun.CardPrice} GOLD",
 					],

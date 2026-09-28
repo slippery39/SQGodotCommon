@@ -98,8 +98,6 @@ public record PlayPartyCardAction : GameAction
 					.SelectMany(_ => steps.Append(new KindleAction { Amount = kindle })),
 			];
 		}
-		// **KIN**: a family card pays for each monster of its family in your line, once per play.
-		steps.AddRange(PartyFamilies.KinBonus(s, card.Family));
 		s = s.SpawnActions(steps.Append(new DiscardPlayedCardAction { CardId = CardId }));
 
 		return new ActionResult(s).WithEvent(

@@ -694,55 +694,6 @@ public partial class PartyTests
 		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 3), "and it fights from the next round");
 	}
 
-	private static IEnumerable<string> InPlay(GameState s) =>
-		new[] { ZoneType.Draw, ZoneType.Hand, ZoneType.Discard }.SelectMany(z =>
-			s.CardsIn(z).Select(c => c.Name)
-		);
-
-	private static KinCard Plain(string name) => Card(name, 0, new GuardAction());
-
-	[Test]
-	public void AMonsterInTheLineBringsItsDeck()
-	{
-		var s = Battle(
-			[new(Mon("Pike") with { Cards = [Plain("Feint")] }, 0)],
-			[Plain("Guard")],
-			Foe(0)
-		);
-
-		Assert.That(InPlay(s), Is.EquivalentTo(new[] { "Guard", "Feint" }));
-	}
-
-	[Test]
-	public void ABenchedMonstersDeckJoinsWhenItComesIn()
-	{
-		var s = Battle(
-			[new(Mon("Pike", hp: 5), 0), new(Mon("Boar") with { Cards = [Plain("Tusk")] }, -1)],
-			[],
-			Foe(0, pattern: Hit(9))
-		);
-		Assert.That(InPlay(s), Does.Not.Contain("Tusk"), "the bench's deck waits");
-
-		s = EndTurn(s);
-
-		Assert.That(s.CardsIn(ZoneType.Hand).Select(c => c.Name), Does.Contain("Tusk"));
-	}
-
-	[Test]
-	public void AFallenMonstersCardsLeaveEveryZone()
-	{
-		var s = Battle(
-			[new(Mon("Pike", hp: 5) with { Cards = [Plain("Feint")] }, 0), new(Mon("Bramble"), 1)],
-			[Plain("Guard")],
-			Foe(0, pattern: Hit(9))
-		);
-		Assert.That(InPlay(s), Does.Contain("Feint"));
-
-		s = EndTurn(s);
-
-		Assert.That(InPlay(s), Is.EquivalentTo(new[] { "Guard" }), "no dead draws");
-	}
-
 	// ===== Monsters that change how you play: triggers
 
 	[Test]
@@ -940,14 +891,12 @@ public partial class PartyTests
 		{
 			CaughtPassive = "TEST",
 			CaughtAbilities = [discardEnergy],
-			CaughtCards = [Plain("Gift")],
 		};
 
 		var mine = PartyRun.FromFoe(wild);
 
 		Assert.That(mine.Passive, Is.EqualTo(wild.CaughtPassive));
 		Assert.That(mine.Abilities, Is.EqualTo(wild.CaughtAbilities));
-		Assert.That(mine.Cards, Is.EqualTo(wild.CaughtCards));
 		Assert.That(mine.Moves.Any(m => m.Steals), Is.False);
 	}
 
@@ -1415,7 +1364,7 @@ public partial class PartyTests
 	[Test]
 	public void HoldTheLineAtTheFrontGainsBlockInsteadOfBeingDead()
 	{
-		var hold = PartyContent.Pike.Cards.Single(c => c.Name == "Hold the Line");
+		var hold = PartyCards.HoldTheLine;
 		var block = ((SwapAction)hold.Effects[0].Template).AloneBlock;
 		var s = Deal([new PlacedCompanion(Mon("Solo"), 0)], [hold], Foe(0, 50, Idle));
 

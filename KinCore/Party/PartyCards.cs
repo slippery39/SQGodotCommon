@@ -24,6 +24,46 @@ public static class PartyCards
 			],
 		};
 
+	// ===== The starters' old signature cards (monster decks are gone, 2026-09-28)
+
+	/// <summary>Bramble's, now Grove's: Thorns for a wall that wants to be hit.</summary>
+	public static readonly KinCard Thornhide = Card(
+		"Thornhide",
+		1,
+		"Gain 3 Thorns this turn.",
+		new ThornsAction { Amount = 3 }
+	) with
+	{
+		Family = Family.Grove,
+	};
+
+	public static readonly KinCard Bristle = Card(
+		"Bristle",
+		0,
+		"Gain 2 Thorns this turn. Draw a card.",
+		new ThornsAction { Amount = 2 },
+		new DrawAction()
+	) with
+	{
+		Family = Family.Grove,
+	};
+
+	/// <summary>Pike's, now colourless: moving in the line is every family's business.</summary>
+	public static readonly KinCard Charge = Card(
+		"Charge",
+		1,
+		"Send it to the front. +2 Power this turn.",
+		new RallyAction(),
+		new PowerAction { Amount = 2 }
+	);
+
+	public static readonly KinCard HoldTheLine = Card(
+		"Hold the Line",
+		0,
+		"Swap it with the one ahead. At the front: gain 5 Block.",
+		new SwapAction { AloneBlock = 5 }
+	);
+
 	// ===== SPELLCRAFT — damage from the card itself: no aim needed.
 
 	/// <summary>Enabler · filler: a fine card anywhere, and the spell every Spellcraft payoff counts.</summary>
@@ -77,6 +117,7 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Ember,
+		Rarity = Rarity.Rare,
 	};
 
 	/// <summary>Payoff · narrow: a turn of dropped spells, each three wide.</summary>
@@ -88,6 +129,7 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Ember,
+		Rarity = Rarity.Uncommon,
 	};
 
 	// ===== THE LINE — Gale's deck: reorder THEIR front.
@@ -204,6 +246,7 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Grove,
+		Rarity = Rarity.Uncommon,
 	};
 
 	/// <summary>Payoff (Summon → Draw, Surge) · narrow: a token spent, a hand refilled.</summary>
@@ -217,6 +260,7 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Grove,
+		Rarity = Rarity.Uncommon,
 	};
 
 	// ===== SURGE — more energy than the turn allows, at a price.
@@ -278,6 +322,7 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Ember,
+		Rarity = Rarity.Rare,
 	};
 
 	// ===== DISCARD + DRAW
@@ -373,6 +418,7 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Grove,
+		Rarity = Rarity.Uncommon,
 	};
 
 	/// <summary>Enabler for THORNWALL: Block that stays.</summary>
@@ -395,6 +441,7 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Grove,
+		Rarity = Rarity.Uncommon,
 	};
 
 	/// <summary>Bridge: growth becomes a wall.</summary>
@@ -417,6 +464,7 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Grove,
+		Rarity = Rarity.Rare,
 	};
 
 	/// <summary>Payoff for a patient wall.</summary>
@@ -428,6 +476,7 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Grove,
+		Rarity = Rarity.Rare,
 	};
 
 	// ===== EMBER — the engine is SPELL COUNT (KinFamiliesPlan.md §4)
@@ -453,6 +502,7 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Ember,
+		Rarity = Rarity.Uncommon,
 	};
 
 	/// <summary>Accelerator: a spell twice is two Kindle.</summary>
@@ -464,6 +514,7 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Ember,
+		Rarity = Rarity.Uncommon,
 	};
 
 	/// <summary>THE BIG TURN (an experiment — KinFamiliesPlan.md §6).</summary>
@@ -475,5 +526,6 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Ember,
+		Rarity = Rarity.Rare,
 	};
 }

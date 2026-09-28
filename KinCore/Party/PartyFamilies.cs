@@ -21,6 +21,17 @@ public enum Family
 	Mire,
 }
 
+/// <summary>
+/// **A card's RARITY** (Shayne, 2026-09-28): commons are the fuel, uncommons the bridges, rares the
+/// build-arounds and big turns. A reward weighs them; a leader win guarantees a rare.
+/// </summary>
+public enum Rarity
+{
+	Common,
+	Uncommon,
+	Rare,
+}
+
 // ===== GROVE — the engine is TIME
 
 /// <summary>**GROW**: at the start of each of your turns it gains this much Power and max HP (and HP).</summary>
@@ -210,25 +221,6 @@ public record KindleAction : GameAction
 	}
 }
 
-/// <summary>
-/// **KIN — a family card pays for each monster of its family standing in your line** (Shayne,
-/// 2026-09-28: "cards pay on kin", scaled per kin, feeding the family's own engine). Grove: each
-/// Grove kin grows once. Ember: +1 Kindle per Ember kin. Appended to the card's steps on play.
-/// </summary>
-public record KinGrowAction : GameAction
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var events = ImmutableList<GameEvent>.Empty;
-		foreach (var ally in s.KinOf(Family.Grove).ToList())
-		{
-			(s, var grew) = PartyFamilies.GrowOnce(s, ally, new Grow());
-			events = events.AddRange(grew);
-		}
-		return new ActionResult(s).WithEvents(events);
-	}
-}
-
 public record KindleGainedEvent : GameEvent
 {
 	public int Amount { get; init; }
@@ -335,26 +327,6 @@ public static class PartyFamilies
 				},
 			]
 		);
-	}
-
-	/// <summary>Your KIN of a family: its REAL monsters standing in your line — tokens are not kin.</summary>
-	public static IEnumerable<Ally> KinOf(this GameState s, Family family) =>
-		family == Family.None
-			? []
-			: s.LivingAllies().Where(a => a.Family == family && a.FadesIn == 0);
-
-	/// <summary>What a card of this family pays on top, now — nothing for a family without a kin rule yet.</summary>
-	public static IEnumerable<GameAction> KinBonus(GameState s, Family family)
-	{
-		var kin = s.KinOf(family).Count();
-		if (kin == 0)
-			return [];
-		return family switch
-		{
-			Family.Grove => [new KinGrowAction()],
-			Family.Ember => [new KindleAction { Amount = kin }],
-			_ => [],
-		};
 	}
 
 	/// <summary>

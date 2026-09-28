@@ -91,7 +91,6 @@ public static class PartyWorld
 		CaughtPassive = "MOSSBACK",
 		CaughtRule = "All its Block is ROOTED: none of it vanishes at your turn start.",
 		CaughtAbilities = [new Mossback()],
-		CaughtCards = [PartyCards.Root],
 	};
 
 	/// <summary>
@@ -126,7 +125,6 @@ public static class PartyWorld
 		CaughtPassive = "EMBERSKIN",
 		CaughtRule = "At your turn start it gains Block equal to your KINDLE.",
 		CaughtAbilities = [new Emberskin()],
-		CaughtCards = [PartyCards.Cinderwall],
 	};
 
 	/// <summary>
@@ -199,7 +197,6 @@ public static class PartyWorld
 				Effects = [new DamageRandomFoeAction { Amount = 2 }],
 			},
 		],
-		CaughtCards = [PartyCards.Sift, PartyCards.Rummage],
 		Family = Family.Mire,
 	};
 
@@ -226,7 +223,6 @@ public static class PartyWorld
 				MaxPerTurn = 1,
 			},
 		],
-		CaughtCards = [PartyCards.Sift, PartyCards.Jot],
 		Family = Family.Mire,
 	};
 
@@ -263,7 +259,6 @@ public static class PartyWorld
 				Effects = [new GainBlockAction { Amount = 3 }],
 			},
 		],
-		CaughtCards = [PartyCards.Ration, PartyCards.Sift],
 		Family = Family.Mire,
 	};
 
@@ -284,7 +279,6 @@ public static class PartyWorld
 		CaughtPassive = "STOKER",
 		CaughtRule = "Every spell you play adds 2 KINDLE, not 1.",
 		CaughtAbilities = [new Stoker()],
-		CaughtCards = [PartyCards.Zap, PartyCards.Stoke],
 	};
 
 	/// <summary>
@@ -302,7 +296,6 @@ public static class PartyWorld
 		CaughtPassive = "ECHO",
 		CaughtRule = "The first spell you play each turn is cast twice.",
 		CaughtAbilities = [new EchoFirstSpell()],
-		CaughtCards = [PartyCards.SparkScroll],
 	};
 
 	/// <summary>
@@ -329,7 +322,6 @@ public static class PartyWorld
 				Effects = [new GainBlockAction { Amount = 3 }],
 			},
 		],
-		CaughtCards = [PartyCards.Zap, PartyCards.Jot],
 		Family = Family.Storm,
 	};
 
@@ -354,7 +346,6 @@ public static class PartyWorld
 		CaughtPassive = "GLOW +1",
 		CaughtRule = "Unhit last turn: +1 energy at the start of your turn.",
 		CaughtAbilities = [new EnergyIfUnhit { Amount = 1 }],
-		CaughtCards = [PartyCards.Surge, PartyCards.Quicken],
 		Family = Family.Storm,
 	};
 
@@ -381,7 +372,6 @@ public static class PartyWorld
 				Effects = [new GainEnergyAction()],
 			},
 		],
-		CaughtCards = [PartyCards.BattleCry, PartyCards.Zap],
 		Family = Family.Storm,
 	};
 
@@ -408,7 +398,6 @@ public static class PartyWorld
 		CaughtPassive = "SPORES",
 		CaughtRule = "When a token of yours falls: draw a card and gain 1 energy.",
 		CaughtAbilities = [new Spores()],
-		CaughtCards = [PartyCards.Overgrow],
 	};
 
 	// ===== SUMMON (round one)
@@ -433,7 +422,6 @@ public static class PartyWorld
 		CaughtPassive = "NURSERY",
 		CaughtRule = "Tokens you summon while it stands have GROW (+1 Power, +2 HP each turn).",
 		CaughtAbilities = [new Nursery()],
-		CaughtCards = [PartyCards.Sow, PartyCards.Graft],
 	};
 
 	/// <summary>**Howler — caught: the Summon engine.** Every token you summon arrives stronger.</summary>
@@ -448,7 +436,6 @@ public static class PartyWorld
 		CaughtPassive = "ALPHA",
 		CaughtRule = "Your tokens arrive with +2 HP and +1 Power, and attack the front each round.",
 		CaughtAbilities = [new TokenBoost { Hp = 2, Power = 1 }, new Alpha()],
-		CaughtCards = [PartyCards.Harvest],
 	};
 
 	/// <summary>
@@ -468,7 +455,6 @@ public static class PartyWorld
 		CaughtPassive = "TRAMPLE",
 		CaughtRule = "Damage beyond what fells a foe hits the one behind it.",
 		CaughtAbilities = [new Trample()],
-		CaughtCards = [PartyCards.Flashpoint],
 	};
 
 	/// <summary>A foe's place in its line; the factory closes the line up from these in order.</summary>
@@ -488,15 +474,21 @@ public static class PartyWorld
 		int rareLevel = PartyLevels.Base
 	)
 	{
+		// **A FAMILY first, evenly, then a species of it** (Shayne, 2026-09-28: "uniformly mixed") —
+		// so Mire's six species do not crowd out Storm's three.
+		var families = area.Pool.GroupBy(f => f.Family).Select(g => g.ToList()).ToList();
+		Foe Roll()
+		{
+			var family = families[rng.Next(families.Count)];
+			return family[rng.Next(family.Count)];
+		}
+
 		var foes = Enumerable
 			.Range(0, count)
 			.Select(i =>
 				i == 0 && rare is not null
 					? PartyLevels.Scale(rare, rareLevel)
-					: PartyLevels.Scale(
-						area.Pool[rng.Next(area.Pool.Count)],
-						rng.Next(minLevel, maxLevel + 1)
-					)
+					: PartyLevels.Scale(Roll(), rng.Next(minLevel, maxLevel + 1))
 			)
 			.ToList();
 
@@ -508,11 +500,35 @@ public static class PartyWorld
 
 	// ===== The areas and gyms the regions are built from. Unscaled — a region scales its copy.
 
+	/// <summary>
+	/// **Every wild species, in every area** (`KinFamiliesPlan.md`, round 2: wild foes are mixed
+	/// uniformly, so a run of any family meets its own kind everywhere). An area keeps its name, its
+	/// look and its RARE; the rares stay lair-only.
+	/// </summary>
+	private static readonly ImmutableList<Foe> Wilds =
+	[
+		PartyContent.Boar(0),
+		Mosshell,
+		Hushcap,
+		Broodvine,
+		CinderNewt,
+		Emberling,
+		Ironhorn,
+		PartyContent.Stonebeak(0),
+		Warden,
+		Stormbuck,
+		PartyContent.Wisp(0),
+		BogToad,
+		BriarViper,
+		Magpie,
+		HoardDrake,
+	];
+
 	private static readonly Area MossyHollow =
 		new(
 			"Mossy Hollow",
 			"Damp and green. Boars root here; wisps drift between the trees.",
-			[PartyContent.Boar(0), PartyContent.Wisp(0), Mosshell, Hushcap, Broodvine],
+			Wilds,
 			Howler
 		);
 
@@ -520,7 +536,7 @@ public static class PartyWorld
 		new(
 			"Stony Ridge",
 			"Bare rock and wind. Stonebeaks nest on the crags; a warden keeps the pass.",
-			[PartyContent.Stonebeak(0), PartyContent.Boar(0), CinderNewt, Warden, Stormbuck],
+			Wilds,
 			Glowmoth
 		);
 
@@ -528,7 +544,7 @@ public static class PartyWorld
 		new(
 			"Misty Marsh",
 			"Fog over black water. Toads, thieving magpies, and a drake on its hoard.",
-			[BogToad, PartyContent.Wisp(0), BriarViper, Magpie, HoardDrake],
+			Wilds,
 			Inkling
 		);
 
@@ -536,7 +552,7 @@ public static class PartyWorld
 		new(
 			"Ember Crags",
 			"Hot stone and ash. Newts in every crack, embers that bite, and an owl that answers back.",
-			[CinderNewt, PartyContent.Stonebeak(0), Mosshell, Emberling, Ironhorn],
+			Wilds,
 			EchoOwl
 		);
 

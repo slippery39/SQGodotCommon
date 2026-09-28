@@ -23,6 +23,12 @@ public record PartyBattle : GameObject
 	public int Snares { get; init; }
 
 	/// <summary>
+	/// **The run's FAMILY: only it and colourless foes can be caught** (`KinFamiliesPlan.md`, round 2).
+	/// `None` — a practice fight — catches anything.
+	/// </summary>
+	public Family Family { get; init; }
+
+	/// <summary>
 	/// **Cards a card or ability discarded this turn** — MtgCore's `SpellsCastThisTurn` pattern:
 	/// counted in ONE place (`FirePartyTriggersAction`) from the staged events, so no discard path
 	/// can forget it. The end-of-turn discard is not counted. Scrap Hammer reads it.
@@ -220,9 +226,6 @@ public record Foe : Creature
 	public string CaughtPassive { get; init; } = "";
 	public string CaughtRule { get; init; } = "";
 	public ImmutableList<GameComponent> CaughtAbilities { get; init; } = [];
-
-	/// <summary>Its monster deck, once it is yours.</summary>
-	public ImmutableList<KinCard> CaughtCards { get; init; } = [];
 
 	public bool IsDead => IsDown;
 }

@@ -49,7 +49,7 @@ measured came from leaders that never killed while routes did.
 
 ### The work, in order
 
-1. **System** (one step, reviewable): drop KIN (`KinBonus`, `KinGrowAction`, its two tests); drop
+1. ☑ **System** (built 2026-09-28; 310 tests): drop KIN (`KinBonus`, `KinGrowAction`, its two tests); drop
    monster decks (`DeployDeck`/`WithdrawDeck`/`OwnerName`, their tests; each starter's signature cards
    move into its family's pool); `KinCard.Rarity`; `PartyRun.Family` from the starter; rewards and
    shop filtered to it + colourless, weighted by rarity; the catch refusal "Not your family"

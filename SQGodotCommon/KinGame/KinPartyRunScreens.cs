@@ -69,7 +69,7 @@ public sealed partial class KinPartyRunScreens
 	{
 		Begin(
 			"CHOOSE YOUR STARTER",
-			"Catch the rest: weaken a foe to a third of its HP, then throw a Snare.",
+			"Your starter's FAMILY is the run's: the cards you are offered, and the monsters you can catch.",
 			"title"
 		);
 
@@ -81,6 +81,7 @@ public sealed partial class KinPartyRunScreens
 					KinArt.Sprite(companion.Name) ?? KinArt.Drawing(companion.Name),
 					companion.Name.ToUpperInvariant(),
 					[
+						$"{companion.Family.ToString().ToUpperInvariant()} FAMILY",
 						Wants.GetValueOrDefault(companion.Name, ""),
 						companion.Passive,
 						companion.PassiveRule,
@@ -98,7 +99,7 @@ public sealed partial class KinPartyRunScreens
 							),
 						$"LV {companion.Level} · HP {companion.Hp} · POW {companion.Power}",
 					],
-					new Vector2(340, 580),
+					new Vector2(340, 640),
 					() => choose(companion)
 				)
 			);
@@ -142,7 +143,7 @@ public sealed partial class KinPartyRunScreens
 					KinPalette.Family(reward.Family),
 					CardArt(reward.Name),
 					$"{reward.Name.ToUpperInvariant()}  ({reward.Cost})",
-					[KinLine(run, reward), string.Join(" ", KinRulesText.Lines(reward))],
+					[KinCardFace.Tag(reward), string.Join(" ", KinRulesText.Lines(reward))],
 					new Vector2(280, 430),
 					() => take(reward)
 				)
@@ -229,18 +230,6 @@ public sealed partial class KinPartyRunScreens
 
 	// ===== Pieces
 
-	/// <summary>
-	/// **A card's FAMILY, and who on the team is its kin** — the playtest (2026-09-28) could not tell
-	/// which cards fit which monsters. "" for a card of no family.
-	/// </summary>
-	private static string KinLine(PartyRun run, KinCard card)
-	{
-		if (card.Family == Family.None)
-			return "";
-		var kin = run.KinOnTeam(card.Family).ToList();
-		return card.Family.ToString().ToUpperInvariant()
-			+ (kin.Count > 0 ? $" — KIN: {string.Join(", ", kin).ToUpperInvariant()}" : "");
-	}
 
 	private void Begin(string title, string subtitle, string scene = "greenwood")
 	{

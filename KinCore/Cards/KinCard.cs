@@ -39,14 +39,11 @@ public record KinCard : GameObject
 	public bool Devours { get; init; }
 
 	/// <summary>
-	/// **THE COMPANION GAME: the monster whose deck this card came from** (its `Ally` id). The card
-	/// is in play only while that monster fights. 0 = the trainer's own card.
+	/// The companion game's FAMILY tag (`KinCore.Party.Family`). A run offers only its family's
+	/// cards and colourless ones (`None`).
 	/// </summary>
-	public int OwnerId { get; init; }
-
-	/// <summary>Its owner's name, for the card face — which sees the card and nothing else. "" = none.</summary>
-	public string OwnerName { get; init; } = "";
-
-	/// <summary>The companion game's FAMILY tag (`KinCore.Party.Family`) — rewards lean to your team's.</summary>
 	public KinCore.Party.Family Family { get; init; }
+
+	/// <summary>How often a reward offers it (`PartyRun.RewardOffer`). Default: common.</summary>
+	public KinCore.Party.Rarity Rarity { get; init; }
 }

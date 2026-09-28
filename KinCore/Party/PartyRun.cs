@@ -91,6 +91,12 @@ public partial record PartyRun
 	/// <summary>**The bench**: caught monsters beyond the three that fight.</summary>
 	public ImmutableList<RunCompanion> Bench { get; init; } = [];
 
+	/// <summary>
+	/// **The run's FAMILY — its starter's** (`KinFamiliesPlan.md`, round 2). Rewards, the shop and
+	/// catching offer only it and colourless.
+	/// </summary>
+	public Family Family { get; init; }
+
 	/// <summary>**The trainer's deck** — one for the run, whoever is on the team.</summary>
 	public ImmutableList<KinCard> Deck { get; init; } = [];
 
@@ -140,8 +146,9 @@ public partial record PartyRun
 		new()
 		{
 			Team = [new RunCompanion(starter, starter.Hp)],
+			Family = starter.Family,
 			Regions = regions ?? PartyWorld.Regions,
-			Deck = deck ?? PartyContent.StarterDeck,
+			Deck = deck ?? PartyContent.StartingDeck(starter.Family),
 			Rewards = rewards ?? PartyContent.Rewards,
 			Snares = StartingSnares,
 			Gold = StartingGold,
@@ -151,8 +158,8 @@ public partial record PartyRun
 
 	/// <summary>
 	/// **A caught foe as a monster of yours: exactly what it had.** Its cycle and its max HP.
-	/// Power 0, because a foe's move amounts are already its whole damage. **Its deck ability wakes
-	/// now**: the passive, triggers and monster deck it carried dormant. A wild trait (Thief) stays wild.
+	/// Power 0, because a foe's move amounts are already its whole damage. **Its passive wakes now**:
+	/// the passive and triggers it carried dormant. A wild trait (Thief) stays wild.
 	/// **Its stats are the species' BASE** (`PartyWorld.Species`); it joins at the level it was caught.
 	/// </summary>
 	public static PartyCompanion FromFoe(Foe foe)
@@ -167,7 +174,6 @@ public partial record PartyRun
 			PassiveRule: foe.CaughtRule
 		)
 		{
-			Cards = foe.CaughtCards,
 			Abilities = foe.CaughtAbilities,
 			Family = foe.Family,
 		};
@@ -220,7 +226,8 @@ public partial record PartyRun
 			Deck,
 			[],
 			Snares,
-			Deploy: true
+			Deploy: true,
+			Family
 		);
 		return PartyBattleFactory.Create(scenario, Seed + RegionIndex * 1009 + NodeId * 37);
 	}
@@ -357,37 +364,47 @@ public partial record PartyRun
 
 	// ===== Cards: a win's reward, and the town's shop
 
-	/// <summary>The team's KIN of a family, by name — who a family card would pay for.</summary>
-	public IEnumerable<string> KinOnTeam(Family family) =>
-		family == Family.None
-			? []
-			: Team.Where(m => m.Companion.Family == family).Select(m => m.Companion.Name);
+	/// <summary>How often a reward offers each rarity, relative to the others (STS's shape).</summary>
+	public static double Weight(Rarity rarity) =>
+		rarity switch
+		{
+			Rarity.Rare => 10,
+			Rarity.Uncommon => 30,
+			_ => 60,
+		};
 
-	/// <summary>**Three cards to choose from after a win** — seeded, so a run replays.</summary>
+	/// <summary>
+	/// **Three cards to choose from after a win** — seeded, so a run replays. **A leader's win
+	/// guarantees a RARE** (Shayne, 2026-09-28).
+	/// </summary>
 	public ImmutableList<KinCard> RewardOffer()
 	{
 		var rng = new Random(Seed * 31 + RegionIndex * 13 + NodeId * 3 + (LeaderBeaten ? 1 : 0));
-		return Leaning(rng);
+		return Offer(rng, rareFirst: Phase == RunPhase.Town && LeaderBeaten || IsWon);
 	}
 
+	/// <summary>The cards this run may be offered: its FAMILY's and the colourless ones.</summary>
+	public IEnumerable<KinCard> Pool =>
+		Rewards.Where(c => c.Family is Family.None || c.Family == Family);
+
 	/// <summary>
-	/// **Three cards, leaning to your team's FAMILIES** (`KinFamiliesPlan.md`): a card of a family on
-	/// your team or bench is three times as likely to be offered. Neutral cards stay in the draw.
+	/// **Three different cards from the pool, weighted by rarity** — a weighted draw without
+	/// replacement (each card's key is u^(1/weight), the highest three win).
 	/// </summary>
-	private ImmutableList<KinCard> Leaning(Random rng)
+	private ImmutableList<KinCard> Offer(Random rng, bool rareFirst = false)
 	{
-		var families = Team.Concat(Bench).Select(m => m.Companion.Family).ToHashSet();
-		families.Remove(Family.None);
-		return
-		[
-			.. Rewards
-				.Select(c =>
-					(Card: c, Key: rng.NextDouble() / (families.Contains(c.Family) ? 3.0 : 1.0))
-				)
-				.OrderBy(p => p.Key)
-				.Take(3)
-				.Select(p => p.Card),
-		];
+		var keyed = Pool.Select(c =>
+				(Card: c, Key: Math.Pow(rng.NextDouble(), 1 / Weight(c.Rarity)))
+			)
+			.OrderByDescending(p => p.Key)
+			.Select(p => p.Card)
+			.ToList();
+		if (rareFirst && keyed.FirstOrDefault(c => c.Rarity == Rarity.Rare) is { } rare)
+		{
+			keyed.Remove(rare);
+			keyed.Insert(0, rare);
+		}
+		return [.. keyed.Take(3)];
 	}
 
 	/// <summary>The chosen card joins the deck for the rest of the run.</summary>
@@ -397,7 +414,7 @@ public partial record PartyRun
 	public ImmutableList<KinCard> ShopCards()
 	{
 		var rng = new Random(Seed * 53 + RegionIndex);
-		return Leaning(rng);
+		return Offer(rng);
 	}
 
 	public bool CanBuySnare => Gold >= SnarePrice;

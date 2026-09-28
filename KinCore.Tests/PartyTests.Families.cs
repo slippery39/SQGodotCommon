@@ -188,73 +188,6 @@ public partial class PartyTests
 		Assert.That(Named(s, "Wall").Rooted, Is.EqualTo(root.Amount * 2));
 	}
 
-	// ===== KIN — a family card pays per monster of its family in your line
-
-	private static PartyCompanion Kin(string name, Family family) =>
-		Mon(name) with
-		{
-			Family = family,
-		};
-
-	[Test]
-	public void AnEmberCardAddsAKindleForEachEmberKin()
-	{
-		var s = Deal(
-			[
-				new(Kin("Ash", Family.Ember), 0),
-				new(Kin("Soot", Family.Ember), 1),
-				new(Mon("Plain"), 2),
-			],
-			[Zap() with { Family = Family.Ember }, Zap()],
-			Foe(0)
-		);
-
-		s = Play(s, "Zap", 0, foeRow: true);
-		var afterKinZap = s.GetParty().Kindle;
-		s = Play(s, "Zap", 0, foeRow: true);
-
-		Assert.That(
-			afterKinZap,
-			Is.EqualTo(1 + 2),
-			"the spell's own Kindle, then one per Ember kin"
-		);
-		Assert.That(
-			s.GetParty().Kindle - afterKinZap,
-			Is.EqualTo(1),
-			"a card of no family: no kin"
-		);
-	}
-
-	[Test]
-	public void AGroveCardGrowsEachGroveKinButNotTokensOrOthers()
-	{
-		var grow = new Grow();
-		var sprout = new TokenTemplate(Kin("Sprout", Family.Grove) with { Hp = 3 }, 2);
-		var s = Deal(
-			[
-				new(Kin("Oak", Family.Grove), 0),
-				new(Kin("Elm", Family.Grove), 1),
-				new(Mon("Plain"), 2),
-			],
-			[
-				Summon(sprout),
-				Card("Mulch", 0, new GuardAction { Amount = 1 }) with
-				{
-					Family = Family.Grove,
-				},
-			],
-			Foe(0)
-		);
-		s = Play(s, "Summon", 0);
-
-		s = Play(s, "Mulch", 1);
-
-		Assert.That(Named(s, "Oak").Power, Is.EqualTo(grow.Power));
-		Assert.That(Named(s, "Elm").MaxHp, Is.EqualTo(20 + grow.Hp));
-		Assert.That(Named(s, "Plain").Power, Is.Zero, "not kin");
-		Assert.That(Named(s, "Sprout").Power, Is.Zero, "a token is not kin");
-	}
-
 	// ===== EMBER
 
 	[Test]
@@ -378,22 +311,77 @@ public partial class PartyTests
 		{
 			var caught = PartyRun.FromFoe(PartyWorld.Species(name)!);
 			Assert.That(caught.Abilities, Is.Not.Empty, $"{name} brings an engine");
-			Assert.That(caught.Cards, Is.Not.Empty, $"{name} brings a monster deck");
+		}
+	}
+
+	// ===== ONE FAMILY PER RUN (KinFamiliesPlan.md, round 2)
+
+	[Test]
+	public void ARunIsItsStartersFamilyAndStartsWithTwoOfItsCards()
+	{
+		foreach (var starter in PartyContent.Roster)
+		{
+			var run = PartyRun.Start(starter, 1);
+
+			Assert.That(run.Family, Is.EqualTo(starter.Family).And.Not.EqualTo(Family.None));
+			Assert.That(
+				run.Deck.Count(c => c.Family == starter.Family),
+				Is.EqualTo(2),
+				starter.Name
+			);
+			Assert.That(run.Deck.Count, Is.EqualTo(PartyContent.StarterDeck.Count + 2));
 		}
 	}
 
 	[Test]
-	public void RewardsLeanToTheFamiliesOnYourTeam()
+	public void RewardsAndTheShopOfferOnlyYourFamilyAndColourless()
 	{
-		static double GroveShare(PartyCompanion starter) =>
-			Enumerable
-				.Range(0, 200)
-				.SelectMany(seed => PartyRun.Start(starter, seed).RewardOffer())
-				.Count(c => c.Family == Family.Grove) / 600.0;
+		foreach (var starter in PartyContent.Roster)
+		{
+			var offered = Enumerable
+				.Range(0, 100)
+				.Select(seed => PartyRun.Start(starter, seed))
+				.SelectMany(run => run.RewardOffer().Concat(run.ShopCards()))
+				.ToList();
 
-		Assert.That(
-			GroveShare(PartyContent.Bramble),
-			Is.GreaterThan(GroveShare(PartyContent.Pike) * 1.5)
-		);
+			Assert.That(
+				offered.Select(c => c.Family).Distinct(),
+				Is.EquivalentTo(new[] { Family.None, starter.Family }),
+				starter.Name
+			);
+		}
+	}
+
+	[Test]
+	public void ALeadersWinOffersARare()
+	{
+		foreach (var seed in Enumerable.Range(0, 20))
+		{
+			var after = PartyRun.Start(PartyContent.Bramble, seed) with
+			{
+				Phase = RunPhase.Town,
+				LeaderBeaten = true,
+			};
+
+			Assert.That(after.RewardOffer().Any(c => c.Rarity == Rarity.Rare), Is.True);
+		}
+	}
+
+	[Test]
+	public void YouCatchOnlyYourFamilyAndColourless()
+	{
+		static Foe Weak(Family family) => Foe(0, hp: 30) with { Hp = 1, Family = family };
+
+		string? Refusal(Family foe)
+		{
+			var s = Deal([new(Mon("Pike"), 0)], [], Weak(foe));
+			var party = s.GetParty();
+			s = s.UpdateObject(party.Id, party with { Snares = 1, Family = Family.Grove });
+			return s.CatchRefusal(s.FoeAt(0)!);
+		}
+
+		Assert.That(Refusal(Family.Grove), Is.Null, "your family");
+		Assert.That(Refusal(Family.None), Is.Null, "colourless");
+		Assert.That(Refusal(Family.Ember), Does.StartWith("Not your family"));
 	}
 }

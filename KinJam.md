@@ -1,5 +1,23 @@
 # KIN — design doc
 
+> # ONE FAMILY PER RUN — the starter is your class (Shayne, 2026-09-28; built: the system)
+>
+> "Once you commit to a bonus, it's kind of bad to catch non-bonus monsters, as well as some cards
+> kind of become useless." And: difficulty belongs to ELITES and BOSSES, not wild monsters.
+> **The full decisions (three interview rounds) are `KinFamiliesPlan.md`, "ROUND 2".** Built so far:
+> - **The starter's family is the run's** (`PartyRun.Family`): Bramble = Grove, Pike = Ember. Gale
+>   (Storm) is off the roster; Storm and Mire are shelved, fight-only.
+> - **Rewards and the shop offer only the family's cards and COLOURLESS ones**, weighted by
+>   **RARITY** (common 60 / uncommon 30 / rare 10); **a leader's win guarantees a rare**.
+> - **You catch only your family and colourless** (`PartyState.IsYourKind`); those foes are marked
+>   "◇ CATCH AT n" all fight. **No colourless monsters exist yet**, so a run catches its own family only.
+> - **Wild pools are mixed**: every area rolls a FAMILY evenly, then a species. Rares stay lair-only.
+> - **Starting deck: 4 Strike, 4 Guard + 2 family cards** (Grove: Root, Sow; Ember: Zap, Stoke).
+>   Rally, Hasten and Stagger are colourless rewards now.
+> - **Monster decks and KIN are gone.** Bramble's Thornhide and Bristle are Grove cards; Pike's
+>   Charge and Hold the Line are colourless. Practice scenarios deal those cards in directly.
+> - Next: the run's shape (5 regions, elites, bosses shown, relics), then the content interviews.
+
 > # KIN — family cards pay per kin, and the engines show (Shayne, 2026-09-28, after playing the slice)
 >
 > "I did not feel any indication that I was supposed or that I was rewarded for building a family
