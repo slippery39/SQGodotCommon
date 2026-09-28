@@ -16,7 +16,16 @@
 >   Rally, Hasten and Stagger are colourless rewards now.
 > - **Monster decks and KIN are gone.** Bramble's Thornhide and Bristle are Grove cards; Pike's
 >   Charge and Hold the Line are colourless. Practice scenarios deal those cards in directly.
-> - Next: the run's shape (5 regions, elites, bosses shown, relics), then the content interviews.
+> - **Built next, the run's shape**: **5 regions**, each **town → route → BOSS**. The boss (one of
+>   two per region, fixed by the seed) is named from the town and stands at the route's END, with a
+>   **spring (30%, never full) on the row before it**. Routes are longer (8 rows of choices) and drawn
+>   **left to right**. **1–2 ELITES per route, shown**: uncatchable, rare-led card reward, a RELIC,
+>   double XP and 60 gold. The rare's lair holds **your family's** rare. Town halls and leaders are
+>   gone. Wild fights are lighter (1–3 foes, levels under the elite and boss).
+> - **RELICS** (`PartyRelics`), eight, all Shayne-approved: Whetstone, Iron Shell, Lantern, Quick
+>   Boots (in fight); Field Kit, Lucky Coin, Snare Pouch, Trainer's Eye (run).
+> - **Placeholders**: the Old Tusker and Old Mire lines are both the elites and the bosses until the
+>   boss and elite interview. Next: that interview, then Grove, Ember and colourless.
 
 > # KIN — family cards pay per kin, and the engines show (Shayne, 2026-09-28, after playing the slice)
 >

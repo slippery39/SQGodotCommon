@@ -90,9 +90,9 @@ public sealed class KinTownMap
 
 		_title.Text =
 			$"{run.Region.Name.ToUpperInvariant()} — TOWN {run.RegionIndex + 1} OF {run.Regions.Count}";
-		_subtitle.Text = run.CannotLeaveTown is not null
-			? $"Visit a building. The gate opens when {run.Region.Gym.Name} is beaten."
-			: "Visit a building, then take the gate out to the route.";
+		// The region's BOSS, named from the town on: the route is preparing for it.
+		_subtitle.Text =
+			$"Visit a building, then take the gate. The route ends at {run.Boss.Name.ToUpperInvariant()}.";
 		_purse.Text = $"GOLD {run.Gold}   ·   SNARES {run.Snares}";
 
 		foreach (var child in _places.GetChildren())
@@ -138,7 +138,7 @@ public sealed class KinTownMap
 			0
 		);
 		shadow.Position = new Vector2(size.X * 0.1f, size.Y - 62);
-		var goal = building.Kind == BuildingKind.Hall && !_run.LeaderBeaten;
+		var goal = building.Kind == BuildingKind.Gate;
 		shadow.Modulate = goal ? new Color(KinPalette.Gold, 0.9f) : new Color(0, 0, 0, 0.55f);
 		button.AddChild(shadow);
 
@@ -208,10 +208,8 @@ public sealed class KinTownMap
 				$"Heal the team and the bench to full — {PartyRun.HospitalPrice} gold.",
 			BuildingKind.Shop => "Snares, cards, and taking a card out of your deck.",
 			BuildingKind.Pen => "Your team and your bench: choose who fights.",
-			BuildingKind.Hall => _run.LeaderBeaten
-				? $"{_run.Region.Gym.Name} is beaten."
-				: $"{_run.Region.Gym.Name}'s hall. Beat the leader to open the gate.",
-			BuildingKind.Gate => _run.CannotLeaveTown ?? "Out onto the route.",
+			BuildingKind.Gate => _run.CannotLeaveTown
+				?? $"Out onto the route — {_run.Boss.Name} waits at its end.",
 			_ => "",
 		};
 }

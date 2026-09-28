@@ -122,6 +122,8 @@ public sealed partial class KinPartyRunScreens
 		// Level-ups light their monster on the team row, not a line each: three lines of them pushed
 		// SKIP off a 1080 screen (Shayne's playtest, 2026-09-28).
 		var news = new List<string>();
+		if (report.Relic is { } relic)
+			news.Add($"RELIC: {PartyRelics.Name(relic)} — {PartyRelics.Text(relic)}");
 		foreach (var name in report.Revived)
 			news.Add($"{name} was knocked out, and is back at a quarter HP.");
 		foreach (var name in report.Caught)
@@ -181,6 +183,16 @@ public sealed partial class KinPartyRunScreens
 				new Color(KinPalette.Bone, 0.8f)
 			)
 		);
+
+		// The RELICS held, by name — each one's rule is on the victory screen that paid it.
+		if (!run.Relics.IsEmpty)
+			_column.AddChild(
+				Label(
+					"RELICS: " + string.Join(", ", run.Relics.Select(PartyRelics.Name)),
+					20,
+					KinPalette.Gold
+				)
+			);
 
 		var group = new ButtonGroup { AllowUnpress = true };
 		var team = Row();

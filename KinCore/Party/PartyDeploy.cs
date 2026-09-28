@@ -41,16 +41,15 @@ public record BeginFightAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var party = s.GetParty();
-		return new(
-			s.UpdateObject(
-				party.Id,
-				party with
-				{
-					Deploying = false,
-					DeployedOrder = [.. s.LivingAllies().Select(a => a.Slot)],
-				}
-			)
+		s = s.UpdateObject(
+			party.Id,
+			party with
+			{
+				Deploying = false,
+				DeployedOrder = [.. s.LivingAllies().Select(a => a.Slot)],
+			}
 		);
+		return new(PartyRelics.FightBegins(s));
 	}
 }
 

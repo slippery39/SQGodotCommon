@@ -21,19 +21,22 @@ public enum FindKind
 public record Area(string Name, string Description, ImmutableList<Foe> Pool, Foe Rare);
 
 /// <summary>
-/// **A region: a town, then one of two wild areas, then its gym** (KinJam.md "THE MAP"). Wild fights
-/// field between `MinFoes` and `MaxFoes` creatures from the chosen area's pool. Its areas and gym are
-/// already scaled to the region's DIFFICULTY TIER (`PartyWorld.Tiers`).
+/// **A region: a town, then a wild route across two areas, then its BOSS at the route's end**
+/// (`KinFamiliesPlan.md`, round 2). Wild fights field `MinFoes`–`MaxFoes` creatures. **The difficulty
+/// is the ELITES and the BOSS** — already scaled here to the region's tier (`PartyWorld.Tiers`); wild
+/// fights are light attrition. One of the two `Bosses` is the region's, SHOWN from its town on.
 /// </summary>
 public record Region(
 	string Name,
 	ImmutableList<Area> Areas,
-	Encounter Gym,
+	ImmutableList<Encounter> Bosses,
+	ImmutableList<Encounter> Elites,
 	int MinFoes,
 	int MaxFoes,
 	int MinLevel = PartyLevels.Base,
 	int MaxLevel = PartyLevels.Base,
-	int LeaderLevel = PartyLevels.Base
+	int EliteLevel = PartyLevels.Base,
+	int BossLevel = PartyLevels.Base
 )
 {
 	/// <summary>The rare's lair and trainers field monsters above the wild range.</summary>
@@ -525,127 +528,112 @@ public static class PartyWorld
 	];
 
 	private static readonly Area MossyHollow =
-		new(
-			"Mossy Hollow",
-			"Damp and green. Boars root here; wisps drift between the trees.",
-			Wilds,
-			Howler
-		);
+		new("Mossy Hollow", "Damp and green, moss over everything.", Wilds, Howler);
 
 	private static readonly Area StonyRidge =
-		new(
-			"Stony Ridge",
-			"Bare rock and wind. Stonebeaks nest on the crags; a warden keeps the pass.",
-			Wilds,
-			Glowmoth
-		);
+		new("Stony Ridge", "Bare rock and wind, and a long way down.", Wilds, Glowmoth);
 
 	private static readonly Area MistyMarsh =
-		new(
-			"Misty Marsh",
-			"Fog over black water. Toads, thieving magpies, and a drake on its hoard.",
-			Wilds,
-			Inkling
-		);
+		new("Misty Marsh", "Fog over black water.", Wilds, Inkling);
 
 	private static readonly Area EmberCrags =
-		new(
-			"Ember Crags",
-			"Hot stone and ash. Newts in every crack, embers that bite, and an owl that answers back.",
-			Wilds,
-			EchoOwl
-		);
+		new("Ember Crags", "Hot stone and ash.", Wilds, EchoOwl);
 
-	private static readonly Encounter TuskerGym =
+	// **PLACEHOLDERS** — today's two old leader lines stand in as both elites and bosses until the
+	// boss and elite interview designs the real ones (unique patterns, never species).
+
+	private static readonly Encounter OldTusker =
 		new("The Old Tusker", [PartyContent.OldTusker(2), At(PartyContent.Wisp(0), 4)]);
 
-	private static readonly Encounter MireGym =
+	private static readonly Encounter OldMireLine =
 		new("The Old Mire", [At(BogToad, 0), At(OldMire, 2), At(BriarViper, 4)]);
 
-	private static readonly Encounter LastGym =
+	private static readonly Encounter LastStand =
 		new("The Last Stand", [At(PartyContent.OldTusker(0), 1), At(OldMire, 3)]);
 
 	/// <summary>
-	/// **A region's difficulty: foes per wild fight, and the LEVELS its wild creatures come at**
-	/// (`PartyLevels`; Shayne, 2026-09-27). THE TUNING TABLE. **Region 1 fields ONE foe** (the rare's
-	/// lair two) at Lv 2–4, under a Lv 5 starter — the start was far too hard with 1–2 full-strength
-	/// foes. The old HP/damage multipliers and their measured curve (94/70/25%) are retired.
+	/// **A region's difficulty** (THE TUNING TABLE): foes per wild fight, the wild LEVELS (light
+	/// attrition — at or under the team), and the elites' and the boss's levels, which carry the threat.
+	/// Every number is a guess (exploring). The first boss is set against a starter near Lv 7.
 	/// </summary>
-	/// <summary>
-	/// `Leader` is the level of THIS town's leader — met at the end of the PREVIOUS region's route, so
-	/// it is set against that route and the team's level there (`party-sim` shows both).
-	/// </summary>
-	public record Tier(int MinFoes, int MaxFoes, int MinLevel, int MaxLevel, int Leader);
+	public record Tier(int MinFoes, int MaxFoes, int MinLevel, int MaxLevel, int Elite, int Boss);
 
 	public static readonly ImmutableList<Tier> Tiers =
 	[
-		new(1, 1, 2, 4, 0),
-		new(2, 3, 5, 7, 5),
-		new(2, 3, 8, 10, 9),
-		new(4, 4, 11, 13, 13),
-		new(4, 4, 13, 15, 17),
-		new(4, 5, 17, 19, 20),
-		new(4, 5, 20, 22, 23),
-		new(4, 5, 23, 25, 27),
-		new(4, 5, 25, 27, 30),
-		new(5, 5, 28, 30, 33),
+		new(1, 1, 2, 4, 6, 7),
+		new(1, 2, 5, 7, 9, 10),
+		new(2, 2, 8, 10, 12, 13),
+		new(2, 3, 11, 13, 15, 16),
+		new(2, 3, 14, 16, 18, 19),
 	];
 
 	/// <summary>
-	/// **THE MAP — ten regions.** Regions 3-10 reuse the four areas and two gyms, scaled by their tier;
-	/// new creatures come once the curve is settled. The last gym fields both old bosses.
+	/// **THE MAP — five regions, a boss each** (Shayne, 2026-09-28). Two bosses per region, one of them
+	/// the region's; the elites are drawn from the region's pool.
 	/// </summary>
 	public static readonly ImmutableList<Region> Regions =
 	[
-		Build(0, "The Greenwood", MossyHollow, StonyRidge, TuskerGym),
-		// The FIRST leader is the Old Tusker's two: the Old Mire's three killed 7% of runs as a first
-		// exam (party-sim, 2026-09-27), the Tusker's two killed none. The Mire comes one town later.
-		Build(1, "The Mirelands", MistyMarsh, EmberCrags, TuskerGym),
-		Build(2, "The Stonefells", StonyRidge, EmberCrags, MireGym),
-		Build(3, "The Deepwood", MossyHollow, MistyMarsh, MireGym),
-		Build(4, "The Emberwastes", EmberCrags, StonyRidge, TuskerGym),
-		Build(5, "The Sunken Vale", MistyMarsh, MossyHollow, MireGym),
-		Build(6, "The Thornmarch", MossyHollow, StonyRidge, TuskerGym),
-		Build(7, "The Ashen Steppe", EmberCrags, MistyMarsh, MireGym),
-		Build(8, "The High Crag", StonyRidge, EmberCrags, TuskerGym),
-		Build(9, "The Wyrm's Rest", MistyMarsh, MossyHollow, LastGym),
+		Build(0, "The Greenwood", MossyHollow, StonyRidge, [OldTusker, OldMireLine]),
+		Build(1, "The Mirelands", MistyMarsh, EmberCrags, [OldMireLine, OldTusker]),
+		Build(2, "The Stonefells", StonyRidge, EmberCrags, [OldTusker, OldMireLine]),
+		Build(3, "The Deepwood", MossyHollow, MistyMarsh, [OldMireLine, OldTusker]),
+		Build(4, "The Wyrm's Rest", EmberCrags, MistyMarsh, [LastStand, LastStand]),
 	];
 
 	/// <summary>
-	/// **A region**: its two areas' pools stay at their BASE — a route scales each foe to the level it
-	/// rolls (`PartyRoutes`) — and its leader's line is scaled here, to the leader's level.
+	/// **A region**: its areas' pools stay at their BASE — a route scales each foe to the level it
+	/// rolls (`PartyRoutes`) — and its bosses and elites are scaled here. None can be caught.
 	/// </summary>
-	private static Region Build(int tier, string name, Area a, Area b, Encounter gym)
+	private static Region Build(
+		int tier,
+		string name,
+		Area a,
+		Area b,
+		ImmutableList<Encounter> bosses
+	)
 	{
 		var t = Tiers[tier];
-		// **A leader is met at the END of the route BEFORE its town**, so `t.Leader` is set against that
-		// route. The first build used this region's own range + 3: the first leader came at Lv 10
-		// straight after Lv 2–4 foes, and its first turn wiped the team (Shayne, 2026-09-27).
-		var region = new Region(
+		ImmutableList<Encounter> Scaled(IEnumerable<Encounter> lines, int level) =>
+			[
+				.. lines.Select(line => new Encounter(
+					line.Name,
+					[
+						.. line.Foes.Select(f =>
+							PartyLevels.Scale(f, level) with
+							{
+								Catchable = false,
+							}
+						),
+					]
+				)),
+			];
+		return new Region(
 			name,
 			[a, b],
-			gym,
+			Scaled(bosses, t.Boss),
+			Scaled([OldTusker, OldMireLine], t.Elite),
 			t.MinFoes,
 			t.MaxFoes,
 			t.MinLevel,
 			t.MaxLevel,
-			t.Leader
+			t.Elite,
+			t.Boss
 		);
-		return region with
-		{
-			Gym = new(
-				gym.Name,
-				[
-					.. gym.Foes.Select(f =>
-						PartyLevels.Scale(f, region.LeaderLevel) with
-						{
-							Catchable = false,
-						}
-					),
-				]
-			),
-		};
 	}
+
+	/// <summary>
+	/// **The rare of a FAMILY** — what a route's lair holds for a run of it, so the lair is always a
+	/// catch you can make. Null for no family (a practice run), which keeps the area's own.
+	/// </summary>
+	public static Foe? RareOf(Family family) =>
+		family switch
+		{
+			Family.Grove => Howler,
+			Family.Ember => EchoOwl,
+			Family.Storm => Glowmoth,
+			Family.Mire => Inkling,
+			_ => null,
+		};
 
 	/// <summary>
 	/// **A creature's BASE, by name** — what a caught one's stats grow from. Null for a name no area

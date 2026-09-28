@@ -59,7 +59,14 @@ public partial class PartyRunTests
 		new(name, "", [Foe($"{name}1"), Foe($"{name}2")], Foe($"{name} Rare"));
 
 	private static Region Region(string name) =>
-		new(name, [Area($"{name}North"), Area($"{name}South")], Fight(Foe($"{name} Gym")), 1, 2);
+		new(
+			name,
+			[Area($"{name}North"), Area($"{name}South")],
+			[Fight(Foe($"{name} Boss") with { Catchable = false })],
+			[Fight(Foe($"{name} Elite") with { Catchable = false })],
+			1,
+			2
+		);
 
 	private static Encounter Fight(params Foe[] foes) => new("Fight", [.. foes]);
 
@@ -131,9 +138,10 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void WinningTheLastGymWinsTheRun()
+	public void BeatingTheLastBossWinsTheRun()
 	{
-		var run = Run() with { RegionIndex = 1, Phase = RunPhase.Gym };
+		var run = OnRoute(Run() with { RegionIndex = 1 }).MoveTo(1);
+		Assert.That(run.AtBoss);
 
 		(run, _) = WinNext(run);
 
@@ -152,24 +160,29 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void EveryRealRouteFightAndLeaderBuildsABattle()
+	public void EveryRealRouteFightEliteAndBossBuildsABattle()
 	{
 		foreach (var region in PartyWorld.Regions)
 		{
-			Assert.That(region.Gym.Foes.All(f => !f.Catchable), Is.True, $"{region.Name}'s leader");
+			Assert.That(
+				region.Bosses.Concat(region.Elites).SelectMany(e => e.Foes),
+				Has.All.Matches<Foe>(f => !f.Catchable),
+				$"{region.Name}'s bosses and elites"
+			);
 			var index = PartyWorld.Regions.IndexOf(region);
-			var town = PartyRun.Start(PartyContent.Pike, seed: 5) with { RegionIndex = index };
-			var route = (town with { LeaderBeaten = true }).EnterRoute();
-			foreach (var node in route.Route!.Nodes.Where(n => n.IsFight))
+			var route = (
+				PartyRun.Start(PartyContent.Pike, seed: 5) with
+				{
+					RegionIndex = index,
+				}
+			).EnterRoute();
+			Assert.That(route.Route!.End.IsFight, "the boss stands at the end");
+			foreach (var node in route.Route.Nodes.Where(n => n.IsFight))
 				Assert.That(
 					(route with { NodeId = node.Id }).StartBattle().LivingFoes(),
 					Is.Not.Empty,
 					$"{region.Name}, {node.Kind}"
 				);
-			Assert.That(
-				(town with { Phase = RunPhase.Gym }).StartBattle().LivingFoes(),
-				Is.Not.Empty
-			);
 		}
 	}
 

@@ -108,7 +108,7 @@ public sealed class KinRouteMap
 		var areas = run.Region.Areas;
 		_title.Text = $"THE ROUTE — {run.Region.Name.ToUpperInvariant()}";
 		_subtitle.Text =
-			$"◀ {areas[0].Name}   ·   {areas[1].Name} ▶   ·   wild LV {run.Region.MinLevel}–{run.Region.MaxLevel}"
+			$"▲ {areas[0].Name}   ·   {areas[1].Name} ▼   ·   wild LV {run.Region.MinLevel}–{run.Region.MaxLevel}"
 			+ "   ·   pick a lit place to walk to";
 		_purse.Text = $"GOLD {run.Gold}   ·   SNARES {run.Snares}";
 		_note.Text = Arrived(run.Here);
@@ -133,12 +133,17 @@ public sealed class KinRouteMap
 
 	// ===== Geometry
 
+	/// <summary>
+	/// **The route runs LEFT to RIGHT** — the town at the left, the boss at the right, a place's `X`
+	/// down the map. Eleven rows bottom-to-top left 76px a row for 96px discs (2026-09-28); across,
+	/// they get 160.
+	/// </summary>
 	private Vector2 At(RouteNode node)
 	{
 		var rows = _run.Route!.End.Row;
 		return new Vector2(
-			Left + (float)node.X * (Right - Left),
-			Bottom - node.Row * (Bottom - Top) / rows
+			Left + node.Row * (Right - Left) / rows,
+			Top + (float)node.X * (Bottom - Top)
 		);
 	}
 
@@ -182,7 +187,10 @@ public sealed class KinRouteMap
 	/// </summary>
 	private Control Place(RouteNode node, bool reachable)
 	{
-		var size = node.Kind is NodeKind.Start or NodeKind.End ? Node + 24 : Node;
+		var size =
+			node.Kind is NodeKind.Start or NodeKind.End ? Node + 24
+			: node.Kind == NodeKind.Elite ? Node + 12
+			: Node;
 		var button = new Button
 		{
 			Size = new Vector2(size, size),
@@ -260,13 +268,15 @@ public sealed class KinRouteMap
 	private static (Texture2D Art, string Glyph) Face(RouteNode node) =>
 		node.Kind switch
 		{
-			NodeKind.Wild or NodeKind.Rare => (Creature(node.Encounter!.Foes[0].Name), ""),
+			NodeKind.Wild or NodeKind.Rare or NodeKind.Elite or NodeKind.End => (
+				Creature(node.Encounter!.Foes.MaxBy(f => f.MaxHp)!.Name),
+				""
+			),
 			NodeKind.Trainer => (KinArt.AttackIcon, ""),
 			NodeKind.Rest => (KinArt.Drawing("icons/life"), ""),
 			NodeKind.Find when node.Find == FindKind.Snare => (KinArt.Drawing("cards/snare"), ""),
 			NodeKind.Find => (null, "$"),
 			NodeKind.Grass => (null, "?"),
-			NodeKind.End => (null, "▲"),
 			_ => (null, "●"),
 		};
 
@@ -277,7 +287,8 @@ public sealed class KinRouteMap
 		node.Kind switch
 		{
 			NodeKind.Start => "TOWN",
-			NodeKind.End => "NEXT TOWN",
+			NodeKind.End => "BOSS · " + node.Encounter!.Name.ToUpperInvariant(),
+			NodeKind.Elite => "ELITE · " + node.Encounter!.Name.ToUpperInvariant(),
 			NodeKind.Wild => Species(node),
 			NodeKind.Rare => "RARE · " + node.Encounter!.Foes[0].Name.ToUpperInvariant(),
 			NodeKind.Grass => "TALL GRASS",
@@ -303,7 +314,10 @@ public sealed class KinRouteMap
 				"A trainer: a harder fight that pays more. Nothing here can be caught.",
 			NodeKind.Rest => $"A spring: every monster heals {(int)(PartyRun.RestHeal * 100)}%.",
 			NodeKind.Find => "Something lying on the path.",
-			NodeKind.End => "The next town: a hospital, a shop — and, from here on, a leader.",
+			NodeKind.Elite =>
+				$"An ELITE: {node.Encounter!.Name}. A hard fight that pays a rare card, a relic, and big XP and gold. Nothing here can be caught.",
+			NodeKind.End =>
+				$"The BOSS: {node.Encounter!.Name}. Beat it to go on. The spring before it heals {(int)(PartyRun.RestHeal * 100)}%.",
 			_ => "",
 		};
 

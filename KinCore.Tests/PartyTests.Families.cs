@@ -353,15 +353,11 @@ public partial class PartyTests
 	}
 
 	[Test]
-	public void ALeadersWinOffersARare()
+	public void ABossesWinOffersARare()
 	{
 		foreach (var seed in Enumerable.Range(0, 20))
 		{
-			var after = PartyRun.Start(PartyContent.Bramble, seed) with
-			{
-				Phase = RunPhase.Town,
-				LeaderBeaten = true,
-			};
+			var after = PartyRun.Start(PartyContent.Bramble, seed) with { Phase = RunPhase.Town };
 
 			Assert.That(after.RewardOffer().Any(c => c.Rarity == Rarity.Rare), Is.True);
 		}

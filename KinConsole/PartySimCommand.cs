@@ -69,14 +69,14 @@ public static class PartySimCommand
 			Console.WriteLine(
 				$"  {region + 1, 2} {regions[region].Name, -17} "
 					+ $"{through, 6:P0} ({target, 4:P0})   {survived, 6:P0} ({target / previous, 4:P0})   "
-					+ $"{Died(RunEnd.Trail), 4}/{Died(RunEnd.Deep), -3}/{Died(RunEnd.Gym), -3}"
+					+ $"{Died(RunEnd.Trail), 4}/{Died(RunEnd.Deep), -3}/{Died(RunEnd.Boss), -3}"
 					+ (
 						gyms.Count == 0
 							? ""
 							: $"{"", 8}{gyms.Average(g => g.TeamHpShare), 4:P0}  "
 								+ $"{gyms.Average(g => g.TeamSize), 4:F1}  {gyms.Count(g => g.WentDeep) / (double)gyms.Count, 5:P0}  "
 								+ $"{gyms.Average(g => g.Turns), 5:F1}"
-								+ $"  {gyms.Average(g => g.TeamLevel), 4:F1} ({regions[region].LeaderLevel})"
+								+ $"  {gyms.Average(g => g.TeamLevel), 4:F1} ({regions[region].BossLevel})"
 					)
 			);
 			previous = target;

@@ -73,13 +73,7 @@ public partial class PartyRunTests
 			var index = PartyWorld.Regions.IndexOf(region);
 			for (var seed = 0; seed < 10; seed++)
 			{
-				var route = (
-					PartyRun.Start(PartyContent.Pike, seed) with
-					{
-						RegionIndex = index,
-						LeaderBeaten = true,
-					}
-				)
+				var route = (PartyRun.Start(PartyContent.Pike, seed) with { RegionIndex = index })
 					.EnterRoute()
 					.Route!;
 				foreach (
@@ -102,7 +96,11 @@ public partial class PartyRunTests
 
 		Assert.That(last.MaxFoes, Is.GreaterThan(first.MaxFoes));
 		Assert.That(last.MinLevel, Is.GreaterThan(first.MaxLevel));
-		Assert.That(last.Gym.Foes.Select(f => f.Level), Is.All.EqualTo(last.LeaderLevel));
+		Assert.That(
+			last.Bosses.SelectMany(b => b.Foes).Select(f => f.Level),
+			Is.All.EqualTo(last.BossLevel)
+		);
+		Assert.That(last.BossLevel, Is.GreaterThan(last.EliteLevel).And.GreaterThan(last.MaxLevel));
 	}
 
 	[Test]

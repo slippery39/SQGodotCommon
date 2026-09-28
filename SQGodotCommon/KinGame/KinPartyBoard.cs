@@ -182,22 +182,24 @@ public partial class KinPartyBoard : Node2D
 		else if (_captureStarter is { } starter)
 		{
 			// Capture-only: `--screen=route` sets out onto the first route, `route2` walks one place
-			// further; `town2` is the second town (its leader unbeaten), `gym|gymfight` that leader;
+			// further; `town2` is the second town; `boss` stands at the route's end (placed, not walked);
 			// `between|over` fight the route's first place and end it through `DebugEndBattle`.
 			BeginRun(PartyContent.Roster[starter]);
 			if (_captureScreen is { } screen)
 				GetTree().CreateTimer(0.5).Timeout += () =>
 				{
-					if (screen is "town2" or "gym" or "gymfight")
+					if (screen == "town2")
 					{
 						Change(r => r with { RegionIndex = 1 });
-						if (screen == "gym")
-							OpenBuilding(BuildingKind.Hall);
-						if (screen == "gymfight")
+						return;
+					}
+					if (screen == "boss")
+					{
+						Change(r =>
 						{
-							_run = _run.FightLeader();
-							NextBattle();
-						}
+							var route = r.EnterRoute();
+							return route with { NodeId = route.Route!.End.Id };
+						});
 						return;
 					}
 					if (screen is "hospital" or "shop" or "pen")
@@ -286,11 +288,6 @@ public partial class KinPartyBoard : Node2D
 					{
 						_building = null;
 						Continue();
-					},
-					() =>
-					{
-						_run = _run.FightLeader();
-						NextBattle();
 					}
 				);
 				break;
@@ -304,9 +301,6 @@ public partial class KinPartyBoard : Node2D
 			case RunPhase.Route:
 				_screens.Hide();
 				_route.Show(_run, id => Change(r => r.MoveTo(id)));
-				break;
-			case RunPhase.Gym:
-				NextBattle();
 				break;
 			default:
 				_screens.ShowOver(

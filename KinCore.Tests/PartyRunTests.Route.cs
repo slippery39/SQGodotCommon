@@ -10,12 +10,12 @@ namespace KinCore.Tests;
 /// </summary>
 public partial class PartyRunTests
 {
-	/// <summary>A run on a straight route: the town, the given places in a line, the next town.</summary>
+	/// <summary>A run on a straight route: the town, the given places in a line, the region's boss.</summary>
 	private static PartyRun OnRoute(PartyRun run, params RouteNode[] middle)
 	{
 		var nodes = new List<RouteNode> { new(0, NodeKind.Start, 0, 0.5) };
 		nodes.AddRange(middle.Select((n, i) => n with { Id = i + 1, Row = i + 1 }));
-		nodes.Add(new(nodes.Count, NodeKind.End, nodes.Count, 0.5));
+		nodes.Add(new(nodes.Count, NodeKind.End, nodes.Count, 0.5, Encounter: run.Boss));
 		var links = Enumerable.Range(0, nodes.Count - 1).Select(i => new RouteLink(i, i + 1));
 		return run with
 		{
@@ -39,50 +39,62 @@ public partial class PartyRunTests
 	private static IEnumerable<RouteMap> Routes(int seeds = 40) =>
 		Enumerable.Range(0, seeds).Select(seed => (Run() with { Seed = seed }).EnterRoute().Route!);
 
-	// ===== Leaving town — and the leader
+	// ===== Leaving town — and the BOSS at the route's end
 
 	[Test]
-	public void TheFirstTownHasNoLeaderSoYouCanSetOut()
+	public void EveryTownLetsYouSetOutAndItsBossIsKnownAlready()
 	{
-		var run = Run();
-
-		Assert.That(run.HasLeader, Is.False);
-		Assert.That(run.CannotLeaveTown, Is.Null);
-		Assert.That(run.FightLeader(), Is.EqualTo(run), "no leader to fight");
-		Assert.That(run.EnterRoute().Phase, Is.EqualTo(RunPhase.Route));
-	}
-
-	[Test]
-	public void FromTheSecondTownTheLeaderMustBeBeatenBeforeYouLeave()
-	{
-		var run = Run() with
+		foreach (var region in new[] { 0, 1 })
 		{
-			RegionIndex = 1,
-			Regions = [Region("R1"), Region("R2"), Region("R3")],
-		};
+			var run = Run() with { RegionIndex = region };
 
-		Assert.That(run.CannotLeaveTown, Is.EqualTo("Beat the leader first"));
-		Assert.That(run.EnterRoute(), Is.EqualTo(run), "a refused exit changes nothing");
-
-		run = run.FightLeader();
-		Assert.That(run.Phase, Is.EqualTo(RunPhase.Gym));
-		Assert.That(run.NextFight.Foes.Single().Name, Is.EqualTo("R2 Gym"));
-
-		(run, var report) = WinNext(run);
-
-		Assert.That(report.Gold, Is.EqualTo(PartyRun.GymGold));
-		Assert.That(run.Phase, Is.EqualTo(RunPhase.Town), "back in the town");
-		Assert.That(run.LeaderBeaten && run.CannotLeaveTown is null, Is.True);
-		Assert.That(run.FightLeader(), Is.EqualTo(run), "a leader is beaten once");
-		Assert.That(run.EnterRoute().Phase, Is.EqualTo(RunPhase.Route));
+			Assert.That(run.CannotLeaveTown, Is.Null);
+			var route = run.EnterRoute();
+			Assert.That(route.Phase, Is.EqualTo(RunPhase.Route));
+			Assert.That(
+				route.Route!.End.Encounter,
+				Is.EqualTo(run.Boss),
+				"the boss, shown from town"
+			);
+		}
 	}
 
 	[Test]
-	public void ANewTownsLeaderIsUnbeaten()
+	public void TheRowBeforeTheBossIsAlwaysASpring()
 	{
-		var run = OnRoute(Run() with { LeaderBeaten = true });
+		foreach (var route in Routes())
+		{
+			var before = route.Nodes.Where(n => n.Row == route.End.Row - 1).ToList();
+			Assert.That(before.Select(n => n.Kind), Is.EqualTo(new[] { NodeKind.Rest }));
+		}
+	}
 
-		Assert.That(run.MoveTo(1).LeaderBeaten, Is.False);
+	[Test]
+	public void EveryRouteHasOneOrTwoElitesNobodyCanCatch()
+	{
+		foreach (var route in Routes())
+		{
+			var elites = route.Nodes.Where(n => n.Kind == NodeKind.Elite).ToList();
+			Assert.That(elites.Count, Is.InRange(1, 2));
+			Assert.That(elites.Select(n => n.Row).Distinct().Count(), Is.EqualTo(elites.Count));
+			Assert.That(
+				elites.SelectMany(n => n.Encounter!.Foes),
+				Has.All.Matches<Foe>(f => !f.Catchable)
+			);
+		}
+	}
+
+	[Test]
+	public void TheLairHoldsYourFamilysRare()
+	{
+		var run = PartyRun.Start(PartyContent.Bramble, 3).EnterRoute();
+
+		var lair = run.Route!.Nodes.Single(n => n.Kind == NodeKind.Rare);
+
+		Assert.That(
+			lair.Encounter!.Foes.Select(f => f.Name),
+			Does.Contain(PartyWorld.RareOf(Family.Grove)!.Name)
+		);
 	}
 
 	// ===== The map
@@ -179,6 +191,7 @@ public partial class PartyRunTests
 	[TestCase(NodeKind.Wild, PartyRun.WildGold)]
 	[TestCase(NodeKind.Rare, PartyRun.DeepGold)]
 	[TestCase(NodeKind.Trainer, PartyRun.TrainerGold)]
+	[TestCase(NodeKind.Elite, PartyRun.EliteGold)]
 	public void AFightMustBeWonBeforeYouWalkOnAndPaysByItsKind(NodeKind kind, int gold)
 	{
 		var run = OnRoute(Run(), Place(kind, Fight(Foe("W"))), Place(NodeKind.Find)).MoveTo(1);
@@ -224,24 +237,19 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void TheEndOfTheRouteIsTheNextTownWhereNobodyIsHealedForFree()
+	public void TheBossAtTheEndMustBeBeatenAndThenIsTheNextTown()
 	{
-		var run = OnRoute(Run() with { Team = [new RunCompanion(A, 5)] });
+		var run = OnRoute(Run() with { Team = [new RunCompanion(A, 30)] }).MoveTo(1);
 
-		var after = run.MoveTo(1);
+		Assert.That(run.AtBoss && run.Phase == RunPhase.Route, "the end is a fight now");
+		Assert.That(run.NextFight, Is.EqualTo(run.Boss));
 
+		(var after, var report) = WinNext(run);
+
+		Assert.That(report.Gold, Is.EqualTo(PartyRun.BossGold));
 		Assert.That(after.Phase, Is.EqualTo(RunPhase.Town));
 		Assert.That(after.RegionIndex, Is.EqualTo(1));
 		Assert.That(after.Route, Is.Null);
-		Assert.That(Hp(after, "A"), Is.EqualTo(5), "the hospital sells healing now");
-	}
-
-	[Test]
-	public void TheEndOfTheLastRegionsRouteWinsTheRun()
-	{
-		var run = OnRoute(Run() with { RegionIndex = 1 });
-
-		Assert.That(run.MoveTo(1).Phase, Is.EqualTo(RunPhase.Won));
 	}
 
 	[Test]

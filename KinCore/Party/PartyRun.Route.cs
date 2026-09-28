@@ -18,8 +18,8 @@ public partial record PartyRun
 	public bool HereIsCleared => Cleared.Contains(NodeId);
 
 	/// <summary>
-	/// **Out of the town, onto its route** — drawn now from the region, seeded. Refused while
-	/// <see cref="CannotLeaveTown"/> says so (the leader, from the second town on).
+	/// **Out of the town, onto its route** — drawn now from the region, seeded, with the region's BOSS
+	/// at its end and the run's FAMILY's rare in its lair.
 	/// </summary>
 	public PartyRun EnterRoute() =>
 		CannotLeaveTown is not null
@@ -27,7 +27,12 @@ public partial record PartyRun
 			: this with
 			{
 				Phase = RunPhase.Route,
-				Route = PartyRoutes.Build(Region, new Random(Seed * 17 + RegionIndex * 7)),
+				Route = PartyRoutes.Build(
+					Region,
+					new Random(Seed * 17 + RegionIndex * 7),
+					Boss,
+					PartyWorld.RareOf(Family)
+				),
 				NodeId = 0,
 				Cleared = [0],
 				Sold = [],
@@ -41,8 +46,8 @@ public partial record PartyRun
 		: null;
 
 	/// <summary>
-	/// **Walks to a linked place and meets what is there.** A find or spring is taken at once; the end
-	/// is the next town (or the run won, after the last region); a fight waits for its battle.
+	/// **Walks to a linked place and meets what is there.** A find or spring is taken at once; a fight
+	/// — the boss at the end among them — waits for its battle.
 	/// A refused walk changes nothing (see <see cref="CannotMoveTo"/>).
 	/// </summary>
 	public PartyRun MoveTo(int node)
@@ -54,12 +59,6 @@ public partial record PartyRun
 		var here = run.Here;
 		return here.Kind switch
 		{
-			NodeKind.End => RegionIndex + 1 >= Regions.Count
-				? run with
-				{
-					Phase = RunPhase.Won,
-				}
-				: run.EnterTown(RegionIndex + 1),
 			NodeKind.Find => run.Clear() with
 			{
 				Snares = Snares + (here.Find == FindKind.Snare ? 1 : 0),
@@ -83,6 +82,8 @@ public partial record PartyRun
 		{
 			NodeKind.Rare => DeepGold,
 			NodeKind.Trainer => TrainerGold,
+			NodeKind.Elite => EliteGold,
+			NodeKind.End => BossGold,
 			_ => WildGold,
 		};
 }

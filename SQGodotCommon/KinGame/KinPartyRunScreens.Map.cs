@@ -21,7 +21,6 @@ public sealed partial class KinPartyRunScreens
 		run.Phase switch
 		{
 			RunPhase.Town => $"the town of {run.Region.Name}",
-			RunPhase.Gym => $"the leader — {run.Region.Gym.Name}",
 			RunPhase.Route => "back to the route",
 			_ => "",
 		};
@@ -29,15 +28,14 @@ public sealed partial class KinPartyRunScreens
 	// ===== The town's buildings (KinMapPlan.md §3) — each opened from the town map (KinTownMap)
 
 	/// <summary>
-	/// **Inside a building.** `back` returns to the town map; `fight` is the leader's hall's FIGHT.
-	/// A change made inside (a purchase, a heal, a swap) redraws the same building.
+	/// **Inside a building.** `back` returns to the town map. A change made inside (a purchase, a
+	/// heal, a swap) redraws the same building.
 	/// </summary>
 	public void ShowBuilding(
 		PartyRun run,
 		BuildingKind kind,
 		Action<Func<PartyRun, PartyRun>> change,
-		Action back,
-		Action fight
+		Action back
 	)
 	{
 		switch (kind)
@@ -48,11 +46,8 @@ public sealed partial class KinPartyRunScreens
 			case BuildingKind.Shop:
 				ShowShop(run, change);
 				break;
-			case BuildingKind.Pen:
-				ShowPen(run, change);
-				break;
 			default:
-				ShowHall(run, fight);
+				ShowPen(run, change);
 				break;
 		}
 		Row().AddChild(Button("◀ BACK TO TOWN", back));
@@ -165,37 +160,5 @@ public sealed partial class KinPartyRunScreens
 		}
 
 		Row().AddChild(Button("BACK", () => change(r => r)));
-	}
-
-	// ===== The leader
-
-	/// <summary>**The leader's hall**: their line, and FIGHT — or, once beaten, only that it is done.</summary>
-	private void ShowHall(PartyRun run, Action fight)
-	{
-		var gym = run.Region.Gym;
-		Begin(
-			$"THE LEADER — {gym.Name.ToUpperInvariant()}",
-			run.LeaderBeaten
-				? "Beaten. The gate is open."
-				: "Beat their whole line to open the gate. Their creatures cannot be caught.",
-			"map"
-		);
-
-		var row = Row();
-		foreach (var foe in gym.Foes)
-			row.AddChild(
-				Tile(
-					KinPalette.Slate,
-					ArtFor(foe.Name),
-					foe.Name.ToUpperInvariant(),
-					[$"LV {foe.Level} · HP {foe.MaxHp}"],
-					new Vector2(260, 330),
-					run.LeaderBeaten ? () => { } : fight
-				)
-			);
-
-		ShowTeam(run, null);
-		if (!run.LeaderBeaten)
-			Row().AddChild(Button("FIGHT", fight));
 	}
 }

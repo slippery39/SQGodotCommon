@@ -33,17 +33,16 @@ public record RunReport(
 
 	/// <summary>The team indices (after the battle's reorder) of the monsters that levelled.</summary>
 	public ImmutableList<int> LevelUps { get; init; } = [];
+
+	/// <summary>The RELIC an elite paid, if it did (none are left once you hold them all).</summary>
+	public Relic? Relic { get; init; }
 }
 
 /// <summary>Where a run is. The screens are chosen from this and nothing else.</summary>
 public enum RunPhase
 {
-	/// <summary>In a region's town: a map of buildings — hospital, shop, pen; from the second town on, a
-	/// LEADER must be beaten before you can leave.</summary>
+	/// <summary>In a region's town: a map of buildings — hospital, shop, pen, and the gate out.</summary>
 	Town,
-
-	/// <summary>Fighting the town's leader (the region's `Gym` encounter).</summary>
-	Gym,
 
 	/// <summary>
 	/// **On a wild ROUTE** (`KinMapPlan.md`): walking a branching map toward the next town, at
@@ -56,9 +55,9 @@ public enum RunPhase
 }
 
 /// <summary>
-/// **THE RUN** (`KinMapPlan.md`): TOWN → wild ROUTE → next town → … Each town has a hospital (healing
-/// for gold) and a shop; from the second town on its LEADER must be beaten before you leave (the last town's leader
-/// wins the run). A route is a branching map of fights, finds and springs (`PartyRun.Route.cs`).
+/// **THE RUN** (`KinMapPlan.md`; `KinFamiliesPlan.md`, round 2): TOWN → wild ROUTE → its BOSS → next
+/// town → … five regions; the fifth boss wins the run. Each town has a hospital (healing for gold) and
+/// a shop. A route is a branching map of fights, finds and springs (`PartyRun.Route.cs`).
 /// You start with one monster and catch the rest. HP carries between fights; a knocked-out monster
 /// revives at a quarter of its max; gold from every win buys Snares and cards.
 ///
@@ -76,7 +75,8 @@ public partial record PartyRun
 
 	public const int WildGold = 20;
 	public const int DeepGold = 35;
-	public const int GymGold = 50;
+	public const int BossGold = 50;
+	public const int EliteGold = 60;
 	public const int FoundGold = 40;
 
 	public const int SnarePrice = 30;
@@ -129,11 +129,30 @@ public partial record PartyRun
 	public bool IsOver => Phase is RunPhase.Won or RunPhase.Lost;
 	public Region Region => Regions[RegionIndex];
 
-	/// <summary>From the second town on, a leader stands between you and the road out.</summary>
-	public bool HasLeader => RegionIndex >= 1;
+	/// <summary>
+	/// **This region's BOSS — one of its two, fixed by the seed**, so it is known from the town on and
+	/// the route becomes preparing for it (Shayne, 2026-09-28: shown, like STS).
+	/// </summary>
+	public Encounter Boss =>
+		Region.Bosses[new Random(Seed * 29 + RegionIndex).Next(Region.Bosses.Count)];
 
-	/// <summary>Whether this town's leader has been beaten.</summary>
-	public bool LeaderBeaten { get; init; }
+	/// <summary>**The RELICS** held (`PartyRelics`) — an elite's prize, kept for the whole run.</summary>
+	public ImmutableList<Relic> Relics { get; init; } = [];
+
+	public bool Has(Relic relic) => Relics.Contains(relic);
+
+	/// <summary>A relic joins the run — and Snare Pouch pays its Snares at once.</summary>
+	public PartyRun Gain(Relic relic) =>
+		Has(relic)
+			? this
+			: this with
+			{
+				Relics = Relics.Add(relic),
+				Snares = Snares + (relic == Relic.SnarePouch ? PartyRelics.SnarePouchNow : 0),
+			};
+
+	/// <summary>Whether you stand before the BOSS — the route's last place.</summary>
+	public bool AtBoss => Phase == RunPhase.Route && Route is not null && Here.Kind == NodeKind.End;
 
 	/// <summary>A new run: one starter, in the first region's town.</summary>
 	public static PartyRun Start(
@@ -182,38 +201,23 @@ public partial record PartyRun
 	// ===== Leaving town
 
 	/// <summary>Why you cannot leave the town yet — or null if you can.</summary>
-	public string? CannotLeaveTown =>
-		Phase != RunPhase.Town ? "Not in a town"
-		: HasLeader && !LeaderBeaten ? "Beat the leader first"
-		: null;
-
-	/// <summary>Into the leader's hall — the town's leader fight. Refused with no leader, or twice.</summary>
-	public PartyRun FightLeader() =>
-		Phase == RunPhase.Town && HasLeader && !LeaderBeaten
-			? this with
-			{
-				Phase = RunPhase.Gym,
-			}
-			: this;
+	public string? CannotLeaveTown => Phase != RunPhase.Town ? "Not in a town" : null;
 
 	// ===== Battles
 
-	/// <summary>The fight at this point of the run: the current stop's, or the gym's.</summary>
+	/// <summary>The fight at this point of the run: the place you stand on.</summary>
 	public Encounter NextFight =>
-		Phase switch
-		{
-			RunPhase.Gym => Region.Gym,
-			RunPhase.Route => Here.Encounter,
-			_ => null,
-		} ?? throw new InvalidOperationException("No fight here");
+		(Phase == RunPhase.Route ? Here.Encounter : null)
+		?? throw new InvalidOperationException("No fight here");
 
 	public GameState StartBattle()
 	{
 		var scenario = new PartyScenario(
 			NextFight.Name,
-			Phase switch
+			Here.Kind switch
 			{
-				RunPhase.Gym => $"{Region.Name} — the leader",
+				NodeKind.End => $"{Region.Name} — the boss",
+				NodeKind.Elite => $"{Region.Name} — an elite",
 				_ => $"{Region.Name} — the route",
 			},
 			// **The team's order IS the line** (front first), then the bench off it (-1) — in that
@@ -227,7 +231,8 @@ public partial record PartyRun
 			[],
 			Snares,
 			Deploy: true,
-			Family
+			Family,
+			Relics
 		);
 		return PartyBattleFactory.Create(scenario, Seed + RegionIndex * 1009 + NodeId * 37);
 	}
@@ -269,9 +274,11 @@ public partial record PartyRun
 		];
 		var bench = Bench.Select((m, i) => After(m, Team.Count + i)).ToImmutableList();
 
-		var gold = Phase == RunPhase.Gym ? GymGold : RouteGold(Here.Kind);
-		// **XP to every monster on the team** — the line that fought (`PartyLevels.XpFor`).
-		var xp = PartyLevels.XpFor(NextFight.Foes, leader: Phase == RunPhase.Gym);
+		var kind = Here.Kind;
+		var gold = (int)(RouteGold(kind) * (Has(Relic.LuckyCoin) ? PartyRelics.LuckyCoinGold : 1));
+		// **XP to every monster on the team** — the line that fought (`PartyLevels.XpFor`). An elite
+		// and a boss pay double.
+		var xp = PartyLevels.XpFor(NextFight.Foes, leader: kind is NodeKind.End or NodeKind.Elite);
 		var levelUps = ImmutableList<int>.Empty;
 		team =
 		[
@@ -294,6 +301,26 @@ public partial record PartyRun
 			Gold = Gold + gold,
 		};
 
+		// FIELD KIT: every monster that is still up heals a little — a revived one too.
+		if (Has(Relic.FieldKit))
+			run = run with
+			{
+				Team = HealBy(run.Team, PartyRelics.FieldKitHeal),
+				Bench = HealBy(run.Bench, PartyRelics.FieldKitHeal),
+			};
+
+		// **An ELITE pays a RELIC** — one you do not hold, seeded; none once you hold them all.
+		Relic? relic = null;
+		if (kind == NodeKind.Elite)
+		{
+			var left = PartyRelics.All.Where(r => !Has(r)).ToList();
+			if (left.Count > 0)
+			{
+				relic = left[new Random(Seed * 41 + RegionIndex * 7 + NodeId).Next(left.Count)];
+				run = run.Gain(relic.Value);
+			}
+		}
+
 		var caught = ImmutableList<string>.Empty;
 		var toBench = ImmutableList<string>.Empty;
 		foreach (var foe in finished.CaughtFoes())
@@ -311,18 +338,23 @@ public partial record PartyRun
 
 		run =
 			// On a route you stay where you fought — the place is cleared, and the map is yours again.
-			Phase == RunPhase.Route
+			kind != NodeKind.End
 				? run with
 				{
 					Cleared = run.Cleared.Add(NodeId),
 				}
-			// The leader beaten: back in its town, the road out open — or, the last one, the run won.
+			// The BOSS beaten: on to the next town — or, the last one, the run won.
 			: RegionIndex + 1 >= Regions.Count ? run with { Phase = RunPhase.Won }
-			: run with { Phase = RunPhase.Town, LeaderBeaten = true };
+			: run.EnterTown(RegionIndex + 1);
 
 		return (
 			run,
-			new RunReport(revived, caught, toBench, gold) { Xp = xp, LevelUps = levelUps }
+			new RunReport(revived, caught, toBench, gold)
+			{
+				Xp = xp,
+				LevelUps = levelUps,
+				Relic = relic,
+			}
 		);
 	}
 
@@ -334,12 +366,18 @@ public partial record PartyRun
 		{
 			RegionIndex = region,
 			Phase = RunPhase.Town,
-			LeaderBeaten = false,
+			Snares = Snares + (Has(Relic.SnarePouch) ? 1 : 0),
 			Route = null,
 			NodeId = 0,
 			Cleared = [],
 			Sold = [],
 		};
+
+	/// <summary>Everyone heals this many HP, up to their max.</summary>
+	internal static ImmutableList<RunCompanion> HealBy(
+		ImmutableList<RunCompanion> monsters,
+		int hp
+	) => [.. monsters.Select(m => m with { Hp = Math.Min(m.MaxHp, m.Hp + hp) })];
 
 	internal static ImmutableList<RunCompanion> Heal(
 		ImmutableList<RunCompanion> monsters,
@@ -374,13 +412,20 @@ public partial record PartyRun
 		};
 
 	/// <summary>
-	/// **Three cards to choose from after a win** — seeded, so a run replays. **A leader's win
-	/// guarantees a RARE** (Shayne, 2026-09-28).
+	/// **Three cards to choose from after a win** — seeded, so a run replays. **An elite's or a boss's
+	/// win guarantees a RARE** (Shayne, 2026-09-28). Trainer's Eye offers four.
 	/// </summary>
 	public ImmutableList<KinCard> RewardOffer()
 	{
-		var rng = new Random(Seed * 31 + RegionIndex * 13 + NodeId * 3 + (LeaderBeaten ? 1 : 0));
-		return Offer(rng, rareFirst: Phase == RunPhase.Town && LeaderBeaten || IsWon);
+		// After a boss the run has moved on to the next town (or won); after an elite it stands there.
+		var bossBeaten = Phase == RunPhase.Town || IsWon;
+		var eliteBeaten = Phase == RunPhase.Route && Here.Kind == NodeKind.Elite;
+		var rng = new Random(Seed * 31 + RegionIndex * 13 + NodeId * 3 + (bossBeaten ? 1 : 0));
+		return Offer(
+			rng,
+			rareFirst: bossBeaten || eliteBeaten,
+			count: Has(Relic.TrainersEye) ? PartyRelics.TrainersEyeOffer : 3
+		);
 	}
 
 	/// <summary>The cards this run may be offered: its FAMILY's and the colourless ones.</summary>
@@ -391,7 +436,7 @@ public partial record PartyRun
 	/// **Three different cards from the pool, weighted by rarity** — a weighted draw without
 	/// replacement (each card's key is u^(1/weight), the highest three win).
 	/// </summary>
-	private ImmutableList<KinCard> Offer(Random rng, bool rareFirst = false)
+	private ImmutableList<KinCard> Offer(Random rng, bool rareFirst = false, int count = 3)
 	{
 		var keyed = Pool.Select(c =>
 				(Card: c, Key: Math.Pow(rng.NextDouble(), 1 / Weight(c.Rarity)))
@@ -404,7 +449,7 @@ public partial record PartyRun
 			keyed.Remove(rare);
 			keyed.Insert(0, rare);
 		}
-		return [.. keyed.Take(3)];
+		return [.. keyed.Take(count)];
 	}
 
 	/// <summary>The chosen card joins the deck for the rest of the run.</summary>

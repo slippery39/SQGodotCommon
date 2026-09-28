@@ -14,8 +14,8 @@ public enum RunEnd
 	/// <summary>Lost at a route's rare lair (the old deeper path).</summary>
 	Deep,
 
-	/// <summary>Lost to a town's leader.</summary>
-	Gym,
+	/// <summary>Lost to a region's boss.</summary>
+	Boss,
 
 	/// <summary>A battle that ran past <see cref="PartySim.TurnLimit"/> turns — the bot could not finish it.</summary>
 	Stalled,
@@ -115,13 +115,8 @@ public static class PartySim
 						run = run.BuySnare();
 					if (run.CanBuyCard(0))
 						run = run.BuyCard(0);
-					if (run.CannotLeaveTown is not null)
-						run = run.FightLeader();
-					else
-					{
-						run = run.EnterRoute();
-						wentDeep = false;
-					}
+					run = run.EnterRoute();
+					wentDeep = false;
 					break;
 
 				case RunPhase.Route when run.HereIsCleared:
@@ -129,7 +124,7 @@ public static class PartySim
 					break;
 
 				default:
-					if (run.Phase == RunPhase.Gym)
+					if (run.AtBoss)
 						gyms = gyms.Add(
 							new GymArrival(
 								run.RegionIndex,
@@ -145,7 +140,7 @@ public static class PartySim
 						wentDeep = true;
 
 					var where =
-						run.Phase == RunPhase.Gym ? RunEnd.Gym
+						run.AtBoss ? RunEnd.Boss
 						: run.Here.Kind == NodeKind.Rare ? RunEnd.Deep
 						: RunEnd.Trail;
 
@@ -186,7 +181,7 @@ public static class PartySim
 
 					var party = battle.GetParty();
 					caught += battle.CaughtFoes().Count();
-					if (where == RunEnd.Gym)
+					if (where == RunEnd.Boss)
 						gyms = gyms.SetItem(gyms.Count - 1, gyms[^1] with { Turns = t });
 					var region = run.RegionIndex;
 					(run, _) = run.AfterBattle(battle);
@@ -222,6 +217,8 @@ public static class PartySim
 				NodeKind.Wild => healthy ? 5 : 3,
 				NodeKind.Grass => healthy ? 4 : 2,
 				NodeKind.Trainer => healthy ? 3 : 1,
+				// An elite only when healthy — and then before a wild fight: it pays a relic.
+				NodeKind.Elite => healthy ? 5 : 0,
 				_ => 4,
 			};
 		return run.Route!.Next(run.NodeId)

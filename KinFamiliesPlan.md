@@ -54,7 +54,8 @@ measured came from leaders that never killed while routes did.
    move into its family's pool); `KinCard.Rarity`; `PartyRun.Family` from the starter; rewards and
    shop filtered to it + colourless, weighted by rarity; the catch refusal "Not your family"
    (and a mark on catchable foes); areas' wild pools mixed; the new starting decks.
-2. **Run shape**: 5 regions; wild fights eased to light attrition; ELITE nodes (1–2, shown); the boss
+2. ☑ **Run shape** (built 2026-09-28; 317 tests; the boss at the ROUTE's end, a spring before it, the
+   route drawn left to right): 5 regions; wild fights eased to light attrition; ELITE nodes (1–2, shown); the boss
    shown on entering a region; elite rewards; RELICS as a system with ~6 starters. Placeholder elites
    and bosses reuse today's leader lines until designed.
 3. **Interview: bosses and elites** — what each tests, its unique pattern.

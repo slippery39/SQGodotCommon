@@ -12,22 +12,21 @@ public partial class PartyRunTests
 		[.. run.Town.Buildings.Select(b => b.Kind)];
 
 	[Test]
-	public void TheFirstTownHasNoLeadersHallAndTheNextOnesDo()
+	public void EveryTownHasItsBuildingsAndNoLeadersHall()
 	{
-		Assert.That(Buildings(Run()), Does.Not.Contain(BuildingKind.Hall));
-		Assert.That(
-			Buildings(Run() with { RegionIndex = 1 }),
-			Is.SupersetOf(
-				new[]
-				{
-					BuildingKind.Hospital,
-					BuildingKind.Shop,
-					BuildingKind.Pen,
-					BuildingKind.Hall,
-					BuildingKind.Gate,
-				}
-			)
-		);
+		foreach (var region in new[] { 0, 1 })
+			Assert.That(
+				Buildings(Run() with { RegionIndex = region }),
+				Is.EquivalentTo(
+					new[]
+					{
+						BuildingKind.Hospital,
+						BuildingKind.Shop,
+						BuildingKind.Pen,
+						BuildingKind.Gate,
+					}
+				)
+			);
 	}
 
 	[Test]

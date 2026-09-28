@@ -14,8 +14,17 @@ public enum NodeKind
 	/// <summary>Tall grass: a wild fight from the pool, not shown until you walk in.</summary>
 	Grass,
 
-	/// <summary>The route's rare, on one branch only: harder, and the only place it lives.</summary>
+	/// <summary>
+	/// The route's rare, on one branch only: harder, and the only place it lives — always your
+	/// FAMILY's rare, so the lair is a catch you can make.
+	/// </summary>
 	Rare,
+
+	/// <summary>
+	/// **An ELITE**: a mini-boss with its own patterns, SHOWN on the map, so taking it is a choice.
+	/// Pays a rare-led card reward, a RELIC, and big XP and gold. Nothing in it can be caught.
+	/// </summary>
+	Elite,
 
 	/// <summary>A trainer's line: pays more, and nothing in it can be caught.</summary>
 	Trainer,
@@ -26,7 +35,10 @@ public enum NodeKind
 	/// <summary>A spring: every monster heals a share of its max.</summary>
 	Rest,
 
-	/// <summary>The next town's gate.</summary>
+	/// <summary>
+	/// **The region's BOSS**, at the top of the map where it is seen all the way up. Beaten, the next
+	/// town — or, the last, the run won. The row before it is always a spring.
+	/// </summary>
 	End,
 }
 
@@ -74,10 +86,16 @@ public record RouteMap(ImmutableList<RouteNode> Nodes, ImmutableList<RouteLink> 
 /// </summary>
 public static class PartyRoutes
 {
-	/// <summary>The rows between the two towns.</summary>
-	public const int Middle = 5;
+	/// <summary>
+	/// The rows of choices between the town and the spring before the boss — 8, since five regions
+	/// replaced ten (Shayne, 2026-09-28: "longer").
+	/// </summary>
+	public const int Middle = 8;
 
-	public static RouteMap Build(Region region, Random rng)
+	/// <summary>The rows an elite may stand on: past the first choices, before the rare's row.</summary>
+	private static readonly int[] EliteRows = [4, 5, 6, 7];
+
+	public static RouteMap Build(Region region, Random rng, Encounter boss, Foe? rare = null)
 	{
 		var nodes = new List<RouteNode>();
 		var rows = new List<List<int>>();
@@ -89,7 +107,20 @@ public static class PartyRoutes
 			{
 				var area = x < 0.5 ? 0 : 1;
 				ids.Add(nodes.Count);
-				nodes.Add(Place(nodes.Count, kind, row, x, region, region.Areas[area], area, rng));
+				nodes.Add(
+					Place(
+						nodes.Count,
+						kind,
+						row,
+						x,
+						region,
+						region.Areas[area],
+						area,
+						rng,
+						rare,
+						boss
+					)
+				);
 			}
 			rows.Add(ids);
 		}
@@ -97,6 +128,8 @@ public static class PartyRoutes
 		Row(0, [(NodeKind.Start, 0.5)]);
 		// The first fork is one visible fight in each biome: the first choice is what to catch.
 		Row(1, [(NodeKind.Wild, 0.25), (NodeKind.Wild, 0.75)]);
+		// **1–2 ELITES, each on its own row** — shown, and a fork around each, so they can be dodged.
+		var eliteRows = EliteRows.OrderBy(_ => rng.Next()).Take(rng.Next(1, 3)).ToHashSet();
 		for (var row = 2; row <= Middle; row++)
 		{
 			var kinds = Enumerable.Range(0, rng.Next(2, 4)).Select(_ => Roll(rng)).ToList();
@@ -105,9 +138,13 @@ public static class PartyRoutes
 				kinds[0] = NodeKind.Grass;
 			if (row == Middle)
 				kinds[rng.Next(kinds.Count)] = NodeKind.Rare;
+			if (eliteRows.Contains(row))
+				kinds[rng.Next(kinds.Count)] = NodeKind.Elite;
 			Row(row, kinds.Select((k, i) => (k, Spread(i, kinds.Count, rng))));
 		}
-		Row(Middle + 1, [(NodeKind.End, 0.5)]);
+		// **A spring before the boss, always — a share of HP, never a full heal** (Shayne: like STS).
+		Row(Middle + 1, [(NodeKind.Rest, 0.5)]);
+		Row(Middle + 2, [(NodeKind.End, 0.5)]);
 
 		return new([.. nodes], [.. Link(rows, rng)]);
 	}
@@ -138,7 +175,9 @@ public static class PartyRoutes
 		Region region,
 		Area area,
 		int areaIndex,
-		Random rng
+		Random rng,
+		Foe? rare,
+		Encounter boss
 	)
 	{
 		Encounter Wild(int count, Foe? rare = null, int? level = null) =>
@@ -160,8 +199,16 @@ public static class PartyRoutes
 			},
 			NodeKind.Rare => node with
 			{
-				Encounter = Wild(Math.Min(PartyBattle.MaxLine, region.MaxFoes + 1), area.Rare),
+				Encounter = Wild(
+					Math.Min(PartyBattle.MaxLine, region.MaxFoes + 1),
+					rare ?? area.Rare
+				),
 			},
+			NodeKind.Elite => node with
+			{
+				Encounter = region.Elites[rng.Next(region.Elites.Count)],
+			},
+			NodeKind.End => node with { Encounter = boss },
 			NodeKind.Trainer => node with
 			{
 				Encounter = Trainer(Wild(region.MaxFoes, level: region.TrainerLevel)),

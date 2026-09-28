@@ -28,6 +28,9 @@ public record PartyBattle : GameObject
 	/// </summary>
 	public Family Family { get; init; }
 
+	/// <summary>The run's RELICS (`PartyRelics`) — read at the deal and when the fight begins.</summary>
+	public ImmutableList<Relic> Relics { get; init; } = [];
+
 	/// <summary>
 	/// **Cards a card or ability discarded this turn** — MtgCore's `SpellsCastThisTurn` pattern:
 	/// counted in ONE place (`FirePartyTriggersAction`) from the staged events, so no discard path

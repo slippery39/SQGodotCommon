@@ -14,10 +14,7 @@ public enum BuildingKind
 	/// <summary>The team and the bench: who fights next.</summary>
 	Pen,
 
-	/// <summary>The leader's hall: the town's leader fight (from the second town on).</summary>
-	Hall,
-
-	/// <summary>The road out, onto the next route — shut until the leader is beaten.</summary>
+	/// <summary>The road out, onto the route — and its boss at the end.</summary>
 	Gate,
 }
 
@@ -31,7 +28,7 @@ public record TownMap(ImmutableList<Building> Buildings);
 
 /// <summary>
 /// **The town of a region.** One layout for every town for now — the plan's "any town assembled from
-/// data" starts with the same streets; a town differs by its name and whether it has a leader.
+/// data" starts with the same streets; a town differs by its name.
 /// </summary>
 public static class PartyTowns
 {
@@ -41,9 +38,6 @@ public static class PartyTowns
 				new(BuildingKind.Hospital, "Hospital", 0.22, 0.34),
 				new(BuildingKind.Shop, "Shop", 0.5, 0.26),
 				new(BuildingKind.Pen, "The Pen", 0.25, 0.72),
-				.. regionIndex >= 1
-					? [new Building(BuildingKind.Hall, $"{regionName} Hall", 0.77, 0.3)]
-					: ImmutableList<Building>.Empty,
 				new(BuildingKind.Gate, "Town Gate", 0.8, 0.74),
 			]
 		);

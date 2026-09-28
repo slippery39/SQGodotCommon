@@ -55,7 +55,8 @@ public record PartyScenario(
 	ImmutableList<string> OpeningHand,
 	int Snares = 0,
 	bool Deploy = false,
-	Family Family = Family.None
+	Family Family = Family.None,
+	ImmutableList<Relic>? Relics = null
 );
 
 /// <summary>
@@ -530,6 +531,7 @@ public static class PartyBattleFactory
 				Energy = 3,
 				Snares = scenario.Snares,
 				Family = scenario.Family,
+				Relics = scenario.Relics ?? [],
 			}
 		);
 		(s, var draw) = s.AddObject(
@@ -603,10 +605,11 @@ public static class PartyBattleFactory
 		}
 
 		s = s.AddAction(new StartPartyTurnAction()).ProcessAllActions().State;
+		s = PartyRelics.Dealt(s);
 
 		// DEPLOY (R2): the hand is dealt, and the fight waits for FIGHT.
 		return scenario.Deploy
 			? s.UpdateObject(s.GetParty().Id, s.GetParty() with { Deploying = true })
-			: s;
+			: PartyRelics.FightBegins(s);
 	}
 }
