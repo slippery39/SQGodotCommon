@@ -284,6 +284,17 @@ public static class KinCardFace
 		card.HasComponent<UnitComponent>()
 		|| card.Effects.Any(e => KinTargeting.IsLaneScoped(e.Target));
 
+	/// <summary>
+	/// A spell's damage numbers with the bonus added. Every spell's text says its damage as "deal N"
+	/// or, for a splash, "and N" — `IsSpell` gates it, so no other card's numbers are touched.
+	/// </summary>
+	private static string Boost(string text, int bonus) =>
+		System.Text.RegularExpressions.Regex.Replace(
+			text,
+			@"\b(deal|Deal|and) (\d+)",
+			m => $"{m.Groups[1].Value} {int.Parse(m.Groups[2].Value) + bonus}"
+		);
+
 	public static string RulesTextFor(KinCard card)
 	{
 		// Assembled in KinCore so the console dump cannot disagree with the card face — and so a
@@ -309,7 +320,14 @@ public static class KinCardFace
 	private static int ArtHeightFor(KinCard card) =>
 		RulesTextFor(card).Length == 0 ? TallArt : ShortArt;
 
-	public static InternalCardUI2D.Details For(KinCard card)
+	public static InternalCardUI2D.Details For(KinCard card) => For(card, 0, 0);
+
+	/// <summary>
+	/// **The card as it plays NOW** (Shayne, 2026-09-28: the playtest could not tell whether Ember
+	/// ever fired): its kin on the family line, and a spell's damage with the Kindle already added —
+	/// in green, the way a boosted number reads in Slay the Spire.
+	/// </summary>
+	public static InternalCardUI2D.Details For(KinCard card, int kin, int spellBonus)
 	{
 		var unit = card.GetComponent<UnitComponent>();
 
@@ -318,7 +336,12 @@ public static class KinCardFace
 		// stay plain.
 		var owner = card.OwnerName.Length > 0 ? card.OwnerName : null;
 		// Style D: the EDGE is the owner's colour, neutral steel for a trainer card.
-		var edge = owner is not null ? KinPalette.Companion(owner) : KinCardKit.Neutral;
+		// The FAMILY wins the edge (2026-09-28); the medallion still says whose deck it is from.
+		var edge =
+			card.Family != KinCore.Party.Family.None ? KinPalette.Family(card.Family)
+			: owner is not null ? KinPalette.Companion(owner)
+			: KinCardKit.Neutral;
+		var boosted = spellBonus > 0 && KinCore.Party.PartySpells.IsSpell(card);
 		var ground = owner is not null
 			? KinPalette.Companion(owner).Lightened(0.3f)
 			: KinArt.ColourFor(card.Name);
@@ -337,7 +360,7 @@ public static class KinCardFace
 			TypeLine =
 				card.Family == KinCore.Party.Family.None
 					? ""
-					: card.Family.ToString().ToUpperInvariant(),
+					: card.Family.ToString().ToUpperInvariant() + (kin > 0 ? $" · KIN ×{kin}" : ""),
 
 			// A rite's text is the only thing telling you what it does, so it goes where rules text
 			// goes. It is authored beside the effect it describes — see KinEffect.Text.
@@ -346,7 +369,7 @@ public static class KinCardFace
 			// no effects and no tags, and this returned the empty string — so `Description`, which is
 			// authored for every card in the game, was displayed nowhere at all. It reads as a font
 			// bug and is not one: there was no text to size.
-			RulesText = RulesTextFor(card),
+			RulesText = boosted ? Boost(RulesTextFor(card), spellBonus) : RulesTextFor(card),
 			// TOUGHNESS ONLY — power is drawn beside the sword at bottom-left. See StyleStats.
 			PowerToughness = unit is null ? "" : unit.Toughness.ToString(),
 
@@ -378,7 +401,7 @@ public static class KinCardFace
 
 			NameColor = KinPalette.Bone,
 			ManaCostColor = KinPalette.Bone,
-			RulesTextColor = KinCardKit.Ink,
+			RulesTextColor = boosted ? Color.FromHtml("#1F7A2E") : KinCardKit.Ink,
 
 			// The border is painted into the frame texture, so the shader outline would only
 			// double it.

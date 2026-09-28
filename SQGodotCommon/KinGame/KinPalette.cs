@@ -30,6 +30,21 @@ public static class KinPalette
 	/// Playtest (2026-09-23): every card looked the same, so a card played for Bramble was believed
 	/// to be Pike's. Never gold or red: those are reserved for "yours" and for the enemy.
 	/// </summary>
+	/// <summary>
+	/// **A monster's colour is its FAMILY's** (Shayne, 2026-09-28: the playtest could not tell which
+	/// monsters and cards were kin). The companion colour is only the fallback for a family-less one;
+	/// a card's medallion still says whose deck it came from. Ember is ORANGE, not the foes' red.
+	/// </summary>
+	public static Color Family(KinCore.Party.Family family, string name = "") =>
+		family switch
+		{
+			KinCore.Party.Family.Grove => Color.FromHtml("#3F7A34"),
+			KinCore.Party.Family.Ember => Color.FromHtml("#C2621F"),
+			KinCore.Party.Family.Storm => Color.FromHtml("#2F72A8"),
+			KinCore.Party.Family.Mire => Color.FromHtml("#6A4A8E"),
+			_ => Companion(name),
+		};
+
 	public static Color Companion(string name) =>
 		name switch
 		{

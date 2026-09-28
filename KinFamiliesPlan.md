@@ -1,5 +1,77 @@
 # FAMILIES — monsters as engines, cards as fuel (design, 2026-09-27)
 
+## ROUND 2 — ONE FAMILY PER RUN (interview, 2026-09-28) — supersedes "the build emerges from finds"
+
+**Status: DECIDED (three rounds), not built.** Shayne, after playing KIN: "once you commit to a bonus, it's kind of bad
+to catch non-bonus monsters, as well as some cards kind of become useless … we can curate cards and
+monsters so they better fit within a single run." The Slay the Spire class model: **the family is your
+class.** Everything below is his answer from three rounds of questions.
+
+| | Decided |
+|---|---|
+| Choosing | **The starter IS the family** (Bramble = Grove, Pike = Ember). No new screen |
+| Rewards and shop | **Only your family's cards and COLOURLESS ones** |
+| Catching | **Only your family's monsters and colourless ones.** You still FIGHT every family |
+| Wild foes | **Uniformly mixed** across families in every area (the themed areas go) |
+| Colourless monsters | **Generalists** — each has a passive that CAN be built around, generic enough that any family might want it in the right spot, backed by colourless cards that work well with it |
+| Kin bonus | **DROPPED** — with one family it is noise. Family colours, labels, live numbers, pop-ups stay |
+| Pool size | **STS-scale**: per family ~8 monsters (starter included) and 20+ cards; colourless ~6 monsters, ~15 cards |
+| Starting deck | **4 Strike, 4 Guard, + 2 small family cards** that show the engine on turn one |
+| Rarity | **Common / uncommon / rare**, rewards weighted; a leader win guarantees a rare |
+| Monster decks | **DROPPED** — a monster brings its passive and moves; every card comes from rewards |
+| Storm, Mire | **Shelved** — their cards stay theirs and wait; their monsters are fight-only foes |
+| First slice | **Grove + Ember**, each deepened to a full curated pool |
+| Order | **System first** (playable with today's content, thin), then the pools |
+| Content design | **An interview PER FAMILY** before any drafts |
+
+### THE RUN'S SHAPE — difficulty lives in elites and bosses (same interview, round 3)
+
+Shayne: "the difficulty should mainly come from the elites and bosses, and not the wild monsters …
+You were rarely dying in Pokémon because you couldn't handle the wild monsters in an area, it was
+always the gym leaders and trainers." **The loop: go to the wild to find monsters to catch, so you
+are strong enough for the elites and the boss.** One family at a time is also what makes that
+balanceable — "much easier to balance for both fun and difficulty".
+
+| | Decided |
+|---|---|
+| Length | **5 regions** (the 10-region map goes) |
+| Fight tiers | **wild < trainer < ELITE < BOSS**. Trainers stay, a middle tier; the rare's lair stays a catch spot |
+| Wild fights | **Light attrition** — few foes, at or under your level; rarely kill, but HP carries and healing costs gold. They pay in catches and XP |
+| Elites | **1–2 per route, always shown on the map**; branching makes them dodgeable. Mini-bosses with UNIQUE play patterns — not species, never catchable |
+| Elite reward | **A rare card, a held item / relic, and big XP + gold** |
+| Bosses | **STS bosses, not monsters** — never catchable, never a species. **Either shape, per boss**: one huge creature with its own rules and phases, or a leader with a signature beast and unique support |
+| Boss pool | **2 per region, the one you face SHOWN as you enter** — the route becomes preparing for it. 10 in time |
+| Items | **Both**: trainer RELICS (global, permanent) and monster HELD items |
+
+This retires the current leaders (Old Tusker and Old Mire lines, built of scaled wild species),
+the ten-region `Tiers` table, and "late routes field 4–5 foes" — the late-game ease the last handoff
+measured came from leaders that never killed while routes did.
+
+### The work, in order
+
+1. **System** (one step, reviewable): drop KIN (`KinBonus`, `KinGrowAction`, its two tests); drop
+   monster decks (`DeployDeck`/`WithdrawDeck`/`OwnerName`, their tests; each starter's signature cards
+   move into its family's pool); `KinCard.Rarity`; `PartyRun.Family` from the starter; rewards and
+   shop filtered to it + colourless, weighted by rarity; the catch refusal "Not your family"
+   (and a mark on catchable foes); areas' wild pools mixed; the new starting decks.
+2. **Run shape**: 5 regions; wild fights eased to light attrition; ELITE nodes (1–2, shown); the boss
+   shown on entering a region; elite rewards; RELICS as a system with ~6 starters. Placeholder elites
+   and bosses reuse today's leader lines until designed.
+3. **Interview: bosses and elites** — what each tests, its unique pattern.
+4. **Interview: Grove**, then **Ember** — fantasy, big turn, fears → ~8 monsters and 20+ cards each.
+5. **Interview: colourless** — the generalists and the cards that make each worth a slot.
+6. **Held items** (monster-held).
+7. Playtest a run of each family.
+
+### What this costs
+
+- **"The build emerges from finds" is reversed** (the brief, §1): the build is chosen at the start;
+  catches and rewards now pick WITHIN it.
+- **About a third of wild foes are catchable** (your family, plus colourless) — mixed areas are what
+  keep that from being zero in three areas of four.
+- **The practice scenarios** deal monster decks and off-family teams; they need re-dealing.
+- `party-sim` numbers from before this are void — not that we are simming (exploring).
+
 **Status: REVIEWED — building the Grove + Ember slice.** Shayne: "Our cards and monsters just feel kind of generic.
 The fun part of card games is figuring out and achieving combos and synergies." The brief below is his
 answers from an interview (five rounds, 2026-09-27); the family drafts are a proposal to react to.
@@ -125,4 +197,8 @@ Kindle in the relay; and **Echo Owl + Fan the Flames + Flashpoint** — spells d
 4. ☑ Screen — family word first on each creature's status line and on each card (under the art);
    GROW and ROOTED on the status line; KINDLE in orange over the energy orb; the level moved into
    the HP bar ("LV5 · 24/24") — on the name line it cut long names.
-5. ☐ Shayne plays the slice. Then Storm and Mire.
+5. ☑ Shayne played the slice (2026-09-28): no sense a family build was wanted or paid; could not tell
+   which monsters and cards were kin, nor whether Kindle fired. → **KIN** (family cards pay per kin
+   in the line, in the family's resource), family colours, live spell numbers, engine pop-ups — see
+   the top of `KinJam.md`.
+6. ☐ Shayne plays KIN. Then Storm and Mire (each needs its kin bonus: energy? draw?).

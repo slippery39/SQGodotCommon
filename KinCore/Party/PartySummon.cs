@@ -176,7 +176,8 @@ public static class PartySummon
 				c.Id,
 				c with
 				{
-					FadesIn = c.FadesIn - 1,
+					// Never to 0: 0 means a REAL monster, and a real one falling calls the bench.
+					FadesIn = Math.Max(1, c.FadesIn - 1),
 					Hp = c.FadesIn == 1 ? 0 : c.Hp,
 				}
 			);

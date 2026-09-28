@@ -101,7 +101,7 @@ public sealed partial class KinPartyRunScreens
 			var offer = i;
 			// The card's action picture (style D), as the reward screen shows it.
 			var tile = Tile(
-				KinPalette.Slate,
+				run.Sold.Contains(offer) ? KinPalette.Slate : KinPalette.Family(cards[i].Family),
 				run.Sold.Contains(offer) ? null : CardArt(cards[i].Name),
 				run.Sold.Contains(offer)
 					? "SOLD"
@@ -110,6 +110,7 @@ public sealed partial class KinPartyRunScreens
 					? []
 					:
 					[
+						KinLine(run, cards[i]),
 						string.Join(" ", KinRulesText.Lines(cards[i])),
 						$"{PartyRun.CardPrice} GOLD",
 					],

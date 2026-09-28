@@ -188,6 +188,73 @@ public partial class PartyTests
 		Assert.That(Named(s, "Wall").Rooted, Is.EqualTo(root.Amount * 2));
 	}
 
+	// ===== KIN — a family card pays per monster of its family in your line
+
+	private static PartyCompanion Kin(string name, Family family) =>
+		Mon(name) with
+		{
+			Family = family,
+		};
+
+	[Test]
+	public void AnEmberCardAddsAKindleForEachEmberKin()
+	{
+		var s = Deal(
+			[
+				new(Kin("Ash", Family.Ember), 0),
+				new(Kin("Soot", Family.Ember), 1),
+				new(Mon("Plain"), 2),
+			],
+			[Zap() with { Family = Family.Ember }, Zap()],
+			Foe(0)
+		);
+
+		s = Play(s, "Zap", 0, foeRow: true);
+		var afterKinZap = s.GetParty().Kindle;
+		s = Play(s, "Zap", 0, foeRow: true);
+
+		Assert.That(
+			afterKinZap,
+			Is.EqualTo(1 + 2),
+			"the spell's own Kindle, then one per Ember kin"
+		);
+		Assert.That(
+			s.GetParty().Kindle - afterKinZap,
+			Is.EqualTo(1),
+			"a card of no family: no kin"
+		);
+	}
+
+	[Test]
+	public void AGroveCardGrowsEachGroveKinButNotTokensOrOthers()
+	{
+		var grow = new Grow();
+		var sprout = new TokenTemplate(Kin("Sprout", Family.Grove) with { Hp = 3 }, 2);
+		var s = Deal(
+			[
+				new(Kin("Oak", Family.Grove), 0),
+				new(Kin("Elm", Family.Grove), 1),
+				new(Mon("Plain"), 2),
+			],
+			[
+				Summon(sprout),
+				Card("Mulch", 0, new GuardAction { Amount = 1 }) with
+				{
+					Family = Family.Grove,
+				},
+			],
+			Foe(0)
+		);
+		s = Play(s, "Summon", 0);
+
+		s = Play(s, "Mulch", 1);
+
+		Assert.That(Named(s, "Oak").Power, Is.EqualTo(grow.Power));
+		Assert.That(Named(s, "Elm").MaxHp, Is.EqualTo(20 + grow.Hp));
+		Assert.That(Named(s, "Plain").Power, Is.Zero, "not kin");
+		Assert.That(Named(s, "Sprout").Power, Is.Zero, "a token is not kin");
+	}
+
 	// ===== EMBER
 
 	[Test]

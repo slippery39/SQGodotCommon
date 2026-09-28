@@ -1196,7 +1196,11 @@ public partial class PartyTests
 	[Test]
 	public void ATokenEntersAtTheFrontActsAndFades()
 	{
-		var s = Deal([new(Mon("Pike"), 0)], [Summon(Token(fades: 1, moves: Hit(2)))], Foe(0));
+		var s = Deal(
+			[new(Mon("Pike"), 0), new(Mon("Boar"), -1)],
+			[Summon(Token(fades: 1, moves: Hit(2)))],
+			Foe(0)
+		);
 
 		Assert.That(CanPlay(s, "Summon", 0, foeRow: true), Is.False, "your line");
 		Assert.That(CanPlay(s, "Summon", 1), Is.False, "your FRONT — where it arrives");
@@ -1205,7 +1209,11 @@ public partial class PartyTests
 
 		s = EndTurn(s);
 		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 2), "it acted");
-		Assert.That(Line(s), Is.EqualTo("Pike"), "and faded at the start of the next turn");
+		Assert.That(
+			Line(s),
+			Is.EqualTo("Pike"),
+			"and faded at the start of the next turn — bringing no one off the bench"
+		);
 	}
 
 	[Test]

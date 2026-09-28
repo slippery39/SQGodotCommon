@@ -95,9 +95,13 @@ public record GrowNowAction : CardStep
 
 	public override ActionResult Execute(GameState s)
 	{
+		var events = ImmutableList<GameEvent>.Empty;
 		for (var i = 0; i < Times; i++)
-			s = PartyFamilies.GrowAll(s);
-		return new(s);
+		{
+			(s, var grew) = PartyFamilies.GrowAll(s);
+			events = events.AddRange(grew);
+		}
+		return new ActionResult(s).WithEvents(events);
 	}
 }
 
@@ -200,8 +204,41 @@ public record KindleAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var party = s.GetParty();
-		return new(s.UpdateObject(party.Id, party with { Kindle = party.Kindle + Amount }));
+		return new ActionResult(
+			s.UpdateObject(party.Id, party with { Kindle = party.Kindle + Amount })
+		).WithEvent(new KindleGainedEvent { Amount = Amount });
 	}
+}
+
+/// <summary>
+/// **KIN — a family card pays for each monster of its family standing in your line** (Shayne,
+/// 2026-09-28: "cards pay on kin", scaled per kin, feeding the family's own engine). Grove: each
+/// Grove kin grows once. Ember: +1 Kindle per Ember kin. Appended to the card's steps on play.
+/// </summary>
+public record KinGrowAction : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var events = ImmutableList<GameEvent>.Empty;
+		foreach (var ally in s.KinOf(Family.Grove).ToList())
+		{
+			(s, var grew) = PartyFamilies.GrowOnce(s, ally, new Grow());
+			events = events.AddRange(grew);
+		}
+		return new ActionResult(s).WithEvents(events);
+	}
+}
+
+public record KindleGainedEvent : GameEvent
+{
+	public int Amount { get; init; }
+}
+
+public record GrewEvent : GameEvent
+{
+	public int AllyId { get; init; }
+	public int Power { get; init; }
+	public int Hp { get; init; }
 }
 
 /// <summary>Cinderwall: the monster it is dropped on gains Block equal to your Kindle.</summary>
@@ -257,32 +294,74 @@ public record FlashpointAction : CardStep
 public static class PartyFamilies
 {
 	/// <summary>Everything of yours with Grow grows once.</summary>
-	public static GameState GrowAll(GameState s)
+	public static (GameState, ImmutableList<GameEvent>) GrowAll(GameState s)
 	{
+		var events = ImmutableList<GameEvent>.Empty;
 		foreach (var ally in s.LivingAllies().ToList())
 		{
 			var grow = ally.GetComponents<Grow>().ToList();
 			if (grow.Count == 0)
 				continue;
-			var (power, hp) = (grow.Sum(g => g.Power), grow.Sum(g => g.Hp));
-			s = s.UpdateObject(
-				ally.Id,
-				ally with
-				{
-					Power = ally.Power + power,
-					MaxHp = ally.MaxHp + hp,
-					Hp = ally.Hp + hp,
-				}
+			(s, var grew) = GrowOnce(
+				s,
+				ally,
+				new Grow { Power = grow.Sum(g => g.Power), Hp = grow.Sum(g => g.Hp) }
 			);
+			events = events.AddRange(grew);
 		}
-		return s;
+		return (s, events);
+	}
+
+	/// <summary>One monster grows by this much, now.</summary>
+	public static (GameState, ImmutableList<GameEvent>) GrowOnce(GameState s, Ally ally, Grow by)
+	{
+		s = s.UpdateObject(
+			ally.Id,
+			ally with
+			{
+				Power = ally.Power + by.Power,
+				MaxHp = ally.MaxHp + by.Hp,
+				Hp = ally.Hp + by.Hp,
+			}
+		);
+		return (
+			s,
+			[
+				new GrewEvent
+				{
+					AllyId = ally.Id,
+					Power = by.Power,
+					Hp = by.Hp,
+				},
+			]
+		);
+	}
+
+	/// <summary>Your KIN of a family: its REAL monsters standing in your line — tokens are not kin.</summary>
+	public static IEnumerable<Ally> KinOf(this GameState s, Family family) =>
+		family == Family.None
+			? []
+			: s.LivingAllies().Where(a => a.Family == family && a.FadesIn == 0);
+
+	/// <summary>What a card of this family pays on top, now — nothing for a family without a kin rule yet.</summary>
+	public static IEnumerable<GameAction> KinBonus(GameState s, Family family)
+	{
+		var kin = s.KinOf(family).Count();
+		if (kin == 0)
+			return [];
+		return family switch
+		{
+			Family.Grove => [new KinGrowAction()],
+			Family.Ember => [new KindleAction { Amount = kin }],
+			_ => [],
+		};
 	}
 
 	/// <summary>
 	/// **Your turn starts**: Block drops to what is Rooted (all of it, for a Mossback); Grow grows;
 	/// Emberskin shields from the Kindle.
 	/// </summary>
-	public static GameState TurnStart(GameState s, bool firstTurn)
+	public static (GameState, ImmutableList<GameEvent>) TurnStart(GameState s, bool firstTurn)
 	{
 		var kindle = s.GetParty().Kindle;
 		foreach (var ally in s.Allies().ToList())
@@ -293,7 +372,7 @@ public static class PartyFamilies
 			var skin = !ally.IsDown && ally.HasComponent<Emberskin>() ? kindle : 0;
 			s = s.UpdateObject(ally.Id, ally with { Block = kept + skin, Rooted = kept });
 		}
-		return firstTurn ? s : GrowAll(s);
+		return firstTurn ? (s, []) : GrowAll(s);
 	}
 
 	/// <summary>How much Kindle one spell cast adds: 1, plus every Stoker standing.</summary>

@@ -129,11 +129,14 @@ public static class PartySpells
 	/// **Your bonuses first, then the target's ward**, so a Warden halves the Emberling's +2 too
 	/// (MtgCore applies multipliers first; the Warden's question needs the other order).
 	/// </summary>
+	/// <summary>What every spell deals on top, now — before any foe's ward. The hand shows it live.</summary>
+	public static int SpellBonus(this GameState s) =>
+		s.LivingAllies().SelectMany(a => a.GetComponents<SpellPower>()).Sum(p => p.Amount)
+		+ s.GetParty().Kindle;
+
 	public static int SpellDamageTo(this GameState s, Foe foe, int amount)
 	{
-		amount +=
-			s.LivingAllies().SelectMany(a => a.GetComponents<SpellPower>()).Sum(p => p.Amount)
-			+ s.GetParty().Kindle;
+		amount += s.SpellBonus();
 		if (foe.HasComponent<SpellWard>())
 			amount /= 2;
 		return Math.Max(0, amount);

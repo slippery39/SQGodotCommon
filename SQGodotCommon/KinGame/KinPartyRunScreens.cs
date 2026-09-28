@@ -77,7 +77,7 @@ public sealed partial class KinPartyRunScreens
 		foreach (var companion in PartyContent.Roster)
 			row.AddChild(
 				Tile(
-					KinPalette.Companion(companion.Name),
+					KinPalette.Family(companion.Family, companion.Name),
 					KinArt.Sprite(companion.Name) ?? KinArt.Drawing(companion.Name),
 					companion.Name.ToUpperInvariant(),
 					[
@@ -118,8 +118,9 @@ public sealed partial class KinPartyRunScreens
 			$"+{report.Gold} gold.   +{report.Xp} XP each.   Next: {Ahead(run)}"
 		);
 
-		// Level-ups first: growing is the headline of a win (Shayne, 2026-09-27: levels + XP).
-		var news = new List<string>(report.LevelUps);
+		// Level-ups light their monster on the team row, not a line each: three lines of them pushed
+		// SKIP off a 1080 screen (Shayne's playtest, 2026-09-28).
+		var news = new List<string>();
 		foreach (var name in report.Revived)
 			news.Add($"{name} was knocked out, and is back at a quarter HP.");
 		foreach (var name in report.Caught)
@@ -131,17 +132,17 @@ public sealed partial class KinPartyRunScreens
 		foreach (var line in news)
 			_column.AddChild(Label(line, 24, KinPalette.Gold));
 
-		ShowTeam(run, swap);
+		ShowTeam(run, swap, report.LevelUps);
 
 		_column.AddChild(Label("TAKE A CARD", 28, KinPalette.Bone));
 		var row = Row();
 		foreach (var reward in run.RewardOffer())
 			row.AddChild(
 				Tile(
-					KinPalette.Slate,
+					KinPalette.Family(reward.Family),
 					CardArt(reward.Name),
 					$"{reward.Name.ToUpperInvariant()}  ({reward.Cost})",
-					[string.Join(" ", KinRulesText.Lines(reward))],
+					[KinLine(run, reward), string.Join(" ", KinRulesText.Lines(reward))],
 					new Vector2(280, 430),
 					() => take(reward)
 				)
@@ -169,7 +170,7 @@ public sealed partial class KinPartyRunScreens
 	/// **The team, and the bench if there is one.** Pick a team member, then a benched monster, and
 	/// they swap — the team is who fights next. With no bench it is one line of HP.
 	/// </summary>
-	private void ShowTeam(PartyRun run, Action<int, int> swap)
+	private void ShowTeam(PartyRun run, Action<int, int> swap, IReadOnlyList<int>? grew = null)
 	{
 		var swapping = swap is not null && !run.Bench.IsEmpty;
 		_column.AddChild(
@@ -184,7 +185,7 @@ public sealed partial class KinPartyRunScreens
 		var team = Row();
 		for (var i = 0; i < run.Team.Count; i++)
 		{
-			var member = Monster(run.Team[i]);
+			var member = Monster(run.Team[i], grew?.Contains(i) == true);
 			member.ToggleMode = swapping;
 			member.ButtonGroup = swapping ? group : null;
 			team.AddChild(member);
@@ -208,16 +209,16 @@ public sealed partial class KinPartyRunScreens
 		}
 	}
 
-	private static Button Monster(RunCompanion m)
+	private static Button Monster(RunCompanion m, bool grew = false)
 	{
 		var button = Button(
-			$"{m.Companion.Name.ToUpperInvariant()}  LV {m.Level}  {m.Hp}/{m.MaxHp}\n"
+			$"{m.Companion.Name.ToUpperInvariant()}  LV {m.Level}{(grew ? " ▲" : "")}  {m.Hp}/{m.MaxHp}\n"
 				+ $"XP {m.Xp}/{PartyLevels.XpToNext(m.Level)}",
 			() => { }
 		);
-		var tint = KinPalette.Companion(m.Companion.Name).Lightened(0.35f);
+		var tint = KinPalette.Family(m.Companion.Family, m.Companion.Name).Lightened(0.35f);
 		KinUiKit.Style(button, 22);
-		button.AddThemeStyleboxOverride("normal", KinUiKit.Plate("bone", tint));
+		button.AddThemeStyleboxOverride("normal", KinUiKit.Plate(grew ? "gold" : "bone", tint));
 		button.AddThemeStyleboxOverride("hover", KinUiKit.Plate("gold", tint.Lightened(0.15f)));
 		// PRESSED is the picked team member in a swap: it must stay unmistakably lit.
 		button.AddThemeStyleboxOverride("pressed", KinUiKit.Plate("gold", KinPalette.Gold));
@@ -227,6 +228,19 @@ public sealed partial class KinPartyRunScreens
 	}
 
 	// ===== Pieces
+
+	/// <summary>
+	/// **A card's FAMILY, and who on the team is its kin** — the playtest (2026-09-28) could not tell
+	/// which cards fit which monsters. "" for a card of no family.
+	/// </summary>
+	private static string KinLine(PartyRun run, KinCard card)
+	{
+		if (card.Family == Family.None)
+			return "";
+		var kin = run.KinOnTeam(card.Family).ToList();
+		return card.Family.ToString().ToUpperInvariant()
+			+ (kin.Count > 0 ? $" — KIN: {string.Join(", ", kin).ToUpperInvariant()}" : "");
+	}
 
 	private void Begin(string title, string subtitle, string scene = "greenwood")
 	{

@@ -1,5 +1,20 @@
 # KIN — design doc
 
+> # KIN — family cards pay per kin, and the engines show (Shayne, 2026-09-28, after playing the slice)
+>
+> "I did not feel any indication that I was supposed or that I was rewarded for building a family
+> type deck … it wasn't clear which monsters were part of which family, and which cards would fit.
+> I'm not sure if the ember stuff ever triggered." The family TAG did nothing on its own. **Built:**
+> - **KIN** (`PartyFamilies.KinBonus`): a family card pays once per play for each REAL monster of its
+>   family in your line (tokens are not kin), in the family's own resource — **Ember: +1 Kindle per
+>   kin; Grove: each Grove kin grows once.** Storm and Mire: none yet. Numbers unmeasured (exploring).
+> - **Family colour wins** over the companion colour (`KinPalette.Family`); reward and shop tiles say
+>   the family and "KIN: <names>"; a card in hand says "EMBER · KIN ×2".
+> - **Live spell numbers**: Zap reads "deal 9" in green once Kindle and Spell Power are in.
+> - **Engine pop-ups**: "+N KINDLE", "GROW +1/+2", "THORNS N".
+> - Bugs: a FADING token called a bench monster in (it read as a real monster falling); three
+>   level-ups pushed SKIP off the victory screen (they light the team row now).
+
 > # FAMILIES — monsters as engines, cards as fuel (Shayne, 2026-09-27, from a design interview)
 >
 > "Our cards and monsters just feel kind of generic. The fun part of card games is figuring out and

@@ -742,7 +742,9 @@ public partial class KinPartyBoard : Node2D
 		// The badge shows what the card costs NOW (`CostOf`: Scrap Hammer after discards).
 		_hand.Sync(
 			[.. _state.CardsIn(ZoneType.Hand).Select(c => c with { Cost = _state.CostOf(c) })],
-			party.Energy
+			party.Energy,
+			// LIVE: kin standing for its family, and a spell's numbers with the Kindle already in.
+			c => KinCardFace.For(c, _state.KinOf(c.Family).Count(), _state.SpellBonus())
 		);
 		_field.Settle(Animate(events));
 	}
@@ -874,6 +876,28 @@ public partial class KinPartyBoard : Node2D
 						_field.ViewOf(block.AllyId),
 						$"+{block.Amount} BLOCK",
 						KinPalette.Bone
+					),
+				// **The engines, seen firing** (2026-09-28: the playtest could not tell Ember ever did).
+				KindleGainedEvent kindled => () =>
+					KinAnimator.Float(
+						_overlay,
+						_kindle,
+						$"+{kindled.Amount} KINDLE",
+						KinPalette.Family(Family.Ember).Lightened(0.3f)
+					),
+				GrewEvent grew => () =>
+					KinAnimator.Float(
+						_overlay,
+						_field.ViewOf(grew.AllyId),
+						$"GROW +{grew.Power}/+{grew.Hp}",
+						KinPalette.Family(Family.Grove).Lightened(0.4f)
+					),
+				ThornsEvent thorns => () =>
+					KinAnimator.Float(
+						_overlay,
+						_field.ViewOf(thorns.FoeId),
+						$"THORNS {thorns.Damage}",
+						KinPalette.Family(Family.Grove).Lightened(0.4f)
 					),
 				AllySwappedInEvent swap => () =>
 				{

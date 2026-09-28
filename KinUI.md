@@ -306,6 +306,10 @@ The slice's battle screen, `KinPartyBoard` + `KinPartyCell`. Foes on the top row
 the bottom, a combined hand. Built from the first playtest: **"every card looked the same" and "I
 could not see what a card did."**
 
+- **SUPERSEDED 2026-09-28 — a monster's colour is its FAMILY's** (`KinPalette.Family`: Grove green,
+  Ember orange, Storm blue, Mire violet): name pills, card edges, team buttons, reward and shop
+  tiles. The companion colour below is now only the fallback for a family-less monster, and the
+  medallion on a card still says whose deck it is from. Playtest: kin were unreadable.
 - **Each companion has an identity colour** (`KinPalette.Companion`), and it is on EVERYTHING of
   theirs: the whole card face, the card's art window, the cell they stand in, their figure. Never
   gold or red. The owner's name is also on the card's type line, but colour is what reads at a

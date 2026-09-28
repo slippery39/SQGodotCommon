@@ -221,7 +221,7 @@ public sealed class KinRelayField
 		var next = ally.Current;
 		var drop = ctx.Drops.Contains(ally.Position) ? ctx.Focus : null;
 		var loses = ctx.Forecast.GetValueOrDefault(ally.Id);
-		var colour = KinPalette.Companion(ally.Name);
+		var colour = KinPalette.Family(ally.Family, ally.Name);
 
 		var (move, icon) = ally.HasActed
 			? ("acted", null)

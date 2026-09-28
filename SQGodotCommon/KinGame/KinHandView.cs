@@ -120,8 +120,13 @@ public sealed class KinHandView
 	/// Brings the fan into line with the Hand zone. Cards are matched by GameState id, so replaying
 	/// the same hand does not rebuild every card and restart its tween.
 	/// </summary>
-	public void Sync(IReadOnlyList<KinCard> cards, int energy)
+	public void Sync(
+		IReadOnlyList<KinCard> cards,
+		int energy,
+		Func<KinCard, InternalCardUI2D.Details> face = null
+	)
 	{
+		face ??= KinCardFace.For;
 		var wanted = cards.ToDictionary(c => c.Id.ToString());
 
 		foreach (var ui in _hand.GetCards().ToList())
@@ -145,7 +150,7 @@ public sealed class KinHandView
 		// SetCardsDetails applies positionally, so the list has to be ordered the way the fan
 		// currently holds its cards rather than the way the zone holds them.
 		var inFanOrder = _hand.GetCards();
-		_hand.SetCardsDetails(inFanOrder.Select(ui => KinCardFace.For(wanted[ui.Id])).ToList());
+		_hand.SetCardsDetails(inFanOrder.Select(ui => face(wanted[ui.Id])).ToList());
 
 		// AFTER the details: power lives on a node the shared `Details` does not know about, and a
 		// card recycled into a new hand would otherwise keep the last card's number.

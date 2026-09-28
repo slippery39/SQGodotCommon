@@ -31,8 +31,8 @@ public record RunReport(
 	/// <summary>XP each team member earned.</summary>
 	public int Xp { get; init; }
 
-	/// <summary>"Pike grew to Lv 6!" — one per monster that levelled.</summary>
-	public ImmutableList<string> LevelUps { get; init; } = [];
+	/// <summary>The team indices (after the battle's reorder) of the monsters that levelled.</summary>
+	public ImmutableList<int> LevelUps { get; init; } = [];
 }
 
 /// <summary>Where a run is. The screens are chosen from this and nothing else.</summary>
@@ -265,16 +265,18 @@ public partial record PartyRun
 		var gold = Phase == RunPhase.Gym ? GymGold : RouteGold(Here.Kind);
 		// **XP to every monster on the team** — the line that fought (`PartyLevels.XpFor`).
 		var xp = PartyLevels.XpFor(NextFight.Foes, leader: Phase == RunPhase.Gym);
-		var levelUps = ImmutableList<string>.Empty;
+		var levelUps = ImmutableList<int>.Empty;
 		team =
 		[
-			.. team.Select(m =>
-			{
-				var grown = PartyLevels.Gain(m, xp);
-				if (grown.Level > m.Level)
-					levelUps = levelUps.Add($"{m.Companion.Name} grew to Lv {grown.Level}!");
-				return grown;
-			}),
+			.. team.Select(
+				(m, i) =>
+				{
+					var grown = PartyLevels.Gain(m, xp);
+					if (grown.Level > m.Level)
+						levelUps = levelUps.Add(i);
+					return grown;
+				}
+			),
 		];
 
 		var run = this with
@@ -354,6 +356,12 @@ public partial record PartyRun
 		};
 
 	// ===== Cards: a win's reward, and the town's shop
+
+	/// <summary>The team's KIN of a family, by name — who a family card would pay for.</summary>
+	public IEnumerable<string> KinOnTeam(Family family) =>
+		family == Family.None
+			? []
+			: Team.Where(m => m.Companion.Family == family).Select(m => m.Companion.Name);
 
 	/// <summary>**Three cards to choose from after a win** — seeded, so a run replays.</summary>
 	public ImmutableList<KinCard> RewardOffer()

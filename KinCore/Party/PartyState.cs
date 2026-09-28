@@ -536,6 +536,7 @@ public static class PartyState
 			var thorns = victim.TotalThorns + (victim.HasComponent<Thornwall>() ? victim.Block : 0);
 			if (thorns > 0)
 			{
+				events = events.Add(new ThornsEvent { FoeId = attacker.Id, Damage = thorns });
 				(s, more) = HitFoe(s, (Foe)s.GetObject(attacker.Id), thorns);
 				events = events.AddRange(more);
 			}

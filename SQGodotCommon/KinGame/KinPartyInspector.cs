@@ -57,7 +57,7 @@ public sealed class KinPartyInspector
 		}
 
 		var ally = creature as Ally;
-		var colour = ally is null ? KinPalette.Red : KinPalette.Companion(ally.Name);
+		var colour = ally is null ? KinPalette.Red : KinPalette.Family(ally.Family, ally.Name);
 		_root.AddThemeStyleboxOverride("panel", KinPalette.Box(KinPalette.Navy, colour, 3));
 
 		Line($"{creature.Name.ToUpperInvariant()}  LV {creature.Level}", 26, KinPalette.Bone);

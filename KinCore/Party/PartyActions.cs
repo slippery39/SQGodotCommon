@@ -98,6 +98,8 @@ public record PlayPartyCardAction : GameAction
 					.SelectMany(_ => steps.Append(new KindleAction { Amount = kindle })),
 			];
 		}
+		// **KIN**: a family card pays for each monster of its family in your line, once per play.
+		steps.AddRange(PartyFamilies.KinBonus(s, card.Family));
 		s = s.SpawnActions(steps.Append(new DiscardPlayedCardAction { CardId = CardId }));
 
 		return new ActionResult(s).WithEvent(
@@ -295,7 +297,7 @@ public record StartPartyTurnAction : GameAction
 			);
 
 		// Block drops to what is ROOTED; Grow grows; Emberskin shields (PartyFamilies).
-		s = PartyFamilies.TurnStart(s, firstTurn: party.TurnNumber == 1);
+		(s, var grew) = PartyFamilies.TurnStart(s, firstTurn: party.TurnNumber == 1);
 
 		foreach (var foe in s.LivingFoes().Where(f => f.OffBalance > 0).ToList())
 			s = s.UpdateObject(foe.Id, foe with { OffBalance = 0 });
@@ -306,9 +308,9 @@ public record StartPartyTurnAction : GameAction
 		s = PartySummon.Fade(s);
 
 		(s, _) = StartTurnAction.DrawCards(s, HandSize);
-		return new ActionResult(s).WithEvent(
-			new TurnStartedEvent { TurnNumber = party.TurnNumber }
-		);
+		return new ActionResult(s)
+			.WithEvent(new TurnStartedEvent { TurnNumber = party.TurnNumber })
+			.WithEvents(grew);
 	}
 }
 
@@ -542,6 +544,13 @@ public record AllyHitEvent : GameEvent
 
 	/// <summary>The creature whose blow it was — the board lunges it. 0 = no body swung (Thorns, a spell).</summary>
 	public int AttackerId { get; init; }
+}
+
+/// <summary>A foe struck a monster with Thorns (or THORNWALL) and takes this much back.</summary>
+public record ThornsEvent : GameEvent
+{
+	public int FoeId { get; init; }
+	public int Damage { get; init; }
 }
 
 public record AllyKnockedOutEvent : GameEvent
