@@ -46,4 +46,7 @@ public record KinCard : GameObject
 
 	/// <summary>Its owner's name, for the card face — which sees the card and nothing else. "" = none.</summary>
 	public string OwnerName { get; init; } = "";
+
+	/// <summary>The companion game's FAMILY tag (`KinCore.Party.Family`) — rewards lean to your team's.</summary>
+	public KinCore.Party.Family Family { get; init; }
 }

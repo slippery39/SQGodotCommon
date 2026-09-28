@@ -9,7 +9,7 @@ namespace KinCore.Tests;
 /// **THE RELAY — every rule FIRES** (`KinRelayPlan.md`). Exploring, not tuning: these read a number
 /// that moved, never a field that was set, and every monster, card and foe is inline.
 /// </summary>
-public class PartyTests
+public partial class PartyTests
 {
 	private static KinCard Card(string name, int cost, params GameAction[] steps) =>
 		new()
@@ -1003,7 +1003,8 @@ public class PartyTests
 		s = Play(s, "Zap", 0, foeRow: true);
 		s = Play(s, "Overload", 1, foeRow: true);
 
-		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(50 - 8));
+		// Zap 4 (Kindle 0 → 1), Zap 4 + 1 (Kindle → 2): 9 spell damage this turn; Overload deals that + 2 Kindle.
+		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(50 - (4 + 5 + 2)));
 	}
 
 	[Test]
@@ -1033,7 +1034,11 @@ public class PartyTests
 		s = Play(s, "Zap", 1, foeRow: true);
 		s = EndTurn(s);
 
-		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(50 - 4 - 4), "cast, then echoed");
+		Assert.That(
+			FoeIn(s, 1).Hp,
+			Is.EqualTo(50 - 4 - (4 + 1)),
+			"cast, then echoed with 1 Kindle"
+		);
 		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50));
 		Assert.That(s.GetParty().LastSpell, Is.Null, "the next turn has cast nothing");
 	}

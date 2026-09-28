@@ -57,6 +57,9 @@ public partial class KinPartyBoard : Node2D
 	private Label _energy;
 	private Label _energyNote;
 
+	/// <summary>EMBER's KINDLE for this fight, over the orb — hidden at 0.</summary>
+	private Label _kindle;
+
 	/// <summary>The Snare item: press it, then click a foe. Armed = the next foe click throws it.</summary>
 	private Button _snare;
 
@@ -722,6 +725,7 @@ public partial class KinPartyBoard : Node2D
 		// Borrowed energy (Surge) is a cost you pay later — it must be visible now.
 		_energy.Text = $"{party.Energy}/{party.MaxEnergy}";
 		_energyNote.Text = party.EnergyDebt > 0 ? $"−{party.EnergyDebt} NEXT TURN" : "ENERGY";
+		_kindle.Text = party.Kindle > 0 ? $"KINDLE {party.Kindle}" : "";
 		_energyNote.LabelSettings.FontColor =
 			party.EnergyDebt > 0 ? KinPalette.Red.Lightened(0.3f) : KinPalette.Bone;
 		_snare.Text = $"SNARE ×{party.Snares}";
@@ -1142,6 +1146,11 @@ public partial class KinPartyBoard : Node2D
 		_energy.Position = new Vector2(10, 40);
 		_energy.Size = new Vector2(orb, 60);
 		disc.AddChild(_energy);
+		_kindle = Outlined("", 26, Color.FromHtml("#FF9A3C"));
+		_kindle.Position = new Vector2(28, canvas.Y - 316);
+		_kindle.Size = new Vector2(orb + 40, 36);
+		layer.AddChild(_kindle);
+
 		_energyNote = Outlined("ENERGY", 16, KinPalette.Bone);
 		_energyNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 		_energyNote.Position = new Vector2(20, 96);

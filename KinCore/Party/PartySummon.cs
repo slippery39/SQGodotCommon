@@ -106,21 +106,19 @@ public static class PartySummon
 		var boost = s.LivingAllies().SelectMany(a => a.GetComponents<TokenBoost>()).ToList();
 		var c = token.Creature;
 		var hp = c.Hp + boost.Sum(b => b.Hp);
-		return PartyState.InsertAtFront(
-			s,
-			new Ally
-			{
-				Slot = -1,
-				Name = c.Name,
-				Hp = hp,
-				MaxHp = hp,
-				Power = c.Power + boost.Sum(b => b.Power),
-				Pattern = c.Moves,
-				FadesIn = token.FadesIn,
-				Components = [.. c.Abilities],
-			},
-			foes: false
-		);
+		var ally = new Ally
+		{
+			Slot = -1,
+			Name = c.Name,
+			Hp = hp,
+			MaxHp = hp,
+			Power = c.Power + boost.Sum(b => b.Power),
+			Pattern = c.Moves,
+			FadesIn = token.FadesIn,
+			Family = c.Family,
+			Components = [.. c.Abilities],
+		};
+		return PartyState.InsertAtFront(s, PartyFamilies.Nurture(s, ally), foes: false);
 	}
 
 	/// <summary>A wild creature's brood: an uncatchable foe at the FRONT of their line, fading like any token.</summary>
@@ -148,6 +146,7 @@ public static class PartySummon
 	/// <summary>A token fell (hit, or offered): the Sprout's shield goes to the ones ahead of and behind it.</summary>
 	public static GameState TokenFainted(GameState s, Ally token)
 	{
+		s = PartyFamilies.TokenFell(s);
 		var shield = token.GetComponents<FaintShield>().Sum(f => f.Amount);
 		if (shield == 0)
 			return s;

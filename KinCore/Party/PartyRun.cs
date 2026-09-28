@@ -169,6 +169,7 @@ public partial record PartyRun
 		{
 			Cards = foe.CaughtCards,
 			Abilities = foe.CaughtAbilities,
+			Family = foe.Family,
 		};
 	}
 
@@ -358,7 +359,27 @@ public partial record PartyRun
 	public ImmutableList<KinCard> RewardOffer()
 	{
 		var rng = new Random(Seed * 31 + RegionIndex * 13 + NodeId * 3 + (LeaderBeaten ? 1 : 0));
-		return [.. Rewards.OrderBy(_ => rng.Next()).Take(3)];
+		return Leaning(rng);
+	}
+
+	/// <summary>
+	/// **Three cards, leaning to your team's FAMILIES** (`KinFamiliesPlan.md`): a card of a family on
+	/// your team or bench is three times as likely to be offered. Neutral cards stay in the draw.
+	/// </summary>
+	private ImmutableList<KinCard> Leaning(Random rng)
+	{
+		var families = Team.Concat(Bench).Select(m => m.Companion.Family).ToHashSet();
+		families.Remove(Family.None);
+		return
+		[
+			.. Rewards
+				.Select(c =>
+					(Card: c, Key: rng.NextDouble() / (families.Contains(c.Family) ? 3.0 : 1.0))
+				)
+				.OrderBy(p => p.Key)
+				.Take(3)
+				.Select(p => p.Card),
+		];
 	}
 
 	/// <summary>The chosen card joins the deck for the rest of the run.</summary>
@@ -368,7 +389,7 @@ public partial record PartyRun
 	public ImmutableList<KinCard> ShopCards()
 	{
 		var rng = new Random(Seed * 53 + RegionIndex);
-		return [.. Rewards.OrderBy(_ => rng.Next()).Take(3)];
+		return Leaning(rng);
 	}
 
 	public bool CanBuySnare => Gold >= SnarePrice;

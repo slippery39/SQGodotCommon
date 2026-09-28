@@ -482,7 +482,9 @@ public static class PartyState
 	)
 	{
 		var damage =
-			ally.AttackFor(amount) + ally.FinisherPerAlly * s.GetParty().AlliesActedThisRound;
+			ally.AttackFor(amount)
+			+ ally.FinisherPerAlly * s.GetParty().AlliesActedThisRound
+			+ ally.GetComponents<KindleFinisher>().Sum(k => k.PerKindle) * s.GetParty().Kindle;
 		var events = ImmutableList<GameEvent>.Empty;
 		foreach (var id in targets)
 		{
@@ -529,10 +531,12 @@ public static class PartyState
 				events = events.AddRange(more);
 			}
 
-			// **Thorns: attacking this monster hurts**, blocked or not.
-			if (victim.TotalThorns > 0)
+			// **Thorns: attacking this monster hurts**, blocked or not. THORNWALL adds its Block, as
+			// it stood when the blow came in.
+			var thorns = victim.TotalThorns + (victim.HasComponent<Thornwall>() ? victim.Block : 0);
+			if (thorns > 0)
 			{
-				(s, more) = HitFoe(s, (Foe)s.GetObject(attacker.Id), victim.TotalThorns);
+				(s, more) = HitFoe(s, (Foe)s.GetObject(attacker.Id), thorns);
 				events = events.AddRange(more);
 			}
 		}
@@ -599,6 +603,7 @@ public static class PartyState
 		{
 			WasHit = true,
 			Block = ally.Block - blocked,
+			Rooted = Math.Min(ally.Rooted, ally.Block - blocked),
 			Hp = Math.Max(0, ally.Hp - (amount - blocked)),
 		};
 		s = s.UpdateObject(ally.Id, hit);

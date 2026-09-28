@@ -21,7 +21,8 @@ public sealed record CreatureLook(
 	Color Bar,
 	string Status,
 	string Note,
-	Color NoteColour
+	Color NoteColour,
+	int Level = 0
 );
 
 /// <summary>
@@ -304,7 +305,9 @@ public sealed class KinRelayCreature
 		_hp.MaxValue = look.MaxHp;
 		_hp.Value = look.Hp;
 		_fill.ModulateColor = look.Bar;
-		_hpText.Text = $"{look.Hp}/{look.MaxHp}";
+		// The level rides in the bar: on the name line it cut long names ("BROODVINE LV").
+		_hpText.Text =
+			look.Level > 0 ? $"LV{look.Level} · {look.Hp}/{look.MaxHp}" : $"{look.Hp}/{look.MaxHp}";
 
 		_note.Text = look.Note;
 		// Red is lifted for the forecast: the palette's red on a dark outline all but vanished.

@@ -35,6 +35,9 @@ public record PartyCompanion(
 
 	/// <summary>The level these stats are at (`PartyLevels.Scale` sets it; the base is Lv 5).</summary>
 	public int Level { get; init; } = PartyLevels.Base;
+
+	/// <summary>Its FAMILY (`PartyFamilies`).</summary>
+	public Family Family { get; init; }
 }
 
 /// <summary>
@@ -97,11 +100,13 @@ public static class PartyContent
 			Hp: 30,
 			Power: 2,
 			[Attack("Bash", 4), Guard("Brace", 6)],
-			Passive: "THORNS 2",
-			PassiveRule: "A foe that attacks her takes 2, even if she blocks it.",
+			Passive: "THORNWALL",
+			PassiveRule: "A foe that attacks her takes 2 + her Block, even if she blocks it.",
 			Thorns: 2
 		)
 		{
+			Family = Family.Grove,
+			Abilities = [new Thornwall()],
 			Cards =
 			[
 				Card("Thornhide", 1, "Gain 3 Thorns this turn.", new ThornsAction { Amount = 3 }),
@@ -126,10 +131,12 @@ public static class PartyContent
 			Power: 3,
 			[Attack("Jab", 2), Attack("Jab", 2), Attack("Flurry", 0, Aim.Sweep)],
 			Passive: "FINISHER +2",
-			PassiveRule: "+2 damage for each of your monsters that acted before it this round.",
+			PassiveRule: "+2 damage for each of your monsters that acted before it this round, and +1 per KINDLE.",
 			FinisherPerAlly: 2
 		)
 		{
+			Family = Family.Ember,
+			Abilities = [new KindleFinisher()],
 			Cards =
 			[
 				Card(
@@ -163,6 +170,7 @@ public static class PartyContent
 			Unbalances: 2
 		)
 		{
+			Family = Family.Storm,
 			Cards = [PartyCards.Gust, PartyCards.Tailwind],
 		};
 
@@ -206,6 +214,7 @@ public static class PartyContent
 	public static Foe Boar(int position) =>
 		Creature("Boar", 22, Attack("Charge", 9), Attack("Thrash", 5, Aim.Sweep)) with
 		{
+			Family = Family.Grove,
 			Position = position,
 		};
 
@@ -241,6 +250,7 @@ public static class PartyContent
 			}
 		) with
 		{
+			Family = Family.Mire,
 			Position = position,
 		};
 
@@ -254,6 +264,7 @@ public static class PartyContent
 			Guard("Preen", 6)
 		) with
 		{
+			Family = Family.Storm,
 			Position = position,
 		};
 
@@ -307,6 +318,16 @@ public static class PartyContent
 		PartyCards.Ration,
 		PartyCards.ScrapHammer,
 		PartyCards.PageStorm,
+		PartyCards.Graft,
+		PartyCards.Root,
+		PartyCards.Overgrow,
+		PartyCards.Thicket,
+		PartyCards.Harvest,
+		PartyCards.DeepRoots,
+		PartyCards.Stoke,
+		PartyCards.Cinderwall,
+		PartyCards.FanTheFlames,
+		PartyCards.Flashpoint,
 	];
 
 	public static readonly PartyScenario Alone =
@@ -395,7 +416,7 @@ public static class PartyContent
 				},
 			],
 			[.. StarterDeck, PartyCards.Overload, PartyCards.Focus, PartyCards.SparkScroll],
-			["Zap", "Zap", "Focus"],
+			["Stoke", "Zap", "Spark Scroll"],
 			Snares: 2,
 			Deploy: true
 		);
@@ -437,7 +458,7 @@ public static class PartyContent
 			],
 			[PartyWorld.Ironhorn with { Position = 0 }, Wisp(1), Stonebeak(2)],
 			[.. StarterDeck, PartyCards.Swarm, PartyCards.Offering, PartyCards.DecoyCard],
-			["Sow", "Call Sparks", "Swarm"],
+			["Sow", "Graft", "Harvest"],
 			Snares: 2,
 			Deploy: true
 		);
@@ -495,6 +516,7 @@ public static class PartyBattleFactory
 					Slot = slot,
 					Name = companion.Name,
 					Level = companion.Level,
+					Family = companion.Family,
 					Hp = hp ?? companion.Hp,
 					MaxHp = companion.Hp,
 					Power = companion.Power,

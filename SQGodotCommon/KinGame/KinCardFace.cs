@@ -333,7 +333,11 @@ public static class KinCardFace
 			// nothing a stat badge does not already say. A Rite has no badge, which is the tell.
 			// **The companion game puts a monster-deck card's OWNER here.**
 			// Empty: the owner is the medallion at the card's foot now (style D).
-			TypeLine = "",
+			// The card's FAMILY (`KinFamiliesPlan.md`): rewards lean to your team's, so it must show.
+			TypeLine =
+				card.Family == KinCore.Party.Family.None
+					? ""
+					: card.Family.ToString().ToUpperInvariant(),
 
 			// A rite's text is the only thing telling you what it does, so it goes where rules text
 			// goes. It is authored beside the effect it describes — see KinEffect.Text.

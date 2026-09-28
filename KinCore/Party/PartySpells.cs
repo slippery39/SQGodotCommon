@@ -131,9 +131,9 @@ public static class PartySpells
 	/// </summary>
 	public static int SpellDamageTo(this GameState s, Foe foe, int amount)
 	{
-		amount += s.LivingAllies()
-			.SelectMany(a => a.GetComponents<SpellPower>())
-			.Sum(p => p.Amount);
+		amount +=
+			s.LivingAllies().SelectMany(a => a.GetComponents<SpellPower>()).Sum(p => p.Amount)
+			+ s.GetParty().Kindle;
 		if (foe.HasComponent<SpellWard>())
 			amount /= 2;
 		return Math.Max(0, amount);

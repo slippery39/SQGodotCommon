@@ -38,6 +38,17 @@ public record PartyBattle : GameObject
 	/// <summary>The last spell cast this turn, with where it was dropped — what an Echo repeats.</summary>
 	public SpellDamageAction? LastSpell { get; init; }
 
+	// ===== EMBER (PartyFamilies.cs)
+
+	/// <summary>**KINDLE**: each spell adds to it, every spell deals +1 per point; it lasts the whole fight.</summary>
+	public int Kindle { get; init; }
+
+	/// <summary>Fan the Flames was played: the next spell is cast twice.</summary>
+	public bool NextSpellTwice { get; init; }
+
+	/// <summary>Spells played this turn — the Echo Owl's "first spell each turn".</summary>
+	public int SpellsThisTurn { get; init; }
+
 	// ===== SURGE — energy and cost (PartySurge.cs)
 
 	/// <summary>Borrowed energy (Surge): taken off the NEXT turn's energy.</summary>
@@ -94,6 +105,9 @@ public abstract record Creature : GameObject
 	/// <summary>Its LEVEL (`PartyLevels`) — shown; its stats already carry it.</summary>
 	public int Level { get; init; } = PartyLevels.Base;
 
+	/// <summary>Its FAMILY (`PartyFamilies`) — a tag for your own synergies; no weakness chart.</summary>
+	public Family Family { get; init; }
+
 	/// <summary>
 	/// **Its place in its line: 0 is the FRONT.** Kept contiguous by `PartyState.Settle`; −1 once it has
 	/// left the line (fallen, caught) or while it waits on the bench.
@@ -126,6 +140,9 @@ public record Ally : Creature
 
 	/// <summary>Added to this monster's attacks.</summary>
 	public int Power { get; init; }
+
+	/// <summary>**ROOTED Block** (Grove): the part of its Block that does not vanish at your turn start.</summary>
+	public int Rooted { get; init; }
 
 	/// <summary>Power added by cards this turn (Rally). Cleared when your next turn starts.</summary>
 	public int BonusPower { get; init; }

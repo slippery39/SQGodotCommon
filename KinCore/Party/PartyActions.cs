@@ -65,20 +65,40 @@ public record PlayPartyCardAction : GameAction
 		// choice from the hand ("discard a card") cannot pick the card being played. It is
 		// discarded LAST: discarded first, a draw could reshuffle it straight back into the hand.
 		s = s.MoveObject(CardId, party.Id);
+		var steps = card
+			.Effects.Select(e =>
+				e.Template is CardStep step
+					? step with
+					{
+						Space = Space,
+						FoeRow = FoeRow,
+					}
+					: e.Template
+			)
+			.ToList();
 		if (card.IsSpell())
+		{
+			// **EMBER**: an Echo's first spell or Fan the Flames casts it again; every cast stokes.
+			var casts = PartyFamilies.SpellCasts(s);
+			var kindle = PartyFamilies.KindlePerSpell(s);
+			var now = s.GetParty();
+			s = s.UpdateObject(
+				now.Id,
+				now with
+				{
+					SpellsThisTurn = now.SpellsThisTurn + 1,
+					NextSpellTwice = false,
+				}
+			);
 			s = s.StageEvent(new SpellPlayedEvent());
-		s = s.SpawnActions(
-			card.Effects.Select(e =>
-					e.Template is CardStep step
-						? step with
-						{
-							Space = Space,
-							FoeRow = FoeRow,
-						}
-						: e.Template
-				)
-				.Append(new DiscardPlayedCardAction { CardId = CardId })
-		);
+			steps =
+			[
+				.. Enumerable
+					.Range(0, casts)
+					.SelectMany(_ => steps.Append(new KindleAction { Amount = kindle })),
+			];
+		}
+		s = s.SpawnActions(steps.Append(new DiscardPlayedCardAction { CardId = CardId }));
 
 		return new ActionResult(s).WithEvent(
 			new CardPlayedEvent
@@ -258,6 +278,7 @@ public record StartPartyTurnAction : GameAction
 				SpellDamageThisTurn = 0,
 				SpellsSplash = false,
 				LastSpell = null,
+				SpellsThisTurn = 0,
 			}
 		);
 
@@ -266,13 +287,15 @@ public record StartPartyTurnAction : GameAction
 				ally.Id,
 				ally with
 				{
-					Block = 0,
 					BonusThorns = 0,
 					BonusPower = 0,
 					WasHit = false,
 					HasActed = false,
 				}
 			);
+
+		// Block drops to what is ROOTED; Grow grows; Emberskin shields (PartyFamilies).
+		s = PartyFamilies.TurnStart(s, firstTurn: party.TurnNumber == 1);
 
 		foreach (var foe in s.LivingFoes().Where(f => f.OffBalance > 0).ToList())
 			s = s.UpdateObject(foe.Id, foe with { OffBalance = 0 });

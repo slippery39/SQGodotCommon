@@ -241,12 +241,16 @@ public sealed class KinRelayField
 				? KinPalette.Gold
 				: colour,
 			drop is not null || ally.Id == ctx.SelectedId || ally.Id == ctx.HeldId,
-			$"{ally.Name.ToUpperInvariant()}  LV {ally.Level}",
+			ally.Name.ToUpperInvariant(),
 			ally.Hp,
 			ally.MaxHp,
 			colour.Lightened(0.25f),
 			Join(
-				ally.Block > 0 ? $"BLOCK {ally.Block}" : "",
+				FamilyWord(ally.Family),
+				ally.Block > 0
+					? $"BLOCK {ally.Block}" + (ally.Rooted > 0 ? $" ({ally.Rooted} ROOTED)" : "")
+					: "",
+				ally.HasComponent<Grow>() ? "GROW" : "",
 				ally.FadesIn > 0 ? $"TOKEN · FADES IN {ally.FadesIn}"
 					: ally.BonusThorns > 0 ? $"THORNS {ally.TotalThorns}"
 					: ally.Passive
@@ -254,7 +258,8 @@ public sealed class KinRelayField
 			drop is not null ? $"▲ {drop.Name.ToUpperInvariant()} HERE"
 				: loses > 0 ? $"−{loses}"
 				: "",
-			drop is not null ? KinPalette.Gold : KinPalette.Red
+			drop is not null ? KinPalette.Gold : KinPalette.Red,
+			ally.Level
 		);
 	}
 
@@ -277,11 +282,12 @@ public sealed class KinRelayField
 			ctx.Steps.GetValueOrDefault(foe.Id),
 			drop is not null || snareHere ? KinPalette.Gold : KinPalette.Red,
 			drop is not null || snareHere,
-			$"{foe.Name.ToUpperInvariant()}  LV {foe.Level}",
+			foe.Name.ToUpperInvariant(),
 			foe.Hp,
 			foe.MaxHp,
 			KinPalette.Red,
 			Join(
+				FamilyWord(foe.Family),
 				foe.Block > 0 ? $"BLOCK {foe.Block}" : "",
 				foe.OffBalance > 0 ? $"OFF-BALANCE +{foe.OffBalance}" : "",
 				foe.FadesIn > 0 ? $"FADES IN {foe.FadesIn}" : "",
@@ -291,9 +297,14 @@ public sealed class KinRelayField
 				: drop is not null ? $"▼ {drop.Name.ToUpperInvariant()} HERE"
 				: loses > 0 ? $"−{loses}"
 				: "",
-			snareHere || drop is not null ? KinPalette.Gold : KinPalette.Red
+			snareHere || drop is not null ? KinPalette.Gold : KinPalette.Red,
+			foe.Level
 		);
 	}
+
+	/// <summary>The family, as the status line's first word — "" for none (`KinFamiliesPlan.md`).</summary>
+	private static string FamilyWord(Family family) =>
+		family == Family.None ? "" : family.ToString().ToUpperInvariant();
 
 	private static string Join(params string[] parts) =>
 		string.Join(" · ", parts.Where(p => p.Length > 0));

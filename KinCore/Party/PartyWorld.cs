@@ -85,7 +85,14 @@ public static class PartyWorld
 		26,
 		Guard("Shell Up", 8),
 		Attack("Slam", 8)
-	);
+	) with
+	{
+		Family = Family.Grove,
+		CaughtPassive = "MOSSBACK",
+		CaughtRule = "All its Block is ROOTED: none of it vanishes at your turn start.",
+		CaughtAbilities = [new Mossback()],
+		CaughtCards = [PartyCards.Root],
+	};
 
 	/// <summary>
 	/// **Briar Viper — fast and fragile.** It strikes two columns before almost anything acts, so it
@@ -102,7 +109,10 @@ public static class PartyWorld
 			Kind = IntentType.Move,
 			Amount = -1,
 		}
-	);
+	) with
+	{
+		Family = Family.Mire,
+	};
 
 	/// <summary>**Cinder Newt — a wide spitter.** Chip across three columns, then one hot Flare.</summary>
 	public static readonly Foe CinderNewt = Creature(
@@ -110,7 +120,14 @@ public static class PartyWorld
 		14,
 		Attack("Spit", 3, Aim.Sweep),
 		Attack("Flare", 8)
-	);
+	) with
+	{
+		Family = Family.Ember,
+		CaughtPassive = "EMBERSKIN",
+		CaughtRule = "At your turn start it gains Block equal to your KINDLE.",
+		CaughtAbilities = [new Emberskin()],
+		CaughtCards = [PartyCards.Cinderwall],
+	};
 
 	/// <summary>
 	/// **Bog Toad — hunts the weak.** Its Tongue homes on your lowest-HP monster, so a wounded catch
@@ -128,7 +145,10 @@ public static class PartyWorld
 		},
 		Guard("Swell", 6),
 		Attack("Belly Flop", 6, Aim.Sweep)
-	);
+	) with
+	{
+		Family = Family.Mire,
+	};
 
 	/// <summary>
 	/// **The Old Mire — the second gym, an exam of the whole row.** Deluge covers all five columns, so
@@ -143,6 +163,7 @@ public static class PartyWorld
 	) with
 	{
 		Catchable = false,
+		Family = Family.Mire,
 	};
 
 	// ===== DISCARD + DRAW (round one, docs/paper/round-one-synergies.md). Each is a question when
@@ -179,6 +200,7 @@ public static class PartyWorld
 			},
 		],
 		CaughtCards = [PartyCards.Sift, PartyCards.Rummage],
+		Family = Family.Mire,
 	};
 
 	/// <summary>
@@ -205,6 +227,7 @@ public static class PartyWorld
 			},
 		],
 		CaughtCards = [PartyCards.Sift, PartyCards.Jot],
+		Family = Family.Mire,
 	};
 
 	/// <summary>
@@ -241,6 +264,7 @@ public static class PartyWorld
 			},
 		],
 		CaughtCards = [PartyCards.Ration, PartyCards.Sift],
+		Family = Family.Mire,
 	};
 
 	// ===== SPELLCRAFT (round one)
@@ -256,10 +280,11 @@ public static class PartyWorld
 		Attack("Ember", 2)
 	) with
 	{
-		CaughtPassive = "KINDLING +2",
-		CaughtRule = "Your spells deal 2 more while it stands.",
-		CaughtAbilities = [new SpellPower { Amount = 2 }],
-		CaughtCards = [PartyCards.Zap, PartyCards.SparkScroll],
+		Family = Family.Ember,
+		CaughtPassive = "STOKER",
+		CaughtRule = "Every spell you play adds 2 KINDLE, not 1.",
+		CaughtAbilities = [new Stoker()],
+		CaughtCards = [PartyCards.Zap, PartyCards.Stoke],
 	};
 
 	/// <summary>
@@ -273,8 +298,11 @@ public static class PartyWorld
 		Attack("Peck", 3)
 	) with
 	{
-		// No passive line: its power IS its move, and the move already says it (the cell showed "ECHO" twice).
-		CaughtCards = [PartyCards.Zap, PartyCards.Arc],
+		Family = Family.Ember,
+		CaughtPassive = "ECHO",
+		CaughtRule = "The first spell you play each turn is cast twice.",
+		CaughtAbilities = [new EchoFirstSpell()],
+		CaughtCards = [PartyCards.SparkScroll],
 	};
 
 	/// <summary>
@@ -302,6 +330,7 @@ public static class PartyWorld
 			},
 		],
 		CaughtCards = [PartyCards.Zap, PartyCards.Jot],
+		Family = Family.Storm,
 	};
 
 	// ===== SURGE (round one)
@@ -326,6 +355,7 @@ public static class PartyWorld
 		CaughtRule = "Unhit last turn: +1 energy at the start of your turn.",
 		CaughtAbilities = [new EnergyIfUnhit { Amount = 1 }],
 		CaughtCards = [PartyCards.Surge, PartyCards.Quicken],
+		Family = Family.Storm,
 	};
 
 	/// <summary>
@@ -352,6 +382,7 @@ public static class PartyWorld
 			},
 		],
 		CaughtCards = [PartyCards.BattleCry, PartyCards.Zap],
+		Family = Family.Storm,
 	};
 
 	/// <summary>
@@ -373,10 +404,11 @@ public static class PartyWorld
 	{
 		Trait = "HUSH: your first card each turn costs 1 more.",
 		Components = [new FirstCardCost { Amount = 1 }],
-		CaughtPassive = "HUSH",
-		CaughtRule = "Your first card each turn costs 1 less.",
-		CaughtAbilities = [new FirstCardCost { Amount = -1 }],
-		CaughtCards = [PartyCards.Quicken, PartyCards.Surge],
+		Family = Family.Grove,
+		CaughtPassive = "SPORES",
+		CaughtRule = "When a token of yours falls: draw a card and gain 1 energy.",
+		CaughtAbilities = [new Spores()],
+		CaughtCards = [PartyCards.Overgrow],
 	};
 
 	// ===== SUMMON (round one)
@@ -397,9 +429,11 @@ public static class PartyWorld
 		Attack("Lash", 4)
 	) with
 	{
-		CaughtPassive = "BROOD",
-		CaughtRule = "Its Brood summons a Grub (2 HP) beside it, for 2 turns.",
-		CaughtCards = [PartyCards.Sow, PartyCards.CallSparks],
+		Family = Family.Grove,
+		CaughtPassive = "NURSERY",
+		CaughtRule = "Tokens you summon while it stands have GROW (+1 Power, +2 HP each turn).",
+		CaughtAbilities = [new Nursery()],
+		CaughtCards = [PartyCards.Sow, PartyCards.Graft],
 	};
 
 	/// <summary>**Howler — caught: the Summon engine.** Every token you summon arrives stronger.</summary>
@@ -410,10 +444,11 @@ public static class PartyWorld
 		Guard("Snarl", 4)
 	) with
 	{
-		CaughtPassive = "PACK +2/+1",
-		CaughtRule = "Your tokens arrive with +2 HP and +1 Power.",
-		CaughtAbilities = [new TokenBoost { Hp = 2, Power = 1 }],
-		CaughtCards = [PartyCards.CallSparks, PartyCards.DecoyCard],
+		Family = Family.Grove,
+		CaughtPassive = "ALPHA",
+		CaughtRule = "Your tokens arrive with +2 HP and +1 Power, and attack the front each round.",
+		CaughtAbilities = [new TokenBoost { Hp = 2, Power = 1 }, new Alpha()],
+		CaughtCards = [PartyCards.Harvest],
 	};
 
 	/// <summary>
@@ -429,10 +464,11 @@ public static class PartyWorld
 	{
 		Trait = "TRAMPLE: damage beyond what fells a monster hits YOU.",
 		Components = [new Trample()],
+		Family = Family.Ember,
 		CaughtPassive = "TRAMPLE",
-		CaughtRule = "Damage beyond what fells a foe hits a random other foe.",
+		CaughtRule = "Damage beyond what fells a foe hits the one behind it.",
 		CaughtAbilities = [new Trample()],
-		CaughtCards = [PartyCards.Sow, PartyCards.Jot],
+		CaughtCards = [PartyCards.Flashpoint],
 	};
 
 	/// <summary>A foe's place in its line; the factory closes the line up from these in order.</summary>
