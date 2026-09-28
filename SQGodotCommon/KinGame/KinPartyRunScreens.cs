@@ -155,6 +155,28 @@ public sealed partial class KinPartyRunScreens
 		buttons.AddChild(Button("SKIP", skip));
 	}
 
+	/// <summary>**A boss beaten: three BOSS RELICS — keep one for the rest of the run.**</summary>
+	public void ShowRelicChoice(PartyRun run, string beaten, Action<Relic> choose, Action skip)
+	{
+		Begin(
+			$"{beaten.ToUpperInvariant()} IS BEATEN",
+			"Choose a BOSS RELIC to keep for the rest of the run. The team is healed in full."
+		);
+		var row = Row();
+		foreach (var relic in run.RelicChoice)
+			row.AddChild(
+				Tile(
+					KinPalette.Slate,
+					null,
+					PartyRelics.Name(relic).ToUpperInvariant(),
+					[PartyRelics.Text(relic)],
+					new Vector2(320, 240),
+					() => choose(relic)
+				)
+			);
+		Row().AddChild(Button("SKIP", skip));
+	}
+
 	public void ShowOver(PartyRun run, Action newRun, Action menu)
 	{
 		Begin(

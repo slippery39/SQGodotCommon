@@ -104,24 +104,20 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void TheFirstRegionFieldsOneFoeUnderAStartersLevel()
+	public void TheFirstRegionsWildFoesAreNeverAboveAStarter()
 	{
+		// Region 1 chips (Shayne, 2026-09-28: "a little chip"), but never outclasses a Lv 5 starter,
+		// and a fight is at most two foes.
 		var first = PartyWorld.Regions[0];
 
-		Assert.That(first.MinFoes, Is.EqualTo(1));
-		Assert.That(first.MaxFoes, Is.EqualTo(1));
-		Assert.That(first.MaxLevel, Is.LessThan(PartyLevels.Base), "weaker than a Lv 5 starter");
+		Assert.That(first.MaxLevel, Is.LessThanOrEqualTo(PartyLevels.Base));
 		for (var seed = 0; seed < 20; seed++)
 		{
 			var route = (PartyRun.Start(PartyContent.Pike, seed)).EnterRoute().Route!;
-			foreach (
-				var node in route.Nodes.Where(n =>
-					n.Kind is NodeKind.Wild or NodeKind.Grass or NodeKind.Trainer
-				)
-			)
+			foreach (var node in route.Nodes.Where(n => n.Kind is NodeKind.Wild or NodeKind.Grass))
 				Assert.That(
 					node.Encounter!.Foes,
-					Has.Count.EqualTo(1),
+					Has.Count.InRange(1, 2).And.All.Matches<Foe>(f => f.Level <= PartyLevels.Base),
 					$"seed {seed}, {node.Kind}"
 				);
 		}

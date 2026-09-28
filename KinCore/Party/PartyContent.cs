@@ -223,23 +223,6 @@ public static class PartyContent
 			Position = position,
 		};
 
-	/// <summary>
-	/// **The Old Tusker — a gym's exam of the FRONT.** Its Gore is huge and lands on your front (put
-	/// Bramble there, on Thorns, or Guard it); its Stampede hits the whole line.
-	/// </summary>
-	public static Foe OldTusker(int position) =>
-		Creature(
-			"Old Tusker",
-			48,
-			Attack("Gore", 14),
-			Attack("Stampede", 7, Aim.Sweep),
-			Guard("Snort", 10)
-		) with
-		{
-			Catchable = false,
-			Position = position,
-		};
-
 	/// <summary>**Wisp — HUNTS the weakest**, wherever it stands, then drifts toward the back.</summary>
 	public static Foe Wisp(int position) =>
 		Creature(

@@ -67,6 +67,9 @@ public static class PartyState
 		var party = s.GetParty();
 		if (party.NextCardFree)
 			return 0;
+		// KIN TOTEM: your first card each turn is free.
+		if (party.CardsPlayedThisTurn == 0 && party.Relics.Contains(Relic.KinTotem))
+			return 0;
 		if (card.HasComponent<SpendsAllEnergy>())
 			return party.Energy;
 
@@ -429,6 +432,10 @@ public static class PartyState
 						: PartySummon.SummonFoe(s, brood);
 				break;
 
+			case IntentType.Pull when creature is Foe:
+				s = PartyBosses.PullBackToFront(s);
+				break;
+
 			// **Echo: your last spell again**, on the same foe. Only an ally has spells to echo.
 			case IntentType.Echo when creature is Ally && s.GetParty().LastSpell is { } spell:
 				var echoed = spell.Execute(s);
@@ -622,7 +629,8 @@ public static class PartyState
 	)
 	{
 		// Off-Balance rides on every hit, whoever lands it — Pike's jab and Bramble's Thorns alike.
-		amount += foe.OffBalance;
+		// SHELL then asks whether the whole blow was big enough to matter.
+		amount = PartyBosses.ThroughShell(foe, amount + foe.OffBalance);
 
 		var blocked = Math.Min(amount, foe.Block);
 		var hit = foe with
@@ -648,6 +656,8 @@ public static class PartyState
 			);
 		}
 
+		// A PHASE fires on the hit that crosses it — after the hit's own event, so it reads in order.
+		(s, var phased) = PartyBosses.CheckPhase(s, foe.Id);
 		return (
 			s,
 			[
@@ -658,6 +668,7 @@ public static class PartyState
 					Blocked = blocked,
 					AttackerId = byId,
 				},
+				.. phased,
 			]
 		);
 	}

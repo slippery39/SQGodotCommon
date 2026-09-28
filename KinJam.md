@@ -1,5 +1,22 @@
 # KIN — design doc
 
+> # BOSSES AND ELITES — exams with an answer (Shayne, 2026-09-28; built for regions 1–2)
+>
+> Pike's first elite was "pretty much unbeatable … no possible thing I could have done" — a scaled
+> old leader line. **Now each boss and elite TESTS A DECK QUALITY and has an ANSWER**
+> (`PartyExams`; the design and every decision: `KinFamiliesPlan.md`, round 3):
+> - Region 1: the **Old Tusker** (BLOCK — a WIND-UP shows its Gore a turn early), the **Goblin
+>   Chief** (FOCUS vs SPREAD — minions); elites the **Iron Sentinel** (SHELL: small hits bounce) and
+>   **Goblin Raiders** (three goblins, a thief).
+> - Region 2: the **Old Mire** (LINE ORDER — its Tongue drags your back monster forward; SUBMERGES
+>   at half), the **Black Knight** (a DAMAGE RACE — ENRAGE, a Second Wind); elites the **Hexer and
+>   her Golem** (REACH — a first-card tax) and the **Harpy Flock** (they rake your weakest).
+> - Regions 3–5 reuse region 2's, at their levels, until designed.
+> - New engine, `PartyBosses`: WIND-UP and PULL moves, SHELL, ENRAGE, PHASES, minions that stay.
+> - **A boss pays**: one of three BOSS RELICS (no drawbacks), a FULL heal in the next town, 100 gold.
+> - **A catch joins at half HP**, not the third it was caught at.
+> - **Wild fights chip**: tiers raised to 4–7% of the team's HP a fight (`party-sim`).
+
 > # ONE FAMILY PER RUN — the starter is your class (Shayne, 2026-09-28; built: the system)
 >
 > "Once you commit to a bonus, it's kind of bad to catch non-bonus monsters, as well as some cards

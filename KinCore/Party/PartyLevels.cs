@@ -45,6 +45,19 @@ public static class PartyLevels
 			MaxHp = hp,
 			Level = level,
 			Pattern = Scaled(foe.Pattern, level),
+			// A PHASE's second pattern and Block are the same foe's numbers, at the same level.
+			Components =
+			[
+				.. foe.Components.Select(c =>
+					c is Phase phase
+						? phase with
+						{
+							Pattern = Scaled(phase.Pattern, level),
+							Block = At(phase.Block, level),
+						}
+						: c
+				),
+			],
 		};
 	}
 

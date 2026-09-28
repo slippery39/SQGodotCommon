@@ -6,6 +6,42 @@ the next; map rules are fixed (Snares to 2, one card if affordable, a random are
 only with two monsters and above 60% of your health and the team's HP). **A floor, not the game.**
 Read it for WHERE runs die and HOW they are won, per region.
 
+## 2026-09-28 (b) — THE EXAMS for regions 1–2: the wall is gone, and now it is too easy (300 runs)
+
+The designed bosses and elites (`PartyExams`), catches at half HP, boss relics and a full heal after
+each boss. Then one pass raising the wild tiers for "a little chip". Regions 3–5 reuse region 2's exams.
+
+| pass | won | Bramble | Pike | Pike died, R1 / R2 / R3 / R4 / R5 | elites won | wild chip R1→R5 |
+|---|---|---|---|---|---|---|
+| exams | 91.7% | 100% | 83.3% | 3 / 14 / 4 / 3 / 1 | 99.1% | 0 / 3 / 4 / 5 / 5% |
+| + wild tiers up | 88.3% | 100% | 76.7% | 2 / 10 / **15** / 4 / 4 | 99.4% | 4 / 5 / 7 / 6 / 7% |
+
+- **Region 1's wall is gone** (Pike 60 deaths → 2–3).
+- **Now the difficulty is in the wrong place again**: bosses and elites almost never kill (elites won
+  99%+; the bot takes one only when healthy), and with the wild tiers up, **12 of Pike's 15 region-3
+  deaths are WILD fights**. Bramble has not lost a run.
+- The team out-levels every boss (region 5: Lv 23.7 against 22).
+- Tiers now: wild 1–2 foes Lv 3–5 → 3 foes Lv 18–20; elite and boss 6/7 → 21/22.
+
+## 2026-09-28 — ONE FAMILY, FIVE REGIONS, ELITES AND BOSSES: Pike's wall is region 1 (300 runs, seeds 1–300)
+
+The run is now five regions of town → route → BOSS; one family per run (Bramble = Grove, Pike =
+Ember); 1–2 ELITES a route (the bot takes one only with two monsters and above 60% HP); relics from
+elites. **Elites and bosses are PLACEHOLDERS** (the Old Tusker and Old Mire lines). The TARGET column
+is still the old ten-region curve — ignore it. Shayne's playtest: died at the first elite.
+
+| | won | region 1 died (elite / boss) | region 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| **Bramble** (150) | **98.0%** | 0 (0 / 0) | 0 | 1 | 2 | 0 |
+| **Pike** (150) | **37.3%** | **60 (19 / 40)** | 19 (13 / 5) | 7 (7 / 0) | 5 (3 / 1) | 3 (0 / 3) |
+
+- **Every elite death is Pike's.** Elites won 94.5% (719/761) overall — the bot dodges them when weak.
+- **Region 1 is the only wall, and only for Pike**: 40% of Pike runs die there, two thirds to the
+  boss (Lv 7) with a team of ~2 at ~Lv 6. Pike has 18 HP to Bramble's 30 and no Block engine.
+- **After region 1 it is easy**: 96–99% survive each later region, and the team out-levels the boss
+  (Lv 13.6 vs 13, 17.6 vs 16, 21.6 vs 19). Bosses are not the late threat the design wants.
+- 4.4 caught, 28.7 battles, 2.5 turns a battle, 2.5 elites fought a run.
+
 ## 2026-09-27 — THE JOURNEY with LEVELS: early game on target, late game too easy (300 runs, seeds 1–300)
 
 The run is now town → route MAP → town with a LEADER, and every creature has a LEVEL

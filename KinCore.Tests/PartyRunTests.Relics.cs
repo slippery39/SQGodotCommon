@@ -104,4 +104,77 @@ public partial class PartyRunTests
 			Has.Count.EqualTo(PartyRelics.TrainersEyeOffer)
 		);
 	}
+
+	// ===== A BOSS's prizes: a full heal in the next town, and one of three BOSS relics
+
+	[Test]
+	public void ABossHealsYouInTheNextTownAndOffersThreeBossRelics()
+	{
+		var run = OnRoute(Run() with { Team = [new RunCompanion(A, 5)] }).MoveTo(1);
+
+		var (town, _) = WinNext(run);
+
+		Assert.That(town.Phase, Is.EqualTo(RunPhase.Town));
+		Assert.That(Hp(town, "A"), Is.EqualTo(town.Team[0].MaxHp), "healed in full");
+		Assert.That(town.RelicChoice, Has.Count.EqualTo(3));
+		Assert.That(town.RelicChoice, Is.SubsetOf(PartyRelics.Boss));
+
+		var pick = town.RelicChoice[1];
+		var chosen = town.ChooseRelic(pick);
+		Assert.That(chosen.Relics, Does.Contain(pick));
+		Assert.That(chosen.RelicChoice, Is.Empty, "the other two are gone");
+		Assert.That(town.EnterRoute().RelicChoice, Is.Empty, "and they do not follow you out");
+	}
+
+	[Test]
+	public void AnEliteNeverPaysABossRelic()
+	{
+		Assert.That(PartyRelics.All.Intersect(PartyRelics.Boss), Is.Empty);
+	}
+
+	[Test]
+	public void WarDrumAncientLensAndWarbandBannerFireEveryTurn()
+	{
+		var deck = Run() with { Deck = [.. Enumerable.Repeat(Wipe("Wipe"), 20)] };
+		var plain = Fought(Dealt(deck));
+		var held = Fought(
+			Dealt(Holding(deck, Relic.WarDrum, Relic.AncientLens, Relic.WarbandBanner))
+		);
+
+		Assert.That(
+			held.Allies().Single().Power - plain.Allies().Single().Power,
+			Is.EqualTo(PartyRelics.WarbandBannerPower)
+		);
+		plain = Do(plain, new EndPartyTurnAction());
+		held = Do(held, new EndPartyTurnAction());
+		Assert.That(
+			held.GetParty().Energy - plain.GetParty().Energy,
+			Is.EqualTo(PartyRelics.WarDrumEnergy),
+			"a later turn's energy"
+		);
+		Assert.That(
+			held.CardsIn(ZoneType.Hand).Count() - plain.CardsIn(ZoneType.Hand).Count(),
+			Is.EqualTo(PartyRelics.AncientLensDraw),
+			"a later turn's draw"
+		);
+	}
+
+	[Test]
+	public void KinTotemMakesTheFirstCardEachTurnFree()
+	{
+		var deck = Run() with { Deck = [Wipe("Wipe") with { Cost = 2 }] };
+		var plain = Fought(Dealt(deck));
+		var held = Fought(Dealt(Holding(deck, Relic.KinTotem)));
+
+		Assert.That(plain.CostOf(plain.CardsIn(ZoneType.Hand).Single()), Is.EqualTo(2));
+		Assert.That(held.CostOf(held.CardsIn(ZoneType.Hand).Single()), Is.Zero);
+	}
+
+	[Test]
+	public void BigTentHoldsAFourthMonsterOnTheTeam()
+	{
+		var run = WithTeam(Run(), A, B, C);
+		Assert.That(run.TeamCapacity, Is.EqualTo(PartyRun.TeamSize));
+		Assert.That(run.Gain(Relic.BigTent).TeamCapacity, Is.EqualTo(PartyRelics.BigTentTeam));
+	}
 }

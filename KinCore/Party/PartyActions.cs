@@ -294,6 +294,10 @@ public record StartPartyTurnAction : GameAction
 				}
 			);
 
+		// ENRAGE sharpens every attack after the first round (PartyBosses).
+		if (party.TurnNumber > 1)
+			s = PartyBosses.RoundStarts(s);
+
 		// Block drops to what is ROOTED; Grow grows; Emberskin shields (PartyFamilies).
 		(s, var grew) = PartyFamilies.TurnStart(s, firstTurn: party.TurnNumber == 1);
 
@@ -305,7 +309,7 @@ public record StartPartyTurnAction : GameAction
 
 		s = PartySummon.Fade(s);
 
-		(s, _) = StartTurnAction.DrawCards(s, HandSize);
+		(s, _) = StartTurnAction.DrawCards(s, HandSize + s.GetParty().DrawBonus);
 		return new ActionResult(s)
 			.WithEvent(new TurnStartedEvent { TurnNumber = party.TurnNumber })
 			.WithEvents(grew);

@@ -75,7 +75,7 @@ public partial record PartyRun
 
 	public const int WildGold = 20;
 	public const int DeepGold = 35;
-	public const int BossGold = 50;
+	public const int BossGold = 100;
 	public const int EliteGold = 60;
 	public const int FoundGold = 40;
 
@@ -140,6 +140,26 @@ public partial record PartyRun
 	public ImmutableList<Relic> Relics { get; init; } = [];
 
 	public bool Has(Relic relic) => Relics.Contains(relic);
+
+	/// <summary>How many monsters the team holds — Big Tent makes it four.</summary>
+	public int TeamCapacity => Has(Relic.BigTent) ? PartyRelics.BigTentTeam : TeamSize;
+
+	/// <summary>
+	/// **The BOSS RELICS offered — pick one** (`ChooseRelic`), or leave them. Set when a boss falls;
+	/// cleared by the choice, or on leaving the town.
+	/// </summary>
+	public ImmutableList<Relic> RelicChoice { get; init; } = [];
+
+	/// <summary>Three boss relics you do not hold, seeded by the region.</summary>
+	private ImmutableList<Relic> BossRelicOffer()
+	{
+		var rng = new Random(Seed * 43 + RegionIndex);
+		return [.. PartyRelics.Boss.Where(r => !Has(r)).OrderBy(_ => rng.Next()).Take(3)];
+	}
+
+	/// <summary>Takes one of the offered boss relics; the others are gone.</summary>
+	public PartyRun ChooseRelic(Relic relic) =>
+		RelicChoice.Contains(relic) ? Gain(relic) with { RelicChoice = [] } : this;
 
 	/// <summary>A relic joins the run — and Snare Pouch pays its Snares at once.</summary>
 	public PartyRun Gain(Relic relic) =>
@@ -325,9 +345,11 @@ public partial record PartyRun
 		var toBench = ImmutableList<string>.Empty;
 		foreach (var foe in finished.CaughtFoes())
 		{
-			var joining = new RunCompanion(FromFoe(foe), foe.Hp, foe.Level);
+			// **A catch joins at HALF its HP** (Shayne, 2026-09-28) — usable at once, not a near-corpse.
+			var joining = new RunCompanion(FromFoe(foe), 0, foe.Level);
+			joining = joining with { Hp = Math.Max(foe.Hp, (joining.MaxHp + 1) / 2) };
 			caught = caught.Add(foe.Name);
-			if (run.Team.Count < TeamSize)
+			if (run.Team.Count < run.TeamCapacity)
 				run = run with { Team = run.Team.Add(joining) };
 			else
 			{
@@ -343,9 +365,15 @@ public partial record PartyRun
 				{
 					Cleared = run.Cleared.Add(NodeId),
 				}
-			// The BOSS beaten: on to the next town — or, the last one, the run won.
+			// The BOSS beaten: on to the next town — healed in full, with three boss relics to choose
+			// from (Shayne, 2026-09-28) — or, the last one, the run won.
 			: RegionIndex + 1 >= Regions.Count ? run with { Phase = RunPhase.Won }
-			: run.EnterTown(RegionIndex + 1);
+			: run.EnterTown(RegionIndex + 1) with
+			{
+				Team = Heal(run.Team, 1),
+				Bench = Heal(run.Bench, 1),
+				RelicChoice = BossRelicOffer(),
+			};
 
 		return (
 			run,

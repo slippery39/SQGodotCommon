@@ -269,8 +269,9 @@ public sealed class KinRelayField
 		var drop = ctx.Drops.Contains(PartyBattle.MaxLine + foe.Position) ? ctx.Focus : null;
 		var snareHere = ctx.Snaring && s.CatchRefusal(foe) is null;
 		var loses = ctx.Forecast.GetValueOrDefault(foe.Id);
-		var (move, icon) = foe.Staggered
-			? ("staggered", null)
+		var (move, icon) =
+			foe.Staggered ? ("staggered", null)
+			: intent.Kind == IntentType.WindUp ? KinMoveText.WindingUp(foe)
 			: KinMoveText.Short(intent, intent.Amount);
 
 		return new CreatureLook(
@@ -336,8 +337,21 @@ public static class KinMoveText
 			IntentType.Shove => $"{intent.Name}: swap front two",
 			IntentType.Echo => $"{intent.Name}: last spell",
 			IntentType.Summon => $"{intent.Name}: a {intent.Summons?.Creature.Name}",
+			IntentType.WindUp => $"{intent.Name}: winds up the next move",
+			IntentType.Pull => $"{intent.Name}: your back monster to the front",
 			_ => intent.Name,
 		};
+
+	/// <summary>
+	/// **A wind-up's badge shows the move it is winding up to** — "next: 18 → front" — so the big
+	/// blow is on screen a whole turn before it lands.
+	/// </summary>
+	public static (string Text, Texture2D Icon) WindingUp(Foe foe)
+	{
+		var next = foe.Pattern[(foe.PatternIndex + 1) % foe.Pattern.Count];
+		var (text, icon) = Short(next, next.Amount);
+		return ($"next: {text}", icon);
+	}
 
 	/// <summary>
 	/// **A move on the badge above a creature's head** — an icon and "6 → front", as the style-D
@@ -359,6 +373,7 @@ public static class KinMoveText
 			IntentType.Shove => ("swap front two", null),
 			IntentType.Echo => ("echo spell", null),
 			IntentType.Summon => ($"summon {intent.Summons?.Creature.Name}", null),
+			IntentType.Pull => ("back → front", null),
 			_ => (intent.Name, null),
 		};
 

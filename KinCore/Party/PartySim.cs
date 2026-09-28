@@ -14,6 +14,9 @@ public enum RunEnd
 	/// <summary>Lost at a route's rare lair (the old deeper path).</summary>
 	Deep,
 
+	/// <summary>Lost to an ELITE on a route.</summary>
+	Elite,
+
 	/// <summary>Lost to a region's boss.</summary>
 	Boss,
 
@@ -41,7 +44,19 @@ public record SimRun(
 	int Caught,
 	int Battles,
 	int Turns
-);
+)
+{
+	/// <summary>Elites fought, and won.</summary>
+	public int Elites { get; init; }
+
+	public int ElitesWon { get; init; }
+
+	/// <summary>Each WILD fight's cost: the share of the team's HP it took, by region.</summary>
+	public ImmutableList<WildChip> Chips { get; init; } = [];
+}
+
+/// <summary>What one wild fight took out of the team: the share of its HP, from the line that fought.</summary>
+public record WildChip(int Region, double Lost);
 
 /// <summary>
 /// **`party-sim`: whole runs played by <see cref="PartyBot"/>** under simple map rules — Snares when
@@ -102,6 +117,9 @@ public static class PartySim
 		var battles = 0;
 		var turns = 0;
 		var wentDeep = false;
+		var elites = 0;
+		var elitesWon = 0;
+		var chips = ImmutableList<WildChip>.Empty;
 
 		while (!run.IsOver)
 		{
@@ -141,10 +159,16 @@ public static class PartySim
 
 					var where =
 						run.AtBoss ? RunEnd.Boss
+						: run.Here.Kind == NodeKind.Elite ? RunEnd.Elite
 						: run.Here.Kind == NodeKind.Rare ? RunEnd.Deep
 						: RunEnd.Trail;
+					if (where == RunEnd.Elite)
+						elites++;
 
 					var battle = run.StartBattle();
+					var hpBefore = battle.Allies().Where(a => a.FadesIn == 0).Sum(a => a.Hp);
+					var hpMax = battle.Allies().Where(a => a.FadesIn == 0).Sum(a => a.MaxHp);
+					var wild = run.Here.Kind is NodeKind.Wild or NodeKind.Grass;
 					log?.Invoke(
 						$"  BATTLE {battles + 1} ({where}): {run.NextFight.Name} — team "
 							+ string.Join(", ", run.Team.Select(m => $"{m.Companion.Name} {m.Hp}"))
@@ -189,8 +213,28 @@ public static class PartySim
 						$"   => {(party.Won ? "WON" : "LOST")}, caught {battle.CaughtFoes().Count()}; next: {run.Phase}"
 					);
 
+					if (wild && run.Phase != RunPhase.Lost)
+						chips = chips.Add(
+							new WildChip(
+								region,
+								(
+									hpBefore
+									- battle
+										.Allies()
+										.Where(a => a.FadesIn == 0)
+										.Sum(a => Math.Max(0, a.Hp))
+								) / (double)Math.Max(1, hpMax)
+							)
+						);
 					if (run.Phase == RunPhase.Lost)
-						return new(starter.Name, seed, where, region, gyms, caught, battles, turns);
+						return new(starter.Name, seed, where, region, gyms, caught, battles, turns)
+						{
+							Elites = elites,
+							ElitesWon = elitesWon,
+							Chips = chips,
+						};
+					if (where == RunEnd.Elite)
+						elitesWon++;
 
 					if (!run.IsOver && run.RewardOffer() is [var card, ..])
 						run = run.Take(card);
@@ -198,7 +242,12 @@ public static class PartySim
 			}
 		}
 
-		return new(starter.Name, seed, RunEnd.Won, run.RegionIndex, gyms, caught, battles, turns);
+		return new(starter.Name, seed, RunEnd.Won, run.RegionIndex, gyms, caught, battles, turns)
+		{
+			Elites = elites,
+			ElitesWon = elitesWon,
+			Chips = chips,
+		};
 	}
 
 	/// <summary>

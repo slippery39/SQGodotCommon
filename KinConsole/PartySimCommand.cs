@@ -51,7 +51,7 @@ public static class PartySimCommand
 		var regions = PartyWorld.Regions;
 		Console.WriteLine();
 		Console.WriteLine(
-			"  REGION               THROUGH (target)   survived (target)  died trail/deep/gym  "
+			"  REGION               THROUGH (target)   survived (target)  died trail/deep/elite/boss  "
 				+ "at gym: team  size  deeper  turns  lv (leader)"
 		);
 		var previous = 1.0;
@@ -69,7 +69,7 @@ public static class PartySimCommand
 			Console.WriteLine(
 				$"  {region + 1, 2} {regions[region].Name, -17} "
 					+ $"{through, 6:P0} ({target, 4:P0})   {survived, 6:P0} ({target / previous, 4:P0})   "
-					+ $"{Died(RunEnd.Trail), 4}/{Died(RunEnd.Deep), -3}/{Died(RunEnd.Boss), -3}"
+					+ $"{Died(RunEnd.Trail), 4}/{Died(RunEnd.Deep)}/{Died(RunEnd.Elite)}/{Died(RunEnd.Boss), -3}"
 					+ (
 						gyms.Count == 0
 							? ""
@@ -81,6 +81,43 @@ public static class PartySimCommand
 			);
 			previous = target;
 		}
+		// Where each STARTER's runs die, region by region — one starter's wall hides in the total.
+		Console.WriteLine();
+		foreach (var starter in runs.GroupBy(r => r.Starter))
+			Console.WriteLine(
+				$"  {starter.Key, -8} died in region: "
+					+ string.Join(
+						"  ",
+						Enumerable
+							.Range(0, regions.Count)
+							.Select(region =>
+							{
+								var died = starter
+									.Where(r => r.Region == region && r.End != RunEnd.Won)
+									.ToList();
+								return $"{region + 1}: {died.Count, 2} "
+									+ $"(elite {died.Count(r => r.End == RunEnd.Elite)}, boss {died.Count(r => r.End == RunEnd.Boss)})";
+							})
+					)
+			);
+
+		// What a WILD fight costs, per region — the design wants a little chip (5–15% of the team's HP).
+		Console.WriteLine(
+			"  wild fight chip:  "
+				+ string.Join(
+					"  ",
+					Enumerable
+						.Range(0, regions.Count)
+						.Select(region =>
+						{
+							var chips = runs.SelectMany(r => r.Chips)
+								.Where(c => c.Region == region)
+								.ToList();
+							return $"{region + 1}: {(chips.Count == 0 ? 0 : chips.Average(c => c.Lost)), 4:P0}";
+						})
+				)
+		);
+
 		var stalled = runs.Count(r => r.End == RunEnd.Stalled);
 		if (stalled > 0)
 			Console.WriteLine(
@@ -90,7 +127,8 @@ public static class PartySimCommand
 		Console.WriteLine();
 		Console.WriteLine(
 			$"  Per run: {runs.Average(r => r.Caught):F1} caught, {runs.Average(r => r.Battles):F1} battles, "
-				+ $"{runs.Sum(r => r.Turns) / (double)Math.Max(1, runs.Sum(r => r.Battles)):F1} turns a battle"
+				+ $"{runs.Sum(r => r.Turns) / (double)Math.Max(1, runs.Sum(r => r.Battles)):F1} turns a battle, "
+				+ $"{runs.Average(r => r.Elites):F1} elites fought ({Pct(runs.Sum(r => r.ElitesWon), runs.Sum(r => r.Elites))} won)"
 		);
 		Console.WriteLine(
 			"  The bot searches a turn's plays and looks one turn on; a person plans further. Read it for WHERE runs die."

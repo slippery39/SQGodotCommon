@@ -265,7 +265,7 @@ public partial class PartyRunTests
 	// ===== Catching
 
 	[Test]
-	public void ACaughtFoeJoinsWithItsCycleAndTheHpItWasCaughtAt()
+	public void ACaughtFoeJoinsWithItsCycleAtHalfItsHp()
 	{
 		var run = OnFights(Run(), Fight(Foe("Brute", hit: 6)), Fight(Foe("Idle")));
 
@@ -274,7 +274,11 @@ public partial class PartyRunTests
 
 		Assert.That(report.Caught, Is.EqualTo(new[] { "Brute" }));
 		var caught = run.Team[1];
-		Assert.That(caught.Hp, Is.EqualTo(10));
+		Assert.That(
+			caught.Hp,
+			Is.EqualTo((caught.MaxHp + 1) / 2),
+			"half, not the 10 it was caught at"
+		);
 		Assert.That(caught.Companion.Moves.Single().Amount, Is.EqualTo(6), "its own move");
 		Assert.That(run.Snares, Is.EqualTo(PartyRun.StartingSnares - 1), "the Snare is spent");
 		Assert.That(run.StartBattle().Allies().Count(), Is.EqualTo(2), "and it fights");

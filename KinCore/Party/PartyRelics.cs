@@ -18,6 +18,13 @@ public enum Relic
 	LuckyCoin,
 	SnarePouch,
 	TrainersEye,
+
+	// ----- BOSS RELICS: one of three after a boss. Strong, and no drawbacks (Shayne, 2026-09-28).
+	WarDrum,
+	AncientLens,
+	WarbandBanner,
+	BigTent,
+	KinTotem,
 }
 
 public static class PartyRelics
@@ -30,8 +37,26 @@ public static class PartyRelics
 	public const double LuckyCoinGold = 1.5;
 	public const int SnarePouchNow = 2;
 	public const int TrainersEyeOffer = 4;
+	public const int WarDrumEnergy = 1;
+	public const int AncientLensDraw = 1;
+	public const int WarbandBannerPower = 2;
+	public const int BigTentTeam = 4;
 
-	public static readonly ImmutableList<Relic> All = [.. Enum.GetValues<Relic>()];
+	/// <summary>The BOSS relics — a boss offers three of these; an elite never does.</summary>
+	public static readonly ImmutableList<Relic> Boss =
+	[
+		Relic.WarDrum,
+		Relic.AncientLens,
+		Relic.WarbandBanner,
+		Relic.BigTent,
+		Relic.KinTotem,
+	];
+
+	/// <summary>The relics an ELITE pays.</summary>
+	public static readonly ImmutableList<Relic> All =
+	[
+		.. Enum.GetValues<Relic>().Where(r => !Boss.Contains(r)),
+	];
 
 	public static string Name(Relic relic) =>
 		relic switch
@@ -42,6 +67,11 @@ public static class PartyRelics
 			Relic.LuckyCoin => "Lucky Coin",
 			Relic.SnarePouch => "Snare Pouch",
 			Relic.TrainersEye => "Trainer's Eye",
+			Relic.WarDrum => "War Drum",
+			Relic.AncientLens => "Ancient Lens",
+			Relic.WarbandBanner => "Warband Banner",
+			Relic.BigTent => "Big Tent",
+			Relic.KinTotem => "Kin Totem",
 			_ => relic.ToString(),
 		};
 
@@ -58,6 +88,11 @@ public static class PartyRelics
 			Relic.LuckyCoin => "Fights pay 50% more gold.",
 			Relic.SnarePouch => $"Gain a Snare at every town, and {SnarePouchNow} now.",
 			Relic.TrainersEye => $"Card rewards offer {TrainersEyeOffer} cards, not 3.",
+			Relic.WarDrum => $"+{WarDrumEnergy} energy every turn.",
+			Relic.AncientLens => $"Draw {AncientLensDraw} more card every turn.",
+			Relic.WarbandBanner => $"Your monsters have +{WarbandBannerPower} Power.",
+			Relic.BigTent => $"Your team holds {BigTentTeam} monsters, not 3.",
+			Relic.KinTotem => "Your first card each turn costs 0.",
 			_ => "",
 		};
 
@@ -68,9 +103,28 @@ public static class PartyRelics
 	public static GameState Dealt(GameState s)
 	{
 		var party = s.GetParty();
-		if (party.Relics.Contains(Relic.Whetstone))
+		var power =
+			(party.Relics.Contains(Relic.Whetstone) ? WhetstonePower : 0)
+			+ (party.Relics.Contains(Relic.WarbandBanner) ? WarbandBannerPower : 0);
+		if (power > 0)
 			foreach (var ally in s.Allies().ToList())
-				s = s.UpdateObject(ally.Id, ally with { Power = ally.Power + WhetstonePower });
+				s = s.UpdateObject(ally.Id, ally with { Power = ally.Power + power });
+		// War Drum: every turn's energy (and this first one's); Ancient Lens: every turn's draw.
+		if (party.Relics.Contains(Relic.WarDrum))
+			s = s.UpdateObject(
+				party.Id,
+				s.GetParty() with
+				{
+					MaxEnergy = s.GetParty().MaxEnergy + WarDrumEnergy,
+					Energy = s.GetParty().Energy + WarDrumEnergy,
+				}
+			);
+		if (party.Relics.Contains(Relic.AncientLens))
+		{
+			s = s.UpdateObject(party.Id, s.GetParty() with { DrawBonus = AncientLensDraw });
+			(s, _) = StartTurnAction.DrawCards(s, AncientLensDraw);
+		}
+		party = s.GetParty();
 		if (party.Relics.Contains(Relic.Lantern))
 			s = s.UpdateObject(
 				party.Id,

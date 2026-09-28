@@ -151,22 +151,6 @@ public static class PartyWorld
 		Family = Family.Mire,
 	};
 
-	/// <summary>
-	/// **The Old Mire — the second gym, an exam of the whole row.** Deluge covers all five columns, so
-	/// nobody steps out of it — Block, or kill it first. Swallow is huge and one wide.
-	/// </summary>
-	public static readonly Foe OldMire = Creature(
-		"Old Mire",
-		64,
-		Attack("Deluge", 5, Aim.Sweep),
-		Attack("Swallow", 15),
-		Guard("Wallow", 12)
-	) with
-	{
-		Catchable = false,
-		Family = Family.Mire,
-	};
-
 	// ===== DISCARD + DRAW (round one, docs/paper/round-one-synergies.md). Each is a question when
 	// wild and an engine when caught; the tester, caught, becomes a bridge for what it punished.
 
@@ -539,18 +523,6 @@ public static class PartyWorld
 	private static readonly Area EmberCrags =
 		new("Ember Crags", "Hot stone and ash.", Wilds, EchoOwl);
 
-	// **PLACEHOLDERS** — today's two old leader lines stand in as both elites and bosses until the
-	// boss and elite interview designs the real ones (unique patterns, never species).
-
-	private static readonly Encounter OldTusker =
-		new("The Old Tusker", [PartyContent.OldTusker(2), At(PartyContent.Wisp(0), 4)]);
-
-	private static readonly Encounter OldMireLine =
-		new("The Old Mire", [At(BogToad, 0), At(OldMire, 2), At(BriarViper, 4)]);
-
-	private static readonly Encounter LastStand =
-		new("The Last Stand", [At(PartyContent.OldTusker(0), 1), At(OldMire, 3)]);
-
 	/// <summary>
 	/// **A region's difficulty** (THE TUNING TABLE): foes per wild fight, the wild LEVELS (light
 	/// attrition — at or under the team), and the elites' and the boss's levels, which carry the threat.
@@ -560,11 +532,37 @@ public static class PartyWorld
 
 	public static readonly ImmutableList<Tier> Tiers =
 	[
-		new(1, 1, 2, 4, 6, 7),
-		new(1, 2, 5, 7, 9, 10),
-		new(2, 2, 8, 10, 12, 13),
-		new(2, 3, 11, 13, 15, 16),
-		new(2, 3, 14, 16, 18, 19),
+		new(1, 2, 3, 5, 6, 7),
+		new(2, 2, 6, 8, 9, 10),
+		new(2, 3, 10, 12, 13, 14),
+		new(2, 3, 14, 16, 17, 18),
+		new(3, 3, 18, 20, 21, 22),
+	];
+
+	private static readonly ImmutableList<Encounter> Region1 =
+	[
+		PartyExams.OldTusker,
+		PartyExams.GoblinChief,
+	];
+	private static readonly ImmutableList<Encounter> Region1Elites =
+	[
+		PartyExams.IronSentinel,
+		PartyExams.GoblinRaiders,
+	];
+	private static readonly ImmutableList<Encounter> Region2 =
+	[
+		PartyExams.OldMire,
+		PartyExams.BlackKnight,
+	];
+	private static readonly ImmutableList<Encounter> Region2Elites =
+	[
+		PartyExams.HexerAndGolem,
+		PartyExams.HarpyFlock,
+	];
+	private static readonly ImmutableList<Encounter> AllElites =
+	[
+		.. Region1Elites,
+		.. Region2Elites,
 	];
 
 	/// <summary>
@@ -573,11 +571,12 @@ public static class PartyWorld
 	/// </summary>
 	public static readonly ImmutableList<Region> Regions =
 	[
-		Build(0, "The Greenwood", MossyHollow, StonyRidge, [OldTusker, OldMireLine]),
-		Build(1, "The Mirelands", MistyMarsh, EmberCrags, [OldMireLine, OldTusker]),
-		Build(2, "The Stonefells", StonyRidge, EmberCrags, [OldTusker, OldMireLine]),
-		Build(3, "The Deepwood", MossyHollow, MistyMarsh, [OldMireLine, OldTusker]),
-		Build(4, "The Wyrm's Rest", EmberCrags, MistyMarsh, [LastStand, LastStand]),
+		Build(0, "The Greenwood", MossyHollow, StonyRidge, Region1, Region1Elites),
+		Build(1, "The Mirelands", MistyMarsh, EmberCrags, Region2, Region2Elites),
+		// Regions 3–5 are PLACEHOLDERS until their exams are designed: region 2's, at their levels.
+		Build(2, "The Stonefells", StonyRidge, EmberCrags, Region2, AllElites),
+		Build(3, "The Deepwood", MossyHollow, MistyMarsh, Region2, AllElites),
+		Build(4, "The Wyrm's Rest", EmberCrags, MistyMarsh, Region2, AllElites),
 	];
 
 	/// <summary>
@@ -589,7 +588,8 @@ public static class PartyWorld
 		string name,
 		Area a,
 		Area b,
-		ImmutableList<Encounter> bosses
+		ImmutableList<Encounter> bosses,
+		ImmutableList<Encounter> elites
 	)
 	{
 		var t = Tiers[tier];
@@ -611,7 +611,7 @@ public static class PartyWorld
 			name,
 			[a, b],
 			Scaled(bosses, t.Boss),
-			Scaled([OldTusker, OldMireLine], t.Elite),
+			Scaled(elites, t.Elite),
 			t.MinFoes,
 			t.MaxFoes,
 			t.MinLevel,

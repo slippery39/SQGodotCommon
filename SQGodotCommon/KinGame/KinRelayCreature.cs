@@ -275,6 +275,8 @@ public sealed class KinRelayCreature
 		var side = look.FacesLeft ? KinPalette.Red : KinPalette.Gold;
 
 		_move.Text = look.Move;
+		// A long move ("next: 21 → front") steps down a size rather than wrap out of its pill.
+		_move.LabelSettings.FontSize = look.Move.Length > 13 ? 16 : 20;
 		_icon.Texture = look.MoveIcon;
 		_icon.Visible = look.MoveIcon is not null;
 		// No icon, no icon gap: "swap front two" wrapped while leaving room for an icon it lacked.

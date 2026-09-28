@@ -36,6 +36,7 @@ public partial record PartyRun
 				NodeId = 0,
 				Cleared = [0],
 				Sold = [],
+				RelicChoice = [],
 			};
 
 	/// <summary>Why you cannot walk to that place — or null if you can.</summary>

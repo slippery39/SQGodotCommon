@@ -193,13 +193,19 @@ public partial class KinPartyBoard : Node2D
 						Change(r => r with { RegionIndex = 1 });
 						return;
 					}
-					if (screen == "boss")
+					if (screen is "boss" or "relics")
 					{
 						Change(r =>
 						{
 							var route = r.EnterRoute();
 							return route with { NodeId = route.Route!.End.Id };
 						});
+						// `relics` wins the boss fight through the capture hook: the real flow after.
+						if (screen == "relics")
+						{
+							_state = _state.DebugEndBattle(won: true);
+							BattleOver();
+						}
 						return;
 					}
 					if (screen is "hospital" or "shop" or "pen")
@@ -352,9 +358,31 @@ public partial class KinPartyBoard : Node2D
 
 		if (_run.IsOver)
 			Continue();
+		else if (!_run.RelicChoice.IsEmpty)
+			ShowRelicChoice(report, beaten);
 		else
 			ShowBetween(report, beaten);
 	}
+
+	/// <summary>
+	/// **After a boss: one of three BOSS RELICS, on its own screen** — then the usual rewards. Its
+	/// own screen because the victory screen is already full (it pushed SKIP off once).
+	/// </summary>
+	private void ShowRelicChoice(RunReport report, string beaten) =>
+		_screens.ShowRelicChoice(
+			_run,
+			beaten,
+			relic =>
+			{
+				_run = _run.ChooseRelic(relic);
+				ShowBetween(report, beaten);
+			},
+			() =>
+			{
+				_run = _run with { RelicChoice = [] };
+				ShowBetween(report, beaten);
+			}
+		);
 
 	/// <summary>Redrawn after every bench swap, so the team shown is always the team that fights.</summary>
 	private void ShowBetween(RunReport report, string beaten) =>
@@ -886,6 +914,12 @@ public partial class KinPartyBoard : Node2D
 						$"GROW +{grew.Power}/+{grew.Hp}",
 						KinPalette.Family(Family.Grove).Lightened(0.4f)
 					),
+				FoePhaseEvent phase => () =>
+				{
+					var cell = _field.ViewOf(phase.FoeId);
+					KinAnimator.Pop(cell);
+					KinAnimator.Float(_overlay, cell, $"{phase.Name}!", KinPalette.Red);
+				},
 				ThornsEvent thorns => () =>
 					KinAnimator.Float(
 						_overlay,

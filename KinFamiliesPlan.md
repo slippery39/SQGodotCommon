@@ -78,6 +78,82 @@ The fun part of card games is figuring out and achieving combos and synergies." 
 answers from an interview (five rounds, 2026-09-27); the family drafts are a proposal to react to.
 Exploring, not tuning: every number is a guess; tests prove things fire; no sims until a design holds.
 
+## ROUND 3 — BOSSES AND ELITES (interview 2026-09-28; all 8 APPROVED and BUILT — `PartyExams`, `PartyBosses`)
+
+Shayne played Pike into the first elite: "pretty much unbeatable … no possible thing I could have
+done … a 68 health enemy attacking all my guys for 10." The wild fights were "the exact opposite".
+`party-sim` agreed: Pike died in region 1 in 40% of runs, Bramble never (`docs/findings/companion-balance.md`).
+
+| | Decided |
+|---|---|
+| What makes them hard | **All four**: big TELEGRAPHED turns, PHASES, RULE-BENDERS, MINIONS |
+| Fairness | **Designer judgement**, per boss — no blanket rule. (Every draft below still says its answer) |
+| Exams | **They test DECK QUALITIES** (a Block check, a damage race, focus vs spread, line order) — any family can pass with the right cards; the boss is shown early so you can draft for it |
+| A catch joins at | **half HP** (was: the HP it was caught at, a third or less) |
+| Elites | **either** one creature or a small group, per elite |
+| This pass | **regions 1–2**: 4 bosses, 4 elites; regions 3–5 keep the placeholders |
+| Wild fights | **a little chip** — usually 5–15% of the team's HP |
+| A boss pays | a rare-led card, **a BOSS RELIC (one of three, some with a drawback)**, **a heal in the next town**, **big gold and XP** |
+
+### The drafts
+
+Numbers are at Lv 5, as all content is (`PartyLevels` scales them: region 1's elites are Lv 6, its
+bosses Lv 7). A region-1 team is the starter and one catch, ~Lv 6. Every number is a guess.
+
+**REGION 1 bosses — one idea each, for a team of two**
+
+| Boss | Tests | Shape | Pattern | The answer |
+|---|---|---|---|---|
+| **The Old Tusker** (beast) | BLOCK — reading the telegraph | one, 56 HP | **Paw the Ground** (WIND-UP: "next: GORE 18 → front") → **Gore 18** → **Trample 4 → all** | Guard or Stagger on the wind-up turn; a wall in front (Thornwall pays double) |
+| **The Goblin Chief** | FOCUS vs SPREAD — minions | the Chief (36 HP) + adds | **Call the Band** (a Goblin, 8 HP, stab 3, at the front) → **Spear 7 → front** → **Call the Band** | sweep the band (Whirl, Flurry, Arc) or reach past it for the Chief (spells, Gust) |
+
+**REGION 1 elites — beatable by a starter and one half-HP catch**
+
+| Elite | Tests | Shape | Pattern / rule | The answer |
+|---|---|---|---|---|
+| **The Iron Sentinel** (construct) | BIG HITS | one, 40 HP | RULE: **SHELL — ignores any hit of 4 or less.** **Brace 10** ↔ **Slam 8 → front** | Rally + Strike, Kindle-fed spells; chip damage and tokens do nothing |
+| **Goblin Raiders** | SPREAD | three goblins, 14 HP each | **Stab 4** each; the back one **Snatches** a card (the Magpie's thief) | sweeps; kill the thief to get the card back |
+
+**REGION 2 bosses — a phase and a rule each, for a team of three**
+
+| Boss | Tests | Shape | Pattern | The answer |
+|---|---|---|---|---|
+| **The Old Mire** (a giant toad) | LINE ORDER | one, 70 HP | **Tongue** (pulls your BACK monster to the FRONT) → **Swallow 16 → front** → **Deluge 5 → all**. PHASE at half: **Submerge** — Block 15 each turn, and a **Toadling** (10 HP) every other turn | put the one who can take a Swallow at the back; burst it before the phase |
+| **The Black Knight** | a DAMAGE RACE | one, 64 HP | **Cleave 8 → front two**, **Guard 10**; RULE: **ENRAGE — +2 to its attacks every round**. PHASE at half: **Second Wind** — 20 Block, once | burst (Rally, Kindle, Harvest); a slow wall loses |
+
+**REGION 2 elites**
+
+| Elite | Tests | Shape | Pattern / rule | The answer |
+|---|---|---|---|---|
+| **The Hexer and her Golem** (a rival mage) | REACH | the Hexer (26 HP) behind a Golem (40 HP) | RULE: **HEX — your first card each turn costs 1 more** while she stands. Golem **Guard 10 → the one ahead** ↔ **Slam 9**; Hexer **Bolt 6 → your weakest** | spells, back-line attacks or a pull reach her; kill her first |
+| **Harpy Flock** | PROTECTING the fragile | three harpies, 12 HP each | **Rake 5 → your weakest** each; one **Screeches** (swaps your front two) | Block the weak one, Decoy, kill fast |
+
+**BOSS RELICS — pick one of three after a boss. NO drawbacks** (Shayne: "we can do these without
+the drawbacks"), so War Drum and Heavy Crown were one relic and merged:
+
+| Relic | Rule |
+|---|---|
+| **War Drum** | +1 energy every turn. |
+| **Ancient Lens** | Draw 1 more card every turn. |
+| **Warband Banner** | Your monsters have +2 Power. |
+| **Big Tent** | Your team holds 4 monsters, not 3. |
+| **Kin Totem** | Your first card each turn costs 0. |
+
+**The heal in town after a boss: FULL** (read from "without the drawbacks"; the 75% draft was not
+kept). Boss gold 50 → 100; XP was already double.
+
+**Built as drafted, one change**: the Hexer WARDS the Golem ahead of her (a Block can only go to
+the one AHEAD), rather than the Golem guarding her.
+
+### What building them costs (engine, before content)
+
+- **WIND-UP**: an intent that shows the NEXT move in its telegraph ("next: GORE 18"). Small.
+- **PHASES**: at half HP a foe swaps to a second pattern (and can gain a rule). New, small.
+- **Rule-benders**: SHELL (ignore small hits) and ENRAGE (+N a round) are new components; HEX is
+  the existing first-card tax; TONGUE (pull your back to the front) is a new intent.
+- **Minions that stay**: a foe summon with no fade — the Summon intent already exists.
+- **Boss relics** join `PartyRelics`; the 1-of-3 choice is a new screen after a boss.
+
 ## 1. The brief (Shayne's answers)
 
 | | Decided |

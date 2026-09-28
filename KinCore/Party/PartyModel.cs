@@ -31,6 +31,9 @@ public record PartyBattle : GameObject
 	/// <summary>The run's RELICS (`PartyRelics`) — read at the deal and when the fight begins.</summary>
 	public ImmutableList<Relic> Relics { get; init; } = [];
 
+	/// <summary>Cards drawn every turn beyond the hand's five (Ancient Lens).</summary>
+	public int DrawBonus { get; init; }
+
 	/// <summary>
 	/// **Cards a card or ability discarded this turn** — MtgCore's `SpellsCastThisTurn` pattern:
 	/// counted in ONE place (`FirePartyTriggersAction`) from the staged events, so no discard path
@@ -255,6 +258,15 @@ public enum IntentType
 
 	/// <summary>Summons <see cref="Intent.Summons"/> at the FRONT of its own line.</summary>
 	Summon,
+
+	/// <summary>
+	/// **A WIND-UP: it does nothing now — and its telegraph shows the NEXT move**, so a big blow
+	/// always gives you a turn to answer it (`PartyBosses`).
+	/// </summary>
+	WindUp,
+
+	/// <summary>**TONGUE: drags the other line's BACK creature to its FRONT** (`PartyBosses`).</summary>
+	Pull,
 }
 
 /// <summary>
