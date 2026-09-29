@@ -1,5 +1,15 @@
 # KIN — design doc
 
+> # A SIMPLER GAME — the cards matter, the monsters guide (Shayne, 2026-09-28; DECIDED, not built)
+>
+> Catching filled the bench with under-levelled monsters; Strike went on the strongest monster
+> anyway; the relay never mattered. **Monsters become HP, Power, Spell Power and a passive, with a
+> unique bonus on the FIRST attack card played on each one each turn. No move cycles, no catching,
+> no levels. You start with one and pick one of three after each of the first two bosses.** Ember is
+> spellslinging (Spell Power, Burn, chains, big spells); Grove is Block into damage (Rooted, Thorns,
+> conversion, Growth) — priced so defending and attacking in one card is never cheap. Every decision:
+> `KinFamiliesPlan.md`, round 4.
+
 > # BOSSES AND ELITES — exams with an answer (Shayne, 2026-09-28; built for regions 1–2)
 >
 > Pike's first elite was "pretty much unbeatable … no possible thing I could have done" — a scaled

@@ -143,7 +143,7 @@ public static class PartyBot
 		var party = s.GetParty();
 		var snaring =
 			party.Snares > 0
-				? s.LivingFoes().Count(f => f.Catchable && f.Hp <= f.CatchAt()) * CatchableValue
+				? s.LivingFoes().Count(f => s.IsYourKind(f) && f.Hp <= f.CatchAt()) * CatchableValue
 				: 0;
 		return s.Allies().Where(a => !a.IsKnockedOut).Sum(a => a.Hp)
 			- s.LivingFoes().Sum(f => f.Hp)

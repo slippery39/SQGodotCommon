@@ -6,6 +6,32 @@ the next; map rules are fixed (Snares to 2, one card if affordable, a random are
 only with two monsters and above 60% of your health and the team's HP). **A floor, not the game.**
 Read it for WHERE runs die and HOW they are won, per region.
 
+## 2026-09-28 (d) — WHY PIKE LOSES: the family, a Gore no region-1 deck can answer (150 runs a row)
+
+`party-sim variants 150` swaps one thing at a time; `party-sim catches 300` counts catches by species;
+`party-sim trace 2` is one Pike run.
+
+| variant | won | died in region 1 | caught |
+|---|---|---|---|
+| Pike | 23.3% | 37 | 3.3 |
+| Pike, 30 HP | 44.7% | 14 | 4.4 |
+| **Pike, GROVE family** | **86.0%** | 5 | 6.8 |
+| Bramble | 94.0% | 0 | 6.8 |
+| **Bramble, EMBER family** | **28.0%** | 7 | 3.2 |
+| Bramble, no Thornwall | 92.0% | 0 | 8.0 |
+| Bramble, 18 HP | 82.7% | 2 | 6.0 |
+
+- **The FAMILY is ~60 points; the starter's kit is small.** Thornwall is worth 2 points; HP ~11–21.
+- **Catching is not the cause**: with a Snare in hand, Ember species are caught 36–67% of meetings,
+  Grove 38–61%. Grove runs meet twice as many of their own kind only because they LIVE longer.
+- **The trace: the bot plays Ember sensibly** (Stoke first, Zap, Spark Scroll) — and loses the
+  region-1 boss on turn 2: the Old Tusker's wind-up telegraphs **Gore 29** against Pike's 19 HP. Guard
+  (8) cannot answer it, so no play does. `Toughen`'s ×1.3 hits broke the exam's answer (it was 18).
+- Spell damage never scales with level; exams gain HP with level and then double. Grove's power
+  lives on its monsters, whose attacks do scale.
+- Fixed: the bot valued leaving OFF-family foes at catchable HP (`PartyBot.Value` now asks
+  `IsYourKind`).
+
 ## 2026-09-28 (c) — "WAY TOO EASY": exams toughened, the bot at 57% — and a 90/23 starter split (300 runs)
 
 Shayne played (Pike) and agreed: way too easy — bosses, elites, and out-levelling. Target: **the bot

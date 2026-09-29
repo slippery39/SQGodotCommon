@@ -111,7 +111,8 @@ public static class PartyContent
 	public static readonly PartyCompanion Pike =
 		new(
 			"Pike",
-			Hp: 18,
+			// 18 → 24 (2026-09-28): one Gore in region 1 was a knockout.
+			Hp: 24,
 			Power: 3,
 			[Attack("Jab", 2), Attack("Jab", 2), Attack("Flurry", 0, Aim.Sweep)],
 			Passive: "FINISHER +2",

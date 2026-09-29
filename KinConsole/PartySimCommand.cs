@@ -26,6 +26,59 @@ public static class PartySimCommand
 			return;
 		}
 
+		// `party-sim variants 150` — is it the STARTER or its FAMILY? Each starter, then with one thing
+		// swapped: its HP, its family (deck, rewards, catches), its passive. Same seeds for every row.
+		if (args.Length > 1 && args[1] == "variants")
+		{
+			var each = args.Length > 2 && int.TryParse(args[2], out var v) ? v : 150;
+			var pike = PartyContent.Pike;
+			var bramble = PartyContent.Bramble;
+			foreach (
+				var (label, starter) in new (string, PartyCompanion)[]
+				{
+					("Pike", pike),
+					($"Pike, {bramble.Hp} HP", pike with { Hp = bramble.Hp }),
+					("Pike, GROVE family", pike with { Family = Family.Grove }),
+					("Bramble", bramble),
+					("Bramble, EMBER family", bramble with { Family = Family.Ember }),
+					("Bramble, no Thornwall", bramble with { Thorns = 0, Abilities = [] }),
+					($"Bramble, {pike.Hp} HP", bramble with { Hp = pike.Hp }),
+				}
+			)
+			{
+				var played = PartySim.PlayMany(each, [starter]);
+				var region1 = played.Count(r => r.Region == 0 && r.End != RunEnd.Won);
+				Console.WriteLine(
+					$"  {label, -24} won {Pct(played.Count(r => r.End == RunEnd.Won), each)}"
+						+ $"   died in region 1: {region1, 3}   caught {played.Average(r => r.Caught):F1}"
+				);
+			}
+			return;
+		}
+
+		// `party-sim catches 300` — every foe of your kind met in a won fight, by species: how often
+		// it was caught, how often there was no Snare to throw.
+		if (args.Length > 1 && args[1] == "catches")
+		{
+			var each = args.Length > 2 && int.TryParse(args[2], out var c) ? c : 300;
+			var played = PartySim.PlayMany(each);
+			foreach (
+				var species in played
+					.SelectMany(r => r.Seen)
+					.GroupBy(x => x.Species)
+					.OrderBy(g => g.Key)
+			)
+			{
+				var withSnare = species.Where(x => x.HadSnare).ToList();
+				var family = PartyWorld.Species(species.Key)?.Family ?? Family.None;
+				Console.WriteLine(
+					$"  {species.Key, -14} {family, -6} met {species.Count(), 4}   no Snare {species.Count(x => !x.HadSnare), 4}"
+						+ $"   with a Snare, caught {Pct(withSnare.Count(x => x.Caught), withSnare.Count)}"
+				);
+			}
+			return;
+		}
+
 		var count = args.Length > 1 && int.TryParse(args[1], out var n) ? n : 60;
 		Console.WriteLine(
 			$"  Simulating {count} companion runs, seeds 1-{count}, starters in turn..."

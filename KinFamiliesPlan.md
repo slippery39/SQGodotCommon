@@ -78,6 +78,45 @@ The fun part of card games is figuring out and achieving combos and synergies." 
 answers from an interview (five rounds, 2026-09-27); the family drafts are a proposal to react to.
 Exploring, not tuning: every number is a guess; tests prove things fire; no sims until a design holds.
 
+## ROUND 4 — A SIMPLER GAME: the CARDS matter, the monsters guide (interview 2026-09-28)
+
+**Status: DECIDED, not built. It supersedes catching, the bench, levels, the relay's monster cycles
+and KIN below.** Shayne, after playing: catching "creates underleveled monsters on the bench which
+don't really do much … I always just play [Strike] on my strongest monster anyway"; the relay "never
+mattered … you just keep your highest health monster at the front". The fix is to simplify: "the
+cards should matter, the monsters just guide you in what cards you are choosing."
+
+| | Decided |
+|---|---|
+| A monster | **HP, Power and Spell Power**, and a **passive** that guides your deck. **No move cycle, no auto-attack** |
+| Attacking | **Only with attack cards**, played ON a monster (+ its Power) |
+| First-attack bonus | **The first attack card played on each monster EACH TURN triggers that monster's OWN bonus** — spreading attacks is the good play |
+| Spells | Still dropped on a foe; **Spell Power is your TEAM's total**. A spell is not an attack: it does not trigger a first-attack bonus (so an Ember monster's bonus should FEED spells) |
+| The line | **Kept**: foes aim at your front, back or weakest, **and cards care about position** ("front: …", "back: …", swaps) |
+| Getting monsters | **Start with one. The first two bosses each offer 3 of your family's (colourless among them); pick 1.** Region 1 is designed for one monster; regions 4–5 test the full team. The boss relic stays |
+| Catching, the bench, Snares, levels, XP | **CUT.** Monsters grow through cards, relics and upgrades; exams scale by region |
+| Knocked out | Out for the fight; **back at 1 HP** after it. The run ends when all are down |
+| Wild fights pay | **a card and gold** |
+| Springs | **heal OR upgrade a card** (STS's campfire); **every card has a + version**, authored with it |
+| Families | **No automatic family mechanic** (Kindle as a free rule goes). A family is a set of SHARED card mechanics, and its monsters' passives lean on them |
+| Sub-mechanics relate by | **BRIDGES**: each works alone; a few bridge cards pay two at once |
+| Roster | **5 per family** (the starter + 4 boss picks) **+ 3 colourless** |
+| Order | **Rules first** on today's cards as placeholders, then drafts of both families for review, then build |
+
+**EMBER — spellslinging**: damage spells, and boosting them. Sub-mechanics: **Spell Power
+stacking** (the scaling engine), **Burn** (damage over time), **Spell chains** (cheap spells, "your
+3rd spell this turn…"), **Big spells** (X-cost, charge-ups).
+
+**GROVE — Block, and turning it into damage.** Sub-mechanics: **Rooted Block** (Block that stays),
+**Thorns**, **Block → damage**, **Growth**. **Balance rule (Shayne): a card that both defends and
+deals damage must not do both efficiently** — that is why Grove was too strong. Price conversion as
+a premium: Block spent to become damage, or damage that needs Block already banked.
+
+### What goes, with the rules
+Monster move cycles and the RELAY for your side (foes keep their telegraphed patterns — every exam
+survives); Hasten, Echo, Finisher (relay-count), Kindle as a free rule, catching, Snares, the bench and
+the Pen, levels and XP, tokens as fighters (Sow, Swarm, Harvest — unless a draft brings them back).
+
 ## ROUND 3 — BOSSES AND ELITES (interview 2026-09-28; all 8 APPROVED and BUILT — `PartyExams`, `PartyBosses`)
 
 Shayne played Pike into the first elite: "pretty much unbeatable … no possible thing I could have

@@ -533,11 +533,14 @@ public static class PartyWorld
 	/// <summary>
 	/// **How much tougher than its level an exam is** — HP and hits (`PartyLevels.Toughen`). Shayne,
 	/// 2026-09-28: "way too easy"; the bot should win about half its runs, losing mostly to these.
+	/// **HITS stay at their level** (×1): a telegraphed blow must stay ANSWERABLE by that region's
+	/// cards — ×1.3 made the region-1 Tusker's Gore 29 against a 19-HP Pike, and no Guard answered it
+	/// (party-sim trace, 2026-09-28). The toughness is in HP.
 	/// </summary>
-	public const double BossHp = 2.0,
-		BossHit = 1.3,
-		EliteHp = 2.0,
-		EliteHit = 1.4;
+	public const double BossHp = 2.5,
+		BossHit = 1.0,
+		EliteHp = 2.4,
+		EliteHit = 1.0;
 
 	public static readonly ImmutableList<Tier> Tiers =
 	[
