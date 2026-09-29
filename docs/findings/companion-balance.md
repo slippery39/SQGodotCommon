@@ -6,6 +6,22 @@ the next; map rules are fixed (Snares to 2, one card if affordable, a random are
 only with two monsters and above 60% of your health and the team's HP). **A floor, not the game.**
 Read it for WHERE runs die and HOW they are won, per region.
 
+## 2026-09-28 (e) — ROUND 4's rules on placeholder content: 61.7%, and the family gap (300 runs)
+
+Monsters act only through cards (a first-attack bonus each), come from bosses, never level; springs
+heal or upgrade. Every kit is a PLACEHOLDER (old species + a bonus).
+
+| pass | tiers (wild → boss levels, region 1 → 5) | exams (HP ×) | won | Bramble | Pike |
+|---|---|---|---|---|---|
+| the old tiers | 3–5 … 19–21 wild; bosses 8 → 29 | boss 2.5, elite 2.4 | **4.3%** | 8.7% | 0% |
+| **flat tiers** | 3–5 … 7–9 wild; bosses 6 → 10 | boss 1.8, elite 1.6 | **61.7%** | **96.0%** | **27.3%** |
+
+- Without ally levels, the old climbing tiers were a wall (boss fights 8–16 turns).
+- **Flat tiers put the run near the 50% target overall — as two games again.** Pike's wall is
+  region 2 (61 of 109 Pike deaths: 43 to the boss, 15 to elites). Grove's placeholder kit has Block
+  on nearly everything; Ember's has little. The family drafts are the fix, not a global number.
+- Deaths are mostly to bosses (85 of 115); elites won 97.9%; wild chip 2–6%.
+
 ## 2026-09-28 (d) — WHY PIKE LOSES: the family, a Gore no region-1 deck can answer (150 runs a row)
 
 `party-sim variants 150` swaps one thing at a time; `party-sim catches 300` counts catches by species;

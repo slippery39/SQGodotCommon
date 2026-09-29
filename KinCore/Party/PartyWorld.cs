@@ -524,8 +524,9 @@ public static class PartyWorld
 
 	/// <summary>
 	/// **A region's difficulty** (THE TUNING TABLE): foes per wild fight, the wild LEVELS (light
-	/// attrition — at or under the team), and the elites' and the boss's levels, which carry the threat.
-	/// Every number is a guess (exploring). The first boss is set against a starter near Lv 7.
+	/// attrition), and the elites' and the boss's levels, which carry the threat. **FLAT since round 4**
+	/// (2026-09-28): your monsters no longer level — they grow through cards, relics and upgrades — so
+	/// foes climb only a level or so a region. Every number is a guess (exploring).
 	/// </summary>
 	public record Tier(int MinFoes, int MaxFoes, int MinLevel, int MaxLevel, int Elite, int Boss);
 
@@ -536,18 +537,18 @@ public static class PartyWorld
 	/// cards — ×1.3 made the region-1 Tusker's Gore 29 against a 19-HP Pike, and no Guard answered it
 	/// (party-sim trace, 2026-09-28). The toughness is in HP.
 	/// </summary>
-	public const double BossHp = 2.5,
+	public const double BossHp = 1.8,
 		BossHit = 1.0,
-		EliteHp = 2.4,
+		EliteHp = 1.6,
 		EliteHit = 1.0;
 
 	public static readonly ImmutableList<Tier> Tiers =
 	[
-		new(1, 2, 3, 5, 7, 8),
-		new(2, 2, 7, 9, 11, 13),
-		new(2, 3, 11, 13, 16, 18),
-		new(2, 3, 15, 17, 21, 24),
-		new(3, 3, 19, 21, 26, 29),
+		new(1, 2, 3, 5, 5, 6),
+		new(2, 2, 4, 6, 6, 7),
+		new(2, 3, 5, 7, 7, 8),
+		new(2, 3, 6, 8, 8, 9),
+		new(3, 3, 7, 9, 9, 10),
 	];
 
 	private static readonly ImmutableList<Encounter> Region1 =

@@ -80,7 +80,7 @@ Exploring, not tuning: every number is a guess; tests prove things fire; no sims
 
 ## ROUND 4 — A SIMPLER GAME: the CARDS matter, the monsters guide (interview 2026-09-28)
 
-**Status: DECIDED, not built. It supersedes catching, the bench, levels, the relay's monster cycles
+**Status: the RULES are BUILT (2026-09-28, four commits); the FAMILY DRAFTS are next. It supersedes catching, the bench, levels, the relay's monster cycles
 and KIN below.** Shayne, after playing: catching "creates underleveled monsters on the bench which
 don't really do much … I always just play [Strike] on my strongest monster anyway"; the relay "never
 mattered … you just keep your highest health monster at the front". The fix is to simplify: "the

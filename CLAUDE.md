@@ -11,7 +11,8 @@ things that face outward.
 **PIVOTING (2026-09-23) to a monster-companion deckbuilder: up to 3 companions ARE the board, units
 are cut. AUTO-BATTLE v1 (2026-09-24): every monster plays its own move cycle in Speed order; the deck
 is the TRAINER's, generic cards played on a monster. ONE FAMILY PER RUN (2026-09-28): the starter's
-family is the run's class — rewards and catches are it plus colourless; monster decks are gone.** A run is playable (`kin_party.tscn`, `KinCore/Party/`), built
+family is the run's class. ROUND 4 (2026-09-28): monsters act ONLY through cards (a first-attack
+bonus each), come from bosses, never level; no catching.** A run is playable (`kin_party.tscn`, `KinCore/Party/`), built
 BESIDE the lane game. **Read `KinJam.md` first** — its newest section, at the top, is the truth; the
 design philosophy is there too. The setting is a GENERIC FANTASY substrate (`KinSettingSketches.md`).
 The lane game's history (the deleted doom layer, companion upgrades) is in `docs/findings/kin-balance.md`.
@@ -38,7 +39,7 @@ SQGodotCommon/
 │   │                                #   .Archetypes.cs holds each companion's archetype cards),
 │   │                                #   KeywordLibrary (the glossary, as DATA — console and UI share it)
 │   ├── Run/                         # Run + RunCard (OUTSIDE GameState); Companion; ActMap; ShopOffer
-│   ├── Party/                       # THE COMPANION GAME — PartyState API; PartyWorld.Tiers; PartyExams + PartyBosses; PartyRelics; PartyCards + Discard/Spells/Surge/Summon/Triggers
+│   ├── Party/                       # THE COMPANION GAME — PartyState API; PartyWorld.Tiers; PartyMonsters; PartyExams + PartyBosses; PartyRelics; PartyCards + Discard/Spells/Surge/Summon/Triggers
 │   └── KinBattleFactory.cs          # one GameState per battle; KinStateExtensions is the API
 ├── KinCore.Tests/                  # NUnit; inline card definitions only
 ├── KinConsole/                     # terminal front end — THE REMOTE SURFACE, needs no Godot
@@ -88,7 +89,7 @@ superseded by this paragraph.
 | **The setting — GENERIC FANTASY substrate; themes swappable on top** | `KinSettingSketches.md` | read it before naming any content |
 | **The next design — FAMILIES: monsters as engines, cards as fuel (interview 2026-09-27)** | `KinFamiliesPlan.md` | read it before designing any monster or card; the Relay's plan is `KinRelayPlan.md` |
 | **The next loop — towns and wild routes as interactive MAPS (planned 2026-09-26)** | `KinMapPlan.md` | read it before touching the run's structure or its screens |
-| Where the last session got to | `HANDOFF-KinFamilies.md` | read it when picking the work back up |
+| Where the last session got to | `HANDOFF-KinRound4.md` | read it when picking the work back up |
 | Earlier handoffs, superseded — every other `HANDOFF-Kin*.md` | root | read only for their scars section |
 | Credits — **must ship** | `CREDITS.md` | before release, and when adding any third-party asset |
 | UI design — layout contract AND the visual language | `KinUI.md` | read it before touching `SQGodotCommon/KinGame/` |

@@ -1,6 +1,6 @@
 # KIN — design doc
 
-> # A SIMPLER GAME — the cards matter, the monsters guide (Shayne, 2026-09-28; DECIDED, not built)
+> # A SIMPLER GAME — the cards matter, the monsters guide (Shayne, 2026-09-28; RULES BUILT)
 >
 > Catching filled the bench with under-levelled monsters; Strike went on the strongest monster
 > anyway; the relay never mattered. **Monsters become HP, Power, Spell Power and a passive, with a
@@ -9,6 +9,14 @@
 > spellslinging (Spell Power, Burn, chains, big spells); Grove is Block into damage (Rooted, Thorns,
 > conversion, Growth) — priced so defending and attacking in one card is never cheap. Every decision:
 > `KinFamiliesPlan.md`, round 4.
+> - **Built** (`226fb01`, `9aac1ba`, `0c973c9`, then the retune): no catching, bench, levels or XP;
+>   the first two bosses offer 3 monsters (pick 1); a knockout is back at 1 HP; your monsters act
+>   ONLY through attack cards, with a FIRST-ATTACK bonus each (`PartyMonsters`); SPELL POWER is a
+>   team total; Kindle comes only from cards and Stokers; springs HEAL or UPGRADE a card (`KinCard.
+>   Upgraded`, + versions for every starting-deck card). Foe levels are flat by region.
+> - **Every monster kit and most cards are PLACEHOLDERS** — the old species with a first-attack bonus
+>   each. `party-sim`: 61.7% won — **Bramble 96%, Pike 27%**. The gap is the families' content, so
+>   the next step is the family drafts, not more tuning.
 
 > # BOSSES AND ELITES — exams with an answer (Shayne, 2026-09-28; built for regions 1–2)
 >
