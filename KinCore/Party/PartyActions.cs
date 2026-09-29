@@ -111,50 +111,6 @@ public record PlayPartyCardAction : GameAction
 	}
 }
 
-/// <summary>
-/// **Throw a Snare at a foe: it is caught** — out of the line at once, counted as beaten, and it
-/// joins the run with its own cycle if the battle is won. Their FRONT only, a third of its HP or
-/// less, never a boss. An ITEM, not a card: Snares never dilute the deck.
-/// </summary>
-public record UseSnareAction : GameAction
-{
-	public const int Cost = 1;
-
-	public int FoeId { get; init; }
-
-	public override ValidationResult ValidateAdd(GameState s)
-	{
-		if (s.GetParty().IsOver)
-			return ValidationResult.Invalid("The battle is over");
-		if (s.GetParty().Deploying)
-			return ValidationResult.Invalid(PartyDeploy.Waiting);
-		if (
-			!s.HasObject(FoeId)
-			|| s.GetObject(FoeId) is not Foe { IsDead: false, Caught: false } foe
-		)
-			return ValidationResult.Invalid("Throw it at a foe");
-		return s.CatchRefusal(foe) is { } refusal
-			? ValidationResult.Invalid(refusal)
-			: ValidationResult.Valid;
-	}
-
-	public override ActionResult Execute(GameState s)
-	{
-		var party = s.GetParty();
-		s = s.UpdateObject(
-			party.Id,
-			party with
-			{
-				Energy = party.Energy - Cost,
-				Snares = party.Snares - 1,
-			}
-		);
-		s = s.UpdateObject(FoeId, (Foe)s.GetObject(FoeId) with { Caught = true });
-		s = s.ReturnStolen(FoeId);
-		return new ActionResult(s).WithEvent(new FoeCaughtEvent { FoeId = FoeId });
-	}
-}
-
 /// <summary>The played card leaves the hand once everything it does has resolved.</summary>
 public record DiscardPlayedCardAction : GameAction
 {
@@ -581,18 +537,6 @@ public record FoeHitEvent : GameEvent
 
 	/// <summary>The monster whose blow it was — the board lunges it. 0 = no body swung (a spell, Thorns).</summary>
 	public int AttackerId { get; init; }
-}
-
-/// <summary>A benched monster joined the back of the line for a fallen one.</summary>
-public record AllySwappedInEvent : GameEvent
-{
-	public int AllyId { get; init; }
-	public int ForAllyId { get; init; }
-}
-
-public record FoeCaughtEvent : GameEvent
-{
-	public int FoeId { get; init; }
 }
 
 public record CardStolenEvent : GameEvent

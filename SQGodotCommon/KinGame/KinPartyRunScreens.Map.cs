@@ -43,11 +43,8 @@ public sealed partial class KinPartyRunScreens
 			case BuildingKind.Hospital:
 				ShowHospital(run, change);
 				break;
-			case BuildingKind.Shop:
-				ShowShop(run, change);
-				break;
 			default:
-				ShowPen(run, change);
+				ShowShop(run, change);
 				break;
 		}
 		Row().AddChild(Button("◀ BACK TO TOWN", back));
@@ -58,10 +55,10 @@ public sealed partial class KinPartyRunScreens
 	{
 		Begin(
 			"HOSPITAL",
-			$"The team and the bench healed to full — {PartyRun.HospitalPrice} gold. Nowhere else heals fully.",
+			$"The team healed to full — {PartyRun.HospitalPrice} gold. Nowhere else heals fully.",
 			"town"
 		);
-		ShowTeam(run, null);
+		ShowTeam(run);
 		var heal = Button(
 			$"HEAL EVERYONE — {PartyRun.HospitalPrice} GOLD",
 			() => change(r => r.HealAtHospital())
@@ -72,23 +69,12 @@ public sealed partial class KinPartyRunScreens
 			_column.AddChild(Label(why + ".", 22, KinPalette.Bone));
 	}
 
-	/// <summary>**The shop**: Snares, three cards (each once), and paying to take a card out.</summary>
+	/// <summary>**The shop**: three cards (each once), and paying to take a card out.</summary>
 	private void ShowShop(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
 	{
-		Begin("SHOP", $"You have {run.Gold} gold and {run.Snares} Snares.", "town");
+		Begin("SHOP", $"You have {run.Gold} gold.", "town");
 
 		var shop = Row();
-
-		var snare = Tile(
-			KinPalette.Slate,
-			KinArt.Drawing("cards/snare"),
-			"SNARE",
-			["Catch a foe at a third of its HP or less.", $"{PartyRun.SnarePrice} GOLD"],
-			new Vector2(260, 400),
-			() => change(r => r.BuySnare())
-		);
-		snare.Disabled = !run.CanBuySnare;
-		shop.AddChild(snare);
 
 		var cards = run.ShopCards();
 		for (var i = 0; i < cards.Count; i++)
@@ -122,19 +108,6 @@ public sealed partial class KinPartyRunScreens
 		);
 		remove.Disabled = !run.CanRemove;
 		Row().AddChild(remove);
-	}
-
-	/// <summary>**The pen**: the team (front first — the line) and the bench, and swapping them.</summary>
-	private void ShowPen(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
-	{
-		Begin(
-			"THE PEN",
-			run.Bench.IsEmpty
-				? "Your team, front first. Catch more than three and the rest wait on the bench here."
-				: "Pick a team member, then a benched monster: they swap. The team fights next.",
-			"town"
-		);
-		ShowTeam(run, (team, bench) => change(r => r.Swap(team, bench)));
 	}
 
 	/// <summary>The deck, one button a card: the one pressed leaves the deck for good.</summary>

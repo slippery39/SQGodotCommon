@@ -70,31 +70,14 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void EveryRouteHasOneOrTwoElitesNobodyCanCatch()
+	public void EveryRouteHasOneOrTwoElitesOnTheirOwnRows()
 	{
 		foreach (var route in Routes())
 		{
 			var elites = route.Nodes.Where(n => n.Kind == NodeKind.Elite).ToList();
 			Assert.That(elites.Count, Is.InRange(1, 2));
 			Assert.That(elites.Select(n => n.Row).Distinct().Count(), Is.EqualTo(elites.Count));
-			Assert.That(
-				elites.SelectMany(n => n.Encounter!.Foes),
-				Has.All.Matches<Foe>(f => !f.Catchable)
-			);
 		}
-	}
-
-	[Test]
-	public void TheLairHoldsYourFamilysRare()
-	{
-		var run = PartyRun.Start(PartyContent.Bramble, 3).EnterRoute();
-
-		var lair = run.Route!.Nodes.Single(n => n.Kind == NodeKind.Rare);
-
-		Assert.That(
-			lair.Encounter!.Foes.Select(f => f.Name),
-			Does.Contain(PartyWorld.RareOf(Family.Grove)!.Name)
-		);
 	}
 
 	// ===== The map
@@ -126,7 +109,7 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void TheFirstForkIsAVisibleFightInEachAreaAndEveryRouteHasTallGrassAndOneRare()
+	public void TheFirstForkIsAVisibleFightInEachAreaAndEveryRouteHasTallGrass()
 	{
 		foreach (var route in Routes())
 		{
@@ -135,11 +118,6 @@ public partial class PartyRunTests
 			Assert.That(first.Select(n => n.Area), Is.EquivalentTo(new[] { 0, 1 }));
 
 			Assert.That(route.Nodes.Count(n => n.Kind == NodeKind.Grass), Is.GreaterThan(0));
-			var rare = route.Nodes.Single(n => n.Kind == NodeKind.Rare);
-			Assert.That(
-				rare.Encounter!.Foes.Select(f => f.Name),
-				Does.Contain(Run().Region.Areas[rare.Area].Rare.Name)
-			);
 		}
 	}
 
@@ -153,17 +131,6 @@ public partial class PartyRunTests
 				node.Encounter!.Foes.Select(f => f.Name),
 				Is.All.AnyOf(areas[node.Area].Pool.Select(f => f.Name).ToArray())
 			);
-	}
-
-	[Test]
-	public void NothingInATrainersLineCanBeCaught()
-	{
-		var trainers = Routes(80).SelectMany(r => r.Nodes).Where(n => n.Kind == NodeKind.Trainer);
-		Assert.That(trainers, Is.Not.Empty, "80 routes field a trainer somewhere");
-		Assert.That(
-			trainers.SelectMany(n => n.Encounter!.Foes),
-			Has.All.Matches<Foe>(f => !f.Catchable)
-		);
 	}
 
 	// ===== Walking it
@@ -189,7 +156,6 @@ public partial class PartyRunTests
 	}
 
 	[TestCase(NodeKind.Wild, PartyRun.WildGold)]
-	[TestCase(NodeKind.Rare, PartyRun.DeepGold)]
 	[TestCase(NodeKind.Trainer, PartyRun.TrainerGold)]
 	[TestCase(NodeKind.Elite, PartyRun.EliteGold)]
 	public void AFightMustBeWonBeforeYouWalkOnAndPaysByItsKind(NodeKind kind, int gold)
@@ -206,19 +172,14 @@ public partial class PartyRunTests
 		Assert.That(run.MoveTo(2).NodeId, Is.EqualTo(2));
 	}
 
-	[TestCase(FindKind.Snare)]
-	[TestCase(FindKind.Gold)]
-	public void AFindIsTakenOnArrival(FindKind find)
+	[Test]
+	public void AFindIsTakenOnArrival()
 	{
-		var run = OnRoute(Run(), Place(NodeKind.Find, find: find));
+		var run = OnRoute(Run(), Place(NodeKind.Find, find: FindKind.Gold));
 
 		var after = run.MoveTo(1);
 
-		Assert.That(after.Snares - run.Snares, Is.EqualTo(find == FindKind.Snare ? 1 : 0));
-		Assert.That(
-			after.Gold - run.Gold,
-			Is.EqualTo(find == FindKind.Gold ? PartyRun.FoundGold : 0)
-		);
+		Assert.That(after.Gold - run.Gold, Is.EqualTo(PartyRun.FoundGold));
 		Assert.That(after.HereIsCleared, "you can walk straight on");
 	}
 

@@ -18,13 +18,7 @@ public partial class PartyRunTests
 			Assert.That(
 				Buildings(Run() with { RegionIndex = region }),
 				Is.EquivalentTo(
-					new[]
-					{
-						BuildingKind.Hospital,
-						BuildingKind.Shop,
-						BuildingKind.Pen,
-						BuildingKind.Gate,
-					}
+					new[] { BuildingKind.Hospital, BuildingKind.Shop, BuildingKind.Gate }
 				)
 			);
 	}
@@ -41,14 +35,17 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void TheHospitalHealsTheTeamAndTheBenchForGold()
+	public void TheHospitalHealsTheTeamForGold()
 	{
-		var run = Run() with { Team = [new RunCompanion(A, 5)], Bench = [new RunCompanion(B, 1)] };
+		var run = WithTeam(Run(), A, B) with
+		{
+			Team = [new RunCompanion(A, 5), new RunCompanion(B, 1)],
+		};
 
 		var after = run.HealAtHospital();
 
 		Assert.That(Hp(after, "A"), Is.EqualTo(40));
-		Assert.That(after.Bench.Single().Hp, Is.EqualTo(40));
+		Assert.That(Hp(after, "B"), Is.EqualTo(40));
 		Assert.That(after.Gold, Is.EqualTo(run.Gold - PartyRun.HospitalPrice));
 	}
 

@@ -11,9 +11,6 @@ public enum RunEnd
 	/// <summary>Lost in a fight on a route (named for the trail the route replaced).</summary>
 	Trail,
 
-	/// <summary>Lost at a route's rare lair (the old deeper path).</summary>
-	Deep,
-
 	/// <summary>Lost to an ELITE on a route.</summary>
 	Elite,
 
@@ -24,14 +21,11 @@ public enum RunEnd
 	Stalled,
 }
 
-/// <summary>A team arriving at a gym: what it brought.</summary>
-public record GymArrival(int Region, double TeamHpShare, int TeamSize, bool WentDeep)
+/// <summary>A team arriving at a boss: what it brought.</summary>
+public record GymArrival(int Region, double TeamHpShare, int TeamSize)
 {
-	/// <summary>How many turns the gym took.</summary>
+	/// <summary>How many turns the boss took.</summary>
 	public int Turns { get; init; }
-
-	/// <summary>The team's average level on arrival, against the leader's (`PartyLevels`).</summary>
-	public double TeamLevel { get; init; }
 }
 
 /// <summary>One simulated run.</summary>
@@ -41,7 +35,6 @@ public record SimRun(
 	RunEnd End,
 	int Region,
 	ImmutableList<GymArrival> Gyms,
-	int Caught,
 	int Battles,
 	int Turns
 )
@@ -53,58 +46,32 @@ public record SimRun(
 
 	/// <summary>Each WILD fight's cost: the share of the team's HP it took, by region.</summary>
 	public ImmutableList<WildChip> Chips { get; init; } = [];
-
-	/// <summary>Every foe of YOUR kind met in a won fight, and whether it was caught.</summary>
-	public ImmutableList<CatchSeen> Seen { get; init; } = [];
 }
-
-/// <summary>One foe you could have caught: its species, whether you had a Snare, and whether you did.</summary>
-public record CatchSeen(string Species, bool HadSnare, bool Caught);
 
 /// <summary>What one wild fight took out of the team: the share of its HP, from the line that fought.</summary>
 public record WildChip(int Region, double Lost);
 
 /// <summary>
-/// **`party-sim`: whole runs played by <see cref="PartyBot"/>** under simple map rules — Snares when
-/// low, a card when there is gold, an area at random, the deeper path only when healthy. Seeded,
-/// deterministic, parallel. For a quick read on where runs die; the bot plays one move ahead, so
-/// its numbers are a floor.
+/// **`party-sim`: whole runs played by <see cref="PartyBot"/>** under simple map rules — a card when
+/// there is gold, the hospital when hurt, an elite only when healthy, a boss's first relic and first
+/// monster. Seeded, deterministic, parallel. For a quick read on where runs die; the bot plays one
+/// move ahead, so its numbers are a floor.
 /// </summary>
 public static class PartySim
 {
 	public const int TurnLimit = 40;
 
 	/// <summary>
-	/// **THE CURVE (Shayne, 2026-09-24), for the BOT as a baseline**: the share of runs that should get
-	/// THROUGH each region — 90% through region 3, 75% through region 5, 25% win all ten. Between those
-	/// points the per-region survival is even (geometric). Players are compared to the bot later.
+	/// **THE CURVE for the BOT** (Shayne, 2026-09-28: "bot wins ~50%"): the share of runs that should
+	/// get THROUGH each region, losing evenly — about 87% of those who reach a region get through it.
 	/// </summary>
-	public static readonly ImmutableList<double> Target = Curve(
-		[(0, 1.0), (3, 0.90), (5, 0.75), (10, 0.25)]
-	);
+	public static readonly ImmutableList<double> Target =
+	[
+		.. Enumerable.Range(1, 5).Select(r => Math.Pow(0.5, r / 5.0)),
+	];
 
-	private static ImmutableList<double> Curve((int Region, double Through)[] anchors)
-	{
-		var curve = ImmutableList.CreateBuilder<double>();
-		for (var a = 1; a < anchors.Length; a++)
-		{
-			var (from, start) = anchors[a - 1];
-			var (to, end) = anchors[a];
-			var step = Math.Pow(end / start, 1.0 / (to - from));
-			for (var r = from + 1; r <= to; r++)
-				curve.Add(start * Math.Pow(step, r - from));
-		}
-		return curve.ToImmutable();
-	}
-
-	/// <summary>Deeper only with this much of your health and the team's HP left.</summary>
-	public const double DeepIfHealthy = 0.6;
-
-	/// <summary>
-	/// **And only with this many monsters** — the first sim's bot took the deeper path with Pike alone,
-	/// against three foes, and your health drained 13, 9, 5, 3. A person would not.
-	/// </summary>
-	public const int DeepWithAtLeast = 2;
+	/// <summary>An elite, and the hospital skipped, only with this share of the team's HP left.</summary>
+	public const double HealthyAt = 0.6;
 
 	public static SimRun[] PlayMany(int count, ImmutableList<PartyCompanion>? starters = null)
 	{
@@ -119,29 +86,35 @@ public static class PartySim
 		var rng = new Random(seed);
 		var run = PartyRun.Start(starter, seed);
 		var gyms = ImmutableList<GymArrival>.Empty;
-		var caught = 0;
 		var battles = 0;
 		var turns = 0;
-		var wentDeep = false;
 		var elites = 0;
 		var elitesWon = 0;
 		var chips = ImmutableList<WildChip>.Empty;
-		var seen = ImmutableList<CatchSeen>.Empty;
+
+		SimRun Ended(RunEnd end, int region) =>
+			new(starter.Name, seed, end, region, gyms, battles, turns)
+			{
+				Elites = elites,
+				ElitesWon = elitesWon,
+				Chips = chips,
+			};
 
 		while (!run.IsOver)
 		{
 			switch (run.Phase)
 			{
 				case RunPhase.Town:
-					// Heal only when it matters: under the deeper-path threshold, and it can pay.
+					// A boss's prizes: the first relic and the first monster offered.
+					if (run.RelicChoice is [var relic, ..])
+						run = run.ChooseRelic(relic);
+					if (run.MonsterChoice is [var monster, ..])
+						run = run.ChooseMonster(monster);
 					if (!Healthy(run) && run.CannotHeal is null)
 						run = run.HealAtHospital();
-					while (run.Snares < 2 && run.CanBuySnare)
-						run = run.BuySnare();
 					if (run.CanBuyCard(0))
 						run = run.BuyCard(0);
 					run = run.EnterRoute();
-					wentDeep = false;
 					break;
 
 				case RunPhase.Route when run.HereIsCleared:
@@ -151,23 +124,12 @@ public static class PartySim
 				default:
 					if (run.AtBoss)
 						gyms = gyms.Add(
-							new GymArrival(
-								run.RegionIndex,
-								TeamShare(run),
-								run.Team.Count,
-								wentDeep
-							)
-							{
-								TeamLevel = run.Team.Average(m => m.Level),
-							}
+							new GymArrival(run.RegionIndex, TeamShare(run), run.Team.Count)
 						);
-					else if (run.Here.Kind == NodeKind.Rare)
-						wentDeep = true;
 
 					var where =
 						run.AtBoss ? RunEnd.Boss
 						: run.Here.Kind == NodeKind.Elite ? RunEnd.Elite
-						: run.Here.Kind == NodeKind.Rare ? RunEnd.Deep
 						: RunEnd.Trail;
 					if (where == RunEnd.Elite)
 						elites++;
@@ -176,8 +138,6 @@ public static class PartySim
 					var hpBefore = battle.Allies().Where(a => a.FadesIn == 0).Sum(a => a.Hp);
 					var hpMax = battle.Allies().Where(a => a.FadesIn == 0).Sum(a => a.MaxHp);
 					var wild = run.Here.Kind is NodeKind.Wild or NodeKind.Grass;
-					var yours = battle.LivingFoes().Where(battle.IsYourKind).ToList();
-					var hadSnare = battle.GetParty().Snares > 0;
 					log?.Invoke(
 						$"  BATTLE {battles + 1} ({where}): {run.NextFight.Name} — team "
 							+ string.Join(", ", run.Team.Select(m => $"{m.Companion.Name} {m.Hp}"))
@@ -189,7 +149,7 @@ public static class PartySim
 						log?.Invoke(
 							$"   turn {t + 1} ends: "
 								+ string.Join(", ", battle.Allies().Select(a => $"{a.Name} {a.Hp}"))
-								+ $" | foes "
+								+ " | foes "
 								+ string.Join(
 									", ",
 									battle.LivingFoes().Select(f => $"{f.Name} {f.Hp}")
@@ -201,35 +161,15 @@ public static class PartySim
 					turns += t;
 
 					if (!battle.GetParty().IsOver)
-						return new(
-							starter.Name,
-							seed,
-							RunEnd.Stalled,
-							run.RegionIndex,
-							gyms,
-							caught,
-							battles,
-							turns
-						);
+						return Ended(RunEnd.Stalled, run.RegionIndex);
 
 					var party = battle.GetParty();
-					caught += battle.CaughtFoes().Count();
 					if (where == RunEnd.Boss)
 						gyms = gyms.SetItem(gyms.Count - 1, gyms[^1] with { Turns = t });
 					var region = run.RegionIndex;
 					(run, _) = run.AfterBattle(battle);
-					log?.Invoke(
-						$"   => {(party.Won ? "WON" : "LOST")}, caught {battle.CaughtFoes().Count()}; next: {run.Phase}"
-					);
+					log?.Invoke($"   => {(party.Won ? "WON" : "LOST")}; next: {run.Phase}");
 
-					if (party.Won)
-						seen = seen.AddRange(
-							yours.Select(f => new CatchSeen(
-								f.Name,
-								hadSnare,
-								battle.CaughtFoes().Any(c => c.Id == f.Id)
-							))
-						);
 					if (wild && run.Phase != RunPhase.Lost)
 						chips = chips.Add(
 							new WildChip(
@@ -244,13 +184,7 @@ public static class PartySim
 							)
 						);
 					if (run.Phase == RunPhase.Lost)
-						return new(starter.Name, seed, where, region, gyms, caught, battles, turns)
-						{
-							Elites = elites,
-							ElitesWon = elitesWon,
-							Chips = chips,
-							Seen = seen,
-						};
+						return Ended(where, region);
 					if (where == RunEnd.Elite)
 						elitesWon++;
 
@@ -260,18 +194,12 @@ public static class PartySim
 			}
 		}
 
-		return new(starter.Name, seed, RunEnd.Won, run.RegionIndex, gyms, caught, battles, turns)
-		{
-			Elites = elites,
-			ElitesWon = elitesWon,
-			Chips = chips,
-			Seen = seen,
-		};
+		return Ended(RunEnd.Won, run.RegionIndex);
 	}
 
 	/// <summary>
-	/// **Where the bot walks next on a route**: hurt, a spring or a find; healthy, the rare's lair
-	/// first, then any fight. Ties broken by the seed.
+	/// **Where the bot walks next on a route**: hurt, a spring or a find; healthy, an elite first,
+	/// then any fight. Ties broken by the seed.
 	/// </summary>
 	private static int Walk(PartyRun run, Random rng)
 	{
@@ -281,12 +209,11 @@ public static class PartySim
 			{
 				NodeKind.Rest => healthy ? 1 : 6,
 				NodeKind.Find => healthy ? 2 : 5,
-				NodeKind.Rare => healthy ? 6 : 0,
 				NodeKind.Wild => healthy ? 5 : 3,
 				NodeKind.Grass => healthy ? 4 : 2,
 				NodeKind.Trainer => healthy ? 3 : 1,
 				// An elite only when healthy — and then before a wild fight: it pays a relic.
-				NodeKind.Elite => healthy ? 5 : 0,
+				NodeKind.Elite => healthy ? 6 : 0,
 				_ => 4,
 			};
 		return run.Route!.Next(run.NodeId)
@@ -296,8 +223,7 @@ public static class PartySim
 			.Id;
 	}
 
-	private static bool Healthy(PartyRun run) =>
-		run.Team.Count >= DeepWithAtLeast && TeamShare(run) >= DeepIfHealthy;
+	private static bool Healthy(PartyRun run) => TeamShare(run) >= HealthyAt;
 
 	private static double TeamShare(PartyRun run) =>
 		run.Team.Sum(m => m.Hp) / (double)run.Team.Sum(m => m.MaxHp);

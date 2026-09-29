@@ -8,8 +8,8 @@ namespace KinCore.Party;
 /// level; its HP, Power and move amounts are its BASE × <see cref="Factor"/>. **The content's own
 /// numbers are the base, at <see cref="Base"/>**, so nothing already authored moves at Lv 5.
 ///
-/// Wild levels come from the region (`Region.MinLevel/MaxLevel`); yours grow from XP. Every number is
-/// a guess (exploring, not tuning) — the point is that there is now ONE handle to turn.
+/// **Only FOES have levels now** (round 4, 2026-09-28: your monsters grow through cards, relics and
+/// upgrades, not XP): a region sets its foes' levels, and `Toughen` makes its exams harder still.
 /// </summary>
 public static class PartyLevels
 {
@@ -88,47 +88,5 @@ public static class PartyLevels
 				),
 			],
 		};
-	}
-
-	/// <summary>**A monster of yours at a level**: HP, Power and its moves scaled.</summary>
-	public static PartyCompanion Scale(PartyCompanion companion, int level) =>
-		companion with
-		{
-			Hp = At(companion.Hp, level),
-			Power = At(companion.Power, level),
-			Moves = Scaled(companion.Moves, level),
-			Level = level,
-		};
-
-	// ===== XP
-
-	/// <summary>XP to grow from this level to the next.</summary>
-	/// <remarks>22 × level, tuned with `party-sim` (2026-09-27): at 30 the team trailed every leader
-	/// by 1.5–2.5 levels and the routes after them killed.</remarks>
-	public static int XpToNext(int level) => 22 * level;
-
-	/// <summary>
-	/// **What a won fight is worth to each monster on the team**: 12 × the foes' average level — a
-	/// fight is a fight, however many foes — doubled for a leader.
-	/// </summary>
-	public static int XpFor(IEnumerable<Foe> foes, bool leader)
-	{
-		var list = foes.ToList();
-		if (list.Count == 0)
-			return 0;
-		var xp = (int)Math.Round(12 * list.Average(f => f.Level));
-		return leader ? xp * 2 : xp;
-	}
-
-	/// <summary>
-	/// **XP in; levels out.** A level gained raises its max HP, and its current HP by the same amount.
-	/// </summary>
-	public static RunCompanion Gain(RunCompanion m, int xp)
-	{
-		var (level, pool) = (m.Level, m.Xp + xp);
-		while (pool >= XpToNext(level))
-			pool -= XpToNext(level++);
-		var grown = m with { Level = level, Xp = pool };
-		return grown with { Hp = Math.Max(0, m.Hp + grown.MaxHp - m.MaxHp) };
 	}
 }

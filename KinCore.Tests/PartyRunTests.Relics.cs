@@ -78,19 +78,6 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void SnarePouchPaysNowAndAtEveryTown()
-	{
-		var run = Run();
-		var held = run.Gain(Relic.SnarePouch);
-		Assert.That(held.Snares - run.Snares, Is.EqualTo(PartyRelics.SnarePouchNow));
-
-		var (inTown, _) = WinNext(OnRoute(held).MoveTo(1));
-
-		Assert.That(inTown.Phase, Is.EqualTo(RunPhase.Town));
-		Assert.That(inTown.Snares - held.Snares, Is.EqualTo(1));
-	}
-
-	[Test]
 	public void TrainersEyeOffersMoreCards()
 	{
 		var run = Run() with
@@ -168,13 +155,5 @@ public partial class PartyRunTests
 
 		Assert.That(plain.CostOf(plain.CardsIn(ZoneType.Hand).Single()), Is.EqualTo(2));
 		Assert.That(held.CostOf(held.CardsIn(ZoneType.Hand).Single()), Is.Zero);
-	}
-
-	[Test]
-	public void BigTentHoldsAFourthMonsterOnTheTeam()
-	{
-		var run = WithTeam(Run(), A, B, C);
-		Assert.That(run.TeamCapacity, Is.EqualTo(PartyRun.TeamSize));
-		Assert.That(run.Gain(Relic.BigTent).TeamCapacity, Is.EqualTo(PartyRelics.BigTentTeam));
 	}
 }

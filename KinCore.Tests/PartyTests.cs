@@ -270,21 +270,6 @@ public partial class PartyTests
 	}
 
 	[Test]
-	public void AFallLetsTheBenchJoinAtTheBackAndTheLineClosesUp()
-	{
-		var s = Battle(
-			[new(Mon("Pike", hp: 5), 0), new(Mon("Bramble"), 1), new(Mon("Boar"), -1)],
-			[],
-			Foe(0, pattern: Hit(9))
-		);
-		Assert.That(Line(s), Is.EqualTo("Pike,Bramble"), "the bench is not in the line");
-
-		s = EndTurn(s);
-
-		Assert.That(Line(s), Is.EqualTo("Bramble,Boar"));
-	}
-
-	[Test]
 	public void SwapRallyAndRetreatReorderYourLine()
 	{
 		var s = Battle(
@@ -606,93 +591,7 @@ public partial class PartyTests
 		Assert.That(s.CardsIn(ZoneType.Hand), Is.Empty);
 	}
 
-	// ===== Catching — a Snare is an item, thrown at a weakened foe in their FRONT
-
-	private static GameState WithSnares(GameState s, int snares) =>
-		s.UpdateObject(s.GetParty().Id, s.GetParty() with { Snares = snares });
-
-	private static GameState Weakened(GameState s, int position, int hp, int maxHp = 30) =>
-		s.UpdateObject(FoeIn(s, position).Id, FoeIn(s, position) with { Hp = hp, MaxHp = maxHp });
-
-	private static bool CanSnare(GameState s, int position) =>
-		new UseSnareAction { FoeId = FoeIn(s, position).Id }
-			.ValidateAdd(s)
-			.IsValid;
-
-	[Test]
-	public void AFoeCanBeCaughtOnlyAtAThirdOfItsHpOrLess()
-	{
-		var s = WithSnares(Battle([new(Mon("Pike"), 0)], [], Foe(0, hp: 30), Foe(1)), 1);
-		Assert.That(CanSnare(s, 0), Is.False, "30 of 30");
-
-		s = Weakened(s, 0, 10);
-		Assert.That(CanSnare(s, 0), Is.True, "10 of 30");
-	}
-
-	[Test]
-	public void ASnareOnlyReachesTheirFront()
-	{
-		var s = Weakened(WithSnares(Battle([new(Mon("Pike"), 0)], [], Foe(0), Foe(1)), 1), 1, 3);
-
-		Assert.That(CanSnare(s, 1), Is.False);
-		Assert.That(s.CatchRefusal(FoeIn(s, 1)), Does.Contain("front"));
-	}
-
-	[Test]
-	public void ACaughtFoeLeavesTheLineAndCostsASnareAndEnergy()
-	{
-		var s = Weakened(WithSnares(Battle([new(Mon("Pike"), 0)], [], Foe(0), Foe(1)), 2), 0, 3);
-
-		s = Do(s, new UseSnareAction { FoeId = FoeIn(s, 0).Id });
-
-		Assert.That(s.LivingFoes().Count(), Is.EqualTo(1), "the one behind stepped up");
-		Assert.That(s.CaughtFoes().Single().Hp, Is.EqualTo(3), "caught at the HP it had");
-		Assert.That(s.GetParty().Snares, Is.EqualTo(1));
-		Assert.That(s.GetParty().Energy, Is.EqualTo(3 - UseSnareAction.Cost));
-	}
-
-	[Test]
-	public void CatchingTheLastFoeWinsTheBattle()
-	{
-		var s = Weakened(WithSnares(Battle([new(Mon("Pike"), 0)], [], Foe(0)), 1), 0, 3);
-
-		s = Do(s, new UseSnareAction { FoeId = FoeIn(s, 0).Id });
-
-		Assert.That(s.GetParty().IsOver && s.GetParty().Won, Is.True);
-	}
-
-	[Test]
-	public void NoSnaresOrABossCannotBeCaught()
-	{
-		var s = Weakened(Battle([new(Mon("Pike"), 0)], [], Foe(0)), 0, 3);
-		Assert.That(CanSnare(s, 0), Is.False, "no Snares");
-
-		s = WithSnares(s, 1);
-		Assert.That(CanSnare(s, 0), Is.True);
-
-		s = s.UpdateObject(FoeIn(s, 0).Id, FoeIn(s, 0) with { Catchable = false });
-		Assert.That(CanSnare(s, 0), Is.False, "a boss");
-	}
-
 	// ===== The bench and monster decks
-
-	[Test]
-	public void ABenchedMonsterIsOutOfTheLineUntilOneFalls()
-	{
-		var s = Battle(
-			[new(Mon("Pike", hp: 5), 0), new(Mon("Boar", moves: Hit(3)), -1)],
-			[],
-			Foe(0, pattern: [Hit(9), Hit(1)])
-		);
-		Assert.That(s.ActingOrder().Any(c => c.Name == "Boar"), Is.False, "the bench does not act");
-
-		s = EndTurn(s);
-		Assert.That(Line(s), Is.EqualTo("Boar"));
-		Assert.That(s.GetParty().IsOver, Is.False, "so the battle goes on");
-
-		s = EndTurn(s);
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 3), "and it fights from the next round");
-	}
 
 	// ===== Monsters that change how you play: triggers
 
@@ -1234,7 +1133,7 @@ public partial class PartyTests
 	}
 
 	[Test]
-	public void AWildBroodPutsAGrubAtTheirFrontThatCannotBeCaught()
+	public void AWildBroodPutsAGrubAtTheirFront()
 	{
 		var brood = new Intent
 		{
@@ -1246,7 +1145,6 @@ public partial class PartyTests
 
 		var front = FoeIn(s, 0);
 		Assert.That(front.FadesIn, Is.GreaterThan(0), "the grub is in front");
-		Assert.That(front.Catchable, Is.False);
 	}
 
 	[Test]
@@ -1289,22 +1187,6 @@ public partial class PartyTests
 	}
 
 	// ===== How a battle ends
-
-	[Test]
-	public void TheBattleIsLostOnlyWhenTheBenchIsGoneToo()
-	{
-		var s = Battle(
-			[new(Mon("Pike", hp: 5), 0), new(Mon("Boar", hp: 5), -1)],
-			[],
-			Foe(0, pattern: Hit(9))
-		);
-
-		s = EndTurn(s);
-		Assert.That(s.GetParty().IsOver, Is.False);
-
-		s = EndTurn(s);
-		Assert.That(s.GetParty().IsOver && !s.GetParty().Won, Is.True);
-	}
 
 	[Test]
 	public void KillingTheLastFoeWins()

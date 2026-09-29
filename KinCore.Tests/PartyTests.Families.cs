@@ -362,22 +362,4 @@ public partial class PartyTests
 			Assert.That(after.RewardOffer().Any(c => c.Rarity == Rarity.Rare), Is.True);
 		}
 	}
-
-	[Test]
-	public void YouCatchOnlyYourFamilyAndColourless()
-	{
-		static Foe Weak(Family family) => Foe(0, hp: 30) with { Hp = 1, Family = family };
-
-		string? Refusal(Family foe)
-		{
-			var s = Deal([new(Mon("Pike"), 0)], [], Weak(foe));
-			var party = s.GetParty();
-			s = s.UpdateObject(party.Id, party with { Snares = 1, Family = Family.Grove });
-			return s.CatchRefusal(s.FoeAt(0)!);
-		}
-
-		Assert.That(Refusal(Family.Grove), Is.Null, "your family");
-		Assert.That(Refusal(Family.None), Is.Null, "colourless");
-		Assert.That(Refusal(Family.Ember), Does.StartWith("Not your family"));
-	}
 }

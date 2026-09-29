@@ -110,7 +110,7 @@ public sealed class KinRouteMap
 		_subtitle.Text =
 			$"▲ {areas[0].Name}   ·   {areas[1].Name} ▼   ·   wild LV {run.Region.MinLevel}–{run.Region.MaxLevel}"
 			+ "   ·   pick a lit place to walk to";
-		_purse.Text = $"GOLD {run.Gold}   ·   SNARES {run.Snares}";
+		_purse.Text = $"GOLD {run.Gold}";
 		_note.Text = Arrived(run.Here);
 
 		foreach (var child in _places.GetChildren())
@@ -268,13 +268,12 @@ public sealed class KinRouteMap
 	private static (Texture2D Art, string Glyph) Face(RouteNode node) =>
 		node.Kind switch
 		{
-			NodeKind.Wild or NodeKind.Rare or NodeKind.Elite or NodeKind.End => (
+			NodeKind.Wild or NodeKind.Elite or NodeKind.End => (
 				Creature(node.Encounter!.Foes.MaxBy(f => f.MaxHp)!.Name),
 				""
 			),
 			NodeKind.Trainer => (KinArt.AttackIcon, ""),
 			NodeKind.Rest => (KinArt.Drawing("icons/life"), ""),
-			NodeKind.Find when node.Find == FindKind.Snare => (KinArt.Drawing("cards/snare"), ""),
 			NodeKind.Find => (null, "$"),
 			NodeKind.Grass => (null, "?"),
 			_ => (null, "●"),
@@ -290,7 +289,6 @@ public sealed class KinRouteMap
 			NodeKind.End => "BOSS · " + node.Encounter!.Name.ToUpperInvariant(),
 			NodeKind.Elite => "ELITE · " + node.Encounter!.Name.ToUpperInvariant(),
 			NodeKind.Wild => Species(node),
-			NodeKind.Rare => "RARE · " + node.Encounter!.Foes[0].Name.ToUpperInvariant(),
 			NodeKind.Grass => "TALL GRASS",
 			NodeKind.Trainer => "TRAINER",
 			NodeKind.Rest => "SPRING",
@@ -304,18 +302,14 @@ public sealed class KinRouteMap
 	private static string Tooltip(RouteNode node) =>
 		node.Kind switch
 		{
-			NodeKind.Wild =>
-				$"A wild fight: {Species(node)}. Weaken one and throw a Snare to catch it.",
+			NodeKind.Wild => $"A wild fight: {Species(node)}.",
 			NodeKind.Grass =>
 				"Tall grass: a wild fight, but you will not know what until you walk in.",
-			NodeKind.Rare =>
-				$"The rare's lair: {Species(node)}. Harder — the only place this rare lives.",
-			NodeKind.Trainer =>
-				"A trainer: a harder fight that pays more. Nothing here can be caught.",
+			NodeKind.Trainer => "A trainer: a harder fight that pays more.",
 			NodeKind.Rest => $"A spring: every monster heals {(int)(PartyRun.RestHeal * 100)}%.",
 			NodeKind.Find => "Something lying on the path.",
 			NodeKind.Elite =>
-				$"An ELITE: {node.Encounter!.Name}. A hard fight that pays a rare card, a relic, and big XP and gold. Nothing here can be caught.",
+				$"An ELITE: {node.Encounter!.Name}. A hard fight that pays a rare card, a relic, and gold.",
 			NodeKind.End =>
 				$"The BOSS: {node.Encounter!.Name}. Beat it to go on. The spring before it heals {(int)(PartyRun.RestHeal * 100)}%.",
 			_ => "",
@@ -325,7 +319,6 @@ public sealed class KinRouteMap
 	private static string Arrived(RouteNode here) =>
 		here.Kind switch
 		{
-			NodeKind.Find when here.Find == FindKind.Snare => "You found a Snare.",
 			NodeKind.Find => $"You found a purse: +{PartyRun.FoundGold} gold.",
 			NodeKind.Rest => "The spring heals everyone.",
 			_ => "",

@@ -19,7 +19,7 @@ public partial record PartyRun
 
 	/// <summary>
 	/// **Out of the town, onto its route** — drawn now from the region, seeded, with the region's BOSS
-	/// at its end and the run's FAMILY's rare in its lair.
+	/// at its end.
 	/// </summary>
 	public PartyRun EnterRoute() =>
 		CannotLeaveTown is not null
@@ -27,16 +27,12 @@ public partial record PartyRun
 			: this with
 			{
 				Phase = RunPhase.Route,
-				Route = PartyRoutes.Build(
-					Region,
-					new Random(Seed * 17 + RegionIndex * 7),
-					Boss,
-					PartyWorld.RareOf(Family)
-				),
+				Route = PartyRoutes.Build(Region, new Random(Seed * 17 + RegionIndex * 7), Boss),
 				NodeId = 0,
 				Cleared = [0],
 				Sold = [],
 				RelicChoice = [],
+				MonsterChoice = [],
 			};
 
 	/// <summary>Why you cannot walk to that place — or null if you can.</summary>
@@ -62,14 +58,9 @@ public partial record PartyRun
 		{
 			NodeKind.Find => run.Clear() with
 			{
-				Snares = Snares + (here.Find == FindKind.Snare ? 1 : 0),
 				Gold = Gold + (here.Find == FindKind.Gold ? FoundGold : 0),
 			},
-			NodeKind.Rest => run.Clear() with
-			{
-				Team = Heal(Team, RestHeal),
-				Bench = Heal(Bench, RestHeal),
-			},
+			NodeKind.Rest => run.Clear() with { Team = Heal(Team, RestHeal) },
 			_ when here.IsFight => run,
 			_ => run.Clear(),
 		};
@@ -81,7 +72,6 @@ public partial record PartyRun
 	private static int RouteGold(NodeKind kind) =>
 		kind switch
 		{
-			NodeKind.Rare => DeepGold,
 			NodeKind.Trainer => TrainerGold,
 			NodeKind.Elite => EliteGold,
 			NodeKind.End => BossGold,

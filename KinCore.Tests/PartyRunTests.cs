@@ -62,8 +62,8 @@ public partial class PartyRunTests
 		new(
 			name,
 			[Area($"{name}North"), Area($"{name}South")],
-			[Fight(Foe($"{name} Boss") with { Catchable = false })],
-			[Fight(Foe($"{name} Elite") with { Catchable = false })],
+			[Fight(Foe($"{name} Boss"))],
+			[Fight(Foe($"{name} Elite"))],
 			1,
 			2
 		);
@@ -112,28 +112,19 @@ public partial class PartyRunTests
 	private static (PartyRun, RunReport) WinNext(PartyRun run) =>
 		run.AfterBattle(Win(run.StartBattle()));
 
-	/// <summary>Weakens the foe at that place in their line to `hp` and throws a Snare at it.</summary>
-	private static GameState Catch(GameState s, int position, int hp)
-	{
-		var foe = s.LivingFoes().Single(f => f.Position == position);
-		s = s.UpdateObject(foe.Id, foe with { Hp = hp });
-		return Do(s, new UseSnareAction { FoeId = foe.Id });
-	}
-
 	private static int Hp(PartyRun run, string name) =>
 		run.Team.Single(m => m.Companion.Name == name).Hp;
 
 	// ===== The regions
 
 	[Test]
-	public void ARunStartsInTheFirstTownWithOneMonsterSnaresAndGold()
+	public void ARunStartsInTheFirstTownWithOneMonsterAndGold()
 	{
 		var run = Run();
 
 		Assert.That(run.Phase, Is.EqualTo(RunPhase.Town));
 		Assert.That(run.Region.Name, Is.EqualTo("R1"));
 		Assert.That(run.Team.Select(m => m.Companion.Name), Is.EqualTo(new[] { "A" }));
-		Assert.That(run.Snares, Is.EqualTo(PartyRun.StartingSnares));
 		Assert.That(run.Gold, Is.EqualTo(PartyRun.StartingGold));
 	}
 
@@ -164,11 +155,6 @@ public partial class PartyRunTests
 	{
 		foreach (var region in PartyWorld.Regions)
 		{
-			Assert.That(
-				region.Bosses.Concat(region.Elites).SelectMany(e => e.Foes),
-				Has.All.Matches<Foe>(f => !f.Catchable),
-				$"{region.Name}'s bosses and elites"
-			);
 			var index = PartyWorld.Regions.IndexOf(region);
 			var route = (
 				PartyRun.Start(PartyContent.Pike, seed: 5) with
@@ -200,7 +186,7 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void AKnockedOutMonsterRevivesAtAQuarterOfItsMax()
+	public void AKnockedOutMonsterIsBackAtOneHp()
 	{
 		var run = OnFights(WithTeam(Run(), A, B), Fight(Foe("Brute", 1, 99)), Fight(Foe("Idle")));
 
@@ -210,7 +196,40 @@ public partial class PartyRunTests
 		RunReport report;
 		(run, report) = run.AfterBattle(Win(battle)); // B wins it
 		Assert.That(report.Revived, Is.EqualTo(new[] { "A" }));
-		Assert.That(Hp(run, "A"), Is.EqualTo(10));
+		Assert.That(Hp(run, "A"), Is.EqualTo(1), "round 4: back at 1 HP");
+	}
+
+	// ===== Monsters come from BOSSES (round 4)
+
+	[Test]
+	public void TheFirstTwoBossesEachOfferThreeMonstersOfYourFamily()
+	{
+		var run = Run() with
+		{
+			Family = Family.Grove,
+			Regions = [Region("R1"), Region("R2"), Region("R3")],
+		};
+
+		foreach (var region in new[] { 0, 1 })
+		{
+			var (town, _) = WinNext(OnRoute(run with { RegionIndex = region }).MoveTo(1));
+
+			Assert.That(town.MonsterChoice, Has.Count.EqualTo(3), $"boss {region + 1}");
+			Assert.That(town.MonsterChoice.Select(m => m.Family), Is.All.EqualTo(Family.Grove));
+
+			var pick = town.MonsterChoice[0];
+			run = town.ChooseMonster(pick);
+			Assert.That(run.Team.Select(m => m.Companion.Name), Does.Contain(pick.Name));
+			Assert.That(
+				run.Team.Single(m => m.Companion.Name == pick.Name).Hp,
+				Is.EqualTo(pick.Hp)
+			);
+			Assert.That(run.MonsterChoice, Is.Empty);
+		}
+
+		Assert.That(run.Team, Has.Count.EqualTo(PartyRun.TeamSize));
+		var (third, _) = WinNext(OnRoute(run with { RegionIndex = 2 }).MoveTo(1));
+		Assert.That(third.MonsterChoice, Is.Empty, "a full team is offered no more");
 	}
 
 	// ===== Deploy — the order is yours, and it is kept
@@ -238,71 +257,10 @@ public partial class PartyRunTests
 
 	// ===== The bench in battle
 
-	[Test]
-	public void TheBenchFightsAndComesBackWithTheHpItHasLeft()
-	{
-		var run = OnFights(
-			WithTeam(Run(), Mon("A", hp: 5)) with
-			{
-				Bench = [new RunCompanion(B, 40)],
-			},
-			Fight(Foe("Brute", hit: 9)),
-			Fight(Foe("Idle"))
-		);
-
-		var battle = EndTurnTwice(run.StartBattle()); // A faints, B steps in and takes a hit
-		RunReport report;
-		(run, report) = run.AfterBattle(Win(battle));
-
-		Assert.That(report.Revived, Is.EqualTo(new[] { "A" }));
-		Assert.That(run.Bench.Single().Hp, Is.EqualTo(40 - 9), "B stays on the bench, hurt");
-		Assert.That(run.Team.Single().Companion.Name, Is.EqualTo("A"), "the lineup is unchanged");
-	}
-
 	private static GameState EndTurnTwice(GameState s) =>
 		Do(Do(s, new EndPartyTurnAction()), new EndPartyTurnAction());
 
 	// ===== Catching
-
-	[Test]
-	public void ACaughtFoeJoinsWithItsCycleAtHalfItsHp()
-	{
-		var run = OnFights(Run(), Fight(Foe("Brute", hit: 6)), Fight(Foe("Idle")));
-
-		RunReport report;
-		(run, report) = run.AfterBattle(Catch(run.StartBattle(), 0, hp: 10));
-
-		Assert.That(report.Caught, Is.EqualTo(new[] { "Brute" }));
-		var caught = run.Team[1];
-		Assert.That(
-			caught.Hp,
-			Is.EqualTo((caught.MaxHp + 1) / 2),
-			"half, not the 10 it was caught at"
-		);
-		Assert.That(caught.Companion.Moves.Single().Amount, Is.EqualTo(6), "its own move");
-		Assert.That(run.Snares, Is.EqualTo(PartyRun.StartingSnares - 1), "the Snare is spent");
-		Assert.That(run.StartBattle().Allies().Count(), Is.EqualTo(2), "and it fights");
-	}
-
-	[Test]
-	public void ACatchBeyondThreeGoesToTheBenchAndCanBeSwappedIn()
-	{
-		var run = OnFights(
-			WithTeam(Run(), A, B, C),
-			Fight(Foe("Runt", 0), Foe("Brute", 1)),
-			Fight(Foe("Idle"))
-		);
-
-		RunReport report;
-		(run, report) = run.AfterBattle(Win(Catch(run.StartBattle(), 0, hp: 5)));
-
-		Assert.That(report.ToBench, Is.EqualTo(new[] { "Runt" }));
-		Assert.That(run.Team, Has.Count.EqualTo(PartyRun.TeamSize));
-
-		run = run.Swap(teamIndex: 1, benchIndex: 0);
-		Assert.That(run.Team.Select(m => m.Companion.Name), Is.EqualTo(new[] { "A", "Runt", "C" }));
-		Assert.That(run.Bench.Single().Companion.Name, Is.EqualTo("B"));
-	}
 
 	// ===== Cards and the shop
 
@@ -314,19 +272,6 @@ public partial class PartyRunTests
 		run = run.Take(run.RewardOffer()[0]);
 
 		Assert.That(run.Deck, Has.Count.EqualTo(2));
-	}
-
-	[Test]
-	public void TheShopSellsSnaresForGold()
-	{
-		var run = Run().BuySnare();
-
-		Assert.That(run.Snares, Is.EqualTo(PartyRun.StartingSnares + 1));
-		Assert.That(run.Gold, Is.EqualTo(PartyRun.StartingGold - PartyRun.SnarePrice));
-
-		var broke = run with { Gold = PartyRun.SnarePrice - 1 };
-		Assert.That(broke.CanBuySnare, Is.False);
-		Assert.That(broke.BuySnare(), Is.EqualTo(broke), "nothing happens");
 	}
 
 	[Test]

@@ -5,7 +5,7 @@ namespace KinCore.Party;
 
 /// <summary>
 /// **The bot for `party-sim` — never for play.** Each turn it searches SEQUENCES of plays (a beam:
-/// the best few part-turns, each extended by every card and Snare), so it finds combos whose first
+/// the best few part-turns, each extended by every card), so it finds combos whose first
 /// card looks useless alone — Charge then Rally, Gust then a Strike. A plan is scored by what the
 /// ENGINE says ending the turn leaves, AND by the turn after with no plays, so the order the line is
 /// left in matters. Still a heuristic: its win rate is a floor, not the game's. Not yet re-tuned
@@ -13,15 +13,6 @@ namespace KinCore.Party;
 /// </summary>
 public static class PartyBot
 {
-	/// <summary>A catch is worth this much HP.</summary>
-	public const double CatchValue = 15;
-
-	/// <summary>
-	/// **A foe left at catchable HP, with a Snare to throw, is most of a catch** — so the bot stops
-	/// hitting a foe it could Snare next turn instead of killing it (the first sim's bot never did).
-	/// </summary>
-	public const double CatchableValue = CatchValue * 0.6;
-
 	/// <summary>Part-turns kept at each depth, and the most plays in one turn.</summary>
 	public const int BeamWidth = 5;
 
@@ -99,7 +90,7 @@ public static class PartyBot
 		return s;
 	}
 
-	/// <summary>Every distinct card on every place in either line, every Snare.</summary>
+	/// <summary>Every distinct card on every place in either line.</summary>
 	private static IEnumerable<GameAction> Candidates(GameState s)
 	{
 		// Two copies of Guard do the same thing — try one.
@@ -112,9 +103,6 @@ public static class PartyBot
 						Space = space,
 						FoeRow = foeRow,
 					};
-
-		foreach (var foe in s.LivingFoes())
-			yield return new UseSnareAction { FoeId = foe.Id };
 	}
 
 	/// <summary>
@@ -140,15 +128,8 @@ public static class PartyBot
 
 	private static double Value(GameState s)
 	{
-		var party = s.GetParty();
-		var snaring =
-			party.Snares > 0
-				? s.LivingFoes().Count(f => s.IsYourKind(f) && f.Hp <= f.CatchAt()) * CatchableValue
-				: 0;
 		return s.Allies().Where(a => !a.IsKnockedOut).Sum(a => a.Hp)
-			- s.LivingFoes().Sum(f => f.Hp)
-			+ s.CaughtFoes().Count() * CatchValue
-			+ snaring;
+			- s.LivingFoes().Sum(f => f.Hp);
 	}
 
 	/// <summary>Enough of a state to tell two part-turns apart — the beam keeps one of each.</summary>
@@ -165,10 +146,10 @@ public static class PartyBot
 					s.GetChildren(s.GetWellKnownId(PartyState.BattleKey))
 						.OfType<Foe>()
 						.Select(f =>
-							$"{f.Id}:{f.Position}:{f.Hp}:{f.Block}:{f.Staggered}:{f.OffBalance}:{f.Caught}"
+							$"{f.Id}:{f.Position}:{f.Hp}:{f.Block}:{f.Staggered}:{f.OffBalance}"
 						)
 				)
-				.Append($"{party.Energy}:{party.Snares}:{party.NextCardFree}:{party.XPaid}")
+				.Append($"{party.Energy}:{party.NextCardFree}:{party.XPaid}")
 				.Append(string.Join(",", s.CardsIn(ZoneType.Hand).Select(c => c.Id)))
 		);
 	}
@@ -178,7 +159,6 @@ public static class PartyBot
 		{
 			PlayPartyCardAction p =>
 				$"{s.GetObject(p.CardId).Name} on {(p.FoeRow ? "their" : "your")} line at {p.Space}",
-			UseSnareAction u => $"SNARE at the {s.GetObject(u.FoeId).Name}",
 			_ => action.GetType().Name,
 		};
 }

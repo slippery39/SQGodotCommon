@@ -8,11 +8,8 @@ public enum BuildingKind
 	/// <summary>Heals the team and the bench — for gold.</summary>
 	Hospital,
 
-	/// <summary>Snares, cards, and taking a card out of the deck.</summary>
+	/// <summary>Cards, and taking a card out of the deck.</summary>
 	Shop,
-
-	/// <summary>The team and the bench: who fights next.</summary>
-	Pen,
 
 	/// <summary>The road out, onto the route — and its boss at the end.</summary>
 	Gate,
@@ -37,7 +34,6 @@ public static class PartyTowns
 			[
 				new(BuildingKind.Hospital, "Hospital", 0.22, 0.34),
 				new(BuildingKind.Shop, "Shop", 0.5, 0.26),
-				new(BuildingKind.Pen, "The Pen", 0.25, 0.72),
 				new(BuildingKind.Gate, "Town Gate", 0.8, 0.74),
 			]
 		);

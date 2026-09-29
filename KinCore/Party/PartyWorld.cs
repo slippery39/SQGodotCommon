@@ -6,7 +6,6 @@ namespace KinCore.Party;
 /// <summary>What a find on a route holds.</summary>
 public enum FindKind
 {
-	Snare,
 	Gold,
 
 	/// <summary>A quiet spot: every monster heals 30% of its max (a route's spring).</summary>
@@ -616,10 +615,7 @@ public static class PartyWorld
 					line.Name,
 					[
 						.. line.Foes.Select(f =>
-							PartyLevels.Toughen(PartyLevels.Scale(f, level), hp, hit) with
-							{
-								Catchable = false,
-							}
+							PartyLevels.Toughen(PartyLevels.Scale(f, level), hp, hit)
 						),
 					]
 				)),
@@ -637,20 +633,6 @@ public static class PartyWorld
 			t.Boss
 		);
 	}
-
-	/// <summary>
-	/// **The rare of a FAMILY** — what a route's lair holds for a run of it, so the lair is always a
-	/// catch you can make. Null for no family (a practice run), which keeps the area's own.
-	/// </summary>
-	public static Foe? RareOf(Family family) =>
-		family switch
-		{
-			Family.Grove => Howler,
-			Family.Ember => EchoOwl,
-			Family.Storm => Glowmoth,
-			Family.Mire => Inkling,
-			_ => null,
-		};
 
 	/// <summary>
 	/// **A creature's BASE, by name** — what a caught one's stats grow from. Null for a name no area

@@ -15,12 +15,6 @@ public enum NodeKind
 	Grass,
 
 	/// <summary>
-	/// The route's rare, on one branch only: harder, and the only place it lives — always your
-	/// FAMILY's rare, so the lair is a catch you can make.
-	/// </summary>
-	Rare,
-
-	/// <summary>
 	/// **An ELITE**: a mini-boss with its own patterns, SHOWN on the map, so taking it is a choice.
 	/// Pays a rare-led card reward, a RELIC, and big XP and gold. Nothing in it can be caught.
 	/// </summary>
@@ -29,7 +23,7 @@ public enum NodeKind
 	/// <summary>A trainer's line: pays more, and nothing in it can be caught.</summary>
 	Trainer,
 
-	/// <summary>Something lying on the path — a Snare or gold (<see cref="RouteNode.Find"/>).</summary>
+	/// <summary>Something lying on the path — gold (<see cref="RouteNode.Find"/>).</summary>
 	Find,
 
 	/// <summary>A spring: every monster heals a share of its max.</summary>
@@ -55,7 +49,7 @@ public record RouteNode(
 	double X,
 	int Area = 0,
 	Encounter? Encounter = null,
-	FindKind Find = FindKind.Snare
+	FindKind Find = FindKind.Gold
 )
 {
 	public bool IsFight => Encounter is not null;
@@ -95,7 +89,7 @@ public static class PartyRoutes
 	/// <summary>The rows an elite may stand on: past the first choices, before the rare's row.</summary>
 	private static readonly int[] EliteRows = [4, 5, 6, 7];
 
-	public static RouteMap Build(Region region, Random rng, Encounter boss, Foe? rare = null)
+	public static RouteMap Build(Region region, Random rng, Encounter boss)
 	{
 		var nodes = new List<RouteNode>();
 		var rows = new List<List<int>>();
@@ -108,36 +102,23 @@ public static class PartyRoutes
 				var area = x < 0.5 ? 0 : 1;
 				ids.Add(nodes.Count);
 				nodes.Add(
-					Place(
-						nodes.Count,
-						kind,
-						row,
-						x,
-						region,
-						region.Areas[area],
-						area,
-						rng,
-						rare,
-						boss
-					)
+					Place(nodes.Count, kind, row, x, region, region.Areas[area], area, rng, boss)
 				);
 			}
 			rows.Add(ids);
 		}
 
 		Row(0, [(NodeKind.Start, 0.5)]);
-		// The first fork is one visible fight in each biome: the first choice is what to catch.
+		// The first fork is one visible fight in each biome.
 		Row(1, [(NodeKind.Wild, 0.25), (NodeKind.Wild, 0.75)]);
 		// **1–2 ELITES, each on its own row** — shown, and a fork around each, so they can be dodged.
 		var eliteRows = EliteRows.OrderBy(_ => rng.Next()).Take(rng.Next(1, 3)).ToHashSet();
 		for (var row = 2; row <= Middle; row++)
 		{
 			var kinds = Enumerable.Range(0, rng.Next(2, 4)).Select(_ => Roll(rng)).ToList();
-			// Guarantees, so every route has each kind of choice: tall grass early, the rare late.
+			// A guarantee, so every route has tall grass early.
 			if (row == 2)
 				kinds[0] = NodeKind.Grass;
-			if (row == Middle)
-				kinds[rng.Next(kinds.Count)] = NodeKind.Rare;
 			if (eliteRows.Contains(row))
 				kinds[rng.Next(kinds.Count)] = NodeKind.Elite;
 			Row(row, kinds.Select((k, i) => (k, Spread(i, kinds.Count, rng))));
@@ -176,7 +157,6 @@ public static class PartyRoutes
 		Area area,
 		int areaIndex,
 		Random rng,
-		Foe? rare,
 		Encounter boss
 	)
 	{
@@ -197,13 +177,6 @@ public static class PartyRoutes
 			{
 				Encounter = Wild(rng.Next(region.MinFoes, region.MaxFoes + 1)),
 			},
-			NodeKind.Rare => node with
-			{
-				Encounter = Wild(
-					Math.Min(PartyBattle.MaxLine, region.MaxFoes + 1),
-					rare ?? area.Rare
-				),
-			},
 			NodeKind.Elite => node with
 			{
 				Encounter = region.Elites[rng.Next(region.Elites.Count)],
@@ -213,14 +186,13 @@ public static class PartyRoutes
 			{
 				Encounter = Trainer(Wild(region.MaxFoes, level: region.TrainerLevel)),
 			},
-			NodeKind.Find => node with { Find = rng.Next(2) == 0 ? FindKind.Snare : FindKind.Gold },
+			NodeKind.Find => node with { Find = FindKind.Gold },
 			_ => node,
 		};
 	}
 
-	/// <summary>A trainer's line is their monsters, not wild ones: none can be caught.</summary>
-	private static Encounter Trainer(Encounter wild) =>
-		new("Trainer", [.. wild.Foes.Select(f => f with { Catchable = false })]);
+	/// <summary>A trainer's line: harder than the wild, and paid better.</summary>
+	private static Encounter Trainer(Encounter wild) => new("Trainer", wild.Foes);
 
 	/// <summary>
 	/// **Links from each row to the next, without crossing**: each place to its proportional place

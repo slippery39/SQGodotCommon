@@ -71,7 +71,7 @@ only) and arms the Snare; `--inspect=N` shows the hover panel for the creature i
 `--end-turn` ends the turn at 1.6s, to capture the foes' turn animating. The RUN (no `--scenario`):
 `--starter=N` skips choosing (Roster[N]) and opens in the first town; `--screen=route` sets out onto its
 route map, `route2` stands further along it (placed, not walked — a find there is not picked up),
-`town2` is the second town's map, `boss` stands at the route's end before its boss (placed, not walked), `relics` beats that boss (through `DebugEndBattle`) to show the boss-relic choice,
+`town2` is the second town's map, `boss` stands at the route's end before its boss (placed, not walked), `relics` beats that boss (through `DebugEndBattle`) to show the boss-relic choice, `monsters` the boss's monster pick,
 `hospital|shop|pen` open that building in the first town (the starter at half HP),
 `routefight` walks to the route's first fight and stays in it,
 `--screen=between|over` fights the route's first place and ends it through

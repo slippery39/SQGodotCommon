@@ -27,7 +27,7 @@ public static class PartySimCommand
 		}
 
 		// `party-sim variants 150` — is it the STARTER or its FAMILY? Each starter, then with one thing
-		// swapped: its HP, its family (deck, rewards, catches), its passive. Same seeds for every row.
+		// swapped: its HP, its family (deck, rewards, boss picks), its passive. Same seeds for every row.
 		if (args.Length > 1 && args[1] == "variants")
 		{
 			var each = args.Length > 2 && int.TryParse(args[2], out var v) ? v : 150;
@@ -50,30 +50,7 @@ public static class PartySimCommand
 				var region1 = played.Count(r => r.Region == 0 && r.End != RunEnd.Won);
 				Console.WriteLine(
 					$"  {label, -24} won {Pct(played.Count(r => r.End == RunEnd.Won), each)}"
-						+ $"   died in region 1: {region1, 3}   caught {played.Average(r => r.Caught):F1}"
-				);
-			}
-			return;
-		}
-
-		// `party-sim catches 300` — every foe of your kind met in a won fight, by species: how often
-		// it was caught, how often there was no Snare to throw.
-		if (args.Length > 1 && args[1] == "catches")
-		{
-			var each = args.Length > 2 && int.TryParse(args[2], out var c) ? c : 300;
-			var played = PartySim.PlayMany(each);
-			foreach (
-				var species in played
-					.SelectMany(r => r.Seen)
-					.GroupBy(x => x.Species)
-					.OrderBy(g => g.Key)
-			)
-			{
-				var withSnare = species.Where(x => x.HadSnare).ToList();
-				var family = PartyWorld.Species(species.Key)?.Family ?? Family.None;
-				Console.WriteLine(
-					$"  {species.Key, -14} {family, -6} met {species.Count(), 4}   no Snare {species.Count(x => !x.HadSnare), 4}"
-						+ $"   with a Snare, caught {Pct(withSnare.Count(x => x.Caught), withSnare.Count)}"
+						+ $"   died in region 1: {region1, 3}"
 				);
 			}
 			return;
@@ -99,13 +76,12 @@ public static class PartySimCommand
 				$"    {starter.Key, -8} {Pct(starter.Count(r => r.End == RunEnd.Won), starter.Count())}"
 			);
 
-		// One row a region: how many got THROUGH it against the curve, how it went there, and the gym.
-		// One row a region: how many got THROUGH it against the curve, how it went there, and the gym.
+		// One row a region: how many got THROUGH it against the curve, how they died, and the boss.
 		var regions = PartyWorld.Regions;
 		Console.WriteLine();
 		Console.WriteLine(
-			"  REGION               THROUGH (target)   survived (target)  died trail/deep/elite/boss  "
-				+ "at gym: team  size  deeper  turns  lv (leader)"
+			"  REGION               THROUGH (target)   survived (target)  died trail/elite/boss   "
+				+ "at boss: team HP  size  turns"
 		);
 		var previous = 1.0;
 		for (var region = 0; region < regions.Count; region++)
@@ -122,18 +98,17 @@ public static class PartySimCommand
 			Console.WriteLine(
 				$"  {region + 1, 2} {regions[region].Name, -17} "
 					+ $"{through, 6:P0} ({target, 4:P0})   {survived, 6:P0} ({target / previous, 4:P0})   "
-					+ $"{Died(RunEnd.Trail), 4}/{Died(RunEnd.Deep)}/{Died(RunEnd.Elite)}/{Died(RunEnd.Boss), -3}"
+					+ $"{Died(RunEnd.Trail), 4}/{Died(RunEnd.Elite)}/{Died(RunEnd.Boss), -6}"
 					+ (
 						gyms.Count == 0
 							? ""
-							: $"{"", 8}{gyms.Average(g => g.TeamHpShare), 4:P0}  "
-								+ $"{gyms.Average(g => g.TeamSize), 4:F1}  {gyms.Count(g => g.WentDeep) / (double)gyms.Count, 5:P0}  "
-								+ $"{gyms.Average(g => g.Turns), 5:F1}"
-								+ $"  {gyms.Average(g => g.TeamLevel), 4:F1} ({regions[region].BossLevel})"
+							: $"{"", 12}{gyms.Average(g => g.TeamHpShare), 4:P0}  "
+								+ $"{gyms.Average(g => g.TeamSize), 4:F1}  {gyms.Average(g => g.Turns), 5:F1}"
 					)
 			);
 			previous = target;
 		}
+
 		// Where each STARTER's runs die, region by region — one starter's wall hides in the total.
 		Console.WriteLine();
 		foreach (var starter in runs.GroupBy(r => r.Starter))
@@ -179,7 +154,7 @@ public static class PartySimCommand
 
 		Console.WriteLine();
 		Console.WriteLine(
-			$"  Per run: {runs.Average(r => r.Caught):F1} caught, {runs.Average(r => r.Battles):F1} battles, "
+			$"  Per run: {runs.Average(r => r.Battles):F1} battles, "
 				+ $"{runs.Sum(r => r.Turns) / (double)Math.Max(1, runs.Sum(r => r.Battles)):F1} turns a battle, "
 				+ $"{runs.Average(r => r.Elites):F1} elites fought ({Pct(runs.Sum(r => r.ElitesWon), runs.Sum(r => r.Elites))} won)"
 		);

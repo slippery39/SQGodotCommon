@@ -4,36 +4,17 @@ using ImmutableGameObjects;
 namespace KinCore.Party;
 
 /// <summary>
-/// **A monster between battles**: who it is (its BASE stats), the HP it carries, its LEVEL and the XP
-/// toward the next (`PartyLevels`).
+/// **A monster between battles**: who it is and the HP it carries. No levels (round 4): a monster
+/// grows through cards, relics and upgrades.
 /// </summary>
-public record RunCompanion(
-	PartyCompanion Companion,
-	int Hp,
-	int Level = PartyLevels.Base,
-	int Xp = 0
-)
+public record RunCompanion(PartyCompanion Companion, int Hp)
 {
-	/// <summary>Its stats at its level — what fights.</summary>
-	public PartyCompanion Stats => PartyLevels.Scale(Companion, Level);
-
-	public int MaxHp => Stats.Hp;
+	public int MaxHp => Companion.Hp;
 }
 
 /// <summary>What happened in a battle just won, for the screen to tell.</summary>
-public record RunReport(
-	ImmutableList<string> Revived,
-	ImmutableList<string> Caught,
-	ImmutableList<string> ToBench,
-	int Gold
-)
+public record RunReport(ImmutableList<string> Revived, int Gold)
 {
-	/// <summary>XP each team member earned.</summary>
-	public int Xp { get; init; }
-
-	/// <summary>The team indices (after the battle's reorder) of the monsters that levelled.</summary>
-	public ImmutableList<int> LevelUps { get; init; } = [];
-
 	/// <summary>The RELIC an elite paid, if it did (none are left once you hold them all).</summary>
 	public Relic? Relic { get; init; }
 }
@@ -41,7 +22,7 @@ public record RunReport(
 /// <summary>Where a run is. The screens are chosen from this and nothing else.</summary>
 public enum RunPhase
 {
-	/// <summary>In a region's town: a map of buildings — hospital, shop, pen, and the gate out.</summary>
+	/// <summary>In a region's town: a map of buildings — the hospital, the shop, and the gate out.</summary>
 	Town,
 
 	/// <summary>
@@ -58,28 +39,25 @@ public enum RunPhase
 /// **THE RUN** (`KinMapPlan.md`; `KinFamiliesPlan.md`, round 2): TOWN → wild ROUTE → its BOSS → next
 /// town → … five regions; the fifth boss wins the run. Each town has a hospital (healing for gold) and
 /// a shop. A route is a branching map of fights, finds and springs (`PartyRun.Route.cs`).
-/// You start with one monster and catch the rest. HP carries between fights; a knocked-out monster
-/// revives at a quarter of its max; gold from every win buys Snares and cards.
+/// **You start with ONE monster and choose another after each of the first two bosses** (round 4:
+/// no catching, no bench, no levels). HP carries between fights; a knocked-out monster is back at
+/// 1 HP after the fight; gold buys cards and healing.
 ///
 /// **Lives OUTSIDE GameState**, like the lane game's `Run`: a battle is built from it, played, and
 /// read back into it. Plain records only — the Serialization Rule holds here too.
 /// </summary>
 public partial record PartyRun
 {
-	/// <summary>How many fight. The rest wait on the bench.</summary>
+	/// <summary>The most monsters a team holds: the starter and two bosses' picks.</summary>
 	public const int TeamSize = 3;
-
-	public const int StartingSnares = 3;
 
 	public const int StartingGold = 60;
 
 	public const int WildGold = 20;
-	public const int DeepGold = 35;
 	public const int BossGold = 100;
 	public const int EliteGold = 60;
 	public const int FoundGold = 40;
 
-	public const int SnarePrice = 30;
 	public const int CardPrice = 50;
 	public const int RemovePrice = 40;
 
@@ -88,12 +66,9 @@ public partial record PartyRun
 
 	public ImmutableList<RunCompanion> Team { get; init; } = [];
 
-	/// <summary>**The bench**: caught monsters beyond the three that fight.</summary>
-	public ImmutableList<RunCompanion> Bench { get; init; } = [];
-
 	/// <summary>
-	/// **The run's FAMILY — its starter's** (`KinFamiliesPlan.md`, round 2). Rewards, the shop and
-	/// catching offer only it and colourless.
+	/// **The run's FAMILY — its starter's** (`KinFamiliesPlan.md`, round 2). Rewards, the shop and a
+	/// boss's monsters offer only it and colourless.
 	/// </summary>
 	public Family Family { get; init; }
 
@@ -108,7 +83,6 @@ public partial record PartyRun
 	public int RegionIndex { get; init; }
 	public RunPhase Phase { get; init; }
 
-	public int Snares { get; init; }
 	public int Gold { get; init; }
 
 	/// <summary>Shop cards bought in THIS town, by offer index — each can be bought once.</summary>
@@ -141,8 +115,37 @@ public partial record PartyRun
 
 	public bool Has(Relic relic) => Relics.Contains(relic);
 
-	/// <summary>How many monsters the team holds — Big Tent makes it four.</summary>
-	public int TeamCapacity => Has(Relic.BigTent) ? PartyRelics.BigTentTeam : TeamSize;
+	/// <summary>
+	/// **The MONSTERS a boss offers — pick one** (`ChooseMonster`), or leave them. Set when one of the
+	/// first two bosses falls (round 4: monsters come from bosses); cleared on leaving the town.
+	/// </summary>
+	public ImmutableList<PartyCompanion> MonsterChoice { get; init; } = [];
+
+	/// <summary>Three of your family's monsters not on the team, seeded by the region.</summary>
+	private ImmutableList<PartyCompanion> BossMonsterOffer()
+	{
+		if (Team.Count >= TeamSize)
+			return [];
+		var rng = new Random(Seed * 47 + RegionIndex);
+		return
+		[
+			.. PartyContent
+				.MonstersOf(Family)
+				.Where(m => Team.All(t => t.Companion.Name != m.Name))
+				.OrderBy(_ => rng.Next())
+				.Take(3),
+		];
+	}
+
+	/// <summary>One of the offered monsters joins the team, at full HP; the others are gone.</summary>
+	public PartyRun ChooseMonster(PartyCompanion monster) =>
+		MonsterChoice.Contains(monster) && Team.Count < TeamSize
+			? this with
+			{
+				Team = Team.Add(new RunCompanion(monster, monster.Hp)),
+				MonsterChoice = [],
+			}
+			: this;
 
 	/// <summary>
 	/// **The BOSS RELICS offered — pick one** (`ChooseRelic`), or leave them. Set when a boss falls;
@@ -161,15 +164,9 @@ public partial record PartyRun
 	public PartyRun ChooseRelic(Relic relic) =>
 		RelicChoice.Contains(relic) ? Gain(relic) with { RelicChoice = [] } : this;
 
-	/// <summary>A relic joins the run — and Snare Pouch pays its Snares at once.</summary>
+	/// <summary>A relic joins the run.</summary>
 	public PartyRun Gain(Relic relic) =>
-		Has(relic)
-			? this
-			: this with
-			{
-				Relics = Relics.Add(relic),
-				Snares = Snares + (relic == Relic.SnarePouch ? PartyRelics.SnarePouchNow : 0),
-			};
+		Has(relic) ? this : this with { Relics = Relics.Add(relic) };
 
 	/// <summary>Whether you stand before the BOSS — the route's last place.</summary>
 	public bool AtBoss => Phase == RunPhase.Route && Route is not null && Here.Kind == NodeKind.End;
@@ -189,17 +186,15 @@ public partial record PartyRun
 			Regions = regions ?? PartyWorld.Regions,
 			Deck = deck ?? PartyContent.StartingDeck(starter.Family),
 			Rewards = rewards ?? PartyContent.Rewards,
-			Snares = StartingSnares,
 			Gold = StartingGold,
 			Phase = RunPhase.Town,
 			Seed = seed,
 		};
 
 	/// <summary>
-	/// **A caught foe as a monster of yours: exactly what it had.** Its cycle and its max HP.
-	/// Power 0, because a foe's move amounts are already its whole damage. **Its passive wakes now**:
-	/// the passive and triggers it carried dormant. A wild trait (Thief) stays wild.
-	/// **Its stats are the species' BASE** (`PartyWorld.Species`); it joins at the level it was caught.
+	/// **A species as a monster of yours** — its HP and its passive (the kit it carries dormant as a
+	/// wild foe). PLACEHOLDER until the families are drafted (round 4): the boss picks are built from
+	/// today's species this way.
 	/// </summary>
 	public static PartyCompanion FromFoe(Foe foe)
 	{
@@ -240,28 +235,22 @@ public partial record PartyRun
 				NodeKind.Elite => $"{Region.Name} — an elite",
 				_ => $"{Region.Name} — the route",
 			},
-			// **The team's order IS the line** (front first), then the bench off it (-1) — in that
-			// order, so slots line up. The battle opens DEPLOYING (R2): the order can change before FIGHT.
-			[
-				.. Team.Select((m, i) => new PlacedCompanion(m.Stats, i, m.Hp)),
-				.. Bench.Select(m => new PlacedCompanion(m.Stats, -1, m.Hp)),
-			],
+			// **The team's order IS the line** (front first). The battle opens DEPLOYING (R2): the order
+			// can change before FIGHT.
+			[.. Team.Select((m, i) => new PlacedCompanion(m.Companion, i, m.Hp))],
 			NextFight.Foes,
 			Deck,
 			[],
-			Snares,
 			Deploy: true,
-			Family,
-			Relics
+			Relics: Relics
 		);
 		return PartyBattleFactory.Create(scenario, Seed + RegionIndex * 1009 + NodeId * 37);
 	}
 
 	/// <summary>
 	/// **Reads a finished battle back into the run.** A loss ends it. A win carries HP over — a
-	/// knocked-out monster revives at a quarter of its max — keeps the Snares left, pays gold, and
-	/// every caught foe joins: the team if there is room, else the bench. On a route you stay on the
-	/// place you fought; after a leader you are back in its town with the road open.
+	/// knocked-out monster is back at 1 HP (round 4) — and pays gold. On a route you stay on the place
+	/// you fought; after a boss you are in the next town, healed, with its prizes to choose.
 	/// </summary>
 	public (PartyRun Run, RunReport Report) AfterBattle(GameState finished)
 	{
@@ -270,9 +259,8 @@ public partial record PartyRun
 			throw new InvalidOperationException("The battle is not over");
 
 		if (!party.Won)
-			return (this with { Phase = RunPhase.Lost }, new RunReport([], [], [], 0));
+			return (this with { Phase = RunPhase.Lost }, new RunReport([], 0));
 
-		// Team and bench both come back by slot: a benched monster may have stepped in and fought.
 		var revived = ImmutableList<string>.Empty;
 		RunCompanion After(RunCompanion member, int slot)
 		{
@@ -281,7 +269,7 @@ public partial record PartyRun
 				return member with { Hp = ally.Hp };
 
 			revived = revived.Add(ally.Name);
-			return member with { Hp = (int)Math.Ceiling(ally.MaxHp / 4.0) };
+			return member with { Hp = 1 };
 		}
 		var team = Team.Select(After).ToImmutableList();
 
@@ -292,42 +280,14 @@ public partial record PartyRun
 			.. deployed.Select(slot => team[slot]),
 			.. team.Where((_, slot) => !deployed.Contains(slot)),
 		];
-		var bench = Bench.Select((m, i) => After(m, Team.Count + i)).ToImmutableList();
-
 		var kind = Here.Kind;
 		var gold = (int)(RouteGold(kind) * (Has(Relic.LuckyCoin) ? PartyRelics.LuckyCoinGold : 1));
-		// **XP to every monster on the team** — the line that fought (`PartyLevels.XpFor`). An elite
-		// and a boss pay double.
-		var xp = PartyLevels.XpFor(NextFight.Foes, leader: kind is NodeKind.End or NodeKind.Elite);
-		var levelUps = ImmutableList<int>.Empty;
-		team =
-		[
-			.. team.Select(
-				(m, i) =>
-				{
-					var grown = PartyLevels.Gain(m, xp);
-					if (grown.Level > m.Level)
-						levelUps = levelUps.Add(i);
-					return grown;
-				}
-			),
-		];
 
-		var run = this with
-		{
-			Team = team,
-			Bench = bench,
-			Snares = party.Snares,
-			Gold = Gold + gold,
-		};
+		var run = this with { Team = team, Gold = Gold + gold };
 
-		// FIELD KIT: every monster that is still up heals a little — a revived one too.
+		// FIELD KIT: every monster heals a little — a revived one too.
 		if (Has(Relic.FieldKit))
-			run = run with
-			{
-				Team = HealBy(run.Team, PartyRelics.FieldKitHeal),
-				Bench = HealBy(run.Bench, PartyRelics.FieldKitHeal),
-			};
+			run = run with { Team = HealBy(run.Team, PartyRelics.FieldKitHeal) };
 
 		// **An ELITE pays a RELIC** — one you do not hold, seeded; none once you hold them all.
 		Relic? relic = null;
@@ -341,23 +301,6 @@ public partial record PartyRun
 			}
 		}
 
-		var caught = ImmutableList<string>.Empty;
-		var toBench = ImmutableList<string>.Empty;
-		foreach (var foe in finished.CaughtFoes())
-		{
-			// **A catch joins at HALF its HP** (Shayne, 2026-09-28) — usable at once, not a near-corpse.
-			var joining = new RunCompanion(FromFoe(foe), 0, foe.Level);
-			joining = joining with { Hp = Math.Max(foe.Hp, (joining.MaxHp + 1) / 2) };
-			caught = caught.Add(foe.Name);
-			if (run.Team.Count < run.TeamCapacity)
-				run = run with { Team = run.Team.Add(joining) };
-			else
-			{
-				run = run with { Bench = run.Bench.Add(joining) };
-				toBench = toBench.Add(foe.Name);
-			}
-		}
-
 		run =
 			// On a route you stay where you fought — the place is cleared, and the map is yours again.
 			kind != NodeKind.End
@@ -365,25 +308,17 @@ public partial record PartyRun
 				{
 					Cleared = run.Cleared.Add(NodeId),
 				}
-			// The BOSS beaten: on to the next town — healed in full, with three boss relics to choose
-			// from (Shayne, 2026-09-28) — or, the last one, the run won.
+			// The BOSS beaten: on to the next town — healed in full, with three boss relics and (the first
+			// two bosses) three monsters to choose from (Shayne, 2026-09-28) — or, the last one, the run won.
 			: RegionIndex + 1 >= Regions.Count ? run with { Phase = RunPhase.Won }
 			: run.EnterTown(RegionIndex + 1) with
 			{
 				Team = Heal(run.Team, 1),
-				Bench = Heal(run.Bench, 1),
 				RelicChoice = BossRelicOffer(),
+				MonsterChoice = run.BossMonsterOffer(),
 			};
 
-		return (
-			run,
-			new RunReport(revived, caught, toBench, gold)
-			{
-				Xp = xp,
-				LevelUps = levelUps,
-				Relic = relic,
-			}
-		);
+		return (run, new RunReport(revived, gold) { Relic = relic });
 	}
 
 	/// <summary>
@@ -394,7 +329,6 @@ public partial record PartyRun
 		{
 			RegionIndex = region,
 			Phase = RunPhase.Town,
-			Snares = Snares + (Has(Relic.SnarePouch) ? 1 : 0),
 			Route = null,
 			NodeId = 0,
 			Cleared = [],
@@ -419,14 +353,6 @@ public partial record PartyRun
 				}
 			),
 		];
-
-	/// <summary>**A benched monster takes a team member's place**, and the team member sits down.</summary>
-	public PartyRun Swap(int teamIndex, int benchIndex) =>
-		this with
-		{
-			Team = Team.SetItem(teamIndex, Bench[benchIndex]),
-			Bench = Bench.SetItem(benchIndex, Team[teamIndex]),
-		};
 
 	// ===== Cards: a win's reward, and the town's shop
 
@@ -490,14 +416,9 @@ public partial record PartyRun
 		return Offer(rng);
 	}
 
-	public bool CanBuySnare => Gold >= SnarePrice;
-
 	public bool CanBuyCard(int offer) => Gold >= CardPrice && !Sold.Contains(offer);
 
 	public bool CanRemove => Gold >= RemovePrice && Deck.Count > 1;
-
-	public PartyRun BuySnare() =>
-		CanBuySnare ? this with { Gold = Gold - SnarePrice, Snares = Snares + 1 } : this;
 
 	public PartyRun BuyCard(int offer) =>
 		CanBuyCard(offer)

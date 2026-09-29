@@ -25,23 +25,15 @@ public static class PartyState
 	public static IEnumerable<Ally> LivingAllies(this GameState s) =>
 		s.GetChildren(s.GetWellKnownId(BattleKey))
 			.OfType<Ally>()
-			.Where(a => !a.IsKnockedOut && !a.Benched && a.Position >= 0)
+			.Where(a => !a.IsKnockedOut && a.Position >= 0)
 			.OrderBy(a => a.Position);
 
-	/// <summary>The bench, in the order it joins the line.</summary>
-	public static IEnumerable<Ally> BenchedAllies(this GameState s) =>
-		s.Allies().Where(a => a.Benched && !a.IsKnockedOut);
-
-	/// <summary>**Their line**: standing, not caught, front (0) first.</summary>
+	/// <summary>**Their line**: standing, front (0) first.</summary>
 	public static IEnumerable<Foe> LivingFoes(this GameState s) =>
 		s.GetChildren(s.GetWellKnownId(BattleKey))
 			.OfType<Foe>()
-			.Where(f => !f.IsDead && !f.Caught && f.Position >= 0)
+			.Where(f => !f.IsDead && f.Position >= 0)
 			.OrderBy(f => f.Position);
-
-	/// <summary>Every foe a Snare took this battle — they join the run if it is won.</summary>
-	public static IEnumerable<Foe> CaughtFoes(this GameState s) =>
-		s.GetChildren(s.GetWellKnownId(BattleKey)).OfType<Foe>().Where(f => f.Caught);
 
 	public static Ally? AllyAt(this GameState s, int position) =>
 		s.LivingAllies().FirstOrDefault(a => a.Position == position);
@@ -101,43 +93,6 @@ public static class PartyState
 		foreach (var card in s.GetChildren(foeId).OfType<KinCard>().ToList())
 			s = s.MoveObject(card.Id, s.ZoneId(ZoneType.Discard));
 		return s;
-	}
-
-	/// <summary>
-	/// **Whether this foe could EVER be yours**: catchable, and of your run's family or colourless
-	/// (`KinFamiliesPlan.md`, round 2). A practice fight (no family) catches anything.
-	/// </summary>
-	public static bool IsYourKind(this GameState s, Foe foe)
-	{
-		var family = s.GetParty().Family;
-		return foe.Catchable
-			&& (family == Family.None || foe.Family == Family.None || foe.Family == family);
-	}
-
-	/// <summary>**The HP at or below which a foe can be caught: a third of its max.**</summary>
-	public static int CatchAt(this Foe foe) => foe.MaxHp / 3;
-
-	/// <summary>
-	/// **Why a Snare cannot take this foe now, or null if it can.** Shared by the throw and by the
-	/// board, which lights the foe a Snare would take. **Only their FRONT** (Shayne, 2026-09-25):
-	/// catching a back-liner means pulling it forward first.
-	/// </summary>
-	public static string? CatchRefusal(this GameState s, Foe foe)
-	{
-		var party = s.GetParty();
-		if (party.Snares <= 0)
-			return "You have no Snares left";
-		if (!foe.Catchable)
-			return $"The {foe.Name} cannot be caught";
-		if (!s.IsYourKind(foe))
-			return $"Not your family: you catch {party.Family} and colourless monsters";
-		if (foe.Position != 0)
-			return "A Snare only reaches their front";
-		if (foe.Hp > foe.CatchAt())
-			return $"Weaken the {foe.Name} first: {foe.CatchAt()} HP or less";
-		if (party.Energy < UseSnareAction.Cost)
-			return "Not enough energy for a Snare";
-		return null;
 	}
 
 	/// <summary>
@@ -256,10 +211,6 @@ public static class PartyState
 		return s.UpdateObject(party.Id, party with { IsOver = true, Won = won });
 	}
 
-	/// <summary>**CAPTURE HARNESS ONLY.** Drops the foe at that position to the HP a Snare can take.</summary>
-	public static GameState DebugWeaken(this GameState s, int position) =>
-		s.FoeAt(position) is { } foe ? s.UpdateObject(foe.Id, foe with { Hp = foe.CatchAt() }) : s;
-
 	// ===== Lines
 
 	/// <summary>
@@ -303,8 +254,7 @@ public static class PartyState
 
 	/// <summary>
 	/// **SETTLE — MtgCore's state-based effects for a line.** Hits only deal damage; this is where the
-	/// fallen and the caught LEAVE their line, the first benched monster joins at the BACK for each of
-	/// your real monsters that fell, the lines close up, and the battle is won or lost. It runs after
+	/// fallen LEAVE their line, the lines close up, and the battle is won or lost. It runs after
 	/// every card (the post-processor) and after every STEP of the end of the turn, which is what
 	/// makes a step simultaneous: nobody's faint changes a line until the step is over. Idempotent.
 	/// </summary>
@@ -316,7 +266,7 @@ public static class PartyState
 		foreach (
 			var foe in s.GetChildren(root)
 				.OfType<Foe>()
-				.Where(f => (f.IsDead || f.Caught) && f.Position >= 0)
+				.Where(f => f.IsDead && f.Position >= 0)
 				.ToList()
 		)
 			s = s.UpdateObject(foe.Id, foe with { Position = -1 });
@@ -330,22 +280,6 @@ public static class PartyState
 
 		s = Renumber(s, [.. s.LivingAllies()]);
 		s = Renumber(s, [.. s.LivingFoes()]);
-
-		// A token has no bench behind it; a real monster is replaced at the back.
-		foreach (var ally in fallen.Where(a => a.FadesIn == 0))
-		{
-			if (s.BenchedAllies().FirstOrDefault() is not { } sub)
-				break;
-			s = s.UpdateObject(
-				sub.Id,
-				sub with
-				{
-					Benched = false,
-					Position = s.LivingAllies().Count(),
-				}
-			);
-			events = events.Add(new AllySwappedInEvent { AllyId = sub.Id, ForAllyId = ally.Id });
-		}
 
 		var party = s.GetParty();
 		if (party.IsOver)
@@ -479,7 +413,7 @@ public static class PartyState
 		var events = ImmutableList<GameEvent>.Empty;
 		foreach (var id in targets)
 		{
-			if (s.GetObject(id) is not Foe { IsDead: false, Caught: false } foe)
+			if (s.GetObject(id) is not Foe { IsDead: false } foe)
 				continue;
 
 			var overflow = damage + foe.OffBalance - foe.Block - foe.Hp;

@@ -42,7 +42,7 @@ public class PartyBotTests
 
 	private static GameState Battle(PartyCompanion mon, KinCard[] deck, params Foe[] foes) =>
 		PartyBattleFactory.Create(
-			new PartyScenario("Test", "", [new(mon, 0)], [.. foes], [.. deck], [], Snares: 1)
+			new PartyScenario("Test", "", [new(mon, 0)], [.. foes], [.. deck], [])
 		);
 
 	[Test]
@@ -75,18 +75,6 @@ public class PartyBotTests
 		s = PartyBot.PlayTurn(s);
 
 		Assert.That(s.GetParty().IsOver && s.GetParty().Won, Is.True);
-	}
-
-	[Test]
-	public void ItThrowsASnareAtAWeakFoe()
-	{
-		var s = Battle(Mon(Hit(1)), [], Foe(0, 30, Hit(1)));
-		var foe = s.LivingFoes().Single();
-		s = s.UpdateObject(foe.Id, foe with { Hp = 5 });
-
-		s = PartyBot.PlayTurn(s);
-
-		Assert.That(s.CaughtFoes(), Is.Not.Empty);
 	}
 
 	[Test]

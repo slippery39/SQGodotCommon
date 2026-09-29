@@ -19,15 +19,6 @@ public record PartyBattle : GameObject
 	public int Energy { get; init; }
 	public int MaxEnergy { get; init; } = 3;
 
-	/// <summary>**Snares carried into this battle** — the run's item for catching. Used ones are gone.</summary>
-	public int Snares { get; init; }
-
-	/// <summary>
-	/// **The run's FAMILY: only it and colourless foes can be caught** (`KinFamiliesPlan.md`, round 2).
-	/// `None` — a practice fight — catches anything.
-	/// </summary>
-	public Family Family { get; init; }
-
 	/// <summary>The run's RELICS (`PartyRelics`) — read at the deal and when the fight begins.</summary>
 	public ImmutableList<Relic> Relics { get; init; } = [];
 
@@ -91,7 +82,7 @@ public record PartyBattle : GameObject
 	public int AlliesActedThisRound { get; init; }
 
 	/// <summary>
-	/// **DEPLOY (R2): the fight has not begun.** You see their line and order yours; cards, Snares and
+	/// **DEPLOY (R2): the fight has not begun.** You see their line and order yours; cards and
 	/// END TURN wait until FIGHT (`BeginFightAction`). The hand is already dealt, so the order can
 	/// answer it.
 	/// </summary>
@@ -162,12 +153,6 @@ public record Ally : Creature
 	/// <summary>Played its move early this turn (Hasten), so it does not act again at the end.</summary>
 	public bool HasActed { get; init; }
 
-	/// <summary>
-	/// **On the bench: out of the line, waiting.** The first one joins at the BACK when a monster in
-	/// the line falls.
-	/// </summary>
-	public bool Benched { get; init; }
-
 	/// <summary>The passive, as the player reads it. Rules live in the fields below, never here.</summary>
 	public string Passive { get; init; } = "";
 
@@ -213,12 +198,6 @@ public record Foe : Creature
 
 	/// <summary>Stagger: it loses its next move (the cycle still advances).</summary>
 	public bool Staggered { get; init; }
-
-	/// <summary>False for a boss: an exam is not a catch.</summary>
-	public bool Catchable { get; init; } = true;
-
-	/// <summary>**Caught by a Snare** — out of the line, beaten, and joining you when the battle is won.</summary>
-	public bool Caught { get; init; }
 
 	/// <summary>
 	/// **A WILD trait, in words** — what its own abilities (triggers in `Components`) do while it

@@ -46,7 +46,6 @@ public static class PartyExams
 			MaxHp = hp,
 			Position = position,
 			Pattern = [.. cycle],
-			Catchable = false,
 		};
 
 	/// <summary>A MINION: stays until beaten (no fade), and comes in at its summoner's level.</summary>

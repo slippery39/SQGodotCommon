@@ -14,7 +14,6 @@ public sealed record FieldContext(
 	Dictionary<int, int> Steps,
 	HashSet<int> Drops,
 	KinCard Focus,
-	bool Snaring,
 	int SelectedId,
 	int HeldId
 );
@@ -267,7 +266,6 @@ public sealed class KinRelayField
 	{
 		var intent = foe.Current;
 		var drop = ctx.Drops.Contains(PartyBattle.MaxLine + foe.Position) ? ctx.Focus : null;
-		var snareHere = ctx.Snaring && s.CatchRefusal(foe) is null;
 		var loses = ctx.Forecast.GetValueOrDefault(foe.Id);
 		var (move, icon) =
 			foe.Staggered ? ("staggered", null)
@@ -281,8 +279,8 @@ public sealed class KinRelayField
 			KinArt.Sprite(foe.Name) is not null,
 			FacesLeft: true,
 			ctx.Steps.GetValueOrDefault(foe.Id),
-			drop is not null || snareHere ? KinPalette.Gold : KinPalette.Red,
-			drop is not null || snareHere,
+			drop is not null ? KinPalette.Gold : KinPalette.Red,
+			drop is not null,
 			foe.Name.ToUpperInvariant(),
 			foe.Hp,
 			foe.MaxHp,
@@ -291,17 +289,12 @@ public sealed class KinRelayField
 				FamilyWord(foe.Family),
 				foe.Block > 0 ? $"BLOCK {foe.Block}" : "",
 				foe.OffBalance > 0 ? $"OFF-BALANCE +{foe.OffBalance}" : "",
-				foe.FadesIn > 0 ? $"FADES IN {foe.FadesIn}" : "",
-					// Your kind is marked all fight (one family per run, 2026-09-28): what to weaken, not kill.
-					!s.IsYourKind(foe) ? ""
-					: foe.Hp <= foe.CatchAt() ? "◆ CATCHABLE"
-					: $"◇ CATCH AT {foe.CatchAt()}"
+				foe.FadesIn > 0 ? $"FADES IN {foe.FadesIn}" : ""
 			),
-			snareHere ? "◆ SNARE IT HERE"
-				: drop is not null ? $"▼ {drop.Name.ToUpperInvariant()} HERE"
+			drop is not null ? $"▼ {drop.Name.ToUpperInvariant()} HERE"
 				: loses > 0 ? $"−{loses}"
 				: "",
-			snareHere || drop is not null ? KinPalette.Gold : KinPalette.Red,
+			drop is not null ? KinPalette.Gold : KinPalette.Red,
 			foe.Level
 		);
 	}

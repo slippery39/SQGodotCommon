@@ -97,7 +97,7 @@ public sealed partial class KinPartyRunScreens
 									)
 								)
 							),
-						$"LV {companion.Level} · HP {companion.Hp} · POW {companion.Power}",
+						$"HP {companion.Hp} · POW {companion.Power}",
 					],
 					new Vector2(340, 640),
 					() => choose(companion)
@@ -110,32 +110,23 @@ public sealed partial class KinPartyRunScreens
 		RunReport report,
 		string beaten,
 		Action<KinCard> take,
-		Action skip,
-		Action<int, int> swap
+		Action skip
 	)
 	{
 		Begin(
 			$"VICTORY — {beaten.ToUpperInvariant()}",
-			$"+{report.Gold} gold.   +{report.Xp} XP each.   Next: {Ahead(run)}"
+			$"+{report.Gold} gold.   Next: {Ahead(run)}"
 		);
 
-		// Level-ups light their monster on the team row, not a line each: three lines of them pushed
-		// SKIP off a 1080 screen (Shayne's playtest, 2026-09-28).
 		var news = new List<string>();
 		if (report.Relic is { } relic)
 			news.Add($"RELIC: {PartyRelics.Name(relic)} — {PartyRelics.Text(relic)}");
 		foreach (var name in report.Revived)
-			news.Add($"{name} was knocked out, and is back at a quarter HP.");
-		foreach (var name in report.Caught)
-			news.Add(
-				report.ToBench.Contains(name)
-					? $"Caught the {name}! The team is full, so it waits on the bench."
-					: $"Caught the {name}! It joins the team."
-			);
+			news.Add($"{name} was knocked out, and is back at 1 HP.");
 		foreach (var line in news)
 			_column.AddChild(Label(line, 24, KinPalette.Gold));
 
-		ShowTeam(run, swap, report.LevelUps);
+		ShowTeam(run);
 
 		_column.AddChild(Label("TAKE A CARD", 28, KinPalette.Bone));
 		var row = Row();
@@ -177,12 +168,42 @@ public sealed partial class KinPartyRunScreens
 		Row().AddChild(Button("SKIP", skip));
 	}
 
+	/// <summary>
+	/// **A boss beaten: three MONSTERS of your family — one joins the team** (round 4: monsters come
+	/// from bosses; the first two bosses offer them).
+	/// </summary>
+	public void ShowMonsterChoice(PartyRun run, Action<PartyCompanion> choose, Action skip)
+	{
+		Begin(
+			"A MONSTER JOINS YOU",
+			"Choose one to join the team for the rest of the run. Its passive shapes the cards you want."
+		);
+		var row = Row();
+		foreach (var monster in run.MonsterChoice)
+			row.AddChild(
+				Tile(
+					KinPalette.Family(monster.Family, monster.Name),
+					KinArt.Sprite(monster.Name) ?? KinArt.Drawing(monster.Name),
+					monster.Name.ToUpperInvariant(),
+					[
+						$"{monster.Family.ToString().ToUpperInvariant()} FAMILY",
+						monster.Passive,
+						monster.PassiveRule,
+						$"HP {monster.Hp} · POW {monster.Power}",
+					],
+					new Vector2(340, 560),
+					() => choose(monster)
+				)
+			);
+		Row().AddChild(Button("SKIP", skip));
+	}
+
 	public void ShowOver(PartyRun run, Action newRun, Action menu)
 	{
 		Begin(
 			run.IsWon ? "THE RUN IS WON" : "DEFEAT",
 			run.IsWon
-				? $"All {run.Regions.Count} gyms beaten, with {run.Team.Count + run.Bench.Count} monsters to your name."
+				? $"All {run.Regions.Count} bosses beaten, with {run.Team.Count} monsters to your name."
 				: $"The team fell in {run.Region.Name} — region {run.RegionIndex + 1} of {run.Regions.Count}."
 		);
 
@@ -191,20 +212,10 @@ public sealed partial class KinPartyRunScreens
 		buttons.AddChild(Button("MENU", menu));
 	}
 
-	/// <summary>
-	/// **The team, and the bench if there is one.** Pick a team member, then a benched monster, and
-	/// they swap — the team is who fights next. With no bench it is one line of HP.
-	/// </summary>
-	private void ShowTeam(PartyRun run, Action<int, int> swap, IReadOnlyList<int>? grew = null)
+	/// <summary>**The team, as one line of HP**, and the relics held.</summary>
+	private void ShowTeam(PartyRun run)
 	{
-		var swapping = swap is not null && !run.Bench.IsEmpty;
-		_column.AddChild(
-			Label(
-				$"TEAM{(swapping ? " — pick one, then a benched monster to swap" : "")}     SNARES ×{run.Snares}     GOLD {run.Gold}",
-				20,
-				new Color(KinPalette.Bone, 0.8f)
-			)
-		);
+		_column.AddChild(Label($"TEAM     GOLD {run.Gold}", 20, new Color(KinPalette.Bone, 0.8f)));
 
 		// The RELICS held, by name — each one's rule is on the victory screen that paid it.
 		if (!run.Relics.IsEmpty)
@@ -216,44 +227,17 @@ public sealed partial class KinPartyRunScreens
 				)
 			);
 
-		var group = new ButtonGroup { AllowUnpress = true };
 		var team = Row();
-		for (var i = 0; i < run.Team.Count; i++)
-		{
-			var member = Monster(run.Team[i], grew?.Contains(i) == true);
-			member.ToggleMode = swapping;
-			member.ButtonGroup = swapping ? group : null;
-			team.AddChild(member);
-		}
-
-		if (run.Bench.IsEmpty)
-			return;
-
-		_column.AddChild(Label("BENCH", 20, new Color(KinPalette.Bone, 0.8f)));
-		var bench = Row();
-		for (var b = 0; b < run.Bench.Count; b++)
-		{
-			var benchIndex = b;
-			var sitter = Monster(run.Bench[b]);
-			sitter.Pressed += () =>
-			{
-				if (swapping && group.GetPressedButton() is { } picked)
-					swap(picked.GetIndex(), benchIndex);
-			};
-			bench.AddChild(sitter);
-		}
+		foreach (var member in run.Team)
+			team.AddChild(Monster(member));
 	}
 
-	private static Button Monster(RunCompanion m, bool grew = false)
+	private static Button Monster(RunCompanion m)
 	{
-		var button = Button(
-			$"{m.Companion.Name.ToUpperInvariant()}  LV {m.Level}{(grew ? " ▲" : "")}  {m.Hp}/{m.MaxHp}\n"
-				+ $"XP {m.Xp}/{PartyLevels.XpToNext(m.Level)}",
-			() => { }
-		);
+		var button = Button($"{m.Companion.Name.ToUpperInvariant()}\n{m.Hp}/{m.MaxHp}", () => { });
 		var tint = KinPalette.Family(m.Companion.Family, m.Companion.Name).Lightened(0.35f);
 		KinUiKit.Style(button, 22);
-		button.AddThemeStyleboxOverride("normal", KinUiKit.Plate(grew ? "gold" : "bone", tint));
+		button.AddThemeStyleboxOverride("normal", KinUiKit.Plate("bone", tint));
 		button.AddThemeStyleboxOverride("hover", KinUiKit.Plate("gold", tint.Lightened(0.15f)));
 		// PRESSED is the picked team member in a swap: it must stay unmistakably lit.
 		button.AddThemeStyleboxOverride("pressed", KinUiKit.Plate("gold", KinPalette.Gold));

@@ -53,7 +53,7 @@ public static class KinMapKit
 			}
 		);
 		var hp = Text(20, KinPalette.Bone, HorizontalAlignment.Left);
-		hp.Text = $"{m.Companion.Name.ToUpperInvariant()}  LV {m.Level}\n{m.Hp}/{m.MaxHp}";
+		hp.Text = $"{m.Companion.Name.ToUpperInvariant()}\n{m.Hp}/{m.MaxHp}";
 		row.AddChild(hp);
 		return row;
 	}

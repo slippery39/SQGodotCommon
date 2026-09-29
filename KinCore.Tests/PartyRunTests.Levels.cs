@@ -33,21 +33,6 @@ public partial class PartyRunTests
 	// ===== Scaling
 
 	[Test]
-	public void AtTheBaseLevelNothingChanges()
-	{
-		var foe = Hitter(10, 4);
-
-		var same = PartyLevels.Scale(foe, PartyLevels.Base);
-
-		Assert.That(same.MaxHp, Is.EqualTo(foe.MaxHp));
-		Assert.That(
-			same.Pattern.Select(i => i.Amount),
-			Is.EqualTo(foe.Pattern.Select(i => i.Amount))
-		);
-		Assert.That(PartyLevels.Scale(A, PartyLevels.Base).Hp, Is.EqualTo(A.Hp));
-	}
-
-	[Test]
 	public void ALevelScalesHpBlockAndAttacksUpAndDown()
 	{
 		var foe = Hitter(10, 4);
@@ -124,79 +109,4 @@ public partial class PartyRunTests
 	}
 
 	// ===== Your monsters grow
-
-	[Test]
-	public void AWinGivesTheTeamXpAndEnoughOfItALevel()
-	{
-		var foe = Foe("W") with { Level = 20 };
-		var run = OnFights(WithTeam(Run(), A, B), Fight(foe));
-		var xp = PartyLevels.XpFor([foe], leader: false);
-		Assert.That(
-			xp,
-			Is.GreaterThanOrEqualTo(PartyLevels.XpToNext(PartyLevels.Base)),
-			"enough for a level"
-		);
-
-		(run, var report) = WinNext(run);
-
-		Assert.That(report.Xp, Is.EqualTo(xp));
-		Assert.That(run.Team.Select(m => m.Level), Is.All.GreaterThan(PartyLevels.Base));
-		Assert.That(report.LevelUps, Has.Count.EqualTo(2));
-	}
-
-	[Test]
-	public void ALevelGainedRaisesMaxHpAndCurrentHpAlike()
-	{
-		var hurt = new RunCompanion(A, 10);
-
-		var grown = PartyLevels.Gain(hurt, PartyLevels.XpToNext(PartyLevels.Base));
-
-		Assert.That(grown.Level, Is.EqualTo(PartyLevels.Base + 1));
-		Assert.That(grown.MaxHp, Is.GreaterThan(hurt.MaxHp));
-		Assert.That(grown.Hp - hurt.Hp, Is.EqualTo(grown.MaxHp - hurt.MaxHp));
-		Assert.That(grown.Xp, Is.Zero);
-	}
-
-	[Test]
-	public void ALeaderIsWorthDoubleXp()
-	{
-		var foes = new[] { Foe("L") with { Level = 8 } };
-
-		Assert.That(
-			PartyLevels.XpFor(foes, leader: true),
-			Is.EqualTo(2 * PartyLevels.XpFor(foes, leader: false))
-		);
-	}
-
-	[Test]
-	public void AMonsterFightsAtItsLevel()
-	{
-		var run = OnFights(
-			Run() with
-			{
-				Team = [new RunCompanion(A, 30, Level: 10)],
-			},
-			Fight(Foe("W"))
-		);
-
-		var ally = run.StartBattle().Allies().Single();
-
-		Assert.That(ally.Level, Is.EqualTo(10));
-		Assert.That(ally.MaxHp, Is.EqualTo(PartyLevels.At(A.Hp, 10)));
-	}
-
-	[Test]
-	public void ACatchJoinsAtItsLevelFromItsSpeciesBase()
-	{
-		var boar = PartyWorld.Species("Boar")!;
-		var wild = PartyLevels.Scale(boar, 3) with { Position = 0 };
-		var run = OnFights(Run(), Fight(wild), Fight(Foe("Idle")));
-
-		(run, _) = run.AfterBattle(Catch(run.StartBattle(), 0, hp: 5));
-
-		var caught = run.Team.Single(m => m.Companion.Name == "Boar");
-		Assert.That(caught.Level, Is.EqualTo(3));
-		Assert.That(caught.Companion.Hp, Is.EqualTo(boar.MaxHp), "stored at its species' base");
-		Assert.That(caught.MaxHp, Is.EqualTo(wild.MaxHp), "and fights at its level");
-	}
 }

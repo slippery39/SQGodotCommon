@@ -93,7 +93,7 @@ public sealed class KinTownMap
 		// The region's BOSS, named from the town on: the route is preparing for it.
 		_subtitle.Text =
 			$"Visit a building, then take the gate. The route ends at {run.Boss.Name.ToUpperInvariant()}.";
-		_purse.Text = $"GOLD {run.Gold}   ·   SNARES {run.Snares}";
+		_purse.Text = $"GOLD {run.Gold}";
 
 		foreach (var child in _places.GetChildren())
 			child.QueueFree();
@@ -204,10 +204,8 @@ public sealed class KinTownMap
 	private string Tooltip(Building building) =>
 		building.Kind switch
 		{
-			BuildingKind.Hospital =>
-				$"Heal the team and the bench to full — {PartyRun.HospitalPrice} gold.",
-			BuildingKind.Shop => "Snares, cards, and taking a card out of your deck.",
-			BuildingKind.Pen => "Your team and your bench: choose who fights.",
+			BuildingKind.Hospital => $"Heal the team to full — {PartyRun.HospitalPrice} gold.",
+			BuildingKind.Shop => "Cards, and taking a card out of your deck.",
 			BuildingKind.Gate => _run.CannotLeaveTown
 				?? $"Out onto the route — {_run.Boss.Name} waits at its end.",
 			_ => "",

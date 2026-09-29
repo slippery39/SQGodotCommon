@@ -138,7 +138,6 @@ public static class PartySummon
 					MaxHp = c.Hp,
 					Pattern = c.Moves,
 					FadesIn = token.FadesIn,
-					Catchable = false,
 					// FadesIn 0 = a MINION that stays until it is beaten (a boss's band).
 					Trait =
 						token.FadesIn > 0

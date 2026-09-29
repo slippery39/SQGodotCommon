@@ -60,10 +60,6 @@ public partial class KinPartyBoard : Node2D
 	/// <summary>EMBER's KINDLE for this fight, over the orb — hidden at 0.</summary>
 	private Label _kindle;
 
-	/// <summary>The Snare item: press it, then click a foe. Armed = the next foe click throws it.</summary>
-	private Button _snare;
-
-	private bool _snaring;
 	private Label _hint;
 	private Label _log;
 	private Button _endTurn;
@@ -156,18 +152,9 @@ public partial class KinPartyBoard : Node2D
 				&& int.TryParse(arg["--inspect=".Length..], out var inspect)
 			)
 				_captureInspect = inspect;
-			// Capture-only: `--snare=3` weakens the foe in space 3 to catchable (`DebugWeaken`) and
-			// arms the Snare, to capture what an armed Snare lights.
-			if (arg.StartsWith("--snare=") && int.TryParse(arg["--snare=".Length..], out var weak))
-				GetTree().CreateTimer(0.4).Timeout += () =>
-				{
-					_state = _state.DebugWeaken(weak);
-					Render(ImmutableList<GameEvent>.Empty);
-					OnSnare();
-				};
 			if (arg == "--end-turn")
 				GetTree().CreateTimer(1.6).Timeout += OnEndTurn;
-			// Capture-only: `--fight` presses FIGHT before any `--play`, `--focus` or `--snare`
+			// Capture-only: `--fight` presses FIGHT before any `--play` or `--focus`
 			// (practice scenarios open deploying, and deploy refuses them all).
 			if (arg == "--fight")
 				GetTree().CreateTimer(0.3).Timeout += OnEndTurn;
@@ -193,7 +180,7 @@ public partial class KinPartyBoard : Node2D
 						Change(r => r with { RegionIndex = 1 });
 						return;
 					}
-					if (screen is "boss" or "relics")
+					if (screen is "boss" or "relics" or "monsters")
 					{
 						Change(r =>
 						{
@@ -201,10 +188,16 @@ public partial class KinPartyBoard : Node2D
 							return route with { NodeId = route.Route!.End.Id };
 						});
 						// `relics` wins the boss fight through the capture hook: the real flow after.
-						if (screen == "relics")
+						if (screen is "relics" or "monsters")
 						{
 							_state = _state.DebugEndBattle(won: true);
 							BattleOver();
+						}
+						// `monsters` skips the relic, to show the boss's monster pick.
+						if (screen == "monsters")
+						{
+							_run = _run with { RelicChoice = [] };
+							ShowPrizes(new RunReport([], 0), _run.Boss.Name);
 						}
 						return;
 					}
@@ -358,8 +351,33 @@ public partial class KinPartyBoard : Node2D
 
 		if (_run.IsOver)
 			Continue();
-		else if (!_run.RelicChoice.IsEmpty)
+		else
+			ShowPrizes(report, beaten);
+	}
+
+	/// <summary>
+	/// **A boss's prizes, each on its own screen, then the usual rewards**: a boss relic, then (the
+	/// first two bosses) a monster — round 4: monsters come from bosses. Any fight else goes straight
+	/// to the rewards.
+	/// </summary>
+	private void ShowPrizes(RunReport report, string beaten)
+	{
+		if (!_run.RelicChoice.IsEmpty)
 			ShowRelicChoice(report, beaten);
+		else if (!_run.MonsterChoice.IsEmpty)
+			_screens.ShowMonsterChoice(
+				_run,
+				monster =>
+				{
+					_run = _run.ChooseMonster(monster);
+					ShowPrizes(report, beaten);
+				},
+				() =>
+				{
+					_run = _run with { MonsterChoice = [] };
+					ShowPrizes(report, beaten);
+				}
+			);
 		else
 			ShowBetween(report, beaten);
 	}
@@ -375,29 +393,17 @@ public partial class KinPartyBoard : Node2D
 			relic =>
 			{
 				_run = _run.ChooseRelic(relic);
-				ShowBetween(report, beaten);
+				ShowPrizes(report, beaten);
 			},
 			() =>
 			{
 				_run = _run with { RelicChoice = [] };
-				ShowBetween(report, beaten);
+				ShowPrizes(report, beaten);
 			}
 		);
 
-	/// <summary>Redrawn after every bench swap, so the team shown is always the team that fights.</summary>
 	private void ShowBetween(RunReport report, string beaten) =>
-		_screens.ShowBetween(
-			_run,
-			report,
-			beaten,
-			reward => Change(r => r.Take(reward)),
-			Continue,
-			(team, bench) =>
-			{
-				_run = _run.Swap(team, bench);
-				ShowBetween(report, beaten);
-			}
-		);
+		_screens.ShowBetween(_run, report, beaten, reward => Change(r => r.Take(reward)), Continue);
 
 	private int HandCard(int index) => _state.CardsIn(ZoneType.Hand).ElementAt(index).Id;
 
@@ -522,18 +528,6 @@ public partial class KinPartyBoard : Node2D
 	private int? FoeSpaceAt(Vector2 point) =>
 		_field.DropAt(point) is { } d && d >= PartyBattle.MaxLine ? d - PartyBattle.MaxLine : null;
 
-	private void OnSnare()
-	{
-		_selectedAllyId = 0;
-		_snaring = !_snaring;
-		Report(
-			_snaring
-				? "Click a lit foe to catch it — a third of its HP or less. Click anywhere else to put the Snare away."
-				: HowToPlay
-		);
-		RenderRows();
-	}
-
 	private int? SpaceAt(Vector2 point) =>
 		_field.DropAt(point) is { } d && d < PartyBattle.MaxLine ? d : null;
 
@@ -562,21 +556,6 @@ public partial class KinPartyBoard : Node2D
 			is not InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left } click
 		)
 			return;
-
-		// **An armed Snare takes the next click**: a foe is a throw, anywhere else puts it away.
-		if (_snaring)
-		{
-			GetViewport().SetInputAsHandled();
-			_snaring = false;
-			if (FoeSpaceAt(click.Position) is { } at && _state.FoeAt(at) is { } target)
-				Apply(new UseSnareAction { FoeId = target.Id });
-			else
-			{
-				_hint.Text = HowToPlay;
-				RenderRows();
-			}
-			return;
-		}
 
 		if (SpaceAt(click.Position) is not { } space)
 			return;
@@ -660,7 +639,6 @@ public partial class KinPartyBoard : Node2D
 	private void OnEndTurn()
 	{
 		_selectedAllyId = 0;
-		_snaring = false;
 		Apply(_state.GetParty().Deploying ? new BeginFightAction() : new EndPartyTurnAction());
 	}
 
@@ -738,11 +716,9 @@ public partial class KinPartyBoard : Node2D
 			: $"{party.Name.ToUpperInvariant()}   ·   TURN {party.TurnNumber}";
 
 		var down = _state.Allies().Where(a => a.IsKnockedOut).Select(a => a.Name).ToList();
-		var bench = _state.BenchedAllies().Select(a => $"{a.Name} {a.Hp}/{a.MaxHp}").ToList();
 		_subtitle.Text =
 			party.Description
-			+ (down.Count > 0 ? $"   Knocked out: {string.Join(", ", down)}." : "")
-			+ (bench.Count > 0 ? $"   Bench: {string.Join(", ", bench)}." : "");
+			+ (down.Count > 0 ? $"   Knocked out: {string.Join(", ", down)}." : "");
 
 		// Borrowed energy (Surge) is a cost you pay later — it must be visible now.
 		_energy.Text = $"{party.Energy}/{party.MaxEnergy}";
@@ -750,8 +726,6 @@ public partial class KinPartyBoard : Node2D
 		_kindle.Text = party.Kindle > 0 ? $"KINDLE {party.Kindle}" : "";
 		_energyNote.LabelSettings.FontColor =
 			party.EnergyDebt > 0 ? KinPalette.Red.Lightened(0.3f) : KinPalette.Bone;
-		_snare.Text = $"SNARE ×{party.Snares}";
-		_snare.Disabled = party.IsOver || party.Snares == 0;
 		_endTurn.Disabled = party.IsOver;
 		_endTurn.Text = party.Deploying ? "FIGHT" : "END TURN";
 		if (party.Deploying)
@@ -812,7 +786,6 @@ public partial class KinPartyBoard : Node2D
 				steps,
 				drops,
 				focus,
-				_snaring,
 				_selectedAllyId,
 				_heldId
 			)
@@ -857,12 +830,6 @@ public partial class KinPartyBoard : Node2D
 						played.CardName.ToUpperInvariant(),
 						KinPalette.Gold
 					);
-				},
-				FoeCaughtEvent caught => () =>
-				{
-					var cell = _field.ViewOf(caught.FoeId);
-					KinAnimator.Pop(cell);
-					KinAnimator.Float(_overlay, cell, "CAUGHT!", KinPalette.Gold);
 				},
 				CardStolenEvent stolen => () =>
 					KinAnimator.Float(
@@ -927,12 +894,6 @@ public partial class KinPartyBoard : Node2D
 						$"THORNS {thorns.Damage}",
 						KinPalette.Family(Family.Grove).Lightened(0.4f)
 					),
-				AllySwappedInEvent swap => () =>
-				{
-					var cell = _field.ViewOf(swap.AllyId);
-					KinAnimator.Pop(cell);
-					KinAnimator.Float(_overlay, cell, "IN!", KinPalette.Gold);
-				},
 				FoeMovedEvent moved => () =>
 					KinAnimator.Float(
 						_overlay,
@@ -980,8 +941,6 @@ public partial class KinPartyBoard : Node2D
 			FoeStaggeredEvent staggered => $"{Who(staggered.FoeId)} is staggered",
 			CardStolenEvent stolen => $"{Who(stolen.FoeId)} steals your {stolen.CardName}",
 			CardDiscardedEvent discarded => $"Discarded {Who(discarded.CardId)}",
-			FoeCaughtEvent caught => $"Caught the {Who(caught.FoeId)}!",
-			AllySwappedInEvent swap => $"{Who(swap.AllyId)} steps in for {Who(swap.ForAllyId)}",
 			PartyBattleEndedEvent end => end.Won ? "VICTORY." : "DEFEAT.",
 			_ => null,
 		};
@@ -1173,8 +1132,8 @@ public partial class KinPartyBoard : Node2D
 	}
 
 	/// <summary>
-	/// **The corners of the hand band, as the mockup has them**: the energy ORB with the Snares under
-	/// it bottom-left, END TURN bottom-right. Placed on the 1920x1080 canvas by hand — they sit
+	/// **The corners of the hand band, as the mockup has them**: the energy ORB bottom-left, END TURN
+	/// bottom-right. Placed on the 1920x1080 canvas by hand — they sit
 	/// beside the fan, which no container lays out.
 	/// </summary>
 	private void BuildCorners(CanvasLayer layer)
@@ -1208,17 +1167,6 @@ public partial class KinPartyBoard : Node2D
 		_energyNote.Position = new Vector2(20, 96);
 		_energyNote.Size = new Vector2(orb - 20, 40);
 		disc.AddChild(_energyNote);
-
-		_snare = new Button
-		{
-			Text = "SNARE",
-			TooltipText = "Catch a foe at a third of its HP or less. Costs 1 energy.",
-			Position = new Vector2(48, canvas.Y - 96),
-			Size = new Vector2(orb, 56),
-		};
-		StyleButton(_snare, 22);
-		_snare.Pressed += OnSnare;
-		layer.AddChild(_snare);
 
 		_endTurn = new Button
 		{

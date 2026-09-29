@@ -3,7 +3,7 @@ namespace KinCore.Party;
 /// <summary>
 /// **The town, as a map of buildings** (`KinMapPlan.md` §3, §7): the hospital, the shop, the pen,
 /// the leader's hall (from the second town on) and the gate. **Healing is no longer free on
-/// arrival** — the hospital sells it, so it competes with Snares and cards for the same gold (the
+/// arrival** — the hospital sells it, so it competes with cards for the same gold (the
 /// decided "what makes a town a choice"). The shop, pen, hall and gate use the run's existing verbs.
 /// </summary>
 public partial record PartyRun
@@ -15,7 +15,7 @@ public partial record PartyRun
 	public TownMap Town => PartyTowns.For(RegionIndex, Region.Name);
 
 	/// <summary>Anyone on the team or the bench below their max.</summary>
-	public bool AnyoneHurt => Team.Concat(Bench).Any(m => m.Hp < m.MaxHp);
+	public bool AnyoneHurt => Team.Any(m => m.Hp < m.MaxHp);
 
 	/// <summary>Why the hospital will not heal — or null if it will.</summary>
 	public string? CannotHeal =>
@@ -32,6 +32,5 @@ public partial record PartyRun
 			{
 				Gold = Gold - HospitalPrice,
 				Team = Heal(Team, 1),
-				Bench = Heal(Bench, 1),
 			};
 }

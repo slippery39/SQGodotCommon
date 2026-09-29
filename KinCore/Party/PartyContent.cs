@@ -26,16 +26,13 @@ public record PartyCompanion(
 	/// </summary>
 	public ImmutableList<GameComponent> Abilities { get; init; } = [];
 
-	/// <summary>The level these stats are at (`PartyLevels.Scale` sets it; the base is Lv 5).</summary>
-	public int Level { get; init; } = PartyLevels.Base;
-
 	/// <summary>Its FAMILY (`PartyFamilies`).</summary>
 	public Family Family { get; init; }
 }
 
 /// <summary>
-/// A monster in a battle. `Position` is its place in your line (0 = the front); below 0 puts it on
-/// the BENCH. `Hp` is where a RUN left it; null = full.
+/// A monster in a battle. `Position` is its place in your line (0 = the front). `Hp` is where a RUN
+/// left it; null = full.
 /// </summary>
 public record PlacedCompanion(PartyCompanion Companion, int Position, int? Hp = null);
 
@@ -53,7 +50,6 @@ public record PartyScenario(
 	ImmutableList<Foe> Foes,
 	ImmutableList<KinCard> Deck,
 	ImmutableList<string> OpeningHand,
-	int Snares = 0,
 	bool Deploy = false,
 	Family Family = Family.None,
 	ImmutableList<Relic>? Relics = null
@@ -337,7 +333,6 @@ public static class PartyContent
 			[Boar(0), Wisp(1)],
 			StarterDeck,
 			[],
-			Snares: 2,
 			Deploy: true
 		);
 
@@ -349,7 +344,6 @@ public static class PartyContent
 			[Boar(0), Stonebeak(1), Wisp(2)],
 			StarterDeck,
 			[],
-			Snares: 2,
 			Deploy: true
 		);
 
@@ -365,7 +359,6 @@ public static class PartyContent
 			[Boar(0), Stonebeak(1), Wisp(2)],
 			[.. StarterDeck, PartyCards.Charge, PartyCards.Gust, Rally, Stagger],
 			["Charge", "Gust", "Rally", "Guard", "Stagger"],
-			Snares: 2,
 			Deploy: true
 		);
 
@@ -394,7 +387,6 @@ public static class PartyContent
 				PartyCards.Ration,
 			],
 			["Sift"],
-			Snares: 2,
 			Deploy: true
 		);
 
@@ -431,7 +423,6 @@ public static class PartyContent
 				PartyCards.SparkScroll,
 			],
 			["Stoke", "Zap", "Spark Scroll"],
-			Snares: 2,
 			Deploy: true
 		);
 
@@ -459,7 +450,6 @@ public static class PartyContent
 				PartyCards.BattleCry,
 			],
 			["Surge", "Quicken", "Unleash"],
-			Snares: 2,
 			Deploy: true
 		);
 
@@ -488,9 +478,39 @@ public static class PartyContent
 				PartyCards.DecoyCard,
 			],
 			["Sow", "Graft", "Harvest"],
-			Snares: 2,
 			Deploy: true
 		);
+
+	/// <summary>
+	/// **The monsters a boss can offer a run of this family** (round 4: monsters come from bosses).
+	/// PLACEHOLDER — today's species, as they joined when caught — until the families are drafted.
+	/// A method, not a field: it reads `PartyWorld`, which reads this class.
+	/// </summary>
+	public static ImmutableList<PartyCompanion> MonstersOf(Family family) =>
+		family switch
+		{
+			Family.Grove =>
+			[
+				.. new[]
+				{
+					PartyWorld.Mosshell,
+					PartyWorld.Broodvine,
+					PartyWorld.Hushcap,
+					PartyWorld.Howler,
+				}.Select(PartyRun.FromFoe),
+			],
+			Family.Ember =>
+			[
+				.. new[]
+				{
+					PartyWorld.CinderNewt,
+					PartyWorld.Emberling,
+					PartyWorld.EchoOwl,
+					PartyWorld.Ironhorn,
+				}.Select(PartyRun.FromFoe),
+			],
+			_ => [],
+		};
 
 	public static ImmutableList<PartyScenario> Scenarios =>
 		[Trio, Alone, Pair, Looting, Spellcraft, SurgeScenario, SummonScenario];
@@ -513,8 +533,6 @@ public static class PartyBattleFactory
 				Name = scenario.Name,
 				Description = scenario.Description,
 				Energy = 3,
-				Snares = scenario.Snares,
-				Family = scenario.Family,
 				Relics = scenario.Relics ?? [],
 			}
 		);
@@ -546,13 +564,11 @@ public static class PartyBattleFactory
 				{
 					Slot = slot,
 					Name = companion.Name,
-					Level = companion.Level,
 					Family = companion.Family,
 					Hp = hp ?? companion.Hp,
 					MaxHp = companion.Hp,
 					Power = companion.Power,
 					Position = position,
-					Benched = position < 0,
 					Pattern = companion.Moves,
 					Passive = companion.Passive,
 					PassiveRule = companion.PassiveRule,
