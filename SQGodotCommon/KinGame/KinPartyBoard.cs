@@ -57,8 +57,8 @@ public partial class KinPartyBoard : Node2D
 	private Label _energy;
 	private Label _energyNote;
 
-	/// <summary>EMBER's KINDLE for this fight, over the orb — hidden at 0.</summary>
-	private Label _kindle;
+	/// <summary>The team's SPELL POWER and your auras, over the orb — hidden when there are none.</summary>
+	private Label _spellPower;
 
 	private Label _hint;
 	private Label _log;
@@ -742,7 +742,13 @@ public partial class KinPartyBoard : Node2D
 		// Borrowed energy (Surge) is a cost you pay later — it must be visible now.
 		_energy.Text = $"{party.Energy}/{party.MaxEnergy}";
 		_energyNote.Text = party.EnergyDebt > 0 ? $"−{party.EnergyDebt} NEXT TURN" : "ENERGY";
-		_kindle.Text = party.Kindle > 0 ? $"KINDLE {party.Kindle}" : "";
+		// Spell Power is the TEAM's total, and the auras are rules on your side (Ember, round 4).
+		_spellPower.Text = string.Join(
+			"\n",
+			new[] { _state.SpellBonus() > 0 ? $"SPELL POWER {_state.SpellBonus()}" : "" }
+				.Concat(_state.Auras().Select(a => a.Name.ToUpperInvariant()))
+				.Where(l => l.Length > 0)
+		);
 		_energyNote.LabelSettings.FontColor =
 			party.EnergyDebt > 0 ? KinPalette.Red.Lightened(0.3f) : KinPalette.Bone;
 		_endTurn.Disabled = party.IsOver;
@@ -758,7 +764,7 @@ public partial class KinPartyBoard : Node2D
 		_hand.Sync(
 			[.. _state.CardsIn(ZoneType.Hand).Select(c => c with { Cost = _state.CostOf(c) })],
 			party.Energy,
-			// LIVE: a spell's numbers with the Kindle already in.
+			// LIVE: a spell's numbers with the Spell Power already in.
 			c => KinCardFace.For(c, _state.SpellBonus())
 		);
 		_field.Settle(Animate(events));
@@ -886,13 +892,24 @@ public partial class KinPartyBoard : Node2D
 						KinPalette.Bone
 					),
 				// **The engines, seen firing** (2026-09-28: the playtest could not tell Ember ever did).
-				KindleGainedEvent kindled => () =>
+				SpellPowerGainedEvent gained => () =>
 					KinAnimator.Float(
 						_overlay,
-						_kindle,
-						$"+{kindled.Amount} KINDLE",
+						_spellPower,
+						$"+{gained.Amount} SPELL POWER",
 						KinPalette.Family(Family.Ember).Lightened(0.3f)
 					),
+				FoeBurnedEvent burned => () =>
+				{
+					var cell = _field.ViewOf(burned.FoeId);
+					KinAnimator.Flash(cell, new Color(1.6f, 0.9f, 0.5f));
+					KinAnimator.Float(
+						_overlay,
+						cell,
+						$"−{burned.Damage} BURN",
+						KinPalette.Family(Family.Ember).Lightened(0.3f)
+					);
+				},
 				GrewEvent grew => () =>
 					KinAnimator.Float(
 						_overlay,
@@ -1183,10 +1200,13 @@ public partial class KinPartyBoard : Node2D
 		_energy.Position = new Vector2(10, 40);
 		_energy.Size = new Vector2(orb, 60);
 		disc.AddChild(_energy);
-		_kindle = Outlined("", 26, Color.FromHtml("#FF9A3C"));
-		_kindle.Position = new Vector2(28, canvas.Y - 316);
-		_kindle.Size = new Vector2(orb + 40, 36);
-		layer.AddChild(_kindle);
+		_spellPower = Outlined("", 26, Color.FromHtml("#FF9A3C"));
+		_spellPower.Position = new Vector2(28, canvas.Y - 316);
+		_spellPower.Size = new Vector2(orb + 40, 36);
+		// Auras stack as more lines: it grows UP, away from the energy orb.
+		_spellPower.GrowVertical = Control.GrowDirection.Begin;
+		_spellPower.VerticalAlignment = VerticalAlignment.Bottom;
+		layer.AddChild(_spellPower);
 
 		_energyNote = Outlined("ENERGY", 16, KinPalette.Bone);
 		_energyNote.AutowrapMode = TextServer.AutowrapMode.WordSmart;

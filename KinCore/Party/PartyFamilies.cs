@@ -65,22 +65,10 @@ public record Alpha : GameComponent;
 
 // ===== EMBER — the engine is SPELL COUNT
 
-/// <summary>**STOKER** (Emberling): every spell you play adds this much MORE Kindle.</summary>
+/// <summary>**STOKER** (Emberling): when a card gives Spell Power, it gives this much more.</summary>
 public record Stoker : GameComponent
 {
 	public int Extra { get; init; } = 1;
-}
-
-/// <summary>**ECHO** (Echo Owl): the first spell you play each turn is cast twice.</summary>
-public record EchoFirstSpell : GameComponent;
-
-/// <summary>**EMBERSKIN** (Cinder Newt): at your turn start it gains Block equal to your Kindle.</summary>
-public record Emberskin : GameComponent;
-
-/// <summary>**FINISHER, Ember's half** (Pike): its attacks deal this much more per Kindle.</summary>
-public record KindleFinisher : GameComponent
-{
-	public int PerKindle { get; init; } = 1;
 }
 
 // ===== Card steps
@@ -207,79 +195,11 @@ public record HarvestAction : CardStep
 	}
 }
 
-/// <summary>Stoke (and the Kindle every spell adds): this much Kindle.</summary>
-public record KindleAction : GameAction
-{
-	public int Amount { get; init; }
-
-	public override ActionResult Execute(GameState s)
-	{
-		var party = s.GetParty();
-		return new ActionResult(
-			s.UpdateObject(party.Id, party with { Kindle = party.Kindle + Amount })
-		).WithEvent(new KindleGainedEvent { Amount = Amount });
-	}
-}
-
-public record KindleGainedEvent : GameEvent
-{
-	public int Amount { get; init; }
-}
-
 public record GrewEvent : GameEvent
 {
 	public int AllyId { get; init; }
 	public int Power { get; init; }
 	public int Hp { get; init; }
-}
-
-/// <summary>Cinderwall: the monster it is dropped on gains Block equal to your Kindle.</summary>
-public record CinderwallAction : CardStep
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var ally = Target(s);
-		var amount = s.GetParty().Kindle;
-		s = s.UpdateObject(ally.Id, ally with { Block = ally.Block + amount });
-		return new ActionResult(s).WithEvent(
-			new BlockGainedEvent { AllyId = ally.Id, Amount = amount }
-		);
-	}
-}
-
-/// <summary>Fan the Flames: your next spell is cast twice.</summary>
-public record FanFlamesAction : GameAction
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var party = s.GetParty();
-		return new(s.UpdateObject(party.Id, party with { NextSpellTwice = true }));
-	}
-}
-
-/// <summary>
-/// **FLASHPOINT — Ember's big turn (an EXPERIMENT)**: spend ALL your Kindle; the foe it is dropped
-/// on takes this many times as much. Not a spell itself (it does not stoke). Plain card, cheap to drop.
-/// </summary>
-public record FlashpointAction : CardStep
-{
-	public int PerKindle { get; init; } = 3;
-
-	public override string? Refusal(GameState s, int space, bool foeRow) =>
-		!foeRow || s.FoeAt(space) is null ? "Drop it on a foe"
-		: s.GetParty().Kindle == 0 ? "You have no Kindle to spend"
-		: null;
-
-	public override ActionResult Execute(GameState s)
-	{
-		var party = s.GetParty();
-		var damage = party.Kindle * PerKindle;
-		s = s.UpdateObject(party.Id, party with { Kindle = 0 });
-		if (s.FoeAt(Space) is not { } foe)
-			return new(s);
-		var (after, events) = PartyState.HitFoe(s, foe, damage);
-		return new ActionResult(after).WithEvents(events);
-	}
 }
 
 /// <summary>The families' rules that run at fixed moments: turn start, a spell cast, a token falling.</summary>
@@ -330,38 +250,18 @@ public static class PartyFamilies
 	}
 
 	/// <summary>
-	/// **Your turn starts**: Block drops to what is Rooted (all of it, for a Mossback); Grow grows;
-	/// Emberskin shields from the Kindle.
+	/// **Your turn starts**: Block drops to what is Rooted (all of it, for a Mossback); Grow grows.
 	/// </summary>
 	public static (GameState, ImmutableList<GameEvent>) TurnStart(GameState s, bool firstTurn)
 	{
-		var kindle = s.GetParty().Kindle;
 		foreach (var ally in s.Allies().ToList())
 		{
 			var kept = ally.HasComponent<Mossback>()
 				? ally.Block
 				: Math.Min(ally.Block, ally.Rooted);
-			var skin = !ally.IsDown && ally.HasComponent<Emberskin>() ? kindle : 0;
-			s = s.UpdateObject(ally.Id, ally with { Block = kept + skin, Rooted = kept });
+			s = s.UpdateObject(ally.Id, ally with { Block = kept, Rooted = kept });
 		}
 		return firstTurn ? (s, []) : GrowAll(s);
-	}
-
-	/// <summary>
-	/// How much Kindle one spell cast adds: what the Stokers standing add — none without one (round 4:
-	/// no family mechanic is automatic).
-	/// </summary>
-	public static int KindlePerSpell(GameState s) =>
-		s.LivingAllies().SelectMany(a => a.GetComponents<Stoker>()).Sum(k => k.Extra);
-
-	/// <summary>How many times a spell played now is cast: once, +1 for an Echo's first, +1 for Fan the Flames.</summary>
-	public static int SpellCasts(GameState s)
-	{
-		var party = s.GetParty();
-		var echo =
-			party.SpellsThisTurn == 0
-			&& s.LivingAllies().Any(a => a.HasComponent<EchoFirstSpell>());
-		return 1 + (echo ? 1 : 0) + (party.NextSpellTwice ? 1 : 0);
 	}
 
 	/// <summary>A token of yours fell: every Spores standing draws and pays out.</summary>

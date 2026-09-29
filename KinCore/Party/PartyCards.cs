@@ -79,72 +79,6 @@ public static class PartyCards
 		new SwapAction { AloneBlock = 5 }
 	);
 
-	// ===== SPELLCRAFT — damage from the card itself: no aim needed.
-
-	/// <summary>Enabler · filler: a fine card anywhere, and the spell every Spellcraft payoff counts.</summary>
-	public static readonly KinCard Zap = Plus(
-		Card("Zap", 1, "Drop on a foe: deal 4.", new SpellDamageAction { Amount = 4 }) with
-		{
-			Family = Family.Ember,
-		},
-		Card("Zap", 1, "Drop on a foe: deal 6.", new SpellDamageAction { Amount = 6 })
-	);
-
-	/// <summary>Enabler · standard: the answer to a swarm.</summary>
-	public static readonly KinCard Arc = Card(
-		"Arc",
-		2,
-		"Deal 2 to every foe.",
-		new SpellDamageAction { Amount = 2, Target = SpellTarget.All }
-	) with
-	{
-		Family = Family.Ember,
-	};
-
-	/// <summary>Bridge (Spellcraft and Discard) · standard: a spell whether you cast it or toss it.</summary>
-	public static readonly KinCard SparkScroll = Card(
-		"Spark Scroll",
-		1,
-		"Drop on a foe: deal 3. TOSS: deal 3 to a random foe.",
-		new SpellDamageAction { Amount = 3 }
-	) with
-	{
-		Components =
-		[
-			new Trigger
-			{
-				Name = "Toss",
-				When = new OnSelfDiscarded(),
-				Effects = [new SpellDamageAction { Amount = 3, Target = SpellTarget.Random }],
-			},
-		],
-		Family = Family.Ember,
-	};
-
-	/// <summary>Payoff · narrow: nothing on its own, the whole turn's spells again after them.</summary>
-	public static readonly KinCard Overload = Card(
-		"Overload",
-		2,
-		"Drop on a foe: deal all the spell damage dealt this turn.",
-		new SpellDamageAction { FromSpellDamageThisTurn = true }
-	) with
-	{
-		Family = Family.Ember,
-		Rarity = Rarity.Rare,
-	};
-
-	/// <summary>Payoff · narrow: a turn of dropped spells, each three wide.</summary>
-	public static readonly KinCard Focus = Card(
-		"Focus",
-		1,
-		"This turn, your spells also hit the foe behind their target.",
-		new SplashSpellsAction()
-	) with
-	{
-		Family = Family.Ember,
-		Rarity = Rarity.Uncommon,
-	};
-
 	// ===== THE LINE — Gale's deck: reorder THEIR front.
 
 	/// <summary>Enabler (Control) · standard: their front two swap — Off-Balance while Gale stands.</summary>
@@ -333,19 +267,6 @@ public static class PartyCards
 		Family = Family.Storm,
 	};
 
-	/// <summary>Payoff (Spellcraft) · narrow: the four-energy spell a Surge turn is for.</summary>
-	public static readonly KinCard Meteor = Card(
-		"Meteor",
-		4,
-		"Drop on a foe: deal 14, and 4 to the one behind it.",
-		new SpellDamageAction { Amount = 14 },
-		new SpellDamageAction { Amount = 4, Target = SpellTarget.Behind }
-	) with
-	{
-		Family = Family.Ember,
-		Rarity = Rarity.Rare,
-	};
-
 	// ===== DISCARD + DRAW
 
 	/// <summary>Enabler (both) · filler: card selection anywhere. MtgCore's looting pipeline.</summary>
@@ -505,65 +426,6 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Grove,
-		Rarity = Rarity.Rare,
-	};
-
-	// ===== EMBER — the engine is SPELL COUNT (KinFamiliesPlan.md §4)
-
-	/// <summary>Enabler: Kindle without a spell.</summary>
-	public static readonly KinCard Stoke = Plus(
-		Card(
-			"Stoke",
-			1,
-			"+3 KINDLE. Draw a card.",
-			new KindleAction { Amount = 3 },
-			new DrawAction()
-		) with
-		{
-			Family = Family.Ember,
-		},
-		Card(
-			"Stoke",
-			1,
-			"+5 KINDLE. Draw a card.",
-			new KindleAction { Amount = 5 },
-			new DrawAction()
-		)
-	);
-
-	/// <summary>Bridge: the fire keeps you alive.</summary>
-	public static readonly KinCard Cinderwall = Card(
-		"Cinderwall",
-		1,
-		"It gains Block equal to your KINDLE.",
-		new CinderwallAction()
-	) with
-	{
-		Family = Family.Ember,
-		Rarity = Rarity.Uncommon,
-	};
-
-	/// <summary>Accelerator: a spell twice is two Kindle.</summary>
-	public static readonly KinCard FanTheFlames = Card(
-		"Fan the Flames",
-		1,
-		"Your next spell is cast twice.",
-		new FanFlamesAction()
-	) with
-	{
-		Family = Family.Ember,
-		Rarity = Rarity.Uncommon,
-	};
-
-	/// <summary>THE BIG TURN (an experiment — KinFamiliesPlan.md §6).</summary>
-	public static readonly KinCard Flashpoint = Card(
-		"Flashpoint",
-		2,
-		"Drop on a foe: spend all your KINDLE, and it takes 3 for each.",
-		new FlashpointAction { PerKindle = 3 }
-	) with
-	{
-		Family = Family.Ember,
 		Rarity = Rarity.Rare,
 	};
 }

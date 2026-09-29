@@ -43,11 +43,23 @@ public record PartyBattle : GameObject
 
 	// ===== EMBER (PartyFamilies.cs)
 
-	/// <summary>**KINDLE**: each spell adds to it, every spell deals +1 per point; it lasts the whole fight.</summary>
-	public int Kindle { get; init; }
+	/// <summary>
+	/// **SPELL POWER for the rest of the fight**, from cards (Stoke, Inner Fire) — added to every spell.
+	/// (Kindle, merged into Spell Power: Shayne, 2026-09-28.) `PartySpells.SpellBonus` sums it all.
+	/// </summary>
+	public int FightSpellPower { get; init; }
 
-	/// <summary>Fan the Flames was played: the next spell is cast twice.</summary>
-	public bool NextSpellTwice { get; init; }
+	/// <summary>Spell Power for THIS turn, from cards and first-attack bonuses.</summary>
+	public int TurnSpellPower { get; init; }
+
+	/// <summary>Fan the Flames: this many of your next spells this turn are cast twice.</summary>
+	public int SpellsTwice { get; init; }
+
+	/// <summary>Spell Surge: your spells cost this much less this turn.</summary>
+	public int SpellDiscount { get; init; }
+
+	/// <summary>Charge Up: this much more energy when your next turn starts.</summary>
+	public int EnergyNextTurn { get; init; }
 
 	/// <summary>Spells played this turn — the Echo Owl's "first spell each turn".</summary>
 	public int SpellsThisTurn { get; init; }
@@ -156,9 +168,6 @@ public record Ally : Creature
 	/// </summary>
 	public int SpellPower { get; init; }
 
-	/// <summary>Spell Power added this turn (a first-attack bonus). Cleared when your next turn starts.</summary>
-	public int BonusSpellPower { get; init; }
-
 	/// <summary>
 	/// **An attack card has been played on it this turn** — so its FIRST-ATTACK bonus is spent
 	/// (`PartyMonsters`). Cleared when your next turn starts.
@@ -210,6 +219,9 @@ public record Foe : Creature
 {
 	/// <summary>Extra damage this foe takes from every hit, from being moved. Cleared at your turn start.</summary>
 	public int OffBalance { get; init; }
+
+	/// <summary>**BURN** (`PartyEmber`): this much damage as its turn begins, Block or not, then 1 less.</summary>
+	public int Burn { get; init; }
 
 	/// <summary>Stagger: it loses its next move (the cycle still advances).</summary>
 	public bool Staggered { get; init; }

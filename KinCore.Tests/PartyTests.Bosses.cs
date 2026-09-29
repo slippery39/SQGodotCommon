@@ -56,7 +56,7 @@ public partial class PartyTests
 		s = Play(s, "Zap", 0, foeRow: true);
 		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(30), "a hit of Shell's size bounces");
 
-		// The second Zap carries the first's Kindle too; whatever it deals, it gets through.
+		// The second Zap is the same spell; whatever it deals, it gets through.
 		s = Play(s, "Zap", 0, foeRow: true);
 		Assert.That(FoeIn(s, 0).Hp, Is.LessThan(30));
 	}

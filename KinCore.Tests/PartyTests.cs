@@ -710,7 +710,7 @@ public partial class PartyTests
 		s = Play(s, "Zap", 0, foeRow: true);
 		s = Play(s, "Overload", 1, foeRow: true);
 
-		// Two Zaps, 4 each (round 4: no Kindle without a card or a monster that makes it).
+		// Two Zaps, 4 each (round 4: no Spell Power without a card or a monster that gives it).
 		Assert.That(FoeIn(s, 1).Hp, Is.EqualTo(50 - (4 + 4)));
 	}
 
@@ -748,12 +748,12 @@ public partial class PartyTests
 		};
 		var s = Deal(
 			[new(guard, 0)],
-			[Zap(), Card("Rally", 0, new PowerAction { Amount = 1 })],
+			[Zap(), Card("Jab", 0, new StrikeAction { Amount = 1 })],
 			Foe(0)
 		);
 
-		s = Play(s, "Rally", 0);
-		Assert.That(Named(s, "Warden").Block, Is.EqualTo(0), "not a spell");
+		s = Play(s, "Jab", 0);
+		Assert.That(Named(s, "Warden").Block, Is.EqualTo(0), "an attack is not a spell");
 		s = Play(s, "Zap", 0, foeRow: true);
 		Assert.That(Named(s, "Warden").Block, Is.EqualTo(3));
 	}

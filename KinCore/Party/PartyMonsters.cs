@@ -26,8 +26,13 @@ public record FirstAttack : GameComponent
 	/// <summary>Spell Power for the whole team, this turn.</summary>
 	public int SpellPower { get; init; }
 
-	/// <summary>Kindle — Spell Power for the rest of the fight.</summary>
-	public int Kindle { get; init; }
+	/// <summary>Spell Power for the rest of the fight.</summary>
+	public int FightSpellPower { get; init; }
+
+	/// <summary>Burn on the foe (or foes) the attack hits.</summary>
+	public int Burn { get; init; }
+
+	public int Energy { get; init; }
 
 	public int Draw { get; init; }
 
@@ -42,7 +47,9 @@ public record FirstAttack : GameComponent
 				Rooted > 0 ? $"+{Rooted} Rooted Block" : "",
 				Thorns > 0 ? $"+{Thorns} Thorns" : "",
 				SpellPower > 0 ? $"+{SpellPower} Spell Power this turn" : "",
-				Kindle > 0 ? $"+{Kindle} Kindle" : "",
+				FightSpellPower > 0 ? $"+{FightSpellPower} Spell Power this fight" : "",
+				Burn > 0 ? $"{Burn} Burn on the foe it hits" : "",
+				Energy > 0 ? $"+{Energy} energy" : "",
 				Draw > 0 ? $"draw {Draw}" : "",
 			}.Where(p => p.Length > 0)
 		);
@@ -58,7 +65,7 @@ public static class PartyMonsters
 	/// **An attack card was played on this monster**: the bonus's damage to add (0 after the first),
 	/// and the state with everything else the bonus gives — and the monster marked as having attacked.
 	/// </summary>
-	public static (GameState State, int Damage, ImmutableList<GameEvent> Events) Attacks(
+	public static (GameState State, int Damage, ImmutableList<GameEvent> Events, int Burn) Attacks(
 		GameState s,
 		Ally ally
 	)
@@ -73,7 +80,6 @@ public static class PartyMonsters
 				Block = ally.Block + bonus.Block + bonus.Rooted,
 				Rooted = ally.Rooted + bonus.Rooted,
 				BonusThorns = ally.BonusThorns + bonus.Thorns,
-				BonusSpellPower = ally.BonusSpellPower + bonus.SpellPower,
 			};
 			if (bonus.Block + bonus.Rooted > 0)
 				events = events.Add(
@@ -82,14 +88,22 @@ public static class PartyMonsters
 			events = events.Add(new FirstAttackEvent { AllyId = ally.Id, Text = bonus.Text });
 		}
 		s = s.UpdateObject(ally.Id, ally);
-		if (bonus is { Kindle: > 0 })
+		if (bonus is not null)
 		{
 			var party = s.GetParty();
-			s = s.UpdateObject(party.Id, party with { Kindle = party.Kindle + bonus.Kindle });
+			s = s.UpdateObject(
+				party.Id,
+				party with
+				{
+					TurnSpellPower = party.TurnSpellPower + bonus.SpellPower,
+					FightSpellPower = party.FightSpellPower + bonus.FightSpellPower,
+					Energy = party.Energy + bonus.Energy,
+				}
+			);
 		}
 		if (bonus is { Draw: > 0 })
 			(s, _) = StartTurnAction.DrawCards(s, bonus.Draw);
-		return (s, bonus?.Damage ?? 0, events);
+		return (s, bonus?.Damage ?? 0, events, bonus?.Burn ?? 0);
 	}
 }
 

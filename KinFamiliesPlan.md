@@ -78,6 +78,106 @@ The fun part of card games is figuring out and achieving combos and synergies." 
 answers from an interview (five rounds, 2026-09-27); the family drafts are a proposal to react to.
 Exploring, not tuning: every number is a guess; tests prove things fire; no sims until a design holds.
 
+## EMBER — the family draft (interview 2026-09-28; DRAFT 2 APPROVED and BUILT — `PartyEmber`, `EmberCards`)
+
+**As built** (what the tables below do not say):
+- **A SPELL is every card that is not an ATTACK; an attack card makes one of your monsters attack**
+  (Shayne, 2026-09-28). So Guard, Kindle, Flicker and the auras are spells: they count toward chains
+  and Echo, Fan the Flames doubles them, Spell Surge makes them cheaper. The card face says which
+  ("SPELL · EMBER", "ATTACK"); rarity shows on the reward and shop tiles only, as it clipped.
+- **Firestorm recasts every 0-cost spell**, not only damage: Heat Surge's energy, Flicker+'s draw.
+  Steps that must land on your own monster (Block) are skipped, X cards (Meteor) are not recast, and
+  the recasts do not count toward the chain.
+- The Ember monsters have no move cycle (round 4); each carries one placeholder "Wait" so the shared
+  record stays valid. They reuse the wild species' names, so the art comes with them.
+- Meteor is an X card; its cost gem shows **0**, as Unleash's always has — the card face has no X.
+- `kin_card_preview.tscn -- --party` shows the pool's seven longest texts; all fit.
+
+| | Decided (Shayne) |
+|---|---|
+| Creatures | **a MIX of fire creatures** — the theme is heat, not a creature type |
+| Big turns | **all four**: STACK then nuke, CHAINS, BURN detonate, ENERGY dump — four archetypes to bridge |
+| Weak at | **fragile, and card-hungry** |
+| Block | **it has Block cards, but big Block takes creativity** — never cheap |
+| Burn | **STS Poison**: Burn N deals N at the start of the foe's turn, ignoring Block, then drops by 1 |
+| Spell Power | **ONE number** (Kindle merges into it): monsters give a base; cards add for the TURN or the FIGHT |
+| Attacks | **hybrid monsters**: some attack, their hits scaling with Spell Power |
+| Roster | **Pike, a flexible starter, and one boss pick per archetype** |
+
+Numbers are guesses (Lv 5). SP = Spell Power. Every card has a +.
+
+### Monsters
+
+| Monster | Archetype | HP · POW · SP | Passive | First attack each turn |
+|---|---|---|---|---|
+| **Pike** (starter) | hybrid | 24 · 3 · 1 | **SPELLBLADE**: its attacks add your Spell Power | +1 SP this turn |
+| **Emberling** | STACK | 14 · 0 · 2 | **STOKER**: when a card gives Spell Power, it gives 1 more | +1 SP this fight |
+| **Cinder Newt** | BURN | 18 · 1 · 1 | **SMOULDER**: your spells apply 1 Burn to each foe they hit | apply 2 Burn to the foe it hits |
+| **Echo Owl** | CHAINS | 16 · 1 · 1 | **ECHO**: your 3rd spell each turn is cast twice | draw a card |
+| **Ironhorn** | ENERGY (hybrid) | 26 · 4 · 0 | **BANK**: up to 2 unspent energy carries into your next turn | gain 1 energy |
+
+### Cards — DRAFT 2 (pushed: Shayne, "push the cards' limits first, then nerf")
+
+Draft 1 was "not exciting", thin on chains, and pre-nerfed (an energy card that cost next turn's
+energy; a Burn payoff that removed the Burn). Draft 2 pushes every card and adds **AURAS** — cards
+that set a rule for the rest of the fight (STS's powers) — where the "oh, THAT combo" lives.
+
+| Card | Cost | R | Text | + | For |
+|---|---|---|---|---|---|
+| **Zap** | 1 | C | Deal 5. | Deal 7 | spell (start) |
+| **Kindle** | 1 | C | +3 SP this turn. Draw a card. | +4 SP | [stack] (start) |
+| **Spark** | 0 | C | Deal 3. | Deal 4 | [chain] |
+| **Ember Dart** | 0 | C | Deal 2. Draw a card. | Deal 3 | [chain] |
+| **Kindling** | 1 | C | Add 2 Sparks to your hand. | 3 Sparks | [chain] fodder |
+| **Singe** | 1 | C | Deal 4. Apply 4 Burn. | 5 / 5 | [burn] |
+| **Fire Fan** | 1 | C | Deal 3 to every foe. Apply 2 Burn to each. | 4 / 3 | [burn] area |
+| **Flicker** | 1 | C | Draw 3 cards. | costs 0 | card-hungry |
+| **Charge Up** | 1 | C | Next turn, +2 energy. Draw a card. | +3 | [energy] |
+| **Flame Ward** | 1 | C | Gain Block: 6 + three times your SP. | 9 + three times | Block · [stack] |
+| **Heat Haze** | 1 | C | Gain 6 Block. If you have cast 2 spells this turn, gain 12 more. | 8 / 14 | Block · [chain] |
+| **Stoke** | 1 | U | +2 SP for the rest of the fight. | +3 | [stack] |
+| **Fan the Flames** | 1 | U | Your next 2 spells this turn are cast twice. | costs 0 | [stack] [chain] |
+| **Spell Surge** | 1 | U | Your spells cost 1 less this turn. | costs 0 | [chain] enabler |
+| **Wildfire** | 1 | U | Deal 6. Costs 0 if you have cast 2 spells this turn. | Deal 8 | [chain] |
+| **Chain Lightning** | 1 | U | Deal 3 for each spell you have cast this turn, this one included. | 4 each | [chain] payoff |
+| **Ignite** | 1 | U | Double a foe's Burn. | costs 0 | [burn] |
+| **Spreading Flames** | 1 | U | Every foe's Burn rises to the highest Burn among them. | then +2 each | [burn] |
+| **Smoke Screen** | 1 | U | Gain 5 Block for each spell you have cast this turn. | 6 each | Block · [chain] |
+| **Cinder Shield** | 1 | U | Gain Block equal to twice the Burn on their line. | three times | Block · [burn] |
+| **Heat Surge** | 0 | U | +2 energy. | +3 | [energy] |
+| **Flashpoint** | 2 | R | Deal three times a foe's Burn. (The Burn stays.) | four times | [burn] detonate |
+| **Meteor** | X | R | Spend all energy: deal 8 per energy to a foe, and 4 per energy to the one behind. | 10 / 5 | [energy] dump |
+| **Overload** | 1 | R | Deal all the spell damage dealt this turn. | costs 0 | [chain] finisher |
+| **Pyroblast** | 3 | R | Deal 12. Your SP counts three times. | Deal 16 | [stack] nuke |
+| **Firestorm** | 2 | R | Cast every 0-cost spell in your discard pile, each at a random foe. | costs 1 | [chain] big turn |
+| **Inner Fire** | 2 | R | AURA: at the start of each of your turns, +1 SP for the rest of the fight. | costs 1 | [stack] engine |
+| **Everburn** | 1 | R | AURA: Burn no longer drops at the foe's turn. | costs 0 | [burn] engine |
+| **Spellweaver** | 2 | R | AURA: whenever you cast your 3rd spell in a turn, draw 2 and gain 1 energy. | costs 1 | [chain] engine |
+
+**The starting deck**: 4 Strike, 4 Guard, **Zap, Kindle**. **29 cards**: 11 common, 10 uncommon, 8 rare.
+
+**The combos it is built for** (the finds):
+- **Chains**: Kindling / Ember Dart / Spark → Spell Surge → Chain Lightning or Wildfire; Firestorm
+  recasts every Spark in the discard; Spellweaver refuels it; Echo Owl doubles the 3rd.
+- **Burn**: Singe / Fire Fan → Spreading Flames → Ignite → Flashpoint (the Burn stays, so again next
+  turn); Everburn makes it permanent; Cinder Newt adds Burn to every spell; Cinder Shield turns it to Block.
+- **Stack**: Kindle / Stoke / Inner Fire → Pyroblast or Pike's SPELLBLADE Strikes; Flame Ward walls
+  with it; Emberling adds 1 to every gain.
+- **Energy**: Charge Up / Heat Surge / Ironhorn's BANK → Meteor.
+- **Bridges**: Fan the Flames (stack + chain), Fire Fan (area + Burn), Smoke Screen and Heat Haze
+  (chains keep you alive), Pike (attacks cash the stack).
+
+**Block** (bigger, as asked): Flame Ward, Heat Haze, Smoke Screen, Cinder Shield — each asks for its
+engine first, and each walls a boss hit once the engine is running.
+
+### Engine it needs
+
+Burn (a foe counter, ticking at the foe's turn start); Spell Power for the turn and the fight (Kindle
+renamed); "your Nth spell this turn" (the counter exists); X-cost spells (the X exists for attacks);
+energy carried over; Block that reads SP, spells cast or Burn; SPELLBLADE; SMOULDER; ECHO on the 3rd;
+**AURAS** (a rule on your side for the rest of the fight); **adding a card to your hand**; **casting
+from the discard**; a cost cut for the turn; "the next 2 spells are cast twice".
+
 ## ROUND 4 — A SIMPLER GAME: the CARDS matter, the monsters guide (interview 2026-09-28)
 
 **Status: the RULES are BUILT (2026-09-28, four commits); the FAMILY DRAFTS are next. It supersedes catching, the bench, levels, the relay's monster cycles

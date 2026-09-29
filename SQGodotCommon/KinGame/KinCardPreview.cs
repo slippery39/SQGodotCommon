@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using Common.Cards;
-using KinCore;
 using Godot;
 using ImmutableGameObjects;
+using KinCore;
 
 namespace KinGame;
 
@@ -37,6 +37,16 @@ public partial class KinCardPreview : Node2D
 	/// Companion — each one a thing that has already come out wrong at least once.
 	/// </summary>
 	private static IEnumerable<KinCard> Cases()
+	{
+		// `--party`: the companion game's cards instead — the Ember pool's longest rules text.
+		if (OS.GetCmdlineUserArgs().Contains("--party"))
+			return KinCore
+				.Party.EmberCards.Pool.OrderByDescending(c => KinCardFace.RulesTextFor(c).Length)
+				.Take(7);
+		return LaneCases();
+	}
+
+	private static IEnumerable<KinCard> LaneCases()
 	{
 		// The reward pool too, not just the shared one: the cards with EFFECTS are the act's own,
 		// and they are exactly the cards whose text is hard to fit and whose keywords matter.

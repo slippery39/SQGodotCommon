@@ -5,7 +5,7 @@ namespace KinCore.Tests;
 
 /// <summary>
 /// **THE FAMILIES — every Grove and Ember rule FIRES** (`KinFamiliesPlan.md`): Grow, Root, the Grove
-/// passives and cards; Kindle, the Ember passives and cards; rewards leaning to your families. Uses
+/// passives and cards (Ember's are in `PartyTests.Ember.cs`); rewards leaning to your families. Uses
 /// the battle fixtures in `PartyTests.cs`; card amounts are read from the cards, never restated.
 /// </summary>
 public partial class PartyTests
@@ -176,132 +176,16 @@ public partial class PartyTests
 		Assert.That(Named(s, "Wall").Rooted, Is.EqualTo(root.Amount * 2));
 	}
 
-	// ===== EMBER
-
-	[Test]
-	public void KindleAddsToEverySpellAndASpellAddsNoneByItself()
-	{
-		var stoke = (KindleAction)PartyCards.Stoke.Effects[0].Template;
-		var s = Solo(Mon("Caster"), [PartyCards.Stoke, Zap(), Zap()]);
-
-		s = Play(s, "Stoke", 0);
-		s = Play(s, "Zap", 0, foeRow: true);
-		s = Play(s, "Zap", 0, foeRow: true);
-
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 2 * (4 + stoke.Amount)));
-		Assert.That(s.GetParty().Kindle, Is.EqualTo(stoke.Amount), "round 4: no automatic Kindle");
-	}
-
-	[Test]
-	public void AStokerMakesEverySpellAddKindle()
-	{
-		var stoker = new Stoker();
-		var s = Solo(With(Mon("Emberling"), stoker), [Zap()]);
-
-		s = Play(s, "Zap", 0, foeRow: true);
-
-		Assert.That(s.GetParty().Kindle, Is.EqualTo(stoker.Extra), "none without one (round 4)");
-	}
-
-	[Test]
-	public void AnEchoCastsOnlyTheFirstSpellEachTurnTwice()
-	{
-		var s = Solo(With(Mon("Owl"), new EchoFirstSpell()), [Zap(), Zap()]);
-
-		s = Play(s, "Zap", 0, foeRow: true);
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 4 - 4), "cast twice");
-		s = Play(s, "Zap", 0, foeRow: true);
-
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 4 - 4 - 4), "then once");
-	}
-
-	[Test]
-	public void FanTheFlamesCastsTheNextSpellTwice()
-	{
-		var s = Solo(Mon("Caster"), [PartyCards.FanTheFlames, Zap()]);
-
-		s = Play(s, "Fan the Flames", 0);
-		s = Play(s, "Zap", 0, foeRow: true);
-
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 4 - 4));
-		Assert.That(s.GetParty().NextSpellTwice, Is.False, "used up");
-	}
-
-	[Test]
-	public void StokeCinderwallAndEmberskinReadTheKindle()
-	{
-		var stoke = (KindleAction)PartyCards.Stoke.Effects[0].Template;
-		var s = Solo(With(Mon("Newt"), new Emberskin()), [PartyCards.Stoke, PartyCards.Cinderwall]);
-
-		s = Play(s, "Stoke", 0);
-		Assert.That(s.GetParty().Kindle, Is.EqualTo(stoke.Amount));
-		s = Play(s, "Cinderwall", 0);
-		Assert.That(Named(s, "Newt").Block, Is.EqualTo(stoke.Amount));
-
-		s = EndTurn(s);
-		Assert.That(
-			Named(s, "Newt").Block,
-			Is.EqualTo(stoke.Amount),
-			"Emberskin, at the turn start"
-		);
-	}
-
-	[Test]
-	public void PikesAttacksAddTheKindle()
-	{
-		var stoke = (KindleAction)PartyCards.Stoke.Effects[0].Template;
-		var s = Solo(
-			With(Mon("Pike"), new KindleFinisher()),
-			[PartyCards.Stoke, Card("Strike", 0, new StrikeAction { Amount = 2 })]
-		);
-
-		s = Play(Play(s, "Stoke", 0), "Strike", 0);
-
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 2 - stoke.Amount));
-	}
-
-	[Test]
-	public void FlashpointSpendsAllTheKindle()
-	{
-		var stoke = (KindleAction)PartyCards.Stoke.Effects[0].Template;
-		var flash = (FlashpointAction)PartyCards.Flashpoint.Effects[0].Template;
-		var s = Solo(Mon("Caster"), [PartyCards.Stoke, PartyCards.Flashpoint]);
-
-		Assert.That(CanPlay(s, "Flashpoint", 0, foeRow: true), Is.False, "no Kindle yet");
-		s = Play(s, "Stoke", 0);
-		s = Play(s, "Flashpoint", 0, foeRow: true);
-
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - stoke.Amount * flash.PerKindle));
-		Assert.That(s.GetParty().Kindle, Is.Zero);
-	}
-
 	// ===== The content
 
 	[Test]
-	public void EveryGroveAndEmberMonsterOfTheSliceHasItsFamilyAndAKit()
+	public void EveryMonsterABossCanOfferIsItsFamilyAndBringsAnEngine()
 	{
-		Assert.That(PartyContent.Bramble.Family, Is.EqualTo(Family.Grove));
-		Assert.That(PartyContent.Pike.Family, Is.EqualTo(Family.Ember));
-		foreach (var name in new[] { "Broodvine", "Mosshell", "Hushcap", "Howler" })
-			Assert.That(PartyWorld.Species(name)!.Family, Is.EqualTo(Family.Grove), name);
-		foreach (var name in new[] { "Emberling", "Echo Owl", "Cinder Newt", "Ironhorn" })
-			Assert.That(PartyWorld.Species(name)!.Family, Is.EqualTo(Family.Ember), name);
-		foreach (
-			var name in new[]
-			{
-				"Broodvine",
-				"Mosshell",
-				"Hushcap",
-				"Howler",
-				"Emberling",
-				"Echo Owl",
-				"Cinder Newt",
-				"Ironhorn",
-			}
-		)
+		foreach (var family in new[] { Family.Grove, Family.Ember })
+		foreach (var monster in PartyContent.MonstersOf(family))
 		{
-			var caught = PartyRun.FromFoe(PartyWorld.Species(name)!);
-			Assert.That(caught.Abilities, Is.Not.Empty, $"{name} brings an engine");
+			Assert.That(monster.Family, Is.EqualTo(family), monster.Name);
+			Assert.That(monster.Abilities, Is.Not.Empty, $"{monster.Name} brings an engine");
 		}
 	}
 

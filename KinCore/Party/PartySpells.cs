@@ -30,6 +30,18 @@ public record SpellDamageAction : CardStep
 	/// <summary>Overload: the amount is all the spell damage already dealt this turn.</summary>
 	public bool FromSpellDamageThisTurn { get; init; }
 
+	/// <summary>Meteor: + this much for each energy its X paid.</summary>
+	public int PerX { get; init; }
+
+	/// <summary>Chain Lightning: + this much for each spell cast this turn, this one included.</summary>
+	public int PerSpellThisTurn { get; init; }
+
+	/// <summary>Flashpoint: + this much for each Burn on the foe it hits (the Burn stays).</summary>
+	public int PerBurn { get; init; }
+
+	/// <summary>Pyroblast: your Spell Power counts this many times.</summary>
+	public int SpellPowerTimes { get; init; } = 1;
+
 	public override string? Refusal(GameState s, int space, bool foeRow) =>
 		Target != SpellTarget.Foe || (foeRow && s.FoeAt(space) is not null)
 			? null
@@ -38,7 +50,9 @@ public record SpellDamageAction : CardStep
 	public override ActionResult Execute(GameState s)
 	{
 		var party = s.GetParty();
-		var amount = FromSpellDamageThisTurn ? party.SpellDamageThisTurn : Amount;
+		var amount = FromSpellDamageThisTurn
+			? party.SpellDamageThisTurn
+			: Amount + PerX * party.XPaid + PerSpellThisTurn * party.SpellsThisTurn;
 
 		List<Foe> targets = Target switch
 		{
@@ -67,8 +81,10 @@ public record SpellDamageAction : CardStep
 		{
 			if (s.GetParty().IsOver || ((Foe)s.GetObject(foe.Id)).IsDead)
 				continue;
-			var damage = s.SpellDamageTo((Foe)s.GetObject(foe.Id), amount);
-			var (after, hit) = PartyState.HitFoe(s, (Foe)s.GetObject(foe.Id), damage);
+			var now = (Foe)s.GetObject(foe.Id);
+			var damage = s.SpellDamageTo(now, amount + PerBurn * now.Burn, SpellPowerTimes);
+			var (after, hit) = PartyState.HitFoe(s, now, damage);
+			after = PartyEmber.Smoulder(after, foe.Id);
 			var counted = after.GetParty();
 			s = after.UpdateObject(
 				counted.Id,
@@ -113,7 +129,7 @@ public record SpellPower : GameComponent
 /// <summary>**Spells deal half to this foe** — the Warden's wild trait.</summary>
 public record SpellWard : GameComponent;
 
-/// <summary>A card with a spell in it was played. Staged by `PlayPartyCardAction`.</summary>
+/// <summary>A spell (any card but an attack) was played. Staged by `PlayPartyCardAction`.</summary>
 public record SpellPlayedEvent : GameEvent;
 
 public record OnSpellPlayed : TriggerRule
@@ -131,18 +147,26 @@ public static class PartySpells
 	/// </summary>
 	/// <summary>What every spell deals on top, now — before any foe's ward. The hand shows it live.</summary>
 	public static int SpellBonus(this GameState s) =>
-		s.LivingAllies().Sum(a => a.SpellPower + a.BonusSpellPower)
+		s.LivingAllies().Sum(a => a.SpellPower)
 		+ s.LivingAllies().SelectMany(a => a.GetComponents<SpellPower>()).Sum(p => p.Amount)
-		+ s.GetParty().Kindle;
+		+ s.GetParty().FightSpellPower
+		+ s.GetParty().TurnSpellPower;
 
-	public static int SpellDamageTo(this GameState s, Foe foe, int amount)
+	public static int SpellDamageTo(this GameState s, Foe foe, int amount, int spellPowerTimes = 1)
 	{
-		amount += s.SpellBonus();
+		amount += s.SpellBonus() * spellPowerTimes;
 		if (foe.HasComponent<SpellWard>())
 			amount /= 2;
 		return Math.Max(0, amount);
 	}
 
-	public static bool IsSpell(this KinCard card) =>
-		card.Effects.Any(e => e.Template is SpellDamageAction);
+	/// <summary>**An ATTACK card makes one of your monsters attack** — it has a Strike in it.</summary>
+	public static bool IsAttack(this KinCard card) =>
+		card.Effects.Any(e => e.Template is StrikeAction);
+
+	/// <summary>
+	/// **A SPELL is every card that is not an attack** (Shayne, 2026-09-28) — Guard and Kindle as much
+	/// as Zap. Chains, Echo, Fan the Flames, Spell Surge and Spellweaver all count them.
+	/// </summary>
+	public static bool IsSpell(this KinCard card) => !card.IsAttack();
 }

@@ -6,10 +6,14 @@ scars; its game (catching, the relay, levels, KIN) is gone.
 
 ## State at handoff (2026-09-28)
 
-- Branch **`kin-pivot`**, nothing pushed. **297 KinCore tests green**; the solution and the Godot project
+- Branch **`kin-pivot`**, nothing pushed. **313 KinCore tests green** (after Ember); the solution and the Godot project
   build. `SQGodotCommon/project.godot` is still left uncommitted on purpose (a headless import strips
   two comment lines).
 - **The rules of round 4 are built on PLACEHOLDER content.** Next is the family drafts.
+- **EMBER DRAFT 2 IS BUILT** (later the same day): `PartyEmber` (Burn, Spell Power for the turn or
+  the fight, auras, chains, energy, the passives), `EmberCards` (29 cards, 4 boss monsters), the UI
+  (SPELL POWER and auras over the energy orb; BURN n on a foe; the tick floats), 24 tests in
+  `PartyTests.Ember.cs`. The as-built notes are under the Ember draft in `KinFamiliesPlan.md`.
 
 ## 1. The game now, in one paragraph
 
@@ -65,8 +69,7 @@ a rare-led card. **Springs heal 30% or upgrade a card to its + version.**
 
 ## 5. Next
 
-1. **The family drafts** (`KinFamiliesPlan.md`, round 4): Ember (Spell Power, Burn, chains, big spells)
-   and Grove (Rooted, Thorns, Block → damage, Growth — never cheap to do both), 5 monsters each + 3
+1. **The family drafts** (`KinFamiliesPlan.md`, round 4): ~~Ember~~ (built) and Grove (Rooted, Thorns, Block → damage, Growth — never cheap to do both), 5 monsters each + 3
    colourless, every card with a +. Interview-led; the bridges between sub-mechanics are the finds.
 2. Then re-tune with `party-sim` per region and per starter; the 50% target and even losses are in
    `PartySim.Target`.

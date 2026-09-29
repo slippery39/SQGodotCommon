@@ -230,11 +230,7 @@ public sealed class KinRelayField
 			: ("attacked", null);
 		var stats =
 			$"POW {ally.Power + ally.BonusPower}"
-			+ (
-				ally.SpellPower + ally.BonusSpellPower > 0
-					? $" · SP {ally.SpellPower + ally.BonusSpellPower}"
-					: ""
-			);
+			+ (ally.SpellPower > 0 ? $" · SP {ally.SpellPower}" : "");
 
 		return new CreatureLook(
 			move,
@@ -295,6 +291,7 @@ public sealed class KinRelayField
 			Join(
 				FamilyWord(foe.Family),
 				foe.Block > 0 ? $"BLOCK {foe.Block}" : "",
+				foe.Burn > 0 ? $"BURN {foe.Burn}" : "",
 				foe.OffBalance > 0 ? $"OFF-BALANCE +{foe.OffBalance}" : "",
 				foe.FadesIn > 0 ? $"FADES IN {foe.FadesIn}" : ""
 			),
@@ -353,7 +350,9 @@ public static class KinMoveText
 				b.Rooted > 0 ? $"+{b.Rooted} rooted" : "",
 				b.Thorns > 0 ? $"+{b.Thorns} thorns" : "",
 				b.SpellPower > 0 ? $"+{b.SpellPower} SP" : "",
-				b.Kindle > 0 ? $"+{b.Kindle} kindle" : "",
+				b.FightSpellPower > 0 ? $"+{b.FightSpellPower} SP (fight)" : "",
+				b.Burn > 0 ? $"{b.Burn} burn" : "",
+				b.Energy > 0 ? $"+{b.Energy} energy" : "",
 				b.Draw > 0 ? $"draw {b.Draw}" : "",
 			}.Where(p => p.Length > 0)
 		);

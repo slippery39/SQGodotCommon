@@ -79,6 +79,6 @@ public partial class PartyTests
 		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(90 - 7 - (4 + 1 + 2 + 3)), "and the bonus's");
 
 		s = EndTurn(s);
-		Assert.That(Named(s, "Newt").BonusSpellPower, Is.Zero, "only for that turn");
+		Assert.That(s.GetParty().TurnSpellPower, Is.Zero, "only for that turn");
 	}
 }

@@ -6,6 +6,14 @@ the next; map rules are fixed (Snares to 2, one card if affordable, a random are
 only with two monsters and above 60% of your health and the team's HP). **A floor, not the game.**
 Read it for WHERE runs die and HOW they are won, per region.
 
+## 2026-09-28 (f) — EMBER DRAFT 2 BUILT: a crash check, not a tuning run (40 runs, seeds 1–40)
+
+**Pike 60% (12/20)** — was 27% on the placeholder Ember; Bramble 100% (20/20, still placeholder).
+Pike's deaths: region 1 boss ×1, region 2 ×5 (boss 4, elite 1), regions 4–5 ×2. 40 runs is a smoke
+test: it proves the bot plays the new cards through whole runs (one trace: Zap 40, Meteor 35,
+Overload 24, Heat Surge 13, Flicker 13, Pyroblast 8, Flame Ward 7…), not a number to tune to. Tuning
+waits for Grove's draft.
+
 ## 2026-09-28 (e) — ROUND 4's rules on placeholder content: 61.7%, and the family gap (300 runs)
 
 Monsters act only through cards (a first-attack bonus each), come from bosses, never level; springs

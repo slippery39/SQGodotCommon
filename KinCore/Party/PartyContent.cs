@@ -105,8 +105,8 @@ public static class PartyContent
 		};
 
 	/// <summary>
-	/// **Pike — Ember's starter.** PLACEHOLDER kit until the Ember draft (round 4): its relay FINISHER
-	/// is gone with the relay; its attacks still grow with Kindle, and it brings a little Spell Power.
+	/// **Pike — Ember's starter, the flexible one** (Ember draft 2): SPELLBLADE — its attacks add your
+	/// Spell Power, so a stacked turn can be cashed with a Strike as well as a spell.
 	/// </summary>
 	public static readonly PartyCompanion Pike =
 		new(
@@ -115,13 +115,13 @@ public static class PartyContent
 			Hp: 24,
 			Power: 3,
 			[Attack("Jab", 2), Attack("Jab", 2), Attack("Flurry", 0, Aim.Sweep)],
-			Passive: "KINDLED",
-			PassiveRule: "Its attacks deal +1 per KINDLE."
+			Passive: "SPELLBLADE",
+			PassiveRule: "Its attacks add your Spell Power."
 		)
 		{
 			Family = Family.Ember,
 			SpellPower = 1,
-			Abilities = [new KindleFinisher(), new FirstAttack { Damage = 3 }],
+			Abilities = [new Spellblade(), new FirstAttack { SpellPower = 1 }],
 		};
 
 	/// <summary>
@@ -197,7 +197,7 @@ public static class PartyContent
 			.. family switch
 			{
 				Family.Grove => [PartyCards.Root, PartyCards.Sow],
-				Family.Ember => [PartyCards.Zap, PartyCards.Stoke],
+				Family.Ember => EmberCards.Starting,
 				_ => ImmutableList<KinCard>.Empty,
 			},
 		];
@@ -299,12 +299,6 @@ public static class PartyContent
 		PartyCards.Quicken,
 		PartyCards.BattleCry,
 		PartyCards.Unleash,
-		PartyCards.Meteor,
-		PartyCards.Zap,
-		PartyCards.Arc,
-		PartyCards.SparkScroll,
-		PartyCards.Overload,
-		PartyCards.Focus,
 		PartyCards.Sift,
 		PartyCards.Rummage,
 		PartyCards.Ration,
@@ -316,10 +310,7 @@ public static class PartyContent
 		PartyCards.Thicket,
 		PartyCards.Harvest,
 		PartyCards.DeepRoots,
-		PartyCards.Stoke,
-		PartyCards.Cinderwall,
-		PartyCards.FanTheFlames,
-		PartyCards.Flashpoint,
+		.. EmberCards.Pool,
 	];
 
 	public static readonly PartyScenario Alone =
@@ -388,18 +379,14 @@ public static class PartyContent
 		);
 
 	/// <summary>
-	/// **Spellcraft, to try by hand.** A caught Emberling (+2 to spells) and Echo Owl against a
-	/// Warden in front (spells deal half) guarding a Wisp and a Briar Viper — spells reach past it.
+	/// **Ember, to try by hand.** Pike, an Emberling (Stoker) and an Echo Owl (the 3rd spell twice)
+	/// against a Warden in front (spells deal half) guarding a Wisp and a Briar Viper.
 	/// </summary>
 	public static PartyScenario Spellcraft =>
 		new(
-			"Spellcraft",
-			"Bramble, an Emberling and an Echo Owl against a Warden, a Wisp and a Briar Viper.",
-			[
-				new(Bramble, 0),
-				new(PartyRun.FromFoe(PartyWorld.Emberling), 1),
-				new(PartyRun.FromFoe(PartyWorld.EchoOwl), 2),
-			],
+			"Ember",
+			"Pike, an Emberling and an Echo Owl against a Warden, a Wisp and a Briar Viper.",
+			[new(Pike, 0), new(EmberCards.Emberling, 1), new(EmberCards.EchoOwl, 2)],
 			[
 				PartyWorld.Warden with
 				{
@@ -413,13 +400,13 @@ public static class PartyContent
 			],
 			[
 				.. StarterDeck,
-				PartyCards.Stoke,
-				PartyCards.Zap,
-				PartyCards.Overload,
-				PartyCards.Focus,
-				PartyCards.SparkScroll,
+				EmberCards.Kindle,
+				EmberCards.Zap,
+				EmberCards.Overload,
+				EmberCards.Singe,
+				EmberCards.Spark,
 			],
-			["Stoke", "Zap", "Spark Scroll"],
+			["Kindle", "Singe", "Spark"],
 			Deploy: true
 		);
 
@@ -443,7 +430,7 @@ public static class PartyContent
 				PartyCards.Surge,
 				PartyCards.Quicken,
 				PartyCards.Unleash,
-				PartyCards.Meteor,
+				EmberCards.Meteor,
 				PartyCards.BattleCry,
 			],
 			["Surge", "Quicken", "Unleash"],
@@ -494,13 +481,7 @@ public static class PartyContent
 				Joins(PartyWorld.Hushcap, new FirstAttack { Thorns = 3 }),
 				Joins(PartyWorld.Howler, new FirstAttack { Damage = 3 }),
 			],
-			Family.Ember =>
-			[
-				Joins(PartyWorld.CinderNewt, new FirstAttack { SpellPower = 1 }),
-				Joins(PartyWorld.Emberling, new FirstAttack { Kindle = 1 }, spellPower: 1),
-				Joins(PartyWorld.EchoOwl, new FirstAttack { SpellPower = 2 }, spellPower: 1),
-				Joins(PartyWorld.Ironhorn, new FirstAttack { Damage = 4 }),
-			],
+			Family.Ember => EmberCards.Monsters,
 			_ => [],
 		};
 

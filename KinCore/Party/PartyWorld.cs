@@ -124,9 +124,6 @@ public static class PartyWorld
 	) with
 	{
 		Family = Family.Ember,
-		CaughtPassive = "EMBERSKIN",
-		CaughtRule = "At your turn start it gains Block equal to your KINDLE.",
-		CaughtAbilities = [new Emberskin()],
 	};
 
 	/// <summary>
@@ -262,9 +259,6 @@ public static class PartyWorld
 	) with
 	{
 		Family = Family.Ember,
-		CaughtPassive = "STOKER",
-		CaughtRule = "Every spell you play adds 2 KINDLE, not 1.",
-		CaughtAbilities = [new Stoker()],
 	};
 
 	/// <summary>
@@ -279,9 +273,6 @@ public static class PartyWorld
 	) with
 	{
 		Family = Family.Ember,
-		CaughtPassive = "ECHO",
-		CaughtRule = "The first spell you play each turn is cast twice.",
-		CaughtAbilities = [new EchoFirstSpell()],
 	};
 
 	/// <summary>

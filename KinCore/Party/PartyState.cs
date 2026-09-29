@@ -65,7 +65,14 @@ public static class PartyState
 		if (card.HasComponent<SpendsAllEnergy>())
 			return party.Energy;
 
+		// WILDFIRE: free once the chain is long enough.
+		if (card.GetComponent<FreeAfterSpells>() is { } free && party.SpellsThisTurn >= free.Spells)
+			return 0;
+
 		var cost = card.Cost;
+		// SPELL SURGE: this turn's spells cost less.
+		if (card.IsSpell())
+			cost -= party.SpellDiscount;
 		if (card.GetComponent<CostReduction>() is { } reduction)
 			cost -= reduction.PerDiscardThisTurn * party.DiscardedThisTurn;
 
@@ -406,7 +413,8 @@ public static class PartyState
 		var damage =
 			ally.AttackFor(amount)
 			+ ally.FinisherPerAlly * s.GetParty().AlliesActedThisRound
-			+ ally.GetComponents<KindleFinisher>().Sum(k => k.PerKindle) * s.GetParty().Kindle;
+			// SPELLBLADE (Pike): its attacks add your Spell Power.
+			+ (ally.HasComponent<Spellblade>() ? s.SpellBonus() : 0);
 		var events = ImmutableList<GameEvent>.Empty;
 		foreach (var id in targets)
 		{

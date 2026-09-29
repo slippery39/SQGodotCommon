@@ -72,7 +72,7 @@ public sealed class KinPartyInspector
 				+ (
 					ally is null
 						? ""
-						: $" · POWER {ally.Power + ally.BonusPower} · SPELL POWER {ally.SpellPower + ally.BonusSpellPower}"
+						: $" · POWER {ally.Power + ally.BonusPower} · SPELL POWER {ally.SpellPower}"
 				),
 			18,
 			KinPalette.Bone

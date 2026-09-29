@@ -17,6 +17,12 @@
 > - **Every monster kit and most cards are PLACEHOLDERS** — the old species with a first-attack bonus
 >   each. `party-sim`: 61.7% won — **Bramble 96%, Pike 27%**. The gap is the families' content, so
 >   the next step is the family drafts, not more tuning.
+> - **EMBER IS DRAFTED AND BUILT** (draft 2, "push first, nerf later"): 29 cards with + versions, four
+>   boss-pick monsters (Emberling STACK, Cinder Newt BURN, Echo Owl CHAINS, Ironhorn ENERGY), BURN as
+>   STS Poison, ONE Spell Power (turn or fight), and AURAS — rules for the rest of the fight. Pike is
+>   SPELLBLADE. **A spell is every card that is not an attack** (Guard too). Rules: `PartyEmber`;
+>   content: `EmberCards`; the draft: `KinFamiliesPlan.md`.
+>   Grove is still placeholder.
 
 > # BOSSES AND ELITES — exams with an answer (Shayne, 2026-09-28; built for regions 1–2)
 >

@@ -78,27 +78,13 @@ public record PlayPartyCardAction : GameAction
 			.ToList();
 		if (card.IsSpell())
 		{
-			// **EMBER**: an Echo's first spell or Fan the Flames casts it again; every cast stokes.
-			var casts = PartyFamilies.SpellCasts(s);
-			var kindle = PartyFamilies.KindlePerSpell(s);
+			// **EMBER**: the chain count rises first — Chain Lightning and the Nth-spell rules read it —
+			// then ECHO, Fan the Flames and SPELLWEAVER (`PartyEmber.SpellCast`).
 			var now = s.GetParty();
-			s = s.UpdateObject(
-				now.Id,
-				now with
-				{
-					SpellsThisTurn = now.SpellsThisTurn + 1,
-					NextSpellTwice = false,
-				}
-			);
+			s = s.UpdateObject(now.Id, now with { SpellsThisTurn = now.SpellsThisTurn + 1 });
+			(s, var extra) = PartyEmber.SpellCast(s);
 			s = s.StageEvent(new SpellPlayedEvent());
-			steps =
-			[
-				.. Enumerable
-					.Range(0, casts)
-					.SelectMany(_ =>
-						kindle > 0 ? steps.Append(new KindleAction { Amount = kindle }) : steps
-					),
-			];
+			steps = [.. Enumerable.Range(0, 1 + extra).SelectMany(_ => steps)];
 		}
 		s = s.SpawnActions(steps.Append(new DiscardPlayedCardAction { CardId = CardId }));
 
@@ -143,10 +129,14 @@ public record EndPartyTurnAction : GameAction
 		var ending = s.GetParty();
 		s = s.UpdateObject(ending.Id, ending with { EndingTurn = true });
 
+		// **BURN ticks as the foes' turn begins** — before any of them acts (`PartyEmber`).
+		(s, var burned) = PartyEmber.BurnTick(s);
+		(s, var fell) = s.Settle();
+
 		// Who acts this round is fixed now; WHEN is by position, re-read each step — a token summoned
 		// at the front pushes everyone back, so a loop over positions would skip whoever moved.
 		var toAct = s.ActingOrder().Select(c => c.Id).ToHashSet();
-		var events = ImmutableList<GameEvent>.Empty;
+		var events = burned.AddRange(fell);
 		ImmutableList<GameEvent> more;
 
 		while (!s.GetParty().IsOver)
@@ -212,6 +202,14 @@ public record StartPartyTurnAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var party = s.GetParty();
+		// **BANK** (Ironhorn): some of the energy left unspent carries over. Turn 1 has none to carry.
+		var banked =
+			party.TurnNumber == 1
+				? 0
+				: Math.Min(
+					party.Energy,
+					s.LivingAllies().SelectMany(a => a.GetComponents<Bank>()).Sum(b => b.Most)
+				);
 		// **The Glowmoth**: a monster left unhit last turn brings energy. Turn 1 had no last turn.
 		var unhit =
 			party.TurnNumber == 1
@@ -225,8 +223,18 @@ public record StartPartyTurnAction : GameAction
 			party.Id,
 			party with
 			{
-				Energy = Math.Max(0, party.MaxEnergy - party.EnergyDebt + unhit),
+				Energy = Math.Max(
+					0,
+					party.MaxEnergy - party.EnergyDebt + unhit + party.EnergyNextTurn + banked
+				),
 				EnergyDebt = 0,
+				EnergyNextTurn = 0,
+				TurnSpellPower = 0,
+				SpellDiscount = 0,
+				SpellsTwice = 0,
+				// INNER FIRE: every turn it holds, the fight's Spell Power climbs.
+				FightSpellPower =
+					party.FightSpellPower + party.GetComponents<InnerFireAura>().Count(),
 				NextCardFree = false,
 				CardsPlayedThisTurn = 0,
 				FoesDefeatedThisTurn = 0,
@@ -247,7 +255,6 @@ public record StartPartyTurnAction : GameAction
 				{
 					BonusThorns = 0,
 					BonusPower = 0,
-					BonusSpellPower = 0,
 					AttackedThisTurn = false,
 					WasHit = false,
 					HasActed = false,
@@ -352,8 +359,9 @@ public record StrikeAction : CardStep
 	public override ActionResult Execute(GameState s)
 	{
 		// **The FIRST attack on this monster this turn fires its bonus** (round 4, `PartyMonsters`).
-		var (bonused, extra, bonus) = PartyMonsters.Attacks(s, Target(s));
+		var (bonused, extra, bonus, burn) = PartyMonsters.Attacks(s, Target(s));
 		var ally = (Ally)bonused.GetObject(Target(s).Id);
+		var targets = PartyState.AimAt(bonused, ally, Aim);
 		var (after, events) = PartyState.AttackFoes(
 			bonused,
 			ally,
@@ -361,8 +369,12 @@ public record StrikeAction : CardStep
 				+ extra
 				+ (PlusCardsInHand ? bonused.CardsIn(ZoneType.Hand).Count() : 0)
 				+ PerX * bonused.GetParty().XPaid,
-			PartyState.AimAt(bonused, ally, Aim)
+			targets
 		);
+		// A first-attack BURN (Cinder Newt) lands on whoever the blow hit.
+		foreach (var id in targets)
+			if (burn > 0 && after.GetObject(id) is Foe { IsDead: false } hit)
+				after = after.UpdateObject(id, hit with { Burn = hit.Burn + burn });
 		return new ActionResult(after).WithEvents(bonus.AddRange(events));
 	}
 }

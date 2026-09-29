@@ -324,23 +324,28 @@ public static class KinCardFace
 	public static InternalCardUI2D.Details For(KinCard card) => For(card, 0);
 
 	/// <summary>
-	/// **A card's FAMILY and, above common, its RARITY** — "GROVE · RARE". The family line on the
-	/// face and the reward tiles both say it; "" for a colourless common.
+	/// **A card's TYPE, FAMILY and, above common, its RARITY** — "SPELL · GROVE · RARE". The type
+	/// matters to play: every card but an attack is a spell, and Ember counts spells. The card FACE
+	/// leaves the rarity out (`rarity: false`): "SPELL · EMBER · UNCOMMON" clipped at hand size, and
+	/// rarity matters where a card is chosen — the reward and shop tiles, which keep it.
 	/// </summary>
-	public static string Tag(KinCard card) =>
+	public static string Tag(KinCard card, bool rarity = true) =>
 		string.Join(
 				" · ",
 				new[]
 				{
+					KinCore.Party.PartySpells.IsAttack(card) ? "ATTACK" : "SPELL",
 					card.Family == KinCore.Party.Family.None ? "" : card.Family.ToString(),
-					card.Rarity == KinCore.Party.Rarity.Common ? "" : card.Rarity.ToString(),
+					!rarity || card.Rarity == KinCore.Party.Rarity.Common
+						? ""
+						: card.Rarity.ToString(),
 				}.Where(p => p.Length > 0)
 			)
 			.ToUpperInvariant();
 
 	/// <summary>
 	/// **The card as it plays NOW** (Shayne, 2026-09-28: the playtest could not tell whether Ember
-	/// ever fired): a spell's damage with the Kindle already added — in green, the way a boosted
+	/// ever fired): a spell's damage with the Spell Power already added — in green, the way a boosted
 	/// number reads in Slay the Spire.
 	/// </summary>
 	public static InternalCardUI2D.Details For(KinCard card, int spellBonus)
@@ -365,7 +370,7 @@ public static class KinCardFace
 			// Blank: the reference card has no type line, and "Unit" floating across the face says
 			// nothing a stat badge does not already say. A Rite has no badge, which is the tell.
 			// **The companion game puts the card's FAMILY and rarity here** ("GROVE · RARE").
-			TypeLine = Tag(card),
+			TypeLine = Tag(card, rarity: false),
 
 			// A rite's text is the only thing telling you what it does, so it goes where rules text
 			// goes. It is authored beside the effect it describes — see KinEffect.Text.
