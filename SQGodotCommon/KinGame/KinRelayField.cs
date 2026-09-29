@@ -217,16 +217,23 @@ public sealed class KinRelayField
 
 	private static CreatureLook AllyLook(GameState s, Ally ally, FieldContext ctx)
 	{
-		var next = ally.Current;
 		var drop = ctx.Drops.Contains(ally.Position) ? ctx.Focus : null;
 		var loses = ctx.Forecast.GetValueOrDefault(ally.Id);
 		var colour = KinPalette.Family(ally.Family, ally.Name);
 
-		var (move, icon) = ally.HasActed
-			? ("acted", null)
-			: KinMoveText.Short(
-				next,
-				next.Kind == IntentType.Attack ? ally.AttackFor(next.Amount) : next.Amount
+		// **Round 4: a monster has no move — its badge is its FIRST-ATTACK bonus**, lit until the first
+		// attack card on it this turn spends it.
+		var (move, icon) =
+			ally.GetComponent<FirstAttack>() is not { } bonus ? ("", null)
+			: PartyMonsters.BonusReady(ally)
+				? ($"1st: {KinMoveText.Bonus(bonus)}", KinArt.AttackIcon)
+			: ("attacked", null);
+		var stats =
+			$"POW {ally.Power + ally.BonusPower}"
+			+ (
+				ally.SpellPower + ally.BonusSpellPower > 0
+					? $" · SP {ally.SpellPower + ally.BonusSpellPower}"
+					: ""
 			);
 
 		return new CreatureLook(
@@ -235,7 +242,7 @@ public sealed class KinRelayField
 			Art(ally.Name, colour.Lightened(0.45f), hostile: false),
 			KinArt.Sprite(ally.Name) is not null,
 			FacesLeft: false,
-			ally.HasActed ? 0 : ctx.Steps.GetValueOrDefault(ally.Id),
+			0,
 			drop is not null || ally.Id == ctx.SelectedId || ally.Id == ctx.HeldId
 				? KinPalette.Gold
 				: colour,
@@ -246,6 +253,7 @@ public sealed class KinRelayField
 			colour.Lightened(0.25f),
 			Join(
 				FamilyWord(ally.Family),
+				ally.FadesIn > 0 ? "" : stats,
 				ally.Block > 0
 					? $"BLOCK {ally.Block}" + (ally.Rooted > 0 ? $" ({ally.Rooted} ROOTED)" : "")
 					: "",
@@ -257,8 +265,7 @@ public sealed class KinRelayField
 			drop is not null ? $"▲ {drop.Name.ToUpperInvariant()} HERE"
 				: loses > 0 ? $"−{loses}"
 				: "",
-			drop is not null ? KinPalette.Gold : KinPalette.Red,
-			ally.Level
+			drop is not null ? KinPalette.Gold : KinPalette.Red
 		);
 	}
 
@@ -334,6 +341,22 @@ public static class KinMoveText
 			IntentType.Pull => $"{intent.Name}: your back monster to the front",
 			_ => intent.Name,
 		};
+
+	/// <summary>A FIRST-ATTACK bonus, short enough for a badge: "+4 dmg, +5 block".</summary>
+	public static string Bonus(FirstAttack b) =>
+		string.Join(
+			", ",
+			new[]
+			{
+				b.Damage > 0 ? $"+{b.Damage} dmg" : "",
+				b.Block > 0 ? $"+{b.Block} block" : "",
+				b.Rooted > 0 ? $"+{b.Rooted} rooted" : "",
+				b.Thorns > 0 ? $"+{b.Thorns} thorns" : "",
+				b.SpellPower > 0 ? $"+{b.SpellPower} SP" : "",
+				b.Kindle > 0 ? $"+{b.Kindle} kindle" : "",
+				b.Draw > 0 ? $"draw {b.Draw}" : "",
+			}.Where(p => p.Length > 0)
+		);
 
 	/// <summary>
 	/// **A wind-up's badge shows the move it is winding up to** — "next: 18 → front" — so the big

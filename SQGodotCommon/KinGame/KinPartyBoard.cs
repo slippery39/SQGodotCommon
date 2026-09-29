@@ -499,8 +499,8 @@ public partial class KinPartyBoard : Node2D
 	}
 
 	private const string HowToPlay =
-		"Drag a card onto a monster (or a foe). At END TURN the lines act from the back, both sides "
-		+ "at once — the fronts clash last.";
+		"Drag a card onto a monster (or a foe). The first attack on each monster each turn fires its "
+		+ "bonus. At END TURN the foes act, from the back.";
 
 	/// <summary>The cell the last card was dropped on — the card's name rises off it.</summary>
 	private Control _lastDrop;
@@ -880,6 +880,13 @@ public partial class KinPartyBoard : Node2D
 						_field.ViewOf(grew.AllyId),
 						$"GROW +{grew.Power}/+{grew.Hp}",
 						KinPalette.Family(Family.Grove).Lightened(0.4f)
+					),
+				FirstAttackEvent first => () =>
+					KinAnimator.Float(
+						_overlay,
+						_field.ViewOf(first.AllyId),
+						$"1ST: {first.Text.ToUpperInvariant()}",
+						KinPalette.Gold
 					),
 				FoePhaseEvent phase => () =>
 				{

@@ -131,7 +131,8 @@ public static class PartySpells
 	/// </summary>
 	/// <summary>What every spell deals on top, now — before any foe's ward. The hand shows it live.</summary>
 	public static int SpellBonus(this GameState s) =>
-		s.LivingAllies().SelectMany(a => a.GetComponents<SpellPower>()).Sum(p => p.Amount)
+		s.LivingAllies().Sum(a => a.SpellPower + a.BonusSpellPower)
+		+ s.LivingAllies().SelectMany(a => a.GetComponents<SpellPower>()).Sum(p => p.Amount)
 		+ s.GetParty().Kindle;
 
 	public static int SpellDamageTo(this GameState s, Foe foe, int amount)

@@ -26,6 +26,9 @@ public record PartyCompanion(
 	/// </summary>
 	public ImmutableList<GameComponent> Abilities { get; init; } = [];
 
+	/// <summary>**Spell Power**: added to every spell you cast while it stands (round 4).</summary>
+	public int SpellPower { get; init; }
+
 	/// <summary>Its FAMILY (`PartyFamilies`).</summary>
 	public Family Family { get; init; }
 }
@@ -97,12 +100,13 @@ public static class PartyContent
 		)
 		{
 			Family = Family.Grove,
-			Abilities = [new Thornwall()],
+			// PLACEHOLDER first-attack bonus until the Grove draft (round 4).
+			Abilities = [new Thornwall(), new FirstAttack { Block = 4 }],
 		};
 
 	/// <summary>
-	/// **Pike, the Finisher — wants the front, and is fragile there.** The line acts back to front, so
-	/// in front Pike acts LAST and cashes everyone behind it — where the blows land.
+	/// **Pike — Ember's starter.** PLACEHOLDER kit until the Ember draft (round 4): its relay FINISHER
+	/// is gone with the relay; its attacks still grow with Kindle, and it brings a little Spell Power.
 	/// </summary>
 	public static readonly PartyCompanion Pike =
 		new(
@@ -111,13 +115,13 @@ public static class PartyContent
 			Hp: 24,
 			Power: 3,
 			[Attack("Jab", 2), Attack("Jab", 2), Attack("Flurry", 0, Aim.Sweep)],
-			Passive: "FINISHER +2",
-			PassiveRule: "+2 damage for each of your monsters that acted before it this round, and +1 per KINDLE.",
-			FinisherPerAlly: 2
+			Passive: "KINDLED",
+			PassiveRule: "Its attacks deal +1 per KINDLE."
 		)
 		{
 			Family = Family.Ember,
-			Abilities = [new KindleFinisher()],
+			SpellPower = 1,
+			Abilities = [new KindleFinisher(), new FirstAttack { Damage = 3 }],
 		};
 
 	/// <summary>
@@ -157,13 +161,6 @@ public static class PartyContent
 		1,
 		"+4 Power this turn.",
 		new PowerAction { Amount = 4 }
-	);
-
-	private static readonly KinCard Hasten = Card(
-		"Hasten",
-		1,
-		"It plays its move now, not at end of turn.",
-		new HastenAction()
 	);
 
 	private static readonly KinCard Stagger = Card(
@@ -269,7 +266,6 @@ public static class PartyContent
 	[
 		// ----- Colourless
 		Rally,
-		Hasten,
 		Stagger,
 		PartyCards.Charge,
 		PartyCards.HoldTheLine,
@@ -489,28 +485,29 @@ public static class PartyContent
 	public static ImmutableList<PartyCompanion> MonstersOf(Family family) =>
 		family switch
 		{
+			// PLACEHOLDER first-attack bonuses and Spell Power (round 4) until the family drafts.
 			Family.Grove =>
 			[
-				.. new[]
-				{
-					PartyWorld.Mosshell,
-					PartyWorld.Broodvine,
-					PartyWorld.Hushcap,
-					PartyWorld.Howler,
-				}.Select(PartyRun.FromFoe),
+				Joins(PartyWorld.Mosshell, new FirstAttack { Rooted = 4 }),
+				Joins(PartyWorld.Broodvine, new FirstAttack { Draw = 1 }),
+				Joins(PartyWorld.Hushcap, new FirstAttack { Thorns = 3 }),
+				Joins(PartyWorld.Howler, new FirstAttack { Damage = 3 }),
 			],
 			Family.Ember =>
 			[
-				.. new[]
-				{
-					PartyWorld.CinderNewt,
-					PartyWorld.Emberling,
-					PartyWorld.EchoOwl,
-					PartyWorld.Ironhorn,
-				}.Select(PartyRun.FromFoe),
+				Joins(PartyWorld.CinderNewt, new FirstAttack { SpellPower = 1 }),
+				Joins(PartyWorld.Emberling, new FirstAttack { Kindle = 1 }, spellPower: 1),
+				Joins(PartyWorld.EchoOwl, new FirstAttack { SpellPower = 2 }, spellPower: 1),
+				Joins(PartyWorld.Ironhorn, new FirstAttack { Damage = 4 }),
 			],
 			_ => [],
 		};
+
+	private static PartyCompanion Joins(Foe species, FirstAttack bonus, int spellPower = 0)
+	{
+		var monster = PartyRun.FromFoe(species);
+		return monster with { Abilities = monster.Abilities.Add(bonus), SpellPower = spellPower };
+	}
 
 	public static ImmutableList<PartyScenario> Scenarios =>
 		[Trio, Alone, Pair, Looting, Spellcraft, SurgeScenario, SummonScenario];
@@ -568,6 +565,7 @@ public static class PartyBattleFactory
 					Hp = hp ?? companion.Hp,
 					MaxHp = companion.Hp,
 					Power = companion.Power,
+					SpellPower = companion.SpellPower,
 					Position = position,
 					Pattern = companion.Moves,
 					Passive = companion.Passive,

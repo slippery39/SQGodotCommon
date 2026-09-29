@@ -95,7 +95,9 @@ public record PlayPartyCardAction : GameAction
 			[
 				.. Enumerable
 					.Range(0, casts)
-					.SelectMany(_ => steps.Append(new KindleAction { Amount = kindle })),
+					.SelectMany(_ =>
+						kindle > 0 ? steps.Append(new KindleAction { Amount = kindle }) : steps
+					),
 			];
 		}
 		s = s.SpawnActions(steps.Append(new DiscardPlayedCardAction { CardId = CardId }));
@@ -245,6 +247,8 @@ public record StartPartyTurnAction : GameAction
 				{
 					BonusThorns = 0,
 					BonusPower = 0,
+					BonusSpellPower = 0,
+					AttackedThisTurn = false,
 					WasHit = false,
 					HasActed = false,
 				}
@@ -331,31 +335,9 @@ public record PowerAction : CardStep
 }
 
 /// <summary>
-/// **The monster plays its move NOW instead of at the end of the turn** — Hasten. It sits out its
-/// step, and it counts for the relay (a FINISHER behind it sees it).
+/// **An ATTACK card: the monster it is played on strikes NOW** — the only way a monster attacks (round
+/// 4). Their front, unless aimed. The first on each monster each turn fires its bonus.
 /// </summary>
-public record HastenAction : CardStep
-{
-	public override string? Refusal(GameState s, int space, bool foeRow) =>
-		base.Refusal(s, space, foeRow)
-		?? (s.AllyAt(space)!.HasActed ? $"{s.AllyAt(space)!.Name} has already acted" : null);
-
-	public override ActionResult Execute(GameState s)
-	{
-		var ally = Target(s);
-		var (after, events) = PartyState.Act(s, ally.Id, s.IntentTargets(ally));
-		after = after.UpdateObject(
-			ally.Id,
-			(Ally)after.GetObject(ally.Id) with
-			{
-				HasActed = true,
-			}
-		);
-		return new ActionResult(after).WithEvents(events);
-	}
-}
-
-/// <summary>The monster strikes NOW, on top of its move — the deck's damage. Their front, unless aimed.</summary>
 public record StrikeAction : CardStep
 {
 	public int Amount { get; init; }
@@ -369,16 +351,19 @@ public record StrikeAction : CardStep
 
 	public override ActionResult Execute(GameState s)
 	{
-		var ally = Target(s);
+		// **The FIRST attack on this monster this turn fires its bonus** (round 4, `PartyMonsters`).
+		var (bonused, extra, bonus) = PartyMonsters.Attacks(s, Target(s));
+		var ally = (Ally)bonused.GetObject(Target(s).Id);
 		var (after, events) = PartyState.AttackFoes(
-			s,
+			bonused,
 			ally,
 			Amount
-				+ (PlusCardsInHand ? s.CardsIn(ZoneType.Hand).Count() : 0)
-				+ PerX * s.GetParty().XPaid,
-			PartyState.AimAt(s, ally, Aim)
+				+ extra
+				+ (PlusCardsInHand ? bonused.CardsIn(ZoneType.Hand).Count() : 0)
+				+ PerX * bonused.GetParty().XPaid,
+			PartyState.AimAt(bonused, ally, Aim)
 		);
-		return new ActionResult(after).WithEvents(events);
+		return new ActionResult(after).WithEvents(bonus.AddRange(events));
 	}
 }
 

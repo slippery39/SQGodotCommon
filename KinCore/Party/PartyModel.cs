@@ -150,6 +150,21 @@ public record Ally : Creature
 	/// <summary>Power added by cards this turn (Rally). Cleared when your next turn starts.</summary>
 	public int BonusPower { get; init; }
 
+	/// <summary>
+	/// **SPELL POWER — added to every spell, summed across your team** (round 4: a spell is cast by
+	/// the team, not a monster). Its base, from the monster.
+	/// </summary>
+	public int SpellPower { get; init; }
+
+	/// <summary>Spell Power added this turn (a first-attack bonus). Cleared when your next turn starts.</summary>
+	public int BonusSpellPower { get; init; }
+
+	/// <summary>
+	/// **An attack card has been played on it this turn** — so its FIRST-ATTACK bonus is spent
+	/// (`PartyMonsters`). Cleared when your next turn starts.
+	/// </summary>
+	public bool AttackedThisTurn { get; init; }
+
 	/// <summary>Played its move early this turn (Hasten), so it does not act again at the end.</summary>
 	public bool HasActed { get; init; }
 

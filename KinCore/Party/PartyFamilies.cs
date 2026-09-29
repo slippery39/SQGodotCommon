@@ -347,9 +347,12 @@ public static class PartyFamilies
 		return firstTurn ? (s, []) : GrowAll(s);
 	}
 
-	/// <summary>How much Kindle one spell cast adds: 1, plus every Stoker standing.</summary>
+	/// <summary>
+	/// How much Kindle one spell cast adds: what the Stokers standing add — none without one (round 4:
+	/// no family mechanic is automatic).
+	/// </summary>
 	public static int KindlePerSpell(GameState s) =>
-		1 + s.LivingAllies().SelectMany(a => a.GetComponents<Stoker>()).Sum(k => k.Extra);
+		s.LivingAllies().SelectMany(a => a.GetComponents<Stoker>()).Sum(k => k.Extra);
 
 	/// <summary>How many times a spell played now is cast: once, +1 for an Echo's first, +1 for Fan the Flames.</summary>
 	public static int SpellCasts(GameState s)

@@ -85,18 +85,9 @@ public sealed partial class KinPartyRunScreens
 						Wants.GetValueOrDefault(companion.Name, ""),
 						companion.Passive,
 						companion.PassiveRule,
-						"Moves: "
-							+ string.Join(
-								", ",
-								companion.Moves.Select(m =>
-									KinMoveText.Says(
-										m,
-										m.Kind == IntentType.Attack
-											? m.Amount + companion.Power
-											: m.Amount
-									)
-								)
-							),
+						companion.Abilities.OfType<FirstAttack>().FirstOrDefault() is { } bonus
+							? $"First attack each turn: {bonus.Text}."
+							: "",
 						$"HP {companion.Hp} · POW {companion.Power}",
 					],
 					new Vector2(340, 640),

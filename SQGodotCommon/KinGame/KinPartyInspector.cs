@@ -60,21 +60,42 @@ public sealed class KinPartyInspector
 		var colour = ally is null ? KinPalette.Red : KinPalette.Family(ally.Family, ally.Name);
 		_root.AddThemeStyleboxOverride("panel", KinPalette.Box(KinPalette.Navy, colour, 3));
 
-		Line($"{creature.Name.ToUpperInvariant()}  LV {creature.Level}", 26, KinPalette.Bone);
+		Line(
+			ally is null
+				? $"{creature.Name.ToUpperInvariant()}  LV {creature.Level}"
+				: creature.Name.ToUpperInvariant(),
+			26,
+			KinPalette.Bone
+		);
 		Line(
 			$"HP {creature.Hp}/{creature.MaxHp}"
-				+ (ally is null ? "" : $" · POWER {ally.Power + ally.BonusPower}"),
+				+ (
+					ally is null
+						? ""
+						: $" · POWER {ally.Power + ally.BonusPower} · SPELL POWER {ally.SpellPower + ally.BonusSpellPower}"
+				),
 			18,
 			KinPalette.Bone
 		);
 		Line(
-			ally is { HasActed: true } ? "Has already acted this turn."
-				: step > 0
-					? $"Acts in step {step} when you end the turn — both lines act from the back, at once."
+			ally is null && step > 0
+				? $"Acts in step {step} when you end the turn — the foes act from the back."
 				: "",
 			16,
 			KinPalette.Bone
 		);
+
+		// **Round 4: a monster has no moves — it has a FIRST-ATTACK bonus.**
+		if (ally?.GetComponent<FirstAttack>() is { } bonus)
+		{
+			Line("FIRST ATTACK EACH TURN", 18, KinPalette.Gold);
+			Line(
+				$"The first attack card played on it each turn also: {bonus.Text}."
+					+ (PartyMonsters.BonusReady(ally) ? "" : " (Spent this turn.)"),
+				16,
+				KinPalette.Bone
+			);
+		}
 
 		if (ally is not null && ally.Passive.Length > 0)
 		{
@@ -84,6 +105,15 @@ public sealed class KinPartyInspector
 
 		foreach (var status in Statuses(creature))
 			Line(status, 16, KinPalette.Gold);
+
+		if (ally is not null)
+		{
+			_cell = cell;
+			_screen = screen;
+			_root.Visible = true;
+			Fit();
+			return;
+		}
 
 		Line("MOVES — in this order, then round again:", 18, KinPalette.Bone);
 		var next = creature.PatternIndex % creature.Pattern.Count;

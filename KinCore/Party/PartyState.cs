@@ -96,17 +96,14 @@ public static class PartyState
 	}
 
 	/// <summary>
-	/// **The steps of the end of the turn, back to front, BOTH LINES AT ONCE** (R3): each step is the
-	/// creatures standing at one position, yours first. A monster that acted early (Hasten) sits its
-	/// step out. The board's order badges are this list — as things stand now.
+	/// **The steps of the end of the turn, back to front**: each step is the FOES standing at one
+	/// position (round 4: your monsters act only through cards). The board's order badges are this
+	/// list — as things stand now.
 	/// </summary>
 	public static ImmutableList<ImmutableList<Creature>> ActingSteps(this GameState s)
 	{
-		var creatures = s.LivingAllies()
-			.Where(a => !a.HasActed)
-			.Cast<Creature>()
-			.Concat(s.LivingFoes())
-			.ToList();
+		// Round 4: your monsters have no moves — only the foes act at the end of the turn.
+		var creatures = s.LivingFoes().Cast<Creature>().ToList();
 		return
 		[
 			.. creatures

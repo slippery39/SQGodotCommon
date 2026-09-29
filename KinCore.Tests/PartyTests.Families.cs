@@ -106,18 +106,6 @@ public partial class PartyTests
 	}
 
 	[Test]
-	public void AnAlphasTokensAttackTheFrontForTheirPower()
-	{
-		var boost = new TokenBoost { Hp = 0, Power = 2 };
-		var s = Solo(With(Mon("Howler"), boost, new Alpha()), [PartyCards.Sow]);
-
-		s = Play(s, "Sow", 0);
-		s = EndTurn(s);
-
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - boost.Power), "the Sprout pounces");
-	}
-
-	[Test]
 	public void SporesDrawAndPayWhenATokenFalls()
 	{
 		var spores = new Spores();
@@ -191,26 +179,28 @@ public partial class PartyTests
 	// ===== EMBER
 
 	[Test]
-	public void EverySpellAddsKindleAndEveryKindleAddsToSpells()
+	public void KindleAddsToEverySpellAndASpellAddsNoneByItself()
 	{
-		var s = Solo(Mon("Caster"), [Zap(), Zap()]);
+		var stoke = (KindleAction)PartyCards.Stoke.Effects[0].Template;
+		var s = Solo(Mon("Caster"), [PartyCards.Stoke, Zap(), Zap()]);
 
+		s = Play(s, "Stoke", 0);
 		s = Play(s, "Zap", 0, foeRow: true);
 		s = Play(s, "Zap", 0, foeRow: true);
 
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 4 - (4 + 1)));
-		Assert.That(s.GetParty().Kindle, Is.EqualTo(2));
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 2 * (4 + stoke.Amount)));
+		Assert.That(s.GetParty().Kindle, Is.EqualTo(stoke.Amount), "round 4: no automatic Kindle");
 	}
 
 	[Test]
-	public void AStokerAddsMoreKindlePerSpell()
+	public void AStokerMakesEverySpellAddKindle()
 	{
 		var stoker = new Stoker();
 		var s = Solo(With(Mon("Emberling"), stoker), [Zap()]);
 
 		s = Play(s, "Zap", 0, foeRow: true);
 
-		Assert.That(s.GetParty().Kindle, Is.EqualTo(1 + stoker.Extra));
+		Assert.That(s.GetParty().Kindle, Is.EqualTo(stoker.Extra), "none without one (round 4)");
 	}
 
 	[Test]
@@ -219,11 +209,10 @@ public partial class PartyTests
 		var s = Solo(With(Mon("Owl"), new EchoFirstSpell()), [Zap(), Zap()]);
 
 		s = Play(s, "Zap", 0, foeRow: true);
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 4 - (4 + 1)), "cast twice");
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 4 - 4), "cast twice");
 		s = Play(s, "Zap", 0, foeRow: true);
 
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 4 - 5 - (4 + 2)), "then once");
-		Assert.That(s.GetParty().Kindle, Is.EqualTo(3));
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 4 - 4 - 4), "then once");
 	}
 
 	[Test]
@@ -234,7 +223,7 @@ public partial class PartyTests
 		s = Play(s, "Fan the Flames", 0);
 		s = Play(s, "Zap", 0, foeRow: true);
 
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 4 - (4 + 1)));
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 4 - 4));
 		Assert.That(s.GetParty().NextSpellTwice, Is.False, "used up");
 	}
 
@@ -258,13 +247,15 @@ public partial class PartyTests
 	}
 
 	[Test]
-	public void PikesFinisherAddsTheKindleToItsAttacks()
+	public void PikesAttacksAddTheKindle()
 	{
 		var stoke = (KindleAction)PartyCards.Stoke.Effects[0].Template;
-		var s = Solo(With(Mon("Pike", moves: Hit(2)), new KindleFinisher()), [PartyCards.Stoke]);
+		var s = Solo(
+			With(Mon("Pike"), new KindleFinisher()),
+			[PartyCards.Stoke, Card("Strike", 0, new StrikeAction { Amount = 2 })]
+		);
 
-		s = Play(s, "Stoke", 0);
-		s = EndTurn(s);
+		s = Play(Play(s, "Stoke", 0), "Strike", 0);
 
 		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 2 - stoke.Amount));
 	}
