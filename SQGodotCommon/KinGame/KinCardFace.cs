@@ -354,7 +354,8 @@ public static class KinCardFace
 				: KinCardKit.Neutral;
 		var boosted = spellBonus > 0 && KinCore.Party.PartySpells.IsSpell(card);
 		var ground = KinArt.ColourFor(card.Name);
-		var subject = card.Name;
+		// A + version draws its base card's art ("Strike+" is Strike's picture).
+		var subject = card.Name.TrimEnd('+');
 
 		return new InternalCardUI2D.Details
 		{
@@ -400,7 +401,7 @@ public static class KinCardFace
 			ManaCostFrameTexture = KinCardKit.CostGem,
 			// The ACTION picture when there is one (style D); else the old subject art.
 			ArtworkTexture =
-				KinCardKit.Illustration(card.Name, ArtHeightFor(card))
+				KinCardKit.Illustration(subject, ArtHeightFor(card))
 				?? KinArt.CardArt(subject, ground, ArtHeightFor(card)),
 
 			NameColor = KinPalette.Bone,

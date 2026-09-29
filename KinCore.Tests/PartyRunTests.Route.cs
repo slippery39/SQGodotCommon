@@ -184,17 +184,49 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void ASpringHealsAShareOnArrival()
+	public void ASpringWaitsForItsChoiceAndItsHealIsAShare()
 	{
 		var run = OnRoute(
-			WithTeam(Run(), A) with
-			{
-				Team = [new RunCompanion(A, 10)],
-			},
-			Place(NodeKind.Rest)
-		);
+				WithTeam(Run(), A) with
+				{
+					Team = [new RunCompanion(A, 10)],
+				},
+				Place(NodeKind.Rest),
+				Place(NodeKind.Find)
+			)
+			.MoveTo(1);
 
-		Assert.That(Hp(run.MoveTo(1), "A"), Is.EqualTo(10 + 12), "30% of 40");
+		Assert.That(run.AtSpring, Is.True);
+		Assert.That(Hp(run, "A"), Is.EqualTo(10), "nothing until you choose");
+		Assert.That(run.CannotMoveTo(2), Is.EqualTo("Choose at the spring first"));
+
+		var healed = run.HealAtSpring();
+		Assert.That(Hp(healed, "A"), Is.EqualTo(10 + 12), "30% of 40");
+		Assert.That(healed.CannotMoveTo(2), Is.Null);
+	}
+
+	[Test]
+	public void ASpringCanUpgradeACardInsteadToItsPlusVersion()
+	{
+		var plain = Wipe("Punch");
+		var better = Wipe("Punch") with { Cost = 0 };
+		var run = OnRoute(
+				Run() with
+				{
+					Deck = [Wipe("Wipe"), PartyCards.Plus(plain, better)],
+				},
+				Place(NodeKind.Rest)
+			)
+			.MoveTo(1);
+
+		Assert.That(run.Upgradable, Is.EqualTo(new[] { 1 }), "only the card with a +");
+
+		var after = run.UpgradeAtSpring(1);
+
+		Assert.That(after.Deck[1].Name, Is.EqualTo("Punch+"));
+		Assert.That(after.Deck[1].Cost, Is.Zero);
+		Assert.That(after.Upgradable, Is.Empty, "a + is not upgraded again");
+		Assert.That(after.HereIsCleared, Is.True, "and you walk on");
 	}
 
 	[Test]

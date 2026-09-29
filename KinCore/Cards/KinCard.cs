@@ -46,4 +46,10 @@ public record KinCard : GameObject
 
 	/// <summary>How often a reward offers it (`PartyRun.RewardOffer`). Default: common.</summary>
 	public KinCore.Party.Rarity Rarity { get; init; }
+
+	/// <summary>
+	/// **Its + version** (round 4: every card has one, authored beside it) — what a spring's UPGRADE
+	/// makes it. Null for a card with none yet, or one already upgraded.
+	/// </summary>
+	public KinCard? Upgraded { get; init; }
 }

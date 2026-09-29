@@ -24,6 +24,21 @@ public static class PartyCards
 			],
 		};
 
+	/// <summary>
+	/// **A card and its + version** (round 4: a spring can UPGRADE a card). The + keeps the card's
+	/// family and rarity and takes its name with a "+".
+	/// </summary>
+	public static KinCard Plus(KinCard card, KinCard better) =>
+		card with
+		{
+			Upgraded = better with
+			{
+				Name = card.Name + "+",
+				Family = card.Family,
+				Rarity = card.Rarity,
+			},
+		};
+
 	// ===== The starters' old signature cards (monster decks are gone, 2026-09-28)
 
 	/// <summary>Bramble's, now Grove's: Thorns for a wall that wants to be hit.</summary>
@@ -67,15 +82,13 @@ public static class PartyCards
 	// ===== SPELLCRAFT — damage from the card itself: no aim needed.
 
 	/// <summary>Enabler · filler: a fine card anywhere, and the spell every Spellcraft payoff counts.</summary>
-	public static readonly KinCard Zap = Card(
-		"Zap",
-		1,
-		"Drop on a foe: deal 4.",
-		new SpellDamageAction { Amount = 4 }
-	) with
-	{
-		Family = Family.Ember,
-	};
+	public static readonly KinCard Zap = Plus(
+		Card("Zap", 1, "Drop on a foe: deal 4.", new SpellDamageAction { Amount = 4 }) with
+		{
+			Family = Family.Ember,
+		},
+		Card("Zap", 1, "Drop on a foe: deal 6.", new SpellDamageAction { Amount = 6 })
+	);
 
 	/// <summary>Enabler · standard: the answer to a swarm.</summary>
 	public static readonly KinCard Arc = Card(
@@ -205,15 +218,23 @@ public static class PartyCards
 		);
 
 	/// <summary>Enabler (Summon, Block) · filler: a movable wall.</summary>
-	public static readonly KinCard Sow = Card(
-		"Sow",
-		1,
-		"Summon a Sprout in front (3 HP, 2 turns). When it falls, the ones beside it gain 3 Block.",
-		new SummonTokenAction { Token = Sprout }
-	) with
-	{
-		Family = Family.Grove,
-	};
+	public static readonly KinCard Sow = Plus(
+		Card(
+			"Sow",
+			1,
+			"Summon a Sprout in front (3 HP, 2 turns). When it falls, the ones beside it gain 3 Block.",
+			new SummonTokenAction { Token = Sprout }
+		) with
+		{
+			Family = Family.Grove,
+		},
+		Card(
+			"Sow",
+			0,
+			"Summon a Sprout in front (3 HP, 2 turns). When it falls, the ones beside it gain 3 Block.",
+			new SummonTokenAction { Token = Sprout }
+		)
+	);
 
 	/// <summary>Bridge (Summon and Spellcraft) · standard: two hits that need a column each.</summary>
 	public static readonly KinCard CallSparks = Card(
@@ -422,15 +443,23 @@ public static class PartyCards
 	};
 
 	/// <summary>Enabler for THORNWALL: Block that stays.</summary>
-	public static readonly KinCard Root = Card(
-		"Root",
-		1,
-		"Gain 6 ROOTED Block: it does not vanish at your turn start.",
-		new RootAction { Amount = 6 }
-	) with
-	{
-		Family = Family.Grove,
-	};
+	public static readonly KinCard Root = Plus(
+		Card(
+			"Root",
+			1,
+			"Gain 6 ROOTED Block: it does not vanish at your turn start.",
+			new RootAction { Amount = 6 }
+		) with
+		{
+			Family = Family.Grove,
+		},
+		Card(
+			"Root",
+			1,
+			"Gain 9 ROOTED Block: it does not vanish at your turn start.",
+			new RootAction { Amount = 9 }
+		)
+	);
 
 	/// <summary>Accelerator: time, now.</summary>
 	public static readonly KinCard Overgrow = Card(
@@ -482,16 +511,25 @@ public static class PartyCards
 	// ===== EMBER — the engine is SPELL COUNT (KinFamiliesPlan.md §4)
 
 	/// <summary>Enabler: Kindle without a spell.</summary>
-	public static readonly KinCard Stoke = Card(
-		"Stoke",
-		1,
-		"+3 KINDLE. Draw a card.",
-		new KindleAction { Amount = 3 },
-		new DrawAction()
-	) with
-	{
-		Family = Family.Ember,
-	};
+	public static readonly KinCard Stoke = Plus(
+		Card(
+			"Stoke",
+			1,
+			"+3 KINDLE. Draw a card.",
+			new KindleAction { Amount = 3 },
+			new DrawAction()
+		) with
+		{
+			Family = Family.Ember,
+		},
+		Card(
+			"Stoke",
+			1,
+			"+5 KINDLE. Draw a card.",
+			new KindleAction { Amount = 5 },
+			new DrawAction()
+		)
+	);
 
 	/// <summary>Bridge: the fire keeps you alive.</summary>
 	public static readonly KinCard Cinderwall = Card(

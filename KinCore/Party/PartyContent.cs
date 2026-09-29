@@ -142,18 +142,19 @@ public static class PartyContent
 			Family = Family.Storm,
 		};
 
-	private static readonly KinCard BasicGuard = Card(
-		"Guard",
-		1,
-		"Gain 8 Block.",
-		new GuardAction { Amount = 8 }
+	private static readonly KinCard BasicGuard = PartyCards.Plus(
+		Card("Guard", 1, "Gain 8 Block.", new GuardAction { Amount = 8 }),
+		Card("Guard", 1, "Gain 11 Block.", new GuardAction { Amount = 11 })
 	);
 
-	private static readonly KinCard BasicStrike = Card(
-		"Strike",
-		1,
-		"It attacks their front now: 5 + Power.",
-		new StrikeAction { Amount = 5 }
+	private static readonly KinCard BasicStrike = PartyCards.Plus(
+		Card(
+			"Strike",
+			1,
+			"It attacks their front now: 5 + Power.",
+			new StrikeAction { Amount = 5 }
+		),
+		Card("Strike", 1, "It attacks their front now: 8 + Power.", new StrikeAction { Amount = 8 })
 	);
 
 	private static readonly KinCard Rally = Card(

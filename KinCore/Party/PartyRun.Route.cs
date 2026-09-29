@@ -38,7 +38,12 @@ public partial record PartyRun
 	/// <summary>Why you cannot walk to that place — or null if you can.</summary>
 	public string? CannotMoveTo(int node) =>
 		Phase != RunPhase.Route || Route is null ? "Not on a route"
-		: !HereIsCleared ? "Win the fight here first"
+		: !HereIsCleared
+			? (
+				Here.Kind == NodeKind.Rest
+					? "Choose at the spring first"
+					: "Win the fight here first"
+			)
 		: !Route.Linked(NodeId, node) ? "Not a path from here"
 		: null;
 
@@ -60,13 +65,36 @@ public partial record PartyRun
 			{
 				Gold = Gold + (here.Find == FindKind.Gold ? FoundGold : 0),
 			},
-			NodeKind.Rest => run.Clear() with { Team = Heal(Team, RestHeal) },
+			// A SPRING waits for its choice: heal, or upgrade a card (round 4).
+			NodeKind.Rest => run,
 			_ when here.IsFight => run,
 			_ => run.Clear(),
 		};
 	}
 
 	private PartyRun Clear() => this with { Cleared = Cleared.Add(NodeId) };
+
+	// ===== The SPRING: heal, or upgrade a card (round 4 — STS's campfire)
+
+	/// <summary>Whether you stand at a spring that is still waiting for its choice.</summary>
+	public bool AtSpring => Phase == RunPhase.Route && Here.Kind == NodeKind.Rest && !HereIsCleared;
+
+	/// <summary>The deck's cards a spring can upgrade, by deck index — those with a + version.</summary>
+	public IEnumerable<int> Upgradable =>
+		Enumerable.Range(0, Deck.Count).Where(i => Deck[i].Upgraded is not null);
+
+	/// <summary>**The spring's HEAL**: every monster heals a share of its max, and you walk on.</summary>
+	public PartyRun HealAtSpring() =>
+		AtSpring ? Clear() with { Team = Heal(Team, RestHeal) } : this;
+
+	/// <summary>**The spring's UPGRADE**: that card becomes its + version, and you walk on.</summary>
+	public PartyRun UpgradeAtSpring(int deckIndex) =>
+		AtSpring && Upgradable.Contains(deckIndex)
+			? Clear() with
+			{
+				Deck = Deck.SetItem(deckIndex, Deck[deckIndex].Upgraded!),
+			}
+			: this;
 
 	/// <summary>What winning a route fight pays.</summary>
 	private static int RouteGold(NodeKind kind) =>

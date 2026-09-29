@@ -121,6 +121,14 @@ public static class PartySim
 					run = run.MoveTo(Walk(run, rng));
 					break;
 
+				// A spring: heal when hurt, else upgrade the first card that has a +.
+				case RunPhase.Route when run.AtSpring:
+					run =
+						!Healthy(run) || !run.Upgradable.Any()
+							? run.HealAtSpring()
+							: run.UpgradeAtSpring(run.Upgradable.First());
+					break;
+
 				default:
 					if (run.AtBoss)
 						gyms = gyms.Add(

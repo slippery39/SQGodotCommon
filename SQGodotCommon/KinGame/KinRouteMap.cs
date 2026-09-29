@@ -306,12 +306,13 @@ public sealed class KinRouteMap
 			NodeKind.Grass =>
 				"Tall grass: a wild fight, but you will not know what until you walk in.",
 			NodeKind.Trainer => "A trainer: a harder fight that pays more.",
-			NodeKind.Rest => $"A spring: every monster heals {(int)(PartyRun.RestHeal * 100)}%.",
+			NodeKind.Rest =>
+				$"A spring: every monster heals {(int)(PartyRun.RestHeal * 100)}% — or upgrade a card instead.",
 			NodeKind.Find => "Something lying on the path.",
 			NodeKind.Elite =>
 				$"An ELITE: {node.Encounter!.Name}. A hard fight that pays a rare card, a relic, and gold.",
 			NodeKind.End =>
-				$"The BOSS: {node.Encounter!.Name}. Beat it to go on. The spring before it heals {(int)(PartyRun.RestHeal * 100)}%.",
+				$"The BOSS: {node.Encounter!.Name}. Beat it to go on. The spring before it heals {(int)(PartyRun.RestHeal * 100)}% or upgrades a card.",
 			_ => "",
 		};
 
@@ -320,7 +321,7 @@ public sealed class KinRouteMap
 		here.Kind switch
 		{
 			NodeKind.Find => $"You found a purse: +{PartyRun.FoundGold} gold.",
-			NodeKind.Rest => "The spring heals everyone.",
+			NodeKind.Rest => "",
 			_ => "",
 		};
 }

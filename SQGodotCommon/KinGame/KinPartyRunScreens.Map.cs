@@ -110,6 +110,47 @@ public sealed partial class KinPartyRunScreens
 		Row().AddChild(remove);
 	}
 
+	/// <summary>
+	/// **A SPRING: heal, or upgrade a card** (round 4 — STS's campfire). One tile a card that has a +,
+	/// showing what it becomes.
+	/// </summary>
+	public void ShowSpring(PartyRun run, Action heal, Action<int> upgrade)
+	{
+		Begin(
+			"A SPRING",
+			$"Rest here — every monster heals {(int)(PartyRun.RestHeal * 100)}% of its max — or upgrade a card.",
+			"map"
+		);
+		ShowTeam(run);
+		Row().AddChild(Button($"HEAL {(int)(PartyRun.RestHeal * 100)}%", heal));
+
+		var upgradable = run.Upgradable.ToList();
+		if (upgradable.Count == 0)
+		{
+			_column.AddChild(
+				Label("No card in your deck can be upgraded yet.", 20, KinPalette.Bone)
+			);
+			return;
+		}
+		_column.AddChild(Label("OR UPGRADE ONE", 24, KinPalette.Bone));
+		var row = Row();
+		// One tile a NAME: five Strikes upgrade the same way, and five tiles would overflow the row.
+		foreach (var index in upgradable.DistinctBy(i => run.Deck[i].Name))
+		{
+			var better = run.Deck[index].Upgraded!;
+			row.AddChild(
+				Tile(
+					KinPalette.Family(better.Family),
+					CardArt(better.Name.TrimEnd('+')),
+					$"{better.Name.ToUpperInvariant()}  ({better.Cost})",
+					[string.Join(" ", KinRulesText.Lines(better))],
+					new Vector2(240, 380),
+					() => upgrade(index)
+				)
+			);
+		}
+	}
+
 	/// <summary>The deck, one button a card: the one pressed leaves the deck for good.</summary>
 	private void ShowRemove(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
 	{

@@ -175,6 +175,17 @@ public partial class KinPartyBoard : Node2D
 			if (_captureScreen is { } screen)
 				GetTree().CreateTimer(0.5).Timeout += () =>
 				{
+					if (screen == "spring")
+					{
+						// Placed on the route's first spring, not walked: its choice waits.
+						Change(r =>
+						{
+							var route = r.EnterRoute();
+							var spring = route.Route!.Nodes.First(n => n.Kind == NodeKind.Rest);
+							return route with { NodeId = spring.Id };
+						});
+						return;
+					}
 					if (screen == "town2")
 					{
 						Change(r => r with { RegionIndex = 1 });
@@ -296,6 +307,14 @@ public partial class KinPartyBoard : Node2D
 				break;
 			case RunPhase.Route when !_run.HereIsCleared && _run.Here.IsFight:
 				NextBattle();
+				break;
+			// A SPRING: heal, or upgrade a card (round 4).
+			case RunPhase.Route when _run.AtSpring:
+				_screens.ShowSpring(
+					_run,
+					() => Change(r => r.HealAtSpring()),
+					index => Change(r => r.UpgradeAtSpring(index))
+				);
 				break;
 			case RunPhase.Route:
 				_screens.Hide();
