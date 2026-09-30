@@ -130,4 +130,20 @@ public partial class PartyTests
 			"two calls, and neither faded"
 		);
 	}
+
+	/// <summary>CRUSH (the difficulty pass, 2026-09-30): the telegraphed hit ignores Block, which stays.</summary>
+	[Test]
+	public void ACrushingHitIgnoresBlock()
+	{
+		var crush = Hit(6) with { Crushes = true };
+		var s = Solo(
+			Mon("Wall", hp: 20),
+			[Card("Brace", 0, new GuardAction { Amount = 10 })],
+			Foe(0, 50, crush)
+		);
+
+		s = EndTurn(Play(s, "Brace", 0));
+
+		Assert.That(Named(s, "Wall").Hp, Is.EqualTo(20 - crush.Amount));
+	}
 }

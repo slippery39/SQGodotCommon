@@ -89,20 +89,22 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void TheFirstRegionsWildFoesAreNeverAboveAStarter()
+	public void TheFirstRegionsWildFoesAreAtMostOneLevelAboveBase()
 	{
-		// Region 1 chips (Shayne, 2026-09-28: "a little chip"), but never outclasses a Lv 5 starter,
-		// and a fight is at most two foes.
+		// Region 1 CHIPS for real (Shayne, 2026-09-30: wild fights should cost ~5–10%; it was "a little
+		// chip", level 5 at most, on 2026-09-28) — but never more than a level above the content's base,
+		// and a fight is at most two foes, for a solo starter.
 		var first = PartyWorld.Regions[0];
 
-		Assert.That(first.MaxLevel, Is.LessThanOrEqualTo(PartyLevels.Base));
+		Assert.That(first.MaxLevel, Is.LessThanOrEqualTo(PartyLevels.Base + 1));
 		for (var seed = 0; seed < 20; seed++)
 		{
 			var route = (PartyRun.Start(PartyContent.Pike, seed)).EnterRoute().Route!;
 			foreach (var node in route.Nodes.Where(n => n.Kind is NodeKind.Wild or NodeKind.Grass))
 				Assert.That(
 					node.Encounter!.Foes,
-					Has.Count.InRange(1, 2).And.All.Matches<Foe>(f => f.Level <= PartyLevels.Base),
+					Has.Count.InRange(1, 2)
+						.And.All.Matches<Foe>(f => f.Level <= PartyLevels.Base + 1),
 					$"seed {seed}, {node.Kind}"
 				);
 		}

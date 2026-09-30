@@ -48,9 +48,9 @@ public static class GroveCards
 		);
 
 	/// <summary>Cheap, and gone at your next turn: a wall for one hit, or fuel.</summary>
-	public static readonly TokenTemplate Seedling = Token("Seedling", 4, 0, fadesIn: 1);
+	public static readonly TokenTemplate Seedling = Token("Seedling", 3, 0, fadesIn: 1);
 
-	public static readonly TokenTemplate Sprout = Token("Sprout", 6, 1);
+	public static readonly TokenTemplate Sprout = Token("Sprout", 5, 1);
 
 	public static readonly TokenTemplate Log = Token("Log", 12, 0, 0, new DrawOnFall { Count = 2 });
 	public static readonly TokenTemplate BigLog = Token(
@@ -61,14 +61,14 @@ public static class GroveCards
 		new DrawOnFall { Count = 2 }
 	);
 
-	public static readonly TokenTemplate Treant = Token("Treant", 20, 3);
-	public static readonly TokenTemplate BigTreant = Token("Treant", 26, 4);
+	public static readonly TokenTemplate Treant = Token("Treant", 16, 3);
+	public static readonly TokenTemplate BigTreant = Token("Treant", 22, 4);
 
 	// ===== Commons
 
 	public static readonly KinCard Root = Plus(
-		Card("Root", 1, C, "Gain 8 Rooted Block.", new RootAction { Amount = 8 }),
-		Card("Root", 1, C, "Gain 11 Rooted Block.", new RootAction { Amount = 11 })
+		Card("Root", 1, C, "Gain 6 Rooted Block.", new RootAction { Amount = 6 }),
+		Card("Root", 1, C, "Gain 9 Rooted Block.", new RootAction { Amount = 9 })
 	);
 
 	public static readonly KinCard Sow = Plus(
@@ -76,15 +76,14 @@ public static class GroveCards
 			"Sow",
 			1,
 			C,
-			"Summon a Sprout (6 HP, 1 Power). Draw a card.",
-			new SummonTokenAction { Token = Sprout },
-			new DrawAction()
+			"Summon a Sprout (5 HP, 1 Power).",
+			new SummonTokenAction { Token = Sprout }
 		),
 		Card(
 			"Sow",
-			0,
+			1,
 			C,
-			"Summon a Sprout (6 HP, 1 Power). Draw a card.",
+			"Summon a Sprout (5 HP, 1 Power). Draw a card.",
 			new SummonTokenAction { Token = Sprout },
 			new DrawAction()
 		)
@@ -95,14 +94,14 @@ public static class GroveCards
 			"Seedlings",
 			0,
 			C,
-			"Summon 2 Seedlings (4 HP). They wither at your next turn.",
+			"Summon 2 Seedlings (3 HP). They wither at your next turn.",
 			new SummonTokenAction { Token = Seedling, Count = 2 }
 		),
 		Card(
 			"Seedlings",
 			0,
 			C,
-			"Summon 3 Seedlings (4 HP). They wither at your next turn.",
+			"Summon 3 Seedlings (3 HP). They wither at your next turn.",
 			new SummonTokenAction { Token = Seedling, Count = 3 }
 		)
 	);
@@ -156,15 +155,15 @@ public static class GroveCards
 			"Thicket",
 			1,
 			C,
-			"Every creature on your line gains 5 Block.",
-			new GroveBlockAction { Amount = 5, AllLine = true }
+			"Every creature on your line gains 4 Block.",
+			new GroveBlockAction { Amount = 4, AllLine = true }
 		),
 		Card(
 			"Thicket",
 			1,
 			C,
-			"Every creature on your line gains 7 Block.",
-			new GroveBlockAction { Amount = 7, AllLine = true }
+			"Every creature on your line gains 6 Block.",
+			new GroveBlockAction { Amount = 6, AllLine = true }
 		)
 	);
 
@@ -173,15 +172,15 @@ public static class GroveCards
 			"Hardwood",
 			1,
 			C,
-			"Gain 7 Block. If it already had Block, 7 more.",
-			new GroveBlockAction { Amount = 7, IfHadBlock = 7 }
+			"Gain 6 Block. If it already had Block, 6 more.",
+			new GroveBlockAction { Amount = 6, IfHadBlock = 6 }
 		),
 		Card(
 			"Hardwood",
 			1,
 			C,
-			"Gain 9 Block. If it already had Block, 9 more.",
-			new GroveBlockAction { Amount = 9, IfHadBlock = 9 }
+			"Gain 8 Block. If it already had Block, 8 more.",
+			new GroveBlockAction { Amount = 8, IfHadBlock = 8 }
 		)
 	);
 
@@ -464,14 +463,14 @@ public static class GroveCards
 			"Treant",
 			2,
 			R,
-			"Summon a Treant (20 HP, 3 Power).",
+			"Summon a Treant (16 HP, 3 Power).",
 			new SummonTokenAction { Token = Treant }
 		),
 		Card(
 			"Treant",
 			2,
 			R,
-			"Summon a Treant (26 HP, 4 Power).",
+			"Summon a Treant (22 HP, 4 Power).",
 			new SummonTokenAction { Token = BigTreant }
 		)
 	);
@@ -566,7 +565,7 @@ public static class GroveCards
 	/// <summary>**ROOTED** — a wall that keeps everything and grows from being hit.</summary>
 	public static readonly PartyCompanion Mosshell = Monster(
 		"Mosshell",
-		34,
+		30,
 		1,
 		"MOSSBACK",
 		"Its Block is Rooted. When its Block stops a hit, it grows 1.",

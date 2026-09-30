@@ -192,6 +192,8 @@ public sealed class KinPartyInspector
 		{
 			IntentType.Attack when move.Steals =>
 				$"{amount} damage to {Lands(move.Target, victims)}, then steals the top card of your draw pile until it is beaten.",
+			IntentType.Attack when move.Crushes =>
+				$"{amount} damage to {Lands(move.Target, victims)}. CRUSH: it ignores Block.",
 			IntentType.Attack => $"{amount} damage to {Lands(move.Target, victims)}.",
 			IntentType.Block when move.Target == Aim.Ahead =>
 				$"gives the one ahead of it {amount} Block.",

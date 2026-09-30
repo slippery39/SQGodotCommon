@@ -39,6 +39,15 @@ public record SimRun(
 	int Turns
 )
 {
+	/// <summary>
+	/// **The deck and team as region 2 began** — null if the run fell in region 1. The bot takes the
+	/// first card, relic and monster offered, so what a run holds is near-random: comparing the runs
+	/// with a card to those without measures the card (`party-sim cards`).
+	/// </summary>
+	public ImmutableList<string>? Region2Deck { get; init; }
+
+	public ImmutableList<string>? Region2Team { get; init; }
+
 	/// <summary>Elites fought, and won.</summary>
 	public int Elites { get; init; }
 
@@ -62,39 +71,63 @@ public static class PartySim
 	public const int TurnLimit = 40;
 
 	/// <summary>
-	/// **THE CURVE for the BOT** (Shayne, 2026-09-28: "bot wins ~50%"): the share of runs that should
-	/// get THROUGH each region, losing evenly — about 87% of those who reach a region get through it.
+	/// **THE CURVE for the BOT** (Shayne, 2026-09-30: the bot at ~50% was "way too easy" for a person,
+	/// who plans further than it does — the bot should win ~35%): the share of runs that should get
+	/// THROUGH each region, losing evenly — about 81% of those who reach a region get through it.
 	/// </summary>
+	public const double BotWins = 0.35;
+
 	public static readonly ImmutableList<double> Target =
 	[
-		.. Enumerable.Range(1, 5).Select(r => Math.Pow(0.5, r / 5.0)),
+		.. Enumerable.Range(1, 5).Select(r => Math.Pow(BotWins, r / 5.0)),
 	];
 
 	/// <summary>An elite, and the hospital skipped, only with this share of the team's HP left.</summary>
 	public const double HealthyAt = 0.6;
 
-	public static SimRun[] PlayMany(int count, ImmutableList<PartyCompanion>? starters = null)
+	/// <param name="setup">A variant's change to the run as it starts (a different starting deck) — for
+	/// `party-sim variants` only. The sim is outside the game state, so a delegate is fine here.</param>
+	public static SimRun[] PlayMany(
+		int count,
+		ImmutableList<PartyCompanion>? starters = null,
+		Func<PartyRun, PartyRun>? setup = null
+	)
 	{
 		var roster = starters ?? PartyContent.Roster;
 		var results = new SimRun[count];
-		Parallel.For(0, count, i => results[i] = PlayRun(roster[i % roster.Count], seed: i + 1));
+		Parallel.For(
+			0,
+			count,
+			i => results[i] = PlayRun(roster[i % roster.Count], seed: i + 1, setup: setup)
+		);
 		return results;
 	}
 
-	public static SimRun PlayRun(PartyCompanion starter, int seed, Action<string>? log = null)
+	public static SimRun PlayRun(
+		PartyCompanion starter,
+		int seed,
+		Action<string>? log = null,
+		Func<PartyRun, PartyRun>? setup = null
+	)
 	{
 		var rng = new Random(seed);
 		var run = PartyRun.Start(starter, seed);
+		if (setup is not null)
+			run = setup(run);
 		var gyms = ImmutableList<GymArrival>.Empty;
 		var battles = 0;
 		var turns = 0;
 		var elites = 0;
 		var elitesWon = 0;
 		var chips = ImmutableList<WildChip>.Empty;
+		ImmutableList<string>? deck2 = null,
+			team2 = null;
 
 		SimRun Ended(RunEnd end, int region) =>
 			new(starter.Name, seed, end, region, gyms, battles, turns)
 			{
+				Region2Deck = deck2,
+				Region2Team = team2,
 				Elites = elites,
 				ElitesWon = elitesWon,
 				Chips = chips,
@@ -110,6 +143,11 @@ public static class PartySim
 						run = run.ChooseRelic(relic);
 					if (run.MonsterChoice is [var monster, ..])
 						run = run.ChooseMonster(monster);
+					if (run.RegionIndex == 1 && deck2 is null)
+					{
+						deck2 = [.. run.Deck.Select(c => c.Name)];
+						team2 = [.. run.Team.Select(m => m.Companion.Name)];
+					}
 					if (!Healthy(run) && run.CannotHeal is null)
 						run = run.HealAtHospital();
 					if (run.CanBuyCard(0))

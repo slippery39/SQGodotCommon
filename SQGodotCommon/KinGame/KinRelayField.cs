@@ -325,6 +325,7 @@ public static class KinMoveText
 		intent.Kind switch
 		{
 			IntentType.Attack => $"{intent.Name} {amount} → {Where(intent.Target)}"
+				+ (intent.Crushes ? ", ignores Block" : "")
 				+ (intent.Steals ? " + steals" : ""),
 			IntentType.Block when intent.Target == Aim.Ahead =>
 				$"{intent.Name}: +{amount} block ahead",
@@ -378,7 +379,8 @@ public static class KinMoveText
 		intent.Kind switch
 		{
 			IntentType.Attack => (
-				$"{amount} → {Where(intent.Target)}" + (intent.Steals ? " + steal" : ""),
+				$"{amount}{(intent.Crushes ? " crush" : "")} → {Where(intent.Target)}"
+					+ (intent.Steals ? " + steal" : ""),
 				KinArt.AttackIcon
 			),
 			IntentType.Block => (

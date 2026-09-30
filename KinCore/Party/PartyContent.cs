@@ -91,7 +91,8 @@ public static class PartyContent
 	public static readonly PartyCompanion Bramble =
 		new(
 			"Bramble",
-			Hp: 30,
+			// 30 → 27 (2026-09-30): the family balance pass.
+			Hp: 27,
 			Power: 2,
 			[Attack("Bash", 4), Guard("Brace", 6)],
 			Passive: "THORNS",
@@ -102,7 +103,7 @@ public static class PartyContent
 			Family = Family.Grove,
 			// THORNWALL (2 + her Block) went 2026-09-30: every Block card was also a damage card. Her
 			// first attack each turn still roots her wall.
-			Abilities = [new FirstAttack { Rooted = 5 }],
+			Abilities = [new FirstAttack { Rooted = 4 }],
 		};
 
 	/// <summary>
@@ -112,8 +113,9 @@ public static class PartyContent
 	public static readonly PartyCompanion Pike =
 		new(
 			"Pike",
-			// 18 → 24 (2026-09-28): one Gore in region 1 was a knockout.
-			Hp: 24,
+			// 18 → 24 (2026-09-28): one Gore in region 1 was a knockout. 24 → 28 (2026-09-30): the
+			// family balance pass — Pike won 7% to Bramble's 72%.
+			Hp: 28,
 			Power: 3,
 			[Attack("Jab", 2), Attack("Jab", 2), Attack("Flurry", 0, Aim.Sweep)],
 			Passive: "SPELLBLADE",
@@ -122,7 +124,7 @@ public static class PartyContent
 		{
 			Family = Family.Ember,
 			SpellPower = 1,
-			Abilities = [new Spellblade(), new FirstAttack { SpellPower = 1 }],
+			Abilities = [new Spellblade(), new FirstAttack { SpellPower = 2 }],
 		};
 
 	/// <summary>
@@ -213,8 +215,17 @@ public static class PartyContent
 		};
 
 	public static Foe Boar(int position) =>
-		Creature("Boar", 22, Attack("Charge", 9), Attack("Thrash", 5, Aim.Sweep)) with
+		Creature(
+			"Boar",
+			22,
+			Attack("Charge", 9) with
+			{
+				Crushes = true,
+			},
+			Attack("Thrash", 5, Aim.Sweep)
+		) with
 		{
+			Trait = "CRUSH: its Charge ignores Block.",
 			Family = Family.Grove,
 			Position = position,
 		};

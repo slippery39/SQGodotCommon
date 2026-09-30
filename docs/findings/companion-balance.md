@@ -6,6 +6,73 @@ the next; map rules are fixed (Snares to 2, one card if affordable, a random are
 only with two monsters and above 60% of your health and the team's HP). **A floor, not the game.**
 Read it for WHERE runs die and HOW they are won, per region.
 
+## 2026-09-30 (b) — FAMILY PARITY: Pike 7% → 54%, Bramble 72% → 54.5% (400 runs, 200 a starter)
+
+Shayne: "It is hard to buff or nerf the enemies around such a disparity … get them so that absolute
+maximum they are within 10% win rate of one another." **The rule from here: the two families within
+10 points of each other before any foe balancing.**
+
+**Where the gap was** (`party-sim variants 100`, same seeds a row):
+
+| row | won | died in region 1 |
+|---|---|---|
+| Pike | 6% | 29 |
+| Pike, Bramble's 30 HP | 7% | 15 |
+| **Pike, GROVE family** | **67%** | 4 |
+| Bramble | 79% | 1 |
+| **Bramble, EMBER family** | **12%** | 8 |
+| Bramble, no passive | 59% | 2 |
+| Bramble, Pike's 24 HP | 71% | 5 |
+| **Pike, basics only** (no Zap, Kindle) | **13%** | 20 |
+| Pike, starts Root + Sow | 20% | 5 |
+| Bramble, basics only | 70% | 4 |
+| Bramble, starts Zap + Kindle | 58% | 4 |
+
+- **The FAMILY was ~60 points; the starter monster 5–20.**
+- **Ember's two starting cards were worse than none** — Zap (5) under a Pike Strike (5 + 3 Power),
+  Kindle useless without spells after it.
+- `party-sim cards 400` (new): no single card carried either family — Grove won ~70% whatever it
+  held, Ember ~12% of those reaching region 2. So the fix was each family's FLOOR, not its rares.
+
+**The steps** (`party-sim 200`, then 400):
+
+| step | Bramble | Pike |
+|---|---|---|
+| start | 72% | 7% |
+| Ember's floor up: Zap 8, Kindle draws 2, spells ~+40%, Ember Block over a Guard, monsters +6 HP, Pike 28 HP | 70% | 41% |
+| Grove trimmed: Root 6, Sow no longer draws (Sow+ does), Sprout 5 HP, Seedling 3, Thicket 4, Hardwood 6/6, Treant 16, Mosshell 30 | 57% | 41% |
+| Bramble 27 HP (400 runs) | 58.5% | 45.5% |
+| **first attacks: Bramble +4 Rooted, Pike +2 Spell Power (400 runs)** | **54.5%** | **54.0%** |
+
+**Now the whole game is too easy again — 54% against the 35% target** (through by region
+96/74/67/59/54 against 81/66/53/43/35), so the foe pass has to be redone on top. 4 of 400 runs
+stalled past 40 turns (unexamined).
+
+## 2026-09-30 — THE FOE DIFFICULTY PASS: on the curve for the average, and a 72/7 starter split (150 runs a row)
+
+Shayne's playtest: both families "too easy" (Grove walled a whole act for 3 damage). Decided in an
+interview: difficulty from BOTH numbers and foe traits; wild fights a REAL chip (~5–10% a fight);
+exam hits may rise because every exam is a fixed, telegraphed cycle; the sim steers, then Shayne
+plays. **The bot's target moved from ~50% to ~35% of runs won** (`PartySim.BotWins`): a person plans
+further than the bot, and 50% was far too easy for a person.
+
+| step | runs won | Bramble | Pike | through by region (target 81/66/53/43/35) | wild chip by region | elites won |
+|---|---|---|---|---|---|---|
+| before (traits in) | 80.0% | 96% | 64% | 93/84/83/82/80 | 4/4/5/5/7% | 99.8% |
+| tiers up, exams ×2.0/×1.8 HP and ×1.3 hits | 40.7% | 76% | 7% | 76/56/48/44/41 | 4/6/8/8/10% | 95.7% |
+| region-1 exam hits back to ×1; regions 4–5 up | **39.3%** | **72%** | **7%** | 87/58/51/44/39 | 5/7/8/9/12% | 94.8% |
+
+**What it says:**
+- **The foes are on the curve for the average run** — every region within a few points of its target.
+- **The average hides the families: Bramble 72%, Pike 7%.** No foe number fits both. Pike dies in
+  region 1 (19, the Tusker ×8) and region 2 (35, bosses ×25). Foe tuning stops here: the gap is the
+  families', and the bot may play Ember worse than a person (chains and banked energy are the plans a
+  one-turn lookahead misses). Shayne's play is the judge.
+- **Region-1 exam hits stay ×1.** At ×1.3 the Old Tusker (100 HP) wound up a Gore that went through
+  two Guards; Pike fell with the boss at 15 (trace, seed 2). A solo region must stay answerable.
+- **2 runs stalled** (a battle past 40 turns) on the last row — unexamined.
+- Elites are still won ~95% of the time: the bot takes one only above 60% team HP.
+
 ## 2026-09-29 — GROVE DRAFT 1 BUILT: a crash check, not a tuning run (40 runs, seeds 1–40)
 
 **Bramble 100% (20/20), Pike 70% (14/20)** — both families now drafted. Pike's 6 deaths are all

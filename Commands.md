@@ -277,6 +277,8 @@ The other four:
 ```
 dotnet run --project KinConsole -c Release -- sim 1000          # 1000 runs, seeds 1-1000
 dotnet run --project KinConsole -c Release -- party-sim 300     # THE COMPANION GAME: 300 runs, per region
+dotnet run --project KinConsole -c Release -- party-sim variants 100   # starter vs FAMILY vs starting cards, same seeds a row
+dotnet run --project KinConsole -c Release -- party-sim cards 400      # each card/monster: win rate with it vs without (from region 2)
 dotnet run --project KinConsole -c Release -- sim 200 Life=4    # override any eval weight
 ```
 

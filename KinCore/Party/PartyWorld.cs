@@ -144,6 +144,8 @@ public static class PartyWorld
 		Attack("Belly Flop", 6, Aim.Sweep)
 	) with
 	{
+		Trait = "SWELLS: its attacks deal 1 more every round.",
+		Components = [new Enrage { PerRound = 1 }],
 		Family = Family.Mire,
 	};
 
@@ -218,10 +220,14 @@ public static class PartyWorld
 		"Hoard Drake",
 		26,
 		Guard("Hoard", 6),
-		Attack("Tail", 7)
+		Attack("Tail", 7) with
+		{
+			Crushes = true,
+		}
 	) with
 	{
-		Trait = "HOARD: gains 2 Block whenever you draw or discard during your turn.",
+		Trait =
+			"HOARD: gains 2 Block when you draw or discard in your turn. CRUSH: its Tail ignores Block.",
 		Components =
 		[
 			new Trigger
@@ -338,6 +344,8 @@ public static class PartyWorld
 		Guard("Rear", 4)
 	) with
 	{
+		Trait = "RUT: its attacks deal 1 more every round.",
+		Components = [new Enrage { PerRound = 1 }],
 		CaughtPassive = "STORM",
 		CaughtRule = "When a foe dies during your turn, +1 energy.",
 		CaughtAbilities =
@@ -513,24 +521,25 @@ public static class PartyWorld
 	public record Tier(int MinFoes, int MaxFoes, int MinLevel, int MaxLevel, int Elite, int Boss);
 
 	/// <summary>
-	/// **How much tougher than its level an exam is** — HP and hits (`PartyLevels.Toughen`). Shayne,
-	/// 2026-09-28: "way too easy"; the bot should win about half its runs, losing mostly to these.
-	/// **HITS stay at their level** (×1): a telegraphed blow must stay ANSWERABLE by that region's
-	/// cards — ×1.3 made the region-1 Tusker's Gore 29 against a 19-HP Pike, and no Guard answered it
-	/// (party-sim trace, 2026-09-28). The toughness is in HP.
+	/// **How much tougher than its level an exam is** — HP and hits (`PartyLevels.Toughen`). The
+	/// difficulty pass (Shayne, 2026-09-30: both families "too easy"): hits go up too — every exam is a
+	/// fixed, telegraphed cycle, so a harder blow is still one you can plan for. **Except in region 1**
+	/// (<see cref="ExamHit"/>): with one monster, ×1.3 made the Tusker's Gore unanswerable (party-sim
+	/// traces, 2026-09-28 and -30).
 	/// </summary>
-	public const double BossHp = 1.8,
-		BossHit = 1.0,
-		EliteHp = 1.6,
-		EliteHit = 1.0;
+	public const double BossHp = 2.0,
+		EliteHp = 1.8;
+
+	/// <summary>An exam's hits, as a share of its level's: ×1 in region 1, ×1.3 after.</summary>
+	public static double ExamHit(int tier) => tier == 0 ? 1.0 : 1.3;
 
 	public static readonly ImmutableList<Tier> Tiers =
 	[
-		new(1, 2, 3, 5, 5, 6),
-		new(2, 2, 4, 6, 6, 7),
-		new(2, 3, 5, 7, 7, 8),
-		new(2, 3, 6, 8, 8, 9),
-		new(3, 3, 7, 9, 9, 10),
+		new(1, 2, 4, 6, 6, 6),
+		new(2, 2, 6, 8, 8, 9),
+		new(2, 3, 8, 10, 10, 11),
+		new(2, 3, 11, 13, 13, 14),
+		new(3, 3, 13, 15, 15, 17),
 	];
 
 	private static readonly ImmutableList<Encounter> Region1 =
@@ -606,8 +615,8 @@ public static class PartyWorld
 		return new Region(
 			name,
 			[a, b],
-			Scaled(bosses, t.Boss, BossHp, BossHit),
-			Scaled(elites, t.Elite, EliteHp, EliteHit),
+			Scaled(bosses, t.Boss, BossHp, ExamHit(tier)),
+			Scaled(elites, t.Elite, EliteHp, ExamHit(tier)),
 			t.MinFoes,
 			t.MaxFoes,
 			t.MinLevel,

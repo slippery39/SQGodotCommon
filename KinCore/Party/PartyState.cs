@@ -458,8 +458,15 @@ public static class PartyState
 			if (s.GetObject(id) is not Ally { IsKnockedOut: false } victim)
 				continue;
 
-			var overflow = intent.Amount - victim.Block - victim.Hp;
-			(s, more) = HitAlly(s, victim, intent.Amount, attacker.Name, attacker.Id);
+			var overflow = intent.Amount - (intent.Crushes ? 0 : victim.Block) - victim.Hp;
+			(s, more) = HitAlly(
+				s,
+				victim,
+				intent.Amount,
+				attacker.Name,
+				attacker.Id,
+				intent.Crushes
+			);
 			events = events.AddRange(more);
 
 			if (overflow > 0 && attacker.HasComponent<Trample>() && Behind(s, victim) is Ally next)
@@ -532,10 +539,12 @@ public static class PartyState
 		Ally ally,
 		int amount,
 		string by,
-		int byId = 0
+		int byId = 0,
+		bool crushes = false
 	)
 	{
-		var blocked = Math.Min(amount, ally.Block);
+		// CRUSH goes straight through: the Block is untouched, and stops nothing.
+		var blocked = crushes ? 0 : Math.Min(amount, ally.Block);
 		var hit = ally with
 		{
 			WasHit = true,

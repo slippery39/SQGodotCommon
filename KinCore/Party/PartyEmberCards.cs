@@ -32,8 +32,8 @@ public static class EmberCards
 	// ===== Commons
 
 	public static readonly KinCard Zap = Plus(
-		Card("Zap", 1, C, "Drop on a foe: deal 5.", Deal(5)),
-		Card("Zap", 1, C, "Drop on a foe: deal 7.", Deal(7))
+		Card("Zap", 1, C, "Drop on a foe: deal 8.", Deal(8)),
+		Card("Zap", 1, C, "Drop on a foe: deal 11.", Deal(11))
 	);
 
 	public static readonly KinCard Kindle = Plus(
@@ -41,28 +41,28 @@ public static class EmberCards
 			"Kindle",
 			1,
 			C,
-			"+3 Spell Power this turn. Draw a card.",
+			"+3 Spell Power this turn. Draw 2 cards.",
 			new SpellPowerAction { Amount = 3 },
-			new DrawAction()
+			new DrawAction { Count = 2 }
 		),
 		Card(
 			"Kindle",
 			1,
 			C,
-			"+4 Spell Power this turn. Draw a card.",
+			"+4 Spell Power this turn. Draw 2 cards.",
 			new SpellPowerAction { Amount = 4 },
-			new DrawAction()
+			new DrawAction { Count = 2 }
 		)
 	);
 
 	public static readonly KinCard Spark = Plus(
-		Card("Spark", 0, C, "Drop on a foe: deal 3.", Deal(3)),
-		Card("Spark", 0, C, "Drop on a foe: deal 4.", Deal(4))
+		Card("Spark", 0, C, "Drop on a foe: deal 4.", Deal(4)),
+		Card("Spark", 0, C, "Drop on a foe: deal 6.", Deal(6))
 	);
 
 	public static readonly KinCard EmberDart = Plus(
-		Card("Ember Dart", 0, C, "Drop on a foe: deal 2. Draw a card.", Deal(2), new DrawAction()),
-		Card("Ember Dart", 0, C, "Drop on a foe: deal 3. Draw a card.", Deal(3), new DrawAction())
+		Card("Ember Dart", 0, C, "Drop on a foe: deal 3. Draw a card.", Deal(3), new DrawAction()),
+		Card("Ember Dart", 0, C, "Drop on a foe: deal 5. Draw a card.", Deal(5), new DrawAction())
 	);
 
 	/// <summary>The Sparks Kindling makes — plain, never upgraded.</summary>
@@ -70,8 +70,8 @@ public static class EmberCards
 		"Spark",
 		0,
 		C,
-		"Drop on a foe: deal 3.",
-		Deal(3)
+		"Drop on a foe: deal 4.",
+		Deal(4)
 	);
 
 	public static readonly KinCard Kindling = Plus(
@@ -96,17 +96,17 @@ public static class EmberCards
 			"Singe",
 			1,
 			C,
-			"Drop on a foe: deal 4. Apply 4 Burn.",
-			Deal(4),
-			new BurnAction { Amount = 4 }
+			"Drop on a foe: deal 6. Apply 5 Burn.",
+			Deal(6),
+			new BurnAction { Amount = 5 }
 		),
 		Card(
 			"Singe",
 			1,
 			C,
-			"Drop on a foe: deal 5. Apply 5 Burn.",
-			Deal(5),
-			new BurnAction { Amount = 5 }
+			"Drop on a foe: deal 8. Apply 6 Burn.",
+			Deal(8),
+			new BurnAction { Amount = 6 }
 		)
 	);
 
@@ -115,17 +115,17 @@ public static class EmberCards
 			"Fire Fan",
 			1,
 			C,
-			"Deal 3 to every foe. Apply 2 Burn to each.",
-			DealAll(3),
-			new BurnAction { Amount = 2, All = true }
+			"Deal 5 to every foe. Apply 3 Burn to each.",
+			DealAll(5),
+			new BurnAction { Amount = 3, All = true }
 		),
 		Card(
 			"Fire Fan",
 			1,
 			C,
-			"Deal 4 to every foe. Apply 3 Burn to each.",
-			DealAll(4),
-			new BurnAction { Amount = 3, All = true }
+			"Deal 7 to every foe. Apply 4 Burn to each.",
+			DealAll(7),
+			new BurnAction { Amount = 4, All = true }
 		)
 	);
 
@@ -158,15 +158,15 @@ public static class EmberCards
 			"Flame Ward",
 			1,
 			C,
-			"Gain Block: 6 + three times your Spell Power.",
-			new EmberBlockAction { Amount = 6, PerSpellPower = 3 }
+			"Gain Block: 10 + three times your Spell Power.",
+			new EmberBlockAction { Amount = 10, PerSpellPower = 3 }
 		),
 		Card(
 			"Flame Ward",
 			1,
 			C,
-			"Gain Block: 9 + three times your Spell Power.",
-			new EmberBlockAction { Amount = 9, PerSpellPower = 3 }
+			"Gain Block: 13 + three times your Spell Power.",
+			new EmberBlockAction { Amount = 13, PerSpellPower = 3 }
 		)
 	);
 
@@ -175,10 +175,10 @@ public static class EmberCards
 			"Heat Haze",
 			1,
 			C,
-			"Gain 6 Block. If you have cast 2 spells this turn, 12 more.",
+			"Gain 9 Block. If you have cast 2 spells this turn, 12 more.",
 			new EmberBlockAction
 			{
-				Amount = 6,
+				Amount = 9,
 				IfSpellsCast = 2,
 				Bonus = 12,
 			}
@@ -187,10 +187,10 @@ public static class EmberCards
 			"Heat Haze",
 			1,
 			C,
-			"Gain 8 Block. If you have cast 2 spells this turn, 14 more.",
+			"Gain 11 Block. If you have cast 2 spells this turn, 14 more.",
 			new EmberBlockAction
 			{
-				Amount = 8,
+				Amount = 11,
 				IfSpellsCast = 2,
 				Bonus = 14,
 			}
@@ -257,8 +257,8 @@ public static class EmberCards
 			"Wildfire",
 			1,
 			U,
-			"Drop on a foe: deal 6. Costs 0 if you have cast 2 spells this turn.",
-			Deal(6)
+			"Drop on a foe: deal 9. Costs 0 if you have cast 2 spells this turn.",
+			Deal(9)
 		) with
 		{
 			Components = [new FreeAfterSpells { Spells = 2 }],
@@ -267,8 +267,8 @@ public static class EmberCards
 			"Wildfire",
 			1,
 			U,
-			"Drop on a foe: deal 8. Costs 0 if you have cast 2 spells this turn.",
-			Deal(8)
+			"Drop on a foe: deal 12. Costs 0 if you have cast 2 spells this turn.",
+			Deal(12)
 		) with
 		{
 			Components = [new FreeAfterSpells { Spells = 2 }],
@@ -280,15 +280,15 @@ public static class EmberCards
 			"Chain Lightning",
 			1,
 			U,
-			"Drop on a foe: deal 3 for each spell cast this turn, this one too.",
-			new SpellDamageAction { PerSpellThisTurn = 3 }
+			"Drop on a foe: deal 4 for each spell cast this turn, this one too.",
+			new SpellDamageAction { PerSpellThisTurn = 4 }
 		),
 		Card(
 			"Chain Lightning",
 			1,
 			U,
-			"Drop on a foe: deal 4 for each spell cast this turn, this one too.",
-			new SpellDamageAction { PerSpellThisTurn = 4 }
+			"Drop on a foe: deal 5 for each spell cast this turn, this one too.",
+			new SpellDamageAction { PerSpellThisTurn = 5 }
 		)
 	);
 
@@ -319,15 +319,15 @@ public static class EmberCards
 			"Smoke Screen",
 			1,
 			U,
-			"Gain 5 Block for each spell you have cast this turn.",
-			new EmberBlockAction { PerSpellThisTurn = 5 }
+			"Gain 6 Block for each spell you have cast this turn.",
+			new EmberBlockAction { PerSpellThisTurn = 6 }
 		),
 		Card(
 			"Smoke Screen",
 			1,
 			U,
-			"Gain 6 Block for each spell you have cast this turn.",
-			new EmberBlockAction { PerSpellThisTurn = 6 }
+			"Gain 8 Block for each spell you have cast this turn.",
+			new EmberBlockAction { PerSpellThisTurn = 8 }
 		)
 	);
 
@@ -336,15 +336,15 @@ public static class EmberCards
 			"Cinder Shield",
 			1,
 			U,
-			"Gain Block equal to twice the Burn on their line.",
-			new EmberBlockAction { PerBurnOnTheirLine = 2 }
+			"Gain Block equal to three times the Burn on their line.",
+			new EmberBlockAction { PerBurnOnTheirLine = 3 }
 		),
 		Card(
 			"Cinder Shield",
 			1,
 			U,
-			"Gain Block equal to three times the Burn on their line.",
-			new EmberBlockAction { PerBurnOnTheirLine = 3 }
+			"Gain Block equal to four times the Burn on their line.",
+			new EmberBlockAction { PerBurnOnTheirLine = 4 }
 		)
 	);
 
@@ -377,9 +377,9 @@ public static class EmberCards
 			"Meteor",
 			0,
 			R,
-			"Spend all energy: deal 8 per energy to a foe, and 4 per energy to the one behind.",
-			new SpellDamageAction { PerX = 8 },
-			new SpellDamageAction { PerX = 4, Target = SpellTarget.Behind }
+			"Spend all energy: deal 10 per energy to a foe, and 5 per energy to the one behind.",
+			new SpellDamageAction { PerX = 10 },
+			new SpellDamageAction { PerX = 5, Target = SpellTarget.Behind }
 		) with
 		{
 			Components = [new SpendsAllEnergy()],
@@ -388,9 +388,9 @@ public static class EmberCards
 			"Meteor",
 			0,
 			R,
-			"Spend all energy: deal 10 per energy to a foe, and 5 per energy to the one behind.",
-			new SpellDamageAction { PerX = 10 },
-			new SpellDamageAction { PerX = 5, Target = SpellTarget.Behind }
+			"Spend all energy: deal 13 per energy to a foe, and 6 per energy to the one behind.",
+			new SpellDamageAction { PerX = 13 },
+			new SpellDamageAction { PerX = 6, Target = SpellTarget.Behind }
 		) with
 		{
 			Components = [new SpendsAllEnergy()],
@@ -419,15 +419,15 @@ public static class EmberCards
 			"Pyroblast",
 			3,
 			R,
-			"Drop on a foe: deal 12. Your Spell Power counts three times.",
-			new SpellDamageAction { Amount = 12, SpellPowerTimes = 3 }
+			"Drop on a foe: deal 18. Your Spell Power counts three times.",
+			new SpellDamageAction { Amount = 18, SpellPowerTimes = 3 }
 		),
 		Card(
 			"Pyroblast",
 			3,
 			R,
-			"Drop on a foe: deal 16. Your Spell Power counts three times.",
-			new SpellDamageAction { Amount = 16, SpellPowerTimes = 3 }
+			"Drop on a foe: deal 24. Your Spell Power counts three times.",
+			new SpellDamageAction { Amount = 24, SpellPowerTimes = 3 }
 		)
 	);
 
@@ -562,7 +562,7 @@ public static class EmberCards
 	/// <summary>**STACK** — Spell Power, then a nuke.</summary>
 	public static readonly PartyCompanion Emberling = Monster(
 		"Emberling",
-		14,
+		20,
 		0,
 		2,
 		"STOKER",
@@ -574,7 +574,7 @@ public static class EmberCards
 	/// <summary>**BURN** — every spell leaves a flame.</summary>
 	public static readonly PartyCompanion CinderNewt = Monster(
 		"Cinder Newt",
-		18,
+		24,
 		1,
 		1,
 		"SMOULDER",
@@ -586,7 +586,7 @@ public static class EmberCards
 	/// <summary>**CHAINS** — the third spell is a double.</summary>
 	public static readonly PartyCompanion EchoOwl = Monster(
 		"Echo Owl",
-		16,
+		22,
 		1,
 		1,
 		"ECHO",
@@ -598,7 +598,7 @@ public static class EmberCards
 	/// <summary>**ENERGY** — bank it, then dump it.</summary>
 	public static readonly PartyCompanion Ironhorn = Monster(
 		"Ironhorn",
-		26,
+		30,
 		4,
 		0,
 		"BANK",

@@ -333,4 +333,10 @@ public record Intent
 
 	/// <summary>What a Summon move brings — the Broodvine's Grub.</summary>
 	public TokenTemplate? Summons { get; init; }
+
+	/// <summary>
+	/// **CRUSH: this hit ignores Block** (the difficulty pass, 2026-09-30) — a question for a pure wall.
+	/// On one telegraphed MOVE, not the creature, so you see it coming; kill it first, or take it.
+	/// </summary>
+	public bool Crushes { get; init; }
 }

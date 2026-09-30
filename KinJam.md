@@ -31,6 +31,13 @@
 > - **PLAYTEST 2026-09-30: Grove too easy** (a whole act for 3 damage — it blocked and killed at
 >   once). **Rooted Block now lasts ONE extra turn**, THORNWALL is gone (Bramble: Thorns 2), and
 >   **Spell Surge costs 3 and is rare**. Both families still too easy: a foe difficulty pass is next.
+> - **THE FOE DIFFICULTY PASS (2026-09-30)**: regions climb faster (wild Lv 4–6 in region 1 up to
+>   13–15 in region 5), exams have ×2.0 / ×1.8 HP and **×1.3 hits from region 2** (every exam is a
+>   fixed telegraphed cycle, so a harder blow is one you can plan for; region 1 stays ×1 for a solo
+>   monster), and two foe TRAITS test decks: **CRUSH** (a telegraphed hit that ignores Block — the
+>   Boar's Charge, the Hoard Drake's Tail) and **ENRAGE** on wild foes (+1 a round — the Stormbuck,
+>   the Bog Toad). The bot's target is now ~35% of runs won; it wins 39%, **but Bramble 72%, Pike 7%**
+>   — the next question is the families', not the foes' (`docs/findings/companion-balance.md`).
 >   Grove is still placeholder.
 
 > # BOSSES AND ELITES — exams with an answer (Shayne, 2026-09-28; built for regions 1–2)

@@ -77,6 +77,8 @@ a rare-led card. **Springs heal 30% or upgrade a card to its + version.**
    **3 colourless monsters** (and their cards), interview-led.
    **Playtest 2026-09-30**: Grove walled a whole act (Rooted now lasts one extra turn; THORNWALL
    gone); Spell Surge now costs 3, rare. Both families still too easy — a foe difficulty pass next.
+   **Difficulty pass done (2026-09-30)**: the bot wins 39% (target 35%), Bramble 72% / Pike 7%.
+   Shayne playtests next; the Pike/Ember gap is the open question.
 2. Then re-tune with `party-sim` per region and per starter; the 50% target and even losses are in
    `PartySim.Target`.
 3. Regions 3–5 still reuse region 2's bosses and elites; their exams are undesigned.

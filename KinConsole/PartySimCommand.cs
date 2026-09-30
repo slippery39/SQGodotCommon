@@ -26,6 +26,53 @@ public static class PartySimCommand
 			return;
 		}
 
+		// `party-sim cards 300` — WHICH cards and monsters carry a family: among runs that reached
+		// region 2, the win rate of those holding each (at region 2's start) against those without.
+		// The bot's picks are the first offered, so what a run holds is near-random.
+		if (args.Length > 1 && args[1] == "cards")
+		{
+			var total = args.Length > 2 && int.TryParse(args[2], out var c) ? c : 300;
+			var played = PartySim.PlayMany(total);
+			foreach (var family in played.GroupBy(r => r.Starter))
+			{
+				var reached = family.Where(r => r.Region2Deck is not null).ToList();
+				double Rate(IEnumerable<SimRun> rs) =>
+					rs.Any() ? rs.Count(r => r.End == RunEnd.Won) / (double)rs.Count() : 0;
+				Console.WriteLine();
+				Console.WriteLine(
+					$"  {family.Key}: {reached.Count} of {family.Count()} reached region 2, "
+						+ $"{Rate(reached):P0} of them won"
+				);
+				var names = reached
+					.SelectMany(r => r.Region2Deck!.Distinct().Select(n => ("card", n)))
+					.Concat(
+						reached.SelectMany(r => r.Region2Team!.Skip(1).Select(n => ("monster", n)))
+					)
+					.Distinct();
+				foreach (
+					var (kind, name, with, without) in names
+						.Select(k =>
+						{
+							var has = reached
+								.Where(r =>
+									(k.Item1 == "card" ? r.Region2Deck! : r.Region2Team!).Contains(
+										k.Item2
+									)
+								)
+								.ToList();
+							return (k.Item1, k.Item2, has, reached.Except(has).ToList());
+						})
+						.Where(x => x.has.Count >= 8 && x.Item4.Count >= 8)
+						.OrderByDescending(x => Rate(x.has) - Rate(x.Item4))
+				)
+					Console.WriteLine(
+						$"    {kind, -7} {name, -18} {Rate(with) - Rate(without), 6:+0%;-0%}   "
+							+ $"with {Rate(with):P0} (n={with.Count, 3})   without {Rate(without):P0}"
+					);
+			}
+			return;
+		}
+
 		// `party-sim variants 150` — is it the STARTER or its FAMILY? Each starter, then with one thing
 		// swapped: its HP, its family (deck, rewards, boss picks), its passive. Same seeds for every row.
 		if (args.Length > 1 && args[1] == "variants")
@@ -33,6 +80,29 @@ public static class PartySimCommand
 			var each = args.Length > 2 && int.TryParse(args[2], out var v) ? v : 150;
 			var pike = PartyContent.Pike;
 			var bramble = PartyContent.Bramble;
+			// Starting decks swapped: is it the family's first two cards, or everything after?
+			Func<PartyRun, PartyRun> Starts(Family family) =>
+				run => run with { Deck = PartyContent.StartingDeck(family) };
+			foreach (
+				var (label, starter, setup) in new (
+					string,
+					PartyCompanion,
+					Func<PartyRun, PartyRun>?
+				)[]
+				{
+					("Pike, basics only", pike, Starts(Family.None)),
+					("Pike, starts Root+Sow", pike, Starts(Family.Grove)),
+					("Bramble, basics only", bramble, Starts(Family.None)),
+					("Bramble, starts Zap+Kindle", bramble, Starts(Family.Ember)),
+				}
+			)
+			{
+				var played = PartySim.PlayMany(each, [starter], setup);
+				Console.WriteLine(
+					$"  {label, -26} won {Pct(played.Count(r => r.End == RunEnd.Won), each)}"
+						+ $"   died in region 1: {played.Count(r => r.Region == 0 && r.End != RunEnd.Won), 3}"
+				);
+			}
 			foreach (
 				var (label, starter) in new (string, PartyCompanion)[]
 				{
@@ -41,7 +111,7 @@ public static class PartySimCommand
 					("Pike, GROVE family", pike with { Family = Family.Grove }),
 					("Bramble", bramble),
 					("Bramble, EMBER family", bramble with { Family = Family.Ember }),
-					("Bramble, no Thornwall", bramble with { Thorns = 0, Abilities = [] }),
+					("Bramble, no passive", bramble with { Thorns = 0, Abilities = [] }),
 					($"Bramble, {pike.Hp} HP", bramble with { Hp = pike.Hp }),
 				}
 			)

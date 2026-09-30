@@ -96,6 +96,16 @@ engine by our own test); Bark Slam read that wall for free. Changed:
   turn with no setup. "One card that does all that without much effort is too much."
 - Both families were still "too easy" overall: a difficulty pass on the foes comes after this.
 
+**FAMILY PARITY (2026-09-30)** — the sim had Bramble 72%, Pike 7%; the family was the gap, and
+Ember's starters were worse than blanks. Shayne's rule: **the families within 10 points before any
+foe balancing.** Now 54.5 / 54.0 (numbers only — no mechanic changed):
+- Ember up: Zap 8 (+ 11), Kindle draws 2, Spark 4, Ember Dart 3, Singe 6 + 5 Burn, Fire Fan 5 + 3,
+  Flame Ward 10 + 3×SP, Heat Haze 9 (+12), Wildfire 9, Chain Lightning 4 a spell, Smoke Screen 6,
+  Cinder Shield 3× Burn, Meteor 10 / 5, Pyroblast 18; Emberling 20, Cinder Newt 24, Echo Owl 22,
+  Ironhorn 30 HP; Pike 28 HP and first attack +2 Spell Power.
+- Grove down: Root 6 (+ 9), Sow no longer draws (Sow+ does, and costs 1), Sprout 5 HP, Seedling 3,
+  Thicket 4, Hardwood 6 / 6, Treant 16 / 3, Mosshell 30 HP, Bramble 27 HP and first attack +4 Rooted.
+
 **As built** (what the tables below do not say):
 - **A token is marked `Ally.IsToken`**, apart from fading: `FadesIn` 0 now means it stays. Tokens
   arrive at your FRONT, and the line holds 5 — with three monsters and a Sprout, Seedlings fits one.
