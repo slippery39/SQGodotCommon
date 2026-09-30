@@ -66,9 +66,12 @@ Moving foes is built (Gale); cross-companion "if X acted" combos are not.
 
 - **Content** — `KinCore/Party/PartyContent.cs`. A card is `Card(name, cost, text, steps...)`: steps
   are `CardStep` templates resolved IN ORDER by its owner (`Lunge` = step, then strike; `Hit and
-  Run` = strike, then step). A step played ON a space overrides `NeedsSpace` and `SpaceRefusal`
-  (step, push, swap do); the play's validation asks each, and the board lights exactly the spaces
-  validation accepts — never a second opinion. The card is discarded AFTER its steps — so a draw can
+  Run` = strike, then step). **A step that acts on what it is dropped on is
+  TARGETED** (`CardStep.NeedsTarget`, default true; MTG's rule): its `Refusal` says which places
+  take it. A step that targets nothing (a draw, a summon, anything "every foe" or "your whole line")
+  overrides `NeedsTarget => false`, and a card made only of those plays anywhere on the field.
+  Preconditions ("your line is full") stay in `Refusal`. The board lights exactly the places
+  validation accepts — never a second opinion — and lights nothing for an untargeted card. The card is discarded AFTER its steps — so a draw can
   never draw the card itself.
 - **A new mechanic** = a new `CardStep` record in `PartyActions.cs`, or a field on an existing one.
   Records only, no delegates (the Serialization Rule in the root `CLAUDE.md`). A passive = a field on

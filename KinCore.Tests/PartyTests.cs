@@ -206,7 +206,7 @@ public partial class PartyTests
 				Name = "Behind",
 			}
 		);
-		Assert.That(CanPlay(s, "Gust", 0), Is.False, "their line, not yours");
+		Assert.That(CanPlay(s, "Gust", 0), Is.True, "no target: it always moves their front two");
 
 		s = Play(Play(s, "Gust", 0, foeRow: true), "Strike", 0);
 
@@ -879,8 +879,8 @@ public partial class PartyTests
 	{
 		var s = Deal([new(Mon("Pike"), 0)], [Summon(Token(fades: 1, moves: Hit(2)))], Foe(0));
 
-		Assert.That(CanPlay(s, "Summon", 0, foeRow: true), Is.False, "your line");
-		Assert.That(CanPlay(s, "Summon", 1), Is.False, "your FRONT — where it arrives");
+		// No target (2026-09-30): it plays wherever it is dropped, and arrives at your front regardless.
+		Assert.That(CanPlay(s, "Summon", 0, foeRow: true), Is.True, "anywhere on the field");
 		s = Play(s, "Summon", 0);
 		Assert.That(Line(s), Is.EqualTo("Tok,Pike"));
 

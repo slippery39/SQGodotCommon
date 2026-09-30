@@ -60,13 +60,7 @@ public sealed class KinPartyInspector
 		var colour = ally is null ? KinPalette.Red : KinPalette.Family(ally.Family, ally.Name);
 		_root.AddThemeStyleboxOverride("panel", KinPalette.Box(KinPalette.Navy, colour, 3));
 
-		Line(
-			ally is null
-				? $"{creature.Name.ToUpperInvariant()}  LV {creature.Level}"
-				: creature.Name.ToUpperInvariant(),
-			26,
-			KinPalette.Bone
-		);
+		Line(creature.Name.ToUpperInvariant(), 26, KinPalette.Bone);
 		Line(
 			$"HP {creature.Hp}/{creature.MaxHp}"
 				+ (
@@ -165,10 +159,14 @@ public sealed class KinPartyInspector
 				.. new[]
 				{
 					a.Block > 0 ? $"BLOCK {a.Block} — soaks damage until your next turn." : "",
-					a.BonusThorns > 0 ? $"THORNS {a.TotalThorns} this turn." : "",
-					a.FadesIn > 0
-						? $"A TOKEN: fades in {a.FadesIn} turn{(a.FadesIn == 1 ? "" : "s")}."
+					a.Rooted > 0 ? $"ROOTED {a.Rooted} of it — stays one more turn." : "",
+					a.TotalThorns > 0
+						? $"THORNS {a.TotalThorns} — a foe that hits it takes that much."
 						: "",
+					!a.IsToken ? ""
+					: a.FadesIn > 0
+						? $"A TOKEN: fades in {a.FadesIn} turn{(a.FadesIn == 1 ? "" : "s")}."
+					: "A TOKEN: it stays until it falls, and leaves after the fight.",
 				}.Where(s => s.Length > 0),
 			],
 			Foe f =>

@@ -265,7 +265,7 @@ public record StartPartyTurnAction : GameAction
 		if (party.TurnNumber > 1)
 			s = PartyBosses.RoundStarts(s);
 
-		// Block drops to what is ROOTED; Grow grows; Emberskin shields (PartyFamilies).
+		// Block drops to what is ROOTED; WILD HEART grows your monsters (PartyFamilies).
 		(s, var grew) = PartyFamilies.TurnStart(s, firstTurn: party.TurnNumber == 1);
 
 		foreach (var foe in s.LivingFoes().Where(f => f.OffBalance > 0).ToList())
@@ -297,9 +297,22 @@ public abstract record CardStep : GameAction
 
 	public bool FoeRow { get; init; }
 
-	/// <summary>Why the card cannot be dropped there, or null if it can.</summary>
+	/// <summary>
+	/// **Does this step act on what the card is dropped on?** MtgCore's
+	/// `TargetingStrategy.RequiresUserSelection` (Shayne, 2026-09-30). A card with no step that does
+	/// is played wherever it is dropped on the field (`PartyState.NeedsTarget`); only steps that
+	/// target are asked about the place.
+	/// </summary>
+	public virtual bool NeedsTarget => true;
+
+	/// <summary>
+	/// Why the card cannot be dropped there, or null if it can. An untargeted step ignores the place
+	/// and says only why it cannot happen at all ("your line is full").
+	/// </summary>
 	public virtual string? Refusal(GameState s, int space, bool foeRow) =>
-		!foeRow && s.AllyAt(space) is not null ? null : "Drop it on one of your monsters";
+		!NeedsTarget || (!foeRow && s.AllyAt(space) is not null)
+			? null
+			: "Drop it on one of your monsters";
 
 	/// <summary>The monster it was dropped on.</summary>
 	protected Ally Target(GameState s) => s.AllyAt(Space)!;
@@ -323,13 +336,36 @@ public record GuardAction : CardStep
 	}
 }
 
-/// <summary>Thorns until your next turn starts — Thornhide. On Bramble it stacks on her own.</summary>
+/// <summary>
+/// **THORNS** — until your next turn starts (big numbers), or `ForFight` (small ones); on the creature
+/// it is dropped on, or `AllLine` every creature on your line. SPORECAP (Hushcap) adds to every card.
+/// </summary>
 public record ThornsAction : CardStep
 {
 	public int Amount { get; init; }
+	public bool ForFight { get; init; }
+	public bool AllLine { get; init; }
 
-	public override ActionResult Execute(GameState s) =>
-		Update(s, Target(s) with { BonusThorns = Target(s).BonusThorns + Amount });
+	public override bool NeedsTarget => !AllLine;
+
+	public override ActionResult Execute(GameState s)
+	{
+		var amount = Amount + PartyGrove.Sporecap(s);
+		foreach (var ally in AllLine ? s.LivingAllies().ToList() : [Target(s)])
+			s = s.UpdateObject(
+				ally.Id,
+				ForFight
+					? ally with
+					{
+						Thorns = ally.Thorns + amount,
+					}
+					: ally with
+					{
+						BonusThorns = ally.BonusThorns + amount,
+					}
+			);
+		return new(s);
+	}
 }
 
 /// <summary>Power until your next turn starts — Rally. It lands when the monster's attack does.</summary>
@@ -356,6 +392,12 @@ public record StrikeAction : CardStep
 	/// <summary>Unleash: + this much for each energy its X paid.</summary>
 	public int PerX { get; init; }
 
+	/// <summary>Bark Slam: + this much for each point of its Block — READ, never spent (Grove).</summary>
+	public int PerBlock { get; init; }
+
+	/// <summary>Thorn Lash: + this much for each of its Thorns.</summary>
+	public int PerThorns { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		// **The FIRST attack on this monster this turn fires its bonus** (round 4, `PartyMonsters`).
@@ -368,7 +410,9 @@ public record StrikeAction : CardStep
 			Amount
 				+ extra
 				+ (PlusCardsInHand ? bonused.CardsIn(ZoneType.Hand).Count() : 0)
-				+ PerX * bonused.GetParty().XPaid,
+				+ PerX * bonused.GetParty().XPaid
+				+ PerBlock * ally.Block
+				+ PerThorns * ally.TotalThorns,
 			targets
 		);
 		// A first-attack BURN (Cinder Newt) lands on whoever the blow hit.
@@ -382,6 +426,12 @@ public record StrikeAction : CardStep
 public record DrawAction : CardStep
 {
 	public int Count { get; init; } = 1;
+
+	/// <summary>
+	/// **A draw targets nothing** — so Ember Dart (deal to a foe, then draw) goes where its damage
+	/// goes, and Flicker plays anywhere (playtest, 2026-09-30).
+	/// </summary>
+	public override bool NeedsTarget => false;
 
 	/// <summary>Reads how many from the pipeline instead — "draw that many" (MtgCore's AmountContextKey).</summary>
 	public string CountKey { get; init; } = "";
@@ -469,10 +519,11 @@ public record GustAction : CardStep
 	/// </summary>
 	public int AloneDamage { get; init; }
 
+	/// <summary>It always moves their FRONT two — nothing to aim.</summary>
+	public override bool NeedsTarget => false;
+
 	public override string? Refusal(GameState s, int space, bool foeRow) =>
-		!foeRow ? "Drop it on their line"
-		: s.LivingFoes().Count() < 2 && AloneDamage == 0 ? "It needs two foes to swap"
-		: null;
+		s.LivingFoes().Count() < 2 && AloneDamage == 0 ? "It needs two foes to swap" : null;
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -501,7 +552,7 @@ public record AllyHitEvent : GameEvent
 	public int AttackerId { get; init; }
 }
 
-/// <summary>A foe struck a monster with Thorns (or THORNWALL) and takes this much back.</summary>
+/// <summary>A foe struck a monster with Thorns (or under THORNMAIL) and takes this much back.</summary>
 public record ThornsEvent : GameEvent
 {
 	public int FoeId { get; init; }

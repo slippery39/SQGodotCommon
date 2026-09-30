@@ -41,28 +41,6 @@ public static class PartyCards
 
 	// ===== The starters' old signature cards (monster decks are gone, 2026-09-28)
 
-	/// <summary>Bramble's, now Grove's: Thorns for a wall that wants to be hit.</summary>
-	public static readonly KinCard Thornhide = Card(
-		"Thornhide",
-		1,
-		"Gain 3 Thorns this turn.",
-		new ThornsAction { Amount = 3 }
-	) with
-	{
-		Family = Family.Grove,
-	};
-
-	public static readonly KinCard Bristle = Card(
-		"Bristle",
-		0,
-		"Gain 2 Thorns this turn. Draw a card.",
-		new ThornsAction { Amount = 2 },
-		new DrawAction()
-	) with
-	{
-		Family = Family.Grove,
-	};
-
 	/// <summary>Pike's, now colourless: moving in the line is every family's business.</summary>
 	public static readonly KinCard Charge = Card(
 		"Charge",
@@ -104,15 +82,7 @@ public static class PartyCards
 		Family = Family.Storm,
 	};
 
-	// ===== SUMMON — tokens: bodies that fade.
-
-	private static Intent Still(string name) =>
-		new()
-		{
-			Name = name,
-			Kind = IntentType.Block,
-			Amount = 0,
-		};
+	// ===== The wild Broodvine's brood (Grove's own tokens are in `GroveCards`)
 
 	private static Intent Hits(string name, int amount) =>
 		new()
@@ -122,101 +92,12 @@ public static class PartyCards
 			Amount = amount,
 		};
 
-	/// <summary>A wall that stays two turns, and shields its neighbours when it falls.</summary>
-	public static readonly TokenTemplate Sprout =
-		new(
-			new PartyCompanion("Sprout", 3, 0, [Still("Rooted")])
-			{
-				Abilities = [new FaintShield { Amount = 3 }],
-				Family = Family.Grove,
-			},
-			FadesIn: 2
-		);
-
-	/// <summary>A spell that walks: fast, one hit, gone.</summary>
-	public static readonly TokenTemplate Spark =
-		new(new PartyCompanion("Spark", 1, 0, [Hits("Spark", 2)]), FadesIn: 1);
-
-	/// <summary>The answer to snipers and hunters: BACK and HUNT attacks aim at it.</summary>
-	public static readonly TokenTemplate Decoy =
-		new(
-			new PartyCompanion("Decoy", 5, 0, [Still("Lure")]) { Abilities = [new Lure()] },
-			FadesIn: 1
-		);
-
 	/// <summary>The Broodvine's brood — yours when it is yours, the foes' when it is wild.</summary>
 	public static readonly TokenTemplate Grub =
 		new(
 			new PartyCompanion("Grub", 2, 0, [Hits("Bite", 2)]) { Family = Family.Grove },
 			FadesIn: 2
 		);
-
-	/// <summary>Enabler (Summon, Block) · filler: a movable wall.</summary>
-	public static readonly KinCard Sow = Plus(
-		Card(
-			"Sow",
-			1,
-			"Summon a Sprout in front (3 HP, 2 turns). When it falls, the ones beside it gain 3 Block.",
-			new SummonTokenAction { Token = Sprout }
-		) with
-		{
-			Family = Family.Grove,
-		},
-		Card(
-			"Sow",
-			0,
-			"Summon a Sprout in front (3 HP, 2 turns). When it falls, the ones beside it gain 3 Block.",
-			new SummonTokenAction { Token = Sprout }
-		)
-	);
-
-	/// <summary>Bridge (Summon and Spellcraft) · standard: two hits that need a column each.</summary>
-	public static readonly KinCard CallSparks = Card(
-		"Call Sparks",
-		1,
-		"Summon two Sparks in front (1 HP, hit 2). They fade after this round.",
-		new SummonTokenAction { Token = Spark, Count = 2 }
-	) with
-	{
-		Family = Family.Grove,
-	};
-
-	/// <summary>Enabler (Summon) + answer (homing) · standard.</summary>
-	public static readonly KinCard DecoyCard = Card(
-		"Decoy",
-		1,
-		"Summon a Decoy in front (5 HP) for a round. Back and hunting attacks aim at it.",
-		new SummonTokenAction { Token = Decoy }
-	) with
-	{
-		Family = Family.Grove,
-	};
-
-	/// <summary>Payoff · narrow: nothing without tokens.</summary>
-	public static readonly KinCard Swarm = Card(
-		"Swarm",
-		2,
-		"Each of your tokens attacks their front now: 2 + Power.",
-		new TokensAttackAction { Amount = 2 }
-	) with
-	{
-		Family = Family.Grove,
-		Rarity = Rarity.Uncommon,
-	};
-
-	/// <summary>Payoff (Summon → Draw, Surge) · narrow: a token spent, a hand refilled.</summary>
-	public static readonly KinCard Offering = Card(
-		"Offering",
-		0,
-		"Drop on a token: it faints. Draw 2 cards, +1 energy.",
-		new SacrificeTokenAction(),
-		new DrawAction { Count = 2 },
-		new GainEnergyAction()
-	) with
-	{
-		Family = Family.Grove,
-		Rarity = Rarity.Uncommon,
-	};
 
 	// ===== SURGE — more energy than the turn allows, at a price.
 
@@ -347,85 +228,5 @@ public static class PartyCards
 	) with
 	{
 		Family = Family.Mire,
-	};
-
-	// ===== GROVE — the engine is TIME (KinFamiliesPlan.md §3)
-
-	/// <summary>Enabler · the key to non-token Grove: any monster grows.</summary>
-	public static readonly KinCard Graft = Card(
-		"Graft",
-		1,
-		"It gains GROW for this fight: +1 Power and +2 HP each turn.",
-		new GraftAction()
-	) with
-	{
-		Family = Family.Grove,
-		Rarity = Rarity.Uncommon,
-	};
-
-	/// <summary>Enabler for THORNWALL: Block that stays.</summary>
-	public static readonly KinCard Root = Plus(
-		Card(
-			"Root",
-			1,
-			"Gain 6 ROOTED Block: it does not vanish at your turn start.",
-			new RootAction { Amount = 6 }
-		) with
-		{
-			Family = Family.Grove,
-		},
-		Card(
-			"Root",
-			1,
-			"Gain 9 ROOTED Block: it does not vanish at your turn start.",
-			new RootAction { Amount = 9 }
-		)
-	);
-
-	/// <summary>Accelerator: time, now.</summary>
-	public static readonly KinCard Overgrow = Card(
-		"Overgrow",
-		2,
-		"Everything of yours with GROW grows twice, now.",
-		new GrowNowAction { Times = 2 }
-	) with
-	{
-		Family = Family.Grove,
-		Rarity = Rarity.Uncommon,
-	};
-
-	/// <summary>Bridge: growth becomes a wall.</summary>
-	public static readonly KinCard Thicket = Card(
-		"Thicket",
-		1,
-		"Each of your Grove monsters gains Block equal to its Power.",
-		new ThicketAction()
-	) with
-	{
-		Family = Family.Grove,
-	};
-
-	/// <summary>THE BIG TURN (an experiment — KinFamiliesPlan.md §6).</summary>
-	public static readonly KinCard Harvest = Card(
-		"Harvest",
-		2,
-		"Each of your tokens falls, and deals its HP to their front.",
-		new HarvestAction()
-	) with
-	{
-		Family = Family.Grove,
-		Rarity = Rarity.Rare,
-	};
-
-	/// <summary>Payoff for a patient wall.</summary>
-	public static readonly KinCard DeepRoots = Card(
-		"Deep Roots",
-		0,
-		"Its ROOTED Block doubles.",
-		new DeepRootsAction()
-	) with
-	{
-		Family = Family.Grove,
-		Rarity = Rarity.Rare,
 	};
 }

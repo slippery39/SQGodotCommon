@@ -108,8 +108,7 @@ public sealed class KinRouteMap
 		var areas = run.Region.Areas;
 		_title.Text = $"THE ROUTE — {run.Region.Name.ToUpperInvariant()}";
 		_subtitle.Text =
-			$"▲ {areas[0].Name}   ·   {areas[1].Name} ▼   ·   wild LV {run.Region.MinLevel}–{run.Region.MaxLevel}"
-			+ "   ·   pick a lit place to walk to";
+			$"▲ {areas[0].Name}   ·   {areas[1].Name} ▼   ·   pick a lit place to walk to";
 		_purse.Text = $"GOLD {run.Gold}";
 		_note.Text = Arrived(run.Here);
 

@@ -234,17 +234,19 @@ public static class EmberCards
 	);
 
 	public static readonly KinCard SpellSurge = Plus(
+		// Cost 3 and rare (Shayne, 2026-09-30): at 1 it refunded a whole turn with no setup. It takes
+		// the turn's energy now, so it pays only in a deck built for it.
 		Card(
 			"Spell Surge",
-			1,
-			U,
+			3,
+			R,
 			"Your spells cost 1 less this turn.",
 			new SpellDiscountAction { Amount = 1 }
 		),
 		Card(
 			"Spell Surge",
-			0,
-			U,
+			2,
+			R,
 			"Your spells cost 1 less this turn.",
 			new SpellDiscountAction { Amount = 1 }
 		)

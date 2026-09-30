@@ -19,163 +19,6 @@ public partial class PartyTests
 	private static GameState Solo(PartyCompanion m, KinCard[] hand, params Foe[] foes) =>
 		Deal([new PlacedCompanion(m, 0)], hand, foes.Length > 0 ? foes : [Foe(0)]);
 
-	// ===== GROVE
-
-	[Test]
-	public void GrowGrowsAtTheStartOfEachLaterTurn()
-	{
-		var grow = new Grow();
-		var s = Solo(With(Mon("Sapling", hp: 20, power: 1), grow), []);
-
-		s = EndTurn(s);
-
-		var sapling = Named(s, "Sapling");
-		Assert.That(sapling.Power, Is.EqualTo(1 + grow.Power));
-		Assert.That(sapling.MaxHp, Is.EqualTo(20 + grow.Hp));
-	}
-
-	[Test]
-	public void RootedBlockStaysWhenYourTurnStartsAndPlainBlockDoesNot()
-	{
-		var root = (RootAction)PartyCards.Root.Effects[0].Template;
-		var s = Solo(
-			Mon("Wall"),
-			[PartyCards.Root, Card("Brace", 1, new GuardAction { Amount = 5 })]
-		);
-
-		s = Play(s, "Root", 0);
-		s = Play(s, "Brace", 0);
-		s = EndTurn(s);
-
-		Assert.That(
-			Named(s, "Wall").Block,
-			Is.EqualTo(root.Amount),
-			"the Root stays, the Brace goes"
-		);
-	}
-
-	[Test]
-	public void RootedBlockIsLostWhereItIsHitThrough()
-	{
-		var root = (RootAction)PartyCards.Root.Effects[0].Template;
-		var s = Solo(Mon("Wall"), [PartyCards.Root], Foe(0, 50, Hit(4)));
-
-		s = Play(s, "Root", 0);
-		s = EndTurn(s);
-
-		Assert.That(Named(s, "Wall").Block, Is.EqualTo(root.Amount - 4));
-	}
-
-	[Test]
-	public void MossbackKeepsAllItsBlock()
-	{
-		var s = Solo(
-			With(Mon("Shell"), new Mossback()),
-			[Card("Brace", 1, new GuardAction { Amount = 5 })]
-		);
-
-		s = Play(s, "Brace", 0);
-		s = EndTurn(s);
-
-		Assert.That(Named(s, "Shell").Block, Is.EqualTo(5));
-	}
-
-	[Test]
-	public void ThornwallHitsBackWithItsBlock()
-	{
-		var s = Solo(
-			With(Mon("Bramble"), new Thornwall()),
-			[Card("Brace", 1, new GuardAction { Amount = 8 })],
-			Foe(0, 50, Hit(3))
-		);
-
-		s = Play(s, "Brace", 0);
-		s = EndTurn(s);
-
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - 8), "its Block when the blow came in");
-	}
-
-	[Test]
-	public void ANurseryGivesYourTokensGrow()
-	{
-		var s = Solo(With(Mon("Vine"), new Nursery()), [PartyCards.Sow]);
-
-		s = Play(s, "Sow", 0);
-
-		Assert.That(Named(s, "Sprout").HasComponent<Grow>(), Is.True);
-	}
-
-	[Test]
-	public void SporesDrawAndPayWhenATokenFalls()
-	{
-		var spores = new Spores();
-		var offer = Card("Offer", 0, new SacrificeTokenAction());
-		var s = Solo(With(Mon("Cap"), spores), [PartyCards.Sow, offer]);
-
-		s = Play(s, "Sow", 0);
-		var (energy, hand) = (s.GetParty().Energy, s.CardsIn(ZoneType.Hand).Count());
-		s = Play(s, "Offer", 0);
-
-		Assert.That(s.GetParty().Energy, Is.EqualTo(energy + spores.Energy));
-		Assert.That(s.CardsIn(ZoneType.Hand).Count(), Is.EqualTo(hand - 1 + spores.Draw));
-	}
-
-	[Test]
-	public void ThicketShieldsOnlyYourGroveMonstersByTheirPower()
-	{
-		var s = Deal(
-			[
-				new PlacedCompanion(Mon("Oak", power: 3) with { Family = Family.Grove }, 0),
-				new PlacedCompanion(Mon("Stranger", power: 3), 1),
-			],
-			[PartyCards.Thicket],
-			Foe(0)
-		);
-
-		s = Play(s, "Thicket", 0);
-
-		Assert.That(Named(s, "Oak").Block, Is.EqualTo(3));
-		Assert.That(Named(s, "Stranger").Block, Is.Zero);
-	}
-
-	[Test]
-	public void GraftAndOvergrowGrowAMonsterNow()
-	{
-		var overgrow = (GrowNowAction)PartyCards.Overgrow.Effects[0].Template;
-		var s = Solo(Mon("Any", power: 0), [PartyCards.Graft, PartyCards.Overgrow]);
-
-		s = Play(s, "Graft", 0);
-		s = Play(s, "Overgrow", 0);
-
-		Assert.That(Named(s, "Any").Power, Is.EqualTo(new Grow().Power * overgrow.Times));
-	}
-
-	[Test]
-	public void HarvestFellsYourTokensAndEachHitsTheirFrontForItsHp()
-	{
-		var s = Solo(Mon("Keeper"), [PartyCards.Sow, PartyCards.Harvest]);
-		s = Play(s, "Sow", 0);
-		var sprout = Named(s, "Sprout").Hp;
-
-		s = Play(s, "Harvest", 0);
-
-		Assert.That(s.LivingAllies().Select(a => a.Name), Is.EqualTo(new[] { "Keeper" }));
-		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(50 - sprout));
-	}
-
-	[Test]
-	public void DeepRootsDoublesRootedBlock()
-	{
-		var root = (RootAction)PartyCards.Root.Effects[0].Template;
-		var s = Solo(Mon("Wall"), [PartyCards.Root, PartyCards.DeepRoots]);
-
-		s = Play(s, "Root", 0);
-		s = Play(s, "Deep Roots", 0);
-
-		Assert.That(Named(s, "Wall").Block, Is.EqualTo(root.Amount * 2));
-		Assert.That(Named(s, "Wall").Rooted, Is.EqualTo(root.Amount * 2));
-	}
-
 	// ===== The content
 
 	[Test]
@@ -236,5 +79,85 @@ public partial class PartyTests
 
 			Assert.That(after.RewardOffer().Any(c => c.Rarity == Rarity.Rare), Is.True);
 		}
+	}
+
+	/// <summary>
+	/// **Every card a run can hold has SOMEWHERE to be dropped** (playtest, 2026-09-30: Ember Dart
+	/// could not be played at all — its damage wanted a foe and its draw wanted your monster, and no
+	/// place is both). An inert card throws no error, so each is asked place by place, + too.
+	/// </summary>
+	[Test]
+	public void EveryCardARunCanHoldCanBePlayedSomewhere()
+	{
+		var cards = PartyContent
+			.Rewards.Concat(PartyContent.StarterDeck)
+			.SelectMany(c => c.Upgraded is { } plus ? new[] { c, plus } : [c]);
+		var stuck = new List<string>();
+		foreach (var card in cards)
+		{
+			// A monster behind a token, two foes, energy to spare: every card's precondition met.
+			var s = Deal(
+				[new PlacedCompanion(Mon("Keeper"), 0), new PlacedCompanion(Mon("Second"), 1)],
+				[Summon(Sapling()), card],
+				Foe(0),
+				Foe(1)
+			);
+			s = Play(s, "Summon", 0);
+			s = s.UpdateObject(s.GetParty().Id, s.GetParty() with { Energy = 10 });
+			var inHand = s.CardsIn(ZoneType.Hand)
+				.First(c => c.Name == card.Name && c.Effects[0].Text == card.Effects[0].Text);
+
+			var playable = Enumerable
+				.Range(0, PartyBattle.MaxLine)
+				.SelectMany(space => new[] { (space, false), (space, true) })
+				.Any(p =>
+					new PlayPartyCardAction
+					{
+						CardId = inHand.Id,
+						Space = p.space,
+						FoeRow = p.Item2,
+					}
+						.ValidateAdd(s)
+						.IsValid
+				);
+
+			if (!playable)
+				stuck.Add(card.Name);
+		}
+
+		Assert.That(stuck, Is.Empty, "these cards have nowhere to be played");
+	}
+
+	/// <summary>
+	/// **MTG's targeting rule** (Shayne, 2026-09-30): a card with no step that targets plays wherever it
+	/// is dropped — no place at all; a card with one needs that place, whatever else it does.
+	/// </summary>
+	[Test]
+	public void ACardWithNoTargetPlaysAnywhereAndATargetedOneNeedsItsPlace()
+	{
+		var surge = Card("Surge", 0, new GainEnergyAction { Amount = 2 }, new DrawAction());
+		var dart = Card("Dart", 0, new SpellDamageAction { Amount = 2 }, new DrawAction());
+		var sow = Summon(Sapling());
+		var s = Solo(Mon("Keeper"), [surge, dart, sow]);
+
+		Assert.That(surge.NeedsTarget(), Is.False);
+		Assert.That(sow.NeedsTarget(), Is.False, "a token always arrives at the front");
+		Assert.That(dart.NeedsTarget(), Is.True, "the draw does not stop the damage needing a foe");
+
+		bool Plays(string name, int space, bool foeRow = false) =>
+			new PlayPartyCardAction
+			{
+				CardId = InHand(s, name).Id,
+				Space = space,
+				FoeRow = foeRow,
+			}
+				.ValidateAdd(s)
+				.IsValid;
+
+		Assert.That(Plays("Surge", -1), Is.True, "no place at all");
+		Assert.That(Plays("Summon", -1), Is.True);
+		Assert.That(Plays("Dart", -1), Is.False);
+		Assert.That(Plays("Dart", 0, foeRow: true), Is.True);
+		Assert.That(Plays("Dart", 0), Is.False, "not on your own monster");
 	}
 }

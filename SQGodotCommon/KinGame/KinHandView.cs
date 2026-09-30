@@ -34,6 +34,9 @@ public sealed class KinHandView
 
 	private readonly Action<string> _report;
 
+	/// <summary>The top of the hand's band: a card released below it went back to the hand.</summary>
+	private readonly float _bandTop;
+
 	public KinHandView(
 		Node parent,
 		Vector2 position,
@@ -45,6 +48,7 @@ public sealed class KinHandView
 		_laneAt = laneAt;
 		_tryPlay = tryPlay;
 		_report = report;
+		_bandTop = position.Y - BandHeight / 2f;
 
 		// The scene, not `new Hand2D()` — Hand.tscn already carries the position curves, the card
 		// scene and the LeftMostPoint / RightMostPoint anchors that Hand2D looks up by name.
@@ -92,6 +96,14 @@ public sealed class KinHandView
 		var card = context.CardUI2D;
 
 		if (!int.TryParse(card.Id, out var cardId))
+		{
+			_hand.LerpCardTransform(card);
+			return;
+		}
+
+		// **Released over the hand: it went back.** Not a play, and not a refusal to report — a card
+		// that needs no target would otherwise play the moment it was let go of in the fan.
+		if (context.DragEndPoint.Y > _bandTop)
 		{
 			_hand.LerpCardTransform(card);
 			return;

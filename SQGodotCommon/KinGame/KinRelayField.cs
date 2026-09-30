@@ -249,12 +249,12 @@ public sealed class KinRelayField
 			colour.Lightened(0.25f),
 			Join(
 				FamilyWord(ally.Family),
-				ally.FadesIn > 0 ? "" : stats,
+				// A token's Power matters too (Grove draft 1: tokens attack).
+				stats,
 				ally.Block > 0
 					? $"BLOCK {ally.Block}" + (ally.Rooted > 0 ? $" ({ally.Rooted} ROOTED)" : "")
 					: "",
-				ally.HasComponent<Grow>() ? "GROW" : "",
-				ally.FadesIn > 0 ? $"TOKEN · FADES IN {ally.FadesIn}"
+				ally.IsToken ? "TOKEN" + (ally.FadesIn > 0 ? $" · FADES IN {ally.FadesIn}" : "")
 					: ally.BonusThorns > 0 ? $"THORNS {ally.TotalThorns}"
 					: ally.Passive
 			),
@@ -298,8 +298,7 @@ public sealed class KinRelayField
 			drop is not null ? $"▼ {drop.Name.ToUpperInvariant()} HERE"
 				: loses > 0 ? $"−{loses}"
 				: "",
-			drop is not null ? KinPalette.Gold : KinPalette.Red,
-			foe.Level
+			drop is not null ? KinPalette.Gold : KinPalette.Red
 		);
 	}
 
@@ -354,6 +353,8 @@ public static class KinMoveText
 				b.Burn > 0 ? $"{b.Burn} burn" : "",
 				b.Energy > 0 ? $"+{b.Energy} energy" : "",
 				b.Draw > 0 ? $"draw {b.Draw}" : "",
+				b.Grow > 0 ? $"grows {b.Grow}" : "",
+				b.Summons is { } t ? $"+{t.Creature.Name.ToLowerInvariant()}" : "",
 			}.Where(p => p.Length > 0)
 		);
 

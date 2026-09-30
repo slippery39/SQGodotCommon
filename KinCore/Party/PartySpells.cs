@@ -39,20 +39,27 @@ public record SpellDamageAction : CardStep
 	/// <summary>Flashpoint: + this much for each Burn on the foe it hits (the Burn stays).</summary>
 	public int PerBurn { get; init; }
 
+	/// <summary>Heartwood: + this much for each point of Rooted Block on your line (it stays).</summary>
+	public int PerRootedOnLine { get; init; }
+
 	/// <summary>Pyroblast: your Spell Power counts this many times.</summary>
 	public int SpellPowerTimes { get; init; } = 1;
 
+	/// <summary>Every foe or a random one targets nothing; a foe, or the one behind it, is aimed.</summary>
+	public override bool NeedsTarget => Target is SpellTarget.Foe or SpellTarget.Behind;
+
 	public override string? Refusal(GameState s, int space, bool foeRow) =>
-		Target != SpellTarget.Foe || (foeRow && s.FoeAt(space) is not null)
-			? null
-			: "Drop it on a foe";
+		!NeedsTarget || (foeRow && s.FoeAt(space) is not null) ? null : "Drop it on a foe";
 
 	public override ActionResult Execute(GameState s)
 	{
 		var party = s.GetParty();
 		var amount = FromSpellDamageThisTurn
 			? party.SpellDamageThisTurn
-			: Amount + PerX * party.XPaid + PerSpellThisTurn * party.SpellsThisTurn;
+			: Amount
+				+ PerX * party.XPaid
+				+ PerSpellThisTurn * party.SpellsThisTurn
+				+ PerRootedOnLine * s.LivingAllies().Sum(a => PartyFamilies.RootedOf(s, a));
 
 		List<Foe> targets = Target switch
 		{

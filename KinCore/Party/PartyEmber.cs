@@ -121,8 +121,10 @@ public record BurnAction : CardStep
 	public bool Double { get; init; }
 	public bool RiseToHighest { get; init; }
 
+	public override bool NeedsTarget => !All && !RiseToHighest;
+
 	public override string? Refusal(GameState s, int space, bool foeRow) =>
-		All || RiseToHighest || (foeRow && s.FoeAt(space) is not null) ? null : "Drop it on a foe";
+		!NeedsTarget || (foeRow && s.FoeAt(space) is not null) ? null : "Drop it on a foe";
 
 	public override ActionResult Execute(GameState s)
 	{

@@ -50,6 +50,13 @@ public static class PartyState
 		[.. c is Ally ? s.LivingAllies().Cast<Creature>() : s.LivingFoes()];
 
 	/// <summary>
+	/// **Does this card need a TARGET?** MtgCore's `SpellNeedsTargets`: yes if any step acts on what it
+	/// is dropped on. A card that does not is played wherever it lands on the field.
+	/// </summary>
+	public static bool NeedsTarget(this KinCard card) =>
+		card.Effects.Any(e => e.Template is CardStep { NeedsTarget: true });
+
+	/// <summary>
 	/// **What a card costs to play NOW — the one place a cost is adjusted** (MtgCore's CostEngine:
 	/// every reduction and tax goes through here, floored at 0). Paying, validating and the hand's
 	/// cost badge all read it, so they cannot disagree.
@@ -290,7 +297,7 @@ public static class PartyState
 			return (s, events);
 
 		// Tokens never keep a battle alive — only real monsters do.
-		var lost = !s.LivingAllies().Any(a => a.FadesIn == 0);
+		var lost = !s.LivingAllies().Any(a => !a.IsToken);
 		var won = !s.LivingFoes().Any();
 		if (won || lost)
 		{
@@ -461,9 +468,8 @@ public static class PartyState
 				events = events.AddRange(more);
 			}
 
-			// **Thorns: attacking this monster hurts**, blocked or not. THORNWALL adds its Block, as
-			// it stood when the blow came in.
-			var thorns = victim.TotalThorns + (victim.HasComponent<Thornwall>() ? victim.Block : 0);
+			// **Thorns: attacking this monster hurts**, blocked or not; THORNMAIL for the whole line.
+			var thorns = victim.TotalThorns + PartyGrove.Thornmail(s);
 			if (thorns > 0)
 			{
 				events = events.Add(new ThornsEvent { FoeId = attacker.Id, Damage = thorns });
@@ -534,6 +540,8 @@ public static class PartyState
 		{
 			WasHit = true,
 			Block = ally.Block - blocked,
+			// Spent oldest first: the Block carried from last turn, then plain, then Rooted.
+			Carried = Math.Max(0, ally.Carried - blocked),
 			Rooted = Math.Min(ally.Rooted, ally.Block - blocked),
 			Hp = Math.Max(0, ally.Hp - (amount - blocked)),
 		};
@@ -553,8 +561,14 @@ public static class PartyState
 		if (hit.IsKnockedOut && !ally.IsKnockedOut)
 		{
 			events = events.Add(new AllyKnockedOutEvent { AllyId = ally.Id });
-			if (hit.FadesIn > 0)
+			if (hit.IsToken)
 				s = PartySummon.TokenFainted(s, hit);
+		}
+		// MOSSBACK: its Block stopped a hit, so it grows.
+		if (blocked > 0 && !hit.IsKnockedOut && hit.GetComponent<Mossback>() is { } moss)
+		{
+			(s, var grew) = PartyFamilies.GrowOnce(s, hit, moss.Grow);
+			events = events.AddRange(grew);
 		}
 		return (s, events);
 	}

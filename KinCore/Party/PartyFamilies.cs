@@ -11,10 +11,10 @@ public enum Family
 {
 	None,
 
-	/// <summary>Growth: bodies that grow each turn, Block that stays, walls that bite. Leans FRONT.</summary>
+	/// <summary>Block, and turning it into damage: Rooted walls, Thorns, Growth, tokens (`PartyGrove`).</summary>
 	Grove,
 
-	/// <summary>Kindling: every spell stokes a fire that burns hotter all fight. Leans BACK.</summary>
+	/// <summary>Spellslinging: Spell Power, Burn, chains, big spells (`PartyEmber`).</summary>
 	Ember,
 
 	Storm,
@@ -32,38 +32,18 @@ public enum Rarity
 	Rare,
 }
 
-// ===== GROVE — the engine is TIME
-
-/// <summary>**GROW**: at the start of each of your turns it gains this much Power and max HP (and HP).</summary>
-public record Grow : GameComponent
-{
-	public int Power { get; init; } = 1;
-	public int Hp { get; init; } = 2;
-}
-
-/// <summary>**NURSERY** (Broodvine): tokens you summon while it stands arrive with Grow.</summary>
-public record Nursery : GameComponent;
-
-/// <summary>**MOSSBACK** (Mosshell): all of its Block is Rooted — none of it vanishes at your turn start.</summary>
-public record Mossback : GameComponent;
-
-/// <summary>**THORNWALL** (Bramble): a foe that attacks it takes damage equal to its Block, as well.</summary>
-public record Thornwall : GameComponent;
-
-/// <summary>**SPORES** (Hushcap): when a token of yours falls, draw this many and gain this much energy.</summary>
-public record Spores : GameComponent
-{
-	public int Draw { get; init; } = 1;
-	public int Energy { get; init; } = 1;
-}
+// ===== GROVE's shared pieces (the rest is in `PartyGrove`)
 
 /// <summary>
-/// **ALPHA** (Howler): tokens you summon while it stands ATTACK the front for their Power each round,
-/// instead of whatever still thing they do — so a growing swarm hits harder every turn.
+/// **MOSSBACK** (Mosshell): all of its Block is Rooted — it survives your next turn start — and whenever
+/// its Block stops a hit, it GROWS this much.
 /// </summary>
-public record Alpha : GameComponent;
+public record Mossback : GameComponent
+{
+	public int Grow { get; init; } = 1;
+}
 
-// ===== EMBER — the engine is SPELL COUNT
+// ===== EMBER's
 
 /// <summary>**STOKER** (Emberling): when a card gives Spell Power, it gives this much more.</summary>
 public record Stoker : GameComponent
@@ -73,38 +53,7 @@ public record Stoker : GameComponent
 
 // ===== Card steps
 
-/// <summary>Graft: the monster it is dropped on gains Grow for this fight.</summary>
-public record GraftAction : CardStep
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var ally = Target(s);
-		return ally.HasComponent<Grow>()
-			? new(s)
-			: new(
-				s.UpdateObject(ally.Id, ally with { Components = ally.Components.Add(new Grow()) })
-			);
-	}
-}
-
-/// <summary>Overgrow: everything of yours with Grow grows now, this many times. Dropped on any monster.</summary>
-public record GrowNowAction : CardStep
-{
-	public int Times { get; init; } = 1;
-
-	public override ActionResult Execute(GameState s)
-	{
-		var events = ImmutableList<GameEvent>.Empty;
-		for (var i = 0; i < Times; i++)
-		{
-			(s, var grew) = PartyFamilies.GrowAll(s);
-			events = events.AddRange(grew);
-		}
-		return new ActionResult(s).WithEvents(events);
-	}
-}
-
-/// <summary>Root: this much ROOTED Block — it does not vanish at your turn start.</summary>
+/// <summary>Root: this much ROOTED Block — it survives your next turn start.</summary>
 public record RootAction : CardStep
 {
 	public int Amount { get; init; }
@@ -132,69 +81,15 @@ public record DeepRootsAction : CardStep
 	public override ActionResult Execute(GameState s)
 	{
 		var ally = Target(s);
-		return new(
-			s.UpdateObject(
-				ally.Id,
-				ally with
-				{
-					Block = ally.Block + ally.Rooted,
-					Rooted = ally.Rooted * 2,
-				}
-			)
+		var rooted = PartyFamilies.RootedOf(s, ally);
+		s = s.UpdateObject(ally.Id, ally with { Block = ally.Block + rooted, Rooted = rooted * 2 });
+		return new ActionResult(s).WithEvent(
+			new BlockGainedEvent { AllyId = ally.Id, Amount = rooted }
 		);
 	}
 }
 
-/// <summary>Thicket: each of your GROVE monsters gains Block equal to its Power. Dropped on any monster.</summary>
-public record ThicketAction : CardStep
-{
-	public override ActionResult Execute(GameState s)
-	{
-		var events = ImmutableList<GameEvent>.Empty;
-		foreach (var ally in s.LivingAllies().Where(a => a.Family == Family.Grove).ToList())
-		{
-			var amount = ally.Power + ally.BonusPower;
-			if (amount <= 0)
-				continue;
-			s = s.UpdateObject(ally.Id, ally with { Block = ally.Block + amount });
-			events = events.Add(new BlockGainedEvent { AllyId = ally.Id, Amount = amount });
-		}
-		return new ActionResult(s).WithEvents(events);
-	}
-}
-
-/// <summary>
-/// **HARVEST — Grove's big turn (an EXPERIMENT, `KinFamiliesPlan.md` §6)**: each of your tokens falls,
-/// and each deals its HP to their front. Plain card, no hooks elsewhere — cheap to drop.
-/// </summary>
-public record HarvestAction : CardStep
-{
-	public override string? Refusal(GameState s, int space, bool foeRow) =>
-		base.Refusal(s, space, foeRow)
-		?? (s.LivingAllies().Any(a => a.FadesIn > 0) ? null : "You have no tokens to harvest");
-
-	public override ActionResult Execute(GameState s)
-	{
-		var events = ImmutableList<GameEvent>.Empty;
-		foreach (var token in s.LivingAllies().Where(a => a.FadesIn > 0).ToList())
-		{
-			if (s.GetParty().IsOver)
-				break;
-			var power = token.Hp;
-			s = s.UpdateObject(token.Id, token with { Hp = 0 });
-			s = PartySummon.TokenFainted(s, token);
-			events = events.Add(new AllyKnockedOutEvent { AllyId = token.Id });
-			if (s.LivingFoes().OrderBy(f => f.Position).FirstOrDefault() is { } front)
-			{
-				ImmutableList<GameEvent> hit;
-				(s, hit) = PartyState.HitFoe(s, front, power);
-				events = events.AddRange(hit);
-			}
-		}
-		return new ActionResult(s).WithEvents(events);
-	}
-}
-
+/// <summary>A creature GREW: +Power for the rest of the fight. The screen floats it.</summary>
 public record GrewEvent : GameEvent
 {
 	public int AllyId { get; init; }
@@ -202,105 +97,86 @@ public record GrewEvent : GameEvent
 	public int Hp { get; init; }
 }
 
-/// <summary>The families' rules that run at fixed moments: turn start, a spell cast, a token falling.</summary>
+/// <summary>The families' rules that run at fixed moments: turn start, a token falling.</summary>
 public static class PartyFamilies
 {
-	/// <summary>Everything of yours with Grow grows once.</summary>
-	public static (GameState, ImmutableList<GameEvent>) GrowAll(GameState s)
+	/// <summary>
+	/// **GROW** (Grove draft 1): +this much Power for the rest of the fight, on a monster or a token.
+	/// Only Power: growing HP is healing by another name, and a longer fight would pay it more.
+	/// </summary>
+	public static (GameState, ImmutableList<GameEvent>) GrowOnce(GameState s, Ally ally, int power)
 	{
-		var events = ImmutableList<GameEvent>.Empty;
-		foreach (var ally in s.LivingAllies().ToList())
-		{
-			var grow = ally.GetComponents<Grow>().ToList();
-			if (grow.Count == 0)
-				continue;
-			(s, var grew) = GrowOnce(
-				s,
-				ally,
-				new Grow { Power = grow.Sum(g => g.Power), Hp = grow.Sum(g => g.Hp) }
-			);
-			events = events.AddRange(grew);
-		}
-		return (s, events);
+		if (power <= 0)
+			return (s, []);
+		var now = (Ally)s.GetObject(ally.Id);
+		s = s.UpdateObject(now.Id, now with { Power = now.Power + power });
+		return (s, [new GrewEvent { AllyId = now.Id, Power = power }]);
 	}
 
-	/// <summary>One monster grows by this much, now.</summary>
-	public static (GameState, ImmutableList<GameEvent>) GrowOnce(GameState s, Ally ally, Grow by)
-	{
-		s = s.UpdateObject(
-			ally.Id,
-			ally with
-			{
-				Power = ally.Power + by.Power,
-				MaxHp = ally.MaxHp + by.Hp,
-				Hp = ally.Hp + by.Hp,
-			}
-		);
-		return (
-			s,
-			[
-				new GrewEvent
-				{
-					AllyId = ally.Id,
-					Power = by.Power,
-					Hp = by.Hp,
-				},
-			]
-		);
-	}
+	/// <summary>Every point of its Block is Rooted: a Mossback, or anything under ANCIENT BARK.</summary>
+	private static bool AllRooted(GameState s, Ally ally) =>
+		ally.HasComponent<Mossback>() || s.GetParty().HasComponent<AncientBarkAura>();
 
 	/// <summary>
-	/// **Your turn starts**: Block drops to what is Rooted (all of it, for a Mossback); Grow grows.
+	/// **Its ROOTED Block** — what will survive your next turn start. For a Mossback or under Ancient
+	/// Bark, all the Block gained since the last one; never the Block already carried over.
+	/// </summary>
+	public static int RootedOf(GameState s, Ally ally) =>
+		AllRooted(s, ally) ? Math.Max(0, ally.Block - ally.Carried) : ally.Rooted;
+
+	/// <summary>
+	/// **Your turn starts**: Block drops to what is ROOTED, and that is carried ONE turn — kept now, gone
+	/// at the next start unless rooted again. WILD HEART grows each of your monsters.
 	/// </summary>
 	public static (GameState, ImmutableList<GameEvent>) TurnStart(GameState s, bool firstTurn)
 	{
 		foreach (var ally in s.Allies().ToList())
 		{
-			var kept = ally.HasComponent<Mossback>()
-				? ally.Block
-				: Math.Min(ally.Block, ally.Rooted);
-			s = s.UpdateObject(ally.Id, ally with { Block = kept, Rooted = kept });
+			var kept = Math.Min(ally.Block, RootedOf(s, ally));
+			s = s.UpdateObject(ally.Id, ally with { Block = kept, Rooted = 0, Carried = kept });
 		}
-		return firstTurn ? (s, []) : GrowAll(s);
+		var hearts = s.GetParty().GetComponents<WildHeartAura>().Count();
+		var events = ImmutableList<GameEvent>.Empty;
+		if (hearts > 0)
+			foreach (var monster in s.LivingAllies().Where(a => !a.IsToken).ToList())
+			{
+				(s, var grew) = GrowOnce(s, monster, hearts);
+				events = events.AddRange(grew);
+			}
+		return (s, events);
 	}
 
-	/// <summary>A token of yours fell: every Spores standing draws and pays out.</summary>
+	/// <summary>
+	/// **A token of yours fell** (hit down, or sacrificed): PACK LEADER grows your monsters; LIFE CYCLE
+	/// draws and roots your front. Growth is staged, so the screen floats it.
+	/// </summary>
 	public static GameState TokenFell(GameState s)
 	{
-		var spores = s.LivingAllies().SelectMany(a => a.GetComponents<Spores>()).ToList();
-		if (spores.Count == 0)
-			return s;
-		var party = s.GetParty();
-		s = s.UpdateObject(
-			party.Id,
-			party with
+		var pack = s.LivingAllies().SelectMany(a => a.GetComponents<PackLeader>()).Sum(p => p.Grow);
+		if (pack > 0)
+			foreach (var monster in s.LivingAllies().Where(a => !a.IsToken).ToList())
 			{
-				Energy = party.Energy + spores.Sum(p => p.Energy),
+				(s, var grew) = GrowOnce(s, monster, pack);
+				foreach (var e in grew)
+					s = s.StageEvent(e);
 			}
-		);
-		(s, _) = StartTurnAction.DrawCards(s, spores.Sum(p => p.Draw));
-		return s;
-	}
 
-	/// <summary>A token summoned while a Nursery or an Alpha stands: Grow, and an attack each round.</summary>
-	public static Ally Nurture(GameState s, Ally token)
-	{
-		var standing = s.LivingAllies().ToList();
-		if (standing.Any(a => a.HasComponent<Nursery>()) && !token.HasComponent<Grow>())
-			token = token with { Components = token.Components.Add(new Grow()) };
-		if (standing.Any(a => a.HasComponent<Alpha>()))
-			token = token with
-			{
-				Pattern =
-				[
-					new Intent
-					{
-						Name = "Pounce",
-						Kind = IntentType.Attack,
-						Amount = 0,
-					},
-				],
-			};
-		return token;
+		var cycles = s.GetParty().GetComponents<LifeCycleAura>().ToList();
+		if (cycles.Count == 0)
+			return s;
+		if (s.LivingAllies().FirstOrDefault() is { } front)
+		{
+			var rooted = cycles.Sum(c => c.Rooted);
+			s = s.UpdateObject(
+				front.Id,
+				front with
+				{
+					Block = front.Block + rooted,
+					Rooted = front.Rooted + rooted,
+				}
+			);
+		}
+		(s, _) = StartTurnAction.DrawCards(s, cycles.Sum(c => c.Draw));
+		return s;
 	}
 }

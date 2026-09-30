@@ -36,6 +36,12 @@ public record FirstAttack : GameComponent
 
 	public int Draw { get; init; }
 
+	/// <summary>The monster GROWS this much (Howler).</summary>
+	public int Grow { get; init; }
+
+	/// <summary>A token arrives at your front (Broodvine).</summary>
+	public TokenTemplate? Summons { get; init; }
+
 	/// <summary>The bonus in words — its badge and its inspector line.</summary>
 	public string Text =>
 		string.Join(
@@ -51,6 +57,8 @@ public record FirstAttack : GameComponent
 				Burn > 0 ? $"{Burn} Burn on the foe it hits" : "",
 				Energy > 0 ? $"+{Energy} energy" : "",
 				Draw > 0 ? $"draw {Draw}" : "",
+				Grow > 0 ? $"it grows {Grow}" : "",
+				Summons is { } t ? $"summon a {t.Creature.Name}" : "",
 			}.Where(p => p.Length > 0)
 		);
 }
@@ -103,6 +111,13 @@ public static class PartyMonsters
 		}
 		if (bonus is { Draw: > 0 })
 			(s, _) = StartTurnAction.DrawCards(s, bonus.Draw);
+		if (bonus is { Grow: > 0 })
+		{
+			(s, var grew) = PartyFamilies.GrowOnce(s, ally, bonus.Grow);
+			events = events.AddRange(grew);
+		}
+		if (bonus?.Summons is { } token)
+			s = PartySummon.SummonAlly(s, token);
 		return (s, bonus?.Damage ?? 0, events, bonus?.Burn ?? 0);
 	}
 }

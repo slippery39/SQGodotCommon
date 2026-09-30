@@ -94,14 +94,15 @@ public static class PartyContent
 			Hp: 30,
 			Power: 2,
 			[Attack("Bash", 4), Guard("Brace", 6)],
-			Passive: "THORNWALL",
-			PassiveRule: "A foe that attacks her takes 2 + her Block, even if she blocks it.",
+			Passive: "THORNS",
+			PassiveRule: "A foe that attacks her takes 2.",
 			Thorns: 2
 		)
 		{
 			Family = Family.Grove,
-			// PLACEHOLDER first-attack bonus until the Grove draft (round 4).
-			Abilities = [new Thornwall(), new FirstAttack { Block = 4 }],
+			// THORNWALL (2 + her Block) went 2026-09-30: every Block card was also a damage card. Her
+			// first attack each turn still roots her wall.
+			Abilities = [new FirstAttack { Rooted = 5 }],
 		};
 
 	/// <summary>
@@ -196,7 +197,7 @@ public static class PartyContent
 			.. StarterDeck,
 			.. family switch
 			{
-				Family.Grove => [PartyCards.Root, PartyCards.Sow],
+				Family.Grove => GroveCards.Starting,
 				Family.Ember => EmberCards.Starting,
 				_ => ImmutableList<KinCard>.Empty,
 			},
@@ -288,13 +289,6 @@ public static class PartyContent
 		Card("Bulwark", 2, "Gain 12 Block.", new GuardAction { Amount = 12 }),
 		Card("Frenzy", 1, "+5 Power this turn.", new PowerAction { Amount = 5 }),
 		PartyCards.Tailwind,
-		PartyCards.Thornhide,
-		PartyCards.Bristle,
-		PartyCards.Sow,
-		PartyCards.CallSparks,
-		PartyCards.DecoyCard,
-		PartyCards.Swarm,
-		PartyCards.Offering,
 		PartyCards.Surge,
 		PartyCards.Quicken,
 		PartyCards.BattleCry,
@@ -304,12 +298,7 @@ public static class PartyContent
 		PartyCards.Ration,
 		PartyCards.ScrapHammer,
 		PartyCards.PageStorm,
-		PartyCards.Graft,
-		PartyCards.Root,
-		PartyCards.Overgrow,
-		PartyCards.Thicket,
-		PartyCards.Harvest,
-		PartyCards.DeepRoots,
+		.. GroveCards.Pool,
 		.. EmberCards.Pool,
 	];
 
@@ -438,58 +427,39 @@ public static class PartyContent
 		);
 
 	/// <summary>
-	/// **Summon, to try by hand.** A caught Broodvine (its Brood puts Grubs in front) and Howler
-	/// (tokens arrive +2/+1) against an Ironhorn, whose Trample goes through a token into the one
-	/// behind, and a Wisp that the Decoy answers.
+	/// **Grove, to try by hand.** Bramble, a Broodvine (tokens arrive bigger) and a Howler (a token lost
+	/// grows the team) against an Ironhorn, whose Trample goes through a token into the one behind.
 	/// </summary>
 	public static PartyScenario SummonScenario =>
 		new(
-			"Summon",
+			"Grove",
 			"Bramble, a Broodvine and a Howler against an Ironhorn, a Wisp and a Stonebeak.",
-			[
-				new(Bramble, 0),
-				new(PartyRun.FromFoe(PartyWorld.Broodvine), 1),
-				new(PartyRun.FromFoe(PartyWorld.Howler), 2),
-			],
+			[new(Bramble, 0), new(GroveCards.Broodvine, 1), new(GroveCards.Howler, 2)],
 			[PartyWorld.Ironhorn with { Position = 0 }, Wisp(1), Stonebeak(2)],
 			[
 				.. StarterDeck,
-				PartyCards.Sow,
-				PartyCards.Graft,
-				PartyCards.Harvest,
-				PartyCards.Swarm,
-				PartyCards.Offering,
-				PartyCards.DecoyCard,
+				GroveCards.Sow,
+				GroveCards.Seedlings,
+				GroveCards.Graft,
+				GroveCards.Harvest,
+				GroveCards.PackCharge,
+				GroveCards.Compost,
 			],
-			["Sow", "Graft", "Harvest"],
+			["Sow", "Seedlings", "Graft"],
 			Deploy: true
 		);
 
 	/// <summary>
 	/// **The monsters a boss can offer a run of this family** (round 4: monsters come from bosses).
-	/// PLACEHOLDER — today's species, as they joined when caught — until the families are drafted.
-	/// A method, not a field: it reads `PartyWorld`, which reads this class.
+	/// Each family's four, one per archetype (`GroveCards`, `EmberCards`).
 	/// </summary>
 	public static ImmutableList<PartyCompanion> MonstersOf(Family family) =>
 		family switch
 		{
-			// PLACEHOLDER first-attack bonuses and Spell Power (round 4) until the family drafts.
-			Family.Grove =>
-			[
-				Joins(PartyWorld.Mosshell, new FirstAttack { Rooted = 4 }),
-				Joins(PartyWorld.Broodvine, new FirstAttack { Draw = 1 }),
-				Joins(PartyWorld.Hushcap, new FirstAttack { Thorns = 3 }),
-				Joins(PartyWorld.Howler, new FirstAttack { Damage = 3 }),
-			],
+			Family.Grove => GroveCards.Monsters,
 			Family.Ember => EmberCards.Monsters,
 			_ => [],
 		};
-
-	private static PartyCompanion Joins(Foe species, FirstAttack bonus, int spellPower = 0)
-	{
-		var monster = PartyRun.FromFoe(species);
-		return monster with { Abilities = monster.Abilities.Add(bonus), SpellPower = spellPower };
-	}
 
 	public static ImmutableList<PartyScenario> Scenarios =>
 		[Trio, Alone, Pair, Looting, Spellcraft, SurgeScenario, SummonScenario];

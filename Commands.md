@@ -61,7 +61,7 @@ procedure in the `draw-card-art` skill.
 
 ## Running a scene — USE THE SCRIPT
 
-`kin_party.tscn` flags: `--fight` presses FIGHT at 0.3s — **practice scenarios open DEPLOYING, which refuses `--play`, `--focus` and `--snare` until then**; `--click-space=a,b` clicks your line's places (deploy: a monster, then its new place). `--scenario=N` — **THE RELAY order** (lines, front first): (0 = three vs three, the intro: Bramble, Pike, Gale; 1 = one vs two, 2 = two vs three, 3 = draw and discard: caught Magpie + Inkling vs a Hoard Drake and a wild Magpie; Sift on top — `--play=0` opens the discard choice; 4 = EMBER: Emberling + Echo Owl vs a Warden, Wisp and Briar Viper; Kindle, Singe, Spark on top; 5 = surge: caught Glowmoth + Stormbuck vs a Hushcap, Boar and Wisp; Surge, Quicken, Unleash on top; 6 = GROVE: caught Broodvine + Howler vs an Ironhorn, Wisp and Stonebeak; Sow, Graft, Harvest on top); `--click-space=3,2` sends
+`kin_party.tscn` flags: `--fight` presses FIGHT at 0.3s — **practice scenarios open DEPLOYING, which refuses `--play`, `--focus` and `--snare` until then**; `--click-space=a,b` clicks your line's places (deploy: a monster, then its new place). `--scenario=N` — **THE RELAY order** (lines, front first): (0 = three vs three, the intro: Bramble, Pike, Gale; 1 = one vs two, 2 = two vs three, 3 = draw and discard: caught Magpie + Inkling vs a Hoard Drake and a wild Magpie; Sift on top — `--play=0` opens the discard choice; 4 = EMBER: Emberling + Echo Owl vs a Warden, Wisp and Briar Viper; Kindle, Singe, Spark on top; 5 = surge: caught Glowmoth + Stormbuck vs a Hushcap, Boar and Wisp; Surge, Quicken, Unleash on top; 6 = GROVE: Bramble, Broodvine + Howler vs an Ironhorn, Wisp and Stonebeak; Sow, Seedlings, Graft on top); `--click-space=3,2` sends
 REAL clicks to those spaces of your row, in order — select a monster, then step it. Capture-only:
 `--focus=N` lights where hand card N can be dropped, as a hover would (a capture CANNOT hover — this
 shows the look, not that hovering triggers it); `--play=N` plays hand card N on the first space that
@@ -71,7 +71,7 @@ only) and arms the Snare; `--inspect=N` shows the hover panel for the creature i
 `--end-turn` ends the turn at 1.6s, to capture the foes' turn animating. The RUN (no `--scenario`):
 `--starter=N` skips choosing (Roster[N]) and opens in the first town; `--screen=route` sets out onto its
 route map, `route2` stands further along it (placed, not walked — a find there is not picked up),
-`town2` is the second town's map, `boss` stands at the route's end before its boss (placed, not walked), `relics` beats that boss (through `DebugEndBattle`) to show the boss-relic choice, `monsters` the boss's monster pick, `spring` stands at the route's first spring (heal or upgrade),
+`town2` is the second town's map, `boss` stands at the route's end before its boss (placed, not walked), `relics` beats that boss (through `DebugEndBattle`) to show the boss-relic choice, `monsters` the boss's monster pick, `spring` stands at the route's first spring (heal or upgrade), `spring-full` the same with the family's whole pool added to the deck (the upgrade row that scrolls),
 `hospital|shop|pen` open that building in the first town (the starter at half HP),
 `routefight` walks to the route's first fight and stays in it,
 `--screen=between|over` fights the route's first place and ends it through

@@ -143,8 +143,8 @@ public static class PartySim
 						elites++;
 
 					var battle = run.StartBattle();
-					var hpBefore = battle.Allies().Where(a => a.FadesIn == 0).Sum(a => a.Hp);
-					var hpMax = battle.Allies().Where(a => a.FadesIn == 0).Sum(a => a.MaxHp);
+					var hpBefore = battle.Allies().Where(a => !a.IsToken).Sum(a => a.Hp);
+					var hpMax = battle.Allies().Where(a => !a.IsToken).Sum(a => a.MaxHp);
 					var wild = run.Here.Kind is NodeKind.Wild or NodeKind.Grass;
 					log?.Invoke(
 						$"  BATTLE {battles + 1} ({where}): {run.NextFight.Name} — team "
@@ -186,7 +186,7 @@ public static class PartySim
 									hpBefore
 									- battle
 										.Allies()
-										.Where(a => a.FadesIn == 0)
+										.Where(a => !a.IsToken)
 										.Sum(a => Math.Max(0, a.Hp))
 								) / (double)Math.Max(1, hpMax)
 							)

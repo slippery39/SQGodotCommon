@@ -38,10 +38,13 @@ public partial class KinCardPreview : Node2D
 	/// </summary>
 	private static IEnumerable<KinCard> Cases()
 	{
-		// `--party`: the companion game's cards instead — the Ember pool's longest rules text.
+		// `--party`: the companion game's cards instead — the family pools' longest rules text, + versions
+		// included (they are often the longer).
 		if (OS.GetCmdlineUserArgs().Contains("--party"))
 			return KinCore
-				.Party.EmberCards.Pool.OrderByDescending(c => KinCardFace.RulesTextFor(c).Length)
+				.Party.EmberCards.Pool.Concat(KinCore.Party.GroveCards.Pool)
+				.SelectMany(c => c.Upgraded is { } plus ? new[] { c, plus } : [c])
+				.OrderByDescending(c => KinCardFace.RulesTextFor(c).Length)
 				.Take(7);
 		return LaneCases();
 	}

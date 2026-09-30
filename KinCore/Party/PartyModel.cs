@@ -153,11 +153,26 @@ public record Ally : Creature
 	/// <summary>Its place in the run's team — how the run finds it again after the battle.</summary>
 	public int Slot { get; init; }
 
+	/// <summary>
+	/// **A TOKEN** — summoned by a card or a bonus, gone after the fight, never keeps a battle alive.
+	/// Apart from `FadesIn`: a Sprout stays until it falls (Grove draft 1, 2026-09-29).
+	/// </summary>
+	public bool IsToken { get; init; }
+
 	/// <summary>Added to this monster's attacks.</summary>
 	public int Power { get; init; }
 
-	/// <summary>**ROOTED Block** (Grove): the part of its Block that does not vanish at your turn start.</summary>
+	/// <summary>
+	/// **ROOTED Block** (Grove), gained since your last turn start: it survives the NEXT turn start, once
+	/// (Shayne, 2026-09-30 — it stacked forever and Grove walled whole acts).
+	/// </summary>
 	public int Rooted { get; init; }
+
+	/// <summary>
+	/// **Block kept at your last turn start** — it has had its extra turn and goes at the next one. Hits
+	/// spend it first.
+	/// </summary>
+	public int Carried { get; init; }
 
 	/// <summary>Power added by cards this turn (Rally). Cleared when your next turn starts.</summary>
 	public int BonusPower { get; init; }

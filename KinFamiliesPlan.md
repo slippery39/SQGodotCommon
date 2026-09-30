@@ -78,6 +78,137 @@ The fun part of card games is figuring out and achieving combos and synergies." 
 answers from an interview (five rounds, 2026-09-27); the family drafts are a proposal to react to.
 Exploring, not tuning: every number is a guess; tests prove things fire; no sims until a design holds.
 
+## GROVE — the family draft (interview 2026-09-29; DRAFT 1 APPROVED and BUILT — `PartyGrove`, `GroveCards`)
+
+Shayne: "good as a first pass, we will see how it plays out, and maybe we can brainstorm some more
+aggressive mechanics if the family feels too slow."
+
+**AFTER THE FIRST PLAYTEST (Shayne, 2026-09-30)** — "too easy for the grove": a whole act for 3
+damage, "too easy for the grove to both block and kill things at the same time". Three things
+multiplied: THORNWALL made every Block card a damage card; Rooted Block stacked forever (a stall
+engine by our own test); Bark Slam read that wall for free. Changed:
+- **ROOTED Block lasts ONE extra turn** — kept at your next turn start, gone at the one after unless
+  rooted again (`Ally.Carried` is the Block on its extra turn; hits spend it first). Mossback and
+  Ancient Bark root all Block the same way. Deep Roots and Heartwood read only the fresh Rooted Block.
+- **THORNWALL is gone**: Bramble has plain Thorns 2 ("THORNS"). Block into damage lives in cards.
+- Bark Slam and Crushing Weight stay READ-only; the bounded wall is what bounds them. Re-check in play.
+- (Ember, same playtest) **Spell Surge costs 3 and is RARE (+ costs 2)**: at 1 it refunded a whole
+  turn with no setup. "One card that does all that without much effort is too much."
+- Both families were still "too easy" overall: a difficulty pass on the foes comes after this.
+
+**As built** (what the tables below do not say):
+- **A token is marked `Ally.IsToken`**, apart from fading: `FadesIn` 0 now means it stays. Tokens
+  arrive at your FRONT, and the line holds 5 — with three monsters and a Sprout, Seedlings fits one.
+- **A token that withers has not FALLEN**: Pack Leader, Life Cycle and a Log's draw hear a token hit
+  down or sacrificed, not a Seedling fading. (Otherwise Seedlings were free growth every turn.)
+- **Graft sacrifices your FRONT token** (a card is dropped on one creature, so it cannot also pick one).
+- Heartwood is a spell dropped on a foe; its damage is spell damage, so Spell Power adds to it.
+- Bramble's first attack gives +5 Rooted Block (THORNWALL went after the playtest, above).
+- Seedling, Log and Treant have no art yet: they draw as the generated figure.
+
+| | Decided (Shayne) |
+|---|---|
+| Creatures | **a FOREST MIX** — plants, fungi, mossy beasts, shelled things |
+| Archetypes | **all four**: ROOTED wall, THORNS, BLOCK INTO DAMAGE, GROWTH — plus TOKENS as the substrate |
+| Weak at | **all four**: slow start, no area damage, poor at burst, card-starved |
+| Block → damage | **READ only** (STS Body Slam): damage equal to Block, and the Block stays. The card is weak alone |
+| Growth | **by cards only** — no automatic per-turn growth; a monster's PASSIVE may grow things |
+| Thorns | **by card**: for the TURN (big numbers) or for the FIGHT (small numbers, rarer) |
+| Tokens | **back, as WALL, FUEL and ATTACKER** — "if a mechanic can serve multiple purposes, that's a good thing" |
+| Token lifetime | **by card**: cheap ones wither, rarer ones stay |
+| Sacrifice pays | **by card**: damage, Block, growth or cards |
+| Token places | **any free place** on the line of 5 — a solo region-1 monster can field four |
+| Attacks on tokens | **yes** — an attack card played on a token swings with its Power (no first-attack bonus) |
+
+**GROW N** = +N Power for the rest of the fight, on a monster or a token. **ROOTED** Block stays at
+your turn start until it is broken. Numbers are guesses (Lv 5), pushed first.
+
+### Tokens
+
+| Token | HP · POW | Lasts | From |
+|---|---|---|---|
+| **Seedling** | 4 · 0 | withers at your next turn | Seedlings |
+| **Sprout** | 6 · 1 | until it falls | Sow, Broodvine |
+| **Log** | 12 · 0 | until it falls; **when it falls, draw 2** | Nurse Log |
+| **Treant** | 20 · 3 | until it falls | Treant |
+
+### Monsters
+
+| Monster | Archetype | HP · POW | Passive | First attack each turn |
+|---|---|---|---|---|
+| **Bramble** (starter) | Block → damage, Thorns | 30 · 2 | **THORNWALL**: a foe that attacks her takes 2 + her Block | +5 Rooted Block |
+| **Mosshell** | ROOTED | 34 · 1 | **MOSSBACK**: its Block is Rooted; when its Block stops a hit, it Grows 1 | +6 Block |
+| **Hushcap** | THORNS | 20 · 2 | **SPORECAP**: a card that gives Thorns gives 3 more | +6 Thorns this turn |
+| **Broodvine** | TOKENS | 22 · 1 | **NURSERY**: your tokens arrive with +3 HP and Grow 1 | summon a Sprout |
+| **Howler** | GROWTH | 24 · 4 | **PACK LEADER**: when a token of yours falls, each of your monsters Grows 1 | Grow 1 |
+
+### Cards — DRAFT 1
+
+| Card | Cost | R | Text | + | For |
+|---|---|---|---|---|---|
+| **Root** | 1 | C | Gain 8 Rooted Block. | 11 | [rooted] (start) |
+| **Sow** | 1 | C | Summon a Sprout. Draw a card. | costs 0 | [tokens] (start) |
+| **Seedlings** | 0 | C | Summon 2 Seedlings. | 3 | [tokens] cheap wall / fuel |
+| **Bristle** | 1 | C | 8 Thorns this turn. | 12 | [thorns] |
+| **Bark Slam** | 1 | C | ATTACK: deal damage equal to its Block. | costs 0 | [convert] |
+| **Thorn Lash** | 1 | C | ATTACK: deal 4 + its Thorns. | 6 + | [thorns] → damage |
+| **Overgrow** | 1 | C | Grow 3. | Grow 4 | [growth] |
+| **Thicket** | 1 | C | Every creature on your line gains 5 Block. | 7 | wall · [tokens] |
+| **Hardwood** | 1 | C | Gain 7 Block. If it already had Block, 7 more. | 9 / 9 | [rooted] |
+| **Compost** | 0 | C | Sacrifice a token: draw 2 and gain 1 energy. | draw 3 | [tokens] fuel · card-starved answer |
+| **Barkskin** | 1 | C | Gain Block equal to three times its Power. | four times | [growth] → wall |
+| **Deep Roots** | 1 | U | Its Rooted Block doubles. | costs 0 | [rooted] |
+| **Ironbark** | 2 | U | Gain 16 Rooted Block. | 22 | [rooted] |
+| **Brace Roots** | 1 | U | Gain 4 Block. All its Block becomes Rooted. | 7 | [rooted] enabler |
+| **Briar Patch** | 1 | U | Every creature on your line gains 5 Thorns this turn. | 7 | [thorns] · [tokens] |
+| **Needles** | 1 | U | +3 Thorns for the rest of the fight. | +4 | [thorns] |
+| **Graft** | 1 | U | Sacrifice a token: a monster Grows by its Power and gains Block equal to its HP. | also draw 1 | [tokens] → growth + wall |
+| **Harvest** | 2 | U | Sacrifice all your tokens: deal their total HP to a foe. | costs 1 | [tokens] big turn |
+| **Pack Charge** | 1 | U | Each of your tokens attacks their front for its Power. | costs 0 | [tokens] · [growth] |
+| **Wild Growth** | 1 | U | Every creature on your line Grows 1. | Grow 2 | [growth] · [tokens] |
+| **Nurse Log** | 1 | U | Summon a Log. | 16 HP | [tokens] wall → draw |
+| **Crushing Weight** | 2 | R | ATTACK: deal twice its Block. | three times | [convert] nuke |
+| **Heartwood** | 1 | R | Deal damage equal to all the Rooted Block on your line. It stays. | costs 0 | [rooted] → damage |
+| **Ancient Bark** | 2 | R | AURA: all your Block is Rooted. | costs 1 | [rooted] engine |
+| **Thornmail** | 1 | R | AURA: a foe that hits any creature on your line takes 3. | 5 | [thorns] engine |
+| **Wild Heart** | 2 | R | AURA: at the start of each of your turns, each of your monsters Grows 1. | costs 1 | [growth] engine |
+| **Treant** | 2 | R | Summon a Treant. | 26 HP · 4 POW | [tokens] |
+| **Rampant Growth** | 1 | R | A creature Grows by its Power. | costs 0 | [growth] burst |
+| **Life Cycle** | 1 | R | AURA: when a token of yours falls, draw a card and your front gains 4 Rooted Block. | costs 0 | [tokens] engine |
+
+Attacks add the monster's Power as always — so Growth pays every attack, Bark Slam included.
+**The starting deck**: 4 Strike, 4 Guard, **Root, Sow**. **29 cards**: 11 common, 10 uncommon, 8 rare.
+
+**The combos it is built for** (the finds):
+- **Rooted**: Root / Ironbark / Brace Roots → Deep Roots → Bark Slam, Crushing Weight or Heartwood;
+  Ancient Bark makes every Block Rooted; Mosshell walls and grows; Bramble's Thornwall reads it.
+- **Thorns**: Bristle / Briar Patch / Needles → Thorn Lash; Thornmail for the whole line; Hushcap adds
+  3 to every Thorns card; Briar Patch on a line of tokens makes every hit hurt.
+- **Growth**: Overgrow / Wild Growth → Rampant Growth → any attack; Barkskin turns Power into Block;
+  Howler grows the team whenever a token falls; Wild Heart for the long fight.
+- **Tokens**: Sow / Seedlings / Nurse Log / Treant wall the front → Compost, Graft or Harvest cash
+  them; a grown Sprout swings; Pack Charge swings them all; Broodvine grows them as they arrive;
+  Life Cycle and Nurse Log turn every loss into cards.
+- **Bridges**: Barkskin (growth → wall), Graft (token → growth + wall), Thicket and Briar Patch
+  (tokens + wall / Thorns), Bark Slam + Power (growth → conversion), Life Cycle (tokens → rooted +
+  cards), Mosshell (rooted → growth), Howler (tokens → growth).
+
+**The weaknesses, as drafted**: nothing hits more than one foe (Thornmail and Thorns only answer
+attackers); the burst cards all need turns of banking first; draw exists only as a token's price
+(Compost, Log, Life Cycle); turn 1 is Root and Sow.
+
+### Engine it needs
+
+GROW as +Power for the fight on any creature (the old automatic per-turn Grow goes); **a token flag
+apart from fading** (today `FadesIn > 0` IS the token mark, so a lasting token needs its own); attack
+cards on tokens (check it); a Log's draw when it falls; attacks that read Block or Thorns; Thorns for
+the turn and the fight on any creature, and a line-wide Thorns aura; an aura that roots all Block;
+sacrifice with payoffs (cards and energy, growth and Block, Harvest's total HP); line-wide Block,
+Thorns and Grow; Heartwood's damage from the line's Rooted Block; Mossback's growth when its Block
+stops a hit; Sporecap (Stoker for Thorns); Nursery via the existing `TokenBoost`.
+**Goes**: the old Grow and Nursery, Spores, Alpha, the old Thicket and Harvest, and the placeholder
+Grove cards (Thornhide, Bristle's old text, Call Sparks, Decoy, Swarm, Offering, Graft's old text).
+
 ## EMBER — the family draft (interview 2026-09-28; DRAFT 2 APPROVED and BUILT — `PartyEmber`, `EmberCards`)
 
 **As built** (what the tables below do not say):

@@ -22,6 +22,15 @@
 >   STS Poison, ONE Spell Power (turn or fight), and AURAS — rules for the rest of the fight. Pike is
 >   SPELLBLADE. **A spell is every card that is not an attack** (Guard too). Rules: `PartyEmber`;
 >   content: `EmberCards`; the draft: `KinFamiliesPlan.md`.
+> - **GROVE IS DRAFTED AND BUILT** (draft 1, 2026-09-29): 29 cards, Mosshell ROOTED, Hushcap
+>   THORNS, Broodvine TOKENS, Howler GROWTH; Block into damage is READ, never spent (Bark Slam);
+>   GROW is +Power for the fight, from cards and passives only; **TOKENS are back as wall, fuel and
+>   attacker** — "if a mechanic can serve multiple purposes, that's a good thing". Rules:
+>   `PartyGrove`; content: `GroveCards`. If it plays too slow, the next step is more aggressive
+>   mechanics, not nerfs.
+> - **PLAYTEST 2026-09-30: Grove too easy** (a whole act for 3 damage — it blocked and killed at
+>   once). **Rooted Block now lasts ONE extra turn**, THORNWALL is gone (Bramble: Thorns 2), and
+>   **Spell Surge costs 3 and is rare**. Both families still too easy: a foe difficulty pass is next.
 >   Grove is still placeholder.
 
 > # BOSSES AND ELITES — exams with an answer (Shayne, 2026-09-28; built for regions 1–2)
@@ -1639,6 +1648,13 @@ so the patch is not reinvented for a problem that no longer exists.
 
 What `ImmutableGameObjects` gives us for free, and what had to be built. **Fill this in as we go — it
 is the deliverable for "how flexible is this engine?"**
+
+**Targeting (2026-09-30, a playtest bug):** every KIN card step asked for a drop place, so a card that
+deals damage to a foe AND draws (Ember Dart) had no legal place at all. **Adapted MtgCore's rule**
+(`TargetingStrategy.RequiresUserSelection`, `MtgGameManager.SpellNeedsTargets`): each `CardStep` says
+whether it `NeedsTarget`; a card with none is played wherever it is dropped on the field, and only
+the steps that target are asked about the place. Preconditions ("your line is full") stay in
+`Refusal`, apart from targeting. No engine change — the split is KIN-side, one bool per step.
 
 **Triggers (2026-09-24, before building deck strategies):** the engine had the PLUMBING for
 triggered abilities (`PendingGameEvents`, the `PostActionProcessor` hook, components), but the

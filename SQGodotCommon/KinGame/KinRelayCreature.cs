@@ -21,8 +21,7 @@ public sealed record CreatureLook(
 	Color Bar,
 	string Status,
 	string Note,
-	Color NoteColour,
-	int Level = 0
+	Color NoteColour
 );
 
 /// <summary>
@@ -285,6 +284,8 @@ public sealed class KinRelayCreature
 		_icon.Modulate = side;
 		var rim = look.FacesLeft ? "red" : "gold";
 		_pill.AddThemeStyleboxOverride("panel", KinUiKit.Plate(rim));
+		// Nothing to say (a token has no first-attack bonus): no empty pill.
+		_pill.Visible = look.Move.Length > 0 || look.MoveIcon is not null;
 		_disc.Visible = look.Step > 0;
 		_disc.AddThemeStyleboxOverride("panel", KinUiKit.Nine("disc_" + rim, 0, 0, null, 0, 0));
 		_step.Text = look.Step.ToString();
@@ -307,9 +308,8 @@ public sealed class KinRelayCreature
 		_hp.MaxValue = look.MaxHp;
 		_hp.Value = look.Hp;
 		_fill.ModulateColor = look.Bar;
-		// The level rides in the bar: on the name line it cut long names ("BROODVINE LV").
-		_hpText.Text =
-			look.Level > 0 ? $"LV{look.Level} · {look.Hp}/{look.MaxHp}" : $"{look.Hp}/{look.MaxHp}";
+		// No level shown (playtest, 2026-09-30: foes do not need one — a region's scaling is not news).
+		_hpText.Text = $"{look.Hp}/{look.MaxHp}";
 
 		_note.Text = look.Note;
 		// Red is lifted for the forecast: the palette's red on a dark outline all but vanished.

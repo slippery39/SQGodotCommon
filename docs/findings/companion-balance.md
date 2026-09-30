@@ -6,6 +6,14 @@ the next; map rules are fixed (Snares to 2, one card if affordable, a random are
 only with two monsters and above 60% of your health and the team's HP). **A floor, not the game.**
 Read it for WHERE runs die and HOW they are won, per region.
 
+## 2026-09-29 — GROVE DRAFT 1 BUILT: a crash check, not a tuning run (40 runs, seeds 1–40)
+
+**Bramble 100% (20/20), Pike 70% (14/20)** — both families now drafted. Pike's 6 deaths are all
+bosses in regions 1–2 (region 2's boss ×5). A Bramble trace (seed 1) plays across all four
+archetypes: Root 25, Sow 20, Briar Patch 18, Thicket 16, Bristle 15, Heartwood 13, Thornmail 11,
+Crushing Weight 7, Deep Roots 6, Bark Slam 5, Harvest 3… 40 runs is a smoke test, not a number to
+tune to: tuning waits for Shayne to call it.
+
 ## 2026-09-28 (f) — EMBER DRAFT 2 BUILT: a crash check, not a tuning run (40 runs, seeds 1–40)
 
 **Pike 60% (12/20)** — was 27% on the placeholder Ember; Bramble 100% (20/20, still placeholder).

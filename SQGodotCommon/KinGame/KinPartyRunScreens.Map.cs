@@ -133,8 +133,8 @@ public sealed partial class KinPartyRunScreens
 			return;
 		}
 		_column.AddChild(Label("OR UPGRADE ONE", 24, KinPalette.Bone));
-		var row = Row();
-		// One tile a NAME: five Strikes upgrade the same way, and five tiles would overflow the row.
+		var row = ScrollRow(380);
+		// One tile a NAME: five Strikes upgrade the same way. Still more names than fit: it scrolls.
 		foreach (var index in upgradable.DistinctBy(i => run.Deck[i].Name))
 		{
 			var better = run.Deck[index].Upgraded!;

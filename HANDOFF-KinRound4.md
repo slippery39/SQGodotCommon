@@ -14,6 +14,10 @@ scars; its game (catching, the relay, levels, KIN) is gone.
   the fight, auras, chains, energy, the passives), `EmberCards` (29 cards, 4 boss monsters), the UI
   (SPELL POWER and auras over the energy orb; BURN n on a foe; the tick floats), 24 tests in
   `PartyTests.Ember.cs`. The as-built notes are under the Ember draft in `KinFamiliesPlan.md`.
+- **GROVE DRAFT 1 IS BUILT** (2026-09-29): `PartyGrove` (GROW as +Power for the fight, Thorns for
+  the turn or the fight, Grove Block, Graft, Harvest, the auras, the passives), `GroveCards` (4 tokens,
+  29 cards, 4 boss monsters), tokens as `Ally.IsToken` apart from fading, 29 tests in
+  `PartyTests.Grove.cs` (333 green). As-built notes under the Grove draft in `KinFamiliesPlan.md`.
 
 ## 1. The game now, in one paragraph
 
@@ -69,8 +73,10 @@ a rare-led card. **Springs heal 30% or upgrade a card to its + version.**
 
 ## 5. Next
 
-1. **The family drafts** (`KinFamiliesPlan.md`, round 4): ~~Ember~~ (built) and Grove (Rooted, Thorns, Block → damage, Growth — never cheap to do both), 5 monsters each + 3
-   colourless, every card with a +. Interview-led; the bridges between sub-mechanics are the finds.
+1. **The family drafts** (`KinFamiliesPlan.md`, round 4): Ember and Grove are BUILT; next are the
+   **3 colourless monsters** (and their cards), interview-led.
+   **Playtest 2026-09-30**: Grove walled a whole act (Rooted now lasts one extra turn; THORNWALL
+   gone); Spell Surge now costs 3, rare. Both families still too easy — a foe difficulty pass next.
 2. Then re-tune with `party-sim` per region and per starter; the 50% target and even losses are in
    `PartySim.Target`.
 3. Regions 3–5 still reuse region 2's bosses and elites; their exams are undesigned.

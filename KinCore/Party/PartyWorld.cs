@@ -372,9 +372,6 @@ public static class PartyWorld
 		Trait = "HUSH: your first card each turn costs 1 more.",
 		Components = [new FirstCardCost { Amount = 1 }],
 		Family = Family.Grove,
-		CaughtPassive = "SPORES",
-		CaughtRule = "When a token of yours falls: draw a card and gain 1 energy.",
-		CaughtAbilities = [new Spores()],
 	};
 
 	// ===== SUMMON (round one)
@@ -396,9 +393,6 @@ public static class PartyWorld
 	) with
 	{
 		Family = Family.Grove,
-		CaughtPassive = "NURSERY",
-		CaughtRule = "Tokens you summon while it stands have GROW (+1 Power, +2 HP each turn).",
-		CaughtAbilities = [new Nursery()],
 	};
 
 	/// <summary>**Howler — caught: the Summon engine.** Every token you summon arrives stronger.</summary>
@@ -410,9 +404,6 @@ public static class PartyWorld
 	) with
 	{
 		Family = Family.Grove,
-		CaughtPassive = "ALPHA",
-		CaughtRule = "Your tokens arrive with +2 HP and +1 Power, and attack the front each round.",
-		CaughtAbilities = [new TokenBoost { Hp = 2, Power = 1 }, new Alpha()],
 	};
 
 	/// <summary>

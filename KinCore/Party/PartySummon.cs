@@ -4,10 +4,9 @@ using ImmutableGameObjects;
 namespace KinCore.Party;
 
 /// <summary>
-/// **A TOKEN, as summoned: a simple creature that FADES** (KinJam.md: tokens fade, so free bodies
-/// cannot fill the empty columns and undo trainer health). It takes a column, steps and swaps like
-/// any monster, cannot be caught or healed, never counts toward losing, and is gone after
-/// `FadesIn` of your turn starts.
+/// **A TOKEN, as summoned** — wall, fuel and attacker (Grove draft 1). It takes a place in your line,
+/// can be attacked with, never counts toward losing, and is gone after `FadesIn` of your turn starts —
+/// or, at 0, stays until it falls.
 /// </summary>
 public record TokenTemplate(PartyCompanion Creature, int FadesIn);
 
@@ -20,14 +19,11 @@ public record SummonTokenAction : CardStep
 	public TokenTemplate Token { get; init; } = null!;
 	public int Count { get; init; } = 1;
 
-	/// <summary>
-	/// **Dropped on your FRONT — where the token will stand.** Lighting every place of your line
-	/// promised a choice of place the summon does not give.
-	/// </summary>
+	/// <summary>A token always arrives at your FRONT — there is no place to choose, so no target.</summary>
+	public override bool NeedsTarget => false;
+
 	public override string? Refusal(GameState s, int space, bool foeRow) =>
-		foeRow || space != 0 ? "Drop it on your front: that is where it arrives"
-		: s.LivingAllies().Count() >= PartyBattle.MaxLine ? "Your line is full"
-		: null;
+		s.LivingAllies().Count() >= PartyBattle.MaxLine ? "Your line is full" : null;
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -45,7 +41,7 @@ public record TokensAttackAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var events = ImmutableList<GameEvent>.Empty;
-		foreach (var token in s.LivingAllies().Where(a => a.FadesIn > 0).ToList())
+		foreach (var token in s.LivingAllies().Where(a => a.IsToken).ToList())
 		{
 			if (s.GetParty().IsOver || s.GetObject(token.Id) is not Ally { IsDown: false } now)
 				continue;
@@ -61,7 +57,7 @@ public record TokensAttackAction : GameAction
 public record SacrificeTokenAction : CardStep
 {
 	public override string? Refusal(GameState s, int space, bool foeRow) =>
-		!foeRow && s.AllyAt(space) is { FadesIn: > 0 } ? null : "Drop it on one of your tokens";
+		!foeRow && s.AllyAt(space) is { IsToken: true } ? null : "Drop it on one of your tokens";
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -115,10 +111,11 @@ public static class PartySummon
 			Power = c.Power + boost.Sum(b => b.Power),
 			Pattern = c.Moves,
 			FadesIn = token.FadesIn,
+			IsToken = true,
 			Family = c.Family,
 			Components = [.. c.Abilities],
 		};
-		return PartyState.InsertAtFront(s, PartyFamilies.Nurture(s, ally), foes: false);
+		return PartyState.InsertAtFront(s, ally, foes: false);
 	}
 
 	/// <summary>A wild creature's brood: an uncatchable foe at the FRONT of their line, fading like any token.</summary>
@@ -150,10 +147,12 @@ public static class PartySummon
 		);
 	}
 
-	/// <summary>A token fell (hit, or offered): the Sprout's shield goes to the ones ahead of and behind it.</summary>
+	/// <summary>A token fell (hit, or offered): a Log draws; a shield goes to the ones ahead of and behind it.</summary>
 	public static GameState TokenFainted(GameState s, Ally token)
 	{
 		s = PartyFamilies.TokenFell(s);
+		if (token.GetComponents<DrawOnFall>().Sum(d => d.Count) is > 0 and var draw)
+			(s, _) = StartTurnAction.DrawCards(s, draw);
 		var shield = token.GetComponents<FaintShield>().Sum(f => f.Amount);
 		if (shield == 0)
 			return s;
@@ -183,7 +182,7 @@ public static class PartySummon
 				c.Id,
 				c with
 				{
-					// Never to 0: 0 means a REAL monster, and a real one falling calls the bench.
+					// Never to 0: 0 means it never fades (a lasting token, a boss's minion).
 					FadesIn = Math.Max(1, c.FadesIn - 1),
 					Hp = c.FadesIn == 1 ? 0 : c.Hp,
 				}

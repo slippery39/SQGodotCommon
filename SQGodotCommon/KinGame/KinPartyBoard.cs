@@ -175,13 +175,21 @@ public partial class KinPartyBoard : Node2D
 			if (_captureScreen is { } screen)
 				GetTree().CreateTimer(0.5).Timeout += () =>
 				{
-					if (screen == "spring")
+					if (screen is "spring" or "spring-full")
 					{
 						// Placed on the route's first spring, not walked: its choice waits.
+						// `spring-full` adds the family's whole pool first — the upgrade row that overflows.
 						Change(r =>
 						{
 							var route = r.EnterRoute();
 							var spring = route.Route!.Nodes.First(n => n.Kind == NodeKind.Rest);
+							if (screen == "spring-full")
+								route = route with
+								{
+									Deck = route.Deck.AddRange(
+										PartyContent.Rewards.Where(c => c.Family == route.Family)
+									),
+								};
 							return route with { NodeId = spring.Id };
 						});
 						return;
@@ -517,9 +525,11 @@ public partial class KinPartyBoard : Node2D
 		Settle(state, events);
 	}
 
+	private const string NoTargetHint = " needs no target: drop it anywhere on the field.";
+
 	private const string HowToPlay =
-		"Drag a card onto a monster (or a foe). The first attack on each monster each turn fires its "
-		+ "bonus. At END TURN the foes act, from the back.";
+		"Drag a card onto its target — or anywhere on the field if it needs none. The first attack on "
+		+ "each monster each turn fires its bonus. At END TURN the foes act, from the back.";
 
 	/// <summary>The cell the last card was dropped on — the card's name rises off it.</summary>
 	private Control _lastDrop;
@@ -527,6 +537,17 @@ public partial class KinPartyBoard : Node2D
 	/// <summary>Returns null when the card played, or the engine's refusal — the hand shows it.</summary>
 	private string TryPlay(int cardId, int? drop)
 	{
+		// **No target needed: it plays where it lands** (MTG's `SpellNeedsTargets` false → cast on drop).
+		if (_state.GetObject(cardId) is KinCard { } untargeted && !untargeted.NeedsTarget())
+		{
+			var free = new PlayPartyCardAction { CardId = cardId };
+			if (free.ValidateAdd(_state) is { IsValid: false } refused)
+				return refused.Reason;
+			_lastDrop = drop is { } at ? _field.At(_state, at) : null;
+			Apply(free);
+			return null;
+		}
+
 		// Nowhere takes it: say the ENGINE's reason (in deploy, "order your line first"), not a guess.
 		if (drop is null)
 			return Play(cardId, 0).ValidateAdd(_state).Reason ?? "Drop it on a monster or a foe";
@@ -798,11 +819,18 @@ public partial class KinPartyBoard : Node2D
 
 		// **Where the card under the cursor can be dropped — asked of the ENGINE, place by place, on
 		// both lines**, so the lit places can never disagree with what a drop will do.
+		// A card that needs NO target lights nothing: it plays wherever it is dropped (MTG's rule).
 		var drops = new HashSet<int>();
-		if (focus is not null)
+		if (focus is not null && focus.NeedsTarget())
+		{
 			for (var d = 0; d < PartyBattle.MaxLine * 2; d++)
 				if (Play(focus.Id, d).ValidateAdd(_state).IsValid)
 					drops.Add(d);
+		}
+		else if (focus is not null && !_state.GetParty().Deploying)
+			_hint.Text = $"{focus.Name.ToUpperInvariant()}{NoTargetHint}";
+		else if (focus is null && _hint.Text.EndsWith(NoTargetHint))
+			_hint.Text = HowToPlay;
 
 		_field.Render(
 			_state,
@@ -914,7 +942,7 @@ public partial class KinPartyBoard : Node2D
 					KinAnimator.Float(
 						_overlay,
 						_field.ViewOf(grew.AllyId),
-						$"GROW +{grew.Power}/+{grew.Hp}",
+						$"GROWS +{grew.Power}",
 						KinPalette.Family(Family.Grove).Lightened(0.4f)
 					),
 				FirstAttackEvent first => () =>

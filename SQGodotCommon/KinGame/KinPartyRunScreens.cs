@@ -262,6 +262,29 @@ public sealed partial class KinPartyRunScreens
 		return row;
 	}
 
+	/// <summary>
+	/// **A row that scrolls sideways** when its tiles outgrow the screen — the spring's upgrades ran off
+	/// it once a deck had grown (playtest, 2026-09-30). Centred while they fit.
+	/// </summary>
+	private HBoxContainer ScrollRow(float height)
+	{
+		var scroll = new ScrollContainer
+		{
+			CustomMinimumSize = new Vector2(1700, height + 24),
+			VerticalScrollMode = ScrollContainer.ScrollMode.Disabled,
+		};
+		_column.AddChild(scroll);
+		var row = new HBoxContainer
+		{
+			Alignment = BoxContainer.AlignmentMode.Center,
+			SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		row.AddThemeConstantOverride("separation", 24);
+		scroll.AddChild(row);
+		return row;
+	}
+
 	private static Label Label(string text, int size, Color colour)
 	{
 		var label = KinPalette.Text(text, size, colour);

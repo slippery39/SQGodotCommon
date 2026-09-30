@@ -95,6 +95,13 @@ public static class PartyBot
 	{
 		// Two copies of Guard do the same thing — try one.
 		foreach (var card in s.CardsIn(ZoneType.Hand).DistinctBy(c => c.Name))
+		{
+			// No target: one play, not ten identical ones.
+			if (!card.NeedsTarget())
+			{
+				yield return new PlayPartyCardAction { CardId = card.Id };
+				continue;
+			}
 			for (var space = 0; space < PartyBattle.MaxLine; space++)
 				foreach (var foeRow in new[] { false, true })
 					yield return new PlayPartyCardAction
@@ -103,6 +110,7 @@ public static class PartyBot
 						Space = space,
 						FoeRow = foeRow,
 					};
+		}
 	}
 
 	/// <summary>
