@@ -269,6 +269,33 @@ public static class KinArt
 	/// </summary>
 	public static Texture2D GuardIcon => Drawing("icons/shield");
 
+	// ===== The status symbols (the declutter pass, 2026-09-30) — game-icons.net, CC BY 3.0, each
+	// in CREDITS.md. Bone silhouettes, tinted where they are drawn.
+
+	public static Texture2D PowerIcon => Drawing("icons/power");
+	public static Texture2D SpellPowerIcon => Drawing("icons/spell_power");
+	public static Texture2D ThornsIcon => Drawing("icons/thorns");
+	public static Texture2D BurnIcon => Drawing("icons/burn");
+	public static Texture2D GrowIcon => Drawing("icons/grow");
+	public static Texture2D CrushIcon => Drawing("icons/crush");
+	public static Texture2D SpellIcon => Drawing("icons/spell");
+	public static Texture2D PassiveIcon => Drawing("icons/passive");
+	public static Texture2D AuraIcon => Drawing("icons/aura");
+	public static Texture2D ClockIcon => Drawing("icons/kin_clock");
+	public static Texture2D LifeIcon => Drawing("icons/life");
+	public static Texture2D DrawIcon => Drawing("icons/draw");
+
+	private static Texture2D _pipHit,
+		_pipMiss;
+
+	/// <summary>An intent's aim, one dot a place in your line: filled where the move lands.</summary>
+	public static Texture2D PipHit =>
+		_pipHit ??= Circle(24, 24, KinPalette.Red.Lightened(0.25f), KinPalette.Bone, 2);
+
+	public static Texture2D PipMiss =>
+		_pipMiss ??= Circle(24, 24, new Color(0, 0, 0, 0.35f), KinPalette.Bone, 2);
+	public static Texture2D EnergyIcon => Drawing("icons/energy");
+
 	private static readonly Dictionary<(int, int), Texture2D> Dashed = new();
 
 	/// <summary>

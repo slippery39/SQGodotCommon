@@ -190,9 +190,10 @@ public static class KinCardFace
 	/// a card recycled into a new hand keeps the previous card's power. Call it right after
 	/// `SetCardsDetails` / `ApplyTo`.
 	/// </summary>
-	public static void ApplyStats(CardUI2D ui, KinCard card)
+	public static void ApplyStats(CardUI2D ui, KinCard card, int spellBonus = 0)
 	{
 		var unit = card.GetComponent<UnitComponent>();
+		IconText(ui, card, spellBonus);
 
 		// **Re-centre the art window, per card.** A Sprite2D draws its texture centred on its own
 		// position, so a taller art texture alone would grow upward into the name and downward into
@@ -241,6 +242,66 @@ public static class KinCardFace
 		// No card belongs to a monster any more (monster decks dropped, 2026-09-28).
 		if (ui.FindChild(MedallionName, true, false) is Sprite2D medallion)
 			medallion.Texture = null;
+	}
+
+	private const string IconTextName = "KinIconText";
+
+	/// <summary>
+	/// **A basic card says it in SYMBOLS** (the declutter pass, 2026-09-30) — a rich-text overlay ON
+	/// THIS INSTANCE, laid exactly over the shared rules box (never MTG's scene), shown when
+	/// `KinCardIcons` can say the whole card; the words' label is then made invisible, not emptied,
+	/// so the shared fitter and `Details` are untouched. Per card: cards in the fan are recycled.
+	/// </summary>
+	private static void IconText(CardUI2D ui, KinCard card, int spellBonus)
+	{
+		if (ui.FindChild("RulesTextLabel", true, false) is not Label rules)
+			return;
+		var fontSize = rules.LabelSettings?.FontSize ?? Pt(22);
+		var line = KinCardIcons.Line(card, spellBonus, (int)(fontSize * 1.5f));
+
+		var rich = rules.GetParent().GetNodeOrNull<RichTextLabel>(IconTextName);
+		if (rich is null && line is not null)
+		{
+			rich = new RichTextLabel
+			{
+				Name = IconTextName,
+				BbcodeEnabled = true,
+				ScrollActive = false,
+				AutowrapMode = TextServer.AutowrapMode.WordSmart,
+				VerticalAlignment = VerticalAlignment.Center,
+				MouseFilter = Control.MouseFilterEnum.Ignore,
+			};
+			rules.GetParent().AddChild(rich);
+		}
+		if (rich is not null)
+		{
+			rich.Visible = line is not null;
+			rich.AnchorLeft = rules.AnchorLeft;
+			rich.AnchorRight = rules.AnchorRight;
+			rich.AnchorTop = rules.AnchorTop;
+			rich.AnchorBottom = rules.AnchorBottom;
+			rich.OffsetLeft = rules.OffsetLeft;
+			rich.OffsetRight = rules.OffsetRight;
+			rich.OffsetTop = rules.OffsetTop;
+			rich.OffsetBottom = rules.OffsetBottom;
+			rich.AddThemeFontSizeOverride("normal_font_size", (int)(fontSize * 1.35f));
+			if (rules.LabelSettings?.Font is { } font)
+				rich.AddThemeFontOverride("normal_font", font);
+			rich.AddThemeColorOverride("default_color", KinCardKit.Ink);
+			rich.Text = line ?? "";
+		}
+		rules.SelfModulate = line is null ? Colors.White : new Color(1, 1, 1, 0);
+	}
+
+	/// <summary>
+	/// **"Drop on a foe:" goes** — the lit drop places say where a card goes (the declutter pass).
+	/// </summary>
+	private static string WithoutDropOn(string text)
+	{
+		const string drop = "Drop on a foe: ";
+		return text.StartsWith(drop) && text.Length > drop.Length
+			? char.ToUpperInvariant(text[drop.Length]) + text[(drop.Length + 1)..]
+			: text;
 	}
 
 	/// <summary>
@@ -379,7 +440,9 @@ public static class KinCardFace
 			// no effects and no tags, and this returned the empty string — so `Description`, which is
 			// authored for every card in the game, was displayed nowhere at all. It reads as a font
 			// bug and is not one: there was no text to size.
-			RulesText = boosted ? Boost(RulesTextFor(card), spellBonus) : RulesTextFor(card),
+			RulesText = WithoutDropOn(
+				boosted ? Boost(RulesTextFor(card), spellBonus) : RulesTextFor(card)
+			),
 			// TOUGHNESS ONLY — power is drawn beside the sword at bottom-left. See StyleStats.
 			PowerToughness = unit is null ? "" : unit.Toughness.ToString(),
 

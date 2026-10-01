@@ -223,18 +223,19 @@ public sealed class KinRelayField
 
 		// **Round 4: a monster has no move — its badge is its FIRST-ATTACK bonus**, lit until the first
 		// attack card on it this turn spends it.
-		var (move, icon) =
-			ally.GetComponent<FirstAttack>() is not { } bonus ? ("", null)
-			: PartyMonsters.BonusReady(ally)
-				? ($"1st: {KinMoveText.Bonus(bonus)}", KinArt.AttackIcon)
-			: ("attacked", null);
-		var stats =
-			$"POW {ally.Power + ally.BonusPower}"
-			+ (ally.SpellPower > 0 ? $" · SP {ally.SpellPower}" : "");
+		// Spent (or none): no badge at all — "attacked" was a word for an absence.
+		var (move, icon2, tint2) =
+			ally.GetComponent<FirstAttack>() is { } bonus && PartyMonsters.BonusReady(ally)
+				? KinMoveText.BonusSymbol(bonus)
+				: ("", null, KinPalette.Bone);
+		var icon = icon2 is null && move.Length == 0 ? null : KinArt.AttackIcon;
 
 		return new CreatureLook(
 			move,
 			icon,
+			icon2,
+			tint2,
+			[],
 			Art(ally.Name, colour.Lightened(0.45f), hostile: false),
 			KinArt.Sprite(ally.Name) is not null,
 			FacesLeft: false,
@@ -247,17 +248,55 @@ public sealed class KinRelayField
 			ally.Hp,
 			ally.MaxHp,
 			colour.Lightened(0.25f),
-			Join(
-				FamilyWord(ally.Family),
+			ally.Block,
+			PartyFamilies.RootedOf(s, ally) > 0,
+			Chips(
 				// A token's Power matters too (Grove draft 1: tokens attack).
-				stats,
-				ally.Block > 0
-					? $"BLOCK {ally.Block}" + (ally.Rooted > 0 ? $" ({ally.Rooted} ROOTED)" : "")
-					: "",
-				ally.IsToken ? "TOKEN" + (ally.FadesIn > 0 ? $" · FADES IN {ally.FadesIn}" : "")
-					: ally.BonusThorns > 0 ? $"THORNS {ally.TotalThorns}"
-					: ally.Passive
+				new Chip(
+					KinArt.PowerIcon,
+					$"{ally.Power + ally.BonusPower}",
+					KinPalette.Bone,
+					$"Power {ally.Power + ally.BonusPower}: {KinSymbols.Power.Meaning}"
+				),
+				ally.SpellPower > 0
+					? new Chip(
+						KinArt.SpellPowerIcon,
+						$"{ally.SpellPower}",
+						EmberTint,
+						$"Spell Power {ally.SpellPower}: it adds this to your team's {KinSymbols.SpellPower.Name}."
+					)
+					: null,
+				ally.TotalThorns > 0
+					? new Chip(
+						KinArt.ThornsIcon,
+						$"{ally.TotalThorns}",
+						GroveTint,
+						$"Thorns {ally.TotalThorns}: {KinSymbols.Thorns.Meaning}"
+					)
+					: null,
+				ally.IsToken
+					? ally.FadesIn > 0
+						? new Chip(
+							KinArt.ClockIcon,
+							$"{ally.FadesIn}",
+							KinPalette.Bone,
+							$"A token that fades in {ally.FadesIn} turn{(ally.FadesIn == 1 ? "" : "s")}."
+						)
+						: new Chip(KinArt.GrowIcon, "", GroveTint, KinSymbols.Token.Line)
+					: null,
+				!ally.IsToken && ally.Passive.Length > 0
+					? new Chip(
+						KinArt.PassiveIcon,
+						"",
+						KinPalette.Gold,
+						$"{ally.Passive}: {ally.PassiveRule}"
+					)
+					: null
 			),
+			BlockTip(s, ally),
+			ally.GetComponent<FirstAttack>() is { } firstBonus && PartyMonsters.BonusReady(ally)
+				? $"First attack this turn: {firstBonus.Text}."
+				: "",
 			drop is not null ? $"▲ {drop.Name.ToUpperInvariant()} HERE"
 				: loses > 0 ? $"−{loses}"
 				: "",
@@ -270,14 +309,25 @@ public sealed class KinRelayField
 		var intent = foe.Current;
 		var drop = ctx.Drops.Contains(PartyBattle.MaxLine + foe.Position) ? ctx.Focus : null;
 		var loses = ctx.Forecast.GetValueOrDefault(foe.Id);
-		var (move, icon) =
-			foe.Staggered ? ("staggered", null)
+		var (move, icon, icon2) =
+			foe.Staggered ? ("dazed", null, null)
 			: intent.Kind == IntentType.WindUp ? KinMoveText.WindingUp(foe)
 			: KinMoveText.Short(intent, intent.Amount);
+		// Where an attack lands, as the ENGINE aims it (the forecast's own account): one dot a place
+		// in your line, back to front as it stands on screen.
+		var hit =
+			intent.Kind == IntentType.Attack && !foe.Staggered
+				? s.IntentTargets(foe).ToHashSet()
+				: [];
+		var line = s.LivingAllies().OrderByDescending(a => a.Position).ToList();
+		ImmutableList<bool> pips = hit.Count > 0 ? [.. line.Select(a => hit.Contains(a.Id))] : [];
 
 		return new CreatureLook(
 			move,
 			icon,
+			icon2,
+			KinPalette.Red.Lightened(0.3f),
+			pips,
 			Art(foe.Name, KinArt.ColourFor(foe.Name), hostile: true),
 			KinArt.Sprite(foe.Name) is not null,
 			FacesLeft: true,
@@ -288,13 +338,47 @@ public sealed class KinRelayField
 			foe.Hp,
 			foe.MaxHp,
 			KinPalette.Red,
-			Join(
-				FamilyWord(foe.Family),
-				foe.Block > 0 ? $"BLOCK {foe.Block}" : "",
-				foe.Burn > 0 ? $"BURN {foe.Burn}" : "",
-				foe.OffBalance > 0 ? $"OFF-BALANCE +{foe.OffBalance}" : "",
-				foe.FadesIn > 0 ? $"FADES IN {foe.FadesIn}" : ""
+			foe.Block,
+			false,
+			Chips(
+				foe.Burn > 0
+					? new Chip(
+						KinArt.BurnIcon,
+						$"{foe.Burn}",
+						EmberTint,
+						$"Burn {foe.Burn}: {KinSymbols.Burn.Meaning}"
+					)
+					: null,
+				foe.OffBalance > 0
+					? new Chip(
+						KinArt.AttackIcon,
+						$"+{foe.OffBalance}",
+						KinPalette.Red.Lightened(0.3f),
+						$"Off-Balance: every hit on it this round deals {foe.OffBalance} more."
+					)
+					: null,
+				foe.FadesIn > 0
+					? new Chip(
+						KinArt.ClockIcon,
+						$"{foe.FadesIn}",
+						KinPalette.Bone,
+						$"Fades in {foe.FadesIn} turn{(foe.FadesIn == 1 ? "" : "s")}."
+					)
+					: null,
+				foe.Trait.Length > 0
+					? new Chip(KinArt.PassiveIcon, "", KinPalette.Red.Lightened(0.3f), foe.Trait)
+					: null
 			),
+			foe.Block > 0 ? $"Block {foe.Block}: it stops that much damage." : "",
+			foe.Staggered ? "Dazed: it loses this move."
+				: intent.Kind == IntentType.WindUp
+					? $"Winding up. Next: {KinMoveText.Says(foe.Pattern[(foe.PatternIndex + 1) % foe.Pattern.Count], foe.Pattern[(foe.PatternIndex + 1) % foe.Pattern.Count].Amount)}."
+				: KinMoveText.Says(intent, intent.Amount)
+					+ (
+						intent.Kind == IntentType.Attack
+							? ". The dots: your line, back to front; filled is hit."
+							: "."
+					),
 			drop is not null ? $"▼ {drop.Name.ToUpperInvariant()} HERE"
 				: loses > 0 ? $"−{loses}"
 				: "",
@@ -302,12 +386,33 @@ public sealed class KinRelayField
 		);
 	}
 
-	/// <summary>The family, as the status line's first word — "" for none (`KinFamiliesPlan.md`).</summary>
-	private static string FamilyWord(Family family) =>
-		family == Family.None ? "" : family.ToString().ToUpperInvariant();
+	// The palette's Ember brown read as mud at chip size over a meadow: the brighter flame orange.
+	/// <summary>A monster's Block, said with its Rooted part.</summary>
+	private static string BlockTip(GameState s, Ally ally)
+	{
+		if (ally.Block <= 0)
+			return "";
+		var rooted = PartyFamilies.RootedOf(s, ally);
+		return $"Block {ally.Block}: {KinSymbols.Block.Meaning}"
+			+ (rooted > 0 ? $" {rooted} of it is Rooted: it stays one more turn." : "");
+	}
 
-	private static string Join(params string[] parts) =>
-		string.Join(" · ", parts.Where(p => p.Length > 0));
+	/// <summary>
+	/// **The meaning of the symbol under the mouse, on whichever creature it is over** — or null.
+	/// </summary>
+	public string TipAt(GameState s, Vector2 global) =>
+		CreatureAt(s, global) is { } hit && _views.TryGetValue(hit.Creature.Id, out var view)
+			? view.TipAt(global)
+			: null;
+
+	private static readonly Color EmberTint = Color.FromHtml("#FF9A3C");
+	private static readonly Color GroveTint = KinPalette.Family(Family.Grove).Lightened(0.35f);
+
+	/// <summary>
+	/// **The status row** — the ones that apply, in a fixed order. No family word: the creature's
+	/// colour already says it, and a foe's family means nothing to you (the declutter pass).
+	/// </summary>
+	private static ImmutableList<Chip> Chips(params Chip?[] chips) => [.. chips.OfType<Chip>()];
 
 	/// <summary>
 	/// A standing sprite if one exists, else the portrait drawing, else the silhouette in the
@@ -363,11 +468,41 @@ public static class KinMoveText
 	/// **A wind-up's badge shows the move it is winding up to** — "next: 18 → front" — so the big
 	/// blow is on screen a whole turn before it lands.
 	/// </summary>
-	public static (string Text, Texture2D Icon) WindingUp(Foe foe)
+	/// <summary>A wind-up: the clock, then the blow it is winding up to.</summary>
+	public static (string Text, Texture2D Icon, Texture2D Icon2) WindingUp(Foe foe)
 	{
 		var next = foe.Pattern[(foe.PatternIndex + 1) % foe.Pattern.Count];
-		var (text, icon) = Short(next, next.Amount);
-		return ($"next: {text}", icon);
+		var (text, icon, _) = Short(next, next.Amount);
+		return (text, KinArt.ClockIcon, icon);
+	}
+
+	/// <summary>
+	/// **A first-attack bonus as a symbol and a number** — "+4" beside a shield, not "1st: +4 block".
+	/// The first thing it gives; the inspector has every word.
+	/// </summary>
+	public static (string Text, Texture2D Icon, Color Tint) BonusSymbol(FirstAttack b)
+	{
+		var ember = KinPalette.Family(Family.Ember).Lightened(0.4f);
+		var grove = KinPalette.Family(Family.Grove).Lightened(0.4f);
+		return b switch
+		{
+			{ Damage: > 0 } => ($"+{b.Damage}", KinArt.PowerIcon, KinPalette.Bone),
+			{ Block: > 0 } => ($"+{b.Block}", KinArt.GuardIcon, KinPalette.Bone),
+			{ Rooted: > 0 } => ($"+{b.Rooted}", KinArt.GuardIcon, grove),
+			{ Thorns: > 0 } => ($"+{b.Thorns}", KinArt.ThornsIcon, grove),
+			{ SpellPower: > 0 } => ($"+{b.SpellPower}", KinArt.SpellPowerIcon, ember),
+			{ FightSpellPower: > 0 } => (
+				$"+{b.FightSpellPower}",
+				KinArt.SpellPowerIcon,
+				KinPalette.Gold
+			),
+			{ Burn: > 0 } => ($"{b.Burn}", KinArt.BurnIcon, ember),
+			{ Energy: > 0 } => ($"+{b.Energy}", KinArt.EnergyIcon, KinPalette.Gold),
+			{ Draw: > 0 } => ($"+{b.Draw}", KinArt.DrawIcon, KinPalette.Bone),
+			{ Grow: > 0 } => ($"+{b.Grow}", KinArt.PowerIcon, grove),
+			{ Summons: { } t } => ("", KinArt.GrowIcon, grove),
+			_ => ("", null, KinPalette.Bone),
+		};
 	}
 
 	/// <summary>
@@ -375,24 +510,26 @@ public static class KinMoveText
 	/// mockup has it. The move's NAME is dropped here (it did not fit a place at a readable size) and
 	/// kept in the inspector and on the starter screen, which use <see cref="Says"/>.
 	/// </summary>
-	public static (string Text, Texture2D Icon) Short(Intent intent, int amount) =>
+	public static (string Text, Texture2D Icon, Texture2D Icon2) Short(Intent intent, int amount) =>
 		intent.Kind switch
 		{
+			// Where it lands is the badge's dots, not a word; CRUSH is its cracked shield.
 			IntentType.Attack => (
-				$"{amount}{(intent.Crushes ? " crush" : "")} → {Where(intent.Target)}"
-					+ (intent.Steals ? " + steal" : ""),
-				KinArt.AttackIcon
+				$"{amount}" + (intent.Steals ? " +steal" : ""),
+				intent.Crushes ? KinArt.CrushIcon : KinArt.AttackIcon,
+				null
 			),
 			IntentType.Block => (
 				$"+{amount}" + (intent.Target == Aim.Ahead ? " ahead" : ""),
-				KinArt.GuardIcon
+				KinArt.GuardIcon,
+				null
 			),
-			IntentType.Move => (amount < 0 ? "forward" : "back", null),
-			IntentType.Shove => ("swap front two", null),
-			IntentType.Echo => ("echo spell", null),
-			IntentType.Summon => ($"summon {intent.Summons?.Creature.Name}", null),
-			IntentType.Pull => ("back → front", null),
-			_ => (intent.Name, null),
+			IntentType.Move => (amount < 0 ? "forward" : "back", null, null),
+			IntentType.Shove => ("swap", null, null),
+			IntentType.Echo => ("echo", null, null),
+			IntentType.Summon => ($"+{intent.Summons?.Creature.Name}", null, null),
+			IntentType.Pull => ("pull", null, null),
+			_ => (intent.Name, null, null),
 		};
 
 	/// <summary>Where a move lands, in a word or two.</summary>

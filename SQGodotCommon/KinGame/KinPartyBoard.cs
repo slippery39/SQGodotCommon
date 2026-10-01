@@ -60,10 +60,14 @@ public partial class KinPartyBoard : Node2D
 	/// <summary>The team's SPELL POWER and your auras, over the orb — hidden when there are none.</summary>
 	private Label _spellPower;
 
+	/// <summary>Spell Power's symbol, left of its number.</summary>
+	private TextureRect _spellIcon;
+
+	/// <summary>The auras in play: a symbol and a short name each, over the Spell Power.</summary>
+	private VBoxContainer _auras;
+
 	private Label _hint;
-	private Label _log;
 	private Button _endTurn;
-	private readonly List<string> _logLines = new();
 	private CanvasLayer _layer;
 
 	/// <summary>Full-rect, never takes a click: where floating numbers live so no container clips them.</summary>
@@ -144,7 +148,8 @@ public partial class KinPartyBoard : Node2D
 							: parts[1].StartsWith('f')
 								? PartyBattle.MaxLine + int.Parse(parts[1][1..])
 							: int.Parse(parts[1]);
-						Report(TryPlay(card, at) ?? "played");
+						if (TryPlay(card, at) is { } refused)
+							Report(refused);
 					};
 			}
 			if (
@@ -158,6 +163,33 @@ public partial class KinPartyBoard : Node2D
 			// (practice scenarios open deploying, and deploy refuses them all).
 			if (arg == "--fight")
 				GetTree().CreateTimer(0.3).Timeout += OnEndTurn;
+			// Capture-only: `--mouse=x,y` stands in for the cursor (canvas pixels), so a tip can be seen.
+			if (
+				arg.StartsWith("--mouse=")
+				&& arg["--mouse=".Length..].Split(',') is [var mx, var my]
+			)
+			{
+				var at = _captureMouse = new Vector2(float.Parse(mx), float.Parse(my));
+				// One real motion event too, so a native tooltip (the run screens) can open.
+				GetTree().CreateTimer(0.9).Timeout += () =>
+					GetViewport()
+						.PushInput(
+							new InputEventMouseMotion
+							{
+								Position = at.Value,
+								GlobalPosition = at.Value,
+							},
+							true
+						);
+			}
+			if (
+				arg.StartsWith("--hover-card=")
+				&& int.TryParse(arg["--hover-card=".Length..], out var hc)
+			)
+				_captureHoverCard = hc;
+			// Capture-only: `--howto` opens the ? panel.
+			if (arg == "--howto")
+				GetTree().CreateTimer(0.6).Timeout += ToggleHowTo;
 		}
 
 		_practice |= Practice;
@@ -358,7 +390,6 @@ public partial class KinPartyBoard : Node2D
 		_town.Hide();
 		_hand.SetVisible(true);
 		_selectedAllyId = 0;
-		_logLines.Clear();
 		_state = _run.StartBattle();
 		Render(ImmutableList<GameEvent>.Empty);
 	}
@@ -475,7 +506,6 @@ public partial class KinPartyBoard : Node2D
 		_scenario = index;
 		_practicePicker.Selected = index;
 		_selectedAllyId = 0;
-		_logLines.Clear();
 		_state = PartyBattleFactory.Create(
 			PartyContent.Scenarios[index],
 			(int)GD.RandRange(1, 9999)
@@ -506,7 +536,7 @@ public partial class KinPartyBoard : Node2D
 	private void Settle(GameState state, ImmutableList<GameEvent> events)
 	{
 		_state = state;
-		_hint.Text = HowToPlay;
+		_hint.Text = "";
 		Render(events);
 
 		if (_state.GetPendingChoice() is { } choice)
@@ -525,11 +555,45 @@ public partial class KinPartyBoard : Node2D
 		Settle(state, events);
 	}
 
-	private const string NoTargetHint = " needs no target: drop it anywhere on the field.";
+	/// <summary>
+	/// **The team's Spell Power and the auras in play, as symbols** — a swirl and a number; an aura's
+	/// mark and its name (the declutter pass, 2026-09-30).
+	/// </summary>
+	private void ShowTeamStatus()
+	{
+		var spell = _state.SpellBonus();
+		_spellIcon.Visible = _spellPower.Visible = spell > 0;
+		_spellPower.Text = spell.ToString();
 
-	private const string HowToPlay =
-		"Drag a card onto its target — or anywhere on the field if it needs none. The first attack on "
-		+ "each monster each turn fires its bonus. At END TURN the foes act, from the back.";
+		foreach (var child in _auras.GetChildren())
+			child.QueueFree();
+		foreach (var aura in _state.Auras())
+		{
+			var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+			row.AddThemeConstantOverride("separation", 6);
+			row.AddChild(
+				new TextureRect
+				{
+					ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+					StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+					Texture = KinArt.AuraIcon,
+					Modulate = KinPalette.Gold,
+					CustomMinimumSize = new Vector2(30, 30),
+					MouseFilter = Control.MouseFilterEnum.Ignore,
+				}
+			);
+			row.AddChild(Outlined(aura.Name.ToUpperInvariant(), 18, KinPalette.Bone));
+			_auras.AddChild(row);
+		}
+	}
+
+	/// <summary>How to play — the ? panel's lines (the declutter pass: no always-on hint line).</summary>
+	private static readonly string[] HowToPlay =
+	[
+		"Drag a card onto its target. A card with no target plays anywhere on the field.",
+		"The first attack card on each monster each turn also fires its bonus.",
+		"END TURN: the foes act, from the back. A foe's badge shows its next move.",
+	];
 
 	/// <summary>The cell the last card was dropped on — the card's name rises off it.</summary>
 	private Control _lastDrop;
@@ -664,11 +728,7 @@ public partial class KinPartyBoard : Node2D
 
 		_selectedAllyId = _selectedAllyId == held.Id ? 0 : held.Id;
 		RenderRows();
-		Report(
-			_selectedAllyId != 0
-				? $"{held.Name}: {held.PassiveRule} Click a place in your line to move it there."
-				: HowToPlay
-		);
+		Report(_selectedAllyId != 0 ? "Click a place in your line to move it there." : "");
 	}
 
 	private Ally Selected() =>
@@ -698,6 +758,12 @@ public partial class KinPartyBoard : Node2D
 			Common.Cards.CardUIManager.DraggingCard
 			?? Common.Cards.CardUIManager.CurrentHoveredCard;
 		UpdateInspector(cardInPlay: ui is not null);
+		UpdateTip(
+			Common.Cards.CardUIManager.DraggingCard is not null
+				? null
+				: Common.Cards.CardUIManager.CurrentHoveredCard
+					?? (_captureHoverCard is { } n && n < _hand.Cards.Count ? _hand.Cards[n] : null)
+		);
 
 		var id = int.TryParse(ui?.Id, out var parsed) ? parsed : _captureFocusId;
 		if (id == _focusCardId)
@@ -746,47 +812,148 @@ public partial class KinPartyBoard : Node2D
 		);
 	}
 
+	// ===== Tips — what a symbol means, on hover (Shayne, 2026-10-01)
+
+	private PanelContainer _tip;
+	private RichTextLabel _tipText;
+
+	/// <summary>`--hover-card=N` only: hand card N stands in for a hovered card.</summary>
+	private int? _captureHoverCard;
+
+	/// <summary>`--mouse=x,y` only: the cursor a capture stands in for, so a hover can be seen.</summary>
+	private Vector2? _captureMouse;
+
+	private Vector2 Mouse => _captureMouse ?? GetViewport().GetMousePosition();
+
+	private void BuildTip(CanvasLayer layer)
+	{
+		_tip = new PanelContainer
+		{
+			Visible = false,
+			ZIndex = 250,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		_tip.AddThemeStyleboxOverride("panel", KinPalette.Box(KinPalette.Navy, KinPalette.Gold, 2));
+		_tipText = new RichTextLabel
+		{
+			BbcodeEnabled = true,
+			FitContent = true,
+			ScrollActive = false,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			CustomMinimumSize = new Vector2(380, 0),
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		_tipText.AddThemeFontSizeOverride("normal_font_size", 22);
+		_tipText.AddThemeFontSizeOverride("bold_font_size", 22);
+		_tipText.AddThemeColorOverride("default_color", KinPalette.Bone);
+		_tip.AddChild(_tipText);
+		layer.AddChild(_tip);
+	}
+
+	/// <summary>
+	/// **The tip for what is under the cursor**: a hovered CARD says its rules and each symbol on it;
+	/// a creature's ICON says what it is (and hides the inspector, which would cover it); the Spell
+	/// Power and aura marks say theirs. Nothing under the cursor, no tip.
+	/// </summary>
+	private void UpdateTip(Common.Cards.CardUI2D hoveredCard)
+	{
+		string text = null;
+		Vector2 at;
+		if (
+			hoveredCard is not null
+			&& int.TryParse(hoveredCard.Id, out var cardId)
+			&& _state.HasObject(cardId)
+			&& _state.GetObject(cardId) is KinCard card
+		)
+		{
+			text = CardTip(card);
+			// Above the lifted card, beside it: the card itself must stay readable.
+			at = hoveredCard.GetGlobalTransformWithCanvas().Origin + new Vector2(140, -560);
+		}
+		else
+		{
+			at = Mouse + new Vector2(24, 24);
+			if (!_screens.IsShowing)
+				text = _field.TipAt(_state, Mouse) ?? TeamStatusTip(Mouse);
+			if (text is not null)
+				_inspector.Hide();
+		}
+
+		_tip.Visible = text is not null;
+		if (text is null)
+			return;
+		if (_tipText.Text != text)
+			_tipText.Text = text;
+		_tip.ResetSize();
+		var canvas = GetViewportRect().Size;
+		_tip.Position = new Vector2(
+			Mathf.Clamp(at.X, 8, canvas.X - _tip.Size.X - 8),
+			Mathf.Clamp(at.Y, 8, canvas.Y - _tip.Size.Y - 8)
+		);
+	}
+
+	/// <summary>A card's rules in words, then each symbol it uses and what it means.</summary>
+	private static string CardTip(KinCard card)
+	{
+		var lines = new List<string>
+		{
+			$"[b]{card.Name.ToUpperInvariant()}[/b]",
+			KinCardFace.RulesTextFor(card),
+		};
+		foreach (var symbol in KinSymbols.Of(card))
+			lines.Add($"{KinSymbols.Img(symbol)} [b]{symbol.Name}[/b]: {symbol.Meaning}");
+		return string.Join("\n", lines);
+	}
+
+	/// <summary>The Spell Power and aura marks over the orb, explained.</summary>
+	private string TeamStatusTip(Vector2 mouse)
+	{
+		if (
+			_spellIcon.Visible
+			&& (
+				_spellIcon.GetGlobalRect().HasPoint(mouse)
+				|| _spellPower.GetGlobalRect().HasPoint(mouse)
+			)
+		)
+			return $"Spell Power {_state.SpellBonus()}: {KinSymbols.SpellPower.Meaning}";
+		var auras = _state.Auras().ToList();
+		var rows = _auras.GetChildren().OfType<Control>().ToList();
+		for (var i = 0; i < Mathf.Min(rows.Count, auras.Count); i++)
+			if (rows[i].GetGlobalRect().HasPoint(mouse))
+				return $"{auras[i].Name}: {KinSymbols.Aura.Meaning}";
+		return null;
+	}
+
 	private void Render(ImmutableList<GameEvent> events)
 	{
 		var party = _state.GetParty();
 		RenderRows(settleAfter: null);
 
+		// One short line (the declutter pass): the fight and the turn. The field shows the rest.
 		_title.Text = party.IsOver
 			? (party.Won ? "VICTORY" : "DEFEAT") + $" — {party.Name.ToUpperInvariant()}"
-			: $"{party.Name.ToUpperInvariant()}   ·   TURN {party.TurnNumber}";
-
-		var down = _state.Allies().Where(a => a.IsKnockedOut).Select(a => a.Name).ToList();
-		_subtitle.Text =
-			party.Description
-			+ (down.Count > 0 ? $"   Knocked out: {string.Join(", ", down)}." : "");
+			: $"TURN {party.TurnNumber}   ·   {party.Name.ToUpperInvariant()}";
+		_subtitle.Text = "";
 
 		// Borrowed energy (Surge) is a cost you pay later — it must be visible now.
 		_energy.Text = $"{party.Energy}/{party.MaxEnergy}";
-		_energyNote.Text = party.EnergyDebt > 0 ? $"−{party.EnergyDebt} NEXT TURN" : "ENERGY";
+		_energyNote.Text = party.EnergyDebt > 0 ? $"−{party.EnergyDebt} NEXT TURN" : "";
 		// Spell Power is the TEAM's total, and the auras are rules on your side (Ember, round 4).
-		_spellPower.Text = string.Join(
-			"\n",
-			new[] { _state.SpellBonus() > 0 ? $"SPELL POWER {_state.SpellBonus()}" : "" }
-				.Concat(_state.Auras().Select(a => a.Name.ToUpperInvariant()))
-				.Where(l => l.Length > 0)
-		);
+		ShowTeamStatus();
 		_energyNote.LabelSettings.FontColor =
 			party.EnergyDebt > 0 ? KinPalette.Red.Lightened(0.3f) : KinPalette.Bone;
 		_endTurn.Disabled = party.IsOver;
 		_endTurn.Text = party.Deploying ? "FIGHT" : "END TURN";
 		if (party.Deploying)
-			_hint.Text =
-				"DEPLOY: drag your monsters into order — the front stands nearest the middle. Then FIGHT.";
-
-		foreach (var line in events.Select(Describe).Where(l => l is not null))
-			Log(line);
+			_hint.Text = "Arrange your line, then FIGHT.";
 
 		// The badge shows what the card costs NOW (`CostOf`: Scrap Hammer after discards).
 		_hand.Sync(
 			[.. _state.CardsIn(ZoneType.Hand).Select(c => c with { Cost = _state.CostOf(c) })],
 			party.Energy,
 			// LIVE: a spell's numbers with the Spell Power already in.
-			c => KinCardFace.For(c, _state.SpellBonus())
+			c => KinCardFace.For(c, _state.SpellBonus()),
+			_state.SpellBonus()
 		);
 		_field.Settle(Animate(events));
 	}
@@ -827,10 +994,6 @@ public partial class KinPartyBoard : Node2D
 				if (Play(focus.Id, d).ValidateAdd(_state).IsValid)
 					drops.Add(d);
 		}
-		else if (focus is not null && !_state.GetParty().Deploying)
-			_hint.Text = $"{focus.Name.ToUpperInvariant()}{NoTargetHint}";
-		else if (focus is null && _hint.Text.EndsWith(NoTargetHint))
-			_hint.Text = HowToPlay;
 
 		_field.Render(
 			_state,
@@ -916,16 +1079,18 @@ public partial class KinPartyBoard : Node2D
 					KinAnimator.Float(
 						_overlay,
 						_field.ViewOf(block.AllyId),
-						$"+{block.Amount} BLOCK",
-						KinPalette.Bone
+						$"+{block.Amount}",
+						KinPalette.Bone,
+						KinArt.GuardIcon
 					),
 				// **The engines, seen firing** (2026-09-28: the playtest could not tell Ember ever did).
 				SpellPowerGainedEvent gained => () =>
 					KinAnimator.Float(
 						_overlay,
 						_spellPower,
-						$"+{gained.Amount} SPELL POWER",
-						KinPalette.Family(Family.Ember).Lightened(0.3f)
+						$"+{gained.Amount}",
+						KinPalette.Family(Family.Ember).Lightened(0.3f),
+						KinArt.SpellPowerIcon
 					),
 				FoeBurnedEvent burned => () =>
 				{
@@ -934,23 +1099,18 @@ public partial class KinPartyBoard : Node2D
 					KinAnimator.Float(
 						_overlay,
 						cell,
-						$"−{burned.Damage} BURN",
-						KinPalette.Family(Family.Ember).Lightened(0.3f)
+						$"−{burned.Damage}",
+						KinPalette.Family(Family.Ember).Lightened(0.3f),
+						KinArt.BurnIcon
 					);
 				},
 				GrewEvent grew => () =>
 					KinAnimator.Float(
 						_overlay,
 						_field.ViewOf(grew.AllyId),
-						$"GROWS +{grew.Power}",
-						KinPalette.Family(Family.Grove).Lightened(0.4f)
-					),
-				FirstAttackEvent first => () =>
-					KinAnimator.Float(
-						_overlay,
-						_field.ViewOf(first.AllyId),
-						$"1ST: {first.Text.ToUpperInvariant()}",
-						KinPalette.Gold
+						$"+{grew.Power}",
+						KinPalette.Family(Family.Grove).Lightened(0.4f),
+						KinArt.PowerIcon
 					),
 				FoePhaseEvent phase => () =>
 				{
@@ -962,8 +1122,9 @@ public partial class KinPartyBoard : Node2D
 					KinAnimator.Float(
 						_overlay,
 						_field.ViewOf(thorns.FoeId),
-						$"THORNS {thorns.Damage}",
-						KinPalette.Family(Family.Grove).Lightened(0.4f)
+						$"−{thorns.Damage}",
+						KinPalette.Family(Family.Grove).Lightened(0.4f),
+						KinArt.ThornsIcon
 					),
 				FoeMovedEvent moved => () =>
 					KinAnimator.Float(
@@ -994,42 +1155,16 @@ public partial class KinPartyBoard : Node2D
 		KinAnimator.Float(
 			_overlay,
 			cell,
-			damage > 0 ? $"−{damage}" : "BLOCKED",
-			damage > 0 ? KinPalette.Red : KinPalette.Bone
+			damage > 0 ? $"−{damage}" : "",
+			damage > 0 ? KinPalette.Red : KinPalette.Bone,
+			damage > 0 ? null : KinArt.GuardIcon
 		);
 	}
-
-	private string Describe(GameEvent e) =>
-		e switch
-		{
-			AllyHitEvent hit => $"{hit.By} hits {Who(hit.AllyId)} for {hit.Damage}"
-				+ (hit.Blocked > 0 ? $" ({hit.Blocked} blocked)" : ""),
-			AllyKnockedOutEvent ko => $"{Who(ko.AllyId)} is knocked out!",
-			FoeHitEvent hit => $"{Who(hit.FoeId)} takes {hit.Damage}"
-				+ (hit.Blocked > 0 ? $" ({hit.Blocked} blocked)" : ""),
-			CardPlayedEvent played => $"Played {played.CardName}",
-			FoeMovedEvent moved => $"{Who(moved.FoeId)} is moved to place {moved.To + 1}",
-			FoeStaggeredEvent staggered => $"{Who(staggered.FoeId)} is staggered",
-			CardStolenEvent stolen => $"{Who(stolen.FoeId)} steals your {stolen.CardName}",
-			CardDiscardedEvent discarded => $"Discarded {Who(discarded.CardId)}",
-			PartyBattleEndedEvent end => end.Won ? "VICTORY." : "DEFEAT.",
-			_ => null,
-		};
-
-	private string Who(int id) => _state.GetObject(id).Name;
 
 	private void Report(string text)
 	{
 		_hint.Text = text;
 		KinAnimator.Pop(_hint);
-	}
-
-	private void Log(string line)
-	{
-		_logLines.Add(line);
-		if (_logLines.Count > 6)
-			_logLines.RemoveAt(0);
-		_log.Text = string.Join("\n", _logLines);
 	}
 
 	// ===== Layout
@@ -1085,17 +1220,6 @@ public partial class KinPartyBoard : Node2D
 		column.AddChild(new Control { CustomMinimumSize = new Vector2(0, KinHandView.BandHeight) });
 		BuildCorners(layer);
 
-		// The log sits over END TURN, beside the fan: the field now spans the width (style D), and
-		// top-right it ran over the back foe's badge.
-		_log = Outlined("", 16, KinPalette.Bone);
-		_log.HorizontalAlignment = HorizontalAlignment.Left;
-		_log.VerticalAlignment = VerticalAlignment.Bottom;
-		_log.Position = new Vector2(1572, 690);
-		_log.Size = new Vector2(320, 190);
-		_log.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-		_log.Modulate = new Color(1, 1, 1, 0.8f);
-		layer.AddChild(_log);
-
 		_choice = new MtgGame.ChoicePanel();
 		AddChild(_choice);
 		_choice.Confirmed += OnChoiceConfirmed;
@@ -1126,6 +1250,7 @@ public partial class KinPartyBoard : Node2D
 		_route = new KinRouteMap(layer);
 		_town = new KinTownMap(layer);
 		_inspector = new KinPartyInspector(layer);
+		BuildTip(layer);
 	}
 
 	/// <summary>How far the backdrop is raised: ground at the feet line, sky cropped (tuned by capture).</summary>
@@ -1174,6 +1299,12 @@ public partial class KinPartyBoard : Node2D
 		_practicePicker.ItemSelected += index => StartScenario((int)index);
 		across.AddChild(_practicePicker);
 
+		// **?** — the how-to and what every symbol means (the declutter pass: no always-on hints).
+		var help = new Button { Text = "?", SizeFlagsVertical = Control.SizeFlags.ShrinkBegin };
+		StyleButton(help, 18);
+		help.Pressed += ToggleHowTo;
+		across.AddChild(help);
+
 		var menu = new Button { Text = "MENU", SizeFlagsVertical = Control.SizeFlags.ShrinkBegin };
 		StyleButton(menu, 18);
 		menu.Pressed += () => Project.GameManager.Instance.GoToMainMenu();
@@ -1182,11 +1313,91 @@ public partial class KinPartyBoard : Node2D
 		return across;
 	}
 
-	/// <summary>Esc goes back to the main menu, as the MENU button does.</summary>
+	/// <summary>Esc closes the how-to if it is open; otherwise it goes back to the main menu.</summary>
 	public override void _Input(InputEvent @event)
 	{
-		if (@event is InputEventKey { Pressed: true, Keycode: Key.Escape })
+		if (@event is not InputEventKey { Pressed: true, Keycode: Key.Escape })
+			return;
+		if (_howTo is { Visible: true })
+			_howTo.Visible = false;
+		else
 			Project.GameManager.Instance.GoToMainMenu();
+		GetViewport().SetInputAsHandled();
+	}
+
+	/// <summary>The how-to panel, built the first time it is asked for.</summary>
+	private Control _howTo;
+
+	private void ToggleHowTo()
+	{
+		_howTo ??= BuildHowTo();
+		_howTo.Visible = !_howTo.Visible;
+	}
+
+	/// <summary>
+	/// **HOW TO PLAY, and what every symbol means** — one screen, on the ? button. Everything the
+	/// battle used to say all the time (the hint line, words on every creature) lives here once.
+	/// A click anywhere closes it.
+	/// </summary>
+	private Control BuildHowTo()
+	{
+		var dim = new ColorRect { Color = new Color(0, 0, 0, 0.7f), ZIndex = 300 };
+		dim.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+		dim.GuiInput += e =>
+		{
+			if (e is InputEventMouseButton { Pressed: true })
+				dim.Visible = false;
+		};
+		_layer.AddChild(dim);
+
+		var centre = new CenterContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+		centre.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+		dim.AddChild(centre);
+		var panel = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+		panel.AddThemeStyleboxOverride(
+			"panel",
+			KinPalette.Box(KinPalette.Navy, KinPalette.Gold, 3)
+		);
+		centre.AddChild(panel);
+		var column = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+		column.AddThemeConstantOverride("separation", 10);
+		panel.AddChild(column);
+
+		column.AddChild(Outlined("HOW TO PLAY", 36, KinPalette.Gold));
+		foreach (var line in HowToPlay)
+			column.AddChild(Outlined("•  " + line, 22, KinPalette.Bone));
+
+		var grid = new GridContainer { Columns = 2, MouseFilter = Control.MouseFilterEnum.Ignore };
+		grid.AddThemeConstantOverride("h_separation", 48);
+		grid.AddThemeConstantOverride("v_separation", 8);
+		column.AddChild(grid);
+		foreach (
+			var (_, icon, tint, meaning) in KinSymbols.Legend.Select(s =>
+				(s, s.Icon, s.Tint, s.Line)
+			)
+		)
+		{
+			var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+			row.AddThemeConstantOverride("separation", 10);
+			row.AddChild(
+				new TextureRect
+				{
+					ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+					StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+					Texture = icon,
+					Modulate = tint,
+					CustomMinimumSize = new Vector2(34, 34),
+					MouseFilter = Control.MouseFilterEnum.Ignore,
+				}
+			);
+			var label = Outlined(meaning, 20, KinPalette.Bone);
+			label.HorizontalAlignment = HorizontalAlignment.Left;
+			row.AddChild(label);
+			grid.AddChild(row);
+		}
+		column.AddChild(Outlined("Click anywhere to close.", 18, new Color(KinPalette.Bone, 0.7f)));
+		dim.Visible = false;
+		return dim;
 	}
 
 	/// <summary>
@@ -1196,7 +1407,7 @@ public partial class KinPartyBoard : Node2D
 	/// </summary>
 	private Control BuildHint()
 	{
-		_hint = Outlined(HowToPlay, 20, KinPalette.Bone);
+		_hint = Outlined("", 20, KinPalette.Bone);
 		_hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 		_hint.CustomMinimumSize = new Vector2(1, 0);
 		return _hint;
@@ -1228,12 +1439,29 @@ public partial class KinPartyBoard : Node2D
 		_energy.Position = new Vector2(10, 40);
 		_energy.Size = new Vector2(orb, 60);
 		disc.AddChild(_energy);
-		_spellPower = Outlined("", 26, Color.FromHtml("#FF9A3C"));
-		_spellPower.Position = new Vector2(28, canvas.Y - 316);
-		_spellPower.Size = new Vector2(orb + 40, 36);
-		// Auras stack as more lines: it grows UP, away from the energy orb.
-		_spellPower.GrowVertical = Control.GrowDirection.Begin;
-		_spellPower.VerticalAlignment = VerticalAlignment.Bottom;
+		_spellIcon = new TextureRect
+		{
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+			Texture = KinArt.SpellPowerIcon,
+			Modulate = Color.FromHtml("#FF9A3C"),
+			Position = new Vector2(24, canvas.Y - 326),
+			Size = new Vector2(52, 52),
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		layer.AddChild(_spellIcon);
+		_auras = new VBoxContainer
+		{
+			Position = new Vector2(28, canvas.Y - 520),
+			Size = new Vector2(220, 196),
+			Alignment = BoxContainer.AlignmentMode.End,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		layer.AddChild(_auras);
+		_spellPower = Outlined("", 38, Color.FromHtml("#FF9A3C"));
+		_spellPower.HorizontalAlignment = HorizontalAlignment.Left;
+		_spellPower.Position = new Vector2(80, canvas.Y - 324);
+		_spellPower.Size = new Vector2(orb, 48);
 		layer.AddChild(_spellPower);
 
 		_energyNote = Outlined("ENERGY", 16, KinPalette.Bone);

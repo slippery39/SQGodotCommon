@@ -91,6 +91,9 @@ public sealed class KinHandView
 	/// </summary>
 	public void SetVisible(bool visible) => _hand.Visible = visible;
 
+	/// <summary>The fan's cards, in fan order — for a capture standing in for a hover.</summary>
+	public IReadOnlyList<CardUI2D> Cards => _hand.GetCards();
+
 	private void OnCardDropped(Hand2D.DragEndContext context)
 	{
 		var card = context.CardUI2D;
@@ -135,7 +138,8 @@ public sealed class KinHandView
 	public void Sync(
 		IReadOnlyList<KinCard> cards,
 		int energy,
-		Func<KinCard, InternalCardUI2D.Details> face = null
+		Func<KinCard, InternalCardUI2D.Details> face = null,
+		int spellBonus = 0
 	)
 	{
 		face ??= KinCardFace.For;
@@ -167,7 +171,7 @@ public sealed class KinHandView
 		// AFTER the details: power lives on a node the shared `Details` does not know about, and a
 		// card recycled into a new hand would otherwise keep the last card's number.
 		foreach (var ui in inFanOrder)
-			KinCardFace.ApplyStats(ui, wanted[ui.Id]);
+			KinCardFace.ApplyStats(ui, wanted[ui.Id], spellBonus);
 
 		// Affordability is shown by dimming rather than by hiding: an unaffordable card is still
 		// information — it is what you are playing around this turn.

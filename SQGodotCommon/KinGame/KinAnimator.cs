@@ -116,7 +116,13 @@ public static class KinAnimator
 	/// The label is parented to <paramref name="overlay"/> rather than to the thing it describes,
 	/// so it can rise past that thing's bounds and cannot be clipped by a container.
 	/// </summary>
-	public static void Float(Control overlay, Control from, string text, Color colour)
+	public static void Float(
+		Control overlay,
+		Control from,
+		string text,
+		Color colour,
+		Texture2D icon = null
+	)
 	{
 		if (overlay is null || from is null || Instant)
 			return;
@@ -135,26 +141,48 @@ public static class KinAnimator
 			OutlineColor = new Color(0.04f, 0.06f, 0.09f),
 		};
 		label.MouseFilter = Control.MouseFilterEnum.Ignore;
-		label.ZIndex = 200;
+
+		// **A symbol and a number** (the declutter pass, 2026-09-30): "+8" beside a shield, not
+		// "+8 BLOCK". The pair floats as one row.
+		var row = new HBoxContainer
+		{
+			Alignment = BoxContainer.AlignmentMode.Center,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+			ZIndex = 200,
+			CustomMinimumSize = new Vector2(160, 0),
+		};
+		row.AddThemeConstantOverride("separation", 4);
+		if (icon is not null)
+			row.AddChild(
+				new TextureRect
+				{
+					ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+					StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+					Texture = icon,
+					CustomMinimumSize = new Vector2(44, 44),
+					Modulate = label.LabelSettings.FontColor,
+					MouseFilter = Control.MouseFilterEnum.Ignore,
+				}
+			);
+		row.AddChild(label);
 
 		// Started ABOVE the thing it came out of, not on top of it. Centred on the health bar the
 		// number sat directly over the bar's own "38 / 44" and the two were unreadable together.
 		var centre = from.GetGlobalRect().GetCenter();
-		label.Position = centre - new Vector2(60, 68);
-		label.CustomMinimumSize = new Vector2(120, 0);
-		overlay.AddChild(label);
+		row.Position = centre - new Vector2(80, 68);
+		overlay.AddChild(row);
 
-		var tween = label.CreateTween();
+		var tween = row.CreateTween();
 		tween.SetParallel();
 		tween
-			.TweenProperty(label, "position", label.Position + new Vector2(0, -54), Seconds(0.85))
+			.TweenProperty(row, "position", row.Position + new Vector2(0, -54), Seconds(0.85))
 			.SetTrans(Tween.TransitionType.Quad)
 			.SetEase(Tween.EaseType.Out);
-		tween.TweenProperty(label, "modulate:a", 0f, Seconds(0.85)).SetDelay(Seconds(0.25));
+		tween.TweenProperty(row, "modulate:a", 0f, Seconds(0.85)).SetDelay(Seconds(0.25));
 
 		// **QueueFree, and bound to the tween.** These spawn several times a turn for a whole run;
 		// left behind they are an unbounded pile of Labels on top of the board.
-		tween.Chain().TweenCallback(Callable.From(label.QueueFree));
+		tween.Chain().TweenCallback(Callable.From(row.QueueFree));
 	}
 
 	/// <summary>

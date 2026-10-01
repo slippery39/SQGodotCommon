@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Common.Cards;
 using Godot;
 using KinCore;
 using KinCore.Party;
@@ -23,20 +24,13 @@ public sealed partial class KinPartyRunScreens
 
 	public bool IsShowing => _root.Visible;
 
-	/// <summary>What each starter WANTS from the board — the one line that tells them apart.</summary>
-	private static readonly Dictionary<string, string> Wants =
-		new()
-		{
-			["Bramble"] = "Wants to be HIT",
-			["Pike"] = "Wants never to be where the hit lands",
-			["Gale"] = "Wants the FOES where it chooses",
-		};
-
 	public KinPartyRunScreens(Node parent)
 	{
 		_root = new ColorRect { Color = KinPalette.Navy, Visible = false };
 		_root.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 		_root.MouseFilter = Control.MouseFilterEnum.Stop; // nothing under it takes a click
+		// Hover any symbol on these screens for what it means (Shayne, 2026-10-01).
+		_root.Theme = KinSymbols.TooltipTheme();
 		parent.AddChild(_root);
 
 		// **A PLACE behind every screen** (style D) — the town, the region's map, the title valley —
@@ -67,33 +61,11 @@ public sealed partial class KinPartyRunScreens
 
 	public void ShowStarters(Action<PartyCompanion> choose)
 	{
-		Begin(
-			"CHOOSE YOUR STARTER",
-			"Your starter's FAMILY is the run's: the cards you are offered, and the monsters you can catch.",
-			"title"
-		);
+		Begin("CHOOSE YOUR STARTER", "", "title");
 
 		var row = Row();
 		foreach (var companion in PartyContent.Roster)
-			row.AddChild(
-				Tile(
-					KinPalette.Family(companion.Family, companion.Name),
-					KinArt.Sprite(companion.Name) ?? KinArt.Drawing(companion.Name),
-					companion.Name.ToUpperInvariant(),
-					[
-						$"{companion.Family.ToString().ToUpperInvariant()} FAMILY",
-						Wants.GetValueOrDefault(companion.Name, ""),
-						companion.Passive,
-						companion.PassiveRule,
-						companion.Abilities.OfType<FirstAttack>().FirstOrDefault() is { } bonus
-							? $"First attack each turn: {bonus.Text}."
-							: "",
-						$"HP {companion.Hp} · POW {companion.Power}",
-					],
-					new Vector2(340, 640),
-					() => choose(companion)
-				)
-			);
+			row.AddChild(MonsterTile(companion, new Vector2(340, 480), () => choose(companion)));
 	}
 
 	public void ShowBetween(
@@ -104,10 +76,7 @@ public sealed partial class KinPartyRunScreens
 		Action skip
 	)
 	{
-		Begin(
-			$"VICTORY — {beaten.ToUpperInvariant()}",
-			$"+{report.Gold} gold.   Next: {Ahead(run)}"
-		);
+		Begin($"VICTORY — {beaten.ToUpperInvariant()}", $"+{report.Gold} GOLD");
 
 		var news = new List<string>();
 		if (report.Relic is { } relic)
@@ -122,16 +91,7 @@ public sealed partial class KinPartyRunScreens
 		_column.AddChild(Label("TAKE A CARD", 28, KinPalette.Bone));
 		var row = Row();
 		foreach (var reward in run.RewardOffer())
-			row.AddChild(
-				Tile(
-					KinPalette.Family(reward.Family),
-					CardArt(reward.Name),
-					$"{reward.Name.ToUpperInvariant()}  ({reward.Cost})",
-					[KinCardFace.Tag(reward), string.Join(" ", KinRulesText.Lines(reward))],
-					new Vector2(280, 430),
-					() => take(reward)
-				)
-			);
+			row.AddChild(CardButton(reward, () => take(reward), Rarity(reward)));
 
 		var buttons = Row();
 		buttons.AddChild(Button("SKIP", skip));
@@ -140,10 +100,7 @@ public sealed partial class KinPartyRunScreens
 	/// <summary>**A boss beaten: three BOSS RELICS — keep one for the rest of the run.**</summary>
 	public void ShowRelicChoice(PartyRun run, string beaten, Action<Relic> choose, Action skip)
 	{
-		Begin(
-			$"{beaten.ToUpperInvariant()} IS BEATEN",
-			"Choose a BOSS RELIC to keep for the rest of the run. The team is healed in full."
-		);
+		Begin($"{beaten.ToUpperInvariant()} IS BEATEN", "The team is healed in full.");
 		var row = Row();
 		foreach (var relic in run.RelicChoice)
 			row.AddChild(
@@ -165,27 +122,10 @@ public sealed partial class KinPartyRunScreens
 	/// </summary>
 	public void ShowMonsterChoice(PartyRun run, Action<PartyCompanion> choose, Action skip)
 	{
-		Begin(
-			"A MONSTER JOINS YOU",
-			"Choose one to join the team for the rest of the run. Its passive shapes the cards you want."
-		);
+		Begin("A MONSTER JOINS YOU", "");
 		var row = Row();
 		foreach (var monster in run.MonsterChoice)
-			row.AddChild(
-				Tile(
-					KinPalette.Family(monster.Family, monster.Name),
-					KinArt.Sprite(monster.Name) ?? KinArt.Drawing(monster.Name),
-					monster.Name.ToUpperInvariant(),
-					[
-						$"{monster.Family.ToString().ToUpperInvariant()} FAMILY",
-						monster.Passive,
-						monster.PassiveRule,
-						$"HP {monster.Hp} · POW {monster.Power}",
-					],
-					new Vector2(340, 560),
-					() => choose(monster)
-				)
-			);
+			row.AddChild(MonsterTile(monster, new Vector2(340, 480), () => choose(monster)));
 		Row().AddChild(Button("SKIP", skip));
 	}
 
@@ -206,7 +146,7 @@ public sealed partial class KinPartyRunScreens
 	/// <summary>**The team, as one line of HP**, and the relics held.</summary>
 	private void ShowTeam(PartyRun run)
 	{
-		_column.AddChild(Label($"TEAM     GOLD {run.Gold}", 20, new Color(KinPalette.Bone, 0.8f)));
+		_column.AddChild(Label($"GOLD {run.Gold}", 20, new Color(KinPalette.Bone, 0.8f)));
 
 		// The RELICS held, by name — each one's rule is on the victory screen that paid it.
 		if (!run.Relics.IsEmpty)
@@ -246,7 +186,8 @@ public sealed partial class KinPartyRunScreens
 			child.QueueFree();
 		_scene.Texture = KinArt.RegionBackdrop(scene) ?? KinArt.RegionBackdrop("greenwood");
 		_column.AddChild(Label(title, 56, KinPalette.Gold));
-		_column.AddChild(Label(subtitle, 24, KinPalette.Bone));
+		if (subtitle.Length > 0)
+			_column.AddChild(Label(subtitle, 24, KinPalette.Bone));
 		_root.Visible = true;
 	}
 
@@ -315,6 +256,175 @@ public sealed partial class KinPartyRunScreens
 	}
 
 	/// <summary>
+	/// **A card AS ITSELF** — the hand's own face (`KinCardFace`), drawn once into an off-screen
+	/// viewport and shown as a picture (the declutter pass, 2026-09-30: one look everywhere). The
+	/// shared card listens for hover and drag through its own collision area; as a picture it takes
+	/// no input, so the button alone takes the click.
+	/// </summary>
+	private static Button CardButton(KinCard card, Action pressed, string footer = "")
+	{
+		var size = new Vector2(250, 360);
+		var button = new Button
+		{
+			CustomMinimumSize = size + new Vector2(0, footer.Length > 0 ? 36 : 0),
+		};
+		var clear = new StyleBoxEmpty();
+		button.AddThemeStyleboxOverride("normal", clear);
+		button.AddThemeStyleboxOverride("focus", clear);
+		button.AddThemeStyleboxOverride("disabled", clear);
+		button.AddThemeStyleboxOverride("hover", KinUiKit.Plate("gold", new Color(1, 1, 1, 0.35f)));
+		button.AddThemeStyleboxOverride("pressed", KinUiKit.Plate("gold", KinPalette.Gold));
+		button.Pressed += pressed;
+		button.TooltipText = KinSymbols.PlainTip(card);
+
+		var view = new SubViewport
+		{
+			Size = new Vector2I((int)size.X, (int)size.Y),
+			TransparentBg = true,
+			RenderTargetUpdateMode = SubViewport.UpdateMode.Always,
+		};
+		button.AddChild(view);
+		var ui = GD.Load<PackedScene>("res://Common/Cards/2D/Card2D/card_2d_canvasgroup.tscn")
+			.Instantiate<CardUI2D>();
+		ui.Position = size / 2;
+		ui.Scale *= 1.15f;
+		// **Filled once it is READY, not when it is made.** The button is built before the screen adds
+		// it, so the card is not in the tree yet; the shared card finds its own parts in `_Ready`, and
+		// `ApplyTo` before that threw — the whole row and the SKIP after it vanished (capture).
+		ui.Ready += () =>
+		{
+			KinCardFace.Style(ui);
+			ui.ApplyTo(KinCardFace.For(card));
+			KinCardFace.ApplyStats(ui, card);
+		};
+		view.AddChild(ui);
+
+		button.AddChild(
+			new TextureRect
+			{
+				Texture = view.GetTexture(),
+				Size = size,
+				MouseFilter = Control.MouseFilterEnum.Ignore,
+			}
+		);
+		if (footer.Length > 0)
+		{
+			var label = Label(footer, 22, KinPalette.Gold);
+			label.Position = new Vector2(0, size.Y);
+			label.Size = new Vector2(size.X, 34);
+			label.HorizontalAlignment = HorizontalAlignment.Center;
+			button.AddChild(label);
+		}
+		return button;
+	}
+
+	/// <summary>Uncommon and rare said under a card where it is chosen; nothing for a common.</summary>
+	private static string Rarity(KinCard card) =>
+		card.Rarity == KinCore.Party.Rarity.Common ? "" : card.Rarity.ToString().ToUpperInvariant();
+
+	/// <summary>
+	/// **A monster to choose** — its art, its passive (a star, its name, its one-line rule), its
+	/// first-attack bonus and its stats as symbols. No "GROVE FAMILY": the tile is in its colour.
+	/// </summary>
+	private static Button MonsterTile(PartyCompanion monster, Vector2 size, Action pressed)
+	{
+		var bonus = monster.Abilities.OfType<FirstAttack>().FirstOrDefault();
+		var (bonusText, bonusIcon, bonusTint) = bonus is null
+			? ("", null, KinPalette.Bone)
+			: KinMoveText.BonusSymbol(bonus);
+		return Tile(
+			KinPalette.Family(monster.Family, monster.Name),
+			KinArt.Sprite(monster.Name) ?? KinArt.Drawing(monster.Name),
+			monster.Name.ToUpperInvariant(),
+			[monster.PassiveRule],
+			size,
+			pressed,
+			[
+				[
+					new Chip(
+						KinArt.PassiveIcon,
+						monster.Passive,
+						KinPalette.Gold,
+						$"{KinSymbols.Passive.Line} {monster.Passive}: {monster.PassiveRule}"
+					),
+				],
+				bonusIcon is null
+					? []
+					:
+					[
+						new Chip(
+							KinArt.AttackIcon,
+							"",
+							KinPalette.Gold,
+							KinSymbols.FirstAttack.Line
+						),
+						new Chip(bonusIcon, bonusText, bonusTint, $"First attack: {bonus!.Text}."),
+					],
+				[
+					new Chip(
+						KinArt.LifeIcon,
+						$"{monster.Hp}",
+						KinPalette.Red.Lightened(0.3f),
+						$"Health {monster.Hp}: {KinSymbols.Health.Meaning}"
+					),
+					new Chip(
+						KinArt.PowerIcon,
+						$"{monster.Power}",
+						KinPalette.Bone,
+						$"Power {monster.Power}: {KinSymbols.Power.Meaning}"
+					),
+					.. monster.SpellPower > 0
+						? new[]
+						{
+							new Chip(
+								KinArt.SpellPowerIcon,
+								$"{monster.SpellPower}",
+								Color.FromHtml("#FF9A3C"),
+								$"Spell Power {monster.SpellPower}: it adds this to your team's Spell Power."
+							),
+						}
+						: [],
+				],
+			]
+		);
+	}
+
+	/// <summary>One row of symbols with their numbers, centred — a tile's stats.</summary>
+	private static HBoxContainer ChipRow(IEnumerable<Chip> chips)
+	{
+		var row = new HBoxContainer
+		{
+			Alignment = BoxContainer.AlignmentMode.Center,
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		row.AddThemeConstantOverride("separation", 6);
+		foreach (var chip in chips)
+		{
+			row.AddChild(
+				new TextureRect
+				{
+					ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+					StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
+					Texture = chip.Icon,
+					Modulate = chip.Tint,
+					CustomMinimumSize = new Vector2(32, 32),
+					// PASS, not Ignore: it shows its tip, and the click still reaches the tile.
+					MouseFilter = Control.MouseFilterEnum.Pass,
+					TooltipText = chip.Tip,
+				}
+			);
+			if (chip.Text.Length > 0)
+			{
+				var number = Label(chip.Text, 24, KinPalette.Bone);
+				number.MouseFilter = Control.MouseFilterEnum.Pass;
+				number.TooltipText = chip.Tip;
+				row.AddChild(number);
+			}
+		}
+		return row;
+	}
+
+	/// <summary>
 	/// A big clickable tile: the companion's colour, its portrait, a title and a few lines. A Button
 	/// with ignoring children, so the whole tile takes the click.
 	/// </summary>
@@ -324,7 +434,8 @@ public sealed partial class KinPartyRunScreens
 		string title,
 		string[] lines,
 		Vector2 size,
-		Action pressed
+		Action pressed,
+		Chip[][] chipRows = null
 	)
 	{
 		// The kit's bevelled plate, TINTED toward the tile's colour (a starter's own), so a tile is a
@@ -374,6 +485,8 @@ public sealed partial class KinPartyRunScreens
 					MouseFilter = Control.MouseFilterEnum.Ignore,
 				}
 			);
+		foreach (var chips in (chipRows ?? []).Where(r => r.Length > 0).Take(1))
+			column.AddChild(ChipRow(chips));
 		foreach (var line in lines.Where(l => l.Length > 0))
 		{
 			var label = Label(line, 20, KinPalette.Bone);
@@ -381,6 +494,8 @@ public sealed partial class KinPartyRunScreens
 			label.CustomMinimumSize = new Vector2(1, 0);
 			column.AddChild(label);
 		}
+		foreach (var chips in (chipRows ?? []).Where(r => r.Length > 0).Skip(1))
+			column.AddChild(ChipRow(chips));
 
 		return tile;
 	}

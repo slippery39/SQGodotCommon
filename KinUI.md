@@ -8,6 +8,65 @@ screen, intermission, animation, hover glossary, painted backdrop, and art for e
 Opponent in the game. The layout contract below is what it implements; the visual language section
 further down is what it looks like, and a screen that disagrees with that section is wrong.
 
+## THE DECLUTTER PASS — symbols, not sentences (interview 2026-09-30; BUILT 2026-10-01)
+
+Shayne: "Everything is very verbose, there is text everywhere. Most games use symbols to portray
+certain values … there is still a bunch of fluff text everywhere that overexplains everything." The
+audit found it on every screen (the list is in this section's history: the battle's subtitle sentence
+and always-on hint line, two text lines under every creature, word badges, a combat log, "played",
+"ENERGY", card sentences, and subtitles on every run screen — some of them stale: "monsters you can
+catch", "Wants to be HIT").
+
+| | Decided |
+|---|---|
+| Icons | **game-icons.net** (CC BY — the set our 5 already come from; every new one goes in `CREDITS.md`) |
+| A creature | **STS style**: Block as a shield + number on the left of the HP bar (Rooted a different tint); under the bar ONE row of icon + number chips (Power, Spell Power, Thorns, Burn); the passive an icon that explains itself on hover. **No family word** — on yours or the foes' |
+| Teaching | **Hover, and a ? button** — no always-on hint line, no instructional subtitles; a ? opens a one-screen how-to. A subtitle stays only where it carries information (the boss's name) |
+| Card text | **Icons for the basics** — Strike = sword 5, Guard = shield 8, Zap = bolt 8; real rules stay as short words ("Draw 2", "All foes", "Sacrifice a token"). The lit drop places say where it goes, so no "Drop on a foe:" |
+| Combat log | **Cut** — the floats show every hit; `party-sim trace` keeps the record |
+| Foe intents | **Icon + number + an aim glyph** (front, back, front two, all, weakest); CRUSH a cracked shield; the aim explained on hover |
+| Rewards, shop, spring | **The real card faces**, as in the hand — one look everywhere; price or SOLD under it |
+| Title box | **One short line**: "Turn 2 · Wild Bog Toad" (or the boss) — knocked-out monsters greyed on the field |
+
+Also: "3/3", not "3/3 ENERGY"; Spell Power as a chip; floats as icon + number; the debug "played"
+goes; first-attack badges as icon + number.
+
+**As built** (each step seen on screen):
+- **Icons**: 11 more from game-icons.net in `Art/icons/` (power, spell_power, thorns, burn, grow,
+  crush, spell, passive, aura, draw, energy), bone silhouettes tinted in code; `KinArt.*Icon`.
+- **A creature** (`KinRelayCreature`): a shield + number on the HP bar's left end (green = some
+  Rooted); one row of `Chip`s (icon + number) under the forecast, from a fixed pool of slots.
+- **Badges**: a foe's intent is [sword or CRUSH's cracked shield] [number] [one dot a place in your
+  line, back to front, filled where the ENGINE aims it — `IntentTargets`, the forecast's account, so
+  "weakest" shows exactly whom]. Our badge is [sword] [the bonus's symbol] [number]; spent, it hides.
+- **Battle chrome**: title "TURN n · NAME"; no subtitle, hint line or combat log; "3/3" alone;
+  Spell Power a swirl + number; auras a mark + name; floats an icon + number (`KinAnimator.Float`'s
+  `icon`); the hint spot now carries only refusals.
+- **Cards** (`KinCardIcons`): a card made ONLY of basic steps reads as symbols, generated from its
+  steps (never parsed from its sentence) — a `RichTextLabel` added to the instance over the shared
+  rules box, whose label is made invisible. Any card with a real rule keeps its words, without
+  "Drop on a foe:". Live Spell Power stays green.
+- **Run screens**: real card faces (`CardButton` — the hand's face drawn once into a `SubViewport`
+  and shown as a picture, so it takes no input; filled on the card's `Ready`, not before);
+  starter/monster tiles as a passive star, a first-attack row and heart/Power/Spell Power symbols;
+  every instructional subtitle gone; "TOWN: BOSS: …" and "+20 GOLD" kept.
+- **?** beside MENU: three how-to lines and every symbol's meaning; Esc or a click closes it.
+- **EVERY SYMBOL EXPLAINS ITSELF ON HOVER** (Shayne, 2026-10-01: "I should be able to at least
+  hover over the icons and see what it means"). The words live ONCE, in `KinSymbols` — the ? legend,
+  the tips and a card's panel all read it. On the field the creature view catches no mouse (card
+  hover is physics picking), so the board hit-tests: `KinRelayCreature.TipAt` → a tip at the cursor
+  (chips, the Block shield, the badge); a hovered CARD gets a panel with its rules and each symbol
+  it uses (`KinSymbols.Of`, from its steps). On the run screens the symbols are Controls with
+  `MouseFilter.Pass` and a native tooltip, themed by `KinSymbols.TooltipTheme`; a card button's
+  tooltip is the same explanation in plain text. Capture: `--mouse=x,y`, `--hover-card=N`.
+- **Not done**: knocked-out monsters greyed on the field (they still leave the line).
+
+**Build order, as planned** (each step seen on screen before the next): icons in → the creature (bar, Block,
+chips) → the battle chrome (title, hint, log, "played", energy) → intents and first-attack badges →
+the run screens (subtitles, real cards, stale text) → card text with inline icons (the riskiest:
+the shared card's rules box is a `Label`, so icons need a `RichTextLabel` added to the instance —
+never edit MTG's scene) → the ? how-to.
+
 ## The rule this doc exists to enforce
 
 > **The UI never computes a game fact. It reads one.**

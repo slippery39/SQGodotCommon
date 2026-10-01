@@ -53,11 +53,7 @@ public sealed partial class KinPartyRunScreens
 	/// <summary>**The hospital**: the team's HP, and healing everyone to full for gold.</summary>
 	private void ShowHospital(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
 	{
-		Begin(
-			"HOSPITAL",
-			$"The team healed to full — {PartyRun.HospitalPrice} gold. Nowhere else heals fully.",
-			"town"
-		);
+		Begin("HOSPITAL", "", "town");
 		ShowTeam(run);
 		var heal = Button(
 			$"HEAL EVERYONE — {PartyRun.HospitalPrice} GOLD",
@@ -72,7 +68,7 @@ public sealed partial class KinPartyRunScreens
 	/// <summary>**The shop**: three cards (each once), and paying to take a card out.</summary>
 	private void ShowShop(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
 	{
-		Begin("SHOP", $"You have {run.Gold} gold.", "town");
+		Begin("SHOP", $"GOLD {run.Gold}", "town");
 
 		var shop = Row();
 
@@ -80,25 +76,15 @@ public sealed partial class KinPartyRunScreens
 		for (var i = 0; i < cards.Count; i++)
 		{
 			var offer = i;
-			// The card's action picture (style D), as the reward screen shows it.
-			var tile = Tile(
-				run.Sold.Contains(offer) ? KinPalette.Slate : KinPalette.Family(cards[i].Family),
-				run.Sold.Contains(offer) ? null : CardArt(cards[i].Name),
-				run.Sold.Contains(offer)
-					? "SOLD"
-					: $"{cards[i].Name.ToUpperInvariant()} ({cards[i].Cost})",
-				run.Sold.Contains(offer)
-					? []
-					:
-					[
-						KinCardFace.Tag(cards[i]),
-						string.Join(" ", KinRulesText.Lines(cards[i])),
-						$"{PartyRun.CardPrice} GOLD",
-					],
-				new Vector2(260, 400),
-				() => change(r => r.BuyCard(offer))
+			// The card itself, as in the hand; its price under it, or SOLD.
+			var tile = CardButton(
+				cards[i],
+				() => change(r => r.BuyCard(offer)),
+				run.Sold.Contains(offer) ? "SOLD" : $"{PartyRun.CardPrice} GOLD"
 			);
 			tile.Disabled = !run.CanBuyCard(offer);
+			if (tile.Disabled)
+				tile.Modulate = new Color(0.55f, 0.55f, 0.6f);
 			shop.AddChild(tile);
 		}
 
@@ -116,11 +102,7 @@ public sealed partial class KinPartyRunScreens
 	/// </summary>
 	public void ShowSpring(PartyRun run, Action heal, Action<int> upgrade)
 	{
-		Begin(
-			"A SPRING",
-			$"Rest here — every monster heals {(int)(PartyRun.RestHeal * 100)}% of its max — or upgrade a card.",
-			"map"
-		);
+		Begin("A SPRING", "", "map");
 		ShowTeam(run);
 		Row().AddChild(Button($"HEAL {(int)(PartyRun.RestHeal * 100)}%", heal));
 
@@ -133,21 +115,12 @@ public sealed partial class KinPartyRunScreens
 			return;
 		}
 		_column.AddChild(Label("OR UPGRADE ONE", 24, KinPalette.Bone));
-		var row = ScrollRow(380);
+		var row = ScrollRow(370);
 		// One tile a NAME: five Strikes upgrade the same way. Still more names than fit: it scrolls.
 		foreach (var index in upgradable.DistinctBy(i => run.Deck[i].Name))
 		{
 			var better = run.Deck[index].Upgraded!;
-			row.AddChild(
-				Tile(
-					KinPalette.Family(better.Family),
-					CardArt(better.Name.TrimEnd('+')),
-					$"{better.Name.ToUpperInvariant()}  ({better.Cost})",
-					[string.Join(" ", KinRulesText.Lines(better))],
-					new Vector2(240, 380),
-					() => upgrade(index)
-				)
-			);
+			row.AddChild(CardButton(better, () => upgrade(index)));
 		}
 	}
 

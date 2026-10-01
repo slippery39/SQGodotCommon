@@ -91,8 +91,7 @@ public sealed class KinTownMap
 		_title.Text =
 			$"{run.Region.Name.ToUpperInvariant()} — TOWN {run.RegionIndex + 1} OF {run.Regions.Count}";
 		// The region's BOSS, named from the town on: the route is preparing for it.
-		_subtitle.Text =
-			$"Visit a building, then take the gate. The route ends at {run.Boss.Name.ToUpperInvariant()}.";
+		_subtitle.Text = $"BOSS: {run.Boss.Name.ToUpperInvariant()}";
 		_purse.Text = $"GOLD {run.Gold}";
 
 		foreach (var child in _places.GetChildren())

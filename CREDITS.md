@@ -37,8 +37,19 @@ The paths themselves are unchanged.
 | Life / health | `heart` (badges set) | **game-icons.net** |
 | Doom clock | `hourglass` | **Lorc** |
 | Death | `skull-crossed-bones` | **Lorc** |
+| Power (`icons/power`) | `biceps` | **Delapouite** |
+| Spell Power (`icons/spell_power`) | `magic-swirl` | **Lorc** |
+| Thorns (`icons/thorns`) | `thorny-vine` | **Lorc** |
+| Burn (`icons/burn`) | `small-fire` | **Lorc** |
+| Grow, tokens (`icons/grow`) | `sprout` | **Lorc** |
+| Crush (`icons/crush`) | `cracked-shield` | **Lorc** |
+| Spell damage (`icons/spell`) | `lightning-arc` | **Lorc** |
+| A passive (`icons/passive`) | `star-swirl` | **Lorc** |
+| An aura (`icons/aura`) | `aura` | **Lorc** |
+| Draw a card (`icons/draw`) | `card-exchange` | **Delapouite** |
+| Energy (`icons/energy`) | `energise` | **Lorc** |
 
-> Icons made by Lorc and others, available at [game-icons.net](https://game-icons.net/),
+> Icons made by Lorc, Delapouite and others, available at [game-icons.net](https://game-icons.net/),
 > licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).
 
 That line is the minimum acceptable in-game attribution. If you add more icons, add them to the

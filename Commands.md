@@ -68,7 +68,7 @@ shows the look, not that hovering triggers it); `--play=N` plays hand card N on 
 takes it, `--play=N@3` on your space 3, `--play=N@f3` on the foe's — through the drop path;
 `--snare=N` weakens the foe in space N to catchable (`PartyState.DebugWeaken`, capture harness
 only) and arms the Snare; `--inspect=N` shows the hover panel for the creature in cell N (0–4 yours, 5–9 the foe's);
-`--end-turn` ends the turn at 1.6s, to capture the foes' turn animating. The RUN (no `--scenario`):
+`--end-turn` ends the turn at 1.6s, to capture the foes' turn animating. `--howto` opens the ? panel (how to play, and every symbol). `--mouse=x,y` stands in for the cursor (canvas pixels) to see an icon's tip; `--hover-card=N` for hovering hand card N. The RUN (no `--scenario`):
 `--starter=N` skips choosing (Roster[N]) and opens in the first town; `--screen=route` sets out onto its
 route map, `route2` stands further along it (placed, not walked — a find there is not picked up),
 `town2` is the second town's map, `boss` stands at the route's end before its boss (placed, not walked), `relics` beats that boss (through `DebugEndBattle`) to show the boss-relic choice, `monsters` the boss's monster pick, `spring` stands at the route's first spring (heal or upgrade), `spring-full` the same with the family's whole pool added to the deck (the upgrade row that scrolls),
