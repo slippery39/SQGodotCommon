@@ -60,7 +60,9 @@ Moving foes is built (Gale); cross-companion "if X acted" combos are not.
 - [ ] Stall test passed?
 - [ ] Text ≤ two lines on the card, the rule said once, and TRUE to the template.
 - [ ] A test proves it FIRES — the consequence, never the construction (section 4).
-- [ ] Seen on screen (section 5).
+- [ ] **Its symbols are wired** (section 4, "Symbols"): a new step or status has an icon, a
+      meaning in `KinSymbols`, and shows on hover. Symbols first; words only where a symbol can't.
+- [ ] Seen on screen (section 5) — and HOVERED (`--hover-card=N`, `--mouse=x,y`).
 
 ## 4. Building it in code
 
@@ -84,13 +86,31 @@ Moving foes is built (Gale); cross-companion "if X acted" combos are not.
   moved: `FoeIn(s, 2).Hp`, `Named(s, "Pike").Space`. An inert card throws no error — four silent
   no-op bugs in this codebase were found only by testing the consequence.
 
+### Symbols — every new mechanic needs its wiring (the declutter pass, 2026-10-01)
+
+The UI says things with **a symbol and a number, and the words in a hover** — the default, not a
+law: when unsure, start with a symbol (`KinUI.md`, the declutter pass). The card text and the tips
+are GENERATED from a card's steps, never parsed from its sentence, so a new mechanic is silent until
+it is wired:
+- **A new `CardStep` / action**: if it is basic (one number, one target), add its case to
+  `KinCardIcons.Part` so a card made of it reads as symbols; otherwise the card keeps its words
+  (fine — but its sentence must still be short). Add it to `KinSymbols.Of` so a hovered card
+  explains it — **a step missing there is a card whose hover panel says nothing about it**.
+- **A new keyword or status** (Burn, Thorns…): a `KinSymbols.Symbol` (name, icon, tint, ONE-line
+  meaning) and, if it is common, a place in `KinSymbols.Legend` (the ? panel).
+- **A new creature status**: a `Chip` in `KinRelayField` WITH its `Tip`, and for a foe's move a
+  `KinMoveText` symbol — a chip with no tip is a symbol nobody can read.
+- **A new icon**: the `add-icon` skill (game-icons.net, credited).
+
 ## 5. Seeing it — nothing is done until it has been looked at
 
 ```
 ./Run-Godot.ps1 KinGame/kin_party.tscn -Capture shots/party -Seconds 1.5 -GameArgs '--scenario=1','--play=1'
 ```
 
-Flags are in `Commands.md` (`--play`, `--focus`, `--click-space`, `--end-turn`). Then READ the frame:
+Flags are in `Commands.md` (`--play`, `--focus`, `--click-space`, `--end-turn`, `--hover-card`,
+`--mouse`). **Build the Godot project first** (`dotnet build SQGodotCommon/SQGodotCommon.csproj`):
+a capture runs the last build. Then READ the frame:
 - **Does the whole rules line show?** The shared fitter measures without line spacing, so text it
   judges to fit can still be CLIPPED with no error — Root Wall lost "Block.", Flank "lone foe.".
   Cards with no stat row now get the stat row's room; keep text short anyway.

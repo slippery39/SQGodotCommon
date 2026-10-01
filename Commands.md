@@ -61,6 +61,19 @@ procedure in the `draw-card-art` skill.
 
 ## Running a scene — USE THE SCRIPT
 
+**Capture traps learned in the declutter pass (2026-10-01):**
+- **Build the GODOT project before a capture** — `dotnet build SQGodotCommon/SQGodotCommon.csproj`.
+  `Run-Godot.ps1` runs what was last built; after a KinCore change the screen showed the OLD numbers
+  (Bramble at 30 HP after she went to 27), which looks exactly like a bug in the change.
+- **Run it from the repo root.** A PowerShell cwd left inside `Art/` made `./Run-Godot.ps1` "not
+  recognized" for every capture in a loop.
+- **A capture cannot hover.** `--mouse=x,y` stands in for the cursor for the board's own tips (it
+  also pushes one real mouse-move, which a NATIVE tooltip needs — give it ~2.5 s, the tooltip waits);
+  `--hover-card=N` stands in for hovering hand card N.
+- **`--mouse` is in CANVAS pixels (1920×1080)**: a 1600×900 capture's pixel × 1.2. Re-read the
+  position from a FRESH frame after any layout change — shortened tiles moved every icon down and
+  the first tooltip captures pointed at text.
+
 `kin_party.tscn` flags: `--fight` presses FIGHT at 0.3s — **practice scenarios open DEPLOYING, which refuses `--play`, `--focus` and `--snare` until then**; `--click-space=a,b` clicks your line's places (deploy: a monster, then its new place). `--scenario=N` — **THE RELAY order** (lines, front first): (0 = three vs three, the intro: Bramble, Pike, Gale; 1 = one vs two, 2 = two vs three, 3 = draw and discard: caught Magpie + Inkling vs a Hoard Drake and a wild Magpie; Sift on top — `--play=0` opens the discard choice; 4 = EMBER: Emberling + Echo Owl vs a Warden, Wisp and Briar Viper; Kindle, Singe, Spark on top; 5 = surge: caught Glowmoth + Stormbuck vs a Hushcap, Boar and Wisp; Surge, Quicken, Unleash on top; 6 = GROVE: Bramble, Broodvine + Howler vs an Ironhorn, Wisp and Stonebeak; Sow, Seedlings, Graft on top); `--click-space=3,2` sends
 REAL clicks to those spaces of your row, in order — select a monster, then step it. Capture-only:
 `--focus=N` lights where hand card N can be dropped, as a hover would (a capture CANNOT hover — this

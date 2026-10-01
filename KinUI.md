@@ -10,6 +10,14 @@ further down is what it looks like, and a screen that disagrees with that sectio
 
 ## THE DECLUTTER PASS — symbols, not sentences (interview 2026-09-30; BUILT 2026-10-01)
 
+> **The default for every screen from here (Shayne, 2026-10-01): when unsure, START WITH SYMBOLS.**
+> Not a strict rule — not everything will have a symbol — "but it should not be assumed that we
+> should want text … I would rather begin with symbols if unsure, than have the UI be cluttered with
+> a bunch of text everywhere." So: a symbol and a number first; the words in a hover (every symbol
+> must explain itself — its meaning written once, in `KinSymbols`); a line of text only where it
+> carries what no symbol or hover does (a boss's name, gold earned). The Godot traps this pass hit
+> are in `.claude/rules/kin-frontend.md`; the capture traps in `Commands.md`.
+
 Shayne: "Everything is very verbose, there is text everywhere. Most games use symbols to portray
 certain values … there is still a bunch of fluff text everywhere that overexplains everything." The
 audit found it on every screen (the list is in this section's history: the battle's subtitle sentence

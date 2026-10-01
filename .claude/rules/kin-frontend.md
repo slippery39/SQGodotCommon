@@ -37,6 +37,38 @@ one.
 - **`--resolution` does NOT resize the window** — `window/size/window_*_override` in `project.godot`
   wins. Check a capture's real pixel size before believing it is small.
 
+## Symbols first — the default, not a law (Shayne, 2026-10-01)
+
+**When unsure, start with a SYMBOL and a number, and put the words in a hover.** Text on screen has to
+earn its place; it is not the default. Not everything needs a symbol — but a screen cluttered with
+sentences is the failure this project already had once (the declutter pass, `KinUI.md`). Every symbol
+must say what it means on hover, and its meaning is written once, in `KinSymbols`.
+
+## Learned in the declutter pass (2026-09-30 / 10-01) — each one broke silently
+
+- **`TextureRect`: set `ExpandMode = IgnoreSize` BEFORE `Texture` and `Size`** in the initializer.
+  Set after, the texture's own 512 px had already become the minimum size — a Block shield covered
+  half the field.
+- **The shared card (`CardUI2D`) fills only once it is READY.** `ApplyTo` / `KinCardFace.Style` on a
+  card not yet in the tree throws — and an exception while a screen is being built SILENTLY drops
+  everything after it (the reward cards AND the SKIP button vanished). Fill it in `ui.Ready +=`.
+  **A button or row missing from a capture: check the Godot log for an exception first.**
+- **A live hand card in a menu fights the menu**: it takes hover and drag through its own collision
+  area (physics picking). Show a card OUTSIDE the hand as a picture — drawn once into a
+  `SubViewport`, its texture in a `TextureRect` (`KinPartyRunScreens.CardButton`).
+- **A `Label` cannot hold an icon.** Inline symbols need a `RichTextLabel` (`[img=WxH color=#..]`)
+  ADDED to the card instance over the shared rules box; hide the original with `SelfModulate`
+  alpha 0, never by emptying it — the shared fitter and `Details` still read it.
+- **The battle field catches no mouse on purpose** (card hover is physics picking), so a hover tip
+  there is the BOARD hit-testing (`KinRelayField.TipAt` → `KinRelayCreature.TipAt`), never a
+  Control's `TooltipText`. On the run screens a symbol is a Control with `MouseFilter.Pass` and a
+  `TooltipText`: PASS shows the tip AND lets the click reach the tile (Ignore shows nothing, Stop
+  eats the click).
+- **A dangling `else` binds to the nearest `if`** — `if (a) for (...) if (b) x; else y;` ran `y` for
+  every refused drop, not when `a` was false. Brace any `if` whose body is a loop.
+- **Small symbols need brighter tints than the palette**: Ember's `#C2621F` read as mud at chip size
+  over a meadow; chips use `#FF9A3C`.
+
 ## The shared card is MTG's too
 
 `Common/Cards/2D` is used by the MTG scenes, which this project must leave a clean no-op. **Add nodes
