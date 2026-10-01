@@ -79,6 +79,8 @@ a rare-led card. **Springs heal 30% or upgrade a card to its + version.**
    gone); Spell Surge now costs 3, rare. Both families still too easy — a foe difficulty pass next.
    **Difficulty pass done (2026-09-30)**: the bot wins 39% (target 35%), Bramble 72% / Pike 7%.
    Shayne playtests next; the Pike/Ember gap is the open question.
+   **Parity done, foes redone (2026-09-30)**: the bot wins 38.8% — Bramble 36.5%, Pike 41%.
+   Rule: families within 10 points before any foe balancing. Open: Grove stalls vs the Goblin Chief.
 2. Then re-tune with `party-sim` per region and per starter; the 50% target and even losses are in
    `PartySim.Target`.
 3. Regions 3–5 still reuse region 2's bosses and elites; their exams are undesigned.

@@ -6,6 +6,29 @@ the next; map rules are fixed (Snares to 2, one card if affordable, a random are
 only with two monsters and above 60% of your health and the team's HP). **A floor, not the game.**
 Read it for WHERE runs die and HOW they are won, per region.
 
+## 2026-09-30 (c) — THE FOE PASS, REDONE ON PARITY: 38.8% won, Bramble 36.5% / Pike 41% (400 runs)
+
+| step | runs won | Bramble | Pike | through by region (target 81/66/53/43/35) |
+|---|---|---|---|---|
+| parity, old foes | 54.2% | 54.5% | 54.0% | 96/74/67/59/54 |
+| tiers up (region-1 exams Lv 7/8, regions 3–5 +3) | 38.0% | 45.5% | 30.5% | 91/64/54/43/38 |
+| region-1 boss back to Lv 7; Pike 30 HP | 38.0% | 45.5% | 30.5% | 94/67/56/45/38 |
+| Ember's combo pieces get a floor (Ignite applies 3 first, Spreading Flames +3, Flashpoint 6 +, Chain Lightning 5 a spell) | 44.8% | 45.5% | 44.0% | 94/69/61/51/45 |
+| **regions 3–5 +1 level; region-1 elites Lv 8** | **38.8%** | **36.5%** | **41.0%** | **94/68/56/47/39** |
+
+Wild chip by region: 4/5/9/10/12%.
+
+**What it says:**
+- **Harder foes hurt Ember more** (fragile): the first tier raise reopened a 15-point gap. It closed
+  by giving Ember's COMBO PIECES a floor — `party-sim cards` showed its losers were the cards that do
+  nothing alone (Spreading Flames −19%, Flashpoint, Ignite, Chain Lightning), because the bot takes
+  whatever it is offered. A person drafts better; the sim is the scale.
+- **Region 1 stays easy (94% through against 81%)** — by design: its wild foes are at most a level
+  over base and its boss at Lv 7 (a solo monster). Its losses are left to region 2.
+- **9 runs STALLED, all Bramble** (counted as losses — ~4 points of hers). Traced (seed 47): 40 turns
+  against the Goblin Chief, the bot walling its minions with Sprouts and chipping the Chief. A person
+  would press; but nothing ENDS a walled Grove fight, and the Chief does not enrage.
+
 ## 2026-09-30 (b) — FAMILY PARITY: Pike 7% → 54%, Bramble 72% → 54.5% (400 runs, 200 a starter)
 
 Shayne: "It is hard to buff or nerf the enemies around such a disparity … get them so that absolute

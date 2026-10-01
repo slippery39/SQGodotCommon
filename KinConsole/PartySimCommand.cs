@@ -219,7 +219,12 @@ public static class PartySimCommand
 		var stalled = runs.Count(r => r.End == RunEnd.Stalled);
 		if (stalled > 0)
 			Console.WriteLine(
-				$"  {stalled} runs STALLED — a battle ran past {PartySim.TurnLimit} turns."
+				$"  {stalled} runs STALLED — a battle ran past {PartySim.TurnLimit} turns. Seeds (trace one): "
+					+ string.Join(
+						", ",
+						runs.Where(r => r.End == RunEnd.Stalled)
+							.Select(r => $"{r.Seed} {r.Starter} r{r.Region + 1}")
+					)
 			);
 
 		Console.WriteLine();

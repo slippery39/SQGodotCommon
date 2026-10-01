@@ -105,6 +105,9 @@ foe balancing.** Now 54.5 / 54.0 (numbers only — no mechanic changed):
   Ironhorn 30 HP; Pike 28 HP and first attack +2 Spell Power.
 - Grove down: Root 6 (+ 9), Sow no longer draws (Sow+ does, and costs 1), Sprout 5 HP, Seedling 3,
   Thicket 4, Hardwood 6 / 6, Treant 16 / 3, Mosshell 30 HP, Bramble 27 HP and first attack +4 Rooted.
+- Then, with the foes harder: Pike 30 HP, and **Ember's combo pieces get a floor** so none is dead in
+  hand — Ignite applies 3 Burn before doubling, Spreading Flames adds 3 (+ 5), Flashpoint deals 6 +
+  three times the Burn (+ 8 + four times), Chain Lightning 5 a spell (+ 6).
 
 **As built** (what the tables below do not say):
 - **A token is marked `Ally.IsToken`**, apart from fading: `FadesIn` 0 now means it stays. Tokens

@@ -38,6 +38,10 @@
 >   Boar's Charge, the Hoard Drake's Tail) and **ENRAGE** on wild foes (+1 a round — the Stormbuck,
 >   the Bog Toad). The bot's target is now ~35% of runs won; it wins 39%, **but Bramble 72%, Pike 7%**
 >   — the next question is the families', not the foes' (`docs/findings/companion-balance.md`).
+> - **FAMILY PARITY, then the foe pass redone (2026-09-30)** — Shayne's rule: **the families within 10
+>   points before any foe balancing.** Ember's floor raised (its starters were worse than none) and
+>   Grove trimmed, numbers only; then foes re-tuned on top. **The bot wins 38.8% (target 35%):
+>   Bramble 36.5%, Pike 41%.** Region 1 stays easy by design (a solo monster).
 >   Grove is still placeholder.
 
 > # BOSSES AND ELITES — exams with an answer (Shayne, 2026-09-28; built for regions 1–2)

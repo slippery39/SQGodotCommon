@@ -280,21 +280,36 @@ public static class EmberCards
 			"Chain Lightning",
 			1,
 			U,
-			"Drop on a foe: deal 4 for each spell cast this turn, this one too.",
-			new SpellDamageAction { PerSpellThisTurn = 4 }
+			"Drop on a foe: deal 5 for each spell cast this turn, this one too.",
+			new SpellDamageAction { PerSpellThisTurn = 5 }
 		),
 		Card(
 			"Chain Lightning",
 			1,
 			U,
-			"Drop on a foe: deal 5 for each spell cast this turn, this one too.",
-			new SpellDamageAction { PerSpellThisTurn = 5 }
+			"Drop on a foe: deal 6 for each spell cast this turn, this one too.",
+			new SpellDamageAction { PerSpellThisTurn = 6 }
 		)
 	);
 
 	public static readonly KinCard Ignite = Plus(
-		Card("Ignite", 1, U, "Drop on a foe: double its Burn.", new BurnAction { Double = true }),
-		Card("Ignite", 0, U, "Drop on a foe: double its Burn.", new BurnAction { Double = true })
+		// A floor of its own (the balance pass, 2026-09-30): a combo piece is never dead in hand.
+		Card(
+			"Ignite",
+			1,
+			U,
+			"Drop on a foe: apply 3 Burn, then double its Burn.",
+			new BurnAction { Amount = 3 },
+			new BurnAction { Double = true }
+		),
+		Card(
+			"Ignite",
+			0,
+			U,
+			"Drop on a foe: apply 3 Burn, then double its Burn.",
+			new BurnAction { Amount = 3 },
+			new BurnAction { Double = true }
+		)
 	);
 
 	public static readonly KinCard SpreadingFlames = Plus(
@@ -302,15 +317,15 @@ public static class EmberCards
 			"Spreading Flames",
 			1,
 			U,
-			"Every foe's Burn rises to the highest among them.",
-			new BurnAction { RiseToHighest = true }
+			"Every foe's Burn rises to the highest among them, then 3 more.",
+			new BurnAction { RiseToHighest = true, Amount = 3 }
 		),
 		Card(
 			"Spreading Flames",
 			1,
 			U,
-			"Every foe's Burn rises to the highest among them, then 2 more.",
-			new BurnAction { RiseToHighest = true, Amount = 2 }
+			"Every foe's Burn rises to the highest among them, then 5 more.",
+			new BurnAction { RiseToHighest = true, Amount = 5 }
 		)
 	);
 
@@ -360,15 +375,15 @@ public static class EmberCards
 			"Flashpoint",
 			2,
 			R,
-			"Drop on a foe: deal three times its Burn. The Burn stays.",
-			new SpellDamageAction { PerBurn = 3 }
+			"Drop on a foe: deal 6 + three times its Burn. The Burn stays.",
+			new SpellDamageAction { Amount = 6, PerBurn = 3 }
 		),
 		Card(
 			"Flashpoint",
 			2,
 			R,
-			"Drop on a foe: deal four times its Burn. The Burn stays.",
-			new SpellDamageAction { PerBurn = 4 }
+			"Drop on a foe: deal 8 + four times its Burn. The Burn stays.",
+			new SpellDamageAction { Amount = 8, PerBurn = 4 }
 		)
 	);
 

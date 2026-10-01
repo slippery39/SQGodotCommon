@@ -535,11 +535,11 @@ public static class PartyWorld
 
 	public static readonly ImmutableList<Tier> Tiers =
 	[
-		new(1, 2, 4, 6, 6, 6),
-		new(2, 2, 6, 8, 8, 9),
-		new(2, 3, 8, 10, 10, 11),
-		new(2, 3, 11, 13, 13, 14),
-		new(3, 3, 13, 15, 15, 17),
+		new(1, 2, 4, 6, 8, 7),
+		new(2, 2, 6, 8, 9, 10),
+		new(2, 3, 10, 12, 13, 14),
+		new(2, 3, 13, 15, 16, 17),
+		new(3, 3, 15, 17, 18, 20),
 	];
 
 	private static readonly ImmutableList<Encounter> Region1 =
