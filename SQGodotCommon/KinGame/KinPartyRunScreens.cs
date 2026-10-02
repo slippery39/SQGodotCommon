@@ -144,7 +144,8 @@ public sealed partial class KinPartyRunScreens
 	}
 
 	/// <summary>**The team, as one line of HP**, and the relics held.</summary>
-	private void ShowTeam(PartyRun run)
+	/// <summary>The gold, relics and team — front first. With `toFront`, pressing a monster sends it there.</summary>
+	private void ShowTeam(PartyRun run, Action<int> toFront = null)
 	{
 		_column.AddChild(Label($"GOLD {run.Gold}", 20, new Color(KinPalette.Bone, 0.8f)));
 
@@ -159,13 +160,19 @@ public sealed partial class KinPartyRunScreens
 			);
 
 		var team = Row();
-		foreach (var member in run.Team)
-			team.AddChild(Monster(member));
+		for (var i = 0; i < run.Team.Count; i++)
+		{
+			var index = i;
+			var tile = Monster(run.Team[i], () => toFront?.Invoke(index));
+			if (toFront is not null)
+				tile.TooltipText = i == 0 ? "The front: foes hit it first." : "Send to the front.";
+			team.AddChild(tile);
+		}
 	}
 
-	private static Button Monster(RunCompanion m)
+	private static Button Monster(RunCompanion m, Action pressed)
 	{
-		var button = Button($"{m.Companion.Name.ToUpperInvariant()}\n{m.Hp}/{m.MaxHp}", () => { });
+		var button = Button($"{m.Companion.Name.ToUpperInvariant()}\n{m.Hp}/{m.MaxHp}", pressed);
 		var tint = KinPalette.Family(m.Companion.Family, m.Companion.Name).Lightened(0.35f);
 		KinUiKit.Style(button, 22);
 		button.AddThemeStyleboxOverride("normal", KinUiKit.Plate("bone", tint));

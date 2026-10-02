@@ -40,11 +40,8 @@ public partial class KinPartyBoard : Node2D
 	/// <summary>The practice scenarios, as one dropdown: a row of buttons pushed END TURN off screen at seven.</summary>
 	private OptionButton _practicePicker;
 
-	/// <summary>The monster clicked last — its rule is shown; in deploy, the next place clicked takes it. 0 = none.</summary>
+	/// <summary>The monster clicked last — its rule is shown. 0 = none.</summary>
 	private int _selectedAllyId;
-
-	/// <summary>DEPLOY: the monster pressed and being dragged to a new place. 0 = none.</summary>
-	private int _heldId;
 
 	private KinRelayField _field;
 
@@ -159,10 +156,6 @@ public partial class KinPartyBoard : Node2D
 				_captureInspect = inspect;
 			if (arg == "--end-turn")
 				GetTree().CreateTimer(1.6).Timeout += OnEndTurn;
-			// Capture-only: `--fight` presses FIGHT before any `--play` or `--focus`
-			// (practice scenarios open deploying, and deploy refuses them all).
-			if (arg == "--fight")
-				GetTree().CreateTimer(0.3).Timeout += OnEndTurn;
 			// Capture-only: `--mouse=x,y` stands in for the cursor (canvas pixels), so a tip can be seen.
 			if (
 				arg.StartsWith("--mouse=")
@@ -636,9 +629,9 @@ public partial class KinPartyBoard : Node2D
 		_field.DropAt(point) is { } d && d < PartyBattle.MaxLine ? d : null;
 
 	/// <summary>
-	/// **Click a monster to read its rule. In DEPLOY, press one and drag it to a place in your line**
-	/// — or click it, then the place (a capture cannot drag). Read here, after the GUI and after a hand
-	/// card has claimed its own click, so nothing on the board has to catch the mouse.
+	/// **Click a monster to read its rule** — monsters are not dragged in a fight; the order is set in
+	/// town (2026-10-02). Read here, after the GUI and after a hand card has claimed its own click, so
+	/// nothing on the board has to catch the mouse.
 	/// </summary>
 	public override void _UnhandledInput(InputEvent @event)
 	{
@@ -648,12 +641,6 @@ public partial class KinPartyBoard : Node2D
 			|| Common.Cards.CardUIManager.DraggingCard is not null
 		)
 			return;
-
-		if (_heldId != 0)
-		{
-			Carry(@event);
-			return;
-		}
 
 		if (
 			@event
@@ -666,29 +653,8 @@ public partial class KinPartyBoard : Node2D
 
 		GetViewport().SetInputAsHandled();
 
-		// DEPLOY (R2), by clicks: a monster picked, then the place it should stand.
-		if (
-			_state.GetParty().Deploying
-			&& Selected() is { } placing
-			&& space != placing.Position
-			&& space < _state.LivingAllies().Count()
-		)
-		{
-			_selectedAllyId = 0;
-			Apply(new DeployMoveAction { AllyId = placing.Id, To = space });
-			return;
-		}
-
 		if (_state.AllyAt(space) is { } ally)
 		{
-			// Picked up: the release decides — another place moves it, the same place is a click.
-			if (_state.GetParty().Deploying)
-			{
-				_heldId = ally.Id;
-				RenderRows();
-				return;
-			}
-
 			_selectedAllyId = _selectedAllyId == ally.Id ? 0 : ally.Id;
 			Render(ImmutableList<GameEvent>.Empty);
 			if (_selectedAllyId != 0)
@@ -699,47 +665,10 @@ public partial class KinPartyBoard : Node2D
 		Report("Click one of your monsters to read it.");
 	}
 
-	/// <summary>DEPLOY: the held monster follows the mouse; let go over a place in your line, it goes there.</summary>
-	private void Carry(InputEvent @event)
-	{
-		if (@event is InputEventMouseMotion motion)
-		{
-			_field.Follow(_heldId, motion.Position);
-			return;
-		}
-		if (
-			@event is not InputEventMouseButton { Pressed: false, ButtonIndex: MouseButton.Left } up
-		)
-			return;
-
-		GetViewport().SetInputAsHandled();
-		var held = (Ally)_state.GetObject(_heldId);
-		_heldId = 0;
-		if (
-			SpaceAt(up.Position) is { } to
-			&& to != held.Position
-			&& to < _state.LivingAllies().Count()
-		)
-		{
-			_selectedAllyId = 0;
-			Apply(new DeployMoveAction { AllyId = held.Id, To = to });
-			return;
-		}
-
-		_selectedAllyId = _selectedAllyId == held.Id ? 0 : held.Id;
-		RenderRows();
-		Report(_selectedAllyId != 0 ? "Click a place in your line to move it there." : "");
-	}
-
-	private Ally Selected() =>
-		_selectedAllyId != 0 && _state.GetObject(_selectedAllyId) is Ally { IsKnockedOut: false } a
-			? a
-			: null;
-
 	private void OnEndTurn()
 	{
 		_selectedAllyId = 0;
-		Apply(_state.GetParty().Deploying ? new BeginFightAction() : new EndPartyTurnAction());
+		Apply(new EndPartyTurnAction());
 	}
 
 	// ===== Rendering — a full repaint from state, every time
@@ -981,9 +910,6 @@ public partial class KinPartyBoard : Node2D
 		_energyNote.LabelSettings.FontColor =
 			party.EnergyDebt > 0 ? KinPalette.Red.Lightened(0.3f) : KinPalette.Bone;
 		_endTurn.Disabled = party.IsOver;
-		_endTurn.Text = party.Deploying ? "FIGHT" : "END TURN";
-		if (party.Deploying)
-			_hint.Text = "Arrange your line, then FIGHT.";
 
 		// The badge shows what the card costs NOW (`CostOf`: Scrap Hammer after discards).
 		_hand.Sync(
@@ -1040,8 +966,7 @@ public partial class KinPartyBoard : Node2D
 				steps,
 				drops,
 				focus,
-				_selectedAllyId,
-				_heldId
+				_selectedAllyId
 			)
 		);
 		if (settleAfter is { } delay)

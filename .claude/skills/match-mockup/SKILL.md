@@ -12,7 +12,7 @@ description: Make a KIN screen look like its mockup (or like the style-D kit whe
 ## The loop
 
 1. **Capture** the real screen (`Commands.md` has every flag):
-   `./Run-Godot.ps1 KinGame/kin_party.tscn -Capture shots/x -Seconds 1.6 -GameArgs '--scenario=0','--fight'`
+   `./Run-Godot.ps1 KinGame/kin_party.tscn -Capture shots/x -Seconds 1.6 -GameArgs '--scenario=0'`
    Run screens: `--starter=0` (town), plus `--screen=areas|find|deep|gym|between|over`.
 2. **Compare** with the target, side by side at the same size — never from memory.
 3. **List the differences, biggest first.** Order that worked: art (sprites) → scale and placement →

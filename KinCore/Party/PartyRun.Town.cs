@@ -24,6 +24,18 @@ public partial record PartyRun
 		: Gold < HospitalPrice ? $"Healing costs {HospitalPrice} gold"
 		: null;
 
+	/// <summary>
+	/// **The team's ORDER is set in town, and only there** (playtest, 2026-10-02: deploying before every
+	/// fight was never used) — this monster to the front, the rest keeping theirs. Free.
+	/// </summary>
+	public PartyRun MoveToFront(int index) =>
+		Phase != RunPhase.Town || index <= 0 || index >= Team.Count
+			? this
+			: this with
+			{
+				Team = [Team[index], .. Team.RemoveAt(index)],
+			};
+
 	/// <summary>**The hospital**: the team and the bench to full, for gold. Refused changes nothing.</summary>
 	public PartyRun HealAtHospital() =>
 		CannotHeal is not null

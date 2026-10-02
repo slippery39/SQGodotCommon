@@ -53,7 +53,6 @@ public record PartyScenario(
 	ImmutableList<Foe> Foes,
 	ImmutableList<KinCard> Deck,
 	ImmutableList<string> OpeningHand,
-	bool Deploy = false,
 	Family Family = Family.None,
 	ImmutableList<Relic>? Relics = null
 );
@@ -310,8 +309,7 @@ public static class PartyContent
 			[new(Pike, 0)],
 			[Boar(0), Wisp(1)],
 			StarterDeck,
-			[],
-			Deploy: true
+			[]
 		);
 
 	public static readonly PartyScenario Pair =
@@ -321,8 +319,7 @@ public static class PartyContent
 			[new(Bramble, 0), new(Pike, 1)],
 			[Boar(0), Stonebeak(1), Wisp(2)],
 			StarterDeck,
-			[],
-			Deploy: true
+			[]
 		);
 
 	/// <summary>
@@ -336,8 +333,7 @@ public static class PartyContent
 			[new(Bramble, 0), new(Pike, 1), new(Gale, 2)],
 			[Boar(0), Stonebeak(1), Wisp(2)],
 			[.. StarterDeck, PartyCards.Charge, PartyCards.Gust, Rally, Stagger],
-			["Charge", "Gust", "Rally", "Guard", "Stagger"],
-			Deploy: true
+			["Charge", "Gust", "Rally", "Guard", "Stagger"]
 		);
 
 	/// <summary>
@@ -364,8 +360,7 @@ public static class PartyContent
 				PartyCards.PageStorm,
 				PartyCards.Ration,
 			],
-			["Sift"],
-			Deploy: true
+			["Sift"]
 		);
 
 	/// <summary>
@@ -396,8 +391,7 @@ public static class PartyContent
 				EmberCards.Singe,
 				EmberCards.Spark,
 			],
-			["Kindle", "Singe", "Spark"],
-			Deploy: true
+			["Kindle", "Singe", "Spark"]
 		);
 
 	/// <summary>
@@ -423,8 +417,7 @@ public static class PartyContent
 				EmberCards.Meteor,
 				PartyCards.BattleCry,
 			],
-			["Surge", "Quicken", "Unleash"],
-			Deploy: true
+			["Surge", "Quicken", "Unleash"]
 		);
 
 	/// <summary>
@@ -446,8 +439,7 @@ public static class PartyContent
 				GroveCards.PackCharge,
 				GroveCards.Compost,
 			],
-			["Sow", "Seedlings", "Graft"],
-			Deploy: true
+			["Sow", "Seedlings", "Graft"]
 		);
 
 	/// <summary>
@@ -558,9 +550,7 @@ public static class PartyBattleFactory
 		s = s.AddAction(new StartPartyTurnAction()).ProcessAllActions().State;
 		s = PartyRelics.Dealt(s);
 
-		// DEPLOY (R2): the hand is dealt, and the fight waits for FIGHT.
-		return scenario.Deploy
-			? s.UpdateObject(s.GetParty().Id, s.GetParty() with { Deploying = true })
-			: PartyRelics.FightBegins(s);
+		// No DEPLOY any more (playtest, 2026-10-02): the order is set in town, so the fight begins now.
+		return PartyRelics.FightBegins(s);
 	}
 }

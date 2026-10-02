@@ -235,13 +235,12 @@ public partial record PartyRun
 				NodeKind.Elite => $"{Region.Name} — an elite",
 				_ => $"{Region.Name} — the route",
 			},
-			// **The team's order IS the line** (front first). The battle opens DEPLOYING (R2): the order
-			// can change before FIGHT.
+			// **The team's order IS the line** (front first) — set in town (`MoveToFront`), not before a
+			// fight (deploy cut, playtest 2026-10-02).
 			[.. Team.Select((m, i) => new PlacedCompanion(m.Companion, i, m.Hp))],
 			NextFight.Foes,
 			Deck,
 			[],
-			Deploy: true,
 			Relics: Relics
 		);
 		return PartyBattleFactory.Create(scenario, Seed + RegionIndex * 1009 + NodeId * 37);
@@ -273,13 +272,6 @@ public partial record PartyRun
 		}
 		var team = Team.Select(After).ToImmutableList();
 
-		// **The order you deployed is kept for the next fight** (R2) — not where the line ended up.
-		var deployed = party.DeployedOrder.Where(slot => slot < team.Count).ToList();
-		team =
-		[
-			.. deployed.Select(slot => team[slot]),
-			.. team.Where((_, slot) => !deployed.Contains(slot)),
-		];
 		var kind = Here.Kind;
 		var gold = (int)(RouteGold(kind) * (Has(Relic.LuckyCoin) ? PartyRelics.LuckyCoinGold : 1));
 

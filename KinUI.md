@@ -262,7 +262,7 @@ are history. The hand band, the choice panel and the inspector stay.
 region PLATE as wide as its words (title, and the subtitle that names the knocked-out and the
 bench); top-right, the practice picker and MENU as kit buttons. Bottom-left, the energy ORB
 ("3/3", with ENERGY or "−1 NEXT TURN" under it) and SNARE ×N below it; bottom-right, a big
-framed END TURN (FIGHT while deploying). The hint — how to play, deploy, and the engine's refusal
+framed END TURN. The hint — the engine's refusal
 of a play — is outlined words above the hand. The kit is `Plate`/`StyleButton` in `KinPartyBoard`:
 navy at 0.92, a thin gold border (bone for information), gold text on hover.
 
@@ -308,8 +308,8 @@ navy at 0.92, a thin gold border (bone for information), gold text on hover.
   on theirs. The engine lights the legal ones; the field only draws. **A lit place must be a real
   choice**: Summon first lit all five of your places though its token always arrives at the front,
   so the engine now takes a summon only on your front.
-- **Deploy (R2): press a monster, drag it to a place in your line, release.** Clicking one and then a
-  place does the same (a capture cannot drag). The button reads FIGHT.
+- **No deploy (cut 2026-10-02 — never used in play).** Monsters are not dragged in a fight; the
+  team's order is set in TOWN, at the hospital: press a monster to send it to the front.
 - **Motion** (`KinAnimator`, one Speed dial): a blow LUNGES its attacker toward the other line
   (0.12s out, 0.12s back), the target flashes and its number rises; the line slides (0.3s).
 - Sizes: move and HP 22, name 22, status and note 20 — authored on the 1920 canvas (x 0.833 on the

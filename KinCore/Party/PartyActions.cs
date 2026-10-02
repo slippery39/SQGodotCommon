@@ -22,8 +22,6 @@ public record PlayPartyCardAction : GameAction
 		var party = s.GetParty();
 		if (party.IsOver)
 			return ValidationResult.Invalid("The battle is over");
-		if (party.Deploying)
-			return ValidationResult.Invalid(PartyDeploy.Waiting);
 
 		if (!s.HasObject(CardId) || s.GetParent(CardId) != s.ZoneId(ZoneType.Hand))
 			return ValidationResult.Invalid("That card is not in your hand");
@@ -117,9 +115,9 @@ public record DiscardPlayedCardAction : GameAction
 public record EndPartyTurnAction : GameAction
 {
 	public override ValidationResult ValidateAdd(GameState s) =>
-		s.GetParty().IsOver ? ValidationResult.Invalid("The battle is over")
-		: s.GetParty().Deploying ? ValidationResult.Invalid(PartyDeploy.Waiting)
-		: ValidationResult.Valid;
+		s.GetParty().IsOver
+			? ValidationResult.Invalid("The battle is over")
+			: ValidationResult.Valid;
 
 	public override ActionResult Execute(GameState s)
 	{

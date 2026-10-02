@@ -50,11 +50,14 @@ public sealed partial class KinPartyRunScreens
 		Row().AddChild(Button("◀ BACK TO TOWN", back));
 	}
 
-	/// <summary>**The hospital**: the team's HP, and healing everyone to full for gold.</summary>
+	/// <summary>
+	/// **The hospital**: the team's HP, healing everyone to full for gold — and the team's ORDER, the
+	/// only place it is set (2026-10-02): press a monster to send it to the front.
+	/// </summary>
 	private void ShowHospital(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
 	{
 		Begin("HOSPITAL", "", "town");
-		ShowTeam(run);
+		ShowTeam(run, index => change(r => r.MoveToFront(index)));
 		var heal = Button(
 			$"HEAL EVERYONE — {PartyRun.HospitalPrice} GOLD",
 			() => change(r => r.HealAtHospital())

@@ -85,19 +85,8 @@ public partial class PartyRunTests
 			Team = [.. team.Select(c => new RunCompanion(c, c.Hp))],
 		};
 
-	/// <summary>
-	/// Plays an action — pressing FIGHT first if the battle is still deploying (R2): a run's battle
-	/// opens deploying, and these tests are about what happens once it has begun.
-	/// </summary>
 	private static GameState Do(GameState s, GameAction a) =>
-		(
-			s.GetParty().Deploying && a is not (DeployMoveAction or BeginFightAction)
-				? s.AddAction(new BeginFightAction()).ProcessAllActions().State
-				: s
-		)
-			.AddAction(a)
-			.ProcessAllActions()
-			.State;
+		s.AddAction(a).ProcessAllActions().State;
 
 	/// <summary>Wins the battle: the Wipe, dropped on the first monster still standing.</summary>
 	private static GameState Win(GameState s)
@@ -232,27 +221,23 @@ public partial class PartyRunTests
 		Assert.That(third.MonsterChoice, Is.Empty, "a full team is offered no more");
 	}
 
-	// ===== Deploy — the order is yours, and it is kept
+	// ===== The team's order — set in town, and only there (deploy cut, 2026-10-02)
 
 	[Test]
-	public void TheOrderYouDeployIsKeptForTheNextFight()
+	public void TheOrderIsSetInTownAndIsTheLine()
 	{
-		var run = OnFights(WithTeam(Run(), A, B), Fight(Foe("Idle")), Fight(Foe("Idle")));
+		var town = WithTeam(Run(), A, B) with { Phase = RunPhase.Town };
 
-		var battle = run.StartBattle();
-		Assert.That(battle.GetParty().Deploying, Is.True, "a run's battle opens deploying");
-		battle = Do(
-			battle,
-			new DeployMoveAction { AllyId = battle.Allies().Single(a => a.Name == "B").Id, To = 0 }
-		);
-		battle = Do(battle, new BeginFightAction());
-		(run, _) = run.AfterBattle(Win(battle));
+		var moved = town.MoveToFront(1);
+		Assert.That(moved.Team.Select(m => m.Companion.Name), Is.EqualTo(new[] { "B", "A" }));
 
-		Assert.That(run.Team.Select(m => m.Companion.Name), Is.EqualTo(new[] { "B", "A" }));
+		var run = OnFights(moved, Fight(Foe("Idle")));
 		Assert.That(
 			run.StartBattle().LivingAllies().Select(a => a.Name),
-			Is.EqualTo(new[] { "B", "A" })
+			Is.EqualTo(new[] { "B", "A" }),
+			"the town's order is the fight's line, and the fight opens ready to play"
 		);
+		Assert.That(run.MoveToFront(1).Team, Is.EqualTo(run.Team), "not on the route");
 	}
 
 	// ===== The bench in battle

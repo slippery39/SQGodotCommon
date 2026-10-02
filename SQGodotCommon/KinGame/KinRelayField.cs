@@ -8,14 +8,13 @@ using KinCore.Party;
 
 namespace KinGame;
 
-/// <summary>What the board knows that the field shows: the forecast, the steps, what is lit, what is held.</summary>
+/// <summary>What the board knows that the field shows: the forecast, the steps, what is lit.</summary>
 public sealed record FieldContext(
 	ImmutableDictionary<int, int> Forecast,
 	Dictionary<int, int> Steps,
 	HashSet<int> Drops,
 	KinCard Focus,
-	int SelectedId,
-	int HeldId
+	int SelectedId
 );
 
 /// <summary>
@@ -58,9 +57,6 @@ public sealed class KinRelayField
 
 	/// <summary>Each place's gold ground mark — lit where the held card can land on an EMPTY place.</summary>
 	private readonly TextureRect[] _hints = new TextureRect[PartyBattle.MaxLine * 2];
-
-	/// <summary>A view lifted by the deploy drag: it follows the mouse and is not slid until dropped.</summary>
-	private int _heldId;
 
 	public KinRelayField()
 	{
@@ -145,7 +141,6 @@ public sealed class KinRelayField
 	/// </summary>
 	public void Render(GameState s, FieldContext ctx)
 	{
-		_heldId = ctx.HeldId;
 		var standing = new HashSet<int>();
 		var longest = Mathf.Max(s.LivingAllies().Count(), s.LivingFoes().Count());
 		_slot = Mathf.Max(Slot, Half / (float)Mathf.Max(3, longest));
@@ -199,7 +194,7 @@ public sealed class KinRelayField
 				KinAnimator.FadeOut(view.Root, delay);
 				continue;
 			}
-			if (id != _heldId && view.Root.Position != to)
+			if (view.Root.Position != to)
 				KinAnimator.Slide(view.Root, to, delay);
 		}
 	}
@@ -209,13 +204,6 @@ public sealed class KinRelayField
 	{
 		if (_views.TryGetValue(attackerId, out var view))
 			KinAnimator.Lunge(view.Sprite, s.GetObject(attackerId) is Ally ? 48 : -48);
-	}
-
-	/// <summary>DEPLOY: the held creature follows the mouse until it is dropped.</summary>
-	public void Follow(int creatureId, Vector2 global)
-	{
-		if (_views.TryGetValue(creatureId, out var view))
-			view.Root.GlobalPosition = global - new Vector2(_slot / 2f, 140 * ViewScale);
 	}
 
 	// ===== Looks — strings from facts
@@ -245,10 +233,8 @@ public sealed class KinRelayField
 			KinArt.Sprite(ally.Name) is not null,
 			FacesLeft: false,
 			0,
-			drop is not null || ally.Id == ctx.SelectedId || ally.Id == ctx.HeldId
-				? KinPalette.Gold
-				: colour,
-			drop is not null || ally.Id == ctx.SelectedId || ally.Id == ctx.HeldId,
+			drop is not null || ally.Id == ctx.SelectedId ? KinPalette.Gold : colour,
+			drop is not null || ally.Id == ctx.SelectedId,
 			ally.Name.ToUpperInvariant(),
 			ally.Hp,
 			ally.MaxHp,

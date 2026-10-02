@@ -12,11 +12,8 @@ public partial class PartyRunTests
 	private static PartyRun Holding(PartyRun run, params Relic[] relics) =>
 		relics.Aggregate(run, (r, relic) => r.Gain(relic));
 
-	/// <summary>A run's battle at its first fight, before FIGHT is pressed.</summary>
+	/// <summary>A run's battle at its first fight, dealt and begun.</summary>
 	private static GameState Dealt(PartyRun run) => OnFights(run, Fight(Foe("W"))).StartBattle();
-
-	private static GameState Fought(GameState s) =>
-		s.AddAction(new BeginFightAction()).ProcessAllActions().State;
 
 	[Test]
 	public void AnElitePaysARelicYouDoNotHold()
@@ -54,7 +51,7 @@ public partial class PartyRunTests
 	[Test]
 	public void IronShellShieldsWhoeverIsInFrontWhenTheFightBegins()
 	{
-		var s = Fought(Dealt(Holding(WithTeam(Run(), A, B), Relic.IronShell)));
+		var s = Dealt(Holding(WithTeam(Run(), A, B), Relic.IronShell));
 
 		Assert.That(s.AllyAt(0)!.Block, Is.EqualTo(PartyRelics.IronShellBlock));
 		Assert.That(s.AllyAt(1)!.Block, Is.Zero);
@@ -123,10 +120,8 @@ public partial class PartyRunTests
 	public void WarDrumAncientLensAndWarbandBannerFireEveryTurn()
 	{
 		var deck = Run() with { Deck = [.. Enumerable.Repeat(Wipe("Wipe"), 20)] };
-		var plain = Fought(Dealt(deck));
-		var held = Fought(
-			Dealt(Holding(deck, Relic.WarDrum, Relic.AncientLens, Relic.WarbandBanner))
-		);
+		var plain = Dealt(deck);
+		var held = Dealt(Holding(deck, Relic.WarDrum, Relic.AncientLens, Relic.WarbandBanner));
 
 		Assert.That(
 			held.Allies().Single().Power - plain.Allies().Single().Power,
@@ -150,8 +145,8 @@ public partial class PartyRunTests
 	public void KinTotemMakesTheFirstCardEachTurnFree()
 	{
 		var deck = Run() with { Deck = [Wipe("Wipe") with { Cost = 2 }] };
-		var plain = Fought(Dealt(deck));
-		var held = Fought(Dealt(Holding(deck, Relic.KinTotem)));
+		var plain = Dealt(deck);
+		var held = Dealt(Holding(deck, Relic.KinTotem));
 
 		Assert.That(plain.CostOf(plain.CardsIn(ZoneType.Hand).Single()), Is.EqualTo(2));
 		Assert.That(held.CostOf(held.CardsIn(ZoneType.Hand).Single()), Is.Zero);
