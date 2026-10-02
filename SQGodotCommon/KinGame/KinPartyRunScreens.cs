@@ -100,7 +100,10 @@ public sealed partial class KinPartyRunScreens
 	/// <summary>**A boss beaten: three BOSS RELICS — keep one for the rest of the run.**</summary>
 	public void ShowRelicChoice(PartyRun run, string beaten, Action<Relic> choose, Action skip)
 	{
-		Begin($"{beaten.ToUpperInvariant()} IS BEATEN", "The team is healed in full.");
+		Begin(
+			$"{beaten.ToUpperInvariant()} IS BEATEN",
+			$"The team heals {(int)(PartyRun.BossHeal * 100)}%."
+		);
 		var row = Row();
 		foreach (var relic in run.RelicChoice)
 			row.AddChild(

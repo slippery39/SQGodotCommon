@@ -89,7 +89,7 @@ public partial class PartyRunTests
 		);
 	}
 
-	// ===== A BOSS's prizes: a full heal in the next town, and one of three BOSS relics
+	// ===== A BOSS's prizes: half healed in the next town, and one of three BOSS relics
 
 	[Test]
 	public void ABossHealsYouInTheNextTownAndOffersThreeBossRelics()
@@ -99,7 +99,12 @@ public partial class PartyRunTests
 		var (town, _) = WinNext(run);
 
 		Assert.That(town.Phase, Is.EqualTo(RunPhase.Town));
-		Assert.That(Hp(town, "A"), Is.EqualTo(town.Team[0].MaxHp), "healed in full");
+		var max = town.Team[0].MaxHp;
+		Assert.That(
+			Hp(town, "A"),
+			Is.EqualTo(Math.Min(max, 5 + (int)Math.Ceiling(max * PartyRun.BossHeal))),
+			"healed by half, not in full — the hospital has something to do"
+		);
 		Assert.That(town.RelicChoice, Has.Count.EqualTo(3));
 		Assert.That(town.RelicChoice, Is.SubsetOf(PartyRelics.Boss));
 

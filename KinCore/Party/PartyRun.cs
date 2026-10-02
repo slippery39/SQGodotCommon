@@ -64,6 +64,12 @@ public partial record PartyRun
 	/// <summary>A Rest find heals this much of each monster's max.</summary>
 	public const double RestHeal = 0.3;
 
+	/// <summary>
+	/// **A boss beaten heals HALF** (Shayne, 2026-10-02) — not in full: a full heal before the town
+	/// left its hospital nothing to heal. A guess (exploring).
+	/// </summary>
+	public const double BossHeal = 0.5;
+
 	public ImmutableList<RunCompanion> Team { get; init; } = [];
 
 	/// <summary>
@@ -300,12 +306,12 @@ public partial record PartyRun
 				{
 					Cleared = run.Cleared.Add(NodeId),
 				}
-			// The BOSS beaten: on to the next town — healed in full, with three boss relics and (the first
+			// The BOSS beaten: on to the next town — healed by half (`BossHeal`), with three boss relics and (the first
 			// two bosses) three monsters to choose from (Shayne, 2026-09-28) — or, the last one, the run won.
 			: RegionIndex + 1 >= Regions.Count ? run with { Phase = RunPhase.Won }
 			: run.EnterTown(RegionIndex + 1) with
 			{
-				Team = Heal(run.Team, 1),
+				Team = Heal(run.Team, BossHeal),
 				RelicChoice = BossRelicOffer(),
 				MonsterChoice = run.BossMonsterOffer(),
 			};
