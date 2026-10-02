@@ -92,9 +92,9 @@ The UI says things with **a symbol and a number, and the words in a hover** — 
 law: when unsure, start with a symbol (`KinUI.md`, the declutter pass). The card text and the tips
 are GENERATED from a card's steps, never parsed from its sentence, so a new mechanic is silent until
 it is wired:
-- **A new `CardStep` / action**: if it is basic (one number, one target), add its case to
-  `KinCardIcons.Part` so a card made of it reads as symbols; otherwise the card keeps its words
-  (fine — but its sentence must still be short). Add it to `KinSymbols.Of` so a hovered card
+- **A new `CardStep` / action**: the card says it in a SHORT sentence — cards are words, not
+  symbols (2026-10-01; an attack is "Attack 5.", its aim said only when it is not the front).
+  Add it to `KinSymbols.Of` so a hovered card
   explains it — **a step missing there is a card whose hover panel says nothing about it**.
 - **A new keyword or status** (Burn, Thorns…): a `KinSymbols.Symbol` (name, icon, tint, ONE-line
   meaning) and, if it is common, a place in `KinSymbols.Legend` (the ? panel).

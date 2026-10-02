@@ -410,6 +410,24 @@ public static class PartyState
 	/// the whole attack: the relay's count of monsters that acted before it this round. A target that
 	/// already fell is a wasted blow.
 	/// </summary>
+	/// <summary>What one of your monsters' attacks lands for, before the foe's Block.</summary>
+	internal static int AttackDamage(GameState s, Ally ally, int amount) =>
+		ally.AttackFor(amount)
+		+ ally.FinisherPerAlly * s.GetParty().AlliesActedThisRound
+		// SPELLBLADE (Pike): its attacks add your Spell Power.
+		+ (ally.HasComponent<Spellblade>() ? s.SpellBonus() : 0);
+
+	/// <summary>
+	/// **What an attack card would hit for, played on the monster at <paramref name="space"/>** — the
+	/// number the card shows while it is dragged there. Null when the card has no attack or no monster
+	/// stands there. Reads the ATTACK step alone: a step before it (a Power boost) is not run.
+	/// </summary>
+	public static int? AttackPreview(this GameState s, KinCard card, int space) =>
+		card.Effects.Select(e => e.Template).OfType<StrikeAction>().FirstOrDefault() is { } strike
+		&& s.AllyAt(space) is { IsKnockedOut: false }
+			? (strike with { Space = space, FoeRow = false }).Damage(s)
+			: null;
+
 	internal static (GameState, ImmutableList<GameEvent>) AttackFoes(
 		GameState s,
 		Ally ally,
@@ -417,11 +435,7 @@ public static class PartyState
 		IEnumerable<int> targets
 	)
 	{
-		var damage =
-			ally.AttackFor(amount)
-			+ ally.FinisherPerAlly * s.GetParty().AlliesActedThisRound
-			// SPELLBLADE (Pike): its attacks add your Spell Power.
-			+ (ally.HasComponent<Spellblade>() ? s.SpellBonus() : 0);
+		var damage = AttackDamage(s, ally, amount);
 		var events = ImmutableList<GameEvent>.Empty;
 		foreach (var id in targets)
 		{

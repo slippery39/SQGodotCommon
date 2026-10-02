@@ -420,6 +420,26 @@ public partial class PartyTests
 		Assert.That(s.GetParty().Energy, Is.EqualTo(energy + bonus.Energy));
 	}
 
+	/// <summary>The number a dragged attack card shows is the number it lands for — every add-on in.</summary>
+	[Test]
+	public void AnAttacksPreviewIsWhatItLands()
+	{
+		var kindle = new SpellPowerAction { Amount = 3 };
+		var s = Solo(
+			With(With(Mon("Pike"), new Spellblade()), new FirstAttack { Damage = 4 }),
+			[Card("Kindle", 0, kindle), Card("Strike", 0, new StrikeAction { Amount = 2 })]
+		);
+		s = Play(s, "Kindle", 0);
+		var hp = FoeIn(s, 0).Hp;
+
+		var preview = s.AttackPreview(InHand(s, "Strike"), 0);
+		s = Play(s, "Strike", 0);
+
+		Assert.That(preview, Is.EqualTo(hp - FoeIn(s, 0).Hp));
+		Assert.That(preview, Is.GreaterThan(2), "the add-ons are in it");
+		Assert.That(s.AttackPreview(Spark(), 0), Is.Null, "not an attack");
+	}
+
 	// ===== The content
 
 	[Test]

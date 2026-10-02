@@ -595,7 +595,7 @@ public partial class KinPartyBoard : Node2D
 		"END TURN: the foes act, from the back. A foe's badge shows its next move.",
 	];
 
-	/// <summary>The cell the last card was dropped on — the card's name rises off it.</summary>
+	/// <summary>The cell the last card was dropped on — it pops.</summary>
 	private Control _lastDrop;
 
 	/// <summary>Returns null when the card played, or the engine's refusal — the hand shows it.</summary>
@@ -765,12 +765,50 @@ public partial class KinPartyBoard : Node2D
 					?? (_captureHoverCard is { } n && n < _hand.Cards.Count ? _hand.Cards[n] : null)
 		);
 
+		PreviewAttack(Common.Cards.CardUIManager.DraggingCard);
+
 		var id = int.TryParse(ui?.Id, out var parsed) ? parsed : _captureFocusId;
 		if (id == _focusCardId)
 			return;
 
 		_focusCardId = id;
 		RenderRows();
+	}
+
+	private (Common.Cards.CardUI2D Ui, KinCard Card, int? Total) _attackShown;
+
+	/// <summary>
+	/// **A dragged attack card shows what it would hit for, over the monster under it** — and its own
+	/// words again anywhere else. Rewritten only when the number changes.
+	/// </summary>
+	private void PreviewAttack(Common.Cards.CardUI2D dragging)
+	{
+		var card =
+			int.TryParse(dragging?.Id, out var id)
+			&& _state.HasObject(id)
+			&& _state.GetObject(id) is KinCard c
+			&& c.Effects.Any(e => e.Template is StrikeAction)
+				? c
+				: null;
+		int? total =
+			card is not null && SpaceAt(Mouse) is { } space
+				? _state.AttackPreview(card, space)
+				: null;
+		if (dragging == _attackShown.Ui && total == _attackShown.Total)
+			return;
+
+		// Put the words back only on an ATTACK the old face still shows: a non-attack was never
+		// rewritten, and a played card's face is recycled for whatever the hand drew next.
+		if (
+			_attackShown is { Ui: { } old, Card: { } shown }
+			&& old != dragging
+			&& IsInstanceValid(old)
+			&& old.Id == shown.Id.ToString()
+		)
+			KinCardFace.ShowAttack(old, shown, null);
+		if (card is not null)
+			KinCardFace.ShowAttack(dragging, card, total);
+		_attackShown = (dragging, card, total);
 	}
 
 	/// <summary>
@@ -1037,16 +1075,8 @@ public partial class KinPartyBoard : Node2D
 
 			System.Action play = e switch
 			{
-				CardPlayedEvent played when _lastDrop is { } cell => () =>
-				{
-					KinAnimator.Pop(cell);
-					KinAnimator.Float(
-						_overlay,
-						cell,
-						played.CardName.ToUpperInvariant(),
-						KinPalette.Gold
-					);
-				},
+				// A pop on what it landed on — no name rising off it: you just played it (2026-10-02).
+				CardPlayedEvent when _lastDrop is { } cell => () => KinAnimator.Pop(cell),
 				CardStolenEvent stolen => () =>
 					KinAnimator.Float(
 						_overlay,

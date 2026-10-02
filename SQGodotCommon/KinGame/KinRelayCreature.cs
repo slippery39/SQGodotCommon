@@ -403,6 +403,9 @@ public sealed class KinRelayCreature
 		}
 
 		_name.Text = look.Name;
+		// Lit — a card can land here — the name goes gold with the ground: the drop's highlight
+		// replaced its "HERE" words (2026-10-02), and the gold ground alone was faint on grass.
+		_name.Modulate = look.Lit ? KinPalette.Gold : Colors.White;
 		_hp.MaxValue = look.MaxHp;
 		_hp.Value = look.Hp;
 		_fill.ModulateColor = look.Bar;

@@ -55,7 +55,7 @@ the author to the attribution line if new. "Some icons from game-icons.net" is n
   creature tips, the tile tooltips and the card hover panel all read it. Add it to `Legend` if it is
   common.
 - Where it shows: a `Chip` (with its `Tip`) on a creature, a `KinMoveText` badge symbol, a
-  `KinCardIcons.Part` case on a card, a run-screen chip row (`MouseFilter.Pass` + `TooltipText`).
+  run-screen chip row (`MouseFilter.Pass` + `TooltipText`).
 - **Tint for its size**: a small symbol needs a brighter tint than the palette colour (Ember's
   `#C2621F` read as mud at chip size; chips use `#FF9A3C`).
 

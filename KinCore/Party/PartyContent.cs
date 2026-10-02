@@ -151,13 +151,8 @@ public static class PartyContent
 	);
 
 	private static readonly KinCard BasicStrike = PartyCards.Plus(
-		Card(
-			"Strike",
-			1,
-			"It attacks their front now: 5 + Power.",
-			new StrikeAction { Amount = 5 }
-		),
-		Card("Strike", 1, "It attacks their front now: 8 + Power.", new StrikeAction { Amount = 8 })
+		Card("Strike", 1, "Attack 5.", new StrikeAction { Amount = 5 }),
+		Card("Strike", 1, "Attack 8.", new StrikeAction { Amount = 8 })
 	);
 
 	private static readonly KinCard Rally = Card(
@@ -282,16 +277,11 @@ public static class PartyContent
 		Stagger,
 		PartyCards.Charge,
 		PartyCards.HoldTheLine,
-		Card(
-			"Strike",
-			1,
-			"It attacks their front now: 3 + Power.",
-			new StrikeAction { Amount = 3 }
-		),
+		Card("Strike", 1, "Attack 3.", new StrikeAction { Amount = 3 }),
 		Card(
 			"Whirl",
 			2,
-			"It attacks their whole line now: 2 + Power.",
+			"Attack all foes for 2.",
 			new StrikeAction { Amount = 2, Aim = Aim.Sweep }
 		) with
 		{

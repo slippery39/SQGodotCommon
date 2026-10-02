@@ -30,7 +30,7 @@ catch", "Wants to be HIT").
 | Icons | **game-icons.net** (CC BY — the set our 5 already come from; every new one goes in `CREDITS.md`) |
 | A creature | **STS style**: Block as a shield + number on the left of the HP bar (Rooted a different tint); under the bar ONE row of icon + number chips (Power, Spell Power, Thorns, Burn); the passive an icon that explains itself on hover. **No family word** — on yours or the foes' |
 | Teaching | **Hover, and a ? button** — no always-on hint line, no instructional subtitles; a ? opens a one-screen how-to. A subtitle stays only where it carries information (the boss's name) |
-| Card text | **Icons for the basics** — Strike = sword 5, Guard = shield 8, Zap = bolt 8; real rules stay as short words ("Draw 2", "All foes", "Sacrifice a token"). The lit drop places say where it goes, so no "Drop on a foe:" |
+| Card text | **WORDS — reversed 2026-10-01** (below). Short sentences, STS/MTG style: "Gain 8 Block.", "Attack 5."; the lit drop places say where it goes, so no "Drop on a foe:" |
 | Combat log | **Cut** — the floats show every hit; `party-sim trace` keeps the record |
 | Foe intents | **Icon + number + an aim glyph** (front, back, front two, all, weakest); CRUSH a cracked shield; the aim explained on hover |
 | Rewards, shop, spring | **The real card faces**, as in the hand — one look everywhere; price or SOLD under it |
@@ -50,10 +50,17 @@ goes; first-attack badges as icon + number.
 - **Battle chrome**: title "TURN n · NAME"; no subtitle, hint line or combat log; "3/3" alone;
   Spell Power a swirl + number; auras a mark + name; floats an icon + number (`KinAnimator.Float`'s
   `icon`); the hint spot now carries only refusals.
-- **Cards** (`KinCardIcons`): a card made ONLY of basic steps reads as symbols, generated from its
-  steps (never parsed from its sentence) — a `RichTextLabel` added to the instance over the shared
-  rules box, whose label is made invisible. Any card with a real rule keeps its words, without
-  "Drop on a foe:". Live Spell Power stays green.
+- **Cards — icons tried, then REVERSED (Shayne, 2026-10-01)**: a basic card read as symbols
+  (`KinCardIcons`, deleted). Even Shayne read Kindle's "[swirl] +3 [cards] 2" as *Burn 3* — it
+  is Spell Power. **Symbols are for STATUS you glance at (chips, intents, the board); a CARD is a
+  CHOICE you read, so it says it in words**, as STS and MTG do. Attacks say "Attack 5." (front is
+  the default; any other aim is said: "Attack all foes for 2."); Power is never written — **dragged
+  over one of your monsters, the card shows that monster's real total**, green
+  (`PartyState.AttackPreview`, `KinCardFace.ShowAttack`). Green on a spell only when a number on it
+  actually grew.
+- **Drop targets are a HIGHLIGHT, not words (2026-10-02)**: a place a held card can land on turns its
+  ground and name gold; an empty place shows the gold ground mark alone. No "▲ STRIKE HERE", and no
+  card name floating off what it was played on — a pop says it landed.
 - **Run screens**: real card faces (`CardButton` — the hand's face drawn once into a `SubViewport`
   and shown as a picture, so it takes no input; filled on the card's `Ready`, not before);
   starter/monster tiles as a passive star, a first-attack row and heart/Power/Spell Power symbols;

@@ -112,20 +112,8 @@ public static class GroveCards
 	);
 
 	public static readonly KinCard BarkSlam = Plus(
-		Card(
-			"Bark Slam",
-			1,
-			C,
-			"It attacks their front for its Block + Power.",
-			new StrikeAction { PerBlock = 1 }
-		),
-		Card(
-			"Bark Slam",
-			0,
-			C,
-			"It attacks their front for its Block + Power.",
-			new StrikeAction { PerBlock = 1 }
-		)
+		Card("Bark Slam", 1, C, "Attack for its Block.", new StrikeAction { PerBlock = 1 }),
+		Card("Bark Slam", 0, C, "Attack for its Block.", new StrikeAction { PerBlock = 1 })
 	);
 
 	public static readonly KinCard ThornLash = Plus(
@@ -133,14 +121,14 @@ public static class GroveCards
 			"Thorn Lash",
 			1,
 			C,
-			"It attacks their front for 4 + its Thorns + Power.",
+			"Attack for 4 + its Thorns.",
 			new StrikeAction { Amount = 4, PerThorns = 1 }
 		),
 		Card(
 			"Thorn Lash",
 			1,
 			C,
-			"It attacks their front for 6 + its Thorns + Power.",
+			"Attack for 6 + its Thorns.",
 			new StrikeAction { Amount = 6, PerThorns = 1 }
 		)
 	);
@@ -325,14 +313,14 @@ public static class GroveCards
 			"Pack Charge",
 			1,
 			U,
-			"Each of your tokens attacks their front for its Power.",
+			"Each of your tokens attacks for its Power.",
 			new TokensAttackAction()
 		),
 		Card(
 			"Pack Charge",
 			0,
 			U,
-			"Each of your tokens attacks their front for its Power.",
+			"Each of your tokens attacks for its Power.",
 			new TokensAttackAction()
 		)
 	);
@@ -378,14 +366,14 @@ public static class GroveCards
 			"Crushing Weight",
 			2,
 			R,
-			"It attacks their front for twice its Block + Power.",
+			"Attack for twice its Block.",
 			new StrikeAction { PerBlock = 2 }
 		),
 		Card(
 			"Crushing Weight",
 			2,
 			R,
-			"It attacks their front for three times its Block + Power.",
+			"Attack for three times its Block.",
 			new StrikeAction { PerBlock = 3 }
 		)
 	);

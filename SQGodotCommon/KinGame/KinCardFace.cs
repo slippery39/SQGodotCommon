@@ -193,7 +193,6 @@ public static class KinCardFace
 	public static void ApplyStats(CardUI2D ui, KinCard card, int spellBonus = 0)
 	{
 		var unit = card.GetComponent<UnitComponent>();
-		IconText(ui, card, spellBonus);
 
 		// **Re-centre the art window, per card.** A Sprite2D draws its texture centred on its own
 		// position, so a taller art texture alone would grow upward into the name and downward into
@@ -244,54 +243,24 @@ public static class KinCardFace
 			medallion.Texture = null;
 	}
 
-	private const string IconTextName = "KinIconText";
-
 	/// <summary>
-	/// **A basic card says it in SYMBOLS** (the declutter pass, 2026-09-30) — a rich-text overlay ON
-	/// THIS INSTANCE, laid exactly over the shared rules box (never MTG's scene), shown when
-	/// `KinCardIcons` can say the whole card; the words' label is then made invisible, not emptied,
-	/// so the shared fitter and `Details` are untouched. Per card: cards in the fan are recycled.
+	/// **An attack card held over one of your monsters reads THAT monster's number** (Shayne,
+	/// 2026-10-01: "Attack 5" in the hand, the real total over the attacker) — Power, Spell Power and a
+	/// first-attack bonus folded in, green as a boosted spell is. Null puts the card's own words back.
+	/// The label is set directly, not through `Details`, so a drag does not re-apply the art.
 	/// </summary>
-	private static void IconText(CardUI2D ui, KinCard card, int spellBonus)
+	public static void ShowAttack(CardUI2D ui, KinCard card, int? total)
 	{
 		if (ui.FindChild("RulesTextLabel", true, false) is not Label rules)
 			return;
-		var fontSize = rules.LabelSettings?.FontSize ?? Pt(22);
-		var line = KinCardIcons.Line(card, spellBonus, (int)(fontSize * 1.5f));
-
-		var rich = rules.GetParent().GetNodeOrNull<RichTextLabel>(IconTextName);
-		if (rich is null && line is not null)
-		{
-			rich = new RichTextLabel
-			{
-				Name = IconTextName,
-				BbcodeEnabled = true,
-				ScrollActive = false,
-				AutowrapMode = TextServer.AutowrapMode.WordSmart,
-				VerticalAlignment = VerticalAlignment.Center,
-				MouseFilter = Control.MouseFilterEnum.Ignore,
-			};
-			rules.GetParent().AddChild(rich);
-		}
-		if (rich is not null)
-		{
-			rich.Visible = line is not null;
-			rich.AnchorLeft = rules.AnchorLeft;
-			rich.AnchorRight = rules.AnchorRight;
-			rich.AnchorTop = rules.AnchorTop;
-			rich.AnchorBottom = rules.AnchorBottom;
-			rich.OffsetLeft = rules.OffsetLeft;
-			rich.OffsetRight = rules.OffsetRight;
-			rich.OffsetTop = rules.OffsetTop;
-			rich.OffsetBottom = rules.OffsetBottom;
-			rich.AddThemeFontSizeOverride("normal_font_size", (int)(fontSize * 1.35f));
-			if (rules.LabelSettings?.Font is { } font)
-				rich.AddThemeFontOverride("normal_font", font);
-			rich.AddThemeColorOverride("default_color", KinCardKit.Ink);
-			rich.Text = line ?? "";
-		}
-		rules.SelfModulate = line is null ? Colors.White : new Color(1, 1, 1, 0);
+		var text = WithoutDropOn(RulesTextFor(card));
+		rules.Text = total is { } n ? AttackNumber.Replace(text, $"Attack${{head}} {n}.", 1) : text;
+		rules.Modulate = total is null ? KinCardKit.Ink : Color.FromHtml("#1F7A2E");
 	}
+
+	/// <summary>"Attack 5." / "Attack all foes for 2." / "Attack for its Block." — the number, or what stands for it.</summary>
+	private static readonly System.Text.RegularExpressions.Regex AttackNumber =
+		new(@"\bAttack(?<head>(?:[^.]* for)?) [^.]+\.");
 
 	/// <summary>
 	/// **"Drop on a foe:" goes** — the lit drop places say where a card goes (the declutter pass).
@@ -418,7 +387,12 @@ public static class KinCardFace
 			card.Family != KinCore.Party.Family.None
 				? KinPalette.Family(card.Family)
 				: KinCardKit.Neutral;
-		var boosted = spellBonus > 0 && KinCore.Party.PartySpells.IsSpell(card);
+		// Green only when a number on it actually grew — Guard is a spell, but nothing on it rises.
+		var text =
+			spellBonus > 0 && KinCore.Party.PartySpells.IsSpell(card)
+				? Boost(RulesTextFor(card), spellBonus)
+				: RulesTextFor(card);
+		var boosted = text != RulesTextFor(card);
 		var ground = KinArt.ColourFor(card.Name);
 		// A + version draws its base card's art ("Strike+" is Strike's picture).
 		var subject = card.Name.TrimEnd('+');
@@ -440,9 +414,7 @@ public static class KinCardFace
 			// no effects and no tags, and this returned the empty string — so `Description`, which is
 			// authored for every card in the game, was displayed nowhere at all. It reads as a font
 			// bug and is not one: there was no text to size.
-			RulesText = WithoutDropOn(
-				boosted ? Boost(RulesTextFor(card), spellBonus) : RulesTextFor(card)
-			),
+			RulesText = WithoutDropOn(text),
 			// TOUGHNESS ONLY — power is drawn beside the sword at bottom-left. See StyleStats.
 			PowerToughness = unit is null ? "" : unit.Toughness.ToString(),
 

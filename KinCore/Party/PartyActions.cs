@@ -398,6 +398,22 @@ public record StrikeAction : CardStep
 	/// <summary>Thorn Lash: + this much for each of its Thorns.</summary>
 	public int PerThorns { get; init; }
 
+	/// <summary>What this attack would land for, before Block — the card's live number on a drag.</summary>
+	public int Damage(GameState s)
+	{
+		var (bonused, extra, _, _) = PartyMonsters.Attacks(s, Target(s));
+		var ally = (Ally)bonused.GetObject(Target(s).Id);
+		return PartyState.AttackDamage(bonused, ally, Total(bonused, ally, extra));
+	}
+
+	private int Total(GameState s, Ally ally, int extra) =>
+		Amount
+		+ extra
+		+ (PlusCardsInHand ? s.CardsIn(ZoneType.Hand).Count() : 0)
+		+ PerX * s.GetParty().XPaid
+		+ PerBlock * ally.Block
+		+ PerThorns * ally.TotalThorns;
+
 	public override ActionResult Execute(GameState s)
 	{
 		// **The FIRST attack on this monster this turn fires its bonus** (round 4, `PartyMonsters`).
@@ -407,12 +423,7 @@ public record StrikeAction : CardStep
 		var (after, events) = PartyState.AttackFoes(
 			bonused,
 			ally,
-			Amount
-				+ extra
-				+ (PlusCardsInHand ? bonused.CardsIn(ZoneType.Hand).Count() : 0)
-				+ PerX * bonused.GetParty().XPaid
-				+ PerBlock * ally.Block
-				+ PerThorns * ally.TotalThorns,
+			Total(bonused, ally, extra),
 			targets
 		);
 		// A first-attack BURN (Cinder Newt) lands on whoever the blow hit.

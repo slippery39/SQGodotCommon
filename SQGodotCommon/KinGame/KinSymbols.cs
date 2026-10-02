@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using KinCore;
@@ -129,8 +129,8 @@ public static class KinSymbols
 	];
 
 	/// <summary>
-	/// **The symbols a card uses** — from its STEPS, as `KinCardIcons` draws them, never parsed from
-	/// its words. Each once, in the order its steps first need it.
+	/// **The symbols a card uses** — from its STEPS, never parsed from its words — for its hover
+	/// panel. Each once, in the order its steps first need it.
 	/// </summary>
 	public static IReadOnlyList<Symbol> Of(KinCard card)
 	{

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Godot;
@@ -55,7 +55,9 @@ public sealed class KinRelayField
 
 	private readonly Dictionary<int, KinRelayCreature> _views = new();
 	private readonly Dictionary<int, Vector2> _targets = new();
-	private readonly Label[] _hints = new Label[PartyBattle.MaxLine * 2];
+
+	/// <summary>Each place's gold ground mark — lit where the held card can land on an EMPTY place.</summary>
+	private readonly TextureRect[] _hints = new TextureRect[PartyBattle.MaxLine * 2];
 
 	/// <summary>A view lifted by the deploy drag: it follows the mouse and is not slid until dropped.</summary>
 	private int _heldId;
@@ -70,11 +72,17 @@ public sealed class KinRelayField
 
 		for (var d = 0; d < _hints.Length; d++)
 		{
-			var hint = KinPalette.Text("", 22, KinPalette.Gold);
-			hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
-			hint.CustomMinimumSize = new Vector2(1, 0);
-			hint.Size = new Vector2(Slot, 80);
-			hint.MouseFilter = Control.MouseFilterEnum.Ignore;
+			// The creature's own drop mark (`ui/contact`, gold) on bare ground: a highlight, not words.
+			var hint = new TextureRect
+			{
+				ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+				StretchMode = TextureRect.StretchModeEnum.Scale,
+				Texture = KinArt.Drawing("ui/contact"),
+				Size = new Vector2(Slot * 0.7f, 40),
+				Modulate = new Color(KinPalette.Gold, 0.95f),
+				MouseFilter = Control.MouseFilterEnum.Ignore,
+				Visible = false,
+			};
 			Root.AddChild(hint);
 			_hints[d] = hint;
 		}
@@ -150,17 +158,14 @@ public sealed class KinRelayField
 		foreach (var id in _views.Keys.Where(id => !standing.Contains(id)).ToList())
 			_targets.Remove(id);
 
-		// A drop on an EMPTY place — a Summon on your line, a Gust on theirs — is said on the place.
+		// A drop on an EMPTY place — a Summon on your line, a Gust on theirs — lights the place.
 		var allies = s.LivingAllies().Count();
 		var foes = s.LivingFoes().Count();
 		for (var d = 0; d < _hints.Length; d++)
 		{
 			var empty = d < PartyBattle.MaxLine ? d >= allies : d - PartyBattle.MaxLine >= foes;
-			_hints[d].Position = SlotRect(d).Position + new Vector2((_slot - Slot) / 2, 220);
-			_hints[d].Text =
-				empty && ctx.Focus is not null && ctx.Drops.Contains(d)
-					? $"▲ {ctx.Focus.Name.ToUpperInvariant()} HERE"
-					: "";
+			_hints[d].Position = SlotRect(d).Position + new Vector2((_slot - Slot * 0.7f) / 2, 220);
+			_hints[d].Visible = empty && ctx.Focus is not null && ctx.Drops.Contains(d);
 		}
 	}
 
@@ -297,10 +302,8 @@ public sealed class KinRelayField
 			ally.GetComponent<FirstAttack>() is { } firstBonus && PartyMonsters.BonusReady(ally)
 				? $"First attack this turn: {firstBonus.Text}."
 				: "",
-			drop is not null ? $"▲ {drop.Name.ToUpperInvariant()} HERE"
-				: loses > 0 ? $"−{loses}"
-				: "",
-			drop is not null ? KinPalette.Gold : KinPalette.Red
+			loses > 0 ? $"−{loses}" : "",
+			KinPalette.Red
 		);
 	}
 
@@ -379,10 +382,8 @@ public sealed class KinRelayField
 							? ". The dots: your line, back to front; filled is hit."
 							: "."
 					),
-			drop is not null ? $"▼ {drop.Name.ToUpperInvariant()} HERE"
-				: loses > 0 ? $"−{loses}"
-				: "",
-			drop is not null ? KinPalette.Gold : KinPalette.Red
+			loses > 0 ? $"−{loses}" : "",
+			KinPalette.Red
 		);
 	}
 

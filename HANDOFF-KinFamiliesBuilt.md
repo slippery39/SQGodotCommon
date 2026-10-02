@@ -46,8 +46,8 @@ decks (CRUSH ignores Block; ENRAGE grows each round).
   target `PartySim.BotWins`.
 - **Tests**: `KinCore.Tests/PartyTests.Ember.cs`, `PartyTests.Grove.cs`;
   `EveryCardARunCanHoldCanBePlayedSomewhere` and the targeting test in `PartyTests.Families.cs`.
-- **UI**: `KinSymbols` (every symbol's meaning, ONCE), `KinCardIcons` (a basic card's text as
-  symbols, generated from its steps), `KinRelayCreature` (Block shield, chips, badge, `TipAt`),
+- **UI**: `KinSymbols` (every symbol's meaning, ONCE), card text is WORDS again (`KinUI.md`, the
+  reversal 2026-10-01), `KinRelayCreature` (Block shield, chips, badge, `TipAt`),
   `KinRelayField` (chips, intent dots from `IntentTargets`), `KinPartyBoard` (tips, ? panel),
   `KinPartyRunScreens` (`CardButton`, `MonsterTile`). Icons in `Art/icons/`, credited in `CREDITS.md`.
 - **Measurements**: `docs/findings/companion-balance.md` — the difficulty pass, parity, the redone

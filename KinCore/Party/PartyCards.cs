@@ -140,7 +140,7 @@ public static class PartyCards
 	public static readonly KinCard Unleash = Card(
 		"Unleash",
 		0,
-		"Costs all your energy. It attacks their whole line now: 4 per energy.",
+		"Costs all your energy. Attack all foes for 4 per energy.",
 		new StrikeAction { PerX = 4, Aim = Aim.Sweep }
 	) with
 	{
@@ -211,7 +211,7 @@ public static class PartyCards
 	public static readonly KinCard ScrapHammer = Card(
 		"Scrap Hammer",
 		3,
-		"It attacks their front now: 6 + Power. Costs 1 less per card discarded this turn.",
+		"Attack 6. Costs 1 less per card discarded this turn.",
 		new StrikeAction { Amount = 6 }
 	) with
 	{
@@ -223,7 +223,7 @@ public static class PartyCards
 	public static readonly KinCard PageStorm = Card(
 		"Page Storm",
 		1,
-		"It attacks their front now: Power + 1 per card in your hand.",
+		"Attack for 1 per card in your hand.",
 		new StrikeAction { Amount = 0, PlusCardsInHand = true }
 	) with
 	{
