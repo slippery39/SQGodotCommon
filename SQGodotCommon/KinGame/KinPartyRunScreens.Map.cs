@@ -127,7 +127,10 @@ public sealed partial class KinPartyRunScreens
 		}
 	}
 
-	/// <summary>The deck, one button a card: the one pressed leaves the deck for good.</summary>
+	/// <summary>
+	/// The deck as its REAL cards, in a scrolling row as the spring's (playtest, 2026-10-02: name
+	/// buttons hid what each card does): the one pressed leaves the deck for good.
+	/// </summary>
 	private void ShowRemove(PartyRun run, Action<Func<PartyRun, PartyRun>> change)
 	{
 		Begin(
@@ -135,18 +138,11 @@ public sealed partial class KinPartyRunScreens
 			$"{PartyRun.RemovePrice} gold. A thinner deck draws its best cards more."
 		);
 
-		HBoxContainer row = null;
+		var row = ScrollRow(370);
 		for (var i = 0; i < run.Deck.Count; i++)
 		{
-			if (i % 5 == 0)
-				row = Row();
 			var index = i;
-			row!.AddChild(
-				Button(
-					$"{run.Deck[i].Name.ToUpperInvariant()} ({run.Deck[i].Cost})",
-					() => change(r => r.Remove(index))
-				)
-			);
+			row.AddChild(CardButton(run.Deck[i], () => change(r => r.Remove(index))));
 		}
 
 		Row().AddChild(Button("BACK", () => change(r => r)));
