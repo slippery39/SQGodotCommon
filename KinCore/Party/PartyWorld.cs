@@ -216,18 +216,32 @@ public static class PartyWorld
 	/// thickens its hoard, so it becomes the foe to kill first. Caught, discarding shields it — a
 	/// bridge from Discard to Block.
 	/// </summary>
-	public static readonly Foe HoardDrake = Creature(
-		"Hoard Drake",
-		26,
-		Guard("Hoard", 6),
-		Attack("Tail", 7) with
+	/// <summary>
+	/// **Rock Mite — CRUSH done right** (playtest 2026-10-02): FRAGILE, and a SMALL crush every turn.
+	/// Kill it first, or ignore it and take a little guaranteed damage — never a run-ender.
+	/// </summary>
+	public static readonly Foe RockMite = Creature(
+		"Rock Mite",
+		10,
+		Attack("Bore", 3) with
 		{
 			Crushes = true,
 		}
 	) with
 	{
-		Trait =
-			"HOARD: gains 2 Block when you draw or discard in your turn. CRUSH: its Tail ignores Block.",
+		Trait = "CRUSH: its Bore ignores Block.",
+		Family = Family.Mire,
+	};
+
+	public static readonly Foe HoardDrake = Creature(
+		"Hoard Drake",
+		26,
+		Guard("Hoard", 6),
+		Attack("Tail", 7)
+	) with
+	{
+		// No CRUSH on 26 HP (2026-10-02): CRUSH is for fragile foes only.
+		Trait = "HOARD: gains 2 Block when you draw or discard in your turn.",
 		Components =
 		[
 			new Trigger
@@ -498,6 +512,7 @@ public static class PartyWorld
 		BriarViper,
 		Magpie,
 		HoardDrake,
+		RockMite,
 	];
 
 	private static readonly Area MossyHollow =

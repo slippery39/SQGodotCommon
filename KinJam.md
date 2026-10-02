@@ -1,5 +1,17 @@
 # KIN — design doc
 
+> # PLAYTEST 2026-10-02 — the quick fixes (BUILT)
+>
+> - **Deploy is CUT**: no ordering before a fight (never used). The team's order is set in TOWN —
+>   the hospital, press a monster to send it to the front (`PartyRun.MoveToFront`). Swap / Charge /
+>   Retreat stay as the in-fight answer.
+> - **A boss heals HALF, not in full** (`PartyRun.BossHeal`): the full heal left the hospital nothing
+>   to heal.
+> - **Remove-a-card shows the real cards.**
+> - **The ENEMY brainstorm is done — `KinEnemiesPlan.md`**: an STS-steep curve, a roster per region,
+>   junk cards, four debuffs, CRUSH only on fragile foes (built). Then the MAP (wild vs trainer is a
+>   leftover with no difference), then the HOOK. Balance waits for the enemies.
+
 > # A SIMPLER GAME — the cards matter, the monsters guide (Shayne, 2026-09-28; RULES BUILT)
 >
 > Catching filled the bench with under-levelled monsters; Strike went on the strongest monster

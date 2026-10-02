@@ -86,6 +86,7 @@ superseded by this paragraph.
 | Design doc — read first; lessons for ANY deckbuilder | `KinJam.md`; `docs/design-principles.md` | read both |
 | **The setting — GENERIC FANTASY substrate; themes swappable on top** | `KinSettingSketches.md` | read it before naming any content |
 | **The next design — FAMILIES: monsters as engines, cards as fuel (interview 2026-09-27)** | `KinFamiliesPlan.md` | read it before designing any monster or card; the Relay's plan is `KinRelayPlan.md` |
+| **The ENEMIES — the curve, region rosters, junk cards, debuffs, the foe ideas (2026-10-02)** | `KinEnemiesPlan.md` | read it before designing or building any foe |
 | **The next loop — towns and wild routes as interactive MAPS (planned 2026-09-26)** | `KinMapPlan.md` | read it before touching the run's structure or its screens |
 | Where the last session got to | `HANDOFF-KinFamiliesBuilt.md` | read it when picking the work back up |
 | Earlier handoffs, superseded — every other `HANDOFF-Kin*.md` | root | read only for their scars section |

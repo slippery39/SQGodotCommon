@@ -212,14 +212,14 @@ public static class PartyContent
 		Creature(
 			"Boar",
 			22,
-			Attack("Charge", 9) with
-			{
-				Crushes = true,
-			},
+			// No CRUSH (playtest 2026-10-02: a CRUSH 10 on 22 HP was unanswerable on floor 3). CRUSH is
+			// for FRAGILE foes; the Boar's big Charge is telegraphed instead — Block answers it.
+			new Intent { Name = "Lower Head", Kind = IntentType.WindUp },
+			Attack("Charge", 9),
 			Attack("Thrash", 5, Aim.Sweep)
 		) with
 		{
-			Trait = "CRUSH: its Charge ignores Block.",
+			Trait = "Lowers its head a turn before it CHARGES.",
 			Family = Family.Grove,
 			Position = position,
 		};

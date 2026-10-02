@@ -73,6 +73,38 @@ public partial class PartyRunTests
 		}
 	}
 
+	/// <summary>
+	/// **CRUSH is for FRAGILE foes, and small** (playtest 2026-10-02: a 22-HP Boar's CRUSH 10 ended a
+	/// run on floor 3 — nothing could answer it). In region 1, at its top level: a crusher has at most
+	/// 12 HP and crushes for at most 4. Kill it first, or take a little — never a run-ender.
+	/// </summary>
+	[Test]
+	public void TheFirstRegionsCrushersAreFragileAndSmall()
+	{
+		var first = PartyWorld.Regions[0];
+		var crushers = first
+			.Areas.SelectMany(a => a.Pool)
+			.Where(f => f.Pattern.Any(i => i.Crushes))
+			.Distinct()
+			.ToList();
+
+		Assert.That(crushers, Is.Not.Empty, "the choice — kill it first or take a little — exists");
+		foreach (var foe in crushers)
+		{
+			Assert.That(
+				PartyLevels.At(foe.MaxHp, first.MaxLevel),
+				Is.LessThanOrEqualTo(12),
+				foe.Name
+			);
+			Assert.That(
+				foe.Pattern.Where(i => i.Crushes)
+					.Select(i => PartyLevels.At(i.Amount, first.MaxLevel)),
+				Is.All.LessThanOrEqualTo(4),
+				foe.Name
+			);
+		}
+	}
+
 	[Test]
 	public void LaterRegionsFieldMoreAndHigherLevelledFoes()
 	{
