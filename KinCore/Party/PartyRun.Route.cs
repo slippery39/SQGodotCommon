@@ -32,7 +32,7 @@ public partial record PartyRun
 				Cleared = [0],
 				Sold = [],
 				RelicChoice = [],
-				MonsterChoice = [],
+				EvolutionDue = false,
 			};
 
 	/// <summary>Why you cannot walk to that place — or null if you can.</summary>

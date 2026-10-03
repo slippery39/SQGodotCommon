@@ -19,7 +19,7 @@ The run's new shape is at the top of `KinJam.md`. For the families it means:
 | Echo Owl → **Echo Strix** | Draw 1 → 2 | **CADENCE**: your 3rd spell each turn costs 0 |
 | Ironhorn → **Ironclad** | Energy +1 → +2 | **TRAMPLE**: damage beyond what fells a foe hits the one behind (`Trample` exists) |
 | Bramble → **Bramble Elder** | Rooted 4 → 6, Thorns 2 → 3 | **GUARDIAN**: monsters behind her take 2 less from each hit |
-| Mosshell → **Ironbark** | Block 6 → 9 | **IRONBARK**: its attacks add half its Block (Block into damage — not Bramble's wall) |
+| Mosshell → **Elder Mosshell** | Block 6 → 9 | **SHELLSTRIKE**: its attacks add half its Block (Block into damage — not Bramble's wall). Renamed 2026-10-03: Ironbark and Heartwood are cards |
 | Hushcap → **Sporelord** | Thorns 6 → 9 | **SPORE CLOUD**: its Thorns hit every foe that attacks your line |
 | Broodvine → **Broodmother** | Summons 1 Sprout → 2 | **SEEDFALL**: when a token falls, draw a card (`DrawOnFall` exists) |
 | Howler → **Alpha Howler** | Grow 1 → 2 | **HUNT CALL**: its first attack each turn also makes each of your tokens attack |

@@ -29,6 +29,15 @@ public record PartyCompanion(
 	/// <summary>**Spell Power**: added to every spell you cast while it stands (round 4).</summary>
 	public int SpellPower { get; init; }
 
+	/// <summary>
+	/// **What a boss EVOLVES it into** (`KinFamiliesPlan.md`, round 5) — the same creature, a bigger
+	/// kit. Null for a form that is already evolved (single forms, for now).
+	/// </summary>
+	public PartyCompanion? EvolvesInto { get; init; }
+
+	/// <summary>This IS an evolved form.</summary>
+	public bool Evolved { get; init; }
+
 	/// <summary>Its FAMILY (`PartyFamilies`).</summary>
 	public Family Family { get; init; }
 }
@@ -83,6 +92,42 @@ public static class PartyContent
 			Amount = amount,
 		};
 
+	// ===== EVOLVED FORMS (round 5): +50% HP, +2 Power, the first-attack bonus about doubled. Each
+	// one's NEW passive comes with its rule; until then a form carries its base passive. Declared
+	// before the base forms, which name them.
+
+	public static readonly PartyCompanion BrambleElder =
+		new(
+			"Bramble Elder",
+			Hp: 24,
+			Power: 4,
+			[Attack("Bash", 4), Guard("Brace", 6)],
+			Passive: "THORNS",
+			PassiveRule: "A foe that attacks her takes 3.",
+			Thorns: 3
+		)
+		{
+			Family = Family.Grove,
+			Abilities = [new FirstAttack { Rooted = 6 }],
+			Evolved = true,
+		};
+
+	public static readonly PartyCompanion Lancepike =
+		new(
+			"Lancepike",
+			Hp: 27,
+			Power: 5,
+			[Attack("Jab", 2), Attack("Jab", 2), Attack("Flurry", 0, Aim.Sweep)],
+			Passive: "SPELLBLADE",
+			PassiveRule: "Its attacks add your Spell Power."
+		)
+		{
+			Family = Family.Ember,
+			SpellPower = 1,
+			Abilities = [new Spellblade(), new FirstAttack { SpellPower = 3 }],
+			Evolved = true,
+		};
+
 	/// <summary>
 	/// **Bramble, the Wall — wants the FRONT.** Every foe that strikes her pays for it, and in a line
 	/// the front is struck every round.
@@ -103,6 +148,7 @@ public static class PartyContent
 			// THORNWALL (2 + her Block) went 2026-09-30: every Block card was also a damage card. Her
 			// first attack each turn still roots her wall.
 			Abilities = [new FirstAttack { Rooted = 4 }],
+			EvolvesInto = BrambleElder,
 		};
 
 	/// <summary>
@@ -125,6 +171,7 @@ public static class PartyContent
 			Family = Family.Ember,
 			SpellPower = 1,
 			Abilities = [new Spellblade(), new FirstAttack { SpellPower = 2 }],
+			EvolvesInto = Lancepike,
 		};
 
 	/// <summary>
@@ -459,14 +506,6 @@ public static class PartyContent
 	/// **The monsters a boss can offer a run of this family** (round 4: monsters come from bosses).
 	/// Each family's four, one per archetype (`GroveCards`, `EmberCards`).
 	/// </summary>
-	public static ImmutableList<PartyCompanion> MonstersOf(Family family) =>
-		family switch
-		{
-			Family.Grove => GroveCards.Monsters,
-			Family.Ember => EmberCards.Monsters,
-			_ => [],
-		};
-
 	public static ImmutableList<PartyScenario> Scenarios =>
 		[Trio, Alone, Pair, Looting, Spellcraft, SurgeScenario, SummonScenario];
 }

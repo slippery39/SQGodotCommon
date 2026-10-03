@@ -45,9 +45,7 @@ public static class PartySimCommand
 				);
 				var names = reached
 					.SelectMany(r => r.Region2Deck!.Distinct().Select(n => ("card", n)))
-					.Concat(
-						reached.SelectMany(r => r.Region2Team!.Skip(1).Select(n => ("monster", n)))
-					)
+					.Concat(reached.SelectMany(r => r.Region2Team!.Select(n => ("monster", n))))
 					.Distinct();
 				foreach (
 					var (kind, name, with, without) in names

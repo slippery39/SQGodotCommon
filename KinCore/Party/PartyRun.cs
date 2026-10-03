@@ -122,36 +122,41 @@ public partial record PartyRun
 	public bool Has(Relic relic) => Relics.Contains(relic);
 
 	/// <summary>
-	/// **The MONSTERS a boss offers — pick one** (`ChooseMonster`), or leave them. Set when one of the
-	/// first two bosses falls (round 4: monsters come from bosses); cleared on leaving the town.
+	/// **A boss beaten: EVOLVE one of your monsters** (`KinFamiliesPlan.md`, round 5 — no new monsters
+	/// any more). Set as you reach the next town; spent by <see cref="Evolve"/>.
 	/// </summary>
-	public ImmutableList<PartyCompanion> MonsterChoice { get; init; } = [];
+	public bool EvolutionDue { get; init; }
 
-	/// <summary>Three of your family's monsters not on the team, seeded by the region.</summary>
-	private ImmutableList<PartyCompanion> BossMonsterOffer()
+	/// <summary>The team places whose monster can evolve now — none unless an evolution is due.</summary>
+	public ImmutableList<int> Evolvable =>
+		EvolutionDue
+			?
+			[
+				.. Team.Select((m, i) => (m, i))
+					.Where(p => p.m.Companion.EvolvesInto is not null)
+					.Select(p => p.i),
+			]
+			: [];
+
+	/// <summary>
+	/// **That monster becomes its evolved form** — it gains the extra HP and keeps its damage (no hidden
+	/// heal, 2026-10-03). Refused changes nothing.
+	/// </summary>
+	public PartyRun Evolve(int index)
 	{
-		if (Team.Count >= TeamSize)
-			return [];
-		var rng = new Random(Seed * 47 + RegionIndex);
-		return
-		[
-			.. PartyContent
-				.MonstersOf(Family)
-				.Where(m => Team.All(t => t.Companion.Name != m.Name))
-				.OrderBy(_ => rng.Next())
-				.Take(3),
-		];
+		if (!Evolvable.Contains(index))
+			return this;
+		var member = Team[index];
+		var form = member.Companion.EvolvesInto!;
+		return this with
+		{
+			Team = Team.SetItem(
+				index,
+				new RunCompanion(form, member.Hp + form.Hp - member.Companion.Hp)
+			),
+			EvolutionDue = false,
+		};
 	}
-
-	/// <summary>One of the offered monsters joins the team, at full HP; the others are gone.</summary>
-	public PartyRun ChooseMonster(PartyCompanion monster) =>
-		MonsterChoice.Contains(monster) && Team.Count < TeamSize
-			? this with
-			{
-				Team = Team.Add(new RunCompanion(monster, monster.Hp)),
-				MonsterChoice = [],
-			}
-			: this;
 
 	/// <summary>
 	/// **The BOSS RELICS offered — pick one** (`ChooseRelic`), or leave them. Set when a boss falls;
@@ -367,7 +372,7 @@ public partial record PartyRun
 			{
 				Team = Heal(run.Team, BossHeal),
 				RelicChoice = BossRelicOffer(),
-				MonsterChoice = run.BossMonsterOffer(),
+				EvolutionDue = run.Team.Any(m => m.Companion.EvolvesInto is not null),
 			};
 
 		return (run, new RunReport(revived, gold) { Relic = relic });

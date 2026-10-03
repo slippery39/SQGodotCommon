@@ -141,8 +141,8 @@ public static class PartySim
 					// A boss's prizes: the first relic and the first monster offered.
 					if (run.RelicChoice is [var relic, ..])
 						run = run.ChooseRelic(relic);
-					if (run.MonsterChoice is [var monster, ..])
-						run = run.ChooseMonster(monster);
+					if (run.Evolvable is [var first, ..])
+						run = run.Evolve(first);
 					if (run.RegionIndex == 1 && deck2 is null)
 					{
 						deck2 = [.. run.Deck.Select(c => c.Name)];

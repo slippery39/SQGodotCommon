@@ -25,7 +25,7 @@ public partial class PartyTests
 	public void EveryMonsterABossCanOfferIsItsFamilyAndBringsAnEngine()
 	{
 		foreach (var family in new[] { Family.Grove, Family.Ember })
-		foreach (var monster in PartyContent.MonstersOf(family))
+		foreach (var monster in PartyContent.PoolOf(family))
 		{
 			Assert.That(monster.Family, Is.EqualTo(family), monster.Name);
 			Assert.That(monster.Abilities, Is.Not.Empty, $"{monster.Name} brings an engine");

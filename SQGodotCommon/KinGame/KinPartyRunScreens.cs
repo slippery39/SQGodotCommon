@@ -127,16 +127,21 @@ public sealed partial class KinPartyRunScreens
 	}
 
 	/// <summary>
-	/// **A boss beaten: three MONSTERS of your family — one joins the team** (round 4: monsters come
-	/// from bosses; the first two bosses offer them).
+	/// **A boss beaten: EVOLVE one of your monsters** (round 5) — each that can, shown as the form it
+	/// becomes. No skip: an evolution is never worse.
 	/// </summary>
-	public void ShowMonsterChoice(PartyRun run, Action<PartyCompanion> choose, Action skip)
+	public void ShowEvolution(PartyRun run, Action<int> evolve)
 	{
-		Begin("A MONSTER JOINS YOU", "");
+		Begin("EVOLVE ONE", "");
 		var row = Row();
-		foreach (var monster in run.MonsterChoice)
-			row.AddChild(MonsterTile(monster, new Vector2(340, 480), () => choose(monster)));
-		Row().AddChild(Button("SKIP", skip));
+		foreach (var index in run.Evolvable)
+			row.AddChild(
+				MonsterTile(
+					run.Team[index].Companion.EvolvesInto,
+					new Vector2(340, 480),
+					() => evolve(index)
+				)
+			);
 	}
 
 	public void ShowOver(PartyRun run, Action newRun, Action menu)

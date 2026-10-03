@@ -420,17 +420,12 @@ public partial class KinPartyBoard : Node2D
 	{
 		if (!_run.RelicChoice.IsEmpty)
 			ShowRelicChoice(report, beaten);
-		else if (!_run.MonsterChoice.IsEmpty)
-			_screens.ShowMonsterChoice(
+		else if (!_run.Evolvable.IsEmpty)
+			_screens.ShowEvolution(
 				_run,
-				monster =>
+				index =>
 				{
-					_run = _run.ChooseMonster(monster);
-					ShowPrizes(report, beaten);
-				},
-				() =>
-				{
-					_run = _run with { MonsterChoice = [] };
+					_run = _run.Evolve(index);
 					ShowPrizes(report, beaten);
 				}
 			);

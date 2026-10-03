@@ -575,6 +575,65 @@ public static class EmberCards
 		};
 
 	/// <summary>**STACK** — Spell Power, then a nuke.</summary>
+	// ===== EVOLVED FORMS (KinFamiliesPlan.md, round 5) — declared first: each base names its form.
+
+	public static readonly PartyCompanion Flamekin = Monster(
+		"Flamekin",
+		18,
+		2,
+		2,
+		"STOKER",
+		"When a card gives Spell Power, it gives 1 more.",
+		new Stoker(),
+		new FirstAttack { FightSpellPower = 2 }
+	) with
+	{
+		Evolved = true,
+	};
+
+	public static readonly PartyCompanion CinderDrake = Monster(
+		"Cinder Drake",
+		21,
+		3,
+		1,
+		"SMOULDER",
+		"Your spells apply 1 Burn to each foe they hit.",
+		new Smoulder(),
+		new FirstAttack { Burn = 4 }
+	) with
+	{
+		Evolved = true,
+	};
+
+	public static readonly PartyCompanion EchoStrix = Monster(
+		"Echo Strix",
+		20,
+		3,
+		1,
+		"ECHO",
+		"Your 3rd spell each turn is cast twice.",
+		new EchoNthSpell { Nth = 3 },
+		new FirstAttack { Draw = 2 }
+	) with
+	{
+		Evolved = true,
+	};
+
+	public static readonly PartyCompanion Ironclad = Monster(
+		"Ironclad",
+		27,
+		6,
+		0,
+		"BANK · TRAMPLE",
+		"Up to 2 unspent energy carries over. Damage beyond what fells a foe hits the one behind.",
+		new Bank { Most = 2 },
+		new Trample(),
+		new FirstAttack { Energy = 2 }
+	) with
+	{
+		Evolved = true,
+	};
+
 	public static readonly PartyCompanion Emberling = Monster(
 		"Emberling",
 		12,
@@ -584,7 +643,10 @@ public static class EmberCards
 		"When a card gives Spell Power, it gives 1 more.",
 		new Stoker(),
 		new FirstAttack { FightSpellPower = 1 }
-	);
+	) with
+	{
+		EvolvesInto = Flamekin,
+	};
 
 	/// <summary>**BURN** — every spell leaves a flame.</summary>
 	public static readonly PartyCompanion CinderNewt = Monster(
@@ -596,7 +658,10 @@ public static class EmberCards
 		"Your spells apply 1 Burn to each foe they hit.",
 		new Smoulder(),
 		new FirstAttack { Burn = 2 }
-	);
+	) with
+	{
+		EvolvesInto = CinderDrake,
+	};
 
 	/// <summary>**CHAINS** — the third spell is a double.</summary>
 	public static readonly PartyCompanion EchoOwl = Monster(
@@ -608,7 +673,10 @@ public static class EmberCards
 		"Your 3rd spell each turn is cast twice.",
 		new EchoNthSpell { Nth = 3 },
 		new FirstAttack { Draw = 1 }
-	);
+	) with
+	{
+		EvolvesInto = EchoStrix,
+	};
 
 	/// <summary>**ENERGY** — bank it, then dump it.</summary>
 	public static readonly PartyCompanion Ironhorn = Monster(
@@ -620,7 +688,10 @@ public static class EmberCards
 		"Up to 2 unspent energy carries into your next turn.",
 		new Bank { Most = 2 },
 		new FirstAttack { Energy = 1 }
-	);
+	) with
+	{
+		EvolvesInto = Ironclad,
+	};
 
 	/// <summary>The four a boss can offer an Ember run.</summary>
 	public static readonly ImmutableList<PartyCompanion> Monsters =

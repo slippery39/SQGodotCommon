@@ -551,6 +551,60 @@ public static class GroveCards
 		};
 
 	/// <summary>**ROOTED** — a wall that keeps everything and grows from being hit.</summary>
+	// ===== EVOLVED FORMS (KinFamiliesPlan.md, round 5) — declared first: each base names its form.
+
+	public static readonly PartyCompanion ElderMosshell = Monster(
+		"Elder Mosshell",
+		27,
+		3,
+		"MOSSBACK",
+		"Its Block is Rooted. When its Block stops a hit, it grows 1.",
+		new Mossback(),
+		new FirstAttack { Block = 9 }
+	) with
+	{
+		Evolved = true,
+	};
+
+	public static readonly PartyCompanion Sporelord = Monster(
+		"Sporelord",
+		18,
+		4,
+		"SPORECAP",
+		"A card that gives Thorns gives 3 more.",
+		new Sporecap(),
+		new FirstAttack { Thorns = 9 }
+	) with
+	{
+		Evolved = true,
+	};
+
+	public static readonly PartyCompanion Broodmother = Monster(
+		"Broodmother",
+		20,
+		3,
+		"NURSERY",
+		"Your tokens arrive with +3 HP and +1 Power.",
+		new TokenBoost { Hp = 3, Power = 1 },
+		new FirstAttack { Summons = Sprout }
+	) with
+	{
+		Evolved = true,
+	};
+
+	public static readonly PartyCompanion AlphaHowler = Monster(
+		"Alpha Howler",
+		21,
+		6,
+		"PACK LEADER",
+		"When a token of yours falls, each of your monsters grows 1.",
+		new PackLeader(),
+		new FirstAttack { Grow = 2 }
+	) with
+	{
+		Evolved = true,
+	};
+
 	public static readonly PartyCompanion Mosshell = Monster(
 		"Mosshell",
 		18,
@@ -559,7 +613,10 @@ public static class GroveCards
 		"Its Block is Rooted. When its Block stops a hit, it grows 1.",
 		new Mossback(),
 		new FirstAttack { Block = 6 }
-	);
+	) with
+	{
+		EvolvesInto = ElderMosshell,
+	};
 
 	/// <summary>**THORNS** — every Thorns card, bigger.</summary>
 	public static readonly PartyCompanion Hushcap = Monster(
@@ -570,7 +627,10 @@ public static class GroveCards
 		"A card that gives Thorns gives 3 more.",
 		new Sporecap(),
 		new FirstAttack { Thorns = 6 }
-	);
+	) with
+	{
+		EvolvesInto = Sporelord,
+	};
 
 	/// <summary>**TOKENS** — they arrive bigger, and its own attacks sow them.</summary>
 	public static readonly PartyCompanion Broodvine = Monster(
@@ -581,7 +641,10 @@ public static class GroveCards
 		"Your tokens arrive with +3 HP and +1 Power.",
 		new TokenBoost { Hp = 3, Power = 1 },
 		new FirstAttack { Summons = Sprout }
-	);
+	) with
+	{
+		EvolvesInto = Broodmother,
+	};
 
 	/// <summary>**GROWTH** — every token lost makes the pack stronger.</summary>
 	public static readonly PartyCompanion Howler = Monster(
@@ -592,7 +655,10 @@ public static class GroveCards
 		"When a token of yours falls, each of your monsters grows 1.",
 		new PackLeader(),
 		new FirstAttack { Grow = 1 }
-	);
+	) with
+	{
+		EvolvesInto = AlphaHowler,
+	};
 
 	/// <summary>The four a boss can offer a Grove run.</summary>
 	public static readonly ImmutableList<PartyCompanion> Monsters =

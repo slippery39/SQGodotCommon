@@ -188,37 +188,57 @@ public partial class PartyRunTests
 		Assert.That(Hp(run, "A"), Is.EqualTo(1), "round 4: back at 1 HP");
 	}
 
-	// ===== Monsters come from BOSSES (round 4)
+	// ===== Bosses EVOLVE (round 5 — no new monsters any more)
 
 	[Test]
-	public void TheFirstTwoBossesEachOfferThreeMonstersOfYourFamily()
+	public void ABossEvolvesOneMonsterWhichKeepsItsDamageAndCannotEvolveAgain()
 	{
+		var formA = Mon("A+", hp: 60) with { Evolved = true };
+		var formB = Mon("B+", hp: 60) with { Evolved = true };
 		var run = Run() with
 		{
-			Family = Family.Grove,
+			Team =
+			[
+				new RunCompanion(A with { EvolvesInto = formA }, 10),
+				new RunCompanion(B with { EvolvesInto = formB }, B.Hp),
+			],
 			Regions = [Region("R1"), Region("R2"), Region("R3")],
 		};
 
-		foreach (var region in new[] { 0, 1 })
+		var (town, _) = WinNext(OnRoute(run).MoveTo(1));
+		Assert.That(town.Evolvable, Is.EqualTo(new[] { 0, 1 }), "boss 1: either can");
+		var hurt = town.Team[0].Hp;
+
+		run = town.Evolve(0);
+		Assert.That(run.Team[0].Companion, Is.EqualTo(formA));
+		Assert.That(
+			run.Team[0].Hp,
+			Is.EqualTo(hurt + formA.Hp - A.Hp),
+			"gains the extra HP, keeps the damage"
+		);
+		Assert.That(run.Evolvable, Is.Empty, "one evolution a boss");
+
+		var (second, _) = WinNext(OnRoute(run with { RegionIndex = 1 }).MoveTo(1));
+		Assert.That(
+			second.Evolvable,
+			Is.EqualTo(new[] { 1 }),
+			"an evolved form evolves no further"
+		);
+	}
+
+	[Test]
+	public void EveryPoolMonsterEvolvesIntoABiggerFormOfItsFamily()
+	{
+		foreach (var family in PartyContent.Families)
+		foreach (var monster in PartyContent.PoolOf(family))
 		{
-			var (town, _) = WinNext(OnRoute(run with { RegionIndex = region }).MoveTo(1));
-
-			Assert.That(town.MonsterChoice, Has.Count.EqualTo(3), $"boss {region + 1}");
-			Assert.That(town.MonsterChoice.Select(m => m.Family), Is.All.EqualTo(Family.Grove));
-
-			var pick = town.MonsterChoice[0];
-			run = town.ChooseMonster(pick);
-			Assert.That(run.Team.Select(m => m.Companion.Name), Does.Contain(pick.Name));
-			Assert.That(
-				run.Team.Single(m => m.Companion.Name == pick.Name).Hp,
-				Is.EqualTo(pick.Hp)
-			);
-			Assert.That(run.MonsterChoice, Is.Empty);
+			var form = monster.EvolvesInto;
+			Assert.That(form, Is.Not.Null, monster.Name);
+			Assert.That(form!.Evolved && form.EvolvesInto is null, monster.Name);
+			Assert.That(form.Family, Is.EqualTo(monster.Family), monster.Name);
+			Assert.That(form.Hp, Is.GreaterThan(monster.Hp), monster.Name);
+			Assert.That(form.Power, Is.GreaterThan(monster.Power), monster.Name);
 		}
-
-		Assert.That(run.Team, Has.Count.EqualTo(PartyRun.TeamSize));
-		var (third, _) = WinNext(OnRoute(run with { RegionIndex = 2 }).MoveTo(1));
-		Assert.That(third.MonsterChoice, Is.Empty, "a full team is offered no more");
 	}
 
 	// ===== The team's order — set in town, and only there (deploy cut, 2026-10-02)
