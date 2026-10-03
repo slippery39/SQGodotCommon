@@ -13,36 +13,17 @@ public enum FindKind
 }
 
 /// <summary>
-/// **A wild area: its own POOL of creatures** (Shayne, 2026-09-24 — random from a pool, and the pool
-/// is the area's). Choosing an area is choosing what you might catch. `Rare` appears only down the
-/// deeper path.
-/// </summary>
-public record Area(string Name, string Description, ImmutableList<Foe> Pool, Foe Rare);
-
-/// <summary>
-/// **A region: a town, then a wild route across two areas, then its BOSS at the route's end**
-/// (`KinFamiliesPlan.md`, round 2). Wild fights field `MinFoes`–`MaxFoes` creatures. **The difficulty
-/// is the ELITES and the BOSS** — already scaled here to the region's tier (`PartyWorld.Tiers`); wild
-/// fights are light attrition. One of the two `Bosses` is the region's, SHOWN from its town on.
+/// **A region: a town, a wild route, then its BOSS** (`KinEnemiesPlan.md`, 2026-10-03). Its foes are
+/// AUTHORED at its strength — no levels — and its wild fights are AUTHORED groups: the route's first
+/// fights draw from `Easy`, the rest from `Normal`, so each encounter can be judged on its own.
 /// </summary>
 public record Region(
 	string Name,
-	ImmutableList<Area> Areas,
 	ImmutableList<Encounter> Bosses,
 	ImmutableList<Encounter> Elites,
-	int MinFoes,
-	int MaxFoes,
-	int MinLevel = PartyLevels.Base,
-	int MaxLevel = PartyLevels.Base,
-	int EliteLevel = PartyLevels.Base,
-	int BossLevel = PartyLevels.Base
-)
-{
-	/// <summary>The rare's lair and trainers field monsters above the wild range.</summary>
-	public int RareLevel => MaxLevel + 2;
-
-	public int TrainerLevel => MaxLevel + 1;
-}
+	ImmutableList<Encounter> Easy,
+	ImmutableList<Encounter> Normal
+);
 
 /// <summary>
 /// **THE MAP v1 — two regions** (Shayne: "2 regions to get a feel for the gameplay loop"). Every
@@ -450,124 +431,68 @@ public static class PartyWorld
 	/// <summary>A foe's place in its line; the factory closes the line up from these in order.</summary>
 	private static Foe At(Foe foe, int position) => foe with { Position = position };
 
-	/// <summary>
-	/// **A wild fight from an area's pool**: `count` foes, the `rare` first if there is one, placed
-	/// front to back. Shared by the trail and the route (`PartyRoutes`).
-	/// </summary>
-	internal static Encounter WildFight(
-		Area area,
-		int count,
-		Foe? rare,
-		Random rng,
-		int minLevel = PartyLevels.Base,
-		int maxLevel = PartyLevels.Base,
-		int rareLevel = PartyLevels.Base
-	)
-	{
-		// **A FAMILY first, evenly, then a species of it** (Shayne, 2026-09-28: "uniformly mixed") —
-		// so Mire's six species do not crowd out Storm's three.
-		var families = area.Pool.GroupBy(f => f.Family).Select(g => g.ToList()).ToList();
-		Foe Roll()
-		{
-			var family = families[rng.Next(families.Count)];
-			return family[rng.Next(family.Count)];
-		}
+	// ===== THE REGIONS (`KinEnemiesPlan.md`, 2026-10-03) — three now, five later
 
-		var foes = Enumerable
-			.Range(0, count)
-			.Select(i =>
-				i == 0 && rare is not null
-					? PartyLevels.Scale(rare, rareLevel)
-					: PartyLevels.Scale(Roll(), rng.Next(minLevel, maxLevel + 1))
-			)
-			.ToList();
-
-		return new(
-			"Wild " + string.Join(", ", foes.Select(f => f.Name)),
+	/// <summary>A wild fight: these foes, front to back.</summary>
+	private static Encounter Wild(params Foe[] foes) =>
+		new(
+			"Wild " + string.Join(", ", foes.Select(f => f.Name).Distinct()),
 			[.. foes.Select((f, i) => At(f, i))]
 		);
+
+	/// <summary>
+	/// **PLACEHOLDER strength for regions 2–3**: the old species and region 2's exams, every HP, attack
+	/// and Block times `by` (the agreed curve: region 2 ×1.6, region 3 ×2.5 of region 1).
+	/// ponytail: a multiplier, not authored numbers — delete once regions 2–3 have their own rosters.
+	/// </summary>
+	private static Foe Stronger(Foe foe, double by)
+	{
+		int Times(int amount) => amount <= 0 ? amount : (int)Math.Round(amount * by);
+		ImmutableList<Intent> Harder(ImmutableList<Intent> moves) =>
+			[
+				.. moves.Select(i =>
+					i.Kind is IntentType.Attack or IntentType.Block
+						? i with
+						{
+							Amount = Times(i.Amount),
+						}
+						: i
+				),
+			];
+		return foe with
+		{
+			Hp = Times(foe.MaxHp),
+			MaxHp = Times(foe.MaxHp),
+			Pattern = Harder(foe.Pattern),
+			Components =
+			[
+				.. foe.Components.Select(c =>
+					c is Phase phase
+						? phase with
+						{
+							Pattern = Harder(phase.Pattern),
+							Block = Times(phase.Block),
+						}
+						: c
+				),
+			],
+		};
 	}
 
-	// ===== The areas and gyms the regions are built from. Unscaled — a region scales its copy.
+	private static Encounter Stronger(Encounter fight, double by) =>
+		new(fight.Name, [.. fight.Foes.Select(f => Stronger(f, by))]);
 
-	/// <summary>
-	/// **Every wild species, in every area** (`KinFamiliesPlan.md`, round 2: wild foes are mixed
-	/// uniformly, so a run of any family meets its own kind everywhere). An area keeps its name, its
-	/// look and its RARE; the rares stay lair-only.
-	/// </summary>
-	private static readonly ImmutableList<Foe> Wilds =
-	[
-		PartyContent.Boar(0),
-		Mosshell,
-		Hushcap,
-		Broodvine,
-		CinderNewt,
-		Emberling,
-		Ironhorn,
-		PartyContent.Stonebeak(0),
-		Warden,
-		Stormbuck,
-		PartyContent.Wisp(0),
-		BogToad,
-		BriarViper,
-		Magpie,
-		HoardDrake,
-		RockMite,
-	];
+	private const double MirelandsStrength = 1.6,
+		StonefellsStrength = 2.5;
 
-	private static readonly Area MossyHollow =
-		new("Mossy Hollow", "Damp and green, moss over everything.", Wilds, Howler);
+	private static Encounter Mire(params Foe[] foes) => Stronger(Wild(foes), MirelandsStrength);
 
-	private static readonly Area StonyRidge =
-		new("Stony Ridge", "Bare rock and wind, and a long way down.", Wilds, Glowmoth);
+	private static Encounter Stone(params Foe[] foes) => Stronger(Wild(foes), StonefellsStrength);
 
-	private static readonly Area MistyMarsh =
-		new("Misty Marsh", "Fog over black water.", Wilds, Inkling);
+	private static readonly Foe Wisp = PartyContent.Wisp(0);
+	private static readonly Foe Stonebeak = PartyContent.Stonebeak(0);
 
-	private static readonly Area EmberCrags =
-		new("Ember Crags", "Hot stone and ash.", Wilds, EchoOwl);
-
-	/// <summary>
-	/// **A region's difficulty** (THE TUNING TABLE): foes per wild fight, the wild LEVELS (light
-	/// attrition), and the elites' and the boss's levels, which carry the threat. **FLAT since round 4**
-	/// (2026-09-28): your monsters no longer level — they grow through cards, relics and upgrades — so
-	/// foes climb only a level or so a region. Every number is a guess (exploring).
-	/// </summary>
-	public record Tier(int MinFoes, int MaxFoes, int MinLevel, int MaxLevel, int Elite, int Boss);
-
-	/// <summary>
-	/// **How much tougher than its level an exam is** — HP and hits (`PartyLevels.Toughen`). The
-	/// difficulty pass (Shayne, 2026-09-30: both families "too easy"): hits go up too — every exam is a
-	/// fixed, telegraphed cycle, so a harder blow is still one you can plan for. **Except in region 1**
-	/// (<see cref="ExamHit"/>): with one monster, ×1.3 made the Tusker's Gore unanswerable (party-sim
-	/// traces, 2026-09-28 and -30).
-	/// </summary>
-	public const double BossHp = 2.0,
-		EliteHp = 1.8;
-
-	/// <summary>An exam's hits, as a share of its level's: ×1 in region 1, ×1.3 after.</summary>
-	public static double ExamHit(int tier) => tier == 0 ? 1.0 : 1.3;
-
-	public static readonly ImmutableList<Tier> Tiers =
-	[
-		new(1, 2, 4, 6, 8, 7),
-		new(2, 2, 6, 8, 9, 10),
-		new(2, 3, 10, 12, 13, 14),
-		new(2, 3, 13, 15, 16, 17),
-		new(3, 3, 15, 17, 18, 20),
-	];
-
-	private static readonly ImmutableList<Encounter> Region1 =
-	[
-		PartyExams.OldTusker,
-		PartyExams.GoblinChief,
-	];
-	private static readonly ImmutableList<Encounter> Region1Elites =
-	[
-		PartyExams.IronSentinel,
-		PartyExams.GoblinRaiders,
-	];
-	private static readonly ImmutableList<Encounter> Region2 =
+	private static readonly ImmutableList<Encounter> Region2Bosses =
 	[
 		PartyExams.OldMire,
 		PartyExams.BlackKnight,
@@ -577,75 +502,49 @@ public static class PartyWorld
 		PartyExams.HexerAndGolem,
 		PartyExams.HarpyFlock,
 	];
-	private static readonly ImmutableList<Encounter> AllElites =
-	[
-		.. Region1Elites,
-		.. Region2Elites,
-	];
 
 	/// <summary>
-	/// **THE MAP — five regions, a boss each** (Shayne, 2026-09-28). Two bosses per region, one of them
-	/// the region's; the elites are drawn from the region's pool.
+	/// **THE MAP — three regions, a boss each.** The Greenwood is authored (`PartyGreenwood`); the
+	/// Mirelands keep their exams, and both later regions' wild fights are PLACEHOLDERS from the old
+	/// species until their factions exist (hags and the dead, giants and kobolds — junk cards and
+	/// debuffs first). Region 3's exams are region 2's, made stronger, until its own are designed.
 	/// </summary>
 	public static readonly ImmutableList<Region> Regions =
 	[
-		Build(0, "The Greenwood", MossyHollow, StonyRidge, Region1, Region1Elites),
-		Build(1, "The Mirelands", MistyMarsh, EmberCrags, Region2, Region2Elites),
-		// Region 3 is a PLACEHOLDER until its exams are designed: region 2's, at its levels. THREE regions
-		// (2026-10-03, `KinEnemiesPlan.md`): the run ends with region 3's boss until 4 and 5 are designed.
-		Build(2, "The Stonefells", StonyRidge, EmberCrags, Region2, AllElites),
-	];
-
-	/// <summary>
-	/// **A region**: its areas' pools stay at their BASE — a route scales each foe to the level it
-	/// rolls (`PartyRoutes`) — and its bosses and elites are scaled here. None can be caught.
-	/// </summary>
-	private static Region Build(
-		int tier,
-		string name,
-		Area a,
-		Area b,
-		ImmutableList<Encounter> bosses,
-		ImmutableList<Encounter> elites
-	)
-	{
-		var t = Tiers[tier];
-		ImmutableList<Encounter> Scaled(
-			IEnumerable<Encounter> lines,
-			int level,
-			double hp,
-			double hit
-		) =>
+		new(
+			"The Greenwood",
+			[PartyExams.OldTusker, PartyExams.GoblinChief],
+			[PartyExams.IronSentinel, PartyExams.GoblinRaiders],
+			PartyGreenwood.Easy,
+			PartyGreenwood.Normal
+		),
+		new(
+			"The Mirelands",
+			Region2Bosses,
+			Region2Elites,
+			[Mire(BogToad), Mire(Wisp, Inkling), Mire(Glowmoth, Glowmoth, Wisp)],
 			[
-				.. lines.Select(line => new Encounter(
-					line.Name,
-					[
-						.. line.Foes.Select(f =>
-							PartyLevels.Toughen(PartyLevels.Scale(f, level), hp, hit)
-						),
-					]
-				)),
-			];
-		return new Region(
-			name,
-			[a, b],
-			Scaled(bosses, t.Boss, BossHp, ExamHit(tier)),
-			Scaled(elites, t.Elite, EliteHp, ExamHit(tier)),
-			t.MinFoes,
-			t.MaxFoes,
-			t.MinLevel,
-			t.MaxLevel,
-			t.Elite,
-			t.Boss
-		);
-	}
-
-	/// <summary>
-	/// **A creature's BASE, by name** — what a caught one's stats grow from. Null for a name no area
-	/// knows (a test's inline foe), which is then its own base.
-	/// </summary>
-	public static Foe? Species(string name) =>
-		new[] { MossyHollow, StonyRidge, MistyMarsh, EmberCrags }
-			.SelectMany(a => a.Pool.Append(a.Rare))
-			.FirstOrDefault(f => f.Name == name);
+				Mire(BogToad, Wisp),
+				Mire(HoardDrake, Inkling),
+				Mire(Inkling, Inkling, Wisp),
+				Mire(BogToad, Glowmoth, Wisp),
+				Mire(HoardDrake, Wisp, Wisp),
+				Mire(BogToad, Inkling, Glowmoth),
+			]
+		),
+		new(
+			"The Stonefells",
+			[.. Region2Bosses.Select(b => Stronger(b, StonefellsStrength / MirelandsStrength))],
+			[.. Region2Elites.Select(e => Stronger(e, StonefellsStrength / MirelandsStrength))],
+			[Stone(Stonebeak), Stone(Stormbuck), Stone(Warden)],
+			[
+				Stone(Stonebeak, Stormbuck),
+				Stone(Warden, Stonebeak),
+				Stone(Warden, Stormbuck, Stonebeak),
+				Stone(HoardDrake, Stonebeak),
+				Stone(Stonebeak, Stonebeak, Warden),
+				Stone(Stormbuck, Warden),
+			]
+		),
+	];
 }

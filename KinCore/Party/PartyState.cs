@@ -396,6 +396,13 @@ public static class PartyState
 
 		var acted = (Creature)s.GetObject(creatureId);
 		s = s.UpdateObject(creatureId, acted with { PatternIndex = acted.PatternIndex + 1 });
+
+		// A move that is its maker's LAST (the Powder Goblin's blast): it falls once the move is done.
+		if (intent.SelfDestructs && s.GetObject(creatureId) is Foe { IsDead: false } spent)
+		{
+			s = s.ReturnStolen(spent.Id).UpdateObject(spent.Id, spent with { Hp = 0 });
+			s = s.StageEvent(new FoeDefeatedEvent { FoeId = spent.Id, DuringYourTurn = false });
+		}
 		if (acted is Ally)
 		{
 			var party = s.GetParty();

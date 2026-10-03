@@ -55,17 +55,13 @@ public partial class PartyRunTests
 	private static readonly PartyCompanion B = Mon("B");
 	private static readonly PartyCompanion C = Mon("C");
 
-	private static Area Area(string name) =>
-		new(name, "", [Foe($"{name}1"), Foe($"{name}2")], Foe($"{name} Rare"));
-
 	private static Region Region(string name) =>
 		new(
 			name,
-			[Area($"{name}North"), Area($"{name}South")],
 			[Fight(Foe($"{name} Boss"))],
 			[Fight(Foe($"{name} Elite"))],
-			1,
-			2
+			[Fight(Foe($"{name} Easy1")), Fight(Foe($"{name} Easy2"))],
+			[Fight(Foe($"{name} Normal1")), Fight(Foe($"{name} Normal2"))]
 		);
 
 	private static Encounter Fight(params Foe[] foes) => new("Fight", [.. foes]);

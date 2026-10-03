@@ -11,17 +11,11 @@ public enum NodeKind
 	/// <summary>A VISIBLE wild fight: its species are shown, so choosing it is choosing a catch.</summary>
 	Wild,
 
-	/// <summary>Tall grass: a wild fight from the pool, not shown until you walk in.</summary>
-	Grass,
-
 	/// <summary>
 	/// **An ELITE**: a mini-boss with its own patterns, SHOWN on the map, so taking it is a choice.
 	/// Pays a rare-led card reward, a RELIC, and big XP and gold. Nothing in it can be caught.
 	/// </summary>
 	Elite,
-
-	/// <summary>A trainer's line: pays more, and nothing in it can be caught.</summary>
-	Trainer,
 
 	/// <summary>Something lying on the path — gold (<see cref="RouteNode.Find"/>).</summary>
 	Find,
@@ -47,7 +41,6 @@ public record RouteNode(
 	NodeKind Kind,
 	int Row,
 	double X,
-	int Area = 0,
 	Encounter? Encounter = null,
 	FindKind Find = FindKind.Gold
 )
@@ -99,11 +92,8 @@ public static class PartyRoutes
 			var ids = new List<int>();
 			foreach (var (kind, x) in places.OrderBy(p => p.X))
 			{
-				var area = x < 0.5 ? 0 : 1;
 				ids.Add(nodes.Count);
-				nodes.Add(
-					Place(nodes.Count, kind, row, x, region, region.Areas[area], area, rng, boss)
-				);
+				nodes.Add(Place(nodes.Count, kind, row, x, region, rng, boss));
 			}
 			rows.Add(ids);
 		}
@@ -116,9 +106,6 @@ public static class PartyRoutes
 		for (var row = 2; row <= Middle; row++)
 		{
 			var kinds = Enumerable.Range(0, rng.Next(2, 4)).Select(_ => Roll(rng)).ToList();
-			// A guarantee, so every route has tall grass early.
-			if (row == 2)
-				kinds[0] = NodeKind.Grass;
 			if (eliteRows.Contains(row))
 				kinds[rng.Next(kinds.Count)] = NodeKind.Elite;
 			Row(row, kinds.Select((k, i) => (k, Spread(i, kinds.Count, rng))));
@@ -137,10 +124,8 @@ public static class PartyRoutes
 	private static NodeKind Roll(Random rng) =>
 		rng.Next(10) switch
 		{
-			< 3 => NodeKind.Wild,
-			< 5 => NodeKind.Grass,
-			< 7 => NodeKind.Find,
-			< 9 => NodeKind.Trainer,
+			< 7 => NodeKind.Wild,
+			< 9 => NodeKind.Find,
 			_ => NodeKind.Rest,
 		};
 
@@ -148,51 +133,33 @@ public static class PartyRoutes
 	private static double Spread(int i, int count, Random rng) =>
 		0.08 + 0.84 * (i + 0.5) / count + (rng.NextDouble() - 0.5) * 0.1;
 
+	/// <summary>The rows whose fights draw from the region's EASY list — a route's first fights.</summary>
+	public const int EasyRows = 2;
+
 	private static RouteNode Place(
 		int id,
 		NodeKind kind,
 		int row,
 		double x,
 		Region region,
-		Area area,
-		int areaIndex,
 		Random rng,
 		Encounter boss
 	)
 	{
-		Encounter Wild(int count, Foe? rare = null, int? level = null) =>
-			PartyWorld.WildFight(
-				area,
-				count,
-				rare,
-				rng,
-				level ?? region.MinLevel,
-				level ?? region.MaxLevel,
-				region.RareLevel
-			);
-		var node = new RouteNode(id, kind, row, x, areaIndex);
+		var node = new RouteNode(id, kind, row, x);
+		var fights = row <= EasyRows ? region.Easy : region.Normal;
 		return kind switch
 		{
-			NodeKind.Wild or NodeKind.Grass => node with
-			{
-				Encounter = Wild(rng.Next(region.MinFoes, region.MaxFoes + 1)),
-			},
+			NodeKind.Wild => node with { Encounter = fights[rng.Next(fights.Count)] },
 			NodeKind.Elite => node with
 			{
 				Encounter = region.Elites[rng.Next(region.Elites.Count)],
 			},
 			NodeKind.End => node with { Encounter = boss },
-			NodeKind.Trainer => node with
-			{
-				Encounter = Trainer(Wild(region.MaxFoes, level: region.TrainerLevel)),
-			},
 			NodeKind.Find => node with { Find = FindKind.Gold },
 			_ => node,
 		};
 	}
-
-	/// <summary>A trainer's line: harder than the wild, and paid better.</summary>
-	private static Encounter Trainer(Encounter wild) => new("Trainer", wild.Foes);
 
 	/// <summary>
 	/// **Links from each row to the next, without crossing**: each place to its proportional place

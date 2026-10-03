@@ -34,7 +34,7 @@ public partial class PartyRunTests
 		NodeKind kind,
 		Encounter? fight = null,
 		FindKind find = default
-	) => new(0, kind, 0, 0.5, 0, fight, find);
+	) => new(0, kind, 0, 0.5, fight, find);
 
 	private static IEnumerable<RouteMap> Routes(int seeds = 40) =>
 		Enumerable.Range(0, seeds).Select(seed => (Run() with { Seed = seed }).EnterRoute().Route!);
@@ -109,27 +109,31 @@ public partial class PartyRunTests
 	}
 
 	[Test]
-	public void TheFirstForkIsAVisibleFightInEachAreaAndEveryRouteHasTallGrass()
+	public void TheFirstForkIsTwoWildFights()
 	{
 		foreach (var route in Routes())
-		{
-			var first = route.Nodes.Where(n => n.Row == 1).ToList();
-			Assert.That(first.Select(n => n.Kind), Is.All.EqualTo(NodeKind.Wild));
-			Assert.That(first.Select(n => n.Area), Is.EquivalentTo(new[] { 0, 1 }));
-
-			Assert.That(route.Nodes.Count(n => n.Kind == NodeKind.Grass), Is.GreaterThan(0));
-		}
+			Assert.That(
+				route.Nodes.Where(n => n.Row == 1).Select(n => n.Kind),
+				Is.EqualTo(new[] { NodeKind.Wild, NodeKind.Wild })
+			);
 	}
 
+	/// <summary>
+	/// **A wild fight is one of the region's AUTHORED encounters** (`KinEnemiesPlan.md`): the route's
+	/// first rows from its easy list, the rest from its normal one.
+	/// </summary>
 	[Test]
-	public void AWildFightComesFromThePoolOfTheAreaItLiesIn()
+	public void AWildFightIsAnAuthoredEncounterEasyOnTheFirstRows()
 	{
-		var areas = Run().Region.Areas;
+		// By their foes' names: each Run() builds its regions afresh, so the lists are new instances.
+		static string Key(Encounter e) => string.Join(",", e.Foes.Select(f => f.Name));
+		var region = Run().Region;
 		foreach (var route in Routes())
-		foreach (var node in route.Nodes.Where(n => n.Kind is NodeKind.Wild or NodeKind.Grass))
+		foreach (var node in route.Nodes.Where(n => n.Kind == NodeKind.Wild))
 			Assert.That(
-				node.Encounter!.Foes.Select(f => f.Name),
-				Is.All.AnyOf(areas[node.Area].Pool.Select(f => f.Name).ToArray())
+				(node.Row <= PartyRoutes.EasyRows ? region.Easy : region.Normal).Select(Key),
+				Does.Contain(Key(node.Encounter!)),
+				$"row {node.Row}"
 			);
 	}
 
@@ -156,7 +160,6 @@ public partial class PartyRunTests
 	}
 
 	[TestCase(NodeKind.Wild, PartyRun.WildGold)]
-	[TestCase(NodeKind.Trainer, PartyRun.TrainerGold)]
 	[TestCase(NodeKind.Elite, PartyRun.EliteGold)]
 	public void AFightMustBeWonBeforeYouWalkOnAndPaysByItsKind(NodeKind kind, int gold)
 	{

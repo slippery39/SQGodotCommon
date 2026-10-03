@@ -37,7 +37,7 @@ SQGodotCommon/
 │   │                                #   .Archetypes.cs holds each companion's archetype cards),
 │   │                                #   KeywordLibrary (the glossary, as DATA — console and UI share it)
 │   ├── Run/                         # Run + RunCard (OUTSIDE GameState); Companion; ActMap; ShopOffer
-│   ├── Party/                       # THE COMPANION GAME — PartyState API; PartyWorld.Tiers; PartyMonsters; PartyExams + PartyBosses; PartyRelics; PartyCards + Discard/Spells/Surge/Summon/Triggers; PartyEmber + EmberCards; PartyGrove + GroveCards
+│   ├── Party/                       # THE COMPANION GAME — PartyState API; PartyWorld (regions) + PartyGreenwood; PartyMonsters; PartyExams + PartyBosses; PartyRelics; PartyCards + Discard/Spells/Surge/Summon/Triggers; PartyEmber + EmberCards; PartyGrove + GroveCards
 │   └── KinBattleFactory.cs          # one GameState per battle; KinStateExtensions is the API
 ├── KinCore.Tests/                  # NUnit; inline card definitions only
 ├── KinConsole/                     # terminal front end — THE REMOTE SURFACE, needs no Godot

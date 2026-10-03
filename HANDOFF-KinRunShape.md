@@ -76,8 +76,7 @@ highlight, not text.
 1. **Shayne playtests the new shape** — three monsters from floor 1, the reroll, evolution, the
    passives. Watch: is 12–18 HP a monster too fragile; does evolution feel like a reward; which
    passives never come up.
-2. **The enemy pass resumes** (`KinEnemiesPlan.md`): region 1 authored for a team of THREE (the
-   2026-10-02 draft — goblins, wolves, Boar, Powder Goblin — gets redone for three monsters), levels
-   out, authored encounters, Grass/Trainer merged into Wild, the Powder Goblin's self-destruct. Your
-   own species are still wild foes until then.
+2. **Enemy pass step 1 is BUILT** (2026-10-03, `KinEnemiesPlan.md`): no levels; region 1 authored
+   for three (goblins, wolves, Boar, Powder Goblin…); authored encounters, easy first; Grass/Trainer
+   gone; exams +50% HP. Regions 2–3 are placeholders. **Not yet played.** Next: the debuff system.
 3. Then the debuff and junk-card systems; the MAP session; the HOOK; art for the evolved forms.

@@ -183,7 +183,7 @@ public static class PartySim
 					var battle = run.StartBattle();
 					var hpBefore = battle.Allies().Where(a => !a.IsToken).Sum(a => a.Hp);
 					var hpMax = battle.Allies().Where(a => !a.IsToken).Sum(a => a.MaxHp);
-					var wild = run.Here.Kind is NodeKind.Wild or NodeKind.Grass;
+					var wild = run.Here.Kind is NodeKind.Wild;
 					log?.Invoke(
 						$"  BATTLE {battles + 1} ({where}): {run.NextFight.Name} — team "
 							+ string.Join(", ", run.Team.Select(m => $"{m.Companion.Name} {m.Hp}"))
@@ -256,8 +256,6 @@ public static class PartySim
 				NodeKind.Rest => healthy ? 1 : 6,
 				NodeKind.Find => healthy ? 2 : 5,
 				NodeKind.Wild => healthy ? 5 : 3,
-				NodeKind.Grass => healthy ? 4 : 2,
-				NodeKind.Trainer => healthy ? 3 : 1,
 				// An elite only when healthy — and then before a wild fight: it pays a relic.
 				NodeKind.Elite => healthy ? 6 : 0,
 				_ => 4,

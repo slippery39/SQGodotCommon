@@ -116,25 +116,21 @@ public static class PartySummon
 		if (s.LivingFoes().Count() >= PartyBattle.MaxLine)
 			return s;
 		var c = token.Creature;
-		var level = s.LivingFoes().Select(f => f.Level).DefaultIfEmpty(PartyLevels.Base).Max();
 		return PartyState.InsertAtFront(
 			s,
-			PartyLevels.Scale(
-				new Foe
-				{
-					Name = c.Name,
-					Hp = c.Hp,
-					MaxHp = c.Hp,
-					Pattern = c.Moves,
-					FadesIn = token.FadesIn,
-					// FadesIn 0 = a MINION that stays until it is beaten (a boss's band).
-					Trait =
-						token.FadesIn > 0
-							? $"A {c.Name.ToUpperInvariant()}: fades in {token.FadesIn} turns."
-							: $"A {c.Name.ToUpperInvariant()}, summoned.",
-				},
-				level
-			),
+			new Foe
+			{
+				Name = c.Name,
+				Hp = c.Hp,
+				MaxHp = c.Hp,
+				Pattern = c.Moves,
+				FadesIn = token.FadesIn,
+				// FadesIn 0 = a MINION that stays until it is beaten (a boss's band).
+				Trait =
+					token.FadesIn > 0
+						? $"A {c.Name.ToUpperInvariant()}: fades in {token.FadesIn} turns."
+						: $"A {c.Name.ToUpperInvariant()}, summoned.",
+			},
 			foes: true
 		);
 	}

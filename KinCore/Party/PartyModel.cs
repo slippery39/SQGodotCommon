@@ -107,9 +107,6 @@ public abstract record Creature : GameObject
 	public int Hp { get; init; }
 	public int MaxHp { get; init; }
 
-	/// <summary>Its LEVEL (`PartyLevels`) — shown; its stats already carry it.</summary>
-	public int Level { get; init; } = PartyLevels.Base;
-
 	/// <summary>Its FAMILY (`PartyFamilies`) — a tag for your own synergies; no weakness chart.</summary>
 	public Family Family { get; init; }
 
@@ -329,4 +326,7 @@ public record Intent
 	/// On one telegraphed MOVE, not the creature, so you see it coming; kill it first, or take it.
 	/// </summary>
 	public bool Crushes { get; init; }
+
+	/// <summary>**Its maker falls after this move** — the Powder Goblin's blast.</summary>
+	public bool SelfDestructs { get; init; }
 }

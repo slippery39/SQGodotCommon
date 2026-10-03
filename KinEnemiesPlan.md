@@ -58,6 +58,19 @@
 - **Witch** — **Doubt** into your hand each turn: gone at turn end; unplayed, −1 energy next turn 🔧.
 - **Goblin Thief** — steals a card from your hand; kill it before it flees ✅ (`CardStolenEvent`).
 
+## Step 1 — BUILT (2026-10-03)
+
+- **Levels are gone** (`PartyLevels` deleted). Region 1 is authored (`PartyGreenwood`: draft 2 for a
+  team of three — goblins, Grey Wolf, Boar, Viper, Rock Mite, Magpie; 3 easy + 6 normal). The exams
+  carry their old effective numbers + 50% HP — region 2's too, since you now arrive with three.
+- **Regions 2–3 are PLACEHOLDERS**: old non-recruitable species in authored groups, ×1.6 / ×2.5
+  (`PartyWorld.Stronger`, marked ponytail); region 3's exams are region 2's ×(2.5/1.6) — their summoned
+  minions are NOT scaled. Replace with the hags/dead and giants/kobolds once junk cards and debuffs exist.
+- **The route**: Wild (7 in 10), Find, Spring; rows 1–2 draw from `Easy` (`PartyRoutes.EasyRows`);
+  Grass, Trainer and the areas' Rares are gone. A wild node's caption is "LEAD +N".
+- **The Powder Goblin's** `Intent.SelfDestructs`. Tests: `PartyRunTests.Regions.cs`, `PartyTests.Foes.cs`.
+- Next: **the debuff system**, then junk cards, then regions 2–3's real rosters.
+
 ## Decided for step 1 (2026-10-02)
 
 - **Foes are authored at their region's strength** — levels go (`PartyLevels.Scale`, the tier

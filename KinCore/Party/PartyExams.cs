@@ -5,8 +5,9 @@ namespace KinCore.Party;
 
 /// <summary>
 /// **THE EXAMS — regions 1–2's bosses and elites** (`KinFamiliesPlan.md`, round 3; each approved by
-/// Shayne, 2026-09-28). Every one TESTS A DECK QUALITY and says its answer; numbers are at Lv 5 like
-/// all content, and `PartyWorld` scales them to the region. None is a species: none can be caught.
+/// Shayne, 2026-09-28). Every one TESTS A DECK QUALITY and says its answer. **Numbers are AUTHORED at
+/// the region's strength** (2026-10-03, no levels): what the level and boss multipliers made of them,
+/// then +50% HP for a team of three from the start. None can be caught.
 /// </summary>
 public static class PartyExams
 {
@@ -48,7 +49,7 @@ public static class PartyExams
 			Pattern = [.. cycle],
 		};
 
-	/// <summary>A MINION: stays until beaten (no fade), and comes in at its summoner's level.</summary>
+	/// <summary>A MINION: stays until beaten (no fade).</summary>
 	private static TokenTemplate Minion(string name, int hp, Intent move) =>
 		new(new PartyCompanion(name, hp, 0, [move]), FadesIn: 0);
 
@@ -64,11 +65,11 @@ public static class PartyExams
 			[
 				Exam(
 					"Old Tusker",
-					56,
+					195,
 					0,
 					WindUp("Paw the Ground"),
-					Attack("Gore", 18),
-					Attack("Trample", 4, Aim.Sweep)
+					Attack("Gore", 21),
+					Attack("Trample", 5, Aim.Sweep)
 				) with
 				{
 					Trait = "Paws the ground a turn before it GORES.",
@@ -86,11 +87,11 @@ public static class PartyExams
 			[
 				Exam(
 					"Goblin Chief",
-					36,
+					126,
 					0,
-					Summon("Call the Band", Minion("Goblin", 8, Attack("Stab", 3))),
-					Attack("Spear", 7),
-					Summon("Call the Band", Minion("Goblin", 8, Attack("Stab", 3)))
+					Summon("Call the Band", Minion("Goblin", 9, Attack("Stab", 3))),
+					Attack("Spear", 8),
+					Summon("Call the Band", Minion("Goblin", 9, Attack("Stab", 3)))
 				) with
 				{
 					Trait = "Calls a GOBLIN to its front, again and again.",
@@ -105,7 +106,7 @@ public static class PartyExams
 		new(
 			"The Iron Sentinel",
 			[
-				Exam("Iron Sentinel", 40, 0, Guard("Brace", 10), Attack("Slam", 8)) with
+				Exam("Iron Sentinel", 135, 0, Guard("Brace", 12), Attack("Slam", 10)) with
 				{
 					Components = [new Shell()],
 					Trait = $"SHELL: a hit of {new Shell().AtMost} or less does nothing.",
@@ -118,17 +119,17 @@ public static class PartyExams
 		new(
 			"Goblin Raiders",
 			[
-				Exam("Goblin", 14, 0, Attack("Stab", 4)),
-				Exam("Goblin", 14, 1, Attack("Stab", 4)),
+				Exam("Goblin", 46, 0, Attack("Stab", 5)),
+				Exam("Goblin", 46, 1, Attack("Stab", 5)),
 				Exam(
 					"Goblin Thief",
-					14,
+					46,
 					2,
-					Attack("Snatch", 3) with
+					Attack("Snatch", 4) with
 					{
 						Steals = true,
 					},
-					Attack("Stab", 4)
+					Attack("Stab", 5)
 				) with
 				{
 					Trait = "A THIEF: its Snatch takes a card until it is beaten.",
@@ -149,11 +150,11 @@ public static class PartyExams
 			[
 				Exam(
 					"Old Mire",
-					70,
+					294,
 					0,
 					new Intent { Name = "Tongue", Kind = IntentType.Pull },
-					Attack("Swallow", 16),
-					Attack("Deluge", 5, Aim.Sweep)
+					Attack("Swallow", 29),
+					Attack("Deluge", 9, Aim.Sweep)
 				) with
 				{
 					Trait =
@@ -165,9 +166,9 @@ public static class PartyExams
 							Name = "SUBMERGED",
 							Pattern =
 							[
-								Guard("Wallow", 15),
-								Attack("Swallow", 16),
-								Summon("Spawn", Minion("Toadling", 10, Attack("Spit", 4))),
+								Guard("Wallow", 21),
+								Attack("Swallow", 29),
+								Summon("Spawn", Minion("Toadling", 14, Attack("Spit", 6))),
 							],
 							Trait = "SUBMERGED: it wallows for Block and spawns toadlings.",
 						},
@@ -186,15 +187,15 @@ public static class PartyExams
 			[
 				Exam(
 					"Black Knight",
-					64,
+					270,
 					0,
-					Attack("Cleave", 8, Aim.Pierce),
-					Guard("Guard", 10)
+					Attack("Cleave", 14, Aim.Pierce),
+					Guard("Guard", 14)
 				) with
 				{
 					Trait =
 						$"ENRAGE: +{new Enrage().PerRound} to its attacks every round. At half HP, a SECOND WIND.",
-					Components = [new Enrage(), new Phase { Name = "SECOND WIND", Block = 20 }],
+					Components = [new Enrage(), new Phase { Name = "SECOND WIND", Block = 28 }],
 				},
 			]
 		);
@@ -209,8 +210,14 @@ public static class PartyExams
 		new(
 			"The Hexer and her Golem",
 			[
-				Exam("Golem", 40, 0, Attack("Slam", 9), Attack("Stomp", 4, Aim.Sweep)),
-				Exam("Hexer", 26, 1, Attack("Bolt", 6, Aim.Hunt), Guard("Ward", 10, Aim.Ahead)) with
+				Exam("Golem", 142, 0, Attack("Slam", 16), Attack("Stomp", 6, Aim.Sweep)),
+				Exam(
+					"Hexer",
+					92,
+					1,
+					Attack("Bolt", 10, Aim.Hunt),
+					Guard("Ward", 13, Aim.Ahead)
+				) with
 				{
 					Components = [new FirstCardCost { Amount = 1 }],
 					Trait = "HEX: your first card each turn costs 1 more while she stands.",
@@ -223,14 +230,14 @@ public static class PartyExams
 		new(
 			"Harpy Flock",
 			[
-				Exam("Harpy", 12, 0, Attack("Rake", 5, Aim.Hunt)),
-				Exam("Harpy", 12, 1, Attack("Rake", 5, Aim.Hunt)),
+				Exam("Harpy", 44, 0, Attack("Rake", 9, Aim.Hunt)),
+				Exam("Harpy", 44, 1, Attack("Rake", 9, Aim.Hunt)),
 				Exam(
 					"Screeching Harpy",
-					12,
+					44,
 					2,
 					new Intent { Name = "Screech", Kind = IntentType.Shove },
-					Attack("Rake", 5, Aim.Hunt)
+					Attack("Rake", 9, Aim.Hunt)
 				) with
 				{
 					Trait = "Its SCREECH swaps your front two.",

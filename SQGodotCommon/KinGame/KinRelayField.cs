@@ -419,7 +419,8 @@ public static class KinMoveText
 		{
 			IntentType.Attack => $"{intent.Name} {amount} → {Where(intent.Target)}"
 				+ (intent.Crushes ? ", ignores Block" : "")
-				+ (intent.Steals ? " + steals" : ""),
+				+ (intent.Steals ? " + steals" : "")
+				+ (intent.SelfDestructs ? ", then it falls" : ""),
 			IntentType.Block when intent.Target == Aim.Ahead =>
 				$"{intent.Name}: +{amount} block ahead",
 			IntentType.Block => $"{intent.Name}: +{amount} block",

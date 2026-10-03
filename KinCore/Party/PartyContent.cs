@@ -262,9 +262,9 @@ public static class PartyContent
 			22,
 			// No CRUSH (playtest 2026-10-02: a CRUSH 10 on 22 HP was unanswerable on floor 3). CRUSH is
 			// for FRAGILE foes; the Boar's big Charge is telegraphed instead — Block answers it.
+			Attack("Thrash", 4, Aim.Sweep),
 			new Intent { Name = "Lower Head", Kind = IntentType.WindUp },
-			Attack("Charge", 9),
-			Attack("Thrash", 5, Aim.Sweep)
+			Attack("Charge", 10)
 		) with
 		{
 			Trait = "Lowers its head a turn before it CHARGES.",

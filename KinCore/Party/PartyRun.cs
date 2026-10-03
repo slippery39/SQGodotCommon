@@ -263,7 +263,7 @@ public partial record PartyRun
 	/// </summary>
 	public static PartyCompanion FromFoe(Foe foe)
 	{
-		var basis = PartyWorld.Species(foe.Name) ?? foe;
+		var basis = foe;
 		return new(
 			foe.Name,
 			basis.MaxHp,

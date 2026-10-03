@@ -105,9 +105,8 @@ public sealed class KinRouteMap
 		_walking = false;
 		_root.Visible = true;
 
-		var areas = run.Region.Areas;
 		_title.Text = $"THE ROUTE — {run.Region.Name.ToUpperInvariant()}";
-		_subtitle.Text = $"▲ {areas[0].Name}   ·   {areas[1].Name} ▼";
+		_subtitle.Text = "";
 		_purse.Text = $"GOLD {run.Gold}";
 		_note.Text = Arrived(run.Here);
 
@@ -202,7 +201,7 @@ public sealed class KinRouteMap
 
 		var rim =
 			reachable ? "gold"
-			: node.IsFight && node.Kind != NodeKind.Grass ? "red"
+			: node.IsFight ? "red"
 			: "bone";
 		button.AddChild(
 			KinMapKit.Fill(KinArt.Drawing("ui/node_" + rim), new Vector2(size, size), 0)
@@ -270,10 +269,8 @@ public sealed class KinRouteMap
 				Creature(node.Encounter!.Foes.MaxBy(f => f.MaxHp)!.Name),
 				""
 			),
-			NodeKind.Trainer => (KinArt.AttackIcon, ""),
 			NodeKind.Rest => (KinArt.Drawing("icons/life"), ""),
 			NodeKind.Find => (null, "$"),
-			NodeKind.Grass => (null, "?"),
 			_ => (null, "●"),
 		};
 
@@ -286,13 +283,22 @@ public sealed class KinRouteMap
 			NodeKind.Start => "TOWN",
 			NodeKind.End => "BOSS · " + node.Encounter!.Name.ToUpperInvariant(),
 			NodeKind.Elite => "ELITE · " + node.Encounter!.Name.ToUpperInvariant(),
-			NodeKind.Wild => Species(node),
-			NodeKind.Grass => "TALL GRASS",
-			NodeKind.Trainer => "TRAINER",
+			NodeKind.Wild => Lead(node),
 			NodeKind.Rest => "SPRING",
 			NodeKind.Find => "FIND",
 			_ => "",
 		};
+
+	/// <summary>
+	/// The fight's first foe and how many more — "GOBLIN GRUNT +2". A three-foe fight's full list ran
+	/// into its neighbours' captions (2026-10-03); the tooltip keeps the list.
+	/// </summary>
+	private static string Lead(RouteNode node)
+	{
+		var foes = node.Encounter!.Foes;
+		var lead = foes[0].Name.ToUpperInvariant();
+		return foes.Count > 1 ? $"{lead} +{foes.Count - 1}" : lead;
+	}
 
 	private static string Species(RouteNode node) =>
 		string.Join(", ", node.Encounter!.Foes.Select(f => f.Name.ToUpperInvariant()).Distinct());
@@ -301,9 +307,6 @@ public sealed class KinRouteMap
 		node.Kind switch
 		{
 			NodeKind.Wild => $"A wild fight: {Species(node)}.",
-			NodeKind.Grass =>
-				"Tall grass: a wild fight, but you will not know what until you walk in.",
-			NodeKind.Trainer => "A trainer: a harder fight that pays more.",
 			NodeKind.Rest =>
 				$"A spring: every monster heals {(int)(PartyRun.RestHeal * 100)}% — or upgrade a card instead.",
 			NodeKind.Find => "Something lying on the path.",

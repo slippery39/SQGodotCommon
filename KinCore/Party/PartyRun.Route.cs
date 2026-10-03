@@ -8,8 +8,6 @@ namespace KinCore.Party;
 /// </summary>
 public partial record PartyRun
 {
-	public const int TrainerGold = 40;
-
 	/// <summary>Where you stand on the route.</summary>
 	public RouteNode Here =>
 		Route?.Nodes[NodeId] ?? throw new InvalidOperationException("Not on a route");
@@ -100,7 +98,6 @@ public partial record PartyRun
 	private static int RouteGold(NodeKind kind) =>
 		kind switch
 		{
-			NodeKind.Trainer => TrainerGold,
 			NodeKind.Elite => EliteGold,
 			NodeKind.End => BossGold,
 			_ => WildGold,
