@@ -58,6 +58,28 @@
 - **Witch** — **Doubt** into your hand each turn: gone at turn end; unplayed, −1 energy next turn 🔧.
 - **Goblin Thief** — steals a card from your hand; kill it before it flees ✅ (`CardStolenEvent`).
 
+## Decided for step 1 (2026-10-02)
+
+- **Foes are authored at their region's strength** — levels go (`PartyLevels.Scale`, the tier
+  levels, `BossHp`/`ExamHit`, the level tests). Target curve: **region 2 ×1.6, region 3 ×2.5** of
+  region 1, HP and hits alike.
+- **3 regions now, 5 later** — the run ends after region 3's boss until 4–5 are designed.
+- **Each region: beasts + one faction**, fully distinct rosters, none of your recruitable species in
+  the wild. Greenwood: beasts + GOBLINS; Mirelands: bog beasts + HAGS and the restless dead (junk
+  cards and debuffs arrive); Stonefells: mountain beasts + giants/kobolds or a wyrm cult (the
+  style-punishing elites). Region 3's bosses and elites are new.
+- **Authored encounter groups, 3 easy + 6 normal a region** — "we can easily balance by checking
+  floor + enemy — damage lost, turns won or lost … with a random mix, two enemies together may be too
+  powerful while each is fine" (Shayne). The first 2–3 fights of a region draw from the easy list.
+- **Grass and Trainer merge into plain Wild fights now**; the lair Rares go. The map session redesigns
+  the nodes.
+- **The Powder Goblin is in** (a move that kills its maker), so region 1 has its clock.
+- **Structure first**: levels out, encounters authored, region 1 complete; regions 2–3 provisional
+  with today's mechanics until the debuffs and junk cards exist.
+- **WAITS ON the run's new shape** (`KinJam.md`, top): region 1 is authored for a TEAM OF THREE, so
+  line-wide, back-line and weakest-aimed attacks all mean something. The region 1 draft (goblins,
+  wolves, Boar, Powder Goblin…) is in the 2026-10-02 session and gets redone for three monsters.
+
 ## The build, in order (proposed)
 
 1. **Region rosters + the curve's shape** — each region its own pool; the tier table steepened.

@@ -1,5 +1,30 @@
 # FAMILIES — monsters as engines, cards as fuel (design, 2026-09-27)
 
+## ROUND 5 — THREE FROM THE START, BOSSES EVOLVE (interview 2026-10-02/03; DRAFT 1 APPROVED, NOT BUILT)
+
+The run's new shape is at the top of `KinJam.md`. For the families it means:
+- **The pool is the family's five** (Pike / Bramble and the four boss monsters each) — **no starters
+  any more**: a run rolls 3 of the 5 (one reroll), so some runs have no Pike. ~10 a family later.
+- **HP about HALVED** — the team starts around 1.5× today's solo starter (~45 across three, ~15 each).
+  A region-1 Charge 9 takes 60% of a monster: tense on purpose (confirmed 2026-10-03).
+- **Evolution, single form: +50% HP, +2 Power, the first-attack bonus about doubled, ONE new passive**
+  that deepens the monster's own relationship to the board — several now read POSITION, which three
+  monsters make real from floor 1. None pays more for a longer fight. Names are placeholders.
+
+| Monster → evolved | Bigger bonus | New passive |
+|---|---|---|
+| Pike → **Lancepike** | Spell Power +2 → +3 | **REACH**: its attacks hit the front two foes (watch it with Spellblade — push first) |
+| Emberling → **Flamekin** | Fight Spell Power +1 → +2 | **SHELTERED**: +2 Spell Power while it is not at the front |
+| Cinder Newt → **Cinder Drake** | Burn 2 → 4 | **WILDFIRE**: when a Burning foe falls, its Burn moves to the foe behind it |
+| Echo Owl → **Echo Strix** | Draw 1 → 2 | **CADENCE**: your 3rd spell each turn costs 0 |
+| Ironhorn → **Ironclad** | Energy +1 → +2 | **TRAMPLE**: damage beyond what fells a foe hits the one behind (`Trample` exists) |
+| Bramble → **Bramble Elder** | Rooted 4 → 6, Thorns 2 → 3 | **GUARDIAN**: monsters behind her take 2 less from each hit |
+| Mosshell → **Ironbark** | Block 6 → 9 | **IRONBARK**: its attacks add half its Block (Block into damage — not Bramble's wall) |
+| Hushcap → **Sporelord** | Thorns 6 → 9 | **SPORE CLOUD**: its Thorns hit every foe that attacks your line |
+| Broodvine → **Broodmother** | Summons 1 Sprout → 2 | **SEEDFALL**: when a token falls, draw a card (`DrawOnFall` exists) |
+| Howler → **Alpha Howler** | Grow 1 → 2 | **HUNT CALL**: its first attack each turn also makes each of your tokens attack |
+
+
 ## ROUND 2 — ONE FAMILY PER RUN (interview, 2026-09-28) — supersedes "the build emerges from finds"
 
 **Status: DECIDED (three rounds), not built.** Shayne, after playing KIN: "once you commit to a bonus, it's kind of bad

@@ -9,9 +9,9 @@ change with the re-theme — the prefix is chosen to survive that. Those two con
 things that face outward.
 
 **A monster-companion deckbuilder (2026-09-23): up to 3 monsters ARE the board; the deck is the
-TRAINER's. ONE FAMILY PER RUN — the starter's (2026-09-28). ROUND 4 (2026-09-28): monsters act ONLY
-through cards (a first-attack bonus each), come from bosses, never level; no catching.** A run is
-playable (`kin_party.tscn`, `KinCore/Party/`), built BESIDE the lane game. **Read `KinJam.md` first** — its newest section, at the top, is the truth; the
+TRAINER's. ONE FAMILY PER RUN, chosen at the start. Monsters act ONLY through cards (a first-attack
+bonus each); no catching. NEW SHAPE (2026-10-02, not built): 3 random monsters from the start, bosses
+EVOLVE one.** A run is playable (`kin_party.tscn`, `KinCore/Party/`), built BESIDE the lane game. **Read `KinJam.md` first** — its newest section, at the top, is the truth; the
 design philosophy is there too. The setting is a GENERIC FANTASY substrate (`KinSettingSketches.md`).
 The lane game's history (the deleted doom layer, companion upgrades) is in `docs/findings/kin-balance.md`.
 

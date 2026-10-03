@@ -1,5 +1,36 @@
 # KIN — design doc
 
+> # THE RUN'S NEW SHAPE — three monsters from the start, bosses EVOLVE (Shayne, 2026-10-02; DECIDED, NOT BUILT)
+>
+> Found in the enemy pass: with ONE monster, region 1 was a different game — "all", "back" and
+> "weakest" all meant "you", the line cards were dead, and no turn asked which monster attacks. "Getting
+> the actual game going to start, rather than only being able to play the full game on region 3+."
+> **This overturns round 4's "monsters come from bosses".**
+>
+> | | Decided |
+> |---|---|
+> | Family | **Chosen** at the start (Ember or Grove). Random only if the game ever has many families |
+> | Team | **3 monsters from the first fight**, rolled at random from the family's pool; **one reroll** of the whole trio |
+> | Pool | Today 5 a family (starter + 4 boss monsters); **~10 a family later** for variety |
+> | Boss reward | **EVOLVE one of your monsters** (no new monsters, so nothing is ever a sideways swap) — AND the boss relic pick, as now |
+> | Evolution | **Single form** each (branching and three-stage lines later, if it is fun). Two bosses evolve two of the three — "who gets it?" is the decision |
+> | What evolving does | **The same creature, a bigger kit**: more HP and Power, a bigger first-attack bonus, one new passive |
+> | HP | **Lower per monster**: the team starts around 1.5× today's solo starter, not 3× — a knockout hurts, protecting the fragile one is a job |
+> | Balance | Off, knowingly — exploring |
+>
+> **The evolutions (draft 1, approved 2026-10-03)** are `KinFamiliesPlan.md`, round 5 — with the
+> HP halving and the end of starters.
+>
+> **The cheap playtest's build calls (2026-10-03):** the run is cut to **3 regions now** (two bosses
+> evolve, the third wins); evolving **adds the extra HP and keeps the damage** (no hidden heal); the
+> evolved forms are **placeholders** (the base sprite larger, a gold rim, the new name); the trio is
+> rolled on the **family screen** — pick Ember or Grove, see the three, REROLL once or BEGIN.
+>
+> **Sequence:** (1) a cheap playtest of the shape — today's 5 a family as the pool, one evolution each;
+> (2) the ENEMY pass resumes, region 1 authored for a team of three (`KinEnemiesPlan.md`); (3) the
+> families grow to ~10 once the shape is proven. Line-swap cards and line-wide foe attacks now work
+> from region 1.
+
 > # PLAYTEST 2026-10-02 — the quick fixes (BUILT)
 >
 > - **Deploy is CUT**: no ordering before a fight (never used). The team's order is set in TOWN —
