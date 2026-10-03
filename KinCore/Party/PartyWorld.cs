@@ -591,10 +591,9 @@ public static class PartyWorld
 	[
 		Build(0, "The Greenwood", MossyHollow, StonyRidge, Region1, Region1Elites),
 		Build(1, "The Mirelands", MistyMarsh, EmberCrags, Region2, Region2Elites),
-		// Regions 3–5 are PLACEHOLDERS until their exams are designed: region 2's, at their levels.
+		// Region 3 is a PLACEHOLDER until its exams are designed: region 2's, at its levels. THREE regions
+		// (2026-10-03, `KinEnemiesPlan.md`): the run ends with region 3's boss until 4 and 5 are designed.
 		Build(2, "The Stonefells", StonyRidge, EmberCrags, Region2, AllElites),
-		Build(3, "The Deepwood", MossyHollow, MistyMarsh, Region2, AllElites),
-		Build(4, "The Wyrm's Rest", EmberCrags, MistyMarsh, Region2, AllElites),
 	];
 
 	/// <summary>

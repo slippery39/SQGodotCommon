@@ -80,7 +80,7 @@ public class PartyBotTests
 	[Test]
 	public void ARealRunFinishes()
 	{
-		var run = PartySim.PlayRun(PartyContent.Pike, seed: 7);
+		var run = PartySim.PlayRun(Family.Ember, seed: 7);
 
 		Assert.That(run.Battles, Is.GreaterThan(0));
 		Assert.That(run.End, Is.Not.EqualTo(RunEnd.Stalled));

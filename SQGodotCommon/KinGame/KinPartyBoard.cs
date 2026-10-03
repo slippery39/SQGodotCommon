@@ -196,7 +196,7 @@ public partial class KinPartyBoard : Node2D
 			// Capture-only: `--screen=route` sets out onto the first route, `route2` walks one place
 			// further; `town2` is the second town; `boss` stands at the route's end (placed, not walked);
 			// `between|over` fight the route's first place and end it through `DebugEndBattle`.
-			BeginRun(PartyContent.Roster[starter]);
+			BeginRun(PartyContent.Families[starter]);
 			if (_captureScreen is { } screen)
 				GetTree().CreateTimer(0.5).Timeout += () =>
 				{
@@ -247,8 +247,13 @@ public partial class KinPartyBoard : Node2D
 					}
 					if (screen is "hospital" or "shop" or "pen")
 					{
-						// A hurt starter, so the hospital has something to sell.
-						Change(r => r with { Team = [r.Team[0] with { Hp = r.Team[0].Hp / 2 }] });
+						// A hurt team, so the hospital has something to sell.
+						Change(r =>
+							r with
+							{
+								Team = [.. r.Team.Select(m => m with { Hp = m.Hp / 2 })],
+							}
+						);
 						OpenBuilding(System.Enum.Parse<BuildingKind>(screen, ignoreCase: true));
 						return;
 					}
@@ -298,9 +303,9 @@ public partial class KinPartyBoard : Node2D
 		_screens.ShowStarters(BeginRun);
 	}
 
-	private void BeginRun(PartyCompanion starter)
+	private void BeginRun(Family family)
 	{
-		_run = PartyRun.Start(starter, (int)GD.RandRange(1, 9999));
+		_run = PartyRun.Start(family, (int)GD.RandRange(1, 9999));
 		Continue();
 	}
 

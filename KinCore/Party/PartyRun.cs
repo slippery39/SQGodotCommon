@@ -178,8 +178,25 @@ public partial record PartyRun
 	public bool AtBoss => Phase == RunPhase.Route && Route is not null && Here.Kind == NodeKind.End;
 
 	/// <summary>A new run: one starter, in the first region's town.</summary>
+	/// <summary>
+	/// **A run of a FAMILY: three of its pool, rolled** (`KinJam.md`, top: the run's new shape,
+	/// 2026-10-02). Seeded, so a seed is always the same trio; <see cref="Reroll"/> rolls once more.
+	/// </summary>
+	public static PartyRun Start(Family family, int seed) =>
+		Start(Roll(family, seed, attempt: 0), family, seed);
+
+	/// <summary>A run with exactly this one monster — tests and the console, where the team is the point.</summary>
 	public static PartyRun Start(
 		PartyCompanion starter,
+		int seed,
+		ImmutableList<Region>? regions = null,
+		ImmutableList<KinCard>? deck = null,
+		ImmutableList<KinCard>? rewards = null
+	) => Start([starter], starter.Family, seed, regions, deck, rewards);
+
+	private static PartyRun Start(
+		ImmutableList<PartyCompanion> team,
+		Family family,
 		int seed,
 		ImmutableList<Region>? regions = null,
 		ImmutableList<KinCard>? deck = null,
@@ -187,15 +204,52 @@ public partial record PartyRun
 	) =>
 		new()
 		{
-			Team = [new RunCompanion(starter, starter.Hp)],
-			Family = starter.Family,
+			Team = [.. team.Select(m => new RunCompanion(m, m.Hp))],
+			Family = family,
 			Regions = regions ?? PartyWorld.Regions,
-			Deck = deck ?? PartyContent.StartingDeck(starter.Family),
+			Deck = deck ?? PartyContent.StartingDeck(family),
 			Rewards = rewards ?? PartyContent.Rewards,
 			Gold = StartingGold,
 			Phase = RunPhase.Town,
 			Seed = seed,
 		};
+
+	/// <summary>Three of the family's pool, in a seeded order — the front first.</summary>
+	public static ImmutableList<PartyCompanion> Roll(Family family, int seed, int attempt)
+	{
+		var rng = new Random(seed * 7919 + attempt);
+		return [.. PartyContent.PoolOf(family).OrderBy(_ => rng.Next()).Take(TeamSize)];
+	}
+
+	/// <summary>The one REROLL has been spent.</summary>
+	public bool Rerolled { get; init; }
+
+	/// <summary>Why the trio cannot be rerolled — or null if it can: once, before the run sets out.</summary>
+	public string? CannotReroll =>
+		Rerolled ? "The reroll is spent"
+		: Phase != RunPhase.Town || RegionIndex != 0 || Route is not null
+			? "Only before the run sets out"
+		: null;
+
+	/// <summary>
+	/// **The one reroll: a different trio** (2026-10-03 — it saves a run dealt three that clash). The
+	/// next seeded roll that is not the same three. Refused changes nothing.
+	/// </summary>
+	public PartyRun Reroll()
+	{
+		if (CannotReroll is not null)
+			return this;
+		var now = Team.Select(m => m.Companion.Name).ToHashSet();
+		var attempt = 1;
+		ImmutableList<PartyCompanion> trio;
+		do trio = Roll(Family, Seed, attempt++);
+		while (trio.All(m => now.Contains(m.Name)) && attempt < 50);
+		return this with
+		{
+			Team = [.. trio.Select(m => new RunCompanion(m, m.Hp))],
+			Rerolled = true,
+		};
+	}
 
 	/// <summary>
 	/// **A species as a monster of yours** — its HP and its passive (the kit it carries dormant as a

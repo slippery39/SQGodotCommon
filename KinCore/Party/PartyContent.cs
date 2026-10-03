@@ -90,8 +90,8 @@ public static class PartyContent
 	public static readonly PartyCompanion Bramble =
 		new(
 			"Bramble",
-			// 30 → 27 (2026-09-30): the family balance pass.
-			Hp: 27,
+			// 30 → 27 (2026-09-30): the family balance pass. ×0.6 (2026-10-03): three from the start.
+			Hp: 16,
 			Power: 2,
 			[Attack("Bash", 4), Guard("Brace", 6)],
 			Passive: "THORNS",
@@ -114,7 +114,8 @@ public static class PartyContent
 			"Pike",
 			// 18 → 24 (2026-09-28): one Gore in region 1 was a knockout. 24 → 28 (2026-09-30): the
 			// family balance pass — Pike won 7% to Bramble's 72%. 28 → 30: the foe pass after it.
-			Hp: 30,
+			// ×0.6 (2026-10-03): a team of three from the start (`KinFamiliesPlan.md`, round 5).
+			Hp: 18,
 			Power: 3,
 			[Attack("Jab", 2), Attack("Jab", 2), Attack("Flurry", 0, Aim.Sweep)],
 			Passive: "SPELLBLADE",
@@ -260,10 +261,22 @@ public static class PartyContent
 	// ===== THE RUN
 
 	/// <summary>
-	/// **The starters — choosing one IS choosing the run's family.** Grove and Ember only: Storm and
+	/// **The families a run can be — chosen at the start** (2026-10-02). Grove and Ember only: Storm and
 	/// Mire are shelved until built (`KinFamiliesPlan.md`, round 2). Gale stays for the practice fights.
 	/// </summary>
-	public static readonly ImmutableList<PartyCompanion> Roster = [Bramble, Pike];
+	public static readonly ImmutableList<Family> Families = [Family.Grove, Family.Ember];
+
+	/// <summary>
+	/// **A family's POOL — a run rolls its team of three from it** (`KinFamiliesPlan.md`, round 5: no
+	/// starters any more; Bramble and Pike are two of their family's five).
+	/// </summary>
+	public static ImmutableList<PartyCompanion> PoolOf(Family family) =>
+		family switch
+		{
+			Family.Grove => [Bramble, .. GroveCards.Monsters],
+			Family.Ember => [Pike, .. EmberCards.Monsters],
+			_ => [],
+		};
 
 	/// <summary>
 	/// **Every card a win or a shop can offer.** A run sees only its family's and the colourless ones

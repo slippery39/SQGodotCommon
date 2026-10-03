@@ -577,7 +577,7 @@ public static class EmberCards
 	/// <summary>**STACK** — Spell Power, then a nuke.</summary>
 	public static readonly PartyCompanion Emberling = Monster(
 		"Emberling",
-		20,
+		12,
 		0,
 		2,
 		"STOKER",
@@ -589,7 +589,7 @@ public static class EmberCards
 	/// <summary>**BURN** — every spell leaves a flame.</summary>
 	public static readonly PartyCompanion CinderNewt = Monster(
 		"Cinder Newt",
-		24,
+		14,
 		1,
 		1,
 		"SMOULDER",
@@ -601,7 +601,7 @@ public static class EmberCards
 	/// <summary>**CHAINS** — the third spell is a double.</summary>
 	public static readonly PartyCompanion EchoOwl = Monster(
 		"Echo Owl",
-		22,
+		13,
 		1,
 		1,
 		"ECHO",
@@ -613,7 +613,7 @@ public static class EmberCards
 	/// <summary>**ENERGY** — bank it, then dump it.</summary>
 	public static readonly PartyCompanion Ironhorn = Monster(
 		"Ironhorn",
-		30,
+		18,
 		4,
 		0,
 		"BANK",

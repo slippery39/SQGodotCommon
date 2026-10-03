@@ -82,7 +82,7 @@ takes it, `--play=N@3` on your space 3, `--play=N@f3` on the foe's — through t
 `--snare=N` weakens the foe in space N to catchable (`PartyState.DebugWeaken`, capture harness
 only) and arms the Snare; `--inspect=N` shows the hover panel for the creature in cell N (0–4 yours, 5–9 the foe's);
 `--end-turn` ends the turn at 1.6s, to capture the foes' turn animating. `--howto` opens the ? panel (how to play, and every symbol). `--mouse=x,y` stands in for the cursor (canvas pixels) to see an icon's tip; `--hover-card=N` for hovering hand card N. The RUN (no `--scenario`):
-`--starter=N` skips choosing (Roster[N]) and opens in the first town; `--screen=route` sets out onto its
+`--starter=N` skips choosing (the family `PartyContent.Families[N]`, its seeded trio) and opens in the first town; `--screen=route` sets out onto its
 route map, `route2` stands further along it (placed, not walked — a find there is not picked up),
 `town2` is the second town's map, `boss` stands at the route's end before its boss (placed, not walked), `relics` beats that boss (through `DebugEndBattle`) to show the boss-relic choice, `monsters` the boss's monster pick, `spring` stands at the route's first spring (heal or upgrade), `spring-full` the same with the family's whole pool added to the deck (the upgrade row that scrolls),
 `hospital|shop|pen` open that building in the first town (the starter at half HP),
@@ -290,7 +290,6 @@ The other four:
 ```
 dotnet run --project KinConsole -c Release -- sim 1000          # 1000 runs, seeds 1-1000
 dotnet run --project KinConsole -c Release -- party-sim 300     # THE COMPANION GAME: 300 runs, per region
-dotnet run --project KinConsole -c Release -- party-sim variants 100   # starter vs FAMILY vs starting cards, same seeds a row
 dotnet run --project KinConsole -c Release -- party-sim cards 400      # each card/monster: win rate with it vs without (from region 2)
 dotnet run --project KinConsole -c Release -- sim 200 Life=4    # override any eval weight
 ```

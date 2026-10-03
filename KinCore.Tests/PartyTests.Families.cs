@@ -35,37 +35,76 @@ public partial class PartyTests
 	// ===== ONE FAMILY PER RUN (KinFamiliesPlan.md, round 2)
 
 	[Test]
-	public void ARunIsItsStartersFamilyAndStartsWithTwoOfItsCards()
+	public void ARunIsItsFamilyAndStartsWithTwoOfItsCards()
 	{
-		foreach (var starter in PartyContent.Roster)
+		foreach (var family in PartyContent.Families)
 		{
-			var run = PartyRun.Start(starter, 1);
+			var run = PartyRun.Start(family, 1);
 
-			Assert.That(run.Family, Is.EqualTo(starter.Family).And.Not.EqualTo(Family.None));
-			Assert.That(
-				run.Deck.Count(c => c.Family == starter.Family),
-				Is.EqualTo(2),
-				starter.Name
-			);
+			Assert.That(run.Family, Is.EqualTo(family).And.Not.EqualTo(Family.None));
+			Assert.That(run.Deck.Count(c => c.Family == family), Is.EqualTo(2), family.ToString());
 			Assert.That(run.Deck.Count, Is.EqualTo(PartyContent.StarterDeck.Count + 2));
 		}
+	}
+
+	// ===== THREE FROM THE START (KinFamiliesPlan.md, round 5)
+
+	[Test]
+	public void ARunStartsWithThreeOfItsFamilysPoolRolledBySeed()
+	{
+		foreach (var family in PartyContent.Families)
+		{
+			var pool = PartyContent.PoolOf(family).Select(m => m.Name).ToList();
+			var trios = Enumerable
+				.Range(1, 30)
+				.Select(seed => PartyRun.Start(family, seed).Team.Select(m => m.Companion.Name))
+				.Select(names => string.Join(",", names))
+				.ToList();
+
+			foreach (var trio in trios.Select(t => t.Split(',')))
+			{
+				Assert.That(trio, Has.Length.EqualTo(PartyRun.TeamSize).And.Unique);
+				Assert.That(trio, Is.SubsetOf(pool), family.ToString());
+			}
+			Assert.That(
+				PartyRun.Start(family, 7).Team.Select(m => m.Companion.Name),
+				Is.EqualTo(PartyRun.Start(family, 7).Team.Select(m => m.Companion.Name)),
+				"a seed is always the same trio"
+			);
+			Assert.That(trios.Distinct().Count(), Is.GreaterThan(1), "seeds roll different trios");
+		}
+	}
+
+	[Test]
+	public void TheRerollGivesADifferentTrioOnceAndOnlyBeforeSettingOut()
+	{
+		var run = PartyRun.Start(Family.Ember, 3);
+		var names = run.Team.Select(m => m.Companion.Name).ToHashSet();
+
+		var rerolled = run.Reroll();
+		Assert.That(rerolled.Team.Select(m => m.Companion.Name), Is.Not.EquivalentTo(names));
+		Assert.That(rerolled.Team, Has.Count.EqualTo(PartyRun.TeamSize));
+
+		Assert.That(rerolled.Reroll(), Is.SameAs(rerolled), "once only");
+		var setOut = run.EnterRoute();
+		Assert.That(setOut.Reroll(), Is.SameAs(setOut), "not once set out");
 	}
 
 	[Test]
 	public void RewardsAndTheShopOfferOnlyYourFamilyAndColourless()
 	{
-		foreach (var starter in PartyContent.Roster)
+		foreach (var family in PartyContent.Families)
 		{
 			var offered = Enumerable
 				.Range(0, 100)
-				.Select(seed => PartyRun.Start(starter, seed))
+				.Select(seed => PartyRun.Start(family, seed))
 				.SelectMany(run => run.RewardOffer().Concat(run.ShopCards()))
 				.ToList();
 
 			Assert.That(
 				offered.Select(c => c.Family).Distinct(),
-				Is.EquivalentTo(new[] { Family.None, starter.Family }),
-				starter.Name
+				Is.EquivalentTo(new[] { Family.None, family }),
+				family.ToString()
 			);
 		}
 	}

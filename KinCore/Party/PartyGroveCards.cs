@@ -553,7 +553,7 @@ public static class GroveCards
 	/// <summary>**ROOTED** — a wall that keeps everything and grows from being hit.</summary>
 	public static readonly PartyCompanion Mosshell = Monster(
 		"Mosshell",
-		30,
+		18,
 		1,
 		"MOSSBACK",
 		"Its Block is Rooted. When its Block stops a hit, it grows 1.",
@@ -564,7 +564,7 @@ public static class GroveCards
 	/// <summary>**THORNS** — every Thorns card, bigger.</summary>
 	public static readonly PartyCompanion Hushcap = Monster(
 		"Hushcap",
-		20,
+		12,
 		2,
 		"SPORECAP",
 		"A card that gives Thorns gives 3 more.",
@@ -575,7 +575,7 @@ public static class GroveCards
 	/// <summary>**TOKENS** — they arrive bigger, and its own attacks sow them.</summary>
 	public static readonly PartyCompanion Broodvine = Monster(
 		"Broodvine",
-		22,
+		13,
 		1,
 		"NURSERY",
 		"Your tokens arrive with +3 HP and +1 Power.",
@@ -586,7 +586,7 @@ public static class GroveCards
 	/// <summary>**GROWTH** — every token lost makes the pack stronger.</summary>
 	public static readonly PartyCompanion Howler = Monster(
 		"Howler",
-		24,
+		14,
 		4,
 		"PACK LEADER",
 		"When a token of yours falls, each of your monsters grows 1.",

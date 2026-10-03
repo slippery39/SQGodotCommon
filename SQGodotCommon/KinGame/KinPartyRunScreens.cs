@@ -59,13 +59,20 @@ public sealed partial class KinPartyRunScreens
 
 	// ===== The three screens
 
-	public void ShowStarters(Action<PartyCompanion> choose)
+	/// <summary>
+	/// **Choose the FAMILY** — each shown by its first monster for now; the trio and its REROLL come
+	/// with the family screen (`KinJam.md`, top: the run's new shape).
+	/// </summary>
+	public void ShowStarters(Action<Family> choose)
 	{
-		Begin("CHOOSE YOUR STARTER", "", "title");
+		Begin("CHOOSE YOUR FAMILY", "", "title");
 
 		var row = Row();
-		foreach (var companion in PartyContent.Roster)
-			row.AddChild(MonsterTile(companion, new Vector2(340, 480), () => choose(companion)));
+		foreach (var family in PartyContent.Families)
+		{
+			var face = PartyContent.PoolOf(family)[0];
+			row.AddChild(MonsterTile(face, new Vector2(340, 480), () => choose(family)));
+		}
 	}
 
 	public void ShowBetween(

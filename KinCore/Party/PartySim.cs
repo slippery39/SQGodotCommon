@@ -89,11 +89,11 @@ public static class PartySim
 	/// `party-sim variants` only. The sim is outside the game state, so a delegate is fine here.</param>
 	public static SimRun[] PlayMany(
 		int count,
-		ImmutableList<PartyCompanion>? starters = null,
+		ImmutableList<Family>? families = null,
 		Func<PartyRun, PartyRun>? setup = null
 	)
 	{
-		var roster = starters ?? PartyContent.Roster;
+		var roster = families ?? PartyContent.Families;
 		var results = new SimRun[count];
 		Parallel.For(
 			0,
@@ -104,14 +104,14 @@ public static class PartySim
 	}
 
 	public static SimRun PlayRun(
-		PartyCompanion starter,
+		Family family,
 		int seed,
 		Action<string>? log = null,
 		Func<PartyRun, PartyRun>? setup = null
 	)
 	{
 		var rng = new Random(seed);
-		var run = PartyRun.Start(starter, seed);
+		var run = PartyRun.Start(family, seed);
 		if (setup is not null)
 			run = setup(run);
 		var gyms = ImmutableList<GymArrival>.Empty;
@@ -124,7 +124,7 @@ public static class PartySim
 			team2 = null;
 
 		SimRun Ended(RunEnd end, int region) =>
-			new(starter.Name, seed, end, region, gyms, battles, turns)
+			new(family.ToString(), seed, end, region, gyms, battles, turns)
 			{
 				Region2Deck = deck2,
 				Region2Team = team2,
