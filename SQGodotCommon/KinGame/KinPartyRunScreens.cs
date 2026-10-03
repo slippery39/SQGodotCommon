@@ -59,11 +59,20 @@ public sealed partial class KinPartyRunScreens
 
 	// ===== The three screens
 
+	/// <summary>What each family plays like, in a line — the choice the run starts with.</summary>
+	private static string Blurb(Family family) =>
+		family switch
+		{
+			Family.Grove => "Block, Thorns and tokens — a wall that hits back.",
+			Family.Ember => "Spells, Spell Power and Burn.",
+			_ => "",
+		};
+
 	/// <summary>
-	/// **Choose the FAMILY** — each shown by its first monster for now; the trio and its REROLL come
-	/// with the family screen (`KinJam.md`, top: the run's new shape).
+	/// **Choose the FAMILY** (`KinJam.md`, top: the run's new shape) — each shown by its first
+	/// monster; the team of three is rolled next.
 	/// </summary>
-	public void ShowStarters(Action<Family> choose)
+	public void ShowFamilies(Action<Family> choose)
 	{
 		Begin("CHOOSE YOUR FAMILY", "", "title");
 
@@ -71,8 +80,37 @@ public sealed partial class KinPartyRunScreens
 		foreach (var family in PartyContent.Families)
 		{
 			var face = PartyContent.PoolOf(family)[0];
-			row.AddChild(MonsterTile(face, new Vector2(340, 480), () => choose(family)));
+			row.AddChild(
+				Tile(
+					KinPalette.Family(family),
+					KinArt.Sprite(face.Name) ?? KinArt.Drawing(face.Name),
+					family.ToString().ToUpperInvariant(),
+					[Blurb(family)],
+					new Vector2(340, 480),
+					() => choose(family)
+				)
+			);
 		}
+	}
+
+	/// <summary>
+	/// **Your team of three, rolled** — REROLL once for a different three, or BEGIN. Shown before the
+	/// first town, so the roll is seen before anything is spent.
+	/// </summary>
+	public void ShowTrio(PartyRun run, Action reroll, Action begin)
+	{
+		Begin("YOUR TEAM", "", "title");
+
+		var row = Row();
+		foreach (var member in run.Team)
+			row.AddChild(MonsterTile(member.Companion, new Vector2(340, 480), () => { }));
+
+		var buttons = Row();
+		var again = Button("REROLL", reroll);
+		again.Disabled = run.CannotReroll is not null;
+		again.TooltipText = run.CannotReroll ?? "A different three — once.";
+		buttons.AddChild(again);
+		buttons.AddChild(Button("BEGIN", begin));
 	}
 
 	public void ShowBetween(
@@ -135,13 +173,19 @@ public sealed partial class KinPartyRunScreens
 		Begin("EVOLVE ONE", "");
 		var row = Row();
 		foreach (var index in run.Evolvable)
+		{
+			var from = run.Team[index].Companion;
+			var form = from.EvolvesInto!;
 			row.AddChild(
 				MonsterTile(
-					run.Team[index].Companion.EvolvesInto,
-					new Vector2(340, 480),
-					() => evolve(index)
+					form,
+					// Taller than a plain tile: the FROM line sits above a two-passive rule.
+					new Vector2(340, 560),
+					() => evolve(index),
+					$"FROM {from.Name.ToUpperInvariant()}: +{form.Hp - from.Hp} HP, +{form.Power - from.Power} POWER"
 				)
 			);
+		}
 	}
 
 	public void ShowOver(PartyRun run, Action newRun, Action menu)
@@ -348,7 +392,12 @@ public sealed partial class KinPartyRunScreens
 	/// **A monster to choose** — its art, its passive (a star, its name, its one-line rule), its
 	/// first-attack bonus and its stats as symbols. No "GROVE FAMILY": the tile is in its colour.
 	/// </summary>
-	private static Button MonsterTile(PartyCompanion monster, Vector2 size, Action pressed)
+	private static Button MonsterTile(
+		PartyCompanion monster,
+		Vector2 size,
+		Action pressed,
+		string note = ""
+	)
 	{
 		var bonus = monster.Abilities.OfType<FirstAttack>().FirstOrDefault();
 		var (bonusText, bonusIcon, bonusTint) = bonus is null
@@ -358,7 +407,7 @@ public sealed partial class KinPartyRunScreens
 			KinPalette.Family(monster.Family, monster.Name),
 			KinArt.Sprite(monster.Name) ?? KinArt.Drawing(monster.Name),
 			monster.Name.ToUpperInvariant(),
-			[monster.PassiveRule],
+			note.Length > 0 ? [note, monster.PassiveRule] : [monster.PassiveRule],
 			size,
 			pressed,
 			[

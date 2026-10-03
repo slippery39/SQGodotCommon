@@ -1,6 +1,6 @@
 # FAMILIES — monsters as engines, cards as fuel (design, 2026-09-27)
 
-## ROUND 5 — THREE FROM THE START, BOSSES EVOLVE (interview 2026-10-02/03; DRAFT 1 APPROVED, NOT BUILT)
+## ROUND 5 — THREE FROM THE START, BOSSES EVOLVE (interview 2026-10-02/03; DRAFT 1 APPROVED and BUILT — `PartyTests.Evolved.cs`)
 
 The run's new shape is at the top of `KinJam.md`. For the families it means:
 - **The pool is the family's five** (Pike / Bramble and the four boss monsters each) — **no starters

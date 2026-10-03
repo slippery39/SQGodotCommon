@@ -196,10 +196,13 @@ public partial class KinPartyBoard : Node2D
 			// Capture-only: `--screen=route` sets out onto the first route, `route2` walks one place
 			// further; `town2` is the second town; `boss` stands at the route's end (placed, not walked);
 			// `between|over` fight the route's first place and end it through `DebugEndBattle`.
-			BeginRun(PartyContent.Families[starter]);
+			// `trio` shows the rolled team and its REROLL; every other screen skips past it.
+			BeginRun(PartyContent.Families[starter], showTrio: _captureScreen == "trio");
 			if (_captureScreen is { } screen)
 				GetTree().CreateTimer(0.5).Timeout += () =>
 				{
+					if (screen == "trio")
+						return;
 					if (screen is "spring" or "spring-full")
 					{
 						// Placed on the route's first spring, not walked: its choice waits.
@@ -272,8 +275,20 @@ public partial class KinPartyBoard : Node2D
 						);
 						return;
 					}
+					// `evolvedfight`: the whole team in its evolved forms (the ★ and the art fallback).
+					if (screen == "evolvedfight")
+						_run = _run with
+						{
+							Team =
+							[
+								.. _run.Team.Select(m => new RunCompanion(
+									m.Companion.EvolvesInto ?? m.Companion,
+									m.Hp
+								)),
+							],
+						};
 					Change(r => r.MoveTo(r.Route!.Next(0).First().Id));
-					if (screen == "routefight")
+					if (screen is "routefight" or "evolvedfight")
 						return;
 					_state = _state.DebugEndBattle(won: screen == "between");
 					BattleOver();
@@ -300,14 +315,29 @@ public partial class KinPartyBoard : Node2D
 	private void ShowStarters()
 	{
 		_hand.SetVisible(false);
-		_screens.ShowStarters(BeginRun);
+		_screens.ShowFamilies(family => BeginRun(family));
 	}
 
-	private void BeginRun(Family family)
+	private void BeginRun(Family family, bool showTrio = true)
 	{
 		_run = PartyRun.Start(family, (int)GD.RandRange(1, 9999));
-		Continue();
+		if (showTrio)
+			ShowTrio();
+		else
+			Continue();
 	}
+
+	/// <summary>The rolled three: REROLL once, or BEGIN the run.</summary>
+	private void ShowTrio() =>
+		_screens.ShowTrio(
+			_run,
+			() =>
+			{
+				_run = _run.Reroll();
+				ShowTrio();
+			},
+			Continue
+		);
 
 	/// <summary>A change to the run from a screen, then whatever comes next.</summary>
 	private void Change(System.Func<PartyRun, PartyRun> change)

@@ -1,6 +1,6 @@
 # KIN — design doc
 
-> # THE RUN'S NEW SHAPE — three monsters from the start, bosses EVOLVE (Shayne, 2026-10-02; DECIDED, NOT BUILT)
+> # THE RUN'S NEW SHAPE — three monsters from the start, bosses EVOLVE (Shayne, 2026-10-02; BUILT 2026-10-03, not yet played)
 >
 > Found in the enemy pass: with ONE monster, region 1 was a different game — "all", "back" and
 > "weakest" all meant "you", the line cards were dead, and no turn asked which monster attacks. "Getting

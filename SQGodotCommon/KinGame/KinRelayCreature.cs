@@ -403,6 +403,11 @@ public sealed class KinRelayCreature
 		}
 
 		_name.Text = look.Name;
+		// A long name ("★ ELDER MOSSHELL") steps down rather than wrap behind the HP bar.
+		_name.LabelSettings.FontSize =
+			look.Name.Length > 13 ? 16
+			: look.Name.Length > 11 ? 18
+			: 22;
 		// Lit — a card can land here — the name goes gold with the ground: the drop's highlight
 		// replaced its "HERE" words (2026-10-02), and the gold ground alone was faint on grass.
 		_name.Modulate = look.Lit ? KinPalette.Gold : Colors.White;

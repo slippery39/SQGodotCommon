@@ -235,7 +235,8 @@ public sealed class KinRelayField
 			0,
 			drop is not null || ally.Id == ctx.SelectedId ? KinPalette.Gold : colour,
 			drop is not null || ally.Id == ctx.SelectedId,
-			ally.Name.ToUpperInvariant(),
+			// ★ = an evolved form (gold on a creature means "drop here", so no gold rim).
+			(PartyContent.BaseFormOf(ally.Name) is null ? "" : "★ ") + ally.Name.ToUpperInvariant(),
 			ally.Hp,
 			ally.MaxHp,
 			colour.Lightened(0.25f),

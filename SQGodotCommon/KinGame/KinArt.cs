@@ -84,6 +84,11 @@ public static class KinArt
 				return Drawn[key] = GD.Load<Texture2D>(path);
 		}
 
+		// An EVOLVED form draws its base form until it has art of its own (placeholder, 2026-10-03).
+		var slash = subject.LastIndexOf('/') + 1;
+		if (KinCore.Party.PartyContent.BaseFormOf(subject[slash..]) is { } basis)
+			return Drawn[key] = Drawing(subject[..slash] + basis);
+
 		return Drawn[key] = null;
 	}
 

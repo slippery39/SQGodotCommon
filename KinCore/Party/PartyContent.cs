@@ -317,6 +317,10 @@ public static class PartyContent
 	/// **A family's POOL — a run rolls its team of three from it** (`KinFamiliesPlan.md`, round 5: no
 	/// starters any more; Bramble and Pike are two of their family's five).
 	/// </summary>
+	/// <summary>The name of the monster this EVOLVED form came from — null for any other name.</summary>
+	public static string? BaseFormOf(string name) =>
+		Families.SelectMany(PoolOf).FirstOrDefault(m => m.EvolvesInto?.Name == name)?.Name;
+
 	public static ImmutableList<PartyCompanion> PoolOf(Family family) =>
 		family switch
 		{

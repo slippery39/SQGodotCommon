@@ -58,6 +58,11 @@ goes; first-attack badges as icon + number.
   over one of your monsters, the card shows that monster's real total**, green
   (`PartyState.AttackPreview`, `KinCardFace.ShowAttack`). Green on a spell only when a number on it
   actually grew.
+- **The run's screens (2026-10-03)**: CHOOSE YOUR FAMILY (a tile each, its first monster and a line);
+  YOUR TEAM (the rolled three, REROLL once, BEGIN); EVOLVE ONE (each evolvable monster as its form,
+  "FROM X: +HP, +POWER" on a taller tile). On the field an evolved monster's name wears a ★ — not a
+  gold rim, since gold means a drop target — and a long name steps its size down. An evolved form
+  draws its base form's art until it has its own (`KinArt.Drawing`).
 - **Drop targets are a HIGHLIGHT, not words (2026-10-02)**: a place a held card can land on turns its
   ground and name gold; an empty place shows the gold ground mark alone. No "▲ STRIKE HERE", and no
   card name floating off what it was played on — a pop says it landed.

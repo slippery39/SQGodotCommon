@@ -10,8 +10,8 @@ things that face outward.
 
 **A monster-companion deckbuilder (2026-09-23): up to 3 monsters ARE the board; the deck is the
 TRAINER's. ONE FAMILY PER RUN, chosen at the start. Monsters act ONLY through cards (a first-attack
-bonus each); no catching. NEW SHAPE (2026-10-02, not built): 3 random monsters from the start, bosses
-EVOLVE one.** A run is playable (`kin_party.tscn`, `KinCore/Party/`), built BESIDE the lane game. **Read `KinJam.md` first** — its newest section, at the top, is the truth; the
+bonus each); no catching. 3 monsters rolled from the start (one reroll); bosses EVOLVE
+one (2026-10-03).** A run is playable (`kin_party.tscn`, `KinCore/Party/`), built BESIDE the lane game. **Read `KinJam.md` first** — its newest section, at the top, is the truth; the
 design philosophy is there too. The setting is a GENERIC FANTASY substrate (`KinSettingSketches.md`).
 The lane game's history (the deleted doom layer, companion upgrades) is in `docs/findings/kin-balance.md`.
 
@@ -88,7 +88,7 @@ superseded by this paragraph.
 | **The next design — FAMILIES: monsters as engines, cards as fuel (interview 2026-09-27)** | `KinFamiliesPlan.md` | read it before designing any monster or card; the Relay's plan is `KinRelayPlan.md` |
 | **The ENEMIES — the curve, region rosters, junk cards, debuffs, the foe ideas (2026-10-02)** | `KinEnemiesPlan.md` | read it before designing or building any foe |
 | **The next loop — towns and wild routes as interactive MAPS (planned 2026-09-26)** | `KinMapPlan.md` | read it before touching the run's structure or its screens |
-| Where the last session got to | `HANDOFF-KinFamiliesBuilt.md` | read it when picking the work back up |
+| Where the last session got to | `HANDOFF-KinRunShape.md` | read it when picking the work back up |
 | Earlier handoffs, superseded — every other `HANDOFF-Kin*.md` | root | read only for their scars section |
 | Credits — **must ship** | `CREDITS.md` | before release, and when adding any third-party asset |
 | UI design — layout contract AND the visual language | `KinUI.md` | read it before touching `SQGodotCommon/KinGame/` |
