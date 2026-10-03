@@ -279,6 +279,8 @@ public sealed partial class KinPartyRunScreens
 		{
 			CustomMinimumSize = new Vector2(1700, height + 24),
 			VerticalScrollMode = ScrollContainer.ScrollMode.Disabled,
+			// A tap that wobbles a little stays a tap; past this, the finger is swiping the row.
+			ScrollDeadzone = 16,
 		};
 		_column.AddChild(scroll);
 		var row = new HBoxContainer
@@ -327,6 +329,15 @@ public sealed partial class KinPartyRunScreens
 	/// shared card listens for hover and drag through its own collision area; as a picture it takes
 	/// no input, so the button alone takes the click.
 	/// </summary>
+	/// <summary>How far the scrolling row around this control has moved — 0 outside one.</summary>
+	private static int ScrolledBy(Control control)
+	{
+		for (var parent = control.GetParent(); parent is not null; parent = parent.GetParent())
+			if (parent is ScrollContainer scroll)
+				return scroll.ScrollHorizontal + scroll.ScrollVertical;
+		return 0;
+	}
+
 	private static Button CardButton(KinCard card, Action pressed, string footer = "")
 	{
 		var size = new Vector2(250, 360);
@@ -340,7 +351,17 @@ public sealed partial class KinPartyRunScreens
 		button.AddThemeStyleboxOverride("disabled", clear);
 		button.AddThemeStyleboxOverride("hover", KinUiKit.Plate("gold", new Color(1, 1, 1, 0.35f)));
 		button.AddThemeStyleboxOverride("pressed", KinUiKit.Plate("gold", KinPalette.Gold));
-		button.Pressed += pressed;
+		// **A swipe scrolls, a tap picks** (playtest 2026-10-03, on a phone: the upgrade row scrolled only
+		// by its bar). PASS hands the touch on to a scrolling row, which drags itself; a press that ends
+		// after the row has moved was a swipe, not a pick.
+		button.MouseFilter = Control.MouseFilterEnum.Pass;
+		var downAt = 0;
+		button.ButtonDown += () => downAt = ScrolledBy(button);
+		button.Pressed += () =>
+		{
+			if (ScrolledBy(button) == downAt)
+				pressed();
+		};
 		button.TooltipText = KinSymbols.PlainTip(card);
 
 		var view = new SubViewport

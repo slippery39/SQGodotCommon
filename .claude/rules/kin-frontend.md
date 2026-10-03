@@ -66,6 +66,11 @@ must say what it means on hover, and its meaning is written once, in `KinSymbols
   eats the click).
 - **A dangling `else` binds to the nearest `if`** — `if (a) for (...) if (b) x; else y;` ran `y` for
   every refused drop, not when `a` was false. Brace any `if` whose body is a loop.
+- **A Button inside a ScrollContainer eats the swipe** — on a phone the row scrolled only by its bar
+  (playtest 2026-10-03). Godot's ScrollContainer drags itself on a touchscreen, but only if the touch
+  reaches it: give the buttons `MouseFilter.Pass`, and ignore a press if the row moved between
+  `ButtonDown` and `Pressed` (a swipe is not a pick). `KinPartyRunScreens.CardButton` does both;
+  `ScrollRow` sets a dead zone so a wobbly tap stays a tap.
 - **Small symbols need brighter tints than the palette**: Ember's `#C2621F` read as mud at chip size
   over a meadow; chips use `#FF9A3C`.
 
