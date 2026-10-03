@@ -102,13 +102,13 @@ public static class PartyContent
 			Hp: 24,
 			Power: 4,
 			[Attack("Bash", 4), Guard("Brace", 6)],
-			Passive: "THORNS",
-			PassiveRule: "A foe that attacks her takes 3.",
+			Passive: "THORNS · GUARDIAN",
+			PassiveRule: "A foe that attacks her takes 3. Monsters behind her take 2 less from each hit.",
 			Thorns: 3
 		)
 		{
 			Family = Family.Grove,
-			Abilities = [new FirstAttack { Rooted = 6 }],
+			Abilities = [new Guardian(), new FirstAttack { Rooted = 6 }],
 			Evolved = true,
 		};
 
@@ -118,13 +118,13 @@ public static class PartyContent
 			Hp: 27,
 			Power: 5,
 			[Attack("Jab", 2), Attack("Jab", 2), Attack("Flurry", 0, Aim.Sweep)],
-			Passive: "SPELLBLADE",
-			PassiveRule: "Its attacks add your Spell Power."
+			Passive: "SPELLBLADE · REACH",
+			PassiveRule: "Its attacks add your Spell Power and hit the front two foes."
 		)
 		{
 			Family = Family.Ember,
 			SpellPower = 1,
-			Abilities = [new Spellblade(), new FirstAttack { SpellPower = 3 }],
+			Abilities = [new Spellblade(), new Reach(), new FirstAttack { SpellPower = 3 }],
 			Evolved = true,
 		};
 

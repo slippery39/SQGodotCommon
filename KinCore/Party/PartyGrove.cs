@@ -29,6 +29,29 @@ public record DrawOnFall : GameComponent
 	public int Count { get; init; } = 2;
 }
 
+// ===== EVOLVED PASSIVES (KinFamiliesPlan.md, round 5)
+
+/// <summary>**GUARDIAN** (Bramble Elder): your monsters BEHIND it take this much less from each hit.</summary>
+public record Guardian : GameComponent
+{
+	public int Amount { get; init; } = 2;
+}
+
+/// <summary>**SHELLSTRIKE** (Elder Mosshell): its attacks add half its Block — read, never spent.</summary>
+public record Shellstrike : GameComponent;
+
+/// <summary>**SPORE CLOUD** (Sporelord): a foe that attacks your line takes its Thorns, once an attack.</summary>
+public record SporeCloud : GameComponent;
+
+/// <summary>**SEEDFALL** (Broodmother): when a token of yours falls, draw this many.</summary>
+public record Seedfall : GameComponent
+{
+	public int Count { get; init; } = 1;
+}
+
+/// <summary>**HUNT CALL** (Alpha Howler): its first attack each turn sends every token of yours in too.</summary>
+public record HuntCall : GameComponent;
+
 // ===== AURAS
 
 /// <summary>ANCIENT BARK: all your Block is Rooted.</summary>

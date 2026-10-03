@@ -42,6 +42,9 @@ public record FirstAttack : GameComponent
 	/// <summary>A token arrives at your front (Broodvine).</summary>
 	public TokenTemplate? Summons { get; init; }
 
+	/// <summary>How many of <see cref="Summons"/> — the Broodmother calls two.</summary>
+	public int SummonCount { get; init; } = 1;
+
 	/// <summary>The bonus in words — its badge and its inspector line.</summary>
 	public string Text =>
 		string.Join(
@@ -58,7 +61,11 @@ public record FirstAttack : GameComponent
 				Energy > 0 ? $"+{Energy} energy" : "",
 				Draw > 0 ? $"draw {Draw}" : "",
 				Grow > 0 ? $"it grows {Grow}" : "",
-				Summons is { } t ? $"summon a {t.Creature.Name}" : "",
+				Summons is { } t
+					? SummonCount > 1
+						? $"summon {SummonCount} {t.Creature.Name}s"
+						: $"summon a {t.Creature.Name}"
+					: "",
 			}.Where(p => p.Length > 0)
 		);
 }
@@ -79,6 +86,7 @@ public static class PartyMonsters
 	)
 	{
 		var bonus = BonusReady(ally) ? ally.GetComponent<FirstAttack>() : null;
+		var first = !ally.AttackedThisTurn;
 		var events = ImmutableList<GameEvent>.Empty;
 		ally = ally with { AttackedThisTurn = true };
 		if (bonus is not null)
@@ -117,7 +125,14 @@ public static class PartyMonsters
 			events = events.AddRange(grew);
 		}
 		if (bonus?.Summons is { } token)
-			s = PartySummon.SummonAlly(s, token);
+			for (var i = 0; i < bonus.SummonCount; i++)
+				s = PartySummon.SummonAlly(s, token);
+		// HUNT CALL: its first attack each turn sends the tokens in with it.
+		if (first && ally.HasComponent<HuntCall>())
+		{
+			(s, var pack) = PartySummon.TokensAttack(s, 0);
+			events = events.AddRange(pack);
+		}
 		return (s, bonus?.Damage ?? 0, events, bonus?.Burn ?? 0);
 	}
 }

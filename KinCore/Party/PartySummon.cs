@@ -40,16 +40,8 @@ public record TokensAttackAction : GameAction
 
 	public override ActionResult Execute(GameState s)
 	{
-		var events = ImmutableList<GameEvent>.Empty;
-		foreach (var token in s.LivingAllies().Where(a => a.IsToken).ToList())
-		{
-			if (s.GetParty().IsOver || s.GetObject(token.Id) is not Ally { IsDown: false } now)
-				continue;
-			ImmutableList<GameEvent> hit;
-			(s, hit) = PartyState.AttackFoes(s, now, Amount, PartyState.AimAt(s, now, Aim.Front));
-			events = events.AddRange(hit);
-		}
-		return new ActionResult(s).WithEvents(events);
+		var (after, events) = PartySummon.TokensAttack(s, Amount);
+		return new ActionResult(after).WithEvents(events);
 	}
 }
 
@@ -147,11 +139,30 @@ public static class PartySummon
 		);
 	}
 
+	/// <summary>**Each of your tokens attacks their front** — Pack Charge, and HUNT CALL.</summary>
+	public static (GameState, ImmutableList<GameEvent>) TokensAttack(GameState s, int amount)
+	{
+		var events = ImmutableList<GameEvent>.Empty;
+		foreach (var token in s.LivingAllies().Where(a => a.IsToken).ToList())
+		{
+			if (s.GetParty().IsOver || s.GetObject(token.Id) is not Ally { IsDown: false } now)
+				continue;
+			ImmutableList<GameEvent> hit;
+			(s, hit) = PartyState.AttackFoes(s, now, amount, PartyState.AimAt(s, now, Aim.Front));
+			events = events.AddRange(hit);
+		}
+		return (s, events);
+	}
+
 	/// <summary>A token fell (hit, or offered): a Log draws; a shield goes to the ones ahead of and behind it.</summary>
 	public static GameState TokenFainted(GameState s, Ally token)
 	{
 		s = PartyFamilies.TokenFell(s);
-		if (token.GetComponents<DrawOnFall>().Sum(d => d.Count) is > 0 and var draw)
+		// A Log draws as it falls; SEEDFALL draws for any token.
+		var draw =
+			token.GetComponents<DrawOnFall>().Sum(d => d.Count)
+			+ s.LivingAllies().SelectMany(a => a.GetComponents<Seedfall>()).Sum(f => f.Count);
+		if (draw > 0)
 			(s, _) = StartTurnAction.DrawCards(s, draw);
 		var shield = token.GetComponents<FaintShield>().Sum(f => f.Amount);
 		if (shield == 0)

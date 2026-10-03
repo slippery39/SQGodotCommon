@@ -557,9 +557,10 @@ public static class GroveCards
 		"Elder Mosshell",
 		27,
 		3,
-		"MOSSBACK",
-		"Its Block is Rooted. When its Block stops a hit, it grows 1.",
+		"MOSSBACK · SHELLSTRIKE",
+		"Its Block is Rooted; when it stops a hit, it grows 1. Its attacks add half its Block.",
 		new Mossback(),
+		new Shellstrike(),
 		new FirstAttack { Block = 9 }
 	) with
 	{
@@ -570,9 +571,10 @@ public static class GroveCards
 		"Sporelord",
 		18,
 		4,
-		"SPORECAP",
-		"A card that gives Thorns gives 3 more.",
+		"SPORECAP · SPORE CLOUD",
+		"A card that gives Thorns gives 3 more. A foe that attacks your line takes its Thorns.",
 		new Sporecap(),
+		new SporeCloud(),
 		new FirstAttack { Thorns = 9 }
 	) with
 	{
@@ -583,10 +585,11 @@ public static class GroveCards
 		"Broodmother",
 		20,
 		3,
-		"NURSERY",
-		"Your tokens arrive with +3 HP and +1 Power.",
+		"NURSERY · SEEDFALL",
+		"Your tokens arrive with +3 HP and +1 Power. When one falls, draw a card.",
 		new TokenBoost { Hp = 3, Power = 1 },
-		new FirstAttack { Summons = Sprout }
+		new Seedfall(),
+		new FirstAttack { Summons = Sprout, SummonCount = 2 }
 	) with
 	{
 		Evolved = true,
@@ -596,9 +599,10 @@ public static class GroveCards
 		"Alpha Howler",
 		21,
 		6,
-		"PACK LEADER",
-		"When a token of yours falls, each of your monsters grows 1.",
+		"PACK LEADER · HUNT CALL",
+		"When a token of yours falls, your monsters grow 1. Its first attack each turn sends your tokens in.",
 		new PackLeader(),
+		new HuntCall(),
 		new FirstAttack { Grow = 2 }
 	) with
 	{

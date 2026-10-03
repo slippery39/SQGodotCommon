@@ -410,14 +410,18 @@ public record StrikeAction : CardStep
 		+ (PlusCardsInHand ? s.CardsIn(ZoneType.Hand).Count() : 0)
 		+ PerX * s.GetParty().XPaid
 		+ PerBlock * ally.Block
-		+ PerThorns * ally.TotalThorns;
+		+ PerThorns * ally.TotalThorns
+		// SHELLSTRIKE: half its Block, read and never spent.
+		+ (ally.HasComponent<Shellstrike>() ? ally.Block / 2 : 0);
 
 	public override ActionResult Execute(GameState s)
 	{
 		// **The FIRST attack on this monster this turn fires its bonus** (round 4, `PartyMonsters`).
 		var (bonused, extra, bonus, burn) = PartyMonsters.Attacks(s, Target(s));
 		var ally = (Ally)bonused.GetObject(Target(s).Id);
-		var targets = PartyState.AimAt(bonused, ally, Aim);
+		// REACH: an attack at the front takes the front two.
+		var aim = Aim == Aim.Front && ally.HasComponent<Reach>() ? Aim.Pierce : Aim;
+		var targets = PartyState.AimAt(bonused, ally, aim);
 		var (after, events) = PartyState.AttackFoes(
 			bonused,
 			ally,

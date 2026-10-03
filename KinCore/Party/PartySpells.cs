@@ -156,6 +156,11 @@ public static class PartySpells
 	public static int SpellBonus(this GameState s) =>
 		s.LivingAllies().Sum(a => a.SpellPower)
 		+ s.LivingAllies().SelectMany(a => a.GetComponents<SpellPower>()).Sum(p => p.Amount)
+		// SHELTERED: kept out of the front.
+		+ s.LivingAllies()
+			.Where(a => a.Position != 0)
+			.SelectMany(a => a.GetComponents<Sheltered>())
+			.Sum(p => p.Amount)
 		+ s.GetParty().FightSpellPower
 		+ s.GetParty().TurnSpellPower;
 

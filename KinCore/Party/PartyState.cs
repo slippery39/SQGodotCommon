@@ -72,6 +72,15 @@ public static class PartyState
 		if (card.HasComponent<SpendsAllEnergy>())
 			return party.Energy;
 
+		// CADENCE: the Nth spell of the turn is free while the monster stands.
+		if (
+			card.IsSpell()
+			&& s.LivingAllies()
+				.SelectMany(a => a.GetComponents<Cadence>())
+				.Any(c => party.SpellsThisTurn == c.Nth - 1)
+		)
+			return 0;
+
 		// WILDFIRE: free once the chain is long enough.
 		if (card.GetComponent<FreeAfterSpells>() is { } free && party.SpellsThisTurn >= free.Spells)
 			return 0;
@@ -463,6 +472,11 @@ public static class PartyState
 	{
 		var events = ImmutableList<GameEvent>.Empty;
 		ImmutableList<GameEvent> more;
+
+		// SPORE CLOUD: the attack stings ONCE — and not at all on top of hitting the Sporelord itself.
+		var lords = s.LivingAllies().Where(a => a.HasComponent<SporeCloud>()).ToList();
+		var spores = lords.Any(l => targets.Contains(l.Id)) ? 0 : lords.Sum(l => l.TotalThorns);
+
 		foreach (var id in targets)
 		{
 			if (s.GetObject(id) is not Ally { IsKnockedOut: false } victim)
@@ -493,6 +507,13 @@ public static class PartyState
 				(s, more) = HitFoe(s, (Foe)s.GetObject(attacker.Id), thorns);
 				events = events.AddRange(more);
 			}
+		}
+
+		if (spores > 0 && s.GetObject(attacker.Id) is Foe { IsDead: false } stung)
+		{
+			events = events.Add(new ThornsEvent { FoeId = stung.Id, Damage = spores });
+			(s, more) = HitFoe(s, stung, spores);
+			events = events.AddRange(more);
 		}
 
 		// **THIEF: then it takes the top card of your draw pile.** An empty pile is not reshuffled.
@@ -553,6 +574,16 @@ public static class PartyState
 		bool crushes = false
 	)
 	{
+		// GUARDIAN: a monster ahead of it takes some of every blow.
+		amount = Math.Max(
+			0,
+			amount
+				- s.LivingAllies()
+					.Where(a => a.Position < ally.Position)
+					.SelectMany(a => a.GetComponents<Guardian>())
+					.Sum(g => g.Amount)
+		);
+
 		// CRUSH goes straight through: the Block is untouched, and stops nothing.
 		var blocked = crushes ? 0 : Math.Min(amount, ally.Block);
 		var hit = ally with
@@ -626,6 +657,13 @@ public static class PartyState
 			s = s.StageEvent(
 				new FoeDefeatedEvent { FoeId = foe.Id, DuringYourTurn = !party.EndingTurn }
 			);
+			// CINDERFALL: its Burn passes to the foe behind it.
+			if (
+				hit.Burn > 0
+				&& s.LivingAllies().Any(a => a.HasComponent<Cinderfall>())
+				&& Behind(s, hit) is Foe next
+			)
+				s = s.UpdateObject(next.Id, next with { Burn = next.Burn + hit.Burn });
 		}
 
 		// A PHASE fires on the hit that crosses it — after the hit's own event, so it reads in order.

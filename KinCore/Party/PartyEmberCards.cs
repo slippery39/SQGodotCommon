@@ -582,9 +582,10 @@ public static class EmberCards
 		18,
 		2,
 		2,
-		"STOKER",
-		"When a card gives Spell Power, it gives 1 more.",
+		"STOKER · SHELTERED",
+		"When a card gives Spell Power, it gives 1 more. +2 Spell Power while it is not in front.",
 		new Stoker(),
+		new Sheltered(),
 		new FirstAttack { FightSpellPower = 2 }
 	) with
 	{
@@ -596,9 +597,10 @@ public static class EmberCards
 		21,
 		3,
 		1,
-		"SMOULDER",
-		"Your spells apply 1 Burn to each foe they hit.",
+		"SMOULDER · CINDERFALL",
+		"Your spells apply 1 Burn to each foe they hit. A Burning foe that falls passes its Burn back.",
 		new Smoulder(),
+		new Cinderfall(),
 		new FirstAttack { Burn = 4 }
 	) with
 	{
@@ -610,9 +612,10 @@ public static class EmberCards
 		20,
 		3,
 		1,
-		"ECHO",
-		"Your 3rd spell each turn is cast twice.",
+		"ECHO · CADENCE",
+		"Your 3rd spell each turn costs 0 and is cast twice.",
 		new EchoNthSpell { Nth = 3 },
+		new Cadence { Nth = 3 },
 		new FirstAttack { Draw = 2 }
 	) with
 	{

@@ -40,6 +40,26 @@ public abstract record Aura : GameComponent
 }
 
 /// <summary>INNER FIRE: at the start of each of your turns, +1 Spell Power for the rest of the fight.</summary>
+// ===== EVOLVED PASSIVES (KinFamiliesPlan.md, round 5)
+
+/// <summary>**REACH** (Lancepike): its attacks aimed at the front hit the front TWO.</summary>
+public record Reach : GameComponent;
+
+/// <summary>**SHELTERED** (Flamekin): this much Spell Power while it is not at the front.</summary>
+public record Sheltered : GameComponent
+{
+	public int Amount { get; init; } = 2;
+}
+
+/// <summary>**CINDERFALL** (Cinder Drake): a Burning foe that falls passes its Burn to the one behind.</summary>
+public record Cinderfall : GameComponent;
+
+/// <summary>**CADENCE** (Echo Strix): your Nth spell each turn costs 0.</summary>
+public record Cadence : GameComponent
+{
+	public int Nth { get; init; } = 3;
+}
+
 public record InnerFireAura : Aura
 {
 	public override string Name => "Inner Fire";
