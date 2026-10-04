@@ -290,6 +290,21 @@ public partial class KinPartyBoard : Node2D
 					Change(r => r.MoveTo(r.Route!.Next(0).First().Id));
 					if (screen is "routefight" or "evolvedfight")
 						return;
+					// `debuffs`: the first fight, a different debuff on each monster (the chips and tips).
+					if (screen == "debuffs")
+					{
+						var allies = _state.LivingAllies().ToList();
+						for (var i = 0; i < allies.Count; i++)
+							_state = PartyDebuffs.Afflict(
+								_state,
+								allies[i].Id,
+								(Debuff)(1 + i % 4),
+								i + 1
+							);
+						_state = PartyDebuffs.Afflict(_state, allies[0].Id, Debuff.Shaken, 1);
+						Render(ImmutableList<GameEvent>.Empty);
+						return;
+					}
 					_state = _state.DebugEndBattle(won: screen == "between");
 					BattleOver();
 				};

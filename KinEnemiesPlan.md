@@ -71,6 +71,20 @@
 - **The Powder Goblin's** `Intent.SelfDestructs`. Tests: `PartyRunTests.Regions.cs`, `PartyTests.Foes.cs`.
 - Next: **the debuff system**, then junk cards, then regions 2–3's real rosters.
 
+## Step 2 — THE DEBUFFS, BUILT (interview 2026-10-03, every answer as recommended)
+
+- **Weak** (attacks −25%), **Vulnerable** (hits +50%), **Silence** (no first-attack bonus), **Shaken**
+  (attack cards refused) — turns on `Ally`, STACKING, counted down as YOUR TURN ENDS (before the foes
+  act): a 1-turn debuff from a foe covers your next turn; a Vulnerable must be 2+ to outlast the foes'
+  next turn. Rounded down. Nothing removes them but time; foes only (your cards may use them later).
+- **A rider on a move** (`Intent.Inflicts` / `InflictTurns`): on whoever the move hit — after a
+  SCREECH (a shove), on the new front. Shown as the badge's second symbol; the words in its tip.
+- **Who has them** (until region 2's hags and the dead): Hexer's Bolt SILENCE 1, Black Knight's Cleave
+  VULNERABLE 2, Old Mire's Swallow WEAK 2, the Harpies' Screech SHAKEN 1. Region 1 has none.
+- Code `PartyDebuffs.cs`; chips + tips `KinRelayField` / `KinSymbols` (and the ? legend); icons
+  `Art/icons/weak|vulnerable|silence|shaken` (credited); tests `PartyTests.Foes.cs`; capture
+  `--screen=debuffs`. Next: **junk cards**.
+
 ## Decided for step 1 (2026-10-02)
 
 - **Foes are authored at their region's strength** — levels go (`PartyLevels.Scale`, the tier

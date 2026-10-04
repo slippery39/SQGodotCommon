@@ -394,6 +394,17 @@ public static class PartyState
 				break;
 		}
 
+		// A DEBUFF rider: on whoever the move hit — after a SCREECH, on your new front.
+		if (creature is Foe && intent.Inflicts != Debuff.None)
+		{
+			ImmutableList<int> afflicted =
+				intent.Kind == IntentType.Shove
+					? [.. s.LivingAllies().Where(a => a.Position == 0).Select(a => a.Id)]
+					: targets;
+			foreach (var id in afflicted)
+				s = PartyDebuffs.Afflict(s, id, intent.Inflicts, intent.InflictTurns);
+		}
+
 		var acted = (Creature)s.GetObject(creatureId);
 		s = s.UpdateObject(creatureId, acted with { PatternIndex = acted.PatternIndex + 1 });
 
@@ -424,10 +435,14 @@ public static class PartyState
 	/// </summary>
 	/// <summary>What one of your monsters' attacks lands for, before the foe's Block.</summary>
 	internal static int AttackDamage(GameState s, Ally ally, int amount) =>
-		ally.AttackFor(amount)
-		+ ally.FinisherPerAlly * s.GetParty().AlliesActedThisRound
-		// SPELLBLADE (Pike): its attacks add your Spell Power.
-		+ (ally.HasComponent<Spellblade>() ? s.SpellBonus() : 0);
+		// WEAK takes a quarter off the whole blow.
+		PartyDebuffs.Weakened(
+			ally,
+			ally.AttackFor(amount)
+				+ ally.FinisherPerAlly * s.GetParty().AlliesActedThisRound
+				// SPELLBLADE (Pike): its attacks add your Spell Power.
+				+ (ally.HasComponent<Spellblade>() ? s.SpellBonus() : 0)
+		);
 
 	/// <summary>
 	/// **What an attack card would hit for, played on the monster at <paramref name="space"/>** — the
@@ -581,7 +596,8 @@ public static class PartyState
 		bool crushes = false
 	)
 	{
-		// GUARDIAN: a monster ahead of it takes some of every blow.
+		// VULNERABLE takes half again; then GUARDIAN, a monster ahead of it, takes some of every blow.
+		amount = PartyDebuffs.Exposed(ally, amount);
 		amount = Math.Max(
 			0,
 			amount

@@ -301,6 +301,17 @@ public static class KinArt
 		_pipMiss ??= Circle(24, 24, new Color(0, 0, 0, 0.35f), KinPalette.Bone, 2);
 	public static Texture2D EnergyIcon => Drawing("icons/energy");
 
+	/// <summary>A debuff's symbol (`PartyDebuffs`), or null for none.</summary>
+	public static Texture2D DebuffIcon(KinCore.Party.Debuff debuff) =>
+		debuff switch
+		{
+			KinCore.Party.Debuff.Weak => Drawing("icons/weak"),
+			KinCore.Party.Debuff.Vulnerable => Drawing("icons/vulnerable"),
+			KinCore.Party.Debuff.Silence => Drawing("icons/silence"),
+			KinCore.Party.Debuff.Shaken => Drawing("icons/shaken"),
+			_ => null,
+		};
+
 	private static readonly Dictionary<(int, int), Texture2D> Dashed = new();
 
 	/// <summary>

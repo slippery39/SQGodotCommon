@@ -74,7 +74,9 @@ public static class PartyMonsters
 {
 	/// <summary>Whether this monster's first-attack bonus is still to come this turn.</summary>
 	public static bool BonusReady(Ally ally) =>
-		!ally.AttackedThisTurn && ally.GetComponent<FirstAttack>() is not null;
+		!ally.AttackedThisTurn
+		&& ally.Silenced == 0
+		&& ally.GetComponent<FirstAttack>() is not null;
 
 	/// <summary>
 	/// **An attack card was played on this monster**: the bonus's damage to add (0 after the first),

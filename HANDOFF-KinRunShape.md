@@ -78,5 +78,6 @@ highlight, not text.
    passives never come up.
 2. **Enemy pass step 1 is BUILT** (2026-10-03, `KinEnemiesPlan.md`): no levels; region 1 authored
    for three (goblins, wolves, Boar, Powder Goblin…); authored encounters, easy first; Grass/Trainer
-   gone; exams +50% HP. Regions 2–3 are placeholders. **Not yet played.** Next: the debuff system.
+   gone; exams +50% HP. Regions 2–3 are placeholders. **Not yet played.** Then the DEBUFFS (Weak,
+   Vulnerable, Silence, Shaken — `KinEnemiesPlan.md` step 2) were built, on region 2's exams. Next: junk cards.
 3. Then the debuff and junk-card systems; the MAP session; the HOOK; art for the evolved forms.

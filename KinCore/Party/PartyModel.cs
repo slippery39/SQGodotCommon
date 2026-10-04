@@ -164,6 +164,20 @@ public record Ally : Creature
 	/// <summary>Power added by cards this turn (Rally). Cleared when your next turn starts.</summary>
 	public int BonusPower { get; init; }
 
+	// ===== DEBUFFS (`PartyDebuffs`) — turns left, counted down at the end of your turn
+
+	/// <summary>WEAK: its attacks deal 25% less.</summary>
+	public int Weak { get; init; }
+
+	/// <summary>VULNERABLE: it takes 50% more from each hit.</summary>
+	public int Vulnerable { get; init; }
+
+	/// <summary>SILENCE: its first-attack bonus does not fire.</summary>
+	public int Silenced { get; init; }
+
+	/// <summary>SHAKEN: attack cards cannot be played on it.</summary>
+	public int Shaken { get; init; }
+
 	/// <summary>
 	/// **SPELL POWER — added to every spell, summed across your team** (round 4: a spell is cast by
 	/// the team, not a monster). Its base, from the monster.
@@ -329,4 +343,9 @@ public record Intent
 
 	/// <summary>**Its maker falls after this move** — the Powder Goblin's blast.</summary>
 	public bool SelfDestructs { get; init; }
+
+	/// <summary>**A DEBUFF rider** (`PartyDebuffs`): this, for <see cref="InflictTurns"/>, on whoever the move hits.</summary>
+	public Debuff Inflicts { get; init; }
+
+	public int InflictTurns { get; init; }
 }

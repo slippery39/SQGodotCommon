@@ -52,6 +52,39 @@ public static class KinSymbols
 			EmberTint,
 			"it takes this much as the foes' turn starts, through Block; then Burn drops by 1."
 		);
+
+	// ===== DEBUFFS on your monsters (`PartyDebuffs`): the number is the turns left
+	private static readonly Color DebuffTint = Color.FromHtml("#C59BE8");
+
+	public static readonly Symbol Weak =
+		new("Weak", KinArt.DebuffIcon(Debuff.Weak), DebuffTint, "its attacks deal 25% less.");
+	public static readonly Symbol Vulnerable =
+		new("Vulnerable", KinArt.DebuffIcon(Debuff.Vulnerable), DebuffTint, "it takes 50% more.");
+	public static readonly Symbol Silence =
+		new(
+			"Silence",
+			KinArt.DebuffIcon(Debuff.Silence),
+			DebuffTint,
+			"its first-attack bonus is off."
+		);
+	public static readonly Symbol Shaken =
+		new(
+			"Shaken",
+			KinArt.DebuffIcon(Debuff.Shaken),
+			DebuffTint,
+			"no attack card can be played on it."
+		);
+
+	/// <summary>A debuff's symbol.</summary>
+	public static Symbol Of(Debuff debuff) =>
+		debuff switch
+		{
+			Debuff.Weak => Weak,
+			Debuff.Vulnerable => Vulnerable,
+			Debuff.Silence => Silence,
+			_ => Shaken,
+		};
+
 	public static readonly Symbol Grow =
 		new("Grow", KinArt.PowerIcon, GroveTint, "+Power for the rest of the fight.");
 	public static readonly Symbol Token =
@@ -126,6 +159,10 @@ public static class KinSymbols
 		Draw,
 		Energy,
 		Aura,
+		Weak,
+		Vulnerable,
+		Silence,
+		Shaken,
 	];
 
 	/// <summary>

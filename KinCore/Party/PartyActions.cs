@@ -124,6 +124,9 @@ public record EndPartyTurnAction : GameAction
 		foreach (var id in s.GetChildrenIds(s.ZoneId(ZoneType.Hand)).ToList())
 			s = s.MoveObject(id, s.ZoneId(ZoneType.Discard));
 
+		// Your turn is over: each DEBUFF has a turn less (a 1-turn one covered the turn just played).
+		s = PartyDebuffs.Tick(s);
+
 		var ending = s.GetParty();
 		s = s.UpdateObject(ending.Id, ending with { EndingTurn = true });
 
@@ -395,6 +398,13 @@ public record StrikeAction : CardStep
 
 	/// <summary>Thorn Lash: + this much for each of its Thorns.</summary>
 	public int PerThorns { get; init; }
+
+	/// <summary>SHAKEN: no attack card lands on it.</summary>
+	public override string? Refusal(GameState s, int space, bool foeRow) =>
+		base.Refusal(s, space, foeRow)
+		?? (
+			!foeRow && s.AllyAt(space) is { Shaken: > 0 } ? "It is shaken: no attacks on it" : null
+		);
 
 	/// <summary>What this attack would land for, before Block — the card's live number on a drag.</summary>
 	public int Damage(GameState s)

@@ -153,7 +153,11 @@ public static class PartyExams
 					294,
 					0,
 					new Intent { Name = "Tongue", Kind = IntentType.Pull },
-					Attack("Swallow", 29),
+					Attack("Swallow", 29) with
+					{
+						Inflicts = Debuff.Weak,
+						InflictTurns = 2,
+					},
 					Attack("Deluge", 9, Aim.Sweep)
 				) with
 				{
@@ -167,7 +171,11 @@ public static class PartyExams
 							Pattern =
 							[
 								Guard("Wallow", 21),
-								Attack("Swallow", 29),
+								Attack("Swallow", 29) with
+								{
+									Inflicts = Debuff.Weak,
+									InflictTurns = 2,
+								},
 								Summon("Spawn", Minion("Toadling", 14, Attack("Spit", 6))),
 							],
 							Trait = "SUBMERGED: it wallows for Block and spawns toadlings.",
@@ -189,7 +197,11 @@ public static class PartyExams
 					"Black Knight",
 					270,
 					0,
-					Attack("Cleave", 14, Aim.Pierce),
+					Attack("Cleave", 14, Aim.Pierce) with
+					{
+						Inflicts = Debuff.Vulnerable,
+						InflictTurns = 2,
+					},
 					Guard("Guard", 14)
 				) with
 				{
@@ -215,12 +227,17 @@ public static class PartyExams
 					"Hexer",
 					92,
 					1,
-					Attack("Bolt", 10, Aim.Hunt),
+					Attack("Bolt", 10, Aim.Hunt) with
+					{
+						Inflicts = Debuff.Silence,
+						InflictTurns = 1,
+					},
 					Guard("Ward", 13, Aim.Ahead)
 				) with
 				{
 					Components = [new FirstCardCost { Amount = 1 }],
-					Trait = "HEX: your first card each turn costs 1 more while she stands.",
+					Trait =
+						"HEX: your first card each turn costs 1 more while she stands. Her Bolt SILENCES.",
 				},
 			]
 		);
@@ -236,11 +253,17 @@ public static class PartyExams
 					"Screeching Harpy",
 					44,
 					2,
-					new Intent { Name = "Screech", Kind = IntentType.Shove },
+					new Intent
+					{
+						Name = "Screech",
+						Kind = IntentType.Shove,
+						Inflicts = Debuff.Shaken,
+						InflictTurns = 1,
+					},
 					Attack("Rake", 9, Aim.Hunt)
 				) with
 				{
-					Trait = "Its SCREECH swaps your front two.",
+					Trait = "Its SCREECH swaps your front two and SHAKES the new front.",
 				},
 			]
 		);

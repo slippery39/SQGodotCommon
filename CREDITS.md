@@ -48,6 +48,10 @@ The paths themselves are unchanged.
 | An aura (`icons/aura`) | `aura` | **Lorc** |
 | Draw a card (`icons/draw`) | `card-exchange` | **Delapouite** |
 | Energy (`icons/energy`) | `energise` | **Lorc** |
+| Weak (`icons/weak`) | `sword-break` | **Lorc** |
+| Vulnerable (`icons/vulnerable`) | `achilles-heel` | **Delapouite** |
+| Silence (`icons/silence`) | `silenced` | **Delapouite** |
+| Shaken (`icons/shaken`) | `terror` | **Lorc** |
 
 > Icons made by Lorc, Delapouite and others, available at [game-icons.net](https://game-icons.net/),
 > licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).

@@ -250,6 +250,11 @@ public sealed class KinRelayField
 					KinPalette.Bone,
 					$"Power {ally.Power + ally.BonusPower}: {KinSymbols.Power.Meaning}"
 				),
+				// DEBUFFS next: they change this turn's plan. The number is the turns left.
+				Afflicted(KinSymbols.Weak, ally.Weak),
+				Afflicted(KinSymbols.Vulnerable, ally.Vulnerable),
+				Afflicted(KinSymbols.Silence, ally.Silenced),
+				Afflicted(KinSymbols.Shaken, ally.Shaken),
 				ally.SpellPower > 0
 					? new Chip(
 						KinArt.SpellPowerIcon,
@@ -293,6 +298,16 @@ public sealed class KinRelayField
 			KinPalette.Red
 		);
 	}
+
+	private static Chip Afflicted(KinSymbols.Symbol debuff, int turns) =>
+		turns > 0
+			? new Chip(
+				debuff.Icon,
+				$"{turns}",
+				debuff.Tint,
+				$"{debuff.Name} for {turns} turn{(turns == 1 ? "" : "s")}: {debuff.Meaning}"
+			)
+			: null;
 
 	private static CreatureLook FoeLook(GameState s, Foe foe, FieldContext ctx)
 	{
@@ -415,6 +430,14 @@ public static class KinMoveText
 {
 	/// <summary>`amount` is what it will actually deal (a monster's attack already carries Power).</summary>
 	public static string Says(Intent intent, int amount) =>
+		Move(intent, amount)
+		+ (
+			intent.Inflicts == Debuff.None
+				? ""
+				: $" + {intent.Inflicts} for {intent.InflictTurns} turn{(intent.InflictTurns == 1 ? "" : "s")}"
+		);
+
+	private static string Move(Intent intent, int amount) =>
 		intent.Kind switch
 		{
 			IntentType.Attack => $"{intent.Name} {amount} → {Where(intent.Target)}"
@@ -499,7 +522,17 @@ public static class KinMoveText
 	/// mockup has it. The move's NAME is dropped here (it did not fit a place at a readable size) and
 	/// kept in the inspector and on the starter screen, which use <see cref="Says"/>.
 	/// </summary>
-	public static (string Text, Texture2D Icon, Texture2D Icon2) Short(Intent intent, int amount) =>
+	/// <summary>A move on a badge — a DEBUFF rider as its second symbol.</summary>
+	public static (string Text, Texture2D Icon, Texture2D Icon2) Short(Intent intent, int amount)
+	{
+		var (text, icon, icon2) = ShortMove(intent, amount);
+		return (text, icon, KinArt.DebuffIcon(intent.Inflicts) ?? icon2);
+	}
+
+	private static (string Text, Texture2D Icon, Texture2D Icon2) ShortMove(
+		Intent intent,
+		int amount
+	) =>
 		intent.Kind switch
 		{
 			// Where it lands is the badge's dots, not a word; CRUSH is its cracked shield.
