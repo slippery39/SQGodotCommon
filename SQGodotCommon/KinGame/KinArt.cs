@@ -301,6 +301,8 @@ public static class KinArt
 		_pipMiss ??= Circle(24, 24, new Color(0, 0, 0, 0.35f), KinPalette.Bone, 2);
 	public static Texture2D EnergyIcon => Drawing("icons/energy");
 
+	public static Texture2D JunkIcon => Drawing("icons/junk");
+
 	/// <summary>A debuff's symbol (`PartyDebuffs`), or null for none.</summary>
 	public static Texture2D DebuffIcon(KinCore.Party.Debuff debuff) =>
 		debuff switch

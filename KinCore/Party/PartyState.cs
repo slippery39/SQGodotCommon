@@ -405,6 +405,10 @@ public static class PartyState
 				s = PartyDebuffs.Afflict(s, id, intent.Inflicts, intent.InflictTurns);
 		}
 
+		// A JUNK rider: into your deck, where that junk goes (`PartyJunk`).
+		if (creature is Foe && intent.AddsJunk != Junk.None)
+			s = PartyJunk.Add(s, intent.AddsJunk, intent.JunkCount);
+
 		var acted = (Creature)s.GetObject(creatureId);
 		s = s.UpdateObject(creatureId, acted with { PatternIndex = acted.PatternIndex + 1 });
 

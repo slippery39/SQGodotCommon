@@ -522,14 +522,23 @@ public static class PartyWorld
 			"The Mirelands",
 			Region2Bosses,
 			Region2Elites,
-			[Mire(BogToad), Mire(Wisp, Inkling), Mire(Glowmoth, Glowmoth, Wisp)],
+			// The HAGS have arrived (`PartyMirelands`, junk); the beasts beside them are placeholders.
 			[
-				Mire(BogToad, Wisp),
+				Mire(BogToad),
+				Wild(PartyMirelands.PlagueRat, PartyMirelands.PlagueRat),
+				Mire(Wisp, Inkling),
+			],
+			[
+				Wild(Stronger(BogToad, MirelandsStrength), PartyMirelands.BogHag),
+				Wild(PartyMirelands.GiantSpider, PartyMirelands.PlagueRat),
+				Wild(
+					PartyMirelands.Witch,
+					Stronger(Wisp, MirelandsStrength),
+					Stronger(Wisp, MirelandsStrength)
+				),
 				Mire(HoardDrake, Inkling),
-				Mire(Inkling, Inkling, Wisp),
-				Mire(BogToad, Glowmoth, Wisp),
-				Mire(HoardDrake, Wisp, Wisp),
-				Mire(BogToad, Inkling, Glowmoth),
+				Wild(PartyMirelands.PlagueRat, PartyMirelands.PlagueRat, PartyMirelands.Witch),
+				Wild(PartyMirelands.GiantSpider, PartyMirelands.BogHag),
 			]
 		),
 		new(

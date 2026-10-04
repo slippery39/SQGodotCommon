@@ -29,6 +29,8 @@ public record PlayPartyCardAction : GameAction
 		var card = (KinCard)s.GetObject(CardId);
 		if (card.Effects.IsEmpty)
 			return ValidationResult.Invalid($"{card.Name} does nothing");
+		if (PartyJunk.MovesTheLine(card) && PartyJunk.Webbed(s))
+			return ValidationResult.Invalid("A Web holds your line: clear it first");
 
 		if (party.Energy < s.CostOf(card))
 			return ValidationResult.Invalid($"Not enough energy for {card.Name}");
@@ -102,8 +104,11 @@ public record DiscardPlayedCardAction : GameAction
 {
 	public int CardId { get; init; }
 
+	// A card that EXHAUSTS (junk) is gone for the fight instead.
 	public override ActionResult Execute(GameState s) =>
-		new(s.MoveObject(CardId, s.ZoneId(ZoneType.Discard)));
+		s.GetObject(CardId) is KinCard { Exhausts: true }
+			? new(s.RemoveObject(CardId))
+			: new(s.MoveObject(CardId, s.ZoneId(ZoneType.Discard)));
 }
 
 /// <summary>
@@ -121,6 +126,8 @@ public record EndPartyTurnAction : GameAction
 
 	public override ActionResult Execute(GameState s)
 	{
+		// A DOUBT still in hand goes, and takes its energy from next turn; the rest is discarded.
+		s = PartyJunk.FleetingGo(s);
 		foreach (var id in s.GetChildrenIds(s.ZoneId(ZoneType.Hand)).ToList())
 			s = s.MoveObject(id, s.ZoneId(ZoneType.Discard));
 

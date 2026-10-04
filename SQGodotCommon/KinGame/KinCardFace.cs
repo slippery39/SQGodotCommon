@@ -364,7 +364,9 @@ public static class KinCardFace
 				" · ",
 				new[]
 				{
-					KinCore.Party.PartySpells.IsAttack(card) ? "ATTACK" : "SPELL",
+					card.HasComponent<KinCore.Party.JunkCard>() ? "JUNK"
+					: KinCore.Party.PartySpells.IsAttack(card) ? "ATTACK"
+					: "SPELL",
 					card.Family == KinCore.Party.Family.None ? "" : card.Family.ToString(),
 					!rarity || card.Rarity == KinCore.Party.Rarity.Common
 						? ""
@@ -383,10 +385,11 @@ public static class KinCardFace
 		var unit = card.GetComponent<UnitComponent>();
 
 		// Style D: the EDGE is the card's FAMILY colour (2026-09-28), neutral steel for colourless.
+		// JUNK is a dull grey-green: a card nobody wants, readable at a glance.
 		var edge =
-			card.Family != KinCore.Party.Family.None
-				? KinPalette.Family(card.Family)
-				: KinCardKit.Neutral;
+			card.HasComponent<KinCore.Party.JunkCard>() ? Color.FromHtml("#5F6656")
+			: card.Family != KinCore.Party.Family.None ? KinPalette.Family(card.Family)
+			: KinCardKit.Neutral;
 		// Green only when a number on it actually grew — Guard is a spell, but nothing on it rises.
 		var text =
 			spellBonus > 0 && KinCore.Party.PartySpells.IsSpell(card)

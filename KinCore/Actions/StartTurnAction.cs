@@ -145,6 +145,9 @@ public record StartTurnAction : GameAction
 			}
 
 			state = state.MoveObject(top, handId);
+			// A card that does something as it is DRAWN (the companion game's Rot).
+			if (state.GetObject(top) is KinCard drawn)
+				state = KinCore.Party.PartyJunk.Drawn(state, drawn);
 		}
 
 		return (state, events);

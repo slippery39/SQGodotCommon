@@ -180,5 +180,6 @@ public static class PartySpells
 	/// **A SPELL is every card that is not an attack** (Shayne, 2026-09-28) — Guard and Kindle as much
 	/// as Zap. Chains, Echo, Fan the Flames, Spell Surge and Spellweaver all count them.
 	/// </summary>
-	public static bool IsSpell(this KinCard card) => !card.IsAttack();
+	public static bool IsSpell(this KinCard card) =>
+		!card.IsAttack() && !card.HasComponent<JunkCard>();
 }

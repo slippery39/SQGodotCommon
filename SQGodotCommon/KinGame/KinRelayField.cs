@@ -432,6 +432,11 @@ public static class KinMoveText
 	public static string Says(Intent intent, int amount) =>
 		Move(intent, amount)
 		+ (
+			intent.Kind != IntentType.Curse && intent.AddsJunk != Junk.None
+				? $" + a {intent.AddsJunk} into your deck"
+				: ""
+		)
+		+ (
 			intent.Inflicts == Debuff.None
 				? ""
 				: $" + {intent.Inflicts} for {intent.InflictTurns} turn{(intent.InflictTurns == 1 ? "" : "s")}"
@@ -453,6 +458,8 @@ public static class KinMoveText
 			IntentType.Summon => $"{intent.Name}: a {intent.Summons?.Creature.Name}",
 			IntentType.WindUp => $"{intent.Name}: winds up the next move",
 			IntentType.Pull => $"{intent.Name}: your back monster to the front",
+			IntentType.Curse =>
+				$"{intent.Name}: {intent.JunkCount} {intent.AddsJunk} into your deck",
 			_ => intent.Name,
 		};
 
@@ -526,7 +533,11 @@ public static class KinMoveText
 	public static (string Text, Texture2D Icon, Texture2D Icon2) Short(Intent intent, int amount)
 	{
 		var (text, icon, icon2) = ShortMove(intent, amount);
-		return (text, icon, KinArt.DebuffIcon(intent.Inflicts) ?? icon2);
+		var rider =
+			intent.AddsJunk != Junk.None && intent.Kind != IntentType.Curse
+				? KinArt.JunkIcon
+				: null;
+		return (text, icon, KinArt.DebuffIcon(intent.Inflicts) ?? rider ?? icon2);
 	}
 
 	private static (string Text, Texture2D Icon, Texture2D Icon2) ShortMove(
@@ -551,6 +562,7 @@ public static class KinMoveText
 			IntentType.Echo => ("echo", null, null),
 			IntentType.Summon => ($"+{intent.Summons?.Creature.Name}", null, null),
 			IntentType.Pull => ("pull", null, null),
+			IntentType.Curse => ($"+{intent.JunkCount}", KinArt.JunkIcon, null),
 			_ => (intent.Name, null, null),
 		};
 

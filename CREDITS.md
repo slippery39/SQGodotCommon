@@ -52,6 +52,7 @@ The paths themselves are unchanged.
 | Vulnerable (`icons/vulnerable`) | `achilles-heel` | **Delapouite** |
 | Silence (`icons/silence`) | `silenced` | **Delapouite** |
 | Shaken (`icons/shaken`) | `terror` | **Lorc** |
+| Junk card (`icons/junk`) | `card-burn` | **Delapouite** |
 
 > Icons made by Lorc, Delapouite and others, available at [game-icons.net](https://game-icons.net/),
 > licensed under [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/).

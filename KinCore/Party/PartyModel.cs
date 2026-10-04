@@ -289,6 +289,9 @@ public enum IntentType
 
 	/// <summary>**TONGUE: drags the other line's BACK creature to its FRONT** (`PartyBosses`).</summary>
 	Pull,
+
+	/// <summary>**A CURSE: it only adds junk** (`Intent.AddsJunk`) — the Bog Hag, the Giant Spider.</summary>
+	Curse,
 }
 
 /// <summary>
@@ -348,4 +351,9 @@ public record Intent
 	public Debuff Inflicts { get; init; }
 
 	public int InflictTurns { get; init; }
+
+	/// <summary>**A JUNK rider** (`PartyJunk`): this many of it, where that junk goes.</summary>
+	public Junk AddsJunk { get; init; }
+
+	public int JunkCount { get; init; }
 }

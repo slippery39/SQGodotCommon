@@ -75,6 +75,14 @@ public static class KinSymbols
 			"no attack card can be played on it."
 		);
 
+	public static readonly Symbol Junk =
+		new(
+			"Junk",
+			KinArt.JunkIcon,
+			Color.FromHtml("#A8B0A0"),
+			"a card a foe adds to your deck for the fight — it clogs your hand."
+		);
+
 	/// <summary>A debuff's symbol.</summary>
 	public static Symbol Of(Debuff debuff) =>
 		debuff switch
@@ -163,6 +171,7 @@ public static class KinSymbols
 		Vulnerable,
 		Silence,
 		Shaken,
+		Junk,
 	];
 
 	/// <summary>

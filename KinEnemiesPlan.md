@@ -85,6 +85,21 @@
   `Art/icons/weak|vulnerable|silence|shaken` (credited); tests `PartyTests.Foes.cs`; capture
   `--screen=debuffs`. Next: **junk cards**.
 
+## Step 3 — JUNK CARDS and the first real Mirelands foes, BUILT (interview 2026-10-03, as recommended)
+
+- **Mire** (unplayable; shuffled into the draw pile), **Web** (cost 1 to clear; held, line cards are
+  refused), **Rot** (unplayable; drawn, your weakest takes 2; into the discard), **Doubt** (into the
+  hand; gone at turn end, and unplayed it costs 1 energy next turn). `PartyJunk.cs`.
+- **For the fight only** (the battle deck is rebuilt from the run deck). Played junk EXHAUSTS — gone for
+  the fight (`KinCard.Exhausts`, reused from the lane game); Mire and Rot come back each reshuffle.
+  Junk is never a spell (no Ember chains from it). Grey edge, "JUNK" type line, words.
+- **A rider** `Intent.AddsJunk` / `JunkCount`, or a move that only adds it (`IntentType.Curse`).
+- **The carriers** (`PartyMirelands.cs`, region 2 strength): Bog Hag (Curse: 2 Mire, Claw 8), Witch
+  (Whisper 5 at your weakest + a Doubt, every turn), Plague Rat (Bite 6 + a Rot), Giant Spider (Spin
+  Web, Bite 11) — in region 2's encounter lists beside the placeholder beasts.
+- Tests `PartyTests.Foes.cs`; capture `--screen=junk`. Next: the rest of region 2's roster (the
+  restless dead; Banshee's Shaken), then region 3.
+
 ## Decided for step 1 (2026-10-02)
 
 - **Foes are authored at their region's strength** — levels go (`PartyLevels.Scale`, the tier

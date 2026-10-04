@@ -290,6 +290,17 @@ public partial class KinPartyBoard : Node2D
 					Change(r => r.MoveTo(r.Route!.Next(0).First().Id));
 					if (screen is "routefight" or "evolvedfight")
 						return;
+					// `junk`: the first fight with one of each junk card in hand (their faces).
+					if (screen == "junk")
+					{
+						foreach (var junk in new[] { Junk.Mire, Junk.Web, Junk.Rot, Junk.Doubt })
+							(_state, _) = _state.AddObject(
+								PartyJunk.CardOf(junk),
+								_state.ZoneId(ZoneType.Hand)
+							);
+						Render(ImmutableList<GameEvent>.Empty);
+						return;
+					}
 					// `debuffs`: the first fight, a different debuff on each monster (the chips and tips).
 					if (screen == "debuffs")
 					{
