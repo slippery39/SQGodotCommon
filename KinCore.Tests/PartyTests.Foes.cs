@@ -197,4 +197,22 @@ public partial class PartyTests
 		foreach (var junk in new[] { Junk.Mire, Junk.Web, Junk.Rot, Junk.Doubt })
 			Assert.That(PartyJunk.CardOf(junk).IsSpell(), Is.False, junk.ToString());
 	}
+
+	[Test]
+	public void ASkeletonReassemblesOnceAtHalfItsHp()
+	{
+		var skeleton = Foe(0, hp: 10) with { Components = [new Reassembles()] };
+		var s = Solo(
+			Mon("A"),
+			[Strike(20), Card("Again", 0, new StrikeAction { Amount = 20 })],
+			skeleton,
+			Foe(1)
+		);
+
+		s = Play(s, "Strike", 0);
+		Assert.That(FoeIn(s, 0).Hp, Is.EqualTo(skeleton.MaxHp / 2), "up again, at half");
+
+		s = Play(s, "Again", 0);
+		Assert.That(s.LivingFoes().Count(), Is.EqualTo(1), "the second fall is the last");
+	}
 }

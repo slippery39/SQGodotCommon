@@ -100,6 +100,20 @@
 - Tests `PartyTests.Foes.cs`; capture `--screen=junk`. Next: the rest of region 2's roster (the
   restless dead; Banshee's Shaken), then region 3.
 
+## Step 4 — THE MIRELANDS, COMPLETE (approved 2026-10-04)
+
+- **The restless dead and the bog's beasts** join the hags (`PartyMirelands.cs`): Skeleton (22, Rusty
+  Blade 8, REASSEMBLES once at half HP — `Reassembles`), Banshee (18: Wail 4 on your line → Shriek 3 +
+  SHAKEN 1 on your front → Drift; split from the draft's single Wail, since a rider lands on everyone a
+  move hits), Ghoul (26: Gnaw 9 + WEAK 1 → Gnaw 9), Bog Leech (14: Latch 6 + VULNERABLE 2 at your
+  weakest), Bog Toad (38: Swell 10 → Belly Flop 10 on your line, +1 a round), Wisp (16: Zap 6 ×2 at your
+  weakest → Drift).
+- **Easy**: Plague Rats ×2 · Skeleton · Wisp + Bog Leech. **Normal**: Bog Toad + Bog Hag · Giant Spider +
+  Plague Rat · Witch + 2 Wisps · 2 Skeletons + Banshee · Ghoul + Bog Leech + Plague Rat · Giant Spider +
+  Bog Hag. Region 2 has no placeholders left; its exams are unchanged.
+- Next: **region 3, the Stonefells** — giants and kobolds (or a wyrm cult), its own exams, and the
+  style-punishing elites (Null Knight, Thornback Ogre…). Still placeholder until then.
+
 ## Decided for step 1 (2026-10-02)
 
 - **Foes are authored at their region's strength** — levels go (`PartyLevels.Scale`, the tier

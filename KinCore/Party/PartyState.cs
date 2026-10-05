@@ -668,6 +668,17 @@ public static class PartyState
 			Block = foe.Block - blocked,
 			Hp = Math.Max(0, foe.Hp - (amount - blocked)),
 		};
+		// REASSEMBLES: its first fall is not its last — it stands back up at half its HP.
+		if (hit.IsDead && !foe.IsDead && hit.GetComponent<Reassembles>() is { Used: false })
+			hit = hit with
+			{
+				Hp = Math.Max(1, hit.MaxHp / 2),
+				Components =
+				[
+					.. hit.Components.Where(c => c is not Reassembles),
+					new Reassembles { Used = true },
+				],
+			};
 		s = s.UpdateObject(foe.Id, hit);
 		if (hit.IsDead && !foe.IsDead)
 		{

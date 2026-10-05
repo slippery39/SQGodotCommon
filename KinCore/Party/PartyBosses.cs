@@ -8,6 +8,15 @@ namespace KinCore.Party;
 // that does not fade). Each is data on a `Foe`; the hooks are `HitFoe`, `Act` and the turn start.
 
 /// <summary>**SHELL: a hit of this much or less does nothing to it** — chip damage and tokens bounce.</summary>
+/// <summary>
+/// **REASSEMBLES** (the Skeleton): the first time it falls it stands back up at half its HP. `Used`
+/// once it has — a second fall is the last.
+/// </summary>
+public record Reassembles : GameComponent
+{
+	public bool Used { get; init; }
+}
+
 public record Shell : GameComponent
 {
 	public int AtMost { get; init; } = 4;

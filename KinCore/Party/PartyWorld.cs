@@ -485,11 +485,8 @@ public static class PartyWorld
 	private const double MirelandsStrength = 1.6,
 		StonefellsStrength = 2.5;
 
-	private static Encounter Mire(params Foe[] foes) => Stronger(Wild(foes), MirelandsStrength);
-
 	private static Encounter Stone(params Foe[] foes) => Stronger(Wild(foes), StonefellsStrength);
 
-	private static readonly Foe Wisp = PartyContent.Wisp(0);
 	private static readonly Foe Stonebeak = PartyContent.Stonebeak(0);
 
 	private static readonly ImmutableList<Encounter> Region2Bosses =
@@ -522,24 +519,8 @@ public static class PartyWorld
 			"The Mirelands",
 			Region2Bosses,
 			Region2Elites,
-			// The HAGS have arrived (`PartyMirelands`, junk); the beasts beside them are placeholders.
-			[
-				Mire(BogToad),
-				Wild(PartyMirelands.PlagueRat, PartyMirelands.PlagueRat),
-				Mire(Wisp, Inkling),
-			],
-			[
-				Wild(Stronger(BogToad, MirelandsStrength), PartyMirelands.BogHag),
-				Wild(PartyMirelands.GiantSpider, PartyMirelands.PlagueRat),
-				Wild(
-					PartyMirelands.Witch,
-					Stronger(Wisp, MirelandsStrength),
-					Stronger(Wisp, MirelandsStrength)
-				),
-				Mire(HoardDrake, Inkling),
-				Wild(PartyMirelands.PlagueRat, PartyMirelands.PlagueRat, PartyMirelands.Witch),
-				Wild(PartyMirelands.GiantSpider, PartyMirelands.BogHag),
-			]
+			PartyMirelands.Easy,
+			PartyMirelands.Normal
 		),
 		new(
 			"The Stonefells",
