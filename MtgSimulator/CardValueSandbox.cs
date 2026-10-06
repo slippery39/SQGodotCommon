@@ -503,7 +503,7 @@ public static class CardValueSandbox
 		int selfActionsPerTurn = 1
 	)
 	{
-		var (state, ids) = Table(mana, stocking);
+		var (state, ids) = Table(mana, seed, stocking);
 		var ai = new MultiTurnBeamSearchAiStrategy(
 			ids,
 			lookaheadTurns: lookaheadTurns,
@@ -655,10 +655,26 @@ public static class CardValueSandbox
 	/// affordability from cost, which is right when mana is meant to cancel and wrong here, where
 	/// it is the variable being held constant.
 	/// </summary>
-	private static (GameState State, MtgGameIds Ids) Table(int mana, Stocking? stocking = null)
+	private static (GameState State, MtgGameIds Ids) Table(
+		int mana,
+		int seed,
+		Stocking? stocking = null
+	)
 	{
 		var (state, ids) = MtgGameFactory.Create();
 		state = state.WithoutDeckingLoss();
+
+		// **Seeded from the measurement's own seed, or the engine's random picks are truly random.**
+		// `RngSeed` 0 means unseeded (`ConsumeRandom`), and a real game only gets one from
+		// `SetupGameAction`, which this table never runs. Measured: Xathrid Necromancer's SUPPLIED
+		// arm read anywhere from 0 to 16.7 across ten identical calls in one process, while BARE
+		// held at 9.2 — the bare library is identical filler so its order cannot matter, the
+		// stocked one holds real cards. Seeded, all ten read the same. 0 is mapped away for the
+		// same reason.
+		state = state with
+		{
+			RngSeed = seed != 0 ? seed : 1,
+		};
 
 		var seats = new[]
 		{

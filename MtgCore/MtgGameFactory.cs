@@ -214,9 +214,21 @@ public static class MtgGameFactory
 	/// correctly plays EndTurn to deck the opponent, and correctly refuses to cast draw spells.
 	/// See MtgGame.DeckingLossEnabled. Use Create() plus a real library to test decking itself.
 	/// </summary>
+	/// <summary>The engine seed every <see cref="CreateForTesting"/> fixture starts from. Non-zero: 0 is "truly random".</summary>
+	public const int TestingRngSeed = 7;
+
 	public static (GameState State, MtgGameIds Ids) CreateForTesting()
 	{
 		var (state, ids) = Create();
+
+		// A FIXED engine seed, because `RngSeed` 0 means "truly random" (see `ConsumeRandom`) and
+		// nothing here runs `SetupGameAction`, which is where a real game gets its seed. Unseeded,
+		// any random discard or random target in a fixture made the result differ between two
+		// identical calls — measured on the simulator's probes, which build on this factory.
+		state = state with
+		{
+			RngSeed = TestingRngSeed,
+		};
 
 		var p1 = state.GetPlayer(ids.Player1Id);
 		var p2 = state.GetPlayer(ids.Player2Id);

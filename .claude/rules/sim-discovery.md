@@ -223,6 +223,16 @@ subtract their own control**, so the extra permanents cancel and what is left is
 gain from being supported. `LeverageSweepTests` drives it — **11s for all 783 cards**, so this is
 cheap enough to run before any discovery session.
 
+**The sandbox table is SEEDED from the measurement's `seed`, and until 2026-10-06 it was not.** It
+never runs `SetupGameAction`, so `RngSeed` was 0 — "truly random" to `ConsumeRandom` — and any
+random discard or random target inside a measurement was unseeded. `bare` was unaffected (its
+library is identical filler, so order cannot matter); `supplied` was not: Xathrid Necromancer read
+0 to 16.7 across ten identical calls. **Every `supp'd`/leverage figure recorded before that date
+carries that noise** — re-measure before comparing against one. `MtgGameFactory.CreateForTesting`
+seeds too now, which covers the `PoolFeatures` probes and `ComboProbe`. Pinned by
+`DeterminismTests.SameCall_Leverage_ProducesIdenticalResult`; two mode 7 runs at one seed now
+produce byte-identical reports.
+
 The stocking puts suppliers into **battlefield, graveyard, library and hand at once**, deliberately:
 a subtype filter reads the battlefield, a reanimation spec the graveyard, Dragonstorm's fetch the
 library, a rummage cost the hand — and dispatching per demand kind is the mechanic-to-meaning table
@@ -973,6 +983,10 @@ stocking supplies, and it is open.
 cards between the before and after runs (Raise the Sunken lift 16 → 7) and that is the documented
 non-reproducibility of mode 7's game columns, not an effect of this fix. Only `bare`, `supplied` and
 the rank are comparable here.
+
+> **Re-check this caveat before relying on it (2026-10-06).** `supplied` was in fact the column that
+> did NOT reproduce — the leverage sandbox was unseeded (see LEVERAGE above). After seeding it, two
+> mode 7 runs at one seed are byte-identical, game columns included.
 
 
 ### TRIED AND REJECTED: a longer rollout does not make a combo measurable

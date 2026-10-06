@@ -135,4 +135,31 @@ public class DeterminismTests
 
 		AssertIdenticalResults(result1, result2);
 	}
+
+	/// <summary>
+	/// **Leverage is a measurement, so the same call must return the same number.** The sandbox
+	/// table never runs `SetupGameAction`, so it had `RngSeed` 0 — which the engine reads as "truly
+	/// random" — and Xathrid Necromancer's SUPPLIED arm read anywhere from 0 to 16.7 across ten
+	/// identical calls while BARE held steady. The docs called `supplied` comparable across runs.
+	///
+	/// Equality, not a value: a balance change may move the number, never make two calls disagree.
+	/// Xathrid is the card it was measured on; any card whose stocking reaches a random pick would do.
+	/// </summary>
+	[Test]
+	public void SameCall_Leverage_ProducesIdenticalResult()
+	{
+		var cards = SetRegistry.Get("DES").Cards.Where(c => !c.HasSubtype("Land")).ToList();
+		var pool = cards.ToDictionary(c => c.Name);
+		var features = PoolFeatures.Build(cards);
+
+		var readings = Enumerable
+			.Range(0, 5)
+			.Select(_ =>
+				CardValueSandbox.MeasureLeverage(["Xathrid Necromancer"], features, pool).Single()
+			)
+			.Select(r => (r.Bare, r.Supplied))
+			.ToList();
+
+		Assert.That(readings.Distinct().Count(), Is.EqualTo(1), string.Join(", ", readings));
+	}
 }
