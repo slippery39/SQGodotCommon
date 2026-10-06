@@ -38,7 +38,25 @@ public class ColorSlotSurvivalTests
 			useDraftPrior: false
 		);
 
-		var result = evolver.Run();
+		// **Run inside a scratch directory.** `Run` reads and writes `sim_results/` relative to the
+		// working directory, which other tests move to the solution root (`TestPaths`) — so depending
+		// on test ORDER this test read the real value tables and wrote a metagame file and evolved
+		// counts into the user's `sim_results/` on every full run. Isolated, it reads nothing and
+		// leaves nothing; the invariant under test needs neither.
+		var previous = Directory.GetCurrentDirectory();
+		var scratch = Directory.CreateTempSubdirectory("color-slot-survival-").FullName;
+		MetagameResult result;
+		try
+		{
+			Directory.SetCurrentDirectory(scratch);
+			result = evolver.Run();
+		}
+		finally
+		{
+			Directory.SetCurrentDirectory(previous);
+			Directory.Delete(scratch, recursive: true);
+		}
+
 		var pool = CoresetCube.Set.Cards.ToDictionary(c => c.Name, StringComparer.Ordinal);
 
 		var constrained = 0;
