@@ -186,8 +186,10 @@ with the GENERIC track as amber crystals (lit = available, dark = spent) plus a 
 phone, then one runestone per colour the player has, each with its remaining count; a stone with 0
 left goes dark. To be checked in a capture before it is called done.
 
-**Backdrop:** one ComfyUI desk 1344x768, plain lit leather centre, props (candles, books, coins)
-only at the edges — the edges are what a phone crops.
+**Backdrop:** `MtgGame/Assets/UI/backdrop.jpg` — tooled leather mat with a gold medallion on the
+centre line between the two sides (chosen 2026-10-06). Prompt + seed in
+`docs/mockups/mtg/backdrop_prompt.json` (`mat`, variant 2, seed 355171413, DreamShaper XL Turbo).
+Every screen gets it through `MtgUiStyles.AddBackdrop`.
 
 ## 7. Build log
 
@@ -214,3 +216,13 @@ clipped under the cost disc ("night of the White Orchid").
 Found on the way: the shader bug above; the tribe-tinted name plate (never seen before the fix)
 read as a second colour claim and was dropped; the hand card scene ships with foil ON, which
 washed the cream face in rainbow noise.
+
+**Step 3 - backdrop (2026-10-06).** 13 ComfyUI candidates. Top-down "desk with props" prompts put
+a book or clutter in the centre every time; an angled desk gave the most mood but drew an open
+BOOK whose seam ran down through both battle rows. A "single seamless mat" prompt (negatives:
+book, spine, seam) removed the seam and the candles with it. Three were captured IN the board:
+the medallion mat won — the medallion marks the confrontation line, the dark border survives a
+phone's crop, the bright-bordered plain mat put gold exactly under the side panels and END TURN.
+The battlefield panels are now empty styleboxes: the backdrop is the table.
+Seen and deferred: the turn label sits unreadable on the gold border (step 4: banner + outline);
+the candlelight mood could return as a warm vignette, no new art needed.

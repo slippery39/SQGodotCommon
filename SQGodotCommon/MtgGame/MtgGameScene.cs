@@ -120,6 +120,7 @@ public partial class MtgGameScene : Node2D
 			? GameManager.Instance.GetService<DeckSetupData>()
 			: new DeckSetupData(new DeckChoice.RandomPremade(), new DeckChoice.RandomPremade());
 		_manager = new MtgGameManager(setup, cardValues: LoadCardValues());
+		MtgUiStyles.AddBackdrop(this);
 		_boardUI = GetNode<BoardUI>("BoardUI");
 		_hand = GetNode<Hand2D>("Hand2D");
 		_battlefieldDropZone = GetNode<Area2D>("BattlefieldDropZone");

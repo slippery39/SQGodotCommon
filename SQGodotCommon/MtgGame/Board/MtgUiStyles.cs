@@ -37,6 +37,26 @@ public static class MtgUiStyles
 
 	public static StyleBoxTexture Banner() => Plate("banner", 12);
 
+	/// <summary>
+	/// The table a screen sits on, behind everything. Its own CanvasLayer at -1: the default layer
+	/// 1 draws OVER plain Node2D children such as the hand (godot-frontend.md).
+	/// </summary>
+	public static void AddBackdrop(Node parent)
+	{
+		var layer = new CanvasLayer { Layer = -1 };
+		// ExpandMode before Texture, or the texture's pixel size becomes the minimum size.
+		var image = new TextureRect
+		{
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			Texture = GD.Load<Texture2D>(UiDir + "backdrop.jpg"),
+			MouseFilter = Control.MouseFilterEnum.Ignore,
+		};
+		image.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+		layer.AddChild(image);
+		parent.AddChild(layer);
+	}
+
 	/// <summary>The oxblood END TURN / PICK button, in Cinzel.</summary>
 	public static void StylePrimary(Button button, int fontSize = 30)
 	{

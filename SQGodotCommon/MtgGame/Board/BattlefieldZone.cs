@@ -34,7 +34,8 @@ public partial class BattlefieldZone : PanelContainer
 
 	public override void _Ready()
 	{
-		AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
+		// Open table: the backdrop is the battlefield (MtgVisualDesign.md §6).
+		AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
 
 		var margin = new MarginContainer();
 		margin.AddThemeConstantOverride("margin_left", 12);
