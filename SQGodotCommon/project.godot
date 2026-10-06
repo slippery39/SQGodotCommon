@@ -35,6 +35,8 @@ window/stretch/mode="canvas_items"
 [dotnet]
 
 project/assembly_name="SQGodotCommon"
+; The .sln is one level up. Without this an export SUCCEEDS with zero C# in the APK.
+project/solution_directory=".."
 
 [input]
 
@@ -53,3 +55,8 @@ debug={
 "events": [Object(InputEventKey,"resource_local_to_scene":false,"resource_name":"","device":-1,"window_id":0,"alt_pressed":false,"shift_pressed":false,"ctrl_pressed":false,"meta_pressed":false,"pressed":false,"keycode":0,"physical_keycode":96,"key_label":0,"unicode":96,"location":0,"echo":false,"script":null)
 ]
 }
+
+[rendering]
+
+; Android export refuses without ETC2/ASTC, and says nothing about why (Commands.md).
+textures/vram_compression/import_etc2_astc=true

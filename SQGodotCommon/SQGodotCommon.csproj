@@ -3,6 +3,9 @@
     <!-- net9.0, not 10: Godot's Android export template refuses anything newer. Commands.md, "Android build". -->
     <TargetFramework>net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!-- Android publish emits deps.json for each referenced project in both the RID and non-RID
+         output dirs; without this NETSDK1152 fails the export. Contents are identical. -->
+    <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MtgCore\MtgCore.csproj" />

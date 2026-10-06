@@ -73,6 +73,70 @@ for f in fs[11:]:
     print(sum(i * c for i, c in enumerate(d.histogram())) / 1e6, f)
 ```
 
+## Android build (phone)
+
+```
+./Build-Apk.ps1                                          # MTG -> build/mtg.apk. USE THIS
+cd build; python -m http.server 8000 --bind 127.0.0.1    # serve it...
+cloudflared tunnel --url http://localhost:8000 --no-autoupdate   # ...on a public HTTPS URL
+```
+
+**`Build-Apk.ps1` exists because the raw export ships stale and broken APKs while exiting 0.** It
+writes the two SDK paths into Godot's editor settings, deletes the ExportRelease output so the C#
+is always recompiled, exports, then refuses the result if the APK has too few assemblies or any
+source file is newer than the assembly that was built. `-Preset` picks another game's preset.
+
+The tunnel URL is unguessable, changes every restart, and serves whatever is in `build/` — rebuild
+and the same URL serves the new APK. **Chat/file transfer caps at 30 MiB**, so the APK can never be
+sent that way. Arm64 only, signed with a local debug keystore; Play Protect warns on a sideload.
+
+**Presets live in `SQGodotCommon/export_presets.cfg`, which is gitignored** — so a fresh clone has
+none, and every branch checked out in this directory SHARES one file. This branch's is
+`Android MTG`; KIN's is `Android` (it excludes `MtgGame/*`). Add a preset per game; never edit
+another's. One-time machine setup (scoop `temurin17-jdk`, Android SDK cmdline-tools +
+`build-tools;36.0.0` + `platforms;android-36`, Godot 4.6.3 mono export templates in
+`~/scoop/persist/godot-mono/editor_data/export_templates/`, a debug keystore, `cloudflared`) was
+done on the KIN branch and is already on this machine.
+
+**The Godot dependency chain is pinned to `net9.0`** — `SQGodotCommon`, `MtgCore`, `MtgSimulator`,
+`ImmutableGameObjects` (a comment in each csproj says so). The Android template refuses anything
+newer. Raising one breaks the PHONE build only — desktop and tests keep working, so it fails where
+nobody is looking. Test and console projects stay on net10; they can reference net9 libraries.
+
+**Card art is imported LOSSY (`compress/mode=1`).** Lossless, 31 MB of JPG imported to 145 MB and
+shipped at that size; lossy it is 22 MB, no visible difference at card size. New art imports
+lossless by default — set the mode in its `.import` file, or the APK silently grows.
+
+**Godot 4.6 reads the Java and Android SDK paths from EDITOR SETTINGS ONLY**, not `JAVA_HOME` /
+`ANDROID_HOME`, and they have come back empty on their own (a headless run that saves settings is
+enough). Symptom: "A valid Android SDK path is required in Editor Settings" with the SDK plainly
+installed, and no command-line flag for it. The script rewrites both before every export.
+
+**FIVE ways this export fails quietly** (all found on the KIN branch):
+
+- **The export SKIPS the C# build when its output is newer than your source — and an edit saved
+  while an export RUNS lands inside exactly that window.** Every later export then sees a newer
+  `.dll` and skips again: exit 0, full assembly count, correct size, shipping pre-edit code for as
+  many rebuilds as you run. `dotnet build` says nothing, since only ExportRelease is stale. **Never
+  edit sources while an export runs.** The script clears
+  `SQGodotCommon/.godot/mono/temp/{bin,obj}/ExportRelease` every time for this reason.
+- **No ETC2/ASTC, no export — and no message.** `rendering/textures/vram_compression/import_etc2_astc=true`
+  is required; without it the only output is "configuration errors:" followed by the UNRELATED
+  "C#/.NET is experimental" line.
+- **A missing solution path gives a SUCCESSFUL APK with zero C# in it.** The `.sln` is one level up,
+  so `dotnet/project/solution_directory=".."` is required. Without it: one stack trace mid-log, exit
+  0, a game that launches to nothing. The script checks the assembly count.
+- **`NETSDK1152`, duplicate publish outputs** — `ErrorOnDuplicatePublishOutputFiles=false` in
+  `SQGodotCommon.csproj`.
+- **Everything imported ships**, at IMPORTED size, not on-disk size. Capture frames were 122 MB of
+  KIN's APK until each `shots*/` folder got a `.gdignore` (`Run-Godot.ps1` now adds one). Check the
+  breakdown before blaming the engine for the size.
+
+**An APK of identical size is NOT evidence the build did not change** — zip alignment absorbed a
+512-byte growth in the game assembly twice. To prove an edit shipped, extract
+`SQGodotCommon.dll` from the APK and search it for a string you just added (UTF-16LE: that is how
+.NET stores string literals).
+
 ## Inspect what the AI is doing
 
 In the Godot game: **Space** pauses the AI, **F6** opens the inspector, **F7** saves the position.

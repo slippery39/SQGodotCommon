@@ -495,3 +495,6 @@ $RECYCLE.BIN/
 
 # Screenshot captures from the --write-movie loop (Run-Godot.ps1 -Capture). Regenerated on demand.
 SQGodotCommon/shots*/
+
+# The Android APK. Rebuilt by Build-Apk.ps1.
+build/
