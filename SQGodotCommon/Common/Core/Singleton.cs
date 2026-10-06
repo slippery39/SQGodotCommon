@@ -40,7 +40,10 @@ public abstract partial class Singleton<T> : Node
 	{
 		base._ExitTree();
 
-		if (Instance == this)
+		// The FIELD, not the Instance property — the property logs "is not initialized!" when it is
+		// null, so reading it here printed that error on the way out of a tree whose singleton had
+		// already gone. A teardown diagnostic that fires during normal teardown is noise.
+		if (_instance == this)
 		{
 			_instance = null;
 		}

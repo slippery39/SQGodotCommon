@@ -15,11 +15,12 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="SQGodotCommon"
-run/main_scene="res://Project/game_manager.tscn"
+run/main_scene="res://Project/MainMenu/main_menu.tscn"
 config/features=PackedStringArray("4.6", "C#")
 
 [autoload]
 
+GameManager="*res://Project/game_manager.tscn"
 FrameProviderDispatcher="*res://addons/R3.Godot/FrameProviderDispatcher.cs"
 DebugConsole="*res://Common/GlobalDebug/debug_console.tscn"
 
