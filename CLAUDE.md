@@ -33,6 +33,7 @@ The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only 
 | Procedures | skills (`/add-card`, `/ai-inspect`, `/regen-card-values`) | when invoked or relevant |
 | Commands — **run Godot scenes via `Run-Godot.ps1`** | `Commands.md` | read it |
 | Deferred decisions | `DesignNotes.md` | read it |
+| Lessons for a ROGUELIKE deckbuilder (from KIN) | `docs/roguelike-deckbuilder/` | before designing a game of that kind |
 
 Each project's `CLAUDE.md` is a map to its own rules — start there, not here.
 
