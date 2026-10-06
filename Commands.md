@@ -107,6 +107,10 @@ nobody is looking. Test and console projects stay on net10; they can reference n
 shipped at that size; lossy it is 22 MB, no visible difference at card size. New art imports
 lossless by default — set the mode in its `.import` file, or the APK silently grows.
 
+**A project theme (`gui/theme/custom`) that references a NEW font breaks the first import** - the
+theme loads before the font is imported, the run ends early, and no `.import` files appear. Run
+`--import` a second time and check the `.import` files exist.
+
 **Godot 4.6 reads the Java and Android SDK paths from EDITOR SETTINGS ONLY**, not `JAVA_HOME` /
 `ANDROID_HOME`, and they have come back empty on their own (a headless run that saves settings is
 enough). Symptom: "A valid Android SDK path is required in Editor Settings" with the SDK plainly

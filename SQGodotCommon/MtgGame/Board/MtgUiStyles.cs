@@ -1,80 +1,94 @@
 using Godot;
+using Godot.Collections;
 
 namespace MtgGame;
 
+/// <summary>
+/// The Dark Arcane kit (MtgVisualDesign.md §6): brass-rimmed leather plates, an oxblood primary
+/// button, parchment banners, Cinzel for titles. Textures come from <c>tools/make_mtg_ui.py</c> as
+/// 9-slices — a solid <see cref="StyleBoxFlat"/> is what reads as "default Godot". Body text is
+/// EB Garamond through the project theme (<c>MtgGame/Assets/mtg_theme.tres</c>), so it needs no
+/// helper.
+/// </summary>
 public static class MtgUiStyles
 {
-	public static readonly Color DarkBg = new(0.06f, 0.06f, 0.10f, 1f);
-	public static readonly Color CardBg = new(0.10f, 0.10f, 0.16f, 1f);
-	public static readonly Color GoldBorder = new(0.80f, 0.62f, 0.22f, 1f);
-	public static readonly Color DimBorder = new(0.30f, 0.30f, 0.35f, 1f);
-	public static readonly Color ArtBlock = new(0.22f, 0.16f, 0.08f, 1f);
+	private const string UiDir = "res://MtgGame/Assets/UI/";
 
-	public static StyleBoxFlat DarkPanel(int borderWidth = 1, Color? borderColor = null)
+	/// Must match CORNER in tools/make_mtg_ui.py.
+	private const int Corner = 16;
+
+	/// The primary button's pointed ends; stretched only between them.
+	private const int PointEnd = 28;
+
+	public static readonly Color DarkBg = new("2d170c");
+	public static readonly Color CardBg = new("292219");
+	public static readonly Color GoldBorder = new("e6c77e");
+	public static readonly Color DimBorder = new("7a706a");
+	public static readonly Color ArtBlock = new("371a0c");
+	public static readonly Color Ink = new("2a1a0c");
+
+	public static StyleBoxTexture DarkPanel() => Plate("plate", 14);
+
+	public static StyleBoxTexture ButtonNormal() => Plate("plate", 8);
+
+	public static StyleBoxTexture ButtonHover() => Plate("plate_hover", 8);
+
+	public static StyleBoxTexture ButtonDisabled() => Plate("plate_disabled", 8);
+
+	public static StyleBoxTexture Banner() => Plate("banner", 12);
+
+	/// <summary>The oxblood END TURN / PICK button, in Cinzel.</summary>
+	public static void StylePrimary(Button button, int fontSize = 30)
 	{
-		var s = new StyleBoxFlat();
-		s.BgColor = DarkBg;
-		s.SetBorderWidthAll(borderWidth);
-		s.BorderColor = borderColor ?? GoldBorder;
-		s.CornerRadiusTopLeft =
-			s.CornerRadiusTopRight =
-			s.CornerRadiusBottomLeft =
-			s.CornerRadiusBottomRight =
-				4;
-		return s;
+		button.AddThemeStyleboxOverride("normal", Primary("button"));
+		button.AddThemeStyleboxOverride("pressed", Primary("button"));
+		button.AddThemeStyleboxOverride("hover", Primary("button_hover"));
+		button.AddThemeStyleboxOverride("disabled", Primary("button_disabled"));
+		button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+		button.AddThemeFontOverride("font", TitleFont);
+		button.AddThemeFontSizeOverride("font_size", fontSize);
+		button.AddThemeColorOverride("font_color", GoldBorder);
+		button.AddThemeColorOverride("font_hover_color", new Color("fff0c0"));
+		button.AddThemeColorOverride("font_disabled_color", DimBorder);
 	}
 
-	public static StyleBoxFlat ButtonNormal()
+	/// <summary>Cinzel Bold — banners, buttons, big numerals.</summary>
+	public static readonly Font TitleFont = new FontVariation
 	{
-		var s = new StyleBoxFlat();
-		s.BgColor = DarkBg;
-		s.SetBorderWidthAll(2);
-		s.BorderColor = GoldBorder;
-		s.CornerRadiusTopLeft =
-			s.CornerRadiusTopRight =
-			s.CornerRadiusBottomLeft =
-			s.CornerRadiusBottomRight =
-				4;
-		return s;
-	}
-
-	public static StyleBoxFlat ButtonHover()
-	{
-		var s = new StyleBoxFlat();
-		s.BgColor = new Color(0.15f, 0.12f, 0.05f, 1f);
-		s.SetBorderWidthAll(2);
-		s.BorderColor = new Color(1f, 0.82f, 0.35f, 1f);
-		s.CornerRadiusTopLeft =
-			s.CornerRadiusTopRight =
-			s.CornerRadiusBottomLeft =
-			s.CornerRadiusBottomRight =
-				4;
-		return s;
-	}
-
-	public static StyleBoxFlat ButtonDisabled()
-	{
-		var s = new StyleBoxFlat();
-		s.BgColor = new Color(0.04f, 0.04f, 0.07f, 1f);
-		s.SetBorderWidthAll(1);
-		s.BorderColor = DimBorder;
-		s.CornerRadiusTopLeft =
-			s.CornerRadiusTopRight =
-			s.CornerRadiusBottomLeft =
-			s.CornerRadiusBottomRight =
-				4;
-		return s;
-	}
+		BaseFont = GD.Load<FontFile>("res://MtgGame/Assets/Fonts/Cinzel.ttf"),
+		VariationOpentype = new Dictionary
+		{
+			{ TextServerManager.GetPrimaryInterface().NameToTag("wght"), 700 },
+		},
+	};
 
 	public static StyleBoxFlat ManaPip(bool filled)
 	{
 		var s = new StyleBoxFlat();
 		s.BgColor = filled ? GoldBorder : DimBorder;
-		s.CornerRadiusTopLeft =
-			s.CornerRadiusTopRight =
-			s.CornerRadiusBottomLeft =
-			s.CornerRadiusBottomRight =
-				7;
+		s.SetCornerRadiusAll(7);
+		return s;
+	}
+
+	private static StyleBoxTexture Plate(string name, int padding) =>
+		NineSlice(name, Corner, Corner, padding, padding);
+
+	private static StyleBoxTexture Primary(string name) =>
+		NineSlice(name, PointEnd, Corner, PointEnd, 6);
+
+	private static StyleBoxTexture NineSlice(
+		string name,
+		int sliceX,
+		int sliceY,
+		int padX,
+		int padY
+	)
+	{
+		var s = new StyleBoxTexture { Texture = GD.Load<Texture2D>(UiDir + name + ".png") };
+		s.TextureMarginLeft = s.TextureMarginRight = sliceX;
+		s.TextureMarginTop = s.TextureMarginBottom = sliceY;
+		s.ContentMarginLeft = s.ContentMarginRight = padX;
+		s.ContentMarginTop = s.ContentMarginBottom = padY;
 		return s;
 	}
 }

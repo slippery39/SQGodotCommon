@@ -489,7 +489,7 @@ public partial class MtgGameScene : Node2D
 	private void BuildPromptBanner(CanvasLayer layer)
 	{
 		_promptBanner = new PanelContainer { Visible = false };
-		_promptBanner.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel(borderWidth: 2));
+		_promptBanner.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
 		_promptBanner.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
 		_promptBanner.GrowHorizontal = Control.GrowDirection.Both;
 		_promptBanner.OffsetTop = 44;

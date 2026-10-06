@@ -16,7 +16,7 @@ var setCode = args.Length > 1 ? args[1] : SetRegistry.LegacyCode;
 var set = SetRegistry.Get(setCode);
 
 // Cards not in the set list that still need art
-var extraCards = new List<string> { "Plains" };
+var extraCards = new List<string> { "Plains", "Island", "Swamp", "Mountain", "Forest" };
 
 // Token cards — fetched via Scryfall search (t:token) rather than named lookup
 var tokenCards = new List<string> { "Goblin", "Clue", "Spirit", "Human", "Zombie", "Vampire" };
@@ -167,8 +167,9 @@ static async Task<string?> GetArtCropUrl(HttpClient http, string cardName)
 
 		if (resp.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
 		{
-			var retryAfter =
-				resp.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+			// Scryfall can answer Retry-After: 0 while still limiting, so never wait less than the backoff.
+			var backoff = TimeSpan.FromSeconds(Math.Pow(2, attempt + 1));
+			var retryAfter = resp.Headers.RetryAfter?.Delta is { } d && d > backoff ? d : backoff;
 			Console.Write($"[rate limited, waiting {retryAfter.TotalSeconds:F0}s]... ");
 			await Task.Delay(retryAfter);
 			continue;
@@ -216,8 +217,9 @@ static async Task<string?> GetTokenArtCropUrl(HttpClient http, string tokenName)
 
 		if (resp.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
 		{
-			var retryAfter =
-				resp.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+			// Scryfall can answer Retry-After: 0 while still limiting, so never wait less than the backoff.
+			var backoff = TimeSpan.FromSeconds(Math.Pow(2, attempt + 1));
+			var retryAfter = resp.Headers.RetryAfter?.Delta is { } d && d > backoff ? d : backoff;
 			Console.Write($"[rate limited, waiting {retryAfter.TotalSeconds:F0}s]... ");
 			await Task.Delay(retryAfter);
 			continue;

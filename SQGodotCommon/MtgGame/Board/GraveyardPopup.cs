@@ -42,7 +42,7 @@ public partial class GraveyardPopup : CanvasLayer
 
 		var panel = new PanelContainer();
 		panel.CustomMinimumSize = new Vector2(1150, 500);
-		panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel(borderWidth: 2));
+		panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
 		center.AddChild(panel);
 
 		var margin = new MarginContainer();

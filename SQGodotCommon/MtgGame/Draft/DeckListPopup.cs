@@ -58,7 +58,7 @@ public partial class DeckListPopup : CanvasLayer
 		AddChild(center);
 
 		_panel = new PanelContainer();
-		_panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel(borderWidth: 2));
+		_panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
 		_panel.CustomMinimumSize = TextViewSize;
 		center.AddChild(_panel);
 

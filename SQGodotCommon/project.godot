@@ -38,6 +38,10 @@ project/assembly_name="SQGodotCommon"
 ; The .sln is one level up. Without this an export SUCCEEDS with zero C# in the APK.
 project/solution_directory=".."
 
+[gui]
+
+theme/custom="res://MtgGame/Assets/mtg_theme.tres"
+
 [input]
 
 M1={
@@ -60,3 +64,5 @@ debug={
 
 ; Android export refuses without ETC2/ASTC, and says nothing about why (Commands.md).
 textures/vram_compression/import_etc2_astc=true
+; Desk wood (MtgVisualDesign.md) until a scene draws its own backdrop.
+environment/defaults/default_clear_color=Color(0.086, 0.043, 0.02, 1)

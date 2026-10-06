@@ -15,7 +15,7 @@ public partial class PlayerPanel : PanelContainer
 
 	public override void _Ready()
 	{
-		AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel(borderWidth: 2));
+		AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
 
 		var margin = new MarginContainer();
 		margin.AddThemeConstantOverride("margin_left", 16);

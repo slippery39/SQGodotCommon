@@ -54,3 +54,5 @@ Frame-by-colour replaced frame-by-card-TYPE, which was all this could do before 
 **Every frame value must stay light.** It is MULTIPLIED against the frame art, so black is a violet-grey rather than black — `MtgCardThemeTests` pins a luminance floor precisely because "black" invites someone to use an actually-black value and turn the art to mud.
 
 Card art is keyed by a slug of the card name (`CardArtLoader`). Hollowmere has essentially none, which degrades to the card scene's default artwork rather than failing — `Details.ApplyTo` assigns the texture unconditionally and the setter falls back, so a reused node cannot inherit the previous card's art.
+
+**The look is Dark Arcane** (`MtgVisualDesign.md`, mockups in `docs/mockups/mtg/`). Style through `MtgUiStyles` - its plates and buttons are 9-slices drawn by `tools/make_mtg_ui.py` (re-run it, then `--import`, to change a colour) and body text is EB Garamond from the project theme `MtgGame/Assets/mtg_theme.tres`. Never a raw `StyleBoxFlat`: that is what reads as default Godot.

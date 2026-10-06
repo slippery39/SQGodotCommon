@@ -75,11 +75,7 @@ public partial class BoardUI : Control
 		_turnLabel.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
 		_turnLabel.HorizontalAlignment = HorizontalAlignment.Center;
 
-		_endTurnButton.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
-		_endTurnButton.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
-		_endTurnButton.AddThemeStyleboxOverride("disabled", MtgUiStyles.ButtonDisabled());
-		_endTurnButton.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
-		_endTurnButton.AddThemeColorOverride("font_disabled_color", MtgUiStyles.DimBorder);
+		MtgUiStyles.StylePrimary(_endTurnButton);
 
 		_playerBattlefield.CardClicked += id => PlayerCreatureClicked?.Invoke(id);
 		_playerBattlefield.CardRightClicked += id => PlayerCreatureRightClicked?.Invoke(id);

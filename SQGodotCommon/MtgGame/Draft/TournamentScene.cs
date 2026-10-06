@@ -84,7 +84,7 @@ public partial class TournamentScene : Control
 		_root.AddChild(_status);
 
 		var panel = new PanelContainer();
-		panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel(borderWidth: 2));
+		panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
 		_root.AddChild(panel);
 
 		var inner = new MarginContainer();

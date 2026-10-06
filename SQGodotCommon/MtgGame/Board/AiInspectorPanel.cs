@@ -38,7 +38,7 @@ public partial class AiInspectorPanel : CanvasLayer
 		_panel.AnchorRight = 1.0f;
 		_panel.AnchorTop = 0.0f;
 		_panel.AnchorBottom = 1.0f;
-		_panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel(1, MtgUiStyles.GoldBorder));
+		_panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
 		AddChild(_panel);
 
 		var margin = new MarginContainer();

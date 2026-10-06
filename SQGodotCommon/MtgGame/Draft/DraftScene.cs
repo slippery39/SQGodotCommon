@@ -168,7 +168,7 @@ public partial class DraftScene : Control
 	private PanelContainer BuildPoolSidebar()
 	{
 		var panel = new PanelContainer();
-		panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel(borderWidth: 2));
+		panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
 		panel.CustomMinimumSize = new Vector2(260, 0);
 
 		var inner = new MarginContainer();

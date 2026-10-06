@@ -189,3 +189,18 @@ left goes dark. To be checked in a capture before it is called done.
 
 **Backdrop:** one ComfyUI desk 1344x768, plain lit leather centre, props (candles, books, coins)
 only at the edges — the edges are what a phone crops.
+
+## 7. Build log
+
+**Step 1 - fonts + kit (2026-10-06).** Cinzel + EB Garamond (OFL) in `MtgGame/Assets/Fonts/`;
+Garamond 600 is the project theme's default font. `tools/make_mtg_ui.py` draws plate / plate_hover /
+plate_disabled / banner / button(+hover, disabled); `MtgUiStyles` serves them as 9-slices under the
+old helper names, so every panel and button restyled without touching its call site. END TURN uses
+`StylePrimary`. Clear colour = desk wood until the backdrop.
+Captured board, draft, menu: fonts and plates land everywhere. Seen and deferred: the battlefield
+plates stretch their gloss into a smear (they go in step 4 - the board is open table); Garamond
+rules text on the OLD card face is cramped at draft size (step 2); the menu is the generic
+"Game Title" scene (step 7).
+**Art gap closed:** 121 of 396 CSC cards and four basics had no art; the scraper had simply not been
+re-run for CSC. Re-run (and its Retry-After: 0 backoff fixed): every CSC card has art except the
+Clue and Human tokens.
