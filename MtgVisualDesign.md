@@ -183,10 +183,11 @@ clickable.
 mana symbols (sun, drop, skull, flame, tree) and one per keyword: Flying, First/Double Strike,
 Deathtouch, Lifelink, Trample, Reach, Taunt, Cover, Indestructible.
 
-**Mana display — designed here, neither mockup got it right:** beside the portrait, a brass bar
-with the GENERIC track as amber crystals (lit = available, dark = spent) plus a "4/6" numeral for
-phone, then one runestone per colour the player has, each with its remaining count; a stone with 0
-left goes dark. To be checked in a capture before it is called done.
+**Mana display — designed here, neither mockup got it right:** `ManaBar`, beside the portrait on
+both sides: the GENERIC track as amber crystals (lit = available, dark = spent, at most 10) plus a
+"4/6" numeral for phone, then one gem per colour the player's lands make with what is left this
+turn; a colour with none left goes dark. Lands never stay in play, so this bar is the only place a
+player's lands are seen.
 
 **Backdrop:** `MtgGame/Assets/UI/backdrop.jpg` — tooled leather mat with a gold medallion on the
 centre line between the two sides (chosen 2026-10-06). Prompt + seed in
@@ -258,3 +259,8 @@ Found: an HBox child fills the strip's height unless ShrinkCenter (slivers, bars
 ran before layout at width 0 and shrank every token to the minimum — it now runs on resize.
 Deferred: an attached Equipment/Aura is still nearly hidden behind its host; the mana pips are
 the old row until step 5.
+
+**Step 5 - mana (2026-10-06).** `ManaBar` as above, in both HUD strips; `crystal.png` is a white
+faceted lozenge tinted per state, colour gems reuse `gem.png` with `MtgCardSkin.GemColor`. The
+hand's "playable" glow now asks the engine (`CostEngine.ValidateManaPayment`, both tracks) instead
+of comparing generic mana in the UI — it lit a blue card for a player with only White.

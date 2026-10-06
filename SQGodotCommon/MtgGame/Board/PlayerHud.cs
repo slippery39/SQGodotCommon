@@ -26,7 +26,7 @@ public partial class PlayerHud : HBoxContainer
 	private HBoxContainer? _handBacks;
 	private TextureRect _ring = null!;
 	private Label _life = null!;
-	private HBoxContainer _mana = null!;
+	private ManaBar _mana = null!;
 	private ZonePile _library = null!;
 	private ZonePile _graveyard = null!;
 	private ZonePile _exile = null!;
@@ -57,12 +57,7 @@ public partial class PlayerHud : HBoxContainer
 
 		AddChild(BuildPortrait());
 
-		_mana = new HBoxContainer
-		{
-			MouseFilter = MouseFilterEnum.Ignore,
-			SizeFlagsVertical = SizeFlags.ShrinkCenter,
-		};
-		_mana.AddThemeConstantOverride("separation", 4);
+		_mana = new ManaBar();
 		AddChild(_mana);
 
 		_library = Pile();
@@ -105,15 +100,7 @@ public partial class PlayerHud : HBoxContainer
 			_handBacks.TooltipText = $"Hand: {handCount}";
 		}
 
-		// ponytail: the old pip row until step 5's two-track mana display.
-		foreach (var child in _mana.GetChildren())
-			child.QueueFree();
-		for (var i = 0; i < player.MaxMana; i++)
-		{
-			var pip = new Panel { CustomMinimumSize = new Vector2(14, 14) };
-			pip.AddThemeStyleboxOverride("panel", MtgUiStyles.ManaPip(i < player.CurrentMana));
-			_mana.AddChild(pip);
-		}
+		_mana.Refresh(player);
 
 		_library.Refresh(CardBack, libraryCount, "Library", clickable: false);
 		_graveyard.Refresh(Art(graveyardTop), graveyardCount, "Graveyard", clickable: true);

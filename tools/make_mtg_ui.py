@@ -233,6 +233,18 @@ def main():
     d.polygon([(cx, cy - r * 0.7), (cx + r * 0.5, cy), (cx, cy + r * 0.7), (cx - r * 0.5, cy)], fill=BRASS[1] + (255,))
     save(big.resize((120, 168), Image.LANCZOS), "card_back")
 
+    # Generic mana crystal: a WHITE faceted lozenge, tinted amber (available) or dark (spent).
+    W, H = 28 * S, 40 * S
+    crystal = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(crystal)
+    top, mid, bot, l, r, cx = (0, H * 0.42, H - 1, 0, W - 1, W / 2)
+    d.polygon([(cx, top), (r, mid), (cx, bot), (l, mid)], fill=(40, 36, 32, 255))
+    inset = 2.5 * S
+    d.polygon([(cx, top + inset), (cx, bot - inset), (l + inset, mid)], fill=(255, 255, 255, 255))
+    d.polygon([(cx, top + inset), (r - inset, mid), (cx, bot - inset)], fill=(196, 196, 196, 255))
+    d.polygon([(cx, top + inset), (cx + W * 0.18, mid * 0.8), (cx, mid), (cx - W * 0.18, mid * 0.8)], fill=(255, 255, 255, 255))
+    save(crystal.resize((28, 40), Image.LANCZOS), "crystal")
+
     mask, rim, glow = token_parts()
     save(mask, "token_mask")
     save(rim, "token_rim")

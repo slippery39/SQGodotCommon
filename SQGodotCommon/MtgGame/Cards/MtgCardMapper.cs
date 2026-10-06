@@ -26,7 +26,8 @@ public static class MtgCardMapper
 			// place that answers this, and the cast actions already use it — showing card.ManaCost
 			// here meant a Stormwing Entity discounted to 2 still read 5 in hand.
 			var cost = state.ComputeEffectiveCost(card, playerId);
-			canPlay = player.CurrentMana >= cost;
+			// The engine's own rule, both tracks — generic alone glowed a WW card with no White.
+			canPlay = state.ValidateManaPayment(playerId, cost, card.ColorPips).IsValid;
 			manaCostDisplay = $"{cost}";
 		}
 

@@ -60,3 +60,5 @@ Card art is keyed by a slug of the card name (`CardArtLoader`). Hollowmere has e
 **Every card face comes from `MtgCardMapper.Face`** — it carries the skin textures, the colour, foil off, and `Details.Decorate = MtgCardSkin.Apply` (cost top-right with a gem per pip, dark ink on cream). A screen that builds its own `Details` loses all of it.
 
 **The battlefield is compact `BoardToken`s, not cards** (`BattlefieldZone.AsTokens`); the full card is the hover preview. There is no land row — a played land becomes mana and goes to exile. To capture a board with permanents on it: `./Run-Godot.ps1 MtgGame/MtgGameScene.tscn -Capture shots/x -GameArgs '--autoplay=5'`.
+
+**Affordability is the engine's question** — `CostEngine.ValidateManaPayment` checks generic AND colour. The hand glow compared generic mana itself and lit cards the player could not cast; never re-derive a rule in the UI.

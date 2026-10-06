@@ -39,6 +39,9 @@ public static class MtgCardSkin
 			[ManaColor.Green] = new("58c06c"),
 		};
 
+	/// The bright colour of a mana colour's gem — card pips and the mana bar share it.
+	public static Color GemColor(ManaColor colour) => GemColors[colour];
+
 	private static readonly LabelSettings CostText =
 		new()
 		{

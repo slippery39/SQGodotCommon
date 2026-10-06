@@ -82,14 +82,6 @@ public static class MtgUiStyles
 		},
 	};
 
-	public static StyleBoxFlat ManaPip(bool filled)
-	{
-		var s = new StyleBoxFlat();
-		s.BgColor = filled ? GoldBorder : DimBorder;
-		s.SetCornerRadiusAll(7);
-		return s;
-	}
-
 	private static StyleBoxTexture Plate(string name, int padding) =>
 		NineSlice(name, Corner, Corner, padding, padding);
 
