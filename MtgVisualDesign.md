@@ -171,7 +171,9 @@ top edge, colour pip at the bottom centre, **power and toughness in two separate
 left/right (Hearthstone). Exhausted = greyscale + tilted. Can attack = green glow; valid target =
 gold glow.
 
-**Lands:** a slim row of round chips behind each side's tokens, symbol of the colour it makes.
+**Lands: there is no land row.** A played land becomes permanent mana and the card goes to exile
+(`PlayLandAction`), so lands are never on the battlefield — the mockups' land chips came from our
+own prompt. The MANA display is the land representation; the exile pile is mostly lands.
 
 **Hero:** round brass-framed portrait, life in an oxblood seal bottom-right, emblems as small badges.
 Zone piles (library, graveyard, exile) beside it, each a small stack with a brass count plate,
@@ -226,3 +228,17 @@ phone's crop, the bright-bordered plain mat put gold exactly under the side pane
 The battlefield panels are now empty styleboxes: the backdrop is the table.
 Seen and deferred: the turn label sits unreadable on the gold border (step 4: banner + outline);
 the candlelight mood could return as a warm vignette, no new art needed.
+
+**Step 4a - board tokens (2026-10-06).** `BoardToken` (built in code): art clipped to an arch
+(`token_mask` + ClipChildren), a light rim tinted by `MtgCardTheme.FrameColor`, a parchment name
+plate, power and toughness in two discs (toughness shows what is LEFT, red when damaged; a
+planeswalker shows loyalty in the right disc), keywords as a text strip from
+`MtgCardMapper.KeywordNames` (the rules text's own list; icons in step 6). States: exhausted =
+grey + tilted 12 degrees, summoning sick = dimmed, glows for target / selected / cost / flashback
+and a soft green "can attack". `BattlefieldZone.AsTokens` switches the two battlefield zones to
+tokens; the graveyard viewer keeps full cards. The opponent's row hugs the centre line.
+`-GameArgs '--autoplay=N'` (new) makes the board capturable mid-game.
+Found: lands never reach the battlefield (above) — 4b, the land row, was dropped and its code
+deleted. A ScrollContainer only stretches its child vertically if the child asks (ExpandFill).
+Deferred to 4d: an attached Equipment/Aura peeks out behind its host token and is nearly hidden;
+the Clue and Human tokens have no art (a dark fill stands in).

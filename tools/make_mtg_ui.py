@@ -148,6 +148,41 @@ RULES = ((238, 228, 206), (216, 202, 174))
 EDGE = ((70, 64, 58), (34, 30, 28), (10, 9, 8))
 
 
+def arch(d, x0, y0, x1, y1):
+    """A board token's silhouette: a round-topped arch over a square-ish base."""
+    w, h = x1 - x0, y1 - y0
+    d.ellipse((x0, y0, x1 - 1, y0 + w * 0.9), fill=255)
+    d.rounded_rectangle((x0, y0 + w * 0.45, x1 - 1, y1 - 1), radius=w * 0.08, fill=255, corners=(False, False, True, True))
+
+
+TOKEN = (150, 190)
+TOKEN_RIM = 7
+
+
+def token_parts():
+    """Mask (clips the art), rim (light bevel, tinted by card colour in the game), glow (states)."""
+    w, h = TOKEN
+    W, H, rw = w * S, h * S, TOKEN_RIM * S
+    outer = shape_mask(W, H, lambda d, w_, h_: arch(d, 0, 0, w_, h_))
+    inner = shape_mask(W, H, lambda d, w_, h_: arch(d, rw, rw, w_ - rw, h_ - rw))
+    line = shape_mask(W, H, lambda d, w_, h_: arch(d, rw - 2 * S, rw - 2 * S, w_ - rw + 2 * S, h_ - rw + 2 * S))
+
+    mask = Image.merge("RGBA", (Image.new("L", (W, H), 255),) * 3 + (inner,))
+
+    rim = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    rim.paste(rim_gradient(W, H, (255, 255, 255), (205, 200, 192), (120, 114, 106)), (0, 0), ImageChops.subtract(outer, line))
+    rim.paste(Image.new("RGBA", (W, H), DARK + (255,)), (0, 0), ImageChops.subtract(line, inner))
+
+    pad = 24 * S
+    g = Image.new("L", (W + 2 * pad, H + 2 * pad), 0)
+    g.paste(outer, (pad, pad))
+    g = g.filter(ImageFilter.GaussianBlur(9 * S)).point(lambda v: min(255, v * 2))
+    glow = Image.merge("RGBA", (Image.new("L", g.size, 255),) * 3 + (g,))
+
+    shrink = lambda im, size: im.resize(size, Image.LANCZOS)
+    return shrink(mask, TOKEN), shrink(rim, TOKEN), shrink(glow, (w + 48, h + 48))
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     made = []
@@ -176,6 +211,11 @@ def main():
     save(compose(64, 64, circle(), LEATHER, BRASS, 4), "card_cost")
     save(compose(96, 56, rounded(14), LEATHER, BRASS, 3), "card_pt")
     save(gem(), "gem")
+
+    mask, rim, glow = token_parts()
+    save(mask, "token_mask")
+    save(rim, "token_rim")
+    save(glow, "token_glow")
 
     print("made", ", ".join(made), "->", OUT)
 

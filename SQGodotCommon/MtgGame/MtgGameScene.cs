@@ -282,6 +282,14 @@ public partial class MtgGameScene : Node2D
 
 		var startEvents = _manager.StartGame();
 		_eventLog.AppendEvents(startEvents, _manager.State, _manager.HumanPlayerId);
+
+		// -GameArgs --autoplay=N: open on a mid-game board, for screenshots of the layout.
+		foreach (var arg in OS.GetCmdlineUserArgs())
+			if (
+				arg.StartsWith("--autoplay=")
+				&& int.TryParse(arg["--autoplay=".Length..], out var turns)
+			)
+				_manager.Autoplay(turns);
 		Refresh();
 	}
 

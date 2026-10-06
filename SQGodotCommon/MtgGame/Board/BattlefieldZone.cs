@@ -25,6 +25,22 @@ public partial class BattlefieldZone : PanelContainer
 	[Export]
 	public float CardScale { get; set; } = 0.68f;
 
+	/// <summary>
+	/// The battlefield shows permanents as compact <see cref="BoardToken"/>s; off (the graveyard
+	/// viewer) it shows full cards, to be READ. There is no land row: a played land becomes
+	/// permanent mana and goes to exile (PlayLandAction), so lands are never on the battlefield.
+	/// </summary>
+	[Export]
+	public bool AsTokens { get; set; }
+
+	/// The opponent's row sits at the BOTTOM of its zone, so both sides face each other across the
+	/// centre line rather than one hugging the top of the screen.
+	[Export]
+	public bool HugBottom { get; set; }
+
+	/// Room around a token for its glow, which a ScrollContainer would otherwise clip.
+	private const float GlowPad = 24f;
+
 	private HBoxContainer _container = null!;
 
 	public event Action<int>? CardClicked;
@@ -53,8 +69,15 @@ public partial class BattlefieldZone : PanelContainer
 		margin.AddChild(scroll);
 
 		_container = new HBoxContainer();
-		_container.AddThemeConstantOverride("separation", 12);
+		_container.AddThemeConstantOverride("separation", AsTokens ? -8 : 12);
 		_container.MouseFilter = Control.MouseFilterEnum.Ignore;
+		_container.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+		// A ScrollContainer only stretches its child vertically when the child asks to; without
+		// this the row is its minimum height and HugBottom has nothing to align within.
+		_container.SizeFlagsVertical = SizeFlags.ExpandFill;
+		_container.Alignment = AsTokens
+			? BoxContainer.AlignmentMode.Center
+			: BoxContainer.AlignmentMode.Begin;
 		scroll.AddChild(_container);
 	}
 
@@ -64,7 +87,8 @@ public partial class BattlefieldZone : PanelContainer
 		int? selectedId = null,
 		IEnumerable<int> targetHighlightIds = null,
 		IEnumerable<int> additionalCostHighlightIds = null,
-		IEnumerable<int> flashbackHighlightIds = null
+		IEnumerable<int> flashbackHighlightIds = null,
+		bool canAttack = false
 	)
 	{
 		foreach (var child in _container.GetChildren())
@@ -87,7 +111,11 @@ public partial class BattlefieldZone : PanelContainer
 			if (HostId(card) != 0)
 				continue;
 
-			var slot = new Control { MouseFilter = MouseFilterEnum.Pass };
+			var slot = new Control
+			{
+				MouseFilter = MouseFilterEnum.Pass,
+				SizeFlagsVertical = HugBottom ? SizeFlags.ShrinkEnd : SizeFlags.ShrinkBegin,
+			};
 			_container.AddChild(slot);
 
 			var attached = attachments.Contains(card.Id)
@@ -104,9 +132,10 @@ public partial class BattlefieldZone : PanelContainer
 					selectedId,
 					targetHighlightIds,
 					null,
-					null
+					null,
+					canAttack: false
 				);
-				peek.Position = new Vector2(AttachmentPeek * (i + 1), AttachmentPeek * (i + 1));
+				peek.Position = Inset + new Vector2(1, 1) * AttachmentPeek * (i + 1);
 			}
 
 			var host = AddCard(
@@ -116,29 +145,55 @@ public partial class BattlefieldZone : PanelContainer
 				selectedId,
 				targetHighlightIds,
 				additionalCostHighlightIds,
-				flashbackHighlightIds
+				flashbackHighlightIds,
+				canAttack
 			);
+			host.Position = Inset;
 
 			// CustomMinimumSize is final once the node has entered the tree, so the slot can be
 			// sized from the card rather than from a second copy of the authored dimensions.
 			slot.CustomMinimumSize =
-				host.CustomMinimumSize + new Vector2(1, 1) * AttachmentPeek * attached.Count;
+				host.CustomMinimumSize
+				+ Inset * 2
+				+ new Vector2(1, 1) * AttachmentPeek * attached.Count;
 		}
 	}
 
 	/// Pixels an attachment sticks out from behind the permanent it is attached to.
 	private const float AttachmentPeek = 12f;
 
-	private BoardCard AddCard(
+	private Vector2 Inset => AsTokens ? new Vector2(GlowPad, GlowPad) : Vector2.Zero;
+
+	private Control AddCard(
 		Control parent,
 		Card card,
 		GameState state,
 		int? selectedId,
 		IEnumerable<int> targetHighlightIds,
 		IEnumerable<int> additionalCostHighlightIds,
-		IEnumerable<int> flashbackHighlightIds
+		IEnumerable<int> flashbackHighlightIds,
+		bool canAttack
 	)
 	{
+		var highlight = ComputeHighlight(
+			card,
+			selectedId,
+			targetHighlightIds,
+			additionalCostHighlightIds,
+			flashbackHighlightIds
+		);
+		if (AsTokens)
+		{
+			var token = new BoardToken();
+			parent.AddChild(token);
+			token.Clicked += id => CardClicked?.Invoke(id);
+			token.RightClicked += id => CardRightClicked?.Invoke(id);
+			token.Hovered += id => CardHovered?.Invoke(id);
+			token.HoverEnded += id => CardHoverEnded?.Invoke(id);
+			token.Refresh(card, state, highlight, canAttack);
+			return token;
+		}
+
 		var boardCard = BoardCardScene.Instantiate<BoardCard>();
 		// Set before entering the tree: BoardCard applies it in _Ready.
 		boardCard.CardScale = CardScale;
@@ -147,17 +202,7 @@ public partial class BattlefieldZone : PanelContainer
 		boardCard.RightClicked += id => CardRightClicked?.Invoke(id);
 		boardCard.Hovered += id => CardHovered?.Invoke(id);
 		boardCard.HoverEnded += id => CardHoverEnded?.Invoke(id);
-		boardCard.Refresh(
-			card,
-			state,
-			ComputeHighlight(
-				card,
-				selectedId,
-				targetHighlightIds,
-				additionalCostHighlightIds,
-				flashbackHighlightIds
-			)
-		);
+		boardCard.Refresh(card, state, highlight);
 		return boardCard;
 	}
 

@@ -43,6 +43,8 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("3_battlefield")
 BoardCardScene = ExtResource("4_boardcard")
+AsTokens = true
+HugBottom = true
 
 [node name="PlayerRow" type="HBoxContainer" parent="MainColumn"]
 size_flags_vertical = 3
@@ -62,6 +64,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("3_battlefield")
 BoardCardScene = ExtResource("4_boardcard")
+AsTokens = true
 
 [node name="BottomBar" type="HBoxContainer" parent="MainColumn"]
 alignment = 2

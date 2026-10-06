@@ -691,6 +691,16 @@ public static class MtgCardMapper
 	/// </param>
 	private static string? DescribeKeywords(CreatureComponent creature, CreatureStats stats)
 	{
+		var keywords = KeywordNames(creature, stats);
+		return keywords.Count > 0 ? string.Join(", ", keywords) : null;
+	}
+
+	/// <summary>
+	/// The keywords as data, for a board token's icon strip — the same list the rules text
+	/// prints, so the two cannot disagree. See <see cref="DescribeKeywords"/> for <paramref name="stats"/>.
+	/// </summary>
+	public static List<string> KeywordNames(CreatureComponent creature, CreatureStats stats)
+	{
 		var keywords = new List<string>();
 
 		void Add(bool present, string name)
@@ -719,7 +729,7 @@ public static class MtgCardMapper
 		Add(stats?.HasHexproof ?? creature.HasHexproof, "Hexproof");
 		Add(stats?.CantAttack ?? false, "Can't attack");
 
-		return keywords.Count > 0 ? string.Join(", ", keywords) : null;
+		return keywords;
 	}
 
 	/// <summary>

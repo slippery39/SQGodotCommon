@@ -58,3 +58,5 @@ Card art is keyed by a slug of the card name (`CardArtLoader`). Hollowmere has e
 **The look is Dark Arcane** (`MtgVisualDesign.md`, mockups in `docs/mockups/mtg/`). Style through `MtgUiStyles` - its plates and buttons are 9-slices drawn by `tools/make_mtg_ui.py` (re-run it, then `--import`, to change a colour) and body text is EB Garamond from the project theme `MtgGame/Assets/mtg_theme.tres`. Never a raw `StyleBoxFlat`: that is what reads as default Godot.
 
 **Every card face comes from `MtgCardMapper.Face`** — it carries the skin textures, the colour, foil off, and `Details.Decorate = MtgCardSkin.Apply` (cost top-right with a gem per pip, dark ink on cream). A screen that builds its own `Details` loses all of it.
+
+**The battlefield is compact `BoardToken`s, not cards** (`BattlefieldZone.AsTokens`); the full card is the hover preview. There is no land row — a played land becomes mana and goes to exile. To capture a board with permanents on it: `./Run-Godot.ps1 MtgGame/MtgGameScene.tscn -Capture shots/x -GameArgs '--autoplay=5'`.

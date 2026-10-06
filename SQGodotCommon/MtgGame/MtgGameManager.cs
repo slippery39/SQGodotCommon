@@ -874,6 +874,43 @@ public class MtgGameManager
 
 	// ===== DEBUG / REPLAY =====
 
+	/// <summary>
+	/// DEBUG: the AI plays BOTH seats until turn <paramref name="turns"/>, so a screenshot opens on
+	/// a mid-game board instead of an empty one (<c>-GameArgs --autoplay=N</c>, Commands.md). Runs
+	/// synchronously at startup; a capture tool, not a game mode. Stops early if someone dies.
+	/// </summary>
+	public void Autoplay(int turns)
+	{
+		var actionsThisTurn = 0;
+		// Hands over on the HUMAN's turn: the scene starts AI turns only after the human ends one.
+		while (
+			(_state.TryGetGame()?.TurnNumber ?? 0) < turns || IsAiTurn || _state.IsWaitingForChoice
+		)
+		{
+			if (_state.GetPlayer(HumanPlayerId).Life <= 0 || _state.GetPlayer(AiPlayerId).Life <= 0)
+				return;
+
+			if (_state.IsWaitingForChoice)
+			{
+				var decider = _state.GetPendingChoiceDecidingPlayerId();
+				ResolveChoice(
+					_aiStrategy.ResolveChoice(_state, _state.GetPendingChoice()!, decider)
+				);
+				continue;
+			}
+
+			var mover = _state.GetGame().ActivePlayerId;
+#pragma warning disable CS0618
+			var next =
+				actionsThisTurn < MaxAiActionsPerTurn && GetLegalActions(mover).Count > 0
+					? _aiStrategy.SelectAction(_state, _ids, mover)
+					: BuildAiEndTurnAction();
+#pragma warning restore CS0618
+			actionsThisTurn = next is EndTurnAction ? 0 : actionsThisTurn + 1;
+			SubmitAction(next);
+		}
+	}
+
 	public IReadOnlyList<(int Index, string Description)> GetHistorySummary() =>
 		_history.Select((e, i) => (i, e.ActionDescription)).ToList();
 

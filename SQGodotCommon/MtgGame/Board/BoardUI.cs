@@ -172,12 +172,14 @@ public partial class BoardUI : Control
 			state.GetCardsInZone(aiLibraryId).Count(),
 			state.GetCardsInZone(aiHandId).Count()
 		);
+		var isHumanTurn = game.ActivePlayerId == humanPlayerId;
 		_playerBattlefield.Refresh(
 			state.GetCardsInZone(humanBattlefieldId),
 			state,
 			selectedAttackerId,
 			targetHighlightIds,
-			additionalCostHighlightIds
+			additionalCostHighlightIds,
+			canAttack: isHumanTurn
 		);
 		_opponentBattlefield.Refresh(
 			state.GetCardsInZone(aiBattlefieldId),
@@ -195,7 +197,6 @@ public partial class BoardUI : Control
 		_opponentGraveyardButton.Text = $"Opp. Graveyard ({aiGraveyardCount})";
 		_opponentGraveyardButton.Disabled = aiGraveyardCount == 0;
 
-		var isHumanTurn = game.ActivePlayerId == humanPlayerId;
 		_playerPanel.SetActive(isHumanTurn);
 		_opponentPanel.SetActive(!isHumanTurn);
 
