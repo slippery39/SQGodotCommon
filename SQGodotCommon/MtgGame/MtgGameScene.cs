@@ -156,6 +156,9 @@ public partial class MtgGameScene : Node2D
 		_boardUI.OpponentDirectAttacked += OnOpponentDirectAttacked;
 		_boardUI.GraveyardButtonPressed += OpenGraveyardPopup;
 		_boardUI.OpponentGraveyardButtonPressed += OpenOpponentGraveyardPopup;
+		_boardUI.ExilePressed += () => OpenExilePopup(_manager.HumanPlayerId, "Your Exile");
+		_boardUI.OpponentExilePressed += () =>
+			OpenExilePopup(_manager.AiPlayerId, "Opponent's Exile");
 		_boardUI.LogTogglePressed += OnLogTogglePressed;
 		_boardUI.CreatureHovered += OnCreatureHovered;
 		_boardUI.CreatureHoverEnded += _ => _cardPreviewPopup.HideCard();
@@ -501,7 +504,9 @@ public partial class MtgGameScene : Node2D
 		_promptBanner.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
 		_promptBanner.SetAnchorsPreset(Control.LayoutPreset.CenterTop);
 		_promptBanner.GrowHorizontal = Control.GrowDirection.Both;
-		_promptBanner.OffsetTop = 44;
+		// On the centre line between the two token rows (BoardUI): at the top it covered the
+		// opponent's portrait, the thing a prompt most often asks you to target.
+		_promptBanner.OffsetTop = 408;
 		_promptBanner.MouseFilter = Control.MouseFilterEnum.Ignore;
 		layer.AddChild(_promptBanner);
 
@@ -719,6 +724,21 @@ public partial class MtgGameScene : Node2D
 			state,
 			flashbackIds: System.Array.Empty<int>(),
 			title: "Opponent's Graveyard"
+		);
+	}
+
+	/// <summary>
+	/// A player's exile, read-only (nothing is cast from exile here yet) — the same click-ignoring
+	/// mode as the opponent's graveyard. Lands are left out: see <see cref="BoardUI.ExileShown"/>.
+	/// </summary>
+	private void OpenExilePopup(int playerId, string title)
+	{
+		_viewingOpponentGraveyard = true;
+		_graveyardPopup.ShowGraveyard(
+			BoardUI.ExileShown(_manager.State, playerId),
+			_manager.State,
+			flashbackIds: System.Array.Empty<int>(),
+			title: title
 		);
 	}
 

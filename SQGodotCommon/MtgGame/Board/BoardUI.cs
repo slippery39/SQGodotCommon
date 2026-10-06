@@ -6,6 +6,11 @@ using MtgCore;
 
 namespace MtgGame;
 
+/// <summary>
+/// The board's layout (MtgVisualDesign.md §6): a column of [opponent strip] [opponent tokens]
+/// [your tokens] [your strip], the hand fanned below it, END TURN and the turn banner bottom-right
+/// where a thumb reaches them on a phone. Each strip is a <see cref="PlayerHud"/>.
+/// </summary>
 public partial class BoardUI : Control
 {
 	public event Action? EndTurnPressed;
@@ -15,6 +20,8 @@ public partial class BoardUI : Control
 	public event Action? OpponentDirectAttacked;
 	public event Action? GraveyardButtonPressed;
 	public event Action? OpponentGraveyardButtonPressed;
+	public event Action? ExilePressed;
+	public event Action? OpponentExilePressed;
 	public event Action? LogTogglePressed;
 	public event Action<int>? CreatureHovered;
 	public event Action<int>? CreatureHoverEnded;
@@ -22,18 +29,12 @@ public partial class BoardUI : Control
 	/// Fraction of the width the board keeps while the event log is open.
 	private const float BoardWidthWithLog = 0.78f;
 
-	/// Width of the left rail holding the player panels and the graveyard button. Taking these
-	/// out of the vertical stack is what lets the battlefield rows be tall enough to read.
-	private const float RailWidth = 300f;
-
 	private VBoxContainer _mainColumn = null!;
-	private Label _turnLabel = null!;
-	private PlayerPanel _opponentPanel = null!;
-	private PlayerPanel _playerPanel = null!;
+	private Label _turnBanner = null!;
+	private PlayerHud _opponentHud = null!;
+	private PlayerHud _playerHud = null!;
 	private BattlefieldZone _opponentBattlefield = null!;
 	private BattlefieldZone _playerBattlefield = null!;
-	private Button _graveyardButton = null!;
-	private Button _opponentGraveyardButton = null!;
 	private Button _endTurnButton = null!;
 	private Button _logToggleButton = null!;
 
@@ -46,36 +47,30 @@ public partial class BoardUI : Control
 		MouseFilter = Control.MouseFilterEnum.Ignore;
 
 		_mainColumn = GetNode<VBoxContainer>("MainColumn");
-		_turnLabel = GetNode<Label>("MainColumn/TopBar/TurnLabel");
-		_logToggleButton = GetNode<Button>("MainColumn/TopBar/LogToggleButton");
-		_opponentPanel = GetNode<PlayerPanel>(
-			"MainColumn/OpponentRow/OpponentSidebar/OpponentPanel"
-		);
-		_opponentGraveyardButton = GetNode<Button>(
-			"MainColumn/OpponentRow/OpponentSidebar/OpponentGraveyardButton"
-		);
-		_opponentBattlefield = GetNode<BattlefieldZone>(
-			"MainColumn/OpponentRow/OpponentBattlefield"
-		);
-		_playerPanel = GetNode<PlayerPanel>("MainColumn/PlayerRow/PlayerSidebar/PlayerPanel");
-		_graveyardButton = GetNode<Button>("MainColumn/PlayerRow/PlayerSidebar/GraveyardButton");
-		_playerBattlefield = GetNode<BattlefieldZone>("MainColumn/PlayerRow/PlayerBattlefield");
-		_endTurnButton = GetNode<Button>("MainColumn/BottomBar/EndTurnButton");
-
-		// Each panel sits beside its own battlefield row rather than above it, so it reads as
-		// belonging to that half of the board and — more importantly — stops being a height
-		// driver. See SetBoardWidth for the horizontal half of this.
-		_opponentPanel.CustomMinimumSize = new Vector2(RailWidth, 0);
-		_playerPanel.CustomMinimumSize = new Vector2(RailWidth, 0);
+		_opponentHud = GetNode<PlayerHud>("MainColumn/OpponentHud");
+		_opponentBattlefield = GetNode<BattlefieldZone>("MainColumn/OpponentBattlefield");
+		_playerBattlefield = GetNode<BattlefieldZone>("MainColumn/PlayerBattlefield");
+		_playerHud = GetNode<PlayerHud>("MainColumn/PlayerHud");
+		_turnBanner = GetNode<Label>("TurnBanner");
+		_endTurnButton = GetNode<Button>("EndTurnButton");
+		_logToggleButton = GetNode<Button>("LogToggleButton");
 
 		_endTurnButton.Pressed += () => EndTurnPressed?.Invoke();
 		_logToggleButton.Pressed += () => LogTogglePressed?.Invoke();
+		MtgUiStyles.StylePrimary(_endTurnButton, fontSize: 34);
 
-		_turnLabel.AddThemeFontSizeOverride("font_size", 25);
-		_turnLabel.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
-		_turnLabel.HorizontalAlignment = HorizontalAlignment.Center;
+		// A label over the backdrop needs its own outline (godot-frontend.md), on a parchment plate.
+		_turnBanner.AddThemeStyleboxOverride("normal", MtgUiStyles.Banner());
+		_turnBanner.LabelSettings = new LabelSettings
+		{
+			Font = MtgUiStyles.TitleFont,
+			FontSize = 22,
+			FontColor = MtgUiStyles.Ink,
+		};
 
-		MtgUiStyles.StylePrimary(_endTurnButton);
+		_logToggleButton.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
+		_logToggleButton.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
+		_logToggleButton.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
 
 		_playerBattlefield.CardClicked += id => PlayerCreatureClicked?.Invoke(id);
 		_playerBattlefield.CardRightClicked += id => PlayerCreatureRightClicked?.Invoke(id);
@@ -84,28 +79,12 @@ public partial class BoardUI : Control
 		_opponentBattlefield.CardClicked += id => OpponentCreatureClicked?.Invoke(id);
 		_opponentBattlefield.CardHovered += id => CreatureHovered?.Invoke(id);
 		_opponentBattlefield.CardHoverEnded += id => CreatureHoverEnded?.Invoke(id);
-		_opponentPanel.Clicked += () => OpponentDirectAttacked?.Invoke();
 
-		_graveyardButton.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
-		_graveyardButton.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
-		_graveyardButton.AddThemeStyleboxOverride("disabled", MtgUiStyles.ButtonDisabled());
-		_graveyardButton.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
-		_graveyardButton.AddThemeColorOverride("font_disabled_color", MtgUiStyles.DimBorder);
-		_graveyardButton.Pressed += () => GraveyardButtonPressed?.Invoke();
-
-		_opponentGraveyardButton.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
-		_opponentGraveyardButton.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
-		_opponentGraveyardButton.AddThemeStyleboxOverride("disabled", MtgUiStyles.ButtonDisabled());
-		_opponentGraveyardButton.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
-		_opponentGraveyardButton.AddThemeColorOverride(
-			"font_disabled_color",
-			MtgUiStyles.DimBorder
-		);
-		_opponentGraveyardButton.Pressed += () => OpponentGraveyardButtonPressed?.Invoke();
-
-		_logToggleButton.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
-		_logToggleButton.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
-		_logToggleButton.AddThemeColorOverride("font_color", MtgUiStyles.GoldBorder);
+		_opponentHud.PortraitClicked += () => OpponentDirectAttacked?.Invoke();
+		_playerHud.GraveyardClicked += () => GraveyardButtonPressed?.Invoke();
+		_opponentHud.GraveyardClicked += () => OpponentGraveyardButtonPressed?.Invoke();
+		_playerHud.ExileClicked += () => ExilePressed?.Invoke();
+		_opponentHud.ExileClicked += () => OpponentExilePressed?.Invoke();
 	}
 
 	/// <summary>
@@ -127,17 +106,23 @@ public partial class BoardUI : Control
 	public Rect2 GetPlayerBattlefieldRect() =>
 		new(_playerBattlefield.GlobalPosition, _playerBattlefield.Size);
 
-	public Vector2 GetPlayerLibraryPosition() =>
-		_playerPanel.GlobalPosition
-		+ new Vector2(_playerPanel.Size.X - 40f, _playerPanel.Size.Y * 0.5f);
+	public Vector2 GetPlayerLibraryPosition() => _playerHud.LibraryCenter;
 
-	public void FlashLoss(int losingPlayerId, int humanPlayerId)
-	{
-		var panel = losingPlayerId == humanPlayerId ? _playerPanel : _opponentPanel;
-		var tween = panel.CreateTween();
-		tween.TweenProperty(panel, "modulate", new Color(1f, 0.15f, 0.15f, 1f), 0.15f);
-		tween.TweenProperty(panel, "modulate", Colors.White, 0.35f);
-	}
+	public void FlashLoss(int losingPlayerId, int humanPlayerId) =>
+		(losingPlayerId == humanPlayerId ? _playerHud : _opponentHud).Flash(
+			new Color(1f, 0.15f, 0.15f, 1f)
+		);
+
+	/// <summary>
+	/// The cards in a player's exile that are worth showing: everything but LANDS. A played land
+	/// becomes mana and is exiled on the way (PlayLandAction), so the raw pile is mostly lands —
+	/// and the mana display already accounts for them.
+	/// </summary>
+	public static List<Card> ExileShown(GameState state, int playerId) =>
+		state
+			.GetCardsInZone(state.GetPlayerZoneId(playerId, ZoneType.Exile))
+			.Where(c => !c.HasSubtype("Land"))
+			.ToList();
 
 	public void RefreshAll(
 		GameState state,
@@ -149,32 +134,13 @@ public partial class BoardUI : Control
 	)
 	{
 		var game = state.GetGame();
-		var human = state.GetPlayer(humanPlayerId);
-		var ai = state.GetPlayer(aiPlayerId);
-
-		var humanLibraryId = state.GetWellKnownId(MtgObjectKeys.Player1Library);
-		var aiLibraryId = state.GetWellKnownId(MtgObjectKeys.Player2Library);
-		var humanBattlefieldId = state.GetWellKnownId(MtgObjectKeys.Player1Battlefield);
-		var aiBattlefieldId = state.GetWellKnownId(MtgObjectKeys.Player2Battlefield);
-
-		var humanHandId = state.GetWellKnownId(MtgObjectKeys.Player1Hand);
-		var aiHandId = state.GetWellKnownId(MtgObjectKeys.Player2Hand);
-
-		_playerPanel.Refresh(
-			"You",
-			human,
-			state.GetCardsInZone(humanLibraryId).Count(),
-			state.GetCardsInZone(humanHandId).Count()
-		);
-		_opponentPanel.Refresh(
-			"Opponent",
-			ai,
-			state.GetCardsInZone(aiLibraryId).Count(),
-			state.GetCardsInZone(aiHandId).Count()
-		);
 		var isHumanTurn = game.ActivePlayerId == humanPlayerId;
+
+		RefreshHud(_playerHud, state, humanPlayerId, isHumanTurn, targetHighlightIds);
+		RefreshHud(_opponentHud, state, aiPlayerId, !isHumanTurn, targetHighlightIds);
+
 		_playerBattlefield.Refresh(
-			state.GetCardsInZone(humanBattlefieldId),
+			state.GetCardsInZone(state.GetWellKnownId(MtgObjectKeys.Player1Battlefield)),
 			state,
 			selectedAttackerId,
 			targetHighlightIds,
@@ -182,35 +148,35 @@ public partial class BoardUI : Control
 			canAttack: isHumanTurn
 		);
 		_opponentBattlefield.Refresh(
-			state.GetCardsInZone(aiBattlefieldId),
+			state.GetCardsInZone(state.GetWellKnownId(MtgObjectKeys.Player2Battlefield)),
 			state,
 			targetHighlightIds: targetHighlightIds
 		);
 
-		var humanGraveyardId = state.GetWellKnownId(MtgObjectKeys.Player1Graveyard);
-		var graveyardCount = state.GetCardsInZone(humanGraveyardId).Count();
-		_graveyardButton.Text = $"Graveyard ({graveyardCount})";
-		_graveyardButton.Disabled = graveyardCount == 0;
-
-		var aiGraveyardId = state.GetWellKnownId(MtgObjectKeys.Player2Graveyard);
-		var aiGraveyardCount = state.GetCardsInZone(aiGraveyardId).Count();
-		_opponentGraveyardButton.Text = $"Opp. Graveyard ({aiGraveyardCount})";
-		_opponentGraveyardButton.Disabled = aiGraveyardCount == 0;
-
-		_playerPanel.SetActive(isHumanTurn);
-		_opponentPanel.SetActive(!isHumanTurn);
-
-		// Highlight player panels that are valid spell/ability targets (overrides active state)
-		if (targetHighlightIds != null)
-		{
-			if (targetHighlightIds.Contains(humanPlayerId))
-				_playerPanel.Modulate = new Color(1f, 1f, 0.3f, 1f);
-			if (targetHighlightIds.Contains(aiPlayerId))
-				_opponentPanel.Modulate = new Color(1f, 1f, 0.3f, 1f);
-		}
-
-		_turnLabel.Text =
-			$"Turn {game.TurnNumber} — {(isHumanTurn ? "Your turn" : "Opponent's turn")}";
+		_turnBanner.Text = $"Turn {game.TurnNumber} — {(isHumanTurn ? "Your turn" : "Opponent")}";
 		_endTurnButton.Disabled = !isHumanTurn;
+	}
+
+	private static void RefreshHud(
+		PlayerHud hud,
+		GameState state,
+		int playerId,
+		bool active,
+		IEnumerable<int>? targetHighlightIds
+	)
+	{
+		var graveyard = state.GetCardsInZone(state.GetPlayerZoneId(playerId, ZoneType.Graveyard));
+		var exile = ExileShown(state, playerId);
+		hud.Refresh(
+			state.GetPlayer(playerId),
+			state.GetCardsInZone(state.GetPlayerZoneId(playerId, ZoneType.Hand)).Count(),
+			state.GetCardsInZone(state.GetPlayerZoneId(playerId, ZoneType.Library)).Count(),
+			graveyard.LastOrDefault(),
+			graveyard.Count(),
+			exile.LastOrDefault(),
+			exile.Count
+		);
+		hud.SetActive(active);
+		hud.SetTargetable(targetHighlightIds?.Contains(playerId) == true);
 	}
 }

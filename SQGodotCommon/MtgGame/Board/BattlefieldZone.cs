@@ -12,15 +12,8 @@ public partial class BattlefieldZone : PanelContainer
 	public PackedScene BoardCardScene { get; set; }
 
 	/// <summary>
-	/// Visual scale of the cards in this zone. The graveyard raises it further, since a card there
-	/// has to be read rather than recognised.
-	///
-	/// ponytail: 0.68 is set against the height budget, not chosen for looks. MainColumn gets
-	/// 0.73 of a 1080 viewport (788px), and since the player panels moved into the left rail the
-	/// only fixed chrome left in the column is the top bar and the End Turn row (~75px), leaving
-	/// ~713px for both rows. A row costs the card's height plus 28px of margin and border, and
-	/// CustomMinimumSize is a hard floor — past ~0.74 the rows push the End Turn button off the
-	/// bottom instead of shrinking. Recompute this if anything else moves back into the column.
+	/// Visual scale of full cards in this zone — the graveyard viewer's, since the battlefield
+	/// shows <see cref="BoardToken"/>s (<see cref="AsTokens"/>) and ignores it.
 	/// </summary>
 	[Export]
 	public float CardScale { get; set; } = 0.68f;
@@ -56,13 +49,15 @@ public partial class BattlefieldZone : PanelContainer
 		var margin = new MarginContainer();
 		margin.AddThemeConstantOverride("margin_left", 12);
 		margin.AddThemeConstantOverride("margin_right", 12);
-		margin.AddThemeConstantOverride("margin_top", 12);
-		margin.AddThemeConstantOverride("margin_bottom", 12);
+		// Tokens carry their own glow padding, and the row height is tight (MtgVisualDesign.md).
+		margin.AddThemeConstantOverride("margin_top", AsTokens ? 0 : 12);
+		margin.AddThemeConstantOverride("margin_bottom", AsTokens ? 0 : 12);
 		margin.MouseFilter = Control.MouseFilterEnum.Ignore;
 		AddChild(margin);
 
 		var scroll = new ScrollContainer();
-		scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Auto;
+		// Still scrolls by drag or wheel past MinFit; the bar itself read as a stray line.
+		scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.ShowNever;
 		scroll.VerticalScrollMode = ScrollContainer.ScrollMode.Disabled;
 		scroll.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
 		scroll.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
@@ -79,6 +74,7 @@ public partial class BattlefieldZone : PanelContainer
 			? BoxContainer.AlignmentMode.Center
 			: BoxContainer.AlignmentMode.Begin;
 		scroll.AddChild(_container);
+		Resized += FitRow;
 	}
 
 	public void Refresh(
@@ -117,6 +113,10 @@ public partial class BattlefieldZone : PanelContainer
 				SizeFlagsVertical = HugBottom ? SizeFlags.ShrinkEnd : SizeFlags.ShrinkBegin,
 			};
 			_container.AddChild(slot);
+			// Scaled as a unit when the row is too full (FitRow); containers ignore Scale, so
+			// it sits on a plain Control inside the slot rather than on the slot itself.
+			var holder = new Control { MouseFilter = MouseFilterEnum.Pass };
+			slot.AddChild(holder);
 
 			var attached = attachments.Contains(card.Id)
 				? attachments[card.Id].ToList()
@@ -126,7 +126,7 @@ public partial class BattlefieldZone : PanelContainer
 			for (var i = 0; i < attached.Count; i++)
 			{
 				var peek = AddCard(
-					slot,
+					holder,
 					attached[i],
 					state,
 					selectedId,
@@ -139,7 +139,7 @@ public partial class BattlefieldZone : PanelContainer
 			}
 
 			var host = AddCard(
-				slot,
+				holder,
 				card,
 				state,
 				selectedId,
@@ -157,7 +157,41 @@ public partial class BattlefieldZone : PanelContainer
 				+ Inset * 2
 				+ new Vector2(1, 1) * AttachmentPeek * attached.Count;
 		}
+
+		FitRow();
 	}
+
+	/// <summary>
+	/// Shrinks every token when the row is wider than the table — Magic has no board cap, and a
+	/// goblin deck put ten tokens behind a scrollbar. Below <see cref="MinFit"/> the row scrolls.
+	/// Runs on every resize too: the first refresh happens before layout, when the zone is 0
+	/// wide, and opening the log narrows the board. Idempotent — works from the unscaled size.
+	/// </summary>
+	private void FitRow()
+	{
+		if (!AsTokens || Size.X <= 0)
+			return;
+
+		var slots = _container
+			.GetChildren()
+			.OfType<Control>()
+			.Where(s => !s.IsQueuedForDeletion())
+			.Select(s => (Slot: s, Holder: s.GetChild<Control>(0)))
+			.Select(x => (x.Slot, x.Holder, Base: x.Slot.CustomMinimumSize / x.Holder.Scale.X))
+			.ToList();
+		var separation = _container.GetThemeConstant("separation");
+		var needed = slots.Sum(x => x.Base.X) + separation * (slots.Count - 1);
+		var available = Size.X - 24;
+		var fit = needed <= available ? 1f : Mathf.Max(MinFit, available / needed);
+
+		foreach (var (slot, holder, baseSize) in slots)
+		{
+			holder.Scale = new Vector2(fit, fit);
+			slot.CustomMinimumSize = baseSize * fit;
+		}
+	}
+
+	private const float MinFit = 0.55f;
 
 	/// Pixels an attachment sticks out from behind the permanent it is attached to.
 	private const float AttachmentPeek = 12f;

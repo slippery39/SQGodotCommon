@@ -242,3 +242,19 @@ Found: lands never reach the battlefield (above) — 4b, the land row, was dropp
 deleted. A ScrollContainer only stretches its child vertically if the child asks (ExpandFill).
 Deferred to 4d: an attached Equipment/Aura peeks out behind its host token and is nearly hidden;
 the Clue and Human tokens have no art (a dark fill stands in).
+
+**Step 4c/4d - layout, portraits, piles (2026-10-06).** Done together: building the HUD inside the
+old left rail and then moving it would have been the work twice. `BoardUI.tscn` is now
+[opponent strip][opponent tokens][your tokens][your strip], hand below, END TURN + parchment turn
+banner bottom-right (thumb reach on a phone). `PlayerHud` replaces `PlayerPanel` and the text
+graveyard buttons: round portrait (ComfyUI, knight v2 / sorceress v1, prompts in
+`docs/mockups/mtg/portrait_prompts.json`) in a brass ring that lights on its owner's turn and turns
+gold as a target, life on an oxblood seal, the opponent's hand as card backs, and `ZonePile`s for
+library / graveyard / exile (top card's art, brass count, click to view). Exile is NEW and
+read-only; it leaves out lands, which are exiled as they become mana. The prompt toast moved to the
+centre line — at the top it covered the opponent's portrait, the thing it most often asks you to
+target. Full rows shrink their tokens to fit (down to 55%).
+Found: an HBox child fills the strip's height unless ShrinkCenter (slivers, bars); `FitRow` first
+ran before layout at width 0 and shrank every token to the minimum — it now runs on resize.
+Deferred: an attached Equipment/Aura is still nearly hidden behind its host; the mana pips are
+the old row until step 5.

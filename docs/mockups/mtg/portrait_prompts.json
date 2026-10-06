@@ -1,0 +1,6 @@
+[
+ {"label": "hero_knight", "width": 1024, "height": 1024,
+  "prompt": "head and shoulders portrait of a young knight, brown hair, determined expression, steel armour with a deep blue cloak, facing the viewer, centred, warm candlelight from the left, plain dark brown background, painterly fantasy illustration, Magic the Gathering card art style, rich detail, no text"},
+ {"label": "hero_sorceress", "width": 1024, "height": 1024,
+  "prompt": "head and shoulders portrait of a dark sorceress, long black hair, glowing violet eyes, a thin dark silver crown, high-collared black and purple robes, facing the viewer, centred, cold violet rim light, plain dark background, painterly fantasy illustration, Magic the Gathering card art style, rich detail, no text"}
+]

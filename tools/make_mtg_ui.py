@@ -212,6 +212,27 @@ def main():
     save(compose(96, 56, rounded(14), LEATHER, BRASS, 3), "card_pt")
     save(gem(), "gem")
 
+    # Hero portrait: a circular mask (clips the painting), a thick brass ring, the oxblood life seal.
+    P = 256 * S
+    save(Image.merge("RGBA", (Image.new("L", (P, P), 255),) * 3
+                     + (shape_mask(P, P, lambda d, w, h: d.ellipse((8 * S, 8 * S, w - 8 * S, h - 8 * S), fill=255)),)
+                     ).resize((256, 256), Image.LANCZOS), "portrait_mask")
+    ring = ImageChops.subtract(shape_mask(P, P, lambda d, w, h: d.ellipse((0, 0, w - 1, h - 1), fill=255)),
+                               shape_mask(P, P, lambda d, w, h: d.ellipse((14 * S, 14 * S, w - 14 * S, h - 14 * S), fill=255)))
+    portrait = Image.new("RGBA", (P, P), (0, 0, 0, 0))
+    portrait.paste(rim_gradient(P, P, *BRASS), (0, 0), ring)
+    save(portrait.resize((256, 256), Image.LANCZOS), "portrait_ring")
+    save(compose(72, 72, circle(), OXBLOOD, BRASS, 5), "seal")
+
+    # Card back (library, opponent's hand): leather in brass, a gold lozenge in the middle.
+    back = compose(120, 168, rounded(10), LEATHER, BRASS, 4)
+    big = back.resize((120 * S, 168 * S), Image.LANCZOS)
+    d = ImageDraw.Draw(big)
+    cx, cy, r = 60 * S, 84 * S, 26 * S
+    d.polygon([(cx, cy - r * 1.4), (cx + r, cy), (cx, cy + r * 1.4), (cx - r, cy)], outline=BRASS[0] + (255,), width=3 * S)
+    d.polygon([(cx, cy - r * 0.7), (cx + r * 0.5, cy), (cx, cy + r * 0.7), (cx - r * 0.5, cy)], fill=BRASS[1] + (255,))
+    save(big.resize((120, 168), Image.LANCZOS), "card_back")
+
     mask, rim, glow = token_parts()
     save(mask, "token_mask")
     save(rim, "token_rim")

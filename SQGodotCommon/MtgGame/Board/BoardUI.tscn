@@ -1,7 +1,7 @@
 [gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://MtgGame/Board/BoardUI.cs" id="1_boardui"]
-[ext_resource type="Script" path="res://MtgGame/Board/PlayerPanel.cs" id="2_panel"]
+[ext_resource type="Script" path="res://MtgGame/Board/PlayerHud.cs" id="2_hud"]
 [ext_resource type="Script" path="res://MtgGame/Board/BattlefieldZone.cs" id="3_battlefield"]
 [ext_resource type="PackedScene" path="res://MtgGame/Board/board_card.tscn" id="4_boardcard"]
 
@@ -12,63 +12,55 @@ script = ExtResource("1_boardui")
 
 [node name="MainColumn" type="VBoxContainer" parent="."]
 anchor_right = 1.0
-anchor_bottom = 0.73
+anchor_bottom = 0.78
+offset_top = 10.0
+theme_override_constants/separation = 0
 
-[node name="TopBar" type="HBoxContainer" parent="MainColumn"]
+[node name="OpponentHud" type="HBoxContainer" parent="MainColumn"]
+custom_minimum_size = Vector2(0, 160)
+script = ExtResource("2_hud")
+IsOpponent = true
 
-[node name="TurnLabel" type="Label" parent="MainColumn/TopBar"]
-size_flags_horizontal = 3
-text = "Turn -"
-horizontal_alignment = 1
-
-[node name="LogToggleButton" type="Button" parent="MainColumn/TopBar"]
-custom_minimum_size = Vector2(150, 0)
-text = "Log"
-
-[node name="OpponentRow" type="HBoxContainer" parent="MainColumn"]
-size_flags_vertical = 3
-
-[node name="OpponentSidebar" type="VBoxContainer" parent="MainColumn/OpponentRow"]
-custom_minimum_size = Vector2(300, 0)
-size_flags_vertical = 4
-
-[node name="OpponentPanel" type="PanelContainer" parent="MainColumn/OpponentRow/OpponentSidebar"]
-script = ExtResource("2_panel")
-
-[node name="OpponentGraveyardButton" type="Button" parent="MainColumn/OpponentRow/OpponentSidebar"]
-text = "Opp. Graveyard (0)"
-
-[node name="OpponentBattlefield" type="PanelContainer" parent="MainColumn/OpponentRow"]
-size_flags_horizontal = 3
+[node name="OpponentBattlefield" type="PanelContainer" parent="MainColumn"]
 size_flags_vertical = 3
 script = ExtResource("3_battlefield")
 BoardCardScene = ExtResource("4_boardcard")
 AsTokens = true
 HugBottom = true
 
-[node name="PlayerRow" type="HBoxContainer" parent="MainColumn"]
-size_flags_vertical = 3
-
-[node name="PlayerSidebar" type="VBoxContainer" parent="MainColumn/PlayerRow"]
-custom_minimum_size = Vector2(300, 0)
-size_flags_vertical = 4
-
-[node name="PlayerPanel" type="PanelContainer" parent="MainColumn/PlayerRow/PlayerSidebar"]
-script = ExtResource("2_panel")
-
-[node name="GraveyardButton" type="Button" parent="MainColumn/PlayerRow/PlayerSidebar"]
-text = "Graveyard (0)"
-
-[node name="PlayerBattlefield" type="PanelContainer" parent="MainColumn/PlayerRow"]
-size_flags_horizontal = 3
+[node name="PlayerBattlefield" type="PanelContainer" parent="MainColumn"]
 size_flags_vertical = 3
 script = ExtResource("3_battlefield")
 BoardCardScene = ExtResource("4_boardcard")
 AsTokens = true
 
-[node name="BottomBar" type="HBoxContainer" parent="MainColumn"]
-alignment = 2
+[node name="PlayerHud" type="HBoxContainer" parent="MainColumn"]
+custom_minimum_size = Vector2(0, 160)
+script = ExtResource("2_hud")
 
-[node name="EndTurnButton" type="Button" parent="MainColumn/BottomBar"]
-custom_minimum_size = Vector2(220, 0)
+[node name="LogToggleButton" type="Button" parent="."]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 176.0
+offset_bottom = 60.0
+text = "Log"
+
+[node name="TurnBanner" type="Label" parent="."]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -330.0
+offset_top = 846.0
+offset_right = -24.0
+offset_bottom = 892.0
+text = "Turn -"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="EndTurnButton" type="Button" parent="."]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -330.0
+offset_top = 900.0
+offset_right = -24.0
+offset_bottom = 980.0
 text = "End Turn"
