@@ -183,7 +183,7 @@ public record StartTurnAction : GameAction
 					),
 					// Only the per-turn count resets. TriggerCountTotal is deliberately left
 					// alone — it is what makes renown "once ever".
-					TriggeredAbilityComponent tc => updatedComponents.SetItem(
+					TriggeredAbility tc => updatedComponents.SetItem(
 						i,
 						tc with
 						{

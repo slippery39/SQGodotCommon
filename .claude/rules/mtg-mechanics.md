@@ -236,7 +236,9 @@ MtgCore/
 │                            # MaxTriggers (lifetime cap, never reset — this is renown's "if it isn't renowned")
 │                            #   and MaxTriggersPerTurn (reset by StartTurnAction) are INDEPENDENT. 0 = unlimited.
 │                            #   Collapsing them into one field silently turns renown into a creature that grows
-│                            #   every turn. Enforced in CheckStateBasedEffectsAction.EvaluateCardTriggers.
+│                            #   every turn. Both caps and the firing loop live in the ENGINE (TriggeredAbility,
+│                            #   Triggers.FireTriggers); EvaluateCardTriggers supplies MTG's zone-pass filter,
+│                            #   condition context and ResolveEffectAction.
 │                            # AndTriggerCondition — fires only when every sub-condition fires; how an
 │                            #   "intervening if" clause is expressed without a bespoke type per card.
 │                            # OpponentControlsMoreLandsCondition — board question, not an event question;

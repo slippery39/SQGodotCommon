@@ -15,6 +15,7 @@ Immutable, ID-based flat object store with separate relationship maps (`ParentTo
 | `ChoiceActions/ChoiceAction.cs` | Player choice mid-resolution |
 | `GameEvents/GameEvent.cs` | Base event type |
 | `GameStateExtensions.cs` | Extension helpers on GameState |
+| `Triggers.cs` | Triggered abilities: the `TriggeredAbility` component base (lifetime + per-turn caps) and `FireTriggers<T>`, the firing loop. A game subclasses the component and passes what "matches" and "spawns" mean. MtgCore's `TriggeredAbilityComponent` is the first user |
 
 ## Actions
 
@@ -46,6 +47,8 @@ Actions are pure data records with an `Execute` method — no delegates or lambd
 ## PostActionProcessor
 
 A `GameAction` template set on `GameState` that is automatically queued after every non-post-processor standalone action and completed pipeline. Set `IsPostProcessor = true` on an action to prevent recursion.
+
+**Spawned actions run BEFORE the post-processor**, so anything the post-processor does in response to an action — firing triggers, above all — lands after everything that action spawned. The trap, found by the KIN jam: a trigger fired by the END of a turn resolves after the next turn has already begun (its resets included), so **an effect that must matter during the end of the turn cannot be a trigger** — read it as a component at the point it applies instead. Stamp an event with what you need to know at the time ("during your turn") rather than relying on resolution order.
 
 ## ChoiceAction
 

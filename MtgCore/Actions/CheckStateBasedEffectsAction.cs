@@ -354,6 +354,15 @@ public record CheckStateBasedEffectsAction : GameAction
 			_ => 0,
 		};
 
+	/// <summary>
+	/// One zone pass over one card. The loop itself is the engine's (<c>Triggers.FireTriggers</c>);
+	/// what is MTG here is the pass filter, the condition's context and what a match spawns.
+	///
+	/// <paramref name="activeZone"/> is a PASS LABEL, not the card's current zone: a permanent that
+	/// left for hand, exile or library is evaluated in the graveyard pass (see
+	/// <see cref="EvaluateDepartedCardTriggers"/>), so the filter compares the ability's declared zone
+	/// with the pass, never with where the card is.
+	/// </summary>
 	private static GameState EvaluateCardTriggers(
 		GameState state,
 		Card card,
@@ -368,30 +377,15 @@ public record CheckStateBasedEffectsAction : GameAction
 			ControllingPlayerId = card.ControllerId,
 		};
 
-		// Indexed rather than foreach over GetComponents, because a capped ability has to be
-		// written back with an incremented count and the index is the only way to find it again.
-		var components = card.Components;
-		var changed = false;
+		return state.FireTriggers<TriggeredAbilityComponent>(
+			card.Id,
+			pendingEvents,
+			matches: (ability, e, _) =>
+				ability.ActiveInZone == activeZone
+				&& ability.Condition.IsSatisfiedBy(e, triggerContext),
+			spawn: (ability, e, _) =>
 
-		for (int i = 0; i < components.Length; i++)
-		{
-			if (components[i] is not TriggeredAbilityComponent ability)
-				continue;
-
-			if (ability.ActiveInZone != activeZone)
-				continue;
-
-			foreach (var e in pendingEvents)
-			{
-				// Re-checked inside the event loop: two matching events in one batch must not
-				// both fire a once-per-turn ability.
-				if (!ability.CanTrigger)
-					break;
-
-				if (!ability.Condition.IsSatisfiedBy(e, triggerContext))
-					continue;
-
-				state = state.SpawnAction(
+				[
 					new ResolveEffectAction
 					{
 						Effects = ability.Effects,
@@ -399,26 +393,9 @@ public record CheckStateBasedEffectsAction : GameAction
 						SourceCardId = card.Id,
 						TriggerAmount = TriggerAmountOf(e),
 						TriggerSubjectId = EventTriggerCondition.ExtractSubjectId(e),
-					}
-				);
-
-				if (ability.MaxTriggers > 0 || ability.MaxTriggersPerTurn > 0)
-				{
-					ability = ability with
-					{
-						TriggerCountTotal = ability.TriggerCountTotal + 1,
-						TriggerCountThisTurn = ability.TriggerCountThisTurn + 1,
-					};
-					components = components.SetItem(i, ability);
-					changed = true;
-				}
-			}
-		}
-
-		if (changed)
-			state = state.UpdateObject(card.Id, card with { Components = components });
-
-		return state;
+					},
+				]
+		);
 	}
 
 	/// <summary>
