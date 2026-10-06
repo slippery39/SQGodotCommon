@@ -542,4 +542,66 @@ public class CausalSupplyTests
 			);
 		});
 	}
+
+	/// <summary>
+	/// **A planeswalker's loyalty ability is measured — the probe used to throw on every one.**
+	///
+	/// The activation probe collects each ability legal at the start and fires them in turn. A
+	/// planeswalker may use ONE loyalty ability a turn, so the second was refused once the first
+	/// resolved, `AddActions` threw, and the catch discarded the whole probe — including the
+	/// activation that had worked. All 19 planeswalkers in DES read as producing nothing this way.
+	/// The probe now asks the engine (`TryAddAction`) and skips what it refuses.
+	///
+	/// The walker's FIRST ability mills, so the measurement is the one the probe actually takes;
+	/// the second exists only to be refused.
+	/// </summary>
+	[Test]
+	public void APlaneswalkersLoyaltyAbility_IsMeasured_RatherThanThrowingOnTheSecond()
+	{
+		var walker = CardFactory
+			.Planeswalker("Walker", manaCost: 3)
+			.WithLoyalty(3)
+			.WithLoyaltyAbility(
+				"+1: Mill two cards",
+				1,
+				eb => eb.WithMill(2).WithTarget(TargetingStrategy.Self())
+			)
+			.WithLoyaltyAbility(
+				"-1: Draw a card",
+				-1,
+				eb => eb.WithDraw(1).WithTarget(TargetingStrategy.Self())
+			)
+			.Build();
+
+		Card Bear(string name) =>
+			CardFactory.Creature(name, manaCost: 2, power: 2, toughness: 2).Build();
+
+		var reanimate = CardFactory
+			.Spell("Reanimate", manaCost: 2)
+			.WithReanimate()
+			.WithTarget(TargetBuilder.Single().CreatureInYourGraveyard())
+			.Build();
+
+		var features = PoolFeatures.Build(
+			[walker, Bear("Bear1"), Bear("Bear2"), Bear("Bear3"), reanimate]
+		);
+
+		var graveyard = features
+			.DemandsOf("Reanimate")
+			.Single(d => features.SuppliersOf(d).Contains("Bear1"));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				features.Failures.Where(f => f.Contains("Walker")),
+				Is.Empty,
+				"the second loyalty ability must be skipped, not thrown on"
+			);
+			Assert.That(
+				features.CausalSupplyOf(graveyard, "Walker"),
+				Is.GreaterThan(0),
+				"its +1 mills two — a planeswalker that fills your graveyard is a reanimator enabler"
+			);
+		});
+	}
 }

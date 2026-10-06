@@ -643,7 +643,7 @@ public sealed class PoolFeatures
 					}
 					catch (Exception ex)
 					{
-						failures.Add($"{spec} threw {ex.GetType().Name}");
+						failures.Add($"{spec} threw {ex.GetType().Name}: {ex.Message}");
 						return false;
 					}
 				}
@@ -928,7 +928,7 @@ public sealed class PoolFeatures
 				// A card that cannot be played into a bare fixture answers nothing rather than
 				// killing the build. Surfaced, because a card that throws on entering the
 				// battlefield is an engine bug worth knowing about.
-				failures.Add($"probe {card.Name} threw {ex.GetType().Name}");
+				failures.Add($"probe {card.Name} threw {ex.GetType().Name}: {ex.Message}");
 			}
 		}
 	}
@@ -1084,7 +1084,7 @@ public sealed class PoolFeatures
 					// Same rule as every other probe here: a card that cannot be deployed into a
 					// bare fixture answers nothing rather than killing the build, and is surfaced.
 					failures.Add(
-						$"chain probe {card.Name} + {igniterName} threw {ex.GetType().Name}"
+						$"chain probe {card.Name} + {igniterName} threw {ex.GetType().Name}: {ex.Message}"
 					);
 				}
 			}
@@ -1146,7 +1146,7 @@ public sealed class PoolFeatures
 		}
 		catch (Exception ex)
 		{
-			failures.Add($"cost baseline threw {ex.GetType().Name}");
+			failures.Add($"cost baseline threw {ex.GetType().Name}: {ex.Message}");
 			return;
 		}
 
@@ -1224,7 +1224,7 @@ public sealed class PoolFeatures
 			}
 			catch (Exception ex)
 			{
-				failures.Add($"cost probe of demand {d} threw {ex.GetType().Name}");
+				failures.Add($"cost probe of demand {d} threw {ex.GetType().Name}: {ex.Message}");
 			}
 		}
 
@@ -1553,7 +1553,7 @@ public sealed class PoolFeatures
 			{
 				// Same rule as every other probe here: a card that cannot be deployed into a bare
 				// fixture answers nothing rather than killing the build, and is surfaced.
-				failures.Add($"card probe {card.Name} threw {ex.GetType().Name}");
+				failures.Add($"card probe {card.Name} threw {ex.GetType().Name}: {ex.Message}");
 			}
 		}
 
@@ -1749,7 +1749,7 @@ public sealed class PoolFeatures
 				}
 				catch (Exception ex)
 				{
-					_failures.Add($"fodder match {filter} threw {ex.GetType().Name}");
+					_failures.Add($"fodder match {filter} threw {ex.GetType().Name}: {ex.Message}");
 					break;
 				}
 			}
@@ -1857,7 +1857,7 @@ public sealed class PoolFeatures
 		{
 			// Same rule as every other probe here, and the same fallback as `Activate`: the whole
 			// pre-payment state, never a half-paid one.
-			failures.Add($"cast-cost probe {cardName} threw {ex.GetType().Name}");
+			failures.Add($"cast-cost probe {cardName} threw {ex.GetType().Name}: {ex.Message}");
 			return (resolvedWithoutCosts, []);
 		}
 	}
@@ -1972,8 +1972,15 @@ public sealed class PoolFeatures
 			foreach (var activation in activations)
 			{
 				// Re-processed one at a time: paying a cost or resolving an effect can make a later
-				// activation illegal, and the engine is the only thing that knows.
-				var (next, _) = state.AddActions([activation]).ProcessAllActions();
+				// activation illegal, and the engine is the only thing that knows — so ASK it, and
+				// skip what it refuses. Adding unchecked threw on every planeswalker (one loyalty
+				// ability per turn: the second is refused once the first resolves), and the catch
+				// below then discarded the activation that HAD worked along with the one that did not.
+				var (queued, legal) = state.TryAddAction(activation);
+				if (!legal)
+					continue;
+
+				var (next, _) = queued.ProcessAllActions();
 				state = next;
 			}
 
@@ -1984,7 +1991,7 @@ public sealed class PoolFeatures
 			// Same rule as the probe around it: a card that cannot be activated in a bare fixture
 			// answers nothing rather than killing the build, and is surfaced. Falling back to the
 			// pre-activation state gives exactly the old measurement for that card.
-			failures.Add($"activation probe {cardName} threw {ex.GetType().Name}");
+			failures.Add($"activation probe {cardName} threw {ex.GetType().Name}: {ex.Message}");
 			return (before, []);
 		}
 	}

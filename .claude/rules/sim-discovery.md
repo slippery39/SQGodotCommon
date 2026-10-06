@@ -729,8 +729,15 @@ production alone. Fodder is placed inside the activation phase for the same reas
 fixture: a board full of creatures changes what a card produces (Wirewood Conduit adds mana per
 creature you control).
 
-**19 cards throw, all planeswalker loyalty abilities.** They are surfaced by name and fall back to
-the *whole* pre-activation state, so they get exactly the old measurement rather than a partial one.
+**Planeswalkers threw until 2026-10-06 — all 19 in DES.** The loop collected every ability legal at
+the start and added each unchecked; a planeswalker may use one loyalty ability a turn, so the second
+was refused once the first resolved, `AddActions` threw, and the catch discarded the whole probe —
+the activation that HAD worked included. It now asks `TryAddAction` and skips what the engine
+refuses, so a walker is measured on its FIRST legal loyalty ability (not each one — they cannot all
+be used in one turn, and measuring them from separate branches is not built). Pinned by
+`APlaneswalkersLoyaltyAbility_IsMeasured_RatherThanThrowingOnTheSecond`, confirmed to fail without
+the fix. Undiagnosed for weeks because every probe `catch` recorded only the exception TYPE; they
+now record its message too.
 
 **Cast costs are the SPELL half of the same gap.** `ProbeCardProfiles` resolves `spell.Effects`
 directly and never casts, so `Card.AdditionalCastCosts` were never paid. Casting for real was
