@@ -425,8 +425,16 @@ else
 	new PreconstructedSimulatorRunner(n, aiDepth).Run();
 }
 
-Console.WriteLine("Done. Press any key to exit.");
-Console.ReadKey(intercept: true);
+// Only when a person is at the keyboard. Piped input (every scripted run in RunningSimulations.md)
+// has no key to read: ReadKey threw, so every scripted run ended in an unhandled exception and a
+// failure exit code — noise that would also hide a real crash at the end of a long run.
+if (Console.IsInputRedirected)
+	Console.WriteLine("Done.");
+else
+{
+	Console.WriteLine("Done. Press any key to exit.");
+	Console.ReadKey(intercept: true);
+}
 
 // Which set to draft, train or build on. Skips the prompt entirely while only one choice exists.
 //

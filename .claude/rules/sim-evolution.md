@@ -30,7 +30,8 @@ first slots of the field. The console prompts for it: *"Engine file from mode 7?
 
 ```bash
 export MTG_MIN_LANDS=12
-printf '6\n\n4\n8\n25\n3\n6\n20\n0.45\n800\nY\nY\n0\n4\nsim_results/engines_all_<stamp>.json\nmyseed\n' \
+# 19 fields, re-verified 2026-10-06 (set 5 = ALL). Field table: RunningSimulations.md, mode 6.
+printf '6\n\n5\n8\n25\n0\n3\n6\n20\n0.45\n\n800\nY\n0\n4\nsim_results/engines_all_<stamp>.json\n\n\nmyseed\n' \
   | dotnet run --project MtgSimulator.Console -c Release
 ```
 

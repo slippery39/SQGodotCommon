@@ -171,11 +171,12 @@ doesn't recognize (your own designs) land in `_needs_art_<code>.txt` beside the 
 ## Train a draft model
 
 ```
-printf '4\n\n\n300\n8\n1\n3\nn\ncscfinal\n' | dotnet run --project MtgSimulator.Console -c Release
+printf '4\n\n\n300\n8\n1\n2\nn\ncscfinal\n' | dotnet run --project MtgSimulator.Console -c Release
 ```
 
 Fields: mode, AI depth (blank=3), format (blank=Booster), drafts, seats, generations, **set
-choice** (index printed by the menu — read it, don't hardcode), train-from-scratch, seed. The
+choice** (index printed by the menu — read it, don't hardcode; `2` = CSC since HLM retired, it
+was `3`), train-from-scratch, seed. The
 `n` is load-bearing — answering the default merges into the old model instead of replacing it.
 Writes `sim_results/draft_training_<code>.json`. 300 drafts ≈ 25 min.
 
@@ -229,7 +230,7 @@ Mode 4 is interactive, but the console reads plain `Console.ReadLine()`, so it d
 stdin — no CLI-argument path was added because piping needs no shipped code:
 
 ```
-printf '4\n\n\n300\n8\n1\n3\nn\ncscfinal\n' | dotnet run --project MtgSimulator.Console -c Release
+printf '4\n\n\n300\n8\n1\n2\nn\ncscfinal\n' | dotnet run --project MtgSimulator.Console -c Release
 ```
 
 Fields in order: mode, AI depth (blank = 3), format (blank = Booster), drafts, seats, generations,
@@ -287,12 +288,12 @@ Reference rate, measured: 5 drafts = 140 games = 28s, so ~5.6 games/sec. 300 dra
 ### Evolve a constructed metagame (mode 6)
 
 ```
-printf '6\n\n3\n8\n30\n3\n6\n20\nY\n<seed>\n' | dotnet run --project MtgSimulator.Console -c Release
+printf '6\n\n2\n16\n30\n0\n3\n6\n20\n\n\n300\nY\n0\n0\n\n<seed>\n' | dotnet run --project MtgSimulator.Console -c Release
 ```
 
-Fields in order: mode, AI depth (blank = 2), set (the index printed by `ReadSet` — **read the
-menu, do not hardcode it**), decks, generations, mutants, games/matchup, final games/matchup,
-seed-from-draft-model, seed. Count the prompts in the output rather than trusting that list —
+17 fields, 19 with an engine file — verified 2026-10-06; the per-field table and defaults are in
+`RunningSimulations.md`. Set `2` is CSC (**read the menu, do not hardcode it** — it has shifted
+twice). Count the prompts in the output rather than trusting any written list —
 mode 4's documented command was wrong for exactly this reason.
 
 Reference cost: 8 decks x 30 generations x 3 mutants x 6 games = ~1 300 games/generation (a

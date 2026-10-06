@@ -6,12 +6,10 @@ results land, and what to read before trusting a run.
 Every command and field list here was **verified by running it** on 2026-09-05, not copied from
 documentation. See "Known documentation drift" at the bottom.
 
-> **STALE SINCE THE COLOUR WORK — the piped `printf` field lists are NOT re-verified.** This file
-> was written on another machine on 2026-09-05..07 and merged on 2026-10-06, after Hollowmere was
-> retired, colour identity reached the evolver and the draft, and culling was removed. The set
-> menu below is corrected; every piped command still carries the OLD set index (HLM was 2) and may
-> mis-answer prompts that were added or removed since. Before piping one, run the mode
-> interactively and count the prompts. Its worked-example numbers predate colour too.
+> **Written on another machine (2026-09-05..07); every piped command re-verified against
+> `Program.cs` on 2026-10-06**, after Hollowmere retired, colour identity reached the evolver and
+> culling was removed. The mode 6 command with an engine file and the mode 7 command were also run.
+> Measured figures in the worked example (costs, win rates) still predate colour.
 
 ---
 
@@ -72,7 +70,8 @@ what makes it converge on midrange piles.
 3 = Combo Proving Ground (CMB, 21)
 ```
 
-Read off mode 7 on 2026-10-06. Modes 6 and 7 get options 4 and 5 (the unions). **The menu has
+Read off mode 7 on 2026-10-06. Modes 6 and 7 get options 4 and 5 (the unions); **modes 3 and 4
+show only 1–3**, so CSC is `2` in every mode. **The menu has
 shifted TWICE** — CMB was inserted, then Hollowmere (HLM, once option 2) retired — so a piped
 command written against either older numbering runs a different set silently.
 
@@ -90,15 +89,15 @@ command written against either older numbering runs a different set silently.
 The console is plain `Console.ReadLine()`, so piping works. **Count the prompts in the output rather
 than trusting any written field list** — the field count changes with your answers.
 
-The final `Console.ReadKey` throws `InvalidOperationException` when stdin is redirected. It fires
-*after* all files are written, so the output is safe. Ignore it.
+A piped run ends with `Done.` and exit code 0. (Until 2026-10-06 the final `Console.ReadKey` threw
+when stdin was redirected, so every scripted run ended in an unhandled exception.)
 
 ### Mode 6 — evolve a metagame
 
 17 fields with no engine file, **19 with one** (an engine file adds two prompts).
 
 ```bash
-printf '6\n\n3\n8\n30\n0\n3\n6\n20\n\n300\nY\nY\n0\n0\n\nmyseed\n' \
+printf '6\n\n2\n16\n30\n0\n3\n6\n20\n\n\n300\nY\n0\n0\n\nmyseed\n' \
   | dotnet run --project MtgSimulator.Console -c Release
 ```
 
@@ -107,15 +106,15 @@ printf '6\n\n3\n8\n30\n0\n3\n6\n20\n\n300\nY\nY\n0\n0\n\nmyseed\n' \
 | 1 | Mode | — |
 | 2 | AI depth | blank = **2** |
 | 3 | Which set | 1 |
-| 4 | How many decks | 8 |
+| 4 | How many decks | 16 = 15 colour identities + wildcard |
 | 5 | How many generations | 30 |
 | 6 | …how many are exploration generations | 0 = off |
 | 7 | Mutants per deck per generation | 3 |
 | 8 | Games per matchup while evolving | 6 |
 | 9 | Games per matchup in the final round-robin | 20 |
-| 10 | Minimum deck difference | 0.35 |
-| 11 | Pre-simulation decks | 300, 0 = skip |
-| 12 | Cull non-viable decks (Y/n) | Y |
+| 10 | Minimum deck difference | 0.15 |
+| 11 | Minimum difference between two ENGINE decks | same as #10 |
+| 12 | Pre-simulation decks | 300, 0 = skip |
 | 13 | Seed from the draft model (Y/n) | Y |
 | 14 | Synergy (concept) deck slots | 0 = off |
 | 15 | Gauntlet games per reference deck | 0 = off |
@@ -132,7 +131,7 @@ means answering `30` then `20`.
 6 fields.
 
 ```bash
-printf '7\n\n5\n10\n30\nmyseed\n' | dotnet run --project MtgSimulator.Console -c Release
+printf '7\n\n4\n10\n30\nmyseed\n' | dotnet run --project MtgSimulator.Console -c Release
 ```
 
 mode · AI depth *(blank=2)* · set · solitaire games per engine · engines to highlight · seed
@@ -143,7 +142,7 @@ least `engine slots × 3`, because that is the pool mode 6 samples from (see the
 ### Mode 4 — train draft pickers
 
 ```bash
-printf '4\n\n\n300\n8\n1\n3\nn\ncscfinal\n' | dotnet run --project MtgSimulator.Console -c Release
+printf '4\n\n\n300\n8\n1\n2\nn\ncscfinal\n' | dotnet run --project MtgSimulator.Console -c Release
 ```
 
 mode · AI depth · format *(blank = Booster)* · drafts · seats · generations · set · **train-from-scratch** · seed
@@ -269,7 +268,7 @@ quantity, never fixing) and every opening hand contains three lands by rule.
 
 ```bash
 dotnet build MtgSimulator.Console/MtgSimulator.Console.csproj -c Release
-printf '7\n\n5\n10\n30\nmyseed\n' | dotnet run --project MtgSimulator.Console -c Release
+printf '7\n\n4\n10\n30\nmyseed\n' | dotnet run --project MtgSimulator.Console -c Release
 ```
 
 Highlight is 30 rather than the default 8 on purpose: mode 6 samples from the top
@@ -281,32 +280,29 @@ Copy the exact filename.
 ### Step 2 — the evolution run
 
 ```bash
-printf '6\n\n5\n14\n30\n20\n3\n6\n20\n\n300\nn\nY\n0\n4\nsim_results/engines_des_<stamp>.json\n10\n\nmyseed\n' \
+printf '6\n\n4\n14\n30\n20\n3\n6\n20\n\n\n300\nY\n0\n4\nsim_results/engines_des_<stamp>.json\n10\n\nmyseed\n' \
   | dotnet run --project MtgSimulator.Console -c Release
 ```
 
 | Prompt | Answer | Why |
 |---|---|---|
-| Which set | `5` | DES |
+| Which set | `4` | DES |
 | How many decks | `14` | 10 engine + 4 curve |
 | Generations | `30` | Total |
-| …exploration | `20` | Playset-sized moves, no culling while it runs |
+| …exploration | `20` | Playset-sized moves, then the Harvest rebuilds each deck |
 | Mutants / games / final | `3` `6` `20` | Defaults |
-| Min difference | blank | 0.35 |
+| Min difference / engine min difference | blank, blank | 0.15, same |
 | Pre-simulation decks | `300` | **Do not skip** if no values table exists yet |
-| Cull | `n` | See below |
 | Seed from draft model | `Y` | |
 | Concept slots | `0` | Engine slots do this job; don't run both |
 | Gauntlet games | `4` | See below |
 | Engine file | from step 1 | Unlocks the next two prompts |
-| Engine slots | `10` | The other 4 become Aggro / Midrange / Control |
+| Engine slots | `10` | The other 4 are curve decks, each with a colour identity (by slot position) and an Aggro / Midrange / Control profile |
 | Exclusions | blank | First run |
 
-**Why cull `n`:** engine slots are never culled regardless — mode 7 already judged them on whether
-they *assemble*, and a win-rate floor would delete exactly the decks the engine file exists to keep.
-So culling only touches the 4 curve decks, and it is measured harmful: culling resets that slot's
-`DeckHistory`, so the deck restarts not just bad but **blind**. Over 100 generations the two slots
-culled once reached age 78/95 and finished best; the slots culled 10 and 13 times never recovered.
+**Culling is gone** (removed 2026-09-11), so there is no cull prompt. The finding that drove it: a
+cull reset the slot's `DeckHistory`, so the deck restarted not just bad but **blind** — over 100
+generations the slots culled once finished best, the ones culled 10 and 13 times never recovered.
 
 **Why gauntlet `4`:** a closed round-robin averages exactly 50% by construction, so a field that
 converges on something mediocre reports itself perfectly healthy. Measured: the evolved ALL field
@@ -377,10 +373,10 @@ A scenario is **serialized state**, not a `GameStateSnapshot` report.
 
 ## Known documentation drift
 
-`MtgSimulator/CLAUDE.md` (§"Running it") carries a mode 6 pipe recipe with **10 fields**. It
-predates the exploration-generations, min-difference, pre-simulation, cull, concept-slots, gauntlet
-and engine-file prompts, and will mis-answer 7 of them if pasted. The 17/19-field version in this
-document is the verified one.
+A 10-field mode 6 recipe once lived in `MtgSimulator/CLAUDE.md` and then `Commands.md`; it predated
+seven prompts and mis-answered every one after the first gap. It was replaced on 2026-10-06, along
+with the recipe in `.claude/rules/sim-evolution.md`, after the cull prompt was removed and an
+engine-difference prompt added. **Every mode 6 recipe in the repo is now 17 or 19 fields.**
 
 The general rule the project keeps relearning: **count the prompts in the output**, never trust a
 written field list — including this one, after the next prompt is added.
