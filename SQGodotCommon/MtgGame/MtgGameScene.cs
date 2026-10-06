@@ -115,7 +115,10 @@ public partial class MtgGameScene : Node2D
 
 	public override void _Ready()
 	{
-		var setup = GameManager.Instance.GetService<DeckSetupData>();
+		// Opened directly (a capture, F6 in the editor): play two random premades.
+		var setup = GameManager.Instance.HasService<DeckSetupData>()
+			? GameManager.Instance.GetService<DeckSetupData>()
+			: new DeckSetupData(new DeckChoice.RandomPremade(), new DeckChoice.RandomPremade());
 		_manager = new MtgGameManager(setup, cardValues: LoadCardValues());
 		_boardUI = GetNode<BoardUI>("BoardUI");
 		_hand = GetNode<Hand2D>("Hand2D");
