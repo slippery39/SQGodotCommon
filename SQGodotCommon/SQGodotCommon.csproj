@@ -1,6 +1,7 @@
 <Project Sdk="Godot.NET.Sdk/4.6.3">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- net9.0, not 10: Godot's Android export template refuses anything newer. Commands.md, "Android build". -->
+    <TargetFramework>net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
   </PropertyGroup>
   <ItemGroup>
