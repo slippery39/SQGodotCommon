@@ -28,6 +28,9 @@ public static class MtgCardSkin
 
 	private static readonly Color Ink = MtgUiStyles.Ink;
 
+	/// The mana symbol on a gem — card pips and the mana bar: near-black, so it reads on all five.
+	public static readonly Color ManaSymbolInk = new(0.12f, 0.08f, 0.05f, 0.9f);
+
 	/// Brighter than the frame colours — small symbols need it (godot-frontend.md).
 	private static readonly System.Collections.Generic.Dictionary<ManaColor, Color> GemColors =
 		new()
@@ -116,14 +119,23 @@ public static class MtgCardSkin
 		{
 			for (var i = 0; i < pips[colour]; i++)
 			{
-				row.AddChild(
+				// SelfModulate on the gem: Modulate would also tint the symbol sitting on it.
+				var gem = new Sprite2D
+				{
+					Texture = Gem,
+					SelfModulate = GemColors[colour],
+					Position = new Vector2(x, 0),
+				};
+				var symbol = MtgSymbols.Mana(colour);
+				gem.AddChild(
 					new Sprite2D
 					{
-						Texture = Gem,
-						Modulate = GemColors[colour],
-						Position = new Vector2(x, 0),
+						Texture = symbol,
+						Scale = Vector2.One * (18f / symbol.GetWidth()),
+						Modulate = ManaSymbolInk,
 					}
 				);
+				row.AddChild(gem);
 				x -= step;
 			}
 		}

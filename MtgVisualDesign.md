@@ -264,3 +264,12 @@ the old row until step 5.
 faceted lozenge tinted per state, colour gems reuse `gem.png` with `MtgCardSkin.GemColor`. The
 hand's "playable" glow now asks the engine (`CostEngine.ValidateManaPayment`, both tracks) instead
 of comparing generic mana in the UI — it lit a blue card for a player with only White.
+
+**Step 6 - icons (2026-10-06).** 19 game-icons.net symbols in `MtgGame/Assets/Icons/` (credited in
+the new root `CREDITS.md`): five mana colours and every keyword `KeywordNames` emits, plus Cover.
+`MtgSymbols` is the one registry — icon, tint, and a one-line meaning written for THIS engine
+(no blocking: Flying = "only Flying or Reach can attack it"). Tokens show keywords as symbol discs
+along the top with the meaning on hover (MouseFilter Pass); card pips and mana-bar gems carry the
+colour's symbol in near-black ink. Found: a spent gem's dark symbol on a dark gem hid WHICH colour
+was spent — a spent gem keeps a dim, readable symbol. A capture cannot hover, so the tooltips are
+wired but unseen until played.

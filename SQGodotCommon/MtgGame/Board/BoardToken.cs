@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ImmutableGameObjects;
 using MtgCore;
 
@@ -45,7 +46,7 @@ public partial class BoardToken : Control
 	private TextureRect _art = null!;
 	private TextureRect _rim = null!;
 	private Label _name = null!;
-	private Label _keywords = null!;
+	private HBoxContainer _keywords = null!;
 	private Label _power = null!;
 	private Label _toughness = null!;
 	private Control _powerDisc = null!;
@@ -96,7 +97,15 @@ public partial class BoardToken : Control
 			new Vector2(plate.Size.X - 12, 30)
 		);
 
-		_keywords = Text(this, 13, Cream, outline: 5, new Vector2(10, 8), new Vector2(130, 22));
+		_keywords = new HBoxContainer
+		{
+			Position = new Vector2(0, 2),
+			Size = new Vector2(TokenSize.X, 30),
+			Alignment = BoxContainer.AlignmentMode.Center,
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		_keywords.AddThemeConstantOverride("separation", 2);
+		AddChild(_keywords);
 
 		(_powerDisc, _power) = Disc(new Vector2(-10, 142));
 		(_toughnessDisc, _toughness) = Disc(new Vector2(TokenSize.X - 46, 142));
@@ -140,9 +149,10 @@ public partial class BoardToken : Control
 			creature != null ? MtgCardMapper.KeywordNames(creature, stats!) : new List<string>();
 		if (creature is { CoverTurns: > 0 })
 			keywords.Add($"Cover {creature.CoverTurns}");
-		// ponytail: text until step 6 swaps in an icon per keyword.
-		_keywords.Text = string.Join(" · ", keywords);
-		Fit(_keywords, 13, 9);
+		foreach (var child in _keywords.GetChildren())
+			child.QueueFree();
+		foreach (var keyword in keywords)
+			_keywords.AddChild(KeywordDisc(keyword));
 
 		var ready =
 			canAttack
@@ -183,6 +193,40 @@ public partial class BoardToken : Control
 		};
 		(parent ?? this).AddChild(rect);
 		return rect;
+	}
+
+	/// <summary>
+	/// One keyword as a symbol on a small disc, its meaning on hover (MtgSymbols). Pass, not
+	/// Ignore: Ignore shows no tooltip, Stop would eat the token's click (godot-frontend.md).
+	/// A keyword with no symbol yet shows its initials rather than vanishing.
+	/// </summary>
+	private static Control KeywordDisc(string keyword)
+	{
+		var symbol = MtgSymbols.Keyword(keyword);
+		var disc = new TextureRect
+		{
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			Texture = DiscTex,
+			CustomMinimumSize = new Vector2(30, 30),
+			MouseFilter = MouseFilterEnum.Pass,
+			TooltipText = symbol != null ? $"{keyword}: {symbol.Meaning}" : keyword,
+		};
+		if (symbol != null)
+			disc.AddChild(
+				new TextureRect
+				{
+					ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+					Texture = symbol.Icon,
+					Position = new Vector2(6, 6),
+					Size = new Vector2(18, 18),
+					SelfModulate = symbol.Tint,
+					MouseFilter = MouseFilterEnum.Ignore,
+				}
+			);
+		else
+			Text(disc, 12, Cream, outline: 4, Vector2.Zero, disc.CustomMinimumSize).Text =
+				string.Concat(keyword.Split(' ').Select(w => w[0]));
+		return disc;
 	}
 
 	private (Control, Label) Disc(Vector2 position)

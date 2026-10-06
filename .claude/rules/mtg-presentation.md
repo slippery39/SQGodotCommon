@@ -62,3 +62,5 @@ Card art is keyed by a slug of the card name (`CardArtLoader`). Hollowmere has e
 **The battlefield is compact `BoardToken`s, not cards** (`BattlefieldZone.AsTokens`); the full card is the hover preview. There is no land row — a played land becomes mana and goes to exile. To capture a board with permanents on it: `./Run-Godot.ps1 MtgGame/MtgGameScene.tscn -Capture shots/x -GameArgs '--autoplay=5'`.
 
 **Affordability is the engine's question** — `CostEngine.ValidateManaPayment` checks generic AND colour. The hand glow compared generic mana itself and lit cards the player could not cast; never re-derive a rule in the UI.
+
+**Symbols and their meanings live in `MtgSymbols`** (keywords, mana colours), credited in root `CREDITS.md`. A new keyword in `MtgCardMapper.KeywordNames` needs an entry there, or its token disc falls back to initials. Use the `/add-icon` skill.

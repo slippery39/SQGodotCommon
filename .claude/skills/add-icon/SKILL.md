@@ -11,7 +11,7 @@ with a symbol, a number, and the words in a hover.
 
 | Game | Icons folder | Where a symbol's meaning lives |
 |---|---|---|
-| MTG | `SQGodotCommon/MtgGame/Assets/Icons/` | not built yet — see step 5 |
+| MTG | `SQGodotCommon/MtgGame/Assets/Icons/` | `MtgSymbols` (keywords, mana colours) |
 | KIN (`kin-pivot` branch) | `SQGodotCommon/KinGame/Art/icons/` | `KinSymbols` |
 
 ## 1. Find a name that EXISTS
@@ -57,8 +57,7 @@ yet** — it must ship with the game. "Some icons from game-icons.net" is not at
 ## 5. Give it a meaning — an icon nobody can read is noise
 
 - **Write its meaning ONCE, in one registry** (name, icon, tint, a one-line meaning) that every
-  tooltip, legend and hover panel reads. Two copies of a meaning drift. MTG has no registry yet: the
-  first icon is the moment to add one beside `MtgCardTheme`, not to hardcode a tooltip.
+  tooltip, legend and hover panel reads. Two copies of a meaning drift. MTG's is `MtgSymbols`, beside `MtgCardTheme` — add the entry there, never a hardcoded tooltip.
 - **Every symbol says what it means on hover.** A Control showing it uses `MouseFilter.Pass` +
   `TooltipText` (Pass shows the tip AND lets the click through; Ignore shows nothing, Stop eats the
   click). Over cards, hover is physics picking and a Control can block it —

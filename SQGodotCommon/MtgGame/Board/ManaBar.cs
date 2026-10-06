@@ -76,14 +76,28 @@ public partial class ManaBar : PanelContainer
 				new Vector2(34, 34),
 				left > 0 ? MtgCardSkin.GemColor(colour) : new Color(0.25f, 0.22f, 0.2f)
 			);
-			stone.TooltipText = $"{colour}: {left} of {max} left this turn";
-			stone.MouseFilter = MouseFilterEnum.Pass;
-			var count = Text(20, Colors.White);
+			// Spent: the gem goes dark but its symbol stays readable, or you cannot tell WHICH colour.
+			var symbol = Picture(
+				MtgSymbols.Mana(colour),
+				new Vector2(22, 22),
+				left > 0 ? MtgCardSkin.ManaSymbolInk : new Color(0.6f, 0.55f, 0.48f)
+			);
+			symbol.Position = new Vector2(6, 6);
+			symbol.Size = symbol.CustomMinimumSize;
+			stone.AddChild(symbol);
+
+			// Gem and count as one hover target: the symbol says WHICH colour, the number how much.
+			var pair = new HBoxContainer
+			{
+				MouseFilter = MouseFilterEnum.Pass,
+				TooltipText = $"{colour}: {left} of {max} left this turn",
+			};
+			pair.AddThemeConstantOverride("separation", 2);
+			pair.AddChild(stone);
+			var count = Text(22, left > 0 ? Colors.White : MtgUiStyles.DimBorder);
 			count.Text = $"{left}";
-			count.Size = stone.CustomMinimumSize;
-			count.HorizontalAlignment = HorizontalAlignment.Center;
-			stone.AddChild(count);
-			_colours.AddChild(stone);
+			pair.AddChild(count);
+			_colours.AddChild(pair);
 		}
 	}
 
