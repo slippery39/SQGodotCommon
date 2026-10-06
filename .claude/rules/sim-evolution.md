@@ -768,3 +768,62 @@ the draft prior and the failure mode is "reads unremarkable" rather than "reads 
 Draft, random pools and `Decklist.Materialize` all route through it. Every one of them used to pad
 with Plains, which was fine with no colours and silently fatal with them. It allocates by MEASURED
 DEMAND — sources needed to cast a card on the turn it costs — not by raw pip count.
+
+## Exploration and optimisation are two phases, and the Harvest sits between them
+
+**Merged 2026-10-06 from work done on another machine (2026-09-07), designed and measured BEFORE
+colour identity and before culling was removed.** Re-measure before quoting its numbers.
+
+The first `explorationGenerations` generations EXPLORE: every slot mutates (see below), with
+playset-sized moves only, to find out which cards belong. At the boundary, `HarvestField`
+rebuilds each deck from what exploration MEASURED — per-slot games-in-hand rates
+(`DeckHistory.KeepScore`) — rather than handing optimisation wherever the last accepted mutation
+left it. Then optimisation hill-climbs from those lists. Pinned by `HarvestTests`.
+
+- **The pool lock is a CAP in the harvest, never a filter.** A card already in the deck stays a
+  candidate up to the copies it holds; only ADDING is locked to the core. As a filter, a 2-4
+  card core could not fill 40 spells, the build failed `IsValid`, and the slot came back
+  unharvested (3 of 21 on DES).
+- **A core that cannot fill a deck does not lock at all** (`DeckCore.CanFillDeck`) — in the
+  harvest and in `DeckBuilder.Mutate` alike. Otherwise the deck is frozen, not searching.
+- **The harvested deck must carry the slot's COLOUR identity.** Harvest predates colour and
+  built from `Decklist.Empty`, which has none; merged as written, every colour slot would have
+  lost its identity and the next `ValidateFieldIdentities` would have thrown.
+  `AHarvestedDeckKeepsItsColourIdentity` pins it. Any new operator that builds a deck from
+  `Decklist.Empty` must copy `Identity` across — it is optional on the record, so nothing else
+  will catch it.
+
+### Exploration always mutates; only optimisation leaves winners alone
+
+`MutantsFor` returned 0 for any slot at or above `StableRate` (0.60). **That rule predates the
+exploration/optimisation split, and applying it during exploration inverts the phase's purpose** —
+exploration exists to find out WHICH CARDS BELONG, and the deck that is winning is the one whose
+list is most worth learning from.
+
+Measured on a 21-deck DES run before the fix:
+
+| slot | real | dry | kept | final rate |
+|---|---|---|---|---|
+| Engine-Kilnmother Vess (Twin) | **1** | 1 | **0** | **76.7% — first in the field** |
+
+`lastRate` starts at 0 so everyone explores once; Twin finished generation 1 at 76%, which put it
+above `StableRate`, and it was **never offered a change again**. The best deck in the field was
+frozen at its seed, so its win rate is a fact about seeding rather than about the search.
+
+`MutantsFor(rate, exploring)` now ignores the rate while exploring and keeps the rule for
+optimisation, which is where it belongs: once the card list is settled, re-tuning a deck that
+already clears the bar is what the rule exists to prevent.
+
+**This is NOT the narrow-core dry problem and the two are easy to confuse.** A slot below
+`StrugglingRate` already had the full budget and still produced nothing — that is `TryMutate`
+failing to find a legal move in a 2–5 card core pool. This rule silenced a slot for the opposite
+reason: for winning. Read the `real`/`dry`/`kept` columns together, since `real 1, dry 1` and
+`real 1, dry 7` have completely different causes.
+
+The run header reports which rule is in force, because a stale self-report is how this went
+unnoticed. Pinned by `MutationBudgetTests`, whose optimisation half is the control that keeps the
+exploration half a statement about the phase rather than about the rule being deleted.
+
+**Built since — that is the Harvest, above.** This paragraph once recorded it as open: at the end
+of exploration the field was whatever the last accepted mutation left, not a list built from
+what exploration learned.

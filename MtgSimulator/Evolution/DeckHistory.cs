@@ -62,6 +62,18 @@ public sealed class DeckHistory
 	public int DeckGames => _cards.Count == 0 ? 0 : _cards.Values.Max(c => c.DeckGames);
 
 	/// <summary>
+	/// Every card this slot has ever had in a deck — its whole candidate set, including cards from
+	/// mutants that were REJECTED, because every scheduled candidate's games are folded in here.
+	///
+	/// That is what makes a harvest possible: exploration's findings are not just the cards that
+	/// survived, they are the cards that were tried and measured.
+	/// </summary>
+	public IEnumerable<string> Names => _cards.Keys;
+
+	/// Games in hand for one card, so a caller can tell "measured and mediocre" from "never drawn".
+	public int GamesOf(string name) => _cards.TryGetValue(name, out var c) ? c.Games : 0;
+
+	/// <summary>
 	/// How well this card itself has done in this deck, in percentage points against the
 	/// deck's own base rate. The baseline is the DECK's rate, not a global one — the question
 	/// is whether the card is pulling its weight in the shell it is actually in.

@@ -1,0 +1,271 @@
+using MtgCore;
+using NUnit.Framework;
+
+namespace MtgSimulator.Tests;
+
+/// <summary>
+/// **At the exploration/optimisation boundary, rebuild each deck from what exploration measured.**
+///
+/// Without it the field handed to optimisation is wherever the last accepted mutation left it — a
+/// hill-climb endpoint rather than a summary of the run's findings — and two generations of
+/// evidence about which cards work in this shell is discarded.
+/// </summary>
+[TestFixture]
+public class HarvestTests
+{
+	private static readonly CardSet Set = SetRegistry.Get("CMB");
+
+	private static IReadOnlyList<string> Spells =>
+		[
+			.. Set
+				.Cards.Where(c => !c.HasSubtype("Land"))
+				.Select(c => c.Name)
+				.Order(StringComparer.Ordinal),
+		];
+
+	private static ConstructedValues Values() => new(new CardStatAccumulator().ToData(), null);
+
+	private static MetagameEvolver Evolver() =>
+		new(Set, deckCount: 2, generations: 1, mutantsPerDeck: 1);
+
+	/// <summary>
+	/// A history in which <paramref name="hero"/> is drawn in games that are won and
+	/// <paramref name="dud"/> in games that are lost, with every other card split evenly so the
+	/// deck's own base rate stays near 50% and the two deltas are about the card, not the shell.
+	/// </summary>
+	private static DeckHistory History(string hero, string dud, int games = 200)
+	{
+		var acc = new CardStatAccumulator();
+		var all = Spells.ToList();
+
+		for (var i = 0; i < games; i++)
+		{
+			var won = i % 2 == 0;
+			// Everything is IN the deck every game; what varies is what was DRAWN, which is the
+			// quantity games-in-hand counting is built on.
+			var drawn = new List<string> { won ? hero : dud };
+			drawn.AddRange(all.Where(n => n != hero && n != dud).Take(6));
+			acc.Add(drawn, all, won);
+		}
+
+		return new DeckHistory(acc.ToData());
+	}
+
+	private static Decklist Deck(params string[] names)
+	{
+		var d = Decklist.Empty("Slot") with { Lands = 20 };
+		foreach (var n in names)
+			d = d.WithCopies(n, 4);
+		return d;
+	}
+
+	[Test]
+	public void ItPlaysTheCardsThatWonAndDropsTheOnesThatLost()
+	{
+		var hero = Spells[0];
+		var dud = Spells[1];
+
+		var harvested = Evolver()
+			.Harvest(
+				Deck(dud),
+				core: null,
+				DeckBuilder.DeckProfile.Any,
+				History(hero, dud),
+				Values()
+			);
+
+		TestContext.Out.WriteLine(harvested.Format(ConstructedGameSetup.PoolIndex(Set.Cards)));
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				harvested.CopiesOf(hero),
+				Is.EqualTo(Decklist.MaxCopies),
+				"the card measured winning should be a playset in the harvested list"
+			);
+			Assert.That(
+				harvested.CopiesOf(dud),
+				Is.LessThan(harvested.CopiesOf(hero)),
+				"the card measured losing must not outrank it — the starting deck held only the dud, "
+					+ "so this also shows the harvest is not just echoing its input"
+			);
+			Assert.That(harvested.IsValid, Is.True);
+			Assert.That(harvested.Lands, Is.EqualTo(20), "lands are carried over, not harvested");
+		});
+	}
+
+	/// <summary>
+	/// **The pool lock, which is the check that keeps a harvest on-archetype.** `DeckBuilder.Mutate`
+	/// draws only from a core's identity cards; a harvest that ignored that could reach cards
+	/// mutation never could, and the good-stuff drift the lock exists to prevent would re-enter
+	/// through this door.
+	/// </summary>
+	[Test]
+	public void ItNeverReachesOutsideAPoolLockedCore()
+	{
+		// **Wide enough to FILL, or the test proves nothing.** A 40-spell capacity needs ten
+		// playsets; with a six-card core the harvest cannot fill, falls back to the current deck,
+		// and the outside card is absent for the wrong reason. The first version of this test was
+		// vacuous exactly that way.
+		var inCore = Spells.Take(12).ToList();
+		var outside = Spells.Last();
+		Assert.That(inCore, Does.Not.Contain(outside), "fixture: the outside card must be outside");
+
+		var core = new DeckCore(
+			"locked",
+			[new CoreSlot("Payoff", [.. inCore], 4, IsIdentity: true)]
+		);
+
+		// The dud is INSIDE the core and the hero OUTSIDE it, so a harvest that ignored the lock
+		// would visibly reach for the hero — it is the single best-measured card available.
+		var harvested = Evolver()
+			.Harvest(
+				Deck(inCore[0]),
+				core,
+				DeckBuilder.DeckProfile.Any,
+				History(outside, inCore[0]),
+				Values()
+			);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				harvested.IsValid,
+				Is.True,
+				"the harvest must have actually built something, or the lock is untested"
+			);
+			Assert.That(
+				harvested.CopiesOf(outside),
+				Is.Zero,
+				"a card outside the core's identity is off-archetype however well it measured"
+			);
+			Assert.That(
+				harvested.Spells.Keys,
+				Is.SubsetOf(inCore),
+				"every card in a pool-locked harvest comes from the core's identity"
+			);
+		});
+	}
+
+	/// <summary>
+	/// **A narrow core must still harvest, and the pool lock is what nearly stopped it.**
+	///
+	/// `Mutate`'s lock is asymmetric — it constrains what may be ADDED and leaves cutting alone —
+	/// so a deck legitimately holds off-identity cards that seeding put there. Reading the lock as
+	/// a candidate filter means a 4-card core offers at most 16 spells against a 40-spell capacity,
+	/// the build cannot fill, and the harvest falls back. Measured on a 21-deck DES run: 16 of 21
+	/// slots harvested, and the three that did not were the 2-, 3- and 4-card cores — the slots the
+	/// engine mechanism exists for.
+	///
+	/// **A core that cannot fill a deck does not lock the slots it cannot reach**, so the flex is
+	/// exactly what a narrow-core slot searches: find the support cards that serve this engine. The
+	/// core's own minimums still carry the archetype.
+	///
+	/// This test previously asserted the opposite — that an off-identity card could be kept but
+	/// never added to — which was the rule that froze the 2-, 3- and 4-card cores. `DeckCore.Identity`
+	/// still binds strictly wherever the core CAN fill a deck; `ItNeverReachesOutsideAPoolLockedCore`
+	/// is that half.
+	/// </summary>
+	[Test]
+	public void ANarrowCoreHarvestsItsFlex_AndCanPromoteTheBestSupport()
+	{
+		var identity = Spells.Take(2).ToList();
+		var flex = Spells.Skip(2).Take(10).ToList();
+
+		var core = new DeckCore(
+			"narrow",
+			[new CoreSlot("Payoff", [.. identity], 4, IsIdentity: true)]
+		);
+
+		// The seeded shape: the core plus off-identity flex, exactly what a pool-locked slot looks
+		// like in a real run. Two flex cards are held at ONE copy so the cap has something to bind
+		// on — a harvest that ignored it would happily take them to four.
+		var current = Decklist.Empty("Narrow") with
+		{
+			Lands = 20,
+		};
+		foreach (var n in identity)
+			current = current.WithCopies(n, 4);
+		foreach (var n in flex.Take(8))
+			current = current.WithCopies(n, 4);
+		current = current.WithCopies(flex[8], 1).WithCopies(flex[9], 1);
+
+		var harvested = Evolver()
+			.Harvest(
+				current,
+				core,
+				DeckBuilder.DeckProfile.Any,
+				History(flex[9], flex[0]),
+				Values()
+			);
+
+		Assert.Multiple(() =>
+		{
+			Assert.That(
+				harvested,
+				Is.Not.EqualTo(current),
+				"a 2-card core must still harvest its flex rather than falling back"
+			);
+			Assert.That(harvested.IsValid, Is.True);
+			Assert.That(
+				core.Holds(harvested),
+				Is.True,
+				"the core's minimums are what carry the archetype once the lock is off"
+			);
+
+			// `flex[9]` is off-identity, was held at ONE copy, and is the best-measured card in the
+			// slot's history. Promoting it is the whole point — this is the search finding support
+			// for the engine, and it is what the old cap forbade.
+			Assert.That(
+				harvested.CopiesOf(flex[9]),
+				Is.GreaterThan(current.CopiesOf(flex[9])),
+				"a narrow core must be able to promote the support card its own games rated best"
+			);
+		});
+	}
+
+	/// <summary>
+	/// With nothing measured there is nothing to harvest, and the current deck stands. A step that
+	/// returned an empty or half-built list here would hand optimisation something worse than the
+	/// hill-climb endpoint it replaced.
+	/// </summary>
+	[Test]
+	public void WithNoEvidence_TheCurrentDeckStands()
+	{
+		var current = Deck(Spells[0], Spells[1], Spells[2]);
+		var empty = new DeckHistory(new CardStatAccumulator().ToData());
+
+		Assert.That(
+			Evolver().Harvest(current, null, DeckBuilder.DeckProfile.Any, empty, Values()),
+			Is.EqualTo(current)
+		);
+	}
+
+	/// <summary>
+	/// **A harvested deck keeps its COLOUR identity.** Harvest predates colour and built its result
+	/// from `Decklist.Empty`, which carries none, so every colour slot came out unconstrained and the
+	/// next generation's `ValidateFieldIdentities` threw "an operator dropped it" — the failure the
+	/// cull's re-seed once had. Found merging Harvest onto the colour-identity evolver.
+	/// </summary>
+	[Test]
+	public void AHarvestedDeckKeepsItsColourIdentity()
+	{
+		var hero = Spells[0];
+		var dud = Spells[1];
+		var identity = ColorIdentity.Standard[0].Code;
+
+		var harvested = Evolver()
+			.Harvest(
+				Deck(dud) with
+				{
+					Identity = identity,
+				},
+				core: null,
+				DeckBuilder.DeckProfile.Any,
+				History(hero, dud),
+				Values()
+			);
+
+		Assert.That(harvested.Identity, Is.EqualTo(identity));
+	}
+}

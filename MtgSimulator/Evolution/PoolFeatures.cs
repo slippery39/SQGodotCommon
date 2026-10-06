@@ -187,6 +187,8 @@ public sealed class PoolFeatures
 	private readonly Dictionary<string, int>[] _supply;
 	private readonly Dictionary<string, int>[] _causalSupply;
 	private readonly bool[] _landSupply;
+	private readonly Dictionary<string, int[]> _cheatDemandsOf;
+	private readonly Dictionary<string, int> _cost;
 
 	private PoolFeatures(
 		List<object> demands,
@@ -195,6 +197,8 @@ public sealed class PoolFeatures
 		Dictionary<string, int>[] supply,
 		Dictionary<string, int>[] causalSupply,
 		bool[] landSupply,
+		Dictionary<string, int[]> cheatDemandsOf,
+		Dictionary<string, int> cost,
 		IReadOnlyList<string> failures
 	)
 	{
@@ -204,8 +208,24 @@ public sealed class PoolFeatures
 		_supply = supply;
 		_causalSupply = causalSupply;
 		_landSupply = landSupply;
+		_cheatDemandsOf = cheatDemandsOf;
+		_cost = cost;
 		Failures = failures;
 	}
+
+	/// <summary>
+	/// Demands this card answers by putting a card onto the battlefield **without paying for it**.
+	///
+	/// The subset of <see cref="DemandsOf"/> that is arbitrage rather than a question — see
+	/// <see cref="CostInversion"/> for why the two must be told apart, and why nothing else here
+	/// can tell them apart. `Reanimate` and `Gravedigger` ask the identical demand; only one of
+	/// them appears here.
+	/// </summary>
+	public IReadOnlyList<int> CheatDemandsOf(string cardName) =>
+		_cheatDemandsOf.TryGetValue(cardName, out var d) ? d : [];
+
+	/// Printed mana cost of a pool card; 0 when the name is not in this pool.
+	public int CostOf(string cardName) => _cost.GetValueOrDefault(cardName);
 
 	public IReadOnlyList<object> Demands => _demands;
 
@@ -749,6 +769,29 @@ public sealed class PoolFeatures
 		for (var i = 0; i < keep.Count; i++)
 			remap[keep[i]] = i;
 
+		// **Which of a card's demands it answers by CHEATING.** Recorded here rather than derived
+		// later because this is the one place that holds both the pool's cards and the demand
+		// index they map to; `DeckCore` sees names only. Specs are records, so the harvest's own
+		// dedupe index resolves a spec to its demand by value.
+		var cheatDemandsOf = new Dictionary<string, int[]>(StringComparer.Ordinal);
+		var cost = new Dictionary<string, int>(StringComparer.Ordinal);
+		foreach (var card in pool)
+		{
+			cost[card.Name] = card.ManaCost;
+
+			var mine = new List<int>();
+			foreach (var spec in CostInversion.PutIntoPlaySpecs(card))
+				if (
+					index.TryGetValue(spec, out var raw)
+					&& remap[raw] >= 0
+					&& !mine.Contains(remap[raw])
+				)
+					mine.Add(remap[raw]);
+
+			if (mine.Count > 0)
+				cheatDemandsOf[card.Name] = [.. mine];
+		}
+
 		return new PoolFeatures(
 			keep.Select(d => demands[d]).ToList(),
 			keep.Select(d => origins[d]).ToList(),
@@ -760,6 +803,8 @@ public sealed class PoolFeatures
 			keep.Select(d => supply[d]).ToArray(),
 			keep.Select(d => causal[d]).ToArray(),
 			keep.Select(d => landSupply[d]).ToArray(),
+			cheatDemandsOf,
+			cost,
 			failures.Distinct(StringComparer.Ordinal).ToList()
 		)
 		{
@@ -1410,6 +1455,16 @@ public sealed class PoolFeatures
 						.ProcessAllActions();
 				}
 
+				// **A card whose effect asks a question moved nothing until this ran.**
+				// `ProcessAllActions` stops at a `ChoiceAction`, so every discard outlet in the pool
+				// finished the probe with its `SelectCardsFromHandAction` still pending and no card
+				// in the graveyard — and `MovesInto` is read BEFORE the DIRECTED/LIKELY gate, so a
+				// looter was struck from the causal channel without either rule being consulted.
+				// Measured on ALL: Faithless Looting and Careful Study were absent from the
+				// reanimation enabler slot while Entomb (which selects with a filter and needs no
+				// question) was present, so the slot was self-mill only.
+				after = SettleChoices(after);
+
 				// **An X card's ManaCost is 0 and that is not a discount.** X lives on the cast
 				// action, never on the card, so Banefire and Hangarback Walker both read
 				// `manaCost: 0` and came back as free spells that any storm deck should play.
@@ -1504,6 +1559,57 @@ public sealed class PoolFeatures
 
 		return profiles;
 	}
+
+	/// <summary>
+	/// Answers every choice a probed card raises, taking the FIRST <c>MinChoices</c> enabled
+	/// options in the order the state offers them.
+	///
+	/// **Deterministic by construction, and it has to be.** The probe runs once per card at harvest
+	/// time and its answer is cached into a `CardProfile`, so an RNG or an AI here would make the
+	/// whole feature table — every demand, supplier and core — differ between runs at one seed.
+	/// First-N is the cheapest rule that always advances.
+	///
+	/// **Which option is chosen does not matter, and that is the existing rule, not a new one.**
+	/// `PoolFeatures` already credits a mover with no filter match on what it moved, because in a
+	/// real game you choose what to pitch. The probe only needs the discard to HAPPEN.
+	///
+	/// Bounded so a choice that fails to advance cannot wedge the harvest: the same guarantee
+	/// `MaxChoiceResolutionIterations` gives the AI, at a fixed cost per card rather than per game.
+	/// </summary>
+	private static GameState SettleChoices(GameState state)
+	{
+		for (var i = 0; i < MaxProbeChoices && state.IsWaitingForChoice; i++)
+		{
+			var choice = state.GetPendingChoice();
+			var picks = choice
+				?.Options.Where(o => o.IsEnabled)
+				.Take(Math.Max(1, choice.MinChoices))
+				.Select(o => o.Id)
+				.ToImmutableList();
+
+			// No option to give it. Resolving with an empty list is still the right move — a
+			// "discard a card" with an empty hand is legally answered by discarding nothing — but
+			// if that does not advance the stack, stop rather than spin.
+			var before = state;
+			try
+			{
+				(state, _) = state.ResolveChoice(picks ?? []);
+			}
+			catch
+			{
+				return before;
+			}
+
+			if (ReferenceEquals(state, before))
+				return before;
+		}
+
+		return state;
+	}
+
+	/// One per card, not per game: a probe that needs more than this is not a card the harvest can
+	/// characterise, and stopping leaves it in the declarative channel rather than crediting it.
+	private const int MaxProbeChoices = 32;
 
 	private const string CompanionName = "__companion";
 

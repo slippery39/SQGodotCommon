@@ -835,10 +835,13 @@ harvest time; revisit if a real archetype is measured losing its enablers.
 picking by count — the selector is no longer load-bearing for the Goblin case, but naming it is
 still the honest way to ask.
 
-## Settled: this engine cannot contain an infinite combo, so stop looking for one
+## The produce/consume GRAPH cannot find a combo — `LoopDetector` (simulation) is the instrument
 
-**Do not rebuild the combo-discovery plan.** It was scoped, the cheap half was run, and the answer
-is structural rather than a matter of search budget.
+**This section once read "Settled: this engine cannot contain an infinite combo". That stopped being
+true when `UnexhaustCreatureAction` shipped** — `LoopDetector` finds the shipped Splinter Twin loop, and
+`ComboProbe` ranks engines by it. What IS settled is narrower: **do not rebuild the GRAPH-based
+combo search.** It was scoped, the cheap half was run, and the answer is structural rather than a
+matter of search budget.
 
 The produce/consume graph needs no new machinery — `A -> B` when A supplies a demand B asks, which
 is `SupplyOf` and `DemandsOf`, and a card is struck from the askers of any demand it supplies so
@@ -882,6 +885,9 @@ inside `ResolveSpellAction` rather than as a targetable copy.
 > moment their zero should be able to move, and if it does not, suspect the detector before
 > believing the pool. Copy is still absent as a targetable action, though a token template carrying
 > `CopyOnEnterComponent` reaches most of the same ground.
+>
+> **That simulation instrument now exists: `ComboProbe`** (merged 2026-10-06 — see "Merged from
+> the other machine" at the end of this file). It found Splinter Twin's loop.
 >
 > The paragraph below remains correct about the **produce/consume graph**: that graph is built from
 > membership predicates and has no operations in it, so it still cannot find a combo no matter what
@@ -927,3 +933,287 @@ members, not one.
 before the colour column carries null; treating that as unbuildable empties the entire engine field
 and the run comes back clean having seeded nothing. Re-run discovery rather than inferring anything
 from an absent column.
+
+## Merged from the other machine: leverage, loops, outlets and cost inversion
+
+**Written 2026-09-06..07 on another machine, merged 2026-10-06.** Every number here was measured
+BEFORE colour identity reached the evolver and before Hollowmere retired (DES then held HLM and
+was 732 cards; it is 429 now). The mechanisms stand; re-measure before quoting a figure.
+
+### The reanimator fix, made a second time on the other machine and measured on DES
+
+The same defect as "Uncastable into an empty board IS a measurement" above, found and fixed
+independently; the merge kept one implementation (`CardValueSandbox.Unmeasured`, pinned by
+`LeverageMeasurementTests` on all four bare/supplied combinations) and one constant
+(`Uncastable`). What this side adds is the DES evidence:
+
+Measured on DES, before and after:
+
+| concept | rank before | after | bare | leverage |
+|---|---|---|---|---|
+| Necromantic Summons | 22 | **2** | 0.00 | 23.50 |
+| Illusory Angel | 23 | **3** | 0.00 | 20.33 |
+| Raise the Sunken | 24 | **4** | 0.00 | 17.60 |
+| Echo of the Drowned | 25 | **5** | 0.00 | 2.80 |
+
+**This does NOT fix Splinter Twin.** Kilnmother Vess moved 32 → 31 and its numbers are unchanged:
+`bare 9.00, leverage 0.00`. Its bare arm was always castable, so it was never affected — the probe
+simply reports that it gains nothing from having its demands answered, which contradicts the
+gauntlet, where hand-built Twin beats the evolved field. That is a separate defect in what the
+stocking supplies, and it is open.
+
+**Do not read the LIFT and ASSEMBLY columns across two runs as a change.** They moved for these
+cards between the before and after runs (Raise the Sunken lift 16 → 7) and that is the documented
+non-reproducibility of mode 7's game columns, not an effect of this fix. Only `bare`, `supplied` and
+the rank are comparable here.
+
+
+### TRIED AND REJECTED: a longer rollout does not make a combo measurable
+
+**Splinter Twin measures leverage 0.00 and it is not the detector's fault.** Traced end to end on a
+replica of the sandbox's stocked fixture: the copier IS cast, four Illusionists ARE on the
+battlefield, the Twin activation IS offered, and `TwinComboPilotTests` shows the production AI
+taking it and looping it repeatedly. It dies in `PlayGreedyTurn`, which plays a land and then
+`_selfActionsPerTurn` actions — **default 1**. An unbounded loop therefore turns over once per
+simulated turn, so "infinite tokens" prices as "one token a turn".
+
+Sweeping the budget on that fixture shows the loop plainly:
+
+| selfActionsPerTurn | subject | control | leverage |
+|---|---|---|---|
+| 1 | 104.70 | 97.10 | 7.60 |
+| 4 | 168.67 | 157.27 | 11.40 |
+| 8 | 232.67 | 197.27 | 35.40 |
+| 16 | 353.07 | 281.67 | 71.40 |
+
+**The monotone climb with no plateau is the combo signature.** So raising the budget was the
+obvious fix, and it does not work. Measured on DES, 5 payoffs:
+
+| budget | measured | Twin leverage |
+|---|---|---|
+| 1 | 5/5 | 0.00 |
+| 2 | 5/5 | 2.67 |
+| 3 | **0/5** | — |
+| 8 | **0/5** | — |
+
+Over the whole 43-engine report at budget 8: **0 of 43 measured**, against 43 of 44 at budget 1.
+**The fixture decides itself** — more actions per turn kills the opponent inside the lookahead for
+*every* card, not only for combos, and `IsDecisive` excludes the lot. Budget 2 is the only setting
+that both measures and registers Twin at all, and 2.67 against Zombie Apocalypse's 45.87 changes no
+rank worth changing, while sitting one step from the cliff.
+
+`LeverageSelfActions` stays **1**. The parameter is kept because the sweep is the evidence, not
+because anything should raise it.
+
+**The reusable finding: more simulation cannot isolate a combo in a fixture that can end.** Telling
+an unbounded engine from a fixed effect wants `LoopDetector` — which already finds this exact combo,
+`TheShippedTwinCombo_IsFound` — rather than a longer rollout. That is what `ComboProbe` does.
+
+### SOLVED by asking a different question: `ComboProbe`
+
+`ComboProbe.WithSupport(payoff, support)` puts the payoff and its best suppliers on a minimal board
+and asks `LoopDetector` whether a repeatable line exists. It is plumbing, not new detection — the
+detector already found this combo; nothing was consulting it.
+
+**The precondition is the whole design: the loop must NEED the support.** A payoff that loops alone
+is a balance bug, not an archetype (`NoSingleCardInThePoolLoops` is the sweep for those), and
+crediting it here would rank a broken card as the pool's best engine. `WithSupport` returns null
+unless the card fails to loop alone *and* succeeds with support — the control
+`NeitherHalfOfTheTwinCombo_LoopsAlone` applies by hand, made a precondition.
+
+`BlankFirstKey` gains a first component, `Loops ? 0 : 1`. Deliberately its own component rather
+than a large synthetic leverage: a loop is a **structural** fact about the pair, and folding it into
+a measured quantity would make two incomparable numbers trade off.
+
+Measured on DES:
+
+| | |
+|---|---|
+| payoffs assembling a loop | **2 of 93** (both Twin copiers), **1 of 44** after core dedupe |
+| cost | **~3s** for the whole pool |
+| Kilnmother Vess rank | **31 → 1** |
+| other cards moving ≥2 ranks | **1 of 44** |
+
+**Compare the rejected option above: 26 of 43 moved ≥5 ranks and 0 of 43 stayed measurable.** Every
+other engine here shifted down exactly one place with its relative order intact, which is what a
+targeted instrument looks like next to a re-baselining one.
+
+The minimal board is deliberate — the leverage fixture's dummy ladder and library filler multiply
+this search's branching for no gain, since the question is whether a repeatable line exists, not
+what it is worth.
+
+`ALoopOutranksABetterMeasuredCard` pins the ranking consequence directly, because the probe could
+otherwise be correct and change nothing.
+
+#### The sweep found a real bug: an unguarded control
+
+The subject's score is tested with `IsDecisive` and excluded by name. **The control it is
+subtracted from was not.** A fixture that resolves itself gave a baseline of ±9000, so every card
+measured against it returned `score - 9000` **as a clean result** — Raise the Sunken came back at
+`-8018.06` with no error, which reads as a real measurement of a catastrophic card.
+
+Guarded rather than clamped: with no counterfactual there is nothing to subtract, so the honest
+answer is that the measurement did not happen. Budgets 1 and 2 are byte-identical either way, so
+nothing in production moved. Pinned by
+`ADecidedControlIsReportedAsUnmeasured_NeverAsANumber`, which asserts the invariant — a measured
+leverage is never of terminal magnitude — rather than a count of failures, so it fails loudly if the
+fixture ever stops deciding.
+
+### FIXED: every discard outlet was invisible, because the probe stopped at the question
+
+**The reanimation enabler slot was self-mill only, and no rule in this file put it there.**
+`ProbeCardProfiles` ends in `ProcessAllActions`, which pauses on a `ChoiceAction` — and
+`WithDiscard` compiles to a `SelectCardsFromHandAction`. A looter therefore finished the probe with
+its discard still pending, moved nothing, and never got an entry in `MovesInto`. That lookup runs
+**before** the DIRECTED/LIKELY gate, so the looter was cut without either rule being consulted.
+
+Measured on ALL, `IsCreatureInOwnGraveyardSpecification`:
+
+| | causal suppliers |
+|---|---|
+| before | **44** — self-mill and directed tutors only |
+| after | **58** |
+
+All 14 additions are outlets: Faithless Looting, Careful Study, Cathartic Reunion, Tormenting
+Voice, Thrill of Possibility, Wild Guess, Rain of Revelation, Smallpox, Zombie Infestation,
+Tide of Whispers, Chorus of Whispers, Silt-Stained Ledger, Tomebound Lich, Cavalier of Gales.
+
+**Entomb passed throughout, and that is what made the gap look like a threshold.** It selects with
+a filter and asks no question, so the one enabler anybody spot-checked was the one that worked.
+The likelihood gate would have admitted Faithless Looting comfortably had it ever been reached —
+density 0.58, one card moved, 0.58 ≥ 0.5 — so **tuning the gate could never have found this**.
+
+`SettleChoices` answers with the first `MinChoices` enabled options, deterministically: the probe
+runs once per card and its answer is cached into a `CardProfile`, so an RNG or an AI here would
+make every demand, supplier and core differ between runs at one seed. Which option is taken does
+not matter — the existing rule already credits a mover with no filter match on what it moved,
+because in a real game you choose what to pitch. Bounded at `MaxProbeChoices` (32) so a
+non-advancing choice cannot wedge the harvest.
+
+Pinned by `ADiscardOutletEnablesTheGraveyard_EvenThoughItsDiscardIsAChoice`, which **fails without
+the fix** — checked, because a regression test that passes either way is worse than none. Its
+`Divination` half is the vacuity guard: a plain draw spell moves nothing to the graveyard, so a fix
+that assumed movement rather than observing it fails there.
+
+**The general shape, and it is the third instance in this file: a capability that was never
+exercised reads exactly like a parameter that needs tuning.** Same class as the vacuous LIFT
+column and the seeded-hash non-determinism — check that the code path RUNS before arguing about
+what it should return.
+
+The other `ProcessAllActions` calls in `PoolFeatures` — `ProbeTriggers`, `ProbeChainedTriggers`,
+`ProbeCostDemands` — have the same shape and have **not** been audited for it. A trigger whose
+effect asks a question is the obvious next candidate.
+
+### Cost inversion — mana arbitrage as a build-around signal
+
+**The demand model cannot express magnitude, and this is the way around that.** `Raise the Sunken`
+and `Gravedigger` ask the identical question — `IsCreatureInOwnGraveyardSpecification` — so
+`DeckCore` builds them the same core and `EngineDiscovery` dedupes them into ONE archetype. Measured
+on ALL: **24 cards share that identity key**, and the representative is chosen alphabetically, so
+the archetype is reported as *Angel of Second Rites* and `Reanimate` never appears by name.
+
+One costs 1 and puts ANY creature onto the battlefield. One costs 4 and returns a creature to your
+hand, where you still pay for it. Nothing in the demand model separates them, and **no threshold
+can**: the target slot has 470 candidates where only 46 cost 6 or more.
+
+`CostInversion.Rank(pool, features)` reads two numbers already on the cards: what you pay, and the
+cost of the most expensive pool card the cheat's own targeting spec accepts.
+
+**The discriminator is the ACTION TYPE, which is what keeps this structural rather than a
+mechanic-to-meaning table.** `PutIntoBattlefieldAction` is the single path a card takes to the
+battlefield without being cast; `ReturnToHandAction` is not a cheat. No card name, subtype or zone
+name is read anywhere.
+
+Measured on ALL — run `DumpCostInversionForARealPool` rather than trusting this table, which is
+here for its SHAPE:
+
+```
+card                       paid cheat  gap  cand  big  via
+Raise the Sunken              1     8    7   541   47  spell
+Reanimate                     1     8    7   541   47  spell
+Blood for Bones               3     8    5   541   47  spell
+Goblin Lackey                 1     5    4    25    0  triggered
+Obsessive Stitcher            7     8    1   541   47  activated
+Sun Titan                     6     7    1   400   12  triggered
+```
+
+Three things worth carrying:
+
+- **18 cards on ALL, 15 on DES.** A tight list against the 24-member undifferentiated blob, and
+  every return-to-hand card is correctly absent.
+- **It generalises past the graveyard on its own.** Goblin Lackey and Warren Instigator surface as
+  triggered cheats putting a Goblin from hand into play — an archetype the demand model files as
+  tribal. Nothing about graveyards is written into this.
+- **An activated cheat pays for the card AND the activation**, so Obsessive Stitcher is 3+4=7 and
+  ranks last rather than tying with a 1-mana sorcery. Without that every recursive creature reads
+  as Reanimate.
+
+**The MAXIMUM is the honest statistic**, not the mean: you choose what goes in your deck, so a cheat
+is worth the biggest thing it can reach. The other 500 candidates are choices you decline, not a
+dilution. `Big` carries the redundancy so a lone outlier is visible.
+
+Deliberately not read: cost reduction, alternative costs and "cast without paying its mana cost" are
+the same idea through a different mechanism. X cards are skipped — `ManaCost` is 0 for them because
+X lives on the cast action, the same rule `ProbeCardProfiles` already applies.
+
+#### The archetype is NAMED for the card that cheats
+
+Cards asking the same demands produce the byte-identical core and dedupe into one entry, so one of
+them has to name it. That was alphabetical, which made a **24-card** reanimation group on ALL report
+as *Angel of Second Rites* while `Reanimate` never appeared in a report at all.
+
+Real decks are named for the card that puts the big thing into play — Reanimator, Show and Tell,
+Through the Breach. `EngineDiscovery.Representative` orders a group by cost-inversion gap, with
+alphabetical order as the tiebreak. Measured on ALL: the graveyard archetype is now **Raise the
+Sunken**, and the goblins-from-hand archetype is **Goblin Lackey** (gap 4).
+
+**Alphabetical order still does all the work for archetypes with no cheat in them**, since every
+card in a tribal group has gap 0 — Arms Dealer, Dwynen's Elite and Drogskol Captain are unmoved.
+`WithNoCheatInTheGroup_TheOrderIsUnchanged` is that guard, and it matters: without it this change
+could silently rename every archetype in the report.
+
+A true tie resolves alphabetically so the report stays reproducible — `Reanimate` and `Raise the
+Sunken` both read gap 7 on ALL, and the run must not pick a different one each time.
+
+#### The gap ranks a cheat's TARGET slot, and only that slot
+
+`PoolFeatures.CheatDemandsOf(card)` is the subset of `DemandsOf` a card answers by putting a card
+onto the battlefield without paying. `DeckCore.For` uses it to mark that demand's **declarative**
+slot cost-ranked, `CoreSlot.CostOf` carries the costs the way `Supply` already rides on the slot,
+and `Satisfy` orders by it **before** supply.
+
+**Before supply, not as a tiebreak**, because supply is the signal that misranks these cards: a
+token maker reads 5 on the merged channel and outranks the eight-drop the deck exists to cheat in.
+`CostOf` is 0 on every other slot, so the comparison is a no-op everywhere else and nothing that
+was not a mana cheat changed.
+
+Measured on DES, the top of each core's target slot:
+
+| payoff | cheat? | ranks first |
+|---|---|---|
+| Raise the Sunken | yes | Abyssal Tyrant(8), Aurex the Sevenfold(8), The Drowned Archfiend(8), Vilis(8) |
+| Necromantic Summons | yes | Abyssal Tyrant(8), Aurex(8), The Drowned Archfiend(8), Vilis(8) |
+| **Gravedigger** | **no** | Grave Titan(6), Hornet Queen(7), Throne of Empires(4), **Ajani(3)** |
+
+**Gravedigger is the control and it is in the same output**, asking the byte-identical demand. If it
+ever starts ranking by cost, the marking has moved from the payoff to the demand and every
+return-to-hand deck will begin playing eight-drops it cannot cast.
+
+**Enabler slots are never cost-ranked.** A discard outlet wants to be cheap; ranking those by cost
+would ask a reanimator deck to play the most expensive way of filling its own graveyard. Verified in
+the same dump: `costRanked=False` on every enabler slot, still ordered by supply.
+
+`OnlyACheatsTargetSlotIsRankedByCost` pins both directions. **Its fixture had to be renamed to mean
+anything**: with cost ranking off the tiebreak is alphabetical, so calling the expensive card
+"Colossus" and the cheap one "Ogre" let the expensive card win either way and the control asserted
+nothing. The cheap card must sort first alphabetically for the two orderings to disagree.
+
+#### A synthetic pool needs cards that do NOT answer the demand
+
+`PoolFeatures` drops any demand answered by more than `UninformativeShare` (**0.99**) of the pool.
+In a fixture of three creatures, "a creature card in your graveyard" is answered by 3 of 3, so the
+demand vanishes and any feature built on it finds nothing.
+
+**The failure is silent** — `Demands.Count` is 0, `Failures` is empty, and nothing names the dropped
+card. It reads exactly like the feature under test being broken, and cost a debugging session here.
+`CostInversionTests.Ballast()` exists solely to keep test pools above that line.

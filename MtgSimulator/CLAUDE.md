@@ -59,7 +59,9 @@ Non-obvious files only — the rest are named for what they do.
 | `Evolution/EngineProbe.cs` | **Did the payoff resolve with its support deployed?** One pass over one game's event log |
 | `Evolution/PreSimulation.cs` | Uniform-random constructed decks played before evolution; also the pool-conditioned card-value sampler |
 | `Evolution/EngineDiscovery.cs` | Mode 7 — probe every concept, rank by assembly, save `sim_results/engines_<set>_<stamp>.json` |
-| `Evolution/MetagameEvolver.cs` | Mode 6 — the evolution loop, paired evaluation, culling, report |
+| `Evolution/ComboProbe.cs` | **Does the payoff plus its support assemble an UNBOUNDED loop?** `LoopDetector` behind the demand model — the question leverage structurally cannot answer |
+| `Evolution/CostInversion.cs` | **Mana arbitrage**: what a card costs against the best thing it puts onto the battlefield without paying. Independent of the demand model — see §"Cost inversion" |
+| `Evolution/MetagameEvolver.cs` | Mode 6 — the evolution loop: exploration, the Harvest, optimisation, paired evaluation, report |
 | `Evolution/MutationLog.cs` | Every proposal the search considered, not only what survived |
 | `Scenarios/StateJson.cs` | Real `GameState` ↔ JSON; reflection-based `$type` discriminators |
 | `Scenarios/Scenario.cs` | `Scenario` record + `ScenarioStore` in `scenarios/`; `ScenarioComparer`/`ScenarioConsole` drive mode 5 |

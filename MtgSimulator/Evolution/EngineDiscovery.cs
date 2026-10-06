@@ -72,7 +72,13 @@ public sealed record EngineCandidate(
 	float Supplied = 0f,
 	bool LeverageMeasured = false,
 	IReadOnlyList<string>? Identities = null,
-	double ManaFeasibility = 0
+	double ManaFeasibility = 0,
+	/// <summary>
+	/// This payoff plus its best suppliers assembles an UNBOUNDED loop, and neither does so alone.
+	/// See <see cref="ComboProbe"/> — leverage cannot answer this, because the rollout takes one
+	/// action per turn and prices an infinite loop as one activation a turn.
+	/// </summary>
+	bool Loops = false
 )
 {
 	/// <summary>
@@ -152,8 +158,23 @@ public sealed record EngineCandidate(
 	/// (0.00 → 0.00, an enabler wearing a payoff's clothes) ranked third, above Flameshadow
 	/// Conjuring at 1.50 → 24.50.
 	/// </remarks>
-	public (int Unmeasured, double Bare, double Leverage) BlankFirstKey =>
-		(LeverageMeasured && Leverage > 0f ? 0 : 1, Math.Max(Bare, 0f), -Leverage);
+	/// <remarks>
+	/// **An assembled LOOP outranks everything, and it has to be its own component.** A card whose
+	/// support turns it into an unbounded engine is the strongest instance of "a blank until
+	/// assembled" there is — but leverage scores it near zero, because the rollout takes one action
+	/// per simulated turn and an infinite loop prices as one activation a turn. Splinter Twin read
+	/// `bare 9.00, leverage 0.00` and ranked 31st of 44 while the hand-built Twin deck beats the
+	/// evolved field. Raising the rollout budget to fix that was measured and rejected — the
+	/// fixture decides itself and the whole report goes unmeasured. See `ComboProbe`.
+	///
+	/// It is deliberately a separate first component rather than a large fake leverage: a loop is a
+	/// STRUCTURAL fact about the pair, and folding it into a measured quantity would make the two
+	/// incomparable numbers trade off against each other.
+	///
+	/// **High precision, measured: 2 of 93 DES payoffs**, and both are the Twin copiers.
+	/// </remarks>
+	public (int NotALoop, int Unmeasured, double Bare, double Leverage) BlankFirstKey =>
+		(Loops ? 0 : 1, LeverageMeasured && Leverage > 0f ? 0 : 1, Math.Max(Bare, 0f), -Leverage);
 }
 
 public sealed record EngineReport(
@@ -214,6 +235,11 @@ public static class EngineDiscovery
 		foreach (var failure in features.Failures)
 			writer.WriteLine($"  WARNING  {failure}");
 
+		// Mana arbitrage per card, used only to choose which member of an archetype names it.
+		var gap = CostInversion
+			.Rank(spells, features)
+			.ToDictionary(r => r.Card, r => r.Gap, StringComparer.Ordinal);
+
 		// **Candidates are payoff CARDS now, not demand indices.** Every card that asks something
 		// answerable gets the core its own demands describe; the majority of any pool asks nothing
 		// and drops out here.
@@ -246,7 +272,12 @@ public static class EngineDiscovery
 					),
 				StringComparer.Ordinal
 			)
-			.Select(g => g.OrderBy(c => c.Name, StringComparer.Ordinal).First())
+			// **The archetype is named for the card that CHEATS, not the one that sorts first.**
+			// A reanimation group holds 24 cards on ALL and was represented alphabetically, so the
+			// report called it "Angel of Second Rites" and `Reanimate` never appeared by name.
+			// Decks are named for the card that puts the big thing into play — Reanimator, Show and
+			// Tell, Through the Breach — because that card is what the deck is built to do.
+			.Select(g => Representative(g, gap))
 			.OrderBy(c => c.Name, StringComparer.Ordinal)
 			.ToList();
 
@@ -270,6 +301,27 @@ public static class EngineDiscovery
 			.MeasureLeverage(cores.Select(c => c.Name).ToList(), features, pool)
 			.ToDictionary(r => r.Name, r => r, StringComparer.Ordinal);
 
+		// **Does the payoff plus its support assemble an UNBOUNDED engine?** The question leverage
+		// structurally cannot answer — see `ComboProbe`. Sequential and cheap: 93 payoffs in ~3s on
+		// DES, against the game batch below.
+		writer.WriteLine($"Probing {cores.Count} payoffs for assembled loops...");
+		var loops = cores
+			.Where(c =>
+				pool.ContainsKey(c.Name)
+				&& ComboProbe.WithSupport(
+					pool[c.Name],
+					ComboProbe.SupportFor(c.Name, features, pool)
+				)
+					is not null
+			)
+			.Select(c => c.Name)
+			.ToHashSet(StringComparer.Ordinal);
+		writer.WriteLine(
+			loops.Count == 0
+				? "  none — this pool contains no assembled loop among its payoffs."
+				: $"  {loops.Count}: {string.Join(", ", loops.Order(StringComparer.Ordinal))}"
+		);
+
 		var probed = new EngineCandidate?[cores.Count];
 		var done = 0;
 
@@ -288,7 +340,8 @@ public static class EngineDiscovery
 					gamesPerEngine,
 					seed,
 					aiDepth,
-					leverage.GetValueOrDefault(cores[i].Name)
+					leverage.GetValueOrDefault(cores[i].Name),
+					loops.Contains(cores[i].Name)
 				);
 				var n = Interlocked.Increment(ref done);
 				if (n % 25 == 0)
@@ -364,6 +417,31 @@ public static class EngineDiscovery
 	/// only because that one lives in the executable. If a third caller appears, promote this to a
 	/// shared helper rather than writing a fourth.
 	/// </summary>
+	/// <summary>
+	/// **Which card of an archetype gives it its name: the one that cheats hardest.**
+	///
+	/// Cards asking the same demands produce the byte-identical core and dedupe into one entry, so
+	/// one of them has to name it. Alphabetical order made that "Angel of Second Rites" for a
+	/// 24-card reanimation group on ALL, and `Reanimate` — the card the archetype IS — never
+	/// appeared in a report at all. Real decks are named for the card that puts the big thing into
+	/// play: Reanimator, Show and Tell, Through the Breach.
+	///
+	/// **Alphabetical order remains the tiebreak, and does all the work for non-combo archetypes.**
+	/// Every card in a tribal group has gap 0, so a lord group is ordered exactly as it was. This
+	/// only moves groups that contain a mana cheat.
+	///
+	/// `internal` so <c>EngineNamingTests</c> can assert the choice without running a discovery
+	/// pass, which plays games. Same reasoning as <c>DeckCore.For</c> being reachable from tests.
+	/// </summary>
+	internal static DeckCore Representative(
+		IEnumerable<DeckCore> group,
+		IReadOnlyDictionary<string, int> gap
+	) =>
+		group
+			.OrderByDescending(c => gap.GetValueOrDefault(c.Name))
+			.ThenBy(c => c.Name, StringComparer.Ordinal)
+			.First();
+
 	private static int StableHash(string s)
 	{
 		uint hash = 2166136261u;
@@ -386,7 +464,8 @@ public static class EngineDiscovery
 		int games,
 		int seed,
 		int aiDepth,
-		CardLeverage? leverage
+		CardLeverage? leverage,
+		bool loops
 	)
 	{
 		// Derived from the core's identity rather than the loop index, so a candidate's seed does
@@ -503,7 +582,8 @@ public static class EngineDiscovery
 			// archetype's pool, and a slot the deck happened to fill in red may be fillable in
 			// white too. The core is what has to be buildable.
 			[.. core.PlayableIdentities(pool).Select(i => i.Code)],
-			core.BestManaFeasibility(pool)
+			core.BestManaFeasibility(pool),
+			loops
 		);
 	}
 
@@ -635,7 +715,7 @@ public static class EngineDiscovery
 		writer.WriteLine("          is a tribal lord, which the ordinary search already finds.");
 		writer.WriteLine();
 		writer.WriteLine(
-			$"{"", -4}{"concept", -34}{"cols", -14}{"mana", 6}{"supp", 6}{"pay", 5}{"enab", 6}"
+			$"{"", -5}{"concept", -34}{"cols", -14}{"mana", 6}{"supp", 6}{"pay", 5}{"enab", 6}"
 				+ $"{"assem", 8}{"depth", 7}{"LIFT", 7}{"cover", 7}{"kill", 6}{"bare", 9}{"supp'd", 9}"
 		);
 
@@ -643,7 +723,12 @@ public static class EngineDiscovery
 		foreach (var e in report.Engines)
 		{
 			rank++;
-			var mark = rank <= keep ? "*" : " ";
+			// A loop is the one property here that is structural rather than measured, so it gets
+			// its own mark instead of being inferred from a big number.
+			var mark =
+				e.Loops ? "LOOP"
+				: rank <= keep ? "*"
+				: " ";
 			var concept = e.Concept.Length > 32 ? e.Concept[..32] : e.Concept;
 
 			// "-" rather than an empty cell: a blank column reads as missing data, and this is a
@@ -653,7 +738,7 @@ public static class EngineDiscovery
 				colors += "+";
 
 			writer.WriteLine(
-				$"{mark, -4}{concept, -34}{colors, -14}{e.ManaLabel, 6}{e.SuppliersInPool, 6}{e.Payoffs.Count, 5}{e.Enablers.Count, 6}"
+				$"{mark, -5}{concept, -34}{colors, -14}{e.ManaLabel, 6}{e.SuppliersInPool, 6}{e.Payoffs.Count, 5}{e.Enablers.Count, 6}"
 					+ $"{e.AssemblyRate, 8:P0}{e.MedianDepth, 7:F1}"
 					+ $"{e.Lift, 7:+0.0;-0.0; 0.0}{e.Coverage, 7:P0}{e.MedianSpeed, 6:F1}"
 					+ (

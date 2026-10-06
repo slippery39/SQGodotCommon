@@ -72,6 +72,11 @@ Three rules worth carrying: a scenario is **serialized state**, not a `GameState
 copy of the sum for display; and **goldfish speed is measured to be the wrong fitness for a combo
 deck** — dismantling Storm makes it goldfish *faster*. Use `EngineProbe`.
 
+`RunningSimulations.md` at the solution root is the operator's runbook: how to run each console
+mode, the piped field lists, the output files and how to read a run. **A console prompt added or
+reordered invalidates it** — update it in the same step, and re-count the prompts against the real
+output rather than editing the list from memory.
+
 ## Card Sets
 
 **The set menu is 1=LEG 2=CSC 3=CMB 4=DES 5=ALL.** It has shifted TWICE — CMB was inserted, then HLM
