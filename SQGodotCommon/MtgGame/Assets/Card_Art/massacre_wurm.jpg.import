@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/massacre_wurm.jpg-9ef55d837e056283a7c0b81a1eb
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

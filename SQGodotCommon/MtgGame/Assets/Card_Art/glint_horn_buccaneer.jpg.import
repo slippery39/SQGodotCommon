@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/glint_horn_buccaneer.jpg-b875c5eb8dc76e83cdb4
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

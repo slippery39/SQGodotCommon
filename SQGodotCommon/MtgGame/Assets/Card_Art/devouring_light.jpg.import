@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/devouring_light.jpg-408d9e1ae4c4acf2a58e82326
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

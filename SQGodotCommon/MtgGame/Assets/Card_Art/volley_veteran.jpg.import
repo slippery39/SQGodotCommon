@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/volley_veteran.jpg-a77385449a1dec93e3a6be8a1f
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

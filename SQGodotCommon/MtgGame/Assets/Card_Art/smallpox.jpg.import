@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/smallpox.jpg-30651c598f7c1eabb4ac8f9349a7f0ce
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

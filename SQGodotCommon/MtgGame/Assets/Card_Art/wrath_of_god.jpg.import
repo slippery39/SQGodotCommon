@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/wrath_of_god.jpg-c211e5484fd5a0403e861fe1606b
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

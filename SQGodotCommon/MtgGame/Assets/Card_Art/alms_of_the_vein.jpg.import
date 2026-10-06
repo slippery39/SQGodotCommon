@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/alms_of_the_vein.jpg-0370461f28667f2fcf3eb4ec
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

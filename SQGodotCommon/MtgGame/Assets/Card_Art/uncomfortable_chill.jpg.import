@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/uncomfortable_chill.jpg-4dc7fe6e91df04c950933
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

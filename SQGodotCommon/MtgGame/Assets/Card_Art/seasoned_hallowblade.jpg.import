@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/seasoned_hallowblade.jpg-a6974a109bb7fd587aa9
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

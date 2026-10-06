@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/read_the_bones.jpg-8a3d6c7ec9c1e87fd1ad7f5fd8
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/rite_of_flame.jpg-475b81a3d51f31b9269c0a9b17c
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

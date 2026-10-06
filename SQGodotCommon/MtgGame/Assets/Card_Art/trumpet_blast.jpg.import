@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/trumpet_blast.jpg-1ba6987618b65d7e87c852d58d6
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

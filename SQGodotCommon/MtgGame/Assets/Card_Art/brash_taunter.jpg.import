@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/brash_taunter.jpg-146869dc8b7a2fb8338f77d2f56
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

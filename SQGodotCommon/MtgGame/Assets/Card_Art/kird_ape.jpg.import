@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/kird_ape.jpg-33ef2fb497ca21f2a72b38cdfa6cdf85
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

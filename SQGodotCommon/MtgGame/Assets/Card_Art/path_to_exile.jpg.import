@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/path_to_exile.jpg-c5a0716298dd3449bae20542d20
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

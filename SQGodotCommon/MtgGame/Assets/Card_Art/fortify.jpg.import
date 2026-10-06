@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/fortify.jpg-95ace96541b7d77e1841831c1dcff6ac.
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

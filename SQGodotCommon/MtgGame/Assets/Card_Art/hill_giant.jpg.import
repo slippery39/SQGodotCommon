@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/hill_giant.jpg-3d8d313843fba2496841462d6dcfb8
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/whirler_rogue.jpg-a7c08492ed5d9606e2b5a1831a8
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

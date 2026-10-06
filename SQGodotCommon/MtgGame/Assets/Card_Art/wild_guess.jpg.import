@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/wild_guess.jpg-7ffa75f6487d5266144debc3b24ff8
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

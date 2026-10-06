@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/seat_of_the_synod.jpg-c5b6c85c536f5d3f2210a4a
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

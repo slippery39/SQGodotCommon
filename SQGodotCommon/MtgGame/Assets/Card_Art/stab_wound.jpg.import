@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/stab_wound.jpg-9d05292c5dd8ccca47d4aa03124404
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

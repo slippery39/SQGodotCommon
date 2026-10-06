@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/drogskol_captain.jpg-17bf04af2f5a4037e855f825
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/myr_enforcer.jpg-6f0615e3d9308af34f518c9bc60e
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

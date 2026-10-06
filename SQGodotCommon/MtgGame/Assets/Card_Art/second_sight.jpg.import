@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/second_sight.jpg-9b22bf3fe1f6e9e1f3444edbfadf
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

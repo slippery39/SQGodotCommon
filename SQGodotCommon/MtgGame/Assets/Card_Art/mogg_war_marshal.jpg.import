@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/mogg_war_marshal.jpg-fc7134e693e0d309bf9666b4
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

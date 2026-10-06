@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/doom_blade.jpg-47fc1a11ea2c655c06cf027d5fdc19
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

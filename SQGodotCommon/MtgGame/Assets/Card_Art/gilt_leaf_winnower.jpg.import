@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/gilt_leaf_winnower.jpg-86e9b232ffe0dd367aa292
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

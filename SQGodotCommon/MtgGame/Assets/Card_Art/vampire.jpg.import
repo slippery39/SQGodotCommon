@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/vampire.jpg-80cfb6c40c18a5bdeaca1d4f0a353fbd.
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

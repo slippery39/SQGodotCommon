@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/angelic_destiny.jpg-2ac336b5683d5fba8c53ab483
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

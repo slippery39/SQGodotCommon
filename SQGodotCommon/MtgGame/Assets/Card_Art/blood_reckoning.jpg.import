@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/blood_reckoning.jpg-5dcbf89d6d972c728fe6e91f4
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

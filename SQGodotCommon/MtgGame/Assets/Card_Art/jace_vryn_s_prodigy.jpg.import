@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/jace_vryn_s_prodigy.jpg-fef8070a41a12ca9cb09a
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

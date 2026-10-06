@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/liliana_s_specter.jpg-48d8e4d6f9e3369601b03fc
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

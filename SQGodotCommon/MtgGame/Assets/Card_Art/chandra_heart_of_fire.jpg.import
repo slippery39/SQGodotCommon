@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/chandra_heart_of_fire.jpg-9395e279055a1aa3bc5
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

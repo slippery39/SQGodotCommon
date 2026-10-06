@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/sorin_markov.jpg-b4b6dd60bcdfde0a128b0fb46182
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

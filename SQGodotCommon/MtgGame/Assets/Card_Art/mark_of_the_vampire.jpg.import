@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/mark_of_the_vampire.jpg-5a3e3a9e965ec32b60f50
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

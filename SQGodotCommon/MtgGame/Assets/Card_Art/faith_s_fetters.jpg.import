@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/faith_s_fetters.jpg-9bdd21ff7d3fe3cf6e66398d2
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

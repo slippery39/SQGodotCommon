@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/jace_beleren.jpg-9d8e26ec120bef8b11b98b1418b9
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

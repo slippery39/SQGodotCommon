@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/grasp_of_darkness.jpg-21739d4f98d8fd8b65d72e6
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

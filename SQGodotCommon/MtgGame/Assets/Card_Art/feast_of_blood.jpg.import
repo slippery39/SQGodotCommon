@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/feast_of_blood.jpg-d95cbf42b501d7269c398b7133
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

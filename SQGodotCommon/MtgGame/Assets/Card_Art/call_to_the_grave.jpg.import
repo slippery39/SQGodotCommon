@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/call_to_the_grave.jpg-c8b79d2a02021be31bcecca
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

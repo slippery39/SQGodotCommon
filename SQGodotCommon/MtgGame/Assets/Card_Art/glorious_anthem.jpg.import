@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/glorious_anthem.jpg-ae47d77b082d637ac652bda14
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

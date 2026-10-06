@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/mausoleum_wanderer.jpg-21b3407b70216c5e94b6d8
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

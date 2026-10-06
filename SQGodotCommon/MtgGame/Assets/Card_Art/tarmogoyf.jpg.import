@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/tarmogoyf.jpg-0b1990893a15bfbd8c701e12e0880ba
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

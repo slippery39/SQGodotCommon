@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/carnage_tyrant.jpg-3c5d752670cb4b5a28c7ad5e07
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/bloodhunter_bat.jpg-63d1a1b72157a1c82d7139710
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

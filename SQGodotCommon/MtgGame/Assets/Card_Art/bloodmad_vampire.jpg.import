@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/bloodmad_vampire.jpg-ba2afe1568ebf86c5a8a09c4
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

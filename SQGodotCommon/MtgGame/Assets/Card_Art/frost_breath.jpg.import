@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/frost_breath.jpg-88326015fa8f0c24c8f070eaa45f
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

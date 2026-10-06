@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/ulcerate.jpg-4924ca7923979bab70d1382909c96cd4
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

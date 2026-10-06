@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/harm_s_way.jpg-443da64b9384a178a7c75881a58a06
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

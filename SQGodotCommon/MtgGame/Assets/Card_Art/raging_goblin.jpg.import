@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/raging_goblin.jpg-ead4e101e538dd76c9d35374201
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

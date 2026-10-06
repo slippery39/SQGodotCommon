@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/liliana_of_the_veil.jpg-6ad1d8382d785d7e13707
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

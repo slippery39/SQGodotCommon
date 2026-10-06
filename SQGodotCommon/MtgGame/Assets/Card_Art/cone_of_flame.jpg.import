@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/cone_of_flame.jpg-48a28d823d4aa826861b0bf013b
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

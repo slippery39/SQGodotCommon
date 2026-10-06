@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/aether_adept.jpg-d17bf94d6d732d107480b5e4856e
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

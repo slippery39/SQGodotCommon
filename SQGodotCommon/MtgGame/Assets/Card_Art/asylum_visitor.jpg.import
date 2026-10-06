@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/asylum_visitor.jpg-88ee0d909e2c975d0f3e4bb65e
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

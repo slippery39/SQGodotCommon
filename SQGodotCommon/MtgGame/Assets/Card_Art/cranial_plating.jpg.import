@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/cranial_plating.jpg-66a4231fd6de85081d456a332
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

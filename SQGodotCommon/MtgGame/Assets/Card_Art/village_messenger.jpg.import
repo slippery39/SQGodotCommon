@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/village_messenger.jpg-92583688804c8d2c1fe51de
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/oblivion_ring.jpg-47b5295a1a21a2bb7a61ecf7208
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

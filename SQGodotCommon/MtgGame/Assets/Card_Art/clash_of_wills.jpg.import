@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/clash_of_wills.jpg-b1e0fea8cc794ea16a27d32a6a
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

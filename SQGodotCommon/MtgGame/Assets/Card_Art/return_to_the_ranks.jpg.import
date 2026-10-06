@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/return_to_the_ranks.jpg-4456e828599ef6da3af20
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

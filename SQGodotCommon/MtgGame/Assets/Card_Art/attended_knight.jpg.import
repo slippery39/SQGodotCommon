@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/attended_knight.jpg-e389374ad7640da4dc21b0f24
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

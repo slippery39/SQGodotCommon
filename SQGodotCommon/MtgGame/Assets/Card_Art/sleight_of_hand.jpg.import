@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/sleight_of_hand.jpg-a73748cc69a0ab6004b40735c
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/crypt_lurker.jpg-cfd85d4ee83f5be6d25339f83373
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/mistral_singer.jpg-6375d2be9bddde3fa452a92db8
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

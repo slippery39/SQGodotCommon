@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/rummaging_goblin.jpg-ea639ccae309e8fc46d2fbdb
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

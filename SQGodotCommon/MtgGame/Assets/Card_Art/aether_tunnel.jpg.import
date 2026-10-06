@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/aether_tunnel.jpg-0a9695a860e6e9db2f524b58d41
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

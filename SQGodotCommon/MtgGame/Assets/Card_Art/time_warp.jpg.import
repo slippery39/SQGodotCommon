@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/time_warp.jpg-8ebb75a402b1c4f7b6799b7d1931db4
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

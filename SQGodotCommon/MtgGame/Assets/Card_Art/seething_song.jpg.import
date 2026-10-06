@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/seething_song.jpg-285c3300646a9b3f1acab5a9fe2
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

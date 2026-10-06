@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/sensory_deprivation.jpg-3cd324723b3c5c274caf1
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

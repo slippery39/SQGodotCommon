@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/disfigure.jpg-046bc4e54930d081b5c10ee3030cba3
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

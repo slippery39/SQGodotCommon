@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/tragic_arrogance.jpg-2a6d50f5c6f2e76775db1fcb
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

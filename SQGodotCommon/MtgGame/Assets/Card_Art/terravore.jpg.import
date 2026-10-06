@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/terravore.jpg-005489bf89b1794e0f25255c3409961
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

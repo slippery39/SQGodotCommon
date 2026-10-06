@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/crippling_blight.jpg-34092fc43d9a176b37381f65
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

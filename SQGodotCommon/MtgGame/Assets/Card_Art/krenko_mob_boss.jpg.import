@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/krenko_mob_boss.jpg-19f2379f109c08b90ee6a5e85
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/clone.jpg-d55ce7b8903562da06505ad984fab177.ct
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/phyrexian_arena.jpg-8fcda39a49ae6e1eba07f1b8d
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

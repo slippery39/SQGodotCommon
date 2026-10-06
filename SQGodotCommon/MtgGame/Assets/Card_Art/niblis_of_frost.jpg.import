@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/niblis_of_frost.jpg-085fa8b8970394723ca0d98f0
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

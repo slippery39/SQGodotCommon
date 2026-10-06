@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/borderland_marauder.jpg-4bd5188d530ed83cf7b90
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/plains.jpg-4b29d1b2007d90aaf41f695eb4567bab.c
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

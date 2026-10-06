@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/fog_bank.jpg-17313dab441f52c177bc83394dbc87ae
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

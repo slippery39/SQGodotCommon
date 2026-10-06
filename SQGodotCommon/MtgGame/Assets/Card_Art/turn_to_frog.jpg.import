@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/turn_to_frog.jpg-9626b8c9d1f153d45a3f8ca27318
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

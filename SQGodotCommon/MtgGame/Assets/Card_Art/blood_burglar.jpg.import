@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/blood_burglar.jpg-e299e8ce43e18021507b668e1b3
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

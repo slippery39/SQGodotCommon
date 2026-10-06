@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/cryptbreaker.jpg-5d0871566c0d705568d03c61e1da
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

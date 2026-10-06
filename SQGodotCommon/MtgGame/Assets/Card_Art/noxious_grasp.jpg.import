@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/noxious_grasp.jpg-860b23670b8a2ee17c217030baa
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

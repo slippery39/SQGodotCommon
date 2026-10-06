@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/wall_of_frost.jpg-7adbe63432b41e1622b1f06744e
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

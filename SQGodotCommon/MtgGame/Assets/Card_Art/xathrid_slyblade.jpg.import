@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/xathrid_slyblade.jpg-7c6a160592d6b046f72216cf
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

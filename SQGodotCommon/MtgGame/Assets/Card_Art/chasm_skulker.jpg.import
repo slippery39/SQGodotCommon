@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/chasm_skulker.jpg-b64a5d863e8f0cd1c31a058942d
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

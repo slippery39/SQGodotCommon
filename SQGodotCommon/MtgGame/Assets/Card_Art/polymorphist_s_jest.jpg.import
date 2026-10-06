@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/polymorphist_s_jest.jpg-cce5fbbe6f3afe113db69
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

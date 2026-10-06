@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/illusory_angel.jpg-0bbbda8d6ffdca2a0d63dd1f96
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

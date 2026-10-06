@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/goblin_rabblemaster.jpg-61d3f2a731e9ad6f51280
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

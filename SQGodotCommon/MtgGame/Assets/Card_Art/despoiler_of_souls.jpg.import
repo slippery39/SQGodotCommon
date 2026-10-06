@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/despoiler_of_souls.jpg-24002a4df8f89242aaf116
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

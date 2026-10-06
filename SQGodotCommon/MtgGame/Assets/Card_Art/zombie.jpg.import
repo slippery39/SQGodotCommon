@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/zombie.jpg-97f23cdc3085a52a1ac349c58697a0ce.c
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

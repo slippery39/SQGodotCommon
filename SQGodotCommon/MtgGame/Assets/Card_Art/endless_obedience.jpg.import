@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/endless_obedience.jpg-9295ed1b92c7647730614fc
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

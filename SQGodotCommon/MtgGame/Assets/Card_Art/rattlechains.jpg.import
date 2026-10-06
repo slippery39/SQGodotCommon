@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/rattlechains.jpg-866bac84226678cf3b07b64f03c6
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/bone_to_ash.jpg-0f994bdcf9e192df354dd33b4748b
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

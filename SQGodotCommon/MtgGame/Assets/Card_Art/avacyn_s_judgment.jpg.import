@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/avacyn_s_judgment.jpg-6ec032b43e5d118d4570b1d
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/thought_scour.jpg-c4c066417f5192fb8e1383cf756
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
