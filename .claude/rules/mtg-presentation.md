@@ -47,12 +47,14 @@ P/T used to be printed by `GetRulesText` *and* drawn by a `BoardCard` overlay la
 
 The event log is a collapsible overlay on its own `CanvasLayer`, closed by default, with an unread count on its toggle so an AI turn cannot pass unnoticed. Nothing reclaims its space automatically — `BoardUI.SetBoardWidth` moves `MainColumn`'s right anchor between 0.78 and 1.0. The hand's drop target is synced from `BoardUI.GetPlayerBattlefieldRect()` rather than hardcoded, since the board changes width when the log opens.
 
-`MtgCardTheme` colours the **frame by the card's COLOUR** (`Card.ColorPips` — WUBRG, gold for two or more, grey for colourless, brown for lands) and the **name plate by tribe**, via `SelfModulate` so the tint cannot bleed onto the labels.
+`MtgCardTheme` colours the **frame by the card's COLOUR** (`Card.ColorPips` — WUBRG, gold for two or more, grey for colourless, brown for lands) via `SelfModulate`. Name plates are plain cream: a tribe tint read as a second colour claim once tints actually rendered.
 
 Frame-by-colour replaced frame-by-card-TYPE, which was all this could do before the engine had colours. Type is already stated in words on the type line, so spending the strongest visual channel on it spent it twice; colour is what decides whether a card is castable in a drafter's deck, which is the first question they ask of a pack. Order inside `FrameColor` is load-bearing and commented: lands first (a land has no pips — its colour is what it PRODUCES), then pips before the artifact subtype so a coloured artifact takes its colour.
 
-**Every frame value must stay light.** It is MULTIPLIED against the frame art, so black is a violet-grey rather than black — `MtgCardThemeTests` pins a luminance floor precisely because "black" invites someone to use an actually-black value and turn the art to mud.
+**A tint on a card part only shows because `new_holo.gdshader` multiplies by `COLOR`.** Every card sprite inherits that shader; until 2026-10-06 it dropped `COLOR`, so frame-by-colour had NEVER rendered — five tints, one brown texture, and tests that only checked the tint values passed throughout. A tint test cannot see this; only a capture can. MTG supplies a near-white frame (`MtgCardSkin`), so the theme values are the colours the player sees.
 
 Card art is keyed by a slug of the card name (`CardArtLoader`). Hollowmere has essentially none, which degrades to the card scene's default artwork rather than failing — `Details.ApplyTo` assigns the texture unconditionally and the setter falls back, so a reused node cannot inherit the previous card's art.
 
 **The look is Dark Arcane** (`MtgVisualDesign.md`, mockups in `docs/mockups/mtg/`). Style through `MtgUiStyles` - its plates and buttons are 9-slices drawn by `tools/make_mtg_ui.py` (re-run it, then `--import`, to change a colour) and body text is EB Garamond from the project theme `MtgGame/Assets/mtg_theme.tres`. Never a raw `StyleBoxFlat`: that is what reads as default Godot.
+
+**Every card face comes from `MtgCardMapper.Face`** — it carries the skin textures, the colour, foil off, and `Details.Decorate = MtgCardSkin.Apply` (cost top-right with a gem per pip, dark ink on cream). A screen that builds its own `Details` loses all of it.

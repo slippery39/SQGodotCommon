@@ -89,17 +89,7 @@ public partial class BoardCard : Control
 
 		if (_cardNode != null)
 		{
-			var details = new InternalCardUI2D.Details
-			{
-				CardName = card.Name,
-				ManaCost = card.ManaCost.ToString(),
-				TypeLine = MtgCardMapper.GetTypeLine(card),
-				PowerToughness = MtgCardMapper.GetPowerToughness(card, state),
-				RulesText = MtgCardMapper.GetRulesText(card, state),
-				ArtworkTexture = CardArtLoader.Load(card.Name),
-				FrameColor = MtgCardTheme.FrameColor(card),
-				NamePlateColor = MtgCardTheme.NamePlateColor(card),
-			};
+			var details = MtgCardMapper.Face(card, state);
 			details.ApplyTo(_cardNode);
 		}
 

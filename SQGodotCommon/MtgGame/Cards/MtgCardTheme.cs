@@ -6,8 +6,8 @@ using MtgCore;
 namespace MtgGame;
 
 /// <summary>
-/// Per-card colouring, on two independent channels: the FRAME carries the card's colour
-/// (<see cref="Card.ColorPips"/>) and the NAME PLATE carries its tribe.
+/// Per-card colouring: the FRAME carries the card's colour (<see cref="Card.ColorPips"/>), and
+/// the tribe is read from the type line (<see cref="OrderedTribes"/>).
 ///
 /// Frame-by-colour is how a Magic player actually reads a card, and it is the signal that decides
 /// whether a card is castable in their deck — which since colours became a real constraint is the
@@ -15,13 +15,12 @@ namespace MtgGame;
 /// file could do back when the engine had no colour field at all: type is already stated in words
 /// on the type line, so spending the strongest visual channel on it was spending it twice.
 ///
-/// Tribe keeps the name plate because it is the second question ("does it go in my deck?") and
-/// the two never compete for the same pixels.
+/// The name plate USED to carry the tribe, but the shader dropped every tint, so nobody ever saw
+/// it. Once tints rendered, a green plate on a black card read as a second colour claim; plates
+/// are plain cream now (2026-10-06).
 ///
-/// **Black cannot be black.** Values are multiplied against the frame art via SelfModulate, so
-/// every one of them must stay light — a dark colour multiplies the frame into mud. Black is a
-/// desaturated violet-grey rather than the colour it names, which is the same compromise every
-/// real Magic frame makes for exactly the same reason.
+/// Values are multiplied against the frame art via SelfModulate. MTG supplies a near-white frame
+/// (<see cref="MtgCardSkin"/>), so each value IS the colour the player sees.
 /// </summary>
 public static class MtgCardTheme
 {
@@ -82,57 +81,24 @@ public static class MtgCardTheme
 		"Scout",
 	};
 
-	private static readonly Dictionary<string, Color> TribeColors =
-		new(StringComparer.OrdinalIgnoreCase)
-		{
-			["Zombie"] = new Color(0.62f, 0.80f, 0.48f),
-			["Vampire"] = new Color(0.85f, 0.38f, 0.44f),
-			["Spirit"] = new Color(0.68f, 0.86f, 0.95f),
-			["Werewolf"] = new Color(0.78f, 0.60f, 0.38f),
-			["Angel"] = new Color(1.00f, 0.93f, 0.62f),
-			["Demon"] = new Color(0.72f, 0.30f, 0.28f),
-			["Horror"] = new Color(0.70f, 0.55f, 0.88f),
-			["Insect"] = new Color(0.74f, 0.78f, 0.42f),
-			["Human"] = new Color(0.95f, 0.86f, 0.70f),
-			["Wizard"] = new Color(0.62f, 0.72f, 0.95f),
-			["Cleric"] = new Color(0.96f, 0.96f, 0.90f),
-			["Soldier"] = new Color(0.78f, 0.80f, 0.84f),
-			["Rogue"] = new Color(0.60f, 0.62f, 0.68f),
-			["Goblin"] = new Color(0.90f, 0.58f, 0.42f),
-			["Elf"] = new Color(0.66f, 0.86f, 0.62f),
-			["Dragon"] = new Color(0.88f, 0.52f, 0.40f),
-			["Elemental"] = new Color(0.74f, 0.84f, 0.86f),
-			["Cat"] = new Color(0.92f, 0.80f, 0.52f),
-			["Merfolk"] = new Color(0.60f, 0.84f, 0.86f),
-			["Giant"] = new Color(0.76f, 0.72f, 0.62f),
-			["Beast"] = new Color(0.80f, 0.74f, 0.52f),
-			["Shaman"] = new Color(0.78f, 0.70f, 0.90f),
-			["Druid"] = new Color(0.70f, 0.84f, 0.66f),
-			["Knight"] = new Color(0.86f, 0.86f, 0.92f),
-			["Warrior"] = new Color(0.88f, 0.74f, 0.66f),
-			["Berserker"] = new Color(0.90f, 0.66f, 0.58f),
-			["Scout"] = new Color(0.74f, 0.82f, 0.70f),
-		};
-
 	/// <summary>
-	/// Frame tint by COLOUR. Light throughout — see the type remarks on SelfModulate.
-	///
-	/// Black is a violet-grey rather than black, and white is a cream rather than white, for the
-	/// same reason: one would multiply the frame art into mud and the other would not read as a
-	/// tint at all.
+	/// Frame colour by COLOUR — the Dark Arcane palette, sampled from the mockups
+	/// (MtgVisualDesign.md §6). MTG's frame texture is near-white (<see cref="MtgCardSkin"/>), so
+	/// the multiply lands on these values as they are: black can be a real dark grey now. On the
+	/// old dark brown frame every one of these came out the same brown.
 	/// </summary>
-	private static readonly Color WhiteFrame = new(0.99f, 0.97f, 0.88f);
-	private static readonly Color BlueFrame = new(0.66f, 0.81f, 0.96f);
-	private static readonly Color BlackFrame = new(0.70f, 0.68f, 0.75f);
-	private static readonly Color RedFrame = new(0.97f, 0.71f, 0.63f);
-	private static readonly Color GreenFrame = new(0.71f, 0.88f, 0.70f);
+	private static readonly Color WhiteFrame = new("d8c296");
+	private static readonly Color BlueFrame = new("4998c8");
+	private static readonly Color BlackFrame = new("3c3735");
+	private static readonly Color RedFrame = new("b8452f");
+	private static readonly Color GreenFrame = new("4f8a5c");
 
 	/// Two or more colours. One gold frame rather than a blend: a blend of blue and red is a
 	/// muddy purple that reads as a third colour rather than as "this needs both".
-	private static readonly Color GoldFrame = new(0.96f, 0.87f, 0.58f);
+	private static readonly Color GoldFrame = new("c9a24a");
 
-	private static readonly Color LandFrame = new(0.86f, 0.76f, 0.60f);
-	private static readonly Color ColorlessFrame = new(0.84f, 0.88f, 0.92f);
+	private static readonly Color LandFrame = new("8a6a48");
+	private static readonly Color ColorlessFrame = new("9aa2aa");
 
 	/// <summary>
 	/// Frame tint by the card's colour. Every card matches exactly one branch.
@@ -165,18 +131,6 @@ public static class MtgCardTheme
 			ManaColor.Green => GreenFrame,
 			_ => ColorlessFrame,
 		};
-	}
-
-	/// <summary>
-	/// Name-plate tint by tribe. White for anything without a recognised tribe — including every
-	/// spell, since <c>SpellCardBuilder</c> never sets subtypes.
-	/// </summary>
-	public static Color NamePlateColor(Card card)
-	{
-		var tribe = OrderedTribes(card).FirstOrDefault();
-		return tribe != null && TribeColors.TryGetValue(tribe, out var color)
-			? color
-			: Colors.White;
 	}
 
 	/// <summary>

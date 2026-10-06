@@ -56,12 +56,11 @@ the style must sit next to that. One backdrop for every game for now (decided). 
 | Event log | collapsible overlay + unread count | keep, restyle |
 | AI inspector (F6), save scenario (F7), pause (Space) | debug overlays | keep, unstyled is fine |
 
-**Why every frame looks the same (found 2026-10-06):** `MainFrame.PNG` is a dark saturated brown
-(mean RGB 0.39/0.29/0.16) and the tint is MULTIPLIED onto it — a multiply only removes light, so
-white/blue/black/red/green land on `#634823 #423c26 #46321e #613519 #47411c`, five browns. The art
-and the untinted gold rules box also cover most of the frame. The wiring is correct; the texture
-cannot carry a colour. Fix with the card restyle: a light, low-saturation frame texture (on MTG's
-own instance — never edit the shared scene) and a tinted rules box, as both mockups draw.
+**Why every frame looked the same (found 2026-10-06, first diagnosis WRONG):** the first reading
+was "a light tint multiplied onto a dark brown texture stays brown". The real cause: the card
+shader (`new_holo.gdshader`) built its output from the texture and never multiplied by `COLOR`,
+so every SelfModulate tint on a card part was dropped — frame-by-colour had never rendered at all.
+Fixed with one line in the shader; MTG also supplies a near-white frame so the tint is the colour.
 
 ## 3. Screen inventory
 
@@ -204,3 +203,14 @@ rules text on the OLD card face is cramped at draft size (step 2); the menu is t
 **Art gap closed:** 121 of 396 CSC cards and four basics had no art; the scraper had simply not been
 re-run for CSC. Re-run (and its Retry-After: 0 backoff fixed): every CSC card has art except the
 Clue and Human tokens.
+
+**Step 2 - card face (2026-10-06).** `MtgCardMapper.Face` is the one factory (five screens had their
+own copy). It passes MTG's textures (`card_frame`, `card_name`, `card_rules`, `card_cost`) and a
+`Details.Decorate` hook (new, game-agnostic) that `MtgCardSkin.Apply` uses on the instance: cost
+disc top-right in Cinzel with a gem per pip beneath (generic and colour tracks both visible), name
+left-aligned and stopping short of the disc, dark ink on cream with outline and shadow zeroed, a
+leather P/T plate, foil off. `FitNameToBox` now fits the label's real width, which fixed names
+clipped under the cost disc ("night of the White Orchid").
+Found on the way: the shader bug above; the tribe-tinted name plate (never seen before the fix)
+read as a second colour claim and was dropped; the hand card scene ships with foil ON, which
+washed the cream face in rainbow noise.

@@ -1164,17 +1164,7 @@ public partial class MtgGameScene : Node2D
 		var card = _manager.State.GetObject(cardId) as Card;
 		if (card == null)
 			return;
-		var details = new InternalCardUI2D.Details
-		{
-			CardName = card.Name,
-			ManaCost = card.ManaCost.ToString(),
-			TypeLine = MtgCardMapper.GetTypeLine(card),
-			PowerToughness = MtgCardMapper.GetPowerToughness(card, _manager.State),
-			RulesText = MtgCardMapper.GetRulesText(card, _manager.State),
-			ArtworkTexture = CardArtLoader.Load(card.Name),
-			FrameColor = MtgCardTheme.FrameColor(card),
-			NamePlateColor = MtgCardTheme.NamePlateColor(card),
-		};
+		var details = MtgCardMapper.Face(card, _manager.State);
 		_cardPreviewPopup.ShowCard(details, GetViewport().GetMousePosition());
 	}
 

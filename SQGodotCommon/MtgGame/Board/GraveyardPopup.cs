@@ -124,20 +124,7 @@ public partial class GraveyardPopup : CanvasLayer
 		if (_state?.GetObject(cardId) is not Card card)
 			return;
 
-		_preview.ShowCard(
-			new InternalCardUI2D.Details
-			{
-				CardName = card.Name,
-				ManaCost = card.ManaCost.ToString(),
-				TypeLine = MtgCardMapper.GetTypeLine(card),
-				PowerToughness = MtgCardMapper.GetPowerToughness(card, _state),
-				RulesText = MtgCardMapper.GetRulesText(card, _state),
-				ArtworkTexture = CardArtLoader.Load(card.Name),
-				FrameColor = MtgCardTheme.FrameColor(card),
-				NamePlateColor = MtgCardTheme.NamePlateColor(card),
-			},
-			GetViewport().GetMousePosition()
-		);
+		_preview.ShowCard(MtgCardMapper.Face(card, _state), GetViewport().GetMousePosition());
 	}
 
 	/// <param name="title">

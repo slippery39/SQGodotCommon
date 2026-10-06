@@ -95,24 +95,31 @@ public class MtgCardThemeTests
 	}
 
 	[Test]
-	public void EveryFrameStaysLight_SoSelfModulateCannotMuddyTheArt()
+	public void EveryFrame_IsClearlyDistinctFromEveryOther()
 	{
-		// The frame tint is MULTIPLIED against the frame art. Anything dark turns it to mud, and
-		// "black" is the one that will tempt someone to use an actually-black value.
+		// "Distinct" is not enough: the frame art is near-white, so the tint IS what the player
+		// sees, and two near-identical tints cannot be told apart. (This checks the VALUES only —
+		// when the card shader dropped COLOR, every frame rendered as one brown while this passed.
+		// Rendering is checked by a capture, not here.)
 		var cards = ManaPool
 			.Colors.Select(c => Spell(ManaPool.Empty.Add(c, 1)))
 			.Append(Spell(new ManaPool { White = 1, Black = 1 }))
 			.Append(CardFactory.Artifact("Plain Rock", manaCost: 2).Build())
-			.Append(CardLibrary.BasicLand(ManaColor.Green));
+			.Append(CardLibrary.BasicLand(ManaColor.Green))
+			.ToList();
 
-		foreach (var card in cards)
+		for (var i = 0; i < cards.Count; i++)
+		for (var j = i + 1; j < cards.Count; j++)
 		{
-			var frame = MtgCardTheme.FrameColor(card);
-			var luminance = 0.299f * frame.R + 0.587f * frame.G + 0.114f * frame.B;
+			var a = MtgCardTheme.FrameColor(cards[i]);
+			var b = MtgCardTheme.FrameColor(cards[j]);
+			var distance = Math.Sqrt(
+				Math.Pow(a.R - b.R, 2) + Math.Pow(a.G - b.G, 2) + Math.Pow(a.B - b.B, 2)
+			);
 			Assert.That(
-				luminance,
-				Is.GreaterThan(0.55f),
-				$"{card.Name} frame is too dark to multiply"
+				distance,
+				Is.GreaterThan(0.15),
+				$"{cards[i].Name} and {cards[j].Name} frames are too alike to tell apart"
 			);
 		}
 	}

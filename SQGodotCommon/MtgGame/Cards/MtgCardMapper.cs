@@ -30,21 +30,43 @@ public static class MtgCardMapper
 			manaCostDisplay = $"{cost}";
 		}
 
-		return new InternalCardUI2D.Details
+		var details = Face(card, state, manaCostDisplay);
+		details.Id = card.Id.ToString();
+		details.OutlineColor = canPlay ? new Color(0, 1.5f, 0, 1) : new Color(0.3f, 0.3f, 0.3f, 1);
+		details.OutlineThickness = canPlay ? 3f : 0f;
+		return details;
+	}
+
+	/// <summary>
+	/// The card face every screen shows — hand, board, draft, previews, graveyard — in the Dark
+	/// Arcane skin (<see cref="MtgCardSkin"/>). One factory, so a new screen cannot forget the skin
+	/// or the colour. <paramref name="state"/> null = printed P/T and rules, for a card not in a
+	/// game (a draft pack). <paramref name="manaCost"/> overrides the printed cost (the hand shows
+	/// what the player will actually pay).
+	/// </summary>
+	public static InternalCardUI2D.Details Face(
+		Card card,
+		GameState state = null,
+		string manaCost = null
+	) =>
+		new()
 		{
-			Id = card.Id.ToString(),
 			CardName = card.Name,
-			ManaCost = manaCostDisplay,
+			ManaCost = manaCost ?? (card.HasSubtype("Land") ? "" : card.ManaCost.ToString()),
 			TypeLine = GetTypeLine(card),
 			PowerToughness = GetPowerToughness(card, state),
 			RulesText = GetRulesText(card, state),
 			ArtworkTexture = CardArtLoader.Load(card.Name),
 			FrameColor = MtgCardTheme.FrameColor(card),
-			NamePlateColor = MtgCardTheme.NamePlateColor(card),
-			OutlineColor = canPlay ? new Color(0, 1.5f, 0, 1) : new Color(0.3f, 0.3f, 0.3f, 1),
-			OutlineThickness = canPlay ? 3f : 0f,
+			MainFrameTexture = MtgCardSkin.Frame,
+			NameFrameTexture = MtgCardSkin.NamePlate,
+			RulesTextFrameTexture = MtgCardSkin.RulesBox,
+			ManaCostFrameTexture = MtgCardSkin.CostDisc,
+			// The shared hand card ships with the foil effect ON; over a cream face it reads as
+			// rainbow noise across the rules text.
+			Holographic = false,
+			Decorate = ui => MtgCardSkin.Apply(ui, card.ColorPips),
 		};
-	}
 
 	/// <summary>
 	/// The card's type line, e.g. "Creature — Human Soldier". Derived from component presence and

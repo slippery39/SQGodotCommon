@@ -208,18 +208,5 @@ public partial class DeckListPopup : CanvasLayer
 
 	// state: null — a drafted pool card is not in a game, so P/T is the printed value.
 	private void ShowPreview(Card card) =>
-		_preview.ShowCard(
-			new InternalCardUI2D.Details
-			{
-				CardName = card.Name,
-				ManaCost = card.ManaCost.ToString(),
-				TypeLine = MtgCardMapper.GetTypeLine(card),
-				PowerToughness = MtgCardMapper.GetPowerToughness(card, state: null),
-				RulesText = MtgCardMapper.GetRulesText(card),
-				ArtworkTexture = CardArtLoader.Load(card.Name),
-				FrameColor = MtgCardTheme.FrameColor(card),
-				NamePlateColor = MtgCardTheme.NamePlateColor(card),
-			},
-			GetViewport().GetMousePosition()
-		);
+		_preview.ShowCard(MtgCardMapper.Face(card, state: null), GetViewport().GetMousePosition());
 }

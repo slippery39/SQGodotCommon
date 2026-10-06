@@ -127,7 +127,9 @@ void fragment() {
     float effective_time = pause_animation ? manual_time : TIME * global_time_scale;
     
     // Get base texture
-    vec4 base_texture = texture(TEXTURE, UV);
+    // Times COLOR, as the default canvas shader does: it carries the sprite's (Self)Modulate.
+    // Without it every tint on a card part (frame colour, name plate) was silently dropped.
+    vec4 base_texture = texture(TEXTURE, UV) * COLOR;
     vec3 final_color = base_texture.rgb;
     
     // Check if any effects are enabled

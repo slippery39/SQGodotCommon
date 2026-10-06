@@ -116,6 +116,38 @@ def pointed(end):
     return draw
 
 
+def circle():
+    return lambda d, x0, y0, x1, y1: d.ellipse((x0, y0, x1 - 1, y1 - 1), fill=255)
+
+
+def gem(size=32):
+    """A WHITE glossy gem, tinted per mana colour in the game (Modulate)."""
+    W = size * S
+    img = Image.new("RGBA", (W, W), (0, 0, 0, 0))
+    ring = shape_mask(W, W, lambda d, w, h: d.ellipse((0, 0, w - 1, h - 1), fill=255))
+    img.paste(Image.new("RGBA", (W, W), (40, 36, 32, 255)), (0, 0), ring)
+    sphere = Image.new("RGBA", (W, W))
+    sp = sphere.load()
+    lx, ly = W * 0.40, W * 0.36
+    for y in range(W):
+        for x in range(W):
+            t = min(1.0, ((x - lx) ** 2 + (y - ly) ** 2) ** 0.5 / (W * 0.55))
+            v = int(255 - 120 * t)
+            sp[x, y] = (v, v, v, 255)
+    inner = shape_mask(W, W, lambda d, w, h: d.ellipse((w * 0.1, h * 0.1, w * 0.9, h * 0.9), fill=255))
+    img.paste(sphere, (0, 0), inner)
+    return img.resize((size, size), Image.LANCZOS)
+
+
+# Card parts — the SAME pixel sizes as Common/Cards/2D/Card2D/Images/Parts, so the shared scene's
+# geometry holds. Frame and name plate are near-WHITE: the game multiplies a colour onto them
+# (MtgCardTheme), and a dark base turned every colour brown (MtgVisualDesign.md section 2).
+CARD_WHITE = ((246, 242, 236), (214, 208, 200))
+CREAM = ((250, 244, 230), (226, 216, 196))
+RULES = ((238, 228, 206), (216, 202, 174))
+EDGE = ((70, 64, 58), (34, 30, 28), (10, 9, 8))
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     made = []
@@ -137,6 +169,13 @@ def main():
         ("button_disabled", ASH, IRON),
     ):
         save(compose(160, 64, pointed(24), fill, rim, 4), name)
+
+    save(compose(312, 445, rounded(14), CARD_WHITE, EDGE, 4, grain_strength=0.3, gloss=False), "card_frame")
+    save(compose(279, 53, rounded(8), CREAM, BRASS, 2, grain_strength=0.2), "card_name")
+    save(compose(279, 158, rounded(6), RULES, EDGE, 2, grain_strength=0.25, gloss=False), "card_rules")
+    save(compose(64, 64, circle(), LEATHER, BRASS, 4), "card_cost")
+    save(compose(96, 56, rounded(14), LEATHER, BRASS, 3), "card_pt")
+    save(gem(), "gem")
 
     print("made", ", ".join(made), "->", OUT)
 

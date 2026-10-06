@@ -608,7 +608,9 @@ public partial class InternalCardUI2D : Node2D
 
 		const int maxFontSize = 27;
 		const int minFontSize = 15;
-		const float availableWidth = 250f;
+		// The label's own width, not a constant: a game that narrows the label (MTG moves its cost
+		// over the plate) would otherwise fit to the old width and clip the name.
+		var availableWidth = _nameLabel.Size.X - 8f;
 
 		var font = _nameLabel.LabelSettings.Font ?? _nameLabel.GetThemeFont("font");
 		if (font == null)
@@ -660,6 +662,13 @@ public partial class InternalCardUI2D : Node2D
 		public bool? Holographic { get; set; }
 		public float? HolographicIntensity { get; set; }
 
+		/// <summary>
+		/// Runs last in <see cref="ApplyTo(InternalCardUI2D)"/>: a game's own skin — moving a part,
+		/// adding a node — on the instance, so the shared scene itself is never edited. Runs on
+		/// every apply, so it must be idempotent (a reused node is applied many times).
+		/// </summary>
+		public System.Action<InternalCardUI2D> Decorate { get; set; }
+
 		public void ApplyTo(InternalCardUI2D card)
 		{
 			card.Id = Id?.ToString() ?? card.Id;
@@ -705,6 +714,7 @@ public partial class InternalCardUI2D : Node2D
 				card.Holographic = Holographic.Value;
 			if (HolographicIntensity.HasValue)
 				card.HolographicIntensity = HolographicIntensity.Value;
+			Decorate?.Invoke(card);
 		}
 
 		public void ApplyTo(CardUI2D card)
