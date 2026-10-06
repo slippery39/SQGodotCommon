@@ -107,10 +107,10 @@ move, and deriving it means there is something honest to move away from. Note `S
 it slightly — it tops a card to a full playset once chosen, so a floor of 3 yields 4 — which is why
 the lists read as playsets rather than as odd counts.
 
-**Engine slots are never culled.** Mode 7 already judged the archetype on whether it ASSEMBLES; the
-win rate is here to tune it against the field, not to decide whether it deserves to exist. A
-half-built combo deck loses every game, so a viability floor would delete exactly the decks the
-feature exists to keep — which is what every unconstrained run has done. The rate is still reported.
+**Nothing removes an engine slot** (nothing removes any deck — culling was removed 2026-09-11). Mode
+7 already judged the archetype on whether it ASSEMBLES; the win rate is here to tune it against the
+field, not to decide whether it deserves to exist. A half-built combo deck loses every game, so a
+viability floor would delete exactly the decks the feature exists to keep. The rate is still reported.
 
 **So the only way a dead engine leaves the field is the exclusion list**, and it has to leave,
 because it does not merely waste its own slot. Mere-Storm read 8.2% and 0.0% across two CMB runs and
@@ -156,7 +156,7 @@ rest of the field, and the run outputs a metagame — decklists plus the matchup
 thing in the project that BUILDS a constructed deck rather than measuring a hand-written one.
 
 Each generation: every deck proposes M mutants, every candidate plays the frozen field, the best
-improving mutant that stays distinct is accepted, and at most one non-viable deck is culled.
+improving mutant that stays distinct is accepted, and a non-viable deck is flagged in the report.
 Phases mirror `DraftTrainer` exactly — sequential proposals, one parallel game batch into a
 pre-allocated array, sequential fold-in.
 
@@ -176,9 +176,9 @@ invalidates every number it prints.**
 
 The sum of win rates in a closed field is exactly `50% x N` by construction — "every deck at 40%"
 is unreachable arithmetic. It is implemented as a **viability floor**: a deck that cannot clear
-40% against the field is a non-viable list and gets replaced. Grace period of 5 generations (a
-fresh seed starts bad by definition) and at most one cull per generation (the field has to be
-re-measured after any replacement).
+40% against the field is REPORTED non-viable and never removed. It used to be culled and re-seeded;
+that was removed on 2026-09-11 because a culled slot lost its `DeckHistory` and restarted blind as
+well as bad — the slots culled most never recovered (`RunningSimulations.md`, worked example).
 
 The report also prints each deck's BEST matchup, because a deck under the floor that still
 counters something is a real archetype and one that beats nothing is not.
@@ -191,7 +191,7 @@ nothing should be. Both halves already existed in the trained model: per-card ra
 good, `PairStat` says what wants to be together, and both were found unsupervised.
 
 Deck 8 is a permanent **wildcard** slot: uniform anchor ignoring card value, double synergy
-weight. It is often bad and gets culled, which IS the exploration. Without a slot that ignores
+weight. It is often bad, which IS the exploration. Without a slot that ignores
 what the prior already believes, the field can only refine cards the prior already liked, and a
 combo deck of individually-mediocre pieces is unreachable.
 
@@ -251,8 +251,9 @@ games, so pairs reach hundreds to thousands of games within a few generations.
 - **Summing is safe here where it was not globally.** The measured harm was from adding ~27
   thin cross-pool deltas; these are dense, few, about the deck being scored, and carry two
   orders of magnitude more evidence per pair.
-- **Reset on cull**, and pairs whose partner has been cut are ignored — a record about a card no
-  longer in the deck is not evidence about the deck now.
+- **Pairs whose partner has been cut are ignored** — a record about a card no longer in the deck
+  is not evidence about the deck now. (The history used to be reset on cull, which is exactly why
+  culling was removed: a reset slot restarted blind.)
 
 Baseline is the deck's OWN base rate, not an independence baseline: inside one deck the question
 is simply whether games drawing both go better than that deck's average game, and the cards'
@@ -438,9 +439,6 @@ Four things about how it is computed, each of which would otherwise mislead:
 - **A recount is rendered as a change.** `Mutate` moves 3x to 4x far more often than it swaps a card
   in, so a diff over card SETS would make the most-used operator invisible. Land changes likewise,
   as a synthetic `Land` entry that `ByCard` filters back out.
-
-Culls are logged too (`reseeded`), with the full old→new diff — a cull is the largest edit the
-search makes, and omitting it makes a card look never-tried when its whole deck was replaced under it.
 
 **Read the rejects first.** The accepted rows only say what worked; the rejects say what the mutator
 keeps reaching for and failing with.
@@ -659,8 +657,7 @@ under test.
 instead of anchor-and-kernel: pick a mechanical demand from `PoolFeatures`, jam every card in the
 pool that answers or asks it, then refine. Slots are labelled `Synergy-1..N` / `Midrange-A..` /
 `Wildcard`, each synergy slot takes a **distinct** demand, and they seed first (a synergy deck is
-the hardest shape to fit past the diversity floor). Concept slots get `ConceptGraceMultiplier` (3)
-times the normal cull grace and re-seed on a concept when culled.
+the hardest shape to fit past the diversity floor).
 
 **Unproven either way — leave `conceptSlots` at 0.** Two A/B runs were done and **neither is
 readable**, because the control was later run against itself and differed from its own repeat by

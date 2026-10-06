@@ -3,6 +3,10 @@
 **Status:** phase 1 (demand extraction) is **built and measured** — see §9. The rest of "The
 proposal" is not started, and options 1/2/4 below are superseded by §9's approach.
 
+**Culling was removed from the evolver on 2026-09-11** (with `ConceptGraceMultiplier` and the cull
+prompt). Every passage below that mentions culling — the field list, the A/B settings, concept-slot
+grace — describes the evolver as it was, not as it is.
+
 ---
 
 ## 1. What exists

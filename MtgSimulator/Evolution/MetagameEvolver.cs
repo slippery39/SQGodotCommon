@@ -50,12 +50,9 @@ public sealed class MetagameEvolver
 	/// *how many copies*, which is genuinely a small-effect question and needs the deeper evaluation
 	/// that fewer, larger proposals free up.
 	///
-	/// **Culling is OFF while exploring, and that is not a tuning choice.** A deck mid-exploration is
-	/// deliberately half-built, and a viability floor deletes exactly those — the failure this file
-	/// already records for engine slots ("a half-built combo deck loses every game, so a viability
-	/// floor would delete exactly the decks the feature exists to keep"). Engine slots are permanently
-	/// cull-exempt for that reason; exploration extends the same exemption to every slot for as long
-	/// as every slot is in that state.
+	/// **Nothing is removed from the field in either phase** — culling was taken out on 2026-09-11.
+	/// Exploration once suppressed it for the reason that applies to every deck: a deck
+	/// mid-exploration is deliberately half-built, and a viability floor deletes exactly those.
 	/// </summary>
 	private readonly int _explorationGenerations;
 
@@ -92,19 +89,6 @@ public sealed class MetagameEvolver
 	/// with each other by construction.
 	/// </summary>
 	private const double MaxEngineOverlap = 0.8;
-
-	/// <summary>
-	/// How much longer a concept slot is left alone before its candidate set counts as exhausted.
-	///
-	/// **A proxy for "the candidate set is exhausted", which is the honest abandon rule and is
-	/// not built.** A human drops an archetype once the pool has no more cards that could fix it,
-	/// not because it is losing this week; a synergy deck is a coherent thing that gets better as
-	/// the wrong copies are pruned out, and culling it on the viability floor at generation 5
-	/// judges it before any of that has happened. The wildcard slot failed exactly this way on
-	/// the combined pool — 13 of 48 culls, never once survived, so the exploration it existed to
-	/// provide never materialised.
-	/// </summary>
-	public const int ConceptGraceMultiplier = 3;
 
 	/// <param name="minDifference">
 	/// Minimum fraction of spells any two decks must differ by. Enforced at seeding AND at
@@ -1531,16 +1515,6 @@ public sealed class MetagameEvolver
 	}
 
 	/// <summary>
-	/// Replaces the worst deck if it is below the viability floor and out of its grace period.
-	///
-	/// At most one per generation: the field has to be re-measured after any replacement, and
-	/// culling several at once churns faster than the measurement can follow.
-	/// </summary>
-	/// <param name="profiles">
-	/// The curve band each slot must keep. The colour identity needs no parameter — the outgoing
-	/// deck carries it, and the replacement inherits it from there.
-	/// </param>
-	/// <summary>
 	/// **The SECOND line of defence, not the mechanism.** Enforcement is `DeckBuilder.Seed`'s
 	/// required `identity` parameter: omitting it is a compile error, which is what the two bugs
 	/// this file records would have been.
@@ -1784,11 +1758,7 @@ public sealed class MetagameEvolver
 					+ "its list, not offered changes and refusing them:"
 			);
 			Console.WriteLine($"    {"slot", -30}{"real", 7}{"dry", 6}{"kept", 6}");
-			foreach (
-				var g in rows.Where(r => r.Outcome != MutationLog.Reseeded)
-					.GroupBy(r => (r.Slot, r.Deck))
-					.OrderBy(g => g.Key.Slot)
-			)
+			foreach (var g in rows.GroupBy(r => (r.Slot, r.Deck)).OrderBy(g => g.Key.Slot))
 				Console.WriteLine(
 					$"    {Truncate(g.Key.Deck, 30), -30}"
 						+ $"{g.Count(r => r.Outcome != MutationLog.NoProposal), 7}"
@@ -1798,10 +1768,7 @@ public sealed class MetagameEvolver
 			Console.WriteLine();
 		}
 
-		var proposals = rows.Where(r =>
-				r.Outcome != MutationLog.Reseeded && r.Outcome != MutationLog.NoProposal
-			)
-			.ToList();
+		var proposals = rows.Where(r => r.Outcome != MutationLog.NoProposal).ToList();
 		var acceptedRows = proposals.Where(r => r.Outcome == MutationLog.Accepted).ToList();
 		var tooSimilar = proposals.Count(r => r.Outcome == MutationLog.TooSimilar);
 
@@ -1812,8 +1779,7 @@ public sealed class MetagameEvolver
 		Console.WriteLine(
 			$"    {proposals.Count} proposals, {acceptedRows.Count} accepted "
 				+ $"({(proposals.Count == 0 ? 0 : 100.0 * acceptedRows.Count / proposals.Count):F0}%), "
-				+ $"{tooSimilar} rejected on diversity, "
-				+ $"{rows.Count(r => r.Outcome == MutationLog.Reseeded)} culls"
+				+ $"{tooSimilar} rejected on diversity"
 		);
 		if (acceptedRows.Count > 0)
 			Console.WriteLine(
@@ -1977,8 +1943,7 @@ public sealed class MetagameEvolver
 				$"    ...but {_engineDifference:P0} between two ENGINE decks — their pool locks "
 					+ "already hold them apart, and archetype pools overlap"
 			);
-		// Exploration is a MUTATION-OPERATOR change and a culling override, neither of which shows
-		// up anywhere else in the log — a run that cannot state its own phase split is not
+		// Exploration is a MUTATION-OPERATOR change, which shows up nowhere else in the log — a run that cannot state its own phase split is not
 		// comparable to another one. Same reason the culling line above exists.
 		Console.WriteLine(
 			_explorationGenerations > 0

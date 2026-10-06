@@ -50,7 +50,6 @@ public sealed class MutationLog
 	public const string Accepted = "accepted";
 	public const string Rejected = "rejected";
 	public const string TooSimilar = "too-similar";
-	public const string Reseeded = "reseeded";
 
 	/// <summary>
 	/// The proposal undoes a mutation this slot accepted a few generations ago.

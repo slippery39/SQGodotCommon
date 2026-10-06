@@ -239,9 +239,10 @@ else if (mode == 6)
 	var evolveGenInput = Console.ReadLine()?.Trim() ?? "";
 	var evolveGens = int.TryParse(evolveGenInput, out var eg) && eg > 0 ? eg : 30;
 
-	// Exploration generations: playset-sized moves only (Recount and AdjustLands are off) and no
-	// culling. A +-1 trim is below what this many games can resolve, so early generations spent on
-	// them are noise; the phase exists to find WHICH cards belong before tuning HOW MANY.
+	// Exploration generations: playset-sized moves only (Recount and AdjustLands are off). A +-1
+	// trim is below what this many games can resolve, so early generations spent on them are
+	// noise; the phase exists to find WHICH cards belong before tuning HOW MANY, and the Harvest
+	// rebuilds each deck from what it measured before optimisation begins.
 	Console.Write($"How many of those are exploration generations? (default 0 = off): ");
 	var exploreInput = Console.ReadLine()?.Trim() ?? "";
 	var explorationGens = int.TryParse(exploreInput, out var xg) && xg >= 0 ? xg : 0;
@@ -311,8 +312,8 @@ else if (mode == 6)
 	// Phase two. Seeds the top-LIFT archetypes from a mode 7 run into the field and holds each to
 	// its card POOL — not to a decklist, so the deck can still pick up removal and metagame
 	// answers without dissolving into the midrange pile every unconstrained run converges on.
-	// Engine slots are never culled: mode 7 already judged them on whether they ASSEMBLE, and a
-	// win-rate floor would delete exactly the decks this exists to keep.
+	// No win-rate floor removes them (nothing removes any deck since culling went): mode 7 already
+	// judged them on whether they ASSEMBLE, and the exclusion list is how a dead one leaves.
 	Console.Write("Engine file from mode 7? (blank = none, e.g. sim_results/engines_all_*.json): ");
 	var enginesPath = Console.ReadLine()?.Trim();
 	if (!string.IsNullOrWhiteSpace(enginesPath) && !File.Exists(enginesPath))

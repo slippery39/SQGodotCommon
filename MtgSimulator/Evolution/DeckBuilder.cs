@@ -441,7 +441,7 @@ public static class DeckBuilder
 	/// </summary>
 	/// <param name="wildcard">
 	/// The exploration arm. Samples its anchor UNIFORMLY, ignoring card value entirely, and
-	/// leans harder on synergy. It will often be bad and get culled — that is the mechanism,
+	/// leans harder on synergy. It will often be bad — that is the mechanism,
 	/// not a failure of it. Without a slot that ignores what the model already believes, the
 	/// field can only ever refine the cards the prior already liked, and a combo deck built
 	/// from individually-mediocre pieces is unreachable.

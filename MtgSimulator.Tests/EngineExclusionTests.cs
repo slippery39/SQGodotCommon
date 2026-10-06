@@ -7,9 +7,9 @@ namespace MtgSimulator.Tests;
 ///
 /// Mere-Storm finished at 8.2% and 0.0% across two CMB runs, and every other deck's best matchup
 /// was "vs Mere-Storm": the field spread, the viable count and each deck's overall rate were all
-/// measured partly against a punching bag. Engine slots are never culled by design (mode 7 already
-/// judged the archetype on whether it ASSEMBLES), so nothing in a run removes one — the exclusion
-/// list is the only way it leaves the field.
+/// measured partly against a punching bag. Nothing in a run removes a deck (culling is gone, and
+/// mode 7 already judged the archetype on whether it ASSEMBLES), so the exclusion list is the only
+/// way it leaves the field.
 ///
 /// These drive <see cref="MetagameEvolver.LoadEngines"/> directly rather than through
 /// <c>Run()</c>, so they cost no games.
