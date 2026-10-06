@@ -48,6 +48,9 @@ C# on .NET. Windows.
 - Small, reviewable steps; never large all-at-once changes
 - **Never assume on vague requirements — confirm before implementing**
 - **Verify a primitive fires before relying on it.** An inert card throws no error; four silent no-op engine bugs were found only by testing the consequence.
+- **"It looks a bit off" is a bug report, never about the look.** Text that looked too small was empty; a cramped badge showed the WRONG number. Find the cause before fixing the resemblance.
+- **Check `git status` before writing a file you believe is new.** A `cat >` over an existing test file destroyed eight tests; the only tell was the count going DOWN after tests were added.
+- **Tests read authored values, never restate them.** A literal copied out of content breaks on every balance pass while the code is right; twelve did at once.
 
 ## Seeing what the AI is doing
 
