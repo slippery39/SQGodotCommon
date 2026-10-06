@@ -200,10 +200,10 @@
   {
     "Name": "Pegasus Courser",
     "ManaCost": 3,
-    "Value": 7.1000023,
+    "Value": 7.333332,
     "StressValue": 12,
     "NotMeasured": null,
-    "Fragility": -4.8999977,
+    "Fragility": -4.666668,
     "WasMeasured": true
   },
   {
@@ -219,9 +219,9 @@
     "Name": "Steadfast Sentry",
     "ManaCost": 3,
     "Value": 12,
-    "StressValue": 14.400001,
+    "StressValue": 25.8,
     "NotMeasured": null,
-    "Fragility": -2.4000006,
+    "Fragility": -13.799999,
     "WasMeasured": true
   },
   {
@@ -246,9 +246,9 @@
     "Name": "Basri\u0027s Acolyte",
     "ManaCost": 4,
     "Value": 15.612118,
-    "StressValue": 14.800001,
+    "StressValue": 13.114286,
     "NotMeasured": null,
-    "Fragility": 0.8121166,
+    "Fragility": 2.4978313,
     "WasMeasured": true
   },
   {
@@ -515,10 +515,10 @@
   {
     "Name": "Oblivion Ring",
     "ManaCost": 3,
-    "Value": 7.5,
+    "Value": 7.700001,
     "StressValue": 17.1,
     "NotMeasured": null,
-    "Fragility": -9.6,
+    "Fragility": -9.4,
     "WasMeasured": true
   },
   {
@@ -633,9 +633,9 @@
     "Name": "Harbinger of the Tides",
     "ManaCost": 2,
     "Value": 14.466667,
-    "StressValue": 45.75,
+    "StressValue": 25.400002,
     "NotMeasured": null,
-    "Fragility": -31.283333,
+    "Fragility": -10.933334,
     "WasMeasured": true
   },
   {
@@ -687,18 +687,18 @@
     "Name": "Aether Adept",
     "ManaCost": 3,
     "Value": 14.466663,
-    "StressValue": 36.482353,
+    "StressValue": 25.400002,
     "NotMeasured": null,
-    "Fragility": -22.01569,
+    "Fragility": -10.933338,
     "WasMeasured": true
   },
   {
     "Name": "Barrin, Tolarian Archmage",
     "ManaCost": 3,
-    "Value": 13.599995,
-    "StressValue": 36.482353,
+    "Value": 14.466663,
+    "StressValue": 25.400002,
     "NotMeasured": null,
-    "Fragility": -22.882359,
+    "Fragility": -10.933338,
     "WasMeasured": true
   },
   {
@@ -723,9 +723,9 @@
     "Name": "Frost Lynx",
     "ManaCost": 3,
     "Value": 9,
-    "StressValue": 22.95,
+    "StressValue": 22.400002,
     "NotMeasured": null,
-    "Fragility": -13.950001,
+    "Fragility": -13.400002,
     "WasMeasured": true
   },
   {
@@ -831,18 +831,18 @@
     "Name": "Frost Titan",
     "ManaCost": 6,
     "Value": 29.7,
-    "StressValue": 25.882355,
+    "StressValue": 33.2,
     "NotMeasured": null,
-    "Fragility": 3.817646,
+    "Fragility": -3.5,
     "WasMeasured": true
   },
   {
     "Name": "Agent of Treachery",
     "ManaCost": 7,
-    "Value": 57.599995,
-    "StressValue": 48.399998,
+    "Value": 38.133335,
+    "StressValue": 44.2,
     "NotMeasured": null,
-    "Fragility": 9.199997,
+    "Fragility": -6.0666656,
     "WasMeasured": true
   },
   {
@@ -1821,9 +1821,9 @@
     "Name": "Goblin Arsonist",
     "ManaCost": 1,
     "Value": 6,
-    "StressValue": 13.757895,
+    "StressValue": 15.6,
     "NotMeasured": null,
-    "Fragility": -7.7578955,
+    "Fragility": -9.6,
     "WasMeasured": true
   },
   {
@@ -2126,29 +2126,29 @@
   {
     "Name": "Inferno Titan",
     "ManaCost": 6,
-    "Value": 55.2,
-    "StressValue": 38.666668,
+    "Value": 60.599995,
+    "StressValue": 100.2,
     "NotMeasured": null,
-    "Fragility": 16.533333,
+    "Fragility": -39.600002,
     "WasMeasured": true
   },
   {
     "Name": "Soul of Shandalar",
     "ManaCost": 6,
-    "Value": 25.007694,
-    "StressValue": 36.72308,
+    "Value": 37.399998,
+    "StressValue": 53.457146,
     "NotMeasured": null,
-    "Fragility": -11.715385,
+    "Fragility": -16.057148,
     "WasMeasured": true
   },
   {
     "Name": "Drakuseth, Maw of Flames",
     "ManaCost": 7,
-    "Value": 77.533325,
-    "StressValue": 93.933334,
-    "NotMeasured": null,
-    "Fragility": -16.40001,
-    "WasMeasured": true
+    "Value": 0,
+    "StressValue": 0,
+    "NotMeasured": "reached a terminal inside the lookahead",
+    "Fragility": 0,
+    "WasMeasured": false
   },
   {
     "Name": "Lightning Bolt",
@@ -2306,10 +2306,10 @@
   {
     "Name": "Flames of the Firebrand",
     "ManaCost": 2,
-    "Value": 6,
-    "StressValue": 15.6,
+    "Value": 12.200001,
+    "StressValue": 28.529411,
     "NotMeasured": null,
-    "Fragility": -9.6,
+    "Fragility": -16.32941,
     "WasMeasured": true
   },
   {
@@ -2324,19 +2324,19 @@
   {
     "Name": "Cone of Flame",
     "ManaCost": 4,
-    "Value": 6.200001,
-    "StressValue": 29.944447,
+    "Value": 12.200001,
+    "StressValue": 28.529411,
     "NotMeasured": null,
-    "Fragility": -23.744446,
+    "Fragility": -16.32941,
     "WasMeasured": true
   },
   {
     "Name": "Barrage of Expendables",
     "ManaCost": 2,
     "Value": 1.5,
-    "StressValue": 29.133333,
+    "StressValue": 30.45,
     "NotMeasured": null,
-    "Fragility": -27.633333,
+    "Fragility": -28.95,
     "WasMeasured": true
   },
   {
@@ -2368,7 +2368,7 @@
   },
   {
     "Name": "Chandra\u0027s Regulator",
-    "ManaCost": 1,
+    "ManaCost": 2,
     "Value": 1.5,
     "StressValue": 1.5,
     "NotMeasured": null,
@@ -3036,9 +3036,9 @@
     "Name": "Phyrexian Revoker",
     "ManaCost": 2,
     "Value": 9,
-    "StressValue": 17.877777,
+    "StressValue": 22.400002,
     "NotMeasured": null,
-    "Fragility": -8.877777,
+    "Fragility": -13.400002,
     "WasMeasured": true
   },
   {
@@ -3242,10 +3242,10 @@
   {
     "Name": "Meteorite",
     "ManaCost": 4,
-    "Value": 1.7000008,
-    "StressValue": 13.300001,
+    "Value": 7.700001,
+    "StressValue": 17.1,
     "NotMeasured": null,
-    "Fragility": -11.6,
+    "Fragility": -9.4,
     "WasMeasured": true
   },
   {
