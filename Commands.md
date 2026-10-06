@@ -18,6 +18,61 @@ dotnet test SQGodotCommon.Tests
 dotnet run --project MtgConsole
 ```
 
+## Run a Godot scene — USE THE SCRIPT
+
+```
+./Run-Godot.ps1                                              # the main scene (the menu)
+./Run-Godot.ps1 MtgGame/Draft/DraftScene.tscn                # any scene, directly
+./Run-Godot.ps1 MtgGame/Draft/DraftScene.tscn -Capture shots/draft -Seconds 4
+./Run-Godot.ps1 MtgGame/Draft/DraftScene.tscn -Headless -Seconds 4   # log-only check
+```
+
+**`Run-Godot.ps1` exists because three things go wrong every time and none are memorable.**
+`godot` on PATH is the NON-.NET build and fails every C# script load with errors that look like a
+broken project — the script always uses `godot-mono`. It opens on the SECOND monitor (detected,
+not hardcoded) instead of over your work. And it creates the capture folder: `--write-movie` with a
+missing folder exits 0, prints "Done recording movie", and writes nothing.
+
+**Captures land inside the Godot project, so they would ship in the APK.** The script drops a
+`.gdignore` in every capture folder it makes (the KIN branch shipped 122 MB of frames before this).
+
+**Any scene opens directly** — `GameManager` is an autoload, so logging and the input map exist
+whichever scene boots, and it logs `Initial scene: <name>`. A scene that needs an earlier screen's
+data still fails honestly: `MtgGameScene` throws "Service DeckSetupData has not been registered"
+unless entered from deck select.
+
+Traps, each paid for once on the KIN branch:
+- **Build the Godot project before a capture** — `dotnet build SQGodotCommon/SQGodotCommon.csproj`.
+  Godot run from the command line uses the LAST BUILT assemblies; a change that has not been built
+  looks exactly like a change that does not work.
+- **Run from the repo root** — a cwd left elsewhere makes `./Run-Godot.ps1` "not recognized".
+- **Take a LATE frame.** Layout and card tweens have not settled on frame 0.
+- **`--headless` cannot render**, and prints shader-compiler errors (`shader_compiler.cpp`,
+  `custom_samplers`) with stack traces when the card scene loads. That is the dummy renderer, not a
+  broken scene. Judge visuals with `-Capture`, never headless.
+- **New assets do not exist until imported.** The game launched with `--path` never imports; until
+  `godot-mono --path SQGodotCommon --headless --import` runs, `ResourceLoader.Exists` is false and
+  nothing errors — the art is just missing.
+- **`--resolution` does not resize the window** while `project.godot` has
+  `window/size/window_*_override` (it does: 1280x720). Check a capture's real pixel size.
+- **A capture cannot hover or click**, and a still frame proves nothing about motion — nothing moves
+  until state changes. KIN added debug flags (`--hover-card=N`, `--mouse=x,y`, real clicks through
+  the viewport) for this; MtgGame has none yet. Add one when a screen needs it, and send REAL input
+  events through the viewport rather than calling the handler, or the capture "verifies" something
+  no player can do.
+
+To find the frames where something animates, diff against a settled one instead of guessing timing:
+
+```python
+from PIL import Image, ImageChops
+import glob
+fs = sorted(glob.glob('SQGodotCommon/shots/x/*.png'))
+base = Image.open(fs[10]).convert('RGB')
+for f in fs[11:]:
+    d = ImageChops.difference(Image.open(f).convert('RGB'), base).convert('L')
+    print(sum(i * c for i, c in enumerate(d.histogram())) / 1e6, f)
+```
+
 ## Inspect what the AI is doing
 
 In the Godot game: **Space** pauses the AI, **F6** opens the inspector, **F7** saves the position.
