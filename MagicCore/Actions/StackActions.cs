@@ -9,7 +9,8 @@ using MagicCore.Turns;
 namespace MagicCore.Actions;
 
 /// <summary>What was decided while casting, carried by the card while it is on the stack.</summary>
-public record OnStackComponent(int X, ImmutableArray<int> Targets) : GameComponent;
+public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArray<int> Modes)
+	: GameComponent;
 
 /// <summary>A triggered or activated ability on the stack (CR 113.7) — not a card.</summary>
 public record StackAbility : GameObject
@@ -36,6 +37,9 @@ public record CastSpellAction : GameAction
 	public int X { get; init; }
 	public ImmutableArray<int> Targets { get; init; } = [];
 
+	/// <summary>Chosen modes of a modal spell, by index; empty otherwise.</summary>
+	public ImmutableArray<int> Modes { get; init; } = [];
+
 	public override ValidationResult ValidateAdd(GameState s)
 	{
 		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
@@ -49,7 +53,18 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("Sorcery speed: your main phase with an empty stack");
 		if (X < 0 || (X > 0 && !card.ManaCost.HasX))
 			return ValidationResult.Invalid("Invalid X");
-		if (!TargetSpec.AreLegal(s, StackResolution.SpecsOf(card), Targets, PlayerId, CardId))
+		var text = card.GetComponent<SpellEffectsComponent>();
+		if (!Modal.IsLegal(text?.Modes ?? [], text?.Choose ?? 1, Modes))
+			return ValidationResult.Invalid("Illegal choice of modes");
+		if (
+			!TargetSpec.AreLegal(
+				s,
+				StackResolution.TextOf(card, Modes).Specs,
+				Targets,
+				PlayerId,
+				CardId
+			)
+		)
 			return ValidationResult.Invalid("Illegal targets");
 		if (ManaPayment.Find(s, PlayerId, Costs.Of(s, PlayerId, card), X) is null)
 			return ValidationResult.Invalid("Cannot pay the cost");
@@ -77,7 +92,7 @@ public record CastSpellAction : GameAction
 		s = s.MoveCard(CardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
 		s = s.UpdateObject(
 			CardId,
-			s.GetCard(CardId).WithComponent(new OnStackComponent(X, Targets))
+			s.GetCard(CardId).WithComponent(new OnStackComponent(X, Targets, Modes))
 		);
 		s = s.Raise(new SpellCastEvent(CardId, PlayerId));
 		return new ActionResult(Priority.Retain(s, PlayerId));
@@ -145,8 +160,14 @@ public record ActivateAbilityAction : GameAction
 
 public static class StackResolution
 {
-	public static ImmutableList<TargetSpec> SpecsOf(Card card) =>
-		card.GetComponent<SpellEffectsComponent>()?.Targets ?? [];
+	/// <summary>A spell's target words and steps for the chosen modes (the whole text when not modal).</summary>
+	public static (ImmutableList<TargetSpec> Specs, ImmutableList<GameAction> Steps) TextOf(
+		Card card,
+		ImmutableArray<int> modes
+	) =>
+		card.GetComponent<SpellEffectsComponent>() is { } text
+			? Modal.Compose(text.Targets, text.Effects, text.Modes, modes)
+			: ([], []);
 
 	public static GameState Push(GameState s, StackAbility ability)
 	{
@@ -176,14 +197,16 @@ public static class StackResolution
 		var (controller, sourceId, snapshot, effects, specs, chosen, x, eventCard, finish) =
 			top switch
 			{
-				Card spell => (
+				Card spell
+					when spell.GetComponent<OnStackComponent>() is { } cast
+						&& TextOf(spell, cast.Modes) is var text => (
 					spell.ControllerId,
 					spell.Id,
 					spell,
-					spell.GetComponent<SpellEffectsComponent>()?.Effects ?? [],
-					SpecsOf(spell),
-					spell.GetComponent<OnStackComponent>()!.Targets,
-					spell.GetComponent<OnStackComponent>()!.X,
+					text.Steps,
+					text.Specs,
+					cast.Targets,
+					cast.X,
 					0,
 					(GameAction)new FinishSpellAction { CardId = spell.Id }
 				),
@@ -218,6 +241,7 @@ public static class StackResolution
 					.Add(ContextKeys.SourceSnapshot, snapshot)
 					.Add(ContextKeys.X, x)
 					.Add(ContextKeys.Targets, legal)
+					.Add(ContextKeys.AllTargets, legal)
 					.Add(ContextKeys.EventCard, eventCard),
 			}
 		);

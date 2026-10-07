@@ -111,6 +111,35 @@ public static class FraCards
 		params GameAction[] effects
 	) => new(on, [.. effects]) { Targets = [.. targets] };
 
+	/// <summary>One bullet: its target words and effects. Its text is filled in from the card.</summary>
+	static Mode M(TargetSpec[] targets, params GameAction[] effects) =>
+		new("", [.. targets], [.. effects]);
+
+	/// <summary>"Choose one/two —" spell. The modes must match the printed bullets one for one.</summary>
+	static SpellEffectsComponent ModalSpell(string name, int choose, params Mode[] modes) =>
+		new([]) { Modes = Printed(name, modes), Choose = choose };
+
+	static TriggeredAbilityComponent ModalWhen(
+		string name,
+		TriggerEvent on,
+		int choose,
+		params Mode[] modes
+	) => new(on, []) { Modes = Printed(name, modes), Choose = choose };
+
+	/// <summary>Names each mode with its printed bullet — and refuses a script whose count differs.</summary>
+	static ImmutableList<Mode> Printed(string name, Mode[] modes)
+	{
+		var bullets = (Data[name].OracleText ?? "")
+			.Split('\n')
+			.Where(l => l.StartsWith('•'))
+			.ToList();
+		if (bullets.Count != modes.Length)
+			throw new InvalidOperationException(
+				$"{name}: {modes.Length} modes scripted, {bullets.Count} printed"
+			);
+		return [.. modes.Select((m, i) => m with { Text = bullets[i] })];
+	}
+
 	static readonly Dictionary<string, ImmutableArray<GameComponent>> Scripts =
 		new()
 		{
@@ -199,7 +228,7 @@ public static class FraCards
 				When(
 					TriggerEvent.AnotherCreatureYouControlEnters,
 					[],
-					new ModifyUntilEndOfTurn(Ref.Source, 0, 0) { PowerFromEventCard = true }
+					new ModifyUntilEndOfTurn(Ref.Source, Count.PowerOf(Ref.EventCard), 0)
 				),
 			],
 			["Koth, the Geomancer"] =
@@ -408,6 +437,214 @@ public static class FraCards
 				Grant(-10, [Creature], new AddCounters(Ref.Target(), Count.LandsYouControl)),
 			],
 			["Keeper of the Quiet Hour"] = [When(TriggerEvent.SelfEnters, [], new EmpowerJace(2))],
+
+			// ===== Modal: "Choose one/two —" (Modes.cs) =====
+			["Surgical Precision"] =
+			[
+				ModalSpell(
+					"Surgical Precision",
+					1,
+					M(
+						[Creature with { MinToughness = 4 }],
+						new Destroy(Ref.Target()),
+						new GainLife(Ref.You, 1)
+					),
+					M([], new DrawCards(Ref.You, 1), new GainLife(Ref.You, 2))
+				),
+			],
+			["Divining Duelist"] =
+			[
+				ModalWhen(
+					"Divining Duelist",
+					TriggerEvent.SelfEnters,
+					1,
+					M([Creature], new Tap(Ref.Target())),
+					M([Creature], new Untap(Ref.Target())),
+					M([], new DrawCards(Ref.You, 1), new Discard(Ref.You, 1))
+				),
+			],
+			["Perfected Theory"] =
+			[
+				ModalSpell(
+					"Perfected Theory",
+					1,
+					M(
+						[Creature],
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { SetBase = (1, 1) }
+					),
+					M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { SetBase = (4, 5) })
+				),
+			],
+			["Rise of the Deathbringer"] =
+			[
+				// ponytail: "lose life equal to the number of cards drawn" reads X; a library shorter
+				// than X draws fewer. Count the cards actually drawn if that ever matters.
+				ModalSpell(
+					"Rise of the Deathbringer",
+					1,
+					M(
+						[],
+						new DrawCards(Ref.You, Count.GreatestPowerOf(Ref.CreaturesYouControl)),
+						new LoseLife(Ref.You, Count.GreatestPowerOf(Ref.CreaturesYouControl))
+					),
+					M([], new ModifyUntilEndOfTurn(Ref.AllCreatures, -3, -3))
+				),
+			],
+			["Vraska's Final Mercy"] =
+			[
+				ModalSpell(
+					"Vraska's Final Mercy",
+					1,
+					M(
+						[CreatureOrPlaneswalker],
+						new LoseLife(Ref.You, 2),
+						new Destroy(Ref.Target())
+					),
+					M([], new LoseLife(Ref.You, 2), new EmpowerJace(6))
+				),
+			],
+			["Fulminous Forte"] =
+			[
+				ModalSpell(
+					"Fulminous Forte",
+					1,
+					M(
+						[],
+						new DealDamage(
+							Ref.OpponentsPermanents(CardType.Creature | CardType.Planeswalker),
+							1
+						)
+					),
+					M([CreatureOrPlaneswalker], new DealDamage(Ref.Target(), 5))
+				),
+			],
+			["Compel Brutality"] =
+			[
+				ModalSpell(
+					"Compel Brutality",
+					1,
+					M(
+						[
+							new TargetSpec(TargetKind.Creature, Whose.You),
+							CreatureOrPlaneswalker with
+							{
+								Whose = Whose.Opponent,
+							},
+						],
+						new DamageFrom(Ref.Target(0), Ref.Target(1), Count.PowerOf(Ref.Target(0)))
+					),
+					M(
+						[
+							new TargetSpec(TargetKind.Permanent, Whose.You)
+							{
+								AnyOfTypes = CardType.Planeswalker,
+							},
+							CreatureOrPlaneswalker with
+							{
+								Whose = Whose.Opponent,
+							},
+						],
+						new DamageFrom(Ref.Target(0), Ref.Target(1), Count.LoyaltyOf(Ref.Target(0)))
+					)
+				),
+			],
+			["Charge the Sanctum"] =
+			[
+				ModalSpell(
+					"Charge the Sanctum",
+					1,
+					M([], new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 2, 0)),
+					M(
+						[Creature],
+						new ModifyUntilEndOfTurn(Ref.Target(), 2, 0, "First strike"),
+						new AddCounters(Ref.Target(), 1)
+					)
+				),
+			],
+			["Craftwork Crusher"] =
+			[
+				ModalWhen(
+					"Craftwork Crusher",
+					TriggerEvent.SelfEnters,
+					2,
+					M([CreatureOrPlaneswalker], new DealDamage(Ref.Target(), 4)),
+					M([], new CreateTokens(Cadet, 1)),
+					M([], new DrawCards(Ref.You, 1))
+				),
+			],
+			["Fatehold Charm"] =
+			[
+				ModalSpell(
+					"Fatehold Charm",
+					1,
+					M([], new DrawCards(Ref.You, 1), new EmpowerJace(2)),
+					M([new TargetSpec(TargetKind.SpellOrCreature)], new ReturnToHand(Ref.Target())),
+					M([], new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 2))
+				),
+			],
+			["Konstrari Charm"] =
+			[
+				ModalSpell(
+					"Konstrari Charm",
+					1,
+					M([Creature with { WithKeyword = "Flying" }], new DealDamage(Ref.Target(), 6)),
+					M(
+						[Creature],
+						new AddCounters(Ref.Target(), 2),
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Trample")
+					),
+					M([], new AddMana(ManaColor.Colorless, 3))
+				),
+			],
+			["Stingerquill Charm"] =
+			[
+				ModalSpell(
+					"Stingerquill Charm",
+					1,
+					M([new TargetSpec(TargetKind.AnyTarget)], new DealDamage(Ref.Target(), 3)),
+					M(
+						[Creature],
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "First strike"),
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Deathtouch")
+					),
+					M([], new CreateTokens(Cadet, 1) { GainsUntilEndOfTurn = "Haste" })
+				),
+			],
+			["Archive Arbiter"] =
+			[
+				ModalWhen(
+					"Archive Arbiter",
+					TriggerEvent.SelfEnters,
+					1,
+					M(
+						[
+							new TargetSpec(TargetKind.Permanent)
+							{
+								NotTypes = CardType.Creature | CardType.Land,
+							},
+						],
+						new Destroy(Ref.Target())
+					),
+					M([], new GainLife(Ref.You, 4))
+				),
+			],
+			["Yuriko, Hope from the Shadows"] =
+			[
+				ModalWhen(
+					"Yuriko, Hope from the Shadows",
+					TriggerEvent.SelfEnters,
+					1,
+					M(
+						[Creature],
+						new ModifyUntilEndOfTurn(
+							Ref.Target(),
+							Count.NumberOf(Ref.CardsInYourGraveyard).Negated,
+							0
+						)
+					),
+					M([], new Surveil(2))
+				),
+			],
 		};
 
 	public static CardDefinition Get(string name) =>

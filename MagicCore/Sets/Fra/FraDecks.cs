@@ -16,7 +16,8 @@ public static class FraDecks
 				("Last Gasp", 2),
 				("Terminal Criticism", 2),
 				("Extended Absence", 1),
-				("Cast Away Doubt", 2),
+				("Vraska's Final Mercy", 1),
+				("Surgical Precision", 1),
 				("Rank Rat", 3),
 				("Rampart Hunter", 3),
 				("Screeching Soulbreaker", 3),
@@ -35,9 +36,11 @@ public static class FraDecks
 				("No Admittance", 2),
 				("Arni, Renowned Champion", 1),
 				("Koth, the Geomancer", 1),
-				("Tethermage's Advantage", 2),
+				("Konstrari Charm", 1),
+				("Compel Brutality", 1),
 				("Yoshimaru, Scrappy Stray", 1),
-				("Greenhouse Propagator", 3),
+				("Greenhouse Propagator", 2),
+				("Fulminous Forte", 1),
 				("Arcane Amphisbaena", 2),
 				("Way of the Wildspeaker", 1),
 				("Way of the Pyromancer", 1),
@@ -54,10 +57,12 @@ public static class FraDecks
 				("Thalia, the Survivor", 1),
 				("Way of the Healer", 1),
 				("Way of the Mentor", 1),
-				("Mindseeker Oculus", 4),
+				("Mindseeker Oculus", 3),
 				("Protege's Awakening", 2),
 				("Tam's Resistance", 3),
-				("Keeper of the Quiet Hour", 3)
+				("Keeper of the Quiet Hour", 1),
+				("Divining Duelist", 2),
+				("Fatehold Charm", 1)
 			),
 		};
 

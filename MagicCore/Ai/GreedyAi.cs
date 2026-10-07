@@ -52,6 +52,9 @@ public sealed class GreedyAi(int playerId)
 	{
 		if (choice is ChooseCardsFromHandChoice)
 			return WorstCards(s, choice.Options.Select(o => o.Id), choice.MinChoices);
+		if (choice is ChooseModesChoice { MaxChoices: > 1 } modes)
+			return Combinations(modes.Options.Select(o => o.Id).ToList(), modes.MaxChoices)
+				.MaxBy(pick => Evaluate(Settle(s.Choose(pick))))!;
 		if (choice.MaxChoices != 1)
 			return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
 
@@ -60,6 +63,16 @@ public sealed class GreedyAi(int playerId)
 			options.Insert(0, []);
 		return options.MaxBy(pick => Evaluate(Settle(s.Choose(pick))))!;
 	}
+
+	static IEnumerable<IEnumerable<int>> Combinations(List<int> ids, int k) =>
+		k == 0
+			?
+			[
+				[],
+			]
+			: ids.SelectMany(
+				(id, i) => Combinations(ids[(i + 1)..], k - 1).Select(rest => rest.Prepend(id))
+			);
 
 	/// <summary>Keep 2–5 lands in seven; after two mulligans keep anything.</summary>
 	bool ShouldKeep(GameState s)

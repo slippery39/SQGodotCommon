@@ -43,7 +43,7 @@ public record EmpowerJace(Count Amount) : Effect
 
 	public override ActionResult Execute(GameState s)
 	{
-		var n = Amount.Of(s, InputContext);
+		var n = Amount.Value(s, InputContext);
 		var jace = s.CardsIn(Controller, ZoneType.Battlefield).FirstOrDefault(IsJaceToken);
 		if (jace is null)
 		{

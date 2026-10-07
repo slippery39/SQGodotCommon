@@ -10,6 +10,8 @@ public enum TargetKind
 	CreatureOrPlaneswalker,
 	AnyTarget, // creature, planeswalker or player (CR 115.4)
 	Player,
+	Permanent, // narrowed by AnyOfTypes / NotTypes: "noncreature, nonland permanent"
+	SpellOrCreature, // a spell on the stack, or a creature on the battlefield
 }
 
 public enum Whose
@@ -36,6 +38,18 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	/// <summary>"That's blue or red" — empty means any colour.</summary>
 	public ImmutableArray<ManaColor> AnyOfColors { get; init; } = [];
 
+	/// <summary>For <see cref="TargetKind.Permanent"/>: "artifact or enchantment". None means any type.</summary>
+	public CardType AnyOfTypes { get; init; }
+
+	/// <summary>"Noncreature, nonland": none of these types.</summary>
+	public CardType NotTypes { get; init; }
+
+	/// <summary>"With toughness 4 or greater".</summary>
+	public int MinToughness { get; init; }
+
+	/// <summary>"Target creature with flying".</summary>
+	public string? WithKeyword { get; init; }
+
 	public bool IsLegal(GameState s, int controllerId, int sourceId, int targetId)
 	{
 		if (!s.HasObject(targetId))
@@ -54,6 +68,12 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		if (s.GetObject(targetId) is MagicPlayer)
 			return Kind is TargetKind.AnyTarget or TargetKind.Player;
 		if (
+			Kind == TargetKind.SpellOrCreature
+			&& s.GetObject(targetId) is Card spell
+			&& OnStack(s, targetId)
+		)
+			return targetId != sourceId && Filters(spell); // a spell cannot target itself (CR 115.5)
+		if (
 			Kind == TargetKind.Player
 			|| s.GetObject(targetId) is not Card card
 			|| !s.IsOnBattlefield(targetId)
@@ -62,14 +82,22 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 
 		var typeOk = Kind switch
 		{
-			TargetKind.Creature => card.Is(CardType.Creature),
+			TargetKind.Creature or TargetKind.SpellOrCreature => card.Is(CardType.Creature),
+			TargetKind.Permanent => AnyOfTypes == CardType.None || card.Is(AnyOfTypes),
 			_ => card.Is(CardType.Creature | CardType.Planeswalker),
 		};
-		return typeOk
-			&& !(Another && targetId == sourceId)
-			&& !(Nonlegendary && card.Is(Supertype.Legendary))
-			&& (AnyOfColors.IsEmpty || card.Colors.Any(AnyOfColors.Contains));
+		return typeOk && !(Another && targetId == sourceId) && Filters(card);
 	}
+
+	bool Filters(Card card) =>
+		!(Nonlegendary && card.Is(Supertype.Legendary))
+		&& (AnyOfColors.IsEmpty || card.Colors.Any(AnyOfColors.Contains))
+		&& (NotTypes == CardType.None || !card.Is(NotTypes))
+		&& card.Toughness >= MinToughness
+		&& (WithKeyword is null || card.Has(WithKeyword));
+
+	static bool OnStack(GameState s, int id) =>
+		s.GetParent(id) == s.GetWellKnownId(MagicKeys.Stack);
 
 	public IEnumerable<int> Candidates(GameState s, int controllerId, int sourceId)
 	{
@@ -77,7 +105,14 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		var permanents = players
 			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
 			.Select(c => c.Id);
-		return players.Concat(permanents).Where(id => IsLegal(s, controllerId, sourceId, id));
+		var spells =
+			Kind == TargetKind.SpellOrCreature
+				? s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
+				: [];
+		return players
+			.Concat(permanents)
+			.Concat(spells)
+			.Where(id => IsLegal(s, controllerId, sourceId, id));
 	}
 
 	/// <summary>Every legal assignment for a list of target words — one id per word, 0 for an unused "up to one".</summary>

@@ -143,16 +143,25 @@ public static class MagicRules
 	static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card)
 	{
 		var maxX = card.ManaCost.HasX ? AvailableMana(s, player) : 0;
-		var targetings = TargetSpec.Combinations(s, StackResolution.SpecsOf(card), player, card.Id);
+		var text = card.GetComponent<SpellEffectsComponent>();
+		var choices = Modal
+			.Choices(text?.Modes ?? [], text?.Choose ?? 1)
+			.SelectMany(modes =>
+				TargetSpec
+					.Combinations(s, StackResolution.TextOf(card, modes).Specs, player, card.Id)
+					.Select(targets => (modes, targets))
+			)
+			.ToList();
 		return Enumerable
 			.Range(0, maxX + 1)
 			.SelectMany(x =>
-				targetings.Select(targets => new CastSpellAction
+				choices.Select(c => new CastSpellAction
 				{
 					PlayerId = player,
 					CardId = card.Id,
 					X = x,
-					Targets = targets,
+					Targets = c.targets,
+					Modes = c.modes,
 				})
 			);
 	}
@@ -217,7 +226,7 @@ public static class MagicRules
 				{
 					PlayLandAction p => $"land|{s.GetCard(p.CardId).Name}",
 					CastSpellAction c =>
-						$"cast|{s.GetCard(c.CardId).Name}|{c.X}|{string.Join(",", c.Targets)}",
+						$"cast|{s.GetCard(c.CardId).Name}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}",
 					_ => (object)a,
 				}
 			)

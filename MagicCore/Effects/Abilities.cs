@@ -8,6 +8,10 @@ namespace MagicCore.Effects;
 public record SpellEffectsComponent(ImmutableList<GameAction> Effects) : GameComponent
 {
 	public ImmutableList<TargetSpec> Targets { get; init; } = [];
+
+	/// <summary>"Choose one/two —": the bullets. Empty for a non-modal spell.</summary>
+	public ImmutableList<Mode> Modes { get; init; } = [];
+	public int Choose { get; init; } = 1;
 }
 
 public enum TriggerEvent
@@ -25,6 +29,10 @@ public record TriggeredAbilityComponent(TriggerEvent On, ImmutableList<GameActio
 	: GameComponent
 {
 	public ImmutableList<TargetSpec> Targets { get; init; } = [];
+
+	/// <summary>"When this enters, choose one —": chosen as it goes on the stack (CR 700.2b).</summary>
+	public ImmutableList<Mode> Modes { get; init; } = [];
+	public int Choose { get; init; } = 1;
 }
 
 /// <summary>"[Cost]: [effects]." Uses the stack. Mana abilities are <see cref="ManaAbilityComponent"/>, which does not.</summary>

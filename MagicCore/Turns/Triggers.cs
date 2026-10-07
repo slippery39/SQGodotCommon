@@ -99,32 +99,75 @@ public static class Triggers
 	{
 		foreach (var t in triggers)
 		{
-			var controller = t.Source.ControllerId;
-			var unchoosable = t.Ability.Targets.Any(spec =>
-				!spec.Optional && !spec.Candidates(s, controller, t.Source.Id).Any()
-			);
-			if (unchoosable)
+			if (t.Ability.Modes.IsEmpty)
+			{
+				s = QueueTargets(s, t, t.Ability.Targets, t.Ability.Effects);
 				continue;
+			}
+			var choosable = ChoosableModes(s, t);
+			if (choosable.Count < t.Ability.Choose)
+				continue; // not enough modes can be chosen: the ability is removed (CR 700.2a)
 			s = s.SpawnAction(
 				new PipelineAction
 				{
 					Steps =
 					[
-						.. t.Ability.Targets.Select(
-							(spec, i) => new ChooseTargetChoice(controller, t.Source.Id, spec, i)
+						new ChooseModesChoice(
+							t.Source.ControllerId,
+							t.Source.Id,
+							t.Ability,
+							choosable
 						),
-						new PutTriggerOnStackAction
-						{
-							Source = t.Source,
-							ControllerId = controller,
-							Ability = t.Ability,
-							EventCardId = t.EventCardId,
-						},
+						new QueueModalTriggerAction { Trigger = t },
 					],
 				}
 			);
 		}
 		return s.SpawnAction(new GivePriorityAction { PlayerId = priorityPlayerId });
+	}
+
+	/// <summary>Modes whose required targets all have a legal choice (CR 700.2a).</summary>
+	public static ImmutableList<int> ChoosableModes(GameState s, Pending t) =>
+		t
+			.Ability.Modes.Select((mode, i) => (mode, i))
+			.Where(m =>
+				m.mode.Targets.All(spec =>
+					spec.Optional || spec.Candidates(s, t.Source.ControllerId, t.Source.Id).Any()
+				)
+			)
+			.Select(m => m.i)
+			.ToImmutableList();
+
+	/// <summary>The controller chooses each target, then the ability goes on the stack (CR 603.3d).</summary>
+	public static GameState QueueTargets(
+		GameState s,
+		Pending t,
+		ImmutableList<Targeting.TargetSpec> specs,
+		ImmutableList<GameAction> steps
+	)
+	{
+		var controller = t.Source.ControllerId;
+		if (specs.Any(spec => !spec.Optional && !spec.Candidates(s, controller, t.Source.Id).Any()))
+			return s;
+		return s.SpawnAction(
+			new PipelineAction
+			{
+				Steps =
+				[
+					.. specs.Select(
+						(spec, i) => new ChooseTargetChoice(controller, t.Source.Id, spec, i)
+					),
+					new PutTriggerOnStackAction
+					{
+						Source = t.Source,
+						ControllerId = controller,
+						Specs = specs,
+						Effects = steps,
+						EventCardId = t.EventCardId,
+					},
+				],
+			}
+		);
 	}
 }
 
@@ -133,13 +176,16 @@ public record PutTriggerOnStackAction : GameAction
 	/// <summary>The source as it was when it triggered — it may be gone by now (a token that died).</summary>
 	public Card Source { get; init; } = null!;
 	public int ControllerId { get; init; }
-	public TriggeredAbilityComponent Ability { get; init; } = null!;
+
+	/// <summary>The target words and steps to run — the whole text, or the chosen modes composed.</summary>
+	public ImmutableList<Targeting.TargetSpec> Specs { get; init; } = [];
+	public ImmutableList<GameAction> Effects { get; init; } = [];
 	public int EventCardId { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
-		var targets = ChooseTargetChoice.Read(InputContext, Ability.Targets.Count);
-		if (Ability.Targets.Where((spec, i) => !spec.Optional && targets[i] == 0).Any())
+		var targets = ChooseTargetChoice.Read(InputContext, Specs.Count);
+		if (Specs.Where((spec, i) => !spec.Optional && targets[i] == 0).Any())
 			return new(s);
 		return new(
 			StackResolution.Push(
@@ -150,13 +196,31 @@ public record PutTriggerOnStackAction : GameAction
 					SourceId = Source.Id,
 					Source = Source,
 					ControllerId = ControllerId,
-					Effects = Ability.Effects,
-					Specs = Ability.Targets,
+					Effects = Effects,
+					Specs = Specs,
 					Targets = targets,
 					EventCardId = EventCardId,
 				}
 			)
 		);
+	}
+}
+
+/// <summary>After the modes are chosen: compose them and ask for their targets.</summary>
+public record QueueModalTriggerAction : GameAction
+{
+	public Triggers.Pending Trigger { get; init; } = null!;
+
+	public override ActionResult Execute(GameState s)
+	{
+		var chosen = ChooseModesChoice.Read(InputContext);
+		var (specs, steps) = Modal.Compose(
+			Trigger.Ability.Targets,
+			Trigger.Ability.Effects,
+			Trigger.Ability.Modes,
+			chosen
+		);
+		return new(Triggers.QueueTargets(s, Trigger, specs, steps));
 	}
 }
 

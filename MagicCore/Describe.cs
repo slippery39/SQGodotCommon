@@ -15,6 +15,8 @@ public static class Describe
 			KeepHandAction => "Keep hand",
 			MulliganAction => "Mulligan",
 			PlayLandAction p => $"Play {Name(s, p.CardId)}",
+			CastSpellAction { Modes.Length: > 0 } m =>
+				$"Cast {Name(s, m.CardId)} ({ModeText(s, m)}){Targets(s, m.Targets)}",
 			CastSpellAction c =>
 				$"Cast {Name(s, c.CardId)}{(c.X > 0 ? $" (X={c.X})" : "")}{Targets(s, c.Targets)}",
 			ActivateAbilityAction a => $"Activate {Name(s, a.CardId)}{Targets(s, a.Targets)}",
@@ -30,6 +32,7 @@ public static class Describe
 		{
 			DeclareAttackerChoice a => $"Attack with {Card(s.GetCard(a.CreatureId))}?",
 			DeclareBlockerChoice b => $"Block with {Card(s.GetCard(b.CreatureId))}?",
+			ChooseModesChoice m => $"{Name(s, m.SourceId)}: {m.Prompt.ToLowerInvariant()}",
 			ChooseTargetChoice t =>
 				$"{Name(s, t.SourceId)}: choose target {t.Index + 1}{(t.Spec.Optional ? " (optional)" : "")}",
 			_ => choice.Prompt,
@@ -67,6 +70,11 @@ public static class Describe
 			is { } ability
 			? Loyalty.CostText(ability.Cost)
 			: "?";
+
+	static string ModeText(GameState s, CastSpellAction c) =>
+		s.GetCard(c.CardId).GetComponent<Effects.SpellEffectsComponent>() is { } text
+			? string.Join(" + ", c.Modes.Select(i => text.Modes[i].Text.TrimStart('•', ' ')))
+			: "";
 
 	static string Name(GameState s, int id) => s.HasObject(id) ? s.GetObject(id).Name : $"#{id}";
 

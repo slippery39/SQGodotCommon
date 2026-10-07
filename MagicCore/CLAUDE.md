@@ -21,8 +21,10 @@ MagicCore/
 ├── Actions/             PassPriority, PlayLand, TapForMana; CastSpell, ActivateAbility, StackAbility,
 │                        StackResolution (fizzle); mulligan; hand, library, combat and target choices
 ├── Actions/LoyaltyActions.cs  Loyalty.AbilitiesOf (own + granted) and ActivateLoyaltyAction
+├── Actions/ModeChoices.cs     ChooseModesChoice — a modal trigger's modes, chosen as it goes on the stack
 ├── Effects/Effects.cs   ContextKeys, Ref (you / opponent / target i / source / event card …), primitives
 ├── Effects/Abilities.cs spell, triggered, activated, mana and static ability components
+├── Effects/Modes.cs     Mode, Modal.Compose (chosen modes → one target list + steps), ScopeTargetsAction
 ├── Targeting/TargetSpec.cs  one legality test for choosing AND resolving; Combinations
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions)
@@ -68,6 +70,13 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   speed and once per turn per permanent, damage removes loyalty, 0 loyalty is a state-based death,
   and the defending player's planeswalkers are attack options. Empower Jace creates and loads the
   token in ONE resolution, so a fresh token never meets the check at 0.
+- **Modes (CR 700.2):** a modal text is its `Modes` + `Choose`. `Modal.Compose` is the ONE place the
+  chosen modes become target words and steps, in printed order; each mode's effects see only its own
+  targets (`Target(0)` is that mode's first). A spell's modes are chosen when cast (`CastSpellAction.
+  Modes`), a trigger's as it goes on the stack. A mode with an unchoosable required target can't be
+  chosen. The scripted mode count must match the printed bullets — `FraCards` throws otherwise.
+- **Base P/T effects** ("has base power and toughness 4/5") sit under counters and pumps, latest
+  wins (`UntilEndOfTurn.SetBase`, read only in `Card.Power`/`Toughness`).
 - **A spell or ability whose targets are ALL illegal on resolution does nothing** (CR 608.2b) — the
   drain on Extended Absence included. Partially illegal: those targets read as 0 to the effects.
 - **`MagicRules.Choose` checks WHICH ids, `ResolveChoice` only how many.** Distinct and offered.
@@ -106,9 +115,9 @@ needs · Empower Jace with two Jace tokens loads the first · surveil keeps the 
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 49 cards
-(`FraDecks`), including 15 Empower Jace cards and the 15 dual lands. **The 8 real planeswalkers are
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 63 cards
+(`FraDecks`), including 15 Empower Jace cards, the 15 dual lands and 14 modal cards. **The 8 real planeswalkers are
 not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
-Coverage plan, by cards unblocked: 7a lands ✓ · 7b modal, sacrifice, dies triggers · 7c continuous
+Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves · 7c continuous
 effects, step triggers, prowess · 7d prepare, flashback, cycling, graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
 limited Bo1 uses it are unconfirmed — hence `handSmoothing`.

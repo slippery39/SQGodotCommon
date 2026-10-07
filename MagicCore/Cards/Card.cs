@@ -57,9 +57,17 @@ public record Card : GameObject
 	/// effects. Every rule reads these, never BasePower — a second sum drifts.
 	/// </summary>
 	public int Power =>
-		BasePower + PlusOneCounters + Components.OfType<UntilEndOfTurn>().Sum(u => u.Power);
+		(CurrentBase?.Power ?? BasePower)
+		+ PlusOneCounters
+		+ Components.OfType<UntilEndOfTurn>().Sum(u => u.Power);
 	public int Toughness =>
-		BaseToughness + PlusOneCounters + Components.OfType<UntilEndOfTurn>().Sum(u => u.Toughness);
+		(CurrentBase?.Toughness ?? BaseToughness)
+		+ PlusOneCounters
+		+ Components.OfType<UntilEndOfTurn>().Sum(u => u.Toughness);
+
+	/// <summary>The latest "has base power and toughness P/T" effect, if any (CR 613.4b, timestamp order).</summary>
+	(int Power, int Toughness)? CurrentBase =>
+		Components.OfType<UntilEndOfTurn>().LastOrDefault(u => u.SetBase is not null)?.SetBase;
 
 	// ===== Permanent-only state — wiped by Fresh() whenever the card changes zones =====
 
@@ -121,7 +129,11 @@ public record Card : GameObject
 /// and by any zone change.
 /// </summary>
 public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword = null)
-	: GameComponent;
+	: GameComponent
+{
+	/// <summary>"Has base power and toughness P/T" - replaces the printed numbers, under counters and pumps.</summary>
+	public (int Power, int Toughness)? SetBase { get; init; }
+}
 
 /// <summary>
 /// What goes in a deck: the printed data plus the hand-written ability components. A card with no

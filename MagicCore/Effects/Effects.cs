@@ -15,6 +15,9 @@ public static class ContextKeys
 	/// <summary>ImmutableArray&lt;int&gt;, one per target word; 0 where unchosen or no longer legal.</summary>
 	public const string Targets = "Targets";
 
+	/// <summary>Every chosen target, all modes together; Targets is narrowed to one mode's slice.</summary>
+	public const string AllTargets = "AllTargets";
+
 	/// <summary>The spell card or the permanent whose ability this is.</summary>
 	public const string Source = "Source";
 
@@ -35,6 +38,9 @@ public enum RefKind
 	Source,
 	EventCard,
 	YourPermanents, // of Type: "creatures you control", "lands you control" …
+	OpponentsPermanents, // of Type: "each creature and planeswalker your opponents control"
+	AllPermanents, // of Type: "all creatures"
+	YourGraveyard, // the cards in it
 }
 
 /// <summary>Who or what an effect acts on, resolved against the context at resolution.</summary>
@@ -50,6 +56,11 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 	public static readonly Ref LandsYouControl = new(RefKind.YourPermanents, Type: CardType.Land);
 	public static readonly Ref PlaneswalkersYouControl =
 		new(RefKind.YourPermanents, Type: CardType.Planeswalker);
+	public static readonly Ref AllCreatures = new(RefKind.AllPermanents, Type: CardType.Creature);
+	public static readonly Ref CardsInYourGraveyard = new(RefKind.YourGraveyard);
+
+	public static Ref OpponentsPermanents(CardType type) =>
+		new(RefKind.OpponentsPermanents, Type: type);
 
 	public static Ref Target(int index = 0) => new(RefKind.Target, index);
 
@@ -78,6 +89,14 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 			[
 				context.TryGetValue(ContextKeys.EventCard, out var e) ? (int)e : 0,
 			],
+			RefKind.OpponentsPermanents => s.CardsIn(s.OpponentOf(controller), ZoneType.Battlefield)
+				.Where(c => c.Is(Type))
+				.Select(c => c.Id),
+			RefKind.AllPermanents => new[] { controller, s.OpponentOf(controller) }
+				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+				.Where(c => c.Is(Type))
+				.Select(c => c.Id),
+			RefKind.YourGraveyard => s.CardsIn(controller, ZoneType.Graveyard).Select(c => c.Id),
 			_ => s.CardsIn(controller, ZoneType.Battlefield)
 				.Where(c => c.Is(Type))
 				.Select(c => c.Id),
@@ -108,10 +127,13 @@ public abstract record Effect : GameAction
 	protected static GameState Update(GameState s, Card card) => s.UpdateObject(card.Id, card);
 }
 
-public record DrawCards(Ref Who, int Count) : Effect
+public record DrawCards(Ref Who, Count Amount) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(All(Who, s).Aggregate(s, (st, p) => st.Draw(p, Count)));
+	public override ActionResult Execute(GameState s)
+	{
+		var n = Amount.Value(s, InputContext);
+		return new(All(Who, s).Aggregate(s, (st, p) => st.Draw(p, n)));
+	}
 }
 
 public record GainLife(Ref Who, int Amount) : Effect
@@ -121,17 +143,20 @@ public record GainLife(Ref Who, int Amount) : Effect
 }
 
 /// <summary>Life loss that is not damage — lifelink and damage triggers do not see it.</summary>
-public record LoseLife(Ref Who, int Amount) : Effect
+public record LoseLife(Ref Who, Count Amount) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(
+	public override ActionResult Execute(GameState s)
+	{
+		var n = Amount.Value(s, InputContext);
+		return new(
 			All(Who, s)
 				.Aggregate(
 					s,
 					(st, p) =>
-						st.WithPlayer(st.GetPlayer(p) with { Life = st.GetPlayer(p).Life - Amount })
+						st.WithPlayer(st.GetPlayer(p) with { Life = st.GetPlayer(p).Life - n })
 				)
 		);
+	}
 }
 
 /// <summary>"[Source] deals N damage to …" — through <see cref="Damage.Deal"/>, so lifelink and deathtouch apply.</summary>
@@ -162,55 +187,83 @@ public record Exile(Ref What) : Effect
 		);
 }
 
-/// <summary>"Gets +P/+T [and gains Keyword] until end of turn."</summary>
-public record ModifyUntilEndOfTurn(Ref What, int Power, int Toughness, string? Keyword = null)
+/// <summary>"Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.</summary>
+public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, string? Keyword = null)
 	: Effect
 {
-	/// <summary>Arni: "+X/+0 where X is that creature's power" — the entering creature's power, read now.</summary>
-	public bool PowerFromEventCard { get; init; }
+	/// <summary>Perfected Theory: "has base power and toughness P/T until end of turn" (CR 613, layer 7b).</summary>
+	public (int Power, int Toughness)? SetBase { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
-		var power = PowerFromEventCard
-			? Ref
-				.EventCard.Resolve(s, InputContext)
-				.Select(id => s.GetCard(id).Power)
-				.FirstOrDefault()
-			: Power;
+		var effect = new UntilEndOfTurn(
+			Power.Value(s, InputContext),
+			Toughness.Value(s, InputContext),
+			Keyword
+		)
+		{
+			SetBase = SetBase,
+		};
 		return new(
-			Permanents(What, s)
-				.Aggregate(
-					s,
-					(st, c) =>
-						Update(
-							st,
-							(Card)c.WithComponent(new UntilEndOfTurn(power, Toughness, Keyword))
-						)
-				)
+			Permanents(What, s).Aggregate(s, (st, c) => Update(st, (Card)c.WithComponent(effect)))
 		);
 	}
 }
 
+public enum CountOf
+{
+	Fixed,
+	NumberOf, // "the number of [Ref]"
+	GreatestPowerOf, // "the greatest power among [Ref]"
+	PowerOf, // "equal to its power"
+	LoyaltyOf, // "equal to its loyalty"
+}
+
 /// <summary>
-/// A number in rules text — fixed, or "X, where X is the number of [Ref]" counted at resolution.
-/// Counting goes through Ref, so "creatures you control" means one thing everywhere.
+/// A number in rules text, counted at resolution. Counting goes through Ref, so "creatures you
+/// control" means one thing everywhere. A negative Sign is "-X".
 /// </summary>
-public record Count(int Fixed, Ref? NumberOf = null)
+public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int Sign = 1)
 {
 	public static implicit operator Count(int n) => new(n);
 
-	public static readonly Count CreaturesYouControl = new(0, Ref.CreaturesYouControl);
-	public static readonly Count LandsYouControl = new(0, Ref.LandsYouControl);
+	public static Count NumberOf(Ref r) => new(0, r, CountOf.NumberOf);
 
-	public int Of(GameState s, ImmutableDictionary<string, object> context) =>
-		NumberOf is null ? Fixed : NumberOf.Resolve(s, context).Count();
+	public static Count GreatestPowerOf(Ref r) => new(0, r, CountOf.GreatestPowerOf);
+
+	public static Count PowerOf(Ref r) => new(0, r, CountOf.PowerOf);
+
+	public static Count LoyaltyOf(Ref r) => new(0, r, CountOf.LoyaltyOf);
+
+	public static readonly Count CreaturesYouControl = NumberOf(Ref.CreaturesYouControl);
+	public static readonly Count LandsYouControl = NumberOf(Ref.LandsYouControl);
+
+	public Count Negated => this with { Sign = -Sign };
+
+	public int Value(GameState s, ImmutableDictionary<string, object> context)
+	{
+		if (Kind == CountOf.Fixed)
+			return Sign * Fixed;
+		var ids = Of!.Resolve(s, context);
+		IEnumerable<Card> Cards() => ids.Select(s.GetObject).OfType<Card>();
+		var counted = Kind switch
+		{
+			CountOf.NumberOf => ids.Count(),
+			CountOf.GreatestPowerOf => Cards().Select(c => c.Power).DefaultIfEmpty(0).Max(),
+			CountOf.PowerOf => Cards().Select(c => c.Power).FirstOrDefault(),
+			_ => Cards().Select(c => c.Loyalty).FirstOrDefault(),
+		};
+		// CR 107.1b: a number that would be negative is 0 — a -4 power must not make "lose X life"
+		// a life gain. The sign ("-X") applies after.
+		return Sign * Math.Max(0, counted);
+	}
 }
 
 public record AddCounters(Ref What, Count Amount) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
-		var n = Amount.Of(s, InputContext);
+		var n = Amount.Value(s, InputContext);
 		return new(
 			Permanents(What, s)
 				.Where(c => c.Is(CardType.Creature))
@@ -227,7 +280,7 @@ public record AddLoyalty(Ref What, Count Amount) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
-		var n = Amount.Of(s, InputContext);
+		var n = Amount.Value(s, InputContext);
 		return new(
 			Permanents(What, s)
 				.Where(c => c.Is(CardType.Planeswalker))
@@ -270,6 +323,9 @@ public record Surveil(int N) : Effect
 
 public record CreateTokens(CardData Token, int Count) : Effect
 {
+	/// <summary>Stingerquill Charm: "Create a ... Cadet. It gains haste until end of turn."</summary>
+	public string? GainsUntilEndOfTurn { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		for (var i = 0; i < Count; i++)
@@ -280,6 +336,11 @@ public record CreateTokens(CardData Token, int Count) : Effect
 			};
 			(s, token) = s.AddObject(token);
 			s = s.EnterBattlefield(token.Id, Controller);
+			if (GainsUntilEndOfTurn is { } keyword)
+				s = Update(
+					s,
+					(Card)s.GetCard(token.Id).WithComponent(new UntilEndOfTurn(Keyword: keyword))
+				);
 		}
 		return new(s);
 	}
@@ -335,12 +396,50 @@ public record Untap(Ref What) : Effect
 		new(Permanents(What, s).Aggregate(s, (st, c) => Update(st, c with { IsTapped = false })));
 }
 
-public record AddMana(ManaColor Color) : Effect
+public record AddMana(ManaColor Color, int Amount = 1) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
 		var player = s.GetPlayer(Controller);
-		return new(s.WithPlayer(player with { ManaPool = player.ManaPool.Add(Color) }));
+		return new(s.WithPlayer(player with { ManaPool = player.ManaPool.Add(Color, Amount) }));
+	}
+}
+
+public record Tap(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(Permanents(What, s).Aggregate(s, (st, c) => Update(st, c with { IsTapped = true })));
+}
+
+/// <summary>"Return target spell or creature to its owner's hand" - from the battlefield or the stack.</summary>
+public record ReturnToHand(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var stack = s.GetWellKnownId(MagicKeys.Stack);
+		var cards = All(What, s)
+			.Where(id => s.IsOnBattlefield(id) || s.GetParent(id) == stack)
+			.Select(s.GetCard)
+			.ToList();
+		return new(
+			cards.Aggregate(s, (st, c) => st.MoveCard(c.Id, st.ZoneId(c.OwnerId, ZoneType.Hand)))
+		);
+	}
+}
+
+/// <summary>
+/// "[A] deals damage equal to its power (or loyalty) to [B]" - the source is A, not the spell, so
+/// A's deathtouch and lifelink apply (Compel Brutality).
+/// </summary>
+public record DamageFrom(Ref From, Ref To, Count Amount) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var from = Permanents(From, s).FirstOrDefault();
+		if (from is null)
+			return new(s);
+		var amount = Amount.Value(s, InputContext);
+		return new(All(To, s).Aggregate(s, (st, id) => Damage.Deal(st, from, id, amount)));
 	}
 }
 
