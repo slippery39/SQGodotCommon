@@ -44,6 +44,9 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	/// <summary>"Noncreature, nonland": none of these types.</summary>
 	public CardType NotTypes { get; init; }
 
+	/// <summary>"With power 2 or less".</summary>
+	public int MaxPower { get; init; } = int.MaxValue;
+
 	/// <summary>"With toughness 4 or greater".</summary>
 	public int MinToughness { get; init; }
 
@@ -72,7 +75,7 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 			&& s.GetObject(targetId) is Card spell
 			&& OnStack(s, targetId)
 		)
-			return targetId != sourceId && Filters(spell); // a spell cannot target itself (CR 115.5)
+			return targetId != sourceId && Filters(s, spell); // a spell cannot target itself (CR 115.5)
 		if (
 			Kind == TargetKind.Player
 			|| s.GetObject(targetId) is not Card card
@@ -86,15 +89,16 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 			TargetKind.Permanent => AnyOfTypes == CardType.None || card.Is(AnyOfTypes),
 			_ => card.Is(CardType.Creature | CardType.Planeswalker),
 		};
-		return typeOk && !(Another && targetId == sourceId) && Filters(card);
+		return typeOk && !(Another && targetId == sourceId) && Filters(s, card);
 	}
 
-	bool Filters(Card card) =>
+	bool Filters(GameState s, Card card) =>
 		!(Nonlegendary && card.Is(Supertype.Legendary))
 		&& (AnyOfColors.IsEmpty || card.Colors.Any(AnyOfColors.Contains))
 		&& (NotTypes == CardType.None || !card.Is(NotTypes))
-		&& card.Toughness >= MinToughness
-		&& (WithKeyword is null || card.Has(WithKeyword));
+		&& (MinToughness == 0 || s.Toughness(card) >= MinToughness)
+		&& (MaxPower == int.MaxValue || s.Power(card) <= MaxPower)
+		&& (WithKeyword is null || s.Has(card, WithKeyword));
 
 	static bool OnStack(GameState s, int id) =>
 		s.GetParent(id) == s.GetWellKnownId(MagicKeys.Stack);

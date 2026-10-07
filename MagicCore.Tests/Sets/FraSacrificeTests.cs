@@ -104,7 +104,7 @@ public class FraSacrificeTests : FraBoardTest
 
 		var card = s.GetCard(edgar);
 		Assert.That(
-			(card.PlusOneCounters, card.Has("Menace"), Life(me)),
+			(card.PlusOneCounters, s.Has(card, "Menace"), Life(me)),
 			Is.EqualTo((1, true, life + 1))
 		);
 	}

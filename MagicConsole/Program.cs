@@ -97,7 +97,8 @@ void Header(GameState s)
 
 void Board(GameState s)
 {
-	string Zone(int p, ZoneType z) => string.Join(" | ", s.CardsIn(p, z).Select(Describe.Card));
+	string Zone(int p, ZoneType z) =>
+		string.Join(" | ", s.CardsIn(p, z).Select(c => Describe.Card(s, c)));
 	var (you, them) = (s.GetPlayer(human), s.GetPlayer(opponent));
 	Console.WriteLine(
 		$"  AI   life {them.Life} · hand {s.CardsIn(opponent, ZoneType.Hand).Count()} · library {s.CardsIn(opponent, ZoneType.Library).Count()}"

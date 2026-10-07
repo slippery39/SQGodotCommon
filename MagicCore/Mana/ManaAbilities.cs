@@ -29,7 +29,9 @@ public static class ManaAbilities
 	/// <summary>{T} in ANY cost: untapped, and a creature must not be summoning sick (CR 302.6).</summary>
 	public static bool CanPayTapCost(GameState s, Card card) =>
 		!card.IsTapped
-		&& (!card.Is(CardType.Creature) || card.Has("Haste") || !Combat.IsSummoningSick(s, card));
+		&& (
+			!card.Is(CardType.Creature) || s.Has(card, "Haste") || !Combat.IsSummoningSick(s, card)
+		);
 
 	public static bool CanTap(GameState s, Card card) =>
 		ColorsOf(card).Any() && CanPayTapCost(s, card);

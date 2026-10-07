@@ -24,6 +24,13 @@ public static class Costs
 			delta -= card.GetComponents<CostsLessIfYouControlLegendaryCreature>()
 				.Sum(r => r.Amount);
 
+		if (card.HasComponent<CostsLessByGreatestPowerYouControl>())
+			delta -= s.CardsIn(casterId, ZoneType.Battlefield)
+				.Where(c => c.Is(CardType.Creature))
+				.Select(c => Math.Max(0, s.Power(c)))
+				.DefaultIfEmpty(0)
+				.Max();
+
 		return delta == 0 ? card.ManaCost : card.ManaCost.WithGeneric(delta);
 	}
 }

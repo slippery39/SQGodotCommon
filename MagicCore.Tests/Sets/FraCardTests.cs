@@ -159,9 +159,9 @@ public class FraCardTests
 		Cast(Hand("Last Gasp", me), big);
 
 		Assert.That(OnBattlefield(small), Is.False);
-		Assert.That(s.GetCard(big).Toughness, Is.EqualTo(1));
+		Assert.That(s.Toughness(s.GetCard(big)), Is.EqualTo(1));
 		ToNextTurn();
-		Assert.That(s.GetCard(big).Toughness, Is.EqualTo(4), "the effect ended in cleanup");
+		Assert.That(s.Toughness(s.GetCard(big)), Is.EqualTo(4), "the effect ended in cleanup");
 	}
 
 	[Test]
@@ -256,11 +256,11 @@ public class FraCardTests
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = hunter });
 		Resolve(choice => [bear]);
 
-		Assert.That((s.GetCard(bear).Power, s.GetCard(bear).Toughness), Is.EqualTo((4, 4)));
-		Assert.That(s.GetCard(bear).Has("Deathtouch"));
+		Assert.That((s.Power(s.GetCard(bear)), s.Toughness(s.GetCard(bear))), Is.EqualTo((4, 4)));
+		Assert.That(s.Has(s.GetCard(bear), "Deathtouch"));
 		ToNextTurn();
-		Assert.That(s.GetCard(bear).Power, Is.EqualTo(2));
-		Assert.That(s.GetCard(bear).Has("Deathtouch"), Is.False);
+		Assert.That(s.Power(s.GetCard(bear)), Is.EqualTo(2));
+		Assert.That(s.Has(s.GetCard(bear), "Deathtouch"), Is.False);
 	}
 
 	[Test]
@@ -323,8 +323,8 @@ public class FraCardTests
 
 		Cast(Hand("Artifist Acumen", me));
 
-		Assert.That(s.GetCard(a).Has("First strike") && s.GetCard(b).Has("First strike"));
-		Assert.That(s.GetCard(theirs).Has("First strike"), Is.False);
+		Assert.That(s.Has(s.GetCard(a), "First strike") && s.Has(s.GetCard(b), "First strike"));
+		Assert.That(s.Has(s.GetCard(theirs), "First strike"), Is.False);
 		Assert.That(
 			HandCount(me),
 			Is.EqualTo(hand + 1),
@@ -337,7 +337,7 @@ public class FraCardTests
 	{
 		Cast(Hand("Heartstring Puller", me));
 		var cadet = s.CardsIn(me, ZoneType.Battlefield).Single(c => c.IsToken);
-		Assert.That((cadet.Name, cadet.Power, cadet.Toughness), Is.EqualTo(("Cadet", 2, 2)));
+		Assert.That((cadet.Name, s.Power(cadet), s.Toughness(cadet)), Is.EqualTo(("Cadet", 2, 2)));
 
 		Cast(Hand("Last Gasp", me), cadet.Id);
 
@@ -359,11 +359,11 @@ public class FraCardTests
 	public void Arni_GetsTheEnteringCreaturesPower()
 	{
 		var arni = Field("Arni, Renowned Champion", me);
-		var printed = s.GetCard(arni).Power;
+		var printed = s.Power(s.GetCard(arni));
 
 		Cast(Hand(TestGames.Creature("Brute", "3/3"), me));
 
-		Assert.That(s.GetCard(arni).Power, Is.EqualTo(printed + 3));
+		Assert.That(s.Power(s.GetCard(arni)), Is.EqualTo(printed + 3));
 	}
 
 	[Test]
@@ -392,7 +392,7 @@ public class FraCardTests
 
 		var card = s.GetCard(bear);
 		Assert.That(
-			(card.Power, card.Toughness, card.Has("Reach"), card.IsTapped),
+			(s.Power(card), s.Toughness(card), s.Has(card, "Reach"), card.IsTapped),
 			Is.EqualTo((4, 4, true, false))
 		);
 	}
@@ -524,7 +524,10 @@ public class FraCardTests
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Cast(Hand("Academic Ascent", me), bear);
 
-		Assert.That((s.GetCard(bear).Power, s.GetCard(bear).Has("Flying")), Is.EqualTo((4, true)));
+		Assert.That(
+			(s.Power(s.GetCard(bear)), s.Has(s.GetCard(bear), "Flying")),
+			Is.EqualTo((4, true))
+		);
 		Assert.That(Jace(me)!.Loyalty, Is.EqualTo(2));
 	}
 
@@ -562,7 +565,7 @@ public class FraCardTests
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Cast(Hand("Tam's Resistance", me), bear);
 		Assert.That(
-			(s.GetCard(bear).PlusOneCounters, s.GetCard(bear).Has("Vigilance")),
+			(s.GetCard(bear).PlusOneCounters, s.Has(s.GetCard(bear), "Vigilance")),
 			Is.EqualTo((1, true))
 		);
 
@@ -662,7 +665,7 @@ public class FraCardTests
 
 		var beast = s.CardsIn(me, ZoneType.Battlefield).Single(c => c.Name == "Beast");
 		Assert.That(
-			(beast.Power, beast.Toughness, beast.Has("Trample"), beast.IsToken),
+			(s.Power(beast), s.Toughness(beast), s.Has(beast, "Trample"), beast.IsToken),
 			Is.EqualTo((4, 4, true, true))
 		);
 	}

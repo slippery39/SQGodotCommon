@@ -30,13 +30,17 @@ public static class Combat
 	public static bool CanAttack(GameState s, Card c) =>
 		c.Is(CardType.Creature)
 		&& !c.IsTapped
-		&& !c.Has("Defender")
-		&& (c.Has("Haste") || !IsSummoningSick(s, c));
+		&& !s.Has(c, "Defender")
+		&& (s.Has(c, "Haste") || !IsSummoningSick(s, c));
 
-	public static bool CanBlock(Card blocker, Card attacker) =>
+	/// <summary>"Can't be blocked" — granted by static abilities and until-end-of-turn effects alike.</summary>
+	public const string CantBeBlocked = "Can't be blocked";
+
+	public static bool CanBlock(GameState s, Card blocker, Card attacker) =>
 		blocker.Is(CardType.Creature)
 		&& !blocker.IsTapped
-		&& (!attacker.Has("Flying") || blocker.Has("Flying") || blocker.Has("Reach"));
+		&& !s.Has(attacker, CantBeBlocked)
+		&& (!s.Has(attacker, "Flying") || s.Has(blocker, "Flying") || s.Has(blocker, "Reach"));
 
 	public static GameState BeginDeclareAttackers(GameState s)
 	{
@@ -65,7 +69,7 @@ public static class Combat
 			return TurnStructure.EndStep(s); // CR 508.8: no attackers, no blockers or damage steps
 		var defender = Defender(s);
 		var candidates = s.CardsIn(defender, ZoneType.Battlefield)
-			.Where(b => attackers.Any(a => CanBlock(b, a)))
+			.Where(b => attackers.Any(a => CanBlock(s, b, a)))
 			.ToList();
 		if (candidates.Count == 0)
 			return TurnStructure.GivePriority(s, s.GetGame().ActivePlayerId);
@@ -82,7 +86,7 @@ public static class Combat
 	}
 
 	public static bool AnyFirstStrike(GameState s) =>
-		Combatants(s).Any(c => c.Has("First strike") || c.Has("Double strike"));
+		Combatants(s).Any(c => s.Has(c, "First strike") || s.Has(c, "Double strike"));
 
 	static IEnumerable<Card> Combatants(GameState s) =>
 		Attackers(s)
@@ -99,11 +103,11 @@ public static class Combat
 	public static GameState DealDamage(GameState s, bool firstStrikeStep)
 	{
 		bool Deals(Card c) =>
-			c.Power > 0
+			s.Power(c) > 0
 			&& (
 				firstStrikeStep
-					? c.Has("First strike") || c.Has("Double strike")
-					: !c.Has("First strike") || c.Has("Double strike")
+					? s.Has(c, "First strike") || s.Has(c, "Double strike")
+					: !s.Has(c, "First strike") || s.Has(c, "Double strike")
 			);
 
 		var hits = new List<(Card Source, int TargetId, int Amount)>();
@@ -111,21 +115,21 @@ public static class Combat
 		{
 			if (!attacker.IsBlocked)
 			{
-				hits.Add((attacker, attacker.AttackingId, attacker.Power));
+				hits.Add((attacker, attacker.AttackingId, s.Power(attacker)));
 				continue;
 			}
-			var remaining = attacker.Power;
+			var remaining = s.Power(attacker);
 			var blockers = BlockersOf(s, attacker.Id).ToList();
 			foreach (var blocker in blockers)
 			{
-				var lethal = attacker.Has("Deathtouch")
+				var lethal = s.Has(attacker, "Deathtouch")
 					? 1
-					: Math.Max(1, blocker.Toughness - blocker.Damage);
+					: Math.Max(1, s.Toughness(blocker) - blocker.Damage);
 				var amount = Math.Min(remaining, lethal);
 				hits.Add((attacker, blocker.Id, amount));
 				remaining -= amount;
 			}
-			if (remaining > 0 && attacker.Has("Trample"))
+			if (remaining > 0 && s.Has(attacker, "Trample"))
 				hits.Add((attacker, attacker.AttackingId, remaining));
 			else if (remaining > 0 && blockers.Count > 0)
 				hits.Add((attacker, blockers[0].Id, remaining));
@@ -135,7 +139,7 @@ public static class Combat
 				.Where(c => c.BlockingId != 0 && Deals(c))
 		)
 			if (s.GetCard(blocker.BlockingId).AttackingId != 0)
-				hits.Add((blocker, blocker.BlockingId, blocker.Power));
+				hits.Add((blocker, blocker.BlockingId, s.Power(blocker)));
 
 		foreach (var (source, targetId, amount) in hits)
 			s = Rules.Damage.Deal(s, source, targetId, amount, combat: true);

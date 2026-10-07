@@ -59,14 +59,14 @@ public record Card : GameObject
 	public int PrintedLoyalty { get; init; }
 
 	/// <summary>
-	/// The ONE place power and toughness are computed: printed + counters + until-end-of-turn
-	/// effects. Every rule reads these, never BasePower — a second sum drifts.
+	/// The card's OWN power and toughness: printed (or a base-setting effect) + counters + until-end-
+	/// of-turn effects. NOT what rules read — s.Power(card) adds every static on the battlefield.
 	/// </summary>
-	public int Power =>
+	public int OwnPower =>
 		(CurrentBase?.Power ?? BasePower)
 		+ PlusOneCounters
 		+ Components.OfType<UntilEndOfTurn>().Sum(u => u.Power);
-	public int Toughness =>
+	public int OwnToughness =>
 		(CurrentBase?.Toughness ?? BaseToughness)
 		+ PlusOneCounters
 		+ Components.OfType<UntilEndOfTurn>().Sum(u => u.Toughness);
@@ -82,6 +82,9 @@ public record Card : GameObject
 
 	/// <summary>Loyalty counters on a planeswalker. Damage removes them (CR 120.3c); at 0 it dies (CR 704.5i).</summary>
 	public int Loyalty { get; init; }
+
+	/// <summary>The X paid to cast this permanent — its "when this enters" abilities use it (CR 107.3m).</summary>
+	public int CastX { get; init; }
 
 	/// <summary>The TurnNumber a loyalty ability of this permanent was last activated — once per turn (CR 606.3).</summary>
 	public int LoyaltyActivatedOnTurn { get; init; }
@@ -111,6 +114,7 @@ public record Card : GameObject
 			IsTapped = false,
 			PlusOneCounters = 0,
 			Loyalty = 0,
+			CastX = 0,
 			LoyaltyActivatedOnTurn = 0,
 			Damage = 0,
 			DamagedByDeathtouch = false,
@@ -124,7 +128,7 @@ public record Card : GameObject
 		};
 
 	/// <summary>Printed keywords plus any granted until end of turn.</summary>
-	public bool Has(string keyword) =>
+	public bool HasOwn(string keyword) =>
 		Keywords.Contains(keyword)
 		|| Components.Any(c => c is UntilEndOfTurn u && u.Keyword == keyword);
 

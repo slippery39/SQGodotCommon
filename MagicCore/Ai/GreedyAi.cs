@@ -127,7 +127,7 @@ public sealed class GreedyAi(int playerId)
 		{
 			var blocker = s.GetCard(block.CreatureId);
 			var safe = choice.Options.Where(o =>
-				o.Id != CombatOption.None && s.GetCard(o.Id).Power < blocker.Toughness
+				o.Id != CombatOption.None && s.Power(s.GetCard(o.Id)) < s.Toughness(blocker)
 			);
 			return [safe.Select(o => o.Id).FirstOrDefault(CombatOption.None)];
 		}
@@ -151,7 +151,7 @@ public sealed class GreedyAi(int playerId)
 	static double Side(GameState s, int player)
 	{
 		var board = s.CardsIn(player, ZoneType.Battlefield).ToList();
-		var creatures = board.Where(c => c.Is(CardType.Creature)).Sum(CreatureValue);
+		var creatures = board.Where(c => c.Is(CardType.Creature)).Sum(c => CreatureValue(s, c));
 		// Every term is MONOTONIC — more of a good thing always scores more, tapering instead of
 		// capping. A cap makes "more" tie with "less", and a tie silently picks the passive move:
 		// life capped at 20 stopped all attacks past tapped blockers once a drain deck pushed the
@@ -175,14 +175,16 @@ public sealed class GreedyAi(int playerId)
 	static double Taper(int n, int knee, double perUnit, double beyond) =>
 		Math.Min(n, knee) * perUnit + Math.Max(0, n - knee) * beyond;
 
-	static double CreatureValue(Card c)
+	static double CreatureValue(GameState s, Card c)
 	{
 		// Alive is decided by the real toughness (a pump that saved it counts); its VALUE by what
-		// lasts past this turn — so a temporary pump or keyword is worth only what it changed.
-		if (c.Toughness - c.Damage <= 0)
+		// lasts past this turn — statics yes ("creatures you control have trample" stays), until-
+		// end-of-turn pumps and grants no.
+		if (s.Toughness(c) - c.Damage <= 0)
 			return 0;
-		var power = c.BasePower + c.PlusOneCounters;
-		var toughness = Math.Max(1, c.BaseToughness + c.PlusOneCounters - c.Damage);
+		var pumps = c.GetComponents<UntilEndOfTurn>().ToList();
+		var power = s.Power(c) - pumps.Sum(u => u.Power);
+		var toughness = Math.Max(1, s.Toughness(c) - pumps.Sum(u => u.Toughness) - c.Damage);
 		var keywords = new[]
 		{
 			"Flying",
@@ -192,7 +194,7 @@ public sealed class GreedyAi(int playerId)
 			"Double strike",
 			"Trample",
 			"Menace",
-		}.Count(c.Keywords.Contains);
+		}.Count(k => s.Has(c, k) && !pumps.Any(u => u.Keyword == k));
 		return 2 + power * 1.5 + toughness + keywords * 0.8;
 	}
 }

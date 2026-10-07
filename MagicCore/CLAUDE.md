@@ -29,6 +29,7 @@ MagicCore/
 ├── Targeting/TargetSpec.cs  one legality test for choosing AND resolving; Combinations
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions)
+├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
 ├── Rules/Life.cs        THE life-gain path — raises the event "whenever you gain life" reads
 ├── Cards/Card.cs        Card (computed P/T + keywords, permanent/combat state, Fresh()), CardFactory
 ├── Cards/CardData.cs    printed data (Scryfall) + CardDataSet.Load("FRA")
@@ -58,8 +59,9 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Every zone change goes through `MagicState.MoveCard`** (or `EnterBattlefield`), which calls
   `Card.Fresh()` — CR 400.7. Damage, tapped, counters, until-end-of-turn effects, combat state and
   stack choices die there. Only `Shuffle` uses `MoveObject`, to reorder within one zone.
-- **One computation each, never a second copy:** `Card.Power`/`Toughness`/`Has` (printed + counters +
-  until-end-of-turn; rules never read `BasePower`), `Damage.Deal` (players, creatures, planeswalker
+- **One computation each, never a second copy:** `s.Power(card)`/`s.Toughness`/`s.Has` (Rules/
+  Characteristics.cs — the card's own numbers plus every static ability on the battlefield; rules
+  never read `Card.OwnPower`/`HasOwn` or `BasePower`, which ignore every anthem on the board), `Damage.Deal` (players, creatures, planeswalker
   loyalty), `Life.Gain`, `Costs.Of`, `ManaPayment.Find`, `ManaAbilities.CanTap`/`CanPayTapCost`,
   `TargetSpec.IsLegal` (on choosing AND resolving), `Loyalty.AbilitiesOf` (own + granted),
   `Loyalty.Change` (costs, damage, effects; never below 0), `Ref` (what "creatures you control"
@@ -88,8 +90,11 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   targets (`Target(0)` is that mode's first). A spell's modes are chosen when cast (`CastSpellAction.
   Modes`), a trigger's as it goes on the stack. A mode with an unchoosable required target can't be
   chosen. The scripted mode count must match the printed bullets — `FraCards` throws otherwise.
+- **Static abilities are never stamped onto what they affect.** A `StaticEffectComponent` on its source
+  is read live by Characteristics, so it stops the instant the source leaves — MtgCore's stamped
+  statics went stale exactly there. "Can't be blocked" is a keyword-like grant (`Combat.CantBeBlocked`).
 - **Base P/T effects** ("has base power and toughness 4/5") sit under counters and pumps, latest
-  wins (`UntilEndOfTurn.SetBase`, read only in `Card.Power`/`Toughness`).
+  wins (`UntilEndOfTurn.SetBase`, read in `Card.OwnPower`/`OwnToughness` under `s.Power`/`Toughness`).
 - **A spell or ability whose targets are ALL illegal on resolution does nothing** (CR 608.2b) — the
   drain on Extended Absence included. Partially illegal: those targets read as 0 to the effects.
 - **`MagicRules.Choose` checks WHICH ids, `ResolveChoice` only how many.** Distinct and offered.
@@ -118,7 +123,7 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 
 ## Known ceilings (each marked `ponytail:` in the code)
 
-Damage split among blockers is automatic · the legend rule keeps the newest · a dying card's own
+Damage split among blockers is automatic · the legend rule keeps the newest · last-known information keeps a card's own characteristics, not what statics gave it · a dying card's own
 "when this dies" looks back, but other leaves-the-battlefield triggers read the battlefield NOW (Edgar
 dying alongside a creature misses its death) · a "sacrifice the greatest" tie takes the first ·
 `GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana, no "do I need
@@ -131,10 +136,10 @@ needs · Empower Jace with two Jace tokens loads the first · surveil keeps the 
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 74 cards
-(`FraDecks`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 82 cards scripted
+in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
 dies / exile-until cards. **The 8 real planeswalkers are
 not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
-Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c continuous
-effects, step triggers, prowess · 7d prepare, flashback, cycling, graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
+Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
+per-turn tracking, prowess · 7d prepare, flashback, cycling, graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
 limited Bo1 uses it are unconfirmed — hence `handSmoothing`.

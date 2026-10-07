@@ -63,6 +63,8 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 	public static readonly Ref AllCreatures = new(RefKind.AllPermanents, Type: CardType.Creature);
 	public static readonly Ref CardsInYourGraveyard = new(RefKind.YourGraveyard);
 
+	public static Ref YourGraveyard(CardType type) => new(RefKind.YourGraveyard, Type: type);
+
 	public static Ref OpponentsPermanents(CardType type) =>
 		new(RefKind.OpponentsPermanents, Type: type);
 
@@ -108,7 +110,9 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
 				.Where(c => c.Is(Type))
 				.Select(c => c.Id),
-			RefKind.YourGraveyard => s.CardsIn(controller, ZoneType.Graveyard).Select(c => c.Id),
+			RefKind.YourGraveyard => s.CardsIn(controller, ZoneType.Graveyard)
+				.Where(c => Type == CardType.None || c.Is(Type))
+				.Select(c => c.Id),
 			_ => s.CardsIn(controller, ZoneType.Battlefield)
 				.Where(c => c.Is(Type))
 				.Select(c => c.Id),
@@ -172,10 +176,13 @@ public record LoseLife(Ref Who, Count Amount) : Effect
 }
 
 /// <summary>"[Source] deals N damage to …" — through <see cref="Damage.Deal"/>, so lifelink and deathtouch apply.</summary>
-public record DealDamage(Ref To, int Amount) : Effect
+public record DealDamage(Ref To, Count Amount) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(All(To, s).Aggregate(s, (st, id) => Damage.Deal(st, Source(s), id, Amount)));
+	public override ActionResult Execute(GameState s)
+	{
+		var amount = Amount.Value(s, InputContext);
+		return new(All(To, s).Aggregate(s, (st, id) => Damage.Deal(st, Source(s), id, amount)));
+	}
 }
 
 public record Destroy(Ref What) : Effect
@@ -229,6 +236,7 @@ public enum CountOf
 	GreatestPowerOf, // "the greatest power among [Ref]"
 	PowerOf, // "equal to its power"
 	LoyaltyOf, // "equal to its loyalty"
+	X, // the X paid
 }
 
 /// <summary>
@@ -247,22 +255,32 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	public static Count LoyaltyOf(Ref r) => new(0, r, CountOf.LoyaltyOf);
 
+	public static readonly Count X = new(0, null, CountOf.X);
+
 	public static readonly Count CreaturesYouControl = NumberOf(Ref.CreaturesYouControl);
 	public static readonly Count LandsYouControl = NumberOf(Ref.LandsYouControl);
 
 	public Count Negated => this with { Sign = -Sign };
 
+	/// <summary>"Is this a fixed nothing?" — a static with Power 0 and Toughness 0 changes no P/T.</summary>
+	public static bool operator ==(Count c, int n) =>
+		c.Kind == CountOf.Fixed && c.Sign * c.Fixed == n;
+
+	public static bool operator !=(Count c, int n) => !(c == n);
+
 	public int Value(GameState s, ImmutableDictionary<string, object> context)
 	{
 		if (Kind == CountOf.Fixed)
 			return Sign * Fixed;
+		if (Kind == CountOf.X)
+			return Sign * (context.TryGetValue(ContextKeys.X, out var x) ? (int)x : 0);
 		var ids = Of!.Resolve(s, context);
 		IEnumerable<Card> Cards() => ids.Select(s.GetObject).OfType<Card>();
 		var counted = Kind switch
 		{
 			CountOf.NumberOf => ids.Count(),
-			CountOf.GreatestPowerOf => Cards().Select(c => c.Power).DefaultIfEmpty(0).Max(),
-			CountOf.PowerOf => Cards().Select(c => c.Power).FirstOrDefault(),
+			CountOf.GreatestPowerOf => Cards().Select(c => s.Power(c)).DefaultIfEmpty(0).Max(),
+			CountOf.PowerOf => Cards().Select(c => s.Power(c)).FirstOrDefault(),
 			_ => Cards().Select(c => c.Loyalty).FirstOrDefault(),
 		};
 		// CR 107.1b: a number that would be negative is 0 — a -4 power must not make "lose X life"
@@ -397,8 +415,8 @@ public record Fight(Ref A, Ref B) : Effect
 		var b = Permanents(B, s).FirstOrDefault(c => c.Is(CardType.Creature));
 		if (a is null || b is null)
 			return new(s);
-		s = Damage.Deal(s, a, b.Id, a.Power);
-		return new(Damage.Deal(s, b, a.Id, b.Power));
+		s = Damage.Deal(s, a, b.Id, s.Power(a));
+		return new(Damage.Deal(s, b, a.Id, s.Power(b)));
 	}
 }
 
@@ -517,6 +535,31 @@ public record MaySacrifice(TargetSpec Filter, ImmutableList<GameAction> Then) : 
 				}
 			)
 		);
+}
+
+/// <summary>Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.</summary>
+public record EachSacrifices(Ref Who, TargetSpec Filter) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer))
+		{
+			var choice = new ChoosePermanentChoice(
+				player,
+				GetInput<int>(ContextKeys.Source),
+				Filter,
+				required: true
+			)
+			{
+				Prompt = $"Sacrifice ({Source(s).Name})",
+			};
+			if (!choice.GetOptions(s, InputContext).IsEmpty)
+				s = s.SpawnAction(
+					new PipelineAction { Steps = [choice, new SacrificeChosenAction()] }
+				);
+		}
+		return new(s);
+	}
 }
 
 /// <summary>"Exile [it] until this leaves the battlefield." Does nothing if this already left (CR 610.3c).</summary>

@@ -202,6 +202,7 @@ public static class Triggers
 						Effects = steps,
 						EventCardId = t.EventCardId,
 						EventSnapshot = t.EventSnapshot,
+						X = t.Ability.On == TriggerEvent.SelfEnters ? t.Source.CastX : 0,
 					},
 				],
 			}
@@ -220,6 +221,7 @@ public record PutTriggerOnStackAction : GameAction
 	public ImmutableList<GameAction> Effects { get; init; } = [];
 	public int EventCardId { get; init; }
 	public Card? EventSnapshot { get; init; }
+	public int X { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -240,6 +242,7 @@ public record PutTriggerOnStackAction : GameAction
 					Targets = targets,
 					EventCardId = EventCardId,
 					EventSnapshot = EventSnapshot,
+					X = X,
 				}
 			)
 		);

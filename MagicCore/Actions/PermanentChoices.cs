@@ -24,12 +24,18 @@ public record ChoosePermanentChoice : ChoiceAction
 	public int SourceId { get; init; }
 	public TargetSpec Filter { get; init; }
 
-	public ChoosePermanentChoice(int playerId, int sourceId, TargetSpec filter)
+	/// <param name="required">"Sacrifices a creature" must; "you may sacrifice" need not.</param>
+	public ChoosePermanentChoice(
+		int playerId,
+		int sourceId,
+		TargetSpec filter,
+		bool required = false
+	)
 	{
 		PlayerId = playerId;
 		SourceId = sourceId;
 		Filter = filter;
-		MinChoices = 0;
+		MinChoices = required ? 1 : 0;
 		MaxChoices = 1;
 		OutputKey = Chosen;
 	}

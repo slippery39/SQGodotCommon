@@ -47,9 +47,9 @@ public class ManaCostTests
 			Assert.That(card.ManaCost.ManaValue, Is.EqualTo((int)data.Cmc), data.Name);
 			// Printed numbers, negatives included (Loot, the Anomaly is -2/4).
 			if (int.TryParse(data.Power, out var power))
-				Assert.That(card.Power, Is.EqualTo(power), data.Name);
+				Assert.That(card.OwnPower, Is.EqualTo(power), data.Name);
 			if (int.TryParse(data.Toughness, out var toughness))
-				Assert.That(card.Toughness, Is.EqualTo(toughness), data.Name);
+				Assert.That(card.OwnToughness, Is.EqualTo(toughness), data.Name);
 		}
 	}
 }

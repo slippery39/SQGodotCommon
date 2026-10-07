@@ -57,14 +57,14 @@ public class FraModalTests : FraBoardTest
 
 		Cast(Hand("Perfected Theory", me), [0], bear);
 		Assert.That(
-			(s.GetCard(bear).Power, s.GetCard(bear).Toughness),
+			(s.Power(s.GetCard(bear)), s.Toughness(s.GetCard(bear))),
 			Is.EqualTo((2, 2)),
 			"base 1/1, then the counter"
 		);
 
 		Cast(Hand("Perfected Theory", me), [1], bear);
 		Assert.That(
-			(s.GetCard(bear).Power, s.GetCard(bear).Toughness),
+			(s.Power(s.GetCard(bear)), s.Toughness(s.GetCard(bear))),
 			Is.EqualTo((5, 6)),
 			"the later base wins"
 		);
@@ -85,7 +85,7 @@ public class FraModalTests : FraBoardTest
 			Is.False,
 			"mine too"
 		);
-		Assert.That(s.GetCard(theirs).Toughness, Is.EqualTo(1));
+		Assert.That(s.Toughness(s.GetCard(theirs)), Is.EqualTo(1));
 	}
 
 	[Test]
@@ -133,12 +133,12 @@ public class FraModalTests : FraBoardTest
 		var a = Field(TestGames.Creature("A", "1/1"), me);
 		var b = Field(TestGames.Creature("B", "1/1"), me);
 		Cast(Hand("Charge the Sanctum", me), [0]);
-		Assert.That((s.GetCard(a).Power, s.GetCard(b).Power), Is.EqualTo((3, 3)));
+		Assert.That((s.Power(s.GetCard(a)), s.Power(s.GetCard(b))), Is.EqualTo((3, 3)));
 
 		Cast(Hand("Charge the Sanctum", me), [1], a);
 		var card = s.GetCard(a);
 		Assert.That(
-			(card.Power, card.PlusOneCounters, card.Has("First strike")),
+			(s.Power(card), card.PlusOneCounters, s.Has(card, "First strike")),
 			Is.EqualTo((6, 1, true))
 		);
 	}
@@ -176,7 +176,7 @@ public class FraModalTests : FraBoardTest
 		Cast(charm, [1], gasp);
 
 		Assert.That(s.IsIn(gasp, them, ZoneType.Hand), "back in its owner's hand");
-		Assert.That(s.GetCard(bear).Toughness, Is.EqualTo(2), "it never resolved");
+		Assert.That(s.Toughness(s.GetCard(bear)), Is.EqualTo(2), "it never resolved");
 	}
 
 	[Test]
@@ -188,7 +188,7 @@ public class FraModalTests : FraBoardTest
 
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Cast(Hand("Fatehold Charm", me), [2]);
-		Assert.That((s.GetCard(bear).Power, s.GetCard(bear).Toughness), Is.EqualTo((3, 4)));
+		Assert.That((s.Power(s.GetCard(bear)), s.Toughness(s.GetCard(bear))), Is.EqualTo((3, 4)));
 	}
 
 	[Test]
@@ -207,7 +207,7 @@ public class FraModalTests : FraBoardTest
 		var mine = Field(TestGames.Creature("Mine", "1/1"), me);
 		Cast(Hand("Konstrari Charm", me), [1], mine);
 		Assert.That(
-			(s.GetCard(mine).PlusOneCounters, s.GetCard(mine).Has("Trample")),
+			(s.GetCard(mine).PlusOneCounters, s.Has(s.GetCard(mine), "Trample")),
 			Is.EqualTo((2, true))
 		);
 
@@ -224,7 +224,7 @@ public class FraModalTests : FraBoardTest
 
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		Cast(Hand("Stingerquill Charm", me), [1], bear);
-		Assert.That(s.GetCard(bear).Has("First strike") && s.GetCard(bear).Has("Deathtouch"));
+		Assert.That(s.Has(s.GetCard(bear), "First strike") && s.Has(s.GetCard(bear), "Deathtouch"));
 
 		Cast(Hand("Stingerquill Charm", me), [2]);
 		var cadet = s.CardsIn(me, ZoneType.Battlefield).Single(c => c.Name == "Cadet");
@@ -258,7 +258,7 @@ public class FraModalTests : FraBoardTest
 			);
 		var bear = Field(TestGames.Creature("Bear", "4/4"), them);
 		CastWithTrigger(Hand("Yuriko, Hope from the Shadows", me), [0], bear);
-		Assert.That(s.GetCard(bear).Power, Is.EqualTo(4 - 3));
+		Assert.That(s.Power(s.GetCard(bear)), Is.EqualTo(4 - 3));
 
 		var top2 = s.CardsIn(me, ZoneType.Library).Take(2).Select(c => c.Id).ToList();
 		var yuriko = Hand("Yuriko, Hope from the Shadows", me);

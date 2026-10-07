@@ -170,8 +170,8 @@ public static class StateBasedActions
 				.Where(c =>
 					c.Is(CardType.Creature)
 					&& (
-						c.Toughness <= 0
-						|| c.Damage >= c.Toughness
+						s.Toughness(c) <= 0
+						|| c.Damage >= s.Toughness(c)
 						|| (c.DamagedByDeathtouch && c.Damage > 0)
 					)
 				)

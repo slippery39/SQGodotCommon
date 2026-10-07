@@ -74,7 +74,7 @@ public record DeclareBlockerChoice : ChoiceAction
 			new ChoiceOption { Id = CombatOption.None, DisplayText = "Don't block" },
 			.. Combat
 				.Attackers(s)
-				.Where(a => Combat.CanBlock(blocker, a))
+				.Where(a => Combat.CanBlock(s, blocker, a))
 				.Select(a => new ChoiceOption { Id = a.Id, DisplayText = $"Block {a.Name}" }),
 		];
 	}
@@ -112,7 +112,7 @@ public record FinishAttackersAction : GameAction
 					card with
 					{
 						AttackingId = target,
-						IsTapped = card.IsTapped || !card.Has("Vigilance"),
+						IsTapped = card.IsTapped || !s.Has(card, "Vigilance"),
 					}
 				)
 				.Raise(new AttackedEvent(id));
@@ -133,7 +133,7 @@ public record FinishBlockersAction : GameAction
 		var blocks = Declarations.Read(InputContext, DeclareBlockerChoice.KeyPrefix).ToList();
 		blocks = blocks
 			.Where(b =>
-				!s.GetCard(b.ChosenId).Has("Menace")
+				!s.Has(s.GetCard(b.ChosenId), "Menace")
 				|| blocks.Count(o => o.ChosenId == b.ChosenId) >= 2
 			)
 			.ToList();

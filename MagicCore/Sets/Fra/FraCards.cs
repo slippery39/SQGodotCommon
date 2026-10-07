@@ -3,6 +3,7 @@ using ImmutableGameObjects;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Targeting;
+using MagicCore.Turns;
 
 namespace MagicCore.Sets.Fra;
 
@@ -786,6 +787,100 @@ public static class FraCards
 					],
 					new ExileUntilSourceLeaves(Ref.Target())
 				),
+			],
+			// ===== Continuous effects (Rules/Characteristics.cs) =====
+			["Samut, Hazoret's Champion"] =
+			[
+				new StaticEffectComponent(Affects.CreaturesYouControl, "Haste"),
+			],
+			["Ajani's Anguish"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[new TargetSpec(TargetKind.AnyTarget)],
+					new DealDamage(Ref.Target(), Count.X)
+				),
+				new StaticEffectComponent(Affects.CreaturesYouControl, "Trample"),
+			],
+			["Ghalta the Unstoppable"] =
+			[
+				new CostsLessByGreatestPowerYouControl(),
+				new StaticEffectComponent(Affects.OtherCreaturesYouControl, "Trample"),
+			],
+			["Skilled Battlecarver"] =
+			[
+				new StaticEffectComponent(Affects.Self, "First strike")
+				{
+					While = StaticCondition.DuringYourTurn,
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}{R}"),
+					[new ModifyUntilEndOfTurn(Ref.Source, 1, 0)]
+				),
+			],
+			["Mind Meanderer"] =
+			[
+				new StaticEffectComponent(Affects.Self, "Vigilance")
+				{
+					While = StaticCondition.YouControlAJacePlaneswalker,
+				},
+				When(
+					TriggerEvent.SelfEnters,
+					[new TargetSpec(TargetKind.Creature, Whose.Opponent) { Optional = true }],
+					new Fight(Ref.Source, Ref.Target())
+				),
+			],
+			["Winter, Tormented Loner"] =
+			[
+				// ponytail: "When you do" is a reflexive trigger; here it happens inline, with no
+				// chance to respond between the sacrifice and the opponents' sacrifices.
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new MaySacrifice(
+						CreatureOrPlaneswalker with
+						{
+							Whose = Whose.You,
+						},
+						[
+							new EachSacrifices(
+								Ref.EachOpponent,
+								new TargetSpec(TargetKind.Creature, Whose.You)
+							),
+						]
+					)
+				),
+				new StaticEffectComponent(Affects.Self)
+				{
+					Power = Count.NumberOf(
+						Ref.YourGraveyard(CardType.Creature | CardType.Planeswalker)
+					),
+				},
+			],
+			["Tetsuko Umezawa, Fugitive"] =
+			[
+				new StaticEffectComponent(Affects.CreaturesYouControl, Combat.CantBeBlocked)
+				{
+					OnlyPowerOrToughnessAtMost = 1,
+				},
+			],
+			["Eardrum Rattler"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, Combat.CantBeBlocked)]
+				)
+				{
+					TapCost = true,
+					Targets =
+					[
+						new TargetSpec(TargetKind.Creature, Whose.You)
+						{
+							Another = true,
+							MaxPower = 2,
+						},
+					],
+				},
 			],
 		};
 

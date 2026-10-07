@@ -32,8 +32,8 @@ public static class Describe
 	public static string Question(GameState s, ChoiceAction choice) =>
 		choice switch
 		{
-			DeclareAttackerChoice a => $"Attack with {Card(s.GetCard(a.CreatureId))}?",
-			DeclareBlockerChoice b => $"Block with {Card(s.GetCard(b.CreatureId))}?",
+			DeclareAttackerChoice a => $"Attack with {Card(s, s.GetCard(a.CreatureId))}?",
+			DeclareBlockerChoice b => $"Block with {Card(s, s.GetCard(b.CreatureId))}?",
 			ChooseModesChoice m => $"{Name(s, m.SourceId)}: {m.Prompt.ToLowerInvariant()}",
 			ChooseTargetChoice t =>
 				$"{Name(s, t.SourceId)}: choose target {t.Index + 1}{(t.Spec.Optional ? " (optional)" : "")}",
@@ -46,11 +46,11 @@ public static class Describe
 		return $"{Question(s, choice)} {(picked.Count == 0 ? "none" : string.Join(", ", picked))}";
 	}
 
-	public static string Card(Card c)
+	public static string Card(GameState s, Card c)
 	{
 		var parts = new List<string> { c.Name };
 		if (c.Is(CardType.Creature))
-			parts.Add($"{c.Power}/{c.Toughness}");
+			parts.Add($"{s.Power(c)}/{s.Toughness(c)}");
 		if (c.Is(CardType.Planeswalker))
 			parts.Add($"loyalty {c.Loyalty}");
 		if (c.Damage > 0)

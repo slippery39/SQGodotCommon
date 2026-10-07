@@ -94,8 +94,42 @@ public record EntersWithCountersComponent(int Count) : GameComponent;
 /// <summary>On a card exiled "until [source] leaves the battlefield" — MagicState.MoveCard returns it then.</summary>
 public record ExiledUntilLeaves(int SourceId, int SourceIncarnation) : GameComponent;
 
+public enum Affects
+{
+	Self,
+	CreaturesYouControl,
+	OtherCreaturesYouControl,
+}
+
+public enum StaticCondition
+{
+	Always,
+	DuringYourTurn,
+	YouControlAJacePlaneswalker,
+}
+
+/// <summary>
+/// A static ability that changes characteristics while its source is on the battlefield — "creatures
+/// you control have haste", "this gets +1/+0 for each …". Read only by Characteristics.
+/// </summary>
+public record StaticEffectComponent(Affects Affects, string? Keyword = null) : GameComponent
+{
+	public Count Power { get; init; } = 0;
+	public Count Toughness { get; init; } = 0;
+	public StaticCondition While { get; init; }
+
+	/// <summary>
+	/// Tetsuko: "creatures you control with power or toughness 1 or less". Only on a keyword static —
+	/// it reads real P/T, which a P/T static would then feed back into.
+	/// </summary>
+	public int? OnlyPowerOrToughnessAtMost { get; init; }
+}
+
 /// <summary>Thalia: "Noncreature spells your opponents cast cost {N} more to cast."</summary>
 public record OpponentsNoncreatureSpellsCostMore(int Amount) : GameComponent;
+
+/// <summary>Ghalta: "This spell costs {X} less to cast, where X is the greatest power among creatures you control."</summary>
+public record CostsLessByGreatestPowerYouControl : GameComponent;
 
 /// <summary>Wrath of the Bloodmane: "This spell costs {N} less to cast if you control a legendary creature."</summary>
 public record CostsLessIfYouControlLegendaryCreature(int Amount) : GameComponent;

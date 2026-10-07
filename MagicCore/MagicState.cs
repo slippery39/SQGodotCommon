@@ -38,8 +38,11 @@ public static class MagicState
 	public static bool IsIn(this GameState s, int cardId, int playerId, ZoneType type) =>
 		s.GetParent(cardId) == s.ZoneId(playerId, type);
 
+	/// <summary>False — not a throw — for an id that no longer exists (a dead token, a last-known copy).</summary>
 	public static bool IsOnBattlefield(this GameState s, int cardId) =>
-		s.GetObject(cardId) is Card card && s.IsIn(cardId, card.ControllerId, ZoneType.Battlefield);
+		s.HasObject(cardId)
+		&& s.GetObject(cardId) is Card card
+		&& s.IsIn(cardId, card.ControllerId, ZoneType.Battlefield);
 
 	public static bool StackIsEmpty(this GameState s) =>
 		!s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).Any();

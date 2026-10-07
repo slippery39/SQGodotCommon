@@ -36,12 +36,12 @@ public static class Damage
 				target with
 				{
 					Damage = target.Damage + amount,
-					DamagedByDeathtouch = target.DamagedByDeathtouch || source.Has("Deathtouch"),
+					DamagedByDeathtouch = target.DamagedByDeathtouch || s.Has(source, "Deathtouch"),
 				}
 			);
 		else
 			return s;
 
-		return source.Has("Lifelink") ? Life.Gain(s, source.ControllerId, amount) : s;
+		return s.Has(source, "Lifelink") ? Life.Gain(s, source.ControllerId, amount) : s;
 	}
 }

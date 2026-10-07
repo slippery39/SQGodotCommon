@@ -25,6 +25,9 @@ public record StackAbility : GameObject
 	public ImmutableArray<int> Targets { get; init; } = [];
 	public int EventCardId { get; init; }
 	public Card? EventSnapshot { get; init; }
+
+	/// <summary>X for its effects: the X paid for the permanent, for its own "enters" trigger only (CR 107.3m).</summary>
+	public int X { get; init; }
 }
 
 /// <summary>
@@ -90,7 +93,7 @@ public record CastSpellAction : GameAction
 	bool CanCastNow(GameState s, Card card)
 	{
 		return card.Is(CardType.Instant)
-			|| card.Has("Flash")
+			|| s.Has(card, "Flash")
 			|| Priority.AtSorcerySpeed(s, PlayerId);
 	}
 
@@ -220,6 +223,9 @@ public static class StackResolution
 		if (top is Card permanent && !permanent.Is(CardType.Instant | CardType.Sorcery))
 		{
 			s = s.EnterBattlefield(permanent.Id, permanent.ControllerId);
+			var paidX = permanent.GetComponent<OnStackComponent>()?.X ?? 0;
+			if (paidX != 0)
+				s = s.UpdateObject(permanent.Id, s.GetCard(permanent.Id) with { CastX = paidX });
 			return Priority.Retain(s, s.GetGame().ActivePlayerId);
 		}
 
@@ -246,7 +252,7 @@ public static class StackResolution
 					ability.Effects,
 					ability.Specs,
 					ability.Targets,
-					0,
+					ability.X,
 					ability.EventCardId,
 					new FinishAbilityAction { AbilityId = ability.Id }
 				),

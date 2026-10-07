@@ -31,6 +31,31 @@ public class RandomGameTests
 		);
 	}
 
+	// Every scripted card, not just those in FraDecks: each seed deals all scripted nonland cards into
+	// two decks at random, with lands of every colour, so a card in no deck still gets played.
+	[Test]
+	public void RandomPlay_EveryScriptedCard([Range(1, 30)] int seed)
+	{
+		var rng = new Random(seed);
+		var spells = FraCards
+			.Scripted.Select(FraCards.Get)
+			.Where(c => !c.Data.TypeLine.Contains("Land"))
+			.OrderBy(_ => rng.Next())
+			.ToList();
+		var lands = new[] { "Plains", "Island", "Swamp", "Mountain", "Forest" }
+			.SelectMany(l => Enumerable.Repeat(TestGames.Card(l), 4))
+			.ToList();
+		var half = spells.Count / 2;
+
+		var s = MagicRules.NewGame(
+			[.. spells.Take(half), .. lands],
+			[.. spells.Skip(half), .. lands],
+			seed
+		);
+
+		Assert.That(PlayRandomly(s, seed).IsOver(), $"seed {seed} did not finish");
+	}
+
 	public static GameState PlayRandomly(GameState s, int seed)
 	{
 		var rng = new Random(seed);
