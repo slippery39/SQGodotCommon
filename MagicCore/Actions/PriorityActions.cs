@@ -20,6 +20,18 @@ static class Priority
 			? ValidationResult.Valid
 			: ValidationResult.Invalid("Player does not have priority");
 
+	/// <summary>
+	/// "Any time you could cast a sorcery" (CR 307.1): your turn, a main phase, an empty stack. The ONE
+	/// timing rule for sorceries, lands, loyalty abilities and "activate only as a sorcery".
+	/// </summary>
+	public static bool AtSorcerySpeed(GameState s, int playerId)
+	{
+		var game = s.GetGame();
+		return game.ActivePlayerId == playerId
+			&& game.Step is Step.PreCombatMain or Step.PostCombatMain
+			&& s.StackIsEmpty();
+	}
+
 	/// <summary>CR 117.3c: a player who acts gets priority back, and the pass count restarts.</summary>
 	public static GameState Retain(GameState s, int playerId) =>
 		TurnStructure.GivePriority(
@@ -60,11 +72,10 @@ public record PlayLandAction : GameAction
 	{
 		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
 			return noPriority;
-		var game = s.GetGame();
-		if (game.ActivePlayerId != PlayerId)
-			return ValidationResult.Invalid("Not your turn");
-		if (game.Step is not (Step.PreCombatMain or Step.PostCombatMain) || !s.StackIsEmpty())
-			return ValidationResult.Invalid("Lands are played in a main phase with an empty stack");
+		if (!Priority.AtSorcerySpeed(s, PlayerId))
+			return ValidationResult.Invalid(
+				"Lands are played in your main phase with an empty stack"
+			);
 		if (s.GetPlayer(PlayerId).LandsPlayedThisTurn >= 1)
 			return ValidationResult.Invalid("Already played a land this turn");
 		if (!s.IsIn(CardId, PlayerId, ZoneType.Hand) || !s.GetCard(CardId).Is(CardType.Land))

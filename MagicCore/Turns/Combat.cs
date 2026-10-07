@@ -138,7 +138,7 @@ public static class Combat
 				hits.Add((blocker, blocker.BlockingId, blocker.Power));
 
 		foreach (var (source, targetId, amount) in hits)
-			s = Rules.Damage.Deal(s, source, targetId, amount);
+			s = Rules.Damage.Deal(s, source, targetId, amount, combat: true);
 		return s;
 	}
 

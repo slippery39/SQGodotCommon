@@ -83,21 +83,46 @@ public static class MagicState
 	}
 
 	/// <summary>Every zone change of a card on or off the battlefield/stack — it arrives as a new object (CR 400.7).</summary>
-	public static GameState MoveCard(
-		this GameState s,
-		int cardId,
-		int zoneId,
-		bool toTop = false
-	) =>
-		(toTop ? s.MoveObjectToFront(cardId, zoneId) : s.MoveObject(cardId, zoneId)).UpdateObject(
-			cardId,
-			s.GetCard(cardId).Fresh()
-		);
+	public static GameState MoveCard(this GameState s, int cardId, int zoneId, bool toTop = false)
+	{
+		var before = s.GetCard(cardId);
+		var leavesBattlefield = s.IsOnBattlefield(cardId) && s.GetParent(cardId) != zoneId;
+		s = (
+			toTop ? s.MoveObjectToFront(cardId, zoneId) : s.MoveObject(cardId, zoneId)
+		).UpdateObject(cardId, before.Fresh());
+		if (!leavesBattlefield)
+			return s;
+
+		// "Dies" (CR 700.4): battlefield to graveyard. The event carries the card as it LAST was —
+		// its counters and controller — because the card in the graveyard is a new object.
+		if (
+			zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard)
+			&& before.Is(CardType.Creature | CardType.Planeswalker)
+		)
+			s = s.Raise(new DiedEvent(before));
+
+		// CR 610.3: what this permanent exiled "until it leaves the battlefield" returns at once.
+		var exiled = new[] { s.Player1Id(), s.Player2Id() }
+			.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
+			.Where(c =>
+				c.GetComponent<ExiledUntilLeaves>() is { } link
+				&& link.SourceId == cardId
+				&& link.SourceIncarnation == before.Incarnation
+			)
+			.ToList();
+		foreach (var card in exiled)
+			s = s.EnterBattlefield(card.Id, card.OwnerId);
+		return s;
+	}
 
 	/// <summary>
 	/// The ONE way onto the battlefield — cast, played, created or returned. Owns the entry
 	/// ceremony: controller, summoning-sickness stamp, starting loyalty, entering tapped, the event.
 	/// </summary>
+	/// <summary>The ONE way to sacrifice: to its owner's graveyard — a creature so moved dies.</summary>
+	public static GameState Sacrifice(this GameState s, int cardId) =>
+		s.MoveCard(cardId, s.ZoneId(s.GetCard(cardId).OwnerId, ZoneType.Graveyard));
+
 	public static GameState EnterBattlefield(this GameState s, int cardId, int controllerId)
 	{
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield))
@@ -110,6 +135,7 @@ public static class MagicState
 				ControllerId = controllerId,
 				ControlledSinceTurn = s.GetGame().TurnNumber,
 				Loyalty = card.PrintedLoyalty,
+				PlusOneCounters = card.GetComponent<EntersWithCountersComponent>()?.Count ?? 0,
 				IsTapped =
 					card.GetComponent<EntersTappedComponent>() is { } tapped
 					&& !EntersUntapped(s, card.Id, controllerId, tapped.Unless),

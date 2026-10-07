@@ -12,6 +12,11 @@ public record AttackedEvent(int CardId) : GameEvent;
 
 public record SpellCastEvent(int CardId, int PlayerId) : GameEvent;
 
+/// <summary>A creature or planeswalker went from the battlefield to a graveyard — as it last existed.</summary>
+public record DiedEvent(Card LastKnown) : GameEvent;
+
+public record PlayerDealtDamageEvent(int PlayerId, bool Combat) : GameEvent;
+
 /// <summary>Raised by Rules.Life.Gain — one per life-gain event, however much (CR 119.9).</summary>
 public record LifeGainedEvent(int PlayerId) : GameEvent;
 
@@ -27,14 +32,22 @@ public static class Triggers
 			PendingGameEvents = s.PendingGameEvents.Add(e),
 		};
 
-	public record Pending(Card Source, TriggeredAbilityComponent Ability, int EventCardId);
+	/// <summary>A triggered ability waiting to go on the stack. EventSnapshot is the card the event was about, as it last was (a dead creature's counters).</summary>
+	public record Pending(
+		Card Source,
+		TriggeredAbilityComponent Ability,
+		int EventCardId,
+		Card? EventSnapshot = null
+	);
 
 	/// <summary>
 	/// Every ability that triggered on the staged events, the active player's first (CR 101.4 APNAP:
 	/// they go on the stack first, so the other player's resolve first).
 	///
-	/// ponytail: sources are the permanents on the battlefield NOW. That is right for every trigger
-	/// built so far; "dies"/"leaves" triggers need the permanent as it last was — add a look-back here.
+	/// A dying card's OWN "when this dies" ability is read from the card as it last existed (CR
+	/// 603.10a). ponytail: other leaves-the-battlefield abilities are read from permanents still on
+	/// the battlefield, so Edgar dying alongside another creature misses that one's death. Look back
+	/// for every leaves trigger if a card ever needs it.
 	/// </summary>
 	public static List<Pending> Collect(GameState s)
 	{
@@ -42,15 +55,29 @@ public static class Triggers
 		var permanents = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
 			s.CardsIn(p, ZoneType.Battlefield)
 		);
-		return permanents
-			.SelectMany(source =>
-				source
-					.GetComponents<TriggeredAbilityComponent>()
-					.SelectMany(ability =>
-						s.PendingGameEvents.Where(e => Matches(s, source, ability.On, e))
-							.Select(e => new Pending(source, ability, EventCard(e)))
-					)
-			)
+		var fromTheBattlefield = permanents.SelectMany(source =>
+			source
+				.GetComponents<TriggeredAbilityComponent>()
+				.SelectMany(ability =>
+					s.PendingGameEvents.Where(e => Matches(s, source, ability.On, e))
+						.Select(e => new Pending(
+							source,
+							ability,
+							EventCard(e),
+							(e as DiedEvent)?.LastKnown
+						))
+				)
+		);
+		var fromTheDead = s
+			.PendingGameEvents.OfType<DiedEvent>()
+			.SelectMany(died =>
+				died.LastKnown.GetComponents<TriggeredAbilityComponent>()
+					.Where(a => a.On == TriggerEvent.SelfDies)
+					.Select(a => new Pending(died.LastKnown, a, died.LastKnown.Id, died.LastKnown))
+			);
+		return fromTheBattlefield
+			.Concat(fromTheDead)
+			.OrderBy(p => p.Source.ControllerId == active ? 0 : 1) // APNAP; stable within a player
 			.ToList();
 	}
 
@@ -76,6 +103,15 @@ public static class Triggers
 				&& !s.GetCard(cast.CardId).Is(CardType.Creature),
 			(TriggerEvent.YouGainLife, LifeGainedEvent gained) => gained.PlayerId
 				== source.ControllerId,
+			(TriggerEvent.AnotherCreatureOrPlaneswalkerYouControlDies, DiedEvent died) =>
+				died.LastKnown.Id != source.Id
+					&& died.LastKnown.ControllerId == source.ControllerId
+					&& died.LastKnown.Is(CardType.Creature | CardType.Planeswalker),
+			(TriggerEvent.CreatureYouControlDies, DiedEvent died) => died.LastKnown.ControllerId
+				== source.ControllerId
+				&& died.LastKnown.Is(CardType.Creature),
+			(TriggerEvent.OpponentDealtNoncombatDamage, PlayerDealtDamageEvent damaged) =>
+				damaged.PlayerId != source.ControllerId && !damaged.Combat,
 			_ => false,
 		};
 	}
@@ -87,6 +123,7 @@ public static class Triggers
 			EnteredBattlefieldEvent entered => entered.CardId,
 			AttackedEvent attacked => attacked.CardId,
 			SpellCastEvent cast => cast.CardId,
+			DiedEvent died => died.LastKnown.Id,
 			_ => 0,
 		};
 
@@ -164,6 +201,7 @@ public static class Triggers
 						Specs = specs,
 						Effects = steps,
 						EventCardId = t.EventCardId,
+						EventSnapshot = t.EventSnapshot,
 					},
 				],
 			}
@@ -181,6 +219,7 @@ public record PutTriggerOnStackAction : GameAction
 	public ImmutableList<Targeting.TargetSpec> Specs { get; init; } = [];
 	public ImmutableList<GameAction> Effects { get; init; } = [];
 	public int EventCardId { get; init; }
+	public Card? EventSnapshot { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
@@ -200,6 +239,7 @@ public record PutTriggerOnStackAction : GameAction
 					Specs = Specs,
 					Targets = targets,
 					EventCardId = EventCardId,
+					EventSnapshot = EventSnapshot,
 				}
 			)
 		);

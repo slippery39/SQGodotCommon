@@ -7,90 +7,18 @@ using MagicCore.Turns;
 namespace MagicCore.Tests.Sets;
 
 /// <summary>Every modal FRA card: each mode FIRES, through real casting and the real stack.</summary>
-public class FraModalTests
+public class FraModalTests : FraBoardTest
 {
-	GameState s = null!;
-	int me,
-		them;
-
-	[SetUp]
-	public void Board()
-	{
-		s = TestGames.InFirstMain();
-		me = s.GetGame().StartingPlayerId;
-		them = s.OpponentOf(me);
-		foreach (var player in new[] { me, them })
-		foreach (var land in new[] { "Plains", "Island", "Swamp", "Mountain", "Forest" })
-		for (var i = 0; i < 4; i++) // tests cast a card two or three times in one turn
-			(s, _) = TestGames.Put(s, player, TestGames.Card(land), ZoneType.Battlefield);
-	}
-
-	// Each helper replaces s — call on its own line (see MagicCore/CLAUDE.md, the test trap).
-	int Field(CardDefinition card, int player)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, card, ZoneType.Battlefield);
-		return id;
-	}
-
-	int Hand(string fra, int player)
-	{
-		int id;
-		(s, id) = TestGames.Put(s, player, FraCards.Get(fra), ZoneType.Hand);
-		return id;
-	}
-
-	/// <summary>Casts the spell with these modes and targets, then resolves the whole stack.</summary>
-	void Cast(int card, int[] modes, params int[] targets)
-	{
-		s = s.Act(new CastSpellAction { PlayerId = s.GetCard(card).OwnerId, CardId = card, Modes = [.. modes], Targets = [.. targets] });
-		Resolve();
-	}
-
-	/// <summary>Casts a creature whose entering trigger is modal, answering its mode and target choices.</summary>
-	void CastWithTrigger(int card, int[] modes, params int[] targets)
-	{
-		s = s.Act(new CastSpellAction { PlayerId = me, CardId = card });
-		Resolve(choice =>
-			choice switch
-			{
-				ChooseModesChoice => modes,
-				ChooseTargetChoice t => [targets[t.Index]],
-				_ => choice.Options.Take(choice.MinChoices).Select(o => o.Id),
-			}
-		);
-	}
-
-	void Resolve(Func<ChoiceAction, IEnumerable<int>>? answer = null)
-	{
-		for (var i = 0; i < 100; i++)
-		{
-			if (s.GetPendingChoice() is { } choice)
-				s = s.Choose(answer?.Invoke(choice) ?? choice.Options.Take(choice.MinChoices).Select(o => o.Id));
-			else if (!s.StackIsEmpty())
-				s = s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
-			else
-				return;
-		}
-	}
-
-	int Life(int p) => s.GetPlayer(p).Life;
-
-	int HandCount(int p) => s.CardsIn(p, ZoneType.Hand).Count();
-
-	bool Alive(int card) => s.IsOnBattlefield(card);
-
-	IEnumerable<CastSpellAction> Casts(int card) => s.LegalActions().OfType<CastSpellAction>().Where(a => a.CardId == card);
-
-	Card? Jace(int p) => s.CardsIn(p, ZoneType.Battlefield).FirstOrDefault(EmpowerJace.IsJaceToken);
-
 	[Test]
 	public void SurgicalPrecision_DestroysOnlyToughnessFourUp_OrDrawsAndGains()
 	{
 		var small = Field(TestGames.Creature("Small", "3/3"), them);
 		var big = Field(TestGames.Creature("Big", "2/4"), them);
 		var precision = Hand("Surgical Precision", me);
-		Assert.That(Casts(precision).Where(a => a.Modes[0] == 0).Select(a => a.Targets[0]), Does.Contain(big).And.Not.Contain(small));
+		Assert.That(
+			Casts(precision).Where(a => a.Modes[0] == 0).Select(a => a.Targets[0]),
+			Does.Contain(big).And.Not.Contain(small)
+		);
 
 		var life = Life(me);
 		Cast(precision, [0], big);
@@ -99,7 +27,11 @@ public class FraModalTests
 		var hand = HandCount(me);
 		var second = Hand("Surgical Precision", me);
 		Cast(second, [1]);
-		Assert.That((HandCount(me), Life(me)), Is.EqualTo((hand + 1, life + 1 + 2)), "put in hand +1, cast -1, drew +1");
+		Assert.That(
+			(HandCount(me), Life(me)),
+			Is.EqualTo((hand + 1, life + 1 + 2)),
+			"put in hand +1, cast -1, drew +1"
+		);
 	}
 
 	[Test]
@@ -124,10 +56,18 @@ public class FraModalTests
 		s = s.UpdateObject(bear, s.GetCard(bear) with { PlusOneCounters = 1 }); // TEST SETUP
 
 		Cast(Hand("Perfected Theory", me), [0], bear);
-		Assert.That((s.GetCard(bear).Power, s.GetCard(bear).Toughness), Is.EqualTo((2, 2)), "base 1/1, then the counter");
+		Assert.That(
+			(s.GetCard(bear).Power, s.GetCard(bear).Toughness),
+			Is.EqualTo((2, 2)),
+			"base 1/1, then the counter"
+		);
 
 		Cast(Hand("Perfected Theory", me), [1], bear);
-		Assert.That((s.GetCard(bear).Power, s.GetCard(bear).Toughness), Is.EqualTo((5, 6)), "the later base wins");
+		Assert.That(
+			(s.GetCard(bear).Power, s.GetCard(bear).Toughness),
+			Is.EqualTo((5, 6)),
+			"the later base wins"
+		);
 	}
 
 	[Test]
@@ -140,7 +80,11 @@ public class FraModalTests
 
 		var theirs = Field(TestGames.Creature("Theirs", "3/4"), them);
 		Cast(Hand("Rise of the Deathbringer", me), [1]);
-		Assert.That(s.CardsIn(me, ZoneType.Battlefield).Any(c => c.Name == "Three"), Is.False, "mine too");
+		Assert.That(
+			s.CardsIn(me, ZoneType.Battlefield).Any(c => c.Name == "Three"),
+			Is.False,
+			"mine too"
+		);
 		Assert.That(s.GetCard(theirs).Toughness, Is.EqualTo(1));
 	}
 
@@ -193,7 +137,10 @@ public class FraModalTests
 
 		Cast(Hand("Charge the Sanctum", me), [1], a);
 		var card = s.GetCard(a);
-		Assert.That((card.Power, card.PlusOneCounters, card.Has("First strike")), Is.EqualTo((6, 1, true)));
+		Assert.That(
+			(card.Power, card.PlusOneCounters, card.Has("First strike")),
+			Is.EqualTo((6, 1, true))
+		);
 	}
 
 	[Test]
@@ -203,7 +150,10 @@ public class FraModalTests
 		CastWithTrigger(Hand("Craftwork Crusher", me), [0, 1], victim);
 
 		Assert.That(Alive(victim), Is.False);
-		Assert.That(s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Name == "Cadet"), Is.EqualTo(1));
+		Assert.That(
+			s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Name == "Cadet"),
+			Is.EqualTo(1)
+		);
 	}
 
 	[Test]
@@ -213,7 +163,14 @@ public class FraModalTests
 		var charm = Hand("Fatehold Charm", me);
 		var gasp = Hand("Last Gasp", them);
 		s = s.Act(new PassPriorityAction { PlayerId = me });
-		s = s.Act(new CastSpellAction { PlayerId = them, CardId = gasp, Targets = [bear] });
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = them,
+				CardId = gasp,
+				Targets = [bear],
+			}
+		);
 		s = s.Act(new PassPriorityAction { PlayerId = them });
 
 		Cast(charm, [1], gasp);
@@ -240,13 +197,19 @@ public class FraModalTests
 		var bird = Field(TestGames.Creature("Bird", "2/6", "Flying"), them);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), them);
 		var charm = Hand("Konstrari Charm", me);
-		Assert.That(Casts(charm).Where(a => a.Modes[0] == 0).Select(a => a.Targets[0]), Does.Contain(bird).And.Not.Contain(bear));
+		Assert.That(
+			Casts(charm).Where(a => a.Modes[0] == 0).Select(a => a.Targets[0]),
+			Does.Contain(bird).And.Not.Contain(bear)
+		);
 		Cast(charm, [0], bird);
 		Assert.That(Alive(bird), Is.False);
 
 		var mine = Field(TestGames.Creature("Mine", "1/1"), me);
 		Cast(Hand("Konstrari Charm", me), [1], mine);
-		Assert.That((s.GetCard(mine).PlusOneCounters, s.GetCard(mine).Has("Trample")), Is.EqualTo((2, true)));
+		Assert.That(
+			(s.GetCard(mine).PlusOneCounters, s.GetCard(mine).Has("Trample")),
+			Is.EqualTo((2, true))
+		);
 
 		Cast(Hand("Konstrari Charm", me), [2]);
 		Assert.That(s.GetPlayer(me).ManaPool.Colorless, Is.EqualTo(3));
@@ -287,7 +250,12 @@ public class FraModalTests
 	public void Yuriko_MinusXByGraveyard_OrSurveilTwo()
 	{
 		for (var i = 0; i < 3; i++)
-			(s, _) = TestGames.Put(s, me, TestGames.Creature($"Dead{i}", "1/1"), ZoneType.Graveyard);
+			(s, _) = TestGames.Put(
+				s,
+				me,
+				TestGames.Creature($"Dead{i}", "1/1"),
+				ZoneType.Graveyard
+			);
 		var bear = Field(TestGames.Creature("Bear", "4/4"), them);
 		CastWithTrigger(Hand("Yuriko, Hope from the Shadows", me), [0], bear);
 		Assert.That(s.GetCard(bear).Power, Is.EqualTo(4 - 3));
@@ -295,7 +263,14 @@ public class FraModalTests
 		var top2 = s.CardsIn(me, ZoneType.Library).Take(2).Select(c => c.Id).ToList();
 		var yuriko = Hand("Yuriko, Hope from the Shadows", me);
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = yuriko });
-		Resolve(choice => choice is ChooseModesChoice ? [1] : choice is ChooseFromLibraryTopChoice ? top2 : []);
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseModesChoice => [1],
+				ChooseFromLibraryTopChoice => top2,
+				_ => [],
+			}
+		);
 		// The first Yuriko went to the graveyard too — the legend rule, as the second one entered.
 		Assert.That(top2.All(id => s.IsIn(id, me, ZoneType.Graveyard)), "both surveiled cards");
 	}
@@ -308,7 +283,10 @@ public class FraModalTests
 	public void DistinctMoves_KeepsEveryMode()
 	{
 		var rise = Hand("Rise of the Deathbringer", me);
-		var modes = s.DistinctMoves(s.LegalActions()).OfType<CastSpellAction>().Where(a => a.CardId == rise).Select(a => a.Modes[0]);
+		var modes = s.DistinctMoves(s.LegalActions())
+			.OfType<CastSpellAction>()
+			.Where(a => a.CardId == rise)
+			.Select(a => a.Modes[0]);
 		Assert.That(modes, Is.EquivalentTo(new[] { 0, 1 }));
 	}
 
@@ -317,7 +295,10 @@ public class FraModalTests
 	public void ANegativeCount_IsZero()
 	{
 		var shrunk = Field(TestGames.Creature("Shrunk", "1/9"), me);
-		s = s.UpdateObject(shrunk, (Card)s.GetCard(shrunk).WithComponent(new UntilEndOfTurn(-5, 0))); // TEST SETUP
+		s = s.UpdateObject(
+			shrunk,
+			(Card)s.GetCard(shrunk).WithComponent(new UntilEndOfTurn(-5, 0))
+		); // TEST SETUP
 		var (hand, life) = (HandCount(me), Life(me));
 
 		Cast(Hand("Rise of the Deathbringer", me), [0]);
@@ -354,7 +335,16 @@ public class FraModalTests
 					Choose = 2,
 					Modes =
 					[
-						new Effects.Mode("hit", [new Targeting.TargetSpec(Targeting.TargetKind.Creature, Targeting.Whose.Opponent)], [new Effects.Tap(Effects.Ref.Target())]),
+						new Effects.Mode(
+							"hit",
+							[
+								new Targeting.TargetSpec(
+									Targeting.TargetKind.Creature,
+									Targeting.Whose.Opponent
+								),
+							],
+							[new Effects.Tap(Effects.Ref.Target())]
+						),
 						new Effects.Mode("draw", [], [new Effects.DrawCards(Effects.Ref.You, 1)]),
 					],
 				},
@@ -368,6 +358,10 @@ public class FraModalTests
 			s = s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
 
 		Assert.That(s.IsOnBattlefield(picky));
-		Assert.That((s.IsWaitingForChoice, s.StackIsEmpty()), Is.EqualTo((false, true)), "no unanswerable choice");
+		Assert.That(
+			(s.IsWaitingForChoice, s.StackIsEmpty()),
+			Is.EqualTo((false, true)),
+			"no unanswerable choice"
+		);
 	}
 }

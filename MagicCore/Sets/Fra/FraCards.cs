@@ -645,6 +645,148 @@ public static class FraCards
 					M([], new Surveil(2))
 				),
 			],
+
+			// ===== Sacrifice, dies, exile-until-leaves =====
+			["Budding Insurgent"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[
+						// "If that permanent was a legendary enchantment" — read before it is destroyed.
+						new If(
+							new TargetIs(0, CardType.Enchantment, Supertype.Legendary),
+							new DrawCards(Ref.You, 1)
+						),
+						new Destroy(Ref.Target()),
+					]
+				)
+				{
+					SacrificeSelf = true,
+					SorcerySpeed = true,
+					Targets =
+					[
+						new TargetSpec(TargetKind.Permanent)
+						{
+							AnyOfTypes = CardType.Artifact | CardType.Enchantment,
+						},
+					],
+				},
+			],
+			["Living Library"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{6}"),
+					[new ShuffleIntoLibrary(Ref.Target())]
+				)
+				{
+					SacrificeSelf = true,
+					Targets = [CreatureOrPlaneswalker with { Whose = Whose.Opponent }],
+				},
+			],
+			["Marwyn, the Clearcutter"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new DrawCards(Ref.You, 1)])
+				{
+					TapCost = true,
+					Sacrifice = new TargetSpec(TargetKind.Permanent, Whose.You)
+					{
+						AnyOfTypes = CardType.Artifact | CardType.Land,
+					},
+				},
+			],
+			["Edgar, Ancient Bloodlord"] =
+			[
+				When(
+					TriggerEvent.AnotherCreatureOrPlaneswalkerYouControlDies,
+					[],
+					new GainLife(Ref.You, 1)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[
+						new AddCounters(Ref.Source, 1),
+						new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Menace"),
+					]
+				)
+				{
+					Sacrifice = CreatureOrPlaneswalker with { Whose = Whose.You, Another = true },
+				},
+			],
+			["Break Under Pressure"] =
+			[
+				Spell(
+					[new TargetSpec(TargetKind.Player, Whose.Opponent)],
+					new SacrificeGreatestManaValue(
+						Ref.Target(),
+						CardType.Creature | CardType.Planeswalker
+					),
+					new GainLife(Ref.You, 2)
+				),
+			],
+			["Silence the Echo"] =
+			[
+				new SacrificeOrPayAdditionalCost(
+					CreatureOrPlaneswalker with
+					{
+						Whose = Whose.You,
+					},
+					3
+				),
+				Spell([CreatureOrPlaneswalker], new Destroy(Ref.Target())),
+			],
+			["Way of the Deathbringer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(5)),
+				Grant(
+					-2,
+					[],
+					new MaySacrifice(
+						new TargetSpec(TargetKind.Creature, Whose.You),
+						[new CreateTokens(Beast, 1)]
+					)
+				),
+			],
+			["Graft Surgeon"] =
+			[
+				new EntersWithCountersComponent(1),
+				When(
+					TriggerEvent.SelfDies,
+					[new TargetSpec(TargetKind.Creature, Whose.You) { Optional = true }],
+					new PutEventCardCounters(Ref.Target())
+				),
+			],
+			["Massacre Girl, Most Wanted"] =
+			[
+				When(
+					TriggerEvent.AnotherCreatureOrPlaneswalkerYouControlDies,
+					[new TargetSpec(TargetKind.Player, Whose.Opponent)],
+					new DealDamage(Ref.Target(), 1),
+					new GainLife(Ref.You, 1)
+				),
+				When(TriggerEvent.OpponentDealtNoncombatDamage, [], new AddCounters(Ref.Source, 1)),
+			],
+			["Way of the Necromancer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(2)),
+				When(
+					TriggerEvent.CreatureYouControlDies,
+					[],
+					new AddLoyalty(Ref.PlaneswalkersYouControl, 1)
+				),
+			],
+			["Memory Trap"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[
+						new TargetSpec(TargetKind.Permanent, Whose.Opponent)
+						{
+							NotTypes = CardType.Land,
+						},
+					],
+					new ExileUntilSourceLeaves(Ref.Target())
+				),
+			],
 		};
 
 	public static CardDefinition Get(string name) =>

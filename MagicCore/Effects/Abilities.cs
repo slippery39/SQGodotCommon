@@ -22,6 +22,10 @@ public enum TriggerEvent
 	YouCastNoncreatureSpell,
 	LandYouControlEnters, // landfall
 	YouGainLife,
+	SelfDies, // read from the dying card as it last existed (CR 603.10a)
+	AnotherCreatureOrPlaneswalkerYouControlDies,
+	CreatureYouControlDies,
+	OpponentDealtNoncombatDamage,
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>
@@ -41,6 +45,15 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 {
 	public bool TapCost { get; init; }
 	public ImmutableList<TargetSpec> Targets { get; init; } = [];
+
+	/// <summary>"Sacrifice this [permanent]:" — part of the cost.</summary>
+	public bool SacrificeSelf { get; init; }
+
+	/// <summary>"Sacrifice another creature or planeswalker:" — what may be sacrificed as the cost.</summary>
+	public TargetSpec? Sacrifice { get; init; }
+
+	/// <summary>"Activate only as a sorcery."</summary>
+	public bool SorcerySpeed { get; init; }
 }
 
 /// <summary>
@@ -71,6 +84,15 @@ public enum EntersUntappedIf
 /// <summary>"This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield.</summary>
 public record EntersTappedComponent(EntersUntappedIf Unless = EntersUntappedIf.Never)
 	: GameComponent;
+
+/// <summary>Silence the Echo: "As an additional cost to cast this spell, sacrifice a [Sacrifice] or pay {Generic}."</summary>
+public record SacrificeOrPayAdditionalCost(TargetSpec Sacrifice, int Generic) : GameComponent;
+
+/// <summary>"This creature enters with N +1/+1 counters on it." Applied by MagicState.EnterBattlefield.</summary>
+public record EntersWithCountersComponent(int Count) : GameComponent;
+
+/// <summary>On a card exiled "until [source] leaves the battlefield" — MagicState.MoveCard returns it then.</summary>
+public record ExiledUntilLeaves(int SourceId, int SourceIncarnation) : GameComponent;
 
 /// <summary>Thalia: "Noncreature spells your opponents cast cost {N} more to cast."</summary>
 public record OpponentsNoncreatureSpellsCostMore(int Amount) : GameComponent;

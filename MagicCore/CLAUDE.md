@@ -22,6 +22,7 @@ MagicCore/
 │                        StackResolution (fizzle); mulligan; hand, library, combat and target choices
 ├── Actions/LoyaltyActions.cs  Loyalty.AbilitiesOf (own + granted) and ActivateLoyaltyAction
 ├── Actions/ModeChoices.cs     ChooseModesChoice — a modal trigger's modes, chosen as it goes on the stack
+├── Actions/PermanentChoices.cs  "you may sacrifice …": ChoosePermanentChoice, SacrificeChosen, IfChosen
 ├── Effects/Effects.cs   ContextKeys, Ref (you / opponent / target i / source / event card …), primitives
 ├── Effects/Abilities.cs spell, triggered, activated, mana and static ability components
 ├── Effects/Modes.cs     Mode, Modal.Compose (chosen modes → one target list + steps), ScopeTargetsAction
@@ -48,8 +49,9 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Legality lives in `ValidateAdd` only.** `LegalActions` enumerates candidates and keeps those that
   validate — never re-derive a rule in the generator.
 - **`TurnStructure` is the only place a step changes or priority is given.** `GivePriority` collects
-  triggers, runs state-based actions, then puts the triggers on the stack (CR 117.5). Triggers are
-  collected BEFORE the check, so a creature the check kills still saw its own entry.
+  triggers, runs state-based actions, and repeats while the check raised new events — so a creature
+  the check kills has its death seen in the same pass — then puts the triggers on the stack (CR
+  117.5). Triggers are collected BEFORE the check, so a creature it kills still saw its own entry.
 - **`PriorityPlayerId` is 0 while nobody holds priority** (pregame, untap, cleanup, pending choice,
   game over). `Priority.Holds` rejects a 0 caller — it once matched, and "player 0" could pass.
 - **Child index 0 is the TOP** of the library and of the stack; `MoveObject` appends (= bottom).
@@ -61,9 +63,20 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   loyalty), `Life.Gain`, `Costs.Of`, `ManaPayment.Find`, `ManaAbilities.CanTap`/`CanPayTapCost`,
   `TargetSpec.IsLegal` (on choosing AND resolving), `Loyalty.AbilitiesOf` (own + granted),
   `Loyalty.Change` (costs, damage, effects; never below 0), `Ref` (what "creatures you control"
-  means — `Count` counts a `Ref`, it does not filter again).
+  means — `Count` counts a `Ref`, it does not filter again), `MagicState.Sacrifice`,
+  `Priority.AtSorcerySpeed` (sorceries, lands, loyalty, "activate only as a sorcery").
+- **Same id is not same object (CR 400.7).** Ids survive zone changes; `Card.Incarnation` does not.
+  "Is it still that permanent?" compares Incarnation — `Ref.Source` resolves to nothing once the
+  source left, even if it came back, and an exile-until link names the incarnation that exiled.
 - **`EnterBattlefield` is the one way onto the battlefield** and owns the entry: controller,
-  summoning-sickness stamp, starting loyalty, entering tapped (`EntersTappedComponent`), the event.
+  summoning-sickness stamp, starting loyalty, entering tapped (`EntersTappedComponent`), entering
+  with counters, the event.
+- **`MoveCard` owns leaving it:** a creature or planeswalker going to a graveyard raises `DiedEvent`
+  with the card AS IT LAST WAS (its counters, its controller — the card in the graveyard is a new
+  object), and whatever it exiled "until it leaves" comes back at once (CR 610.3).
+- **Sacrifice is a move to the owner's graveyard** — it dies. As a cost it is part of the action
+  (`ActivateAbilityAction`/`CastSpellAction.SacrificeId`), chosen like a target, one legal action per
+  choice; `StackAbility.Source` keeps the source as it was if the cost sacrificed it.
   The exception is test setup: `TestGames.Put(…, Battlefield)` places a card with NONE of that —
   untapped, unsick, 0 loyalty. Use `EnterBattlefield` in a test when the entry itself matters.
 - **Planeswalkers:** enter with printed loyalty (`EnterBattlefield`), loyalty abilities are sorcery
@@ -103,8 +116,9 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 
 ## Known ceilings (each marked `ponytail:` in the code)
 
-Damage split among blockers is automatic · the legend rule keeps the newest · triggers read sources on
-the battlefield NOW (dies/leaves triggers need a look-back) · state-based actions run one pass ·
+Damage split among blockers is automatic · the legend rule keeps the newest · a dying card's own
+"when this dies" looks back, but other leaves-the-battlefield triggers read the battlefield NOW (Edgar
+dying alongside a creature misses its death) · a "sacrifice the greatest" tie takes the first ·
 `GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana, no "do I need
 this mana now" when choosing a tapped dual, and it loses slow races to evasive fliers
 (`docs/findings/magic-ai.md`) · menace drops a
@@ -115,9 +129,10 @@ needs · Empower Jace with two Jace tokens loads the first · surveil keeps the 
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 63 cards
-(`FraDecks`), including 15 Empower Jace cards, the 15 dual lands and 14 modal cards. **The 8 real planeswalkers are
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 74 cards
+(`FraDecks`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
+dies / exile-until cards. **The 8 real planeswalkers are
 not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
-Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves · 7c continuous
+Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c continuous
 effects, step triggers, prowess · 7d prepare, flashback, cycling, graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
 limited Bo1 uses it are unconfirmed — hence `handSmoothing`.

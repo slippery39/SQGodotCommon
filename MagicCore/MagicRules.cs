@@ -152,17 +152,24 @@ public static class MagicRules
 					.Select(targets => (modes, targets))
 			)
 			.ToList();
+		// "Sacrifice … or pay {N}": 0 is paying; each permanent that may be sacrificed is another way.
+		IEnumerable<int> sacrifices = card.GetComponent<SacrificeOrPayAdditionalCost>() is { } extra
+			? [0, .. extra.Sacrifice.Candidates(s, player, card.Id)]
+			: [0];
 		return Enumerable
 			.Range(0, maxX + 1)
 			.SelectMany(x =>
-				choices.Select(c => new CastSpellAction
-				{
-					PlayerId = player,
-					CardId = card.Id,
-					X = x,
-					Targets = c.targets,
-					Modes = c.modes,
-				})
+				sacrifices.SelectMany(sacrifice =>
+					choices.Select(c => new CastSpellAction
+					{
+						PlayerId = player,
+						CardId = card.Id,
+						X = x,
+						Targets = c.targets,
+						Modes = c.modes,
+						SacrificeId = sacrifice,
+					})
+				)
 			);
 	}
 
@@ -172,13 +179,18 @@ public static class MagicRules
 				(ability, index) =>
 					TargetSpec
 						.Combinations(s, ability.Targets, player, card.Id)
-						.Select(targets => new ActivateAbilityAction
-						{
-							PlayerId = player,
-							CardId = card.Id,
-							AbilityIndex = index,
-							Targets = targets,
-						})
+						.SelectMany(targets =>
+							(ability.Sacrifice?.Candidates(s, player, card.Id) ?? [0]).Select(
+								sacrifice => new ActivateAbilityAction
+								{
+									PlayerId = player,
+									CardId = card.Id,
+									AbilityIndex = index,
+									Targets = targets,
+									SacrificeId = sacrifice,
+								}
+							)
+						)
 			);
 
 	static IEnumerable<GameAction> LoyaltyCandidates(GameState s, int player, Card card) =>
@@ -226,11 +238,16 @@ public static class MagicRules
 				{
 					PlayLandAction p => $"land|{s.GetCard(p.CardId).Name}",
 					CastSpellAction c =>
-						$"cast|{s.GetCard(c.CardId).Name}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}",
+						$"cast|{s.GetCard(c.CardId).Name}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}",
+					ActivateAbilityAction activate =>
+						$"activate|{activate.CardId}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}",
 					_ => (object)a,
 				}
 			)
 			.ToImmutableList();
+
+	/// <summary>Sacrificing one Forest is the same move as sacrificing another.</summary>
+	static string Fodder(GameState s, int id) => id == 0 ? "" : s.GetCard(id).Name;
 
 	public static GameState Act(this GameState s, GameAction action) =>
 		s.AddAction(action).ProcessAllActions().State;

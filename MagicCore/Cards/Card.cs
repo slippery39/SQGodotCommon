@@ -49,6 +49,12 @@ public record Card : GameObject
 	public int BaseToughness { get; init; }
 	public bool IsToken { get; init; }
 
+	/// <summary>
+	/// Bumped by every zone change: ids survive a zone change but the object does not (CR 400.7).
+	/// "Is this still the same permanent?" compares this, never the id alone.
+	/// </summary>
+	public int Incarnation { get; init; }
+
 	/// <summary>The loyalty printed in the corner; a planeswalker enters with that many counters (CR 306.5b).</summary>
 	public int PrintedLoyalty { get; init; }
 
@@ -101,6 +107,7 @@ public record Card : GameObject
 	public Card Fresh() =>
 		this with
 		{
+			Incarnation = Incarnation + 1,
 			IsTapped = false,
 			PlusOneCounters = 0,
 			Loyalty = 0,
@@ -111,7 +118,9 @@ public record Card : GameObject
 			AttackingId = 0,
 			BlockingId = 0,
 			IsBlocked = false,
-			Components = Components.RemoveAll(c => c is Actions.OnStackComponent or UntilEndOfTurn),
+			Components = Components.RemoveAll(c =>
+				c is Actions.OnStackComponent or UntilEndOfTurn or Effects.ExiledUntilLeaves
+			),
 		};
 
 	/// <summary>Printed keywords plus any granted until end of turn.</summary>

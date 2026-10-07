@@ -24,6 +24,7 @@ public record StackAbility : GameObject
 	public ImmutableList<TargetSpec> Specs { get; init; } = [];
 	public ImmutableArray<int> Targets { get; init; } = [];
 	public int EventCardId { get; init; }
+	public Card? EventSnapshot { get; init; }
 }
 
 /// <summary>
@@ -39,6 +40,15 @@ public record CastSpellAction : GameAction
 
 	/// <summary>Chosen modes of a modal spell, by index; empty otherwise.</summary>
 	public ImmutableArray<int> Modes { get; init; } = [];
+
+	/// <summary>A "sacrifice … or pay {N}" additional cost: what is sacrificed, or 0 to pay.</summary>
+	public int SacrificeId { get; init; }
+
+	/// <summary>Effective cost plus whatever is paid instead of a sacrifice.</summary>
+	ManaCost CostToPay(GameState s, Card card) =>
+		card.GetComponent<SacrificeOrPayAdditionalCost>() is { } extra && SacrificeId == 0
+			? Costs.Of(s, PlayerId, card).WithGeneric(extra.Generic)
+			: Costs.Of(s, PlayerId, card);
 
 	public override ValidationResult ValidateAdd(GameState s)
 	{
@@ -66,29 +76,30 @@ public record CastSpellAction : GameAction
 			)
 		)
 			return ValidationResult.Invalid("Illegal targets");
-		if (ManaPayment.Find(s, PlayerId, Costs.Of(s, PlayerId, card), X) is null)
+		var extra = card.GetComponent<SacrificeOrPayAdditionalCost>();
+		if (
+			SacrificeId != 0
+			&& (extra is null || !extra.Sacrifice.IsLegal(s, PlayerId, CardId, SacrificeId))
+		)
+			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
+		if (ManaPayment.Find(s, PlayerId, CostToPay(s, card), X) is null)
 			return ValidationResult.Invalid("Cannot pay the cost");
 		return ValidationResult.Valid;
 	}
 
 	bool CanCastNow(GameState s, Card card)
 	{
-		if (card.Is(CardType.Instant) || card.Has("Flash"))
-			return true;
-		var game = s.GetGame();
-		return game.ActivePlayerId == PlayerId
-			&& game.Step is Step.PreCombatMain or Step.PostCombatMain
-			&& s.StackIsEmpty();
+		return card.Is(CardType.Instant)
+			|| card.Has("Flash")
+			|| Priority.AtSorcerySpeed(s, PlayerId);
 	}
 
 	public override ActionResult Execute(GameState s)
 	{
 		var card = s.GetCard(CardId);
-		s = ManaPayment.Pay(
-			s,
-			PlayerId,
-			ManaPayment.Find(s, PlayerId, Costs.Of(s, PlayerId, card), X)!
-		);
+		s = ManaPayment.Pay(s, PlayerId, ManaPayment.Find(s, PlayerId, CostToPay(s, card), X)!);
+		if (SacrificeId != 0)
+			s = s.Sacrifice(SacrificeId);
 		s = s.MoveCard(CardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
 		s = s.UpdateObject(
 			CardId,
@@ -107,6 +118,9 @@ public record ActivateAbilityAction : GameAction
 	public int AbilityIndex { get; init; }
 	public ImmutableArray<int> Targets { get; init; } = [];
 
+	/// <summary>The permanent sacrificed as the cost ("Sacrifice another creature:"); 0 if none.</summary>
+	public int SacrificeId { get; init; }
+
 	ActivatedAbilityComponent? Ability(GameState s) =>
 		s.GetCard(CardId)
 			.GetComponents<ActivatedAbilityComponent>()
@@ -121,6 +135,14 @@ public record ActivateAbilityAction : GameAction
 		var card = s.GetCard(CardId);
 		if (ability.TapCost && !ManaAbilities.CanPayTapCost(s, card))
 			return ValidationResult.Invalid("Cannot pay {T}");
+		if (ability.SorcerySpeed && !Priority.AtSorcerySpeed(s, PlayerId))
+			return ValidationResult.Invalid("Activate only as a sorcery");
+		if (
+			ability.Sacrifice is { } sacrifice
+				? !sacrifice.IsLegal(s, PlayerId, CardId, SacrificeId)
+				: SacrificeId != 0
+		)
+			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
 		if (!TargetSpec.AreLegal(s, ability.Targets, Targets, PlayerId, CardId))
 			return ValidationResult.Invalid("Illegal targets");
 		if (
@@ -141,13 +163,20 @@ public record ActivateAbilityAction : GameAction
 		);
 		if (ability.TapCost)
 			s = s.UpdateObject(CardId, s.GetCard(CardId) with { IsTapped = true });
+		var source = s.GetCard(CardId); // as it was when activated — the cost may sacrifice it
+		foreach (
+			var sacrificed in new[] { ability.SacrificeSelf ? CardId : 0, SacrificeId }.Where(id =>
+				id != 0
+			)
+		)
+			s = s.Sacrifice(sacrificed);
 		s = StackResolution.Push(
 			s,
 			new StackAbility
 			{
-				Name = $"{s.GetCard(CardId).Name} ability",
+				Name = $"{source.Name} ability",
 				SourceId = CardId,
-				Source = s.GetCard(CardId),
+				Source = source,
 				ControllerId = PlayerId,
 				Effects = ability.Effects,
 				Specs = ability.Targets,
@@ -231,18 +260,21 @@ public static class StackResolution
 			.ToImmutableArray();
 		var fizzles = chosen.Any(id => id != 0) && legal.All(id => id == 0);
 
+		var context = ImmutableDictionary<string, object>
+			.Empty.Add(ContextKeys.Controller, controller)
+			.Add(ContextKeys.Source, sourceId)
+			.Add(ContextKeys.SourceSnapshot, snapshot)
+			.Add(ContextKeys.X, x)
+			.Add(ContextKeys.Targets, legal)
+			.Add(ContextKeys.AllTargets, legal)
+			.Add(ContextKeys.EventCard, eventCard);
+		if (top is StackAbility { EventSnapshot: { } snapshotOfEvent })
+			context = context.Add(ContextKeys.EventSnapshot, snapshotOfEvent);
 		return s.SpawnAction(
 			new PipelineAction
 			{
 				Steps = fizzles ? [finish] : [.. effects, finish],
-				PipelineContext = ImmutableDictionary<string, object>
-					.Empty.Add(ContextKeys.Controller, controller)
-					.Add(ContextKeys.Source, sourceId)
-					.Add(ContextKeys.SourceSnapshot, snapshot)
-					.Add(ContextKeys.X, x)
-					.Add(ContextKeys.Targets, legal)
-					.Add(ContextKeys.AllTargets, legal)
-					.Add(ContextKeys.EventCard, eventCard),
+				PipelineContext = context,
 			}
 		);
 	}

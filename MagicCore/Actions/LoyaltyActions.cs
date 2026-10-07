@@ -67,11 +67,7 @@ public record ActivateLoyaltyAction : GameAction
 		if (Loyalty.AbilitiesOf(s, walker).ElementAtOrDefault(AbilityIndex) is not { } ability)
 			return ValidationResult.Invalid("No such loyalty ability");
 		var game = s.GetGame();
-		if (
-			game.ActivePlayerId != PlayerId
-			|| game.Step is not (Step.PreCombatMain or Step.PostCombatMain)
-			|| !s.StackIsEmpty()
-		)
+		if (!Priority.AtSorcerySpeed(s, PlayerId))
 			return ValidationResult.Invalid("Loyalty abilities are sorcery speed");
 		if (walker.LoyaltyActivatedOnTurn == game.TurnNumber)
 			return ValidationResult.Invalid(

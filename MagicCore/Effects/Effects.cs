@@ -3,6 +3,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Rules;
+using MagicCore.Targeting;
 
 namespace MagicCore.Effects;
 
@@ -23,6 +24,9 @@ public static class ContextKeys
 
 	/// <summary>The card the trigger event was about — the creature that entered, the land that fell.</summary>
 	public const string EventCard = "EventCard";
+
+	/// <summary>The event's card as it last existed (a dead creature's counters), for "dies" triggers.</summary>
+	public const string EventSnapshot = "EventSnapshot";
 
 	/// <summary>An ability's source as it last existed — used once the source itself is gone (CR 113.7a).</summary>
 	public const string SourceSnapshot = "SourceSnapshot";
@@ -66,6 +70,14 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 
 	public static Ref ControllerOfTarget(int index = 0) => new(RefKind.ControllerOfTarget, index);
 
+	/// <summary>Is the source still the object the ability came from? Not if it left and came back (CR 400.7).</summary>
+	static bool SameObject(GameState s, ImmutableDictionary<string, object> context) =>
+		!context.TryGetValue(ContextKeys.SourceSnapshot, out var snapshot)
+		|| snapshot is not Card then
+		|| !s.HasObject(then.Id)
+		|| s.GetObject(then.Id) is not Card now
+		|| now.Incarnation == then.Incarnation;
+
 	public IEnumerable<int> Resolve(GameState s, ImmutableDictionary<string, object> context)
 	{
 		var controller = (int)context[ContextKeys.Controller];
@@ -84,7 +96,7 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 			&& s.GetObject(TargetAt(Index)) is Card c
 				? [c.ControllerId]
 				: [],
-			RefKind.Source => [(int)context[ContextKeys.Source]],
+			RefKind.Source => SameObject(s, context) ? [(int)context[ContextKeys.Source]] : [],
 			RefKind.EventCard =>
 			[
 				context.TryGetValue(ContextKeys.EventCard, out var e) ? (int)e : 0,
@@ -443,6 +455,107 @@ public record DamageFrom(Ref From, Ref To, Count Amount) : Effect
 	}
 }
 
+/// <summary>"Its owner shuffles it into their library."</summary>
+public record ShuffleIntoLibrary(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var card in Permanents(What, s).ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Library)).Shuffle(card.OwnerId);
+		return new(s);
+	}
+}
+
+/// <summary>
+/// Break Under Pressure: each player named sacrifices one of their [Types] with the greatest mana value.
+/// ponytail: on a tie the first is taken; the rules let that player choose among the tied.
+/// </summary>
+public record SacrificeGreatestManaValue(Ref Who, CardType Types) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer))
+		{
+			var victim = s.CardsIn(player, ZoneType.Battlefield)
+				.Where(c => c.Is(Types))
+				.OrderByDescending(c => c.ManaCost.ManaValue)
+				.FirstOrDefault();
+			if (victim is not null)
+				s = s.Sacrifice(victim.Id);
+		}
+		return new(s);
+	}
+}
+
+/// <summary>
+/// "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the Then
+/// effects run only if something was sacrificed, with this ability's context.
+/// </summary>
+public record MaySacrifice(TargetSpec Filter, ImmutableList<GameAction> Then) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					// Its own key, cleared: a "none" answer leaves the context untouched, so a stale
+					// pick from an earlier choice would otherwise be sacrificed.
+					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+					Steps =
+					[
+						new ChoosePermanentChoice(
+							Controller,
+							GetInput<int>(ContextKeys.Source),
+							Filter
+						)
+						{
+							Prompt = "You may sacrifice",
+						},
+						new SacrificeChosenAction(),
+						new IfChosenAction(Then),
+					],
+				}
+			)
+		);
+}
+
+/// <summary>"Exile [it] until this leaves the battlefield." Does nothing if this already left (CR 610.3c).</summary>
+public record ExileUntilSourceLeaves(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var sourceId = GetInput<int>(ContextKeys.Source);
+		var source = Ref.Source.Resolve(s, InputContext).FirstOrDefault(); // 0 if it left, even if it came back
+		if (source == 0 || !s.IsOnBattlefield(sourceId))
+			return new(s);
+		foreach (var card in Permanents(What, s).ToList())
+		{
+			s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Exile));
+			s = Update(
+				s,
+				(Card)
+					s.GetCard(card.Id)
+						.WithComponent(
+							new ExiledUntilLeaves(sourceId, s.GetCard(sourceId).Incarnation)
+						)
+			);
+		}
+		return new(s);
+	}
+}
+
+/// <summary>Graft Surgeon: "put its counters on …" — the counters the dead card had as it last existed.</summary>
+public record PutEventCardCounters(Ref To) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var counters = GetInput<Card?>(ContextKeys.EventSnapshot)?.PlusOneCounters ?? 0;
+		return counters == 0
+			? new(s)
+			: (new AddCounters(To, counters) with { InputContext = InputContext }).Execute(s);
+	}
+}
+
 public abstract record Condition
 {
 	public abstract bool Holds(GameState s, ImmutableDictionary<string, object> context);
@@ -453,6 +566,17 @@ public record TargetIsNotAttacking(int Index) : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
 		Ref.Target(Index).Resolve(s, context).Select(s.GetCard).Any(c => c.AttackingId == 0);
+}
+
+/// <summary>Budding Insurgent: "if that permanent was a legendary enchantment" — read before it is destroyed.</summary>
+public record TargetIs(int Index, CardType Type, Supertype Supertype = Supertype.None) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		Ref.Target(Index)
+			.Resolve(s, context)
+			.Select(s.GetObject)
+			.OfType<Card>()
+			.Any(c => c.Is(Type) && (Supertype == Supertype.None || c.Is(Supertype)));
 }
 
 public record EventCardHasSubtype(string Subtype) : Condition

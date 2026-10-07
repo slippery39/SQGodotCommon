@@ -1,5 +1,6 @@
 using ImmutableGameObjects;
 using MagicCore.Cards;
+using MagicCore.Turns;
 
 namespace MagicCore.Rules;
 
@@ -9,13 +10,20 @@ namespace MagicCore.Rules;
 /// </summary>
 public static class Damage
 {
-	public static GameState Deal(GameState s, Card source, int targetId, int amount)
+	public static GameState Deal(
+		GameState s,
+		Card source,
+		int targetId,
+		int amount,
+		bool combat = false
+	)
 	{
 		if (amount <= 0 || !s.HasObject(targetId))
 			return s;
 
 		if (s.GetObject(targetId) is MagicPlayer player)
-			s = s.WithPlayer(player with { Life = player.Life - amount });
+			s = s.WithPlayer(player with { Life = player.Life - amount })
+				.Raise(new PlayerDealtDamageEvent(player.Id, combat));
 		else if (
 			s.GetObject(targetId) is Card { } walker
 			&& s.IsOnBattlefield(targetId)

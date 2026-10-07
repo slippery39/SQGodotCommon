@@ -20,8 +20,23 @@ public static class TurnStructure
 	/// </summary>
 	public static GameState GivePriority(GameState s, int playerId)
 	{
-		var triggered = Triggers.Collect(s);
-		s = StateBasedActions.Check(s with { PendingGameEvents = [] });
+		// Collect, check, and again while the check itself raised events — a creature the check kills
+		// must have its death seen in this same pass, not at some later priority.
+		var triggered = new List<Triggers.Pending>();
+		for (var round = 0; ; round++)
+		{
+			if (round == 100)
+				throw new InvalidOperationException(
+					"State-based actions kept raising events for 100 rounds"
+				);
+			triggered.AddRange(Triggers.Collect(s));
+			s = StateBasedActions.Check(s with { PendingGameEvents = [] });
+			if (s.PendingGameEvents.IsEmpty)
+				break;
+		}
+		// APNAP across every round, not just within one (CR 603.3b).
+		var active = s.GetGame().ActivePlayerId;
+		triggered = [.. triggered.OrderBy(t => t.Source.ControllerId == active ? 0 : 1)];
 		if (s.IsOver())
 			return s.WithGame(s.GetGame() with { PriorityPlayerId = 0 });
 		if (triggered.Count > 0)
@@ -130,11 +145,20 @@ public static class TurnStructure
 
 public static class StateBasedActions
 {
-	/// <summary>
-	/// CR 704.5. ponytail: one pass — nothing yet makes one state-based action cause another. Loop
-	/// until stable once dying can trigger or change toughness.
-	/// </summary>
+	/// <summary>CR 704.3: performed again and again until none applies — a pass that changes nothing returns the same state.</summary>
 	public static GameState Check(GameState s)
+	{
+		for (var round = 0; round < 100; round++)
+		{
+			var next = CheckOnce(s);
+			if (ReferenceEquals(next, s))
+				return s;
+			s = next;
+		}
+		throw new InvalidOperationException("State-based actions still applied after 100 passes");
+	}
+
+	static GameState CheckOnce(GameState s)
 	{
 		foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
 		{
