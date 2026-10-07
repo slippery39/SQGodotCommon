@@ -215,9 +215,19 @@ public sealed record Decklist(
 			.ThenBy(e => e.Name, StringComparer.Ordinal)
 			.Select(e => $"  {e.Value}x {e.Name} ({e.Cost})");
 
+		// The lands the deck really PLAYS — the same Materialize builds. This printed "{Lands}x
+		// Plains" for every deck long after colours arrived, so a blue deck read as 22 Plains in
+		// every run report while its games were played with Islands.
+		var lands = Materialize(0, pool)
+			.Where(c => c.HasSubtype("Land"))
+			.GroupBy(c => c.Name)
+			.OrderByDescending(g => g.Count())
+			.ThenBy(g => g.Key, StringComparer.Ordinal)
+			.Select(g => $"  {g.Count()}x {g.Key}");
+
 		return string.Join(
 			Environment.NewLine,
-			lines.Append($"  {Lands}x Plains").Prepend($"{Name} — {TotalCards} cards")
+			lines.Concat(lands).Prepend($"{Name} — {TotalCards} cards")
 		);
 	}
 }

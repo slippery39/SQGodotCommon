@@ -166,7 +166,28 @@ the Designed pool had a gauntlet at all.
 | CMB Reanimator | 43.5% | 56.5% |
 | **field overall** | **32.7%** | |
 
-**STALE (2026-10-06): these three reference decks were padded with 17 Plains** until `DesignedGauntletDecks` was routed through `ManaBase` - since colours, the references could not cast their own spells. Re-measure before quoting any number in this table.
+**SUPERSEDED - re-measured 2026-10-07; quote the table below, not the one above.** The table above
+was taken with the references padded with 17 Plains (their builder predated colour) and before
+colour identity, on a 732-card DES. The re-measurement, same shape (10 decks x 12 generations,
+3 references x 20 games), commit `852e8fe` + real reference manabases, DES at 429 cards, seed
+`cmbremeasure`, 43 320 evolution games, 81.8 min:
+
+| | field wins | reference wins |
+|---|---|---|
+| CMB Twin | 28.5% | **71.5%** |
+| CMB Elves | 32.0% | **68.0%** |
+| CMB Reanimator | 76.0% | 24.0% |
+| **field overall** | **45.5%** | |
+
+Twin and Elves still beat every evolved slot but one (WG-Control 50% vs Twin, W-Aggro 60% vs
+Elves); Reanimator now loses to all ten. One seed and 20 games a cell (about +/-11pp per cell), so
+read the ORDER, not the decimals. The engine and the pool both changed since the old table, so the
+difference is not attributable to the manabase alone. Field spread 36.7%-65.0%, 9/10 viable,
+diversity 54%. Decklists: `sim_results/metagame_des_20261007_000436.json`.
+
+The run's report printed every evolved deck as "Nx Plains": `Decklist.Format` hardcoded it. A
+PRINT bug only - games materialise through `ManaBase` - now fixed and pinned
+(`ManaBaseTests.AFormattedDecklist_PrintsTheManabaseItPlays`).
 
 Every internal metric read healthy at the same time: **8/10 viable, 47.8pp spread, 44% diversity**
 against a 35% floor. That is the closed-round-robin blindness this file already records for ALL

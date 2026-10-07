@@ -298,4 +298,25 @@ public class ManaBaseTests
 		var missing = ManaPool.Colors.Where(c => needed[c] > 0 && produced[c] == 0).ToList();
 		Assert.That(missing, Is.Empty, $"{deck.Name}'s lands make no {string.Join(", ", missing)}");
 	}
+
+	/// <summary>
+	/// A run report prints the lands a deck really plays. `Decklist.Format` printed "Nx Plains"
+	/// for every deck long after colours arrived, so an evolved blue deck read as 22 Plains while
+	/// its games were played with Islands — it nearly sent a gauntlet re-measurement to the bin.
+	/// </summary>
+	[Test]
+	public void AFormattedDecklist_PrintsTheManabaseItPlays()
+	{
+		var blue = CardFactory
+			.Creature("Format Probe Drake", manaCost: 2, power: 2, toughness: 2)
+			.WithPips(ManaColor.Blue)
+			.Build();
+		var deck = Decklist.Empty("blue") with { Lands = 24 };
+		deck = deck.WithCopies(blue.Name, 4);
+
+		var text = deck.Format(new Dictionary<string, Card> { [blue.Name] = blue });
+
+		Assert.That(text, Does.Contain("Island"));
+		Assert.That(text, Does.Not.Contain("Plains"));
+	}
 }
