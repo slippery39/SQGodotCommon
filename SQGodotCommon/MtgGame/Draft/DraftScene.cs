@@ -50,6 +50,9 @@ public partial class DraftScene : Control
 	private HFlowContainer _packGrid = null!;
 	private VBoxContainer _poolList = null!;
 	private HFlowContainer _poolColours = null!;
+	private Button _pickButton = null!;
+	private readonly List<(BoardCard Node, Card Card)> _packNodes = new();
+	private int _selected = -1;
 	private Label _poolHeader = null!;
 	private CardPreviewPopup _preview = null!;
 	private PackedScene _boardCardScene = null!;
@@ -119,7 +122,7 @@ public partial class DraftScene : Control
 			InternalCardScene = ResourceLoader.Load<PackedScene>(
 				"res://Common/Cards/2D/Card2D/internal_cardui2d_canvasgroup.tscn"
 			),
-			PreviewScale = PreviewCardScale,
+			PreviewScale = MtgUiStyles.PreviewScale(PreviewCardScale),
 		};
 		AddChild(_preview);
 
@@ -197,6 +200,20 @@ public partial class DraftScene : Control
 		_poolList.SizeFlagsHorizontal = SizeFlags.ExpandFill;
 		scroll.AddChild(_poolList);
 
+		_pickButton = new Button
+		{
+			Text = "Pick",
+			CustomMinimumSize = new Vector2(0, 76),
+			Disabled = true,
+		};
+		MtgUiStyles.StylePrimary(_pickButton, fontSize: 30);
+		_pickButton.Pressed += () =>
+		{
+			if (_selected >= 0)
+				OnPicked(_selected);
+		};
+		col.AddChild(_pickButton);
+
 		return panel;
 	}
 
@@ -214,6 +231,8 @@ public partial class DraftScene : Control
 	{
 		foreach (var child in _packGrid.GetChildren())
 			child.QueueFree();
+		_packNodes.Clear();
+		Select(-1);
 
 		for (var i = 0; i < offer.Count; i++)
 		{
@@ -228,11 +247,35 @@ public partial class DraftScene : Control
 			node.CardScale = PackCardScale;
 			_packGrid.AddChild(node);
 			node.Refresh(card, state: null);
-			node.Clicked += _ => OnPicked(index);
+			_packNodes.Add((node, card));
+			// Tap SELECTS, tapping it again (or PICK) picks. On a touchscreen the press is the
+			// first contact, so hover and click arrive together and a one-tap pick left no way
+			// to read a card before taking it (godot-frontend.md, "a hover precondition").
+			node.Clicked += _ =>
+			{
+				if (_selected == index)
+					OnPicked(index);
+				else
+				{
+					Select(index);
+					_preview.ShowCard(ToDetails(card), GetViewport().GetMousePosition());
+				}
+			};
 			node.Hovered += _ =>
 				_preview.ShowCard(ToDetails(card), GetViewport().GetMousePosition());
 			node.HoverEnded += _ => _preview.HideCard();
 		}
+	}
+
+	private void Select(int index)
+	{
+		if (_selected >= 0 && _selected < _packNodes.Count)
+			_packNodes[_selected].Node.Refresh(_packNodes[_selected].Card, state: null);
+		_selected = index;
+		if (index >= 0)
+			_packNodes[index]
+				.Node.Refresh(_packNodes[index].Card, null, BoardCardHighlight.Selected);
+		_pickButton.Disabled = index < 0;
 	}
 
 	private void RefreshPool(IReadOnlyList<Card> pool)

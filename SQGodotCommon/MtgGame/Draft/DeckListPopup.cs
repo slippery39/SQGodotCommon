@@ -127,7 +127,7 @@ public partial class DeckListPopup : CanvasLayer
 			InternalCardScene = ResourceLoader.Load<PackedScene>(
 				"res://Common/Cards/2D/Card2D/internal_cardui2d_canvasgroup.tscn"
 			),
-			PreviewScale = 1.15f,
+			PreviewScale = MtgUiStyles.PreviewScale(1.15f),
 			PreviewLayer = 9,
 		};
 		AddChild(_preview);

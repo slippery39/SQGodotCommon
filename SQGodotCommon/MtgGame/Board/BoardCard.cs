@@ -107,11 +107,17 @@ public partial class BoardCard : Control
 			_cardNode.Modulate = highlight switch
 			{
 				BoardCardHighlight.Target => new Color(1f, 1f, 0.3f, 1f),
-				BoardCardHighlight.Selected => new Color(0.4f, 1f, 0.4f, 1f),
 				BoardCardHighlight.AdditionalCost => new Color(1f, 0.65f, 0.1f, 1f),
 				BoardCardHighlight.Flashback => new Color(0.8f, 0.5f, 1f, 1f),
 				_ => Colors.White,
 			};
+			// Selected is an OUTLINE, not a tint: tinting the whole card green changed the one
+			// signal a drafter reads first — its colour.
+			var selected = highlight == BoardCardHighlight.Selected;
+			_cardNode.OutlineColor = selected
+				? new Color(1f, 0.85f, 0.3f, 1f)
+				: new Color(0, 0, 0, 0);
+			_cardNode.OutlineThickness = selected ? 8f : 0f;
 		}
 	}
 }

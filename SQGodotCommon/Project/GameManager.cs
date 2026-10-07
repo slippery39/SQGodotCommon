@@ -27,6 +27,8 @@ public partial class GameManager : Singleton<GameManager>
 	{
 		_eventManager = new EventManager();
 		AddChild(new CardUIManager());
+		if (DebugTaps.FromArgs() is { } taps)
+			AddChild(taps);
 	}
 
 	public void ChangeScene(string scenePath)

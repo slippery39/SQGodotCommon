@@ -57,6 +57,12 @@ public static class MtgUiStyles
 		parent.AddChild(layer);
 	}
 
+	/// <summary>
+	/// The scale of a full-card preview. On a phone a card's rules text only reads when the card
+	/// is near full screen height (445 x 2.2 = 979 of 1080); a desktop keeps the caller's size.
+	/// </summary>
+	public static float PreviewScale(float desktop) => OS.HasFeature("mobile") ? 2.2f : desktop;
+
 	/// <summary>A screen or section title: Cinzel, gold, outlined — it sits on the backdrop.</summary>
 	public static Label Title(string text, int size = 52) =>
 		new()

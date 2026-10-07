@@ -22,6 +22,8 @@ public partial class MtgGameScene : Node2D
 	private AiInspectorPanel _aiInspector = null!;
 	private GraveyardPopup _graveyardPopup = null!;
 	private CardPreviewPopup _cardPreviewPopup = null!;
+	private CardPreviewPopup _handPreview = null!;
+	private CardUI2D? _previewedHandCard;
 
 	/// Comfortably above the 0.42 board-card scale — a preview that is not clearly bigger
 	/// than the card it previews is worse than none.
@@ -146,8 +148,16 @@ public partial class MtgGameScene : Node2D
 		// The battlefield is capped at 0.45 by the height budget (see BattlefieldZone.CardScale),
 		// so the board card is for recognising a card and this preview is for reading it. It has
 		// to be a lot bigger than 0.45 to earn that job. Matches the draft screen.
-		_cardPreviewPopup.PreviewScale = PreviewCardScale;
+		_cardPreviewPopup.PreviewScale = MtgUiStyles.PreviewScale(PreviewCardScale);
 		AddChild(_cardPreviewPopup);
+
+		// Its own popup, so a hand card leaving hover can never hide a token's preview.
+		_handPreview = new CardPreviewPopup
+		{
+			InternalCardScene = _cardPreviewPopup.InternalCardScene,
+			PreviewScale = MtgUiStyles.PreviewScale(PreviewCardScale),
+		};
+		AddChild(_handPreview);
 
 		_boardUI.EndTurnPressed += OnEndTurnPressed;
 		_boardUI.PlayerCreatureClicked += OnPlayerCreatureClicked;
@@ -313,6 +323,35 @@ public partial class MtgGameScene : Node2D
 	)
 	{
 		WriteSnapshot("crash", $"Unobserved task exception: {e.Exception}");
+	}
+
+	/// <summary>
+	/// PHONE ONLY: the hovered hand card in the big preview. A hand card's own hover lift is about
+	/// half the screen — readable on a monitor, not on a phone — and it cannot simply be enlarged:
+	/// <see cref="CardUI2D"/> scales a DRAGGED card by its HoverScale too. Hidden while dragging.
+	/// </summary>
+	public override void _Process(double delta)
+	{
+		if (!OS.HasFeature("mobile"))
+			return;
+
+		var hovered = CardUIManager.DraggingCard == null ? CardUIManager.CurrentHoveredCard : null;
+		if (hovered == _previewedHandCard)
+			return;
+		_previewedHandCard = hovered;
+
+		if (
+			hovered != null
+			&& int.TryParse(hovered.Id, out var id)
+			&& _manager.State.HasObject(id)
+			&& _manager.State.GetObject(id) is Card card
+		)
+			_handPreview.ShowCard(
+				MtgCardMapper.ToDetails(card, _manager.State, _manager.HumanPlayerId),
+				GetViewport().GetMousePosition()
+			);
+		else
+			_handPreview.HideCard();
 	}
 
 	public override void _Input(InputEvent @event)

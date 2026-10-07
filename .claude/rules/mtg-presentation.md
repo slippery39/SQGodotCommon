@@ -64,3 +64,5 @@ Card art is keyed by a slug of the card name (`CardArtLoader`). Hollowmere has e
 **Affordability is the engine's question** — `CostEngine.ValidateManaPayment` checks generic AND colour. The hand glow compared generic mana itself and lit cards the player could not cast; never re-derive a rule in the UI.
 
 **Symbols and their meanings live in `MtgSymbols`** (keywords, mana colours), credited in root `CREDITS.md`. A new keyword in `MtgCardMapper.KeywordNames` needs an entry there, or its token disc falls back to initials. Use the `/add-icon` skill.
+
+**Touch: a press is hover AND click at once.** So nothing may act on the first tap if the player needs to read first: a draft card is SELECTED by a tap and picked by a second tap or PICK; on a phone (`OS.HasFeature("mobile")`) previews are near full height (`MtgUiStyles.PreviewScale`) and the hovered hand card gets one too. Verify a click with `--tap`, not by reasoning.

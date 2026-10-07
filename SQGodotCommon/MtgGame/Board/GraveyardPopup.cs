@@ -100,7 +100,7 @@ public partial class GraveyardPopup : CanvasLayer
 			InternalCardScene = ResourceLoader.Load<PackedScene>(
 				"res://Common/Cards/2D/Card2D/internal_cardui2d_canvasgroup.tscn"
 			),
-			PreviewScale = 1.1f,
+			PreviewScale = MtgUiStyles.PreviewScale(1.1f),
 			PreviewLayer = 7,
 		};
 		AddChild(_preview);

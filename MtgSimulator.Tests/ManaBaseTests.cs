@@ -278,4 +278,24 @@ public class ManaBaseTests
 			Assert.That(counts["Plains"] + counts["Island"], Is.EqualTo(24));
 		});
 	}
+
+	/// <summary>
+	/// Every playable deck's lands make every colour its spells ask for. The three CMB gauntlet
+	/// decks shipped 17 Plains under spells that needed none of them — their builder padded with
+	/// Plains instead of calling ManaBase — and it was found by playing on a phone, not by a test.
+	/// </summary>
+	[TestCaseSource(typeof(DeckRegistry), nameof(DeckRegistry.All))]
+	public void EveryRegisteredDeck_ProducesTheColoursItsSpellsNeed(DeckInfo deck)
+	{
+		var cards = deck.Builder(1);
+		var needed = cards
+			.Where(c => !c.HasSubtype("Land"))
+			.Aggregate(ManaPool.Empty, (sum, c) => sum.Add(c.ColorPips));
+		var produced = cards
+			.SelectMany(c => c.GetComponents<LandColorComponent>())
+			.Aggregate(ManaPool.Empty, (sum, l) => sum.Add(l.Produces));
+
+		var missing = ManaPool.Colors.Where(c => needed[c] > 0 && produced[c] == 0).ToList();
+		Assert.That(missing, Is.Empty, $"{deck.Name}'s lands make no {string.Join(", ", missing)}");
+	}
 }

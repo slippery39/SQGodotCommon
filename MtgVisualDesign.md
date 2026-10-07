@@ -290,3 +290,12 @@ plus `AddBackdrop` on every screen.
   it needs a live tournament, so not captured).
 Tiny player-facing text raised: choice-panel hint 13->17, deck-list hint 11->15.
 The mockup's PICK button was NOT added — clicking a card picks it, one click fewer.
+
+**Phone playtest (2026-10-06), confirmed fixed on the device.** (1) A draft tap picked the card
+before it could be read — a touch press is hover and click at once. A tap now SELECTS (gold
+outline, big preview, PICK lit); a second tap or PICK picks. Verified with the new `--tap` flag.
+(2) Hand cards lifted to ~half the screen, unreadable on a phone; HoverScale could not just grow
+(it also scales a DRAGGED card), so on mobile the hovered hand card also shows in a ~90%-height
+preview, and every preview uses `MtgUiStyles.PreviewScale`. (3) The three CMB decks shipped 17
+Plains (their builder predated colour and skipped `ManaBase`); fixed and pinned by
+`ManaBaseTests.EveryRegisteredDeck_ProducesTheColoursItsSpellsNeed`.

@@ -166,6 +166,8 @@ the Designed pool had a gauntlet at all.
 | CMB Reanimator | 43.5% | 56.5% |
 | **field overall** | **32.7%** | |
 
+**STALE (2026-10-06): these three reference decks were padded with 17 Plains** until `DesignedGauntletDecks` was routed through `ManaBase` - since colours, the references could not cast their own spells. Re-measure before quoting any number in this table.
+
 Every internal metric read healthy at the same time: **8/10 viable, 47.8pp spread, 44% diversity**
 against a 35% floor. That is the closed-round-robin blindness this file already records for ALL
 (Zoo 66.2%), now measured on the pool all recent work has used.

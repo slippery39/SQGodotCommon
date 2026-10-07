@@ -151,13 +151,7 @@ public static class DesignedGauntletDecks
 			StringComparer.OrdinalIgnoreCase
 		);
 
-		// `CardLibrary.Plains()` rather than a set lookup: basic lands are not part of any set's
-		// card list (packs exclude them and the deck builder supplies the mana base), so
-		// `GetByName("Plains")` throws. Every sibling factory takes lands from here too.
 		var deck = new List<Card>();
-		for (var i = 0; i < lands; i++)
-			deck.Add(CardLibrary.Plains() with { OwnerId = ownerId, ControllerId = ownerId });
-
 		foreach (var (copies, name) in spells)
 		{
 			if (!pool.TryGetValue(name, out var card))
@@ -168,6 +162,9 @@ public static class DesignedGauntletDecks
 				deck.Add(card with { OwnerId = ownerId, ControllerId = ownerId });
 		}
 
+		// ManaBase, like every other deck: this padded with Plains, written before the engine had
+		// colours, and all three decks shipped 17 Plains under spells that needed none of them.
+		deck.AddRange(ManaBase.Build(deck, lands, ownerId));
 		return deck;
 	}
 }
