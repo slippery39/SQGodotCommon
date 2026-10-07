@@ -11,7 +11,8 @@ namespace MagicCore.Ai;
 /// Card-agnostic — it reads outcomes, never card text, so every new card works with no AI code.
 ///
 /// ponytail: one ply and an opponent that never responds inside the simulation. It cannot plan a
-/// turn, hold up mana or bluff. The real search comes once games run in bulk (see MagicCore/CLAUDE.md).
+/// turn, hold up mana or bluff, and a tapped dual and an untapped basic play as equals — it never
+/// asks "do I need this mana now". The real search comes once games run in bulk (see MagicCore/CLAUDE.md).
 /// </summary>
 public sealed class GreedyAi(int playerId)
 {
@@ -138,7 +139,11 @@ public sealed class GreedyAi(int playerId)
 	{
 		var board = s.CardsIn(player, ZoneType.Battlefield).ToList();
 		var creatures = board.Where(c => c.Is(CardType.Creature)).Sum(CreatureValue);
-		var lands = Math.Min(board.Count(c => c.Is(CardType.Land)), 7) * 1.5;
+		// Every term is MONOTONIC — more of a good thing always scores more, tapering instead of
+		// capping. A cap makes "more" tie with "less", and a tie silently picks the passive move:
+		// life capped at 20 stopped all attacks past tapped blockers once a drain deck pushed the
+		// opponent above it; lands capped at 7 made an 8th land worth less in play than in hand.
+		var lands = Taper(board.Count(c => c.Is(CardType.Land)), 7, 1.5, 0.4);
 		// Loyalty is spent, not banked: valued under half a card per counter, so trading three
 		// counters for a card scores as a gain. At 0.8 the AI never once used its Jace.
 		var walkers = board.Where(c => c.Is(CardType.Planeswalker)).Sum(c => 2 + c.Loyalty * 0.35);
@@ -146,15 +151,16 @@ public sealed class GreedyAi(int playerId)
 			board.Count(c => !c.Is(CardType.Creature | CardType.Land | CardType.Planeswalker))
 			* 2.0;
 		var life = s.GetPlayer(player).Life;
-		var lifeValue = life <= 0 ? -50 : Math.Min(life, 20) + (life < 6 ? life - 6 : 0); // low life hurts more
-		return creatures
-			+ walkers
-			+ lands
-			+ others
-			+ s.CardsIn(player, ZoneType.Hand).Count() * 1.2
-			+ lifeValue
-			+ s.GetPlayer(player).ManaPool.Total * 0.1;
+		var lifeValue = life <= 0 ? -50 : Taper(life, 20, 1.0, 0.5) + (life < 6 ? life - 6 : 0); // low life hurts more
+		// A land in hand is worth less than a spell, so playing even a surplus land scores a gain.
+		// Floating mana scores nothing: it empties at the end of the step, which Settle never reaches.
+		var hand = s.CardsIn(player, ZoneType.Hand).Sum(c => c.Is(CardType.Land) ? 0.3 : 1.2);
+		return creatures + walkers + lands + others + hand + lifeValue;
 	}
+
+	/// <summary>Full value per unit up to <paramref name="knee"/>, a smaller value per unit beyond.</summary>
+	static double Taper(int n, int knee, double perUnit, double beyond) =>
+		Math.Min(n, knee) * perUnit + Math.Max(0, n - knee) * beyond;
 
 	static double CreatureValue(Card c)
 	{

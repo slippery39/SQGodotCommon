@@ -36,26 +36,35 @@ public class GreedyAiTests
 	}
 
 	// The AI is measured by what it achieves, not by inspecting its picks. Every deck pairing, the
-	// AI in both seats, so a win cannot come from one deck being stronger. 85% overall, not per
-	// pairing: Red-Green loses ~1 in 6 to random White-Black's fliers — a one-ply ceiling, measured
-	// in docs/findings/magic-ai.md. A drop below 85% is a regression; that weakness is not.
+	// AI in both seats, so a win cannot come from one deck being stronger. 90% overall AND 6 of 10
+	// per pairing: the overall bar alone let one matchup collapse unseen. Red-Green vs White-Black
+	// is the weakest pairing — measured in docs/findings/magic-ai.md, not hidden here.
 	[Test]
 	public void BeatsRandomPlay_InNearlyEveryGame()
 	{
 		var decks = FraDecks.All.Keys.ToList();
-		var (games, wins) = (0, 0);
+		var results = new List<(string Pairing, int Wins, int Games)>();
 		foreach (var aiDeck in decks)
 		foreach (var randomDeck in decks.Where(d => d != aiDeck))
-			for (var seed = 1; seed <= 5; seed++)
+		{
+			var wins = 0;
+			for (var seed = 1; seed <= 10; seed++)
 			{
 				var s = MagicRules.NewGame(FraDecks.All[aiDeck], FraDecks.All[randomDeck], seed);
 				var aiSeat = s.Player1Id();
 				s = Play(s, new() { [aiSeat] = new GreedyAi(aiSeat) }, seed);
-				games++;
 				wins += s.WinnerId() == aiSeat ? 1 : 0;
 			}
+			results.Add(($"{aiDeck} vs {randomDeck}", wins, 10));
+		}
 
-		Assert.That(wins, Is.GreaterThanOrEqualTo(games * 0.85), $"{wins}/{games}");
+		var summary = string.Join("; ", results.Select(r => $"{r.Pairing} {r.Wins}/{r.Games}"));
+		Assert.That(
+			results.Sum(r => r.Wins),
+			Is.GreaterThanOrEqualTo(results.Sum(r => r.Games) * 0.9),
+			summary
+		);
+		Assert.That(results.Where(r => r.Wins < 6), Is.Empty, summary);
 	}
 
 	// A creature saved by a pump is alive; it was once scored as dead from its PRINTED toughness.
@@ -98,6 +107,44 @@ public class GreedyAiTests
 			s = s.AutoPass().DecidingPlayerId() == me ? ai.Decide(s).State : s;
 
 		Assert.That(s.GetCard(jace).Loyalty, Is.LessThan(6));
+	}
+
+	// Life was capped at 20 in the evaluation: above it, damage scored zero, so the AI declined a
+	// free attack into a board of tapped creatures (docs/findings/magic-ai.md).
+	[Test]
+	public void AttacksPastTappedBlockers_EvenWhenTheOpponentIsAboveTwenty()
+	{
+		var s = TestGames.InFirstMain();
+		var (me, them) = (s.GetGame().StartingPlayerId, s.OpponentOf(s.GetGame().StartingPlayerId));
+		int bear,
+			wall;
+		(s, bear) = TestGames.Put(s, me, TestGames.Creature("Bear", "2/2"), ZoneType.Battlefield);
+		(s, wall) = TestGames.Put(s, them, TestGames.Creature("Wall", "1/4"), ZoneType.Battlefield);
+		s = s.UpdateObject(wall, s.GetCard(wall) with { IsTapped = true }); // TEST SETUP: it attacked last turn
+		s = s.WithPlayer(s.GetPlayer(them) with { Life = 29 });
+
+		s = TestGames.PassUntil(s, x => x.IsWaitingForChoice);
+		var (_, what) = new GreedyAi(me).Decide(s);
+
+		Assert.That(what, Does.EndWith(s.GetPlayer(them).Name), what);
+	}
+
+	// Lands were capped at 7 in the evaluation, so an 8th scored less in play than in hand and the
+	// AI hoarded lands — no landfall, no Koth, three or four dead cards at the end of every game.
+	[Test]
+	public void PlaysASurplusLand()
+	{
+		var s = TestGames.InFirstMain();
+		var me = s.GetGame().StartingPlayerId;
+		for (var i = 0; i < 7; i++)
+			(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Battlefield);
+		foreach (var card in s.CardsIn(me, ZoneType.Hand).ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP: a hand of one land
+		(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Hand);
+
+		var (_, what) = new GreedyAi(me).Decide(s);
+
+		Assert.That(what, Is.EqualTo("Play Forest"));
 	}
 
 	[Test]

@@ -53,6 +53,38 @@ public class CombatTests
 	bool Alive(int card) =>
 		s.GetParent(card) == s.ZoneId(s.GetCard(card).ControllerId, ZoneType.Battlefield);
 
+	// An attacker stays tapped through EVERY step of the opponent's turn — so it is never asked to
+	// block their attack — and untaps only in its controller's next untap step.
+	[Test]
+	public void AnAttacker_StaysTappedThroughTheOpponentsWholeTurn_AndCannotBlock()
+	{
+		var bear = Put(me, "2/2");
+		var raider = Put(them, "1/1");
+		Attack(bear);
+		ToSecondMain();
+
+		var askedToBlock = new List<int>();
+		while (s.GetGame().TurnNumber < 3)
+		{
+			if (s.GetGame().TurnNumber == 2)
+				Assert.That(s.GetCard(bear).IsTapped, $"untapped during {s.GetGame().Step}");
+			if (s.GetPendingChoice() is DeclareAttackerChoice)
+				s = s.Choose([me]); // they attack with the raider
+			else if (s.GetPendingChoice() is DeclareBlockerChoice block)
+			{
+				askedToBlock.Add(block.CreatureId);
+				s = s.Choose([CombatOption.None]);
+			}
+			else
+				s = TestGames.PassOrChoose(s);
+		}
+
+		Assert.That(askedToBlock, Does.Not.Contain(bear), "a tapped creature cannot block");
+		Assert.That(s.GetCard(raider).AttackingId, Is.Zero, "their attack happened and ended");
+		s = TestGames.PassUntil(s, x => x.GetGame().Step == Step.Upkeep);
+		Assert.That(s.GetCard(bear).IsTapped, Is.False, "untapped in its controller's untap step");
+	}
+
 	[Test]
 	public void Unblocked_DamagesTheDefender_AttackingTaps_VigilanceDoesNot()
 	{

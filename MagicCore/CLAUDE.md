@@ -85,6 +85,9 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   script would make the test check the script against itself and miss a transcription error.
 - `AutoPass` and `DistinctMoves` are conveniences for front ends and the AI, never rules:
   `LegalActions` stays complete.
+- **AI evaluation terms are MONOTONIC** — more of a good thing always scores more, tapering not
+  capping. A cap makes "more" tie with "less", and a tie silently picks the passive move: a life cap
+  at 20 stopped every attack past tapped blockers; a land cap at 7 made the AI hoard lands.
 - Same serialization rule as the root `CLAUDE.md`: nothing with a delegate lives in `GameState`.
 - **Test trap:** helpers that replace a `GameState` field (`Hand`, `Field`) must run on their own line —
   in `s.Act(new … { CardId = Hand(…) })` C# reads `s` before `Hand` replaces it.
@@ -93,8 +96,9 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 
 Damage split among blockers is automatic · the legend rule keeps the newest · triggers read sources on
 the battlefield NOW (dies/leaves triggers need a look-back) · state-based actions run one pass ·
-`GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana, and it loses
-slow races to evasive drains (measured: `docs/findings/magic-ai.md`) · menace drops a
+`GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana, no "do I need
+this mana now" when choosing a tapped dual, and it loses slow races to evasive fliers
+(`docs/findings/magic-ai.md`) · menace drops a
 lone blocker instead of refusing the declaration · the auto-tapper ignores what the rest of the hand
 needs · Empower Jace with two Jace tokens loads the first · surveil keeps the kept cards' order.
 
