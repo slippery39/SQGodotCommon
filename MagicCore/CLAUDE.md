@@ -2,72 +2,91 @@
 
 Its own thing, like KIN: real phases, priority, the stack, blocking, lands that tap for mana.
 **Arena-accurate, Bo1 only** — comprehensive-rules corners wait until a card needs them.
-First set: **Reality Fracture (FRA)**.
+First set: **Reality Fracture (FRA)**. Play it: `dotnet run --project MagicConsole` (Commands.md).
 
 `MtgCore` is the simplified deckbuilder engine and is **not modified** for this work. Copy what fits
-from it (zones, targeting, triggers, card builder, AI search) and own the copy — the two rule sets
-diverge on combat, mana and the stack, so shared code would fight both.
+from it and own the copy — the two rule sets diverge on combat, mana and the stack.
 
 ## Source map
 
 ```
 MagicCore/
-├── MagicRules.cs        THE API: NewGame (setup, coin flip, Bo1 hand smoother), DecidingPlayerId,
-│                        LegalActions, Act, Choose, AutoPass
-├── MagicGame.cs         root object (active player, turn, Step, priority, passes) + Step + MagicKeys
-├── MagicPlayer.cs       life, mana pool, land drops, mulligan state, loss flags
-├── MagicState.cs        queries + building-block moves: zones, Draw, Shuffle, seeded TakeRng
-├── Turns/TurnStructure.cs  EnterStep/EndStep/GivePriority + StateBasedActions
-├── Turns/Combat.cs      who may attack/block, declaration pipelines, simultaneous damage, end of combat
-├── Actions/             PassPriority, PlayLand, TapForMana; CastSpell + StackResolution;
-│                        Keep/Mulligan; hand choices (bottom, discard); per-creature attack/block choices
-├── Effects/Effects.cs   SpellEffectsComponent + effect primitives (draw, gain life, opponent loses)
-├── Cards/Card.cs        Card (types, cost, keywords, P/T, permanent + combat state, Fresh()),
-│                        CardDefinition (data + ability components), CardFactory
-├── Cards/CardData.cs    printed card data (Scryfall) + CardDataSet.Load("FRA")
-├── Mana/ManaPool.cs     W U B R G C counts — ONE track, unlike MtgCore
-├── Mana/ManaCost.cs     parsed "{2}{W/U}{2/G}{X}"; ManaValue
-├── Mana/ManaPayment.cs  Arena-style auto-pay: floating first, then lands; backtracking search
+├── MagicRules.cs        THE API: NewGame, DecidingPlayerId, LegalActions, Act, Choose, AutoPass,
+│                        DistinctMoves
+├── MagicGame.cs / MagicPlayer.cs / MagicState.cs   root object, player, queries + MoveCard/EnterBattlefield
+├── Describe.cs          plain-text actions, choices and cards for every front end and log
+├── Turns/TurnStructure.cs  EnterStep/EndStep/GivePriority + StateBasedActions (incl. legend rule, tokens)
+├── Turns/Combat.cs      who may attack/block, declarations, simultaneous damage, end of combat
+├── Turns/Triggers.cs    trigger events, Collect (APNAP), PutOnStack with target choices
+├── Actions/             PassPriority, PlayLand, TapForMana; CastSpell, ActivateAbility, StackAbility,
+│                        StackResolution (fizzle); mulligan; hand, combat and target choices
+├── Effects/Effects.cs   ContextKeys, Ref (you / opponent / target i / source / event card …), primitives
+├── Effects/Abilities.cs spell, triggered, activated, mana and static ability components
+├── Targeting/TargetSpec.cs  one legality test for choosing AND resolving; Combinations
+├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
+├── Rules/Costs.cs       THE effective cost (taxes, reductions)
+├── Cards/Card.cs        Card (computed P/T + keywords, permanent/combat state, Fresh()), CardFactory
+├── Cards/CardData.cs    printed data (Scryfall) + CardDataSet.Load("FRA")
+├── Mana/                ManaPool, ManaCost (parse, WithGeneric), ManaPayment (solver), ManaAbilities
+├── Sets/Fra/FraCards.cs hand-written FRA abilities by name; IsImplemented
+├── Sets/Fra/FraDecks.cs two 40-card decks of implemented cards (console, fuzz tests)
+├── Ai/GreedyAi.cs       one-ply simulate-and-evaluate AI
 ├── Zones/Zone.cs        per-player zones + shared Stack; per-CONTROLLER battlefield
 └── Sets/FRA.json        imported by tools/import_scryfall_set.py — embedded resource, never hand-edit
 ```
 
-A front end's loop: `DecidingPlayerId` → if `GetPendingChoice()` answer with `Choose`, else pick from
-`LegalActions` and `Act` — until `IsOver`.
+A front end's loop: `AutoPass` → `DecidingPlayerId` → if `GetPendingChoice()` answer with `Choose`,
+else pick from `LegalActions` and `Act` — until `IsOver`.
 
 ## Rules that hold everywhere
 
 - **Legality lives in `ValidateAdd` only.** `LegalActions` enumerates candidates and keeps those that
   validate — never re-derive a rule in the generator.
-- **`TurnStructure` is the only place a step changes or priority is given.** `GivePriority` runs the
-  state-based check first (CR 117.5); triggers will go on the stack at that same point.
+- **`TurnStructure` is the only place a step changes or priority is given.** `GivePriority` collects
+  triggers, runs state-based actions, then puts the triggers on the stack (CR 117.5). Triggers are
+  collected BEFORE the check, so a creature the check kills still saw its own entry.
 - **`PriorityPlayerId` is 0 while nobody holds priority** (pregame, untap, cleanup, pending choice,
   game over). `Priority.Holds` rejects a 0 caller — it once matched, and "player 0" could pass.
-- **Child index 0 is the TOP** of the library and of the stack; `MoveObject` appends (= bottom),
-  `MoveObjectToFront` pushes.
+- **Child index 0 is the TOP** of the library and of the stack; `MoveObject` appends (= bottom).
 - **Every zone change goes through `MagicState.MoveCard`** (or `EnterBattlefield`), which calls
-  `Card.Fresh()` — CR 400.7, a card that moves is a new object. Damage, tapped, combat state and
-  stack choices die there; a raw `MoveObject` off the battlefield keeps them. Only `Shuffle` uses
-  `MoveObject`, to reorder within one zone.
-- **`MagicRules.Choose` checks WHICH ids, `ResolveChoice` only how many.** Distinct and offered, or it
-  throws — a duplicate once kept an extra card through a mulligan.
-- **Combat declarations are one choice per creature**, not one pick among subsets — linear for the AI.
-  Option id 0 is "don't". Damage assignment ORDER is gone from the rules (Foundations, Nov 2024); the
-  split among blockers is automatic for now (`Combat.DealDamage`).
-- **`ManaPayment.Find` is the only cost solver** — casting validates and pays through the same call.
+  `Card.Fresh()` — CR 400.7. Damage, tapped, counters, until-end-of-turn effects, combat state and
+  stack choices die there. Only `Shuffle` uses `MoveObject`, to reorder within one zone.
+- **One computation each, never a second copy:** `Card.Power`/`Toughness`/`Has` (printed + counters +
+  until-end-of-turn; rules never read `BasePower`), `Damage.Deal`, `Costs.Of`, `ManaPayment.Find`,
+  `ManaAbilities.CanTap`, `TargetSpec.IsLegal` (on choosing AND resolving).
+- **A spell or ability whose targets are ALL illegal on resolution does nothing** (CR 608.2b) — the
+  drain on Extended Absence included. Partially illegal: those targets read as 0 to the effects.
+- **`MagicRules.Choose` checks WHICH ids, `ResolveChoice` only how many.** Distinct and offered.
+- **Combat declarations are one choice per creature**, not one pick among subsets. Option id 0 is
+  "don't". Damage assignment ORDER is gone from the rules (Foundations, Nov 2024); the split among
+  blockers is automatic for now (`Combat.DealDamage`).
 - Mana abilities are not in `LegalActions` (pure AI branching); casting taps what it needs.
-- **A `CardDefinition` with no components plays vanilla, silently.** Right for a vanilla creature,
-  wrong for everything else — test that an ability FIRES, not that the card builds.
-- `AutoPass` passes only while Pass is the sole legal action. It is a convenience for front ends and
-  the AI, never part of the rules: `LegalActions` stays complete.
-- Card abilities are hand-written with a builder; **name, cost, type, P/T and rules text come from
-  `CardData`**, never retyped into code.
+- **A card plays only if `FraCards.IsImplemented`** — scripted, a basic land, or text that is only
+  engine keywords. Anything else plays silently vanilla. **Every scripted card has a test in
+  `FraCardTests` that its ability FIRES**, through real casting and the real stack.
+- Card abilities are hand-written as data (`FraCards`); **name, cost, type, P/T and keywords come from
+  `CardData`**, never retyped. Test cards are inline (`TestGames.Creature/Inline`).
+- **A card test asserts the PRINTED text's numbers** (Last Gasp is -3/-3) — that is the root rule's
+  exception, not a breach: printed cards get no balance passes, and reading the number back from the
+  script would make the test check the script against itself and miss a transcription error.
+- `AutoPass` and `DistinctMoves` are conveniences for front ends and the AI, never rules:
+  `LegalActions` stays complete.
 - Same serialization rule as the root `CLAUDE.md`: nothing with a delegate lives in `GameState`.
-  `CardData` is static reference data and stays out of `GameState`.
+- **Test trap:** helpers that replace a `GameState` field (`Hand`, `Field`) must run on their own line —
+  in `s.Act(new … { CardId = Hand(…) })` C# reads `s` before `Hand` replaces it.
+
+## Known ceilings (each marked `ponytail:` in the code)
+
+Damage split among blockers is automatic · the legend rule keeps the newest · triggers read sources on
+the battlefield NOW (dies/leaves triggers need a look-back) · state-based actions run one pass ·
+`GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana · menace drops a
+lone blocker instead of refusing the declaration · **damage to a planeswalker does not remove loyalty
+yet** — planeswalkers arrive with Empower Jace · the auto-tapper ignores what the rest of the hand needs.
 
 ## What FRA demands (read the rules text before building each)
 
-Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token* —
-planeswalkers are needed early), **Prepared 24** (21 cards use the two-face `prepare` layout),
-Flying 28. The Bo1 hand smoother is Arena's published description (two shuffles, closer land count wins);
-the exact weighting and whether limited Bo1 uses it are unconfirmed — hence `handSmoothing`. Costs include hybrid `{W/U}`, `{2/W}` and `{X}`. 78 legendary creatures (legend rule).
+Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
+**Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 19 cards
+(`FraDecks`). The Bo1 hand smoother is Arena's published description; its weighting and whether
+limited Bo1 uses it are unconfirmed — hence `handSmoothing`.

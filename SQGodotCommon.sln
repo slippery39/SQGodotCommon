@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagicCore", "MagicCore\Magi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagicCore.Tests", "MagicCore.Tests\MagicCore.Tests.csproj", "{ADFE6C48-5252-4057-8A94-08649D499462}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagicConsole", "MagicConsole\MagicConsole.csproj", "{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -211,6 +213,18 @@ Global
 		{ADFE6C48-5252-4057-8A94-08649D499462}.Release|x64.Build.0 = Release|Any CPU
 		{ADFE6C48-5252-4057-8A94-08649D499462}.Release|x86.ActiveCfg = Release|Any CPU
 		{ADFE6C48-5252-4057-8A94-08649D499462}.Release|x86.Build.0 = Release|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Debug|x64.Build.0 = Debug|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Debug|x86.Build.0 = Debug|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Release|x64.ActiveCfg = Release|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Release|x64.Build.0 = Release|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Release|x86.ActiveCfg = Release|Any CPU
+		{AF1FAB72-7946-4C04-9B9A-9ED3575407B5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

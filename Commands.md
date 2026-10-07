@@ -22,6 +22,16 @@ python tools/import_scryfall_set.py fra    # -> MagicCore/Sets/FRA.json, embedde
 Stdlib only. Re-running rewrites the file sorted by collector number, so `git diff` shows exactly
 what Scryfall changed (errata, a late-spoiled card).
 
+## Play Reality Fracture against the AI (MagicCore)
+
+```
+dotnet run --project MagicConsole                       # pick a deck, play the AI
+dotnet run --project MagicConsole -- --ai-vs-ai         # watch two AIs
+dotnet run --project MagicConsole -- --seed=7 --deck=1  # replay a game; skip the deck prompt
+```
+
+Enter passes; `q` quits. The decks are `FraDecks` - only cards `FraCards.IsImplemented` allows.
+
 ## Play in console
 
 ```
