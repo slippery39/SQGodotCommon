@@ -8,6 +8,8 @@ SQGodotCommon/
 │   ├── ImmutableGameObjects/        # Immutable game state library (GameState, GameAction, PipelineAction)
 │   ├── ImmutableGameObjects.Tests/
 │   └── ImmutableGameObjects.Benchmarks/
+├── MagicCore/                       # REAL Magic rules (branch mtg-real) — see MagicCore/CLAUDE.md
+├── MagicCore.Tests/
 ├── MtgCore/                         # MTG card game engine (actions, cards, turns, combat, targeting)
 ├── MtgCore.Tests/
 ├── MtgConsole/                      # Console presentation layer (ConsoleGameLoop, ConsoleRenderer)
