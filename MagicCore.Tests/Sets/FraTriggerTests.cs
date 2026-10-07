@@ -375,4 +375,325 @@ public class FraTriggerTests : FraBoardTest
 		Assert.That((Alive(mine), Alive(theirs)), Is.EqualTo((false, false)));
 		Assert.That(Named("Cadet", me), Has.Count.EqualTo(1), "a token you control");
 	}
+
+	// ===== 7c-2 leftovers: beginning of combat, graveyard triggers, "becomes the target", more "this turn" =====
+
+	/// <summary>An inline instant: "[effects]" — something done this turn without a real card.</summary>
+	int Instant(params GameAction[] effects) =>
+		Hand(TestGames.Inline($"Instant{s.NextId}", "{U}", "Instant", null, effects), me);
+
+	int GuidingHydraWithX(int x)
+	{
+		var hydra = Hand("Guiding Hydra", me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = hydra,
+				X = x,
+			}
+		);
+		Resolve();
+		return hydra;
+	}
+
+	[Test]
+	public void GuidingHydra_EntersWithX_AndAtCombatMovesACounterOntoEachOther()
+	{
+		var hydra = GuidingHydraWithX(3);
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+		Assert.That(s.GetCard(hydra).PlusOneCounters, Is.EqualTo(3));
+
+		To(Step.BeginCombat, me);
+		Resolve(choice =>
+			choice switch
+			{
+				YesNoChoice => [1],
+				_ => [],
+			}
+		);
+
+		Assert.That(
+			(s.GetCard(hydra).PlusOneCounters, s.GetCard(bear).PlusOneCounters),
+			Is.EqualTo((2, 1)),
+			"one off the Hydra, one on each OTHER creature"
+		);
+	}
+
+	[Test]
+	public void GuidingHydra_SayingNo_ChangesNothing()
+	{
+		var hydra = GuidingHydraWithX(3);
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+
+		To(Step.BeginCombat, me);
+		Resolve(); // no
+
+		Assert.That(
+			(s.GetCard(hydra).PlusOneCounters, s.GetCard(bear).PlusOneCounters),
+			Is.EqualTo((3, 0))
+		);
+	}
+
+	[Test]
+	public void DesperateFuturescribe_PumpsAnotherCreature_OrCountersItIfYouSurveilled()
+	{
+		Field(FraCards.Get("Desperate Futurescribe"), me);
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+
+		To(Step.BeginCombat, me);
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseTargetChoice => [bear],
+				_ => [],
+			}
+		);
+		Assert.That(
+			(s.Power(s.GetCard(bear)), s.GetCard(bear).PlusOneCounters),
+			Is.EqualTo((3, 0)),
+			"+1/+1 until end of turn"
+		);
+
+		To(Step.Upkeep, them);
+		To(Step.PreCombatMain, me);
+		Cast(Instant(new Surveil(1)), []);
+		To(Step.BeginCombat, me);
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseTargetChoice => [bear],
+				_ => [],
+			}
+		);
+		Assert.That(
+			(s.Power(s.GetCard(bear)), s.GetCard(bear).PlusOneCounters),
+			Is.EqualTo((3, 1)),
+			"a counter instead"
+		);
+	}
+
+	[Test]
+	public void DarklightPhoenix_ReturnsFromTheGraveyardAtCombat_AfterTwoDeaths()
+	{
+		int phoenix;
+		(s, phoenix) = TestGames.Put(s, me, FraCards.Get("Darklight Phoenix"), ZoneType.Graveyard);
+		var a = Field(TestGames.Creature("A", "1/1"), me);
+		var b = Field(TestGames.Creature("B", "1/1"), them);
+		s = s.Sacrifice(a); // TEST SETUP: one creature dies
+		To(Step.BeginCombat, me);
+		Resolve();
+		Assert.That(s.IsIn(phoenix, me, ZoneType.Graveyard), "only one died");
+
+		To(Step.Upkeep, them);
+		To(Step.PreCombatMain, me);
+		s = s.Sacrifice(b); // anyone's creature counts
+		var c = Field(TestGames.Creature("C", "1/1"), me);
+		s = s.Sacrifice(c);
+		To(Step.BeginCombat, me);
+		Resolve();
+		Assert.That(Alive(phoenix), "two died this turn");
+	}
+
+	[Test]
+	public void RuricTharBiomagus_DrawsWhenAnOpponentTargetsIt_NotWhenYouDo()
+	{
+		var ruric = Field(FraCards.Get("Ruric Thar, Biomagus"), me);
+		var gasp = Hand("Last Gasp", them);
+		var hand = HandCount(me);
+
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = them,
+				CardId = gasp,
+				Targets = [ruric],
+			}
+		);
+		Resolve();
+		Assert.That(HandCount(me), Is.EqualTo(hand + 1));
+
+		var mine = Hand("Last Gasp", me);
+		hand = HandCount(me);
+		Cast(mine, [], ruric);
+		Assert.That(HandCount(me), Is.EqualTo(hand - 1), "just the Gasp cast");
+	}
+
+	[Test]
+	public void RuricTharBiomagus_TargetedTwiceByOneSpell_DrawsOnce()
+	{
+		var ruric = Field(FraCards.Get("Ruric Thar, Biomagus"), me);
+		var twin = Hand(
+			new CardDefinition(
+				TestGames.Inline("Twin Bolt", "{R}", "Instant").Data,
+				[
+					new SpellEffectsComponent([new DealDamage(Ref.Target(0), 1)])
+					{
+						Targets =
+						[
+							new Targeting.TargetSpec(Targeting.TargetKind.Creature),
+							new Targeting.TargetSpec(Targeting.TargetKind.Creature),
+						],
+					},
+				]
+			),
+			them
+		);
+		var hand = HandCount(me);
+
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = them,
+				CardId = twin,
+				Targets = [ruric, ruric],
+			}
+		);
+		Resolve();
+
+		Assert.That(HandCount(me), Is.EqualTo(hand + 1), "it becomes the target once");
+	}
+
+	[Test]
+	public void RuricTharBiomagus_ProwessTwice()
+	{
+		var ruric = Field(FraCards.Get("Ruric Thar, Biomagus"), me);
+		Cast(Spark(), []);
+		Assert.That(s.Power(s.GetCard(ruric)), Is.EqualTo(4 + 2));
+	}
+
+	[Test]
+	public void LyraTolarianArchangel_AnAngelAtTheEndStep_IfYouDrewThree()
+	{
+		Field(FraCards.Get("Lyra, Tolarian Archangel"), me);
+		Cast(Instant(new DrawCards(Ref.You, 2)), []);
+		To(Step.End, me);
+		Resolve();
+		Assert.That(Named("Angel", me), Is.Empty, "two drawn");
+
+		To(Step.Upkeep, them);
+		s = s.Act(new PassPriorityAction { PlayerId = them });
+		Cast(Instant(new DrawCards(Ref.You, 3)), []); // their turn — "each end step"
+		To(Step.End, them);
+		Resolve();
+		var angel = Named("Angel", me).Single();
+		Assert.That(
+			(angel.IsToken, s.Has(angel, "Flying"), s.Power(angel)),
+			Is.EqualTo((true, true, 3))
+		);
+	}
+
+	[Test]
+	public void LyraTolarianArchangel_ActivatedDrawsTwoOnCombatDamage_UntilEndOfTurn()
+	{
+		var lyra = Field(FraCards.Get("Lyra, Tolarian Archangel"), me);
+		s = s.Act(new ActivateAbilityAction { PlayerId = me, CardId = lyra });
+		Resolve();
+		var hand = HandCount(me);
+
+		Attack();
+		s = TestGames.PassUntil(s, x => x.GetGame().Step == Step.PostCombatMain);
+		Assert.That(HandCount(me), Is.EqualTo(hand + 2));
+
+		To(Step.Upkeep, them);
+		Assert.That(s.GetCard(lyra).HasComponent<UntilEndOfTurn>(), Is.False, "gone at cleanup");
+	}
+
+	[Test]
+	public void GerminateRecruits_ACadetPerLifeGainedThisTurn()
+	{
+		Cast(Instant(new GainLife(Ref.You, 3)), []);
+		Cast(Hand("Germinate Recruits", me), []);
+		Assert.That(Named("Cadet", me), Has.Count.EqualTo(3));
+	}
+
+	int OnTop(CardDefinition card)
+	{
+		int id;
+		(s, id) = TestGames.Put(s, me, card, ZoneType.Library);
+		s = s.MoveObjectToFront(id, s.ZoneId(me, ZoneType.Library)); // TEST SETUP: index 0 is the top
+		return id;
+	}
+
+	[Test]
+	public void EnlightenedConfidant_GainedLife_SurveilsAndReturnsACheapCard()
+	{
+		Field(FraCards.Get("Enlightened Confidant"), me);
+		Cast(Instant(new GainLife(Ref.You, 2)), []);
+		var cheap = OnTop(TestGames.CreatureCosting("{1}{G}", "Cheap", "2/2"));
+
+		To(Step.End, me);
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseFromLibraryTopChoice => [cheap],
+				_ => [],
+			}
+		);
+
+		Assert.That(s.IsIn(cheap, me, ZoneType.Hand), "mana value 2, two life gained");
+	}
+
+	[Test]
+	public void EnlightenedConfidant_TooExpensive_StaysInTheGraveyard()
+	{
+		Field(FraCards.Get("Enlightened Confidant"), me);
+		Cast(Instant(new GainLife(Ref.You, 2)), []);
+		var dear = OnTop(TestGames.CreatureCosting("{2}{G}", "Dear", "2/2"));
+
+		To(Step.End, me);
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseFromLibraryTopChoice => [dear],
+				_ => [],
+			}
+		);
+
+		Assert.That(s.IsIn(dear, me, ZoneType.Graveyard));
+	}
+
+	[Test]
+	public void EnlightenedConfidant_NoLifeGained_NoTrigger()
+	{
+		Field(FraCards.Get("Enlightened Confidant"), me);
+		To(Step.End, me);
+		Assert.That(s.StackIsEmpty());
+	}
+
+	[Test]
+	public void SurveillancePhantasm_AttacksOnlyAfterYouSurveil()
+	{
+		var phantasm = Field(FraCards.Get("Surveillance Phantasm"), me);
+		Assert.That(Combat.CanAttack(s, s.GetCard(phantasm)), Is.False, "defender");
+
+		s = s.Act(new ActivateAbilityAction { PlayerId = me, CardId = phantasm });
+		Resolve();
+
+		Assert.That(Combat.CanAttack(s, s.GetCard(phantasm)));
+	}
+
+	[Test]
+	public void WayOfTheParadox_ALoyaltyActivationGainsOneAndAnExtraLandDrop()
+	{
+		Cast("Way of the Paradox");
+		var (first, second) = (
+			Hand(TestGames.Card("Forest"), me),
+			Hand(TestGames.Card("Forest"), me)
+		);
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = first });
+		Assert.That(
+			s.LegalActions().OfType<PlayLandAction>().Any(a => a.CardId == second),
+			Is.False,
+			"one land a turn"
+		);
+		var life = Life(me);
+
+		Loyalty(Jace(me)!.Id, -1);
+
+		Assert.That(Life(me), Is.EqualTo(life + 1));
+		Assert.That(s.LegalActions().OfType<PlayLandAction>().Any(a => a.CardId == second));
+	}
 }

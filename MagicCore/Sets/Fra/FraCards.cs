@@ -115,6 +115,25 @@ public static class FraCards
 			null
 		);
 
+	/// <summary>Lyra: "a 3/3 blue Angel creature token with flying".</summary>
+	public static readonly CardData Angel =
+		new(
+			"Angel",
+			"token",
+			null,
+			0,
+			"Creature — Angel",
+			null,
+			"3",
+			"3",
+			null,
+			["U"],
+			["Flying"],
+			"token",
+			"T",
+			null
+		);
+
 	/// <summary>"[cost]: effects" — a loyalty ability, own or granted.</summary>
 	static LoyaltyAbilityComponent Loyalty(
 		int cost,
@@ -983,7 +1002,7 @@ public static class FraCards
 			[
 				When(TriggerEvent.YourEndStep, [], new AddCounters(Ref.Source, 2)) with
 				{
-					If = new Not(new YouCastASpellThisTurn()),
+					If = new Not(new AtLeast(Count.SpellsYouCastThisTurn, 1)),
 				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{4}{G}"),
@@ -1046,6 +1065,114 @@ public static class FraCards
 					new DrawCards(Ref.You, Count.CreaturesYouControl)
 				),
 				Loyalty(-3, [], new DealDamage(Ref.CreaturesExceptYourTokens, 4)),
+			],
+			["Guiding Hydra"] =
+			[
+				new EntersWithCountersComponent(Count.X),
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[],
+					new May(
+						"Remove a +1/+1 counter from Guiding Hydra?",
+						new AtLeast(Count.CountersOn(Ref.Source), 1),
+						[
+							new AddCounters(Ref.Source, -1),
+							new AddCounters(Ref.OtherCreaturesYouControl, 1),
+						]
+					)
+				),
+			],
+			["Desperate Futurescribe"] =
+			[
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[new TargetSpec(TargetKind.Creature, Whose.You) { Another = true }],
+					new If(
+						new AtLeast(Count.YourSurveilsThisTurn, 1),
+						[new AddCounters(Ref.Target(), 1)]
+					)
+					{
+						Otherwise = [new ModifyUntilEndOfTurn(Ref.Target(), 1, 1)],
+					}
+				),
+			],
+			["Darklight Phoenix"] =
+			[
+				When(
+					TriggerEvent.BeginningOfCombatOnYourTurn,
+					[],
+					new ReturnFromGraveyardToBattlefield(Ref.Source)
+				) with
+				{
+					If = new AtLeast(Count.CreaturesDiedThisTurn, 2),
+					FromGraveyard = true,
+				},
+			],
+			["Ruric Thar, Biomagus"] =
+			[
+				Prowess,
+				Prowess,
+				When(
+					TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["Lyra, Tolarian Archangel"] =
+			[
+				When(TriggerEvent.EachEndStep, [], new CreateTokens(Angel, 1)) with
+				{
+					If = new AtLeast(Count.CardsYouDrewThisTurn, 3),
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{U}{U}"),
+					[
+						new ModifyUntilEndOfTurn(Ref.Source, 0, 0)
+						{
+							Trigger = When(
+								TriggerEvent.SelfDealsCombatDamageToPlayer,
+								[],
+								new DrawCards(Ref.You, 2)
+							),
+						},
+					]
+				),
+			],
+			["Germinate Recruits"] =
+			[
+				Spell([], new CreateTokens(Cadet, Count.LifeYouGainedThisTurn)),
+			],
+			["Enlightened Confidant"] =
+			[
+				When(
+					TriggerEvent.YourEndStep,
+					[],
+					new Surveil(1)
+					{
+						Then =
+						[
+							new ReturnChosenToHandIfManaValueAtMost(Count.LifeYouGainedThisTurn),
+						],
+					}
+				) with
+				{
+					If = new AtLeast(Count.LifeYouGainedThisTurn, 1),
+				},
+			],
+			["Surveillance Phantasm"] =
+			[
+				new AttacksDespiteDefender(new AtLeast(Count.YourSurveilsThisTurn, 1)),
+				new ActivatedAbilityComponent(ManaCost.Parse("{3}{U}"), [new Surveil(1)]),
+			],
+			["Way of the Paradox"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(5)),
+				When(
+					TriggerEvent.YouActivateLoyaltyAbility,
+					[],
+					new GainLife(Ref.You, 1),
+					new AdditionalLandDrop()
+				),
 			],
 		};
 

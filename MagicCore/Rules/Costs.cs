@@ -24,7 +24,7 @@ public static class Costs
 			delta -= card.GetComponents<CostsLessIfYouControlLegendaryCreature>()
 				.Sum(r => r.Amount);
 
-		if (s.GetPlayer(casterId).NoncreatureSpellsCastThisTurn > 0)
+		if (s.GetPlayer(casterId).ThisTurn.NoncreatureSpellsCast > 0)
 			delta -= card.GetComponents<CostsLessIfYouCastNoncreatureSpellThisTurn>()
 				.Sum(r => r.Amount);
 

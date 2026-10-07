@@ -25,6 +25,7 @@ MagicCore/
 ├── Actions/PermanentChoices.cs  "you may sacrifice …": ChoosePermanentChoice, SacrificeChosen, IfChosen
 ├── Effects/Effects.cs   ContextKeys, Ref (you / opponent / target i / source / event card …), primitives
 ├── Effects/Abilities.cs spell, triggered, activated, mana and static ability components
+├── Effects/Conditions.cs  "if …": Condition, AtLeast(Count, N), Not, target/event tests
 ├── Effects/Modes.cs     Mode, Modal.Compose (chosen modes → one target list + steps), ScopeTargetsAction
 ├── Targeting/TargetSpec.cs  one legality test for choosing AND resolving; Combinations
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
@@ -91,8 +92,18 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   Modes`), a trigger's as it goes on the stack. A mode with an unchoosable required target can't be
   chosen. The scripted mode count must match the printed bullets — `FraCards` throws otherwise.
 - **"At the beginning of [step]"** triggers on a `StepBeganEvent`, raised by `EnterStep` for upkeep,
-  draw, beginning of combat and end. **"This turn" is a counter on `MagicPlayer`** (`SpellsCastThisTurn`
-  …), reset for BOTH players as each turn begins — "this turn" is every turn, not only yours.
+  draw, beginning of combat and end. **"This turn" lives in `MagicPlayer.ThisTurn`** (a `TurnTally`:
+  lands, spells, cards drawn, life gained, surveils), REPLACED whole for BOTH players as each turn
+  begins — "this turn" is every turn, not only yours, and a new count cannot miss the reset. Update
+  it with `s.Tally(…)`. Creatures that died this turn (anyone's) are on `MagicGame`.
+- **Where triggers are read from:** permanents on the battlefield; a dying card's own "when this
+  dies"; a graveyard card's abilities marked `FromGraveyard` (Darklight Phoenix) — those, and only
+  those, trigger from there; and a trigger granted until end of turn (`UntilEndOfTurn.Trigger`,
+  Lyra), which ends at cleanup or a zone change like any other until-end-of-turn effect.
+- **"Becomes the target"** is raised when a spell or ability goes on the stack with its targets —
+  `CastSpellAction` and `StackResolution.Push` (every ability), the one place each.
+- **"You may … If you do"** is `May` (a `YesNoChoice`, asked only when it can be done) or
+  `MaySacrifice`; both clear the shared "chosen" key so a "no" cannot read a stale "yes".
 - **An intervening "if" (CR 603.4) is `TriggeredAbilityComponent.If`**, never a bare `If` effect:
   checked as it triggers (`Collect`) AND again on resolution (`QueueTargets` wraps the effects).
   Edgar with a spell cast in response to his trigger gets nothing. A condition on the EVENT itself
@@ -147,9 +158,9 @@ needs · Empower Jace with two Jace tokens loads the first · surveil keeps the 
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 92 cards scripted
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 101 cards scripted
 in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
-dies / exile-until cards, and 10 step-trigger / per-turn / prowess cards. **Two real planeswalkers are
+dies / exile-until cards, and 19 step-trigger / per-turn / prowess cards. **Two real planeswalkers are
 in** (The Theorist, Ajani Unrelenting); **the other 6 are not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
 Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
 per-turn tracking, prowess ✓ · 7d prepare, flashback, cycling, graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether

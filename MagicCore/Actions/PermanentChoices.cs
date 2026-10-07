@@ -56,6 +56,31 @@ public record ChoosePermanentChoice : ChoiceAction
 	) => PlayerId;
 }
 
+/// <summary>"You may …": Yes is picking the one option, No is picking none. Read by IfChosenAction.</summary>
+public record YesNoChoice : ChoiceAction
+{
+	public int PlayerId { get; init; }
+
+	public YesNoChoice(int playerId, string prompt)
+	{
+		PlayerId = playerId;
+		Prompt = prompt;
+		MinChoices = 0;
+		MaxChoices = 1;
+		OutputKey = ChoosePermanentChoice.Chosen;
+	}
+
+	public override ImmutableList<ChoiceOption> GetOptions(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => [new ChoiceOption { Id = 1, DisplayText = "Yes" }];
+
+	public override int GetDecidingPlayerId(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => PlayerId;
+}
+
 /// <summary>Sacrifices what the previous choice picked (to its owner's graveyard — it dies).</summary>
 public record SacrificeChosenAction : GameAction
 {

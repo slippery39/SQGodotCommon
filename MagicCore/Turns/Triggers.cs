@@ -22,6 +22,9 @@ public record StepBeganEvent(Step Step) : GameEvent;
 
 public record BlocksEvent(int CardId) : GameEvent;
 
+/// <summary>A spell or ability put on the stack with this card as a target (CR 115).</summary>
+public record BecameTargetEvent(int CardId, int ByPlayerId) : GameEvent;
+
 /// <summary>"Whenever you activate a loyalty ability" — Cost is +N/−N, so "removed two or more" reads it.</summary>
 public record LoyaltyActivatedEvent(int PlayerId, int Cost) : GameEvent;
 
@@ -39,6 +42,13 @@ public static class Triggers
 		{
 			PendingGameEvents = s.PendingGameEvents.Add(e),
 		};
+
+	/// <summary>Each card a spell or ability now on the stack targets "becomes the target" of it.</summary>
+	public static GameState RaiseTargeted(GameState s, IEnumerable<int> targets, int byPlayerId) =>
+		targets
+			.Distinct() // targeted by two words of one spell, it still becomes its target once
+			.Where(id => id != 0 && s.HasObject(id) && s.GetObject(id) is Card)
+			.Aggregate(s, (st, id) => st.Raise(new BecameTargetEvent(id, byPlayerId)));
 
 	/// <summary>A triggered ability waiting to go on the stack. EventSnapshot is the card the event was about, as it last was (a dead creature's counters).</summary>
 	public record Pending(
@@ -63,19 +73,30 @@ public static class Triggers
 		var permanents = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
 			s.CardsIn(p, ZoneType.Battlefield)
 		);
-		var fromTheBattlefield = permanents.SelectMany(source =>
-			source
-				.GetComponents<TriggeredAbilityComponent>()
-				.SelectMany(ability =>
-					s.PendingGameEvents.Where(e => Matches(s, source, ability.On, e))
-						.Select(e => new Pending(source, ability, EventCard(e), Snapshot(s, e)))
-				)
+		// A card in a graveyard is controlled by its owner (CR 108.4a).
+		var inGraveyards = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
+			s.CardsIn(p, ZoneType.Graveyard)
+				.Where(c => AbilitiesOf(c).Any(a => a.FromGraveyard))
+				.Select(c => c with { ControllerId = c.OwnerId })
 		);
+		var fromTheBattlefield = permanents
+			.SelectMany(source =>
+				AbilitiesOf(source).Where(a => !a.FromGraveyard).Select(a => (source, a))
+			)
+			.Concat(
+				inGraveyards.SelectMany(source =>
+					AbilitiesOf(source).Where(a => a.FromGraveyard).Select(a => (source, a))
+				)
+			)
+			.SelectMany(found =>
+				s.PendingGameEvents.Where(e => Matches(s, found.source, found.a.On, e))
+					.Select(e => new Pending(found.source, found.a, EventCard(e), Snapshot(s, e)))
+			);
 		var fromTheDead = s
 			.PendingGameEvents.OfType<DiedEvent>()
 			.SelectMany(died =>
-				died.LastKnown.GetComponents<TriggeredAbilityComponent>()
-					.Where(a => a.On == TriggerEvent.SelfDies)
+				AbilitiesOf(died.LastKnown)
+					.Where(a => a.On == TriggerEvent.SelfDies && !a.FromGraveyard)
 					.Select(a => new Pending(died.LastKnown, a, died.LastKnown.Id, died.LastKnown))
 			);
 		return fromTheBattlefield
@@ -110,6 +131,15 @@ public static class Triggers
 			BlocksEvent blocks when s.IsOnBattlefield(blocks.CardId) => s.GetCard(blocks.CardId),
 			_ => null,
 		};
+
+	/// <summary>Its own triggered abilities, and any it gained until end of turn (Lyra).</summary>
+	static IEnumerable<TriggeredAbilityComponent> AbilitiesOf(Card card) =>
+		card.GetComponents<TriggeredAbilityComponent>()
+			.Concat(
+				card.GetComponents<UntilEndOfTurn>()
+					.Select(u => u.Trigger)
+					.OfType<TriggeredAbilityComponent>()
+			);
 
 	static bool Matches(GameState s, Card source, TriggerEvent on, GameEvent e)
 	{
@@ -152,6 +182,11 @@ public static class Triggers
 				&& !yourTurn,
 			(TriggerEvent.YourEndStep, StepBeganEvent began) => began.Step == Step.End && yourTurn,
 			(TriggerEvent.EachEndStep, StepBeganEvent began) => began.Step == Step.End,
+			(TriggerEvent.BeginningOfCombatOnYourTurn, StepBeganEvent began) => began.Step
+				== Step.BeginCombat
+				&& yourTurn,
+			(TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility, BecameTargetEvent targeted) =>
+				targeted.CardId == source.Id && targeted.ByPlayerId != source.ControllerId,
 			(TriggerEvent.OpponentsCreatureWithPowerOrToughness1OrLessBlocks, BlocksEvent blocks) =>
 				s.IsOnBattlefield(blocks.CardId)
 					&& s.GetCard(blocks.CardId) is var blocker

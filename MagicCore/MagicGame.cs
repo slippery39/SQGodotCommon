@@ -43,6 +43,9 @@ public record MagicGame : GameObject
 	/// the step; any action — a land, a mana ability — resets it.
 	/// </summary>
 	public int PassesInSuccession { get; init; }
+
+	/// <summary>"If two or more creatures died this turn" — anyone's. Reset as each turn begins.</summary>
+	public int CreaturesDiedThisTurn { get; init; }
 }
 
 public static class MagicKeys

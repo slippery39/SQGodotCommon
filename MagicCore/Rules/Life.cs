@@ -12,6 +12,7 @@ public static class Life
 			return s;
 		var player = s.GetPlayer(playerId);
 		return s.WithPlayer(player with { Life = player.Life + amount })
+			.Tally(playerId, t => t with { LifeGained = t.LifeGained + amount })
 			.Raise(new LifeGainedEvent(playerId));
 	}
 }

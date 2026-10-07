@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Cards;
 using MagicCore.Effects;
@@ -102,7 +103,16 @@ public static class MagicState
 			zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard)
 			&& before.Is(CardType.Creature | CardType.Planeswalker)
 		)
+		{
 			s = s.Raise(new DiedEvent(before));
+			if (before.Is(CardType.Creature))
+				s = s.WithGame(
+					s.GetGame() with
+					{
+						CreaturesDiedThisTurn = s.GetGame().CreaturesDiedThisTurn + 1,
+					}
+				);
+		}
 
 		// CR 610.3: what this permanent exiled "until it leaves the battlefield" returns at once.
 		var exiled = new[] { s.Player1Id(), s.Player2Id() }
@@ -126,7 +136,13 @@ public static class MagicState
 	public static GameState Sacrifice(this GameState s, int cardId) =>
 		s.MoveCard(cardId, s.ZoneId(s.GetCard(cardId).OwnerId, ZoneType.Graveyard));
 
-	public static GameState EnterBattlefield(this GameState s, int cardId, int controllerId)
+	/// <param name="x">The X paid to cast it — "enters with X counters" and its "when this enters" read it (CR 107.3m).</param>
+	public static GameState EnterBattlefield(
+		this GameState s,
+		int cardId,
+		int controllerId,
+		int x = 0
+	)
 	{
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield))
 			.Raise(new EnteredBattlefieldEvent(cardId));
@@ -138,7 +154,15 @@ public static class MagicState
 				ControllerId = controllerId,
 				ControlledSinceTurn = s.GetGame().TurnNumber,
 				Loyalty = card.PrintedLoyalty,
-				PlusOneCounters = card.GetComponent<EntersWithCountersComponent>()?.Count ?? 0,
+				CastX = x,
+				PlusOneCounters =
+					card.GetComponent<EntersWithCountersComponent>()
+						?.Count.Value(
+							s,
+							ImmutableDictionary<string, object>
+								.Empty.Add(ContextKeys.Controller, controllerId)
+								.Add(ContextKeys.X, x)
+						) ?? 0,
 				IsTapped =
 					card.GetComponent<EntersTappedComponent>() is { } tapped
 					&& !EntersUntapped(s, card.Id, controllerId, tapped.Unless),
@@ -164,6 +188,19 @@ public static class MagicState
 		};
 	}
 
+	/// <summary>Updates one player's "this turn" counts.</summary>
+	public static GameState Tally(
+		this GameState s,
+		int playerId,
+		Func<TurnTally, TurnTally> change
+	) =>
+		s.WithPlayer(
+			s.GetPlayer(playerId) with
+			{
+				ThisTurn = change(s.GetPlayer(playerId).ThisTurn),
+			}
+		);
+
 	/// <summary>Draws from the top; a draw from an empty library flags the loss for the state-based check.</summary>
 	public static GameState Draw(this GameState s, int playerId, int count = 1)
 	{
@@ -179,7 +216,8 @@ public static class MagicState
 						AttemptedDrawFromEmptyLibrary = true,
 					}
 				);
-			s = s.MoveCard(top, handId);
+			s = s.MoveCard(top, handId)
+				.Tally(playerId, t => t with { CardsDrawn = t.CardsDrawn + 1 });
 		}
 		return s;
 	}

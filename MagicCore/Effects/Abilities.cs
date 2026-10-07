@@ -35,6 +35,8 @@ public enum TriggerEvent
 	OpponentsCreatureWithPowerOrToughness1OrLessBlocks, // Tetsuko, Pursuer
 	YouActivateLoyaltyAbility,
 	YouActivateLoyaltyAbilityRemovingTwoOrMore,
+	BeginningOfCombatOnYourTurn,
+	SelfBecomesTargetOfOpponentsSpellOrAbility, // Ruric Thar, Biomagus
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>
@@ -49,6 +51,9 @@ public record TriggeredAbilityComponent(TriggerEvent On, ImmutableList<GameActio
 
 	/// <summary>"At …, if [condition], …" — intervening: checked as it triggers AND as it resolves (CR 603.4).</summary>
 	public Condition? If { get; init; }
+
+	/// <summary>Darklight Phoenix: "return this card from your graveyard" — it triggers from there, not the battlefield.</summary>
+	public bool FromGraveyard { get; init; }
 }
 
 /// <summary>"[Cost]: [effects]." Uses the stack. Mana abilities are <see cref="ManaAbilityComponent"/>, which does not.</summary>
@@ -100,8 +105,11 @@ public record EntersTappedComponent(EntersUntappedIf Unless = EntersUntappedIf.N
 /// <summary>Silence the Echo: "As an additional cost to cast this spell, sacrifice a [Sacrifice] or pay {Generic}."</summary>
 public record SacrificeOrPayAdditionalCost(TargetSpec Sacrifice, int Generic) : GameComponent;
 
-/// <summary>"This creature enters with N +1/+1 counters on it." Applied by MagicState.EnterBattlefield.</summary>
-public record EntersWithCountersComponent(int Count) : GameComponent;
+/// <summary>"This creature enters with N (or X) +1/+1 counters on it." Applied by MagicState.EnterBattlefield.</summary>
+public record EntersWithCountersComponent(Count Count) : GameComponent;
+
+/// <summary>"As long as [condition], this creature can attack as though it didn't have defender." (Surveillance Phantasm)</summary>
+public record AttacksDespiteDefender(Condition While) : GameComponent;
 
 /// <summary>On a card exiled "until [source] leaves the battlefield" — MagicState.MoveCard returns it then.</summary>
 public record ExiledUntilLeaves(int SourceId, int SourceIncarnation) : GameComponent;

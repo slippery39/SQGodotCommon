@@ -146,6 +146,9 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 {
 	/// <summary>"Has base power and toughness P/T" - replaces the printed numbers, under counters and pumps.</summary>
 	public (int Power, int Toughness)? SetBase { get; init; }
+
+	/// <summary>Lyra: "Until end of turn, whenever [this] deals combat damage to a player, …" — Collect reads it.</summary>
+	public Effects.TriggeredAbilityComponent? Trigger { get; init; }
 }
 
 /// <summary>

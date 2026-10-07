@@ -30,7 +30,11 @@ public static class Combat
 	public static bool CanAttack(GameState s, Card c) =>
 		c.Is(CardType.Creature)
 		&& !c.IsTapped
-		&& !s.Has(c, "Defender")
+		&& (
+			!s.Has(c, "Defender")
+			|| c.GetComponents<Effects.AttacksDespiteDefender>()
+				.Any(d => d.While.Holds(s, Effects.Conditions.Of(c)))
+		)
 		&& (s.Has(c, "Haste") || !IsSummoningSick(s, c));
 
 	/// <summary>"Can't be blocked" — granted by static abilities and until-end-of-turn effects alike.</summary>

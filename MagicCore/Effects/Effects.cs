@@ -50,6 +50,7 @@ public enum RefKind
 	YourPermanentsWithCounters, // of Type, with a +1/+1 counter on it
 	AllPermanentsExceptYourTokens, // of Type: Ajani's "each creature except for tokens you control"
 	YourTokens, // "all tokens you control"
+	YourOtherPermanents, // of Type: "each other creature you control" — not the source
 }
 
 /// <summary>Who or what an effect acts on, resolved against the context at resolution.</summary>
@@ -74,6 +75,8 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 	public static readonly Ref CreaturesExceptYourTokens =
 		new(RefKind.AllPermanentsExceptYourTokens, Type: CardType.Creature);
 	public static readonly Ref TokensYouControl = new(RefKind.YourTokens);
+	public static readonly Ref OtherCreaturesYouControl =
+		new(RefKind.YourOtherPermanents, Type: CardType.Creature);
 
 	public static Ref YourGraveyard(CardType type) => new(RefKind.YourGraveyard, Type: type);
 
@@ -135,6 +138,9 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 				.Where(c => c.Is(Type) && c.PlusOneCounters > 0)
 				.Select(c => c.Id),
 			RefKind.YourTokens => Yours().Where(c => c.IsToken).Select(c => c.Id),
+			RefKind.YourOtherPermanents => Yours()
+				.Where(c => c.Is(Type) && c.Id != (int)context[ContextKeys.Source])
+				.Select(c => c.Id),
 			RefKind.YourHand => s.CardsIn(controller, ZoneType.Hand).Select(c => c.Id),
 			RefKind.YourGraveyard => s.CardsIn(controller, ZoneType.Graveyard)
 				.Where(c => Type == CardType.None || c.Is(Type))
@@ -237,6 +243,9 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// <summary>Perfected Theory: "has base power and toughness P/T until end of turn" (CR 613, layer 7b).</summary>
 	public (int Power, int Toughness)? SetBase { get; init; }
 
+	/// <summary>Lyra: "until end of turn, whenever …" — a triggered ability it has until cleanup.</summary>
+	public TriggeredAbilityComponent? Trigger { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var effect = new UntilEndOfTurn(
@@ -246,6 +255,7 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 		)
 		{
 			SetBase = SetBase,
+			Trigger = Trigger,
 		};
 		return new(
 			Permanents(What, s).Aggregate(s, (st, c) => Update(st, (Card)c.WithComponent(effect)))
@@ -261,6 +271,12 @@ public enum CountOf
 	PowerOf, // "equal to its power"
 	LoyaltyOf, // "equal to its loyalty"
 	X, // the X paid
+	CountersOn, // "+1/+1 counters on [Ref]"
+	LifeYouGainedThisTurn,
+	CardsYouDrewThisTurn,
+	YourSurveilsThisTurn,
+	SpellsYouCastThisTurn,
+	CreaturesDiedThisTurn, // anyone's
 }
 
 /// <summary>
@@ -281,6 +297,17 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	public static readonly Count X = new(0, null, CountOf.X);
 
+	public static Count CountersOn(Ref r) => new(0, r, CountOf.CountersOn);
+
+	public static readonly Count LifeYouGainedThisTurn =
+		new(0, null, CountOf.LifeYouGainedThisTurn);
+	public static readonly Count CardsYouDrewThisTurn = new(0, null, CountOf.CardsYouDrewThisTurn);
+	public static readonly Count YourSurveilsThisTurn = new(0, null, CountOf.YourSurveilsThisTurn);
+	public static readonly Count SpellsYouCastThisTurn =
+		new(0, null, CountOf.SpellsYouCastThisTurn);
+	public static readonly Count CreaturesDiedThisTurn =
+		new(0, null, CountOf.CreaturesDiedThisTurn);
+
 	public static readonly Count CreaturesYouControl = NumberOf(Ref.CreaturesYouControl);
 	public static readonly Count LandsYouControl = NumberOf(Ref.LandsYouControl);
 
@@ -298,6 +325,26 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			return Sign * Fixed;
 		if (Kind == CountOf.X)
 			return Sign * (context.TryGetValue(ContextKeys.X, out var x) ? (int)x : 0);
+		if (Kind == CountOf.CreaturesDiedThisTurn)
+			return Sign * s.GetGame().CreaturesDiedThisTurn;
+		if (
+			Kind
+			is CountOf.LifeYouGainedThisTurn
+				or CountOf.CardsYouDrewThisTurn
+				or CountOf.YourSurveilsThisTurn
+				or CountOf.SpellsYouCastThisTurn
+		)
+		{
+			var tally = s.GetPlayer((int)context[ContextKeys.Controller]).ThisTurn;
+			return Sign
+				* Kind switch
+				{
+					CountOf.LifeYouGainedThisTurn => tally.LifeGained,
+					CountOf.CardsYouDrewThisTurn => tally.CardsDrawn,
+					CountOf.SpellsYouCastThisTurn => tally.SpellsCast,
+					_ => tally.Surveils,
+				};
+		}
 		var ids = Of!.Resolve(s, context);
 		IEnumerable<Card> Cards() => ids.Select(s.GetObject).OfType<Card>();
 		var counted = Kind switch
@@ -305,6 +352,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			CountOf.NumberOf => ids.Count(),
 			CountOf.GreatestPowerOf => Cards().Select(c => s.Power(c)).DefaultIfEmpty(0).Max(),
 			CountOf.PowerOf => Cards().Select(c => s.Power(c)).FirstOrDefault(),
+			CountOf.CountersOn => Cards().Sum(c => c.PlusOneCounters),
 			_ => Cards().Select(c => c.Loyalty).FirstOrDefault(),
 		};
 		// CR 107.1b: a number that would be negative is 0 — a -4 power must not make "lose X life"
@@ -323,7 +371,8 @@ public record AddCounters(Ref What, Count Amount) : Effect
 				.Where(c => c.Is(CardType.Creature))
 				.Aggregate(
 					s,
-					(st, c) => Update(st, c with { PlusOneCounters = c.PlusOneCounters + n })
+					(st, c) =>
+						Update(st, c with { PlusOneCounters = Math.Max(0, c.PlusOneCounters + n) })
 				)
 		);
 	}
@@ -349,40 +398,68 @@ public record AddLoyalty(Ref What, Count Amount) : Effect
 /// </summary>
 public record Surveil(int N) : Effect
 {
+	/// <summary>Riders on the cards put into the graveyard "this way" — they read the surveil's choice.</summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
+		s = s.Tally(Controller, t => t with { Surveils = t.Surveils + 1 }); // "if you've surveilled"
 		var n = Math.Min(N, s.CardsIn(Controller, ZoneType.Library).Count());
 		if (n == 0)
 			return new(s);
+		ImmutableList<GameAction> steps =
+		[
+			new ChooseFromLibraryTopChoice
+			{
+				PlayerId = Controller,
+				Count = n,
+				MinChoices = 0,
+				MaxChoices = n,
+			},
+			new MoveChosenToGraveyardAction { PlayerId = Controller },
+			.. Then,
+		];
 		return new(
 			s.SpawnAction(
 				new PipelineAction
 				{
-					Steps =
-					[
-						new ChooseFromLibraryTopChoice
-						{
-							PlayerId = Controller,
-							Count = n,
-							MinChoices = 0,
-							MaxChoices = n,
-						},
-						new MoveChosenToGraveyardAction { PlayerId = Controller },
-					],
+					// The ability's context for Then; its own key cleared, so no earlier pick leaks in.
+					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+					Steps = steps,
 				}
 			)
 		);
 	}
 }
 
-public record CreateTokens(CardData Token, int Count) : Effect
+/// <summary>
+/// Enlightened Confidant: "If you put a card with mana value N or less into your graveyard this way,
+/// put that card into your hand." A surveil's Then.
+/// </summary>
+public record ReturnChosenToHandIfManaValueAtMost(Count Max) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var max = Max.Value(s, InputContext);
+		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
+			if (
+				s.IsIn(id, Controller, ZoneType.Graveyard)
+				&& s.GetCard(id).ManaCost.ManaValue <= max
+			)
+				s = s.MoveCard(id, s.ZoneId(Controller, ZoneType.Hand));
+		return new(s);
+	}
+}
+
+public record CreateTokens(CardData Token, Count Count) : Effect
 {
 	/// <summary>Stingerquill Charm: "Create a ... Cadet. It gains haste until end of turn."</summary>
 	public string? GainsUntilEndOfTurn { get; init; }
 
 	public override ActionResult Execute(GameState s)
 	{
-		for (var i = 0; i < Count; i++)
+		var count = Count.Value(s, InputContext);
+		for (var i = 0; i < count; i++)
 		{
 			var token = CardFactory.Create(CardDefinition.Vanilla(Token), Controller) with
 			{
@@ -398,6 +475,46 @@ public record CreateTokens(CardData Token, int Count) : Effect
 		}
 		return new(s);
 	}
+}
+
+/// <summary>Darklight Phoenix: "return this card from your graveyard to the battlefield".</summary>
+public record ReturnFromGraveyardToBattlefield(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var id in All(What, s).ToList())
+			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, ZoneType.Graveyard))
+				s = s.EnterBattlefield(id, card.OwnerId);
+		return new(s);
+	}
+}
+
+/// <summary>Way of the Paradox: "You may play an additional land this turn."</summary>
+public record AdditionalLandDrop : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(s.Tally(Controller, t => t with { ExtraLandDrops = t.ExtraLandDrops + 1 }));
+}
+
+/// <summary>
+/// "You may [do something]. If you do, [Then]." Asked only when it can be done (<see cref="Can"/>);
+/// the doing is the first of Then. Guiding Hydra: "you may remove a +1/+1 counter …".
+/// </summary>
+public record May(string Prompt, Condition Can, ImmutableList<GameAction> Then) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		!Can.Holds(s, InputContext)
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						// Its own key, cleared — as MaySacrifice: a "no" must not read a stale "yes".
+						PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+						Steps = [new YesNoChoice(Controller, Prompt), new IfChosenAction(Then)],
+					}
+				)
+			);
 }
 
 /// <summary>"Sacrifice this …" — only what is still on the battlefield.</summary>
@@ -642,62 +759,19 @@ public record PutEventCardCounters(Ref To) : Effect
 	}
 }
 
-public abstract record Condition
-{
-	public abstract bool Holds(GameState s, ImmutableDictionary<string, object> context);
-}
-
-/// <summary>Prophesied End: "if it wasn't attacking" — read BEFORE the destroy, while it still knows.</summary>
-public record TargetIsNotAttacking(int Index) : Condition
-{
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		Ref.Target(Index).Resolve(s, context).Select(s.GetCard).Any(c => c.AttackingId == 0);
-}
-
-/// <summary>Budding Insurgent: "if that permanent was a legendary enchantment" — read before it is destroyed.</summary>
-public record TargetIs(int Index, CardType Type, Supertype Supertype = Supertype.None) : Condition
-{
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		Ref.Target(Index)
-			.Resolve(s, context)
-			.Select(s.GetObject)
-			.OfType<Card>()
-			.Any(c => c.Is(Type) && (Supertype == Supertype.None || c.Is(Supertype)));
-}
-
-public record EventCardHasSubtype(string Subtype) : Condition
-{
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		Ref.EventCard.Resolve(s, context).Select(s.GetCard).Any(c => c.Subtypes.Contains(Subtype));
-}
-
-public record Not(Condition Inner) : Condition
-{
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		!Inner.Holds(s, context);
-}
-
-/// <summary>Edgar, Moonlit Sovereign: "if you didn't cast a spell this turn" (with Not).</summary>
-public record YouCastASpellThisTurn : Condition
-{
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		s.GetPlayer((int)context[ContextKeys.Controller]).SpellsCastThisTurn > 0;
-}
-
-/// <summary>Eye of Jace: "if there are seven or more cards in your graveyard".</summary>
-public record AtLeast(Count Count, int N) : Condition
-{
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		Count.Value(s, context) >= N;
-}
-
 /// <summary>"If [condition], [effects]" — the effects run in order with this ability's context.</summary>
 public record If(Condition When, ImmutableList<GameAction> Then) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		When.Holds(s, InputContext)
-			? new(
-				s.SpawnAction(new PipelineAction { Steps = Then, PipelineContext = InputContext })
-			)
-			: new(s);
+	/// <summary>Desperate Futurescribe: "… instead" — what happens when the condition does not hold.</summary>
+	public ImmutableList<GameAction> Otherwise { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		var steps = When.Holds(s, InputContext) ? Then : Otherwise;
+		return steps.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(new PipelineAction { Steps = steps, PipelineContext = InputContext })
+			);
+	}
 }

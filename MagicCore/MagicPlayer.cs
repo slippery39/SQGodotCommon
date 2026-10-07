@@ -9,11 +9,8 @@ public record MagicPlayer : GameObject
 	/// <summary>Empties at the end of every step and phase (CR 500.4).</summary>
 	public ManaPool ManaPool { get; init; } = ManaPool.Empty;
 
-	public int LandsPlayedThisTurn { get; init; }
-
-	/// <summary>"If you didn't cast a spell this turn" — any turn, theirs or yours; reset as each turn begins.</summary>
-	public int SpellsCastThisTurn { get; init; }
-	public int NoncreatureSpellsCastThisTurn { get; init; }
+	/// <summary>What this player did this turn — any turn, theirs or yours. Replaced whole as each turn begins.</summary>
+	public TurnTally ThisTurn { get; init; } = new();
 	public int MulligansTaken { get; init; }
 	public bool HasKeptHand { get; init; }
 
@@ -24,4 +21,23 @@ public record MagicPlayer : GameObject
 	public bool AttemptedDrawFromEmptyLibrary { get; init; }
 
 	public bool HasLost { get; init; }
+}
+
+/// <summary>
+/// "This turn" counts for one player. One record, so a new count cannot miss the reset: the turn
+/// start replaces the whole thing (<see cref="Turns.TurnStructure"/>).
+/// </summary>
+public record TurnTally
+{
+	public int LandsPlayed { get; init; }
+
+	/// <summary>Way of the Paradox: "You may play an additional land this turn."</summary>
+	public int ExtraLandDrops { get; init; }
+	public int SpellsCast { get; init; }
+	public int NoncreatureSpellsCast { get; init; }
+	public int CardsDrawn { get; init; }
+	public int LifeGained { get; init; }
+
+	/// <summary>"If you've scried or surveilled this turn" — FRA has no scry, so surveils.</summary>
+	public int Surveils { get; init; }
 }

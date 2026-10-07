@@ -76,7 +76,8 @@ public record PlayLandAction : GameAction
 			return ValidationResult.Invalid(
 				"Lands are played in your main phase with an empty stack"
 			);
-		if (s.GetPlayer(PlayerId).LandsPlayedThisTurn >= 1)
+		var tally = s.GetPlayer(PlayerId).ThisTurn;
+		if (tally.LandsPlayed >= 1 + tally.ExtraLandDrops)
 			return ValidationResult.Invalid("Already played a land this turn");
 		if (!s.IsIn(CardId, PlayerId, ZoneType.Hand) || !s.GetCard(CardId).Is(CardType.Land))
 			return ValidationResult.Invalid("Not a land in your hand");
@@ -86,8 +87,7 @@ public record PlayLandAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		s = s.EnterBattlefield(CardId, PlayerId);
-		var player = s.GetPlayer(PlayerId);
-		s = s.WithPlayer(player with { LandsPlayedThisTurn = player.LandsPlayedThisTurn + 1 });
+		s = s.Tally(PlayerId, t => t with { LandsPlayed = t.LandsPlayed + 1 });
 		return new ActionResult(Priority.Retain(s, PlayerId));
 	}
 }

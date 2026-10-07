@@ -108,16 +108,18 @@ public record CastSpellAction : GameAction
 			CardId,
 			s.GetCard(CardId).WithComponent(new OnStackComponent(X, Targets, Modes))
 		);
-		var caster = s.GetPlayer(PlayerId);
-		s = s.WithPlayer(
-				caster with
-				{
-					SpellsCastThisTurn = caster.SpellsCastThisTurn + 1,
-					NoncreatureSpellsCastThisTurn =
-						caster.NoncreatureSpellsCastThisTurn + (card.Is(CardType.Creature) ? 0 : 1),
-				}
+		var noncreature = card.Is(CardType.Creature) ? 0 : 1;
+		s = s.Tally(
+				PlayerId,
+				t =>
+					t with
+					{
+						SpellsCast = t.SpellsCast + 1,
+						NoncreatureSpellsCast = t.NoncreatureSpellsCast + noncreature,
+					}
 			)
 			.Raise(new SpellCastEvent(CardId, PlayerId));
+		s = Turns.Triggers.RaiseTargeted(s, Targets, PlayerId);
 		return new ActionResult(Priority.Retain(s, PlayerId));
 	}
 }
@@ -214,7 +216,11 @@ public static class StackResolution
 	{
 		var stackId = s.GetWellKnownId(MagicKeys.Stack);
 		(s, var added) = s.AddObject(ability, stackId);
-		return s.MoveObjectToFront(added.Id, stackId);
+		return Turns.Triggers.RaiseTargeted(
+			s.MoveObjectToFront(added.Id, stackId),
+			ability.Targets,
+			ability.ControllerId
+		);
 	}
 
 	/// <summary>
@@ -231,10 +237,8 @@ public static class StackResolution
 
 		if (top is Card permanent && !permanent.Is(CardType.Instant | CardType.Sorcery))
 		{
-			s = s.EnterBattlefield(permanent.Id, permanent.ControllerId);
 			var paidX = permanent.GetComponent<OnStackComponent>()?.X ?? 0;
-			if (paidX != 0)
-				s = s.UpdateObject(permanent.Id, s.GetCard(permanent.Id) with { CastX = paidX });
+			s = s.EnterBattlefield(permanent.Id, permanent.ControllerId, paidX);
 			return Priority.Retain(s, s.GetGame().ActivePlayerId);
 		}
 
