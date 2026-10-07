@@ -19,21 +19,21 @@ public class StackTests
 		"{G}",
 		"Sorcery",
 		null,
-		new GainLifeEffect(1)
+		new GainLife(Ref.You, 1)
 	);
 	static readonly CardDefinition Heal = TestGames.Inline(
 		"Heal",
 		"{G}",
 		"Instant",
 		null,
-		new GainLifeEffect(3)
+		new GainLife(Ref.You, 3)
 	);
 	static readonly CardDefinition Drain = TestGames.Inline(
 		"Drain",
 		"{G}",
 		"Instant",
 		null,
-		new EachOpponentLosesLifeEffect(2)
+		new LoseLife(Ref.EachOpponent, 2)
 	);
 
 	/// <summary>Both players get two Forests; the starting player is in their first main phase.</summary>

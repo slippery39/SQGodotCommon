@@ -1,5 +1,6 @@
 using ImmutableGameObjects;
 using MagicCore.Cards;
+using MagicCore.Turns;
 
 namespace MagicCore;
 
@@ -35,6 +36,9 @@ public static class MagicState
 
 	public static bool IsIn(this GameState s, int cardId, int playerId, ZoneType type) =>
 		s.GetParent(cardId) == s.ZoneId(playerId, type);
+
+	public static bool IsOnBattlefield(this GameState s, int cardId) =>
+		s.GetObject(cardId) is Card card && s.IsIn(cardId, card.ControllerId, ZoneType.Battlefield);
 
 	public static bool StackIsEmpty(this GameState s) =>
 		!s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).Any();
@@ -91,7 +95,8 @@ public static class MagicState
 
 	public static GameState EnterBattlefield(this GameState s, int cardId, int controllerId)
 	{
-		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield));
+		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield))
+			.Raise(new EnteredBattlefieldEvent(cardId));
 		return s.UpdateObject(
 			cardId,
 			s.GetCard(cardId) with

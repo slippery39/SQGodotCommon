@@ -14,14 +14,23 @@ public static class TurnStructure
 	public const int MaxHandSize = 7;
 
 	/// <summary>
-	/// CR 117.5: state-based actions are checked every time a player would receive priority.
-	/// Triggers go on the stack at this same point once they exist.
+	/// CR 117.5: every time a player would receive priority, state-based actions are checked and
+	/// triggered abilities go on the stack. Triggers are collected BEFORE the check, so a creature
+	/// the check kills still saw its own entry.
 	/// </summary>
 	public static GameState GivePriority(GameState s, int playerId)
 	{
-		s = StateBasedActions.Check(s);
-		var game = s.GetGame();
-		return s.WithGame(game with { PriorityPlayerId = s.IsOver() ? 0 : playerId });
+		var triggered = Triggers.Collect(s);
+		s = StateBasedActions.Check(s with { PendingGameEvents = [] });
+		if (s.IsOver())
+			return s.WithGame(s.GetGame() with { PriorityPlayerId = 0 });
+		if (triggered.Count > 0)
+			return Triggers.PutOnStack(
+				s.WithGame(s.GetGame() with { PriorityPlayerId = 0 }),
+				triggered,
+				playerId
+			);
+		return s.WithGame(s.GetGame() with { PriorityPlayerId = playerId });
 	}
 
 	public static GameState StartFirstTurn(GameState s)
@@ -91,7 +100,7 @@ public static class TurnStructure
 				return GivePriority(Combat.EndCombat(s), active);
 
 			case Step.Cleanup:
-				s = Combat.RemoveDamage(s);
+				s = Combat.CleanupPermanents(s);
 				var excess = s.CardsIn(active, ZoneType.Hand).Count() - MaxHandSize;
 				if (excess <= 0)
 					return EndStep(s); // no priority in cleanup unless something triggers (CR 514.3)
@@ -145,6 +154,29 @@ public static class StateBasedActions
 				.ToList();
 			foreach (var card in dying)
 				s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+
+			// CR 704.5j legend rule. ponytail: keeps the newest; Arena asks which. Make it a choice
+			// when keeping the older one (say, a tapped copy) matters to the AI.
+			var extraLegends = s.CardsIn(id, ZoneType.Battlefield)
+				.Where(c => c.Is(Supertype.Legendary))
+				.GroupBy(c => c.Name)
+				.SelectMany(g => g.SkipLast(1))
+				.ToList();
+			foreach (var card in extraLegends)
+				s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+
+			// CR 704.5d: a token anywhere but the battlefield ceases to exist.
+			foreach (
+				var zone in new[]
+				{
+					ZoneType.Graveyard,
+					ZoneType.Exile,
+					ZoneType.Hand,
+					ZoneType.Library,
+				}
+			)
+			foreach (var token in s.CardsIn(id, zone).Where(c => c.IsToken).ToList())
+				s = s.RemoveObject(token.Id);
 		}
 		return s;
 	}

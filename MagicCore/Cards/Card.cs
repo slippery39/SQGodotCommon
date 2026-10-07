@@ -44,12 +44,24 @@ public record Card : GameObject
 
 	/// <summary>Scryfall's printed keywords ("Flash", "Flying"). Rules read these; nothing retypes them.</summary>
 	public ImmutableArray<string> Keywords { get; init; } = ImmutableArray<string>.Empty;
-	public int Power { get; init; }
-	public int Toughness { get; init; }
+	public ImmutableArray<ManaColor> Colors { get; init; } = ImmutableArray<ManaColor>.Empty;
+	public int BasePower { get; init; }
+	public int BaseToughness { get; init; }
+	public bool IsToken { get; init; }
+
+	/// <summary>
+	/// The ONE place power and toughness are computed: printed + counters + until-end-of-turn
+	/// effects. Every rule reads these, never BasePower — a second sum drifts.
+	/// </summary>
+	public int Power =>
+		BasePower + PlusOneCounters + Components.OfType<UntilEndOfTurn>().Sum(u => u.Power);
+	public int Toughness =>
+		BaseToughness + PlusOneCounters + Components.OfType<UntilEndOfTurn>().Sum(u => u.Toughness);
 
 	// ===== Permanent-only state — wiped by Fresh() whenever the card changes zones =====
 
 	public bool IsTapped { get; init; }
+	public int PlusOneCounters { get; init; }
 	public int Damage { get; init; }
 	public bool DamagedByDeathtouch { get; init; }
 
@@ -73,21 +85,32 @@ public record Card : GameObject
 		this with
 		{
 			IsTapped = false,
+			PlusOneCounters = 0,
 			Damage = 0,
 			DamagedByDeathtouch = false,
 			ControlledSinceTurn = 0,
 			AttackingId = 0,
 			BlockingId = 0,
 			IsBlocked = false,
-			Components = Components.RemoveAll(c => c is Actions.OnStackComponent),
+			Components = Components.RemoveAll(c => c is Actions.OnStackComponent or UntilEndOfTurn),
 		};
 
-	public bool Has(string keyword) => Keywords.Contains(keyword);
+	/// <summary>Printed keywords plus any granted until end of turn.</summary>
+	public bool Has(string keyword) =>
+		Keywords.Contains(keyword)
+		|| Components.Any(c => c is UntilEndOfTurn u && u.Keyword == keyword);
 
 	public bool Is(CardType type) => (Types & type) != 0;
 
 	public bool Is(Supertype supertype) => (Supertypes & supertype) != 0;
 }
+
+/// <summary>
+/// "Gets +P/+T and gains Keyword until end of turn" on a permanent. Removed in cleanup (CR 514.2)
+/// and by any zone change.
+/// </summary>
+public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword = null)
+	: GameComponent;
 
 /// <summary>
 /// What goes in a deck: the printed data plus the hand-written ability components. A card with no
@@ -116,8 +139,9 @@ public static class CardFactory
 			Supertypes = supertypes,
 			Subtypes = subtypes,
 			ManaCost = ManaCost.Parse(front?.ManaCost ?? data.ManaCost),
-			Power = ParsePowerToughness(front?.Power ?? data.Power),
-			Toughness = ParsePowerToughness(front?.Toughness ?? data.Toughness),
+			BasePower = ParsePowerToughness(front?.Power ?? data.Power),
+			BaseToughness = ParsePowerToughness(front?.Toughness ?? data.Toughness),
+			Colors = [.. (data.Colors ?? []).Select(ManaCost.ColorOf)],
 			// Scryfall merges every face's keywords; keep the ones the front face's text names.
 			Keywords = front is null
 				? [.. data.Keywords]

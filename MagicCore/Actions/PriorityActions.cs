@@ -98,8 +98,13 @@ public record TapForManaAction : GameAction
 	{
 		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
 			return noPriority;
-		if (!s.IsIn(CardId, PlayerId, ZoneType.Battlefield) || s.GetCard(CardId).IsTapped)
-			return ValidationResult.Invalid("Not an untapped permanent you control");
+		if (
+			!s.IsIn(CardId, PlayerId, ZoneType.Battlefield)
+			|| !ManaAbilities.CanTap(s, s.GetCard(CardId))
+		)
+			return ValidationResult.Invalid(
+				"Not a permanent you control that can tap for mana now"
+			);
 		if (!ManaAbilities.ColorsOf(s.GetCard(CardId)).Contains(Color))
 			return ValidationResult.Invalid($"Cannot produce {Color}");
 		return ValidationResult.Valid;
@@ -111,33 +116,5 @@ public record TapForManaAction : GameAction
 		var player = s.GetPlayer(PlayerId);
 		s = s.WithPlayer(player with { ManaPool = player.ManaPool.Add(Color) });
 		return new ActionResult(Priority.Retain(s, PlayerId));
-	}
-}
-
-public static class ManaAbilities
-{
-	public static IEnumerable<ManaColor> ColorsOf(Card card)
-	{
-		foreach (var subtype in card.Subtypes)
-		{
-			switch (subtype)
-			{
-				case "Plains":
-					yield return ManaColor.White;
-					break;
-				case "Island":
-					yield return ManaColor.Blue;
-					break;
-				case "Swamp":
-					yield return ManaColor.Black;
-					break;
-				case "Mountain":
-					yield return ManaColor.Red;
-					break;
-				case "Forest":
-					yield return ManaColor.Green;
-					break;
-			}
-		}
 	}
 }

@@ -21,23 +21,34 @@ public static class ManaPayment
 	/// <summary>One unit of mana spent: from a land tapped for it, or floating (LandId 0).</summary>
 	public record Payment(int LandId, ManaColor Color);
 
-	record Source(int LandId, ImmutableArray<ManaColor> Colors);
+	record Source(int LandId, ImmutableArray<ManaColor> Colors, bool IsCreature = false);
 
 	/// <summary>Allowed colours for one mana; TwoBridColor set means "this, or two generic instead".</summary>
 	record Need(ImmutableArray<ManaColor> Allowed, ManaColor? TwoBridColor = null);
 
 	static readonly ImmutableArray<ManaColor> Any = [.. Enum.GetValues<ManaColor>()];
 
-	public static IReadOnlyList<Payment>? Find(GameState s, int playerId, ManaCost cost, int x)
+	public static IReadOnlyList<Payment>? Find(
+		GameState s,
+		int playerId,
+		ManaCost cost,
+		int x,
+		int excludeId = 0
+	)
 	{
 		var player = s.GetPlayer(playerId);
 		var sources = Any.SelectMany(c => Enumerable.Repeat(new Source(0, [c]), player.ManaPool[c]))
 			.Concat(
-				s.CardsIn(playerId, ZoneType.Battlefield)
-					.Where(c => !c.IsTapped)
-					.Select(c => new Source(c.Id, [.. ManaAbilities.ColorsOf(c)]))
-					.Where(src => src.Colors.Length > 0)
-					.OrderBy(src => src.Colors.Length)
+				ManaAbilities
+					.Sources(s, playerId, excludeId)
+					.Select(c => new Source(
+						c.Id,
+						[.. ManaAbilities.ColorsOf(c)],
+						c.Is(Cards.CardType.Creature)
+					))
+					// Lands before creatures: a creature tapped for mana can no longer attack or block.
+					.OrderBy(src => src.IsCreature)
+					.ThenBy(src => src.Colors.Length)
 			)
 			.ToList();
 
@@ -71,7 +82,7 @@ public static class ManaPayment
 			return true;
 		var need = needs[0];
 		var rest = needs.RemoveAt(0);
-		var tried = new HashSet<(bool, string, ManaColor)>();
+		var tried = new HashSet<(bool, bool, string, ManaColor)>();
 
 		for (var i = 0; i < sources.Count; i++)
 		{
@@ -80,7 +91,14 @@ public static class ManaPayment
 			foreach (var color in sources[i].Colors.Where(need.Allowed.Contains))
 			{
 				if (
-					!tried.Add((sources[i].LandId == 0, string.Join(",", sources[i].Colors), color))
+					!tried.Add(
+						(
+							sources[i].LandId == 0,
+							sources[i].IsCreature,
+							string.Join(",", sources[i].Colors),
+							color
+						)
+					)
 				)
 					continue;
 				used[i] = true;

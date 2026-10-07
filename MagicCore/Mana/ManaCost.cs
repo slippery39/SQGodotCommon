@@ -38,6 +38,43 @@ public record ManaCost(ImmutableArray<ManaSymbol> Symbols)
 			}
 		);
 
+	/// <summary>
+	/// Adds (positive) or removes (negative) generic mana. A reduction only ever touches generic —
+	/// coloured pips stay (CR 601.2f).
+	/// </summary>
+	public ManaCost WithGeneric(int delta)
+	{
+		if (delta > 0)
+		{
+			var generic = Symbols.ToList().FindIndex(sym => sym.Kind == SymbolKind.Generic);
+			return generic >= 0
+				? new(
+					Symbols.SetItem(
+						generic,
+						Symbols[generic] with
+						{
+							Amount = Symbols[generic].Amount + delta,
+						}
+					)
+				)
+				: new(Symbols.Insert(0, new ManaSymbol(SymbolKind.Generic, Amount: delta)));
+		}
+		var symbols = Symbols.ToBuilder();
+		for (var i = 0; i < symbols.Count && delta < 0; i++)
+		{
+			if (symbols[i].Kind != SymbolKind.Generic)
+				continue;
+			var cut = Math.Min(symbols[i].Amount, -delta);
+			symbols[i] = symbols[i] with { Amount = symbols[i].Amount - cut };
+			delta += cut;
+		}
+		return new(
+			symbols
+				.Where(sym => sym is not { Kind: SymbolKind.Generic, Amount: 0 })
+				.ToImmutableArray()
+		);
+	}
+
 	public static ManaCost Parse(string? text)
 	{
 		if (string.IsNullOrEmpty(text))

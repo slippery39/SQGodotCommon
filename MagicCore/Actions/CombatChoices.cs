@@ -104,13 +104,14 @@ public record FinishAttackersAction : GameAction
 		{
 			var card = s.GetCard(id);
 			s = s.UpdateObject(
-				id,
-				card with
-				{
-					AttackingId = target,
-					IsTapped = card.IsTapped || !card.Has("Vigilance"),
-				}
-			);
+					id,
+					card with
+					{
+						AttackingId = target,
+						IsTapped = card.IsTapped || !card.Has("Vigilance"),
+					}
+				)
+				.Raise(new AttackedEvent(id));
 		}
 		return new ActionResult(TurnStructure.GivePriority(s, s.GetGame().ActivePlayerId));
 	}

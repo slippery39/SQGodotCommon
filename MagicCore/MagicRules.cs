@@ -2,6 +2,8 @@ using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Effects;
+using MagicCore.Targeting;
 
 namespace MagicCore;
 
@@ -126,6 +128,8 @@ public static class MagicRules
 								? [new PlayLandAction { PlayerId = player, CardId = c.Id }]
 								: CastCandidates(s, player, c)
 						),
+					.. s.CardsIn(player, ZoneType.Battlefield)
+						.SelectMany(c => ActivateCandidates(s, player, c)),
 				];
 		return candidates.Where(a => a.ValidateAdd(s).IsValid).ToImmutableList();
 	}
@@ -137,20 +141,38 @@ public static class MagicRules
 	static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card)
 	{
 		var maxX = card.ManaCost.HasX ? AvailableMana(s, player) : 0;
+		var targetings = TargetSpec.Combinations(s, StackResolution.SpecsOf(card), player, card.Id);
 		return Enumerable
 			.Range(0, maxX + 1)
-			.Select(x => new CastSpellAction
-			{
-				PlayerId = player,
-				CardId = card.Id,
-				X = x,
-			});
+			.SelectMany(x =>
+				targetings.Select(targets => new CastSpellAction
+				{
+					PlayerId = player,
+					CardId = card.Id,
+					X = x,
+					Targets = targets,
+				})
+			);
 	}
+
+	static IEnumerable<GameAction> ActivateCandidates(GameState s, int player, Card card) =>
+		card.GetComponents<ActivatedAbilityComponent>()
+			.SelectMany(
+				(ability, index) =>
+					TargetSpec
+						.Combinations(s, ability.Targets, player, card.Id)
+						.Select(targets => new ActivateAbilityAction
+						{
+							PlayerId = player,
+							CardId = card.Id,
+							AbilityIndex = index,
+							Targets = targets,
+						})
+			);
 
 	static int AvailableMana(GameState s, int player) =>
 		s.GetPlayer(player).ManaPool.Total
-		+ s.CardsIn(player, ZoneType.Battlefield)
-			.Count(c => !c.IsTapped && ManaAbilities.ColorsOf(c).Any());
+		+ s.CardsIn(player, ZoneType.Battlefield).Count(c => ManaAbilities.CanTap(s, c));
 
 	/// <summary>
 	/// Passes for whoever must act while passing is their ONLY legal action — Arena's auto-pass,
@@ -162,6 +184,26 @@ public static class MagicRules
 			s = s.Act(pass);
 		return s;
 	}
+
+	/// <summary>
+	/// One move per distinct choice: copies of a card in hand are interchangeable, so three Plains
+	/// are one "play Plains". A front-end and AI convenience — LegalActions itself stays complete.
+	/// </summary>
+	public static ImmutableList<GameAction> DistinctMoves(
+		this GameState s,
+		IEnumerable<GameAction> actions
+	) =>
+		actions
+			.DistinctBy(a =>
+				a switch
+				{
+					PlayLandAction p => $"land|{s.GetCard(p.CardId).Name}",
+					CastSpellAction c =>
+						$"cast|{s.GetCard(c.CardId).Name}|{c.X}|{string.Join(",", c.Targets)}",
+					_ => (object)a,
+				}
+			)
+			.ToImmutableList();
 
 	public static GameState Act(this GameState s, GameAction action) =>
 		s.AddAction(action).ProcessAllActions().State;

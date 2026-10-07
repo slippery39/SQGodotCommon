@@ -137,29 +137,8 @@ public static class Combat
 			if (s.GetCard(blocker.BlockingId).AttackingId != 0)
 				hits.Add((blocker, blocker.BlockingId, blocker.Power));
 
-		foreach (var (source, targetId, amount) in hits.Where(h => h.Amount > 0))
-		{
-			if (s.GetObject(targetId) is MagicPlayer player)
-				s = s.WithPlayer(player with { Life = player.Life - amount });
-			else
-			{
-				var target = s.GetCard(targetId);
-				s = s.UpdateObject(
-					targetId,
-					target with
-					{
-						Damage = target.Damage + amount,
-						DamagedByDeathtouch =
-							target.DamagedByDeathtouch || source.Has("Deathtouch"),
-					}
-				);
-			}
-			if (source.Has("Lifelink"))
-			{
-				var controller = s.GetPlayer(source.ControllerId);
-				s = s.WithPlayer(controller with { Life = controller.Life + amount });
-			}
-		}
+		foreach (var (source, targetId, amount) in hits)
+			s = Rules.Damage.Deal(s, source, targetId, amount);
 		return s;
 	}
 
@@ -171,12 +150,20 @@ public static class Combat
 			c => c with { AttackingId = 0, BlockingId = 0, IsBlocked = false }
 		);
 
-	/// <summary>CR 514.2: damage wears off in cleanup.</summary>
-	public static GameState RemoveDamage(GameState s) =>
+	/// <summary>CR 514.2: damage wears off and "until end of turn" effects end, together, in cleanup.</summary>
+	public static GameState CleanupPermanents(GameState s) =>
 		ForEachPermanent(
 			s,
-			c => c.Damage > 0 || c.DamagedByDeathtouch,
-			c => c with { Damage = 0, DamagedByDeathtouch = false }
+			c => c.Damage > 0 || c.DamagedByDeathtouch || c.HasComponent<UntilEndOfTurn>(),
+			c =>
+				(Card)
+					(
+						c with
+						{
+							Damage = 0,
+							DamagedByDeathtouch = false,
+						}
+					).WithoutComponents<UntilEndOfTurn>()
 		);
 
 	static GameState ForEachPermanent(GameState s, Func<Card, bool> where, Func<Card, Card> update)
