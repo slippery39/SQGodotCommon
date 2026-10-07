@@ -15,7 +15,15 @@ public record SpellCastEvent(int CardId, int PlayerId) : GameEvent;
 /// <summary>A creature or planeswalker went from the battlefield to a graveyard — as it last existed.</summary>
 public record DiedEvent(Card LastKnown) : GameEvent;
 
-public record PlayerDealtDamageEvent(int PlayerId, bool Combat) : GameEvent;
+public record PlayerDealtDamageEvent(int PlayerId, bool Combat, int SourceId) : GameEvent;
+
+/// <summary>A step began — "at the beginning of …". Raised for the steps scripted cards trigger on.</summary>
+public record StepBeganEvent(Step Step) : GameEvent;
+
+public record BlocksEvent(int CardId) : GameEvent;
+
+/// <summary>"Whenever you activate a loyalty ability" — Cost is +N/−N, so "removed two or more" reads it.</summary>
+public record LoyaltyActivatedEvent(int PlayerId, int Cost) : GameEvent;
 
 /// <summary>Raised by Rules.Life.Gain — one per life-gain event, however much (CR 119.9).</summary>
 public record LifeGainedEvent(int PlayerId) : GameEvent;
@@ -60,12 +68,7 @@ public static class Triggers
 				.GetComponents<TriggeredAbilityComponent>()
 				.SelectMany(ability =>
 					s.PendingGameEvents.Where(e => Matches(s, source, ability.On, e))
-						.Select(e => new Pending(
-							source,
-							ability,
-							EventCard(e),
-							(e as DiedEvent)?.LastKnown
-						))
+						.Select(e => new Pending(source, ability, EventCard(e), Snapshot(s, e)))
 				)
 		);
 		var fromTheDead = s
@@ -77,14 +80,42 @@ public static class Triggers
 			);
 		return fromTheBattlefield
 			.Concat(fromTheDead)
+			.Where(p => InterveningIfHolds(s, p))
 			.OrderBy(p => p.Source.ControllerId == active ? 0 : 1) // APNAP; stable within a player
 			.ToList();
 	}
+
+	/// <summary>
+	/// CR 603.4: "When/At …, if [condition], …" — checked as it triggers here, and again as it
+	/// resolves (<see cref="QueueTargets"/> wraps the effects in it).
+	/// </summary>
+	static bool InterveningIfHolds(GameState s, Pending t)
+	{
+		if (t.Ability.If is not { } condition)
+			return true;
+		var context = ImmutableDictionary<string, object>
+			.Empty.Add(ContextKeys.Controller, t.Source.ControllerId)
+			.Add(ContextKeys.Source, t.Source.Id)
+			.Add(ContextKeys.EventCard, t.EventCardId);
+		if (t.EventSnapshot is { } snapshot)
+			context = context.Add(ContextKeys.EventSnapshot, snapshot);
+		return condition.Holds(s, context);
+	}
+
+	/// <summary>The event's card as it is now — so "that creature's controller" survives it leaving (CR 608.2h).</summary>
+	static Card? Snapshot(GameState s, GameEvent e) =>
+		e switch
+		{
+			DiedEvent died => died.LastKnown,
+			BlocksEvent blocks when s.IsOnBattlefield(blocks.CardId) => s.GetCard(blocks.CardId),
+			_ => null,
+		};
 
 	static bool Matches(GameState s, Card source, TriggerEvent on, GameEvent e)
 	{
 		bool Yours(int cardId) =>
 			s.IsOnBattlefield(cardId) && s.GetCard(cardId).ControllerId == source.ControllerId;
+		var yourTurn = s.GetGame().ActivePlayerId == source.ControllerId;
 
 		return (on, e) switch
 		{
@@ -112,6 +143,26 @@ public static class Triggers
 				&& died.LastKnown.Is(CardType.Creature),
 			(TriggerEvent.OpponentDealtNoncombatDamage, PlayerDealtDamageEvent damaged) =>
 				damaged.PlayerId != source.ControllerId && !damaged.Combat,
+			(TriggerEvent.SelfDealsCombatDamageToPlayer, PlayerDealtDamageEvent damaged) =>
+				damaged.Combat && damaged.SourceId == source.Id,
+			(TriggerEvent.YourUpkeep, StepBeganEvent began) => began.Step == Step.Upkeep
+				&& yourTurn,
+			(TriggerEvent.EachUpkeep, StepBeganEvent began) => began.Step == Step.Upkeep,
+			(TriggerEvent.OpponentsDrawStep, StepBeganEvent began) => began.Step == Step.Draw
+				&& !yourTurn,
+			(TriggerEvent.YourEndStep, StepBeganEvent began) => began.Step == Step.End && yourTurn,
+			(TriggerEvent.EachEndStep, StepBeganEvent began) => began.Step == Step.End,
+			(TriggerEvent.OpponentsCreatureWithPowerOrToughness1OrLessBlocks, BlocksEvent blocks) =>
+				s.IsOnBattlefield(blocks.CardId)
+					&& s.GetCard(blocks.CardId) is var blocker
+					&& blocker.ControllerId != source.ControllerId
+					&& (s.Power(blocker) <= 1 || s.Toughness(blocker) <= 1),
+			(TriggerEvent.YouActivateLoyaltyAbility, LoyaltyActivatedEvent activated) =>
+				activated.PlayerId == source.ControllerId,
+			(
+				TriggerEvent.YouActivateLoyaltyAbilityRemovingTwoOrMore,
+				LoyaltyActivatedEvent activated
+			) => activated.PlayerId == source.ControllerId && activated.Cost <= -2,
 			_ => false,
 		};
 	}
@@ -124,6 +175,7 @@ public static class Triggers
 			AttackedEvent attacked => attacked.CardId,
 			SpellCastEvent cast => cast.CardId,
 			DiedEvent died => died.LastKnown.Id,
+			BlocksEvent blocks => blocks.CardId,
 			_ => 0,
 		};
 
@@ -186,6 +238,8 @@ public static class Triggers
 		var controller = t.Source.ControllerId;
 		if (specs.Any(spec => !spec.Optional && !spec.Candidates(s, controller, t.Source.Id).Any()))
 			return s;
+		if (t.Ability.If is { } condition)
+			steps = [new If(condition, steps)]; // CR 603.4: checked again on resolution
 		return s.SpawnAction(
 			new PipelineAction
 			{

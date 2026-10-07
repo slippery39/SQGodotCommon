@@ -10,6 +10,10 @@ public record MagicPlayer : GameObject
 	public ManaPool ManaPool { get; init; } = ManaPool.Empty;
 
 	public int LandsPlayedThisTurn { get; init; }
+
+	/// <summary>"If you didn't cast a spell this turn" — any turn, theirs or yours; reset as each turn begins.</summary>
+	public int SpellsCastThisTurn { get; init; }
+	public int NoncreatureSpellsCastThisTurn { get; init; }
 	public int MulligansTaken { get; init; }
 	public bool HasKeptHand { get; init; }
 

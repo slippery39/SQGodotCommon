@@ -108,7 +108,16 @@ public record CastSpellAction : GameAction
 			CardId,
 			s.GetCard(CardId).WithComponent(new OnStackComponent(X, Targets, Modes))
 		);
-		s = s.Raise(new SpellCastEvent(CardId, PlayerId));
+		var caster = s.GetPlayer(PlayerId);
+		s = s.WithPlayer(
+				caster with
+				{
+					SpellsCastThisTurn = caster.SpellsCastThisTurn + 1,
+					NoncreatureSpellsCastThisTurn =
+						caster.NoncreatureSpellsCastThisTurn + (card.Is(CardType.Creature) ? 0 : 1),
+				}
+			)
+			.Raise(new SpellCastEvent(CardId, PlayerId));
 		return new ActionResult(Priority.Retain(s, PlayerId));
 	}
 }

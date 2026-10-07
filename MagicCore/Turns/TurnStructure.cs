@@ -80,6 +80,8 @@ public static class TurnStructure
 		var game = s.GetGame() with { Step = step, PriorityPlayerId = 0, PassesInSuccession = 0 };
 		s = s.WithGame(game);
 		var active = game.ActivePlayerId;
+		if (step is Step.Upkeep or Step.Draw or Step.End)
+			s = s.Raise(new StepBeganEvent(step)); // "at the beginning of …" (CR 503.1a, 504.2, 513.1a)
 
 		switch (step)
 		{
@@ -87,6 +89,14 @@ public static class TurnStructure
 				foreach (var card in s.CardsIn(active, ZoneType.Battlefield).Where(c => c.IsTapped))
 					s = s.UpdateObject(card.Id, card with { IsTapped = false });
 				s = s.WithPlayer(s.GetPlayer(active) with { LandsPlayedThisTurn = 0 });
+				foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
+					s = s.WithPlayer(
+						s.GetPlayer(id) with
+						{
+							SpellsCastThisTurn = 0,
+							NoncreatureSpellsCastThisTurn = 0,
+						}
+					);
 				return EndStep(s); // nobody gets priority during untap (CR 502.4)
 
 			case Step.Draw:

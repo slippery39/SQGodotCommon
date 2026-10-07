@@ -141,7 +141,8 @@ public record FinishBlockersAction : GameAction
 		foreach (var (blocker, attacker) in blocks)
 		{
 			s = s.UpdateObject(blocker, s.GetCard(blocker) with { BlockingId = attacker });
-			s = s.UpdateObject(attacker, s.GetCard(attacker) with { IsBlocked = true });
+			s = s.UpdateObject(attacker, s.GetCard(attacker) with { IsBlocked = true })
+				.Raise(new BlocksEvent(blocker));
 		}
 		return new ActionResult(TurnStructure.GivePriority(s, s.GetGame().ActivePlayerId));
 	}

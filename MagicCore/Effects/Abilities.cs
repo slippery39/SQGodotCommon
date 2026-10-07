@@ -26,6 +26,15 @@ public enum TriggerEvent
 	AnotherCreatureOrPlaneswalkerYouControlDies,
 	CreatureYouControlDies,
 	OpponentDealtNoncombatDamage,
+	SelfDealsCombatDamageToPlayer,
+	YourUpkeep,
+	EachUpkeep, // "each player's upkeep"
+	OpponentsDrawStep,
+	YourEndStep,
+	EachEndStep, // "the end step" — every turn's
+	OpponentsCreatureWithPowerOrToughness1OrLessBlocks, // Tetsuko, Pursuer
+	YouActivateLoyaltyAbility,
+	YouActivateLoyaltyAbilityRemovingTwoOrMore,
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>
@@ -37,6 +46,9 @@ public record TriggeredAbilityComponent(TriggerEvent On, ImmutableList<GameActio
 	/// <summary>"When this enters, choose one —": chosen as it goes on the stack (CR 700.2b).</summary>
 	public ImmutableList<Mode> Modes { get; init; } = [];
 	public int Choose { get; init; } = 1;
+
+	/// <summary>"At …, if [condition], …" — intervening: checked as it triggers AND as it resolves (CR 603.4).</summary>
+	public Condition? If { get; init; }
 }
 
 /// <summary>"[Cost]: [effects]." Uses the stack. Mana abilities are <see cref="ManaAbilityComponent"/>, which does not.</summary>
@@ -133,3 +145,6 @@ public record CostsLessByGreatestPowerYouControl : GameComponent;
 
 /// <summary>Wrath of the Bloodmane: "This spell costs {N} less to cast if you control a legendary creature."</summary>
 public record CostsLessIfYouControlLegendaryCreature(int Amount) : GameComponent;
+
+/// <summary>Traxos: "This spell costs {N} less to cast if you've cast a noncreature spell this turn."</summary>
+public record CostsLessIfYouCastNoncreatureSpellThisTurn(int Amount) : GameComponent;

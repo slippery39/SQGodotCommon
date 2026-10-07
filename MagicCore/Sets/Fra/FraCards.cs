@@ -58,6 +58,63 @@ public static class FraCards
 			null
 		);
 
+	/// <summary>"A 1/1 blue Illusion creature token."</summary>
+	public static readonly CardData Illusion =
+		new(
+			"Illusion",
+			"token",
+			null,
+			0,
+			"Creature — Illusion",
+			null,
+			"1",
+			"1",
+			null,
+			["U"],
+			[],
+			"token",
+			"T",
+			null
+		);
+
+	/// <summary>Verdant Kraken: "a 3/3 green Forest Tentacle land creature token" — Forest gives it {T}: Add {G}.</summary>
+	public static readonly CardData ForestTentacle =
+		new(
+			"Forest Tentacle",
+			"token",
+			null,
+			0,
+			"Land Creature — Forest Tentacle",
+			null,
+			"3",
+			"3",
+			null,
+			["G"],
+			[],
+			"token",
+			"T",
+			null
+		);
+
+	/// <summary>"Mowu, a legendary 3/3 green Dog creature token."</summary>
+	public static readonly CardData Mowu =
+		new(
+			"Mowu",
+			"token",
+			null,
+			0,
+			"Legendary Creature — Dog",
+			null,
+			"3",
+			"3",
+			null,
+			["G"],
+			[],
+			"token",
+			"T",
+			null
+		);
+
 	/// <summary>"[cost]: effects" — a loyalty ability, own or granted.</summary>
 	static LoyaltyAbilityComponent Loyalty(
 		int cost,
@@ -112,6 +169,14 @@ public static class FraCards
 		params GameAction[] effects
 	) => new(on, [.. effects]) { Targets = [.. targets] };
 
+	/// <summary>
+	/// "Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of
+	/// turn.)" A scripted trigger, not an engine keyword: Ruric Thar has it twice, and each instance
+	/// triggers separately (CR 702.108b).
+	/// </summary>
+	static TriggeredAbilityComponent Prowess =>
+		When(TriggerEvent.YouCastNoncreatureSpell, [], new ModifyUntilEndOfTurn(Ref.Source, 1, 1));
+
 	/// <summary>One bullet: its target words and effects. Its text is filled in from the card.</summary>
 	static Mode M(TargetSpec[] targets, params GameAction[] effects) =>
 		new("", [.. targets], [.. effects]);
@@ -152,7 +217,7 @@ public static class FraCards
 					[Creature],
 					new If(
 						new TargetIsNotAttacking(0),
-						new DrawCards(Ref.ControllerOfTarget(0), 1)
+						[new DrawCards(Ref.ControllerOfTarget(0), 1)]
 					),
 					new Destroy(Ref.Target())
 				),
@@ -238,7 +303,7 @@ public static class FraCards
 					TriggerEvent.LandYouControlEnters,
 					[],
 					new DealDamage(Ref.EachOpponent, 1),
-					new If(new EventCardHasSubtype("Mountain"), new AddMana(ManaColor.Red))
+					new If(new EventCardHasSubtype("Mountain"), [new AddMana(ManaColor.Red)])
 				),
 			],
 
@@ -656,7 +721,7 @@ public static class FraCards
 						// "If that permanent was a legendary enchantment" — read before it is destroyed.
 						new If(
 							new TargetIs(0, CardType.Enchantment, Supertype.Legendary),
-							new DrawCards(Ref.You, 1)
+							[new DrawCards(Ref.You, 1)]
 						),
 						new Destroy(Ref.Target()),
 					]
@@ -881,6 +946,106 @@ public static class FraCards
 						},
 					],
 				},
+			],
+
+			// ===== Step triggers, per-turn tracking, prowess =====
+			["Verdant Kraken"] =
+			[
+				When(TriggerEvent.EachUpkeep, [], new CreateTokens(ForestTentacle, 1)),
+			],
+			["Frostbite Pyromental"] =
+			[
+				When(TriggerEvent.SelfDealsCombatDamageToPlayer, [], new DrawCards(Ref.You, 2)),
+				When(TriggerEvent.EachEndStep, [], new Sacrifice(Ref.Source)),
+			],
+			["Eye of Jace"] =
+			[
+				When(
+					TriggerEvent.YourUpkeep,
+					[],
+					new Surveil(1),
+					new If(
+						new AtLeast(Count.NumberOf(Ref.CardsInYourGraveyard), 7),
+						[
+							new Sacrifice(Ref.Source),
+							new DealDamage(Ref.EachOpponent, 2),
+							new GainLife(Ref.You, 2),
+						]
+					)
+				),
+			],
+			["Traxos, Academy Guardian"] =
+			[
+				new CostsLessIfYouCastNoncreatureSpellThisTurn(2),
+				Prowess,
+			],
+			["Edgar, Moonlit Sovereign"] =
+			[
+				When(TriggerEvent.YourEndStep, [], new AddCounters(Ref.Source, 2)) with
+				{
+					If = new Not(new YouCastASpellThisTurn()),
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{4}{G}"),
+					[new AddCounters(Ref.YourCreaturesWithCounters, 1)]
+				),
+			],
+			["Tetsuko Umezawa, Pursuer"] =
+			[
+				Prowess,
+				When(
+					TriggerEvent.OpponentsCreatureWithPowerOrToughness1OrLessBlocks,
+					[],
+					new DealDamage(Ref.ControllerOfEventCard, 1)
+				),
+			],
+			["Jiang Yanggu, Never Alone"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(Mowu, 1)),
+				When(TriggerEvent.YourEndStep, [], new Untap(Ref.TokensYouControl)),
+			],
+			["Way of the Mind Sculptor"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(5)),
+				When(
+					TriggerEvent.YouActivateLoyaltyAbilityRemovingTwoOrMore,
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+			],
+			["The Theorist, Jace Beleren"] =
+			[
+				When(TriggerEvent.OpponentsDrawStep, [], new DrawCards(Ref.You, 1)),
+				Loyalty(1, [], new CreateTokens(Illusion, 1)),
+				Loyalty(
+					-2,
+					[
+						new TargetSpec(TargetKind.Permanent, Whose.Opponent)
+						{
+							AnyOfTypes = CardType.Artifact | CardType.Creature,
+							Optional = true,
+						},
+					],
+					new ReturnToHand(Ref.Target())
+				),
+				Loyalty(
+					-6,
+					[],
+					new DrawCards(Ref.You, 3),
+					new AddCounters(Ref.CreaturesYouControl, Count.NumberOf(Ref.CardsInYourHand))
+				),
+			],
+			["Ajani Unrelenting"] =
+			[
+				When(TriggerEvent.YouActivateLoyaltyAbility, [], new CreateTokens(Cadet, 1)),
+				Loyalty(1, [], new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 0, "Haste")),
+				Loyalty(
+					-2,
+					[],
+					new DiscardHand(Ref.You),
+					new DrawCards(Ref.You, Count.CreaturesYouControl)
+				),
+				Loyalty(-3, [], new DealDamage(Ref.CreaturesExceptYourTokens, 4)),
 			],
 		};
 

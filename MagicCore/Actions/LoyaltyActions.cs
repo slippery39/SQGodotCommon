@@ -3,6 +3,7 @@ using ImmutableGameObjects;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Targeting;
+using MagicCore.Turns;
 
 namespace MagicCore.Actions;
 
@@ -86,7 +87,7 @@ public record ActivateLoyaltyAction : GameAction
 		var ability = Loyalty.AbilitiesOf(s, walker)[AbilityIndex];
 		s = Loyalty.Change(s, CardId, ability.Cost);
 		walker = s.GetCard(CardId) with { LoyaltyActivatedOnTurn = s.GetGame().TurnNumber };
-		s = s.UpdateObject(CardId, walker);
+		s = s.UpdateObject(CardId, walker).Raise(new LoyaltyActivatedEvent(PlayerId, ability.Cost));
 		s = StackResolution.Push(
 			s,
 			new StackAbility

@@ -17,7 +17,7 @@ MagicCore/
 ├── Describe.cs          plain-text actions, choices and cards for every front end and log
 ├── Turns/TurnStructure.cs  EnterStep/EndStep/GivePriority + StateBasedActions (incl. legend rule, tokens)
 ├── Turns/Combat.cs      who may attack/block, declarations, simultaneous damage, end of combat
-├── Turns/Triggers.cs    trigger events, Collect (APNAP), PutOnStack with target choices
+├── Turns/Triggers.cs    trigger events, Collect (APNAP, intervening "if"), PutOnStack with target choices
 ├── Actions/             PassPriority, PlayLand, TapForMana; CastSpell, ActivateAbility, StackAbility,
 │                        StackResolution (fizzle); mulligan; hand, library, combat and target choices
 ├── Actions/LoyaltyActions.cs  Loyalty.AbilitiesOf (own + granted) and ActivateLoyaltyAction
@@ -90,6 +90,17 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   targets (`Target(0)` is that mode's first). A spell's modes are chosen when cast (`CastSpellAction.
   Modes`), a trigger's as it goes on the stack. A mode with an unchoosable required target can't be
   chosen. The scripted mode count must match the printed bullets — `FraCards` throws otherwise.
+- **"At the beginning of [step]"** triggers on a `StepBeganEvent`, raised by `EnterStep` for upkeep,
+  draw, beginning of combat and end. **"This turn" is a counter on `MagicPlayer`** (`SpellsCastThisTurn`
+  …), reset for BOTH players as each turn begins — "this turn" is every turn, not only yours.
+- **An intervening "if" (CR 603.4) is `TriggeredAbilityComponent.If`**, never a bare `If` effect:
+  checked as it triggers (`Collect`) AND again on resolution (`QueueTargets` wraps the effects).
+  Edgar with a spell cast in response to his trigger gets nothing. A condition on the EVENT itself
+  can't change before resolution, so it may be a `TriggerEvent` instead (Way of the Mind Sculptor's
+  "removed two or more"). `If` runs its steps as a child pipeline — so a surveil inside it finishes
+  before the next step — and its steps' outputs do not reach the steps after it.
+- **Prowess is a scripted trigger** (`FraCards.Prowess`), not an engine keyword — each instance
+  triggers on its own (Ruric Thar has two).
 - **Static abilities are never stamped onto what they affect.** A `StaticEffectComponent` on its source
   is read live by Characteristics, so it stops the instant the source leaves — MtgCore's stamped
   statics went stale exactly there. "Can't be blocked" is a keyword-like grant (`Combat.CantBeBlocked`).
@@ -136,10 +147,10 @@ needs · Empower Jace with two Jace tokens loads the first · surveil keeps the 
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 82 cards scripted
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 92 cards scripted
 in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
-dies / exile-until cards. **The 8 real planeswalkers are
-not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
+dies / exile-until cards, and 10 step-trigger / per-turn / prowess cards. **Two real planeswalkers are
+in** (The Theorist, Ajani Unrelenting); **the other 6 are not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
 Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
-per-turn tracking, prowess · 7d prepare, flashback, cycling, graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
+per-turn tracking, prowess ✓ · 7d prepare, flashback, cycling, graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
 limited Bo1 uses it are unconfirmed — hence `handSmoothing`.

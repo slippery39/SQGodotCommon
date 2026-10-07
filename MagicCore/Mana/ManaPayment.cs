@@ -81,6 +81,12 @@ public static class ManaPayment
 	{
 		if (needs.IsEmpty)
 			return true;
+		// Fewer sources left than mana still owed: fail now. Without this, an unaffordable X
+		// backtracked through every order of land kinds for its generic — 5^X paths — and
+		// LegalActions asks for every X up to the land count (20 lands hung a test). Checked here,
+		// not once up front, because {2/W} grows the need list mid-search.
+		if (needs.Count > used.Count(u => !u))
+			return false;
 		var need = needs[0];
 		var rest = needs.RemoveAt(0);
 		var tried = new HashSet<(bool, bool, string, ManaColor)>();

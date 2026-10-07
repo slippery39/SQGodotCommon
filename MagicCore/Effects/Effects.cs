@@ -45,6 +45,11 @@ public enum RefKind
 	OpponentsPermanents, // of Type: "each creature and planeswalker your opponents control"
 	AllPermanents, // of Type: "all creatures"
 	YourGraveyard, // the cards in it
+	YourHand, // the cards in it
+	ControllerOfEventCard, // Tetsuko, Pursuer: "that creature's controller"
+	YourPermanentsWithCounters, // of Type, with a +1/+1 counter on it
+	AllPermanentsExceptYourTokens, // of Type: Ajani's "each creature except for tokens you control"
+	YourTokens, // "all tokens you control"
 }
 
 /// <summary>Who or what an effect acts on, resolved against the context at resolution.</summary>
@@ -62,6 +67,13 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 		new(RefKind.YourPermanents, Type: CardType.Planeswalker);
 	public static readonly Ref AllCreatures = new(RefKind.AllPermanents, Type: CardType.Creature);
 	public static readonly Ref CardsInYourGraveyard = new(RefKind.YourGraveyard);
+	public static readonly Ref CardsInYourHand = new(RefKind.YourHand);
+	public static readonly Ref ControllerOfEventCard = new(RefKind.ControllerOfEventCard);
+	public static readonly Ref YourCreaturesWithCounters =
+		new(RefKind.YourPermanentsWithCounters, Type: CardType.Creature);
+	public static readonly Ref CreaturesExceptYourTokens =
+		new(RefKind.AllPermanentsExceptYourTokens, Type: CardType.Creature);
+	public static readonly Ref TokensYouControl = new(RefKind.YourTokens);
 
 	public static Ref YourGraveyard(CardType type) => new(RefKind.YourGraveyard, Type: type);
 
@@ -87,6 +99,12 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 			? (ImmutableArray<int>)t
 			: [];
 		int TargetAt(int i) => i < targets.Length ? targets[i] : 0;
+		var eventCard = context.TryGetValue(ContextKeys.EventCard, out var e) ? (int)e : 0;
+		IEnumerable<Card> Yours() => s.CardsIn(controller, ZoneType.Battlefield);
+		IEnumerable<Card> All() =>
+			new[] { controller, s.OpponentOf(controller) }.SelectMany(p =>
+				s.CardsIn(p, ZoneType.Battlefield)
+			);
 
 		IEnumerable<int> ids = Kind switch
 		{
@@ -99,23 +117,29 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 				? [c.ControllerId]
 				: [],
 			RefKind.Source => SameObject(s, context) ? [(int)context[ContextKeys.Source]] : [],
-			RefKind.EventCard =>
-			[
-				context.TryGetValue(ContextKeys.EventCard, out var e) ? (int)e : 0,
-			],
+			RefKind.EventCard => [eventCard],
+			// Its controller now if it is still there, else as it last was (CR 608.2h).
+			RefKind.ControllerOfEventCard => s.IsOnBattlefield(eventCard)
+				? [s.GetCard(eventCard).ControllerId]
+			: context.TryGetValue(ContextKeys.EventSnapshot, out var snapshot)
+				? [((Card)snapshot).ControllerId]
+			: [],
 			RefKind.OpponentsPermanents => s.CardsIn(s.OpponentOf(controller), ZoneType.Battlefield)
 				.Where(c => c.Is(Type))
 				.Select(c => c.Id),
-			RefKind.AllPermanents => new[] { controller, s.OpponentOf(controller) }
-				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
-				.Where(c => c.Is(Type))
+			RefKind.AllPermanents => All().Where(c => c.Is(Type)).Select(c => c.Id),
+			RefKind.AllPermanentsExceptYourTokens => All()
+				.Where(c => c.Is(Type) && !(c.IsToken && c.ControllerId == controller))
 				.Select(c => c.Id),
+			RefKind.YourPermanentsWithCounters => Yours()
+				.Where(c => c.Is(Type) && c.PlusOneCounters > 0)
+				.Select(c => c.Id),
+			RefKind.YourTokens => Yours().Where(c => c.IsToken).Select(c => c.Id),
+			RefKind.YourHand => s.CardsIn(controller, ZoneType.Hand).Select(c => c.Id),
 			RefKind.YourGraveyard => s.CardsIn(controller, ZoneType.Graveyard)
 				.Where(c => Type == CardType.None || c.Is(Type))
 				.Select(c => c.Id),
-			_ => s.CardsIn(controller, ZoneType.Battlefield)
-				.Where(c => c.Is(Type))
-				.Select(c => c.Id),
+			_ => Yours().Where(c => c.Is(Type)).Select(c => c.Id),
 		};
 		return ids.Where(id => id != 0 && s.HasObject(id));
 	}
@@ -376,6 +400,25 @@ public record CreateTokens(CardData Token, int Count) : Effect
 	}
 }
 
+/// <summary>"Sacrifice this …" — only what is still on the battlefield.</summary>
+public record Sacrifice(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(Permanents(What, s).Aggregate(s, (st, c) => st.Sacrifice(c.Id)));
+}
+
+/// <summary>Ajani Unrelenting: "Discard your hand" — the whole hand, so there is nothing to choose.</summary>
+public record DiscardHand(Ref Who) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer))
+		foreach (var card in s.CardsIn(player, ZoneType.Hand).ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(player, ZoneType.Graveyard));
+		return new(s);
+	}
+}
+
 /// <summary>Each player named discards, choosing for themselves.</summary>
 public record Discard(Ref Who, int Count) : Effect
 {
@@ -628,10 +671,33 @@ public record EventCardHasSubtype(string Subtype) : Condition
 		Ref.EventCard.Resolve(s, context).Select(s.GetCard).Any(c => c.Subtypes.Contains(Subtype));
 }
 
-public record If(Condition When, GameAction Then) : Effect
+public record Not(Condition Inner) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		!Inner.Holds(s, context);
+}
+
+/// <summary>Edgar, Moonlit Sovereign: "if you didn't cast a spell this turn" (with Not).</summary>
+public record YouCastASpellThisTurn : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetPlayer((int)context[ContextKeys.Controller]).SpellsCastThisTurn > 0;
+}
+
+/// <summary>Eye of Jace: "if there are seven or more cards in your graveyard".</summary>
+public record AtLeast(Count Count, int N) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		Count.Value(s, context) >= N;
+}
+
+/// <summary>"If [condition], [effects]" — the effects run in order with this ability's context.</summary>
+public record If(Condition When, ImmutableList<GameAction> Then) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
 		When.Holds(s, InputContext)
-			? (Then with { InputContext = InputContext }).Execute(s)
+			? new(
+				s.SpawnAction(new PipelineAction { Steps = Then, PipelineContext = InputContext })
+			)
 			: new(s);
 }

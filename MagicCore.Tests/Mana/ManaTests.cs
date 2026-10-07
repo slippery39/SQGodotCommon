@@ -83,6 +83,33 @@ public class ManaPaymentTests
 	public void Find(string cost, string[] lands, bool payable) =>
 		Assert.That(CanPay(cost, lands), Is.EqualTo(payable));
 
+	// LegalActions asks for every X up to the land count, so the top one is always unaffordable.
+	// It backtracked through every order of land kinds (5^X) — 20 lands hung a test.
+	[Test]
+	public void AnUnaffordableX_FailsAtOnce_HoweverManyLandKinds()
+	{
+		var lands = Enumerable
+			.Range(0, 4)
+			.SelectMany(_ => new[] { "Plains", "Island", "Swamp", "Mountain", "Forest" })
+			.ToArray();
+		var (s, me) = Board(lands);
+
+		// Without the bound these never return.
+		Assert.That(ManaPayment.Find(s, me, ManaCost.Parse("{X}{W}"), lands.Length), Is.Null);
+		Assert.That(
+			ManaPayment.Find(s, me, ManaCost.Parse("{X}{W}"), lands.Length - 1),
+			Is.Not.Null
+		);
+
+		// No Plains: {2/W} becomes two generic mid-search, one more than the lands left.
+		var noPlains = lands.Where(l => l != "Plains").ToArray();
+		(s, me) = Board(noPlains);
+		Assert.That(
+			ManaPayment.Find(s, me, ManaCost.Parse("{X}{2/W}"), noPlains.Length - 1),
+			Is.Null
+		);
+	}
+
 	// A mana creature tapped for a spell can no longer attack — lands go first.
 	[Test]
 	public void LandsAreTappedBeforeAManaCreature()
