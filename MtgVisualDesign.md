@@ -299,3 +299,8 @@ outline, big preview, PICK lit); a second tap or PICK picks. Verified with the n
 preview, and every preview uses `MtgUiStyles.PreviewScale`. (3) The three CMB decks shipped 17
 Plains (their builder predated colour and skipped `ManaBase`); fixed and pinned by
 `ManaBaseTests.EveryRegisteredDeck_ProducesTheColoursItsSpellsNeed`.
+
+**Attachments (2026-10-06).** An Aura or Equipment on a token is a 44px round art chip down the
+host's right edge (portrait mask + ring, no new art), its own hover/click target with the
+attachment's id; gold ring when it is a valid target. A Myr Enforcer read 13/6 with nothing on
+screen saying why — the Plating hid behind it. `--decks=A,B` added to make such boards repeatable.

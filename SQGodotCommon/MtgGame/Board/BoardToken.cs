@@ -47,6 +47,7 @@ public partial class BoardToken : Control
 	private TextureRect _rim = null!;
 	private Label _name = null!;
 	private HBoxContainer _keywords = null!;
+	private VBoxContainer _attachments = null!;
 	private Label _power = null!;
 	private Label _toughness = null!;
 	private Control _powerDisc = null!;
@@ -106,6 +107,14 @@ public partial class BoardToken : Control
 		};
 		_keywords.AddThemeConstantOverride("separation", 2);
 		AddChild(_keywords);
+
+		_attachments = new VBoxContainer
+		{
+			Position = new Vector2(TokenSize.X - 26, 30),
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		_attachments.AddThemeConstantOverride("separation", 2);
+		AddChild(_attachments);
 
 		(_powerDisc, _power) = Disc(new Vector2(-10, 142));
 		(_toughnessDisc, _toughness) = Disc(new Vector2(TokenSize.X - 46, 142));
@@ -192,6 +201,56 @@ public partial class BoardToken : Control
 			Size = TokenSize,
 		};
 		(parent ?? this).AddChild(rect);
+		return rect;
+	}
+
+	/// <summary>
+	/// The Auras and Equipment on this permanent, as round art chips down its right edge. Each is
+	/// its own hover / click target carrying the ATTACHMENT's id, so it previews that card and can
+	/// be picked as a target (a Disenchant aimed at a Rancor); gold-ringed when it is one.
+	/// </summary>
+	public void SetAttachments(IEnumerable<Card> attached, IEnumerable<int>? targetIds)
+	{
+		foreach (var child in _attachments.GetChildren())
+			child.QueueFree();
+
+		foreach (var card in attached)
+		{
+			var id = card.Id;
+			var chip = new Control
+			{
+				CustomMinimumSize = new Vector2(44, 44),
+				MouseFilter = MouseFilterEnum.Stop,
+				TooltipText = card.Name,
+			};
+			var mask = Circle(chip, "portrait_mask.png");
+			mask.ClipChildren = ClipChildrenMode.Only;
+			Circle(mask, null).Texture = CardArtLoader.Load(card.Name);
+			Circle(chip, "portrait_ring.png").SelfModulate =
+				targetIds?.Contains(id) == true ? new Color("ffe066") : Colors.White;
+
+			chip.GuiInput += e =>
+			{
+				if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
+					Clicked?.Invoke(id);
+			};
+			chip.MouseEntered += () => Hovered?.Invoke(id);
+			chip.MouseExited += () => HoverEnded?.Invoke(id);
+			_attachments.AddChild(chip);
+		}
+	}
+
+	private static TextureRect Circle(Control parent, string? file)
+	{
+		var rect = new TextureRect
+		{
+			ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+			StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+			Texture = file == null ? null : GD.Load<Texture2D>(UiDir + file),
+			Size = new Vector2(44, 44),
+			MouseFilter = MouseFilterEnum.Ignore,
+		};
+		parent.AddChild(rect);
 		return rect;
 	}
 

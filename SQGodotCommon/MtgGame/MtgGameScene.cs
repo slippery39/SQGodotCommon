@@ -115,12 +115,23 @@ public partial class MtgGameScene : Node2D
 		return CardValueTable.FromJson(FileAccess.GetFileAsString(path));
 	}
 
+	private static DeckSetupData DirectOpenDecks()
+	{
+		var named = OS.GetCmdlineUserArgs()
+			.FirstOrDefault(a => a.StartsWith("--decks="))
+			?[8..].Split(',');
+		DeckChoice Pick(int i) =>
+			named?.Length > i ? new DeckChoice.Premade(named[i]) : new DeckChoice.RandomPremade();
+		return new DeckSetupData(Pick(0), Pick(1));
+	}
+
 	public override void _Ready()
 	{
-		// Opened directly (a capture, F6 in the editor): play two random premades.
+		// Opened directly (a capture, F6 in the editor): two random premades, or the two named by
+		// -GameArgs --decks=Player,Opponent (DeckRegistry names) for a repeatable board.
 		var setup = GameManager.Instance.HasService<DeckSetupData>()
 			? GameManager.Instance.GetService<DeckSetupData>()
-			: new DeckSetupData(new DeckChoice.RandomPremade(), new DeckChoice.RandomPremade());
+			: DirectOpenDecks();
 		_manager = new MtgGameManager(setup, cardValues: LoadCardValues());
 		MtgUiStyles.AddBackdrop(this);
 		_boardUI = GetNode<BoardUI>("BoardUI");

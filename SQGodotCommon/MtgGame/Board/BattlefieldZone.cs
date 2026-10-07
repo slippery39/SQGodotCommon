@@ -122,12 +122,14 @@ public partial class BattlefieldZone : PanelContainer
 				? attachments[card.Id].ToList()
 				: new List<Card>();
 
-			// Added before the host so the host draws on top of them.
-			for (var i = 0; i < attached.Count; i++)
+			// Full cards: added before the host so it draws on top and they peek out behind it.
+			// Tokens: the host shows them as chips instead — a peeking token was all but hidden.
+			var peeks = AsTokens ? new List<Card>() : attached;
+			for (var i = 0; i < peeks.Count; i++)
 			{
 				var peek = AddCard(
 					holder,
-					attached[i],
+					peeks[i],
 					state,
 					selectedId,
 					targetHighlightIds,
@@ -149,13 +151,15 @@ public partial class BattlefieldZone : PanelContainer
 				canAttack
 			);
 			host.Position = Inset;
+			if (host is BoardToken token)
+				token.SetAttachments(attached, targetHighlightIds);
 
 			// CustomMinimumSize is final once the node has entered the tree, so the slot can be
 			// sized from the card rather than from a second copy of the authored dimensions.
 			slot.CustomMinimumSize =
 				host.CustomMinimumSize
 				+ Inset * 2
-				+ new Vector2(1, 1) * AttachmentPeek * attached.Count;
+				+ new Vector2(1, 1) * AttachmentPeek * peeks.Count;
 		}
 
 		FitRow();

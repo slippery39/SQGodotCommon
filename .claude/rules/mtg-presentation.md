@@ -66,3 +66,5 @@ Card art is keyed by a slug of the card name (`CardArtLoader`). Hollowmere has e
 **Symbols and their meanings live in `MtgSymbols`** (keywords, mana colours), credited in root `CREDITS.md`. A new keyword in `MtgCardMapper.KeywordNames` needs an entry there, or its token disc falls back to initials. Use the `/add-icon` skill.
 
 **Touch: a press is hover AND click at once.** So nothing may act on the first tap if the player needs to read first: a draft card is SELECTED by a tap and picked by a second tap or PICK; on a phone (`OS.HasFeature("mobile")`) previews are near full height (`MtgUiStyles.PreviewScale`) and the hovered hand card gets one too. Verify a click with `--tap`, not by reasoning.
+
+**An attached Aura or Equipment is a round art chip on its host token** (`BoardToken.SetAttachments`), carrying the attachment's own id for hover and click — a peeking token behind the host was all but invisible. Full-card zones (the graveyard viewer) still peek. To capture one: `-GameArgs '--decks=Affinity,Affinity','--autoplay=7'` (Cranial Plating).
