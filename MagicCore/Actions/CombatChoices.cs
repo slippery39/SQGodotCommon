@@ -35,6 +35,10 @@ public record DeclareAttackerChoice : ChoiceAction
 		[
 			new ChoiceOption { Id = CombatOption.None, DisplayText = "Don't attack" },
 			new ChoiceOption { Id = opponent.Id, DisplayText = $"Attack {opponent.Name}" },
+			// CR 506.3: a planeswalker the defending player controls can be attacked.
+			.. s.CardsIn(opponent.Id, ZoneType.Battlefield)
+				.Where(c => c.Is(Cards.CardType.Planeswalker))
+				.Select(c => new ChoiceOption { Id = c.Id, DisplayText = $"Attack {c.Name}" }),
 		];
 	}
 

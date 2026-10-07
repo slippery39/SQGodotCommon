@@ -129,7 +129,9 @@ public static class MagicRules
 								: CastCandidates(s, player, c)
 						),
 					.. s.CardsIn(player, ZoneType.Battlefield)
-						.SelectMany(c => ActivateCandidates(s, player, c)),
+						.SelectMany(c =>
+							ActivateCandidates(s, player, c).Concat(LoyaltyCandidates(s, player, c))
+						),
 				];
 		return candidates.Where(a => a.ValidateAdd(s).IsValid).ToImmutableList();
 	}
@@ -162,6 +164,22 @@ public static class MagicRules
 					TargetSpec
 						.Combinations(s, ability.Targets, player, card.Id)
 						.Select(targets => new ActivateAbilityAction
+						{
+							PlayerId = player,
+							CardId = card.Id,
+							AbilityIndex = index,
+							Targets = targets,
+						})
+			);
+
+	static IEnumerable<GameAction> LoyaltyCandidates(GameState s, int player, Card card) =>
+		Loyalty
+			.AbilitiesOf(s, card)
+			.SelectMany(
+				(ability, index) =>
+					TargetSpec
+						.Combinations(s, ability.Targets, player, card.Id)
+						.Select(targets => new ActivateLoyaltyAction
 						{
 							PlayerId = player,
 							CardId = card.Id,

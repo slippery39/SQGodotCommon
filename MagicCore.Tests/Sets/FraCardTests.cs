@@ -16,7 +16,7 @@ public class FraCardTests
 	int me,
 		them;
 
-	/// <summary>The starting player's first main phase; both players have two of each basic.</summary>
+	/// <summary>The starting player's first main phase; both players have two of each basic land.</summary>
 	[SetUp]
 	public void Board()
 	{
@@ -24,7 +24,7 @@ public class FraCardTests
 		me = s.GetGame().StartingPlayerId;
 		them = s.OpponentOf(me);
 		foreach (var player in new[] { me, them })
-		foreach (var land in new[] { "Plains", "Swamp", "Mountain", "Forest" })
+		foreach (var land in new[] { "Plains", "Island", "Swamp", "Mountain", "Forest" })
 		{
 			Field(TestGames.Card(land), player);
 			Field(TestGames.Card(land), player);
@@ -434,6 +434,255 @@ public class FraCardTests
 		Assert.That(Life(me), Is.EqualTo(life + 1), "the settled one saw the new one enter");
 		Assert.That(ManaAbilities.CanTap(s, s.GetCard(settled)));
 		Assert.That(ManaAbilities.CanTap(s, s.GetCard(fresh)), Is.False, "summoning sick");
+	}
+
+	// ===== Empower Jace and planeswalkers =====
+
+	Card? Jace(int player) =>
+		s.CardsIn(player, ZoneType.Battlefield).FirstOrDefault(EmpowerJace.IsJaceToken);
+
+	/// <summary>Activates the loyalty ability with this cost on <paramref name="walker"/> and resolves it.</summary>
+	void Loyalty(
+		int walker,
+		int cost,
+		Func<ChoiceAction, IEnumerable<int>>? answer = null,
+		params int[] targets
+	)
+	{
+		var move = s.LegalActions()
+			.OfType<ActivateLoyaltyAction>()
+			.First(a =>
+				a.CardId == walker
+				&& Actions.Loyalty.AbilitiesOf(s, s.GetCard(walker))[a.AbilityIndex].Cost == cost
+				&& (targets.Length == 0 || a.Targets.SequenceEqual(targets))
+			);
+		s = s.Act(move);
+		Resolve(answer);
+	}
+
+	[Test]
+	public void EmpowerJace_CreatesTheToken_ThenLoadsTheSameOne()
+	{
+		Cast(Hand("Mindseeker Oculus", me));
+		var jace = Jace(me)!;
+		Assert.That(
+			(jace.Name, jace.Loyalty, jace.Colors.Single()),
+			Is.EqualTo(("Jace", 4, ManaColor.Blue))
+		);
+
+		Cast(Hand("Keeper of the Quiet Hour", me));
+
+		Assert.That(
+			s.CardsIn(me, ZoneType.Battlefield).Count(EmpowerJace.IsJaceToken),
+			Is.EqualTo(1)
+		);
+		Assert.That(Jace(me)!.Loyalty, Is.EqualTo(4 + 2));
+	}
+
+	[Test]
+	public void JaceToken_MinusOneSurveils_MinusThreeDraws()
+	{
+		Cast(Hand("Protege's Awakening", me)); // Empower Jace 6, draw a card
+		var jace = Jace(me)!.Id;
+		var top = s.CardsIn(me, ZoneType.Library).First().Id;
+
+		Loyalty(jace, -1, choice => [top]);
+		Assert.That(s.IsIn(top, me, ZoneType.Graveyard), "surveiled into the graveyard");
+
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().TurnNumber == 3 && x.GetGame().Step == Step.PreCombatMain
+		);
+		var hand = HandCount(me);
+		Loyalty(jace, -3);
+		Assert.That(HandCount(me), Is.EqualTo(hand + 1));
+		Assert.That(s.GetCard(jace).Loyalty, Is.EqualTo(6 - 1 - 3));
+	}
+
+	[Test]
+	public void ProtegesAwakening_EmpowersSixAndDraws()
+	{
+		var hand = HandCount(me);
+		Cast(Hand("Protege's Awakening", me));
+		Assert.That(Jace(me)!.Loyalty, Is.EqualTo(6));
+		Assert.That(HandCount(me), Is.EqualTo(hand + 1));
+	}
+
+	[TestCase("Arcane Amphisbaena", 2)]
+	[TestCase("Keeper of the Quiet Hour", 2)]
+	[TestCase("Mindseeker Oculus", 4)]
+	[TestCase("Sanctum Lurker", 1)]
+	public void EntersAndEmpowers(string card, int loyalty)
+	{
+		Cast(Hand(card, me));
+		Assert.That(Jace(me)!.Loyalty, Is.EqualTo(loyalty));
+	}
+
+	[Test]
+	public void AcademicAscent_PumpsFlyingAndEmpowersTwo()
+	{
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+		Cast(Hand("Academic Ascent", me), bear);
+
+		Assert.That((s.GetCard(bear).Power, s.GetCard(bear).Has("Flying")), Is.EqualTo((4, true)));
+		Assert.That(Jace(me)!.Loyalty, Is.EqualTo(2));
+	}
+
+	[Test]
+	public void NoAdmittance_ThreeToAnyTarget_IncludingAPlaneswalker()
+	{
+		var theirs = Life(them);
+		Cast(Hand("No Admittance", me), them);
+		Assert.That(Life(them), Is.EqualTo(theirs - 3));
+		Assert.That(Jace(me)!.Loyalty, Is.EqualTo(1));
+
+		var walker = Hand(TestGames.Planeswalker("Walker", 3), them);
+		s = s.EnterBattlefield(walker, them); // TEST SETUP: theirs, at printed loyalty 3
+		Cast(Hand("No Admittance", me), walker);
+		Assert.That(s.IsIn(walker, them, ZoneType.Graveyard), "3 damage took all 3 loyalty");
+	}
+
+	[Test]
+	public void RepurposedEnforcer_AttackingEmpowersByCreatureCount()
+	{
+		Field("Repurposed Enforcer", me);
+		Field(TestGames.Creature("Ally", "1/1"), me);
+
+		s = TestGames.PassUntil(s, x => x.IsWaitingForChoice);
+		while (s.GetPendingChoice() is DeclareAttackerChoice)
+			s = s.Choose([them]);
+		Resolve();
+
+		Assert.That(Jace(me)!.Loyalty, Is.EqualTo(2));
+	}
+
+	[Test]
+	public void TamsResistance_CounterAndVigilance_OrJustEmpowerWithNoTarget()
+	{
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+		Cast(Hand("Tam's Resistance", me), bear);
+		Assert.That(
+			(s.GetCard(bear).PlusOneCounters, s.GetCard(bear).Has("Vigilance")),
+			Is.EqualTo((1, true))
+		);
+
+		Cast(Hand("Tam's Resistance", me), 0); // "up to one" — none chosen, so it does not fizzle
+		Assert.That(Jace(me)!.Loyalty, Is.EqualTo(4 + 4));
+	}
+
+	[Test]
+	public void WayOfTheHealer_GrantsMinusTwo_CadetAndSurveil()
+	{
+		Cast(Hand("Way of the Healer", me));
+		var jace = Jace(me)!.Id;
+		Assert.That(s.GetCard(jace).Loyalty, Is.EqualTo(5));
+
+		Loyalty(jace, -2, choice => []);
+
+		Assert.That(
+			s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Name == "Cadet"),
+			Is.EqualTo(1)
+		);
+		Assert.That(s.GetCard(jace).Loyalty, Is.EqualTo(3));
+	}
+
+	[Test]
+	public void WayOfTheMentor_GainingLifeAddsLoyalty()
+	{
+		Cast(Hand("Way of the Mentor", me));
+		var before = Jace(me)!.Loyalty;
+
+		Cast(Hand("Terminal Criticism", me), Field("Heartstring Puller", them)); // "You gain 1 life."
+
+		Assert.That(Jace(me)!.Loyalty, Is.EqualTo(before + 1));
+	}
+
+	[Test]
+	public void SanctumLurker_WalkersSurviveZero_AndGrantPlusTwoDrain()
+	{
+		Cast(Hand("Sanctum Lurker", me));
+		var jace = Jace(me)!.Id;
+		Loyalty(jace, -1, choice => []);
+		Assert.That(OnBattlefield(jace), "0 loyalty, still here");
+
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().TurnNumber == 3 && x.GetGame().Step == Step.PreCombatMain
+		);
+		var (mine, theirs) = (Life(me), Life(them));
+		Loyalty(jace, 2);
+		Assert.That(
+			(Life(me), Life(them), s.GetCard(jace).Loyalty),
+			Is.EqualTo((mine + 1, theirs - 1, 2))
+		);
+	}
+
+	// Damage beyond the loyalty there once left Jace at -3: alive under the Lurker, but every
+	// ability, even the +2, refused as unaffordable.
+	[Test]
+	public void ExcessDamageToAWalker_StopsAtZeroLoyalty()
+	{
+		Cast(Hand("Sanctum Lurker", me)); // Empower Jace 1
+		var jace = Jace(me)!.Id;
+
+		// 3 damage at 1 loyalty, then the spell's own Empower Jace 1 lands on the same token:
+		// 0 + 1 with the floor, -2 + 1 without it.
+		Cast(Hand("No Admittance", me), jace);
+
+		Assert.That(OnBattlefield(jace), "the Lurker keeps it");
+		Assert.That(s.GetCard(jace).Loyalty, Is.EqualTo(1));
+	}
+
+	[Test]
+	public void WayOfThePyromancer_GrantsPlusOneAddRed()
+	{
+		Cast(Hand("Way of the Pyromancer", me));
+		Loyalty(Jace(me)!.Id, 1);
+		Assert.That(s.GetPlayer(me).ManaPool.Red, Is.EqualTo(1));
+	}
+
+	[Test]
+	public void WayOfTheWarlord_GrantsMinusFour_TwoToACreatureAndTwoToAPlayer()
+	{
+		Cast(Hand("Way of the Warlord", me));
+		var bear = Field(TestGames.Creature("Bear", "2/2"), them);
+		var theirs = Life(them);
+
+		Loyalty(Jace(me)!.Id, -4, null, bear, them);
+
+		Assert.That(OnBattlefield(bear), Is.False);
+		Assert.That(Life(them), Is.EqualTo(theirs - 2));
+	}
+
+	[Test]
+	public void WayOfTheWildspeaker_GrantsMinusFour_ABeast()
+	{
+		Cast(Hand("Way of the Wildspeaker", me));
+		Loyalty(Jace(me)!.Id, -4);
+
+		var beast = s.CardsIn(me, ZoneType.Battlefield).Single(c => c.Name == "Beast");
+		Assert.That(
+			(beast.Power, beast.Toughness, beast.Has("Trample"), beast.IsToken),
+			Is.EqualTo((4, 4, true, true))
+		);
+	}
+
+	[Test]
+	public void AvatarOfBurgeoningEchoes_LandfallEmpowers_AndGrantsMinusTen()
+	{
+		Field("Avatar of Burgeoning Echoes", me);
+		var island = Hand(TestGames.Card("Island"), me);
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = island });
+		Resolve();
+		var jace = Jace(me)!.Id;
+		Assert.That(s.GetCard(jace).Loyalty, Is.EqualTo(2));
+
+		s = s.UpdateObject(jace, s.GetCard(jace) with { Loyalty = 10 }); // TEST SETUP
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+		var lands = s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land));
+		Loyalty(jace, -10, null, bear);
+
+		Assert.That(s.GetCard(bear).PlusOneCounters, Is.EqualTo(lands));
 	}
 
 	// ===== Last-known information =====

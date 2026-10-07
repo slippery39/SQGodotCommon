@@ -34,18 +34,22 @@ public enum RefKind
 	ControllerOfTarget,
 	Source,
 	EventCard,
-	CreaturesYouControl,
+	YourPermanents, // of Type: "creatures you control", "lands you control" …
 }
 
 /// <summary>Who or what an effect acts on, resolved against the context at resolution.</summary>
-public record Ref(RefKind Kind, int Index = 0)
+public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 {
 	public static readonly Ref You = new(RefKind.You);
 	public static readonly Ref EachOpponent = new(RefKind.EachOpponent);
 	public static readonly Ref EachPlayer = new(RefKind.EachPlayer);
 	public static readonly Ref Source = new(RefKind.Source);
 	public static readonly Ref EventCard = new(RefKind.EventCard);
-	public static readonly Ref CreaturesYouControl = new(RefKind.CreaturesYouControl);
+	public static readonly Ref CreaturesYouControl =
+		new(RefKind.YourPermanents, Type: CardType.Creature);
+	public static readonly Ref LandsYouControl = new(RefKind.YourPermanents, Type: CardType.Land);
+	public static readonly Ref PlaneswalkersYouControl =
+		new(RefKind.YourPermanents, Type: CardType.Planeswalker);
 
 	public static Ref Target(int index = 0) => new(RefKind.Target, index);
 
@@ -75,7 +79,7 @@ public record Ref(RefKind Kind, int Index = 0)
 				context.TryGetValue(ContextKeys.EventCard, out var e) ? (int)e : 0,
 			],
 			_ => s.CardsIn(controller, ZoneType.Battlefield)
-				.Where(c => c.Is(CardType.Creature))
+				.Where(c => c.Is(Type))
 				.Select(c => c.Id),
 		};
 		return ids.Where(id => id != 0 && s.HasObject(id));
@@ -113,14 +117,7 @@ public record DrawCards(Ref Who, int Count) : Effect
 public record GainLife(Ref Who, int Amount) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
-		new(
-			All(Who, s)
-				.Aggregate(
-					s,
-					(st, p) =>
-						st.WithPlayer(st.GetPlayer(p) with { Life = st.GetPlayer(p).Life + Amount })
-				)
-		);
+		new(All(Who, s).Aggregate(s, (st, p) => Life.Gain(st, p, Amount)));
 }
 
 /// <summary>Life loss that is not damage — lifelink and damage triggers do not see it.</summary>
@@ -194,17 +191,81 @@ public record ModifyUntilEndOfTurn(Ref What, int Power, int Toughness, string? K
 	}
 }
 
-public record AddCounters(Ref What, int Count) : Effect
+/// <summary>
+/// A number in rules text — fixed, or "X, where X is the number of [Ref]" counted at resolution.
+/// Counting goes through Ref, so "creatures you control" means one thing everywhere.
+/// </summary>
+public record Count(int Fixed, Ref? NumberOf = null)
 {
-	public override ActionResult Execute(GameState s) =>
-		new(
+	public static implicit operator Count(int n) => new(n);
+
+	public static readonly Count CreaturesYouControl = new(0, Ref.CreaturesYouControl);
+	public static readonly Count LandsYouControl = new(0, Ref.LandsYouControl);
+
+	public int Of(GameState s, ImmutableDictionary<string, object> context) =>
+		NumberOf is null ? Fixed : NumberOf.Resolve(s, context).Count();
+}
+
+public record AddCounters(Ref What, Count Amount) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var n = Amount.Of(s, InputContext);
+		return new(
 			Permanents(What, s)
 				.Where(c => c.Is(CardType.Creature))
 				.Aggregate(
 					s,
-					(st, c) => Update(st, c with { PlusOneCounters = c.PlusOneCounters + Count })
+					(st, c) => Update(st, c with { PlusOneCounters = c.PlusOneCounters + n })
 				)
 		);
+	}
+}
+
+/// <summary>"Put N loyalty counters on …" — no-op on anything that is not a planeswalker.</summary>
+public record AddLoyalty(Ref What, Count Amount) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var n = Amount.Of(s, InputContext);
+		return new(
+			Permanents(What, s)
+				.Where(c => c.Is(CardType.Planeswalker))
+				.Aggregate(s, (st, c) => Actions.Loyalty.Change(st, c.Id, n))
+		);
+	}
+}
+
+/// <summary>
+/// CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.
+/// ponytail: the kept cards keep their order; reordering them is a second choice nobody needs at N=1.
+/// </summary>
+public record Surveil(int N) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var n = Math.Min(N, s.CardsIn(Controller, ZoneType.Library).Count());
+		if (n == 0)
+			return new(s);
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new ChooseFromLibraryTopChoice
+						{
+							PlayerId = Controller,
+							Count = n,
+							MinChoices = 0,
+							MaxChoices = n,
+						},
+						new MoveChosenToGraveyardAction { PlayerId = Controller },
+					],
+				}
+			)
+		);
+	}
 }
 
 public record CreateTokens(CardData Token, int Count) : Effect
@@ -245,7 +306,7 @@ public record Discard(Ref Who, int Count) : Effect
 								MaxChoices = n,
 								Prompt = $"Discard {n}",
 							},
-							new DiscardChosenAction { PlayerId = player },
+							new MoveChosenToGraveyardAction { PlayerId = player },
 						],
 					}
 				);

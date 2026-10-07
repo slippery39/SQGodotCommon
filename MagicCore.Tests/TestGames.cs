@@ -51,6 +51,32 @@ static class TestGames
 	public static CardDefinition Creature(string name, string pt, params string[] keywords) =>
 		CreatureCosting("{1}", name, pt, keywords);
 
+	/// <summary>An inline test planeswalker costing {1}, with the given printed loyalty and loyalty abilities.</summary>
+	public static CardDefinition Planeswalker(
+		string name,
+		int loyalty,
+		params Effects.LoyaltyAbilityComponent[] abilities
+	) =>
+		new(
+			new CardData(
+				name,
+				"normal",
+				"{1}",
+				1,
+				"Planeswalker — Test",
+				null,
+				null,
+				null,
+				$"{loyalty}",
+				null,
+				[],
+				"common",
+				"0",
+				null
+			),
+			[.. abilities]
+		);
+
 	public static CardDefinition CreatureCosting(
 		string cost,
 		string name,

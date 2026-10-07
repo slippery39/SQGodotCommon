@@ -12,6 +12,9 @@ public record AttackedEvent(int CardId) : GameEvent;
 
 public record SpellCastEvent(int CardId, int PlayerId) : GameEvent;
 
+/// <summary>Raised by Rules.Life.Gain — one per life-gain event, however much (CR 119.9).</summary>
+public record LifeGainedEvent(int PlayerId) : GameEvent;
+
 /// <summary>
 /// Triggered abilities (CR 603). Events are staged on GameState.PendingGameEvents where they
 /// happen; whenever a player would receive priority, every ability that saw one goes on the stack.
@@ -44,21 +47,19 @@ public static class Triggers
 				source
 					.GetComponents<TriggeredAbilityComponent>()
 					.SelectMany(ability =>
-						s.PendingGameEvents.Select(e => EventCard(s, source, ability.On, e))
-							.Where(eventCard => eventCard != 0)
-							.Select(eventCard => new Pending(source, ability, eventCard))
+						s.PendingGameEvents.Where(e => Matches(s, source, ability.On, e))
+							.Select(e => new Pending(source, ability, EventCard(e)))
 					)
 			)
 			.ToList();
 	}
 
-	/// <summary>The card the event is about if it triggers this ability, else 0.</summary>
-	static int EventCard(GameState s, Card source, TriggerEvent on, GameEvent e)
+	static bool Matches(GameState s, Card source, TriggerEvent on, GameEvent e)
 	{
 		bool Yours(int cardId) =>
 			s.IsOnBattlefield(cardId) && s.GetCard(cardId).ControllerId == source.ControllerId;
 
-		var matches = (on, e) switch
+		return (on, e) switch
 		{
 			(TriggerEvent.SelfEnters, EnteredBattlefieldEvent entered) => entered.CardId
 				== source.Id,
@@ -73,18 +74,21 @@ public static class Triggers
 			(TriggerEvent.YouCastNoncreatureSpell, SpellCastEvent cast) => cast.PlayerId
 				== source.ControllerId
 				&& !s.GetCard(cast.CardId).Is(CardType.Creature),
+			(TriggerEvent.YouGainLife, LifeGainedEvent gained) => gained.PlayerId
+				== source.ControllerId,
 			_ => false,
 		};
-		return !matches
-			? 0
-			: e switch
-			{
-				EnteredBattlefieldEvent entered => entered.CardId,
-				AttackedEvent attacked => attacked.CardId,
-				SpellCastEvent cast => cast.CardId,
-				_ => 0,
-			};
 	}
+
+	/// <summary>The card the event is about — what "that creature" and "that land" mean; 0 if none.</summary>
+	static int EventCard(GameEvent e) =>
+		e switch
+		{
+			EnteredBattlefieldEvent entered => entered.CardId,
+			AttackedEvent attacked => attacked.CardId,
+			SpellCastEvent cast => cast.CardId,
+			_ => 0,
+		};
 
 	/// <summary>
 	/// Each trigger's controller picks its targets, then it goes on the stack; then priority goes

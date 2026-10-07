@@ -49,7 +49,11 @@ public record PutChosenOnBottomAction : GameAction
 	}
 }
 
-public record DiscardChosenAction : GameAction
+/// <summary>
+/// The chosen cards go to their owner's graveyard — discarding and surveiling alike. When a
+/// discard trigger exists, discarding raises its own event here; surveil must not.
+/// </summary>
+public record MoveChosenToGraveyardAction : GameAction
 {
 	public int PlayerId { get; init; }
 

@@ -103,6 +103,7 @@ public static class MagicState
 			{
 				ControllerId = controllerId,
 				ControlledSinceTurn = s.GetGame().TurnNumber,
+				Loyalty = s.GetCard(cardId).PrintedLoyalty,
 			}
 		);
 	}

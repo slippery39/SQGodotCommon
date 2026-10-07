@@ -116,7 +116,7 @@ public static class TurnStructure
 								MaxChoices = excess,
 								Prompt = $"Discard {excess} to hand size",
 							},
-							new DiscardChosenAction { PlayerId = active },
+							new MoveChosenToGraveyardAction { PlayerId = active },
 							new EndStepAction(),
 						],
 					}
@@ -153,6 +153,15 @@ public static class StateBasedActions
 				)
 				.ToList();
 			foreach (var card in dying)
+				s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+
+			// CR 704.5i: a planeswalker with 0 loyalty — unless something says it survives (Sanctum Lurker).
+			var walkersSurvive = s.CardsIn(id, ZoneType.Battlefield)
+				.Any(c => c.HasComponent<Effects.YourPlaneswalkersSurviveZeroLoyalty>());
+			var depleted = s.CardsIn(id, ZoneType.Battlefield)
+				.Where(c => c.Is(CardType.Planeswalker) && c.Loyalty <= 0 && !walkersSurvive)
+				.ToList();
+			foreach (var card in depleted)
 				s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
 
 			// CR 704.5j legend rule. ponytail: keeps the newest; Arena asks which. Make it a choice

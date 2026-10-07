@@ -38,6 +38,39 @@ public static class FraCards
 			null
 		);
 
+	/// <summary>"A 4/4 green Beast creature token with trample."</summary>
+	public static readonly CardData Beast =
+		new(
+			"Beast",
+			"token",
+			null,
+			0,
+			"Creature — Beast",
+			null,
+			"4",
+			"4",
+			null,
+			["G"],
+			["Trample"],
+			"token",
+			"T",
+			null
+		);
+
+	/// <summary>"[cost]: effects" — a loyalty ability, own or granted.</summary>
+	static LoyaltyAbilityComponent Loyalty(
+		int cost,
+		TargetSpec[] targets,
+		params GameAction[] effects
+	) => new(cost, [.. effects]) { Targets = [.. targets] };
+
+	/// <summary>"Planeswalkers you control have '[cost]: effects'."</summary>
+	static GrantsLoyaltyAbility Grant(
+		int cost,
+		TargetSpec[] targets,
+		params GameAction[] effects
+	) => new(Loyalty(cost, targets, effects));
+
 	/// <summary>Keywords the engine implements; a text line made only of these needs no script.</summary>
 	public static readonly ImmutableHashSet<string> EngineKeywords = ImmutableHashSet.Create(
 		StringComparer.OrdinalIgnoreCase,
@@ -201,6 +234,90 @@ public static class FraCards
 				When(TriggerEvent.AnotherCreatureYouControlEnters, [], new GainLife(Ref.You, 1)),
 				new ManaAbilityComponent(ManaColor.Green),
 			],
+
+			// ===== Empower Jace (see EmpowerJace.cs) =====
+			["Academic Ascent"] =
+			[
+				Spell(
+					[Creature],
+					new ModifyUntilEndOfTurn(Ref.Target(), 2, 2),
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Flying"),
+					new EmpowerJace(2)
+				),
+			],
+			["Repurposed Enforcer"] =
+			[
+				When(TriggerEvent.SelfAttacks, [], new EmpowerJace(Count.CreaturesYouControl)),
+			],
+			["Way of the Healer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(5)),
+				Grant(-2, [], new CreateTokens(Cadet, 1), new Surveil(1)),
+			],
+			["Way of the Mentor"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(5)),
+				When(TriggerEvent.YouGainLife, [], new AddLoyalty(Ref.PlaneswalkersYouControl, 1)),
+			],
+			["Mindseeker Oculus"] = [When(TriggerEvent.SelfEnters, [], new EmpowerJace(4))],
+			["Protege's Awakening"] = [Spell([], new EmpowerJace(6), new DrawCards(Ref.You, 1))],
+			["Sanctum Lurker"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(1)),
+				new YourPlaneswalkersSurviveZeroLoyalty(),
+				Grant(2, [], new DealDamage(Ref.EachOpponent, 1), new GainLife(Ref.You, 1)),
+			],
+			["No Admittance"] =
+			[
+				Spell(
+					[new TargetSpec(TargetKind.AnyTarget)],
+					new DealDamage(Ref.Target(), 3),
+					new EmpowerJace(1)
+				),
+			],
+			["Way of the Pyromancer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(2)),
+				Grant(1, [], new AddMana(ManaColor.Red)),
+			],
+			["Way of the Warlord"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(5)),
+				// "This planeswalker deals …" — the granted ability's source is the planeswalker.
+				Grant(
+					-4,
+					[
+						CreatureOrPlaneswalker with
+						{
+							Optional = true,
+						},
+						new TargetSpec(TargetKind.Player),
+					],
+					new DealDamage(Ref.Target(0), 2),
+					new DealDamage(Ref.Target(1), 2)
+				),
+			],
+			["Arcane Amphisbaena"] = [When(TriggerEvent.SelfEnters, [], new EmpowerJace(2))],
+			["Way of the Wildspeaker"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(7)),
+				Grant(-4, [], new CreateTokens(Beast, 1)),
+			],
+			["Tam's Resistance"] =
+			[
+				Spell(
+					[Creature with { Optional = true }],
+					new AddCounters(Ref.Target(), 1),
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Vigilance"),
+					new EmpowerJace(4)
+				),
+			],
+			["Avatar of Burgeoning Echoes"] =
+			[
+				When(TriggerEvent.LandYouControlEnters, [], new EmpowerJace(2)),
+				Grant(-10, [Creature], new AddCounters(Ref.Target(), Count.LandsYouControl)),
+			],
+			["Keeper of the Quiet Hour"] = [When(TriggerEvent.SelfEnters, [], new EmpowerJace(2))],
 		};
 
 	public static CardDefinition Get(string name) =>

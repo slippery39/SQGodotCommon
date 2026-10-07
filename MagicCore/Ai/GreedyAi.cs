@@ -139,10 +139,16 @@ public sealed class GreedyAi(int playerId)
 		var board = s.CardsIn(player, ZoneType.Battlefield).ToList();
 		var creatures = board.Where(c => c.Is(CardType.Creature)).Sum(CreatureValue);
 		var lands = Math.Min(board.Count(c => c.Is(CardType.Land)), 7) * 1.5;
-		var others = board.Count(c => !c.Is(CardType.Creature | CardType.Land)) * 2.0;
+		// Loyalty is spent, not banked: valued under half a card per counter, so trading three
+		// counters for a card scores as a gain. At 0.8 the AI never once used its Jace.
+		var walkers = board.Where(c => c.Is(CardType.Planeswalker)).Sum(c => 2 + c.Loyalty * 0.35);
+		var others =
+			board.Count(c => !c.Is(CardType.Creature | CardType.Land | CardType.Planeswalker))
+			* 2.0;
 		var life = s.GetPlayer(player).Life;
 		var lifeValue = life <= 0 ? -50 : Math.Min(life, 20) + (life < 6 ? life - 6 : 0); // low life hurts more
 		return creatures
+			+ walkers
 			+ lands
 			+ others
 			+ s.CardsIn(player, ZoneType.Hand).Count() * 1.2

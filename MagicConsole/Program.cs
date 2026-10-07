@@ -8,7 +8,7 @@ using MagicCore.Sets.Fra;
 // Play Reality Fracture against the AI in the console.
 //   dotnet run --project MagicConsole                      you vs the AI
 //   dotnet run --project MagicConsole -- --ai-vs-ai        watch two AIs
-//   --seed=N replays a game; --deck=1|2 skips the deck prompt.
+//   --seed=N replays a game; --deck=N skips the deck prompt (the AI plays the next deck).
 
 var flags = args.ToHashSet();
 int? Arg(string name) =>
@@ -130,8 +130,12 @@ IEnumerable<int> AskChoice(GameState s, ChoiceAction choice)
 
 	while (true)
 	{
+		var range =
+			choice.MinChoices == choice.MaxChoices
+				? $"{choice.MinChoices}"
+				: $"{choice.MinChoices} to {choice.MaxChoices}";
 		Console.WriteLine(
-			$"{Describe.Question(s, choice)} — pick {choice.MinChoices}, comma-separated:"
+			$"{Describe.Question(s, choice)} — pick {range}, comma-separated (Enter for none):"
 		);
 		for (var i = 0; i < labels.Count; i++)
 			Console.WriteLine($"  {i + 1}. {labels[i]}");
@@ -140,7 +144,8 @@ IEnumerable<int> AskChoice(GameState s, ChoiceAction choice)
 			.Select(p => int.TryParse(p.Trim(), out var n) ? n - 1 : -1)
 			.Distinct()
 			.ToList();
-		if (picks.Count == choice.MinChoices && picks.All(i => i >= 0 && i < labels.Count))
+		var countOk = picks.Count >= choice.MinChoices && picks.Count <= choice.MaxChoices;
+		if (countOk && picks.All(i => i >= 0 && i < labels.Count))
 			return picks.Select(i => choice.Options[i].Id);
 	}
 }

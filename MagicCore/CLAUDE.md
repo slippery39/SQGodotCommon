@@ -19,17 +19,20 @@ MagicCore/
 ├── Turns/Combat.cs      who may attack/block, declarations, simultaneous damage, end of combat
 ├── Turns/Triggers.cs    trigger events, Collect (APNAP), PutOnStack with target choices
 ├── Actions/             PassPriority, PlayLand, TapForMana; CastSpell, ActivateAbility, StackAbility,
-│                        StackResolution (fizzle); mulligan; hand, combat and target choices
+│                        StackResolution (fizzle); mulligan; hand, library, combat and target choices
+├── Actions/LoyaltyActions.cs  Loyalty.AbilitiesOf (own + granted) and ActivateLoyaltyAction
 ├── Effects/Effects.cs   ContextKeys, Ref (you / opponent / target i / source / event card …), primitives
 ├── Effects/Abilities.cs spell, triggered, activated, mana and static ability components
 ├── Targeting/TargetSpec.cs  one legality test for choosing AND resolving; Combinations
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions)
+├── Rules/Life.cs        THE life-gain path — raises the event "whenever you gain life" reads
 ├── Cards/Card.cs        Card (computed P/T + keywords, permanent/combat state, Fresh()), CardFactory
 ├── Cards/CardData.cs    printed data (Scryfall) + CardDataSet.Load("FRA")
 ├── Mana/                ManaPool, ManaCost (parse, WithGeneric), ManaPayment (solver), ManaAbilities
 ├── Sets/Fra/FraCards.cs hand-written FRA abilities by name; IsImplemented
-├── Sets/Fra/FraDecks.cs two 40-card decks of implemented cards (console, fuzz tests)
+├── Sets/Fra/EmpowerJace.cs  the keyword action and the Jace token
+├── Sets/Fra/FraDecks.cs 40-card decks of implemented cards (console, fuzz tests)
 ├── Ai/GreedyAi.cs       one-ply simulate-and-evaluate AI
 ├── Zones/Zone.cs        per-player zones + shared Stack; per-CONTROLLER battlefield
 └── Sets/FRA.json        imported by tools/import_scryfall_set.py — embedded resource, never hand-edit
@@ -52,8 +55,15 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   `Card.Fresh()` — CR 400.7. Damage, tapped, counters, until-end-of-turn effects, combat state and
   stack choices die there. Only `Shuffle` uses `MoveObject`, to reorder within one zone.
 - **One computation each, never a second copy:** `Card.Power`/`Toughness`/`Has` (printed + counters +
-  until-end-of-turn; rules never read `BasePower`), `Damage.Deal`, `Costs.Of`, `ManaPayment.Find`,
-  `ManaAbilities.CanTap`, `TargetSpec.IsLegal` (on choosing AND resolving).
+  until-end-of-turn; rules never read `BasePower`), `Damage.Deal` (players, creatures, planeswalker
+  loyalty), `Life.Gain`, `Costs.Of`, `ManaPayment.Find`, `ManaAbilities.CanTap`/`CanPayTapCost`,
+  `TargetSpec.IsLegal` (on choosing AND resolving), `Loyalty.AbilitiesOf` (own + granted),
+  `Loyalty.Change` (costs, damage, effects; never below 0), `Ref` (what "creatures you control"
+  means — `Count` counts a `Ref`, it does not filter again).
+- **Planeswalkers:** enter with printed loyalty (`EnterBattlefield`), loyalty abilities are sorcery
+  speed and once per turn per permanent, damage removes loyalty, 0 loyalty is a state-based death,
+  and the defending player's planeswalkers are attack options. Empower Jace creates and loads the
+  token in ONE resolution, so a fresh token never meets the check at 0.
 - **A spell or ability whose targets are ALL illegal on resolution does nothing** (CR 608.2b) — the
   drain on Extended Absence included. Partially illegal: those targets read as 0 to the effects.
 - **`MagicRules.Choose` checks WHICH ids, `ResolveChoice` only how many.** Distinct and offered.
@@ -80,13 +90,14 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 Damage split among blockers is automatic · the legend rule keeps the newest · triggers read sources on
 the battlefield NOW (dies/leaves triggers need a look-back) · state-based actions run one pass ·
 `GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana · menace drops a
-lone blocker instead of refusing the declaration · **damage to a planeswalker does not remove loyalty
-yet** — planeswalkers arrive with Empower Jace · the auto-tapper ignores what the rest of the hand needs.
+lone blocker instead of refusing the declaration · the auto-tapper ignores what the rest of the hand
+needs · Empower Jace with two Jace tokens loads the first · surveil keeps the kept cards' order.
 
 ## What FRA demands (read the rules text before building each)
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 19 cards
-(`FraDecks`). The Bo1 hand smoother is Arena's published description; its weighting and whether
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 34 cards
+(`FraDecks`), including 15 Empower Jace cards. **The 8 real planeswalkers are not**: each needs an
+emblem, an "until your next turn" effect, impulse draw or a −X cost first. The Bo1 hand smoother is Arena's published description; its weighting and whether
 limited Bo1 uses it are unconfirmed — hence `handSmoothing`.

@@ -49,6 +49,9 @@ public record Card : GameObject
 	public int BaseToughness { get; init; }
 	public bool IsToken { get; init; }
 
+	/// <summary>The loyalty printed in the corner; a planeswalker enters with that many counters (CR 306.5b).</summary>
+	public int PrintedLoyalty { get; init; }
+
 	/// <summary>
 	/// The ONE place power and toughness are computed: printed + counters + until-end-of-turn
 	/// effects. Every rule reads these, never BasePower — a second sum drifts.
@@ -62,13 +65,19 @@ public record Card : GameObject
 
 	public bool IsTapped { get; init; }
 	public int PlusOneCounters { get; init; }
+
+	/// <summary>Loyalty counters on a planeswalker. Damage removes them (CR 120.3c); at 0 it dies (CR 704.5i).</summary>
+	public int Loyalty { get; init; }
+
+	/// <summary>The TurnNumber a loyalty ability of this permanent was last activated — once per turn (CR 606.3).</summary>
+	public int LoyaltyActivatedOnTurn { get; init; }
 	public int Damage { get; init; }
 	public bool DamagedByDeathtouch { get; init; }
 
 	/// <summary>TurnNumber it came under its controller's control — summoning sickness reads it.</summary>
 	public int ControlledSinceTurn { get; init; }
 
-	/// <summary>The player (later: planeswalker) it is attacking; 0 when not attacking.</summary>
+	/// <summary>The player OR planeswalker it is attacking; 0 when not attacking. Never assume a player.</summary>
 	public int AttackingId { get; init; }
 
 	/// <summary>The attacker it blocks; 0 when not blocking.</summary>
@@ -86,6 +95,8 @@ public record Card : GameObject
 		{
 			IsTapped = false,
 			PlusOneCounters = 0,
+			Loyalty = 0,
+			LoyaltyActivatedOnTurn = 0,
 			Damage = 0,
 			DamagedByDeathtouch = false,
 			ControlledSinceTurn = 0,
@@ -141,6 +152,7 @@ public static class CardFactory
 			ManaCost = ManaCost.Parse(front?.ManaCost ?? data.ManaCost),
 			BasePower = ParsePowerToughness(front?.Power ?? data.Power),
 			BaseToughness = ParsePowerToughness(front?.Toughness ?? data.Toughness),
+			PrintedLoyalty = ParsePowerToughness(front?.Loyalty ?? data.Loyalty),
 			Colors = [.. (data.Colors ?? []).Select(ManaCost.ColorOf)],
 			// Scryfall merges every face's keywords; keep the ones the front face's text names.
 			Keywords = front is null

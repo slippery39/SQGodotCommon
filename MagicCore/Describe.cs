@@ -18,6 +18,8 @@ public static class Describe
 			CastSpellAction c =>
 				$"Cast {Name(s, c.CardId)}{(c.X > 0 ? $" (X={c.X})" : "")}{Targets(s, c.Targets)}",
 			ActivateAbilityAction a => $"Activate {Name(s, a.CardId)}{Targets(s, a.Targets)}",
+			ActivateLoyaltyAction l =>
+				$"{Name(s, l.CardId)} [{LoyaltyCost(s, l)}]{Targets(s, l.Targets)}",
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",
 			_ => action.GetType().Name,
 		};
@@ -44,6 +46,8 @@ public static class Describe
 		var parts = new List<string> { c.Name };
 		if (c.Is(CardType.Creature))
 			parts.Add($"{c.Power}/{c.Toughness}");
+		if (c.Is(CardType.Planeswalker))
+			parts.Add($"loyalty {c.Loyalty}");
 		if (c.Damage > 0)
 			parts.Add($"dmg {c.Damage}");
 		if (c.IsTapped)
@@ -56,6 +60,13 @@ public static class Describe
 			parts.Add("token");
 		return string.Join(" ", parts);
 	}
+
+	static string LoyaltyCost(GameState s, ActivateLoyaltyAction l) =>
+		s.HasObject(l.CardId)
+		&& Loyalty.AbilitiesOf(s, s.GetCard(l.CardId)).ElementAtOrDefault(l.AbilityIndex)
+			is { } ability
+			? Loyalty.CostText(ability.Cost)
+			: "?";
 
 	static string Name(GameState s, int id) => s.HasObject(id) ? s.GetObject(id).Name : $"#{id}";
 

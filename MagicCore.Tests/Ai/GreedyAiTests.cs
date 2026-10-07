@@ -79,6 +79,29 @@ public class GreedyAiTests
 		Assert.That(ai.Evaluate(s), Is.GreaterThan(before));
 	}
 
+	// At 0.8 per loyalty counter the AI valued a counter at two thirds of a card, so it never spent
+	// Jace's loyalty on anything — the Jace deck's engine sat idle in AI hands.
+	[Test]
+	public void SpendsJacesLoyalty_WhenItHasNothingBetterToDo()
+	{
+		var s = TestGames.InFirstMain();
+		var me = s.GetGame().StartingPlayerId;
+		int jace;
+		(s, jace) = TestGames.Put(
+			s,
+			me,
+			MagicCore.Sets.Fra.EmpowerJace.JaceToken,
+			ZoneType.Battlefield
+		);
+		s = s.UpdateObject(jace, s.GetCard(jace) with { Loyalty = 6, IsToken = true });
+		var ai = new GreedyAi(me);
+
+		for (var i = 0; i < 3 && s.GetCard(jace).Loyalty == 6; i++)
+			s = s.AutoPass().DecidingPlayerId() == me ? ai.Decide(s).State : s;
+
+		Assert.That(s.GetCard(jace).Loyalty, Is.LessThan(6));
+	}
+
 	[Test]
 	public void AiVersusAi_Finishes([Range(1, 4)] int seed)
 	{

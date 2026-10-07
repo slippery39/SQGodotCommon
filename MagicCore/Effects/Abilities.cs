@@ -17,6 +17,7 @@ public enum TriggerEvent
 	SelfAttacks,
 	YouCastNoncreatureSpell,
 	LandYouControlEnters, // landfall
+	YouGainLife,
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>
@@ -33,6 +34,21 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 	public bool TapCost { get; init; }
 	public ImmutableList<TargetSpec> Targets { get; init; } = [];
 }
+
+/// <summary>
+/// "[+N]/[−N]/[0]: [effects]" — a planeswalker's loyalty ability (CR 606). Sorcery speed, once per
+/// turn per permanent; the cost adds or removes loyalty counters.
+/// </summary>
+public record LoyaltyAbilityComponent(int Cost, ImmutableList<GameAction> Effects) : GameComponent
+{
+	public ImmutableList<TargetSpec> Targets { get; init; } = [];
+}
+
+/// <summary>The Way cycle and friends: "Planeswalkers you control have [loyalty ability]."</summary>
+public record GrantsLoyaltyAbility(LoyaltyAbilityComponent Ability) : GameComponent;
+
+/// <summary>Sanctum Lurker: "Planeswalkers you control aren't put into their owners' graveyards for having 0 loyalty."</summary>
+public record YourPlaneswalkersSurviveZeroLoyalty : GameComponent;
 
 /// <summary>"{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).</summary>
 public record ManaAbilityComponent(ManaColor Color) : GameComponent;

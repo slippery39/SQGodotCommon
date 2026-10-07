@@ -9,6 +9,7 @@ public enum TargetKind
 	Creature,
 	CreatureOrPlaneswalker,
 	AnyTarget, // creature, planeswalker or player (CR 115.4)
+	Player,
 }
 
 public enum Whose
@@ -51,8 +52,12 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		if (!whoseOk)
 			return false;
 		if (s.GetObject(targetId) is MagicPlayer)
-			return Kind == TargetKind.AnyTarget;
-		if (s.GetObject(targetId) is not Card card || !s.IsOnBattlefield(targetId))
+			return Kind is TargetKind.AnyTarget or TargetKind.Player;
+		if (
+			Kind == TargetKind.Player
+			|| s.GetObject(targetId) is not Card card
+			|| !s.IsOnBattlefield(targetId)
+		)
 			return false;
 
 		var typeOk = Kind switch

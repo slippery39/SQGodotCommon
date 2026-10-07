@@ -17,10 +17,18 @@ public class RandomGameTests
 		);
 
 	[Test]
-	public void RandomPlay_RealFraDecks_AlwaysFinishes([Range(1, 30)] int seed)
+	public void RandomPlay_RealFraDecks_AlwaysFinishes([Range(1, 90)] int seed)
 	{
-		var s = MagicRules.NewGame(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], seed);
-		Assert.That(PlayRandomly(s, seed).IsOver(), $"seed {seed} did not finish");
+		// Every ordered pairing of the decks, in turn — so each deck plays each other from both seats.
+		var decks = FraDecks.All.Keys.ToList();
+		var pairs = decks.SelectMany(a => decks.Where(b => b != a).Select(b => (a, b))).ToList();
+		var (first, second) = pairs[seed % pairs.Count];
+
+		var s = MagicRules.NewGame(FraDecks.All[first], FraDecks.All[second], seed);
+		Assert.That(
+			PlayRandomly(s, seed).IsOver(),
+			$"seed {seed} ({first} vs {second}) did not finish"
+		);
 	}
 
 	public static GameState PlayRandomly(GameState s, int seed)

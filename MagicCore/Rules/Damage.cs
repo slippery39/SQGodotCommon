@@ -16,6 +16,12 @@ public static class Damage
 
 		if (s.GetObject(targetId) is MagicPlayer player)
 			s = s.WithPlayer(player with { Life = player.Life - amount });
+		else if (
+			s.GetObject(targetId) is Card { } walker
+			&& s.IsOnBattlefield(targetId)
+			&& walker.Is(CardType.Planeswalker)
+		)
+			s = Actions.Loyalty.Change(s, targetId, -amount); // CR 120.3c
 		else if (s.GetObject(targetId) is Card target && s.IsOnBattlefield(targetId))
 			s = s.UpdateObject(
 				targetId,
@@ -28,11 +34,6 @@ public static class Damage
 		else
 			return s;
 
-		if (source.Has("Lifelink"))
-		{
-			var controller = s.GetPlayer(source.ControllerId);
-			s = s.WithPlayer(controller with { Life = controller.Life + amount });
-		}
-		return s;
+		return source.Has("Lifelink") ? Life.Gain(s, source.ControllerId, amount) : s;
 	}
 }
