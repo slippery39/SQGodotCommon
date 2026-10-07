@@ -1,0 +1,209 @@
+{
+ "how": "python tools/gen_art.py --prompt-file <batch> --variants N --ckpt dreamshaperXL_turbo.safetensors [--seed S] ; seeds are derived per label+variant, so batch + variant reproduces an image",
+ "batches": {
+  "originals (variants 3, default seed)": [
+   {
+    "label": "almsgiver_acolyte",
+    "prompt": "a young temple acolyte in white and gold robes handing out bread to the poor on cathedral steps, warm sunlight, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "aurex_the_sevenfold",
+    "prompt": "a colossal black horror with seven heads rising from a swamp of bones, ominous purple sky, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "consign_to_rot",
+    "prompt": "a body laid into a dark bog, crows and rot, mourners with lanterns in fog, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "covenant_of_thorns",
+    "prompt": "a glowing pact sealed in blood on a stone altar wrapped in thorny vines, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "hoofthunder_colossus",
+    "prompt": "a gigantic armoured horned beast stampeding across a plain, dust and thunder clouds, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "ironscale_marshal",
+    "prompt": "a snake-folk warrior captain in iron scale armour raising a spear before troops, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "ironscale_rite",
+    "prompt": "serpent shamans in a jungle clearing anointing a warrior with green glowing oil, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "kilnmother_vess",
+    "prompt": "a fire mage woman shaping molten glass at a roaring kiln forge, sparks, red and blue light, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "mirevale_deceiver",
+    "prompt": "a cloaked illusionist in a misty marsh, mirror images of himself shimmering around him, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "raise_the_sunken",
+    "prompt": "a necromancer on a stormy shore raising drowned warriors from the waves, green ghostly light, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "sanguine_reciprocity",
+    "prompt": "two vampire nobles exchanging chalices of blood in a candlelit gothic hall, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "scrapyard_ravager",
+    "prompt": "a small savage construct made of rusty scrap metal and gears snarling in a junkyard, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "scrapyard_servitor",
+    "prompt": "a tiny humble clockwork servant robot of patched brass carrying a bolt in a workshop, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "sporeback_ballista",
+    "prompt": "a siege ballista grown from fungus and wood launching a glowing spore bolt, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "sunken_colossus",
+    "prompt": "an enormous ancient stone titan lying drowned at the bottom of the sea, fish and kelp, light rays, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "tidebinder_sprite",
+    "prompt": "a small winged water faerie binding a glowing ribbon of sea water, ocean spray, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "timberwatch_elder",
+    "prompt": "an old elf druid with an antler staff standing guard in an ancient forest, green light, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "twinflame_artisan",
+    "prompt": "a goblin artificer crafting two identical blazing statues, mirrored flames, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "wirewood_conduit",
+    "prompt": "an elf mystic channelling green energy through a living tree's roots into the ground, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "wirewood_symbiont",
+    "prompt": "a small insect creature riding on the shoulder of an elf archer in a lush forest, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "ornithopter_shard",
+    "prompt": "a small brass mechanical bird made of clockwork and a shard of blue crystal, flying, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   }
+  ],
+  "redo (variants 4, --seed 777)": [
+   {
+    "label": "wirewood_symbiont",
+    "prompt": "close-up of a large iridescent green beetle with six legs clinging to the leather shoulder armour of an elf ranger, the beetle large in the foreground, glowing forest behind, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "ironscale_rite",
+    "prompt": "a serpent-folk shaman with a cobra head and green scales pouring glowing green oil over the scaly head of a kneeling snake-headed warrior, stone jungle temple, incense smoke, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   },
+   {
+    "label": "consign_to_rot",
+    "prompt": "hooded mourners lowering a body wrapped in pale linen into a black bog, crows perched on dead branches, fog, lanterns, painterly fantasy illustration, Magic the Gathering card art style, dramatic lighting, rich detail, no text",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed"
+   }
+  ],
+  "redo2 (variants 4, --seed 4242)": [
+   {
+    "label": "wirewood_symbiont",
+    "width": 1216,
+    "height": 832,
+    "negative": "text, letters, watermark, frame, border, card, blurry, deformed, person, human, armour, warrior",
+    "prompt": "a large iridescent green and gold forest beetle with glowing wing cases sitting on a mossy tree branch, an elf hand reaching toward it, sunbeams through an ancient forest, painterly fantasy illustration, Magic the Gathering card art style, rich detail, no text"
+   }
+  ]
+ },
+ "chosen": {
+  "almsgiver_acolyte": "originals almsgiver_acolyte_v1",
+  "aurex_the_sevenfold": "originals aurex_the_sevenfold_v1",
+  "consign_to_rot": "redo consign_to_rot_v3",
+  "covenant_of_thorns": "originals covenant_of_thorns_v1",
+  "hoofthunder_colossus": "originals hoofthunder_colossus_v0",
+  "ironscale_marshal": "originals ironscale_marshal_v0",
+  "ironscale_rite": "redo ironscale_rite_v3",
+  "kilnmother_vess": "originals kilnmother_vess_v1",
+  "mirevale_deceiver": "originals mirevale_deceiver_v0",
+  "ornithopter_shard": "originals ornithopter_shard_v1",
+  "raise_the_sunken": "originals raise_the_sunken_v0",
+  "sanguine_reciprocity": "originals sanguine_reciprocity_v1",
+  "scrapyard_ravager": "originals scrapyard_ravager_v1",
+  "scrapyard_servitor": "originals scrapyard_servitor_v2",
+  "sporeback_ballista": "originals sporeback_ballista_v2",
+  "sunken_colossus": "originals sunken_colossus_v1",
+  "tidebinder_sprite": "originals tidebinder_sprite_v0",
+  "timberwatch_elder": "originals timberwatch_elder_v2",
+  "twinflame_artisan": "originals twinflame_artisan_v1",
+  "wirewood_conduit": "originals wirewood_conduit_v1",
+  "wirewood_symbiont": "redo2 wirewood_symbiont_v1"
+ }
+}

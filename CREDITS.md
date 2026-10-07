@@ -37,4 +37,5 @@ recoloured to a light neutral for tinting in code.
 
 Card illustrations are fetched from [Scryfall](https://scryfall.com) for personal, non-commercial
 use; they are the property of Wizards of the Coast and the individual artists. Generated art
-(backdrop, hero portraits) is made locally with ComfyUI.
+(backdrop, hero portraits, and the art of the 21 original-design cards Scryfall has no card for)
+is made locally with ComfyUI; prompts in `docs/mockups/mtg/`.
