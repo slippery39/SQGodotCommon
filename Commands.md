@@ -166,10 +166,10 @@ Fields: mode, which scenario (blank = first), which strategies (blank = all).
 ## Art pass (download card art)
 
 ```
-dotnet run --project MtgArtScraper -- SQGodotCommon/MtgGame/Assets/Card_Art HLM
+dotnet run --project MtgArtScraper -- SQGodotCommon/MtgGame/Assets/Card_Art CSC   # then LEG, then CMB
 ```
 
-Pulls art crops from Scryfall by card name, skips files that already exist. Cards Scryfall
+**Run it once per set code - CSC, LEG and CMB** (the premade decks are LEG; it had only ever been run for one, and 121 cube cards had no art). Tokens are found by walking each card for the templates its effects create, so a new token needs no list entry. **Official art first:** only what is in `_needs_art_<code>.txt` (genuine original designs) goes to ComfyUI. Pulls art crops from Scryfall by card name, skips files that already exist. Cards Scryfall
 doesn't recognize (your own designs) land in `_needs_art_<code>.txt` beside the output folder.
 
 ## Train a draft model

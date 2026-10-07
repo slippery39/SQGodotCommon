@@ -18,10 +18,18 @@ var set = SetRegistry.Get(setCode);
 // Cards not in the set list that still need art
 var extraCards = new List<string> { "Plains", "Island", "Swamp", "Mountain", "Forest" };
 
-// Token cards — fetched via Scryfall search (t:token) rather than named lookup
-var tokenCards = new List<string> { "Goblin", "Clue", "Spirit", "Human", "Zombie", "Vampire" };
-
 var cardNames = set.Cards.Select(c => c.Name).Distinct().OrderBy(n => n).ToList();
+
+// Token cards — fetched via Scryfall search (t:token) rather than named lookup. DISCOVERED: every
+// card template nested inside a set card (what its effects create), found by walking the card.
+// The hand-kept list this replaced had six names while the cube creates many more.
+var tokenCards = set
+	.Cards.SelectMany(NestedCards)
+	.Select(c => c.Name)
+	.Where(n => !cardNames.Contains(n))
+	.Distinct()
+	.OrderBy(n => n)
+	.ToList();
 
 // Double-faced cards need their night face fetched separately — it is a distinct piece of
 // art under a different name, and the card renders it when transformed.
@@ -99,7 +107,12 @@ foreach (var name in tokenCards)
 
 	try
 	{
-		var artUrl = await GetTokenArtCropUrl(http, name);
+		// A card may name its token "Angel Token"; Scryfall's is "Angel". Searched without the
+		// suffix, saved under the full name, since that is what the game's art loader asks for.
+		var artUrl = await GetTokenArtCropUrl(
+			http,
+			name.EndsWith(" Token") ? name[..^" Token".Length] : name
+		);
 		if (artUrl is null)
 		{
 			Console.WriteLine("not found");
@@ -124,6 +137,16 @@ foreach (var name in tokenCards)
 Console.WriteLine();
 Console.WriteLine($"Done. {allNamed.Count + tokenCards.Count} cards processed.");
 
+var missingPath = Path.Combine(
+	Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? outputPath,
+	$"_needs_art_{set.Code.ToLowerInvariant()}.txt"
+);
+
+// A set with nothing missing must not keep an old list: a stale one sent Gideon to the
+// generator after his art had been supplied.
+if (notFound.Count == 0 && File.Exists(missingPath))
+	File.Delete(missingPath);
+
 if (notFound.Count > 0)
 {
 	// These are the original designs — no real card shares the name, so Scryfall has nothing.
@@ -132,10 +155,6 @@ if (notFound.Count > 0)
 	//
 	// Written BESIDE the art directory, not inside it: Godot imports everything under its
 	// asset folders, and a stray .txt would gain a .import sidecar and show up as a resource.
-	var missingPath = Path.Combine(
-		Path.GetDirectoryName(Path.GetFullPath(outputPath)) ?? outputPath,
-		$"_needs_art_{set.Code.ToLowerInvariant()}.txt"
-	);
 	await File.WriteAllLinesAsync(missingPath, notFound);
 
 	Console.WriteLine($"\n=== NOT FOUND ({notFound.Count}) — written to {missingPath} ===");
@@ -231,18 +250,88 @@ static async Task<string?> GetTokenArtCropUrl(HttpClient http, string tokenName)
 		using var doc = JsonDocument.Parse(json);
 		var root = doc.RootElement;
 
-		if (root.TryGetProperty("data", out var data) && data.GetArrayLength() > 0)
-		{
-			var first = data[0];
-			if (
-				first.TryGetProperty("image_uris", out var imageUris)
-				&& imageUris.TryGetProperty("art_crop", out var artCrop)
-			)
-				return artCrop.GetString();
-		}
+		// The first SINGLE-faced token with art. The oldest Clue and Human are now double-faced
+		// tokens, whose art sits under card_faces with no top-level image_uris — taking data[0]
+		// blindly reported both as "not found" while Scryfall had several of each.
+		if (root.TryGetProperty("data", out var data))
+			foreach (var token in data.EnumerateArray())
+				if (
+					token.TryGetProperty("image_uris", out var imageUris)
+					&& imageUris.TryGetProperty("art_crop", out var artCrop)
+				)
+					return artCrop.GetString();
 
 		return null;
 	}
 
 	throw new Exception($"exceeded {MaxRetries} retries due to rate limiting");
+}
+
+// Every Card reachable from inside a card (token templates in its effects, copies it makes), by
+// reflection over engine types and collections. Depth-limited: a computed property can hand back
+// a new object on every read, which a visited-set alone would chase forever.
+static IEnumerable<Card> NestedCards(Card root)
+{
+	var seen = new HashSet<object>(ReferenceEqualityComparer.Instance);
+	var stack = new Stack<(object Node, int Depth)>();
+	stack.Push((root, 0));
+	while (stack.Count > 0)
+	{
+		var (node, depth) = stack.Pop();
+		if (depth > 14 || !seen.Add(node))
+			continue;
+		if (node is Card card && !ReferenceEquals(card, root))
+			yield return card;
+
+		var type = node.GetType();
+		if (node is string || type.IsPrimitive || type.IsEnum)
+			continue;
+		if (node is System.Collections.IEnumerable items)
+		{
+			foreach (var item in items)
+				if (item != null)
+					stack.Push((Unpair(item), depth + 1));
+			continue;
+		}
+		var ns = type.Namespace ?? "";
+		if (!ns.StartsWith("MtgCore") && !ns.StartsWith("ImmutableGameObjects"))
+			continue;
+		foreach (
+			var property in type.GetProperties(
+				System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance
+			)
+		)
+		{
+			// Value types are skipped EXCEPT collections: GameObject.Components is an
+			// ImmutableArray (a struct), and skipping it found no tokens at all.
+			if (
+				property.GetIndexParameters().Length > 0
+				|| (
+					property.PropertyType.IsValueType
+					&& !typeof(System.Collections.IEnumerable).IsAssignableFrom(
+						property.PropertyType
+					)
+				)
+			)
+				continue;
+			object? value;
+			try
+			{
+				value = property.GetValue(node);
+			}
+			catch
+			{
+				continue;
+			}
+			if (value != null)
+				stack.Push((value, depth + 1));
+		}
+	}
+
+	// A dictionary yields KeyValuePairs (structs); the value is what can hold a card.
+	static object Unpair(object item) =>
+		item.GetType() is { IsGenericType: true } t
+		&& t.GetGenericTypeDefinition() == typeof(KeyValuePair<,>)
+			? t.GetProperty("Value")!.GetValue(item) ?? item
+			: item;
 }
