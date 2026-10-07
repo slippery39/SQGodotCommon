@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Mana;
 
@@ -26,6 +27,14 @@ public class ManaCostTests
 		);
 		Assert.That(cost.ManaValue, Is.EqualTo(2 + 1 + 2 + 0 + 1));
 	}
+
+	// Thalia's tax once rendered as {1}{B}{1}.
+	[Test]
+	public void ATax_MergesIntoTheGenericSymbol() =>
+		Assert.That(
+			ManaCost.Parse("{1}{B}").WithGeneric(1).Symbols,
+			Is.EqualTo(ManaCost.Parse("{2}{B}").Symbols)
+		);
 
 	// Every printed cost and type line in the set builds — a new symbol or type word fails here,
 	// not mid-game. Scryfall's own mana value is the oracle for the parse.
@@ -73,6 +82,34 @@ public class ManaPaymentTests
 	[TestCase("{W/U}{U/B}", new[] { "Island", "Plains" }, true)]
 	public void Find(string cost, string[] lands, bool payable) =>
 		Assert.That(CanPay(cost, lands), Is.EqualTo(payable));
+
+	// A mana creature tapped for a spell can no longer attack — lands go first.
+	[Test]
+	public void LandsAreTappedBeforeAManaCreature()
+	{
+		var s = TestGames.InFirstMain();
+		var me = s.GetGame().StartingPlayerId;
+		int propagator,
+			spell;
+		(s, propagator) = TestGames.Put(
+			s,
+			me,
+			FraCards.Get("Greenhouse Propagator"),
+			ZoneType.Battlefield
+		);
+		(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Battlefield);
+		(s, spell) = TestGames.Put(
+			s,
+			me,
+			TestGames.CreatureCosting("{1}{G}", "Bear", "2/2"),
+			ZoneType.Hand
+		);
+
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = spell });
+
+		Assert.That(s.GetCard(propagator).IsTapped, Is.False);
+	}
 
 	[Test]
 	public void FloatingManaIsSpentBeforeAnyLandIsTapped()

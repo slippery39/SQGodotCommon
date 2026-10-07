@@ -1,3 +1,6 @@
+using ImmutableGameObjects;
+using MagicCore.Sets.Fra;
+
 namespace MagicCore.Tests;
 
 /// <summary>
@@ -7,11 +10,22 @@ namespace MagicCore.Tests;
 public class RandomGameTests
 {
 	[Test]
-	public void RandomPlay_AlwaysFinishes([Range(1, 30)] int seed)
+	public void RandomPlay_VanillaFiller_AlwaysFinishes([Range(1, 30)] int seed) =>
+		Assert.That(
+			PlayRandomly(TestGames.New(seed), seed).IsOver(),
+			$"seed {seed} did not finish"
+		);
+
+	[Test]
+	public void RandomPlay_RealFraDecks_AlwaysFinishes([Range(1, 30)] int seed)
+	{
+		var s = MagicRules.NewGame(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], seed);
+		Assert.That(PlayRandomly(s, seed).IsOver(), $"seed {seed} did not finish");
+	}
+
+	public static GameState PlayRandomly(GameState s, int seed)
 	{
 		var rng = new Random(seed);
-		var s = TestGames.New(seed);
-
 		for (var i = 0; i < 20_000 && !s.IsOver(); i++)
 		{
 			if (s.GetPendingChoice() is { } choice)
@@ -20,14 +34,12 @@ public class RandomGameTests
 				s = s.Choose(picks.Select(o => o.Id));
 				continue;
 			}
-			var actions = s.LegalActions();
 			// Mulligan rarely, or random play mulligans to nothing and never reaches combat.
-			var pool = actions
+			var pool = s.LegalActions()
 				.Where(a => a is not Actions.MulliganAction || rng.Next(10) == 0)
 				.ToList();
 			s = s.Act(pool[rng.Next(pool.Count)]);
 		}
-
-		Assert.That(s.IsOver(), $"seed {seed} did not finish");
+		return s;
 	}
 }
