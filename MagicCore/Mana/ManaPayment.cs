@@ -14,7 +14,8 @@ namespace MagicCore;
 /// search tiny however many basics are out.
 ///
 /// ponytail: spends floating mana first, then lands with the fewest colours. Arena's tapper also
-/// keeps colours the rest of your hand needs; add that here when duals and a real hand make it matter.
+/// keeps colours the rest of your hand needs. That trigger has fired — the FRA decks play duals
+/// since batch 7a, so a {1}{W} can still tap the Island a {U}{U} in hand needed. Next to build.
 /// </summary>
 public static class ManaPayment
 {

@@ -60,6 +60,10 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   `TargetSpec.IsLegal` (on choosing AND resolving), `Loyalty.AbilitiesOf` (own + granted),
   `Loyalty.Change` (costs, damage, effects; never below 0), `Ref` (what "creatures you control"
   means — `Count` counts a `Ref`, it does not filter again).
+- **`EnterBattlefield` is the one way onto the battlefield** and owns the entry: controller,
+  summoning-sickness stamp, starting loyalty, entering tapped (`EntersTappedComponent`), the event.
+  The exception is test setup: `TestGames.Put(…, Battlefield)` places a card with NONE of that —
+  untapped, unsick, 0 loyalty. Use `EnterBattlefield` in a test when the entry itself matters.
 - **Planeswalkers:** enter with printed loyalty (`EnterBattlefield`), loyalty abilities are sorcery
   speed and once per turn per permanent, damage removes loyalty, 0 loyalty is a state-based death,
   and the defending player's planeswalkers are attack options. Empower Jace creates and loads the
@@ -89,7 +93,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 
 Damage split among blockers is automatic · the legend rule keeps the newest · triggers read sources on
 the battlefield NOW (dies/leaves triggers need a look-back) · state-based actions run one pass ·
-`GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana · menace drops a
+`GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana, and it loses
+slow races to evasive drains (measured: `docs/findings/magic-ai.md`) · menace drops a
 lone blocker instead of refusing the declaration · the auto-tapper ignores what the rest of the hand
 needs · Empower Jace with two Jace tokens loads the first · surveil keeps the kept cards' order.
 
@@ -97,7 +102,9 @@ needs · Empower Jace with two Jace tokens loads the first · surveil keeps the 
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 34 cards
-(`FraDecks`), including 15 Empower Jace cards. **The 8 real planeswalkers are not**: each needs an
-emblem, an "until your next turn" effect, impulse draw or a −X cost first. The Bo1 hand smoother is Arena's published description; its weighting and whether
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 49 cards
+(`FraDecks`), including 15 Empower Jace cards and the 15 dual lands. **The 8 real planeswalkers are
+not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
+Coverage plan, by cards unblocked: 7a lands ✓ · 7b modal, sacrifice, dies triggers · 7c continuous
+effects, step triggers, prowess · 7d prepare, flashback, cycling, graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
 limited Bo1 uses it are unconfirmed — hence `handSmoothing`.

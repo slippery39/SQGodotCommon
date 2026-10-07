@@ -52,6 +52,7 @@ Some of them are mechanical — grep the diff rather than reading for them:
 | A test asserting a number copied out of card content | tests read authored values, never restate them |
 | A new card with no ability components / effects | an inert card throws no error — is there a test that the ability FIRES? |
 | New `ponytail:` comments | fine, but each must name its ceiling and upgrade path |
+| A test reading a state field in the same expression as a helper that replaces it: `s.GetCard(Play(…))`, `s.Act(new … { CardId = Hand(…) })` | C# reads `s` first — the call runs on the state before the card existed. Bit MagicCore's tests twice |
 
 ## 4. Hygiene
 

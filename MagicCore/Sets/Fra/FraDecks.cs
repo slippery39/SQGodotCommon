@@ -9,8 +9,9 @@ public static class FraDecks
 		new Dictionary<string, IReadOnlyList<CardDefinition>>
 		{
 			["White-Black"] = Build(
-				("Plains", 7),
-				("Swamp", 10),
+				("Plains", 6),
+				("Swamp", 9),
+				("Meticulous Commons", 2),
 				("Prophesied End", 3),
 				("Last Gasp", 2),
 				("Terminal Criticism", 2),
@@ -24,8 +25,10 @@ public static class FraDecks
 				("Yargle, Glutton of Urborg", 1)
 			),
 			["Red-Green"] = Build(
-				("Mountain", 9),
-				("Forest", 8),
+				("Mountain", 7),
+				("Forest", 7),
+				("Konstrari Annex", 2),
+				("Rockfall Vale", 1),
 				("Chandra's Emberling", 3),
 				("Heartstring Puller", 3),
 				("Wrath of the Bloodmane", 2),
@@ -41,8 +44,10 @@ public static class FraDecks
 				("Way of the Warlord", 1)
 			),
 			["White-Blue Jace"] = Build(
-				("Plains", 8),
-				("Island", 9),
+				("Plains", 7),
+				("Island", 7),
+				("Fatehold Annex", 2),
+				("Deserted Beach", 1),
 				("Academic Ascent", 3),
 				("Repurposed Enforcer", 3),
 				("Prophesied End", 2),

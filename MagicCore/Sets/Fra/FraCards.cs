@@ -71,6 +71,17 @@ public static class FraCards
 		params GameAction[] effects
 	) => new(Loyalty(cost, targets, effects));
 
+	static ImmutableArray<GameComponent> DualLand(
+		EntersUntappedIf unless,
+		ManaColor a,
+		ManaColor b
+	) =>
+		[
+			new EntersTappedComponent(unless),
+			new ManaAbilityComponent(a),
+			new ManaAbilityComponent(b),
+		];
+
 	/// <summary>Keywords the engine implements; a text line made only of these needs no script.</summary>
 	public static readonly ImmutableHashSet<string> EngineKeywords = ImmutableHashSet.Create(
 		StringComparer.OrdinalIgnoreCase,
@@ -234,6 +245,85 @@ public static class FraCards
 				When(TriggerEvent.AnotherCreatureYouControlEnters, [], new GainLife(Ref.You, 1)),
 				new ManaAbilityComponent(ManaColor.Green),
 			],
+
+			// ===== Dual lands =====
+			// Ten commons: "enters tapped unless you control a planeswalker." Five rares: "unless you
+			// control two or more other lands." Each "{T}: Add {A} or {B}."
+			["Dedicated Commons"] = DualLand(
+				EntersUntappedIf.YouControlAPlaneswalker,
+				ManaColor.Red,
+				ManaColor.White
+			),
+			["Fatehold Annex"] = DualLand(
+				EntersUntappedIf.YouControlAPlaneswalker,
+				ManaColor.White,
+				ManaColor.Blue
+			),
+			["Formidable Commons"] = DualLand(
+				EntersUntappedIf.YouControlAPlaneswalker,
+				ManaColor.Black,
+				ManaColor.Green
+			),
+			["Innovative Commons"] = DualLand(
+				EntersUntappedIf.YouControlAPlaneswalker,
+				ManaColor.Blue,
+				ManaColor.Red
+			),
+			["Konstrari Annex"] = DualLand(
+				EntersUntappedIf.YouControlAPlaneswalker,
+				ManaColor.Red,
+				ManaColor.Green
+			),
+			["Meticulous Commons"] = DualLand(
+				EntersUntappedIf.YouControlAPlaneswalker,
+				ManaColor.White,
+				ManaColor.Black
+			),
+			["Stingerquill Annex"] = DualLand(
+				EntersUntappedIf.YouControlAPlaneswalker,
+				ManaColor.Black,
+				ManaColor.Red
+			),
+			["Theorix Annex"] = DualLand(
+				EntersUntappedIf.YouControlAPlaneswalker,
+				ManaColor.Blue,
+				ManaColor.Black
+			),
+			["Transformative Commons"] = DualLand(
+				EntersUntappedIf.YouControlAPlaneswalker,
+				ManaColor.Green,
+				ManaColor.Blue
+			),
+			["Vigorbloom Annex"] = DualLand(
+				EntersUntappedIf.YouControlAPlaneswalker,
+				ManaColor.Green,
+				ManaColor.White
+			),
+			["Deserted Beach"] = DualLand(
+				EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+				ManaColor.White,
+				ManaColor.Blue
+			),
+			["Haunted Ridge"] = DualLand(
+				EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+				ManaColor.Black,
+				ManaColor.Red
+			),
+			["Overgrown Farmland"] = DualLand(
+				EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+				ManaColor.Green,
+				ManaColor.White
+			),
+			["Rockfall Vale"] = DualLand(
+				EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+				ManaColor.Red,
+				ManaColor.Green
+			),
+			["Shipwreck Marsh"] = DualLand(
+				EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+				ManaColor.Blue,
+				ManaColor.Black
+			),
 
 			// ===== Empower Jace (see EmpowerJace.cs) =====
 			["Academic Ascent"] =

@@ -53,6 +53,17 @@ public record YourPlaneswalkersSurviveZeroLoyalty : GameComponent;
 /// <summary>"{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).</summary>
 public record ManaAbilityComponent(ManaColor Color) : GameComponent;
 
+public enum EntersUntappedIf
+{
+	Never,
+	YouControlAPlaneswalker,
+	YouControlTwoOrMoreOtherLands,
+}
+
+/// <summary>"This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield.</summary>
+public record EntersTappedComponent(EntersUntappedIf Unless = EntersUntappedIf.Never)
+	: GameComponent;
+
 /// <summary>Thalia: "Noncreature spells your opponents cast cost {N} more to cast."</summary>
 public record OpponentsNoncreatureSpellsCostMore(int Amount) : GameComponent;
 

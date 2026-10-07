@@ -1,5 +1,6 @@
 using ImmutableGameObjects;
 using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Turns;
 
 namespace MagicCore;
@@ -93,19 +94,45 @@ public static class MagicState
 			s.GetCard(cardId).Fresh()
 		);
 
+	/// <summary>
+	/// The ONE way onto the battlefield — cast, played, created or returned. Owns the entry
+	/// ceremony: controller, summoning-sickness stamp, starting loyalty, entering tapped, the event.
+	/// </summary>
 	public static GameState EnterBattlefield(this GameState s, int cardId, int controllerId)
 	{
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield))
 			.Raise(new EnteredBattlefieldEvent(cardId));
+		var card = s.GetCard(cardId);
 		return s.UpdateObject(
 			cardId,
-			s.GetCard(cardId) with
+			card with
 			{
 				ControllerId = controllerId,
 				ControlledSinceTurn = s.GetGame().TurnNumber,
-				Loyalty = s.GetCard(cardId).PrintedLoyalty,
+				Loyalty = card.PrintedLoyalty,
+				IsTapped =
+					card.GetComponent<EntersTappedComponent>() is { } tapped
+					&& !EntersUntapped(s, card.Id, controllerId, tapped.Unless),
 			}
 		);
+	}
+
+	/// <summary>"This land enters tapped unless …", judged as it enters — "other" excludes itself.</summary>
+	/// <summary>Judged on the board it is ENTERING — the new controller's, not the card's old one.</summary>
+	static bool EntersUntapped(GameState s, int cardId, int controllerId, EntersUntappedIf unless)
+	{
+		var others = s.CardsIn(controllerId, ZoneType.Battlefield)
+			.Where(c => c.Id != cardId)
+			.ToList();
+		return unless switch
+		{
+			EntersUntappedIf.YouControlAPlaneswalker => others.Any(c =>
+				c.Is(CardType.Planeswalker)
+			),
+			EntersUntappedIf.YouControlTwoOrMoreOtherLands => others.Count(c => c.Is(CardType.Land))
+				>= 2,
+			_ => false,
+		};
 	}
 
 	/// <summary>Draws from the top; a draw from an empty library flags the loss for the state-based check.</summary>
