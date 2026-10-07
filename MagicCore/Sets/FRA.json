@@ -1,0 +1,5039 @@
+[
+ {
+  "name": "Emrakul, the Exigent Doom",
+  "layout": "normal",
+  "mana_cost": "{10}",
+  "cmc": 10.0,
+  "type_line": "Legendary Creature — Eldrazi",
+  "oracle_text": "When you cast this spell, untap all lands you control.\nFlying, trample\nWard—Sacrifice three permanents.\n{3}, Exile this card from your hand: Target land gains \"{T}: Add {C}{C}\" until this card is cast from exile. You may cast this card for as long as it remains exiled.",
+  "power": "12",
+  "toughness": "12",
+  "colors": [],
+  "keywords": [
+   "Flying",
+   "Trample",
+   "Ward"
+  ],
+  "rarity": "mythic",
+  "collector_number": "1"
+ },
+ {
+  "name": "Academic Ascent",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Target creature gets +2/+2 and gains flying until end of turn.\nEmpower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "common",
+  "collector_number": "2"
+ },
+ {
+  "name": "Blossom-Blessed Angel // Seed Suture",
+  "layout": "prepare",
+  "mana_cost": "{3}{W} // {G/W}",
+  "cmc": 4.0,
+  "type_line": "Creature — Angel Cleric // Sorcery",
+  "power": "2",
+  "toughness": "4",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Flying",
+   "Vigilance",
+   "Prepared"
+  ],
+  "rarity": "common",
+  "collector_number": "3",
+  "card_faces": [
+   {
+    "name": "Blossom-Blessed Angel",
+    "mana_cost": "{3}{W}",
+    "type_line": "Creature — Angel Cleric",
+    "oracle_text": "Flying, vigilance\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    "power": "2",
+    "toughness": "4"
+   },
+   {
+    "name": "Seed Suture",
+    "mana_cost": "{G/W}",
+    "type_line": "Sorcery",
+    "oracle_text": "Put a +1/+1 counter on target creature. You gain 1 life."
+   }
+  ]
+ },
+ {
+  "name": "Campus Crier",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Creature — Human Advisor",
+  "oracle_text": "{1}, Exile this card from your graveyard: Empower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "power": "3",
+  "toughness": "1",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "common",
+  "collector_number": "4"
+ },
+ {
+  "name": "Enlightened Confidant",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Creature — Kor Cleric",
+  "oracle_text": "Lifelink\nAt the beginning of your end step, if you gained life this turn, surveil 1. If you put a card with mana value less than or equal to the amount of life you gained this turn into your graveyard this way, put that card into your hand.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Surveil",
+   "Lifelink"
+  ],
+  "rarity": "mythic",
+  "collector_number": "5"
+ },
+ {
+  "name": "Fateshaper Aspirant",
+  "layout": "normal",
+  "mana_cost": "{4}{W}",
+  "cmc": 5.0,
+  "type_line": "Creature — Rhino Cleric",
+  "oracle_text": "When this creature enters, choose one —\n• Return target legendary card from your graveyard to your hand.\n• Put a +1/+1 counter on target creature. It gains vigilance and indestructible until end of turn. (Damage and effects that say \"destroy\" don't destroy it.)",
+  "power": "3",
+  "toughness": "4",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "6"
+ },
+ {
+  "name": "Flickering Hound",
+  "layout": "normal",
+  "mana_cost": "{3}{W}",
+  "cmc": 4.0,
+  "type_line": "Creature — Dog",
+  "oracle_text": "Whenever you cast a creature spell, exile up to one other target creature you control, then return that card to the battlefield under its owner's control.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "7"
+ },
+ {
+  "name": "Generous Revival",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Return target creature card with mana value 3 or less from your graveyard to the battlefield with an additional +1/+1 counter on it.\nFlashback {4}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Flashback"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "8"
+ },
+ {
+  "name": "Germinate Recruits",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Instant",
+  "oracle_text": "Create X 2/2 colorless Wizard Soldier creature tokens named Cadet, where X is the amount of life you gained this turn.",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "9"
+ },
+ {
+  "name": "Graft Surgeon",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Creature — Human Cleric",
+  "oracle_text": "This creature enters with a +1/+1 counter on it.\nWhen this creature dies, put its counters on up to one target creature you control.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "10"
+ },
+ {
+  "name": "Guiding Hydra",
+  "layout": "normal",
+  "mana_cost": "{X}{W}",
+  "cmc": 1.0,
+  "type_line": "Creature — Hydra Horror",
+  "oracle_text": "This creature enters with X +1/+1 counters on it.\nAt the beginning of combat on your turn, you may remove a +1/+1 counter from this creature. If you do, put a +1/+1 counter on each other creature you control.",
+  "power": "1",
+  "toughness": "0",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "11"
+ },
+ {
+  "name": "Hexhaven Battalion",
+  "layout": "normal",
+  "mana_cost": "{4}{W}{W}",
+  "cmc": 6.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Create three 2/2 colorless Wizard Soldier creature tokens named Cadet. Empower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nBasic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace",
+   "Landcycling",
+   "Basic landcycling",
+   "Typecycling",
+   "Cycling"
+  ],
+  "rarity": "common",
+  "collector_number": "12"
+ },
+ {
+  "name": "Kindred Judgment",
+  "layout": "normal",
+  "mana_cost": "{5}{W}{W}",
+  "cmc": 7.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Choose a creature type. Destroy all creatures that aren't of the chosen type.",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "13"
+ },
+ {
+  "name": "Loyal Tutor",
+  "layout": "normal",
+  "mana_cost": "{W}",
+  "cmc": 1.0,
+  "type_line": "Instant",
+  "oracle_text": "Search your library for a planeswalker card, reveal it, then shuffle and put that card on top.",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "14"
+ },
+ {
+  "name": "Memory Trap",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Enchantment",
+  "oracle_text": "When this enchantment enters, exile target nonland permanent an opponent controls until this enchantment leaves the battlefield.",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "15"
+ },
+ {
+  "name": "Predictive Preparations",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Put a +1/+1 counter on each of one or two target creatures.\nFlashback {3}{W} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Flashback"
+  ],
+  "rarity": "common",
+  "collector_number": "16"
+ },
+ {
+  "name": "Prophesied End",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Destroy target creature. If it wasn't attacking, its controller draws a card.",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "17"
+ },
+ {
+  "name": "Refute Destiny",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Exile target creature or planeswalker that's green or blue. Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Surveil"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "18"
+ },
+ {
+  "name": "Repurposed Enforcer",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Creature — Human Soldier",
+  "oracle_text": "Whenever this creature attacks, empower Jace X, where X is the number of creatures you control. (Put that many loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "rare",
+  "collector_number": "19"
+ },
+ {
+  "name": "Return to the Light Realms",
+  "layout": "normal",
+  "mana_cost": "{7}{W}{W}",
+  "cmc": 9.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Return all nonland permanent cards from your graveyard to the battlefield.",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "mythic",
+  "collector_number": "20"
+ },
+ {
+  "name": "Shatterwing Pegasus",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Creature — Pegasus",
+  "oracle_text": "Flying\n{4}{W}: Creatures you control get +1/+1 until end of turn.",
+  "power": "2",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "common",
+  "collector_number": "21"
+ },
+ {
+  "name": "Surgical Precision",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Choose one —\n• Destroy target creature with toughness 4 or greater. You gain 1 life.\n• You draw a card and gain 2 life.",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "22"
+ },
+ {
+  "name": "Unflinching Hortimancer",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Creature — Human Cleric",
+  "oracle_text": "Ward {1} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {1}.)\nWhenever you gain life, put a +1/+1 counter on this creature.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Ward"
+  ],
+  "rarity": "common",
+  "collector_number": "23"
+ },
+ {
+  "name": "Your Fate Ends Here",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Instant",
+  "oracle_text": "Destroy target creature or planeswalker with mana value 3 or greater. Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Surveil"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "24"
+ },
+ {
+  "name": "Countersculpt",
+  "layout": "normal",
+  "mana_cost": "{U}{U}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "As an additional cost to cast this spell, behold a Jace or pay {1}. (To behold a Jace, choose a Jace you control or reveal a Jace card from your hand.)\nCounter target spell. Empower Jace 1. (Put a loyalty counter on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace",
+   "Behold"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "25"
+ },
+ {
+  "name": "Cruel Calculations",
+  "layout": "normal",
+  "mana_cost": "{2}{U}",
+  "cmc": 3.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Draw X cards, where X is the number of cards that were put into target player's graveyard from their library this turn.",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "26"
+ },
+ {
+  "name": "Cryotheory Adept",
+  "layout": "normal",
+  "mana_cost": "{1}{U}",
+  "cmc": 2.0,
+  "type_line": "Creature — Human Wizard",
+  "oracle_text": "Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)\n{3}{U}, Exile this card from your graveyard: Tap target creature and put a stun counter on it. Activate only as a sorcery. (If a permanent with a stun counter would become untapped, remove one from it instead.)",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Prowess"
+  ],
+  "rarity": "common",
+  "collector_number": "27"
+ },
+ {
+  "name": "Diviner of Victory // Unwind History",
+  "layout": "prepare",
+  "mana_cost": "{U} // {1}{U}",
+  "cmc": 1.0,
+  "type_line": "Creature — Dwarf Wizard // Sorcery",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Prepared"
+  ],
+  "rarity": "rare",
+  "collector_number": "28",
+  "card_faces": [
+   {
+    "name": "Diviner of Victory",
+    "mana_cost": "{U}",
+    "type_line": "Creature — Dwarf Wizard",
+    "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nWhenever you scry or surveil, this creature gets +1/+1 until end of turn.",
+    "power": "1",
+    "toughness": "1"
+   },
+   {
+    "name": "Unwind History",
+    "mana_cost": "{1}{U}",
+    "type_line": "Sorcery",
+    "oracle_text": "Return target creature an opponent controls with mana value 3 or less to its owner's hand. Surveil 1."
+   }
+  ]
+ },
+ {
+  "name": "Divining Duelist",
+  "layout": "normal",
+  "mana_cost": "{2}{U}",
+  "cmc": 3.0,
+  "type_line": "Creature — Merfolk Wizard",
+  "oracle_text": "Flash\nWhen this creature enters, choose one —\n• Tap target creature.\n• Untap target creature.\n• Draw a card, then discard a card.",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Flash"
+  ],
+  "rarity": "common",
+  "collector_number": "29"
+ },
+ {
+  "name": "Icy Reception",
+  "layout": "normal",
+  "mana_cost": "{1}{U}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose one —\n• Counter target creature or legendary spell unless its controller pays {3}.\n• Target creature gets -5/-0 until end of turn.",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "30"
+ },
+ {
+  "name": "Infinite Coursework",
+  "layout": "normal",
+  "mana_cost": "{2}{U}",
+  "cmc": 3.0,
+  "type_line": "Enchantment — Aura",
+  "oracle_text": "Enchant creature\nWhen this Aura enters, tap enchanted creature. It becomes unprepared.\nEnchanted creature loses all abilities and doesn't untap during its controller's untap step.",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Enchant",
+   "Prepared"
+  ],
+  "rarity": "common",
+  "collector_number": "31"
+ },
+ {
+  "name": "Jace's Machinations",
+  "layout": "normal",
+  "mana_cost": "{2}{U}",
+  "cmc": 3.0,
+  "type_line": "Instant",
+  "oracle_text": "Until end of turn, you may activate loyalty abilities of Jace planeswalkers you control on any player's turn any time you could cast an instant.\nEmpower Jace 8. (Put eight loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "rare",
+  "collector_number": "32"
+ },
+ {
+  "name": "Mindseeker Oculus",
+  "layout": "normal",
+  "mana_cost": "{2}{U}",
+  "cmc": 3.0,
+  "type_line": "Creature — Homunculus",
+  "oracle_text": "When this creature enters, empower Jace 4. (Put four loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "common",
+  "collector_number": "33"
+ },
+ {
+  "name": "Perfected Theory",
+  "layout": "normal",
+  "mana_cost": "{U}",
+  "cmc": 1.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose one —\n• Target creature has base power and toughness 1/1 until end of turn.\n• Target creature has base power and toughness 4/5 until end of turn.",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "34"
+ },
+ {
+  "name": "Plan for All Outcomes",
+  "layout": "normal",
+  "mana_cost": "{3}{U}",
+  "cmc": 4.0,
+  "type_line": "Enchantment",
+  "oracle_text": "When this enchantment enters, the owner of up to one other target nonland permanent puts it on their choice of the top or bottom of their library.\nWhenever you cast your first noncreature spell each turn, empower Jace 1. (Put a loyalty counter on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "35"
+ },
+ {
+  "name": "Precise Redaction",
+  "layout": "normal",
+  "mana_cost": "{1}{U}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Counter target white or black spell.",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "36"
+ },
+ {
+  "name": "Protege's Awakening",
+  "layout": "normal",
+  "mana_cost": "{3}{U}",
+  "cmc": 4.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Empower Jace 6. (Put six loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nDraw a card.",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "common",
+  "collector_number": "37"
+ },
+ {
+  "name": "Seasoned Cryomancer",
+  "layout": "normal",
+  "mana_cost": "{1}{U}{U}",
+  "cmc": 3.0,
+  "type_line": "Creature — Human Wizard",
+  "oracle_text": "When this creature enters, draw two cards, then discard two cards. When you discard one or more nonland cards this way, tap up to that many target creatures and put a stun counter on each of them.\n{3}{U}{U}, Exile this card from your graveyard: Draw two cards.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "mythic",
+  "collector_number": "38"
+ },
+ {
+  "name": "Semester Foreseer // Peer Review",
+  "layout": "prepare",
+  "mana_cost": "{3}{U} // {2}{W/U}",
+  "cmc": 4.0,
+  "type_line": "Creature — Human Wizard // Sorcery",
+  "power": "3",
+  "toughness": "4",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Prepared"
+  ],
+  "rarity": "common",
+  "collector_number": "39",
+  "card_faces": [
+   {
+    "name": "Semester Foreseer",
+    "mana_cost": "{3}{U}",
+    "type_line": "Creature — Human Wizard",
+    "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nWhen this creature enters, surveil 1.",
+    "power": "3",
+    "toughness": "4"
+   },
+   {
+    "name": "Peer Review",
+    "mana_cost": "{2}{W/U}",
+    "type_line": "Sorcery",
+    "oracle_text": "Create a 2/2 colorless Wizard Soldier creature token named Cadet. Surveil 1."
+   }
+  ]
+ },
+ {
+  "name": "Sphinx of False Conclusions",
+  "layout": "normal",
+  "mana_cost": "{2}{U}{U}",
+  "cmc": 4.0,
+  "type_line": "Creature — Sphinx Illusion",
+  "oracle_text": "Flash\nFlying\nWhenever this creature attacks, draw a card, then discard a card.\nWhen this creature dies, if it isn't a token, create a token that's a copy of it.",
+  "power": "4",
+  "toughness": "2",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Flying",
+   "Flash"
+  ],
+  "rarity": "rare",
+  "collector_number": "40"
+ },
+ {
+  "name": "Sphinx's Approach",
+  "layout": "normal",
+  "mana_cost": "{1}{U}{U}",
+  "cmc": 3.0,
+  "type_line": "Instant",
+  "oracle_text": "Draw two cards. Then you may exile this spell and four cards named Sphinx's Approach from your graveyard. If you do, search your library for a Sphinx creature card, put it onto the battlefield, then shuffle.\nA deck can have any number of cards named Sphinx's Approach.",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "41"
+ },
+ {
+  "name": "Surveillance Phantasm",
+  "layout": "normal",
+  "mana_cost": "{1}{U}",
+  "cmc": 2.0,
+  "type_line": "Creature — Bird Illusion",
+  "oracle_text": "Defender, flying, vigilance\nAs long as you've scried or surveilled this turn, this creature can attack as though it didn't have defender.\n{3}{U}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
+  "power": "2",
+  "toughness": "3",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Flying",
+   "Surveil",
+   "Vigilance",
+   "Defender"
+  ],
+  "rarity": "common",
+  "collector_number": "42"
+ },
+ {
+  "name": "The Theorist, Jace Beleren",
+  "layout": "normal",
+  "mana_cost": "{2}{U}{U}",
+  "cmc": 4.0,
+  "type_line": "Legendary Planeswalker — Jace",
+  "oracle_text": "At the beginning of each opponent's draw step, you draw a card.\n+1: Create a 1/1 blue Illusion creature token.\n−2: For each opponent, return up to one target artifact or creature that player controls to its owner's hand.\n−6: Draw three cards. Then put X +1/+1 counters on each creature you control, where X is the number of cards in your hand.",
+  "loyalty": "3",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "mythic",
+  "collector_number": "43"
+ },
+ {
+  "name": "Theorist's Proxy",
+  "layout": "normal",
+  "mana_cost": "{1}{U}",
+  "cmc": 2.0,
+  "type_line": "Creature — Illusion",
+  "oracle_text": "Flash\nWhen this creature enters, empower Jace 3. (Put three loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\n{U}, Sacrifice this creature: The next spell you cast this turn can't be countered.",
+  "power": "0",
+  "toughness": "3",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace",
+   "Flash"
+  ],
+  "rarity": "rare",
+  "collector_number": "44"
+ },
+ {
+  "name": "Undulating Witness",
+  "layout": "normal",
+  "mana_cost": "{4}{U}",
+  "cmc": 5.0,
+  "type_line": "Creature — Serpent",
+  "oracle_text": "Flying\n{2}: This creature gets +1/-1 until end of turn.\nBasic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)",
+  "power": "3",
+  "toughness": "5",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Flying",
+   "Landcycling",
+   "Basic landcycling",
+   "Typecycling",
+   "Cycling"
+  ],
+  "rarity": "common",
+  "collector_number": "45"
+ },
+ {
+  "name": "Unsummon",
+  "layout": "normal",
+  "mana_cost": "{U}",
+  "cmc": 1.0,
+  "type_line": "Instant",
+  "oracle_text": "Return target creature to its owner's hand.",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "46"
+ },
+ {
+  "name": "Variable Chaser // Arc of Fortune",
+  "layout": "prepare",
+  "mana_cost": "{2}{U} // {2}{U}",
+  "cmc": 3.0,
+  "type_line": "Creature — Human Wizard // Sorcery",
+  "power": "2",
+  "toughness": "3",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Flying",
+   "Prowess",
+   "Prepared"
+  ],
+  "rarity": "rare",
+  "collector_number": "47",
+  "card_faces": [
+   {
+    "name": "Variable Chaser",
+    "mana_cost": "{2}{U}",
+    "type_line": "Creature — Human Wizard",
+    "oracle_text": "Flying, prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    "power": "2",
+    "toughness": "3"
+   },
+   {
+    "name": "Arc of Fortune",
+    "mana_cost": "{2}{U}",
+    "type_line": "Sorcery",
+    "oracle_text": "Each player may discard their hand and draw seven cards."
+   }
+  ]
+ },
+ {
+  "name": "Apex Witchstalker",
+  "layout": "normal",
+  "mana_cost": "{4}{B}{B}",
+  "cmc": 6.0,
+  "type_line": "Creature — Wolf",
+  "oracle_text": "Menace (This creature can't be blocked except by two or more creatures.)\nWhen this creature enters or dies, you gain 2 life.\nBasic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)",
+  "power": "6",
+  "toughness": "4",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Landcycling",
+   "Menace",
+   "Basic landcycling",
+   "Typecycling",
+   "Cycling"
+  ],
+  "rarity": "common",
+  "collector_number": "48"
+ },
+ {
+  "name": "Bloodline Recollector // Ancestral Craving",
+  "layout": "prepare",
+  "mana_cost": "{1}{B} // {B}",
+  "cmc": 2.0,
+  "type_line": "Creature — Vampire Warlock // Instant",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Prepared"
+  ],
+  "rarity": "mythic",
+  "collector_number": "49",
+  "card_faces": [
+   {
+    "name": "Bloodline Recollector",
+    "mana_cost": "{1}{B}",
+    "type_line": "Creature — Vampire Warlock",
+    "oracle_text": "At the beginning of each end step, if three or more creatures died this turn, this creature becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    "power": "2",
+    "toughness": "2"
+   },
+   {
+    "name": "Ancestral Craving",
+    "mana_cost": "{B}",
+    "type_line": "Instant",
+    "oracle_text": "Target player draws three cards and loses 3 life."
+   }
+  ]
+ },
+ {
+  "name": "Break Under Pressure",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Instant",
+  "oracle_text": "Target opponent sacrifices a creature or planeswalker with the greatest mana value among creatures and planeswalkers they control. You gain 2 life.",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "50"
+ },
+ {
+  "name": "Cast Away Doubt",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Draw two cards. Cast Away Doubt deals 2 damage to each player.",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "51"
+ },
+ {
+  "name": "Dark Matter Manipulator",
+  "layout": "normal",
+  "mana_cost": "{B}",
+  "cmc": 1.0,
+  "type_line": "Creature — Human Warlock",
+  "oracle_text": "When this creature enters, mill three cards.\nThis creature gets +2/+0 for every seven cards in your graveyard.",
+  "power": "1",
+  "toughness": "2",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Mill"
+  ],
+  "rarity": "rare",
+  "collector_number": "52"
+ },
+ {
+  "name": "Darklight Phoenix",
+  "layout": "normal",
+  "mana_cost": "{3}{B}",
+  "cmc": 4.0,
+  "type_line": "Creature — Phoenix",
+  "oracle_text": "Flying, haste\nAt the beginning of combat on your turn, if two or more creatures died this turn, return this card from your graveyard to the battlefield.",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Flying",
+   "Haste"
+  ],
+  "rarity": "mythic",
+  "collector_number": "53"
+ },
+ {
+  "name": "Extended Absence",
+  "layout": "normal",
+  "mana_cost": "{3}{B}",
+  "cmc": 4.0,
+  "type_line": "Instant",
+  "oracle_text": "Exile target creature or planeswalker. Extended Absence deals 1 damage to each opponent and you gain 1 life.",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "54"
+ },
+ {
+  "name": "Extrapolate the Impossible",
+  "layout": "normal",
+  "mana_cost": "{1}{B}",
+  "cmc": 2.0,
+  "type_line": "Sorcery",
+  "oracle_text": "You may reveal exactly two cards you own with different names from outside the game. An opponent chooses one of them. You put that card into your hand.",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "55"
+ },
+ {
+  "name": "Last Gasp",
+  "layout": "normal",
+  "mana_cost": "{1}{B}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Target creature gets -3/-3 until end of turn.",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "56"
+ },
+ {
+  "name": "Lich's Relic",
+  "layout": "normal",
+  "mana_cost": "{B}",
+  "cmc": 1.0,
+  "type_line": "Artifact — Equipment",
+  "oracle_text": "When this Equipment enters, you may pay {2}. When you do, for each opponent, destroy up to one target creature or planeswalker that player controls.\nEquipped creature gets +2/+1.\nEquip {2}",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Equip"
+  ],
+  "rarity": "rare",
+  "collector_number": "57"
+ },
+ {
+  "name": "Multiply by Zero",
+  "layout": "normal",
+  "mana_cost": "{1}{B}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Target creature has base power and toughness 0/0 until end of turn.",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "58"
+ },
+ {
+  "name": "Overwrite the Multiverse",
+  "layout": "normal",
+  "mana_cost": "{4}{B}{B}",
+  "cmc": 6.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Exile all creatures. Empower Jace X, where X is the number of creatures exiled this way. (Put that many loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "mythic",
+  "collector_number": "59"
+ },
+ {
+  "name": "Rampart Hunter",
+  "layout": "normal",
+  "mana_cost": "{3}{B}",
+  "cmc": 4.0,
+  "type_line": "Creature — Horror",
+  "oracle_text": "Deathtouch\nWhen this creature enters, target creature gets +2/+2 and gains deathtouch until end of turn.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Deathtouch"
+  ],
+  "rarity": "common",
+  "collector_number": "60"
+ },
+ {
+  "name": "Rank Rat",
+  "layout": "normal",
+  "mana_cost": "{1}{B}",
+  "cmc": 2.0,
+  "type_line": "Creature — Zombie Rat",
+  "oracle_text": "When this creature enters, each opponent discards a card.",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "61"
+ },
+ {
+  "name": "Rewrite Regrets",
+  "layout": "normal",
+  "mana_cost": "{3}{B}",
+  "cmc": 4.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Return target creature or planeswalker card with mana value 6 or less from your graveyard to the battlefield.\nEmpower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "62"
+ },
+ {
+  "name": "Rise of the Deathbringer",
+  "layout": "normal",
+  "mana_cost": "{4}{B}",
+  "cmc": 5.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose one —\n• Draw cards equal to the greatest power among creatures you control. You lose life equal to the number of cards drawn this way.\n• All creatures get -3/-3 until end of turn.",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "63"
+ },
+ {
+  "name": "Sanctum Lurker",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Creature — Horror",
+  "oracle_text": "When this creature enters, empower Jace 1.\nPlaneswalkers you control aren't put into their owners' graveyards for having 0 loyalty.\nPlaneswalkers you control have \"[+2]: This planeswalker deals 1 damage to each opponent and you gain 1 life.\"",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Empower Jace"
+  ],
+  "rarity": "rare",
+  "collector_number": "64"
+ },
+ {
+  "name": "Screeching Soulbreaker",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Creature — Siren Bard",
+  "oracle_text": "Flying\nWhenever this creature attacks, it deals 1 damage to each opponent and you gain 1 life.",
+  "power": "1",
+  "toughness": "4",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "common",
+  "collector_number": "65"
+ },
+ {
+  "name": "Silence the Echo",
+  "layout": "normal",
+  "mana_cost": "{1}{B}",
+  "cmc": 2.0,
+  "type_line": "Sorcery",
+  "oracle_text": "As an additional cost to cast this spell, sacrifice a creature or planeswalker or pay {3}.\nDestroy target creature or planeswalker.",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "66"
+ },
+ {
+  "name": "Solve for Disappointment",
+  "layout": "normal",
+  "mana_cost": "{1}{B}",
+  "cmc": 2.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Target opponent reveals their hand. You choose a nonland permanent card from it. That player discards that card.\nEmpower Jace 1. (Put a loyalty counter on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "common",
+  "collector_number": "67"
+ },
+ {
+  "name": "Terminal Criticism",
+  "layout": "normal",
+  "mana_cost": "{1}{B}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Destroy target creature or planeswalker that's blue or red. You gain 1 life.",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "68"
+ },
+ {
+  "name": "Theoretical Necromancer",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Creature — Vampire Warlock",
+  "oracle_text": "{3}{B}, Exile this card from your graveyard: Return another target creature card from your graveyard to your hand.",
+  "power": "4",
+  "toughness": "1",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "69"
+ },
+ {
+  "name": "Void Extrapolator // Omit Variables",
+  "layout": "prepare",
+  "mana_cost": "{1}{B} // {U/B}",
+  "cmc": 2.0,
+  "type_line": "Creature — Aetherborn Warlock // Sorcery",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Threshold",
+   "Prepared",
+   "Mill"
+  ],
+  "rarity": "common",
+  "collector_number": "70",
+  "card_faces": [
+   {
+    "name": "Void Extrapolator",
+    "mana_cost": "{1}{B}",
+    "type_line": "Creature — Aetherborn Warlock",
+    "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nThreshold — This creature gets +1/+1 as long as there are seven or more cards in your graveyard.",
+    "power": "2",
+    "toughness": "2"
+   },
+   {
+    "name": "Omit Variables",
+    "mana_cost": "{U/B}",
+    "type_line": "Sorcery",
+    "oracle_text": "Mill three cards. (Put the top three cards of your library into your graveyard.)"
+   }
+  ]
+ },
+ {
+  "name": "Vraska's Final Mercy",
+  "layout": "normal",
+  "mana_cost": "{B}{B}",
+  "cmc": 2.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Choose one —\n• You lose 2 life. Destroy target creature or planeswalker.\n• You lose 2 life. Empower Jace 6. (Put six loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "rare",
+  "collector_number": "71"
+ },
+ {
+  "name": "Ajani's Anguish",
+  "layout": "normal",
+  "mana_cost": "{X}{R}",
+  "cmc": 1.0,
+  "type_line": "Enchantment",
+  "oracle_text": "When this enchantment enters, it deals X damage to any target.\nCreatures you control have trample.",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "72"
+ },
+ {
+  "name": "Artifist Acumen",
+  "layout": "normal",
+  "mana_cost": "{R}",
+  "cmc": 1.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Creatures you control gain first strike until end of turn.\nDraw a card.",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "73"
+ },
+ {
+  "name": "Awaken the Inferno",
+  "layout": "normal",
+  "mana_cost": "{4}{R}",
+  "cmc": 5.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Awaken the Inferno deals 6 damage to target creature or planeswalker an opponent controls. Put a +1/+1 counter on up to one target creature you control.\nBasic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Landcycling",
+   "Basic landcycling",
+   "Typecycling",
+   "Cycling"
+  ],
+  "rarity": "common",
+  "collector_number": "74"
+ },
+ {
+  "name": "Blazing Crescendo",
+  "layout": "normal",
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Target creature gets +3/+1 until end of turn.\nExile the top card of your library. Until the end of your next turn, you may play that card.",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "75"
+ },
+ {
+  "name": "Chandra's Emberling",
+  "layout": "normal",
+  "mana_cost": "{2}{R}",
+  "cmc": 3.0,
+  "type_line": "Creature — Gremlin Elemental",
+  "oracle_text": "Haste\nWhenever you cast a noncreature spell, put a +1/+1 counter on this creature.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Haste"
+  ],
+  "rarity": "common",
+  "collector_number": "76"
+ },
+ {
+  "name": "Command the Stage",
+  "layout": "normal",
+  "mana_cost": "{2}{R}",
+  "cmc": 3.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Create a 2/2 colorless Wizard Soldier creature token named Cadet, then put a +1/+1 counter on each other Wizard token you control.\nAt the beginning of each upkeep, if an opponent was dealt noncombat damage last turn, return this card from your graveyard to your hand.",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "77"
+ },
+ {
+  "name": "Craterclaw Colossus",
+  "layout": "normal",
+  "mana_cost": "{4}{R}{R}{R}",
+  "cmc": 7.0,
+  "type_line": "Artifact Creature — Beast Construct",
+  "oracle_text": "Haste\nWhen this creature enters, creatures you control gain trample and get +X/+0 until end of turn, where X is the number of artifacts you control.",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Haste"
+  ],
+  "rarity": "mythic",
+  "collector_number": "78"
+ },
+ {
+  "name": "Curse-Marred Demon",
+  "layout": "normal",
+  "mana_cost": "{2}{R}{R}",
+  "cmc": 4.0,
+  "type_line": "Creature — Demon",
+  "oracle_text": "Flying, trample\nWhen this creature enters, search your library for a card, put it into your hand, shuffle, then discard a card at random.",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Flying",
+   "Trample"
+  ],
+  "rarity": "rare",
+  "collector_number": "79"
+ },
+ {
+  "name": "Draconic Visitor",
+  "layout": "normal",
+  "mana_cost": "{3}{R}{R}",
+  "cmc": 5.0,
+  "type_line": "Creature — Dragon",
+  "oracle_text": "Flying\nIf one or more artifact tokens would be created under your control, that many 5/5 red Dragon creature tokens with flying are created instead.",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "rare",
+  "collector_number": "80"
+ },
+ {
+  "name": "Eardrum Rattler",
+  "layout": "normal",
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Creature — Human Bard",
+  "oracle_text": "{1}, {T}: Another target creature you control with power 2 or less can't be blocked this turn.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "81"
+ },
+ {
+  "name": "Essence Burn",
+  "layout": "normal",
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Essence Burn deals 5 damage to target black or green creature or planeswalker. If that permanent would die this turn, exile it instead.",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "82"
+ },
+ {
+  "name": "Face Yourself",
+  "layout": "normal",
+  "mana_cost": "{5}{R}{R}",
+  "cmc": 7.0,
+  "type_line": "Sorcery",
+  "oracle_text": "For each creature target player controls, create a token that's a copy of that creature, except it has haste and \"At the beginning of the end step, if you don't control a planeswalker, sacrifice this creature.\"",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "83"
+ },
+ {
+  "name": "Fulminous Forte",
+  "layout": "normal",
+  "mana_cost": "{2}{R}",
+  "cmc": 3.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose one —\n• Fulminous Forte deals 1 damage to each creature and planeswalker your opponents control.\n• Fulminous Forte deals 5 damage to target creature or planeswalker.",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "84"
+ },
+ {
+  "name": "Hallway Heckler // Vicious Verse",
+  "layout": "prepare",
+  "mana_cost": "{2}{R} // {B/R}",
+  "cmc": 3.0,
+  "type_line": "Creature — Elemental Sorcerer // Sorcery",
+  "power": "2",
+  "toughness": "3",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Prepared"
+  ],
+  "rarity": "common",
+  "collector_number": "85",
+  "card_faces": [
+   {
+    "name": "Hallway Heckler",
+    "mana_cost": "{2}{R}",
+    "type_line": "Creature — Elemental Sorcerer",
+    "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\n{T}, Discard a card: Draw a card.",
+    "power": "2",
+    "toughness": "3"
+   },
+   {
+    "name": "Vicious Verse",
+    "mana_cost": "{B/R}",
+    "type_line": "Sorcery",
+    "oracle_text": "Vicious Verse deals 1 damage to target opponent."
+   }
+  ]
+ },
+ {
+  "name": "Heartstring Puller",
+  "layout": "normal",
+  "mana_cost": "{3}{R}",
+  "cmc": 4.0,
+  "type_line": "Creature — Elf Sorcerer",
+  "oracle_text": "Trample\nWhen this creature enters, create a 2/2 colorless Wizard Soldier creature token named Cadet.",
+  "power": "3",
+  "toughness": "1",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Trample"
+  ],
+  "rarity": "common",
+  "collector_number": "86"
+ },
+ {
+  "name": "Identity Echo",
+  "layout": "normal",
+  "mana_cost": "{2}{R}",
+  "cmc": 3.0,
+  "type_line": "Enchantment",
+  "oracle_text": "{3}{R}: Exile target creature or planeswalker you control. Reveal cards from the top of your library until you reveal a creature or planeswalker card. Put that card onto the battlefield and the rest on the bottom of your library in a random order. Activate only as a sorcery.",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "87"
+ },
+ {
+  "name": "Master of Barbs",
+  "layout": "normal",
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Creature — Lizard Bard",
+  "oracle_text": "Menace\nWhenever one or more opponents are dealt noncombat damage, creatures you control get +1/+0 until end of turn.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Menace"
+  ],
+  "rarity": "rare",
+  "collector_number": "88"
+ },
+ {
+  "name": "No Admittance",
+  "layout": "normal",
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Sorcery",
+  "oracle_text": "No Admittance deals 3 damage to any target.\nEmpower Jace 1. (Put a loyalty counter on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "common",
+  "collector_number": "89"
+ },
+ {
+  "name": "Pompous Battlemage // Improvised Act",
+  "layout": "prepare",
+  "mana_cost": "{R} // {R}",
+  "cmc": 1.0,
+  "type_line": "Creature — Goblin Sorcerer // Sorcery",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Prowess",
+   "Prepared"
+  ],
+  "rarity": "rare",
+  "collector_number": "90",
+  "card_faces": [
+   {
+    "name": "Pompous Battlemage",
+    "mana_cost": "{R}",
+    "type_line": "Creature — Goblin Sorcerer",
+    "oracle_text": "Prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    "power": "1",
+    "toughness": "1"
+   },
+   {
+    "name": "Improvised Act",
+    "mana_cost": "{R}",
+    "type_line": "Sorcery",
+    "oracle_text": "You may discard a card. If you do, draw a card."
+   }
+  ]
+ },
+ {
+  "name": "Pyre Rhymer // Molten Tide",
+  "layout": "prepare",
+  "mana_cost": "{1}{R}{R} // {R}",
+  "cmc": 3.0,
+  "type_line": "Creature — Elemental Sorcerer // Instant",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Prowess",
+   "Prepared"
+  ],
+  "rarity": "rare",
+  "collector_number": "91",
+  "card_faces": [
+   {
+    "name": "Pyre Rhymer",
+    "mana_cost": "{1}{R}{R}",
+    "type_line": "Creature — Elemental Sorcerer",
+    "oracle_text": "Prowess\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    "power": "3",
+    "toughness": "3"
+   },
+   {
+    "name": "Molten Tide",
+    "mana_cost": "{R}",
+    "type_line": "Instant",
+    "oracle_text": "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}."
+   }
+  ]
+ },
+ {
+  "name": "Skilled Battlecarver",
+  "layout": "normal",
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Creature — Human Warrior",
+  "oracle_text": "During your turn, this creature has first strike.\n{1}{R}: This creature gets +1/+0 until end of turn.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "92"
+ },
+ {
+  "name": "Stingcaster Mage",
+  "layout": "normal",
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Creature — Human Wizard",
+  "oracle_text": "Haste\nWhen this creature enters, target instant or sorcery card in your graveyard gains flashback until end of turn. The flashback cost is equal to its mana cost. (You may cast that card from your graveyard for its flashback cost. Then exile it.)",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Haste"
+  ],
+  "rarity": "mythic",
+  "collector_number": "93"
+ },
+ {
+  "name": "Tether Technician",
+  "layout": "normal",
+  "mana_cost": "{4}{R}",
+  "cmc": 5.0,
+  "type_line": "Creature — Minotaur Artificer",
+  "oracle_text": "Reach\nWhen this creature enters, you may discard a card. When you do, this creature deals 2 damage to any target.",
+  "power": "4",
+  "toughness": "5",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Reach"
+  ],
+  "rarity": "common",
+  "collector_number": "94"
+ },
+ {
+  "name": "Violent Echoes",
+  "layout": "normal",
+  "mana_cost": "{2}{R}{R}",
+  "cmc": 4.0,
+  "type_line": "Instant",
+  "oracle_text": "Violent Echoes deals 6 damage to target creature or planeswalker. If excess damage was dealt to that permanent this way, empower Jace X, where X is that excess damage. (Put that many loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "95"
+ },
+ {
+  "name": "Wrath of the Bloodmane",
+  "layout": "normal",
+  "mana_cost": "{2}{R}",
+  "cmc": 3.0,
+  "type_line": "Instant",
+  "oracle_text": "This spell costs {1} less to cast if you control a legendary creature.\nWrath of the Bloodmane deals 4 damage to target creature or planeswalker.",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "96"
+ },
+ {
+  "name": "Arcane Amphisbaena",
+  "layout": "normal",
+  "mana_cost": "{1}{G}",
+  "cmc": 2.0,
+  "type_line": "Creature — Snake",
+  "oracle_text": "Deathtouch\nWhen this creature enters, empower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace",
+   "Deathtouch"
+  ],
+  "rarity": "common",
+  "collector_number": "97"
+ },
+ {
+  "name": "Bestial Incursion",
+  "layout": "normal",
+  "mana_cost": "{3}{G}",
+  "cmc": 4.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Create a 4/4 green Beast creature token with trample.\nFlashback {5}{G} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Flashback"
+  ],
+  "rarity": "common",
+  "collector_number": "98"
+ },
+ {
+  "name": "Budding Insurgent",
+  "layout": "normal",
+  "mana_cost": "{2}{G}",
+  "cmc": 3.0,
+  "type_line": "Creature — Dryad Scout",
+  "oracle_text": "Vigilance\nSacrifice this creature: Destroy target artifact or enchantment. If that permanent was a legendary enchantment, draw a card. Activate only as a sorcery.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Vigilance"
+  ],
+  "rarity": "common",
+  "collector_number": "99"
+ },
+ {
+  "name": "Carnivorous Cultivator // Enroot",
+  "layout": "prepare",
+  "mana_cost": "{1}{G} // {G}",
+  "cmc": 2.0,
+  "type_line": "Creature — Elf Warlock // Sorcery",
+  "power": "2",
+  "toughness": "3",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Prepared",
+   "Deathtouch"
+  ],
+  "rarity": "rare",
+  "collector_number": "100",
+  "card_faces": [
+   {
+    "name": "Carnivorous Cultivator",
+    "mana_cost": "{1}{G}",
+    "type_line": "Creature — Elf Warlock",
+    "oracle_text": "Deathtouch\nThis creature enters prepared.\nWhenever this creature deals combat damage to a player, return target land card from your graveyard to your hand.",
+    "power": "2",
+    "toughness": "3"
+   },
+   {
+    "name": "Enroot",
+    "mana_cost": "{G}",
+    "type_line": "Sorcery",
+    "oracle_text": "Search your library for a land card, put it into your graveyard, then shuffle."
+   }
+  ]
+ },
+ {
+  "name": "Compel Brutality",
+  "layout": "normal",
+  "mana_cost": "{1}{G}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose one —\n• Target creature you control deals damage equal to its power to target creature or planeswalker an opponent controls.\n• Target planeswalker you control deals damage equal to its loyalty to target creature or planeswalker an opponent controls.",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "101"
+ },
+ {
+  "name": "Flourishing Grapple",
+  "layout": "normal",
+  "mana_cost": "{G}",
+  "cmc": 1.0,
+  "type_line": "Instant",
+  "oracle_text": "Target creature or planeswalker an opponent controls that's red or white loses all abilities until end of turn. Target creature you control deals damage equal to its power to that permanent.",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "102"
+ },
+ {
+  "name": "Gardenize",
+  "layout": "normal",
+  "mana_cost": "{1}{G}{G}",
+  "cmc": 3.0,
+  "type_line": "Enchantment",
+  "oracle_text": "Whenever a creature you control dies, put a charge counter on this enchantment.\nAt the beginning of your first main phase, add {G} for each charge counter on this enchantment.",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "103"
+ },
+ {
+  "name": "Greenhouse Propagator",
+  "layout": "normal",
+  "mana_cost": "{2}{G}",
+  "cmc": 3.0,
+  "type_line": "Creature — Cat Druid",
+  "oracle_text": "Whenever another creature you control enters, you gain 1 life.\n{T}: Add {G}.",
+  "power": "2",
+  "toughness": "3",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "104"
+ },
+ {
+  "name": "Heartwood Crafter // Soul Tether",
+  "layout": "prepare",
+  "mana_cost": "{G} // {2}{R/G}",
+  "cmc": 1.0,
+  "type_line": "Creature — Elf Artificer // Sorcery",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Prepared"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "105",
+  "card_faces": [
+   {
+    "name": "Heartwood Crafter",
+    "mana_cost": "{G}",
+    "type_line": "Creature — Elf Artificer",
+    "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\n{T}: Add {C}. This mana can't be spent to cast spells from your hand.",
+    "power": "1",
+    "toughness": "1"
+   },
+   {
+    "name": "Soul Tether",
+    "mana_cost": "{2}{R/G}",
+    "type_line": "Sorcery",
+    "oracle_text": "Create a Heartwood token. (It's a red and green artifact with \"{T}: Add {R} or {G}.\")"
+   }
+  ]
+ },
+ {
+  "name": "Hexhaven Invigorator",
+  "layout": "normal",
+  "mana_cost": "{G}{G}{G}{G}",
+  "cmc": 4.0,
+  "type_line": "Creature — Chimera Horror",
+  "oracle_text": "Vigilance\nWhenever this creature is dealt damage, you may search your library for up to that many land cards, put them onto the battlefield tapped, then shuffle.",
+  "power": "6",
+  "toughness": "6",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Vigilance"
+  ],
+  "rarity": "mythic",
+  "collector_number": "106"
+ },
+ {
+  "name": "Hungering Puppetbeast",
+  "layout": "normal",
+  "mana_cost": "{3}{G}{G}",
+  "cmc": 5.0,
+  "type_line": "Artifact Creature — Beast Construct",
+  "oracle_text": "When this creature enters, create a Heartwood token. (It's a red and green artifact with \"{T}: Add {R} or {G}.\")\n{1}, Sacrifice another artifact: Put a +1/+1 counter on this creature. It gains your choice of trample, hexproof, or haste until end of turn.",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "107"
+ },
+ {
+  "name": "Hunter's Axe",
+  "layout": "normal",
+  "mana_cost": "{G}",
+  "cmc": 1.0,
+  "type_line": "Artifact — Equipment",
+  "oracle_text": "Equipped creature gets +2/+0 and has \"Whenever this creature attacks, it gains your choice of trample or deathtouch until end of turn.\"\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Equip"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "108"
+ },
+ {
+  "name": "Inspired Tethermage",
+  "layout": "normal",
+  "mana_cost": "{2}{G}",
+  "cmc": 3.0,
+  "type_line": "Creature — Elf Warrior",
+  "oracle_text": "Whenever you put one or more loyalty counters on a planeswalker, put a +1/+1 counter on this creature.\n{6}: Empower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "common",
+  "collector_number": "109"
+ },
+ {
+  "name": "Omnipresence",
+  "layout": "normal",
+  "mana_cost": "{5}{G}{G}{G}",
+  "cmc": 8.0,
+  "type_line": "Enchantment",
+  "oracle_text": "You may cast spells with mana value less than or equal to the number of creatures you control from your hand without paying their mana costs.",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "mythic",
+  "collector_number": "110"
+ },
+ {
+  "name": "Puppet Crafting",
+  "layout": "normal",
+  "mana_cost": "{1}{G}",
+  "cmc": 2.0,
+  "type_line": "Enchantment — Aura",
+  "oracle_text": "Enchant artifact or non-Aura enchantment\nEnchanted permanent is a Construct creature with base power and toughness 5/5 in addition to its other types.\n{4}{G}: Return this card from your graveyard to your hand.",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Enchant"
+  ],
+  "rarity": "rare",
+  "collector_number": "111"
+ },
+ {
+  "name": "Restore with Empathy",
+  "layout": "normal",
+  "mana_cost": "{2}{G}",
+  "cmc": 3.0,
+  "type_line": "Instant",
+  "oracle_text": "Return target permanent card from your graveyard to your hand. You gain 4 life.",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "112"
+ },
+ {
+  "name": "Simulacrum Shaper",
+  "layout": "normal",
+  "mana_cost": "{1}{G}{G}",
+  "cmc": 3.0,
+  "type_line": "Creature — Elf Druid",
+  "oracle_text": "When this creature enters, you may search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.\nWhen this creature dies, draw a card.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "113"
+ },
+ {
+  "name": "Something Worth Saving",
+  "layout": "normal",
+  "mana_cost": "{1}{G}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Mill four cards. You may put a permanent card from among them into your hand. You gain 1 life. (To mill four cards, put the top four cards of your library into your graveyard.)",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Mill"
+  ],
+  "rarity": "common",
+  "collector_number": "114"
+ },
+ {
+  "name": "Sureshot Sower",
+  "layout": "normal",
+  "mana_cost": "{1}{G}",
+  "cmc": 2.0,
+  "type_line": "Creature — Human Archer",
+  "oracle_text": "Reach\n{3}{G}, Discard this card: Destroy target creature with flying.",
+  "power": "3",
+  "toughness": "1",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Reach"
+  ],
+  "rarity": "common",
+  "collector_number": "115"
+ },
+ {
+  "name": "Tarmogoyf",
+  "layout": "normal",
+  "mana_cost": "{1}{G}",
+  "cmc": 2.0,
+  "type_line": "Creature — Lhurgoyf",
+  "oracle_text": "Tarmogoyf's power is equal to the number of card types among cards in all graveyards and its toughness is equal to that number plus 1.",
+  "power": "*",
+  "toughness": "1+*",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "mythic",
+  "collector_number": "116"
+ },
+ {
+  "name": "Tethermage's Advantage",
+  "layout": "normal",
+  "mana_cost": "{G}",
+  "cmc": 1.0,
+  "type_line": "Instant",
+  "oracle_text": "Target creature gets +2/+2 and gains reach until end of turn. Untap it.",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "117"
+ },
+ {
+  "name": "Verdant Kraken",
+  "layout": "normal",
+  "mana_cost": "{4}{G}{G}{G}",
+  "cmc": 7.0,
+  "type_line": "Creature — Plant Kraken",
+  "oracle_text": "At the beginning of each player's upkeep, you create a 3/3 green Forest Tentacle land creature token. (It has \"{T}: Add {G}.\" It's affected by summoning sickness until your next turn.)",
+  "power": "6",
+  "toughness": "6",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "118"
+ },
+ {
+  "name": "Vinelasher Adept",
+  "layout": "normal",
+  "mana_cost": "{4}{G}{G}",
+  "cmc": 6.0,
+  "type_line": "Creature — Rhino Soldier",
+  "oracle_text": "Reach\nWhen this creature enters, put three +1/+1 counters on target creature.\nBasic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)",
+  "power": "2",
+  "toughness": "4",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Reach",
+   "Landcycling",
+   "Basic landcycling",
+   "Typecycling",
+   "Cycling"
+  ],
+  "rarity": "common",
+  "collector_number": "119"
+ },
+ {
+  "name": "Wrecking Gecko",
+  "layout": "normal",
+  "mana_cost": "{4}{G}",
+  "cmc": 5.0,
+  "type_line": "Artifact Creature — Lizard Construct",
+  "oracle_text": "Ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)\n{6}{G}{G}: This creature gets +4/+4 and gains trample until end of turn.",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Ward"
+  ],
+  "rarity": "common",
+  "collector_number": "120"
+ },
+ {
+  "name": "Aerid Konstrari",
+  "layout": "normal",
+  "mana_cost": "{1}{R}{G}{G}",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Elder Sphinx",
+  "oracle_text": "Flying\nWhen Aerid Konstrari enters or dies, create a Heartwood token. (It's a red and green artifact with \"{T}: Add {R} or {G}.\")\n{6}: Create a Heartwood token. Then Aerid Konstrari gets +X/+0 until end of turn, where X is the number of artifacts you control.",
+  "power": "5",
+  "toughness": "4",
+  "colors": [
+   "G",
+   "R"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "mythic",
+  "collector_number": "121"
+ },
+ {
+  "name": "Avatar of Burgeoning Echoes",
+  "layout": "normal",
+  "mana_cost": "{G}{U}",
+  "cmc": 2.0,
+  "type_line": "Creature — Avatar",
+  "oracle_text": "Landfall — Whenever a land you control enters, empower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nPlaneswalkers you control have \"[−10]: Put a +1/+1 counter on target creature for each land you control.\"",
+  "power": "2",
+  "toughness": "3",
+  "colors": [
+   "G",
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace",
+   "Landfall"
+  ],
+  "rarity": "mythic",
+  "collector_number": "122"
+ },
+ {
+  "name": "Blessed Ghoul",
+  "layout": "normal",
+  "mana_cost": "{W/B}",
+  "cmc": 1.0,
+  "type_line": "Creature — Zombie Cleric",
+  "oracle_text": "Lifelink\n{2}{W/B}: Return this card from your graveyard to your hand.",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "B",
+   "W"
+  ],
+  "keywords": [
+   "Lifelink"
+  ],
+  "rarity": "common",
+  "collector_number": "123"
+ },
+ {
+  "name": "Bloombrute",
+  "layout": "normal",
+  "mana_cost": "{2}{G}{W}",
+  "cmc": 4.0,
+  "type_line": "Creature — Plant Elemental",
+  "oracle_text": "Whenever you gain life, draw a card. This ability triggers only once each turn.\n{4}{G}{W}: Target creature gains trample and lifelink until end of turn.",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "G",
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "124"
+ },
+ {
+  "name": "Charge the Sanctum",
+  "layout": "normal",
+  "mana_cost": "{2}{R/W}",
+  "cmc": 3.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose one —\n• Creatures you control get +2/+0 until end of turn.\n• Target creature gets +2/+0 and gains first strike until end of turn. Put a +1/+1 counter on it.",
+  "colors": [
+   "R",
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "125"
+ },
+ {
+  "name": "Clash of Elements",
+  "layout": "normal",
+  "mana_cost": "{1}{U}{R}",
+  "cmc": 3.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose target nonland permanent. Its owner may put it on top of their library. If they do, Clash of Elements deals 2 damage to them. If they didn't put the card on top of their library, they put it on the bottom.",
+  "colors": [
+   "R",
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "126"
+ },
+ {
+  "name": "Craftwork Crusher",
+  "layout": "normal",
+  "mana_cost": "{3}{R}{R}{G}{G}",
+  "cmc": 7.0,
+  "type_line": "Artifact Creature — Boar Construct",
+  "oracle_text": "Trample\nWhen this creature enters, choose two —\n• This creature deals 4 damage to target creature or planeswalker.\n• Create a 2/2 colorless Wizard Soldier creature token named Cadet.\n• Draw a card.",
+  "power": "7",
+  "toughness": "5",
+  "colors": [
+   "G",
+   "R"
+  ],
+  "keywords": [
+   "Trample"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "127"
+ },
+ {
+  "name": "Denzilore Fatehold",
+  "layout": "normal",
+  "mana_cost": "{1}{W}{U}{U}",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Elder Sphinx",
+  "oracle_text": "Flash\nFlying\nWhenever you scry or surveil, put a +1/+1 counter on each creature you control.",
+  "power": "3",
+  "toughness": "4",
+  "colors": [
+   "U",
+   "W"
+  ],
+  "keywords": [
+   "Flying",
+   "Flash"
+  ],
+  "rarity": "mythic",
+  "collector_number": "128"
+ },
+ {
+  "name": "Desperate Futurescribe",
+  "layout": "normal",
+  "mana_cost": "{2}{W}{U}",
+  "cmc": 4.0,
+  "type_line": "Creature — Kor Scout",
+  "oracle_text": "Flying\nAt the beginning of combat on your turn, another target creature you control gets +1/+1 until end of turn. If you've scried or surveilled this turn, put a +1/+1 counter on that creature instead.",
+  "power": "3",
+  "toughness": "4",
+  "colors": [
+   "U",
+   "W"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "129"
+ },
+ {
+  "name": "Emergency Phytomedic // Seed Suture",
+  "layout": "prepare",
+  "mana_cost": "{G/W} // {G/W}",
+  "cmc": 1.0,
+  "type_line": "Creature — Dryad Cleric // Sorcery",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "G",
+   "W"
+  ],
+  "keywords": [
+   "Prepared"
+  ],
+  "rarity": "common",
+  "collector_number": "130",
+  "card_faces": [
+   {
+    "name": "Emergency Phytomedic",
+    "mana_cost": "{G/W}",
+    "type_line": "Creature — Dryad Cleric",
+    "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    "power": "1",
+    "toughness": "1"
+   },
+   {
+    "name": "Seed Suture",
+    "mana_cost": "{G/W}",
+    "type_line": "Sorcery",
+    "oracle_text": "Put a +1/+1 counter on target creature. You gain 1 life."
+   }
+  ]
+ },
+ {
+  "name": "Entrust the Spark",
+  "layout": "normal",
+  "mana_cost": "{3}{G}{U}",
+  "cmc": 5.0,
+  "type_line": "Sorcery",
+  "oracle_text": "You may sacrifice a planeswalker. If you do, search your library for a planeswalker card, put it onto the battlefield, then shuffle.",
+  "colors": [
+   "G",
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "131"
+ },
+ {
+  "name": "Fatehold Charm",
+  "layout": "normal",
+  "mana_cost": "{W}{U}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose one —\n• Draw a card. Empower Jace 2.\n• Return target spell or creature to its owner's hand.\n• Creatures you control get +1/+2 until end of turn.",
+  "colors": [
+   "U",
+   "W"
+  ],
+  "keywords": [
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "132"
+ },
+ {
+  "name": "Fatehold Chronologist // Peer Review",
+  "layout": "prepare",
+  "mana_cost": "{1}{W/U} // {2}{W/U}",
+  "cmc": 2.0,
+  "type_line": "Creature — Bird Wizard // Sorcery",
+  "power": "1",
+  "toughness": "2",
+  "colors": [
+   "U",
+   "W"
+  ],
+  "keywords": [
+   "Flying",
+   "Surveil",
+   "Prepared"
+  ],
+  "rarity": "common",
+  "collector_number": "133",
+  "card_faces": [
+   {
+    "name": "Fatehold Chronologist",
+    "mana_cost": "{1}{W/U}",
+    "type_line": "Creature — Bird Wizard",
+    "oracle_text": "Flying\nThis creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    "power": "1",
+    "toughness": "2"
+   },
+   {
+    "name": "Peer Review",
+    "mana_cost": "{2}{W/U}",
+    "type_line": "Sorcery",
+    "oracle_text": "Create a 2/2 colorless Wizard Soldier creature token named Cadet. Surveil 1."
+   }
+  ]
+ },
+ {
+  "name": "Ferocity of the Hunt",
+  "layout": "normal",
+  "mana_cost": "{1}{B/G}",
+  "cmc": 2.0,
+  "type_line": "Enchantment — Aura",
+  "oracle_text": "Flash\nEnchant creature\nEnchanted creature gets +1/+0 and has deathtouch.\nWhen enchanted creature dies, return that card to the battlefield tapped under its owner's control.",
+  "colors": [
+   "B",
+   "G"
+  ],
+  "keywords": [
+   "Enchant",
+   "Flash"
+  ],
+  "rarity": "common",
+  "collector_number": "134"
+ },
+ {
+  "name": "Frostbite Pyromental",
+  "layout": "normal",
+  "mana_cost": "{U}{R}{R}",
+  "cmc": 3.0,
+  "type_line": "Creature — Elemental",
+  "oracle_text": "Trample, haste\nWhenever this creature deals combat damage to a player, draw two cards.\nAt the beginning of the end step, sacrifice this creature.",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "R",
+   "U"
+  ],
+  "keywords": [
+   "Haste",
+   "Trample"
+  ],
+  "rarity": "rare",
+  "collector_number": "135"
+ },
+ {
+  "name": "Grim Repriser",
+  "layout": "normal",
+  "mana_cost": "{B}{R}",
+  "cmc": 2.0,
+  "type_line": "Creature — Zombie Bard",
+  "oracle_text": "Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)\n{B}{R}: Return this card from your graveyard to the battlefield with a finality counter on it. Activate only if an opponent has been dealt noncombat damage this turn. (If a creature with a finality counter on it would die, exile it instead.)",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "B",
+   "R"
+  ],
+  "keywords": [
+   "Prowess"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "136"
+ },
+ {
+  "name": "Ingris Stingerquill",
+  "layout": "normal",
+  "mana_cost": "{B}{R}{R}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Elder Sphinx",
+  "oracle_text": "Flying\nWhenever a creature you control attacks, that creature deals 1 damage to each opponent.\n{4}: Create a 2/2 colorless Wizard Soldier creature token named Cadet. Then creatures you control gain haste until end of turn.",
+  "power": "1",
+  "toughness": "4",
+  "colors": [
+   "B",
+   "R"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "mythic",
+  "collector_number": "137"
+ },
+ {
+  "name": "Konstrari Charm",
+  "layout": "normal",
+  "mana_cost": "{R}{G}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose one —\n• Konstrari Charm deals 6 damage to target creature with flying.\n• Put two +1/+1 counters on target creature. It gains trample until end of turn.\n• Add {C}{C}{C}.",
+  "colors": [
+   "G",
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "138"
+ },
+ {
+  "name": "Konstrari Improviser // Soul Tether",
+  "layout": "prepare",
+  "mana_cost": "{1}{R/G} // {2}{R/G}",
+  "cmc": 2.0,
+  "type_line": "Creature — Human Artificer // Sorcery",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "G",
+   "R"
+  ],
+  "keywords": [
+   "Prepared"
+  ],
+  "rarity": "common",
+  "collector_number": "139",
+  "card_faces": [
+   {
+    "name": "Konstrari Improviser",
+    "mana_cost": "{1}{R/G}",
+    "type_line": "Creature — Human Artificer",
+    "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    "power": "2",
+    "toughness": "2"
+   },
+   {
+    "name": "Soul Tether",
+    "mana_cost": "{2}{R/G}",
+    "type_line": "Sorcery",
+    "oracle_text": "Create a Heartwood token. (It's a red and green artifact with \"{T}: Add {R} or {G}.\")"
+   }
+  ]
+ },
+ {
+  "name": "Kwia Vigorbloom",
+  "layout": "normal",
+  "mana_cost": "{3}{G}{W}{W}",
+  "cmc": 6.0,
+  "type_line": "Legendary Creature — Elder Sphinx",
+  "oracle_text": "Flying, vigilance, lifelink, ward {2}\nWhenever you gain life, create a colorless artifact token named Lotus with \"{T}, Sacrifice this token: Add three mana of any one color.\" This ability triggers only once each turn.",
+  "power": "6",
+  "toughness": "6",
+  "colors": [
+   "G",
+   "W"
+  ],
+  "keywords": [
+   "Flying",
+   "Lifelink",
+   "Vigilance",
+   "Ward"
+  ],
+  "rarity": "mythic",
+  "collector_number": "140"
+ },
+ {
+  "name": "Mind Meanderer",
+  "layout": "normal",
+  "mana_cost": "{3}{G}{U}{U}",
+  "cmc": 6.0,
+  "type_line": "Creature — Bird Fish Illusion",
+  "oracle_text": "Flying\nThis creature has vigilance as long as you control a Jace planeswalker.\nWhen this creature enters, it fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.)",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "G",
+   "U"
+  ],
+  "keywords": [
+   "Flying",
+   "Fight"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "141"
+ },
+ {
+  "name": "Null Summoner",
+  "layout": "normal",
+  "mana_cost": "{2}{U}{B}",
+  "cmc": 4.0,
+  "type_line": "Creature — Human Warlock",
+  "oracle_text": "When this creature enters, if you cast it, target opponent reveals their hand. You choose a nonland card from it. Exile that card.\nThreshold — As long as there are seven or more cards in your graveyard, you may cast the exiled card, and mana of any type can be spent to cast that spell.",
+  "power": "4",
+  "toughness": "2",
+  "colors": [
+   "B",
+   "U"
+  ],
+  "keywords": [
+   "Threshold"
+  ],
+  "rarity": "rare",
+  "collector_number": "142"
+ },
+ {
+  "name": "Paradox Shaper // Omit Variables",
+  "layout": "prepare",
+  "mana_cost": "{1}{U/B} // {U/B}",
+  "cmc": 2.0,
+  "type_line": "Creature — Octopus Wizard // Sorcery",
+  "power": "1",
+  "toughness": "3",
+  "colors": [
+   "B",
+   "U"
+  ],
+  "keywords": [
+   "Prepared",
+   "Mill"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "143",
+  "card_faces": [
+   {
+    "name": "Paradox Shaper",
+    "mana_cost": "{1}{U/B}",
+    "type_line": "Creature — Octopus Wizard",
+    "oracle_text": "At the beginning of your upkeep, if this creature isn't prepared, it becomes prepared.\n{2}: Put target card from your graveyard on the bottom of your library.",
+    "power": "1",
+    "toughness": "3"
+   },
+   {
+    "name": "Omit Variables",
+    "mana_cost": "{U/B}",
+    "type_line": "Sorcery",
+    "oracle_text": "Mill three cards. (Put the top three cards of your library into your graveyard.)"
+   }
+  ]
+ },
+ {
+  "name": "Primal Witchstalker",
+  "layout": "normal",
+  "mana_cost": "{1}{B}{G}",
+  "cmc": 3.0,
+  "type_line": "Creature — Wolf",
+  "oracle_text": "Menace (This creature can't be blocked except by two or more creatures.)\nWhen this creature enters, mill four cards. When you do, return target land card from your graveyard to the battlefield tapped. (To mill four cards, put the top four cards of your library into your graveyard.)",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "B",
+   "G"
+  ],
+  "keywords": [
+   "Menace",
+   "Mill"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "144"
+ },
+ {
+  "name": "Proctor of Potential",
+  "layout": "normal",
+  "mana_cost": "{W}{U}",
+  "cmc": 2.0,
+  "type_line": "Creature — Human Cleric",
+  "oracle_text": "Whenever this creature or another creature you control enters, surveil 1. (Look at the top card of your library. You may put it into your graveyard.)\n{W}{U}: Return this card from your graveyard to the battlefield with a finality counter on it. Activate only if you've scried or surveilled this turn. (If a creature with a finality counter on it would die, exile it instead.)",
+  "power": "3",
+  "toughness": "1",
+  "colors": [
+   "U",
+   "W"
+  ],
+  "keywords": [
+   "Surveil"
+  ],
+  "rarity": "rare",
+  "collector_number": "145"
+ },
+ {
+  "name": "Prudent Fateseer // Peer Review",
+  "layout": "prepare",
+  "mana_cost": "{1}{W/U}{W/U} // {2}{W/U}",
+  "cmc": 3.0,
+  "type_line": "Creature — Dwarf Wizard // Sorcery",
+  "power": "1",
+  "toughness": "4",
+  "colors": [
+   "U",
+   "W"
+  ],
+  "keywords": [
+   "Surveil",
+   "Prepared"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "146",
+  "card_faces": [
+   {
+    "name": "Prudent Fateseer",
+    "mana_cost": "{1}{W/U}{W/U}",
+    "type_line": "Creature — Dwarf Wizard",
+    "oracle_text": "This creature enters prepared.\nWhenever you scry or surveil, creatures you control get +1/+0 until end of turn. This ability triggers only once each turn.",
+    "power": "1",
+    "toughness": "4"
+   },
+   {
+    "name": "Peer Review",
+    "mana_cost": "{2}{W/U}",
+    "type_line": "Sorcery",
+    "oracle_text": "Create a 2/2 colorless Wizard Soldier creature token named Cadet. Surveil 1."
+   }
+  ]
+ },
+ {
+  "name": "Recursive Recruitment",
+  "layout": "normal",
+  "mana_cost": "{2}{U}{B}",
+  "cmc": 4.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Create two 2/2 colorless Wizard Soldier creature tokens named Cadet. If this spell was cast from a graveyard, put a +1/+1 counter on each of them for every three cards in your graveyard.\nFlashback {6}{U}{B} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+  "colors": [
+   "B",
+   "U"
+  ],
+  "keywords": [
+   "Flashback"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "147"
+ },
+ {
+  "name": "Solarium Sentry",
+  "layout": "normal",
+  "mana_cost": "{G}{W}",
+  "cmc": 2.0,
+  "type_line": "Creature — Cat Soldier",
+  "oracle_text": "Whenever an opponent casts a spell with mana value 2 or less, you gain 2 life.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "G",
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "148"
+ },
+ {
+  "name": "Solitary Cell",
+  "layout": "normal",
+  "mana_cost": "{R}{W}",
+  "cmc": 2.0,
+  "type_line": "Artifact",
+  "oracle_text": "When this artifact enters, exile target nonland permanent an opponent controls with mana value 3 or less until this artifact leaves the battlefield.\n{1}, {T}, Discard a legendary card: Draw a card.",
+  "colors": [
+   "R",
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "149"
+ },
+ {
+  "name": "Stingerquill Charm",
+  "layout": "normal",
+  "mana_cost": "{B}{R}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose one —\n• Stingerquill Charm deals 3 damage to any target.\n• Target creature gains first strike and deathtouch until end of turn.\n• Create a 2/2 colorless Wizard Soldier creature token named Cadet. It gains haste until end of turn.",
+  "colors": [
+   "B",
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "150"
+ },
+ {
+  "name": "Stingerquill Voxmancer // Vicious Verse",
+  "layout": "prepare",
+  "mana_cost": "{B/R} // {B/R}",
+  "cmc": 1.0,
+  "type_line": "Creature — Goblin Sorcerer // Sorcery",
+  "power": "1",
+  "toughness": "2",
+  "colors": [
+   "B",
+   "R"
+  ],
+  "keywords": [
+   "Prepared"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "151",
+  "card_faces": [
+   {
+    "name": "Stingerquill Voxmancer",
+    "mana_cost": "{B/R}",
+    "type_line": "Creature — Goblin Sorcerer",
+    "oracle_text": "At the beginning of your upkeep, if this creature isn't prepared, it becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    "power": "1",
+    "toughness": "2"
+   },
+   {
+    "name": "Vicious Verse",
+    "mana_cost": "{B/R}",
+    "type_line": "Sorcery",
+    "oracle_text": "Vicious Verse deals 1 damage to target opponent."
+   }
+  ]
+ },
+ {
+  "name": "Stinging Vitriol",
+  "layout": "normal",
+  "mana_cost": "{B}{R}",
+  "cmc": 2.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Stinging Vitriol deals 2 damage to target opponent. That player reveals their hand. You choose a nonland card from it. They discard that card.",
+  "colors": [
+   "B",
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "152"
+ },
+ {
+  "name": "Tam's Resistance",
+  "layout": "normal",
+  "mana_cost": "{1}{G/U}",
+  "cmc": 2.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Put a +1/+1 counter on up to one target creature. It gains vigilance until end of turn.\nEmpower Jace 4. (Put four loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "colors": [
+   "G",
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "common",
+  "collector_number": "153"
+ },
+ {
+  "name": "Tenured Tethermage",
+  "layout": "normal",
+  "mana_cost": "{1}{R}{G}",
+  "cmc": 3.0,
+  "type_line": "Creature — Human Artificer",
+  "oracle_text": "When this creature enters, you may sacrifice a land. If you do, create two tapped Heartwood tokens. (They're red and green artifacts with \"{T}: Add {R} or {G}.\")\nTap two untapped artifacts you control: Put two +1/+1 counters on this creature.",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "G",
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "154"
+ },
+ {
+  "name": "Theorix Charm",
+  "layout": "normal",
+  "mana_cost": "{U}{B}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose one —\n• Counter target noncreature spell unless its controller pays {2}.\n• Target creature gets -2/-2 until end of turn.\n• Mill three cards, then draw a card. (To mill three cards, put the top three cards of your library into your graveyard.)",
+  "colors": [
+   "B",
+   "U"
+  ],
+  "keywords": [
+   "Mill"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "155"
+ },
+ {
+  "name": "Theorix Metamage // Omit Variables",
+  "layout": "prepare",
+  "mana_cost": "{2}{U/B} // {U/B}",
+  "cmc": 3.0,
+  "type_line": "Creature — Shade Wizard // Sorcery",
+  "power": "2",
+  "toughness": "3",
+  "colors": [
+   "B",
+   "U"
+  ],
+  "keywords": [
+   "Threshold",
+   "Prepared",
+   "Mill"
+  ],
+  "rarity": "common",
+  "collector_number": "156",
+  "card_faces": [
+   {
+    "name": "Theorix Metamage",
+    "mana_cost": "{2}{U/B}",
+    "type_line": "Creature — Shade Wizard",
+    "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nThreshold — This creature gets +1/+0 and has flying as long as there are seven or more cards in your graveyard.",
+    "power": "2",
+    "toughness": "3"
+   },
+   {
+    "name": "Omit Variables",
+    "mana_cost": "{U/B}",
+    "type_line": "Sorcery",
+    "oracle_text": "Mill three cards. (Put the top three cards of your library into your graveyard.)"
+   }
+  ]
+ },
+ {
+  "name": "Twinned Vision",
+  "layout": "normal",
+  "mana_cost": "{1}{U/R}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Draw a card. If this spell wasn't cast from your hand, draw two cards instead.\nFlashback—{1}{U/R}{U/R}, Discard a card. (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+  "colors": [
+   "R",
+   "U"
+  ],
+  "keywords": [
+   "Flashback"
+  ],
+  "rarity": "common",
+  "collector_number": "157"
+ },
+ {
+  "name": "Twisted Fates",
+  "layout": "normal",
+  "mana_cost": "{2}{W}{W}{B}",
+  "cmc": 5.0,
+  "type_line": "Sorcery",
+  "oracle_text": "Destroy target nonland permanent. Put a +1/+1 counter on each creature target player controls.",
+  "colors": [
+   "B",
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "158"
+ },
+ {
+  "name": "Uldaros Theorix",
+  "layout": "normal",
+  "mana_cost": "{3}{U}{B}{B}",
+  "cmc": 6.0,
+  "type_line": "Legendary Creature — Elder Sphinx",
+  "oracle_text": "Flying\nWhen Uldaros Theorix enters, if you cast him, exile up to one target nonland card of each card type from your graveyard. Copy those cards. You may cast any number of spells with total mana value 6 or less from among the copies without paying their mana costs. (Permanent spells cast this way become tokens.)",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "B",
+   "U"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "mythic",
+  "collector_number": "159"
+ },
+ {
+  "name": "Vigorbloom Charm",
+  "layout": "normal",
+  "mana_cost": "{G}{W}",
+  "cmc": 2.0,
+  "type_line": "Instant",
+  "oracle_text": "Choose one —\n• Target permanent you control gains hexproof and indestructible until end of turn.\n• You draw a card and gain 3 life.\n• Put a +1/+1 counter on target creature you control. Then it fights target creature an opponent controls. (Each deals damage equal to its power to the other.)",
+  "colors": [
+   "G",
+   "W"
+  ],
+  "keywords": [
+   "Fight"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "160"
+ },
+ {
+  "name": "Vigorbloom Vanguard // Seed Suture",
+  "layout": "prepare",
+  "mana_cost": "{1}{G/W} // {G/W}",
+  "cmc": 2.0,
+  "type_line": "Creature — Troll Druid // Sorcery",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "G",
+   "W"
+  ],
+  "keywords": [
+   "Prepared"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "161",
+  "card_faces": [
+   {
+    "name": "Vigorbloom Vanguard",
+    "mana_cost": "{1}{G/W}",
+    "type_line": "Creature — Troll Druid",
+    "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nEach creature you control with a +1/+1 counter on it has vigilance.",
+    "power": "2",
+    "toughness": "2"
+   },
+   {
+    "name": "Seed Suture",
+    "mana_cost": "{G/W}",
+    "type_line": "Sorcery",
+    "oracle_text": "Put a +1/+1 counter on target creature. You gain 1 life."
+   }
+  ]
+ },
+ {
+  "name": "Vindictive Triumph",
+  "layout": "normal",
+  "mana_cost": "{W}{B}{B}",
+  "cmc": 3.0,
+  "type_line": "Instant",
+  "oracle_text": "Exile target creature or planeswalker. If that permanent's mana value was 3 or less, return it to the battlefield tapped under your control. Exile it at the beginning of the next end step.",
+  "colors": [
+   "B",
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "162"
+ },
+ {
+  "name": "Warrior's Blades",
+  "layout": "normal",
+  "mana_cost": "{2}{R}{W}",
+  "cmc": 4.0,
+  "type_line": "Artifact — Equipment",
+  "oracle_text": "When this Equipment enters, it deals 3 damage to any target and you gain 3 life.\nEquipped creature gets +2/+1.\nEquip {3}. This ability costs {1} less to activate for each +1/+1 counter on the creature it targets.",
+  "colors": [
+   "R",
+   "W"
+  ],
+  "keywords": [
+   "Equip"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "163"
+ },
+ {
+  "name": "Whiplash Wordsmith // Vicious Verse",
+  "layout": "prepare",
+  "mana_cost": "{3}{B/R} // {B/R}",
+  "cmc": 4.0,
+  "type_line": "Creature — Vampire Sorcerer // Sorcery",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "B",
+   "R"
+  ],
+  "keywords": [
+   "Prepared"
+  ],
+  "rarity": "common",
+  "collector_number": "164",
+  "card_faces": [
+   {
+    "name": "Whiplash Wordsmith",
+    "mana_cost": "{3}{B/R}",
+    "type_line": "Creature — Vampire Sorcerer",
+    "oracle_text": "This creature enters prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)\nAs long as an opponent was dealt noncombat damage this turn, this creature has flying and haste.",
+    "power": "3",
+    "toughness": "3"
+   },
+   {
+    "name": "Vicious Verse",
+    "mana_cost": "{B/R}",
+    "type_line": "Sorcery",
+    "oracle_text": "Vicious Verse deals 1 damage to target opponent."
+   }
+  ]
+ },
+ {
+  "name": "Woodwork Prodigy // Soul Tether",
+  "layout": "prepare",
+  "mana_cost": "{2}{R/G} // {2}{R/G}",
+  "cmc": 3.0,
+  "type_line": "Creature — Cat Druid // Sorcery",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "G",
+   "R"
+  ],
+  "keywords": [
+   "Prepared"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "165",
+  "card_faces": [
+   {
+    "name": "Woodwork Prodigy",
+    "mana_cost": "{2}{R/G}",
+    "type_line": "Creature — Cat Druid",
+    "oracle_text": "At the beginning of your upkeep, if this creature isn't prepared, it becomes prepared. (While it's prepared, you may cast a copy of its spell. Doing so unprepares it.)",
+    "power": "3",
+    "toughness": "3"
+   },
+   {
+    "name": "Soul Tether",
+    "mana_cost": "{2}{R/G}",
+    "type_line": "Sorcery",
+    "oracle_text": "Create a Heartwood token. (It's a red and green artifact with \"{T}: Add {R} or {G}.\")"
+   }
+  ]
+ },
+ {
+  "name": "Afterthought Sentry",
+  "layout": "normal",
+  "mana_cost": "{2}",
+  "cmc": 2.0,
+  "type_line": "Artifact Creature — Gargoyle",
+  "oracle_text": "{2}: This creature gains flying until end of turn.\nWhenever this creature attacks, exile up to one target card from a graveyard.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "166"
+ },
+ {
+  "name": "Archive Arbiter",
+  "layout": "normal",
+  "mana_cost": "{6}",
+  "cmc": 6.0,
+  "type_line": "Artifact Creature — Sphinx",
+  "oracle_text": "Flying\nWhen this creature enters, choose one —\n• Destroy target noncreature, nonland permanent.\n• You gain 4 life.",
+  "power": "4",
+  "toughness": "4",
+  "colors": [],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "167"
+ },
+ {
+  "name": "Codie, Ravenous Codex",
+  "layout": "normal",
+  "mana_cost": "{3}",
+  "cmc": 3.0,
+  "type_line": "Legendary Artifact Creature — Book Construct",
+  "oracle_text": "Whenever you cast a prepared spell, copy it. You may choose new targets for the copy.\n{W}{U}{B}{R}{G}, {T}: Each creature you control becomes prepared. (Only creatures with prepare spells can become prepared.)",
+  "power": "1",
+  "toughness": "4",
+  "colors": [],
+  "keywords": [
+   "Prepared"
+  ],
+  "rarity": "rare",
+  "collector_number": "168"
+ },
+ {
+  "name": "The Echoverse Fulcrum",
+  "layout": "normal",
+  "mana_cost": "{2}",
+  "cmc": 2.0,
+  "type_line": "Legendary Artifact",
+  "oracle_text": "When The Echoverse Fulcrum enters, draw a card, then discard a card.\n{5}, {T}, Exile The Echoverse Fulcrum: Destroy all creatures. Activate only as a sorcery.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "mythic",
+  "collector_number": "169"
+ },
+ {
+  "name": "Eye of Jace",
+  "layout": "normal",
+  "mana_cost": "{1}",
+  "cmc": 1.0,
+  "type_line": "Artifact",
+  "oracle_text": "At the beginning of your upkeep, surveil 1. Then if there are seven or more cards in your graveyard, sacrifice this artifact, it deals 2 damage to each opponent, and you gain 2 life. (To surveil 1, look at the top card of your library. You may put it into your graveyard.)",
+  "colors": [],
+  "keywords": [
+   "Surveil"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "170"
+ },
+ {
+  "name": "Keeper of the Quiet Hour",
+  "layout": "normal",
+  "mana_cost": "{3}",
+  "cmc": 3.0,
+  "type_line": "Artifact Creature — Chimera",
+  "oracle_text": "When this creature enters, empower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")",
+  "power": "3",
+  "toughness": "2",
+  "colors": [],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "common",
+  "collector_number": "171"
+ },
+ {
+  "name": "Living Library",
+  "layout": "normal",
+  "mana_cost": "{2}",
+  "cmc": 2.0,
+  "type_line": "Artifact Creature — Book Illusion",
+  "oracle_text": "{6}, Sacrifice this creature: Choose target creature or planeswalker an opponent controls. Its owner shuffles it into their library.",
+  "power": "0",
+  "toughness": "4",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "172"
+ },
+ {
+  "name": "Medic's Kitesail",
+  "layout": "normal",
+  "mana_cost": "{2}",
+  "cmc": 2.0,
+  "type_line": "Artifact — Equipment",
+  "oracle_text": "Equipped creature gets +1/+0 and has flying and \"Whenever this creature attacks, you gain 1 life.\"\nEquip {2} ({2}: Attach to target creature you control. Equip only as a sorcery.)",
+  "colors": [],
+  "keywords": [
+   "Equip"
+  ],
+  "rarity": "common",
+  "collector_number": "173"
+ },
+ {
+  "name": "Murmuring Volume",
+  "layout": "normal",
+  "mana_cost": "{3}",
+  "cmc": 3.0,
+  "type_line": "Artifact — Book",
+  "oracle_text": "{T}: Add one mana of any color.\n{2}, {T}, Discard a card: Draw a card.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "174"
+ },
+ {
+  "name": "Dedicated Commons",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control a planeswalker.\n{T}: Add {R} or {W}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "175"
+ },
+ {
+  "name": "Deserted Beach",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control two or more other lands.\n{T}: Add {W} or {U}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "176"
+ },
+ {
+  "name": "Fatehold Annex",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control a planeswalker.\n{T}: Add {W} or {U}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "177"
+ },
+ {
+  "name": "Formidable Commons",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control a planeswalker.\n{T}: Add {B} or {G}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "178"
+ },
+ {
+  "name": "Hall of Echoes",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "{T}: Add {C}.\n{5}: This land becomes a copy of target creature you control until end of turn. The \"legend rule\" doesn't apply to permanents you control this turn.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "179"
+ },
+ {
+  "name": "Haunted Ridge",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control two or more other lands.\n{T}: Add {B} or {R}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "180"
+ },
+ {
+  "name": "Hexhaven Dueling Arena",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "{T}: Add {C}.\n{2}, {T}: Target creature that attacked this turn becomes prepared. Activate only as a sorcery. (Only creatures with prepare spells can become prepared.)\n{4}, {T}: Target creature becomes prepared.",
+  "colors": [],
+  "keywords": [
+   "Prepared"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "181"
+ },
+ {
+  "name": "Innovative Commons",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control a planeswalker.\n{T}: Add {U} or {R}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "182"
+ },
+ {
+  "name": "Konstrari Annex",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control a planeswalker.\n{T}: Add {R} or {G}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "183"
+ },
+ {
+  "name": "Meticulous Commons",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control a planeswalker.\n{T}: Add {W} or {B}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "184"
+ },
+ {
+  "name": "Overgrown Farmland",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control two or more other lands.\n{T}: Add {G} or {W}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "185"
+ },
+ {
+  "name": "Rockfall Vale",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control two or more other lands.\n{T}: Add {R} or {G}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "186"
+ },
+ {
+  "name": "Roiling Canopy",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped.\nWhenever a Forest you control enters, if you control at least five other Forests, target creature you control gets +3/+3 until end of turn.\n{T}: Add {G}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "187"
+ },
+ {
+  "name": "Room of Refuge",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped. As it enters, choose a color.\n{T}: Add one mana of the chosen color.\n{5}, {T}, Sacrifice this land: Put two +1/+1 counters on target creature. Activate only as a sorcery.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "188"
+ },
+ {
+  "name": "Shipwreck Marsh",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control two or more other lands.\n{T}: Add {U} or {B}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "189"
+ },
+ {
+  "name": "Stingerquill Annex",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control a planeswalker.\n{T}: Add {B} or {R}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "190"
+ },
+ {
+  "name": "Theorist's Sanctum",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land — Island",
+  "oracle_text": "({T}: Add {U}.)\nAs this land enters, you may behold a Jace. If you don't, this land enters tapped. (To behold a Jace, choose a Jace you control or reveal a Jace card from your hand.)\n{2}{U}, {T}: Empower Jace 2.",
+  "colors": [],
+  "keywords": [
+   "Empower Jace",
+   "Behold"
+  ],
+  "rarity": "rare",
+  "collector_number": "191"
+ },
+ {
+  "name": "Theorix Annex",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control a planeswalker.\n{T}: Add {U} or {B}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "192"
+ },
+ {
+  "name": "Transformative Commons",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control a planeswalker.\n{T}: Add {G} or {U}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "193"
+ },
+ {
+  "name": "Vigorbloom Annex",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Land",
+  "oracle_text": "This land enters tapped unless you control a planeswalker.\n{T}: Add {G} or {W}.",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "194"
+ },
+ {
+  "name": "Ajani Resolute",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Legendary Planeswalker — Ajani",
+  "oracle_text": "Whenever you gain life, put a loyalty counter on Ajani.\n0: You gain 1 life.\n−4: Create a 2/2 white Cat Soldier creature token named Ajani's Pridemate with \"Whenever you gain life, put a +1/+1 counter on this token.\"\n−10: You get an emblem with \"Creatures you control get +2/+2.\"",
+  "loyalty": "2",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "mythic",
+  "collector_number": "195"
+ },
+ {
+  "name": "Danitha, Sword of Hope",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Human Knight",
+  "oracle_text": "First strike\nWhenever you cast an Equipment spell or a spell that targets a creature you control, draw a card. This ability triggers only once each turn.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "First strike"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "196"
+ },
+ {
+  "name": "Ghalta the Immovable",
+  "layout": "normal",
+  "mana_cost": "{8}{W}",
+  "cmc": 9.0,
+  "type_line": "Legendary Creature — Elder Dinosaur",
+  "oracle_text": "This spell costs {X} less to cast, where X is the greatest toughness among creatures you control.\nCreatures you control can attack as though they didn't have defender.\nEach creature you control with toughness greater than its power assigns combat damage equal to its toughness rather than its power.",
+  "power": "0",
+  "toughness": "7",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "197"
+ },
+ {
+  "name": "Gideon's Memorial",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Legendary Artifact",
+  "oracle_text": "Creature tokens you control get +1/+0 and have vigilance.\n{T}: Add one mana of any color. Spend this mana only to cast a planeswalker spell.\n{1}{W}, Discard this card: It deals 4 damage to target attacking or blocking creature.",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "198"
+ },
+ {
+  "name": "Koth of the Homestead",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Human Citizen",
+  "oracle_text": "Landfall — Whenever a land you control enters, you gain 1 life.\nWhenever a Plains you control enters, put a +1/+1 counter on target creature.",
+  "power": "2",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Landfall"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "199"
+ },
+ {
+  "name": "Liliana the Faultless",
+  "layout": "normal",
+  "mana_cost": "{W}",
+  "cmc": 1.0,
+  "type_line": "Legendary Creature — Human Cleric",
+  "oracle_text": "Whenever another creature or planeswalker you control enters, you gain 1 life.\n{1}, {T}, Discard a card: Another target creature or planeswalker you control gains hexproof until end of turn.",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "200"
+ },
+ {
+  "name": "Lyra, Archangel of Dawn",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Angel Knight",
+  "oracle_text": "Flying\nWhenever you gain life, put a +1/+1 counter on each Angel you control.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "rare",
+  "collector_number": "201"
+ },
+ {
+  "name": "Rescue Girl, First Responder",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Human Cleric",
+  "oracle_text": "Flying\n{T}: Return another target permanent you control to its owner's hand. Activate only during your turn.",
+  "power": "1",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "202"
+ },
+ {
+  "name": "Saheeli, Consul of Oversight",
+  "layout": "normal",
+  "mana_cost": "{3}{W}{W}",
+  "cmc": 5.0,
+  "type_line": "Legendary Creature — Human Advisor",
+  "oracle_text": "Flying\nWhenever you scry or surveil, create a 1/1 colorless Thopter artifact creature token with flying. This ability triggers only once each turn.",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "203"
+ },
+ {
+  "name": "Teyo, Lightshield Expert",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Human Cleric",
+  "oracle_text": "Flash\nWhen Teyo enters, target permanent you control gains hexproof until end of turn. Put a +1/+1 counter on it if it's a creature. Put a loyalty counter on it if it's a planeswalker. (It can't be the target of spells or abilities your opponents control.)",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Flash"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "204"
+ },
+ {
+  "name": "Thalia, the Survivor",
+  "layout": "normal",
+  "mana_cost": "{3}{W}",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Human Soldier",
+  "oracle_text": "Lifelink\nNoncreature spells your opponents cast cost {1} more to cast.",
+  "power": "3",
+  "toughness": "4",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Lifelink"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "205"
+ },
+ {
+  "name": "Tomik, Orzhov Lawmage",
+  "layout": "normal",
+  "mana_cost": "{1}{W}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Human Advisor",
+  "oracle_text": "Flying\nPlaneswalkers you control have \"No more than one creature can attack this planeswalker each combat.\"\n{T}: Target creature with a +1/+1 counter on it gains flying until end of turn.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "206"
+ },
+ {
+  "name": "Way of the Healer",
+  "layout": "normal",
+  "mana_cost": "{3}{W}",
+  "cmc": 4.0,
+  "type_line": "Legendary Enchantment",
+  "oracle_text": "When Way of the Healer enters, empower Jace 5. (Put five loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nPlaneswalkers you control have \"[−2]: Create a 2/2 colorless Wizard Soldier creature token named Cadet. Surveil 1.\"",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "207"
+ },
+ {
+  "name": "Way of the Mentor",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Legendary Enchantment",
+  "oracle_text": "When Way of the Mentor enters, empower Jace 5. (Put five loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nWhenever you gain life, put a loyalty counter on each planeswalker you control.",
+  "colors": [
+   "W"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "208"
+ },
+ {
+  "name": "Yoshimaru, Beloved Companion",
+  "layout": "normal",
+  "mana_cost": "{2}{W}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Dog",
+  "oracle_text": "If one or more +1/+1 counters would be put on a creature you control, that many plus one +1/+1 counters are put on it instead.\n{6}: Put a +1/+1 counter on target legendary creature.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "209"
+ },
+ {
+  "name": "Yuriko, Blade of the Mighty",
+  "layout": "normal",
+  "mana_cost": "{3}{W}",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Human Samurai",
+  "oracle_text": "During combat, players can't cast spells or activate abilities that aren't mana abilities.\nWhenever a creature you control attacks a player alone, it gains double strike until end of turn.",
+  "power": "2",
+  "toughness": "3",
+  "colors": [
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "210"
+ },
+ {
+  "name": "Arni, Humble Scribe",
+  "layout": "normal",
+  "mana_cost": "{2}{U}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Human Wizard",
+  "oracle_text": "Whenever another nontoken creature you control enters, untap Arni.\n{T}: Draw a card, then discard a card.",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "211"
+ },
+ {
+  "name": "Chandra, Chill of Compliance",
+  "layout": "normal",
+  "mana_cost": "{1}{U}{U}",
+  "cmc": 3.0,
+  "type_line": "Legendary Planeswalker — Chandra",
+  "oracle_text": "+1: Surveil 1. If you put a noncreature, nonland card into your graveyard this way, put that card into your hand.\n+1: Add {U}. Spend this mana only to cast a noncreature spell.\n−X: Tap target artifact or creature. Put X stun counters on it.\n−6: You get an emblem with \"Whenever you cast a spell, draw a card.\"",
+  "loyalty": "3",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil"
+  ],
+  "rarity": "mythic",
+  "collector_number": "212"
+ },
+ {
+  "name": "Fblthp, Impossibly Lost",
+  "layout": "normal",
+  "mana_cost": "{1}{U}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Homunculus",
+  "oracle_text": "When one or more of your opponents are dealt combat damage during your turn, draw two cards. If your library has no cards in it, you win the game. Fblthp's owner shuffles him into their library. (If you draw from an empty library this way, you still win the game.)",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "213"
+ },
+ {
+  "name": "Geist of Saint Thalia",
+  "layout": "normal",
+  "mana_cost": "{1}{U}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Spirit Cleric",
+  "oracle_text": "Flying\nNoncreature spells you cast cost {1} less to cast.",
+  "power": "1",
+  "toughness": "2",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "214"
+ },
+ {
+  "name": "Hapatra, the Desert Frost",
+  "layout": "normal",
+  "mana_cost": "{3}{U}",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Human Wizard",
+  "oracle_text": "When Hapatra enters, for each opponent, tap up to one target creature that player controls. Put a stun counter on each of those creatures. (If a permanent with a stun counter would become untapped, remove one from it instead.)\n{2}{U}: Untap target creature.",
+  "power": "4",
+  "toughness": "3",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "215"
+ },
+ {
+  "name": "Jace, Reality Sculptor",
+  "layout": "normal",
+  "mana_cost": "{3}{U}{U}",
+  "cmc": 5.0,
+  "type_line": "Legendary Planeswalker — Jace",
+  "oracle_text": "+1: Empower Jace X, where X is the number of Islands you control.\n−3: Until your next turn, whenever a creature attacks you or a planeswalker you control, it gets -5/-0 until end of turn.\n0: Exile all but the bottom card of each opponent's library. Activate only if there are twenty-five or more loyalty counters among Jaces you control.",
+  "loyalty": "5",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Empower Jace"
+  ],
+  "rarity": "rare",
+  "collector_number": "216"
+ },
+ {
+  "name": "Lyra, Tolarian Archangel",
+  "layout": "normal",
+  "mana_cost": "{1}{U}{U}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Angel Wizard",
+  "oracle_text": "Flying\nAt the beginning of each end step, if you've drawn three or more cards this turn, create a 3/3 blue Angel creature token with flying.\n{3}{U}{U}: Until end of turn, whenever Lyra deals combat damage to a player, draw two cards.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Flying"
+  ],
+  "rarity": "rare",
+  "collector_number": "217"
+ },
+ {
+  "name": "Proft, Consulting Detective",
+  "layout": "normal",
+  "mana_cost": "{1}{U}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Human Detective",
+  "oracle_text": "Whenever you scry or surveil, you may pay {2}. If you do, put a +1/+1 counter on Proft and draw a card. (Draw after you scry or surveil.)",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "218"
+ },
+ {
+  "name": "Ruric Thar, Biomagus",
+  "layout": "normal",
+  "mana_cost": "{4}{U}{U}",
+  "cmc": 6.0,
+  "type_line": "Legendary Creature — Ogre Crab Wizard",
+  "oracle_text": "Flying\nProwess, prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn twice.)\nWhenever Ruric Thar becomes the target of a spell or ability an opponent controls, draw a card.",
+  "power": "4",
+  "toughness": "6",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Flying",
+   "Prowess"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "219"
+ },
+ {
+  "name": "Samut, Tyrant of Naktamun",
+  "layout": "normal",
+  "mana_cost": "{1}{U}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Human Wizard",
+  "oracle_text": "Instant and sorcery spells you control have split second. (As long as a spell with split second is on the stack, players can't cast spells or activate abilities that aren't mana abilities.)",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "220"
+ },
+ {
+  "name": "Tetsuko Umezawa, Fugitive",
+  "layout": "normal",
+  "mana_cost": "{1}{U}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Human Rogue",
+  "oracle_text": "Creatures you control with power or toughness 1 or less can't be blocked.",
+  "power": "1",
+  "toughness": "3",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "221"
+ },
+ {
+  "name": "Traxos, Academy Guardian",
+  "layout": "normal",
+  "mana_cost": "{3}{U}",
+  "cmc": 4.0,
+  "type_line": "Legendary Artifact Creature — Dragon Construct",
+  "oracle_text": "This spell costs {2} less to cast if you've cast a noncreature spell this turn.\nFlying, vigilance\nProwess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)",
+  "power": "1",
+  "toughness": "5",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Flying",
+   "Prowess",
+   "Vigilance"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "222"
+ },
+ {
+  "name": "Way of the Cryomancer",
+  "layout": "normal",
+  "mana_cost": "{2}{U}",
+  "cmc": 3.0,
+  "type_line": "Legendary Enchantment",
+  "oracle_text": "When Way of the Cryomancer enters, empower Jace 5. (Put five loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nPlaneswalkers you control have \"[−3]: When you next cast an instant or sorcery spell this turn, copy that spell. You may choose new targets for the copy.\"",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "223"
+ },
+ {
+  "name": "Way of the Mind Sculptor",
+  "layout": "normal",
+  "mana_cost": "{4}{U}",
+  "cmc": 5.0,
+  "type_line": "Legendary Enchantment",
+  "oracle_text": "When Way of the Mind Sculptor enters, empower Jace 5. (Put five loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nWhenever you activate a loyalty ability, if you removed two or more loyalty counters to activate it, draw a card.",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "224"
+ },
+ {
+  "name": "Yargle, Goliath of Otaria",
+  "layout": "normal",
+  "mana_cost": "{4}{U}",
+  "cmc": 5.0,
+  "type_line": "Legendary Creature — Frog Spirit",
+  "oracle_text": "",
+  "power": "3",
+  "toughness": "9",
+  "colors": [
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "225"
+ },
+ {
+  "name": "Yuriko, Hope from the Shadows",
+  "layout": "normal",
+  "mana_cost": "{U}",
+  "cmc": 1.0,
+  "type_line": "Legendary Creature — Human Ninja",
+  "oracle_text": "Flash\nWhen Yuriko enters, choose one —\n• Target creature gets -X/-0 until end of turn, where X is the number of cards in your graveyard.\n• Surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "U"
+  ],
+  "keywords": [
+   "Surveil",
+   "Flash"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "226"
+ },
+ {
+  "name": "Danitha, Spear of Agony",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Human Knight",
+  "oracle_text": "First strike\nWhenever you cast a spell that targets an opponent or a creature an opponent controls, put a +1/+1 counter on Danitha.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "First strike"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "227"
+ },
+ {
+  "name": "Gallia, Tragic Host",
+  "layout": "normal",
+  "mana_cost": "{1}{B}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Zombie Satyr",
+  "oracle_text": "Menace (This creature can't be blocked except by two or more creatures.)\n{4}{B}, Exile another creature card from your graveyard: Return this card from your graveyard to the battlefield tapped with a +1/+1 counter on her.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Menace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "228"
+ },
+ {
+  "name": "Garruk, Veiled Butcher",
+  "layout": "normal",
+  "mana_cost": "{3}{B}{B}",
+  "cmc": 5.0,
+  "type_line": "Legendary Planeswalker — Garruk",
+  "oracle_text": "If a creature an opponent controls would die, exile it instead.\n+2: Up to one target creature gets -4/-1 until your next turn.\n−2: Each player sacrifices a creature of their choice. If you sacrificed a creature this way, create a 4/4 green Beast creature token with trample.\n−3: Each opponent discards two cards. For each opponent who didn't discard two nonland cards this way, you draw a card.",
+  "loyalty": "5",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "mythic",
+  "collector_number": "229"
+ },
+ {
+  "name": "Gideon the Oathless",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Human Mercenary",
+  "oracle_text": "Ward—Discard a card.\nWhenever a creature an opponent controls enters, Gideon deals 1 damage to that player.\nWhenever an opponent activates a loyalty ability, Gideon deals 1 damage to that player.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Ward"
+  ],
+  "rarity": "rare",
+  "collector_number": "230"
+ },
+ {
+  "name": "Liliana the Repentant",
+  "layout": "normal",
+  "mana_cost": "{1}{B}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Human Warlock",
+  "oracle_text": "Whenever another creature or planeswalker you control enters, mill two cards.\nExhaust — {5}{B}: Return target creature or planeswalker card from your graveyard to the battlefield. Put a +1/+1 counter on Liliana. Activate only as a sorcery. (Activate each exhaust ability only once.)",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Exhaust",
+   "Mill"
+  ],
+  "rarity": "rare",
+  "collector_number": "231"
+ },
+ {
+  "name": "Loot, the Anomaly",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Beast Horror",
+  "oracle_text": "If Loot's power is negative, he assigns combat damage as though his power were positive.\nThreshold — Sacrifice another creature or planeswalker: Loot gets -2/-0 until end of turn. Activate only if there are seven or more cards in your graveyard.",
+  "power": "-2",
+  "toughness": "4",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Threshold"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "232"
+ },
+ {
+  "name": "Mabel, Bitter Recluse",
+  "layout": "normal",
+  "mana_cost": "{B}",
+  "cmc": 1.0,
+  "type_line": "Legendary Creature — Mouse Warlock",
+  "oracle_text": "Deathtouch\nWhen Mabel enters, remove up to three counters from another target creature or planeswalker.",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Deathtouch"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "233"
+ },
+ {
+  "name": "Massacre Girl, Most Wanted",
+  "layout": "normal",
+  "mana_cost": "{4}{B}",
+  "cmc": 5.0,
+  "type_line": "Legendary Creature — Human Assassin",
+  "oracle_text": "Whenever another creature or planeswalker you control dies, Massacre Girl deals 1 damage to target opponent and you gain 1 life.\nWhenever an opponent is dealt noncombat damage, put a +1/+1 counter on Massacre Girl.",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "234"
+ },
+ {
+  "name": "Proft, Sinister Mastermind",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Human Rogue",
+  "oracle_text": "Threshold — You can't cast this spell unless there are seven or more cards in your graveyard.\nMenace\n{B}, Discard this card: Target creature gets -3/-1 until end of turn.",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Threshold",
+   "Menace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "235"
+ },
+ {
+  "name": "Teyo, Diamondblade Mage",
+  "layout": "normal",
+  "mana_cost": "{3}{B}",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Human Warlock",
+  "oracle_text": "Flash\nWhen Teyo enters, target permanent you control gains deathtouch until end of turn. Put a +1/+1 counter on it if it's a creature. Put a loyalty counter on it if it's a planeswalker.",
+  "power": "3",
+  "toughness": "1",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Flash"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "236"
+ },
+ {
+  "name": "Tinybones, Pocket Nuisance",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Skeleton Rogue",
+  "oracle_text": "When Tinybones enters, each opponent discards a card.\nWhenever a player discards one or more cards, Tinybones deals 1 damage to each opponent.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "237"
+ },
+ {
+  "name": "Way of the Deathbringer",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Legendary Enchantment",
+  "oracle_text": "When Way of the Deathbringer enters, empower Jace 5. (Put five loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nPlaneswalkers you control have \"[−2]: You may sacrifice a creature. If you do, create a 4/4 green Beast creature token with trample.\"",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "238"
+ },
+ {
+  "name": "Way of the Necromancer",
+  "layout": "normal",
+  "mana_cost": "{1}{B}",
+  "cmc": 2.0,
+  "type_line": "Legendary Enchantment",
+  "oracle_text": "When Way of the Necromancer enters, empower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nWhenever a creature you control dies, put a loyalty counter on each planeswalker you control.",
+  "colors": [
+   "B"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "239"
+ },
+ {
+  "name": "Winter, Tormented Loner",
+  "layout": "normal",
+  "mana_cost": "{2}{B}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Human Warlock",
+  "oracle_text": "When Winter enters, you may sacrifice a creature or planeswalker. When you do, each opponent sacrifices a creature of their choice.\nWinter gets +1/+0 for each creature and planeswalker card in your graveyard.",
+  "power": "0",
+  "toughness": "3",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "240"
+ },
+ {
+  "name": "Yargle, Glutton of Urborg",
+  "layout": "normal",
+  "mana_cost": "{4}{B}",
+  "cmc": 5.0,
+  "type_line": "Legendary Creature — Frog Spirit",
+  "oracle_text": "",
+  "power": "9",
+  "toughness": "3",
+  "colors": [
+   "B"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "241"
+ },
+ {
+  "name": "Ajani Unrelenting",
+  "layout": "normal",
+  "mana_cost": "{4}{R}{R}",
+  "cmc": 6.0,
+  "type_line": "Legendary Planeswalker — Ajani",
+  "oracle_text": "Whenever you activate a loyalty ability, create a 2/2 colorless Wizard Soldier creature token named Cadet.\n+1: Creatures you control get +1/+0 and gain haste until end of turn.\n−2: Discard your hand, then draw a card for each creature you control.\n−3: Ajani deals 4 damage to each creature except for tokens you control.",
+  "loyalty": "5",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "mythic",
+  "collector_number": "242"
+ },
+ {
+  "name": "Arni, Renowned Champion",
+  "layout": "normal",
+  "mana_cost": "{3}{R}",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Human Berserker",
+  "oracle_text": "Trample\nWhenever another creature you control enters, Arni gets +X/+0 until end of turn, where X is that creature's power.",
+  "power": "1",
+  "toughness": "5",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Trample"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "243"
+ },
+ {
+  "name": "Chandra, Torch of Defiance",
+  "layout": "normal",
+  "mana_cost": "{2}{R}{R}",
+  "cmc": 4.0,
+  "type_line": "Legendary Planeswalker — Chandra",
+  "oracle_text": "+1: Exile the top card of your library. You may cast that card. If you don't, Chandra deals 2 damage to each opponent.\n+1: Add {R}{R}.\n−3: Chandra deals 4 damage to target creature.\n−7: You get an emblem with \"Whenever you cast a spell, this emblem deals 5 damage to any target.\"",
+  "loyalty": "4",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "mythic",
+  "collector_number": "244"
+ },
+ {
+  "name": "Gallia, the Merrymaker",
+  "layout": "normal",
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Satyr",
+  "oracle_text": "Haste\nEach other creature you control with a +1/+1 counter on it has haste.\n{1}{R}, {T}: Put a +1/+1 counter on target creature that entered this turn.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Haste"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "245"
+ },
+ {
+  "name": "Jiang Yanggu, Alone",
+  "layout": "normal",
+  "mana_cost": "{4}{R}",
+  "cmc": 5.0,
+  "type_line": "Legendary Creature — Human Berserker",
+  "oracle_text": "Menace (This creature can't be blocked except by two or more creatures.)\nWhenever a creature you control attacks a player alone, discard a card, then draw a card. Then put a +1/+1 counter on that creature for each card you've discarded this turn.",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Menace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "246"
+ },
+ {
+  "name": "Kiora of Fire and Ashes",
+  "layout": "normal",
+  "mana_cost": "{4}{R}{R}",
+  "cmc": 6.0,
+  "type_line": "Legendary Creature — Merfolk Noble",
+  "oracle_text": "When Kiora enters, create a 5/5 red Dragon creature token with flying.\n{8}: Create a 5/5 red Dragon creature token with flying.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "247"
+ },
+ {
+  "name": "Koth, the Geomancer",
+  "layout": "normal",
+  "mana_cost": "{2}{R}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Human Warrior",
+  "oracle_text": "Reach\nLandfall — Whenever a land you control enters, Koth deals 1 damage to each opponent. If that land is a Mountain, add {R}.",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Reach",
+   "Landfall"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "248"
+ },
+ {
+  "name": "Marwyn, the Clearcutter",
+  "layout": "normal",
+  "mana_cost": "{R}",
+  "cmc": 1.0,
+  "type_line": "Legendary Creature — Elf Warrior",
+  "oracle_text": "{2}, {T}, Sacrifice an artifact or land: Draw a card.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "249"
+ },
+ {
+  "name": "Pia, Determined Rebuilder",
+  "layout": "normal",
+  "mana_cost": "{2}{R}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Human Artificer",
+  "oracle_text": "When Pia enters, create a 1/1 colorless Thopter artifact creature token with flying.\n{5}{R}: Target creature gets +X/+0 until end of turn, where X is the number of artifacts you control.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "250"
+ },
+ {
+  "name": "Samut, Hazoret's Champion",
+  "layout": "normal",
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Human Warrior Cleric",
+  "oracle_text": "Creatures you control have haste.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "R"
+  ],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "251"
+ },
+ {
+  "name": "Tetsuko Umezawa, Pursuer",
+  "layout": "normal",
+  "mana_cost": "{3}{R}",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Human Mercenary",
+  "oracle_text": "Double strike\nProwess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)\nWhenever a creature an opponent controls with power or toughness 1 or less blocks, Tetsuko Umezawa deals 1 damage to that creature's controller.",
+  "power": "2",
+  "toughness": "4",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Prowess",
+   "Double strike"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "252"
+ },
+ {
+  "name": "Tomik, Izzet Sparkmage",
+  "layout": "normal",
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Human Wizard",
+  "oracle_text": "Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)\nIf a source you control would deal noncombat damage to an opponent or a permanent an opponent controls, it deals that much damage plus 1 instead.",
+  "power": "1",
+  "toughness": "2",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Prowess"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "253"
+ },
+ {
+  "name": "Way of the Pyromancer",
+  "layout": "normal",
+  "mana_cost": "{1}{R}",
+  "cmc": 2.0,
+  "type_line": "Legendary Enchantment",
+  "oracle_text": "When Way of the Pyromancer enters, empower Jace 2. (Put two loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nPlaneswalkers you control have \"[+1]: Add {R}.\"",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "254"
+ },
+ {
+  "name": "Way of the Warlord",
+  "layout": "normal",
+  "mana_cost": "{2}{R}",
+  "cmc": 3.0,
+  "type_line": "Legendary Enchantment",
+  "oracle_text": "When Way of the Warlord enters, empower Jace 5. (Put five loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nPlaneswalkers you control have \"[−4]: This planeswalker deals 2 damage to up to one target creature or planeswalker and 2 damage to target player.\"",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "255"
+ },
+ {
+  "name": "Winter, Team Player",
+  "layout": "normal",
+  "mana_cost": "{4}{R}",
+  "cmc": 5.0,
+  "type_line": "Legendary Creature — Human Warrior",
+  "oracle_text": "Convoke (Your creatures can help cast this spell. Each creature you tap while casting this spell pays for {1} or one mana of that creature's color.)\nWhenever you cast a noncreature spell, creatures you control get +1/+0 until end of turn.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "R"
+  ],
+  "keywords": [
+   "Convoke"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "256"
+ },
+ {
+  "name": "Edgar, Moonlit Sovereign",
+  "layout": "normal",
+  "mana_cost": "{3}{G}{G}",
+  "cmc": 5.0,
+  "type_line": "Legendary Creature — Werewolf Noble",
+  "oracle_text": "Flash\nAt the beginning of your end step, if you didn't cast a spell this turn, put two +1/+1 counters on Edgar.\n{4}{G}: Put a +1/+1 counter on each creature you control with a +1/+1 counter on it.",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Flash"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "257"
+ },
+ {
+  "name": "Fblthp, Knows the Way",
+  "layout": "normal",
+  "mana_cost": "{X}{G}{G}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Homunculus Scout",
+  "oracle_text": "Domain — Fblthp's power is equal to the number of basic land types among lands you control.\nWhen Fblthp enters, search your library for up to X basic land cards with different names, reveal them, put them into your hand, then shuffle.",
+  "power": "*",
+  "toughness": "2",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Domain"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "258"
+ },
+ {
+  "name": "Garruk, Curse Breaker",
+  "layout": "normal",
+  "mana_cost": "{3}{G}{G}",
+  "cmc": 5.0,
+  "type_line": "Legendary Planeswalker — Garruk",
+  "oracle_text": "Whenever a creature you control with power 4 or greater enters, draw a card.\n+2: Untap up to two target lands.\n−3: Create a 4/4 green Beast creature token with trample.\n−4: Until your next turn, whenever one or more creatures attack one of your opponents, those creatures get +2/+2 and gain trample until end of turn.",
+  "loyalty": "5",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "mythic",
+  "collector_number": "259"
+ },
+ {
+  "name": "Ghalta the Unstoppable",
+  "layout": "normal",
+  "mana_cost": "{8}{G}",
+  "cmc": 9.0,
+  "type_line": "Legendary Creature — Elder Dinosaur",
+  "oracle_text": "This spell costs {X} less to cast, where X is the greatest power among creatures you control.\nTrample\nOther creatures you control have trample.",
+  "power": "8",
+  "toughness": "8",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Trample"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "260"
+ },
+ {
+  "name": "Jiang Yanggu, Never Alone",
+  "layout": "normal",
+  "mana_cost": "{3}{G}",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Human Druid",
+  "oracle_text": "When Jiang Yanggu enters, create Mowu, a legendary 3/3 green Dog creature token.\nAt the beginning of your end step, untap all tokens you control.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "261"
+ },
+ {
+  "name": "Loot, the Nexus",
+  "layout": "normal",
+  "mana_cost": "{2}{G}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Beast Noble",
+  "oracle_text": "{T}: Choose a color. Add one mana of that color for each different power among creatures you control.",
+  "power": "2",
+  "toughness": "1",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "262"
+ },
+ {
+  "name": "Marwyn, the Preserver",
+  "layout": "normal",
+  "mana_cost": "{1}{G}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Elf Druid",
+  "oracle_text": "Lands you control have hexproof. (They can't be the targets of spells or abilities your opponents control.)\n{2}: Return target land card from your graveyard to your hand.",
+  "power": "3",
+  "toughness": "2",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "263"
+ },
+ {
+  "name": "Pia, Aether Ascetic",
+  "layout": "normal",
+  "mana_cost": "{2}{G}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Human Druid",
+  "oracle_text": "When Pia enters, you may discard a card. If you do, search your library for an enchantment card, reveal it, put it into your hand, then shuffle.",
+  "power": "2",
+  "toughness": "2",
+  "colors": [
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "264"
+ },
+ {
+  "name": "Ruric Thar, Magecrusher",
+  "layout": "normal",
+  "mana_cost": "{5}{G}{G}",
+  "cmc": 7.0,
+  "type_line": "Legendary Creature — Ogre Warrior",
+  "oracle_text": "This spell can't be countered.\nReach, vigilance, trample\nRuric Thar has hexproof as long as they haven't dealt combat damage yet. (They can't be the target of spells or abilities your opponents control.)",
+  "power": "7",
+  "toughness": "7",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Reach",
+   "Vigilance",
+   "Trample"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "265"
+ },
+ {
+  "name": "Titanbones, Towering Heart",
+  "layout": "normal",
+  "mana_cost": "{3}{G}",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Skeleton Druid",
+  "oracle_text": "Reach\nWhenever you gain life, put two +1/+1 counters on Titanbones.\nWhen you discard this card, you gain 3 life.",
+  "power": "4",
+  "toughness": "3",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Reach"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "266"
+ },
+ {
+  "name": "Way of the Paradox",
+  "layout": "normal",
+  "mana_cost": "{2}{G}",
+  "cmc": 3.0,
+  "type_line": "Legendary Enchantment",
+  "oracle_text": "When Way of the Paradox enters, empower Jace 5. (Put five loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nWhenever you activate a loyalty ability, you gain 1 life. You may play an additional land this turn.",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "267"
+ },
+ {
+  "name": "Way of the Wildspeaker",
+  "layout": "normal",
+  "mana_cost": "{4}{G}",
+  "cmc": 5.0,
+  "type_line": "Legendary Enchantment",
+  "oracle_text": "When Way of the Wildspeaker enters, empower Jace 7. (Put seven loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with \"[−1]: Surveil 1\" and \"[−3]: Draw a card.\")\nPlaneswalkers you control have \"[−4]: Create a 4/4 green Beast creature token with trample.\"",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Surveil",
+   "Empower Jace"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "268"
+ },
+ {
+  "name": "Yoshimaru, Scrappy Stray",
+  "layout": "normal",
+  "mana_cost": "{1}{G}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Dog",
+  "oracle_text": "When Yoshimaru enters, another target creature you control fights up to one target creature an opponent controls. (Each deals damage equal to its power to the other.)\n{6}: Put a +1/+1 counter on target nonlegendary creature.",
+  "power": "1",
+  "toughness": "1",
+  "colors": [
+   "G"
+  ],
+  "keywords": [
+   "Fight"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "269"
+ },
+ {
+  "name": "Edgar, Ancient Bloodlord",
+  "layout": "normal",
+  "mana_cost": "{W}{B}",
+  "cmc": 2.0,
+  "type_line": "Legendary Creature — Vampire Noble",
+  "oracle_text": "Whenever another creature or planeswalker you control dies, you gain 1 life.\n{2}, Sacrifice another creature or planeswalker: Put a +1/+1 counter on Edgar. He gains menace until end of turn. (He can't be blocked except by two or more creatures.)",
+  "power": "2",
+  "toughness": "3",
+  "colors": [
+   "B",
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "270"
+ },
+ {
+  "name": "Hapatra, the Desert Fang",
+  "layout": "normal",
+  "mana_cost": "{2}{B}{B}{G}",
+  "cmc": 5.0,
+  "type_line": "Legendary Creature — Human Cleric",
+  "oracle_text": "When Hapatra enters, for each opponent, put X -1/-1 counters on up to one target creature that player controls, where X is the greatest mana value among cards in your graveyard.",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "B",
+   "G"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "271"
+ },
+ {
+  "name": "Karn, Gilded Guardian",
+  "layout": "normal",
+  "mana_cost": "{2/W}{2/U}{2/B}{2/R}{2/G}",
+  "cmc": 10.0,
+  "type_line": "Legendary Artifact Creature — Golem",
+  "oracle_text": "Vigilance, trample\nWhen Karn enters, draw a card for each color among other artifacts you control.",
+  "power": "5",
+  "toughness": "5",
+  "colors": [
+   "B",
+   "G",
+   "R",
+   "U",
+   "W"
+  ],
+  "keywords": [
+   "Vigilance",
+   "Trample"
+  ],
+  "rarity": "rare",
+  "collector_number": "272"
+ },
+ {
+  "name": "Kiora of Salt and Sand",
+  "layout": "normal",
+  "mana_cost": "{1}{G}{U}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Merfolk Noble",
+  "oracle_text": "Whenever you attack, if you've activated a loyalty ability this turn, untap target attacking creature. It can't be blocked this turn.\nPlaneswalkers you control have \"[−8]: Create an 8/8 blue Leviathan creature token with hexproof.\"",
+  "power": "2",
+  "toughness": "4",
+  "colors": [
+   "G",
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "273"
+ },
+ {
+  "name": "Mabel, Valley Hero",
+  "layout": "normal",
+  "mana_cost": "{1}{R}{W}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Mouse Soldier",
+  "oracle_text": "Whenever Mabel or another creature you control enters, put a +1/+1 counter on target creature that entered this turn.",
+  "power": "1",
+  "toughness": "2",
+  "colors": [
+   "R",
+   "W"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "274"
+ },
+ {
+  "name": "Saheeli, Jewel of Avishkar",
+  "layout": "normal",
+  "mana_cost": "{2}{U}{R}",
+  "cmc": 4.0,
+  "type_line": "Legendary Creature — Human Artificer",
+  "oracle_text": "Thopters you control have haste.\nWhenever you cast a noncreature spell, create a 1/1 colorless Thopter artifact creature token with flying.",
+  "power": "2",
+  "toughness": "4",
+  "colors": [
+   "R",
+   "U"
+  ],
+  "keywords": [],
+  "rarity": "uncommon",
+  "collector_number": "275"
+ },
+ {
+  "name": "Tam, the Possibility",
+  "layout": "normal",
+  "mana_cost": "{1}{G}{U}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Gorgon Wizard",
+  "oracle_text": "Planeswalker spells you cast cost {1} less to cast.\n{W}{U}{B}{R}{G}, {T}: Proliferate X times, where X is the number of planeswalker types among planeswalkers you control. (To proliferate, choose any number of permanents and/or players, then give each another counter of each kind already there.)",
+  "power": "2",
+  "toughness": "4",
+  "colors": [
+   "G",
+   "U"
+  ],
+  "keywords": [
+   "Proliferate"
+  ],
+  "rarity": "rare",
+  "collector_number": "276"
+ },
+ {
+  "name": "Vraska, Soul of Stone",
+  "layout": "normal",
+  "mana_cost": "{U}{R}{W}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Gorgon Wizard",
+  "oracle_text": "Artifact creatures you control have vigilance.\nWhenever you cast a noncreature spell, create a 1/1 colorless Sculpture Treasure artifact creature token with \"{T}, Sacrifice this token: Add one mana of any color.\"",
+  "power": "3",
+  "toughness": "3",
+  "colors": [
+   "R",
+   "U",
+   "W"
+  ],
+  "keywords": [
+   "Treasure"
+  ],
+  "rarity": "rare",
+  "collector_number": "277"
+ },
+ {
+  "name": "Vraska, the Cutting Glare",
+  "layout": "normal",
+  "mana_cost": "{B}{B}{G}",
+  "cmc": 3.0,
+  "type_line": "Legendary Creature — Gorgon Assassin",
+  "oracle_text": "Deathtouch\nWhen Vraska enters, if you control six or more lands, destroy target permanent an opponent controls. They create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+  "power": "4",
+  "toughness": "4",
+  "colors": [
+   "B",
+   "G"
+  ],
+  "keywords": [
+   "Treasure",
+   "Deathtouch"
+  ],
+  "rarity": "rare",
+  "collector_number": "278"
+ },
+ {
+  "name": "Karn, Argent Defender",
+  "layout": "normal",
+  "mana_cost": "{2}",
+  "cmc": 2.0,
+  "type_line": "Legendary Artifact Creature — Golem",
+  "oracle_text": "Artifacts and creatures entering the battlefield don't cause abilities to trigger.",
+  "power": "1",
+  "toughness": "3",
+  "colors": [],
+  "keywords": [],
+  "rarity": "rare",
+  "collector_number": "279"
+ },
+ {
+  "name": "Traxos, Scourge Eternal",
+  "layout": "normal",
+  "mana_cost": "{4}",
+  "cmc": 4.0,
+  "type_line": "Legendary Artifact Creature — Dragon Construct",
+  "oracle_text": "Trample\nTraxos doesn't untap during your untap step.\nWhenever you cast an artifact or creature spell, untap Traxos.",
+  "power": "5",
+  "toughness": "4",
+  "colors": [],
+  "keywords": [
+   "Trample"
+  ],
+  "rarity": "uncommon",
+  "collector_number": "280"
+ },
+ {
+  "name": "Plains",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Basic Land — Plains",
+  "oracle_text": "({T}: Add {W}.)",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "281"
+ },
+ {
+  "name": "Island",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Basic Land — Island",
+  "oracle_text": "({T}: Add {U}.)",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "283"
+ },
+ {
+  "name": "Swamp",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Basic Land — Swamp",
+  "oracle_text": "({T}: Add {B}.)",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "285"
+ },
+ {
+  "name": "Mountain",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Basic Land — Mountain",
+  "oracle_text": "({T}: Add {R}.)",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "287"
+ },
+ {
+  "name": "Forest",
+  "layout": "normal",
+  "mana_cost": "",
+  "cmc": 0.0,
+  "type_line": "Basic Land — Forest",
+  "oracle_text": "({T}: Add {G}.)",
+  "colors": [],
+  "keywords": [],
+  "rarity": "common",
+  "collector_number": "289"
+ }
+]

@@ -29,6 +29,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MtgSimulator.Tests", "MtgSi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MtgArtScraper", "MtgArtScraper\MtgArtScraper.csproj", "{0CB8A45E-2046-4536-83EF-B5409F541E62}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagicCore", "MagicCore\MagicCore.csproj", "{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MagicCore.Tests", "MagicCore.Tests\MagicCore.Tests.csproj", "{ADFE6C48-5252-4057-8A94-08649D499462}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -183,6 +187,30 @@ Global
 		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Release|x64.Build.0 = Release|Any CPU
 		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Release|x86.ActiveCfg = Release|Any CPU
 		{0CB8A45E-2046-4536-83EF-B5409F541E62}.Release|x86.Build.0 = Release|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Debug|x64.Build.0 = Debug|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Debug|x86.Build.0 = Debug|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Release|x64.ActiveCfg = Release|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Release|x64.Build.0 = Release|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Release|x86.ActiveCfg = Release|Any CPU
+		{B4D6BE81-EC43-4B5A-A779-D10C3627FA3A}.Release|x86.Build.0 = Release|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Debug|x64.Build.0 = Debug|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Debug|x86.Build.0 = Debug|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Release|x64.ActiveCfg = Release|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Release|x64.Build.0 = Release|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Release|x86.ActiveCfg = Release|Any CPU
+		{ADFE6C48-5252-4057-8A94-08649D499462}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

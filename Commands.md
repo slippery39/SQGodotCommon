@@ -10,7 +10,17 @@ dotnet test
 dotnet test MtgCore.Tests
 dotnet test MtgSimulator.Tests
 dotnet test SQGodotCommon.Tests
+dotnet test MagicCore.Tests
 ```
+
+## Import a real set's card data (MagicCore)
+
+```
+python tools/import_scryfall_set.py fra    # -> MagicCore/Sets/FRA.json, embedded in MagicCore
+```
+
+Stdlib only. Re-running rewrites the file sorted by collector number, so `git diff` shows exactly
+what Scryfall changed (errata, a late-spoiled card).
 
 ## Play in console
 

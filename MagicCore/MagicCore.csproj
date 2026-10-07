@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net9.0, not 10: Godot's Android export template refuses anything newer. Commands.md, "Android build". -->
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ImmutableGameObjects\ImmutableGameObjects\ImmutableGameObjects.csproj" />
+  </ItemGroup>
+
+  <!-- Embedded, not copied: no working-directory trap (root CLAUDE.md, sim_results/). -->
+  <ItemGroup>
+    <EmbeddedResource Include="Sets\*.json" LogicalName="MagicCore.Sets.%(Filename).json" />
+  </ItemGroup>
+
+</Project>
