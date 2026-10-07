@@ -10,7 +10,15 @@ public class FraSacrificeTests : FraBoardTest
 {
 	void Activate(int card, int sacrifice = 0, params int[] targets)
 	{
-		s = s.Act(new ActivateAbilityAction { PlayerId = s.GetCard(card).ControllerId, CardId = card, SacrificeId = sacrifice, Targets = [.. targets] });
+		s = s.Act(
+			new ActivateAbilityAction
+			{
+				PlayerId = s.GetCard(card).ControllerId,
+				CardId = card,
+				SacrificeId = sacrifice,
+				Targets = [.. targets],
+			}
+		);
 		Resolve();
 	}
 
@@ -26,7 +34,10 @@ public class FraSacrificeTests : FraBoardTest
 
 		Activate(insurgent, 0, way);
 
-		Assert.That((Alive(way), Alive(insurgent), HandCount(me)), Is.EqualTo((false, false, hand + 1)));
+		Assert.That(
+			(Alive(way), Alive(insurgent), HandCount(me)),
+			Is.EqualTo((false, false, hand + 1))
+		);
 
 		var second = Field(FraCards.Get("Budding Insurgent"), me);
 		var trap = Field(FraCards.Get("Memory Trap"), them); // not legendary
@@ -40,7 +51,10 @@ public class FraSacrificeTests : FraBoardTest
 		var insurgent = Field(FraCards.Get("Budding Insurgent"), me);
 		Field(FraCards.Get("Memory Trap"), them);
 		s = s.Act(new PassPriorityAction { PlayerId = me }); // their priority, my main phase
-		Assert.That(s.LegalActions().OfType<ActivateAbilityAction>().Where(a => a.CardId == insurgent), Is.Empty);
+		Assert.That(
+			s.LegalActions().OfType<ActivateAbilityAction>().Where(a => a.CardId == insurgent),
+			Is.Empty
+		);
 	}
 
 	[Test]
@@ -68,7 +82,10 @@ public class FraSacrificeTests : FraBoardTest
 		var land = offered.First().Id;
 		Activate(marwyn, land);
 
-		Assert.That((s.IsIn(land, me, ZoneType.Graveyard), HandCount(me)), Is.EqualTo((true, hand + 1)));
+		Assert.That(
+			(s.IsIn(land, me, ZoneType.Graveyard), HandCount(me)),
+			Is.EqualTo((true, hand + 1))
+		);
 	}
 
 	[Test]
@@ -76,13 +93,20 @@ public class FraSacrificeTests : FraBoardTest
 	{
 		var edgar = Field(FraCards.Get("Edgar, Ancient Bloodlord"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
-		Assert.That(Activations(edgar).Select(a => a.SacrificeId), Does.Not.Contain(edgar), "another");
+		Assert.That(
+			Activations(edgar).Select(a => a.SacrificeId),
+			Does.Not.Contain(edgar),
+			"another"
+		);
 		var life = Life(me);
 
 		Activate(edgar, bear);
 
 		var card = s.GetCard(edgar);
-		Assert.That((card.PlusOneCounters, card.Has("Menace"), Life(me)), Is.EqualTo((1, true, life + 1)));
+		Assert.That(
+			(card.PlusOneCounters, card.Has("Menace"), Life(me)),
+			Is.EqualTo((1, true, life + 1))
+		);
 	}
 
 	[Test]
@@ -103,14 +127,32 @@ public class FraSacrificeTests : FraBoardTest
 		var victim = Field(TestGames.Creature("Victim", "2/2"), them);
 		var fodder = Field(TestGames.Creature("Fodder", "1/1"), me);
 		var silence = Hand("Silence the Echo", me);
-		var untapped = s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land) && !c.IsTapped);
+		var untapped = s.CardsIn(me, ZoneType.Battlefield)
+			.Count(c => c.Is(CardType.Land) && !c.IsTapped);
 
-		s = s.Act(new CastSpellAction { PlayerId = me, CardId = silence, Targets = [victim], SacrificeId = fodder });
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = silence,
+				Targets = [victim],
+				SacrificeId = fodder,
+			}
+		);
 		Resolve();
 
-		var tapped = untapped - s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land) && !c.IsTapped);
-		Assert.That((Alive(victim), s.IsIn(fodder, me, ZoneType.Graveyard)), Is.EqualTo((false, true)));
-		Assert.That(tapped, Is.EqualTo(s.GetCard(silence).ManaCost.ManaValue), "sacrificing paid the {3}");
+		var tapped =
+			untapped
+			- s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land) && !c.IsTapped);
+		Assert.That(
+			(Alive(victim), s.IsIn(fodder, me, ZoneType.Graveyard)),
+			Is.EqualTo((false, true))
+		);
+		Assert.That(
+			tapped,
+			Is.EqualTo(s.GetCard(silence).ManaCost.ManaValue),
+			"sacrificing paid the {3}"
+		);
 
 		Field(TestGames.Creature("Another", "2/2"), them); // something left to target
 		var second = Hand("Silence the Echo", me);
@@ -122,7 +164,10 @@ public class FraSacrificeTests : FraBoardTest
 	ActivateLoyaltyAction GrantedMinusTwo(int jace) =>
 		s.LegalActions()
 			.OfType<ActivateLoyaltyAction>()
-			.First(a => a.CardId == jace && Actions.Loyalty.AbilitiesOf(s, s.GetCard(jace))[a.AbilityIndex].Cost == -2);
+			.First(a =>
+				a.CardId == jace
+				&& Actions.Loyalty.AbilitiesOf(s, s.GetCard(jace))[a.AbilityIndex].Cost == -2
+			);
 
 	[Test]
 	public void WayOfTheDeathbringer_MaySacrificeForABeast()
@@ -133,10 +178,19 @@ public class FraSacrificeTests : FraBoardTest
 		var jace = Jace(me)!.Id;
 
 		s = s.Act(GrantedMinusTwo(jace));
-		Resolve(choice => choice is ChoosePermanentChoice ? [bear] : choice.Options.Take(choice.MinChoices).Select(o => o.Id));
+		Resolve(choice =>
+			choice switch
+			{
+				ChoosePermanentChoice => [bear],
+				_ => choice.Options.Take(choice.MinChoices).Select(o => o.Id),
+			}
+		);
 
 		Assert.That(s.IsIn(bear, me, ZoneType.Graveyard));
-		Assert.That(s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Name == "Beast"), Is.EqualTo(1));
+		Assert.That(
+			s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Name == "Beast"),
+			Is.EqualTo(1)
+		);
 	}
 
 	[Test]
@@ -162,8 +216,21 @@ public class FraSacrificeTests : FraBoardTest
 		var heir = Field(TestGames.Creature("Heir", "1/1"), me);
 
 		var end = Hand("Prophesied End", me); // destroy target creature
-		s = s.Act(new CastSpellAction { PlayerId = me, CardId = end, Targets = [surgeon] });
-		Resolve(choice => choice is ChooseTargetChoice ? [heir] : []);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = end,
+				Targets = [surgeon],
+			}
+		);
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseTargetChoice => [heir],
+				_ => [],
+			}
+		);
 
 		Assert.That(s.IsIn(surgeon, me, ZoneType.Graveyard));
 		Assert.That(s.GetCard(heir).PlusOneCounters, Is.EqualTo(3), "all of them, as it last was");
@@ -180,7 +247,11 @@ public class FraSacrificeTests : FraBoardTest
 		Cast(gasp, [], bear);
 
 		Assert.That((Life(them), Life(me)), Is.EqualTo((theirs - 1, mine + 1)));
-		Assert.That(s.GetCard(girl).PlusOneCounters, Is.EqualTo(1), "her ping was noncombat damage");
+		Assert.That(
+			s.GetCard(girl).PlusOneCounters,
+			Is.EqualTo(1),
+			"her ping was noncombat damage"
+		);
 	}
 
 	[Test]
@@ -239,11 +310,35 @@ public class FraSacrificeTests : FraBoardTest
 		Field(FraCards.Get("Massacre Girl, Most Wanted"), me);
 		var myOne = Field(TestGames.Creature("MyOne", "1/1"), me);
 		var both = new CardDefinition(
-			new CardData("Both", "normal", "{1}", 1, "Sorcery", null, null, null, null, null, [], "common", "0", null),
+			new CardData(
+				"Both",
+				"normal",
+				"{1}",
+				1,
+				"Sorcery",
+				null,
+				null,
+				null,
+				null,
+				null,
+				[],
+				"common",
+				"0",
+				null
+			),
 			[
-				new Effects.SpellEffectsComponent([new Effects.Destroy(Effects.Ref.Target(0)), new Effects.ModifyUntilEndOfTurn(Effects.Ref.Target(1), -1, -1)])
+				new Effects.SpellEffectsComponent(
+					[
+						new Effects.Destroy(Effects.Ref.Target(0)),
+						new Effects.ModifyUntilEndOfTurn(Effects.Ref.Target(1), -1, -1),
+					]
+				)
 				{
-					Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Creature), new Targeting.TargetSpec(Targeting.TargetKind.Creature)],
+					Targets =
+					[
+						new Targeting.TargetSpec(Targeting.TargetKind.Creature),
+						new Targeting.TargetSpec(Targeting.TargetKind.Creature),
+					],
 				},
 			]
 		);
@@ -251,14 +346,25 @@ public class FraSacrificeTests : FraBoardTest
 		(s, spell) = TestGames.Put(s, me, both, ZoneType.Hand);
 
 		// Destroy theirs during resolution (round 1: their Edgar); shrink mine to 0 (the check kills it, round 2: my Massacre Girl).
-		s = s.Act(new CastSpellAction { PlayerId = me, CardId = spell, Targets = [theirBear, myOne] });
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = spell,
+				Targets = [theirBear, myOne],
+			}
+		);
 		s = s.Act(new PassPriorityAction { PlayerId = me });
 		s = s.Act(new PassPriorityAction { PlayerId = them });
 		while (s.GetPendingChoice() is { } choice)
 			s = s.Choose(choice.Options.Take(Math.Max(1, choice.MinChoices)).Select(o => o.Id));
 
 		var top = (StackAbility)s.GetChildren(s.GetWellKnownId(MagicKeys.Stack)).First();
-		Assert.That(top.SourceId, Is.EqualTo(theirEdgar), "the non-active player's trigger resolves first");
+		Assert.That(
+			top.SourceId,
+			Is.EqualTo(theirEdgar),
+			"the non-active player's trigger resolves first"
+		);
 	}
 
 	// A "none" answer leaves the pipeline context untouched; under the shared "chosen" key a stale
@@ -267,12 +373,18 @@ public class FraSacrificeTests : FraBoardTest
 	public void DecliningMaySacrifice_IgnoresAStaleEarlierPick()
 	{
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
-		var stale = System.Collections.Immutable.ImmutableDictionary<string, object>
-			.Empty.Add(Effects.ContextKeys.Controller, me)
+		var stale = System
+			.Collections.Immutable.ImmutableDictionary<string, object>.Empty.Add(
+				Effects.ContextKeys.Controller,
+				me
+			)
 			.Add(Effects.ContextKeys.Source, bear)
 			.Add(ChooseCardsFromHandChoice.Chosen, bear)
 			.Add(ChoosePermanentChoice.Chosen, bear);
-		var effect = new Effects.MaySacrifice(new Targeting.TargetSpec(Targeting.TargetKind.Creature, Targeting.Whose.You), [new Effects.CreateTokens(FraCards.Beast, 1)])
+		var effect = new Effects.MaySacrifice(
+			new Targeting.TargetSpec(Targeting.TargetKind.Creature, Targeting.Whose.You),
+			[new Effects.CreateTokens(FraCards.Beast, 1)]
+		)
 		{
 			InputContext = stale,
 		};
@@ -297,7 +409,8 @@ public class FraSacrificeTests : FraBoardTest
 
 		// TEST SETUP: it leaves and is back, same id, as a new object. Moved directly rather than through
 		// EnterBattlefield, so it brings no NEW enters trigger — a new one would rightly exile the bear.
-		s = s.MoveCard(trap, s.ZoneId(me, ZoneType.Hand)).MoveCard(trap, s.ZoneId(me, ZoneType.Battlefield));
+		s = s.MoveCard(trap, s.ZoneId(me, ZoneType.Hand))
+			.MoveCard(trap, s.ZoneId(me, ZoneType.Battlefield));
 		Resolve();
 
 		Assert.That(Alive(bear));
@@ -309,7 +422,25 @@ public class FraSacrificeTests : FraBoardTest
 	public void StateBasedActions_RepeatUntilNothingApplies_EvenWithoutAnEvent()
 	{
 		CardDefinition Shrine(params GameComponent[] statics) =>
-			new(new CardData("Shrine", "normal", "{1}", 1, "Legendary Enchantment", null, null, null, null, null, [], "common", "0", null), [.. statics]);
+			new(
+				new CardData(
+					"Shrine",
+					"normal",
+					"{1}",
+					1,
+					"Legendary Enchantment",
+					null,
+					null,
+					null,
+					null,
+					null,
+					[],
+					"common",
+					"0",
+					null
+				),
+				[.. statics]
+			);
 		Field(Shrine(new Effects.YourPlaneswalkersSurviveZeroLoyalty()), me); // the older copy keeps walkers alive
 		var walker = Hand(TestGames.Planeswalker("Walker", 3), me);
 		s = s.EnterBattlefield(walker, me);

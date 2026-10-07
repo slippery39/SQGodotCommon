@@ -111,6 +111,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   capping. A cap makes "more" tie with "less", and a tie silently picks the passive move: a life cap
   at 20 stopped every attack past tapped blockers; a land cap at 7 made the AI hoard lands.
 - Same serialization rule as the root `CLAUDE.md`: nothing with a delegate lives in `GameState`.
+- **CSharpier 0.29 misreads `x is SomeType ? [a] : b`** — it takes `SomeType?` for a nullable type.
+  Valid C#, but the commit hook then skips formatting the whole file. Write a `switch` expression.
 - **Test trap:** helpers that replace a `GameState` field (`Hand`, `Field`) must run on their own line —
   in `s.Act(new … { CardId = Hand(…) })` C# reads `s` before `Hand` replaces it.
 
