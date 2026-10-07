@@ -54,6 +54,10 @@ is on screen — twice, twenty minutes of hand-play found what a screenshot loop
 - **An exception while a screen is being built SILENTLY drops everything built after it.** A reward
   row AND its SKIP button vanished. **A button or row missing from a capture: check the Godot log for
   an exception before anything else.**
+- **Adding a node to an ANCESTOR from a child's `_Ready` silently fails** — the ancestor is still
+  "busy setting up children"; Godot logs an error and drops the node. A backdrop added to the screen
+  root from a nested menu script never appeared. Add to the node itself (a `CanvasLayer` draws at
+  its layer wherever it sits), or `CallDeferred`.
 - **New assets do not exist until imported** (`godot-mono --path SQGodotCommon --headless --import`).
   Until then `ResourceLoader.Exists` is false and nothing errors.
 - **`--resolution` does not resize the window** while `project.godot` sets

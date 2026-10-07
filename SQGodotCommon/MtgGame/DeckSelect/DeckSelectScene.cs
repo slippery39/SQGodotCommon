@@ -13,95 +13,100 @@ public partial class DeckSelectScene : Control
 	private readonly List<Button> _opponentButtons = new();
 	private Button _startButton = null!;
 
-	private static readonly Color SelectedBg = new(0.45f, 0.34f, 0.06f, 1f);
-	private static readonly Color SelectedBorder = new(1f, 0.85f, 0.30f, 1f);
+	private Label _playerTagline = null!;
+	private Label _opponentTagline = null!;
+
+	/// Deck buttons per row in each side's grid. One column of fourteen pushed Start Battle off
+	/// the bottom of a 720p window — the screen could not start a game.
+	private const int GridColumns = 2;
 
 	public override void _Ready()
 	{
-		var bg = new ColorRect { Color = MtgUiStyles.DarkBg };
-		bg.SetAnchorsPreset(LayoutPreset.FullRect);
-		AddChild(bg);
-
-		var center = new CenterContainer();
-		center.SetAnchorsPreset(LayoutPreset.FullRect);
-		AddChild(center);
+		MtgUiStyles.AddBackdrop(this);
 
 		var root = new VBoxContainer();
-		root.AddThemeConstantOverride("separation", 32);
-		center.AddChild(root);
+		root.SetAnchorsPreset(LayoutPreset.FullRect);
+		root.OffsetTop = 24;
+		root.AddThemeConstantOverride("separation", 20);
+		AddChild(root);
 
-		var title = new Label { Text = "Choose Your Decks" };
-		title.HorizontalAlignment = HorizontalAlignment.Center;
-		title.AddThemeFontSizeOverride("font_size", 48);
-		title.Modulate = MtgUiStyles.GoldBorder;
-		root.AddChild(title);
+		root.AddChild(MtgUiStyles.Title("Choose Your Decks"));
 
-		var columns = new HBoxContainer();
-		columns.AddThemeConstantOverride("separation", 48);
+		var columns = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+		columns.AddThemeConstantOverride("separation", 72);
 		root.AddChild(columns);
-
 		columns.AddChild(BuildColumn("Your Deck", isPlayer: true));
-
-		var sep = new VSeparator();
-		sep.CustomMinimumSize = new Vector2(2, 0);
-		columns.AddChild(sep);
-
 		columns.AddChild(BuildColumn("Opponent's Deck", isPlayer: false));
 
-		var startCenter = new CenterContainer();
-		root.AddChild(startCenter);
-
+		// Pinned bottom-right, where END TURN lives on the board: never pushed off by the list.
 		_startButton = new Button { Text = "Start Battle", Disabled = true };
-		_startButton.CustomMinimumSize = new Vector2(300, 56);
-		_startButton.AddThemeFontSizeOverride("font_size", 22);
-		ApplyButtonStyle(_startButton, selected: false);
+		_startButton.SetAnchorsPreset(LayoutPreset.BottomRight);
+		_startButton.OffsetLeft = -360;
+		_startButton.OffsetTop = -110;
+		_startButton.OffsetRight = -24;
+		_startButton.OffsetBottom = -30;
+		MtgUiStyles.StylePrimary(_startButton, fontSize: 32);
 		_startButton.Pressed += OnStartBattle;
-		startCenter.AddChild(_startButton);
+		AddChild(_startButton);
 	}
 
 	private VBoxContainer BuildColumn(string heading, bool isPlayer)
 	{
 		var col = new VBoxContainer();
 		col.AddThemeConstantOverride("separation", 12);
-		col.CustomMinimumSize = new Vector2(290, 0);
 
-		var label = new Label { Text = heading };
-		label.HorizontalAlignment = HorizontalAlignment.Center;
-		label.AddThemeFontSizeOverride("font_size", 22);
-		label.Modulate = MtgUiStyles.GoldBorder;
-		col.AddChild(label);
+		col.AddChild(MtgUiStyles.Title(heading, 30));
+
+		var grid = new GridContainer { Columns = GridColumns };
+		grid.AddThemeConstantOverride("h_separation", 10);
+		grid.AddThemeConstantOverride("v_separation", 10);
+		col.AddChild(grid);
+
+		var tagline = new Label
+		{
+			HorizontalAlignment = HorizontalAlignment.Center,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			CustomMinimumSize = new Vector2(1, 56),
+		};
+		tagline.AddThemeFontSizeOverride("font_size", 22);
+		tagline.AddThemeColorOverride("font_color", new Color("f2e6c8"));
+		col.AddChild(tagline);
+		if (isPlayer)
+			_playerTagline = tagline;
+		else
+			_opponentTagline = tagline;
 
 		var buttonList = isPlayer ? _playerButtons : _opponentButtons;
-
 		foreach (var deck in DeckRegistry.All)
-		{
-			var choice = new DeckChoice.Premade(deck.Name);
-			AddDeckOption(col, buttonList, deck.Name, DeckTagline(deck.Name), choice, isPlayer);
-		}
-
+			AddDeckOption(
+				grid,
+				buttonList,
+				deck.Name,
+				DeckTagline(deck.Name),
+				new DeckChoice.Premade(deck.Name),
+				isPlayer
+			);
 		AddDeckOption(
-			col,
+			grid,
 			buttonList,
 			"Random Premade",
 			"Mystery deck — revealed at game start",
 			new DeckChoice.RandomPremade(),
 			isPlayer
 		);
-
 		AddDeckOption(
-			col,
+			grid,
 			buttonList,
 			"Randomized",
 			"40 random cards from the full card pool",
 			new DeckChoice.Randomized(),
 			isPlayer
 		);
-
 		return col;
 	}
 
 	private void AddDeckOption(
-		VBoxContainer parent,
+		GridContainer parent,
 		List<Button> buttonList,
 		string name,
 		string tagline,
@@ -109,10 +114,9 @@ public partial class DeckSelectScene : Control
 		bool isPlayer
 	)
 	{
-		var btn = new Button { Text = name };
-		btn.CustomMinimumSize = new Vector2(290, 44);
-		btn.AddThemeFontSizeOverride("font_size", 18);
-		ApplyButtonStyle(btn, selected: false);
+		var btn = new Button { Text = name, CustomMinimumSize = new Vector2(250, 52) };
+		btn.AddThemeFontSizeOverride("font_size", 22);
+		MtgUiStyles.StyleChoice(btn, selected: false);
 
 		btn.Pressed += () =>
 		{
@@ -120,40 +124,29 @@ public partial class DeckSelectScene : Control
 			{
 				_playerChoice = choice;
 				HighlightSelection(_playerButtons, btn);
+				_playerTagline.Text = tagline;
 			}
 			else
 			{
 				_opponentChoice = choice;
 				HighlightSelection(_opponentButtons, btn);
+				_opponentTagline.Text = tagline;
 			}
 			UpdateStartButton();
 		};
 
 		buttonList.Add(btn);
 		parent.AddChild(btn);
-
-		if (tagline.Length > 0)
-		{
-			var sub = new Label { Text = tagline };
-			sub.HorizontalAlignment = HorizontalAlignment.Center;
-			sub.AddThemeFontSizeOverride("font_size", 11);
-			sub.Modulate = new Color(0.7f, 0.7f, 0.7f, 1f);
-			parent.AddChild(sub);
-		}
 	}
 
 	private static void HighlightSelection(List<Button> buttons, Button selected)
 	{
 		foreach (var b in buttons)
-			ApplyButtonStyle(b, selected: b == selected);
+			MtgUiStyles.StyleChoice(b, selected: b == selected);
 	}
 
-	private void UpdateStartButton()
-	{
-		var ready = _playerChoice != null && _opponentChoice != null;
-		_startButton.Disabled = !ready;
-		ApplyButtonStyle(_startButton, selected: ready);
-	}
+	private void UpdateStartButton() =>
+		_startButton.Disabled = _playerChoice == null || _opponentChoice == null;
 
 	private void OnStartBattle()
 	{
@@ -163,33 +156,6 @@ public partial class DeckSelectScene : Control
 		var setup = new DeckSetupData(_playerChoice, _opponentChoice);
 		GameManager.Instance.RegisterService(setup);
 		GameManager.Instance.ChangeScene("res://MtgGame/MtgGameScene.tscn");
-	}
-
-	private static void ApplyButtonStyle(Button btn, bool selected)
-	{
-		if (selected)
-		{
-			var s = new StyleBoxFlat();
-			s.BgColor = SelectedBg;
-			s.SetBorderWidthAll(2);
-			s.BorderColor = SelectedBorder;
-			s.CornerRadiusTopLeft =
-				s.CornerRadiusTopRight =
-				s.CornerRadiusBottomLeft =
-				s.CornerRadiusBottomRight =
-					4;
-			btn.AddThemeStyleboxOverride("normal", s);
-			btn.AddThemeStyleboxOverride("hover", s);
-			btn.AddThemeStyleboxOverride("pressed", s);
-			btn.AddThemeStyleboxOverride("disabled", MtgUiStyles.ButtonDisabled());
-		}
-		else
-		{
-			btn.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
-			btn.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
-			btn.AddThemeStyleboxOverride("pressed", MtgUiStyles.ButtonNormal());
-			btn.AddThemeStyleboxOverride("disabled", MtgUiStyles.ButtonDisabled());
-		}
 	}
 
 	private static string DeckTagline(string deckName) =>

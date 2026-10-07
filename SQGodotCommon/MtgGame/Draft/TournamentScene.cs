@@ -59,9 +59,7 @@ public partial class TournamentScene : Control
 
 	private void BuildUi()
 	{
-		var bg = new ColorRect { Color = MtgUiStyles.DarkBg };
-		bg.SetAnchorsPreset(LayoutPreset.FullRect);
-		AddChild(bg);
+		MtgUiStyles.AddBackdrop(this);
 
 		var center = new CenterContainer();
 		center.SetAnchorsPreset(LayoutPreset.FullRect);
@@ -72,15 +70,12 @@ public partial class TournamentScene : Control
 		_root.CustomMinimumSize = new Vector2(560, 0);
 		center.AddChild(_root);
 
-		var title = new Label { Text = "Draft Standings" };
-		title.HorizontalAlignment = HorizontalAlignment.Center;
-		title.AddThemeFontSizeOverride("font_size", 44);
-		title.Modulate = MtgUiStyles.GoldBorder;
-		_root.AddChild(title);
+		_root.AddChild(MtgUiStyles.Title("Draft Standings"));
 
 		_status = new Label();
 		_status.HorizontalAlignment = HorizontalAlignment.Center;
-		_status.AddThemeFontSizeOverride("font_size", 16);
+		_status.AddThemeFontSizeOverride("font_size", 20);
+		_status.AddThemeColorOverride("font_color", new Color("f2e6c8"));
 		_root.AddChild(_status);
 
 		var panel = new PanelContainer();
@@ -98,8 +93,8 @@ public partial class TournamentScene : Control
 
 		_hint = new Label { Visible = false };
 		_hint.HorizontalAlignment = HorizontalAlignment.Center;
-		_hint.AddThemeFontSizeOverride("font_size", 13);
-		_hint.Modulate = new Color(0.6f, 0.6f, 0.65f, 1f);
+		_hint.AddThemeFontSizeOverride("font_size", 17);
+		_hint.Modulate = new Color("c8bca4");
 		_root.AddChild(_hint);
 
 		var buttonRow = new CenterContainer();
@@ -109,12 +104,8 @@ public partial class TournamentScene : Control
 		AddChild(_deckList);
 
 		_action = new Button();
-		_action.CustomMinimumSize = new Vector2(360, 52);
-		_action.AddThemeFontSizeOverride("font_size", 20);
-		_action.AddThemeStyleboxOverride("normal", MtgUiStyles.ButtonNormal());
-		_action.AddThemeStyleboxOverride("hover", MtgUiStyles.ButtonHover());
-		_action.AddThemeStyleboxOverride("pressed", MtgUiStyles.ButtonNormal());
-		_action.AddThemeStyleboxOverride("disabled", MtgUiStyles.ButtonDisabled());
+		_action.CustomMinimumSize = new Vector2(420, 76);
+		MtgUiStyles.StylePrimary(_action, fontSize: 26);
 		buttonRow.AddChild(_action);
 	}
 

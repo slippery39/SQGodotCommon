@@ -54,7 +54,7 @@ public partial class ChoicePanel : CanvasLayer
 		vbox.AddChild(_promptLabel);
 
 		_hintLabel = new Label();
-		_hintLabel.AddThemeFontSizeOverride("font_size", 13);
+		_hintLabel.AddThemeFontSizeOverride("font_size", 17);
 		_hintLabel.Modulate = new Color(0.75f, 0.75f, 0.75f, 1f);
 		vbox.AddChild(_hintLabel);
 

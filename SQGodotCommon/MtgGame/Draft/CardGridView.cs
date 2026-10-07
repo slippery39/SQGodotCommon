@@ -48,7 +48,7 @@ public static class CardGridView
 				Text = $"{costGroup.Key}  ({costGroup.Count()})",
 				HorizontalAlignment = HorizontalAlignment.Center,
 			};
-			heading.AddThemeFontSizeOverride("font_size", 14);
+			heading.AddThemeFontSizeOverride("font_size", 16);
 			heading.Modulate = MtgUiStyles.GoldBorder;
 			column.AddChild(heading);
 

@@ -71,34 +71,45 @@ public partial class ManaBar : PanelContainer
 				continue;
 			var left = player.CurrentColorMana[colour];
 
-			var stone = Picture(
-				Gem,
-				new Vector2(34, 34),
-				left > 0 ? MtgCardSkin.GemColor(colour) : new Color(0.25f, 0.22f, 0.2f)
+			_colours.AddChild(
+				ColourCount(
+					colour,
+					left,
+					lit: left > 0,
+					$"{colour}: {left} of {max} left this turn"
+				)
 			);
-			// Spent: the gem goes dark but its symbol stays readable, or you cannot tell WHICH colour.
-			var symbol = Picture(
-				MtgSymbols.Mana(colour),
-				new Vector2(22, 22),
-				left > 0 ? MtgCardSkin.ManaSymbolInk : new Color(0.6f, 0.55f, 0.48f)
-			);
-			symbol.Position = new Vector2(6, 6);
-			symbol.Size = symbol.CustomMinimumSize;
-			stone.AddChild(symbol);
-
-			// Gem and count as one hover target: the symbol says WHICH colour, the number how much.
-			var pair = new HBoxContainer
-			{
-				MouseFilter = MouseFilterEnum.Pass,
-				TooltipText = $"{colour}: {left} of {max} left this turn",
-			};
-			pair.AddThemeConstantOverride("separation", 2);
-			pair.AddChild(stone);
-			var count = Text(22, left > 0 ? Colors.White : MtgUiStyles.DimBorder);
-			count.Text = $"{left}";
-			pair.AddChild(count);
-			_colours.AddChild(pair);
 		}
+	}
+
+	/// <summary>
+	/// A colour's gem (with its symbol) and a number, as one hover target — the mana bar and the
+	/// draft's pool panel both say "this colour: this many" this way. Unlit, the gem goes dark but
+	/// its symbol stays readable, or you cannot tell WHICH colour it is.
+	/// </summary>
+	public static Control ColourCount(ManaColor colour, int count, bool lit, string tooltip)
+	{
+		var stone = Picture(
+			Gem,
+			new Vector2(34, 34),
+			lit ? MtgCardSkin.GemColor(colour) : new Color(0.25f, 0.22f, 0.2f)
+		);
+		var symbol = Picture(
+			MtgSymbols.Mana(colour),
+			new Vector2(22, 22),
+			lit ? MtgCardSkin.ManaSymbolInk : new Color(0.6f, 0.55f, 0.48f)
+		);
+		symbol.Position = new Vector2(6, 6);
+		symbol.Size = symbol.CustomMinimumSize;
+		stone.AddChild(symbol);
+
+		var pair = new HBoxContainer { MouseFilter = MouseFilterEnum.Pass, TooltipText = tooltip };
+		pair.AddThemeConstantOverride("separation", 2);
+		pair.AddChild(stone);
+		var number = Text(22, lit ? Colors.White : MtgUiStyles.DimBorder);
+		number.Text = $"{count}";
+		pair.AddChild(number);
+		return pair;
 	}
 
 	/// ExpandMode before Texture, or the texture's pixel size becomes the minimum (godot-frontend.md).

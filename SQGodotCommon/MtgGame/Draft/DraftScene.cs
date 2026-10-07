@@ -49,6 +49,7 @@ public partial class DraftScene : Control
 	private Label _pickerLabel = null!;
 	private HFlowContainer _packGrid = null!;
 	private VBoxContainer _poolList = null!;
+	private HFlowContainer _poolColours = null!;
 	private Label _poolHeader = null!;
 	private CardPreviewPopup _preview = null!;
 	private PackedScene _boardCardScene = null!;
@@ -111,9 +112,7 @@ public partial class DraftScene : Control
 
 	private void BuildUi(string pickerName)
 	{
-		var bg = new ColorRect { Color = MtgUiStyles.DarkBg };
-		bg.SetAnchorsPreset(LayoutPreset.FullRect);
-		AddChild(bg);
+		MtgUiStyles.AddBackdrop(this);
 
 		_preview = new CardPreviewPopup
 		{
@@ -131,17 +130,16 @@ public partial class DraftScene : Control
 		AddChild(margin);
 
 		var root = new VBoxContainer();
-		root.AddThemeConstantOverride("separation", 12);
+		root.AddThemeConstantOverride("separation", 4);
 		margin.AddChild(root);
 
-		_header = new Label();
-		_header.AddThemeFontSizeOverride("font_size", 32);
-		_header.Modulate = MtgUiStyles.GoldBorder;
+		_header = MtgUiStyles.Title("", 32);
+		_header.HorizontalAlignment = HorizontalAlignment.Left;
 		root.AddChild(_header);
 
 		_pickerLabel = new Label { Text = $"7 AI drafters · {pickerName} · seed {_seed}" };
-		_pickerLabel.AddThemeFontSizeOverride("font_size", 13);
-		_pickerLabel.Modulate = new Color(0.65f, 0.65f, 0.7f, 1f);
+		_pickerLabel.AddThemeFontSizeOverride("font_size", 16);
+		_pickerLabel.Modulate = new Color("f2e6c8");
 		root.AddChild(_pickerLabel);
 
 		var columns = new HBoxContainer();
@@ -169,7 +167,9 @@ public partial class DraftScene : Control
 	{
 		var panel = new PanelContainer();
 		panel.AddThemeStyleboxOverride("panel", MtgUiStyles.DarkPanel());
-		panel.CustomMinimumSize = new Vector2(260, 0);
+		// ponytail: 270 is what leaves room for SIX pack cards a row — at 320 the pack wrapped to 5
+		// and its third row fell off the bottom. Recompute if PackCardScale changes.
+		panel.CustomMinimumSize = new Vector2(270, 0);
 
 		var inner = new MarginContainer();
 		foreach (var side in new[] { "left", "right", "top", "bottom" })
@@ -180,10 +180,13 @@ public partial class DraftScene : Control
 		col.AddThemeConstantOverride("separation", 6);
 		inner.AddChild(col);
 
-		_poolHeader = new Label();
-		_poolHeader.AddThemeFontSizeOverride("font_size", 18);
-		_poolHeader.Modulate = MtgUiStyles.GoldBorder;
+		_poolHeader = MtgUiStyles.Title("", 26);
 		col.AddChild(_poolHeader);
+
+		// What colour am I? — the drafter's first question, answered without reading the list.
+		_poolColours = new HFlowContainer { Alignment = FlowContainer.AlignmentMode.Center };
+		_poolColours.AddThemeConstantOverride("h_separation", 8);
+		col.AddChild(_poolColours);
 
 		var scroll = new ScrollContainer();
 		scroll.SizeFlagsVertical = SizeFlags.ExpandFill;
@@ -234,8 +237,23 @@ public partial class DraftScene : Control
 
 	private void RefreshPool(IReadOnlyList<Card> pool)
 	{
-		_poolHeader.Text = $"Your Pool ({pool.Count})";
-		CardListView.Fill(_poolList, pool);
+		_poolHeader.Text = $"Your Pool — {pool.Count}";
+		CardListView.Fill(_poolList, pool, fontSize: 16);
+
+		foreach (var child in _poolColours.GetChildren())
+			child.QueueFree();
+		foreach (var colour in ManaPool.Colors)
+		{
+			var cards = pool.Count(c => c.ColorPips[colour] > 0);
+			_poolColours.AddChild(
+				ManaBar.ColourCount(
+					colour,
+					cards,
+					lit: cards > 0,
+					$"{colour}: {cards} cards in your pool"
+				)
+			);
+		}
 	}
 
 	// state: null — a draft pack card is not in a game, so P/T is the printed value.

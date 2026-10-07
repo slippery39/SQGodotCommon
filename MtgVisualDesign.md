@@ -273,3 +273,20 @@ along the top with the meaning on hover (MouseFilter Pass); card pips and mana-b
 colour's symbol in near-black ink. Found: a spent gem's dark symbol on a dark gem hid WHICH colour
 was spent — a spent gem keeps a dim, readable symbol. A capture cannot hover, so the tooltips are
 wired but unseen until played.
+
+**Step 7 - the other screens (2026-10-06).** Kit helpers `MtgUiStyles.Title` (Cinzel, outlined)
+and `StyleChoice` (leather plate, PARCHMENT with ink when selected — one selected state everywhere)
+plus `AddBackdrop` on every screen.
+- **Title** (`Project/MainMenu`): "Arcane Duel", plates for Start Game / Draft / Quit; Options
+  removed (it did nothing). Mouse, touch and keyboard drive one selection.
+- **Deck select**: two-column grids per side. Found: one column of 14 decks pushed START BATTLE
+  below the bottom of a 720p window — the screen could not start a game. Start is now the oxblood
+  button pinned bottom-right; the selected deck's tagline shows under its grid at 22px (it was
+  11px, under three of the fourteen).
+- **Draft**: Cinzel header, pool panel with a colour count row (`ManaBar.ColourCount`, shared
+  with the mana bar). The pool panel is 270 wide on purpose: at 320 the pack wrapped to five a row
+  and its third row fell off the screen.
+- **Tournament**: backdrop, title, oxblood action button, readable status/hint (built from code;
+  it needs a live tournament, so not captured).
+Tiny player-facing text raised: choice-panel hint 13->17, deck-list hint 11->15.
+The mockup's PICK button was NOT added — clicking a card picks it, one click fewer.

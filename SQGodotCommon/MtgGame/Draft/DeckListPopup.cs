@@ -96,7 +96,7 @@ public partial class DeckListPopup : CanvasLayer
 
 		var hint = new Label { Text = "Click anywhere outside to close" };
 		hint.HorizontalAlignment = HorizontalAlignment.Center;
-		hint.AddThemeFontSizeOverride("font_size", 11);
+		hint.AddThemeFontSizeOverride("font_size", 15);
 		hint.Modulate = new Color(0.55f, 0.55f, 0.6f, 1f);
 		root.AddChild(hint);
 

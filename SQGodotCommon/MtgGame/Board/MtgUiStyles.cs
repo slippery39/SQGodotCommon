@@ -57,6 +57,40 @@ public static class MtgUiStyles
 		parent.AddChild(layer);
 	}
 
+	/// <summary>A screen or section title: Cinzel, gold, outlined — it sits on the backdrop.</summary>
+	public static Label Title(string text, int size = 52) =>
+		new()
+		{
+			Text = text,
+			HorizontalAlignment = HorizontalAlignment.Center,
+			LabelSettings = new LabelSettings
+			{
+				Font = TitleFont,
+				FontSize = size,
+				FontColor = GoldBorder,
+				OutlineSize = size / 6,
+				OutlineColor = new Color(0, 0, 0, 0.85f),
+			},
+		};
+
+	/// <summary>
+	/// A choice among several (a deck, a menu entry): a leather plate, or PARCHMENT with dark ink
+	/// when selected — the one selected state every screen uses.
+	/// </summary>
+	public static void StyleChoice(Button button, bool selected)
+	{
+		var idle = selected ? Banner() : ButtonNormal();
+		button.AddThemeStyleboxOverride("normal", idle);
+		button.AddThemeStyleboxOverride("pressed", idle);
+		button.AddThemeStyleboxOverride("hover", selected ? Banner() : ButtonHover());
+		button.AddThemeStyleboxOverride("disabled", ButtonDisabled());
+		button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+		var ink = selected ? Ink : new Color("f2e6c8");
+		button.AddThemeColorOverride("font_color", ink);
+		button.AddThemeColorOverride("font_hover_color", selected ? Ink : Colors.White);
+		button.AddThemeColorOverride("font_pressed_color", ink);
+	}
+
 	/// <summary>The oxblood END TURN / PICK button, in Cinzel.</summary>
 	public static void StylePrimary(Button button, int fontSize = 30)
 	{
