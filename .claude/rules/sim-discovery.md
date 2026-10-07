@@ -1116,6 +1116,15 @@ the fix** — checked, because a regression test that passes either way is worse
 `Divination` half is the vacuity guard: a plain draw spell moves nothing to the graveyard, so a fix
 that assumed movement rather than observing it fails there.
 
+**The rest of `PoolFeatures` was audited for the same pause (2026-10-06).** The activation and
+cast-cost paths (`Activate`, `PayThenResolve`) had it — an activated loot's discard stayed pending,
+so Chandra's Regulator moved nothing. Settled there too: DES graveyard enablers 32 -> 34, Sun Titan
+no longer unbuildable; pinned by `ActivatedLootProbeTests` (fails without). **The trigger probes do
+NOT need it, measured not argued:** a pending choice does not block later actions (the companion
+and death steps still run), and their bare fixture has an empty hand, so a settled loot discards
+nothing anyway — settling them left mode 7's DES report byte-identical. `ProbeCostDemands` places
+cards with `AddObject` and processes no actions at all.
+
 **The general shape, and it is the third instance in this file: a capability that was never
 exercised reads exactly like a parameter that needs tuning.** Same class as the vacuous LIFT
 column and the seeded-hash non-determinism — check that the code path RUNS before arguing about

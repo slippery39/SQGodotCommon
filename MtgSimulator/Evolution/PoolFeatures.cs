@@ -1851,7 +1851,7 @@ public sealed class PoolFeatures
 				)
 				.ProcessAllActions();
 
-			return (resolved, fodder);
+			return (SettleChoices(resolved), fodder);
 		}
 		catch (Exception ex)
 		{
@@ -1980,8 +1980,12 @@ public sealed class PoolFeatures
 				if (!legal)
 					continue;
 
+				// Settled: an activated loot (Chandra's Regulator, Merfolk Looter) asks which card to
+				// discard, and unsettled the discard never happened — the same miss the ETB path had
+				// before `SettleChoices`, one level down. Measured on DES: graveyard enablers 32 -> 34,
+				// and Sun Titan stopped reading as unbuildable.
 				var (next, _) = queued.ProcessAllActions();
-				state = next;
+				state = SettleChoices(next);
 			}
 
 			return (state, fodder);
