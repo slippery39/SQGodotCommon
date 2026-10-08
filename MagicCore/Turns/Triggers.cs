@@ -22,6 +22,8 @@ public record StepBeganEvent(Step Step) : GameEvent;
 
 public record BlocksEvent(int CardId) : GameEvent;
 
+public record SurveilledEvent(int PlayerId) : GameEvent;
+
 /// <summary>A spell or ability put on the stack with this card as a target (CR 115).</summary>
 public record BecameTargetEvent(int CardId, int ByPlayerId) : GameEvent;
 
@@ -182,6 +184,11 @@ public static class Triggers
 				&& !yourTurn,
 			(TriggerEvent.YourEndStep, StepBeganEvent began) => began.Step == Step.End && yourTurn,
 			(TriggerEvent.EachEndStep, StepBeganEvent began) => began.Step == Step.End,
+			(TriggerEvent.YouSurveil, SurveilledEvent surveilled) => surveilled.PlayerId
+				== source.ControllerId,
+			(TriggerEvent.CreatureYouControlEnters, EnteredBattlefieldEvent entered) => Yours(
+				entered.CardId
+			) && s.GetCard(entered.CardId).Is(CardType.Creature),
 			(TriggerEvent.BeginningOfCombatOnYourTurn, StepBeganEvent began) => began.Step
 				== Step.BeginCombat
 				&& yourTurn,
@@ -221,8 +228,26 @@ public static class Triggers
 	/// </summary>
 	public static GameState PutOnStack(GameState s, List<Pending> triggers, int priorityPlayerId)
 	{
+		var firedOnce = new HashSet<(int Id, int Incarnation)>();
 		foreach (var t in triggers)
 		{
+			if (t.Ability.OncePerTurn)
+			{
+				// "Only once each turn": the first goes on the stack and stamps the card; the rest
+				// don't. A source that already left still resolves (CR 603.3) — there is nothing left
+				// to stamp, and a new object may trigger again anyway (CR 400.7).
+				// ponytail: one stamp per card, so two once-per-turn abilities on one permanent would
+				// block each other. Key it by ability if a card ever has two.
+				var turn = s.GetGame().TurnNumber;
+				if (!firedOnce.Add((t.Source.Id, t.Source.Incarnation)))
+					continue;
+				if (s.IsOnBattlefield(t.Source.Id) && s.GetCard(t.Source.Id) is var now)
+				{
+					if (now.OncePerTurnTriggeredOn == turn)
+						continue;
+					s = s.UpdateObject(now.Id, now with { OncePerTurnTriggeredOn = turn });
+				}
+			}
 			if (t.Ability.Modes.IsEmpty)
 			{
 				s = QueueTargets(s, t, t.Ability.Targets, t.Ability.Effects);

@@ -22,8 +22,15 @@ public static class Damage
 			return s;
 
 		if (s.GetObject(targetId) is MagicPlayer player)
+		{
 			s = s.WithPlayer(player with { Life = player.Life - amount })
 				.Raise(new PlayerDealtDamageEvent(player.Id, combat, source.Id));
+			if (!combat)
+				s = s.Tally(
+					player.Id,
+					t => t with { NoncombatDamageTaken = t.NoncombatDamageTaken + amount }
+				);
+		}
 		else if (
 			s.GetObject(targetId) is Card { } walker
 			&& s.IsOnBattlefield(targetId)

@@ -91,7 +91,7 @@ public static class Characteristics
 				&& card.Id != source.Id,
 			_ => false,
 		};
-		if (!affected)
+		if (!affected || (effect.OnlyWithCounter && card.PlusOneCounters == 0))
 			return false;
 		// Real power and toughness (CR 613): safe, because only keyword statics carry this filter.
 		if (

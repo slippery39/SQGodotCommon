@@ -696,4 +696,189 @@ public class FraTriggerTests : FraBoardTest
 		Assert.That(Life(me), Is.EqualTo(life + 1));
 		Assert.That(s.LegalActions().OfType<PlayLandAction>().Any(a => a.CardId == second));
 	}
+
+	// ===== Whenever you surveil, entered this turn, last turn =====
+
+	void SurveilNow() => Cast(Instant(new Surveil(1)), []);
+
+	[Test]
+	public void DenziloreFatehold_EverySurveilCountersEachCreatureYouControl()
+	{
+		var denzilore = Field(FraCards.Get("Denzilore Fatehold"), me);
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+
+		SurveilNow();
+
+		Assert.That(
+			(s.GetCard(denzilore).PlusOneCounters, s.GetCard(bear).PlusOneCounters),
+			Is.EqualTo((1, 1))
+		);
+	}
+
+	[Test]
+	public void SaheeliConsulOfOversight_AThopterOnlyOnceEachTurn()
+	{
+		Field(FraCards.Get("Saheeli, Consul of Oversight"), me);
+		SurveilNow();
+		SurveilNow();
+		var thopter = Named("Thopter", me).Single();
+		Assert.That(
+			(thopter.IsToken, thopter.Is(CardType.Artifact), s.Has(thopter, "Flying")),
+			Is.EqualTo((true, true, true))
+		);
+
+		To(Step.Upkeep, them);
+		s = s.Act(new PassPriorityAction { PlayerId = them });
+		SurveilNow();
+		Assert.That(Named("Thopter", me), Has.Count.EqualTo(2), "once EACH turn — theirs too");
+	}
+
+	[Test]
+	public void SaheeliConsulOfOversight_DyingToTheStateCheck_StillMakesTheThopter()
+	{
+		Field(FraCards.Get("Saheeli, Consul of Oversight"), me);
+
+		// Lethal damage: she is still there when triggers are collected, gone (state-based) before
+		// they go on the stack.
+		Cast(Instant(new Surveil(1), new DealDamage(Ref.CreaturesYouControl, 4)), []);
+
+		Assert.That(Named("Thopter", me), Has.Count.EqualTo(1), "it triggered (CR 603.3)");
+	}
+
+	[Test]
+	public void ProftConsultingDetective_PayingTwo_CountersAndDraws()
+	{
+		var proft = Field(FraCards.Get("Proft, Consulting Detective"), me);
+		var surveil = Instant(new Surveil(1));
+		var hand = HandCount(me);
+
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = surveil });
+		Resolve(choice =>
+			choice switch
+			{
+				YesNoChoice => [1],
+				_ => [],
+			}
+		);
+
+		Assert.That(s.GetCard(proft).PlusOneCounters, Is.EqualTo(1));
+		Assert.That(HandCount(me), Is.EqualTo(hand - 1 + 1), "the instant cast, one drawn");
+	}
+
+	[Test]
+	public void ProftConsultingDetective_UnableToPay_IsNotAsked()
+	{
+		Field(FraCards.Get("Proft, Consulting Detective"), me);
+		var surveil = Instant(new Surveil(1));
+		var island = s.CardsIn(me, ZoneType.Battlefield).First(c => c.Subtypes.Contains("Island"));
+		foreach (
+			var land in s.CardsIn(me, ZoneType.Battlefield)
+				.Where(c => c.Is(CardType.Land) && c.Id != island.Id)
+				.ToList()
+		)
+			s = s.UpdateObject(land.Id, land with { IsTapped = true }); // TEST SETUP: one Island left
+		var asked = false;
+
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = surveil });
+		Resolve(choice =>
+		{
+			asked |= choice is YesNoChoice;
+			return [];
+		});
+
+		Assert.That(asked, Is.False);
+	}
+
+	[Test]
+	public void GalliaTheMerrymaker_CountersANewCreature_WhichThenHasHaste()
+	{
+		var gallia = Field(FraCards.Get("Gallia, the Merrymaker"), me);
+		var old = Field(TestGames.Creature("Old", "2/2"), me);
+		var fresh = Hand(TestGames.Creature("Fresh", "2/2"), me);
+		s = s.EnterBattlefield(fresh, me); // TEST SETUP: entered this turn, summoning sick
+		Assert.That(Combat.CanAttack(s, s.GetCard(fresh)), Is.False);
+
+		var targets = s.LegalActions()
+			.OfType<ActivateAbilityAction>()
+			.Where(a => a.CardId == gallia)
+			.Select(a => a.Targets[0]);
+		Assert.That(targets, Does.Contain(fresh).And.Not.Contain(old), "entered this turn only");
+
+		s = s.Act(
+			new ActivateAbilityAction
+			{
+				PlayerId = me,
+				CardId = gallia,
+				Targets = [fresh],
+			}
+		);
+		Resolve();
+
+		Assert.That(Combat.CanAttack(s, s.GetCard(fresh)), "a counter, so haste");
+	}
+
+	[Test]
+	public void MabelValleyHero_ACreatureEntering_CountersACreatureThatEnteredThisTurn()
+	{
+		Field(FraCards.Get("Mabel, Valley Hero"), me);
+		var bear = Hand(TestGames.Creature("Bear", "2/2"), me);
+
+		Cast(bear, []);
+
+		Assert.That(s.GetCard(bear).PlusOneCounters, Is.EqualTo(1));
+	}
+
+	int WizardToken()
+	{
+		var id = Field(CardDefinition.Vanilla(FraCards.Cadet), me);
+		s = s.UpdateObject(id, s.GetCard(id) with { IsToken = true }); // TEST SETUP
+		return id;
+	}
+
+	[Test]
+	public void CommandTheStage_ACadet_AndACounterOnEachOtherWizardToken()
+	{
+		var wizard = WizardToken();
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+
+		Cast(Hand("Command the Stage", me), []);
+
+		var cadets = Named("Cadet", me);
+		Assert.That(cadets, Has.Count.EqualTo(2));
+		Assert.That(
+			(
+				s.GetCard(wizard).PlusOneCounters,
+				cadets.Single(c => c.Id != wizard).PlusOneCounters,
+				s.GetCard(bear).PlusOneCounters
+			),
+			Is.EqualTo((1, 0, 0)),
+			"the other Wizard token only"
+		);
+	}
+
+	[Test]
+	public void CommandTheStage_ReturnsToHandAtUpkeep_IfAnOpponentTookNoncombatDamageLastTurn()
+	{
+		var command = Hand("Command the Stage", me);
+		Cast(command, []);
+		Assert.That(s.IsIn(command, me, ZoneType.Graveyard));
+
+		Cast(Instant(new DealDamage(Ref.EachOpponent, 1)), []);
+		To(Step.Upkeep, them);
+		Resolve();
+
+		Assert.That(s.IsIn(command, me, ZoneType.Hand));
+	}
+
+	[Test]
+	public void CommandTheStage_NoDamageLastTurn_StaysInTheGraveyard()
+	{
+		var command = Hand("Command the Stage", me);
+		Cast(command, []);
+
+		To(Step.Upkeep, them);
+		Resolve();
+
+		Assert.That(s.IsIn(command, me, ZoneType.Graveyard));
+	}
 }

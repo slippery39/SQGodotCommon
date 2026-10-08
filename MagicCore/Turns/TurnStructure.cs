@@ -89,7 +89,13 @@ public static class TurnStructure
 				foreach (var card in s.CardsIn(active, ZoneType.Battlefield).Where(c => c.IsTapped))
 					s = s.UpdateObject(card.Id, card with { IsTapped = false });
 				foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
-					s = s.WithPlayer(s.GetPlayer(id) with { ThisTurn = new() });
+					s = s.WithPlayer(
+						s.GetPlayer(id) with
+						{
+							LastTurn = s.GetPlayer(id).ThisTurn,
+							ThisTurn = new(),
+						}
+					);
 				s = s.WithGame(s.GetGame() with { CreaturesDiedThisTurn = 0 });
 				return EndStep(s); // nobody gets priority during untap (CR 502.4)
 

@@ -134,6 +134,25 @@ public static class FraCards
 			null
 		);
 
+	/// <summary>Saheeli: "a 1/1 colorless Thopter artifact creature token with flying".</summary>
+	public static readonly CardData Thopter =
+		new(
+			"Thopter",
+			"token",
+			null,
+			0,
+			"Artifact Creature — Thopter",
+			null,
+			"1",
+			"1",
+			null,
+			[],
+			["Flying"],
+			"token",
+			"T",
+			null
+		);
+
 	/// <summary>"[cost]: effects" — a loyalty ability, own or granted.</summary>
 	static LoyaltyAbilityComponent Loyalty(
 		int cost,
@@ -1101,7 +1120,7 @@ public static class FraCards
 				When(
 					TriggerEvent.BeginningOfCombatOnYourTurn,
 					[],
-					new ReturnFromGraveyardToBattlefield(Ref.Source)
+					new ReturnFromGraveyard(Ref.Source, ZoneType.Battlefield)
 				) with
 				{
 					If = new AtLeast(Count.CreaturesDiedThisTurn, 2),
@@ -1173,6 +1192,78 @@ public static class FraCards
 					new GainLife(Ref.You, 1),
 					new AdditionalLandDrop()
 				),
+			],
+
+			// ===== Whenever you surveil, entered this turn, last turn =====
+			["Denzilore Fatehold"] =
+			[
+				When(TriggerEvent.YouSurveil, [], new AddCounters(Ref.CreaturesYouControl, 1)),
+			],
+			["Saheeli, Consul of Oversight"] =
+			[
+				When(TriggerEvent.YouSurveil, [], new CreateTokens(Thopter, 1)) with
+				{
+					OncePerTurn = true,
+				},
+			],
+			["Proft, Consulting Detective"] =
+			[
+				When(
+					TriggerEvent.YouSurveil,
+					[],
+					new May(
+						"Pay {2}: a +1/+1 counter on Proft and draw a card?",
+						new CanPay(ManaCost.Parse("{2}")),
+						[
+							new PayMana(
+								ManaCost.Parse("{2}"),
+								[new AddCounters(Ref.Source, 1), new DrawCards(Ref.You, 1)]
+							),
+						]
+					)
+				),
+			],
+			["Gallia, the Merrymaker"] =
+			[
+				new StaticEffectComponent(Affects.OtherCreaturesYouControl, "Haste")
+				{
+					OnlyWithCounter = true,
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}{R}"),
+					[new AddCounters(Ref.Target(), 1)]
+				)
+				{
+					TapCost = true,
+					Targets = [Creature with { EnteredThisTurn = true }],
+				},
+			],
+			["Mabel, Valley Hero"] =
+			[
+				When(
+					TriggerEvent.CreatureYouControlEnters,
+					[Creature with { EnteredThisTurn = true }],
+					new AddCounters(Ref.Target(), 1)
+				),
+			],
+			["Command the Stage"] =
+			[
+				// "Create a Cadet, then a counter on each OTHER Wizard token" — counters first, then
+				// the Cadet: the same result without remembering which token is new.
+				Spell(
+					[],
+					new AddCounters(Ref.TokensYouControl with { Subtype = "Wizard" }, 1),
+					new CreateTokens(Cadet, 1)
+				),
+				When(
+					TriggerEvent.EachUpkeep,
+					[],
+					new ReturnFromGraveyard(Ref.Source, ZoneType.Hand)
+				) with
+				{
+					If = new AtLeast(Count.NoncombatDamageToOpponentsLastTurn, 1),
+					FromGraveyard = true,
+				},
 			],
 		};
 

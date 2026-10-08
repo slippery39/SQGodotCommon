@@ -36,6 +36,8 @@ public enum TriggerEvent
 	YouActivateLoyaltyAbility,
 	YouActivateLoyaltyAbilityRemovingTwoOrMore,
 	BeginningOfCombatOnYourTurn,
+	YouSurveil, // "whenever you scry or surveil" — FRA has no scry
+	CreatureYouControlEnters, // Mabel: "Mabel or another creature you control"
 	SelfBecomesTargetOfOpponentsSpellOrAbility, // Ruric Thar, Biomagus
 }
 
@@ -54,6 +56,9 @@ public record TriggeredAbilityComponent(TriggerEvent On, ImmutableList<GameActio
 
 	/// <summary>Darklight Phoenix: "return this card from your graveyard" — it triggers from there, not the battlefield.</summary>
 	public bool FromGraveyard { get; init; }
+
+	/// <summary>"This ability triggers only once each turn." Stamped on the card as it goes on the stack.</summary>
+	public bool OncePerTurn { get; init; }
 }
 
 /// <summary>"[Cost]: [effects]." Uses the stack. Mana abilities are <see cref="ManaAbilityComponent"/>, which does not.</summary>
@@ -143,6 +148,9 @@ public record StaticEffectComponent(Affects Affects, string? Keyword = null) : G
 	/// it reads real P/T, which a P/T static would then feed back into.
 	/// </summary>
 	public int? OnlyPowerOrToughnessAtMost { get; init; }
+
+	/// <summary>Gallia: "each other creature you control with a +1/+1 counter on it".</summary>
+	public bool OnlyWithCounter { get; init; }
 }
 
 /// <summary>Thalia: "Noncreature spells your opponents cast cost {N} more to cast."</summary>

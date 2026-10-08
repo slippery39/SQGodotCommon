@@ -53,6 +53,9 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	/// <summary>"Target creature with flying".</summary>
 	public string? WithKeyword { get; init; }
 
+	/// <summary>Gallia, Mabel: "target creature that entered this turn".</summary>
+	public bool EnteredThisTurn { get; init; }
+
 	public bool IsLegal(GameState s, int controllerId, int sourceId, int targetId)
 	{
 		if (!s.HasObject(targetId))
@@ -98,7 +101,8 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		&& (NotTypes == CardType.None || !card.Is(NotTypes))
 		&& (MinToughness == 0 || s.Toughness(card) >= MinToughness)
 		&& (MaxPower == int.MaxValue || s.Power(card) <= MaxPower)
-		&& (WithKeyword is null || s.Has(card, WithKeyword));
+		&& (WithKeyword is null || s.Has(card, WithKeyword))
+		&& (!EnteredThisTurn || card.EnteredOnTurn == s.GetGame().TurnNumber);
 
 	static bool OnStack(GameState s, int id) =>
 		s.GetParent(id) == s.GetWellKnownId(MagicKeys.Stack);

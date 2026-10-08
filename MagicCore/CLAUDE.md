@@ -95,7 +95,12 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   draw, beginning of combat and end. **"This turn" lives in `MagicPlayer.ThisTurn`** (a `TurnTally`:
   lands, spells, cards drawn, life gained, surveils), REPLACED whole for BOTH players as each turn
   begins — "this turn" is every turn, not only yours, and a new count cannot miss the reset. Update
-  it with `s.Tally(…)`. Creatures that died this turn (anyone's) are on `MagicGame`.
+  it with `s.Tally(…)`. The finished turn's tally becomes `LastTurn` ("last turn" = the turn before
+  this one, whoever's). Creatures that died this turn (anyone's) are on `MagicGame`.
+- **"This ability triggers only once each turn"** is `TriggeredAbilityComponent.OncePerTurn`, stamped
+  on the card as it goes on the stack (`PutOnStack`) — a new object (CR 400.7) may trigger again.
+- **"Entered this turn"** is `Card.EnteredOnTurn`, stamped by `EnterBattlefield` — not
+  `ControlledSinceTurn`, which a control change would also move.
 - **Where triggers are read from:** permanents on the battlefield; a dying card's own "when this
   dies"; a graveyard card's abilities marked `FromGraveyard` (Darklight Phoenix) — those, and only
   those, trigger from there; and a trigger granted until end of turn (`UntilEndOfTurn.Trigger`,
@@ -126,7 +131,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - Mana abilities are not in `LegalActions` (pure AI branching); casting taps what it needs.
 - **A card plays only if `FraCards.IsImplemented`** — scripted, a basic land, or text that is only
   engine keywords. Anything else plays silently vanilla. **Every scripted card has a test in
-  `FraCardTests` that its ability FIRES**, through real casting and the real stack.
+  a `Sets/Fra*Tests` file that its ability FIRES** (`FraCardTests`, or the batch's own file —
+  `FraTriggerTests`, `FraStaticTests` …), through real casting and the real stack.
 - Card abilities are hand-written as data (`FraCards`); **name, cost, type, P/T and keywords come from
   `CardData`**, never retyped. Test cards are inline (`TestGames.Creature/Inline`).
 - **A card test asserts the PRINTED text's numbers** (Last Gasp is -3/-3) — that is the root rule's
@@ -145,7 +151,9 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 
 ## Known ceilings (each marked `ponytail:` in the code)
 
-Damage split among blockers is automatic · the legend rule keeps the newest · last-known information keeps a card's own characteristics, not what statics gave it · a dying card's own
+Damage split among blockers is automatic · triggers are matched against the battlefield at the next priority, so a
+source, or an entering creature, that is gone by then — destroyed later in the same resolution — is
+missed (one the state-based check kills is still seen) · the legend rule keeps the newest · last-known information keeps a card's own characteristics, not what statics gave it · a dying card's own
 "when this dies" looks back, but other leaves-the-battlefield triggers read the battlefield NOW (Edgar
 dying alongside a creature misses its death) · a "sacrifice the greatest" tie takes the first ·
 `GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana, no "do I need
@@ -158,9 +166,9 @@ needs · Empower Jace with two Jace tokens loads the first · surveil keeps the 
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 101 cards scripted
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 107 cards scripted
 in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
-dies / exile-until cards, and 19 step-trigger / per-turn / prowess cards. **Two real planeswalkers are
+dies / exile-until cards, and 25 step-trigger / per-turn / prowess / surveil-trigger cards. **Two real planeswalkers are
 in** (The Theorist, Ajani Unrelenting); **the other 6 are not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
 Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
 per-turn tracking, prowess ✓ · 7d prepare, flashback, cycling, graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether

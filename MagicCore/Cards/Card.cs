@@ -94,6 +94,12 @@ public record Card : GameObject
 	/// <summary>TurnNumber it came under its controller's control — summoning sickness reads it.</summary>
 	public int ControlledSinceTurn { get; init; }
 
+	/// <summary>TurnNumber it entered the battlefield — "target creature that entered this turn".</summary>
+	public int EnteredOnTurn { get; init; }
+
+	/// <summary>TurnNumber its "triggers only once each turn" ability last triggered.</summary>
+	public int OncePerTurnTriggeredOn { get; init; }
+
 	/// <summary>The player OR planeswalker it is attacking; 0 when not attacking. Never assume a player.</summary>
 	public int AttackingId { get; init; }
 
@@ -116,6 +122,8 @@ public record Card : GameObject
 			Loyalty = 0,
 			CastX = 0,
 			LoyaltyActivatedOnTurn = 0,
+			EnteredOnTurn = 0,
+			OncePerTurnTriggeredOn = 0,
 			Damage = 0,
 			DamagedByDeathtouch = false,
 			ControlledSinceTurn = 0,

@@ -49,6 +49,13 @@ public static class Conditions
 			.Add(ContextKeys.Source, card.Id);
 }
 
+/// <summary>Proft: "you may pay {2}" — asked only when it can be paid.</summary>
+public record CanPay(ManaCost Cost) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		ManaPayment.Find(s, (int)context[ContextKeys.Controller], Cost, 0) is not null;
+}
+
 /// <summary>Eye of Jace: "if there are seven or more cards in your graveyard".</summary>
 public record AtLeast(Count Count, int N) : Condition
 {

@@ -4,6 +4,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Rules;
 using MagicCore.Targeting;
+using MagicCore.Turns;
 
 namespace MagicCore.Effects;
 
@@ -56,6 +57,9 @@ public enum RefKind
 /// <summary>Who or what an effect acts on, resolved against the context at resolution.</summary>
 public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 {
+	/// <summary>Command the Stage: "each other Wizard token you control" — only cards with this subtype.</summary>
+	public string? Subtype { get; init; }
+
 	public static readonly Ref You = new(RefKind.You);
 	public static readonly Ref EachOpponent = new(RefKind.EachOpponent);
 	public static readonly Ref EachPlayer = new(RefKind.EachPlayer);
@@ -147,7 +151,11 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 				.Select(c => c.Id),
 			_ => Yours().Where(c => c.Is(Type)).Select(c => c.Id),
 		};
-		return ids.Where(id => id != 0 && s.HasObject(id));
+		return ids.Where(id =>
+			id != 0
+			&& s.HasObject(id)
+			&& (Subtype is null || (s.GetObject(id) is Card c && c.Subtypes.Contains(Subtype)))
+		);
 	}
 }
 
@@ -276,6 +284,7 @@ public enum CountOf
 	CardsYouDrewThisTurn,
 	YourSurveilsThisTurn,
 	SpellsYouCastThisTurn,
+	NoncombatDamageToOpponentsLastTurn,
 	CreaturesDiedThisTurn, // anyone's
 }
 
@@ -305,6 +314,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static readonly Count YourSurveilsThisTurn = new(0, null, CountOf.YourSurveilsThisTurn);
 	public static readonly Count SpellsYouCastThisTurn =
 		new(0, null, CountOf.SpellsYouCastThisTurn);
+	public static readonly Count NoncombatDamageToOpponentsLastTurn =
+		new(0, null, CountOf.NoncombatDamageToOpponentsLastTurn);
 	public static readonly Count CreaturesDiedThisTurn =
 		new(0, null, CountOf.CreaturesDiedThisTurn);
 
@@ -327,6 +338,11 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			return Sign * (context.TryGetValue(ContextKeys.X, out var x) ? (int)x : 0);
 		if (Kind == CountOf.CreaturesDiedThisTurn)
 			return Sign * s.GetGame().CreaturesDiedThisTurn;
+		if (Kind == CountOf.NoncombatDamageToOpponentsLastTurn)
+			return Sign
+				* s.GetPlayer(
+					s.OpponentOf((int)context[ContextKeys.Controller])
+				).LastTurn.NoncombatDamageTaken;
 		if (
 			Kind
 			is CountOf.LifeYouGainedThisTurn
@@ -403,7 +419,8 @@ public record Surveil(int N) : Effect
 
 	public override ActionResult Execute(GameState s)
 	{
-		s = s.Tally(Controller, t => t with { Surveils = t.Surveils + 1 }); // "if you've surveilled"
+		s = s.Tally(Controller, t => t with { Surveils = t.Surveils + 1 }) // "if you've surveilled"
+			.Raise(new SurveilledEvent(Controller));
 		var n = Math.Min(N, s.CardsIn(Controller, ZoneType.Library).Count());
 		if (n == 0)
 			return new(s);
@@ -477,16 +494,35 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 	}
 }
 
-/// <summary>Darklight Phoenix: "return this card from your graveyard to the battlefield".</summary>
-public record ReturnFromGraveyardToBattlefield(Ref What) : Effect
+/// <summary>"Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to your hand" (Command the Stage).</summary>
+public record ReturnFromGraveyard(Ref What, ZoneType To) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in All(What, s).ToList())
 			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, ZoneType.Graveyard))
-				s = s.EnterBattlefield(id, card.OwnerId);
+				s =
+					To == ZoneType.Battlefield
+						? s.EnterBattlefield(id, card.OwnerId)
+						: s.MoveCard(id, s.ZoneId(card.OwnerId, To));
 		return new(s);
 	}
+}
+
+/// <summary>Proft: "you may pay {2}" — the first step of a May's Then; its Can is <see cref="CanPay"/>.</summary>
+public record PayMana(ManaCost Cost, ImmutableList<GameAction> Then) : Effect
+{
+	/// <summary>Pays, then runs Then — or, unable to pay, does nothing at all ("if you do").</summary>
+	public override ActionResult Execute(GameState s) =>
+		ManaPayment.Find(s, Controller, Cost, 0) is not { } payment
+			? new(s)
+			: new(
+				ManaPayment
+					.Pay(s, Controller, payment)
+					.SpawnAction(
+						new PipelineAction { Steps = Then, PipelineContext = InputContext }
+					)
+			);
 }
 
 /// <summary>Way of the Paradox: "You may play an additional land this turn."</summary>

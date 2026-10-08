@@ -11,6 +11,9 @@ public record MagicPlayer : GameObject
 
 	/// <summary>What this player did this turn — any turn, theirs or yours. Replaced whole as each turn begins.</summary>
 	public TurnTally ThisTurn { get; init; } = new();
+
+	/// <summary>The turn before this one — "if an opponent was dealt noncombat damage last turn".</summary>
+	public TurnTally LastTurn { get; init; } = new();
 	public int MulligansTaken { get; init; }
 	public bool HasKeptHand { get; init; }
 
@@ -40,4 +43,7 @@ public record TurnTally
 
 	/// <summary>"If you've scried or surveilled this turn" — FRA has no scry, so surveils.</summary>
 	public int Surveils { get; init; }
+
+	/// <summary>Noncombat damage dealt TO this player (Command the Stage).</summary>
+	public int NoncombatDamageTaken { get; init; }
 }
