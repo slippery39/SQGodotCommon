@@ -13,7 +13,11 @@ public record AttackedEvent(int CardId) : GameEvent;
 public record SpellCastEvent(int CardId, int PlayerId) : GameEvent;
 
 /// <summary>A creature or planeswalker went from the battlefield to a graveyard — as it last existed.</summary>
-public record DiedEvent(Card LastKnown) : GameEvent;
+/// <param name="Attached">What was attached to it as it died — "when enchanted creature dies" looks back (CR 603.10a).</param>
+public record DiedEvent(Card LastKnown) : GameEvent
+{
+	public ImmutableList<Card> Attached { get; init; } = [];
+}
 
 public record PlayerDealtDamageEvent(int PlayerId, bool Combat, int SourceId) : GameEvent;
 
@@ -120,6 +124,20 @@ public static class Triggers
 				AbilitiesOf(died.LastKnown)
 					.Where(a => a.On == TriggerEvent.SelfDies && !a.FromGraveyard)
 					.Select(a => new Pending(died.LastKnown, a, died.LastKnown.Id, died.LastKnown))
+					// The Aura is in the graveyard by the time triggers are collected — the state-based
+					// check takes it in the same pass — so its trigger is read from it as it was.
+					.Concat(
+						died.Attached.SelectMany(attachment =>
+							AbilitiesOf(attachment)
+								.Where(a => a.On == TriggerEvent.AttachedCreatureDies)
+								.Select(a => new Pending(
+									attachment,
+									a,
+									died.LastKnown.Id,
+									died.LastKnown
+								))
+						)
+					)
 			);
 		return fromTheBattlefield
 			.Concat(fromTheDead)
@@ -212,6 +230,9 @@ public static class Triggers
 			(TriggerEvent.EachEndStep, StepBeganEvent began) => began.Step == Step.End,
 			(TriggerEvent.YouSurveil, SurveilledEvent surveilled) => surveilled.PlayerId
 				== source.ControllerId,
+			(TriggerEvent.AttachedCreatureAttacks, AttackedEvent attacked) => s.IsOnBattlefield(
+				attacked.CardId
+			) && Rules.Attachments.IsOn(source, s.GetCard(attacked.CardId)),
 			(TriggerEvent.YouPutLoyaltyCounters, LoyaltyCountersPutEvent put) => put.PutterId
 				== source.ControllerId,
 			(TriggerEvent.CreatureYouControlEnters, EnteredBattlefieldEvent entered) => Yours(

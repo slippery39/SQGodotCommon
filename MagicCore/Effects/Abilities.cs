@@ -41,6 +41,8 @@ public enum TriggerEvent
 	AnotherCreatureOrPlaneswalkerYouControlEnters, // Liliana the Repentant
 	YouSurveil, // "whenever you scry or surveil" — FRA has no scry
 	CreatureYouControlEnters, // Mabel: "Mabel or another creature you control"
+	AttachedCreatureAttacks, // "equipped creature attacks", and "Whenever this creature attacks" granted by Equipment
+	AttachedCreatureDies, // "When enchanted creature dies" — looks back: the Aura is already gone (CR 603.10a)
 	SelfBecomesTargetOfOpponentsSpellOrAbility, // Ruric Thar, Biomagus
 }
 
@@ -98,6 +100,9 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 	/// ExileFromGraveyardAdditionalCost, where a card exiling ITSELF paid for its own recursion.
 	/// </summary>
 	public TargetSpec? ExileFromGraveyard { get; init; }
+
+	/// <summary>Warrior's Blades' equip: "{1} less for each +1/+1 counter on the creature it targets".</summary>
+	public bool CostsLessPerCounterOnTarget { get; init; }
 
 	/// <summary>"Activate only if [condition]" — judged as it is activated.</summary>
 	public Condition? OnlyIf { get; init; }
@@ -157,6 +162,7 @@ public enum Affects
 	CreaturesYouControl,
 	OtherCreaturesYouControl,
 	LandsYouControl, // Marwyn: "Lands you control have hexproof."
+	AttachedCreature, // "Equipped/enchanted creature gets …": the permanent this is attached to
 }
 
 public enum StaticCondition
@@ -231,6 +237,13 @@ public record EntersPreparedComponent : GameComponent;
 
 /// <summary>On a prepared copy in exile: the creature (and which object of it) it belongs to.</summary>
 public record PreparedCopyOf(int CreatureId, int Incarnation) : GameComponent;
+
+/// <summary>
+/// "Enchant [Enchant]" — an Aura spell targets what it will enchant as it is CAST, so it can't be
+/// cast with nothing to enchant (MtgCore learned this from a Pacifism that resolved onto an empty
+/// board and sat inert). It attaches as it resolves (Rules/Attachments.cs).
+/// </summary>
+public record AuraComponent(TargetSpec Enchant) : GameComponent;
 
 /// <summary>"This spell can't be countered." Read by StackResolution.Counter.</summary>
 public record CantBeCountered : GameComponent;

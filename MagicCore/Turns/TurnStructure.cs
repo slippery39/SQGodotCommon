@@ -213,6 +213,8 @@ public static class StateBasedActions
 			foreach (var card in extraLegends)
 				s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
 
+			s = Rules.Attachments.Check(s, id); // CR 704.5m/n
+
 			// CR 704.5d: a token anywhere but the battlefield ceases to exist.
 			foreach (
 				var zone in new[]

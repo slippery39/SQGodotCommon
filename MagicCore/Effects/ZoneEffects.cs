@@ -398,6 +398,17 @@ public record MillAndMayTake(int N, CardType Types) : Effect
 	}
 }
 
+/// <summary>Equip: "Attach to target creature you control." This Equipment, to the target.</summary>
+public record AttachSourceTo(Ref Host) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var self = Ref.Source.Resolve(s, InputContext).FirstOrDefault();
+		var host = Permanents(Host, s).FirstOrDefault();
+		return new(self == 0 || host is null ? s : Attachments.Attach(s, self, host.Id));
+	}
+}
+
 /// <summary>"Sacrifice this …" — only what is still on the battlefield.</summary>
 public record Sacrifice(Ref What) : Effect
 {

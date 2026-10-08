@@ -98,6 +98,7 @@ public static class Characteristics
 				&& card.Is(CardType.Creature)
 				&& card.Id != source.Id,
 			Affects.LandsYouControl => yours && card.Is(CardType.Land),
+			Affects.AttachedCreature => Rules.Attachments.IsOn(source, card),
 			_ => false,
 		};
 		if (!affected || (effect.OnlyWithCounter && card.PlusOneCounters == 0))

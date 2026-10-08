@@ -26,6 +26,26 @@ public static class Costs
 		return card.GetComponent<FlashbackComponent>();
 	}
 
+	/// <summary>
+	/// An activated ability's effective cost for these targets — Warrior's Blades' equip is {1} less
+	/// for each +1/+1 counter on the creature it targets.
+	/// </summary>
+	public static ManaCost OfAbility(
+		GameState s,
+		ActivatedAbilityComponent ability,
+		System.Collections.Immutable.ImmutableArray<int> targets
+	)
+	{
+		if (
+			!ability.CostsLessPerCounterOnTarget
+			|| targets.IsDefaultOrEmpty
+			|| !s.IsOnBattlefield(targets[0])
+		)
+			return ability.Cost;
+		var counters = s.GetCard(targets[0]).PlusOneCounters;
+		return counters == 0 ? ability.Cost : ability.Cost.WithGeneric(-counters);
+	}
+
 	public static ManaCost Of(GameState s, int casterId, Card card)
 	{
 		var printed = Flashback(s, card)?.Cost ?? card.ManaCost; // flashback is an alternative cost: taxes still apply

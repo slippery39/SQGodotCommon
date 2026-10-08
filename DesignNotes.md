@@ -1105,3 +1105,4 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - the auto-tapper ignores what the rest of the hand needs
 - Empower Jace with two Jace tokens loads the first
 - surveil keeps the kept cards' order.
+- "when enchanted creature dies" sees what was attached as the creature moved; if ONE effect moves the creature AND its Aura, the Aura moved first is missed — no FRA card does that (record attachments per resolution if one ever does)

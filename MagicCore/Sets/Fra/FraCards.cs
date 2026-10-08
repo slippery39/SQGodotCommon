@@ -327,6 +327,18 @@ public static class FraCards
 			new CounterUnlessPays(Ref.EventObject, ManaCost.Parse(cost))
 		);
 
+	/// <summary>"Equip {N} ({N}: Attach to target creature you control. Equip only as a sorcery.)"</summary>
+	static ActivatedAbilityComponent Equip(string cost) =>
+		new(ManaCost.Parse(cost), [new AttachSourceTo(Ref.Target())])
+		{
+			SorcerySpeed = true,
+			Targets = [Creature with { Whose = Whose.You }],
+		};
+
+	/// <summary>"Equipped/enchanted creature gets +P/+T."</summary>
+	static StaticEffectComponent AttachedGets(int power, int toughness) =>
+		new(Affects.AttachedCreature) { Power = power, Toughness = toughness };
+
 	/// <summary>One bullet: its target words and effects. Its text is filled in from the card.</summary>
 	static Mode M(TargetSpec[] targets, params GameAction[] effects) =>
 		new("", [.. targets], [.. effects]);
@@ -2000,6 +2012,95 @@ public static class FraCards
 					ManaCost.Parse("{6}{G}{G}"),
 					[new ModifyUntilEndOfTurn(Ref.Source, 4, 4, "Trample")]
 				),
+			],
+
+			// ===== Auras and Equipment =====
+			["Medic's Kitesail"] =
+			[
+				AttachedGets(1, 0),
+				new StaticEffectComponent(Affects.AttachedCreature, "Flying"),
+				// "and has 'Whenever this creature attacks, you gain 1 life.'"
+				When(TriggerEvent.AttachedCreatureAttacks, [], new GainLife(Ref.You, 1)),
+				Equip("{2}"),
+			],
+			["Ferocity of the Hunt"] =
+			[
+				new AuraComponent(Creature),
+				AttachedGets(1, 0),
+				new StaticEffectComponent(Affects.AttachedCreature, "Deathtouch"),
+				When(
+					TriggerEvent.AttachedCreatureDies,
+					[],
+					new ReturnFromGraveyard(Ref.EventCard, ZoneType.Battlefield) { Tapped = true }
+				),
+			],
+			["Hunter's Axe"] =
+			[
+				AttachedGets(2, 0),
+				// "has 'Whenever this creature attacks, it gains your choice of trample or deathtouch
+				// until end of turn.'" — a choice, not printed bullets, so the modes are named here.
+				new TriggeredAbilityComponent(TriggerEvent.AttachedCreatureAttacks, [])
+				{
+					Modes =
+					[
+						new Mode(
+							"trample",
+							[],
+							[new ModifyUntilEndOfTurn(Ref.EventCard, 0, 0, "Trample")]
+						),
+						new Mode(
+							"deathtouch",
+							[],
+							[new ModifyUntilEndOfTurn(Ref.EventCard, 0, 0, "Deathtouch")]
+						),
+					],
+					Choose = 1,
+				},
+				Equip("{2}"),
+			],
+			["Warrior's Blades"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[new TargetSpec(TargetKind.AnyTarget)],
+					new DealDamage(Ref.Target(), 3),
+					new GainLife(Ref.You, 3)
+				),
+				AttachedGets(2, 1),
+				Equip("{3}") with
+				{
+					CostsLessPerCounterOnTarget = true,
+				},
+			],
+			["Lich's Relic"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new May(
+						"Pay {2}: destroy up to one of their creatures or planeswalkers?",
+						new CanPay(ManaCost.Parse("{2}")),
+						[
+							new PayMana(
+								ManaCost.Parse("{2}"),
+								[
+									new WhenYouDo(
+										[
+											CreatureOrPlaneswalker with
+											{
+												Whose = Whose.Opponent,
+												Optional = true,
+											},
+										],
+										[new Destroy(Ref.Target())]
+									),
+								]
+							),
+						]
+					)
+				),
+				AttachedGets(2, 1),
+				Equip("{2}"),
 			],
 		};
 

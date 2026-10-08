@@ -118,7 +118,10 @@ public static class MagicState
 			&& before.Is(CardType.Creature | CardType.Planeswalker)
 		)
 		{
-			s = s.Raise(new DiedEvent(before));
+			// ponytail: what is attached as THIS creature moves — if one effect moved its Aura first,
+			// "when enchanted creature dies" misses it. No FRA card does; record attachments per
+			// resolution if one ever does.
+			s = s.Raise(new DiedEvent(before) { Attached = [.. Rules.Attachments.On(s, before)] });
 			if (before.Is(CardType.Creature))
 				s = s.WithGame(
 					s.GetGame() with
@@ -158,7 +161,8 @@ public static class MagicState
 		int x = 0,
 		int extraCounters = 0,
 		bool tapped = false,
-		bool finality = false
+		bool finality = false,
+		int attachTo = 0
 	)
 	{
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield))
@@ -193,6 +197,12 @@ public static class MagicState
 					),
 			}
 		);
+		// An Aura enters attached: to the target it was cast at, or to what its controller chooses (CR 303.4f).
+		if (card.HasComponent<AuraComponent>())
+			s =
+				attachTo != 0
+					? Rules.Attachments.Attach(s, cardId, attachTo)
+					: Rules.Attachments.ChooseHostAsItEnters(s, cardId);
 		if (card.PrintedLoyalty > 0)
 			s = s.Raise(new LoyaltyCountersPutEvent(controllerId)); // entering with them is "putting" (CR 122.6)
 		if (card.HasComponent<ChoosesColorAsItEnters>())

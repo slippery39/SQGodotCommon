@@ -71,7 +71,15 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	/// <summary>The second of "one or two target creatures": optional, and not the first one again.</summary>
 	public bool NotThePrevious { get; init; }
 
-	public bool IsLegal(GameState s, int controllerId, int sourceId, int targetId)
+	/// <param name="targeting">False for a restriction that is not targeting — an Aura's "enchant",
+	/// an attachment choice: hexproof then doesn't matter (CR 702.11b names targets only).</param>
+	public bool IsLegal(
+		GameState s,
+		int controllerId,
+		int sourceId,
+		int targetId,
+		bool targeting = true
+	)
 	{
 		if (!s.HasObject(targetId))
 			return false;
@@ -136,7 +144,7 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		return typeOk
 			&& !(Another && targetId == sourceId)
 			&& Filters(s, card)
-			&& !(card.ControllerId != controllerId && s.Has(card, "Hexproof"));
+			&& !(targeting && card.ControllerId != controllerId && s.Has(card, "Hexproof"));
 	}
 
 	bool Filters(GameState s, Card card) =>

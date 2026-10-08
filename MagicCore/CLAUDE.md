@@ -36,6 +36,7 @@ MagicCore/
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions)
 ├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
 ├── FraCoverage.md       what FRA is scripted, what waits and why — status, not rules
+├── Rules/Attachments.cs THE Aura/Equipment rules: attach, what's on a permanent, fall-off (state-based)
 ├── Rules/Playable.cs    THE "may it be cast/played from here": hand, flashback, prepared copy, impulse exile
 ├── Rules/Prepare.cs     THE prepare rules: become prepared (a copy of the spell in exile), castable, unprepare
 ├── Rules/Life.cs        THE life-gain path — raises the event "whenever you gain life" reads
@@ -132,6 +133,10 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Hexproof** is checked in `TargetSpec.IsLegal` through `s.Has` (an opponent's spells and abilities
   only; mass effects never target). **Indestructible** is `s.IsIndestructible` — the Destroy effect and
   the lethal-damage check both ask it; 0 toughness still kills.
+- **Auras and Equipment are one mechanism** (`Card.AttachedToId`, Rules/Attachments.cs). An Aura targets
+  as it is cast (`AuraComponent`) and attaches on resolving; what either grants is a live static
+  (`Affects.AttachedCreature`), never stamped. "When enchanted creature dies" looks back through
+  `DiedEvent.Attached` — the state check takes the Aura in the same pass.
 - **Countering is `StackResolution.Counter`** — a spell to its graveyard through MoveCard (flashback and
   prepared copies still hold), an ability removed, "can't be countered" untouched. "Unless its
   controller pays" asks that player (`CounterUnlessPays`). **Ward** is a trigger whose "it" is the

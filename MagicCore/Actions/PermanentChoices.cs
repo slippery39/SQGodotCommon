@@ -88,6 +88,52 @@ public record PayToKeepChoice : YesNoChoice
 		: base(playerId, prompt) { }
 }
 
+/// <summary>An Aura entering without being cast: its controller chooses what it enchants (CR 303.4f).</summary>
+public record ChooseHostChoice : ChoiceAction
+{
+	public int PlayerId { get; init; }
+	public int AuraId { get; init; }
+
+	public ChooseHostChoice(int playerId, int auraId)
+	{
+		PlayerId = playerId;
+		AuraId = auraId;
+		Prompt = "Choose what it enchants";
+		OutputKey = ChoosePermanentChoice.Chosen;
+		MinChoices = 1;
+		MaxChoices = 1;
+	}
+
+	public override ImmutableList<ChoiceOption> GetOptions(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) =>
+		!s.IsOnBattlefield(AuraId)
+			? []
+			: new[] { s.Player1Id(), s.Player2Id() }
+				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+				.Where(c =>
+					c.Id != AuraId && Rules.Attachments.CanEnchant(s, s.GetCard(AuraId), c.Id)
+				)
+				.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
+				.ToImmutableList();
+
+	public override int GetDecidingPlayerId(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => PlayerId;
+}
+
+public record AttachChosenHostAction(int AuraId) : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			ChoosePermanentChoice.Read(InputContext).FirstOrDefault() is var host && host != 0
+				? Rules.Attachments.Attach(s, AuraId, host)
+				: s
+		);
+}
+
 /// <summary>Sacrifices what the previous choice picked (to its owner's graveyard — it dies).</summary>
 public record SacrificeChosenAction : GameAction
 {

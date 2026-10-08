@@ -217,7 +217,13 @@ public record ActivateAbilityAction : GameAction
 		if (!TargetSpec.AreLegal(s, ability.Targets, Targets, PlayerId, CardId))
 			return ValidationResult.Invalid("Illegal targets");
 		if (
-			ManaPayment.Find(s, PlayerId, ability.Cost, 0, excludeId: ability.TapCost ? CardId : 0)
+			ManaPayment.Find(
+				s,
+				PlayerId,
+				Costs.OfAbility(s, ability, Targets),
+				0,
+				excludeId: ability.TapCost ? CardId : 0
+			)
 			is null
 		)
 			return ValidationResult.Invalid("Cannot pay the cost");
@@ -230,7 +236,13 @@ public record ActivateAbilityAction : GameAction
 		s = ManaPayment.Pay(
 			s,
 			PlayerId,
-			ManaPayment.Find(s, PlayerId, ability.Cost, 0, ability.TapCost ? CardId : 0)!
+			ManaPayment.Find(
+				s,
+				PlayerId,
+				Costs.OfAbility(s, ability, Targets),
+				0,
+				ability.TapCost ? CardId : 0
+			)!
 		);
 		if (ability.TapCost)
 			s = s.UpdateObject(CardId, s.GetCard(CardId) with { IsTapped = true });
@@ -271,7 +283,8 @@ public static class StackResolution
 	) =>
 		card.GetComponent<SpellEffectsComponent>() is { } text
 			? Modal.Compose(text.Targets, text.Effects, text.Modes, modes)
-			: ([], []);
+		: card.GetComponent<AuraComponent>() is { } aura ? ([aura.Enchant], [])
+		: ([], []);
 
 	public static GameState Push(GameState s, StackAbility ability)
 	{
@@ -321,10 +334,25 @@ public static class StackResolution
 		if (top is Card permanent && !permanent.Is(CardType.Instant | CardType.Sorcery))
 		{
 			var cast = permanent.GetComponent<OnStackComponent>();
+			// An Aura spell whose target is now illegal doesn't resolve (CR 608.3b); else it enters on it.
+			var auraHost = 0;
+			var auraFizzles = false;
+			if (permanent.GetComponent<AuraComponent>() is { } aura)
+			{
+				auraHost = cast is { Targets.Length: > 0 } ? cast.Targets[0] : 0;
+				auraFizzles =
+					auraHost == 0
+					|| !aura.Enchant.IsLegal(s, permanent.ControllerId, permanent.Id, auraHost);
+			}
 			s =
-				cast?.CastFrom == ZoneType.Graveyard
+				cast?.CastFrom == ZoneType.Graveyard || auraFizzles
 					? s.MoveCard(permanent.Id, s.ZoneId(permanent.OwnerId, ZoneType.Graveyard)) // flashback: exiled instead (MoveCard)
-					: s.EnterBattlefield(permanent.Id, permanent.ControllerId, cast?.X ?? 0);
+					: s.EnterBattlefield(
+						permanent.Id,
+						permanent.ControllerId,
+						cast?.X ?? 0,
+						attachTo: auraHost
+					);
 			return Priority.Retain(s, s.GetGame().ActivePlayerId);
 		}
 

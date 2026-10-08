@@ -1,0 +1,97 @@
+using ImmutableGameObjects;
+using MagicCore.Actions;
+using MagicCore.Cards;
+using MagicCore.Effects;
+
+namespace MagicCore.Rules;
+
+/// <summary>
+/// Auras and Equipment (CR 301.5, 303.4) — ONE attachment mechanism, as in MtgCore, differing in
+/// two ways: an Aura attaches as it enters and dies without a legal host; Equipment attaches by its
+/// equip ability and merely falls off. What they grant is a live static on the attachment
+/// (Affects.AttachedCreature) — never stamped onto the host, which is how MtgCore's equipment
+/// boosts went stale. An attachment remembers its host's incarnation too: a host that leaves and
+/// comes back is a new object, and nothing is attached to it (CR 400.7).
+/// </summary>
+public static class Attachments
+{
+	/// <summary>THE "is this attached to that permanent" — same id and same object.</summary>
+	public static bool IsOn(Card attachment, Card host) =>
+		attachment.AttachedToId == host.Id && attachment.AttachedToIncarnation == host.Incarnation;
+
+	/// <summary>Its host, if that is still the same object on the battlefield.</summary>
+	public static Card? HostOf(GameState s, Card attachment) =>
+		attachment.AttachedToId != 0
+		&& s.IsOnBattlefield(attachment.AttachedToId)
+		&& s.GetCard(attachment.AttachedToId) is var host
+		&& IsOn(attachment, host)
+			? host
+			: null;
+
+	/// <summary>Attaches it — only while both are on the battlefield.</summary>
+	public static GameState Attach(GameState s, int attachmentId, int hostId) =>
+		s.IsOnBattlefield(attachmentId) && s.IsOnBattlefield(hostId)
+			? s.UpdateObject(
+				attachmentId,
+				s.GetCard(attachmentId) with
+				{
+					AttachedToId = hostId,
+					AttachedToIncarnation = s.GetCard(hostId).Incarnation,
+				}
+			)
+			: s;
+
+	/// <summary>What is attached to this permanent — the host as it is, or as it last was.</summary>
+	public static IEnumerable<Card> On(GameState s, Card host) =>
+		new[] { s.Player1Id(), s.Player2Id() }
+			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+			.Where(c => IsOn(c, host));
+
+	/// <summary>Could this Aura be on that permanent? The enchant restriction — not targeting, so hexproof doesn't matter.</summary>
+	public static bool CanEnchant(GameState s, Card aura, int hostId) =>
+		aura.GetComponent<AuraComponent>() is { } enchant
+		&& enchant.Enchant.IsLegal(s, aura.ControllerId, aura.Id, hostId, targeting: false);
+
+	/// <summary>
+	/// An Aura put onto the battlefield without being cast (Return to the Light Realms): its
+	/// controller chooses what it enchants (CR 303.4f). With nothing legal, the state check takes it.
+	/// </summary>
+	public static GameState ChooseHostAsItEnters(GameState s, int auraId)
+	{
+		var choice = new ChooseHostChoice(s.GetCard(auraId).ControllerId, auraId);
+		return choice
+			.GetOptions(s, System.Collections.Immutable.ImmutableDictionary<string, object>.Empty)
+			.IsEmpty
+			? s
+			: s.SpawnAction(
+				new PipelineAction { Steps = [choice, new AttachChosenHostAction(auraId)] }
+			);
+	}
+
+	/// <summary>
+	/// State-based (CR 704.5m/n): an Aura attached to nothing legal goes to its owner's graveyard;
+	/// an Equipment attached to something that is no longer a creature on the battlefield falls off.
+	/// </summary>
+	public static GameState Check(GameState s, int playerId)
+	{
+		foreach (var card in s.CardsIn(playerId, ZoneType.Battlefield).ToList())
+		{
+			var host = HostOf(s, card);
+			if (card.HasComponent<AuraComponent>())
+			{
+				if (host is null || !CanEnchant(s, card, host.Id))
+					s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+			}
+			else if (card.AttachedToId != 0 && (host is null || !host.Is(CardType.Creature)))
+				s = s.UpdateObject(
+					card.Id,
+					card with
+					{
+						AttachedToId = 0,
+						AttachedToIncarnation = 0,
+					}
+				);
+		}
+		return s;
+	}
+}

@@ -82,6 +82,8 @@ public static class Describe
 			parts.Add("token");
 		if (c.IsPrepared)
 			parts.Add("prepared");
+		if (Rules.Attachments.HostOf(s, c) is { } host)
+			parts.Add($"on {host.Name}");
 		return string.Join(" ", parts);
 	}
 

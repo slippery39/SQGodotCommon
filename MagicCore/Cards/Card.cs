@@ -106,6 +106,12 @@ public record Card : GameObject
 	/// <summary>Prepare: its prepare spell's copy waits in exile (Rules/Prepare.cs).</summary>
 	public bool IsPrepared { get; init; }
 
+	/// <summary>An Aura or Equipment: the permanent it is attached to; 0 if none (Rules/Attachments.cs).</summary>
+	public int AttachedToId { get; init; }
+
+	/// <summary>Which object of that id — a host that left and came back is a new one (CR 400.7).</summary>
+	public int AttachedToIncarnation { get; init; }
+
 	/// <summary>"If a creature with a finality counter on it would die, exile it instead" — MagicState.MoveCard.</summary>
 	public bool HasFinalityCounter { get; init; }
 
@@ -143,6 +149,8 @@ public record Card : GameObject
 			EnteredOnTurn = 0,
 			OncePerTurnTriggeredOn = 0,
 			IsPrepared = false,
+			AttachedToId = 0,
+			AttachedToIncarnation = 0,
 			HasFinalityCounter = false,
 			StunCounters = 0,
 			HasDealtCombatDamage = false,
