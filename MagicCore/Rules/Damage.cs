@@ -47,8 +47,17 @@ public static class Damage
 				}
 			);
 		else
-			return s;
+			return s; // its target is gone: no damage was dealt
 
+		// Ruric Thar, Magecrusher: "as long as they haven't dealt combat damage yet".
+		if (combat && s.IsOnBattlefield(source.Id) && !s.GetCard(source.Id).HasDealtCombatDamage)
+			s = s.UpdateObject(
+				source.Id,
+				s.GetCard(source.Id) with
+				{
+					HasDealtCombatDamage = true,
+				}
+			);
 		return s.Has(source, "Lifelink") ? Life.Gain(s, source.ControllerId, amount) : s;
 	}
 }

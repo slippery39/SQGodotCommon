@@ -112,6 +112,12 @@ public record Card : GameObject
 	/// <summary>"If a permanent with a stun counter would become untapped, remove one from it instead" — MagicState.Untap.</summary>
 	public int StunCounters { get; init; }
 
+	/// <summary>Ruric Thar, Magecrusher: "as long as they haven't dealt combat damage yet" — set by Rules.Damage.</summary>
+	public bool HasDealtCombatDamage { get; init; }
+
+	/// <summary>Its exhaust ability has been activated — never again for this object.</summary>
+	public bool ExhaustUsed { get; init; }
+
 	/// <summary>The player OR planeswalker it is attacking; 0 when not attacking. Never assume a player.</summary>
 	public int AttackingId { get; init; }
 
@@ -139,6 +145,8 @@ public record Card : GameObject
 			IsPrepared = false,
 			HasFinalityCounter = false,
 			StunCounters = 0,
+			HasDealtCombatDamage = false,
+			ExhaustUsed = false,
 			Damage = 0,
 			DamagedByDeathtouch = false,
 			ControlledSinceTurn = 0,

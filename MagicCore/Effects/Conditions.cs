@@ -65,6 +65,14 @@ public record SourceIsPrepared : Condition
 		&& s.GetObject((int)context[ContextKeys.Source]) is Card { IsPrepared: true };
 }
 
+/// <summary>Ruric Thar, Magecrusher: "as long as they haven't dealt combat damage yet" (with Not).</summary>
+public record SourceHasDealtCombatDamage : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.HasObject((int)context[ContextKeys.Source])
+		&& s.GetObject((int)context[ContextKeys.Source]) is Card { HasDealtCombatDamage: true };
+}
+
 /// <summary>A "you may" that can always be done.</summary>
 public record Always : Condition
 {

@@ -148,15 +148,21 @@ public static class Triggers
 		bool Yours(int cardId) =>
 			s.IsOnBattlefield(cardId) && s.GetCard(cardId).ControllerId == source.ControllerId;
 		var yourTurn = s.GetGame().ActivePlayerId == source.ControllerId;
+		bool AnotherOfYoursEntered(EnteredBattlefieldEvent entered, CardType types) =>
+			entered.CardId != source.Id
+			&& Yours(entered.CardId)
+			&& s.GetCard(entered.CardId).Is(types);
 
 		return (on, e) switch
 		{
 			(TriggerEvent.SelfEnters, EnteredBattlefieldEvent entered) => entered.CardId
 				== source.Id,
 			(TriggerEvent.AnotherCreatureYouControlEnters, EnteredBattlefieldEvent entered) =>
-				entered.CardId != source.Id
-					&& Yours(entered.CardId)
-					&& s.GetCard(entered.CardId).Is(CardType.Creature),
+				AnotherOfYoursEntered(entered, CardType.Creature),
+			(
+				TriggerEvent.AnotherCreatureOrPlaneswalkerYouControlEnters,
+				EnteredBattlefieldEvent entered
+			) => AnotherOfYoursEntered(entered, CardType.Creature | CardType.Planeswalker),
 			(TriggerEvent.LandYouControlEnters, EnteredBattlefieldEvent entered) => Yours(
 				entered.CardId
 			) && s.GetCard(entered.CardId).Is(CardType.Land),

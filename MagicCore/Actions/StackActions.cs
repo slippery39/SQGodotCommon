@@ -194,6 +194,8 @@ public record ActivateAbilityAction : GameAction
 			&& !onlyIf.Holds(s, Conditions.Of(card with { ControllerId = PlayerId }))
 		)
 			return ValidationResult.Invalid("Its condition isn't met");
+		if (ability.Exhaust && card.ExhaustUsed)
+			return ValidationResult.Invalid("Exhaust: activated once already");
 		if (
 			ability.DiscardACard
 				? DiscardId == CardId || !s.IsIn(DiscardId, PlayerId, ZoneType.Hand)
@@ -236,6 +238,8 @@ public record ActivateAbilityAction : GameAction
 		);
 		if (ability.TapCost)
 			s = s.UpdateObject(CardId, s.GetCard(CardId) with { IsTapped = true });
+		if (ability.Exhaust)
+			s = s.UpdateObject(CardId, s.GetCard(CardId) with { ExhaustUsed = true });
 		var source = s.GetCard(CardId); // as it was when activated — the cost may sacrifice it
 		IEnumerable<int> Paid(bool self, int chosen) =>
 			new[] { self ? CardId : 0, chosen }.Where(id => id != 0);

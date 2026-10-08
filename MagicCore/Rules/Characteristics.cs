@@ -29,6 +29,14 @@ public static class Characteristics
 	public static bool Has(this GameState s, Card card, string keyword) =>
 		card.HasOwn(keyword) || Statics(s, card, ptOnly: false).Any(a => a.Keyword == keyword);
 
+	/// <summary>
+	/// "Destroy" and lethal damage don't destroy it (CR 702.12b) — 0 toughness still does. The ONE
+	/// answer: the Destroy effect and the state-based check both ask here, so they can't disagree
+	/// (MtgCore keeps its two destroy actions in step by the same rule).
+	/// </summary>
+	public static bool IsIndestructible(this GameState s, Card card) =>
+		s.Has(card, "Indestructible");
+
 	record Applied(int Power, int Toughness, string? Keyword);
 
 	/// <summary>Every static on the battlefield, found once per (immutable) state — this sits under the AI's simulations.</summary>
@@ -89,6 +97,7 @@ public static class Characteristics
 			Affects.OtherCreaturesYouControl => yours
 				&& card.Is(CardType.Creature)
 				&& card.Id != source.Id,
+			Affects.LandsYouControl => yours && card.Is(CardType.Land),
 			_ => false,
 		};
 		if (!affected || (effect.OnlyWithCounter && card.PlusOneCounters == 0))

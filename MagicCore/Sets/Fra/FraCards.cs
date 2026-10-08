@@ -1740,6 +1740,130 @@ public static class FraCards
 				},
 				ViciousVerse("Hallway Heckler // Vicious Verse"),
 			],
+
+			// ===== Graveyard returns, hexproof, indestructible, exhaust =====
+			["Liliana the Repentant"] =
+			[
+				When(
+					TriggerEvent.AnotherCreatureOrPlaneswalkerYouControlEnters,
+					[],
+					new Mill(Ref.You, 2)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{5}{B}"),
+					[
+						new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield),
+						new AddCounters(Ref.Source, 1),
+					]
+				)
+				{
+					Exhaust = true,
+					SorcerySpeed = true,
+					Targets =
+					[
+						new TargetSpec(TargetKind.CardInYourGraveyard)
+						{
+							AnyOfTypes = CardType.Creature | CardType.Planeswalker,
+						},
+					],
+				},
+			],
+			["Marwyn, the Preserver"] =
+			[
+				new StaticEffectComponent(Affects.LandsYouControl, "Hexproof"),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)]
+				)
+				{
+					Targets =
+					[
+						new TargetSpec(TargetKind.CardInYourGraveyard)
+						{
+							AnyOfTypes = CardType.Land,
+						},
+					],
+				},
+			],
+			["Fateshaper Aspirant"] =
+			[
+				ModalWhen(
+					"Fateshaper Aspirant",
+					TriggerEvent.SelfEnters,
+					1,
+					M(
+						[
+							new TargetSpec(TargetKind.CardInYourGraveyard)
+							{
+								WithSupertype = Supertype.Legendary,
+							},
+						],
+						new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+					),
+					M(
+						[Creature],
+						new AddCounters(Ref.Target(), 1),
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Vigilance"),
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Indestructible")
+					)
+				),
+			],
+			["Return to the Light Realms"] =
+			[
+				Spell(
+					[],
+					new ReturnFromGraveyard(
+						Ref.YourGraveyard(
+							CardType.Creature
+								| CardType.Artifact
+								| CardType.Enchantment
+								| CardType.Planeswalker
+						),
+						ZoneType.Battlefield
+					)
+				),
+			],
+			["Restore with Empathy"] =
+			[
+				Spell(
+					[
+						new TargetSpec(TargetKind.CardInYourGraveyard)
+						{
+							AnyOfTypes =
+								CardType.Creature
+								| CardType.Artifact
+								| CardType.Enchantment
+								| CardType.Planeswalker
+								| CardType.Land,
+						},
+					],
+					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand),
+					new GainLife(Ref.You, 4)
+				),
+			],
+			["Rewrite Regrets"] =
+			[
+				Spell(
+					[
+						new TargetSpec(TargetKind.CardInYourGraveyard)
+						{
+							AnyOfTypes = CardType.Creature | CardType.Planeswalker,
+							MaxManaValue = 6,
+						},
+					],
+					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield),
+					new EmpowerJace(2)
+				),
+			],
+			// ponytail: "This spell can't be countered." is unenforced — FRA's counterspells aren't
+			// scripted yet; give a spell an Uncounterable flag when the first one is.
+			["Ruric Thar, Magecrusher"] =
+			[
+				new StaticEffectComponent(Affects.Self, "Hexproof")
+				{
+					If = new Not(new SourceHasDealtCombatDamage()),
+				},
+			],
 		};
 
 	public static CardDefinition Get(string name) =>

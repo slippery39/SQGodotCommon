@@ -36,6 +36,7 @@ public enum TriggerEvent
 	YouActivateLoyaltyAbility,
 	YouActivateLoyaltyAbilityRemovingTwoOrMore,
 	BeginningOfCombatOnYourTurn,
+	AnotherCreatureOrPlaneswalkerYouControlEnters, // Liliana the Repentant
 	YouSurveil, // "whenever you scry or surveil" — FRA has no scry
 	CreatureYouControlEnters, // Mabel: "Mabel or another creature you control"
 	SelfBecomesTargetOfOpponentsSpellOrAbility, // Ruric Thar, Biomagus
@@ -98,6 +99,13 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 
 	/// <summary>"Activate only if [condition]" — judged as it is activated.</summary>
 	public Condition? OnlyIf { get; init; }
+
+	/// <summary>
+	/// "Exhaust — … (Activate each exhaust ability only once.)" — stamped on the card as it is
+	/// activated. ponytail: one stamp per card, as no FRA card has two exhaust abilities.
+	/// Not MtgCore's "exhaust", which is its tapping.
+	/// </summary>
+	public bool Exhaust { get; init; }
 }
 
 /// <summary>
@@ -146,6 +154,7 @@ public enum Affects
 	Self,
 	CreaturesYouControl,
 	OtherCreaturesYouControl,
+	LandsYouControl, // Marwyn: "Lands you control have hexproof."
 }
 
 public enum StaticCondition

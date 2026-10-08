@@ -36,6 +36,9 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 
 	public bool Nonlegendary { get; init; }
 
+	/// <summary>Fateshaper Aspirant: "target legendary card". None means any.</summary>
+	public Supertype WithSupertype { get; init; }
+
 	/// <summary>"That's blue or red" — empty means any colour.</summary>
 	public ImmutableArray<ManaColor> AnyOfColors { get; init; } = [];
 
@@ -72,7 +75,8 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 				&& s.IsIn(targetId, controllerId, ZoneType.Graveyard)
 				&& targetId != sourceId
 				&& (AnyOfTypes == CardType.None || inGraveyard.Is(AnyOfTypes))
-				&& inGraveyard.ManaCost.ManaValue <= MaxManaValue;
+				&& inGraveyard.ManaCost.ManaValue <= MaxManaValue
+				&& (WithSupertype == Supertype.None || inGraveyard.Is(WithSupertype));
 		var whoseOk = (Whose, s.GetObject(targetId)) switch
 		{
 			(Whose.Any, _) => true,
@@ -105,7 +109,15 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 			TargetKind.Permanent => AnyOfTypes == CardType.None || card.Is(AnyOfTypes),
 			_ => card.Is(CardType.Creature | CardType.Planeswalker),
 		};
-		return typeOk && !(Another && targetId == sourceId) && Filters(s, card);
+		// Hexproof (CR 702.11b): not a legal target for an opponent's spell or ability. Read through
+		// s.Has, the one effective-keyword answer — MtgCore once asked a second question here and
+		// every equipment-granted hexproof protected nothing. Mass effects never target, so they
+		// pass. The same test also filters "a creature you control" for sacrifices — always yours,
+		// so hexproof never bites there.
+		return typeOk
+			&& !(Another && targetId == sourceId)
+			&& Filters(s, card)
+			&& !(card.ControllerId != controllerId && s.Has(card, "Hexproof"));
 	}
 
 	bool Filters(GameState s, Card card) =>

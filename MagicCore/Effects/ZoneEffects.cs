@@ -15,6 +15,7 @@ public record Destroy(Ref What) : Effect
 	public override ActionResult Execute(GameState s) =>
 		new(
 			Permanents(What, s)
+				.Where(c => !s.IsIndestructible(c))
 				.Aggregate(
 					s,
 					(st, c) => st.MoveCard(c.Id, st.ZoneId(c.OwnerId, ZoneType.Graveyard))

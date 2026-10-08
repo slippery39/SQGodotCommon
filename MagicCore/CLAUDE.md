@@ -35,6 +35,7 @@ MagicCore/
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions)
 ├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
+├── FraCoverage.md       what FRA is scripted, what waits and why — status, not rules
 ├── Rules/Prepare.cs     THE prepare rules: become prepared (a copy of the spell in exile), castable, unprepare
 ├── Rules/Life.cs        THE life-gain path — raises the event "whenever you gain life" reads
 ├── Cards/Card.cs        Card (computed P/T + keywords, permanent/combat state, Fresh()), CardFactory
@@ -127,6 +128,9 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   `ActivatedAbilityComponent.From`; card costs (discard this / a card, exile this / another card)
   are chosen like a sacrifice, one legal action each. A finality counter exiles a creature instead
   of letting it die (`MoveCard`); `MagicState.Untap` is the ONE untap, so a stun counter eats it.
+- **Hexproof** is checked in `TargetSpec.IsLegal` through `s.Has` (an opponent's spells and abilities
+  only; mass effects never target). **Indestructible** is `s.IsIndestructible` — the Destroy effect and
+  the lethal-damage check both ask it; 0 toughness still kills.
 - **Targets in a graveyard** are `TargetKind.CardInYourGraveyard` — the same legality test on choosing
   and resolving. "One or two target creatures" is two words, the second `Optional` and `NotThePrevious`.
 - **"You may … If you do"** is `May` (a `YesNoChoice`, asked only when it can be done) or
@@ -173,7 +177,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 
 ## Known ceilings (each marked `ponytail:` in the code)
 
-Damage split among blockers is automatic · triggers are matched against the battlefield at the next priority, so a
+Damage split among blockers is automatic · an exhaust stamp is per card, not per ability · "can't be
+countered" is unenforced until a counterspell is scripted (Ruric Thar, Magecrusher) · triggers are matched against the battlefield at the next priority, so a
 source, or an entering creature, that is gone by then — destroyed later in the same resolution — is
 missed (one the state-based check kills is still seen) · the legend rule keeps the newest · last-known information keeps a card's own characteristics, not what statics gave it · a dying card's own
 "when this dies" looks back, but other leaves-the-battlefield triggers read the battlefield NOW (Edgar
@@ -184,15 +189,7 @@ this mana now" when choosing a tapped dual, and it loses slow races to evasive f
 lone blocker instead of refusing the declaration · the auto-tapper ignores what the rest of the hand
 needs · Empower Jace with two Jace tokens loads the first · surveil keeps the kept cards' order.
 
-## What FRA demands (read the rules text before building each)
+## FRA cards
 
-Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
-**Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 143 cards scripted
-in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
-dies / exile-until cards, 25 step-trigger / per-turn / prowess / surveil-trigger cards, the 6 flashback cards, 19 prepare cards (Pyre Rhymer and Heartwood Crafter wait: a mana-tap
-trigger, restricted mana), and 12 landcycling / graveyard-ability cards. **Two real planeswalkers are
-in** (The Theorist, Ajani Unrelenting); **the other 6 are not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
-Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
-per-turn tracking, prowess ✓ · 7d-1 flashback ✓ · 7d-2 prepare ✓ · 7d-3a landcycling, graveyard abilities ✓ · 7d-3b graveyard returns, hexproof, indestructible. The Bo1 hand smoother is Arena's published description; its weighting and whether
-limited Bo1 uses it are unconfirmed — hence `handSmoothing`.
+**Read each card's FULL rules text before building it** (a listing truncates; Yoshimaru's hidden
+ability was found that way). Coverage — what is scripted, what waits and why — is in `FraCoverage.md`.

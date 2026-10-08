@@ -127,7 +127,8 @@ public sealed class GreedyAi(int playerId)
 		{
 			var blocker = s.GetCard(block.CreatureId);
 			var safe = choice.Options.Where(o =>
-				o.Id != CombatOption.None && s.Power(s.GetCard(o.Id)) < s.Toughness(blocker)
+				o.Id != CombatOption.None
+				&& (s.Power(s.GetCard(o.Id)) < s.Toughness(blocker) || s.IsIndestructible(blocker))
 			);
 			return [safe.Select(o => o.Id).FirstOrDefault(CombatOption.None)];
 		}
@@ -180,8 +181,8 @@ public sealed class GreedyAi(int playerId)
 		// Alive is decided by the real toughness (a pump that saved it counts); its VALUE by what
 		// lasts past this turn — statics yes ("creatures you control have trample" stays), until-
 		// end-of-turn pumps and grants no.
-		if (s.Toughness(c) - c.Damage <= 0)
-			return 0;
+		if (s.Toughness(c) <= 0 || (s.Toughness(c) - c.Damage <= 0 && !s.IsIndestructible(c)))
+			return 0; // the state-based check's own question: lethal damage doesn't kill indestructible
 		var pumps = c.GetComponents<UntilEndOfTurn>().ToList();
 		var power = s.Power(c) - pumps.Sum(u => u.Power);
 		var toughness = Math.Max(1, s.Toughness(c) - pumps.Sum(u => u.Toughness) - c.Damage);

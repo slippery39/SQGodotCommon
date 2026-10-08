@@ -181,8 +181,13 @@ public static class StateBasedActions
 					c.Is(CardType.Creature)
 					&& (
 						s.Toughness(c) <= 0
-						|| c.Damage >= s.Toughness(c)
-						|| (c.DamagedByDeathtouch && c.Damage > 0)
+						|| (
+							!s.IsIndestructible(c)
+							&& (
+								c.Damage >= s.Toughness(c)
+								|| (c.DamagedByDeathtouch && c.Damage > 0)
+							)
+						)
 					)
 				)
 				.ToList();

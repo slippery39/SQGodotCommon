@@ -2,7 +2,9 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
+using MagicCore.Rules;
 using MagicCore.Sets.Fra;
+using MagicCore.Targeting;
 using MagicCore.Turns;
 
 namespace MagicCore.Tests.Sets;
@@ -318,5 +320,229 @@ public class FraGraveyardTests : FraBoardTest
 			s.DistinctMoves(s.LegalActions()).OfType<ActivateAbilityAction>().Count(),
 			Is.EqualTo(1)
 		);
+	}
+
+	// ===== Graveyard returns, hexproof, indestructible, exhaust =====
+
+	[Test]
+	public void LilianaTheRepentant_MillsTwoAsAnotherCreatureEnters()
+	{
+		Field(FraCards.Get("Liliana the Repentant"), me);
+		var graveyard = s.CardsIn(me, ZoneType.Graveyard).Count();
+		Cast(Hand(TestGames.Creature("Bear", "2/2"), me), []);
+		Assert.That(s.CardsIn(me, ZoneType.Graveyard).Count(), Is.EqualTo(graveyard + 2));
+	}
+
+	[Test]
+	public void LilianaTheRepentant_ExhaustReturnsACreatureCard_OnlyOnce()
+	{
+		var liliana = Field(FraCards.Get("Liliana the Repentant"), me);
+		var first = InGraveyard(TestGames.Creature("First", "2/2"));
+		var second = InGraveyard(TestGames.Creature("Second", "2/2"));
+
+		Activate(Activations(liliana).First(a => a.Targets[0] == first));
+
+		Assert.That(Alive(first));
+		Assert.That(s.GetCard(liliana).PlusOneCounters, Is.EqualTo(1));
+		s = TestGames.PassUntil(
+			s,
+			x => x.GetGame().Step == Step.PreCombatMain && x.GetGame().TurnNumber == 3
+		);
+		Assert.That(s.IsIn(second, me, ZoneType.Graveyard));
+		Assert.That(Activations(liliana), Is.Empty, "exhaust: once, ever");
+	}
+
+	/// <summary>What the opponent's spell may target right now, with them holding priority — the real casting path.</summary>
+	IEnumerable<int> TheirTargets(int spell)
+	{
+		if (s.GetGame().PriorityPlayerId == me)
+			s = s.Act(new PassPriorityAction { PlayerId = me });
+		return s.LegalActions()
+			.OfType<CastSpellAction>()
+			.Where(c => c.CardId == spell)
+			.Select(c => c.Targets[0]);
+	}
+
+	CardDefinition DestroyTargetPermanent() =>
+		new(
+			TestGames.Inline("Shatter", "{1}", "Instant").Data,
+			[
+				new SpellEffectsComponent([new Destroy(Ref.Target())])
+				{
+					Targets = [new TargetSpec(TargetKind.Permanent)],
+				},
+			]
+		);
+
+	[Test]
+	public void MarwynThePreserver_YourLandsHaveHexproof_AndALandCardComesBack()
+	{
+		var marwyn = Field(FraCards.Get("Marwyn, the Preserver"), me);
+		var land = s.CardsIn(me, ZoneType.Battlefield).First(c => c.Is(CardType.Land)).Id;
+		var theirLand = s.CardsIn(them, ZoneType.Battlefield).First(c => c.Is(CardType.Land)).Id;
+		var shatter = Hand(DestroyTargetPermanent(), them);
+		var targets = TheirTargets(shatter).ToList();
+		Assert.That(targets, Does.Not.Contain(land), "an opponent can't target your lands");
+		Assert.That(targets, Does.Contain(marwyn).And.Contain(theirLand), "only your lands");
+
+		s = s.Act(new PassPriorityAction { PlayerId = them }); // back to my main phase
+		s = TestGames.PassUntil(
+			s,
+			x =>
+				x.GetGame().Step == Step.PreCombatMain
+				&& x.GetGame().ActivePlayerId == me
+				&& x.GetGame().TurnNumber == 3
+		);
+
+		var dead = InGraveyard(TestGames.Card("Forest"));
+		Activate(Activations(marwyn).Single(a => a.Targets[0] == dead));
+		Assert.That(s.IsIn(dead, me, ZoneType.Hand));
+	}
+
+	[Test]
+	public void RuricTharMagecrusher_HexproofUntilItDealsCombatDamage()
+	{
+		var ruric = Field(FraCards.Get("Ruric Thar, Magecrusher"), me);
+		var gasp = Hand("Last Gasp", them);
+		Assert.That(TheirTargets(gasp), Does.Not.Contain(ruric), "hexproof");
+		s = s.Act(new PassPriorityAction { PlayerId = them });
+
+		s = TestGames.PassUntil(s, x => x.IsWaitingForChoice);
+		s = s.Choose([them]);
+		s = TestGames.PassUntil(s, x => x.GetGame().Step == Step.PostCombatMain);
+
+		Assert.That(TheirTargets(gasp), Does.Contain(ruric), "it has dealt combat damage");
+	}
+
+	[Test]
+	public void RuricTharMagecrusher_DamageToSomethingAlreadyGone_KeepsHexproof()
+	{
+		var ruric = Field(FraCards.Get("Ruric Thar, Magecrusher"), me);
+		var walker = Field(TestGames.Creature("Gone", "1/1"), them);
+		s = s.Sacrifice(walker); // TEST SETUP: its combat target left before damage
+
+		s = Damage.Deal(s, s.GetCard(ruric), walker, 7, combat: true);
+
+		Assert.That(s.GetCard(ruric).HasDealtCombatDamage, Is.False, "no damage was dealt");
+	}
+
+	[Test]
+	public void FateshaperAspirant_ReturnsALegendaryCard()
+	{
+		var legend = InGraveyard("Liliana the Repentant");
+		InGraveyard(TestGames.Creature("Plain", "2/2"));
+		var aspirant = Hand("Fateshaper Aspirant", me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = aspirant });
+		var offered = new List<int>();
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseModesChoice => [0],
+				ChooseTargetChoice t => offered = [.. t.Options.Select(o => o.Id)],
+				_ => [],
+			}
+		);
+		Assert.That(offered, Is.EqualTo(new[] { legend }), "legendary only");
+		Assert.That(s.IsIn(legend, me, ZoneType.Hand));
+	}
+
+	[Test]
+	public void FateshaperAspirant_IndestructibleSurvivesDestroyAndDamage_NotZeroToughness()
+	{
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+		var aspirant = Hand("Fateshaper Aspirant", me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = aspirant });
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseModesChoice => [1],
+				ChooseTargetChoice => [bear],
+				_ => [],
+			}
+		);
+		Assert.That(
+			(
+				s.GetCard(bear).PlusOneCounters,
+				s.Has(s.GetCard(bear), "Vigilance"),
+				s.IsIndestructible(s.GetCard(bear))
+			),
+			Is.EqualTo((1, true, true))
+		);
+
+		Cast(
+			Hand(
+				TestGames.Inline("Wrath", "{1}", "Instant", null, new Destroy(Ref.AllCreatures)),
+				me
+			),
+			[]
+		);
+		Assert.That(Alive(bear), "destroy doesn't");
+		s = Damage.Deal(s, s.GetCard(bear), bear, 10); // TEST SETUP: lethal damage
+		s = StateBasedActions.Check(s);
+		Assert.That(Alive(bear), "lethal damage doesn't");
+
+		Cast(
+			Hand(
+				TestGames.Inline(
+					"Wither",
+					"{1}",
+					"Instant",
+					null,
+					new ModifyUntilEndOfTurn(Ref.AllCreatures, -10, -10)
+				),
+				me
+			),
+			[]
+		);
+		Assert.That(Alive(bear), Is.False, "0 toughness still does");
+	}
+
+	[Test]
+	public void ReturnToTheLightRealms_ReturnsEveryNonlandPermanentCard()
+	{
+		var creature = InGraveyard(TestGames.Creature("Creature", "2/2"));
+		var land = InGraveyard(TestGames.Card("Forest"));
+		var instant = InGraveyard(TestGames.Inline("Trick", "{R}", "Instant"));
+		Cast(Hand("Return to the Light Realms", me), []);
+		Assert.That(
+			(
+				Alive(creature),
+				s.IsIn(land, me, ZoneType.Graveyard),
+				s.IsIn(instant, me, ZoneType.Graveyard)
+			),
+			Is.EqualTo((true, true, true))
+		);
+	}
+
+	[Test]
+	public void RestoreWithEmpathy_APermanentCardToHandAndFourLife()
+	{
+		var land = InGraveyard(TestGames.Card("Forest"));
+		InGraveyard(TestGames.Inline("Trick", "{R}", "Instant"));
+		var restore = Hand("Restore with Empathy", me);
+		Assert.That(
+			Casts(restore).Select(c => c.Targets[0]),
+			Is.EqualTo(new[] { land }),
+			"permanent cards only"
+		);
+		var life = Life(me);
+
+		Cast(restore, [], land);
+
+		Assert.That((s.IsIn(land, me, ZoneType.Hand), Life(me)), Is.EqualTo((true, life + 4)));
+	}
+
+	[Test]
+	public void RewriteRegrets_ReturnsACreatureOfManaValueSixOrLess_AndEmpowersJaceTwo()
+	{
+		var six = InGraveyard(TestGames.CreatureCosting("{5}{B}", "Six", "6/6"));
+		InGraveyard(TestGames.CreatureCosting("{6}{B}", "Seven", "7/7"));
+		var regrets = Hand("Rewrite Regrets", me);
+		Assert.That(Casts(regrets).Select(c => c.Targets[0]), Is.EqualTo(new[] { six }));
+
+		Cast(regrets, [], six);
+
+		Assert.That(Alive(six));
+		Assert.That(Jace(me)!.Loyalty, Is.EqualTo(2));
 	}
 }

@@ -86,6 +86,26 @@ public class GreedyAiTests
 		Assert.That(ai.Evaluate(s), Is.GreaterThan(before));
 	}
 
+	// Lethal damage doesn't kill an indestructible creature, so the AI must not score it as dead.
+	[Test]
+	public void Evaluate_ADamagedIndestructibleCreature_StillCounts()
+	{
+		var s = TestGames.InFirstMain();
+		var me = s.GetGame().StartingPlayerId;
+		var ai = new GreedyAi(me);
+		var before = ai.Evaluate(s);
+		int bear;
+		(s, bear) = TestGames.Put(s, me, TestGames.Creature("Bear", "2/2"), ZoneType.Battlefield);
+		var indestructible = (Card)
+			s.GetCard(bear).WithComponent(new UntilEndOfTurn(Keyword: "Indestructible")) with
+		{
+			Damage = 5,
+		};
+		s = s.UpdateObject(bear, indestructible);
+
+		Assert.That(ai.Evaluate(s), Is.GreaterThan(before));
+	}
+
 	// At 0.8 per loyalty counter the AI valued a counter at two thirds of a card, so it never spent
 	// Jace's loyalty on anything — the Jace deck's engine sat idle in AI hands.
 	[Test]
