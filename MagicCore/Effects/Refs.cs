@@ -175,6 +175,7 @@ public enum CountOf
 	YourSurveilsThisTurn,
 	SpellsYouCastThisTurn,
 	NoncombatDamageToOpponentsLastTurn,
+	NoncombatDamageToOpponentsThisTurn,
 	CreaturesDiedThisTurn, // anyone's
 }
 
@@ -209,6 +210,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 		new(0, null, CountOf.SpellsYouCastThisTurn);
 	public static readonly Count NoncombatDamageToOpponentsLastTurn =
 		new(0, null, CountOf.NoncombatDamageToOpponentsLastTurn);
+	public static readonly Count NoncombatDamageToOpponentsThisTurn =
+		new(0, null, CountOf.NoncombatDamageToOpponentsThisTurn);
 	public static readonly Count CreaturesDiedThisTurn =
 		new(0, null, CountOf.CreaturesDiedThisTurn);
 
@@ -238,6 +241,10 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			return s.GetPlayer(
 				s.OpponentOf((int)context[ContextKeys.Controller])
 			).LastTurn.NoncombatDamageTaken;
+		if (Kind == CountOf.NoncombatDamageToOpponentsThisTurn)
+			return s.GetPlayer(
+				s.OpponentOf((int)context[ContextKeys.Controller])
+			).ThisTurn.NoncombatDamageTaken;
 		if (
 			Kind
 			is CountOf.LifeYouGainedThisTurn

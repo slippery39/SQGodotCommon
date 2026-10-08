@@ -21,6 +21,7 @@ public static class Describe
 						? " from graveyard (flashback)"
 						: ""
 				)
+				+ (s.GetObject(c.CardId) is Card { IsCopy: true } ? " (prepared copy)" : "")
 				+ (c.X > 0 ? $" (X={c.X})" : "")
 				+ (c.Modes.Length > 0 ? $" ({ModeText(s, c)})" : "")
 				+ Targets(s, c.Targets)
@@ -69,6 +70,8 @@ public static class Describe
 			parts.Add("blocking");
 		if (c.IsToken)
 			parts.Add("token");
+		if (c.IsPrepared)
+			parts.Add("prepared");
 		return string.Join(" ", parts);
 	}
 

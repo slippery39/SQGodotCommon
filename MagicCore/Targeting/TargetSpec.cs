@@ -57,7 +57,7 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	/// <summary>Gallia, Mabel: "target creature that entered this turn".</summary>
 	public bool EnteredThisTurn { get; init; }
 
-	/// <summary>"With mana value 3 or less" — cards in a graveyard.</summary>
+	/// <summary>"With mana value 3 or less" — a card in a graveyard or a permanent.</summary>
 	public int MaxManaValue { get; init; } = int.MaxValue;
 
 	/// <summary>The second of "one or two target creatures": optional, and not the first one again.</summary>
@@ -115,7 +115,9 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		&& (MinToughness == 0 || s.Toughness(card) >= MinToughness)
 		&& (MaxPower == int.MaxValue || s.Power(card) <= MaxPower)
 		&& (WithKeyword is null || s.Has(card, WithKeyword))
-		&& (!EnteredThisTurn || card.EnteredOnTurn == s.GetGame().TurnNumber);
+		&& (!EnteredThisTurn || card.EnteredOnTurn == s.GetGame().TurnNumber)
+		&& card.ManaCost.ManaValue + (card.GetComponent<Actions.OnStackComponent>()?.X ?? 0)
+			<= MaxManaValue; // on the stack, X counts (CR 202.3e)
 
 	static bool OnStack(GameState s, int id) =>
 		s.GetParent(id) == s.GetWellKnownId(MagicKeys.Stack);

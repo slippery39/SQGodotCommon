@@ -154,7 +154,7 @@ public static class MagicState
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield))
 			.Raise(new EnteredBattlefieldEvent(cardId));
 		var card = s.GetCard(cardId);
-		return s.UpdateObject(
+		s = s.UpdateObject(
 			cardId,
 			card with
 			{
@@ -179,6 +179,7 @@ public static class MagicState
 					&& !EntersUntapped(s, card.Id, controllerId, tapped.Unless),
 			}
 		);
+		return card.HasComponent<EntersPreparedComponent>() ? Rules.Prepare.Become(s, cardId) : s;
 	}
 
 	/// <summary>"This land enters tapped unless …", judged as it enters — "other" excludes itself.</summary>

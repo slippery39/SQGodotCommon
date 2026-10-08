@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using ImmutableGameObjects;
+using MagicCore.Cards;
 using MagicCore.Turns;
 
 namespace MagicCore.Actions;
@@ -34,6 +35,53 @@ public record ChooseCardsFromHandChoice : ChoiceAction
 			ImmutableList<int> ids => ids,
 			_ => [],
 		};
+}
+
+/// <summary>"Search your library for a [Type] card" — any one of them, or none (a search may fail to find).</summary>
+public record ChooseFromLibraryChoice : ChoiceAction
+{
+	public int PlayerId { get; init; }
+	public CardType Type { get; init; }
+
+	public ChooseFromLibraryChoice()
+	{
+		OutputKey = ChooseCardsFromHandChoice.Chosen;
+		MinChoices = 0;
+		MaxChoices = 1;
+	}
+
+	/// <summary>By name, not library order — the order is hidden information.</summary>
+	public override ImmutableList<ChoiceOption> GetOptions(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) =>
+		s.CardsIn(PlayerId, ZoneType.Library)
+			.Where(c => c.Is(Type))
+			.DistinctBy(c => c.Name) // two Forests are one choice: the library is shuffled after
+			.OrderBy(c => c.Name)
+			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
+			.ToImmutableList();
+
+	public override int GetDecidingPlayerId(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => PlayerId;
+}
+
+/// <summary>The chosen cards go to a zone of their owner's — a searched land to the hand or graveyard.</summary>
+public record MoveChosenToAction(int PlayerId, ZoneType To) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
+			s = s.MoveCard(id, s.ZoneId(PlayerId, To));
+		return new ActionResult(s);
+	}
+}
+
+public record ShuffleLibraryAction(int PlayerId) : GameAction
+{
+	public override ActionResult Execute(GameState s) => new(s.Shuffle(PlayerId));
 }
 
 public record PutChosenOnBottomAction : GameAction

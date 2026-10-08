@@ -33,6 +33,7 @@ MagicCore/
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions)
 ├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
+├── Rules/Prepare.cs     THE prepare rules: become prepared (a copy of the spell in exile), castable, unprepare
 ├── Rules/Life.cs        THE life-gain path — raises the event "whenever you gain life" reads
 ├── Cards/Card.cs        Card (computed P/T + keywords, permanent/combat state, Fresh()), CardFactory
 ├── Cards/CardData.cs    printed data (Scryfall) + CardDataSet.Load("FRA")
@@ -114,6 +115,12 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   flashback this turn); `Costs.Of` starts from it, so taxes still apply. The stack records where a
   spell came from (`OnStackComponent.CastFrom`), and `MoveCard` exiles a flashback spell whenever it
   would leave the stack — resolved, fizzled or bounced (CR 702.34a).
+- **Prepare** (Secrets of Strixhaven's mechanic; FRA reuses it) lives in `Rules/Prepare.cs`. The card is
+  a creature in every zone; its spell half (`PrepareSpellComponent`, the second face) is never cast
+  from hand. Becoming prepared puts a real COPY of the spell in exile (`Card.IsCopy`, linked to the
+  creature's id AND incarnation); its controller may cast it at the spell's own timing while that
+  same creature is still prepared, and casting it unprepares the creature. A copy anywhere but the
+  stack ceases to exist, unless it is a live prepared copy in exile (state-based, CR 704.5e).
 - **Targets in a graveyard** are `TargetKind.CardInYourGraveyard` — the same legality test on choosing
   and resolving. "One or two target creatures" is two words, the second `Optional` and `NotThePrevious`.
 - **"You may … If you do"** is `May` (a `YesNoChoice`, asked only when it can be done) or
@@ -175,10 +182,11 @@ needs · Empower Jace with two Jace tokens loads the first · surveil keeps the 
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 113 cards scripted
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 130 cards scripted
 in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
-dies / exile-until cards, 25 step-trigger / per-turn / prowess / surveil-trigger cards, and the 6 flashback cards. **Two real planeswalkers are
+dies / exile-until cards, 25 step-trigger / per-turn / prowess / surveil-trigger cards, the 6 flashback cards, and 18 prepare cards (Hallway Heckler, Pyre Rhymer, Heartwood
+Crafter wait: a discard cost on an ability, a mana-tap trigger, restricted mana). **Two real planeswalkers are
 in** (The Theorist, Ajani Unrelenting); **the other 6 are not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
 Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
-per-turn tracking, prowess ✓ · 7d-1 flashback ✓ · 7d-2 prepare · 7d-3 cycling and graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
+per-turn tracking, prowess ✓ · 7d-1 flashback ✓ · 7d-2 prepare ✓ · 7d-3 cycling and graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
 limited Bo1 uses it are unconfirmed — hence `handSmoothing`.

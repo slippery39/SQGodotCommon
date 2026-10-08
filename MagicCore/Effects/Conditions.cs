@@ -57,6 +57,20 @@ public record CastFrom(ZoneType Zone) : Condition
 		&& spell.GetComponent<Actions.OnStackComponent>()?.CastFrom == Zone;
 }
 
+/// <summary>"If this creature isn't prepared" (with Not) — the source, as it is now.</summary>
+public record SourceIsPrepared : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.HasObject((int)context[ContextKeys.Source])
+		&& s.GetObject((int)context[ContextKeys.Source]) is Card { IsPrepared: true };
+}
+
+/// <summary>A "you may" that can always be done.</summary>
+public record Always : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) => true;
+}
+
 /// <summary>Proft: "you may pay {2}" — asked only when it can be paid.</summary>
 public record CanPay(ManaCost Cost) : Condition
 {

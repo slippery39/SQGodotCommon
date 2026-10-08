@@ -93,6 +93,9 @@ public record ReturnChosenToHandIfManaValueAtMost(Count Max) : Effect
 
 public record CreateTokens(CardData Token, Count Count) : Effect
 {
+	/// <summary>The token's own abilities — the Heartwood's "{T}: Add {R} or {G}."</summary>
+	public ImmutableArray<GameComponent> Abilities { get; init; } = [];
+
 	/// <summary>Stingerquill Charm: "Create a ... Cadet. It gains haste until end of turn."</summary>
 	public string? GainsUntilEndOfTurn { get; init; }
 
@@ -105,7 +108,7 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 		var counters = Counters.Value(s, InputContext);
 		for (var i = 0; i < count; i++)
 		{
-			var token = CardFactory.Create(CardDefinition.Vanilla(Token), Controller) with
+			var token = CardFactory.Create(new CardDefinition(Token, Abilities), Controller) with
 			{
 				IsToken = true,
 			};
@@ -117,6 +120,112 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 					(Card)s.GetCard(token.Id).WithComponent(new UntilEndOfTurn(Keyword: keyword))
 				);
 		}
+		return new(s);
+	}
+}
+
+/// <summary>"[It] becomes prepared" — through Rules.Prepare, which ignores one already prepared.</summary>
+public record BecomePrepared(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(Permanents(What, s).Aggregate(s, (st, c) => Prepare.Become(st, c.Id)));
+}
+
+/// <summary>"Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.</summary>
+public record Mill(Ref Who, int N) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
+		foreach (var card in s.CardsIn(player, ZoneType.Library).Take(N).ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(player, ZoneType.Graveyard));
+		return new(s);
+	}
+}
+
+/// <summary>"Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.</summary>
+public record SearchLibrary(CardType Type, ZoneType To) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+					Steps =
+					[
+						new ChooseFromLibraryChoice
+						{
+							PlayerId = Controller,
+							Type = Type,
+							Prompt = $"Search for a {Type.ToString().ToLowerInvariant()} card",
+						},
+						new MoveChosenToAction(Controller, To),
+						new ShuffleLibraryAction(Controller),
+					],
+				}
+			)
+		);
+}
+
+/// <summary>Paradox Shaper: "Put target card from your graveyard on the bottom of your library."</summary>
+public record PutOnBottomOfLibrary(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var id in All(What, s).ToList())
+			if (s.GetObject(id) is Card card)
+				s = s.MoveCard(id, s.ZoneId(card.OwnerId, ZoneType.Library)); // appends: the bottom
+		return new(s);
+	}
+}
+
+/// <summary>Improvised Act: "You may discard a card. If you do, [Then]."</summary>
+public record MayDiscard(ImmutableList<GameAction> Then) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		s.CardsIn(Controller, ZoneType.Hand).Any()
+			? new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+						Steps =
+						[
+							new ChooseCardsFromHandChoice
+							{
+								PlayerId = Controller,
+								MinChoices = 0,
+								MaxChoices = 1,
+								Prompt = "You may discard a card",
+							},
+							new MoveChosenToGraveyardAction { PlayerId = Controller },
+							new IfChosenAction(Then) { Key = ChooseCardsFromHandChoice.Chosen },
+						],
+					}
+				)
+			)
+			: new(s);
+}
+
+/// <summary>
+/// Arc of Fortune: "Each player may [Then]." Each player answers for themselves, active player
+/// first, and Then runs as that player's ("you" is them).
+/// ponytail: each acts as they answer; the rules have every player choose, then all act at once.
+/// The difference shows only if a later chooser could see an earlier one's new hand.
+/// </summary>
+public record EachPlayerMay(string Prompt, ImmutableList<GameAction> Then) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var active = s.GetGame().ActivePlayerId;
+		foreach (var player in new[] { active, s.OpponentOf(active) })
+			s = s.SpawnAction(
+				new May(Prompt, new Always(), Then)
+				{
+					InputContext = InputContext.SetItem(ContextKeys.Controller, player),
+				}
+			);
 		return new(s);
 	}
 }

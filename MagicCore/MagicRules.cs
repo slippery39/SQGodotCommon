@@ -131,6 +131,10 @@ public static class MagicRules
 					.. s.CardsIn(player, ZoneType.Graveyard)
 						.Where(c => Rules.Costs.Flashback(s, c) is not null)
 						.SelectMany(c => CastCandidates(s, player, c)),
+					.. new[] { player, s.OpponentOf(player) }
+						.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
+						.Where(c => Rules.Prepare.IsCastableBy(s, c, player))
+						.SelectMany(c => CastCandidates(s, player, c)),
 					.. s.CardsIn(player, ZoneType.Battlefield)
 						.SelectMany(c =>
 							ActivateCandidates(s, player, c).Concat(LoyaltyCandidates(s, player, c))

@@ -144,6 +144,12 @@ public record StaticEffectComponent(Affects Affects, string? Keyword = null) : G
 	public StaticCondition While { get; init; }
 
 	/// <summary>
+	/// "As long as [condition]" — threshold, "an opponent was dealt noncombat damage this turn". Never
+	/// one that reads power or toughness: Characteristics would recurse into itself.
+	/// </summary>
+	public Condition? If { get; init; }
+
+	/// <summary>
 	/// Tetsuko: "creatures you control with power or toughness 1 or less". Only on a keyword static —
 	/// it reads real P/T, which a P/T static would then feed back into.
 	/// </summary>
@@ -173,6 +179,16 @@ public record FlashbackComponent(ManaCost Cost) : GameComponent
 
 /// <summary>Stingcaster Mage: "gains flashback until end of turn. The flashback cost is equal to its mana cost." Lost on any zone change.</summary>
 public record GrantedFlashback(int OnTurn) : GameComponent;
+
+/// <summary>A prepare card's spell half (CR: "a preparation card is a creature card in every zone"): its face and its text.</summary>
+public record PrepareSpellComponent(Cards.CardFace Face, SpellEffectsComponent Text)
+	: GameComponent;
+
+/// <summary>"This creature enters prepared." Applied by MagicState.EnterBattlefield.</summary>
+public record EntersPreparedComponent : GameComponent;
+
+/// <summary>On a prepared copy in exile: the creature (and which object of it) it belongs to.</summary>
+public record PreparedCopyOf(int CreatureId, int Incarnation) : GameComponent;
 
 /// <summary>Traxos: "This spell costs {N} less to cast if you've cast a noncreature spell this turn."</summary>
 public record CostsLessIfYouCastNoncreatureSpellThisTurn(int Amount) : GameComponent;

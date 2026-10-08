@@ -153,6 +153,25 @@ public static class FraCards
 			null
 		);
 
+	/// <summary>Soul Tether: "a Heartwood token (a red and green artifact with '{T}: Add {R} or {G}.')".</summary>
+	public static readonly CardData Heartwood =
+		new(
+			"Heartwood",
+			"token",
+			null,
+			0,
+			"Artifact — Heartwood",
+			null,
+			null,
+			null,
+			null,
+			["R", "G"],
+			[],
+			"token",
+			"T",
+			null
+		);
+
 	/// <summary>"[cost]: effects" — a loyalty ability, own or granted.</summary>
 	static LoyaltyAbilityComponent Loyalty(
 		int cost,
@@ -214,6 +233,61 @@ public static class FraCards
 	/// </summary>
 	static TriggeredAbilityComponent Prowess =>
 		When(TriggerEvent.YouCastNoncreatureSpell, [], new ModifyUntilEndOfTurn(Ref.Source, 1, 1));
+
+	// ===== Prepare: a card's spell half, from its second face in FRA.json =====
+
+	static readonly EntersPreparedComponent EntersPrepared = new();
+
+	static PrepareSpellComponent PrepareSpell(
+		string card,
+		TargetSpec[] targets,
+		params GameAction[] effects
+	) => new(Data[card].CardFaces![1], Spell(targets, effects));
+
+	/// <summary>"At the beginning of your upkeep, if this creature isn't prepared, it becomes prepared."</summary>
+	static TriggeredAbilityComponent PreparesAtYourUpkeep =>
+		When(TriggerEvent.YourUpkeep, [], new BecomePrepared(Ref.Source)) with
+		{
+			If = new Not(new SourceIsPrepared()),
+		};
+
+	/// <summary>Threshold — "as long as there are seven or more cards in your graveyard".</summary>
+	static readonly AtLeast Threshold = new(Count.NumberOf(Ref.CardsInYourGraveyard), 7);
+
+	/// <summary>Seed Suture: "Put a +1/+1 counter on target creature. You gain 1 life."</summary>
+	static PrepareSpellComponent SeedSuture(string card) =>
+		PrepareSpell(card, [Creature], new AddCounters(Ref.Target(), 1), new GainLife(Ref.You, 1));
+
+	/// <summary>Peer Review: "Create a ... Cadet. Surveil 1."</summary>
+	static PrepareSpellComponent PeerReview(string card) =>
+		PrepareSpell(card, [], new CreateTokens(Cadet, 1), new Surveil(1));
+
+	/// <summary>Vicious Verse: "deals 1 damage to target opponent."</summary>
+	static PrepareSpellComponent ViciousVerse(string card) =>
+		PrepareSpell(
+			card,
+			[new TargetSpec(TargetKind.Player, Whose.Opponent)],
+			new DealDamage(Ref.Target(), 1)
+		);
+
+	/// <summary>Omit Variables: "Mill three cards."</summary>
+	static PrepareSpellComponent OmitVariables(string card) =>
+		PrepareSpell(card, [], new Mill(Ref.You, 3));
+
+	/// <summary>Soul Tether: "Create a Heartwood token."</summary>
+	static PrepareSpellComponent SoulTether(string card) =>
+		PrepareSpell(
+			card,
+			[],
+			new CreateTokens(Heartwood, 1)
+			{
+				Abilities =
+				[
+					new ManaAbilityComponent(ManaColor.Red),
+					new ManaAbilityComponent(ManaColor.Green),
+				],
+			}
+		);
 
 	/// <summary>One bullet: its target words and effects. Its text is filled in from the card.</summary>
 	static Mode M(TargetSpec[] targets, params GameAction[] effects) =>
@@ -1340,6 +1414,170 @@ public static class FraCards
 					}
 				),
 				new FlashbackComponent(ManaCost.Parse("{1}{U/R}{U/R}")) { DiscardACard = true },
+			],
+
+			// ===== Prepare =====
+			["Blossom-Blessed Angel // Seed Suture"] =
+			[
+				EntersPrepared,
+				SeedSuture("Blossom-Blessed Angel // Seed Suture"),
+			],
+			["Diviner of Victory // Unwind History"] =
+			[
+				EntersPrepared,
+				When(TriggerEvent.YouSurveil, [], new ModifyUntilEndOfTurn(Ref.Source, 1, 1)),
+				PrepareSpell(
+					"Diviner of Victory // Unwind History",
+					[Creature with { Whose = Whose.Opponent, MaxManaValue = 3 }],
+					new ReturnToHand(Ref.Target()),
+					new Surveil(1)
+				),
+			],
+			["Semester Foreseer // Peer Review"] =
+			[
+				EntersPrepared,
+				When(TriggerEvent.SelfEnters, [], new Surveil(1)),
+				PeerReview("Semester Foreseer // Peer Review"),
+			],
+			["Variable Chaser // Arc of Fortune"] =
+			[
+				EntersPrepared,
+				Prowess,
+				PrepareSpell(
+					"Variable Chaser // Arc of Fortune",
+					[],
+					new EachPlayerMay(
+						"Discard your hand and draw seven cards?",
+						[new DiscardHand(Ref.You), new DrawCards(Ref.You, 7)]
+					)
+				),
+			],
+			["Bloodline Recollector // Ancestral Craving"] =
+			[
+				When(TriggerEvent.EachEndStep, [], new BecomePrepared(Ref.Source)) with
+				{
+					If = new AtLeast(Count.CreaturesDiedThisTurn, 3),
+				},
+				PrepareSpell(
+					"Bloodline Recollector // Ancestral Craving",
+					[new TargetSpec(TargetKind.Player)],
+					new DrawCards(Ref.Target(), 3),
+					new LoseLife(Ref.Target(), 3)
+				),
+			],
+			["Void Extrapolator // Omit Variables"] =
+			[
+				EntersPrepared,
+				new StaticEffectComponent(Affects.Self)
+				{
+					Power = 1,
+					Toughness = 1,
+					If = Threshold,
+				},
+				OmitVariables("Void Extrapolator // Omit Variables"),
+			],
+			["Pompous Battlemage // Improvised Act"] =
+			[
+				Prowess,
+				EntersPrepared,
+				PrepareSpell(
+					"Pompous Battlemage // Improvised Act",
+					[],
+					new MayDiscard([new DrawCards(Ref.You, 1)])
+				),
+			],
+			["Carnivorous Cultivator // Enroot"] =
+			[
+				EntersPrepared,
+				When(
+					TriggerEvent.SelfDealsCombatDamageToPlayer,
+					[new TargetSpec(TargetKind.CardInYourGraveyard) { AnyOfTypes = CardType.Land }],
+					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
+				),
+				PrepareSpell(
+					"Carnivorous Cultivator // Enroot",
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Graveyard)
+				),
+			],
+			["Emergency Phytomedic // Seed Suture"] =
+			[
+				EntersPrepared,
+				SeedSuture("Emergency Phytomedic // Seed Suture"),
+			],
+			["Fatehold Chronologist // Peer Review"] =
+			[
+				EntersPrepared,
+				PeerReview("Fatehold Chronologist // Peer Review"),
+			],
+			["Konstrari Improviser // Soul Tether"] =
+			[
+				EntersPrepared,
+				SoulTether("Konstrari Improviser // Soul Tether"),
+			],
+			["Paradox Shaper // Omit Variables"] =
+			[
+				PreparesAtYourUpkeep,
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[new PutOnBottomOfLibrary(Ref.Target())]
+				)
+				{
+					Targets = [new TargetSpec(TargetKind.CardInYourGraveyard)],
+				},
+				OmitVariables("Paradox Shaper // Omit Variables"),
+			],
+			["Prudent Fateseer // Peer Review"] =
+			[
+				EntersPrepared,
+				When(
+					TriggerEvent.YouSurveil,
+					[],
+					new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 0)
+				) with
+				{
+					OncePerTurn = true,
+				},
+				PeerReview("Prudent Fateseer // Peer Review"),
+			],
+			["Stingerquill Voxmancer // Vicious Verse"] =
+			[
+				PreparesAtYourUpkeep,
+				ViciousVerse("Stingerquill Voxmancer // Vicious Verse"),
+			],
+			["Theorix Metamage // Omit Variables"] =
+			[
+				EntersPrepared,
+				new StaticEffectComponent(Affects.Self) { Power = 1, If = Threshold },
+				new StaticEffectComponent(Affects.Self, "Flying") { If = Threshold },
+				OmitVariables("Theorix Metamage // Omit Variables"),
+			],
+			["Vigorbloom Vanguard // Seed Suture"] =
+			[
+				EntersPrepared,
+				new StaticEffectComponent(Affects.CreaturesYouControl, "Vigilance")
+				{
+					OnlyWithCounter = true,
+				},
+				SeedSuture("Vigorbloom Vanguard // Seed Suture"),
+			],
+			["Whiplash Wordsmith // Vicious Verse"] =
+			[
+				EntersPrepared,
+				new StaticEffectComponent(Affects.Self, "Flying")
+				{
+					If = new AtLeast(Count.NoncombatDamageToOpponentsThisTurn, 1),
+				},
+				new StaticEffectComponent(Affects.Self, "Haste")
+				{
+					If = new AtLeast(Count.NoncombatDamageToOpponentsThisTurn, 1),
+				},
+				ViciousVerse("Whiplash Wordsmith // Vicious Verse"),
+			],
+			["Woodwork Prodigy // Soul Tether"] =
+			[
+				PreparesAtYourUpkeep,
+				SoulTether("Woodwork Prodigy // Soul Tether"),
 			],
 		};
 

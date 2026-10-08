@@ -218,8 +218,12 @@ public static class StateBasedActions
 					ZoneType.Library,
 				}
 			)
-			foreach (var token in s.CardsIn(id, zone).Where(c => c.IsToken).ToList())
-				s = s.RemoveObject(token.Id);
+			foreach (
+				var gone in s.CardsIn(id, zone)
+					.Where(c => c.IsToken || Rules.Prepare.IsDeadCopy(s, c))
+					.ToList()
+			)
+				s = s.RemoveObject(gone.Id);
 		}
 		return s;
 	}

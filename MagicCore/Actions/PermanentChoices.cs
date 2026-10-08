@@ -95,9 +95,19 @@ public record SacrificeChosenAction : GameAction
 /// <summary>"If you do, …": runs the effects only when the previous choice picked something.</summary>
 public record IfChosenAction(ImmutableList<GameAction> Then) : GameAction
 {
+	/// <summary>Which choice's answer to read — a permanent or yes/no (default), or cards from a hand.</summary>
+	public string Key { get; init; } = ChoosePermanentChoice.Chosen;
+
 	public override ActionResult Execute(GameState s)
 	{
-		if (!ChoosePermanentChoice.Read(InputContext).Any())
+		if (
+			InputContext.GetValueOrDefault(Key) switch
+			{
+				int => false,
+				ImmutableList<int> ids => ids.IsEmpty,
+				_ => true,
+			}
+		)
 			return new ActionResult(s);
 		foreach (var effect in Then)
 			s = (effect with { InputContext = InputContext }).Execute(s).GameState;

@@ -73,8 +73,13 @@ public record CastSpellAction : GameAction
 				s.IsIn(CardId, PlayerId, ZoneType.Graveyard)
 				&& Costs.Flashback(s, s.GetCard(CardId)) is not null
 			)
+			&& !(
+				s.HasObject(CardId)
+				&& s.GetObject(CardId) is Card copy
+				&& Prepare.IsCastableBy(s, copy, PlayerId)
+			)
 		)
-			return ValidationResult.Invalid("Not in your hand, and no flashback");
+			return ValidationResult.Invalid("Not in your hand, no flashback, not a prepared copy");
 		var card = s.GetCard(CardId);
 		if (OwesDiscard(s, card) ? !s.IsIn(DiscardId, PlayerId, ZoneType.Hand) : DiscardId != 0)
 			return ValidationResult.Invalid("Discard a card from your hand for this");
@@ -124,6 +129,8 @@ public record CastSpellAction : GameAction
 			s = s.Sacrifice(SacrificeId);
 		if (DiscardId != 0)
 			s = s.MoveCard(DiscardId, s.ZoneId(PlayerId, ZoneType.Graveyard));
+		if (Prepare.CreatureOf(s, card) is { } prepared)
+			s = Prepare.Unprepare(s, prepared.Id); // casting the copy unprepares it
 		s = s.MoveCard(CardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
 		s = s.UpdateObject(
 			CardId,

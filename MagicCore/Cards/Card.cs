@@ -49,6 +49,9 @@ public record Card : GameObject
 	public int BaseToughness { get; init; }
 	public bool IsToken { get; init; }
 
+	/// <summary>A copy of a spell (a prepared copy) — not a card; it ceases to exist off the stack (CR 704.5e).</summary>
+	public bool IsCopy { get; init; }
+
 	/// <summary>
 	/// Bumped by every zone change: ids survive a zone change but the object does not (CR 400.7).
 	/// "Is this still the same permanent?" compares this, never the id alone.
@@ -100,6 +103,9 @@ public record Card : GameObject
 	/// <summary>TurnNumber its "triggers only once each turn" ability last triggered.</summary>
 	public int OncePerTurnTriggeredOn { get; init; }
 
+	/// <summary>Prepare: its prepare spell's copy waits in exile (Rules/Prepare.cs).</summary>
+	public bool IsPrepared { get; init; }
+
 	/// <summary>The player OR planeswalker it is attacking; 0 when not attacking. Never assume a player.</summary>
 	public int AttackingId { get; init; }
 
@@ -124,6 +130,7 @@ public record Card : GameObject
 			LoyaltyActivatedOnTurn = 0,
 			EnteredOnTurn = 0,
 			OncePerTurnTriggeredOn = 0,
+			IsPrepared = false,
 			Damage = 0,
 			DamagedByDeathtouch = false,
 			ControlledSinceTurn = 0,

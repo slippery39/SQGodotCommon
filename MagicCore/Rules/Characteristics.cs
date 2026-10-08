@@ -94,11 +94,14 @@ public static class Characteristics
 		if (!affected || (effect.OnlyWithCounter && card.PlusOneCounters == 0))
 			return false;
 		// Real power and toughness (CR 613): safe, because only keyword statics carry this filter.
+		// Likewise `If` must never read power or toughness — threshold and "this turn" counts only.
 		if (
 			effect.OnlyPowerOrToughnessAtMost is { } most
 			&& s.Power(card) > most
 			&& s.Toughness(card) > most
 		)
+			return false;
+		if (effect.If is { } condition && !condition.Holds(s, Conditions.Of(source)))
 			return false;
 		return effect.While switch
 		{
