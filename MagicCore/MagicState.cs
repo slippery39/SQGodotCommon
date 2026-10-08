@@ -90,6 +90,12 @@ public static class MagicState
 	public static GameState MoveCard(this GameState s, int cardId, int zoneId, bool toTop = false)
 	{
 		var before = s.GetCard(cardId);
+		// Flashback (CR 702.34a): leaving the stack — resolved, countered, fizzled, bounced — it is exiled instead.
+		if (
+			before.GetComponent<Actions.OnStackComponent>() is { CastFrom: ZoneType.Graveyard }
+			&& zoneId != s.GetWellKnownId(MagicKeys.Stack)
+		)
+			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
 		var leavesBattlefield = s.IsOnBattlefield(cardId) && s.GetParent(cardId) != zoneId;
 		s = (
 			toTop ? s.MoveObjectToFront(cardId, zoneId) : s.MoveObject(cardId, zoneId)
@@ -141,7 +147,8 @@ public static class MagicState
 		this GameState s,
 		int cardId,
 		int controllerId,
-		int x = 0
+		int x = 0,
+		int extraCounters = 0
 	)
 	{
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield))
@@ -157,13 +164,16 @@ public static class MagicState
 				Loyalty = card.PrintedLoyalty,
 				CastX = x,
 				PlusOneCounters =
-					card.GetComponent<EntersWithCountersComponent>()
-						?.Count.Value(
-							s,
-							ImmutableDictionary<string, object>
-								.Empty.Add(ContextKeys.Controller, controllerId)
-								.Add(ContextKeys.X, x)
-						) ?? 0,
+					extraCounters
+					+ (
+						card.GetComponent<EntersWithCountersComponent>()
+							?.Count.Value(
+								s,
+								ImmutableDictionary<string, object>
+									.Empty.Add(ContextKeys.Controller, controllerId)
+									.Add(ContextKeys.X, x)
+							) ?? 0
+					),
 				IsTapped =
 					card.GetComponent<EntersTappedComponent>() is { } tapped
 					&& !EntersUntapped(s, card.Id, controllerId, tapped.Unless),

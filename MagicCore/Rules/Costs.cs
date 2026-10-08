@@ -10,8 +10,25 @@ namespace MagicCore.Rules;
 /// </summary>
 public static class Costs
 {
+	/// <summary>
+	/// A card in its owner's graveyard may be cast for this — its flashback, or its mana cost when
+	/// it gained flashback this turn — or not at all (null). The ONE place either is decided.
+	/// </summary>
+	///
+	/// ponytail: with both, the granted one (mana cost, no discard) is taken — cheaper for every FRA
+	/// card. Make it a choice on the cast if a card's own flashback is ever the better deal.
+	public static FlashbackComponent? Flashback(GameState s, Card card)
+	{
+		if (!s.IsIn(card.Id, card.OwnerId, ZoneType.Graveyard))
+			return null;
+		if (card.GetComponents<GrantedFlashback>().Any(g => g.OnTurn == s.GetGame().TurnNumber))
+			return new FlashbackComponent(card.ManaCost);
+		return card.GetComponent<FlashbackComponent>();
+	}
+
 	public static ManaCost Of(GameState s, int casterId, Card card)
 	{
+		var printed = Flashback(s, card)?.Cost ?? card.ManaCost; // flashback is an alternative cost: taxes still apply
 		var delta = 0;
 		if (!card.Is(CardType.Creature))
 			delta += s.CardsIn(s.OpponentOf(casterId), ZoneType.Battlefield)
@@ -35,6 +52,6 @@ public static class Costs
 				.DefaultIfEmpty(0)
 				.Max();
 
-		return delta == 0 ? card.ManaCost : card.ManaCost.WithGeneric(delta);
+		return delta == 0 ? printed : printed.WithGeneric(delta);
 	}
 }

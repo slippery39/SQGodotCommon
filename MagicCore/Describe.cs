@@ -16,10 +16,16 @@ public static class Describe
 			MulliganAction => "Mulligan",
 			PlayLandAction p => $"Play {Name(s, p.CardId)}",
 			CastSpellAction c => $"Cast {Name(s, c.CardId)}"
+				+ (
+					s.IsIn(c.CardId, c.PlayerId, ZoneType.Graveyard)
+						? " from graveyard (flashback)"
+						: ""
+				)
 				+ (c.X > 0 ? $" (X={c.X})" : "")
 				+ (c.Modes.Length > 0 ? $" ({ModeText(s, c)})" : "")
 				+ Targets(s, c.Targets)
-				+ (c.SacrificeId != 0 ? $", sacrificing {Name(s, c.SacrificeId)}" : ""),
+				+ (c.SacrificeId != 0 ? $", sacrificing {Name(s, c.SacrificeId)}" : "")
+				+ (c.DiscardId != 0 ? $", discarding {Name(s, c.DiscardId)}" : ""),
 			ActivateAbilityAction a =>
 				$"Activate {Name(s, a.CardId)}{Targets(s, a.Targets)}{(a.SacrificeId != 0 ? $", sacrificing {Name(s, a.SacrificeId)}" : "")}",
 			ActivateLoyaltyAction l =>

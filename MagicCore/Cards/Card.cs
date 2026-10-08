@@ -131,7 +131,11 @@ public record Card : GameObject
 			BlockingId = 0,
 			IsBlocked = false,
 			Components = Components.RemoveAll(c =>
-				c is Actions.OnStackComponent or UntilEndOfTurn or Effects.ExiledUntilLeaves
+				c
+					is Actions.OnStackComponent
+						or UntilEndOfTurn
+						or Effects.ExiledUntilLeaves
+						or Effects.GrantedFlashback
 			),
 		};
 

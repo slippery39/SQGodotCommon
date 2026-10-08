@@ -128,6 +128,9 @@ public static class MagicRules
 								? [new PlayLandAction { PlayerId = player, CardId = c.Id }]
 								: CastCandidates(s, player, c)
 						),
+					.. s.CardsIn(player, ZoneType.Graveyard)
+						.Where(c => Rules.Costs.Flashback(s, c) is not null)
+						.SelectMany(c => CastCandidates(s, player, c)),
 					.. s.CardsIn(player, ZoneType.Battlefield)
 						.SelectMany(c =>
 							ActivateCandidates(s, player, c).Concat(LoyaltyCandidates(s, player, c))
@@ -156,19 +159,26 @@ public static class MagicRules
 		IEnumerable<int> sacrifices = card.GetComponent<SacrificeOrPayAdditionalCost>() is { } extra
 			? [0, .. extra.Sacrifice.Candidates(s, player, card.Id)]
 			: [0];
+		// Twinned Vision's flashback: one cast per card that could be discarded.
+		IEnumerable<int> discards = CastSpellAction.OwesDiscard(s, card)
+			? s.CardsIn(player, ZoneType.Hand).Select(c => c.Id)
+			: [0];
 		return Enumerable
 			.Range(0, maxX + 1)
 			.SelectMany(x =>
 				sacrifices.SelectMany(sacrifice =>
-					choices.Select(c => new CastSpellAction
-					{
-						PlayerId = player,
-						CardId = card.Id,
-						X = x,
-						Targets = c.targets,
-						Modes = c.modes,
-						SacrificeId = sacrifice,
-					})
+					discards.SelectMany(discard =>
+						choices.Select(c => new CastSpellAction
+						{
+							PlayerId = player,
+							CardId = card.Id,
+							X = x,
+							Targets = c.targets,
+							Modes = c.modes,
+							SacrificeId = sacrifice,
+							DiscardId = discard,
+						})
+					)
 				)
 			);
 	}
@@ -238,7 +248,7 @@ public static class MagicRules
 				{
 					PlayLandAction p => $"land|{s.GetCard(p.CardId).Name}",
 					CastSpellAction c =>
-						$"cast|{s.GetCard(c.CardId).Name}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}",
+						$"cast|{s.GetCard(c.CardId).Name}|{s.GetParent(c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}",
 					ActivateAbilityAction activate =>
 						$"activate|{activate.CardId}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}",
 					_ => (object)a,

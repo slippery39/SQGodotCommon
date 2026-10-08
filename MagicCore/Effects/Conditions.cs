@@ -49,6 +49,14 @@ public static class Conditions
 			.Add(ContextKeys.Source, card.Id);
 }
 
+/// <summary>"If this spell was cast from a graveyard" / "wasn't cast from your hand" (with Not).</summary>
+public record CastFrom(ZoneType Zone) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetObject((int)context[ContextKeys.Source]) is Card spell
+		&& spell.GetComponent<Actions.OnStackComponent>()?.CastFrom == Zone;
+}
+
 /// <summary>Proft: "you may pay {2}" — asked only when it can be paid.</summary>
 public record CanPay(ManaCost Cost) : Condition
 {

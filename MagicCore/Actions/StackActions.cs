@@ -10,7 +10,11 @@ namespace MagicCore.Actions;
 
 /// <summary>What was decided while casting, carried by the card while it is on the stack.</summary>
 public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArray<int> Modes)
-	: GameComponent;
+	: GameComponent
+{
+	/// <summary>"If this spell was cast from a graveyard" — and flashback exiles it as it leaves the stack.</summary>
+	public ZoneType CastFrom { get; init; } = ZoneType.Hand;
+}
 
 /// <summary>A triggered or activated ability on the stack (CR 113.7) — not a card.</summary>
 public record StackAbility : GameObject
@@ -47,6 +51,12 @@ public record CastSpellAction : GameAction
 	/// <summary>A "sacrifice … or pay {N}" additional cost: what is sacrificed, or 0 to pay.</summary>
 	public int SacrificeId { get; init; }
 
+	/// <summary>Twinned Vision's flashback: "Discard a card" — the card discarded; 0 if none is owed.</summary>
+	public int DiscardId { get; init; }
+
+	public static bool OwesDiscard(GameState s, Card card) =>
+		Costs.Flashback(s, card)?.DiscardACard == true;
+
 	/// <summary>Effective cost plus whatever is paid instead of a sacrifice.</summary>
 	ManaCost CostToPay(GameState s, Card card) =>
 		card.GetComponent<SacrificeOrPayAdditionalCost>() is { } extra && SacrificeId == 0
@@ -57,9 +67,17 @@ public record CastSpellAction : GameAction
 	{
 		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
 			return noPriority;
-		if (!s.IsIn(CardId, PlayerId, ZoneType.Hand))
-			return ValidationResult.Invalid("Not in your hand");
+		if (
+			!s.IsIn(CardId, PlayerId, ZoneType.Hand)
+			&& !(
+				s.IsIn(CardId, PlayerId, ZoneType.Graveyard)
+				&& Costs.Flashback(s, s.GetCard(CardId)) is not null
+			)
+		)
+			return ValidationResult.Invalid("Not in your hand, and no flashback");
 		var card = s.GetCard(CardId);
+		if (OwesDiscard(s, card) ? !s.IsIn(DiscardId, PlayerId, ZoneType.Hand) : DiscardId != 0)
+			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (card.Is(CardType.Land))
 			return ValidationResult.Invalid("Lands are played, not cast");
 		if (!CanCastNow(s, card))
@@ -100,13 +118,17 @@ public record CastSpellAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var card = s.GetCard(CardId);
+		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		s = ManaPayment.Pay(s, PlayerId, ManaPayment.Find(s, PlayerId, CostToPay(s, card), X)!);
 		if (SacrificeId != 0)
 			s = s.Sacrifice(SacrificeId);
+		if (DiscardId != 0)
+			s = s.MoveCard(DiscardId, s.ZoneId(PlayerId, ZoneType.Graveyard));
 		s = s.MoveCard(CardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
 		s = s.UpdateObject(
 			CardId,
-			s.GetCard(CardId).WithComponent(new OnStackComponent(X, Targets, Modes))
+			s.GetCard(CardId)
+				.WithComponent(new OnStackComponent(X, Targets, Modes) { CastFrom = from })
 		);
 		var noncreature = card.Is(CardType.Creature) ? 0 : 1;
 		s = s.Tally(
@@ -237,8 +259,11 @@ public static class StackResolution
 
 		if (top is Card permanent && !permanent.Is(CardType.Instant | CardType.Sorcery))
 		{
-			var paidX = permanent.GetComponent<OnStackComponent>()?.X ?? 0;
-			s = s.EnterBattlefield(permanent.Id, permanent.ControllerId, paidX);
+			var cast = permanent.GetComponent<OnStackComponent>();
+			s =
+				cast?.CastFrom == ZoneType.Graveyard
+					? s.MoveCard(permanent.Id, s.ZoneId(permanent.OwnerId, ZoneType.Graveyard)) // flashback: exiled instead (MoveCard)
+					: s.EnterBattlefield(permanent.Id, permanent.ControllerId, cast?.X ?? 0);
 			return Priority.Retain(s, s.GetGame().ActivePlayerId);
 		}
 

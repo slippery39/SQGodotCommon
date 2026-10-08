@@ -12,6 +12,7 @@ public enum TargetKind
 	Player,
 	Permanent, // narrowed by AnyOfTypes / NotTypes: "noncreature, nonland permanent"
 	SpellOrCreature, // a spell on the stack, or a creature on the battlefield
+	CardInYourGraveyard, // narrowed by AnyOfTypes / MaxManaValue: "target creature card in your graveyard"
 }
 
 public enum Whose
@@ -56,10 +57,22 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	/// <summary>Gallia, Mabel: "target creature that entered this turn".</summary>
 	public bool EnteredThisTurn { get; init; }
 
+	/// <summary>"With mana value 3 or less" — cards in a graveyard.</summary>
+	public int MaxManaValue { get; init; } = int.MaxValue;
+
+	/// <summary>The second of "one or two target creatures": optional, and not the first one again.</summary>
+	public bool NotThePrevious { get; init; }
+
 	public bool IsLegal(GameState s, int controllerId, int sourceId, int targetId)
 	{
 		if (!s.HasObject(targetId))
 			return false;
+		if (Kind == TargetKind.CardInYourGraveyard)
+			return s.GetObject(targetId) is Card inGraveyard
+				&& s.IsIn(targetId, controllerId, ZoneType.Graveyard)
+				&& targetId != sourceId
+				&& (AnyOfTypes == CardType.None || inGraveyard.Is(AnyOfTypes))
+				&& inGraveyard.ManaCost.ManaValue <= MaxManaValue;
 		var whoseOk = (Whose, s.GetObject(targetId)) switch
 		{
 			(Whose.Any, _) => true,
@@ -117,9 +130,14 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 			Kind == TargetKind.SpellOrCreature
 				? s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
 				: [];
+		var graveyard =
+			Kind == TargetKind.CardInYourGraveyard
+				? s.CardsIn(controllerId, ZoneType.Graveyard).Select(c => c.Id)
+				: [];
 		return players
 			.Concat(permanents)
 			.Concat(spells)
+			.Concat(graveyard)
 			.Where(id => IsLegal(s, controllerId, sourceId, id));
 	}
 
@@ -137,7 +155,11 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 			var options = spec.Candidates(s, controllerId, sourceId).ToList();
 			if (spec.Optional)
 				options.Add(0);
-			combos = combos.SelectMany(c => options.Select(o => c.Add(o))).ToList();
+			combos = combos
+				.SelectMany(c => options.Select(o => c.Add(o)))
+				// "One or two targets": a pair is one play in either order, so keep one ordering.
+				.Where(c => !spec.NotThePrevious || c.Length < 2 || c[^1] == 0 || c[^1] > c[^2])
+				.ToList();
 		}
 		return combos;
 	}
@@ -157,6 +179,7 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 					targets[i] == 0
 						? spec.Optional
 						: spec.IsLegal(s, controllerId, sourceId, targets[i])
+							&& !(spec.NotThePrevious && i > 0 && targets[i] == targets[i - 1])
 			)
 			.All(ok => ok);
 }

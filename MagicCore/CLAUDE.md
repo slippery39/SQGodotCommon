@@ -109,6 +109,13 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   Lyra), which ends at cleanup or a zone change like any other until-end-of-turn effect.
 - **"Becomes the target"** is raised when a spell or ability goes on the stack with its targets —
   `CastSpellAction` and `StackResolution.Push` (every ability), the one place each.
+- **Casting from the graveyard (flashback):** `Costs.Flashback` is the ONE answer to "may this card
+  be cast from its graveyard, and for what" (its own flashback, or its mana cost when it gained
+  flashback this turn); `Costs.Of` starts from it, so taxes still apply. The stack records where a
+  spell came from (`OnStackComponent.CastFrom`), and `MoveCard` exiles a flashback spell whenever it
+  would leave the stack — resolved, fizzled or bounced (CR 702.34a).
+- **Targets in a graveyard** are `TargetKind.CardInYourGraveyard` — the same legality test on choosing
+  and resolving. "One or two target creatures" is two words, the second `Optional` and `NotThePrevious`.
 - **"You may … If you do"** is `May` (a `YesNoChoice`, asked only when it can be done) or
   `MaySacrifice`; both clear the shared "chosen" key so a "no" cannot read a stale "yes".
 - **An intervening "if" (CR 603.4) is `TriggeredAbilityComponent.If`**, never a bare `If` effect:
@@ -168,10 +175,10 @@ needs · Empower Jace with two Jace tokens loads the first · surveil keeps the 
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 107 cards scripted
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 113 cards scripted
 in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
-dies / exile-until cards, and 25 step-trigger / per-turn / prowess / surveil-trigger cards. **Two real planeswalkers are
+dies / exile-until cards, 25 step-trigger / per-turn / prowess / surveil-trigger cards, and the 6 flashback cards. **Two real planeswalkers are
 in** (The Theorist, Ajani Unrelenting); **the other 6 are not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
 Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
-per-turn tracking, prowess ✓ · 7d prepare, flashback, cycling, graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
+per-turn tracking, prowess ✓ · 7d-1 flashback ✓ · 7d-2 prepare · 7d-3 cycling and graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
 limited Bo1 uses it are unconfirmed — hence `handSmoothing`.

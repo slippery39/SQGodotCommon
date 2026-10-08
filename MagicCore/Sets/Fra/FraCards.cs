@@ -1265,6 +1265,82 @@ public static class FraCards
 					FromGraveyard = true,
 				},
 			],
+
+			// ===== Flashback =====
+			["Generous Revival"] =
+			[
+				Spell(
+					[
+						new TargetSpec(TargetKind.CardInYourGraveyard)
+						{
+							AnyOfTypes = CardType.Creature,
+							MaxManaValue = 3,
+						},
+					],
+					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield) { Counters = 1 }
+				),
+				new FlashbackComponent(ManaCost.Parse("{4}{W}")),
+			],
+			["Predictive Preparations"] =
+			[
+				Spell(
+					[Creature, Creature with { Optional = true, NotThePrevious = true }],
+					new AddCounters(Ref.Target(0), 1),
+					new AddCounters(Ref.Target(1), 1)
+				),
+				new FlashbackComponent(ManaCost.Parse("{3}{W}")),
+			],
+			["Stingcaster Mage"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[
+						new TargetSpec(TargetKind.CardInYourGraveyard)
+						{
+							AnyOfTypes = CardType.Instant | CardType.Sorcery,
+						},
+					],
+					new GainFlashbackThisTurn(Ref.Target())
+				),
+			],
+			["Bestial Incursion"] =
+			[
+				Spell([], new CreateTokens(Beast, 1)),
+				new FlashbackComponent(ManaCost.Parse("{5}{G}")),
+			],
+			["Recursive Recruitment"] =
+			[
+				Spell(
+					[],
+					new If(
+						new CastFrom(ZoneType.Graveyard),
+						[
+							new CreateTokens(Cadet, 2)
+							{
+								Counters = Count.NumberOf(Ref.CardsInYourGraveyard) with
+								{
+									Per = 3,
+								},
+							},
+						]
+					)
+					{
+						Otherwise = [new CreateTokens(Cadet, 2)],
+					}
+				),
+				new FlashbackComponent(ManaCost.Parse("{6}{U}{B}")),
+			],
+			["Twinned Vision"] =
+			[
+				Spell(
+					[],
+					new If(new Not(new CastFrom(ZoneType.Hand)), [new DrawCards(Ref.You, 2)])
+					{
+						Otherwise = [new DrawCards(Ref.You, 1)],
+					}
+				),
+				new FlashbackComponent(ManaCost.Parse("{1}{U/R}{U/R}")) { DiscardACard = true },
+			],
 		};
 
 	public static CardDefinition Get(string name) =>

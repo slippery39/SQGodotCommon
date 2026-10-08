@@ -184,6 +184,9 @@ public enum CountOf
 /// </summary>
 public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int Sign = 1)
 {
+	/// <summary>"For every three cards in your graveyard": the count divided by this, rounded down.</summary>
+	public int Per { get; init; } = 1;
+
 	public static implicit operator Count(int n) => new(n);
 
 	public static Count NumberOf(Ref r) => new(0, r, CountOf.NumberOf);
@@ -220,19 +223,21 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 
 	public static bool operator !=(Count c, int n) => !(c == n);
 
-	public int Value(GameState s, ImmutableDictionary<string, object> context)
+	public int Value(GameState s, ImmutableDictionary<string, object> context) =>
+		Sign * (Counted(s, context) / Per);
+
+	int Counted(GameState s, ImmutableDictionary<string, object> context)
 	{
 		if (Kind == CountOf.Fixed)
-			return Sign * Fixed;
+			return Fixed;
 		if (Kind == CountOf.X)
-			return Sign * (context.TryGetValue(ContextKeys.X, out var x) ? (int)x : 0);
+			return context.TryGetValue(ContextKeys.X, out var x) ? (int)x : 0;
 		if (Kind == CountOf.CreaturesDiedThisTurn)
-			return Sign * s.GetGame().CreaturesDiedThisTurn;
+			return s.GetGame().CreaturesDiedThisTurn;
 		if (Kind == CountOf.NoncombatDamageToOpponentsLastTurn)
-			return Sign
-				* s.GetPlayer(
-					s.OpponentOf((int)context[ContextKeys.Controller])
-				).LastTurn.NoncombatDamageTaken;
+			return s.GetPlayer(
+				s.OpponentOf((int)context[ContextKeys.Controller])
+			).LastTurn.NoncombatDamageTaken;
 		if (
 			Kind
 			is CountOf.LifeYouGainedThisTurn
@@ -242,14 +247,13 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 		)
 		{
 			var tally = s.GetPlayer((int)context[ContextKeys.Controller]).ThisTurn;
-			return Sign
-				* Kind switch
-				{
-					CountOf.LifeYouGainedThisTurn => tally.LifeGained,
-					CountOf.CardsYouDrewThisTurn => tally.CardsDrawn,
-					CountOf.SpellsYouCastThisTurn => tally.SpellsCast,
-					_ => tally.Surveils,
-				};
+			return Kind switch
+			{
+				CountOf.LifeYouGainedThisTurn => tally.LifeGained,
+				CountOf.CardsYouDrewThisTurn => tally.CardsDrawn,
+				CountOf.SpellsYouCastThisTurn => tally.SpellsCast,
+				_ => tally.Surveils,
+			};
 		}
 		var ids = Of!.Resolve(s, context);
 		IEnumerable<Card> Cards() => ids.Select(s.GetObject).OfType<Card>();
@@ -263,6 +267,6 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 		};
 		// CR 107.1b: a number that would be negative is 0 — a -4 power must not make "lose X life"
 		// a life gain. The sign ("-X") applies after.
-		return Sign * Math.Max(0, counted);
+		return Math.Max(0, counted);
 	}
 }

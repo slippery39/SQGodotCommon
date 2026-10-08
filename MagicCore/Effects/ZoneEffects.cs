@@ -96,9 +96,13 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 	/// <summary>Stingerquill Charm: "Create a ... Cadet. It gains haste until end of turn."</summary>
 	public string? GainsUntilEndOfTurn { get; init; }
 
+	/// <summary>Recursive Recruitment: "put N +1/+1 counters on each of them" — counted once, as it resolves.</summary>
+	public Count Counters { get; init; } = 0;
+
 	public override ActionResult Execute(GameState s)
 	{
 		var count = Count.Value(s, InputContext);
+		var counters = Counters.Value(s, InputContext);
 		for (var i = 0; i < count; i++)
 		{
 			var token = CardFactory.Create(CardDefinition.Vanilla(Token), Controller) with
@@ -106,7 +110,7 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 				IsToken = true,
 			};
 			(s, token) = s.AddObject(token);
-			s = s.EnterBattlefield(token.Id, Controller);
+			s = s.EnterBattlefield(token.Id, Controller, extraCounters: counters);
 			if (GainsUntilEndOfTurn is { } keyword)
 				s = Update(
 					s,
@@ -117,16 +121,40 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 	}
 }
 
+/// <summary>Stingcaster Mage: "[it] gains flashback until end of turn" — read by Costs.Flashback.</summary>
+public record GainFlashbackThisTurn(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			All(What, s)
+				.Where(id => s.GetObject(id) is Card)
+				.Aggregate(
+					s,
+					(st, id) =>
+						Update(
+							st,
+							(Card)
+								st.GetCard(id)
+									.WithoutComponents<GrantedFlashback>()
+									.WithComponent(new GrantedFlashback(st.GetGame().TurnNumber))
+						)
+				)
+		);
+}
+
 /// <summary>"Return this card from your graveyard to the battlefield" (Darklight Phoenix) or "to your hand" (Command the Stage).</summary>
 public record ReturnFromGraveyard(Ref What, ZoneType To) : Effect
 {
+	/// <summary>Generous Revival: "with an additional +1/+1 counter on it" — it enters with it.</summary>
+	public int Counters { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in All(What, s).ToList())
 			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, ZoneType.Graveyard))
 				s =
 					To == ZoneType.Battlefield
-						? s.EnterBattlefield(id, card.OwnerId)
+						? s.EnterBattlefield(id, card.OwnerId, extraCounters: Counters)
 						: s.MoveCard(id, s.ZoneId(card.OwnerId, To));
 		return new(s);
 	}

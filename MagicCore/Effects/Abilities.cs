@@ -162,5 +162,17 @@ public record CostsLessByGreatestPowerYouControl : GameComponent;
 /// <summary>Wrath of the Bloodmane: "This spell costs {N} less to cast if you control a legendary creature."</summary>
 public record CostsLessIfYouControlLegendaryCreature(int Amount) : GameComponent;
 
+/// <summary>
+/// "Flashback [cost] (You may cast this card from your graveyard for its flashback cost. Then exile
+/// it.)" Twinned Vision's flashback also costs "Discard a card".
+/// </summary>
+public record FlashbackComponent(ManaCost Cost) : GameComponent
+{
+	public bool DiscardACard { get; init; }
+}
+
+/// <summary>Stingcaster Mage: "gains flashback until end of turn. The flashback cost is equal to its mana cost." Lost on any zone change.</summary>
+public record GrantedFlashback(int OnTurn) : GameComponent;
+
 /// <summary>Traxos: "This spell costs {N} less to cast if you've cast a noncreature spell this turn."</summary>
 public record CostsLessIfYouCastNoncreatureSpellThisTurn(int Amount) : GameComponent;
