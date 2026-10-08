@@ -24,6 +24,9 @@ public record BlocksEvent(int CardId) : GameEvent;
 
 public record SurveilledEvent(int PlayerId) : GameEvent;
 
+/// <summary>A player put loyalty counters on a planeswalker — by a cost, an effect, or its entering with them (CR 122.6).</summary>
+public record LoyaltyCountersPutEvent(int PutterId) : GameEvent;
+
 /// <summary>A spell or ability put on the stack with this card as a target (CR 115).</summary>
 public record BecameTargetEvent(int CardId, int ByPlayerId) : GameEvent;
 
@@ -191,6 +194,8 @@ public static class Triggers
 			(TriggerEvent.YourEndStep, StepBeganEvent began) => began.Step == Step.End && yourTurn,
 			(TriggerEvent.EachEndStep, StepBeganEvent began) => began.Step == Step.End,
 			(TriggerEvent.YouSurveil, SurveilledEvent surveilled) => surveilled.PlayerId
+				== source.ControllerId,
+			(TriggerEvent.YouPutLoyaltyCounters, LoyaltyCountersPutEvent put) => put.PutterId
 				== source.ControllerId,
 			(TriggerEvent.CreatureYouControlEnters, EnteredBattlefieldEvent entered) => Yours(
 				entered.CardId

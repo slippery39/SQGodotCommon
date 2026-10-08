@@ -13,6 +13,7 @@ public enum TargetKind
 	Permanent, // narrowed by AnyOfTypes / NotTypes: "noncreature, nonland permanent"
 	SpellOrCreature, // a spell on the stack, or a creature on the battlefield
 	CardInYourGraveyard, // narrowed by AnyOfTypes / MaxManaValue: "target creature card in your graveyard"
+	CardInAnyGraveyard, // Afterthought Sentry: "target card from a graveyard"
 }
 
 public enum Whose
@@ -70,9 +71,13 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	{
 		if (!s.HasObject(targetId))
 			return false;
-		if (Kind == TargetKind.CardInYourGraveyard)
+		if (Kind is TargetKind.CardInYourGraveyard or TargetKind.CardInAnyGraveyard)
 			return s.GetObject(targetId) is Card inGraveyard
-				&& s.IsIn(targetId, controllerId, ZoneType.Graveyard)
+				&& s.IsIn(
+					targetId,
+					Kind == TargetKind.CardInYourGraveyard ? controllerId : inGraveyard.OwnerId,
+					ZoneType.Graveyard
+				)
 				&& targetId != sourceId
 				&& (AnyOfTypes == CardType.None || inGraveyard.Is(AnyOfTypes))
 				&& inGraveyard.ManaCost.ManaValue <= MaxManaValue
@@ -144,10 +149,15 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 			Kind == TargetKind.SpellOrCreature
 				? s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
 				: [];
-		var graveyard =
-			Kind == TargetKind.CardInYourGraveyard
-				? s.CardsIn(controllerId, ZoneType.Graveyard).Select(c => c.Id)
-				: [];
+		var graveyard = Kind switch
+		{
+			TargetKind.CardInYourGraveyard => s.CardsIn(controllerId, ZoneType.Graveyard)
+				.Select(c => c.Id),
+			TargetKind.CardInAnyGraveyard => players
+				.SelectMany(p => s.CardsIn(p, ZoneType.Graveyard))
+				.Select(c => c.Id),
+			_ => [],
+		};
 		return players
 			.Concat(permanents)
 			.Concat(spells)

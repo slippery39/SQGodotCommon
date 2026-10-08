@@ -122,19 +122,13 @@ public static class MagicRules
 				:
 				[
 					new PassPriorityAction { PlayerId = player },
-					.. s.CardsIn(player, ZoneType.Hand)
+					.. Rules
+						.Playable.Candidates(s, player)
 						.SelectMany(c =>
 							c.Is(CardType.Land)
 								? [new PlayLandAction { PlayerId = player, CardId = c.Id }]
 								: CastCandidates(s, player, c)
 						),
-					.. s.CardsIn(player, ZoneType.Graveyard)
-						.Where(c => Rules.Costs.Flashback(s, c) is not null)
-						.SelectMany(c => CastCandidates(s, player, c)),
-					.. new[] { player, s.OpponentOf(player) }
-						.SelectMany(p => s.CardsIn(p, ZoneType.Exile))
-						.Where(c => Rules.Prepare.IsCastableBy(s, c, player))
-						.SelectMany(c => CastCandidates(s, player, c)),
 					.. s.CardsIn(player, ZoneType.Battlefield)
 						.SelectMany(c =>
 							ActivateCandidates(s, player, c).Concat(LoyaltyCandidates(s, player, c))
@@ -261,7 +255,7 @@ public static class MagicRules
 			.DistinctBy(a =>
 				a switch
 				{
-					PlayLandAction p => $"land|{s.GetCard(p.CardId).Name}",
+					PlayLandAction p => $"land|{s.GetCard(p.CardId).Name}|{s.GetParent(p.CardId)}",
 					CastSpellAction c =>
 						$"cast|{s.GetCard(c.CardId).Name}|{s.GetParent(c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}",
 					ActivateAbilityAction activate =>

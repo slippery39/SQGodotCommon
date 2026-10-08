@@ -50,8 +50,23 @@ public sealed class GreedyAi(int playerId)
 
 	IEnumerable<int> Answer(GameState s, ChoiceAction choice)
 	{
+		if (choice is ChooseCardsFromHandChoice { PlayerId: var owner } && owner != PlayerId)
+			// You choose from THEIR hand: the priciest (MtgCore's stand-in for the same choice).
+			return choice
+				.Options.Select(o => s.GetCard(o.Id))
+				.OrderByDescending(c => c.ManaCost.ManaValue)
+				.Take(Math.Max(choice.MinChoices, 1))
+				.Select(c => c.Id);
+		if (choice is ChooseCardsFromHandChoice { MinChoices: 0, MaxChoices: 1 })
+		{
+			// "You may discard a card": the worst card, or none — whichever plays out better.
+			IEnumerable<int> worst = WorstCards(s, choice.Options.Select(o => o.Id), 1).ToList();
+			return new[] { worst, [] }.MaxBy(pick => Evaluate(Settle(s.Choose(pick))))!;
+		}
 		if (choice is ChooseCardsFromHandChoice)
 			return WorstCards(s, choice.Options.Select(o => o.Id), choice.MinChoices);
+		if (choice is ChooseColorChoice)
+			return [(int)MostWantedColor(s)];
 		if (choice is ChooseModesChoice { MaxChoices: > 1 } modes)
 			return Combinations(modes.Options.Select(o => o.Id).ToList(), modes.MaxChoices)
 				.MaxBy(pick => Evaluate(Settle(s.Choose(pick))))!;
@@ -73,6 +88,29 @@ public sealed class GreedyAi(int playerId)
 			: ids.SelectMany(
 				(id, i) => Combinations(ids[(i + 1)..], k - 1).Select(rest => rest.Prepend(id))
 			);
+
+	/// <summary>
+	/// Room of Refuge: the color with the most mana symbols across this player's cards in hand,
+	/// library and on the battlefield. Every color scores the same to Evaluate, so it can't decide.
+	/// </summary>
+	ManaColor MostWantedColor(GameState s) =>
+		new[] { ZoneType.Hand, ZoneType.Library, ZoneType.Battlefield }
+			.SelectMany(z => s.CardsIn(PlayerId, z))
+			.SelectMany(c => c.ManaCost.Symbols)
+			.SelectMany(sym =>
+				sym.Kind switch
+				{
+					SymbolKind.Colored or SymbolKind.TwoBrid => new[] { sym.Color },
+					SymbolKind.Hybrid => [sym.Color, sym.Color2],
+					_ => [],
+				}
+			)
+			.Where(c => c != ManaColor.Colorless)
+			.GroupBy(c => c)
+			.OrderByDescending(g => g.Count())
+			.Select(g => g.Key)
+			.DefaultIfEmpty(ManaColor.White)
+			.First();
 
 	/// <summary>Keep 2–5 lands in seven; after two mulligans keep anything.</summary>
 	bool ShouldKeep(GameState s)

@@ -138,9 +138,20 @@ public record Mill(Ref Who, int N) : Effect
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
-		foreach (var card in s.CardsIn(player, ZoneType.Library).Take(N).ToList())
-			s = s.MoveCard(card.Id, s.ZoneId(player, ZoneType.Graveyard));
+			(s, _) = Top(s, player, N);
 		return new(s);
+	}
+
+	/// <summary>The ONE mill: the top N into the graveyard, stopping early on a short library; the milled ids.</summary>
+	public static (GameState State, ImmutableList<int> Milled) Top(GameState s, int playerId, int n)
+	{
+		var milled = s.CardsIn(playerId, ZoneType.Library)
+			.Take(n)
+			.Select(c => c.Id)
+			.ToImmutableList();
+		foreach (var id in milled)
+			s = s.MoveCard(id, s.ZoneId(playerId, ZoneType.Graveyard));
+		return (s, milled);
 	}
 }
 
@@ -284,6 +295,106 @@ public record ReturnFromGraveyard(Ref What, ZoneType To) : Effect
 						)
 						: s.MoveCard(id, s.ZoneId(card.OwnerId, To));
 		return new(s);
+	}
+}
+
+/// <summary>Blazing Crescendo: "Exile the top card of your library. Until the end of your next turn, you may play that card."</summary>
+public record ExileTopPlayable : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var top = s.CardsIn(Controller, ZoneType.Library).FirstOrDefault();
+		if (top is null)
+			return new(s);
+		s = s.MoveCard(top.Id, s.ZoneId(Controller, ZoneType.Exile));
+		return new(
+			Update(
+				s,
+				(Card)
+					s.GetCard(top.Id)
+						.WithComponent(
+							new PlayableFromExile(
+								Controller,
+								Playable.EndOfNextTurnOf(s, Controller)
+							)
+						)
+			)
+		);
+	}
+}
+
+/// <summary>Afterthought Sentry: "exile [target card] from a graveyard" — a card, not a permanent.</summary>
+public record ExileFromGraveyard(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var id in All(What, s).ToList())
+			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, ZoneType.Graveyard))
+				s = s.MoveCard(id, s.ZoneId(card.OwnerId, ZoneType.Exile));
+		return new(s);
+	}
+}
+
+/// <summary>
+/// Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card from it.
+/// That player discards that card." A real choice — MtgCore stands in "their most expensive card",
+/// but the card is costed on the choosing.
+/// </summary>
+public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
+		{
+			var choice = new ChooseCardsFromHandChoice
+			{
+				PlayerId = player,
+				DeciderId = Controller,
+				Types = Types,
+				MinChoices = 1,
+				MaxChoices = 1,
+				Prompt = "Choose a card for them to discard",
+			};
+			if (!choice.GetOptions(s, InputContext).IsEmpty)
+				s = s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+						Steps = [choice, new MoveChosenToGraveyardAction { PlayerId = player }],
+					}
+				);
+		}
+		return new(s);
+	}
+}
+
+/// <summary>
+/// Something Worth Saving: "Mill N. You may put a [Types] card from among them into your hand." Mill,
+/// CHOOSE, move — MtgCore's dig once shipped without its middle step and did nothing at all.
+/// </summary>
+public record MillAndMayTake(int N, CardType Types) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		(s, var milled) = Mill.Top(s, Controller, N);
+		var choice = new ChooseAmongChoice
+		{
+			PlayerId = Controller,
+			Ids = milled,
+			Types = Types,
+			Prompt = "You may put one into your hand",
+		};
+		if (choice.GetOptions(s, InputContext).IsEmpty)
+			return new(s); // nothing to choose: no prompt with no options
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+					Steps = [choice, new MoveChosenToAction(Controller, ZoneType.Hand)],
+				}
+			)
+		);
 	}
 }
 

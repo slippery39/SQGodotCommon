@@ -10,7 +10,14 @@ public record ChooseCardsFromHandChoice : ChoiceAction
 {
 	public const string Chosen = "chosen";
 
+	/// <summary>Whose hand.</summary>
 	public int PlayerId { get; init; }
+
+	/// <summary>Who chooses, if not the hand's owner — Solve for Disappointment: "You choose … from it."</summary>
+	public int DeciderId { get; init; }
+
+	/// <summary>Only cards of these types ("a nonland permanent card"); None means any.</summary>
+	public CardType Types { get; init; }
 
 	public ChooseCardsFromHandChoice() => OutputKey = Chosen;
 
@@ -19,13 +26,14 @@ public record ChooseCardsFromHandChoice : ChoiceAction
 		ImmutableDictionary<string, object> context
 	) =>
 		s.CardsIn(PlayerId, ZoneType.Hand)
+			.Where(c => Types == CardType.None || c.Is(Types))
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
 			.ToImmutableList();
 
 	public override int GetDecidingPlayerId(
 		GameState s,
 		ImmutableDictionary<string, object> context
-	) => PlayerId;
+	) => DeciderId != 0 ? DeciderId : PlayerId;
 
 	/// <summary>ResolveChoice stores one pick as an int and several as a list.</summary>
 	public static IEnumerable<int> Read(ImmutableDictionary<string, object> context) =>
@@ -85,6 +93,91 @@ public record MoveChosenToAction(int PlayerId, ZoneType To) : GameAction
 public record ShuffleLibraryAction(int PlayerId) : GameAction
 {
 	public override ActionResult Execute(GameState s) => new(s.Shuffle(PlayerId));
+}
+
+/// <summary>Something Worth Saving: "You may put a [Types] card from among them into your hand."</summary>
+public record ChooseAmongChoice : ChoiceAction
+{
+	public int PlayerId { get; init; }
+	public ImmutableList<int> Ids { get; init; } = [];
+	public CardType Types { get; init; }
+
+	public ChooseAmongChoice()
+	{
+		OutputKey = ChooseCardsFromHandChoice.Chosen;
+		MinChoices = 0;
+		MaxChoices = 1;
+	}
+
+	public override ImmutableList<ChoiceOption> GetOptions(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) =>
+		Ids.Where(id => s.IsIn(id, PlayerId, ZoneType.Graveyard))
+			.Select(s.GetCard)
+			.Where(c => c.Is(Types))
+			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
+			.ToImmutableList();
+
+	public override int GetDecidingPlayerId(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => PlayerId;
+}
+
+/// <summary>"Choose a color." Option ids are the ManaColor values.</summary>
+public record ChooseColorChoice : ChoiceAction
+{
+	public const string Chosen = "color";
+	public int PlayerId { get; init; }
+
+	public ChooseColorChoice(int playerId)
+	{
+		PlayerId = playerId;
+		Prompt = "Choose a color";
+		OutputKey = Chosen;
+		MinChoices = 1;
+		MaxChoices = 1;
+	}
+
+	public override ImmutableList<ChoiceOption> GetOptions(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) =>
+		[
+			.. new[]
+			{
+				ManaColor.White,
+				ManaColor.Blue,
+				ManaColor.Black,
+				ManaColor.Red,
+				ManaColor.Green,
+			}.Select(c => new ChoiceOption { Id = (int)c, DisplayText = c.ToString() }),
+		];
+
+	public override int GetDecidingPlayerId(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => PlayerId;
+}
+
+/// <summary>Room of Refuge: its mana is the chosen color — while it stays this object.</summary>
+public record SetChosenColorAction(int CardId) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		if (
+			!s.IsOnBattlefield(CardId)
+			|| InputContext.GetValueOrDefault(ChooseColorChoice.Chosen) is not int color
+		)
+			return new ActionResult(s);
+		return new ActionResult(
+			s.UpdateObject(
+				CardId,
+				s.GetCard(CardId).WithComponent(new Effects.ChosenColorMana((ManaColor)color))
+			)
+		);
+	}
 }
 
 public record PutChosenOnBottomAction : GameAction

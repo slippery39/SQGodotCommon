@@ -14,14 +14,19 @@ public static class Describe
 			PassPriorityAction => "Pass",
 			KeepHandAction => "Keep hand",
 			MulliganAction => "Mulligan",
-			PlayLandAction p => $"Play {Name(s, p.CardId)}",
+			PlayLandAction p => $"Play {Name(s, p.CardId)}"
+				+ (s.IsIn(p.CardId, p.PlayerId, ZoneType.Exile) ? " from exile" : ""),
 			CastSpellAction c => $"Cast {Name(s, c.CardId)}"
 				+ (
 					s.IsIn(c.CardId, c.PlayerId, ZoneType.Graveyard)
 						? " from graveyard (flashback)"
 						: ""
 				)
-				+ (s.GetObject(c.CardId) is Card { IsCopy: true } ? " (prepared copy)" : "")
+				+ (
+					s.GetObject(c.CardId) is Card { IsCopy: true } ? " (prepared copy)"
+					: s.IsIn(c.CardId, c.PlayerId, ZoneType.Exile) ? " from exile"
+					: ""
+				)
 				+ (c.X > 0 ? $" (X={c.X})" : "")
 				+ (c.Modes.Length > 0 ? $" ({ModeText(s, c)})" : "")
 				+ Targets(s, c.Targets)

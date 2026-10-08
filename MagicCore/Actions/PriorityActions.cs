@@ -79,8 +79,14 @@ public record PlayLandAction : GameAction
 		var tally = s.GetPlayer(PlayerId).ThisTurn;
 		if (tally.LandsPlayed >= 1 + tally.ExtraLandDrops)
 			return ValidationResult.Invalid("Already played a land this turn");
-		if (!s.IsIn(CardId, PlayerId, ZoneType.Hand) || !s.GetCard(CardId).Is(CardType.Land))
-			return ValidationResult.Invalid("Not a land in your hand");
+		if (
+			!s.HasObject(CardId)
+			|| s.GetObject(CardId) is not Card land
+			|| !Rules.Playable.CanPlayLandFromHere(s, land, PlayerId)
+		)
+			return ValidationResult.Invalid(
+				"Not a land in your hand, or one you may play from exile"
+			);
 		return ValidationResult.Valid;
 	}
 

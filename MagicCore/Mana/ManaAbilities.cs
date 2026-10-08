@@ -13,6 +13,7 @@ public static class ManaAbilities
 			.Subtypes.Select(BasicLandColor)
 			.OfType<ManaColor>()
 			.Concat(card.GetComponents<ManaAbilityComponent>().Select(m => m.Color))
+			.Concat(card.GetComponents<ChosenColorMana>().Select(m => m.Color))
 			.Distinct();
 
 	static ManaColor? BasicLandColor(string subtype) =>

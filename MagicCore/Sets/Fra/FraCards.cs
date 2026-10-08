@@ -215,6 +215,11 @@ public static class FraCards
 	);
 
 	static readonly TargetSpec Creature = new(TargetKind.Creature);
+
+	/// <summary>"Permanent card" / "nonland permanent card". FRA has no battles.</summary>
+	const CardType NonlandPermanentTypes =
+		CardType.Creature | CardType.Artifact | CardType.Enchantment | CardType.Planeswalker;
+	const CardType PermanentTypes = NonlandPermanentTypes | CardType.Land;
 	static readonly TargetSpec CreatureOrPlaneswalker = new(TargetKind.CreatureOrPlaneswalker);
 
 	static SpellEffectsComponent Spell(TargetSpec[] targets, params GameAction[] effects) =>
@@ -1813,12 +1818,7 @@ public static class FraCards
 				Spell(
 					[],
 					new ReturnFromGraveyard(
-						Ref.YourGraveyard(
-							CardType.Creature
-								| CardType.Artifact
-								| CardType.Enchantment
-								| CardType.Planeswalker
-						),
+						Ref.YourGraveyard(NonlandPermanentTypes),
 						ZoneType.Battlefield
 					)
 				),
@@ -1829,12 +1829,7 @@ public static class FraCards
 					[
 						new TargetSpec(TargetKind.CardInYourGraveyard)
 						{
-							AnyOfTypes =
-								CardType.Creature
-								| CardType.Artifact
-								| CardType.Enchantment
-								| CardType.Planeswalker
-								| CardType.Land,
+							AnyOfTypes = PermanentTypes,
 						},
 					],
 					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand),
@@ -1863,6 +1858,105 @@ public static class FraCards
 				{
 					If = new Not(new SourceHasDealtCombatDamage()),
 				},
+			],
+
+			// ===== Commons: impulse, reflexive triggers, revealed hands, chosen colors =====
+			["Shatterwing Pegasus"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{4}{W}"),
+					[new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 1)]
+				),
+			],
+			["Unsummon"] = [Spell([Creature], new ReturnToHand(Ref.Target()))],
+			["Inspired Tethermage"] =
+			[
+				When(TriggerEvent.YouPutLoyaltyCounters, [], new AddCounters(Ref.Source, 1)),
+				new ActivatedAbilityComponent(ManaCost.Parse("{6}"), [new EmpowerJace(2)]),
+			],
+			["Something Worth Saving"] =
+			[
+				Spell([], new MillAndMayTake(4, PermanentTypes), new GainLife(Ref.You, 1)),
+			],
+			["Sureshot Sower"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{3}{G}"), [new Destroy(Ref.Target())])
+				{
+					From = ZoneType.Hand,
+					DiscardSelf = true,
+					Targets = [Creature with { WithKeyword = "Flying" }],
+				},
+			],
+			["Afterthought Sentry"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[new ModifyUntilEndOfTurn(Ref.Source, 0, 0, "Flying")]
+				),
+				When(
+					TriggerEvent.SelfAttacks,
+					[new TargetSpec(TargetKind.CardInAnyGraveyard) { Optional = true }],
+					new ExileFromGraveyard(Ref.Target())
+				),
+			],
+			["Murmuring Volume"] =
+			[
+				new ManaAbilityComponent(ManaColor.White),
+				new ManaAbilityComponent(ManaColor.Blue),
+				new ManaAbilityComponent(ManaColor.Black),
+				new ManaAbilityComponent(ManaColor.Red),
+				new ManaAbilityComponent(ManaColor.Green),
+				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new DrawCards(Ref.You, 1)])
+				{
+					TapCost = true,
+					DiscardACard = true,
+				},
+			],
+			["Room of Refuge"] =
+			[
+				new EntersTappedComponent(),
+				new ChoosesColorAsItEnters(),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{5}"),
+					[new AddCounters(Ref.Target(), 2)]
+				)
+				{
+					TapCost = true,
+					SacrificeSelf = true,
+					SorcerySpeed = true,
+					Targets = [Creature],
+				},
+			],
+			["Tether Technician"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new MayDiscard(
+						[
+							new WhenYouDo(
+								[new TargetSpec(TargetKind.AnyTarget)],
+								[new DealDamage(Ref.Target(), 2)]
+							),
+						]
+					)
+				),
+			],
+			["Blazing Crescendo"] =
+			[
+				Spell(
+					[Creature],
+					new ModifyUntilEndOfTurn(Ref.Target(), 3, 1),
+					new ExileTopPlayable()
+				),
+			],
+			["Solve for Disappointment"] =
+			[
+				Spell(
+					[new TargetSpec(TargetKind.Player, Whose.Opponent)],
+					new YouChooseTheyDiscard(Ref.Target(), NonlandPermanentTypes),
+					new EmpowerJace(1)
+				),
 			],
 		};
 

@@ -36,6 +36,8 @@ public enum TriggerEvent
 	YouActivateLoyaltyAbility,
 	YouActivateLoyaltyAbilityRemovingTwoOrMore,
 	BeginningOfCombatOnYourTurn,
+	YouPutLoyaltyCounters, // Inspired Tethermage: "whenever you put one or more loyalty counters on a planeswalker"
+	Reflexive, // "When you do, …" — put on the stack by WhenYouDo, never matched against an event
 	AnotherCreatureOrPlaneswalkerYouControlEnters, // Liliana the Repentant
 	YouSurveil, // "whenever you scry or surveil" — FRA has no scry
 	CreatureYouControlEnters, // Mabel: "Mabel or another creature you control"
@@ -207,6 +209,15 @@ public record FlashbackComponent(ManaCost Cost) : GameComponent
 {
 	public bool DiscardACard { get; init; }
 }
+
+/// <summary>Impulse draw: this exiled card may be played by PlayerId through turn UntilTurn (Rules/Playable.cs).</summary>
+public record PlayableFromExile(int PlayerId, int UntilTurn) : GameComponent;
+
+/// <summary>Room of Refuge: "As it enters, choose a color." Applied by MagicState.EnterBattlefield.</summary>
+public record ChoosesColorAsItEnters : GameComponent;
+
+/// <summary>"{T}: Add one mana of the chosen color." — set as it entered; gone when it leaves.</summary>
+public record ChosenColorMana(ManaColor Color) : GameComponent;
 
 /// <summary>Stingcaster Mage: "gains flashback until end of turn. The flashback cost is equal to its mana cost." Lost on any zone change.</summary>
 public record GrantedFlashback(int OnTurn) : GameComponent;

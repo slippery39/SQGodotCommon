@@ -56,6 +56,6 @@ public record EmpowerJace(Count Amount) : Effect
 			s = s.EnterBattlefield(jace.Id, Controller);
 			jace = s.GetCard(jace.Id);
 		}
-		return new(Actions.Loyalty.Change(s, jace.Id, n));
+		return new(Actions.Loyalty.Change(s, jace.Id, n, Controller));
 	}
 }

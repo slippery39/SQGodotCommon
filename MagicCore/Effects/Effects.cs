@@ -125,7 +125,7 @@ public record AddLoyalty(Ref What, Count Amount) : Effect
 		return new(
 			Permanents(What, s)
 				.Where(c => c.Is(CardType.Planeswalker))
-				.Aggregate(s, (st, c) => Actions.Loyalty.Change(st, c.Id, n))
+				.Aggregate(s, (st, c) => Actions.Loyalty.Change(st, c.Id, n, Controller))
 		);
 	}
 }
@@ -244,6 +244,37 @@ public record PutEventCardCounters(Ref To) : Effect
 		return counters == 0
 			? new(s)
 			: (new AddCounters(To, counters) with { InputContext = InputContext }).Execute(s);
+	}
+}
+
+/// <summary>
+/// "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this resolves, its
+/// targets are chosen then, and it goes on the stack above — so a player can respond knowing what
+/// was done. Tether Technician: "you may discard a card. When you do, …".
+/// </summary>
+public record WhenYouDo(ImmutableList<TargetSpec> Targets, ImmutableList<GameAction> Then) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var ability = new TriggeredAbilityComponent(TriggerEvent.Reflexive, Then)
+		{
+			Targets = Targets,
+		};
+		return new(
+			Turns.Triggers.QueueTargets(
+				s,
+				new Turns.Triggers.Pending(
+					Source(s) with
+					{
+						ControllerId = Controller,
+					},
+					ability,
+					0
+				),
+				Targets,
+				Then
+			)
+		);
 	}
 }
 

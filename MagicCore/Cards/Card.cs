@@ -159,6 +159,8 @@ public record Card : GameObject
 						or UntilEndOfTurn
 						or Effects.ExiledUntilLeaves
 						or Effects.GrantedFlashback
+						or Effects.PlayableFromExile
+						or Effects.ChosenColorMana
 			),
 		};
 

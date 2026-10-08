@@ -193,6 +193,19 @@ public static class MagicState
 					),
 			}
 		);
+		if (card.PrintedLoyalty > 0)
+			s = s.Raise(new LoyaltyCountersPutEvent(controllerId)); // entering with them is "putting" (CR 122.6)
+		if (card.HasComponent<ChoosesColorAsItEnters>())
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						new Actions.ChooseColorChoice(controllerId),
+						new Actions.SetChosenColorAction(cardId),
+					],
+				}
+			);
 		return card.HasComponent<EntersPreparedComponent>() ? Rules.Prepare.Become(s, cardId) : s;
 	}
 

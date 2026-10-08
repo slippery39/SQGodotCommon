@@ -36,6 +36,7 @@ MagicCore/
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions)
 ├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
 ├── FraCoverage.md       what FRA is scripted, what waits and why — status, not rules
+├── Rules/Playable.cs    THE "may it be cast/played from here": hand, flashback, prepared copy, impulse exile
 ├── Rules/Prepare.cs     THE prepare rules: become prepared (a copy of the spell in exile), castable, unprepare
 ├── Rules/Life.cs        THE life-gain path — raises the event "whenever you gain life" reads
 ├── Cards/Card.cs        Card (computed P/T + keywords, permanent/combat state, Fresh()), CardFactory
@@ -131,7 +132,9 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Hexproof** is checked in `TargetSpec.IsLegal` through `s.Has` (an opponent's spells and abilities
   only; mass effects never target). **Indestructible** is `s.IsIndestructible` — the Destroy effect and
   the lethal-damage check both ask it; 0 toughness still kills.
-- **Targets in a graveyard** are `TargetKind.CardInYourGraveyard` — the same legality test on choosing
+- **"When you do"** (a reflexive trigger, CR 603.12) is the `WhenYouDo` effect: its targets are chosen
+  as it triggers, after the thing done, and it goes on the stack above — never fold it into the effect.
+- **Targets in a graveyard** are `TargetKind.CardInYourGraveyard` (or `CardInAnyGraveyard`, "from a graveyard") — the same legality test on choosing
   and resolving. "One or two target creatures" is two words, the second `Optional` and `NotThePrevious`.
 - **"You may … If you do"** is `May` (a `YesNoChoice`, asked only when it can be done) or
   `MaySacrifice`; both clear the shared "chosen" key so a "no" cannot read a stale "yes".

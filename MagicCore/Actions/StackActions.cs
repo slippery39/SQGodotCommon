@@ -68,18 +68,11 @@ public record CastSpellAction : GameAction
 		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
 			return noPriority;
 		if (
-			!s.IsIn(CardId, PlayerId, ZoneType.Hand)
-			&& !(
-				s.IsIn(CardId, PlayerId, ZoneType.Graveyard)
-				&& Costs.Flashback(s, s.GetCard(CardId)) is not null
-			)
-			&& !(
-				s.HasObject(CardId)
-				&& s.GetObject(CardId) is Card copy
-				&& Prepare.IsCastableBy(s, copy, PlayerId)
-			)
+			!s.HasObject(CardId)
+			|| s.GetObject(CardId) is not Card candidate
+			|| !Playable.CanCastFromHere(s, candidate, PlayerId)
 		)
-			return ValidationResult.Invalid("Not in your hand, no flashback, not a prepared copy");
+			return ValidationResult.Invalid("You may not cast that card from where it is");
 		var card = s.GetCard(CardId);
 		if (OwesDiscard(s, card) ? !s.IsIn(DiscardId, PlayerId, ZoneType.Hand) : DiscardId != 0)
 			return ValidationResult.Invalid("Discard a card from your hand for this");

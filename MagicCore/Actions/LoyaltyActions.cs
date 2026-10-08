@@ -29,16 +29,14 @@ public static class Loyalty
 	/// Never below 0: removing counters removes only those there (CR 120.3c), which matters when
 	/// Sanctum Lurker keeps a walker alive at 0.
 	/// </summary>
-	public static GameState Change(GameState s, int walkerId, int delta)
+	/// <param name="putterId">Who puts them — Inspired Tethermage's "you"; the walker's controller if 0.</param>
+	public static GameState Change(GameState s, int walkerId, int delta, int putterId = 0)
 	{
 		var walker = s.GetCard(walkerId);
-		return s.UpdateObject(
-			walkerId,
-			walker with
-			{
-				Loyalty = Math.Max(0, walker.Loyalty + delta),
-			}
-		);
+		s = s.UpdateObject(walkerId, walker with { Loyalty = Math.Max(0, walker.Loyalty + delta) });
+		return delta > 0
+			? s.Raise(new LoyaltyCountersPutEvent(putterId != 0 ? putterId : walker.ControllerId))
+			: s;
 	}
 
 	public static string CostText(int cost) =>
@@ -85,7 +83,7 @@ public record ActivateLoyaltyAction : GameAction
 	{
 		var walker = s.GetCard(CardId);
 		var ability = Loyalty.AbilitiesOf(s, walker)[AbilityIndex];
-		s = Loyalty.Change(s, CardId, ability.Cost);
+		s = Loyalty.Change(s, CardId, ability.Cost, PlayerId);
 		walker = s.GetCard(CardId) with { LoyaltyActivatedOnTurn = s.GetGame().TurnNumber };
 		s = s.UpdateObject(CardId, walker).Raise(new LoyaltyActivatedEvent(PlayerId, ability.Cost));
 		s = StackResolution.Push(
