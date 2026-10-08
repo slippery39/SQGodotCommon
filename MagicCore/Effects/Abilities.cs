@@ -232,5 +232,8 @@ public record EntersPreparedComponent : GameComponent;
 /// <summary>On a prepared copy in exile: the creature (and which object of it) it belongs to.</summary>
 public record PreparedCopyOf(int CreatureId, int Incarnation) : GameComponent;
 
+/// <summary>"This spell can't be countered." Read by StackResolution.Counter.</summary>
+public record CantBeCountered : GameComponent;
+
 /// <summary>Traxos: "This spell costs {N} less to cast if you've cast a noncreature spell this turn."</summary>
 public record CostsLessIfYouCastNoncreatureSpellThisTurn(int Amount) : GameComponent;

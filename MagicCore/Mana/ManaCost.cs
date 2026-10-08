@@ -114,4 +114,21 @@ public record ManaCost(ImmutableArray<ManaSymbol> Symbols)
 			"C" => ManaColor.Colorless,
 			_ => throw new FormatException($"Unknown mana letter '{letter}'"),
 		};
+
+	static string LetterOf(ManaColor color) => "WUBRGC"[(int)color].ToString();
+
+	/// <summary>The printed form, "{2}{W/U}" — what Parse reads. Needed wherever a cost is shown.</summary>
+	public override string ToString() =>
+		string.Concat(
+			Symbols.Select(s =>
+				s.Kind switch
+				{
+					SymbolKind.Generic => $"{{{s.Amount}}}",
+					SymbolKind.Hybrid => $"{{{LetterOf(s.Color)}/{LetterOf(s.Color2)}}}",
+					SymbolKind.TwoBrid => $"{{2/{LetterOf(s.Color)}}}",
+					SymbolKind.X => "{X}",
+					_ => $"{{{LetterOf(s.Color)}}}",
+				}
+			)
+		);
 }

@@ -132,6 +132,10 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Hexproof** is checked in `TargetSpec.IsLegal` through `s.Has` (an opponent's spells and abilities
   only; mass effects never target). **Indestructible** is `s.IsIndestructible` — the Destroy effect and
   the lethal-damage check both ask it; 0 toughness still kills.
+- **Countering is `StackResolution.Counter`** — a spell to its graveyard through MoveCard (flashback and
+  prepared copies still hold), an ability removed, "can't be countered" untouched. "Unless its
+  controller pays" asks that player (`CounterUnlessPays`). **Ward** is a trigger whose "it" is the
+  targeting spell or ability, carried as the event card of `BecameTargetEvent`.
 - **"When you do"** (a reflexive trigger, CR 603.12) is the `WhenYouDo` effect: its targets are chosen
   as it triggers, after the thing done, and it goes on the stack above — never fold it into the effect.
 - **Targets in a graveyard** are `TargetKind.CardInYourGraveyard` (or `CardInAnyGraveyard`, "from a graveyard") — the same legality test on choosing
@@ -178,19 +182,10 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Test trap:** helpers that replace a `GameState` field (`Hand`, `Field`) must run on their own line —
   in `s.Act(new … { CardId = Hand(…) })` C# reads `s` before `Hand` replaces it.
 
-## Known ceilings (each marked `ponytail:` in the code)
+## Known ceilings
 
-Damage split among blockers is automatic · an exhaust stamp is per card, not per ability · "can't be
-countered" is unenforced until a counterspell is scripted (Ruric Thar, Magecrusher) · triggers are matched against the battlefield at the next priority, so a
-source, or an entering creature, that is gone by then — destroyed later in the same resolution — is
-missed (one the state-based check kills is still seen) · the legend rule keeps the newest · last-known information keeps a card's own characteristics, not what statics gave it · a dying card's own
-"when this dies" looks back, but other leaves-the-battlefield triggers read the battlefield NOW (Edgar
-dying alongside a creature misses its death) · a "sacrifice the greatest" tie takes the first ·
-`GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana, no "do I need
-this mana now" when choosing a tapped dual, and it loses slow races to evasive fliers
-(`docs/findings/magic-ai.md`) · menace drops a
-lone blocker instead of refusing the declaration · the auto-tapper ignores what the rest of the hand
-needs · Empower Jace with two Jace tokens loads the first · surveil keeps the kept cards' order.
+Each is marked `ponytail:` in the code, with its upgrade path; the list is in `DesignNotes.md` under
+**MagicCore known ceilings**. Add a new one there in the same step as its comment.
 
 ## FRA cards
 

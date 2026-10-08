@@ -14,6 +14,7 @@ public enum TargetKind
 	SpellOrCreature, // a spell on the stack, or a creature on the battlefield
 	CardInYourGraveyard, // narrowed by AnyOfTypes / MaxManaValue: "target creature card in your graveyard"
 	CardInAnyGraveyard, // Afterthought Sentry: "target card from a graveyard"
+	Spell, // a spell on the stack, narrowed by AnyOfTypes (+ OrSupertype) and the usual filters
 }
 
 public enum Whose
@@ -39,6 +40,9 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 
 	/// <summary>Fateshaper Aspirant: "target legendary card". None means any.</summary>
 	public Supertype WithSupertype { get; init; }
+
+	/// <summary>Icy Reception: "creature OR legendary spell" — widens AnyOfTypes; never narrows.</summary>
+	public Supertype OrSupertype { get; init; }
 
 	/// <summary>"That's blue or red" — empty means any colour.</summary>
 	public ImmutableArray<ManaColor> AnyOfColors { get; init; } = [];
@@ -95,6 +99,16 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 			return false;
 		if (s.GetObject(targetId) is MagicPlayer)
 			return Kind is TargetKind.AnyTarget or TargetKind.Player;
+		if (Kind == TargetKind.Spell)
+			return s.GetObject(targetId) is Card stackSpell
+				&& OnStack(s, targetId)
+				&& targetId != sourceId // a spell cannot target itself (CR 115.5)
+				&& (
+					AnyOfTypes == CardType.None
+					|| stackSpell.Is(AnyOfTypes)
+					|| (OrSupertype != Supertype.None && stackSpell.Is(OrSupertype))
+				)
+				&& Filters(s, stackSpell);
 		if (
 			Kind == TargetKind.SpellOrCreature
 			&& s.GetObject(targetId) is Card spell
@@ -145,10 +159,9 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		var permanents = players
 			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
 			.Select(c => c.Id);
-		var spells =
-			Kind == TargetKind.SpellOrCreature
-				? s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
-				: [];
+		var spells = Kind is TargetKind.SpellOrCreature or TargetKind.Spell
+			? s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
+			: [];
 		var graveyard = Kind switch
 		{
 			TargetKind.CardInYourGraveyard => s.CardsIn(controllerId, ZoneType.Graveyard)

@@ -316,6 +316,17 @@ public static class FraCards
 			OnlyIf = onlyIf,
 		};
 
+	/// <summary>
+	/// "Ward {N} (Whenever this creature becomes the target of a spell or ability an opponent controls,
+	/// counter it unless that player pays {N}.)" "It" is Ref.EventObject — the targeting spell or ability.
+	/// </summary>
+	static TriggeredAbilityComponent Ward(string cost) =>
+		When(
+			TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
+			[],
+			new CounterUnlessPays(Ref.EventObject, ManaCost.Parse(cost))
+		);
+
 	/// <summary>One bullet: its target words and effects. Its text is filled in from the card.</summary>
 	static Mode M(TargetSpec[] targets, params GameAction[] effects) =>
 		new("", [.. targets], [.. effects]);
@@ -1850,10 +1861,9 @@ public static class FraCards
 					new EmpowerJace(2)
 				),
 			],
-			// ponytail: "This spell can't be countered." is unenforced — FRA's counterspells aren't
-			// scripted yet; give a spell an Uncounterable flag when the first one is.
 			["Ruric Thar, Magecrusher"] =
 			[
+				new CantBeCountered(),
 				new StaticEffectComponent(Affects.Self, "Hexproof")
 				{
 					If = new Not(new SourceHasDealtCombatDamage()),
@@ -1956,6 +1966,39 @@ public static class FraCards
 					[new TargetSpec(TargetKind.Player, Whose.Opponent)],
 					new YouChooseTheyDiscard(Ref.Target(), NonlandPermanentTypes),
 					new EmpowerJace(1)
+				),
+			],
+
+			// ===== Counterspells and ward =====
+			["Icy Reception"] =
+			[
+				ModalSpell(
+					"Icy Reception",
+					1,
+					M(
+						[
+							new TargetSpec(TargetKind.Spell)
+							{
+								AnyOfTypes = CardType.Creature,
+								OrSupertype = Supertype.Legendary,
+							},
+						],
+						new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{3}"))
+					),
+					M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), -5, 0))
+				),
+			],
+			["Unflinching Hortimancer"] =
+			[
+				Ward("{1}"),
+				When(TriggerEvent.YouGainLife, [], new AddCounters(Ref.Source, 1)),
+			],
+			["Wrecking Gecko"] =
+			[
+				Ward("{2}"),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{6}{G}{G}"),
+					[new ModifyUntilEndOfTurn(Ref.Source, 4, 4, "Trample")]
 				),
 			],
 		};

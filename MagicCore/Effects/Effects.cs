@@ -248,6 +248,61 @@ public record PutEventCardCounters(Ref To) : Effect
 }
 
 /// <summary>
+/// "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer CHOOSES (CR
+/// 118.12): asked only when they can pay. MtgCore auto-pays; real rules don't.
+/// </summary>
+public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var stack = s.GetWellKnownId(MagicKeys.Stack);
+		foreach (var id in All(What, s).Where(id => s.GetParent(id) == stack).ToList())
+		{
+			if (
+				s.GetObject(id) is Card { } uncounterable
+				&& uncounterable.HasComponent<CantBeCountered>()
+			)
+				continue; // nothing to pay for: the counter can't touch it
+			var payer = s.GetObject(id) switch
+			{
+				Card spell => spell.ControllerId,
+				StackAbility ability => ability.ControllerId,
+				_ => 0,
+			};
+			if (payer == 0 || ManaPayment.Find(s, payer, Cost, 0) is null)
+			{
+				s = StackResolution.Counter(s, id);
+				continue;
+			}
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+					Steps =
+					[
+						new PayToKeepChoice(payer, $"Pay {Cost} to keep {s.GetObject(id).Name}?"),
+						new PayOrCounterAction(id, payer, Cost),
+					],
+				}
+			);
+		}
+		return new(s);
+	}
+}
+
+/// <summary>After the payer's answer: pay the cost, or the spell or ability is countered.</summary>
+public record PayOrCounterAction(int StackObjectId, int PayerId, ManaCost Cost) : GameAction
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			ChoosePermanentChoice.Read(InputContext).Any()
+			&& ManaPayment.Find(s, PayerId, Cost, 0) is { } payment
+				? ManaPayment.Pay(s, PayerId, payment)
+				: StackResolution.Counter(s, StackObjectId)
+		);
+}
+
+/// <summary>
 /// "When you do, [effects]" — a reflexive trigger (CR 603.12): it triggers as this resolves, its
 /// targets are chosen then, and it goes on the stack above — so a player can respond knowing what
 /// was done. Tether Technician: "you may discard a card. When you do, …".

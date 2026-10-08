@@ -125,11 +125,16 @@ public record ChooseAmongChoice : ChoiceAction
 	) => PlayerId;
 }
 
-/// <summary>"Choose a color." Option ids are the ManaColor values.</summary>
+/// <summary>"Choose a color." Option id = ManaColor + 1: 0 means "none" across this engine, so no answer may be 0.</summary>
 public record ChooseColorChoice : ChoiceAction
 {
 	public const string Chosen = "color";
 	public int PlayerId { get; init; }
+
+	/// <summary>The option id for a color, and back — the ONE place the +1 lives.</summary>
+	public static int IdOf(ManaColor color) => (int)color + 1;
+
+	public static ManaColor ColorOf(int id) => (ManaColor)(id - 1);
 
 	public ChooseColorChoice(int playerId)
 	{
@@ -152,7 +157,7 @@ public record ChooseColorChoice : ChoiceAction
 				ManaColor.Black,
 				ManaColor.Red,
 				ManaColor.Green,
-			}.Select(c => new ChoiceOption { Id = (int)c, DisplayText = c.ToString() }),
+			}.Select(c => new ChoiceOption { Id = IdOf(c), DisplayText = c.ToString() }),
 		];
 
 	public override int GetDecidingPlayerId(
@@ -174,7 +179,8 @@ public record SetChosenColorAction(int CardId) : GameAction
 		return new ActionResult(
 			s.UpdateObject(
 				CardId,
-				s.GetCard(CardId).WithComponent(new Effects.ChosenColorMana((ManaColor)color))
+				s.GetCard(CardId)
+					.WithComponent(new Effects.ChosenColorMana(ChooseColorChoice.ColorOf(color)))
 			)
 		);
 	}

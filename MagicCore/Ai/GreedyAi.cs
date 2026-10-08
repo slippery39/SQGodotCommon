@@ -66,7 +66,7 @@ public sealed class GreedyAi(int playerId)
 		if (choice is ChooseCardsFromHandChoice)
 			return WorstCards(s, choice.Options.Select(o => o.Id), choice.MinChoices);
 		if (choice is ChooseColorChoice)
-			return [(int)MostWantedColor(s)];
+			return [ChooseColorChoice.IdOf(MostWantedColor(s))];
 		if (choice is ChooseModesChoice { MaxChoices: > 1 } modes)
 			return Combinations(modes.Options.Select(o => o.Id).ToList(), modes.MaxChoices)
 				.MaxBy(pick => Evaluate(Settle(s.Choose(pick))))!;
@@ -172,6 +172,8 @@ public sealed class GreedyAi(int playerId)
 		}
 		if (choice is DeclareAttackerChoice)
 			return [CombatOption.None];
+		if (choice is PayToKeepChoice)
+			return choice.Options.Select(o => o.Id).Take(1); // looking ahead: keep the spell if it can be paid
 		return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
 	}
 

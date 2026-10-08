@@ -28,7 +28,7 @@ public record SurveilledEvent(int PlayerId) : GameEvent;
 public record LoyaltyCountersPutEvent(int PutterId) : GameEvent;
 
 /// <summary>A spell or ability put on the stack with this card as a target (CR 115).</summary>
-public record BecameTargetEvent(int CardId, int ByPlayerId) : GameEvent;
+public record BecameTargetEvent(int CardId, int ByPlayerId, int ByStackObjectId) : GameEvent;
 
 /// <summary>"Whenever you activate a loyalty ability" — Cost is +N/−N, so "removed two or more" reads it.</summary>
 public record LoyaltyActivatedEvent(int PlayerId, int Cost) : GameEvent;
@@ -49,18 +49,29 @@ public static class Triggers
 		};
 
 	/// <summary>Each card a spell or ability now on the stack targets "becomes the target" of it.</summary>
-	public static GameState RaiseTargeted(GameState s, IEnumerable<int> targets, int byPlayerId) =>
+	/// <param name="byStackObjectId">The spell or ability that targets — "it" to ward.</param>
+	public static GameState RaiseTargeted(
+		GameState s,
+		IEnumerable<int> targets,
+		int byPlayerId,
+		int byStackObjectId
+	) =>
 		targets
 			.Distinct() // targeted by two words of one spell, it still becomes its target once
 			.Where(id => id != 0 && s.HasObject(id) && s.GetObject(id) is Card)
-			.Aggregate(s, (st, id) => st.Raise(new BecameTargetEvent(id, byPlayerId)));
+			.Aggregate(
+				s,
+				(st, id) => st.Raise(new BecameTargetEvent(id, byPlayerId, byStackObjectId))
+			);
 
 	/// <summary>A triggered ability waiting to go on the stack. EventSnapshot is the card the event was about, as it last was (a dead creature's counters).</summary>
+	/// <param name="EventObject">Ward's "it": the spell or ability that targeted, as it was — so a recast with the same id is not it.</param>
 	public record Pending(
 		Card Source,
 		TriggeredAbilityComponent Ability,
 		int EventCardId,
-		Card? EventSnapshot = null
+		Card? EventSnapshot = null,
+		GameObject? EventObject = null
 	);
 
 	/// <summary>
@@ -95,7 +106,13 @@ public static class Triggers
 			)
 			.SelectMany(found =>
 				s.PendingGameEvents.Where(e => Matches(s, found.source, found.a.On, e))
-					.Select(e => new Pending(found.source, found.a, EventCard(e), Snapshot(s, e)))
+					.Select(e => new Pending(
+						found.source,
+						found.a,
+						EventCard(e),
+						Snapshot(s, e),
+						EventObject(s, e)
+					))
 			);
 		var fromTheDead = s
 			.PendingGameEvents.OfType<DiedEvent>()
@@ -221,6 +238,12 @@ public static class Triggers
 	}
 
 	/// <summary>The card the event is about — what "that creature" and "that land" mean; 0 if none.</summary>
+	/// <summary>The spell or ability an event was done BY, as it is now — ward's "it".</summary>
+	static GameObject? EventObject(GameState s, GameEvent e) =>
+		e is BecameTargetEvent targeted && s.HasObject(targeted.ByStackObjectId)
+			? s.GetObject(targeted.ByStackObjectId)
+			: null;
+
 	static int EventCard(GameEvent e) =>
 		e switch
 		{
@@ -229,6 +252,7 @@ public static class Triggers
 			SpellCastEvent cast => cast.CardId,
 			DiedEvent died => died.LastKnown.Id,
 			BlocksEvent blocks => blocks.CardId,
+			BecameTargetEvent targeted => targeted.CardId,
 			_ => 0,
 		};
 
@@ -327,6 +351,7 @@ public static class Triggers
 						Effects = steps,
 						EventCardId = t.EventCardId,
 						EventSnapshot = t.EventSnapshot,
+						EventObject = t.EventObject,
 						X = t.Ability.On == TriggerEvent.SelfEnters ? t.Source.CastX : 0,
 					},
 				],
@@ -346,6 +371,7 @@ public record PutTriggerOnStackAction : GameAction
 	public ImmutableList<GameAction> Effects { get; init; } = [];
 	public int EventCardId { get; init; }
 	public Card? EventSnapshot { get; init; }
+	public GameObject? EventObject { get; init; }
 	public int X { get; init; }
 
 	public override ActionResult Execute(GameState s)
@@ -367,6 +393,7 @@ public record PutTriggerOnStackAction : GameAction
 					Targets = targets,
 					EventCardId = EventCardId,
 					EventSnapshot = EventSnapshot,
+					EventObject = EventObject,
 					X = X,
 				}
 			)

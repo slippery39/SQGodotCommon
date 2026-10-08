@@ -31,6 +31,9 @@ public static class ContextKeys
 	/// <summary>The event's card as it last existed (a dead creature's counters), for "dies" triggers.</summary>
 	public const string EventSnapshot = "EventSnapshot";
 
+	/// <summary>The spell or ability an event was done by, as it was — ward's "it".</summary>
+	public const string EventObject = "EventObject";
+
 	/// <summary>An ability's source as it last existed — used once the source itself is gone (CR 113.7a).</summary>
 	public const string SourceSnapshot = "SourceSnapshot";
 }
@@ -44,6 +47,7 @@ public enum RefKind
 	ControllerOfTarget,
 	Source,
 	EventCard,
+	EventObject, // ward: "counter it" — the spell or ability that targeted, if it is still that object
 	YourPermanents, // of Type: "creatures you control", "lands you control" …
 	OpponentsPermanents, // of Type: "each creature and planeswalker your opponents control"
 	AllPermanents, // of Type: "all creatures"
@@ -67,6 +71,7 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 	public static readonly Ref EachPlayer = new(RefKind.EachPlayer);
 	public static readonly Ref Source = new(RefKind.Source);
 	public static readonly Ref EventCard = new(RefKind.EventCard);
+	public static readonly Ref EventObject = new(RefKind.EventObject);
 	public static readonly Ref CreaturesYouControl =
 		new(RefKind.YourPermanents, Type: CardType.Creature);
 	public static readonly Ref LandsYouControl = new(RefKind.YourPermanents, Type: CardType.Land);
@@ -127,6 +132,17 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 				: [],
 			RefKind.Source => SameObject(s, context) ? [(int)context[ContextKeys.Source]] : [],
 			RefKind.EventCard => [eventCard],
+			RefKind.EventObject => context.GetValueOrDefault(ContextKeys.EventObject) switch
+			{
+				// Same id is not the same object (CR 400.7): a spell recast from the graveyard isn't it.
+				Card then
+					when s.HasObject(then.Id)
+						&& s.GetObject(then.Id) is Card now
+						&& now.Incarnation == then.Incarnation => [then.Id],
+				Card => [],
+				GameObject ability => [ability.Id],
+				_ => [],
+			},
 			// Its controller now if it is still there, else as it last was (CR 608.2h).
 			RefKind.ControllerOfEventCard => s.IsOnBattlefield(eventCard)
 				? [s.GetCard(eventCard).ControllerId]

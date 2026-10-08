@@ -81,6 +81,13 @@ public record YesNoChoice : ChoiceAction
 	) => PlayerId;
 }
 
+/// <summary>"Counter it unless its controller pays {N}" — Yes pays. Its own type so the AI's look-ahead can pay.</summary>
+public record PayToKeepChoice : YesNoChoice
+{
+	public PayToKeepChoice(int playerId, string prompt)
+		: base(playerId, prompt) { }
+}
+
 /// <summary>Sacrifices what the previous choice picked (to its owner's graveyard — it dies).</summary>
 public record SacrificeChosenAction : GameAction
 {

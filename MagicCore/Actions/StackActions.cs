@@ -30,6 +30,9 @@ public record StackAbility : GameObject
 	public int EventCardId { get; init; }
 	public Card? EventSnapshot { get; init; }
 
+	/// <summary>Ward's "it": the spell or ability its event was done by, as it was then.</summary>
+	public GameObject? EventObject { get; init; }
+
 	/// <summary>X for its effects: the X paid for the permanent, for its own "enters" trigger only (CR 107.3m).</summary>
 	public int X { get; init; }
 }
@@ -141,7 +144,7 @@ public record CastSpellAction : GameAction
 					}
 			)
 			.Raise(new SpellCastEvent(CardId, PlayerId));
-		s = Turns.Triggers.RaiseTargeted(s, Targets, PlayerId);
+		s = Turns.Triggers.RaiseTargeted(s, Targets, PlayerId, CardId);
 		return new ActionResult(Priority.Retain(s, PlayerId));
 	}
 }
@@ -277,8 +280,30 @@ public static class StackResolution
 		return Turns.Triggers.RaiseTargeted(
 			s.MoveObjectToFront(added.Id, stackId),
 			ability.Targets,
-			ability.ControllerId
+			ability.ControllerId,
+			added.Id
 		);
+	}
+
+	/// <summary>
+	/// THE counter (CR 701.6): a spell goes to its owner's graveyard — through MoveCard, so flashback
+	/// still exiles it and a prepared copy still ceases to exist — and an ability is removed. A spell
+	/// that "can't be countered" stays: the counter does nothing to it, and it was still cast
+	/// (MtgCore's counter traps keep the same two rules).
+	/// </summary>
+	public static GameState Counter(GameState s, int stackObjectId)
+	{
+		if (
+			!s.HasObject(stackObjectId)
+			|| s.GetParent(stackObjectId) != s.GetWellKnownId(MagicKeys.Stack)
+		)
+			return s;
+		return s.GetObject(stackObjectId) switch
+		{
+			Card spell when spell.HasComponent<CantBeCountered>() => s,
+			Card spell => s.MoveCard(spell.Id, s.ZoneId(spell.OwnerId, ZoneType.Graveyard)),
+			_ => s.RemoveObject(stackObjectId),
+		};
 	}
 
 	/// <summary>
@@ -350,6 +375,8 @@ public static class StackResolution
 			.Add(ContextKeys.EventCard, eventCard);
 		if (top is StackAbility { EventSnapshot: { } snapshotOfEvent })
 			context = context.Add(ContextKeys.EventSnapshot, snapshotOfEvent);
+		if (top is StackAbility { EventObject: { } eventObject })
+			context = context.Add(ContextKeys.EventObject, eventObject);
 		return s.SpawnAction(
 			new PipelineAction
 			{

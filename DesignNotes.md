@@ -1086,3 +1086,22 @@ recorded in the root `CLAUDE.md`:
 
 **Read a single green run as weak evidence on this test.** It is the one test whose failure would
 otherwise look like a real serialization regression.
+
+
+## MagicCore known ceilings
+
+The real-rules engine (branch `mtg-real`, `MagicCore/`). Each is fine for now and marked `ponytail:`
+in the code with its upgrade path; revisit when a card or the AI needs it.
+
+- Damage split among blockers is automatic
+- an exhaust stamp is per card, not per ability
+- triggers are matched against the battlefield at the next priority, so a source, or an entering creature, that is gone by then — destroyed later in the same resolution — is missed (one the state-based check kills is still seen)
+- the legend rule keeps the newest
+- last-known information keeps a card's own characteristics, not what statics gave it
+- a dying card's own "when this dies" looks back, but other leaves-the-battlefield triggers read the battlefield NOW (Edgar dying alongside a creature misses its death)
+- a "sacrifice the greatest" tie takes the first
+- `GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana, no "do I need this mana now" when choosing a tapped dual, and it loses slow races to evasive fliers (`docs/findings/magic-ai.md`)
+- menace drops a lone blocker instead of refusing the declaration
+- the auto-tapper ignores what the rest of the hand needs
+- Empower Jace with two Jace tokens loads the first
+- surveil keeps the kept cards' order.
