@@ -287,4 +287,20 @@ public class CombatTests
 
 		Assert.That(s.WinnerId(), Is.EqualTo(me));
 	}
+
+	[Test]
+	public void ABlockerWhoseAttackerNoLongerExists_DealsNoDamageAndNothingThrows()
+	{
+		var token = Put(me, "1/1");
+		s = s.UpdateObject(token, s.GetCard(token) with { IsToken = true }); // TEST SETUP
+		var other = Put(me, "1/1"); // still attacking, so the regular damage step happens
+		var striker = Put(them, "2/2", "Double strike");
+
+		Attack(token, other);
+		Block((striker, token));
+		ToSecondMain(); // first strike kills the token; it ceases to exist before regular damage
+
+		Assert.That(s.HasObject(token), Is.False);
+		Assert.That(s.GetPlayer(them).Life, Is.EqualTo(startingLife - 1), "the other attacker hit");
+	}
 }

@@ -146,6 +146,9 @@ public record Mill(Ref Who, int N) : Effect
 /// <summary>"Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.</summary>
 public record SearchLibrary(CardType Type, ZoneType To) : Effect
 {
+	/// <summary>Basic landcycling: "a basic land card".</summary>
+	public Supertype Supertype { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.SpawnAction(
@@ -158,7 +161,9 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 						{
 							PlayerId = Controller,
 							Type = Type,
-							Prompt = $"Search for a {Type.ToString().ToLowerInvariant()} card",
+							Supertype = Supertype,
+							Prompt =
+								$"Search for a {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{Type.ToString().ToLowerInvariant()} card",
 						},
 						new MoveChosenToAction(Controller, To),
 						new ShuffleLibraryAction(Controller),
@@ -257,13 +262,25 @@ public record ReturnFromGraveyard(Ref What, ZoneType To) : Effect
 	/// <summary>Generous Revival: "with an additional +1/+1 counter on it" — it enters with it.</summary>
 	public int Counters { get; init; }
 
+	/// <summary>Gallia, Tragic Host: "to the battlefield tapped".</summary>
+	public bool Tapped { get; init; }
+
+	/// <summary>Grim Repriser, Proctor: "with a finality counter on it".</summary>
+	public bool Finality { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in All(What, s).ToList())
 			if (s.GetObject(id) is Card card && s.IsIn(id, card.OwnerId, ZoneType.Graveyard))
 				s =
 					To == ZoneType.Battlefield
-						? s.EnterBattlefield(id, card.OwnerId, extraCounters: Counters)
+						? s.EnterBattlefield(
+							id,
+							card.OwnerId,
+							extraCounters: Counters,
+							tapped: Tapped,
+							finality: Finality
+						)
 						: s.MoveCard(id, s.ZoneId(card.OwnerId, To));
 		return new(s);
 	}

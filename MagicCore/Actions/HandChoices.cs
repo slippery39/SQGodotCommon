@@ -43,6 +43,9 @@ public record ChooseFromLibraryChoice : ChoiceAction
 	public int PlayerId { get; init; }
 	public CardType Type { get; init; }
 
+	/// <summary>Landcycling: "a basic land card". None means any.</summary>
+	public Supertype Supertype { get; init; }
+
 	public ChooseFromLibraryChoice()
 	{
 		OutputKey = ChooseCardsFromHandChoice.Chosen;
@@ -56,7 +59,7 @@ public record ChooseFromLibraryChoice : ChoiceAction
 		ImmutableDictionary<string, object> context
 	) =>
 		s.CardsIn(PlayerId, ZoneType.Library)
-			.Where(c => c.Is(Type))
+			.Where(c => c.Is(Type) && (Supertype == Supertype.None || c.Is(Supertype)))
 			.DistinctBy(c => c.Name) // two Forests are one choice: the library is shuffled after
 			.OrderBy(c => c.Name)
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })

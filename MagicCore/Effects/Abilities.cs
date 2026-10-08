@@ -76,6 +76,28 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 
 	/// <summary>"Activate only as a sorcery."</summary>
 	public bool SorcerySpeed { get; init; }
+
+	/// <summary>Where it is activated from: the battlefield, or a card in your hand (cycling) or graveyard.</summary>
+	public ZoneType From { get; init; } = ZoneType.Battlefield;
+
+	/// <summary>"Exile this card from your graveyard:" — part of the cost.</summary>
+	public bool ExileSelf { get; init; }
+
+	/// <summary>Cycling: "Discard this card:" — part of the cost.</summary>
+	public bool DiscardSelf { get; init; }
+
+	/// <summary>Hallway Heckler: "Discard a card:" — the card is chosen like a sacrifice.</summary>
+	public bool DiscardACard { get; init; }
+
+	/// <summary>
+	/// Gallia, Tragic Host: "Exile another creature card from your graveyard:" — what may be exiled.
+	/// A CardInYourGraveyard spec, so the source itself never qualifies: lifted from MtgCore's
+	/// ExileFromGraveyardAdditionalCost, where a card exiling ITSELF paid for its own recursion.
+	/// </summary>
+	public TargetSpec? ExileFromGraveyard { get; init; }
+
+	/// <summary>"Activate only if [condition]" — judged as it is activated.</summary>
+	public Condition? OnlyIf { get; init; }
 }
 
 /// <summary>

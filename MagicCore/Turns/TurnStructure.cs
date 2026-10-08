@@ -87,7 +87,7 @@ public static class TurnStructure
 		{
 			case Step.Untap:
 				foreach (var card in s.CardsIn(active, ZoneType.Battlefield).Where(c => c.IsTapped))
-					s = s.UpdateObject(card.Id, card with { IsTapped = false });
+					s = s.Untap(card.Id);
 				foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
 					s = s.WithPlayer(
 						s.GetPlayer(id) with

@@ -142,7 +142,11 @@ public static class Combat
 			var blocker in s.CardsIn(Defender(s), ZoneType.Battlefield)
 				.Where(c => c.BlockingId != 0 && Deals(c))
 		)
-			if (s.GetCard(blocker.BlockingId).AttackingId != 0)
+			// Its attacker may be gone — a token that died to first strike no longer exists (CR 506.4).
+			if (
+				s.IsOnBattlefield(blocker.BlockingId)
+				&& s.GetCard(blocker.BlockingId).AttackingId != 0
+			)
 				hits.Add((blocker, blocker.BlockingId, s.Power(blocker)));
 
 		foreach (var (source, targetId, amount) in hits)

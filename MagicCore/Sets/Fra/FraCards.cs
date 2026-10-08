@@ -289,6 +289,28 @@ public static class FraCards
 			}
 		);
 
+	/// <summary>"Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)"</summary>
+	static ActivatedAbilityComponent BasicLandcycling =>
+		new(
+			ManaCost.Parse("{2}"),
+			[new SearchLibrary(CardType.Land, ZoneType.Hand) { Supertype = Supertype.Basic }]
+		)
+		{
+			From = ZoneType.Hand,
+			DiscardSelf = true,
+		};
+
+	/// <summary>"[Cost]: Return this card from your graveyard to the battlefield with a finality counter on it."</summary>
+	static ActivatedAbilityComponent ReturnsWithFinality(string cost, Condition onlyIf) =>
+		new(
+			ManaCost.Parse(cost),
+			[new ReturnFromGraveyard(Ref.Source, ZoneType.Battlefield) { Finality = true }]
+		)
+		{
+			From = ZoneType.Graveyard,
+			OnlyIf = onlyIf,
+		};
+
 	/// <summary>One bullet: its target words and effects. Its text is filled in from the card.</summary>
 	static Mode M(TargetSpec[] targets, params GameAction[] effects) =>
 		new("", [.. targets], [.. effects]);
@@ -1578,6 +1600,145 @@ public static class FraCards
 			[
 				PreparesAtYourUpkeep,
 				SoulTether("Woodwork Prodigy // Soul Tether"),
+			],
+
+			// ===== Abilities from the hand and graveyard =====
+			["Hexhaven Battalion"] =
+			[
+				Spell([], new CreateTokens(Cadet, 3), new EmpowerJace(2)),
+				BasicLandcycling,
+			],
+			["Undulating Witness"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[new ModifyUntilEndOfTurn(Ref.Source, 1, -1)]
+				),
+				BasicLandcycling,
+			],
+			["Apex Witchstalker"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new GainLife(Ref.You, 2)),
+				When(TriggerEvent.SelfDies, [], new GainLife(Ref.You, 2)),
+				BasicLandcycling,
+			],
+			["Awaken the Inferno"] =
+			[
+				Spell(
+					[
+						CreatureOrPlaneswalker with
+						{
+							Whose = Whose.Opponent,
+						},
+						Creature with
+						{
+							Whose = Whose.You,
+							Optional = true,
+						},
+					],
+					new DealDamage(Ref.Target(0), 6),
+					new AddCounters(Ref.Target(1), 1)
+				),
+				BasicLandcycling,
+			],
+			["Vinelasher Adept"] =
+			[
+				When(TriggerEvent.SelfEnters, [Creature], new AddCounters(Ref.Target(), 3)),
+				BasicLandcycling,
+			],
+			["Campus Crier"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new EmpowerJace(2)])
+				{
+					From = ZoneType.Graveyard,
+					ExileSelf = true,
+				},
+			],
+			["Cryotheory Adept"] =
+			[
+				Prowess,
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{U}"),
+					[new Tap(Ref.Target()), new AddStunCounters(Ref.Target(), 1)]
+				)
+				{
+					From = ZoneType.Graveyard,
+					ExileSelf = true,
+					SorcerySpeed = true,
+					Targets = [Creature],
+				},
+			],
+			["Theoretical Necromancer"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{B}"),
+					[new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)]
+				)
+				{
+					From = ZoneType.Graveyard,
+					ExileSelf = true,
+					// "another target creature card": a graveyard target is never its source
+					Targets =
+					[
+						new TargetSpec(TargetKind.CardInYourGraveyard)
+						{
+							AnyOfTypes = CardType.Creature,
+						},
+					],
+				},
+			],
+			["Blessed Ghoul"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}{W/B}"),
+					[new ReturnFromGraveyard(Ref.Source, ZoneType.Hand)]
+				)
+				{
+					From = ZoneType.Graveyard,
+				},
+			],
+			["Grim Repriser"] =
+			[
+				Prowess,
+				ReturnsWithFinality(
+					"{B}{R}",
+					new AtLeast(Count.NoncombatDamageToOpponentsThisTurn, 1)
+				),
+			],
+			["Proctor of Potential"] =
+			[
+				When(TriggerEvent.CreatureYouControlEnters, [], new Surveil(1)),
+				ReturnsWithFinality("{W}{U}", new AtLeast(Count.YourSurveilsThisTurn, 1)),
+			],
+			["Gallia, Tragic Host"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{4}{B}"),
+					[
+						new ReturnFromGraveyard(Ref.Source, ZoneType.Battlefield)
+						{
+							Tapped = true,
+							Counters = 1,
+						},
+					]
+				)
+				{
+					From = ZoneType.Graveyard,
+					ExileFromGraveyard = new TargetSpec(TargetKind.CardInYourGraveyard)
+					{
+						AnyOfTypes = CardType.Creature,
+					},
+				},
+			],
+			["Hallway Heckler // Vicious Verse"] =
+			[
+				EntersPrepared,
+				new ActivatedAbilityComponent(ManaCost.None, [new DrawCards(Ref.You, 1)])
+				{
+					TapCost = true,
+					DiscardACard = true,
+				},
+				ViciousVerse("Hallway Heckler // Vicious Verse"),
 			],
 		};
 

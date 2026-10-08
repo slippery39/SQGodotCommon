@@ -106,6 +106,12 @@ public record Card : GameObject
 	/// <summary>Prepare: its prepare spell's copy waits in exile (Rules/Prepare.cs).</summary>
 	public bool IsPrepared { get; init; }
 
+	/// <summary>"If a creature with a finality counter on it would die, exile it instead" — MagicState.MoveCard.</summary>
+	public bool HasFinalityCounter { get; init; }
+
+	/// <summary>"If a permanent with a stun counter would become untapped, remove one from it instead" — MagicState.Untap.</summary>
+	public int StunCounters { get; init; }
+
 	/// <summary>The player OR planeswalker it is attacking; 0 when not attacking. Never assume a player.</summary>
 	public int AttackingId { get; init; }
 
@@ -131,6 +137,8 @@ public record Card : GameObject
 			EnteredOnTurn = 0,
 			OncePerTurnTriggeredOn = 0,
 			IsPrepared = false,
+			HasFinalityCounter = false,
+			StunCounters = 0,
 			Damage = 0,
 			DamagedByDeathtouch = false,
 			ControlledSinceTurn = 0,

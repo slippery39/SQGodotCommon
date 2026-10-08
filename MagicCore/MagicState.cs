@@ -96,6 +96,14 @@ public static class MagicState
 			&& zoneId != s.GetWellKnownId(MagicKeys.Stack)
 		)
 			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
+		// A finality counter: it would die, so it is exiled instead — and never dies (CR 122.1i).
+		if (
+			before.HasFinalityCounter
+			&& before.Is(CardType.Creature)
+			&& s.IsOnBattlefield(cardId)
+			&& zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard)
+		)
+			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
 		var leavesBattlefield = s.IsOnBattlefield(cardId) && s.GetParent(cardId) != zoneId;
 		s = (
 			toTop ? s.MoveObjectToFront(cardId, zoneId) : s.MoveObject(cardId, zoneId)
@@ -148,7 +156,9 @@ public static class MagicState
 		int cardId,
 		int controllerId,
 		int x = 0,
-		int extraCounters = 0
+		int extraCounters = 0,
+		bool tapped = false,
+		bool finality = false
 	)
 	{
 		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield))
@@ -174,9 +184,13 @@ public static class MagicState
 									.Add(ContextKeys.X, x)
 							) ?? 0
 					),
+				HasFinalityCounter = finality,
 				IsTapped =
-					card.GetComponent<EntersTappedComponent>() is { } tapped
-					&& !EntersUntapped(s, card.Id, controllerId, tapped.Unless),
+					tapped
+					|| (
+						card.GetComponent<EntersTappedComponent>() is { } entersTapped
+						&& !EntersUntapped(s, card.Id, controllerId, entersTapped.Unless)
+					),
 			}
 		);
 		return card.HasComponent<EntersPreparedComponent>() ? Rules.Prepare.Become(s, cardId) : s;
@@ -198,6 +212,19 @@ public static class MagicState
 				>= 2,
 			_ => false,
 		};
+	}
+
+	/// <summary>
+	/// The ONE way a permanent untaps — the untap step and "untap" effects alike. A stun counter is
+	/// removed instead (CR 122.1d).
+	/// </summary>
+	public static GameState Untap(this GameState s, int cardId)
+	{
+		var card = s.GetCard(cardId);
+		return !card.IsTapped ? s
+			: card.StunCounters > 0
+				? s.UpdateObject(cardId, card with { StunCounters = card.StunCounters - 1 })
+			: s.UpdateObject(cardId, card with { IsTapped = false });
 	}
 
 	/// <summary>Updates one player's "this turn" counts.</summary>

@@ -164,6 +164,12 @@ public record ActivateAbilityAction : GameAction
 	/// <summary>The permanent sacrificed as the cost ("Sacrifice another creature:"); 0 if none.</summary>
 	public int SacrificeId { get; init; }
 
+	/// <summary>The card discarded as the cost ("Discard a card:"); 0 if none.</summary>
+	public int DiscardId { get; init; }
+
+	/// <summary>The graveyard card exiled as the cost ("Exile another creature card from your graveyard:"); 0 if none.</summary>
+	public int ExileId { get; init; }
+
 	ActivatedAbilityComponent? Ability(GameState s) =>
 		s.GetCard(CardId)
 			.GetComponents<ActivatedAbilityComponent>()
@@ -173,9 +179,33 @@ public record ActivateAbilityAction : GameAction
 	{
 		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
 			return noPriority;
-		if (!s.IsIn(CardId, PlayerId, ZoneType.Battlefield) || Ability(s) is not { } ability)
-			return ValidationResult.Invalid("No such ability on a permanent you control");
+		if (
+			!s.HasObject(CardId)
+			|| s.GetObject(CardId) is not Card
+			|| Ability(s) is not { } ability
+			|| !s.IsIn(CardId, PlayerId, ability.From)
+		)
+			return ValidationResult.Invalid("No such ability where you can activate it");
 		var card = s.GetCard(CardId);
+		// Judged as the activating player's: a card off the battlefield may still carry an old
+		// controller (CR 108.4a — in a graveyard it is its owner's).
+		if (
+			ability.OnlyIf is { } onlyIf
+			&& !onlyIf.Holds(s, Conditions.Of(card with { ControllerId = PlayerId }))
+		)
+			return ValidationResult.Invalid("Its condition isn't met");
+		if (
+			ability.DiscardACard
+				? DiscardId == CardId || !s.IsIn(DiscardId, PlayerId, ZoneType.Hand)
+				: DiscardId != 0
+		)
+			return ValidationResult.Invalid("Discard a card from your hand for this");
+		if (
+			ability.ExileFromGraveyard is { } exile
+				? !exile.IsLegal(s, PlayerId, CardId, ExileId)
+				: ExileId != 0
+		)
+			return ValidationResult.Invalid("Not a card you can exile for this");
 		if (ability.TapCost && !ManaAbilities.CanPayTapCost(s, card))
 			return ValidationResult.Invalid("Cannot pay {T}");
 		if (ability.SorcerySpeed && !Priority.AtSorcerySpeed(s, PlayerId))
@@ -207,12 +237,14 @@ public record ActivateAbilityAction : GameAction
 		if (ability.TapCost)
 			s = s.UpdateObject(CardId, s.GetCard(CardId) with { IsTapped = true });
 		var source = s.GetCard(CardId); // as it was when activated — the cost may sacrifice it
-		foreach (
-			var sacrificed in new[] { ability.SacrificeSelf ? CardId : 0, SacrificeId }.Where(id =>
-				id != 0
-			)
-		)
-			s = s.Sacrifice(sacrificed);
+		IEnumerable<int> Paid(bool self, int chosen) =>
+			new[] { self ? CardId : 0, chosen }.Where(id => id != 0);
+		foreach (var id in Paid(ability.SacrificeSelf, SacrificeId))
+			s = s.Sacrifice(id);
+		foreach (var id in Paid(ability.DiscardSelf, DiscardId))
+			s = s.MoveCard(id, s.ZoneId(PlayerId, ZoneType.Graveyard));
+		foreach (var id in Paid(ability.ExileSelf, ExileId))
+			s = s.MoveCard(id, s.ZoneId(PlayerId, ZoneType.Exile));
 		s = StackResolution.Push(
 			s,
 			new StackAbility

@@ -139,6 +139,9 @@ public static class MagicRules
 						.SelectMany(c =>
 							ActivateCandidates(s, player, c).Concat(LoyaltyCandidates(s, player, c))
 						),
+					.. s.CardsIn(player, ZoneType.Hand)
+						.Concat(s.CardsIn(player, ZoneType.Graveyard))
+						.SelectMany(c => ActivateCandidates(s, player, c)),
 				];
 		return candidates.Where(a => a.ValidateAdd(s).IsValid).ToImmutableList();
 	}
@@ -187,25 +190,33 @@ public static class MagicRules
 			);
 	}
 
-	static IEnumerable<GameAction> ActivateCandidates(GameState s, int player, Card card) =>
-		card.GetComponents<ActivatedAbilityComponent>()
-			.SelectMany(
-				(ability, index) =>
-					TargetSpec
-						.Combinations(s, ability.Targets, player, card.Id)
-						.SelectMany(targets =>
-							(ability.Sacrifice?.Candidates(s, player, card.Id) ?? [0]).Select(
-								sacrifice => new ActivateAbilityAction
-								{
-									PlayerId = player,
-									CardId = card.Id,
-									AbilityIndex = index,
-									Targets = targets,
-									SacrificeId = sacrifice,
-								}
-							)
-						)
+	/// <summary>Abilities activated from the zone the card is in — one candidate per target and card-cost choice.</summary>
+	static IEnumerable<GameAction> ActivateCandidates(GameState s, int player, Card card)
+	{
+		var zone = ((Zone)s.GetObject(s.GetParent(card.Id)!.Value)).ZoneType;
+		return card.GetComponents<ActivatedAbilityComponent>()
+			.Select((ability, index) => (ability, index))
+			.Where(a => a.ability.From == zone)
+			.SelectMany(a =>
+				from targets in TargetSpec.Combinations(s, a.ability.Targets, player, card.Id)
+				from sacrifice in a.ability.Sacrifice?.Candidates(s, player, card.Id) ?? [0]
+				from discard in a.ability.DiscardACard
+					? s.CardsIn(player, ZoneType.Hand).Where(c => c.Id != card.Id).Select(c => c.Id)
+					: [0]
+				from exile in a.ability.ExileFromGraveyard?.Candidates(s, player, card.Id) ?? [0]
+				select (GameAction)
+					new ActivateAbilityAction
+					{
+						PlayerId = player,
+						CardId = card.Id,
+						AbilityIndex = a.index,
+						Targets = targets,
+						SacrificeId = sacrifice,
+						DiscardId = discard,
+						ExileId = exile,
+					}
 			);
+	}
 
 	static IEnumerable<GameAction> LoyaltyCandidates(GameState s, int player, Card card) =>
 		Loyalty
@@ -254,7 +265,7 @@ public static class MagicRules
 					CastSpellAction c =>
 						$"cast|{s.GetCard(c.CardId).Name}|{s.GetParent(c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}",
 					ActivateAbilityAction activate =>
-						$"activate|{activate.CardId}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}",
+						$"activate|{(s.IsOnBattlefield(activate.CardId) ? activate.CardId : $"{s.GetCard(activate.CardId).Name}@{s.GetParent(activate.CardId)}")}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}",
 					_ => (object)a,
 				}
 			)

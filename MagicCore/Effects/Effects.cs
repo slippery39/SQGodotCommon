@@ -191,7 +191,17 @@ public record Fight(Ref A, Ref B) : Effect
 public record Untap(Ref What) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
-		new(Permanents(What, s).Aggregate(s, (st, c) => Update(st, c with { IsTapped = false })));
+		new(Permanents(What, s).Aggregate(s, (st, c) => st.Untap(c.Id)));
+}
+
+/// <summary>Cryotheory Adept: "put a stun counter on it".</summary>
+public record AddStunCounters(Ref What, int N) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			Permanents(What, s)
+				.Aggregate(s, (st, c) => Update(st, c with { StunCounters = c.StunCounters + N }))
+		);
 }
 
 public record AddMana(ManaColor Color, int Amount = 1) : Effect

@@ -6,6 +6,8 @@ First set: **Reality Fracture (FRA)**. Play it: `dotnet run --project MagicConso
 
 `MtgCore` is the simplified deckbuilder engine and is **not modified** for this work. Copy what fits
 from it and own the copy — the two rule sets diverge on combat, mana and the stack.
+**Grep MtgCore FIRST for every mechanic a batch needs** (flashback, mill, library search, discard,
+exhaust … are already there) — copy and adapt what fits, and say what was lifted in the batch report.
 
 ## Source map
 
@@ -121,6 +123,10 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   creature's id AND incarnation); its controller may cast it at the spell's own timing while that
   same creature is still prepared, and casting it unprepares the creature. A copy anywhere but the
   stack ceases to exist, unless it is a live prepared copy in exile (state-based, CR 704.5e).
+- **Abilities from the hand or graveyard** (landcycling, "exile this from your graveyard:") are
+  `ActivatedAbilityComponent.From`; card costs (discard this / a card, exile this / another card)
+  are chosen like a sacrifice, one legal action each. A finality counter exiles a creature instead
+  of letting it die (`MoveCard`); `MagicState.Untap` is the ONE untap, so a stun counter eats it.
 - **Targets in a graveyard** are `TargetKind.CardInYourGraveyard` — the same legality test on choosing
   and resolving. "One or two target creatures" is two words, the second `Optional` and `NotThePrevious`.
 - **"You may … If you do"** is `May` (a `YesNoChoice`, asked only when it can be done) or
@@ -182,11 +188,11 @@ needs · Empower Jace with two Jace tokens loads the first · surveil keeps the 
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 130 cards scripted
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 143 cards scripted
 in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
-dies / exile-until cards, 25 step-trigger / per-turn / prowess / surveil-trigger cards, the 6 flashback cards, and 18 prepare cards (Hallway Heckler, Pyre Rhymer, Heartwood
-Crafter wait: a discard cost on an ability, a mana-tap trigger, restricted mana). **Two real planeswalkers are
+dies / exile-until cards, 25 step-trigger / per-turn / prowess / surveil-trigger cards, the 6 flashback cards, 19 prepare cards (Pyre Rhymer and Heartwood Crafter wait: a mana-tap
+trigger, restricted mana), and 12 landcycling / graveyard-ability cards. **Two real planeswalkers are
 in** (The Theorist, Ajani Unrelenting); **the other 6 are not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
 Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
-per-turn tracking, prowess ✓ · 7d-1 flashback ✓ · 7d-2 prepare ✓ · 7d-3 cycling and graveyard abilities. The Bo1 hand smoother is Arena's published description; its weighting and whether
+per-turn tracking, prowess ✓ · 7d-1 flashback ✓ · 7d-2 prepare ✓ · 7d-3a landcycling, graveyard abilities ✓ · 7d-3b graveyard returns, hexproof, indestructible. The Bo1 hand smoother is Arena's published description; its weighting and whether
 limited Bo1 uses it are unconfirmed — hence `handSmoothing`.
