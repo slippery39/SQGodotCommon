@@ -192,9 +192,9 @@ Verify a new or edited rule actually loads rather than assuming — same instinc
 card's effect fires:
 
 ```
-claude -p "Read <a file the rule claims>. Then WITHOUT opening any other file: is the text of
-.claude/rules/<rule>.md already in your context? Reply exactly LOADED or NOT LOADED." --allowedTools Read
+claude -p "Read <a file the rule claims>. Then WITHOUT any tool: if .claude/rules/<rule>.md is in your
+context, quote its sentence beginning \"<a phrase from it>\" word for word; else reply NOT LOADED." --allowedTools Read
 ```
 
-Then repeat with a file the rule should NOT match — a rule that answers LOADED to everything has
-lost its `paths:` and is costing context in every session.
+Ask for a QUOTE: a yes/no answer once said LOADED for a file the rule didn't match. Repeat with a
+file it should NOT match — a rule quoted for everything has lost its `paths:` and costs context everywhere.

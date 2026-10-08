@@ -90,76 +90,13 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   choice; `StackAbility.Source` keeps the source as it was if the cost sacrificed it.
   The exception is test setup: `TestGames.Put(…, Battlefield)` places a card with NONE of that —
   untapped, unsick, 0 loyalty. Use `EnterBattlefield` in a test when the entry itself matters.
-- **Planeswalkers:** enter with printed loyalty (`EnterBattlefield`), loyalty abilities are sorcery
-  speed and once per turn per permanent, damage removes loyalty, 0 loyalty is a state-based death,
-  and the defending player's planeswalkers are attack options. Empower Jace creates and loads the
-  token in ONE resolution, so a fresh token never meets the check at 0.
-- **Modes (CR 700.2):** a modal text is its `Modes` + `Choose`. `Modal.Compose` is the ONE place the
-  chosen modes become target words and steps, in printed order; each mode's effects see only its own
-  targets (`Target(0)` is that mode's first). A spell's modes are chosen when cast (`CastSpellAction.
-  Modes`), a trigger's as it goes on the stack. A mode with an unchoosable required target can't be
-  chosen. The scripted mode count must match the printed bullets — `FraCards` throws otherwise.
-- **"At the beginning of [step]"** triggers on a `StepBeganEvent`, raised by `EnterStep` for upkeep,
-  draw, beginning of combat and end. **"This turn" lives in `MagicPlayer.ThisTurn`** (a `TurnTally`:
-  lands, spells, cards drawn, life gained, surveils), REPLACED whole for BOTH players as each turn
-  begins — "this turn" is every turn, not only yours, and a new count cannot miss the reset. Update
-  it with `s.Tally(…)`. The finished turn's tally becomes `LastTurn` ("last turn" = the turn before
-  this one, whoever's). Creatures that died this turn (anyone's) are on `MagicGame`.
-- **"This ability triggers only once each turn"** is `TriggeredAbilityComponent.OncePerTurn`, stamped
-  on the card as it goes on the stack (`PutOnStack`) — a new object (CR 400.7) may trigger again.
-- **"Entered this turn"** is `Card.EnteredOnTurn`, stamped by `EnterBattlefield` — not
-  `ControlledSinceTurn`, which a control change would also move.
-- **Where triggers are read from:** permanents on the battlefield; a dying card's own "when this
-  dies"; a graveyard card's abilities marked `FromGraveyard` (Darklight Phoenix) — those, and only
-  those, trigger from there; and a trigger granted until end of turn (`UntilEndOfTurn.Trigger`,
-  Lyra), which ends at cleanup or a zone change like any other until-end-of-turn effect.
-- **"Becomes the target"** is raised when a spell or ability goes on the stack with its targets —
-  `CastSpellAction` and `StackResolution.Push` (every ability), the one place each.
-- **Casting from the graveyard (flashback):** `Costs.Flashback` is the ONE answer to "may this card
-  be cast from its graveyard, and for what" (its own flashback, or its mana cost when it gained
-  flashback this turn); `Costs.Of` starts from it, so taxes still apply. The stack records where a
-  spell came from (`OnStackComponent.CastFrom`), and `MoveCard` exiles a flashback spell whenever it
-  would leave the stack — resolved, fizzled or bounced (CR 702.34a).
-- **Prepare** (Secrets of Strixhaven's mechanic; FRA reuses it) lives in `Rules/Prepare.cs`. The card is
-  a creature in every zone; its spell half (`PrepareSpellComponent`, the second face) is never cast
-  from hand. Becoming prepared puts a real COPY of the spell in exile (`Card.IsCopy`, linked to the
-  creature's id AND incarnation); its controller may cast it at the spell's own timing while that
-  same creature is still prepared, and casting it unprepares the creature. A copy anywhere but the
-  stack ceases to exist, unless it is a live prepared copy in exile (state-based, CR 704.5e).
-- **Abilities from the hand or graveyard** (landcycling, "exile this from your graveyard:") are
-  `ActivatedAbilityComponent.From`; card costs (discard this / a card, exile this / another card)
-  are chosen like a sacrifice, one legal action each. A finality counter exiles a creature instead
-  of letting it die (`MoveCard`); `MagicState.Untap` is the ONE untap, so a stun counter eats it.
-- **Hexproof** is checked in `TargetSpec.IsLegal` through `s.Has` (an opponent's spells and abilities
-  only; mass effects never target). **Indestructible** is `s.IsIndestructible` — the Destroy effect and
-  the lethal-damage check both ask it; 0 toughness still kills.
-- **Auras and Equipment are one mechanism** (`Card.AttachedToId`, Rules/Attachments.cs). An Aura targets
-  as it is cast (`AuraComponent`) and attaches on resolving; what either grants is a live static
-  (`Affects.AttachedCreature`), never stamped. "When enchanted creature dies" looks back through
-  `DiedEvent.Attached` — the state check takes the Aura in the same pass.
-- **Countering is `StackResolution.Counter`** — a spell to its graveyard through MoveCard (flashback and
-  prepared copies still hold), an ability removed, "can't be countered" untouched. "Unless its
-  controller pays" asks that player (`CounterUnlessPays`). **Ward** is a trigger whose "it" is the
-  targeting spell or ability, carried as the event card of `BecameTargetEvent`.
-- **"When you do"** (a reflexive trigger, CR 603.12) is the `WhenYouDo` effect: its targets are chosen
-  as it triggers, after the thing done, and it goes on the stack above — never fold it into the effect.
-- **Targets in a graveyard** are `TargetKind.CardInYourGraveyard` (or `CardInAnyGraveyard`, "from a graveyard") — the same legality test on choosing
-  and resolving. "One or two target creatures" is two words, the second `Optional` and `NotThePrevious`.
-- **"You may … If you do"** is `May` (a `YesNoChoice`, asked only when it can be done) or
-  `MaySacrifice`; both clear the shared "chosen" key so a "no" cannot read a stale "yes".
-- **An intervening "if" (CR 603.4) is `TriggeredAbilityComponent.If`**, never a bare `If` effect:
-  checked as it triggers (`Collect`) AND again on resolution (`QueueTargets` wraps the effects).
-  Edgar with a spell cast in response to his trigger gets nothing. A condition on the EVENT itself
-  can't change before resolution, so it may be a `TriggerEvent` instead (Way of the Mind Sculptor's
-  "removed two or more"). `If` runs its steps as a child pipeline — so a surveil inside it finishes
-  before the next step — and its steps' outputs do not reach the steps after it.
-- **Prowess is a scripted trigger** (`FraCards.Prowess`), not an engine keyword — each instance
-  triggers on its own (Ruric Thar has two).
 - **Static abilities are never stamped onto what they affect.** A `StaticEffectComponent` on its source
   is read live by Characteristics, so it stops the instant the source leaves — MtgCore's stamped
   statics went stale exactly there. "Can't be blocked" is a keyword-like grant (`Combat.CantBeBlocked`).
-- **Base P/T effects** ("has base power and toughness 4/5") sit under counters and pumps, latest
-  wins (`UntilEndOfTurn.SetBase`, read in `Card.OwnPower`/`OwnToughness` under `s.Power`/`Toughness`).
+- **Each mechanic's rules** — planeswalkers, modes, step triggers and "this turn", flashback, prepare,
+  abilities from the hand and graveyard, hexproof and indestructible, Auras and Equipment, countering
+  and ward, reflexive and intervening triggers — are in `.claude/rules/magic-mechanics.md`, which
+  loads with any MagicCore file. Add a new mechanic's rule there, not here.
 - **A spell or ability whose targets are ALL illegal on resolution does nothing** (CR 608.2b) — the
   drain on Extended Absence included. Partially illegal: those targets read as 0 to the effects.
 - **`MagicRules.Choose` checks WHICH ids, `ResolveChoice` only how many.** Distinct and offered.
