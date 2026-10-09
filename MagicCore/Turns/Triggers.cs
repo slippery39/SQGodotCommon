@@ -106,16 +106,16 @@ public static class Triggers
 		// A card in a graveyard is controlled by its owner (CR 108.4a).
 		var inGraveyards = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
 			s.CardsIn(p, ZoneType.Graveyard)
-				.Where(c => AbilitiesOf(c).Any(a => a.FromGraveyard))
+				.Where(c => AbilitiesOf(s, c).Any(a => a.FromGraveyard))
 				.Select(c => c with { ControllerId = c.OwnerId })
 		);
 		var fromTheBattlefield = permanents
 			.SelectMany(source =>
-				AbilitiesOf(source).Where(a => !a.FromGraveyard).Select(a => (source, a))
+				AbilitiesOf(s, source).Where(a => !a.FromGraveyard).Select(a => (source, a))
 			)
 			.Concat(
 				inGraveyards.SelectMany(source =>
-					AbilitiesOf(source).Where(a => a.FromGraveyard).Select(a => (source, a))
+					AbilitiesOf(s, source).Where(a => a.FromGraveyard).Select(a => (source, a))
 				)
 			)
 			.SelectMany(found =>
@@ -133,14 +133,20 @@ public static class Triggers
 		var fromTheDead = s
 			.PendingGameEvents.OfType<DiedEvent>()
 			.SelectMany(died =>
-				AbilitiesOf(died.LastKnown)
+				// As it last existed (CR 603.10a): under Infinite Coursework it had no abilities — the
+				// Aura is gone from the battlefield by now, so ask what was attached as it died.
+				(
+					died.Attached.Any(a => a.HasComponent<EnchantedLosesAllAbilities>())
+						? []
+						: AbilitiesOf(s, died.LastKnown)
+				)
 					.Where(a => a.On == TriggerEvent.SelfDies && !a.FromGraveyard)
 					.Select(a => new Pending(died.LastKnown, a, died.LastKnown.Id, died.LastKnown))
 					// The Aura is in the graveyard by the time triggers are collected — the state-based
 					// check takes it in the same pass — so its trigger is read from it as it was.
 					.Concat(
 						died.Attached.SelectMany(attachment =>
-							AbilitiesOf(attachment)
+							AbilitiesOf(s, attachment)
 								.Where(a => a.On == TriggerEvent.AttachedCreatureDies)
 								.Select(a => new Pending(
 									attachment,
@@ -184,14 +190,16 @@ public static class Triggers
 			_ => null,
 		};
 
-	/// <summary>Its own triggered abilities, and any it gained until end of turn (Lyra).</summary>
-	static IEnumerable<TriggeredAbilityComponent> AbilitiesOf(Card card) =>
-		card.GetComponents<TriggeredAbilityComponent>()
-			.Concat(
-				card.GetComponents<UntilEndOfTurn>()
-					.Select(u => u.Trigger)
-					.OfType<TriggeredAbilityComponent>()
-			);
+	/// <summary>Its own triggered abilities, and any it gained until end of turn (Lyra) — none once it lost them all.</summary>
+	static IEnumerable<TriggeredAbilityComponent> AbilitiesOf(GameState s, Card card) =>
+		s.HasLostAllAbilities(card)
+			? []
+			: card.GetComponents<TriggeredAbilityComponent>()
+				.Concat(
+					card.GetComponents<UntilEndOfTurn>()
+						.Select(u => u.Trigger)
+						.OfType<TriggeredAbilityComponent>()
+				);
 
 	static bool Matches(GameState s, Card source, TriggerEvent on, GameEvent e)
 	{

@@ -14,12 +14,12 @@ public static class Loyalty
 	/// ("Planeswalkers you control have …"). The ONE list — activation indexes into it.
 	/// </summary>
 	public static ImmutableList<LoyaltyAbilityComponent> AbilitiesOf(GameState s, Card walker) =>
-		walker.Is(CardType.Planeswalker)
+		walker.Is(CardType.Planeswalker) && !s.HasLostAllAbilities(walker) // granted ones go too
 			?
 			[
-				.. walker.GetComponents<LoyaltyAbilityComponent>(),
+				.. s.AbilitiesOf<LoyaltyAbilityComponent>(walker),
 				.. s.CardsIn(walker.ControllerId, ZoneType.Battlefield)
-					.SelectMany(c => c.GetComponents<GrantsLoyaltyAbility>())
+					.SelectMany(s.AbilitiesOf<GrantsLoyaltyAbility>)
 					.Select(g => g.Ability),
 			]
 			: [];

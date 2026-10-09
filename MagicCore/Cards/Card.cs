@@ -207,6 +207,9 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 
 	/// <summary>Essence Burn: "if that permanent would die this turn, exile it instead" — MoveCard reads it.</summary>
 	public bool ExileIfItWouldDie { get; init; }
+
+	/// <summary>Flourishing Grapple: "loses all abilities until end of turn" — Characteristics.HasLostAllAbilities.</summary>
+	public bool LosesAllAbilities { get; init; }
 }
 
 /// <summary>

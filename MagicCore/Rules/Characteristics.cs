@@ -21,13 +21,51 @@ namespace MagicCore;
 public static class Characteristics
 {
 	public static int Power(this GameState s, Card card) =>
-		card.OwnPower + Statics(s, card, ptOnly: true).Sum(a => a.Power);
+		card.OwnPower + Statics(s, BoardOf(s), card, ptOnly: true).Sum(a => a.Power);
 
 	public static int Toughness(this GameState s, Card card) =>
-		card.OwnToughness + Statics(s, card, ptOnly: true).Sum(a => a.Toughness);
+		card.OwnToughness + Statics(s, BoardOf(s), card, ptOnly: true).Sum(a => a.Toughness);
 
-	public static bool Has(this GameState s, Card card, string keyword) =>
-		card.HasOwn(keyword) || Statics(s, card, ptOnly: false).Any(a => a.Keyword == keyword);
+	public static bool Has(this GameState s, Card card, string keyword)
+	{
+		var board = BoardOf(s);
+		return (
+				card.HasOwn(keyword)
+				|| Statics(s, board, card, ptOnly: false).Any(a => a.Keyword == keyword)
+			) && !Lost(board, card); // asked last: it's rarely true and this sits under the AI
+	}
+
+	/// <summary>
+	/// THE read of a permanent's own abilities of one kind — triggered, activated, static, mana,
+	/// replacement — empty once it has lost them all. Every rule asks here, never GetComponents, or
+	/// "loses all abilities" misses that rule.
+	/// </summary>
+	public static IEnumerable<T> AbilitiesOf<T>(this GameState s, Card card)
+		where T : GameComponent =>
+		// The card's own components first: most permanents have none of a kind, and then nothing to lose.
+		!card.HasComponent<T>() || s.HasLostAllAbilities(card)
+			? []
+			: card.GetComponents<T>();
+
+	public static bool HasAbility<T>(this GameState s, Card card)
+		where T : GameComponent => s.AbilitiesOf<T>(card).Any();
+
+	/// <summary>
+	/// "Loses all abilities" — until end of turn (Flourishing Grapple) or while an Aura says so
+	/// (Infinite Coursework). ponytail: no timestamps (CR 613.7) — it loses every ability, even one
+	/// granted later, and a P/T it sets for itself (layer 7a) with them. Order them if a card cares.
+	/// </summary>
+	public static bool HasLostAllAbilities(this GameState s, Card card) => Lost(BoardOf(s), card);
+
+	static bool Lost(Board board, Card card)
+	{
+		if (board.Stripped.Count > 0 && board.Stripped.Contains((card.Id, card.Incarnation)))
+			return true;
+		foreach (var component in card.Components) // a loop, not LINQ: every ability read asks
+			if (component is UntilEndOfTurn { LosesAllAbilities: true })
+				return true;
+		return false;
+	}
 
 	/// <summary>
 	/// "Destroy" and lethal damage don't destroy it (CR 702.12b) — 0 toughness still does. The ONE
@@ -39,27 +77,48 @@ public static class Characteristics
 
 	record Applied(int Power, int Toughness, string? Keyword);
 
-	/// <summary>Every static on the battlefield, found once per (immutable) state — this sits under the AI's simulations.</summary>
-	/// An array (never mutated once built), because the table needs a reference-type value.
-	static readonly ConditionalWeakTable<
-		GameState,
-		(Card Source, StaticEffectComponent Effect)[]
-	> Sources = new();
+	/// <summary>
+	/// What the battlefield says, found once per (immutable) state — this sits under the AI's
+	/// simulations: every static that applies (from a permanent that still has its abilities), and
+	/// the permanents an Aura strips of theirs. Never mutated once built.
+	/// </summary>
+	sealed record Board(
+		(Card Source, StaticEffectComponent Effect)[] Statics,
+		HashSet<(int, int)> Stripped
+	);
 
-	static (Card Source, StaticEffectComponent Effect)[] StaticsOnBattlefield(GameState s) =>
-		Sources.GetValue(
+	static readonly ConditionalWeakTable<GameState, Board> Boards = new();
+
+	static readonly HashSet<(int, int)> NoneStripped = [];
+
+	static Board BoardOf(GameState s) =>
+		Boards.GetValue(
 			s,
 			state =>
-				new[] { state.Player1Id(), state.Player2Id() }
-					.SelectMany(p => state.CardsIn(p, ZoneType.Battlefield))
-					.SelectMany(c => c.GetComponents<StaticEffectComponent>().Select(e => (c, e)))
-					.ToArray()
+			{
+				// One pass over the battlefield: it runs for every new state the AI simulates.
+				List<(Card, StaticEffectComponent)> statics = [];
+				HashSet<(int, int)>? stripped = null;
+				foreach (var p in new[] { state.Player1Id(), state.Player2Id() })
+				foreach (var c in state.CardsIn(p, ZoneType.Battlefield))
+				foreach (var component in c.Components)
+					if (component is StaticEffectComponent effect)
+						statics.Add((c, effect));
+					else if (component is EnchantedLosesAllAbilities)
+						(stripped ??= []).Add((c.AttachedToId, c.AttachedToIncarnation));
+				var lost = new Board([], stripped ?? NoneStripped);
+				return lost with
+				{
+					// A permanent that lost its abilities has no statics either.
+					Statics = [.. statics.Where(x => !Lost(lost, x.Item1))],
+				};
+			}
 		);
 
 	/// <summary>Statics apply to permanents on the battlefield — not to a card in hand or a dead card's last-known copy.</summary>
-	static IEnumerable<Applied> Statics(GameState s, Card card, bool ptOnly)
+	static IEnumerable<Applied> Statics(GameState s, Board board, Card card, bool ptOnly)
 	{
-		var all = StaticsOnBattlefield(s);
+		var all = board.Statics;
 		if (
 			all.Length == 0
 			|| !s.IsOnBattlefield(card.Id)

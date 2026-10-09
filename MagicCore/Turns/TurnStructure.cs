@@ -99,11 +99,20 @@ public static class TurnStructure
 		switch (step)
 		{
 			case Step.Untap:
+				// Held down by an Aura (Infinite Coursework) — found once for the step.
+				var heldDown = new[] { s.Player1Id(), s.Player2Id() }
+					.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+					.Where(a => a.HasComponent<Effects.EnchantedDoesntUntap>())
+					.Select(a => (a.AttachedToId, a.AttachedToIncarnation))
+					.ToHashSet();
 				foreach (
 					var card in s.CardsIn(active, ZoneType.Battlefield)
 						.Where(c =>
-							c.IsTapped && !c.HasComponent<Effects.DoesntUntapInYourUntapStep>()
+							c.IsTapped
+							&& !s.HasAbility<Effects.DoesntUntapInYourUntapStep>(c)
+							&& !heldDown.Contains((c.Id, c.Incarnation))
 						)
+						.ToList()
 				)
 					s = s.Untap(card.Id);
 				foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
@@ -216,7 +225,7 @@ public static class StateBasedActions
 
 			// CR 704.5i: a planeswalker with 0 loyalty — unless something says it survives (Sanctum Lurker).
 			var walkersSurvive = s.CardsIn(id, ZoneType.Battlefield)
-				.Any(c => c.HasComponent<Effects.YourPlaneswalkersSurviveZeroLoyalty>());
+				.Any(s.HasAbility<Effects.YourPlaneswalkersSurviveZeroLoyalty>);
 			var depleted = s.CardsIn(id, ZoneType.Battlefield)
 				.Where(c => c.Is(CardType.Planeswalker) && c.Loyalty <= 0 && !walkersSurvive)
 				.ToList();

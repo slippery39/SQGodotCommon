@@ -56,7 +56,7 @@ public static class ManaPayment
 						c.Id,
 						[
 							.. ManaAbilities
-								.ColorsOf(c)
+								.ColorsOf(s, c)
 								.Concat(convokers.GetValueOrDefault(c.Id) ?? [])
 								.Distinct(),
 						],

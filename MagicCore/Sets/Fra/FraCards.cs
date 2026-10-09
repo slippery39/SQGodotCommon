@@ -2660,6 +2660,35 @@ public static class FraCards
 					}
 				),
 			],
+
+			// ===== Engine: "loses all abilities" =====
+			["Flourishing Grapple"] =
+			[
+				Spell(
+					[
+						CreatureOrPlaneswalker with
+						{
+							Whose = Whose.Opponent,
+							AnyOfColors = [ManaColor.Red, ManaColor.White],
+						},
+						new TargetSpec(TargetKind.Creature, Whose.You),
+					],
+					new ModifyUntilEndOfTurn(Ref.Target(0), 0, 0) { LosesAllAbilities = true },
+					new DamageFrom(Ref.Target(1), Ref.Target(0), Count.PowerOf(Ref.Target(1)))
+				),
+			],
+			["Infinite Coursework"] =
+			[
+				new AuraComponent(Creature),
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new Tap(Ref.EnchantedCreature),
+					new BecomeUnprepared(Ref.EnchantedCreature)
+				),
+				new EnchantedLosesAllAbilities(),
+				new EnchantedDoesntUntap(),
+			],
 		};
 
 	public static CardDefinition Get(string name) =>

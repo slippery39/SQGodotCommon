@@ -58,11 +58,9 @@ public static class Costs
 		if (!card.Is(CardType.Creature))
 			delta +=
 				s.CardsIn(s.OpponentOf(casterId), ZoneType.Battlefield)
-					.SelectMany(c => c.GetComponents<OpponentsNoncreatureSpellsCostMore>())
+					.SelectMany(s.AbilitiesOf<OpponentsNoncreatureSpellsCostMore>)
 					.Sum(t => t.Amount)
-				- yours
-					.SelectMany(c => c.GetComponents<YourNoncreatureSpellsCostLess>())
-					.Sum(r => r.Amount);
+				- yours.SelectMany(s.AbilitiesOf<YourNoncreatureSpellsCostLess>).Sum(r => r.Amount);
 
 		var controlsLegendaryCreature = yours.Any(c =>
 			c.Is(CardType.Creature) && c.Is(Supertype.Legendary)

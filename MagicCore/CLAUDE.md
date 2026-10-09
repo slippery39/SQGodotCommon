@@ -71,7 +71,9 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   stack choices die there. Only `Shuffle` uses `MoveObject`, to reorder within one zone.
 - **One computation each, never a second copy:** `s.Power(card)`/`s.Toughness`/`s.Has` (Rules/
   Characteristics.cs — the card's own numbers plus every static ability on the battlefield; rules
-  never read `Card.OwnPower`/`HasOwn` or `BasePower`, which ignore every anthem on the board), `Damage.Deal` (players, creatures, planeswalker
+  never read `Card.OwnPower`/`HasOwn` or `BasePower`, which ignore every anthem on the board),
+  `s.AbilitiesOf<T>`/`HasAbility<T>` (a permanent's own abilities — never `GetComponents`, or "loses all
+  abilities" misses that rule), `Damage.Deal` (players, creatures, planeswalker
   loyalty), `Life.Gain`, `Costs.Of`, `ManaPayment.Find`, `ManaAbilities.CanTap`/`CanPayTapCost`,
   `TargetSpec.IsLegal` (on choosing AND resolving), `Loyalty.AbilitiesOf` (own + granted),
   `Loyalty.Change` (costs, damage, effects; never below 0), `Ref` (what "creatures you control"

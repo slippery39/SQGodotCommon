@@ -76,7 +76,7 @@ public class FraTriggerTests : FraBoardTest
 			Is.EqualTo((true, true, 3, 3)),
 			"theirs too: \"each player's upkeep\", and you create it"
 		);
-		Assert.That(ManaAbilities.ColorsOf(tentacle), Is.EqualTo(new[] { ManaColor.Green }));
+		Assert.That(ManaAbilities.ColorsOf(s, tentacle), Is.EqualTo(new[] { ManaColor.Green }));
 		Assert.That(ManaAbilities.CanTap(s, tentacle), Is.False, "summoning sick");
 
 		To(Step.Upkeep, me);

@@ -8,13 +8,17 @@ namespace MagicCore;
 /// <summary>Which permanents make mana, and when they may. The one place both are answered.</summary>
 public static class ManaAbilities
 {
-	public static IEnumerable<ManaColor> ColorsOf(Card card) =>
-		card
-			.Subtypes.Select(BasicLandColor)
-			.OfType<ManaColor>()
-			.Concat(card.GetComponents<ManaAbilityComponent>().Select(m => m.Color))
-			.Concat(card.GetComponents<ChosenColorMana>().Select(m => m.Color))
+	public static IEnumerable<ManaColor> ColorsOf(GameState s, Card card)
+	{
+		// A basic land type's mana ability is intrinsic (CR 305.6) — an ability all the same.
+		var intrinsic = card.Subtypes.Select(BasicLandColor).OfType<ManaColor>();
+		if (intrinsic.Any() && s.HasLostAllAbilities(card))
+			return [];
+		return intrinsic
+			.Concat(s.AbilitiesOf<ManaAbilityComponent>(card).Select(m => m.Color))
+			.Concat(s.AbilitiesOf<ChosenColorMana>(card).Select(m => m.Color))
 			.Distinct();
+	}
 
 	/// <summary>Plains, Island, Swamp, Mountain, Forest — domain counts these.</summary>
 	public static bool IsBasicLandType(string subtype) => BasicLandColor(subtype) is not null;
@@ -38,7 +42,7 @@ public static class ManaAbilities
 		);
 
 	public static bool CanTap(GameState s, Card card) =>
-		ColorsOf(card).Any() && CanPayTapCost(s, card);
+		ColorsOf(s, card).Any() && CanPayTapCost(s, card);
 
 	/// <summary>Permanents that can make mana for this player right now, optionally leaving one out
 	/// (the permanent whose {T} is itself the cost being paid).</summary>

@@ -60,6 +60,7 @@ public enum RefKind
 	YourOtherPermanents, // of Type: "each other creature you control" — not the source
 	OwnerOfTarget, // Clash of Elements: "its owner" — wherever the card now is
 	TargetPlayersPermanents, // of Type: Twisted Fates' "each creature target player controls"
+	SourceHost, // an Aura's "enchanted creature" — what the source is attached to
 }
 
 /// <summary>Who or what an effect acts on, resolved against the context at resolution.</summary>
@@ -88,6 +89,7 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 	public static readonly Ref CreaturesExceptYourTokens =
 		new(RefKind.AllPermanentsExceptYourTokens, Type: CardType.Creature);
 	public static readonly Ref TokensYouControl = new(RefKind.YourTokens);
+	public static readonly Ref EnchantedCreature = new(RefKind.SourceHost);
 	public static readonly Ref OtherCreaturesYouControl =
 		new(RefKind.YourOtherPermanents, Type: CardType.Creature);
 
@@ -136,6 +138,17 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 			RefKind.ControllerOfTarget => s.HasObject(TargetAt(Index))
 			&& s.GetObject(TargetAt(Index)) is Card c
 				? [c.ControllerId]
+				: [],
+			// The Aura as it was (last-known, CR 608.2h) — so removing it in response changes nothing,
+			// and an Aura that left and came back on something else doesn't redirect it.
+			RefKind.SourceHost => (
+				context.GetValueOrDefault(ContextKeys.SourceSnapshot) as Card
+				?? s.GetObject((int)context[ContextKeys.Source]) as Card
+			)
+				is { AttachedToId: not 0 } aura
+			&& s.IsOnBattlefield(aura.AttachedToId)
+			&& Rules.Attachments.IsOn(aura, s.GetCard(aura.AttachedToId))
+				? [aura.AttachedToId]
 				: [],
 			RefKind.OwnerOfTarget => s.HasObject(TargetAt(Index))
 			&& s.GetObject(TargetAt(Index)) is Card owned

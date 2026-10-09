@@ -210,8 +210,7 @@ public record ActivateAbilityAction : GameAction
 	public int ExileId { get; init; }
 
 	ActivatedAbilityComponent? Ability(GameState s) =>
-		s.GetCard(CardId)
-			.GetComponents<ActivatedAbilityComponent>()
+		s.AbilitiesOf<ActivatedAbilityComponent>(s.GetCard(CardId))
 			.ElementAtOrDefault(AbilityIndex);
 
 	public override ValidationResult ValidateAdd(GameState s)

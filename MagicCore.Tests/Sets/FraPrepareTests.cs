@@ -340,7 +340,7 @@ public class FraPrepareTests : FraBoardTest
 		CastCopy(improviser);
 		var heartwood = s.CardsIn(me, ZoneType.Battlefield).Single(c => c.Name == "Heartwood");
 		Assert.That(
-			ManaAbilities.ColorsOf(heartwood),
+			ManaAbilities.ColorsOf(s, heartwood),
 			Is.EquivalentTo(new[] { ManaColor.Red, ManaColor.Green })
 		);
 		Assert.That((heartwood.IsToken, heartwood.Is(CardType.Artifact)), Is.EqualTo((true, true)));

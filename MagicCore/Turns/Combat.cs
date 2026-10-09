@@ -33,10 +33,10 @@ public static class Combat
 		&& !c.IsTapped
 		&& (
 			!s.Has(c, "Defender")
-			|| c.GetComponents<Effects.AttacksDespiteDefender>()
+			|| s.AbilitiesOf<Effects.AttacksDespiteDefender>(c)
 				.Any(d => d.While.Holds(s, Effects.Conditions.Of(c)))
 			|| s.CardsIn(c.ControllerId, ZoneType.Battlefield)
-				.Any(p => p.HasComponent<Effects.YourCreaturesAttackDespiteDefender>())
+				.Any(s.HasAbility<Effects.YourCreaturesAttackDespiteDefender>)
 		)
 		&& (s.Has(c, "Haste") || !IsSummoningSick(s, c));
 
@@ -48,7 +48,7 @@ public static class Combat
 		s.GetGame().Step is >= Step.BeginCombat and <= Step.EndCombat
 		&& new[] { s.Player1Id(), s.Player2Id() }
 			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
-			.Any(c => c.HasComponent<Effects.NoSpellsOrAbilitiesDuringCombat>());
+			.Any(s.HasAbility<Effects.NoSpellsOrAbilitiesDuringCombat>);
 
 	/// <summary>"Can't be blocked" — granted by static abilities and until-end-of-turn effects alike.</summary>
 	public const string CantBeBlocked = "Can't be blocked";
@@ -119,10 +119,10 @@ public static class Combat
 		if (
 			s.Toughness(c) > power
 			&& s.CardsIn(c.ControllerId, ZoneType.Battlefield)
-				.Any(p => p.HasComponent<Effects.YourCreaturesAssignDamageByToughness>())
+				.Any(s.HasAbility<Effects.YourCreaturesAssignDamageByToughness>)
 		)
 			return s.Toughness(c);
-		return power < 0 && c.HasComponent<Effects.AssignsDamageAsThoughPowerPositive>()
+		return power < 0 && s.HasAbility<Effects.AssignsDamageAsThoughPowerPositive>(c)
 			? -power
 			: power;
 	}

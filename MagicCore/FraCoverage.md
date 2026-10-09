@@ -5,7 +5,7 @@ Count scripted cards from `FraCards.cs` (`["Name"] =` keys) — never from memor
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 214 cards scripted
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 216 cards scripted
 in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
 dies / exile-until cards, 25 step-trigger / per-turn / prowess / surveil-trigger cards, the 6 flashback cards, 19 prepare cards (Pyre Rhymer and Heartwood Crafter wait: a mana-tap
 trigger, restricted mana), 12 landcycling / graveyard-ability cards, and 7 graveyard-return / hexproof /
@@ -22,14 +22,10 @@ Ascetic, both Danithas, Plan for All Outcomes, Proft Sinister Mastermind, Counte
 triggers). 7e-2d: 6 — Tomik Izzet Sparkmage, Yoshimaru Beloved Companion, Mabel Bitter Recluse,
 Hapatra the Desert Fang, Loot the Anomaly, Ghalta the Immovable (replacements, -1/-1 counters, combat
 damage). 7e-2e: 6 — Yuriko Blade of the Mighty, Tomik Orzhov Lawmage, Kiora of Salt and Sand, Winter
-Team Player, both Fblthps (combat, convoke, domain, "you win the game"). **Uncommons left: 4, all waiting** —
-Loot the Nexus (a mana ability making several mana of a chosen colour: the payment solver's sources
-make one each), Heartwood Crafter (restricted mana), Flourishing Grapple ("loses all abilities"),
-Way of the Cryomancer (copying a spell)
-(HANDOFF-MtgReal.md); Flourishing Grapple waits with Infinite Coursework, Heartwood Crafter on restricted
-mana, Way of the Cryomancer on copying a spell. Commons left: Infinite Coursework
-(waits: "loses all abilities" needs one central read of a card's abilities), Sphinx's Approach
-(deferred). Puppet Crafting waits on type-changing. **Two real planeswalkers are
+Team Player, both Fblthps (combat, convoke, domain, "you win the game"). 7f-1: Flourishing Grapple, Infinite Coursework ("loses all abilities", read through `s.AbilitiesOf`).
+**Uncommons left: 3, waiting on engine pieces** — Loot the Nexus (a mana ability making several mana
+of a chosen colour: the payment solver's sources make one each), Heartwood Crafter (restricted mana),
+Way of the Cryomancer (copying a spell). **Commons left:** Sphinx's Approach (deferred). Puppet Crafting waits on type-changing. **Two real planeswalkers are
 in** (The Theorist, Ajani Unrelenting); **the other 6 are not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
 Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
 per-turn tracking, prowess ✓ · 7d-1 flashback ✓ · 7d-2 prepare ✓ · 7d-3a landcycling, graveyard abilities ✓ · 7d-3b graveyard returns, hexproof, indestructible ✓. The Bo1 hand smoother is Arena's published description; its weighting and whether

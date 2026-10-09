@@ -321,6 +321,12 @@ public record NoSpellsOrAbilitiesDuringCombat : GameComponent;
 /// <summary>Tomik, Orzhov Lawmage: "Planeswalkers you control have 'No more than one creature can attack this planeswalker each combat.'"</summary>
 public record OneAttackerPerPlaneswalkerYouControl : GameComponent;
 
+/// <summary>Infinite Coursework: "Enchanted creature loses all abilities" — Characteristics.HasLostAllAbilities.</summary>
+public record EnchantedLosesAllAbilities : GameComponent;
+
+/// <summary>Infinite Coursework: "… and doesn't untap during its controller's untap step" — the Aura's, not the creature's.</summary>
+public record EnchantedDoesntUntap : GameComponent;
+
 /// <summary>"This spell can't be countered." Read by StackResolution.Counter.</summary>
 public record CantBeCountered : GameComponent;
 

@@ -109,6 +109,9 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// <summary>Essence Burn: "if that permanent would die this turn, exile it instead".</summary>
 	public bool ExileIfItWouldDie { get; init; }
 
+	/// <summary>Flourishing Grapple: "loses all abilities until end of turn".</summary>
+	public bool LosesAllAbilities { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var effect = new UntilEndOfTurn(
@@ -120,6 +123,7 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 			SetBase = SetBase,
 			Trigger = Trigger,
 			ExileIfItWouldDie = ExileIfItWouldDie,
+			LosesAllAbilities = LosesAllAbilities,
 		};
 		return new(
 			Permanents(What, s).Aggregate(s, (st, c) => Update(st, (Card)c.WithComponent(effect)))

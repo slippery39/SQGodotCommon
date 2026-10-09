@@ -29,7 +29,7 @@ public static class Replacements
 			: amount
 				+ s.CardsIn(playerId, ZoneType.Battlefield)
 					.Where(c => c.Id != exceptId)
-					.SelectMany(c => c.GetComponents<AmountReplacement>())
+					.SelectMany(s.AbilitiesOf<AmountReplacement>)
 					.Where(r => r.Event == evt)
 					.Sum(r => r.Bonus);
 }

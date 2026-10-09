@@ -32,7 +32,7 @@ public record DeclareAttackerChoice : ChoiceAction
 	{
 		var opponent = s.GetPlayer(s.OpponentOf(PlayerId));
 		var oneEach = s.CardsIn(opponent.Id, ZoneType.Battlefield)
-			.Any(c => c.HasComponent<Effects.OneAttackerPerPlaneswalkerYouControl>());
+			.Any(s.HasAbility<Effects.OneAttackerPerPlaneswalkerYouControl>);
 		return
 		[
 			new ChoiceOption { Id = CombatOption.None, DisplayText = "Don't attack" },
@@ -44,6 +44,7 @@ public record DeclareAttackerChoice : ChoiceAction
 					c.Is(Cards.CardType.Planeswalker)
 					&& !(
 						oneEach
+						&& !s.HasLostAllAbilities(c) // a granted ability: a stripped walker loses it
 						&& Declarations.Read(context, KeyPrefix).Any(d => d.ChosenId == c.Id)
 					)
 				)

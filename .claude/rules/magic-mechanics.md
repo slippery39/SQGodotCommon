@@ -70,6 +70,11 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   declaration or damage step (`AttackersDeclaredEvent`, `CombatDamageToPlayersEvent`) — never one per creature.
 - **"You win the game"** (`WinTheGame`) ends it at once: a same-moment draw from an empty library never
   reaches the state-based check.
+- **"Loses all abilities"** is `s.HasLostAllAbilities` — until end of turn (`UntilEndOfTurn.LosesAllAbilities`)
+  or under an Aura (`EnchantedLosesAllAbilities`, found once per state with the statics). It reaches
+  every rule because every rule reads abilities through `s.AbilitiesOf<T>`, keywords through `s.Has`,
+  mana through `ManaAbilities.ColorsOf` (a basic land's intrinsic ability included). What the AURA
+  says ("doesn't untap") is the Aura's, so it still applies. No timestamps: everything goes.
 - **Cost changes all live in `Costs.Of`** — taxes on the opponent's side, reductions on yours
   (`YourNoncreatureSpellsCostLess`), and the card's own.
 - **Where triggers are read from:** permanents on the battlefield; a dying card's own "when this

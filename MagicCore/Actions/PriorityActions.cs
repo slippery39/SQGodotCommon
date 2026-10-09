@@ -122,7 +122,7 @@ public record TapForManaAction : GameAction
 			return ValidationResult.Invalid(
 				"Not a permanent you control that can tap for mana now"
 			);
-		if (!ManaAbilities.ColorsOf(s.GetCard(CardId)).Contains(Color))
+		if (!ManaAbilities.ColorsOf(s, s.GetCard(CardId)).Contains(Color))
 			return ValidationResult.Invalid($"Cannot produce {Color}");
 		return ValidationResult.Valid;
 	}

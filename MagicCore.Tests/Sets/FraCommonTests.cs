@@ -122,7 +122,7 @@ public class FraCommonTests : FraBoardTest
 	public void MurmuringVolume_TapsForAnyColor_AndLootsForTwo()
 	{
 		var volume = Field(FraCards.Get("Murmuring Volume"), me);
-		Assert.That(ManaAbilities.ColorsOf(s.GetCard(volume)).Count(), Is.EqualTo(5));
+		Assert.That(ManaAbilities.ColorsOf(s, s.GetCard(volume)).Count(), Is.EqualTo(5));
 
 		var fodder = Hand(TestGames.Card("Forest"), me);
 		var hand = HandCount(me);
@@ -143,7 +143,10 @@ public class FraCommonTests : FraBoardTest
 		s = s.Choose([ChooseColorChoice.IdOf(ManaColor.Blue)]);
 
 		Assert.That(s.GetCard(room).IsTapped);
-		Assert.That(ManaAbilities.ColorsOf(s.GetCard(room)), Is.EqualTo(new[] { ManaColor.Blue }));
+		Assert.That(
+			ManaAbilities.ColorsOf(s, s.GetCard(room)),
+			Is.EqualTo(new[] { ManaColor.Blue })
+		);
 
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
 		s = s.UpdateObject(room, s.GetCard(room) with { IsTapped = false }); // TEST SETUP
@@ -281,7 +284,7 @@ public class FraCommonTests : FraBoardTest
 		(s, _) = new global::MagicCore.Ai.GreedyAi(me).Decide(s);
 
 		Assert.That(
-			ManaAbilities.ColorsOf(s.GetCard(room)).ToList(),
+			ManaAbilities.ColorsOf(s, s.GetCard(room)).ToList(),
 			Is.EqualTo(new[] { ManaColor.Red })
 		);
 	}
@@ -508,7 +511,7 @@ public class FraCommonTests : FraBoardTest
 		s = s.Act(new PlayLandAction { PlayerId = me, CardId = room });
 		s = s.Choose([s.GetPendingChoice()!.Options.First(o => o.DisplayText == "White").Id]);
 		Assert.That(
-			ManaAbilities.ColorsOf(s.GetCard(room)).ToList(),
+			ManaAbilities.ColorsOf(s, s.GetCard(room)).ToList(),
 			Is.EqualTo(new[] { ManaColor.White })
 		);
 	}

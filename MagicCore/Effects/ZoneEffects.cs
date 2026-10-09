@@ -125,6 +125,13 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 	}
 }
 
+/// <summary>Infinite Coursework: "It becomes unprepared."</summary>
+public record BecomeUnprepared(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(Permanents(What, s).Aggregate(s, (st, c) => Prepare.Unprepare(st, c.Id)));
+}
+
 /// <summary>"[It] becomes prepared" — through Rules.Prepare, which ignores one already prepared.</summary>
 public record BecomePrepared(Ref What) : Effect
 {
