@@ -234,15 +234,19 @@ public static class StateBasedActions
 			foreach (var card in depleted)
 				s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
 
-			// CR 704.5j legend rule. ponytail: keeps the newest; Arena asks which. Make it a choice
-			// when keeping the older one (say, a tapped copy) matters to the AI.
-			var extraLegends = s.CardsIn(id, ZoneType.Battlefield)
-				.Where(c => c.Is(Supertype.Legendary))
-				.GroupBy(c => c.Name)
-				.SelectMany(g => g.SkipLast(1))
-				.ToList();
-			foreach (var card in extraLegends)
-				s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+			// CR 704.5j legend rule — not this turn after Hall of Echoes. ponytail: keeps a card over a
+			// token (Face Yourself's copy is sacrificed anyway), then the newest; Arena asks which. Make it
+			// a choice when keeping the older one (say, a tapped copy) matters to the AI.
+			if (!s.GetPlayer(id).ThisTurn.NoLegendRule)
+			{
+				var extraLegends = s.CardsIn(id, ZoneType.Battlefield)
+					.Where(c => c.Is(Supertype.Legendary))
+					.GroupBy(c => c.Name)
+					.SelectMany(g => g.OrderBy(c => c.IsToken ? 0 : 1).SkipLast(1)) // stable: newest last
+					.ToList();
+				foreach (var card in extraLegends)
+					s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+			}
 
 			s = Rules.Attachments.Check(s, id); // CR 704.5m/n
 

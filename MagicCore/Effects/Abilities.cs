@@ -389,6 +389,14 @@ public record CantBeCountered : GameComponent;
 /// <summary>Traxos: "This spell costs {N} less to cast if you've cast a noncreature spell this turn."</summary>
 public record CostsLessIfYouCastNoncreatureSpellThisTurn(int Amount) : GameComponent;
 
+/// <summary>
+/// A delayed triggered ability (CR 603.7) kept on the permanent it acts on — Vindictive Triumph's
+/// "exile it at the beginning of the next end step". Not the permanent's ability: losing all
+/// abilities keeps it, a copy doesn't take it, and it is gone with a zone change (Card.IsStatus).
+/// ponytail: one-shot only because its effect moves the permanent; mark it fired if one ever doesn't.
+/// </summary>
+public record DelayedTrigger(TriggeredAbilityComponent Ability) : GameComponent;
+
 /// <summary>Karn, Argent Defender: "Artifacts and creatures entering the battlefield don't cause abilities to trigger." Read by Triggers.Collect.</summary>
 public record EnteringArtifactsAndCreaturesDontTrigger : GameComponent;
 

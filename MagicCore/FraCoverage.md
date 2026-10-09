@@ -3,7 +3,7 @@
 Status, not rules: what is scripted, what waits and why. The rules live in `MagicCore/CLAUDE.md`.
 Count scripted cards from `FraCards.cs` (`["Name"] =` keys) — never from memory; this file once ran one high.
 
-**Playable by rarity** (scripted, keyword-only or basic — computed, 2026-10-09): common 86/86 · uncommon 109/109 · rare 56/64 · mythic 19/26 · **270/285**.
+**Playable by rarity** (scripted, keyword-only or basic — computed, 2026-10-09): common 86/86 · uncommon 109/109 · rare 60/64 · mythic 19/26 · **274/285**.
 8a (rares from existing pieces): Aerid Konstrari, Craterclaw Colossus, Ingris Stingerquill, Overwrite the
 Multiverse, The Echoverse Fulcrum, Tarmogoyf, Dark Matter Manipulator, Simulacrum Shaper, Lyra Archangel
 of Dawn, Master of Barbs, Solarium Sentry, Liliana the Faultless. 8b: Stinging Vitriol, Loyal Tutor, Entrust
@@ -12,7 +12,8 @@ Theorist's Sanctum, Theorist's Proxy, Solitary Cell. 8c: both Vraskas, Kwia Vigo
 Hungering Puppetbeast, Tenured Tethermage, Gideon's Memorial (Treasure, restricted mana, token replacement).
 8d (one-offs): Gideon the Oathless, Flickering Hound, Gardenize, Cruel Calculations, Curse-Marred Demon,
 Hexhaven Invigorator, Seasoned Cryomancer, Identity Echo, Kindred Judgment, Karn Argent Defender, Sphinx's
-Approach, Null Summoner, Omnipresence. Remaining rare batches 8e–8g: HANDOFF-MtgReal.md.
+Approach, Null Summoner, Omnipresence. 8e (copying permanents): Sphinx of False Conclusions, Face Yourself,
+Vindictive Triumph, Hall of Echoes. Remaining batches 8f–8g: HANDOFF-MtgReal.md.
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,

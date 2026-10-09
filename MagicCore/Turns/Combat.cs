@@ -223,11 +223,15 @@ public static class Combat
 	public static GameState CleanupPermanents(GameState s) =>
 		ForEachPermanent(
 			s,
-			c => c.Damage > 0 || c.DamagedByDeathtouch || c.HasComponent<UntilEndOfTurn>(),
+			c =>
+				c.Damage > 0
+				|| c.DamagedByDeathtouch
+				|| c.HasComponent<UntilEndOfTurn>()
+				|| c.HasComponent<CopyUntilEndOfTurn>(),
 			c =>
 				(Card)
 					(
-						c with
+						c.WithoutCopyEffect() with
 						{
 							Damage = 0,
 							DamagedByDeathtouch = false,

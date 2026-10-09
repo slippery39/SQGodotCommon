@@ -1096,7 +1096,7 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - Damage split among blockers is automatic
 - an exhaust stamp is per card, not per ability
 - triggers are matched against the battlefield at the next priority, so a source, or an entering creature, that is gone by then — destroyed later in the same resolution — is missed (one the state-based check kills is still seen)
-- the legend rule keeps the newest
+- the legend rule keeps a card over a token, then the newest
 - last-known information keeps a card's own characteristics, not what statics gave it
 - a dying card's own "when this dies" looks back, but other leaves-the-battlefield triggers read the battlefield NOW (Edgar dying alongside a creature misses its death)
 - a "sacrifice the greatest" tie takes the first
@@ -1113,3 +1113,4 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - "Whenever this creature is dealt damage" (Hexhaven Invigorator) triggers once per damage SOURCE: two blockers' combat damage is two triggers, where the rules make it one for the total (coalesce per damage step if a card ever cares)
 - Kindred Judgment offers the creature types on the battlefield plus "a type no creature has" — every other type does the same as that one
 - "Up to that many target creatures" (Seasoned Cryomancer) keeps only neighbouring targets apart; three or more could repeat one (make it all-distinct if a card ever asks for three)
+- a `DelayedTrigger` is one-shot only because Vindictive Triumph's moves the permanent; one that leaves it in place would fire every end step (mark it fired if a card ever needs that)

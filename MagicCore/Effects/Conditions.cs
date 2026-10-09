@@ -57,6 +57,15 @@ public record Not(Condition Inner) : Condition
 /// <summary>The context a condition is judged in outside a resolving ability: a permanent and its controller.</summary>
 public static class Conditions
 {
+	/// <summary>The source as it was when it triggered (CR 603.10a), else as it is now — null if gone.</summary>
+	public static Card? SourceAsItWas(GameState s, ImmutableDictionary<string, object> context) =>
+		context.GetValueOrDefault(ContextKeys.SourceSnapshot) as Card
+		?? (
+			s.HasObject((int)context[ContextKeys.Source])
+				? s.GetObject((int)context[ContextKeys.Source]) as Card
+				: null
+		);
+
 	public static ImmutableDictionary<string, object> Of(Card card) =>
 		ImmutableDictionary<string, object>
 			.Empty.Add(ContextKeys.Controller, card.ControllerId)
@@ -78,10 +87,25 @@ public record CastFrom(ZoneType Zone) : Condition
 public record SourceWasCast : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		(
-			context.GetValueOrDefault(ContextKeys.SourceSnapshot) as Card
-			?? s.GetObject((int)context[ContextKeys.Source]) as Card
-		)?.WasCast == true;
+		Conditions.SourceAsItWas(s, context)?.WasCast == true;
+}
+
+/// <summary>Sphinx of False Conclusions: "if it isn't a token" (with Not) — as it last was.</summary>
+public record SourceIsToken : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		Conditions.SourceAsItWas(s, context)?.IsToken == true;
+}
+
+/// <summary>Vindictive Triumph: "if that permanent's mana value was N or less" — read before it moves.</summary>
+public record TargetManaValueAtMost(int Index, int Max) : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		Ref.Target(Index)
+			.Resolve(s, context)
+			.Select(s.GetObject)
+			.OfType<Card>()
+			.Any(c => c.ManaCost.ManaValue <= Max);
 }
 
 /// <summary>"If this creature isn't prepared" (with Not) — the source, as it is now.</summary>

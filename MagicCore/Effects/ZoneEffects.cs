@@ -271,19 +271,14 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 		var controller = ControlledBy is null ? Controller : All(ControlledBy, s).FirstOrDefault();
 		if (controller == 0)
 			return new(s);
-		// Draconic Visitor: an artifact token under its controller's control is a Dragon instead (CR 614.1a).
-		var definition = new CardDefinition(Token, Abilities);
-		if (
-			CardFactory.Create(definition, controller).Is(CardType.Artifact)
-			&& s.CardsIn(controller, ZoneType.Battlefield)
-				.SelectMany(s.AbilitiesOf<ArtifactTokensBecome>)
-				.FirstOrDefault()
-				is { } instead
-		)
-			definition = new CardDefinition(instead.Token, instead.Abilities);
+		var template = Instead(
+			s,
+			controller,
+			CardFactory.Create(new(Token, Abilities), controller)
+		);
 		for (var i = 0; i < count; i++)
 		{
-			var token = CardFactory.Create(definition, controller) with { IsToken = true };
+			var token = template with { IsToken = true };
 			(s, token) = s.AddObject(token);
 			s = s.EnterBattlefield(token.Id, controller, extraCounters: counters, tapped: Tapped);
 			if (GainsUntilEndOfTurn is { } keyword)
@@ -294,6 +289,132 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 		}
 		return new(s);
 	}
+
+	/// <summary>
+	/// The token actually created — Draconic Visitor: an artifact token under its controller's control
+	/// is a Dragon instead (CR 614.1a). Every token goes through here, copies included.
+	/// </summary>
+	public static Card Instead(GameState s, int controller, Card token) =>
+		token.Is(CardType.Artifact)
+		&& s.CardsIn(controller, ZoneType.Battlefield)
+			.SelectMany(s.AbilitiesOf<ArtifactTokensBecome>)
+			.FirstOrDefault()
+			is { } instead
+			? CardFactory.Create(new(instead.Token, instead.Abilities), controller)
+			: token;
+}
+
+/// <summary>
+/// "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new token
+/// under your control — never its counters, damage or what it was given — entering through
+/// EnterBattlefield, so its own "enters" abilities fire. A source that just died is copied as it
+/// last existed (Sphinx of False Conclusions). Adding: Face Yourself's "except it has …" (CR 707.9b).
+/// </summary>
+public record CreateTokenCopy(Ref What) : Effect
+{
+	/// <summary>"Except it has haste" — keywords the copies also have.</summary>
+	public ImmutableArray<string> AddingKeywords { get; init; } = [];
+
+	/// <summary>"… and '[ability]'" — abilities the copies also have.</summary>
+	public ImmutableArray<GameComponent> Adding { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		var originals = Permanents(What, s).ToList();
+		if (
+			originals.Count == 0
+			&& What.Kind == RefKind.Source
+			&& GetInput<Card?>(ContextKeys.SourceSnapshot) is { } lastKnown
+		)
+			originals.Add(lastKnown);
+		foreach (var original in originals)
+		{
+			var copy = new Card
+			{
+				OwnerId = Controller,
+				ControllerId = Controller,
+				IsToken = true,
+			}.WithCopiableValuesOf(original);
+			copy = CreateTokens.Instead(
+				s,
+				Controller,
+				copy with
+				{
+					Keywords = [.. copy.Keywords, .. AddingKeywords],
+					Components = [.. copy.Components, .. Adding],
+				}
+			) with
+			{
+				IsToken = true,
+			};
+			(s, copy) = s.AddObject(copy);
+			s = s.EnterBattlefield(copy.Id, Controller);
+		}
+		return new(s);
+	}
+}
+
+/// <summary>
+/// Vindictive Triumph: "return it to the battlefield tapped under your control. Exile it at the
+/// beginning of the next end step." — a card exiled earlier in this resolution; a token that left
+/// can't come back (CR 111.8).
+/// </summary>
+public record ReturnFromExileUnderYourControl(Ref What) : Effect
+{
+	public bool Tapped { get; init; }
+
+	/// <summary>"Exile it at the beginning of the next end step" — a delayed trigger on it.</summary>
+	public bool ExileAtNextEndStep { get; init; }
+
+	static readonly DelayedTrigger ExileItAtTheEndStep =
+		new(new TriggeredAbilityComponent(TriggerEvent.EachEndStep, [new Exile(Ref.Source)]));
+
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var id in All(What, s).ToList())
+		{
+			if (
+				s.GetObject(id) is not Card { IsToken: false } card
+				|| !s.IsIn(id, card.OwnerId, ZoneType.Exile)
+			)
+				continue;
+			s = s.EnterBattlefield(id, Controller, tapped: Tapped);
+			if (ExileAtNextEndStep)
+				s = Update(s, (Card)s.GetCard(id).WithComponent(ExileItAtTheEndStep));
+		}
+		return new(s);
+	}
+}
+
+/// <summary>
+/// Hall of Echoes: "This land becomes a copy of target creature you control until end of turn" —
+/// what it was is kept on it (CopyUntilEndOfTurn) and comes back in cleanup or as it leaves.
+/// </summary>
+public record BecomeCopyUntilEndOfTurn(Ref What, Ref Of) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		if (Permanents(Of, s).FirstOrDefault() is not { } model)
+			return new(s);
+		foreach (var card in Permanents(What, s).ToList())
+		{
+			var original = card.GetComponent<CopyUntilEndOfTurn>()?.Original ?? card; // a second copy restores to the first original
+			s = Update(
+				s,
+				(Card)
+					card.WithCopiableValuesOf(model)
+						.WithComponentReplaced(new CopyUntilEndOfTurn(original))
+			);
+		}
+		return new(s);
+	}
+}
+
+/// <summary>Hall of Echoes: "The 'legend rule' doesn't apply to permanents you control this turn."</summary>
+public record NoLegendRuleThisTurn : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(s.Tally(Controller, t => t with { NoLegendRule = true }));
 }
 
 /// <summary>Infinite Coursework: "It becomes unprepared."</summary>

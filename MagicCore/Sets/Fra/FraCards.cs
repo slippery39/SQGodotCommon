@@ -3287,6 +3287,74 @@ public static class FraCards
 				new MayCastWhatItExiled(Threshold),
 			],
 			["Omnipresence"] = [new CastFromHandFreeUpToCreatureCount()],
+
+			// ===== Rares (8e): copying permanents =====
+			["Sphinx of False Conclusions"] =
+			[
+				When(
+					TriggerEvent.SelfAttacks,
+					[],
+					new DrawCards(Ref.You, 1),
+					new Discard(Ref.You, 1)
+				),
+				When(TriggerEvent.SelfDies, [], new CreateTokenCopy(Ref.Source)) with
+				{
+					If = new Not(new SourceIsToken()),
+				},
+			],
+			["Face Yourself"] =
+			[
+				Spell(
+					[new TargetSpec(TargetKind.Player)],
+					new CreateTokenCopy(Ref.PermanentsOfTargetPlayer(CardType.Creature, 0))
+					{
+						AddingKeywords = ["Haste"],
+						Adding =
+						[
+							When(TriggerEvent.EachEndStep, [], new Sacrifice(Ref.Source)) with
+							{
+								If = new Not(
+									new AtLeast(Count.NumberOf(Ref.PlaneswalkersYouControl), 1)
+								),
+							},
+						],
+					}
+				),
+			],
+			["Vindictive Triumph"] =
+			[
+				Spell(
+					[CreatureOrPlaneswalker],
+					new If(
+						new TargetManaValueAtMost(0, 3),
+						[
+							new Exile(Ref.Target()),
+							new ReturnFromExileUnderYourControl(Ref.Target())
+							{
+								Tapped = true,
+								ExileAtNextEndStep = true,
+							},
+						]
+					)
+					{
+						Otherwise = [new Exile(Ref.Target())],
+					}
+				),
+			],
+			["Hall of Echoes"] =
+			[
+				new ManaAbilityComponent(ManaColor.Colorless),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{5}"),
+					[
+						new BecomeCopyUntilEndOfTurn(Ref.Source, Ref.Target()),
+						new NoLegendRuleThisTurn(),
+					]
+				)
+				{
+					Targets = [Creature with { Whose = Whose.You }],
+				},
+			],
 		};
 
 	public static CardDefinition Get(string name) =>

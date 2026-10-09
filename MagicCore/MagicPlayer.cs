@@ -69,6 +69,9 @@ public record TurnTally
 	/// <summary>Cruel Calculations: "cards that were put into [this player's] graveyard from their library this turn" — MagicState.MoveCard.</summary>
 	public int CardsFromLibraryToGraveyard { get; init; }
 
+	/// <summary>Hall of Echoes: "The 'legend rule' doesn't apply to permanents you control this turn."</summary>
+	public bool NoLegendRule { get; init; }
+
 	/// <summary>Noncombat damage dealt TO this player (Command the Stage).</summary>
 	public int NoncombatDamageTaken { get; init; }
 }

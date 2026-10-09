@@ -166,5 +166,13 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **Randomness** (a discard at random, a random order) takes `s.TakeRng()`, so a seeded game replays.
   A search for several cards may take two of a name unless `SearchLibrary.DifferentNames` (Fblthp).
   A spell that exiles itself as it resolves (Sphinx's Approach) is left there by `FinishSpellAction`.
+- **Copying a permanent** (CR 707.2) is `Card.WithCopiableValuesOf` — name, cost, types, colours,
+  P/T, keywords and abilities, never its status (`Card.IsStatus`: counters, damage, what it was
+  given; the same set a zone change strips). A token copy (`CreateTokenCopy`) is a blank token with
+  those values, entering through `EnterBattlefield` so its own "enters" fires; a source that just died
+  is copied as it last existed. "Becomes a copy until end of turn" (Hall of Echoes) keeps the original
+  in `CopyUntilEndOfTurn`, restored in cleanup AND as it leaves (`Card.Fresh`), so a dead Hall is a Hall.
+- **A delayed trigger on a permanent** ("exile it at the beginning of the next end step") is a
+  `DelayedTrigger` component: kept when it loses all abilities, not copied, gone with a zone change.
 - **Base P/T effects** ("has base power and toughness 4/5") sit under counters and pumps, latest
   wins (`UntilEndOfTurn.SetBase`, read in `Card.OwnPower`/`OwnToughness` under `s.Power`/`Toughness`).

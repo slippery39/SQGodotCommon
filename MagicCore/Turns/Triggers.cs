@@ -232,6 +232,7 @@ public static class Triggers
 		var context = ImmutableDictionary<string, object>
 			.Empty.Add(ContextKeys.Controller, t.Source.ControllerId)
 			.Add(ContextKeys.Source, t.Source.Id)
+			.Add(ContextKeys.SourceSnapshot, t.Source) // a dying card as it was: "if it isn't a token"
 			.Add(ContextKeys.EventCard, t.EventCardId);
 		if (t.EventSnapshot is { } snapshot)
 			context = context.Add(ContextKeys.EventSnapshot, snapshot);
@@ -256,14 +257,16 @@ public static class Triggers
 
 	/// <summary>Its own triggered abilities, and any it gained until end of turn (Lyra) — none once it lost them all.</summary>
 	static IEnumerable<TriggeredAbilityComponent> AbilitiesOf(GameState s, Card card) =>
-		s.HasLostAllAbilities(card)
-			? []
-			: card.GetComponents<TriggeredAbilityComponent>()
-				.Concat(
-					card.GetComponents<UntilEndOfTurn>()
-						.Select(u => u.Trigger)
-						.OfType<TriggeredAbilityComponent>()
-				);
+		(
+			s.HasLostAllAbilities(card)
+				? []
+				: card.GetComponents<TriggeredAbilityComponent>()
+					.Concat(
+						card.GetComponents<UntilEndOfTurn>()
+							.Select(u => u.Trigger)
+							.OfType<TriggeredAbilityComponent>()
+					)
+		).Concat(card.GetComponents<DelayedTrigger>().Select(d => d.Ability)); // not its own: kept
 
 	static bool Matches(GameState s, Card source, TriggerEvent on, GameEvent e)
 	{

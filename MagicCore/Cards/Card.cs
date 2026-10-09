@@ -151,7 +151,9 @@ public record Card : GameObject
 	/// CR 400.7: a card that changes zones is a new object with no memory of its previous one.
 	/// The ONLY reset — every zone change goes through MagicState.MoveCard, which calls this.
 	/// </summary>
-	public Card Fresh() =>
+	public Card Fresh() => WithoutCopyEffect().Reset();
+
+	Card Reset() =>
 		this with
 		{
 			Incarnation = Incarnation + 1,
@@ -180,17 +182,55 @@ public record Card : GameObject
 			AttackingId = 0,
 			BlockingId = 0,
 			IsBlocked = false,
-			Components = Components.RemoveAll(c =>
-				c
-					is Actions.OnStackComponent
-						or UntilEndOfTurn
-						or Effects.ExiledUntilLeaves
-						or Effects.GrantedFlashback
-						or Effects.PlayableFromExile
-						or Effects.ExiledBy
-						or Effects.ChosenColorMana
-			),
+			Components = Components.RemoveAll(IsStatus),
 		};
+
+	/// <summary>
+	/// What this object was given or decided here, not what it is: gone with a zone change, and never
+	/// copied (CR 707.2) — a copy of an exiling permanent doesn't own its exile, nor a pumped one its pump.
+	/// </summary>
+	public static bool IsStatus(GameComponent c) =>
+		c
+			is Actions.OnStackComponent
+				or UntilEndOfTurn
+				or Effects.ExiledUntilLeaves
+				or Effects.GrantedFlashback
+				or Effects.PlayableFromExile
+				or Effects.ExiledBy
+				or Effects.ChosenColorMana
+				or CopyUntilEndOfTurn
+				or Effects.DelayedTrigger;
+
+	/// <summary>
+	/// CR 707.2: this object with <paramref name="source"/>'s copiable values — name, cost, types,
+	/// colours, P/T, keywords and abilities (themselves already copied, if it is a copy: CR 707.3).
+	/// Its own status stays: counters, damage, tapped, what it was given. The ONE place a copy is made.
+	/// </summary>
+	public Card WithCopiableValuesOf(Card source) =>
+		this with
+		{
+			Name = source.Name,
+			Types = source.Types,
+			Supertypes = source.Supertypes,
+			Subtypes = source.Subtypes,
+			ManaCost = source.ManaCost,
+			Keywords = source.Keywords,
+			Colors = source.Colors,
+			BasePower = source.BasePower,
+			BaseToughness = source.BaseToughness,
+			PrintedLoyalty = source.PrintedLoyalty,
+			Components =
+			[
+				.. source.Components.Where(c => !IsStatus(c)),
+				.. Components.Where(IsStatus),
+			],
+		};
+
+	/// <summary>Hall of Echoes back to itself — at cleanup, or as it leaves (CR 400.7).</summary>
+	public Card WithoutCopyEffect() =>
+		GetComponent<CopyUntilEndOfTurn>() is { } copy
+			? (Card)WithCopiableValuesOf(copy.Original).WithoutComponents<CopyUntilEndOfTurn>()
+			: this;
 
 	/// <summary>Printed keywords plus any granted until end of turn.</summary>
 	public bool HasOwn(string keyword) =>
@@ -225,6 +265,12 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 	/// <summary>Flourishing Grapple: "loses all abilities until end of turn" — Characteristics.HasLostAllAbilities.</summary>
 	public bool LosesAllAbilities { get; init; }
 }
+
+/// <summary>
+/// Hall of Echoes: "becomes a copy of [it] until end of turn" — what it was before, restored in
+/// cleanup or on leaving the battlefield (Card.WithoutCopyEffect).
+/// </summary>
+public record CopyUntilEndOfTurn(Card Original) : GameComponent;
 
 /// <summary>
 /// What goes in a deck: the printed data plus the hand-written ability components. A card with no
