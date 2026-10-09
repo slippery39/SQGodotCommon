@@ -90,7 +90,7 @@ Traps, each paid for once on the KIN branch:
   `window/size/window_*_override` (it does: 1280x720). Check a capture's real pixel size.
 - **A capture cannot hover or click**, and a still frame proves nothing about motion — nothing moves
   until state changes. KIN added debug flags (`--hover-card=N`, `--mouse=x,y`, real clicks through
-  the viewport) for this; `-GameArgs '--tap=X,Y@F'` (any screen; window pixels, as read off a capture frame) sends a REAL click on frame F+1, and MtgGame has `-GameArgs '--autoplay=N'` (the AI plays BOTH seats to turn N, so the board opens mid-game; a game can end early) and `--decks=Player,Opponent` (DeckRegistry names; random otherwise). Add more when a screen needs them, and send REAL input
+  the viewport) for this; `-GameArgs '--tap=X,Y@F'` (any screen; window pixels, as read off a capture frame) sends a REAL click on frame F+1, and MtgGame has `-GameArgs '--autoplay=N'` (the AI plays BOTH seats to turn N, so the board opens mid-game; a game can end early) and `--decks=Player,Opponent` (DeckRegistry names; random otherwise); MagicTable has `--seed=N`, `--decks=A,B` (FraDecks names), `--autoplay=N` and `--ai-vs-ai`. Add more when a screen needs them, and send REAL input
   events through the viewport rather than calling the handler, or the capture "verifies" something
   no player can do.
 

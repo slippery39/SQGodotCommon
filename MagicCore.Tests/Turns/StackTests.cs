@@ -160,4 +160,23 @@ public class StackTests
 		Assert.That(s.DecidingPlayerId(), Is.EqualTo(s.GetGame().StartingPlayerId));
 		Assert.That(s.LegalActions().OfType<PlayLandAction>(), Is.Not.Empty);
 	}
+
+	[Test]
+	public void IsMoveFor_TheOneKeptMoveCountsForEveryIdenticalCopy_NotForOtherPermanents()
+	{
+		var (s, me, _) = Board();
+		int first,
+			second;
+		(s, first) = TestGames.Put(s, me, Heal, ZoneType.Hand);
+		(s, second) = TestGames.Put(s, me, Heal, ZoneType.Hand);
+
+		var casts = s.DistinctMoves(s.LegalActions()).OfType<CastSpellAction>().ToList();
+		Assert.That(casts.Where(c => s.GetCard(c.CardId).Name == "Heal"), Has.Exactly(1).Items);
+		var heal = casts.Single(c => s.GetCard(c.CardId).Name == "Heal");
+
+		Assert.That(s.IsMoveFor(heal, first) && s.IsMoveFor(heal, second));
+		var forest = s.CardsIn(me, ZoneType.Battlefield).First().Id;
+		Assert.That(s.IsMoveFor(heal, forest), Is.False);
+		Assert.That(s.IsMoveFor(new PassPriorityAction { PlayerId = me }, first), Is.False);
+	}
 }

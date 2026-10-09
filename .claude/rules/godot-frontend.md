@@ -27,6 +27,10 @@ is on screen — twice, twenty minutes of hand-play found what a screenshot loop
 
 ## Layout — nothing here errors when it breaks
 
+- **Sizes are in the 1920x1080 DESIGN space** (`project.godot`: viewport 1920x1080, window
+  1280x720, `canvas_items` stretch), so everything draws at 2/3. A screen written in window
+  pixels came out with 15px text reading as 10px and columns two-thirds as wide as set. Author
+  in design pixels; read a capture's pixels x1.5.
 - **A Container overrides its children's anchors and positions on every layout pass.** If a
   `Position` or anchor preset is ignored, check the PARENT's type before your maths. A
   `PanelContainer` root stretched a screen full-size and dragged an anchored button behind the

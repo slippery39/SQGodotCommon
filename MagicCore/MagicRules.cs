@@ -279,11 +279,11 @@ public static class MagicRules
 			.DistinctBy(a =>
 				a switch
 				{
-					PlayLandAction p => $"land|{s.GetCard(p.CardId).Name}|{s.GetParent(p.CardId)}",
+					PlayLandAction p => $"land|{Identity(s, p.CardId)}",
 					CastSpellAction c =>
-						$"cast|{s.GetCard(c.CardId).Name}|{s.GetParent(c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}",
+						$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}",
 					ActivateAbilityAction activate =>
-						$"activate|{(s.IsOnBattlefield(activate.CardId) ? activate.CardId : $"{s.GetCard(activate.CardId).Name}@{s.GetParent(activate.CardId)}")}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}",
+						$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}",
 					_ => (object)a,
 				}
 			)
@@ -291,6 +291,29 @@ public static class MagicRules
 
 	/// <summary>Sacrificing one Forest is the same move as sacrificing another.</summary>
 	static string Fodder(GameState s, int id) => id == 0 ? "" : s.GetCard(id).Name;
+
+	/// <summary>Which card a move is "from" for DistinctMoves: a permanent by id; elsewhere any copy in the same zone.</summary>
+	static string Identity(GameState s, int id) =>
+		s.IsOnBattlefield(id) ? $"{id}" : $"{s.GetCard(id).Name}@{s.GetParent(id)}";
+
+	/// <summary>The card a move is played, cast or activated from; 0 for pass, keep and mulligan.</summary>
+	public static int CardOf(GameAction move) =>
+		move switch
+		{
+			PlayLandAction p => p.CardId,
+			CastSpellAction c => c.CardId,
+			ActivateAbilityAction a => a.CardId,
+			ActivateLoyaltyAction l => l.CardId,
+			_ => 0,
+		};
+
+	/// <summary>
+	/// Is <paramref name="move"/> one of this card's? DistinctMoves keeps ONE of identical cards, so
+	/// a move kept for one copy counts for every copy it stands for — a front end asking "what can
+	/// I do with this card" gets the same answer for each.
+	/// </summary>
+	public static bool IsMoveFor(this GameState s, GameAction move, int cardId) =>
+		CardOf(move) is var id and not 0 && Identity(s, id) == Identity(s, cardId);
 
 	public static GameState Act(this GameState s, GameAction action) =>
 		s.AddAction(action).ProcessAllActions().State;

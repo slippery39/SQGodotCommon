@@ -127,6 +127,17 @@ public class MagicTableManagerTests
 	}
 
 	[Test]
+	public void AutoplayTo_ReachesTheTurn_AndLeavesNoUndo()
+	{
+		var m = New();
+		m.AutoplayTo(5);
+
+		Assert.That(m.IsOver || m.State.GetGame().TurnNumber >= 5);
+		Assert.That(m.CanUndo, Is.False);
+		Assert.That(m.HumanToAct || m.AiToAct || m.IsOver, "the table can carry on");
+	}
+
+	[Test]
 	public void Replay_DealsTheSameOpeningHand()
 	{
 		var m = New(seed: 77);

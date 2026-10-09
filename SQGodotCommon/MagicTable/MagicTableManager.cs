@@ -100,6 +100,25 @@ public sealed class MagicTableManager
 		Decided(Describe.Answer(State, State.GetPendingChoice()!, picked), State.Choose(picked));
 	}
 
+	/// <summary>
+	/// Debug (<c>-GameArgs --autoplay=N</c>): a stand-in AI plays your seat too until turn N, so the
+	/// table opens mid-game for a capture. Leaves no undo steps.
+	/// </summary>
+	public void AutoplayTo(int turn)
+	{
+		var standIn = new GreedyAi(HumanId);
+		while (!IsOver && State.GetGame().TurnNumber < turn)
+		{
+			if (AiToAct)
+			{
+				StepAi();
+				continue;
+			}
+			State = standIn.Decide(State).State;
+			Settle();
+		}
+	}
+
 	/// <summary>Back to just before your last decision — the AI's replies since then go too.</summary>
 	public void Undo()
 	{
