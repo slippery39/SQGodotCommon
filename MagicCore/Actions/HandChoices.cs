@@ -54,6 +54,12 @@ public record ChooseFromLibraryChoice : ChoiceAction
 	/// <summary>Landcycling: "a basic land card". None means any.</summary>
 	public Supertype Supertype { get; init; }
 
+	/// <summary>Sphinx's Approach: "a Sphinx creature card".</summary>
+	public string? Subtype { get; init; }
+
+	/// <summary>Fblthp: "with different names".</summary>
+	public bool DifferentNames { get; init; }
+
 	public ChooseFromLibraryChoice()
 	{
 		OutputKey = ChooseCardsFromHandChoice.Chosen;
@@ -65,13 +71,21 @@ public record ChooseFromLibraryChoice : ChoiceAction
 	public override ImmutableList<ChoiceOption> GetOptions(
 		GameState s,
 		ImmutableDictionary<string, object> context
-	) =>
-		s.CardsIn(PlayerId, ZoneType.Library)
-			.Where(c => c.Is(Type) && (Supertype == Supertype.None || c.Is(Supertype)))
-			.DistinctBy(c => c.Name) // two Forests are one choice: the library is shuffled after
+	)
+	{
+		var cards = s.CardsIn(PlayerId, ZoneType.Library)
+			.Where(c =>
+				(Type == CardType.None || c.Is(Type)) // None: "a card"
+				&& (Supertype == Supertype.None || c.Is(Supertype))
+				&& (Subtype is null || c.Subtypes.Contains(Subtype))
+			);
+		// Taking one, two Forests are one choice: the library is shuffled after. Taking up to
+		// several, Hexhaven Invigorator may take both — unless the names must differ (Fblthp).
+		return (DifferentNames || MaxChoices <= 1 ? cards.DistinctBy(c => c.Name) : cards)
 			.OrderBy(c => c.Name)
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
 			.ToImmutableList();
+	}
 
 	public override int GetDecidingPlayerId(
 		GameState s,

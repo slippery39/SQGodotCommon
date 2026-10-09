@@ -169,27 +169,29 @@ public static class MagicRules
 		IEnumerable<int> discards = CastSpellAction.OwesDiscard(s, card)
 			? s.CardsIn(player, ZoneType.Hand).Select(c => c.Id)
 			: [0];
-		return Enumerable
-			.Range(0, maxX + 1)
-			.SelectMany(x =>
-				sacrifices.SelectMany(sacrifice =>
-					discards.SelectMany(discard =>
-						beholds.SelectMany(beheld =>
-							choices.Select(c => new CastSpellAction
-							{
-								PlayerId = player,
-								CardId = card.Id,
-								X = x,
-								Targets = c.targets,
-								Modes = c.modes,
-								SacrificeId = sacrifice,
-								DiscardId = discard,
-								BeholdId = beheld,
-							})
-						)
+		// Omnipresence: X = 0 is cast without paying its mana cost — never worse, so it replaces the paid one.
+		var free = Rules.Playable.MayCastWithoutPaying(s, card, player);
+		var payments = Enumerable.Range(0, maxX + 1).Select(x => (x, free: free && x == 0));
+		return payments.SelectMany(payment =>
+			sacrifices.SelectMany(sacrifice =>
+				discards.SelectMany(discard =>
+					beholds.SelectMany(beheld =>
+						choices.Select(c => new CastSpellAction
+						{
+							PlayerId = player,
+							CardId = card.Id,
+							X = payment.x,
+							WithoutPayingManaCost = payment.free,
+							Targets = c.targets,
+							Modes = c.modes,
+							SacrificeId = sacrifice,
+							DiscardId = discard,
+							BeholdId = beheld,
+						})
 					)
 				)
-			);
+			)
+		);
 	}
 
 	/// <summary>Abilities activated from the zone the card is in — one candidate per target and card-cost choice.</summary>
@@ -275,7 +277,7 @@ public static class MagicRules
 				{
 					PlayLandAction p => $"land|{s.GetCard(p.CardId).Name}|{s.GetParent(p.CardId)}",
 					CastSpellAction c =>
-						$"cast|{s.GetCard(c.CardId).Name}|{s.GetParent(c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}",
+						$"cast|{s.GetCard(c.CardId).Name}|{s.GetParent(c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}",
 					ActivateAbilityAction activate =>
 						$"activate|{(s.IsOnBattlefield(activate.CardId) ? activate.CardId : $"{s.GetCard(activate.CardId).Name}@{s.GetParent(activate.CardId)}")}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}",
 					_ => (object)a,

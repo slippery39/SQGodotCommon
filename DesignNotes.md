@@ -1110,3 +1110,6 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - "Tap two untapped artifacts" (Tenured Tethermage) picks which ones for the player — what makes no mana first, then least; make it a choice if the pick ever matters more than that
 - a permanent's mana abilities share one restriction (the first one's); no FRA card mixes restricted and unrestricted mana, and nothing grants mana abilities (track it per unit if one does)
 - a Sculpture Treasure that may convoke is offered only for convoke (tapped, not sacrificed), never sacrificed for a colour in the same payment
+- "Whenever this creature is dealt damage" (Hexhaven Invigorator) triggers once per damage SOURCE: two blockers' combat damage is two triggers, where the rules make it one for the total (coalesce per damage step if a card ever cares)
+- Kindred Judgment offers the creature types on the battlefield plus "a type no creature has" — every other type does the same as that one
+- "Up to that many target creatures" (Seasoned Cryomancer) keeps only neighbouring targets apart; three or more could repeat one (make it all-distinct if a card ever asks for three)

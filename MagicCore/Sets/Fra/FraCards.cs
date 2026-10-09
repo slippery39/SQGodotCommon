@@ -2711,6 +2711,7 @@ public static class FraCards
 					{
 						Supertype = Supertype.Basic,
 						UpTo = Count.X,
+						DifferentNames = true,
 					}
 				),
 			],
@@ -3140,6 +3141,152 @@ public static class FraCards
 					Targets = [Creature with { InCombat = true }],
 				},
 			],
+
+			// ===== Rares (8d): one-offs =====
+			["Gideon the Oathless"] =
+			[
+				When(
+					TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
+					[],
+					new CounterUnlessPays(Ref.EventObject, ManaCost.None) { DiscardACard = true }
+				),
+				When(
+					TriggerEvent.CreatureOpponentControlsEnters,
+					[],
+					new DealDamage(Ref.EachOpponent, 1) // "that player" — even if the creature left in response
+				),
+				When(
+					TriggerEvent.OpponentActivatesLoyaltyAbility,
+					[],
+					new DealDamage(Ref.EachOpponent, 1)
+				),
+			],
+			["Flickering Hound"] =
+			[
+				When(
+					TriggerEvent.YouCastCreatureSpell,
+					[Creature with { Whose = Whose.You, Optional = true, Another = true }],
+					new Flicker(Ref.Target())
+				),
+			],
+			["Gardenize"] =
+			[
+				When(TriggerEvent.CreatureYouControlDies, [], new AddChargeCounters(Ref.Source, 1)),
+				When(
+					TriggerEvent.YourFirstMainPhase,
+					[],
+					new AddMana(ManaColor.Green, Count.ChargeCountersOn(Ref.Source))
+				),
+			],
+			["Cruel Calculations"] =
+			[
+				Spell(
+					[new TargetSpec(TargetKind.Player)],
+					new DrawCards(Ref.You, Count.CardsFromLibraryToGraveyardThisTurn(Ref.Target()))
+				),
+			],
+			["Curse-Marred Demon"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.None, ZoneType.Hand), // "a card"
+					new DiscardAtRandom(Ref.You, 1)
+				),
+			],
+			["Hexhaven Invigorator"] =
+			[
+				When(
+					TriggerEvent.SelfDealtDamage,
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Battlefield)
+					{
+						UpTo = Count.X,
+						Tapped = true,
+					}
+				),
+			],
+			["Seasoned Cryomancer"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new DrawCards(Ref.You, 2),
+					new Discard(Ref.You, 2)
+					{
+						Then =
+						[
+							new WhenYouDo(
+								[Creature],
+								[
+									new Tap(Ref.Target(0)),
+									new AddStunCounters(Ref.Target(0), 1),
+									new Tap(Ref.Target(1)),
+									new AddStunCounters(Ref.Target(1), 1),
+								]
+							)
+							{
+								TargetsUpTo = Count.NonlandCardsChosen,
+							},
+						],
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{U}{U}"),
+					[new DrawCards(Ref.You, 2)]
+				)
+				{
+					From = ZoneType.Graveyard,
+					ExileSelf = true,
+				},
+			],
+			["Identity Echo"] =
+			[
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}{R}"),
+					[
+						new Exile(Ref.Target()),
+						new RevealUntilOntoBattlefield(CardType.Creature | CardType.Planeswalker),
+					]
+				)
+				{
+					Targets = [CreatureOrPlaneswalker with { Whose = Whose.You }],
+					SorcerySpeed = true,
+				},
+			],
+			["Kindred Judgment"] = [Spell([], new DestroyCreaturesNotOfChosenType())],
+			["Karn, Argent Defender"] = [new EnteringArtifactsAndCreaturesDontTrigger()],
+			["Sphinx's Approach"] =
+			[
+				Spell(
+					[],
+					new DrawCards(Ref.You, 2),
+					new May(
+						"Exile this and four Sphinx's Approach to search for a Sphinx?",
+						new GraveyardHasCopiesOfSource(4),
+						[
+							new ExileSourceAndCopiesFromGraveyard(4),
+							new SearchLibrary(CardType.Creature, ZoneType.Battlefield)
+							{
+								Subtype = "Sphinx",
+							},
+						]
+					)
+				),
+			],
+			["Null Summoner"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[new TargetSpec(TargetKind.Player, Whose.Opponent)],
+					new YouChooseTheyDiscard(Ref.Target(), NonlandTypes) { ExileInstead = true }
+				) with
+				{
+					If = new SourceWasCast(),
+				},
+				new MayCastWhatItExiled(Threshold),
+			],
+			["Omnipresence"] = [new CastFromHandFreeUpToCreatureCount()],
 		};
 
 	public static CardDefinition Get(string name) =>

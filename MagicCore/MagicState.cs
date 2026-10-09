@@ -108,9 +108,17 @@ public static class MagicState
 		)
 			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
 		var leavesBattlefield = s.IsOnBattlefield(cardId) && s.GetParent(cardId) != zoneId;
+		var milled =
+			s.IsIn(cardId, before.OwnerId, ZoneType.Library)
+			&& zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard);
 		s = (
 			toTop ? s.MoveObjectToFront(cardId, zoneId) : s.MoveObject(cardId, zoneId)
 		).UpdateObject(cardId, before.Fresh());
+		if (milled) // mill, surveil, any "from your library into your graveyard" — counted in one place
+			s = s.Tally(
+				before.OwnerId,
+				t => t with { CardsFromLibraryToGraveyard = t.CardsFromLibraryToGraveyard + 1 }
+			);
 		if (!leavesBattlefield)
 			return s;
 
@@ -157,6 +165,7 @@ public static class MagicState
 		s.MoveCard(cardId, s.ZoneId(s.GetCard(cardId).OwnerId, ZoneType.Graveyard));
 
 	/// <param name="x">The X paid to cast it — "enters with X counters" and its "when this enters" read it (CR 107.3m).</param>
+	/// <param name="cast">It is a resolving spell — "if you cast it".</param>
 	public static GameState EnterBattlefield(
 		this GameState s,
 		int cardId,
@@ -165,11 +174,12 @@ public static class MagicState
 		int extraCounters = 0,
 		bool tapped = false,
 		bool finality = false,
-		int attachTo = 0
+		int attachTo = 0,
+		bool cast = false
 	)
 	{
-		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield))
-			.Raise(new EnteredBattlefieldEvent(cardId));
+		s = s.MoveCard(cardId, s.ZoneId(controllerId, ZoneType.Battlefield));
+		s = s.Raise(new EnteredBattlefieldEvent(cardId, s.GetCard(cardId).Types));
 		var card = s.GetCard(cardId);
 		s = s.UpdateObject(
 			cardId,
@@ -180,6 +190,7 @@ public static class MagicState
 				EnteredOnTurn = s.GetGame().TurnNumber,
 				Loyalty = card.PrintedLoyalty,
 				CastX = x,
+				WasCast = cast,
 				HasFinalityCounter = finality,
 				IsTapped =
 					tapped

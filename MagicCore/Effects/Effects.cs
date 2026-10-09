@@ -470,13 +470,33 @@ public record AddStunCounters(Ref What, int N) : Effect
 		);
 }
 
-public record AddMana(ManaColor Color, int Amount = 1) : Effect
+/// <summary>"Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.</summary>
+public record AddMana(ManaColor Color, Count Amount) : Effect
 {
+	public AddMana(ManaColor color)
+		: this(color, 1) { }
+
 	public override ActionResult Execute(GameState s)
 	{
+		var n = Amount.Value(s, InputContext);
 		var player = s.GetPlayer(Controller);
-		return new(s.WithPlayer(player with { ManaPool = player.ManaPool.Add(Color, Amount) }));
+		return n <= 0
+			? new(s)
+			: new(s.WithPlayer(player with { ManaPool = player.ManaPool.Add(Color, n) }));
 	}
+}
+
+/// <summary>Gardenize: "put a charge counter on this enchantment".</summary>
+public record AddChargeCounters(Ref What, int N) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			Permanents(What, s)
+				.Aggregate(
+					s,
+					(st, c) => Update(st, c with { ChargeCounters = c.ChargeCounters + N })
+				)
+		);
 }
 
 public record Tap(Ref What) : Effect
@@ -528,6 +548,9 @@ public record PutEventCardCounters(Ref To) : Effect
 /// </summary>
 public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 {
+	/// <summary>Gideon the Oathless: "Ward—Discard a card." — the cost is a card from hand instead.</summary>
+	public bool DiscardACard { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var stack = s.GetWellKnownId(MagicKeys.Stack);
@@ -544,20 +567,40 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 				StackAbility ability => ability.ControllerId,
 				_ => 0,
 			};
-			if (payer == 0 || ManaPayment.Find(s, payer, Cost, 0) is null)
+			var canPay =
+				payer != 0
+				&& (
+					DiscardACard
+						? s.CardsIn(payer, ZoneType.Hand).Any()
+						: ManaPayment.Find(s, payer, Cost, 0) is not null
+				);
+			if (!canPay)
 			{
 				s = StackResolution.Counter(s, id);
 				continue;
 			}
+			var name = s.GetObject(id).Name;
 			s = s.SpawnAction(
 				new PipelineAction
 				{
-					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
-					Steps =
-					[
-						new PayToKeepChoice(payer, $"Pay {Cost} to keep {s.GetObject(id).Name}?"),
-						new PayOrCounterAction(id, payer, Cost),
-					],
+					// The payer is "you" for a discard; the counter reads the id, not who.
+					PipelineContext = InputContext
+						.Remove(ChoosePermanentChoice.Chosen)
+						.SetItem(ContextKeys.Controller, payer),
+					Steps = DiscardACard
+						?
+						[
+							new PayToKeepChoice(payer, $"Discard a card to keep {name}?"),
+							new IfChosenAction([new Discard(Ref.You, 1)])
+							{
+								Otherwise = [new Counter(What)],
+							},
+						]
+						:
+						[
+							new PayToKeepChoice(payer, $"Pay {Cost} to keep {name}?"),
+							new PayOrCounterAction(id, payer, Cost),
+						],
 				}
 			);
 		}
@@ -591,11 +634,31 @@ public record PayOrCounterAction(int StackObjectId, int PayerId, ManaCost Cost) 
 /// </summary>
 public record WhenYouDo(ImmutableList<TargetSpec> Targets, ImmutableList<GameAction> Then) : Effect
 {
+	/// <summary>
+	/// Seasoned Cryomancer: "tap up to that many target creatures" — Targets[0], that many times, each
+	/// optional and not the one before; nothing triggers at 0. ponytail: "not the one before" keeps
+	/// two apart, all FRA needs; three or more could repeat a target.
+	/// </summary>
+	public Count? TargetsUpTo { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
+		var targets = Targets;
+		if (TargetsUpTo is { } upTo)
+		{
+			var n = upTo.Value(s, InputContext);
+			if (n <= 0)
+				return new(s);
+			targets =
+			[
+				.. Enumerable
+					.Range(0, n)
+					.Select(i => Targets[0] with { Optional = true, NotThePrevious = i > 0 }),
+			];
+		}
 		var ability = new TriggeredAbilityComponent(TriggerEvent.Reflexive, Then)
 		{
-			Targets = Targets,
+			Targets = targets,
 		};
 		return new(
 			Turns.Triggers.QueueTargets(
@@ -608,7 +671,7 @@ public record WhenYouDo(ImmutableList<TargetSpec> Targets, ImmutableList<GameAct
 					ability,
 					0
 				),
-				Targets,
+				targets,
 				Then
 			)
 		);

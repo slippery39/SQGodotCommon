@@ -66,6 +66,9 @@ public record TurnTally
 	/// <summary>"If you've scried or surveilled this turn" — FRA has no scry, so surveils.</summary>
 	public int Surveils { get; init; }
 
+	/// <summary>Cruel Calculations: "cards that were put into [this player's] graveyard from their library this turn" — MagicState.MoveCard.</summary>
+	public int CardsFromLibraryToGraveyard { get; init; }
+
 	/// <summary>Noncombat damage dealt TO this player (Command the Stage).</summary>
 	public int NoncombatDamageTaken { get; init; }
 }

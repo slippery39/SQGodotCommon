@@ -63,6 +63,9 @@ public record CastSpellAction : GameAction
 	/// <summary>The card beheld for a "behold … or pay" cost; 0 when paying instead.</summary>
 	public int BeholdId { get; init; }
 
+	/// <summary>Omnipresence: cast without paying its mana cost — X is 0 (CR 107.3c).</summary>
+	public bool WithoutPayingManaCost { get; init; }
+
 	public static bool OwesDiscard(GameState s, Card card) =>
 		Costs.Flashback(s, card)?.DiscardACard == true;
 
@@ -86,7 +89,8 @@ public record CastSpellAction : GameAction
 					card.GetComponent<BeholdOrPayAdditionalCost>() is { } behold && BeholdId == 0
 						? behold.Generic
 						: 0
-				)
+				),
+			free: WithoutPayingManaCost
 		);
 
 	public override ValidationResult ValidateAdd(GameState s)
@@ -108,8 +112,10 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("Lands are played, not cast");
 		if (!CanCastNow(s, card))
 			return ValidationResult.Invalid("Sorcery speed: your main phase with an empty stack");
-		if (X < 0 || (X > 0 && !card.ManaCost.HasX))
+		if (X < 0 || (X > 0 && (!card.ManaCost.HasX || WithoutPayingManaCost)))
 			return ValidationResult.Invalid("Invalid X");
+		if (WithoutPayingManaCost && !Playable.MayCastWithoutPaying(s, card, PlayerId))
+			return ValidationResult.Invalid("You may not cast that without paying its mana cost");
 		var text = card.GetComponent<SpellEffectsComponent>();
 		if (!Modal.IsLegal(text?.Modes ?? [], text?.Choose ?? 1, Modes))
 			return ValidationResult.Invalid("Illegal choice of modes");
@@ -185,15 +191,15 @@ public record CastSpellAction : GameAction
 		s = s.MoveCard(CardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
 		s = s.UpdateObject(
 			CardId,
-			s.GetCard(CardId)
-				.WithComponent(
-					new OnStackComponent(X, Targets, Modes)
-					{
-						CastFrom = from,
-						// Theorist's Proxy: "the next spell you cast this turn can't be countered" — this one.
-						CantBeCountered = s.GetPlayer(PlayerId).ThisTurn.NextSpellCantBeCountered,
-					}
-				)
+			// Its caster controls it (CR 601.2a) — Null Summoner casts the opponent's card.
+			(s.GetCard(CardId) with { ControllerId = PlayerId }).WithComponent(
+				new OnStackComponent(X, Targets, Modes)
+				{
+					CastFrom = from,
+					// Theorist's Proxy: "the next spell you cast this turn can't be countered" — this one.
+					CantBeCountered = s.GetPlayer(PlayerId).ThisTurn.NextSpellCantBeCountered,
+				}
+			)
 		);
 		var noncreature = card.Is(CardType.Creature) ? 0 : 1;
 		s = s.Tally(
@@ -469,7 +475,8 @@ public static class StackResolution
 						permanent.Id,
 						permanent.ControllerId,
 						cast?.X ?? 0,
-						attachTo: auraHost
+						attachTo: auraHost,
+						cast: cast is not null
 					);
 			return Priority.Retain(s, s.GetGame().ActivePlayerId);
 		}
@@ -540,7 +547,8 @@ public record FinishSpellAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var card = s.GetCard(CardId);
-		s = s.MoveCard(CardId, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+		if (s.GetParent(CardId) == s.GetWellKnownId(MagicKeys.Stack)) // Sphinx's Approach may have exiled itself
+			s = s.MoveCard(CardId, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
 		return new ActionResult(Priority.Retain(s, s.GetGame().ActivePlayerId));
 	}
 }

@@ -50,9 +50,19 @@ public static class Costs
 	/// X and any additional generic cost ("or pay {N}"). Taxes and reductions apply to the TOTAL (CR
 	/// 601.2f) — Geist's {1} off an {X}{R} spell would be lost on the printed cost, which has no generic.
 	/// </param>
-	public static ManaCost Of(GameState s, int casterId, Card card, int addedGeneric = 0)
+	/// <param name="free">"Without paying its mana cost" (Omnipresence) — taxes and additional costs still apply.</param>
+	public static ManaCost Of(
+		GameState s,
+		int casterId,
+		Card card,
+		int addedGeneric = 0,
+		bool free = false
+	)
 	{
-		var printed = Flashback(s, card)?.Cost ?? card.ManaCost; // flashback is an alternative cost: taxes still apply
+		var printed = free ? ManaCost.None : Flashback(s, card)?.Cost ?? card.ManaCost; // flashback is an alternative cost: taxes still apply
+		// Null Summoner: "mana of any type can be spent to cast that spell".
+		if (!free && Playable.IsCastableThroughLink(s, card, casterId))
+			printed = printed.OfAnyType();
 		var yours = s.CardsIn(casterId, ZoneType.Battlefield).ToList();
 		var delta = addedGeneric;
 		if (!card.Is(CardType.Creature))

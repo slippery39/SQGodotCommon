@@ -75,6 +75,26 @@ public record ManaCost(ImmutableArray<ManaSymbol> Symbols)
 		);
 	}
 
+	/// <summary>
+	/// "Mana of any type can be spent": each coloured, hybrid or {2/W} symbol becomes {1} — one mana of
+	/// any type pays it. X stays X.
+	/// </summary>
+	public ManaCost OfAnyType()
+	{
+		var generic = Symbols.Sum(sym =>
+			sym.Kind switch
+			{
+				SymbolKind.Generic => sym.Amount,
+				SymbolKind.X => 0,
+				_ => 1,
+			}
+		);
+		ImmutableArray<ManaSymbol> xs = [.. Symbols.Where(sym => sym.Kind == SymbolKind.X)];
+		return new(
+			generic == 0 ? xs : xs.Insert(0, new ManaSymbol(SymbolKind.Generic, Amount: generic))
+		);
+	}
+
 	public static ManaCost Parse(string? text)
 	{
 		if (string.IsNullOrEmpty(text))

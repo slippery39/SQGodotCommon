@@ -12,15 +12,156 @@ namespace MagicCore.Effects;
 
 public record Destroy(Ref What) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(
-			Permanents(What, s)
-				.Where(c => !s.IsIndestructible(c))
-				.Aggregate(
-					s,
-					(st, c) => st.MoveCard(c.Id, st.ZoneId(c.OwnerId, ZoneType.Graveyard))
-				)
+	public override ActionResult Execute(GameState s) => new(All(s, Permanents(What, s)));
+
+	/// <summary>CR 701.7: each to its owner's graveyard — but not one that is indestructible.</summary>
+	public static GameState All(GameState s, IEnumerable<Card> permanents) =>
+		permanents
+			.Where(c => !s.IsIndestructible(c))
+			.ToList()
+			.Aggregate(s, (st, c) => st.MoveCard(c.Id, st.ZoneId(c.OwnerId, ZoneType.Graveyard)));
+}
+
+/// <summary>
+/// Kindred Judgment: "Choose a creature type. Destroy all creatures that aren't of the chosen type."
+/// The options are the types among creatures on the battlefield, and one for a type none of them
+/// has — which destroys them all.
+/// </summary>
+public record DestroyCreaturesNotOfChosenType : Effect
+{
+	public const string NoneOfThem = "A type no creature has";
+
+	public override ActionResult Execute(GameState s)
+	{
+		ImmutableArray<string> types =
+		[
+			.. Ref
+				.AllCreatures.Resolve(s, InputContext)
+				.SelectMany(id => s.GetCard(id).Subtypes)
+				.Distinct()
+				.Order(),
+			NoneOfThem,
+		];
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext,
+					Steps =
+					[
+						new ChooseKeywordChoice(Controller, types)
+						{
+							Prompt = "Choose a creature type",
+						},
+						new DestroyCreaturesNotOfTypeAction(types),
+					],
+				}
+			)
 		);
+	}
+}
+
+/// <summary>After the choice: every creature without the chosen type is destroyed.</summary>
+public record DestroyCreaturesNotOfTypeAction(ImmutableArray<string> Types) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var chosen = InputContext.GetValueOrDefault(ChooseKeywordChoice.Chosen) is int id
+			? Types[id - 1]
+			: DestroyCreaturesNotOfChosenType.NoneOfThem;
+		return new(
+			Destroy.All(s, Permanents(Ref.AllCreatures, s).Where(c => !c.Subtypes.Contains(chosen)))
+		);
+	}
+}
+
+/// <summary>
+/// Flickering Hound: "exile [it], then return that card to the battlefield under its owner's
+/// control" — a new object (CR 400.7). A token exiled this way ceases to exist (CR 111.7).
+/// </summary>
+public record Flicker(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var card in Permanents(What, s).ToList())
+		{
+			s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Exile));
+			if (!card.IsToken && s.IsIn(card.Id, card.OwnerId, ZoneType.Exile))
+				s = s.EnterBattlefield(card.Id, card.OwnerId);
+		}
+		return new(s);
+	}
+}
+
+/// <summary>Curse-Marred Demon: "discard a card at random" — MtgCore's DiscardRandomCardAction, through the one discard.</summary>
+public record DiscardAtRandom(Ref Who, int N) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
+		{
+			var hand = s.CardsIn(player, ZoneType.Hand).Select(c => c.Id).ToArray();
+			(var rng, s) = s.TakeRng();
+			rng.Shuffle(hand);
+			s = s.Discard(player, [.. hand.Take(N)]);
+		}
+		return new(s);
+	}
+}
+
+/// <summary>
+/// Identity Echo: "Reveal cards from the top of your library until you reveal a [Types] card. Put
+/// that card onto the battlefield and the rest on the bottom of your library in a random order."
+/// </summary>
+public record RevealUntilOntoBattlefield(CardType Types) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var library = s.CardsIn(Controller, ZoneType.Library).ToList();
+		var hit = library.FindIndex(c => c.Is(Types));
+		var rest = (hit < 0 ? library : library.Take(hit)).Select(c => c.Id).ToArray();
+		if (hit >= 0)
+			s = s.EnterBattlefield(library[hit].Id, Controller);
+		(var rng, s) = s.TakeRng();
+		rng.Shuffle(rest);
+		var libraryId = s.ZoneId(Controller, ZoneType.Library);
+		foreach (var id in rest) // out and back in: MoveObject appends, and the end is the bottom
+			s = s.MoveObject(id, 0).MoveObject(id, libraryId);
+		return new(s);
+	}
+}
+
+/// <summary>
+/// Sphinx's Approach: "exile this spell and four cards named Sphinx's Approach from your graveyard"
+/// — the first of a May's Then; asked only when <see cref="GraveyardHasCopiesOfSource"/>.
+/// </summary>
+public record ExileSourceAndCopiesFromGraveyard(int N) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var source = Source(s);
+		var stack = s.GetWellKnownId(MagicKeys.Stack);
+		if (s.HasObject(source.Id) && s.GetParent(source.Id) == stack)
+			s = s.MoveCard(source.Id, s.ZoneId(source.OwnerId, ZoneType.Exile));
+		foreach (
+			var copy in GraveyardHasCopiesOfSource.Copies(s, Controller, source).Take(N).ToList()
+		)
+			s = s.MoveCard(copy.Id, s.ZoneId(copy.OwnerId, ZoneType.Exile));
+		return new(s);
+	}
+}
+
+/// <summary>"[N] cards named [this card] in your graveyard" — not this one.</summary>
+public record GraveyardHasCopiesOfSource(int N) : Condition
+{
+	public static IEnumerable<Card> Copies(GameState s, int playerId, Card source) =>
+		s.CardsIn(playerId, ZoneType.Graveyard)
+			.Where(c => c.Name == source.Name && c.Id != source.Id);
+
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.HasObject((int)context[ContextKeys.Source])
+		&& s.GetObject((int)context[ContextKeys.Source]) is Card source
+		&& Copies(s, (int)context[ContextKeys.Controller], source).Count() >= N;
 }
 
 public record Exile(Ref What) : Effect
@@ -217,6 +358,12 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 	/// <summary>Simulacrum Shaper: "put that card onto the battlefield tapped".</summary>
 	public bool Tapped { get; init; }
 
+	/// <summary>Sphinx's Approach: "a Sphinx creature card".</summary>
+	public string? Subtype { get; init; }
+
+	/// <summary>Fblthp: "with different names". Unset, two Forests may both be taken.</summary>
+	public bool DifferentNames { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.SpawnAction(
@@ -230,9 +377,11 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 							PlayerId = Controller,
 							Type = Type,
 							Supertype = Supertype,
+							Subtype = Subtype,
+							DifferentNames = DifferentNames,
 							MaxChoices = Math.Max(0, UpTo.Value(s, InputContext)),
 							Prompt =
-								$"Search for {(UpTo == 1 ? "a" : $"up to {UpTo.Value(s, InputContext)}")} {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{Type.ToString().ToLowerInvariant()} card{(UpTo == 1 ? "" : "s with different names")}",
+								$"Search for {(UpTo == 1 ? "a" : $"up to {UpTo.Value(s, InputContext)}")} {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{(Subtype is null ? "" : Subtype + " ")}{(Type == CardType.None ? "" : Type.ToString().ToLowerInvariant() + " ")}card{(UpTo == 1 ? "" : "s")}{(DifferentNames ? " with different names" : "")}",
 						},
 						// Loyal Tutor: "then shuffle and put that card on top" — the shuffle comes first.
 						.. To == ZoneType.Library
@@ -415,6 +564,9 @@ public record ExileFromGraveyard(Ref What) : Effect
 /// </summary>
 public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 {
+	/// <summary>Null Summoner: "Exile that card" instead — linked to this permanent (ExiledBy).</summary>
+	public bool ExileInstead { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
@@ -426,16 +578,45 @@ public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 				Types = Types,
 				MinChoices = 1,
 				MaxChoices = 1,
-				Prompt = "Choose a card for them to discard",
+				Prompt = ExileInstead
+					? "Choose a card to exile"
+					: "Choose a card for them to discard",
 			};
 			if (!choice.GetOptions(s, InputContext).IsEmpty)
 				s = s.SpawnAction(
 					new PipelineAction
 					{
 						PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
-						Steps = [choice, new MoveChosenToGraveyardAction { PlayerId = player }],
+						Steps =
+						[
+							choice,
+							ExileInstead
+								? new ExileChosenLinkedAction()
+								: new MoveChosenToGraveyardAction { PlayerId = player },
+						],
 					}
 				);
+		}
+		return new(s);
+	}
+}
+
+/// <summary>The chosen cards to exile, each linked to this ability's source as it is now (CR 607.2a).</summary>
+public record ExileChosenLinkedAction : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var sourceId = GetInput<int>(ContextKeys.Source);
+		// The same object the ability came from, or never castable — left and came back is a new one (CR 400.7).
+		var incarnation =
+			Ref.Source.Resolve(s, InputContext).Any() && s.IsOnBattlefield(sourceId)
+				? s.GetCard(sourceId).Incarnation
+				: -1;
+		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext).ToList())
+		{
+			var card = s.GetCard(id);
+			s = s.MoveCard(id, s.ZoneId(card.OwnerId, ZoneType.Exile));
+			s = Update(s, (Card)s.GetCard(id).WithComponent(new ExiledBy(sourceId, incarnation)));
 		}
 		return new(s);
 	}
@@ -503,6 +684,9 @@ public record DiscardHand(Ref Who) : Effect
 /// <summary>Each player named discards, choosing for themselves.</summary>
 public record Discard(Ref Who, int Count) : Effect
 {
+	/// <summary>Seasoned Cryomancer: "When you discard one or more nonland cards this way" — run after, reading the discarded.</summary>
+	public ImmutableList<GameAction> Then { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s))
@@ -512,6 +696,7 @@ public record Discard(Ref Who, int Count) : Effect
 				s = s.SpawnAction(
 					new PipelineAction
 					{
+						PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
 						Steps =
 						[
 							new ChooseCardsFromHandChoice
@@ -522,6 +707,7 @@ public record Discard(Ref Who, int Count) : Effect
 								Prompt = $"Discard {n}",
 							},
 							new MoveChosenToGraveyardAction { PlayerId = player },
+							.. Then,
 						],
 					}
 				);

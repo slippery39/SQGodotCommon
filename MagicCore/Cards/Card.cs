@@ -91,6 +91,12 @@ public record Card : GameObject
 	/// <summary>The X paid to cast this permanent — its "when this enters" abilities use it (CR 107.3m).</summary>
 	public int CastX { get; init; }
 
+	/// <summary>Null Summoner: "if you cast it" — it entered by resolving as a spell.</summary>
+	public bool WasCast { get; init; }
+
+	/// <summary>Gardenize's charge counters — a resource; nothing but the card that holds them reads them.</summary>
+	public int ChargeCounters { get; init; }
+
 	/// <summary>The TurnNumber a loyalty ability of this permanent was last activated — once per turn (CR 606.3).</summary>
 	public int LoyaltyActivatedOnTurn { get; init; }
 	public int Damage { get; init; }
@@ -149,11 +155,14 @@ public record Card : GameObject
 		this with
 		{
 			Incarnation = Incarnation + 1,
+			ControllerId = OwnerId, // off the battlefield and stack it is its owner's (CR 108.4a); entering or casting sets it
 			IsTapped = false,
 			PlusOneCounters = 0,
 			MinusOneCounters = 0,
 			Loyalty = 0,
 			CastX = 0,
+			WasCast = false,
+			ChargeCounters = 0,
 			LoyaltyActivatedOnTurn = 0,
 			EnteredOnTurn = 0,
 			AttackedOnTurn = 0,
@@ -178,6 +187,7 @@ public record Card : GameObject
 						or Effects.ExiledUntilLeaves
 						or Effects.GrantedFlashback
 						or Effects.PlayableFromExile
+						or Effects.ExiledBy
 						or Effects.ChosenColorMana
 			),
 		};

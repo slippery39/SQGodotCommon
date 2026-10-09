@@ -3,14 +3,16 @@
 Status, not rules: what is scripted, what waits and why. The rules live in `MagicCore/CLAUDE.md`.
 Count scripted cards from `FraCards.cs` (`["Name"] =` keys) — never from memory; this file once ran one high.
 
-**Playable by rarity** (scripted, keyword-only or basic — computed, 2026-10-09): common 85/86 · uncommon 109/109 · rare 47/64 · mythic 16/26 · **257/285**.
+**Playable by rarity** (scripted, keyword-only or basic — computed, 2026-10-09): common 86/86 · uncommon 109/109 · rare 56/64 · mythic 19/26 · **270/285**.
 8a (rares from existing pieces): Aerid Konstrari, Craterclaw Colossus, Ingris Stingerquill, Overwrite the
 Multiverse, The Echoverse Fulcrum, Tarmogoyf, Dark Matter Manipulator, Simulacrum Shaper, Lyra Archangel
 of Dawn, Master of Barbs, Solarium Sentry, Liliana the Faultless. 8b: Stinging Vitriol, Loyal Tutor, Entrust
 the Spark, Codie, Karn Gilded Guardian, Roiling Canopy, Samut Tyrant of Naktamun, Jace's Machinations,
 Theorist's Sanctum, Theorist's Proxy, Solitary Cell. 8c: both Vraskas, Kwia Vigorbloom, Draconic Visitor,
 Hungering Puppetbeast, Tenured Tethermage, Gideon's Memorial (Treasure, restricted mana, token replacement).
-Remaining rare batches 8d–8g: HANDOFF-MtgReal.md.
+8d (one-offs): Gideon the Oathless, Flickering Hound, Gardenize, Cruel Calculations, Curse-Marred Demon,
+Hexhaven Invigorator, Seasoned Cryomancer, Identity Echo, Kindred Judgment, Karn Argent Defender, Sphinx's
+Approach, Null Summoner, Omnipresence. Remaining rare batches 8e–8g: HANDOFF-MtgReal.md.
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
@@ -32,7 +34,7 @@ Hapatra the Desert Fang, Loot the Anomaly, Ghalta the Immovable (replacements, -
 damage). 7e-2e: 6 — Yuriko Blade of the Mighty, Tomik Orzhov Lawmage, Kiora of Salt and Sand, Winter
 Team Player, both Fblthps (combat, convoke, domain, "you win the game"). 7f-1: Flourishing Grapple, Infinite Coursework ("loses all abilities", read through `s.AbilitiesOf`).
 7f-2: Loot the Nexus, Heartwood Crafter, Pyre Rhymer (mana: several of one colour, restricted
-mana, a Mountain's extra {R}). 7f-3: Way of the Cryomancer (copying a spell). **Every common and uncommon is in but one:** Sphinx's Approach (deferred). Puppet Crafting waits on type-changing. **Two real planeswalkers are
+mana, a Mountain's extra {R}). 7f-3: Way of the Cryomancer (copying a spell). **Every common and uncommon is in** (Sphinx's Approach, the last, in 8d). Puppet Crafting waits on type-changing. **Two real planeswalkers are
 in** (The Theorist, Ajani Unrelenting); **the other 6 are not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
 Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
 per-turn tracking, prowess ✓ · 7d-1 flashback ✓ · 7d-2 prepare ✓ · 7d-3a landcycling, graveyard abilities ✓ · 7d-3b graveyard returns, hexproof, indestructible ✓. The Bo1 hand smoother is Arena's published description; its weighting and whether

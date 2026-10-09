@@ -40,13 +40,15 @@ public static class Damage
 			s = Actions.Loyalty.Change(s, targetId, -amount); // CR 120.3c
 		else if (s.GetObject(targetId) is Card target && s.IsOnBattlefield(targetId))
 			s = s.UpdateObject(
-				targetId,
-				target with
-				{
-					Damage = target.Damage + amount,
-					DamagedByDeathtouch = target.DamagedByDeathtouch || s.Has(source, "Deathtouch"),
-				}
-			);
+					targetId,
+					target with
+					{
+						Damage = target.Damage + amount,
+						DamagedByDeathtouch =
+							target.DamagedByDeathtouch || s.Has(source, "Deathtouch"),
+					}
+				)
+				.Raise(new CreatureDealtDamageEvent(targetId, amount));
 		else
 			return s; // its target is gone: no damage was dealt
 

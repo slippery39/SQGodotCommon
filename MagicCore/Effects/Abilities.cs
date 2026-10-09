@@ -57,6 +57,11 @@ public enum TriggerEvent
 	CreatureYouControlAttacks, // Ingris Stingerquill — the event card is the attacker
 	YouCastPreparedSpell, // Codie — the copy of a prepare spell, cast from exile
 	OpponentCastsSpellWithManaValue2OrLess, // Solarium Sentry
+	CreatureOpponentControlsEnters, // Gideon the Oathless
+	OpponentActivatesLoyaltyAbility, // Gideon the Oathless
+	YouCastCreatureSpell, // Flickering Hound
+	SelfDealtDamage, // Hexhaven Invigorator — X is how much
+	YourFirstMainPhase, // Gardenize: "at the beginning of your first main phase"
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>
@@ -383,3 +388,22 @@ public record CantBeCountered : GameComponent;
 
 /// <summary>Traxos: "This spell costs {N} less to cast if you've cast a noncreature spell this turn."</summary>
 public record CostsLessIfYouCastNoncreatureSpellThisTurn(int Amount) : GameComponent;
+
+/// <summary>Karn, Argent Defender: "Artifacts and creatures entering the battlefield don't cause abilities to trigger." Read by Triggers.Collect.</summary>
+public record EnteringArtifactsAndCreaturesDontTrigger : GameComponent;
+
+/// <summary>
+/// Omnipresence: "You may cast spells with mana value less than or equal to the number of creatures
+/// you control from your hand without paying their mana costs." (CastSpellAction.WithoutPayingManaCost)
+/// </summary>
+public record CastFromHandFreeUpToCreatureCount : GameComponent;
+
+/// <summary>
+/// Null Summoner: "As long as [While], you may cast the exiled card, and mana of any type can be
+/// spent to cast that spell." On the source — a static, so only while it is on the battlefield;
+/// the card it exiled is <see cref="ExiledBy"/> it (Rules/Playable.cs).
+/// </summary>
+public record MayCastWhatItExiled(Condition While) : GameComponent;
+
+/// <summary>On a card a permanent exiled for a linked ability (CR 607.2a) — which object of it.</summary>
+public record ExiledBy(int SourceId, int SourceIncarnation) : GameComponent;

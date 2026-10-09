@@ -70,6 +70,8 @@ public sealed class GreedyAi(int playerId)
 		if (choice is ChooseModesChoice { MaxChoices: > 1 } modes)
 			return Combinations(modes.Options.Select(o => o.Id).ToList(), modes.MaxChoices)
 				.MaxBy(pick => Evaluate(Settle(s.Choose(pick))))!;
+		if (choice is ChooseFromLibraryChoice { MaxChoices: > 1 })
+			return choice.Options.Take(choice.MaxChoices).Select(o => o.Id); // "up to N lands": more is better
 		if (choice.MaxChoices != 1)
 			return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
 

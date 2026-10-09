@@ -22,7 +22,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   Modes`), a trigger's as it goes on the stack. A mode with an unchoosable required target can't be
   chosen. The scripted mode count must match the printed bullets — `FraCards` throws otherwise.
 - **"At the beginning of [step]"** triggers on a `StepBeganEvent`, raised by `EnterStep` for upkeep,
-  draw, beginning of combat and end. **"This turn" lives in `MagicPlayer.ThisTurn`** (a `TurnTally`:
+  draw, the first main phase, beginning of combat and end. **"This turn" lives in `MagicPlayer.ThisTurn`** (a `TurnTally`:
   lands, spells, cards drawn, life gained, surveils), REPLACED whole for BOTH players as each turn
   begins — "this turn" is every turn, not only yours, and a new count cannot miss the reset. Update
   it with `s.Tally(…)`. The finished turn's tally becomes `LastTurn` ("last turn" = the turn before
@@ -150,5 +150,21 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   before the next step — and its steps' outputs do not reach the steps after it.
 - **Prowess is a scripted trigger** (`FraCards.Prowess`), not an engine keyword — each instance
   triggers on its own (Ruric Thar has two).
+- **"Entering doesn't cause abilities to trigger"** (Karn, Argent Defender) drops those entering
+  events in `Triggers.Collect` before ANY ability is matched — read at the next priority, so Karn
+  entering alongside a creature silences it too, as the rulings say.
+- **"Without paying its mana cost"** (Omnipresence) is `CastSpellAction.WithoutPayingManaCost`, offered
+  and checked by `Playable.MayCastWithoutPaying`: X is 0, and `Costs.Of(…, free: true)` still adds
+  taxes and additional costs.
+- **A card exiled for a linked ability** (Null Summoner) carries `ExiledBy(source, incarnation)`;
+  `Playable.IsCastableThroughLink` asks the source's static (`MayCastWhatItExiled`) — so only while that
+  same object is on the battlefield. "Mana of any type can be spent" is `ManaCost.OfAnyType` in `Costs.Of`.
+- **"If you cast it"** is `Card.WasCast`, set by `EnterBattlefield(cast: true)` from a resolving spell.
+- **"Whenever this creature is dealt damage"** triggers on `CreatureDealtDamageEvent` from `Damage.Deal`;
+  "that many" is the trigger's X (`Triggers.Pending.X`). **Cards put into a graveyard from a library**
+  (mill, surveil, anything) are counted in `MoveCard` (`TurnTally.CardsFromLibraryToGraveyard`).
+- **Randomness** (a discard at random, a random order) takes `s.TakeRng()`, so a seeded game replays.
+  A search for several cards may take two of a name unless `SearchLibrary.DifferentNames` (Fblthp).
+  A spell that exiles itself as it resolves (Sphinx's Approach) is left there by `FinishSpellAction`.
 - **Base P/T effects** ("has base power and toughness 4/5") sit under counters and pumps, latest
   wins (`UntilEndOfTurn.SetBase`, read in `Card.OwnPower`/`OwnToughness` under `s.Power`/`Toughness`).

@@ -6,7 +6,8 @@ using MagicCore.Effects;
 
 namespace MagicCore.Turns;
 
-public record EnteredBattlefieldEvent(int CardId) : GameEvent;
+/// <param name="Types">What it was as it entered — Karn, Argent Defender asks, whatever it is by the next priority.</param>
+public record EnteredBattlefieldEvent(int CardId, CardType Types = CardType.None) : GameEvent;
 
 public record AttackedEvent(int CardId) : GameEvent;
 
@@ -33,6 +34,9 @@ public record DiedEvent(Card LastKnown) : GameEvent
 }
 
 public record PlayerDealtDamageEvent(int PlayerId, bool Combat, int SourceId) : GameEvent;
+
+/// <summary>A creature was dealt damage — Hexhaven Invigorator's "that many" is Amount.</summary>
+public record CreatureDealtDamageEvent(int CardId, int Amount) : GameEvent;
 
 /// <summary>A step began — "at the beginning of …". Raised for the steps scripted cards trigger on.</summary>
 public record StepBeganEvent(Step Step) : GameEvent;
@@ -86,12 +90,14 @@ public static class Triggers
 
 	/// <summary>A triggered ability waiting to go on the stack. EventSnapshot is the card the event was about, as it last was (a dead creature's counters).</summary>
 	/// <param name="EventObject">Ward's "it": the spell or ability that targeted, as it was — so a recast with the same id is not it.</param>
+	/// <param name="X">"That many": how much the event was — the damage Hexhaven Invigorator was dealt.</param>
 	public record Pending(
 		Card Source,
 		TriggeredAbilityComponent Ability,
 		int EventCardId,
 		Card? EventSnapshot = null,
-		GameObject? EventObject = null
+		GameObject? EventObject = null,
+		int X = 0
 	);
 
 	/// <summary>
@@ -115,6 +121,7 @@ public static class Triggers
 				.Where(c => AbilitiesOf(s, c).Any(a => a.FromGraveyard))
 				.Select(c => c with { ControllerId = c.OwnerId })
 		);
+		var events = WithoutSilencedEntries(s, permanents);
 		var fromTheBattlefield = permanents
 			.SelectMany(source =>
 				AbilitiesOf(s, source).Where(a => !a.FromGraveyard).Select(a => (source, a))
@@ -125,15 +132,15 @@ public static class Triggers
 				)
 			)
 			.SelectMany(found =>
-				s.PendingGameEvents.Where(e =>
-						Matches(s, found.source, found.a.On, e) && OfSubtype(s, found.a, e)
-					)
+				events
+					.Where(e => Matches(s, found.source, found.a.On, e) && OfSubtype(s, found.a, e))
 					.Select(e => new Pending(
 						found.source,
 						found.a,
 						EventCard(e),
 						Snapshot(s, e),
-						EventObject(s, e)
+						EventObject(s, e),
+						e is CreatureDealtDamageEvent damaged ? damaged.Amount : 0
 					))
 			);
 		var fromTheDead = s
@@ -187,6 +194,31 @@ public static class Triggers
 			.Where(p => InterveningIfHolds(s, p))
 			.OrderBy(p => p.Source.ControllerId == active ? 0 : 1) // APNAP; stable within a player
 			.ToList();
+	}
+
+	/// <summary>
+	/// Karn, Argent Defender: "Artifacts and creatures entering the battlefield don't cause abilities
+	/// to trigger" — their entering events are dropped, for every ability (CR 603.2g). Read at the
+	/// next priority, so Karn entering alongside a creature silences it too, as the rulings say.
+	/// </summary>
+	static IReadOnlyList<GameEvent> WithoutSilencedEntries(
+		GameState s,
+		IEnumerable<Card> permanents
+	)
+	{
+		var events = s.PendingGameEvents;
+		if (
+			!events.Any(e => e is EnteredBattlefieldEvent)
+			|| !permanents.Any(p => s.HasAbility<EnteringArtifactsAndCreaturesDontTrigger>(p))
+		)
+			return events;
+		return
+		[
+			.. events.Where(e =>
+				e is not EnteredBattlefieldEvent entered
+				|| (entered.Types & (CardType.Artifact | CardType.Creature)) == 0
+			),
+		];
 	}
 
 	/// <summary>
@@ -366,6 +398,19 @@ public static class Triggers
 			// Counted as it is cast, so a second spell cast in response can't take the first's place.
 			(TriggerEvent.YouCastFirstNoncreatureSpellEachTurn, SpellCastEvent cast) =>
 				cast.PlayerId == source.ControllerId && cast.NoncreatureSpellNumber == 1, // 0 for a creature
+			(TriggerEvent.CreatureOpponentControlsEnters, EnteredBattlefieldEvent entered) =>
+				CreatureControlledBy(entered.CardId, you: false),
+			(TriggerEvent.OpponentActivatesLoyaltyAbility, LoyaltyActivatedEvent activated) =>
+				activated.PlayerId != source.ControllerId,
+			(TriggerEvent.YouCastCreatureSpell, SpellCastEvent cast) => cast.PlayerId
+				== source.ControllerId
+				&& s.HasObject(cast.CardId)
+				&& s.GetCard(cast.CardId).Is(CardType.Creature),
+			(TriggerEvent.SelfDealtDamage, CreatureDealtDamageEvent damaged) => damaged.CardId
+				== source.Id,
+			(TriggerEvent.YourFirstMainPhase, StepBeganEvent began) => began.Step
+				== Step.PreCombatMain
+				&& yourTurn,
 			_ => false,
 		};
 	}
@@ -402,6 +447,7 @@ public static class Triggers
 			DiedEvent died => died.LastKnown.Id,
 			BlocksEvent blocks => blocks.CardId,
 			BecameTargetEvent targeted => targeted.CardId,
+			CreatureDealtDamageEvent damaged => damaged.CardId,
 			_ => 0,
 		};
 
@@ -501,7 +547,7 @@ public static class Triggers
 						EventCardId = t.EventCardId,
 						EventSnapshot = t.EventSnapshot,
 						EventObject = t.EventObject,
-						X = t.Ability.On == TriggerEvent.SelfEnters ? t.Source.CastX : 0,
+						X = t.Ability.On == TriggerEvent.SelfEnters ? t.Source.CastX : t.X,
 					},
 				],
 			}

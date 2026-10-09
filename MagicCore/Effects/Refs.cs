@@ -234,6 +234,9 @@ public enum CountOf
 	NoncombatDamageToOpponentsLastTurn,
 	NoncombatDamageToOpponentsThisTurn,
 	CreaturesDiedThisTurn, // anyone's
+	ChargeCountersOn, // Gardenize: "for each charge counter on [Ref]"
+	CardsFromLibraryToGraveyardThisTurn, // Cruel Calculations: of the player [Ref]
+	NonlandCardsChosen, // Seasoned Cryomancer: "nonland cards [discarded] this way" — the last hand choice
 }
 
 /// <summary>
@@ -267,6 +270,13 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static readonly Count X = new(0, null, CountOf.X);
 
 	public static Count CountersOn(Ref r) => new(0, r, CountOf.CountersOn);
+
+	public static Count ChargeCountersOn(Ref r) => new(0, r, CountOf.ChargeCountersOn);
+
+	public static Count CardsFromLibraryToGraveyardThisTurn(Ref player) =>
+		new(0, player, CountOf.CardsFromLibraryToGraveyardThisTurn);
+
+	public static readonly Count NonlandCardsChosen = new(0, null, CountOf.NonlandCardsChosen);
 
 	public static readonly Count LifeYouGainedThisTurn =
 		new(0, null, CountOf.LifeYouGainedThisTurn);
@@ -315,6 +325,16 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			return context.TryGetValue(ContextKeys.X, out var x) ? (int)x : 0;
 		if (Kind == CountOf.CreaturesDiedThisTurn)
 			return s.GetGame().CreaturesDiedThisTurn;
+		if (Kind == CountOf.NonlandCardsChosen)
+			return ChooseCardsFromHandChoice
+				.Read(context)
+				.Count(id => s.HasObject(id) && !s.GetCard(id).Is(CardType.Land));
+		if (Kind == CountOf.CardsFromLibraryToGraveyardThisTurn)
+			return Of!
+				.Resolve(s, context)
+				.Select(s.GetObject)
+				.OfType<MagicPlayer>()
+				.Sum(p => p.ThisTurn.CardsFromLibraryToGraveyard);
 		if (Kind == CountOf.CardTypesInAllGraveyards) // one pass: it sits under Tarmogoyf's P/T
 			return System.Numerics.BitOperations.PopCount(
 				(uint)
@@ -359,7 +379,14 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			};
 		}
 		var ids = Of!.Resolve(s, context);
-		IEnumerable<Card> Cards() => ids.Select(s.GetObject).OfType<Card>();
+		// "On this enchantment" once it is gone: as it last existed (CR 113.7a) — Gardenize destroyed
+		// in response still adds its {G}s.
+		IEnumerable<Card> Cards() =>
+			Of.Kind == RefKind.Source
+			&& !ids.Any()
+			&& context.GetValueOrDefault(ContextKeys.SourceSnapshot) is Card then
+				? [then]
+				: ids.Select(s.GetObject).OfType<Card>();
 		var counted = Kind switch
 		{
 			CountOf.NumberOf => ids.Count(),
@@ -376,6 +403,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Distinct()
 				.Count(),
 			CountOf.CountersOn => Cards().Sum(c => c.PlusOneCounters),
+			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
 			_ => Cards().Select(c => c.Loyalty).FirstOrDefault(),
 		};
 		// CR 107.1b: a number that would be negative is 0 — a -4 power must not make "lose X life"

@@ -35,11 +35,36 @@ public static class Playable
 			)
 			|| Prepare.IsCastableBy(s, card, playerId)
 			|| IsImpulsePlayableBy(s, card, playerId)
+			|| IsCastableThroughLink(s, card, playerId)
 		)
 		&& (
 			card.GetComponent<CastOnlyIf>() is not { } only
 			|| only.When.Holds(s, Conditions.Of(card with { ControllerId = playerId }))
 		);
+
+	/// <summary>
+	/// Null Summoner: the card it exiled, cast by its controller while its condition holds — and only
+	/// while it is that same object on the battlefield (a static ability, CR 607.2a).
+	/// </summary>
+	public static bool IsCastableThroughLink(GameState s, Card card, int playerId) =>
+		card.GetComponent<ExiledBy>() is { } link
+		&& s.IsIn(card.Id, card.OwnerId, ZoneType.Exile)
+		&& s.IsOnBattlefield(link.SourceId)
+		&& s.GetCard(link.SourceId) is var source
+		&& source.Incarnation == link.SourceIncarnation
+		&& source.ControllerId == playerId
+		&& s.AbilitiesOf<MayCastWhatItExiled>(source)
+			.Any(may => may.While.Holds(s, Conditions.Of(source)));
+
+	/// <summary>Omnipresence: from your hand, with mana value at most the number of creatures you control.</summary>
+	public static bool MayCastWithoutPaying(GameState s, Card card, int playerId)
+	{
+		if (!s.IsIn(card.Id, playerId, ZoneType.Hand))
+			return false;
+		var yours = s.CardsIn(playerId, ZoneType.Battlefield).ToList();
+		return yours.Any(s.HasAbility<CastFromHandFreeUpToCreatureCount>)
+			&& card.ManaCost.ManaValue <= yours.Count(c => c.Is(CardType.Creature));
+	}
 
 	public static bool CanPlayLandFromHere(GameState s, Card card, int playerId) =>
 		card.Is(CardType.Land)

@@ -93,8 +93,10 @@ public static class TurnStructure
 		var game = s.GetGame() with { Step = step, PriorityPlayerId = 0, PassesInSuccession = 0 };
 		s = s.WithGame(game);
 		var active = game.ActivePlayerId;
-		if (step is Step.Upkeep or Step.Draw or Step.BeginCombat or Step.End)
-			s = s.Raise(new StepBeganEvent(step)); // "at the beginning of …" (CR 503.1a, 504.2, 507.1, 513.1a)
+		// "At the beginning of …" (CR 503.1a, 504.2, 505.4, 507.1, 513.1a) — the main phase is the first one
+		// only: Gardenize's "your first main phase".
+		if (step is Step.Upkeep or Step.Draw or Step.PreCombatMain or Step.BeginCombat or Step.End)
+			s = s.Raise(new StepBeganEvent(step));
 
 		switch (step)
 		{

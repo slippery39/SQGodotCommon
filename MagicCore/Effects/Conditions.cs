@@ -71,6 +71,19 @@ public record CastFrom(ZoneType Zone) : Condition
 		&& spell.GetComponent<Actions.OnStackComponent>()?.CastFrom == Zone;
 }
 
+/// <summary>
+/// Null Summoner: "if you cast it" — it entered by resolving as a spell. Read from the source as it
+/// was when it triggered, so it leaving in response doesn't change the answer.
+/// </summary>
+public record SourceWasCast : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		(
+			context.GetValueOrDefault(ContextKeys.SourceSnapshot) as Card
+			?? s.GetObject((int)context[ContextKeys.Source]) as Card
+		)?.WasCast == true;
+}
+
 /// <summary>"If this creature isn't prepared" (with Not) — the source, as it is now.</summary>
 public record SourceIsPrepared : Condition
 {
