@@ -292,14 +292,8 @@ public class FraCommonTests : FraBoardTest
 	// ===== Counterspells and ward =====
 
 	/// <summary>Their flash creature on the stack, with me holding priority to respond.</summary>
-	int TheirFlashCreatureOnTheStack()
-	{
-		var flashy = Hand(TestGames.Creature("Flashy", "2/2", "Flash"), them);
-		s = s.Act(new PassPriorityAction { PlayerId = me });
-		s = s.Act(new CastSpellAction { PlayerId = them, CardId = flashy });
-		s = s.Act(new PassPriorityAction { PlayerId = them });
-		return flashy;
-	}
+	int TheirFlashCreatureOnTheStack() =>
+		TheirSpellOnTheStack(TestGames.Creature("Flashy", "2/2", "Flash"));
 
 	void CastIcyReception(int target, Func<ChoiceAction, IEnumerable<int>> answer)
 	{
@@ -352,13 +346,9 @@ public class FraCommonTests : FraBoardTest
 	[Test]
 	public void IcyReception_TargetsOnlyACreatureOrLegendarySpell()
 	{
-		var trick = Hand(
-			TestGames.Inline("Trick", "{R}", "Instant", null, new GainLife(Ref.You, 1)),
-			them
+		var trick = TheirSpellOnTheStack(
+			TestGames.Inline("Trick", "{R}", "Instant", null, new GainLife(Ref.You, 1))
 		);
-		s = s.Act(new PassPriorityAction { PlayerId = me });
-		s = s.Act(new CastSpellAction { PlayerId = them, CardId = trick });
-		s = s.Act(new PassPriorityAction { PlayerId = them });
 		var icy = Hand("Icy Reception", me);
 		Assert.That(
 			Casts(icy).Where(c => c.Modes.SequenceEqual([0])).SelectMany(c => c.Targets),

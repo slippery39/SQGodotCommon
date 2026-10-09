@@ -194,6 +194,9 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 
 	/// <summary>Lyra: "Until end of turn, whenever [this] deals combat damage to a player, …" — Collect reads it.</summary>
 	public Effects.TriggeredAbilityComponent? Trigger { get; init; }
+
+	/// <summary>Essence Burn: "if that permanent would die this turn, exile it instead" — MoveCard reads it.</summary>
+	public bool ExileIfItWouldDie { get; init; }
 }
 
 /// <summary>

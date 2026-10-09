@@ -58,6 +58,8 @@ public enum RefKind
 	AllPermanentsExceptYourTokens, // of Type: Ajani's "each creature except for tokens you control"
 	YourTokens, // "all tokens you control"
 	YourOtherPermanents, // of Type: "each other creature you control" — not the source
+	OwnerOfTarget, // Clash of Elements: "its owner" — wherever the card now is
+	TargetPlayersPermanents, // of Type: Twisted Fates' "each creature target player controls"
 }
 
 /// <summary>Who or what an effect acts on, resolved against the context at resolution.</summary>
@@ -98,6 +100,11 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 
 	public static Ref ControllerOfTarget(int index = 0) => new(RefKind.ControllerOfTarget, index);
 
+	public static Ref OwnerOfTarget(int index = 0) => new(RefKind.OwnerOfTarget, index);
+
+	public static Ref PermanentsOfTargetPlayer(CardType type, int index) =>
+		new(RefKind.TargetPlayersPermanents, index, type);
+
 	/// <summary>Is the source still the object the ability came from? Not if it left and came back (CR 400.7).</summary>
 	static bool SameObject(GameState s, ImmutableDictionary<string, object> context) =>
 		!context.TryGetValue(ContextKeys.SourceSnapshot, out var snapshot)
@@ -129,6 +136,16 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 			RefKind.ControllerOfTarget => s.HasObject(TargetAt(Index))
 			&& s.GetObject(TargetAt(Index)) is Card c
 				? [c.ControllerId]
+				: [],
+			RefKind.OwnerOfTarget => s.HasObject(TargetAt(Index))
+			&& s.GetObject(TargetAt(Index)) is Card owned
+				? [owned.OwnerId]
+				: [],
+			RefKind.TargetPlayersPermanents => s.HasObject(TargetAt(Index))
+			&& s.GetObject(TargetAt(Index)) is MagicPlayer player
+				? s.CardsIn(player.Id, ZoneType.Battlefield)
+					.Where(c => c.Is(Type))
+					.Select(c => c.Id)
 				: [],
 			RefKind.Source => SameObject(s, context) ? [(int)context[ContextKeys.Source]] : [],
 			RefKind.EventCard => [eventCard],

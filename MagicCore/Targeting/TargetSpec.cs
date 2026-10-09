@@ -68,6 +68,9 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	/// <summary>"With mana value 3 or less" — a card in a graveyard or a permanent.</summary>
 	public int MaxManaValue { get; init; } = int.MaxValue;
 
+	/// <summary>Your Fate Ends Here: "with mana value 3 or greater".</summary>
+	public int MinManaValue { get; init; }
+
 	/// <summary>The second of "one or two target creatures": optional, and not the first one again.</summary>
 	public bool NotThePrevious { get; init; }
 
@@ -93,6 +96,7 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 				&& targetId != sourceId
 				&& (AnyOfTypes == CardType.None || inGraveyard.Is(AnyOfTypes))
 				&& inGraveyard.ManaCost.ManaValue <= MaxManaValue
+				&& inGraveyard.ManaCost.ManaValue >= MinManaValue
 				&& (WithSupertype == Supertype.None || inGraveyard.Is(WithSupertype));
 		var whoseOk = (Whose, s.GetObject(targetId)) switch
 		{
@@ -155,8 +159,13 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		&& (MaxPower == int.MaxValue || s.Power(card) <= MaxPower)
 		&& (WithKeyword is null || s.Has(card, WithKeyword))
 		&& (!EnteredThisTurn || card.EnteredOnTurn == s.GetGame().TurnNumber)
-		&& card.ManaCost.ManaValue + (card.GetComponent<Actions.OnStackComponent>()?.X ?? 0)
-			<= MaxManaValue; // on the stack, X counts (CR 202.3e)
+		&& ManaValue(card) is var mv
+		&& mv <= MaxManaValue
+		&& mv >= MinManaValue;
+
+	/// <summary>On the stack, X counts (CR 202.3e); anywhere else it is 0.</summary>
+	static int ManaValue(Card card) =>
+		card.ManaCost.ManaValue + (card.GetComponent<Actions.OnStackComponent>()?.X ?? 0);
 
 	static bool OnStack(GameState s, int id) =>
 		s.GetParent(id) == s.GetWellKnownId(MagicKeys.Stack);

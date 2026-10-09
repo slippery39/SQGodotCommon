@@ -65,10 +65,34 @@ public record LoseLife(Ref Who, Count Amount) : Effect
 /// <summary>"[Source] deals N damage to …" — through <see cref="Damage.Deal"/>, so lifelink and deathtouch apply.</summary>
 public record DealDamage(Ref To, Count Amount) : Effect
 {
+	/// <summary>
+	/// Violent Echoes: "if excess damage was dealt to that permanent this way, [IfExcess]" — X is the
+	/// excess. For a single target: with several, X would be their total.
+	/// </summary>
+	public ImmutableList<GameAction> IfExcess { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		var amount = Amount.Value(s, InputContext);
-		return new(All(To, s).Aggregate(s, (st, id) => Damage.Deal(st, Source(s), id, amount)));
+		var source = Source(s);
+		var excess = 0;
+		foreach (var id in All(To, s).ToList())
+		{
+			if (!IfExcess.IsEmpty)
+				excess += Damage.Excess(s, source, id, amount);
+			s = Damage.Deal(s, source, id, amount);
+		}
+		return excess == 0 || IfExcess.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						Steps = IfExcess,
+						PipelineContext = InputContext.SetItem(ContextKeys.X, excess),
+					}
+				)
+			);
 	}
 }
 
@@ -82,6 +106,9 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// <summary>Lyra: "until end of turn, whenever …" — a triggered ability it has until cleanup.</summary>
 	public TriggeredAbilityComponent? Trigger { get; init; }
 
+	/// <summary>Essence Burn: "if that permanent would die this turn, exile it instead".</summary>
+	public bool ExileIfItWouldDie { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var effect = new UntilEndOfTurn(
@@ -92,6 +119,7 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 		{
 			SetBase = SetBase,
 			Trigger = Trigger,
+			ExileIfItWouldDie = ExileIfItWouldDie,
 		};
 		return new(
 			Permanents(What, s).Aggregate(s, (st, c) => Update(st, (Card)c.WithComponent(effect)))
@@ -159,8 +187,16 @@ public record AdditionalLandDrop : Effect
 /// </summary>
 public record May(string Prompt, Condition Can, ImmutableList<GameAction> Then) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		!Can.Holds(s, InputContext)
+	/// <summary>Clash of Elements: "its owner may …" — who answers. Unset is you; the effects stay yours.</summary>
+	public Ref? Who { get; init; }
+
+	/// <summary>"If they didn't, [Otherwise]" — run on a "no". Not run when it can't be asked.</summary>
+	public ImmutableList<GameAction> Otherwise { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		var decider = Who is null ? Controller : All(Who, s).FirstOrDefault();
+		return !Can.Holds(s, InputContext) || decider == 0
 			? new(s)
 			: new(
 				s.SpawnAction(
@@ -168,10 +204,15 @@ public record May(string Prompt, Condition Can, ImmutableList<GameAction> Then) 
 					{
 						// Its own key, cleared — as MaySacrifice: a "no" must not read a stale "yes".
 						PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
-						Steps = [new YesNoChoice(Controller, Prompt), new IfChosenAction(Then)],
+						Steps =
+						[
+							new YesNoChoice(decider, Prompt),
+							new IfChosenAction(Then) { Otherwise = Otherwise },
+						],
 					}
 				)
 			);
+	}
 }
 
 /// <summary>CR 701.14: each deals damage equal to its power to the other. Nothing if either is gone.</summary>
@@ -288,6 +329,13 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 		}
 		return new(s);
 	}
+}
+
+/// <summary>Precise Redaction: "Counter target spell" — through StackResolution.Counter.</summary>
+public record Counter(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(All(What, s).ToList().Aggregate(s, StackResolution.Counter));
 }
 
 /// <summary>After the payer's answer: pay the cost, or the spell or ability is countered.</summary>

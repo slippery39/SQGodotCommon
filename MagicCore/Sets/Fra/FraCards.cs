@@ -1570,7 +1570,7 @@ public static class FraCards
 				PreparesAtYourUpkeep,
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{2}"),
-					[new PutOnBottomOfLibrary(Ref.Target())]
+					[new PutIntoLibrary(Ref.Target(), OnTop: false)]
 				)
 				{
 					Targets = [new TargetSpec(TargetKind.CardInYourGraveyard)],
@@ -2101,6 +2101,158 @@ public static class FraCards
 				),
 				AttachedGets(2, 1),
 				Equip("{2}"),
+			],
+
+			// ===== Uncommons: removal and spells =====
+			["Refute Destiny"] =
+			[
+				Spell(
+					[
+						CreatureOrPlaneswalker with
+						{
+							AnyOfColors = [ManaColor.Green, ManaColor.Blue],
+						},
+					],
+					new Exile(Ref.Target()),
+					new Surveil(1)
+				),
+			],
+			["Your Fate Ends Here"] =
+			[
+				Spell(
+					[CreatureOrPlaneswalker with { MinManaValue = 3 }],
+					new Destroy(Ref.Target()),
+					new Surveil(1)
+				),
+			],
+			["Precise Redaction"] =
+			[
+				Spell(
+					[
+						new TargetSpec(TargetKind.Spell)
+						{
+							AnyOfColors = [ManaColor.White, ManaColor.Black],
+						},
+					],
+					new Counter(Ref.Target())
+				),
+			],
+			["Multiply by Zero"] =
+			[
+				Spell(
+					[Creature],
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { SetBase = (0, 0) }
+				),
+			],
+			["Essence Burn"] =
+			[
+				Spell(
+					[
+						CreatureOrPlaneswalker with
+						{
+							AnyOfColors = [ManaColor.Black, ManaColor.Green],
+						},
+					],
+					new DealDamage(Ref.Target(), 5),
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileIfItWouldDie = true }
+				),
+			],
+			["Violent Echoes"] =
+			[
+				Spell(
+					[CreatureOrPlaneswalker],
+					new DealDamage(Ref.Target(), 6) { IfExcess = [new EmpowerJace(Count.X)] }
+				),
+			],
+			["Clash of Elements"] =
+			[
+				Spell(
+					[new TargetSpec(TargetKind.Permanent) { NotTypes = CardType.Land }],
+					new May(
+						"Put it on top of your library and take 2 damage? (No: it goes on the bottom.)",
+						new Always(),
+						[
+							new PutIntoLibrary(Ref.Target(), OnTop: true),
+							new DealDamage(Ref.OwnerOfTarget(), 2),
+						]
+					)
+					{
+						Who = Ref.OwnerOfTarget(),
+						Otherwise = [new PutIntoLibrary(Ref.Target(), OnTop: false)],
+					}
+				),
+			],
+			["Primal Witchstalker"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new Mill(Ref.You, 4)
+					{
+						IfMilled =
+						[
+							new WhenYouDo(
+								[
+									new TargetSpec(TargetKind.CardInYourGraveyard)
+									{
+										AnyOfTypes = CardType.Land,
+									},
+								],
+								[
+									new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield)
+									{
+										Tapped = true,
+									},
+								]
+							),
+						],
+					}
+				),
+			],
+			["Theorix Charm"] =
+			[
+				ModalSpell(
+					"Theorix Charm",
+					1,
+					M(
+						[new TargetSpec(TargetKind.Spell) { NotTypes = CardType.Creature }],
+						new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{2}"))
+					),
+					M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), -2, -2)),
+					M([], new Mill(Ref.You, 3), new DrawCards(Ref.You, 1))
+				),
+			],
+			["Twisted Fates"] =
+			[
+				Spell(
+					[
+						new TargetSpec(TargetKind.Permanent) { NotTypes = CardType.Land },
+						new TargetSpec(TargetKind.Player),
+					],
+					new Destroy(Ref.Target(0)),
+					new AddCounters(Ref.PermanentsOfTargetPlayer(CardType.Creature, 1), 1)
+				),
+			],
+			["Vigorbloom Charm"] =
+			[
+				ModalSpell(
+					"Vigorbloom Charm",
+					1,
+					M(
+						[new TargetSpec(TargetKind.Permanent, Whose.You)],
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Hexproof"),
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Indestructible")
+					),
+					M([], new DrawCards(Ref.You, 1), new GainLife(Ref.You, 3)),
+					M(
+						[
+							new TargetSpec(TargetKind.Creature, Whose.You),
+							new TargetSpec(TargetKind.Creature, Whose.Opponent),
+						],
+						new AddCounters(Ref.Target(0), 1),
+						new Fight(Ref.Target(0), Ref.Target(1))
+					)
+				),
 			],
 		};
 

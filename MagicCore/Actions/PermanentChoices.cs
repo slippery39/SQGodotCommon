@@ -151,18 +151,18 @@ public record IfChosenAction(ImmutableList<GameAction> Then) : GameAction
 	/// <summary>Which choice's answer to read — a permanent or yes/no (default), or cards from a hand.</summary>
 	public string Key { get; init; } = ChoosePermanentChoice.Chosen;
 
+	/// <summary>Run instead on a "no" — Clash of Elements' "if they didn't, … the bottom".</summary>
+	public ImmutableList<GameAction> Otherwise { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
-		if (
-			InputContext.GetValueOrDefault(Key) switch
-			{
-				int => false,
-				ImmutableList<int> ids => ids.IsEmpty,
-				_ => true,
-			}
-		)
-			return new ActionResult(s);
-		foreach (var effect in Then)
+		var chosen = InputContext.GetValueOrDefault(Key) switch
+		{
+			int => true,
+			ImmutableList<int> ids => !ids.IsEmpty,
+			_ => false,
+		};
+		foreach (var effect in chosen ? Then : Otherwise)
 			s = (effect with { InputContext = InputContext }).Execute(s).GameState;
 		return new ActionResult(s);
 	}

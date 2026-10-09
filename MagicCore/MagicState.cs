@@ -96,10 +96,13 @@ public static class MagicState
 			&& zoneId != s.GetWellKnownId(MagicKeys.Stack)
 		)
 			zoneId = s.ZoneId(before.OwnerId, ZoneType.Exile);
-		// A finality counter: it would die, so it is exiled instead — and never dies (CR 122.1i).
+		// It would die, so it is exiled instead — and never dies: a finality counter (CR 122.1i), or
+		// Essence Burn's "if that permanent would die this turn".
 		if (
-			before.HasFinalityCounter
-			&& before.Is(CardType.Creature)
+			(
+				before.HasFinalityCounter
+				|| before.Components.OfType<UntilEndOfTurn>().Any(u => u.ExileIfItWouldDie)
+			)
 			&& s.IsOnBattlefield(cardId)
 			&& zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard)
 		)

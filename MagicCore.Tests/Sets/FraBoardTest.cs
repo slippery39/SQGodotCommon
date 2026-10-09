@@ -90,6 +90,16 @@ public abstract class FraBoardTest
 		}
 	}
 
+	/// <summary>They cast it (it needs flash or to be an instant); I then hold priority with it on the stack.</summary>
+	protected int TheirSpellOnTheStack(CardDefinition card)
+	{
+		var spell = Hand(card, them);
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(new CastSpellAction { PlayerId = them, CardId = spell });
+		s = s.Act(new PassPriorityAction { PlayerId = them });
+		return spell;
+	}
+
 	protected int Life(int p) => s.GetPlayer(p).Life;
 
 	protected int HandCount(int p) => s.CardsIn(p, ZoneType.Hand).Count();

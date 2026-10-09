@@ -65,10 +65,16 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   targeting spell or ability, carried as the event card of `BecameTargetEvent`.
 - **"When you do"** (a reflexive trigger, CR 603.12) is the `WhenYouDo` effect: its targets are chosen
   as it triggers, after the thing done, and it goes on the stack above — never fold it into the effect.
+  It triggers only if the thing was done: after a mill it goes in `Mill.IfMilled` (an empty library mills nothing).
 - **Targets in a graveyard** are `TargetKind.CardInYourGraveyard` (or `CardInAnyGraveyard`, "from a graveyard") — the same legality test on choosing
   and resolving. "One or two target creatures" is two words, the second `Optional` and `NotThePrevious`.
 - **"You may … If you do"** is `May` (a `YesNoChoice`, asked only when it can be done) or
-  `MaySacrifice`; both clear the shared "chosen" key so a "no" cannot read a stale "yes".
+  `MaySacrifice`; both clear the shared "chosen" key so a "no" cannot read a stale "yes". "Its owner
+  may" is `May.Who` — another player answers, the effects stay yours — and "if they didn't" is `Otherwise`.
+- **"Exile it instead" of dying** is decided in `MoveCard` alone: a finality counter, or Essence Burn's
+  `UntilEndOfTurn.ExileIfItWouldDie` — so the card never dies and no "dies" trigger sees it.
+- **Excess damage** (CR 120.4a) is `Damage.Excess`, measured BEFORE the damage is dealt (past
+  loyalty, or toughness less marked damage; 1 from deathtouch). `DealDamage.IfExcess` runs with X = it.
 - **An intervening "if" (CR 603.4) is `TriggeredAbilityComponent.If`**, never a bare `If` effect:
   checked as it triggers (`Collect`) AND again on resolution (`QueueTargets` wraps the effects).
   Edgar with a spell cast in response to his trigger gets nothing. A condition on the EVENT itself

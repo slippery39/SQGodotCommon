@@ -60,4 +60,27 @@ public static class Damage
 			);
 		return s.Has(source, "Lifelink") ? Life.Gain(s, source.ControllerId, amount) : s;
 	}
+
+	/// <summary>
+	/// CR 120.4a: how much of this damage would be beyond lethal — past a planeswalker's loyalty, or
+	/// a creature's toughness less the damage already marked (1 is lethal from deathtouch).
+	/// </summary>
+	public static int Excess(GameState s, Card source, int targetId, int amount)
+	{
+		if (!s.IsOnBattlefield(targetId))
+			return 0;
+		var target = s.GetCard(targetId);
+		var lethal =
+			target.Is(CardType.Planeswalker) ? target.Loyalty
+			: target.Is(CardType.Creature) ? Math.Max(0, s.Toughness(target) - target.Damage)
+			: amount;
+		// A planeswalker creature loses loyalty, where deathtouch means nothing (CR 120.3c).
+		if (
+			!target.Is(CardType.Planeswalker)
+			&& target.Is(CardType.Creature)
+			&& s.Has(source, "Deathtouch")
+		)
+			lethal = Math.Min(lethal, 1);
+		return Math.Max(0, amount - lethal);
+	}
 }

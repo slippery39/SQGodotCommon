@@ -135,11 +135,24 @@ public record BecomePrepared(Ref What) : Effect
 /// <summary>"Mill N" (CR 701.13): the top N cards of each player's library into their graveyard.</summary>
 public record Mill(Ref Who, int N) : Effect
 {
+	/// <summary>Primal Witchstalker: "mill four cards. When you do, …" — run only if a card was milled.</summary>
+	public ImmutableList<GameAction> IfMilled { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
+		var any = false;
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
-			(s, _) = Top(s, player, N);
-		return new(s);
+		{
+			(s, var milled) = Top(s, player, N);
+			any |= !milled.IsEmpty;
+		}
+		return !any || IfMilled.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction { Steps = IfMilled, PipelineContext = InputContext }
+				)
+			);
 	}
 
 	/// <summary>The ONE mill: the top N into the graveyard, stopping early on a short library; the milled ids.</summary>
@@ -185,14 +198,17 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 		);
 }
 
-/// <summary>Paradox Shaper: "Put target card from your graveyard on the bottom of your library."</summary>
-public record PutOnBottomOfLibrary(Ref What) : Effect
+/// <summary>
+/// "Put [it] on the bottom (or top) of its owner's library" — Paradox Shaper's graveyard card,
+/// Clash of Elements' permanent.
+/// </summary>
+public record PutIntoLibrary(Ref What, bool OnTop) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in All(What, s).ToList())
 			if (s.GetObject(id) is Card card)
-				s = s.MoveCard(id, s.ZoneId(card.OwnerId, ZoneType.Library)); // appends: the bottom
+				s = s.MoveCard(id, s.ZoneId(card.OwnerId, ZoneType.Library), toTop: OnTop);
 		return new(s);
 	}
 }
