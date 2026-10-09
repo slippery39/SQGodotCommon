@@ -223,6 +223,7 @@ public enum CountOf
 	CardsYouDiscardedThisTurn,
 	LoyaltyAbilitiesYouActivatedThisTurn,
 	BasicLandTypesAmongLandsYouControl, // domain
+	CardTypesInAllGraveyards, // Tarmogoyf
 	YourSurveilsThisTurn,
 	SpellsYouCastThisTurn,
 	NoncombatDamageToOpponentsLastTurn,
@@ -238,6 +239,9 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 {
 	/// <summary>"For every three cards in your graveyard": the count divided by this, rounded down.</summary>
 	public int Per { get; init; } = 1;
+
+	/// <summary>Dark Matter Manipulator: "+2/+0 for every seven" — each Per counts this many.</summary>
+	public int Times { get; init; } = 1;
 
 	public static implicit operator Count(int n) => new(n);
 
@@ -265,6 +269,10 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static readonly Count LoyaltyAbilitiesYouActivatedThisTurn =
 		new(0, null, CountOf.LoyaltyAbilitiesYouActivatedThisTurn);
 
+	/// <summary>Tarmogoyf: "the number of card types among cards in all graveyards".</summary>
+	public static readonly Count CardTypesInAllGraveyards =
+		new(0, null, CountOf.CardTypesInAllGraveyards);
+
 	/// <summary>Domain: "the number of basic land types among lands you control".</summary>
 	public static readonly Count BasicLandTypesAmongLandsYouControl =
 		new(0, null, CountOf.BasicLandTypesAmongLandsYouControl);
@@ -290,7 +298,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static bool operator !=(Count c, int n) => !(c == n);
 
 	public int Value(GameState s, ImmutableDictionary<string, object> context) =>
-		Sign * (Counted(s, context) / Per);
+		Sign * Times * (Counted(s, context) / Per);
 
 	int Counted(GameState s, ImmutableDictionary<string, object> context)
 	{
@@ -300,6 +308,13 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			return context.TryGetValue(ContextKeys.X, out var x) ? (int)x : 0;
 		if (Kind == CountOf.CreaturesDiedThisTurn)
 			return s.GetGame().CreaturesDiedThisTurn;
+		if (Kind == CountOf.CardTypesInAllGraveyards) // one pass: it sits under Tarmogoyf's P/T
+			return System.Numerics.BitOperations.PopCount(
+				(uint)
+					new[] { s.Player1Id(), s.Player2Id() }
+						.SelectMany(p => s.CardsIn(p, ZoneType.Graveyard))
+						.Aggregate(CardType.None, (types, c) => types | c.Types)
+			);
 		if (Kind == CountOf.BasicLandTypesAmongLandsYouControl)
 			return Ref
 				.LandsYouControl.Resolve(s, context)

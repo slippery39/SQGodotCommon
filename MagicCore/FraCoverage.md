@@ -3,9 +3,14 @@
 Status, not rules: what is scripted, what waits and why. The rules live in `MagicCore/CLAUDE.md`.
 Count scripted cards from `FraCards.cs` (`["Name"] =` keys) — never from memory; this file once ran one high.
 
+**Playable by rarity** (scripted, keyword-only or basic — computed, 2026-10-09): common 85/86 · uncommon 109/109 · rare 30/64 · mythic 15/26 · **239/285**.
+8a (rares from existing pieces): Aerid Konstrari, Craterclaw Colossus, Ingris Stingerquill, Overwrite the
+Multiverse, The Echoverse Fulcrum, Tarmogoyf, Dark Matter Manipulator, Simulacrum Shaper, Lyra Archangel
+of Dawn, Master of Barbs, Solarium Sentry, Liliana the Faultless. Remaining rare batches 8b–8g: HANDOFF-MtgReal.md.
+
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 220 cards scripted
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 232 cards scripted
 in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
 dies / exile-until cards, 25 step-trigger / per-turn / prowess / surveil-trigger cards, the 6 flashback cards, 21 prepare cards, 12 landcycling / graveyard-ability cards, and 7 graveyard-return / hexproof /
 indestructible / exhaust cards.

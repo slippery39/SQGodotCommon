@@ -1106,3 +1106,4 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - Empower Jace with two Jace tokens loads the first
 - surveil keeps the kept cards' order.
 - "when enchanted creature dies" sees what was attached as the creature moved; if ONE effect moves the creature AND its Aura, the Aura moved first is missed — no FRA card does that (record attachments per resolution if one ever does)
+- Tarmogoyf's */1+* (and any characteristic-defining P/T) is a battlefield static, so off the battlefield it reads as its printed 0/1 — nothing reads a creature card's power outside the battlefield yet (make CDAs a Card-level read if a card ever does)

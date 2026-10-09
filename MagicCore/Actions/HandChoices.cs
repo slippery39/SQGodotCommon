@@ -82,10 +82,16 @@ public record ChooseFromLibraryChoice : ChoiceAction
 /// <summary>The chosen cards go to a zone of their owner's — a searched land to the hand or graveyard.</summary>
 public record MoveChosenToAction(int PlayerId, ZoneType To) : GameAction
 {
+	/// <summary>Simulacrum Shaper: "onto the battlefield tapped".</summary>
+	public bool Tapped { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
-			s = s.MoveCard(id, s.ZoneId(PlayerId, To));
+			s =
+				To == ZoneType.Battlefield
+					? s.EnterBattlefield(id, PlayerId, tapped: Tapped) // the one way in: its entry, its events
+					: s.MoveCard(id, s.ZoneId(PlayerId, To));
 		return new ActionResult(s);
 	}
 }

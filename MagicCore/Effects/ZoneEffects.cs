@@ -25,11 +25,25 @@ public record Destroy(Ref What) : Effect
 
 public record Exile(Ref What) : Effect
 {
-	public override ActionResult Execute(GameState s) =>
-		new(
-			Permanents(What, s)
-				.Aggregate(s, (st, c) => st.MoveCard(c.Id, st.ZoneId(c.OwnerId, ZoneType.Exile)))
-		);
+	/// <summary>Overwrite the Multiverse: "… where X is the number of creatures exiled this way" — run after, with X.</summary>
+	public ImmutableList<GameAction> ThenWithXExiled { get; init; } = [];
+
+	public override ActionResult Execute(GameState s)
+	{
+		var exiled = Permanents(What, s).ToList();
+		s = exiled.Aggregate(s, (st, c) => st.MoveCard(c.Id, st.ZoneId(c.OwnerId, ZoneType.Exile)));
+		return ThenWithXExiled.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						Steps = ThenWithXExiled,
+						PipelineContext = InputContext.SetItem(ContextKeys.X, exiled.Count),
+					}
+				)
+			);
+	}
 }
 
 /// <summary>
@@ -184,6 +198,9 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 	/// <summary>Fblthp: "up to X … with different names" — the options are already one per name.</summary>
 	public Count UpTo { get; init; } = 1;
 
+	/// <summary>Simulacrum Shaper: "put that card onto the battlefield tapped".</summary>
+	public bool Tapped { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.SpawnAction(
@@ -201,7 +218,7 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 							Prompt =
 								$"Search for {(UpTo == 1 ? "a" : $"up to {UpTo.Value(s, InputContext)}")} {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{Type.ToString().ToLowerInvariant()} card{(UpTo == 1 ? "" : "s with different names")}",
 						},
-						new MoveChosenToAction(Controller, To),
+						new MoveChosenToAction(Controller, To) { Tapped = Tapped },
 						new ShuffleLibraryAction(Controller),
 					],
 				}

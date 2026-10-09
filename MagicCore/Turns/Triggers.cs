@@ -212,6 +212,9 @@ public static class Triggers
 		{
 			DiedEvent died => died.LastKnown,
 			BlocksEvent blocks when s.IsOnBattlefield(blocks.CardId) => s.GetCard(blocks.CardId),
+			AttackedEvent attacked when s.IsOnBattlefield(attacked.CardId) => s.GetCard(
+				attacked.CardId
+			),
 			_ => null,
 		};
 
@@ -318,6 +321,14 @@ public static class Triggers
 				== source.ControllerId
 				&& s.GetCard(cast.CardId).Is(CardType.Artifact | CardType.Creature),
 			(TriggerEvent.APlayerDiscards, DiscardedEvent) => true,
+			(TriggerEvent.CreatureYouControlAttacks, AttackedEvent attacked) => Yours(
+				attacked.CardId
+			) && s.GetCard(attacked.CardId).Is(CardType.Creature),
+			// Mana value on the stack counts X (CR 202.3e).
+			(TriggerEvent.OpponentCastsSpellWithManaValue2OrLess, SpellCastEvent cast) =>
+				cast.PlayerId != source.ControllerId
+					&& s.HasObject(cast.CardId)
+					&& s.GetCard(cast.CardId).ManaValueNow <= 2,
 			(TriggerEvent.YouAttack, AttackersDeclaredEvent declared) => declared.PlayerId
 				== source.ControllerId,
 			(

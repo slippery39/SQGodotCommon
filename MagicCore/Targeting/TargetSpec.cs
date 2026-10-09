@@ -172,13 +172,9 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		&& (!AttackedThisTurn || card.AttackedOnTurn == s.GetGame().TurnNumber)
 		&& (!Attacking || card.AttackingId != 0)
 		&& (!WithPlusOneCounter || card.PlusOneCounters > 0)
-		&& ManaValue(card) is var mv
+		&& card.ManaValueNow is var mv
 		&& mv <= MaxManaValue
 		&& mv >= MinManaValue;
-
-	/// <summary>On the stack, X counts (CR 202.3e); anywhere else it is 0.</summary>
-	static int ManaValue(Card card) =>
-		card.ManaCost.ManaValue + (card.GetComponent<Actions.OnStackComponent>()?.X ?? 0);
 
 	static bool OnStack(GameState s, int id) =>
 		s.GetParent(id) == s.GetWellKnownId(MagicKeys.Stack);

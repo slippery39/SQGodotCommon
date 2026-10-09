@@ -439,7 +439,10 @@ public record DamageFrom(Ref From, Ref To, Count Amount) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
-		var from = Permanents(From, s).FirstOrDefault();
+		// Ingris: "that creature deals 1 damage" — the attacker as it last was, if it left in response.
+		var from =
+			Permanents(From, s).FirstOrDefault()
+			?? (From.Kind == RefKind.EventCard ? GetInput<Card?>(ContextKeys.EventSnapshot) : null);
 		if (from is null)
 			return new(s);
 		var amount = Amount.Value(s, InputContext);

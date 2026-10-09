@@ -189,6 +189,10 @@ public record Card : GameObject
 
 	public bool Is(CardType type) => (Types & type) != 0;
 
+	/// <summary>Its mana value — on the stack X counts (CR 202.3e); anywhere else X is 0.</summary>
+	public int ManaValueNow =>
+		ManaCost.ManaValue + (GetComponent<Actions.OnStackComponent>()?.X ?? 0);
+
 	public bool Is(Supertype supertype) => (Supertypes & supertype) != 0;
 }
 

@@ -54,6 +54,8 @@ public enum TriggerEvent
 	YouCastFirstNoncreatureSpellEachTurn, // Plan for All Outcomes
 	YouAttack, // Kiora of Salt and Sand: "whenever you attack" — once per declaration
 	OpponentsDealtCombatDamageDuringYourTurn, // Fblthp, Impossibly Lost — "one or more", once a step
+	CreatureYouControlAttacks, // Ingris Stingerquill — the event card is the attacker
+	OpponentCastsSpellWithManaValue2OrLess, // Solarium Sentry
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>

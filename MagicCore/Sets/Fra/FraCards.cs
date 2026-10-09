@@ -317,20 +317,24 @@ public static class FraCards
 	static PrepareSpellComponent OmitVariables(string card) =>
 		PrepareSpell(card, [], new Mill(Ref.You, 3));
 
+	/// <summary>"Create a Heartwood token. (It's a red and green artifact with '{T}: Add {R} or {G}.')"</summary>
+	static CreateTokens CreateHeartwood =>
+		new(Heartwood, 1)
+		{
+			Abilities =
+			[
+				new ManaAbilityComponent(ManaColor.Red),
+				new ManaAbilityComponent(ManaColor.Green),
+			],
+		};
+
+	/// <summary>"The number of artifacts you control".</summary>
+	static readonly Count ArtifactsYouControl = Count.NumberOf(
+		new Ref(RefKind.YourPermanents, Type: CardType.Artifact)
+	);
+
 	/// <summary>Soul Tether: "Create a Heartwood token."</summary>
-	static PrepareSpellComponent SoulTether(string card) =>
-		PrepareSpell(
-			card,
-			[],
-			new CreateTokens(Heartwood, 1)
-			{
-				Abilities =
-				[
-					new ManaAbilityComponent(ManaColor.Red),
-					new ManaAbilityComponent(ManaColor.Green),
-				],
-			}
-		);
+	static PrepareSpellComponent SoulTether(string card) => PrepareSpell(card, [], CreateHeartwood);
 
 	/// <summary>"Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)"</summary>
 	static ActivatedAbilityComponent BasicLandcycling =>
@@ -2358,15 +2362,7 @@ public static class FraCards
 				When(TriggerEvent.SelfEnters, [], new CreateTokens(Thopter, 1)),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{5}{R}"),
-					[
-						new ModifyUntilEndOfTurn(
-							Ref.Target(),
-							Count.NumberOf(
-								new Ref(RefKind.YourPermanents, Type: CardType.Artifact)
-							),
-							0
-						),
-					]
+					[new ModifyUntilEndOfTurn(Ref.Target(), ArtifactsYouControl, 0)]
 				)
 				{
 					Targets = [Creature],
@@ -2717,6 +2713,149 @@ public static class FraCards
 			[
 				When(TriggerEvent.SelfEnters, [], new EmpowerJace(5)),
 				Grant(-3, [], new CopyNextInstantOrSorceryThisTurn()),
+			],
+
+			// ===== Rares (8a): from existing pieces =====
+			["Aerid Konstrari"] =
+			[
+				When(TriggerEvent.SelfEnters, [], CreateHeartwood),
+				When(TriggerEvent.SelfDies, [], CreateHeartwood),
+				// "Then … gets +X/+0": counted after the token, so it counts itself.
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{6}"),
+					[CreateHeartwood, new ModifyUntilEndOfTurn(Ref.Source, ArtifactsYouControl, 0)]
+				),
+			],
+			["Craterclaw Colossus"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new ModifyUntilEndOfTurn(
+						Ref.CreaturesYouControl,
+						ArtifactsYouControl,
+						0,
+						"Trample"
+					)
+				),
+			],
+			["Ingris Stingerquill"] =
+			[
+				When(
+					TriggerEvent.CreatureYouControlAttacks,
+					[],
+					new DamageFrom(Ref.EventCard, Ref.EachOpponent, 1)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{4}"),
+					[
+						new CreateTokens(Cadet, 1),
+						new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 0, 0, "Haste"),
+					]
+				),
+			],
+			["Overwrite the Multiverse"] =
+			[
+				// Exiled first, then Jace: nothing exiled sees the token enter.
+				Spell(
+					[],
+					new Exile(Ref.AllCreatures) { ThenWithXExiled = [new EmpowerJace(Count.X)] }
+				),
+			],
+			["The Echoverse Fulcrum"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new DrawCards(Ref.You, 1),
+					new Discard(Ref.You, 1)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{5}"),
+					[new Destroy(Ref.AllCreatures)]
+				)
+				{
+					TapCost = true,
+					ExileSelf = true,
+					SorcerySpeed = true,
+				},
+			],
+			["Tarmogoyf"] =
+			[
+				// "*/1+*": the printed 1 is its base toughness; the static adds the count to both.
+				new StaticEffectComponent(Affects.Self)
+				{
+					Power = Count.CardTypesInAllGraveyards,
+					Toughness = Count.CardTypesInAllGraveyards,
+				},
+			],
+			["Dark Matter Manipulator"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new Mill(Ref.You, 3)),
+				new StaticEffectComponent(Affects.Self)
+				{
+					Power = Count.NumberOf(Ref.CardsInYourGraveyard) with { Per = 7, Times = 2 },
+				},
+			],
+			["Simulacrum Shaper"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Battlefield)
+					{
+						Supertype = Supertype.Basic,
+						Tapped = true,
+					}
+				),
+				When(TriggerEvent.SelfDies, [], new DrawCards(Ref.You, 1)),
+			],
+			["Lyra, Archangel of Dawn"] =
+			[
+				When(
+					TriggerEvent.YouGainLife,
+					[],
+					new AddCounters(
+						new Ref(RefKind.YourPermanents, Type: CardType.Creature)
+						{
+							Subtype = "Angel",
+						},
+						1
+					)
+				),
+			],
+			["Master of Barbs"] =
+			[
+				When(
+					TriggerEvent.OpponentDealtNoncombatDamage,
+					[],
+					new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 0)
+				),
+			],
+			["Solarium Sentry"] =
+			[
+				When(
+					TriggerEvent.OpponentCastsSpellWithManaValue2OrLess,
+					[],
+					new GainLife(Ref.You, 2)
+				),
+			],
+			["Liliana the Faultless"] =
+			[
+				When(
+					TriggerEvent.AnotherCreatureOrPlaneswalkerYouControlEnters,
+					[],
+					new GainLife(Ref.You, 1)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Hexproof")]
+				)
+				{
+					TapCost = true,
+					DiscardACard = true,
+					Targets = [CreatureOrPlaneswalker with { Whose = Whose.You, Another = true }],
+				},
 			],
 		};
 

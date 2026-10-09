@@ -65,6 +65,9 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   Molten Tide (`TurnTally.ExtraRedFromMountains`), mana that can't pay for spells from your hand
   (Heartwood Crafter). `ManaPayment.Find` solves units: a permanent taps once, and what the payment
   doesn't use floats (`Payment.Floats`). Restricted mana is never floated — manual tapping refuses it.
+- **A card put onto the battlefield from anywhere enters through `MagicState.EnterBattlefield`** —
+  a search, a return, a token: never a bare `MoveCard` to the battlefield, which skips its entry
+  (controller, tapped, its "enters" event). `MoveChosenToAction` routes a battlefield search there.
 - **Copying a spell** is `CopySpell` (CR 707.10): a `Card.IsCopy` on top of the stack, controlled by
   the copier, not cast (no "whenever you cast"), its targets chosen anew with the original's among the
   options — and gone once it leaves the stack (the state-based check prepared copies use). "When you
