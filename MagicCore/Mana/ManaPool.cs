@@ -26,6 +26,11 @@ public record ManaPool
 	public int Green { get; init; }
 	public int Colorless { get; init; }
 
+	/// <summary>Chandra, Chill of Compliance: "Spend this mana only to cast a noncreature spell" — kept apart.</summary>
+	public System.Collections.Immutable.ImmutableList<RestrictedMana> Restricted { get; init; } =
+		[];
+
+	/// <summary>Unrestricted mana only: what can pay for anything.</summary>
 	public int Total => White + Blue + Black + Red + Green + Colorless;
 
 	public int this[ManaColor color] =>
@@ -50,3 +55,6 @@ public record ManaPool
 			_ => this with { Colorless = Colorless + amount },
 		};
 }
+
+/// <summary>One floating mana that may pay only for what its restriction allows.</summary>
+public record RestrictedMana(ManaColor Color, Effects.ManaRestriction Restriction);

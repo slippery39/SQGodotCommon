@@ -108,7 +108,11 @@ void Board(GameState s)
 	if (stack.Count > 0)
 		Console.WriteLine($"  STACK (top first): {string.Join(" ← ", stack)}");
 	Console.WriteLine($"       {Zone(human, ZoneType.Battlefield)}");
-	var pool = you.ManaPool.Total > 0 ? $" · floating {you.ManaPool.Total}" : "";
+	var restricted = you.ManaPool.Restricted.Count;
+	var pool =
+		you.ManaPool.Total + restricted > 0
+			? $" · floating {you.ManaPool.Total}{(restricted > 0 ? $" (+{restricted} restricted)" : "")}"
+			: "";
 	Console.WriteLine(
 		$"  You  life {you.Life} · library {s.CardsIn(human, ZoneType.Library).Count()}{pool}"
 	);

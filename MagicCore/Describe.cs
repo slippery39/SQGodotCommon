@@ -92,7 +92,7 @@ public static class Describe
 		s.HasObject(l.CardId)
 		&& Loyalty.AbilitiesOf(s, s.GetCard(l.CardId)).ElementAtOrDefault(l.AbilityIndex)
 			is { } ability
-			? Loyalty.CostText(ability.Cost)
+			? (ability.MinusX ? $"−{l.X}" : Loyalty.CostText(ability.Cost))
 			: "?";
 
 	static string ModeText(GameState s, CastSpellAction c) =>

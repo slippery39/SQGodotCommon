@@ -324,17 +324,25 @@ public class FraEngineTests : FraBoardTest
 		TapAllLandsBut();
 		Assert.That(Casts(Hand(Spell("{1}"), me)), Is.Empty, "not for a spell from your hand");
 		Assert.That(Activations(engineId), Is.Not.Empty, "an ability is fine");
-		Assert.Throws<InvalidOperationException>(
-			() =>
-				s.Act(
-					new TapForManaAction
-					{
-						PlayerId = me,
-						CardId = crafter,
-						Color = ManaColor.Colorless,
-					}
-				)
+		s = s.Act(
+			new TapForManaAction
+			{
+				PlayerId = me,
+				CardId = crafter,
+				Color = ManaColor.Colorless,
+			}
 		);
+		Assert.That(
+			(s.GetPlayer(me).ManaPool.Total, s.GetPlayer(me).ManaPool.Restricted.Count),
+			Is.EqualTo((0, 1)),
+			"tapped by hand, it floats — still restricted"
+		);
+		Assert.That(
+			Casts(Hand(Spell("{1}"), me)),
+			Is.Empty,
+			"floating, it still can't pay a spell from hand"
+		);
+		Assert.That(Activations(engineId), Is.Not.Empty, "but an ability, yes");
 	}
 
 	[Test]

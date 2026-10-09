@@ -125,10 +125,6 @@ public record TapForManaAction : GameAction
 		var yield = ManaAbilities.YieldOf(s, s.GetCard(CardId));
 		if (yield.Units.IsEmpty || !yield.Units[0].Contains(Color))
 			return ValidationResult.Invalid($"Cannot produce {Color}");
-		// ponytail: the pool can't remember a restriction, so restricted mana is only ever made by
-		// auto-payment, which spends it at once. Track it in the pool if a card ever floats it.
-		if (yield.Restriction != Effects.ManaRestriction.None)
-			return ValidationResult.Invalid("Its mana is spent as it is made");
 		return ValidationResult.Valid;
 	}
 
@@ -140,7 +136,19 @@ public record TapForManaAction : GameAction
 		var player = s.GetPlayer(PlayerId);
 		var pool = player.ManaPool;
 		foreach (var unit in yield.Units.Select((u, i) => (Colors: u, First: i == 0)))
-			pool = pool.Add(unit.First || yield.SameColor ? Color : unit.Colors[0]);
+		{
+			var color = unit.First || yield.SameColor ? Color : unit.Colors[0];
+			// Restricted mana floats as restricted (ManaPool.Restricted) — what it may pay for stays with it.
+			pool =
+				yield.Restriction == Effects.ManaRestriction.None
+					? pool.Add(color)
+					: pool with
+					{
+						Restricted = pool.Restricted.Add(
+							new RestrictedMana(color, yield.Restriction)
+						),
+					};
+		}
 		s = s.WithPlayer(player with { ManaPool = pool });
 		if (yield.Sacrificed)
 			s = s.Sacrifice(CardId); // Treasure: "{T}, Sacrifice this"

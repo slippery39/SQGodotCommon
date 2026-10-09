@@ -60,16 +60,21 @@ public static class ManaAbilities
 	)
 	{
 		/// <summary>May this mana pay for that spell (null: an ability, or anything but a spell)?</summary>
-		public bool CanPayFor(GameState s, Card? spell) =>
-			Restriction switch
-			{
-				ManaRestriction.NotForSpellsFromHand => spell is null
-					|| !s.IsIn(spell.Id, spell.OwnerId, ZoneType.Hand),
-				ManaRestriction.OnlyPlaneswalkerSpells => spell is not null
-					&& spell.Is(CardType.Planeswalker),
-				_ => true,
-			};
+		public bool CanPayFor(GameState s, Card? spell) => Allows(Restriction, s, spell);
 	}
+
+	/// <summary>THE restriction check — a permanent's mana and floating mana alike.</summary>
+	public static bool Allows(ManaRestriction restriction, GameState s, Card? spell) =>
+		restriction switch
+		{
+			ManaRestriction.NotForSpellsFromHand => spell is null
+				|| !s.IsIn(spell.Id, spell.OwnerId, ZoneType.Hand),
+			ManaRestriction.OnlyPlaneswalkerSpells => spell is not null
+				&& spell.Is(CardType.Planeswalker),
+			ManaRestriction.OnlyNoncreatureSpells => spell is not null
+				&& !spell.Is(CardType.Creature),
+			_ => true,
+		};
 
 	/// <summary>THE answer to "what does tapping this make" — payment, manual tapping and the X bound all ask.</summary>
 	public static Yield YieldOf(GameState s, Card card)

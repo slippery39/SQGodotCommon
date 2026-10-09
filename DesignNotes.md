@@ -1114,3 +1114,5 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - Kindred Judgment offers the creature types on the battlefield plus "a type no creature has" — every other type does the same as that one
 - "Up to that many target creatures" (Seasoned Cryomancer) keeps only neighbouring targets apart; three or more could repeat one (make it all-distinct if a card ever asks for three)
 - a `DelayedTrigger` is one-shot only because Vindictive Triumph's moves the permanent; one that leaves it in place would fire every end step (mark it fired if a card ever needs that)
+- Chandra, Torch of Defiance's "you may cast that card" is a yes now and the cast later this turn (it becomes playable from exile until end of turn) — a real cast mid-resolution needs casting to run inside an ability; a yes can still go uncast, so neither the cast nor the 2 damage happens
+- Proliferate (Tam) picks for the player: your permanents' +1/+1, loyalty and charge counters, opponents' -1/-1 and stun — never the other kind; make it a choice if a card ever wants otherwise

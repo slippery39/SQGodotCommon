@@ -100,7 +100,11 @@ public static class Characteristics
 				List<(Card, StaticEffectComponent)> statics = [];
 				HashSet<(int, int)>? stripped = null;
 				foreach (var p in new[] { state.Player1Id(), state.Player2Id() })
-				foreach (var c in state.CardsIn(p, ZoneType.Battlefield))
+				foreach (
+					var c in state
+						.CardsIn(p, ZoneType.Battlefield)
+						.Concat(state.CardsIn(p, ZoneType.Command))
+				) // emblems too
 				foreach (var component in c.Components)
 					if (component is StaticEffectComponent effect)
 						statics.Add((c, effect));

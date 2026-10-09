@@ -62,6 +62,10 @@ public enum TriggerEvent
 	YouCastCreatureSpell, // Flickering Hound
 	SelfDealtDamage, // Hexhaven Invigorator — X is how much
 	YourFirstMainPhase, // Gardenize: "at the beginning of your first main phase"
+	YouCastSpell, // Chandra's emblems: "whenever you cast a spell"
+	CreatureAttacksYouOrYourPlaneswalker, // Jace, Reality Sculptor's −3 — the event card is the attacker
+	CreatureWithPower4OrMoreYouControlEnters, // Garruk, Curse Breaker — its power as it enters
+	CreaturesAttackYourOpponent, // Garruk, Curse Breaker's −4: "one or more creatures attack one of your opponents"
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>
@@ -158,6 +162,12 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 public record LoyaltyAbilityComponent(int Cost, ImmutableList<GameAction> Effects) : GameComponent
 {
 	public ImmutableList<TargetSpec> Targets { get; init; } = [];
+
+	/// <summary>"−X:" — the activator chooses X (up to its loyalty); X reaches the effects (Count.X).</summary>
+	public bool MinusX { get; init; }
+
+	/// <summary>Jace, Reality Sculptor: "Activate only if …".</summary>
+	public Condition? OnlyIf { get; init; }
 }
 
 /// <summary>The Way cycle and friends: "Planeswalkers you control have [loyalty ability]."</summary>
@@ -172,6 +182,7 @@ public enum ManaRestriction
 	None,
 	NotForSpellsFromHand, // Heartwood Crafter
 	OnlyPlaneswalkerSpells, // Gideon's Memorial
+	OnlyNoncreatureSpells, // Chandra, Chill of Compliance
 }
 
 /// <summary>"{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).</summary>
@@ -396,6 +407,12 @@ public record CostsLessIfYouCastNoncreatureSpellThisTurn(int Amount) : GameCompo
 /// ponytail: one-shot only because its effect moves the permanent; mark it fired if one ever doesn't.
 /// </summary>
 public record DelayedTrigger(TriggeredAbilityComponent Ability) : GameComponent;
+
+/// <summary>Garruk, Veiled Butcher: "If a creature an opponent controls would die, exile it instead." — MagicState.MoveCard.</summary>
+public record OpponentsCreaturesExiledInsteadOfDying : GameComponent;
+
+/// <summary>Tam, the Possibility: "Planeswalker spells you cast cost {N} less to cast." — Costs.Of.</summary>
+public record YourSpellsOfTypeCostLess(Cards.CardType Types, int Amount) : GameComponent;
 
 /// <summary>Karn, Argent Defender: "Artifacts and creatures entering the battlefield don't cause abilities to trigger." Read by Triggers.Collect.</summary>
 public record EnteringArtifactsAndCreaturesDontTrigger : GameComponent;

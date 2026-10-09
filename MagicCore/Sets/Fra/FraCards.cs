@@ -232,6 +232,32 @@ public static class FraCards
 	static ManaOfOneColorComponent SacrificeForMana(int amount) =>
 		new(amount) { SacrificeSelf = true };
 
+	/// <summary>Ajani Resolute: "a 2/2 white Cat Soldier creature token named Ajani's Pridemate".</summary>
+	public static readonly CardData AjanisPridemate =
+		new(
+			"Ajani's Pridemate",
+			"token",
+			null,
+			0,
+			"Creature — Cat Soldier",
+			null,
+			"2",
+			"2",
+			null,
+			["W"],
+			[],
+			"token",
+			"T",
+			null
+		);
+
+	/// <summary>"Create a 4/4 green Beast creature token with trample."</summary>
+	static CreateTokens CreateBeast => new(Beast, 1);
+
+	/// <summary>"Planeswalkers / lands … you control" narrowed to a subtype — "Islands you control", "Jaces you control".</summary>
+	static Ref YoursOfSubtype(CardType type, string subtype) =>
+		new(RefKind.YourPermanents, Type: type) { Subtype = subtype };
+
 	/// <summary>Soul Tether: "a Heartwood token (a red and green artifact with '{T}: Add {R} or {G}.')".</summary>
 	public static readonly CardData Heartwood =
 		new(
@@ -3353,6 +3379,214 @@ public static class FraCards
 				)
 				{
 					Targets = [Creature with { Whose = Whose.You }],
+				},
+			],
+
+			// ===== Mythics and rares (8f): planeswalkers — emblems, "until your next turn", −X =====
+			["Ajani Resolute"] =
+			[
+				When(TriggerEvent.YouGainLife, [], new AddLoyalty(Ref.Source, 1)),
+				Loyalty(0, [], new GainLife(Ref.You, 1)),
+				Loyalty(
+					-4,
+					[],
+					new CreateTokens(AjanisPridemate, 1)
+					{
+						Abilities =
+						[
+							When(TriggerEvent.YouGainLife, [], new AddCounters(Ref.Source, 1)),
+						],
+					}
+				),
+				Loyalty(
+					-10,
+					[],
+					new GetEmblem(
+						[
+							new StaticEffectComponent(Affects.CreaturesYouControl)
+							{
+								Power = 2,
+								Toughness = 2,
+							},
+						]
+					)
+				),
+			],
+			["Chandra, Chill of Compliance"] =
+			[
+				Loyalty(
+					1,
+					[],
+					new Surveil(1)
+					{
+						Then =
+						[
+							new ReturnChosenToHandIfManaValueAtMost(int.MaxValue)
+							{
+								ExceptTypes = CardType.Creature | CardType.Land,
+							},
+						],
+					}
+				),
+				Loyalty(
+					1,
+					[],
+					new AddMana(ManaColor.Blue)
+					{
+						Restriction = ManaRestriction.OnlyNoncreatureSpells,
+					}
+				),
+				new LoyaltyAbilityComponent(
+					0,
+					[new Tap(Ref.Target()), new AddStunCounters(Ref.Target(), Count.X)]
+				)
+				{
+					MinusX = true,
+					Targets =
+					[
+						new TargetSpec(TargetKind.Permanent)
+						{
+							AnyOfTypes = CardType.Artifact | CardType.Creature,
+						},
+					],
+				},
+				Loyalty(
+					-6,
+					[],
+					new GetEmblem([When(TriggerEvent.YouCastSpell, [], new DrawCards(Ref.You, 1))])
+				),
+			],
+			["Chandra, Torch of Defiance"] =
+			[
+				Loyalty(1, [], new ExileTopMayCast([new DealDamage(Ref.EachOpponent, 2)])),
+				Loyalty(1, [], new AddMana(ManaColor.Red, 2)),
+				Loyalty(-3, [Creature], new DealDamage(Ref.Target(), 4)),
+				Loyalty(
+					-7,
+					[],
+					new GetEmblem(
+						[
+							When(
+								TriggerEvent.YouCastSpell,
+								[new TargetSpec(TargetKind.AnyTarget)],
+								new DealDamage(Ref.Target(), 5)
+							),
+						]
+					)
+				),
+			],
+			["Jace, Reality Sculptor"] =
+			[
+				Loyalty(
+					1,
+					[],
+					new EmpowerJace(Count.NumberOf(YoursOfSubtype(CardType.Land, "Island")))
+				),
+				Loyalty(
+					-3,
+					[],
+					new UntilYourNextTurnWhenever(
+						When(
+							TriggerEvent.CreatureAttacksYouOrYourPlaneswalker,
+							[],
+							new ModifyUntilEndOfTurn(Ref.EventCard, -5, 0)
+						)
+					)
+				),
+				Loyalty(0, [], new ExileAllButBottom(Ref.EachOpponent)) with
+				{
+					OnlyIf = new AtLeast(
+						Count.TotalLoyaltyOf(YoursOfSubtype(CardType.Planeswalker, "Jace")),
+						25
+					),
+				},
+			],
+			["Garruk, Veiled Butcher"] =
+			[
+				new OpponentsCreaturesExiledInsteadOfDying(),
+				Loyalty(
+					2,
+					[Creature with { Optional = true }],
+					new ModifyUntilEndOfTurn(Ref.Target(), -4, -1) { UntilYourNextTurn = true }
+				),
+				Loyalty(
+					-2,
+					[],
+					new EachSacrifices(
+						Ref.EachPlayer,
+						new TargetSpec(TargetKind.Creature, Whose.You)
+					)
+					{
+						IfYouDid = [CreateBeast],
+					}
+				),
+				Loyalty(
+					-3,
+					[],
+					new Discard(Ref.EachOpponent, 2)
+					{
+						Then =
+						[
+							new If(
+								new Not(new AtLeast(Count.NonlandCardsChosen, 2)),
+								[new DrawCards(Ref.You, 1)]
+							),
+						],
+					}
+				),
+			],
+			["Garruk, Curse Breaker"] =
+			[
+				When(
+					TriggerEvent.CreatureWithPower4OrMoreYouControlEnters,
+					[],
+					new DrawCards(Ref.You, 1)
+				),
+				Loyalty(
+					2,
+					[
+						new TargetSpec(TargetKind.Permanent)
+						{
+							AnyOfTypes = CardType.Land,
+							Optional = true,
+						},
+						new TargetSpec(TargetKind.Permanent)
+						{
+							AnyOfTypes = CardType.Land,
+							Optional = true,
+							NotThePrevious = true,
+						},
+					],
+					new Untap(Ref.Target(0)),
+					new Untap(Ref.Target(1))
+				),
+				Loyalty(-3, [], CreateBeast),
+				Loyalty(
+					-4,
+					[],
+					new UntilYourNextTurnWhenever(
+						When(
+							TriggerEvent.CreaturesAttackYourOpponent,
+							[],
+							new ModifyUntilEndOfTurn(
+								new Ref(RefKind.YourCreaturesAttackingAPlayer),
+								2,
+								2,
+								"Trample"
+							)
+						)
+					)
+				),
+			],
+			["Tam, the Possibility"] =
+			[
+				new YourSpellsOfTypeCostLess(CardType.Planeswalker, 1),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{W}{U}{B}{R}{G}"),
+					[new Proliferate(Count.SubtypesAmong(Ref.PlaneswalkersYouControl))]
+				)
+				{
+					TapCost = true,
 				},
 			],
 		};

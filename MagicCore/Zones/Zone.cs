@@ -10,6 +10,7 @@ public enum ZoneType
 	Battlefield,
 	Exile,
 	Stack,
+	Command, // emblems, and "until your next turn" effects that outlive their source (CR 408)
 }
 
 /// <summary>

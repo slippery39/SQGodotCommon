@@ -67,6 +67,33 @@ public static class TurnStructure
 	}
 
 	/// <summary>
+	/// "Until your next turn" (CR 611.2b) ends as that player's turn begins: from permanents, and the
+	/// effects kept in the command zone, which then cease to exist.
+	/// </summary>
+	static GameState EndUntilYourNextTurn(GameState s, int playerId)
+	{
+		foreach (var p in new[] { s.Player1Id(), s.Player2Id() })
+		foreach (var zone in new[] { ZoneType.Battlefield, ZoneType.Command })
+		foreach (
+			var c in s.CardsIn(p, zone)
+				.Where(c =>
+					c.Components.Any(x => x is UntilEndOfTurn u && u.UntilTurnOf == playerId)
+				)
+				.ToList()
+		)
+		{
+			var left = c.Components.RemoveAll(x =>
+				x is UntilEndOfTurn u && u.UntilTurnOf == playerId
+			);
+			s =
+				zone == ZoneType.Command && left.IsEmpty
+					? s.RemoveObject(c.Id)
+					: s.UpdateObject(c.Id, c with { Components = left });
+		}
+		return s;
+	}
+
+	/// <summary>
 	/// The cleanup is done (CR 514.3): the next turn — unless something triggered or a state-based
 	/// action applies (Tinybones seeing a discard to hand size). Then players get priority in the
 	/// cleanup, and once they pass with an empty stack, another cleanup step begins (EndStep).
@@ -101,6 +128,7 @@ public static class TurnStructure
 		switch (step)
 		{
 			case Step.Untap:
+				s = EndUntilYourNextTurn(s, active);
 				// Held down by an Aura (Infinite Coursework) — found once for the step.
 				var heldDown = new[] { s.Player1Id(), s.Player2Id() }
 					.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))

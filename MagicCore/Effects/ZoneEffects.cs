@@ -234,6 +234,9 @@ public record Surveil(int N) : Effect
 /// </summary>
 public record ReturnChosenToHandIfManaValueAtMost(Count Max) : Effect
 {
+	/// <summary>Chandra, Chill of Compliance: "a noncreature, nonland card" — none of these types.</summary>
+	public CardType ExceptTypes { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var max = Max.Value(s, InputContext);
@@ -241,6 +244,7 @@ public record ReturnChosenToHandIfManaValueAtMost(Count Max) : Effect
 			if (
 				s.IsIn(id, Controller, ZoneType.Graveyard)
 				&& s.GetCard(id).ManaCost.ManaValue <= max
+				&& !s.GetCard(id).Is(ExceptTypes)
 			)
 				s = s.MoveCard(id, s.ZoneId(Controller, ZoneType.Hand));
 		return new(s);
@@ -415,6 +419,85 @@ public record NoLegendRuleThisTurn : Effect
 {
 	public override ActionResult Execute(GameState s) =>
 		new(s.Tally(Controller, t => t with { NoLegendRule = true }));
+}
+
+/// <summary>
+/// Chandra, Torch of Defiance: "Exile the top card of your library. You may cast that card. If you
+/// don't, [Otherwise]." ponytail: casting it is a yes now and the cast later this turn (it becomes
+/// playable from exile until end of turn); a real cast inside the resolution needs the cast to run
+/// mid-ability. Asked only when it could be cast — a land, or one you can't pay for, is "don't".
+/// </summary>
+public record ExileTopMayCast(ImmutableList<GameAction> Otherwise) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var top = s.CardsIn(Controller, ZoneType.Library).FirstOrDefault();
+		if (top is not null)
+			s = s.MoveCard(top.Id, s.ZoneId(Controller, ZoneType.Exile));
+		var castable =
+			top is not null
+			&& !top.Is(CardType.Land)
+			// Its required targets exist (a modal card is assumed castable — ponytail).
+			&& StackResolution
+				.TextOf(top, [])
+				.Specs.All(spec => spec.Optional || spec.Candidates(s, Controller, top.Id).Any())
+			&& ManaPayment.Find(
+				s,
+				Controller,
+				Costs.Of(s, Controller, s.GetCard(top.Id)),
+				0,
+				forSpell: s.GetCard(top.Id)
+			)
+				is not null;
+		if (!castable)
+			return new(
+				s.SpawnAction(
+					new PipelineAction { Steps = Otherwise, PipelineContext = InputContext }
+				)
+			);
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+					Steps =
+					[
+						new YesNoChoice(Controller, $"Cast {top!.Name}?"),
+						new IfChosenAction([new MakePlayableThisTurn(top.Id)])
+						{
+							Otherwise = Otherwise,
+						},
+					],
+				}
+			)
+		);
+	}
+}
+
+/// <summary>The exiled card may be cast by you until end of turn.</summary>
+public record MakePlayableThisTurn(int CardId) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			Update(
+				s,
+				(Card)
+					s.GetCard(CardId)
+						.WithComponent(new PlayableFromExile(Controller, s.GetGame().TurnNumber))
+			)
+		);
+}
+
+/// <summary>Jace, Reality Sculptor: "Exile all but the bottom card of each opponent's library."</summary>
+public record ExileAllButBottom(Ref Who) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
+		foreach (var card in s.CardsIn(player, ZoneType.Library).SkipLast(1).ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(player, ZoneType.Exile));
+		return new(s);
+	}
 }
 
 /// <summary>Infinite Coursework: "It becomes unprepared."</summary>
@@ -813,6 +896,14 @@ public record Discard(Ref Who, int Count) : Effect
 		foreach (var player in All(Who, s))
 		{
 			var n = Math.Min(Count, s.CardsIn(player, ZoneType.Hand).Count());
+			if (n == 0 && !Then.IsEmpty) // Garruk: an empty hand "didn't discard two nonland cards"
+				s = s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+						Steps = Then,
+					}
+				);
 			if (n > 0)
 				s = s.SpawnAction(
 					new PipelineAction
@@ -920,6 +1011,9 @@ public record MaySacrifice(TargetSpec Filter, ImmutableList<GameAction> Then) : 
 /// <summary>Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.</summary>
 public record EachSacrifices(Ref Who, TargetSpec Filter) : Effect
 {
+	/// <summary>Garruk, Veiled Butcher: "If you sacrificed a creature this way, [IfYouDid]."</summary>
+	public ImmutableList<GameAction> IfYouDid { get; init; } = [];
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer))
@@ -935,7 +1029,18 @@ public record EachSacrifices(Ref Who, TargetSpec Filter) : Effect
 			};
 			if (!choice.GetOptions(s, InputContext).IsEmpty)
 				s = s.SpawnAction(
-					new PipelineAction { Steps = [choice, new SacrificeChosenAction()] }
+					new PipelineAction
+					{
+						PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+						Steps =
+						[
+							choice,
+							new SacrificeChosenAction(),
+							.. player == Controller && !IfYouDid.IsEmpty
+								? [new IfChosenAction(IfYouDid)]
+								: (GameAction[])[],
+						],
+					}
 				);
 		}
 		return new(s);

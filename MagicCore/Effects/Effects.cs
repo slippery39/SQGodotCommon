@@ -112,6 +112,9 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	/// <summary>Flourishing Grapple: "loses all abilities until end of turn".</summary>
 	public bool LosesAllAbilities { get; init; }
 
+	/// <summary>Garruk, Veiled Butcher: "until your next turn" instead of end of turn.</summary>
+	public bool UntilYourNextTurn { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var effect = new UntilEndOfTurn(
@@ -124,6 +127,7 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 			Trigger = Trigger,
 			ExileIfItWouldDie = ExileIfItWouldDie,
 			LosesAllAbilities = LosesAllAbilities,
+			UntilTurnOf = UntilYourNextTurn ? Controller : 0,
 		};
 		return new(
 			Permanents(What, s).Aggregate(s, (st, c) => Update(st, (Card)c.WithComponent(effect)))
@@ -461,13 +465,102 @@ public record Untap(Ref What) : Effect
 }
 
 /// <summary>Cryotheory Adept: "put a stun counter on it".</summary>
-public record AddStunCounters(Ref What, int N) : Effect
+public record AddStunCounters(Ref What, Count N) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var n = N.Value(s, InputContext);
+		return new(
+			Permanents(What, s)
+				.Aggregate(s, (st, c) => Update(st, c with { StunCounters = c.StunCounters + n }))
+		);
+	}
+}
+
+/// <summary>"You get an emblem with [Abilities]" (CR 114) — a card in your command zone, for good.</summary>
+public record GetEmblem(ImmutableArray<GameComponent> Abilities) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(ToCommandZone(s, Controller, $"Emblem — {Source(s).Name}", Abilities));
+
+	/// <summary>The ONE way an object is made in the command zone — emblems and effects alike.</summary>
+	public static GameState ToCommandZone(
+		GameState s,
+		int playerId,
+		string name,
+		ImmutableArray<GameComponent> components
+	) =>
+		s.AddObject(
+			new Card
+			{
+				Name = name,
+				OwnerId = playerId,
+				ControllerId = playerId,
+				Components = components,
+			},
+			s.ZoneId(playerId, ZoneType.Command)
+		).GameState;
+}
+
+/// <summary>
+/// Jace, Reality Sculptor's −3, Garruk, Curse Breaker's −4: "Until your next turn, whenever …" —
+/// an effect object in your command zone, so it outlives the planeswalker; it ends as your next
+/// turn begins (TurnStructure.EndUntilYourNextTurn).
+/// </summary>
+public record UntilYourNextTurnWhenever(TriggeredAbilityComponent Ability) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
 		new(
-			Permanents(What, s)
-				.Aggregate(s, (st, c) => Update(st, c with { StunCounters = c.StunCounters + N }))
+			GetEmblem.ToCommandZone(
+				s,
+				Controller,
+				$"{Source(s).Name} (until your next turn)",
+				[new UntilEndOfTurn { UntilTurnOf = Controller, Trigger = Ability }]
+			)
 		);
+}
+
+/// <summary>
+/// Tam: "Proliferate X times" (CR 701.27). ponytail: no prompt — it chooses your permanents' good
+/// counters (+1/+1, loyalty, charge) and opponents' bad ones (-1/-1, stun), never the other kind; as
+/// RemoveCounters does. No FRA player has counters. Make it a choice if a card ever wants otherwise.
+/// </summary>
+public record Proliferate(Count Times) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		for (var i = Times.Value(s, InputContext); i > 0; i--)
+			foreach (var p in new[] { s.Player1Id(), s.Player2Id() })
+			foreach (var c in s.CardsIn(p, ZoneType.Battlefield).ToList())
+			{
+				if (p == Controller)
+				{
+					if (c.PlusOneCounters > 0)
+						s = s.AddPlusOneCounters(c.Id, 1);
+					if (c.ChargeCounters > 0)
+						s = Update(
+							s,
+							s.GetCard(c.Id) with
+							{
+								ChargeCounters = c.ChargeCounters + 1,
+							}
+						);
+					if (c.Loyalty > 0)
+						s = Actions.Loyalty.Change(s, c.Id, 1, Controller);
+				}
+				else
+					s = Update(
+						s,
+						c with
+						{
+							MinusOneCounters =
+								c.MinusOneCounters + (c.MinusOneCounters > 0 ? 1 : 0),
+							StunCounters = c.StunCounters + (c.StunCounters > 0 ? 1 : 0),
+						}
+					);
+			}
+		return new(s);
+	}
 }
 
 /// <summary>"Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.</summary>
@@ -476,13 +569,25 @@ public record AddMana(ManaColor Color, Count Amount) : Effect
 	public AddMana(ManaColor color)
 		: this(color, 1) { }
 
+	/// <summary>Chandra, Chill of Compliance: "Spend this mana only to cast a noncreature spell."</summary>
+	public ManaRestriction Restriction { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var n = Amount.Value(s, InputContext);
-		var player = s.GetPlayer(Controller);
+		var pool = s.GetPlayer(Controller).ManaPool;
+		pool =
+			Restriction == ManaRestriction.None
+				? pool.Add(Color, n)
+				: pool with
+				{
+					Restricted = pool.Restricted.AddRange(
+						Enumerable.Repeat(new RestrictedMana(Color, Restriction), n)
+					),
+				};
 		return n <= 0
 			? new(s)
-			: new(s.WithPlayer(player with { ManaPool = player.ManaPool.Add(Color, n) }));
+			: new(s.WithPlayer(s.GetPlayer(Controller) with { ManaPool = pool }));
 	}
 }
 

@@ -64,7 +64,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   allowed colours — several of ONE colour (Loot, the Nexus: `SameColor`), a Mountain's extra {R} under
   Molten Tide (`TurnTally.ExtraRedFromMountains`), mana that can't pay for spells from your hand
   (Heartwood Crafter). `ManaPayment.Find` solves units: a permanent taps once, and what the payment
-  doesn't use floats (`Payment.Floats`). Restricted mana is never floated — manual tapping refuses it.
+  doesn't use floats (`Payment.Floats`). Manual tapping floats restricted mana AS restricted (`ManaPool.Restricted`).
   A restriction is a `ManaRestriction` the solver checks against the spell it pays for
   (`Find(…, forSpell)`; null for an ability). Treasure and Lotus are `ManaOfOneColorComponent`
   with `SacrificeSelf`: `Pay` sacrifices them, and the solver spends them last.
@@ -174,5 +174,17 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   in `CopyUntilEndOfTurn`, restored in cleanup AND as it leaves (`Card.Fresh`), so a dead Hall is a Hall.
 - **A delayed trigger on a permanent** ("exile it at the beginning of the next end step") is a
   `DelayedTrigger` component: kept when it loses all abilities, not copied, gone with a zone change.
+- **Emblems** (CR 114) are cards in their owner's COMMAND zone (`GetEmblem`): `Triggers.Collect` and
+  the statics board read that zone beside the battlefield, so an emblem's trigger has a source
+  ("this emblem deals 5 damage") and its anthem applies. Nothing removes them.
+- **"Until your next turn"** is `UntilEndOfTurn.UntilTurnOf` (the player): cleanup leaves it, and
+  that player's untap step ends it (`TurnStructure.EndUntilYourNextTurn`). One on a permanent rides the
+  permanent (Garruk's −4/−1); "until your next turn, whenever …" is an effect card in the command
+  zone (`UntilYourNextTurnWhenever`), so it outlives the planeswalker, and is removed when it ends.
+- **"−X" loyalty** is `LoyaltyAbilityComponent.MinusX`: one legal action per X up to the loyalty, X on
+  the stack for the effects. "Activate only if" is `LoyaltyAbilityComponent.OnlyIf`.
+- **Restricted floating mana** ("spend this only to cast a noncreature spell") is
+  `ManaPool.Restricted`: the solver offers it first, only to a spell `ManaAbilities.Allows` — the one
+  restriction check, permanents' mana too — and `Pay` takes that unit. `ManaPool.Total` excludes it.
 - **Base P/T effects** ("has base power and toughness 4/5") sit under counters and pumps, latest
   wins (`UntilEndOfTurn.SetBase`, read in `Card.OwnPower`/`OwnToughness` under `s.Power`/`Toughness`).

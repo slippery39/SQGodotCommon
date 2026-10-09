@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Effects;
 
 namespace MagicCore;
 
@@ -29,11 +30,13 @@ public static class ManaPayment
 	/// </summary>
 	/// <param name="Sacrificed">Its source is sacrificed as it makes the mana (Treasure) — decided by
 	/// the search, so a Treasure creature tapped for convoke is only tapped.</param>
+	/// <param name="Restriction">Floating restricted mana spent (Chandra's {U}) — Pay takes that one.</param>
 	public record Payment(
 		int LandId,
 		ManaColor Color,
 		bool Floats = false,
-		bool Sacrificed = false
+		bool Sacrificed = false,
+		ManaRestriction Restriction = ManaRestriction.None
 	);
 
 	/// <summary>
@@ -45,11 +48,12 @@ public static class ManaPayment
 		bool IsCreature,
 		bool SameColor,
 		ImmutableArray<Unit> Units,
-		bool Sacrificed = false
+		bool Sacrificed = false,
+		ManaRestriction Restriction = ManaRestriction.None
 	)
 	{
 		public string Kind { get; } =
-			$"{LandId == 0}|{IsCreature}|{SameColor}|{Sacrificed}|{string.Join(";", Units.Select(u => string.Join(",", u.Colors)))}";
+			$"{LandId == 0}|{IsCreature}|{SameColor}|{Sacrificed}|{Restriction}|{string.Join(";", Units.Select(u => string.Join(",", u.Colors)))}";
 	}
 
 	/// <summary>One mana a source makes, and the colours it may be.</summary>
@@ -120,6 +124,15 @@ public static class ManaPayment
 				tappable.Add((c.Id, true, false, [only], false));
 		}
 		var sources = new List<Source>();
+		// Restricted floating mana first: it can pay for less, so spend it where it can.
+		foreach (
+			var r in player.ManaPool.Restricted.Where(r =>
+				ManaAbilities.Allows(r.Restriction, s, forSpell)
+			)
+		)
+			sources.Add(
+				new(0, false, false, [new(sources.Count, [r.Color])], Restriction: r.Restriction)
+			);
 		foreach (var color in Any)
 			for (var i = 0; i < player.ManaPool[color]; i++)
 				sources.Add(new(0, false, false, [new(sources.Count, [color])]));
@@ -228,7 +241,14 @@ public static class ManaPayment
 						Used[i] = true;
 						unused--;
 						spent[source]++;
-						Plan.Add(new Payment(src.LandId, color, Sacrificed: src.Sacrificed));
+						Plan.Add(
+							new Payment(
+								src.LandId,
+								color,
+								Sacrificed: src.Sacrificed,
+								Restriction: src.Restriction
+							)
+						);
 						if (Solve(rest))
 							return true;
 						Used[i] = false;
@@ -258,7 +278,20 @@ public static class ManaPayment
 				sacrificed.Add(p.LandId); // Treasure: "{T}, Sacrifice this"
 			if (p.LandId != 0)
 				s = s.UpdateObject(p.LandId, s.GetCard(p.LandId) with { IsTapped = true });
-			if (p.LandId == 0 || p.Floats)
+			if (p.Restriction != ManaRestriction.None)
+			{
+				var pool = s.GetPlayer(playerId).ManaPool;
+				var spent = pool.Restricted.First(r =>
+					r.Color == p.Color && r.Restriction == p.Restriction
+				);
+				s = s.WithPlayer(
+					s.GetPlayer(playerId) with
+					{
+						ManaPool = pool with { Restricted = pool.Restricted.Remove(spent) },
+					}
+				);
+			}
+			else if (p.LandId == 0 || p.Floats)
 			{
 				var player = s.GetPlayer(playerId);
 				s = s.WithPlayer(

@@ -112,8 +112,9 @@ public static class Triggers
 	public static List<Pending> Collect(GameState s)
 	{
 		var active = s.GetGame().ActivePlayerId;
+		// Permanents, and emblems and effects in the command zone (CR 113.6b).
 		var permanents = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
-			s.CardsIn(p, ZoneType.Battlefield)
+			s.CardsIn(p, ZoneType.Battlefield).Concat(s.CardsIn(p, ZoneType.Command))
 		);
 		// A card in a graveyard is controlled by its owner (CR 108.4a).
 		var inGraveyards = new[] { active, s.OpponentOf(active) }.SelectMany(p =>
@@ -414,6 +415,29 @@ public static class Triggers
 			(TriggerEvent.YourFirstMainPhase, StepBeganEvent began) => began.Step
 				== Step.PreCombatMain
 				&& yourTurn,
+			(TriggerEvent.YouCastSpell, SpellCastEvent cast) => cast.PlayerId
+				== source.ControllerId,
+			(TriggerEvent.CreatureAttacksYouOrYourPlaneswalker, AttackedEvent attacked) =>
+				s.IsOnBattlefield(attacked.CardId)
+					&& s.GetCard(attacked.CardId).AttackingId is var at
+					&& (
+						at == source.ControllerId
+						|| (
+							s.IsOnBattlefield(at)
+							&& s.GetCard(at).ControllerId == source.ControllerId
+						)
+					),
+			(
+				TriggerEvent.CreatureWithPower4OrMoreYouControlEnters,
+				EnteredBattlefieldEvent entered
+			) => Yours(entered.CardId)
+				&& s.GetCard(entered.CardId) is var big
+				&& big.Is(CardType.Creature)
+				&& s.Power(big) >= 4,
+			(TriggerEvent.CreaturesAttackYourOpponent, AttackersDeclaredEvent declared) =>
+				declared.PlayerId == source.ControllerId
+					&& s.CardsIn(source.ControllerId, ZoneType.Battlefield)
+						.Any(c => c.AttackingId != 0 && s.GetObject(c.AttackingId) is MagicPlayer),
 			_ => false,
 		};
 	}

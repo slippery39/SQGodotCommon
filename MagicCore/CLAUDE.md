@@ -48,7 +48,7 @@ MagicCore/
 ├── Sets/Fra/EmpowerJace.cs  the keyword action and the Jace token
 ├── Sets/Fra/FraDecks.cs 40-card decks of implemented cards (console, fuzz tests)
 ├── Ai/GreedyAi.cs       one-ply simulate-and-evaluate AI
-├── Zones/Zone.cs        per-player zones + shared Stack; per-CONTROLLER battlefield
+├── Zones/Zone.cs        per-player zones (incl. Command: emblems) + shared Stack; per-CONTROLLER battlefield
 └── Sets/FRA.json        imported by tools/import_scryfall_set.py — embedded resource, never hand-edit
 ```
 
@@ -68,7 +68,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Child index 0 is the TOP** of the library and of the stack; `MoveObject` appends (= bottom).
 - **Every zone change goes through `MagicState.MoveCard`** (or `EnterBattlefield`), which calls
   `Card.Fresh()` — CR 400.7. Damage, tapped, counters, until-end-of-turn effects, combat state and
-  stack choices die there. Only `Shuffle` uses `MoveObject`, to reorder within one zone.
+  stack choices die there. Only `Shuffle` and `RevealUntilOntoBattlefield` use `MoveObject`, to
+  reorder within one zone.
 - **One computation each, never a second copy:** `s.Power(card)`/`s.Toughness`/`s.Has` (Rules/
   Characteristics.cs — the card's own numbers plus every static ability on the battlefield; rules
   never read `Card.OwnPower`/`HasOwn` or `BasePower`, which ignore every anthem on the board),

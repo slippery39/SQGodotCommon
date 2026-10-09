@@ -61,6 +61,7 @@ public enum RefKind
 	OwnerOfTarget, // Clash of Elements: "its owner" — wherever the card now is
 	TargetPlayersPermanents, // of Type: Twisted Fates' "each creature target player controls"
 	SourceHost, // an Aura's "enchanted creature" — what the source is attached to
+	YourCreaturesAttackingAPlayer, // Garruk, Curse Breaker: "those creatures" — attacking a player, not a planeswalker
 }
 
 /// <summary>Who or what an effect acts on, resolved against the context at resolution.</summary>
@@ -197,6 +198,9 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 				.Where(c => c.Is(Type) && c.Id != (int)context[ContextKeys.Source])
 				.Select(c => c.Id),
 			RefKind.YourHand => s.CardsIn(controller, ZoneType.Hand).Select(c => c.Id),
+			RefKind.YourCreaturesAttackingAPlayer => Yours()
+				.Where(c => c.AttackingId != 0 && s.GetObject(c.AttackingId) is MagicPlayer)
+				.Select(c => c.Id),
 			RefKind.YourGraveyard => s.CardsIn(controller, ZoneType.Graveyard)
 				.Where(c => Type == CardType.None || c.Is(Type))
 				.Select(c => c.Id),
@@ -237,6 +241,8 @@ public enum CountOf
 	ChargeCountersOn, // Gardenize: "for each charge counter on [Ref]"
 	CardsFromLibraryToGraveyardThisTurn, // Cruel Calculations: of the player [Ref]
 	NonlandCardsChosen, // Seasoned Cryomancer: "nonland cards [discarded] this way" — the last hand choice
+	TotalLoyaltyOf, // Jace, Reality Sculptor: "loyalty counters among Jaces you control"
+	SubtypesAmong, // Tam: "planeswalker types among planeswalkers you control"
 }
 
 /// <summary>
@@ -272,6 +278,10 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static Count CountersOn(Ref r) => new(0, r, CountOf.CountersOn);
 
 	public static Count ChargeCountersOn(Ref r) => new(0, r, CountOf.ChargeCountersOn);
+
+	public static Count TotalLoyaltyOf(Ref r) => new(0, r, CountOf.TotalLoyaltyOf);
+
+	public static Count SubtypesAmong(Ref r) => new(0, r, CountOf.SubtypesAmong);
 
 	public static Count CardsFromLibraryToGraveyardThisTurn(Ref player) =>
 		new(0, player, CountOf.CardsFromLibraryToGraveyardThisTurn);
@@ -404,6 +414,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Count(),
 			CountOf.CountersOn => Cards().Sum(c => c.PlusOneCounters),
 			CountOf.ChargeCountersOn => Cards().Sum(c => c.ChargeCounters),
+			CountOf.TotalLoyaltyOf => Cards().Sum(c => c.Loyalty),
+			CountOf.SubtypesAmong => Cards().SelectMany(c => c.Subtypes).Distinct().Count(),
 			_ => Cards().Select(c => c.Loyalty).FirstOrDefault(),
 		};
 		// CR 107.1b: a number that would be negative is 0 — a -4 power must not make "lose X life"

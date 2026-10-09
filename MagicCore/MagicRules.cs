@@ -224,25 +224,29 @@ public static class MagicRules
 			);
 	}
 
+	/// <summary>One per target choice — and for "−X", one per X it can pay.</summary>
 	static IEnumerable<GameAction> LoyaltyCandidates(GameState s, int player, Card card) =>
 		Loyalty
 			.AbilitiesOf(s, card)
 			.SelectMany(
 				(ability, index) =>
-					TargetSpec
-						.Combinations(s, ability.Targets, player, card.Id)
-						.Select(targets => new ActivateLoyaltyAction
-						{
-							PlayerId = player,
-							CardId = card.Id,
-							AbilityIndex = index,
-							Targets = targets,
-						})
+					from targets in TargetSpec.Combinations(s, ability.Targets, player, card.Id)
+					from x in ability.MinusX ? Enumerable.Range(0, card.Loyalty + 1) : [0]
+					select new ActivateLoyaltyAction
+					{
+						PlayerId = player,
+						CardId = card.Id,
+						AbilityIndex = index,
+						Targets = targets,
+						X = x,
+					}
 			);
 
 	/// <summary>An upper bound on the mana this player could pay — every untapped creature too, for convoke.</summary>
 	static int AvailableMana(GameState s, int player, bool convoke, Card spell) =>
 		s.GetPlayer(player).ManaPool.Total
+		+ s.GetPlayer(player)
+			.ManaPool.Restricted.Count(r => ManaAbilities.Allows(r.Restriction, s, spell))
 		+ s.CardsIn(player, ZoneType.Battlefield)
 			.Sum(c =>
 				(ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c) : null) is { } yield

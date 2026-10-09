@@ -226,17 +226,14 @@ public static class Combat
 			c =>
 				c.Damage > 0
 				|| c.DamagedByDeathtouch
-				|| c.HasComponent<UntilEndOfTurn>()
+				|| c.Components.Any(x => x is UntilEndOfTurn { UntilTurnOf: 0 })
 				|| c.HasComponent<CopyUntilEndOfTurn>(),
 			c =>
-				(Card)
-					(
-						c.WithoutCopyEffect() with
-						{
-							Damage = 0,
-							DamagedByDeathtouch = false,
-						}
-					).WithoutComponents<UntilEndOfTurn>()
+				(Card)(c.WithoutCopyEffect() with { Damage = 0, DamagedByDeathtouch = false }) with
+				{
+					Components = c.WithoutCopyEffect()
+						.Components.RemoveAll(x => x is UntilEndOfTurn { UntilTurnOf: 0 }),
+				}
 		);
 
 	static GameState ForEachPermanent(GameState s, Func<Card, bool> where, Func<Card, Card> update)

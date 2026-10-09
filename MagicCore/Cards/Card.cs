@@ -253,6 +253,12 @@ public record Card : GameObject
 public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword = null)
 	: GameComponent
 {
+	/// <summary>
+	/// "Until your next turn": it lasts until this player's next turn begins (its untap step), not
+	/// past this cleanup. 0 is "until end of turn".
+	/// </summary>
+	public int UntilTurnOf { get; init; }
+
 	/// <summary>"Has base power and toughness P/T" - replaces the printed numbers, under counters and pumps.</summary>
 	public (int Power, int Toughness)? SetBase { get; init; }
 

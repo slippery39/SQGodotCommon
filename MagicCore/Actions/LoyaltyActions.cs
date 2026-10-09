@@ -56,6 +56,11 @@ public record ActivateLoyaltyAction : GameAction
 	public int AbilityIndex { get; init; }
 	public ImmutableArray<int> Targets { get; init; } = [];
 
+	/// <summary>The X of a "−X" ability; 0 otherwise.</summary>
+	public int X { get; init; }
+
+	int CostOf(LoyaltyAbilityComponent ability) => ability.MinusX ? -X : ability.Cost;
+
 	public override ValidationResult ValidateAdd(GameState s)
 	{
 		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
@@ -77,8 +82,12 @@ public record ActivateLoyaltyAction : GameAction
 			return ValidationResult.Invalid(
 				"Already activated a loyalty ability of this planeswalker this turn"
 			);
-		if (walker.Loyalty + ability.Cost < 0)
+		if (X < 0 || (X > 0 && !ability.MinusX))
+			return ValidationResult.Invalid("Invalid X");
+		if (walker.Loyalty + CostOf(ability) < 0)
 			return ValidationResult.Invalid("Not enough loyalty");
+		if (ability.OnlyIf is { } onlyIf && !onlyIf.Holds(s, Conditions.Of(walker)))
+			return ValidationResult.Invalid("Its condition isn't met");
 		if (!TargetSpec.AreLegal(s, ability.Targets, Targets, PlayerId, CardId))
 			return ValidationResult.Invalid("Illegal targets");
 		return ValidationResult.Valid;
@@ -88,25 +97,28 @@ public record ActivateLoyaltyAction : GameAction
 	{
 		var walker = s.GetCard(CardId);
 		var ability = Loyalty.AbilitiesOf(s, walker)[AbilityIndex];
-		s = Loyalty.Change(s, CardId, ability.Cost, PlayerId);
+		var cost = CostOf(ability);
+		s = Loyalty.Change(s, CardId, cost, PlayerId);
 		walker = s.GetCard(CardId) with { LoyaltyActivatedOnTurn = s.GetGame().TurnNumber };
 		s = s.UpdateObject(CardId, walker)
 			.Tally(
 				PlayerId,
 				t => t with { LoyaltyAbilitiesActivated = t.LoyaltyAbilitiesActivated + 1 }
 			)
-			.Raise(new LoyaltyActivatedEvent(PlayerId, ability.Cost));
+			.Raise(new LoyaltyActivatedEvent(PlayerId, cost));
 		s = StackResolution.Push(
 			s,
 			new StackAbility
 			{
-				Name = $"{walker.Name} [{Loyalty.CostText(ability.Cost)}]",
+				Name =
+					$"{walker.Name} [{(ability.MinusX ? $"−{X}" : Loyalty.CostText(ability.Cost))}]",
 				SourceId = CardId,
 				Source = walker,
 				ControllerId = PlayerId,
 				Effects = ability.Effects,
 				Specs = ability.Targets,
 				Targets = Targets,
+				X = X,
 			}
 		);
 		return new ActionResult(Priority.Retain(s, PlayerId));

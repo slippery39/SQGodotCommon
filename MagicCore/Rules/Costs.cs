@@ -72,6 +72,11 @@ public static class Costs
 					.Sum(t => t.Amount)
 				- yours.SelectMany(s.AbilitiesOf<YourNoncreatureSpellsCostLess>).Sum(r => r.Amount);
 
+		delta -= yours
+			.SelectMany(s.AbilitiesOf<YourSpellsOfTypeCostLess>)
+			.Where(r => card.Is(r.Types))
+			.Sum(r => r.Amount);
+
 		var controlsLegendaryCreature = yours.Any(c =>
 			c.Is(CardType.Creature) && c.Is(Supertype.Legendary)
 		);
