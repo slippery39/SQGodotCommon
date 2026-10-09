@@ -361,6 +361,44 @@ public record NextSpellCantBeCounteredThisTurn : Effect
 		new(s.Tally(Controller, t => t with { NextSpellCantBeCountered = true }));
 }
 
+/// <summary>Hungering Puppetbeast: "It gains your choice of trample, hexproof, or haste until end of turn."</summary>
+public record GainsChosenKeyword(Ref What, ImmutableArray<string> Keywords) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext,
+					Steps =
+					[
+						new ChooseKeywordChoice(Controller, Keywords),
+						new GrantChosenKeywordAction(What, Keywords),
+					],
+				}
+			)
+		);
+}
+
+/// <summary>After the choice: the chosen keyword, until end of turn.</summary>
+public record GrantChosenKeywordAction(Ref What, ImmutableArray<string> Keywords) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var chosen = InputContext.GetValueOrDefault(ChooseKeywordChoice.Chosen) is int id
+			? Keywords[id - 1]
+			: null;
+		return chosen is null
+			? new(s)
+			: (
+				new ModifyUntilEndOfTurn(What, 0, 0, chosen) with
+				{
+					InputContext = InputContext,
+				}
+			).Execute(s);
+	}
+}
+
 /// <summary>Way of the Paradox: "You may play an additional land this turn."</summary>
 public record AdditionalLandDrop : Effect
 {

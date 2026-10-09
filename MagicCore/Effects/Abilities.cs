@@ -113,6 +113,11 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 	/// <summary>Hallway Heckler: "Discard a card:" — the card is chosen like a sacrifice.</summary>
 	public bool DiscardACard { get; init; }
 
+	/// <summary>Tenured Tethermage: "Tap two untapped artifacts you control:" — how many, of what type.</summary>
+	public int TapUntapped { get; init; }
+
+	public Cards.CardType TapUntappedType { get; init; }
+
 	/// <summary>Solitary Cell: "Discard a legendary card:" — what the discarded card must be.</summary>
 	public Cards.Supertype DiscardMustBe { get; init; }
 
@@ -156,18 +161,34 @@ public record GrantsLoyaltyAbility(LoyaltyAbilityComponent Ability) : GameCompon
 /// <summary>Sanctum Lurker: "Planeswalkers you control aren't put into their owners' graveyards for having 0 loyalty."</summary>
 public record YourPlaneswalkersSurviveZeroLoyalty : GameComponent;
 
+/// <summary>What a permanent's mana may pay for.</summary>
+public enum ManaRestriction
+{
+	None,
+	NotForSpellsFromHand, // Heartwood Crafter
+	OnlyPlaneswalkerSpells, // Gideon's Memorial
+}
+
 /// <summary>"{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).</summary>
 public record ManaAbilityComponent(ManaColor Color) : GameComponent
 {
-	/// <summary>Heartwood Crafter: "This mana can't be spent to cast spells from your hand."</summary>
-	public bool NotForSpellsFromHand { get; init; }
+	/// <summary>"This mana can't be spent to cast spells from your hand" / "Spend this mana only to cast a planeswalker spell".</summary>
+	public ManaRestriction Restriction { get; init; }
 }
 
 /// <summary>
 /// Loot, the Nexus: "{T}: Choose a color. Add one mana of that color for each [Amount]." Counted as
-/// it is tapped, with the permanent as its source.
+/// it is tapped, with the permanent as its source. Treasure and Lotus: "{T}, Sacrifice this: Add
+/// [Amount] mana of any one color" (SacrificeSelf).
 /// </summary>
-public record ManaOfOneColorComponent(Count Amount) : GameComponent;
+public record ManaOfOneColorComponent(Count Amount) : GameComponent
+{
+	public bool SacrificeSelf { get; init; }
+}
+
+/// <summary>Draconic Visitor: "If one or more artifact tokens would be created under your control, that many [Token] are created instead."</summary>
+public record ArtifactTokensBecome(Cards.CardData Token, ImmutableArray<GameComponent> Abilities)
+	: GameComponent;
 
 public enum EntersUntappedIf
 {
@@ -235,6 +256,12 @@ public record StaticEffectComponent(Affects Affects, string? Keyword = null) : G
 
 	/// <summary>Saheeli: "Thopters you control have haste".</summary>
 	public string? OnlySubtype { get; init; }
+
+	/// <summary>Gideon's Memorial: "creature tokens you control".</summary>
+	public bool OnlyTokens { get; init; }
+
+	/// <summary>Vraska, Soul of Stone: "artifact creatures you control".</summary>
+	public Cards.CardType OnlyTypes { get; init; }
 }
 
 /// <summary>Thalia: "Noncreature spells your opponents cast cost {N} more to cast."</summary>

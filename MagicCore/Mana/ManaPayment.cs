@@ -27,16 +27,29 @@ public static class ManaPayment
 	/// One unit of mana: from a permanent tapped for it, or floating (LandId 0). Floats: made by a
 	/// tapped permanent but not spent — it goes to the pool.
 	/// </summary>
-	public record Payment(int LandId, ManaColor Color, bool Floats = false);
+	/// <param name="Sacrificed">Its source is sacrificed as it makes the mana (Treasure) — decided by
+	/// the search, so a Treasure creature tapped for convoke is only tapped.</param>
+	public record Payment(
+		int LandId,
+		ManaColor Color,
+		bool Floats = false,
+		bool Sacrificed = false
+	);
 
 	/// <summary>
 	/// A permanent (or one floating mana) and what tapping it makes. Kind: what makes two sources the
 	/// same choice — two Forests, two Mountains under Molten Tide — so the search tries one of them.
 	/// </summary>
-	record Source(int LandId, bool IsCreature, bool SameColor, ImmutableArray<Unit> Units)
+	record Source(
+		int LandId,
+		bool IsCreature,
+		bool SameColor,
+		ImmutableArray<Unit> Units,
+		bool Sacrificed = false
+	)
 	{
 		public string Kind { get; } =
-			$"{LandId == 0}|{IsCreature}|{SameColor}|{string.Join(";", Units.Select(u => string.Join(",", u.Colors)))}";
+			$"{LandId == 0}|{IsCreature}|{SameColor}|{Sacrificed}|{string.Join(";", Units.Select(u => string.Join(",", u.Colors)))}";
 	}
 
 	/// <summary>One mana a source makes, and the colours it may be.</summary>
@@ -47,7 +60,8 @@ public static class ManaPayment
 
 	static readonly ImmutableArray<ManaColor> Any = [.. Enum.GetValues<ManaColor>()];
 
-	/// <param name="forSpellFromHand">Casting a spell from the hand — Heartwood Crafter's mana can't pay for that.</param>
+	/// <param name="alsoExclude">Permanents the rest of the cost uses — sacrificed, tapped.</param>
+	/// <param name="forSpell">The spell being cast (in its zone, before it moves) — restricted mana asks what it is; null for an ability.</param>
 	public static IReadOnlyList<Payment>? Find(
 		GameState s,
 		int playerId,
@@ -55,7 +69,8 @@ public static class ManaPayment
 		int x,
 		int excludeId = 0,
 		bool convoke = false,
-		bool forSpellFromHand = false
+		Card? forSpell = null,
+		IReadOnlyCollection<int>? alsoExclude = null
 	)
 	{
 		var player = s.GetPlayer(playerId);
@@ -64,14 +79,16 @@ public static class ManaPayment
 				int Id,
 				bool IsCreature,
 				bool SameColor,
-				ImmutableArray<ImmutableArray<ManaColor>> Units
+				ImmutableArray<ImmutableArray<ManaColor>> Units,
+				bool Sacrificed
 			)>();
 		foreach (var c in s.CardsIn(playerId, ZoneType.Battlefield))
 		{
-			if (c.Id == excludeId)
+			// Its own {T} cost, or a permanent another cost sacrifices or taps: not mana for this too.
+			if (c.Id == excludeId || alsoExclude?.Contains(c.Id) == true)
 				continue;
 			var yield = ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c) : null;
-			if (yield is not null && forSpellFromHand && yield.NotForSpellsFromHand)
+			if (yield is not null && !yield.CanPayFor(s, forSpell))
 				yield = null; // its mana can't pay — but it may still convoke
 			// Convoke (CR 702.51): an untapped creature you control may pay {1} or one mana of its
 			// colour — Colorless is how it pays generic only. Summoning sickness doesn't matter:
@@ -80,6 +97,9 @@ public static class ManaPayment
 				convoke && c.Is(CardType.Creature) && !c.IsTapped
 					? [.. c.Colors, ManaColor.Colorless]
 					: null;
+			if (yield is { Sacrificed: true } && convokes is not null)
+				yield = null; // ponytail: convoking only taps it, so a Sculpture Treasure convokes
+			// rather than being sacrificed for a colour; offer both if that ever matters
 			if (yield is not null && convokes is { } own && yield.Units.Length == 1)
 				tappable.Add(
 					(
@@ -88,26 +108,37 @@ public static class ManaPayment
 						false,
 						[
 							[.. yield.Units[0].Union(own)],
-						]
+						],
+						yield.Sacrificed
 					)
 				);
 			else if (yield is not null)
-				tappable.Add((c.Id, c.Is(CardType.Creature), yield.SameColor, yield.Units));
+				tappable.Add(
+					(c.Id, c.Is(CardType.Creature), yield.SameColor, yield.Units, yield.Sacrificed)
+				);
 			else if (convokes is { } only)
-				tappable.Add((c.Id, true, false, [only]));
+				tappable.Add((c.Id, true, false, [only], false));
 		}
 		var sources = new List<Source>();
 		foreach (var color in Any)
 			for (var i = 0; i < player.ManaPool[color]; i++)
 				sources.Add(new(0, false, false, [new(sources.Count, [color])]));
-		// Lands before creatures: a creature tapped for mana can no longer attack or block.
+		// Lands before creatures (a creature tapped for mana can no longer attack or block), and
+		// a Treasure last of all: spending it spends the permanent.
 		foreach (
-			var (id, isCreature, sameColor, units) in tappable
-				.OrderBy(p => p.IsCreature)
+			var (id, isCreature, sameColor, units, sacrificed) in tappable
+				.OrderBy(p => p.Sacrificed)
+				.ThenBy(p => p.IsCreature)
 				.ThenBy(p => p.Units.Sum(u => u.Length))
 		)
 			sources.Add(
-				new(id, isCreature, sameColor, [.. units.Select(u => new Unit(sources.Count, u))])
+				new(
+					id,
+					isCreature,
+					sameColor,
+					[.. units.Select(u => new Unit(sources.Count, u))],
+					sacrificed
+				)
 			);
 		var all = sources.SelectMany(src => src.Units).ToList();
 
@@ -197,7 +228,7 @@ public static class ManaPayment
 						Used[i] = true;
 						unused--;
 						spent[source]++;
-						Plan.Add(new Payment(src.LandId, color));
+						Plan.Add(new Payment(src.LandId, color, Sacrificed: src.Sacrificed));
 						if (Solve(rest))
 							return true;
 						Used[i] = false;
@@ -220,8 +251,11 @@ public static class ManaPayment
 	/// </summary>
 	public static GameState Pay(GameState s, int playerId, IEnumerable<Payment> payments)
 	{
+		var sacrificed = new HashSet<int>();
 		foreach (var p in payments)
 		{
+			if (p.Sacrificed)
+				sacrificed.Add(p.LandId); // Treasure: "{T}, Sacrifice this"
 			if (p.LandId != 0)
 				s = s.UpdateObject(p.LandId, s.GetCard(p.LandId) with { IsTapped = true });
 			if (p.LandId == 0 || p.Floats)
@@ -235,6 +269,6 @@ public static class ManaPayment
 				);
 			}
 		}
-		return s;
+		return sacrificed.Aggregate(s, (st, id) => st.Sacrifice(id));
 	}
 }

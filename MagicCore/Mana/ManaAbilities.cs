@@ -48,21 +48,35 @@ public static class ManaAbilities
 
 	/// <summary>
 	/// What tapping it for mana makes: one unit per mana, each with the colours it may be.
-	/// SameColor: every unit the one colour chosen (Loot, the Nexus). NotForSpellsFromHand:
-	/// Heartwood Crafter's restriction. A Mountain makes an extra {R} per Molten Tide this turn.
+	/// SameColor: every unit the one colour chosen (Loot, the Nexus). Restriction: what it may pay
+	/// for. Sacrificed: it is sacrificed as it makes the mana (Treasure). A Mountain makes an extra
+	/// {R} per Molten Tide this turn.
 	/// </summary>
 	public record Yield(
 		ImmutableArray<ImmutableArray<ManaColor>> Units,
 		bool SameColor,
-		bool NotForSpellsFromHand
-	);
+		ManaRestriction Restriction,
+		bool Sacrificed = false
+	)
+	{
+		/// <summary>May this mana pay for that spell (null: an ability, or anything but a spell)?</summary>
+		public bool CanPayFor(GameState s, Card? spell) =>
+			Restriction switch
+			{
+				ManaRestriction.NotForSpellsFromHand => spell is null
+					|| !s.IsIn(spell.Id, spell.OwnerId, ZoneType.Hand),
+				ManaRestriction.OnlyPlaneswalkerSpells => spell is not null
+					&& spell.Is(CardType.Planeswalker),
+				_ => true,
+			};
+	}
 
 	/// <summary>THE answer to "what does tapping this make" — payment, manual tapping and the X bound all ask.</summary>
 	public static Yield YieldOf(GameState s, Card card)
 	{
 		var colors = ColorsOf(s, card).ToImmutableArray();
 		if (colors.IsEmpty)
-			return new([], false, false);
+			return new([], false, ManaRestriction.None);
 		var context = Conditions.Of(card);
 		var oneColor = s.AbilitiesOf<ManaOfOneColorComponent>(card).FirstOrDefault();
 		ImmutableArray<ImmutableArray<ManaColor>> units = oneColor is null
@@ -79,12 +93,14 @@ public static class ManaAbilities
 					s.GetPlayer(card.ControllerId).ThisTurn.ExtraRedFromMountains
 				),
 			];
+		// ponytail: one restriction per permanent — all its mana abilities share it (Heartwood
+		// Crafter's {C}, Gideon's Memorial's five colours). Track it per unit if a card mixes them.
 		var abilities = s.AbilitiesOf<ManaAbilityComponent>(card).ToList();
-		var restricted =
-			abilities.Count > 0
-			&& abilities.All(a => a.NotForSpellsFromHand)
-			&& !card.Subtypes.Any(IsBasicLandType);
-		return new(units, oneColor is not null, restricted);
+		var restriction =
+			abilities.Count > 0 && !card.Subtypes.Any(IsBasicLandType)
+				? abilities[0].Restriction
+				: ManaRestriction.None;
+		return new(units, oneColor is not null, restriction, oneColor?.SacrificeSelf == true);
 	}
 
 	/// <summary>{T} in ANY cost: untapped, and a creature must not be summoning sick (CR 302.6).</summary>

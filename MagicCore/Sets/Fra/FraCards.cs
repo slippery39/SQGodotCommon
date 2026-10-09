@@ -191,6 +191,47 @@ public static class FraCards
 			null
 		);
 
+	static CardData Token(
+		string name,
+		string typeLine,
+		string? power = null,
+		string? toughness = null
+	) =>
+		new(
+			name,
+			"token",
+			null,
+			0,
+			typeLine,
+			null,
+			power,
+			toughness,
+			null,
+			[],
+			[],
+			"token",
+			"T",
+			null
+		);
+
+	/// <summary>"A Treasure token. (It's an artifact with '{T}, Sacrifice this token: Add one mana of any color.')"</summary>
+	public static readonly CardData Treasure = Token("Treasure", "Artifact — Treasure");
+
+	/// <summary>Vraska, Soul of Stone: "a 1/1 colorless Sculpture Treasure artifact creature token".</summary>
+	public static readonly CardData SculptureTreasure = Token(
+		"Sculpture Treasure",
+		"Artifact Creature — Sculpture Treasure",
+		"1",
+		"1"
+	);
+
+	/// <summary>Kwia Vigorbloom: "a colorless artifact token named Lotus".</summary>
+	public static readonly CardData Lotus = Token("Lotus", "Artifact");
+
+	/// <summary>"{T}, Sacrifice this token: Add [N] mana of any (one) color." — Treasure's and Lotus's.</summary>
+	static ManaOfOneColorComponent SacrificeForMana(int amount) =>
+		new(amount) { SacrificeSelf = true };
+
 	/// <summary>Soul Tether: "a Heartwood token (a red and green artifact with '{T}: Add {R} or {G}.')".</summary>
 	public static readonly CardData Heartwood =
 		new(
@@ -340,6 +381,15 @@ public static class FraCards
 	static readonly Count ArtifactsYouControl = Count.NumberOf(
 		new Ref(RefKind.YourPermanents, Type: CardType.Artifact)
 	);
+
+	/// <summary>"{T}: Add one mana of any color." — five abilities, one per colour, sharing a restriction.</summary>
+	static GameComponent[] AnyColorMana(ManaRestriction restriction) =>
+		[
+			.. ManaAbilities.AnyColor.Select(c => new ManaAbilityComponent(c)
+			{
+				Restriction = restriction,
+			}),
+		];
 
 	/// <summary>Soul Tether: "Create a Heartwood token."</summary>
 	static PrepareSpellComponent SoulTether(string card) => PrepareSpell(card, [], CreateHeartwood);
@@ -2703,7 +2753,10 @@ public static class FraCards
 			[
 				EntersPrepared,
 				SoulTether("Heartwood Crafter // Soul Tether"),
-				new ManaAbilityComponent(ManaColor.Colorless) { NotForSpellsFromHand = true },
+				new ManaAbilityComponent(ManaColor.Colorless)
+				{
+					Restriction = ManaRestriction.NotForSpellsFromHand,
+				},
 			],
 			["Pyre Rhymer // Molten Tide"] =
 			[
@@ -2983,6 +3036,108 @@ public static class FraCards
 					TapCost = true,
 					DiscardACard = true,
 					DiscardMustBe = Supertype.Legendary,
+				},
+			],
+
+			// ===== Rares (8c): Treasure and artifact tokens =====
+			["Vraska, Soul of Stone"] =
+			[
+				new StaticEffectComponent(Affects.CreaturesYouControl, "Vigilance")
+				{
+					OnlyTypes = CardType.Artifact,
+				},
+				When(
+					TriggerEvent.YouCastNoncreatureSpell,
+					[],
+					new CreateTokens(SculptureTreasure, 1) { Abilities = [SacrificeForMana(1)] }
+				),
+			],
+			["Vraska, the Cutting Glare"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[new TargetSpec(TargetKind.Permanent, Whose.Opponent)],
+					new Destroy(Ref.Target()),
+					new CreateTokens(Treasure, 1)
+					{
+						Abilities = [SacrificeForMana(1)],
+						ControlledBy = Ref.ControllerOfTarget(),
+					}
+				) with
+				{
+					If = new AtLeast(Count.LandsYouControl, 6),
+				},
+			],
+			["Kwia Vigorbloom"] =
+			[
+				Ward("{2}"),
+				When(
+					TriggerEvent.YouGainLife,
+					[],
+					new CreateTokens(Lotus, 1) { Abilities = [SacrificeForMana(3)] }
+				) with
+				{
+					OncePerTurn = true,
+				},
+			],
+			["Draconic Visitor"] = [new ArtifactTokensBecome(Dragon, [])],
+			["Hungering Puppetbeast"] =
+			[
+				When(TriggerEvent.SelfEnters, [], CreateHeartwood),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}"),
+					[
+						new AddCounters(Ref.Source, 1),
+						new GainsChosenKeyword(Ref.Source, ["Trample", "Hexproof", "Haste"]),
+					]
+				)
+				{
+					Sacrifice = new TargetSpec(TargetKind.Permanent, Whose.You)
+					{
+						AnyOfTypes = CardType.Artifact,
+						Another = true,
+					},
+				},
+			],
+			["Tenured Tethermage"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new MaySacrifice(
+						new TargetSpec(TargetKind.Permanent, Whose.You)
+						{
+							AnyOfTypes = CardType.Land,
+						},
+						[CreateHeartwood with { Count = 2, Tapped = true }]
+					)
+				),
+				new ActivatedAbilityComponent(ManaCost.None, [new AddCounters(Ref.Source, 2)])
+				{
+					TapUntapped = 2,
+					TapUntappedType = CardType.Artifact,
+				},
+			],
+			["Gideon's Memorial"] =
+			[
+				new StaticEffectComponent(Affects.CreaturesYouControl)
+				{
+					Power = 1,
+					OnlyTokens = true,
+				},
+				new StaticEffectComponent(Affects.CreaturesYouControl, "Vigilance")
+				{
+					OnlyTokens = true,
+				},
+				.. AnyColorMana(ManaRestriction.OnlyPlaneswalkerSpells),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{1}{W}"),
+					[new DealDamage(Ref.Target(), 4)]
+				)
+				{
+					From = ZoneType.Hand,
+					DiscardSelf = true,
+					Targets = [Creature with { InCombat = true }],
 				},
 			],
 		};

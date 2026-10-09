@@ -225,6 +225,35 @@ public record MoveChosenToGraveyardAction : GameAction
 	}
 }
 
+/// <summary>"Your choice of [keywords]" — option ids 1..n, one per keyword.</summary>
+public record ChooseKeywordChoice : ChoiceAction
+{
+	public const string Chosen = "keyword";
+
+	public int PlayerId { get; init; }
+	public ImmutableArray<string> Keywords { get; init; }
+
+	public ChooseKeywordChoice(int playerId, ImmutableArray<string> keywords)
+	{
+		PlayerId = playerId;
+		Keywords = keywords;
+		MinChoices = 1;
+		MaxChoices = 1;
+		OutputKey = Chosen;
+		Prompt = "Choose one";
+	}
+
+	public override ImmutableList<ChoiceOption> GetOptions(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => [.. Keywords.Select((k, i) => new ChoiceOption { Id = i + 1, DisplayText = k })];
+
+	public override int GetDecidingPlayerId(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => PlayerId;
+}
+
 /// <summary>Finishes the cleanup after it paused for the discard to hand size.</summary>
 public record EndStepAction : GameAction
 {

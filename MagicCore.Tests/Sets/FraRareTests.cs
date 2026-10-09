@@ -547,4 +547,357 @@ public class FraRareTests : FraBoardTest
 			"five OTHER Forests, as it resolves"
 		);
 	}
+
+	// ===== 8c: Treasure and artifact tokens =====
+
+	void TapAllLands(int player)
+	{
+		foreach (
+			var land in s.CardsIn(player, ZoneType.Battlefield)
+				.Where(c => c.Is(CardType.Land))
+				.ToList()
+		)
+			s = s.UpdateObject(land.Id, land with { IsTapped = true }); // TEST SETUP
+	}
+
+	[Test]
+	public void VraskaSoulOfStone_ASculptureTreasurePerNoncreatureSpell_WithVigilance()
+	{
+		Field(FraCards.Get("Vraska, Soul of Stone"), me);
+		Cast(Hand(Instant("Spell"), me), []);
+		var sculpture = Named(me, "Sculpture Treasure").Single();
+		Assert.That(
+			(sculpture.Is(CardType.Artifact | CardType.Creature), s.Has(sculpture, "Vigilance")),
+			Is.EqualTo((true, true))
+		);
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+		Assert.That(s.Has(s.GetCard(bear), "Vigilance"), Is.False, "artifact creatures only");
+	}
+
+	[Test]
+	public void ATreasurePaysOneManaOfAnyColour_AndIsSacrificed()
+	{
+		var treasure = Field(
+			new CardDefinition(
+				FraCards.Treasure,
+				[new ManaOfOneColorComponent(1) { SacrificeSelf = true }]
+			),
+			me
+		);
+		s = s.UpdateObject(treasure, s.GetCard(treasure) with { IsToken = true }); // TEST SETUP
+		TapAllLands(me);
+		var spell = Hand(TestGames.Inline("Black", "{B}", "Instant"), me);
+		Assert.That(Casts(spell), Is.Not.Empty);
+		s = s.Act(Casts(spell).Single());
+		Assert.That(s.HasObject(treasure), Is.False, "sacrificed — a token, so it is gone");
+	}
+
+	[Test]
+	public void ATreasureIsSpentLast()
+	{
+		var treasure = Field(
+			new CardDefinition(
+				FraCards.Treasure,
+				[new ManaOfOneColorComponent(1) { SacrificeSelf = true }]
+			),
+			me
+		);
+		var spell = Hand(TestGames.Inline("Black", "{B}", "Instant"), me);
+		s = s.Act(Casts(spell).Single());
+		Assert.That(Alive(treasure), "a Swamp paid; the Treasure was kept");
+	}
+
+	[Test]
+	public void VraskaCuttingGlare_DestroysTheirPermanent_AndTheyGetATreasure()
+	{
+		var theirs = Field(TestGames.Creature("Theirs", "2/2"), them);
+		var vraska = Hand("Vraska, the Cutting Glare", me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = vraska });
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseTargetChoice => [theirs],
+				_ => [],
+			}
+		);
+		Assert.That(s.IsIn(theirs, them, ZoneType.Graveyard));
+		Assert.That(Named(them, "Treasure").Count(), Is.EqualTo(1), "under THEIR control");
+	}
+
+	[Test]
+	public void VraskaCuttingGlare_NeedsSixLands()
+	{
+		foreach (
+			var land in s.CardsIn(me, ZoneType.Battlefield)
+				.Where(c => c.Is(CardType.Land))
+				.OrderBy(c => c.Name != "Swamp")
+				.Skip(5)
+				.ToList()
+		)
+			s = s.MoveObject(land.Id, s.ZoneId(me, ZoneType.Exile)); // TEST SETUP: five lands
+		Field(TestGames.Creature("Theirs", "2/2"), them);
+		var asked = false;
+		var vraska = Hand(
+			FraCards.Get("Vraska, the Cutting Glare") with
+			{
+				Data = FraCards.Get("Vraska, the Cutting Glare").Data with { ManaCost = "{B}" },
+			},
+			me
+		);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = vraska });
+		Resolve(choice =>
+		{
+			asked |= choice is ChooseTargetChoice;
+			return [];
+		});
+		Assert.That(asked, Is.False);
+	}
+
+	[Test]
+	public void KwiaVigorbloom_ALotusOnLifeGain_OncePerTurn_ForThreeOfOneColour()
+	{
+		Field(FraCards.Get("Kwia Vigorbloom"), me);
+		Cast(Hand(Instant("Heal", new GainLife(Ref.You, 1)), me), []);
+		Cast(Hand(Instant("Heal", new GainLife(Ref.You, 1)), me), []);
+		Assert.That(Named(me, "Lotus").Count(), Is.EqualTo(1));
+		TapAllLands(me);
+		Assert.That(
+			Casts(Hand(TestGames.Inline("Triple", "{G}{G}{G}", "Instant"), me)),
+			Is.Not.Empty
+		);
+		Assert.That(
+			Casts(Hand(TestGames.Inline("Mixed", "{G}{U}", "Instant"), me)),
+			Is.Empty,
+			"one colour"
+		);
+	}
+
+	[Test]
+	public void DraconicVisitor_ArtifactTokensAreDragonsInstead()
+	{
+		Field(FraCards.Get("Draconic Visitor"), me);
+		Cast(Hand("Aerid Konstrari", me), []); // a Heartwood token as it enters
+		Assert.That(Named(me, "Heartwood"), Is.Empty);
+		var dragon = Named(me, "Dragon").Single();
+		Assert.That((s.Power(dragon), s.Has(dragon, "Flying")), Is.EqualTo((5, true)));
+	}
+
+	[Test]
+	public void HungeringPuppetbeast_SacrificeAnArtifact_ForACounterAndYourChoiceOfKeyword()
+	{
+		var beast = Hand("Hungering Puppetbeast", me);
+		Cast(beast, []);
+		var heartwood = Named(me, "Heartwood").Single().Id;
+		s = s.Act(Activations(beast).Single(a => a.SacrificeId == heartwood));
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseKeywordChoice k => [k.Options.Single(o => o.DisplayText == "Hexproof").Id],
+				_ => [],
+			}
+		);
+		var card = s.GetCard(beast);
+		Assert.That(
+			(card.PlusOneCounters, s.Has(card, "Hexproof"), s.Has(card, "Trample")),
+			Is.EqualTo((1, true, false))
+		);
+	}
+
+	[Test]
+	public void TenuredTethermage_SacrificeALandForTwoTappedHeartwoods_ThenTapTwoForCounters()
+	{
+		var mage = Hand("Tenured Tethermage", me);
+		var land = s.CardsIn(me, ZoneType.Battlefield).First(c => c.Is(CardType.Land)).Id;
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = mage });
+		Resolve(choice =>
+			choice switch
+			{
+				ChoosePermanentChoice => [land],
+				_ => [],
+			}
+		);
+		var heartwoods = Named(me, "Heartwood").ToList();
+		Assert.That(
+			(
+				s.IsIn(land, me, ZoneType.Graveyard),
+				heartwoods.Count,
+				heartwoods.All(h => h.IsTapped)
+			),
+			Is.EqualTo((true, 2, true))
+		);
+		Assert.That(Activations(mage), Is.Empty, "both are tapped");
+		foreach (var h in heartwoods)
+			s = s.UpdateObject(h.Id, h with { IsTapped = false }); // TEST SETUP: next turn's untap
+		s = s.Act(Activations(mage).Single());
+		Resolve();
+		Assert.That(
+			(s.GetCard(mage).PlusOneCounters, Named(me, "Heartwood").All(h => h.IsTapped)),
+			Is.EqualTo((2, true))
+		);
+	}
+
+	[Test]
+	public void GideonsMemorial_TokensGetPlusOneAndVigilance()
+	{
+		Field(FraCards.Get("Gideon's Memorial"), me);
+		Cast(
+			Hand(
+				TestGames.Inline(
+					"Make",
+					"{1}",
+					"Sorcery",
+					null,
+					new CreateTokens(FraCards.Cadet, 1)
+				),
+				me
+			),
+			[]
+		);
+		var cadet = Named(me, "Cadet").Single();
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+		Assert.That((s.Power(cadet), s.Has(cadet, "Vigilance")), Is.EqualTo((2 + 1, true)));
+		Assert.That(s.Power(s.GetCard(bear)), Is.EqualTo(2), "tokens only");
+	}
+
+	[Test]
+	public void GideonsMemorial_ItsManaPaysOnlyForPlaneswalkerSpells()
+	{
+		Field(FraCards.Get("Gideon's Memorial"), me);
+		TapAllLands(me);
+		var walker = Hand(TestGames.Planeswalker("Walker", 3), me); // costs {1}
+		var other = Hand(TestGames.Inline("Other", "{1}", "Sorcery"), me);
+		Assert.That((Casts(walker).Any(), Casts(other).Any()), Is.EqualTo((true, false)));
+	}
+
+	[Test]
+	public void GideonsMemorial_DiscardedForFourDamageToAnAttacker()
+	{
+		var memorial = Hand("Gideon's Memorial", me);
+		var bear = Field(TestGames.Creature("Bear", "2/5"), me);
+		var idle = Field(TestGames.Creature("Idle", "2/5"), me);
+		s = TestGames.PassUntil(s, x => x.IsWaitingForChoice);
+		while (s.GetPendingChoice() is DeclareAttackerChoice declare)
+			s = s.Choose([declare.CreatureId == bear ? them : CombatOption.None]);
+		Assert.That(
+			Activations(memorial).Select(a => a.Targets[0]),
+			Does.Contain(bear).And.Not.Contain(idle)
+		);
+		s = s.Act(Activations(memorial).Single(a => a.Targets[0] == bear));
+		Resolve();
+		Assert.That(s.GetCard(bear).Damage, Is.EqualTo(4));
+	}
+
+	CardDefinition TreasureToken =>
+		new(FraCards.Treasure, [new ManaOfOneColorComponent(1) { SacrificeSelf = true }]);
+
+	static CardDefinition HeartwoodToken =>
+		new(
+			FraCards.Heartwood,
+			[new ManaAbilityComponent(ManaColor.Red), new ManaAbilityComponent(ManaColor.Green)]
+		);
+
+	[Test]
+	public void ASummoningSickSculptureTreasure_ConvokesWithoutBeingSacrificed()
+	{
+		var sculpture = Field(
+			new CardDefinition(
+				FraCards.SculptureTreasure,
+				[new ManaOfOneColorComponent(1) { SacrificeSelf = true }]
+			),
+			me
+		);
+		s = s.UpdateObject(
+			sculpture,
+			s.GetCard(sculpture) with
+			{
+				ControlledSinceTurn = s.GetGame().TurnNumber,
+			}
+		); // TEST SETUP: just arrived
+		var winter = Hand("Winter, Team Player", me); // {4}{R}, convoke
+		Field(
+			TestGames.Creature("Red", "1/1") with
+			{
+				Data = TestGames.Creature("Red", "1/1").Data with { Colors = ["R"] },
+			},
+			me
+		);
+		for (var i = 0; i < 3; i++)
+			Field(TestGames.Creature("Grey", "1/1"), me);
+		TapAllLands(me);
+		s = s.Act(Casts(winter).Single());
+		Assert.That(
+			(Alive(sculpture), s.GetCard(sculpture).IsTapped),
+			Is.EqualTo((true, true)),
+			"tapped to convoke, not sacrificed"
+		);
+	}
+
+	[Test]
+	public void ATreasureCantPayBothTheSacrificeAndTheMana()
+	{
+		var beast = Field(FraCards.Get("Hungering Puppetbeast"), me); // {1}, Sacrifice another artifact
+		Field(TreasureToken, me);
+		TapAllLands(me);
+		Assert.That(Activations(beast), Is.Empty, "the only artifact is the only mana");
+	}
+
+	[Test]
+	public void TappingArtifactsForACost_TheyArentAlsoTheMana()
+	{
+		var engine = TestGames.Creature("Engine", "1/1");
+		var engineId = Field(
+			engine with
+			{
+				Components =
+				[
+					new ActivatedAbilityComponent(
+						ManaCost.Parse("{1}"),
+						[new AddCounters(Ref.Source, 1)]
+					)
+					{
+						TapUntapped = 2,
+						TapUntappedType = CardType.Artifact,
+					},
+				],
+			},
+			me
+		);
+		Field(HeartwoodToken, me);
+		Field(HeartwoodToken, me);
+		TapAllLands(me);
+		Assert.That(Activations(engineId), Is.Empty, "two to tap and one for {1}: three needed");
+
+		Field(HeartwoodToken, me);
+		s = s.Act(Activations(engineId).Single());
+		Resolve();
+		Assert.That(
+			(s.GetCard(engineId).PlusOneCounters, Named(me, "Heartwood").Count(h => h.IsTapped)),
+			Is.EqualTo((1, 3))
+		);
+	}
+
+	[Test]
+	public void AReadySculptureTreasure_ConvokesToo_RatherThanBeingSacrificed()
+	{
+		var sculpture = Field(
+			new CardDefinition(
+				FraCards.SculptureTreasure,
+				[new ManaOfOneColorComponent(1) { SacrificeSelf = true }]
+			),
+			me
+		);
+		var winter = Hand("Winter, Team Player", me); // {4}{R}, convoke
+		Field(
+			TestGames.Creature("Red", "1/1") with
+			{
+				Data = TestGames.Creature("Red", "1/1").Data with { Colors = ["R"] },
+			},
+			me
+		);
+		for (var i = 0; i < 3; i++)
+			Field(TestGames.Creature("Grey", "1/1"), me);
+		TapAllLands(me);
+		s = s.Act(Casts(winter).Single());
+		Assert.That(Alive(sculpture), "convoked: tapped, still here");
+	}
 }

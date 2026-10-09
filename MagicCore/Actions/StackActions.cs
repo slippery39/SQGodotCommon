@@ -143,7 +143,8 @@ public record CastSpellAction : GameAction
 				CostToPay(s, card),
 				0,
 				convoke: s.Has(card, "Convoke"),
-				forSpellFromHand: s.IsIn(card.Id, PlayerId, ZoneType.Hand)
+				forSpell: card,
+				alsoExclude: [SacrificeId]
 			)
 			is null
 		)
@@ -171,7 +172,8 @@ public record CastSpellAction : GameAction
 				CostToPay(s, card),
 				0,
 				convoke: s.Has(card, "Convoke"),
-				forSpellFromHand: s.IsIn(card.Id, PlayerId, ZoneType.Hand)
+				forSpell: card,
+				alsoExclude: [SacrificeId]
 			)!
 		);
 		if (SacrificeId != 0)
@@ -242,6 +244,33 @@ public record ActivateAbilityAction : GameAction
 	/// <summary>The graveyard card exiled as the cost ("Exile another creature card from your graveyard:"); 0 if none.</summary>
 	public int ExileId { get; init; }
 
+	/// <summary>
+	/// "Tap two untapped artifacts you control" — which ones. Tapping for a cost isn't {T}, so
+	/// summoning sickness doesn't matter (CR 302.6). ponytail: picked for the player, those that
+	/// make no mana first; make it a choice if the pick ever matters more than that.
+	/// </summary>
+	List<Card> ToTapForCost(GameState s, ActivatedAbilityComponent ability) =>
+		ability.TapUntapped == 0
+			? []
+			:
+			[
+				.. s.CardsIn(PlayerId, ZoneType.Battlefield)
+					.Where(c =>
+						c.Is(ability.TapUntappedType)
+						&& !c.IsTapped
+						&& !(ability.TapCost && c.Id == CardId)
+					)
+					// What makes no mana first, then what makes least (a Lotus last).
+					.OrderBy(c =>
+						ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c).Units.Length : 0
+					)
+					.Take(ability.TapUntapped),
+			];
+
+	/// <summary>Permanents the non-mana part of the cost uses — never mana for the same activation.</summary>
+	List<int> CostPermanents(GameState s, ActivatedAbilityComponent ability) =>
+		[SacrificeId, .. ToTapForCost(s, ability).Select(c => c.Id)];
+
 	ActivatedAbilityComponent? Ability(GameState s) =>
 		s.AbilitiesOf<ActivatedAbilityComponent>(s.GetCard(CardId))
 			.ElementAtOrDefault(AbilityIndex);
@@ -269,6 +298,8 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Its condition isn't met");
 		if (ability.Exhaust && card.ExhaustUsed)
 			return ValidationResult.Invalid("Exhaust: activated once already");
+		if (ability.TapUntapped > 0 && ToTapForCost(s, ability).Count < ability.TapUntapped)
+			return ValidationResult.Invalid("Not enough untapped permanents to tap");
 		if (
 			ability.DiscardACard
 				? !s.IsIn(DiscardId, PlayerId, ZoneType.Hand)
@@ -300,7 +331,8 @@ public record ActivateAbilityAction : GameAction
 				PlayerId,
 				Costs.OfAbility(s, ability, Targets),
 				0,
-				excludeId: ability.TapCost ? CardId : 0
+				excludeId: ability.TapCost ? CardId : 0,
+				alsoExclude: CostPermanents(s, ability)
 			)
 			is null
 		)
@@ -311,6 +343,7 @@ public record ActivateAbilityAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var ability = Ability(s)!;
+		var toTap = ToTapForCost(s, ability); // chosen before the mana, which never uses them
 		s = ManaPayment.Pay(
 			s,
 			PlayerId,
@@ -319,11 +352,14 @@ public record ActivateAbilityAction : GameAction
 				PlayerId,
 				Costs.OfAbility(s, ability, Targets),
 				0,
-				ability.TapCost ? CardId : 0
+				ability.TapCost ? CardId : 0,
+				alsoExclude: CostPermanents(s, ability)
 			)!
 		);
 		if (ability.TapCost)
 			s = s.UpdateObject(CardId, s.GetCard(CardId) with { IsTapped = true });
+		foreach (var tapped in toTap)
+			s = s.UpdateObject(tapped.Id, s.GetCard(tapped.Id) with { IsTapped = true });
 		if (ability.Exhaust)
 			s = s.UpdateObject(CardId, s.GetCard(CardId) with { ExhaustUsed = true });
 		var source = s.GetCard(CardId); // as it was when activated — the cost may sacrifice it

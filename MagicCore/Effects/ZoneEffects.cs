@@ -117,18 +117,34 @@ public record CreateTokens(CardData Token, Count Count) : Effect
 	/// <summary>Recursive Recruitment: "put N +1/+1 counters on each of them" — counted once, as it resolves.</summary>
 	public Count Counters { get; init; } = 0;
 
+	/// <summary>Vraska, the Cutting Glare: "They create a Treasure token" — whose; unset is you.</summary>
+	public Ref? ControlledBy { get; init; }
+
+	/// <summary>Tenured Tethermage: "create two tapped Heartwood tokens".</summary>
+	public bool Tapped { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var count = Count.Value(s, InputContext);
 		var counters = Counters.Value(s, InputContext);
+		var controller = ControlledBy is null ? Controller : All(ControlledBy, s).FirstOrDefault();
+		if (controller == 0)
+			return new(s);
+		// Draconic Visitor: an artifact token under its controller's control is a Dragon instead (CR 614.1a).
+		var definition = new CardDefinition(Token, Abilities);
+		if (
+			CardFactory.Create(definition, controller).Is(CardType.Artifact)
+			&& s.CardsIn(controller, ZoneType.Battlefield)
+				.SelectMany(s.AbilitiesOf<ArtifactTokensBecome>)
+				.FirstOrDefault()
+				is { } instead
+		)
+			definition = new CardDefinition(instead.Token, instead.Abilities);
 		for (var i = 0; i < count; i++)
 		{
-			var token = CardFactory.Create(new CardDefinition(Token, Abilities), Controller) with
-			{
-				IsToken = true,
-			};
+			var token = CardFactory.Create(definition, controller) with { IsToken = true };
 			(s, token) = s.AddObject(token);
-			s = s.EnterBattlefield(token.Id, Controller, extraCounters: counters);
+			s = s.EnterBattlefield(token.Id, controller, extraCounters: counters, tapped: Tapped);
 			if (GainsUntilEndOfTurn is { } keyword)
 				s = Update(
 					s,

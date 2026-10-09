@@ -164,6 +164,11 @@ public static class Characteristics
 			return false;
 		if (effect.OnlySubtype is { } subtype && !card.Subtypes.Contains(subtype))
 			return false;
+		if (
+			(effect.OnlyTokens && !card.IsToken)
+			|| (effect.OnlyTypes != CardType.None && !card.Is(effect.OnlyTypes))
+		)
+			return false;
 		// Real power and toughness (CR 613): safe, because only keyword statics carry this filter.
 		// Likewise `If` must never read power or toughness — threshold and "this turn" counts only.
 		if (

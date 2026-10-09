@@ -1107,3 +1107,6 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - surveil keeps the kept cards' order.
 - "when enchanted creature dies" sees what was attached as the creature moved; if ONE effect moves the creature AND its Aura, the Aura moved first is missed — no FRA card does that (record attachments per resolution if one ever does)
 - Tarmogoyf's */1+* (and any characteristic-defining P/T) is a battlefield static, so off the battlefield it reads as its printed 0/1 — nothing reads a creature card's power outside the battlefield yet (make CDAs a Card-level read if a card ever does)
+- "Tap two untapped artifacts" (Tenured Tethermage) picks which ones for the player — what makes no mana first, then least; make it a choice if the pick ever matters more than that
+- a permanent's mana abilities share one restriction (the first one's); no FRA card mixes restricted and unrestricted mana, and nothing grants mana abilities (track it per unit if one does)
+- a Sculpture Treasure that may convoke is offered only for convoke (tapped, not sacrificed), never sacrificed for a colour in the same payment

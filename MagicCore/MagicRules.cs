@@ -146,14 +146,7 @@ public static class MagicRules
 	/// </summary>
 	static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card)
 	{
-		var maxX = card.ManaCost.HasX
-			? AvailableMana(
-				s,
-				player,
-				s.Has(card, "Convoke"),
-				fromHand: s.IsIn(card.Id, player, ZoneType.Hand)
-			)
-			: 0;
+		var maxX = card.ManaCost.HasX ? AvailableMana(s, player, s.Has(card, "Convoke"), card) : 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
 		var choices = Modal
 			.Choices(text?.Modes ?? [], text?.Choose ?? 1)
@@ -246,12 +239,12 @@ public static class MagicRules
 			);
 
 	/// <summary>An upper bound on the mana this player could pay — every untapped creature too, for convoke.</summary>
-	static int AvailableMana(GameState s, int player, bool convoke, bool fromHand) =>
+	static int AvailableMana(GameState s, int player, bool convoke, Card spell) =>
 		s.GetPlayer(player).ManaPool.Total
 		+ s.CardsIn(player, ZoneType.Battlefield)
 			.Sum(c =>
 				(ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c) : null) is { } yield
-				&& !(fromHand && yield.NotForSpellsFromHand)
+				&& yield.CanPayFor(s, spell)
 					? yield.Units.Length
 				: convoke && c.Is(CardType.Creature) && !c.IsTapped ? 1
 				: 0

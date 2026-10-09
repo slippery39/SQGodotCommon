@@ -71,6 +71,9 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	/// <summary>Kiora of Salt and Sand: "target attacking creature".</summary>
 	public bool Attacking { get; init; }
 
+	/// <summary>Gideon's Memorial: "target attacking or blocking creature".</summary>
+	public bool InCombat { get; init; }
+
 	/// <summary>Tomik, Orzhov Lawmage: "target creature with a +1/+1 counter on it".</summary>
 	public bool WithPlusOneCounter { get; init; }
 
@@ -171,6 +174,7 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		&& (!EnteredThisTurn || card.EnteredOnTurn == s.GetGame().TurnNumber)
 		&& (!AttackedThisTurn || card.AttackedOnTurn == s.GetGame().TurnNumber)
 		&& (!Attacking || card.AttackingId != 0)
+		&& (!InCombat || card.AttackingId != 0 || card.BlockingId != 0)
 		&& (!WithPlusOneCounter || card.PlusOneCounters > 0)
 		&& card.ManaValueNow is var mv
 		&& mv <= MaxManaValue

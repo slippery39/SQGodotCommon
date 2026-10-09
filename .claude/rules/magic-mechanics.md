@@ -65,6 +65,11 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   Molten Tide (`TurnTally.ExtraRedFromMountains`), mana that can't pay for spells from your hand
   (Heartwood Crafter). `ManaPayment.Find` solves units: a permanent taps once, and what the payment
   doesn't use floats (`Payment.Floats`). Restricted mana is never floated — manual tapping refuses it.
+  A restriction is a `ManaRestriction` the solver checks against the spell it pays for
+  (`Find(…, forSpell)`; null for an ability). Treasure and Lotus are `ManaOfOneColorComponent`
+  with `SacrificeSelf`: `Pay` sacrifices them, and the solver spends them last.
+- **Every token is made by `CreateTokens`** — so a replacement on tokens (Draconic Visitor's "artifact
+  tokens are Dragons instead") is applied in that one place, under whoever `ControlledBy` names.
 - **A card put onto the battlefield from anywhere enters through `MagicState.EnterBattlefield`** —
   a search, a return, a token: never a bare `MoveCard` to the battlefield, which skips its entry
   (controller, tapped, its "enters" event). `MoveChosenToAction` routes a battlefield search there.
