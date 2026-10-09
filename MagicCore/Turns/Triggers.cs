@@ -109,7 +109,9 @@ public static class Triggers
 				)
 			)
 			.SelectMany(found =>
-				s.PendingGameEvents.Where(e => Matches(s, found.source, found.a.On, e))
+				s.PendingGameEvents.Where(e =>
+						Matches(s, found.source, found.a.On, e) && OfSubtype(s, found.a, e)
+					)
 					.Select(e => new Pending(
 						found.source,
 						found.a,
@@ -254,9 +256,26 @@ public static class Triggers
 				TriggerEvent.YouActivateLoyaltyAbilityRemovingTwoOrMore,
 				LoyaltyActivatedEvent activated
 			) => activated.PlayerId == source.ControllerId && activated.Cost <= -2,
+			(
+				TriggerEvent.AnotherNontokenCreatureYouControlEnters,
+				EnteredBattlefieldEvent entered
+			) => AnotherOfYoursEntered(entered, CardType.Creature)
+				&& !s.GetCard(entered.CardId).IsToken,
+			(TriggerEvent.YouCastArtifactOrCreatureSpell, SpellCastEvent cast) => cast.PlayerId
+				== source.ControllerId
+				&& s.GetCard(cast.CardId).Is(CardType.Artifact | CardType.Creature),
 			_ => false,
 		};
 	}
+
+	/// <summary>"Whenever a Plains you control enters": the event's card has the ability's EventSubtype.</summary>
+	static bool OfSubtype(GameState s, TriggeredAbilityComponent a, GameEvent e) =>
+		a.EventSubtype is not { } subtype
+		|| (
+			s.HasObject(EventCard(e))
+			&& s.GetObject(EventCard(e)) is Card c
+			&& c.Subtypes.Contains(subtype)
+		);
 
 	/// <summary>The card the event is about — what "that creature" and "that land" mean; 0 if none.</summary>
 	/// <summary>The spell or ability an event was done BY, as it is now — ward's "it".</summary>

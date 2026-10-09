@@ -35,9 +35,6 @@ public class FraGraveyardTests : FraBoardTest
 		return id;
 	}
 
-	IEnumerable<ActivateAbilityAction> Activations(int card) =>
-		s.LegalActions().OfType<ActivateAbilityAction>().Where(a => a.CardId == card);
-
 	void Activate(ActivateAbilityAction action, Func<ChoiceAction, IEnumerable<int>>? answer = null)
 	{
 		s = s.Act(action);

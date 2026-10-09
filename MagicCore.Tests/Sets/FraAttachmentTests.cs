@@ -11,9 +11,6 @@ namespace MagicCore.Tests.Sets;
 /// <summary>Auras and Equipment (Rules/Attachments.cs): attach, grant live, fall off — and each card fires.</summary>
 public class FraAttachmentTests : FraBoardTest
 {
-	IEnumerable<ActivateAbilityAction> Activations(int card) =>
-		s.LegalActions().OfType<ActivateAbilityAction>().Where(a => a.CardId == card);
-
 	void Equip(int equipment, int creature)
 	{
 		s = s.Act(Activations(equipment).Single(a => a.Targets[0] == creature));

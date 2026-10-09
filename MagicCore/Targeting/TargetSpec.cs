@@ -65,6 +65,9 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	/// <summary>Gallia, Mabel: "target creature that entered this turn".</summary>
 	public bool EnteredThisTurn { get; init; }
 
+	/// <summary>Hexhaven Dueling Arena: "target creature that attacked this turn".</summary>
+	public bool AttackedThisTurn { get; init; }
+
 	/// <summary>"With mana value 3 or less" — a card in a graveyard or a permanent.</summary>
 	public int MaxManaValue { get; init; } = int.MaxValue;
 
@@ -159,6 +162,7 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		&& (MaxPower == int.MaxValue || s.Power(card) <= MaxPower)
 		&& (WithKeyword is null || s.Has(card, WithKeyword))
 		&& (!EnteredThisTurn || card.EnteredOnTurn == s.GetGame().TurnNumber)
+		&& (!AttackedThisTurn || card.AttackedOnTurn == s.GetGame().TurnNumber)
 		&& ManaValue(card) is var mv
 		&& mv <= MaxManaValue
 		&& mv >= MinManaValue;

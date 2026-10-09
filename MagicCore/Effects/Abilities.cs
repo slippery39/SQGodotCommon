@@ -44,6 +44,8 @@ public enum TriggerEvent
 	AttachedCreatureAttacks, // "equipped creature attacks", and "Whenever this creature attacks" granted by Equipment
 	AttachedCreatureDies, // "When enchanted creature dies" — looks back: the Aura is already gone (CR 603.10a)
 	SelfBecomesTargetOfOpponentsSpellOrAbility, // Ruric Thar, Biomagus
+	AnotherNontokenCreatureYouControlEnters, // Arni, Humble Scribe
+	YouCastArtifactOrCreatureSpell, // Traxos, Scourge Eternal
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>
@@ -64,6 +66,12 @@ public record TriggeredAbilityComponent(TriggerEvent On, ImmutableList<GameActio
 
 	/// <summary>"This ability triggers only once each turn." Stamped on the card as it goes on the stack.</summary>
 	public bool OncePerTurn { get; init; }
+
+	/// <summary>
+	/// Koth: "Whenever a Plains you control enters" — the event's card must have this subtype. Read for
+	/// triggers from the battlefield or a graveyard (not "when this dies"), on an event that has a card.
+	/// </summary>
+	public string? EventSubtype { get; init; }
 }
 
 /// <summary>"[Cost]: [effects]." Uses the stack. Mana abilities are <see cref="ManaAbilityComponent"/>, which does not.</summary>
@@ -168,7 +176,6 @@ public enum Affects
 public enum StaticCondition
 {
 	Always,
-	DuringYourTurn,
 	YouControlAJacePlaneswalker,
 }
 
@@ -196,10 +203,25 @@ public record StaticEffectComponent(Affects Affects, string? Keyword = null) : G
 
 	/// <summary>Gallia: "each other creature you control with a +1/+1 counter on it".</summary>
 	public bool OnlyWithCounter { get; init; }
+
+	/// <summary>Saheeli: "Thopters you control have haste".</summary>
+	public string? OnlySubtype { get; init; }
 }
 
 /// <summary>Thalia: "Noncreature spells your opponents cast cost {N} more to cast."</summary>
 public record OpponentsNoncreatureSpellsCostMore(int Amount) : GameComponent;
+
+/// <summary>
+/// Geist of Saint Thalia: "Noncreature spells you cast cost {N} less to cast." On a permanent, read
+/// for the card being cast — MtgCore's ConditionalCostReductionComponent.AppliesTo case.
+/// </summary>
+public record YourNoncreatureSpellsCostLess(int Amount) : GameComponent;
+
+/// <summary>
+/// Traxos: "doesn't untap during your untap step" — read by the untap step ONLY; an untap effect
+/// still untaps it. (MtgCore's freeze blocks every untap: Dungeon Geists' wording, not this one.)
+/// </summary>
+public record DoesntUntapInYourUntapStep : GameComponent;
 
 /// <summary>Ghalta: "This spell costs {X} less to cast, where X is the greatest power among creatures you control."</summary>
 public record CostsLessByGreatestPowerYouControl : GameComponent;

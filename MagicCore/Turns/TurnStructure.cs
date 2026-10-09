@@ -86,7 +86,12 @@ public static class TurnStructure
 		switch (step)
 		{
 			case Step.Untap:
-				foreach (var card in s.CardsIn(active, ZoneType.Battlefield).Where(c => c.IsTapped))
+				foreach (
+					var card in s.CardsIn(active, ZoneType.Battlefield)
+						.Where(c =>
+							c.IsTapped && !c.HasComponent<Effects.DoesntUntapInYourUntapStep>()
+						)
+				)
 					s = s.Untap(card.Id);
 				foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
 					s = s.WithPlayer(

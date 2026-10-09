@@ -103,6 +103,8 @@ public static class Characteristics
 		};
 		if (!affected || (effect.OnlyWithCounter && card.PlusOneCounters == 0))
 			return false;
+		if (effect.OnlySubtype is { } subtype && !card.Subtypes.Contains(subtype))
+			return false;
 		// Real power and toughness (CR 613): safe, because only keyword statics carry this filter.
 		// Likewise `If` must never read power or toughness — threshold and "this turn" counts only.
 		if (
@@ -115,7 +117,6 @@ public static class Characteristics
 			return false;
 		return effect.While switch
 		{
-			StaticCondition.DuringYourTurn => s.GetGame().ActivePlayerId == source.ControllerId,
 			StaticCondition.YouControlAJacePlaneswalker => s.CardsIn(
 					source.ControllerId,
 					ZoneType.Battlefield

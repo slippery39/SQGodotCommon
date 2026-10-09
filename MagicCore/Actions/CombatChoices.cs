@@ -112,6 +112,7 @@ public record FinishAttackersAction : GameAction
 					card with
 					{
 						AttackingId = target,
+						AttackedOnTurn = s.GetGame().TurnNumber,
 						IsTapped = card.IsTapped || !s.Has(card, "Vigilance"),
 					}
 				)

@@ -153,6 +153,25 @@ public static class FraCards
 			null
 		);
 
+	/// <summary>Kiora of Fire and Ashes: "a 5/5 red Dragon creature token with flying".</summary>
+	public static readonly CardData Dragon =
+		new(
+			"Dragon",
+			"token",
+			null,
+			0,
+			"Creature — Dragon",
+			null,
+			"5",
+			"5",
+			null,
+			["R"],
+			["Flying"],
+			"token",
+			"T",
+			null
+		);
+
 	/// <summary>Soul Tether: "a Heartwood token (a red and green artifact with '{T}: Add {R} or {G}.')".</summary>
 	public static readonly CardData Heartwood =
 		new(
@@ -338,6 +357,20 @@ public static class FraCards
 	/// <summary>"Equipped/enchanted creature gets +P/+T."</summary>
 	static StaticEffectComponent AttachedGets(int power, int toughness) =>
 		new(Affects.AttachedCreature) { Power = power, Toughness = toughness };
+
+	/// <summary>
+	/// The Teyos: "When Teyo enters, target permanent you control gains [keyword] until end of turn.
+	/// Put a +1/+1 counter on it if it's a creature. Put a loyalty counter on it if it's a planeswalker."
+	/// Each counter effect skips the wrong permanent type.
+	/// </summary>
+	static TriggeredAbilityComponent TeyoEnters(string keyword) =>
+		When(
+			TriggerEvent.SelfEnters,
+			[new TargetSpec(TargetKind.Permanent, Whose.You)],
+			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, keyword),
+			new AddCounters(Ref.Target(), 1),
+			new AddLoyalty(Ref.Target(), 1)
+		);
 
 	/// <summary>One bullet: its target words and effects. Its text is filled in from the card.</summary>
 	static Mode M(TargetSpec[] targets, params GameAction[] effects) =>
@@ -1038,7 +1071,7 @@ public static class FraCards
 			[
 				new StaticEffectComponent(Affects.Self, "First strike")
 				{
-					While = StaticCondition.DuringYourTurn,
+					If = new DuringYourTurn(),
 				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}{R}"),
@@ -2253,6 +2286,136 @@ public static class FraCards
 						new Fight(Ref.Target(0), Ref.Target(1))
 					)
 				),
+			],
+
+			// ===== Uncommons: creatures =====
+			["Bloombrute"] =
+			[
+				When(TriggerEvent.YouGainLife, [], new DrawCards(Ref.You, 1)) with
+				{
+					OncePerTurn = true,
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{4}{G}{W}"),
+					[
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Trample"),
+						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Lifelink"),
+					]
+				)
+				{
+					Targets = [Creature],
+				},
+			],
+			["Koth of the Homestead"] =
+			[
+				When(TriggerEvent.LandYouControlEnters, [], new GainLife(Ref.You, 1)),
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[Creature],
+					new AddCounters(Ref.Target(), 1)
+				) with
+				{
+					EventSubtype = "Plains",
+				},
+			],
+			["Rescue Girl, First Responder"] =
+			[
+				new ActivatedAbilityComponent(ManaCost.None, [new ReturnToHand(Ref.Target())])
+				{
+					TapCost = true,
+					Targets = [new TargetSpec(TargetKind.Permanent, Whose.You) { Another = true }],
+					OnlyIf = new DuringYourTurn(),
+				},
+			],
+			["Teyo, Lightshield Expert"] = [TeyoEnters("Hexproof")],
+			["Teyo, Diamondblade Mage"] = [TeyoEnters("Deathtouch")],
+			["Kiora of Fire and Ashes"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(Dragon, 1)),
+				new ActivatedAbilityComponent(ManaCost.Parse("{8}"), [new CreateTokens(Dragon, 1)]),
+			],
+			["Pia, Determined Rebuilder"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new CreateTokens(Thopter, 1)),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{5}{R}"),
+					[
+						new ModifyUntilEndOfTurn(
+							Ref.Target(),
+							Count.NumberOf(
+								new Ref(RefKind.YourPermanents, Type: CardType.Artifact)
+							),
+							0
+						),
+					]
+				)
+				{
+					Targets = [Creature],
+				},
+			],
+			["Hapatra, the Desert Frost"] =
+			[
+				// "For each opponent, … up to one target creature that player controls" — one opponent.
+				When(
+					TriggerEvent.SelfEnters,
+					[new TargetSpec(TargetKind.Creature, Whose.Opponent) { Optional = true }],
+					new Tap(Ref.Target()),
+					new AddStunCounters(Ref.Target(), 1)
+				),
+				new ActivatedAbilityComponent(ManaCost.Parse("{2}{U}"), [new Untap(Ref.Target())])
+				{
+					Targets = [Creature],
+				},
+			],
+			["Geist of Saint Thalia"] = [new YourNoncreatureSpellsCostLess(1)],
+			["Arni, Humble Scribe"] =
+			[
+				When(
+					TriggerEvent.AnotherNontokenCreatureYouControlEnters,
+					[],
+					new Untap(Ref.Source)
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new DrawCards(Ref.You, 1), new Discard(Ref.You, 1)]
+				)
+				{
+					TapCost = true,
+				},
+			],
+			["Traxos, Scourge Eternal"] =
+			[
+				new DoesntUntapInYourUntapStep(),
+				When(TriggerEvent.YouCastArtifactOrCreatureSpell, [], new Untap(Ref.Source)),
+			],
+			["Saheeli, Jewel of Avishkar"] =
+			[
+				new StaticEffectComponent(Affects.CreaturesYouControl, "Haste")
+				{
+					OnlySubtype = "Thopter",
+				},
+				When(TriggerEvent.YouCastNoncreatureSpell, [], new CreateTokens(Thopter, 1)),
+			],
+			["Hexhaven Dueling Arena"] =
+			[
+				new ManaAbilityComponent(ManaColor.Colorless),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{2}"),
+					[new BecomePrepared(Ref.Target())]
+				)
+				{
+					TapCost = true,
+					SorcerySpeed = true,
+					Targets = [Creature with { AttackedThisTurn = true }],
+				},
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{4}"),
+					[new BecomePrepared(Ref.Target())]
+				)
+				{
+					TapCost = true,
+					Targets = [Creature],
+				},
 			],
 		};
 

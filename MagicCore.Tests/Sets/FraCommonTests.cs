@@ -12,9 +12,6 @@ namespace MagicCore.Tests.Sets;
 /// <summary>Commons (7e-1a): impulse draw, reflexive triggers, revealed hands, chosen colors — each ability fires.</summary>
 public class FraCommonTests : FraBoardTest
 {
-	IEnumerable<ActivateAbilityAction> Activations(int card) =>
-		s.LegalActions().OfType<ActivateAbilityAction>().Where(a => a.CardId == card);
-
 	int OnTop(CardDefinition card)
 	{
 		int id;

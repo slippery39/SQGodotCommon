@@ -100,6 +100,9 @@ public record Card : GameObject
 	/// <summary>TurnNumber it entered the battlefield — "target creature that entered this turn".</summary>
 	public int EnteredOnTurn { get; init; }
 
+	/// <summary>TurnNumber it was last declared as an attacker — Hexhaven's "creature that attacked this turn".</summary>
+	public int AttackedOnTurn { get; init; }
+
 	/// <summary>TurnNumber its "triggers only once each turn" ability last triggered.</summary>
 	public int OncePerTurnTriggeredOn { get; init; }
 
@@ -147,6 +150,7 @@ public record Card : GameObject
 			CastX = 0,
 			LoyaltyActivatedOnTurn = 0,
 			EnteredOnTurn = 0,
+			AttackedOnTurn = 0,
 			OncePerTurnTriggeredOn = 0,
 			IsPrepared = false,
 			AttachedToId = 0,

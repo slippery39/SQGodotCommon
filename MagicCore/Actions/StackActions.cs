@@ -60,11 +60,23 @@ public record CastSpellAction : GameAction
 	public static bool OwesDiscard(GameState s, Card card) =>
 		Costs.Flashback(s, card)?.DiscardACard == true;
 
-	/// <summary>Effective cost plus whatever is paid instead of a sacrifice.</summary>
+	/// <summary>
+	/// The total cost: X and whatever is paid instead of a sacrifice are in it, so ManaPayment is
+	/// asked for X = 0 — and a reduction applies to the total (CR 601.2f).
+	/// </summary>
 	ManaCost CostToPay(GameState s, Card card) =>
-		card.GetComponent<SacrificeOrPayAdditionalCost>() is { } extra && SacrificeId == 0
-			? Costs.Of(s, PlayerId, card).WithGeneric(extra.Generic)
-			: Costs.Of(s, PlayerId, card);
+		Costs.Of(
+			s,
+			PlayerId,
+			card,
+			X
+				+ (
+					card.GetComponent<SacrificeOrPayAdditionalCost>() is { } extra
+					&& SacrificeId == 0
+						? extra.Generic
+						: 0
+				)
+		);
 
 	public override ValidationResult ValidateAdd(GameState s)
 	{
@@ -104,7 +116,7 @@ public record CastSpellAction : GameAction
 			&& (extra is null || !extra.Sacrifice.IsLegal(s, PlayerId, CardId, SacrificeId))
 		)
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
-		if (ManaPayment.Find(s, PlayerId, CostToPay(s, card), X) is null)
+		if (ManaPayment.Find(s, PlayerId, CostToPay(s, card), 0) is null)
 			return ValidationResult.Invalid("Cannot pay the cost");
 		return ValidationResult.Valid;
 	}
@@ -120,7 +132,7 @@ public record CastSpellAction : GameAction
 	{
 		var card = s.GetCard(CardId);
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
-		s = ManaPayment.Pay(s, PlayerId, ManaPayment.Find(s, PlayerId, CostToPay(s, card), X)!);
+		s = ManaPayment.Pay(s, PlayerId, ManaPayment.Find(s, PlayerId, CostToPay(s, card), 0)!);
 		if (SacrificeId != 0)
 			s = s.Sacrifice(SacrificeId);
 		if (DiscardId != 0)

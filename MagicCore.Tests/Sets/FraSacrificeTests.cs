@@ -22,9 +22,6 @@ public class FraSacrificeTests : FraBoardTest
 		Resolve();
 	}
 
-	IEnumerable<ActivateAbilityAction> Activations(int card) =>
-		s.LegalActions().OfType<ActivateAbilityAction>().Where(a => a.CardId == card);
-
 	[Test]
 	public void BuddingInsurgent_SacrificesItself_DrawingOnlyForALegendaryEnchantment()
 	{

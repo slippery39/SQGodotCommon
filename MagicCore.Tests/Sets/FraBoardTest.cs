@@ -106,6 +106,9 @@ public abstract class FraBoardTest
 
 	protected bool Alive(int card) => s.IsOnBattlefield(card);
 
+	protected IEnumerable<ActivateAbilityAction> Activations(int card) =>
+		s.LegalActions().OfType<ActivateAbilityAction>().Where(a => a.CardId == card);
+
 	protected IEnumerable<CastSpellAction> Casts(int card) =>
 		s.LegalActions().OfType<CastSpellAction>().Where(a => a.CardId == card);
 

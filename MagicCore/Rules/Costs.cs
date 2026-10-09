@@ -46,17 +46,27 @@ public static class Costs
 		return counters == 0 ? ability.Cost : ability.Cost.WithGeneric(-counters);
 	}
 
-	public static ManaCost Of(GameState s, int casterId, Card card)
+	/// <param name="addedGeneric">
+	/// X and any additional generic cost ("or pay {N}"). Taxes and reductions apply to the TOTAL (CR
+	/// 601.2f) — Geist's {1} off an {X}{R} spell would be lost on the printed cost, which has no generic.
+	/// </param>
+	public static ManaCost Of(GameState s, int casterId, Card card, int addedGeneric = 0)
 	{
 		var printed = Flashback(s, card)?.Cost ?? card.ManaCost; // flashback is an alternative cost: taxes still apply
-		var delta = 0;
+		var yours = s.CardsIn(casterId, ZoneType.Battlefield).ToList();
+		var delta = addedGeneric;
 		if (!card.Is(CardType.Creature))
-			delta += s.CardsIn(s.OpponentOf(casterId), ZoneType.Battlefield)
-				.SelectMany(c => c.GetComponents<OpponentsNoncreatureSpellsCostMore>())
-				.Sum(t => t.Amount);
+			delta +=
+				s.CardsIn(s.OpponentOf(casterId), ZoneType.Battlefield)
+					.SelectMany(c => c.GetComponents<OpponentsNoncreatureSpellsCostMore>())
+					.Sum(t => t.Amount)
+				- yours
+					.SelectMany(c => c.GetComponents<YourNoncreatureSpellsCostLess>())
+					.Sum(r => r.Amount);
 
-		var controlsLegendaryCreature = s.CardsIn(casterId, ZoneType.Battlefield)
-			.Any(c => c.Is(CardType.Creature) && c.Is(Supertype.Legendary));
+		var controlsLegendaryCreature = yours.Any(c =>
+			c.Is(CardType.Creature) && c.Is(Supertype.Legendary)
+		);
 		if (controlsLegendaryCreature)
 			delta -= card.GetComponents<CostsLessIfYouControlLegendaryCreature>()
 				.Sum(r => r.Amount);
@@ -66,7 +76,7 @@ public static class Costs
 				.Sum(r => r.Amount);
 
 		if (card.HasComponent<CostsLessByGreatestPowerYouControl>())
-			delta -= s.CardsIn(casterId, ZoneType.Battlefield)
+			delta -= yours
 				.Where(c => c.Is(CardType.Creature))
 				.Select(c => Math.Max(0, s.Power(c)))
 				.DefaultIfEmpty(0)

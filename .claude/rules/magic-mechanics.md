@@ -30,7 +30,16 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"This ability triggers only once each turn"** is `TriggeredAbilityComponent.OncePerTurn`, stamped
   on the card as it goes on the stack (`PutOnStack`) — a new object (CR 400.7) may trigger again.
 - **"Entered this turn"** is `Card.EnteredOnTurn`, stamped by `EnterBattlefield` — not
-  `ControlledSinceTurn`, which a control change would also move.
+  `ControlledSinceTurn`, which a control change would also move. **"Attacked this turn"** is
+  `Card.AttackedOnTurn`, stamped as attackers are declared.
+- **"Doesn't untap during your untap step"** (`DoesntUntapInYourUntapStep`) is read by the untap step
+  ONLY — an untap effect still untaps it (Traxos' own trigger). A stun counter, by contrast, eats every untap.
+- **A subtype narrows a trigger or a static:** `TriggeredAbilityComponent.EventSubtype` ("whenever a
+  Plains you control enters" — no prompt for any other land) and `StaticEffectComponent.OnlySubtype`
+  ("Thopters you control have haste"). Never `TriggeredAbilityComponent.If` for this: that is checked
+  again on resolution, so a Plains bounced in response would lose Koth's counter — there's no "if" in the text.
+- **Cost changes all live in `Costs.Of`** — taxes on the opponent's side, reductions on yours
+  (`YourNoncreatureSpellsCostLess`), and the card's own.
 - **Where triggers are read from:** permanents on the battlefield; a dying card's own "when this
   dies"; a graveyard card's abilities marked `FromGraveyard` (Darklight Phoenix) — those, and only
   those, trigger from there; and a trigger granted until end of turn (`UntilEndOfTurn.Trigger`,

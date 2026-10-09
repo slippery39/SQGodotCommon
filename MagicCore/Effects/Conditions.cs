@@ -34,6 +34,13 @@ public record EventCardHasSubtype(string Subtype) : Condition
 		Ref.EventCard.Resolve(s, context).Select(s.GetCard).Any(c => c.Subtypes.Contains(Subtype));
 }
 
+/// <summary>Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your turn" static.</summary>
+public record DuringYourTurn : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		s.GetGame().ActivePlayerId == (int)context[ContextKeys.Controller];
+}
+
 public record Not(Condition Inner) : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
