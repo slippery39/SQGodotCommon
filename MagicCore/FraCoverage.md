@@ -5,7 +5,7 @@ Count scripted cards from `FraCards.cs` (`["Name"] =` keys) — never from memor
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 202 cards scripted
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 208 cards scripted
 in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
 dies / exile-until cards, 25 step-trigger / per-turn / prowess / surveil-trigger cards, the 6 flashback cards, 19 prepare cards (Pyre Rhymer and Heartwood Crafter wait: a mana-tap
 trigger, restricted mana), 12 landcycling / graveyard-ability cards, and 7 graveyard-return / hexproof /
@@ -19,7 +19,9 @@ Homestead, Rescue Girl, both Teyos, Kiora of Fire and Ashes, Pia Determined Rebu
 Frost, Geist of Saint Thalia, Arni Humble Scribe, Traxos Scourge Eternal, Saheeli Jewel of Avishkar,
 Hexhaven Dueling Arena (creatures). 7e-2c: 9 — Tinybones, Titanbones, Jiang Yanggu Alone, Pia Aether
 Ascetic, both Danithas, Plan for All Outcomes, Proft Sinister Mastermind, Countersculpt (discard and cast
-triggers). Uncommons left: 16, batched 7e-2d–e
+triggers). 7e-2d: 6 — Tomik Izzet Sparkmage, Yoshimaru Beloved Companion, Mabel Bitter Recluse,
+Hapatra the Desert Fang, Loot the Anomaly, Ghalta the Immovable (replacements, -1/-1 counters, combat
+damage). Uncommons left: 10, batched 7e-2e
 (HANDOFF-MtgReal.md); Flourishing Grapple waits with Infinite Coursework, Heartwood Crafter on restricted
 mana, Way of the Cryomancer on copying a spell. Commons left: Infinite Coursework
 (waits: "loses all abilities" needs one central read of a card's abilities), Sphinx's Approach

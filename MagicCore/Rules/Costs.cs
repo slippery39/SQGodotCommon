@@ -75,10 +75,10 @@ public static class Costs
 			delta -= card.GetComponents<CostsLessIfYouCastNoncreatureSpellThisTurn>()
 				.Sum(r => r.Amount);
 
-		if (card.HasComponent<CostsLessByGreatestPowerYouControl>())
+		if (card.GetComponent<CostsLessByGreatestStatYouControl>() is { } greatest)
 			delta -= yours
 				.Where(c => c.Is(CardType.Creature))
-				.Select(c => Math.Max(0, s.Power(c)))
+				.Select(c => Math.Max(0, greatest.Toughness ? s.Toughness(c) : s.Power(c)))
 				.DefaultIfEmpty(0)
 				.Max();
 

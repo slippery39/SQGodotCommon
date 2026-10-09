@@ -40,6 +40,7 @@ MagicCore/
 ├── Rules/Playable.cs    THE "may it be cast/played from here": hand, flashback, prepared copy, impulse exile
 ├── Rules/Prepare.cs     THE prepare rules: become prepared (a copy of the spell in exile), castable, unprepare
 ├── Rules/Life.cs        THE life-gain path — raises the event "whenever you gain life" reads
+├── Rules/Replacements.cs  THE numeric replacements ("that much plus one instead") — damage, +1/+1 counters
 ├── Cards/Card.cs        Card (computed P/T + keywords, permanent/combat state, Fresh()), CardFactory
 ├── Cards/CardData.cs    printed data (Scryfall) + CardDataSet.Load("FRA")
 ├── Mana/                ManaPool, ManaCost (parse, WithGeneric), ManaPayment (solver), ManaAbilities

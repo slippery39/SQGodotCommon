@@ -52,6 +52,14 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"You can't cast this unless …"** is `CastOnlyIf`, read by `Playable.CanCastFromHere` — never offered.
   **"Behold a … or pay {N}"** is `CastSpellAction.BeholdId` (a card you control, or in hand, not this
   one); nothing moves.
+- **Numeric replacements** ("… that much plus one instead") are `AmountReplacement` on a permanent,
+  applied by `Rules.Replacements.Apply` inside the one place the event happens: `Damage.Deal` (and
+  `Damage.Excess`, so excess sees the replaced amount) and `MagicState.AddPlusOneCounters` — the ONE
+  way +1/+1 counters are put on, entering with them included. Lifted from MtgCore's ReplacementEngine.
+- **-1/-1 counters** are `Card.MinusOneCounters`, read into `OwnPower`/`OwnToughness`; the
+  state-based check cancels them against +1/+1 counters in pairs (CR 704.5q).
+- **How much combat damage a creature assigns** is `Combat.Assigns` — power, or toughness (Ghalta), or a
+  negative power as positive (Loot). Combat never reads `s.Power` for damage directly.
 - **Cost changes all live in `Costs.Of`** — taxes on the opponent's side, reductions on yours
   (`YourNoncreatureSpellsCostLess`), and the card's own.
 - **Where triggers are read from:** permanents on the battlefield; a dying card's own "when this

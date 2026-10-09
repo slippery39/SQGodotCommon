@@ -135,12 +135,78 @@ public record AddCounters(Ref What, Count Amount) : Effect
 		return new(
 			Permanents(What, s)
 				.Where(c => c.Is(CardType.Creature))
-				.Aggregate(
-					s,
-					(st, c) =>
-						Update(st, c with { PlusOneCounters = Math.Max(0, c.PlusOneCounters + n) })
-				)
+				.Aggregate(s, (st, c) => st.AddPlusOneCounters(c.Id, n))
 		);
+	}
+}
+
+/// <summary>Hapatra, the Desert Fang: "put X -1/-1 counters on …" — creatures only.</summary>
+public record AddMinusOneCounters(Ref What, Count Amount) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var n = Amount.Value(s, InputContext);
+		return n <= 0
+			? new(s)
+			: new(
+				Permanents(What, s)
+					.Where(c => c.Is(CardType.Creature))
+					.Aggregate(
+						s,
+						(st, c) => Update(st, c with { MinusOneCounters = c.MinusOneCounters + n })
+					)
+			);
+	}
+}
+
+/// <summary>
+/// Mabel: "remove up to N counters from …". ponytail: no prompt — from your own permanent it
+/// removes the harmful ones (stun, -1/-1, finality), from theirs the helpful ones (+1/+1, loyalty);
+/// never the other kind. Make it a choice if a card ever wants something else.
+/// </summary>
+public record RemoveCounters(Ref What, int UpTo) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var target in Permanents(What, s).ToList())
+		{
+			var left = UpTo;
+			int Take(int have)
+			{
+				var n = Math.Min(have, left);
+				left -= n;
+				return n;
+			}
+			var c = s.GetCard(target.Id);
+			if (c.ControllerId == Controller)
+			{
+				var stun = Take(c.StunCounters);
+				var minus = Take(c.MinusOneCounters);
+				var finality = c.HasFinalityCounter && Take(1) == 1;
+				s = Update(
+					s,
+					c with
+					{
+						StunCounters = c.StunCounters - stun,
+						MinusOneCounters = c.MinusOneCounters - minus,
+						HasFinalityCounter = c.HasFinalityCounter && !finality,
+					}
+				);
+			}
+			else
+			{
+				s = Update(
+					s,
+					c with
+					{
+						PlusOneCounters = c.PlusOneCounters - Take(c.PlusOneCounters),
+					}
+				);
+				if (c.Is(CardType.Planeswalker))
+					s = Actions.Loyalty.Change(s, c.Id, -Take(c.Loyalty));
+			}
+		}
+		return new(s);
 	}
 }
 
@@ -281,10 +347,16 @@ public record PutEventCardCounters(Ref To) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
-		var counters = GetInput<Card?>(ContextKeys.EventSnapshot)?.PlusOneCounters ?? 0;
-		return counters == 0
-			? new(s)
-			: (new AddCounters(To, counters) with { InputContext = InputContext }).Execute(s);
+		var dead = GetInput<Card?>(ContextKeys.EventSnapshot);
+		s = (new AddCounters(To, dead?.PlusOneCounters ?? 0) with { InputContext = InputContext })
+			.Execute(s)
+			.GameState;
+		return (
+			new AddMinusOneCounters(To, dead?.MinusOneCounters ?? 0) with
+			{
+				InputContext = InputContext,
+			}
+		).Execute(s);
 	}
 }
 

@@ -1064,7 +1064,7 @@ public static class FraCards
 			],
 			["Ghalta the Unstoppable"] =
 			[
-				new CostsLessByGreatestPowerYouControl(),
+				new CostsLessByGreatestStatYouControl(),
 				new StaticEffectComponent(Affects.OtherCreaturesYouControl, "Trample"),
 			],
 			["Skilled Battlecarver"] =
@@ -2514,6 +2514,62 @@ public static class FraCards
 					new Counter(Ref.Target()),
 					new EmpowerJace(1)
 				),
+			],
+
+			// ===== Uncommons: replacements and counters =====
+			["Tomik, Izzet Sparkmage"] =
+			[
+				Prowess,
+				new AmountReplacement(ReplaceableEvent.NoncombatDamageToOpponent, 1),
+			],
+			["Yoshimaru, Beloved Companion"] =
+			[
+				new AmountReplacement(ReplaceableEvent.PlusOneCountersOnYourCreature, 1),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{6}"),
+					[new AddCounters(Ref.Target(), 1)]
+				)
+				{
+					Targets = [Creature with { WithSupertype = Supertype.Legendary }],
+				},
+			],
+			["Mabel, Bitter Recluse"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[CreatureOrPlaneswalker with { Another = true }],
+					new RemoveCounters(Ref.Target(), 3)
+				),
+			],
+			["Hapatra, the Desert Fang"] =
+			[
+				// "For each opponent, … up to one target creature that player controls" — one opponent.
+				When(
+					TriggerEvent.SelfEnters,
+					[new TargetSpec(TargetKind.Creature, Whose.Opponent) { Optional = true }],
+					new AddMinusOneCounters(
+						Ref.Target(),
+						Count.GreatestManaValueOf(Ref.CardsInYourGraveyard)
+					)
+				),
+			],
+			["Loot, the Anomaly"] =
+			[
+				new AssignsDamageAsThoughPowerPositive(),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new ModifyUntilEndOfTurn(Ref.Source, -2, 0)]
+				)
+				{
+					Sacrifice = CreatureOrPlaneswalker with { Whose = Whose.You, Another = true },
+					OnlyIf = Threshold,
+				},
+			],
+			["Ghalta the Immovable"] =
+			[
+				new CostsLessByGreatestStatYouControl(Toughness: true),
+				new YourCreaturesAttackDespiteDefender(),
+				new YourCreaturesAssignDamageByToughness(),
 			],
 		};
 

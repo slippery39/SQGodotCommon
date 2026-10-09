@@ -156,6 +156,7 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 
 	bool Filters(GameState s, Card card) =>
 		!(Nonlegendary && card.Is(Supertype.Legendary))
+		&& (WithSupertype == Supertype.None || card.Is(WithSupertype))
 		&& (AnyOfColors.IsEmpty || card.Colors.Any(AnyOfColors.Contains))
 		&& (NotTypes == CardType.None || !card.Is(NotTypes))
 		&& (MinToughness == 0 || s.Toughness(card) >= MinToughness)

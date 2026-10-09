@@ -34,6 +34,8 @@ public static class Combat
 			!s.Has(c, "Defender")
 			|| c.GetComponents<Effects.AttacksDespiteDefender>()
 				.Any(d => d.While.Holds(s, Effects.Conditions.Of(c)))
+			|| s.CardsIn(c.ControllerId, ZoneType.Battlefield)
+				.Any(p => p.HasComponent<Effects.YourCreaturesAttackDespiteDefender>())
 		)
 		&& (s.Has(c, "Haste") || !IsSummoningSick(s, c));
 
@@ -97,6 +99,24 @@ public static class Combat
 			.Concat(s.CardsIn(Defender(s), ZoneType.Battlefield).Where(c => c.BlockingId != 0));
 
 	/// <summary>
+	/// CR 510.1a: combat damage equal to its power — or its toughness, when that is greater and Ghalta
+	/// says so; or, for Loot, as though a negative power were positive.
+	/// </summary>
+	public static int Assigns(GameState s, Card c)
+	{
+		var power = s.Power(c);
+		if (
+			s.Toughness(c) > power
+			&& s.CardsIn(c.ControllerId, ZoneType.Battlefield)
+				.Any(p => p.HasComponent<Effects.YourCreaturesAssignDamageByToughness>())
+		)
+			return s.Toughness(c);
+		return power < 0 && c.HasComponent<Effects.AssignsDamageAsThoughPowerPositive>()
+			? -power
+			: power;
+	}
+
+	/// <summary>
 	/// CR 510: every combatant that deals damage in this step deals it at once — assignments are
 	/// computed from the state before any of it lands.
 	///
@@ -106,8 +126,12 @@ public static class Combat
 	/// </summary>
 	public static GameState DealDamage(GameState s, bool firstStrikeStep)
 	{
+		// Read once per combatant — every assignment is from the state before any damage lands.
+		var assigned = new Dictionary<int, int>();
+		int Assigned(Card c) =>
+			assigned.TryGetValue(c.Id, out var n) ? n : assigned[c.Id] = Assigns(s, c);
 		bool Deals(Card c) =>
-			s.Power(c) > 0
+			Assigned(c) > 0
 			&& (
 				firstStrikeStep
 					? s.Has(c, "First strike") || s.Has(c, "Double strike")
@@ -119,10 +143,10 @@ public static class Combat
 		{
 			if (!attacker.IsBlocked)
 			{
-				hits.Add((attacker, attacker.AttackingId, s.Power(attacker)));
+				hits.Add((attacker, attacker.AttackingId, Assigned(attacker)));
 				continue;
 			}
-			var remaining = s.Power(attacker);
+			var remaining = Assigned(attacker);
 			var blockers = BlockersOf(s, attacker.Id).ToList();
 			foreach (var blocker in blockers)
 			{
@@ -147,7 +171,7 @@ public static class Combat
 				s.IsOnBattlefield(blocker.BlockingId)
 				&& s.GetCard(blocker.BlockingId).AttackingId != 0
 			)
-				hits.Add((blocker, blocker.BlockingId, s.Power(blocker)));
+				hits.Add((blocker, blocker.BlockingId, Assigned(blocker)));
 
 		foreach (var (source, targetId, amount) in hits)
 			s = Rules.Damage.Deal(s, source, targetId, amount, combat: true);

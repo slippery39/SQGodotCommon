@@ -229,8 +229,11 @@ public record YourNoncreatureSpellsCostLess(int Amount) : GameComponent;
 /// </summary>
 public record DoesntUntapInYourUntapStep : GameComponent;
 
-/// <summary>Ghalta: "This spell costs {X} less to cast, where X is the greatest power among creatures you control."</summary>
-public record CostsLessByGreatestPowerYouControl : GameComponent;
+/// <summary>
+/// "This spell costs {X} less to cast, where X is the greatest power among creatures you control" —
+/// or toughness (Ghalta the Immovable).
+/// </summary>
+public record CostsLessByGreatestStatYouControl(bool Toughness = false) : GameComponent;
 
 /// <summary>Wrath of the Bloodmane: "This spell costs {N} less to cast if you control a legendary creature."</summary>
 public record CostsLessIfYouControlLegendaryCreature(int Amount) : GameComponent;
@@ -291,6 +294,24 @@ public record BeholdOrPayAdditionalCost(string Subtype, int Generic) : GameCompo
 			.Where(c => c.Subtypes.Contains(Subtype))
 			.Select(c => c.Id);
 }
+
+public enum ReplaceableEvent
+{
+	NoncombatDamageToOpponent, // Tomik: "a source you control … to an opponent or a permanent an opponent controls"
+	PlusOneCountersOnYourCreature, // Yoshimaru: "+1/+1 counters would be put on a creature you control"
+}
+
+/// <summary>"… that much plus Bonus instead" — on a permanent; Rules.Replacements reads it where the event happens.</summary>
+public record AmountReplacement(ReplaceableEvent Event, int Bonus) : GameComponent;
+
+/// <summary>Loot, the Anomaly: "If his power is negative, he assigns combat damage as though it were positive."</summary>
+public record AssignsDamageAsThoughPowerPositive : GameComponent;
+
+/// <summary>Ghalta: "Each creature you control with toughness greater than its power assigns combat damage equal to its toughness."</summary>
+public record YourCreaturesAssignDamageByToughness : GameComponent;
+
+/// <summary>Ghalta: "Creatures you control can attack as though they didn't have defender."</summary>
+public record YourCreaturesAttackDespiteDefender : GameComponent;
 
 /// <summary>"This spell can't be countered." Read by StackResolution.Counter.</summary>
 public record CantBeCountered : GameComponent;

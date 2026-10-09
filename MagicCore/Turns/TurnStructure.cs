@@ -233,6 +233,24 @@ public static class StateBasedActions
 
 			s = Rules.Attachments.Check(s, id); // CR 704.5m/n
 
+			// CR 704.5q: +1/+1 and -1/-1 counters on one permanent cancel in pairs.
+			foreach (
+				var both in s.CardsIn(id, ZoneType.Battlefield)
+					.Where(c => c.PlusOneCounters > 0 && c.MinusOneCounters > 0)
+					.ToList()
+			)
+			{
+				var pairs = Math.Min(both.PlusOneCounters, both.MinusOneCounters);
+				s = s.UpdateObject(
+					both.Id,
+					both with
+					{
+						PlusOneCounters = both.PlusOneCounters - pairs,
+						MinusOneCounters = both.MinusOneCounters - pairs,
+					}
+				);
+			}
+
 			// CR 704.5d: a token anywhere but the battlefield ceases to exist.
 			foreach (
 				var zone in new[]

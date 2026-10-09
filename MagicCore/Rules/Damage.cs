@@ -20,6 +20,7 @@ public static class Damage
 	{
 		if (amount <= 0 || !s.HasObject(targetId))
 			return s;
+		amount = Replaced(s, source, targetId, amount, combat);
 
 		if (s.GetObject(targetId) is MagicPlayer player)
 		{
@@ -61,6 +62,25 @@ public static class Damage
 		return s.Has(source, "Lifelink") ? Life.Gain(s, source.ControllerId, amount) : s;
 	}
 
+	/// <summary>The damage after replacements — Tomik: +1 noncombat to an opponent or a permanent they control.</summary>
+	static int Replaced(GameState s, Card source, int targetId, int amount, bool combat)
+	{
+		var toAnOpponent = s.GetObject(targetId) switch
+		{
+			MagicPlayer p => p.Id != source.ControllerId,
+			Card c => s.IsOnBattlefield(c.Id) && c.ControllerId != source.ControllerId,
+			_ => false,
+		};
+		return combat || !toAnOpponent
+			? amount
+			: Replacements.Apply(
+				s,
+				Effects.ReplaceableEvent.NoncombatDamageToOpponent,
+				source.ControllerId,
+				amount
+			);
+	}
+
 	/// <summary>
 	/// CR 120.4a: how much of this damage would be beyond lethal — past a planeswalker's loyalty, or
 	/// a creature's toughness less the damage already marked (1 is lethal from deathtouch).
@@ -69,6 +89,7 @@ public static class Damage
 	{
 		if (!s.IsOnBattlefield(targetId))
 			return 0;
+		amount = Replaced(s, source, targetId, amount, combat: false);
 		var target = s.GetCard(targetId);
 		var lethal =
 			target.Is(CardType.Planeswalker) ? target.Loyalty

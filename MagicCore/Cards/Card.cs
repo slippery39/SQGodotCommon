@@ -68,10 +68,12 @@ public record Card : GameObject
 	public int OwnPower =>
 		(CurrentBase?.Power ?? BasePower)
 		+ PlusOneCounters
+		- MinusOneCounters
 		+ Components.OfType<UntilEndOfTurn>().Sum(u => u.Power);
 	public int OwnToughness =>
 		(CurrentBase?.Toughness ?? BaseToughness)
 		+ PlusOneCounters
+		- MinusOneCounters
 		+ Components.OfType<UntilEndOfTurn>().Sum(u => u.Toughness);
 
 	/// <summary>The latest "has base power and toughness P/T" effect, if any (CR 613.4b, timestamp order).</summary>
@@ -102,6 +104,9 @@ public record Card : GameObject
 
 	/// <summary>TurnNumber it was last declared as an attacker — Hexhaven's "creature that attacked this turn".</summary>
 	public int AttackedOnTurn { get; init; }
+
+	/// <summary>-1/-1 counters — annihilated with +1/+1 counters by the state-based check (CR 704.5q).</summary>
+	public int MinusOneCounters { get; init; }
 
 	/// <summary>TurnNumber its "triggers only once each turn" ability last triggered.</summary>
 	public int OncePerTurnTriggeredOn { get; init; }
@@ -146,6 +151,7 @@ public record Card : GameObject
 			Incarnation = Incarnation + 1,
 			IsTapped = false,
 			PlusOneCounters = 0,
+			MinusOneCounters = 0,
 			Loyalty = 0,
 			CastX = 0,
 			LoyaltyActivatedOnTurn = 0,

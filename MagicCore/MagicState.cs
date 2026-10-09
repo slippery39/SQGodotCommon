@@ -180,17 +180,6 @@ public static class MagicState
 				EnteredOnTurn = s.GetGame().TurnNumber,
 				Loyalty = card.PrintedLoyalty,
 				CastX = x,
-				PlusOneCounters =
-					extraCounters
-					+ (
-						card.GetComponent<EntersWithCountersComponent>()
-							?.Count.Value(
-								s,
-								ImmutableDictionary<string, object>
-									.Empty.Add(ContextKeys.Controller, controllerId)
-									.Add(ContextKeys.X, x)
-							) ?? 0
-					),
 				HasFinalityCounter = finality,
 				IsTapped =
 					tapped
@@ -199,6 +188,21 @@ public static class MagicState
 						&& !EntersUntapped(s, card.Id, controllerId, entersTapped.Unless)
 					),
 			}
+		);
+		// Entering with counters is putting them on (Yoshimaru applies) — after control is set.
+		s = s.AddPlusOneCounters(
+			cardId,
+			extraCounters
+				+ (
+					card.GetComponent<EntersWithCountersComponent>()
+						?.Count.Value(
+							s,
+							ImmutableDictionary<string, object>
+								.Empty.Add(ContextKeys.Controller, controllerId)
+								.Add(ContextKeys.X, x)
+						) ?? 0
+				),
+			entering: true
 		);
 		// An Aura enters attached: to the target it was cast at, or to what its controller chooses (CR 303.4f).
 		if (card.HasComponent<AuraComponent>())
@@ -266,6 +270,38 @@ public static class MagicState
 			s = s.MoveCard(id, s.ZoneId(s.GetCard(id).OwnerId, ZoneType.Graveyard));
 		return s.Tally(playerId, t => t with { CardsDiscarded = t.CardsDiscarded + cardIds.Count })
 			.Raise(new DiscardedEvent(playerId, [.. cardIds]));
+	}
+
+	/// <summary>
+	/// The ONE way +1/+1 counters are put on a permanent — Yoshimaru's "that many plus one" applies
+	/// to a creature you control (MtgCore: only to an increase, never a removal). Negative removes.
+	/// </summary>
+	/// <param name="entering">It is entering with them: its own replacement doesn't apply (CR 614.12).</param>
+	public static GameState AddPlusOneCounters(
+		this GameState s,
+		int cardId,
+		int n,
+		bool entering = false
+	)
+	{
+		if (n == 0)
+			return s;
+		var card = s.GetCard(cardId);
+		if (card.Is(CardType.Creature))
+			n = Rules.Replacements.Apply(
+				s,
+				ReplaceableEvent.PlusOneCountersOnYourCreature,
+				card.ControllerId,
+				n,
+				exceptId: entering ? cardId : 0
+			);
+		return s.UpdateObject(
+			cardId,
+			card with
+			{
+				PlusOneCounters = Math.Max(0, card.PlusOneCounters + n),
+			}
+		);
 	}
 
 	/// <summary>Updates one player's "this turn" counts.</summary>

@@ -166,7 +166,10 @@ public sealed class GreedyAi(int playerId)
 			var blocker = s.GetCard(block.CreatureId);
 			var safe = choice.Options.Where(o =>
 				o.Id != CombatOption.None
-				&& (s.Power(s.GetCard(o.Id)) < s.Toughness(blocker) || s.IsIndestructible(blocker))
+				&& (
+					Turns.Combat.Assigns(s, s.GetCard(o.Id)) < s.Toughness(blocker)
+					|| s.IsIndestructible(blocker)
+				)
 			);
 			return [safe.Select(o => o.Id).FirstOrDefault(CombatOption.None)];
 		}
