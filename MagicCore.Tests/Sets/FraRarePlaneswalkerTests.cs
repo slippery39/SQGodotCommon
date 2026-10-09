@@ -275,6 +275,10 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 	{
 		var chandra = Walker("Chandra, Torch of Defiance");
 		var spell = OnTop(TestGames.Inline("Spell", "{1}", "Sorcery"));
+		int Untapped() =>
+			s.CardsIn(me, ZoneType.Battlefield).Count(c => c.Is(CardType.Land) && !c.IsTapped);
+		var untapped = Untapped();
+		var spellsCast = s.GetPlayer(me).ThisTurn.SpellsCast;
 		Activate(
 			chandra,
 			0,
@@ -286,9 +290,13 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 				}
 		);
 		Assert.That(
-			(s.IsIn(spell, me, ZoneType.Exile), Casts(spell).Any()),
-			Is.EqualTo((true, true)),
-			"castable this turn"
+			(
+				s.IsIn(spell, me, ZoneType.Graveyard),
+				s.GetPlayer(me).ThisTurn.SpellsCast,
+				untapped - Untapped()
+			),
+			Is.EqualTo((true, spellsCast + 1, 1)),
+			"cast right then — paid {1}, and counted as cast"
 		);
 
 		s = s.UpdateObject(chandra, s.GetCard(chandra) with { LoyaltyActivatedOnTurn = 0 }); // TEST SETUP

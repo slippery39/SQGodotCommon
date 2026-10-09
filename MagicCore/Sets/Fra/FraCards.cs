@@ -3589,6 +3589,62 @@ public static class FraCards
 					TapCost = true,
 				},
 			],
+
+			// ===== Mythics and a rare (8g): type change, casting from exile, casting mid-resolution =====
+			["Puppet Crafting"] =
+			[
+				new AuraComponent(
+					new TargetSpec(TargetKind.Permanent)
+					{
+						AnyOfTypes = CardType.Artifact | CardType.Enchantment,
+						NotSubtype = "Aura",
+					}
+				),
+				new EnchantedBecomesCreature("Construct", 5, 5),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{4}{G}"),
+					[new ReturnFromGraveyard(Ref.Source, ZoneType.Hand)]
+				)
+				{
+					From = ZoneType.Graveyard,
+				},
+			],
+			["Emrakul, the Exigent Doom"] =
+			[
+				When(TriggerEvent.SelfCast, [], new Untap(Ref.LandsYouControl)),
+				When(
+					TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
+					[],
+					new CounterUnlessPays(Ref.EventObject, ManaCost.None)
+					{
+						SacrificePermanents = 3,
+					}
+				),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{3}"),
+					[new LandTapsForTwoUntilThisIsCast(Ref.Target())]
+				)
+				{
+					From = ZoneType.Hand,
+					ExileSelf = true,
+					// ponytail: "target land" — yours: the grant replaces the land's own mana (one yield
+					// per permanent), so on an opponent's land it would shut off a colour.
+					Targets =
+					[
+						new TargetSpec(TargetKind.Permanent, Whose.You)
+						{
+							AnyOfTypes = CardType.Land,
+						},
+					],
+				},
+			],
+			["Uldaros Theorix"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new ExileOneOfEachTypeAndCastCopies(6)) with
+				{
+					If = new SourceWasCast(),
+				},
+			],
 		};
 
 	public static CardDefinition Get(string name) =>

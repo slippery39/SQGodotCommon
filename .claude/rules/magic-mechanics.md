@@ -186,5 +186,16 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **Restricted floating mana** ("spend this only to cast a noncreature spell") is
   `ManaPool.Restricted`: the solver offers it first, only to a spell `ManaAbilities.Allows` — the one
   restriction check, permanents' mana too — and `Pay` takes that unit. `ManaPool.Total` excludes it.
+- **A type change from an Aura** (Puppet Crafting: "is a 5/5 Construct creature in addition") is
+  STAMPED on the host while the Aura holds it (`Card.AnimatedBy`, what it was kept in `Animated`) and put
+  back by `Attachments.Check` once it doesn't, and by `Card.Fresh` as the host leaves. Every rule reads
+  `card.Is(Creature)`, so a live layer-4 read would need every one of them; the stamp is right by the
+  time anyone gets priority.
+- **Casting in the middle of a resolution** ("you may cast that card", Chandra, Torch of Defiance;
+  Uldaros' free copies) is `CastNow`: a real `CastSpellAction` with `DuringResolution` — the engine's
+  own cast candidates, checked by `ValidateAdd` (no priority or timing; modes, targets, X, additional
+  costs all still apply), the player picking one; then `Cast`, through `PutOnStack` — so "whenever you
+  cast" sees it. A copy of a permanent spell resolves into a token.
+- **"When you cast this spell"** (`TriggerEvent.SelfCast`, Emrakul) is read from the spell on the stack.
 - **Base P/T effects** ("has base power and toughness 4/5") sit under counters and pumps, latest
   wins (`UntilEndOfTurn.SetBase`, read in `Card.OwnPower`/`OwnToughness` under `s.Power`/`Toughness`).

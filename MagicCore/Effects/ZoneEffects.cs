@@ -423,9 +423,8 @@ public record NoLegendRuleThisTurn : Effect
 
 /// <summary>
 /// Chandra, Torch of Defiance: "Exile the top card of your library. You may cast that card. If you
-/// don't, [Otherwise]." ponytail: casting it is a yes now and the cast later this turn (it becomes
-/// playable from exile until end of turn); a real cast inside the resolution needs the cast to run
-/// mid-ability. Asked only when it could be cast — a land, or one you can't pay for, is "don't".
+/// don't, [Otherwise]." Cast right then (CastNow), paying its cost. Asked only when it could be cast —
+/// a land, or one you can't pay for or target with, is "don't".
 /// </summary>
 public record ExileTopMayCast(ImmutableList<GameAction> Otherwise) : Effect
 {
@@ -435,20 +434,7 @@ public record ExileTopMayCast(ImmutableList<GameAction> Otherwise) : Effect
 		if (top is not null)
 			s = s.MoveCard(top.Id, s.ZoneId(Controller, ZoneType.Exile));
 		var castable =
-			top is not null
-			&& !top.Is(CardType.Land)
-			// Its required targets exist (a modal card is assumed castable — ponytail).
-			&& StackResolution
-				.TextOf(top, [])
-				.Specs.All(spec => spec.Optional || spec.Candidates(s, Controller, top.Id).Any())
-			&& ManaPayment.Find(
-				s,
-				Controller,
-				Costs.Of(s, Controller, s.GetCard(top.Id)),
-				0,
-				forSpell: s.GetCard(top.Id)
-			)
-				is not null;
+			top is not null && CastNow.CanCast(s, Controller, s.GetCard(top.Id), free: false);
 		if (!castable)
 			return new(
 				s.SpawnAction(
@@ -463,7 +449,7 @@ public record ExileTopMayCast(ImmutableList<GameAction> Otherwise) : Effect
 					Steps =
 					[
 						new YesNoChoice(Controller, $"Cast {top!.Name}?"),
-						new IfChosenAction([new MakePlayableThisTurn(top.Id)])
+						new IfChosenAction([new CastNow(top.Id, Free: false)])
 						{
 							Otherwise = Otherwise,
 						},
@@ -474,18 +460,306 @@ public record ExileTopMayCast(ImmutableList<GameAction> Otherwise) : Effect
 	}
 }
 
-/// <summary>The exiled card may be cast by you until end of turn.</summary>
-public record MakePlayableThisTurn(int CardId) : Effect
+/// <summary>
+/// "You may cast that card" in the middle of a resolution (CR 608.2g) — Chandra, Torch of Defiance;
+/// Uldaros' free copies. A real CastSpellAction (DuringResolution): the engine's own cast candidates,
+/// so modes, targets, X, convoke and additional costs are all chosen and checked by ValidateAdd, the
+/// one legality — then the player picks one, and it goes on the stack as cast.
+/// </summary>
+public record CastNow(int CardId, bool Free) : Effect
+{
+	/// <summary>Every legal way to cast it now — free means X is 0 and no mana cost.</summary>
+	public static ImmutableList<CastSpellAction> Options(
+		GameState s,
+		int playerId,
+		int cardId,
+		bool free
+	) =>
+		!s.HasObject(cardId) || s.GetObject(cardId) is not Card card || card.Is(CardType.Land)
+			? []
+			:
+			[
+				.. s.DistinctMoves(
+						MagicRules
+							.CastCandidates(s, playerId, card)
+							.OfType<CastSpellAction>()
+							.Where(c => !free || c.X == 0)
+							.Select(c =>
+								c with
+								{
+									DuringResolution = true,
+									WithoutPayingManaCost = free,
+								}
+							)
+					)
+					.OfType<CastSpellAction>()
+					.Where(c => c.ValidateAdd(s).IsValid),
+			];
+
+	public static bool CanCast(GameState s, int playerId, Card card, bool free) =>
+		!Options(s, playerId, card.Id, free).IsEmpty;
+
+	public override ActionResult Execute(GameState s)
+	{
+		var options = Options(s, Controller, CardId, Free);
+		return options.Count switch
+		{
+			0 => new(s),
+			1 => new(options[0].Cast(s)),
+			_ => new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.Remove(ChooseCastChoice.Chosen),
+						Steps =
+						[
+							new ChooseCastChoice(Controller, options),
+							new CastChosenOption(options),
+						],
+					}
+				)
+			),
+		};
+	}
+}
+
+/// <summary>After the choice: that way of casting it, if it is still legal.</summary>
+public record CastChosenOption(ImmutableList<CastSpellAction> Options) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		InputContext.GetValueOrDefault(ChooseCastChoice.Chosen) is int id
+		&& Options[id - 1] is var cast
+		&& cast.ValidateAdd(s).IsValid
+			? new(cast.Cast(s))
+			: new(s);
+}
+
+/// <summary>
+/// Uldaros Theorix: "exile up to one target nonland card of each card type from your graveyard. Copy
+/// those cards. You may cast any number of spells with total mana value [Budget] or less from among
+/// the copies without paying their mana costs." ponytail: the cards are chosen as it resolves, not
+/// targeted as it triggers — one per type with no card twice is a word the targeting can't say.
+/// </summary>
+public record ExileOneOfEachTypeAndCastCopies(int Budget) : Effect
+{
+	static readonly CardType[] CardTypes =
+	[
+		CardType.Artifact,
+		CardType.Creature,
+		CardType.Enchantment,
+		CardType.Instant,
+		CardType.Sorcery,
+		CardType.Planeswalker,
+		CardType.Kindred,
+		CardType.Battle,
+	];
+
+	public override ActionResult Execute(GameState s) =>
+		new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext,
+					Steps =
+					[
+						.. CardTypes.Select(t => new ExileOneOfTypeFromGraveyard(t)),
+						new CastCopiesWithinBudget(Budget, []),
+					],
+				}
+			)
+		);
+}
+
+/// <summary>Up to one nonland card of this type from your graveyard, exiled and linked to the source.</summary>
+public record ExileOneOfTypeFromGraveyard(CardType Type) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		ImmutableList<int> ids =
+		[
+			.. s.CardsIn(Controller, ZoneType.Graveyard)
+				.Where(c => c.Is(Type) && !c.Is(CardType.Land))
+				.Select(c => c.Id),
+		];
+		return ids.IsEmpty
+			? new(s)
+			: new(
+				s.SpawnAction(
+					new PipelineAction
+					{
+						PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+						Steps =
+						[
+							new ChooseAmongChoice
+							{
+								PlayerId = Controller,
+								Ids = ids,
+								Types = Type,
+								Prompt =
+									$"Exile up to one {Type.ToString().ToLowerInvariant()} card",
+							},
+							new ExileChosenLinkedAction(),
+						],
+					}
+				)
+			);
+	}
+}
+
+/// <summary>
+/// One copy at a time, while the mana value left allows: choose one of the cards this exiled, cast a
+/// copy of it free, then choose again. Declining — or nothing left that fits — ends it, and the
+/// link is cleared so a later Uldaros can't offer these again.
+/// </summary>
+public record CastCopiesWithinBudget(int Budget, ImmutableList<int> Done) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var sourceId = GetInput<int>(ContextKeys.Source);
+		var linked = s.CardsIn(Controller, ZoneType.Exile)
+			.Where(c => c.GetComponent<ExiledBy>()?.SourceId == sourceId)
+			.ToList();
+		ImmutableList<int> fits =
+		[
+			.. linked
+				.Where(c =>
+					!Done.Contains(c.Id)
+					&& c.ManaCost.ManaValue <= Budget
+					&& CastNow.CanCast(s, Controller, c, free: true)
+				)
+				.Select(c => c.Id),
+		];
+		if (fits.IsEmpty)
+			return new(Unlink(s, linked));
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChooseCardsFromHandChoice.Chosen),
+					Steps =
+					[
+						new ChooseAmongChoice
+						{
+							PlayerId = Controller,
+							Ids = fits,
+							Zone = ZoneType.Exile,
+							Prompt = $"Cast a copy free ({Budget} mana value left)",
+						},
+						new CastChosenCopy(Budget, Done),
+					],
+				}
+			)
+		);
+	}
+
+	public static GameState Unlink(GameState s, IEnumerable<Card> cards) =>
+		cards.Aggregate(
+			s,
+			(st, c) => st.UpdateObject(c.Id, st.GetCard(c.Id).WithoutComponents<ExiledBy>())
+		);
+}
+
+/// <summary>The chosen card's copy, cast free — then the next choice, with what is left.</summary>
+public record CastChosenCopy(int Budget, ImmutableList<int> Done) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var sourceId = GetInput<int>(ContextKeys.Source);
+		if (
+			ChooseCardsFromHandChoice.Read(InputContext).FirstOrDefault()
+			is not (var chosen and not 0)
+		)
+			return new(
+				CastCopiesWithinBudget.Unlink(
+					s,
+					s.CardsIn(Controller, ZoneType.Exile)
+						.Where(c => c.GetComponent<ExiledBy>()?.SourceId == sourceId)
+				)
+			);
+		var original = s.GetCard(chosen);
+		Card copy;
+		(s, copy) = s.AddObject(
+			new Card
+			{
+				OwnerId = Controller,
+				ControllerId = Controller,
+				IsCopy = true,
+			}.WithCopiableValuesOf(original),
+			s.ZoneId(Controller, ZoneType.Exile)
+		);
+		return new(
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext,
+					Steps =
+					[
+						new CastNow(copy.Id, Free: true),
+						new CastCopiesWithinBudget(
+							Budget - original.ManaCost.ManaValue,
+							Done.Add(chosen)
+						),
+					],
+				}
+			)
+		);
+	}
+}
+
+/// <summary>Emrakul: "Sacrifice three permanents" — the payer chooses which.</summary>
+public record SacrificePermanents(int N) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
 		new(
-			Update(
-				s,
-				(Card)
-					s.GetCard(CardId)
-						.WithComponent(new PlayableFromExile(Controller, s.GetGame().TurnNumber))
+			s.SpawnAction(
+				new PipelineAction
+				{
+					PipelineContext = InputContext.Remove(ChoosePermanentChoice.Chosen),
+					Steps =
+					[
+						new ChoosePermanentChoice(
+							Controller,
+							GetInput<int>(ContextKeys.Source),
+							new TargetSpec(TargetKind.Permanent, Whose.You),
+							required: true
+						)
+						{
+							MinChoices = N,
+							MaxChoices = N,
+							Prompt = $"Sacrifice {N} permanents",
+						},
+						new SacrificeChosenAction(),
+					],
+				}
 			)
 		);
+}
+
+/// <summary>
+/// Emrakul, the Exigent Doom: "Target land gains '{T}: Add {C}{C}' until this card is cast from
+/// exile. You may cast this card for as long as it remains exiled." — after the cost exiled it.
+/// </summary>
+public record LandTapsForTwoUntilThisIsCast(Ref Land) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var sourceId = GetInput<int>(ContextKeys.Source);
+		if (
+			s.GetObject(sourceId) is not Card exiled
+			|| !s.IsIn(sourceId, exiled.OwnerId, ZoneType.Exile)
+		)
+			return new(s);
+		s = Update(s, (Card)exiled.WithComponent(new PlayableFromExile(Controller, int.MaxValue)));
+		foreach (var land in Permanents(Land, s).ToList())
+			s = Update(
+				s,
+				(Card)
+					land.WithComponentReplaced(
+						new TapsForTwoColorlessWhileExiled(sourceId, exiled.Incarnation)
+					)
+			);
+		return new(s);
+	}
 }
 
 /// <summary>Jace, Reality Sculptor: "Exile all but the bottom card of each opponent's library."</summary>

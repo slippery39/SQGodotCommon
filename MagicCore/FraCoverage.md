@@ -3,7 +3,7 @@
 Status, not rules: what is scripted, what waits and why. The rules live in `MagicCore/CLAUDE.md`.
 Count scripted cards from `FraCards.cs` (`["Name"] =` keys) — never from memory; this file once ran one high.
 
-**Playable by rarity** (scripted, keyword-only or basic — computed, 2026-10-09): common 86/86 · uncommon 109/109 · rare 62/64 · mythic 24/26 · **281/285**.
+**Playable by rarity** (scripted, keyword-only or basic — computed, 2026-10-09): common 86/86 · uncommon 109/109 · rare 63/64 · mythic 26/26 · **284/285**.
 8a (rares from existing pieces): Aerid Konstrari, Craterclaw Colossus, Ingris Stingerquill, Overwrite the
 Multiverse, The Echoverse Fulcrum, Tarmogoyf, Dark Matter Manipulator, Simulacrum Shaper, Lyra Archangel
 of Dawn, Master of Barbs, Solarium Sentry, Liliana the Faultless. 8b: Stinging Vitriol, Loyal Tutor, Entrust
@@ -14,8 +14,9 @@ Hungering Puppetbeast, Tenured Tethermage, Gideon's Memorial (Treasure, restrict
 Hexhaven Invigorator, Seasoned Cryomancer, Identity Echo, Kindred Judgment, Karn Argent Defender, Sphinx's
 Approach, Null Summoner, Omnipresence. 8e (copying permanents): Sphinx of False Conclusions, Face Yourself,
 Vindictive Triumph, Hall of Echoes. 8f (planeswalkers): Ajani Resolute, both Chandras, both Garruks, Jace
-Reality Sculptor, Tam the Possibility. Remaining: 8g (Puppet Crafting, Emrakul, Uldaros) and Extrapolate
-the Impossible (held for sealed/draft): HANDOFF-MtgReal.md.
+Reality Sculptor, Tam the Possibility. 8g: Puppet Crafting, Emrakul the Exigent Doom, Uldaros Theorix (type
+change, casting from exile, casting mid-resolution). **Only Extrapolate the Impossible remains** — "from
+outside the game", held for sealed/draft's sideboard.
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
@@ -37,7 +38,7 @@ Hapatra the Desert Fang, Loot the Anomaly, Ghalta the Immovable (replacements, -
 damage). 7e-2e: 6 — Yuriko Blade of the Mighty, Tomik Orzhov Lawmage, Kiora of Salt and Sand, Winter
 Team Player, both Fblthps (combat, convoke, domain, "you win the game"). 7f-1: Flourishing Grapple, Infinite Coursework ("loses all abilities", read through `s.AbilitiesOf`).
 7f-2: Loot the Nexus, Heartwood Crafter, Pyre Rhymer (mana: several of one colour, restricted
-mana, a Mountain's extra {R}). 7f-3: Way of the Cryomancer (copying a spell). **Every common and uncommon is in** (Sphinx's Approach, the last, in 8d). Puppet Crafting waits on type-changing. **Every real planeswalker is
+mana, a Mountain's extra {R}). 7f-3: Way of the Cryomancer (copying a spell). **Every common and uncommon is in** (Sphinx's Approach, the last, in 8d). **Every real planeswalker is
 in** (8f added emblems, "until your next turn" and −X).
 Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
 per-turn tracking, prowess ✓ · 7d-1 flashback ✓ · 7d-2 prepare ✓ · 7d-3a landcycling, graveyard abilities ✓ · 7d-3b graveyard returns, hexproof, indestructible ✓. The Bo1 hand smoother is Arena's published description; its weighting and whether

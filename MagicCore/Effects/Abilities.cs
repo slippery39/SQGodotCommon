@@ -66,6 +66,7 @@ public enum TriggerEvent
 	CreatureAttacksYouOrYourPlaneswalker, // Jace, Reality Sculptor's −3 — the event card is the attacker
 	CreatureWithPower4OrMoreYouControlEnters, // Garruk, Curse Breaker — its power as it enters
 	CreaturesAttackYourOpponent, // Garruk, Curse Breaker's −4: "one or more creatures attack one of your opponents"
+	SelfCast, // Emrakul: "When you cast this spell" — read from the spell on the stack
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>
@@ -413,6 +414,15 @@ public record OpponentsCreaturesExiledInsteadOfDying : GameComponent;
 
 /// <summary>Tam, the Possibility: "Planeswalker spells you cast cost {N} less to cast." — Costs.Of.</summary>
 public record YourSpellsOfTypeCostLess(Cards.CardType Types, int Amount) : GameComponent;
+
+/// <summary>
+/// Puppet Crafting: "Enchanted permanent is a [Subtype] creature with base power and toughness P/T in
+/// addition to its other types." Stamped on the host while the Aura is on it (Attachments.Check).
+/// </summary>
+public record EnchantedBecomesCreature(string Subtype, int Power, int Toughness) : GameComponent;
+
+/// <summary>Emrakul's land: "{T}: Add {C}{C}" until that card (this object of it) is cast from exile.</summary>
+public record TapsForTwoColorlessWhileExiled(int CardId, int Incarnation) : GameComponent;
 
 /// <summary>Karn, Argent Defender: "Artifacts and creatures entering the battlefield don't cause abilities to trigger." Read by Triggers.Collect.</summary>
 public record EnteringArtifactsAndCreaturesDontTrigger : GameComponent;

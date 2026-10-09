@@ -656,6 +656,9 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 	/// <summary>Gideon the Oathless: "Ward—Discard a card." — the cost is a card from hand instead.</summary>
 	public bool DiscardACard { get; init; }
 
+	/// <summary>Emrakul: "Ward—Sacrifice three permanents." — the cost is that many permanents.</summary>
+	public int SacrificePermanents { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		var stack = s.GetWellKnownId(MagicKeys.Stack);
@@ -675,9 +678,10 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 			var canPay =
 				payer != 0
 				&& (
-					DiscardACard
-						? s.CardsIn(payer, ZoneType.Hand).Any()
-						: ManaPayment.Find(s, payer, Cost, 0) is not null
+					DiscardACard ? s.CardsIn(payer, ZoneType.Hand).Any()
+					: SacrificePermanents > 0
+						? s.CardsIn(payer, ZoneType.Battlefield).Count() >= SacrificePermanents
+					: ManaPayment.Find(s, payer, Cost, 0) is not null
 				);
 			if (!canPay)
 			{
@@ -692,15 +696,28 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 					PipelineContext = InputContext
 						.Remove(ChoosePermanentChoice.Chosen)
 						.SetItem(ContextKeys.Controller, payer),
-					Steps = DiscardACard
-						?
-						[
-							new PayToKeepChoice(payer, $"Discard a card to keep {name}?"),
-							new IfChosenAction([new Discard(Ref.You, 1)])
-							{
-								Otherwise = [new Counter(What)],
-							},
-						]
+					Steps =
+						DiscardACard
+							?
+							[
+								new PayToKeepChoice(payer, $"Discard a card to keep {name}?"),
+								new IfChosenAction([new Discard(Ref.You, 1)])
+								{
+									Otherwise = [new Counter(What)],
+								},
+							]
+						: SacrificePermanents > 0
+							?
+							[
+								new PayToKeepChoice(
+									payer,
+									$"Sacrifice {SacrificePermanents} permanents to keep {name}?"
+								),
+								new IfChosenAction([new SacrificePermanents(SacrificePermanents)])
+								{
+									Otherwise = [new Counter(What)],
+								},
+							]
 						:
 						[
 							new PayToKeepChoice(payer, $"Pay {Cost} to keep {name}?"),

@@ -125,6 +125,9 @@ public record ChooseAmongChoice : ChoiceAction
 	public ImmutableList<int> Ids { get; init; } = [];
 	public CardType Types { get; init; }
 
+	/// <summary>Where the cards are: a graveyard (mill), or exile (Uldaros' copies to cast).</summary>
+	public ZoneType Zone { get; init; } = ZoneType.Graveyard;
+
 	public ChooseAmongChoice()
 	{
 		OutputKey = ChooseCardsFromHandChoice.Chosen;
@@ -136,9 +139,9 @@ public record ChooseAmongChoice : ChoiceAction
 		GameState s,
 		ImmutableDictionary<string, object> context
 	) =>
-		Ids.Where(id => s.IsIn(id, PlayerId, ZoneType.Graveyard))
+		Ids.Where(id => s.IsIn(id, PlayerId, Zone))
 			.Select(s.GetCard)
-			.Where(c => c.Is(Types))
+			.Where(c => Types == CardType.None || c.Is(Types)) // None: any card
 			.Select(c => new ChoiceOption { Id = c.Id, DisplayText = c.Name })
 			.ToImmutableList();
 
@@ -261,6 +264,40 @@ public record ChooseKeywordChoice : ChoiceAction
 		GameState s,
 		ImmutableDictionary<string, object> context
 	) => [.. Keywords.Select((k, i) => new ChoiceOption { Id = i + 1, DisplayText = k })];
+
+	public override int GetDecidingPlayerId(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) => PlayerId;
+}
+
+/// <summary>How to cast a card in the middle of a resolution: its targets, modes, X — one legal cast each.</summary>
+public record ChooseCastChoice : ChoiceAction
+{
+	public const string Chosen = "cast";
+
+	public int PlayerId { get; init; }
+	public ImmutableList<CastSpellAction> Casts { get; init; }
+
+	public ChooseCastChoice(int playerId, ImmutableList<CastSpellAction> casts)
+	{
+		PlayerId = playerId;
+		Casts = casts;
+		MinChoices = 1;
+		MaxChoices = 1;
+		OutputKey = Chosen;
+		Prompt = "Cast it how?";
+	}
+
+	public override ImmutableList<ChoiceOption> GetOptions(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	) =>
+		[
+			.. Casts.Select(
+				(c, i) => new ChoiceOption { Id = i + 1, DisplayText = Describe.Action(s, c) }
+			),
+		];
 
 	public override int GetDecidingPlayerId(
 		GameState s,

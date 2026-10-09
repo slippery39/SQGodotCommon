@@ -66,6 +66,13 @@ public record CastSpellAction : GameAction
 	/// <summary>Omnipresence: cast without paying its mana cost — X is 0 (CR 107.3c).</summary>
 	public bool WithoutPayingManaCost { get; init; }
 
+	/// <summary>
+	/// Cast by an effect as it resolves (CastNow — Chandra, Uldaros): no priority, no timing, and the
+	/// effect is the permission to cast it from where it is (and, free, to skip its mana cost). Every
+	/// other rule — targets, modes, X, additional costs, "can't cast unless", payment — still applies.
+	/// </summary>
+	public bool DuringResolution { get; init; }
+
 	public static bool OwesDiscard(GameState s, Card card) =>
 		Costs.Flashback(s, card)?.DiscardACard == true;
 
@@ -95,12 +102,16 @@ public record CastSpellAction : GameAction
 
 	public override ValidationResult ValidateAdd(GameState s)
 	{
-		if (Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
+		if (!DuringResolution && Priority.Holds(s, PlayerId) is { IsValid: false } noPriority)
 			return noPriority;
 		if (
 			!s.HasObject(CardId)
 			|| s.GetObject(CardId) is not Card candidate
-			|| !Playable.CanCastFromHere(s, candidate, PlayerId)
+			|| (
+				DuringResolution
+					? !Playable.CastRestrictionHolds(s, candidate, PlayerId)
+					: !Playable.CanCastFromHere(s, candidate, PlayerId)
+			)
 		)
 			return ValidationResult.Invalid("You may not cast that card from where it is");
 		var card = s.GetCard(CardId);
@@ -110,11 +121,15 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (card.Is(CardType.Land))
 			return ValidationResult.Invalid("Lands are played, not cast");
-		if (!CanCastNow(s, card))
+		if (!DuringResolution && !CanCastNow(s, card))
 			return ValidationResult.Invalid("Sorcery speed: your main phase with an empty stack");
 		if (X < 0 || (X > 0 && (!card.ManaCost.HasX || WithoutPayingManaCost)))
 			return ValidationResult.Invalid("Invalid X");
-		if (WithoutPayingManaCost && !Playable.MayCastWithoutPaying(s, card, PlayerId))
+		if (
+			WithoutPayingManaCost
+			&& !DuringResolution
+			&& !Playable.MayCastWithoutPaying(s, card, PlayerId)
+		)
 			return ValidationResult.Invalid("You may not cast that without paying its mana cost");
 		var text = card.GetComponent<SpellEffectsComponent>();
 		if (!Modal.IsLegal(text?.Modes ?? [], text?.Choose ?? 1, Modes))
@@ -165,7 +180,10 @@ public record CastSpellAction : GameAction
 			|| Priority.AtSorcerySpeed(s, PlayerId);
 	}
 
-	public override ActionResult Execute(GameState s)
+	public override ActionResult Execute(GameState s) => new(Priority.Retain(Cast(s), PlayerId));
+
+	/// <summary>Pays and puts it on the stack — the priority action keeps priority after; a resolution goes on.</summary>
+	public GameState Cast(GameState s)
 	{
 		var card = s.GetCard(CardId);
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
@@ -186,24 +204,43 @@ public record CastSpellAction : GameAction
 			s = s.Sacrifice(SacrificeId);
 		if (DiscardId != 0)
 			s = s.Discard(PlayerId, [DiscardId]);
+		return PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from);
+	}
+
+	/// <summary>
+	/// THE way a cast spell goes on the stack (CR 601.2a, 601.2i) once its costs are paid — from a
+	/// priority action or in the middle of a resolution (Uldaros, Chandra): controlled by its caster,
+	/// what was decided kept on it, counted for "this turn", and "whenever you cast" told.
+	/// </summary>
+	public static GameState PutOnStack(
+		GameState s,
+		int playerId,
+		int cardId,
+		int x,
+		ImmutableArray<int> targets,
+		ImmutableArray<int> modes,
+		ZoneType from
+	)
+	{
+		var card = s.GetCard(cardId);
 		if (Prepare.CreatureOf(s, card) is { } prepared)
 			s = Prepare.Unprepare(s, prepared.Id); // casting the copy unprepares it
-		s = s.MoveCard(CardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
+		s = s.MoveCard(cardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
 		s = s.UpdateObject(
-			CardId,
+			cardId,
 			// Its caster controls it (CR 601.2a) — Null Summoner casts the opponent's card.
-			(s.GetCard(CardId) with { ControllerId = PlayerId }).WithComponent(
-				new OnStackComponent(X, Targets, Modes)
+			(s.GetCard(cardId) with { ControllerId = playerId }).WithComponent(
+				new OnStackComponent(x, targets, modes)
 				{
 					CastFrom = from,
 					// Theorist's Proxy: "the next spell you cast this turn can't be countered" — this one.
-					CantBeCountered = s.GetPlayer(PlayerId).ThisTurn.NextSpellCantBeCountered,
+					CantBeCountered = s.GetPlayer(playerId).ThisTurn.NextSpellCantBeCountered,
 				}
 			)
 		);
 		var noncreature = card.Is(CardType.Creature) ? 0 : 1;
 		s = s.Tally(
-			PlayerId,
+			playerId,
 			t =>
 				t with
 				{
@@ -211,25 +248,24 @@ public record CastSpellAction : GameAction
 					NoncreatureSpellsCast = t.NoncreatureSpellsCast + noncreature,
 				}
 		);
-		if (s.GetPlayer(PlayerId).ThisTurn.NextSpellCantBeCountered)
-			s = s.Tally(PlayerId, t => t with { NextSpellCantBeCountered = false }); // used up
+		if (s.GetPlayer(playerId).ThisTurn.NextSpellCantBeCountered)
+			s = s.Tally(playerId, t => t with { NextSpellCantBeCountered = false }); // used up
 		// "When you next cast an instant or sorcery spell this turn": this one takes every waiting copy.
 		var copies = card.Is(CardType.Instant | CardType.Sorcery)
-			? s.GetPlayer(PlayerId).ThisTurn.CopyNextInstantOrSorcery
+			? s.GetPlayer(playerId).ThisTurn.CopyNextInstantOrSorcery
 			: 0;
 		if (copies > 0)
-			s = s.Tally(PlayerId, t => t with { CopyNextInstantOrSorcery = 0 });
+			s = s.Tally(playerId, t => t with { CopyNextInstantOrSorcery = 0 });
 		// Read from the tallied state — on one line with Tally, `s` would still be the old one.
 		s = s.Raise(
 			new SpellCastEvent(
-				CardId,
-				PlayerId,
-				noncreature * s.GetPlayer(PlayerId).ThisTurn.NoncreatureSpellsCast,
+				cardId,
+				playerId,
+				noncreature * s.GetPlayer(playerId).ThisTurn.NoncreatureSpellsCast,
 				copies
 			)
 		);
-		s = Turns.Triggers.RaiseTargeted(s, Targets, PlayerId, CardId);
-		return new ActionResult(Priority.Retain(s, PlayerId));
+		return Turns.Triggers.RaiseTargeted(s, targets, playerId, cardId);
 	}
 }
 
@@ -458,6 +494,8 @@ public static class StackResolution
 		if (top is Card permanent && !permanent.Is(CardType.Instant | CardType.Sorcery))
 		{
 			var cast = permanent.GetComponent<OnStackComponent>();
+			if (permanent.IsCopy) // CR 707.10f: a copy of a permanent spell becomes a token (Uldaros)
+				s = s.UpdateObject(permanent.Id, permanent with { IsCopy = false, IsToken = true });
 			// An Aura spell whose target is now illegal doesn't resolve (CR 608.3b); else it enters on it.
 			var auraHost = 0;
 			var auraFizzles = false;

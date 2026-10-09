@@ -71,8 +71,43 @@ public static class Attachments
 	/// <summary>
 	/// State-based (CR 704.5m/n): an Aura attached to nothing legal goes to its owner's graveyard;
 	/// an Equipment attached to something that is no longer a creature on the battlefield falls off.
+	/// Then a type change an Aura makes (Puppet Crafting) is put right: gone from a permanent the Aura
+	/// left, on one it holds. ponytail: stamped, not a live layer-4 effect — every rule reads
+	/// card.Is(Creature); the stamp is put right before anyone gets priority.
 	/// </summary>
 	public static GameState Check(GameState s, int playerId)
+	{
+		s = Detach(s, playerId);
+		s = Animations(s, playerId);
+		return s;
+	}
+
+	static GameState Animations(GameState s, int playerId)
+	{
+		foreach (var host in s.CardsIn(playerId, ZoneType.Battlefield).ToList())
+			if (
+				host.GetComponent<Animated>() is { } a
+				&& !(
+					s.IsOnBattlefield(a.AuraId)
+					&& s.GetCard(a.AuraId) is var aura
+					&& aura.Incarnation == a.AuraIncarnation
+					&& IsOn(aura, host)
+					&& s.HasAbility<EnchantedBecomesCreature>(aura)
+				)
+			)
+				s = s.UpdateObject(host.Id, host.WithoutAnimation());
+		foreach (var aura in s.CardsIn(playerId, ZoneType.Battlefield).ToList())
+			if (
+				s.AbilitiesOf<EnchantedBecomesCreature>(aura).FirstOrDefault() is { } becomes
+				&& HostOf(s, aura) is { } host
+				&& !host.HasComponent<Animated>()
+			)
+				s = s.UpdateObject(host.Id, host.AnimatedBy(aura, becomes));
+		return s;
+	}
+
+	/// <summary>An Aura with no legal host dies; an Equipment off a non-creature falls off.</summary>
+	static GameState Detach(GameState s, int playerId)
 	{
 		foreach (var card in s.CardsIn(playerId, ZoneType.Battlefield).ToList())
 		{
@@ -82,7 +117,10 @@ public static class Attachments
 				if (host is null || !CanEnchant(s, card, host.Id))
 					s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
 			}
-			else if (card.AttachedToId != 0 && (host is null || !host.Is(CardType.Creature)))
+			else if (
+				card.AttachedToId != 0
+				&& (host is null || !host.Is(CardType.Creature) || card.Is(CardType.Creature))
+			)
 				s = s.UpdateObject(
 					card.Id,
 					card with

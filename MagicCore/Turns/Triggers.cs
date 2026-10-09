@@ -171,6 +171,15 @@ public static class Triggers
 						)
 					)
 			);
+		// "When you cast this spell" (Emrakul): the spell's own, read from it on the stack.
+		var fromTheSpell = s
+			.PendingGameEvents.OfType<SpellCastEvent>()
+			.Where(cast => s.HasObject(cast.CardId))
+			.SelectMany(cast =>
+				AbilitiesOf(s, s.GetCard(cast.CardId))
+					.Where(a => a.On == TriggerEvent.SelfCast)
+					.Select(a => new Pending(s.GetCard(cast.CardId), a, cast.CardId))
+			);
 		// Delayed triggers set off by a cast (Way of the Cryomancer): "copy that spell" — one per copy.
 		var fromACast = s
 			.PendingGameEvents.OfType<SpellCastEvent>()
@@ -192,6 +201,7 @@ public static class Triggers
 		return fromTheBattlefield
 			.Concat(fromTheDead)
 			.Concat(fromACast)
+			.Concat(fromTheSpell)
 			.Where(p => InterveningIfHolds(s, p))
 			.OrderBy(p => p.Source.ControllerId == active ? 0 : 1) // APNAP; stable within a player
 			.ToList();

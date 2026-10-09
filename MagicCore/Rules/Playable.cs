@@ -36,11 +36,12 @@ public static class Playable
 			|| Prepare.IsCastableBy(s, card, playerId)
 			|| IsImpulsePlayableBy(s, card, playerId)
 			|| IsCastableThroughLink(s, card, playerId)
-		)
-		&& (
-			card.GetComponent<CastOnlyIf>() is not { } only
-			|| only.When.Holds(s, Conditions.Of(card with { ControllerId = playerId }))
-		);
+		) && CastRestrictionHolds(s, card, playerId);
+
+	/// <summary>Proft: "You can't cast this spell unless …" — wherever and however it is cast.</summary>
+	public static bool CastRestrictionHolds(GameState s, Card card, int playerId) =>
+		card.GetComponent<CastOnlyIf>() is not { } only
+		|| only.When.Holds(s, Conditions.Of(card with { ControllerId = playerId }));
 
 	/// <summary>
 	/// Null Summoner: the card it exiled, cast by its controller while its condition holds — and only

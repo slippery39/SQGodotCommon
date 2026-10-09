@@ -144,7 +144,7 @@ public static class MagicRules
 	/// One cast per affordable X. The bound is loose on purpose — ValidateAdd's payment search
 	/// decides; subtracting mana value would undercount, since one W pays a {2/W}.
 	/// </summary>
-	static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card)
+	public static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card)
 	{
 		var maxX = card.ManaCost.HasX ? AvailableMana(s, player, s.Has(card, "Convoke"), card) : 0;
 		var text = card.GetComponent<SpellEffectsComponent>();

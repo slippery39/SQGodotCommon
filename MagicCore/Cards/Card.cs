@@ -151,7 +151,7 @@ public record Card : GameObject
 	/// CR 400.7: a card that changes zones is a new object with no memory of its previous one.
 	/// The ONLY reset — every zone change goes through MagicState.MoveCard, which calls this.
 	/// </summary>
-	public Card Fresh() => WithoutCopyEffect().Reset();
+	public Card Fresh() => WithoutAnimation().WithoutCopyEffect().Reset();
 
 	Card Reset() =>
 		this with
@@ -199,14 +199,18 @@ public record Card : GameObject
 				or Effects.ExiledBy
 				or Effects.ChosenColorMana
 				or CopyUntilEndOfTurn
-				or Effects.DelayedTrigger;
+				or Effects.DelayedTrigger
+				or Animated
+				or Effects.TapsForTwoColorlessWhileExiled;
 
 	/// <summary>
 	/// CR 707.2: this object with <paramref name="source"/>'s copiable values — name, cost, types,
 	/// colours, P/T, keywords and abilities (themselves already copied, if it is a copy: CR 707.3).
 	/// Its own status stays: counters, damage, tapped, what it was given. The ONE place a copy is made.
 	/// </summary>
-	public Card WithCopiableValuesOf(Card source) =>
+	public Card WithCopiableValuesOf(Card source) => WithValuesOf(source.WithoutAnimation()); // an Aura's type change isn't copiable
+
+	Card WithValuesOf(Card source) =>
 		this with
 		{
 			Name = source.Name,
@@ -225,6 +229,50 @@ public record Card : GameObject
 				.. Components.Where(IsStatus),
 			],
 		};
+
+	/// <summary>
+	/// Animated by an Aura (Puppet Crafting): a creature of that subtype with that base P/T, in
+	/// addition to what it was — and what it was, recorded to put back.
+	/// </summary>
+	public Card AnimatedBy(Card aura, Effects.EnchantedBecomesCreature becomes) =>
+		(Card)
+			(
+				this with
+				{
+					Types = Types | CardType.Creature,
+					Subtypes = Subtypes.Contains(becomes.Subtype)
+						? Subtypes
+						: Subtypes.Add(becomes.Subtype),
+					BasePower = becomes.Power,
+					BaseToughness = becomes.Toughness,
+				}
+			).WithComponent(
+				new Animated(
+					aura.Id,
+					aura.Incarnation,
+					Types,
+					Subtypes.Contains(becomes.Subtype) ? null : becomes.Subtype,
+					BasePower,
+					BaseToughness
+				)
+			);
+
+	/// <summary>Back to what it was before an Aura animated it — the Aura left, or it does (CR 400.7).</summary>
+	public Card WithoutAnimation() =>
+		GetComponent<Animated>() is { } a
+			? (Card)
+				(
+					this with
+					{
+						Types = a.Types,
+						Subtypes = a.AddedSubtype is null
+							? Subtypes
+							: Subtypes.Remove(a.AddedSubtype),
+						BasePower = a.BasePower,
+						BaseToughness = a.BaseToughness,
+					}
+				).WithoutComponents<Animated>()
+			: this;
 
 	/// <summary>Hall of Echoes back to itself — at cleanup, or as it leaves (CR 400.7).</summary>
 	public Card WithoutCopyEffect() =>
@@ -277,6 +325,16 @@ public record UntilEndOfTurn(int Power = 0, int Toughness = 0, string? Keyword =
 /// cleanup or on leaving the battlefield (Card.WithoutCopyEffect).
 /// </summary>
 public record CopyUntilEndOfTurn(Card Original) : GameComponent;
+
+/// <summary>Animated by this Aura (this object of it); the rest is what it was, to put back.</summary>
+public record Animated(
+	int AuraId,
+	int AuraIncarnation,
+	CardType Types,
+	string? AddedSubtype,
+	int BasePower,
+	int BaseToughness
+) : GameComponent;
 
 /// <summary>
 /// What goes in a deck: the printed data plus the hand-written ability components. A card with no

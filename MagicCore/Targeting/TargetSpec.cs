@@ -53,6 +53,9 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	/// <summary>"Noncreature, nonland": none of these types.</summary>
 	public CardType NotTypes { get; init; }
 
+	/// <summary>Puppet Crafting: "non-Aura enchantment" — not of this subtype.</summary>
+	public string? NotSubtype { get; init; }
+
 	/// <summary>"With power 2 or less".</summary>
 	public int MaxPower { get; init; } = int.MaxValue;
 
@@ -168,6 +171,7 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		&& (WithSupertype == Supertype.None || card.Is(WithSupertype))
 		&& (AnyOfColors.IsEmpty || card.Colors.Any(AnyOfColors.Contains))
 		&& (NotTypes == CardType.None || !card.Is(NotTypes))
+		&& (NotSubtype is null || !card.Subtypes.Contains(NotSubtype))
 		&& (MinToughness == 0 || s.Toughness(card) >= MinToughness)
 		&& (MaxPower == int.MaxValue || s.Power(card) <= MaxPower)
 		&& (WithKeyword is null || s.Has(card, WithKeyword))

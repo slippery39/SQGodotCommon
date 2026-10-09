@@ -97,6 +97,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Static abilities are never stamped onto what they affect.** A `StaticEffectComponent` on its source
   is read live by Characteristics, so it stops the instant the source leaves — MtgCore's stamped
   statics went stale exactly there. "Can't be blocked" is a keyword-like grant (`Combat.CantBeBlocked`).
+  ONE exception: an Aura's type change (Puppet Crafting) is stamped, because every rule reads
+  `card.Is(Creature)` — put right by the state-based check before anyone gets priority.
 - **Each mechanic's rules** — planeswalkers, modes, step triggers and "this turn", flashback, prepare,
   abilities from the hand and graveyard, hexproof and indestructible, Auras and Equipment, countering
   and ward, reflexive and intervening triggers — are in `.claude/rules/magic-mechanics.md`, which

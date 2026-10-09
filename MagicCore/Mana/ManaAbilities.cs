@@ -79,6 +79,24 @@ public static class ManaAbilities
 	/// <summary>THE answer to "what does tapping this make" — payment, manual tapping and the X bound all ask.</summary>
 	public static Yield YieldOf(GameState s, Card card)
 	{
+		// Emrakul's grant: "{T}: Add {C}{C}" while that card is still the one in exile. ponytail: it
+		// replaces the land's own ability instead of being a second choice — the yield is one per
+		// permanent; make it a choice if the colour ever matters while Emrakul waits.
+		if (
+			card.GetComponent<TapsForTwoColorlessWhileExiled>() is { } grant
+			&& s.HasObject(grant.CardId)
+			&& s.GetObject(grant.CardId) is Card waiting
+			&& waiting.Incarnation == grant.Incarnation
+			&& s.IsIn(waiting.Id, waiting.OwnerId, ZoneType.Exile)
+		)
+			return new(
+				[
+					[ManaColor.Colorless],
+					[ManaColor.Colorless],
+				],
+				false,
+				ManaRestriction.None
+			);
 		var colors = ColorsOf(s, card).ToImmutableArray();
 		if (colors.IsEmpty)
 			return new([], false, ManaRestriction.None);
