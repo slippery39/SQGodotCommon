@@ -14,6 +14,9 @@ public record OnStackComponent(int X, ImmutableArray<int> Targets, ImmutableArra
 {
 	/// <summary>"If this spell was cast from a graveyard" — and flashback exiles it as it leaves the stack.</summary>
 	public ZoneType CastFrom { get; init; } = ZoneType.Hand;
+
+	/// <summary>Theorist's Proxy: this cast can't be countered — gone with the stack object, so a recast can be.</summary>
+	public bool CantBeCountered { get; init; }
 }
 
 /// <summary>A triggered or activated ability on the stack (CR 113.7) — not a card.</summary>
@@ -98,7 +101,7 @@ public record CastSpellAction : GameAction
 			return ValidationResult.Invalid("You may not cast that card from where it is");
 		var card = s.GetCard(CardId);
 		if (Turns.Combat.LockedDown(s))
-			return ValidationResult.Invalid("No spells during combat");
+			return ValidationResult.Invalid("No spells now: combat lockdown or split second");
 		if (OwesDiscard(s, card) ? !s.IsIn(DiscardId, PlayerId, ZoneType.Hand) : DiscardId != 0)
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (card.Is(CardType.Land))
@@ -181,7 +184,14 @@ public record CastSpellAction : GameAction
 		s = s.UpdateObject(
 			CardId,
 			s.GetCard(CardId)
-				.WithComponent(new OnStackComponent(X, Targets, Modes) { CastFrom = from })
+				.WithComponent(
+					new OnStackComponent(X, Targets, Modes)
+					{
+						CastFrom = from,
+						// Theorist's Proxy: "the next spell you cast this turn can't be countered" — this one.
+						CantBeCountered = s.GetPlayer(PlayerId).ThisTurn.NextSpellCantBeCountered,
+					}
+				)
 		);
 		var noncreature = card.Is(CardType.Creature) ? 0 : 1;
 		s = s.Tally(
@@ -193,6 +203,8 @@ public record CastSpellAction : GameAction
 					NoncreatureSpellsCast = t.NoncreatureSpellsCast + noncreature,
 				}
 		);
+		if (s.GetPlayer(PlayerId).ThisTurn.NextSpellCantBeCountered)
+			s = s.Tally(PlayerId, t => t with { NextSpellCantBeCountered = false }); // used up
 		// "When you next cast an instant or sorcery spell this turn": this one takes every waiting copy.
 		var copies = card.Is(CardType.Instant | CardType.Sorcery)
 			? s.GetPlayer(PlayerId).ThisTurn.CopyNextInstantOrSorcery
@@ -247,7 +259,7 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("No such ability where you can activate it");
 		var card = s.GetCard(CardId);
 		if (Turns.Combat.LockedDown(s))
-			return ValidationResult.Invalid("No abilities during combat");
+			return ValidationResult.Invalid("No abilities now: combat lockdown or split second");
 		// Judged as the activating player's: a card off the battlefield may still carry an old
 		// controller (CR 108.4a — in a graveyard it is its owner's).
 		if (
@@ -259,7 +271,8 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Exhaust: activated once already");
 		if (
 			ability.DiscardACard
-				? DiscardId == CardId || !s.IsIn(DiscardId, PlayerId, ZoneType.Hand)
+				? !s.IsIn(DiscardId, PlayerId, ZoneType.Hand)
+					|| !ability.MayDiscard(s.GetCard(DiscardId), CardId)
 				: DiscardId != 0
 		)
 			return ValidationResult.Invalid("Discard a card from your hand for this");
@@ -362,6 +375,11 @@ public static class StackResolution
 		);
 	}
 
+	/// <summary>"This spell can't be countered" — printed, or given to this one cast (Theorist's Proxy).</summary>
+	public static bool CanBeCountered(Card spell) =>
+		!spell.HasComponent<CantBeCountered>()
+		&& spell.GetComponent<OnStackComponent>() is not { CantBeCountered: true };
+
 	/// <summary>
 	/// THE counter (CR 701.6): a spell goes to its owner's graveyard — through MoveCard, so flashback
 	/// still exiles it and a prepared copy still ceases to exist — and an ability is removed. A spell
@@ -377,7 +395,7 @@ public static class StackResolution
 			return s;
 		return s.GetObject(stackObjectId) switch
 		{
-			Card spell when spell.HasComponent<CantBeCountered>() => s,
+			Card spell when !CanBeCountered(spell) => s,
 			Card spell => s.MoveCard(spell.Id, s.ZoneId(spell.OwnerId, ZoneType.Graveyard)),
 			_ => s.RemoveObject(stackObjectId),
 		};

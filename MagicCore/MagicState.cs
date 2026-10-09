@@ -240,6 +240,9 @@ public static class MagicState
 			),
 			EntersUntappedIf.YouControlTwoOrMoreOtherLands => others.Count(c => c.Is(CardType.Land))
 				>= 2,
+			EntersUntappedIf.YouBeholdAJace => new BeholdOrPayAdditionalCost("Jace", 0)
+				.Candidates(s, controllerId, cardId)
+				.Any(),
 			_ => false,
 		};
 	}

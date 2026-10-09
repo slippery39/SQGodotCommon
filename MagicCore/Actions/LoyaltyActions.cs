@@ -66,8 +66,13 @@ public record ActivateLoyaltyAction : GameAction
 		if (Loyalty.AbilitiesOf(s, walker).ElementAtOrDefault(AbilityIndex) is not { } ability)
 			return ValidationResult.Invalid("No such loyalty ability");
 		var game = s.GetGame();
-		if (!Priority.AtSorcerySpeed(s, PlayerId))
+		var instantSpeedJace =
+			walker.Subtypes.Contains("Jace")
+			&& s.GetPlayer(PlayerId).ThisTurn.JaceLoyaltyAtInstantSpeed;
+		if (!instantSpeedJace && !Priority.AtSorcerySpeed(s, PlayerId))
 			return ValidationResult.Invalid("Loyalty abilities are sorcery speed");
+		if (Turns.Combat.LockedDown(s)) // split second or Yuriko — reachable once a Jace's is instant speed
+			return ValidationResult.Invalid("No abilities now: combat lockdown or split second");
 		if (walker.LoyaltyActivatedOnTurn == game.TurnNumber)
 			return ValidationResult.Invalid(
 				"Already activated a loyalty ability of this planeswalker this turn"

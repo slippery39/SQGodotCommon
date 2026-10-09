@@ -210,7 +210,9 @@ public static class MagicRules
 				from targets in TargetSpec.Combinations(s, a.ability.Targets, player, card.Id)
 				from sacrifice in a.ability.Sacrifice?.Candidates(s, player, card.Id) ?? [0]
 				from discard in a.ability.DiscardACard
-					? s.CardsIn(player, ZoneType.Hand).Where(c => c.Id != card.Id).Select(c => c.Id)
+					? s.CardsIn(player, ZoneType.Hand)
+						.Where(c => a.ability.MayDiscard(c, card.Id))
+						.Select(c => c.Id)
 					: [0]
 				from exile in a.ability.ExileFromGraveyard?.Candidates(s, player, card.Id) ?? [0]
 				select (GameAction)

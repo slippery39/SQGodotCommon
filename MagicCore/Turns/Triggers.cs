@@ -321,6 +321,10 @@ public static class Triggers
 				== source.ControllerId
 				&& s.GetCard(cast.CardId).Is(CardType.Artifact | CardType.Creature),
 			(TriggerEvent.APlayerDiscards, DiscardedEvent) => true,
+			(TriggerEvent.YouCastPreparedSpell, SpellCastEvent cast) => cast.PlayerId
+				== source.ControllerId
+				&& s.HasObject(cast.CardId)
+				&& s.GetCard(cast.CardId).HasComponent<PreparedCopyOf>(),
 			(TriggerEvent.CreatureYouControlAttacks, AttackedEvent attacked) => Yours(
 				attacked.CardId
 			) && s.GetCard(attacked.CardId).Is(CardType.Creature),

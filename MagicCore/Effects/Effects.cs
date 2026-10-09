@@ -291,13 +291,15 @@ public record CopySpell(Ref What) : Effect
 			Card copy;
 			(s, copy) = s.AddObject(
 				(Card)
-					(
-						original with
-						{
-							IsCopy = true,
-							ControllerId = Controller,
-						}
-					).WithoutComponents<PreparedCopyOf>(),
+					(original with { IsCopy = true, ControllerId = Controller })
+						.WithoutComponents<PreparedCopyOf>()
+						// Not cast: what this cast got (Theorist's Proxy) is the original's alone.
+						.WithComponentReplaced(
+							original.GetComponent<OnStackComponent>()! with
+							{
+								CantBeCountered = false,
+							}
+						),
 				stack
 			);
 			s = s.MoveObjectToFront(copy.Id, stack); // index 0 is the top
@@ -343,6 +345,20 @@ public record SetCopyTargetsAction(int CopyId) : GameAction
 		s = s.UpdateObject(CopyId, copy.WithComponentReplaced(onStack with { Targets = targets }));
 		return new(Turns.Triggers.RaiseTargeted(s, targets, copy.ControllerId, CopyId));
 	}
+}
+
+/// <summary>Jace's Machinations: Jace loyalty abilities at instant speed, on any turn, until end of turn.</summary>
+public record JaceLoyaltyAtInstantSpeedThisTurn : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(s.Tally(Controller, t => t with { JaceLoyaltyAtInstantSpeed = true }));
+}
+
+/// <summary>Theorist's Proxy: "The next spell you cast this turn can't be countered." — taken by that cast.</summary>
+public record NextSpellCantBeCounteredThisTurn : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(s.Tally(Controller, t => t with { NextSpellCantBeCountered = true }));
 }
 
 /// <summary>Way of the Paradox: "You may play an additional land this turn."</summary>
@@ -480,8 +496,8 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 		foreach (var id in All(What, s).Where(id => s.GetParent(id) == stack).ToList())
 		{
 			if (
-				s.GetObject(id) is Card { } uncounterable
-				&& uncounterable.HasComponent<CantBeCountered>()
+				s.GetObject(id) is Card uncounterable
+				&& !StackResolution.CanBeCountered(uncounterable)
 			)
 				continue; // nothing to pay for: the counter can't touch it
 			var payer = s.GetObject(id) switch

@@ -55,6 +55,7 @@ public enum TriggerEvent
 	YouAttack, // Kiora of Salt and Sand: "whenever you attack" — once per declaration
 	OpponentsDealtCombatDamageDuringYourTurn, // Fblthp, Impossibly Lost — "one or more", once a step
 	CreatureYouControlAttacks, // Ingris Stingerquill — the event card is the attacker
+	YouCastPreparedSpell, // Codie — the copy of a prepare spell, cast from exile
 	OpponentCastsSpellWithManaValue2OrLess, // Solarium Sentry
 }
 
@@ -112,6 +113,13 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 	/// <summary>Hallway Heckler: "Discard a card:" — the card is chosen like a sacrifice.</summary>
 	public bool DiscardACard { get; init; }
 
+	/// <summary>Solitary Cell: "Discard a legendary card:" — what the discarded card must be.</summary>
+	public Cards.Supertype DiscardMustBe { get; init; }
+
+	/// <summary>Whether this card in hand may pay its discard cost.</summary>
+	public bool MayDiscard(Cards.Card card, int sourceId) =>
+		card.Id != sourceId && (DiscardMustBe == Cards.Supertype.None || card.Is(DiscardMustBe));
+
 	/// <summary>
 	/// Gallia, Tragic Host: "Exile another creature card from your graveyard:" — what may be exiled.
 	/// A CardInYourGraveyard spec, so the source itself never qualifies: lifted from MtgCore's
@@ -166,6 +174,7 @@ public enum EntersUntappedIf
 	Never,
 	YouControlAPlaneswalker,
 	YouControlTwoOrMoreOtherLands,
+	YouBeholdAJace, // Theorist's Sanctum: a Jace you control or one in your hand (beholding costs nothing, so always)
 }
 
 /// <summary>"This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield.</summary>
@@ -329,6 +338,9 @@ public record YourCreaturesAttackDespiteDefender : GameComponent;
 
 /// <summary>Yuriko: "During combat, players can't cast spells or activate abilities that aren't mana abilities."</summary>
 public record NoSpellsOrAbilitiesDuringCombat : GameComponent;
+
+/// <summary>Samut: "Instant and sorcery spells you control have split second."</summary>
+public record YourInstantsAndSorceriesHaveSplitSecond : GameComponent;
 
 /// <summary>Tomik, Orzhov Lawmage: "Planeswalkers you control have 'No more than one creature can attack this planeswalker each combat.'"</summary>
 public record OneAttackerPerPlaneswalkerYouControl : GameComponent;

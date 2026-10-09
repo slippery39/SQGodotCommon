@@ -47,6 +47,12 @@ public record TurnTally
 	/// </summary>
 	public int CopyNextInstantOrSorcery { get; init; }
 
+	/// <summary>Jace's Machinations: "you may activate loyalty abilities of Jace planeswalkers you control … any time you could cast an instant".</summary>
+	public bool JaceLoyaltyAtInstantSpeed { get; init; }
+
+	/// <summary>Theorist's Proxy: "The next spell you cast this turn can't be countered."</summary>
+	public bool NextSpellCantBeCountered { get; init; }
+
 	/// <summary>Molten Tide: "until end of turn, whenever you tap a Mountain for mana, add an additional {R}" — one each.</summary>
 	public int ExtraRedFromMountains { get; init; }
 

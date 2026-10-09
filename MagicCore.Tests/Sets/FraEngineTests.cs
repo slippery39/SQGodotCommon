@@ -641,4 +641,38 @@ public class FraEngineTests : FraBoardTest
 		});
 		Assert.That(secondOffered, Does.Not.Contain(x));
 	}
+
+	[Test]
+	public void ACopyOfAnUncounterableSpell_CanBeCountered()
+	{
+		var a = Field(TestGames.Creature("A", "2/2"), them);
+		var b = Field(TestGames.Creature("B", "2/2"), them);
+		WayMinusThree();
+		var proxy = Field(FraCards.Get("Theorist's Proxy"), me);
+		s = s.Act(Activations(proxy).Single()); // the next spell you cast this turn can't be countered
+		Resolve();
+		var bolt = Hand(Bolt(2), me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = bolt,
+				Targets = [a],
+			}
+		);
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		s = s.Act(new PassPriorityAction { PlayerId = them }); // the copy trigger resolves: choose B
+		s = s.Choose([b]);
+		var copy = s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).First();
+		var nope = Hand(
+			Targeted("Nope", new(Targeting.TargetKind.Spell), new Counter(Ref.Target())),
+			me
+		);
+		Cast(nope, [], copy);
+		Assert.That(
+			(Alive(a), Alive(b)),
+			Is.EqualTo((false, true)),
+			"the copy wasn't cast; the Bolt was"
+		);
+	}
 }

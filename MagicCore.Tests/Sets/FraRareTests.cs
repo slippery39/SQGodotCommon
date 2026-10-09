@@ -265,4 +265,286 @@ public class FraRareTests : FraBoardTest
 		Cast(Hand(Kill, me), [], bear);
 		Assert.That((Alive(bear), Life(them)), Is.EqualTo((false, life - 1)), "as it last existed");
 	}
+
+	// ===== 8b: small new pieces =====
+
+	static CardDefinition Walker(string name) => TestGames.Planeswalker(name, 3);
+
+	static CardDefinition JaceCard =>
+		TestGames.Planeswalker("Jace", 3) with
+		{
+			Data = TestGames.Planeswalker("Jace", 3).Data with { TypeLine = "Planeswalker — Jace" },
+		};
+
+	static CardDefinition Instant(string name, params GameAction[] effects) =>
+		TestGames.Inline(name, "{1}", "Instant", null, effects);
+
+	int Top(int player) => s.GetChildrenIds(s.ZoneId(player, ZoneType.Library)).First();
+
+	[Test]
+	public void StingingVitriol_TwoDamage_ThenYouPickTheirNonlandDiscard()
+	{
+		var land = Hand(TestGames.Card("Forest"), them);
+		var spell = Hand(Instant("Spell"), them);
+		var life = Life(them);
+		IEnumerable<int> offered = [];
+		var vitriol = Hand("Stinging Vitriol", me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = vitriol,
+				Targets = [them],
+			}
+		);
+		Resolve(choice =>
+		{
+			offered = choice.Options.Select(o => o.Id).ToList();
+			return [spell];
+		});
+		Assert.That(offered, Does.Contain(spell).And.Not.Contain(land));
+		Assert.That(
+			(Life(them), s.IsIn(spell, them, ZoneType.Graveyard)),
+			Is.EqualTo((life - 2, true))
+		);
+	}
+
+	[Test]
+	public void LoyalTutor_APlaneswalkerOnTopOfTheLibrary()
+	{
+		int walker;
+		(s, walker) = TestGames.Put(s, me, Walker("Walker"), ZoneType.Library);
+		var tutor = Hand("Loyal Tutor", me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = tutor });
+		Resolve(choice => choice.Options.Select(o => o.Id).Where(id => id == walker));
+		Assert.That(Top(me), Is.EqualTo(walker), "shuffled first, then put on top");
+	}
+
+	[Test]
+	public void EntrustTheSpark_SacrificeAPlaneswalker_ForOneFromTheLibrary()
+	{
+		var old = Field(Walker("Old"), me);
+		s = s.UpdateObject(old, s.GetCard(old) with { Loyalty = 3 }); // TEST SETUP: Put skips entering
+		int fresh;
+		(s, fresh) = TestGames.Put(s, me, Walker("Fresh"), ZoneType.Library);
+		var entrust = Hand("Entrust the Spark", me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = entrust });
+		Resolve(choice =>
+			choice switch
+			{
+				_ when choice.Options.Any(o => o.Id == old) => [old],
+				_ when choice.Options.Any(o => o.Id == fresh) => [fresh],
+				_ => choice.Options.Take(choice.MinChoices).Select(o => o.Id),
+			}
+		);
+		Assert.That((s.IsIn(old, me, ZoneType.Graveyard), Alive(fresh)), Is.EqualTo((true, true)));
+	}
+
+	[Test]
+	public void Codie_CopiesAPreparedSpell_AndPreparesYourCreatures()
+	{
+		var codie = Field(FraCards.Get("Codie, Ravenous Codex"), me);
+		var foreseer = Field(FraCards.Get("Semester Foreseer // Peer Review"), me);
+		s = s.Act(Activations(codie).Single());
+		Resolve();
+		Assert.That(
+			s.GetCard(foreseer).IsPrepared,
+			"{W}{U}{B}{R}{G}, {T}: each creature becomes prepared"
+		);
+
+		var copy = s.CardsIn(me, ZoneType.Exile).Single(c => c.IsCopy).Id;
+		s = s.Act(Casts(copy).Single());
+		Resolve();
+		Assert.That(
+			Named(me, "Cadet").Count(),
+			Is.EqualTo(2),
+			"Peer Review and Codie's copy of it"
+		);
+	}
+
+	static CardDefinition ColouredArtifact(string name, params string[] colors) =>
+		TestGames.Inline(name, "{1}", "Artifact") with
+		{
+			Data = TestGames.Inline(name, "{1}", "Artifact").Data with { Colors = colors },
+		};
+
+	[Test]
+	public void KarnGildedGuardian_DrawsForEachColourAmongYourOtherArtifacts()
+	{
+		Field(ColouredArtifact("Red", "R"), me);
+		Field(ColouredArtifact("Also Red", "R"), me);
+		Field(ColouredArtifact("Blue", "U"), me);
+		Field(Trinket, me); // colourless
+		var karn = Hand("Karn, Gilded Guardian", me);
+		var hand = HandCount(me);
+		Cast(karn, []);
+		Assert.That(HandCount(me), Is.EqualTo(hand - 1 + 2), "red and blue");
+	}
+
+	[Test]
+	public void RoilingCanopy_AForestWithFiveOthers_PumpsYourCreature()
+	{
+		var canopy = Hand("Roiling Canopy", me);
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = canopy });
+		Assert.That(s.GetCard(canopy).IsTapped);
+
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+		Field(TestGames.Card("Forest"), me); // five Forests on the battlefield
+		var sixth = Hand(TestGames.Card("Forest"), me);
+		s = s.Tally(me, x => x with { ExtraLandDrops = 1 }); // TEST SETUP: a second land this turn
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = sixth });
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseTargetChoice => [bear],
+				_ => [],
+			}
+		);
+		Assert.That(s.Power(s.GetCard(bear)), Is.EqualTo(2 + 3));
+	}
+
+	[Test]
+	public void Samut_NobodyCastsWhileYourInstantIsOnTheStack()
+	{
+		Field(FraCards.Get("Samut, Tyrant of Naktamun"), me);
+		var mine = Hand(Instant("Mine", new GainLife(Ref.You, 1)), me);
+		var another = Hand(Instant("Another"), me);
+		var theirs = Hand(Instant("Theirs"), them);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = mine });
+		Assert.That(Casts(another), Is.Empty, "split second: not even you");
+		s = s.Act(new PassPriorityAction { PlayerId = me });
+		Assert.That(
+			s.LegalActions().OfType<CastSpellAction>().Where(c => c.CardId == theirs),
+			Is.Empty,
+			"nor them"
+		);
+	}
+
+	[Test]
+	public void JacesMachinations_EmpowersEight_AndJaceAtInstantSpeed()
+	{
+		Cast(Hand("Jace's Machinations", me), []);
+		var jace = Jace(me)!;
+		Assert.That(jace.Loyalty, Is.EqualTo(8));
+		var instant = Hand(Instant("Hold", new GainLife(Ref.You, 1)), me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = instant }); // the stack isn't empty now
+		Assert.That(
+			s.LegalActions().OfType<ActivateLoyaltyAction>().Any(a => a.CardId == jace.Id),
+			"a Jace's loyalty ability with a spell on the stack"
+		);
+	}
+
+	[Test]
+	public void TheoristsSanctum_UntappedOnlyIfYouBeholdAJace()
+	{
+		var sanctum = Hand("Theorist's Sanctum", me);
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = sanctum });
+		Assert.That(s.GetCard(sanctum).IsTapped, "no Jace: tapped");
+
+		Hand(JaceCard, me);
+		var second = Hand("Theorist's Sanctum", me);
+		s = s.Tally(me, x => x with { ExtraLandDrops = 1 }); // TEST SETUP: a second land this turn
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = second });
+		Assert.That(s.GetCard(second).IsTapped, Is.False, "a Jace card in hand to behold");
+	}
+
+	[Test]
+	public void TheoristsProxy_TheNextSpellCantBeCountered()
+	{
+		var proxy = Field(FraCards.Get("Theorist's Proxy"), me);
+		s = s.Act(Activations(proxy).Single());
+		Resolve();
+		var gain = Hand(Instant("Gain", new GainLife(Ref.You, 3)), me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = gain });
+		var counter = Hand(
+			new CardDefinition(
+				TestGames.Inline("Nope", "{1}", "Instant").Data,
+				[
+					new SpellEffectsComponent([new Counter(Ref.Target())])
+					{
+						Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Spell)],
+					},
+				]
+			),
+			me
+		);
+		var life = Life(me);
+		Cast(counter, [], gain);
+		Assert.That(Life(me), Is.EqualTo(life + 3));
+	}
+
+	[Test]
+	public void SolitaryCell_ExilesTheirCheapPermanent_AndLootsALegend()
+	{
+		var cheap = Field(TestGames.CreatureCosting("{2}", "Cheap", "2/2"), them);
+		var cell = Hand("Solitary Cell", me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = cell });
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseTargetChoice => [cheap],
+				_ => [],
+			}
+		);
+		Assert.That(s.IsIn(cheap, them, ZoneType.Exile));
+
+		var legend = Hand(
+			TestGames.Creature("Legend", "1/1") with
+			{
+				Data = TestGames.Creature("Legend", "1/1").Data with
+				{
+					TypeLine = "Legendary Creature — Test",
+				},
+			},
+			me
+		);
+		Hand(Trinket, me);
+		Assert.That(
+			Activations(cell).Select(a => a.DiscardId),
+			Is.EquivalentTo(new[] { legend }),
+			"a legendary card only"
+		);
+	}
+
+	[Test]
+	public void JacesMachinations_StillNotThroughSplitSecond()
+	{
+		Field(FraCards.Get("Samut, Tyrant of Naktamun"), me); // split second for your own instants too
+		Cast(Hand("Jace's Machinations", me), []);
+		var jace = Jace(me)!;
+		var instant = Hand(Instant("Hold", new GainLife(Ref.You, 1)), me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = instant });
+		Assert.That(
+			s.LegalActions().OfType<ActivateLoyaltyAction>().Any(a => a.CardId == jace.Id),
+			Is.False,
+			"split second stops loyalty abilities too"
+		);
+	}
+
+	[Test]
+	public void RoilingCanopy_TheEnteringForestRemovedInResponse_StillPumps()
+	{
+		Field(FraCards.Get("Roiling Canopy"), me);
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+		Field(TestGames.Card("Forest"), me); // five Forests on the battlefield
+		var sixth = Hand(TestGames.Card("Forest"), me);
+		s = s.Act(new PlayLandAction { PlayerId = me, CardId = sixth });
+		s = s.GetPendingChoice() is ChooseTargetChoice ? s.Choose([bear]) : s;
+		Assert.That(s.StackIsEmpty(), Is.False, "the trigger");
+		var wreck = new CardDefinition(
+			TestGames.Inline("Wreck", "{1}", "Instant").Data,
+			[
+				new SpellEffectsComponent([new Destroy(Ref.Target())])
+				{
+					Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Permanent)],
+				},
+			]
+		);
+		Cast(Hand(wreck, me), [], sixth);
+		Assert.That(
+			(Alive(sixth), s.Power(s.GetCard(bear))),
+			Is.EqualTo((false, 2 + 3)),
+			"five OTHER Forests, as it resolves"
+		);
+	}
 }

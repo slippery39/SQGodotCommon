@@ -85,13 +85,16 @@ public record MoveChosenToAction(int PlayerId, ZoneType To) : GameAction
 	/// <summary>Simulacrum Shaper: "onto the battlefield tapped".</summary>
 	public bool Tapped { get; init; }
 
+	/// <summary>Loyal Tutor: to the top of the library, not the bottom.</summary>
+	public bool OnTop { get; init; }
+
 	public override ActionResult Execute(GameState s)
 	{
 		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
 			s =
 				To == ZoneType.Battlefield
 					? s.EnterBattlefield(id, PlayerId, tapped: Tapped) // the one way in: its entry, its events
-					: s.MoveCard(id, s.ZoneId(PlayerId, To));
+					: s.MoveCard(id, s.ZoneId(PlayerId, To), toTop: OnTop);
 		return new ActionResult(s);
 	}
 }

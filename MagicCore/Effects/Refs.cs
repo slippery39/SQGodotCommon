@@ -69,6 +69,9 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 	/// <summary>Command the Stage: "each other Wizard token you control" — only cards with this subtype.</summary>
 	public string? Subtype { get; init; }
 
+	/// <summary>Roiling Canopy: "five OTHER Forests" — not the event's card.</summary>
+	public bool ExceptEventCard { get; init; }
+
 	public static readonly Ref You = new(RefKind.You);
 	public static readonly Ref EachOpponent = new(RefKind.EachOpponent);
 	public static readonly Ref EachPlayer = new(RefKind.EachPlayer);
@@ -201,6 +204,7 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 		};
 		return ids.Where(id =>
 			id != 0
+			&& !(ExceptEventCard && id == eventCard)
 			&& s.HasObject(id)
 			&& (Subtype is null || (s.GetObject(id) is Card c && c.Subtypes.Contains(Subtype)))
 		);
@@ -214,6 +218,7 @@ public enum CountOf
 	GreatestPowerOf, // "the greatest power among [Ref]"
 	GreatestManaValueOf, // Hapatra: "the greatest mana value among cards in your graveyard"
 	DistinctPowersOf, // Loot, the Nexus: "each different power among [Ref]"
+	ColorsAmong, // Karn, Gilded Guardian: "each color among [Ref]"
 	PowerOf, // "equal to its power"
 	LoyaltyOf, // "equal to its loyalty"
 	X, // the X paid
@@ -252,6 +257,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static Count GreatestManaValueOf(Ref r) => new(0, r, CountOf.GreatestManaValueOf);
 
 	public static Count DistinctPowersOf(Ref r) => new(0, r, CountOf.DistinctPowersOf);
+
+	public static Count ColorsAmong(Ref r) => new(0, r, CountOf.ColorsAmong);
 
 	public static Count PowerOf(Ref r) => new(0, r, CountOf.PowerOf);
 
@@ -363,6 +370,11 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.Max(),
 			CountOf.PowerOf => Cards().Select(c => s.Power(c)).FirstOrDefault(),
 			CountOf.DistinctPowersOf => Cards().Select(c => s.Power(c)).Distinct().Count(),
+			CountOf.ColorsAmong => Cards()
+				.SelectMany(c => c.Colors)
+				.Where(c => c != ManaColor.Colorless)
+				.Distinct()
+				.Count(),
 			CountOf.CountersOn => Cards().Sum(c => c.PlusOneCounters),
 			_ => Cards().Select(c => c.Loyalty).FirstOrDefault(),
 		};

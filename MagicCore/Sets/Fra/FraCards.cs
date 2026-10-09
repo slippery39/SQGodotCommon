@@ -258,6 +258,14 @@ public static class FraCards
 	const CardType NonlandPermanentTypes =
 		CardType.Creature | CardType.Artifact | CardType.Enchantment | CardType.Planeswalker;
 	const CardType PermanentTypes = NonlandPermanentTypes | CardType.Land;
+
+	/// <summary>"A nonland card": every card type but land.</summary>
+	const CardType NonlandTypes =
+		NonlandPermanentTypes
+		| CardType.Instant
+		| CardType.Sorcery
+		| CardType.Kindred
+		| CardType.Battle;
 	static readonly TargetSpec CreatureOrPlaneswalker = new(TargetKind.CreatureOrPlaneswalker);
 
 	static SpellEffectsComponent Spell(TargetSpec[] targets, params GameAction[] effects) =>
@@ -2855,6 +2863,126 @@ public static class FraCards
 					TapCost = true,
 					DiscardACard = true,
 					Targets = [CreatureOrPlaneswalker with { Whose = Whose.You, Another = true }],
+				},
+			],
+
+			// ===== Rares (8b): small new pieces =====
+			["Stinging Vitriol"] =
+			[
+				Spell(
+					[new TargetSpec(TargetKind.Player, Whose.Opponent)],
+					new DealDamage(Ref.Target(), 2),
+					new YouChooseTheyDiscard(Ref.Target(), NonlandTypes)
+				),
+			],
+			["Loyal Tutor"] =
+			[
+				Spell([], new SearchLibrary(CardType.Planeswalker, ZoneType.Library)),
+			],
+			["Entrust the Spark"] =
+			[
+				Spell(
+					[],
+					new MaySacrifice(
+						new TargetSpec(TargetKind.Permanent, Whose.You)
+						{
+							AnyOfTypes = CardType.Planeswalker,
+						},
+						[new SearchLibrary(CardType.Planeswalker, ZoneType.Battlefield)]
+					)
+				),
+			],
+			["Codie, Ravenous Codex"] =
+			[
+				When(TriggerEvent.YouCastPreparedSpell, [], new CopySpell(Ref.EventCard)),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{W}{U}{B}{R}{G}"),
+					[new BecomePrepared(Ref.CreaturesYouControl)]
+				)
+				{
+					TapCost = true,
+				},
+			],
+			["Karn, Gilded Guardian"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new DrawCards(
+						Ref.You,
+						Count.ColorsAmong(
+							new Ref(RefKind.YourOtherPermanents, Type: CardType.Artifact)
+						)
+					)
+				),
+			],
+			["Roiling Canopy"] =
+			[
+				new EntersTappedComponent(),
+				new ManaAbilityComponent(ManaColor.Green),
+				// "If you control at least five other Forests" — other than the one entering, checked
+				// again on resolution, so it still counts if that Forest has gone.
+				When(
+					TriggerEvent.LandYouControlEnters,
+					[new TargetSpec(TargetKind.Creature, Whose.You)],
+					new ModifyUntilEndOfTurn(Ref.Target(), 3, 3)
+				) with
+				{
+					EventSubtype = "Forest",
+					If = new AtLeast(
+						Count.NumberOf(
+							new Ref(RefKind.YourPermanents, Type: CardType.Land)
+							{
+								Subtype = "Forest",
+								ExceptEventCard = true,
+							}
+						),
+						5
+					),
+				},
+			],
+			["Samut, Tyrant of Naktamun"] = [new YourInstantsAndSorceriesHaveSplitSecond()],
+			["Jace's Machinations"] =
+			[
+				Spell([], new JaceLoyaltyAtInstantSpeedThisTurn(), new EmpowerJace(8)),
+			],
+			["Theorist's Sanctum"] =
+			[
+				new EntersTappedComponent(EntersUntappedIf.YouBeholdAJace),
+				new ActivatedAbilityComponent(ManaCost.Parse("{2}{U}"), [new EmpowerJace(2)])
+				{
+					TapCost = true,
+				},
+			],
+			["Theorist's Proxy"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(3)),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{U}"),
+					[new NextSpellCantBeCounteredThisTurn()]
+				)
+				{
+					SacrificeSelf = true,
+				},
+			],
+			["Solitary Cell"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[
+						new TargetSpec(TargetKind.Permanent, Whose.Opponent)
+						{
+							NotTypes = CardType.Land,
+							MaxManaValue = 3,
+						},
+					],
+					new ExileUntilSourceLeaves(Ref.Target())
+				),
+				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new DrawCards(Ref.You, 1)])
+				{
+					TapCost = true,
+					DiscardACard = true,
+					DiscardMustBe = Supertype.Legendary,
 				},
 			],
 		};

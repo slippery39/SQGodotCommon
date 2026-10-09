@@ -218,8 +218,21 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 							Prompt =
 								$"Search for {(UpTo == 1 ? "a" : $"up to {UpTo.Value(s, InputContext)}")} {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{Type.ToString().ToLowerInvariant()} card{(UpTo == 1 ? "" : "s with different names")}",
 						},
-						new MoveChosenToAction(Controller, To) { Tapped = Tapped },
-						new ShuffleLibraryAction(Controller),
+						// Loyal Tutor: "then shuffle and put that card on top" — the shuffle comes first.
+						.. To == ZoneType.Library
+							? (GameAction[])
+								[
+									new ShuffleLibraryAction(Controller),
+									new MoveChosenToAction(Controller, ZoneType.Library)
+									{
+										OnTop = true,
+									},
+								]
+							:
+							[
+								new MoveChosenToAction(Controller, To) { Tapped = Tapped },
+								new ShuffleLibraryAction(Controller),
+							],
 					],
 				}
 			)

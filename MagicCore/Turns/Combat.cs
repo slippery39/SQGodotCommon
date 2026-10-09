@@ -41,14 +41,31 @@ public static class Combat
 		&& (s.Has(c, "Haste") || !IsSummoningSick(s, c));
 
 	/// <summary>
-	/// Yuriko: a combat step, with a permanent saying no spells or non-mana abilities now. Casting
-	/// and activating both ask here (mana abilities never do).
+	/// No spells or non-mana abilities now: Yuriko during combat, or a spell with split second on the
+	/// stack (CR 702.61 — Samut gives it to its controller's instants and sorceries). Casting and
+	/// activating both ask here; mana abilities and triggers never do.
 	/// </summary>
-	public static bool LockedDown(GameState s) =>
-		s.GetGame().Step is >= Step.BeginCombat and <= Step.EndCombat
-		&& new[] { s.Player1Id(), s.Player2Id() }
-			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
-			.Any(s.HasAbility<Effects.NoSpellsOrAbilitiesDuringCombat>);
+	public static bool LockedDown(GameState s)
+	{
+		// Cheap questions first: this runs for every cast and activation the AI considers.
+		var inCombat = s.GetGame().Step is >= Step.BeginCombat and <= Step.EndCombat;
+		var spells = s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
+			.Select(s.GetObject)
+			.OfType<Card>()
+			.Where(c => c.Is(CardType.Instant | CardType.Sorcery))
+			.ToList();
+		if (!inCombat && spells.Count == 0)
+			return false;
+		var permanents = new[] { s.Player1Id(), s.Player2Id() }.SelectMany(p =>
+			s.CardsIn(p, ZoneType.Battlefield)
+		);
+		if (inCombat && permanents.Any(s.HasAbility<Effects.NoSpellsOrAbilitiesDuringCombat>))
+			return true;
+		return spells.Any(spell =>
+			s.CardsIn(spell.ControllerId, ZoneType.Battlefield)
+				.Any(s.HasAbility<Effects.YourInstantsAndSorceriesHaveSplitSecond>)
+		);
+	}
 
 	/// <summary>"Can't be blocked" — granted by static abilities and until-end-of-turn effects alike.</summary>
 	public const string CantBeBlocked = "Can't be blocked";

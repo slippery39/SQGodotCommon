@@ -76,8 +76,10 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   Replace a component with `WithComponentReplaced` — `WithComponent` ADDS, and `GetComponent` reads the first.
 - **Convoke** is `ManaPayment.Find(…, convoke: true)`: your untapped creatures join the sources after
   lands, each paying its own colour or {1} (as Colorless); summoning sickness doesn't matter.
-- **"During combat, no spells or abilities"** (Yuriko) is `Combat.LockedDown`, asked by casting and
-  activating alike — never by mana abilities.
+- **"During combat, no spells or abilities"** (Yuriko) and **split second** (Samut) are both
+  `Combat.LockedDown`, asked by casting and activating alike — never by mana abilities or triggers.
+- **"This spell can't be countered" for one cast** (Theorist's Proxy) is `OnStackComponent.CantBeCountered`
+  — gone with the stack object, so a recast can be countered; `StackResolution.CanBeCountered` reads both.
 - **An attack limit** ("no more than one creature can attack this planeswalker") is an option
   `DeclareAttackerChoice` doesn't offer, read from the declarations already made in that pipeline.
 - **"Whenever you attack"** and **"one or more … are dealt combat damage"** are ONE event each per
