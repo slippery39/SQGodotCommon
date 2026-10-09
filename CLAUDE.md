@@ -18,7 +18,8 @@ SQGodotCommon/
 │   └── Evolution/                   # Constructed metagame evolution + engine discovery
 ├── MtgSimulator.Console/            # Thin console entry point (Program.cs only)
 └── SQGodotCommon/                   # Godot project — reusable utilities (Common/, Project/)
-    └── MtgGame/                     # MTG front end: board, deck select, draft + tournament
+    ├── MtgGame/                     # MTG front end: board, deck select, draft + tournament
+    └── MagicTable/                  # MagicCore front end (Arena layout, Arcane look) — PC only
 ```
 
 The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only through

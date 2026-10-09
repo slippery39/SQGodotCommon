@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using MtgGame;
 
 namespace Project;
@@ -10,15 +11,23 @@ namespace Project;
 /// </summary>
 public partial class MainMenu : Control
 {
-	private static readonly (string Label, Action Go)[] Entries =
+	private const string RealMagicScene = "res://MagicTable/MagicTableScene.tscn";
+
+	// Real Magic only where it was exported: MagicTable/* (45 MB of art) is left out of the Android presets.
+	private static readonly (string Label, Action Go)[] Entries = new (string Label, Action Go)?[]
 	{
 		(
 			"Start Game",
 			() => GameManager.Instance.ChangeScene("res://MtgGame/DeckSelect/DeckSelectScene.tscn")
 		),
 		("Draft", () => GameManager.Instance.ChangeScene("res://MtgGame/Draft/DraftScene.tscn")),
+		ResourceLoader.Exists(RealMagicScene)
+			? ("Real Magic (FRA)", () => GameManager.Instance.ChangeScene(RealMagicScene))
+			: null,
 		("Quit", () => GameManager.Instance.GetTree().Quit()),
-	};
+	}
+		.OfType<(string Label, Action Go)>()
+		.ToArray();
 
 	private readonly List<Button> _buttons = new();
 	private int _current;

@@ -22,6 +22,19 @@ python tools/import_scryfall_set.py fra    # -> MagicCore/Sets/FRA.json, embedde
 Stdlib only. Re-running rewrites the file sorted by collector number, so `git diff` shows exactly
 what Scryfall changed (errata, a late-spoiled card).
 
+Art for the MagicTable front end (art crops for the board, full card images for hand and preview —
+the set's tokens too, from `t<code>`), then import it before Godot can see it:
+
+```
+SSL_CERT_FILE=C:/Python310/lib/site-packages/certifi/cacert.pem python tools/fetch_set_art.py fra
+godot-mono --path SQGodotCommon --headless --import
+```
+
+**Without `SSL_CERT_FILE`, Python fails "certificate has expired"** — its Windows certificate store
+is stale while curl's is fine; the certifi bundle works. Re-runs skip files already on disk.
+`MagicTable/*` (45 MB) is excluded from both Android presets, but `export_presets.cfg` is
+**gitignored** — a fresh clone ships it in the APK until the filter is re-added there.
+
 ## Play Reality Fracture against the AI (MagicCore)
 
 ```
