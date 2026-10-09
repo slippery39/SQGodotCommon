@@ -7,13 +7,19 @@ using MtgGame;
 
 namespace MagicTable;
 
-/// <summary>How a card is lit: playable (gold), in combat (red attacking, blue blocking), or plain.</summary>
+/// <summary>
+/// How an object is lit: playable (gold); in combat (red attacking, blue blocking); while a choice
+/// or a target is asked — clickable (light blue), picked (green), what it is about (white).
+/// </summary>
 public enum Glow
 {
 	None,
 	Playable,
 	Attacking,
 	Blocking,
+	Choosable,
+	Selected,
+	About,
 }
 
 /// <summary>
@@ -135,27 +141,37 @@ public static class CardViews
 		return string.Join(" ", parts);
 	}
 
-	private static Panel Frame(Glow glow, Vector2 size)
+	/// <summary>The one look of every glow — cards, player plates and stack rows alike.</summary>
+	public static StyleBoxFlat Outline(Glow glow)
 	{
-		var border = glow switch
-		{
-			Glow.Playable => MtgUiStyles.GoldBorder,
-			Glow.Attacking => new Color("d0583a"),
-			Glow.Blocking => new Color("2f7fd0"),
-			_ => MtgUiStyles.DimBorder,
-		};
 		var style = new StyleBoxFlat
 		{
 			BgColor = MtgUiStyles.CardBg,
-			BorderColor = border,
-			CornerRadiusTopLeft = 5,
-			CornerRadiusTopRight = 5,
-			CornerRadiusBottomLeft = 5,
-			CornerRadiusBottomRight = 5,
+			BorderColor = glow switch
+			{
+				Glow.Playable => MtgUiStyles.GoldBorder,
+				Glow.Attacking => new Color("d0583a"),
+				Glow.Blocking => new Color("2f7fd0"),
+				Glow.Choosable => new Color("8fd3ff"),
+				Glow.Selected => new Color("5fd35f"),
+				Glow.About => Colors.White,
+				_ => MtgUiStyles.DimBorder,
+			},
 		};
-		style.SetBorderWidthAll(glow == Glow.None ? 1 : 3);
+		style.SetCornerRadiusAll(5);
+		style.SetBorderWidthAll(
+			glow == Glow.None ? 1
+			: glow is Glow.Choosable or Glow.Selected ? 5
+			: 3
+		);
+		style.SetContentMarginAll(6);
+		return style;
+	}
+
+	private static Panel Frame(Glow glow, Vector2 size)
+	{
 		var panel = new Panel { Size = size, MouseFilter = Control.MouseFilterEnum.Ignore };
-		panel.AddThemeStyleboxOverride("panel", style);
+		panel.AddThemeStyleboxOverride("panel", Outline(glow));
 		return panel;
 	}
 

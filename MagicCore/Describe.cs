@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Effects;
 
 namespace MagicCore;
 
@@ -33,7 +34,7 @@ public static class Describe
 				+ (c.SacrificeId != 0 ? $", sacrificing {Name(s, c.SacrificeId)}" : "")
 				+ (c.DiscardId != 0 ? $", discarding {Name(s, c.DiscardId)}" : "")
 				+ (c.BeholdId != 0 ? $", beholding {Name(s, c.BeholdId)}" : ""),
-			ActivateAbilityAction a => $"Activate {Name(s, a.CardId)}"
+			ActivateAbilityAction a => $"Activate {Name(s, a.CardId)}{WhichAbility(s, a)}"
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Hand) ? " from hand" : "")
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Graveyard) ? " from graveyard" : "")
 				+ Targets(s, a.Targets)
@@ -45,6 +46,24 @@ public static class Describe
 			TapForManaAction t => $"Tap {Name(s, t.CardId)} for {t.Color}",
 			_ => action.GetType().Name,
 		};
+
+	/// <summary>Tells a card's activated abilities apart — " [#2: {2}{B}, T]"; empty when it has one.</summary>
+	static string WhichAbility(GameState s, ActivateAbilityAction a)
+	{
+		if (!s.HasObject(a.CardId) || s.GetObject(a.CardId) is not Card card)
+			return "";
+		var abilities = s.AbilitiesOf<ActivatedAbilityComponent>(card).ToList();
+		if (abilities.Count < 2 || abilities.ElementAtOrDefault(a.AbilityIndex) is not { } ability)
+			return "";
+		var cost = new[]
+		{
+			ability.Cost.ToString(),
+			ability.TapCost ? "T" : "",
+			ability.SacrificeSelf ? "sacrifice it" : "",
+		}.Where(part => part != "");
+		// The number too: two abilities may cost the same.
+		return $" [#{a.AbilityIndex + 1}: {string.Join(", ", cost)}]";
+	}
 
 	/// <summary>What the pending choice is about, e.g. "Attack with Bear?".</summary>
 	public static string Question(GameState s, ChoiceAction choice) =>

@@ -16,7 +16,9 @@ MagicTable/
 ├── MagicTableScene.cs    layout + redraw from State on every change; clicks → moves; AI timer
 ├── CardViews.cs          permanent crops (tapped lies sideways, lands stack), hand cards, thumbs
 ├── PhaseBar.cs           both players' steps; each step is a stop toggle
-├── ChoicePanel.cs        every pending choice, generically (Describe.Question, Min..Max)
+├── BoardChoice.cs        is a pending choice answered ON the table? which objects light up (plain C#)
+├── Targeting.cs          click a spell, then its targets: plays, narrowing by target (plain C#)
+├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no
 └── MagicArt.cs           Scryfall art crop / full card by name (tools/fetch_set_art.py)
 ```
 
@@ -31,4 +33,10 @@ MagicTable/
   Check `HasObject` before `GetObject`; an unchecked lookup crashed every attack declaration.
 - **Several moves for one card go in the action column**, not a PopupMenu: a popup's rect is in
   window pixels, the table in design pixels.
+- **Objects are clicked where they are, as on Arena.** A choice whose offered objects are ALL on
+  the table (permanents, your hand, the stack, the players) is a `BoardChoice`; one offering
+  anything hidden, or no objects (`MagicRules.OptionsAreObjects` says which), uses the panel. Casting with targets narrows by clicks
+  (`Targeting`). One router, `ObjectClicked`, takes every click — card, player plate, stack row.
+- **Glows:** gold playable, blue clickable now, green picked, white what it is about, red/blue in
+  combat — one style for every object (`CardViews.Outline`).
 - **Stops live in MagicCore (`Stops`)**, tested there; the table only shows and toggles them.

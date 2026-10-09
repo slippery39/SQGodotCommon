@@ -18,11 +18,13 @@ public static class MagicRules
 	/// Arena's Bo1 opening-hand smoother. On by default; whether Arena applies it to limited Bo1
 	/// is unconfirmed, so a run can turn it off.
 	/// </param>
+	/// <param name="names">What prompts and logs call the two players ("Attack the AI"); the keys by default.</param>
 	public static GameState NewGame(
 		IEnumerable<CardDefinition> deck1,
 		IEnumerable<CardDefinition> deck2,
 		int seed = 0,
-		bool handSmoothing = true
+		bool handSmoothing = true,
+		(string Player1, string Player2)? names = null
 	)
 	{
 		var s = new GameState { RngSeed = seed };
@@ -40,7 +42,8 @@ public static class MagicRules
 			var (key, deck) in new[] { (MagicKeys.Player1, deck1), (MagicKeys.Player2, deck2) }
 		)
 		{
-			(s, var player) = s.AddObject(new MagicPlayer { Name = key }, game.Id);
+			var name = names is var (n1, n2) ? (key == MagicKeys.Player1 ? n1 : n2) : key;
+			(s, var player) = s.AddObject(new MagicPlayer { Name = name }, game.Id);
 			s = s.RegisterWellKnownId(key, player.Id);
 			foreach (var type in Enum.GetValues<ZoneType>().Where(t => t != ZoneType.Stack))
 			{
@@ -295,6 +298,45 @@ public static class MagicRules
 	/// <summary>Which card a move is "from" for DistinctMoves: a permanent by id; elsewhere any copy in the same zone.</summary>
 	static string Identity(GameState s, int id) =>
 		s.IsOnBattlefield(id) ? $"{id}" : $"{s.GetCard(id).Name}@{s.GetParent(id)}";
+
+	/// <summary>
+	/// Whether a choice's option ids are object ids (a card, a player) — or numbers of its own
+	/// (modes, colours, keywords, yes/no, which cast). A front end shows the first kind ON the
+	/// objects. Every choice type is listed in one set or the other; a test enforces it.
+	/// </summary>
+	public static bool OptionsAreObjects(ChoiceAction choice)
+	{
+		if (ObjectChoices.Contains(choice.GetType()))
+			return true;
+		if (NumberedChoices.Any(t => t.IsInstanceOfType(choice)))
+			return false;
+		throw new ArgumentException(
+			$"{choice.GetType().Name}: add it to ObjectChoices or NumberedChoices"
+		);
+	}
+
+	public static readonly IReadOnlySet<Type> ObjectChoices = new HashSet<Type>
+	{
+		typeof(ChooseTargetChoice),
+		typeof(ChooseCardsFromHandChoice),
+		typeof(ChooseFromLibraryChoice),
+		typeof(ChooseFromLibraryTopChoice),
+		typeof(ChooseAmongChoice),
+		typeof(ChoosePermanentChoice),
+		typeof(ChooseHostChoice),
+		typeof(DeclareAttackerChoice),
+		typeof(DeclareBlockerChoice),
+	};
+
+	/// <summary>Subtypes count (PayToKeepChoice is a YesNoChoice).</summary>
+	public static readonly IReadOnlyList<Type> NumberedChoices =
+	[
+		typeof(ChooseModesChoice),
+		typeof(ChooseColorChoice),
+		typeof(ChooseKeywordChoice),
+		typeof(YesNoChoice),
+		typeof(ChooseCastChoice),
+	];
 
 	/// <summary>The card a move is played, cast or activated from; 0 for pass, keep and mulligan.</summary>
 	public static int CardOf(GameAction move) =>

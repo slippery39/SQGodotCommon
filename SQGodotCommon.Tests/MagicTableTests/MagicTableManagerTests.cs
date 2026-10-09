@@ -138,6 +138,35 @@ public class MagicTableManagerTests
 	}
 
 	[Test]
+	public void NoAttacks_DeclinesTheWholeDeclaration_AsOneUndoStep()
+	{
+		var m = New();
+		m.AutoplayTo(9); // seed 5: your turn 9, a creature able to attack
+		for (var i = 0; i < 50 && m.State.GetPendingChoice() is not DeclareAttackerChoice; i++)
+		{
+			RunAi(m);
+			if (m.HumanToAct && m.State.GetPendingChoice() is null)
+				m.Act(m.State.LegalActions().OfType<PassPriorityAction>().First());
+		}
+		Assert.That(
+			m.HumanToAct && m.State.GetPendingChoice() is DeclareAttackerChoice,
+			"precondition"
+		);
+		var atTheDeclaration = m.State;
+
+		m.DeclineCombat();
+
+		Assert.That(
+			m.HumanToAct && m.State.GetPendingChoice() is DeclareAttackerChoice,
+			Is.False,
+			"every attacker answered"
+		);
+		Assert.That(m.Log.Count(l => l.EndsWith("No attacks")), Is.EqualTo(1));
+		m.Undo();
+		Assert.That(m.State, Is.SameAs(atTheDeclaration));
+	}
+
+	[Test]
 	public void Replay_DealsTheSameOpeningHand()
 	{
 		var m = New(seed: 77);

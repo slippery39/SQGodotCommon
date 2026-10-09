@@ -14,7 +14,8 @@ exhaust … are already there) — copy and adapt what fits, and say what was li
 ```
 MagicCore/
 ├── MagicRules.cs        THE API: NewGame, DecidingPlayerId, LegalActions, Act, Choose, AutoPass,
-│                        DistinctMoves (+ IsMoveFor, CardOf: which card a move is for)
+│                        DistinctMoves (+ IsMoveFor, CardOf: which card a move is for;
+│                        OptionsAreObjects: every choice type, classified — a test enforces it)
 ├── MagicGame.cs / MagicPlayer.cs / MagicState.cs   root object, player, queries + MoveCard/EnterBattlefield
 ├── Describe.cs          plain-text actions, choices and cards for every front end and log
 ├── Stops.cs             Arena priority stops + full control for a human seat (front-end convenience)

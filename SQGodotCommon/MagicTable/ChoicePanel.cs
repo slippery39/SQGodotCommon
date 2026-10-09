@@ -35,10 +35,7 @@ public partial class ChoicePanel : PanelContainer
 		var column = new VBoxContainer();
 		column.AddThemeConstantOverride("separation", 6);
 		AddChild(column);
-		var range =
-			choice.MinChoices == choice.MaxChoices
-				? $"choose {choice.MinChoices}"
-				: $"choose {choice.MinChoices} to {choice.MaxChoices}";
+		var range = BoardChoice.Range(choice);
 		var question = new Label
 		{
 			Text = $"{Describe.Question(s, choice)}  ({range})",
@@ -50,7 +47,7 @@ public partial class ChoicePanel : PanelContainer
 		column.AddChild(question);
 
 		// Several picks, or none allowed: toggles + Confirm. Exactly one: the click answers.
-		var multi = choice.MaxChoices > 1 || choice.MinChoices == 0;
+		var multi = BoardChoice.IsMulti(choice);
 		var picked = new List<int>();
 		var confirm = new Button { Text = "Confirm", Disabled = choice.MinChoices > 0 };
 		MtgUiStyles.StylePrimary(confirm, 28);
@@ -60,7 +57,7 @@ public partial class ChoicePanel : PanelContainer
 		list.AddThemeConstantOverride("h_separation", 6);
 		list.AddThemeConstantOverride("v_separation", 6);
 		column.AddChild(list);
-		var cardIds = ShowsCards(choice);
+		var cardIds = MagicRules.OptionsAreObjects(choice);
 		foreach (var option in choice.Options)
 		{
 			var card =
@@ -107,15 +104,4 @@ public partial class ChoicePanel : PanelContainer
 		Visible = false;
 		CardViews.Clear(this);
 	}
-
-	/// <summary>Whether option ids are object ids here — modes, colours, keywords and yes/no number their own.</summary>
-	private static bool ShowsCards(ChoiceAction choice) =>
-		choice
-			is not (
-				ChooseModesChoice
-				or ChooseColorChoice
-				or ChooseKeywordChoice
-				or YesNoChoice
-				or ChooseCastChoice
-			);
 }

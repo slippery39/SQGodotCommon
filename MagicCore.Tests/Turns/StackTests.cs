@@ -179,4 +179,73 @@ public class StackTests
 		Assert.That(s.IsMoveFor(heal, forest), Is.False);
 		Assert.That(s.IsMoveFor(new PassPriorityAction { PlayerId = me }, first), Is.False);
 	}
+
+	[Test]
+	public void Describe_TellsACardsActivatedAbilitiesApartByCost()
+	{
+		var (s, me, _) = Board();
+		ActivatedAbilityComponent Gain(string cost) =>
+			new(ManaCost.Parse(cost), [new GainLife(Ref.You, 1)]);
+		var twoAbilities = new CardDefinition(
+			TestGames.Creature("Two Ways", "1/1").Data,
+			[Gain("{1}") with { TapCost = true }, Gain("{2}{G}")]
+		);
+		var oneAbility = new CardDefinition(
+			TestGames.Creature("One Way", "1/1").Data,
+			[Gain("{1}")]
+		);
+		int two,
+			one;
+		(s, two) = TestGames.Put(s, me, twoAbilities, ZoneType.Battlefield);
+		(s, one) = TestGames.Put(s, me, oneAbility, ZoneType.Battlefield);
+
+		string Label(int card, int index) =>
+			Describe.Action(
+				s,
+				new ActivateAbilityAction
+				{
+					PlayerId = me,
+					CardId = card,
+					AbilityIndex = index,
+				}
+			);
+		Assert.That(Label(two, 0), Is.EqualTo("Activate Two Ways [#1: {1}, T]"));
+		Assert.That(Label(two, 1), Is.EqualTo("Activate Two Ways [#2: {2}{G}]"));
+		Assert.That(
+			Label(one, 0),
+			Is.EqualTo("Activate One Way"),
+			"one ability needs no telling apart"
+		);
+		Assert.That(
+			Describe.Action(s, new ActivateAbilityAction { PlayerId = me, CardId = 9999 }),
+			Is.EqualTo("Activate #9999"),
+			"a card that is gone still describes"
+		);
+	}
+
+	[Test]
+	public void EveryChoiceType_SaysWhetherItsOptionsAreObjects()
+	{
+		var choiceTypes = typeof(MagicRules)
+			.Assembly.GetTypes()
+			.Where(t =>
+				typeof(ImmutableGameObjects.ChoiceAction).IsAssignableFrom(t) && !t.IsAbstract
+			);
+
+		var unclassified = choiceTypes.Where(t =>
+			!MagicRules.ObjectChoices.Contains(t)
+			&& !MagicRules.NumberedChoices.Any(n => n.IsAssignableFrom(t))
+		);
+
+		Assert.That(
+			unclassified,
+			Is.Empty,
+			"add each to MagicRules.ObjectChoices or NumberedChoices"
+		);
+		Assert.That(
+			choiceTypes.Count(),
+			Is.GreaterThanOrEqualTo(15),
+			"precondition: the types were found"
+		);
+	}
 }

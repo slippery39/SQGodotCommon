@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using ImmutableGameObjects;
 using MagicCore;
+using MagicCore.Actions;
 using MagicCore.Ai;
 using MagicCore.Cards;
 
@@ -50,7 +51,12 @@ public sealed class MagicTableManager
 	)
 	{
 		(_deck1, _deck2, Seed, AiVsAi) = (deck1, deck2, seed, aiVsAi);
-		State = MagicRules.NewGame(deck1, deck2, seed);
+		State = MagicRules.NewGame(
+			deck1,
+			deck2,
+			seed,
+			names: aiVsAi ? ("AI 1", "AI 2") : ("You", "AI")
+		);
 		(HumanId, OpponentId) = (State.Player1Id(), State.Player2Id());
 		_ais[OpponentId] = new GreedyAi(OpponentId);
 		if (aiVsAi)
@@ -101,6 +107,24 @@ public sealed class MagicTableManager
 	}
 
 	/// <summary>
+	/// "No attacks" / "No blocks": answers "don't" for every creature left in your declaration —
+	/// one decision, so one undo step and one log line.
+	/// </summary>
+	public void DeclineCombat()
+	{
+		var first = State.GetPendingChoice();
+		if (!HumanToAct || first is not (DeclareAttackerChoice or DeclareBlockerChoice))
+			return;
+		var next = State;
+		while (
+			next.DecidingPlayerId() == HumanId
+			&& next.GetPendingChoice() is DeclareAttackerChoice or DeclareBlockerChoice
+		)
+			next = next.Choose([CombatOption.None]);
+		Decided(first is DeclareAttackerChoice ? "No attacks" : "No blocks", next);
+	}
+
+	/// <summary>
 	/// Debug (<c>-GameArgs --autoplay=N</c>): a stand-in AI plays your seat too until turn N, so the
 	/// table opens mid-game for a capture. Leaves no undo steps.
 	/// </summary>
@@ -142,7 +166,7 @@ public sealed class MagicTableManager
 
 	private string Write(int turn, int who, string what)
 	{
-		var line = $"T{turn} {(who == HumanId ? (AiVsAi ? "AI 1" : "You") : "AI")}: {what}";
+		var line = $"T{turn} {State.GetPlayer(who).Name}: {what}";
 		_log.Add(line);
 		return line;
 	}
