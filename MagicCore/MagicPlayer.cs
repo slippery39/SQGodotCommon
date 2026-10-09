@@ -19,7 +19,8 @@ public record MagicPlayer : GameObject
 
 	/// <summary>
 	/// The draw ATTEMPT is the loss, not the empty library (CR 704.5b) — milling to zero is fine.
-	/// Turned into <see cref="HasLost"/> by the state-based check, the one way to lose.
+	/// Turned into <see cref="HasLost"/> by the state-based check — the one way to lose, besides an
+	/// opponent's "you win the game" (WinTheGame), which ends the game at once.
 	/// </summary>
 	public bool AttemptedDrawFromEmptyLibrary { get; init; }
 
@@ -39,6 +40,9 @@ public record TurnTally
 	public int SpellsCast { get; init; }
 	public int NoncreatureSpellsCast { get; init; }
 	public int CardsDrawn { get; init; }
+
+	/// <summary>Kiora of Salt and Sand: "if you've activated a loyalty ability this turn".</summary>
+	public int LoyaltyAbilitiesActivated { get; init; }
 
 	/// <summary>Jiang Yanggu: "for each card you've discarded this turn" — counted by MagicState.Discard.</summary>
 	public int CardsDiscarded { get; init; }

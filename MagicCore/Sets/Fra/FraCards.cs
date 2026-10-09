@@ -172,6 +172,25 @@ public static class FraCards
 			null
 		);
 
+	/// <summary>Kiora of Salt and Sand: "an 8/8 blue Leviathan creature token with hexproof".</summary>
+	public static readonly CardData Leviathan =
+		new(
+			"Leviathan",
+			"token",
+			null,
+			0,
+			"Creature — Leviathan",
+			null,
+			"8",
+			"8",
+			null,
+			["U"],
+			["Hexproof"],
+			"token",
+			"T",
+			null
+		);
+
 	/// <summary>Soul Tether: "a Heartwood token (a red and green artifact with '{T}: Add {R} or {G}.')".</summary>
 	public static readonly CardData Heartwood =
 		new(
@@ -2570,6 +2589,76 @@ public static class FraCards
 				new CostsLessByGreatestStatYouControl(Toughness: true),
 				new YourCreaturesAttackDespiteDefender(),
 				new YourCreaturesAssignDamageByToughness(),
+			],
+
+			// ===== Uncommons: combat and the rest =====
+			["Yuriko, Blade of the Mighty"] =
+			[
+				new NoSpellsOrAbilitiesDuringCombat(),
+				When(
+					TriggerEvent.CreatureYouControlAttacksPlayerAlone,
+					[],
+					new ModifyUntilEndOfTurn(Ref.EventCard, 0, 0, "Double strike")
+				),
+			],
+			["Tomik, Orzhov Lawmage"] =
+			[
+				new OneAttackerPerPlaneswalkerYouControl(),
+				new ActivatedAbilityComponent(
+					ManaCost.None,
+					[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Flying")]
+				)
+				{
+					TapCost = true,
+					Targets = [Creature with { WithPlusOneCounter = true }],
+				},
+			],
+			["Kiora of Salt and Sand"] =
+			[
+				When(
+					TriggerEvent.YouAttack,
+					[Creature with { Attacking = true }],
+					new Untap(Ref.Target()),
+					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, Combat.CantBeBlocked)
+				) with
+				{
+					If = new AtLeast(Count.LoyaltyAbilitiesYouActivatedThisTurn, 1),
+				},
+				Grant(-8, [], new CreateTokens(Leviathan, 1)),
+			],
+			["Winter, Team Player"] =
+			[
+				When(
+					TriggerEvent.YouCastNoncreatureSpell,
+					[],
+					new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 0)
+				),
+			],
+			["Fblthp, Impossibly Lost"] =
+			[
+				When(
+					TriggerEvent.OpponentsDealtCombatDamageDuringYourTurn,
+					[],
+					new DrawCards(Ref.You, 2),
+					new If(new YourLibraryIsEmpty(), [new WinTheGame()]),
+					new ShuffleIntoLibrary(Ref.Source)
+				),
+			],
+			["Fblthp, Knows the Way"] =
+			[
+				new StaticEffectComponent(Affects.Self)
+				{
+					Power = Count.BasicLandTypesAmongLandsYouControl,
+				},
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new SearchLibrary(CardType.Land, ZoneType.Hand)
+					{
+						Supertype = Supertype.Basic,
+						UpTo = Count.X,
+					}
+				),
 			],
 		};
 

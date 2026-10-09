@@ -85,7 +85,12 @@ public record ActivateLoyaltyAction : GameAction
 		var ability = Loyalty.AbilitiesOf(s, walker)[AbilityIndex];
 		s = Loyalty.Change(s, CardId, ability.Cost, PlayerId);
 		walker = s.GetCard(CardId) with { LoyaltyActivatedOnTurn = s.GetGame().TurnNumber };
-		s = s.UpdateObject(CardId, walker).Raise(new LoyaltyActivatedEvent(PlayerId, ability.Cost));
+		s = s.UpdateObject(CardId, walker)
+			.Tally(
+				PlayerId,
+				t => t with { LoyaltyAbilitiesActivated = t.LoyaltyAbilitiesActivated + 1 }
+			)
+			.Raise(new LoyaltyActivatedEvent(PlayerId, ability.Cost));
 		s = StackResolution.Push(
 			s,
 			new StackAbility

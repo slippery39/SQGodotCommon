@@ -10,6 +10,12 @@ public record EnteredBattlefieldEvent(int CardId) : GameEvent;
 
 public record AttackedEvent(int CardId) : GameEvent;
 
+/// <summary>Attackers were declared — one event however many ("whenever you attack").</summary>
+public record AttackersDeclaredEvent(int PlayerId) : GameEvent;
+
+/// <summary>Combat damage was dealt to these players in one damage step ("one or more").</summary>
+public record CombatDamageToPlayersEvent(ImmutableList<int> PlayerIds) : GameEvent;
+
 /// <param name="NoncreatureSpellNumber">Which noncreature spell of the caster's turn this is — 0 for a creature.</param>
 public record SpellCastEvent(int CardId, int PlayerId, int NoncreatureSpellNumber = 0) : GameEvent;
 
@@ -275,6 +281,12 @@ public static class Triggers
 				== source.ControllerId
 				&& s.GetCard(cast.CardId).Is(CardType.Artifact | CardType.Creature),
 			(TriggerEvent.APlayerDiscards, DiscardedEvent) => true,
+			(TriggerEvent.YouAttack, AttackersDeclaredEvent declared) => declared.PlayerId
+				== source.ControllerId,
+			(
+				TriggerEvent.OpponentsDealtCombatDamageDuringYourTurn,
+				CombatDamageToPlayersEvent hit
+			) => yourTurn && hit.PlayerIds.Any(p => p != source.ControllerId),
 			(TriggerEvent.SelfDiscarded, DiscardedEvent discarded) => discarded.CardIds.Contains(
 				source.Id
 			),

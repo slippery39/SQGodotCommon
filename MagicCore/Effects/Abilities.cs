@@ -52,6 +52,8 @@ public enum TriggerEvent
 	YouCastEquipmentOrSpellTargetingYourCreature, // Danitha, Sword of Hope
 	YouCastSpellTargetingOpponentOrTheirCreature, // Danitha, Spear of Agony
 	YouCastFirstNoncreatureSpellEachTurn, // Plan for All Outcomes
+	YouAttack, // Kiora of Salt and Sand: "whenever you attack" — once per declaration
+	OpponentsDealtCombatDamageDuringYourTurn, // Fblthp, Impossibly Lost — "one or more", once a step
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>
@@ -312,6 +314,12 @@ public record YourCreaturesAssignDamageByToughness : GameComponent;
 
 /// <summary>Ghalta: "Creatures you control can attack as though they didn't have defender."</summary>
 public record YourCreaturesAttackDespiteDefender : GameComponent;
+
+/// <summary>Yuriko: "During combat, players can't cast spells or activate abilities that aren't mana abilities."</summary>
+public record NoSpellsOrAbilitiesDuringCombat : GameComponent;
+
+/// <summary>Tomik, Orzhov Lawmage: "Planeswalkers you control have 'No more than one creature can attack this planeswalker each combat.'"</summary>
+public record OneAttackerPerPlaneswalkerYouControl : GameComponent;
 
 /// <summary>"This spell can't be countered." Read by StackResolution.Counter.</summary>
 public record CantBeCountered : GameComponent;

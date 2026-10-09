@@ -453,6 +453,16 @@ public record WhenYouDo(ImmutableList<TargetSpec> Targets, ImmutableList<GameAct
 	}
 }
 
+/// <summary>
+/// "You win the game" (CR 104.2a): every opponent loses, now — and the game ends, so no state-based
+/// check runs after it (a same-moment draw from an empty library can't make it a draw).
+/// </summary>
+public record WinTheGame : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(s.WithPlayer(s.GetPlayer(s.OpponentOf(Controller)) with { HasLost = true }));
+}
+
 /// <summary>"If [condition], [effects]" — the effects run in order with this ability's context.</summary>
 public record If(Condition When, ImmutableList<GameAction> Then) : Effect
 {

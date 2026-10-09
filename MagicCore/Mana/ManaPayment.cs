@@ -34,19 +34,39 @@ public static class ManaPayment
 		int playerId,
 		ManaCost cost,
 		int x,
-		int excludeId = 0
+		int excludeId = 0,
+		bool convoke = false
 	)
 	{
 		var player = s.GetPlayer(playerId);
+		// Convoke (CR 702.51): each untapped creature you control may pay {1} or one mana of its
+		// colour — Colorless is how it pays generic only. Summoning sickness doesn't matter: tapping
+		// for convoke isn't a {T} cost. Ordered after lands, like a creature's own mana ability.
+		var convokers = convoke
+			? s.CardsIn(playerId, ZoneType.Battlefield)
+				.Where(c => c.Is(Cards.CardType.Creature) && !c.IsTapped && c.Id != excludeId)
+				.ToDictionary(c => c.Id, c => (ManaColor[])[.. c.Colors, ManaColor.Colorless])
+			: [];
 		var sources = Any.SelectMany(c => Enumerable.Repeat(new Source(0, [c]), player.ManaPool[c]))
 			.Concat(
 				ManaAbilities
 					.Sources(s, playerId, excludeId)
+					// One source per permanent: a mana creature convoking may pay what it makes OR its own colour.
 					.Select(c => new Source(
 						c.Id,
-						[.. ManaAbilities.ColorsOf(c)],
+						[
+							.. ManaAbilities
+								.ColorsOf(c)
+								.Concat(convokers.GetValueOrDefault(c.Id) ?? [])
+								.Distinct(),
+						],
 						c.Is(Cards.CardType.Creature)
 					))
+					.Concat(
+						convokers
+							.Where(kv => !ManaAbilities.CanTap(s, s.GetCard(kv.Key)))
+							.Select(kv => new Source(kv.Key, [.. kv.Value], IsCreature: true))
+					)
 					// Lands before creatures: a creature tapped for mana can no longer attack or block.
 					.OrderBy(src => src.IsCreature)
 					.ThenBy(src => src.Colors.Length)

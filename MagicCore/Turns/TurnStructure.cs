@@ -188,6 +188,8 @@ public static class StateBasedActions
 
 	static GameState CheckOnce(GameState s)
 	{
+		if (s.IsOver())
+			return s; // the game ended — "you win the game" — so nothing more is checked (CR 104.2a)
 		foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
 		{
 			var player = s.GetPlayer(id);

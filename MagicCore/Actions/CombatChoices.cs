@@ -31,13 +31,22 @@ public record DeclareAttackerChoice : ChoiceAction
 	)
 	{
 		var opponent = s.GetPlayer(s.OpponentOf(PlayerId));
+		var oneEach = s.CardsIn(opponent.Id, ZoneType.Battlefield)
+			.Any(c => c.HasComponent<Effects.OneAttackerPerPlaneswalkerYouControl>());
 		return
 		[
 			new ChoiceOption { Id = CombatOption.None, DisplayText = "Don't attack" },
 			new ChoiceOption { Id = opponent.Id, DisplayText = $"Attack {opponent.Name}" },
-			// CR 506.3: a planeswalker the defending player controls can be attacked.
+			// CR 506.3: a planeswalker the defending player controls can be attacked — once only, under
+			// Tomik, by a creature declared before this one.
 			.. s.CardsIn(opponent.Id, ZoneType.Battlefield)
-				.Where(c => c.Is(Cards.CardType.Planeswalker))
+				.Where(c =>
+					c.Is(Cards.CardType.Planeswalker)
+					&& !(
+						oneEach
+						&& Declarations.Read(context, KeyPrefix).Any(d => d.ChosenId == c.Id)
+					)
+				)
 				.Select(c => new ChoiceOption { Id = c.Id, DisplayText = $"Attack {c.Name}" }),
 		];
 	}
@@ -102,9 +111,8 @@ public record FinishAttackersAction : GameAction
 {
 	public override ActionResult Execute(GameState s)
 	{
-		foreach (
-			var (id, target) in Declarations.Read(InputContext, DeclareAttackerChoice.KeyPrefix)
-		)
+		var declared = Declarations.Read(InputContext, DeclareAttackerChoice.KeyPrefix).ToList();
+		foreach (var (id, target) in declared)
 		{
 			var card = s.GetCard(id);
 			s = s.UpdateObject(
@@ -118,6 +126,9 @@ public record FinishAttackersAction : GameAction
 				)
 				.Raise(new AttackedEvent(id));
 		}
+		// "Whenever you attack": once for the whole declaration, however many attack.
+		if (declared.Count > 0)
+			s = s.Raise(new AttackersDeclaredEvent(s.GetGame().ActivePlayerId));
 		return new ActionResult(TurnStructure.GivePriority(s, s.GetGame().ActivePlayerId));
 	}
 }

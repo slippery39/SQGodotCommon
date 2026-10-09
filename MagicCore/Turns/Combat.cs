@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
@@ -38,6 +39,16 @@ public static class Combat
 				.Any(p => p.HasComponent<Effects.YourCreaturesAttackDespiteDefender>())
 		)
 		&& (s.Has(c, "Haste") || !IsSummoningSick(s, c));
+
+	/// <summary>
+	/// Yuriko: a combat step, with a permanent saying no spells or non-mana abilities now. Casting
+	/// and activating both ask here (mana abilities never do).
+	/// </summary>
+	public static bool LockedDown(GameState s) =>
+		s.GetGame().Step is >= Step.BeginCombat and <= Step.EndCombat
+		&& new[] { s.Player1Id(), s.Player2Id() }
+			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+			.Any(c => c.HasComponent<Effects.NoSpellsOrAbilitiesDuringCombat>());
 
 	/// <summary>"Can't be blocked" — granted by static abilities and until-end-of-turn effects alike.</summary>
 	public const string CantBeBlocked = "Can't be blocked";
@@ -175,7 +186,11 @@ public static class Combat
 
 		foreach (var (source, targetId, amount) in hits)
 			s = Rules.Damage.Deal(s, source, targetId, amount, combat: true);
-		return s;
+		var players = hits.Select(h => h.TargetId)
+			.Where(id => s.GetObject(id) is MagicPlayer)
+			.Distinct()
+			.ToImmutableList();
+		return players.IsEmpty ? s : s.Raise(new CombatDamageToPlayersEvent(players));
 	}
 
 	/// <summary>CR 511.3: everything leaves combat as the end of combat step ends.</summary>

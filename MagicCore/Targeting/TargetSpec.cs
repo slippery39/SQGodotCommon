@@ -68,6 +68,12 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 	/// <summary>Hexhaven Dueling Arena: "target creature that attacked this turn".</summary>
 	public bool AttackedThisTurn { get; init; }
 
+	/// <summary>Kiora of Salt and Sand: "target attacking creature".</summary>
+	public bool Attacking { get; init; }
+
+	/// <summary>Tomik, Orzhov Lawmage: "target creature with a +1/+1 counter on it".</summary>
+	public bool WithPlusOneCounter { get; init; }
+
 	/// <summary>"With mana value 3 or less" — a card in a graveyard or a permanent.</summary>
 	public int MaxManaValue { get; init; } = int.MaxValue;
 
@@ -164,6 +170,8 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		&& (WithKeyword is null || s.Has(card, WithKeyword))
 		&& (!EnteredThisTurn || card.EnteredOnTurn == s.GetGame().TurnNumber)
 		&& (!AttackedThisTurn || card.AttackedOnTurn == s.GetGame().TurnNumber)
+		&& (!Attacking || card.AttackingId != 0)
+		&& (!WithPlusOneCounter || card.PlusOneCounters > 0)
 		&& ManaValue(card) is var mv
 		&& mv <= MaxManaValue
 		&& mv >= MinManaValue;

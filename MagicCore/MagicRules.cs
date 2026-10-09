@@ -146,7 +146,7 @@ public static class MagicRules
 	/// </summary>
 	static IEnumerable<GameAction> CastCandidates(GameState s, int player, Card card)
 	{
-		var maxX = card.ManaCost.HasX ? AvailableMana(s, player) : 0;
+		var maxX = card.ManaCost.HasX ? AvailableMana(s, player, s.Has(card, "Convoke")) : 0;
 		var text = card.GetComponent<SpellEffectsComponent>();
 		var choices = Modal
 			.Choices(text?.Modes ?? [], text?.Choose ?? 1)
@@ -236,9 +236,13 @@ public static class MagicRules
 						})
 			);
 
-	static int AvailableMana(GameState s, int player) =>
+	/// <summary>An upper bound on the mana this player could pay — every untapped creature too, for convoke.</summary>
+	static int AvailableMana(GameState s, int player, bool convoke) =>
 		s.GetPlayer(player).ManaPool.Total
-		+ s.CardsIn(player, ZoneType.Battlefield).Count(c => ManaAbilities.CanTap(s, c));
+		+ s.CardsIn(player, ZoneType.Battlefield)
+			.Count(c =>
+				ManaAbilities.CanTap(s, c) || (convoke && c.Is(CardType.Creature) && !c.IsTapped)
+			);
 
 	/// <summary>
 	/// Passes for whoever must act while passing is their ONLY legal action — Arena's auto-pass,

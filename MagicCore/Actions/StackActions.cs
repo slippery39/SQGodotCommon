@@ -97,6 +97,8 @@ public record CastSpellAction : GameAction
 		)
 			return ValidationResult.Invalid("You may not cast that card from where it is");
 		var card = s.GetCard(CardId);
+		if (Turns.Combat.LockedDown(s))
+			return ValidationResult.Invalid("No spells during combat");
 		if (OwesDiscard(s, card) ? !s.IsIn(DiscardId, PlayerId, ZoneType.Hand) : DiscardId != 0)
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (card.Is(CardType.Land))
@@ -131,7 +133,10 @@ public record CastSpellAction : GameAction
 				.Contains(BeholdId) != true
 		)
 			return ValidationResult.Invalid("Not a card you can behold for this");
-		if (ManaPayment.Find(s, PlayerId, CostToPay(s, card), 0) is null)
+		if (
+			ManaPayment.Find(s, PlayerId, CostToPay(s, card), 0, convoke: s.Has(card, "Convoke"))
+			is null
+		)
 			return ValidationResult.Invalid("Cannot pay the cost");
 		return ValidationResult.Valid;
 	}
@@ -147,7 +152,11 @@ public record CastSpellAction : GameAction
 	{
 		var card = s.GetCard(CardId);
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
-		s = ManaPayment.Pay(s, PlayerId, ManaPayment.Find(s, PlayerId, CostToPay(s, card), 0)!);
+		s = ManaPayment.Pay(
+			s,
+			PlayerId,
+			ManaPayment.Find(s, PlayerId, CostToPay(s, card), 0, convoke: s.Has(card, "Convoke"))!
+		);
 		if (SacrificeId != 0)
 			s = s.Sacrifice(SacrificeId);
 		if (DiscardId != 0)
@@ -217,6 +226,8 @@ public record ActivateAbilityAction : GameAction
 		)
 			return ValidationResult.Invalid("No such ability where you can activate it");
 		var card = s.GetCard(CardId);
+		if (Turns.Combat.LockedDown(s))
+			return ValidationResult.Invalid("No abilities during combat");
 		// Judged as the activating player's: a card off the battlefield may still carry an old
 		// controller (CR 108.4a — in a graveyard it is its owner's).
 		if (

@@ -60,6 +60,16 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   state-based check cancels them against +1/+1 counters in pairs (CR 704.5q).
 - **How much combat damage a creature assigns** is `Combat.Assigns` — power, or toughness (Ghalta), or a
   negative power as positive (Loot). Combat never reads `s.Power` for damage directly.
+- **Convoke** is `ManaPayment.Find(…, convoke: true)`: your untapped creatures join the sources after
+  lands, each paying its own colour or {1} (as Colorless); summoning sickness doesn't matter.
+- **"During combat, no spells or abilities"** (Yuriko) is `Combat.LockedDown`, asked by casting and
+  activating alike — never by mana abilities.
+- **An attack limit** ("no more than one creature can attack this planeswalker") is an option
+  `DeclareAttackerChoice` doesn't offer, read from the declarations already made in that pipeline.
+- **"Whenever you attack"** and **"one or more … are dealt combat damage"** are ONE event each per
+  declaration or damage step (`AttackersDeclaredEvent`, `CombatDamageToPlayersEvent`) — never one per creature.
+- **"You win the game"** (`WinTheGame`) ends it at once: a same-moment draw from an empty library never
+  reaches the state-based check.
 - **Cost changes all live in `Costs.Of`** — taxes on the opponent's side, reductions on yours
   (`YourNoncreatureSpellsCostLess`), and the card's own.
 - **Where triggers are read from:** permanents on the battlefield; a dying card's own "when this

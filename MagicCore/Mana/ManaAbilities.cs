@@ -16,6 +16,9 @@ public static class ManaAbilities
 			.Concat(card.GetComponents<ChosenColorMana>().Select(m => m.Color))
 			.Distinct();
 
+	/// <summary>Plains, Island, Swamp, Mountain, Forest — domain counts these.</summary>
+	public static bool IsBasicLandType(string subtype) => BasicLandColor(subtype) is not null;
+
 	static ManaColor? BasicLandColor(string subtype) =>
 		subtype switch
 		{

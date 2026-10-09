@@ -207,6 +207,8 @@ public enum CountOf
 	LifeYouGainedThisTurn,
 	CardsYouDrewThisTurn,
 	CardsYouDiscardedThisTurn,
+	LoyaltyAbilitiesYouActivatedThisTurn,
+	BasicLandTypesAmongLandsYouControl, // domain
 	YourSurveilsThisTurn,
 	SpellsYouCastThisTurn,
 	NoncombatDamageToOpponentsLastTurn,
@@ -244,6 +246,12 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static readonly Count CardsYouDrewThisTurn = new(0, null, CountOf.CardsYouDrewThisTurn);
 	public static readonly Count CardsYouDiscardedThisTurn =
 		new(0, null, CountOf.CardsYouDiscardedThisTurn);
+	public static readonly Count LoyaltyAbilitiesYouActivatedThisTurn =
+		new(0, null, CountOf.LoyaltyAbilitiesYouActivatedThisTurn);
+
+	/// <summary>Domain: "the number of basic land types among lands you control".</summary>
+	public static readonly Count BasicLandTypesAmongLandsYouControl =
+		new(0, null, CountOf.BasicLandTypesAmongLandsYouControl);
 	public static readonly Count YourSurveilsThisTurn = new(0, null, CountOf.YourSurveilsThisTurn);
 	public static readonly Count SpellsYouCastThisTurn =
 		new(0, null, CountOf.SpellsYouCastThisTurn);
@@ -276,6 +284,13 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			return context.TryGetValue(ContextKeys.X, out var x) ? (int)x : 0;
 		if (Kind == CountOf.CreaturesDiedThisTurn)
 			return s.GetGame().CreaturesDiedThisTurn;
+		if (Kind == CountOf.BasicLandTypesAmongLandsYouControl)
+			return Ref
+				.LandsYouControl.Resolve(s, context)
+				.SelectMany(id => s.GetCard(id).Subtypes)
+				.Where(ManaAbilities.IsBasicLandType)
+				.Distinct()
+				.Count();
 		if (Kind == CountOf.NoncombatDamageToOpponentsLastTurn)
 			return s.GetPlayer(
 				s.OpponentOf((int)context[ContextKeys.Controller])
@@ -289,6 +304,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			is CountOf.LifeYouGainedThisTurn
 				or CountOf.CardsYouDrewThisTurn
 				or CountOf.CardsYouDiscardedThisTurn
+				or CountOf.LoyaltyAbilitiesYouActivatedThisTurn
 				or CountOf.YourSurveilsThisTurn
 				or CountOf.SpellsYouCastThisTurn
 		)
@@ -299,6 +315,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				CountOf.LifeYouGainedThisTurn => tally.LifeGained,
 				CountOf.CardsYouDrewThisTurn => tally.CardsDrawn,
 				CountOf.CardsYouDiscardedThisTurn => tally.CardsDiscarded,
+				CountOf.LoyaltyAbilitiesYouActivatedThisTurn => tally.LoyaltyAbilitiesActivated,
 				CountOf.SpellsYouCastThisTurn => tally.SpellsCast,
 				_ => tally.Surveils,
 			};

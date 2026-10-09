@@ -174,6 +174,9 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 	/// <summary>Basic landcycling: "a basic land card".</summary>
 	public Supertype Supertype { get; init; }
 
+	/// <summary>Fblthp: "up to X … with different names" — the options are already one per name.</summary>
+	public Count UpTo { get; init; } = 1;
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.SpawnAction(
@@ -187,8 +190,9 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 							PlayerId = Controller,
 							Type = Type,
 							Supertype = Supertype,
+							MaxChoices = Math.Max(0, UpTo.Value(s, InputContext)),
 							Prompt =
-								$"Search for a {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{Type.ToString().ToLowerInvariant()} card",
+								$"Search for {(UpTo == 1 ? "a" : $"up to {UpTo.Value(s, InputContext)}")} {(Supertype == Supertype.None ? "" : Supertype.ToString().ToLowerInvariant() + " ")}{Type.ToString().ToLowerInvariant()} card{(UpTo == 1 ? "" : "s with different names")}",
 						},
 						new MoveChosenToAction(Controller, To),
 						new ShuffleLibraryAction(Controller),

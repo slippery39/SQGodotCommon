@@ -41,6 +41,13 @@ public record DuringYourTurn : Condition
 		s.GetGame().ActivePlayerId == (int)context[ContextKeys.Controller];
 }
 
+/// <summary>Fblthp: "If your library has no cards in it".</summary>
+public record YourLibraryIsEmpty : Condition
+{
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
+		!s.CardsIn((int)context[ContextKeys.Controller], ZoneType.Library).Any();
+}
+
 public record Not(Condition Inner) : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
