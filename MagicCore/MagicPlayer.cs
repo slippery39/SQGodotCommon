@@ -41,6 +41,12 @@ public record TurnTally
 	public int NoncreatureSpellsCast { get; init; }
 	public int CardsDrawn { get; init; }
 
+	/// <summary>
+	/// Way of the Cryomancer's "[−3]: When you next cast an instant or sorcery spell this turn, copy
+	/// that spell" — delayed triggers waiting; the next such spell takes them all (CastSpellAction).
+	/// </summary>
+	public int CopyNextInstantOrSorcery { get; init; }
+
 	/// <summary>Molten Tide: "until end of turn, whenever you tap a Mountain for mana, add an additional {R}" — one each.</summary>
 	public int ExtraRedFromMountains { get; init; }
 

@@ -253,6 +253,98 @@ public record MountainsMakeAnExtraRedThisTurn : Effect
 		);
 }
 
+/// <summary>
+/// Way of the Cryomancer's granted "[−3]: When you next cast an instant or sorcery spell this turn,
+/// copy that spell. You may choose new targets for the copy." — a delayed trigger, kept on the player.
+/// </summary>
+public record CopyNextInstantOrSorceryThisTurn : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			s.Tally(
+				Controller,
+				t => t with { CopyNextInstantOrSorcery = t.CopyNextInstantOrSorcery + 1 }
+			)
+		);
+}
+
+/// <summary>
+/// "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on the
+/// stack above it, controlled by you; it is not cast (no "whenever you cast" sees it) and ceases to
+/// exist once it leaves the stack. Its targets are chosen anew from what is legal for it — the
+/// original's among them.
+/// </summary>
+public record CopySpell(Ref What) : Effect
+{
+	public override ActionResult Execute(GameState s)
+	{
+		var stack = s.GetWellKnownId(MagicKeys.Stack);
+		// Countered or gone in response, it is still copied — as it last was on the stack.
+		var originals = All(What, s)
+			.Where(id => s.GetParent(id) == stack)
+			.Select(s.GetCard)
+			.ToList();
+		if (originals.Count == 0 && GetInput<Card?>(ContextKeys.EventSnapshot) is { } lastKnown)
+			originals.Add(lastKnown);
+		foreach (var original in originals.Where(c => c.HasComponent<OnStackComponent>()))
+		{
+			Card copy;
+			(s, copy) = s.AddObject(
+				(Card)
+					(
+						original with
+						{
+							IsCopy = true,
+							ControllerId = Controller,
+						}
+					).WithoutComponents<PreparedCopyOf>(),
+				stack
+			);
+			s = s.MoveObjectToFront(copy.Id, stack); // index 0 is the top
+			var onStack = copy.GetComponent<OnStackComponent>()!;
+			var specs = StackResolution.TextOf(copy, onStack.Modes).Specs;
+			if (specs.IsEmpty)
+				continue;
+			s = s.SpawnAction(
+				new PipelineAction
+				{
+					Steps =
+					[
+						.. specs.Select(
+							(spec, i) => new ChooseTargetChoice(Controller, copy.Id, spec, i)
+						),
+						new SetCopyTargetsAction(copy.Id),
+					],
+				}
+			);
+		}
+		return new(s);
+	}
+}
+
+/// <summary>
+/// The copy's targets, as chosen — a word with no new choice keeps the original's (CR 707.10: so a
+/// copy whose target is gone fizzles, as the spell would). Each "becomes the target" of it (ward).
+/// </summary>
+public record SetCopyTargetsAction(int CopyId) : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		if (!s.HasObject(CopyId))
+			return new(s);
+		var copy = s.GetCard(CopyId);
+		var onStack = copy.GetComponent<OnStackComponent>()!;
+		var chosen = ChooseTargetChoice.Read(InputContext, onStack.Targets.Length);
+		ImmutableArray<int> targets =
+		[
+			.. chosen.Select((id, i) => id != 0 ? id : onStack.Targets[i]),
+		];
+		// Replace, never add: GetComponent reads the first.
+		s = s.UpdateObject(CopyId, copy.WithComponentReplaced(onStack with { Targets = targets }));
+		return new(Turns.Triggers.RaiseTargeted(s, targets, copy.ControllerId, CopyId));
+	}
+}
+
 /// <summary>Way of the Paradox: "You may play an additional land this turn."</summary>
 public record AdditionalLandDrop : Effect
 {

@@ -387,4 +387,258 @@ public class FraEngineTests : FraBoardTest
 			"identical Mountains are one choice"
 		);
 	}
+
+	// ===== 7f-3: copying a spell =====
+
+	static CardDefinition Bolt(int damage) =>
+		new(
+			TestGames.Inline("Bolt", "{1}", "Instant").Data,
+			[
+				new SpellEffectsComponent([new DealDamage(Ref.Target(), damage)])
+				{
+					Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Creature)],
+				},
+			]
+		);
+
+	/// <summary>Casts Way of the Cryomancer (Jace enters with 5), then activates the −3 it grants Jace.</summary>
+	void WayMinusThree()
+	{
+		Cast(Hand("Way of the Cryomancer", me), []);
+		var jace = Jace(me)!;
+		var granted = Loyalty.AbilitiesOf(s, jace).Count - 1; // granted abilities come after its own
+		s = s.Act(
+			s.LegalActions()
+				.OfType<ActivateLoyaltyAction>()
+				.Single(a => a.CardId == jace.Id && a.AbilityIndex == granted)
+		);
+		Resolve();
+	}
+
+	[Test]
+	public void WayOfTheCryomancer_EmpowersJaceFive_AndGrantsTheCopy()
+	{
+		Cast(Hand("Way of the Cryomancer", me), []);
+		var jace = Jace(me)!;
+		Assert.That(jace.Loyalty, Is.EqualTo(5));
+		Assert.That(
+			Loyalty.AbilitiesOf(s, jace).Select(a => a.Cost),
+			Does.Contain(-3).And.Contain(-1)
+		);
+		Assert.That(
+			Loyalty.AbilitiesOf(s, jace).Count(a => a.Cost == -3),
+			Is.EqualTo(2),
+			"its own, and Way's"
+		);
+	}
+
+	[Test]
+	public void WayOfTheCryomancer_TheNextInstantIsCopied_WithANewTarget()
+	{
+		var a = Field(TestGames.Creature("A", "2/2"), them);
+		var b = Field(TestGames.Creature("B", "2/2"), them);
+		WayMinusThree();
+		var bolt = Hand(Bolt(2), me);
+		var graveyard = s.CardsIn(me, ZoneType.Graveyard).Count();
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = bolt,
+				Targets = [a],
+			}
+		);
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseTargetChoice => [b], // the copy's new target
+				_ => [],
+			}
+		);
+		Assert.That((Alive(a), Alive(b)), Is.EqualTo((false, false)));
+		Assert.That(
+			s.CardsIn(me, ZoneType.Graveyard).Count(),
+			Is.EqualTo(graveyard + 1),
+			"the copy ceases to exist; only the Bolt is in the graveyard"
+		);
+	}
+
+	[Test]
+	public void WayOfTheCryomancer_OnlyTheNextOne_AndACreatureSpellDoesntUseItUp()
+	{
+		var a = Field(TestGames.Creature("A", "3/3"), them);
+		var b = Field(TestGames.Creature("B", "3/3"), them);
+		WayMinusThree();
+		Cast(Hand(TestGames.Creature("Bear", "2/2"), me), []); // a creature spell: not copied, not used up
+		var first = Hand(Bolt(2), me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = first,
+				Targets = [a],
+			}
+		);
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseTargetChoice => [a], // the copy keeps the target
+				_ => [],
+			}
+		);
+		Assert.That(Alive(a), Is.False, "the Bolt and its copy: 4 damage");
+		var second = Hand(Bolt(2), me);
+		var copyTargetsAsked = 0;
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = second,
+				Targets = [b],
+			}
+		);
+		Resolve(choice =>
+		{
+			copyTargetsAsked += choice is ChooseTargetChoice ? 1 : 0;
+			return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
+		});
+		Assert.That(
+			(copyTargetsAsked, s.GetCard(b).Damage),
+			Is.EqualTo((0, 2)),
+			"the next instant isn't copied"
+		);
+	}
+
+	[Test]
+	public void WayOfTheCryomancer_TheCopyIsNotCast()
+	{
+		var a = Field(TestGames.Creature("A", "5/5"), them);
+		WayMinusThree();
+		var tomik = Field(FraCards.Get("Tomik, Izzet Sparkmage"), me); // prowess — after Way, itself a cast
+		Cast(Hand(Bolt(1), me), [], a);
+		Assert.That(s.Power(s.GetCard(tomik)), Is.EqualTo(1 + 1), "prowess saw one cast, not two");
+	}
+
+	static CardDefinition Targeted(
+		string name,
+		Targeting.TargetSpec spec,
+		params GameAction[] effects
+	) =>
+		new(
+			TestGames.Inline(name, "{1}", "Instant").Data,
+			[new SpellEffectsComponent([.. effects]) { Targets = [spec] }]
+		);
+
+	[Test]
+	public void WayOfTheCryomancer_ACopyWhoseTargetIsGoneFizzles()
+	{
+		var a = Field(TestGames.Creature("A", "2/2"), them);
+		WayMinusThree();
+		var bolt = Hand(
+			Targeted(
+				"Bolt",
+				new(Targeting.TargetKind.Creature),
+				new DealDamage(Ref.Target(), 2),
+				new GainLife(Ref.You, 1)
+			),
+			me
+		);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = bolt,
+				Targets = [a],
+			}
+		);
+		// The copy trigger is on the stack: kill A in response, so nothing is left to target.
+		var kill = Hand(
+			Targeted("Kill", new(Targeting.TargetKind.Creature), new Destroy(Ref.Target())),
+			me
+		);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = kill,
+				Targets = [a],
+			}
+		);
+		var life = Life(me);
+		Resolve();
+		Assert.That(
+			Life(me),
+			Is.EqualTo(life),
+			"the copy keeps its gone target and does nothing, as the Bolt does"
+		);
+	}
+
+	[Test]
+	public void WayOfTheCryomancer_ACounteredSpellIsStillCopied()
+	{
+		var b = Field(TestGames.Creature("B", "2/2"), them);
+		var a = Field(TestGames.Creature("A", "2/2"), them);
+		WayMinusThree();
+		var bolt = Hand(Bolt(2), me);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = bolt,
+				Targets = [a],
+			}
+		);
+		var counter = Hand(
+			Targeted("Nope", new(Targeting.TargetKind.Spell), new Counter(Ref.Target())),
+			me
+		);
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = counter,
+				Targets = [bolt],
+			}
+		);
+		Resolve(choice =>
+			choice switch
+			{
+				ChooseTargetChoice => [b],
+				_ => [],
+			}
+		);
+		Assert.That(
+			(Alive(a), Alive(b)),
+			Is.EqualTo((true, false)),
+			"the Bolt was countered; its copy wasn't"
+		);
+	}
+
+	[Test]
+	public void ACopysSecondTarget_IsNeverItsFirst()
+	{
+		var x = Field(TestGames.Creature("X", "2/2"), me);
+		var y = Field(TestGames.Creature("Y", "2/2"), me);
+		WayMinusThree();
+		var preparations = Hand("Predictive Preparations", me);
+		IEnumerable<int> secondOffered = [];
+		s = s.Act(
+			new CastSpellAction
+			{
+				PlayerId = me,
+				CardId = preparations,
+				Targets = [x, y],
+			}
+		);
+		Resolve(choice =>
+		{
+			if (choice is not ChooseTargetChoice target)
+				return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
+			if (target.Index == 0)
+				return [x];
+			secondOffered = choice.Options.Select(o => o.Id).ToList();
+			return []; // optional: keep the original second target
+		});
+		Assert.That(secondOffered, Does.Not.Contain(x));
+	}
 }

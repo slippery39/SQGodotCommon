@@ -31,6 +31,13 @@ public record ChooseTargetChoice : ChoiceAction
 		ImmutableDictionary<string, object> context
 	) =>
 		Spec.Candidates(s, PlayerId, SourceId)
+			.Where(id =>
+				!(
+					Spec.NotThePrevious
+					&& context.GetValueOrDefault(KeyPrefix + (Index - 1)) is int previous
+					&& previous == id
+				)
+			)
 			.Select(id => new ChoiceOption { Id = id, DisplayText = s.GetObject(id).Name })
 			.ToImmutableList();
 

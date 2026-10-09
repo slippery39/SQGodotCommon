@@ -2711,6 +2711,13 @@ public static class FraCards
 					new MountainsMakeAnExtraRedThisTurn()
 				),
 			],
+
+			// ===== Engine: copying a spell =====
+			["Way of the Cryomancer"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new EmpowerJace(5)),
+				Grant(-3, [], new CopyNextInstantOrSorceryThisTurn()),
+			],
 		};
 
 	public static CardDefinition Get(string name) =>

@@ -5,7 +5,7 @@ Count scripted cards from `FraCards.cs` (`["Name"] =` keys) — never from memor
 
 Keywords by card count: Surveil 43, **Empower Jace 35** (creates/loads a Jace *planeswalker token*),
 **Prepared 24** (21 cards use the two-face `prepare` layout), Flying 28. Modal "choose one", flashback,
-cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 219 cards scripted
+cycling/landcycling, ward, equipment and +1/+1 counters are common. Implemented so far: 220 cards scripted
 in `FraCards` (every one played by `RandomGameTests.RandomPlay_EveryScriptedCard`), including 15 Empower Jace cards, the 15 dual lands, 14 modal cards and 11 sacrifice /
 dies / exile-until cards, 25 step-trigger / per-turn / prowess / surveil-trigger cards, the 6 flashback cards, 21 prepare cards, 12 landcycling / graveyard-ability cards, and 7 graveyard-return / hexproof /
 indestructible / exhaust cards.
@@ -23,7 +23,7 @@ Hapatra the Desert Fang, Loot the Anomaly, Ghalta the Immovable (replacements, -
 damage). 7e-2e: 6 — Yuriko Blade of the Mighty, Tomik Orzhov Lawmage, Kiora of Salt and Sand, Winter
 Team Player, both Fblthps (combat, convoke, domain, "you win the game"). 7f-1: Flourishing Grapple, Infinite Coursework ("loses all abilities", read through `s.AbilitiesOf`).
 7f-2: Loot the Nexus, Heartwood Crafter, Pyre Rhymer (mana: several of one colour, restricted
-mana, a Mountain's extra {R}). **Uncommons left: 1** — Way of the Cryomancer (copying a spell). **Commons left:** Sphinx's Approach (deferred). Puppet Crafting waits on type-changing. **Two real planeswalkers are
+mana, a Mountain's extra {R}). 7f-3: Way of the Cryomancer (copying a spell). **Every common and uncommon is in but one:** Sphinx's Approach (deferred). Puppet Crafting waits on type-changing. **Two real planeswalkers are
 in** (The Theorist, Ajani Unrelenting); **the other 6 are not**: each needs an emblem, an "until your next turn" effect, impulse draw or a −X cost first.
 Coverage plan, by cards unblocked: 7a lands ✓ · 7b-1 modal ✓ · 7b-2 sacrifice, dies triggers, exile-until-leaves ✓ · 7c-1 continuous effects ✓ · 7c-2 step triggers,
 per-turn tracking, prowess ✓ · 7d-1 flashback ✓ · 7d-2 prepare ✓ · 7d-3a landcycling, graveyard abilities ✓ · 7d-3b graveyard returns, hexproof, indestructible ✓. The Bo1 hand smoother is Arena's published description; its weighting and whether

@@ -65,6 +65,12 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   Molten Tide (`TurnTally.ExtraRedFromMountains`), mana that can't pay for spells from your hand
   (Heartwood Crafter). `ManaPayment.Find` solves units: a permanent taps once, and what the payment
   doesn't use floats (`Payment.Floats`). Restricted mana is never floated — manual tapping refuses it.
+- **Copying a spell** is `CopySpell` (CR 707.10): a `Card.IsCopy` on top of the stack, controlled by
+  the copier, not cast (no "whenever you cast"), its targets chosen anew with the original's among the
+  options — and gone once it leaves the stack (the state-based check prepared copies use). "When you
+  next cast an instant or sorcery this turn" is a delayed trigger kept on the player
+  (`TurnTally.CopyNextInstantOrSorcery`), taken by that cast and carried on its `SpellCastEvent`.
+  Replace a component with `WithComponentReplaced` — `WithComponent` ADDS, and `GetComponent` reads the first.
 - **Convoke** is `ManaPayment.Find(…, convoke: true)`: your untapped creatures join the sources after
   lands, each paying its own colour or {1} (as Colorless); summoning sickness doesn't matter.
 - **"During combat, no spells or abilities"** (Yuriko) is `Combat.LockedDown`, asked by casting and

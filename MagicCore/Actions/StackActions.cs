@@ -193,12 +193,19 @@ public record CastSpellAction : GameAction
 					NoncreatureSpellsCast = t.NoncreatureSpellsCast + noncreature,
 				}
 		);
+		// "When you next cast an instant or sorcery spell this turn": this one takes every waiting copy.
+		var copies = card.Is(CardType.Instant | CardType.Sorcery)
+			? s.GetPlayer(PlayerId).ThisTurn.CopyNextInstantOrSorcery
+			: 0;
+		if (copies > 0)
+			s = s.Tally(PlayerId, t => t with { CopyNextInstantOrSorcery = 0 });
 		// Read from the tallied state — on one line with Tally, `s` would still be the old one.
 		s = s.Raise(
 			new SpellCastEvent(
 				CardId,
 				PlayerId,
-				noncreature * s.GetPlayer(PlayerId).ThisTurn.NoncreatureSpellsCast
+				noncreature * s.GetPlayer(PlayerId).ThisTurn.NoncreatureSpellsCast,
+				copies
 			)
 		);
 		s = Turns.Triggers.RaiseTargeted(s, Targets, PlayerId, CardId);

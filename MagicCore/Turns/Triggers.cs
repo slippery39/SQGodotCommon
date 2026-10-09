@@ -17,7 +17,13 @@ public record AttackersDeclaredEvent(int PlayerId) : GameEvent;
 public record CombatDamageToPlayersEvent(ImmutableList<int> PlayerIds) : GameEvent;
 
 /// <param name="NoncreatureSpellNumber">Which noncreature spell of the caster's turn this is — 0 for a creature.</param>
-public record SpellCastEvent(int CardId, int PlayerId, int NoncreatureSpellNumber = 0) : GameEvent;
+/// <param name="Copies">Way of the Cryomancer: delayed "copy that spell" triggers this cast set off.</param>
+public record SpellCastEvent(
+	int CardId,
+	int PlayerId,
+	int NoncreatureSpellNumber = 0,
+	int Copies = 0
+) : GameEvent;
 
 /// <summary>A creature or planeswalker went from the battlefield to a graveyard — as it last existed.</summary>
 /// <param name="Attached">What was attached to it as it died — "when enchanted creature dies" looks back (CR 603.10a).</param>
@@ -157,8 +163,27 @@ public static class Triggers
 						)
 					)
 			);
+		// Delayed triggers set off by a cast (Way of the Cryomancer): "copy that spell" — one per copy.
+		var fromACast = s
+			.PendingGameEvents.OfType<SpellCastEvent>()
+			.Where(cast => cast.Copies > 0 && s.HasObject(cast.CardId))
+			.SelectMany(cast =>
+				Enumerable.Repeat(
+					new Pending(
+						s.GetCard(cast.CardId) with
+						{
+							ControllerId = cast.PlayerId,
+						},
+						CopyThatSpell,
+						cast.CardId,
+						s.GetCard(cast.CardId) // copied from this if it is gone by resolution
+					),
+					cast.Copies
+				)
+			);
 		return fromTheBattlefield
 			.Concat(fromTheDead)
+			.Concat(fromACast)
 			.Where(p => InterveningIfHolds(s, p))
 			.OrderBy(p => p.Source.ControllerId == active ? 0 : 1) // APNAP; stable within a player
 			.ToList();
@@ -189,6 +214,10 @@ public static class Triggers
 			BlocksEvent blocks when s.IsOnBattlefield(blocks.CardId) => s.GetCard(blocks.CardId),
 			_ => null,
 		};
+
+	/// <summary>The delayed trigger Way of the Cryomancer's ability sets up: "copy that spell".</summary>
+	static readonly TriggeredAbilityComponent CopyThatSpell =
+		new(TriggerEvent.Reflexive, [new CopySpell(Ref.EventCard)]);
 
 	/// <summary>Its own triggered abilities, and any it gained until end of turn (Lyra) — none once it lost them all.</summary>
 	static IEnumerable<TriggeredAbilityComponent> AbilitiesOf(GameState s, Card card) =>
