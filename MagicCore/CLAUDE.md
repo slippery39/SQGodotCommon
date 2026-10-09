@@ -17,6 +17,7 @@ MagicCore/
 │                        DistinctMoves
 ├── MagicGame.cs / MagicPlayer.cs / MagicState.cs   root object, player, queries + MoveCard/EnterBattlefield
 ├── Describe.cs          plain-text actions, choices and cards for every front end and log
+├── Stops.cs             Arena priority stops + full control for a human seat (front-end convenience)
 ├── Turns/TurnStructure.cs  EnterStep/EndStep/GivePriority + StateBasedActions (incl. legend rule, tokens)
 ├── Turns/Combat.cs      who may attack/block, declarations, simultaneous damage, end of combat
 ├── Turns/Triggers.cs    trigger events, Collect (APNAP, intervening "if"), PutOnStack with target choices
@@ -119,7 +120,7 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **A card test asserts the PRINTED text's numbers** (Last Gasp is -3/-3) — that is the root rule's
   exception, not a breach: printed cards get no balance passes, and reading the number back from the
   script would make the test check the script against itself and miss a transcription error.
-- `AutoPass` and `DistinctMoves` are conveniences for front ends and the AI, never rules:
+- `AutoPass`, `DistinctMoves` and `Stops` are conveniences for front ends and the AI, never rules:
   `LegalActions` stays complete.
 - **AI evaluation terms are MONOTONIC** — more of a good thing always scores more, tapering not
   capping. A cap makes "more" tie with "less", and a tie silently picks the passive move: a life cap

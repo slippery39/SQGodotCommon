@@ -669,12 +669,7 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 				&& !StackResolution.CanBeCountered(uncounterable)
 			)
 				continue; // nothing to pay for: the counter can't touch it
-			var payer = s.GetObject(id) switch
-			{
-				Card spell => spell.ControllerId,
-				StackAbility ability => ability.ControllerId,
-				_ => 0,
-			};
+			var payer = s.StackObjectControllerId(id);
 			var canPay =
 				payer != 0
 				&& (

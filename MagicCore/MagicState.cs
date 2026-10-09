@@ -48,6 +48,15 @@ public static class MagicState
 	public static bool StackIsEmpty(this GameState s) =>
 		!s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).Any();
 
+	/// <summary>Who controls a spell or ability on the stack; 0 for anything else.</summary>
+	public static int StackObjectControllerId(this GameState s, int id) =>
+		s.GetObject(id) switch
+		{
+			Card spell => spell.ControllerId,
+			Actions.StackAbility ability => ability.ControllerId,
+			_ => 0,
+		};
+
 	public static bool IsOver(this GameState s) =>
 		s.GetPlayer(s.Player1Id()).HasLost || s.GetPlayer(s.Player2Id()).HasLost;
 
