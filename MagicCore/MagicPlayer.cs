@@ -41,6 +41,9 @@ public record TurnTally
 	public int NoncreatureSpellsCast { get; init; }
 	public int CardsDrawn { get; init; }
 
+	/// <summary>Molten Tide: "until end of turn, whenever you tap a Mountain for mana, add an additional {R}" — one each.</summary>
+	public int ExtraRedFromMountains { get; init; }
+
 	/// <summary>Kiora of Salt and Sand: "if you've activated a loyalty ability this turn".</summary>
 	public int LoyaltyAbilitiesActivated { get; init; }
 

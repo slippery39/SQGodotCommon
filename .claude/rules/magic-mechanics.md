@@ -60,6 +60,11 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   state-based check cancels them against +1/+1 counters in pairs (CR 704.5q).
 - **How much combat damage a creature assigns** is `Combat.Assigns` — power, or toughness (Ghalta), or a
   negative power as positive (Loot). Combat never reads `s.Power` for damage directly.
+- **What tapping a permanent for mana makes** is `ManaAbilities.YieldOf`: units of mana, each with its
+  allowed colours — several of ONE colour (Loot, the Nexus: `SameColor`), a Mountain's extra {R} under
+  Molten Tide (`TurnTally.ExtraRedFromMountains`), mana that can't pay for spells from your hand
+  (Heartwood Crafter). `ManaPayment.Find` solves units: a permanent taps once, and what the payment
+  doesn't use floats (`Payment.Floats`). Restricted mana is never floated — manual tapping refuses it.
 - **Convoke** is `ManaPayment.Find(…, convoke: true)`: your untapped creatures join the sources after
   lands, each paying its own colour or {1} (as Colorless); summoning sickness doesn't matter.
 - **"During combat, no spells or abilities"** (Yuriko) is `Combat.LockedDown`, asked by casting and

@@ -122,16 +122,26 @@ public record TapForManaAction : GameAction
 			return ValidationResult.Invalid(
 				"Not a permanent you control that can tap for mana now"
 			);
-		if (!ManaAbilities.ColorsOf(s, s.GetCard(CardId)).Contains(Color))
+		var yield = ManaAbilities.YieldOf(s, s.GetCard(CardId));
+		if (yield.Units.IsEmpty || !yield.Units[0].Contains(Color))
 			return ValidationResult.Invalid($"Cannot produce {Color}");
+		// ponytail: the pool can't remember a restriction, so restricted mana is only ever made by
+		// auto-payment, which spends it at once. Track it in the pool if a card ever floats it.
+		if (yield.NotForSpellsFromHand)
+			return ValidationResult.Invalid("Its mana is spent as it is made");
 		return ValidationResult.Valid;
 	}
 
+	/// <summary>Makes its whole yield: the chosen colour, all of it for Loot; Molten Tide's extra {R}.</summary>
 	public override ActionResult Execute(GameState s)
 	{
+		var yield = ManaAbilities.YieldOf(s, s.GetCard(CardId));
 		s = s.UpdateObject(CardId, s.GetCard(CardId) with { IsTapped = true });
 		var player = s.GetPlayer(PlayerId);
-		s = s.WithPlayer(player with { ManaPool = player.ManaPool.Add(Color) });
+		var pool = player.ManaPool;
+		foreach (var unit in yield.Units.Select((u, i) => (Colors: u, First: i == 0)))
+			pool = pool.Add(unit.First || yield.SameColor ? Color : unit.Colors[0]);
+		s = s.WithPlayer(player with { ManaPool = pool });
 		return new ActionResult(Priority.Retain(s, PlayerId));
 	}
 }

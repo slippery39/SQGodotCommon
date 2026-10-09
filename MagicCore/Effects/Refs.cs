@@ -213,6 +213,7 @@ public enum CountOf
 	NumberOf, // "the number of [Ref]"
 	GreatestPowerOf, // "the greatest power among [Ref]"
 	GreatestManaValueOf, // Hapatra: "the greatest mana value among cards in your graveyard"
+	DistinctPowersOf, // Loot, the Nexus: "each different power among [Ref]"
 	PowerOf, // "equal to its power"
 	LoyaltyOf, // "equal to its loyalty"
 	X, // the X paid
@@ -245,6 +246,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static Count GreatestPowerOf(Ref r) => new(0, r, CountOf.GreatestPowerOf);
 
 	public static Count GreatestManaValueOf(Ref r) => new(0, r, CountOf.GreatestManaValueOf);
+
+	public static Count DistinctPowersOf(Ref r) => new(0, r, CountOf.DistinctPowersOf);
 
 	public static Count PowerOf(Ref r) => new(0, r, CountOf.PowerOf);
 
@@ -344,6 +347,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				.DefaultIfEmpty(0)
 				.Max(),
 			CountOf.PowerOf => Cards().Select(c => s.Power(c)).FirstOrDefault(),
+			CountOf.DistinctPowersOf => Cards().Select(c => s.Power(c)).Distinct().Count(),
 			CountOf.CountersOn => Cards().Sum(c => c.PlusOneCounters),
 			_ => Cards().Select(c => c.Loyalty).FirstOrDefault(),
 		};

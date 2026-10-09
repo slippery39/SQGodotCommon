@@ -252,4 +252,139 @@ public class FraEngineTests : FraBoardTest
 		Assert.That(s.IsIn(coursework, me, ZoneType.Graveyard));
 		Assert.That(s.GetCard(theirs).IsTapped, "\"enchanted creature\" is read as it last was");
 	}
+
+	// ===== 7f-2: mana =====
+
+	void TapAllLandsBut(params string[] keep)
+	{
+		var kept = new HashSet<string>();
+		foreach (
+			var land in s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Is(CardType.Land)).ToList()
+		)
+			s = s.UpdateObject(
+				land.Id,
+				land with
+				{
+					IsTapped = !(keep.Contains(land.Name) && kept.Add(land.Name)),
+				}
+			); // TEST SETUP: exactly one of each kept land untapped
+	}
+
+	static CardDefinition Spell(string cost) =>
+		TestGames.Inline("Spell", cost, "Instant", null, new GainLife(Ref.You, 1));
+
+	[Test]
+	public void LootTheNexus_OneColourForEachDifferentPower()
+	{
+		Field(FraCards.Get("Loot, the Nexus"), me); // a 2/1
+		Field(TestGames.Creature("Two", "2/2"), me);
+		Field(TestGames.Creature("Three", "3/3"), me);
+		TapAllLandsBut();
+		Assert.That(Casts(Hand(Spell("{B}{B}"), me)), Is.Not.Empty, "powers 2 and 3: two mana");
+		Assert.That(Casts(Hand(Spell("{U}{B}"), me)), Is.Empty, "all of ONE colour");
+		Assert.That(
+			Casts(Hand(Spell("{B}{B}{B}"), me)),
+			Is.Empty,
+			"two different powers, not three creatures"
+		);
+	}
+
+	[Test]
+	public void LootTheNexus_WhatTheSpellDoesntUseFloats()
+	{
+		var loot = Field(FraCards.Get("Loot, the Nexus"), me);
+		Field(TestGames.Creature("Three", "3/3"), me);
+		TapAllLandsBut();
+		var spell = Hand(Spell("{G}"), me);
+		s = s.Act(new CastSpellAction { PlayerId = me, CardId = spell });
+		Assert.That(
+			(s.GetCard(loot).IsTapped, s.GetPlayer(me).ManaPool.Green),
+			Is.EqualTo((true, 1))
+		);
+	}
+
+	[Test]
+	public void HeartwoodCrafter_ItsManaPaysAbilities_NotSpellsFromYourHand()
+	{
+		var crafter = Field(FraCards.Get("Heartwood Crafter // Soul Tether"), me);
+		var engine = TestGames.Creature("Engine", "1/1");
+		var engineId = Field(
+			engine with
+			{
+				Components =
+				[
+					new ActivatedAbilityComponent(
+						ManaCost.Parse("{1}"),
+						[new GainLife(Ref.You, 1)]
+					),
+				],
+			},
+			me
+		);
+		TapAllLandsBut();
+		Assert.That(Casts(Hand(Spell("{1}"), me)), Is.Empty, "not for a spell from your hand");
+		Assert.That(Activations(engineId), Is.Not.Empty, "an ability is fine");
+		Assert.Throws<InvalidOperationException>(
+			() =>
+				s.Act(
+					new TapForManaAction
+					{
+						PlayerId = me,
+						CardId = crafter,
+						Color = ManaColor.Colorless,
+					}
+				)
+		);
+	}
+
+	[Test]
+	public void HeartwoodCrafter_ItsManaCantPayForASpellFromHand_ButItCanStillConvoke()
+	{
+		var winter = Hand("Winter, Team Player", me); // {4}{R}, convoke
+		Field(FraCards.Get("Heartwood Crafter // Soul Tether"), me);
+		Field(Red(TestGames.Creature("Red", "1/1")), me);
+		for (var i = 0; i < 3; i++)
+			Field(TestGames.Creature("Grey", "1/1"), me);
+		TapAllLandsBut();
+		Assert.That(Casts(winter), Is.Not.Empty, "tapping it to convoke isn't spending its mana");
+	}
+
+	[Test]
+	public void PyreRhymer_MoltenTideMakesEachMountainTapForTwo()
+	{
+		var rhymer = Field(FraCards.Get("Pyre Rhymer // Molten Tide"), me);
+		s = Rules.Prepare.Become(s, rhymer);
+		var tide = s.CardsIn(me, ZoneType.Exile).Single(c => c.IsCopy).Id;
+		var red = Hand(Spell("{R}{R}"), me);
+		TapAllLandsBut("Mountain", "Plains");
+		Assert.That(Casts(red), Is.Empty, "one Mountain: one {R}");
+
+		s = s.Act(Casts(tide).Single()); // Molten Tide costs {R}: the Mountain pays it
+		Resolve();
+		TapAllLandsBut("Mountain");
+		Assert.That(Casts(red), Is.Not.Empty, "now a Mountain makes {R}{R}");
+	}
+
+	[Test]
+	public void ManyMountainsUnderMoltenTide_AnUnpayableCostFailsFast()
+	{
+		for (var i = 0; i < 8; i++)
+			Field(TestGames.Card("Mountain"), me);
+		s = s.Tally(me, t => t with { ExtraRedFromMountains = 1 }); // TEST SETUP: Molten Tide resolved
+		TapAllLandsBut();
+		foreach (
+			var m in s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Name == "Mountain").ToList()
+		)
+			s = s.UpdateObject(m.Id, m with { IsTapped = false }); // TEST SETUP: 12 Mountains, 24 {R}
+		var clock = System.Diagnostics.Stopwatch.StartNew();
+		Assert.That(
+			ManaPayment.Find(s, me, ManaCost.Parse("{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{W}"), 0),
+			Is.Null
+		);
+		Assert.That(
+			clock.ElapsedMilliseconds,
+			Is.LessThan(500),
+			"identical Mountains are one choice"
+		);
+	}
 }

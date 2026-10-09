@@ -134,7 +134,14 @@ public record CastSpellAction : GameAction
 		)
 			return ValidationResult.Invalid("Not a card you can behold for this");
 		if (
-			ManaPayment.Find(s, PlayerId, CostToPay(s, card), 0, convoke: s.Has(card, "Convoke"))
+			ManaPayment.Find(
+				s,
+				PlayerId,
+				CostToPay(s, card),
+				0,
+				convoke: s.Has(card, "Convoke"),
+				forSpellFromHand: s.IsIn(card.Id, PlayerId, ZoneType.Hand)
+			)
 			is null
 		)
 			return ValidationResult.Invalid("Cannot pay the cost");
@@ -155,7 +162,14 @@ public record CastSpellAction : GameAction
 		s = ManaPayment.Pay(
 			s,
 			PlayerId,
-			ManaPayment.Find(s, PlayerId, CostToPay(s, card), 0, convoke: s.Has(card, "Convoke"))!
+			ManaPayment.Find(
+				s,
+				PlayerId,
+				CostToPay(s, card),
+				0,
+				convoke: s.Has(card, "Convoke"),
+				forSpellFromHand: s.IsIn(card.Id, PlayerId, ZoneType.Hand)
+			)!
 		);
 		if (SacrificeId != 0)
 			s = s.Sacrifice(SacrificeId);

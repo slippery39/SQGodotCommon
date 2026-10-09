@@ -2689,6 +2689,28 @@ public static class FraCards
 				new EnchantedLosesAllAbilities(),
 				new EnchantedDoesntUntap(),
 			],
+
+			// ===== Engine: mana that isn't one land, one mana =====
+			["Loot, the Nexus"] =
+			[
+				new ManaOfOneColorComponent(Count.DistinctPowersOf(Ref.CreaturesYouControl)),
+			],
+			["Heartwood Crafter // Soul Tether"] =
+			[
+				EntersPrepared,
+				SoulTether("Heartwood Crafter // Soul Tether"),
+				new ManaAbilityComponent(ManaColor.Colorless) { NotForSpellsFromHand = true },
+			],
+			["Pyre Rhymer // Molten Tide"] =
+			[
+				Prowess,
+				EntersPrepared,
+				PrepareSpell(
+					"Pyre Rhymer // Molten Tide",
+					[],
+					new MountainsMakeAnExtraRedThisTurn()
+				),
+			],
 		};
 
 	public static CardDefinition Get(string name) =>

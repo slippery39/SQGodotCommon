@@ -244,6 +244,15 @@ public record PayMana(ManaCost Cost, ImmutableList<GameAction> Then) : Effect
 			);
 }
 
+/// <summary>Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — read by ManaAbilities.YieldOf.</summary>
+public record MountainsMakeAnExtraRedThisTurn : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(
+			s.Tally(Controller, t => t with { ExtraRedFromMountains = t.ExtraRedFromMountains + 1 })
+		);
+}
+
 /// <summary>Way of the Paradox: "You may play an additional land this turn."</summary>
 public record AdditionalLandDrop : Effect
 {

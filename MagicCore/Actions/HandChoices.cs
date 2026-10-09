@@ -150,14 +150,11 @@ public record ChooseColorChoice : ChoiceAction
 		ImmutableDictionary<string, object> context
 	) =>
 		[
-			.. new[]
+			.. ManaAbilities.AnyColor.Select(c => new ChoiceOption
 			{
-				ManaColor.White,
-				ManaColor.Blue,
-				ManaColor.Black,
-				ManaColor.Red,
-				ManaColor.Green,
-			}.Select(c => new ChoiceOption { Id = IdOf(c), DisplayText = c.ToString() }),
+				Id = IdOf(c),
+				DisplayText = c.ToString(),
+			}),
 		];
 
 	public override int GetDecidingPlayerId(

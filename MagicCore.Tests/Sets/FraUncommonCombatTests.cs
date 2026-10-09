@@ -205,6 +205,18 @@ public class FraUncommonCombatTests : FraBoardTest
 	}
 
 	[Test]
+	public void CombatDamage_ToAPlaneswalkerTokenThatAlreadyDied_IsNoCrash()
+	{
+		var walker = Walker(them, 1);
+		s = s.UpdateObject(walker, s.GetCard(walker) with { IsToken = true }); // TEST SETUP: a Jace-like token
+		var striker = Field(TestGames.Creature("Striker", "1/1", "First strike"), me);
+		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
+		Attack(new() { [striker] = walker, [bear] = walker });
+		ToMainTwo(); // first strike kills the token, which ceases to exist before the bear's damage
+		Assert.That(s.HasObject(walker), Is.False);
+	}
+
+	[Test]
 	public void FblthpLost_CombatDamageDrawsTwo_ThenHeShufflesIn()
 	{
 		var fblthp = Field(FraCards.Get("Fblthp, Impossibly Lost"), me);

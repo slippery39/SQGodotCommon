@@ -184,12 +184,13 @@ public static class Combat
 			)
 				hits.Add((blocker, blocker.BlockingId, Assigned(blocker)));
 
-		foreach (var (source, targetId, amount) in hits)
-			s = Rules.Damage.Deal(s, source, targetId, amount, combat: true);
+		// Players never leave the game; a planeswalker token hit by first strike may already be gone.
 		var players = hits.Select(h => h.TargetId)
-			.Where(id => s.GetObject(id) is MagicPlayer)
+			.Where(id => id == s.Player1Id() || id == s.Player2Id())
 			.Distinct()
 			.ToImmutableList();
+		foreach (var (source, targetId, amount) in hits)
+			s = Rules.Damage.Deal(s, source, targetId, amount, combat: true);
 		return players.IsEmpty ? s : s.Raise(new CombatDamageToPlayersEvent(players));
 	}
 

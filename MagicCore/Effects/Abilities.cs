@@ -147,7 +147,17 @@ public record GrantsLoyaltyAbility(LoyaltyAbilityComponent Ability) : GameCompon
 public record YourPlaneswalkersSurviveZeroLoyalty : GameComponent;
 
 /// <summary>"{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).</summary>
-public record ManaAbilityComponent(ManaColor Color) : GameComponent;
+public record ManaAbilityComponent(ManaColor Color) : GameComponent
+{
+	/// <summary>Heartwood Crafter: "This mana can't be spent to cast spells from your hand."</summary>
+	public bool NotForSpellsFromHand { get; init; }
+}
+
+/// <summary>
+/// Loot, the Nexus: "{T}: Choose a color. Add one mana of that color for each [Amount]." Counted as
+/// it is tapped, with the permanent as its source.
+/// </summary>
+public record ManaOfOneColorComponent(Count Amount) : GameComponent;
 
 public enum EntersUntappedIf
 {
