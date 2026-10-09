@@ -94,7 +94,12 @@ public sealed class MagicTableManager
 	public void Act(GameAction action)
 	{
 		if (HumanToAct)
-			Decided(Describe.Action(State, action), State.Act(action));
+			Decided(
+				Describe.Action(State, action),
+				State.Act(action),
+				// A manual tap keeps your priority: auto-passing now would empty the pool you just filled.
+				settle: action is not TapForManaAction
+			);
 	}
 
 	/// <summary>Your answer to the pending choice. Ignored unless it is yours to give.</summary>
@@ -155,13 +160,14 @@ public sealed class MagicTableManager
 	}
 
 	/// <summary>Applied only once the engine accepted it, so a rejected move leaves no undo step.</summary>
-	private void Decided(string line, GameState next)
+	private void Decided(string line, GameState next, bool settle = true)
 	{
 		_undo.Add((State, _log.Count));
 		var turn = State.GetGame().TurnNumber;
 		State = next;
 		Write(turn, HumanId, line);
-		Settle();
+		if (settle)
+			Settle();
 	}
 
 	private string Write(int turn, int who, string what)

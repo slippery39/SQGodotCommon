@@ -5,6 +5,7 @@ using ImmutableGameObjects;
 using MagicCore;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Rules;
 using MagicCore.Sets.Fra;
 using MtgGame;
 
@@ -25,10 +26,10 @@ public partial class MagicTableScene : Control
 	private const int TextSize = 22;
 
 	private MagicTableManager _m = null!;
-	private readonly Label _oppInfo = InfoLabel();
-	private readonly Label _myInfo = InfoLabel();
-	private readonly PanelContainer _oppPlate = new();
-	private readonly PanelContainer _myPlate = new();
+	private readonly PlayerPlate _oppPlate = new();
+	private readonly PlayerPlate _myPlate = new();
+	private readonly ZoneViewer _viewer = new();
+	private (int Player, ZoneType Zone)? _viewing; // the zone open in the viewer, redrawn with the table
 	private readonly Label _header = InfoLabel();
 	private readonly Label _status = InfoLabel();
 	private readonly TextureRect _preview =
@@ -122,7 +123,12 @@ public partial class MagicTableScene : Control
 			return;
 		if (key.Keycode == Key.Escape)
 		{
-			if (_plays is not null || _targeting is not null)
+			if (_viewing is not null)
+			{
+				_viewing = null;
+				Refresh();
+			}
+			else if (_plays is not null || _targeting is not null)
 				Do(() => { }); // Esc cancels a play first, like Arena
 			else
 				Project.GameManager.Instance.GoToMainMenu();
@@ -196,15 +202,31 @@ public partial class MagicTableScene : Control
 
 		_header.Text =
 			$"Seed {_m.Seed} · Turn {game.TurnNumber} · {(game.ActivePlayerId == _m.HumanId ? "your turn" : "AI's turn")}";
-		_oppInfo.Text = Info(s, _m.OpponentId);
-		_myInfo.Text = Info(s, _m.HumanId);
-		_oppPlate.AddThemeStyleboxOverride("panel", CardViews.Outline(GlowOf(_m.OpponentId, null)));
-		_myPlate.AddThemeStyleboxOverride("panel", CardViews.Outline(GlowOf(_m.HumanId, null)));
+		foreach (
+			var (plate, player) in new[] { (_oppPlate, _m.OpponentId), (_myPlate, _m.HumanId) }
+		)
+			plate.Show(
+				s,
+				player,
+				GlowOf(player, null),
+				Preview,
+				zone =>
+				{
+					_viewing = (player, zone);
+					Refresh();
+				}
+			);
 
-		Fill(_oppLands, s, _m.OpponentId, lands: true, c => GlowOf(c.Id, c));
-		Fill(_oppField, s, _m.OpponentId, lands: false, c => GlowOf(c.Id, c));
-		Fill(_myField, s, _m.HumanId, lands: false, c => GlowOf(c.Id, c));
-		Fill(_myLands, s, _m.HumanId, lands: true, c => GlowOf(c.Id, c));
+		// Auras and Equipment sit under their host — on its side of the table, whoever controls them.
+		var attached = s.CardsIn(_m.HumanId, ZoneType.Battlefield)
+			.Concat(s.CardsIn(_m.OpponentId, ZoneType.Battlefield))
+			.Select(a => (Card: a, Host: Attachments.HostOf(s, a)))
+			.Where(x => x.Host is not null)
+			.ToLookup(x => x.Host!.Id, x => x.Card);
+		Fill(_oppLands, s, _m.OpponentId, lands: true, attached, c => GlowOf(c.Id, c));
+		Fill(_oppField, s, _m.OpponentId, lands: false, attached, c => GlowOf(c.Id, c));
+		Fill(_myField, s, _m.HumanId, lands: false, attached, c => GlowOf(c.Id, c));
+		Fill(_myLands, s, _m.HumanId, lands: true, attached, c => GlowOf(c.Id, c));
 		_phases.Show(_m);
 
 		CardViews.Clear(_hand);
@@ -217,7 +239,17 @@ public partial class MagicTableScene : Control
 			.Select(s.GetCard);
 		foreach (var c in hand.Concat(elsewhere))
 			_hand.AddChild(
-				CardViews.HandCard(c, GlowOf(c.Id, c), Preview, () => ObjectClicked(c.Id))
+				CardViews.HandCard(
+					c,
+					GlowOf(c.Id, c),
+					Preview,
+					() => ObjectClicked(c.Id),
+					from: c.IsCopy ? "prepared copy"
+						: s.GetParent(c.Id) is int parent
+						&& s.GetObject(parent) is Zone { ZoneType: not ZoneType.Hand } zone
+							? zone.ZoneType.ToString().ToLowerInvariant()
+						: null
+				)
 			);
 
 		ShowStack(s, id => GlowOf(id, null));
@@ -225,6 +257,26 @@ public partial class MagicTableScene : Control
 		_fullControl.SetPressedNoSignal(_m.Stops.FullControl);
 		_undo.Disabled = !_m.CanUndo;
 		_log.Text = string.Join("\n", _m.Log.TakeLast(200));
+
+		if (_viewing is (var viewPlayer, var viewZone))
+			_viewer.Show(
+				$"{s.GetPlayer(viewPlayer).Name} — {viewZone}",
+				s.CardsIn(viewPlayer, viewZone),
+				c => GlowOf(c.Id, c),
+				Preview,
+				id =>
+				{
+					_viewing = null; // out of the way of the targets and choices that follow
+					ObjectClicked(id);
+				},
+				() =>
+				{
+					_viewing = null;
+					Refresh();
+				}
+			);
+		else
+			_viewer.Close();
 	}
 
 	/// <summary>What a click may pick right now: a target, or an object the board choice offers.</summary>
@@ -258,6 +310,8 @@ public partial class MagicTableScene : Control
 		else if (s.HasObject(id) && s.GetObject(id) is Card)
 		{
 			var plays = Targeting.Plays(s, Moves().Where(a => s.IsMoveFor(a, id)));
+			// Arena's manual tapping: clicking your land (or mana creature) floats its mana.
+			plays.AddRange(s.TapOptions(_m.HumanId, id).Select(t => new List<GameAction> { t }));
 			if (plays.Count == 1)
 				Play(plays[0], 0);
 			else if (plays.Count > 1)
@@ -287,30 +341,52 @@ public partial class MagicTableScene : Control
 		GameState s,
 		int player,
 		bool lands,
+		ILookup<int, Card> attached,
 		Func<Card, Glow> glow
 	)
 	{
 		CardViews.Clear(row);
+		var onSomething = attached.SelectMany(g => g).Select(a => a.Id).ToHashSet();
 		var cards = s.CardsIn(player, ZoneType.Battlefield)
-			.Where(c => c.Is(CardType.Land) == lands);
+			.Where(c => c.Is(CardType.Land) == lands && !onSomething.Contains(c.Id));
 		// Identical lands stack, as on Arena: everything the crop shows is the same.
 		foreach (
 			var group in cards.GroupBy(c =>
-				lands ? $"{CardViews.Looks(s, c)}|{glow(c)}" : $"{c.Id}"
+				lands && !attached.Contains(c.Id) ? $"{CardViews.Looks(s, c)}|{glow(c)}" : $"{c.Id}"
 			)
 		)
 		{
 			var c = group.First();
-			row.AddChild(
-				CardViews.Permanent(
-					s,
-					c,
-					group.Count(),
-					glow(c),
-					Preview,
-					() => ObjectClicked(c.Id)
-				)
+			var view = CardViews.Permanent(
+				s,
+				c,
+				group.Count(),
+				glow(c),
+				Preview,
+				() => ObjectClicked(c.Id)
 			);
+			if (!attached.Contains(c.Id))
+			{
+				row.AddChild(view);
+				continue;
+			}
+			var stack = new VBoxContainer();
+			stack.AddThemeConstantOverride("separation", 2);
+			stack.AddChild(view);
+			AddAttachments(stack, c.Id);
+			row.AddChild(stack);
+		}
+
+		// An Aura on an Equipment on a creature: each strip followed by what is on it.
+		void AddAttachments(VBoxContainer stack, int hostId)
+		{
+			foreach (var a in attached[hostId])
+			{
+				stack.AddChild(
+					CardViews.Attachment(a, glow(a), Preview, () => ObjectClicked(a.Id))
+				);
+				AddAttachments(stack, a.Id);
+			}
 		}
 	}
 
@@ -446,36 +522,6 @@ public partial class MagicTableScene : Control
 			_preview.Texture = MagicArt.Full(cardName);
 	}
 
-	private static string Info(GameState s, int player)
-	{
-		var p = s.GetPlayer(player);
-		int Count(ZoneType z) => s.CardsIn(player, z).Count();
-		var pool = p.ManaPool;
-		var floating = string.Join(
-			" ",
-			new[]
-			{
-				("W", pool.White),
-				("U", pool.Blue),
-				("B", pool.Black),
-				("R", pool.Red),
-				("G", pool.Green),
-				("C", pool.Colorless),
-			}
-				.Where(x => x.Item2 > 0)
-				.Select(x => $"{{{x.Item1}}}×{x.Item2}")
-		);
-		var priority = s.GetGame().PriorityPlayerId == player ? "  ◀ priority" : "";
-		return $"{p.Name} — life {p.Life}{priority}\n"
-			+ $"hand {Count(ZoneType.Hand)} · library {Count(ZoneType.Library)}\n"
-			+ $"graveyard {Count(ZoneType.Graveyard)} · exile {Count(ZoneType.Exile)} · command {Count(ZoneType.Command)}"
-			+ (
-				floating == "" && pool.Restricted.IsEmpty
-					? ""
-					: $"\nfloating {floating}{(pool.Restricted.IsEmpty ? "" : $" +{pool.Restricted.Count} restricted")}"
-			);
-	}
-
 	private void BuildLayout()
 	{
 		var margin = new MarginContainer();
@@ -489,18 +535,8 @@ public partial class MagicTableScene : Control
 
 		// A player plate is a target too: "deal 3 damage to any target", "Attack the AI".
 		var left = Column(375);
-		foreach (
-			var (plate, label, player) in new[] { (_oppPlate, _oppInfo, 0), (_myPlate, _myInfo, 1) }
-		)
-		{
-			plate.AddChild(label);
-			label.MouseFilter = MouseFilterEnum.Ignore;
-			plate.GuiInput += e =>
-			{
-				if (e is InputEventMouseButton { Pressed: true, ButtonIndex: MouseButton.Left })
-					ObjectClicked(player == 0 ? _m.OpponentId : _m.HumanId);
-			};
-		}
+		_oppPlate.Clicked += () => ObjectClicked(_m.OpponentId);
+		_myPlate.Clicked += () => ObjectClicked(_m.HumanId);
 		left.AddChild(_oppPlate);
 		left.AddChild(_preview);
 		left.AddChild(_myPlate);
@@ -539,10 +575,14 @@ public partial class MagicTableScene : Control
 		right.AddChild(logPlate);
 		columns.AddChild(right);
 
-		var overlay = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
-		overlay.SetAnchorsPreset(LayoutPreset.FullRect);
-		overlay.AddChild(_choice);
-		AddChild(overlay);
+		// Later children draw on top: a pending choice above an open zone viewer.
+		foreach (var panel in new Control[] { _viewer, _choice })
+		{
+			var overlay = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
+			overlay.SetAnchorsPreset(LayoutPreset.FullRect);
+			overlay.AddChild(panel);
+			AddChild(overlay);
+		}
 	}
 
 	private static VBoxContainer Column(int width)

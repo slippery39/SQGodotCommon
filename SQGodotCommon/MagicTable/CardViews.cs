@@ -52,8 +52,8 @@ public static class CardViews
 			card.AddChild(Badge(stats, new Vector2(w - 60, h - 36), c.Damage > 0));
 		if (count > 1)
 			card.AddChild(Badge($"×{count}", new Vector2(4, h - 36), false));
-		if (Counters(c) is { Length: > 0 } counters)
-			card.AddChild(Badge(counters, new Vector2(4, 4), false, 16, w - 8)); // on the art, clear of the name
+		if (Status(s, c) is { Length: > 0 } status)
+			card.AddChild(Badge(status, new Vector2(4, 4), false, 16, w - 8)); // on the art, clear of the name
 
 		// A tapped card lies sideways in a slot as wide as it is tall (rotated about its corner).
 		var slot = new Control
@@ -71,14 +71,41 @@ public static class CardViews
 		return slot;
 	}
 
-	public static Control HandCard(Card c, Glow glow, Action<string?> preview, Action onClick)
+	/// <param name="from">Where a card castable from outside the hand is ("graveyard", "exile"); null in hand.</param>
+	public static Control HandCard(
+		Card c,
+		Glow glow,
+		Action<string?> preview,
+		Action onClick,
+		string? from = null
+	)
 	{
 		var card = Frame(glow, HandSize);
 		card.AddChild(Art(MagicArt.Full(c.Name), HandSize - new Vector2(6, 6), new Vector2(3, 3)));
+		if (from is not null)
+			card.AddChild(
+				Badge($"from {from}", new Vector2(4, HandSize.Y - 36), false, 18, HandSize.X - 8)
+			);
 		var slot = new Control { CustomMinimumSize = HandSize };
 		slot.AddChild(card);
 		Hook(slot, c.Name, preview, onClick);
 		return slot;
+	}
+
+	/// <summary>
+	/// An Aura or Equipment, shown under the permanent it is on: a strip with its art and name,
+	/// its own hover and click target.
+	/// </summary>
+	public static Control Attachment(Card a, Glow glow, Action<string?> preview, Action onClick)
+	{
+		var strip = new PanelContainer { CustomMinimumSize = new Vector2(PermanentSize.X, 0) };
+		strip.AddThemeStyleboxOverride("panel", Outline(glow));
+		var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+		row.AddChild(Thumb(a.Name, 34));
+		row.AddChild(Text(a.Name, 14, Vector2.Zero, PermanentSize.X - 50, wrap: false));
+		strip.AddChild(row);
+		Hook(strip, a.Name, preview, onClick);
+		return strip;
 	}
 
 	/// <summary>A small art crop for lists (the stack, choice options).</summary>
@@ -108,7 +135,7 @@ public static class CardViews
 
 	/// <summary>Everything a crop shows — two lands that look alike may stack.</summary>
 	public static string Looks(GameState s, Card c) =>
-		$"{c.Name}|{Stats(s, c)}|{Counters(c)}|{c.IsTapped}|{c.Damage}|{c.AttachedToId}";
+		$"{c.Name}|{Stats(s, c)}|{Status(s, c)}|{c.IsTapped}|{c.Damage}|{c.AttachedToId}";
 
 	/// <summary>Removes at once, not only queued: a container still lays out a queued child this frame.</summary>
 	public static void Clear(Node node)
@@ -125,9 +152,18 @@ public static class CardViews
 		: c.Is(CardType.Planeswalker) ? $"◆{c.Loyalty}"
 		: "";
 
-	private static string Counters(Card c)
+	/// <summary>Counters, and what a crop can't show otherwise: token, copy, prepared, no abilities.</summary>
+	private static string Status(GameState s, Card c)
 	{
 		var parts = new List<string>();
+		if (c.IsToken)
+			parts.Add("token");
+		if (c.IsCopy)
+			parts.Add("copy");
+		if (c.IsPrepared)
+			parts.Add("prepared");
+		if (s.HasLostAllAbilities(c))
+			parts.Add("no abilities");
 		if (c.PlusOneCounters > 0)
 			parts.Add($"+1×{c.PlusOneCounters}");
 		if (c.MinusOneCounters > 0)

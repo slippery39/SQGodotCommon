@@ -19,6 +19,8 @@ MagicTable/
 ├── BoardChoice.cs        is a pending choice answered ON the table? which objects light up (plain C#)
 ├── Targeting.cs          click a spell, then its targets: plays, narrowing by target (plain C#)
 ├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no
+├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; a click target
+├── ZoneViewer.cs         a graveyard / exile / command zone as full cards, live
 └── MagicArt.cs           Scryfall art crop / full card by name (tools/fetch_set_art.py)
 ```
 

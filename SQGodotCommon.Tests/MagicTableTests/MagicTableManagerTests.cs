@@ -167,6 +167,25 @@ public class MagicTableManagerTests
 	}
 
 	[Test]
+	public void AManualTap_FloatsTheMana_AndKeepsYourPriority()
+	{
+		var m = New();
+		m.AutoplayTo(9); // seed 5: your main phase, untapped Swamps
+		RunAi(m);
+		Assert.That(m.HumanToAct && m.State.GetPendingChoice() is null, "precondition");
+		var step = m.State.GetGame().Step;
+		var land = m
+			.State.CardsIn(m.HumanId, ZoneType.Battlefield)
+			.First(c => m.State.TapOptions(m.HumanId, c.Id).Any());
+
+		m.Act(m.State.TapOptions(m.HumanId, land.Id).First());
+
+		Assert.That(m.State.GetPlayer(m.HumanId).ManaPool.Total, Is.EqualTo(1));
+		Assert.That(m.HumanToAct && m.State.GetGame().Step == step, "still yours, same step");
+		Assert.That(m.CanUndo, "a tap is a decision you can take back");
+	}
+
+	[Test]
 	public void Replay_DealsTheSameOpeningHand()
 	{
 		var m = New(seed: 77);

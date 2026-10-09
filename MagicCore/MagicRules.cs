@@ -338,6 +338,24 @@ public static class MagicRules
 		typeof(ChooseCastChoice),
 	];
 
+	/// <summary>
+	/// Manual tapping, for a front end (Arena's "click a land"): each colour this permanent can tap
+	/// for now. Mana abilities stay out of LegalActions — for the AI they are pure branching.
+	/// </summary>
+	public static IEnumerable<TapForManaAction> TapOptions(
+		this GameState s,
+		int playerId,
+		int cardId
+	) =>
+		Enum.GetValues<ManaColor>()
+			.Select(color => new TapForManaAction
+			{
+				PlayerId = playerId,
+				CardId = cardId,
+				Color = color,
+			})
+			.Where(tap => tap.ValidateAdd(s).IsValid);
+
 	/// <summary>The card a move is played, cast or activated from; 0 for pass, keep and mulligan.</summary>
 	public static int CardOf(GameAction move) =>
 		move switch

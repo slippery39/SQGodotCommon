@@ -224,6 +224,24 @@ public class StackTests
 	}
 
 	[Test]
+	public void TapOptions_AreTheColoursAPermanentCanTapForNow()
+	{
+		var (s, me, them) = Board();
+		var forest = s.CardsIn(me, ZoneType.Battlefield).First().Id;
+		var theirs = s.CardsIn(them, ZoneType.Battlefield).First().Id;
+
+		Assert.That(
+			s.TapOptions(me, forest).Select(t => t.Color),
+			Is.EqualTo(new[] { ManaColor.Green })
+		);
+		Assert.That(s.TapOptions(me, theirs), Is.Empty, "not yours");
+
+		s = s.Act(s.TapOptions(me, forest).Single());
+		Assert.That(s.GetPlayer(me).ManaPool.Green, Is.EqualTo(1));
+		Assert.That(s.TapOptions(me, forest), Is.Empty, "tapped");
+	}
+
+	[Test]
 	public void EveryChoiceType_SaysWhetherItsOptionsAreObjects()
 	{
 		var choiceTypes = typeof(MagicRules)
