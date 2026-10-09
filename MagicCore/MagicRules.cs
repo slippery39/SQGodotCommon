@@ -160,6 +160,11 @@ public static class MagicRules
 		IEnumerable<int> sacrifices = card.GetComponent<SacrificeOrPayAdditionalCost>() is { } extra
 			? [0, .. extra.Sacrifice.Candidates(s, player, card.Id)]
 			: [0];
+		// "Behold … or pay {N}": 0 is paying, or behold one — any one: beholding moves nothing, so every
+		// candidate is the same play (a hand-built cast may still name another; ValidateAdd checks it).
+		IEnumerable<int> beholds = card.GetComponent<BeholdOrPayAdditionalCost>() is { } behold
+			? [0, .. behold.Candidates(s, player, card.Id).Take(1)]
+			: [0];
 		// Twinned Vision's flashback: one cast per card that could be discarded.
 		IEnumerable<int> discards = CastSpellAction.OwesDiscard(s, card)
 			? s.CardsIn(player, ZoneType.Hand).Select(c => c.Id)
@@ -169,16 +174,19 @@ public static class MagicRules
 			.SelectMany(x =>
 				sacrifices.SelectMany(sacrifice =>
 					discards.SelectMany(discard =>
-						choices.Select(c => new CastSpellAction
-						{
-							PlayerId = player,
-							CardId = card.Id,
-							X = x,
-							Targets = c.targets,
-							Modes = c.modes,
-							SacrificeId = sacrifice,
-							DiscardId = discard,
-						})
+						beholds.SelectMany(beheld =>
+							choices.Select(c => new CastSpellAction
+							{
+								PlayerId = player,
+								CardId = card.Id,
+								X = x,
+								Targets = c.targets,
+								Modes = c.modes,
+								SacrificeId = sacrifice,
+								DiscardId = discard,
+								BeholdId = beheld,
+							})
+						)
 					)
 				)
 			);
@@ -257,7 +265,7 @@ public static class MagicRules
 				{
 					PlayLandAction p => $"land|{s.GetCard(p.CardId).Name}|{s.GetParent(p.CardId)}",
 					CastSpellAction c =>
-						$"cast|{s.GetCard(c.CardId).Name}|{s.GetParent(c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}",
+						$"cast|{s.GetCard(c.CardId).Name}|{s.GetParent(c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}",
 					ActivateAbilityAction activate =>
 						$"activate|{(s.IsOnBattlefield(activate.CardId) ? activate.CardId : $"{s.GetCard(activate.CardId).Name}@{s.GetParent(activate.CardId)}")}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}",
 					_ => (object)a,

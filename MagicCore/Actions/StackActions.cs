@@ -57,6 +57,9 @@ public record CastSpellAction : GameAction
 	/// <summary>Twinned Vision's flashback: "Discard a card" — the card discarded; 0 if none is owed.</summary>
 	public int DiscardId { get; init; }
 
+	/// <summary>The card beheld for a "behold … or pay" cost; 0 when paying instead.</summary>
+	public int BeholdId { get; init; }
+
 	public static bool OwesDiscard(GameState s, Card card) =>
 		Costs.Flashback(s, card)?.DiscardACard == true;
 
@@ -74,6 +77,11 @@ public record CastSpellAction : GameAction
 					card.GetComponent<SacrificeOrPayAdditionalCost>() is { } extra
 					&& SacrificeId == 0
 						? extra.Generic
+						: 0
+				)
+				+ (
+					card.GetComponent<BeholdOrPayAdditionalCost>() is { } behold && BeholdId == 0
+						? behold.Generic
 						: 0
 				)
 		);
@@ -116,6 +124,13 @@ public record CastSpellAction : GameAction
 			&& (extra is null || !extra.Sacrifice.IsLegal(s, PlayerId, CardId, SacrificeId))
 		)
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
+		if (
+			BeholdId != 0
+			&& card.GetComponent<BeholdOrPayAdditionalCost>()
+				?.Candidates(s, PlayerId, CardId)
+				.Contains(BeholdId) != true
+		)
+			return ValidationResult.Invalid("Not a card you can behold for this");
 		if (ManaPayment.Find(s, PlayerId, CostToPay(s, card), 0) is null)
 			return ValidationResult.Invalid("Cannot pay the cost");
 		return ValidationResult.Valid;
@@ -136,7 +151,7 @@ public record CastSpellAction : GameAction
 		if (SacrificeId != 0)
 			s = s.Sacrifice(SacrificeId);
 		if (DiscardId != 0)
-			s = s.MoveCard(DiscardId, s.ZoneId(PlayerId, ZoneType.Graveyard));
+			s = s.Discard(PlayerId, [DiscardId]);
 		if (Prepare.CreatureOf(s, card) is { } prepared)
 			s = Prepare.Unprepare(s, prepared.Id); // casting the copy unprepares it
 		s = s.MoveCard(CardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
@@ -147,15 +162,22 @@ public record CastSpellAction : GameAction
 		);
 		var noncreature = card.Is(CardType.Creature) ? 0 : 1;
 		s = s.Tally(
+			PlayerId,
+			t =>
+				t with
+				{
+					SpellsCast = t.SpellsCast + 1,
+					NoncreatureSpellsCast = t.NoncreatureSpellsCast + noncreature,
+				}
+		);
+		// Read from the tallied state — on one line with Tally, `s` would still be the old one.
+		s = s.Raise(
+			new SpellCastEvent(
+				CardId,
 				PlayerId,
-				t =>
-					t with
-					{
-						SpellsCast = t.SpellsCast + 1,
-						NoncreatureSpellsCast = t.NoncreatureSpellsCast + noncreature,
-					}
+				noncreature * s.GetPlayer(PlayerId).ThisTurn.NoncreatureSpellsCast
 			)
-			.Raise(new SpellCastEvent(CardId, PlayerId));
+		);
 		s = Turns.Triggers.RaiseTargeted(s, Targets, PlayerId, CardId);
 		return new ActionResult(Priority.Retain(s, PlayerId));
 	}
@@ -265,8 +287,7 @@ public record ActivateAbilityAction : GameAction
 			new[] { self ? CardId : 0, chosen }.Where(id => id != 0);
 		foreach (var id in Paid(ability.SacrificeSelf, SacrificeId))
 			s = s.Sacrifice(id);
-		foreach (var id in Paid(ability.DiscardSelf, DiscardId))
-			s = s.MoveCard(id, s.ZoneId(PlayerId, ZoneType.Graveyard));
+		s = s.Discard(PlayerId, [.. Paid(ability.DiscardSelf, DiscardId)]);
 		foreach (var id in Paid(ability.ExileSelf, ExileId))
 			s = s.MoveCard(id, s.ZoneId(PlayerId, ZoneType.Exile));
 		s = StackResolution.Push(

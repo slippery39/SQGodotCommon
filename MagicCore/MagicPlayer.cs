@@ -39,6 +39,9 @@ public record TurnTally
 	public int SpellsCast { get; init; }
 	public int NoncreatureSpellsCast { get; init; }
 	public int CardsDrawn { get; init; }
+
+	/// <summary>Jiang Yanggu: "for each card you've discarded this turn" — counted by MagicState.Discard.</summary>
+	public int CardsDiscarded { get; init; }
 	public int LifeGained { get; init; }
 
 	/// <summary>"If you've scried or surveilled this turn" — FRA has no scry, so surveils.</summary>

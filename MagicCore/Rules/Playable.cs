@@ -27,10 +27,19 @@ public static class Playable
 		&& s.GetGame().TurnNumber <= playable.UntilTurn;
 
 	public static bool CanCastFromHere(GameState s, Card card, int playerId) =>
-		s.IsIn(card.Id, playerId, ZoneType.Hand)
-		|| (s.IsIn(card.Id, playerId, ZoneType.Graveyard) && Costs.Flashback(s, card) is not null)
-		|| Prepare.IsCastableBy(s, card, playerId)
-		|| IsImpulsePlayableBy(s, card, playerId);
+		(
+			s.IsIn(card.Id, playerId, ZoneType.Hand)
+			|| (
+				s.IsIn(card.Id, playerId, ZoneType.Graveyard)
+				&& Costs.Flashback(s, card) is not null
+			)
+			|| Prepare.IsCastableBy(s, card, playerId)
+			|| IsImpulsePlayableBy(s, card, playerId)
+		)
+		&& (
+			card.GetComponent<CastOnlyIf>() is not { } only
+			|| only.When.Holds(s, Conditions.Of(card with { ControllerId = playerId }))
+		);
 
 	public static bool CanPlayLandFromHere(GameState s, Card card, int playerId) =>
 		card.Is(CardType.Land)

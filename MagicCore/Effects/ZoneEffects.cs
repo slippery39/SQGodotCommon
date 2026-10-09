@@ -437,9 +437,8 @@ public record DiscardHand(Ref Who) : Effect
 {
 	public override ActionResult Execute(GameState s)
 	{
-		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer))
-		foreach (var card in s.CardsIn(player, ZoneType.Hand).ToList())
-			s = s.MoveCard(card.Id, s.ZoneId(player, ZoneType.Graveyard));
+		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
+			s = s.Discard(player, [.. s.CardsIn(player, ZoneType.Hand).Select(c => c.Id)]);
 		return new(s);
 	}
 }

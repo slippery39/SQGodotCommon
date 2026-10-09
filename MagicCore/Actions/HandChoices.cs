@@ -200,8 +200,9 @@ public record PutChosenOnBottomAction : GameAction
 }
 
 /// <summary>
-/// The chosen cards go to their owner's graveyard — discarding and surveiling alike. When a
-/// discard trigger exists, discarding raises its own event here; surveil must not.
+/// The chosen cards go to their owner's graveyard. From the HAND that is a discard (MagicState.Discard:
+/// the event, the count); from the library (surveil) it is not. Never use it to put a card from the
+/// hand into the graveyard any other way — it would count as a discard.
 /// </summary>
 public record MoveChosenToGraveyardAction : GameAction
 {
@@ -210,14 +211,16 @@ public record MoveChosenToGraveyardAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var graveyardId = s.ZoneId(PlayerId, ZoneType.Graveyard);
-		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
-			s = s.MoveCard(id, graveyardId);
-		return new ActionResult(s);
+		var chosen = ChooseCardsFromHandChoice.Read(InputContext).ToList();
+		var fromHand = chosen.Where(id => s.IsIn(id, PlayerId, ZoneType.Hand)).ToList();
+		foreach (var id in chosen.Except(fromHand))
+			s = s.MoveCard(id, graveyardId); // surveil: from the library, not a discard
+		return new ActionResult(s.Discard(PlayerId, fromHand));
 	}
 }
 
-/// <summary>Resumes the turn after a step paused for a choice (cleanup discard).</summary>
+/// <summary>Finishes the cleanup after it paused for the discard to hand size.</summary>
 public record EndStepAction : GameAction
 {
-	public override ActionResult Execute(GameState s) => new(TurnStructure.EndStep(s));
+	public override ActionResult Execute(GameState s) => new(TurnStructure.FinishCleanup(s));
 }

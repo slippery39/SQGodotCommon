@@ -62,9 +62,22 @@ public static class TurnStructure
 			s = s.WithPlayer(s.GetPlayer(id) with { ManaPool = ManaPool.Empty });
 
 		var game = s.GetGame();
-		if (game.Step != Step.Cleanup)
-			return EnterStep(s, game.Step + 1);
+		// Only a cleanup in which something triggered gives priority; after it, another cleanup (CR 514.3a).
+		return EnterStep(s, game.Step == Step.Cleanup ? Step.Cleanup : game.Step + 1);
+	}
 
+	/// <summary>
+	/// The cleanup is done (CR 514.3): the next turn — unless something triggered or a state-based
+	/// action applies (Tinybones seeing a discard to hand size). Then players get priority in the
+	/// cleanup, and once they pass with an empty stack, another cleanup step begins (EndStep).
+	/// </summary>
+	public static GameState FinishCleanup(GameState s)
+	{
+		if (Triggers.Collect(s).Count > 0 || !ReferenceEquals(StateBasedActions.Check(s), s))
+			return GivePriority(s, s.GetGame().ActivePlayerId);
+		foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
+			s = s.WithPlayer(s.GetPlayer(id) with { ManaPool = ManaPool.Empty });
+		var game = s.GetGame();
 		s = s.WithGame(
 			game with
 			{
@@ -133,7 +146,7 @@ public static class TurnStructure
 				s = Combat.CleanupPermanents(s);
 				var excess = s.CardsIn(active, ZoneType.Hand).Count() - MaxHandSize;
 				if (excess <= 0)
-					return EndStep(s); // no priority in cleanup unless something triggers (CR 514.3)
+					return FinishCleanup(s); // no priority in cleanup unless something triggers (CR 514.3)
 				return s.SpawnAction(
 					new PipelineAction
 					{

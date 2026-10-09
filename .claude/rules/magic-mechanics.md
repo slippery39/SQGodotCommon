@@ -38,6 +38,20 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   Plains you control enters" — no prompt for any other land) and `StaticEffectComponent.OnlySubtype`
   ("Thopters you control have haste"). Never `TriggeredAbilityComponent.If` for this: that is checked
   again on resolution, so a Plains bounced in response would lose Koth's counter — there's no "if" in the text.
+- **Discarding is `MagicState.Discard`** — effects, costs (cast or ability) and the cleanup alike: one
+  `DiscardedEvent` per batch ("one or more cards"), counted in `TurnTally.CardsDiscarded`. A chosen
+  card going to the graveyard is a discard only from the hand (`MoveChosenToGraveyardAction`; surveil
+  isn't). "When you discard this card" triggers `FromGraveyard`, where the card now is. Something that
+  triggers in the cleanup (a discard to hand size) gets priority THERE, then another cleanup step
+  follows (`TurnStructure.FinishCleanup`, CR 514.3a) — never carried into the next turn.
+- **"Attacks a player alone"** is read as attackers are declared: it is the only creature its
+  controller has attacking, and it attacks a player, not a planeswalker.
+- **"Whenever you cast a spell that targets …"** reads the spell's targets from its `OnStackComponent`;
+  "your first noncreature spell each turn" is numbered AS IT IS CAST (`SpellCastEvent`) — a count read
+  later would let a spell cast in response steal the trigger.
+- **"You can't cast this unless …"** is `CastOnlyIf`, read by `Playable.CanCastFromHere` — never offered.
+  **"Behold a … or pay {N}"** is `CastSpellAction.BeholdId` (a card you control, or in hand, not this
+  one); nothing moves.
 - **Cost changes all live in `Costs.Of`** — taxes on the opponent's side, reductions on yours
   (`YourNoncreatureSpellsCostLess`), and the card's own.
 - **Where triggers are read from:** permanents on the battlefield; a dying card's own "when this

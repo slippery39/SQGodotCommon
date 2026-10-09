@@ -2417,6 +2417,104 @@ public static class FraCards
 					Targets = [Creature],
 				},
 			],
+
+			// ===== Uncommons: discard and cast triggers =====
+			["Tinybones, Pocket Nuisance"] =
+			[
+				When(TriggerEvent.SelfEnters, [], new Discard(Ref.EachOpponent, 1)),
+				When(TriggerEvent.APlayerDiscards, [], new DealDamage(Ref.EachOpponent, 1)),
+			],
+			["Titanbones, Towering Heart"] =
+			[
+				When(TriggerEvent.YouGainLife, [], new AddCounters(Ref.Source, 2)),
+				When(TriggerEvent.SelfDiscarded, [], new GainLife(Ref.You, 3)) with
+				{
+					FromGraveyard = true,
+				},
+			],
+			["Jiang Yanggu, Alone"] =
+			[
+				When(
+					TriggerEvent.CreatureYouControlAttacksPlayerAlone,
+					[],
+					new Discard(Ref.You, 1),
+					new DrawCards(Ref.You, 1),
+					new AddCounters(Ref.EventCard, Count.CardsYouDiscardedThisTurn)
+				),
+			],
+			["Pia, Aether Ascetic"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[],
+					new MayDiscard([new SearchLibrary(CardType.Enchantment, ZoneType.Hand)])
+				),
+			],
+			["Danitha, Sword of Hope"] =
+			[
+				When(
+					TriggerEvent.YouCastEquipmentOrSpellTargetingYourCreature,
+					[],
+					new DrawCards(Ref.You, 1)
+				) with
+				{
+					OncePerTurn = true,
+				},
+			],
+			["Danitha, Spear of Agony"] =
+			[
+				When(
+					TriggerEvent.YouCastSpellTargetingOpponentOrTheirCreature,
+					[],
+					new AddCounters(Ref.Source, 1)
+				),
+			],
+			["Plan for All Outcomes"] =
+			[
+				When(
+					TriggerEvent.SelfEnters,
+					[
+						new TargetSpec(TargetKind.Permanent)
+						{
+							NotTypes = CardType.Land,
+							Optional = true,
+							Another = true,
+						},
+					],
+					new May(
+						"Put it on top of your library? (No: the bottom.)",
+						new Always(),
+						[new PutIntoLibrary(Ref.Target(), OnTop: true)]
+					)
+					{
+						Who = Ref.OwnerOfTarget(),
+						Otherwise = [new PutIntoLibrary(Ref.Target(), OnTop: false)],
+					}
+				),
+				When(TriggerEvent.YouCastFirstNoncreatureSpellEachTurn, [], new EmpowerJace(1)),
+			],
+			["Proft, Sinister Mastermind"] =
+			[
+				new CastOnlyIf(Threshold),
+				new ActivatedAbilityComponent(
+					ManaCost.Parse("{B}"),
+					[new ModifyUntilEndOfTurn(Ref.Target(), -3, -1)]
+				)
+				{
+					From = ZoneType.Hand,
+					DiscardSelf = true,
+					Targets = [Creature],
+				},
+			],
+			["Countersculpt"] =
+			[
+				new BeholdOrPayAdditionalCost("Jace", 1),
+				Spell(
+					[new TargetSpec(TargetKind.Spell)],
+					new Counter(Ref.Target()),
+					new EmpowerJace(1)
+				),
+			],
 		};
 
 	public static CardDefinition Get(string name) =>

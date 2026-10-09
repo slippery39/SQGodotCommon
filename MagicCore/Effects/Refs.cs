@@ -205,6 +205,7 @@ public enum CountOf
 	CountersOn, // "+1/+1 counters on [Ref]"
 	LifeYouGainedThisTurn,
 	CardsYouDrewThisTurn,
+	CardsYouDiscardedThisTurn,
 	YourSurveilsThisTurn,
 	SpellsYouCastThisTurn,
 	NoncombatDamageToOpponentsLastTurn,
@@ -238,6 +239,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static readonly Count LifeYouGainedThisTurn =
 		new(0, null, CountOf.LifeYouGainedThisTurn);
 	public static readonly Count CardsYouDrewThisTurn = new(0, null, CountOf.CardsYouDrewThisTurn);
+	public static readonly Count CardsYouDiscardedThisTurn =
+		new(0, null, CountOf.CardsYouDiscardedThisTurn);
 	public static readonly Count YourSurveilsThisTurn = new(0, null, CountOf.YourSurveilsThisTurn);
 	public static readonly Count SpellsYouCastThisTurn =
 		new(0, null, CountOf.SpellsYouCastThisTurn);
@@ -282,6 +285,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			Kind
 			is CountOf.LifeYouGainedThisTurn
 				or CountOf.CardsYouDrewThisTurn
+				or CountOf.CardsYouDiscardedThisTurn
 				or CountOf.YourSurveilsThisTurn
 				or CountOf.SpellsYouCastThisTurn
 		)
@@ -291,6 +295,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			{
 				CountOf.LifeYouGainedThisTurn => tally.LifeGained,
 				CountOf.CardsYouDrewThisTurn => tally.CardsDrawn,
+				CountOf.CardsYouDiscardedThisTurn => tally.CardsDiscarded,
 				CountOf.SpellsYouCastThisTurn => tally.SpellsCast,
 				_ => tally.Surveils,
 			};

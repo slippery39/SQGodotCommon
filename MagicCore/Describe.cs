@@ -31,7 +31,8 @@ public static class Describe
 				+ (c.Modes.Length > 0 ? $" ({ModeText(s, c)})" : "")
 				+ Targets(s, c.Targets)
 				+ (c.SacrificeId != 0 ? $", sacrificing {Name(s, c.SacrificeId)}" : "")
-				+ (c.DiscardId != 0 ? $", discarding {Name(s, c.DiscardId)}" : ""),
+				+ (c.DiscardId != 0 ? $", discarding {Name(s, c.DiscardId)}" : "")
+				+ (c.BeholdId != 0 ? $", beholding {Name(s, c.BeholdId)}" : ""),
 			ActivateAbilityAction a => $"Activate {Name(s, a.CardId)}"
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Hand) ? " from hand" : "")
 				+ (s.IsIn(a.CardId, a.PlayerId, ZoneType.Graveyard) ? " from graveyard" : "")

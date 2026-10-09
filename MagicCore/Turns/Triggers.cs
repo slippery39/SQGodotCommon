@@ -10,7 +10,8 @@ public record EnteredBattlefieldEvent(int CardId) : GameEvent;
 
 public record AttackedEvent(int CardId) : GameEvent;
 
-public record SpellCastEvent(int CardId, int PlayerId) : GameEvent;
+/// <param name="NoncreatureSpellNumber">Which noncreature spell of the caster's turn this is — 0 for a creature.</param>
+public record SpellCastEvent(int CardId, int PlayerId, int NoncreatureSpellNumber = 0) : GameEvent;
 
 /// <summary>A creature or planeswalker went from the battlefield to a graveyard — as it last existed.</summary>
 /// <param name="Attached">What was attached to it as it died — "when enchanted creature dies" looks back (CR 603.10a).</param>
@@ -27,6 +28,9 @@ public record StepBeganEvent(Step Step) : GameEvent;
 public record BlocksEvent(int CardId) : GameEvent;
 
 public record SurveilledEvent(int PlayerId) : GameEvent;
+
+/// <summary>A player discarded these cards — one event per discard, however many cards.</summary>
+public record DiscardedEvent(int PlayerId, ImmutableList<int> CardIds) : GameEvent;
 
 /// <summary>A player put loyalty counters on a planeswalker — by a cost, an effect, or its entering with them (CR 122.6).</summary>
 public record LoyaltyCountersPutEvent(int PutterId) : GameEvent;
@@ -188,6 +192,12 @@ public static class Triggers
 		bool Yours(int cardId) =>
 			s.IsOnBattlefield(cardId) && s.GetCard(cardId).ControllerId == source.ControllerId;
 		var yourTurn = s.GetGame().ActivePlayerId == source.ControllerId;
+		// "A creature you control" (you) / "a creature an opponent controls" (not you), on the battlefield now.
+		bool CreatureControlledBy(int cardId, bool you) =>
+			s.IsOnBattlefield(cardId)
+			&& s.GetCard(cardId) is var c
+			&& c.Is(CardType.Creature)
+			&& (c.ControllerId == source.ControllerId) == you;
 		bool AnotherOfYoursEntered(EnteredBattlefieldEvent entered, CardType types) =>
 			entered.CardId != source.Id
 			&& Yours(entered.CardId)
@@ -264,9 +274,44 @@ public static class Triggers
 			(TriggerEvent.YouCastArtifactOrCreatureSpell, SpellCastEvent cast) => cast.PlayerId
 				== source.ControllerId
 				&& s.GetCard(cast.CardId).Is(CardType.Artifact | CardType.Creature),
+			(TriggerEvent.APlayerDiscards, DiscardedEvent) => true,
+			(TriggerEvent.SelfDiscarded, DiscardedEvent discarded) => discarded.CardIds.Contains(
+				source.Id
+			),
+			(TriggerEvent.CreatureYouControlAttacksPlayerAlone, AttackedEvent attacked) => Yours(
+				attacked.CardId
+			)
+				&& s.GetObject(s.GetCard(attacked.CardId).AttackingId) is MagicPlayer
+				&& s.CardsIn(source.ControllerId, ZoneType.Battlefield)
+					.Count(c => c.AttackingId != 0) == 1,
+			(TriggerEvent.YouCastEquipmentOrSpellTargetingYourCreature, SpellCastEvent cast) =>
+				cast.PlayerId == source.ControllerId
+					&& s.HasObject(cast.CardId)
+					&& (
+						s.GetCard(cast.CardId).Subtypes.Contains("Equipment")
+						|| SpellTargets(s, cast).Any(t => CreatureControlledBy(t, you: true))
+					),
+			(TriggerEvent.YouCastSpellTargetingOpponentOrTheirCreature, SpellCastEvent cast) =>
+				cast.PlayerId == source.ControllerId
+					&& SpellTargets(s, cast)
+						.Any(t =>
+							s.GetObject(t) is MagicPlayer p
+								? p.Id != source.ControllerId
+								: CreatureControlledBy(t, you: false)
+						),
+			// Counted as it is cast, so a second spell cast in response can't take the first's place.
+			(TriggerEvent.YouCastFirstNoncreatureSpellEachTurn, SpellCastEvent cast) =>
+				cast.PlayerId == source.ControllerId && cast.NoncreatureSpellNumber == 1, // 0 for a creature
 			_ => false,
 		};
 	}
+
+	/// <summary>What a spell targeted as it was cast — every mode's targets (CR 115.1).</summary>
+	static IEnumerable<int> SpellTargets(GameState s, SpellCastEvent cast) =>
+		s.HasObject(cast.CardId)
+		&& s.GetCard(cast.CardId).GetComponent<OnStackComponent>() is { } onStack
+			? onStack.Targets.Where(id => id != 0 && s.HasObject(id))
+			: [];
 
 	/// <summary>"Whenever a Plains you control enters": the event's card has the ability's EventSubtype.</summary>
 	static bool OfSubtype(GameState s, TriggeredAbilityComponent a, GameEvent e) =>

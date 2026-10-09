@@ -46,6 +46,12 @@ public enum TriggerEvent
 	SelfBecomesTargetOfOpponentsSpellOrAbility, // Ruric Thar, Biomagus
 	AnotherNontokenCreatureYouControlEnters, // Arni, Humble Scribe
 	YouCastArtifactOrCreatureSpell, // Traxos, Scourge Eternal
+	APlayerDiscards, // Tinybones: "whenever a player discards one or more cards"
+	SelfDiscarded, // Titanbones: "when you discard this card" — FromGraveyard, where the card now is
+	CreatureYouControlAttacksPlayerAlone, // Jiang Yanggu, Yuriko — the only attacker, at a player
+	YouCastEquipmentOrSpellTargetingYourCreature, // Danitha, Sword of Hope
+	YouCastSpellTargetingOpponentOrTheirCreature, // Danitha, Spear of Agony
+	YouCastFirstNoncreatureSpellEachTurn, // Plan for All Outcomes
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>
@@ -266,6 +272,25 @@ public record PreparedCopyOf(int CreatureId, int Incarnation) : GameComponent;
 /// board and sat inert). It attaches as it resolves (Rules/Attachments.cs).
 /// </summary>
 public record AuraComponent(TargetSpec Enchant) : GameComponent;
+
+/// <summary>
+/// Proft: "You can't cast this spell unless [When]." A restriction, not a cost — read by
+/// Playable.CanCastFromHere, so the card is never offered (MtgCore's CastRestrictionComponent).
+/// </summary>
+public record CastOnlyIf(Condition When) : GameComponent;
+
+/// <summary>
+/// Countersculpt: "As an additional cost, behold a [Subtype] or pay {Generic}" — choose one you
+/// control or reveal one from your hand (not the spell itself). Nothing moves: beholding is showing.
+/// </summary>
+public record BeholdOrPayAdditionalCost(string Subtype, int Generic) : GameComponent
+{
+	public IEnumerable<int> Candidates(GameState s, int playerId, int spellId) =>
+		s.CardsIn(playerId, ZoneType.Battlefield)
+			.Concat(s.CardsIn(playerId, ZoneType.Hand).Where(c => c.Id != spellId))
+			.Where(c => c.Subtypes.Contains(Subtype))
+			.Select(c => c.Id);
+}
 
 /// <summary>"This spell can't be countered." Read by StackResolution.Counter.</summary>
 public record CantBeCountered : GameComponent;

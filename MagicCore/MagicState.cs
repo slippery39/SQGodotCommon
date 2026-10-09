@@ -253,6 +253,21 @@ public static class MagicState
 			: s.UpdateObject(cardId, card with { IsTapped = false });
 	}
 
+	/// <summary>
+	/// The ONE discard (CR 701.8) — effects, costs and the cleanup alike: each card to its owner's
+	/// graveyard, counted for "this turn", and ONE event for the batch ("discards one or more cards").
+	/// MtgCore's lesson: a discard paid as a cost once fired no discard trigger.
+	/// </summary>
+	public static GameState Discard(this GameState s, int playerId, IReadOnlyList<int> cardIds)
+	{
+		if (cardIds.Count == 0)
+			return s;
+		foreach (var id in cardIds)
+			s = s.MoveCard(id, s.ZoneId(s.GetCard(id).OwnerId, ZoneType.Graveyard));
+		return s.Tally(playerId, t => t with { CardsDiscarded = t.CardsDiscarded + cardIds.Count })
+			.Raise(new DiscardedEvent(playerId, [.. cardIds]));
+	}
+
 	/// <summary>Updates one player's "this turn" counts.</summary>
 	public static GameState Tally(
 		this GameState s,
