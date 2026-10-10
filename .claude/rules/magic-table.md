@@ -20,7 +20,7 @@ MagicTable/
 ├── CardViews.cs          permanent crops (tapped lies sideways, lands stack), hand cards, thumbs
 ├── PhaseBar.cs           both players' steps; each step is a stop toggle
 ├── BoardChoice.cs        is a pending choice answered ON the table? which objects light up (plain C#)
-├── Targeting.cs          click a spell, then its targets: plays, narrowing by target (plain C#)
+├── Targeting.cs          click a spell, then its picks — targets, then what a cost takes (plain C#)
 ├── CombatDeclaration.cs  attacks / blocks clicked on the table, submitted at once (plain C#)
 ├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no
 ├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; a click target
@@ -51,6 +51,11 @@ MagicTable/
   calls is always false. "Still the same question?" compares the immutable `GameState`
   (`_shownState`). Comparing choices wiped every pick of a multi-pick choice on each redraw (Step 4
   shipped it) and every click of a combat declaration.
+- **Every pick is clicked, even when only one is legal** (Shayne: a spell casting itself was a
+  surprise; Arena and MTGO ask) — targets, then a cost's sacrifice / discard / behold / exile.
+  "Sacrifice or pay" is chosen as a WAY first (`Targeting.Ways`), never listed per combination.
+- **Action-column buttons wrap** (`AddButton`): a long label once grew a button off the screen.
+  Lists use the plain plate in the body font; only main actions use the big oxblood style.
 - **Glows:** gold playable, blue clickable now, green picked, white what it is about, red/blue in
   combat — one style for every object (`CardViews.Outline`).
 - **Stops live in MagicCore (`Stops`)**, tested there; the table only shows and toggles them.

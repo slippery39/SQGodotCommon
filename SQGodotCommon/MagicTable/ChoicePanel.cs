@@ -67,9 +67,12 @@ public partial class ChoicePanel : PanelContainer
 				Text = option.DisplayText,
 				ToggleMode = multi,
 				Disabled = !option.IsEnabled,
-				CustomMinimumSize = new Vector2(180, 60),
+				CustomMinimumSize = new Vector2(280, 60),
 				FocusMode = FocusModeEnum.None,
+				// Wrapped at the button's width: a long option once grew off the panel.
+				AutowrapMode = TextServer.AutowrapMode.WordSmart,
 			};
+			button.AddThemeFontSizeOverride("font_size", 20);
 			MtgUiStyles.StyleChoice(button, selected: false);
 			if (card is not null)
 			{

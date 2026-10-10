@@ -84,7 +84,7 @@ public partial class MagicTableScene : Control
 	];
 
 	// What the table is asking, beyond the engine's own state. Any input (Do) clears the first two.
-	private List<List<GameAction>>? _plays; // a clicked card's plays, when it has several
+	private List<(string Label, List<GameAction> Moves)>? _plays; // a clicked card's plays, when it has several
 	private (List<GameAction> Candidates, int Index)? _targeting; // a play waiting for a target click
 	private BoardChoice? _boardChoice; // the pending choice, when it is answered on the table
 
@@ -145,7 +145,15 @@ public partial class MagicTableScene : Control
 				[var n] => (n, ZoneType.Hand),
 				_ => throw new ArgumentException($"Expected --put=Name:Zone, got {put}"),
 			};
-			_m.Sandbox(_m.HumanId, FraCards.Get(name), zone);
+			// A put's trigger may hand the AI a choice (Rank Rat: they discard) — let it answer first.
+			while (!_m.CanSandbox && _m.AiToAct)
+				_m.StepAi();
+			if (_m.CanSandbox)
+				_m.Sandbox(_m.HumanId, FraCards.Get(name), zone);
+			else
+				GD.PushWarning(
+					$"{put} skipped: a choice of yours is pending — answer it, then use the Sandbox panel"
+				);
 		}
 		Refresh();
 	}
@@ -392,7 +400,7 @@ public partial class MagicTableScene : Control
 				Play(plays[0], 0);
 			else if (plays.Count > 1)
 			{
-				_plays = plays;
+				_plays = plays.Select(p => (PlayLabel(s, p), p)).ToList();
 				Refresh();
 			}
 		}
@@ -401,16 +409,23 @@ public partial class MagicTableScene : Control
 	/// <summary>One move left: make it. Several told apart by a target: wait for that click. Otherwise list them.</summary>
 	private void Play(List<GameAction> candidates, int from)
 	{
-		if (candidates.Count == 1)
+		var index = Targeting.NextIndex(candidates, from);
+		if (index < 0 && candidates.Count == 1)
 		{
 			Do(() => _m.Act(candidates[0]));
 			return;
 		}
-		var index = Targeting.NextIndex(candidates, from);
-		_plays = index < 0 ? candidates.Select(c => new List<GameAction> { c }).ToList() : null;
+		// Not told apart by clicks (sacrifice or pay): choose the way, then click its picks.
+		_plays = index < 0 ? Targeting.Ways(_m.State, candidates) : null;
 		_targeting = index < 0 ? null : (candidates, index);
 		Refresh();
 	}
+
+	/// <summary>A play's button: in full when there is nothing left to click, its picks left out otherwise.</summary>
+	private static string PlayLabel(GameState s, List<GameAction> play) =>
+		play.Count == 1 && Targeting.PicksOf(play[0]).Count == 0
+			? Describe.Action(s, play[0])
+			: Targeting.Label(s, play[0]);
 
 	private void Fill(
 		HFlowContainer row,
@@ -516,7 +531,8 @@ public partial class MagicTableScene : Control
 		}
 		if (_targeting is (var candidates, var index))
 		{
-			_status.Text = $"{Targeting.Label(s, candidates[0])} — choose target {index + 1}";
+			_status.Text =
+				$"{Targeting.Label(s, candidates[0])} — choose {Targeting.What(candidates[0], index)}";
 			// A target not on the table (a card in a graveyard) is a button instead; 0 is
 			// "no target" for an optional one ("up to one target creature").
 			foreach (
@@ -525,7 +541,8 @@ public partial class MagicTableScene : Control
 				AddButton(
 					id == 0 ? "No target" : s.GetObject(id).Name,
 					() => ObjectClicked(id),
-					redraw: false
+					redraw: false,
+					option: true
 				);
 			AddButton("Cancel  (Esc)", () => { });
 			return;
@@ -533,12 +550,8 @@ public partial class MagicTableScene : Control
 		if (_plays is not null)
 		{
 			_status.Text = "Choose a play:";
-			foreach (var play in _plays)
-				AddButton(
-					play.Count == 1 ? Describe.Action(s, play[0]) : Targeting.Label(s, play[0]),
-					() => Play(play, 0),
-					redraw: false
-				);
+			foreach (var (label, play) in _plays)
+				AddButton(label, () => Play(play, 0), redraw: false, option: true);
 			AddButton("Cancel  (Esc)", () => { });
 			return;
 		}
@@ -573,7 +586,9 @@ public partial class MagicTableScene : Control
 				AddButton(
 					option.DisplayText,
 					board.Multi ? () => ObjectClicked(option.Id) : () => _m.Choose([option.Id]),
-					redraw: !board.Multi
+					redraw: !board.Multi,
+					option: true,
+					picked: _picked.Contains(option.Id)
 				);
 			if (board.Multi)
 			{
@@ -600,10 +615,33 @@ public partial class MagicTableScene : Control
 	}
 
 	/// <summary>A button in the action column. Through Do (clears any play in progress) unless it continues one.</summary>
-	private Button AddButton(string text, Action act, bool redraw = true)
+	/// <param name="option">One of a list (plays, targets, a choice's options): the plain plate in a
+	/// smaller font. Otherwise a main action (Pass, Attack, Submit) in the big oxblood style.</param>
+	/// <param name="picked">An option of a multi-pick choice that is picked: the selected plate.</param>
+	private Button AddButton(
+		string text,
+		Action act,
+		bool redraw = true,
+		bool option = false,
+		bool picked = false
+	)
 	{
-		var button = new Button { Text = text, FocusMode = FocusModeEnum.None };
-		MtgUiStyles.StylePrimary(button, 28);
+		// Wrapped, never wider than the column: a long label ("Cast X → Y, sacrificing Z") once grew
+		// the button off the screen and hid which button did what.
+		var button = new Button
+		{
+			Text = text,
+			FocusMode = FocusModeEnum.None,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			CustomMinimumSize = new Vector2(1, 0),
+		};
+		if (option)
+		{
+			MtgUiStyles.StyleChoice(button, selected: picked);
+			button.AddThemeFontSizeOverride("font_size", TextSize);
+		}
+		else
+			MtgUiStyles.StylePrimary(button, 28);
 		button.Pressed += redraw ? () => Do(act) : act;
 		_buttons.AddChild(button);
 		return button;
