@@ -1118,3 +1118,41 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - Puppet Crafting's type change is stamped on the host and put back by the state-based check, not a live layer-4 effect: between the Aura leaving and the next priority the host is still a creature (every rule reads card.Is(Creature) — move types into Characteristics if a card ever cares about that window)
 - Uldaros chooses its graveyard cards as it resolves, not as targets when it triggers ("one of each card type, none twice" is a target word the engine can't say)
 - Emrakul's "{T}: Add {C}{C}" replaces the land's own mana ability while she waits in exile, instead of being a second choice — one yield per permanent; so her "target land" is a land YOU control, or it would shut off an opponent's colour (make yields alternatives if a card ever needs it)
+
+## MagicTable does not use Common's Card2D or drag-to-play (deferred)
+
+Shayne, 2026-10-09: the MagicTable front end (`SQGodotCommon/MagicTable/`) draws every card as
+plain Controls built in `CardViews` — a `TextureRect` of the Scryfall image in the hand, a Panel
+crop on the battlefield — and plays by click. It does NOT use `Common/Cards/2D` (`Card2D`,
+`Hand2D`, `DraggableNode2D`) or drag-to-play, which the other games share. **Building games on the
+common features is the standing intent; this was a miss, deferred so playtesting could start.**
+
+Why it went this way: Card2D renders a card from game data through its own card scene (frame,
+name, cost, rules text); MagicTable shows Scryfall's printed card instead, so the Oracle text is
+exact for checking cards. The two had to be reconciled and weren't.
+
+Options, roughly in cost order:
+- **Hand only:** `Hand2D` + `Card2D` with the Scryfall image as the whole face (no frame, no text
+  layers) and drag-to-play onto the table → the same `ObjectClicked` router. Keeps the
+  battlefield crops. Read `.claude/rules/godot-frontend.md` "The shared card" first — Card2D's
+  0.7 scale, ready-only fill, hover/drag traps.
+- **Hand and battlefield:** permanents as Card2D too (tapped = rotated Node2D). Lays out by hand,
+  since a Container won't lay out a Node2D — the whole row code changes.
+- Either way the click paths stay (Arena supports both), and `IsMoveFor` / `Targeting` are reused.
+
+## MagicCore's AI plays implausibly — one-ply greedy is not enough (backlog)
+
+Shayne, 2026-10-09, playing the table: the AI cast **Prophesied End** ("Destroy target creature.
+If it wasn't attacking, its controller draws a card.") on a **Rank Rat** that was not attacking —
+spending premium removal on a 1-drop AND giving him a card. A plausible opponent is needed for
+playtests to mean anything.
+
+`GreedyAi` simulates each move one ply and scores the result; it cannot see that the card drawn
+is worth more than the rat, or that the spell is better held for an attacker. Options:
+- **Port MtgSimulator's `MultiTurnBeamSearchAiStrategy`** (MtgCore's default, `MtgGameManager.cs:84`):
+  beam over the turn + greedy rollouts of future turns, choices branched. 1,455 lines; adapt to
+  MagicCore's priority, stack and choices. Bring a plan first (handoff §4).
+- **Cheaper first:** value a card in hand in the evaluator, so "they draw" costs; weigh a removal
+  target's value against the spell's. Measure every change over 25+ games per pairing and record it
+  in `docs/findings/magic-ai.md` — twice a change there measured as noise.
+- Capture positions like this one to test against: MagicTable's seed + undo make them repeatable.

@@ -130,22 +130,69 @@ public sealed class MagicTableManager
 	}
 
 	/// <summary>
-	/// "No attacks" / "No blocks": answers "don't" for every creature left in your declaration —
-	/// one decision, so one undo step and one log line.
+	/// Your whole combat declaration at once, as on Arena: each creature you picked → the player or
+	/// planeswalker it attacks, or the attacker it blocks; every other creature "don't". The engine
+	/// still asks one creature at a time; each question is answered from <paramref name="chosen"/>.
+	/// The engine is the judge: a pick it doesn't offer (an attack limit) or drops afterwards (a lone
+	/// blocker on menace) is REFUSED — then nothing is committed and the refusals come back, so the
+	/// table can say why. Otherwise one decision: one undo step, one log line. An empty map is
+	/// "No attacks" / "No blocks".
 	/// </summary>
-	public void DeclineCombat()
+	public IReadOnlyList<string> DeclareCombat(IReadOnlyDictionary<int, int> chosen)
 	{
-		var first = State.GetPendingChoice();
-		if (!HumanToAct || first is not (DeclareAttackerChoice or DeclareBlockerChoice))
-			return;
+		var attacking = State.GetPendingChoice() is DeclareAttackerChoice;
+		if (!HumanToAct || !IsDeclaration(State.GetPendingChoice()))
+			return [];
 		var next = State;
+		var asked = new HashSet<int>();
 		while (
 			next.DecidingPlayerId() == HumanId
-			&& next.GetPendingChoice() is DeclareAttackerChoice or DeclareBlockerChoice
+			&& next.GetPendingChoice() is { } choice
+			&& IsDeclaration(choice)
 		)
-			next = next.Choose([CombatOption.None]);
-		Decided(first is DeclareAttackerChoice ? "No attacks" : "No blocks", next);
+		{
+			var creature = choice switch
+			{
+				DeclareAttackerChoice a => a.CreatureId,
+				DeclareBlockerChoice b => b.CreatureId,
+				_ => 0,
+			};
+			asked.Add(creature);
+			var pick = choice.Options.FirstOrDefault(o =>
+				o.IsEnabled
+				&& o.Id != CombatOption.None
+				&& o.Id == chosen.GetValueOrDefault(creature)
+			);
+			next = next.Choose([pick?.Id ?? CombatOption.None]);
+		}
+
+		string Pair(int creature, int target) =>
+			$"{State.GetCard(creature).Name} → {State.GetObject(target).Name}";
+		var took = chosen
+			.Where(d =>
+				asked.Contains(d.Key)
+				&& next.HasObject(d.Key)
+				&& (attacking ? next.GetCard(d.Key).AttackingId : next.GetCard(d.Key).BlockingId)
+					== d.Value
+			)
+			.ToList();
+		var refused = chosen
+			.Except(took)
+			.Select(d => $"{Pair(d.Key, d.Value)} isn't allowed")
+			.ToList();
+		if (refused.Count > 0)
+			return refused;
+		Decided(
+			took.Count == 0
+				? (attacking ? "No attacks" : "No blocks")
+				: $"{(attacking ? "Attack" : "Block")}: {string.Join(", ", took.Select(d => Pair(d.Key, d.Value)))}",
+			next
+		);
+		return [];
 	}
+
+	private static bool IsDeclaration(ChoiceAction? choice) =>
+		choice is DeclareAttackerChoice or DeclareBlockerChoice;
 
 	/// <summary>
 	/// Debug (<c>-GameArgs --autoplay=N</c>): a stand-in AI plays your seat too until turn N, so the

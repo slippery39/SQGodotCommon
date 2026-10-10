@@ -32,6 +32,8 @@ godot-mono --path SQGodotCommon --headless --import
 
 **Without `SSL_CERT_FILE`, Python fails "certificate has expired"** — its Windows certificate store
 is stale while curl's is fine; the certifi bundle works. Re-runs skip files already on disk.
+**The headless `--import` can rewrite `project.godot` and strip its `;` comments** (seen 2026-10-09) —
+`git checkout -- SQGodotCommon/project.godot` after it; those comments carry the Android traps.
 `MagicTable/*` (45 MB) is excluded from both Android presets, but `export_presets.cfg` is
 **gitignored** — a fresh clone ships it in the APK until the filter is re-added there.
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using MagicCore;
 using MagicCore.Actions;
@@ -154,7 +155,7 @@ public class MagicTableManagerTests
 		);
 		var atTheDeclaration = m.State;
 
-		m.DeclineCombat();
+		m.DeclareCombat(new Dictionary<int, int>());
 
 		Assert.That(
 			m.HumanToAct && m.State.GetPendingChoice() is DeclareAttackerChoice,
@@ -164,6 +165,34 @@ public class MagicTableManagerTests
 		Assert.That(m.Log.Count(l => l.EndsWith("No attacks")), Is.EqualTo(1));
 		m.Undo();
 		Assert.That(m.State, Is.SameAs(atTheDeclaration));
+	}
+
+	[Test]
+	public void DeclareCombat_AttacksWithThePickedCreatures_AsOneDecision()
+	{
+		var m = New();
+		m.AutoplayTo(9); // seed 5: your turn 9, a creature able to attack
+		for (var i = 0; i < 50 && m.State.GetPendingChoice() is not DeclareAttackerChoice; i++)
+		{
+			RunAi(m);
+			if (m.HumanToAct && m.State.GetPendingChoice() is null)
+				m.Act(m.State.LegalActions().OfType<PassPriorityAction>().First());
+		}
+		var attackers = global::MagicCore.Turns.Combat.AttackCandidates(m.State);
+		Assert.That(attackers, Is.Not.Empty, "precondition");
+
+		m.DeclareCombat(attackers.ToDictionary(c => c.Id, _ => m.OpponentId));
+
+		Assert.That(
+			attackers.Select(c => m.State.GetCard(c.Id).AttackingId),
+			Is.All.EqualTo(m.OpponentId),
+			"every picked creature attacks the AI"
+		);
+		Assert.That(
+			m.Log.Count(l => l.Contains("Attack: ")),
+			Is.EqualTo(1),
+			"one line for the declaration"
+		);
 	}
 
 	[Test]

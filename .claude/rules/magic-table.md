@@ -21,6 +21,7 @@ MagicTable/
 ├── PhaseBar.cs           both players' steps; each step is a stop toggle
 ├── BoardChoice.cs        is a pending choice answered ON the table? which objects light up (plain C#)
 ├── Targeting.cs          click a spell, then its targets: plays, narrowing by target (plain C#)
+├── CombatDeclaration.cs  attacks / blocks clicked on the table, submitted at once (plain C#)
 ├── ChoicePanel.cs        the choices that are not about the table: library, graveyard, modes, yes/no
 ├── PlayerPlate.cs        life, counts, zone buttons, emblems, floating mana; a click target
 ├── ZoneViewer.cs         a graveyard / exile / command zone as full cards, live
@@ -42,6 +43,14 @@ MagicTable/
   the table (permanents, your hand, the stack, the players) is a `BoardChoice`; one offering
   anything hidden, or no objects (`MagicRules.OptionsAreObjects` says which), uses the panel. Casting with targets narrows by clicks
   (`Targeting`). One router, `ObjectClicked`, takes every click — card, player plate, stack row.
+- **Combat is declared as a whole, as on Arena** — click creatures to attack (again to take back),
+  or your creature then the attacker it blocks; one submit. The engine asks one creature at a time
+  (`DeclareAttackerChoice`); `MagicTableManager.DeclareCombat` answers them all from the clicks.
+  The first version showed those per-creature questions as buttons — Shayne attacked with nothing.
+- **`GetPendingChoice()` builds a NEW choice object on every call** — `ReferenceEquals` on two
+  calls is always false. "Still the same question?" compares the immutable `GameState`
+  (`_shownState`). Comparing choices wiped every pick of a multi-pick choice on each redraw (Step 4
+  shipped it) and every click of a combat declaration.
 - **Glows:** gold playable, blue clickable now, green picked, white what it is about, red/blue in
   combat — one style for every object (`CardViews.Outline`).
 - **Stops live in MagicCore (`Stops`)**, tested there; the table only shows and toggles them.

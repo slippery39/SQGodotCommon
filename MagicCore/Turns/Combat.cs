@@ -76,12 +76,25 @@ public static class Combat
 		&& !s.Has(attacker, CantBeBlocked)
 		&& (!s.Has(attacker, "Flying") || s.Has(blocker, "Flying") || s.Has(blocker, "Reach"));
 
+	/// <summary>The active player's creatures that may be declared as attackers — one choice each.</summary>
+	public static List<Card> AttackCandidates(GameState s) =>
+		s.CardsIn(s.GetGame().ActivePlayerId, ZoneType.Battlefield)
+			.Where(c => CanAttack(s, c))
+			.ToList();
+
+	/// <summary>The defender's creatures that can block at least one attacker — one choice each.</summary>
+	public static List<Card> BlockCandidates(GameState s)
+	{
+		var attackers = Attackers(s).ToList();
+		return s.CardsIn(Defender(s), ZoneType.Battlefield)
+			.Where(b => attackers.Any(a => CanBlock(s, b, a)))
+			.ToList();
+	}
+
 	public static GameState BeginDeclareAttackers(GameState s)
 	{
 		var active = s.GetGame().ActivePlayerId;
-		var candidates = s.CardsIn(active, ZoneType.Battlefield)
-			.Where(c => CanAttack(s, c))
-			.ToList();
+		var candidates = AttackCandidates(s);
 		if (candidates.Count == 0)
 			return TurnStructure.GivePriority(s, active);
 		return s.SpawnAction(
@@ -102,9 +115,7 @@ public static class Combat
 		if (attackers.Count == 0)
 			return TurnStructure.EndStep(s); // CR 508.8: no attackers, no blockers or damage steps
 		var defender = Defender(s);
-		var candidates = s.CardsIn(defender, ZoneType.Battlefield)
-			.Where(b => attackers.Any(a => CanBlock(s, b, a)))
-			.ToList();
+		var candidates = BlockCandidates(s);
 		if (candidates.Count == 0)
 			return TurnStructure.GivePriority(s, s.GetGame().ActivePlayerId);
 		return s.SpawnAction(

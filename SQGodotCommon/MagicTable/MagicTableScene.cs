@@ -87,9 +87,13 @@ public partial class MagicTableScene : Control
 	private List<List<GameAction>>? _plays; // a clicked card's plays, when it has several
 	private (List<GameAction> Candidates, int Index)? _targeting; // a play waiting for a target click
 	private BoardChoice? _boardChoice; // the pending choice, when it is answered on the table
-	private ChoiceAction? _shownChoice;
+
+	// The state last drawn. GetPendingChoice() builds a NEW choice object on every call, so "is this
+	// still the same question?" compares the immutable state, which changes only when something happens.
+	private GameState? _shownState;
 	private readonly List<int> _picked = new(); // a multi board choice's picks so far
 	private HashSet<int> _onTable = new(); // what can be clicked where it is, this redraw
+	private CombatDeclaration? _combat; // your attacks or blocks, clicked on the table before submitting
 
 	public override void _Ready()
 	{
@@ -231,22 +235,31 @@ public partial class MagicTableScene : Control
 		var moves = Moves();
 
 		var choice = _m.HumanToAct ? s.GetPendingChoice() : null;
-		if (!ReferenceEquals(choice, _shownChoice))
+		var sameQuestion = ReferenceEquals(s, _shownState);
+		if (!sameQuestion)
 			_picked.Clear();
 		_onTable = OnTable(s);
-		_boardChoice = choice is null ? null : BoardChoice.For(s, choice, _onTable);
-		if (choice is null || _boardChoice is not null)
+		// Combat is declared on the table as a whole (Arena), not one creature's question at a time.
+		var declaring = choice is DeclareAttackerChoice or DeclareBlockerChoice;
+		// A new declaration (another turn's, or one Undo went back to) starts clean.
+		_combat =
+			!declaring ? null
+			: sameQuestion && _combat is not null ? _combat
+			: new CombatDeclaration(choice is DeclareAttackerChoice);
+		_boardChoice = choice is null || declaring ? null : BoardChoice.For(s, choice, _onTable);
+		if (choice is null || declaring || _boardChoice is not null)
 			_choice.Close();
-		else if (!ReferenceEquals(choice, _shownChoice))
+		else if (!sameQuestion)
 			_choice.Show(s, choice, Preview, ids => Do(() => _m.Choose(ids)));
-		_shownChoice = choice;
+		_shownState = s;
 
 		var clickable = Clickable();
 		var about =
 			_boardChoice?.AboutId
 			?? (_targeting is (var candidates, _) ? MagicRules.CardOf(candidates[0]) : 0);
 		Glow GlowOf(int id, Card? c) =>
-			_picked.Contains(id) ? Glow.Selected
+			_combat is { } combat ? combat.GlowOf(id, c, clickable)
+			: _picked.Contains(id) ? Glow.Selected
 			: clickable.Contains(id) ? Glow.Choosable
 			: id == about ? Glow.About
 			: c?.AttackingId > 0 ? Glow.Attacking
@@ -338,15 +351,21 @@ public partial class MagicTableScene : Control
 
 	/// <summary>What a click may pick right now: a target, or an object the board choice offers.</summary>
 	private IReadOnlySet<int> Clickable() =>
-		_targeting is (var candidates, var index)
+		_combat is { } combat ? combat.Clickable(_m.State, _m.State.GetPendingChoice()!)
+		: _targeting is (var candidates, var index)
 			? Targeting.Options(candidates, index).ToHashSet()
-			: _boardChoice?.Clickable ?? new HashSet<int>();
+		: _boardChoice?.Clickable ?? new HashSet<int>();
 
 	/// <summary>One router for every click on an object — a card, a player plate, a stack row.</summary>
 	private void ObjectClicked(int id)
 	{
 		var s = _m.State;
-		if (_targeting is (var candidates, var index))
+		if (_combat is { } combat)
+		{
+			combat.Click(s, s.GetPendingChoice()!, id);
+			Refresh();
+		}
+		else if (_targeting is (var candidates, var index))
 		{
 			if (Targeting.Options(candidates, index).Contains(id))
 				Play(Targeting.Narrow(candidates, index, id), index + 1);
@@ -523,6 +542,28 @@ public partial class MagicTableScene : Control
 			AddButton("Cancel  (Esc)", () => { });
 			return;
 		}
+		if (_combat is { } combat)
+		{
+			_status.Text = combat.Status(s);
+			var count = combat.Declared.Count;
+			AddButton(
+				count > 0 ? $"{(combat.Attacking ? "Attack" : "Block")} ({count})"
+					: combat.Attacking ? "No attacks"
+					: "No blocks",
+				() => combat.Refused = _m.DeclareCombat(combat.Declared.ToDictionary())
+			);
+			if (combat.Attacking && count < MagicCore.Turns.Combat.AttackCandidates(s).Count)
+				AddButton(
+					"All attack",
+					() =>
+					{
+						combat.AllAttack(s);
+						Refresh();
+					},
+					redraw: false
+				);
+			return;
+		}
 		if (_boardChoice is { } board)
 		{
 			var choice = board.Choice;
@@ -533,11 +574,6 @@ public partial class MagicTableScene : Control
 					option.DisplayText,
 					board.Multi ? () => ObjectClicked(option.Id) : () => _m.Choose([option.Id]),
 					redraw: !board.Multi
-				);
-			if (choice is DeclareAttackerChoice or DeclareBlockerChoice)
-				AddButton(
-					choice is DeclareAttackerChoice ? "No attacks" : "No blocks",
-					_m.DeclineCombat
 				);
 			if (board.Multi)
 			{
