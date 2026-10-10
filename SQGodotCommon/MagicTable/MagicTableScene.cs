@@ -18,7 +18,7 @@ namespace MagicTable;
 /// (<see cref="BoardChoice"/>), anything else in the <see cref="ChoicePanel"/>. Space passes, Esc
 /// leaves; the AI moves on a timer.
 /// Debug args (<c>-GameArgs</c>): <c>--seed=N</c>, <c>--decks=A,B</c> (FraDecks names),
-/// <c>--autoplay=N</c>, <c>--ai-vs-ai</c>.
+/// <c>--autoplay=N</c>, <c>--ai-vs-ai</c>, <c>--put=Name:Zone</c>.
 /// </summary>
 public partial class MagicTableScene : Control
 {
@@ -63,6 +63,25 @@ public partial class MagicTableScene : Control
 			BbcodeEnabled = false,
 		};
 	private readonly ChoicePanel _choice = new() { CustomMinimumSize = new Vector2(930, 0) };
+	private readonly SandboxPanel _sandbox = new();
+	private readonly Timer _timer = new() { WaitTime = 0.5, Autostart = true };
+	private readonly Button _pause =
+		new()
+		{
+			Text = "Pause AI",
+			ToggleMode = true,
+			FocusMode = FocusModeEnum.None,
+		};
+	private readonly Button _step = new() { Text = "Step", FocusMode = FocusModeEnum.None };
+	private readonly OptionButton _speed = new() { FocusMode = FocusModeEnum.None };
+	private static readonly (string Label, double Seconds)[] Speeds =
+	[
+		("Fast", 0.1),
+		("Quick", 0.25),
+		("Normal", 0.5),
+		("Slow", 1.0),
+		("Very slow", 2.0),
+	];
 
 	// What the table is asking, beyond the engine's own state. Any input (Do) clears the first two.
 	private List<List<GameAction>>? _plays; // a clicked card's plays, when it has several
@@ -80,20 +99,50 @@ public partial class MagicTableScene : Control
 		_fullControl.Toggled += on => Do(() => _m.Stops = _m.Stops with { FullControl = on });
 		_undo.Pressed += () => Do(_m.Undo);
 
-		var timer = new Timer { WaitTime = 0.5, Autostart = true };
-		timer.Timeout += () =>
+		// The AI moves on the timer; Pause stops it, Step makes one move, the speed sets the beat.
+		_timer.Timeout += () =>
+		{
+			if (!_pause.ButtonPressed && _m.AiToAct)
+				Do(() => _m.StepAi());
+		};
+		AddChild(_timer);
+		_pause.Toggled += _ => Refresh();
+		_step.Pressed += () =>
 		{
 			if (_m.AiToAct)
 				Do(() => _m.StepAi());
 		};
-		AddChild(timer);
+		foreach (var (label, _) in Speeds)
+			_speed.AddItem(label);
+		_speed.Select(2);
+		_speed.ItemSelected += i => _timer.WaitTime = Speeds[i].Seconds;
+		_sandbox.Put += (seat, name, zone) =>
+			Do(() => _m.Sandbox(seat == 0 ? _m.HumanId : _m.OpponentId, FraCards.Get(name), zone));
+		_sandbox.Previewed += Preview;
 
 		_m = NewGame(
-			int.TryParse(Arg("seed"), out var seed) ? seed : Random.Shared.Next(1, int.MaxValue),
+			int.TryParse(Arg("seed"), out var seed)
+				? seed
+				: TableSetup.Current?.Seed ?? Random.Shared.Next(1, int.MaxValue),
 			Stops.Arena
 		);
 		if (int.TryParse(Arg("autoplay"), out var turn))
 			_m.AutoplayTo(turn);
+		// --put=Name:Zone (repeatable): the sandbox from the command line, into your seat. Without
+		// --autoplay the game is at the mulligan, where nothing can be put — both keep first.
+		var puts = OS.GetCmdlineUserArgs().Where(a => a.StartsWith("--put=")).ToList();
+		if (puts.Count > 0 && !_m.CanSandbox)
+			_m.AutoplayTo(1);
+		foreach (var put in puts)
+		{
+			var (name, zone) = put["--put=".Length..].Split(':') switch
+			{
+				[var n, var z] => (n, Enum.Parse<ZoneType>(z, ignoreCase: true)),
+				[var n] => (n, ZoneType.Hand),
+				_ => throw new ArgumentException($"Expected --put=Name:Zone, got {put}"),
+			};
+			_m.Sandbox(_m.HumanId, FraCards.Get(name), zone);
+		}
 		Refresh();
 	}
 
@@ -102,15 +151,19 @@ public partial class MagicTableScene : Control
 			.FirstOrDefault(a => a.StartsWith($"--{name}="))
 			?[(name.Length + 3)..];
 
-	/// <summary>Decks and AI-vs-AI from the args; --autoplay only at startup, so New game starts at turn 0.</summary>
+	/// <summary>
+	/// Decks and AI-vs-AI from the deck select (<see cref="TableSetup"/>), the debug args overriding;
+	/// --autoplay only at startup, so New game starts at turn 0.
+	/// </summary>
 	private static MagicTableManager NewGame(int seed, Stops stops)
 	{
-		var decks = (Arg("decks") ?? "White-Black,Red-Green").Split(',');
+		var setup = TableSetup.Current;
+		var decks = Arg("decks")?.Split(',');
 		return new MagicTableManager(
-			FraDecks.All[decks[0]],
-			FraDecks.All[decks[1]],
+			decks is null ? setup?.Mine ?? FraDecks.All["White-Black"] : FraDecks.All[decks[0]],
+			decks is null ? setup?.Theirs ?? FraDecks.All["Red-Green"] : FraDecks.All[decks[1]],
 			seed,
-			OS.GetCmdlineUserArgs().Contains("--ai-vs-ai")
+			OS.GetCmdlineUserArgs().Contains("--ai-vs-ai") || setup?.AiVsAi == true
 		)
 		{
 			Stops = stops,
@@ -128,10 +181,12 @@ public partial class MagicTableScene : Control
 				_viewing = null;
 				Refresh();
 			}
+			else if (_sandbox.Visible)
+				_sandbox.Visible = false;
 			else if (_plays is not null || _targeting is not null)
 				Do(() => { }); // Esc cancels a play first, like Arena
 			else
-				Project.GameManager.Instance.GoToMainMenu();
+				Project.GameManager.Instance.ChangeScene("res://MagicTable/DeckSelectScene.tscn");
 		}
 		else if (
 			key.Keycode == Key.Space
@@ -201,7 +256,7 @@ public partial class MagicTableScene : Control
 			: Glow.None;
 
 		_header.Text =
-			$"Seed {_m.Seed} · Turn {game.TurnNumber} · {(game.ActivePlayerId == _m.HumanId ? "your turn" : "AI's turn")}";
+			$"Seed {_m.Seed} · Turn {game.TurnNumber} · {(game.ActivePlayerId == _m.HumanId && !_m.AiVsAi ? "your" : $"{s.GetPlayer(game.ActivePlayerId).Name}'s")} turn";
 		foreach (
 			var (plate, player) in new[] { (_oppPlate, _m.OpponentId), (_myPlate, _m.HumanId) }
 		)
@@ -256,6 +311,8 @@ public partial class MagicTableScene : Control
 		ShowButtons(s, moves);
 		_fullControl.SetPressedNoSignal(_m.Stops.FullControl);
 		_undo.Disabled = !_m.CanUndo;
+		_step.Disabled = !_m.AiToAct;
+		_sandbox.Allow(_m.CanSandbox);
 		_log.Text = string.Join("\n", _m.Log.TakeLast(200));
 
 		if (_viewing is (var viewPlayer, var viewZone))
@@ -569,14 +626,25 @@ public partial class MagicTableScene : Control
 		_log.AddThemeFontSizeOverride("normal_font_size", TextSize - 2);
 		toggles.AddChild(_fullControl);
 		toggles.AddChild(_undo);
+		var sandbox = new Button { Text = "Sandbox", FocusMode = FocusModeEnum.None };
+		sandbox.Pressed += () => _sandbox.Visible = !_sandbox.Visible;
+		toggles.AddChild(sandbox);
 		right.AddChild(toggles);
+		// Watching the AI: pause it, step it, set its pace.
+		var ai = new HBoxContainer();
+		foreach (var control in new Control[] { _pause, _step, _speed, sandbox })
+			control.AddThemeFontSizeOverride("font_size", TextSize);
+		ai.AddChild(_pause);
+		ai.AddChild(_step);
+		ai.AddChild(_speed);
+		right.AddChild(ai);
 		var logPlate = Plate(_log);
 		logPlate.SizeFlagsVertical = SizeFlags.ExpandFill;
 		right.AddChild(logPlate);
 		columns.AddChild(right);
 
 		// Later children draw on top: a pending choice above an open zone viewer.
-		foreach (var panel in new Control[] { _viewer, _choice })
+		foreach (var panel in new Control[] { _viewer, _sandbox, _choice })
 		{
 			var overlay = new CenterContainer { MouseFilter = MouseFilterEnum.Ignore };
 			overlay.SetAnchorsPreset(LayoutPreset.FullRect);

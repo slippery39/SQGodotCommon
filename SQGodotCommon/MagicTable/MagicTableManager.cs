@@ -111,6 +111,24 @@ public sealed class MagicTableManager
 		Decided(Describe.Answer(State, State.GetPendingChoice()!, picked), State.Choose(picked));
 	}
 
+	/// <summary>Sandbox mode is open whenever someone holds priority and nothing is being asked.</summary>
+	public bool CanSandbox => MagicCore.Sandbox.CanPut(State);
+
+	/// <summary>
+	/// The test tool: a fresh card put into a zone (onto the battlefield it enters — triggers fire).
+	/// Logged and undoable like a decision, whoever's turn it is.
+	/// </summary>
+	public void Sandbox(int playerId, CardDefinition card, ZoneType zone)
+	{
+		if (!CanSandbox)
+			return;
+		var where = zone == ZoneType.Library ? "on top of the library" : $"into {zone}";
+		Decided(
+			$"[sandbox] {card.Data.Name} {where} ({State.GetPlayer(playerId).Name})",
+			MagicCore.Sandbox.Put(State, playerId, card, zone)
+		);
+	}
+
 	/// <summary>
 	/// "No attacks" / "No blocks": answers "don't" for every creature left in your declaration —
 	/// one decision, so one undo step and one log line.

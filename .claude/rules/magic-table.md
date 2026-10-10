@@ -13,7 +13,10 @@ shaped it are in the memory `project_mtg_real.md`; the build plan in `HANDOFF-Mt
 MagicTable/
 ├── MagicTableManager.cs  THE bridge to MagicCore (plain C#, no Godot types): game, seed, replay,
 │                         stops, one AI move per StepAi, undo, log. Tested in SQGodotCommon.Tests
+├── DeckSelectScene.cs    the entry: both seats' decks (built-in or a pasted Arena export), seed, AI vs AI
 ├── MagicTableScene.cs    layout + redraw from State on every change; clicks → moves; AI timer
+│                         (pause / step / speed)
+├── SandboxPanel.cs       search any playable FRA card, put it in a zone (MagicCore.Sandbox)
 ├── CardViews.cs          permanent crops (tapped lies sideways, lands stack), hand cards, thumbs
 ├── PhaseBar.cs           both players' steps; each step is a stop toggle
 ├── BoardChoice.cs        is a pending choice answered ON the table? which objects light up (plain C#)

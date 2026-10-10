@@ -186,6 +186,24 @@ public class MagicTableManagerTests
 	}
 
 	[Test]
+	public void Sandbox_PutsACard_AsAnUndoableDecision()
+	{
+		var m = New();
+		m.AutoplayTo(3);
+		RunAi(m);
+		Assert.That(m.CanSandbox, "precondition");
+		var before = m.State;
+		var hand = m.State.CardsIn(m.HumanId, ZoneType.Hand).Count();
+
+		m.Sandbox(m.HumanId, FraCards.Get("Last Gasp"), ZoneType.Hand);
+
+		Assert.That(m.State.CardsIn(m.HumanId, ZoneType.Hand).Count(), Is.EqualTo(hand + 1));
+		Assert.That(m.Log[^1], Does.Contain("[sandbox] Last Gasp"));
+		m.Undo();
+		Assert.That(m.State, Is.SameAs(before));
+	}
+
+	[Test]
 	public void Replay_DealsTheSameOpeningHand()
 	{
 		var m = New(seed: 77);

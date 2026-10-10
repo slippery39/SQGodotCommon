@@ -101,8 +101,10 @@ public static class CardViews
 		var strip = new PanelContainer { CustomMinimumSize = new Vector2(PermanentSize.X, 0) };
 		strip.AddThemeStyleboxOverride("panel", Outline(glow));
 		var row = new HBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-		row.AddChild(Thumb(a.Name, 34));
-		row.AddChild(Text(a.Name, 14, Vector2.Zero, PermanentSize.X - 50, wrap: false));
+		row.AddChild(Thumb(a.Name, 44));
+		var name = Text(a.Name, 15, Vector2.Zero, PermanentSize.X - 56, wrap: false);
+		name.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill; // a clipped label in a row gets no width of its own
+		row.AddChild(name);
 		strip.AddChild(row);
 		Hook(strip, a.Name, preview, onClick);
 		return strip;

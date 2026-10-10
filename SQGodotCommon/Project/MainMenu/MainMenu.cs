@@ -11,7 +11,7 @@ namespace Project;
 /// </summary>
 public partial class MainMenu : Control
 {
-	private const string RealMagicScene = "res://MagicTable/MagicTableScene.tscn";
+	private const string RealMagicScene = "res://MagicTable/DeckSelectScene.tscn";
 
 	// Real Magic only where it was exported: MagicTable/* (45 MB of art) is left out of the Android presets.
 	private static readonly (string Label, Action Go)[] Entries = new (string Label, Action Go)?[]

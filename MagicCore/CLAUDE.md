@@ -20,6 +20,7 @@ MagicCore/
 ├── MagicGame.cs / MagicPlayer.cs / MagicState.cs   root object, player, queries + MoveCard/EnterBattlefield
 ├── Describe.cs          plain-text actions, choices and cards for every front end and log
 ├── Stops.cs             Arena priority stops + full control for a human seat (front-end convenience)
+├── Sandbox.cs           playtest tool: put a fresh card in any zone; onto the battlefield it ENTERS
 ├── Turns/TurnStructure.cs  EnterStep/EndStep/GivePriority + StateBasedActions (incl. legend rule, tokens)
 ├── Turns/Combat.cs      who may attack/block, declarations, simultaneous damage, end of combat
 ├── Turns/Triggers.cs    trigger events, Collect (APNAP, intervening "if"), PutOnStack with target choices
@@ -50,6 +51,7 @@ MagicCore/
 ├── Sets/Fra/FraCards.cs hand-written FRA abilities by name; IsImplemented
 ├── Sets/Fra/EmpowerJace.cs  the keyword action and the Jace token
 ├── Sets/Fra/FraDecks.cs 40-card decks of implemented cards (console, fuzz tests)
+├── Sets/Fra/ArenaDeck.cs  an Arena deck export → FRA cards, every problem named
 ├── Ai/GreedyAi.cs       one-ply simulate-and-evaluate AI
 ├── Zones/Zone.cs        per-player zones (incl. Command: emblems) + shared Stack; per-CONTROLLER battlefield
 └── Sets/FRA.json        imported by tools/import_scryfall_set.py — embedded resource, never hand-edit

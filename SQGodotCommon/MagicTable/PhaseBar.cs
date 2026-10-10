@@ -42,7 +42,7 @@ public partial class PhaseBar : VBoxContainer
 			var row = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
 			row.AddThemeConstantOverride("separation", 2);
 			AddChild(row);
-			row.AddChild(Label(mine ? "You" : "AI", 60));
+			row.AddChild(Label(m.State.GetPlayer(mine ? m.HumanId : m.OpponentId).Name, 60));
 			var active = (game.ActivePlayerId == m.HumanId) == mine;
 			foreach (var (step, label) in Steps)
 			{
