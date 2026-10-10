@@ -7,8 +7,10 @@ using MagicCore.Effects;
 namespace MagicCore.Turns;
 
 /// <param name="Types">What it was as it entered — Karn, Argent Defender asks, whatever it is by the next priority.</param>
+/// <summary>A permanent entered the battlefield — raised by MagicState.EnterBattlefield, the one way in.</summary>
 public record EnteredBattlefieldEvent(int CardId, CardType Types = CardType.None) : GameEvent;
 
+/// <summary>A creature was declared as an attacker — one event per attacker.</summary>
 public record AttackedEvent(int CardId) : GameEvent;
 
 /// <summary>Attackers were declared — one event however many ("whenever you attack").</summary>
@@ -19,6 +21,7 @@ public record CombatDamageToPlayersEvent(ImmutableList<int> PlayerIds) : GameEve
 
 /// <param name="NoncreatureSpellNumber">Which noncreature spell of the caster's turn this is — 0 for a creature.</param>
 /// <param name="Copies">Way of the Cryomancer: delayed "copy that spell" triggers this cast set off.</param>
+/// <summary>A spell was cast — raised by CastSpellAction.PutOnStack (copies are not cast, and raise none).</summary>
 public record SpellCastEvent(
 	int CardId,
 	int PlayerId,
@@ -33,6 +36,7 @@ public record DiedEvent(Card LastKnown) : GameEvent
 	public ImmutableList<Card> Attached { get; init; } = [];
 }
 
+/// <summary>A player was dealt damage — by Rules.Damage.Deal, combat or not.</summary>
 public record PlayerDealtDamageEvent(int PlayerId, bool Combat, int SourceId) : GameEvent;
 
 /// <summary>A creature was dealt damage — Hexhaven Invigorator's "that many" is Amount.</summary>
@@ -41,8 +45,10 @@ public record CreatureDealtDamageEvent(int CardId, int Amount) : GameEvent;
 /// <summary>A step began — "at the beginning of …". Raised for the steps scripted cards trigger on.</summary>
 public record StepBeganEvent(Step Step) : GameEvent;
 
+/// <summary>A creature was declared as a blocker.</summary>
 public record BlocksEvent(int CardId) : GameEvent;
 
+/// <summary>A player surveilled — raised only by Surveil (MagicCore has no Scry yet; "whenever you scry" would need it to raise this too).</summary>
 public record SurveilledEvent(int PlayerId) : GameEvent;
 
 /// <summary>A player discarded these cards — one event per discard, however many cards.</summary>

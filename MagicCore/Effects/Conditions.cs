@@ -28,6 +28,7 @@ public record TargetIs(int Index, CardType Type, Supertype Supertype = Supertype
 			.Any(c => c.Is(Type) && (Supertype == Supertype.None || c.Is(Supertype)));
 }
 
+/// <summary>Koth: "if it's a Mountain" — the trigger event's card has this subtype.</summary>
 public record EventCardHasSubtype(string Subtype) : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
@@ -48,6 +49,7 @@ public record YourLibraryIsEmpty : Condition
 		!s.CardsIn((int)context[ContextKeys.Controller], ZoneType.Library).Any();
 }
 
+/// <summary>The opposite of a condition — "isn't", "wasn't", "unless".</summary>
 public record Not(Condition Inner) : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>

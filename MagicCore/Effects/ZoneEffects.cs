@@ -10,6 +10,7 @@ namespace MagicCore.Effects;
 
 // Effects that move cards between zones: destroy, exile, sacrifice, return, discard, surveil, tokens.
 
+/// <summary>"Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).</summary>
 public record Destroy(Ref What) : Effect
 {
 	public override ActionResult Execute(GameState s) => new(All(s, Permanents(What, s)));
@@ -164,6 +165,7 @@ public record GraveyardHasCopiesOfSource(int N) : Condition
 		&& Copies(s, (int)context[ContextKeys.Controller], source).Count() >= N;
 }
 
+/// <summary>"Exile [What]" — permanents, to their owners' exile.</summary>
 public record Exile(Ref What) : Effect
 {
 	/// <summary>Overwrite the Multiverse: "… where X is the number of creatures exiled this way" — run after, with X.</summary>
@@ -251,6 +253,7 @@ public record ReturnChosenToHandIfManaValueAtMost(Count Max) : Effect
 	}
 }
 
+/// <summary>"Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield (its "enters" fires), Draconic Visitor's replacement applied.</summary>
 public record CreateTokens(CardData Token, Count Count) : Effect
 {
 	/// <summary>The token's own abilities — the Heartwood's "{T}: Add {R} or {G}."</summary>

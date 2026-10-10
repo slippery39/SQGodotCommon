@@ -9,6 +9,10 @@ from it and own the copy — the two rule sets diverge on combat, mana and the s
 **Grep MtgCore FIRST for every mechanic a batch needs** (flashback, mill, library search, discard,
 exhaust … are already there) — copy and adapt what fits, and say what was lifted in the batch report.
 
+**Building cards: `/card-batch`.** What exists: **`AbilityCatalog.md`** (generated — read it instead of
+the engine source). How to script: **`Cookbook.md`**. Every card's script beside its printed text:
+**`FraCardSheet.md`** (generated). Regenerate both with `python tools/magic_docs.py` after any change.
+
 ## Source map
 
 ```
@@ -40,6 +44,9 @@ MagicCore/
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions)
 ├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
 ├── FraCoverage.md       what FRA is scripted, what waits and why — status, not rules
+├── AbilityCatalog.md    GENERATED: every effect, trigger, ref, count, condition, component — one line each
+├── FraCardSheet.md      GENERATED: each FRA card's printed text, its script, the pieces it uses, its tests
+├── Cookbook.md          how to script a card, by pattern; the tiers of checking
 ├── Rules/Attachments.cs THE Aura/Equipment rules: attach, what's on a permanent, fall-off (state-based)
 ├── Rules/Playable.cs    THE "may it be cast/played from here": hand, flashback, prepared copy, impulse exile
 ├── Rules/Prepare.cs     THE prepare rules: become prepared (a copy of the spell in exile), castable, unprepare
@@ -104,6 +111,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   statics went stale exactly there. "Can't be blocked" is a keyword-like grant (`Combat.CantBeBlocked`).
   ONE exception: an Aura's type change (Puppet Crafting) is stamped, because every rule reads
   `card.Is(Creature)` — put right by the state-based check before anyone gets priority.
+- **Every engine piece carries a `///` summary that names a card and quotes its text.** The catalog
+  is generated from those summaries — a piece without one is invisible to the next session.
 - **Each mechanic's rules** — planeswalkers, modes, step triggers and "this turn", flashback, prepare,
   abilities from the hand and graveyard, hexproof and indestructible, Auras and Equipment, countering
   and ward, reflexive and intervening triggers — are in `.claude/rules/magic-mechanics.md`, which

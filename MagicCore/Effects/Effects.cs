@@ -30,6 +30,7 @@ public abstract record Effect : GameAction
 	protected static GameState Update(GameState s, Card card) => s.UpdateObject(card.Id, card);
 }
 
+/// <summary>"[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.</summary>
 public record DrawCards(Ref Who, Count Amount) : Effect
 {
 	public override ActionResult Execute(GameState s)
@@ -39,6 +40,7 @@ public record DrawCards(Ref Who, Count Amount) : Effect
 	}
 }
 
+/// <summary>"[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".</summary>
 public record GainLife(Ref Who, int Amount) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
@@ -135,6 +137,7 @@ public record ModifyUntilEndOfTurn(Ref What, Count Power, Count Toughness, strin
 	}
 }
 
+/// <summary>"Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters (Yoshimaru's replacement applies). Negative removes.</summary>
 public record AddCounters(Ref What, Count Amount) : Effect
 {
 	public override ActionResult Execute(GameState s)
@@ -458,6 +461,7 @@ public record Fight(Ref A, Ref B) : Effect
 	}
 }
 
+/// <summary>"Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.</summary>
 public record Untap(Ref What) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
@@ -604,6 +608,7 @@ public record AddChargeCounters(Ref What, int N) : Effect
 		);
 }
 
+/// <summary>"Tap [What]" — permanents only.</summary>
 public record Tap(Ref What) : Effect
 {
 	public override ActionResult Execute(GameState s) =>

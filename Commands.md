@@ -37,6 +37,23 @@ is stale while curl's is fine; the certifi bundle works. Re-runs skip files alre
 `MagicTable/*` (45 MB) is excluded from both Android presets, but `export_presets.cfg` is
 **gitignored** — a fresh clone ships it in the APK until the filter is re-added there.
 
+## MagicCore card work — the tools (`/card-batch` says when)
+
+```
+python tools/magic_set.py text "Card Name" …        # printed text (--missing: every unplayable card)
+python tools/magic_set.py coverage                  # playable by rarity
+python tools/magic_docs.py                          # regenerate AbilityCatalog.md + FraCardSheet.md (--check: stale?)
+python tools/edit.py SPEC                           # @@ path / <<<< OLD / ==== NEW / >>>> END — all or none
+python -u tools/revert_check.py SPEC                # @@ path | TestFilter — break, confirm the test fails, restore
+MAGIC_PROBE_CARDS="A;B" dotnet test MagicCore.Tests --filter "FullyQualifiedName~CardProbeTests"
+tools/bench_vs_head.sh [filter] [rounds]            # timing vs HEAD (builds HEAD in a worktree)
+python tools/usage_report.py [SESSION_ID | --all]   # what a Claude session cost, by batch
+```
+
+`edit.py` matches line endings and tolerates indentation differences, and on a miss prints the
+nearest lines. `revert_check.py` restores with a fresh mtime and a timeout — a "NOT CAUGHT" row
+means the test is vacuous or the revert aimed at the wrong line.
+
 ## Play Reality Fracture against the AI (MagicCore)
 
 ```
