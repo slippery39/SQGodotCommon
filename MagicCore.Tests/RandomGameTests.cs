@@ -4,17 +4,20 @@ using MagicCore.Sets.Fra;
 namespace MagicCore.Tests;
 
 /// <summary>
-/// Whole games of random legal moves and random choice answers. Asserts only that the engine never
-/// throws and every game ends — a net under everything the focused tests do not think of.
+/// Whole games of random legal moves and random choice answers. Asserts that the engine never throws,
+/// every game ends — a net under everything the focused tests do not think of — and that each game
+/// plays exactly as recorded (<see cref="GoldenReplay"/>), so a refactor can prove it changed nothing.
 /// </summary>
 public class RandomGameTests
 {
+	static readonly GoldenReplay Replays = new("GoldenReplay.txt");
+
+	[OneTimeTearDown]
+	public void SaveReplays() => Replays.WriteIfUpdating();
+
 	[Test]
 	public void RandomPlay_VanillaFiller_AlwaysFinishes([Range(1, 30)] int seed) =>
-		Assert.That(
-			PlayRandomly(TestGames.New(seed), seed).IsOver(),
-			$"seed {seed} did not finish"
-		);
+		PlayAndCheck("VanillaFiller", TestGames.New(seed), seed, $"seed {seed}");
 
 	[Test]
 	public void RandomPlay_RealFraDecks_AlwaysFinishes([Range(1, 90)] int seed)
@@ -25,10 +28,7 @@ public class RandomGameTests
 		var (first, second) = pairs[seed % pairs.Count];
 
 		var s = MagicRules.NewGame(FraDecks.All[first], FraDecks.All[second], seed);
-		Assert.That(
-			PlayRandomly(s, seed).IsOver(),
-			$"seed {seed} ({first} vs {second}) did not finish"
-		);
+		PlayAndCheck("RealFraDecks", s, seed, $"seed {seed} ({first} vs {second})");
 	}
 
 	// Every scripted card, not just those in FraDecks: each seed deals all scripted nonland cards into
@@ -53,26 +53,68 @@ public class RandomGameTests
 			seed
 		);
 
-		Assert.That(PlayRandomly(s, seed).IsOver(), $"seed {seed} did not finish");
+		PlayAndCheck("EveryScriptedCard", s, seed, $"seed {seed}");
 	}
 
-	public static GameState PlayRandomly(GameState s, int seed)
+	static void PlayAndCheck(string game, GameState s, int seed, string name)
+	{
+		var trace = new GoldenReplay.Trace();
+		var end = PlayRandomly(s, seed, trace);
+		Assert.That(end.IsOver(), $"{name} did not finish");
+		Replays.Check(game, seed, trace, end);
+	}
+
+	/// <summary>
+	/// Random legal moves and random choice answers. By default a choice gets its fewest picks;
+	/// <paramref name="everyPath"/> also says "yes" and picks up to the most allowed (CardReplayTests).
+	/// </summary>
+	public static GameState PlayRandomly(
+		GameState s,
+		int seed,
+		GoldenReplay.Trace? trace = null,
+		bool everyPath = false,
+		int lastTurn = int.MaxValue,
+		Action<GameState, GameAction>? onMove = null
+	)
 	{
 		var rng = new Random(seed);
-		for (var i = 0; i < 20_000 && !s.IsOver(); i++)
+		for (var i = 0; i < 20_000 && !s.IsOver() && s.GetGame().TurnNumber <= lastTurn; i++)
 		{
 			if (s.GetPendingChoice() is { } choice)
 			{
-				var picks = choice.Options.OrderBy(_ => rng.Next()).Take(choice.MinChoices);
-				s = s.Choose(picks.Select(o => o.Id));
+				// Once: enumerating twice would draw from rng twice.
+				var picks = (everyPath ? EveryPath(choice, rng) : FewestPicks(choice, rng))
+					.Select(o => o.Id)
+					.ToList();
+				trace?.Step(
+					$"{Seat(s)} {choice.Options.Count} {Describe.Answer(s, choice, picks)}"
+				);
+				s = s.Choose(picks);
 				continue;
 			}
 			// Mulligan rarely, or random play mulligans to nothing and never reaches combat.
 			var pool = s.LegalActions()
 				.Where(a => a is not Actions.MulliganAction || rng.Next(10) == 0)
 				.ToList();
-			s = s.Act(pool[rng.Next(pool.Count)]);
+			var move = pool[rng.Next(pool.Count)];
+			trace?.Step($"{Seat(s)} {pool.Count} {Describe.Action(s, move)}");
+			onMove?.Invoke(s, move);
+			s = s.Act(move);
 		}
 		return s;
+	}
+
+	static string Seat(GameState s) => s.DecidingPlayerId() == s.Player1Id() ? "P1" : "P2";
+
+	static IEnumerable<ChoiceOption> FewestPicks(ChoiceAction choice, Random rng) =>
+		choice.Options.OrderBy(_ => rng.Next()).Take(choice.MinChoices);
+
+	static IEnumerable<ChoiceOption> EveryPath(ChoiceAction choice, Random rng)
+	{
+		var options = choice.Options.Where(o => o.IsEnabled).ToList();
+		// Never below the minimum: too few options is the engine's error to report, not a throw here.
+		var most = Math.Max(choice.MinChoices, Math.Min(choice.MaxChoices, options.Count));
+		var n = rng.Next(choice.MinChoices, most + 1);
+		return options.OrderBy(_ => rng.Next()).Take(n);
 	}
 }

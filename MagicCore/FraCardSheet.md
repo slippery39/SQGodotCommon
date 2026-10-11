@@ -648,7 +648,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** ArenaDeckTests, CardProbeTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, ManaTests, PlaneswalkerTests, RandomGameTests, StackTests, StopsTests, TestGames
+**Status:** basic land · **tests naming it:** ArenaDeckTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, ManaTests, PlaneswalkerTests, RandomGameTests, StackTests, StopsTests, TestGames
 
 ### Formidable Commons
 
@@ -877,7 +877,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {U}.)
 
-**Status:** basic land · **tests naming it:** CardProbeTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests
 
 ### Keeper of the Quiet Hour
 
@@ -1047,7 +1047,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {R}.)
 
-**Status:** basic land · **tests naming it:** CardProbeTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraEngineTests, FraRareOneOffTests, ManaTests, RandomGameTests
 
 ### Murmuring Volume
 
@@ -1104,7 +1104,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** CardProbeTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, ManaTests, RandomGameTests
 
 ### Predictive Preparations
 
@@ -1492,7 +1492,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {B}.)
 
-**Status:** basic land · **tests naming it:** ArenaDeckTests, CardProbeTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** ArenaDeckTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRareTests, ManaTests, RandomGameTests
 
 ### Tam's Resistance
 

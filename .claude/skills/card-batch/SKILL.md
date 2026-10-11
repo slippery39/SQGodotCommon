@@ -60,7 +60,9 @@ modify MtgCore. Tell Shayne the tiers and the new pieces in one short list befor
 - **Tier 1 check:** `python tools/magic_docs.py`, then read the batch's entries in
   `MagicCore/FraCardSheet.md`: printed text against script — a missing clause, a wrong "whose", the wrong
   target kind. That replaces a test for a card made of tested pieces.
-- The full suite once at the end: `dotnet test MagicCore.Tests`.
+- The full suite once at the end: `dotnet test MagicCore.Tests`. **`RandomGameTests` will fail on its
+  golden replay**: new cards change the random games. Regenerate both golden files and check that only
+  the expected games moved (Commands.md, "Golden replays").
 
 ## 4. Docs, review, commit
 

@@ -50,6 +50,21 @@ tools/bench_vs_head.sh [filter] [rounds]            # timing vs HEAD (builds HEA
 python tools/usage_report.py [SESSION_ID | --all]   # what a Claude session cost, by batch
 ```
 
+### Golden replays — "did this change any behaviour?" (MagicCore)
+
+```
+dotnet test MagicCore.Tests --filter "FullyQualifiedName~RandomGameTests"   # 150 games, in the normal suite
+dotnet test MagicCore.Tests --filter "FullyQualifiedName~CardReplayTests"   # every card, ~90 s, explicit
+$env:MAGIC_GOLDEN_UPDATE='1'; dotnet test MagicCore.Tests --filter "…"; Remove-Item Env:MAGIC_GOLDEN_UPDATE
+```
+
+Seeded games are fingerprinted in `MagicCore.Tests/GoldenReplay.txt` and `GoldenCardReplay.txt`.
+**Any behaviour change fails them, an intended one too** (a card fix, a new card in the random
+decks). Regenerate with the update line above, then read the diff: only the games you expected
+should change. A failure names the 100-step window where the game first differed, plus a trace file
+to read around it. The fingerprint includes `Describe`'s text and the ORDER of legal actions and
+choice options, so a change to either regenerates everything.
+
 `edit.py` matches line endings and tolerates indentation differences, and on a miss prints the
 nearest lines. `revert_check.py` restores with a fresh mtime and a timeout — a "NOT CAUGHT" row
 means the test is vacuous or the revert aimed at the wrong line.
