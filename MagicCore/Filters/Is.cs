@@ -1,0 +1,86 @@
+using MagicCore.Cards;
+using MagicCore.Targeting;
+
+namespace MagicCore.Filters;
+
+/// <summary>
+/// The filter vocabulary card scripts read: <c>Is.Creature &amp; Is.Yours &amp; !Is.Source</c> is "another
+/// creature you control". A new card needing a new PROPERTY adds a leaf here; one needing a new
+/// combination writes it with &amp; | ! in its script.
+/// </summary>
+public static class Is
+{
+	public static readonly Filter Creature = Type(CardType.Creature);
+	public static readonly Filter Planeswalker = Type(CardType.Planeswalker);
+	public static readonly Filter Land = Type(CardType.Land);
+	public static readonly Filter Artifact = Type(CardType.Artifact);
+	public static readonly Filter Enchantment = Type(CardType.Enchantment);
+	public static readonly Filter Instant = Type(CardType.Instant);
+	public static readonly Filter Sorcery = Type(CardType.Sorcery);
+	public static readonly Filter Legendary = Supertype(Cards.Supertype.Legendary);
+
+	/// <summary>"You control" — a card's controller, or you yourself.</summary>
+	public static readonly Filter Yours = new OfController(Whose.You);
+
+	/// <summary>"An opponent controls" — or an opponent.</summary>
+	public static readonly Filter Opponents = new OfController(Whose.Opponent);
+	public static readonly Filter Player = new HasProperty(Property.Player);
+
+	/// <summary>"This" — so "another" is !Is.Source.</summary>
+	public static readonly Filter Source = new HasProperty(Property.Source);
+
+	/// <summary>"That creature" — the card the trigger event was about.</summary>
+	public static readonly Filter EventCard = new HasProperty(Property.EventCard);
+
+	/// <summary>"Equipped creature", "enchanted creature".</summary>
+	public static readonly Filter AttachedToSource = new HasProperty(Property.AttachedToSource);
+	public static readonly Filter Token = new HasProperty(Property.Token);
+	public static readonly Filter Copy = new HasProperty(Property.Copy);
+	public static readonly Filter Prepared = new HasProperty(Property.Prepared);
+	public static readonly Filter PreparedCopy = new HasProperty(Property.PreparedCopy);
+	public static readonly Filter WithPlusOneCounter = new HasProperty(Property.PlusOneCounter);
+	public static readonly Filter EnteredThisTurn = new HasProperty(Property.EnteredThisTurn);
+	public static readonly Filter AttackedThisTurn = new HasProperty(Property.AttackedThisTurn);
+	public static readonly Filter Attacking = new HasProperty(Property.Attacking);
+	public static readonly Filter AttackingAPlayer = new HasProperty(Property.AttackingAPlayer);
+
+	/// <summary>"Attacks you or a planeswalker you control".</summary>
+	public static readonly Filter AttackingYou = new HasProperty(Property.AttackingYou);
+	public static readonly Filter Blocking = new HasProperty(Property.Blocking);
+
+	/// <summary>Gideon's Memorial: "attacking or blocking creature". Built from leaves, not fields: no init order.</summary>
+	public static readonly Filter InCombat =
+		new HasProperty(Property.Attacking) | new HasProperty(Property.Blocking);
+
+	/// <summary>None matches nothing — the old vocabularies' "None = any" is NO filter, so it throws.</summary>
+	public static Filter Type(CardType anyOf) =>
+		anyOf == CardType.None
+			? throw new ArgumentException("CardType.None: write no filter for \"any card\"")
+			: new OfType(anyOf);
+
+	public static Filter Supertype(Supertype anyOf) =>
+		anyOf == Cards.Supertype.None
+			? throw new ArgumentException("Supertype.None: write no filter for \"any card\"")
+			: new OfSupertype(anyOf);
+
+	public static Filter Subtype(string subtype) => new OfSubtype(subtype);
+
+	public static Filter Color(ManaColor color) => new OfColor(color);
+
+	/// <summary>"With flying" — granted keywords count.</summary>
+	public static Filter With(string keyword) => new HasKeyword(keyword);
+
+	public static Filter PowerAtLeast(int n) => new StatBetween(Stat.Power, n, int.MaxValue);
+
+	public static Filter PowerAtMost(int n) => new StatBetween(Stat.Power, int.MinValue, n);
+
+	public static Filter ToughnessAtLeast(int n) =>
+		new StatBetween(Stat.Toughness, n, int.MaxValue);
+
+	public static Filter ToughnessAtMost(int n) => new StatBetween(Stat.Toughness, int.MinValue, n);
+
+	public static Filter ManaValueAtLeast(int n) =>
+		new StatBetween(Stat.ManaValue, n, int.MaxValue);
+
+	public static Filter ManaValueAtMost(int n) => new StatBetween(Stat.ManaValue, int.MinValue, n);
+}

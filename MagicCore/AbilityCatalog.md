@@ -145,6 +145,20 @@ and (in brackets) how many FRA cards use it, with a few. Find one: `grep -rn "re
 - **`TargetManaValueAtMost(int Index, int Max)`** — Vindictive Triumph: "if that permanent's mana value was N or less" — read before it moves. [1: Vindictive Triumph]
 - **`YourLibraryIsEmpty`** — Fblthp: "If your library has no cards in it". [1: Fblthp, Impossibly Lost]
 
+## Filters — which objects; scripts write them through `Is` (`Filters/`)
+
+- **`AllOf(Filter A, Filter B)`** — "Nontoken creature": both.
+- **`AnyOf(Filter A, Filter B)`** — "Creature or planeswalker": either.
+- **`HasKeyword(string Keyword)`** — Konstrari Charm: "creature with flying" — through s.Has, so a granted keyword counts.
+- **`HasProperty(Property Property)`** — Gallia: "each other creature you control with a +1/+1 counter on it" — a yes/no property of one object.
+- **`NotFilter(Filter Inner)`** — "Noncreature", "another": not.
+- **`OfColor(ManaColor Color)`** — Terminal Criticism: "that's blue or red" — one colour each, joined with |.
+- **`OfController(Whose Whose)`** — Mabel: "creature you control"; Gideon the Oathless: "an opponent controls" — or the player itself.
+- **`OfSubtype(string Subtype)`** — Koth: "a Plains"; Saheeli: "Thopters".
+- **`OfSupertype(Supertype Supertypes)`** — Fateshaper Aspirant: "target legendary card" — any of these supertypes.
+- **`OfType(CardType Types)`** — Vraska: "artifact creatures"; "artifact or enchantment" — a card of ANY of these types.
+- **`StatBetween(Stat Stat, int Min, int Max)`** — Tetsuko: "power or toughness 1 or less"; Your Fate Ends Here: "mana value 3 or greater". Real P/T, through s.Power / s.Toughness — a…
+
 ## Components — abilities, statics, replacements, markers on a card
 
 - **`ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction> Effects)`** — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does not. [56: Yoshimaru, Scrappy Stray, Budding Insurgent, Living Library…]
@@ -324,7 +338,11 @@ and (in brackets) how many FRA cards use it, with a few. Find one: `grep -rn "re
 
 - **ManaRestriction**: `None`; `NotForSpellsFromHand` (Heartwood Crafter); `OnlyPlaneswalkerSpells` (Gideon's Memorial); `OnlyNoncreatureSpells` (Chandra, Chill of Compliance)
 
+- **Property**: `Player`; `Source` ("this", so !Is.Source is "another"); `EventCard` ("that creature"; !Is.EventCard is Roiling Canopy's "other"); `AttachedToSource` ("equipped/enchanted creature"); `Token`; `Copy`; `Prepared` (the creature is prepared (it has a copy of its spell in exile)); `PreparedCopy` (Codie: the copy of a prepare spell, cast from exile); `PlusOneCounter` ("with a +1/+1 counter on it"); `EnteredThisTurn`; `AttackedThisTurn`; `Attacking`; `AttackingAPlayer` (Garruk, Curse Breaker: not a planeswalker); `AttackingYou` (Jace, Reality Sculptor: "attacks you or a planeswalker you control"); `Blocking`
+
 - **ReplaceableEvent**: `NoncombatDamageToOpponent` (Tomik: "a source you control … to an opponent or a permanent an opponent controls"); `PlusOneCountersOnYourCreature` (Yoshimaru: "+1/+1 counters would be put on a creature you control")
+
+- **Stat**: `Power`; `Toughness`; `ManaValue` (on the stack X counts (CR 202.3e))
 
 - **StaticCondition**: `Always`; `YouControlAJacePlaneswalker`
 
@@ -338,6 +356,7 @@ and (in brackets) how many FRA cards use it, with a few. Find one: `grep -rn "re
 
 - **Ref**: `Ref.You`; `Ref.EachOpponent`; `Ref.EachPlayer`; `Ref.Source`; `Ref.EventCard`; `Ref.EventObject`; `Ref.CreaturesYouControl`; `Ref.LandsYouControl`; `Ref.PlaneswalkersYouControl`; `Ref.AllCreatures`; `Ref.CardsInYourGraveyard`; `Ref.CardsInYourHand`; `Ref.ControllerOfEventCard`; `Ref.YourCreaturesWithCounters`; `Ref.CreaturesExceptYourTokens`; `Ref.TokensYouControl`; `Ref.EnchantedCreature`; `Ref.OtherCreaturesYouControl`; `Ref.YourGraveyard`; `Ref.OpponentsPermanents`; `Ref.Target`; `Ref.ControllerOfTarget`; `Ref.OwnerOfTarget`; `Ref.PermanentsOfTargetPlayer`
 - **Count**: `Count.NumberOf`; `Count.GreatestPowerOf`; `Count.GreatestManaValueOf`; `Count.DistinctPowersOf`; `Count.ColorsAmong`; `Count.PowerOf`; `Count.LoyaltyOf`; `Count.X`; `Count.CountersOn`; `Count.ChargeCountersOn`; `Count.TotalLoyaltyOf`; `Count.SubtypesAmong`; `Count.CardsFromLibraryToGraveyardThisTurn`; `Count.NonlandCardsChosen`; `Count.LifeYouGainedThisTurn`; `Count.CardsYouDrewThisTurn`; `Count.CardsYouDiscardedThisTurn`; `Count.LoyaltyAbilitiesYouActivatedThisTurn`; `Count.CardTypesInAllGraveyards`; `Count.BasicLandTypesAmongLandsYouControl`; `Count.YourSurveilsThisTurn`; `Count.SpellsYouCastThisTurn`; `Count.NoncombatDamageToOpponentsLastTurn`; `Count.NoncombatDamageToOpponentsThisTurn`; `Count.CreaturesDiedThisTurn`; `Count.CreaturesYouControl`; `Count.LandsYouControl`
+- **Is**: `Is.Creature`; `Is.Planeswalker`; `Is.Land`; `Is.Artifact`; `Is.Enchantment`; `Is.Instant`; `Is.Sorcery`; `Is.Legendary`; `Is.Yours`; `Is.Opponents`; `Is.Player`; `Is.Source`; `Is.EventCard`; `Is.AttachedToSource`; `Is.Token`; `Is.Copy`; `Is.Prepared`; `Is.PreparedCopy`; `Is.WithPlusOneCounter`; `Is.EnteredThisTurn`; `Is.AttackedThisTurn`; `Is.Attacking`; `Is.AttackingAPlayer`; `Is.AttackingYou`; `Is.Blocking`; `Is.InCombat`; `Is.Type`; `Is.Supertype`; `Is.Subtype`; `Is.Color`; `Is.With`; `Is.PowerAtLeast`; `Is.PowerAtMost`; `Is.ToughnessAtLeast`; `Is.ToughnessAtMost`; `Is.ManaValueAtLeast`; `Is.ManaValueAtMost`
 
 ## FraCards script helpers (`MagicCore/Sets/Fra/FraCards.cs`)
 

@@ -27,6 +27,7 @@ SHEET = CORE / "FraCardSheet.md"
 SECTIONS = [
     ("Effect", "Effects — what a card does (`Effects/*.cs`)"),
     ("Condition", "Conditions — \"if …\" (`Effects/Conditions.cs`)"),
+    ("Filter", "Filters — which objects; scripts write them through `Is` (`Filters/`)"),
     ("GameComponent", "Components — abilities, statics, replacements, markers on a card"),
     ("ChoiceAction", "Choices — what a player is asked"),
     ("GameEvent", "Events — what triggers listen for (`Turns/Triggers.cs`)"),
@@ -239,9 +240,11 @@ def catalog(types, enums, blocks, helpers, users):
         items = "; ".join(f"`{n}`" + (f" ({c})" if c else "") for n, c in enums[e])
         out += [f"- **{e}**: {items}", ""]
     out += ["## Named shortcuts", ""]
-    for type_name, path in (("Ref", CORE / "Effects" / "Refs.cs"), ("Count", CORE / "Effects" / "Refs.cs")):
+    for label, type_name, path in (("Ref", "Ref", CORE / "Effects" / "Refs.cs"),
+                                   ("Count", "Count", CORE / "Effects" / "Refs.cs"),
+                                   ("Is", "Filter", CORE / "Filters" / "Is.cs")):
         items = parse_static_members(path, type_name)
-        out.append(f"- **{type_name}**: " + "; ".join(f"`{type_name}.{n}`" for n, _ in items))
+        out.append(f"- **{label}**: " + "; ".join(f"`{label}.{n}`" for n, _ in items))
     out += ["", "## FraCards script helpers (`MagicCore/Sets/Fra/FraCards.cs`)", ""]
     for name, d in helpers:
         out.append(f"- `{name}` — {d}{ss(name)}")

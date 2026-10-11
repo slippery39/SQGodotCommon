@@ -40,6 +40,9 @@ MagicCore/
 ├── Effects/Conditions.cs  "if …": Condition, AtLeast(Count, N), Not, target/event tests
 ├── Effects/Modes.cs     Mode, Modal.Compose (chosen modes → one target list + steps), ScopeTargetsAction
 ├── Targeting/TargetSpec.cs  one legality test for choosing AND resolving; Combinations
+├── Filters/            "which objects": Filter (& | !), leaves, and `Is` — the vocabulary scripts read.
+│                        Not used by the engine yet (FilterRefactorPlan.md phase 2 on); migration table:
+│                        MagicCore.Tests/Filters/FilterMigrationTests.cs
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions)
 ├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield

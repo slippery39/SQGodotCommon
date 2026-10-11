@@ -77,13 +77,42 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
   **`Describe`'s text** (phase 6 touches costs that `Describe.WhichAbility` reads). Otherwise everything
   diverges while behaving identically.
 
-### Phase 1: the filter language (new code only, nothing uses it yet)
+### Phase 1: the filter language ✅ done 2026-10-11 (new code only, nothing uses it yet)
 - `MagicCore/Filters/`: `Filter`, `AllOf` / `AnyOf` / `NotFilter`, `FilterContext`, the leaves, `Is`.
 - Tests: each leaf, the operators, last-known objects. Plus a **migration table test**: every
   `RefKind`, `TargetSpec` field, `Affects` value and filter-shaped `TriggerEvent` written as a
   filter expression and checked against the old code on a test board. That table is also the
   guide for phases 2–5.
 - `tools/magic_docs.py`: catalog the `Is` leaves (the generator reads enums today).
+- **Built:** `MagicCore/Filters/Filter.cs` (base, `AllOf`/`AnyOf`/`NotFilter`, `FilterContext`, leaves:
+  `OfType`, `OfSupertype`, `OfSubtype`, `OfColor`, `HasKeyword`, `OfController`, `StatBetween`, and
+  `HasProperty(Property)` for the yes/no ones) and `Filters/Is.cs`. Type and supertype leaves take flags
+  and match ANY of them (`card.Is`). `Is.InCombat` is `Attacking | Blocking`, not a leaf.
+- **The migration table is `MagicCore.Tests/Filters/FilterMigrationTests.cs`** on `FilterBoard` (one of
+  everything, every zone). Each row checks the old code against zone + filter, SAME ORDER; a
+  completeness test per vocabulary fails when a value is in neither the rows nor a "not a filter" list
+  (Ref referents, TargetSpec's `Optional`/`NotThePrevious`, what a static does, and the trigger lists
+  `EventAndWho`, `Residue` (8), `ReadFromTheCard`). Old private code is reached by reflection
+  (`Triggers.Matches`/`OfSubtype`, `Characteristics.AppliesTo`); a phase that deletes one moves its rows.
+  Proven: one mutated leaf failed 4 rows across Ref, TargetSpec, statics and the leaf test.
+- **Found while writing the rows — decide in the phase named:**
+  - Order differs by vocabulary: a `Ref` lists YOUR objects first, `TargetSpec` player 1's. The board's
+    "you" is player 2, so the rows pin both (phases 2, 3).
+  - `SpellOrCreature` is two clauses, `(Battlefield, Is.Creature)` + `(Stack, any)`: "spell" is a zone,
+    not a property. So `From` takes several zones each with its own filter, or this stays a special case (phase 2).
+  - Mana value: `TargetSpec` reads `ManaCost.ManaValue` in a graveyard and `ManaValueNow` elsewhere;
+    `Is.ManaValue…` reads `ManaValueNow` everywhere, equal off the stack (X is 0 there).
+  - "Each creature target player controls" is written as a zone from a Ref (`TargetPlayersBattlefield`),
+    the simpler answer to phase 3's open question — FilterContext doesn't carry targets.
+  - A `Ref`'s or trigger's "any card" has no filter (null), not a match-all leaf. `Is.Type(None)`
+    THROWS: the old "None = any" ported mechanically would match nothing — an inert card.
+  - `Is.Source` / `Is.EventCard` compare ids, as the old code does; `Ref.Source` also checks
+    Incarnation. A flickered source in a filter ("each OTHER creature") — decide in phase 3.
+  - `Is.AttachedToSource` looks the source up live (as `Affects.AttachedCreature` does). The LKI
+    host stays `Ref.SourceHost`. `Is.PowerAtMost` matches noncreatures (power 0), as the old code did.
+- **Test trap:** NUnit's `Is` collides with `MagicCore.Filters.Is`. A test file using filters aliases
+  both: `using Is = MagicCore.Filters.Is; using Nu = NUnit.Framework.Is;`. Card test files will need
+  this from phase 2 on.
 
 ### Phase 2: TargetSpec
 - `TargetSpec(From, Filter)` + `Optional`, `NotThePrevious` + targeting rules. `TargetKind` becomes
@@ -149,8 +178,8 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 ## The gate (every phase)
 
 - Both golden replays identical: `RandomGameTests` (in the suite) and `CardReplayTests` (explicit).
-  All tests green, and counts never go down (MagicCore.Tests 762 + 277 explicit, SQGodotCommon.Tests
-  137 at the start).
+  All tests green, and counts never go down (MagicCore.Tests 880 + 277 explicit, SQGodotCommon.Tests
+  150 after phase 1).
 - `tools/bench_vs_head.sh` for phases 2–5: they sit under the AI (`Candidates`, `Resolve`,
   `Characteristics`).
 - `python tools/magic_docs.py`. The `FraCardSheet.md` diff shows the scripts changed shape and nothing else.
@@ -170,7 +199,7 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 ## Status
 
 - [x] Phase 0: golden replay (2026-10-10)
-- [ ] Phase 1: filter language
+- [x] Phase 1: filter language (2026-10-11)
 - [ ] Phase 2: TargetSpec
 - [ ] Phase 3: Ref, Count
 - [ ] Phase 4: statics, conditions
