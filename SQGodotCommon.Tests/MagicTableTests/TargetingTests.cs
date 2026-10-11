@@ -3,6 +3,8 @@ using System.Linq;
 using ImmutableGameObjects;
 using MagicCore;
 using MagicCore.Actions;
+using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Sets.Fra;
 using MagicTable;
 using NUnit.Framework;
@@ -146,6 +148,56 @@ public class TargetingTests
 			"then the target is clicked"
 		);
 		Assert.That(Targeting.What(sacrificing[0], 1), Is.EqualTo("what to sacrifice"));
+	}
+
+	[Test]
+	public void AModalSpell_ListsEveryMode_TheImpossibleOneGreyedWithWhy()
+	{
+		var m = new MagicTableManager(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], 5);
+		m.AutoplayTo(3);
+		while (m.StepAi() is not null) { }
+		foreach (
+			var (name, zone) in new[]
+			{
+				("Plains", ZoneType.Battlefield),
+				("Plains", ZoneType.Battlefield),
+				("Surgical Precision", ZoneType.Hand),
+			}
+		)
+		{
+			while (!m.CanSandbox && m.StepAi() is not null) { }
+			m.Sandbox(m.HumanId, FraCards.Get(name), zone);
+		}
+		while (m.StepAi() is not null) { }
+		var s = m.State;
+		var precision = s.CardsIn(m.HumanId, ZoneType.Hand)
+			.Single(c => c.Name == "Surgical Precision")
+			.Id;
+		var spell = s.GetCard(precision).GetComponent<SpellEffectsComponent>()!;
+		var bound = spell.Modes[0].Targets[0].MinToughness; // read from the script, not restated
+		Assert.That(
+			new[] { m.HumanId, m.OpponentId }
+				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
+				.Where(c => c.Is(CardType.Creature))
+				.All(c => s.Toughness(c) < bound),
+			"precondition: no creature the destroy mode could target"
+		);
+		var moves = s.DistinctMoves(s.LegalActions())
+			.Where(a => s.IsMoveFor(a, precision))
+			.ToList();
+		Assert.That(moves, Is.Not.Empty, "precondition: castable");
+
+		var modes = Targeting.Modes(s, precision, moves)!;
+
+		Assert.That(
+			modes,
+			Has.Count.EqualTo(spell.Modes.Count),
+			"every mode, not just the legal one"
+		);
+		Assert.That(modes[0].Moves, Is.Empty);
+		Assert.That(modes[0].Label, Does.Contain("(no legal targets)"));
+		Assert.That(modes[1].Moves, Is.Not.Empty);
+		Assert.That(modes[1].Label, Is.EqualTo(Describe.Modes(spell.Modes, [1])));
 	}
 
 	[Test]

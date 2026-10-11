@@ -54,6 +54,10 @@ MagicTable/
 - **Every pick is clicked, even when only one is legal** (Shayne: a spell casting itself was a
   surprise; Arena and MTGO ask) — targets, then a cost's sacrifice / discard / behold / exile.
   "Sacrifice or pay" is chosen as a WAY first (`Targeting.Ways`), never listed per combination.
+- **A modal spell asks for its mode, always** (`Targeting.Modes`): every mode listed, one that can't
+  be chosen greyed with why — Surgical Precision used to cast its only legal mode by itself.
+- **The hand overlaps to fit** (`FitHand`) — 8 cards hid the last behind a scrollbar. The row is
+  `ShowNever`, not `Disabled`: Disabled sized it to the whole hand and pushed the right column off.
 - **Action-column buttons wrap** (`AddButton`): a long label once grew a button off the screen.
   Lists use the plain plate in the body font; only main actions use the big oxblood style.
 - **Glows:** gold playable, blue clickable now, green picked, white what it is about, red/blue in

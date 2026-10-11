@@ -116,8 +116,12 @@ public static class Describe
 
 	static string ModeText(GameState s, CastSpellAction c) =>
 		s.GetCard(c.CardId).GetComponent<Effects.SpellEffectsComponent>() is { } text
-			? string.Join(" + ", c.Modes.Select(i => text.Modes[i].Text.TrimStart('•', ' ')))
+			? Modes(text.Modes, c.Modes)
 			: "";
+
+	/// <summary>The chosen modes' printed lines, "Destroy … + You draw a card …" — for every front end.</summary>
+	public static string Modes(IReadOnlyList<Effects.Mode> modes, IEnumerable<int> chosen) =>
+		string.Join(" + ", chosen.Select(i => modes[i].Text.TrimStart('•', ' ')));
 
 	static string Name(GameState s, int id) => s.HasObject(id) ? s.GetObject(id).Name : $"#{id}";
 

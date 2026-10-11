@@ -84,7 +84,9 @@ public partial class MagicTableScene : Control
 	];
 
 	// What the table is asking, beyond the engine's own state. Any input (Do) clears the first two.
-	private List<(string Label, List<GameAction> Moves)>? _plays; // a clicked card's plays, when it has several
+	// A clicked card's plays when it has several, with what the list asks ("Choose a play:",
+	// "X — choose a mode") — one value, so a list can never show another's title.
+	private (string Title, List<(string Label, List<GameAction> Moves)> Items)? _plays;
 	private (List<GameAction> Candidates, int Index)? _targeting; // a play waiting for a target click
 	private BoardChoice? _boardChoice; // the pending choice, when it is answered on the table
 
@@ -327,6 +329,7 @@ public partial class MagicTableScene : Control
 						: null
 				)
 			);
+		FitHand();
 
 		ShowStack(s, id => GlowOf(id, null));
 		ShowButtons(s, moves);
@@ -393,14 +396,26 @@ public partial class MagicTableScene : Control
 		}
 		else if (s.HasObject(id) && s.GetObject(id) is Card)
 		{
-			var plays = Targeting.Plays(s, Moves().Where(a => s.IsMoveFor(a, id)));
+			var mine = Moves().Where(a => s.IsMoveFor(a, id)).ToList();
+			// A modal spell asks for its mode first — every mode shown, the impossible ones greyed.
+			if (Targeting.Modes(s, id, mine) is { } modes)
+			{
+				var others = Targeting.Plays(s, mine.Where(a => a is not CastSpellAction));
+				_plays = (
+					$"{s.GetCard(id).Name} — choose a mode{(others.Count > 0 ? " or a play" : "")}",
+					[.. modes, .. others.Select(p => (PlayLabel(s, p), p))]
+				);
+				Refresh();
+				return;
+			}
+			var plays = Targeting.Plays(s, mine);
 			// Arena's manual tapping: clicking your land (or mana creature) floats its mana.
 			plays.AddRange(s.TapOptions(_m.HumanId, id).Select(t => new List<GameAction> { t }));
 			if (plays.Count == 1)
 				Play(plays[0], 0);
 			else if (plays.Count > 1)
 			{
-				_plays = plays.Select(p => (PlayLabel(s, p), p)).ToList();
+				_plays = ("Choose a play:", plays.Select(p => (PlayLabel(s, p), p)).ToList());
 				Refresh();
 			}
 		}
@@ -416,9 +431,22 @@ public partial class MagicTableScene : Control
 			return;
 		}
 		// Not told apart by clicks (sacrifice or pay): choose the way, then click its picks.
-		_plays = index < 0 ? Targeting.Ways(_m.State, candidates) : null;
+		_plays = index < 0 ? ("Choose a play:", Targeting.Ways(_m.State, candidates)) : null;
 		_targeting = index < 0 ? null : (candidates, index);
 		Refresh();
+	}
+
+	/// <summary>
+	/// A hand too wide for the row overlaps, as on Arena, instead of hiding its last cards behind a
+	/// scrollbar (8 cards did). The hover preview shows the whole card.
+	/// </summary>
+	private void FitHand()
+	{
+		var count = _hand.GetChildCount();
+		var width = ((Control)_hand.GetParent()).Size.X;
+		var room =
+			count < 2 || width <= 0 ? 4 : (width - count * CardViews.HandSize.X) / (count - 1);
+		_hand.AddThemeConstantOverride("separation", Mathf.Min(4, Mathf.FloorToInt(room))); // floor: a truncated overlap still clipped the last card
 	}
 
 	/// <summary>A play's button: in full when there is nothing left to click, its picks left out otherwise.</summary>
@@ -547,11 +575,12 @@ public partial class MagicTableScene : Control
 			AddButton("Cancel  (Esc)", () => { });
 			return;
 		}
-		if (_plays is not null)
+		if (_plays is var (title, items))
 		{
-			_status.Text = "Choose a play:";
-			foreach (var (label, play) in _plays)
-				AddButton(label, () => Play(play, 0), redraw: false, option: true);
+			_status.Text = title;
+			foreach (var (label, play) in items)
+				AddButton(label, () => Play(play, 0), redraw: false, option: true).Disabled =
+					play.Count == 0; // a mode that can't be chosen now: shown, greyed
 			AddButton("Cancel  (Esc)", () => { });
 			return;
 		}
@@ -679,14 +708,17 @@ public partial class MagicTableScene : Control
 		_oppField.SizeFlagsVertical = _myField.SizeFlagsVertical = SizeFlags.ExpandFill;
 		foreach (var part in new Control[] { _oppLands, _oppField, _phases, _myField, _myLands })
 			center.AddChild(part);
-		_hand.AddThemeConstantOverride("separation", 4);
-		var handScroll = new ScrollContainer
+		var handRow = new ScrollContainer
 		{
 			CustomMinimumSize = new Vector2(0, CardViews.HandSize.Y + 12),
 			VerticalScrollMode = ScrollContainer.ScrollMode.Disabled,
+			// ShowNever, not Disabled: Disabled makes the row as wide as the whole hand and pushes
+			// the right column off the screen. The cards overlap to fit (FitHand), so it never scrolls.
+			HorizontalScrollMode = ScrollContainer.ScrollMode.ShowNever,
 		};
-		handScroll.AddChild(_hand);
-		center.AddChild(handScroll);
+		handRow.AddChild(_hand);
+		handRow.Resized += FitHand;
+		center.AddChild(handRow);
 		columns.AddChild(center);
 
 		var right = Column(430);

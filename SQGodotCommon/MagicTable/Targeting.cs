@@ -3,6 +3,7 @@ using System.Linq;
 using ImmutableGameObjects;
 using MagicCore;
 using MagicCore.Actions;
+using MagicCore.Effects;
 
 namespace MagicTable;
 
@@ -55,6 +56,47 @@ public static class Targeting
 			.GroupBy(m => $"{Label(s, m)}|{(m as ActivateAbilityAction)?.AbilityIndex}")
 			.Select(g => g.ToList())
 			.ToList();
+
+	/// <summary>
+	/// Arena's mode picker: every mode of a modal spell (every combination, for "choose two"), each
+	/// with the legal casts that choose it. A mode that can't be chosen now has none — the table
+	/// greys it, saying why — so a spell with one legal mode still asks (Shayne, 2026-10-09: Surgical
+	/// Precision cast its only legal mode by itself). Null when the card's casts aren't modal.
+	/// </summary>
+	public static List<(string Label, List<GameAction> Moves)>? Modes(
+		GameState s,
+		int cardId,
+		IReadOnlyList<GameAction> moves
+	)
+	{
+		var casts = moves.OfType<CastSpellAction>().ToList();
+		if (
+			casts.Count == 0
+			|| s.GetCard(cardId).GetComponent<SpellEffectsComponent>()
+				is not { Modes.IsEmpty: false } spell
+		)
+			return null;
+		return Modal
+			.Choices(spell.Modes, spell.Choose)
+			.SelectMany(combo =>
+			{
+				var text = Describe.Modes(spell.Modes, combo);
+				var legal = casts.Where(c => c.Modes.Order().SequenceEqual(combo)).ToList();
+				// "No legal targets" only when that is surely why: one mode, and it targets.
+				var why =
+					combo is [var only] && !spell.Modes[only].Targets.IsEmpty
+						? "no legal targets"
+						: "not possible now";
+				if (legal.Count == 0)
+					return [($"{text}  ({why})", new List<GameAction>())];
+				// X is chosen with the mode, before any target is clicked.
+				var byX = legal.GroupBy(c => c.X).ToList();
+				return byX.Select(g =>
+					(byX.Count > 1 ? $"{text} (X={g.Key})" : text, g.Cast<GameAction>().ToList())
+				);
+			})
+			.ToList();
+	}
 
 	/// <summary>
 	/// The next pick to click, from <paramref name="from"/> on. -1 when none is left, or when the
