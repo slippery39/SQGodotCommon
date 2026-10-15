@@ -58,14 +58,22 @@ Order matters: the "wasn't attacking" check runs before the destroy, while the c
 ],
 ```
 
-**A triggered ability** — `When(TriggerEvent.X, targets, effects…)`; the events are listed in the catalog
-under `TriggerEvent`. **An activated ability** — `new ActivatedAbilityComponent(cost, [effects])` with its
+**A triggered ability** — `When(trigger, targets, effects…)`. A trigger is an event kind, which of its
+subjects (`Subject`), who did it (`By`), at which `Step`: the common ones are named (`TriggerEvent.SelfEnters`,
+`YourUpkeep`, `YouCastNoncreatureSpell` — the catalog's `TriggerEvent` line); a one-off writes its own,
+`new Trigger(EventKind.Entered) { Subject = Is.Creature & Is.Yours & !Is.Source & !Is.Token }` (Arni), or
+narrows a named one, `TriggerEvent.YouCastSpell with { Subject = Is.PreparedCopy }`. "Whenever a Plains you
+control enters" is a Subject (`Is.Subtype("Plains")`), never an `If`. **An activated ability** — `new ActivatedAbilityComponent(cost, [effects])` with its
 options (`TapCost`, `Targets`, `SacrificeSelf`, `From = ZoneType.Graveyard`, `SorcerySpeed`, …).
 
 ```csharp
 ["Arni, Humble Scribe"] =   // Whenever another nontoken creature you control enters, untap Arni.  {T}: Draw, then discard.
 [
-	When(TriggerEvent.AnotherNontokenCreatureYouControlEnters, [], new Untap(Ref.Source)),
+	When(
+		new Trigger(EventKind.Entered) { Subject = Is.Creature & Is.Yours & !Is.Source & !Is.Token },
+		[],
+		new Untap(Ref.Source)
+	),
 	new ActivatedAbilityComponent(ManaCost.None, [new DrawCards(Ref.You, 1), new Discard(Ref.You, 1)])
 	{
 		TapCost = true,

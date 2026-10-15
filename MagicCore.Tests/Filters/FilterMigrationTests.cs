@@ -422,99 +422,142 @@ public class FilterMigrationTests
 	static IEnumerable<TestCaseData> TriggerRows()
 	{
 		TestCaseData Row(
-			TriggerEvent on,
+			string name,
+			Trigger on,
 			Ev ev,
 			Filter? subject,
 			Whose by = Whose.Any,
-			string source = "Src",
-			string? eventSubtype = null
-		) =>
-			new TestCaseData(on, ev, subject, by, source, eventSubtype).SetName(
-				$"Trigger_{on}{(eventSubtype is null ? "" : "_EventSubtype")}"
-			);
+			string source = "Src"
+		) => new TestCaseData(on, ev, subject, by, source).SetName($"Trigger_{name}");
 		var another = Is.Yours & !Is.Source;
-		yield return Row(TriggerEvent.SelfEnters, Ev.Enters, Is.Source);
+		yield return Row("SelfEnters", TriggerEvent.SelfEnters, Ev.Enters, Is.Source);
 		yield return Row(
+			"AnotherCreatureYouControlEnters",
 			TriggerEvent.AnotherCreatureYouControlEnters,
 			Ev.Enters,
 			Is.Creature & another
 		);
 		yield return Row(
+			"AnotherCreatureOrPlaneswalkerYouControlEnters",
 			TriggerEvent.AnotherCreatureOrPlaneswalkerYouControlEnters,
 			Ev.Enters,
 			(Is.Creature | Is.Planeswalker) & another
 		);
-		yield return Row(TriggerEvent.LandYouControlEnters, Ev.Enters, Is.Land & Is.Yours);
 		yield return Row(
-			TriggerEvent.LandYouControlEnters, // Koth: "whenever a Plains you control enters" (a Gate here)
+			"LandYouControlEnters",
+			TriggerEvent.LandYouControlEnters,
 			Ev.Enters,
-			Is.Land & Is.Yours & Is.Subtype("Gate"),
-			eventSubtype: "Gate"
+			Is.Land & Is.Yours
 		);
-		yield return Row(TriggerEvent.CreatureYouControlEnters, Ev.Enters, Is.Creature & Is.Yours);
 		yield return Row(
-			TriggerEvent.AnotherNontokenCreatureYouControlEnters,
+			"EventSubtype", // Koth: "whenever a Plains you control enters" (a Gate here)
+			new Trigger(EventKind.Entered) { Subject = Is.Land & Is.Yours & Is.Subtype("Gate") },
+			Ev.Enters,
+			Is.Land & Is.Yours & Is.Subtype("Gate")
+		);
+		yield return Row(
+			"CreatureYouControlEnters",
+			TriggerEvent.CreatureYouControlEnters,
+			Ev.Enters,
+			Is.Creature & Is.Yours
+		);
+		yield return Row(
+			"AnotherNontokenCreatureYouControlEnters",
+			TriggerOf("Arni, Humble Scribe", EventKind.Entered),
 			Ev.Enters,
 			Is.Creature & another & !Is.Token
 		);
 		yield return Row(
-			TriggerEvent.CreatureOpponentControlsEnters,
+			"CreatureOpponentControlsEnters",
+			TriggerOf("Gideon the Oathless", EventKind.Entered),
 			Ev.Enters,
 			Is.Creature & Is.Opponents
 		);
 		yield return Row(
-			TriggerEvent.CreatureWithPower4OrMoreYouControlEnters,
+			"CreatureWithPower4OrMoreYouControlEnters",
+			TriggerOf("Garruk, Curse Breaker", EventKind.Entered),
 			Ev.Enters,
 			Is.Creature & Is.Yours & Is.PowerAtLeast(4)
 		);
-		yield return Row(TriggerEvent.SelfAttacks, Ev.Attacks, Is.Source);
+		yield return Row("SelfAttacks", TriggerEvent.SelfAttacks, Ev.Attacks, Is.Source);
 		yield return Row(
+			"AttachedCreatureAttacks",
 			TriggerEvent.AttachedCreatureAttacks,
 			Ev.Attacks,
 			Is.AttachedToSource,
 			source: "Sword"
 		);
 		yield return Row(
+			"CreatureYouControlAttacks",
 			TriggerEvent.CreatureYouControlAttacks,
 			Ev.Attacks,
 			Is.Creature & Is.Yours
 		);
 		yield return Row(
-			TriggerEvent.CreatureAttacksYouOrYourPlaneswalker,
+			"CreatureAttacksYouOrYourPlaneswalker",
+			TriggerOf("Jace, Reality Sculptor", EventKind.Attacked),
 			Ev.Attacks,
 			Is.AttackingYou
 		);
 		yield return Row(
+			"AnotherCreatureOrPlaneswalkerYouControlDies",
 			TriggerEvent.AnotherCreatureOrPlaneswalkerYouControlDies, // the subject as it last was
 			Ev.Dies,
 			(Is.Creature | Is.Planeswalker) & another
 		);
-		yield return Row(TriggerEvent.CreatureYouControlDies, Ev.Dies, Is.Creature & Is.Yours);
 		yield return Row(
-			TriggerEvent.OpponentsCreatureWithPowerOrToughness1OrLessBlocks, // no "creature": only creatures block
+			"CreatureYouControlDies",
+			TriggerEvent.CreatureYouControlDies,
+			Ev.Dies,
+			Is.Creature & Is.Yours
+		);
+		yield return Row(
+			"OpponentsCreatureWithPowerOrToughness1OrLessBlocks",
+			TriggerOf("Tetsuko Umezawa, Pursuer", EventKind.Blocks), // no "creature": only creatures block
 			Ev.Blocks,
 			Is.Opponents & (Is.PowerAtMost(1) | Is.ToughnessAtMost(1))
 		);
 		yield return Row(
+			"SelfBecomesTargetOfOpponentsSpellOrAbility",
 			TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
 			Ev.Targeted,
 			Is.Source,
 			Whose.Opponent
 		);
-		yield return Row(TriggerEvent.SelfDealtDamage, Ev.Damaged, Is.Source);
-		yield return Row(TriggerEvent.SelfDiscarded, Ev.Discarded, Is.Source);
-		yield return Row(TriggerEvent.YouCastSpell, Ev.Cast, null, Whose.You);
-		yield return Row(TriggerEvent.YouCastNoncreatureSpell, Ev.Cast, !Is.Creature, Whose.You);
-		yield return Row(TriggerEvent.YouCastCreatureSpell, Ev.Cast, Is.Creature, Whose.You);
+		yield return Row("SelfDealtDamage", TriggerEvent.SelfDealtDamage, Ev.Damaged, Is.Source);
+		yield return Row("SelfDiscarded", TriggerEvent.SelfDiscarded, Ev.Discarded, Is.Source);
+		yield return Row("YouCastSpell", TriggerEvent.YouCastSpell, Ev.Cast, null, Whose.You);
 		yield return Row(
-			TriggerEvent.YouCastArtifactOrCreatureSpell,
+			"YouCastNoncreatureSpell",
+			TriggerEvent.YouCastNoncreatureSpell,
+			Ev.Cast,
+			!Is.Creature,
+			Whose.You
+		);
+		yield return Row(
+			"YouCastCreatureSpell",
+			TriggerEvent.YouCastCreatureSpell,
+			Ev.Cast,
+			Is.Creature,
+			Whose.You
+		);
+		yield return Row(
+			"YouCastArtifactOrCreatureSpell",
+			TriggerOf("Traxos, Scourge Eternal", EventKind.SpellCast),
 			Ev.Cast,
 			Is.Type(CardType.Artifact | CardType.Creature),
 			Whose.You
 		);
-		yield return Row(TriggerEvent.YouCastPreparedSpell, Ev.Cast, Is.PreparedCopy, Whose.You);
 		yield return Row(
-			TriggerEvent.OpponentCastsSpellWithManaValue2OrLess,
+			"YouCastPreparedSpell",
+			TriggerOf("Codie, Ravenous Codex", EventKind.SpellCast),
+			Ev.Cast,
+			Is.PreparedCopy,
+			Whose.You
+		);
+		yield return Row(
+			"OpponentCastsSpellWithManaValue2OrLess",
+			TriggerOf("Solarium Sentry", EventKind.SpellCast),
 			Ev.Cast,
 			Is.ManaValueAtMost(2),
 			Whose.Opponent
@@ -522,7 +565,7 @@ public class FilterMigrationTests
 	}
 
 	/// <summary>No subject: the event, and who did it (phase 5's `By`).</summary>
-	static readonly TriggerEvent[] EventAndWho =
+	static readonly Trigger[] EventAndWho =
 	[
 		TriggerEvent.YourUpkeep,
 		TriggerEvent.EachUpkeep,
@@ -545,7 +588,7 @@ public class FilterMigrationTests
 	/// Residue: they test event data beyond the subject, so each becomes a small event predicate in
 	/// phase 5 — keep this list short. Where there is a subject, its filter is noted.
 	/// </summary>
-	static readonly TriggerEvent[] Residue =
+	static readonly Trigger[] Residue =
 	[
 		TriggerEvent.YouActivateLoyaltyAbilityRemovingTwoOrMore, // the cost
 		TriggerEvent.CreatureYouControlAttacksPlayerAlone, // Is.Creature & Is.Yours & Is.AttackingAPlayer + "alone"
@@ -558,7 +601,7 @@ public class FilterMigrationTests
 	];
 
 	/// <summary>Read from the card itself, not matched against an event on the battlefield (Triggers.Collect).</summary>
-	static readonly TriggerEvent[] ReadFromTheCard =
+	static readonly Trigger[] ReadFromTheCard =
 	[
 		TriggerEvent.SelfDies, // the dying card as it last was
 		TriggerEvent.AttachedCreatureDies, // looks back through DiedEvent.Attached
@@ -570,27 +613,15 @@ public class FilterMigrationTests
 		"Matches",
 		BindingFlags.NonPublic | BindingFlags.Static
 	)!;
-	static readonly MethodInfo OldOfSubtype = typeof(MagicCore.Turns.Triggers).GetMethod(
-		"OfSubtype",
-		BindingFlags.NonPublic | BindingFlags.Static
-	)!;
 
 	[TestCaseSource(nameof(TriggerRows))]
-	public void TriggerRow(
-		TriggerEvent on,
-		Ev ev,
-		Filter? subject,
-		Whose by,
-		string source,
-		string? eventSubtype
-	)
+	public void TriggerRow(Trigger on, Ev ev, Filter? subject, Whose by, string source)
 	{
+		// Phase 1 proved the old TriggerEvent switch equal to these subjects + who; now the new
+		// matcher (Trigger + MagicEvent's subjects) must be.
 		var src = B.Card(source);
-		var ability = new TriggeredAbilityComponent(on, []) { EventSubtype = eventSubtype };
 		var events = Events(ev).ToList();
-		bool Old(GameEvent e) =>
-			(bool)OldMatches.Invoke(null, [B.S, src, on, e])!
-			&& (bool)OldOfSubtype.Invoke(null, [B.S, ability, e])!;
+		bool Old(GameEvent e) => (bool)OldMatches.Invoke(null, [B.S, src, on, e])!;
 		bool New(GameObject subjectObject, int byPlayer) =>
 			(subject?.Matches(B.S, subjectObject, B.Context(source)) ?? true)
 			&& by switch
@@ -606,6 +637,30 @@ public class FilterMigrationTests
 			Nu.EqualTo(events.Where(x => Old(x.E)).Select(Label))
 		);
 		Assert.That(events.Count(x => New(x.Subject, x.By)), Nu.InRange(1, events.Count - 1));
+	}
+
+	/// <summary>A card's own trigger, as scripted — the rows read it, never restate it.</summary>
+	static Trigger TriggerOf(string card, EventKind kind)
+	{
+		IEnumerable<TriggeredAbilityComponent> All(object? o, int depth) =>
+			o switch
+			{
+				null or string or CardData => [],
+				TriggeredAbilityComponent a => [a],
+				System.Collections.IEnumerable list when depth < 12 => list.Cast<object>()
+					.SelectMany(x => All(x, depth + 1)),
+				_ when depth < 12 && o.GetType().Namespace?.StartsWith("MagicCore") == true =>
+					o.GetType()
+						.GetProperties()
+						.Where(p =>
+							p.GetIndexParameters().Length == 0 && p.Name != "EqualityContract"
+						)
+						.SelectMany(p => All(p.GetValue(o), depth + 1)),
+				_ => [],
+			};
+		return All(MagicCore.Sets.Fra.FraCards.Get(card).Components, 0)
+			.Select(a => a.On)
+			.Single(on => on.On == kind && on.Subject is not null);
 	}
 
 	static IEnumerable<(GameObject Subject, int By, GameEvent E)> Events(Ev ev)
@@ -650,19 +705,21 @@ public class FilterMigrationTests
 	}
 
 	[Test]
-	public void EveryTriggerEvent_IsARowOrListed()
+	public void EveryNamedTrigger_AndEventKind_IsARowOrListed()
 	{
-		var rows = TriggerRows().Select(r => (TriggerEvent)r.Arguments[0]!);
-		Assert.That(
-			Enum.GetValues<TriggerEvent>()
-				.Except(rows)
-				.Except(EventAndWho)
-				.Except(Residue)
-				.Except(ReadFromTheCard),
-			Nu.Empty
-		);
+		var covered = TriggerRows()
+			.Select(r => (Trigger)r.Arguments[0]!)
+			.Concat(EventAndWho)
+			.Concat(Residue)
+			.Concat(ReadFromTheCard)
+			.ToList();
+		var named = typeof(TriggerEvent)
+			.GetFields(BindingFlags.Public | BindingFlags.Static)
+			.Select(f => f.GetValue(null))
+			.OfType<Trigger>();
+		Assert.That(named.Except(covered), Nu.Empty);
+		Assert.That(Enum.GetValues<EventKind>().Except(covered.Select(x => x.On)), Nu.Empty);
 		Assert.That(OldMatches, Nu.Not.Null);
-		Assert.That(OldOfSubtype, Nu.Not.Null);
 		Assert.That(AppliesTo, Nu.Not.Null);
 	}
 

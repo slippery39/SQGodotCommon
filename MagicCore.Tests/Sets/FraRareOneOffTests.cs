@@ -31,7 +31,7 @@ public class FraRareOneOffTests : FraBoardTest
 
 	static CardDefinition WithTrigger(
 		CardDefinition card,
-		TriggerEvent on,
+		Trigger on,
 		params GameAction[] effects
 	) =>
 		card with

@@ -164,12 +164,7 @@ public sealed record OfController(Whose Whose) : Filter
 			MagicPlayer p => p.Id,
 			_ => 0,
 		};
-		return Whose switch
-		{
-			Whose.You => id == c.Controller,
-			Whose.Opponent => id != 0 && id != c.Controller,
-			_ => true,
-		};
+		return Whose.Includes(id, c.Controller);
 	}
 }
 

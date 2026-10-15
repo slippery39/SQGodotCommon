@@ -1837,15 +1837,18 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever another nontoken creature you control enters, untap Arni.  
 > {T}: Draw a card, then discard a card.
 
-**Status:** scripted · **tests naming it:** FraUncommonCreatureTests
+**Status:** scripted · **tests naming it:** FilterMigrationTests, FraUncommonCreatureTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
 
 ```csharp
 ["Arni, Humble Scribe"] =
 [
 	When(
-		TriggerEvent.AnotherNontokenCreatureYouControlEnters,
+		new Trigger(EventKind.Entered)
+		{
+			Subject = Is.Creature & Is.Yours & !Is.Source & !Is.Token,
+		},
 		[],
 		new Untap(Ref.Source)
 	),
@@ -2817,20 +2820,20 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraUncommonCreatureTests
 
-**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 
 ```csharp
 ["Koth of the Homestead"] =
 [
 	When(TriggerEvent.LandYouControlEnters, [], new GainLife(Ref.You, 1)),
 	When(
-		TriggerEvent.LandYouControlEnters,
+		new Trigger(EventKind.Entered)
+		{
+			Subject = Is.Land & Is.Yours & Is.Subtype("Plains"),
+		},
 		[Creature],
 		new AddCounters(Ref.Target(), 1)
-	) with
-	{
-		EventSubtype = "Plains",
-	},
+	),
 ],
 ```
 
@@ -3683,16 +3686,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Prowess (Whenever you cast a noncreature spell, this creature gets +1/+1 until end of turn.)  
 > Whenever a creature an opponent controls with power or toughness 1 or less blocks, Tetsuko Umezawa deals 1 damage to that creature's controller.
 
-**Status:** scripted · **tests naming it:** FraTriggerTests
+**Status:** scripted · **tests naming it:** FilterMigrationTests, FraTriggerTests
 
-**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 
 ```csharp
 ["Tetsuko Umezawa, Pursuer"] =
 [
 	Prowess,
 	When(
-		TriggerEvent.OpponentsCreatureWithPowerOrToughness1OrLessBlocks,
+		new Trigger(EventKind.Blocks)
+		{
+			Subject = Is.Opponents & (Is.PowerAtMost(1) | Is.ToughnessAtMost(1)),
+		},
 		[],
 		new DealDamage(Ref.ControllerOfEventCard, 1)
 	),
@@ -3885,7 +3891,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Traxos doesn't untap during your untap step.  
 > Whenever you cast an artifact or creature spell, untap Traxos.
 
-**Status:** scripted · **tests naming it:** FraUncommonCreatureTests
+**Status:** scripted · **tests naming it:** FilterMigrationTests, FraUncommonCreatureTests
 
 **Engine pieces:** `DoesntUntapInYourUntapStep` — Traxos: "doesn't untap during your untap step" — read by the untap step ONLY; an untap…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.
 
@@ -3893,7 +3899,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Traxos, Scourge Eternal"] =
 [
 	new DoesntUntapInYourUntapStep(),
-	When(TriggerEvent.YouCastArtifactOrCreatureSpell, [], new Untap(Ref.Source)),
+	When(
+		TriggerEvent.YouCastSpell with
+		{
+			Subject = Is.Type(CardType.Artifact | CardType.Creature),
+		},
+		[],
+		new Untap(Ref.Source)
+	),
 ],
 ```
 
@@ -4528,14 +4541,21 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever you cast a prepared spell, copy it. You may choose new targets for the copy.  
 > {W}{U}{B}{R}{G}, {T}: Each creature you control becomes prepared. (Only creatures with prepare spells can become prepared.)
 
-**Status:** scripted · **tests naming it:** FraRareTests
+**Status:** scripted · **tests naming it:** FilterMigrationTests, FraRareTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `BecomePrepared` — "[It] becomes prepared" — through Rules.Prepare, which ignores one already prepared.; `CopySpell` — "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Codie, Ravenous Codex"] =
 [
-	When(TriggerEvent.YouCastPreparedSpell, [], new CopySpell(Ref.EventCard)),
+	When(
+		TriggerEvent.YouCastSpell with
+		{
+			Subject = Is.PreparedCopy,
+		},
+		[],
+		new CopySpell(Ref.EventCard)
+	),
 	new ActivatedAbilityComponent(
 		ManaCost.Parse("{W}{U}{B}{R}{G}"),
 		[new BecomePrepared(Ref.CreaturesYouControl)]
@@ -4822,9 +4842,9 @@ How to write a script: `MagicCore/Cookbook.md`.
 > Whenever a creature an opponent controls enters, Gideon deals 1 damage to that player.  
 > Whenever an opponent activates a loyalty ability, Gideon deals 1 damage to that player.
 
-**Status:** scripted · **tests naming it:** FraRareOneOffTests
+**Status:** scripted · **tests naming it:** FilterMigrationTests, FraRareOneOffTests
 
-**Engine pieces:** `CounterUnlessPays` — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `CounterUnlessPays` — "Counter [it] unless its controller pays {N}" — Icy Reception, and ward. The payer…; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 
 ```csharp
 ["Gideon the Oathless"] =
@@ -4835,7 +4855,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		new CounterUnlessPays(Ref.EventObject, ManaCost.None) { DiscardACard = true }
 	),
 	When(
-		TriggerEvent.CreatureOpponentControlsEnters,
+		new Trigger(EventKind.Entered) { Subject = Is.Creature & Is.Opponents },
 		[],
 		new DealDamage(Ref.EachOpponent, 1) // "that player" — even if the creature left in response
 	),
@@ -5033,9 +5053,9 @@ How to write a script: `MagicCore/Cookbook.md`.
 > −3: Until your next turn, whenever a creature attacks you or a planeswalker you control, it gets -5/-0 until end of turn.  
 > 0: Exile all but the bottom card of each opponent's library. Activate only if there are twenty-five or more loyalty counters among Jaces you control.
 
-**Status:** scripted · **tests naming it:** FraRarePlaneswalkerTests
+**Status:** scripted · **tests naming it:** FilterMigrationTests, FraRarePlaneswalkerTests
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ExileAllButBottom` — Jace, Reality Sculptor: "Exile all but the bottom card of each opponent's library."; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `UntilYourNextTurnWhenever` — Jace, Reality Sculptor's −3, Garruk, Curse Breaker's −4: "Until your next turn, whenever…
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ExileAllButBottom` — Jace, Reality Sculptor: "Exile all but the bottom card of each opponent's library."; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…; `UntilYourNextTurnWhenever` — Jace, Reality Sculptor's −3, Garruk, Curse Breaker's −4: "Until your next turn, whenever…
 
 ```csharp
 ["Jace, Reality Sculptor"] =
@@ -5052,7 +5072,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		[],
 		new UntilYourNextTurnWhenever(
 			When(
-				TriggerEvent.CreatureAttacksYouOrYourPlaneswalker,
+				new Trigger(EventKind.Attacked) { Subject = Is.AttackingYou },
 				[],
 				new ModifyUntilEndOfTurn(Ref.EventCard, -5, 0)
 			)
@@ -5288,7 +5308,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraTriggerTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `CreateTokens` — "Create N [Token] tokens" — THE way a token is made: entering through EnterBattlefield…; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 
 ```csharp
 ["Lyra, Tolarian Archangel"] =
@@ -5552,7 +5572,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareTests
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 
 ```csharp
 ["Roiling Canopy"] =
@@ -5562,12 +5582,14 @@ How to write a script: `MagicCore/Cookbook.md`.
 	// "If you control at least five other Forests" — other than the one entering, checked
 	// again on resolution, so it still counts if that Forest has gone.
 	When(
-		TriggerEvent.LandYouControlEnters,
+		new Trigger(EventKind.Entered)
+		{
+			Subject = Is.Land & Is.Yours & Is.Subtype("Forest"),
+		},
 		[Target(Is.Creature & Is.Yours)],
 		new ModifyUntilEndOfTurn(Ref.Target(), 3, 3)
 	) with
 	{
-		EventSubtype = "Forest",
 		If = new AtLeast(
 			Count.NumberOf(
 				Ref.Permanents(
@@ -5682,15 +5704,19 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Whenever an opponent casts a spell with mana value 2 or less, you gain 2 life.
 
-**Status:** scripted · **tests naming it:** FraRareTests
+**Status:** scripted · **tests naming it:** FilterMigrationTests, FraRareTests
 
-**Engine pieces:** `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `GainLife` — "[Who] gains N life" — through Rules.Life.Gain, which raises "whenever you gain life".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…
 
 ```csharp
 ["Solarium Sentry"] =
 [
 	When(
-		TriggerEvent.OpponentCastsSpellWithManaValue2OrLess,
+		new Trigger(EventKind.SpellCast)
+		{
+			By = Whose.Opponent,
+			Subject = Is.ManaValueAtMost(2),
+		},
 		[],
 		new GainLife(Ref.You, 2)
 	),
@@ -6421,15 +6447,18 @@ How to write a script: `MagicCore/Cookbook.md`.
 > −3: Create a 4/4 green Beast creature token with trample.  
 > −4: Until your next turn, whenever one or more creatures attack one of your opponents, those creatures get +2/+2 and gain trample until end of turn.
 
-**Status:** scripted · **tests naming it:** FraRarePlaneswalkerTests
+**Status:** scripted · **tests naming it:** FilterMigrationTests, FraRarePlaneswalkerTests
 
-**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.; `UntilYourNextTurnWhenever` — Jace, Reality Sculptor's −3, Garruk, Curse Breaker's −4: "Until your next turn, whenever…
+**Engine pieces:** `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `Trigger` — "When/Whenever [something happens]" — the kind of event, then which of its subjects…; `Untap` — "Untap [What]" — through MagicState.Untap, so a stun counter is removed instead.; `UntilYourNextTurnWhenever` — Jace, Reality Sculptor's −3, Garruk, Curse Breaker's −4: "Until your next turn, whenever…
 
 ```csharp
 ["Garruk, Curse Breaker"] =
 [
 	When(
-		TriggerEvent.CreatureWithPower4OrMoreYouControlEnters,
+		new Trigger(EventKind.Entered)
+		{
+			Subject = Is.Creature & Is.Yours & Is.PowerAtLeast(4),
+		},
 		[],
 		new DrawCards(Ref.You, 1)
 	),

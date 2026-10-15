@@ -335,7 +335,7 @@ public static class FraCards
 		new([.. effects]) { Targets = [.. targets] };
 
 	static TriggeredAbilityComponent When(
-		TriggerEvent on,
+		Trigger on,
 		TargetSpec[] targets,
 		params GameAction[] effects
 	) => new(on, [.. effects]) { Targets = [.. targets] };
@@ -499,7 +499,7 @@ public static class FraCards
 
 	static TriggeredAbilityComponent ModalWhen(
 		string name,
-		TriggerEvent on,
+		Trigger on,
 		int choose,
 		params Mode[] modes
 	) => new(on, []) { Modes = Printed(name, modes), Choose = choose };
@@ -1246,7 +1246,10 @@ public static class FraCards
 			[
 				Prowess,
 				When(
-					TriggerEvent.OpponentsCreatureWithPowerOrToughness1OrLessBlocks,
+					new Trigger(EventKind.Blocks)
+					{
+						Subject = Is.Opponents & (Is.PowerAtMost(1) | Is.ToughnessAtMost(1)),
+					},
 					[],
 					new DealDamage(Ref.ControllerOfEventCard, 1)
 				),
@@ -2301,13 +2304,13 @@ public static class FraCards
 			[
 				When(TriggerEvent.LandYouControlEnters, [], new GainLife(Ref.You, 1)),
 				When(
-					TriggerEvent.LandYouControlEnters,
+					new Trigger(EventKind.Entered)
+					{
+						Subject = Is.Land & Is.Yours & Is.Subtype("Plains"),
+					},
 					[Creature],
 					new AddCounters(Ref.Target(), 1)
-				) with
-				{
-					EventSubtype = "Plains",
-				},
+				),
 			],
 			["Rescue Girl, First Responder"] =
 			[
@@ -2354,7 +2357,10 @@ public static class FraCards
 			["Arni, Humble Scribe"] =
 			[
 				When(
-					TriggerEvent.AnotherNontokenCreatureYouControlEnters,
+					new Trigger(EventKind.Entered)
+					{
+						Subject = Is.Creature & Is.Yours & !Is.Source & !Is.Token,
+					},
 					[],
 					new Untap(Ref.Source)
 				),
@@ -2369,7 +2375,14 @@ public static class FraCards
 			["Traxos, Scourge Eternal"] =
 			[
 				new DoesntUntapInYourUntapStep(),
-				When(TriggerEvent.YouCastArtifactOrCreatureSpell, [], new Untap(Ref.Source)),
+				When(
+					TriggerEvent.YouCastSpell with
+					{
+						Subject = Is.Type(CardType.Artifact | CardType.Creature),
+					},
+					[],
+					new Untap(Ref.Source)
+				),
 			],
 			["Saheeli, Jewel of Avishkar"] =
 			[
@@ -2787,7 +2800,11 @@ public static class FraCards
 			["Solarium Sentry"] =
 			[
 				When(
-					TriggerEvent.OpponentCastsSpellWithManaValue2OrLess,
+					new Trigger(EventKind.SpellCast)
+					{
+						By = Whose.Opponent,
+						Subject = Is.ManaValueAtMost(2),
+					},
 					[],
 					new GainLife(Ref.You, 2)
 				),
@@ -2835,7 +2852,14 @@ public static class FraCards
 			],
 			["Codie, Ravenous Codex"] =
 			[
-				When(TriggerEvent.YouCastPreparedSpell, [], new CopySpell(Ref.EventCard)),
+				When(
+					TriggerEvent.YouCastSpell with
+					{
+						Subject = Is.PreparedCopy,
+					},
+					[],
+					new CopySpell(Ref.EventCard)
+				),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{W}{U}{B}{R}{G}"),
 					[new BecomePrepared(Ref.CreaturesYouControl)]
@@ -2862,12 +2886,14 @@ public static class FraCards
 				// "If you control at least five other Forests" — other than the one entering, checked
 				// again on resolution, so it still counts if that Forest has gone.
 				When(
-					TriggerEvent.LandYouControlEnters,
+					new Trigger(EventKind.Entered)
+					{
+						Subject = Is.Land & Is.Yours & Is.Subtype("Forest"),
+					},
 					[Target(Is.Creature & Is.Yours)],
 					new ModifyUntilEndOfTurn(Ref.Target(), 3, 3)
 				) with
 				{
-					EventSubtype = "Forest",
 					If = new AtLeast(
 						Count.NumberOf(
 							Ref.Permanents(
@@ -3008,7 +3034,7 @@ public static class FraCards
 					new CounterUnlessPays(Ref.EventObject, ManaCost.None) { DiscardACard = true }
 				),
 				When(
-					TriggerEvent.CreatureOpponentControlsEnters,
+					new Trigger(EventKind.Entered) { Subject = Is.Creature & Is.Opponents },
 					[],
 					new DealDamage(Ref.EachOpponent, 1) // "that player" — even if the creature left in response
 				),
@@ -3314,7 +3340,7 @@ public static class FraCards
 					[],
 					new UntilYourNextTurnWhenever(
 						When(
-							TriggerEvent.CreatureAttacksYouOrYourPlaneswalker,
+							new Trigger(EventKind.Attacked) { Subject = Is.AttackingYou },
 							[],
 							new ModifyUntilEndOfTurn(Ref.EventCard, -5, 0)
 						)
@@ -3361,7 +3387,10 @@ public static class FraCards
 			["Garruk, Curse Breaker"] =
 			[
 				When(
-					TriggerEvent.CreatureWithPower4OrMoreYouControlEnters,
+					new Trigger(EventKind.Entered)
+					{
+						Subject = Is.Creature & Is.Yours & Is.PowerAtLeast(4),
+					},
 					[],
 					new DrawCards(Ref.You, 1)
 				),

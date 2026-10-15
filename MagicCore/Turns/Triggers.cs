@@ -3,21 +3,66 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
+using MagicCore.Filters;
+using MagicCore.Targeting;
 
 namespace MagicCore.Turns;
 
+/// <summary>
+/// A trigger event: its kind, the objects it is about — a permanent on the battlefield now, a dead
+/// creature as it last was, a spell wherever it is — and the player who did it. A trigger's
+/// Subject filter asks about the subjects; its By about the player (audit §10.5).
+/// </summary>
+public abstract record MagicEvent : GameEvent
+{
+	public abstract EventKind Kind();
+
+	/// <summary>"Whenever a creature you control enters": the creature. None for "whenever you gain life".</summary>
+	public virtual IEnumerable<GameObject> Subjects(GameState s) => [];
+
+	/// <summary>"Whenever YOU cast", "at the beginning of YOUR upkeep" (the active player); 0: nobody.</summary>
+	public virtual int By(GameState s) => 0;
+}
+
 /// <param name="Types">What it was as it entered — Karn, Argent Defender asks, whatever it is by the next priority.</param>
 /// <summary>A permanent entered the battlefield — raised by MagicState.EnterBattlefield, the one way in.</summary>
-public record EnteredBattlefieldEvent(int CardId, CardType Types = CardType.None) : GameEvent;
+public record EnteredBattlefieldEvent(int CardId, CardType Types = CardType.None) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.Entered;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.IsOnBattlefield(CardId) ? [s.GetCard(CardId)] : [];
+}
 
 /// <summary>A creature was declared as an attacker — one event per attacker.</summary>
-public record AttackedEvent(int CardId) : GameEvent;
+public record AttackedEvent(int CardId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.Attacked;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.IsOnBattlefield(CardId) ? [s.GetCard(CardId)] : [];
+}
 
 /// <summary>Attackers were declared — one event however many ("whenever you attack").</summary>
-public record AttackersDeclaredEvent(int PlayerId) : GameEvent;
+public record AttackersDeclaredEvent(int PlayerId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.AttackersDeclared;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.CardsIn(PlayerId, ZoneType.Battlefield).Where(c => c.AttackingId != 0);
+
+	public override int By(GameState s) => PlayerId;
+}
 
 /// <summary>Combat damage was dealt to these players in one damage step ("one or more").</summary>
-public record CombatDamageToPlayersEvent(ImmutableList<int> PlayerIds) : GameEvent;
+public record CombatDamageToPlayersEvent(ImmutableList<int> PlayerIds) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.CombatDamageToPlayers;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) => PlayerIds.Select(s.GetObject);
+
+	public override int By(GameState s) => s.GetGame().ActivePlayerId;
+}
 
 /// <param name="NoncreatureSpellNumber">Which noncreature spell of the caster's turn this is — 0 for a creature.</param>
 /// <param name="Copies">Way of the Cryomancer: delayed "copy that spell" triggers this cast set off.</param>
@@ -27,44 +72,114 @@ public record SpellCastEvent(
 	int PlayerId,
 	int NoncreatureSpellNumber = 0,
 	int Copies = 0
-) : GameEvent;
+) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.SpellCast;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.HasObject(CardId) ? [s.GetObject(CardId)] : [];
+
+	public override int By(GameState s) => PlayerId;
+}
 
 /// <summary>A creature or planeswalker went from the battlefield to a graveyard — as it last existed.</summary>
 /// <param name="Attached">What was attached to it as it died — "when enchanted creature dies" looks back (CR 603.10a).</param>
-public record DiedEvent(Card LastKnown) : GameEvent
+public record DiedEvent(Card LastKnown) : MagicEvent
 {
+	public override EventKind Kind() => EventKind.Died;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) => [LastKnown];
+
 	public ImmutableList<Card> Attached { get; init; } = [];
 }
 
 /// <summary>A player was dealt damage — by Rules.Damage.Deal, combat or not.</summary>
-public record PlayerDealtDamageEvent(int PlayerId, bool Combat, int SourceId) : GameEvent;
+public record PlayerDealtDamageEvent(int PlayerId, bool Combat, int SourceId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.PlayerDealtDamage;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) => [s.GetObject(PlayerId)];
+}
 
 /// <summary>A creature was dealt damage — Hexhaven Invigorator's "that many" is Amount.</summary>
-public record CreatureDealtDamageEvent(int CardId, int Amount) : GameEvent;
+public record CreatureDealtDamageEvent(int CardId, int Amount) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.CreatureDealtDamage;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.HasObject(CardId) ? [s.GetObject(CardId)] : [];
+}
 
 /// <summary>A step began — "at the beginning of …". Raised for the steps scripted cards trigger on.</summary>
-public record StepBeganEvent(Step Step) : GameEvent;
+public record StepBeganEvent(Step Step) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.StepBegan;
+
+	public override int By(GameState s) => s.GetGame().ActivePlayerId;
+}
 
 /// <summary>A creature was declared as a blocker.</summary>
-public record BlocksEvent(int CardId) : GameEvent;
+public record BlocksEvent(int CardId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.Blocks;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.IsOnBattlefield(CardId) ? [s.GetCard(CardId)] : [];
+}
 
 /// <summary>A player surveilled — raised only by Surveil (MagicCore has no Scry yet; "whenever you scry" would need it to raise this too).</summary>
-public record SurveilledEvent(int PlayerId) : GameEvent;
+public record SurveilledEvent(int PlayerId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.Surveilled;
+
+	public override int By(GameState s) => PlayerId;
+}
 
 /// <summary>A player discarded these cards — one event per discard, however many cards.</summary>
-public record DiscardedEvent(int PlayerId, ImmutableList<int> CardIds) : GameEvent;
+public record DiscardedEvent(int PlayerId, ImmutableList<int> CardIds) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.Discarded;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		CardIds.Where(s.HasObject).Select(s.GetObject);
+
+	public override int By(GameState s) => PlayerId;
+}
 
 /// <summary>A player put loyalty counters on a planeswalker — by a cost, an effect, or its entering with them (CR 122.6).</summary>
-public record LoyaltyCountersPutEvent(int PutterId) : GameEvent;
+public record LoyaltyCountersPutEvent(int PutterId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.LoyaltyCountersPut;
+
+	public override int By(GameState s) => PutterId;
+}
 
 /// <summary>A spell or ability put on the stack with this card as a target (CR 115).</summary>
-public record BecameTargetEvent(int CardId, int ByPlayerId, int ByStackObjectId) : GameEvent;
+public record BecameTargetEvent(int CardId, int ByPlayerId, int ByStackObjectId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.BecameTarget;
+
+	public override IEnumerable<GameObject> Subjects(GameState s) =>
+		s.HasObject(CardId) ? [s.GetObject(CardId)] : [];
+
+	public override int By(GameState s) => ByPlayerId;
+}
 
 /// <summary>"Whenever you activate a loyalty ability" — Cost is +N/−N, so "removed two or more" reads it.</summary>
-public record LoyaltyActivatedEvent(int PlayerId, int Cost) : GameEvent;
+public record LoyaltyActivatedEvent(int PlayerId, int Cost) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.LoyaltyActivated;
+
+	public override int By(GameState s) => PlayerId;
+}
 
 /// <summary>Raised by Rules.Life.Gain — one per life-gain event, however much (CR 119.9).</summary>
-public record LifeGainedEvent(int PlayerId) : GameEvent;
+public record LifeGainedEvent(int PlayerId) : MagicEvent
+{
+	public override EventKind Kind() => EventKind.LifeGained;
+
+	public override int By(GameState s) => PlayerId;
+}
 
 /// <summary>
 /// Triggered abilities (CR 603). Events are staged on GameState.PendingGameEvents where they
@@ -140,7 +255,7 @@ public static class Triggers
 			)
 			.SelectMany(found =>
 				events
-					.Where(e => Matches(s, found.source, found.a.On, e) && OfSubtype(s, found.a, e))
+					.Where(e => Matches(s, found.source, found.a.On, e))
 					.Select(e => new Pending(
 						found.source,
 						found.a,
@@ -160,14 +275,18 @@ public static class Triggers
 						? []
 						: AbilitiesOf(s, died.LastKnown)
 				)
-					.Where(a => a.On == TriggerEvent.SelfDies && !a.FromGraveyard)
+					.Where(a =>
+						a.On.ReadFrom == ReadFrom.TheDyingCard
+						&& !a.FromGraveyard
+						&& Concerns(s, a.On, died.LastKnown, died.LastKnown)
+					)
 					.Select(a => new Pending(died.LastKnown, a, died.LastKnown.Id, died.LastKnown))
 					// The Aura is in the graveyard by the time triggers are collected — the state-based
 					// check takes it in the same pass — so its trigger is read from it as it was.
 					.Concat(
 						died.Attached.SelectMany(attachment =>
 							AbilitiesOf(s, attachment)
-								.Where(a => a.On == TriggerEvent.AttachedCreatureDies)
+								.Where(a => a.On.ReadFrom == ReadFrom.ItsAttachment)
 								.Select(a => new Pending(
 									attachment,
 									a,
@@ -183,7 +302,10 @@ public static class Triggers
 			.Where(cast => s.HasObject(cast.CardId))
 			.SelectMany(cast =>
 				AbilitiesOf(s, s.GetCard(cast.CardId))
-					.Where(a => a.On == TriggerEvent.SelfCast)
+					.Where(a =>
+						a.On.ReadFrom == ReadFrom.TheSpellCast
+						&& Concerns(s, a.On, s.GetCard(cast.CardId), s.GetCard(cast.CardId))
+					)
 					.Select(a => new Pending(s.GetCard(cast.CardId), a, cast.CardId))
 			);
 		// Delayed triggers set off by a cast (Way of the Cryomancer): "copy that spell" — one per copy.
@@ -285,176 +407,57 @@ public static class Triggers
 					)
 		).Concat(card.GetComponents<DelayedTrigger>().Select(d => d.Ability)); // not its own: kept
 
-	static bool Matches(GameState s, Card source, TriggerEvent on, GameEvent e)
-	{
-		bool Yours(int cardId) =>
-			s.IsOnBattlefield(cardId) && s.GetCard(cardId).ControllerId == source.ControllerId;
-		var yourTurn = s.GetGame().ActivePlayerId == source.ControllerId;
-		// "A creature you control" (you) / "a creature an opponent controls" (not you), on the battlefield now.
-		bool CreatureControlledBy(int cardId, bool you) =>
-			s.IsOnBattlefield(cardId)
-			&& s.GetCard(cardId) is var c
-			&& c.Is(CardType.Creature)
-			&& (c.ControllerId == source.ControllerId) == you;
-		bool AnotherOfYoursEntered(EnteredBattlefieldEvent entered, CardType types) =>
-			entered.CardId != source.Id
-			&& Yours(entered.CardId)
-			&& s.GetCard(entered.CardId).Is(types);
+	/// <summary>A look-back trigger's Subject, asked of the card it reads from.</summary>
+	static bool Concerns(GameState s, Trigger on, GameObject subject, Card source) =>
+		on.Subject?.Matches(s, subject, new FilterContext(source.ControllerId, source.Id)) ?? true;
 
-		return (on, e) switch
+	static bool Matches(GameState s, Card source, Trigger on, GameEvent e)
+	{
+		// "When this dies / when you cast this" are read from the card itself (Collect), never here.
+		if (
+			on.ReadFrom != ReadFrom.Battlefield
+			|| e is not MagicEvent happened
+			|| happened.Kind() != on.On
+		)
+			return false;
+		if (on.Step is { } step && (e is not StepBeganEvent began || began.Step != step))
+			return false;
+		if (on.By != Whose.Any && !on.By.Includes(happened.By(s), source.ControllerId))
+			return false;
+		var asking = new FilterContext(source.ControllerId, source.Id);
+		if (
+			on.Subject is { } subject
+			&& !happened.Subjects(s).Any(o => subject.Matches(s, o, asking))
+		)
+			return false;
+		// A spell's target that is a player, or a permanent on the battlefield now.
+		bool Targets(SpellCastEvent cast, Filter f) =>
+			SpellTargets(s, cast)
+				.Any(t =>
+					(s.GetObject(t) is MagicPlayer || s.IsOnBattlefield(t))
+					&& f.Matches(s, s.GetObject(t), asking)
+				);
+		return on.Also switch
 		{
-			(TriggerEvent.SelfEnters, EnteredBattlefieldEvent entered) => entered.CardId
-				== source.Id,
-			(TriggerEvent.AnotherCreatureYouControlEnters, EnteredBattlefieldEvent entered) =>
-				AnotherOfYoursEntered(entered, CardType.Creature),
-			(
-				TriggerEvent.AnotherCreatureOrPlaneswalkerYouControlEnters,
-				EnteredBattlefieldEvent entered
-			) => AnotherOfYoursEntered(entered, CardType.Creature | CardType.Planeswalker),
-			(TriggerEvent.LandYouControlEnters, EnteredBattlefieldEvent entered) => Yours(
-				entered.CardId
-			) && s.GetCard(entered.CardId).Is(CardType.Land),
-			(TriggerEvent.SelfAttacks, AttackedEvent attacked) => attacked.CardId == source.Id,
-			(TriggerEvent.YouCastNoncreatureSpell, SpellCastEvent cast) => cast.PlayerId
-				== source.ControllerId
-				&& !s.GetCard(cast.CardId).Is(CardType.Creature),
-			(TriggerEvent.YouGainLife, LifeGainedEvent gained) => gained.PlayerId
-				== source.ControllerId,
-			(TriggerEvent.AnotherCreatureOrPlaneswalkerYouControlDies, DiedEvent died) =>
-				died.LastKnown.Id != source.Id
-					&& died.LastKnown.ControllerId == source.ControllerId
-					&& died.LastKnown.Is(CardType.Creature | CardType.Planeswalker),
-			(TriggerEvent.CreatureYouControlDies, DiedEvent died) => died.LastKnown.ControllerId
-				== source.ControllerId
-				&& died.LastKnown.Is(CardType.Creature),
-			(TriggerEvent.OpponentDealtNoncombatDamage, PlayerDealtDamageEvent damaged) =>
-				damaged.PlayerId != source.ControllerId && !damaged.Combat,
-			(TriggerEvent.SelfDealsCombatDamageToPlayer, PlayerDealtDamageEvent damaged) =>
-				damaged.Combat && damaged.SourceId == source.Id,
-			(TriggerEvent.YourUpkeep, StepBeganEvent began) => began.Step == Step.Upkeep
-				&& yourTurn,
-			(TriggerEvent.EachUpkeep, StepBeganEvent began) => began.Step == Step.Upkeep,
-			(TriggerEvent.OpponentsDrawStep, StepBeganEvent began) => began.Step == Step.Draw
-				&& !yourTurn,
-			(TriggerEvent.YourEndStep, StepBeganEvent began) => began.Step == Step.End && yourTurn,
-			(TriggerEvent.EachEndStep, StepBeganEvent began) => began.Step == Step.End,
-			(TriggerEvent.YouSurveil, SurveilledEvent surveilled) => surveilled.PlayerId
-				== source.ControllerId,
-			(TriggerEvent.AttachedCreatureAttacks, AttackedEvent attacked) => s.IsOnBattlefield(
-				attacked.CardId
-			) && Rules.Attachments.IsOn(source, s.GetCard(attacked.CardId)),
-			(TriggerEvent.YouPutLoyaltyCounters, LoyaltyCountersPutEvent put) => put.PutterId
-				== source.ControllerId,
-			(TriggerEvent.CreatureYouControlEnters, EnteredBattlefieldEvent entered) => Yours(
-				entered.CardId
-			) && s.GetCard(entered.CardId).Is(CardType.Creature),
-			(TriggerEvent.BeginningOfCombatOnYourTurn, StepBeganEvent began) => began.Step
-				== Step.BeginCombat
-				&& yourTurn,
-			(TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility, BecameTargetEvent targeted) =>
-				targeted.CardId == source.Id && targeted.ByPlayerId != source.ControllerId,
-			(TriggerEvent.OpponentsCreatureWithPowerOrToughness1OrLessBlocks, BlocksEvent blocks) =>
-				s.IsOnBattlefield(blocks.CardId)
-					&& s.GetCard(blocks.CardId) is var blocker
-					&& blocker.ControllerId != source.ControllerId
-					&& (s.Power(blocker) <= 1 || s.Toughness(blocker) <= 1),
-			(TriggerEvent.YouActivateLoyaltyAbility, LoyaltyActivatedEvent activated) =>
-				activated.PlayerId == source.ControllerId,
-			(
-				TriggerEvent.YouActivateLoyaltyAbilityRemovingTwoOrMore,
-				LoyaltyActivatedEvent activated
-			) => activated.PlayerId == source.ControllerId && activated.Cost <= -2,
-			(
-				TriggerEvent.AnotherNontokenCreatureYouControlEnters,
-				EnteredBattlefieldEvent entered
-			) => AnotherOfYoursEntered(entered, CardType.Creature)
-				&& !s.GetCard(entered.CardId).IsToken,
-			(TriggerEvent.YouCastArtifactOrCreatureSpell, SpellCastEvent cast) => cast.PlayerId
-				== source.ControllerId
-				&& s.GetCard(cast.CardId).Is(CardType.Artifact | CardType.Creature),
-			(TriggerEvent.APlayerDiscards, DiscardedEvent) => true,
-			(TriggerEvent.YouCastPreparedSpell, SpellCastEvent cast) => cast.PlayerId
-				== source.ControllerId
+			EventTest.RemovingTwoOrMore => e is LoyaltyActivatedEvent { Cost: <= -2 },
+			// The only creature its controller has attacking (Subject says it attacks a player).
+			EventTest.Alone => s.CardsIn(source.ControllerId, ZoneType.Battlefield)
+				.Count(c => c.AttackingId != 0) == 1,
+			EventTest.EquipmentOrTargetsYourCreature => e is SpellCastEvent cast
 				&& s.HasObject(cast.CardId)
-				&& s.GetCard(cast.CardId).HasComponent<PreparedCopyOf>(),
-			(TriggerEvent.CreatureYouControlAttacks, AttackedEvent attacked) => Yours(
-				attacked.CardId
-			) && s.GetCard(attacked.CardId).Is(CardType.Creature),
-			// Mana value on the stack counts X (CR 202.3e).
-			(TriggerEvent.OpponentCastsSpellWithManaValue2OrLess, SpellCastEvent cast) =>
-				cast.PlayerId != source.ControllerId
-					&& s.HasObject(cast.CardId)
-					&& s.GetCard(cast.CardId).ManaValueNow <= 2,
-			(TriggerEvent.YouAttack, AttackersDeclaredEvent declared) => declared.PlayerId
-				== source.ControllerId,
-			(
-				TriggerEvent.OpponentsDealtCombatDamageDuringYourTurn,
-				CombatDamageToPlayersEvent hit
-			) => yourTurn && hit.PlayerIds.Any(p => p != source.ControllerId),
-			(TriggerEvent.SelfDiscarded, DiscardedEvent discarded) => discarded.CardIds.Contains(
-				source.Id
-			),
-			(TriggerEvent.CreatureYouControlAttacksPlayerAlone, AttackedEvent attacked) => Yours(
-				attacked.CardId
-			)
-				&& s.GetObject(s.GetCard(attacked.CardId).AttackingId) is MagicPlayer
-				&& s.CardsIn(source.ControllerId, ZoneType.Battlefield)
-					.Count(c => c.AttackingId != 0) == 1,
-			(TriggerEvent.YouCastEquipmentOrSpellTargetingYourCreature, SpellCastEvent cast) =>
-				cast.PlayerId == source.ControllerId
-					&& s.HasObject(cast.CardId)
-					&& (
-						s.GetCard(cast.CardId).Subtypes.Contains("Equipment")
-						|| SpellTargets(s, cast).Any(t => CreatureControlledBy(t, you: true))
-					),
-			(TriggerEvent.YouCastSpellTargetingOpponentOrTheirCreature, SpellCastEvent cast) =>
-				cast.PlayerId == source.ControllerId
-					&& SpellTargets(s, cast)
-						.Any(t =>
-							s.GetObject(t) is MagicPlayer p
-								? p.Id != source.ControllerId
-								: CreatureControlledBy(t, you: false)
-						),
+				&& (
+					s.GetCard(cast.CardId).Subtypes.Contains("Equipment")
+					|| Targets(cast, Is.Creature & Is.Yours)
+				),
+			EventTest.TargetsAnOpponentOrTheirCreature => e is SpellCastEvent cast
+				&& Targets(cast, Is.Opponents & (Is.Player | Is.Creature)),
 			// Counted as it is cast, so a second spell cast in response can't take the first's place.
-			(TriggerEvent.YouCastFirstNoncreatureSpellEachTurn, SpellCastEvent cast) =>
-				cast.PlayerId == source.ControllerId && cast.NoncreatureSpellNumber == 1, // 0 for a creature
-			(TriggerEvent.CreatureOpponentControlsEnters, EnteredBattlefieldEvent entered) =>
-				CreatureControlledBy(entered.CardId, you: false),
-			(TriggerEvent.OpponentActivatesLoyaltyAbility, LoyaltyActivatedEvent activated) =>
-				activated.PlayerId != source.ControllerId,
-			(TriggerEvent.YouCastCreatureSpell, SpellCastEvent cast) => cast.PlayerId
-				== source.ControllerId
-				&& s.HasObject(cast.CardId)
-				&& s.GetCard(cast.CardId).Is(CardType.Creature),
-			(TriggerEvent.SelfDealtDamage, CreatureDealtDamageEvent damaged) => damaged.CardId
-				== source.Id,
-			(TriggerEvent.YourFirstMainPhase, StepBeganEvent began) => began.Step
-				== Step.PreCombatMain
-				&& yourTurn,
-			(TriggerEvent.YouCastSpell, SpellCastEvent cast) => cast.PlayerId
-				== source.ControllerId,
-			(TriggerEvent.CreatureAttacksYouOrYourPlaneswalker, AttackedEvent attacked) =>
-				s.IsOnBattlefield(attacked.CardId)
-					&& s.GetCard(attacked.CardId).AttackingId is var at
-					&& (
-						at == source.ControllerId
-						|| (
-							s.IsOnBattlefield(at)
-							&& s.GetCard(at).ControllerId == source.ControllerId
-						)
-					),
-			(
-				TriggerEvent.CreatureWithPower4OrMoreYouControlEnters,
-				EnteredBattlefieldEvent entered
-			) => Yours(entered.CardId)
-				&& s.GetCard(entered.CardId) is var big
-				&& big.Is(CardType.Creature)
-				&& s.Power(big) >= 4,
-			(TriggerEvent.CreaturesAttackYourOpponent, AttackersDeclaredEvent declared) =>
-				declared.PlayerId == source.ControllerId
-					&& s.CardsIn(source.ControllerId, ZoneType.Battlefield)
-						.Any(c => c.AttackingId != 0 && s.GetObject(c.AttackingId) is MagicPlayer),
-			_ => false,
+			EventTest.FirstNoncreatureSpell => e is SpellCastEvent { NoncreatureSpellNumber: 1 },
+			EventTest.CombatDamageFromThis => e is PlayerDealtDamageEvent damaged
+				&& damaged.Combat
+				&& damaged.SourceId == source.Id,
+			EventTest.Noncombat => e is PlayerDealtDamageEvent { Combat: false },
+			_ => true,
 		};
 	}
 
@@ -465,22 +468,13 @@ public static class Triggers
 			? onStack.Targets.Where(id => id != 0 && s.HasObject(id))
 			: [];
 
-	/// <summary>"Whenever a Plains you control enters": the event's card has the ability's EventSubtype.</summary>
-	static bool OfSubtype(GameState s, TriggeredAbilityComponent a, GameEvent e) =>
-		a.EventSubtype is not { } subtype
-		|| (
-			s.HasObject(EventCard(e))
-			&& s.GetObject(EventCard(e)) is Card c
-			&& c.Subtypes.Contains(subtype)
-		);
-
-	/// <summary>The card the event is about — what "that creature" and "that land" mean; 0 if none.</summary>
 	/// <summary>The spell or ability an event was done BY, as it is now — ward's "it".</summary>
 	static GameObject? EventObject(GameState s, GameEvent e) =>
 		e is BecameTargetEvent targeted && s.HasObject(targeted.ByStackObjectId)
 			? s.GetObject(targeted.ByStackObjectId)
 			: null;
 
+	/// <summary>The card the event is about — what "that creature" and "that land" mean; 0 if none.</summary>
 	static int EventCard(GameEvent e) =>
 		e switch
 		{
@@ -590,7 +584,12 @@ public static class Triggers
 						EventCardId = t.EventCardId,
 						EventSnapshot = t.EventSnapshot,
 						EventObject = t.EventObject,
-						X = t.Ability.On == TriggerEvent.SelfEnters ? t.Source.CastX : t.X,
+						// "When this enters": the X it was cast for.
+						X =
+							t.Ability.On.On == EventKind.Entered
+							&& t.Ability.On.Subject == Is.Source
+								? t.Source.CastX
+								: t.X,
 					},
 				],
 			}

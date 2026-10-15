@@ -14,63 +14,283 @@ public record SpellEffectsComponent(ImmutableList<GameAction> Effects) : GameCom
 	public int Choose { get; init; } = 1;
 }
 
-public enum TriggerEvent
+/// <summary>What happened, for triggers — one value per event record. Grows only with a new kind of event.</summary>
+public enum EventKind
 {
-	SelfEnters,
-	AnotherCreatureYouControlEnters,
-	SelfAttacks,
-	YouCastNoncreatureSpell,
-	LandYouControlEnters, // landfall
-	YouGainLife,
-	SelfDies, // read from the dying card as it last existed (CR 603.10a)
-	AnotherCreatureOrPlaneswalkerYouControlDies,
-	CreatureYouControlDies,
-	OpponentDealtNoncombatDamage,
-	SelfDealsCombatDamageToPlayer,
-	YourUpkeep,
-	EachUpkeep, // "each player's upkeep"
-	OpponentsDrawStep,
-	YourEndStep,
-	EachEndStep, // "the end step" — every turn's
-	OpponentsCreatureWithPowerOrToughness1OrLessBlocks, // Tetsuko, Pursuer
-	YouActivateLoyaltyAbility,
-	YouActivateLoyaltyAbilityRemovingTwoOrMore,
-	BeginningOfCombatOnYourTurn,
-	YouPutLoyaltyCounters, // Inspired Tethermage: "whenever you put one or more loyalty counters on a planeswalker"
-	Reflexive, // "When you do, …" — put on the stack by WhenYouDo, never matched against an event
-	AnotherCreatureOrPlaneswalkerYouControlEnters, // Liliana the Repentant
-	YouSurveil, // "whenever you scry or surveil" — FRA has no scry
-	CreatureYouControlEnters, // Mabel: "Mabel or another creature you control"
-	AttachedCreatureAttacks, // "equipped creature attacks", and "Whenever this creature attacks" granted by Equipment
-	AttachedCreatureDies, // "When enchanted creature dies" — looks back: the Aura is already gone (CR 603.10a)
-	SelfBecomesTargetOfOpponentsSpellOrAbility, // Ruric Thar, Biomagus
-	AnotherNontokenCreatureYouControlEnters, // Arni, Humble Scribe
-	YouCastArtifactOrCreatureSpell, // Traxos, Scourge Eternal
-	APlayerDiscards, // Tinybones: "whenever a player discards one or more cards"
-	SelfDiscarded, // Titanbones: "when you discard this card" — FromGraveyard, where the card now is
-	CreatureYouControlAttacksPlayerAlone, // Jiang Yanggu, Yuriko — the only attacker, at a player
-	YouCastEquipmentOrSpellTargetingYourCreature, // Danitha, Sword of Hope
-	YouCastSpellTargetingOpponentOrTheirCreature, // Danitha, Spear of Agony
-	YouCastFirstNoncreatureSpellEachTurn, // Plan for All Outcomes
-	YouAttack, // Kiora of Salt and Sand: "whenever you attack" — once per declaration
-	OpponentsDealtCombatDamageDuringYourTurn, // Fblthp, Impossibly Lost — "one or more", once a step
-	CreatureYouControlAttacks, // Ingris Stingerquill — the event card is the attacker
-	YouCastPreparedSpell, // Codie — the copy of a prepare spell, cast from exile
-	OpponentCastsSpellWithManaValue2OrLess, // Solarium Sentry
-	CreatureOpponentControlsEnters, // Gideon the Oathless
-	OpponentActivatesLoyaltyAbility, // Gideon the Oathless
-	YouCastCreatureSpell, // Flickering Hound
-	SelfDealtDamage, // Hexhaven Invigorator — X is how much
-	YourFirstMainPhase, // Gardenize: "at the beginning of your first main phase"
-	YouCastSpell, // Chandra's emblems: "whenever you cast a spell"
-	CreatureAttacksYouOrYourPlaneswalker, // Jace, Reality Sculptor's −3 — the event card is the attacker
-	CreatureWithPower4OrMoreYouControlEnters, // Garruk, Curse Breaker — its power as it enters
-	CreaturesAttackYourOpponent, // Garruk, Curse Breaker's −4: "one or more creatures attack one of your opponents"
-	SelfCast, // Emrakul: "When you cast this spell" — read from the spell on the stack
+	Entered,
+	Attacked,
+	AttackersDeclared,
+	CombatDamageToPlayers,
+	SpellCast,
+	Died,
+	PlayerDealtDamage,
+	CreatureDealtDamage,
+	StepBegan,
+	Blocks,
+	Surveilled,
+	Discarded,
+	LoyaltyCountersPut,
+	BecameTarget,
+	LoyaltyActivated,
+	LifeGained,
+	Reflexive, // "When you do": put on the stack by WhenYouDo, never raised
+}
+
+/// <summary>
+/// Where a trigger is read from. Almost all: the battlefield, matched against each event. Three look
+/// back (CR 603.10a) and are read in Triggers.Collect from the card itself instead.
+/// </summary>
+public enum ReadFrom
+{
+	Battlefield,
+	TheDyingCard, // "when this dies" — the dying card as it last existed; Subject asked of it
+	ItsAttachment, // "when enchanted creature dies" — read from the Aura as it was; Subject not asked (it has left)
+	TheSpellCast, // Emrakul: "when you cast this spell" — the spell on the stack; Subject asked of it
+}
+
+/// <summary>The few event tests that are not about the subject or who did it — keep this list short.</summary>
+public enum EventTest
+{
+	None,
+	RemovingTwoOrMore, // Way of the Mind Sculptor: a loyalty ability that removed two or more
+	Alone, // Jiang Yanggu, Yuriko: the only creature its controller has attacking
+	EquipmentOrTargetsYourCreature, // Danitha, Sword of Hope: an Equipment spell, or a spell targeting your creature
+	TargetsAnOpponentOrTheirCreature, // Danitha, Spear of Agony
+	FirstNoncreatureSpell, // Plan for All Outcomes: numbered as it is cast
+	CombatDamageFromThis, // "whenever this deals combat damage to a player"
+	Noncombat, // "whenever an opponent is dealt noncombat damage"
+}
+
+/// <summary>
+/// "When/Whenever [something happens]" — the kind of event, then which of its subjects (Subject:
+/// "a creature you control"), who did it (By: "you cast"), at which step, and a rare EventTest.
+/// Gideon the Oathless: new(EventKind.Entered) { Subject = Is.Creature &amp; Is.Opponents }.
+/// </summary>
+public record Trigger(EventKind On)
+{
+	// Combinations that could never fire are refused as the trigger is built — a card that compiles
+	// and never triggers is the silent no-op this engine keeps finding the hard way.
+	readonly Step? step;
+	readonly EventTest also;
+
+	/// <summary>Koth: "a Plains you control" — the event's subject (a dead creature as it last was). None: any.</summary>
+	public Filters.Filter? Subject { get; init; }
+
+	/// <summary>Who did it: "you cast", "an opponent activates"; for a step, whose turn it is.</summary>
+	public Whose By { get; init; }
+
+	/// <summary>"At the beginning of [step]" — only for EventKind.StepBegan.</summary>
+	public Step? Step
+	{
+		get => step;
+		init =>
+			step =
+				value is null || On == EventKind.StepBegan
+					? value
+					: throw new ArgumentException($"A Step only fits StepBegan, not {On}");
+	}
+
+	/// <summary>Jiang Yanggu: "attacks alone" — a test on the event beyond its subject and who did it; each fits one kind.</summary>
+	public EventTest Also
+	{
+		get => also;
+		init =>
+			also = Fits(On, value)
+				? value
+				: throw new ArgumentException($"EventTest {value} can't fire on {On}");
+	}
+
+	/// <summary>"When this dies", "when you cast this": read from the card itself (Triggers.Collect), never matched on the battlefield.</summary>
+	public ReadFrom ReadFrom { get; init; }
+
+	static bool Fits(EventKind on, EventTest test) =>
+		test switch
+		{
+			EventTest.None => true,
+			EventTest.RemovingTwoOrMore => on == EventKind.LoyaltyActivated,
+			EventTest.Alone => on == EventKind.Attacked,
+			EventTest.CombatDamageFromThis or EventTest.Noncombat => on
+				== EventKind.PlayerDealtDamage,
+			_ => on == EventKind.SpellCast,
+		};
+}
+
+/// <summary>The triggers that read like their text, by name — a one-off writes its own Trigger.</summary>
+public static class TriggerEvent
+{
+	static readonly Filters.Filter AnotherOfYours = Filters.Is.Yours & !Filters.Is.Source;
+
+	public static readonly Trigger SelfEnters =
+		new(EventKind.Entered) { Subject = Filters.Is.Source };
+	public static readonly Trigger AnotherCreatureYouControlEnters =
+		new(EventKind.Entered) { Subject = Filters.Is.Creature & AnotherOfYours };
+
+	/// <summary>Liliana the Repentant.</summary>
+	public static readonly Trigger AnotherCreatureOrPlaneswalkerYouControlEnters =
+		new(EventKind.Entered)
+		{
+			Subject = (Filters.Is.Creature | Filters.Is.Planeswalker) & AnotherOfYours,
+		};
+
+	/// <summary>Landfall.</summary>
+	public static readonly Trigger LandYouControlEnters =
+		new(EventKind.Entered) { Subject = Filters.Is.Land & Filters.Is.Yours };
+
+	/// <summary>Mabel: "Mabel or another creature you control".</summary>
+	public static readonly Trigger CreatureYouControlEnters =
+		new(EventKind.Entered) { Subject = Filters.Is.Creature & Filters.Is.Yours };
+	public static readonly Trigger SelfAttacks =
+		new(EventKind.Attacked) { Subject = Filters.Is.Source };
+
+	/// <summary>"Equipped creature attacks", and "whenever this creature attacks" granted by Equipment.</summary>
+	public static readonly Trigger AttachedCreatureAttacks =
+		new(EventKind.Attacked) { Subject = Filters.Is.AttachedToSource };
+
+	/// <summary>Ingris Stingerquill — the event card is the attacker.</summary>
+	public static readonly Trigger CreatureYouControlAttacks =
+		new(EventKind.Attacked) { Subject = Filters.Is.Creature & Filters.Is.Yours };
+
+	/// <summary>Jiang Yanggu, Yuriko — the only attacker, at a player.</summary>
+	public static readonly Trigger CreatureYouControlAttacksPlayerAlone =
+		new(EventKind.Attacked)
+		{
+			Subject = Filters.Is.Yours & Filters.Is.AttackingAPlayer,
+			Also = EventTest.Alone,
+		};
+
+	/// <summary>Kiora of Salt and Sand: "whenever you attack" — once per declaration.</summary>
+	public static readonly Trigger YouAttack = new(EventKind.AttackersDeclared) { By = Whose.You };
+
+	/// <summary>Garruk, Curse Breaker's −4: "one or more creatures attack one of your opponents".</summary>
+	public static readonly Trigger CreaturesAttackYourOpponent =
+		new(EventKind.AttackersDeclared) { By = Whose.You, Subject = Filters.Is.AttackingAPlayer };
+
+	/// <summary>Read from the dying card as it last existed (CR 603.10a).</summary>
+	public static readonly Trigger SelfDies =
+		new(EventKind.Died) { Subject = Filters.Is.Source, ReadFrom = ReadFrom.TheDyingCard };
+
+	/// <summary>"When enchanted creature dies" — looks back: the Aura is already gone (CR 603.10a).</summary>
+	public static readonly Trigger AttachedCreatureDies =
+		new(EventKind.Died)
+		{
+			Subject = Filters.Is.AttachedToSource,
+			ReadFrom = ReadFrom.ItsAttachment,
+		};
+	public static readonly Trigger AnotherCreatureOrPlaneswalkerYouControlDies =
+		new(EventKind.Died)
+		{
+			Subject = (Filters.Is.Creature | Filters.Is.Planeswalker) & AnotherOfYours,
+		};
+	public static readonly Trigger CreatureYouControlDies =
+		new(EventKind.Died) { Subject = Filters.Is.Creature & Filters.Is.Yours };
+
+	/// <summary>Chandra's emblems: "whenever you cast a spell".</summary>
+	public static readonly Trigger YouCastSpell = new(EventKind.SpellCast) { By = Whose.You };
+	public static readonly Trigger YouCastNoncreatureSpell = YouCastSpell with
+	{
+		Subject = !Filters.Is.Creature,
+	};
+
+	/// <summary>Flickering Hound.</summary>
+	public static readonly Trigger YouCastCreatureSpell = YouCastSpell with
+	{
+		Subject = Filters.Is.Creature,
+	};
+
+	/// <summary>Plan for All Outcomes.</summary>
+	public static readonly Trigger YouCastFirstNoncreatureSpellEachTurn = YouCastSpell with
+	{
+		Also = EventTest.FirstNoncreatureSpell,
+	};
+
+	/// <summary>Danitha, Sword of Hope.</summary>
+	public static readonly Trigger YouCastEquipmentOrSpellTargetingYourCreature = YouCastSpell with
+	{
+		Also = EventTest.EquipmentOrTargetsYourCreature,
+	};
+
+	/// <summary>Danitha, Spear of Agony.</summary>
+	public static readonly Trigger YouCastSpellTargetingOpponentOrTheirCreature = YouCastSpell with
+	{
+		Also = EventTest.TargetsAnOpponentOrTheirCreature,
+	};
+
+	/// <summary>Emrakul: "When you cast this spell" — read from the spell on the stack.</summary>
+	public static readonly Trigger SelfCast =
+		new(EventKind.SpellCast) { Subject = Filters.Is.Source, ReadFrom = ReadFrom.TheSpellCast };
+	public static readonly Trigger YouGainLife = new(EventKind.LifeGained) { By = Whose.You };
+
+	/// <summary>"Whenever you scry or surveil" — FRA has no scry.</summary>
+	public static readonly Trigger YouSurveil = new(EventKind.Surveilled) { By = Whose.You };
+
+	/// <summary>Inspired Tethermage: "whenever you put one or more loyalty counters on a planeswalker".</summary>
+	public static readonly Trigger YouPutLoyaltyCounters =
+		new(EventKind.LoyaltyCountersPut) { By = Whose.You };
+	public static readonly Trigger YouActivateLoyaltyAbility =
+		new(EventKind.LoyaltyActivated) { By = Whose.You };
+	public static readonly Trigger YouActivateLoyaltyAbilityRemovingTwoOrMore =
+		YouActivateLoyaltyAbility with
+		{
+			Also = EventTest.RemovingTwoOrMore,
+		};
+
+	/// <summary>Gideon the Oathless.</summary>
+	public static readonly Trigger OpponentActivatesLoyaltyAbility =
+		new(EventKind.LoyaltyActivated) { By = Whose.Opponent };
+
+	/// <summary>Tinybones: "whenever a player discards one or more cards".</summary>
+	public static readonly Trigger APlayerDiscards = new(EventKind.Discarded);
+
+	/// <summary>Titanbones: "when you discard this card" — FromGraveyard, where the card now is.</summary>
+	public static readonly Trigger SelfDiscarded =
+		new(EventKind.Discarded) { Subject = Filters.Is.Source };
+
+	/// <summary>Ruric Thar, Biomagus.</summary>
+	public static readonly Trigger SelfBecomesTargetOfOpponentsSpellOrAbility =
+		new(EventKind.BecameTarget) { Subject = Filters.Is.Source, By = Whose.Opponent };
+
+	/// <summary>Hexhaven Invigorator — X is how much.</summary>
+	public static readonly Trigger SelfDealtDamage =
+		new(EventKind.CreatureDealtDamage) { Subject = Filters.Is.Source };
+	public static readonly Trigger SelfDealsCombatDamageToPlayer =
+		new(EventKind.PlayerDealtDamage) { Also = EventTest.CombatDamageFromThis };
+	public static readonly Trigger OpponentDealtNoncombatDamage =
+		new(EventKind.PlayerDealtDamage)
+		{
+			Subject = Filters.Is.Opponents,
+			Also = EventTest.Noncombat,
+		};
+
+	/// <summary>Fblthp, Impossibly Lost — "one or more", once a step.</summary>
+	public static readonly Trigger OpponentsDealtCombatDamageDuringYourTurn =
+		new(EventKind.CombatDamageToPlayers) { Subject = Filters.Is.Opponents, By = Whose.You };
+	public static readonly Trigger YourUpkeep = Beginning(Step.Upkeep, Whose.You);
+
+	/// <summary>"Each player's upkeep".</summary>
+	public static readonly Trigger EachUpkeep = Beginning(Step.Upkeep, Whose.Any);
+	public static readonly Trigger OpponentsDrawStep = Beginning(Step.Draw, Whose.Opponent);
+	public static readonly Trigger YourEndStep = Beginning(Step.End, Whose.You);
+
+	/// <summary>"The end step" — every turn's.</summary>
+	public static readonly Trigger EachEndStep = Beginning(Step.End, Whose.Any);
+	public static readonly Trigger BeginningOfCombatOnYourTurn = Beginning(
+		Step.BeginCombat,
+		Whose.You
+	);
+
+	/// <summary>Gardenize: "at the beginning of your first main phase".</summary>
+	public static readonly Trigger YourFirstMainPhase = Beginning(Step.PreCombatMain, Whose.You);
+
+	/// <summary>"When you do, …" — put on the stack by WhenYouDo, never matched against an event.</summary>
+	public static readonly Trigger Reflexive = new(EventKind.Reflexive);
+
+	/// <summary>"At the beginning of [whose] [step]".</summary>
+	public static Trigger Beginning(Step step, Whose whose) =>
+		new(EventKind.StepBegan) { Step = step, By = whose };
 }
 
 /// <summary>"When/Whenever [event], [effects]." Goes on the stack the next time a player would get priority.</summary>
-public record TriggeredAbilityComponent(TriggerEvent On, ImmutableList<GameAction> Effects)
+public record TriggeredAbilityComponent(Trigger On, ImmutableList<GameAction> Effects)
 	: GameComponent
 {
 	public ImmutableList<TargetSpec> Targets { get; init; } = [];
@@ -87,12 +307,6 @@ public record TriggeredAbilityComponent(TriggerEvent On, ImmutableList<GameActio
 
 	/// <summary>"This ability triggers only once each turn." Stamped on the card as it goes on the stack.</summary>
 	public bool OncePerTurn { get; init; }
-
-	/// <summary>
-	/// Koth: "Whenever a Plains you control enters" — the event's card must have this subtype. Read for
-	/// triggers from the battlefield or a graveyard (not "when this dies"), on an event that has a card.
-	/// </summary>
-	public string? EventSubtype { get; init; }
 }
 
 /// <summary>"[Cost]: [effects]." Uses the stack. Mana abilities are <see cref="ManaAbilityComponent"/>, which does not.</summary>

@@ -34,8 +34,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   `Card.AttackedOnTurn`, stamped as attackers are declared.
 - **"Doesn't untap during your untap step"** (`DoesntUntapInYourUntapStep`) is read by the untap step
   ONLY — an untap effect still untaps it (Traxos' own trigger). A stun counter, by contrast, eats every untap.
-- **A subtype narrows a trigger or a static:** `TriggeredAbilityComponent.EventSubtype` ("whenever a
-  Plains you control enters" — no prompt for any other land) and a static's scope
+- **A subtype narrows a trigger or a static:** the trigger's `Subject` ("whenever a Plains you
+  control enters" is `Is.Land & Is.Yours & Is.Subtype("Plains")` — no prompt for any other land) and a static's scope
   (`Is.Subtype("Thopter")`: "Thopters you control have haste"). Never `TriggeredAbilityComponent.If`
   for this: that is checked again on resolution, so a Plains bounced in response would lose Koth's counter — there's no "if" in the text.
 - **Discarding is `MagicState.Discard`** — effects, costs (cast or ability) and the cleanup alike: one
@@ -150,7 +150,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **An intervening "if" (CR 603.4) is `TriggeredAbilityComponent.If`**, never a bare `If` effect:
   checked as it triggers (`Collect`) AND again on resolution (`QueueTargets` wraps the effects).
   Edgar with a spell cast in response to his trigger gets nothing. A condition on the EVENT itself
-  can't change before resolution, so it may be a `TriggerEvent` instead (Way of the Mind Sculptor's
+  can't change before resolution, so it may be an `EventTest` on the `Trigger` instead (Way of the Mind Sculptor's
   "removed two or more"). `If` runs its steps as a child pipeline — so a surveil inside it finishes
   before the next step — and its steps' outputs do not reach the steps after it.
 - **Prowess is a scripted trigger** (`FraCards.Prowess`), not an engine keyword — each instance

@@ -228,8 +228,8 @@ def catalog(types, enums, blocks, helpers, users):
             for name, typ, d in t["props"]:
                 out.append(f"  - `{name}` ({typ}): {short(d, 110)}")
         out.append("")
-    out += ["## Building blocks — targets, refs, counts", ""]
-    for n in ("TargetSpec", "Ref", "Count"):
+    out += ["## Building blocks — targets, refs, counts, triggers", ""]
+    for n in ("TargetSpec", "Ref", "Count", "Trigger"):
         if n in types:
             tt = types[n]
             out.append(f"- **`{n}({tt['params']})`** — {short(tt['doc'], 140)}")
@@ -237,14 +237,15 @@ def catalog(types, enums, blocks, helpers, users):
                 out.append(f"  - `{name}` ({typ}): {short(d, 110)}")
     out.append("")
     out += ["## Vocabulary — enums", ""]
-    for e in sorted(enums, key=lambda e: (e not in ("TriggerEvent", "RefKind", "CountOf"), e)):
+    for e in sorted(enums, key=lambda e: (e not in ("EventKind", "RefKind", "CountOf"), e)):
         items = "; ".join(f"`{n}`" + (f" ({c})" if c else "") for n, c in enums[e])
         out += [f"- **{e}**: {items}", ""]
     out += ["## Named shortcuts", ""]
     for label, type_name, path in (("Ref", "Ref", CORE / "Effects" / "Refs.cs"),
                                    ("Count", "Count", CORE / "Effects" / "Refs.cs"),
                                    ("Is", "Filter", CORE / "Filters" / "Is.cs"),
-                                   ("TargetSpec", "TargetSpec", CORE / "Targeting" / "TargetSpec.cs")):
+                                   ("TargetSpec", "TargetSpec", CORE / "Targeting" / "TargetSpec.cs"),
+                                   ("TriggerEvent", "Trigger", CORE / "Effects" / "Abilities.cs")):
         items = parse_static_members(path, type_name)
         out.append(f"- **{label}**: " + "; ".join(f"`{label}.{n}`" for n, _ in items))
     out += ["", "## FraCards script helpers (`MagicCore/Sets/Fra/FraCards.cs`)", ""]

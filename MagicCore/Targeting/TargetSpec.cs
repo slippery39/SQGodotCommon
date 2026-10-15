@@ -22,6 +22,18 @@ public enum Whose
 	Opponent,
 }
 
+public static class WhoseRules
+{
+	/// <summary>THE "you / an opponent" test — a filter's controller and a trigger's "who did it" both ask here.</summary>
+	public static bool Includes(this Whose whose, int playerId, int controllerId) =>
+		whose switch
+		{
+			Whose.You => playerId == controllerId,
+			Whose.Opponent => playerId != 0 && playerId != controllerId,
+			_ => true,
+		};
+}
+
 /// <summary>
 /// What one "target" word allows: a zone, a filter (which objects there), and the targeting rules.
 /// Checked when chosen AND again on resolution (CR 608.2b) — the single legality test for both, so

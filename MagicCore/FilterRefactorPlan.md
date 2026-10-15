@@ -213,7 +213,7 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
   without it. Golden replays identical; bench −0.7%.
 - The table's static rows now check `AppliesTo` against the filter; three tests pin the guard.
 
-### Phase 5: triggers
+### Phase 5: triggers ✅ done 2026-10-15
 - Events get a common base carrying their **subject** (the object, as it was) and the **player**
   who did it. That repairs audit §10.5.
 - `TriggeredAbilityComponent(EventKind On, …) { Filter? Subject; Whose? By; }`. `EventKind` is one
@@ -223,6 +223,33 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
   `AttacksPlayerAlone`, "a spell that targets your creature", "first noncreature spell each turn").
   Each becomes a small event predicate. List them in the phase and keep them few.
 - Common triggers keep names that read like the text (`SelfEnters`, `YourUpkeep`) as helpers.
+- **Built:** every event record derives from `MagicEvent` — `Kind()`, `Subjects(s)` (looked up as the
+  old switch did: on the battlefield now, a death's `LastKnown`, a spell wherever it is) and `By(s)`
+  (who did it; for a step, the active player). `Trigger(EventKind On) { Subject, By, Step, Also,
+  LooksBack }` is what `TriggeredAbilityComponent.On` holds; ONE generic matcher replaces the 51-arm
+  switch. `TriggerEvent` is now a static class of named Triggers, so every `When(TriggerEvent.X, …)`
+  call site stayed. The three read from the card itself (SelfDies, AttachedCreatureDies, SelfCast)
+  say so in `Trigger.ReadFrom`, which Collect reads — never by comparing to the named instance, so a
+  `TriggerEvent.SelfDies with { … }` still fires (review); its Subject is asked of the dying card.
+- 17 event kinds (16 records + Reflexive). Residue, as `EventTest`: RemovingTwoOrMore, Alone,
+  EquipmentOrTargetsYourCreature, TargetsAnOpponentOrTheirCreature, FirstNoncreatureSpell,
+  CombatDamageFromThis, Noncombat — 7. Two expected residues weren't: "creatures attack your
+  opponent" is AttackersDeclared's subjects (the attackers) + `Is.AttackingAPlayer`, and "dealt combat
+  damage during your turn" is CombatDamageToPlayers' By (the active player) + `Is.Opponents`.
+- 8 single-use filter-baked names were inlined in their one card (e.g. Garruk's "creature with power
+  4 or greater you control enters"); `EventSubtype` is gone (Koth, Roiling Canopy: Subject).
+- Verified card by card: 175 triggered abilities (granted and delayed ones included) × 4 sources ×
+  448 events (each kind, each subject, both players, each step with either player active, loyalty
+  +1/−1/−2), old matcher vs new by reflection — identical, except Jiang Yanggu and Yuriko on events
+  for creatures that aren't attacking, where the OLD code threw (`GetObject(0)`) and the new says
+  no; such an event is never raised. "Alone" revert-checked (both card tests fail without it).
+  Golden replays identical; bench −0.2% after the review fixes (a first run's −14.5% was one fast round).
+- Review fixes: a `Trigger` refuses a `Step` off StepBegan and an `EventTest` on a kind it can't fire
+  on, as it is built; `Whose.Includes` is the ONE you/opponent test (a filter's controller and a
+  trigger's By); the residue's "your creature / an opponent or their creature" are filters;
+  `EventKind` lives beside `Trigger` (Effects), which ended an Effects↔Turns cycle. The table's rows
+  for the 8 inlined triggers read them from their cards (`TriggerOf`), and completeness checks every
+  named trigger again, not only every kind. Probe rerun after the fixes: same result.
 
 ### Phase 6: costs (the riskiest; design at phase start)
 - Lift MtgCore's `AdditionalCost` (valid payments / validate / pay). One list of costs serves
@@ -268,5 +295,5 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 - [x] Phase 2: TargetSpec (2026-10-11)
 - [x] Phase 3: Ref, Count (2026-10-15)
 - [x] Phase 4: statics, conditions (2026-10-15)
-- [ ] Phase 5: triggers
+- [x] Phase 5: triggers (2026-10-15)
 - [ ] Phase 6: costs

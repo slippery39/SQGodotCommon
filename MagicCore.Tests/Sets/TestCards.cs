@@ -47,7 +47,7 @@ public static class TestCards
 	/// <summary>The same card with one more triggered ability — "when this enters, gain 3".</summary>
 	public static CardDefinition WithTrigger(
 		CardDefinition card,
-		TriggerEvent on,
+		Trigger on,
 		params GameAction[] effects
 	) =>
 		card with
