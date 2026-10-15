@@ -17,16 +17,16 @@ public class FraRareFinalTests : FraBoardTest
 		string name,
 		string cost,
 		string typeLine,
-		TargetKind kind,
+		TargetSpec spec,
 		params GameAction[] effects
 	) =>
 		new(
 			TestGames.Inline(name, cost, typeLine).Data,
-			[new SpellEffectsComponent([.. effects]) { Targets = [new TargetSpec(kind)] }]
+			[new SpellEffectsComponent([.. effects]) { Targets = [spec] }]
 		);
 
 	static CardDefinition Kill =>
-		Targeted("Kill", "{1}", "Instant", TargetKind.Permanent, new Destroy(Ref.Target()));
+		Targeted("Kill", "{1}", "Instant", TargetSpec.Permanent(), new Destroy(Ref.Target()));
 
 	int Put(CardDefinition card, int player, ZoneType zone)
 	{
@@ -221,7 +221,7 @@ public class FraRareFinalTests : FraBoardTest
 				"Bolt",
 				"{R}",
 				"Instant",
-				TargetKind.AnyTarget,
+				TargetSpec.AnyTarget(),
 				new DealDamage(Ref.Target(), 3)
 			),
 			me,
@@ -370,10 +370,7 @@ public class FraRareFinalTests : FraBoardTest
 	{
 		var taxing = TestGames.Inline("Taxing", "{1}", "Sorcery") with
 		{
-			Components =
-			[
-				new SacrificeOrPayAdditionalCost(new TargetSpec(TargetKind.Creature, Whose.You), 2),
-			],
+			Components = [new SacrificeOrPayAdditionalCost(MagicCore.Filters.Is.Creature, 2)],
 		};
 		var chandra = ChandraOnTop(taxing);
 		var untapped = UntappedLands();
@@ -425,7 +422,7 @@ public class FraRareFinalTests : FraBoardTest
 					"Mirror",
 					"{1}",
 					"Sorcery",
-					TargetKind.Permanent,
+					TargetSpec.Permanent(),
 					new CreateTokenCopy(Ref.Target())
 				),
 				me

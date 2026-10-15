@@ -1,20 +1,18 @@
 using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Cards;
+using MagicCore.Filters;
 
 namespace MagicCore.Targeting;
 
-public enum TargetKind
+/// <summary>Where a target word's candidates come from — the zone a filter never names.</summary>
+public enum From
 {
-	Creature,
-	CreatureOrPlaneswalker,
-	AnyTarget, // creature, planeswalker or player (CR 115.4)
-	Player,
-	Permanent, // narrowed by AnyOfTypes / NotTypes: "noncreature, nonland permanent"
-	SpellOrCreature, // a spell on the stack, or a creature on the battlefield
-	CardInYourGraveyard, // narrowed by AnyOfTypes / MaxManaValue: "target creature card in your graveyard"
-	CardInAnyGraveyard, // Afterthought Sentry: "target card from a graveyard"
-	Spell, // a spell on the stack, narrowed by AnyOfTypes (+ OrSupertype) and the usual filters
+	Players,
+	Battlefield,
+	Stack, // spells: an ability on the stack is not a card
+	YourGraveyard,
+	AnyGraveyard, // Afterthought Sentry: "target card from a graveyard"
 }
 
 public enum Whose
@@ -25,69 +23,54 @@ public enum Whose
 }
 
 /// <summary>
-/// What one "target" word allows. Checked when chosen AND again on resolution (CR 608.2b) —
-/// the single legality test for both, so the two can never disagree.
+/// What one "target" word allows: a zone, a filter (which objects there), and the targeting rules.
+/// Checked when chosen AND again on resolution (CR 608.2b) — the single legality test for both, so
+/// the two can never disagree.
 /// </summary>
-public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
+public record TargetSpec(From From, Filter? Filter = null)
 {
 	/// <summary>"Up to one target" — choosing nothing (id 0) is legal.</summary>
 	public bool Optional { get; init; }
 
-	/// <summary>"Another target" — not the source itself.</summary>
-	public bool Another { get; init; }
-
-	public bool Nonlegendary { get; init; }
-
-	/// <summary>Fateshaper Aspirant: "target legendary card". None means any.</summary>
-	public Supertype WithSupertype { get; init; }
-
-	/// <summary>Icy Reception: "creature OR legendary spell" — widens AnyOfTypes; never narrows.</summary>
-	public Supertype OrSupertype { get; init; }
-
-	/// <summary>"That's blue or red" — empty means any colour.</summary>
-	public ImmutableArray<ManaColor> AnyOfColors { get; init; } = [];
-
-	/// <summary>For <see cref="TargetKind.Permanent"/>: "artifact or enchantment". None means any type.</summary>
-	public CardType AnyOfTypes { get; init; }
-
-	/// <summary>"Noncreature, nonland": none of these types.</summary>
-	public CardType NotTypes { get; init; }
-
-	/// <summary>Puppet Crafting: "non-Aura enchantment" — not of this subtype.</summary>
-	public string? NotSubtype { get; init; }
-
-	/// <summary>"With power 2 or less".</summary>
-	public int MaxPower { get; init; } = int.MaxValue;
-
-	/// <summary>"With toughness 4 or greater".</summary>
-	public int MinToughness { get; init; }
-
-	/// <summary>"Target creature with flying".</summary>
-	public string? WithKeyword { get; init; }
-
-	/// <summary>Gallia, Mabel: "target creature that entered this turn".</summary>
-	public bool EnteredThisTurn { get; init; }
-
-	/// <summary>Hexhaven Dueling Arena: "target creature that attacked this turn".</summary>
-	public bool AttackedThisTurn { get; init; }
-
-	/// <summary>Kiora of Salt and Sand: "target attacking creature".</summary>
-	public bool Attacking { get; init; }
-
-	/// <summary>Gideon's Memorial: "target attacking or blocking creature".</summary>
-	public bool InCombat { get; init; }
-
-	/// <summary>Tomik, Orzhov Lawmage: "target creature with a +1/+1 counter on it".</summary>
-	public bool WithPlusOneCounter { get; init; }
-
-	/// <summary>"With mana value 3 or less" — a card in a graveyard or a permanent.</summary>
-	public int MaxManaValue { get; init; } = int.MaxValue;
-
-	/// <summary>Your Fate Ends Here: "with mana value 3 or greater".</summary>
-	public int MinManaValue { get; init; }
-
 	/// <summary>The second of "one or two target creatures": optional, and not the first one again.</summary>
 	public bool NotThePrevious { get; init; }
+
+	/// <summary>
+	/// Fatehold Charm: "target spell or creature" — also legal where this one says, in its own zone.
+	/// Only the outer spec's Optional and NotThePrevious are read; set them there.
+	/// </summary>
+	public TargetSpec? Or { get; init; }
+
+	/// <summary>"Target creature" — on the battlefield.</summary>
+	public static readonly TargetSpec Creature = Permanent(Is.Creature);
+	public static readonly TargetSpec CreatureOrPlaneswalker = Permanent(
+		Is.Creature | Is.Planeswalker
+	);
+
+	/// <summary>"Target [filter]" on the battlefield; no filter is "target permanent".</summary>
+	public static TargetSpec Permanent(Filter? filter = null) => new(From.Battlefield, filter);
+
+	public static TargetSpec Player(Filter? filter = null) => new(From.Players, filter);
+
+	/// <summary>"Target spell" — never the spell itself (CR 115.5).</summary>
+	public static TargetSpec Spell(Filter? filter = null) => new(From.Stack, filter);
+
+	public static TargetSpec InYourGraveyard(Filter? filter = null) =>
+		new(From.YourGraveyard, filter);
+
+	public static TargetSpec InAnyGraveyard(Filter? filter = null) =>
+		new(From.AnyGraveyard, filter);
+
+	/// <summary>"Any target" (CR 115.4): a player, creature or planeswalker — the filter narrows each.</summary>
+	public static TargetSpec AnyTarget(Filter? filter = null) =>
+		Player(filter) with
+		{
+			Or = Permanent(
+				filter is null
+					? Is.Creature | Is.Planeswalker
+					: (Is.Creature | Is.Planeswalker) & filter
+			),
+		};
 
 	/// <param name="targeting">False for a restriction that is not targeting — an Aura's "enchant",
 	/// an attachment choice: hexproof then doesn't matter (CR 702.11b names targets only).</param>
@@ -97,119 +80,63 @@ public record TargetSpec(TargetKind Kind, Whose Whose = Whose.Any)
 		int sourceId,
 		int targetId,
 		bool targeting = true
-	)
-	{
-		if (!s.HasObject(targetId))
-			return false;
-		if (Kind is TargetKind.CardInYourGraveyard or TargetKind.CardInAnyGraveyard)
-			return s.GetObject(targetId) is Card inGraveyard
-				&& s.IsIn(
-					targetId,
-					Kind == TargetKind.CardInYourGraveyard ? controllerId : inGraveyard.OwnerId,
-					ZoneType.Graveyard
-				)
-				&& targetId != sourceId
-				&& (AnyOfTypes == CardType.None || inGraveyard.Is(AnyOfTypes))
-				&& inGraveyard.ManaCost.ManaValue <= MaxManaValue
-				&& inGraveyard.ManaCost.ManaValue >= MinManaValue
-				&& (WithSupertype == Supertype.None || inGraveyard.Is(WithSupertype));
-		var whoseOk = (Whose, s.GetObject(targetId)) switch
-		{
-			(Whose.Any, _) => true,
-			(Whose.You, MagicPlayer p) => p.Id == controllerId,
-			(Whose.Opponent, MagicPlayer p) => p.Id != controllerId,
-			(Whose.You, Card c) => c.ControllerId == controllerId,
-			(Whose.Opponent, Card c) => c.ControllerId != controllerId,
-			_ => false,
-		};
-		if (!whoseOk)
-			return false;
-		if (s.GetObject(targetId) is MagicPlayer)
-			return Kind is TargetKind.AnyTarget or TargetKind.Player;
-		if (Kind == TargetKind.Spell)
-			return s.GetObject(targetId) is Card stackSpell
-				&& OnStack(s, targetId)
-				&& targetId != sourceId // a spell cannot target itself (CR 115.5)
-				&& (
-					AnyOfTypes == CardType.None
-					|| stackSpell.Is(AnyOfTypes)
-					|| (OrSupertype != Supertype.None && stackSpell.Is(OrSupertype))
-				)
-				&& Filters(s, stackSpell);
-		if (
-			Kind == TargetKind.SpellOrCreature
-			&& s.GetObject(targetId) is Card spell
-			&& OnStack(s, targetId)
-		)
-			return targetId != sourceId && Filters(s, spell); // a spell cannot target itself (CR 115.5)
-		if (
-			Kind == TargetKind.Player
-			|| s.GetObject(targetId) is not Card card
-			|| !s.IsOnBattlefield(targetId)
-		)
-			return false;
+	) =>
+		s.HasObject(targetId)
+		&& (
+			Allows(s, s.GetObject(targetId), controllerId, sourceId, targeting)
+			|| (Or?.IsLegal(s, controllerId, sourceId, targetId, targeting) ?? false)
+		);
 
-		var typeOk = Kind switch
+	bool Allows(GameState s, GameObject o, int controllerId, int sourceId, bool targeting)
+	{
+		var inZone = From switch
 		{
-			TargetKind.Creature or TargetKind.SpellOrCreature => card.Is(CardType.Creature),
-			TargetKind.Permanent => AnyOfTypes == CardType.None || card.Is(AnyOfTypes),
-			_ => card.Is(CardType.Creature | CardType.Planeswalker),
+			From.Players => o is MagicPlayer,
+			From.Battlefield => o is Card && s.IsOnBattlefield(o.Id),
+			// Off the battlefield a spell or ability never targets its own card (CR 115.5).
+			From.Stack => o is Card && OnStack(s, o.Id) && o.Id != sourceId,
+			From.YourGraveyard => o is Card
+				&& s.IsIn(o.Id, controllerId, ZoneType.Graveyard)
+				&& o.Id != sourceId,
+			_ => o is Card c && s.IsIn(o.Id, c.OwnerId, ZoneType.Graveyard) && o.Id != sourceId,
 		};
 		// Hexproof (CR 702.11b): not a legal target for an opponent's spell or ability. Read through
 		// s.Has, the one effective-keyword answer — MtgCore once asked a second question here and
-		// every equipment-granted hexproof protected nothing. Mass effects never target, so they
-		// pass. The same test also filters "a creature you control" for sacrifices — always yours,
-		// so hexproof never bites there.
-		return typeOk
-			&& !(Another && targetId == sourceId)
-			&& Filters(s, card)
-			&& !(targeting && card.ControllerId != controllerId && s.Has(card, "Hexproof"));
+		// every equipment-granted hexproof protected nothing. Mass effects never target, so they pass.
+		return inZone
+			&& (Filter?.Matches(s, o, new FilterContext(controllerId, sourceId)) ?? true)
+			&& !(
+				targeting
+				&& From == From.Battlefield
+				&& o is Card card
+				&& card.ControllerId != controllerId
+				&& s.Has(card, "Hexproof")
+			);
 	}
 
-	bool Filters(GameState s, Card card) =>
-		!(Nonlegendary && card.Is(Supertype.Legendary))
-		&& (WithSupertype == Supertype.None || card.Is(WithSupertype))
-		&& (AnyOfColors.IsEmpty || card.Colors.Any(AnyOfColors.Contains))
-		&& (NotTypes == CardType.None || !card.Is(NotTypes))
-		&& (NotSubtype is null || !card.Subtypes.Contains(NotSubtype))
-		&& (MinToughness == 0 || s.Toughness(card) >= MinToughness)
-		&& (MaxPower == int.MaxValue || s.Power(card) <= MaxPower)
-		&& (WithKeyword is null || s.Has(card, WithKeyword))
-		&& (!EnteredThisTurn || card.EnteredOnTurn == s.GetGame().TurnNumber)
-		&& (!AttackedThisTurn || card.AttackedOnTurn == s.GetGame().TurnNumber)
-		&& (!Attacking || card.AttackingId != 0)
-		&& (!InCombat || card.AttackingId != 0 || card.BlockingId != 0)
-		&& (!WithPlusOneCounter || card.PlusOneCounters > 0)
-		&& card.ManaValueNow is var mv
-		&& mv <= MaxManaValue
-		&& mv >= MinManaValue;
+	bool Covers(From zone) => From == zone || (Or?.Covers(zone) ?? false);
 
 	static bool OnStack(GameState s, int id) =>
 		s.GetParent(id) == s.GetWellKnownId(MagicKeys.Stack);
 
+	/// <summary>Every legal choice, in one fixed order: players, permanents (player 1's first), stack, graveyards.</summary>
 	public IEnumerable<int> Candidates(GameState s, int controllerId, int sourceId)
 	{
 		var players = new[] { s.Player1Id(), s.Player2Id() };
-		var permanents = players
-			.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
-			.Select(c => c.Id);
-		var spells = Kind is TargetKind.SpellOrCreature or TargetKind.Spell
-			? s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack))
-			: [];
-		var graveyard = Kind switch
-		{
-			TargetKind.CardInYourGraveyard => s.CardsIn(controllerId, ZoneType.Graveyard)
-				.Select(c => c.Id),
-			TargetKind.CardInAnyGraveyard => players
-				.SelectMany(p => s.CardsIn(p, ZoneType.Graveyard))
-				.Select(c => c.Id),
-			_ => [],
-		};
-		return players
-			.Concat(permanents)
-			.Concat(spells)
-			.Concat(graveyard)
-			.Where(id => IsLegal(s, controllerId, sourceId, id));
+		IEnumerable<int> ids = Covers(From.Players) ? players : [];
+		if (Covers(From.Battlefield))
+			ids = ids.Concat(
+				players.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield)).Select(c => c.Id)
+			);
+		if (Covers(From.Stack))
+			ids = ids.Concat(s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)));
+		if (Covers(From.AnyGraveyard))
+			ids = ids.Concat(
+				players.SelectMany(p => s.CardsIn(p, ZoneType.Graveyard)).Select(c => c.Id)
+			);
+		else if (Covers(From.YourGraveyard))
+			ids = ids.Concat(s.CardsIn(controllerId, ZoneType.Graveyard).Select(c => c.Id));
+		return ids.Where(id => IsLegal(s, controllerId, sourceId, id));
 	}
 
 	/// <summary>Every legal assignment for a list of target words — one id per word, 0 for an unused "up to one".</summary>

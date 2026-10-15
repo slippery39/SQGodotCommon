@@ -3,6 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Sets.Fra;
+using MagicCore.Targeting;
 using MagicCore.Turns;
 
 namespace MagicCore.Tests.Sets;
@@ -140,7 +141,7 @@ public class FraEngineTests : FraBoardTest
 					[
 						new SpellEffectsComponent([new Destroy(Ref.Target())])
 						{
-							Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Permanent)],
+							Targets = [TargetSpec.Permanent()],
 						},
 					],
 				},
@@ -158,7 +159,7 @@ public class FraEngineTests : FraBoardTest
 			[
 				new SpellEffectsComponent([new Destroy(Ref.Target())])
 				{
-					Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Permanent)],
+					Targets = [TargetSpec.Permanent()],
 				},
 			]
 		);
@@ -181,7 +182,7 @@ public class FraEngineTests : FraBoardTest
 			[
 				new SpellEffectsComponent([new DealDamage(Ref.Target(), 5)])
 				{
-					Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Creature)],
+					Targets = [TargetSpec.Creature],
 				},
 			]
 		);
@@ -404,7 +405,7 @@ public class FraEngineTests : FraBoardTest
 			[
 				new SpellEffectsComponent([new DealDamage(Ref.Target(), damage)])
 				{
-					Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Creature)],
+					Targets = [TargetSpec.Creature],
 				},
 			]
 		);
@@ -545,7 +546,7 @@ public class FraEngineTests : FraBoardTest
 		var bolt = Hand(
 			Targeted(
 				"Bolt",
-				new(Targeting.TargetKind.Creature),
+				TargetSpec.Creature,
 				new DealDamage(Ref.Target(), 2),
 				new GainLife(Ref.You, 1)
 			),
@@ -560,10 +561,7 @@ public class FraEngineTests : FraBoardTest
 			}
 		);
 		// The copy trigger is on the stack: kill A in response, so nothing is left to target.
-		var kill = Hand(
-			Targeted("Kill", new(Targeting.TargetKind.Creature), new Destroy(Ref.Target())),
-			me
-		);
+		var kill = Hand(Targeted("Kill", TargetSpec.Creature, new Destroy(Ref.Target())), me);
 		s = s.Act(
 			new CastSpellAction
 			{
@@ -596,10 +594,7 @@ public class FraEngineTests : FraBoardTest
 				Targets = [a],
 			}
 		);
-		var counter = Hand(
-			Targeted("Nope", new(Targeting.TargetKind.Spell), new Counter(Ref.Target())),
-			me
-		);
+		var counter = Hand(Targeted("Nope", TargetSpec.Spell(), new Counter(Ref.Target())), me);
 		s = s.Act(
 			new CastSpellAction
 			{
@@ -672,10 +667,7 @@ public class FraEngineTests : FraBoardTest
 		s = s.Act(new PassPriorityAction { PlayerId = them }); // the copy trigger resolves: choose B
 		s = s.Choose([b]);
 		var copy = s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)).First();
-		var nope = Hand(
-			Targeted("Nope", new(Targeting.TargetKind.Spell), new Counter(Ref.Target())),
-			me
-		);
+		var nope = Hand(Targeted("Nope", TargetSpec.Spell(), new Counter(Ref.Target())), me);
 		Cast(nope, [], copy);
 		Assert.That(
 			(Alive(a), Alive(b)),

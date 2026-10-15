@@ -25,7 +25,7 @@ public class FilterMigrationTests
 	static readonly FilterBoard B = FilterBoard.Build();
 
 	/// <summary>Where candidates come from — never in a filter. Phase 2's TargetSpec `From`, phase 3's `All(zone, …)`.</summary>
-	public enum From
+	public enum Zone
 	{
 		Players,
 		Battlefield,
@@ -40,9 +40,9 @@ public class FilterMigrationTests
 
 	static IEnumerable<TestCaseData> RefRows()
 	{
-		TestCaseData Row(string name, Ref old, From from, Filter? filter) =>
+		TestCaseData Row(string name, Ref old, Zone from, Filter? filter) =>
 			new TestCaseData(old, from, filter).SetName($"Ref_{name}");
-		var bf = From.Battlefield;
+		var bf = Zone.Battlefield;
 		yield return Row(
 			"CreaturesYouControl",
 			Ref.CreaturesYouControl,
@@ -57,14 +57,14 @@ public class FilterMigrationTests
 			Is.Type(CardType.Creature | CardType.Planeswalker) & Is.Opponents
 		);
 		yield return Row("AllPermanents", Ref.AllCreatures, bf, Is.Creature);
-		yield return Row("YourGraveyard", Ref.CardsInYourGraveyard, From.YourGraveyard, null);
+		yield return Row("YourGraveyard", Ref.CardsInYourGraveyard, Zone.YourGraveyard, null);
 		yield return Row(
 			"YourGraveyardOfType",
 			Ref.YourGraveyard(CardType.Creature),
-			From.YourGraveyard,
+			Zone.YourGraveyard,
 			Is.Creature
 		);
-		yield return Row("YourHand", Ref.CardsInYourHand, From.YourHand, null);
+		yield return Row("YourHand", Ref.CardsInYourHand, Zone.YourHand, null);
 		yield return Row(
 			"YourPermanentsWithCounters",
 			Ref.YourCreaturesWithCounters,
@@ -87,7 +87,7 @@ public class FilterMigrationTests
 		yield return Row(
 			"TargetPlayersPermanents",
 			Ref.PermanentsOfTargetPlayer(CardType.Creature, 0),
-			From.TargetPlayersBattlefield,
+			Zone.TargetPlayersBattlefield,
 			Is.Creature
 		);
 		yield return Row(
@@ -134,7 +134,7 @@ public class FilterMigrationTests
 	];
 
 	[TestCaseSource(nameof(RefRows))]
-	public void RefRow(Ref old, From from, Filter? filter)
+	public void RefRow(Ref old, Zone from, Filter? filter)
 	{
 		var context = ImmutableDictionary<string, object>
 			.Empty.Add(ContextKeys.Controller, B.Me)
@@ -165,213 +165,172 @@ public class FilterMigrationTests
 
 	static IEnumerable<TestCaseData> TargetRows()
 	{
-		TestCaseData Row(string name, TargetSpec old, params (From, Filter?)[] from) =>
-			new TestCaseData(old, from).SetName($"Target_{name}");
-		var bf = From.Battlefield;
-		var creature = new TargetSpec(TargetKind.Creature);
-		yield return Row("Creature", creature, (bf, Is.Creature));
+		TestCaseData Row(string name, TargetSpec spec, params (Zone, Filter?)[] from) =>
+			new TestCaseData(spec, from).SetName($"Target_{name}");
+		var bf = Zone.Battlefield;
+		yield return Row("Creature", TargetSpec.Creature, (bf, Is.Creature));
 		yield return Row(
 			"CreatureOrPlaneswalker",
-			new(TargetKind.CreatureOrPlaneswalker),
+			TargetSpec.Permanent(Is.Creature | Is.Planeswalker),
 			(bf, Is.Creature | Is.Planeswalker)
 		);
 		yield return Row(
 			"AnyTarget",
-			new(TargetKind.AnyTarget),
-			(From.Players, null),
+			TargetSpec.AnyTarget(),
+			(Zone.Players, null),
 			(bf, Is.Creature | Is.Planeswalker)
 		);
-		yield return Row("Player", new(TargetKind.Player), (From.Players, null));
-		yield return Row("Permanent", new(TargetKind.Permanent), (bf, null));
+		yield return Row("Player", TargetSpec.Player(), (Zone.Players, null));
+		yield return Row("Permanent", TargetSpec.Permanent(), (bf, null));
 		yield return Row(
 			"SpellOrCreature", // phase 2: two clauses, since "spell" is a zone, not a property
-			new(TargetKind.SpellOrCreature),
+			TargetSpec.Spell() with
+			{
+				Or = TargetSpec.Creature,
+			},
 			(bf, Is.Creature),
-			(From.Stack, null)
+			(Zone.Stack, null)
 		);
 		yield return Row(
 			"CardInYourGraveyard",
-			new(TargetKind.CardInYourGraveyard),
-			(From.YourGraveyard, null)
+			TargetSpec.InYourGraveyard(),
+			(Zone.YourGraveyard, null)
 		);
 		yield return Row(
 			"CardInAnyGraveyard",
-			new(TargetKind.CardInAnyGraveyard),
-			(From.AnyGraveyard, null)
+			TargetSpec.InAnyGraveyard(),
+			(Zone.AnyGraveyard, null)
 		);
-		yield return Row("Spell", new(TargetKind.Spell), (From.Stack, null));
+		yield return Row("Spell", TargetSpec.Spell(), (Zone.Stack, null));
 		yield return Row(
 			"WhoseYou",
-			new(TargetKind.Creature, Whose.You),
+			TargetSpec.Permanent(Is.Creature & Is.Yours),
 			(bf, Is.Creature & Is.Yours)
 		);
 		yield return Row(
 			"WhoseOpponent",
-			new(TargetKind.AnyTarget, Whose.Opponent),
-			(From.Players, Is.Opponents),
+			TargetSpec.AnyTarget(Is.Opponents),
+			(Zone.Players, Is.Opponents),
 			(bf, (Is.Creature | Is.Planeswalker) & Is.Opponents)
 		);
 		yield return Row(
 			"Another",
-			creature with
-			{
-				Another = true,
-			},
+			TargetSpec.Permanent(Is.Creature & !Is.Source),
 			(bf, Is.Creature & !Is.Source)
 		);
 		yield return Row(
 			"Nonlegendary",
-			creature with
-			{
-				Nonlegendary = true,
-			},
+			TargetSpec.Permanent(Is.Creature & !Is.Legendary),
 			(bf, Is.Creature & !Is.Legendary)
 		);
 		yield return Row(
 			"WithSupertype",
-			new(TargetKind.CardInYourGraveyard) { WithSupertype = Supertype.Legendary },
-			(From.YourGraveyard, Is.Legendary)
+			TargetSpec.InYourGraveyard(Is.Legendary),
+			(Zone.YourGraveyard, Is.Legendary)
 		);
 		yield return Row(
 			"OrSupertype", // Icy Reception: "creature or legendary spell"
-			new(TargetKind.Spell)
-			{
-				AnyOfTypes = CardType.Creature,
-				OrSupertype = Supertype.Legendary,
-			},
-			(From.Stack, Is.Creature | Is.Legendary)
+			TargetSpec.Spell(Is.Creature | Is.Legendary),
+			(Zone.Stack, Is.Creature | Is.Legendary)
 		);
 		yield return Row(
 			"AnyOfColors",
-			creature with
-			{
-				AnyOfColors = [ManaColor.Blue, ManaColor.Red],
-			},
+			TargetSpec.Permanent(
+				Is.Creature & (Is.Color(ManaColor.Blue) | Is.Color(ManaColor.Red))
+			),
 			(bf, Is.Creature & (Is.Color(ManaColor.Blue) | Is.Color(ManaColor.Red)))
 		);
 		yield return Row(
 			"AnyOfTypes",
-			new(TargetKind.Permanent) { AnyOfTypes = CardType.Artifact | CardType.Enchantment },
+			TargetSpec.Permanent(Is.Type(CardType.Artifact | CardType.Enchantment)),
 			(bf, Is.Type(CardType.Artifact | CardType.Enchantment))
 		);
 		yield return Row(
 			"NotTypes",
-			new(TargetKind.Permanent) { NotTypes = CardType.Creature | CardType.Land },
+			TargetSpec.Permanent(!Is.Type(CardType.Creature | CardType.Land)),
 			(bf, !Is.Type(CardType.Creature | CardType.Land))
 		);
 		yield return Row(
 			"NotSubtype", // Puppet Crafting: "non-Aura enchantment"
-			new(TargetKind.Permanent) { AnyOfTypes = CardType.Enchantment, NotSubtype = "Aura" },
+			TargetSpec.Permanent(Is.Enchantment & !Is.Subtype("Aura")),
 			(bf, Is.Enchantment & !Is.Subtype("Aura"))
 		);
 		yield return Row(
 			"MaxPower",
-			creature with
-			{
-				MaxPower = 2,
-			},
+			TargetSpec.Permanent(Is.Creature & Is.PowerAtMost(2)),
 			(bf, Is.Creature & Is.PowerAtMost(2))
 		);
 		yield return Row(
 			"MinToughness",
-			creature with
-			{
-				MinToughness = 4,
-			},
+			TargetSpec.Permanent(Is.Creature & Is.ToughnessAtLeast(4)),
 			(bf, Is.Creature & Is.ToughnessAtLeast(4))
 		);
 		yield return Row(
 			"WithKeyword",
-			creature with
-			{
-				WithKeyword = "Flying",
-			},
+			TargetSpec.Permanent(Is.Creature & Is.With("Flying")),
 			(bf, Is.Creature & Is.With("Flying"))
 		);
 		yield return Row(
 			"EnteredThisTurn",
-			creature with
-			{
-				EnteredThisTurn = true,
-			},
+			TargetSpec.Permanent(Is.Creature & Is.EnteredThisTurn),
 			(bf, Is.Creature & Is.EnteredThisTurn)
 		);
 		yield return Row(
 			"AttackedThisTurn",
-			creature with
-			{
-				AttackedThisTurn = true,
-			},
+			TargetSpec.Permanent(Is.Creature & Is.AttackedThisTurn),
 			(bf, Is.Creature & Is.AttackedThisTurn)
 		);
 		yield return Row(
 			"Attacking",
-			creature with
-			{
-				Attacking = true,
-			},
+			TargetSpec.Permanent(Is.Creature & Is.Attacking),
 			(bf, Is.Creature & Is.Attacking)
 		);
 		yield return Row(
 			"InCombat",
-			creature with
-			{
-				InCombat = true,
-			},
+			TargetSpec.Permanent(Is.Creature & Is.InCombat),
 			(bf, Is.Creature & Is.InCombat)
 		);
 		yield return Row(
 			"WithPlusOneCounter",
-			creature with
-			{
-				WithPlusOneCounter = true,
-			},
+			TargetSpec.Permanent(Is.Creature & Is.WithPlusOneCounter),
 			(bf, Is.Creature & Is.WithPlusOneCounter)
 		);
 		yield return Row(
 			"MaxManaValueOnTheStack", // X counts there
-			new(TargetKind.Spell) { MaxManaValue = 2 },
-			(From.Stack, Is.ManaValueAtMost(2))
+			TargetSpec.Spell(Is.ManaValueAtMost(2)),
+			(Zone.Stack, Is.ManaValueAtMost(2))
 		);
 		yield return Row(
 			"MaxManaValueInAGraveyard",
-			new(TargetKind.CardInYourGraveyard) { MaxManaValue = 2 },
-			(From.YourGraveyard, Is.ManaValueAtMost(2))
+			TargetSpec.InYourGraveyard(Is.ManaValueAtMost(2)),
+			(Zone.YourGraveyard, Is.ManaValueAtMost(2))
 		);
 		yield return Row(
 			"MinManaValue",
-			new(TargetKind.CardInAnyGraveyard) { MinManaValue = 4 },
-			(From.AnyGraveyard, Is.ManaValueAtLeast(4))
+			TargetSpec.InAnyGraveyard(Is.ManaValueAtLeast(4)),
+			(Zone.AnyGraveyard, Is.ManaValueAtLeast(4))
 		);
 	}
 
-	/// <summary>How many targets and how they relate — TargetSpec keeps these; they're not about one object.</summary>
-	static readonly string[] TargetingStructure =
-	[
-		nameof(TargetSpec.Kind), // becomes From; every value is a row above
-		nameof(TargetSpec.Optional),
-		nameof(TargetSpec.NotThePrevious),
-	];
-
 	[TestCaseSource(nameof(TargetRows))]
-	public void TargetRow(TargetSpec old, (From, Filter?)[] from) =>
+	public void TargetRow(TargetSpec spec, (Zone, Filter?)[] from) =>
+		// Phase 1 proved the old TargetSpec equal to these zones + filters; now the new one must be.
 		// Candidates in TargetSpec's order: players, permanents (player 1's first), stack, graveyards.
 		Same(
-			old.Candidates(B.S, B.Me, B["Src"]),
+			spec.Candidates(B.S, B.Me, B["Src"]),
 			Select(B.S.Player1Id(), B.Context(), from),
 			from.SelectMany(f => In(f.Item1, B.S.Player1Id())),
 			from.Any(f => f.Item2 is not null)
 		);
 
 	[Test]
-	public void EveryTargetSpecField_AndKind_IsARow()
+	public void EveryFrom_IsARow()
 	{
-		var rows = TargetRows().Select(r => (TargetSpec)r.Arguments[0]!).ToList();
-		Assert.That(Enum.GetValues<TargetKind>().Except(rows.Select(r => r.Kind)), Nu.Empty);
+		IEnumerable<Targeting.From> Zones(TargetSpec? t) =>
+			t is null ? [] : [t.From, .. Zones(t.Or)];
 		Assert.That(
-			FieldsOf<TargetSpec>()
-				.Except(rows.SelectMany(r => Changed(r, new TargetSpec(r.Kind))))
-				.Except(TargetingStructure),
+			Enum.GetValues<Targeting.From>()
+				.Except(TargetRows().SelectMany(r => Zones((TargetSpec)r.Arguments[0]!))),
 			Nu.Empty
 		);
 	}
@@ -454,7 +413,7 @@ public class FilterMigrationTests
 	[TestCaseSource(nameof(StaticRows))]
 	public void StaticRow(StaticEffectComponent old, Filter filter, string source)
 	{
-		var permanents = In(From.Battlefield, B.S.Player1Id()).Select(B.S.GetCard).ToList();
+		var permanents = In(Zone.Battlefield, B.S.Player1Id()).Select(B.S.GetCard).ToList();
 		Same(
 			permanents
 				.Where(c => (bool)AppliesTo.Invoke(null, [B.S, B.Card(source), old, c])!)
@@ -687,7 +646,7 @@ public class FilterMigrationTests
 	{
 		var s = B.S;
 		var players = new[] { s.Player1Id(), s.Player2Id() };
-		var subjects = In(ev == Ev.Cast ? From.Stack : From.Battlefield, s.Player1Id())
+		var subjects = In(ev == Ev.Cast ? Zone.Stack : Zone.Battlefield, s.Player1Id())
 			.Select(s.GetCard)
 			.ToList();
 		foreach (var c in subjects)
@@ -743,20 +702,20 @@ public class FilterMigrationTests
 
 	// ---------------------------------------------------------------- helpers
 
-	static IEnumerable<int> In(From from, int first)
+	static IEnumerable<int> In(Zone from, int first)
 	{
 		var s = B.S;
 		var players = new[] { first, s.OpponentOf(first) };
-		IEnumerable<int> Zone(int p, ZoneType z) => s.CardsIn(p, z).Select(c => c.Id);
+		IEnumerable<int> CardsOf(int p, ZoneType z) => s.CardsIn(p, z).Select(c => c.Id);
 		return from switch
 		{
-			From.Players => players,
-			From.Battlefield => players.SelectMany(p => Zone(p, ZoneType.Battlefield)),
-			From.Stack => s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)),
-			From.YourGraveyard => Zone(B.Me, ZoneType.Graveyard),
-			From.AnyGraveyard => players.SelectMany(p => Zone(p, ZoneType.Graveyard)),
-			From.YourHand => Zone(B.Me, ZoneType.Hand),
-			_ => Zone(B.Them, ZoneType.Battlefield), // the Ref rows target them
+			Zone.Players => players,
+			Zone.Battlefield => players.SelectMany(p => CardsOf(p, ZoneType.Battlefield)),
+			Zone.Stack => s.GetChildrenIds(s.GetWellKnownId(MagicKeys.Stack)),
+			Zone.YourGraveyard => CardsOf(B.Me, ZoneType.Graveyard),
+			Zone.AnyGraveyard => players.SelectMany(p => CardsOf(p, ZoneType.Graveyard)),
+			Zone.YourHand => CardsOf(B.Me, ZoneType.Hand),
+			_ => CardsOf(B.Them, ZoneType.Battlefield), // the Ref rows target them
 		};
 	}
 
@@ -764,7 +723,7 @@ public class FilterMigrationTests
 	static IEnumerable<int> Select(
 		int first,
 		FilterContext c,
-		params (From From, Filter? Filter)[] clauses
+		params (Zone From, Filter? Filter)[] clauses
 	) =>
 		clauses.SelectMany(clause =>
 			In(clause.From, first)

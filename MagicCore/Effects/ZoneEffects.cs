@@ -723,7 +723,7 @@ public record SacrificePermanents(int N) : Effect
 						new ChoosePermanentChoice(
 							Controller,
 							GetInput<int>(ContextKeys.Source),
-							new TargetSpec(TargetKind.Permanent, Whose.You),
+							null,
 							required: true
 						)
 						{
@@ -1257,7 +1257,7 @@ public record SacrificeGreatestManaValue(Ref Who, CardType Types) : Effect
 /// "You may sacrifice a [Filter]. If you do, [Then]." The controller picks one or none; the Then
 /// effects run only if something was sacrificed, with this ability's context.
 /// </summary>
-public record MaySacrifice(TargetSpec Filter, ImmutableList<GameAction> Then) : Effect
+public record MaySacrifice(Filters.Filter Filter, ImmutableList<GameAction> Then) : Effect
 {
 	public override ActionResult Execute(GameState s) =>
 		new(
@@ -1286,7 +1286,7 @@ public record MaySacrifice(TargetSpec Filter, ImmutableList<GameAction> Then) : 
 }
 
 /// <summary>Winter: "each opponent sacrifices a creature of their choice" — each chooses their own.</summary>
-public record EachSacrifices(Ref Who, TargetSpec Filter) : Effect
+public record EachSacrifices(Ref Who, Filters.Filter Filter) : Effect
 {
 	/// <summary>Garruk, Veiled Butcher: "If you sacrificed a creature this way, [IfYouDid]."</summary>
 	public ImmutableList<GameAction> IfYouDid { get; init; } = [];

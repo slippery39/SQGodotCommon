@@ -174,12 +174,9 @@ public class TargetingTests
 			.Single(c => c.Name == "Surgical Precision")
 			.Id;
 		var spell = s.GetCard(precision).GetComponent<SpellEffectsComponent>()!;
-		var bound = spell.Modes[0].Targets[0].MinToughness; // read from the script, not restated
 		Assert.That(
-			new[] { m.HumanId, m.OpponentId }
-				.SelectMany(p => s.CardsIn(p, ZoneType.Battlefield))
-				.Where(c => c.Is(CardType.Creature))
-				.All(c => s.Toughness(c) < bound),
+			spell.Modes[0].Targets[0].Candidates(s, m.HumanId, precision), // the script's own spec
+			Is.Empty,
 			"precondition: no creature the destroy mode could target"
 		);
 		var moves = s.DistinctMoves(s.LegalActions())

@@ -114,7 +114,7 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
   both: `using Is = MagicCore.Filters.Is; using Nu = NUnit.Framework.Is;`. Card test files will need
   this from phase 2 on.
 
-### Phase 2: TargetSpec
+### Phase 2: TargetSpec ✅ done 2026-10-11
 - `TargetSpec(From, Filter)` + `Optional`, `NotThePrevious` + targeting rules. `TargetKind` becomes
   `From` (battlefield, stack, your graveyard, any graveyard, players). The ~20 fields go.
 - Its public methods keep their signatures (`IsLegal`, `Candidates`, `Combinations`, `AreLegal`), so
@@ -122,6 +122,30 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 - Non-targeting uses of `TargetSpec` (`MaySacrifice`, `EachSacrifices`, activated
   `Sacrifice` / `ExileFromGraveyard`) take a plain `Filter`.
 - Card scripts: `Creature with { EnteredThisTurn = true }` → `Target(Is.Creature & Is.EnteredThisTurn)`.
+- **Built:** `TargetSpec(From, Filter?)` with `Optional`, `NotThePrevious` and **`Or`** (another spec,
+  so it stays value-equal): the two-zone kinds are `Spell() with { Or = Creature }` and
+  `AnyTarget(f)` = players + creature/planeswalker, each narrowed by `f`. Shortcuts on `TargetSpec`
+  (`Creature`, `Permanent(f)`, `Player(f)`, `Spell(f)`, `InYourGraveyard(f)`, `AnyTarget(f)`…);
+  FraCards' `Target(f)` is `Permanent(f)`. The targeting rules: hexproof (battlefield only), and off
+  the battlefield never the source's own card — the old graveyard and stack branches both did that.
+- **Non-targeting costs are a bare `Filter` over the chooser's OWN zone** (`filter.Among(s, player,
+  zone, source)`, in `FilterChoices`): activated `Sacrifice`/`ExileFromGraveyard`, `SacrificeOrPayAdditionalCost`,
+  `MaySacrifice`, `EachSacrifices`, `ChoosePermanentChoice` (null filter = any permanent). Scripts
+  drop `Is.Yours` there. Gallia's "exile ANOTHER creature card" is `Is.Creature & !Is.Source` — the
+  old graveyard spec excluded the source implicitly.
+- 112 script specs converted by a script (the scratchpad `convert_specs.py`, not kept); the 12 cost
+  sites by hand. Golden replays identical (150 games, 277 card games); bench −1.7% (noise).
+- **Conversion verified card by card:** a throwaway probe walked every scripted card's components,
+  dumped each target spec's and cost filter's candidates on `FilterBoard` in 3 contexts (you/your
+  source, you/a graveyard source, the opponent), on HEAD and on the working tree: 483 lines, identical.
+  Do the same in phases 3–5: it covers what the golden replays never cast.
+- The migration table's TargetSpec rows now check the NEW `TargetSpec` against the test's own zone
+  walk + filter (phase 1 proved the old one equal to that); the test's zone enum is `Zone` now.
+- Found: `DecliningMaySacrifice_IgnoresAStaleEarlierPick` ran with controller 0 (the pipeline
+  replaces a step's InputContext), so the Bear was never even offered; the old candidate scan hid it.
+  It now passes the context on the pipeline and asserts the Bear is offered; revert-checked.
+- `magic_docs.py`: catalogs the `TargetSpec` shortcuts; a member access (`Ref.Target`) no longer
+  counts as a use of a script helper (`Target`); `&amp;` in a summary prints as `&`.
 
 ### Phase 3: Ref and Count
 - `Ref` = real referents (`You`, `EachOpponent`, `EachPlayer`, `Target(i)`, `ControllerOf`, `OwnerOf`,
@@ -200,7 +224,7 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 
 - [x] Phase 0: golden replay (2026-10-10)
 - [x] Phase 1: filter language (2026-10-11)
-- [ ] Phase 2: TargetSpec
+- [x] Phase 2: TargetSpec (2026-10-11)
 - [ ] Phase 3: Ref, Count
 - [ ] Phase 4: statics, conditions
 - [ ] Phase 5: triggers

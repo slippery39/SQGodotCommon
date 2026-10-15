@@ -133,8 +133,13 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"When you do"** (a reflexive trigger, CR 603.12) is the `WhenYouDo` effect: its targets are chosen
   as it triggers, after the thing done, and it goes on the stack above — never fold it into the effect.
   It triggers only if the thing was done: after a mill it goes in `Mill.IfMilled` (an empty library mills nothing).
-- **Targets in a graveyard** are `TargetKind.CardInYourGraveyard` (or `CardInAnyGraveyard`, "from a graveyard") — the same legality test on choosing
-  and resolving. "One or two target creatures" is two words, the second `Optional` and `NotThePrevious`.
+- **A target is a zone and a filter** (`TargetSpec(From, Filter)`): the zone says where candidates
+  come from, the filter which of them (`Is.…`), and `TargetSpec` alone adds the targeting rules —
+  hexproof on the battlefield, and off it a spell or ability never targets its own card. Targets in a
+  graveyard are `TargetSpec.InYourGraveyard` (or `InAnyGraveyard`, "from a graveyard") — the same
+  legality test on choosing and resolving. A COST that picks (sacrifice, exile from your graveyard) is
+  not targeting: a bare `Filter` over the chooser's own zone (`filter.Among(…)`, in `FilterChoices`). "One or two target
+  creatures" is two words, the second `Optional` and `NotThePrevious`.
 - **"You may … If you do"** is `May` (a `YesNoChoice`, asked only when it can be done) or
   `MaySacrifice`; both clear the shared "chosen" key so a "no" cannot read a stale "yes". "Its owner
   may" is `May.Who` — another player answers, the effects stay yours — and "if they didn't" is `Otherwise`.

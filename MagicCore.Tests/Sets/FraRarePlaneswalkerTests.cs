@@ -17,7 +17,7 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 			[
 				new SpellEffectsComponent([new Destroy(Ref.Target())])
 				{
-					Targets = [new TargetSpec(TargetKind.Creature)],
+					Targets = [TargetSpec.Creature],
 				},
 			]
 		);
@@ -333,7 +333,7 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 				[
 					new SpellEffectsComponent([new Destroy(Ref.Target())])
 					{
-						Targets = [new TargetSpec(TargetKind.Creature)],
+						Targets = [TargetSpec.Creature],
 					},
 				]
 			)

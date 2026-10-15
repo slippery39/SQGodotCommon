@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Cards;
 using MagicCore.Effects;
+using MagicCore.Filters;
 using MagicCore.Rules;
 using MagicCore.Targeting;
 using MagicCore.Turns;
@@ -147,7 +148,12 @@ public record CastSpellAction : GameAction
 		var extra = card.GetComponent<SacrificeOrPayAdditionalCost>();
 		if (
 			SacrificeId != 0
-			&& (extra is null || !extra.Sacrifice.IsLegal(s, PlayerId, CardId, SacrificeId))
+			&& (
+				extra is null
+				|| !extra
+					.Sacrifice.Among(s, PlayerId, ZoneType.Battlefield, CardId)
+					.Contains(SacrificeId)
+			)
 		)
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
 		if (
@@ -351,7 +357,7 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (
 			ability.ExileFromGraveyard is { } exile
-				? !exile.IsLegal(s, PlayerId, CardId, ExileId)
+				? !exile.Among(s, PlayerId, ZoneType.Graveyard, CardId).Contains(ExileId)
 				: ExileId != 0
 		)
 			return ValidationResult.Invalid("Not a card you can exile for this");
@@ -361,7 +367,7 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Activate only as a sorcery");
 		if (
 			ability.Sacrifice is { } sacrifice
-				? !sacrifice.IsLegal(s, PlayerId, CardId, SacrificeId)
+				? !sacrifice.Among(s, PlayerId, ZoneType.Battlefield, CardId).Contains(SacrificeId)
 				: SacrificeId != 0
 		)
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");

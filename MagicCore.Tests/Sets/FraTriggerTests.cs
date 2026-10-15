@@ -4,6 +4,7 @@ using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Rules;
 using MagicCore.Sets.Fra;
+using MagicCore.Targeting;
 using MagicCore.Turns;
 
 namespace MagicCore.Tests.Sets;
@@ -530,11 +531,7 @@ public class FraTriggerTests : FraBoardTest
 				[
 					new SpellEffectsComponent([new DealDamage(Ref.Target(0), 1)])
 					{
-						Targets =
-						[
-							new Targeting.TargetSpec(Targeting.TargetKind.Creature),
-							new Targeting.TargetSpec(Targeting.TargetKind.Creature),
-						],
+						Targets = [TargetSpec.Creature, TargetSpec.Creature],
 					},
 				]
 			),

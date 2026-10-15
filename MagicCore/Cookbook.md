@@ -50,7 +50,7 @@ Order matters: the "wasn't attacking" check runs before the destroy, while the c
 	ModalSpell(
 		"Theorix Charm",
 		1,
-		M([new TargetSpec(TargetKind.Spell) { NotTypes = CardType.Creature }],
+		M([TargetSpec.Spell(!Is.Creature)],
 			new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{2}"))),
 		M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), -2, -2)),
 		M([], new Mill(Ref.You, 3), new DrawCards(Ref.You, 1))
@@ -125,9 +125,17 @@ live while its source is on the battlefield. **Equipment / Auras** — `Attached
 FraCards); its abilities in `Abilities = [...]`. **Abilities from the graveyard** — `FromGraveyard = true`
 on a trigger, `From = ZoneType.Graveyard` on an activated ability (see Command the Stage in the sheet).
 
-**Narrowing** — `Ref`s and `TargetSpec`s take options: `Ref.TokensYouControl with { Subtype = "Wizard" }`,
-`Creature with { Whose = Whose.You, Optional = true }`, `new TargetSpec(TargetKind.Permanent) { AnyOfTypes
-= CardType.Land }`. All options: the catalog's "Building blocks".
+**Targets** are a zone and a filter. A permanent: `Target(Is.Creature & Is.Yours & !Is.Source)` is
+"another target creature you control"; `Creature` and `CreatureOrPlaneswalker` are the plain ones.
+Elsewhere: `TargetSpec.Player(Is.Opponents)`, `TargetSpec.AnyTarget()`, `TargetSpec.Spell(!Is.Creature)`,
+`TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(3))`; "spell or creature" is
+`TargetSpec.Spell() with { Or = TargetSpec.Creature }`. "Up to one" is `with { Optional = true }`. Write
+the filter as the text reads — type first, then whose, then the rest. **A sacrifice or graveyard cost is a
+bare filter over your own zone** — `Sacrifice = Is.Artifact & !Is.Source`, `new MaySacrifice(Is.Creature,
+…)` — no `Is.Yours`, no `Target(…)`. Every filter word: the catalog's `Is` line.
+
+**Narrowing a Ref** — `Ref.TokensYouControl with { Subtype = "Wizard" }`. All options: the catalog's
+"Building blocks".
 
 ## How much checking a card needs — the tiers
 

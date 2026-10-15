@@ -2,6 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Sets.Fra;
+using MagicCore.Targeting;
 
 namespace MagicCore.Tests.Sets;
 
@@ -331,11 +332,7 @@ public class FraSacrificeTests : FraBoardTest
 					]
 				)
 				{
-					Targets =
-					[
-						new Targeting.TargetSpec(Targeting.TargetKind.Creature),
-						new Targeting.TargetSpec(Targeting.TargetKind.Creature),
-					],
+					Targets = [TargetSpec.Creature, TargetSpec.Creature],
 				},
 			]
 		);
@@ -379,14 +376,15 @@ public class FraSacrificeTests : FraBoardTest
 			.Add(ChooseCardsFromHandChoice.Chosen, bear)
 			.Add(ChoosePermanentChoice.Chosen, bear);
 		var effect = new Effects.MaySacrifice(
-			new Targeting.TargetSpec(Targeting.TargetKind.Creature, Targeting.Whose.You),
+			MagicCore.Filters.Is.Creature,
 			[new Effects.CreateTokens(FraCards.Beast, 1)]
-		)
-		{
-			InputContext = stale,
-		};
+		);
 
-		s = s.AddAction(new PipelineAction { Steps = [effect] }).ProcessAllActions().State;
+		// The pipeline's context is the effect's input: the Bear is offered, and declined.
+		s = s.AddAction(new PipelineAction { PipelineContext = stale, Steps = [effect] })
+			.ProcessAllActions()
+			.State;
+		Assert.That(s.GetPendingChoice()!.Options.Select(o => o.Id), Is.EqualTo(new[] { bear }));
 		s = s.Choose([]);
 
 		Assert.That(Alive(bear));

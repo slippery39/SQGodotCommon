@@ -179,7 +179,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 	{
 		Field(FraCards.Get("Danitha, Sword of Hope"), me);
 		var bear = Field(TestGames.Creature("Bear", "2/2"), me);
-		var pump = new TargetSpec(TargetKind.Creature);
+		var pump = TargetSpec.Creature;
 		var first = Hand(Targeted("Pump", pump, new ModifyUntilEndOfTurn(Ref.Target(), 1, 1)), me);
 		var second = Hand(Targeted("Pump", pump, new ModifyUntilEndOfTurn(Ref.Target(), 1, 1)), me);
 		var hand = HandCount(me);
@@ -204,7 +204,7 @@ public class FraUncommonDiscardTests : FraBoardTest
 		var danitha = Field(FraCards.Get("Danitha, Spear of Agony"), me);
 		var mine = Field(TestGames.Creature("Mine", "2/2"), me);
 		var theirs = Field(TestGames.Creature("Theirs", "2/2"), them);
-		var any = new TargetSpec(TargetKind.AnyTarget);
+		var any = TargetSpec.AnyTarget();
 		Cast(Hand(Targeted("Zap", any, new GainLife(Ref.You, 1)), me), [], mine);
 		Assert.That(s.GetCard(danitha).PlusOneCounters, Is.Zero);
 		Cast(Hand(Targeted("Zap", any, new GainLife(Ref.You, 1)), me), [], theirs);

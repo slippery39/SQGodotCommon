@@ -39,9 +39,10 @@ MagicCore/
 ├── Effects/Abilities.cs spell, triggered, activated, mana and static ability components
 ├── Effects/Conditions.cs  "if …": Condition, AtLeast(Count, N), Not, target/event tests
 ├── Effects/Modes.cs     Mode, Modal.Compose (chosen modes → one target list + steps), ScopeTargetsAction
-├── Targeting/TargetSpec.cs  one legality test for choosing AND resolving; Combinations
+├── Targeting/TargetSpec.cs  a target word = a zone (From) + a Filter + the targeting rules; one legality
+│                        test for choosing AND resolving; Combinations
 ├── Filters/            "which objects": Filter (& | !), leaves, and `Is` — the vocabulary scripts read.
-│                        Not used by the engine yet (FilterRefactorPlan.md phase 2 on); migration table:
+│                        Read by TargetSpec and the sacrifice/exile costs (FilterRefactorPlan.md); migration table:
 │                        MagicCore.Tests/Filters/FilterMigrationTests.cs
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions)

@@ -1,12 +1,12 @@
 using System.Collections.Immutable;
 using ImmutableGameObjects;
-using MagicCore.Targeting;
+using MagicCore.Filters;
 
 namespace MagicCore.Actions;
 
 /// <summary>
-/// Pick up to one permanent matching a filter — "you may sacrifice a creature". Not targeting: the
-/// filter is a TargetSpec only because that is the one place "a creature you control" is decided.
+/// Pick up to one of your permanents matching a filter — "you may sacrifice a creature". Not
+/// targeting: the chooser's battlefield, filtered (no filter is any permanent).
 /// </summary>
 public record ChoosePermanentChoice : ChoiceAction
 {
@@ -22,15 +22,10 @@ public record ChoosePermanentChoice : ChoiceAction
 
 	public int PlayerId { get; init; }
 	public int SourceId { get; init; }
-	public TargetSpec Filter { get; init; }
+	public Filter? Filter { get; init; }
 
 	/// <param name="required">"Sacrifices a creature" must; "you may sacrifice" need not.</param>
-	public ChoosePermanentChoice(
-		int playerId,
-		int sourceId,
-		TargetSpec filter,
-		bool required = false
-	)
+	public ChoosePermanentChoice(int playerId, int sourceId, Filter? filter, bool required = false)
 	{
 		PlayerId = playerId;
 		SourceId = sourceId;
@@ -45,8 +40,7 @@ public record ChoosePermanentChoice : ChoiceAction
 		ImmutableDictionary<string, object> context
 	) =>
 		Filter
-			.Candidates(s, PlayerId, SourceId)
-			.Where(id => s.GetObject(id) is Cards.Card)
+			.Among(s, PlayerId, ZoneType.Battlefield, SourceId)
 			.Select(id => new ChoiceOption { Id = id, DisplayText = s.GetObject(id).Name })
 			.ToImmutableList();
 

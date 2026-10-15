@@ -3,6 +3,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
+using MagicCore.Filters;
 using MagicCore.Targeting;
 
 namespace MagicCore;
@@ -161,7 +162,7 @@ public static class MagicRules
 			.ToList();
 		// "Sacrifice … or pay {N}": 0 is paying; each permanent that may be sacrificed is another way.
 		IEnumerable<int> sacrifices = card.GetComponent<SacrificeOrPayAdditionalCost>() is { } extra
-			? [0, .. extra.Sacrifice.Candidates(s, player, card.Id)]
+			? [0, .. extra.Sacrifice.Among(s, player, ZoneType.Battlefield, card.Id)]
 			: [0];
 		// "Behold … or pay {N}": 0 is paying, or behold one — any one: beholding moves nothing, so every
 		// candidate is the same play (a hand-built cast may still name another; ValidateAdd checks it).
@@ -206,13 +207,17 @@ public static class MagicRules
 			.Where(a => a.ability.From == zone)
 			.SelectMany(a =>
 				from targets in TargetSpec.Combinations(s, a.ability.Targets, player, card.Id)
-				from sacrifice in a.ability.Sacrifice?.Candidates(s, player, card.Id) ?? [0]
+				from sacrifice in a.ability.Sacrifice is { } sacrifice
+					? sacrifice.Among(s, player, ZoneType.Battlefield, card.Id)
+					: [0]
 				from discard in a.ability.DiscardACard
 					? s.CardsIn(player, ZoneType.Hand)
 						.Where(c => a.ability.MayDiscard(c, card.Id))
 						.Select(c => c.Id)
 					: [0]
-				from exile in a.ability.ExileFromGraveyard?.Candidates(s, player, card.Id) ?? [0]
+				from exile in a.ability.ExileFromGraveyard is { } exile
+					? exile.Among(s, player, ZoneType.Graveyard, card.Id)
+					: [0]
 				select (GameAction)
 					new ActivateAbilityAction
 					{

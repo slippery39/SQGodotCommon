@@ -105,8 +105,8 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 	/// <summary>"Sacrifice this [permanent]:" — part of the cost.</summary>
 	public bool SacrificeSelf { get; init; }
 
-	/// <summary>"Sacrifice another creature or planeswalker:" — what may be sacrificed as the cost.</summary>
-	public TargetSpec? Sacrifice { get; init; }
+	/// <summary>"Sacrifice another creature or planeswalker:" — which of yours may be sacrificed as the cost. Null: no such cost.</summary>
+	public Filters.Filter? Sacrifice { get; init; }
 
 	/// <summary>"Activate only as a sorcery."</summary>
 	public bool SorcerySpeed { get; init; }
@@ -137,10 +137,10 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 
 	/// <summary>
 	/// Gallia, Tragic Host: "Exile another creature card from your graveyard:" — what may be exiled.
-	/// A CardInYourGraveyard spec, so the source itself never qualifies: lifted from MtgCore's
+	/// Which cards in your graveyard; "another" is !Is.Source in the filter — lifted from MtgCore's
 	/// ExileFromGraveyardAdditionalCost, where a card exiling ITSELF paid for its own recursion.
 	/// </summary>
-	public TargetSpec? ExileFromGraveyard { get; init; }
+	public Filters.Filter? ExileFromGraveyard { get; init; }
 
 	/// <summary>Warrior's Blades' equip: "{1} less for each +1/+1 counter on the creature it targets".</summary>
 	public bool CostsLessPerCounterOnTarget { get; init; }
@@ -220,7 +220,7 @@ public record EntersTappedComponent(EntersUntappedIf Unless = EntersUntappedIf.N
 	: GameComponent;
 
 /// <summary>Silence the Echo: "As an additional cost to cast this spell, sacrifice a [Sacrifice] or pay {Generic}."</summary>
-public record SacrificeOrPayAdditionalCost(TargetSpec Sacrifice, int Generic) : GameComponent;
+public record SacrificeOrPayAdditionalCost(Filters.Filter Sacrifice, int Generic) : GameComponent;
 
 /// <summary>"This creature enters with N (or X) +1/+1 counters on it." Applied by MagicState.EnterBattlefield.</summary>
 public record EntersWithCountersComponent(Count Count) : GameComponent;

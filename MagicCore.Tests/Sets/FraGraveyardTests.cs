@@ -366,7 +366,7 @@ public class FraGraveyardTests : FraBoardTest
 			[
 				new SpellEffectsComponent([new Destroy(Ref.Target())])
 				{
-					Targets = [new TargetSpec(TargetKind.Permanent)],
+					Targets = [TargetSpec.Permanent()],
 				},
 			]
 		);

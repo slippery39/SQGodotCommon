@@ -12,6 +12,25 @@ namespace MagicCore.Filters;
 // No zone in a filter — whoever supplies the candidates owns the zone. No targeting rules either:
 // hexproof and "a spell can't target itself" stay in TargetSpec.
 
+/// <summary>
+/// Not targeting — "sacrifice a creature", "exile another creature card from your graveyard": the
+/// chooser's own zone, filtered (no filter is any card there). Legality is membership, so the cost
+/// and its candidates can't disagree.
+/// </summary>
+public static class FilterChoices
+{
+	public static IEnumerable<int> Among(
+		this Filter? filter,
+		GameState s,
+		int playerId,
+		ZoneType zone,
+		int sourceId
+	) =>
+		s.CardsIn(playerId, zone)
+			.Where(c => filter?.Matches(s, c, new(playerId, sourceId)) ?? true)
+			.Select(c => c.Id);
+}
+
 /// <summary>Who is asking: "you", "this", "the event's card". 0 where there is none.</summary>
 public readonly record struct FilterContext(int Controller, int Source = 0, int EventCard = 0);
 

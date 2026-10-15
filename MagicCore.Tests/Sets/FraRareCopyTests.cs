@@ -17,7 +17,7 @@ public class FraRareCopyTests : FraBoardTest
 			[
 				new SpellEffectsComponent([new Destroy(Ref.Target())])
 				{
-					Targets = [new TargetSpec(TargetKind.Creature)],
+					Targets = [TargetSpec.Creature],
 				},
 			]
 		);

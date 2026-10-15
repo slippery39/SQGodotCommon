@@ -20,12 +20,7 @@ public class FraRareOneOffTests : FraBoardTest
 	static CardDefinition Targeted(string name, params GameAction[] effects) =>
 		new(
 			TestGames.Inline(name, "{1}", "Instant").Data,
-			[
-				new SpellEffectsComponent([.. effects])
-				{
-					Targets = [new TargetSpec(TargetKind.Creature)],
-				},
-			]
+			[new SpellEffectsComponent([.. effects]) { Targets = [TargetSpec.Creature] }]
 		);
 
 	static CardDefinition Kill => Targeted("Kill", new Destroy(Ref.Target()));
@@ -222,7 +217,7 @@ public class FraRareOneOffTests : FraBoardTest
 				[
 					new SpellEffectsComponent([new Destroy(Ref.Target())])
 					{
-						Targets = [new TargetSpec(TargetKind.Permanent)],
+						Targets = [TargetSpec.Permanent()],
 					},
 				]
 			),

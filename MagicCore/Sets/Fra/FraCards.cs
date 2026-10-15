@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Cards;
 using MagicCore.Effects;
+using MagicCore.Filters;
 using MagicCore.Targeting;
 using MagicCore.Turns;
 
@@ -319,7 +320,10 @@ public static class FraCards
 		"Flash"
 	);
 
-	static readonly TargetSpec Creature = new(TargetKind.Creature);
+	/// <summary>"Target [filter]" — a permanent: Target(Is.Creature &amp; Is.Yours) is "target creature you control".</summary>
+	static TargetSpec Target(Filter? filter = null) => TargetSpec.Permanent(filter);
+
+	static readonly TargetSpec Creature = TargetSpec.Creature;
 
 	/// <summary>"Permanent card" / "nonland permanent card". FRA has no battles.</summary>
 	const CardType NonlandPermanentTypes =
@@ -333,7 +337,7 @@ public static class FraCards
 		| CardType.Sorcery
 		| CardType.Kindred
 		| CardType.Battle;
-	static readonly TargetSpec CreatureOrPlaneswalker = new(TargetKind.CreatureOrPlaneswalker);
+	static readonly TargetSpec CreatureOrPlaneswalker = TargetSpec.CreatureOrPlaneswalker;
 
 	static SpellEffectsComponent Spell(TargetSpec[] targets, params GameAction[] effects) =>
 		new([.. effects]) { Targets = [.. targets] };
@@ -382,11 +386,7 @@ public static class FraCards
 
 	/// <summary>Vicious Verse: "deals 1 damage to target opponent."</summary>
 	static PrepareSpellComponent ViciousVerse(string card) =>
-		PrepareSpell(
-			card,
-			[new TargetSpec(TargetKind.Player, Whose.Opponent)],
-			new DealDamage(Ref.Target(), 1)
-		);
+		PrepareSpell(card, [TargetSpec.Player(Is.Opponents)], new DealDamage(Ref.Target(), 1));
 
 	/// <summary>Omit Variables: "Mill three cards."</summary>
 	static PrepareSpellComponent OmitVariables(string card) =>
@@ -458,7 +458,7 @@ public static class FraCards
 		new(ManaCost.Parse(cost), [new AttachSourceTo(Ref.Target())])
 		{
 			SorcerySpeed = true,
-			Targets = [Creature with { Whose = Whose.You }],
+			Targets = [Target(Is.Creature & Is.Yours)],
 		};
 
 	/// <summary>"Equipped/enchanted creature gets +P/+T."</summary>
@@ -473,7 +473,7 @@ public static class FraCards
 	static TriggeredAbilityComponent TeyoEnters(string keyword) =>
 		When(
 			TriggerEvent.SelfEnters,
-			[new TargetSpec(TargetKind.Permanent, Whose.You)],
+			[Target(Is.Yours)],
 			new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, keyword),
 			new AddCounters(Ref.Target(), 1),
 			new AddLoyalty(Ref.Target(), 1)
@@ -531,7 +531,12 @@ public static class FraCards
 			["Terminal Criticism"] =
 			[
 				Spell(
-					[CreatureOrPlaneswalker with { AnyOfColors = [ManaColor.Blue, ManaColor.Red] }],
+					[
+						Target(
+							(Is.Creature | Is.Planeswalker)
+								& (Is.Color(ManaColor.Blue) | Is.Color(ManaColor.Red))
+						),
+					],
 					new Destroy(Ref.Target()),
 					new GainLife(Ref.You, 1)
 				),
@@ -624,8 +629,11 @@ public static class FraCards
 				When(
 					TriggerEvent.SelfEnters,
 					[
-						new TargetSpec(TargetKind.Creature, Whose.You) { Another = true },
-						new TargetSpec(TargetKind.Creature, Whose.Opponent) { Optional = true },
+						Target(Is.Creature & Is.Yours & !Is.Source),
+						Target(Is.Creature & Is.Opponents) with
+						{
+							Optional = true,
+						},
 					],
 					new Fight(Ref.Target(0), Ref.Target(1))
 				),
@@ -634,7 +642,7 @@ public static class FraCards
 					[new AddCounters(Ref.Target(), 1)]
 				)
 				{
-					Targets = [Creature with { Nonlegendary = true }],
+					Targets = [Target(Is.Creature & !Is.Legendary)],
 				},
 			],
 			["Greenhouse Propagator"] =
@@ -757,7 +765,7 @@ public static class FraCards
 			["No Admittance"] =
 			[
 				Spell(
-					[new TargetSpec(TargetKind.AnyTarget)],
+					[TargetSpec.AnyTarget()],
 					new DealDamage(Ref.Target(), 3),
 					new EmpowerJace(1)
 				),
@@ -774,11 +782,11 @@ public static class FraCards
 				Grant(
 					-4,
 					[
-						CreatureOrPlaneswalker with
+						Target(Is.Creature | Is.Planeswalker) with
 						{
 							Optional = true,
 						},
-						new TargetSpec(TargetKind.Player),
+						TargetSpec.Player(),
 					],
 					new DealDamage(Ref.Target(0), 2),
 					new DealDamage(Ref.Target(1), 2)
@@ -813,7 +821,7 @@ public static class FraCards
 					"Surgical Precision",
 					1,
 					M(
-						[Creature with { MinToughness = 4 }],
+						[Target(Is.Creature & Is.ToughnessAtLeast(4))],
 						new Destroy(Ref.Target()),
 						new GainLife(Ref.You, 1)
 					),
@@ -893,24 +901,15 @@ public static class FraCards
 					1,
 					M(
 						[
-							new TargetSpec(TargetKind.Creature, Whose.You),
-							CreatureOrPlaneswalker with
-							{
-								Whose = Whose.Opponent,
-							},
+							Target(Is.Creature & Is.Yours),
+							Target((Is.Creature | Is.Planeswalker) & Is.Opponents),
 						],
 						new DamageFrom(Ref.Target(0), Ref.Target(1), Count.PowerOf(Ref.Target(0)))
 					),
 					M(
 						[
-							new TargetSpec(TargetKind.Permanent, Whose.You)
-							{
-								AnyOfTypes = CardType.Planeswalker,
-							},
-							CreatureOrPlaneswalker with
-							{
-								Whose = Whose.Opponent,
-							},
+							Target(Is.Planeswalker & Is.Yours),
+							Target((Is.Creature | Is.Planeswalker) & Is.Opponents),
 						],
 						new DamageFrom(Ref.Target(0), Ref.Target(1), Count.LoyaltyOf(Ref.Target(0)))
 					)
@@ -946,7 +945,10 @@ public static class FraCards
 					"Fatehold Charm",
 					1,
 					M([], new DrawCards(Ref.You, 1), new EmpowerJace(2)),
-					M([new TargetSpec(TargetKind.SpellOrCreature)], new ReturnToHand(Ref.Target())),
+					M(
+						[TargetSpec.Spell() with { Or = TargetSpec.Creature }],
+						new ReturnToHand(Ref.Target())
+					),
 					M([], new ModifyUntilEndOfTurn(Ref.CreaturesYouControl, 1, 2))
 				),
 			],
@@ -955,7 +957,7 @@ public static class FraCards
 				ModalSpell(
 					"Konstrari Charm",
 					1,
-					M([Creature with { WithKeyword = "Flying" }], new DealDamage(Ref.Target(), 6)),
+					M([Target(Is.Creature & Is.With("Flying"))], new DealDamage(Ref.Target(), 6)),
 					M(
 						[Creature],
 						new AddCounters(Ref.Target(), 2),
@@ -969,7 +971,7 @@ public static class FraCards
 				ModalSpell(
 					"Stingerquill Charm",
 					1,
-					M([new TargetSpec(TargetKind.AnyTarget)], new DealDamage(Ref.Target(), 3)),
+					M([TargetSpec.AnyTarget()], new DealDamage(Ref.Target(), 3)),
 					M(
 						[Creature],
 						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "First strike"),
@@ -985,12 +987,7 @@ public static class FraCards
 					TriggerEvent.SelfEnters,
 					1,
 					M(
-						[
-							new TargetSpec(TargetKind.Permanent)
-							{
-								NotTypes = CardType.Creature | CardType.Land,
-							},
-						],
+						[Target(!Is.Type(CardType.Creature | CardType.Land))],
 						new Destroy(Ref.Target())
 					),
 					M([], new GainLife(Ref.You, 4))
@@ -1031,13 +1028,7 @@ public static class FraCards
 				{
 					SacrificeSelf = true,
 					SorcerySpeed = true,
-					Targets =
-					[
-						new TargetSpec(TargetKind.Permanent)
-						{
-							AnyOfTypes = CardType.Artifact | CardType.Enchantment,
-						},
-					],
+					Targets = [Target(Is.Type(CardType.Artifact | CardType.Enchantment))],
 				},
 			],
 			["Living Library"] =
@@ -1048,7 +1039,7 @@ public static class FraCards
 				)
 				{
 					SacrificeSelf = true,
-					Targets = [CreatureOrPlaneswalker with { Whose = Whose.Opponent }],
+					Targets = [Target((Is.Creature | Is.Planeswalker) & Is.Opponents)],
 				},
 			],
 			["Marwyn, the Clearcutter"] =
@@ -1056,10 +1047,7 @@ public static class FraCards
 				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new DrawCards(Ref.You, 1)])
 				{
 					TapCost = true,
-					Sacrifice = new TargetSpec(TargetKind.Permanent, Whose.You)
-					{
-						AnyOfTypes = CardType.Artifact | CardType.Land,
-					},
+					Sacrifice = Is.Type(CardType.Artifact | CardType.Land),
 				},
 			],
 			["Edgar, Ancient Bloodlord"] =
@@ -1077,13 +1065,13 @@ public static class FraCards
 					]
 				)
 				{
-					Sacrifice = CreatureOrPlaneswalker with { Whose = Whose.You, Another = true },
+					Sacrifice = (Is.Creature | Is.Planeswalker) & !Is.Source,
 				},
 			],
 			["Break Under Pressure"] =
 			[
 				Spell(
-					[new TargetSpec(TargetKind.Player, Whose.Opponent)],
+					[TargetSpec.Player(Is.Opponents)],
 					new SacrificeGreatestManaValue(
 						Ref.Target(),
 						CardType.Creature | CardType.Planeswalker
@@ -1093,33 +1081,20 @@ public static class FraCards
 			],
 			["Silence the Echo"] =
 			[
-				new SacrificeOrPayAdditionalCost(
-					CreatureOrPlaneswalker with
-					{
-						Whose = Whose.You,
-					},
-					3
-				),
+				new SacrificeOrPayAdditionalCost(Is.Creature | Is.Planeswalker, 3),
 				Spell([CreatureOrPlaneswalker], new Destroy(Ref.Target())),
 			],
 			["Way of the Deathbringer"] =
 			[
 				When(TriggerEvent.SelfEnters, [], new EmpowerJace(5)),
-				Grant(
-					-2,
-					[],
-					new MaySacrifice(
-						new TargetSpec(TargetKind.Creature, Whose.You),
-						[new CreateTokens(Beast, 1)]
-					)
-				),
+				Grant(-2, [], new MaySacrifice(Is.Creature, [new CreateTokens(Beast, 1)])),
 			],
 			["Graft Surgeon"] =
 			[
 				new EntersWithCountersComponent(1),
 				When(
 					TriggerEvent.SelfDies,
-					[new TargetSpec(TargetKind.Creature, Whose.You) { Optional = true }],
+					[Target(Is.Creature & Is.Yours) with { Optional = true }],
 					new PutEventCardCounters(Ref.Target())
 				),
 			],
@@ -1127,7 +1102,7 @@ public static class FraCards
 			[
 				When(
 					TriggerEvent.AnotherCreatureOrPlaneswalkerYouControlDies,
-					[new TargetSpec(TargetKind.Player, Whose.Opponent)],
+					[TargetSpec.Player(Is.Opponents)],
 					new DealDamage(Ref.Target(), 1),
 					new GainLife(Ref.You, 1)
 				),
@@ -1146,12 +1121,7 @@ public static class FraCards
 			[
 				When(
 					TriggerEvent.SelfEnters,
-					[
-						new TargetSpec(TargetKind.Permanent, Whose.Opponent)
-						{
-							NotTypes = CardType.Land,
-						},
-					],
+					[Target(Is.Opponents & !Is.Land)],
 					new ExileUntilSourceLeaves(Ref.Target())
 				),
 			],
@@ -1164,7 +1134,7 @@ public static class FraCards
 			[
 				When(
 					TriggerEvent.SelfEnters,
-					[new TargetSpec(TargetKind.AnyTarget)],
+					[TargetSpec.AnyTarget()],
 					new DealDamage(Ref.Target(), Count.X)
 				),
 				new StaticEffectComponent(Affects.CreaturesYouControl, "Trample"),
@@ -1193,7 +1163,7 @@ public static class FraCards
 				},
 				When(
 					TriggerEvent.SelfEnters,
-					[new TargetSpec(TargetKind.Creature, Whose.Opponent) { Optional = true }],
+					[Target(Is.Creature & Is.Opponents) with { Optional = true }],
 					new Fight(Ref.Source, Ref.Target())
 				),
 			],
@@ -1205,16 +1175,8 @@ public static class FraCards
 					TriggerEvent.SelfEnters,
 					[],
 					new MaySacrifice(
-						CreatureOrPlaneswalker with
-						{
-							Whose = Whose.You,
-						},
-						[
-							new EachSacrifices(
-								Ref.EachOpponent,
-								new TargetSpec(TargetKind.Creature, Whose.You)
-							),
-						]
+						Is.Creature | Is.Planeswalker,
+						[new EachSacrifices(Ref.EachOpponent, Is.Creature)]
 					)
 				),
 				new StaticEffectComponent(Affects.Self)
@@ -1239,14 +1201,7 @@ public static class FraCards
 				)
 				{
 					TapCost = true,
-					Targets =
-					[
-						new TargetSpec(TargetKind.Creature, Whose.You)
-						{
-							Another = true,
-							MaxPower = 2,
-						},
-					],
+					Targets = [Target(Is.Creature & Is.Yours & !Is.Source & Is.PowerAtMost(2))],
 				},
 			],
 
@@ -1322,9 +1277,8 @@ public static class FraCards
 				Loyalty(
 					-2,
 					[
-						new TargetSpec(TargetKind.Permanent, Whose.Opponent)
+						Target(Is.Type(CardType.Artifact | CardType.Creature) & Is.Opponents) with
 						{
-							AnyOfTypes = CardType.Artifact | CardType.Creature,
 							Optional = true,
 						},
 					],
@@ -1369,7 +1323,7 @@ public static class FraCards
 			[
 				When(
 					TriggerEvent.BeginningOfCombatOnYourTurn,
-					[new TargetSpec(TargetKind.Creature, Whose.You) { Another = true }],
+					[Target(Is.Creature & Is.Yours & !Is.Source)],
 					new If(
 						new AtLeast(Count.YourSurveilsThisTurn, 1),
 						[new AddCounters(Ref.Target(), 1)]
@@ -1499,14 +1453,14 @@ public static class FraCards
 				)
 				{
 					TapCost = true,
-					Targets = [Creature with { EnteredThisTurn = true }],
+					Targets = [Target(Is.Creature & Is.EnteredThisTurn)],
 				},
 			],
 			["Mabel, Valley Hero"] =
 			[
 				When(
 					TriggerEvent.CreatureYouControlEnters,
-					[Creature with { EnteredThisTurn = true }],
+					[Target(Is.Creature & Is.EnteredThisTurn)],
 					new AddCounters(Ref.Target(), 1)
 				),
 			],
@@ -1534,13 +1488,7 @@ public static class FraCards
 			["Generous Revival"] =
 			[
 				Spell(
-					[
-						new TargetSpec(TargetKind.CardInYourGraveyard)
-						{
-							AnyOfTypes = CardType.Creature,
-							MaxManaValue = 3,
-						},
-					],
+					[TargetSpec.InYourGraveyard(Is.Creature & Is.ManaValueAtMost(3))],
 					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield) { Counters = 1 }
 				),
 				new FlashbackComponent(ManaCost.Parse("{4}{W}")),
@@ -1558,12 +1506,7 @@ public static class FraCards
 			[
 				When(
 					TriggerEvent.SelfEnters,
-					[
-						new TargetSpec(TargetKind.CardInYourGraveyard)
-						{
-							AnyOfTypes = CardType.Instant | CardType.Sorcery,
-						},
-					],
+					[TargetSpec.InYourGraveyard(Is.Type(CardType.Instant | CardType.Sorcery))],
 					new GainFlashbackThisTurn(Ref.Target())
 				),
 			],
@@ -1618,7 +1561,7 @@ public static class FraCards
 				When(TriggerEvent.YouSurveil, [], new ModifyUntilEndOfTurn(Ref.Source, 1, 1)),
 				PrepareSpell(
 					"Diviner of Victory // Unwind History",
-					[Creature with { Whose = Whose.Opponent, MaxManaValue = 3 }],
+					[Target(Is.Creature & Is.Opponents & Is.ManaValueAtMost(3))],
 					new ReturnToHand(Ref.Target()),
 					new Surveil(1)
 				),
@@ -1650,7 +1593,7 @@ public static class FraCards
 				},
 				PrepareSpell(
 					"Bloodline Recollector // Ancestral Craving",
-					[new TargetSpec(TargetKind.Player)],
+					[TargetSpec.Player()],
 					new DrawCards(Ref.Target(), 3),
 					new LoseLife(Ref.Target(), 3)
 				),
@@ -1681,7 +1624,7 @@ public static class FraCards
 				EntersPrepared,
 				When(
 					TriggerEvent.SelfDealsCombatDamageToPlayer,
-					[new TargetSpec(TargetKind.CardInYourGraveyard) { AnyOfTypes = CardType.Land }],
+					[TargetSpec.InYourGraveyard(Is.Land)],
 					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
 				),
 				PrepareSpell(
@@ -1713,7 +1656,7 @@ public static class FraCards
 					[new PutIntoLibrary(Ref.Target(), OnTop: false)]
 				)
 				{
-					Targets = [new TargetSpec(TargetKind.CardInYourGraveyard)],
+					Targets = [TargetSpec.InYourGraveyard()],
 				},
 				OmitVariables("Paradox Shaper // Omit Variables"),
 			],
@@ -1794,13 +1737,9 @@ public static class FraCards
 			[
 				Spell(
 					[
-						CreatureOrPlaneswalker with
+						Target((Is.Creature | Is.Planeswalker) & Is.Opponents),
+						Target(Is.Creature & Is.Yours) with
 						{
-							Whose = Whose.Opponent,
-						},
-						Creature with
-						{
-							Whose = Whose.You,
 							Optional = true,
 						},
 					],
@@ -1846,13 +1785,7 @@ public static class FraCards
 					From = ZoneType.Graveyard,
 					ExileSelf = true,
 					// "another target creature card": a graveyard target is never its source
-					Targets =
-					[
-						new TargetSpec(TargetKind.CardInYourGraveyard)
-						{
-							AnyOfTypes = CardType.Creature,
-						},
-					],
+					Targets = [TargetSpec.InYourGraveyard(Is.Creature)],
 				},
 			],
 			["Blessed Ghoul"] =
@@ -1892,10 +1825,7 @@ public static class FraCards
 				)
 				{
 					From = ZoneType.Graveyard,
-					ExileFromGraveyard = new TargetSpec(TargetKind.CardInYourGraveyard)
-					{
-						AnyOfTypes = CardType.Creature,
-					},
+					ExileFromGraveyard = Is.Creature & !Is.Source,
 				},
 			],
 			["Hallway Heckler // Vicious Verse"] =
@@ -1929,10 +1859,9 @@ public static class FraCards
 					SorcerySpeed = true,
 					Targets =
 					[
-						new TargetSpec(TargetKind.CardInYourGraveyard)
-						{
-							AnyOfTypes = CardType.Creature | CardType.Planeswalker,
-						},
+						TargetSpec.InYourGraveyard(
+							Is.Type(CardType.Creature | CardType.Planeswalker)
+						),
 					],
 				},
 			],
@@ -1944,13 +1873,7 @@ public static class FraCards
 					[new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)]
 				)
 				{
-					Targets =
-					[
-						new TargetSpec(TargetKind.CardInYourGraveyard)
-						{
-							AnyOfTypes = CardType.Land,
-						},
-					],
+					Targets = [TargetSpec.InYourGraveyard(Is.Land)],
 				},
 			],
 			["Fateshaper Aspirant"] =
@@ -1960,12 +1883,7 @@ public static class FraCards
 					TriggerEvent.SelfEnters,
 					1,
 					M(
-						[
-							new TargetSpec(TargetKind.CardInYourGraveyard)
-							{
-								WithSupertype = Supertype.Legendary,
-							},
-						],
+						[TargetSpec.InYourGraveyard(Is.Legendary)],
 						new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)
 					),
 					M(
@@ -1989,12 +1907,7 @@ public static class FraCards
 			["Restore with Empathy"] =
 			[
 				Spell(
-					[
-						new TargetSpec(TargetKind.CardInYourGraveyard)
-						{
-							AnyOfTypes = PermanentTypes,
-						},
-					],
+					[TargetSpec.InYourGraveyard(Is.Type(PermanentTypes))],
 					new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand),
 					new GainLife(Ref.You, 4)
 				),
@@ -2003,11 +1916,10 @@ public static class FraCards
 			[
 				Spell(
 					[
-						new TargetSpec(TargetKind.CardInYourGraveyard)
-						{
-							AnyOfTypes = CardType.Creature | CardType.Planeswalker,
-							MaxManaValue = 6,
-						},
+						TargetSpec.InYourGraveyard(
+							Is.Type(CardType.Creature | CardType.Planeswalker)
+								& Is.ManaValueAtMost(6)
+						),
 					],
 					new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield),
 					new EmpowerJace(2)
@@ -2046,7 +1958,7 @@ public static class FraCards
 				{
 					From = ZoneType.Hand,
 					DiscardSelf = true,
-					Targets = [Creature with { WithKeyword = "Flying" }],
+					Targets = [Target(Is.Creature & Is.With("Flying"))],
 				},
 			],
 			["Afterthought Sentry"] =
@@ -2057,7 +1969,7 @@ public static class FraCards
 				),
 				When(
 					TriggerEvent.SelfAttacks,
-					[new TargetSpec(TargetKind.CardInAnyGraveyard) { Optional = true }],
+					[TargetSpec.InAnyGraveyard() with { Optional = true }],
 					new ExileFromGraveyard(Ref.Target())
 				),
 			],
@@ -2095,12 +2007,7 @@ public static class FraCards
 					TriggerEvent.SelfEnters,
 					[],
 					new MayDiscard(
-						[
-							new WhenYouDo(
-								[new TargetSpec(TargetKind.AnyTarget)],
-								[new DealDamage(Ref.Target(), 2)]
-							),
-						]
+						[new WhenYouDo([TargetSpec.AnyTarget()], [new DealDamage(Ref.Target(), 2)])]
 					)
 				),
 			],
@@ -2115,7 +2022,7 @@ public static class FraCards
 			["Solve for Disappointment"] =
 			[
 				Spell(
-					[new TargetSpec(TargetKind.Player, Whose.Opponent)],
+					[TargetSpec.Player(Is.Opponents)],
 					new YouChooseTheyDiscard(Ref.Target(), NonlandPermanentTypes),
 					new EmpowerJace(1)
 				),
@@ -2128,13 +2035,7 @@ public static class FraCards
 					"Icy Reception",
 					1,
 					M(
-						[
-							new TargetSpec(TargetKind.Spell)
-							{
-								AnyOfTypes = CardType.Creature,
-								OrSupertype = Supertype.Legendary,
-							},
-						],
+						[TargetSpec.Spell(Is.Creature | Is.Legendary)],
 						new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{3}"))
 					),
 					M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), -5, 0))
@@ -2202,7 +2103,7 @@ public static class FraCards
 			[
 				When(
 					TriggerEvent.SelfEnters,
-					[new TargetSpec(TargetKind.AnyTarget)],
+					[TargetSpec.AnyTarget()],
 					new DealDamage(Ref.Target(), 3),
 					new GainLife(Ref.You, 3)
 				),
@@ -2226,9 +2127,10 @@ public static class FraCards
 								[
 									new WhenYouDo(
 										[
-											CreatureOrPlaneswalker with
+											Target(
+												(Is.Creature | Is.Planeswalker) & Is.Opponents
+											) with
 											{
-												Whose = Whose.Opponent,
 												Optional = true,
 											},
 										],
@@ -2248,10 +2150,10 @@ public static class FraCards
 			[
 				Spell(
 					[
-						CreatureOrPlaneswalker with
-						{
-							AnyOfColors = [ManaColor.Green, ManaColor.Blue],
-						},
+						Target(
+							(Is.Creature | Is.Planeswalker)
+								& (Is.Color(ManaColor.Green) | Is.Color(ManaColor.Blue))
+						),
 					],
 					new Exile(Ref.Target()),
 					new Surveil(1)
@@ -2260,7 +2162,7 @@ public static class FraCards
 			["Your Fate Ends Here"] =
 			[
 				Spell(
-					[CreatureOrPlaneswalker with { MinManaValue = 3 }],
+					[Target((Is.Creature | Is.Planeswalker) & Is.ManaValueAtLeast(3))],
 					new Destroy(Ref.Target()),
 					new Surveil(1)
 				),
@@ -2268,12 +2170,7 @@ public static class FraCards
 			["Precise Redaction"] =
 			[
 				Spell(
-					[
-						new TargetSpec(TargetKind.Spell)
-						{
-							AnyOfColors = [ManaColor.White, ManaColor.Black],
-						},
-					],
+					[TargetSpec.Spell(Is.Color(ManaColor.White) | Is.Color(ManaColor.Black))],
 					new Counter(Ref.Target())
 				),
 			],
@@ -2288,10 +2185,10 @@ public static class FraCards
 			[
 				Spell(
 					[
-						CreatureOrPlaneswalker with
-						{
-							AnyOfColors = [ManaColor.Black, ManaColor.Green],
-						},
+						Target(
+							(Is.Creature | Is.Planeswalker)
+								& (Is.Color(ManaColor.Black) | Is.Color(ManaColor.Green))
+						),
 					],
 					new DealDamage(Ref.Target(), 5),
 					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0) { ExileIfItWouldDie = true }
@@ -2307,7 +2204,7 @@ public static class FraCards
 			["Clash of Elements"] =
 			[
 				Spell(
-					[new TargetSpec(TargetKind.Permanent) { NotTypes = CardType.Land }],
+					[Target(!Is.Land)],
 					new May(
 						"Put it on top of your library and take 2 damage? (No: it goes on the bottom.)",
 						new Always(),
@@ -2332,12 +2229,7 @@ public static class FraCards
 						IfMilled =
 						[
 							new WhenYouDo(
-								[
-									new TargetSpec(TargetKind.CardInYourGraveyard)
-									{
-										AnyOfTypes = CardType.Land,
-									},
-								],
+								[TargetSpec.InYourGraveyard(Is.Land)],
 								[
 									new ReturnFromGraveyard(Ref.Target(), ZoneType.Battlefield)
 									{
@@ -2355,7 +2247,7 @@ public static class FraCards
 					"Theorix Charm",
 					1,
 					M(
-						[new TargetSpec(TargetKind.Spell) { NotTypes = CardType.Creature }],
+						[TargetSpec.Spell(!Is.Creature)],
 						new CounterUnlessPays(Ref.Target(), ManaCost.Parse("{2}"))
 					),
 					M([Creature], new ModifyUntilEndOfTurn(Ref.Target(), -2, -2)),
@@ -2365,10 +2257,7 @@ public static class FraCards
 			["Twisted Fates"] =
 			[
 				Spell(
-					[
-						new TargetSpec(TargetKind.Permanent) { NotTypes = CardType.Land },
-						new TargetSpec(TargetKind.Player),
-					],
+					[Target(!Is.Land), TargetSpec.Player()],
 					new Destroy(Ref.Target(0)),
 					new AddCounters(Ref.PermanentsOfTargetPlayer(CardType.Creature, 1), 1)
 				),
@@ -2379,16 +2268,13 @@ public static class FraCards
 					"Vigorbloom Charm",
 					1,
 					M(
-						[new TargetSpec(TargetKind.Permanent, Whose.You)],
+						[Target(Is.Yours)],
 						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Hexproof"),
 						new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Indestructible")
 					),
 					M([], new DrawCards(Ref.You, 1), new GainLife(Ref.You, 3)),
 					M(
-						[
-							new TargetSpec(TargetKind.Creature, Whose.You),
-							new TargetSpec(TargetKind.Creature, Whose.Opponent),
-						],
+						[Target(Is.Creature & Is.Yours), Target(Is.Creature & Is.Opponents)],
 						new AddCounters(Ref.Target(0), 1),
 						new Fight(Ref.Target(0), Ref.Target(1))
 					)
@@ -2430,7 +2316,7 @@ public static class FraCards
 				new ActivatedAbilityComponent(ManaCost.None, [new ReturnToHand(Ref.Target())])
 				{
 					TapCost = true,
-					Targets = [new TargetSpec(TargetKind.Permanent, Whose.You) { Another = true }],
+					Targets = [Target(Is.Yours & !Is.Source)],
 					OnlyIf = new DuringYourTurn(),
 				},
 			],
@@ -2457,7 +2343,7 @@ public static class FraCards
 				// "For each opponent, … up to one target creature that player controls" — one opponent.
 				When(
 					TriggerEvent.SelfEnters,
-					[new TargetSpec(TargetKind.Creature, Whose.Opponent) { Optional = true }],
+					[Target(Is.Creature & Is.Opponents) with { Optional = true }],
 					new Tap(Ref.Target()),
 					new AddStunCounters(Ref.Target(), 1)
 				),
@@ -2505,7 +2391,7 @@ public static class FraCards
 				{
 					TapCost = true,
 					SorcerySpeed = true,
-					Targets = [Creature with { AttackedThisTurn = true }],
+					Targets = [Target(Is.Creature & Is.AttackedThisTurn)],
 				},
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{4}"),
@@ -2572,14 +2458,7 @@ public static class FraCards
 			[
 				When(
 					TriggerEvent.SelfEnters,
-					[
-						new TargetSpec(TargetKind.Permanent)
-						{
-							NotTypes = CardType.Land,
-							Optional = true,
-							Another = true,
-						},
-					],
+					[Target(!Is.Land & !Is.Source) with { Optional = true }],
 					new May(
 						"Put it on top of your library? (No: the bottom.)",
 						new Always(),
@@ -2608,11 +2487,7 @@ public static class FraCards
 			["Countersculpt"] =
 			[
 				new BeholdOrPayAdditionalCost("Jace", 1),
-				Spell(
-					[new TargetSpec(TargetKind.Spell)],
-					new Counter(Ref.Target()),
-					new EmpowerJace(1)
-				),
+				Spell([TargetSpec.Spell()], new Counter(Ref.Target()), new EmpowerJace(1)),
 			],
 
 			// ===== Uncommons: replacements and counters =====
@@ -2629,14 +2504,14 @@ public static class FraCards
 					[new AddCounters(Ref.Target(), 1)]
 				)
 				{
-					Targets = [Creature with { WithSupertype = Supertype.Legendary }],
+					Targets = [Target(Is.Creature & Is.Legendary)],
 				},
 			],
 			["Mabel, Bitter Recluse"] =
 			[
 				When(
 					TriggerEvent.SelfEnters,
-					[CreatureOrPlaneswalker with { Another = true }],
+					[Target((Is.Creature | Is.Planeswalker) & !Is.Source)],
 					new RemoveCounters(Ref.Target(), 3)
 				),
 			],
@@ -2645,7 +2520,7 @@ public static class FraCards
 				// "For each opponent, … up to one target creature that player controls" — one opponent.
 				When(
 					TriggerEvent.SelfEnters,
-					[new TargetSpec(TargetKind.Creature, Whose.Opponent) { Optional = true }],
+					[Target(Is.Creature & Is.Opponents) with { Optional = true }],
 					new AddMinusOneCounters(
 						Ref.Target(),
 						Count.GreatestManaValueOf(Ref.CardsInYourGraveyard)
@@ -2660,7 +2535,7 @@ public static class FraCards
 					[new ModifyUntilEndOfTurn(Ref.Source, -2, 0)]
 				)
 				{
-					Sacrifice = CreatureOrPlaneswalker with { Whose = Whose.You, Another = true },
+					Sacrifice = (Is.Creature | Is.Planeswalker) & !Is.Source,
 					OnlyIf = Threshold,
 				},
 			],
@@ -2690,14 +2565,14 @@ public static class FraCards
 				)
 				{
 					TapCost = true,
-					Targets = [Creature with { WithPlusOneCounter = true }],
+					Targets = [Target(Is.Creature & Is.WithPlusOneCounter)],
 				},
 			],
 			["Kiora of Salt and Sand"] =
 			[
 				When(
 					TriggerEvent.YouAttack,
-					[Creature with { Attacking = true }],
+					[Target(Is.Creature & Is.Attacking)],
 					new Untap(Ref.Target()),
 					new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, Combat.CantBeBlocked)
 				) with
@@ -2747,12 +2622,12 @@ public static class FraCards
 			[
 				Spell(
 					[
-						CreatureOrPlaneswalker with
-						{
-							Whose = Whose.Opponent,
-							AnyOfColors = [ManaColor.Red, ManaColor.White],
-						},
-						new TargetSpec(TargetKind.Creature, Whose.You),
+						Target(
+							(Is.Creature | Is.Planeswalker)
+								& Is.Opponents
+								& (Is.Color(ManaColor.Red) | Is.Color(ManaColor.White))
+						),
+						Target(Is.Creature & Is.Yours),
 					],
 					new ModifyUntilEndOfTurn(Ref.Target(0), 0, 0) { LosesAllAbilities = true },
 					new DamageFrom(Ref.Target(1), Ref.Target(0), Count.PowerOf(Ref.Target(1)))
@@ -2942,7 +2817,7 @@ public static class FraCards
 				{
 					TapCost = true,
 					DiscardACard = true,
-					Targets = [CreatureOrPlaneswalker with { Whose = Whose.You, Another = true }],
+					Targets = [Target((Is.Creature | Is.Planeswalker) & Is.Yours & !Is.Source)],
 				},
 			],
 
@@ -2950,7 +2825,7 @@ public static class FraCards
 			["Stinging Vitriol"] =
 			[
 				Spell(
-					[new TargetSpec(TargetKind.Player, Whose.Opponent)],
+					[TargetSpec.Player(Is.Opponents)],
 					new DealDamage(Ref.Target(), 2),
 					new YouChooseTheyDiscard(Ref.Target(), NonlandTypes)
 				),
@@ -2964,10 +2839,7 @@ public static class FraCards
 				Spell(
 					[],
 					new MaySacrifice(
-						new TargetSpec(TargetKind.Permanent, Whose.You)
-						{
-							AnyOfTypes = CardType.Planeswalker,
-						},
+						Is.Planeswalker,
 						[new SearchLibrary(CardType.Planeswalker, ZoneType.Battlefield)]
 					)
 				),
@@ -3004,7 +2876,7 @@ public static class FraCards
 				// again on resolution, so it still counts if that Forest has gone.
 				When(
 					TriggerEvent.LandYouControlEnters,
-					[new TargetSpec(TargetKind.Creature, Whose.You)],
+					[Target(Is.Creature & Is.Yours)],
 					new ModifyUntilEndOfTurn(Ref.Target(), 3, 3)
 				) with
 				{
@@ -3049,13 +2921,7 @@ public static class FraCards
 			[
 				When(
 					TriggerEvent.SelfEnters,
-					[
-						new TargetSpec(TargetKind.Permanent, Whose.Opponent)
-						{
-							NotTypes = CardType.Land,
-							MaxManaValue = 3,
-						},
-					],
+					[Target(Is.Opponents & !Is.Land & Is.ManaValueAtMost(3))],
 					new ExileUntilSourceLeaves(Ref.Target())
 				),
 				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new DrawCards(Ref.You, 1)])
@@ -3083,7 +2949,7 @@ public static class FraCards
 			[
 				When(
 					TriggerEvent.SelfEnters,
-					[new TargetSpec(TargetKind.Permanent, Whose.Opponent)],
+					[Target(Is.Opponents)],
 					new Destroy(Ref.Target()),
 					new CreateTokens(Treasure, 1)
 					{
@@ -3119,11 +2985,7 @@ public static class FraCards
 					]
 				)
 				{
-					Sacrifice = new TargetSpec(TargetKind.Permanent, Whose.You)
-					{
-						AnyOfTypes = CardType.Artifact,
-						Another = true,
-					},
+					Sacrifice = Is.Artifact & !Is.Source,
 				},
 			],
 			["Tenured Tethermage"] =
@@ -3131,13 +2993,7 @@ public static class FraCards
 				When(
 					TriggerEvent.SelfEnters,
 					[],
-					new MaySacrifice(
-						new TargetSpec(TargetKind.Permanent, Whose.You)
-						{
-							AnyOfTypes = CardType.Land,
-						},
-						[CreateHeartwood with { Count = 2, Tapped = true }]
-					)
+					new MaySacrifice(Is.Land, [CreateHeartwood with { Count = 2, Tapped = true }])
 				),
 				new ActivatedAbilityComponent(ManaCost.None, [new AddCounters(Ref.Source, 2)])
 				{
@@ -3164,7 +3020,7 @@ public static class FraCards
 				{
 					From = ZoneType.Hand,
 					DiscardSelf = true,
-					Targets = [Creature with { InCombat = true }],
+					Targets = [Target(Is.Creature & Is.InCombat)],
 				},
 			],
 
@@ -3191,7 +3047,7 @@ public static class FraCards
 			[
 				When(
 					TriggerEvent.YouCastCreatureSpell,
-					[Creature with { Whose = Whose.You, Optional = true, Another = true }],
+					[Target(Is.Creature & Is.Yours & !Is.Source) with { Optional = true }],
 					new Flicker(Ref.Target())
 				),
 			],
@@ -3207,7 +3063,7 @@ public static class FraCards
 			["Cruel Calculations"] =
 			[
 				Spell(
-					[new TargetSpec(TargetKind.Player)],
+					[TargetSpec.Player()],
 					new DrawCards(Ref.You, Count.CardsFromLibraryToGraveyardThisTurn(Ref.Target()))
 				),
 			],
@@ -3276,7 +3132,7 @@ public static class FraCards
 					]
 				)
 				{
-					Targets = [CreatureOrPlaneswalker with { Whose = Whose.You }],
+					Targets = [Target((Is.Creature | Is.Planeswalker) & Is.Yours)],
 					SorcerySpeed = true,
 				},
 			],
@@ -3304,7 +3160,7 @@ public static class FraCards
 			[
 				When(
 					TriggerEvent.SelfEnters,
-					[new TargetSpec(TargetKind.Player, Whose.Opponent)],
+					[TargetSpec.Player(Is.Opponents)],
 					new YouChooseTheyDiscard(Ref.Target(), NonlandTypes) { ExileInstead = true }
 				) with
 				{
@@ -3331,7 +3187,7 @@ public static class FraCards
 			["Face Yourself"] =
 			[
 				Spell(
-					[new TargetSpec(TargetKind.Player)],
+					[TargetSpec.Player()],
 					new CreateTokenCopy(Ref.PermanentsOfTargetPlayer(CardType.Creature, 0))
 					{
 						AddingKeywords = ["Haste"],
@@ -3378,7 +3234,7 @@ public static class FraCards
 					]
 				)
 				{
-					Targets = [Creature with { Whose = Whose.You }],
+					Targets = [Target(Is.Creature & Is.Yours)],
 				},
 			],
 
@@ -3442,13 +3298,7 @@ public static class FraCards
 				)
 				{
 					MinusX = true,
-					Targets =
-					[
-						new TargetSpec(TargetKind.Permanent)
-						{
-							AnyOfTypes = CardType.Artifact | CardType.Creature,
-						},
-					],
+					Targets = [Target(Is.Type(CardType.Artifact | CardType.Creature))],
 				},
 				Loyalty(
 					-6,
@@ -3468,7 +3318,7 @@ public static class FraCards
 						[
 							When(
 								TriggerEvent.YouCastSpell,
-								[new TargetSpec(TargetKind.AnyTarget)],
+								[TargetSpec.AnyTarget()],
 								new DealDamage(Ref.Target(), 5)
 							),
 						]
@@ -3512,13 +3362,7 @@ public static class FraCards
 				Loyalty(
 					-2,
 					[],
-					new EachSacrifices(
-						Ref.EachPlayer,
-						new TargetSpec(TargetKind.Creature, Whose.You)
-					)
-					{
-						IfYouDid = [CreateBeast],
-					}
+					new EachSacrifices(Ref.EachPlayer, Is.Creature) { IfYouDid = [CreateBeast] }
 				),
 				Loyalty(
 					-3,
@@ -3545,14 +3389,12 @@ public static class FraCards
 				Loyalty(
 					2,
 					[
-						new TargetSpec(TargetKind.Permanent)
+						Target(Is.Land) with
 						{
-							AnyOfTypes = CardType.Land,
 							Optional = true,
 						},
-						new TargetSpec(TargetKind.Permanent)
+						Target(Is.Land) with
 						{
-							AnyOfTypes = CardType.Land,
 							Optional = true,
 							NotThePrevious = true,
 						},
@@ -3594,11 +3436,7 @@ public static class FraCards
 			["Puppet Crafting"] =
 			[
 				new AuraComponent(
-					new TargetSpec(TargetKind.Permanent)
-					{
-						AnyOfTypes = CardType.Artifact | CardType.Enchantment,
-						NotSubtype = "Aura",
-					}
+					Target(Is.Type(CardType.Artifact | CardType.Enchantment) & !Is.Subtype("Aura"))
 				),
 				new EnchantedBecomesCreature("Construct", 5, 5),
 				new ActivatedAbilityComponent(
@@ -3629,13 +3467,7 @@ public static class FraCards
 					ExileSelf = true,
 					// ponytail: "target land" — yours: the grant replaces the land's own mana (one yield
 					// per permanent), so on an opponent's land it would shut off a colour.
-					Targets =
-					[
-						new TargetSpec(TargetKind.Permanent, Whose.You)
-						{
-							AnyOfTypes = CardType.Land,
-						},
-					],
+					Targets = [Target(Is.Land & Is.Yours)],
 				},
 			],
 			["Uldaros Theorix"] =

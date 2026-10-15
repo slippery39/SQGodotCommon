@@ -9,6 +9,7 @@ engine source. The card sheet is for people: each card's printed text next to it
 engine pieces it uses, and the tests that name it — so a mis-scripted card shows on the page.
 """
 
+import html
 import json
 import re
 import sys
@@ -47,7 +48,7 @@ def clean_doc(lines):
     text = re.sub(r"<see cref=\"([\w.]+)\"\s*/>", lambda m: m.group(1).split(".")[-1], text)
     text = re.sub(r"</?(summary|remarks|c|para)>", " ", text)
     text = re.sub(r"<[^>]+>", "", text)
-    return re.sub(r"\s+", " ", text).strip()
+    return html.unescape(re.sub(r"\s+", " ", text).strip())  # "&amp;" in a summary is "&"
 
 
 def short(doc, limit=170):
@@ -194,7 +195,7 @@ def used_by(types, blocks, helpers):
     users = defaultdict(list)
     for card, body in blocks.items():
         for n in names:
-            if re.search(rf"\b{re.escape(n)}\b", body):
+            if re.search(rf"(?<![.\w]){re.escape(n)}\b", body):  # Ref.Target is not the Target helper
                 users[n].append(card)
     return users
 
@@ -242,7 +243,8 @@ def catalog(types, enums, blocks, helpers, users):
     out += ["## Named shortcuts", ""]
     for label, type_name, path in (("Ref", "Ref", CORE / "Effects" / "Refs.cs"),
                                    ("Count", "Count", CORE / "Effects" / "Refs.cs"),
-                                   ("Is", "Filter", CORE / "Filters" / "Is.cs")):
+                                   ("Is", "Filter", CORE / "Filters" / "Is.cs"),
+                                   ("TargetSpec", "TargetSpec", CORE / "Targeting" / "TargetSpec.cs")):
         items = parse_static_members(path, type_name)
         out.append(f"- **{label}**: " + "; ".join(f"`{label}.{n}`" for n, _ in items))
     out += ["", "## FraCards script helpers (`MagicCore/Sets/Fra/FraCards.cs`)", ""]

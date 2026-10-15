@@ -2,6 +2,7 @@ using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Sets.Fra;
+using MagicCore.Targeting;
 using MagicCore.Turns;
 
 namespace MagicCore.Tests.Sets;
@@ -338,9 +339,8 @@ public class FraModalTests : FraBoardTest
 						new Effects.Mode(
 							"hit",
 							[
-								new Targeting.TargetSpec(
-									Targeting.TargetKind.Creature,
-									Targeting.Whose.Opponent
+								TargetSpec.Permanent(
+									MagicCore.Filters.Is.Creature & MagicCore.Filters.Is.Opponents
 								),
 							],
 							[new Effects.Tap(Effects.Ref.Target())]

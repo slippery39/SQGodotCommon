@@ -4,6 +4,7 @@ using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Rules;
 using MagicCore.Sets.Fra;
+using MagicCore.Targeting;
 using MagicCore.Turns;
 
 namespace MagicCore.Tests.Sets;
@@ -106,12 +107,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 		var spell = Hand(
 			new CardDefinition(
 				TestGames.Inline("Kill", "{1}", "Instant").Data,
-				[
-					new SpellEffectsComponent([kill])
-					{
-						Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Creature)],
-					},
-				]
+				[new SpellEffectsComponent([kill]) { Targets = [TargetSpec.Creature] }]
 			),
 			me
 		);

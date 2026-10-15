@@ -3,6 +3,7 @@ using MagicCore.Actions;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Sets.Fra;
+using MagicCore.Targeting;
 using MagicCore.Turns;
 
 namespace MagicCore.Tests.Sets;
@@ -24,7 +25,7 @@ public class FraRareTests : FraBoardTest
 			[
 				new SpellEffectsComponent([new Destroy(Ref.Target())])
 				{
-					Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Creature)],
+					Targets = [TargetSpec.Creature],
 				},
 			]
 		);
@@ -462,7 +463,7 @@ public class FraRareTests : FraBoardTest
 				[
 					new SpellEffectsComponent([new Counter(Ref.Target())])
 					{
-						Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Spell)],
+						Targets = [TargetSpec.Spell()],
 					},
 				]
 			),
@@ -536,7 +537,7 @@ public class FraRareTests : FraBoardTest
 			[
 				new SpellEffectsComponent([new Destroy(Ref.Target())])
 				{
-					Targets = [new Targeting.TargetSpec(Targeting.TargetKind.Permanent)],
+					Targets = [TargetSpec.Permanent()],
 				},
 			]
 		);

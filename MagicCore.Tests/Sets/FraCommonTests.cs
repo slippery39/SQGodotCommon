@@ -445,7 +445,7 @@ public class FraCommonTests : FraBoardTest
 				[
 					new ActivatedAbilityComponent(ManaCost.None, [new DealDamage(Ref.Target(), 1)])
 					{
-						Targets = [new TargetSpec(TargetKind.Creature)],
+						Targets = [TargetSpec.Creature],
 					},
 				]
 			),
@@ -478,7 +478,7 @@ public class FraCommonTests : FraBoardTest
 				[
 					new SpellEffectsComponent([new GainLife(Ref.You, 2)])
 					{
-						Targets = [new TargetSpec(TargetKind.Creature)],
+						Targets = [TargetSpec.Creature],
 					},
 				]
 			),

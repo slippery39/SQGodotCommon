@@ -12,23 +12,23 @@ namespace MagicCore.Tests.Sets;
 /// </summary>
 public static class TestCards
 {
-	/// <summary>"{1} instant: destroy target [kind]" — a creature by default.</summary>
-	public static CardDefinition Kill(TargetKind kind = TargetKind.Creature) =>
-		Targeted("Kill", kind, new Destroy(Ref.Target()));
+	/// <summary>"{1} instant: destroy target [spec]" — a creature by default.</summary>
+	public static CardDefinition Kill(TargetSpec? spec = null) =>
+		Targeted("Kill", spec ?? TargetSpec.Creature, new Destroy(Ref.Target()));
 
-	/// <summary>"{1} instant: N damage to target [kind]".</summary>
-	public static CardDefinition Shock(int n, TargetKind kind = TargetKind.Creature) =>
-		Targeted("Shock", kind, new DealDamage(Ref.Target(), n));
+	/// <summary>"{1} instant: N damage to target [spec]" — a creature by default.</summary>
+	public static CardDefinition Shock(int n, TargetSpec? spec = null) =>
+		Targeted("Shock", spec ?? TargetSpec.Creature, new DealDamage(Ref.Target(), n));
 
 	/// <summary>A {1} instant with one target word and these effects.</summary>
 	public static CardDefinition Targeted(
 		string name,
-		TargetKind kind,
+		TargetSpec spec,
 		params GameAction[] effects
 	) =>
 		new(
 			TestGames.Inline(name, "{1}", "Instant").Data,
-			[new SpellEffectsComponent([.. effects]) { Targets = [new TargetSpec(kind)] }]
+			[new SpellEffectsComponent([.. effects]) { Targets = [spec] }]
 		);
 
 	/// <summary>A {1} sorcery that does nothing — a card to discard, exile, count.</summary>
