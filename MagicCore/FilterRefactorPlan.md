@@ -147,7 +147,7 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 - `magic_docs.py`: catalogs the `TargetSpec` shortcuts; a member access (`Ref.Target`) no longer
   counts as a use of a script helper (`Target`); `&amp;` in a summary prints as `&`.
 
-### Phase 3: Ref and Count
+### Phase 3: Ref and Count ✅ done 2026-10-15
 - `Ref` = real referents (`You`, `EachOpponent`, `EachPlayer`, `Target(i)`, `ControllerOf`, `OwnerOf`,
   `Source`, `SourceHost`, `EventCard`, `EventObject`, `ControllerOfEventCard`) + **`All(zone, filter)`**.
   About ten `RefKind`s fold into `All`. The last-known and same-object handling stays as it is.
@@ -158,6 +158,25 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 - **Open (decide in the phase):** "each creature *target player* controls" needs a filter that reads
   a Ref. Either `FilterContext` carries the targets, or `All` takes a whose-Ref. Pick whichever
   reads simpler.
+- **Built:** `RefKind` is the eleven referents + `All`. `Ref.All(zone, filter?, of?)`: every
+  player's zone, yours first (the old order), filtered; **`Of` is a Ref naming whose zone** — the
+  open question's answer: Twisted Fates is `Of = Target(i)`, "your graveyard / hand" is `Of = You`.
+  "You control" on the battlefield stays a filter (`Is.Yours`), as in targets. `Ref.Permanents(f)`
+  is `All(Battlefield, f)`. `Type`, `Subtype`, `ExceptEventCard` and FraCards' `YoursOfSubtype` are
+  gone; the static names are one-liners. 8 script sites converted by hand.
+- **Decided: `Is.Source`/`Is.EventCard` keep comparing ids** (phase 1's open note). The old
+  `YourOtherPermanents` and `ExceptEventCard` compared ids too, so that is the unchanged behaviour;
+  `Ref.Source` itself keeps its Incarnation check. Revisit only with a card that flickers its source
+  mid-resolution and counts "other" creatures.
+- Verified card by card (as in phase 2): every Ref and Count in every scripted card, plus all of
+  Ref's and Count's static names, resolved on `FilterBoard` in 3 contexts on HEAD and on the working
+  tree — 19,263 lines, identical. The board got Forest/Island/Angel subtypes for that run so Roiling
+  Canopy's and Jace's Refs weren't empty on both sides. Golden replays identical; bench −0.9%.
+- Review fixes: `Ref.All` without a `Zone` throws (ZoneType's default is Hand, so it would have
+  meant "hands"); an unknown `RefKind` throws instead of resolving to nothing; Garruk, Curse Breaker
+  keeps the old type-free `Is.Yours & Is.AttackingAPlayer` (adding `Is.Creature` was a behaviour
+  change for an attacker that stops being a creature). Left: "you control" scans both battlefields
+  and filters (bench shows no cost; `of: You` is the fix if it ever shows).
 
 ### Phase 4: statics and conditions
 - `StaticEffectComponent(Filter Affects, …)`: the `Affects` enum and the five `Only*` fields go.
@@ -225,7 +244,7 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 - [x] Phase 0: golden replay (2026-10-10)
 - [x] Phase 1: filter language (2026-10-11)
 - [x] Phase 2: TargetSpec (2026-10-11)
-- [ ] Phase 3: Ref, Count
+- [x] Phase 3: Ref, Count (2026-10-15)
 - [ ] Phase 4: statics, conditions
 - [ ] Phase 5: triggers
 - [ ] Phase 6: costs

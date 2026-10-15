@@ -33,7 +33,8 @@ MagicCore/
 ├── Actions/LoyaltyActions.cs  Loyalty.AbilitiesOf (own + granted) and ActivateLoyaltyAction
 ├── Actions/ModeChoices.cs     ChooseModesChoice — a modal trigger's modes, chosen as it goes on the stack
 ├── Actions/PermanentChoices.cs  "you may sacrifice …": ChoosePermanentChoice, SacrificeChosen, IfChosen
-├── Effects/Refs.cs      ContextKeys, Ref (you / opponent / target i / source / event card …), Count
+├── Effects/Refs.cs      ContextKeys, Ref (you / opponent / target i / source / event card …, or
+│                        All: a zone's objects a Filter matches), Count
 ├── Effects/Effects.cs   the Effect base; damage, life, counters, pumps, mana; If, May, PayMana
 ├── Effects/ZoneEffects.cs  effects that move cards: destroy, exile, sacrifice, return, discard, surveil, tokens
 ├── Effects/Abilities.cs spell, triggered, activated, mana and static ability components

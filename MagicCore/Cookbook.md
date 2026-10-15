@@ -134,8 +134,11 @@ the filter as the text reads — type first, then whose, then the rest. **A sacr
 bare filter over your own zone** — `Sacrifice = Is.Artifact & !Is.Source`, `new MaySacrifice(Is.Creature,
 …)` — no `Is.Yours`, no `Target(…)`. Every filter word: the catalog's `Is` line.
 
-**Narrowing a Ref** — `Ref.TokensYouControl with { Subtype = "Wizard" }`. All options: the catalog's
-"Building blocks".
+**Groups of objects** — a named `Ref` (`Ref.CreaturesYouControl`, `Ref.OtherCreaturesYouControl`…), or
+any filter over the battlefield: `Ref.Permanents(Is.Token & Is.Yours & Is.Subtype("Wizard"))` is "each
+Wizard token you control". Another zone: `Ref.All(ZoneType.Graveyard, Is.Creature, of: Ref.You)`; whose
+zone is `of` — "each creature target player controls" is `Ref.All(ZoneType.Battlefield, Is.Creature,
+Ref.Target(0))`. A `Count` counts a `Ref`: `Count.NumberOf(Ref.Permanents(…))`.
 
 ## How much checking a card needs — the tiers
 

@@ -255,10 +255,6 @@ public static class FraCards
 	/// <summary>"Create a 4/4 green Beast creature token with trample."</summary>
 	static CreateTokens CreateBeast => new(Beast, 1);
 
-	/// <summary>"Planeswalkers / lands … you control" narrowed to a subtype — "Islands you control", "Jaces you control".</summary>
-	static Ref YoursOfSubtype(CardType type, string subtype) =>
-		new(RefKind.YourPermanents, Type: type) { Subtype = subtype };
-
 	/// <summary>Soul Tether: "a Heartwood token (a red and green artifact with '{T}: Add {R} or {G}.')".</summary>
 	public static readonly CardData Heartwood =
 		new(
@@ -405,7 +401,7 @@ public static class FraCards
 
 	/// <summary>"The number of artifacts you control".</summary>
 	static readonly Count ArtifactsYouControl = Count.NumberOf(
-		new Ref(RefKind.YourPermanents, Type: CardType.Artifact)
+		Ref.Permanents(Is.Artifact & Is.Yours)
 	);
 
 	/// <summary>"{T}: Add one mana of any color." — five abilities, one per colour, sharing a restriction.</summary>
@@ -1470,7 +1466,7 @@ public static class FraCards
 				// the Cadet: the same result without remembering which token is new.
 				Spell(
 					[],
-					new AddCounters(Ref.TokensYouControl with { Subtype = "Wizard" }, 1),
+					new AddCounters(Ref.Permanents(Is.Token & Is.Yours & Is.Subtype("Wizard")), 1),
 					new CreateTokens(Cadet, 1)
 				),
 				When(
@@ -2778,13 +2774,7 @@ public static class FraCards
 				When(
 					TriggerEvent.YouGainLife,
 					[],
-					new AddCounters(
-						new Ref(RefKind.YourPermanents, Type: CardType.Creature)
-						{
-							Subtype = "Angel",
-						},
-						1
-					)
+					new AddCounters(Ref.Permanents(Is.Creature & Is.Yours & Is.Subtype("Angel")), 1)
 				),
 			],
 			["Master of Barbs"] =
@@ -2862,9 +2852,7 @@ public static class FraCards
 					[],
 					new DrawCards(
 						Ref.You,
-						Count.ColorsAmong(
-							new Ref(RefKind.YourOtherPermanents, Type: CardType.Artifact)
-						)
+						Count.ColorsAmong(Ref.Permanents(Is.Artifact & Is.Yours & !Is.Source))
 					)
 				),
 			],
@@ -2883,11 +2871,9 @@ public static class FraCards
 					EventSubtype = "Forest",
 					If = new AtLeast(
 						Count.NumberOf(
-							new Ref(RefKind.YourPermanents, Type: CardType.Land)
-							{
-								Subtype = "Forest",
-								ExceptEventCard = true,
-							}
+							Ref.Permanents(
+								Is.Land & Is.Yours & Is.Subtype("Forest") & !Is.EventCard
+							)
 						),
 						5
 					),
@@ -3330,7 +3316,9 @@ public static class FraCards
 				Loyalty(
 					1,
 					[],
-					new EmpowerJace(Count.NumberOf(YoursOfSubtype(CardType.Land, "Island")))
+					new EmpowerJace(
+						Count.NumberOf(Ref.Permanents(Is.Land & Is.Yours & Is.Subtype("Island")))
+					)
 				),
 				Loyalty(
 					-3,
@@ -3346,7 +3334,9 @@ public static class FraCards
 				Loyalty(0, [], new ExileAllButBottom(Ref.EachOpponent)) with
 				{
 					OnlyIf = new AtLeast(
-						Count.TotalLoyaltyOf(YoursOfSubtype(CardType.Planeswalker, "Jace")),
+						Count.TotalLoyaltyOf(
+							Ref.Permanents(Is.Planeswalker & Is.Yours & Is.Subtype("Jace"))
+						),
 						25
 					),
 				},
@@ -3411,7 +3401,7 @@ public static class FraCards
 							TriggerEvent.CreaturesAttackYourOpponent,
 							[],
 							new ModifyUntilEndOfTurn(
-								new Ref(RefKind.YourCreaturesAttackingAPlayer),
+								Ref.Permanents(Is.Yours & Is.AttackingAPlayer),
 								2,
 								2,
 								"Trample"

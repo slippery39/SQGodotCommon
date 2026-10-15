@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
+using MagicCore.Filters;
 using MagicCore.Rules;
 using MagicCore.Targeting;
 using MagicCore.Turns;
@@ -45,33 +46,32 @@ public enum RefKind
 	EachPlayer,
 	Target,
 	ControllerOfTarget,
+	OwnerOfTarget, // Clash of Elements: "its owner" — wherever the card now is
 	Source,
+	SourceHost, // an Aura's "enchanted creature" — what the source is attached to
 	EventCard,
 	EventObject, // ward: "counter it" — the spell or ability that targeted, if it is still that object
-	YourPermanents, // of Type: "creatures you control", "lands you control" …
-	OpponentsPermanents, // of Type: "each creature and planeswalker your opponents control"
-	AllPermanents, // of Type: "all creatures"
-	YourGraveyard, // the cards in it
-	YourHand, // the cards in it
 	ControllerOfEventCard, // Tetsuko, Pursuer: "that creature's controller"
-	YourPermanentsWithCounters, // of Type, with a +1/+1 counter on it
-	AllPermanentsExceptYourTokens, // of Type: Ajani's "each creature except for tokens you control"
-	YourTokens, // "all tokens you control"
-	YourOtherPermanents, // of Type: "each other creature you control" — not the source
-	OwnerOfTarget, // Clash of Elements: "its owner" — wherever the card now is
-	TargetPlayersPermanents, // of Type: Twisted Fates' "each creature target player controls"
-	SourceHost, // an Aura's "enchanted creature" — what the source is attached to
-	YourCreaturesAttackingAPlayer, // Garruk, Curse Breaker: "those creatures" — attacking a player, not a planeswalker
+	All, // "creatures you control", "cards in your graveyard": a zone's objects that match a filter
 }
 
-/// <summary>Who or what an effect acts on, resolved against the context at resolution.</summary>
-public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
+/// <summary>
+/// Who or what an effect acts on, resolved against the context at resolution: a referent ("you",
+/// "target creature", "this"), or <see cref="All"/> — every object in a zone that a filter matches.
+/// </summary>
+public record Ref(RefKind Kind, int Index = 0)
 {
-	/// <summary>Command the Stage: "each other Wizard token you control" — only cards with this subtype.</summary>
-	public string? Subtype { get; init; }
+	/// <summary>For All: the zone — Eye of Jace: "cards in your GRAVEYARD"; Ajani: "each creature" (the battlefield).</summary>
+	public ZoneType? Zone { get; init; }
 
-	/// <summary>Roiling Canopy: "five OTHER Forests" — not the event's card.</summary>
-	public bool ExceptEventCard { get; init; }
+	/// <summary>For All: which objects there — Ajani: "each creature except for tokens you control". None is every one.</summary>
+	public Filter? Filter { get; init; }
+
+	/// <summary>
+	/// For All: whose zone — Twisted Fates: "each creature target player controls" is Of =
+	/// Target(i); "your graveyard" is Of = You. None is every player's, yours first.
+	/// </summary>
+	public Ref? Of { get; init; }
 
 	public static readonly Ref You = new(RefKind.You);
 	public static readonly Ref EachOpponent = new(RefKind.EachOpponent);
@@ -79,28 +79,47 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 	public static readonly Ref Source = new(RefKind.Source);
 	public static readonly Ref EventCard = new(RefKind.EventCard);
 	public static readonly Ref EventObject = new(RefKind.EventObject);
-	public static readonly Ref CreaturesYouControl =
-		new(RefKind.YourPermanents, Type: CardType.Creature);
-	public static readonly Ref LandsYouControl = new(RefKind.YourPermanents, Type: CardType.Land);
-	public static readonly Ref PlaneswalkersYouControl =
-		new(RefKind.YourPermanents, Type: CardType.Planeswalker);
-	public static readonly Ref AllCreatures = new(RefKind.AllPermanents, Type: CardType.Creature);
-	public static readonly Ref CardsInYourGraveyard = new(RefKind.YourGraveyard);
-	public static readonly Ref CardsInYourHand = new(RefKind.YourHand);
 	public static readonly Ref ControllerOfEventCard = new(RefKind.ControllerOfEventCard);
-	public static readonly Ref YourCreaturesWithCounters =
-		new(RefKind.YourPermanentsWithCounters, Type: CardType.Creature);
-	public static readonly Ref CreaturesExceptYourTokens =
-		new(RefKind.AllPermanentsExceptYourTokens, Type: CardType.Creature);
-	public static readonly Ref TokensYouControl = new(RefKind.YourTokens);
 	public static readonly Ref EnchantedCreature = new(RefKind.SourceHost);
-	public static readonly Ref OtherCreaturesYouControl =
-		new(RefKind.YourOtherPermanents, Type: CardType.Creature);
 
-	public static Ref YourGraveyard(CardType type) => new(RefKind.YourGraveyard, Type: type);
+	/// <summary>
+	/// Eye of Jace: "the cards in your graveyard" is All(Graveyard, of: You) — the objects in a zone a
+	/// filter matches, from every player's zone (yours first) unless Of names whose, in Of's order.
+	/// </summary>
+	public static Ref All(ZoneType zone, Filter? filter = null, Ref? of = null) =>
+		new(RefKind.All)
+		{
+			Zone = zone,
+			Filter = filter,
+			Of = of,
+		};
+
+	/// <summary>"Each Angel you control": Permanents(Is.Creature &amp; Is.Yours &amp; Is.Subtype("Angel")).</summary>
+	public static Ref Permanents(Filter filter) => All(ZoneType.Battlefield, filter);
+
+	public static readonly Ref CreaturesYouControl = Permanents(Is.Creature & Is.Yours);
+	public static readonly Ref LandsYouControl = Permanents(Is.Land & Is.Yours);
+	public static readonly Ref PlaneswalkersYouControl = Permanents(Is.Planeswalker & Is.Yours);
+	public static readonly Ref AllCreatures = Permanents(Is.Creature);
+	public static readonly Ref CardsInYourGraveyard = All(ZoneType.Graveyard, of: You);
+	public static readonly Ref CardsInYourHand = All(ZoneType.Hand, of: You);
+	public static readonly Ref YourCreaturesWithCounters = Permanents(
+		Is.Creature & Is.Yours & Is.WithPlusOneCounter
+	);
+
+	/// <summary>Ajani: "each creature except for tokens you control".</summary>
+	public static readonly Ref CreaturesExceptYourTokens = Permanents(
+		Is.Creature & !(Is.Token & Is.Yours)
+	);
+	public static readonly Ref TokensYouControl = Permanents(Is.Token & Is.Yours);
+	public static readonly Ref OtherCreaturesYouControl = Permanents(
+		Is.Creature & Is.Yours & !Is.Source
+	);
+
+	public static Ref YourGraveyard(CardType type) => All(ZoneType.Graveyard, Is.Type(type), You);
 
 	public static Ref OpponentsPermanents(CardType type) =>
-		new(RefKind.OpponentsPermanents, Type: type);
+		Permanents(Is.Type(type) & Is.Opponents);
 
 	public static Ref Target(int index = 0) => new(RefKind.Target, index);
 
@@ -108,8 +127,9 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 
 	public static Ref OwnerOfTarget(int index = 0) => new(RefKind.OwnerOfTarget, index);
 
+	/// <summary>Twisted Fates: "each creature target player controls".</summary>
 	public static Ref PermanentsOfTargetPlayer(CardType type, int index) =>
-		new(RefKind.TargetPlayersPermanents, index, type);
+		All(ZoneType.Battlefield, Is.Type(type), Target(index));
 
 	/// <summary>Is the source still the object the ability came from? Not if it left and came back (CR 400.7).</summary>
 	static bool SameObject(GameState s, ImmutableDictionary<string, object> context) =>
@@ -127,12 +147,6 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 			: [];
 		int TargetAt(int i) => i < targets.Length ? targets[i] : 0;
 		var eventCard = context.TryGetValue(ContextKeys.EventCard, out var e) ? (int)e : 0;
-		IEnumerable<Card> Yours() => s.CardsIn(controller, ZoneType.Battlefield);
-		IEnumerable<Card> All() =>
-			new[] { controller, s.OpponentOf(controller) }.SelectMany(p =>
-				s.CardsIn(p, ZoneType.Battlefield)
-			);
-
 		IEnumerable<int> ids = Kind switch
 		{
 			RefKind.You => [controller],
@@ -158,12 +172,6 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 			&& s.GetObject(TargetAt(Index)) is Card owned
 				? [owned.OwnerId]
 				: [],
-			RefKind.TargetPlayersPermanents => s.HasObject(TargetAt(Index))
-			&& s.GetObject(TargetAt(Index)) is MagicPlayer player
-				? s.CardsIn(player.Id, ZoneType.Battlefield)
-					.Where(c => c.Is(Type))
-					.Select(c => c.Id)
-				: [],
 			RefKind.Source => SameObject(s, context) ? [(int)context[ContextKeys.Source]] : [],
 			RefKind.EventCard => [eventCard],
 			RefKind.EventObject => context.GetValueOrDefault(ContextKeys.EventObject) switch
@@ -183,36 +191,45 @@ public record Ref(RefKind Kind, int Index = 0, CardType Type = CardType.None)
 			: context.TryGetValue(ContextKeys.EventSnapshot, out var snapshot)
 				? [((Card)snapshot).ControllerId]
 			: [],
-			RefKind.OpponentsPermanents => s.CardsIn(s.OpponentOf(controller), ZoneType.Battlefield)
-				.Where(c => c.Is(Type))
-				.Select(c => c.Id),
-			RefKind.AllPermanents => All().Where(c => c.Is(Type)).Select(c => c.Id),
-			RefKind.AllPermanentsExceptYourTokens => All()
-				.Where(c => c.Is(Type) && !(c.IsToken && c.ControllerId == controller))
-				.Select(c => c.Id),
-			RefKind.YourPermanentsWithCounters => Yours()
-				.Where(c => c.Is(Type) && c.PlusOneCounters > 0)
-				.Select(c => c.Id),
-			RefKind.YourTokens => Yours().Where(c => c.IsToken).Select(c => c.Id),
-			RefKind.YourOtherPermanents => Yours()
-				.Where(c => c.Is(Type) && c.Id != (int)context[ContextKeys.Source])
-				.Select(c => c.Id),
-			RefKind.YourHand => s.CardsIn(controller, ZoneType.Hand).Select(c => c.Id),
-			RefKind.YourCreaturesAttackingAPlayer => Yours()
-				.Where(c => c.AttackingId != 0 && s.GetObject(c.AttackingId) is MagicPlayer)
-				.Select(c => c.Id),
-			RefKind.YourGraveyard => s.CardsIn(controller, ZoneType.Graveyard)
-				.Where(c => Type == CardType.None || c.Is(Type))
-				.Select(c => c.Id),
-			_ => Yours().Where(c => c.Is(Type)).Select(c => c.Id),
+			RefKind.All => AllIn(s, context, controller, eventCard),
+			_ => throw new ArgumentOutOfRangeException(
+				nameof(Kind),
+				Kind,
+				"a Ref kind Resolve doesn't know"
+			),
 		};
-		return ids.Where(id =>
-			id != 0
-			&& !(ExceptEventCard && id == eventCard)
-			&& s.HasObject(id)
-			&& (Subtype is null || (s.GetObject(id) is Card c && c.Subtypes.Contains(Subtype)))
-		);
+		return ids.Where(id => id != 0 && s.HasObject(id));
 	}
+
+	IEnumerable<int> AllIn(
+		GameState s,
+		ImmutableDictionary<string, object> context,
+		int controller,
+		int eventCard
+	)
+	{
+		// ZoneType's default is Hand: a Ref.All built without a zone must not quietly mean "hands".
+		var zone = Zone ?? throw new InvalidOperationException("Ref.All needs a Zone");
+		var asking = new FilterContext(
+			controller,
+			context.TryGetValue(ContextKeys.Source, out var source) ? (int)source : 0,
+			eventCard
+		);
+		return Whose(s, context, controller)
+			.SelectMany(p => s.CardsIn(p, zone))
+			.Where(c => Filter?.Matches(s, c, asking) ?? true)
+			.Select(c => c.Id);
+	}
+
+	/// <summary>All's players: Of's (only the players it names), or every player, yours first.</summary>
+	IEnumerable<int> Whose(
+		GameState s,
+		ImmutableDictionary<string, object> context,
+		int controller
+	) =>
+		Of is null
+			? [controller, s.OpponentOf(controller)]
+			: Of.Resolve(s, context).Where(id => s.GetObject(id) is MagicPlayer);
 }
 
 public enum CountOf

@@ -47,7 +47,7 @@ public class FraUncommonReplacementTests : FraBoardTest
 	{
 		Field(FraCards.Get("Tomik, Izzet Sparkmage"), me);
 		var mine = Field(TestGames.Creature("Mine", "2/3"), me);
-		Cast(Hand(Ping(new Ref(RefKind.YourPermanents, Type: CardType.Creature), 2), me), []);
+		Cast(Hand(Ping(Ref.CreaturesYouControl, 2), me), []);
 		Assert.That(s.GetCard(mine).Damage, Is.EqualTo(2));
 
 		var life = Life(them);

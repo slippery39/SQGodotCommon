@@ -15,9 +15,11 @@ namespace MagicCore.Tests.Filters;
 /// <summary>
 /// THE MIGRATION TABLE (MagicCore/FilterRefactorPlan.md) — the guide for phases 2–5. Every RefKind,
 /// TargetSpec field, static scope (Affects + Only*) and filter-shaped TriggerEvent, written as a
-/// zone and a filter and checked against the OLD code on <see cref="FilterBoard"/>: the same
-/// objects, in the same order. What isn't a filter is listed with why, and a completeness test fails
-/// when a value is in neither. A phase that replaces a vocabulary moves its rows onto the new code.
+/// zone and a filter and checked on <see cref="FilterBoard"/> — the same objects, in the same order.
+/// Phase 1 checked every row against the OLD code; a phase that replaces a vocabulary moves its rows
+/// onto the new one (Ref and TargetSpec now: the new code against the test's own zone walk), and
+/// checks its card scripts old-vs-new with a probe (FilterRefactorPlan.md). What isn't a filter is
+/// listed with why, and a completeness test fails when a value is in neither.
 /// Each row must pick out some but not all of its candidates, so the board really tells them apart.
 /// </summary>
 public class FilterMigrationTests
@@ -92,26 +94,19 @@ public class FilterMigrationTests
 		);
 		yield return Row(
 			"YourCreaturesAttackingAPlayer",
-			new Ref(RefKind.YourCreaturesAttackingAPlayer),
+			Ref.Permanents(Is.Yours & Is.AttackingAPlayer),
 			bf,
-			Is.Yours & Is.AttackingAPlayer // the old code never asks "creature": only creatures attack
+			Is.Yours & Is.AttackingAPlayer // the old kind never asked "creature": only creatures attack
 		);
 		yield return Row(
 			"Subtype",
-			Ref.OtherCreaturesYouControl with
-			{
-				Subtype = "Wizard",
-			},
+			Ref.Permanents(Is.Creature & Is.Yours & !Is.Source & Is.Subtype("Wizard")),
 			bf,
 			Is.Creature & Is.Yours & !Is.Source & Is.Subtype("Wizard")
 		);
 		yield return Row(
 			"ExceptEventCard", // Roiling Canopy: "five OTHER Forests" (Gates here)
-			new Ref(RefKind.YourPermanents, Type: CardType.Land)
-			{
-				Subtype = "Gate",
-				ExceptEventCard = true,
-			},
+			Ref.Permanents(Is.Land & Is.Yours & Is.Subtype("Gate") & !Is.EventCard),
 			bf,
 			Is.Land & Is.Yours & Is.Subtype("Gate") & !Is.EventCard
 		);
@@ -134,16 +129,17 @@ public class FilterMigrationTests
 	];
 
 	[TestCaseSource(nameof(RefRows))]
-	public void RefRow(Ref old, Zone from, Filter? filter)
+	public void RefRow(Ref reference, Zone from, Filter? filter)
 	{
 		var context = ImmutableDictionary<string, object>
 			.Empty.Add(ContextKeys.Controller, B.Me)
 			.Add(ContextKeys.Source, B["Src"])
 			.Add(ContextKeys.Targets, ImmutableArray.Create(B.Them))
 			.Add(ContextKeys.EventCard, B["Grove"]);
+		// Phase 1 proved the old Ref equal to this zone + filter; now the new one must be.
 		// A Ref lists YOUR objects first.
 		Same(
-			old.Resolve(B.S, context),
+			reference.Resolve(B.S, context),
 			Select(B.Me, B.Context(eventCard: "Grove"), (from, filter)),
 			In(from, B.Me),
 			filter is not null
@@ -151,15 +147,13 @@ public class FilterMigrationTests
 	}
 
 	[Test]
-	public void EveryRefKind_IsARowOrAReferent()
-	{
-		var rows = RefRows().Select(r => (Ref)r.Arguments[0]!).ToList();
+	public void EveryRefKind_IsARowOrAReferent() =>
 		Assert.That(
-			Enum.GetValues<RefKind>().Except(rows.Select(r => r.Kind)).Except(Referents),
+			Enum.GetValues<RefKind>()
+				.Except(RefRows().Select(r => ((Ref)r.Arguments[0]!).Kind))
+				.Except(Referents),
 			Nu.Empty
 		);
-		Assert.That(rows.Any(r => r.Subtype is not null) && rows.Any(r => r.ExceptEventCard));
-	}
 
 	// ---------------------------------------------------------------- TargetSpec (phase 2)
 
