@@ -417,13 +417,6 @@ public record BecomeCopyUntilEndOfTurn(Ref What, Ref Of) : Effect
 	}
 }
 
-/// <summary>Hall of Echoes: "The 'legend rule' doesn't apply to permanents you control this turn."</summary>
-public record NoLegendRuleThisTurn : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		new(s.Tally(Controller, t => t with { NoLegendRule = true }));
-}
-
 /// <summary>
 /// Chandra, Torch of Defiance: "Exile the top card of your library. You may cast that card. If you
 /// don't, [Otherwise]." Cast right then (CastNow), paying its cost. Asked only when it could be cast —

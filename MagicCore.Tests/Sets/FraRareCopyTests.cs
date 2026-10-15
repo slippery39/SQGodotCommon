@@ -188,7 +188,9 @@ public class FraRareCopyTests : FraBoardTest
 			Is.EqualTo(("Legend", false, 3, true, true, true)),
 			"a copy, and no legend rule this turn"
 		);
+		Assert.That(s.CardsIn(me, ZoneType.Command).Count(), Is.EqualTo(1), "the effect, shown");
 		ToTheirTurn();
+		Assert.That(s.CardsIn(me, ZoneType.Command), Is.Empty, "it ended with the turn");
 		var back = s.GetCard(hall);
 		Assert.That(
 			(Alive(hall), back.Name, back.Is(CardType.Land), back.Is(CardType.Creature)),

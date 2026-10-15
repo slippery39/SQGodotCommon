@@ -251,30 +251,6 @@ public record PayMana(ManaCost Cost, ImmutableList<GameAction> Then) : Effect
 			);
 }
 
-/// <summary>Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — read by ManaAbilities.YieldOf.</summary>
-public record MountainsMakeAnExtraRedThisTurn : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		new(
-			s.Tally(Controller, t => t with { ExtraRedFromMountains = t.ExtraRedFromMountains + 1 })
-		);
-}
-
-/// <summary>
-/// Way of the Cryomancer's granted "[−3]: When you next cast an instant or sorcery spell this turn,
-/// copy that spell. You may choose new targets for the copy." — a delayed trigger, kept on the player.
-/// </summary>
-public record CopyNextInstantOrSorceryThisTurn : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		new(
-			s.Tally(
-				Controller,
-				t => t with { CopyNextInstantOrSorcery = t.CopyNextInstantOrSorcery + 1 }
-			)
-		);
-}
-
 /// <summary>
 /// "Copy that spell. You may choose new targets for the copy." (CR 707.10) The copy goes on the
 /// stack above it, controlled by you; it is not cast (no "whenever you cast" sees it) and ceases to
@@ -352,20 +328,6 @@ public record SetCopyTargetsAction(int CopyId) : GameAction
 		s = s.UpdateObject(CopyId, copy.WithComponentReplaced(onStack with { Targets = targets }));
 		return new(Turns.Triggers.RaiseTargeted(s, targets, copy.ControllerId, CopyId));
 	}
-}
-
-/// <summary>Jace's Machinations: Jace loyalty abilities at instant speed, on any turn, until end of turn.</summary>
-public record JaceLoyaltyAtInstantSpeedThisTurn : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		new(s.Tally(Controller, t => t with { JaceLoyaltyAtInstantSpeed = true }));
-}
-
-/// <summary>Theorist's Proxy: "The next spell you cast this turn can't be countered." — taken by that cast.</summary>
-public record NextSpellCantBeCounteredThisTurn : Effect
-{
-	public override ActionResult Execute(GameState s) =>
-		new(s.Tally(Controller, t => t with { NextSpellCantBeCountered = true }));
 }
 
 /// <summary>Hungering Puppetbeast: "It gains your choice of trample, hexproof, or haste until end of turn."</summary>
@@ -523,6 +485,40 @@ public record UntilYourNextTurnWhenever(TriggeredAbilityComponent Ability) : Eff
 			)
 		);
 }
+
+/// <summary>
+/// "This turn" / "until end of turn" effects that belong to no permanent: each is an object in its
+/// controller's command zone, so the table shows it, and it ends as the next turn begins
+/// (TurnStructure, with the TurnTally reset). Read by <see cref="MagicState.ThisTurnEffects{T}"/>;
+/// one that is used up ("the next spell") is removed by what uses it.
+/// </summary>
+public abstract record ThisTurnEffect : GameComponent;
+
+/// <summary>Puts a <see cref="ThisTurnEffect"/> in your command zone for the rest of the turn.</summary>
+public record ThisTurn(ThisTurnEffect What) : Effect
+{
+	public override ActionResult Execute(GameState s) =>
+		new(GetEmblem.ToCommandZone(s, Controller, $"{Source(s).Name} (this turn)", [What]));
+}
+
+/// <summary>Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional {R}." — one {R} each; ManaAbilities.YieldOf.</summary>
+public record ExtraRedFromMountains : ThisTurnEffect;
+
+/// <summary>
+/// Way of the Cryomancer's granted "[−3]: When you next cast an instant or sorcery spell this turn,
+/// copy that spell. You may choose new targets for the copy." — a delayed trigger; the next such
+/// spell takes them all (CastSpellAction).
+/// </summary>
+public record CopyNextInstantOrSorcery : ThisTurnEffect;
+
+/// <summary>Jace's Machinations: "you may activate loyalty abilities of Jace planeswalkers you control … any time you could cast an instant" — LoyaltyActions.</summary>
+public record JaceLoyaltyAtInstantSpeed : ThisTurnEffect;
+
+/// <summary>Theorist's Proxy: "The next spell you cast this turn can't be countered." — taken by that cast.</summary>
+public record NextSpellCantBeCountered : ThisTurnEffect;
+
+/// <summary>Hall of Echoes: "The 'legend rule' doesn't apply to permanents you control this turn." — the state-based check.</summary>
+public record NoLegendRule : ThisTurnEffect;
 
 /// <summary>
 /// Tam: "Proliferate X times" (CR 701.27). ponytail: no prompt — it chooses your permanents' good

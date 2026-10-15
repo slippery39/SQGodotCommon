@@ -71,7 +71,7 @@ MagicCore/
 ├── Sets/Fra/FraDecks.cs 40-card decks of implemented cards (console, fuzz tests)
 ├── Sets/Fra/ArenaDeck.cs  an Arena deck export → FRA cards, every problem named
 ├── Ai/GreedyAi.cs       one-ply simulate-and-evaluate AI
-├── Zones/Zone.cs        per-player zones (incl. Command: emblems) + shared Stack; per-CONTROLLER battlefield
+├── Zones/Zone.cs        per-player zones (incl. Command: emblems, "until your next turn" and "this turn" effects) + shared Stack; per-CONTROLLER battlefield
 └── Sets/FRA.json        imported by tools/import_scryfall_set.py — embedded resource, never hand-edit
 ```
 

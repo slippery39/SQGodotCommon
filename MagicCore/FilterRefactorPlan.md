@@ -287,9 +287,19 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
   activation pays its taps BEFORE the mana, so what is tapped is exactly what the mana search
   excluded (as the old precomputed pick did). Probe rerun: identical. Two tests pin the guards.
 
-### Phase 7: separate decision, not part of this plan
+### Phase 7: per-card state ✅ done 2026-10-15
 `TurnTally` per-card effect flags → command-zone effects; counter fields → a map. Different problem
 (per-card state, not filters). Decide after phase 6.
+- **Decided (Shayne, 2026-10-15):** the flags only. Counters stay six fields — ~250 uses for a gain
+  only a new counter kind would collect; recorded in DesignNotes "MagicCore known ceilings".
+- **Built:** `ThisTurn(ThisTurnEffect What)` puts the effect in its controller's command zone (via
+  `GetEmblem.ToCommandZone`), so MagicTable's plate shows it; `s.ThisTurnEffects<T>(player)` reads it.
+  Five markers replace the five flags: `ExtraRedFromMountains`, `CopyNextInstantOrSorcery`,
+  `JaceLoyaltyAtInstantSpeed`, `NextSpellCantBeCountered`, `NoLegendRule`; a cast removes the ones
+  it uses up. They end at the untap step beside the tally reset, as the flags did (not in cleanup —
+  a known ceiling). `TurnTally` holds counts only (`ExtraLandDrops` stays: a count).
+- Verified: both golden replays identical; the five cards' tests green unchanged; the Hall of
+  Echoes test now checks the effect is shown and ends with the turn (revert-checked); bench +0.7%.
 
 ---
 
@@ -323,3 +333,4 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 - [x] Phase 4: statics, conditions (2026-10-15)
 - [x] Phase 5: triggers (2026-10-15)
 - [x] Phase 6: costs (2026-10-15)
+- [x] Phase 7: TurnTally flags → command zone (2026-10-15)

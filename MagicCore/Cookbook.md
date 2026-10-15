@@ -128,7 +128,8 @@ isn't a token". **Equipment / Auras** — `AttachedGets(p, t)`, a static on `Is.
 ```
 
 **A planeswalker** — its loyalty is printed; each ability is `Loyalty(cost, targets, effects…)`
-(`new LoyaltyAbilityComponent(0, …) { MinusX = true }` for "−X"; `GetEmblem([...])` for an emblem):
+(`new LoyaltyAbilityComponent(0, …) { MinusX = true }` for "−X"; `GetEmblem([...])` for an emblem; `new ThisTurn(new X())` for "this turn, [rule]" with no permanent
+to hold it, where `X` is a `ThisTurnEffect` — never a new `TurnTally` field):
 
 ```csharp
 ["Ajani Unrelenting"] =

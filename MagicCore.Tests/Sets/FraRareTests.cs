@@ -457,6 +457,7 @@ public class FraRareTests : FraBoardTest
 		Resolve();
 		var gain = Hand(Instant("Gain", new GainLife(Ref.You, 3)), me);
 		s = s.Act(new CastSpellAction { PlayerId = me, CardId = gain });
+		Assert.That(s.CardsIn(me, ZoneType.Command), Is.Empty, "used up by that spell");
 		var counter = Hand(
 			new CardDefinition(
 				TestGames.Inline("Nope", "{1}", "Instant").Data,

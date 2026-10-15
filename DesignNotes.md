@@ -1118,6 +1118,8 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - Proliferate (Tam) picks for the player: your permanents' +1/+1, loyalty and charge counters, opponents' -1/-1 and stun — never the other kind; make it a choice if a card ever wants otherwise
 - Puppet Crafting's type change is stamped on the host and put back by the state-based check, not a live layer-4 effect: between the Aura leaving and the next priority the host is still a creature (every rule reads card.Is(Creature) — move types into Characteristics if a card ever cares about that window)
 - Uldaros chooses its graveyard cards as it resolves, not as targets when it triggers ("one of each card type, none twice" is a target word the engine can't say)
+- a "this turn" effect in the command zone (`ThisTurnEffect`) ends as the next turn begins, with `TurnTally`, not in cleanup (CR 514.2) — it differs only when a cleanup gives priority; move both into cleanup if a card cares
+- counters on `Card` are six fields (`PlusOneCounters`, `MinusOneCounters`, `StunCounters`, `ChargeCounters`, `HasFinalityCounter`, `Loyalty`; ~250 uses): a new kind means editing `Reset`, `RemoveCounters` and `Proliferate`, which list them by hand. Make them a keyed map when a set brings a new counter kind (decided 2026-10-15, filter refactor phase 7)
 - Emrakul's "{T}: Add {C}{C}" replaces the land's own mana ability while she waits in exile, instead of being a second choice — one yield per permanent; so her "target land" is a land YOU control, or it would shut off an opponent's colour (make yields alternatives if a card ever needs it)
 
 ## MagicTable does not use Common's Card2D or drag-to-play (deferred)

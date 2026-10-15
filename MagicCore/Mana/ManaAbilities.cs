@@ -113,7 +113,7 @@ public static class ManaAbilities
 				.. units,
 				.. Enumerable.Repeat<ImmutableArray<ManaColor>>(
 					[ManaColor.Red],
-					s.GetPlayer(card.ControllerId).ThisTurn.ExtraRedFromMountains
+					s.ThisTurnEffects<Effects.ExtraRedFromMountains>(card.ControllerId).Count()
 				),
 			];
 		// ponytail: one restriction per permanent — all its mana abilities share it (Heartwood

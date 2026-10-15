@@ -317,6 +317,11 @@ public static class MagicState
 		);
 	}
 
+	/// <summary>A player's "this turn" effects of one kind (<see cref="Effects.ThisTurn"/>), as the objects that hold them.</summary>
+	public static IEnumerable<Card> ThisTurnEffects<T>(this GameState s, int playerId)
+		where T : ThisTurnEffect =>
+		s.CardsIn(playerId, ZoneType.Command).Where(c => c.HasComponent<T>());
+
 	/// <summary>Updates one player's "this turn" counts.</summary>
 	public static GameState Tally(
 		this GameState s,

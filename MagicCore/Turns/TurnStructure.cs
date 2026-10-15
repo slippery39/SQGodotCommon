@@ -146,6 +146,7 @@ public static class TurnStructure
 				)
 					s = s.Untap(card.Id);
 				foreach (var id in new[] { s.Player1Id(), s.Player2Id() })
+				{
 					s = s.WithPlayer(
 						s.GetPlayer(id) with
 						{
@@ -153,6 +154,12 @@ public static class TurnStructure
 							ThisTurn = new(),
 						}
 					);
+					// "This turn" effects end with the tally. ponytail: at the next turn's start, not in
+					// cleanup (CR 514.2), as the tally flags they replaced did; differs only if a cleanup
+					// gives priority. Move both into cleanup if a card ever cares.
+					foreach (var effect in s.ThisTurnEffects<Effects.ThisTurnEffect>(id).ToList())
+						s = s.RemoveObject(effect.Id);
+				}
 				s = s.WithGame(s.GetGame() with { CreaturesDiedThisTurn = 0 });
 				return EndStep(s); // nobody gets priority during untap (CR 502.4)
 
@@ -265,7 +272,7 @@ public static class StateBasedActions
 			// CR 704.5j legend rule — not this turn after Hall of Echoes. ponytail: keeps a card over a
 			// token (Face Yourself's copy is sacrificed anyway), then the newest; Arena asks which. Make it
 			// a choice when keeping the older one (say, a tapped copy) matters to the AI.
-			if (!s.GetPlayer(id).ThisTurn.NoLegendRule)
+			if (!s.ThisTurnEffects<Effects.NoLegendRule>(id).Any())
 			{
 				var extraLegends = s.CardsIn(id, ZoneType.Battlefield)
 					.Where(c => c.Is(Supertype.Legendary))

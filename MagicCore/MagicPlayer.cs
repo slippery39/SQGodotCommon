@@ -29,7 +29,8 @@ public record MagicPlayer : GameObject
 
 /// <summary>
 /// "This turn" counts for one player. One record, so a new count cannot miss the reset: the turn
-/// start replaces the whole thing (<see cref="Turns.TurnStructure"/>).
+/// start replaces the whole thing (<see cref="Turns.TurnStructure"/>). Counts only: one card's
+/// "this turn" effect is an object in the command zone (<see cref="Effects.ThisTurnEffect"/>).
 /// </summary>
 public record TurnTally
 {
@@ -40,21 +41,6 @@ public record TurnTally
 	public int SpellsCast { get; init; }
 	public int NoncreatureSpellsCast { get; init; }
 	public int CardsDrawn { get; init; }
-
-	/// <summary>
-	/// Way of the Cryomancer's "[−3]: When you next cast an instant or sorcery spell this turn, copy
-	/// that spell" — delayed triggers waiting; the next such spell takes them all (CastSpellAction).
-	/// </summary>
-	public int CopyNextInstantOrSorcery { get; init; }
-
-	/// <summary>Jace's Machinations: "you may activate loyalty abilities of Jace planeswalkers you control … any time you could cast an instant".</summary>
-	public bool JaceLoyaltyAtInstantSpeed { get; init; }
-
-	/// <summary>Theorist's Proxy: "The next spell you cast this turn can't be countered."</summary>
-	public bool NextSpellCantBeCountered { get; init; }
-
-	/// <summary>Molten Tide: "until end of turn, whenever you tap a Mountain for mana, add an additional {R}" — one each.</summary>
-	public int ExtraRedFromMountains { get; init; }
 
 	/// <summary>Kiora of Salt and Sand: "if you've activated a loyalty ability this turn".</summary>
 	public int LoyaltyAbilitiesActivated { get; init; }
@@ -68,9 +54,6 @@ public record TurnTally
 
 	/// <summary>Cruel Calculations: "cards that were put into [this player's] graveyard from their library this turn" — MagicState.MoveCard.</summary>
 	public int CardsFromLibraryToGraveyard { get; init; }
-
-	/// <summary>Hall of Echoes: "The 'legend rule' doesn't apply to permanents you control this turn."</summary>
-	public bool NoLegendRule { get; init; }
 
 	/// <summary>Noncombat damage dealt TO this player (Command the Stage).</summary>
 	public int NoncombatDamageTaken { get; init; }

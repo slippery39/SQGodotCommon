@@ -73,7 +73,7 @@ public record ActivateLoyaltyAction : GameAction
 		var game = s.GetGame();
 		var instantSpeedJace =
 			walker.Subtypes.Contains("Jace")
-			&& s.GetPlayer(PlayerId).ThisTurn.JaceLoyaltyAtInstantSpeed;
+			&& s.ThisTurnEffects<Effects.JaceLoyaltyAtInstantSpeed>(PlayerId).Any();
 		if (!instantSpeedJace && !Priority.AtSorcerySpeed(s, PlayerId))
 			return ValidationResult.Invalid("Loyalty abilities are sorcery speed");
 		if (Turns.Combat.LockedDown(s)) // split second or Yuriko — reachable once a Jace's is instant speed

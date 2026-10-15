@@ -386,7 +386,7 @@ public class FraEngineTests : FraBoardTest
 	{
 		for (var i = 0; i < 8; i++)
 			Field(TestGames.Card("Mountain"), me);
-		s = s.Tally(me, t => t with { ExtraRedFromMountains = 1 }); // TEST SETUP: Molten Tide resolved
+		s = GetEmblem.ToCommandZone(s, me, "Molten Tide", [new ExtraRedFromMountains()]); // TEST SETUP: Molten Tide resolved
 		TapAllLandsBut();
 		foreach (
 			var m in s.CardsIn(me, ZoneType.Battlefield).Where(c => c.Name == "Mountain").ToList()

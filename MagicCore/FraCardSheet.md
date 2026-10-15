@@ -4069,13 +4069,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraEngineTests
 
-**Engine pieces:** `CopyNextInstantOrSorceryThisTurn` — Way of the Cryomancer's granted "[−3]: When you next cast an instant or sorcery spell…
+**Engine pieces:** `CopyNextInstantOrSorcery` — Way of the Cryomancer's granted "[−3]: When you next cast an instant or sorcery spell…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
 
 ```csharp
 ["Way of the Cryomancer"] =
 [
 	When(TriggerEvent.SelfEnters, [], new EmpowerJace(5)),
-	Grant(-3, [], new CopyNextInstantOrSorceryThisTurn()),
+	Grant(-3, [], new ThisTurn(new CopyNextInstantOrSorcery())),
 ],
 ```
 
@@ -4960,7 +4960,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraGraveyardTests, FraRareCopyTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `BecomeCopyUntilEndOfTurn` — Hall of Echoes: "This land becomes a copy of target creature you control until end of…; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `NoLegendRuleThisTurn` — Hall of Echoes: "The 'legend rule' doesn't apply to permanents you control this turn."; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `BecomeCopyUntilEndOfTurn` — Hall of Echoes: "This land becomes a copy of target creature you control until end of…; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `NoLegendRule` — Hall of Echoes: "The 'legend rule' doesn't apply to permanents you control this turn." —…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
 
 ```csharp
 ["Hall of Echoes"] =
@@ -4970,7 +4970,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		ManaCost.Parse("{5}"),
 		[
 			new BecomeCopyUntilEndOfTurn(Ref.Source, Ref.Target()),
-			new NoLegendRuleThisTurn(),
+			new ThisTurn(new NoLegendRule()),
 		]
 	)
 	{
@@ -5060,12 +5060,12 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareTests
 
-**Engine pieces:** `JaceLoyaltyAtInstantSpeedThisTurn` — Jace's Machinations: Jace loyalty abilities at instant speed, on any turn, until end of…
+**Engine pieces:** `JaceLoyaltyAtInstantSpeed` — Jace's Machinations: "you may activate loyalty abilities of Jace planeswalkers you…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
 
 ```csharp
 ["Jace's Machinations"] =
 [
-	Spell([], new JaceLoyaltyAtInstantSpeedThisTurn(), new EmpowerJace(8)),
+	Spell([], new ThisTurn(new JaceLoyaltyAtInstantSpeed()), new EmpowerJace(8)),
 ],
 ```
 
@@ -5506,7 +5506,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraEngineTests
 
-**Engine pieces:** `MountainsMakeAnExtraRedThisTurn` — Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional…
+**Engine pieces:** `ExtraRedFromMountains` — Molten Tide: "Until end of turn, whenever you tap a Mountain for mana, add an additional…; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
 
 ```csharp
 ["Pyre Rhymer // Molten Tide"] =
@@ -5516,7 +5516,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	PrepareSpell(
 		"Pyre Rhymer // Molten Tide",
 		[],
-		new MountainsMakeAnExtraRedThisTurn()
+		new ThisTurn(new ExtraRedFromMountains())
 	),
 ],
 ```
@@ -5883,7 +5883,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraEngineTests, FraRareTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `NextSpellCantBeCounteredThisTurn` — Theorist's Proxy: "The next spell you cast this turn can't be countered." — taken by…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `NextSpellCantBeCountered` — Theorist's Proxy: "The next spell you cast this turn can't be countered." — taken by…; `SacrificeSelfCost` — "Sacrifice this [permanent]:" (Treasure's own is ManaOfOneColorComponent).; `ThisTurn` — Puts a ThisTurnEffect in your command zone for the rest of the turn.
 
 ```csharp
 ["Theorist's Proxy"] =
@@ -5891,7 +5891,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(TriggerEvent.SelfEnters, [], new EmpowerJace(3)),
 	new ActivatedAbilityComponent(
 		ManaCost.Parse("{U}"),
-		[new NextSpellCantBeCounteredThisTurn()]
+		[new ThisTurn(new NextSpellCantBeCountered())]
 	)
 	{
 		Costs = [new SacrificeSelfCost()],

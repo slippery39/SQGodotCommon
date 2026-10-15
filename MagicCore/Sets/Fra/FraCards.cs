@@ -2696,7 +2696,7 @@ public static class FraCards
 				PrepareSpell(
 					"Pyre Rhymer // Molten Tide",
 					[],
-					new MountainsMakeAnExtraRedThisTurn()
+					new ThisTurn(new ExtraRedFromMountains())
 				),
 			],
 
@@ -2704,7 +2704,7 @@ public static class FraCards
 			["Way of the Cryomancer"] =
 			[
 				When(TriggerEvent.SelfEnters, [], new EmpowerJace(5)),
-				Grant(-3, [], new CopyNextInstantOrSorceryThisTurn()),
+				Grant(-3, [], new ThisTurn(new CopyNextInstantOrSorcery())),
 			],
 
 			// ===== Rares (8a): from existing pieces =====
@@ -2926,7 +2926,7 @@ public static class FraCards
 			["Samut, Tyrant of Naktamun"] = [new YourInstantsAndSorceriesHaveSplitSecond()],
 			["Jace's Machinations"] =
 			[
-				Spell([], new JaceLoyaltyAtInstantSpeedThisTurn(), new EmpowerJace(8)),
+				Spell([], new ThisTurn(new JaceLoyaltyAtInstantSpeed()), new EmpowerJace(8)),
 			],
 			["Theorist's Sanctum"] =
 			[
@@ -2941,7 +2941,7 @@ public static class FraCards
 				When(TriggerEvent.SelfEnters, [], new EmpowerJace(3)),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{U}"),
-					[new NextSpellCantBeCounteredThisTurn()]
+					[new ThisTurn(new NextSpellCantBeCountered())]
 				)
 				{
 					Costs = [new SacrificeSelfCost()],
@@ -3250,7 +3250,7 @@ public static class FraCards
 					ManaCost.Parse("{5}"),
 					[
 						new BecomeCopyUntilEndOfTurn(Ref.Source, Ref.Target()),
-						new NoLegendRuleThisTurn(),
+						new ThisTurn(new NoLegendRule()),
 					]
 				)
 				{

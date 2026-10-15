@@ -26,7 +26,10 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   lands, spells, cards drawn, life gained, surveils), REPLACED whole for BOTH players as each turn
   begins — "this turn" is every turn, not only yours, and a new count cannot miss the reset. Update
   it with `s.Tally(…)`. The finished turn's tally becomes `LastTurn` ("last turn" = the turn before
-  this one, whoever's). Creatures that died this turn (anyone's) are on `MagicGame`.
+  this one, whoever's). Creatures that died this turn (anyone's) are on `MagicGame`. **A tally holds
+  counts only:** one card's "this turn" effect (Hall of Echoes' no legend rule, Theorist's Proxy) is
+  `new ThisTurn(new X())` — an object in the command zone, which the table shows, ended with the tally;
+  `X` is a `ThisTurnEffect`, read with `s.ThisTurnEffects<X>(player)`, and one used up is removed.
 - **"This ability triggers only once each turn"** is `TriggeredAbilityComponent.OncePerTurn`, stamped
   on the card as it goes on the stack (`PutOnStack`) — a new object (CR 400.7) may trigger again.
 - **"Entered this turn"** is `Card.EnteredOnTurn`, stamped by `EnterBattlefield` — not
@@ -62,7 +65,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   negative power as positive (Loot). Combat never reads `s.Power` for damage directly.
 - **What tapping a permanent for mana makes** is `ManaAbilities.YieldOf`: units of mana, each with its
   allowed colours — several of ONE colour (Loot, the Nexus: `SameColor`), a Mountain's extra {R} under
-  Molten Tide (`TurnTally.ExtraRedFromMountains`), mana that can't pay for spells from your hand
+  Molten Tide (`ExtraRedFromMountains`, a `ThisTurnEffect`), mana that can't pay for spells from your hand
   (Heartwood Crafter). `ManaPayment.Find` solves units: a permanent taps once, and what the payment
   doesn't use floats (`Payment.Floats`). Manual tapping floats restricted mana AS restricted (`ManaPool.Restricted`).
   A restriction is a `ManaRestriction` the solver checks against the spell it pays for
@@ -76,8 +79,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **Copying a spell** is `CopySpell` (CR 707.10): a `Card.IsCopy` on top of the stack, controlled by
   the copier, not cast (no "whenever you cast"), its targets chosen anew with the original's among the
   options — and gone once it leaves the stack (the state-based check prepared copies use). "When you
-  next cast an instant or sorcery this turn" is a delayed trigger kept on the player
-  (`TurnTally.CopyNextInstantOrSorcery`), taken by that cast and carried on its `SpellCastEvent`.
+  next cast an instant or sorcery this turn" is a delayed trigger kept in the command zone
+  (`CopyNextInstantOrSorcery`, a `ThisTurnEffect`), taken by that cast and carried on its `SpellCastEvent`.
   Replace a component with `WithComponentReplaced` — `WithComponent` ADDS, and `GetComponent` reads the first.
 - **Convoke** is `ManaPayment.Find(…, convoke: true)`: your untapped creatures join the sources after
   lands, each paying its own colour or {1} (as Colorless); summoning sickness doesn't matter.

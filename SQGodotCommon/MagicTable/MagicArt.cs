@@ -32,6 +32,8 @@ public static class MagicArt
 		// MagicCore names an emblem "Emblem — Ajani Resolute"; Scryfall's is "Ajani Resolute Emblem".
 		if (name.StartsWith("Emblem — "))
 			name = $"{name["Emblem — ".Length..]} Emblem";
+		// An effect in the command zone, "Theorist's Proxy (this turn)", shows the card that made it.
+		name = Regex.Replace(name, @" \((this turn|until your next turn)\)$", "");
 		var slug = Regex.Replace(name.ToLowerInvariant(), "[^a-z0-9]+", "_").Trim('_');
 		var path = $"res://MagicTable/Assets/{folder}/{slug}.jpg";
 		return ResourceLoader.Exists(path) ? ResourceLoader.Load<Texture2D>(path) : null;

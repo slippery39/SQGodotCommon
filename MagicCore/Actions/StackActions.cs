@@ -223,6 +223,7 @@ public record CastSpellAction : GameAction
 		if (Prepare.CreatureOf(s, card) is { } prepared)
 			s = Prepare.Unprepare(s, prepared.Id); // casting the copy unprepares it
 		s = s.MoveCard(cardId, s.GetWellKnownId(MagicKeys.Stack), toTop: true); // index 0 is the top
+		var proxies = s.ThisTurnEffects<NextSpellCantBeCountered>(playerId).ToList();
 		s = s.UpdateObject(
 			cardId,
 			// Its caster controls it (CR 601.2a) — Null Summoner casts the opponent's card.
@@ -231,7 +232,7 @@ public record CastSpellAction : GameAction
 				{
 					CastFrom = from,
 					// Theorist's Proxy: "the next spell you cast this turn can't be countered" — this one.
-					CantBeCountered = s.GetPlayer(playerId).ThisTurn.NextSpellCantBeCountered,
+					CantBeCountered = proxies.Count > 0,
 				}
 			)
 		);
@@ -245,21 +246,19 @@ public record CastSpellAction : GameAction
 					NoncreatureSpellsCast = t.NoncreatureSpellsCast + noncreature,
 				}
 		);
-		if (s.GetPlayer(playerId).ThisTurn.NextSpellCantBeCountered)
-			s = s.Tally(playerId, t => t with { NextSpellCantBeCountered = false }); // used up
 		// "When you next cast an instant or sorcery spell this turn": this one takes every waiting copy.
 		var copies = card.Is(CardType.Instant | CardType.Sorcery)
-			? s.GetPlayer(playerId).ThisTurn.CopyNextInstantOrSorcery
-			: 0;
-		if (copies > 0)
-			s = s.Tally(playerId, t => t with { CopyNextInstantOrSorcery = 0 });
+			? s.ThisTurnEffects<CopyNextInstantOrSorcery>(playerId).ToList()
+			: [];
+		foreach (var used in proxies.Concat(copies))
+			s = s.RemoveObject(used.Id);
 		// Read from the tallied state — on one line with Tally, `s` would still be the old one.
 		s = s.Raise(
 			new SpellCastEvent(
 				cardId,
 				playerId,
 				noncreature * s.GetPlayer(playerId).ThisTurn.NoncreatureSpellsCast,
-				copies
+				copies.Count
 			)
 		);
 		return Turns.Triggers.RaiseTargeted(s, targets, playerId, cardId);
