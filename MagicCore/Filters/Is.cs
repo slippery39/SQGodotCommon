@@ -48,6 +48,9 @@ public static class Is
 	public static readonly Filter AttackingYou = new HasProperty(Property.AttackingYou);
 	public static readonly Filter Blocking = new HasProperty(Property.Blocking);
 
+	/// <summary>Ruric Thar: "haven't dealt combat damage yet" is !Is.DealtCombatDamage.</summary>
+	public static readonly Filter DealtCombatDamage = new HasProperty(Property.DealtCombatDamage);
+
 	/// <summary>Gideon's Memorial: "attacking or blocking creature". Built from leaves, not fields: no init order.</summary>
 	public static readonly Filter InCombat =
 		new HasProperty(Property.Attacking) | new HasProperty(Property.Blocking);

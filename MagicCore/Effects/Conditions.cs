@@ -10,29 +10,28 @@ public abstract record Condition
 	public abstract bool Holds(GameState s, ImmutableDictionary<string, object> context);
 }
 
-/// <summary>Prophesied End: "if it wasn't attacking" — read BEFORE the destroy, while it still knows.</summary>
-public record TargetIsNotAttacking(int Index) : Condition
+/// <summary>
+/// "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it wasn't
+/// attacking" is Matches(Ref.Target(0), !Is.Attacking), read BEFORE the destroy while it still knows;
+/// Sphinx of False Conclusions: "if it isn't a token" is Not(Matches(Ref.Source, Is.Token)) — once the
+/// source is gone, as it last was (Ref.ObjectsAsTheyWere).
+/// </summary>
+public record Matches(Ref What, Filters.Filter Filter) : Condition
 {
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		Ref.Target(Index).Resolve(s, context).Select(s.GetCard).Any(c => c.AttackingId == 0);
+	public override bool Holds(GameState s, ImmutableDictionary<string, object> context)
+	{
+		var asking = ContextKeys.Asking(context);
+		return What.ObjectsAsTheyWere(s, context).Any(o => Filter.Matches(s, o, asking));
+	}
 }
 
-/// <summary>Budding Insurgent: "if that permanent was a legendary enchantment" — read before it is destroyed.</summary>
-public record TargetIs(int Index, CardType Type, Supertype Supertype = Supertype.None) : Condition
+/// <summary>"You can behold a [Subtype]" — Theorist's Sanctum: a Jace you control or in your hand (it costs nothing).</summary>
+public record YouCanBehold(string Subtype) : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		Ref.Target(Index)
-			.Resolve(s, context)
-			.Select(s.GetObject)
-			.OfType<Card>()
-			.Any(c => c.Is(Type) && (Supertype == Supertype.None || c.Is(Supertype)));
-}
-
-/// <summary>Koth: "if it's a Mountain" — the trigger event's card has this subtype.</summary>
-public record EventCardHasSubtype(string Subtype) : Condition
-{
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		Ref.EventCard.Resolve(s, context).Select(s.GetCard).Any(c => c.Subtypes.Contains(Subtype));
+		new BeholdOrPayAdditionalCost(Subtype, 0)
+			.Candidates(s, (int)context[ContextKeys.Controller], (int)context[ContextKeys.Source])
+			.Any();
 }
 
 /// <summary>Rescue Girl's "activate only during your turn"; Skilled Battlecarver's "during your turn" static.</summary>
@@ -90,40 +89,6 @@ public record SourceWasCast : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
 		Conditions.SourceAsItWas(s, context)?.WasCast == true;
-}
-
-/// <summary>Sphinx of False Conclusions: "if it isn't a token" (with Not) — as it last was.</summary>
-public record SourceIsToken : Condition
-{
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		Conditions.SourceAsItWas(s, context)?.IsToken == true;
-}
-
-/// <summary>Vindictive Triumph: "if that permanent's mana value was N or less" — read before it moves.</summary>
-public record TargetManaValueAtMost(int Index, int Max) : Condition
-{
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		Ref.Target(Index)
-			.Resolve(s, context)
-			.Select(s.GetObject)
-			.OfType<Card>()
-			.Any(c => c.ManaCost.ManaValue <= Max);
-}
-
-/// <summary>"If this creature isn't prepared" (with Not) — the source, as it is now.</summary>
-public record SourceIsPrepared : Condition
-{
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		s.HasObject((int)context[ContextKeys.Source])
-		&& s.GetObject((int)context[ContextKeys.Source]) is Card { IsPrepared: true };
-}
-
-/// <summary>Ruric Thar, Magecrusher: "as long as they haven't dealt combat damage yet" (with Not).</summary>
-public record SourceHasDealtCombatDamage : Condition
-{
-	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		s.HasObject((int)context[ContextKeys.Source])
-		&& s.GetObject((int)context[ContextKeys.Source]) is Card { HasDealtCombatDamage: true };
 }
 
 /// <summary>A "you may" that can always be done.</summary>

@@ -34,7 +34,7 @@ A card's printed data — name, cost, types, P/T, loyalty, keywords — comes fr
 [
 	Spell(
 		[Creature],
-		new If(new TargetIsNotAttacking(0), [new DrawCards(Ref.ControllerOfTarget(0), 1)]),
+		new If(new Matches(Ref.Target(0), !Is.Attacking), [new DrawCards(Ref.ControllerOfTarget(0), 1)]),
 		new Destroy(Ref.Target())
 	),
 ],
@@ -94,15 +94,19 @@ options (`TapCost`, `Targets`, `SacrificeSelf`, `From = ZoneType.Graveyard`, `So
 ],
 ```
 
-**A static ability** — `new StaticEffectComponent(Affects.X, "Keyword") { Power = …, Toughness = … }`, read
-live while its source is on the battlefield. **Equipment / Auras** — `AttachedGets(p, t)`, a static on
-`Affects.AttachedCreature`, `Equip("{2}")` or `new AuraComponent(enchantSpec)`:
+**A static ability** — `new StaticEffectComponent(scope, "Keyword") { Power = …, Toughness = …, If = … }`,
+read live while its source is on the battlefield. The scope is a filter: `Is.Source` ("this"),
+`Is.Creature & Is.Yours & Is.Subtype("Thopter")` ("Thopters you control"). A scope that reads keywords, or
+a P/T static's scope that reads power/toughness, is refused as it's built (Characteristics would loop).
+**"If …"** on a thing is `new Matches(ref, filter)` — `Not(new Matches(Ref.Source, Is.Token))` is "if it
+isn't a token". **Equipment / Auras** — `AttachedGets(p, t)`, a static on `Is.AttachedToSource`,
+`Equip("{2}")` or `new AuraComponent(enchantSpec)`:
 
 ```csharp
 ["Medic's Kitesail"] =      // Equipped creature gets +1/+0, has flying and "whenever this attacks, gain 1". Equip {2}.
 [
 	AttachedGets(1, 0),
-	new StaticEffectComponent(Affects.AttachedCreature, "Flying"),
+	new StaticEffectComponent(Is.AttachedToSource, "Flying"),
 	When(TriggerEvent.AttachedCreatureAttacks, [], new GainLife(Ref.You, 1)),
 	Equip("{2}"),
 ],

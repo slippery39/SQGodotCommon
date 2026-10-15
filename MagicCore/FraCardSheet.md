@@ -234,7 +234,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraSacrificeTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetIs` — Budding Insurgent: "if that permanent was a legendary enchantment" — read before it is…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Budding Insurgent"] =
@@ -244,7 +244,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		[
 			// "If that permanent was a legendary enchantment" — read before it is destroyed.
 			new If(
-				new TargetIs(0, CardType.Enchantment, Supertype.Legendary),
+				new Matches(Ref.Target(0), Is.Enchantment & Is.Legendary),
 				[new DrawCards(Ref.You, 1)]
 			),
 			new Destroy(Ref.Target()),
@@ -417,7 +417,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Dedicated Commons"] = DualLand(
-	EntersUntappedIf.YouControlAPlaneswalker,
+	YouControlAPlaneswalker,
 	ManaColor.Red,
 	ManaColor.White
 ),
@@ -525,11 +525,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 **Status:** scripted · no test names it
 
 ```csharp
-["Fatehold Annex"] = DualLand(
-	EntersUntappedIf.YouControlAPlaneswalker,
-	ManaColor.White,
-	ManaColor.Blue
-),
+["Fatehold Annex"] = DualLand(YouControlAPlaneswalker, ManaColor.White, ManaColor.Blue),
 ```
 
 ### Fatehold Chronologist // Peer Review
@@ -602,7 +598,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 [
 	new AuraComponent(Creature),
 	AttachedGets(1, 0),
-	new StaticEffectComponent(Affects.AttachedCreature, "Deathtouch"),
+	new StaticEffectComponent(Is.AttachedToSource, "Deathtouch"),
 	When(
 		TriggerEvent.AttachedCreatureDies,
 		[],
@@ -630,7 +626,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Formidable Commons"] = DualLand(
-	EntersUntappedIf.YouControlAPlaneswalker,
+	YouControlAPlaneswalker,
 	ManaColor.Black,
 	ManaColor.Green
 ),
@@ -809,7 +805,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Innovative Commons"] = DualLand(
-	EntersUntappedIf.YouControlAPlaneswalker,
+	YouControlAPlaneswalker,
 	ManaColor.Blue,
 	ManaColor.Red
 ),
@@ -864,11 +860,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 **Status:** scripted · no test names it
 
 ```csharp
-["Konstrari Annex"] = DualLand(
-	EntersUntappedIf.YouControlAPlaneswalker,
-	ManaColor.Red,
-	ManaColor.Green
-),
+["Konstrari Annex"] = DualLand(YouControlAPlaneswalker, ManaColor.Red, ManaColor.Green),
 ```
 
 ### Konstrari Improviser // Soul Tether
@@ -942,7 +934,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Medic's Kitesail"] =
 [
 	AttachedGets(1, 0),
-	new StaticEffectComponent(Affects.AttachedCreature, "Flying"),
+	new StaticEffectComponent(Is.AttachedToSource, "Flying"),
 	// "and has 'Whenever this creature attacks, you gain 1 life.'"
 	When(TriggerEvent.AttachedCreatureAttacks, [], new GainLife(Ref.You, 1)),
 	Equip("{2}"),
@@ -981,7 +973,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Meticulous Commons"] = DualLand(
-	EntersUntappedIf.YouControlAPlaneswalker,
+	YouControlAPlaneswalker,
 	ManaColor.White,
 	ManaColor.Black
 ),
@@ -1149,7 +1141,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraCommonTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `ChoosesColorAsItEnters` — Room of Refuge: "As it enters, choose a color." Applied by MagicState.EnterBattlefield.; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AddCounters` — "Put N +1/+1 counters on [What]" — creatures only, through MagicState.AddPlusOneCounters…; `ChoosesColorAsItEnters` — Room of Refuge: "As it enters, choose a color." Applied by MagicState.EnterBattlefield.; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Room of Refuge"] =
@@ -1268,10 +1260,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Skilled Battlecarver"] =
 [
-	new StaticEffectComponent(Affects.Self, "First strike")
-	{
-		If = new DuringYourTurn(),
-	},
+	new StaticEffectComponent(Is.Source, "First strike") { If = new DuringYourTurn() },
 	new ActivatedAbilityComponent(
 		ManaCost.Parse("{1}{R}"),
 		[new ModifyUntilEndOfTurn(Ref.Source, 1, 0)]
@@ -1361,7 +1350,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Stingerquill Annex"] = DualLand(
-	EntersUntappedIf.YouControlAPlaneswalker,
+	YouControlAPlaneswalker,
 	ManaColor.Black,
 	ManaColor.Red
 ),
@@ -1428,12 +1417,15 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraTriggerTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `AttacksDespiteDefender` — "As long as [condition], this creature can attack as though it didn't have defender."…; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `Surveil` — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top.…
 
 ```csharp
 ["Surveillance Phantasm"] =
 [
-	new AttacksDespiteDefender(new AtLeast(Count.YourSurveilsThisTurn, 1)),
+	new StaticEffectComponent(Is.Source, Combat.AttacksDespiteDefender)
+	{
+		If = new AtLeast(Count.YourSurveilsThisTurn, 1),
+	},
 	new ActivatedAbilityComponent(ManaCost.Parse("{3}{U}"), [new Surveil(1)]),
 ],
 ```
@@ -1551,11 +1543,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 **Status:** scripted · no test names it
 
 ```csharp
-["Theorix Annex"] = DualLand(
-	EntersUntappedIf.YouControlAPlaneswalker,
-	ManaColor.Blue,
-	ManaColor.Black
-),
+["Theorix Annex"] = DualLand(YouControlAPlaneswalker, ManaColor.Blue, ManaColor.Black),
 ```
 
 ### Theorix Metamage // Omit Variables
@@ -1575,8 +1563,8 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Theorix Metamage // Omit Variables"] =
 [
 	EntersPrepared,
-	new StaticEffectComponent(Affects.Self) { Power = 1, If = Threshold },
-	new StaticEffectComponent(Affects.Self, "Flying") { If = Threshold },
+	new StaticEffectComponent(Is.Source) { Power = 1, If = Threshold },
+	new StaticEffectComponent(Is.Source, "Flying") { If = Threshold },
 	OmitVariables("Theorix Metamage // Omit Variables"),
 ],
 ```
@@ -1592,7 +1580,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Transformative Commons"] = DualLand(
-	EntersUntappedIf.YouControlAPlaneswalker,
+	YouControlAPlaneswalker,
 	ManaColor.Green,
 	ManaColor.Blue
 ),
@@ -1690,7 +1678,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Vigorbloom Annex"] = DualLand(
-	EntersUntappedIf.YouControlAPlaneswalker,
+	YouControlAPlaneswalker,
 	ManaColor.Green,
 	ManaColor.White
 ),
@@ -1733,7 +1721,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Void Extrapolator // Omit Variables"] =
 [
 	EntersPrepared,
-	new StaticEffectComponent(Affects.Self)
+	new StaticEffectComponent(Is.Source)
 	{
 		Power = 1,
 		Toughness = 1,
@@ -1760,11 +1748,11 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Whiplash Wordsmith // Vicious Verse"] =
 [
 	EntersPrepared,
-	new StaticEffectComponent(Affects.Self, "Flying")
+	new StaticEffectComponent(Is.Source, "Flying")
 	{
 		If = new AtLeast(Count.NoncombatDamageToOpponentsThisTurn, 1),
 	},
-	new StaticEffectComponent(Affects.Self, "Haste")
+	new StaticEffectComponent(Is.Source, "Haste")
 	{
 		If = new AtLeast(Count.NoncombatDamageToOpponentsThisTurn, 1),
 	},
@@ -2313,7 +2301,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Fblthp, Knows the Way"] =
 [
-	new StaticEffectComponent(Affects.Self)
+	new StaticEffectComponent(Is.Source)
 	{
 		Power = Count.BasicLandTypesAmongLandsYouControl,
 	},
@@ -2434,10 +2422,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Gallia, the Merrymaker"] =
 [
-	new StaticEffectComponent(Affects.OtherCreaturesYouControl, "Haste")
-	{
-		OnlyWithCounter = true,
-	},
+	new StaticEffectComponent(
+		Is.Creature & Is.Yours & !Is.Source & Is.WithPlusOneCounter,
+		"Haste"
+	),
 	new ActivatedAbilityComponent(
 		ManaCost.Parse("{1}{R}"),
 		[new AddCounters(Ref.Target(), 1)]
@@ -2496,13 +2484,13 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraUncommonReplacementTests
 
-**Engine pieces:** `CostsLessByGreatestStatYouControl` — "This spell costs {X} less to cast, where X is the greatest power among creatures you…; `YourCreaturesAssignDamageByToughness` — Ghalta: "Each creature you control with toughness greater than its power assigns combat…; `YourCreaturesAttackDespiteDefender` — Ghalta: "Creatures you control can attack as though they didn't have defender."
+**Engine pieces:** `CostsLessByGreatestStatYouControl` — "This spell costs {X} less to cast, where X is the greatest power among creatures you…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…; `YourCreaturesAssignDamageByToughness` — Ghalta: "Each creature you control with toughness greater than its power assigns combat…
 
 ```csharp
 ["Ghalta the Immovable"] =
 [
 	new CostsLessByGreatestStatYouControl(Toughness: true),
-	new YourCreaturesAttackDespiteDefender(),
+	new StaticEffectComponent(Is.Creature & Is.Yours, Combat.AttacksDespiteDefender),
 	new YourCreaturesAssignDamageByToughness(),
 ],
 ```
@@ -2523,7 +2511,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Ghalta the Unstoppable"] =
 [
 	new CostsLessByGreatestStatYouControl(),
-	new StaticEffectComponent(Affects.OtherCreaturesYouControl, "Trample"),
+	new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source, "Trample"),
 ],
 ```
 
@@ -2855,7 +2843,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraCardTests
 
-**Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `EventCardHasSubtype` — Koth: "if it's a Mountain" — the trigger event's card has this subtype.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `AddMana` — "Add {C}" — or Gardenize's "{G} for each charge counter", counted as it resolves.; `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Koth, the Geomancer"] =
@@ -2864,7 +2852,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 		TriggerEvent.LandYouControlEnters,
 		[],
 		new DealDamage(Ref.EachOpponent, 1),
-		new If(new EventCardHasSubtype("Mountain"), [new AddMana(ManaColor.Red)])
+		new If(
+			new Matches(Ref.EventCard, Is.Subtype("Mountain")),
+			[new AddMana(ManaColor.Red)]
+		)
 	),
 ],
 ```
@@ -2990,7 +2981,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Marwyn, the Preserver"] =
 [
-	new StaticEffectComponent(Affects.LandsYouControl, "Hexproof"),
+	new StaticEffectComponent(Is.Land & Is.Yours, "Hexproof"),
 	new ActivatedAbilityComponent(
 		ManaCost.Parse("{2}"),
 		[new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)]
@@ -3035,15 +3026,12 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraStaticTests
 
-**Engine pieces:** `Fight` — CR 701.14: each deals damage equal to its power to the other. Nothing if either is gone.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+**Engine pieces:** `Fight` — CR 701.14: each deals damage equal to its power to the other. Nothing if either is gone.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
 ```csharp
 ["Mind Meanderer"] =
 [
-	new StaticEffectComponent(Affects.Self, "Vigilance")
-	{
-		While = StaticCondition.YouControlAJacePlaneswalker,
-	},
+	new StaticEffectComponent(Is.Source, "Vigilance") { If = YouControlAJace },
 	When(
 		TriggerEvent.SelfEnters,
 		[Target(Is.Creature & Is.Opponents) with { Optional = true }],
@@ -3326,7 +3314,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** ArenaDeckTests, FraCardTests, FraSacrificeTests
 
-**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetIsNotAttacking` — Prophesied End: "if it wasn't attacking" — read BEFORE the destroy, while it still knows.
+**Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Prophesied End"] =
@@ -3335,7 +3323,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	Spell(
 		[Creature],
 		new If(
-			new TargetIsNotAttacking(0),
+			new Matches(Ref.Target(0), !Is.Attacking),
 			[new DrawCards(Ref.ControllerOfTarget(0), 1)]
 		),
 		new Destroy(Ref.Target())
@@ -3540,15 +3528,15 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraCommonTests, FraGraveyardTests
 
-**Engine pieces:** `CantBeCountered` — "This spell can't be countered." Read by StackResolution.Counter.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `SourceHasDealtCombatDamage` — Ruric Thar, Magecrusher: "as long as they haven't dealt combat damage yet" (with Not).; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
+**Engine pieces:** `CantBeCountered` — "This spell can't be countered." Read by StackResolution.Counter.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `StaticEffectComponent` — A static ability that changes characteristics while its source is on the battlefield —…
 
 ```csharp
 ["Ruric Thar, Magecrusher"] =
 [
 	new CantBeCountered(),
-	new StaticEffectComponent(Affects.Self, "Hexproof")
+	new StaticEffectComponent(Is.Source, "Hexproof")
 	{
-		If = new Not(new SourceHasDealtCombatDamage()),
+		If = new Not(new Matches(Ref.Source, Is.DealtCombatDamage)),
 	},
 ],
 ```
@@ -3588,10 +3576,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Saheeli, Jewel of Avishkar"] =
 [
-	new StaticEffectComponent(Affects.CreaturesYouControl, "Haste")
-	{
-		OnlySubtype = "Thopter",
-	},
+	new StaticEffectComponent(Is.Creature & Is.Yours & Is.Subtype("Thopter"), "Haste"),
 	When(TriggerEvent.YouCastNoncreatureSpell, [], new CreateTokens(Thopter, 1)),
 ],
 ```
@@ -3683,10 +3668,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Tetsuko Umezawa, Fugitive"] =
 [
-	new StaticEffectComponent(Affects.CreaturesYouControl, Combat.CantBeBlocked)
-	{
-		OnlyPowerOrToughnessAtMost = 1,
-	},
+	new StaticEffectComponent(
+		Is.Creature & Is.Yours & (Is.PowerAtMost(1) | Is.ToughnessAtMost(1)),
+		Combat.CantBeBlocked
+	),
 ],
 ```
 
@@ -3984,10 +3969,10 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Vigorbloom Vanguard // Seed Suture"] =
 [
 	EntersPrepared,
-	new StaticEffectComponent(Affects.CreaturesYouControl, "Vigilance")
-	{
-		OnlyWithCounter = true,
-	},
+	new StaticEffectComponent(
+		Is.Creature & Is.Yours & Is.WithPlusOneCounter,
+		"Vigilance"
+	),
 	SeedSuture("Vigorbloom Vanguard // Seed Suture"),
 ],
 ```
@@ -4302,7 +4287,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 			[new EachSacrifices(Ref.EachOpponent, Is.Creature)]
 		)
 	),
-	new StaticEffectComponent(Affects.Self)
+	new StaticEffectComponent(Is.Source)
 	{
 		Power = Count.NumberOf(
 			Ref.YourGraveyard(CardType.Creature | CardType.Planeswalker)
@@ -4501,7 +4486,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		[TargetSpec.AnyTarget()],
 		new DealDamage(Ref.Target(), Count.X)
 	),
-	new StaticEffectComponent(Affects.CreaturesYouControl, "Trample"),
+	new StaticEffectComponent(Is.Creature & Is.Yours, "Trample"),
 ],
 ```
 
@@ -4619,7 +4604,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Dark Matter Manipulator"] =
 [
 	When(TriggerEvent.SelfEnters, [], new Mill(Ref.You, 3)),
-	new StaticEffectComponent(Affects.Self)
+	new StaticEffectComponent(Is.Source)
 	{
 		Power = Count.NumberOf(Ref.CardsInYourGraveyard) with { Per = 7, Times = 2 },
 	},
@@ -4637,7 +4622,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Deserted Beach"] = DualLand(
-	EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+	YouControlTwoOrMoreOtherLands,
 	ManaColor.White,
 	ManaColor.Blue
 ),
@@ -4877,15 +4862,8 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Gideon's Memorial"] =
 [
-	new StaticEffectComponent(Affects.CreaturesYouControl)
-	{
-		Power = 1,
-		OnlyTokens = true,
-	},
-	new StaticEffectComponent(Affects.CreaturesYouControl, "Vigilance")
-	{
-		OnlyTokens = true,
-	},
+	new StaticEffectComponent(Is.Creature & Is.Yours & Is.Token) { Power = 1 },
+	new StaticEffectComponent(Is.Creature & Is.Yours & Is.Token, "Vigilance"),
 	.. AnyColorMana(ManaRestriction.OnlyPlaneswalkerSpells),
 	new ActivatedAbilityComponent(
 		ManaCost.Parse("{1}{W}"),
@@ -4968,7 +4946,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Haunted Ridge"] = DualLand(
-	EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+	YouControlTwoOrMoreOtherLands,
 	ManaColor.Black,
 	ManaColor.Red
 ),
@@ -5394,7 +5372,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Overgrown Farmland"] = DualLand(
-	EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+	YouControlTwoOrMoreOtherLands,
 	ManaColor.Green,
 	ManaColor.White
 ),
@@ -5558,7 +5536,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Rockfall Vale"] = DualLand(
-	EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+	YouControlTwoOrMoreOtherLands,
 	ManaColor.Red,
 	ManaColor.Green
 ),
@@ -5574,7 +5552,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareTests
 
-**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
+**Engine pieces:** `AtLeast` — Eye of Jace: "if there are seven or more cards in your graveyard".; `Count` — A number in rules text, counted at resolution. Counting goes through Ref, so "creatures…; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `ManaAbilityComponent` — "{T}: Add {C}." on a non-land (basic land types produce mana by their subtype, CR 305.6).; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Roiling Canopy"] =
@@ -5615,7 +5593,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Samut, Hazoret's Champion"] =
 [
-	new StaticEffectComponent(Affects.CreaturesYouControl, "Haste"),
+	new StaticEffectComponent(Is.Creature & Is.Yours, "Haste"),
 ],
 ```
 
@@ -5665,7 +5643,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 ```csharp
 ["Shipwreck Marsh"] = DualLand(
-	EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+	YouControlTwoOrMoreOtherLands,
 	ManaColor.Blue,
 	ManaColor.Black
 ),
@@ -5758,7 +5736,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareCopyTests
 
-**Engine pieces:** `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `SourceIsToken` — Sphinx of False Conclusions: "if it isn't a token" (with Not) — as it last was.
+**Engine pieces:** `CreateTokenCopy` — "Create a token that's a copy of [it]" (CR 707.2, 111.10): its copiable values on a new…; `Discard` — Each player named discards, choosing for themselves.; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Not` — The opposite of a condition — "isn't", "wasn't", "unless".; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
 ```csharp
 ["Sphinx of False Conclusions"] =
@@ -5771,7 +5749,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	),
 	When(TriggerEvent.SelfDies, [], new CreateTokenCopy(Ref.Source)) with
 	{
-		If = new Not(new SourceIsToken()),
+		If = new Not(new Matches(Ref.Source, Is.Token)),
 	},
 ],
 ```
@@ -5885,12 +5863,12 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareTests
 
-**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.
+**Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `EntersTappedComponent` — "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield,…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `YouCanBehold` — "You can behold a [Subtype]" — Theorist's Sanctum: a Jace you control or in your hand…
 
 ```csharp
 ["Theorist's Sanctum"] =
 [
-	new EntersTappedComponent(EntersUntappedIf.YouBeholdAJace),
+	new EntersTappedComponent(new YouCanBehold("Jace")),
 	new ActivatedAbilityComponent(ManaCost.Parse("{2}{U}"), [new EmpowerJace(2)])
 	{
 		TapCost = true,
@@ -5952,7 +5930,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 **Status:** scripted · **tests naming it:** FraRareCopyTests
 
-**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromExileUnderYourControl` — Vindictive Triumph: "return it to the battlefield tapped under your control. Exile it at…; `TargetManaValueAtMost` — Vindictive Triumph: "if that permanent's mana value was N or less" — read before it moves.
+**Engine pieces:** `Exile` — "Exile [What]" — permanents, to their owners' exile.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnFromExileUnderYourControl` — Vindictive Triumph: "return it to the battlefield tapped under your control. Exile it at…
 
 ```csharp
 ["Vindictive Triumph"] =
@@ -5960,7 +5938,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 	Spell(
 		[CreatureOrPlaneswalker],
 		new If(
-			new TargetManaValueAtMost(0, 3),
+			new Matches(Ref.Target(0), Is.ManaValueAtMost(3)),
 			[
 				new Exile(Ref.Target()),
 				new ReturnFromExileUnderYourControl(Ref.Target())
@@ -6019,10 +5997,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ```csharp
 ["Vraska, Soul of Stone"] =
 [
-	new StaticEffectComponent(Affects.CreaturesYouControl, "Vigilance")
-	{
-		OnlyTypes = CardType.Artifact,
-	},
+	new StaticEffectComponent(Is.Artifact & Is.Creature & Is.Yours, "Vigilance"),
 	When(
 		TriggerEvent.YouCastNoncreatureSpell,
 		[],
@@ -6120,7 +6095,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 		[],
 		new GetEmblem(
 			[
-				new StaticEffectComponent(Affects.CreaturesYouControl)
+				new StaticEffectComponent(Is.Creature & Is.Yours)
 				{
 					Power = 2,
 					Toughness = 2,
@@ -6762,7 +6737,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 ["Tarmogoyf"] =
 [
 	// "*/1+*": the printed 1 is its base toughness; the static adds the count to both.
-	new StaticEffectComponent(Affects.Self)
+	new StaticEffectComponent(Is.Source)
 	{
 		Power = Count.CardTypesInAllGraveyards,
 		Toughness = Count.CardTypesInAllGraveyards,

@@ -288,11 +288,7 @@ public static class FraCards
 		params GameAction[] effects
 	) => new(Loyalty(cost, targets, effects));
 
-	static ImmutableArray<GameComponent> DualLand(
-		EntersUntappedIf unless,
-		ManaColor a,
-		ManaColor b
-	) =>
+	static ImmutableArray<GameComponent> DualLand(Condition unless, ManaColor a, ManaColor b) =>
 		[
 			new EntersTappedComponent(unless),
 			new ManaAbilityComponent(a),
@@ -366,11 +362,29 @@ public static class FraCards
 	static TriggeredAbilityComponent PreparesAtYourUpkeep =>
 		When(TriggerEvent.YourUpkeep, [], new BecomePrepared(Ref.Source)) with
 		{
-			If = new Not(new SourceIsPrepared()),
+			If = new Not(new Matches(Ref.Source, Is.Prepared)),
 		};
 
 	/// <summary>Threshold — "as long as there are seven or more cards in your graveyard".</summary>
 	static readonly AtLeast Threshold = new(Count.NumberOf(Ref.CardsInYourGraveyard), 7);
+
+	/// <summary>Dual lands: "enters tapped unless you control a planeswalker" — judged as this land enters.</summary>
+	static readonly Condition YouControlAPlaneswalker = new AtLeast(
+		Count.NumberOf(Ref.PlaneswalkersYouControl),
+		1
+	);
+
+	/// <summary>"Enters tapped unless you control two or more other lands".</summary>
+	static readonly Condition YouControlTwoOrMoreOtherLands = new AtLeast(
+		Count.NumberOf(Ref.Permanents(Is.Land & Is.Yours & !Is.Source)),
+		2
+	);
+
+	/// <summary>"As long as you control a Jace planeswalker".</summary>
+	static readonly Condition YouControlAJace = new AtLeast(
+		Count.NumberOf(Ref.Permanents(Is.Planeswalker & Is.Yours & Is.Subtype("Jace"))),
+		1
+	);
 
 	/// <summary>Seed Suture: "Put a +1/+1 counter on target creature. You gain 1 life."</summary>
 	static PrepareSpellComponent SeedSuture(string card) =>
@@ -459,7 +473,7 @@ public static class FraCards
 
 	/// <summary>"Equipped/enchanted creature gets +P/+T."</summary>
 	static StaticEffectComponent AttachedGets(int power, int toughness) =>
-		new(Affects.AttachedCreature) { Power = power, Toughness = toughness };
+		new(Is.AttachedToSource) { Power = power, Toughness = toughness };
 
 	/// <summary>
 	/// The Teyos: "When Teyo enters, target permanent you control gains [keyword] until end of turn.
@@ -514,7 +528,7 @@ public static class FraCards
 				Spell(
 					[Creature],
 					new If(
-						new TargetIsNotAttacking(0),
+						new Matches(Ref.Target(0), !Is.Attacking),
 						[new DrawCards(Ref.ControllerOfTarget(0), 1)]
 					),
 					new Destroy(Ref.Target())
@@ -606,7 +620,10 @@ public static class FraCards
 					TriggerEvent.LandYouControlEnters,
 					[],
 					new DealDamage(Ref.EachOpponent, 1),
-					new If(new EventCardHasSubtype("Mountain"), [new AddMana(ManaColor.Red)])
+					new If(
+						new Matches(Ref.EventCard, Is.Subtype("Mountain")),
+						[new AddMana(ManaColor.Red)]
+					)
 				),
 			],
 
@@ -651,77 +668,65 @@ public static class FraCards
 			// Ten commons: "enters tapped unless you control a planeswalker." Five rares: "unless you
 			// control two or more other lands." Each "{T}: Add {A} or {B}."
 			["Dedicated Commons"] = DualLand(
-				EntersUntappedIf.YouControlAPlaneswalker,
+				YouControlAPlaneswalker,
 				ManaColor.Red,
 				ManaColor.White
 			),
-			["Fatehold Annex"] = DualLand(
-				EntersUntappedIf.YouControlAPlaneswalker,
-				ManaColor.White,
-				ManaColor.Blue
-			),
+			["Fatehold Annex"] = DualLand(YouControlAPlaneswalker, ManaColor.White, ManaColor.Blue),
 			["Formidable Commons"] = DualLand(
-				EntersUntappedIf.YouControlAPlaneswalker,
+				YouControlAPlaneswalker,
 				ManaColor.Black,
 				ManaColor.Green
 			),
 			["Innovative Commons"] = DualLand(
-				EntersUntappedIf.YouControlAPlaneswalker,
+				YouControlAPlaneswalker,
 				ManaColor.Blue,
 				ManaColor.Red
 			),
-			["Konstrari Annex"] = DualLand(
-				EntersUntappedIf.YouControlAPlaneswalker,
-				ManaColor.Red,
-				ManaColor.Green
-			),
+			["Konstrari Annex"] = DualLand(YouControlAPlaneswalker, ManaColor.Red, ManaColor.Green),
 			["Meticulous Commons"] = DualLand(
-				EntersUntappedIf.YouControlAPlaneswalker,
+				YouControlAPlaneswalker,
 				ManaColor.White,
 				ManaColor.Black
 			),
 			["Stingerquill Annex"] = DualLand(
-				EntersUntappedIf.YouControlAPlaneswalker,
+				YouControlAPlaneswalker,
 				ManaColor.Black,
 				ManaColor.Red
 			),
-			["Theorix Annex"] = DualLand(
-				EntersUntappedIf.YouControlAPlaneswalker,
-				ManaColor.Blue,
-				ManaColor.Black
-			),
+			["Theorix Annex"] = DualLand(YouControlAPlaneswalker, ManaColor.Blue, ManaColor.Black),
 			["Transformative Commons"] = DualLand(
-				EntersUntappedIf.YouControlAPlaneswalker,
+				YouControlAPlaneswalker,
 				ManaColor.Green,
 				ManaColor.Blue
 			),
 			["Vigorbloom Annex"] = DualLand(
-				EntersUntappedIf.YouControlAPlaneswalker,
+				YouControlAPlaneswalker,
 				ManaColor.Green,
 				ManaColor.White
 			),
 			["Deserted Beach"] = DualLand(
-				EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+				YouControlTwoOrMoreOtherLands,
 				ManaColor.White,
 				ManaColor.Blue
 			),
 			["Haunted Ridge"] = DualLand(
-				EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+				YouControlTwoOrMoreOtherLands,
 				ManaColor.Black,
 				ManaColor.Red
 			),
 			["Overgrown Farmland"] = DualLand(
-				EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+				YouControlTwoOrMoreOtherLands,
 				ManaColor.Green,
 				ManaColor.White
 			),
 			["Rockfall Vale"] = DualLand(
-				EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+				YouControlTwoOrMoreOtherLands,
 				ManaColor.Red,
 				ManaColor.Green
 			),
 			["Shipwreck Marsh"] = DualLand(
-				EntersUntappedIf.YouControlTwoOrMoreOtherLands,
+				YouControlTwoOrMoreOtherLands,
 				ManaColor.Blue,
 				ManaColor.Black
 			),
@@ -1015,7 +1020,7 @@ public static class FraCards
 					[
 						// "If that permanent was a legendary enchantment" — read before it is destroyed.
 						new If(
-							new TargetIs(0, CardType.Enchantment, Supertype.Legendary),
+							new Matches(Ref.Target(0), Is.Enchantment & Is.Legendary),
 							[new DrawCards(Ref.You, 1)]
 						),
 						new Destroy(Ref.Target()),
@@ -1124,7 +1129,7 @@ public static class FraCards
 			// ===== Continuous effects (Rules/Characteristics.cs) =====
 			["Samut, Hazoret's Champion"] =
 			[
-				new StaticEffectComponent(Affects.CreaturesYouControl, "Haste"),
+				new StaticEffectComponent(Is.Creature & Is.Yours, "Haste"),
 			],
 			["Ajani's Anguish"] =
 			[
@@ -1133,19 +1138,16 @@ public static class FraCards
 					[TargetSpec.AnyTarget()],
 					new DealDamage(Ref.Target(), Count.X)
 				),
-				new StaticEffectComponent(Affects.CreaturesYouControl, "Trample"),
+				new StaticEffectComponent(Is.Creature & Is.Yours, "Trample"),
 			],
 			["Ghalta the Unstoppable"] =
 			[
 				new CostsLessByGreatestStatYouControl(),
-				new StaticEffectComponent(Affects.OtherCreaturesYouControl, "Trample"),
+				new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source, "Trample"),
 			],
 			["Skilled Battlecarver"] =
 			[
-				new StaticEffectComponent(Affects.Self, "First strike")
-				{
-					If = new DuringYourTurn(),
-				},
+				new StaticEffectComponent(Is.Source, "First strike") { If = new DuringYourTurn() },
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}{R}"),
 					[new ModifyUntilEndOfTurn(Ref.Source, 1, 0)]
@@ -1153,10 +1155,7 @@ public static class FraCards
 			],
 			["Mind Meanderer"] =
 			[
-				new StaticEffectComponent(Affects.Self, "Vigilance")
-				{
-					While = StaticCondition.YouControlAJacePlaneswalker,
-				},
+				new StaticEffectComponent(Is.Source, "Vigilance") { If = YouControlAJace },
 				When(
 					TriggerEvent.SelfEnters,
 					[Target(Is.Creature & Is.Opponents) with { Optional = true }],
@@ -1175,7 +1174,7 @@ public static class FraCards
 						[new EachSacrifices(Ref.EachOpponent, Is.Creature)]
 					)
 				),
-				new StaticEffectComponent(Affects.Self)
+				new StaticEffectComponent(Is.Source)
 				{
 					Power = Count.NumberOf(
 						Ref.YourGraveyard(CardType.Creature | CardType.Planeswalker)
@@ -1184,10 +1183,10 @@ public static class FraCards
 			],
 			["Tetsuko Umezawa, Fugitive"] =
 			[
-				new StaticEffectComponent(Affects.CreaturesYouControl, Combat.CantBeBlocked)
-				{
-					OnlyPowerOrToughnessAtMost = 1,
-				},
+				new StaticEffectComponent(
+					Is.Creature & Is.Yours & (Is.PowerAtMost(1) | Is.ToughnessAtMost(1)),
+					Combat.CantBeBlocked
+				),
 			],
 			["Eardrum Rattler"] =
 			[
@@ -1394,7 +1393,10 @@ public static class FraCards
 			],
 			["Surveillance Phantasm"] =
 			[
-				new AttacksDespiteDefender(new AtLeast(Count.YourSurveilsThisTurn, 1)),
+				new StaticEffectComponent(Is.Source, Combat.AttacksDespiteDefender)
+				{
+					If = new AtLeast(Count.YourSurveilsThisTurn, 1),
+				},
 				new ActivatedAbilityComponent(ManaCost.Parse("{3}{U}"), [new Surveil(1)]),
 			],
 			["Way of the Paradox"] =
@@ -1439,10 +1441,10 @@ public static class FraCards
 			],
 			["Gallia, the Merrymaker"] =
 			[
-				new StaticEffectComponent(Affects.OtherCreaturesYouControl, "Haste")
-				{
-					OnlyWithCounter = true,
-				},
+				new StaticEffectComponent(
+					Is.Creature & Is.Yours & !Is.Source & Is.WithPlusOneCounter,
+					"Haste"
+				),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}{R}"),
 					[new AddCounters(Ref.Target(), 1)]
@@ -1597,7 +1599,7 @@ public static class FraCards
 			["Void Extrapolator // Omit Variables"] =
 			[
 				EntersPrepared,
-				new StaticEffectComponent(Affects.Self)
+				new StaticEffectComponent(Is.Source)
 				{
 					Power = 1,
 					Toughness = 1,
@@ -1677,27 +1679,27 @@ public static class FraCards
 			["Theorix Metamage // Omit Variables"] =
 			[
 				EntersPrepared,
-				new StaticEffectComponent(Affects.Self) { Power = 1, If = Threshold },
-				new StaticEffectComponent(Affects.Self, "Flying") { If = Threshold },
+				new StaticEffectComponent(Is.Source) { Power = 1, If = Threshold },
+				new StaticEffectComponent(Is.Source, "Flying") { If = Threshold },
 				OmitVariables("Theorix Metamage // Omit Variables"),
 			],
 			["Vigorbloom Vanguard // Seed Suture"] =
 			[
 				EntersPrepared,
-				new StaticEffectComponent(Affects.CreaturesYouControl, "Vigilance")
-				{
-					OnlyWithCounter = true,
-				},
+				new StaticEffectComponent(
+					Is.Creature & Is.Yours & Is.WithPlusOneCounter,
+					"Vigilance"
+				),
 				SeedSuture("Vigorbloom Vanguard // Seed Suture"),
 			],
 			["Whiplash Wordsmith // Vicious Verse"] =
 			[
 				EntersPrepared,
-				new StaticEffectComponent(Affects.Self, "Flying")
+				new StaticEffectComponent(Is.Source, "Flying")
 				{
 					If = new AtLeast(Count.NoncombatDamageToOpponentsThisTurn, 1),
 				},
-				new StaticEffectComponent(Affects.Self, "Haste")
+				new StaticEffectComponent(Is.Source, "Haste")
 				{
 					If = new AtLeast(Count.NoncombatDamageToOpponentsThisTurn, 1),
 				},
@@ -1863,7 +1865,7 @@ public static class FraCards
 			],
 			["Marwyn, the Preserver"] =
 			[
-				new StaticEffectComponent(Affects.LandsYouControl, "Hexproof"),
+				new StaticEffectComponent(Is.Land & Is.Yours, "Hexproof"),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{2}"),
 					[new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)]
@@ -1924,9 +1926,9 @@ public static class FraCards
 			["Ruric Thar, Magecrusher"] =
 			[
 				new CantBeCountered(),
-				new StaticEffectComponent(Affects.Self, "Hexproof")
+				new StaticEffectComponent(Is.Source, "Hexproof")
 				{
-					If = new Not(new SourceHasDealtCombatDamage()),
+					If = new Not(new Matches(Ref.Source, Is.DealtCombatDamage)),
 				},
 			],
 
@@ -2055,7 +2057,7 @@ public static class FraCards
 			["Medic's Kitesail"] =
 			[
 				AttachedGets(1, 0),
-				new StaticEffectComponent(Affects.AttachedCreature, "Flying"),
+				new StaticEffectComponent(Is.AttachedToSource, "Flying"),
 				// "and has 'Whenever this creature attacks, you gain 1 life.'"
 				When(TriggerEvent.AttachedCreatureAttacks, [], new GainLife(Ref.You, 1)),
 				Equip("{2}"),
@@ -2064,7 +2066,7 @@ public static class FraCards
 			[
 				new AuraComponent(Creature),
 				AttachedGets(1, 0),
-				new StaticEffectComponent(Affects.AttachedCreature, "Deathtouch"),
+				new StaticEffectComponent(Is.AttachedToSource, "Deathtouch"),
 				When(
 					TriggerEvent.AttachedCreatureDies,
 					[],
@@ -2371,10 +2373,7 @@ public static class FraCards
 			],
 			["Saheeli, Jewel of Avishkar"] =
 			[
-				new StaticEffectComponent(Affects.CreaturesYouControl, "Haste")
-				{
-					OnlySubtype = "Thopter",
-				},
+				new StaticEffectComponent(Is.Creature & Is.Yours & Is.Subtype("Thopter"), "Haste"),
 				When(TriggerEvent.YouCastNoncreatureSpell, [], new CreateTokens(Thopter, 1)),
 			],
 			["Hexhaven Dueling Arena"] =
@@ -2538,7 +2537,7 @@ public static class FraCards
 			["Ghalta the Immovable"] =
 			[
 				new CostsLessByGreatestStatYouControl(Toughness: true),
-				new YourCreaturesAttackDespiteDefender(),
+				new StaticEffectComponent(Is.Creature & Is.Yours, Combat.AttacksDespiteDefender),
 				new YourCreaturesAssignDamageByToughness(),
 			],
 
@@ -2597,7 +2596,7 @@ public static class FraCards
 			],
 			["Fblthp, Knows the Way"] =
 			[
-				new StaticEffectComponent(Affects.Self)
+				new StaticEffectComponent(Is.Source)
 				{
 					Power = Count.BasicLandTypesAmongLandsYouControl,
 				},
@@ -2742,7 +2741,7 @@ public static class FraCards
 			["Tarmogoyf"] =
 			[
 				// "*/1+*": the printed 1 is its base toughness; the static adds the count to both.
-				new StaticEffectComponent(Affects.Self)
+				new StaticEffectComponent(Is.Source)
 				{
 					Power = Count.CardTypesInAllGraveyards,
 					Toughness = Count.CardTypesInAllGraveyards,
@@ -2751,7 +2750,7 @@ public static class FraCards
 			["Dark Matter Manipulator"] =
 			[
 				When(TriggerEvent.SelfEnters, [], new Mill(Ref.You, 3)),
-				new StaticEffectComponent(Affects.Self)
+				new StaticEffectComponent(Is.Source)
 				{
 					Power = Count.NumberOf(Ref.CardsInYourGraveyard) with { Per = 7, Times = 2 },
 				},
@@ -2886,7 +2885,7 @@ public static class FraCards
 			],
 			["Theorist's Sanctum"] =
 			[
-				new EntersTappedComponent(EntersUntappedIf.YouBeholdAJace),
+				new EntersTappedComponent(new YouCanBehold("Jace")),
 				new ActivatedAbilityComponent(ManaCost.Parse("{2}{U}"), [new EmpowerJace(2)])
 				{
 					TapCost = true,
@@ -2921,10 +2920,7 @@ public static class FraCards
 			// ===== Rares (8c): Treasure and artifact tokens =====
 			["Vraska, Soul of Stone"] =
 			[
-				new StaticEffectComponent(Affects.CreaturesYouControl, "Vigilance")
-				{
-					OnlyTypes = CardType.Artifact,
-				},
+				new StaticEffectComponent(Is.Artifact & Is.Creature & Is.Yours, "Vigilance"),
 				When(
 					TriggerEvent.YouCastNoncreatureSpell,
 					[],
@@ -2989,15 +2985,8 @@ public static class FraCards
 			],
 			["Gideon's Memorial"] =
 			[
-				new StaticEffectComponent(Affects.CreaturesYouControl)
-				{
-					Power = 1,
-					OnlyTokens = true,
-				},
-				new StaticEffectComponent(Affects.CreaturesYouControl, "Vigilance")
-				{
-					OnlyTokens = true,
-				},
+				new StaticEffectComponent(Is.Creature & Is.Yours & Is.Token) { Power = 1 },
+				new StaticEffectComponent(Is.Creature & Is.Yours & Is.Token, "Vigilance"),
 				.. AnyColorMana(ManaRestriction.OnlyPlaneswalkerSpells),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{1}{W}"),
@@ -3167,7 +3156,7 @@ public static class FraCards
 				),
 				When(TriggerEvent.SelfDies, [], new CreateTokenCopy(Ref.Source)) with
 				{
-					If = new Not(new SourceIsToken()),
+					If = new Not(new Matches(Ref.Source, Is.Token)),
 				},
 			],
 			["Face Yourself"] =
@@ -3194,7 +3183,7 @@ public static class FraCards
 				Spell(
 					[CreatureOrPlaneswalker],
 					new If(
-						new TargetManaValueAtMost(0, 3),
+						new Matches(Ref.Target(0), Is.ManaValueAtMost(3)),
 						[
 							new Exile(Ref.Target()),
 							new ReturnFromExileUnderYourControl(Ref.Target())
@@ -3245,7 +3234,7 @@ public static class FraCards
 					[],
 					new GetEmblem(
 						[
-							new StaticEffectComponent(Affects.CreaturesYouControl)
+							new StaticEffectComponent(Is.Creature & Is.Yours)
 							{
 								Power = 2,
 								Toughness = 2,

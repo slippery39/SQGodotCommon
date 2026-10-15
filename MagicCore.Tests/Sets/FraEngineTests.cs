@@ -44,7 +44,14 @@ public class FraEngineTests : FraBoardTest
 			{
 				Components =
 				[
-					new StaticEffectComponent(Affects.OtherCreaturesYouControl) { Power = 1 },
+					new StaticEffectComponent(
+						MagicCore.Filters.Is.Creature
+							& MagicCore.Filters.Is.Yours
+							& !MagicCore.Filters.Is.Source
+					)
+					{
+						Power = 1,
+					},
 				],
 			},
 			them

@@ -31,13 +31,7 @@ public static class Combat
 	public static bool CanAttack(GameState s, Card c) =>
 		c.Is(CardType.Creature)
 		&& !c.IsTapped
-		&& (
-			!s.Has(c, "Defender")
-			|| s.AbilitiesOf<Effects.AttacksDespiteDefender>(c)
-				.Any(d => d.While.Holds(s, Effects.Conditions.Of(c)))
-			|| s.CardsIn(c.ControllerId, ZoneType.Battlefield)
-				.Any(s.HasAbility<Effects.YourCreaturesAttackDespiteDefender>)
-		)
+		&& (!s.Has(c, "Defender") || s.Has(c, AttacksDespiteDefender))
 		&& (s.Has(c, "Haste") || !IsSummoningSick(s, c));
 
 	/// <summary>
@@ -66,6 +60,12 @@ public static class Combat
 				.Any(s.HasAbility<Effects.YourInstantsAndSorceriesHaveSplitSecond>)
 		);
 	}
+
+	/// <summary>
+	/// Surveillance Phantasm: "can attack as though it didn't have defender"; Ghalta: "creatures you
+	/// control can …" — a keyword-like grant, like CantBeBlocked: a static's scope says who.
+	/// </summary>
+	public const string AttacksDespiteDefender = "Can attack as though it didn't have defender";
 
 	/// <summary>"Can't be blocked" — granted by static abilities and until-end-of-turn effects alike.</summary>
 	public const string CantBeBlocked = "Can't be blocked";

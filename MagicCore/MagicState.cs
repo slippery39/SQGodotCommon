@@ -211,7 +211,12 @@ public static class MagicState
 					tapped
 					|| (
 						card.GetComponent<EntersTappedComponent>() is { } entersTapped
-						&& !EntersUntapped(s, card.Id, controllerId, entersTapped.Unless)
+						&& entersTapped.Unless?.Holds(
+							s,
+							ImmutableDictionary<string, object>
+								.Empty.Add(ContextKeys.Controller, controllerId)
+								.Add(ContextKeys.Source, card.Id)
+						) != true
 					),
 			}
 		);
@@ -250,27 +255,6 @@ public static class MagicState
 				}
 			);
 		return card.HasComponent<EntersPreparedComponent>() ? Rules.Prepare.Become(s, cardId) : s;
-	}
-
-	/// <summary>"This land enters tapped unless …", judged as it enters — "other" excludes itself.</summary>
-	/// <summary>Judged on the board it is ENTERING — the new controller's, not the card's old one.</summary>
-	static bool EntersUntapped(GameState s, int cardId, int controllerId, EntersUntappedIf unless)
-	{
-		var others = s.CardsIn(controllerId, ZoneType.Battlefield)
-			.Where(c => c.Id != cardId)
-			.ToList();
-		return unless switch
-		{
-			EntersUntappedIf.YouControlAPlaneswalker => others.Any(c =>
-				c.Is(CardType.Planeswalker)
-			),
-			EntersUntappedIf.YouControlTwoOrMoreOtherLands => others.Count(c => c.Is(CardType.Land))
-				>= 2,
-			EntersUntappedIf.YouBeholdAJace => new BeholdOrPayAdditionalCost("Jace", 0)
-				.Candidates(s, controllerId, cardId)
-				.Any(),
-			_ => false,
-		};
 	}
 
 	/// <summary>

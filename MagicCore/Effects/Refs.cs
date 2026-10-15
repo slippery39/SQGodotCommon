@@ -37,6 +37,14 @@ public static class ContextKeys
 
 	/// <summary>An ability's source as it last existed — used once the source itself is gone (CR 113.7a).</summary>
 	public const string SourceSnapshot = "SourceSnapshot";
+
+	/// <summary>Who a filter asks for in a resolving context: "you", "this", "that creature".</summary>
+	public static Filters.FilterContext Asking(ImmutableDictionary<string, object> context) =>
+		new(
+			(int)context[Controller],
+			context.TryGetValue(Source, out var source) ? (int)source : 0,
+			context.TryGetValue(EventCard, out var e) ? (int)e : 0
+		);
 }
 
 public enum RefKind
@@ -201,6 +209,24 @@ public record Ref(RefKind Kind, int Index = 0)
 		return ids.Where(id => id != 0 && s.HasObject(id));
 	}
 
+	/// <summary>
+	/// The objects it names — and "this" once it is gone, as it last existed (CR 113.7a): Gardenize
+	/// destroyed in response still counts its charge counters. Count and Matches both read this.
+	/// </summary>
+	public IEnumerable<GameObject> ObjectsAsTheyWere(
+		GameState s,
+		ImmutableDictionary<string, object> context
+	)
+	{
+		var objects = Resolve(s, context).Select(s.GetObject).ToList();
+		return
+			Kind == RefKind.Source
+			&& objects.Count == 0
+			&& context.GetValueOrDefault(ContextKeys.SourceSnapshot) is Card then
+			? [then]
+			: objects;
+	}
+
 	IEnumerable<int> AllIn(
 		GameState s,
 		ImmutableDictionary<string, object> context,
@@ -210,11 +236,7 @@ public record Ref(RefKind Kind, int Index = 0)
 	{
 		// ZoneType's default is Hand: a Ref.All built without a zone must not quietly mean "hands".
 		var zone = Zone ?? throw new InvalidOperationException("Ref.All needs a Zone");
-		var asking = new FilterContext(
-			controller,
-			context.TryGetValue(ContextKeys.Source, out var source) ? (int)source : 0,
-			eventCard
-		);
+		var asking = ContextKeys.Asking(context);
 		return Whose(s, context, controller)
 			.SelectMany(p => s.CardsIn(p, zone))
 			.Where(c => Filter?.Matches(s, c, asking) ?? true)
@@ -406,14 +428,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 			};
 		}
 		var ids = Of!.Resolve(s, context);
-		// "On this enchantment" once it is gone: as it last existed (CR 113.7a) — Gardenize destroyed
-		// in response still adds its {G}s.
-		IEnumerable<Card> Cards() =>
-			Of.Kind == RefKind.Source
-			&& !ids.Any()
-			&& context.GetValueOrDefault(ContextKeys.SourceSnapshot) is Card then
-				? [then]
-				: ids.Select(s.GetObject).OfType<Card>();
+		IEnumerable<Card> Cards() => Of.ObjectsAsTheyWere(s, context).OfType<Card>();
 		var counted = Kind switch
 		{
 			CountOf.NumberOf => ids.Count(),

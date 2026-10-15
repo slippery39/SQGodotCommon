@@ -42,6 +42,16 @@ public abstract record Filter
 {
 	public abstract bool Matches(GameState s, GameObject o, FilterContext c);
 
+	/// <summary>
+	/// Reads power or toughness (s.Power / s.Toughness). A P/T static's scope must not: Characteristics
+	/// would ask itself forever — StaticEffectComponent throws as it is built. Abstract, so a new leaf
+	/// must say: a forgotten answer would let the guard pass a loop.
+	/// </summary>
+	public abstract bool ReadsPowerOrToughness();
+
+	/// <summary>Reads keywords (s.Has). No static's scope may: the keyword pass would ask itself.</summary>
+	public abstract bool ReadsKeywords();
+
 	public static Filter operator &(Filter a, Filter b) => new AllOf(a, b);
 
 	public static Filter operator |(Filter a, Filter b) => new AnyOf(a, b);
@@ -52,6 +62,11 @@ public abstract record Filter
 /// <summary>"Nontoken creature": both.</summary>
 public sealed record AllOf(Filter A, Filter B) : Filter
 {
+	public override bool ReadsPowerOrToughness() =>
+		A.ReadsPowerOrToughness() || B.ReadsPowerOrToughness();
+
+	public override bool ReadsKeywords() => A.ReadsKeywords() || B.ReadsKeywords();
+
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
 		A.Matches(s, o, c) && B.Matches(s, o, c);
 }
@@ -59,6 +74,11 @@ public sealed record AllOf(Filter A, Filter B) : Filter
 /// <summary>"Creature or planeswalker": either.</summary>
 public sealed record AnyOf(Filter A, Filter B) : Filter
 {
+	public override bool ReadsPowerOrToughness() =>
+		A.ReadsPowerOrToughness() || B.ReadsPowerOrToughness();
+
+	public override bool ReadsKeywords() => A.ReadsKeywords() || B.ReadsKeywords();
+
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
 		A.Matches(s, o, c) || B.Matches(s, o, c);
 }
@@ -66,6 +86,10 @@ public sealed record AnyOf(Filter A, Filter B) : Filter
 /// <summary>"Noncreature", "another": not.</summary>
 public sealed record NotFilter(Filter Inner) : Filter
 {
+	public override bool ReadsPowerOrToughness() => Inner.ReadsPowerOrToughness();
+
+	public override bool ReadsKeywords() => Inner.ReadsKeywords();
+
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
 		!Inner.Matches(s, o, c);
 }
@@ -73,6 +97,10 @@ public sealed record NotFilter(Filter Inner) : Filter
 /// <summary>Vraska: "artifact creatures"; "artifact or enchantment" — a card of ANY of these types.</summary>
 public sealed record OfType(CardType Types) : Filter
 {
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
 		o is Card card && card.Is(Types);
 }
@@ -80,6 +108,10 @@ public sealed record OfType(CardType Types) : Filter
 /// <summary>Fateshaper Aspirant: "target legendary card" — any of these supertypes.</summary>
 public sealed record OfSupertype(Supertype Supertypes) : Filter
 {
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
 		o is Card card && card.Is(Supertypes);
 }
@@ -87,6 +119,10 @@ public sealed record OfSupertype(Supertype Supertypes) : Filter
 /// <summary>Koth: "a Plains"; Saheeli: "Thopters".</summary>
 public sealed record OfSubtype(string Subtype) : Filter
 {
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
 		o is Card card && card.Subtypes.Contains(Subtype);
 }
@@ -94,6 +130,10 @@ public sealed record OfSubtype(string Subtype) : Filter
 /// <summary>Terminal Criticism: "that's blue or red" — one colour each, joined with |.</summary>
 public sealed record OfColor(ManaColor Color) : Filter
 {
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
 		o is Card card && card.Colors.Contains(Color);
 }
@@ -101,6 +141,10 @@ public sealed record OfColor(ManaColor Color) : Filter
 /// <summary>Konstrari Charm: "creature with flying" — through s.Has, so a granted keyword counts.</summary>
 public sealed record HasKeyword(string Keyword) : Filter
 {
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => true;
+
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
 		o is Card card && s.Has(card, Keyword);
 }
@@ -108,6 +152,10 @@ public sealed record HasKeyword(string Keyword) : Filter
 /// <summary>Mabel: "creature you control"; Gideon the Oathless: "an opponent controls" — or the player itself.</summary>
 public sealed record OfController(Whose Whose) : Filter
 {
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
 	public override bool Matches(GameState s, GameObject o, FilterContext c)
 	{
 		var id = o switch
@@ -139,6 +187,10 @@ public enum Stat
 /// </summary>
 public sealed record StatBetween(Stat Stat, int Min, int Max) : Filter
 {
+	public override bool ReadsPowerOrToughness() => Stat != Stat.ManaValue;
+
+	public override bool ReadsKeywords() => false;
+
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
 		o is Card card
 		&& (
@@ -172,11 +224,16 @@ public enum Property
 	AttackingAPlayer, // Garruk, Curse Breaker: not a planeswalker
 	AttackingYou, // Jace, Reality Sculptor: "attacks you or a planeswalker you control"
 	Blocking,
+	DealtCombatDamage, // Ruric Thar: "as long as they haven't dealt combat damage yet"
 }
 
 /// <summary>Gallia: "each other creature you control with a +1/+1 counter on it" — a yes/no property of one object.</summary>
 public sealed record HasProperty(Property Property) : Filter
 {
+	public override bool ReadsPowerOrToughness() => false;
+
+	public override bool ReadsKeywords() => false;
+
 	public override bool Matches(GameState s, GameObject o, FilterContext c) =>
 		Property switch
 		{
@@ -210,6 +267,7 @@ public sealed record HasProperty(Property Property) : Filter
 					|| (s.IsOnBattlefield(at) && s.GetCard(at).ControllerId == c.Controller)
 				),
 			Property.Blocking => card.BlockingId != 0,
+			Property.DealtCombatDamage => card.HasDealtCombatDamage,
 			_ => false,
 		};
 }

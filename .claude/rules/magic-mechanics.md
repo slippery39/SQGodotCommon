@@ -35,9 +35,9 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"Doesn't untap during your untap step"** (`DoesntUntapInYourUntapStep`) is read by the untap step
   ONLY — an untap effect still untaps it (Traxos' own trigger). A stun counter, by contrast, eats every untap.
 - **A subtype narrows a trigger or a static:** `TriggeredAbilityComponent.EventSubtype` ("whenever a
-  Plains you control enters" — no prompt for any other land) and `StaticEffectComponent.OnlySubtype`
-  ("Thopters you control have haste"). Never `TriggeredAbilityComponent.If` for this: that is checked
-  again on resolution, so a Plains bounced in response would lose Koth's counter — there's no "if" in the text.
+  Plains you control enters" — no prompt for any other land) and a static's scope
+  (`Is.Subtype("Thopter")`: "Thopters you control have haste"). Never `TriggeredAbilityComponent.If`
+  for this: that is checked again on resolution, so a Plains bounced in response would lose Koth's counter — there's no "if" in the text.
 - **Discarding is `MagicState.Discard`** — effects, costs (cast or ability) and the cleanup alike: one
   `DiscardedEvent` per batch ("one or more cards"), counted in `TurnTally.CardsDiscarded`. A chosen
   card going to the graveyard is a discard only from the hand (`MoveChosenToGraveyardAction`; surveil
@@ -124,7 +124,7 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   the lethal-damage check both ask it; 0 toughness still kills.
 - **Auras and Equipment are one mechanism** (`Card.AttachedToId`, Rules/Attachments.cs). An Aura targets
   as it is cast (`AuraComponent`) and attaches on resolving; what either grants is a live static
-  (`Affects.AttachedCreature`), never stamped. "When enchanted creature dies" looks back through
+  (scope `Is.AttachedToSource`), never stamped. "When enchanted creature dies" looks back through
   `DiedEvent.Attached` — the state check takes the Aura in the same pass.
 - **Countering is `StackResolution.Counter`** — a spell to its graveyard through MoveCard (flashback and
   prepared copies still hold), an ability removed, "can't be countered" untouched. "Unless its
@@ -138,8 +138,8 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   hexproof on the battlefield, and off it a spell or ability never targets its own card. Targets in a
   graveyard are `TargetSpec.InYourGraveyard` (or `InAnyGraveyard`, "from a graveyard") — the same
   legality test on choosing and resolving. A COST that picks (sacrifice, exile from your graveyard) is
-  not targeting: a bare `Filter` over the chooser's own zone (`filter.Among(…)`, in `FilterChoices`). "One or two target
-  creatures" is two words, the second `Optional` and `NotThePrevious`.
+  not targeting: a bare `Filter` over the chooser's own zone (`filter.Among(…)`, in `FilterChoices`).
+  "One or two target creatures" is two words, the second `Optional` and `NotThePrevious`.
 - **"You may … If you do"** is `May` (a `YesNoChoice`, asked only when it can be done) or
   `MaySacrifice`; both clear the shared "chosen" key so a "no" cannot read a stale "yes". "Its owner
   may" is `May.Who` — another player answers, the effects stay yours — and "if they didn't" is `Otherwise`.

@@ -9,7 +9,7 @@ namespace MagicCore.Rules;
 /// Auras and Equipment (CR 301.5, 303.4) — ONE attachment mechanism, as in MtgCore, differing in
 /// two ways: an Aura attaches as it enters and dies without a legal host; Equipment attaches by its
 /// equip ability and merely falls off. What they grant is a live static on the attachment
-/// (Affects.AttachedCreature) — never stamped onto the host, which is how MtgCore's equipment
+/// (scope Is.AttachedToSource) — never stamped onto the host, which is how MtgCore's equipment
 /// boosts went stale. An attachment remembers its host's incarnation too: a host that leaves and
 /// comes back is a new object, and nothing is attached to it (CR 400.7).
 /// </summary>

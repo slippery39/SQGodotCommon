@@ -178,7 +178,7 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
   change for an attacker that stops being a creature). Left: "you control" scans both battlefields
   and filters (bench shows no cost; `of: You` is the fix if it ever shows).
 
-### Phase 4: statics and conditions
+### Phase 4: statics and conditions ✅ done 2026-10-15
 - `StaticEffectComponent(Filter Affects, …)`: the `Affects` enum and the five `Only*` fields go.
   Characteristics stays a live read.
 - **A guard composition makes necessary:** a P/T static whose filter reads power or toughness would
@@ -190,6 +190,28 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 - `Condition`: one `Matches(Ref, Filter)` replaces `TargetIs`, `TargetIsNotAttacking`,
   `TargetManaValueAtMost`, `EventCardHasSubtype`, `SourceIsToken`, `SourceIsPrepared`,
   `SourceHasDealtCombatDamage`. The `StaticCondition` and `EntersUntappedIf` enums become `Condition`s.
+- **Built:** `StaticEffectComponent(Filter Affects, Keyword)`; `While` folded into `If`
+  (FraCards' `YouControlAJace`). **The guard:** no static's scope may read keywords, and a P/T static's
+  scope may not read power or toughness (`Filter.ReadsKeywords` / `ReadsPowerOrToughness`); it throws
+  as the component is built, `with` included — explicit backing fields, since MagicCore is net9 (no
+  `field`). The read flags are abstract METHODS: every leaf must say (a default would fail open),
+  and they stay out of a filter's ToString. A keyword static MAY read P/T (Tetsuko): the P/T pass never asks about keywords. Ceiling,
+  in DesignNotes: the static's `Count` and `If` aren't checked.
+- "Can attack as though it didn't have defender" is a keyword-like grant now (review), like
+  `CantBeBlocked`: `StaticEffectComponent(scope, Combat.AttacksDespiteDefender)`, and `CanAttack`
+  asks `s.Has` — both defender components are gone, emblems and the per-state board come free.
+- `Matches(Ref, Filter)`: any object the Ref names matches. It reads `Ref.ObjectsAsTheyWere` — the
+  ONE "this, as it last was, once it's gone" rule, now shared with `Count` (it was inline there).
+  New leaf `Is.DealtCombatDamage` (Ruric Thar). `EntersTappedComponent(Condition? Unless)`: dual lands'
+  `YouControlAPlaneswalker`, `YouControlTwoOrMoreOtherLands`, and `YouCanBehold("Jace")`.
+- Verified card by card (probe, HEAD vs working tree): every Condition in 4 contexts, every static
+  through `AppliesTo` from 3 sources, every enters-tapped for 3 lands — 307 lines, identical but 3:
+  a prepare creature's "if this creature isn't prepared" when the source is GONE by resolution. Old
+  read whatever now has the id (a fresh graveyard card: not prepared), new reads it as it was. The
+  effect, `BecomePrepared(Ref.Source)`, finds no object either way, so the outcome is the same; the new
+  reading is the rules' (last-known information). Defender: revert-checked — both card tests fail
+  without it. Golden replays identical; bench −0.7%.
+- The table's static rows now check `AppliesTo` against the filter; three tests pin the guard.
 
 ### Phase 5: triggers
 - Events get a common base carrying their **subject** (the object, as it was) and the **player**
@@ -221,7 +243,7 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 ## The gate (every phase)
 
 - Both golden replays identical: `RandomGameTests` (in the suite) and `CardReplayTests` (explicit).
-  All tests green, and counts never go down (MagicCore.Tests 880 + 277 explicit, SQGodotCommon.Tests
+  All tests green, and counts never go down (MagicCore.Tests 882 + 277 explicit, SQGodotCommon.Tests
   150 after phase 1).
 - `tools/bench_vs_head.sh` for phases 2–5: they sit under the AI (`Candidates`, `Resolve`,
   `Characteristics`).
@@ -245,6 +267,6 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 - [x] Phase 1: filter language (2026-10-11)
 - [x] Phase 2: TargetSpec (2026-10-11)
 - [x] Phase 3: Ref, Count (2026-10-15)
-- [ ] Phase 4: statics, conditions
+- [x] Phase 4: statics, conditions (2026-10-15)
 - [ ] Phase 5: triggers
 - [ ] Phase 6: costs

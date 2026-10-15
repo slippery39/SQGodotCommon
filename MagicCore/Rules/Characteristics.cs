@@ -132,9 +132,7 @@ public static class Characteristics
 		foreach (var (source, effect) in all)
 		{
 			// A P/T pass reads only statics that change P/T; a keyword pass only those that grant one.
-			var relevant = ptOnly
-				? effect.Power != 0 || effect.Toughness != 0
-				: effect.Keyword is not null;
+			var relevant = ptOnly ? effect.ChangesPowerOrToughness : effect.Keyword is not null;
 			if (!relevant)
 				continue;
 			if (!AppliesTo(s, source, effect, card))
@@ -150,47 +148,12 @@ public static class Characteristics
 		}
 	}
 
-	static bool AppliesTo(GameState s, Card source, StaticEffectComponent effect, Card card)
-	{
-		var yours = card.ControllerId == source.ControllerId;
-		var affected = effect.Affects switch
-		{
-			Affects.Self => card.Id == source.Id,
-			Affects.CreaturesYouControl => yours && card.Is(CardType.Creature),
-			Affects.OtherCreaturesYouControl => yours
-				&& card.Is(CardType.Creature)
-				&& card.Id != source.Id,
-			Affects.LandsYouControl => yours && card.Is(CardType.Land),
-			Affects.AttachedCreature => Rules.Attachments.IsOn(source, card),
-			_ => false,
-		};
-		if (!affected || (effect.OnlyWithCounter && card.PlusOneCounters == 0))
-			return false;
-		if (effect.OnlySubtype is { } subtype && !card.Subtypes.Contains(subtype))
-			return false;
-		if (
-			(effect.OnlyTokens && !card.IsToken)
-			|| (effect.OnlyTypes != CardType.None && !card.Is(effect.OnlyTypes))
-		)
-			return false;
-		// Real power and toughness (CR 613): safe, because only keyword statics carry this filter.
-		// Likewise `If` must never read power or toughness — threshold and "this turn" counts only.
-		if (
-			effect.OnlyPowerOrToughnessAtMost is { } most
-			&& s.Power(card) > most
-			&& s.Toughness(card) > most
-		)
-			return false;
-		if (effect.If is { } condition && !condition.Holds(s, Conditions.Of(source)))
-			return false;
-		return effect.While switch
-		{
-			StaticCondition.YouControlAJacePlaneswalker => s.CardsIn(
-					source.ControllerId,
-					ZoneType.Battlefield
-				)
-				.Any(c => c.Is(CardType.Planeswalker) && c.Subtypes.Contains("Jace")),
-			_ => true,
-		};
-	}
+	/// <summary>
+	/// A keyword static's scope may read real power and toughness (CR 613) — Tetsuko — because the
+	/// P/T pass never asks about keywords; StaticEffectComponent refuses the scopes that would loop.
+	/// `If` must not read keywords (nor, on a P/T static, P/T) — threshold and "this turn" counts only.
+	/// </summary>
+	static bool AppliesTo(GameState s, Card source, StaticEffectComponent effect, Card card) =>
+		effect.Affects.Matches(s, card, new(source.ControllerId, source.Id))
+		&& (effect.If is not { } condition || condition.Holds(s, Conditions.Of(source)));
 }

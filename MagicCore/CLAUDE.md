@@ -38,12 +38,13 @@ MagicCore/
 ├── Effects/Effects.cs   the Effect base; damage, life, counters, pumps, mana; If, May, PayMana
 ├── Effects/ZoneEffects.cs  effects that move cards: destroy, exile, sacrifice, return, discard, surveil, tokens
 ├── Effects/Abilities.cs spell, triggered, activated, mana and static ability components
-├── Effects/Conditions.cs  "if …": Condition, AtLeast(Count, N), Not, target/event tests
+├── Effects/Conditions.cs  "if …": Condition, AtLeast(Count, N), Not, Matches(Ref, Filter)
 ├── Effects/Modes.cs     Mode, Modal.Compose (chosen modes → one target list + steps), ScopeTargetsAction
 ├── Targeting/TargetSpec.cs  a target word = a zone (From) + a Filter + the targeting rules; one legality
 │                        test for choosing AND resolving; Combinations
 ├── Filters/            "which objects": Filter (& | !), leaves, and `Is` — the vocabulary scripts read.
-│                        Read by TargetSpec and the sacrifice/exile costs (FilterRefactorPlan.md); migration table:
+│                        Read by TargetSpec, Ref.All, statics' scopes, Matches conditions and the
+│                        sacrifice/exile costs (FilterRefactorPlan.md); migration table:
 │                        MagicCore.Tests/Filters/FilterMigrationTests.cs
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
 ├── Rules/Costs.cs       THE effective cost (taxes, reductions)
@@ -115,7 +116,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   untapped, unsick, 0 loyalty. Use `EnterBattlefield` in a test when the entry itself matters.
 - **Static abilities are never stamped onto what they affect.** A `StaticEffectComponent` on its source
   is read live by Characteristics, so it stops the instant the source leaves — MtgCore's stamped
-  statics went stale exactly there. "Can't be blocked" is a keyword-like grant (`Combat.CantBeBlocked`).
+  statics went stale exactly there. "Can't be blocked" and "can attack as though it didn't have defender" are keyword-like grants
+  (`Combat.CantBeBlocked`, `Combat.AttacksDespiteDefender`) — a static's scope says who.
   ONE exception: an Aura's type change (Puppet Crafting) is stamped, because every rule reads
   `card.Is(Creature)` — put right by the state-based check before anyone gets priority.
 - **Every engine piece carries a `///` summary that names a card and quotes its text.** The catalog

@@ -207,17 +207,11 @@ public record ManaOfOneColorComponent(Count Amount) : GameComponent
 public record ArtifactTokensBecome(Cards.CardData Token, ImmutableArray<GameComponent> Abilities)
 	: GameComponent;
 
-public enum EntersUntappedIf
-{
-	Never,
-	YouControlAPlaneswalker,
-	YouControlTwoOrMoreOtherLands,
-	YouBeholdAJace, // Theorist's Sanctum: a Jace you control or one in your hand (beholding costs nothing, so always)
-}
-
-/// <summary>"This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield.</summary>
-public record EntersTappedComponent(EntersUntappedIf Unless = EntersUntappedIf.Never)
-	: GameComponent;
+/// <summary>
+/// "This permanent enters tapped [unless …]." Applied by MagicState.EnterBattlefield, judged on the
+/// board it is entering, with this permanent as the source ("other lands" is !Is.Source).
+/// </summary>
+public record EntersTappedComponent(Condition? Unless = null) : GameComponent;
 
 /// <summary>Silence the Echo: "As an additional cost to cast this spell, sacrifice a [Sacrifice] or pay {Generic}."</summary>
 public record SacrificeOrPayAdditionalCost(Filters.Filter Sacrifice, int Generic) : GameComponent;
@@ -225,60 +219,69 @@ public record SacrificeOrPayAdditionalCost(Filters.Filter Sacrifice, int Generic
 /// <summary>"This creature enters with N (or X) +1/+1 counters on it." Applied by MagicState.EnterBattlefield.</summary>
 public record EntersWithCountersComponent(Count Count) : GameComponent;
 
-/// <summary>"As long as [condition], this creature can attack as though it didn't have defender." (Surveillance Phantasm)</summary>
-public record AttacksDespiteDefender(Condition While) : GameComponent;
-
 /// <summary>On a card exiled "until [source] leaves the battlefield" — MagicState.MoveCard returns it then.</summary>
 public record ExiledUntilLeaves(int SourceId, int SourceIncarnation) : GameComponent;
 
-public enum Affects
-{
-	Self,
-	CreaturesYouControl,
-	OtherCreaturesYouControl,
-	LandsYouControl, // Marwyn: "Lands you control have hexproof."
-	AttachedCreature, // "Equipped/enchanted creature gets …": the permanent this is attached to
-}
-
-public enum StaticCondition
-{
-	Always,
-	YouControlAJacePlaneswalker,
-}
-
 /// <summary>
-/// A static ability that changes characteristics while its source is on the battlefield — "creatures
-/// you control have haste", "this gets +1/+0 for each …". Read only by Characteristics.
+/// A static ability that changes characteristics while its source is on the battlefield — Saheeli:
+/// "Thopters you control have haste" is (Is.Creature &amp; Is.Yours &amp; Is.Subtype("Thopter"),
+/// "Haste"); "this gets +1/+0 for each …" is Is.Source. Read only by Characteristics.
 /// </summary>
-public record StaticEffectComponent(Affects Affects, string? Keyword = null) : GameComponent
+public record StaticEffectComponent(Filters.Filter Affects, string? Keyword = null) : GameComponent
 {
-	public Count Power { get; init; } = 0;
-	public Count Toughness { get; init; } = 0;
-	public StaticCondition While { get; init; }
+	// Characteristics asks a static's scope while computing P/T and keywords: a scope that reads
+	// keywords, or a P/T static's scope that reads P/T, would ask itself forever. Refused here, as
+	// it is built (a `with` included), rather than as a stack overflow mid-game.
+	// ponytail: only the scope is checked — an If or a Power Count reading keywords (or, on a P/T
+	// static, P/T) through a filter would still loop. Check Count/Condition too if a card ever needs one.
+	readonly Filters.Filter affects = Scope(Affects, 0, 0);
+	readonly Count power = 0;
+	readonly Count toughness = 0;
+
+	/// <summary>Who it affects — Tetsuko: "creatures you control with power or toughness 1 or less".</summary>
+	public Filters.Filter Affects
+	{
+		get => affects;
+		init => affects = Scope(value, power, toughness);
+	}
+
+	public Count Power
+	{
+		get => power;
+		init
+		{
+			Scope(affects, value, toughness);
+			power = value;
+		}
+	}
+
+	public Count Toughness
+	{
+		get => toughness;
+		init
+		{
+			Scope(affects, power, value);
+			toughness = value;
+		}
+	}
 
 	/// <summary>
-	/// "As long as [condition]" — threshold, "an opponent was dealt noncombat damage this turn". Never
-	/// one that reads power or toughness: Characteristics would recurse into itself.
+	/// "As long as [condition]" — threshold, "as long as you control a Jace planeswalker". Never one
+	/// that reads keywords, nor on a P/T static power or toughness: Characteristics would recurse.
 	/// </summary>
 	public Condition? If { get; init; }
 
-	/// <summary>
-	/// Tetsuko: "creatures you control with power or toughness 1 or less". Only on a keyword static —
-	/// it reads real P/T, which a P/T static would then feed back into.
-	/// </summary>
-	public int? OnlyPowerOrToughnessAtMost { get; init; }
+	/// <summary>A P/T static — what Characteristics' P/T pass reads, and what the guard holds to the stricter rule.</summary>
+	public bool ChangesPowerOrToughness => Power != 0 || Toughness != 0;
 
-	/// <summary>Gallia: "each other creature you control with a +1/+1 counter on it".</summary>
-	public bool OnlyWithCounter { get; init; }
-
-	/// <summary>Saheeli: "Thopters you control have haste".</summary>
-	public string? OnlySubtype { get; init; }
-
-	/// <summary>Gideon's Memorial: "creature tokens you control".</summary>
-	public bool OnlyTokens { get; init; }
-
-	/// <summary>Vraska, Soul of Stone: "artifact creatures you control".</summary>
-	public Cards.CardType OnlyTypes { get; init; }
+	static Filters.Filter Scope(Filters.Filter affects, Count power, Count toughness) =>
+		affects.ReadsKeywords()
+			? throw new ArgumentException($"A static's scope can't read keywords: {affects}")
+		: affects.ReadsPowerOrToughness() && (power != 0 || toughness != 0)
+			? throw new ArgumentException(
+				$"A P/T static's scope can't read power or toughness: {affects}"
+			)
+		: affects;
 }
 
 /// <summary>Thalia: "Noncreature spells your opponents cast cost {N} more to cast."</summary>
@@ -376,9 +379,6 @@ public record AssignsDamageAsThoughPowerPositive : GameComponent;
 
 /// <summary>Ghalta: "Each creature you control with toughness greater than its power assigns combat damage equal to its toughness."</summary>
 public record YourCreaturesAssignDamageByToughness : GameComponent;
-
-/// <summary>Ghalta: "Creatures you control can attack as though they didn't have defender."</summary>
-public record YourCreaturesAttackDespiteDefender : GameComponent;
 
 /// <summary>Yuriko: "During combat, players can't cast spells or activate abilities that aren't mana abilities."</summary>
 public record NoSpellsOrAbilitiesDuringCombat : GameComponent;

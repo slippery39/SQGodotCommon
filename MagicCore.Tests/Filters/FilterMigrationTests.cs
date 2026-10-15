@@ -331,73 +331,30 @@ public class FilterMigrationTests
 
 	// ---------------------------------------------------------------- statics (phase 4)
 
+	// Phase 1 proved each old Affects value and Only* field equal to these filters; phase 4 made the
+	// filter the static's scope. A row now checks Characteristics' own AppliesTo against the filter,
+	// so the source's controller and id reach it ("you", "this", "equipped creature").
 	static IEnumerable<TestCaseData> StaticRows()
 	{
-		TestCaseData Row(string name, StaticEffectComponent old, Filter f, string source = "Src") =>
-			new TestCaseData(old, f, source).SetName($"Static_{name}");
-		var yours = new StaticEffectComponent(Affects.CreaturesYouControl);
-		yield return Row("Self", new(Affects.Self), Is.Source);
-		yield return Row("CreaturesYouControl", yours, Is.Creature & Is.Yours);
-		yield return Row(
-			"OtherCreaturesYouControl",
-			new(Affects.OtherCreaturesYouControl),
-			Is.Creature & Is.Yours & !Is.Source
-		);
-		yield return Row("LandsYouControl", new(Affects.LandsYouControl), Is.Land & Is.Yours);
-		yield return Row(
-			"AttachedCreature",
-			new(Affects.AttachedCreature),
-			Is.AttachedToSource,
-			source: "Sword"
-		);
+		TestCaseData Row(string name, Filter f, string source = "Src") =>
+			new TestCaseData(f, source).SetName($"Static_{name}");
+		yield return Row("Self", Is.Source);
+		yield return Row("CreaturesYouControl", Is.Creature & Is.Yours);
+		yield return Row("OtherCreaturesYouControl", Is.Creature & Is.Yours & !Is.Source);
+		yield return Row("LandsYouControl", Is.Land & Is.Yours);
+		yield return Row("AttachedCreature", Is.AttachedToSource, source: "Sword");
 		yield return Row(
 			"OnlyWithCounter", // Gallia
-			new(Affects.OtherCreaturesYouControl) { OnlyWithCounter = true },
 			Is.Creature & Is.Yours & !Is.Source & Is.WithPlusOneCounter
 		);
+		yield return Row("OnlySubtype", Is.Creature & Is.Yours & Is.Subtype("Wizard"));
+		yield return Row("OnlyTokens", Is.Creature & Is.Yours & Is.Token);
+		yield return Row("OnlyTypes", Is.Artifact & Is.Creature & Is.Yours); // Vraska
 		yield return Row(
-			"OnlySubtype",
-			yours with
-			{
-				OnlySubtype = "Wizard",
-			},
-			Is.Creature & Is.Yours & Is.Subtype("Wizard")
-		);
-		yield return Row(
-			"OnlyTokens",
-			yours with
-			{
-				OnlyTokens = true,
-			},
-			Is.Creature & Is.Yours & Is.Token
-		);
-		yield return Row(
-			"OnlyTypes", // Vraska: "artifact creatures you control"
-			yours with
-			{
-				OnlyTypes = CardType.Artifact,
-			},
-			Is.Creature & Is.Yours & Is.Artifact
-		);
-		yield return Row(
-			"OnlyPowerOrToughnessAtMost", // Tetsuko — phase 4's P/T guard: never on a P/T static
-			yours with
-			{
-				OnlyPowerOrToughnessAtMost = 1,
-			},
+			"OnlyPowerOrToughnessAtMost", // Tetsuko: a keyword static may read P/T
 			Is.Creature & Is.Yours & (Is.PowerAtMost(1) | Is.ToughnessAtMost(1))
 		);
 	}
-
-	/// <summary>What the static DOES, and its conditions (phase 4 makes While a Condition) — not who it affects.</summary>
-	static readonly string[] NotScope =
-	[
-		nameof(StaticEffectComponent.Keyword),
-		nameof(StaticEffectComponent.Power),
-		nameof(StaticEffectComponent.Toughness),
-		nameof(StaticEffectComponent.While),
-		nameof(StaticEffectComponent.If),
-	];
 
 	static readonly MethodInfo AppliesTo = typeof(Characteristics).GetMethod(
 		"AppliesTo",
@@ -405,12 +362,13 @@ public class FilterMigrationTests
 	)!;
 
 	[TestCaseSource(nameof(StaticRows))]
-	public void StaticRow(StaticEffectComponent old, Filter filter, string source)
+	public void StaticRow(Filter filter, string source)
 	{
 		var permanents = In(Zone.Battlefield, B.S.Player1Id()).Select(B.S.GetCard).ToList();
+		var effect = new StaticEffectComponent(filter, "Shroud");
 		Same(
 			permanents
-				.Where(c => (bool)AppliesTo.Invoke(null, [B.S, B.Card(source), old, c])!)
+				.Where(c => (bool)AppliesTo.Invoke(null, [B.S, B.Card(source), effect, c])!)
 				.Select(c => c.Id),
 			permanents.Where(c => filter.Matches(B.S, c, B.Context(source))).Select(c => c.Id),
 			permanents.Select(c => c.Id),
@@ -418,19 +376,33 @@ public class FilterMigrationTests
 		);
 	}
 
+	// Phase 4's guard. Characteristics asks a static's scope while computing P/T and keywords, so a
+	// scope that reads keywords — or a P/T static's that reads P/T — would ask itself forever.
 	[Test]
-	public void EveryAffectsValue_AndOnlyField_IsARow()
+	public void APtStaticWhoseScopeReadsPt_IsRefused()
 	{
-		var rows = StaticRows().Select(r => (StaticEffectComponent)r.Arguments[0]!).ToList();
-		Assert.That(Enum.GetValues<Affects>().Except(rows.Select(r => r.Affects)), Nu.Empty);
-		Assert.That(
-			FieldsOf<StaticEffectComponent>()
-				.Except(rows.SelectMany(r => Changed(r, new StaticEffectComponent(r.Affects))))
-				.Except(NotScope)
-				.Except([nameof(StaticEffectComponent.Affects)]),
-			Nu.Empty
+		Assert.Throws<ArgumentException>(
+			() => _ = new StaticEffectComponent(Is.Creature & Is.PowerAtMost(1)) { Power = 1 }
+		);
+		var anthem = new StaticEffectComponent(Is.Creature & Is.Yours) { Toughness = 1 };
+		Assert.Throws<ArgumentException>(
+			() => _ = anthem with { Affects = Is.Creature & Is.ToughnessAtLeast(4) }
 		);
 	}
+
+	[Test]
+	public void AScopeThatReadsKeywords_IsRefused() =>
+		Assert.Throws<ArgumentException>(
+			() => _ = new StaticEffectComponent(Is.Creature & Is.With("Flying"), "Haste")
+		);
+
+	[Test]
+	public void AKeywordStaticMayReadPt_AndAPtStaticMayReadManaValue() =>
+		Assert.DoesNotThrow(() =>
+		{
+			_ = new StaticEffectComponent(Is.Creature & Is.PowerAtMost(1), "Menace"); // Tetsuko
+			_ = new StaticEffectComponent(Is.Creature & Is.ManaValueAtMost(2)) { Power = 1 };
+		});
 
 	// ---------------------------------------------------------------- triggers (phase 5)
 
