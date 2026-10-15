@@ -723,6 +723,34 @@ public class FilterMigrationTests
 		Assert.That(AppliesTo, Nu.Not.Null);
 	}
 
+	// ---------------------------------------------------------------- costs (phase 6)
+
+	[Test]
+	public void TapSelf_BesideTapUntapped_LeavesTheSourceOut()
+	{
+		var ability = new ActivatedAbilityComponent(ManaCost.None, [])
+		{
+			Costs = [new TapSelfCost(), new TapUntappedCost(2, Is.Artifact)],
+		};
+		Assert.That(ability.Costs.OfType<TapUntappedCost>().Single().NotTheSource, Nu.True);
+		Assert.That(
+			new ActivatedAbilityComponent(ManaCost.None, [])
+			{
+				Costs = [new TapUntappedCost(2, Is.Artifact)],
+			}
+				.Costs.OfType<TapUntappedCost>()
+				.Single()
+				.NotTheSource,
+			Nu.False
+		);
+	}
+
+	[Test]
+	public void TwoCostsPickingIntoOneSlot_Throw_RatherThanPayOne() =>
+		Assert.Throws<InvalidOperationException>(
+			() => CostList.In([new DiscardCost(), new DiscardCost(Is.Legendary)], CostSlot.Discard)
+		);
+
 	// ---------------------------------------------------------------- helpers
 
 	static IEnumerable<int> In(Zone from, int first)

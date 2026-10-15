@@ -856,8 +856,7 @@ public class FraRareTests : FraBoardTest
 						[new AddCounters(Ref.Source, 1)]
 					)
 					{
-						TapUntapped = 2,
-						TapUntappedType = CardType.Artifact,
+						Costs = [new TapUntappedCost(2, MagicCore.Filters.Is.Artifact)],
 					},
 				],
 			},

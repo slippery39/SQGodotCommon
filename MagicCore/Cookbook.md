@@ -64,7 +64,14 @@ subjects (`Subject`), who did it (`By`), at which `Step`: the common ones are na
 `new Trigger(EventKind.Entered) { Subject = Is.Creature & Is.Yours & !Is.Source & !Is.Token }` (Arni), or
 narrows a named one, `TriggerEvent.YouCastSpell with { Subject = Is.PreparedCopy }`. "Whenever a Plains you
 control enters" is a Subject (`Is.Subtype("Plains")`), never an `If`. **An activated ability** — `new ActivatedAbilityComponent(cost, [effects])` with its
-options (`TapCost`, `Targets`, `SacrificeSelf`, `From = ZoneType.Graveyard`, `SorcerySpeed`, …).
+options (`Costs`, `Targets`, `From = ZoneType.Graveyard`, `SorcerySpeed`, …). **Costs beyond mana** are one
+list, in the order paid: `Costs = [new TapSelfCost(), new SacrificeCost(Is.Artifact & !Is.Source)]` — also
+`SacrificeSelfCost`, `DiscardSelfCost`, `DiscardCost(filter)`, `ExileSelfCost`, `ExileFromGraveyardCost(filter)`,
+`TapUntappedCost(n, filter)`, `BeholdCost(subtype)`. The same list is a spell's additional cost
+(`new AdditionalCostsComponent([new SacrificeCost(…) { OrPay = 3 }])` — "or pay {3}"), a flashback's
+(`FlashbackComponent(cost) { Costs = [new DiscardCost()] }`) and ward's (`CounterUnlessPays { Costs = … }`).
+**"Costs {N} more/less"** is `CostChange(amount, spellsFilter)`: on a permanent for whose spells (`By`), or
+`OnItself = true` for "this spell costs … less", with an `If`.
 
 ```csharp
 ["Arni, Humble Scribe"] =   // Whenever another nontoken creature you control enters, untap Arni.  {T}: Draw, then discard.
@@ -76,7 +83,7 @@ options (`TapCost`, `Targets`, `SacrificeSelf`, `From = ZoneType.Graveyard`, `So
 	),
 	new ActivatedAbilityComponent(ManaCost.None, [new DrawCards(Ref.You, 1), new Discard(Ref.You, 1)])
 	{
-		TapCost = true,
+		Costs = [new TapSelfCost()],
 	},
 ],
 ```

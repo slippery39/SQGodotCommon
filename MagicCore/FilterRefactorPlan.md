@@ -251,7 +251,7 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
   for the 8 inlined triggers read them from their cards (`TriggerOf`), and completeness checks every
   named trigger again, not only every kind. Probe rerun after the fixes: same result.
 
-### Phase 6: costs (the riskiest; design at phase start)
+### Phase 6: costs ✅ done 2026-10-15
 - Lift MtgCore's `AdditionalCost` (valid payments / validate / pay). One list of costs serves
   activation, casting (behold-or-pay, sacrifice-or-pay), flashback and ward. The 11 flags on
   `ActivatedAbilityComponent` go.
@@ -260,6 +260,32 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 - Cost changes: one `CostChange(Count Amount, Filter AppliesTo, Whose spells, Condition? If)`. The
   six components and their branches in `Costs.Of` go. Warrior's Blades falls out as
   `Count.CountersOn(Ref.Target(0))`.
+- **Decided at phase start (Shayne, 2026-10-15):** actions KEEP their four named payment ids
+  (`SacrificeId`/`DiscardId`/`ExileId`/`BeholdId`) — each cost names its `CostSlot` — so Describe,
+  DistinctMoves, MagicTable's Targeting and the golden replay are untouched; MtgCore's per-cost payment
+  map waits for a card that sacrifices twice in one cost. Ward joins the list in this phase.
+- **Built:** `AdditionalCost` (Effects/AdditionalCosts.cs): TapSelf, TapUntapped(n, filter),
+  SacrificeSelf, Sacrifice(filter){Count}, DiscardSelf, Discard(filter), ExileSelf,
+  ExileFromGraveyard(filter), Behold(subtype); `OrPay` is "or pay {N}". `CostList` is the one place
+  options, legality and or-pay are read. Lists on `ActivatedAbilityComponent.Costs`, a spell's
+  `AdditionalCostsComponent`, `FlashbackComponent.Costs`, `CounterUnlessPays.Costs` (ward pays by
+  choosing: `PaidByChoosing`, its question from `Describe()`). The 11 flags, `SacrificeOrPay…`,
+  `BeholdOrPay…`, flashback's and ward's flags are gone. 34 abilities converted by a script fed the
+  compiler's error positions (only activated abilities: a mana component's `SacrificeSelf` stays).
+- `CostChange(Count Amount, Filter? Spells) { By, If, OnItself }` replaces the six components; Costs.Of
+  is one loop. New counts: `GreatestToughnessOf` (Ghalta, the Immovable), `NoncreatureSpellsYouCastThisTurn`.
+- Verified: (1) every scripted card in hand, on the battlefield and in the graveyard, on a board with
+  fodder for every cost — 696 legal actions and the state each leaves, old vs new: identical. (2)
+  `Costs.Of` for every scripted card under Thalia/Geist/Tam on either side, before and after a
+  noncreature spell, with a legendary 5/6 out — 4,432 costs: identical. (3) Revert-checked what the
+  probes can't reach: or-pay (Countersculpt), flashback discard (Twinned Vision), discard (Hallway
+  Heckler), both ward costs (Gideon, Emrakul), Warrior's Blades. Golden replays identical; bench +0.8%.
+- Review fixes: a cost in a slot the action doesn't carry (exile on a spell, behold on an ability)
+  throws instead of paying with 0; two costs in one slot throw a clear error; `{T}` beside "tap N
+  untapped" leaves the source out automatically (the old TapCost check, now set by
+  `ActivatedAbilityComponent.Costs`); ward refuses a cost it can't ask for, or mana beside a list;
+  activation pays its taps BEFORE the mana, so what is tapped is exactly what the mana search
+  excluded (as the old precomputed pick did). Probe rerun: identical. Two tests pin the guards.
 
 ### Phase 7: separate decision, not part of this plan
 `TurnTally` per-card effect flags → command-zone effects; counter fields → a map. Different problem
@@ -270,7 +296,7 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 ## The gate (every phase)
 
 - Both golden replays identical: `RandomGameTests` (in the suite) and `CardReplayTests` (explicit).
-  All tests green, and counts never go down (MagicCore.Tests 882 + 277 explicit, SQGodotCommon.Tests
+  All tests green, and counts never go down (MagicCore.Tests 884 + 277 explicit, SQGodotCommon.Tests
   150 after phase 1).
 - `tools/bench_vs_head.sh` for phases 2–5: they sit under the AI (`Candidates`, `Resolve`,
   `Characteristics`).
@@ -296,4 +322,4 @@ One phase per session, with this file as the hand-off. Each phase ends with the 
 - [x] Phase 3: Ref, Count (2026-10-15)
 - [x] Phase 4: statics, conditions (2026-10-15)
 - [x] Phase 5: triggers (2026-10-15)
-- [ ] Phase 6: costs
+- [x] Phase 6: costs (2026-10-15)

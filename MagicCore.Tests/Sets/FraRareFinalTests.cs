@@ -370,7 +370,12 @@ public class FraRareFinalTests : FraBoardTest
 	{
 		var taxing = TestGames.Inline("Taxing", "{1}", "Sorcery") with
 		{
-			Components = [new SacrificeOrPayAdditionalCost(MagicCore.Filters.Is.Creature, 2)],
+			Components =
+			[
+				new AdditionalCostsComponent(
+					[new SacrificeCost(MagicCore.Filters.Is.Creature) { OrPay = 2 }]
+				),
+			],
 		};
 		var chandra = ChandraOnTop(taxing);
 		var untapped = UntappedLands();

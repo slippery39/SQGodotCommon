@@ -658,14 +658,18 @@ public record PutEventCardCounters(Ref To) : Effect
 /// </summary>
 public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 {
-	/// <summary>Gideon the Oathless: "Ward—Discard a card." — the cost is a card from hand instead.</summary>
-	public bool DiscardACard { get; init; }
-
-	/// <summary>Emrakul: "Ward—Sacrifice three permanents." — the cost is that many permanents.</summary>
-	public int SacrificePermanents { get; init; }
+	/// <summary>
+	/// Ward with a cost beyond mana, paid by choosing as it resolves — Gideon the Oathless: [DiscardCost()];
+	/// Emrakul: [SacrificeCost { Count = 3 }]. Empty: the mana Cost.
+	/// </summary>
+	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
 
 	public override ActionResult Execute(GameState s)
 	{
+		if (!Costs.IsEmpty && (!Cost.Symbols.IsEmpty || Costs.Any(c => c.PaidByChoosing() is null)))
+			throw new InvalidOperationException(
+				"Ward pays a list of costs by choosing, with no mana besides: one can't be asked for"
+			);
 		var stack = s.GetWellKnownId(MagicKeys.Stack);
 		foreach (var id in All(What, s).Where(id => s.GetParent(id) == stack).ToList())
 		{
@@ -678,10 +682,9 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 			var canPay =
 				payer != 0
 				&& (
-					DiscardACard ? s.CardsIn(payer, ZoneType.Hand).Any()
-					: SacrificePermanents > 0
-						? s.CardsIn(payer, ZoneType.Battlefield).Count() >= SacrificePermanents
-					: ManaPayment.Find(s, payer, Cost, 0) is not null
+					Costs.IsEmpty
+						? ManaPayment.Find(s, payer, Cost, 0) is not null
+						: Costs.All(c => c.CanPayByChoosing(s, payer))
 				);
 			if (!canPay)
 			{
@@ -696,32 +699,22 @@ public record CounterUnlessPays(Ref What, ManaCost Cost) : Effect
 					PipelineContext = InputContext
 						.Remove(ChoosePermanentChoice.Chosen)
 						.SetItem(ContextKeys.Controller, payer),
-					Steps =
-						DiscardACard
-							?
-							[
-								new PayToKeepChoice(payer, $"Discard a card to keep {name}?"),
-								new IfChosenAction([new Discard(Ref.You, 1)])
-								{
-									Otherwise = [new Counter(What)],
-								},
-							]
-						: SacrificePermanents > 0
-							?
-							[
-								new PayToKeepChoice(
-									payer,
-									$"Sacrifice {SacrificePermanents} permanents to keep {name}?"
-								),
-								new IfChosenAction([new SacrificePermanents(SacrificePermanents)])
-								{
-									Otherwise = [new Counter(What)],
-								},
-							]
-						:
+					Steps = Costs.IsEmpty
+						?
 						[
 							new PayToKeepChoice(payer, $"Pay {Cost} to keep {name}?"),
 							new PayOrCounterAction(id, payer, Cost),
+						]
+						:
+						[
+							new PayToKeepChoice(
+								payer,
+								$"{string.Join(" and ", Costs.Select(c => c.Describe()))} to keep {name}?"
+							),
+							new IfChosenAction([.. Costs.Select(c => c.PaidByChoosing()!)])
+							{
+								Otherwise = [new Counter(What)],
+							},
 						],
 				}
 			);

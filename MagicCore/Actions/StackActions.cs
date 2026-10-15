@@ -74,8 +74,22 @@ public record CastSpellAction : GameAction
 	/// </summary>
 	public bool DuringResolution { get; init; }
 
-	public static bool OwesDiscard(GameState s, Card card) =>
-		Costs.Flashback(s, card)?.DiscardACard == true;
+	/// <summary>What casting it costs beyond mana: its additional costs, then its flashback's when cast that way.</summary>
+	public static ImmutableList<AdditionalCost> CostsOf(GameState s, Card card) =>
+		[
+			.. card.GetComponent<AdditionalCostsComponent>()?.Costs ?? [],
+			.. Costs.Flashback(s, card)?.Costs ?? [],
+		];
+
+	int Chosen(CostSlot slot) =>
+		slot switch
+		{
+			CostSlot.None => 0,
+			CostSlot.Sacrifice => SacrificeId,
+			CostSlot.Discard => DiscardId,
+			CostSlot.Behold => BeholdId,
+			_ => throw new InvalidOperationException($"A spell's cost can't pick into {slot}"),
+		};
 
 	/// <summary>
 	/// The total cost: X and whatever is paid instead of a sacrifice are in it, so ManaPayment is
@@ -86,18 +100,7 @@ public record CastSpellAction : GameAction
 			s,
 			PlayerId,
 			card,
-			X
-				+ (
-					card.GetComponent<SacrificeOrPayAdditionalCost>() is { } extra
-					&& SacrificeId == 0
-						? extra.Generic
-						: 0
-				)
-				+ (
-					card.GetComponent<BeholdOrPayAdditionalCost>() is { } behold && BeholdId == 0
-						? behold.Generic
-						: 0
-				),
+			X + CostList.OrPayOwed(CostsOf(s, card), Chosen),
 			free: WithoutPayingManaCost
 		);
 
@@ -118,7 +121,8 @@ public record CastSpellAction : GameAction
 		var card = s.GetCard(CardId);
 		if (Turns.Combat.LockedDown(s))
 			return ValidationResult.Invalid("No spells now: combat lockdown or split second");
-		if (OwesDiscard(s, card) ? !s.IsIn(DiscardId, PlayerId, ZoneType.Hand) : DiscardId != 0)
+		var costs = CostsOf(s, card);
+		if (!CostList.Fits(costs, CostSlot.Discard, DiscardId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Discard a card from your hand for this");
 		if (card.Is(CardType.Land))
 			return ValidationResult.Invalid("Lands are played, not cast");
@@ -145,24 +149,12 @@ public record CastSpellAction : GameAction
 			)
 		)
 			return ValidationResult.Invalid("Illegal targets");
-		var extra = card.GetComponent<SacrificeOrPayAdditionalCost>();
-		if (
-			SacrificeId != 0
-			&& (
-				extra is null
-				|| !extra
-					.Sacrifice.Among(s, PlayerId, ZoneType.Battlefield, CardId)
-					.Contains(SacrificeId)
-			)
-		)
+		if (!CostList.Fits(costs, CostSlot.Sacrifice, SacrificeId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
-		if (
-			BeholdId != 0
-			&& card.GetComponent<BeholdOrPayAdditionalCost>()
-				?.Candidates(s, PlayerId, CardId)
-				.Contains(BeholdId) != true
-		)
+		if (!CostList.Fits(costs, CostSlot.Behold, BeholdId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a card you can behold for this");
+		if (costs.Any(c => !c.CanPay(s, PlayerId, CardId)))
+			return ValidationResult.Invalid("Cannot pay the additional cost");
 		if (
 			ManaPayment.Find(
 				s,
@@ -171,7 +163,7 @@ public record CastSpellAction : GameAction
 				0,
 				convoke: s.Has(card, "Convoke"),
 				forSpell: card,
-				alsoExclude: [SacrificeId]
+				alsoExclude: [.. costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))]
 			)
 			is null
 		)
@@ -192,6 +184,7 @@ public record CastSpellAction : GameAction
 	public GameState Cast(GameState s)
 	{
 		var card = s.GetCard(CardId);
+		var costs = CostsOf(s, card); // read before paying: flashback's are known only in the graveyard
 		var from = ((Zone)s.GetObject(s.GetParent(CardId)!.Value)).ZoneType;
 		s = ManaPayment.Pay(
 			s,
@@ -203,13 +196,11 @@ public record CastSpellAction : GameAction
 				0,
 				convoke: s.Has(card, "Convoke"),
 				forSpell: card,
-				alsoExclude: [SacrificeId]
+				alsoExclude: [.. costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))]
 			)!
 		);
-		if (SacrificeId != 0)
-			s = s.Sacrifice(SacrificeId);
-		if (DiscardId != 0)
-			s = s.Discard(PlayerId, [DiscardId]);
+		foreach (var cost in costs)
+			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		return PutOnStack(s, PlayerId, CardId, X, Targets, Modes, from);
 	}
 
@@ -292,32 +283,19 @@ public record ActivateAbilityAction : GameAction
 	/// <summary>The graveyard card exiled as the cost ("Exile another creature card from your graveyard:"); 0 if none.</summary>
 	public int ExileId { get; init; }
 
-	/// <summary>
-	/// "Tap two untapped artifacts you control" — which ones. Tapping for a cost isn't {T}, so
-	/// summoning sickness doesn't matter (CR 302.6). ponytail: picked for the player, those that
-	/// make no mana first; make it a choice if the pick ever matters more than that.
-	/// </summary>
-	List<Card> ToTapForCost(GameState s, ActivatedAbilityComponent ability) =>
-		ability.TapUntapped == 0
-			? []
-			:
-			[
-				.. s.CardsIn(PlayerId, ZoneType.Battlefield)
-					.Where(c =>
-						c.Is(ability.TapUntappedType)
-						&& !c.IsTapped
-						&& !(ability.TapCost && c.Id == CardId)
-					)
-					// What makes no mana first, then what makes least (a Lotus last).
-					.OrderBy(c =>
-						ManaAbilities.CanTap(s, c) ? ManaAbilities.YieldOf(s, c).Units.Length : 0
-					)
-					.Take(ability.TapUntapped),
-			];
+	int Chosen(CostSlot slot) =>
+		slot switch
+		{
+			CostSlot.None => 0,
+			CostSlot.Sacrifice => SacrificeId,
+			CostSlot.Discard => DiscardId,
+			CostSlot.Exile => ExileId,
+			_ => throw new InvalidOperationException($"An ability's cost can't pick into {slot}"),
+		};
 
 	/// <summary>Permanents the non-mana part of the cost uses — never mana for the same activation.</summary>
 	List<int> CostPermanents(GameState s, ActivatedAbilityComponent ability) =>
-		[SacrificeId, .. ToTapForCost(s, ability).Select(c => c.Id)];
+		[.. ability.Costs.SelectMany(c => c.Uses(s, PlayerId, CardId, Chosen(c.Slot)))];
 
 	ActivatedAbilityComponent? Ability(GameState s) =>
 		s.AbilitiesOf<ActivatedAbilityComponent>(s.GetCard(CardId))
@@ -346,30 +324,18 @@ public record ActivateAbilityAction : GameAction
 			return ValidationResult.Invalid("Its condition isn't met");
 		if (ability.Exhaust && card.ExhaustUsed)
 			return ValidationResult.Invalid("Exhaust: activated once already");
-		if (ability.TapUntapped > 0 && ToTapForCost(s, ability).Count < ability.TapUntapped)
+		var costs = ability.Costs;
+		if (costs.Any(c => c is TapUntappedCost && !c.CanPay(s, PlayerId, CardId)))
 			return ValidationResult.Invalid("Not enough untapped permanents to tap");
-		if (
-			ability.DiscardACard
-				? !s.IsIn(DiscardId, PlayerId, ZoneType.Hand)
-					|| !ability.MayDiscard(s.GetCard(DiscardId), CardId)
-				: DiscardId != 0
-		)
+		if (!CostList.Fits(costs, CostSlot.Discard, DiscardId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Discard a card from your hand for this");
-		if (
-			ability.ExileFromGraveyard is { } exile
-				? !exile.Among(s, PlayerId, ZoneType.Graveyard, CardId).Contains(ExileId)
-				: ExileId != 0
-		)
+		if (!CostList.Fits(costs, CostSlot.Exile, ExileId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a card you can exile for this");
-		if (ability.TapCost && !ManaAbilities.CanPayTapCost(s, card))
+		if (costs.Any(c => c is TapSelfCost && !c.CanPay(s, PlayerId, CardId)))
 			return ValidationResult.Invalid("Cannot pay {T}");
 		if (ability.SorcerySpeed && !Priority.AtSorcerySpeed(s, PlayerId))
 			return ValidationResult.Invalid("Activate only as a sorcery");
-		if (
-			ability.Sacrifice is { } sacrifice
-				? !sacrifice.Among(s, PlayerId, ZoneType.Battlefield, CardId).Contains(SacrificeId)
-				: SacrificeId != 0
-		)
+		if (!CostList.Fits(costs, CostSlot.Sacrifice, SacrificeId, s, PlayerId, CardId))
 			return ValidationResult.Invalid("Not a permanent you can sacrifice for this");
 		if (!TargetSpec.AreLegal(s, ability.Targets, Targets, PlayerId, CardId))
 			return ValidationResult.Invalid("Illegal targets");
@@ -377,9 +343,8 @@ public record ActivateAbilityAction : GameAction
 			ManaPayment.Find(
 				s,
 				PlayerId,
-				Costs.OfAbility(s, ability, Targets),
+				Costs.OfAbility(s, ability, Targets, PlayerId, CardId),
 				0,
-				excludeId: ability.TapCost ? CardId : 0,
 				alsoExclude: CostPermanents(s, ability)
 			)
 			is null
@@ -391,33 +356,23 @@ public record ActivateAbilityAction : GameAction
 	public override ActionResult Execute(GameState s)
 	{
 		var ability = Ability(s)!;
-		var toTap = ToTapForCost(s, ability); // chosen before the mana, which never uses them
-		s = ManaPayment.Pay(
+		var mana = ManaPayment.Find(
 			s,
 			PlayerId,
-			ManaPayment.Find(
-				s,
-				PlayerId,
-				Costs.OfAbility(s, ability, Targets),
-				0,
-				ability.TapCost ? CardId : 0,
-				alsoExclude: CostPermanents(s, ability)
-			)!
-		);
-		if (ability.TapCost)
-			s = s.UpdateObject(CardId, s.GetCard(CardId) with { IsTapped = true });
-		foreach (var tapped in toTap)
-			s = s.UpdateObject(tapped.Id, s.GetCard(tapped.Id) with { IsTapped = true });
+			Costs.OfAbility(s, ability, Targets, PlayerId, CardId),
+			0,
+			alsoExclude: CostPermanents(s, ability)
+		)!;
+		// The taps on the state the mana search excluded them from — the same permanents; then the
+		// mana, which never uses them.
+		foreach (var cost in ability.Costs.Where(c => c.Taps))
+			s = cost.Pay(s, PlayerId, CardId, 0);
+		s = ManaPayment.Pay(s, PlayerId, mana);
 		if (ability.Exhaust)
 			s = s.UpdateObject(CardId, s.GetCard(CardId) with { ExhaustUsed = true });
 		var source = s.GetCard(CardId); // as it was when activated — the cost may sacrifice it
-		IEnumerable<int> Paid(bool self, int chosen) =>
-			new[] { self ? CardId : 0, chosen }.Where(id => id != 0);
-		foreach (var id in Paid(ability.SacrificeSelf, SacrificeId))
-			s = s.Sacrifice(id);
-		s = s.Discard(PlayerId, [.. Paid(ability.DiscardSelf, DiscardId)]);
-		foreach (var id in Paid(ability.ExileSelf, ExileId))
-			s = s.MoveCard(id, s.ZoneId(PlayerId, ZoneType.Exile));
+		foreach (var cost in ability.Costs.Where(c => !c.Taps))
+			s = cost.Pay(s, PlayerId, CardId, Chosen(cost.Slot));
 		s = StackResolution.Push(
 			s,
 			new StackAbility

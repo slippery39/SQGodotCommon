@@ -437,8 +437,8 @@ public static class FraCards
 			[new SearchLibrary(CardType.Land, ZoneType.Hand) { Supertype = Supertype.Basic }]
 		)
 		{
+			Costs = [new DiscardSelfCost()],
 			From = ZoneType.Hand,
-			DiscardSelf = true,
 		};
 
 	/// <summary>"[Cost]: Return this card from your graveyard to the battlefield with a finality counter on it."</summary>
@@ -534,7 +534,7 @@ public static class FraCards
 					new Destroy(Ref.Target())
 				),
 			],
-			["Thalia, the Survivor"] = [new OpponentsNoncreatureSpellsCostMore(1)],
+			["Thalia, the Survivor"] = [new CostChange(1, !Is.Creature) { By = Whose.Opponent }],
 
 			// ===== Black =====
 			["Last Gasp"] = [Spell([Creature], new ModifyUntilEndOfTurn(Ref.Target(), -3, -3))],
@@ -587,7 +587,14 @@ public static class FraCards
 			// ===== Red =====
 			["Wrath of the Bloodmane"] =
 			[
-				new CostsLessIfYouControlLegendaryCreature(1),
+				new CostChange(-1)
+				{
+					OnItself = true,
+					If = new AtLeast(
+						Count.NumberOf(Ref.Permanents(Is.Creature & Is.Legendary & Is.Yours)),
+						1
+					),
+				},
 				Spell([CreatureOrPlaneswalker], new DealDamage(Ref.Target(), 4)),
 			],
 			["Artifist Acumen"] =
@@ -1027,7 +1034,7 @@ public static class FraCards
 					]
 				)
 				{
-					SacrificeSelf = true,
+					Costs = [new SacrificeSelfCost()],
 					SorcerySpeed = true,
 					Targets = [Target(Is.Type(CardType.Artifact | CardType.Enchantment))],
 				},
@@ -1039,7 +1046,7 @@ public static class FraCards
 					[new ShuffleIntoLibrary(Ref.Target())]
 				)
 				{
-					SacrificeSelf = true,
+					Costs = [new SacrificeSelfCost()],
 					Targets = [Target((Is.Creature | Is.Planeswalker) & Is.Opponents)],
 				},
 			],
@@ -1047,8 +1054,11 @@ public static class FraCards
 			[
 				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new DrawCards(Ref.You, 1)])
 				{
-					TapCost = true,
-					Sacrifice = Is.Type(CardType.Artifact | CardType.Land),
+					Costs =
+					[
+						new TapSelfCost(),
+						new SacrificeCost(Is.Type(CardType.Artifact | CardType.Land)),
+					],
 				},
 			],
 			["Edgar, Ancient Bloodlord"] =
@@ -1066,7 +1076,7 @@ public static class FraCards
 					]
 				)
 				{
-					Sacrifice = (Is.Creature | Is.Planeswalker) & !Is.Source,
+					Costs = [new SacrificeCost((Is.Creature | Is.Planeswalker) & !Is.Source)],
 				},
 			],
 			["Break Under Pressure"] =
@@ -1082,7 +1092,9 @@ public static class FraCards
 			],
 			["Silence the Echo"] =
 			[
-				new SacrificeOrPayAdditionalCost(Is.Creature | Is.Planeswalker, 3),
+				new AdditionalCostsComponent(
+					[new SacrificeCost(Is.Creature | Is.Planeswalker) { OrPay = 3 }]
+				),
 				Spell([CreatureOrPlaneswalker], new Destroy(Ref.Target())),
 			],
 			["Way of the Deathbringer"] =
@@ -1142,7 +1154,10 @@ public static class FraCards
 			],
 			["Ghalta the Unstoppable"] =
 			[
-				new CostsLessByGreatestStatYouControl(),
+				new CostChange(Count.GreatestPowerOf(Ref.CreaturesYouControl).Negated)
+				{
+					OnItself = true,
+				},
 				new StaticEffectComponent(Is.Creature & Is.Yours & !Is.Source, "Trample"),
 			],
 			["Skilled Battlecarver"] =
@@ -1195,7 +1210,7 @@ public static class FraCards
 					[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, Combat.CantBeBlocked)]
 				)
 				{
-					TapCost = true,
+					Costs = [new TapSelfCost()],
 					Targets = [Target(Is.Creature & Is.Yours & !Is.Source & Is.PowerAtMost(2))],
 				},
 			],
@@ -1228,7 +1243,11 @@ public static class FraCards
 			],
 			["Traxos, Academy Guardian"] =
 			[
-				new CostsLessIfYouCastNoncreatureSpellThisTurn(2),
+				new CostChange(-2)
+				{
+					OnItself = true,
+					If = new AtLeast(Count.NoncreatureSpellsYouCastThisTurn, 1),
+				},
 				Prowess,
 			],
 			["Edgar, Moonlit Sovereign"] =
@@ -1453,7 +1472,7 @@ public static class FraCards
 					[new AddCounters(Ref.Target(), 1)]
 				)
 				{
-					TapCost = true,
+					Costs = [new TapSelfCost()],
 					Targets = [Target(Is.Creature & Is.EnteredThisTurn)],
 				},
 			],
@@ -1547,7 +1566,10 @@ public static class FraCards
 						Otherwise = [new DrawCards(Ref.You, 1)],
 					}
 				),
-				new FlashbackComponent(ManaCost.Parse("{1}{U/R}{U/R}")) { DiscardACard = true },
+				new FlashbackComponent(ManaCost.Parse("{1}{U/R}{U/R}"))
+				{
+					Costs = [new DiscardCost()],
+				},
 			],
 
 			// ===== Prepare =====
@@ -1758,8 +1780,8 @@ public static class FraCards
 			[
 				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new EmpowerJace(2)])
 				{
+					Costs = [new ExileSelfCost()],
 					From = ZoneType.Graveyard,
-					ExileSelf = true,
 				},
 			],
 			["Cryotheory Adept"] =
@@ -1770,8 +1792,8 @@ public static class FraCards
 					[new Tap(Ref.Target()), new AddStunCounters(Ref.Target(), 1)]
 				)
 				{
+					Costs = [new ExileSelfCost()],
 					From = ZoneType.Graveyard,
-					ExileSelf = true,
 					SorcerySpeed = true,
 					Targets = [Creature],
 				},
@@ -1783,9 +1805,8 @@ public static class FraCards
 					[new ReturnFromGraveyard(Ref.Target(), ZoneType.Hand)]
 				)
 				{
-					From = ZoneType.Graveyard,
-					ExileSelf = true,
-					// "another target creature card": a graveyard target is never its source
+					Costs = [new ExileSelfCost()],
+					From = ZoneType.Graveyard, // "another target creature card": a graveyard target is never its source
 					Targets = [TargetSpec.InYourGraveyard(Is.Creature)],
 				},
 			],
@@ -1825,8 +1846,8 @@ public static class FraCards
 					]
 				)
 				{
+					Costs = [new ExileFromGraveyardCost(Is.Creature & !Is.Source)],
 					From = ZoneType.Graveyard,
-					ExileFromGraveyard = Is.Creature & !Is.Source,
 				},
 			],
 			["Hallway Heckler // Vicious Verse"] =
@@ -1834,8 +1855,7 @@ public static class FraCards
 				EntersPrepared,
 				new ActivatedAbilityComponent(ManaCost.None, [new DrawCards(Ref.You, 1)])
 				{
-					TapCost = true,
-					DiscardACard = true,
+					Costs = [new TapSelfCost(), new DiscardCost()],
 				},
 				ViciousVerse("Hallway Heckler // Vicious Verse"),
 			],
@@ -1957,8 +1977,8 @@ public static class FraCards
 			[
 				new ActivatedAbilityComponent(ManaCost.Parse("{3}{G}"), [new Destroy(Ref.Target())])
 				{
+					Costs = [new DiscardSelfCost()],
 					From = ZoneType.Hand,
-					DiscardSelf = true,
 					Targets = [Target(Is.Creature & Is.With("Flying"))],
 				},
 			],
@@ -1983,8 +2003,7 @@ public static class FraCards
 				new ManaAbilityComponent(ManaColor.Green),
 				new ActivatedAbilityComponent(ManaCost.Parse("{2}"), [new DrawCards(Ref.You, 1)])
 				{
-					TapCost = true,
-					DiscardACard = true,
+					Costs = [new TapSelfCost(), new DiscardCost()],
 				},
 			],
 			["Room of Refuge"] =
@@ -1996,8 +2015,7 @@ public static class FraCards
 					[new AddCounters(Ref.Target(), 2)]
 				)
 				{
-					TapCost = true,
-					SacrificeSelf = true,
+					Costs = [new TapSelfCost(), new SacrificeSelfCost()],
 					SorcerySpeed = true,
 					Targets = [Creature],
 				},
@@ -2111,7 +2129,7 @@ public static class FraCards
 				AttachedGets(2, 1),
 				Equip("{3}") with
 				{
-					CostsLessPerCounterOnTarget = true,
+					CostChange = new(Count.CountersOn(Ref.Target(0)).Negated),
 				},
 			],
 			["Lich's Relic"] =
@@ -2316,7 +2334,7 @@ public static class FraCards
 			[
 				new ActivatedAbilityComponent(ManaCost.None, [new ReturnToHand(Ref.Target())])
 				{
-					TapCost = true,
+					Costs = [new TapSelfCost()],
 					Targets = [Target(Is.Yours & !Is.Source)],
 					OnlyIf = new DuringYourTurn(),
 				},
@@ -2353,7 +2371,7 @@ public static class FraCards
 					Targets = [Creature],
 				},
 			],
-			["Geist of Saint Thalia"] = [new YourNoncreatureSpellsCostLess(1)],
+			["Geist of Saint Thalia"] = [new CostChange(-1, !Is.Creature)],
 			["Arni, Humble Scribe"] =
 			[
 				When(
@@ -2369,7 +2387,7 @@ public static class FraCards
 					[new DrawCards(Ref.You, 1), new Discard(Ref.You, 1)]
 				)
 				{
-					TapCost = true,
+					Costs = [new TapSelfCost()],
 				},
 			],
 			["Traxos, Scourge Eternal"] =
@@ -2397,7 +2415,7 @@ public static class FraCards
 					[new BecomePrepared(Ref.Target())]
 				)
 				{
-					TapCost = true,
+					Costs = [new TapSelfCost()],
 					SorcerySpeed = true,
 					Targets = [Target(Is.Creature & Is.AttackedThisTurn)],
 				},
@@ -2406,7 +2424,7 @@ public static class FraCards
 					[new BecomePrepared(Ref.Target())]
 				)
 				{
-					TapCost = true,
+					Costs = [new TapSelfCost()],
 					Targets = [Creature],
 				},
 			],
@@ -2487,14 +2505,14 @@ public static class FraCards
 					[new ModifyUntilEndOfTurn(Ref.Target(), -3, -1)]
 				)
 				{
+					Costs = [new DiscardSelfCost()],
 					From = ZoneType.Hand,
-					DiscardSelf = true,
 					Targets = [Creature],
 				},
 			],
 			["Countersculpt"] =
 			[
-				new BeholdOrPayAdditionalCost("Jace", 1),
+				new AdditionalCostsComponent([new BeholdCost("Jace") { OrPay = 1 }]),
 				Spell([TargetSpec.Spell()], new Counter(Ref.Target()), new EmpowerJace(1)),
 			],
 
@@ -2543,13 +2561,16 @@ public static class FraCards
 					[new ModifyUntilEndOfTurn(Ref.Source, -2, 0)]
 				)
 				{
-					Sacrifice = (Is.Creature | Is.Planeswalker) & !Is.Source,
+					Costs = [new SacrificeCost((Is.Creature | Is.Planeswalker) & !Is.Source)],
 					OnlyIf = Threshold,
 				},
 			],
 			["Ghalta the Immovable"] =
 			[
-				new CostsLessByGreatestStatYouControl(Toughness: true),
+				new CostChange(Count.GreatestToughnessOf(Ref.CreaturesYouControl).Negated)
+				{
+					OnItself = true,
+				},
 				new StaticEffectComponent(Is.Creature & Is.Yours, Combat.AttacksDespiteDefender),
 				new YourCreaturesAssignDamageByToughness(),
 			],
@@ -2572,7 +2593,7 @@ public static class FraCards
 					[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Flying")]
 				)
 				{
-					TapCost = true,
+					Costs = [new TapSelfCost()],
 					Targets = [Target(Is.Creature & Is.WithPlusOneCounter)],
 				},
 			],
@@ -2746,8 +2767,7 @@ public static class FraCards
 					[new Destroy(Ref.AllCreatures)]
 				)
 				{
-					TapCost = true,
-					ExileSelf = true,
+					Costs = [new TapSelfCost(), new ExileSelfCost()],
 					SorcerySpeed = true,
 				},
 			],
@@ -2821,8 +2841,7 @@ public static class FraCards
 					[new ModifyUntilEndOfTurn(Ref.Target(), 0, 0, "Hexproof")]
 				)
 				{
-					TapCost = true,
-					DiscardACard = true,
+					Costs = [new TapSelfCost(), new DiscardCost()],
 					Targets = [Target((Is.Creature | Is.Planeswalker) & Is.Yours & !Is.Source)],
 				},
 			],
@@ -2865,7 +2884,7 @@ public static class FraCards
 					[new BecomePrepared(Ref.CreaturesYouControl)]
 				)
 				{
-					TapCost = true,
+					Costs = [new TapSelfCost()],
 				},
 			],
 			["Karn, Gilded Guardian"] =
@@ -2914,7 +2933,7 @@ public static class FraCards
 				new EntersTappedComponent(new YouCanBehold("Jace")),
 				new ActivatedAbilityComponent(ManaCost.Parse("{2}{U}"), [new EmpowerJace(2)])
 				{
-					TapCost = true,
+					Costs = [new TapSelfCost()],
 				},
 			],
 			["Theorist's Proxy"] =
@@ -2925,7 +2944,7 @@ public static class FraCards
 					[new NextSpellCantBeCounteredThisTurn()]
 				)
 				{
-					SacrificeSelf = true,
+					Costs = [new SacrificeSelfCost()],
 				},
 			],
 			["Solitary Cell"] =
@@ -2937,9 +2956,7 @@ public static class FraCards
 				),
 				new ActivatedAbilityComponent(ManaCost.Parse("{1}"), [new DrawCards(Ref.You, 1)])
 				{
-					TapCost = true,
-					DiscardACard = true,
-					DiscardMustBe = Supertype.Legendary,
+					Costs = [new TapSelfCost(), new DiscardCost(Is.Legendary)],
 				},
 			],
 
@@ -2993,7 +3010,7 @@ public static class FraCards
 					]
 				)
 				{
-					Sacrifice = Is.Artifact & !Is.Source,
+					Costs = [new SacrificeCost(Is.Artifact & !Is.Source)],
 				},
 			],
 			["Tenured Tethermage"] =
@@ -3005,8 +3022,7 @@ public static class FraCards
 				),
 				new ActivatedAbilityComponent(ManaCost.None, [new AddCounters(Ref.Source, 2)])
 				{
-					TapUntapped = 2,
-					TapUntappedType = CardType.Artifact,
+					Costs = [new TapUntappedCost(2, Is.Artifact)],
 				},
 			],
 			["Gideon's Memorial"] =
@@ -3019,8 +3035,8 @@ public static class FraCards
 					[new DealDamage(Ref.Target(), 4)]
 				)
 				{
+					Costs = [new DiscardSelfCost()],
 					From = ZoneType.Hand,
-					DiscardSelf = true,
 					Targets = [Target(Is.Creature & Is.InCombat)],
 				},
 			],
@@ -3031,7 +3047,10 @@ public static class FraCards
 				When(
 					TriggerEvent.SelfBecomesTargetOfOpponentsSpellOrAbility,
 					[],
-					new CounterUnlessPays(Ref.EventObject, ManaCost.None) { DiscardACard = true }
+					new CounterUnlessPays(Ref.EventObject, ManaCost.None)
+					{
+						Costs = [new DiscardCost()],
+					}
 				),
 				When(
 					new Trigger(EventKind.Entered) { Subject = Is.Creature & Is.Opponents },
@@ -3119,8 +3138,8 @@ public static class FraCards
 					[new DrawCards(Ref.You, 2)]
 				)
 				{
+					Costs = [new ExileSelfCost()],
 					From = ZoneType.Graveyard,
-					ExileSelf = true,
 				},
 			],
 			["Identity Echo"] =
@@ -3430,13 +3449,13 @@ public static class FraCards
 			],
 			["Tam, the Possibility"] =
 			[
-				new YourSpellsOfTypeCostLess(CardType.Planeswalker, 1),
+				new CostChange(-1, Is.Planeswalker),
 				new ActivatedAbilityComponent(
 					ManaCost.Parse("{W}{U}{B}{R}{G}"),
 					[new Proliferate(Count.SubtypesAmong(Ref.PlaneswalkersYouControl))]
 				)
 				{
-					TapCost = true,
+					Costs = [new TapSelfCost()],
 				},
 			],
 
@@ -3463,7 +3482,7 @@ public static class FraCards
 					[],
 					new CounterUnlessPays(Ref.EventObject, ManaCost.None)
 					{
-						SacrificePermanents = 3,
+						Costs = [new SacrificeCost { Count = 3 }],
 					}
 				),
 				new ActivatedAbilityComponent(
@@ -3471,9 +3490,8 @@ public static class FraCards
 					[new LandTapsForTwoUntilThisIsCast(Ref.Target())]
 				)
 				{
-					From = ZoneType.Hand,
-					ExileSelf = true,
-					// ponytail: "target land" — yours: the grant replaces the land's own mana (one yield
+					Costs = [new ExileSelfCost()],
+					From = ZoneType.Hand, // ponytail: "target land" — yours: the grant replaces the land's own mana (one yield
 					// per permanent), so on an opponent's land it would shut off a colour.
 					Targets = [Target(Is.Land & Is.Yours)],
 				},

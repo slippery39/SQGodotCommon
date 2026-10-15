@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Cards;
 using MagicCore.Effects;
+using MagicCore.Targeting;
 
 namespace MagicCore.Rules;
 
@@ -33,17 +34,18 @@ public static class Costs
 	public static ManaCost OfAbility(
 		GameState s,
 		ActivatedAbilityComponent ability,
-		System.Collections.Immutable.ImmutableArray<int> targets
+		System.Collections.Immutable.ImmutableArray<int> targets,
+		int controllerId,
+		int sourceId
 	)
 	{
-		if (
-			!ability.CostsLessPerCounterOnTarget
-			|| targets.IsDefaultOrEmpty
-			|| !s.IsOnBattlefield(targets[0])
-		)
+		if (ability.CostChange is not { } change)
 			return ability.Cost;
-		var counters = s.GetCard(targets[0]).PlusOneCounters;
-		return counters == 0 ? ability.Cost : ability.Cost.WithGeneric(-counters);
+		var context = Conditions
+			.Of(s.GetCard(sourceId) with { ControllerId = controllerId })
+			.Add(ContextKeys.Targets, targets);
+		var delta = change.If?.Holds(s, context) == false ? 0 : change.Amount.Value(s, context);
+		return delta == 0 ? ability.Cost : ability.Cost.WithGeneric(delta);
 	}
 
 	/// <param name="addedGeneric">
@@ -63,38 +65,34 @@ public static class Costs
 		// Null Summoner: "mana of any type can be spent to cast that spell".
 		if (!free && Playable.IsCastableThroughLink(s, card, casterId))
 			printed = printed.OfAnyType();
-		var yours = s.CardsIn(casterId, ZoneType.Battlefield).ToList();
 		var delta = addedGeneric;
-		if (!card.Is(CardType.Creature))
-			delta +=
-				s.CardsIn(s.OpponentOf(casterId), ZoneType.Battlefield)
-					.SelectMany(s.AbilitiesOf<OpponentsNoncreatureSpellsCostMore>)
-					.Sum(t => t.Amount)
-				- yours.SelectMany(s.AbilitiesOf<YourNoncreatureSpellsCostLess>).Sum(r => r.Amount);
-
-		delta -= yours
-			.SelectMany(s.AbilitiesOf<YourSpellsOfTypeCostLess>)
-			.Where(r => card.Is(r.Types))
-			.Sum(r => r.Amount);
-
-		var controlsLegendaryCreature = yours.Any(c =>
-			c.Is(CardType.Creature) && c.Is(Supertype.Legendary)
-		);
-		if (controlsLegendaryCreature)
-			delta -= card.GetComponents<CostsLessIfYouControlLegendaryCreature>()
-				.Sum(r => r.Amount);
-
-		if (s.GetPlayer(casterId).ThisTurn.NoncreatureSpellsCast > 0)
-			delta -= card.GetComponents<CostsLessIfYouCastNoncreatureSpellThisTurn>()
-				.Sum(r => r.Amount);
-
-		if (card.GetComponent<CostsLessByGreatestStatYouControl>() is { } greatest)
-			delta -= yours
-				.Where(c => c.Is(CardType.Creature))
-				.Select(c => Math.Max(0, greatest.Toughness ? s.Toughness(c) : s.Power(c)))
-				.DefaultIfEmpty(0)
-				.Max();
-
+		// Taxes and reductions on the battlefield, judged as their permanent's (Thalia, Geist).
+		foreach (var player in new[] { casterId, s.OpponentOf(casterId) })
+		foreach (var permanent in s.CardsIn(player, ZoneType.Battlefield))
+		foreach (var change in s.AbilitiesOf<CostChange>(permanent))
+		{
+			var context = Conditions.Of(permanent);
+			if (
+				!change.OnItself
+				&& change.By.Includes(casterId, permanent.ControllerId)
+				&& Applies(s, change, card, context)
+			)
+				delta += change.Amount.Value(s, context);
+		}
+		// "This spell costs … less", judged as its caster's.
+		var asCast = Conditions.Of(card with { ControllerId = casterId });
+		foreach (var change in card.GetComponents<CostChange>())
+			if (change.OnItself && Applies(s, change, card, asCast))
+				delta += change.Amount.Value(s, asCast);
 		return delta == 0 ? printed : printed.WithGeneric(delta);
 	}
+
+	static bool Applies(
+		GameState s,
+		CostChange change,
+		Card spell,
+		System.Collections.Immutable.ImmutableDictionary<string, object> context
+	) =>
+		(change.Spells?.Matches(s, spell, ContextKeys.Asking(context)) ?? true)
+		&& (change.If?.Holds(s, context) ?? true);
 }

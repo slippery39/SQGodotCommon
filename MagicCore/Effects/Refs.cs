@@ -259,6 +259,7 @@ public enum CountOf
 	Fixed,
 	NumberOf, // "the number of [Ref]"
 	GreatestPowerOf, // "the greatest power among [Ref]"
+	GreatestToughnessOf, // Ghalta, the Immovable: "the greatest toughness among creatures you control"
 	GreatestManaValueOf, // Hapatra: "the greatest mana value among cards in your graveyard"
 	DistinctPowersOf, // Loot, the Nexus: "each different power among [Ref]"
 	ColorsAmong, // Karn, Gilded Guardian: "each color among [Ref]"
@@ -274,6 +275,7 @@ public enum CountOf
 	CardTypesInAllGraveyards, // Tarmogoyf
 	YourSurveilsThisTurn,
 	SpellsYouCastThisTurn,
+	NoncreatureSpellsYouCastThisTurn, // Discovery of the Doomsayer's "if you've cast a noncreature spell this turn"
 	NoncombatDamageToOpponentsLastTurn,
 	NoncombatDamageToOpponentsThisTurn,
 	CreaturesDiedThisTurn, // anyone's
@@ -301,6 +303,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static Count NumberOf(Ref r) => new(0, r, CountOf.NumberOf);
 
 	public static Count GreatestPowerOf(Ref r) => new(0, r, CountOf.GreatestPowerOf);
+
+	public static Count GreatestToughnessOf(Ref r) => new(0, r, CountOf.GreatestToughnessOf);
 
 	public static Count GreatestManaValueOf(Ref r) => new(0, r, CountOf.GreatestManaValueOf);
 
@@ -345,6 +349,8 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 	public static readonly Count YourSurveilsThisTurn = new(0, null, CountOf.YourSurveilsThisTurn);
 	public static readonly Count SpellsYouCastThisTurn =
 		new(0, null, CountOf.SpellsYouCastThisTurn);
+	public static readonly Count NoncreatureSpellsYouCastThisTurn =
+		new(0, null, CountOf.NoncreatureSpellsYouCastThisTurn);
 	public static readonly Count NoncombatDamageToOpponentsLastTurn =
 		new(0, null, CountOf.NoncombatDamageToOpponentsLastTurn);
 	public static readonly Count NoncombatDamageToOpponentsThisTurn =
@@ -414,6 +420,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				or CountOf.LoyaltyAbilitiesYouActivatedThisTurn
 				or CountOf.YourSurveilsThisTurn
 				or CountOf.SpellsYouCastThisTurn
+				or CountOf.NoncreatureSpellsYouCastThisTurn
 		)
 		{
 			var tally = s.GetPlayer((int)context[ContextKeys.Controller]).ThisTurn;
@@ -424,6 +431,7 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 				CountOf.CardsYouDiscardedThisTurn => tally.CardsDiscarded,
 				CountOf.LoyaltyAbilitiesYouActivatedThisTurn => tally.LoyaltyAbilitiesActivated,
 				CountOf.SpellsYouCastThisTurn => tally.SpellsCast,
+				CountOf.NoncreatureSpellsYouCastThisTurn => tally.NoncreatureSpellsCast,
 				_ => tally.Surveils,
 			};
 		}
@@ -433,6 +441,10 @@ public record Count(int Fixed, Ref? Of = null, CountOf Kind = CountOf.Fixed, int
 		{
 			CountOf.NumberOf => ids.Count(),
 			CountOf.GreatestPowerOf => Cards().Select(c => s.Power(c)).DefaultIfEmpty(0).Max(),
+			CountOf.GreatestToughnessOf => Cards()
+				.Select(c => s.Toughness(c))
+				.DefaultIfEmpty(0)
+				.Max(),
 			CountOf.GreatestManaValueOf => Cards()
 				.Select(c => c.ManaCost.ManaValue)
 				.DefaultIfEmpty(0)

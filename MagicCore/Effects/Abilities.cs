@@ -313,14 +313,29 @@ public record TriggeredAbilityComponent(Trigger On, ImmutableList<GameAction> Ef
 public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction> Effects)
 	: GameComponent
 {
-	public bool TapCost { get; init; }
+	/// <summary>
+	/// The rest of the cost, in the order it is paid — Gallia, Tragic Host: [TapSelfCost,
+	/// ExileFromGraveyardCost(Is.Creature &amp; !Is.Source)]. Taps first; the source is seen as it
+	/// was activated after that.
+	/// </summary>
+	public ImmutableList<AdditionalCost> Costs
+	{
+		get => costs;
+		// "{T}, tap two untapped artifacts": the source is already spoken for (the old TapCost check).
+		init =>
+			costs = value.Any(c => c is TapSelfCost)
+				?
+				[
+					.. value.Select(c =>
+						c is TapUntappedCost tap ? tap with { NotTheSource = true } : c
+					),
+				]
+				: value;
+	}
+
+	readonly ImmutableList<AdditionalCost> costs = [];
+
 	public ImmutableList<TargetSpec> Targets { get; init; } = [];
-
-	/// <summary>"Sacrifice this [permanent]:" — part of the cost.</summary>
-	public bool SacrificeSelf { get; init; }
-
-	/// <summary>"Sacrifice another creature or planeswalker:" — which of yours may be sacrificed as the cost. Null: no such cost.</summary>
-	public Filters.Filter? Sacrifice { get; init; }
 
 	/// <summary>"Activate only as a sorcery."</summary>
 	public bool SorcerySpeed { get; init; }
@@ -328,36 +343,8 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 	/// <summary>Where it is activated from: the battlefield, or a card in your hand (cycling) or graveyard.</summary>
 	public ZoneType From { get; init; } = ZoneType.Battlefield;
 
-	/// <summary>"Exile this card from your graveyard:" — part of the cost.</summary>
-	public bool ExileSelf { get; init; }
-
-	/// <summary>Cycling: "Discard this card:" — part of the cost.</summary>
-	public bool DiscardSelf { get; init; }
-
-	/// <summary>Hallway Heckler: "Discard a card:" — the card is chosen like a sacrifice.</summary>
-	public bool DiscardACard { get; init; }
-
-	/// <summary>Tenured Tethermage: "Tap two untapped artifacts you control:" — how many, of what type.</summary>
-	public int TapUntapped { get; init; }
-
-	public Cards.CardType TapUntappedType { get; init; }
-
-	/// <summary>Solitary Cell: "Discard a legendary card:" — what the discarded card must be.</summary>
-	public Cards.Supertype DiscardMustBe { get; init; }
-
-	/// <summary>Whether this card in hand may pay its discard cost.</summary>
-	public bool MayDiscard(Cards.Card card, int sourceId) =>
-		card.Id != sourceId && (DiscardMustBe == Cards.Supertype.None || card.Is(DiscardMustBe));
-
-	/// <summary>
-	/// Gallia, Tragic Host: "Exile another creature card from your graveyard:" — what may be exiled.
-	/// Which cards in your graveyard; "another" is !Is.Source in the filter — lifted from MtgCore's
-	/// ExileFromGraveyardAdditionalCost, where a card exiling ITSELF paid for its own recursion.
-	/// </summary>
-	public Filters.Filter? ExileFromGraveyard { get; init; }
-
-	/// <summary>Warrior's Blades' equip: "{1} less for each +1/+1 counter on the creature it targets".</summary>
-	public bool CostsLessPerCounterOnTarget { get; init; }
+	/// <summary>Warrior's Blades' equip: "{1} less for each +1/+1 counter on the creature it targets" — the targets are known.</summary>
+	public CostChange? CostChange { get; init; }
 
 	/// <summary>"Activate only if [condition]" — judged as it is activated.</summary>
 	public Condition? OnlyIf { get; init; }
@@ -368,6 +355,9 @@ public record ActivatedAbilityComponent(ManaCost Cost, ImmutableList<GameAction>
 	/// Not MtgCore's "exhaust", which is its tapping.
 	/// </summary>
 	public bool Exhaust { get; init; }
+
+	/// <summary>"{T}" is part of the cost.</summary>
+	public bool TapsItself => Costs.Any(c => c is TapSelfCost);
 }
 
 /// <summary>
@@ -427,8 +417,29 @@ public record ArtifactTokensBecome(Cards.CardData Token, ImmutableArray<GameComp
 /// </summary>
 public record EntersTappedComponent(Condition? Unless = null) : GameComponent;
 
-/// <summary>Silence the Echo: "As an additional cost to cast this spell, sacrifice a [Sacrifice] or pay {Generic}."</summary>
-public record SacrificeOrPayAdditionalCost(Filters.Filter Sacrifice, int Generic) : GameComponent;
+/// <summary>
+/// "… cost {N} more / less to cast" (CR 601.2f) — Amount is added to the generic cost (negative: less).
+/// Thalia: new CostChange(1, !Is.Creature) { By = Whose.Opponent } — on a permanent, for the spells
+/// its controller's opponents cast; Ghalta: new CostChange(Count.GreatestPowerOf(Ref.CreaturesYouControl)
+/// .Negated) { OnItself = true }. Read by Costs.Of only.
+/// </summary>
+public record CostChange(Count Amount, Filters.Filter? Spells = null) : GameComponent
+{
+	/// <summary>Whose spells it changes, from the permanent's controller: "you cast", "your opponents cast".</summary>
+	public Whose By { get; init; } = Whose.You;
+
+	/// <summary>Wrath of the Bloodmane: "if you control a legendary creature".</summary>
+	public Condition? If { get; init; }
+
+	/// <summary>"This spell costs …": read from the card being cast (any zone), not from the battlefield.</summary>
+	public bool OnItself { get; init; }
+}
+
+/// <summary>
+/// "As an additional cost to cast this spell, …" — Silence the Echo: [SacrificeCost(Is.Creature |
+/// Is.Planeswalker) { OrPay = 3 }]; Countersculpt: [BeholdCost("Jace") { OrPay = 1 }].
+/// </summary>
+public record AdditionalCostsComponent(ImmutableList<AdditionalCost> Costs) : GameComponent;
 
 /// <summary>"This creature enters with N (or X) +1/+1 counters on it." Applied by MagicState.EnterBattlefield.</summary>
 public record EntersWithCountersComponent(Count Count) : GameComponent;
@@ -498,15 +509,6 @@ public record StaticEffectComponent(Filters.Filter Affects, string? Keyword = nu
 		: affects;
 }
 
-/// <summary>Thalia: "Noncreature spells your opponents cast cost {N} more to cast."</summary>
-public record OpponentsNoncreatureSpellsCostMore(int Amount) : GameComponent;
-
-/// <summary>
-/// Geist of Saint Thalia: "Noncreature spells you cast cost {N} less to cast." On a permanent, read
-/// for the card being cast — MtgCore's ConditionalCostReductionComponent.AppliesTo case.
-/// </summary>
-public record YourNoncreatureSpellsCostLess(int Amount) : GameComponent;
-
 /// <summary>
 /// Traxos: "doesn't untap during your untap step" — read by the untap step ONLY; an untap effect
 /// still untaps it. (MtgCore's freeze blocks every untap: Dungeon Geists' wording, not this one.)
@@ -514,21 +516,13 @@ public record YourNoncreatureSpellsCostLess(int Amount) : GameComponent;
 public record DoesntUntapInYourUntapStep : GameComponent;
 
 /// <summary>
-/// "This spell costs {X} less to cast, where X is the greatest power among creatures you control" —
-/// or toughness (Ghalta the Immovable).
-/// </summary>
-public record CostsLessByGreatestStatYouControl(bool Toughness = false) : GameComponent;
-
-/// <summary>Wrath of the Bloodmane: "This spell costs {N} less to cast if you control a legendary creature."</summary>
-public record CostsLessIfYouControlLegendaryCreature(int Amount) : GameComponent;
-
-/// <summary>
 /// "Flashback [cost] (You may cast this card from your graveyard for its flashback cost. Then exile
 /// it.)" Twinned Vision's flashback also costs "Discard a card".
 /// </summary>
 public record FlashbackComponent(ManaCost Cost) : GameComponent
 {
-	public bool DiscardACard { get; init; }
+	/// <summary>Twinned Vision: [DiscardCost()] — what the flashback costs beyond mana.</summary>
+	public ImmutableList<AdditionalCost> Costs { get; init; } = [];
 }
 
 /// <summary>Impulse draw: this exiled card may be played by PlayerId through turn UntilTurn (Rules/Playable.cs).</summary>
@@ -566,19 +560,6 @@ public record AuraComponent(TargetSpec Enchant) : GameComponent;
 /// </summary>
 public record CastOnlyIf(Condition When) : GameComponent;
 
-/// <summary>
-/// Countersculpt: "As an additional cost, behold a [Subtype] or pay {Generic}" — choose one you
-/// control or reveal one from your hand (not the spell itself). Nothing moves: beholding is showing.
-/// </summary>
-public record BeholdOrPayAdditionalCost(string Subtype, int Generic) : GameComponent
-{
-	public IEnumerable<int> Candidates(GameState s, int playerId, int spellId) =>
-		s.CardsIn(playerId, ZoneType.Battlefield)
-			.Concat(s.CardsIn(playerId, ZoneType.Hand).Where(c => c.Id != spellId))
-			.Where(c => c.Subtypes.Contains(Subtype))
-			.Select(c => c.Id);
-}
-
 public enum ReplaceableEvent
 {
 	NoncombatDamageToOpponent, // Tomik: "a source you control … to an opponent or a permanent an opponent controls"
@@ -612,9 +593,6 @@ public record EnchantedDoesntUntap : GameComponent;
 /// <summary>"This spell can't be countered." Read by StackResolution.Counter.</summary>
 public record CantBeCountered : GameComponent;
 
-/// <summary>Traxos: "This spell costs {N} less to cast if you've cast a noncreature spell this turn."</summary>
-public record CostsLessIfYouCastNoncreatureSpellThisTurn(int Amount) : GameComponent;
-
 /// <summary>
 /// A delayed triggered ability (CR 603.7) kept on the permanent it acts on — Vindictive Triumph's
 /// "exile it at the beginning of the next end step". Not the permanent's ability: losing all
@@ -625,9 +603,6 @@ public record DelayedTrigger(TriggeredAbilityComponent Ability) : GameComponent;
 
 /// <summary>Garruk, Veiled Butcher: "If a creature an opponent controls would die, exile it instead." — MagicState.MoveCard.</summary>
 public record OpponentsCreaturesExiledInsteadOfDying : GameComponent;
-
-/// <summary>Tam, the Possibility: "Planeswalker spells you cast cost {N} less to cast." — Costs.Of.</summary>
-public record YourSpellsOfTypeCostLess(Cards.CardType Types, int Amount) : GameComponent;
 
 /// <summary>
 /// Puppet Crafting: "Enchanted permanent is a [Subtype] creature with base power and toughness P/T in

@@ -29,6 +29,7 @@ SECTIONS = [
     ("Effect", "Effects — what a card does (`Effects/*.cs`)"),
     ("Condition", "Conditions — \"if …\" (`Effects/Conditions.cs`)"),
     ("Filter", "Filters — which objects; scripts write them through `Is` (`Filters/`)"),
+    ("AdditionalCost", "Costs beyond mana — one list for abilities, spells, flashback, ward (`Effects/AdditionalCosts.cs`)"),
     ("GameComponent", "Components — abilities, statics, replacements, markers on a card"),
     ("ChoiceAction", "Choices — what a player is asked"),
     ("GameEvent", "Events — what triggers listen for (`Turns/Triggers.cs`)"),

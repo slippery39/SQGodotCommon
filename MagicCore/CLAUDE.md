@@ -38,7 +38,9 @@ MagicCore/
 │                        All: a zone's objects a Filter matches), Count
 ├── Effects/Effects.cs   the Effect base; damage, life, counters, pumps, mana; If, May, PayMana
 ├── Effects/ZoneEffects.cs  effects that move cards: destroy, exile, sacrifice, return, discard, surveil, tokens
-├── Effects/Abilities.cs spell, triggered, activated, mana and static ability components
+├── Effects/Abilities.cs spell, triggered, activated, mana and static ability components; Trigger, CostChange
+├── Effects/AdditionalCosts.cs  costs beyond mana (tap, sacrifice, discard, exile, behold): one list for
+│                        abilities, spells, flashback and ward; CostList (candidates, legality, or-pay)
 ├── Effects/Conditions.cs  "if …": Condition, AtLeast(Count, N), Not, Matches(Ref, Filter)
 ├── Effects/Modes.cs     Mode, Modal.Compose (chosen modes → one target list + steps), ScopeTargetsAction
 ├── Targeting/TargetSpec.cs  a target word = a zone (From) + a Filter + the targeting rules; one legality
@@ -48,7 +50,7 @@ MagicCore/
 │                        sacrifice/exile costs (FilterRefactorPlan.md); migration table:
 │                        MagicCore.Tests/Filters/FilterMigrationTests.cs
 ├── Rules/Damage.cs      THE damage path (lifelink, deathtouch) — combat and effects alike
-├── Rules/Costs.cs       THE effective cost (taxes, reductions)
+├── Rules/Costs.cs       THE effective cost (taxes, reductions: every CostChange)
 ├── Rules/Characteristics.cs  THE power, toughness and keywords: own + every static on the battlefield
 ├── FraCoverage.md       what FRA is scripted, what waits and why — status, not rules
 ├── AbilityCatalog.md    GENERATED: every effect, trigger, ref, count, condition, component — one line each

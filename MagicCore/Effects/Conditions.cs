@@ -29,7 +29,7 @@ public record Matches(Ref What, Filters.Filter Filter) : Condition
 public record YouCanBehold(string Subtype) : Condition
 {
 	public override bool Holds(GameState s, ImmutableDictionary<string, object> context) =>
-		new BeholdOrPayAdditionalCost(Subtype, 0)
+		new BeholdCost(Subtype)
 			.Candidates(s, (int)context[ContextKeys.Controller], (int)context[ContextKeys.Source])
 			.Any();
 }

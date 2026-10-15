@@ -160,19 +160,12 @@ public static class MagicRules
 					.Select(targets => (modes, targets))
 			)
 			.ToList();
-		// "Sacrifice … or pay {N}": 0 is paying; each permanent that may be sacrificed is another way.
-		IEnumerable<int> sacrifices = card.GetComponent<SacrificeOrPayAdditionalCost>() is { } extra
-			? [0, .. extra.Sacrifice.Among(s, player, ZoneType.Battlefield, card.Id)]
-			: [0];
-		// "Behold … or pay {N}": 0 is paying, or behold one — any one: beholding moves nothing, so every
-		// candidate is the same play (a hand-built cast may still name another; ValidateAdd checks it).
-		IEnumerable<int> beholds = card.GetComponent<BeholdOrPayAdditionalCost>() is { } behold
-			? [0, .. behold.Candidates(s, player, card.Id).Take(1)]
-			: [0];
-		// Twinned Vision's flashback: one cast per card that could be discarded.
-		IEnumerable<int> discards = CastSpellAction.OwesDiscard(s, card)
-			? s.CardsIn(player, ZoneType.Hand).Select(c => c.Id)
-			: [0];
+		// One cast per way to pay each cost that picks a card: "sacrifice … or pay {N}" (0 is paying),
+		// a behold (any one is the same play), Twinned Vision's flashback discard.
+		var costs = CastSpellAction.CostsOf(s, card);
+		var sacrifices = CostList.Options(costs, CostSlot.Sacrifice, s, player, card.Id);
+		var beholds = CostList.Options(costs, CostSlot.Behold, s, player, card.Id);
+		var discards = CostList.Options(costs, CostSlot.Discard, s, player, card.Id);
 		// Omnipresence: X = 0 is cast without paying its mana cost — never worse, so it replaces the paid one.
 		var free = Rules.Playable.MayCastWithoutPaying(s, card, player);
 		var payments = Enumerable.Range(0, maxX + 1).Select(x => (x, free: free && x == 0));
@@ -207,17 +200,21 @@ public static class MagicRules
 			.Where(a => a.ability.From == zone)
 			.SelectMany(a =>
 				from targets in TargetSpec.Combinations(s, a.ability.Targets, player, card.Id)
-				from sacrifice in a.ability.Sacrifice is { } sacrifice
-					? sacrifice.Among(s, player, ZoneType.Battlefield, card.Id)
-					: [0]
-				from discard in a.ability.DiscardACard
-					? s.CardsIn(player, ZoneType.Hand)
-						.Where(c => a.ability.MayDiscard(c, card.Id))
-						.Select(c => c.Id)
-					: [0]
-				from exile in a.ability.ExileFromGraveyard is { } exile
-					? exile.Among(s, player, ZoneType.Graveyard, card.Id)
-					: [0]
+				from sacrifice in CostList.Options(
+					a.ability.Costs,
+					CostSlot.Sacrifice,
+					s,
+					player,
+					card.Id
+				)
+				from discard in CostList.Options(
+					a.ability.Costs,
+					CostSlot.Discard,
+					s,
+					player,
+					card.Id
+				)
+				from exile in CostList.Options(a.ability.Costs, CostSlot.Exile, s, player, card.Id)
 				select (GameAction)
 					new ActivateAbilityAction
 					{

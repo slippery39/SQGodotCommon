@@ -96,8 +96,15 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
   every rule because every rule reads abilities through `s.AbilitiesOf<T>`, keywords through `s.Has`,
   mana through `ManaAbilities.ColorsOf` (a basic land's intrinsic ability included). What the AURA
   says ("doesn't untap") is the Aura's, so it still applies. No timestamps: everything goes.
-- **Cost changes all live in `Costs.Of`** — taxes on the opponent's side, reductions on yours
-  (`YourNoncreatureSpellsCostLess`), and the card's own.
+- **Cost changes all live in `Costs.Of`**: each is a `CostChange` — on a permanent, for the spells
+  `By` names (Thalia's tax on opponents, Geist's reduction on yours), or `OnItself` ("this spell costs
+  … less"); an activated ability's (Warrior's Blades) is `ActivatedAbilityComponent.CostChange`, read
+  by `Costs.OfAbility` with the targets known.
+- **Costs beyond mana are one list of `AdditionalCost`** (Effects/AdditionalCosts.cs) — activated
+  abilities, a spell's `AdditionalCostsComponent`, flashback, ward. A cost that picks a card names it
+  in the action's `SacrificeId`/`DiscardId`/`ExileId`/`BeholdId` (`CostSlot`), one legal action per
+  choice; `CostList` is the one place candidates, legality and "or pay" read them. Taps are paid
+  first; ward pays by choosing (`PaidByChoosing`).
 - **Where triggers are read from:** permanents on the battlefield; a dying card's own "when this
   dies"; a graveyard card's abilities marked `FromGraveyard` (Darklight Phoenix) — those, and only
   those, trigger from there; and a trigger granted until end of turn (`UntilEndOfTurn.Trigger`,

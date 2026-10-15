@@ -188,7 +188,7 @@ public class StackTests
 			new(ManaCost.Parse(cost), [new GainLife(Ref.You, 1)]);
 		var twoAbilities = new CardDefinition(
 			TestGames.Creature("Two Ways", "1/1").Data,
-			[Gain("{1}") with { TapCost = true }, Gain("{2}{G}")]
+			[Gain("{1}") with { Costs = [new TapSelfCost()] }, Gain("{2}{G}")]
 		);
 		var oneAbility = new CardDefinition(
 			TestGames.Creature("One Way", "1/1").Data,

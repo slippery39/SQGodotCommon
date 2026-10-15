@@ -58,8 +58,8 @@ public static class Describe
 		var cost = new[]
 		{
 			ability.Cost.ToString(),
-			ability.TapCost ? "T" : "",
-			ability.SacrificeSelf ? "sacrifice it" : "",
+			ability.TapsItself ? "T" : "",
+			ability.Costs.Any(c => c is SacrificeSelfCost) ? "sacrifice it" : "",
 		}.Where(part => part != "");
 		// The number too: two abilities may cost the same.
 		return $" [#{a.AbilityIndex + 1}: {string.Join(", ", cost)}]";
