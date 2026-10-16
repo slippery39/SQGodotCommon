@@ -57,7 +57,7 @@ MagicCore/
 ├── FraCardSheet.md      GENERATED: each FRA card's printed text, its script, the pieces it uses, its tests
 ├── Cookbook.md          how to script a card, by pattern; the tiers of checking
 ├── DesignAudit.md       2026-10-10: what was reinvented instead of reused from MtgCore, and MtgCore's own flaws
-├── FilterRefactorPlan.md  IN PROGRESS: one composable Filter replacing the closed enums — phases, gate, status
+├── FilterRefactorPlan.md  DONE (story MC-2): one composable Filter replacing the closed enums — the design and why
 ├── Rules/Attachments.cs THE Aura/Equipment rules: attach, what's on a permanent, fall-off (state-based)
 ├── Rules/Playable.cs    THE "may it be cast/played from here": hand, flashback, prepared copy, impulse exile
 ├── Rules/Prepare.cs     THE prepare rules: become prepared (a copy of the spell in exile), castable, unprepare
@@ -155,6 +155,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   Valid C#, but the commit hook then skips formatting the whole file. Write a `switch` expression.
 - **Test trap:** helpers that replace a `GameState` field (`Hand`, `Field`) must run on their own line —
   in `s.Act(new … { CardId = Hand(…) })` C# reads `s` before `Hand` replaces it.
+- **Namespace trap in MagicCore.Tests:** `Ai.` and `Cards.` resolve to the test project's own folders.
+  Use a `using`, or `global::MagicCore.…`.
 
 ## Known ceilings
 

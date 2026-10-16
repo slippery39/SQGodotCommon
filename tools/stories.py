@@ -1,0 +1,183 @@
+"""Builds the story index and checks every story — the "All stories" table is generated, never hand-edited.
+
+    python tools/stories.py              # rewrite the table in docs/stories/README.md, report problems
+    python tools/stories.py --check      # exit 1 if the table is stale or a story is broken (for /pre-commit)
+    python tools/stories.py --selftest   # prove the checks catch what they claim to
+
+A story is one file in docs/stories/ with a header (id, title, status, area, created) — see the
+README there for the whole system. What is checked, because each one drifts silently:
+- the id is AREA-N, its area matches the prefix, and its file name starts with it
+- no two stories share an id (two sessions each taking "the next number")
+- a task id inside a story (`- [ ] AI-1.2 …`) is that story's own, and appears once
+- every story the README's "Next up" names exists and is still open
+"""
+
+import contextlib
+import io
+import re
+import sys
+import tempfile
+from pathlib import Path
+
+STORIES = Path(__file__).resolve().parent.parent / "docs" / "stories"
+STATUSES = ["in-progress", "ready", "backlog", "done", "dropped"]
+OPEN = {"in-progress", "ready", "backlog"}
+FIELDS = ("id", "title", "status", "area", "created")
+NOT_STORIES = ("README.md", "_template.md")
+BEGIN, END = "<!-- stories:begin -->", "<!-- stories:end -->"
+ID = re.compile(r"^([A-Z]+)-(\d+)$")
+TASK = re.compile(r"^\s*[-*] \[[ xX]\] ([A-Z]+-\d+\.\d+)\b", re.M)
+
+
+def read(path):
+    # utf-8-sig: a Windows editor that writes a BOM must not make the header unreadable
+    return path.read_text(encoding="utf-8-sig").replace("\r\n", "\n")
+
+
+def header(text):
+    """The `key: value` lines between the opening `---` pair. A comment needs two spaces before its
+    `#` (the template's `status: backlog  # …`), so a title like "Fix issue #12" survives."""
+    if not text.startswith("---\n"):
+        return {}
+    block = text[4:].split("\n---\n", 1)[0]
+    pairs = (line.split(":", 1) for line in block.splitlines() if ":" in line)
+    return {k.strip(): re.split(r"\s{2,}#", v)[0].strip() for k, v in pairs}
+
+
+def load(folder):
+    """Every story as (path, header, text)."""
+    paths = [p for p in sorted(folder.glob("*.md")) if p.name not in NOT_STORIES]
+    return [(p, header(t), t) for p, t in ((p, read(p)) for p in paths)]
+
+
+def next_up(readme):
+    """The first story id on each list line of the `## Next up` section."""
+    if "## Next up" not in readme:
+        return []
+    section = readme.split("## Next up", 1)[1].split("\n## ", 1)[0]
+    lines = [l for l in section.splitlines() if re.match(r"\s*(\d+\.|[-*])\s", l)]
+    return [m[0] for m in (re.search(r"\b[A-Z]+-\d+\b", l) for l in lines) if m]
+
+
+def problems(stories, readme):
+    out, seen, status = [], {}, {}
+    for path, h, text in stories:
+        missing = [k for k in FIELDS if not h.get(k)]
+        if missing:
+            out.append(f"{path.name}: the header lacks {', '.join(missing)}")
+            continue
+        sid, m = h["id"], ID.match(h["id"])
+        if not m:
+            out.append(f"{path.name}: id {sid!r} is not AREA-N")
+            continue
+        if h["area"] != m[1]:
+            out.append(f"{path.name}: area {h['area']} is not the id's prefix {m[1]}")
+        if h["status"] not in STATUSES:
+            out.append(f"{path.name}: status {h['status']!r} is not one of {', '.join(STATUSES)}")
+        if not (path.stem == sid or path.stem.startswith(sid + "-")):
+            out.append(f"{path.name}: the file name must start with its id {sid}")
+        if sid in seen:
+            out.append(f"{sid} is used by both {seen[sid]} and {path.name}")
+        seen[sid], status[sid] = path.name, h["status"]
+        tasks = TASK.findall(text)
+        out += [f"{path.name}: task {t} does not belong to {sid}" for t in tasks if not t.startswith(sid + ".")]
+        out += [f"{path.name}: task {t} appears twice" for t in sorted({t for t in tasks if tasks.count(t) > 1})]
+    for sid in next_up(readme):
+        if sid not in status:
+            out.append(f"Next up names {sid}, which has no story")
+        elif status[sid] not in OPEN:
+            out.append(f"Next up names {sid}, which is {status[sid]}")
+    return out
+
+
+def table(stories):
+    listed = [(p, h) for p, h, _ in stories if ID.match(h.get("id", "")) and h.get("status") in STATUSES]
+    key = lambda s: (STATUSES.index(s[1]["status"]), ID.match(s[1]["id"])[1], int(ID.match(s[1]["id"])[2]))
+    title = lambda h: h.get("title", "").replace("|", "\\|")
+    rows = [f"| [{h['id']}]({p.name}) | {title(h)} | {h['status']} |" for p, h in sorted(listed, key=key)]
+    # Every parseable id counts, broken status or not — or a typo'd story's number is offered again.
+    free = {}
+    for m in (ID.match(h.get("id", "")) for _, h, _ in stories):
+        if m:
+            free[m[1]] = max(free.get(m[1], 0), int(m[2]) + 1)
+    nxt = " · ".join(f"{a}-{n}" for a, n in sorted(free.items()))
+    head = ["<!-- generated by python tools/stories.py — do not edit by hand -->", "", "| ID | Story | Status |", "|---|---|---|"]
+    return "\n".join([BEGIN, *head, *rows, "", f"Next free id per area: {nxt}", END])
+
+
+def with_table(readme, block):
+    if BEGIN not in readme or END not in readme:
+        raise SystemExit(f"README.md needs the markers {BEGIN} and {END}")
+    before, rest = readme.split(BEGIN, 1)
+    return before + block + rest.split(END, 1)[1]
+
+
+def main(argv, folder=STORIES):
+    readme_path = folder / "README.md"
+    if not readme_path.exists():
+        print(f"no {readme_path} on this branch - nothing to check")  # a branch not migrated yet
+        return 0
+    readme, stories = read(readme_path), load(folder)
+    fresh = with_table(readme, table(stories))
+    found = problems(stories, readme)
+    if "--check" in argv:
+        if fresh != readme:
+            found.append("README.md's table is stale: run python tools/stories.py")
+    elif fresh != readme:
+        with open(readme_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(fresh)
+    for p in found:
+        print(p)
+    return 1 if found else 0
+
+
+def selftest():
+    with tempfile.TemporaryDirectory() as d:
+        f = Path(d)
+
+        def story(name, task=None, **h):
+            h = {"title": "t", "status": "ready", "created": "2026-10-16", **h}
+            body = "\n".join(f"{k}: {v}" for k, v in h.items())
+            (f / name).write_text(f"---\n{body}\n---\n\n## Tasks\n\n- [ ] {task or h['id'] + '.1'} a\n", encoding="utf-8")
+
+        story("AI-1-a.md", id="AI-1", area="AI")
+        story("AI-1-b.md", id="AI-1", area="AI")  # a duplicate id
+        story("MC-2-x.md", id="MC-3", area="MC")  # the file name is another id's
+        story("TBL-1.md", id="TBL-1", area="AI")  # the area is not the prefix
+        story("LIM-1.md", id="LIM-1", area="LIM", task="AI-1.1")  # a task borrowed from another story
+        story("DEV-1.md", id="DEV-1", area="DEV", status="done")
+        story("DEV-2.md", id="DEV-2", area="DEV", task="LIM-1.1", title="Fix #12 | pipe")  # an indented `* [X]` foreign task; a # and a | in the title
+        (f / "DEV-2.md").write_text(read(f / "DEV-2.md").replace("- [ ]", "  * [X]"), encoding="utf-8")
+        story("DEV-3.md", id="DEV-3", area="DEV", status="in progress")  # a typo'd status still holds its number
+        (f / "MC-9.md").write_text("﻿" + read(f / "MC-2-x.md").replace("MC-3", "MC-9"), encoding="utf-8")  # a BOM
+        readme = f"## Next up\n\n1. **AI-9** — gone\n2. **DEV-1** — closed\n\n## All stories\n\n{BEGIN}\n{END}\n"
+        (f / "README.md").write_text(readme, encoding="utf-8")
+
+        def run(argv):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                code = main(argv, f)
+            return code, out.getvalue()
+
+        code, found = run(["--check"])
+        for expected in ("AI-1 is used by both", "MC-2-x.md: the file name", "TBL-1.md: area AI",
+                         "task AI-1.1 does not belong to LIM-1", "AI-9, which has no story", "DEV-1, which is done",
+                         "DEV-2.md: task LIM-1.1", "DEV-3.md: status 'in progress'", "README.md's table is stale"):
+            assert expected in found, f"missed {expected!r} in:\n{found}"
+        assert "MC-9" not in found, f"a BOM broke the header:\n{found}"
+        assert code == 1 and read(f / "README.md") == readme, "--check never writes"
+        run([])
+        written = read(f / "README.md")
+        assert "README.md's table is stale" not in run(["--check"])[1], "a freshly written table is not stale"
+        assert "| [AI-1](AI-1-a.md) | t | ready |" in written and "| Fix #12 \\| pipe |" in written
+        assert "Next free id per area: AI-2 · DEV-4" in written
+        assert written.index("AI-1-a.md") < written.index("DEV-1.md"), "open stories list before done ones"
+        empty = Path(d) / "unmigrated"
+        empty.mkdir()
+        assert main(["--check"], empty) == 0, "a branch with no stories passes"
+    print("selftest ok")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(selftest() if "--selftest" in sys.argv else main(sys.argv[1:]))

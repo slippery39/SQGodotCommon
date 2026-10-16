@@ -6,8 +6,8 @@ paths:
 
 # MagicTable — the Godot front end for MagicCore
 
-Arena's layout in the locked Arcane look (`MtgVisualDesign.md`), PC first. Interview answers that
-shaped it are in the memory `project_mtg_real.md`; the build plan in `HANDOFF-MtgReal.md` §4.
+Arena's layout in the locked Arcane look (`MtgVisualDesign.md`), PC first. The interview answers
+that shaped it, and what was built, are story TBL-1 (`docs/stories/`); playtesting is TBL-2.
 
 ```
 MagicTable/

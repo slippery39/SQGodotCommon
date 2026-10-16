@@ -37,6 +37,14 @@ is stale while curl's is fine; the certifi bundle works. Re-runs skip files alre
 `MagicTable/*` (45 MB) is excluded from both Android presets, but `export_presets.cfg` is
 **gitignored** — a fresh clone ships it in the APK until the filter is re-added there.
 
+## Stories (`docs/stories/`)
+
+```
+python tools/stories.py              # rebuild the "All stories" table in docs/stories/README.md, report problems
+python tools/stories.py --check      # exit 1 if the table is stale or a story is broken (/pre-commit)
+python tools/stories.py --selftest   # prove the checks catch what they claim to
+```
+
 ## MagicCore card work — the tools (`/card-batch` says when)
 
 ```

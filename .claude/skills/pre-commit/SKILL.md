@@ -66,6 +66,9 @@ Some of them are mechanical — grep the diff rather than reading for them:
 - **Docs in the same step:** a new file in a project with a source map must appear in that
   project's `CLAUDE.md` map; a new console prompt must update `RunningSimulations.md`; a new
   command belongs in `Commands.md`.
+- **Stories:** the change's story (`docs/stories/`) says what the change did — tasks ticked, new
+  decisions dated, changed requirements edited and logged, Next current. Run
+  `python tools/stories.py --check`. Propose a commit subject that starts with the story ID.
 - **Leftovers:** temp probes, `TmpProbe.cs`-style files, debug prints, files in `shots/`,
   `sim_results/` or the scratchpad that slipped into the change.
 

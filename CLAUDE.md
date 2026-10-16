@@ -22,8 +22,7 @@ SQGodotCommon/
     └── MagicTable/                  # MagicCore front end (Arena layout, Arcane look) — PC only
 ```
 
-The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only through
-`MtgGameManager` (plain C#, no Godot types).
+The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only through `MtgGameManager` (plain C#, no Godot types).
 
 ## Where the detail lives
 
@@ -31,6 +30,7 @@ The MTG game is played in `SQGodotCommon/MtgGame/`. It talks to the engine only 
 
 | Kind | Location | Loads |
 |---|---|---|
+| **The work: what is being built, its requirements, decisions, tasks and next step** — one story each, referred to by ID (`AI-1`, task `AI-1.2`) | `docs/stories/` — "Next up" and every story in its `README.md` | at the start of every task; the story before working on it |
 | Subsystem rules | `.claude/rules/*.md` | automatically, when you open a file the rule's `paths:` matches |
 | Measured results | `docs/findings/*.md` | never — read when a change touches what a run measured |
 | Procedures | skills (`/pre-commit` before any commit; `/add-card` (MtgCore), `/card-batch` (MagicCore), `/ai-inspect`, `/regen-card-values`; art and look: `/match-mockup`, `/generate-art`, `/add-icon`) | when invoked or relevant |
@@ -52,6 +52,7 @@ C# on .NET. Windows.
 - **Game logic and UI logic stay completely separated; no game logic in presentation layers**
 - Small, reviewable steps; never large all-at-once changes
 - **Never assume on vague requirements — confirm before implementing**
+- **Keep the story current, in the same step as the work** (`docs/stories/README.md` says how). A requirement added, changed or dropped, a decision taken, a task done, a result measured — the story says so before the step ends. Commit subjects start with its ID. No handoff files: the story's Next section is the handoff.
 - **Verify a primitive fires before relying on it.** An inert card throws no error; four silent no-op engine bugs were found only by testing the consequence.
 - **"It looks a bit off" is a bug report, never about the look.** Text that looked too small was empty; a cramped badge showed the WRONG number. Find the cause before fixing the resemblance.
 - **Check `git status` before writing a file you believe is new.** A `cat >` over an existing test file destroyed eight tests; the only tell was the count going DOWN after tests were added.
@@ -85,11 +86,8 @@ output rather than editing the list from memory.
 
 **The set menu is 1=LEG 2=CSC 3=CMB 4=DES 5=ALL.** It has shifted TWICE — CMB was inserted, then HLM
 retired — so any piped console command written against either older numbering runs a different set
-silently. **Read the menu; never hardcode the index.**
-
-One draftable set exists: **Core Set Cube (CSC)**, 335 cards, what the Godot draft mode plays. **CMB**
-(Combo Proving Ground) is a registered test instrument with no trained model, meant to be played
-inside DES rather than alone. **HLM is retired.** Per-set detail is in `.claude/rules/mtg-cards.md`.
+silently. **Read the menu; never hardcode the index.** The sets — CSC is the one draftable set, CMB a
+test instrument, HLM retired — are in `.claude/rules/mtg-cards.md`.
 
 ## Colours
 
@@ -176,6 +174,7 @@ added or removed.
 | A command and its traps | `Commands.md` |
 | A repeatable procedure | a skill under `.claude/skills/` |
 | "Fine now, revisit later", with costed options | `DesignNotes.md` |
+| What a piece of work needs, decided, did and does next | its story in `docs/stories/` — never a handoff file |
 
 **Budget: 200 lines per `CLAUDE.md`.** A `PostToolUse` hook (`.claude/check-docs.py`) warns when one
 goes over. Over budget means content is in the wrong file, not that the budget is wrong — move it
