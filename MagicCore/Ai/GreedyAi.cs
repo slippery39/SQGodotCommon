@@ -14,7 +14,7 @@ namespace MagicCore.Ai;
 /// turn, hold up mana or bluff, and a tapped dual and an untapped basic play as equals — it never
 /// asks "do I need this mana now". The real search comes once games run in bulk (see MagicCore/CLAUDE.md).
 /// </summary>
-public sealed class GreedyAi(int playerId) : IAi
+public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 {
 	public int PlayerId { get; } = playerId;
 
@@ -139,5 +139,6 @@ public sealed class GreedyAi(int playerId) : IAi
 			.Select(c => c.Id);
 	}
 
-	double Evaluate(GameState s) => Evaluator.Evaluate(s, PlayerId);
+	/// <summary>Null held values — GreedyAi's own play — is the flat price; the search passes its own.</summary>
+	double Evaluate(GameState s) => Evaluator.Evaluate(s, PlayerId, held);
 }

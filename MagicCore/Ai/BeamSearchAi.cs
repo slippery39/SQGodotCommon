@@ -44,13 +44,28 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool CommitPlans = true,
 		double DivergenceThreshold = 5.0,
 		Rollout.Settings? RolloutSettings = null
-	);
+	)
+	{
+		/// <summary>The search with held cards priced by their measured value (story AI-1).</summary>
+		public const double HeldFraction = 0.5;
+
+		public Settings WithHeld(double fraction = HeldFraction) =>
+			this with
+			{
+				RolloutSettings = (RolloutSettings ?? Rollout.Default) with
+				{
+					Held = HeldValues.Fra(fraction),
+				},
+			};
+	}
 
 	/// <summary>A rollout at or above this has found a win; a decayed win is still far above it.</summary>
 	public const double WinThreshold = 2_500;
 
 	readonly Settings options = settings ?? new();
-	readonly GreedyAi greedy = new(playerId);
+
+	// Mulligans and the choices of several picks: GreedyAi, pricing held cards as the search does.
+	readonly GreedyAi greedy = new(playerId, (settings?.RolloutSettings ?? Rollout.Default).Held);
 
 	public int PlayerId { get; } = playerId;
 
@@ -139,7 +154,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <summary>Each child of a line, rolled out in parallel into its own slot — the order threads finish in never reaches a decision.</summary>
 	List<Node> Expand(Node parent, GameState at, IReadOnlyList<Decision> children, int horizon)
 	{
-		var expected = parent.Expected.Add(Evaluator.Evaluate(at, PlayerId));
+		var expected = parent.Expected.Add(Evaluator.Evaluate(at, PlayerId, RolloutSettings.Held));
 		var nodes = new Node[children.Count];
 		Parallel.For(
 			0,
@@ -170,7 +185,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				return (s, true);
 			var who = s.DecidingPlayerId();
 			if (who != PlayerId)
-				s = Rollout.OpponentStep(s, who);
+				s = Rollout.OpponentStep(s, who, RolloutSettings);
 			else if (!s.IsWaitingForChoice && Stops.TopOfStackControllerId(s) == PlayerId)
 				s = s.Act(new PassPriorityAction { PlayerId = who });
 			else
@@ -226,7 +241,11 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 						i,
 						Score: IsPass(c)
 							? double.MaxValue
-							: Evaluator.Evaluate(Lookahead.Settle(Apply(s, c)), PlayerId)
+							: Evaluator.Evaluate(
+								Lookahead.Settle(Apply(s, c)),
+								PlayerId,
+								RolloutSettings.Held
+							)
 					)
 			)
 			.OrderByDescending(x => x.Score)
@@ -291,7 +310,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		var found =
 			s.GetGame().TurnNumber == planTurn
 			&& (top == 0 || top == PlayerId)
-			&& Math.Abs(Evaluator.Evaluate(s, PlayerId) - expected) <= options.DivergenceThreshold
+			&& Math.Abs(Evaluator.Evaluate(s, PlayerId, RolloutSettings.Held) - expected)
+				<= options.DivergenceThreshold
 				? Refind(s, next)
 				: null;
 		if (found is null)

@@ -34,7 +34,8 @@ public static class Rollout
 		int LookaheadTurns = 2,
 		int ActionsPerTurn = 1,
 		double TerminalDiscount = 0.95,
-		int DecisionLimit = 2_000
+		int DecisionLimit = 2_000,
+		HeldValues? Held = null
 	);
 
 	public static readonly Settings Default = new();
@@ -64,16 +65,16 @@ public static class Rollout
 			var who = s.DecidingPlayerId();
 			if (who != me)
 			{
-				s = OpponentStep(s, who);
+				s = OpponentStep(s, who, settings);
 				continue;
 			}
 			if (s.GetPendingChoice() is { } choice)
 			{
-				s = s.Choose(Answer(s, choice, who));
+				s = s.Choose(Answer(s, choice, who, settings));
 				continue;
 			}
 			var play = !(landDone && plays >= settings.ActionsPerTurn)
-				? OurPlay(s, me, plays >= settings.ActionsPerTurn, ref landDone)
+				? OurPlay(s, me, plays >= settings.ActionsPerTurn, ref landDone, settings)
 				: null;
 			if (play is not null)
 			{
@@ -84,7 +85,7 @@ public static class Rollout
 			s = Pass(s, who); // nothing worth playing
 		}
 
-		var score = Evaluator.Evaluate(s, me);
+		var score = Evaluator.Evaluate(s, me, settings.Held);
 		return s.IsOver()
 			? score * Math.Pow(settings.TerminalDiscount, s.GetGame().TurnNumber - rootTurn)
 			: score;
@@ -95,8 +96,10 @@ public static class Rollout
 	/// attacks and blocks judged, every other choice the cheap answer, every priority passed). The
 	/// search answers the opponent through here too, so its tree and its rollouts agree.
 	/// </summary>
-	public static GameState OpponentStep(GameState s, int who) =>
-		s.GetPendingChoice() is { } choice ? s.Choose(Answer(s, choice, who)) : Pass(s, who);
+	public static GameState OpponentStep(GameState s, int who, Settings settings) =>
+		s.GetPendingChoice() is { } choice
+			? s.Choose(Answer(s, choice, who, settings))
+			: Pass(s, who);
 
 	static GameState Pass(GameState s, int who) =>
 		s.Act(
@@ -111,7 +114,13 @@ public static class Rollout
 	/// a setup play scores flat, and MtgSimulator found strict improvement stops at exactly the play a
 	/// rollout exists to see. Never responds.
 	/// </summary>
-	static GameAction? OurPlay(GameState s, int me, bool playsSpent, ref bool landDone)
+	static GameAction? OurPlay(
+		GameState s,
+		int me,
+		bool playsSpent,
+		ref bool landDone,
+		Settings settings
+	)
 	{
 		if (!Priority.AtSorcerySpeed(s, me))
 			return null;
@@ -124,9 +133,9 @@ public static class Rollout
 		var candidates = moves.Where(a => a is not PassPriorityAction).ToList();
 		if (candidates.Count == 0)
 			return null;
-		var before = Evaluator.Evaluate(s, me);
+		var before = Evaluator.Evaluate(s, me, settings.Held);
 		var (move, score) = candidates
-			.Select(a => (a, Evaluator.Evaluate(Lookahead.Settle(s.Act(a)), me)))
+			.Select(a => (a, Evaluator.Evaluate(Lookahead.Settle(s.Act(a)), me, settings.Held)))
 			.MaxBy(x => x.Item2);
 		return score >= before ? move : null;
 	}
@@ -138,14 +147,16 @@ public static class Rollout
 	/// attack that only works together — two 3/3s into one blocker for lethal — is never found.
 	/// MtgSimulator's FindLethalAttacks covers that before the search; port it if rollouts need it.
 	/// </summary>
-	static IEnumerable<int> Answer(GameState s, ChoiceAction choice, int who) =>
+	static IEnumerable<int> Answer(GameState s, ChoiceAction choice, int who, Settings settings) =>
 		choice switch
 		{
 			DeclareAttackerChoice or DeclareBlockerChoice =>
 			[
 				choice
 					.Options.Select(o => o.Id)
-					.MaxBy(id => Evaluator.Evaluate(Lookahead.Settle(s.Choose([id])), who)),
+					.MaxBy(id =>
+						Evaluator.Evaluate(Lookahead.Settle(s.Choose([id])), who, settings.Held)
+					),
 			],
 			_ => Lookahead.QuickAnswer(s, choice),
 		};

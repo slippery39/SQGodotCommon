@@ -67,12 +67,44 @@ public class AiPositionTests
 	public void RankRat_Control_GreedyAiStillMakesTheBadPlay() =>
 		Assert.That(KillsTheRatWhileItIsNotAttacking(new GreedyAi(me)), Is.True);
 
-	[
-		Test,
-		Ignore(
-			"AI-1: the search fires it too — a held card scores only Evaluator's flat hand value, and the rollout's opponent never casts a better target"
-		)
-	]
-	public void RankRat_TheSearch_HoldsItsRemoval() =>
-		Assert.That(KillsTheRatWhileItIsNotAttacking(new BeamSearchAi(me)), Is.False);
+	// Holding must not become hoarding: against a 5/5 the removal is worth spending.
+	[Test]
+	public void ABigThreat_TheSearchWithHeldValues_SpendsItsRemoval()
+	{
+		var state = RankRatPosition();
+		(state, _) = TestGames.Put(
+			state,
+			them,
+			TestGames.Creature("Big", "5/5"),
+			ZoneType.Battlefield
+		);
+		var bigDied = false;
+		TestGames.PlayAis(
+			state,
+			s.GetGame().TurnNumber + 1,
+			new BeamSearchAi(me, new BeamSearchAi.Settings().WithHeld()),
+			new GreedyAi(them),
+			(_, after) =>
+				bigDied |= !after.CardsIn(them, ZoneType.Battlefield).Any(c => c.Name == "Big")
+		);
+
+		Assert.That(bigDied);
+	}
+
+	// The A/B control: the SAME search without held values still makes the bad play (AI-2.6) — so it is
+	// the held values that keep the removal in hand below, nothing else.
+	[Test]
+	public void RankRat_Control_ThePlainSearchStillMakesTheBadPlay() =>
+		Assert.That(KillsTheRatWhileItIsNotAttacking(new BeamSearchAi(me)), Is.True);
+
+	// The plain search fired it too (a held card was only the flat 1.2; AI-2.6). With held cards priced
+	// by their measured value (AI-1), Prophesied End is worth more in hand than the Rat is dead.
+	[Test]
+	public void RankRat_TheSearchWithHeldValues_HoldsItsRemoval() =>
+		Assert.That(
+			KillsTheRatWhileItIsNotAttacking(
+				new BeamSearchAi(me, new BeamSearchAi.Settings().WithHeld())
+			),
+			Is.False
+		);
 }

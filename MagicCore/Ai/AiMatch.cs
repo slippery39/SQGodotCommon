@@ -25,6 +25,9 @@ public static class AiMatch
 			["greedy"] = (player, _) => new GreedyAi(player),
 			["random"] = (player, seed) => new RandomAi(player, seed * 31 + player),
 			["beam"] = (player, _) => new BeamSearchAi(player),
+			// AI-1: held cards priced by their measured value; AI-1.9 measures it against "beam".
+			["beam-held"] = (player, _) =>
+				new BeamSearchAi(player, new BeamSearchAi.Settings().WithHeld()),
 		};
 
 	public static IReadOnlyCollection<string> Names => Makers.Keys;

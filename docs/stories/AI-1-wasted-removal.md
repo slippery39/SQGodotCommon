@@ -65,7 +65,7 @@ rollout. AI-3's richer opponent models are the other half of the cure.
       at the end of its turn (findings: why not a rollout); tests revert-checked
 - [x] AI-1.7 The table: `MagicConsole -- --card-values` writes a TRACKED file the Godot table reads
       too; regenerate when the evaluator, the rollout or a card changes (Commands.md)
-- [ ] AI-1.8 Held value in the evaluator: a non-land card in hand is worth max(flat, fraction ×
+- [x] AI-1.8 Held value in the evaluator: a non-land card in hand is worth max(flat, fraction ×
       measured) — a setting; GreedyAi unchanged, only the search uses it. Un-ignore the Rank Rat test
 - [ ] AI-1.9 Measure: the search with values vs without, 72 games, fraction swept; land drops and
       creature casts must not suffer (MtgSimulator's hand term failed exactly there); default if not worse
@@ -74,12 +74,15 @@ rollout. AI-3's richer opponent models are the other half of the cure.
 
 ## Next
 
-Next: **AI-1.8**, held values: `CardValues.Fra[name]` gives each card's measured value (parsed once). The test
-to make pass is `AiPositionTests.RankRat_TheSearch_HoldsItsRemoval` (remove its `[Ignore]`);
-its control, `RankRat_Control_GreedyAiStillMakesTheBadPlay`, says the position still provokes the
-play — if (a) changes GreedyAi too, the control's job is done: update it, don't delete the evidence.
-Then read `MagicCore/Ai/Evaluator.cs`, `MagicCore/Ai/Rollout.cs` and `docs/findings/magic-ai.md`,
-and measure with `--match` (`--sequential` for time) before claiming anything.
+Next: **AI-1.9**, the measurement: `--match=beam-held,beam --games=72 --sequential` (~15 min a run),
+then the fraction swept (`BeamSearchAi.Settings.WithHeldValues(fraction)`); check land drops and
+creature casts don't fall (MtgSimulator's hand term failed there — read decisions and actions per
+game beside the win rate). The position tests that must stay green at any fraction chosen:
+`AiPositionTests.RankRat_TheSearchWithHeldValues_HoldsItsRemoval` and
+`ABigThreat_TheSearchWithHeldValues_SpendsItsRemoval`; their controls,
+`RankRat_Control_GreedyAiStillMakesTheBadPlay` and `RankRat_Control_ThePlainSearchStillMakesTheBadPlay`,
+say the position still provokes the play and that held values are what stop it. Record the
+runs in `docs/findings/magic-ai.md`; make held values the search's default only if it doesn't lose.
 
 ## Log
 
@@ -102,6 +105,27 @@ and measure with `--match` (`--sequential` for time) before claiming anything.
   `.gitattributes`; one embedded-resource helper (`CardDataSet.ResourceText`) instead of two
   hand-built names; the API is FRA-only, as the measuring is; the console checks it is writing into
   the repository's Sets folder; the load test checks the round trip, not one card's status.
+- 2026-10-16: AI-1.8 done — `Evaluator.Evaluate(s, player, HeldValues?)`: our own non-land cards in
+  hand at max(flat 1.2, fraction × measured value), the opponent's (hidden) at the average held value
+  of a measured card — so "they draw a card" costs on the same scale. Null keeps the flat price:
+  GreedyAi and the sandbox pass none (GreedyAi's fingerprint and the table unchanged). The search
+  carries it in `Rollout.Settings.Held`, so tree, rollouts, plan checks and the opponent step all
+  evaluate alike; `BeamSearchAi.Settings.WithHeldValues()` (fraction 0.5) and `--match=beam-held`.
+  **The Rank Rat test passes** (un-skipped; at fraction 0 it fails again — revert-checked), and a new
+  position checks holding isn't hoarding: against a 5/5 the removal is spent. Default stays OFF until
+  AI-1.9 measures it.
+- 2026-10-16: /pre-commit fixes to AI-1.8 — the opponent's hand was not blind (their lands still
+  priced 0.3, their spells as unknown): with held values every hidden card now gets ONE price, a
+  limited deck's share of lands (17/40) at the land price and the rest at the average held spell;
+  the search's internal GreedyAi (mulligans, choices of several picks — a discard) priced flat, so
+  GreedyAi takes the same optional held values (off by default: its fingerprint holds); `HeldValues`
+  is a class (a record's `with` copy kept a stale blind price); a missing table throws instead of
+  silently pricing everything flat; settings compose (`new Settings().WithHeld()`). Controls: the
+  PLAIN search still kills the Rat (so the held values are what hold it), and at fraction 2.0 the 5/5
+  survives (the hoarding test can fail) — revert-checked, as is the blind hand. Not pinned by a test:
+  the multi-pick path and the missing-table throw. **For AI-1.9:** the plan's divergence threshold
+  (5.0) was tuned for flat prices; held values move the score more per card, so watch time per
+  decision for plans being dropped more often.
 - 2026-10-16: **the search wastes the removal too.** In the rebuilt position both GreedyAi and
   BeamSearchAi cast Prophesied End on the non-attacking Rat. By the evaluator: casting nets about +2
   (the Rat ~4.5 gone, −1.2 for their card, −1.2 for ours) while holding is worth the flat 1.2 of a
