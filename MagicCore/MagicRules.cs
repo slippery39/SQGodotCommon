@@ -279,20 +279,26 @@ public static class MagicRules
 	public static ImmutableList<GameAction> DistinctMoves(
 		this GameState s,
 		IEnumerable<GameAction> actions
-	) =>
-		actions
-			.DistinctBy(a =>
-				a switch
-				{
-					PlayLandAction p => $"land|{Identity(s, p.CardId)}",
-					CastSpellAction c =>
-						$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}",
-					ActivateAbilityAction activate =>
-						$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}",
-					_ => (object)a,
-				}
-			)
-			.ToImmutableList();
+	) => actions.DistinctBy(a => s.MoveKey(a)).ToImmutableList();
+
+	/// <summary>
+	/// What makes two moves the SAME move: the card (a permanent by id, elsewhere any copy in the same
+	/// zone), X, targets, modes and what a cost takes. DistinctMoves groups by it, and the search AI
+	/// re-finds a planned move by it — anything that tells two legal moves apart must be in it, or a
+	/// plan for "X=4" is replayed as X=0 (MtgSimulator shipped exactly that bug).
+	/// </summary>
+	public static object MoveKey(this GameState s, GameAction a) =>
+		a switch
+		{
+			PlayLandAction p => $"land|{Identity(s, p.CardId)}",
+			CastSpellAction c =>
+				$"cast|{Identity(s, c.CardId)}|{c.X}|{string.Join(",", c.Targets)}|{string.Join(",", c.Modes)}|{Fodder(s, c.SacrificeId)}|{Fodder(s, c.DiscardId)}|{Fodder(s, c.BeholdId)}|{c.WithoutPayingManaCost}",
+			ActivateAbilityAction activate =>
+				$"activate|{Identity(s, activate.CardId)}|{activate.AbilityIndex}|{string.Join(",", activate.Targets)}|{Fodder(s, activate.SacrificeId)}|{Fodder(s, activate.DiscardId)}|{Fodder(s, activate.ExileId)}",
+			ActivateLoyaltyAction loyalty =>
+				$"loyalty|{loyalty.CardId}|{loyalty.AbilityIndex}|{loyalty.X}|{string.Join(",", loyalty.Targets)}",
+			_ => a, // the rest have no collection fields, so a record's own equality is the identity
+		};
 
 	/// <summary>Sacrificing one Forest is the same move as sacrificing another.</summary>
 	static string Fodder(GameState s, int id) => id == 0 ? "" : s.GetCard(id).Name;

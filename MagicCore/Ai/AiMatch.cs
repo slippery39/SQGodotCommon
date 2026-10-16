@@ -24,6 +24,7 @@ public static class AiMatch
 		{
 			["greedy"] = (player, _) => new GreedyAi(player),
 			["random"] = (player, seed) => new RandomAi(player, seed * 31 + player),
+			["beam"] = (player, _) => new BeamSearchAi(player),
 		};
 
 	public static IReadOnlyCollection<string> Names => Makers.Keys;
@@ -47,7 +48,9 @@ public static class AiMatch
 		int DecisionsA,
 		int DecisionsB,
 		double SecondsA,
-		double SecondsB
+		double SecondsB,
+		double SlowestA,
+		double SlowestB
 	)
 	{
 		public string DeckOfA => AIsPlayer1 ? Deck1 : Deck2;
@@ -106,6 +109,7 @@ public static class AiMatch
 		};
 		var decisions = new Dictionary<int, int> { [aSeat] = 0, [bSeat] = 0 };
 		var ticks = new Dictionary<int, long> { [aSeat] = 0, [bSeat] = 0 };
+		var slowest = new Dictionary<int, long> { [aSeat] = 0, [bSeat] = 0 };
 
 		for (var i = 0; i < DecisionLimit && !s.IsOver(); i++)
 		{
@@ -115,7 +119,9 @@ public static class AiMatch
 			var who = s.DecidingPlayerId();
 			var start = Stopwatch.GetTimestamp();
 			s = ais[who].Decide(s).State;
-			ticks[who] += Stopwatch.GetTimestamp() - start;
+			var took = Stopwatch.GetTimestamp() - start;
+			ticks[who] += took;
+			slowest[who] = Math.Max(slowest[who], took);
 			decisions[who]++;
 		}
 
@@ -133,7 +139,9 @@ public static class AiMatch
 			decisions[aSeat],
 			decisions[bSeat],
 			(double)ticks[aSeat] / Stopwatch.Frequency,
-			(double)ticks[bSeat] / Stopwatch.Frequency
+			(double)ticks[bSeat] / Stopwatch.Frequency,
+			(double)slowest[aSeat] / Stopwatch.Frequency,
+			(double)slowest[bSeat] / Stopwatch.Frequency
 		);
 	}
 
@@ -199,7 +207,7 @@ public static class AiMatch
 				"\n",
 				$"{A} vs {B}: {Games.Count} games ({Pairings} deck pairings x {Seeds} seeds x both seats), {Elapsed.TotalSeconds:0.0} s",
 				$"  {a} {WinRateA * 100:0.0}% ± {StandardError * 100:0.0}pp (1 SE) — wins {a} {Games.Count(g => g.Winner == 1)}, {b} {Games.Count(g => g.Winner == 2)}, draws {Games.Count(g => g.Winner == 0)}",
-				$"  time per decision: {a} {Ms(secA, decA)}, {b} {Ms(secB, decB)}",
+				$"  time per decision: {a} {Ms(secA, decA)} (slowest {Games.Max(g => g.SlowestA) * 1000:0} ms), {b} {Ms(secB, decB)} (slowest {Games.Max(g => g.SlowestB) * 1000:0} ms)",
 				$"  per game: decisions {a} {(double)decA / Games.Count:0}, {b} {(double)decB / Games.Count:0}; turns {Games.Average(g => g.Turns):0.0}",
 				$"  {a}'s record by its deck (W-L-D): {string.Join(", ", byDeck)}",
 				unfinished > 0

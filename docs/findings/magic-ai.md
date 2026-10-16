@@ -100,3 +100,25 @@ Where it goes, per rollout (a temporary probe, Release, not committed):
 
 **Attack declarations are the first lever** if rollouts must get cheaper: ~45% of the time for ~4
 decisions. The passes are the engine's own floor (~0.09 ms each).
+
+## The search AI against GreedyAi (2026-10-16, AI-2.5)
+
+`BeamSearchAi` at its defaults (depth 3, beam 4, branching 16 / 5, budget 200 rollouts, plans
+committed), Release, `--match=beam,greedy --games=72 --sequential` (games one at a time; each
+decision's rollouts still run in parallel across 16 cores):
+
+| Build | Result (1 SE over mirror pairs) | Time per decision: mean / slowest | By the search's deck (W-L) |
+|---|---|---|---|
+| first cut | **55–17, 76.4% ± 4.2pp** | 206 ms / 4 695 ms | White-Black 22–2, Red-Green 18–6, Jace 15–9 |
+| after /pre-commit's fixes | **54–18, 75.0% ± 4.2pp** | **177 ms / 3 426 ms** | White-Black 22–2, Red-Green 18–6, Jace 14–10 |
+
+- **The search is clearly stronger** — six standard errors above even. The fixes (plans kept in step
+  with the real game, plans dropped when an opponent's spell is on the stack, one ply per priority
+  window on their turn) left strength the same within noise and cut time by 14%.
+- **The Jace deck wins 14–10 in the search's hands** against GreedyAi, where GreedyAi piloting it
+  against itself went 2–22: one-ply play was the problem, not (only) the deck.
+- **The mean fits a 1-second move; the slowest does not** (3.4 s). The rollout budget is checked
+  between levels, so one wide level can overrun it. On the table this needs a wall-clock cap (AI-2.7);
+  sim runs stay on the deterministic budget.
+- The search makes ~65 decisions a game to GreedyAi's ~52: it reaches more decisions (it keeps more
+  creatures and spells in play), not more forced ones — AutoPass skips those for both.

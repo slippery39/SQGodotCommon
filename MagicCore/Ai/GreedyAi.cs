@@ -48,7 +48,8 @@ public sealed class GreedyAi(int playerId) : IAi
 		return best;
 	}
 
-	IEnumerable<int> Answer(GameState s, ChoiceAction choice)
+	/// <summary>This player's answer to a pending choice. The search AI asks it for the choices it doesn't branch on.</summary>
+	public IEnumerable<int> Answer(GameState s, ChoiceAction choice)
 	{
 		if (choice is ChooseCardsFromHandChoice { PlayerId: var owner } && owner != PlayerId)
 			// You choose from THEIR hand: the priciest (MtgCore's stand-in for the same choice).

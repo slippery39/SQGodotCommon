@@ -18,7 +18,7 @@ namespace MagicCore.Ai;
 ///
 /// The simulated opponent is BoardOnly: it attacks and blocks with its board, never casts and never
 /// plays a land. AI-3 makes that swappable (cast from hand, respond) — the one place it is decided is
-/// the pass for a player who isn't <c>me</c> in <see cref="Score"/>.
+/// <see cref="OpponentStep"/>, which both the rollouts and the search tree go through.
 ///
 /// ponytail: the libraries are read in their REAL order, so a rollout draws the cards really on top
 /// — the AI sees its own future. AI-3 adds "shuffle what the player can't know" as a second mode.
@@ -62,27 +62,26 @@ public static class Rollout
 				(turn, plays, landDone) = (s.GetGame().TurnNumber, 0, false);
 
 			var who = s.DecidingPlayerId();
+			if (who != me)
+			{
+				s = OpponentStep(s, who);
+				continue;
+			}
 			if (s.GetPendingChoice() is { } choice)
 			{
 				s = s.Choose(Answer(s, choice, who));
 				continue;
 			}
-			var play =
-				who == me && !(landDone && plays >= settings.ActionsPerTurn)
-					? OurPlay(s, me, plays >= settings.ActionsPerTurn, ref landDone)
-					: null;
+			var play = !(landDone && plays >= settings.ActionsPerTurn)
+				? OurPlay(s, me, plays >= settings.ActionsPerTurn, ref landDone)
+				: null;
 			if (play is not null)
 			{
 				s = s.Act(play);
 				plays += play is PlayLandAction ? 0 : 1;
 				continue;
 			}
-			// Everyone else — and we, with nothing worth playing — passes. The opponent is BoardOnly.
-			s = s.Act(
-				s.GetGame().Step == Step.PreGame
-					? new KeepHandAction { PlayerId = who }
-					: new PassPriorityAction { PlayerId = who }
-			);
+			s = Pass(s, who); // nothing worth playing
 		}
 
 		var score = Evaluator.Evaluate(s, me);
@@ -90,6 +89,21 @@ public static class Rollout
 			? score * Math.Pow(settings.TerminalDiscount, s.GetGame().TurnNumber - rootTurn)
 			: score;
 	}
+
+	/// <summary>
+	/// One decision of the simulated opponent — the ONE place the opponent model is decided (BoardOnly:
+	/// attacks and blocks judged, every other choice the cheap answer, every priority passed). The
+	/// search answers the opponent through here too, so its tree and its rollouts agree.
+	/// </summary>
+	public static GameState OpponentStep(GameState s, int who) =>
+		s.GetPendingChoice() is { } choice ? s.Choose(Answer(s, choice, who)) : Pass(s, who);
+
+	static GameState Pass(GameState s, int who) =>
+		s.Act(
+			s.GetGame().Step == Step.PreGame
+				? new KeepHandAction { PlayerId = who }
+				: new PassPriorityAction { PlayerId = who }
+		);
 
 	/// <summary>
 	/// Our policy: on our own turn at sorcery speed, the land first, then (unless the turn's plays are

@@ -100,7 +100,7 @@ exactly as MtgCore treats a decision at a turn boundary.
       casts); terminal discount; hidden information through its seam (real order). Measure the cost
       of one rollout — and only then make `Evaluator` cheaper if it shows (the /pre-commit review of
       AI-2.2 noted `CreatureValue` allocates a keyword array per creature and reads toughness 3 times)
-- [ ] AI-2.5 The beam: root = this decision's moves (or a choice's options), expand our decisions to
+- [x] AI-2.5 The beam: root = this decision's moves (or a choice's options), expand our decisions to
       the turn boundary, opponent decisions by the model, prune, branching caps, rollout budget,
       fastest win, pass bias; the committed chain, re-searched on divergence
 - [ ] AI-2.6 Position tests: AI-1's Rank Rat, plus each new bad play
@@ -109,10 +109,10 @@ exactly as MtgCore treats a decision at a turn boundary.
 
 ## Next
 
-Next task: **AI-2.5**, the beam. **Budget first:** a rollout costs ~22 ms (findings), so a 1-second
-move buys ~45 rollouts on one thread against MtgSimulator's 400 — size the beam and the parallelism
-to that, measured with `--sequential`, and cheapen attack declarations in rollouts if it isn't
-enough (45% of a rollout). Read first: `MagicCore/Ai/GreedyAi.cs`,
+Next task: **AI-2.6**, position tests — AI-1's Rank Rat first (build the position by hand: a
+Prophesied End in the search's hand, Shayne's non-attacking Rank Rat). Then **AI-2.7**: the table
+needs a wall-clock cap — the slowest decision measured 3.4 s against ~1 s wanted (sim runs keep the
+deterministic budget). Read first: `MagicCore/Ai/GreedyAi.cs`,
 `MtgSimulator/MultiTurnBeamSearchAiStrategy.cs`, `.claude/rules/sim-ai.md` (the measured lessons),
 `MagicCore/MagicRules.cs` (`DecidingPlayerId`, `LegalActions`, `AutoPass`, `DistinctMoves`).
 Callers to switch in AI-2.7: `MagicTableManager.cs` (`_ais`, and the stand-in at line ~203),
@@ -157,3 +157,13 @@ Callers to switch in AI-2.7: `MagicTableManager.cs` (`_ais`, and the stand-in at
   never read, so they are gone until AI-3 brings a second value (requirements reworded); the
   ceilings are marked `ponytail:` and in DesignNotes; `magic_docs.py`'s enum regex now stops at a
   nested enum's own brace. Each fix pinned by a revert-checked test.
+- 2026-10-16: AI-2.5 done — `BeamSearchAi` (`--match=beam,…`): the beam over our decisions to the
+  turn's end, rollout-scored, fastest win, pass bias, plans committed and re-found by the new
+  `MagicRules.MoveKey`; mulligans stay GreedyAi's. **Beats GreedyAi 54–18 (75.0% ± 4.2pp) over 72
+  games; 177 ms per decision on average, 3.4 s at the slowest** (findings). /pre-commit fixes: the
+  plan fell out of step after our own spells (now we pass on our own stack object for real too, as
+  the tree does); a plan replayed a pass over an opponent's unforeseen spell (dropped now); loyalty
+  moves were never re-found (MoveKey spells them out); the rollout answered the opponent outside
+  `OpponentStep`; the opponent's turn now gets one ply per priority window (blocks still branched).
+  Tests: lethal taken, chump block, determinism, MoveKey (X; loyalty) — revert-checked. Not pinned
+  by a test: the plan fixes — measured instead (same strength, 14% faster).

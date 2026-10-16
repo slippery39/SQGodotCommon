@@ -1124,6 +1124,7 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - the search's rollout (`Ai/Rollout.cs`) reads the libraries in their REAL order, so it draws the cards really on top — the AI sees its own future; AI-3 adds "shuffle what the player can't know"
 - the rollout judges each attacker ALONE (the others declare nothing in its look-ahead), so an attack that only works together — two 3/3s into one blocker for lethal — is never found; port MtgSimulator's FindLethalAttacks if rollouts need it
 - a rollout that hits its DecisionLimit is scored where it stopped, mid-turn, beside rollouts scored at the horizon — only a loop that never advances gets there; flag or drop such a candidate if one is ever seen
+- the search AI (`Ai/BeamSearchAi.cs`) never responds to its OWN object on top of the stack — in its tree or for real — so a line that protects its spell with a second one is never found; branch that window if a deck needs it
 
 ## MagicTable does not use Common's Card2D or drag-to-play (deferred)
 
