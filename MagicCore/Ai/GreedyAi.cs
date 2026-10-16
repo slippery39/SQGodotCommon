@@ -37,11 +37,11 @@ public sealed class GreedyAi(int playerId) : IAi
 			return ShouldKeep(s) ? keep : actions.First(a => a is MulliganAction);
 
 		var pass = actions.First(a => a is PassPriorityAction);
-		var baseline = Evaluate(Settle(s.Act(pass)));
+		var baseline = Evaluate(Lookahead.Settle(s.Act(pass)));
 		var (best, score) = (pass, baseline);
 		foreach (var action in actions.Where(a => a is not PassPriorityAction))
 		{
-			var value = Evaluate(Settle(s.Act(action)));
+			var value = Evaluate(Lookahead.Settle(s.Act(action)));
 			if (value > score)
 				(best, score) = (action, value);
 		}
@@ -61,7 +61,7 @@ public sealed class GreedyAi(int playerId) : IAi
 		{
 			// "You may discard a card": the worst card, or none — whichever plays out better.
 			IEnumerable<int> worst = WorstCards(s, choice.Options.Select(o => o.Id), 1).ToList();
-			return new[] { worst, [] }.MaxBy(pick => Evaluate(Settle(s.Choose(pick))))!;
+			return new[] { worst, [] }.MaxBy(pick => Evaluate(Lookahead.Settle(s.Choose(pick))))!;
 		}
 		if (choice is ChooseCardsFromHandChoice)
 			return WorstCards(s, choice.Options.Select(o => o.Id), choice.MinChoices);
@@ -69,7 +69,7 @@ public sealed class GreedyAi(int playerId) : IAi
 			return [ChooseColorChoice.IdOf(MostWantedColor(s))];
 		if (choice is ChooseModesChoice { MaxChoices: > 1 } modes)
 			return Combinations(modes.Options.Select(o => o.Id).ToList(), modes.MaxChoices)
-				.MaxBy(pick => Evaluate(Settle(s.Choose(pick))))!;
+				.MaxBy(pick => Evaluate(Lookahead.Settle(s.Choose(pick))))!;
 		if (choice is ChooseFromLibraryChoice { MaxChoices: > 1 })
 			return choice.Options.Take(choice.MaxChoices).Select(o => o.Id); // "up to N lands": more is better
 		if (choice.MaxChoices != 1)
@@ -78,7 +78,7 @@ public sealed class GreedyAi(int playerId) : IAi
 		var options = choice.Options.Select(o => (IEnumerable<int>)[o.Id]).ToList();
 		if (choice.MinChoices == 0)
 			options.Insert(0, []);
-		return options.MaxBy(pick => Evaluate(Settle(s.Choose(pick))))!;
+		return options.MaxBy(pick => Evaluate(Lookahead.Settle(s.Choose(pick))))!;
 	}
 
 	static IEnumerable<IEnumerable<int>> Combinations(List<int> ids, int k) =>
@@ -136,50 +136,6 @@ public sealed class GreedyAi(int playerId) : IAi
 			)
 			.Take(count)
 			.Select(c => c.Id);
-	}
-
-	/// <summary>
-	/// Plays forward until the move's consequence is visible: answers choices cheaply, passes for
-	/// both players until the stack is empty, and — mid-combat — until the damage is dealt.
-	/// </summary>
-	GameState Settle(GameState s)
-	{
-		for (var i = 0; i < 200 && !s.IsOver(); i++)
-		{
-			if (s.GetPendingChoice() is { } choice)
-				s = s.Choose(QuickAnswer(s, choice));
-			else if (!s.StackIsEmpty() || InCombat(s))
-				s = s.Act(new PassPriorityAction { PlayerId = s.GetGame().PriorityPlayerId });
-			else
-				break;
-		}
-		return s;
-	}
-
-	static bool InCombat(GameState s) =>
-		s.GetGame().Step is >= Step.DeclareAttackers and <= Step.CombatDamage
-		&& s.GetGame().PriorityPlayerId != 0;
-
-	/// <summary>Inside a simulation: nobody else attacks, blockers only take blocks they survive, targets are the first legal.</summary>
-	static IEnumerable<int> QuickAnswer(GameState s, ChoiceAction choice)
-	{
-		if (choice is DeclareBlockerChoice block)
-		{
-			var blocker = s.GetCard(block.CreatureId);
-			var safe = choice.Options.Where(o =>
-				o.Id != CombatOption.None
-				&& (
-					Turns.Combat.Assigns(s, s.GetCard(o.Id)) < s.Toughness(blocker)
-					|| s.IsIndestructible(blocker)
-				)
-			);
-			return [safe.Select(o => o.Id).FirstOrDefault(CombatOption.None)];
-		}
-		if (choice is DeclareAttackerChoice)
-			return [CombatOption.None];
-		if (choice is PayToKeepChoice)
-			return choice.Options.Select(o => o.Id).Take(1); // looking ahead: keep the spell if it can be paid
-		return choice.Options.Take(choice.MinChoices).Select(o => o.Id);
 	}
 
 	double Evaluate(GameState s) => Evaluator.Evaluate(s, PlayerId);

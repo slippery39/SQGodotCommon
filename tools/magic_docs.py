@@ -134,18 +134,20 @@ def parse_types():
 def parse_enums():
     enums = {}
     for path in sorted(CORE.rglob("*.cs")):
-        if any(p in path.parts for p in ("bin", "obj", "Sets")):
+        # Ai/: the AI's settings are not words a card script spells.
+        if any(p in path.parts for p in ("bin", "obj", "Sets", "Ai")):
             continue
         text = path.read_text(encoding="utf-8")
-        for m in re.finditer(r"public enum (\w+)\s*\{(.*?)\n\}", text, re.S):
-            if m.group(1) in ENUM_SKIP:
+        # The closing brace at the enum's OWN indentation: a nested enum must not run on to its class's end.
+        for m in re.finditer(r"^([ \t]*)public enum (\w+)\s*\{(.*?)^\1\}", text, re.S | re.M):
+            if m.group(2) in ENUM_SKIP:
                 continue
             members = []
-            for line in m.group(2).splitlines():
+            for line in m.group(3).splitlines():
                 mm = re.match(r"\s*(\w+)(?:\s*=\s*[^,]+)?,?\s*(?://\s*(.*))?$", line)
                 if mm and mm.group(1):
                     members.append((mm.group(1), (mm.group(2) or "").strip()))
-            enums[m.group(1)] = members
+            enums[m.group(2)] = members
     return enums
 
 

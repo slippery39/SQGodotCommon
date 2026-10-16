@@ -21,9 +21,10 @@ turn plus greedy rollouts of future turns, with choices branched. It was never p
 - [ ] Measured against `GreedyAi` head-to-head, 25+ games per deck pairing, seats alternated, with
       time per decision beside the win rate — recorded in `docs/findings/magic-ai.md`
 - [ ] About 1 second per move on MagicTable
-- [ ] The opponent inside the simulation sits behind a seam; this story ships `BoardOnly`, AI-3 adds the others
-- [ ] Hidden information is a swappable mode; this story ships "real order" (the AI sees the library
-      as it is), AI-3 adds "shuffle what isn't known"
+- [ ] The opponent inside the simulation is decided in ONE place (the rollout's pass for the other
+      player); this story ships `BoardOnly`, AI-3 adds the others and the setting that picks them
+- [ ] Hidden information: this story ships "real order" (the AI sees the library as it is, marked
+      `ponytail:` and in DesignNotes); AI-3 adds "shuffle what isn't known" and the setting
 - [ ] Selectable on MagicTable and the console; it becomes the default only once measured better
 - [ ] Deterministic for a given seed — no thread order or wall clock reaches a decision in a sim run
 
@@ -94,7 +95,7 @@ exactly as MtgCore treats a decision at a turn boundary.
       `dotnet run --project MagicConsole -- --match=A,B --games=N`; self-checks as an `[Explicit]`
       test: Greedy-vs-Greedy ≈ 50% and Greedy-vs-random clearly apart (a harness that can't see a
       difference measures nothing)
-- [ ] AI-2.4 Rollout: finish the current turn, then N half-turns — our cheap greedy policy, the
+- [x] AI-2.4 Rollout: finish the current turn, then N half-turns — our cheap greedy policy, the
       opponent through the seam (`BoardOnly`: attacks with its board, blocks what it survives, never
       casts); terminal discount; hidden information through its seam (real order). Measure the cost
       of one rollout — and only then make `Evaluator` cheaper if it shows (the /pre-commit review of
@@ -108,7 +109,10 @@ exactly as MtgCore treats a decision at a turn boundary.
 
 ## Next
 
-Next task: **AI-2.4**, the rollout. Read first: `MagicCore/Ai/GreedyAi.cs`,
+Next task: **AI-2.5**, the beam. **Budget first:** a rollout costs ~22 ms (findings), so a 1-second
+move buys ~45 rollouts on one thread against MtgSimulator's 400 — size the beam and the parallelism
+to that, measured with `--sequential`, and cheapen attack declarations in rollouts if it isn't
+enough (45% of a rollout). Read first: `MagicCore/Ai/GreedyAi.cs`,
 `MtgSimulator/MultiTurnBeamSearchAiStrategy.cs`, `.claude/rules/sim-ai.md` (the measured lessons),
 `MagicCore/MagicRules.cs` (`DecidingPlayerId`, `LegalActions`, `AutoPass`, `DistinctMoves`).
 Callers to switch in AI-2.7: `MagicTableManager.cs` (`_ais`, and the stand-in at line ~203),
@@ -139,3 +143,17 @@ Callers to switch in AI-2.7: `MagicTableManager.cs` (`_ais`, and the stand-in at
   `GreedyAiTests.BeatsRandomPlay` now runs through the harness (71–1 at 72 games). The standard error
   is over mirror pairs, not games. Baselines in `docs/findings/magic-ai.md`: GreedyAi takes ~2 ms per
   decision sequentially, parallel runs inflate that 7–8x, and the Jace deck goes 2–22 in GreedyAi's hands.
+- 2026-10-16: AI-2.4 done — `Rollout.Score(s, me, horizon, settings)`: finishes the current turn and
+  plays `LookaheadTurns` (2) more to an ABSOLUTE horizon turn, our side by cheap greedy (land, then up
+  to `ActionsPerTurn` (1) plays at sorcery speed if not worse; attacks by settled score), the opponent
+  `BoardOnly` (attacks and safe blocks, never casts); a decided game decays 0.95 per turn. `Settle` and
+  `QuickAnswer` moved from GreedyAi to `Lookahead` (fingerprint unchanged). Tests: lethal on our
+  board, the opponent's lethal, a sooner win higher, determinism — each revert-checked. Cost: ~22 ms
+  per rollout; attack declarations are ~45% of it.
+- 2026-10-16: /pre-commit fixes to AI-2.4 — the terminal discount counted from each rollout's own
+  start, not the search's root (two candidates losing on the same turn scored differently); blocks
+  were safe-only, so facing lethal we never chump-blocked — now judged by what they lead to, like
+  attacks; a forbidden `is X ? [..] :` ternary became a switch; the two one-value setting enums were
+  never read, so they are gone until AI-3 brings a second value (requirements reworded); the
+  ceilings are marked `ponytail:` and in DesignNotes; `magic_docs.py`'s enum regex now stops at a
+  nested enum's own brace. Each fix pinned by a revert-checked test.

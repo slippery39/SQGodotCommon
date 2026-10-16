@@ -74,3 +74,29 @@ AI differs.
   (greedy vs greedy, by deck). Either the deck is weak or one-ply play cannot pilot it (planeswalker
   loyalty, Empower Jace). A baseline to compare the search AI's per-deck record against.
 - GreedyAi averages ~55 decisions per player per game (AutoPass skips the forced passes) over ~21 turns.
+
+## What one rollout costs (2026-10-16, AI-2.4)
+
+`Rollout.Score` finishes the current turn and plays two more (our cheap greedy policy, the opponent
+`BoardOnly`), then evaluates. Measured at every GreedyAi decision of six real games, one per ordered
+deck pairing (`RolloutTests.Cost_OfOneRollout`, `[Explicit]`), single-threaded:
+
+| Build | Rollouts | mean | p50 | p90 | p99 | max |
+|---|---|---|---|---|---|---|
+| Debug | 384 | 24.2 ms | 20.8 | 43.9 | 73.2 | 124.5 |
+| Release | 384 | 22.1 ms | 15.8 | 42.5 | 87.5 | 104.4 |
+| Release, after AI-2.4's review fixes (blocks judged like attacks; spent plays skipped) | 384 | 21.5 ms | 16.2 | 43.1 | 89.0 | 137.1 |
+
+**So a 1-second move buys ~45 rollouts on one thread** — MtgSimulator's default budget is 400 (on
+an engine with no stack or priority). Release barely helps: the cost is work, not debug overhead.
+
+Where it goes, per rollout (a temporary probe, Release, not committed):
+
+| Part | Count | Time |
+|---|---|---|
+| choices answered — 4.2 of them attack declarations, each option settled through combat | 5.8 | **9.8 ms** |
+| our policy's checks (most return at once: not our sorcery-speed window) | 27.8 | 7.7 ms |
+| priority passes and plays — the engine stepping through the turn | 53.3 | 4.8 ms |
+
+**Attack declarations are the first lever** if rollouts must get cheaper: ~45% of the time for ~4
+decisions. The passes are the engine's own floor (~0.09 ms each).

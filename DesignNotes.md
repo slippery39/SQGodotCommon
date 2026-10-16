@@ -1121,6 +1121,9 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - a "this turn" effect in the command zone (`ThisTurnEffect`) ends as the next turn begins, with `TurnTally`, not in cleanup (CR 514.2) — it differs only when a cleanup gives priority; move both into cleanup if a card cares
 - counters on `Card` are six fields (`PlusOneCounters`, `MinusOneCounters`, `StunCounters`, `ChargeCounters`, `HasFinalityCounter`, `Loyalty`; ~250 uses): a new kind means editing `Reset`, `RemoveCounters` and `Proliferate`, which list them by hand. Make them a keyed map when a set brings a new counter kind (decided 2026-10-15, filter refactor phase 7)
 - Emrakul's "{T}: Add {C}{C}" replaces the land's own mana ability while she waits in exile, instead of being a second choice — one yield per permanent; so her "target land" is a land YOU control, or it would shut off an opponent's colour (make yields alternatives if a card ever needs it)
+- the search's rollout (`Ai/Rollout.cs`) reads the libraries in their REAL order, so it draws the cards really on top — the AI sees its own future; AI-3 adds "shuffle what the player can't know"
+- the rollout judges each attacker ALONE (the others declare nothing in its look-ahead), so an attack that only works together — two 3/3s into one blocker for lethal — is never found; port MtgSimulator's FindLethalAttacks if rollouts need it
+- a rollout that hits its DecisionLimit is scored where it stopped, mid-turn, beside rollouts scored at the horizon — only a loop that never advances gets there; flag or drop such a candidate if one is ever seen
 
 ## MagicTable does not use Common's Card2D or drag-to-play (deferred)
 
