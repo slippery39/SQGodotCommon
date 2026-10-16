@@ -1,7 +1,7 @@
 ---
 id: DEV-2
 title: mtg-real exists somewhere besides this machine
-status: ready
+status: done
 area: DEV
 created: 2026-10-16
 ---
@@ -15,7 +15,7 @@ loses all of it.
 
 ## Requirements
 
-- [ ] `origin/mtg-real` exists and matches the local branch
+- [x] `origin/mtg-real` exists and matches the local branch
 
 ## Decisions
 
@@ -23,12 +23,13 @@ loses all of it.
 
 ## Tasks
 
-- [ ] DEV-2.1 Shayne: `git push -u origin mtg-real`
+- [x] DEV-2.1 Shayne: `git push -u origin mtg-real` — pushed at `4ec90ac`
 
 ## Next
 
-One command. After it, `git status` shows the branch tracking `origin/mtg-real`.
+Done. The branch tracks `origin/mtg-real`.
 
 ## Log
 
 - 2026-10-16: created from the "never pushed" note in the old handoff.
+- 2026-10-16: Shayne pushed; verified `origin/mtg-real` = HEAD `4ec90ac`, tracking set.
