@@ -10,14 +10,15 @@ Refer to work by its ID: **`AI-1`** is a story, **`AI-1.2`** a task inside it.
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
-1. **AI-2** — port the beam-search AI
-2. **AI-3** — swappable simulation models (opponent, our policy, hidden info), measured
-3. **AI-1** — the AI stops wasting removal (what the search leaves unfixed)
-4. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-5. **LIM-1** — sealed and draft (and the last FRA card)
-6. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play
-7. **DATA-1** — bring in 17lands data
-8. **AI-4** — strategic plans above single actions (after AI-2 and AI-3 show the need)
+1. **AI-1** — the AI stops wasting removal: held cards valued by measurement (in progress)
+2. **AI-2** — the search AI: on MagicTable (AI-2.7), then the full measurement (AI-2.8)
+3. **AI-3** — swappable simulation models (opponent, our policy, hidden info, combat), measured
+4. **AI-5** — the evaluator sees threats (life against the board, blockers) and abilities
+5. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+6. **LIM-1** — sealed and draft (and the last FRA card)
+7. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play
+8. **DATA-1** — bring in 17lands data
+9. **AI-4** — strategic plans above single actions (after AI-2 and AI-3 show the need)
 
 ## How it works
 
@@ -73,6 +74,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | ready |
 | [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | backlog |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
+| [AI-5](AI-5-evaluator-threat-abilities.md) | The evaluator sees threats and abilities | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed and draft for Reality Fracture | backlog |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | backlog |
@@ -82,5 +84,5 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [MC-2](MC-2-filter-refactor.md) | One composable filter instead of six closed vocabularies | done |
 | [TBL-1](TBL-1-magictable-v1.md) | MagicTable — play MagicCore games in Godot, the Arena way | done |
 
-Next free id per area: AI-5 · DATA-2 · DEV-3 · LIM-2 · MC-3 · TBL-4
+Next free id per area: AI-6 · DATA-2 · DEV-3 · LIM-2 · MC-3 · TBL-4
 <!-- stories:end -->

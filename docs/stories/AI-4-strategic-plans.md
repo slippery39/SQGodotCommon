@@ -32,6 +32,9 @@ Open questions:
 - When does the AI re-plan: on score divergence like the chain, on new information (a card drawn, a
   threat landing), or every turn?
 - How to measure it: AI-2.3's harness, plus positions where the plan is obviously right?
+- A plan also prices held spells (AI-5): whether to Bolt their 2-power creature now depends on
+  whether we mean to tap out for two turns or to block it with next turn's creature (Shayne,
+  2026-10-16) — so plans and held-spell value may be one design, not two.
 
 ## Tasks
 

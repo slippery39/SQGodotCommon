@@ -44,6 +44,9 @@ measured separately.
   held values; held value is a **setting**, measured against its absence.
 - 2026-10-16: measured to the END of the cast's turn with no attacks, not by a rollout — the rollout
   measured combat, not the card (findings). Held value floors at the flat hand value (findings).
+- 2026-10-16, Shayne: a held spell is an OPTION, cashed in when keeping it is worth less than playing
+  it (AI-5). This story's held value is the first, static price of that option — enough to keep
+  premium removal off a Rat; when a long hold should end is AI-5's.
 
 Why the search alone may not fix it (2026-10-16): every non-land card in hand scores a flat 1.2
 (`Evaluator.Side`, `MagicCore/Ai/Evaluator.cs`), the Rat dying about 4.5 and the drawn card 1.2 — so casting nets ~+2 over passing,
