@@ -10,6 +10,7 @@ using MagicCore.Sets.Fra;
 //   dotnet run --project MagicConsole -- --ai-vs-ai        watch two AIs
 //   --seed=N replays a game; --deck=N skips the deck prompt (the AI plays the next deck).
 //   dotnet run --project MagicConsole -- --match=greedy,random --games=72   AI vs AI, measured
+//   dotnet run --project MagicConsole -- --card-values   regenerate MagicCore/Sets/FRA.values.json
 
 var flags = args.ToHashSet();
 int? Arg(string name) =>
@@ -29,6 +30,24 @@ if (args.FirstOrDefault(a => a.StartsWith("--match=")) is { } match)
 	}
 	Console.WriteLine(
 		AiMatch.Run(names[0], names[1], Arg("games") ?? 24, flags.Contains("--sequential")).Report()
+	);
+	return;
+}
+
+// --card-values: measure every FRA card and write the tracked table (run from the solution root).
+if (flags.Contains("--card-values"))
+{
+	var path = CardValues.TablePath;
+	// The repository's Sets folder — it holds FRA.json — not any folder that happens to be called so.
+	if (!File.Exists(Path.Combine(Path.GetDirectoryName(path)!, "FRA.json")))
+	{
+		Console.WriteLine($"Run from the solution root — no FRA.json beside {path} here.");
+		return;
+	}
+	var entries = CardValues.MeasureFra();
+	File.WriteAllText(path, CardValues.ToJson(entries));
+	Console.WriteLine(
+		$"{path}: {entries.Count} cards, {entries.Count(e => e.NotMeasured is null)} measured. Rebuild to embed it."
 	);
 	return;
 }

@@ -85,6 +85,9 @@ dotnet run --project MagicConsole                       # pick a deck, play the 
 dotnet run --project MagicConsole -- --ai-vs-ai         # watch two AIs
 dotnet run --project MagicConsole -- --seed=7 --deck=1  # replay a game; skip the deck prompt
 dotnet run --project MagicConsole -- --match=greedy,random --games=72  # AI vs AI, measured (AiMatch)
+dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json (~1 s)
+#   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
+#   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
 #   --sequential for honest time per decision (parallel games inflate it 7-8x, unevenly); --match=x lists the AIs
 ```
 

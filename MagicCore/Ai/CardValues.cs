@@ -1,3 +1,6 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
@@ -52,6 +55,63 @@ public static class CardValues
 	static readonly int[] Ladder = [1, 2, 3, 4, 5];
 
 	static readonly string[] Basics = ["Plains", "Island", "Swamp", "Mountain", "Forest"];
+
+	// ===== The tracked table: MagicCore/Sets/FRA.values.json, embedded like FRA.json =====
+
+	static readonly JsonSerializerOptions Json =
+		new()
+		{
+			WriteIndented = true,
+			NewLine = "\n", // the same table on every machine (.gitattributes pins it to LF too)
+			DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+			Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, // "Ajani's Anguish", not escaped as '
+		};
+
+	const string TableFile = "FRA.values.json";
+
+	/// <summary>Where the table is written, from the solution root. GENERATED — never hand-edit it:
+	/// <c>dotnet run --project MagicConsole -- --card-values</c>, and a test fails while it is stale.</summary>
+	public static string TablePath => Path.Combine("MagicCore", "Sets", TableFile);
+
+	/// <summary>Every FRA card that plays, measured, in name order — what the table holds.</summary>
+	public static IReadOnlyList<Entry> MeasureFra() =>
+		Measure(
+			[
+				.. CardDataSet
+					.Load("FRA")
+					.Select(d => d.Name)
+					.Distinct()
+					.Where(FraCards.IsImplemented)
+					.Order(StringComparer.Ordinal)
+					.Select(FraCards.Get),
+			]
+		);
+
+	/// <summary>The table's text: values to two decimals (so a diff shows real moves only), −0 as 0.</summary>
+	public static string ToJson(IReadOnlyList<Entry> entries) =>
+		JsonSerializer.Serialize(
+			entries.Select(e => e with { Value = Math.Round(e.Value, 2) + 0.0 }),
+			Json
+		) + "\n";
+
+	/// <summary>The embedded table's text, or null if it was never generated.</summary>
+	public static string? TableText() => CardDataSet.ResourceText(TableFile);
+
+	/// <summary>
+	/// The FRA table by card name, parsed ONCE — the AI looks values up inside its evaluation. Empty if
+	/// the table was never generated.
+	/// </summary>
+	public static IReadOnlyDictionary<string, Entry> Fra => fra.Value;
+
+	static readonly Lazy<IReadOnlyDictionary<string, Entry>> fra =
+		new(
+			() =>
+				TableText() is { } text
+					? JsonSerializer.Deserialize<List<Entry>>(text)!.ToDictionary(e => e.Name)
+					: new Dictionary<string, Entry>()
+		);
+
+	// ===== Measuring =====
 
 	public static IReadOnlyList<Entry> Measure(IReadOnlyList<CardDefinition> cards, int seed = 7)
 	{

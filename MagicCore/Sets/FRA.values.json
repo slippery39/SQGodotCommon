@@ -1,0 +1,1174 @@
+[
+  {
+    "Name": "Academic Ascent",
+    "Value": 2.7
+  },
+  {
+    "Name": "Aerid Konstrari",
+    "Value": 16.3
+  },
+  {
+    "Name": "Afterthought Sentry",
+    "Value": 7
+  },
+  {
+    "Name": "Ajani Resolute",
+    "Value": 2.7
+  },
+  {
+    "Name": "Ajani Unrelenting",
+    "Value": 3.75
+  },
+  {
+    "Name": "Ajani's Anguish",
+    "Value": 15.5
+  },
+  {
+    "Name": "Apex Witchstalker",
+    "Value": 16.8
+  },
+  {
+    "Name": "Arcane Amphisbaena",
+    "Value": 8
+  },
+  {
+    "Name": "Archive Arbiter",
+    "Value": 14.8
+  },
+  {
+    "Name": "Arni, Humble Scribe",
+    "Value": 8.5
+  },
+  {
+    "Name": "Arni, Renowned Champion",
+    "Value": 9.3
+  },
+  {
+    "Name": "Artifist Acumen",
+    "Value": 0.3
+  },
+  {
+    "Name": "Avatar of Burgeoning Echoes",
+    "Value": 8
+  },
+  {
+    "Name": "Awaken the Inferno",
+    "Value": 17
+  },
+  {
+    "Name": "Bestial Incursion",
+    "Value": 12.8
+  },
+  {
+    "Name": "Blazing Crescendo",
+    "Value": 0
+  },
+  {
+    "Name": "Blessed Ghoul",
+    "Value": 5.3
+  },
+  {
+    "Name": "Bloodline Recollector // Ancestral Craving",
+    "Value": 7
+  },
+  {
+    "Name": "Bloombrute",
+    "Value": 12
+  },
+  {
+    "Name": "Blossom-Blessed Angel // Seed Suture",
+    "Value": 9.8
+  },
+  {
+    "Name": "Break Under Pressure",
+    "Value": 15.5
+  },
+  {
+    "Name": "Budding Insurgent",
+    "Value": 9.5
+  },
+  {
+    "Name": "Campus Crier",
+    "Value": 7.5
+  },
+  {
+    "Name": "Carnivorous Cultivator // Enroot",
+    "Value": 8.8
+  },
+  {
+    "Name": "Cast Away Doubt",
+    "Value": 0.6
+  },
+  {
+    "Name": "Chandra's Emberling",
+    "Value": 7
+  },
+  {
+    "Name": "Chandra, Chill of Compliance",
+    "Value": 3.05
+  },
+  {
+    "Name": "Chandra, Torch of Defiance",
+    "Value": 3.4
+  },
+  {
+    "Name": "Charge the Sanctum",
+    "Value": 2.5
+  },
+  {
+    "Name": "Clash of Elements",
+    "Value": 14.5
+  },
+  {
+    "Name": "Codie, Ravenous Codex",
+    "Value": 7.5
+  },
+  {
+    "Name": "Command the Stage",
+    "Value": 7
+  },
+  {
+    "Name": "Compel Brutality",
+    "Value": 14.5
+  },
+  {
+    "Name": "Countersculpt",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Craftwork Crusher",
+    "Value": 37.3
+  },
+  {
+    "Name": "Craterclaw Colossus",
+    "Value": 14.5
+  },
+  {
+    "Name": "Cruel Calculations",
+    "Value": 0
+  },
+  {
+    "Name": "Cryotheory Adept",
+    "Value": 6
+  },
+  {
+    "Name": "Curse-Marred Demon",
+    "Value": 13.6
+  },
+  {
+    "Name": "Danitha, Spear of Agony",
+    "Value": 7.8
+  },
+  {
+    "Name": "Danitha, Sword of Hope",
+    "Value": 7.8
+  },
+  {
+    "Name": "Dark Matter Manipulator",
+    "Value": 5.5
+  },
+  {
+    "Name": "Darklight Phoenix",
+    "Value": 9.3
+  },
+  {
+    "Name": "Dedicated Commons",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Denzilore Fatehold",
+    "Value": 11.3
+  },
+  {
+    "Name": "Deserted Beach",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Desperate Futurescribe",
+    "Value": 11.3
+  },
+  {
+    "Name": "Diviner of Victory // Unwind History",
+    "Value": 4.5
+  },
+  {
+    "Name": "Divining Duelist",
+    "Value": 8.5
+  },
+  {
+    "Name": "Draconic Visitor",
+    "Value": 15.3
+  },
+  {
+    "Name": "Eardrum Rattler",
+    "Value": 7
+  },
+  {
+    "Name": "Edgar, Ancient Bloodlord",
+    "Value": 8
+  },
+  {
+    "Name": "Edgar, Moonlit Sovereign",
+    "Value": 12
+  },
+  {
+    "Name": "Emergency Phytomedic // Seed Suture",
+    "Value": 4.5
+  },
+  {
+    "Name": "Emrakul, the Exigent Doom",
+    "Value": 33.6
+  },
+  {
+    "Name": "Enlightened Confidant",
+    "Value": 6.8
+  },
+  {
+    "Name": "Entrust the Spark",
+    "Value": 0
+  },
+  {
+    "Name": "Essence Burn",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Extended Absence",
+    "Value": 16
+  },
+  {
+    "Name": "Eye of Jace",
+    "Value": 2
+  },
+  {
+    "Name": "Face Yourself",
+    "Value": 0
+  },
+  {
+    "Name": "Fatehold Annex",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Fatehold Charm",
+    "Value": 13.3
+  },
+  {
+    "Name": "Fatehold Chronologist // Peer Review",
+    "Value": 6.3
+  },
+  {
+    "Name": "Fateshaper Aspirant",
+    "Value": 13
+  },
+  {
+    "Name": "Fblthp, Impossibly Lost",
+    "Value": 4.5
+  },
+  {
+    "Name": "Fblthp, Knows the Way",
+    "Value": 10.9
+  },
+  {
+    "Name": "Ferocity of the Hunt",
+    "Value": 4.3
+  },
+  {
+    "Name": "Flickering Hound",
+    "Value": 7
+  },
+  {
+    "Name": "Flourishing Grapple",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Forest",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Formidable Commons",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Frostbite Pyromental",
+    "Value": 0
+  },
+  {
+    "Name": "Fulminous Forte",
+    "Value": 14.5
+  },
+  {
+    "Name": "Gallia, Tragic Host",
+    "Value": 6.8
+  },
+  {
+    "Name": "Gallia, the Merrymaker",
+    "Value": 6
+  },
+  {
+    "Name": "Gardenize",
+    "Value": 2
+  },
+  {
+    "Name": "Garruk, Curse Breaker",
+    "Value": 3.75
+  },
+  {
+    "Name": "Garruk, Veiled Butcher",
+    "Value": 3.75
+  },
+  {
+    "Name": "Geist of Saint Thalia",
+    "Value": 6.3
+  },
+  {
+    "Name": "Generous Revival",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Germinate Recruits",
+    "Value": 0
+  },
+  {
+    "Name": "Ghalta the Immovable",
+    "Value": 9
+  },
+  {
+    "Name": "Ghalta the Unstoppable",
+    "Value": 26.8
+  },
+  {
+    "Name": "Gideon the Oathless",
+    "Value": 9.5
+  },
+  {
+    "Name": "Gideon's Memorial",
+    "Value": 2
+  },
+  {
+    "Name": "Graft Surgeon",
+    "Value": 9.5
+  },
+  {
+    "Name": "Greenhouse Propagator",
+    "Value": 8
+  },
+  {
+    "Name": "Grim Repriser",
+    "Value": 7
+  },
+  {
+    "Name": "Guiding Hydra",
+    "Value": 21
+  },
+  {
+    "Name": "Hall of Echoes",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Hallway Heckler // Vicious Verse",
+    "Value": 8
+  },
+  {
+    "Name": "Hapatra, the Desert Fang",
+    "Value": 9.5
+  },
+  {
+    "Name": "Hapatra, the Desert Frost",
+    "Value": 11
+  },
+  {
+    "Name": "Haunted Ridge",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Heartstring Puller",
+    "Value": 15.3
+  },
+  {
+    "Name": "Heartwood Crafter // Soul Tether",
+    "Value": 4.5
+  },
+  {
+    "Name": "Hexhaven Battalion",
+    "Value": 23.7
+  },
+  {
+    "Name": "Hexhaven Dueling Arena",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Hexhaven Invigorator",
+    "Value": 17
+  },
+  {
+    "Name": "Hungering Puppetbeast",
+    "Value": 16.5
+  },
+  {
+    "Name": "Hunter's Axe",
+    "Value": 2
+  },
+  {
+    "Name": "Icy Reception",
+    "Value": 0
+  },
+  {
+    "Name": "Identity Echo",
+    "Value": 2
+  },
+  {
+    "Name": "Infinite Coursework",
+    "Value": 2
+  },
+  {
+    "Name": "Ingris Stingerquill",
+    "Value": 8.3
+  },
+  {
+    "Name": "Innovative Commons",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Inspired Tethermage",
+    "Value": 8.5
+  },
+  {
+    "Name": "Island",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Jace's Machinations",
+    "Value": 4.8
+  },
+  {
+    "Name": "Jace, Reality Sculptor",
+    "Value": 3.75
+  },
+  {
+    "Name": "Jiang Yanggu, Alone",
+    "Value": 12.8
+  },
+  {
+    "Name": "Jiang Yanggu, Never Alone",
+    "Value": 16.5
+  },
+  {
+    "Name": "Karn, Argent Defender",
+    "Value": 6.5
+  },
+  {
+    "Name": "Karn, Gilded Guardian",
+    "Value": 15.3
+  },
+  {
+    "Name": "Keeper of the Quiet Hour",
+    "Value": 11.2
+  },
+  {
+    "Name": "Kindred Judgment",
+    "Value": 0
+  },
+  {
+    "Name": "Kiora of Fire and Ashes",
+    "Value": 22.3
+  },
+  {
+    "Name": "Kiora of Salt and Sand",
+    "Value": 9
+  },
+  {
+    "Name": "Konstrari Annex",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Konstrari Charm",
+    "Value": 5
+  },
+  {
+    "Name": "Konstrari Improviser // Soul Tether",
+    "Value": 7
+  },
+  {
+    "Name": "Koth of the Homestead",
+    "Value": 8
+  },
+  {
+    "Name": "Koth, the Geomancer",
+    "Value": 8.5
+  },
+  {
+    "Name": "Kwia Vigorbloom",
+    "Value": 18.6
+  },
+  {
+    "Name": "Last Gasp",
+    "Value": 9.5
+  },
+  {
+    "Name": "Lich's Relic",
+    "Value": 2
+  },
+  {
+    "Name": "Liliana the Faultless",
+    "Value": 4.5
+  },
+  {
+    "Name": "Liliana the Repentant",
+    "Value": 7
+  },
+  {
+    "Name": "Living Library",
+    "Value": 6
+  },
+  {
+    "Name": "Loot, the Anomaly",
+    "Value": 3
+  },
+  {
+    "Name": "Loot, the Nexus",
+    "Value": 6
+  },
+  {
+    "Name": "Loyal Tutor",
+    "Value": 0
+  },
+  {
+    "Name": "Lyra, Archangel of Dawn",
+    "Value": 10.3
+  },
+  {
+    "Name": "Lyra, Tolarian Archangel",
+    "Value": 10.3
+  },
+  {
+    "Name": "Mabel, Bitter Recluse",
+    "Value": 5.3
+  },
+  {
+    "Name": "Mabel, Valley Hero",
+    "Value": 8
+  },
+  {
+    "Name": "Marwyn, the Clearcutter",
+    "Value": 6
+  },
+  {
+    "Name": "Marwyn, the Preserver",
+    "Value": 8.5
+  },
+  {
+    "Name": "Massacre Girl, Most Wanted",
+    "Value": 12
+  },
+  {
+    "Name": "Master of Barbs",
+    "Value": 6.8
+  },
+  {
+    "Name": "Medic's Kitesail",
+    "Value": 2
+  },
+  {
+    "Name": "Memory Trap",
+    "Value": 16.5
+  },
+  {
+    "Name": "Meticulous Commons",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Mind Meanderer",
+    "Value": 22.3
+  },
+  {
+    "Name": "Mindseeker Oculus",
+    "Value": 9.4
+  },
+  {
+    "Name": "Mountain",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Multiply by Zero",
+    "Value": 14.5
+  },
+  {
+    "Name": "Murmuring Volume",
+    "Value": 2
+  },
+  {
+    "Name": "No Admittance",
+    "Value": 11.85
+  },
+  {
+    "Name": "Null Summoner",
+    "Value": 10
+  },
+  {
+    "Name": "Omnipresence",
+    "Value": 2
+  },
+  {
+    "Name": "Overgrown Farmland",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Overwrite the Multiverse",
+    "Value": 5.5
+  },
+  {
+    "Name": "Paradox Shaper // Omit Variables",
+    "Value": 6.5
+  },
+  {
+    "Name": "Perfected Theory",
+    "Value": 0
+  },
+  {
+    "Name": "Pia, Aether Ascetic",
+    "Value": 7
+  },
+  {
+    "Name": "Pia, Determined Rebuilder",
+    "Value": 12.3
+  },
+  {
+    "Name": "Plains",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Plan for All Outcomes",
+    "Value": 16.5
+  },
+  {
+    "Name": "Pompous Battlemage // Improvised Act",
+    "Value": 4.5
+  },
+  {
+    "Name": "Precise Redaction",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Predictive Preparations",
+    "Value": 5
+  },
+  {
+    "Name": "Primal Witchstalker",
+    "Value": 8.3
+  },
+  {
+    "Name": "Proctor of Potential",
+    "Value": 7.5
+  },
+  {
+    "Name": "Proft, Consulting Detective",
+    "Value": 7
+  },
+  {
+    "Name": "Proft, Sinister Mastermind",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Prophesied End",
+    "Value": 14.2
+  },
+  {
+    "Name": "Protege's Awakening",
+    "Value": 4.4
+  },
+  {
+    "Name": "Prudent Fateseer // Peer Review",
+    "Value": 7.5
+  },
+  {
+    "Name": "Puppet Crafting",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Pyre Rhymer // Molten Tide",
+    "Value": 9.5
+  },
+  {
+    "Name": "Rampart Hunter",
+    "Value": 10.3
+  },
+  {
+    "Name": "Rank Rat",
+    "Value": 4.5
+  },
+  {
+    "Name": "Recursive Recruitment",
+    "Value": 14
+  },
+  {
+    "Name": "Refute Destiny",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Repurposed Enforcer",
+    "Value": 8.5
+  },
+  {
+    "Name": "Rescue Girl, First Responder",
+    "Value": 7.3
+  },
+  {
+    "Name": "Restore with Empathy",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Return to the Light Realms",
+    "Value": 0
+  },
+  {
+    "Name": "Rewrite Regrets",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Rise of the Deathbringer",
+    "Value": 0
+  },
+  {
+    "Name": "Rockfall Vale",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Roiling Canopy",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Room of Refuge",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Ruric Thar, Biomagus",
+    "Value": 14.8
+  },
+  {
+    "Name": "Ruric Thar, Magecrusher",
+    "Value": 20.3
+  },
+  {
+    "Name": "Saheeli, Consul of Oversight",
+    "Value": 12.8
+  },
+  {
+    "Name": "Saheeli, Jewel of Avishkar",
+    "Value": 9
+  },
+  {
+    "Name": "Samut, Hazoret's Champion",
+    "Value": 7
+  },
+  {
+    "Name": "Samut, Tyrant of Naktamun",
+    "Value": 6
+  },
+  {
+    "Name": "Sanctum Lurker",
+    "Value": 10.85
+  },
+  {
+    "Name": "Screeching Soulbreaker",
+    "Value": 8.3
+  },
+  {
+    "Name": "Seasoned Cryomancer",
+    "Value": 7
+  },
+  {
+    "Name": "Semester Foreseer // Peer Review",
+    "Value": 10.5
+  },
+  {
+    "Name": "Shatterwing Pegasus",
+    "Value": 8.8
+  },
+  {
+    "Name": "Shipwreck Marsh",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Silence the Echo",
+    "Value": 14.5
+  },
+  {
+    "Name": "Simulacrum Shaper",
+    "Value": 8.5
+  },
+  {
+    "Name": "Skilled Battlecarver",
+    "Value": 6
+  },
+  {
+    "Name": "Solarium Sentry",
+    "Value": 9.5
+  },
+  {
+    "Name": "Solitary Cell",
+    "Value": 11.5
+  },
+  {
+    "Name": "Solve for Disappointment",
+    "Value": 2.35
+  },
+  {
+    "Name": "Something Worth Saving",
+    "Value": 0.8
+  },
+  {
+    "Name": "Sphinx of False Conclusions",
+    "Value": 10.8
+  },
+  {
+    "Name": "Sphinx's Approach",
+    "Value": 0.6
+  },
+  {
+    "Name": "Stingcaster Mage",
+    "Value": 6
+  },
+  {
+    "Name": "Stingerquill Annex",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Stingerquill Charm",
+    "Value": 9.5
+  },
+  {
+    "Name": "Stingerquill Voxmancer // Vicious Verse",
+    "Value": 5.5
+  },
+  {
+    "Name": "Stinging Vitriol",
+    "Value": 2
+  },
+  {
+    "Name": "Sureshot Sower",
+    "Value": 7.5
+  },
+  {
+    "Name": "Surgical Precision",
+    "Value": 15
+  },
+  {
+    "Name": "Surveillance Phantasm",
+    "Value": 8.8
+  },
+  {
+    "Name": "Swamp",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Tam's Resistance",
+    "Value": 5.9
+  },
+  {
+    "Name": "Tam, the Possibility",
+    "Value": 9
+  },
+  {
+    "Name": "Tarmogoyf",
+    "Value": 3
+  },
+  {
+    "Name": "Tenured Tethermage",
+    "Value": 7
+  },
+  {
+    "Name": "Terminal Criticism",
+    "Value": 0,
+    "NotMeasured": "can't be cast in the fixture"
+  },
+  {
+    "Name": "Tether Technician",
+    "Value": 13
+  },
+  {
+    "Name": "Tethermage's Advantage",
+    "Value": 0
+  },
+  {
+    "Name": "Tetsuko Umezawa, Fugitive",
+    "Value": 6.5
+  },
+  {
+    "Name": "Tetsuko Umezawa, Pursuer",
+    "Value": 9.8
+  },
+  {
+    "Name": "Teyo, Diamondblade Mage",
+    "Value": 10
+  },
+  {
+    "Name": "Teyo, Lightshield Expert",
+    "Value": 7
+  },
+  {
+    "Name": "Thalia, the Survivor",
+    "Value": 11.3
+  },
+  {
+    "Name": "The Echoverse Fulcrum",
+    "Value": 2
+  },
+  {
+    "Name": "The Theorist, Jace Beleren",
+    "Value": 3.05
+  },
+  {
+    "Name": "Theoretical Necromancer",
+    "Value": 9
+  },
+  {
+    "Name": "Theorist's Proxy",
+    "Value": 8.05
+  },
+  {
+    "Name": "Theorist's Sanctum",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Theorix Annex",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Theorix Charm",
+    "Value": 7
+  },
+  {
+    "Name": "Theorix Metamage // Omit Variables",
+    "Value": 8
+  },
+  {
+    "Name": "Tinybones, Pocket Nuisance",
+    "Value": 6
+  },
+  {
+    "Name": "Titanbones, Towering Heart",
+    "Value": 11
+  },
+  {
+    "Name": "Tomik, Izzet Sparkmage",
+    "Value": 5.5
+  },
+  {
+    "Name": "Tomik, Orzhov Lawmage",
+    "Value": 6.8
+  },
+  {
+    "Name": "Transformative Commons",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Traxos, Academy Guardian",
+    "Value": 9.3
+  },
+  {
+    "Name": "Traxos, Scourge Eternal",
+    "Value": 14.3
+  },
+  {
+    "Name": "Twinned Vision",
+    "Value": 0.3
+  },
+  {
+    "Name": "Twisted Fates",
+    "Value": 27
+  },
+  {
+    "Name": "Uldaros Theorix",
+    "Value": 15.3
+  },
+  {
+    "Name": "Undulating Witness",
+    "Value": 12.3
+  },
+  {
+    "Name": "Unflinching Hortimancer",
+    "Value": 6
+  },
+  {
+    "Name": "Unsummon",
+    "Value": 13.3
+  },
+  {
+    "Name": "Variable Chaser // Arc of Fortune",
+    "Value": 8.8
+  },
+  {
+    "Name": "Verdant Kraken",
+    "Value": 17
+  },
+  {
+    "Name": "Vigorbloom Annex",
+    "Value": 0,
+    "NotMeasured": "a land — mana, which the evaluator already prices"
+  },
+  {
+    "Name": "Vigorbloom Charm",
+    "Value": 17
+  },
+  {
+    "Name": "Vigorbloom Vanguard // Seed Suture",
+    "Value": 7
+  },
+  {
+    "Name": "Vindictive Triumph",
+    "Value": 14.5
+  },
+  {
+    "Name": "Vinelasher Adept",
+    "Value": 16.5
+  },
+  {
+    "Name": "Violent Echoes",
+    "Value": 16.85
+  },
+  {
+    "Name": "Void Extrapolator // Omit Variables",
+    "Value": 7
+  },
+  {
+    "Name": "Vraska's Final Mercy",
+    "Value": 12.5
+  },
+  {
+    "Name": "Vraska, Soul of Stone",
+    "Value": 9.5
+  },
+  {
+    "Name": "Vraska, the Cutting Glare",
+    "Value": 25.3
+  },
+  {
+    "Name": "Warrior's Blades",
+    "Value": 13
+  },
+  {
+    "Name": "Way of the Cryomancer",
+    "Value": 5.75
+  },
+  {
+    "Name": "Way of the Deathbringer",
+    "Value": 5.75
+  },
+  {
+    "Name": "Way of the Healer",
+    "Value": 5.75
+  },
+  {
+    "Name": "Way of the Mentor",
+    "Value": 5.75
+  },
+  {
+    "Name": "Way of the Mind Sculptor",
+    "Value": 5.75
+  },
+  {
+    "Name": "Way of the Necromancer",
+    "Value": 4.7
+  },
+  {
+    "Name": "Way of the Paradox",
+    "Value": 5.75
+  },
+  {
+    "Name": "Way of the Pyromancer",
+    "Value": 4.7
+  },
+  {
+    "Name": "Way of the Warlord",
+    "Value": 5.75
+  },
+  {
+    "Name": "Way of the Wildspeaker",
+    "Value": 6.45
+  },
+  {
+    "Name": "Whiplash Wordsmith // Vicious Verse",
+    "Value": 9.5
+  },
+  {
+    "Name": "Winter, Team Player",
+    "Value": 9.5
+  },
+  {
+    "Name": "Winter, Tormented Loner",
+    "Value": 6.5
+  },
+  {
+    "Name": "Woodwork Prodigy // Soul Tether",
+    "Value": 9.5
+  },
+  {
+    "Name": "Wrath of the Bloodmane",
+    "Value": 12
+  },
+  {
+    "Name": "Wrecking Gecko",
+    "Value": 14.5
+  },
+  {
+    "Name": "Yargle, Glutton of Urborg",
+    "Value": 18.5
+  },
+  {
+    "Name": "Yargle, Goliath of Otaria",
+    "Value": 15.5
+  },
+  {
+    "Name": "Yoshimaru, Beloved Companion",
+    "Value": 7
+  },
+  {
+    "Name": "Yoshimaru, Scrappy Stray",
+    "Value": 4.5
+  },
+  {
+    "Name": "Your Fate Ends Here",
+    "Value": 14.5
+  },
+  {
+    "Name": "Yuriko, Blade of the Mighty",
+    "Value": 8
+  },
+  {
+    "Name": "Yuriko, Hope from the Shadows",
+    "Value": 4.5
+  }
+]

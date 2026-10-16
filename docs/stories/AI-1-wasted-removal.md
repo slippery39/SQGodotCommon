@@ -63,7 +63,7 @@ rollout. AI-3's richer opponent models are the other half of the cure.
 - [x] AI-1.5 Settle the exact form of (a) with Shayne — measured per card, plan below (2026-10-16)
 - [x] AI-1.6 The sandbox, `MagicCore/Ai/CardValues.cs`: each card cast into a fixed board and measured
       at the end of its turn (findings: why not a rollout); tests revert-checked
-- [ ] AI-1.7 The table: `MagicConsole -- --card-values` writes a TRACKED file the Godot table reads
+- [x] AI-1.7 The table: `MagicConsole -- --card-values` writes a TRACKED file the Godot table reads
       too; regenerate when the evaluator, the rollout or a card changes (Commands.md)
 - [ ] AI-1.8 Held value in the evaluator: a non-land card in hand is worth max(flat, fraction ×
       measured) — a setting; GreedyAi unchanged, only the search uses it. Un-ignore the Rank Rat test
@@ -74,7 +74,8 @@ rollout. AI-3's richer opponent models are the other half of the cure.
 
 ## Next
 
-Next: **AI-1.7**, the table. The test to make pass (AI-1.8) is `AiPositionTests.RankRat_TheSearch_HoldsItsRemoval` (remove its `[Ignore]`);
+Next: **AI-1.8**, held values: `CardValues.Fra[name]` gives each card's measured value (parsed once). The test
+to make pass is `AiPositionTests.RankRat_TheSearch_HoldsItsRemoval` (remove its `[Ignore]`);
 its control, `RankRat_Control_GreedyAiStillMakesTheBadPlay`, says the position still provokes the
 play — if (a) changes GreedyAi too, the control's job is done: update it, don't delete the evidence.
 Then read `MagicCore/Ai/Evaluator.cs`, `MagicCore/Ai/Rollout.cs` and `docs/findings/magic-ai.md`,
@@ -91,6 +92,16 @@ and measure with `--match` (`--sequential` for time) before claiming anything.
   that fails to reach its main phase throws. Tests: ordering, removal, the end-step sacrifice, a
   "you may" taken, unmeasured cards — revert-checked. The review also noted the rollout's own combat
   (attackers judged alone) still shapes the SEARCH's scores — recorded in AI-3.
+- 2026-10-16: AI-1.7 done — `MagicCore/Sets/FRA.values.json` (284 cards, 248 measured), embedded
+  with FRA.json so the Godot table has it with no copy; `MagicConsole -- --card-values` regenerates
+  it; `CardValuesTests.TheTrackedTable_IsCurrent` re-measures the set (~1 s) and fails while the table
+  is stale (revert-checked: one evaluator weight changed fails it). Written with `\n` on every
+  machine; values to two decimals so a diff shows only real moves.
+  /pre-commit fixes: `CardValues.Fra` parses the table ONCE (AI-1.8 reads it inside the evaluation);
+  plain-text JSON (no `'` escapes, so it is searchable and its diff readable); LF pinned in
+  `.gitattributes`; one embedded-resource helper (`CardDataSet.ResourceText`) instead of two
+  hand-built names; the API is FRA-only, as the measuring is; the console checks it is writing into
+  the repository's Sets folder; the load test checks the round trip, not one card's status.
 - 2026-10-16: **the search wastes the removal too.** In the rebuilt position both GreedyAi and
   BeamSearchAi cast Prophesied End on the non-attacking Rat. By the evaluator: casting nets about +2
   (the Rat ~4.5 gone, −1.2 for their card, −1.2 for ours) while holding is worth the flat 1.2 of a

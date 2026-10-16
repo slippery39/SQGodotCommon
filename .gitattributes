@@ -6,3 +6,6 @@ graphify-out/graph.json merge=graphify
 .claude/skills/**/SKILL.md text eol=lf
 CLAUDE.md text eol=lf
 **/CLAUDE.md text eol=lf
+
+# Generated tables are compared byte for byte by a test (CardValuesTests): LF everywhere
+MagicCore/Sets/*.values.json text eol=lf

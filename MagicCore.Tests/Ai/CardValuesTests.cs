@@ -97,6 +97,33 @@ public class CardValuesTests
 		Assert.That(values.Select(v => v.Value), Has.All.EqualTo(0));
 	}
 
+	// The tracked table is what measuring gives NOW — a change to the evaluator, the engine or a card that
+	// moves a value fails here until the table is regenerated, so it can't drift silently (~1 s).
+	[Test]
+	public void TheTrackedTable_IsCurrent()
+	{
+		var embedded = CardValues.TableText()?.Replace("\r\n", "\n");
+
+		Assert.That(
+			embedded,
+			Is.EqualTo(CardValues.ToJson(CardValues.MeasureFra())),
+			$"{CardValues.TablePath} is stale — run: dotnet run --project MagicConsole -- --card-values"
+		);
+	}
+
+	// The table loads back as what was measured: every card, by name, measured or not alike.
+	[Test]
+	public void TheTable_LoadsBackWhatWasMeasured()
+	{
+		var measured = CardValues.MeasureFra();
+
+		Assert.That(CardValues.Fra, Has.Count.EqualTo(measured.Count));
+		Assert.That(
+			measured.Select(m => (m.Name, m.NotMeasured)),
+			Is.EqualTo(measured.Select(m => (m.Name, CardValues.Fra[m.Name].NotMeasured)))
+		);
+	}
+
 	[Test]
 	public void TheSameCards_MeasureTheSame()
 	{

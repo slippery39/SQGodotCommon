@@ -42,12 +42,26 @@ public static class CardDataSet
 	/// <summary>Loads an imported set by its code ("FRA").</summary>
 	public static IReadOnlyList<CardData> Load(string setCode)
 	{
-		var resource = $"MagicCore.Sets.{setCode.ToUpperInvariant()}.json";
-		using var stream =
-			typeof(CardDataSet).Assembly.GetManifestResourceStream(resource)
+		var text =
+			ResourceText($"{setCode.ToUpperInvariant()}.json")
 			?? throw new ArgumentException(
 				$"No imported set '{setCode}'. Run: python tools/import_scryfall_set.py {setCode}"
 			);
-		return JsonSerializer.Deserialize<List<CardData>>(stream, Options)!;
+		return JsonSerializer.Deserialize<List<CardData>>(text, Options)!;
+	}
+
+	/// <summary>
+	/// A file from MagicCore/Sets/, embedded by the csproj as <c>MagicCore.Sets.{file}</c> — the ONE place
+	/// that name is built. Null if there is no such file.
+	/// </summary>
+	public static string? ResourceText(string file)
+	{
+		using var stream = typeof(CardDataSet).Assembly.GetManifestResourceStream(
+			$"MagicCore.Sets.{file}"
+		);
+		if (stream is null)
+			return null;
+		using var reader = new StreamReader(stream);
+		return reader.ReadToEnd();
 	}
 }
