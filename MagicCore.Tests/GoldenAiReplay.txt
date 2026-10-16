@@ -1,0 +1,15 @@
+# Seeded games' fingerprints — see MagicCore.Tests/GoldenReplay.cs. Regenerate only
+# for an intended behaviour change, with the diff reviewed. Format: game seed : steps, last
+# turn, each player's life [hand,library,graveyard,battlefield,exile], hash | hash per 100 steps.
+Red-Green vs White-Black 01 : steps=111 turn=24 end=-1L[0,21,8,11,1] 17[0,20,9,12,0] final=562c3616 | fff5326a
+Red-Green vs White-Black 02 : steps=161 turn=32 end=0L[0,18,9,12,1] 24[1,16,11,12,0] final=9c7b1c48 | 6d25a4df
+Red-Green vs White-Blue Jace 01 : steps=122 turn=24 end=-1L[0,22,10,8,0] 30[0,16,11,17,0] final=1a7c770e | 741f3dda
+Red-Green vs White-Blue Jace 02 : steps=129 turn=25 end=11[0,22,7,15,0] -7L[0,17,12,14,0] final=84ccdc7c | 7e4f0008
+White-Black vs Red-Green 01 : steps=76 turn=19 end=14[0,23,7,10,0] 0L[0,24,7,9,2] final=a73a3f49
+White-Black vs Red-Green 02 : steps=69 turn=17 end=16[0,25,6,9,0] -1L[1,23,7,8,1] final=89dfc36a
+White-Black vs White-Blue Jace 01 : steps=113 turn=21 end=22[0,23,6,11,0] 0L[0,19,10,11,2] final=3372d7b9 | c29f177c
+White-Black vs White-Blue Jace 02 : steps=64 turn=17 end=25[0,25,6,9,0] -2L[2,19,8,11,1] final=122b1672
+White-Blue Jace vs Red-Green 01 : steps=97 turn=16 end=-3L[1,24,5,11,0] 3[0,25,4,14,0] final=443f8eb8
+White-Blue Jace vs Red-Green 02 : steps=148 turn=18 end=-2L[0,22,10,9,0] 9[1,22,6,13,0] final=88a0feda | d9903da6
+White-Blue Jace vs White-Black 01 : steps=116 turn=26 end=0L[0,15,11,19,1] 6[0,19,10,12,0] final=ca7f6b2a | 19441777
+White-Blue Jace vs White-Black 02 : steps=88 turn=22 end=0L[0,18,10,12,1] 18[0,20,7,13,0] final=b5a95fe4

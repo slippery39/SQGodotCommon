@@ -73,8 +73,7 @@ public class GreedyAiTests
 	{
 		var s = TestGames.InFirstMain();
 		var me = s.GetGame().StartingPlayerId;
-		var ai = new GreedyAi(me);
-		var before = ai.Evaluate(s);
+		var before = Evaluator.Evaluate(s, me);
 		int bear;
 		(s, bear) = TestGames.Put(s, me, TestGames.Creature("Bear", "2/2"), ZoneType.Battlefield);
 		var pumped = (Card)s.GetCard(bear).WithComponent(new UntilEndOfTurn(2, 2)) with
@@ -83,7 +82,7 @@ public class GreedyAiTests
 		};
 		s = s.UpdateObject(bear, pumped);
 
-		Assert.That(ai.Evaluate(s), Is.GreaterThan(before));
+		Assert.That(Evaluator.Evaluate(s, me), Is.GreaterThan(before));
 	}
 
 	// Lethal damage doesn't kill an indestructible creature, so the AI must not score it as dead.
@@ -92,8 +91,7 @@ public class GreedyAiTests
 	{
 		var s = TestGames.InFirstMain();
 		var me = s.GetGame().StartingPlayerId;
-		var ai = new GreedyAi(me);
-		var before = ai.Evaluate(s);
+		var before = Evaluator.Evaluate(s, me);
 		int bear;
 		(s, bear) = TestGames.Put(s, me, TestGames.Creature("Bear", "2/2"), ZoneType.Battlefield);
 		var indestructible = (Card)
@@ -103,7 +101,7 @@ public class GreedyAiTests
 		};
 		s = s.UpdateObject(bear, indestructible);
 
-		Assert.That(ai.Evaluate(s), Is.GreaterThan(before));
+		Assert.That(Evaluator.Evaluate(s, me), Is.GreaterThan(before));
 	}
 
 	// At 0.8 per loyalty counter the AI valued a counter at two thirds of a card, so it never spent

@@ -259,13 +259,12 @@ public class FraRarePlaneswalkerTests : FraBoardTest
 	public void TheAi_ValuesAnUntilYourNextTurnDebuff()
 	{
 		var theirs = Field(TestGames.Creature("Theirs", "5/5"), them);
-		var ai = new MagicCore.Ai.GreedyAi(me);
-		var before = ai.Evaluate(s);
+		var before = MagicCore.Ai.Evaluator.Evaluate(s, me);
 		s = s.UpdateObject(
 			theirs,
 			(Card)s.GetCard(theirs).WithComponent(new UntilEndOfTurn(-4, -1) { UntilTurnOf = me })
 		); // TEST SETUP: Garruk's +2
-		Assert.That(ai.Evaluate(s), Is.GreaterThan(before));
+		Assert.That(MagicCore.Ai.Evaluator.Evaluate(s, me), Is.GreaterThan(before));
 	}
 
 	// ===== Chandra, Torch of Defiance =====

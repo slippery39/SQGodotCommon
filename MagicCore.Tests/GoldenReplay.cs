@@ -12,8 +12,9 @@ namespace MagicCore.Tests;
 /// diverges. A running hash every <see cref="Checkpoint"/> steps names the window where a game first
 /// differs, and the game's whole trace is written out for reading around it.
 ///
-/// Two files: GoldenReplay.txt (RandomGameTests, every run) and GoldenCardReplay.txt
-/// (CardReplayTests, explicit — each scripted card in games built around it).
+/// Three files: GoldenReplay.txt (RandomGameTests, every run), GoldenCardReplay.txt
+/// (CardReplayTests, explicit — each scripted card in games built around it) and GoldenAiReplay.txt
+/// (GreedyAiReplayTests, every run — GreedyAi against itself; random play never asks the AI anything).
 ///
 /// Regenerate ONLY for an intended behaviour change, with the diff reviewed: run the fixture with
 /// <c>$env:MAGIC_GOLDEN_UPDATE='1'</c> (merges the games run into the file — a filtered run updates
@@ -140,7 +141,7 @@ public sealed class GoldenReplay(string fileName)
 		File.WriteAllLines(
 			FilePath,
 			[
-				"# Seeded random games' fingerprints — see MagicCore.Tests/GoldenReplay.cs. Regenerate only",
+				"# Seeded games' fingerprints — see MagicCore.Tests/GoldenReplay.cs. Regenerate only",
 				"# for an intended behaviour change, with the diff reviewed. Format: game seed : steps, last",
 				"# turn, each player's life [hand,library,graveyard,battlefield,exile], hash | hash per 100 steps.",
 				.. all.Keys.Order(StringComparer.Ordinal).Select(k => all[k]),

@@ -63,6 +63,7 @@ python tools/usage_report.py [SESSION_ID | --all]   # what a Claude session cost
 ```
 dotnet test MagicCore.Tests --filter "FullyQualifiedName~RandomGameTests"   # 150 games, in the normal suite
 dotnet test MagicCore.Tests --filter "FullyQualifiedName~CardReplayTests"   # every card, ~90 s, explicit
+dotnet test MagicCore.Tests --filter "FullyQualifiedName~GreedyAiReplayTests"  # the AI's decisions, 12 games, in the normal suite
 $env:MAGIC_GOLDEN_UPDATE='1'; dotnet test MagicCore.Tests --filter "…"; Remove-Item Env:MAGIC_GOLDEN_UPDATE
 ```
 

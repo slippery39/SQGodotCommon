@@ -261,13 +261,12 @@ public class FraStaticTests : FraBoardTest
 	[Test]
 	public void TheAiValuesWhatStaticsGive()
 	{
-		var ai = new global::MagicCore.Ai.GreedyAi(me);
 		var winter = Field(FraCards.Get("Winter, Tormented Loner"), me);
-		var before = ai.Evaluate(s);
+		var before = global::MagicCore.Ai.Evaluator.Evaluate(s, me);
 		var dead = Hand(TestGames.Creature("Dead", "1/1"), me);
 		s = s.MoveCard(dead, s.ZoneId(me, ZoneType.Graveyard)); // TEST SETUP: Winter is now 1/3
 		Assert.That(s.Power(s.GetCard(winter)), Is.EqualTo(1));
 
-		Assert.That(ai.Evaluate(s), Is.GreaterThan(before));
+		Assert.That(global::MagicCore.Ai.Evaluator.Evaluate(s, me), Is.GreaterThan(before));
 	}
 }
