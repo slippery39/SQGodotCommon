@@ -23,9 +23,9 @@ int? Arg(string name) =>
 if (args.FirstOrDefault(a => a.StartsWith("--match=")) is { } match)
 {
 	var names = match["--match=".Length..].Split(',');
-	if (names.Length != 2 || names.Any(n => !AiMatch.Names.Contains(n)))
+	if (names.Length != 2 || names.Any(n => !AiMatch.IsKnown(n)))
 	{
-		Console.WriteLine($"--match=A,B with two of: {string.Join(", ", AiMatch.Names)}");
+		Console.WriteLine($"--match=A,B with two of: {AiMatch.Usage}");
 		return;
 	}
 	Console.WriteLine(

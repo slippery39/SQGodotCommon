@@ -46,7 +46,10 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		Rollout.Settings? RolloutSettings = null
 	)
 	{
-		/// <summary>The search with held cards priced by their measured value (story AI-1).</summary>
+		/// <summary>
+		/// Held cards at half their measured value — the DEFAULT (story AI-1, measured 2026-10-16: 38–34
+		/// against the plain search, +11% time per decision; at 1.0 it hoards and loses 26–46).
+		/// </summary>
 		public const double HeldFraction = 0.5;
 
 		public Settings WithHeld(double fraction = HeldFraction) =>
@@ -57,15 +60,38 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 					Held = HeldValues.Fra(fraction),
 				},
 			};
+
+		/// <summary>The search as it was before held values: every card in hand at the flat price (A/B runs).</summary>
+		public Settings WithoutHeld() =>
+			this with
+			{
+				RolloutSettings = (RolloutSettings ?? Rollout.Default) with { Held = null },
+			};
 	}
+
+	/// <summary>
+	/// The search's rollout when no RolloutSettings are given: the rollout defaults with held cards at
+	/// <see cref="Settings.HeldFraction"/>. **Build a custom RolloutSettings from THIS, not from
+	/// Rollout.Default** — that one has no held values, so it is the old flat-price search. Lazy, so a
+	/// missing card-value table fails only where held values are wanted, not the whole type.
+	/// </summary>
+	public static Rollout.Settings DefaultRollout => defaultRollout.Value;
+
+	static readonly Lazy<Rollout.Settings> defaultRollout =
+		new(() => Rollout.Default with { Held = HeldValues.Fra(Settings.HeldFraction) });
 
 	/// <summary>A rollout at or above this has found a win; a decayed win is still far above it.</summary>
 	public const double WinThreshold = 2_500;
 
-	readonly Settings options = settings ?? new();
+	// The fallback to DefaultRollout is resolved HERE, once: every reader below takes options.
+	readonly Settings options = (settings ?? new()) with
+	{
+		RolloutSettings = settings?.RolloutSettings ?? DefaultRollout,
+	};
 
-	// Mulligans and the choices of several picks: GreedyAi, pricing held cards as the search does.
-	readonly GreedyAi greedy = new(playerId, (settings?.RolloutSettings ?? Rollout.Default).Held);
+	// Mulligans and the choices of several picks: GreedyAi, pricing held cards as the search does
+	// (resolved like `options` above — a field initialiser can't read another).
+	readonly GreedyAi greedy = new(playerId, (settings?.RolloutSettings ?? DefaultRollout).Held);
 
 	public int PlayerId { get; } = playerId;
 
@@ -90,7 +116,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	int planTurn;
 	int rollouts;
 
-	Rollout.Settings RolloutSettings => options.RolloutSettings ?? Rollout.Default;
+	Rollout.Settings RolloutSettings => options.RolloutSettings!;
 
 	public (GameState State, string What) Decide(GameState s)
 	{

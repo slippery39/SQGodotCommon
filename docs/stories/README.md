@@ -10,15 +10,14 @@ Refer to work by its ID: **`AI-1`** is a story, **`AI-1.2`** a task inside it.
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
-1. **AI-1** — the AI stops wasting removal: held cards valued by measurement (in progress)
-2. **AI-2** — the search AI: on MagicTable (AI-2.7), then the full measurement (AI-2.8)
-3. **AI-3** — swappable simulation models (opponent, our policy, hidden info, combat), measured
-4. **AI-5** — the evaluator sees threats (life against the board, blockers) and abilities
-5. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
-6. **LIM-1** — sealed and draft (and the last FRA card)
-7. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play
-8. **DATA-1** — bring in 17lands data
-9. **AI-4** — strategic plans above single actions (after AI-2 and AI-3 show the need)
+1. **AI-2** — the search AI: on MagicTable (AI-2.7), then the full measurement (AI-2.8)
+2. **AI-3** — swappable simulation models (opponent, our policy, hidden info, combat), measured
+3. **AI-5** — the evaluator sees threats (life against the board, blockers) and abilities
+4. **TBL-2** — play games on MagicTable; every "looks off" becomes a task
+5. **LIM-1** — sealed and draft (and the last FRA card)
+6. **TBL-3** — the hand on Common's `Card2D`, with drag-to-play
+7. **DATA-1** — bring in 17lands data
+8. **AI-4** — strategic plans above single actions (after AI-2 and AI-3 show the need)
 
 ## How it works
 
@@ -69,7 +68,6 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 
 | ID | Story | Status |
 |---|---|---|
-| [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | in-progress |
 | [AI-2](AI-2-beam-search.md) | A search AI for MagicCore — port the multi-turn beam search | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | ready |
 | [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | backlog |
@@ -78,6 +76,7 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |
 | [LIM-1](LIM-1-sealed-draft.md) | Sealed and draft for Reality Fracture | backlog |
 | [TBL-3](TBL-3-common-card2d-hand.md) | MagicTable's cards use Common's Card2D, with drag-to-play | backlog |
+| [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | done |
 | [DEV-1](DEV-1-story-system.md) | A story system that always says where the work stands | done |
 | [DEV-2](DEV-2-push-mtg-real.md) | mtg-real exists somewhere besides this machine | done |
 | [MC-1](MC-1-fra-cards.md) | A real-rules engine that plays every Reality Fracture card | done |

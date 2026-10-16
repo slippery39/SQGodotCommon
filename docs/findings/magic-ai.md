@@ -104,7 +104,8 @@ decisions. The passes are the engine's own floor (~0.09 ms each).
 ## The search AI against GreedyAi (2026-10-16, AI-2.5)
 
 `BeamSearchAi` at its defaults (depth 3, beam 4, branching 16 / 5, budget 200 rollouts, plans
-committed), Release, `--match=beam,greedy --games=72 --sequential` (games one at a time; each
+committed), Release, `--match=beam,greedy --games=72 --sequential` — the search before held values;
+since AI-1.9 `beam` holds cards by value, so reproduce this with `--match=beam-plain,greedy` (games one at a time; each
 decision's rollouts still run in parallel across 16 cores):
 
 | Build | Result (1 SE over mirror pairs) | Time per decision: mean / slowest | By the search's deck (W-L) |
@@ -158,3 +159,31 @@ took ~19 s; the final measurement takes ~1 s):
 - Sample (final): Craftwork Crusher 37.3, Emrakul 33.6, Ghalta 26.8, Vraska, the Cutting Glare 25.3,
   **Prophesied End 14.2**, Rampart Hunter 10.3, Last Gasp 9.5, **Rank Rat 4.5**; median 8.0; no
   negatives; twelve honest zeros.
+
+## Held cards at a fraction of their measured value (2026-10-16, AI-1.9)
+
+The search with held cards priced max(flat 1.2, fraction × measured value) — the opponent's hand
+blind — against the same search with the flat price. 72 games each, Release:
+
+| Fraction | Result vs the plain search (1 SE over pairs) | Lands played / game (held, plain) | Spells cast / game |
+|---|---|---|---|
+| 0.25 | 38–34, 52.8% ± 5.2pp | 7.2, 7.4 | 10.4, 10.4 |
+| **0.5** | **38–34, 52.8% ± 4.0pp** | 7.4, 7.7 | 10.9, 10.9 |
+| 1.0 | **26–46, 36.1% ± 4.7pp** | 7.2, 7.4 | **10.1**, 10.8 |
+
+- **0.25 and 0.5 are neutral within noise; 1.0 loses** by about three standard errors — it hoards:
+  fewer spells cast, more decisions. `AiPositionTests.ABigThreat_TheSearch_SpendsItsRemoval` is the
+  hoarding check (at 2.0 it fails).
+- **Land drops held.** MtgSimulator's hand term made land drops score negative and the AI stopped
+  playing lands (24.6%, actions 63 → 50); here the gap is ~0.3 lands a game at every fraction —
+  the term is constant per card and never moves with mana.
+  (These counts credited only the deciding player; a spell cast during the other's decision — on
+  resolution — was missed, for both sides alike. The harness counts both seats since.)
+- **Time, `--sequential`, fraction 0.5:** 249 ms per decision against 224 ms (+11%), slowest 5.8 s
+  against 4.4 s; 73 decisions a game against 70. The plan's divergence threshold (5.0) was tuned for
+  flat prices; held values move the score more per card, so plans drop a little more often.
+- **Never compare timings from parallel search-vs-search runs:** each game's search parallelises its
+  own rollouts too, so the cores are oversubscribed — 3–4.6 s mean, minutes at the slowest. The
+  win/loss columns are identical either way (deterministic); only time needs `--sequential`.
+- **Decision: 0.5 is the search's default** (AI-1's plan: default if not worse — it isn't, and it fixes
+  a bad play reported from a real game). `--match=beam-plain` is the search before it.

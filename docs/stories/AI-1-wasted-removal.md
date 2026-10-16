@@ -1,7 +1,7 @@
 ---
 id: AI-1
 title: The AI plays plausibly — no wasted removal
-status: in-progress
+status: done
 area: AI
 created: 2026-10-09
 ---
@@ -67,22 +67,18 @@ rollout. AI-3's richer opponent models are the other half of the cure.
       too; regenerate when the evaluator, the rollout or a card changes (Commands.md)
 - [x] AI-1.8 Held value in the evaluator: a non-land card in hand is worth max(flat, fraction ×
       measured) — a setting; GreedyAi unchanged, only the search uses it. Un-ignore the Rank Rat test
-- [ ] AI-1.9 Measure: the search with values vs without, 72 games, fraction swept; land drops and
+- [x] AI-1.9 Measure: the search with values vs without, 72 games, fraction swept; land drops and
       creature casts must not suffer (MtgSimulator's hand term failed exactly there); default if not worse
-- [ ] AI-1.4 If Shayne meets it again on MagicTable: capture that real game's seed as a second
-      position — the hand-built one lacks the real board and hands
+      — 0.5 is the default (findings)
+- [x] AI-1.4 ~~Capture a real game's seed if Shayne meets it again~~ — moved to TBL-2 (TBL-2.3), the
+      playtest story where such a report lands
 
 ## Next
 
-Next: **AI-1.9**, the measurement: `--match=beam-held,beam --games=72 --sequential` (~15 min a run),
-then the fraction swept (`BeamSearchAi.Settings.WithHeldValues(fraction)`); check land drops and
-creature casts don't fall (MtgSimulator's hand term failed there — read decisions and actions per
-game beside the win rate). The position tests that must stay green at any fraction chosen:
-`AiPositionTests.RankRat_TheSearchWithHeldValues_HoldsItsRemoval` and
-`ABigThreat_TheSearchWithHeldValues_SpendsItsRemoval`; their controls,
-`RankRat_Control_GreedyAiStillMakesTheBadPlay` and `RankRat_Control_ThePlainSearchStillMakesTheBadPlay`,
-say the position still provokes the play and that held values are what stop it. Record the
-runs in `docs/findings/magic-ai.md`; make held values the search's default only if it doesn't lose.
+Done. The search plays with held cards at half their measured value. What stays green:
+`AiPositionTests.RankRat_TheSearch_HoldsItsRemoval` and `ABigThreat_TheSearch_SpendsItsRemoval` (the
+default search), with their controls (GreedyAi and the plain search still make the bad play). When a
+long hold should END — what may still come, time, unused mana, our plan — is AI-5's.
 
 ## Log
 
@@ -126,6 +122,16 @@ runs in `docs/findings/magic-ai.md`; make held values the search's default only 
   the multi-pick path and the missing-table throw. **For AI-1.9:** the plan's divergence threshold
   (5.0) was tuned for flat prices; held values move the score more per card, so watch time per
   decision for plans being dropped more often.
+- 2026-10-16: AI-1.9 done — swept 0.25 / 0.5 / 1.0 against the plain search, 72 games each:
+  38–34, 38–34, 26–46 (1.0 hoards). Land drops held at every fraction. At 0.5, sequential: +11% time
+  per decision. **0.5 is the search's default**; `--match=beam-plain` keeps the old search for A/B.
+  The harness now reports lands played and spells cast per game, and takes `beam-held=F`. **Story done.**
+  /pre-commit fixes: the default is lazy (a missing table no longer poisons the whole type, and
+  `WithoutHeld()` needs none) and resolved once; `BeamSearchAi.DefaultRollout` is the base for a
+  custom rollout (Rollout.Default has no held values); fractions must be finite and >= 0 (NaN made
+  every score NaN); both seats' tallies are diffed each decision (a spell cast on resolution was
+  missed); the mirror test pins the counters, a test pins the name parsing (revert-checked); the
+  usage line no longer lists a placeholder; the findings say how to reproduce the plain search's 54–18.
 - 2026-10-16: **the search wastes the removal too.** In the rebuilt position both GreedyAi and
   BeamSearchAi cast Prophesied End on the non-attacking Rat. By the evaluator: casting nets about +2
   (the Rat ~4.5 gone, −1.2 for their card, −1.2 for ours) while holding is worth the flat 1.2 of a

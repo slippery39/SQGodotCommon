@@ -69,7 +69,7 @@ public class AiPositionTests
 
 	// Holding must not become hoarding: against a 5/5 the removal is worth spending.
 	[Test]
-	public void ABigThreat_TheSearchWithHeldValues_SpendsItsRemoval()
+	public void ABigThreat_TheSearch_SpendsItsRemoval()
 	{
 		var state = RankRatPosition();
 		(state, _) = TestGames.Put(
@@ -82,7 +82,7 @@ public class AiPositionTests
 		TestGames.PlayAis(
 			state,
 			s.GetGame().TurnNumber + 1,
-			new BeamSearchAi(me, new BeamSearchAi.Settings().WithHeld()),
+			new BeamSearchAi(me),
 			new GreedyAi(them),
 			(_, after) =>
 				bigDied |= !after.CardsIn(them, ZoneType.Battlefield).Any(c => c.Name == "Big")
@@ -95,16 +95,16 @@ public class AiPositionTests
 	// the held values that keep the removal in hand below, nothing else.
 	[Test]
 	public void RankRat_Control_ThePlainSearchStillMakesTheBadPlay() =>
-		Assert.That(KillsTheRatWhileItIsNotAttacking(new BeamSearchAi(me)), Is.True);
-
-	// The plain search fired it too (a held card was only the flat 1.2; AI-2.6). With held cards priced
-	// by their measured value (AI-1), Prophesied End is worth more in hand than the Rat is dead.
-	[Test]
-	public void RankRat_TheSearchWithHeldValues_HoldsItsRemoval() =>
 		Assert.That(
 			KillsTheRatWhileItIsNotAttacking(
-				new BeamSearchAi(me, new BeamSearchAi.Settings().WithHeld())
+				new BeamSearchAi(me, new BeamSearchAi.Settings().WithoutHeld())
 			),
-			Is.False
+			Is.True
 		);
+
+	// The search as it plays — held cards priced by their measured value (AI-1, the default since
+	// AI-1.9) — keeps Prophesied End: worth more in hand than the Rat is dead.
+	[Test]
+	public void RankRat_TheSearch_HoldsItsRemoval() =>
+		Assert.That(KillsTheRatWhileItIsNotAttacking(new BeamSearchAi(me)), Is.False);
 }

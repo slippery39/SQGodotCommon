@@ -77,7 +77,8 @@ MagicCore/
 ├── Ai/AiMatch.cs        THE strength harness: AI vs AI, every deck pairing, seats swapped (MagicConsole --match)
 ├── Ai/Lookahead.cs      playing a simulation forward cheaply: Settle (see a move's result), QuickAnswer
 ├── Ai/Rollout.cs        THE rollout the search scores by: to an absolute turn, cheap policies, terminal discount
-├── Ai/BeamSearchAi.cs   the search AI: a beam over our decisions this turn, rollout-scored, plan committed
+├── Ai/BeamSearchAi.cs   the search AI: a beam over our decisions this turn, rollout-scored, plan committed;
+│                        held cards priced by their measured value by default (AI-1)
 ├── Ai/CardValues.cs     the card-value sandbox: each card cast into a fixed board, measured to the turn's end
 ├── Zones/Zone.cs        per-player zones (incl. Command: emblems, "until your next turn" and "this turn" effects) + shared Stack; per-CONTROLLER battlefield
 ├── Sets/FRA.values.json GENERATED card values (CardValues; MagicConsole --card-values) — embedded, a test fails while stale

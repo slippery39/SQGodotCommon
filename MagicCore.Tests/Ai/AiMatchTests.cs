@@ -22,6 +22,32 @@ public class AiMatchTests
 		Assert.That(result.Games.All(g => g.Finished), result.Report());
 		Assert.That(result.WinRateA, Is.EqualTo(0.5), result.Report());
 		Assert.That(result.StandardError, Is.EqualTo(0), result.Report());
+		// The counters the AI-1.9 land-drop finding rests on: a mirror plays alike from both seats.
+		Assert.That(
+			result.Games.Sum(g => g.LandsA),
+			Is.EqualTo(result.Games.Sum(g => g.LandsB)).And.GreaterThan(0)
+		);
+		Assert.That(
+			result.Games.Sum(g => g.SpellsA),
+			Is.EqualTo(result.Games.Sum(g => g.SpellsB)).And.GreaterThan(0)
+		);
+	}
+
+	[Test]
+	public void AHeldFraction_InTheName_IsTheSearchAtThatFraction()
+	{
+		Assert.That(AiMatch.Create("beam-held=0.25", 1, 1), Is.TypeOf<BeamSearchAi>());
+		Assert.That(
+			new[]
+			{
+				"beam-held=NaN",
+				"beam-held=Infinity",
+				"beam-held=-1",
+				"beam-held=x",
+				"beam-held=",
+			}.Where(AiMatch.IsKnown),
+			Is.Empty
+		);
 	}
 
 	[Test]

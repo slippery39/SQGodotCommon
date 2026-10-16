@@ -89,6 +89,8 @@ dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/S
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
 #   --sequential for honest time per decision (parallel games inflate it 7-8x, unevenly); --match=x lists the AIs
+#   beam is the search as it plays (held cards at 0.5 of their measured value — AI-1); beam-plain is
+#   the search before held values; beam-held=0.25 is the search at that fraction
 ```
 
 Enter passes; `q` quits. The decks are `FraDecks` - only cards `FraCards.IsImplemented` allows.

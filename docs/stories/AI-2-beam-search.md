@@ -18,8 +18,8 @@ turn plus greedy rollouts of future turns, with choices branched. It was never p
 
 - [ ] A search AI that plans its own turn through MagicCore's priority, stack, combat and choices
 - [ ] Every bad play reported becomes a position test it must pass — the first is AI-1's Rank Rat.
-      **Unmet for the Rank Rat (2026-10-16): the search makes that play too; AI-1 owns it.** Making the
-      search the default (AI-2.8) rests on the measured strength, not on this requirement.
+      Met for the Rank Rat since AI-1 (2026-10-16): the search prices held cards by their measured
+      value by default and keeps its removal (`AiPositionTests`).
 - [ ] Measured against `GreedyAi` head-to-head, 25+ games per deck pairing, seats alternated, with
       time per decision beside the win rate — recorded in `docs/findings/magic-ai.md`
 - [ ] About 1 second per move on MagicTable
@@ -112,7 +112,8 @@ exactly as MtgCore treats a decision at a turn boundary.
 
 ## Next
 
-Next task: **AI-2.7** — the search on MagicTable and the console; the table needs a wall-clock cap
+Since AI-1 (2026-10-16) the default search prices held cards by their measured value — AI-2.8's
+measurement against GreedyAi must be re-run with it (the 54–18 was the plain search). Next task: **AI-2.7** — the search on MagicTable and the console; the table needs a wall-clock cap
 (the slowest decision measured 3.4 s against ~1 s wanted; sim runs keep the deterministic budget).
 New bad plays go into `MagicCore.Tests/Ai/AiPositionTests.cs`. Read first: `MagicCore/Ai/GreedyAi.cs`,
 `MtgSimulator/MultiTurnBeamSearchAiStrategy.cs`, `.claude/rules/sim-ai.md` (the measured lessons),

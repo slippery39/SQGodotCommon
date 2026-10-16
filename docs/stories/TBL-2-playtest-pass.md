@@ -26,13 +26,16 @@ is a bug report, never about the look.
 - A known engine simplification is not a bug: check `DesignNotes.md` "MagicCore known ceilings"
   before reporting or fixing (the legend rule and proliferate choose for you; blocker damage splits
   automatically; …).
-- An implausible AI play is AI-1's, not this story's.
+- An implausible AI play is an AI story's, not this one's: rebuild it in
+  `MagicCore.Tests/Ai/AiPositionTests.cs` (as AI-1 did the Rank Rat) and add it to the AI story it fits.
 
 ## Tasks
 
 - [ ] TBL-2.1 Emblems on screen: sandbox a planeswalker (`--put`), reach its ultimate, check the
       command zone on the player plate and in the zone viewer
 - [ ] TBL-2.2 Shayne's first playtest session — reports become tasks below
+- [ ] TBL-2.3 If the AI ever again spends Prophesied End (or any removal) on a non-attacking 1-drop:
+      capture that game's seed as a real position beside AI-1's hand-built one (moved from AI-1.4)
 
 ## Next
 
