@@ -9,6 +9,7 @@ using MagicCore.Sets.Fra;
 //   dotnet run --project MagicConsole                      you vs the AI
 //   dotnet run --project MagicConsole -- --ai-vs-ai        watch two AIs
 //   --seed=N replays a game; --deck=N skips the deck prompt (the AI plays the next deck).
+//   dotnet run --project MagicConsole -- --match=greedy,random --games=72   AI vs AI, measured
 
 var flags = args.ToHashSet();
 int? Arg(string name) =>
@@ -16,6 +17,21 @@ int? Arg(string name) =>
 	&& int.TryParse(a[(name.Length + 3)..], out var n)
 		? n
 		: null;
+
+// --match=A,B [--games=N] [--sequential]: AI against AI over every deck pairing, both seats (AiMatch).
+if (args.FirstOrDefault(a => a.StartsWith("--match=")) is { } match)
+{
+	var names = match["--match=".Length..].Split(',');
+	if (names.Length != 2 || names.Any(n => !AiMatch.Names.Contains(n)))
+	{
+		Console.WriteLine($"--match=A,B with two of: {string.Join(", ", AiMatch.Names)}");
+		return;
+	}
+	Console.WriteLine(
+		AiMatch.Run(names[0], names[1], Arg("games") ?? 24, flags.Contains("--sequential")).Report()
+	);
+	return;
+}
 
 var watch = flags.Contains("--ai-vs-ai");
 var seed = Arg("seed") ?? Random.Shared.Next(1, int.MaxValue);

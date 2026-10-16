@@ -89,7 +89,7 @@ exactly as MtgCore treats a decision at a turn boundary.
 - [x] AI-2.2 The evaluator out of `GreedyAi` into `MagicCore/Ai/Evaluator.cs`, behaviour unchanged —
       proven by a golden fingerprint of GreedyAi's decisions over seeded games (the existing golden
       replays play random moves, so they cannot see an AI change)
-- [ ] AI-2.3 Strength harness in `MagicCore/Ai/`: AI vs AI over the FRA deck pairings, seats
+- [x] AI-2.3 Strength harness in `MagicCore/Ai/`: AI vs AI over the FRA deck pairings, seats
       alternated, win rate ± SE, time per decision, actions per game. Run by
       `dotnet run --project MagicConsole -- --match=A,B --games=N`; self-checks as an `[Explicit]`
       test: Greedy-vs-Greedy ≈ 50% and Greedy-vs-random clearly apart (a harness that can't see a
@@ -108,7 +108,7 @@ exactly as MtgCore treats a decision at a turn boundary.
 
 ## Next
 
-Next task: **AI-2.3**, the strength harness. Read first: `MagicCore/Ai/GreedyAi.cs`,
+Next task: **AI-2.4**, the rollout. Read first: `MagicCore/Ai/GreedyAi.cs`,
 `MtgSimulator/MultiTurnBeamSearchAiStrategy.cs`, `.claude/rules/sim-ai.md` (the measured lessons),
 `MagicCore/MagicRules.cs` (`DecidingPlayerId`, `LegalActions`, `AutoPass`, `DistinctMoves`).
 Callers to switch in AI-2.7: `MagicTableManager.cs` (`_ais`, and the stand-in at line ~203),
@@ -133,3 +133,9 @@ Callers to switch in AI-2.7: `MagicTableManager.cs` (`_ais`, and the stand-in at
   proves the move changed nothing. Deferred: an `Explain` breakdown of the evaluator's terms (the
   root rule: Explain is the implementation, Evaluate the wrapper) — build it when an inspector or an
   A/B evaluator first needs one, not before.
+- 2026-10-16: AI-2.3 done — `IAi` (GreedyAi implements it), `RandomAi`, `AiMatch`, and
+  `MagicConsole --match=A,B --games=N [--sequential]`. Self-checks, both in the normal suite: an AI
+  against itself scores exactly 50% ± 0 (revert-checked by breaking the seat swap), and
+  `GreedyAiTests.BeatsRandomPlay` now runs through the harness (71–1 at 72 games). The standard error
+  is over mirror pairs, not games. Baselines in `docs/findings/magic-ai.md`: GreedyAi takes ~2 ms per
+  decision sequentially, parallel runs inflate that 7–8x, and the Jace deck goes 2–22 in GreedyAi's hands.

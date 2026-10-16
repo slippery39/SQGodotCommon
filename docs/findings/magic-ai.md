@@ -48,3 +48,29 @@ has no answer to.
 
 `GreedyAiTests.BeatsRandomPlay_InNearlyEveryGame` asserts 90% overall AND at least 6 of 10 in every
 pairing, so a collapse in one matchup cannot hide in the average.
+
+## The strength harness — baselines (2026-10-16, AI-2.3)
+
+`AiMatch` (`dotnet run --project MagicConsole -- --match=A,B --games=N [--sequential]`) plays every
+ordered FRA deck pairing with the AIs swapping seats: same decks, seats, seed and coin flip, only the
+AI differs.
+
+| Match, 72 games | Result (1 SE over mirror pairs) | Time per decision, `--sequential` |
+|---|---|---|
+| greedy vs random | **71–1**, 98.6% ± 1.4pp | greedy 1.9 ms, random 0.3 ms |
+| greedy vs greedy | **36–36** exactly, ± 0.0pp | 2.2 / 2.2 ms |
+
+- **The two self-checks hold.** An AI against itself scores EXACTLY half with zero error, because
+  GreedyAi is deterministic and a mirror pair is the same game with the names swapped —
+  `AiMatchTests` asserts it in the normal suite, and breaking the seat swap fails it (revert-checked).
+  Greedy beating random proves the harness can see a difference at all —
+  `GreedyAiTests.BeatsRandomPlay_InNearlyEveryGame` runs through the harness for that.
+- **The standard error is over mirror PAIRS, not games.** The two games of a pair share decks, seed
+  and coin flip, so they are not independent; a per-game binomial claimed ±5.9pp for an AI against
+  itself, whose true spread is zero.
+- **Parallel games inflate time per decision 7–8x, unevenly** (greedy 13.1 ms parallel vs 1.9 ms
+  sequential). Only `--sequential` timings are evidence.
+- **The White-Blue Jace deck goes 2–22 in GreedyAi's hands; White-Black 21–3, Red-Green 13–11**
+  (greedy vs greedy, by deck). Either the deck is weak or one-ply play cannot pilot it (planeswalker
+  loyalty, Empower Jace). A baseline to compare the search AI's per-deck record against.
+- GreedyAi averages ~55 decisions per player per game (AutoPass skips the forced passes) over ~21 turns.

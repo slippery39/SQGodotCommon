@@ -14,7 +14,7 @@ namespace MagicCore.Ai;
 /// turn, hold up mana or bluff, and a tapped dual and an untapped basic play as equals — it never
 /// asks "do I need this mana now". The real search comes once games run in bulk (see MagicCore/CLAUDE.md).
 /// </summary>
-public sealed class GreedyAi(int playerId)
+public sealed class GreedyAi(int playerId) : IAi
 {
 	public int PlayerId { get; } = playerId;
 

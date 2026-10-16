@@ -84,6 +84,8 @@ means the test is vacuous or the revert aimed at the wrong line.
 dotnet run --project MagicConsole                       # pick a deck, play the AI
 dotnet run --project MagicConsole -- --ai-vs-ai         # watch two AIs
 dotnet run --project MagicConsole -- --seed=7 --deck=1  # replay a game; skip the deck prompt
+dotnet run --project MagicConsole -- --match=greedy,random --games=72  # AI vs AI, measured (AiMatch)
+#   --sequential for honest time per decision (parallel games inflate it 7-8x, unevenly); --match=x lists the AIs
 ```
 
 Enter passes; `q` quits. The decks are `FraDecks` - only cards `FraCards.IsImplemented` allows.
