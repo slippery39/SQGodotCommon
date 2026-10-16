@@ -13,30 +13,17 @@ public class BeamSearchAiTests
 	[SetUp]
 	public void OurFirstMain_EmptyHands()
 	{
-		s = TestGames.InFirstMain();
+		s = TestGames.EmptyHands(TestGames.InFirstMain());
 		me = s.GetGame().StartingPlayerId;
 		them = s.OpponentOf(me);
-		foreach (var p in new[] { me, them })
-		foreach (var card in s.CardsIn(p, ZoneType.Hand).ToList())
-			s = s.MoveCard(card.Id, s.ZoneId(p, ZoneType.Library)); // TEST SETUP: nothing to cast
 	}
 
 	GameState WithLife(GameState state, int player, int life) =>
 		state.WithPlayer(state.GetPlayer(player) with { Life = life });
 
 	/// <summary>The search decides for us, <paramref name="opponent"/> for them, until the turn passes <paramref name="lastTurn"/>.</summary>
-	GameState PlayThrough(GameState state, int lastTurn, IAi opponent)
-	{
-		var ai = new BeamSearchAi(me);
-		for (var i = 0; i < 500; i++)
-		{
-			state = state.AutoPass();
-			if (state.IsOver() || state.GetGame().TurnNumber > lastTurn)
-				break;
-			state = (state.DecidingPlayerId() == me ? ai : opponent).Decide(state).State;
-		}
-		return state;
-	}
+	GameState PlayThrough(GameState state, int lastTurn, IAi opponent) =>
+		TestGames.PlayAis(state, lastTurn, new BeamSearchAi(me), opponent);
 
 	[Test]
 	public void ItTakesLethal_OnBoard()

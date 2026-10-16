@@ -115,6 +115,43 @@ static class TestGames
 		return (next, obj.Id);
 	}
 
+	/// <summary>TEST SETUP: both hands go back into their libraries, so a position holds only what a test puts in it.</summary>
+	public static GameState EmptyHands(GameState s)
+	{
+		foreach (var p in new[] { s.Player1Id(), s.Player2Id() })
+		foreach (var card in s.CardsIn(p, ZoneType.Hand).ToList())
+			s = s.MoveCard(card.Id, s.ZoneId(p, ZoneType.Library));
+		return s;
+	}
+
+	/// <summary>
+	/// Two AIs play until turn <paramref name="lastTurn"/> is over or the game ends — failing the test
+	/// if it never gets there, so a stuck loop can't pass as "nothing bad happened". <paramref name="onStep"/>
+	/// sees the state before and after each decision (the forced passes before it included).
+	/// </summary>
+	public static GameState PlayAis(
+		GameState s,
+		int lastTurn,
+		global::MagicCore.Ai.IAi first,
+		global::MagicCore.Ai.IAi second,
+		Action<GameState, GameState>? onStep = null
+	)
+	{
+		var ais = new[] { first, second }.ToDictionary(a => a.PlayerId);
+		for (var i = 0; i < 2_000; i++)
+		{
+			var before = s;
+			s = s.AutoPass();
+			if (!s.IsOver() && s.GetGame().TurnNumber <= lastTurn)
+				s = ais[s.DecidingPlayerId()].Decide(s).State;
+			onStep?.Invoke(before, s);
+			if (s.IsOver() || s.GetGame().TurnNumber > lastTurn)
+				return s;
+		}
+		Assert.Fail($"turn {lastTurn} never ended");
+		return s;
+	}
+
 	/// <summary>Started, then passed to the starting player's first main phase.</summary>
 	public static GameState InFirstMain(int seed = 1) =>
 		PassUntil(Started(seed), x => x.GetGame().Step == Step.PreCombatMain);

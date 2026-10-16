@@ -14,12 +14,9 @@ public class RolloutTests
 	[SetUp]
 	public void OurFirstMain_EmptyHands()
 	{
-		s = TestGames.InFirstMain();
+		s = TestGames.EmptyHands(TestGames.InFirstMain());
 		me = s.GetGame().StartingPlayerId;
 		them = s.OpponentOf(me);
-		foreach (var p in new[] { me, them })
-		foreach (var card in s.CardsIn(p, ZoneType.Hand).ToList())
-			s = s.MoveCard(card.Id, s.ZoneId(p, ZoneType.Library)); // TEST SETUP: nothing to cast
 	}
 
 	double Score(GameState state) =>

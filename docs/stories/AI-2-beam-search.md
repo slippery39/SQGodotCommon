@@ -17,7 +17,9 @@ turn plus greedy rollouts of future turns, with choices branched. It was never p
 ## Requirements
 
 - [ ] A search AI that plans its own turn through MagicCore's priority, stack, combat and choices
-- [ ] Every bad play reported becomes a position test it must pass — the first is AI-1's Rank Rat
+- [ ] Every bad play reported becomes a position test it must pass — the first is AI-1's Rank Rat.
+      **Unmet for the Rank Rat (2026-10-16): the search makes that play too; AI-1 owns it.** Making the
+      search the default (AI-2.8) rests on the measured strength, not on this requirement.
 - [ ] Measured against `GreedyAi` head-to-head, 25+ games per deck pairing, seats alternated, with
       time per decision beside the win rate — recorded in `docs/findings/magic-ai.md`
 - [ ] About 1 second per move on MagicTable
@@ -103,16 +105,16 @@ exactly as MtgCore treats a decision at a turn boundary.
 - [x] AI-2.5 The beam: root = this decision's moves (or a choice's options), expand our decisions to
       the turn boundary, opponent decisions by the model, prune, branching caps, rollout budget,
       fastest win, pass bias; the committed chain, re-searched on divergence
-- [ ] AI-2.6 Position tests: AI-1's Rank Rat, plus each new bad play
+- [x] AI-2.6 Position tests: AI-1's Rank Rat, plus each new bad play — `AiPositionTests`; the Rank Rat
+      FAILS for the search too, so it is skipped with its reason and owned by AI-1
 - [ ] AI-2.7 Selectable on MagicTable and the console; ~1 s per move on the table
 - [ ] AI-2.8 Measure against `GreedyAi`, record in `docs/findings/magic-ai.md`; default if better
 
 ## Next
 
-Next task: **AI-2.6**, position tests — AI-1's Rank Rat first (build the position by hand: a
-Prophesied End in the search's hand, Shayne's non-attacking Rank Rat). Then **AI-2.7**: the table
-needs a wall-clock cap — the slowest decision measured 3.4 s against ~1 s wanted (sim runs keep the
-deterministic budget). Read first: `MagicCore/Ai/GreedyAi.cs`,
+Next task: **AI-2.7** — the search on MagicTable and the console; the table needs a wall-clock cap
+(the slowest decision measured 3.4 s against ~1 s wanted; sim runs keep the deterministic budget).
+New bad plays go into `MagicCore.Tests/Ai/AiPositionTests.cs`. Read first: `MagicCore/Ai/GreedyAi.cs`,
 `MtgSimulator/MultiTurnBeamSearchAiStrategy.cs`, `.claude/rules/sim-ai.md` (the measured lessons),
 `MagicCore/MagicRules.cs` (`DecidingPlayerId`, `LegalActions`, `AutoPass`, `DistinctMoves`).
 Callers to switch in AI-2.7: `MagicTableManager.cs` (`_ais`, and the stand-in at line ~203),
@@ -167,3 +169,12 @@ Callers to switch in AI-2.7: `MagicTableManager.cs` (`_ais`, and the stand-in at
   `OpponentStep`; the opponent's turn now gets one ply per priority window (blocks still branched).
   Tests: lethal taken, chump block, determinism, MoveKey (X; loyalty) — revert-checked. Not pinned
   by a test: the plan fixes — measured instead (same strength, 14% faster).
+- 2026-10-16: AI-2.6 — `AiPositionTests` rebuilds the Rank Rat report by hand (two Plains,
+  Prophesied End in hand; the opponent's Rank Rat on the battlefield, not attacking). GreedyAi kills
+  the Rat there, so the position is the report. **The search kills it too** — the "every bad play is
+  a position test it passes" requirement is unmet for this one, and AI-1 owns it; the test is
+  `[Ignore]`d with the reason so every run shows it (un-skipped, it fails — checked). /pre-commit
+  fixes: the test plays THEIR turn too (an instant cast in their upkeep is the same bad play) and
+  fails on the Rat dying while not attacking; a live control asserts GreedyAi still makes the play
+  there, so a broken position can't pass for nothing (revert-checked); a stuck driver loop now fails
+  instead of passing; the three AI test classes share `TestGames.EmptyHands` and `TestGames.PlayAis`.
