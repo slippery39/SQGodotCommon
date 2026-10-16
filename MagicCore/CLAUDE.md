@@ -77,6 +77,7 @@ MagicCore/
 ├── Ai/Lookahead.cs      playing a simulation forward cheaply: Settle (see a move's result), QuickAnswer
 ├── Ai/Rollout.cs        THE rollout the search scores by: to an absolute turn, cheap policies, terminal discount
 ├── Ai/BeamSearchAi.cs   the search AI: a beam over our decisions this turn, rollout-scored, plan committed
+├── Ai/CardValues.cs     the card-value sandbox: each card cast into a fixed board, measured to the turn's end
 ├── Zones/Zone.cs        per-player zones (incl. Command: emblems, "until your next turn" and "this turn" effects) + shared Stack; per-CONTROLLER battlefield
 └── Sets/FRA.json        imported by tools/import_scryfall_set.py — embedded resource, never hand-edit
 ```

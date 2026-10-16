@@ -68,9 +68,9 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 
 | ID | Story | Status |
 |---|---|---|
+| [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | in-progress |
 | [AI-2](AI-2-beam-search.md) | A search AI for MagicCore — port the multi-turn beam search | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | ready |
-| [AI-1](AI-1-wasted-removal.md) | The AI plays plausibly — no wasted removal | backlog |
 | [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | backlog |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |

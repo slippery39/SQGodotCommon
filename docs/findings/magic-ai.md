@@ -122,3 +122,39 @@ decision's rollouts still run in parallel across 16 cores):
   sim runs stay on the deterministic budget.
 - The search makes ~65 decisions a game to GreedyAi's ~52: it reaches more decisions (it keeps more
   creatures and spells in play), not more forced ones — AutoPass skips those for both.
+
+## The card-value sandbox: what to measure (2026-10-16, AI-1.6)
+
+`CardValues.Measure` casts each card into a fixed board (a 1/1–5/5 vanilla ladder on each side) and
+compares with the same board without it. MtgSimulator's sandbox rolls **four turns** forward; on
+MagicCore that measured combat, not the card. Probed over all 284 playable FRA cards (the rollouts
+took ~19 s; the final measurement takes ~1 s):
+
+| Measured at | Exactly 0 | Negative | Rampart Hunter (3/3 deathtouch) | Artifist Acumen (first strike, a card) |
+|---|---|---|---|---|
+| rollout, 4 turns | 9 | 2 | **0.0** | −19.1 |
+| rollout, 2 / 1 / 0 turns | 10 / 12 / 8 | 2 / 3 / 6 | 0.0 / 0.0 / −1.7 | −14.1 / −14.1 / −11.6 |
+| **the cast's turn, no attacks** | 13 (all honest) | **0** | **+10.3** | **+0.3** |
+
+- **Why the rollouts fail here:** with both ladders, the rollout's combat (each attacker judged
+  alone; a trigger's target the first legal one) trades the boards away, and the extra card goes with
+  them — Rampart Hunter measured EXACTLY the control at every horizon. MtgCore has no blocking, so
+  MtgSimulator never met this.
+- **Through the turn, not just the resolution:** measured the instant the spell resolved, Face
+  Yourself (copies sacrificed at the end step) read 47.5, the top of the set; through the end step it
+  reads 0. `CardValuesTests.ACreatureSacrificedAtTheEndStep_IsWorthNothing` pins it (revert-checked).
+- **Per-card lands (MtgSimulator's rule):** a basic per coloured pip plus generic plus 3. A flat
+  fifteen lands left {G}{G}{G}{G} uncastable and let X run to ~13 (Guiding Hydra 38.5, top 2).
+- The honest zeros: pumps until end of turn (Perfected Theory, Blazing Crescendo), cards with nothing
+  to work on (Germinate Recruits with no life gained, Loyal Tutor with no planeswalker), Frostbite
+  Pyromental (its value is the hasty attack, not measured). **So a held card must keep at least the
+  flat hand value** — at 0 the search, whose ties go to acting, would throw zero-valued tricks away.
+- **Our own choices must be tried, not declined** (the /pre-commit review): the cheap answer takes the
+  fewest picks, so every "you may" and "up to N" was refused, and a trigger's target was the first
+  legal one — Ajani's Anguish could burn our own creature. GreedyAi now answers ours (attacks
+  excepted); Ajani's Anguish reads 15.5. A cap of 16 casts cut the BEST lines of two-target spells
+  (the generator lists our small creatures first) — Compel Brutality and Vigorbloom Charm (14.5, 17.0)
+  now get every line. Landcycling no longer counts as a cast.
+- Sample (final): Craftwork Crusher 37.3, Emrakul 33.6, Ghalta 26.8, Vraska, the Cutting Glare 25.3,
+  **Prophesied End 14.2**, Rampart Hunter 10.3, Last Gasp 9.5, **Rank Rat 4.5**; median 8.0; no
+  negatives; twelve honest zeros.

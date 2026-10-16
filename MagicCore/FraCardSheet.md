@@ -1052,7 +1052,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** AiPositionTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, ManaTests, RandomGameTests
 
 ### Predictive Preparations
 
@@ -1121,7 +1121,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > When this creature enters, each opponent discards a card.
 
-**Status:** scripted · **tests naming it:** FraCardTests
+**Status:** scripted · **tests naming it:** AiPositionTests, FraCardTests
 
 **Engine pieces:** `Discard` — Each player named discards, choosing for themselves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -3332,7 +3332,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Destroy target creature. If it wasn't attacking, its controller draws a card.
 
-**Status:** scripted · **tests naming it:** ArenaDeckTests, FraCardTests, FraSacrificeTests
+**Status:** scripted · **tests naming it:** AiPositionTests, ArenaDeckTests, FraCardTests, FraSacrificeTests
 
 **Engine pieces:** `Destroy` — "Destroy [What]" — to its owner's graveyard, unless indestructible (CR 701.7).; `DrawCards` — "[Who] draws N cards" — a draw from an empty library is flagged for the state-based loss.; `If` — "If [condition], [effects]" — the effects run in order with this ability's context.; `Matches` — "If [something] is [filter]" — any object the Ref names matches. Prophesied End: "if it…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 

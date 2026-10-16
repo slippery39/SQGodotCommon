@@ -26,6 +26,10 @@ the opponent's real hand cheats. Which is best is a measurement, not a guess.
       known**. Needs the engine to record which library positions a player knows — surveil and scry
       keeps, "put on the top / bottom", mulligan bottoms — cleared when the library is shuffled
 - [ ] Every combination worth running is measured the same way: strength AND time per decision
+- [ ] The rollout's combat: each attacker is judged alone and a trigger's target is the first legal
+      one (DesignNotes ceilings). On a full board this trades both sides away — it made the card-value
+      sandbox measure combat instead of the card (findings, AI-1.6) and it shapes the search's
+      scores too. Measure a better combat policy here, like the other models
 
 ## Decisions
 

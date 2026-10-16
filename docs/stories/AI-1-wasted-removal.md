@@ -1,7 +1,7 @@
 ---
 id: AI-1
 title: The AI plays plausibly — no wasted removal
-status: backlog
+status: in-progress
 area: AI
 created: 2026-10-09
 ---
@@ -35,6 +35,16 @@ SHARED evaluator as a 25-point loss, because it distorted land drops: `.claude/r
 (b) a rollout opponent that casts threats (AI-3), so holding has something to wait for; (c) both,
 measured separately.
 
+- 2026-10-16, Shayne: **(a) — value a held card by what it can still do.**
+- 2026-10-16, Shayne: **measured per card** (a sandbox, MtgSimulator's CardValueSandbox ported), not
+  a set average for removal, not (b). Valuing a card by its best use NOW can't work: casting realizes
+  that value, holding only keeps a fraction — the held value must come from beyond the current board.
+- 2026-10-16, Shayne: the table is **tracked in git** (MtgSimulator's untracked table needed a Godot
+  copy that went stale); **GreedyAi stays unchanged** (its fingerprint holds) — only the search uses
+  held values; held value is a **setting**, measured against its absence.
+- 2026-10-16: measured to the END of the cast's turn with no attacks, not by a rollout — the rollout
+  measured combat, not the card (findings). Held value floors at the flat hand value (findings).
+
 Why the search alone may not fix it (2026-10-16): every non-land card in hand scores a flat 1.2
 (`Evaluator.Side`, `MagicCore/Ai/Evaluator.cs`), the Rat dying about 4.5 and the drawn card 1.2 — so casting nets ~+2 over passing,
 and any removal is worth less held than almost any target. MtgCore's search has the same flat hand
@@ -46,14 +56,22 @@ rollout. AI-3's richer opponent models are the other half of the cure.
 - [x] AI-1.1 Capture the position as a test — built by hand in AI-2.6:
       `AiPositionTests.RankRat_TheSearch_HoldsItsRemoval` (`[Ignore]`d until this story passes it)
 - [x] AI-1.2 Does the search still waste removal? **Yes** (2026-10-16) — see the Log
-- [ ] AI-1.3 Shayne picks the approach (the open question above, under Decisions)
+- [x] AI-1.3 Shayne picks the approach — (a), 2026-10-16
+- [x] AI-1.5 Settle the exact form of (a) with Shayne — measured per card, plan below (2026-10-16)
+- [x] AI-1.6 The sandbox, `MagicCore/Ai/CardValues.cs`: each card cast into a fixed board and measured
+      at the end of its turn (findings: why not a rollout); tests revert-checked
+- [ ] AI-1.7 The table: `MagicConsole -- --card-values` writes a TRACKED file the Godot table reads
+      too; regenerate when the evaluator, the rollout or a card changes (Commands.md)
+- [ ] AI-1.8 Held value in the evaluator: a non-land card in hand is worth max(flat, fraction ×
+      measured) — a setting; GreedyAi unchanged, only the search uses it. Un-ignore the Rank Rat test
+- [ ] AI-1.9 Measure: the search with values vs without, 72 games, fraction swept; land drops and
+      creature casts must not suffer (MtgSimulator's hand term failed exactly there); default if not worse
 - [ ] AI-1.4 If Shayne meets it again on MagicTable: capture that real game's seed as a second
       position — the hand-built one lacks the real board and hands
 
 ## Next
 
-**Waiting on Shayne: AI-1.3** — no evaluator or model work before he picks (a), (b) or (c). The
-test to make pass is `AiPositionTests.RankRat_TheSearch_HoldsItsRemoval` (remove its `[Ignore]`);
+Next: **AI-1.7**, the table. The test to make pass (AI-1.8) is `AiPositionTests.RankRat_TheSearch_HoldsItsRemoval` (remove its `[Ignore]`);
 its control, `RankRat_Control_GreedyAiStillMakesTheBadPlay`, says the position still provokes the
 play — if (a) changes GreedyAi too, the control's job is done: update it, don't delete the evidence.
 Then read `MagicCore/Ai/Evaluator.cs`, `MagicCore/Ai/Rollout.cs` and `docs/findings/magic-ai.md`,
@@ -63,6 +81,13 @@ and measure with `--match` (`--sequential` for time) before claiming anything.
 
 - 2026-10-16: created from the DesignNotes entry.
 - 2026-10-16: open question answered — AI-2 first.
+- 2026-10-16: AI-1.6 done — the sandbox measures all 284 playable FRA cards in ~1 s: no negatives,
+  twelve honest zeros, Prophesied End 14.2 against the Rank Rat's 4.5. /pre-commit fixes: our own
+  choices answered by GreedyAi (a "you may" was always declined, a trigger hit the first legal
+  target), every cast line tried (a cap of 16 cut the best), casts only (not landcycling), a fixture
+  that fails to reach its main phase throws. Tests: ordering, removal, the end-step sacrifice, a
+  "you may" taken, unmeasured cards — revert-checked. The review also noted the rollout's own combat
+  (attackers judged alone) still shapes the SEARCH's scores — recorded in AI-3.
 - 2026-10-16: **the search wastes the removal too.** In the rebuilt position both GreedyAi and
   BeamSearchAi cast Prophesied End on the non-attacking Rat. By the evaluator: casting nets about +2
   (the Rat ~4.5 gone, −1.2 for their card, −1.2 for ours) while holding is worth the flat 1.2 of a
