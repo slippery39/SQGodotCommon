@@ -183,6 +183,15 @@ def token_parts():
     return shrink(mask, TOKEN), shrink(rim, TOKEN), shrink(glow, (w + 48, h + 48))
 
 
+def tick(img, colour=(244, 226, 155)):
+    """A gold tick over `img` (the palette's gold text), drawn at S x and downsampled like the rest."""
+    w, h = img.size
+    layer = Image.new("RGBA", (w * S, h * S), (0, 0, 0, 0))
+    points = [(x * w * S, y * h * S) for x, y in ((0.26, 0.52), (0.43, 0.70), (0.76, 0.30))]
+    ImageDraw.Draw(layer).line(points, fill=colour + (255,), width=int(0.14 * w * S), joint="curve")
+    return Image.alpha_composite(img, layer.resize((w, h), Image.LANCZOS))
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     made = []
@@ -249,6 +258,12 @@ def main():
     save(mask, "token_mask")
     save(rim, "token_rim")
     save(glow, "token_glow")
+
+    # Checkbox icons, in the project theme (TBL-2.4): a small leather plate, and the same with a
+    # gold tick. Godot's defaults were a faint outline that vanished on the dark backdrop.
+    check = compose(28, 28, rounded(5), LEATHER, BRASS, 2, grain_strength=0.2, gloss=False)
+    save(check, "check_off")
+    save(tick(check), "check_on")
 
     print("made", ", ".join(made), "->", OUT)
 

@@ -304,3 +304,8 @@ Plains (their builder predated colour and skipped `ManaBase`); fixed and pinned 
 host's right edge (portrait mask + ring, no new art), its own hover/click target with the
 attachment's id; gold ring when it is a valid target. A Myr Enforcer read 13/6 with nothing on
 screen saying why — the Plating hid behind it. `--decks=A,B` added to make such boards repeatable.
+
+**Checkboxes (2026-10-16, TBL-2.4).** Godot's default CheckBox icons were a faint dark outline that
+vanished on the leather, and a ~10 px tick beside 24 px text. `check_off` / `check_on` (a small leather
+plate with a brass rim; the same with a gold `#f4e29b` tick) come from `tools/make_mtg_ui.py` and sit in
+`mtg_theme.tres`, so every CheckBox in the project gets them. Shayne chose box icons over plate toggles.

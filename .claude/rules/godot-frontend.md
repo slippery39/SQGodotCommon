@@ -53,6 +53,9 @@ is on screen — twice, twenty minutes of hand-play found what a screenshot loop
 - **Text over a busy picture needs its own `LabelSettings` with an outline** (and a shadow); a
   theme's `outline_size` override drew nothing. Over a bright scene, add a blurred backshadow
   texture — a `StyleBoxFlat` panel reads as a dark card, not as a shadow.
+- **Godot's DEFAULT theme icons vanish on a dark backdrop.** An unticked CheckBox drew nothing on
+  the leather mat, and its icons don't grow with a font-size override. Give every control that draws an
+  icon its icons in the project theme (MTG: `mtg_theme.tres`, textures from `tools/make_mtg_ui.py`).
 - **Small symbols need brighter tints than the palette.** A colour that reads at panel size reads as
   mud at chip size.
 
