@@ -187,3 +187,37 @@ blind — against the same search with the flat price. 72 games each, Release:
   win/loss columns are identical either way (deterministic); only time needs `--sequential`.
 - **Decision: 0.5 is the search's default** (AI-1's plan: default if not worse — it isn't, and it fixes
   a bad play reported from a real game). `--match=beam-plain` is the search before it.
+
+## The search on the table: a 1-second cap (2026-10-16, AI-2.7)
+
+`BeamSearchAi.Settings.Interactive` (a 1 s `TimeLimit`), the search against itself over every
+ordered FRA pairing, seeds 1–2 (24 games), one game at a time; per decision. "Deepest level" counts
+the searches (plan replays excluded) by the last level that expanded anything — root / 2 / 3:
+
+| Cap | Build | Decisions | Mean | p95 | p99 | Slowest | Over 1.2 s / 1.5 s | Deepest level |
+|---|---|---|---|---|---|---|---|---|
+| none | Debug | 2 138 | 246 ms | 1.27 s | 2.37 s | 4.61 s | 122 / 70 | |
+| elapsed checked between levels | Debug | 1 899 | 322 ms | 1.49 s | 2.09 s | 3.33 s | 168 / 91 | |
+| a level started only if all its batches fit | Release | 2 048 | 201 ms | 0.75 s | 1.02 s | 2.24 s | 8 / 3 | |
+| none | Release | 2 138 | 325 ms | 1.68 s | 2.74 s | 5.24 s | 195 / 131 | 531 / 126 / 469 |
+| **each line expanded only if one batch fits** | Release | 1 913 | **222 ms** | 0.94 s | **1.12 s** | **1.65 s** | **10 / 3** | 488 / 198 / 363 |
+
+- **Checking the elapsed time between levels does not cap anything:** in a real mid-game position one
+  level costs 0.4–0.6 s (a parallel batch of rollouts per kept line — far above the ~22 ms one
+  rollout costs on a small board), so a level started at 0.7 s ends at 1.3.
+- **Estimating a whole level was too cautious** (the /pre-commit review): the first estimate was the
+  root's whole time — up to 16 rollouts, where a batch below it has at most 5 (measured: a 0.8 s root,
+  then batches of ~0.25 s) — and lines whose turn was over counted as batches though they cost
+  nothing. A 0.3 s root read as a 1.5 s level and the search stopped at one level. Now the clock is
+  checked before each line is expanded, the first batch estimated from the root's scaled to 5
+  rollouts; a line left unexpanded keeps its rollout score, to the same horizon as the rest. **The
+  capped search reaches the third level in 363 searches against the uncapped 469.**
+- **What is left over 1.2 s is mostly the root:** 16 root moves rolled out take 1.1–2.2 s. Marked
+  `ponytail:` in BeamSearchAi and in DesignNotes.
+- **On the table** (`MagicTableManager`, search in both seats, Debug, 3 games, the level-estimate
+  version): the slowest `StepAi` — which plays the AI's passes up to its next visible move — took
+  1.08 s; p95 0.57 s.
+- The two Debug rows and the uncapped Release rows show how much one run's means move (246 vs 325 ms
+  for the same search): compare the tails, not the means.
+- **Strength under the cap is not measured** — a wall clock in a sim run makes it machine-dependent.
+  `beam` in `--match` stays uncapped; AI-2.8 measures that.

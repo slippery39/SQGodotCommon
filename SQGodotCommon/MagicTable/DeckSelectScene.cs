@@ -11,7 +11,8 @@ public sealed record TableSetup(
 	IReadOnlyList<CardDefinition> Mine,
 	IReadOnlyList<CardDefinition> Theirs,
 	int? Seed,
-	bool AiVsAi
+	bool AiVsAi,
+	bool Search
 )
 {
 	/// <summary>The last setup chosen — New game and Replay keep it.</summary>
@@ -32,6 +33,7 @@ public partial class DeckSelectScene : Control
 	private readonly LineEdit _seed =
 		new() { PlaceholderText = "random", CustomMinimumSize = new Vector2(240, 0) };
 	private readonly CheckBox _aiVsAi = new() { Text = "AI plays both seats (watch)" };
+	private readonly CheckBox _search = new() { Text = "Search AI (stronger, ~1 s a move)" };
 	private readonly Button _start = new() { Text = "Start", FocusMode = FocusModeEnum.None };
 
 	public override void _Ready()
@@ -65,6 +67,8 @@ public partial class DeckSelectScene : Control
 		bottom.AddChild(_seed);
 		_aiVsAi.AddThemeFontSizeOverride("font_size", 24);
 		bottom.AddChild(_aiVsAi);
+		_search.AddThemeFontSizeOverride("font_size", 24);
+		bottom.AddChild(_search);
 		bottom.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
 		MtgUiStyles.StylePrimary(_start, 34);
 		_start.CustomMinimumSize = new Vector2(300, 0);
@@ -88,7 +92,8 @@ public partial class DeckSelectScene : Control
 			_mine.Deck!,
 			_theirs.Deck!,
 			int.TryParse(_seed.Text.Trim(), out var seed) ? seed : null,
-			_aiVsAi.ButtonPressed
+			_aiVsAi.ButtonPressed,
+			_search.ButtonPressed
 		);
 		Project.GameManager.Instance.ChangeScene("res://MagicTable/MagicTableScene.tscn");
 	}

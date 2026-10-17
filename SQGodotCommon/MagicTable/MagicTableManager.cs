@@ -17,7 +17,7 @@ public sealed class MagicTableManager
 {
 	private readonly IReadOnlyList<CardDefinition> _deck1;
 	private readonly IReadOnlyList<CardDefinition> _deck2;
-	private readonly Dictionary<int, GreedyAi> _ais = new();
+	private readonly Dictionary<int, IAi> _ais = new();
 	private readonly List<string> _log = new();
 	private readonly List<(GameState State, int LogCount)> _undo = new();
 
@@ -28,6 +28,9 @@ public sealed class MagicTableManager
 	public int HumanId { get; }
 	public int OpponentId { get; }
 	public bool AiVsAi { get; }
+
+	/// <summary>The AI is the search (<see cref="BeamSearchAi"/>, about a second a decision), not GreedyAi.</summary>
+	public bool Search { get; }
 	private Stops _stops = Stops.Arena;
 
 	/// <summary>Changing them applies at once: a step that is no longer a stop is passed.</summary>
@@ -47,10 +50,11 @@ public sealed class MagicTableManager
 		IReadOnlyList<CardDefinition> deck1,
 		IReadOnlyList<CardDefinition> deck2,
 		int seed,
-		bool aiVsAi = false
+		bool aiVsAi = false,
+		bool search = false
 	)
 	{
-		(_deck1, _deck2, Seed, AiVsAi) = (deck1, deck2, seed, aiVsAi);
+		(_deck1, _deck2, Seed, AiVsAi, Search) = (deck1, deck2, seed, aiVsAi, search);
 		State = MagicRules.NewGame(
 			deck1,
 			deck2,
@@ -58,14 +62,20 @@ public sealed class MagicTableManager
 			names: aiVsAi ? ("AI 1", "AI 2") : ("You", "AI")
 		);
 		(HumanId, OpponentId) = (State.Player1Id(), State.Player2Id());
-		_ais[OpponentId] = new GreedyAi(OpponentId);
+		_ais[OpponentId] = NewAi(OpponentId);
 		if (aiVsAi)
-			_ais[HumanId] = new GreedyAi(HumanId);
+			_ais[HumanId] = NewAi(HumanId);
 		Settle();
 	}
 
 	/// <summary>The same game again: same decks, same seed, so the same shuffles.</summary>
-	public MagicTableManager Replay() => new(_deck1, _deck2, Seed, AiVsAi) { Stops = Stops };
+	public MagicTableManager Replay() =>
+		new(_deck1, _deck2, Seed, AiVsAi, Search) { Stops = Stops };
+
+	private IAi NewAi(int playerId) =>
+		Search
+			? new BeamSearchAi(playerId, BeamSearchAi.Settings.Interactive)
+			: new GreedyAi(playerId);
 
 	public bool IsOver => State.IsOver();
 	public bool HumanToAct => !IsOver && !_ais.ContainsKey(State.DecidingPlayerId());
@@ -222,6 +232,9 @@ public sealed class MagicTableManager
 		_undo.RemoveAt(_undo.Count - 1);
 		State = state;
 		_log.RemoveRange(logCount, _log.Count - logCount);
+		// The search commits to a plan; one made past the undone decisions would replay out of order.
+		foreach (var id in _ais.Keys.ToList())
+			_ais[id] = NewAi(id);
 	}
 
 	/// <summary>Applied only once the engine accepted it, so a rejected move leaves no undo step.</summary>

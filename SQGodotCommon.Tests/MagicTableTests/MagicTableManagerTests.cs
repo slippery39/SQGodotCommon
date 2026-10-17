@@ -10,8 +10,8 @@ namespace SQGodotCommon.Tests;
 
 public class MagicTableManagerTests
 {
-	static MagicTableManager New(int seed = 5, bool aiVsAi = false) =>
-		new(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], seed, aiVsAi);
+	static MagicTableManager New(int seed = 5, bool aiVsAi = false, bool search = false) =>
+		new(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], seed, aiVsAi, search);
 
 	static void RunAi(MagicTableManager m)
 	{
@@ -242,5 +242,20 @@ public class MagicTableManagerTests
 			string.Join(",", x.State.CardsIn(x.HumanId, ZoneType.Hand).Select(c => c.Name));
 		Assert.That(Hand(replay), Is.EqualTo(Hand(m)));
 		Assert.That(replay.Seed, Is.EqualTo(77));
+	}
+
+	[Test]
+	public void TheSearch_PlaysTheTable_AndReplayKeepsIt()
+	{
+		var m = New(aiVsAi: true, search: true);
+		for (var i = 0; i < 200 && !m.IsOver && m.State.GetGame().TurnNumber < 3; i++)
+			m.StepAi();
+
+		Assert.That(
+			m.State.GetGame().TurnNumber,
+			Is.GreaterThanOrEqualTo(3),
+			string.Join(" | ", m.Log)
+		);
+		Assert.That(m.Replay().Search);
 	}
 }

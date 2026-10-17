@@ -10,7 +10,7 @@ Refer to work by its ID: **`AI-1`** is a story, **`AI-1.2`** a task inside it.
 
 Hand-ordered — reorder freely. Everything here must be an open story (`python tools/stories.py` checks).
 
-1. **AI-2** — the search AI: on MagicTable (AI-2.7), then the full measurement (AI-2.8)
+1. **AI-2** — the search AI: the full measurement against GreedyAi, then the default (AI-2.8)
 2. **AI-3** — swappable simulation models (opponent, our policy, hidden info, combat), measured
 3. **AI-5** — the evaluator sees threats (life against the board, blockers) and abilities
 4. **TBL-2** — play games on MagicTable; every "looks off" becomes a task

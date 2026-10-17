@@ -1124,6 +1124,8 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - the search's rollout (`Ai/Rollout.cs`) reads the libraries in their REAL order, so it draws the cards really on top — the AI sees its own future; AI-3 adds "shuffle what the player can't know"
 - the rollout judges each attacker ALONE (the others declare nothing in its look-ahead), so an attack that only works together — two 3/3s into one blocker for lethal — is never found; port MtgSimulator's FindLethalAttacks if rollouts need it
 - a rollout that hits its DecisionLimit is scored where it stopped, mid-turn, beside rollouts scored at the horizon — only a loop that never advances gets there; flag or drop such a candidate if one is ever seen
+- the search's table time cap (`BeamSearchAi.Settings.TimeLimit`, 1 s) gates only the lines below the root: a 16-move root always completes — 1.1–2.2 s measured; with the cap 10 of 1 913 decisions ran over 1.2 s, the slowest 1.65 s (docs/findings/magic-ai.md); skip root rollouts past the limit, scored by the cheap evaluation, if that shows on the table
+- the search runs on the table's main thread, so the window does not redraw while it thinks (the slowest `StepAi` measured 1.1 s); move `Decide` to a worker and apply on the main thread if a playtest calls it a freeze. Undo rebuilds the AIs (the search commits to a plan that an undo would put out of step)
 - the search AI (`Ai/BeamSearchAi.cs`) never responds to its OWN object on top of the stack — in its tree or for real — so a line that protects its spell with a second one is never found; branch that window if a deck needs it
 
 ## MagicTable does not use Common's Card2D or drag-to-play (deferred)

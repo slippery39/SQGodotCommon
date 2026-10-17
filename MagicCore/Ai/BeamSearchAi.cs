@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 
@@ -34,6 +35,15 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <param name="ExpandBranching">The same below the root, where it is tighter (MtgSimulator measured 72% of its cost there).</param>
 	/// <param name="RolloutBudget">Rollouts one decision may start a new level with — about 22 ms each.</param>
 	/// <param name="CommitPlans">False searches afresh at every decision (to measure the plan's worth).</param>
+	/// <param name="TimeLimit">
+	/// Wall clock for one decision. Below the root, a line is expanded only if one more parallel batch
+	/// still fits — a batch costing what the last one did (a level costs 0.4–0.6 s in a real mid-game
+	/// position, so checking the time once per level overran by that much). A line not expanded keeps
+	/// its rollout score, to the same horizon as every other. For the interactive table and console
+	/// ONLY: a sim run must leave it null, or its results depend on the machine (<see cref="Interactive"/>).
+	/// ponytail: the root level always completes — 16 root moves measured at 1.1–2.2 s; skip root
+	/// rollouts past the limit (scoring them by the cheap evaluation) if that ever shows on the table.
+	/// </param>
 	public sealed record Settings(
 		int Depth = 3,
 		int BeamWidth = 4,
@@ -43,9 +53,13 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		double PassBias = 0.01,
 		bool CommitPlans = true,
 		double DivergenceThreshold = 5.0,
-		Rollout.Settings? RolloutSettings = null
+		Rollout.Settings? RolloutSettings = null,
+		TimeSpan? TimeLimit = null
 	)
 	{
+		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
+		public static Settings Interactive => new(TimeLimit: TimeSpan.FromSeconds(1));
+
 		/// <summary>
 		/// Held cards at half their measured value — the DEFAULT (story AI-1, measured 2026-10-16: 38–34
 		/// against the plain search, +11% time per decision; at 1.0 it hoards and loses 26–46).
@@ -139,6 +153,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	Decision Search(GameState s)
 	{
 		(plan, planExpected, rollouts) = ([], [], 0);
+		var clock = Stopwatch.StartNew();
 		var rootTurn = s.GetGame().TurnNumber;
 		var horizon = Rollout.Horizon(s, RolloutSettings);
 		var children = Narrow(s, Children(s), options.MaxBranching);
@@ -148,30 +163,39 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 
 		var root = new Node(s, [], [], 0);
 		var beam = Expand(root, s, children, horizon);
+		// Below the root each kept line is one parallel batch of at most ExpandBranching rollouts; the
+		// first is estimated from the root's batch, scaled to that size (measured: a 0.8 s root of 16
+		// moves, then batches of ~0.25 s).
+		var perBatch =
+			clock.Elapsed * Math.Min(1.0, (double)options.ExpandBranching / children.Count);
 		if (Winner(beam) is { } won)
 			return Commit(won, rootTurn);
 
 		for (var depth = 1; depth < options.Depth && rollouts < options.RolloutBudget; depth++)
 		{
+			var (levelStart, batches) = (clock.Elapsed, 0);
 			var next = new List<Node>();
-			var grew = false;
 			foreach (var node in Prune(beam))
 			{
 				var (at, leaf) = Advance(node.State, rootTurn);
-				if (leaf)
+				// The turn is over on this line, or there is no time to expand it: its score already
+				// reaches the horizon.
+				if (leaf || clock.Elapsed + perBatch >= options.TimeLimit)
 				{
-					next.Add(node); // the turn is over on this line: its score already covers the rest
+					next.Add(node);
 					continue;
 				}
 				next.AddRange(
 					Expand(node, at, Narrow(at, Children(at), options.ExpandBranching), horizon)
 				);
-				grew = true;
+				batches++;
 			}
 			beam = next;
+			if (batches > 0) // none: every line's turn is over, or the time is
+				perBatch = (clock.Elapsed - levelStart) / batches;
 			if (Winner(beam) is { } win)
 				return Commit(win, rootTurn);
-			if (!grew)
+			if (batches == 0)
 				break;
 		}
 		return Commit(Best(beam), rootTurn);

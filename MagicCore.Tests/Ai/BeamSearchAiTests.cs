@@ -1,6 +1,7 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Ai;
+using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Ai;
 
@@ -59,6 +60,41 @@ public class BeamSearchAiTests
 			new BeamSearchAi(me).Decide(s).What,
 			Is.EqualTo(new BeamSearchAi(me).Decide(s).What)
 		);
+	}
+
+	// The table's time cap gates the levels below the root, decision by decision over a real game:
+	// with no time at all only the root is searched (a one-level search's decisions); with time to
+	// spare, every level is (an uncapped search's) — an estimate that always overshoots fails this.
+	[TestCase(0, true, 25)]
+	[TestCase(3600, false, 12)]
+	public void TheTimeCap_GatesTheLevelsBelowTheRoot(int seconds, bool rootOnly, int decisions)
+	{
+		var game = MagicRules.NewGame(FraDecks.All["White-Black"], FraDecks.All["Red-Green"], 1);
+		var p = game.Player1Id();
+		var capped = new BeamSearchAi(
+			p,
+			new BeamSearchAi.Settings(TimeLimit: TimeSpan.FromSeconds(seconds))
+		);
+		var uncapped = new BeamSearchAi(
+			p,
+			rootOnly ? new BeamSearchAi.Settings(Depth: 1) : new BeamSearchAi.Settings()
+		);
+		var other = new GreedyAi(game.Player2Id());
+
+		for (var searched = 0; searched < decisions && !game.IsOver(); )
+		{
+			game = game.AutoPass();
+			if (game.IsOver())
+				break;
+			if (game.DecidingPlayerId() != p)
+			{
+				game = other.Decide(game).State;
+				continue;
+			}
+			var (next, what) = uncapped.Decide(game);
+			Assert.That(capped.Decide(game).What, Is.EqualTo(what), $"decision {searched}");
+			(game, searched) = (next, searched + 1);
+		}
 	}
 
 	// A planned move is re-found by MoveKey, so everything that tells two legal moves apart must be in

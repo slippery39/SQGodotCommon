@@ -22,12 +22,15 @@ turn plus greedy rollouts of future turns, with choices branched. It was never p
       value by default and keeps its removal (`AiPositionTests`).
 - [ ] Measured against `GreedyAi` head-to-head, 25+ games per deck pairing, seats alternated, with
       time per decision beside the win rate — recorded in `docs/findings/magic-ai.md`
-- [ ] About 1 second per move on MagicTable
+- [ ] About 1 second per move on MagicTable. Met since AI-2.7 (2026-10-16) bar the root: a 1 s cap
+      (`Settings.Interactive`) — p99 1.12 s, 10 of 1 913 decisions over 1.2 s (slowest 1.65 s);
+      a 16-move root alone can take 1.1–2.2 s
 - [ ] The opponent inside the simulation is decided in ONE place (the rollout's pass for the other
       player); this story ships `BoardOnly`, AI-3 adds the others and the setting that picks them
 - [ ] Hidden information: this story ships "real order" (the AI sees the library as it is, marked
       `ponytail:` and in DesignNotes); AI-3 adds "shuffle what isn't known" and the setting
-- [ ] Selectable on MagicTable and the console; it becomes the default only once measured better
+- [ ] Selectable on MagicTable and the console; it becomes the default only once measured better.
+      Selectable since AI-2.7 (the deck select's "Search AI" box, `--search` on both); default: AI-2.8
 - [ ] Deterministic for a given seed — no thread order or wall clock reaches a decision in a sim run
 
 ## Decisions
@@ -107,19 +110,21 @@ exactly as MtgCore treats a decision at a turn boundary.
       fastest win, pass bias; the committed chain, re-searched on divergence
 - [x] AI-2.6 Position tests: AI-1's Rank Rat, plus each new bad play — `AiPositionTests`; the Rank Rat
       FAILS for the search too, so it is skipped with its reason and owned by AI-1
-- [ ] AI-2.7 Selectable on MagicTable and the console; ~1 s per move on the table
+- [x] AI-2.7 Selectable on MagicTable and the console; ~1 s per move on the table (commit pending)
 - [ ] AI-2.8 Measure against `GreedyAi`, record in `docs/findings/magic-ai.md`; default if better
 
 ## Next
 
-Since AI-1 (2026-10-16) the default search prices held cards by their measured value — AI-2.8's
-measurement against GreedyAi must be re-run with it (the 54–18 was the plain search). Next task: **AI-2.7** — the search on MagicTable and the console; the table needs a wall-clock cap
-(the slowest decision measured 3.4 s against ~1 s wanted; sim runs keep the deterministic budget).
-New bad plays go into `MagicCore.Tests/Ai/AiPositionTests.cs`. Read first: `MagicCore/Ai/GreedyAi.cs`,
-`MtgSimulator/MultiTurnBeamSearchAiStrategy.cs`, `.claude/rules/sim-ai.md` (the measured lessons),
-`MagicCore/MagicRules.cs` (`DecidingPlayerId`, `LegalActions`, `AutoPass`, `DistinctMoves`).
-Callers to switch in AI-2.7: `MagicTableManager.cs` (`_ais`, and the stand-in at line ~203),
-`MagicConsole/Program.cs`.
+Next task: **AI-2.8** — measure `beam` against `GreedyAi` again (`--match=beam,greedy --games=72
+--sequential`, Release): the 54–18 was the plain search, before AI-1's held values. If it is still
+better, make it the default — `MagicTableManager.Search`'s default, the deck select's box ticked,
+and the console's `--search` reversed — and record it in `docs/findings/magic-ai.md`.
+`beam` in `--match` is UNCAPPED on purpose: a wall clock in a sim run makes results depend on the
+machine; the table's cap (`Settings.Interactive`) is never measured for strength.
+Not done, deferred with costs in DesignNotes: the search runs on the table's main thread (the window
+stalls up to ~1.1 s while it thinks), and the root level ignores the cap.
+New bad plays go into `MagicCore.Tests/Ai/AiPositionTests.cs`. Read first: `MagicCore/Ai/BeamSearchAi.cs`,
+`MagicCore/Ai/AiMatch.cs`, `.claude/rules/sim-ai.md`.
 
 ## Log
 
@@ -179,3 +184,22 @@ Callers to switch in AI-2.7: `MagicTableManager.cs` (`_ais`, and the stand-in at
   fails on the Rat dying while not attacking; a live control asserts GreedyAi still makes the play
   there, so a broken position can't pass for nothing (revert-checked); a stuck driver loop now fails
   instead of passing; the three AI test classes share `TestGames.EmptyHands` and `TestGames.PlayAis`.
+- 2026-10-16: AI-2.7 done — the search on the table (the deck select's "Search AI" box; `--search`)
+  and the console (`--search`); GreedyAi stays the default until AI-2.8. `Settings.TimeLimit` caps a
+  decision for people only (`Settings.Interactive`, 1 s). **Checking the elapsed time between levels
+  capped nothing** — a level costs 0.4–0.6 s mid-game, so 91 of 1 899 decisions still ran past 1.5 s;
+  the cap now starts a level only if its estimate (one parallel batch per kept line, at the last
+  batch's cost) fits: 3 of 2 048 past 1.5 s, p99 1.02 s (findings). Left over: the 16-move root
+  (up to 2.2 s), `ponytail:` and in DesignNotes. On the table the slowest `StepAi` took 1.08 s, on
+  the main thread — DesignNotes too. Tests: no time left = a one-level search, decision by decision
+  over a real game (revert-checked: without the gate it differs at decision 3); the table plays the
+  search to turn 3 and Replay keeps it. MagicCore.Tests 923, MagicTable tests 12, green.
+- 2026-10-16: /pre-commit fixes to AI-2.7 — the level estimate was too cautious (the root's whole
+  time as the first batch; lines whose turn was over counted as batches), so the capped search often
+  stopped at one level: now each line is expanded only if one more batch fits, the first estimated
+  from the root's scaled to `ExpandBranching`. Capped, it reaches the third level in 363 searches
+  against the uncapped 469; p99 1.12 s, slowest 1.65 s (findings). Undo now rebuilds the AIs — the
+  search's committed plan would have replayed past the undone decisions (not pinned by a test: it
+  needs a contrived interrupted plan). The cap test now also checks that a one-hour limit searches
+  every level (revert-checked: a flipped gate fails both cases, an estimate that always overshoots
+  fails the hour case). MagicCore.Tests 924, MagicTable tests 12, green.
