@@ -1,7 +1,7 @@
 ---
 id: AI-2
 title: A search AI for MagicCore — port the multi-turn beam search
-status: in-progress
+status: done
 area: AI
 created: 2026-10-09
 ---
@@ -16,22 +16,24 @@ turn plus greedy rollouts of future turns, with choices branched. It was never p
 
 ## Requirements
 
-- [ ] A search AI that plans its own turn through MagicCore's priority, stack, combat and choices
-- [ ] Every bad play reported becomes a position test it must pass — the first is AI-1's Rank Rat.
+- [x] A search AI that plans its own turn through MagicCore's priority, stack, combat and choices
+- [x] Every bad play reported becomes a position test it must pass — the first is AI-1's Rank Rat.
       Met for the Rank Rat since AI-1 (2026-10-16): the search prices held cards by their measured
       value by default and keeps its removal (`AiPositionTests`).
-- [ ] Measured against `GreedyAi` head-to-head, 25+ games per deck pairing, seats alternated, with
-      time per decision beside the win rate — recorded in `docs/findings/magic-ai.md`
-- [ ] About 1 second per move on MagicTable. Met since AI-2.7 (2026-10-16) bar the root: a 1 s cap
+- [x] Measured against `GreedyAi` head-to-head, 25+ games per deck pairing, seats alternated, with
+      time per decision beside the win rate — recorded in `docs/findings/magic-ai.md`. AI-2.8: 111–45
+      (71.2% ± 3.1pp) over 156 games, 26 per ordered pairing; 239 ms per decision
+- [x] About 1 second per move on MagicTable. Met since AI-2.7 (2026-10-16) bar the root: a 1 s cap
       (`Settings.Interactive`) — p99 1.12 s, 10 of 1 913 decisions over 1.2 s (slowest 1.65 s);
       a 16-move root alone can take 1.1–2.2 s
-- [ ] The opponent inside the simulation is decided in ONE place (the rollout's pass for the other
+- [x] The opponent inside the simulation is decided in ONE place (the rollout's pass for the other
       player); this story ships `BoardOnly`, AI-3 adds the others and the setting that picks them
-- [ ] Hidden information: this story ships "real order" (the AI sees the library as it is, marked
+- [x] Hidden information: this story ships "real order" (the AI sees the library as it is, marked
       `ponytail:` and in DesignNotes); AI-3 adds "shuffle what isn't known" and the setting
-- [ ] Selectable on MagicTable and the console; it becomes the default only once measured better.
-      Selectable since AI-2.7 (the deck select's "Search AI" box, `--search` on both); default: AI-2.8
-- [ ] Deterministic for a given seed — no thread order or wall clock reaches a decision in a sim run
+- [x] Selectable on MagicTable and the console; it becomes the default only once measured better.
+      Selectable since AI-2.7; the default since AI-2.8 (the deck select's box starts ticked;
+      `--greedy` picks GreedyAi on both)
+- [x] Deterministic for a given seed — no thread order or wall clock reaches a decision in a sim run
 
 ## Decisions
 
@@ -110,21 +112,17 @@ exactly as MtgCore treats a decision at a turn boundary.
       fastest win, pass bias; the committed chain, re-searched on divergence
 - [x] AI-2.6 Position tests: AI-1's Rank Rat, plus each new bad play — `AiPositionTests`; the Rank Rat
       FAILS for the search too, so it is skipped with its reason and owned by AI-1
-- [x] AI-2.7 Selectable on MagicTable and the console; ~1 s per move on the table (commit pending)
-- [ ] AI-2.8 Measure against `GreedyAi`, record in `docs/findings/magic-ai.md`; default if better
+- [x] AI-2.7 Selectable on MagicTable and the console; ~1 s per move on the table (2b9eea2)
+- [x] AI-2.8 Measure against `GreedyAi`, record in `docs/findings/magic-ai.md`; default if better
 
 ## Next
 
-Next task: **AI-2.8** — measure `beam` against `GreedyAi` again (`--match=beam,greedy --games=72
---sequential`, Release): the 54–18 was the plain search, before AI-1's held values. If it is still
-better, make it the default — `MagicTableManager.Search`'s default, the deck select's box ticked,
-and the console's `--search` reversed — and record it in `docs/findings/magic-ai.md`.
-`beam` in `--match` is UNCAPPED on purpose: a wall clock in a sim run makes results depend on the
-machine; the table's cap (`Settings.Interactive`) is never measured for strength.
-Not done, deferred with costs in DesignNotes: the search runs on the table's main thread (the window
-stalls up to ~1.1 s while it thinks), and the root level ignores the cap.
-New bad plays go into `MagicCore.Tests/Ai/AiPositionTests.cs`. Read first: `MagicCore/Ai/BeamSearchAi.cs`,
-`MagicCore/Ai/AiMatch.cs`, `.claude/rules/sim-ai.md`.
+**Done.** The search is the table's and the console's AI. What follows is other stories: AI-3 (the
+simulated opponent and hidden information, swappable and measured), AI-5 (the evaluator sees
+threats and abilities), AI-4 (plans above single actions). Deferred with costs in DesignNotes: the
+search runs on the table's main thread (the window stalls up to ~1.1 s while it thinks), and the
+root level ignores the time cap. `beam` in `--match` is UNCAPPED on purpose — the table's cap is
+never measured for strength. New bad plays go into `MagicCore.Tests/Ai/AiPositionTests.cs`.
 
 ## Log
 
@@ -203,3 +201,9 @@ New bad plays go into `MagicCore.Tests/Ai/AiPositionTests.cs`. Read first: `Magi
   needs a contrived interrupted plan). The cap test now also checks that a one-hour limit searches
   every level (revert-checked: a flipped gate fails both cases, an estimate that always overshoots
   fails the hour case). MagicCore.Tests 924, MagicTable tests 12, green.
+- 2026-10-16: AI-2.8 done — `--match=beam,greedy --games=156 --sequential`, Release, at 2b9eea2:
+  **111–45, 71.2% ± 3.1pp**; 239 ms per decision (slowest 6.2 s, uncapped); the search's deck
+  White-Black 48–4, Red-Green 40–12, Jace 23–29 (findings). 156 games, not 72: the requirement is
+  25+ per pairing, and there are six ordered ones. Better by seven standard errors, so it is the
+  default: the deck select's box starts ticked, `--greedy` (table and console) picks GreedyAi; the
+  manager's own default stays GreedyAi so tests stay instant. Story done.

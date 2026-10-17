@@ -1100,7 +1100,7 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - last-known information keeps a card's own characteristics, not what statics gave it
 - a dying card's own "when this dies" looks back, but other leaves-the-battlefield triggers read the battlefield NOW (Edgar dying alongside a creature misses its death)
 - a "sacrifice the greatest" tie takes the first
-- `GreedyAi` is one ply with a passive opponent — no turn planning, no holding up mana, no "do I need this mana now" when choosing a tapped dual, and it loses slow races to evasive fliers (`docs/findings/magic-ai.md`)
+- `GreedyAi` (no longer the default AI — the search is, AI-2) is one ply with a passive opponent — no turn planning, no holding up mana, no "do I need this mana now" when choosing a tapped dual, and it loses slow races to evasive fliers (`docs/findings/magic-ai.md`)
 - menace drops a lone blocker instead of refusing the declaration
 - the auto-tapper ignores what the rest of the hand needs
 - Empower Jace with two Jace tokens loads the first
@@ -1149,7 +1149,11 @@ Options, roughly in cost order:
   since a Container won't lay out a Node2D — the whole row code changes.
 - Either way the click paths stay (Arena supports both), and `IsMoveFor` / `Targeting` are reused.
 
-## MagicCore's AI plays implausibly — one-ply greedy is not enough (backlog)
+## MagicCore's AI plays implausibly — one-ply greedy is not enough (done: AI-1, AI-2)
+
+**Taken up, 2026-10-16:** AI-1 priced held cards by their measured value (the Rank Rat is kept), and
+AI-2 ported the beam search — the table's and the console's default since it beat GreedyAi 111–45
+(`docs/findings/magic-ai.md`). Kept below for the reasoning.
 
 Shayne, 2026-10-09, playing the table: the AI cast **Prophesied End** ("Destroy target creature.
 If it wasn't attacking, its controller draws a card.") on a **Rank Rat** that was not attacking —

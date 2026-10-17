@@ -166,7 +166,8 @@ public partial class MagicTableScene : Control
 			?[(name.Length + 3)..];
 
 	/// <summary>
-	/// Decks, AI-vs-AI and the search from the deck select (<see cref="TableSetup"/>), the debug args overriding;
+	/// Decks, AI-vs-AI and which AI from the deck select (<see cref="TableSetup"/>), the debug args overriding
+	/// (the search unless --greedy);
 	/// --autoplay only at startup, so New game starts at turn 0.
 	/// </summary>
 	private static MagicTableManager NewGame(int seed, Stops stops)
@@ -178,7 +179,7 @@ public partial class MagicTableScene : Control
 			decks is null ? setup?.Theirs ?? FraDecks.All["Red-Green"] : FraDecks.All[decks[1]],
 			seed,
 			OS.GetCmdlineUserArgs().Contains("--ai-vs-ai") || setup?.AiVsAi == true,
-			OS.GetCmdlineUserArgs().Contains("--search") || setup?.Search == true
+			!OS.GetCmdlineUserArgs().Contains("--greedy") && setup?.Search != false
 		)
 		{
 			Stops = stops,

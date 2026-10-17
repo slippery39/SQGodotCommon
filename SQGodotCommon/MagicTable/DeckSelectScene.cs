@@ -33,7 +33,8 @@ public partial class DeckSelectScene : Control
 	private readonly LineEdit _seed =
 		new() { PlaceholderText = "random", CustomMinimumSize = new Vector2(240, 0) };
 	private readonly CheckBox _aiVsAi = new() { Text = "AI plays both seats (watch)" };
-	private readonly CheckBox _search = new() { Text = "Search AI (stronger, ~1 s a move)" };
+	private readonly CheckBox _search =
+		new() { Text = "Search AI (stronger, ~1 s a move)", ButtonPressed = true };
 	private readonly Button _start = new() { Text = "Start", FocusMode = FocusModeEnum.None };
 
 	public override void _Ready()

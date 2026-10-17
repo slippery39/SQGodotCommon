@@ -29,7 +29,10 @@ public sealed class MagicTableManager
 	public int OpponentId { get; }
 	public bool AiVsAi { get; }
 
-	/// <summary>The AI is the search (<see cref="BeamSearchAi"/>, about a second a decision), not GreedyAi.</summary>
+	/// <summary>
+	/// The AI is the search (<see cref="BeamSearchAi"/>, about a second a decision), not GreedyAi. The
+	/// front ends' default (AI-2.8); false here so tests stay instant and seed-exact.
+	/// </summary>
 	public bool Search { get; }
 	private Stops _stops = Stops.Arena;
 

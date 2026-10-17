@@ -83,7 +83,7 @@ means the test is vacuous or the revert aimed at the wrong line.
 ```
 dotnet run --project MagicConsole                       # pick a deck, play the AI
 dotnet run --project MagicConsole -- --ai-vs-ai         # watch two AIs
-dotnet run --project MagicConsole -- --search           # the AI is the search (BeamSearchAi, ~1 s cap a decision), not GreedyAi
+dotnet run --project MagicConsole -- --greedy           # the AI is GreedyAi (instant), not the search (BeamSearchAi, ~1 s a decision)
 dotnet run --project MagicConsole -- --seed=7 --deck=1  # replay a game; skip the deck prompt
 dotnet run --project MagicConsole -- --match=greedy,random --games=72  # AI vs AI, measured (AiMatch)
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json (~1 s)
@@ -141,7 +141,7 @@ Traps, each paid for once on the KIN branch:
   `window/size/window_*_override` (it does: 1280x720). Check a capture's real pixel size.
 - **A capture cannot hover or click**, and a still frame proves nothing about motion — nothing moves
   until state changes. KIN added debug flags (`--hover-card=N`, `--mouse=x,y`, real clicks through
-  the viewport) for this; `-GameArgs '--tap=X,Y@F'` (any screen; window pixels, as read off a capture frame) sends a REAL click on frame F+1, and MtgGame has `-GameArgs '--autoplay=N'` (the AI plays BOTH seats to turn N, so the board opens mid-game; a game can end early) and `--decks=Player,Opponent` (DeckRegistry names; random otherwise); MagicTable has `--seed=N`, `--decks=A,B` (FraDecks names), `--autoplay=N`, `--ai-vs-ai`, `--search` (the search AI; the deck select's checkbox) and `--put=Name:Zone` (repeatable; the sandbox into your seat — `"--put=Hunter's Axe:Battlefield"`). Its entry screen is `MagicTable/DeckSelectScene.tscn`; the flags override what it chose. Add more when a screen needs them, and send REAL input
+  the viewport) for this; `-GameArgs '--tap=X,Y@F'` (any screen; window pixels, as read off a capture frame) sends a REAL click on frame F+1, and MtgGame has `-GameArgs '--autoplay=N'` (the AI plays BOTH seats to turn N, so the board opens mid-game; a game can end early) and `--decks=Player,Opponent` (DeckRegistry names; random otherwise); MagicTable has `--seed=N`, `--decks=A,B` (FraDecks names), `--autoplay=N`, `--ai-vs-ai`, `--greedy` (GreedyAi instead of the search; the deck select's checkbox — makes `--autoplay` fast) and `--put=Name:Zone` (repeatable; the sandbox into your seat — `"--put=Hunter's Axe:Battlefield"`). Its entry screen is `MagicTable/DeckSelectScene.tscn`; the flags override what it chose. Add more when a screen needs them, and send REAL input
   events through the viewport rather than calling the handler, or the capture "verifies" something
   no player can do.
 

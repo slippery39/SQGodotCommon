@@ -221,3 +221,20 @@ the searches (plan replays excluded) by the last level that expanded anything �
   for the same search): compare the tails, not the means.
 - **Strength under the cap is not measured** — a wall clock in a sim run makes it machine-dependent.
   `beam` in `--match` stays uncapped; AI-2.8 measures that.
+
+## The search against GreedyAi, with held values (2026-10-16, AI-2.8)
+
+`--match=beam,greedy --games=156 --sequential`, Release, at 2b9eea2 — `beam` is the search as it
+plays since AI-1 (held cards at half their measured value), UNCAPPED (no wall clock in a sim run).
+156 games = 13 seeds × 6 ordered deck pairings × both seats: 26 games per pairing, the story's 25+.
+
+| Result (1 SE over mirror pairs) | Time per decision: mean / slowest | Decisions per game (beam, greedy) | By the search's deck (W-L) |
+|---|---|---|---|
+| **111–45, 71.2% ± 3.1pp** | 239 ms / 6 238 ms (GreedyAi 4.2 ms) | 66, 50 | White-Black 48–4, Red-Green 40–12, Jace 23–29 |
+
+- **Still clearly stronger** — seven standard errors above even. Against the plain search's 54–18
+  (75.0% ± 4.2pp, 72 games) the difference is within noise, as AI-1.9 measured held values neutral.
+- **The Jace deck is the search's weak seat** (23–29); GreedyAi piloting it went 2–22 against itself.
+- Per game: turns 20.2; lands played 6.8 (search) vs 7.5, spells cast 9.6 vs 9.7.
+- **Decision: the search is the default AI** on MagicTable and the console (the story's rule:
+  default once measured better). `--greedy` picks GreedyAi.

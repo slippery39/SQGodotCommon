@@ -9,7 +9,7 @@ using MagicCore.Sets.Fra;
 //   dotnet run --project MagicConsole                      you vs the AI
 //   dotnet run --project MagicConsole -- --ai-vs-ai        watch two AIs
 //   --seed=N replays a game; --deck=N skips the deck prompt (the AI plays the next deck);
-//   --search: the AI is the search (BeamSearchAi, ~1 s a decision), not GreedyAi.
+//   --greedy: the AI is GreedyAi (one ply, instant), not the search (BeamSearchAi, ~1 s a decision).
 //   dotnet run --project MagicConsole -- --match=greedy,random --games=72   AI vs AI, measured
 //   dotnet run --project MagicConsole -- --card-values   regenerate MagicCore/Sets/FRA.values.json
 
@@ -67,9 +67,9 @@ var theirName = decks[mine % decks.Count];
 var s = MagicRules.NewGame(FraDecks.All[mineName], FraDecks.All[theirName], seed);
 var (human, opponent) = (s.Player1Id(), s.Player2Id());
 IAi NewAi(int player) =>
-	flags.Contains("--search")
-		? new BeamSearchAi(player, BeamSearchAi.Settings.Interactive)
-		: new GreedyAi(player);
+	flags.Contains("--greedy")
+		? new GreedyAi(player)
+		: new BeamSearchAi(player, BeamSearchAi.Settings.Interactive);
 var ais = new Dictionary<int, IAi> { [opponent] = NewAi(opponent) };
 if (watch)
 	ais[human] = NewAi(human);
