@@ -235,6 +235,9 @@ plays since AI-1 (held cards at half their measured value), UNCAPPED (no wall cl
 - **Still clearly stronger** — seven standard errors above even. Against the plain search's 54–18
   (75.0% ± 4.2pp, 72 games) the difference is within noise, as AI-1.9 measured held values neutral.
 - **The Jace deck is the search's weak seat** (23–29); GreedyAi piloting it went 2–22 against itself.
+  **Open:** the plain search went 14–10 with it (seeds 1–6), the held one 23–29 (seeds 1–13) — within
+  noise (~±10 and ±7pp), but held values may make Jace's cards too dear to spend. Settle it on the
+  same seeds: `--match=beam,beam-plain --sequential`, read the by-deck line (~45 min). Not run.
 - Per game: turns 20.2; lands played 6.8 (search) vs 7.5, spells cast 9.6 vs 9.7.
 - **Decision: the search is the default AI** on MagicTable and the console (the story's rule:
   default once measured better). `--greedy` picks GreedyAi.

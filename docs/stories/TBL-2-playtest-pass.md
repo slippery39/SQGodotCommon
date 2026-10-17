@@ -36,11 +36,18 @@ is a bug report, never about the look.
 - [ ] TBL-2.2 Shayne's first playtest session — reports become tasks below
 - [ ] TBL-2.3 If the AI ever again spends Prophesied End (or any removal) on a non-attacking 1-drop:
       capture that game's seed as a real position beside AI-1's hand-built one (moved from AI-1.4)
+- [ ] TBL-2.4 An unticked checkbox draws no box ("AI plays both seats", "Full control"; "Search AI"
+      once unticked); a ticked one is ~10 px beside 24 px text. Cause: Godot's DEFAULT CheckBox
+      icons — `mtg_theme.tres` styles no CheckBox — a faint dark outline on the dark backdrop, not
+      scaled with the font override. Seen in a capture of DeckSelectScene, 2026-10-16. A look
+      decision, so ask first (`MtgVisualDesign.md`): themed box icons sized to the text, or toggles
+      as `MtgUiStyles.StyleChoice` plates (parchment = on), as the deck list already shows a pick
 
 ## Next
 
 Run the table with `Run-Godot.ps1` (`Commands.md`: flags `--seed --decks --autoplay --ai-vs-ai
---put`). For each report: reproduce it with the seed + undo, read `.claude/rules/magic-table.md`
+--greedy --put`). **The AI is the search since AI-2.8** (~1 s a move; the window stalls while it
+thinks — DesignNotes); `--greedy` plays GreedyAi instead, and makes `--autoplay` fast. For each report: reproduce it with the seed + undo, read `.claude/rules/magic-table.md`
 for the table side or `MagicCore/CLAUDE.md` for the engine side, find the cause before the fix.
 
 ## Log
@@ -48,3 +55,5 @@ for the table side or `MagicCore/CLAUDE.md` for the engine side, find the cause 
 - 2026-10-09: TBL-1 done; playtesting is next.
 - 2026-10-09/10: first reports fixed inside TBL-1 (combat declaration, multi-pick choices,
   wrapping, modal spells) — `7855e12`, `c72e55b`, `1ec29e1`.
+- 2026-10-16: TBL-2.4 added — unticked checkboxes are invisible (seen while AI-2.7 added "Search
+  AI"); Next says the AI is now the search, and names `--greedy`.
