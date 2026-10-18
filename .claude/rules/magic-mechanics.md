@@ -178,6 +178,16 @@ The real-rules engine (`MagicCore/`, branch `mtg-real`). The rules that hold on 
 - **"Whenever this creature is dealt damage"** triggers on `CreatureDealtDamageEvent` from `Damage.Deal`;
   "that many" is the trigger's X (`Triggers.Pending.X`). **Cards put into a graveyard from a library**
   (mill, surveil, anything) are counted in `MoveCard` (`TurnTally.CardsFromLibraryToGraveyard`).
+- **Who knows a hidden card is `Card.KnownTo`** (`Knowers`, relative to the owner — story AI-3): in a
+  library, who knows its position; in a hand, whether the opponent saw it. `MoveCard` sets it on every
+  move — out of a public zone into a hand or library is `Everyone`; into its library the owner knows
+  where it went; into a hand only the opponent's knowledge counts, and only from the top (a draw — a
+  search takes it face down) — and `Shuffle` clears the library's. Anything else that LOOKS or REVEALS
+  adds with `s.MakeKnown`: surveil's look, a search's `Reveal` (set it whenever the text says "reveal
+  it"), "reveals their hand", behold from the hand (a cost — Theorist's Sanctum's behold as it enters
+  is a condition and reveals nothing, a known gap). A random order (Identity Echo's bottom) is NOT
+  known. A new card that looks at or reveals a hidden card must do the same, or the search's "shuffle
+  what isn't known" reshuffles a card its player has seen.
 - **Randomness** (a discard at random, a random order) takes `s.TakeRng()`, so a seeded game replays.
   A search for several cards may take two of a name unless `SearchLibrary.DifferentNames` (Fblthp).
   A spell that exiles itself as it resolves (Sphinx's Approach) is left there by `FinishSpellAction`.

@@ -238,6 +238,7 @@ public sealed record BeholdCost(string Subtype) : AdditionalCost
 
 	public override bool AnyOneWillDo => true;
 
+	// The battlefield FIRST: AnyOneWillDo offers only the first, and one beheld from the hand is revealed.
 	public override IEnumerable<int> Candidates(GameState s, int playerId, int sourceId) =>
 		s.CardsIn(playerId, ZoneType.Battlefield)
 			.Concat(s.CardsIn(playerId, ZoneType.Hand).Where(c => c.Id != sourceId))
@@ -247,7 +248,11 @@ public sealed record BeholdCost(string Subtype) : AdditionalCost
 	public override IEnumerable<int> Uses(GameState s, int playerId, int sourceId, int chosen) =>
 		[];
 
-	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) => s;
+	/// <summary>Moves nothing; a card beheld from the hand is revealed (story AI-3).</summary>
+	public override GameState Pay(GameState s, int playerId, int sourceId, int chosen) =>
+		chosen != 0 && s.IsIn(chosen, playerId, ZoneType.Hand)
+			? s.MakeKnown(chosen, Knowers.Everyone)
+			: s;
 
 	public override string Describe() => $"Behold a {Subtype}";
 }

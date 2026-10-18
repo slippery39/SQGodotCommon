@@ -613,7 +613,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {G}.)
 
-**Status:** basic land · **tests naming it:** ArenaDeckTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames
+**Status:** basic land · **tests naming it:** ArenaDeckTests, CardProbeTests, CardReplayTests, FraBoardTest, FraCardTests, FraCommonTests, FraFlashbackTests, FraGraveyardTests, FraKnowledgeTests, FraPrepareTests, FraRareFinalTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, FraUncommonTests, GreedyAiTests, ManaTests, PlaneswalkerTests, RandomGameTests, RolloutTests, StackTests, StopsTests, TestGames
 
 ### Formidable Commons
 
@@ -835,7 +835,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {U}.)
 
-**Status:** basic land · **tests naming it:** CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** CardProbeTests, CardReplayTests, FraAttachmentTests, FraBoardTest, FraCardTests, FraKnowledgeTests, FraRareOneOffTests, FraRarePlaneswalkerTests, FraTriggerTests, ManaTests, RandomGameTests
 
 ### Keeper of the Quiet Hour
 
@@ -1052,7 +1052,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > ({T}: Add {W}.)
 
-**Status:** basic land · **tests naming it:** AiPositionTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests
+**Status:** basic land · **tests naming it:** AiPositionTests, CardProbeTests, CardReplayTests, CardValuesTests, FraBoardTest, FraCardTests, FraEngineTests, FraFlashbackTests, FraKnowledgeTests, FraLandTests, FraPrepareTests, FraRareOneOffTests, FraRareTests, FraTriggerTests, FraUncommonCombatTests, FraUncommonCreatureTests, HeldValuesTests, ManaTests, RandomGameTests
 
 ### Predictive Preparations
 
@@ -1620,7 +1620,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > {2}: This creature gets +1/-1 until end of turn.  
 > Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
 
-**Status:** scripted · **tests naming it:** FraGraveyardTests
+**Status:** scripted · **tests naming it:** FraGraveyardTests, FraKnowledgeTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `ModifyUntilEndOfTurn` — "Gets +P/+T [and gains Keyword] until end of turn." Amounts are counted as it resolves.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…
 
@@ -1660,7 +1660,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Return target creature to its owner's hand.
 
-**Status:** scripted · **tests naming it:** FraCommonTests
+**Status:** scripted · **tests naming it:** FraCommonTests, FraKnowledgeTests
 
 **Engine pieces:** `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `ReturnToHand` — "Return target spell or creature to its owner's hand" - from the battlefield or the stack.
 
@@ -2018,7 +2018,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > As an additional cost to cast this spell, behold a Jace or pay {1}. (To behold a Jace, choose a Jace you control or reveal a Jace card from your hand.)  
 > Counter target spell. Empower Jace 1. (Put a loyalty counter on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "[−1]: Surveil 1" and "[−3]: Draw a card.")
 
-**Status:** scripted · **tests naming it:** FraUncommonDiscardTests
+**Status:** scripted · **tests naming it:** FraKnowledgeTests, FraUncommonDiscardTests
 
 **Engine pieces:** `AdditionalCostsComponent` — "As an additional cost to cast this spell, …" — Silence the Echo:…; `BeholdCost` — Countersculpt: "behold a [Subtype] or pay {N}" — a card you control or in your hand (not…; `Counter` — Precise Redaction: "Counter target spell" — through StackResolution.Counter.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
@@ -2324,6 +2324,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 			Supertype = Supertype.Basic,
 			UpTo = Count.X,
 			DifferentNames = true,
+			Reveal = true,
 		}
 	),
 ],
@@ -3089,7 +3090,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 > //   
 > Mill three cards. (Put the top three cards of your library into your graveyard.)
 
-**Status:** scripted · **tests naming it:** FraPrepareTests
+**Status:** scripted · **tests naming it:** FraKnowledgeTests, FraPrepareTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `PutIntoLibrary` — "Put [it] on the bottom (or top) of its owner's library" — Paradox Shaper's graveyard…; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…
 
@@ -3151,7 +3152,9 @@ How to write a script: `MagicCore/Cookbook.md`.
 	When(
 		TriggerEvent.SelfEnters,
 		[],
-		new MayDiscard([new SearchLibrary(CardType.Enchantment, ZoneType.Hand)])
+		new MayDiscard(
+			[new SearchLibrary(CardType.Enchantment, ZoneType.Hand) { Reveal = true }]
+		)
 	),
 ],
 ```
@@ -5030,7 +5033,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > {3}{R}: Exile target creature or planeswalker you control. Reveal cards from the top of your library until you reveal a creature or planeswalker card. Put that card onto the battlefield and the rest on the bottom of your library in a random order. Activate only as a sorcery.
 
-**Status:** scripted · **tests naming it:** FraRareOneOffTests
+**Status:** scripted · **tests naming it:** FraKnowledgeTests, FraRareOneOffTests
 
 **Engine pieces:** `ActivatedAbilityComponent` — "[Cost]: [effects]." Uses the stack. Mana abilities are ManaAbilityComponent, which does…; `Exile` — "Exile [What]" — permanents, to their owners' exile.; `ManaCost` — A printed mana cost, parsed from Scryfall's "{2}{W/U}{X}" notation.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `RevealUntilOntoBattlefield` — Identity Echo: "Reveal cards from the top of your library until you reveal a [Types]…
 
@@ -5288,14 +5291,17 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Search your library for a planeswalker card, reveal it, then shuffle and put that card on top.
 
-**Status:** scripted · **tests naming it:** FraRareTests
+**Status:** scripted · **tests naming it:** FraKnowledgeTests, FraRareTests
 
 **Engine pieces:** `SearchLibrary` — "Search your library for a [Type] card, put it [To], then shuffle." Enroot; landcycling.
 
 ```csharp
 ["Loyal Tutor"] =
 [
-	Spell([], new SearchLibrary(CardType.Planeswalker, ZoneType.Library)),
+	Spell(
+		[],
+		new SearchLibrary(CardType.Planeswalker, ZoneType.Library) { Reveal = true }
+	),
 ],
 ```
 
@@ -5807,7 +5813,7 @@ How to write a script: `MagicCore/Cookbook.md`.
 
 > Stinging Vitriol deals 2 damage to target opponent. That player reveals their hand. You choose a nonland card from it. They discard that card.
 
-**Status:** scripted · **tests naming it:** FraRareTests
+**Status:** scripted · **tests naming it:** FraKnowledgeTests, FraRareTests
 
 **Engine pieces:** `DealDamage` — "[Source] deals N damage to …" — through Deal, so lifelink and deathtouch apply.; `Ref` — Who or what an effect acts on, resolved against the context at resolution: a referent…; `TargetSpec` — What one "target" word allows: a zone, a filter (which objects there), and the targeting…; `YouChooseTheyDiscard` — Solve for Disappointment: "Target opponent reveals their hand. You choose a [Types] card…
 

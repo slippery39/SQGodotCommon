@@ -34,8 +34,9 @@ SECTIONS = [
     ("ChoiceAction", "Choices — what a player is asked"),
     ("GameEvent", "Events — what triggers listen for (`Turns/Triggers.cs`)"),
 ]
-# Every public enum is vocabulary, except these (types and colours a script never spells as an enum value).
-ENUM_SKIP = {"CardType", "Supertype", "Step", "SymbolKind", "ManaColor"}
+# Every public enum is vocabulary, except these (types and colours a script never spells as an enum value;
+# Knowers, which only the engine sets).
+ENUM_SKIP = {"CardType", "Supertype", "Step", "SymbolKind", "ManaColor", "Knowers"}
 # Bases a record may derive from without being a catalog piece — the engine's own machinery.
 NOT_PIECES = {"GameObject", "GameAction", "Effect", "Condition", "GameComponent", "ChoiceAction", "GameEvent"}
 sys.path.insert(0, str(Path(__file__).resolve().parent))

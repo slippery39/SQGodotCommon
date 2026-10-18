@@ -108,6 +108,7 @@ and (in brackets) how many FRA cards use it, with a few. Find one: `grep -rn "re
   - `Tapped` (bool): Simulacrum Shaper: "put that card onto the battlefield tapped".
   - `Subtype` (string?): Sphinx's Approach: "a Sphinx creature card".
   - `DifferentNames` (bool): Fblthp: "with different names". Unset, two Forests may both be taken.
+  - `Reveal` (bool): "Reveal it" — landcycling, Fblthp, Pia, Loyal Tutor: the found card is known to everyone where it goes.
 - **`ShuffleIntoLibrary(Ref What)`** — "Its owner shuffles it into their library." [2: Living Library, Fblthp, Impossibly Lost]
 - **`Surveil(int N)`** — CR 701.25: look at the top N, put any of them into the graveyard, the rest back on top. ponytail: the kept cards keep their order;… [11: Way of the Healer, Yuriko, Hope from the Shadows, Eye of Jace…]
   - `Then` (ImmutableList<GameAction>): Riders on the cards put into the graveyard "this way" — they read the surveil's choice.

@@ -126,7 +126,11 @@ public record RevealUntilOntoBattlefield(CardType Types) : Effect
 		(var rng, s) = s.TakeRng();
 		rng.Shuffle(rest);
 		var libraryId = s.ZoneId(Controller, ZoneType.Library);
-		foreach (var id in rest) // out and back in: MoveObject appends, and the end is the bottom
+		// Out and back in: MoveObject appends, and the end is the bottom. Not marked known (story AI-3):
+		// their ORDER is random, and a miss sends the whole library down — known, its real order would
+		// survive "shuffle what isn't known". ponytail: so they are shuffled with the rest, losing "they
+		// are at the bottom"; keep them at the bottom, shuffled among themselves, if that ever matters.
+		foreach (var id in rest)
 			s = s.MoveObject(id, 0).MoveObject(id, libraryId);
 		return new(s);
 	}
@@ -205,6 +209,9 @@ public record Surveil(int N) : Effect
 		var n = Math.Min(N, s.CardsIn(Controller, ZoneType.Library).Count());
 		if (n == 0)
 			return new(s);
+		// "Look at the top N": the ones kept stay where their owner now knows they are (story AI-3).
+		foreach (var card in s.CardsIn(Controller, ZoneType.Library).Take(n).ToList())
+			s = s.MakeKnown(card.Id, Knowers.Owner);
 		ImmutableList<GameAction> steps =
 		[
 			new ChooseFromLibraryTopChoice
@@ -838,6 +845,9 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 	/// <summary>Fblthp: "with different names". Unset, two Forests may both be taken.</summary>
 	public bool DifferentNames { get; init; }
 
+	/// <summary>"Reveal it" — landcycling, Fblthp, Pia, Loyal Tutor: the found card is known to everyone where it goes.</summary>
+	public bool Reveal { get; init; }
+
 	public override ActionResult Execute(GameState s) =>
 		new(
 			s.SpawnAction(
@@ -872,6 +882,7 @@ public record SearchLibrary(CardType Type, ZoneType To) : Effect
 								new MoveChosenToAction(Controller, To) { Tapped = Tapped },
 								new ShuffleLibraryAction(Controller),
 							],
+						.. Reveal ? (GameAction[])[new RevealChosenAction()] : [],
 					],
 				}
 			)
@@ -1045,6 +1056,8 @@ public record YouChooseTheyDiscard(Ref Who, CardType Types) : Effect
 	{
 		foreach (var player in All(Who, s).Where(id => s.GetObject(id) is MagicPlayer).ToList())
 		{
+			foreach (var card in s.CardsIn(player, ZoneType.Hand).ToList()) // "reveals their hand"
+				s = s.MakeKnown(card.Id, Knowers.Everyone);
 			var choice = new ChooseCardsFromHandChoice
 			{
 				PlayerId = player,

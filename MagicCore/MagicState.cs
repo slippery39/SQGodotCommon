@@ -91,8 +91,48 @@ public static class MagicState
 		foreach (var id in ids)
 			s = s.MoveObject(id, 0);
 		foreach (var id in ids)
+		{
 			s = s.MoveObject(id, libraryId);
+			if (s.GetCard(id) is { KnownTo: not Knowers.None } card) // a shuffle forgets every position anyone knew
+				s = s.UpdateObject(id, card with { KnownTo = Knowers.None });
+		}
 		return s;
+	}
+
+	/// <summary>
+	/// <paramref name="who"/> now know this card where it is — a surveil's look, a "reveal" (story AI-3).
+	/// Meaningful only in a library or a hand; the next zone change sets it afresh.
+	/// </summary>
+	public static GameState MakeKnown(this GameState s, int cardId, Knowers who)
+	{
+		var card = s.GetCard(cardId);
+		return (card.KnownTo | who) == card.KnownTo
+			? s
+			: s.UpdateObject(cardId, card with { KnownTo = card.KnownTo | who });
+	}
+
+	/// <summary>
+	/// Who knows a card once it moves to <paramref name="zoneId"/> (story AI-3): out of a public zone
+	/// (battlefield, stack, graveyard, exile) into a hand or library, everyone saw it — a bounce, a
+	/// regrowth, Paradox Shaper's bottom. Into a hand, only what the opponent saw counts (the owner
+	/// always knows its hand), and only from the TOP of the library — a draw of a card seen there; a
+	/// search takes its card face down, and one that reveals marks it after. Into its library, its
+	/// owner knows where it went (a mulligan's bottom, Loyal Tutor's top). Anywhere public, nobody needs to.
+	/// </summary>
+	static Knowers KnownAfterMoving(GameState s, Card card, int zoneId)
+	{
+		var library = s.ZoneId(card.OwnerId, ZoneType.Library);
+		var hand = s.ZoneId(card.OwnerId, ZoneType.Hand);
+		var from = s.GetParent(card.Id);
+		if (zoneId != library && zoneId != hand)
+			return Knowers.None;
+		if (from != library && from != hand)
+			return Knowers.Everyone;
+		if (zoneId == library)
+			return card.KnownTo | Knowers.Owner;
+		return s.GetChildrenIds(library).FirstOrDefault() == card.Id // drawn, not searched for
+			? card.KnownTo & Knowers.Opponent
+			: Knowers.None;
 	}
 
 	/// <summary>Every zone change of a card on or off the battlefield/stack — it arrives as a new object (CR 400.7).</summary>
@@ -126,9 +166,10 @@ public static class MagicState
 		var milled =
 			s.IsIn(cardId, before.OwnerId, ZoneType.Library)
 			&& zoneId == s.ZoneId(before.OwnerId, ZoneType.Graveyard);
+		var knownTo = KnownAfterMoving(s, before, zoneId);
 		s = (
 			toTop ? s.MoveObjectToFront(cardId, zoneId) : s.MoveObject(cardId, zoneId)
-		).UpdateObject(cardId, before.Fresh());
+		).UpdateObject(cardId, before.Fresh() with { KnownTo = knownTo });
 		if (milled) // mill, surveil, any "from your library into your graveyard" — counted in one place
 			s = s.Tally(
 				before.OwnerId,

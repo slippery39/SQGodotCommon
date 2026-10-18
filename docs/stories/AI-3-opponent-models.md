@@ -64,8 +64,8 @@ an enum of one (AI-2.4's review removed two).
 
 - [x] AI-3.1 Opponent casts from hand (its real hand): the opponent-model setting, `OpponentStep`
       running `OurPlay` for the opponent on its turn; measured against `beam` and `greedy`, time beside.
-      84–72 head-to-head (1.3 SE, not shown stronger), +41% time; `BoardOnly` stays the default
-- [ ] AI-3.2 Engine: who knows what — library positions a player knows, and hand cards the other
+      84–72 head-to-head (1.3 SE, not shown stronger), +41% time; `BoardOnly` stays the default (d95b89f)
+- [x] AI-3.2 Engine: who knows what — library positions a player knows, and hand cards the other
       player knows; set by every FRA source, cleared on shuffle. A test per source (an inert
       primitive throws no error — test the consequence)
 - [ ] AI-3.3 Library: "shuffle what isn't known" — both libraries, at the decision's root; measured
@@ -81,7 +81,15 @@ an enum of one (AI-2.4's review removed two).
 
 ## Next
 
-**AI-3.1 done; next is AI-3.2** (the engine records who knows what). Read first:
+**AI-3.2 done; next is AI-3.3** — "shuffle what isn't known" at the decision's root, reading
+`Card.KnownTo` (the rule is in `.claude/rules/magic-mechanics.md`; tests in
+`MagicCore.Tests/Sets/FraKnowledgeTests.cs`). Known gaps, each small: Theorist's Sanctum's behold
+(a condition as the land enters) reveals nothing; Identity Echo's revealed bottom is NOT known (its
+order is random), so it is shuffled with the rest; Pia's and Fblthp's `Reveal` have no test of their
+own (landcycling's and Loyal Tutor's do). **For AI-3.4:** `MoveKey` groups hand cards by name, so a
+revealed and a hidden copy of one card are one move and hand order picks which is cast — make the
+copies distinct (or cast the revealed one first) once the hand is sampled.
+Read first:
 `MagicCore/Ai/Rollout.cs` (`OpponentStep` is the ONE place the opponent is decided — the beam's tree
 goes through it too; `Settings.Opponent` picks the model), `BeamSearchAi.cs` (Settings,
 `DefaultRollout`), `AiMatch.Makers` (the `--match` names; `beam-casts` is AI-3.1), and in
@@ -115,3 +123,16 @@ Traps:
   just to find no land. Measured after the fixes (findings): **123–33 vs GreedyAi (78.8% ± 2.8pp,
   276 ms), 84–72 vs beam (53.8% ± 3.0pp), 321 ms against 228** — not shown stronger, 41% dearer;
   not the default. Status `in-progress`.
+- 2026-10-18: AI-3.2 — `Card.KnownTo` (`Knowers`: None / Owner / Opponent / Everyone, relative to the
+  owner). `MoveCard` sets it on every move: from a public zone into a hand or library → Everyone
+  (bounce, regrowth, Paradox Shaper, Clash of Elements, Plan for All Outcomes); hand ↔ library keeps
+  what was known, plus the owner into its library (mulligan bottoms, Loyal Tutor's top). `Shuffle`
+  clears the library's. `s.MakeKnown` for the rest: surveil's look (owner), `SearchLibrary.Reveal`
+  (landcycling, Fblthp, Pia, Loyal Tutor — `RevealChosenAction`), "reveals their hand" (Solve for
+  Disappointment, Null Summoner, Stinging Vitriol), Identity Echo's revealed bottom, behold from the
+  hand. No measurement: nothing reads it yet (AI-3.3 does). /pre-commit fixes: a search took a
+  card's library knowledge into the hand (now only a draw from the top keeps it, and in a hand only
+  the opponent's bit counts); Identity Echo marked its random bottom known — a miss would have kept
+  the whole library's real order; the behold test called `Pay` directly (now a real Countersculpt
+  cast); a shuffle's extra pass and no-op updates gone. Thirteen tests in `FraKnowledgeTests`, ten
+  rules each revert-checked. MagicCore.Tests 940 green.

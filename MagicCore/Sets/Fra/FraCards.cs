@@ -434,7 +434,13 @@ public static class FraCards
 	static ActivatedAbilityComponent BasicLandcycling =>
 		new(
 			ManaCost.Parse("{2}"),
-			[new SearchLibrary(CardType.Land, ZoneType.Hand) { Supertype = Supertype.Basic }]
+			[
+				new SearchLibrary(CardType.Land, ZoneType.Hand)
+				{
+					Supertype = Supertype.Basic,
+					Reveal = true,
+				},
+			]
 		)
 		{
 			Costs = [new DiscardSelfCost()],
@@ -2458,7 +2464,9 @@ public static class FraCards
 				When(
 					TriggerEvent.SelfEnters,
 					[],
-					new MayDiscard([new SearchLibrary(CardType.Enchantment, ZoneType.Hand)])
+					new MayDiscard(
+						[new SearchLibrary(CardType.Enchantment, ZoneType.Hand) { Reveal = true }]
+					)
 				),
 			],
 			["Danitha, Sword of Hope"] =
@@ -2642,6 +2650,7 @@ public static class FraCards
 						Supertype = Supertype.Basic,
 						UpTo = Count.X,
 						DifferentNames = true,
+						Reveal = true,
 					}
 				),
 			],
@@ -2857,7 +2866,10 @@ public static class FraCards
 			],
 			["Loyal Tutor"] =
 			[
-				Spell([], new SearchLibrary(CardType.Planeswalker, ZoneType.Library)),
+				Spell(
+					[],
+					new SearchLibrary(CardType.Planeswalker, ZoneType.Library) { Reveal = true }
+				),
 			],
 			["Entrust the Spark"] =
 			[

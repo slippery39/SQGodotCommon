@@ -29,6 +29,19 @@ public enum Supertype
 }
 
 /// <summary>
+/// Who knows a card in a hidden zone, relative to its owner — a library or hand card is always in
+/// its owner's zone, so "owner" and "opponent" say it for both players (story AI-3).
+/// </summary>
+[Flags]
+public enum Knowers
+{
+	None = 0,
+	Owner = 1 << 0,
+	Opponent = 1 << 1,
+	Everyone = Owner | Opponent,
+}
+
+/// <summary>
 /// A card in any zone. Printed characteristics are parsed from <see cref="CardData"/> by
 /// <see cref="CardFactory"/> — never typed in by hand. GameObject.Name is the Scryfall name,
 /// the key back to the printed data.
@@ -79,6 +92,14 @@ public record Card : GameObject
 	/// <summary>The latest "has base power and toughness P/T" effect, if any (CR 613.4b, timestamp order).</summary>
 	(int Power, int Toughness)? CurrentBase =>
 		Components.OfType<UntilEndOfTurn>().LastOrDefault(u => u.SetBase is not null)?.SetBase;
+
+	/// <summary>
+	/// Who knows this card while it is in a library or a hand — in a library, who knows its POSITION;
+	/// in a hand, whether the opponent has seen it (the owner always knows its hand). For the search's
+	/// "shuffle only what isn't known" (story AI-3). <see cref="MagicState.MoveCard"/> sets it on every
+	/// zone change; surveil and "reveal" add to it; a shuffle clears the library's.
+	/// </summary>
+	public Knowers KnownTo { get; init; }
 
 	// ===== Permanent-only state — wiped by Fresh() whenever the card changes zones =====
 

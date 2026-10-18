@@ -209,6 +209,17 @@ public record SetChosenColorAction(int CardId) : GameAction
 	}
 }
 
+/// <summary>Loyal Tutor: "search your library for a planeswalker card, reveal it" — the chosen cards are known to everyone where they now are (story AI-3).</summary>
+public record RevealChosenAction : GameAction
+{
+	public override ActionResult Execute(GameState s)
+	{
+		foreach (var id in ChooseCardsFromHandChoice.Read(InputContext))
+			s = s.MakeKnown(id, Knowers.Everyone);
+		return new ActionResult(s);
+	}
+}
+
 public record PutChosenOnBottomAction : GameAction
 {
 	public int PlayerId { get; init; }
