@@ -241,3 +241,32 @@ plays since AI-1 (held cards at half their measured value), UNCAPPED (no wall cl
 - Per game: turns 20.2; lands played 6.8 (search) vs 7.5, spells cast 9.6 vs 9.7.
 - **Decision: the search is the default AI** on MagicTable and the console (the story's rule:
   default once measured better). `--greedy` picks GreedyAi.
+
+## The opponent casts from its hand (2026-10-17, AI-3.1)
+
+`beam-casts`: the search whose simulated opponent (`Rollout.OpponentModel.CastsFromHand`) also plays
+a land, up to `ActionsPerTurn` (1) spells and its planeswalkers' loyalty abilities in its own turn,
+by our own cheap policy, from its REAL hand — against `beam` (`BoardOnly`, the default). 156 games
+each, `--sequential`, Release, at 74978b0 plus the change; the same seeds as AI-2.8.
+
+| Match | Result (1 SE over mirror pairs) | Time per decision: mean / slowest | beam-casts by its deck (W-L) |
+|---|---|---|---|
+| beam vs greedy (AI-2.8, for reference) | 111–45, 71.2% ± 3.1pp | 239 ms / 6 238 ms | White-Black 48–4, Red-Green 40–12, Jace 23–29 |
+| **beam-casts vs greedy** | **123–33, 78.8% ± 2.8pp** | 276 ms / 9 128 ms | White-Black 50–2, Red-Green 43–9, Jace 30–22 |
+| **beam-casts vs beam** | **84–72, 53.8% ± 3.0pp** | **321 ms** / 9 351 ms (beam 228 / 8 915) | White-Black 35–17, Red-Green 36–16, Jace 13–39 |
+
+- **Not shown to be stronger.** Head-to-head +3.8pp is 1.3 standard errors; against GreedyAi +7.6pp
+  over the baseline is ~1.8 combined. Both point the same way — not a result yet.
+- **It costs 41% more time per decision** (head-to-head, both searches in one run — the cleaner
+  comparison; +15% against the baseline's run). The casting opponent evaluates every spell in hand
+  at each of its main phases.
+- **Part of any gain is cheating:** this opponent model reads the opponent's REAL hand, while the
+  evaluator prices that hand blind. The hand modes (AI-3.4, 3.5) take that out.
+- **Not symmetric in two details:** in the search's own turn our plays count from the rollout's
+  start and the opponent's from the turn's start (`OpponentStep` keeps no state; it reads the turn's
+  tally), and our side counts a loyalty or other ability as one of its plays.
+- **A first cut that never used loyalty abilities** (the /pre-commit review) measured 120–36 against
+  GreedyAi and 80–76 head-to-head (Jace 10–42) — within noise of the fix; the numbers above replace it.
+- **Decision: `BoardOnly` stays the default** — not stronger by the evidence, and dearer. Re-measured
+  with the hand modes and in the final matrix (AI-3.9).
+- Search-vs-search games run longer (23 turns, ~74 decisions a side) than against GreedyAi (~20).

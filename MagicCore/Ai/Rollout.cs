@@ -1,5 +1,6 @@
 using ImmutableGameObjects;
 using MagicCore.Actions;
+using MagicCore.Cards;
 
 namespace MagicCore.Ai;
 
@@ -16,9 +17,8 @@ namespace MagicCore.Ai;
 ///   win and a later loss score better, and a decided game stays far above any board score;
 /// - every choice is answered by its OWNER, for the owner's good — never by whose turn it is.
 ///
-/// The simulated opponent is BoardOnly: it attacks and blocks with its board, never casts and never
-/// plays a land. AI-3 makes that swappable (cast from hand, respond) — the one place it is decided is
-/// <see cref="OpponentStep"/>, which both the rollouts and the search tree go through.
+/// The simulated opponent is <see cref="Settings.Opponent"/> (story AI-3) — the one place it is decided
+/// is <see cref="OpponentStep"/>, which both the rollouts and the search tree go through.
 ///
 /// ponytail: the libraries are read in their REAL order, so a rollout draws the cards really on top
 /// — the AI sees its own future. AI-3 adds "shuffle what the player can't know" as a second mode.
@@ -27,16 +27,29 @@ public static class Rollout
 {
 	/// <param name="LookaheadTurns">Turns played after the current one is finished.</param>
 	/// <param name="ActionsPerTurn">
-	/// Our non-land plays per simulated turn. MtgSimulator's default of 1 is an asymmetry — the
-	/// opponent attacks with everything — kept as the starting point and measured from there.
+	/// Our non-land plays per simulated turn (and a casting opponent's spells). MtgSimulator's default
+	/// of 1 is an asymmetry — the opponent attacks with everything — kept as the starting point and
+	/// measured from there.
 	/// </param>
+	/// <param name="Opponent">What the simulated opponent does — <see cref="OpponentModel"/>.</param>
 	public sealed record Settings(
 		int LookaheadTurns = 2,
 		int ActionsPerTurn = 1,
 		double TerminalDiscount = 0.95,
 		int DecisionLimit = 2_000,
-		HeldValues? Held = null
+		HeldValues? Held = null,
+		OpponentModel Opponent = OpponentModel.BoardOnly
 	);
+
+	/// <summary>The simulated opponent, measured against each other (story AI-3).</summary>
+	public enum OpponentModel
+	{
+		/// <summary>Attacks and blocks with its board; never casts, never plays a land.</summary>
+		BoardOnly,
+
+		/// <summary>Also plays a land, up to ActionsPerTurn spells and its loyalty abilities in its own turn, by OUR policy — from its real hand.</summary>
+		CastsFromHand,
+	}
 
 	public static readonly Settings Default = new();
 
@@ -73,8 +86,9 @@ public static class Rollout
 				s = s.Choose(Answer(s, choice, who, settings));
 				continue;
 			}
-			var play = !(landDone && plays >= settings.ActionsPerTurn)
-				? OurPlay(s, me, plays >= settings.ActionsPerTurn, ref landDone, settings)
+			var spent = plays >= settings.ActionsPerTurn;
+			var play = !(landDone && spent)
+				? OurPlay(s, me, spent ? null : AnyPlay, ref landDone, settings)
 				: null;
 			if (play is not null)
 			{
@@ -92,14 +106,50 @@ public static class Rollout
 	}
 
 	/// <summary>
-	/// One decision of the simulated opponent — the ONE place the opponent model is decided (BoardOnly:
-	/// attacks and blocks judged, every other choice the cheap answer, every priority passed). The
-	/// search answers the opponent through here too, so its tree and its rollouts agree.
+	/// One decision of the simulated opponent — the ONE place the opponent model is decided: attacks
+	/// and blocks judged, every other choice the cheap answer, and (CastsFromHand) its own sorcery-speed
+	/// plays; every other priority passed. The search answers the opponent through here too, so its
+	/// tree and its rollouts agree.
 	/// </summary>
 	public static GameState OpponentStep(GameState s, int who, Settings settings) =>
-		s.GetPendingChoice() is { } choice
-			? s.Choose(Answer(s, choice, who, settings))
-			: Pass(s, who);
+		s.GetPendingChoice() is { } choice ? s.Choose(Answer(s, choice, who, settings))
+		: settings.Opponent == OpponentModel.CastsFromHand
+		&& TheirPlay(s, who, settings) is { } play
+			? s.Act(play)
+		: Pass(s, who);
+
+	/// <summary>
+	/// CastsFromHand: the opponent plays by OUR policy — its land, then up to ActionsPerTurn spells, and
+	/// each planeswalker's loyalty ability (once a turn by the rules, so it is not counted). Counted from
+	/// the turn's tally rather than kept, because OpponentStep holds no state — the search tree calls it
+	/// too. So the two sides differ in two ways: in the search's own turn ours counts from the rollout's
+	/// start and theirs from the turn's start, and ours counts a loyalty or other ability as a play.
+	/// ponytail: no other activated abilities — the tally counts no activations, so a free one would
+	/// repeat until the decision limit; count them in the tally if a deck's plan is an ability.
+	/// </summary>
+	static GameAction? TheirPlay(GameState s, int who, Settings settings)
+	{
+		var tally = s.GetPlayer(who).ThisTurn;
+		var turn = s.GetGame().TurnNumber;
+		// No land in hand: no land drop to look for (a land played from another zone is missed).
+		var landDone =
+			tally.LandsPlayed >= 1 + tally.ExtraLandDrops
+			|| !s.CardsIn(who, ZoneType.Hand).Any(c => c.Is(CardType.Land));
+		var playable =
+			tally.SpellsCast < settings.ActionsPerTurn ? SpellOrLoyalty
+			: s.CardsIn(who, ZoneType.Battlefield)
+				.Any(c => c.Is(CardType.Planeswalker) && c.LoyaltyActivatedOnTurn != turn)
+				? Loyalty
+			: null;
+		return landDone && playable is null
+			? null
+			: OurPlay(s, who, playable, ref landDone, settings);
+	}
+
+	static readonly Func<GameAction, bool> AnyPlay = a => a is not PassPriorityAction;
+	static readonly Func<GameAction, bool> SpellOrLoyalty = a =>
+		a is CastSpellAction or ActivateLoyaltyAction;
+	static readonly Func<GameAction, bool> Loyalty = a => a is ActivateLoyaltyAction;
 
 	static GameState Pass(GameState s, int who) =>
 		s.Act(
@@ -109,15 +159,15 @@ public static class Rollout
 		);
 
 	/// <summary>
-	/// Our policy: on our own turn at sorcery speed, the land first, then (unless the turn's plays are
-	/// spent) the best-scoring play if it leaves us no worse. "No worse", not "better" as GreedyAi asks:
+	/// Our policy: on our own turn at sorcery speed, the land first, then the best-scoring
+	/// <paramref name="playable"/> move (none: the turn's plays are spent) if it leaves us no worse. "No worse", not "better" as GreedyAi asks:
 	/// a setup play scores flat, and MtgSimulator found strict improvement stops at exactly the play a
 	/// rollout exists to see. Never responds.
 	/// </summary>
 	static GameAction? OurPlay(
 		GameState s,
 		int me,
-		bool playsSpent,
+		Func<GameAction, bool>? playable,
 		ref bool landDone,
 		Settings settings
 	)
@@ -128,9 +178,9 @@ public static class Rollout
 		if (moves.OfType<PlayLandAction>().FirstOrDefault() is { } land)
 			return land;
 		landDone = true; // none now: none this turn worth asking for again
-		if (playsSpent)
+		if (playable is null)
 			return null;
-		var candidates = moves.Where(a => a is not PassPriorityAction).ToList();
+		var candidates = moves.Where(playable).ToList();
 		if (candidates.Count == 0)
 			return null;
 		var before = Evaluator.Evaluate(s, me, settings.Held);

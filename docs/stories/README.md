@@ -67,8 +67,8 @@ numbered on `main` only and cherry-picked to the branches it affects, so its num
 
 | ID | Story | Status |
 |---|---|---|
+| [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | in-progress |
 | [TBL-2](TBL-2-playtest-pass.md) | Playtest MagicTable until the games look right | ready |
-| [AI-3](AI-3-opponent-models.md) | Swappable simulation models in the search, measured for strength against time | backlog |
 | [AI-4](AI-4-strategic-plans.md) | Strategic plans — the AI picks a plan above single actions | backlog |
 | [AI-5](AI-5-evaluator-threat-abilities.md) | The evaluator sees threats and abilities | backlog |
 | [DATA-1](DATA-1-17lands.md) | Bring 17lands data into the engine's tools | backlog |

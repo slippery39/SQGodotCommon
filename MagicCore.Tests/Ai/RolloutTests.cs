@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using ImmutableGameObjects;
 using MagicCore.Ai;
+using MagicCore.Cards;
+using MagicCore.Effects;
 using MagicCore.Sets.Fra;
 
 namespace MagicCore.Tests.Ai;
@@ -43,6 +45,96 @@ public class RolloutTests
 
 		Assert.That(Score(s), Is.LessThan(-5_000));
 	}
+
+	static readonly Rollout.Settings Casts = Rollout.Default with
+	{
+		Opponent = Rollout.OpponentModel.CastsFromHand,
+	};
+
+	// CastsFromHand: the opponent's creature in hand arrives inside the rollout — compared with the
+	// same position without it, so cards it draws can't pass for the one in its hand.
+	[Test]
+	public void ACastingOpponent_CastsFromItsHand_InTheRollout()
+	{
+		(s, _) = TestGames.Put(s, them, TestGames.Card("Forest"), ZoneType.Battlefield);
+		var (withIt, _) = TestGames.Put(
+			s,
+			them,
+			TestGames.Creature("Theirs", "4/4"),
+			ZoneType.Hand
+		);
+
+		var casting = Rollout.Score(withIt, me, Rollout.Horizon(s, Casts), Casts);
+		var without = Rollout.Score(s, me, Rollout.Horizon(s, Casts), Casts);
+
+		Assert.That(casting, Is.LessThan(without - 2));
+	}
+
+	// Its turn, played by OpponentStep: the land, ONE spell (ActionsPerTurn) though it could pay for
+	// two, and the planeswalker's loyalty ability after the spell is spent.
+	[Test]
+	public void ACastingOpponent_CastsOneSpell_AndUsesItsPlaneswalker()
+	{
+		var walker = TheirsWith(out var after, Casts);
+
+		Assert.That(after.GetPlayer(them).ThisTurn.SpellsCast, Is.EqualTo(1));
+		Assert.That(
+			after.CardsIn(them, ZoneType.Battlefield).Count(c => c.Name == "Theirs"),
+			Is.EqualTo(1)
+		);
+		Assert.That(
+			after.GetCard(walker).LoyaltyActivatedOnTurn,
+			Is.EqualTo(after.GetGame().TurnNumber)
+		);
+	}
+
+	[Test]
+	public void BoardOnly_NeverCasts()
+	{
+		var walker = TheirsWith(out var after, Rollout.Default);
+
+		Assert.That(after.GetPlayer(them).ThisTurn.SpellsCast, Is.Zero);
+		Assert.That(after.GetPlayer(them).ThisTurn.LandsPlayed, Is.Zero);
+		Assert.That(after.GetCard(walker).LoyaltyActivatedOnTurn, Is.Zero);
+	}
+
+	/// <summary>
+	/// The opponent with two 4/4s in hand, mana for both and a planeswalker, through its next turn by
+	/// <paramref name="settings"/>' model — <paramref name="after"/> is its turn's last state, before
+	/// the tally resets. Returns the planeswalker's id.
+	/// </summary>
+	int TheirsWith(out GameState after, Rollout.Settings settings)
+	{
+		for (var i = 0; i < 2; i++)
+		{
+			(s, _) = TestGames.Put(s, them, TestGames.Card("Forest"), ZoneType.Battlefield);
+			(s, _) = TestGames.Put(s, them, TestGames.Creature("Theirs", "4/4"), ZoneType.Hand);
+		}
+		(s, _) = TestGames.Put(s, them, TestGames.Card("Forest"), ZoneType.Hand);
+		(s, var walker) = TestGames.Put(s, them, Walker, ZoneType.Hand);
+		s = s.EnterBattlefield(walker, them); // at its printed loyalty: Put's 0 would kill it
+
+		var theirTurn = s.GetGame().TurnNumber + 1;
+		after = TestGames.PassUntil(s, x => x.GetGame().TurnNumber == theirTurn);
+		for (var i = 0; i < 1_000; i++)
+		{
+			var next =
+				after.DecidingPlayerId() == them
+					? Rollout.OpponentStep(after, them, settings)
+					: TestGames.PassOrChoose(after);
+			if (next.GetGame().TurnNumber != theirTurn)
+				return walker;
+			after = next;
+		}
+		Assert.Fail("their turn never ended");
+		return walker;
+	}
+
+	static readonly CardDefinition Walker = TestGames.Planeswalker(
+		"Walker",
+		3,
+		new LoyaltyAbilityComponent(1, [new GainLife(Ref.You, 1)])
+	);
 
 	// Blocks are judged by what they lead to: facing lethal, a chump block keeps us alive.
 	[Test]

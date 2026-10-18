@@ -29,6 +29,17 @@ public static class AiMatch
 			// The search before held values, for A/B runs.
 			["beam-plain"] = (player, _) =>
 				new BeamSearchAi(player, new BeamSearchAi.Settings().WithoutHeld()),
+			// The search whose simulated opponent casts from its real hand (AI-3.1).
+			["beam-casts"] = (player, _) =>
+				new BeamSearchAi(
+					player,
+					new BeamSearchAi.Settings(
+						RolloutSettings: BeamSearchAi.DefaultRollout with
+						{
+							Opponent = Rollout.OpponentModel.CastsFromHand,
+						}
+					)
+				),
 		};
 
 	/// <summary>The fixed names; beside them, "beam-held=0.25" is the search at that held fraction.</summary>
