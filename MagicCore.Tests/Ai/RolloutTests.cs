@@ -4,6 +4,7 @@ using MagicCore.Ai;
 using MagicCore.Cards;
 using MagicCore.Effects;
 using MagicCore.Sets.Fra;
+using MagicCore.Targeting;
 
 namespace MagicCore.Tests.Ai;
 
@@ -86,6 +87,102 @@ public class RolloutTests
 			after.GetCard(walker).LoyaltyActivatedOnTurn,
 			Is.EqualTo(after.GetGame().TurnNumber)
 		);
+	}
+
+	static readonly Rollout.Settings Responds = Rollout.Default with
+	{
+		Opponent = Rollout.OpponentModel.Responds,
+	};
+
+	static readonly CardDefinition Kill =
+		new(
+			TestGames.Inline("Kill", "{1}", "Instant").Data,
+			[
+				new SpellEffectsComponent([new Destroy(Ref.Target())])
+				{
+					Targets = [TargetSpec.Creature],
+				},
+			]
+		);
+
+	// Our creature spell on the stack, and they hold an instant kill spell with the mana for it.
+	GameState OurSpellOnTheStack(bool ourCreatureInPlay)
+	{
+		if (ourCreatureInPlay)
+			(s, _) = TestGames.Put(s, me, TestGames.Creature("Ours", "3/3"), ZoneType.Battlefield);
+		else
+			(s, _) = TestGames.Put(
+				s,
+				them,
+				TestGames.Creature("Theirs", "3/3"),
+				ZoneType.Battlefield
+			);
+		(s, _) = TestGames.Put(s, me, TestGames.Card("Forest"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, them, TestGames.Card("Forest"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, them, Kill, ZoneType.Hand);
+		int spell;
+		(s, spell) = TestGames.Put(s, me, TestGames.Creature("Next", "1/1"), ZoneType.Hand);
+		s = s.Act(new Actions.CastSpellAction { PlayerId = me, CardId = spell });
+		s = s.Act(new Actions.PassPriorityAction { PlayerId = me });
+		Assert.That(s.DecidingPlayerId(), Is.EqualTo(them));
+		return s;
+	}
+
+	// Responds (AI-3.6): our spell on the stack is a window — it kills our creature in response, which
+	// beats letting it be. CastsFromHand plays at sorcery speed only, so it lets our spell resolve.
+	[Test]
+	public void ARespondingOpponent_KillsOurCreature_InResponseToOurSpell()
+	{
+		var before = OurSpellOnTheStack(ourCreatureInPlay: true);
+
+		var responding = Rollout.OpponentStep(before, them, Responds);
+		var casting = Rollout.OpponentStep(before, them, Casts);
+
+		Assert.That(Stops.TopOfStackControllerId(responding), Is.EqualTo(them));
+		Assert.That(responding.GetPlayer(them).ThisTurn.SpellsCast, Is.EqualTo(1));
+		Assert.That(casting.GetPlayer(them).ThisTurn.SpellsCast, Is.Zero);
+	}
+
+	// A response must beat passing: killing only its own creature would not, so it passes.
+	[Test]
+	public void ARespondingOpponent_Passes_WhenNoResponseBeatsPassing()
+	{
+		var before = OurSpellOnTheStack(ourCreatureInPlay: false);
+
+		var after = Rollout.OpponentStep(before, them, Responds);
+
+		Assert.That(after.GetPlayer(them).ThisTurn.SpellsCast, Is.Zero);
+		Assert.That(after.CardsIn(them, ZoneType.Battlefield).Any(c => c.Name == "Theirs"));
+	}
+
+	// Our combat is a window only when something attacks: after we declare an attack it kills the
+	// attacker; with no attack declared it holds its kill (a combat with no attack is no window).
+	[TestCase(true, 1)]
+	[TestCase(false, 0)]
+	public void ARespondingOpponent_AnswersOurCombat_OnlyWhenWeAttack(bool attack, int spellsCast)
+	{
+		(s, _) = TestGames.Put(s, me, TestGames.Creature("Ours", "3/3"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, them, TestGames.Card("Forest"), ZoneType.Battlefield);
+		(s, _) = TestGames.Put(s, them, Kill, ZoneType.Hand);
+		for (
+			var i = 0;
+			i < 50 && !(s.GetGame().Step == Step.DeclareAttackers && s.DecidingPlayerId() == them);
+			i++
+		)
+			s = s.GetPendingChoice() is Actions.DeclareAttackerChoice choice
+				? s.Choose(
+					[
+						attack
+							? choice.Options.First(o => o.Id != Actions.CombatOption.None).Id
+							: Actions.CombatOption.None,
+					]
+				)
+				: s.Act(new Actions.PassPriorityAction { PlayerId = s.DecidingPlayerId() });
+		Assert.That(s.GetGame().Step, Is.EqualTo(Step.DeclareAttackers));
+
+		var after = Rollout.OpponentStep(s, them, Responds);
+
+		Assert.That(after.GetPlayer(them).ThisTurn.SpellsCast, Is.EqualTo(spellsCast));
 	}
 
 	[Test]

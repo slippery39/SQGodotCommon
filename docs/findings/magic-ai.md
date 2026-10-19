@@ -576,3 +576,24 @@ hand), Release, 16 logical processors:
   fixed (a guess keeps its card's id), and that match discarded unfinished.
 - By deck, the guessing side: Red-Green 76–52, White-Black 84–44, Jace 30–98.
 
+## The simulated opponent responds at instant speed (2026-10-19, AI-3.6)
+
+`beam+responds`: the casting opponent also answers in OUR turn — while our spell or ability is on the
+stack, and in our combat once something attacks — with whichever instant-speed spell beats passing
+most (both settled), as often as one does (Shayne). Our own rollout policy never responds. Against
+`beam+casts`; the field's decks hold 4–7 instant-speed cards in 40 (White-Black 6, Red-Green 4,
+White-Blue Jace 7 — mostly removal). Release, 16 logical processors:
+
+| Speed | Result | Cost per decision | Time |
+|---|---|---|---|
+| Quick check | changed 36 (12.5%; `beam+casts` 35); oracle agreement 77.4% (78.8%) | 3 481.2 steps a position (3 373.5, +3.2%) | ~20 s |
+| `--until-clear` | **288 games, 145–143, 50.3% ± 1.9pp — NO difference of 5pp either way** (log-likelihood: better −3.06, worse −4.04) | 1 593.4 steps, 6.9 rollouts (1 536.6, +3.7%) | 506 s |
+
+- **An opponent that answers our plays changes nothing worth 5pp here**, and costs under 4% — far
+  cheaper than expected: most windows hold no castable instant.
+- **What the policy can't see:** "beats passing" settles the rest with both sides passing, so each
+  response is judged as though it were the only one; with two removal spells in hand each is credited
+  with the whole gain. A limit of the rule chosen, not separated.
+- A first cut opened the combat window with no attack declared — found in review, that match
+  stopped. By deck, the responding side: Red-Green 60–36, White-Black 57–39, Jace 28–68.
+

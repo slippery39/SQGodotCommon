@@ -53,14 +53,9 @@ public static class AiMatch
 	static readonly Dictionary<string, Func<BeamSearchAi.Settings, BeamSearchAi.Settings>> Models =
 		new()
 		{
-			["casts"] = o =>
-				o with
-				{
-					RolloutSettings = (o.RolloutSettings ?? BeamSearchAi.DefaultRollout) with
-					{
-						Opponent = Rollout.OpponentModel.CastsFromHand,
-					},
-				},
+			["casts"] = Opponent(Rollout.OpponentModel.CastsFromHand),
+			// It also responds at instant speed in our turn (AI-3.6) — casts from hand too: beam+responds.
+			["responds"] = Opponent(Rollout.OpponentModel.Responds),
 			["shuffle"] = o => o with { Library = Hidden.Library.ShuffleUnknown },
 			// The opponent's unseen hand drawn again from its unseen cards (AI-3.4) — matters only
 			// when the simulated opponent casts: beam+casts+unseen.
@@ -69,12 +64,29 @@ public static class AiMatch
 			["guess"] = o => o with { Hand = Hidden.Hand.GuessedFromColors },
 		};
 
+	static Func<BeamSearchAi.Settings, BeamSearchAi.Settings> Opponent(
+		Rollout.OpponentModel model
+	) =>
+		o =>
+			o with
+			{
+				RolloutSettings = (o.RolloutSettings ?? BeamSearchAi.DefaultRollout) with
+				{
+					Opponent = model,
+				},
+			};
+
 	static BeamSearchAi.Settings? Combined(string name) =>
 		name.Split('+') is ["beam", .. var models]
 		&& models.Length > 0
 		&& models.All(Models.ContainsKey)
-		// The board-only opponent never reads its hand: without casts, unseen or guess would measure nothing.
-		&& (!(models.Contains("unseen") || models.Contains("guess")) || models.Contains("casts"))
+		// The board-only opponent never reads its hand: without casts or responds, unseen or guess measure nothing.
+		&& (
+			!(models.Contains("unseen") || models.Contains("guess"))
+			|| models.Contains("casts")
+			|| models.Contains("responds")
+		)
+		&& !(models.Contains("casts") && models.Contains("responds")) // one opponent model
 		&& !(models.Contains("unseen") && models.Contains("guess")) // one hand mode
 			? models.Aggregate(new BeamSearchAi.Settings(), (o, m) => Models[m](o))
 			: null;
@@ -84,7 +96,7 @@ public static class AiMatch
 
 	/// <summary>What --match accepts, for a usage line.</summary>
 	public static string Usage =>
-		$"{string.Join(", ", Names)}, beam-held=<fraction>, or beam+<model>[+<model>…] ({string.Join(", ", Models.Keys)}; unseen and guess need casts)";
+		$"{string.Join(", ", Names)}, beam-held=<fraction>, or beam+<model>[+<model>…] ({string.Join(", ", Models.Keys)}; unseen and guess need casts or responds)";
 
 	// Names only, never the factories: a broken one fails in Create, with its own message.
 	public static bool IsKnown(string name) =>

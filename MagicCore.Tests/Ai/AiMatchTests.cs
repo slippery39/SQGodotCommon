@@ -70,6 +70,7 @@ public class AiMatchTests
 	[TestCase("beam-plain")]
 	[TestCase("beam-casts")]
 	[TestCase("beam+shuffle")]
+	[TestCase("beam+responds+guess")]
 	[TestCase("beam-held=0.25")]
 	public void EverySearch_TakesTheThreadCount(string name)
 	{
@@ -92,6 +93,19 @@ public class AiMatchTests
 				o.RolloutSettings!.Held is null
 			);
 		Assert.That(Rest(one.Options), Is.EqualTo(Rest(every.Options)));
+	}
+
+	// The models combine only where each means something: a hand mode needs an opponent that casts from
+	// its hand, and one opponent model and one hand mode at a time (AI-3.4–3.6).
+	[TestCase("beam+casts+unseen", true)]
+	[TestCase("beam+responds+guess", true)]
+	[TestCase("beam+unseen", false)]
+	[TestCase("beam+guess", false)]
+	[TestCase("beam+casts+responds", false)]
+	[TestCase("beam+casts+unseen+guess", false)]
+	public void TheModels_CombineOnlyWhereTheyMeanSomething(string name, bool known)
+	{
+		Assert.That(AiMatch.IsKnown(name), Is.EqualTo(known));
 	}
 
 	[Test]

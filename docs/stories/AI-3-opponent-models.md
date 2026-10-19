@@ -68,6 +68,11 @@ the opponent's real hand cheats. Which is best is a measurement, not a guess.
   uncommons, a rare or (1 in 8) a mythic, each slot over that rarity's nonland cards; a guess
   replaces its real card in place, keeping its id (new ids would move every later id away from the
   real game's and lose committed plans), so the library stays real.
+- 2026-10-19, Shayne (AI-3.6): **full responses** — the simulated opponent (only; our rollout
+  policy stays sorcery speed) responds **while one of our spells or abilities is on the stack and in
+  our combat** (after attackers, after blockers); a response **must beat passing**, both settled;
+  **no limit** on how many. Default, not asked: responses are spells (instants, flash) — not
+  activated abilities, which a free one could repeat without end.
 - 2026-10-17 (default, not asked): the casting opponent uses OUR cheap policy, not one of its own —
   symmetric, so a measurement isolates the model. "Our policy" (AI-3.7) swaps our side only.
 
@@ -91,8 +96,9 @@ an enum of one (AI-2.4's review removed two).
       `+unseen`: NO difference of 5pp against the real hand (384 games, 189–195); the default at AI-3.9
 - [x] AI-3.5 Hand: guessed from a deck model — the third value; measured — `+guess` (its colours, by
       rarity): NO difference of 5pp against the real hand (384 games, 190–194), 5% cheaper
-- [ ] AI-3.6 Full responses: the opponent acts at instant speed inside our turn when it scores
-      better; measured — expect it to be the dearest in time
+- [x] AI-3.6 Full responses: the opponent acts at instant speed inside our turn when it scores
+      better; measured — `+responds`: NO difference of 5pp against `beam+casts` (288 games,
+      145–143), +3.7% cost
 - [ ] AI-3.7 Our policy: `GreedyAi` as our rollout policy beside the cheap greedy; measured
 - [ ] AI-3.8 Combat: attackers judged together (MtgSimulator's `FindLethalAttacks`, or all-in
       against each alone) and a trigger's target by its owner's answer; measured
@@ -108,15 +114,16 @@ decision) is the time measure, not the clock.
 
 Done so far: casts from hand (AI-3.1, not shown stronger), who knows what (3.2), library shuffle
 (3.3: WORSE by 5pp, settled by AI-6.5), hand from unseen cards (3.4: no difference), hand guessed
-from its colours (3.5: no difference, 5% cheaper). Defaults stay `BoardOnly`, `RealOrder` and the
-real hand until AI-3.9 chooses.
+from its colours (3.5: no difference, 5% cheaper), full responses (3.6: no difference, +3.7%).
+Defaults stay `BoardOnly`, `RealOrder` and the real hand until AI-3.9 chooses.
 
-**Next task: AI-3.6, full responses** — the simulated opponent acts at instant speed inside our turn
-when it scores better (counters, tricks, removal); expect it to be the dearest in time. Interview
-Shayne first: which windows it may respond in (every priority, or only to our spells and attacks),
-and by what policy (OurPlay's "no worse" at instant speed?). The seam is `Rollout.OpponentStep` (its
-`TheirPlay` is sorcery speed only today). Measure as 3.4 and 3.5: the suite, then
-`beam+casts+<model>` against `beam+casts` with `--until-clear` — and its cost, which matters here.
+**Next task: AI-3.7, our policy** — `GreedyAi` as OUR rollout policy beside the cheap greedy
+(`Rollout.OurPlay`, the land then the one best "no worse" play). Interview Shayne first: GreedyAi
+for every decision of ours in a rollout, or only for its plays (keeping the rollout's combat); with
+its per-turn play limit or not; and against which baseline it is measured (`beam`, the default, is
+the natural one — the opponent models are a separate axis). Expect it to be dear: GreedyAi looks one
+ply at every option. The seam is `Rollout.Score`'s own branch (`OurPlay`); AI-3's rule is one
+setting per axis, added with its second value.
 
 Notes still true:
 - The oracle shares beam's models and its board-only opponent, so it can't rank anything about the
@@ -202,4 +209,14 @@ Notes still true:
   a seen card stays, nothing else touched, no land once 17 are shown, ids and NextId kept, a real
   game played differently — revert-checked four ways. Measured (findings): NO difference of 5pp, 384
   games, 10 min; 5% cheaper. 984 tests.
+- 2026-10-19: AI-3.6 — `Rollout.OpponentModel.Responds` (`+responds`), interviewed first (Shayne: our
+  spells and combat; must beat passing; no limit; opponent only). Review found the combat window
+  opened with no attack declared (fixed: `Combat.Attackers(s).Any()`, as `Stops` guards it) — that
+  match was stopped; "a response's target is the first legal one" was checked and is wrong (each
+  target combination is its own cast candidate). One `BestSettled` for our policy and the response;
+  one model factory in `AiMatch`; the name rules tested (`casts`/`responds` exclusive, a hand mode
+  needs one). Tests: it kills our creature in response, CastsFromHand doesn't, it passes when nothing
+  beats passing, combat answered only when we attack — revert-checked three ways. `beam+casts`
+  unchanged on the suite (35). 995 tests.
+  Measured (findings): NO difference of 5pp, 288 games, 8½ min; +3.7% cost.
 

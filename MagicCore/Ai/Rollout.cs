@@ -49,6 +49,13 @@ public static class Rollout
 
 		/// <summary>Also plays a land, up to ActionsPerTurn spells and its loyalty abilities in its own turn, by OUR policy — from its real hand.</summary>
 		CastsFromHand,
+
+		/// <summary>
+		/// CastsFromHand, and in OUR turn it also responds at instant speed — while a spell or ability
+		/// of ours is on the stack, and in our combat — with whichever spell beats passing most, both
+		/// settled; as often as one does (story AI-3.6, Shayne). Our own rollout policy never responds.
+		/// </summary>
+		Responds,
 	}
 
 	public static readonly Settings Default = new();
@@ -107,16 +114,49 @@ public static class Rollout
 
 	/// <summary>
 	/// One decision of the simulated opponent — the ONE place the opponent model is decided: attacks
-	/// and blocks judged, every other choice the cheap answer, and (CastsFromHand) its own sorcery-speed
-	/// plays; every other priority passed. The search answers the opponent through here too, so its
-	/// tree and its rollouts agree.
+	/// and blocks judged, every other choice the cheap answer, (CastsFromHand, Responds) its own
+	/// sorcery-speed plays, and (Responds) its instant-speed answers in our turn; every other priority
+	/// passed. The search answers the opponent through here too, so its tree and its rollouts agree.
 	/// </summary>
 	public static GameState OpponentStep(GameState s, int who, Settings settings) =>
 		s.GetPendingChoice() is { } choice ? s.Choose(Answer(s, choice, who, settings))
-		: settings.Opponent == OpponentModel.CastsFromHand
-		&& TheirPlay(s, who, settings) is { } play
+		: settings.Opponent != OpponentModel.BoardOnly && TheirPlay(s, who, settings) is { } play
 			? s.Act(play)
+		: settings.Opponent == OpponentModel.Responds
+		&& TheirResponse(s, who, settings) is { } response
+			? s.Act(response)
 		: Pass(s, who);
+
+	/// <summary>
+	/// Responds: in our turn, while our spell or ability is on top of the stack or our attackers or
+	/// blockers are declared, the instant-speed spell whose settled result beats passing (settled the
+	/// same way) most — none if none beats it. Each response is judged at the next window again, so
+	/// there is no limit but its mana. ponytail: spells only — a free activated ability that beats
+	/// passing could repeat without end; add abilities with a count if a deck's answer is one.
+	/// </summary>
+	static GameAction? TheirResponse(GameState s, int who, Settings settings)
+	{
+		var game = s.GetGame();
+		var ours = s.OpponentOf(who);
+		var window =
+			game.ActivePlayerId == ours
+			&& (
+				Stops.TopOfStackControllerId(s) == ours
+				|| (
+					s.StackIsEmpty()
+					&& game.Step is Step.DeclareAttackers or Step.DeclareBlockers
+					&& Turns.Combat.Attackers(s).Any() // a combat with no attack is no window
+				)
+			);
+		if (!window)
+			return null;
+		var spells = s.DistinctMoves(s.LegalActions()).OfType<CastSpellAction>().ToList();
+		if (spells.Count == 0)
+			return null;
+		var passing = Evaluator.Evaluate(Lookahead.Settle(Pass(s, who)), who, settings.Held);
+		var (best, score) = BestSettled(s, who, spells, settings);
+		return score > passing ? best : null;
+	}
 
 	/// <summary>
 	/// CastsFromHand: the opponent plays by OUR policy — its land, then up to ActionsPerTurn spells, and
@@ -184,11 +224,23 @@ public static class Rollout
 		if (candidates.Count == 0)
 			return null;
 		var before = Evaluator.Evaluate(s, me, settings.Held);
-		var (move, score) = candidates
-			.Select(a => (a, Evaluator.Evaluate(Lookahead.Settle(s.Act(a)), me, settings.Held)))
-			.MaxBy(x => x.Item2);
+		var (move, score) = BestSettled(s, me, candidates, settings);
 		return score >= before ? move : null;
 	}
+
+	/// <summary>The move whose settled result scores best for <paramref name="who"/> — our policy's and a responding opponent's one way to judge a play.</summary>
+	static (GameAction Move, double Score) BestSettled<T>(
+		GameState s,
+		int who,
+		IEnumerable<T> candidates,
+		Settings settings
+	)
+		where T : GameAction =>
+		candidates
+			.Select(a =>
+				((GameAction)a, Evaluator.Evaluate(Lookahead.Settle(s.Act(a)), who, settings.Held))
+			)
+			.MaxBy(x => x.Item2);
 
 	/// <summary>
 	/// Attacks and blocks are judged by what they lead to, for whoever declares them — so a player

@@ -120,10 +120,11 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #   and machine for an uncapped AI (every --match AI)
 #   beam is the search as it plays (held cards at 0.5 of their measured value — AI-1); beam-plain is
 #   the search before held values; beam-held=0.25 is the search at that fraction; models combine as
-#   beam+casts+shuffle (casts: the simulated opponent casts from its real hand; shuffle: what the
+#   beam+casts+shuffle (casts: the simulated opponent casts from its real hand; responds: it casts
+#   and also answers our spells and combat at instant speed, AI-3.6 — one of the two; shuffle: what the
 #   search can't know of the libraries is shuffled at its root; unseen: the opponent's hand cards it
 #   hasn't seen are drawn again from its unseen cards, AI-3.4; guess: they are guessed from the colours
-#   it has shown, by rarity, AI-3.5 — only a casting opponent uses its hand, so both need casts;
+#   it has shown, by rarity, AI-3.5 — only a casting opponent uses its hand: casts or responds;
 #   beam-casts = beam+casts)
 ```
 
