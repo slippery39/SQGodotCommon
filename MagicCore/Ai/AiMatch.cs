@@ -107,7 +107,11 @@ public static class AiMatch
 		int LandsA,
 		int LandsB,
 		int SpellsA,
-		int SpellsB
+		int SpellsB,
+		long StepsA,
+		long StepsB,
+		long RolloutsA,
+		long RolloutsB
 	)
 	{
 		public string DeckOfA => AIsPlayer1 ? Deck1 : Deck2;
@@ -170,6 +174,11 @@ public static class AiMatch
 		// What a hand term can break without moving the win rate: MtgSimulator's stopped playing lands.
 		var lands = new Dictionary<int, int> { [aSeat] = 0, [bSeat] = 0 };
 		var spells = new Dictionary<int, int> { [aSeat] = 0, [bSeat] = 0 };
+		var cost = new Dictionary<int, (long Steps, long Rollouts)>
+		{
+			[aSeat] = (0, 0),
+			[bSeat] = (0, 0),
+		};
 
 		for (var i = 0; i < DecisionLimit && !s.IsOver(); i++)
 		{
@@ -181,8 +190,14 @@ public static class AiMatch
 			var turn = s.GetGame().TurnNumber;
 			var tallies = ais.Keys.ToDictionary(p => p, p => s.GetPlayer(p).ThisTurn);
 			var start = Stopwatch.GetTimestamp();
-			s = ais[who].Decide(s).State;
+			var rolloutsBefore = RolloutsOf(ais[who]);
+			var ((next, _), steps) = MagicRules.CountingSteps(() => ais[who].Decide(s));
+			s = next;
 			var took = Stopwatch.GetTimestamp() - start;
+			cost[who] = (
+				cost[who].Steps + steps,
+				cost[who].Rollouts + RolloutsOf(ais[who]) - rolloutsBefore
+			);
 			ticks[who] += took;
 			slowest[who] = Math.Max(slowest[who], took);
 			decisions[who]++;
@@ -214,9 +229,15 @@ public static class AiMatch
 			lands[aSeat],
 			lands[bSeat],
 			spells[aSeat],
-			spells[bSeat]
+			spells[bSeat],
+			cost[aSeat].Steps,
+			cost[bSeat].Steps,
+			cost[aSeat].Rollouts,
+			cost[bSeat].Rollouts
 		);
 	}
+
+	static long RolloutsOf(IAi ai) => ai is BeamSearchAi search ? search.Rollouts : 0;
 
 	public sealed record Result(
 		string A,
@@ -267,6 +288,8 @@ public static class AiMatch
 			var (a, b) = A == B ? ($"{A} (A)", $"{B} (B)") : (A, B);
 			static string Ms(double seconds, int decisions) =>
 				decisions == 0 ? "-" : $"{seconds * 1000 / decisions:0.0} ms";
+			static string PerDecision(long total, int decisions) =>
+				decisions == 0 ? "-" : $"{(double)total / decisions:0.0}";
 			var (secA, decA) = (Games.Sum(g => g.SecondsA), Games.Sum(g => g.DecisionsA));
 			var (secB, decB) = (Games.Sum(g => g.SecondsB), Games.Sum(g => g.DecisionsB));
 			var byDeck = Games
@@ -280,6 +303,8 @@ public static class AiMatch
 				"\n",
 				$"{A} vs {B}: {Games.Count} games ({Pairings} deck pairings x {Seeds} seeds x both seats), {Elapsed.TotalSeconds:0.0} s",
 				$"  {a} {WinRateA * 100:0.0}% ± {StandardError * 100:0.0}pp (1 SE) — wins {a} {Games.Count(g => g.Winner == 1)}, {b} {Games.Count(g => g.Winner == 2)}, draws {Games.Count(g => g.Winner == 0)}",
+				$"  cost per decision (deterministic): {a} {PerDecision(Games.Sum(g => g.StepsA), decA)} engine steps, {PerDecision(Games.Sum(g => g.RolloutsA), decA)} rollouts; "
+					+ $"{b} {PerDecision(Games.Sum(g => g.StepsB), decB)} steps, {PerDecision(Games.Sum(g => g.RolloutsB), decB)} rollouts",
 				$"  time per decision: {a} {Ms(secA, decA)} (slowest {Games.Max(g => g.SlowestA) * 1000:0} ms), {b} {Ms(secB, decB)} (slowest {Games.Max(g => g.SlowestB) * 1000:0} ms)",
 				$"  per game: decisions {a} {(double)decA / Games.Count:0}, {b} {(double)decB / Games.Count:0}; turns {Games.Average(g => g.Turns):0.0}",
 				$"  per game: lands played {a} {Games.Average(g => g.LandsA):0.0}, {b} {Games.Average(g => g.LandsB):0.0}; "

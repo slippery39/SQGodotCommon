@@ -31,6 +31,11 @@ public class AiMatchTests
 			result.Games.Sum(g => g.SpellsA),
 			Is.EqualTo(result.Games.Sum(g => g.SpellsB)).And.GreaterThan(0)
 		);
+		// The cost count (AI-6): deterministic, so a mirror costs alike from both seats.
+		Assert.That(
+			result.Games.Sum(g => g.StepsA),
+			Is.EqualTo(result.Games.Sum(g => g.StepsB)).And.GreaterThan(0)
+		);
 	}
 
 	[Test]

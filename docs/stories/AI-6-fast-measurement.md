@@ -51,8 +51,8 @@ oracle is the search at several times the rollout budget and depth — sized onc
 
 ## Tasks
 
-- [ ] AI-6.1 The cost count: rollouts and engine steps per decision, reported by `--match`; checked
-      once against wall clock (the two must rank the AIs alike)
+- [x] AI-6.1 The cost count: rollouts and engine steps per decision, reported by `--match`; checked
+      once against wall clock (the two must rank the AIs alike) — they do; it undercounts evaluation
 - [ ] AI-6.2 Strength from parallel games: confirm a parallel run's win/loss equals `--sequential`'s
       on the same seeds, measure the wall-clock gain, and make it the default for search runs
 - [ ] AI-6.3 Early stopping for the overnight run: the sequential test on mirror pairs, the cap,
@@ -64,11 +64,29 @@ oracle is the search at several times the rollout budget and depth — sized onc
 
 ## Next
 
-Start with AI-6.1 — `AiMatch` (`MagicCore/Ai/AiMatch.cs`) times decisions with a stopwatch; the
-search already counts its rollouts (`BeamSearchAi.rollouts`). AI-7.1's profiling uses the same count,
-so the two stories meet here. Read `docs/findings/magic-ai.md` (AI-2.3 on the harness, the AI-3
+**AI-6.1 done; next AI-6.2** — parallel games for strength. `AiMatch.Run` already plays games in
+parallel unless `--sequential`; each search also parallelises its rollouts, so try
+`BeamSearchAi.Settings.Threads: 1` per search while games fill the cores (nested parallel loops
+only add overhead), prove win/loss AND the cost count identical to `--sequential`, and time it.
+The count: `MagicRules.CountingSteps(() => ai.Decide(s))` (any AI, any threads) and
+`BeamSearchAi.Rollouts`. Read `docs/findings/magic-ai.md` (AI-2.3 on the harness, the AI-3
 sections for what a run costs).
 
 ## Log
 
 - 2026-10-19: created from an interview with Shayne after AI-3 was paused for slow runs.
+- 2026-10-19: AI-6.1 — engine steps counted in `MagicRules.Act`/`Choose`; `--match` prints "cost
+  per decision (deterministic)" (steps, and `BeamSearchAi.Rollouts`). `Settings.Threads` added for
+  the test and AI-6.2. Tests: one decision costs exactly the same on every core and on one thread;
+  a GreedyAi mirror costs alike from both seats. **Repeating the same decision ten times did NOT
+  catch an accounting mistake** — the threads split the work alike each time; comparing against a
+  single thread does. Checked against the clock (findings): same ranking on three pairs;
+  evaluations are not counted (casts: +24% by steps, +35% by time).
+- 2026-10-19: /pre-commit fixes to AI-6.1 — the first cut was a thread-static count plus the
+  search adding its workers' counts by thread id: any AI or future parallel code outside that one
+  loop would have gone uncounted. Now `MagicRules.CountingSteps` opens a count that flows with the
+  execution context into `Parallel.For` (checked: 64 of 64 across 17 threads), for any AI.
+  `Threads: 1` is a plain loop (Parallel.For hands even one thread's work to the pool); `Threads`
+  below 1 is every core, not a crash; the cost fields are required; `Choose` counts only a valid
+  choice; the test reuses its probe. Revert-checked: suppressing the context's flow, and not
+  counting `Act`, each fail it. MagicCore.Tests 948 green.

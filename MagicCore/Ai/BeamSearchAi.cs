@@ -45,6 +45,11 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// rollouts past the limit (scoring them by the cheap evaluation) if that ever shows on the table.
 	/// </param>
 	/// <param name="Library">What the search may know of the libraries — <see cref="Hidden.Library"/> (story AI-3).</param>
+	/// <param name="Threads">
+	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
+	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
+	/// overhead (AI-6). Never changes a decision: each rollout fills its own slot.
+	/// </param>
 	public sealed record Settings(
 		int Depth = 3,
 		int BeamWidth = 4,
@@ -56,7 +61,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		double DivergenceThreshold = 5.0,
 		Rollout.Settings? RolloutSettings = null,
 		TimeSpan? TimeLimit = null,
-		Hidden.Library Library = Hidden.Library.RealOrder
+		Hidden.Library Library = Hidden.Library.RealOrder,
+		int? Threads = null
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -132,9 +138,22 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	int planTurn;
 	int rollouts;
 
+	long totalRollouts;
+
+	/// <summary>Rollouts every decision so far has played — beside MagicRules.CountingSteps, the search's cost (story AI-6).</summary>
+	public long Rollouts => totalRollouts;
+
 	Rollout.Settings RolloutSettings => options.RolloutSettings!;
 
 	public (GameState State, string What) Decide(GameState s)
+	{
+		rollouts = 0; // a plan replay or a pass doesn't search, and so doesn't reset it
+		var decided = DecideHere(s);
+		totalRollouts += rollouts;
+		return decided;
+	}
+
+	(GameState State, string What) DecideHere(GameState s)
 	{
 		if (s.GetGame().Step == Step.PreGame)
 			return greedy.Decide(s); // mulligans: GreedyAi's rule
@@ -210,17 +229,27 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	{
 		var expected = parent.Expected.Add(Evaluator.Evaluate(at, PlayerId, RolloutSettings.Held));
 		var nodes = new Node[children.Count];
-		Parallel.For(
-			0,
-			children.Count,
-			i =>
-			{
-				var state = Apply(at, children[i]);
-				var score = Rollout.Score(state, PlayerId, horizon, RolloutSettings);
-				Interlocked.Increment(ref rollouts);
-				nodes[i] = new Node(state, parent.Path.Add(children[i]), expected, score);
-			}
-		);
+		void RollOut(int i)
+		{
+			var state = Apply(at, children[i]);
+			var score = Rollout.Score(state, PlayerId, horizon, RolloutSettings);
+			Interlocked.Increment(ref rollouts);
+			nodes[i] = new Node(state, parent.Path.Add(children[i]), expected, score);
+		}
+		// One thread is a plain loop: Parallel.For would still hand its work to a pool thread and wait.
+		if (options.Threads == 1)
+			for (var i = 0; i < children.Count; i++)
+				RollOut(i);
+		else
+			Parallel.For(
+				0,
+				children.Count,
+				new ParallelOptions
+				{
+					MaxDegreeOfParallelism = options.Threads is > 1 and var n ? n : -1,
+				},
+				RollOut
+			);
 		return [.. nodes];
 	}
 

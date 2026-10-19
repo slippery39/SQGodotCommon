@@ -295,3 +295,26 @@ the sample on its own RNG seed — against the search that reads the libraries i
   really knew were coming.
 - **Decision (Shayne, 2026-10-18): the default is chosen at AI-3.9**, once the hand modes exist —
   `RealOrder` (stronger, cheats) stays the default until then; `ShuffleUnknown` is honest.
+
+## The cost count against the clock (2026-10-19, AI-6.1)
+
+`--match` reports a deterministic cost per decision: engine steps (every action and choice
+`MagicRules.Act`/`Choose` applies inside `MagicRules.CountingSteps`, whose count flows with the
+execution context to every thread the decision's work reaches) and rollouts. Checked against wall clock on three 12-game `--sequential` Release runs:
+
+| Run | Steps per decision | ms per decision | Steps ratio | Time ratio |
+|---|---|---|---|---|
+| beam+casts vs beam | 2 231 vs 1 796 | 421 vs 312 | 1.24 | 1.35 |
+| beam vs greedy | 1 565 vs 13.8 | 142 vs 1.9 | 113 | 75 |
+| beam+shuffle vs beam | 1 608 vs 1 550 | 267 vs 261 | 1.04 | 1.02 |
+
+- **The count ranks every pair as the clock does.**
+- **It undercounts evaluation-heavy work:** position evaluations are not steps, and the casting
+  opponent's extra cost is mostly evaluating its spells — +24% by steps, +35% by the clock. Count
+  evaluations too if a change's cost is mostly evaluation.
+- **The clock drifts where the count doesn't:** the same `beam` cost 0.09 ms a step in one run and
+  0.17 in another (smaller boards against GreedyAi are part of it).
+- ~7.5 rollouts per decision on average: most decisions are plan replays or have one move worth
+  searching; the search proper runs 20–200.
+- `BeamSearchAi.Settings.Threads` (null = every core) runs a search's rollouts on fewer threads,
+  never changing a decision — for AI-6.2's parallel games.

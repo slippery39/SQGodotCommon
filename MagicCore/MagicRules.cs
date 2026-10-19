@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 using ImmutableGameObjects;
 using MagicCore.Actions;
 using MagicCore.Cards;
@@ -383,8 +384,41 @@ public static class MagicRules
 	public static bool IsMoveFor(this GameState s, GameAction move, int cardId) =>
 		CardOf(move) is var id and not 0 && Identity(s, id) == Identity(s, cardId);
 
-	public static GameState Act(this GameState s, GameAction action) =>
-		s.AddAction(action).ProcessAllActions().State;
+	public static GameState Act(this GameState s, GameAction action)
+	{
+		CountStep();
+		return s.AddAction(action).ProcessAllActions().State;
+	}
+
+	/// <summary>
+	/// <paramref name="work"/>, and the engine steps it took — every action and choice applied (story
+	/// AI-6): an AI's cost, identical on every run and machine where a stopwatch is not. Counted on
+	/// every thread the work reaches: the count flows with the execution context into Parallel.For's
+	/// workers, so nothing that runs in parallel needs to add its own.
+	/// </summary>
+	public static (T Result, long Steps) CountingSteps<T>(Func<T> work)
+	{
+		var outer = counting.Value;
+		var count = new StrongBox<long>();
+		counting.Value = count;
+		try
+		{
+			var result = work();
+			return (result, count.Value);
+		}
+		finally
+		{
+			counting.Value = outer;
+		}
+	}
+
+	static readonly AsyncLocal<StrongBox<long>?> counting = new();
+
+	static void CountStep()
+	{
+		if (counting.Value is { } count)
+			Interlocked.Increment(ref count.Value);
+	}
 
 	/// <summary>
 	/// Answers the pending choice. ResolveChoice checks only HOW MANY ids arrive, so this boundary
@@ -401,6 +435,7 @@ public static class MagicRules
 			throw new InvalidOperationException(
 				$"Not a selection of the offered options: [{string.Join(", ", chosen)}]"
 			);
+		CountStep();
 		return s.ResolveChoice(chosen).State;
 	}
 }

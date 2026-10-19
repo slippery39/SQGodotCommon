@@ -50,6 +50,55 @@ public class BeamSearchAiTests
 		Assert.That(s.GetPlayer(me).HasLost, Is.False);
 	}
 
+	// The cost count (AI-6) reaches every thread a decision's work runs on: on every core or all on the
+	// deciding thread, the same decision costs the same — a worker the count missed would make them differ.
+	[Test]
+	public void TheSameDecision_CostsTheSame_HoweverTheThreadsRun()
+	{
+		var game = MagicRules.NewGame(
+			FraDecks.All["Red-Green"],
+			FraDecks.All["White-Black"],
+			seed: 2
+		);
+		var greedy = new[] { game.Player1Id(), game.Player2Id() }.ToDictionary(
+			p => p,
+			p => new GreedyAi(p)
+		);
+		(long Steps, long Rollouts) Cost(GameState at, int? threads = null)
+		{
+			var search = new BeamSearchAi(
+				at.DecidingPlayerId(),
+				new BeamSearchAi.Settings(CommitPlans: false, Threads: threads)
+			);
+			var (_, steps) = MagicRules.CountingSteps(() => search.Decide(at));
+			return (steps, search.Rollouts);
+		}
+		// The first decision from turn 4 that searches widely enough to spread over threads.
+		var first = (Steps: 0L, Rollouts: 0L);
+		for (var i = 0; i < 2_000 && !game.IsOver(); i++)
+		{
+			game = game.AutoPass();
+			if (game.GetGame().TurnNumber >= 4 && (first = Cost(game)).Rollouts >= 20)
+				break;
+			game = greedy[game.DecidingPlayerId()].Decide(game).State;
+		}
+
+		var costs = Enumerable
+			.Range(0, 4)
+			.Select(_ => Cost(game))
+			.Prepend(first)
+			.Append(Cost(game, threads: 1))
+			.ToList();
+
+		Assert.That(costs.Distinct(), Has.Exactly(1).Items, string.Join(", ", costs));
+		Assert.That(first.Rollouts, Is.GreaterThanOrEqualTo(20), "a decision that really searched");
+		Assert.That(
+			first.Steps,
+			Is.GreaterThan(first.Rollouts * 10),
+			"every rollout's steps counted"
+		);
+	}
+
 	[Test]
 	public void TheSamePosition_GetsTheSameDecision()
 	{
