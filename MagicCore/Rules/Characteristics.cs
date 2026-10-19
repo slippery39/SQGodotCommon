@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Runtime.CompilerServices;
 using ImmutableGameObjects;
 using MagicCore.Cards;
 using MagicCore.Effects;
@@ -87,37 +86,47 @@ public static class Characteristics
 		HashSet<(int, int)> Stripped
 	);
 
-	static readonly ConditionalWeakTable<GameState, Board> Boards = new();
-
 	static readonly HashSet<(int, int)> NoneStripped = [];
 
-	static Board BoardOf(GameState s) =>
-		Boards.GetValue(
-			s,
-			state =>
-			{
-				// One pass over the battlefield: it runs for every new state the AI simulates.
-				List<(Card, StaticEffectComponent)> statics = [];
-				HashSet<(int, int)>? stripped = null;
-				foreach (var p in new[] { state.Player1Id(), state.Player2Id() })
-				foreach (
-					var c in state
-						.CardsIn(p, ZoneType.Battlefield)
-						.Concat(state.CardsIn(p, ZoneType.Command))
-				) // emblems too
-				foreach (var component in c.Components)
-					if (component is StaticEffectComponent effect)
-						statics.Add((c, effect));
-					else if (component is EnchantedLosesAllAbilities)
-						(stripped ??= []).Add((c.AttachedToId, c.AttachedToIncarnation));
-				var lost = new Board([], stripped ?? NoneStripped);
-				return lost with
-				{
-					// A permanent that lost its abilities has no statics either.
-					Statics = [.. statics.Where(x => !Lost(lost, x.Item1))],
-				};
-			}
-		);
+	// The last board each thread built: the questions about one state come together (the state-based
+	// check asks every creature's toughness), so one entry finds nearly all of them. A global
+	// ConditionalWeakTable did this before, and cost more than it saved: its lock contended across
+	// the search's threads, and every collection scanned a weak handle per state (story AI-7).
+	// ponytail: one entry — a caller asking about two states in turn rebuilds the board every time
+	// (keep two entries if one ever must), and each thread keeps its last state alive until the next.
+	[ThreadStatic]
+	static (GameState? State, Board? Board) lastBoard;
+
+	static Board BoardOf(GameState s)
+	{
+		if (!ReferenceEquals(lastBoard.State, s))
+			lastBoard = (s, BuildBoard(s));
+		return lastBoard.Board!;
+	}
+
+	static Board BuildBoard(GameState state)
+	{
+		// One pass over the battlefield: it runs for every new state the AI simulates.
+		List<(Card, StaticEffectComponent)> statics = [];
+		HashSet<(int, int)>? stripped = null;
+		foreach (var p in new[] { state.Player1Id(), state.Player2Id() })
+		foreach (
+			var c in state
+				.CardsIn(p, ZoneType.Battlefield)
+				.Concat(state.CardsIn(p, ZoneType.Command))
+		) // emblems too
+		foreach (var component in c.Components)
+			if (component is StaticEffectComponent effect)
+				statics.Add((c, effect));
+			else if (component is EnchantedLosesAllAbilities)
+				(stripped ??= []).Add((c.AttachedToId, c.AttachedToIncarnation));
+		var lost = new Board([], stripped ?? NoneStripped);
+		return lost with
+		{
+			// A permanent that lost its abilities has no statics either.
+			Statics = [.. statics.Where(x => !Lost(lost, x.Item1))],
+		};
+	}
 
 	/// <summary>Statics apply to permanents on the battlefield — not to a card in hand or a dead card's last-known copy.</summary>
 	static IEnumerable<Applied> Statics(GameState s, Board board, Card card, bool ptOnly)

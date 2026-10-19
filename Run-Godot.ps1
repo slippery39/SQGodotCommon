@@ -98,11 +98,21 @@ if ($Seconds) {
 if ($Scene) { $engineArgs += $Scene }
 if ($GameArgs.Count) { $engineArgs += @('--') + $GameArgs }
 
+# The server garbage collector for every scene, for MagicTable's search above all (story AI-7.1: the
+# default one's pauses were 76% of its time). The editor build ignores the csproj; this reaches it.
+$gcServerBefore = $env:DOTNET_gcServer
+$env:DOTNET_gcServer = '1'
+
 Write-Host "==> godot-mono $($engineArgs -join ' ')"
-& $godot @engineArgs 2>&1 | Where-Object {
-    # The shader-sampler line and the Android editor-setting lookup are both pre-existing and both
-    # say "Continuing". Everything else is worth seeing.
-    $_ -notmatch 'custom_samplers|export/android|EditorSettings not instantiated'
+try {
+    & $godot @engineArgs 2>&1 | Where-Object {
+        # The shader-sampler line and the Android editor-setting lookup are both pre-existing and both
+        # say "Continuing". Everything else is worth seeing.
+        $_ -notmatch 'custom_samplers|export/android|EditorSettings not instantiated'
+    }
+}
+finally {
+    $env:DOTNET_gcServer = $gcServerBefore # the caller's shell keeps what it had
 }
 
 if ($Capture) {

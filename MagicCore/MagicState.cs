@@ -33,8 +33,14 @@ public static class MagicState
 	public static int ZoneId(this GameState s, int playerId, ZoneType type) =>
 		s.GetWellKnownId(MagicKeys.Zone(playerId, type));
 
-	public static IEnumerable<Card> CardsIn(this GameState s, int playerId, ZoneType type) =>
-		s.GetChildren(s.ZoneId(playerId, type)).Cast<Card>();
+	public static IEnumerable<Card> CardsIn(this GameState s, int playerId, ZoneType type)
+	{
+		// One iterator over the ids, not GetChildren(…).Cast — it sits under every rule and the search.
+		if (!s.ParentToChildren.TryGetValue(s.ZoneId(playerId, type), out var ids))
+			yield break;
+		foreach (var id in ids)
+			yield return (Card)s.GetObject(id);
+	}
 
 	public static bool IsIn(this GameState s, int cardId, int playerId, ZoneType type) =>
 		s.GetParent(cardId) == s.ZoneId(playerId, type);

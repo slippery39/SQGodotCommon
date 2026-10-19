@@ -232,6 +232,10 @@ public static class Triggers
 	/// </summary>
 	public static List<Pending> Collect(GameState s)
 	{
+		// Every trigger below is read from a staged event, so with none nothing can trigger — and
+		// most priority passes stage none (62% in the search; story AI-7.3d).
+		if (s.PendingGameEvents.IsEmpty)
+			return [];
 		var active = s.GetGame().ActivePlayerId;
 		// Permanents, and emblems and effects in the command zone (CR 113.6b).
 		var permanents = new[] { active, s.OpponentOf(active) }.SelectMany(p =>

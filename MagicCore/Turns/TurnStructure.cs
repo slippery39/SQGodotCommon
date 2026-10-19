@@ -242,84 +242,106 @@ public static class StateBasedActions
 			if (!player.HasLost && (player.Life <= 0 || player.AttemptedDrawFromEmptyLibrary))
 				s = s.WithPlayer(player with { HasLost = true });
 
-			var dying = s.CardsIn(id, ZoneType.Battlefield)
-				.Where(c =>
-					c.Is(CardType.Creature)
-					&& (
-						s.Toughness(c) <= 0
-						|| (
-							!s.IsIndestructible(c)
-							&& (
-								c.Damage >= s.Toughness(c)
-								|| (c.DamagedByDeathtouch && c.Damage > 0)
-							)
-						)
-					)
-				)
-				.ToList();
-			foreach (var card in dying)
-				s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+			// Plain loops over one read of the battlefield, read again only once something on it
+			// changed: this runs at every priority, half of each step the search simulates (AI-7.3d).
+			var field = s.CardsIn(id, ZoneType.Battlefield).ToList();
+
+			List<Card>? dying = null;
+			foreach (var c in field)
+				if (c.Is(CardType.Creature) && IsLethal(s, c))
+					(dying ??= []).Add(c);
+			if (dying is not null)
+			{
+				foreach (var card in dying)
+					s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+				field = s.CardsIn(id, ZoneType.Battlefield).ToList();
+			}
 
 			// CR 704.5i: a planeswalker with 0 loyalty — unless something says it survives (Sanctum Lurker).
-			var walkersSurvive = s.CardsIn(id, ZoneType.Battlefield)
-				.Any(s.HasAbility<Effects.YourPlaneswalkersSurviveZeroLoyalty>);
-			var depleted = s.CardsIn(id, ZoneType.Battlefield)
-				.Where(c => c.Is(CardType.Planeswalker) && c.Loyalty <= 0 && !walkersSurvive)
-				.ToList();
-			foreach (var card in depleted)
-				s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+			List<Card>? depleted = null;
+			foreach (var c in field)
+				if (c.Is(CardType.Planeswalker) && c.Loyalty <= 0)
+					(depleted ??= []).Add(c);
+			if (
+				depleted is not null
+				&& !field.Any(s.HasAbility<Effects.YourPlaneswalkersSurviveZeroLoyalty>)
+			)
+			{
+				foreach (var card in depleted)
+					s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+				field = s.CardsIn(id, ZoneType.Battlefield).ToList();
+			}
 
 			// CR 704.5j legend rule — not this turn after Hall of Echoes. ponytail: keeps a card over a
 			// token (Face Yourself's copy is sacrificed anyway), then the newest; Arena asks which. Make it
 			// a choice when keeping the older one (say, a tapped copy) matters to the AI.
-			if (!s.ThisTurnEffects<Effects.NoLegendRule>(id).Any())
+			if (
+				field.Count(c => c.Is(Supertype.Legendary)) > 1
+				&& !s.ThisTurnEffects<Effects.NoLegendRule>(id).Any()
+			)
 			{
-				var extraLegends = s.CardsIn(id, ZoneType.Battlefield)
+				var extraLegends = field
 					.Where(c => c.Is(Supertype.Legendary))
 					.GroupBy(c => c.Name)
 					.SelectMany(g => g.OrderBy(c => c.IsToken ? 0 : 1).SkipLast(1)) // stable: newest last
 					.ToList();
 				foreach (var card in extraLegends)
 					s = s.MoveCard(card.Id, s.ZoneId(card.OwnerId, ZoneType.Graveyard));
+				if (extraLegends.Count > 0)
+					field = s.CardsIn(id, ZoneType.Battlefield).ToList();
 			}
 
+			var beforeAttachments = s;
 			s = Rules.Attachments.Check(s, id); // CR 704.5m/n
+			if (!ReferenceEquals(s, beforeAttachments))
+				field = s.CardsIn(id, ZoneType.Battlefield).ToList();
 
 			// CR 704.5q: +1/+1 and -1/-1 counters on one permanent cancel in pairs.
-			foreach (
-				var both in s.CardsIn(id, ZoneType.Battlefield)
-					.Where(c => c.PlusOneCounters > 0 && c.MinusOneCounters > 0)
-					.ToList()
-			)
-			{
-				var pairs = Math.Min(both.PlusOneCounters, both.MinusOneCounters);
-				s = s.UpdateObject(
-					both.Id,
-					both with
-					{
-						PlusOneCounters = both.PlusOneCounters - pairs,
-						MinusOneCounters = both.MinusOneCounters - pairs,
-					}
-				);
-			}
+			foreach (var both in field)
+				if (both.PlusOneCounters > 0 && both.MinusOneCounters > 0)
+				{
+					var pairs = Math.Min(both.PlusOneCounters, both.MinusOneCounters);
+					s = s.UpdateObject(
+						both.Id,
+						both with
+						{
+							PlusOneCounters = both.PlusOneCounters - pairs,
+							MinusOneCounters = both.MinusOneCounters - pairs,
+						}
+					);
+				}
 
 			// CR 704.5d: a token anywhere but the battlefield ceases to exist.
-			foreach (
-				var zone in new[]
-				{
-					ZoneType.Graveyard,
-					ZoneType.Exile,
-					ZoneType.Hand,
-					ZoneType.Library,
-				}
-			)
-			foreach (
-				var gone in s.CardsIn(id, zone)
-					.Where(c => c.IsToken || Rules.Prepare.IsDeadCopy(s, c))
-					.ToList()
-			)
-				s = s.RemoveObject(gone.Id);
+			foreach (var zone in OffTheBattlefield)
+			{
+				List<Card>? gone = null;
+				foreach (var c in s.CardsIn(id, zone))
+					if (c.IsToken || Rules.Prepare.IsDeadCopy(s, c))
+						(gone ??= []).Add(c);
+				if (gone is not null)
+					foreach (var card in gone)
+						s = s.RemoveObject(card.Id);
+			}
 		}
 		return s;
+	}
+
+	static readonly ZoneType[] OffTheBattlefield =
+	[
+		ZoneType.Graveyard,
+		ZoneType.Exile,
+		ZoneType.Hand,
+		ZoneType.Library,
+	];
+
+	/// <summary>Lethal: no toughness left, or damage enough to destroy it (or any from deathtouch) — 0 toughness kills even the indestructible.</summary>
+	static bool IsLethal(GameState s, Card c)
+	{
+		var toughness = s.Toughness(c);
+		return toughness <= 0
+			|| (
+				!s.IsIndestructible(c)
+				&& (c.Damage >= toughness || (c.DamagedByDeathtouch && c.Damage > 0))
+			);
 	}
 }

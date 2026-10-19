@@ -145,6 +145,11 @@ broken project — the script always uses `godot-mono`. It opens on the SECOND m
 not hardcoded) instead of over your work. And it creates the capture folder: `--write-movie` with a
 missing folder exits 0, prints "Done recording movie", and writes nothing.
 
+**It also gives the game the server garbage collector** (`DOTNET_gcServer=1`), for MagicTable's
+search: the editor build starts .NET from its own config and ignores the csproj's
+`<ServerGarbageCollection>`. **F5 from the Godot editor runs the table on the slow collector** —
+what that costs is in `docs/findings/magic-ai.md` (AI-7.1).
+
 **Captures land inside the Godot project, so they would ship in the APK.** The script drops a
 `.gdignore` in every capture folder it makes (the KIN branch shipped 122 MB of frames before this).
 

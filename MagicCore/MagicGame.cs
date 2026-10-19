@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using ImmutableGameObjects;
 
 namespace MagicCore;
@@ -55,5 +56,12 @@ public static class MagicKeys
 	public const string Player1 = "Player1";
 	public const string Player2 = "Player2";
 
-	public static string Zone(int playerId, ZoneType type) => $"{playerId}.{type}";
+	/// <summary>
+	/// Built once per player and zone, then reused: every zone lookup asks for it (story AI-7.3d — a
+	/// new string each time, with its enum formatted, ran on every CardsIn under the search).
+	/// </summary>
+	public static string Zone(int playerId, ZoneType type) =>
+		ZoneKeys.GetOrAdd((playerId, type), k => $"{k.Item1}.{k.Item2}");
+
+	static readonly ConcurrentDictionary<(int, ZoneType), string> ZoneKeys = new();
 }

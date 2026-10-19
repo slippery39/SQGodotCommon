@@ -424,3 +424,89 @@ shuffled? — asked at both speeds. Release, 16 logical processors (8 cores), se
   and dropped (the batched run had none). A verdict now abandons them at their next decision.
 - **The slowest decision of a parallel run is ~35 s** (one thread, no time limit) — beside a mean
   of ~1.1 s. A lead for AI-7's profile.
+
+## Where a decision's time goes (2026-10-19, AI-7.1)
+
+The suite (`--suite=beam`: 288 decisions, one thread each, 16 logical processors, Release) with the
+collector's own counters read at exit (`GC.GetTotalPauseDuration`, collection counts, allocated
+bytes), a `dotnet-trace` thread-time sample, and single operations timed on a turn-9 position of
+11 permanents (one thread, tiered compilation off).
+
+**1. The garbage collector, made slow by one cache.** `Characteristics.BoardOf` kept each state's
+statics in a global `ConditionalWeakTable` — an entry for nearly every state the search makes. Its
+lock contended across threads (~6% of samples), its containers' finalizers ran (~6%), and every
+collection scanned a weak handle per state. A one-entry cache per thread (the questions about a state
+come together) changes no decision — 0 of 288, the same cost count; 122 tests fail if it goes stale:
+
+| `--suite=beam` | Wall | GC pauses | Gen0 collections | CPU | Allocated |
+|---|---|---|---|---|---|
+| server collector, the weak table | 21.0 s | 5.6 s | 1 177 | 155 s | 36.3 GB |
+| server collector, one entry per thread | **14.6 s** | **1.4 s** | 1 190 | 107 s | 36.2 GB |
+| workstation collector, the weak table | 56.3 s | **42.8 s (76%)** | 4 363 | 131 s | 36.3 GB |
+| workstation collector, one entry per thread | **22.0 s** | 8.6 s | 4 356 | 95 s | 36.3 GB |
+
+MagicCore.Tests went from 1 m 52 s to 1 m 5 s with it.
+
+**2. The table runs on the workstation collector.** `godot-mono` is the editor build: it starts .NET
+from its own `GodotPlugins.runtimeconfig.json` (no `System.GC.Server`), never the project's, so a
+csproj setting can't reach it. Printed from MagicTable: `IsServerGC` False; with the environment
+variable `DOTNET_gcServer=1`, True. The workstation rows above are the table's case.
+
+**3. Allocation: ~126 MB a decision, ~52 KB an engine step** (36.3 GB over 692 784 steps). One
+priority pass allocates 31.8 KB, `LegalActions` 14 KB, `Evaluator.Evaluate` 21 KB, a rollout of 193
+steps 8.1 MB. Untouched by the cache change; it is what still drives the collections.
+
+**4. One engine step (a priority pass) is ~77 µs**, and the turn structure is most of it:
+
+| Part of `Act(pass)` | µs | Allocated |
+|---|---|---|
+| the whole step | 77 | 31.8 KB |
+| `StateBasedActions.Check` | 39 | 14.2 KB |
+| `Triggers.Collect` | 14 | 12.6 KB |
+
+The check is many small zone scans, each a few µs per player: the dying scan (5.9), the token sweep
+over graveyard, exile, hand and library — 29 library cards every pass — (5.6), `Attachments.Check`
+(4.3), the legend scan (1.7), "walkers survive" (1.3). For scale: `LegalActions` 26 µs, `Evaluate` 32.
+
+**5. Where the search spends it** (sampled, inclusive): rollouts 96%; `GivePriority` 70% (the
+state-based check 38%, trigger collection 33%); `Lookahead.Settle` 47%; `Rollout.Answer` — attacks
+and blocks judged one creature at a time, each settled — 41% (AI-2.4 measured ~45%); `Evaluate` 5%;
+`LegalActions` 5%; mana payment ~3%.
+
+**6. Counted over the suite** (temporary counters): trigger collection ran 680 661 times — **62%
+with no staged events, where nothing can trigger**, and only 2.9% found anything. Attack judgments:
+13 026, each of 2 or 3 options (don't, the player, a planeswalker); block judgments: 5 239, of 2–6
+options. Every option plays the whole combat forward (`Lookahead.Settle`).
+
+**Two traps in measuring this:**
+- **65% of the thread-time samples end in `PollGC` under `GameState.GetChildren`, beneath a
+  mis-symbolised `Buffer.BulkMoveWithWriteBarrier`** — threads stopped for the sampler's own stack
+  walk, not for the collector (it paused 1.4 s of that run). Enumerating a zone costs 120 bytes and
+  ~1 µs. Read the callers' inclusive time, never that leaf.
+- **Time single operations with tiered compilation off:** the first timings, on tier-0 code, read
+  a step at 236 µs against 77.
+
+## Decision-neutral speedups, each measured back to back (2026-10-19, AI-7.3)
+
+Every row: `--suite=beam`, **0 of 288 decisions changed and the cost count identical** (2 405.5 engine
+steps, 13.9 rollouts a position), MagicCore.Tests 975 green. Each change is measured against the
+tree without it, both runs minutes apart — **this machine's speed drifted ~2× during the day, so only
+the pairs compare**. Allocated bytes barely move from run to run; they are the steady measure.
+
+| Change | Allocated | CPU (server / workstation) | Wall (server / workstation) |
+|---|---|---|---|
+| 7.3a the board cache: one entry per thread, not a weak table | 36.3 → 36.2 GB | 155 → 107 s / 131 → 95 s | 21.0 → 14.6 s / 56.3 → 22.0 s |
+| 7.3d-1 trigger collection returns at once with no staged event | 36.4 → **27.0 GB** | 119 → 97 s / 118 → 100 s | 26.4 → 17.7 s / 31.1 → 24.3 s |
+| 7.3d-2a `CardsIn` one iterator; zone keys built once | 27.0 → **24.0 GB** | 94 → 84 s / 89 → 75 s | 23.9 → 14.1 s / 21.5 → 18.4 s |
+| 7.3d-2b the state-based check: one battlefield read, plain loops | 23.8 → **21.0 GB** | 74 → 72 s / 73 → 70 s | 15.4 → 13.9 s / 17.0 → 17.3 s |
+
+- **Allocation 36.3 → 21.0 GB (−42%)** over the four. One priority pass on the turn-9 probe position:
+  31.8 → 17.9 KB after 7.3d-1 alone.
+- **Every `CardsIn` built a new key string, `$"{playerId}.{type}"`, formatting the enum each time**
+  — likely the enum-reflection lines in the first profile (`InitializeEnumInfo`, the runtime's type
+  cache rebuilt under collection pressure).
+- **What still allocates in the state-based check is `Characteristics`:** `IsIndestructible` 736 B a
+  call, `Toughness` 288 B — LINQ over `ImmutableArray` components (each boxes the array) and the
+  statics iterator. That is 7.3c.
+- Revert-checked: lethal damage off by one fails 120 tests; a token sweep that removes nothing, 158.
+

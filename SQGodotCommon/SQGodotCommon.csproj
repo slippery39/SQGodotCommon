@@ -6,6 +6,11 @@
     <!-- Android publish emits deps.json for each referenced project in both the RID and non-RID
          output dirs; without this NETSDK1152 fails the export. Contents are identical. -->
     <ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+    <!-- The MagicTable search allocates a state per step on every core; the default collector's pauses
+         were 76% of its time (story AI-7.1). For EXPORTED builds - unverified, no Windows preset exists
+         yet. The editor build starts .NET from its own GodotPlugins.runtimeconfig.json and ignores this;
+         Run-Godot.ps1 sets DOTNET_gcServer=1 instead. -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MtgCore\MtgCore.csproj" />

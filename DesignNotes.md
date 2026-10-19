@@ -1100,6 +1100,7 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - last-known information keeps a card's own characteristics, not what statics gave it
 - a dying card's own "when this dies" looks back, but other leaves-the-battlefield triggers read the battlefield NOW (Edgar dying alongside a creature misses its death)
 - a "sacrifice the greatest" tie takes the first
+- `Characteristics.BoardOf` caches ONE board per thread (AI-7.3a): a caller asking about two states in turn rebuilds it every time — keep two entries if one ever must; each thread keeps its last state alive
 - `GreedyAi` (no longer the default AI — the search is, AI-2) is one ply with a passive opponent — no turn planning, no holding up mana, no "do I need this mana now" when choosing a tapped dual, and it loses slow races to evasive fliers (`docs/findings/magic-ai.md`)
 - menace drops a lone blocker instead of refusing the declaration
 - the auto-tapper ignores what the rest of the hand needs
