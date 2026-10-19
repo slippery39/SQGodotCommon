@@ -19,16 +19,10 @@ public sealed class GreedyAi(int playerId, HeldValues? held = null) : IAi
 	public int PlayerId { get; } = playerId;
 
 	/// <summary>Makes this player's decision — an action, or an answer to a pending choice — and says what it was.</summary>
-	public (GameState State, string What) Decide(GameState s)
-	{
-		if (s.GetPendingChoice() is { } choice)
-		{
-			var answer = Answer(s, choice).ToList();
-			return (s.Choose(answer), Describe.Answer(s, choice, answer));
-		}
-		var action = ChooseAction(s);
-		return (s.Act(action), Describe.Action(s, action));
-	}
+	public AiDecision Decide(GameState s) =>
+		s.GetPendingChoice() is { } choice
+			? AiDecision.Answering(s, [.. Answer(s, choice)])
+			: AiDecision.Acting(s, ChooseAction(s));
 
 	GameAction ChooseAction(GameState s)
 	{

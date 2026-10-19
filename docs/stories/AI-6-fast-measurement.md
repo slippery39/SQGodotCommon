@@ -58,17 +58,21 @@ oracle is the search at several times the rollout budget and depth — sized onc
       identical games, 97 min → 16 min (6.2×) with the server garbage collector
 - [x] AI-6.3 Early stopping for the overnight run: the sequential test on mirror pairs, the cap,
       the reason it stopped in the report — `--until-clear`
-- [ ] AI-6.4 The position suite: generate from self-play (seed + decks + moves), replay, the oracle's
-      answers stored; report changed-vs-committed and agreement/score given up against the oracle
+- [x] AI-6.4a The position suite: generate from self-play (seed + decks + moves), replay, report
+      changed-vs-committed and the cost — `--suite=A`, ~20 s for 288 positions
+- [ ] AI-6.4b The oracle: a much deeper search's answers at every position, stored; the report adds
+      agreement with it and the score each version's choice gives up
 - [ ] AI-6.5 Prove it on AI-3: re-run one AI-3.3 comparison through the new harness; Commands.md says
       how to run each speed
 
 ## Next
 
-**AI-6.3 done; next AI-6.4** — the position suite: positions from search self-play stored as seed +
-decks + moves, replayed; the oracle's answers stored; changed-vs-committed and agreement/score given
-up against the oracle. The overnight run is `--until-clear` (`AiMatch.RunUntilClear`, `EarlyStop`);
-a 156-game search-vs-search match is ~16 min (findings, AI-6.2), so the 600-game cap is ~1 h. Games run in parallel by default, one thread per search, one game per core, on
+**AI-6.4a done; next AI-6.4b** — the oracle: a much deeper search decides each of the suite's 288
+positions once (an overnight job is fine), its answer and its score for every option stored beside
+the committed answers; `--suite=A` adds agreement with it and the score A's choice gives up. The
+suite is `PositionSuite` (`MagicCore/Ai/PositionSuite.cs`, the file `MagicCore/Sets/FRA.positions.txt`,
+embedded); every AI's `Decide` returns an `AiDecision` with the move itself. The overnight run is
+`--until-clear`; a 156-game search-vs-search match is ~16 min, so the 600-game cap is ~1 h. Games run in parallel by default, one thread per search, one game per core, on
 the server garbage collector — keep `<ServerGarbageCollection>` in MagicConsole and the tests.
 The count: `MagicRules.CountingSteps(() => ai.Decide(s))` and `BeamSearchAi.Rollouts`. Read `docs/findings/magic-ai.md` (AI-2.3 on the harness, the AI-3
 sections for what a run costs).
@@ -118,3 +122,23 @@ sections for what a run costs).
   for AI-6.5 to measure; one variance helper for the verdict and the standard error; the tests read
   games per seed from the result and share one run. Revert-checked: no freezing, no minimum, a
   flipped sign — each fails.
+- 2026-10-19: AI-6.4 split — the suite with changed-vs-committed (6.4a, what AI-7 needs to prove an
+  optimisation decision-neutral) before the oracle (6.4b), so each step stays reviewable.
+- 2026-10-19: AI-6.4a — `IAi.Decide` returns an `AiDecision` (the state, the description, and the
+  move: an action or a choice's ids; it still deconstructs to (State, What), so no caller changed).
+  `PositionSuite`: self-play recorded as decks + seed + move tokens (an index among the distinct
+  moves, or a choice's ids) — the generator plays the RECORDED move, so a recording replays exactly;
+  replay checks each position's option count and fails "stale — regenerate" if the engine moved.
+  `--suite=generate`, `--suite=A [--accept]`. Tests: a round trip through the file; GreedyAi's own
+  answers change nothing and random play's change some; a bad move or option count is stale; the
+  tracked file still replays (revert-checked by corrupting a move). Measured (findings): beam 0 of
+  288 changed, greedy 41%, beam+shuffle 8.3%; ~20 s a check. MagicCore.Tests 968 green.
+- 2026-10-19: /pre-commit fixes to AI-6.4a — stale detection compared option COUNTS only, so an
+  engine change that reordered moves would have replayed other moves silently: each position now
+  stores a fingerprint of what it offers and each game one of how it ended (FNV-1a, stable across
+  processes), and a replay that differs from either is stale; a choice's ids in another order are
+  the same answer; forced choices (every enabled option taken) are no longer positions; one token
+  parser, so a malformed token is stale too; a game with no moves round-trips; `AiDecision` is made
+  only by its two factories; RandomAi picks only enabled options. Regenerated — the same 288
+  positions and numbers. Revert-checked: dropping either fingerprint check fails its test.
+  MagicCore.Tests 970 green.

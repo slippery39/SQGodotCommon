@@ -347,3 +347,22 @@ cost count (1 319.6 and 1 245.1 engine steps per decision). Only the wall clock 
   55 s on the server collector against 204 s on the workstation one — a multi-threaded search
   allocates in parallel just the same. So the table may gain as well, if Godot's runtime takes the
   setting (AI-7).
+
+## The position suite (2026-10-19, AI-6.4a)
+
+`MagicCore/Sets/FRA.positions.txt`: the search's self-play — 24 games (every ordered FRA pairing,
+seeds 1–4), 12 positions a game evenly spaced among its real decisions (two options or more) —
+answered by a fresh `beam` at each. Generated in 3½ min (`--suite=generate`). Checked on 16 cores,
+each position's search on one thread, Release:
+
+| `--suite=…` | Changed from beam's answers | Cost per position | Time |
+|---|---|---|---|
+| beam | **0 of 288** | 2 405.5 steps, 13.9 rollouts | 20.5 s |
+| greedy | 119 (41.3%) | 16.3 steps | 6.0 s |
+| beam+shuffle | 24 (8.3%) | 2 436.7 steps, 14.0 rollouts | 21.9 s |
+
+- **A check takes ~20 seconds** — the minutes-long quick check AI-6 asked for, with room to spare.
+- **It sees a difference where a match barely did:** `beam+shuffle` changes 8.3% of decisions,
+  `greedy` 41%. It says WHAT changed, not whether it wins — that is the oracle's job (AI-6.4b).
+- 13.9 rollouts per position against ~7 per decision in a match: the suite's positions are real
+  decisions only (two options or more), where a match counts every pass and plan replay.

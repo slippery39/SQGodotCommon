@@ -73,9 +73,10 @@ MagicCore/
 ├── Ai/GreedyAi.cs       one-ply simulate-and-evaluate AI
 ├── Ai/Evaluator.cs      THE position score every AI compares moves by (a change shows in GoldenAiReplay.txt);
 │                        HeldValues: a held card priced by its measured value — the search's setting (AI-1)
-├── Ai/IAi.cs            what every AI is: Decide(state) for its player; RandomAi.cs is the floor
+├── Ai/IAi.cs            what every AI is: Decide(state) for its player, returning the move too (AiDecision); RandomAi.cs is the floor
 ├── Ai/AiMatch.cs        THE strength harness: AI vs AI, every deck pairing, seats swapped (MagicConsole --match)
 ├── Ai/EarlyStop.cs      when a match has said enough: 5pp better / worse / neither, judged on mirror pairs (--until-clear)
+├── Ai/PositionSuite.cs  THE quick check: recorded self-play positions, an AI decides again, what changed (--suite=A)
 ├── Ai/Lookahead.cs      playing a simulation forward cheaply: Settle (see a move's result), QuickAnswer
 ├── Ai/Rollout.cs        THE rollout the search scores by: to an absolute turn, cheap policies, terminal discount
 ├── Ai/BeamSearchAi.cs   the search AI: a beam over our decisions this turn, rollout-scored, plan committed;
@@ -86,6 +87,7 @@ MagicCore/
 ├── Ai/CardValues.cs     the card-value sandbox: each card cast into a fixed board, measured to the turn's end
 ├── Zones/Zone.cs        per-player zones (incl. Command: emblems, "until your next turn" and "this turn" effects) + shared Stack; per-CONTROLLER battlefield
 ├── Sets/FRA.values.json GENERATED card values (CardValues; MagicConsole --card-values) — embedded, a test fails while stale
+├── Sets/FRA.positions.txt GENERATED position suite (PositionSuite; MagicConsole --suite=generate) — embedded, a test fails while stale
 └── Sets/FRA.json        imported by tools/import_scryfall_set.py — embedded resource, never hand-edit
 ```
 

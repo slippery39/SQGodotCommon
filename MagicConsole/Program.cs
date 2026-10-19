@@ -42,6 +42,50 @@ if (args.FirstOrDefault(a => a.StartsWith("--match=")) is { } match)
 	return;
 }
 
+// --suite=generate: record the search's self-play as the position suite (run from the solution root).
+// --suite=A [--accept]: what AI A decides at every position, against the committed answers (AI-6.4);
+// --accept makes A's answers the committed ones.
+if (args.FirstOrDefault(a => a.StartsWith("--suite=")) is { } suiteArg)
+{
+	var name = suiteArg["--suite=".Length..];
+	var path = PositionSuite.FilePath;
+	if (!Directory.Exists(Path.GetDirectoryName(path)))
+	{
+		Console.WriteLine($"Run from the solution root — no {Path.GetDirectoryName(path)} here.");
+		return;
+	}
+	if (name == "generate")
+	{
+		var made = PositionSuite.Generate();
+		File.WriteAllText(path, PositionSuite.ToText(made));
+		Console.WriteLine(
+			$"{path}: {made.Positions.Count} positions from {made.Games.Count} games, answered by {made.AnsweredBy}. Rebuild to embed it."
+		);
+		return;
+	}
+	if (!AiMatch.IsKnown(name))
+	{
+		Console.WriteLine($"--suite=generate, or --suite=A with one of: {AiMatch.Usage}");
+		return;
+	}
+	var tracked = File.Exists(path) ? PositionSuite.Parse(File.ReadAllText(path)) : null;
+	if (tracked is null)
+	{
+		Console.WriteLine($"No suite at {path} — {PositionSuite.GenerateCommand}");
+		return;
+	}
+	var check = PositionSuite.Run(tracked, name);
+	Console.WriteLine(check.Report());
+	if (flags.Contains("--accept"))
+	{
+		File.WriteAllText(path, PositionSuite.ToText(check.Accepted));
+		Console.WriteLine(
+			$"{path}: {name}'s answers are now the committed ones. Rebuild to embed it."
+		);
+	}
+	return;
+}
+
 // --card-values: measure every FRA card and write the tracked table (run from the solution root).
 if (flags.Contains("--card-values"))
 {

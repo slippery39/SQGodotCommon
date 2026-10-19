@@ -148,7 +148,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 
 	Rollout.Settings RolloutSettings => options.RolloutSettings!;
 
-	public (GameState State, string What) Decide(GameState s)
+	public AiDecision Decide(GameState s)
 	{
 		rollouts = 0; // a plan replay or a pass doesn't search, and so doesn't reset it
 		var decided = DecideHere(s);
@@ -156,20 +156,17 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		return decided;
 	}
 
-	(GameState State, string What) DecideHere(GameState s)
+	AiDecision DecideHere(GameState s)
 	{
 		if (s.GetGame().Step == Step.PreGame)
 			return greedy.Decide(s); // mulligans: GreedyAi's rule
-		if (!s.IsWaitingForChoice && Stops.TopOfStackControllerId(s) == PlayerId)
-		{
-			var pass = new PassPriorityAction { PlayerId = PlayerId };
-			return (s.Act(pass), Describe.Action(s, pass)); // as the tree does: let our own object resolve
-		}
+		if (!s.IsWaitingForChoice && Stops.TopOfStackControllerId(s) == PlayerId) // as the tree does: let our own object resolve
+			return AiDecision.Acting(s, new PassPriorityAction { PlayerId = PlayerId });
 		var decision = FromPlan(s) ?? Search(s);
 		return decision switch
 		{
-			Move m => (s.Act(m.Action), Describe.Action(s, m.Action)),
-			Pick p => (s.Choose(p.Ids), Describe.Answer(s, s.GetPendingChoice()!, p.Ids)),
+			Move m => AiDecision.Acting(s, m.Action),
+			Pick p => AiDecision.Answering(s, p.Ids),
 			_ => throw new InvalidOperationException(decision.GetType().Name),
 		};
 	}

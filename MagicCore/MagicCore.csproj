@@ -14,6 +14,7 @@
   <!-- Embedded, not copied: no working-directory trap (root CLAUDE.md, sim_results/). -->
   <ItemGroup>
     <EmbeddedResource Include="Sets\*.json" LogicalName="MagicCore.Sets.%(Filename).json" />
+    <EmbeddedResource Include="Sets\*.positions.txt" LogicalName="MagicCore.Sets.%(Filename).txt" />
   </ItemGroup>
 
 </Project>

@@ -15,19 +15,20 @@ public sealed class RandomAi(int playerId, int seed) : IAi
 
 	public int PlayerId { get; } = playerId;
 
-	public (GameState State, string What) Decide(GameState s)
+	public AiDecision Decide(GameState s)
 	{
 		if (s.GetPendingChoice() is { } choice)
-		{
-			var picks = choice
-				.Options.OrderBy(_ => rng.Next())
-				.Take(choice.MinChoices)
-				.Select(o => o.Id)
-				.ToList();
-			return (s.Choose(picks), Describe.Answer(s, choice, picks));
-		}
+			return AiDecision.Answering(
+				s,
+				[
+					.. choice
+						.Options.Where(o => o.IsEnabled)
+						.OrderBy(_ => rng.Next())
+						.Take(choice.MinChoices)
+						.Select(o => o.Id),
+				]
+			);
 		var pool = s.DistinctMoves(s.LegalActions()).Where(a => a is not MulliganAction).ToList();
-		var move = pool[rng.Next(pool.Count)];
-		return (s.Act(move), Describe.Action(s, move));
+		return AiDecision.Acting(s, pool[rng.Next(pool.Count)]);
 	}
 }
