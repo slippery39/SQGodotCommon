@@ -46,6 +46,10 @@ landed at 1.3–2 SE ("not shown"). Waiting two hours to test a change is too mu
 - **Runs may use every core.**
 - **The quick check runs on demand** (a console command), not in /pre-commit.
 
+2026-10-19, Shayne: **the oracle looks four turns ahead** (agreement with the default search 86.1%,
+against 97.6% for a 2-turn oracle that was only deeper). It ranks versions of one model; model
+changes are the overnight match's.
+
 Defaults, not asked: the early stop tests "no difference" against "+5pp" at 5% error each way; the
 oracle is the search at several times the rollout budget and depth — sized once it is measured.
 
@@ -60,19 +64,19 @@ oracle is the search at several times the rollout budget and depth — sized onc
       the reason it stopped in the report — `--until-clear`
 - [x] AI-6.4a The position suite: generate from self-play (seed + decks + moves), replay, report
       changed-vs-committed and the cost — `--suite=A`, ~20 s for 288 positions
-- [ ] AI-6.4b The oracle: a much deeper search's answers at every position, stored; the report adds
-      agreement with it and the score each version's choice gives up
+- [x] AI-6.4b The oracle: a much deeper search's answers at every position, stored; the report adds
+      agreement with it and the score each version's choice gives up — four turns ahead; beam 86.1%
 - [ ] AI-6.5 Prove it on AI-3: re-run one AI-3.3 comparison through the new harness; Commands.md says
       how to run each speed
 
 ## Next
 
-**AI-6.4a done; next AI-6.4b** — the oracle: a much deeper search decides each of the suite's 288
-positions once (an overnight job is fine), its answer and its score for every option stored beside
-the committed answers; `--suite=A` adds agreement with it and the score A's choice gives up. The
-suite is `PositionSuite` (`MagicCore/Ai/PositionSuite.cs`, the file `MagicCore/Sets/FRA.positions.txt`,
-embedded); every AI's `Decide` returns an `AiDecision` with the move itself. The overnight run is
-`--until-clear`; a 156-game search-vs-search match is ~16 min, so the 600-game cap is ~1 h. Games run in parallel by default, one thread per search, one game per core, on
+**AI-6.4 done; next AI-6.5** — prove the harness on AI-3: re-run one AI-3.3 comparison as the
+overnight run (`--match=beam+shuffle,beam --until-clear`) and the quick check (`--suite=beam+shuffle`),
+read them beside AI-3.3's findings, and make Commands.md say how to run each speed. The suite is
+`PositionSuite` (`MagicCore/Ai/PositionSuite.cs`; the file `MagicCore/Sets/FRA.positions.txt`,
+embedded, oracle readings included); every AI's `Decide` returns an `AiDecision` with the move. After
+`--suite=generate` the oracle must be re-run (`--suite=oracle`, ~1 min): new positions have none. Games run in parallel by default, one thread per search, one game per core, on
 the server garbage collector — keep `<ServerGarbageCollection>` in MagicConsole and the tests.
 The count: `MagicRules.CountingSteps(() => ai.Decide(s))` and `BeamSearchAi.Rollouts`. Read `docs/findings/magic-ai.md` (AI-2.3 on the harness, the AI-3
 sections for what a run costs).
@@ -142,3 +146,16 @@ sections for what a run costs).
   only by its two factories; RandomAi picks only enabled options. Regenerated — the same 288
   positions and numbers. Revert-checked: dropping either fingerprint check fails its test.
   MagicCore.Tests 970 green.
+- 2026-10-19: AI-6.4b — after a search `BeamSearchAi.FirstMoveScores` holds each first move's best
+  line score (recording it changed no decision: the suite still shows beam 0 of 288 changed).
+  `PositionSuite.WithOracle` (`--suite=oracle`) stores the oracle's answer and scores per position;
+  `--suite=A` adds agreement and score given up, missed wins apart. A 2-turn oracle (only deeper)
+  agreed with beam 97.6%; Shayne chose the 4-turn one (86.1%). Measured (findings). Tests: the
+  oracle's answer is among its scored moves (revert-checked by not recording them), the readings
+  round-trip, the score given up is never negative.
+- 2026-10-19: /pre-commit fixes to AI-6.4b — a loss walked into wasn't counted apart, so GreedyAi's
+  one (−9 000) read as 49.72 given up a position (2.15 now); given up is measured from the oracle's
+  own answer, never below 0, so agreeing gives up nothing; answers and readings are matched in the
+  suite's own order, and readings that don't line up are stale; the oracle searches every first move
+  (no cap); the "never negative" test could not fail — replaced by a hand-built judging test with an
+  exact verdict. Revert-checked: dropping the loss count, the floor or the alignment check each fails.

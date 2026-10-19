@@ -143,6 +143,31 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 
 	long totalRollouts;
 
+	// The last search's reading of each first move, in the order the root offered them (AI-6.4b).
+	readonly Dictionary<Decision, double> firstMoves = new(ReferenceEqualityComparer.Instance);
+	readonly List<Decision> firstMoveOrder = [];
+
+	/// <summary>
+	/// The last decision's reading of each first move: the best score found for a line starting with
+	/// it — its own rollout, or one deeper in its line. What the position suite's oracle stores (story
+	/// AI-6.4b). Empty when the decision didn't search: one option, a plan replayed, a forced pass.
+	/// </summary>
+	public IReadOnlyList<(
+		GameAction? Action,
+		IReadOnlyList<int>? Answer,
+		double Score
+	)> FirstMoveScores =>
+		[
+			.. firstMoveOrder.Select(d =>
+				d switch
+				{
+					Move m => (m.Action, (IReadOnlyList<int>?)null, firstMoves[d]),
+					Pick p => ((GameAction?)null, p.Ids, firstMoves[d]),
+					_ => throw new InvalidOperationException(d.GetType().Name),
+				}
+			),
+		];
+
 	/// <summary>Rollouts every decision so far has played — beside MagicRules.CountingSteps, the search's cost (story AI-6).</summary>
 	public long Rollouts => totalRollouts;
 
@@ -151,6 +176,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	public AiDecision Decide(GameState s)
 	{
 		rollouts = 0; // a plan replay or a pass doesn't search, and so doesn't reset it
+		firstMoves.Clear();
+		firstMoveOrder.Clear();
 		var decided = DecideHere(s);
 		totalRollouts += rollouts;
 		return decided;
@@ -229,6 +256,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	{
 		var expected = parent.Expected.Add(Evaluator.Evaluate(at, PlayerId, RolloutSettings.Held));
 		var nodes = new Node[children.Count];
+		var atRoot = parent.Path.IsEmpty;
 		void RollOut(int i)
 		{
 			var state = Apply(at, children[i]);
@@ -250,6 +278,15 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 				},
 				RollOut
 			);
+		foreach (var node in nodes) // after the parallel loop: one thread writes the reading
+		{
+			var first = node.Path[0];
+			if (atRoot)
+				firstMoveOrder.Add(first);
+			firstMoves[first] = firstMoves.TryGetValue(first, out var best)
+				? Math.Max(best, node.Score)
+				: node.Score;
+		}
 		return [.. nodes];
 	}
 

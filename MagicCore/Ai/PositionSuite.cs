@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using ImmutableGameObjects;
 using MagicCore.Sets.Fra;
@@ -47,26 +48,66 @@ public static class PositionSuite
 		string Answer
 	);
 
+	/// <param name="Oracle">The oracle's reading of each position, by its index in <paramref name="Positions"/> (AI-6.4b); empty until <c>--suite=oracle</c>.</param>
 	public sealed record Suite(
 		string AnsweredBy,
 		IReadOnlyList<Game> Games,
-		IReadOnlyList<Position> Positions
+		IReadOnlyList<Position> Positions,
+		IReadOnlyList<OracleReading>? Oracle = null
 	);
+
+	/// <summary>
+	/// What the oracle — a much deeper search, run once — made of a position: its answer, and its score
+	/// for each first move it searched (the best line it found starting with that move).
+	/// </summary>
+	public sealed record OracleReading(
+		int Position,
+		string Best,
+		IReadOnlyDictionary<string, double> Scores
+	);
+
+	/// <summary>
+	/// The oracle: the search looking FOUR turns ahead instead of two, every first move searched, ten
+	/// times the rollout budget, more lines kept and a level deeper (story AI-6.4b). Depth alone barely
+	/// mattered — most turns run out of decisions first, and a 2-turn oracle agreed with the default
+	/// search 97.6% of the time; looking further ahead, 86.1%. It shares the default's evaluator, held
+	/// values, opponent model and real library order, so it ranks versions of the SAME model; whether
+	/// another model (casting, shuffling) is better is the overnight match's question, not this one's.
+	/// A first move it kept in its beam is scored by the best line below it; one it pruned keeps its
+	/// single rollout — so a version that picks a pruned move is judged on a rougher score.
+	/// </summary>
+	public static BeamSearchAi.Settings OracleSettings =>
+		new(
+			Depth: 4,
+			BeamWidth: 6,
+			MaxBranching: int.MaxValue, // every first move
+			ExpandBranching: 8,
+			RolloutBudget: 2_000,
+			CommitPlans: false,
+			RolloutSettings: BeamSearchAi.DefaultRollout with
+			{
+				LookaheadTurns = 4,
+			},
+			Threads: 1
+		);
 
 	public sealed class StaleException(string message)
 		: Exception($"{message} — the suite is stale; regenerate it: {GenerateCommand}");
 
 	// ===== Moves as tokens =====
 
-	public static string Token(GameState s, AiDecision decision)
+	public static string Token(GameState s, AiDecision decision) =>
+		Token(s, decision.Action, decision.Answer);
+
+	static string Token(GameState s, GameAction? action, IReadOnlyList<int>? answer)
 	{
-		if (decision.Answer is { } ids)
-			return "c" + string.Join(",", ids);
-		var key = s.MoveKey(decision.Action!);
+		if (answer is not null)
+			return "c" + string.Join(",", answer);
+		var key = s.MoveKey(action!);
 		var index = s.DistinctMoves(s.LegalActions()).FindIndex(a => Equals(s.MoveKey(a), key));
 		return index >= 0
 			? $"a{index}"
-			: throw new InvalidOperationException($"{decision.What}: not among the distinct moves");
+			: throw new InvalidOperationException($"{action}: not among the distinct moves");
 	}
 
 	/// <summary>A token against the state it applies to: the action, or the choice's ids — the one parser.</summary>
@@ -203,24 +244,34 @@ public static class PositionSuite
 	/// </summary>
 	static List<(Position Position, GameState State)> Replay(Suite suite, bool check)
 	{
-		var states = new List<(Position, GameState)>();
+		var at = new Dictionary<(int Game, int Move), GameState>();
 		foreach (var (game, g) in suite.Games.Select((game, g) => (game, g)))
 		{
-			var positions = suite.Positions.Where(p => p.GameIndex == g).ToList();
-			var (at, end) = Replay(game, positions.Select(p => p.Move).ToHashSet());
+			var moves = suite
+				.Positions.Where(p => p.GameIndex == g)
+				.Select(p => p.Move)
+				.ToHashSet();
+			var (states, end) = Replay(game, moves);
 			if (check && Ending(end) != game.End)
 				throw new StaleException(
 					$"game {g} ({game.Deck1} vs {game.Deck2}, seed {game.Seed}) ends differently"
 				);
-			foreach (var p in positions)
-			{
-				var s = at[p.Move];
-				if (check && Offers(s) != p.Offers)
-					throw new StaleException($"game {g} move {p.Move} offers something else");
-				states.Add((check ? p : p with { Options = Options(s), Offers = Offers(s) }, s));
-			}
+			foreach (var (move, s) in states)
+				at[(g, move)] = s;
 		}
-		return states;
+		// In the suite's own order: an answer, a stored answer and an oracle reading all share an index.
+		return
+		[
+			.. suite.Positions.Select(p =>
+			{
+				var s = at[(p.GameIndex, p.Move)];
+				if (check && Offers(s) != p.Offers)
+					throw new StaleException(
+						$"game {p.GameIndex} move {p.Move} offers something else"
+					);
+				return (check ? p : p with { Options = Options(s), Offers = Offers(s) }, s);
+			}),
+		];
 	}
 
 	// ===== Generate and check =====
@@ -303,6 +354,29 @@ public static class PositionSuite
 		return answers;
 	}
 
+	/// <summary>The suite with the oracle's reading of every position (<see cref="OracleSettings"/> unless given) — run once, then stored.</summary>
+	public static Suite WithOracle(Suite suite, BeamSearchAi.Settings? settings = null)
+	{
+		var states = States(suite);
+		var readings = new OracleReading[states.Count];
+		Parallel.For(
+			0,
+			states.Count,
+			new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+			i =>
+			{
+				var s = states[i].State;
+				var oracle = new BeamSearchAi(s.DecidingPlayerId(), settings ?? OracleSettings);
+				var best = Token(s, oracle.Decide(s));
+				var scores = oracle
+					.FirstMoveScores.GroupBy(f => Token(s, f.Action, f.Answer))
+					.ToDictionary(g => g.Key, g => Math.Round(g.Max(f => f.Score), 2));
+				readings[i] = new OracleReading(i, best, scores);
+			}
+		);
+		return suite with { Oracle = readings };
+	}
+
 	/// <summary>What <paramref name="ai"/> decides at every position, against the stored answers.</summary>
 	public static Check Run(Suite suite, string ai)
 	{
@@ -327,9 +401,87 @@ public static class PositionSuite
 			{
 				AnsweredBy = ai,
 				Positions = [.. answers.Select(a => a.Position)],
-			}
+			},
+			suite.Oracle is { Count: > 0 } oracle
+				? Judge(
+					Aligned(oracle, suite.Positions.Count),
+					[.. answers.Select(a => a.Token)],
+					[.. suite.Positions.Select(p => p.Answer)]
+				)
+				: null
 		);
 	}
+
+	/// <summary>The oracle's readings, one per position and in its order — anything else is stale.</summary>
+	static IReadOnlyList<OracleReading> Aligned(
+		IReadOnlyList<OracleReading> oracle,
+		int positions
+	) =>
+		oracle.Count == positions && oracle.Select((r, i) => r.Position == i).All(x => x)
+			? oracle
+			: throw new StaleException(
+				"the oracle's readings don't match the positions — re-run: dotnet run -c Release --project MagicConsole -- --suite=oracle"
+			);
+
+	/// <summary>
+	/// The answers against the oracle (one reading per answer, in order): how often they agree with it,
+	/// and the score each gives up — the score of the oracle's answer less the answer's, never below 0,
+	/// so agreeing gives up nothing. Decided games score in the thousands and would swamp the average,
+	/// so a win the oracle found and the answer misses, and a loss the answer walks into that the
+	/// oracle's answer avoids, are counted apart; positions the oracle saw already decided are left out.
+	/// </summary>
+	public static OracleVerdict Judge(
+		IReadOnlyList<OracleReading> oracle,
+		IReadOnlyList<string> answers,
+		IReadOnlyList<string> committedAnswers
+	)
+	{
+		const double win = BeamSearchAi.WinThreshold;
+		static double? Score(OracleReading r, string token) =>
+			r
+				.Scores.Where(kv => Same(kv.Key, token))
+				.Select(kv => (double?)kv.Value)
+				.FirstOrDefault();
+		var (agree, committed, missedWins, losses, unscored) = (0, 0, 0, 0, 0);
+		var givenUp = new List<double>();
+		for (var i = 0; i < oracle.Count; i++)
+		{
+			var r = oracle[i];
+			agree += Same(answers[i], r.Best) ? 1 : 0;
+			committed += Same(committedAnswers[i], r.Best) ? 1 : 0;
+			if (Score(r, r.Best) is not { } reference)
+				continue; // a decision the oracle didn't search
+			if (Score(r, answers[i]) is not { } mine)
+				unscored++;
+			else if (reference >= win && mine < win)
+				missedWins++;
+			else if (mine <= -win && reference > -win)
+				losses++;
+			else if (Math.Abs(reference) < win)
+				givenUp.Add(Math.Max(0, reference - mine));
+		}
+		return new(
+			oracle.Count,
+			agree,
+			committed,
+			givenUp.Count,
+			givenUp.DefaultIfEmpty(0).Average(),
+			missedWins,
+			losses,
+			unscored
+		);
+	}
+
+	public sealed record OracleVerdict(
+		int Positions,
+		int Agree,
+		int CommittedAgree,
+		int Scored,
+		double MeanGivenUp,
+		int MissedWins,
+		int WalkedIntoLosses,
+		int Unscored
+	);
 
 	/// <param name="Accepted">The suite with <paramref name="Ai"/>'s answers as the committed ones (<c>--accept</c>).</param>
 	public sealed record Check(
@@ -339,7 +491,8 @@ public static class PositionSuite
 		long Steps,
 		long Rollouts,
 		TimeSpan Elapsed,
-		Suite Accepted
+		Suite Accepted,
+		OracleVerdict? Oracle
 	)
 	{
 		public string Report(int shown = 10)
@@ -352,6 +505,10 @@ public static class PositionSuite
 				$"suite: {Ai} on {n} positions ({Suite.Games.Count} games), answers by {Suite.AnsweredBy}, {Elapsed.TotalSeconds:0.0} s",
 				$"  changed from the committed answers: {Changed.Count} ({100.0 * Changed.Count / n:0.0}%)",
 				$"  cost per position (deterministic): {(double)Steps / n:0.0} engine steps, {(double)Rollouts / n:0.0} rollouts",
+				Oracle is { } o
+					? $"  agrees with the oracle: {100.0 * o.Agree / o.Positions:0.0}% (the committed answers: {100.0 * o.CommittedAgree / o.Positions:0.0}%); "
+						+ $"score given up: {o.MeanGivenUp:0.00} a position over {o.Scored}; misses a win it found: {o.MissedWins}, walks into a loss it avoids: {o.WalkedIntoLosses}, unscored: {o.Unscored}"
+					: "  no oracle yet — dotnet run -c Release --project MagicConsole -- --suite=oracle",
 			};
 			foreach (var (p, was, now) in Changed.Take(shown))
 			{
@@ -380,12 +537,20 @@ public static class PositionSuite
 				.. suite.Positions.Select(p =>
 					$"pos|{p.GameIndex}|{p.Move}|{p.Options}|{p.Offers}|{p.Answer}"
 				),
+				.. (suite.Oracle ?? []).Select(r =>
+					$"oracle|{r.Position}|{r.Best}|{string.Join(" ", r.Scores.Select(kv => $"{kv.Key}={kv.Value.ToString("0.00", CultureInfo.InvariantCulture)}"))}"
+				),
 			]
 		) + "\n";
 
 	public static Suite Parse(string text)
 	{
-		var (by, games, positions) = ("", new List<Game>(), new List<Position>());
+		var (by, games, positions, oracle) = (
+			"",
+			new List<Game>(),
+			new List<Position>(),
+			new List<OracleReading>()
+		);
 		foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
 		{
 			var f = line.Split('|');
@@ -410,9 +575,23 @@ public static class PositionSuite
 						new Position(int.Parse(f[1]), int.Parse(f[2]), int.Parse(f[3]), f[4], f[5])
 					);
 					break;
+				case "oracle":
+					oracle.Add(
+						new OracleReading(
+							int.Parse(f[1]),
+							f[2],
+							(f[3].Length == 0 ? [] : f[3].Split(' '))
+								.Select(x => x.Split('='))
+								.ToDictionary(
+									x => x[0],
+									x => double.Parse(x[1], CultureInfo.InvariantCulture)
+								)
+						)
+					);
+					break;
 			}
 		}
-		return new Suite(by, games, positions);
+		return new Suite(by, games, positions, oracle);
 	}
 
 	/// <summary>The tracked suite, embedded in MagicCore (no working-directory trap); null if none was generated.</summary>

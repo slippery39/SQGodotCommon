@@ -44,7 +44,8 @@ if (args.FirstOrDefault(a => a.StartsWith("--match=")) is { } match)
 
 // --suite=generate: record the search's self-play as the position suite (run from the solution root).
 // --suite=A [--accept]: what AI A decides at every position, against the committed answers (AI-6.4);
-// --accept makes A's answers the committed ones.
+// --accept makes A's answers the committed ones. --suite=oracle: a much deeper search reads every
+// position once and is stored, so --suite=A also reports agreement with it and the score given up.
 if (args.FirstOrDefault(a => a.StartsWith("--suite=")) is { } suiteArg)
 {
 	var name = suiteArg["--suite=".Length..];
@@ -63,15 +64,26 @@ if (args.FirstOrDefault(a => a.StartsWith("--suite=")) is { } suiteArg)
 		);
 		return;
 	}
-	if (!AiMatch.IsKnown(name))
+	if (name != "oracle" && !AiMatch.IsKnown(name))
 	{
-		Console.WriteLine($"--suite=generate, or --suite=A with one of: {AiMatch.Usage}");
+		Console.WriteLine(
+			$"--suite=generate, --suite=oracle, or --suite=A with one of: {AiMatch.Usage}"
+		);
 		return;
 	}
 	var tracked = File.Exists(path) ? PositionSuite.Parse(File.ReadAllText(path)) : null;
 	if (tracked is null)
 	{
 		Console.WriteLine($"No suite at {path} — {PositionSuite.GenerateCommand}");
+		return;
+	}
+	if (name == "oracle") // run once, then stored beside the positions (AI-6.4b)
+	{
+		var clock = System.Diagnostics.Stopwatch.StartNew();
+		File.WriteAllText(path, PositionSuite.ToText(PositionSuite.WithOracle(tracked)));
+		Console.WriteLine(
+			$"{path}: the oracle read {tracked.Positions.Count} positions in {clock.Elapsed.TotalMinutes:0.0} min. Rebuild to embed it."
+		);
 		return;
 	}
 	var check = PositionSuite.Run(tracked, name);

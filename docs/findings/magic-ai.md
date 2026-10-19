@@ -366,3 +366,32 @@ each position's search on one thread, Release:
   `greedy` 41%. It says WHAT changed, not whether it wins — that is the oracle's job (AI-6.4b).
 - 13.9 rollouts per position against ~7 per decision in a match: the suite's positions are real
   decisions only (two options or more), where a match counts every pass and plan replay.
+
+## The suite's oracle (2026-10-19, AI-6.4b)
+
+The oracle reads each of the 288 positions once: the search with every first move searched, more
+lines kept, a level deeper — and, in the kept version, looking four turns ahead instead of two with
+a 2 000-rollout budget. Each version's answer is compared with the oracle's; "score given up" is
+the score of the oracle's answer less the score of the version's (never below 0), over positions not
+yet decided — a win the oracle found that the version misses, and a loss it walks into that the
+oracle's answer avoids, are counted apart. Release, 16 cores:
+
+| `--suite=…` | Agrees: 2-turn oracle (0.7 min) | Agrees: **4-turn oracle** (0.9 min) | Given up (4-turn) | Wins missed | Losses walked into |
+|---|---|---|---|---|---|
+| beam | 97.6% | **86.1%** | 0.43 | 2 | 0 |
+| beam+shuffle | 89.6% | 81.3% | 0.50 | 2 | 0 |
+| beam-plain | 90.3% | 79.9% | 0.51 | 5 | 0 |
+| beam+casts | 86.8% | 78.8% | 0.75 | 3 | 0 |
+| greedy | 58.0% | 55.9% | 2.15 | 6 | 1 |
+
+- **Depth alone made a poor oracle:** most turns run out of decisions before the extra levels, so
+  the 2-turn oracle was the same search a little wider — the default agreed with it 97.6% of the time.
+  Looking further ahead is what made it differ (86.1%).
+- **Both oracles rank alike:** beam first, the variants between, GreedyAi far behind.
+- **What it can't do:** it shares the default's evaluator, held values, opponent model and real
+  library order, so it favours `beam` by construction. It ranks versions of one model — a pure
+  optimisation must keep beam's 86.1% exactly — but whether casting or shuffling is better is the
+  overnight match's question.
+- 180 of the 288 positions are scored for "given up": the rest are decided within four turns.
+- **One decided game swamps the average:** before losses were counted apart, GreedyAi's single walk
+  into a loss (−9 000 against an undecided best) read as 49.72 given up a position; it is 2.15.
