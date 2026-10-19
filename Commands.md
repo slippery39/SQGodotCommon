@@ -122,7 +122,8 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #   the search before held values; beam-held=0.25 is the search at that fraction; models combine as
 #   beam+casts+shuffle (casts: the simulated opponent casts from its real hand; shuffle: what the
 #   search can't know of the libraries is shuffled at its root; unseen: the opponent's hand cards it
-#   hasn't seen are drawn again from its unseen cards, AI-3.4 — only a casting opponent uses its hand;
+#   hasn't seen are drawn again from its unseen cards, AI-3.4; guess: they are guessed from the colours
+#   it has shown, by rarity, AI-3.5 — only a casting opponent uses its hand, so both need casts;
 #   beam-casts = beam+casts)
 ```
 

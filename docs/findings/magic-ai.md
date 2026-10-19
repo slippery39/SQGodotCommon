@@ -556,3 +556,23 @@ matters only to an opponent that casts. Release, 16 logical processors.
 - By deck, the sampled side: Red-Green 77–51, White-Black 83–45, Jace 29–99 — the same shape as every
   match on this field.
 
+## The opponent's hand guessed from its colours (2026-10-19, AI-3.5)
+
+`beam+casts+guess`: the casting opponent's unseen hand is GUESSED, never its real cards — cards of
+the colours it has shown, weighted as a booster weights rarity, a land with the chance of the lands
+left in a 40-card, 17-land deck (Shayne); its library stays real. Against `beam+casts` (its real
+hand), Release, 16 logical processors:
+
+| Speed | Result | Cost per decision | Time |
+|---|---|---|---|
+| Quick check | changed 40 (13.9%; `beam+casts` 35, `+unseen` 37) | 3 152.8 steps a position (3 373.5) | ~20 s |
+| `--until-clear` | **384 games, 190–194, 49.5% ± 1.6pp — NO difference of 5pp either way** (log-likelihood: better −5.83, worse −3.82) | 1 505.9 steps, 7.0 rollouts (1 588.8, 7.0) | 598 s |
+
+- **An honest guess plays as well as the real hand, and is 5% cheaper** — fewer of its guessed cards
+  are castable than real ones, so the simulated opponent does less. Like AI-3.4, it also takes away
+  the real game's random seed (foresight of a random discard or order), not separated.
+- **A first cut made each guess a new object** — new ids moved every later id away from the real
+  game's, so a committed plan naming a new token or target was never found again. Caught in review,
+  fixed (a guess keeps its card's id), and that match discarded unfinished.
+- By deck, the guessing side: Red-Green 76–52, White-Black 84–44, Jace 30–98.
+

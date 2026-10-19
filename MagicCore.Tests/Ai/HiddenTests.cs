@@ -32,6 +32,9 @@ public class HiddenTests
 	GameState UnseenHand(GameState state) =>
 		Hidden.Sample(state, me, Hidden.Library.RealOrder, Hidden.Hand.ShuffleUnseen);
 
+	GameState GuessedHand(GameState state) =>
+		Hidden.Sample(state, me, Hidden.Library.RealOrder, Hidden.Hand.GuessedFromColors);
+
 	[Test]
 	public void RealOrder_IsTheRealPosition()
 	{
@@ -101,6 +104,67 @@ public class HiddenTests
 		Assert.That(moved.Select(i => after[i]), Is.SubsetOf(hand));
 	}
 
+	// Their unseen hand is GUESSED: new cards, never theirs, of the colours they have shown — here only
+	// a Forest, so green or colourless, and a guessed land is a Forest.
+	[Test]
+	public void TheirUnseenHand_IsGuessed_InTheColoursTheyHaveShown()
+	{
+		(s, _) = TestGames.Put(s, them, TestGames.Card("Forest"), ZoneType.Battlefield);
+		var hand = Hand(s, them);
+
+		var sample = GuessedHand(s);
+		var guessed = sample.CardsIn(them, ZoneType.Hand).ToList();
+
+		Assert.That(guessed.SelectMany(c => c.Colors), Is.All.EqualTo(ManaColor.Green));
+		Assert.That(
+			guessed.Where(c => c.Is(CardType.Land)).Select(c => c.Name),
+			Is.All.EqualTo("Forest")
+		);
+	}
+
+	// A guess takes the id and place of the card it replaces, and makes no new id: a searched line's
+	// new objects get the ids the real game will give them, so a committed plan can name them.
+	[Test]
+	public void AGuess_KeepsTheIdsOfTheHand_AndMakesNoNewOne()
+	{
+		var sample = GuessedHand(s);
+
+		Assert.That(Hand(sample, them), Is.EqualTo(Hand(s, them)));
+		Assert.That(sample.NextId, Is.EqualTo(s.NextId));
+		Assert.That(
+			sample.CardsIn(them, ZoneType.Hand).Select(c => c.Name),
+			Is.Not.EqualTo(s.CardsIn(them, ZoneType.Hand).Select(c => c.Name))
+		);
+	}
+
+	// A hand card I saw stays; their library and everything of mine are untouched.
+	[Test]
+	public void AGuess_KeepsWhatISaw_AndTouchesNothingElse()
+	{
+		var hand = Hand(s, them);
+		s = s.MakeKnown(hand[0], Knowers.Opponent);
+		var (library, myHand, myLibrary) = (Library(s, them), Hand(s, me), Library(s, me));
+
+		var sample = GuessedHand(s);
+
+		Assert.That(Hand(sample, them), Has.Count.EqualTo(hand.Count).And.Contains(hand[0]));
+		Assert.That(Library(sample, them), Is.EqualTo(library));
+		Assert.That(Hand(sample, me), Is.EqualTo(myHand));
+		Assert.That(Library(sample, me), Is.EqualTo(myLibrary));
+	}
+
+	// Lands from what's left of a 17-land deck: with all 17 shown, no guess is a land.
+	[Test]
+	public void AGuess_HasNoLand_OnceAllSeventeenAreShown()
+	{
+		for (var i = 0; i < 17; i++)
+			(s, _) = TestGames.Put(s, them, TestGames.Card("Forest"), ZoneType.Battlefield);
+
+		var guessed = GuessedHand(s).CardsIn(them, ZoneType.Hand).ToList();
+
+		Assert.That(guessed, Is.Not.Empty.And.None.Matches<Card>(c => c.Is(CardType.Land)));
+	}
+
 	// The sample's own randomness is not the game's next: a shuffle inside a rollout can't predict it.
 	[Test]
 	public void TheSample_HasItsOwnSeed()
@@ -161,6 +225,19 @@ public class HiddenTests
 		};
 		Assert.That(
 			Play(new(RolloutSettings: casts, Hand: Hidden.Hand.ShuffleUnseen)),
+			Is.Not.EqualTo(Play(new(RolloutSettings: casts)))
+		);
+	}
+
+	[Test]
+	public void TheSearch_PlaysARealGame_FromItsGuessedHands()
+	{
+		var casts = BeamSearchAi.DefaultRollout with
+		{
+			Opponent = Rollout.OpponentModel.CastsFromHand,
+		};
+		Assert.That(
+			Play(new(RolloutSettings: casts, Hand: Hidden.Hand.GuessedFromColors)),
 			Is.Not.EqualTo(Play(new(RolloutSettings: casts)))
 		);
 	}

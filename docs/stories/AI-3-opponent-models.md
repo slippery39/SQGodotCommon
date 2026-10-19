@@ -59,6 +59,15 @@ the opponent's real hand cheats. Which is best is a measurement, not a guess.
   opponent's library takes the place of the hand card it replaces, the rest of its library keeps its
   order, so the hand mode is measured apart from the library's. **Measured by the suite, then
   `--until-clear`** against `beam+casts` (the hand matters only to a casting opponent).
+- 2026-10-19, Shayne (AI-3.5): **the deck model is its colours, by rarity** — cards of the colours
+  the opponent has shown, weighted as a booster weights rarity (honest in limited); **lands from
+  what's left** of a 40-card, 17-land deck. Defaults, not asked: "shown" is its own cards (by owner)
+  on the battlefield and the stack, in its graveyard and exile, and the hand cards and library places
+  the searcher knows (tokens and copies aside), a land showing the colours it makes; nothing coloured
+  shown is every colour; a guessed land is a basic of a shown colour; a booster is 10 commons, 3
+  uncommons, a rare or (1 in 8) a mythic, each slot over that rarity's nonland cards; a guess
+  replaces its real card in place, keeping its id (new ids would move every later id away from the
+  real game's and lose committed plans), so the library stays real.
 - 2026-10-17 (default, not asked): the casting opponent uses OUR cheap policy, not one of its own —
   symmetric, so a measurement isolates the model. "Our policy" (AI-3.7) swaps our side only.
 
@@ -80,7 +89,8 @@ an enum of one (AI-2.4's review removed two).
       `--until-clear` stopped at 288 games, 130–158, WORSE by 5pp or more
 - [x] AI-3.4 Hand: shuffled from its own unseen cards — the hand setting's second value; measured —
       `+unseen`: NO difference of 5pp against the real hand (384 games, 189–195); the default at AI-3.9
-- [ ] AI-3.5 Hand: guessed from a deck model — the third value; measured
+- [x] AI-3.5 Hand: guessed from a deck model — the third value; measured — `+guess` (its colours, by
+      rarity): NO difference of 5pp against the real hand (384 games, 190–194), 5% cheaper
 - [ ] AI-3.6 Full responses: the opponent acts at instant speed inside our turn when it scores
       better; measured — expect it to be the dearest in time
 - [ ] AI-3.7 Our policy: `GreedyAi` as our rollout policy beside the cheap greedy; measured
@@ -97,15 +107,16 @@ Commands.md, "Measure an AI change — two speeds". The cost count (engine steps
 decision) is the time measure, not the clock.
 
 Done so far: casts from hand (AI-3.1, not shown stronger), who knows what (3.2), library shuffle
-(3.3: WORSE by 5pp, settled by AI-6.5), hand from unseen cards (3.4: no difference). Defaults stay
-`BoardOnly`, `RealOrder` and the real hand until AI-3.9 chooses.
+(3.3: WORSE by 5pp, settled by AI-6.5), hand from unseen cards (3.4: no difference), hand guessed
+from its colours (3.5: no difference, 5% cheaper). Defaults stay `BoardOnly`, `RealOrder` and the
+real hand until AI-3.9 chooses.
 
-**Next task: AI-3.5, the hand guessed from a deck model** — sampled from what the opponent's deck
-COULD hold, never its real cards (honest even in limited). Interview Shayne first: what the deck
-model is (the FRA card pool by rarity? the decks in `FraDecks`? cards seen so far?) and how its
-hand size and lands are drawn. `Hidden.Sample` (`MagicCore/Ai/Hidden.cs`) takes a `Hidden.Hand`;
-`AiMatch.Models` names each model (`+unseen` is AI-3.4's). Measure as 3.4: the suite, then
-`beam+casts+<model>` against `beam+casts` with `--until-clear`.
+**Next task: AI-3.6, full responses** — the simulated opponent acts at instant speed inside our turn
+when it scores better (counters, tricks, removal); expect it to be the dearest in time. Interview
+Shayne first: which windows it may respond in (every priority, or only to our spells and attacks),
+and by what policy (OurPlay's "no worse" at instant speed?). The seam is `Rollout.OpponentStep` (its
+`TheirPlay` is sorcery speed only today). Measure as 3.4 and 3.5: the suite, then
+`beam+casts+<model>` against `beam+casts` with `--until-clear` — and its cost, which matters here.
 
 Notes still true:
 - The oracle shares beam's models and its board-only opponent, so it can't rank anything about the
@@ -183,4 +194,12 @@ Notes still true:
   and the source map the hand mode; findings say both AI-3.3 and AI-3.4 also take away the real
   game's random seed (foresight of a random discard or order) — not separated. Kept the RNG use when
   no hand card is unseen, so `+unseen` is the version measured (the suite: still 37 changed).
+- 2026-10-19: AI-3.5 — `Hidden.Hand.GuessedFromColors` (`+guess`), interviewed first (Shayne: its
+  colours by rarity; lands from what's left). Review found the first cut's guesses took new ids —
+  NextId moved, so a plan naming a later object was lost; that match was stopped, and a guess now
+  keeps its card's id (`UpdateObject`). Also: the stack counts as shown, cards by owner, rarity slots
+  over nonland cards; the 40/17 FRA assumption is a ponytail (DesignNotes). Tests: shown colours only,
+  a seen card stays, nothing else touched, no land once 17 are shown, ids and NextId kept, a real
+  game played differently — revert-checked four ways. Measured (findings): NO difference of 5pp, 384
+  games, 10 min; 5% cheaper. 984 tests.
 

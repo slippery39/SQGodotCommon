@@ -1,5 +1,6 @@
 using ImmutableGameObjects;
 using MagicCore.Cards;
+using MagicCore.Sets.Fra;
 
 namespace MagicCore.Ai;
 
@@ -34,12 +35,20 @@ public static class Hidden
 		/// hand is measured apart from the library's mode (story AI-3.4, Shayne).
 		/// </summary>
 		ShuffleUnseen,
+
+		/// <summary>
+		/// The opponent's hand cards the searching player hasn't seen are GUESSED — never its real cards
+		/// (honest even when its deck is unknown, as in limited): new cards of the colours it has shown,
+		/// weighted as a booster weights rarity; a land with the chance of the lands left in a 40-card,
+		/// 17-land deck, a basic of a shown colour. Its library is left real (story AI-3.5, Shayne).
+		/// </summary>
+		GuessedFromColors,
 	}
 
 	/// <summary>
 	/// The position the search decides from. Under ShuffleUnknown both libraries are reshuffled where
-	/// <paramref name="me"/> can't know them, and under <see cref="Hand.ShuffleUnseen"/> the opponent's
-	/// unseen hand is drawn again (before the libraries) — from a seed of the state's, never from its
+	/// <paramref name="me"/> can't know them, and under a <see cref="Hand"/> mode the opponent's unseen
+	/// hand is drawn again or guessed (before the libraries) — from a seed of the state's, never from its
 	/// RNG, which the real game draws from next — and the sample gets a fresh RNG seed, so a shuffle
 	/// inside a rollout doesn't predict the real game's (so either mode also hides that foresight). The real position when a pending choice would offer different
 	/// ids in the sample (a search lists the first copy of each name in library order): the search's
@@ -57,6 +66,8 @@ public static class Hidden
 		var sample = s;
 		if (hand == Hand.ShuffleUnseen)
 			sample = ShuffleUnseenHand(sample, s.OpponentOf(me), rng);
+		if (hand == Hand.GuessedFromColors)
+			sample = GuessHand(sample, s.OpponentOf(me), rng);
 		if (mode == Library.ShuffleUnknown)
 			foreach (var owner in new[] { s.Player1Id(), s.Player2Id() })
 				sample = ShuffleUnknown(
@@ -111,6 +122,103 @@ public static class Hidden
 		foreach (var id in library)
 			s = s.MoveObject(id, libraryId);
 		return s;
+	}
+
+	/// <summary>The opponent's unseen hand guessed from the colours it has shown — <see cref="Hand.GuessedFromColors"/>.</summary>
+	/// ponytail: the deck is taken to be 40 cards, 17 of them lands, and its cards FRA's — read the deck
+	/// size from the game and the pool from the game's set if another format or set ever plays.
+	static GameState GuessHand(GameState s, int owner, Random rng)
+	{
+		bool Seen(Card c) => (c.KnownTo & Knowers.Opponent) != 0;
+		IEnumerable<Card> Its(IEnumerable<Card> cards) => cards.Where(c => c.OwnerId == owner);
+		// What it has shown me: its cards in public zones (by owner — a card it took is still mine), and
+		// the cards of its hand and library I know; not tokens or copies, which are not in its deck.
+		List<Card> shown =
+		[
+			.. Its(s.CardsIn(s.Player1Id(), ZoneType.Battlefield))
+				.Concat(Its(s.CardsIn(s.Player2Id(), ZoneType.Battlefield)))
+				.Concat(Its(s.GetChildren(s.GetWellKnownId(MagicKeys.Stack)).OfType<Card>()))
+				.Concat(s.CardsIn(owner, ZoneType.Graveyard))
+				.Concat(s.CardsIn(owner, ZoneType.Exile))
+				.Concat(s.CardsIn(owner, ZoneType.Hand).Where(Seen))
+				.Concat(s.CardsIn(owner, ZoneType.Library).Where(Seen))
+				.Where(c => !c.IsToken && !c.IsCopy),
+		];
+		var colors = shown
+			.SelectMany(c => c.Is(CardType.Land) ? ManaAbilities.ColorsOf(s, c) : c.Colors)
+			.Where(c => c != ManaColor.Colorless)
+			.ToHashSet();
+		if (colors.Count == 0)
+			colors = [.. ManaAbilities.AnyColor.Where(c => c != ManaColor.Colorless)]; // nothing shown yet
+		var spells = Spells.Where(x => x.Colors.All(colors.Contains)).ToArray();
+		// Lands from what's left of the deck.
+		var landsLeft = Math.Max(0, 17 - shown.Count(c => c.Is(CardType.Land)));
+		var landChance = Math.Min(1.0, landsLeft / (double)Math.Max(1, 40 - shown.Count));
+		var basics = colors.Order().Select(c => Basics[c]).ToArray();
+		// Each guess takes the id and place of the card it replaces: new ids would move NextId, so every
+		// object a searched line creates would have another id than in the real game and a committed
+		// plan that names one could never be found again.
+		foreach (var card in s.CardsIn(owner, ZoneType.Hand).Where(c => !Seen(c)).ToList())
+		{
+			var guess =
+				rng.NextDouble() < landChance || spells.Length == 0
+					? basics[rng.Next(basics.Length)]
+					: Weighted(spells, rng);
+			s = s.UpdateObject(card.Id, CardFactory.Create(FraCards.Get(guess), owner));
+		}
+		return s;
+	}
+
+	static string Weighted((string Name, ManaColor[] Colors, double Weight)[] spells, Random rng)
+	{
+		var pick = rng.NextDouble() * spells.Sum(x => x.Weight);
+		foreach (var (name, _, weight) in spells)
+			if ((pick -= weight) < 0)
+				return name;
+		return spells[^1].Name;
+	}
+
+	static readonly Dictionary<ManaColor, string> Basics =
+		new()
+		{
+			[ManaColor.White] = "Plains",
+			[ManaColor.Blue] = "Island",
+			[ManaColor.Black] = "Swamp",
+			[ManaColor.Red] = "Mountain",
+			[ManaColor.Green] = "Forest",
+		};
+
+	/// <summary>
+	/// Every implemented FRA nonland card, weighted as a booster deals it: 10 commons, 3 uncommons and
+	/// a rare or (one time in eight) a mythic, each slot shared among that rarity's nonland cards.
+	/// </summary>
+	static readonly (string Name, ManaColor[] Colors, double Weight)[] Spells = BoosterWeighted();
+
+	static (string, ManaColor[], double)[] BoosterWeighted()
+	{
+		var all = FraCards.AllNames.Select(n => FraCards.Get(n).Data).ToList();
+		var slots = new Dictionary<string, double>
+		{
+			["common"] = 10,
+			["uncommon"] = 3,
+			["rare"] = 7 / 8.0,
+			["mythic"] = 1 / 8.0,
+		};
+		var nonland = all.Where(d => !d.TypeLine.Contains("Land")).ToList(); // lands are guessed apart
+		var inSet = nonland.GroupBy(d => d.Rarity).ToDictionary(g => g.Key, g => g.Count());
+		return
+		[
+			.. nonland
+				.Where(d => FraCards.IsImplemented(d.Name))
+				.OrderBy(d => d.Name, StringComparer.Ordinal)
+				.Select(d =>
+					(
+						d.Name,
+						(d.Colors ?? []).Select(ManaCost.ColorOf).ToArray(),
+						slots.GetValueOrDefault(d.Rarity) / inSet[d.Rarity]
+					)
+				),
+		];
 	}
 
 	static GameState ShuffleUnknown(GameState s, int owner, Knowers mine, Random rng)

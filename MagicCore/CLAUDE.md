@@ -109,8 +109,9 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
   `Card.Fresh()` — CR 400.7. Damage, tapped, counters, until-end-of-turn effects, combat state and
   stack choices die there. Only `Shuffle`, `RevealUntilOntoBattlefield` and the AI's `Hidden.Sample`
   use `MoveObject`, to reorder within one zone (`MoveCard` would reset `KnownTo`) — and
-  `Hidden.Sample`'s hand mode to swap opponent cards between hand and library in a hypothetical
-  position, where a real zone change's events must not fire (AI-3.4).
+  `Hidden.Sample`'s hand modes, in a hypothetical position where a real zone change's events must
+  not fire: swapping opponent cards between hand and library (AI-3.4), or replacing one in place
+  with a guessed card that keeps its id (`UpdateObject`, AI-3.5).
 - **One computation each, never a second copy:** `s.Power(card)`/`s.Toughness`/`s.Has` (Rules/
   Characteristics.cs — the card's own numbers plus every static ability on the battlefield; rules
   never read `Card.OwnPower`/`HasOwn` or `BasePower`, which ignore every anthem on the board),
