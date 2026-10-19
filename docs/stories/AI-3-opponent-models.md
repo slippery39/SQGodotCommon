@@ -85,9 +85,8 @@ an enum of one (AI-2.4's review removed two).
 ## Next
 
 **Paused 2026-10-18 (Shayne): the measurement runs take too long** — a head-to-head is 1.5–2 h,
-and each model needs two or three. Before resuming, settle how to measure faster (fewer games per
-step? a cheaper search setting for A/B runs? parallel games for strength, a short sequential run
-for time?). **AI-3.3 done.** `RealOrder` stays the default until AI-3.9 chooses (decided 2026-10-18).
+and each model needs two or three. **Resume after AI-6** (measure in minutes, or overnight with an
+early stop) **and AI-7** (a faster search) — the measuring plan was settled there (2026-10-19). **AI-3.3 done.** `RealOrder` stays the default until AI-3.9 chooses (decided 2026-10-18).
 Deferred from AI-3.3's review: `Hidden.ShuffleUnknown` is a third copy of "out and back in" (with
 `Shuffle` and Identity Echo — one `ReorderLibrary` helper would do), and it rebuilds both libraries
 at every searched decision even when nothing can move (part of the +6–8% time).
