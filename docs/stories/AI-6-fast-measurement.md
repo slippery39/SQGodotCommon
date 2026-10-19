@@ -53,8 +53,9 @@ oracle is the search at several times the rollout budget and depth — sized onc
 
 - [x] AI-6.1 The cost count: rollouts and engine steps per decision, reported by `--match`; checked
       once against wall clock (the two must rank the AIs alike) — they do; it undercounts evaluation
-- [ ] AI-6.2 Strength from parallel games: confirm a parallel run's win/loss equals `--sequential`'s
-      on the same seeds, measure the wall-clock gain, and make it the default for search runs
+- [x] AI-6.2 Strength from parallel games: confirm a parallel run's win/loss equals `--sequential`'s
+      on the same seeds, measure the wall-clock gain, and make it the default for search runs —
+      identical games, 97 min → 16 min (6.2×) with the server garbage collector
 - [ ] AI-6.3 Early stopping for the overnight run: the sequential test on mirror pairs, the cap,
       the reason it stopped in the report
 - [ ] AI-6.4 The position suite: generate from self-play (seed + decks + moves), replay, the oracle's
@@ -64,12 +65,12 @@ oracle is the search at several times the rollout budget and depth — sized onc
 
 ## Next
 
-**AI-6.1 done; next AI-6.2** — parallel games for strength. `AiMatch.Run` already plays games in
-parallel unless `--sequential`; each search also parallelises its rollouts, so try
-`BeamSearchAi.Settings.Threads: 1` per search while games fill the cores (nested parallel loops
-only add overhead), prove win/loss AND the cost count identical to `--sequential`, and time it.
-The count: `MagicRules.CountingSteps(() => ai.Decide(s))` (any AI, any threads) and
-`BeamSearchAi.Rollouts`. Read `docs/findings/magic-ai.md` (AI-2.3 on the harness, the AI-3
+**AI-6.2 done; next AI-6.3** — early stopping for the overnight run: a sequential test on mirror
+pairs ("no difference" against "+5pp", 5% error each way), capped at ~600 games, the reason it
+stopped in the report. A 156-game search-vs-search match is now ~16 min (findings, AI-6.2), so
+the cap is ~1 h. Games run in parallel by default, one thread per search, one game per core, on
+the server garbage collector — keep `<ServerGarbageCollection>` in MagicConsole and the tests.
+The count: `MagicRules.CountingSteps(() => ai.Decide(s))` and `BeamSearchAi.Rollouts`. Read `docs/findings/magic-ai.md` (AI-2.3 on the harness, the AI-3
 sections for what a run costs).
 
 ## Log
@@ -90,3 +91,15 @@ sections for what a run costs).
   below 1 is every core, not a crash; the cost fields are required; `Choose` counts only a valid
   choice; the test reuses its probe. Revert-checked: suppressing the context's flow, and not
   counting `Act`, each fail it. MagicCore.Tests 948 green.
+- 2026-10-19: AI-6.2 — parallel games run each search on one thread (`AiMatch.Create`'s
+  `searchThreads`; every search name now resolves to its settings in one place), one game per core.
+  Proven identical to `--sequential`: `ParallelGames_PlayTheSameGames_AsOneAtATime` (12 games) and AI-3.3's 156-game match reproduced exactly four times. **Found: the workstation garbage
+  collector was the bottleneck** — capping games at the cores made it SLOWER (69 min against 31
+  uncapped), because threads waited on collections; the server collector made the same 48 games 5×
+  faster and the full match 16 min (6.2× AI-3.3's). Server GC on in MagicConsole and the tests
+  (suite 59 → 36 s). Parallel timings are labelled "not evidence" in the report.
+- 2026-10-19: /pre-commit fixes to AI-6.2 — the equality test listed twelve fields by hand and
+  missed `Finished`, lands and spells (it now compares whole games, the clock zeroed, so a new field
+  is compared without being listed); the normal suite now checks that every kind of search name
+  takes the thread count (`EverySearch_TakesTheThreadCount`); `IsKnown` reads names only, so a
+  broken search can't throw from it; the report's parallel flag is required.

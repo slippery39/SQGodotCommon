@@ -40,6 +40,11 @@ Open questions:
 
 ## Next
 
+**Found in AI-6.2: the workstation garbage collector paused every thread** — the server collector
+made parallel games 5× faster (findings). Check whether the TABLE gets it: Godot hosts its own .NET
+runtime, so `<ServerGarbageCollection>` in a csproj may not reach it; a multi-threaded search on the
+table allocates in parallel just the same. Allocation is the likely next lead (a new state per step).
+
 AI-7.1 can start alongside AI-6.1 — the profile wants AI-6.1's count. Leads already measured: attack
 declarations settle every option through combat (AI-2.4); `CreatureValue` allocates a keyword array
 per creature and reads toughness three times (AI-2.2's review); `Hidden.Sample` rebuilds both

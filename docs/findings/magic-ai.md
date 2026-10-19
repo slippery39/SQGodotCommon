@@ -318,3 +318,32 @@ execution context to every thread the decision's work reaches) and rollouts. Che
   searching; the search proper runs 20–200.
 - `BeamSearchAi.Settings.Threads` (null = every core) runs a search's rollouts on fewer threads,
   never changing a decision — for AI-6.2's parallel games.
+
+## Strength from parallel games, and the garbage collector (2026-10-19, AI-6.2)
+
+The same match — `beam+shuffle` vs `beam`, 156 games, AI-3.3's — run four ways, Release. Every run
+plays the SAME games: 72–84, by deck 30–22 / 33–19 / 9–43, the same decisions per game and the same
+cost count (1 319.6 and 1 245.1 engine steps per decision). Only the wall clock differs:
+
+| Games | Each search | Collector | Wall clock | vs AI-3.3 |
+|---|---|---|---|---|
+| one at a time (`--sequential`, AI-3.3) | every core | workstation | 5 814 s (97 min) | 1× |
+| in parallel, uncapped | one thread | workstation | 1 874 s (31 min) | 3.1× |
+| in parallel, one per core | one thread | workstation | 4 138 s (69 min) | 1.4× |
+| **in parallel, one per core** | **one thread** | **server** | **941 s (16 min)** | **6.2×** |
+
+- **The default (workstation) garbage collector was the bottleneck.** The engine allocates a new
+  state at every step on every thread; its collections pause them all. With 16 games on 16 cores a
+  decision took 2.7 s; with ~105 games oversubscribing the same cores it cost half as much CPU —
+  the threads had been waiting, not computing. On 48 games of `beam` vs `greedy`: 497 s with the
+  workstation collector, **100 s with the server one** (97 s uncapped — the cap now costs nothing).
+- **Server GC is on for MagicConsole and MagicCore.Tests** (`<ServerGarbageCollection>`); the suite
+  went from 59 s to 36 s. **Every earlier timing in this file is under the workstation collector** —
+  compare a new `--sequential` timing with them only after re-running the old side.
+- `AiMatchTests.ParallelGames_PlayTheSameGames_AsOneAtATime` (`[Explicit]`) proves parallel and
+  sequential runs play identical games — winners, turns, decisions, steps, rollouts.
+- In a parallel run the time-per-decision line is not evidence (the report says so); the cost line is.
+- **One-at-a-time runs gain too:** the equality test's 12 sequential games of `beam` vs `greedy` took
+  55 s on the server collector against 204 s on the workstation one — a multi-threaded search
+  allocates in parallel just the same. So the table may gain as well, if Godot's runtime takes the
+  setting (AI-7).

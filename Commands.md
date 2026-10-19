@@ -89,7 +89,8 @@ dotnet run --project MagicConsole -- --match=greedy,random --games=72  # AI vs A
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json (~1 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
-#   --sequential for honest time per decision (parallel games inflate it 7-8x, unevenly); --match=x lists the AIs
+#   games run in parallel (one per core, each search on one thread) — the SAME games as --sequential,
+#   ~6x faster; use --sequential only for wall-clock time per decision; --match=x lists the AIs
 #   the "cost per decision" line (engine steps, rollouts) is deterministic: identical on every run and machine for an uncapped AI (every --match AI; AI-6)
 #   beam is the search as it plays (held cards at 0.5 of their measured value — AI-1); beam-plain is
 #   the search before held values; beam-held=0.25 is the search at that fraction; beam-casts is the

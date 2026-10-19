@@ -117,6 +117,9 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 
 	public int PlayerId { get; } = playerId;
 
+	/// <summary>The settings this search runs with, defaults resolved.</summary>
+	public Settings Options => options;
+
 	/// <summary>One of our decisions in a line, with what identifies it when the plan is replayed.</summary>
 	abstract record Decision(object Key);
 

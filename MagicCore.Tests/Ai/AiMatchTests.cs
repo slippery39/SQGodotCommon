@@ -38,6 +38,62 @@ public class AiMatchTests
 		);
 	}
 
+	// Parallel games (each search on one thread) and one game at a time (each search on every core)
+	// play the very same games: the same winners, turns, decisions — and the same cost count. Only the
+	// clock differs, which is why strength may come from a parallel run (AI-6.2).
+	[Test, Explicit("plays 24 games with the search, twice (~2 min)")]
+	public void ParallelGames_PlayTheSameGames_AsOneAtATime()
+	{
+		// Every field but the clock's — a field added to Game is compared without anyone listing it.
+		static AiMatch.Game Played(AiMatch.Game g) =>
+			g with
+			{
+				SecondsA = 0,
+				SecondsB = 0,
+				SlowestA = 0,
+				SlowestB = 0,
+			};
+
+		var parallel = AiMatch.Run("beam", "greedy", games: 12);
+		var sequential = AiMatch.Run("beam", "greedy", games: 12, sequential: true);
+
+		Assert.That(parallel.Games.Select(Played), Is.EqualTo(sequential.Games.Select(Played)));
+		Assert.That(parallel.Games.Sum(g => g.RolloutsA), Is.GreaterThan(0), "the search searched");
+		TestContext.Out.WriteLine(
+			$"parallel {parallel.Elapsed.TotalSeconds:0} s, sequential {sequential.Elapsed.TotalSeconds:0} s"
+		);
+	}
+
+	// What makes parallel games fill the cores: every kind of search name takes the thread count, and
+	// keeps its own settings beside it.
+	[TestCase("beam")]
+	[TestCase("beam-plain")]
+	[TestCase("beam-casts")]
+	[TestCase("beam+shuffle")]
+	[TestCase("beam-held=0.25")]
+	public void EverySearch_TakesTheThreadCount(string name)
+	{
+		var one = (BeamSearchAi)AiMatch.Create(name, 1, 1, searchThreads: 1);
+		var every = (BeamSearchAi)AiMatch.Create(name, 1, 1);
+
+		Assert.That((one.Options.Threads, every.Options.Threads), Is.EqualTo((1, (int?)null)));
+		// Each search builds its own held-values table: compare the rest, and whether it has one.
+		static object Rest(BeamSearchAi.Settings o) =>
+			(
+				o with
+				{
+					Threads = null,
+					RolloutSettings = null,
+				},
+				o.RolloutSettings! with
+				{
+					Held = null,
+				},
+				o.RolloutSettings!.Held is null
+			);
+		Assert.That(Rest(one.Options), Is.EqualTo(Rest(every.Options)));
+	}
+
 	[Test]
 	public void AHeldFraction_InTheName_IsTheSearchAtThatFraction()
 	{

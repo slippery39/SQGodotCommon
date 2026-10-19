@@ -5,6 +5,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The engine allocates a state per step on every thread: the default collector's pauses made
+         parallel games 5x slower (story AI-6.2, docs/findings/magic-ai.md). -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>

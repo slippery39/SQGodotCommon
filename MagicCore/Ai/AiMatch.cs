@@ -10,27 +10,39 @@ namespace MagicCore.Ai;
 /// strength claim about a MagicCore AI comes from here, recorded in docs/findings/magic-ai.md.
 ///
 /// Results are deterministic for the seeds; only the timings depend on the machine. Games run in
-/// parallel unless <c>sequential</c> — parallel games share the CPU unevenly, which inflates time per
-/// decision by an amount that varies with what else ran: only <c>sequential</c> timings are evidence.
+/// parallel unless <c>sequential</c>, each search on ONE thread so the games fill the cores (AI-6.2) —
+/// the results and the cost count are the same either way, and the clock is not: parallel games
+/// share the CPU unevenly, so only <c>sequential</c> timings are evidence.
 /// </summary>
 public static class AiMatch
 {
 	/// <summary>Past this many decisions a game is unfinished — it counts as a draw and is reported.</summary>
 	public const int DecisionLimit = 20_000;
 
-	/// <summary>The AIs a match can name — the one list; <see cref="Names"/> reads it.</summary>
-	static readonly Dictionary<string, Func<int, int, IAi>> Makers =
+	/// <summary>The AIs a match can name that aren't the search — with <see cref="Searches"/>, the one list.</summary>
+	static readonly Dictionary<string, Func<int, int, IAi>> Others =
 		new()
 		{
 			["greedy"] = (player, _) => new GreedyAi(player),
 			["random"] = (player, seed) => new RandomAi(player, seed * 31 + player),
+		};
+
+	/// <summary>
+	/// The searches a match can name, by their settings — beside "beam+…" and "beam-held=…". Factories,
+	/// not values: a search's held values load the card-value table (BeamSearchAi.DefaultRollout), which
+	/// must happen only where a search is wanted, not whenever AiMatch is first touched.
+	/// </summary>
+	static readonly Dictionary<string, Func<BeamSearchAi.Settings>> Searches =
+		new()
+		{
 			// The search as it plays: held cards at half their measured value (AI-1).
-			["beam"] = (player, _) => new BeamSearchAi(player),
+			["beam"] = () => new(),
 			// The search before held values, for A/B runs.
-			["beam-plain"] = (player, _) =>
-				new BeamSearchAi(player, new BeamSearchAi.Settings().WithoutHeld()),
+			["beam-plain"] = () => new BeamSearchAi.Settings().WithoutHeld(),
 			// The search whose simulated opponent casts from its real hand (AI-3.1) — beam+casts.
-			["beam-casts"] = (player, seed) => Create("beam+casts", player, seed), // throws if renamed
+			["beam-casts"] = () =>
+				Combined("beam+casts")
+				?? throw new InvalidOperationException("The 'casts' model was renamed"),
 		};
 
 	/// <summary>
@@ -59,21 +71,31 @@ public static class AiMatch
 			: null;
 
 	/// <summary>The fixed names; beside them, "beam-held=0.25" is the search at that held fraction.</summary>
-	public static IReadOnlyCollection<string> Names => Makers.Keys;
+	public static IReadOnlyCollection<string> Names => [.. Others.Keys, .. Searches.Keys];
 
 	/// <summary>What --match accepts, for a usage line.</summary>
 	public static string Usage =>
 		$"{string.Join(", ", Names)}, beam-held=<fraction>, or beam+<model>[+<model>…] ({string.Join(", ", Models.Keys)})";
 
+	// Names only, never the factories: a broken one fails in Create, with its own message.
 	public static bool IsKnown(string name) =>
-		Makers.ContainsKey(name) || HeldFraction(name) is not null || Combined(name) is not null;
+		Others.ContainsKey(name)
+		|| Searches.ContainsKey(name)
+		|| Combined(name) is not null
+		|| HeldFraction(name) is not null;
 
-	public static IAi Create(string name, int playerId, int seed) =>
-		Makers.TryGetValue(name, out var make) ? make(playerId, seed)
-		: Combined(name) is { } combined ? new BeamSearchAi(playerId, combined)
-		: HeldFraction(name) is { } fraction
-			? new BeamSearchAi(playerId, new BeamSearchAi.Settings().WithHeld(fraction))
+	/// <param name="searchThreads">A search's <see cref="BeamSearchAi.Settings.Threads"/> — 1 when games run in parallel.</param>
+	public static IAi Create(string name, int playerId, int seed, int? searchThreads = null) =>
+		Others.TryGetValue(name, out var make) ? make(playerId, seed)
+		: SearchSettings(name) is { } search
+			? new BeamSearchAi(playerId, search with { Threads = searchThreads ?? search.Threads })
 		: throw new ArgumentException($"Unknown AI '{name}' — known: {Usage}");
+
+	static BeamSearchAi.Settings? SearchSettings(string name) =>
+		Searches.TryGetValue(name, out var settings) ? settings()
+		: Combined(name) is { } combined ? combined
+		: HeldFraction(name) is { } fraction ? new BeamSearchAi.Settings().WithHeld(fraction)
+		: null;
 
 	/// <summary>"beam-held=0.25" → 0.25 (invariant culture, so "0.25" reads alike on every machine).</summary>
 	static double? HeldFraction(string name) =>
@@ -140,6 +162,8 @@ public static class AiMatch
 
 		var clock = Stopwatch.StartNew();
 		var results = new Game[schedule.Count];
+		// One game at a time, each search uses every core; games in parallel, each search one thread.
+		int? searchThreads = sequential ? null : 1;
 		void PlayAt(int i) =>
 			results[i] = Play(
 				a,
@@ -147,17 +171,32 @@ public static class AiMatch
 				schedule[i].x,
 				schedule[i].y,
 				schedule[i].seed,
-				schedule[i].aIsPlayer1
+				schedule[i].aIsPlayer1,
+				searchThreads
 			);
 		if (sequential)
 			for (var i = 0; i < schedule.Count; i++)
 				PlayAt(i);
 		else
-			Parallel.For(0, schedule.Count, PlayAt);
-		return new Result(a, b, pairs.Count, seeds, results, clock.Elapsed);
+			// One game per core: unbounded, the pool grows past the cores and games fight over them.
+			Parallel.For(
+				0,
+				schedule.Count,
+				new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+				PlayAt
+			);
+		return new Result(a, b, pairs.Count, seeds, results, clock.Elapsed, sequential);
 	}
 
-	static Game Play(string a, string b, string deck1, string deck2, int seed, bool aIsPlayer1)
+	static Game Play(
+		string a,
+		string b,
+		string deck1,
+		string deck2,
+		int seed,
+		bool aIsPlayer1,
+		int? searchThreads
+	)
 	{
 		var s = MagicRules.NewGame(FraDecks.All[deck1], FraDecks.All[deck2], seed);
 		var (aSeat, bSeat) = aIsPlayer1
@@ -165,8 +204,8 @@ public static class AiMatch
 			: (s.Player2Id(), s.Player1Id());
 		var ais = new Dictionary<int, IAi>
 		{
-			[aSeat] = Create(a, aSeat, seed),
-			[bSeat] = Create(b, bSeat, seed),
+			[aSeat] = Create(a, aSeat, seed, searchThreads),
+			[bSeat] = Create(b, bSeat, seed, searchThreads),
 		};
 		var decisions = new Dictionary<int, int> { [aSeat] = 0, [bSeat] = 0 };
 		var ticks = new Dictionary<int, long> { [aSeat] = 0, [bSeat] = 0 };
@@ -245,7 +284,8 @@ public static class AiMatch
 		int Pairings,
 		int Seeds,
 		IReadOnlyList<Game> Games,
-		TimeSpan Elapsed
+		TimeSpan Elapsed,
+		bool Sequential
 	)
 	{
 		/// <summary>A's score: a win is 1, a draw or unfinished game half.</summary>
@@ -305,7 +345,7 @@ public static class AiMatch
 				$"  {a} {WinRateA * 100:0.0}% ± {StandardError * 100:0.0}pp (1 SE) — wins {a} {Games.Count(g => g.Winner == 1)}, {b} {Games.Count(g => g.Winner == 2)}, draws {Games.Count(g => g.Winner == 0)}",
 				$"  cost per decision (deterministic): {a} {PerDecision(Games.Sum(g => g.StepsA), decA)} engine steps, {PerDecision(Games.Sum(g => g.RolloutsA), decA)} rollouts; "
 					+ $"{b} {PerDecision(Games.Sum(g => g.StepsB), decB)} steps, {PerDecision(Games.Sum(g => g.RolloutsB), decB)} rollouts",
-				$"  time per decision: {a} {Ms(secA, decA)} (slowest {Games.Max(g => g.SlowestA) * 1000:0} ms), {b} {Ms(secB, decB)} (slowest {Games.Max(g => g.SlowestB) * 1000:0} ms)",
+				$"  time per decision{(Sequential ? "" : " (games in parallel: NOT evidence — use the cost line, or --sequential)")}: {a} {Ms(secA, decA)} (slowest {Games.Max(g => g.SlowestA) * 1000:0} ms), {b} {Ms(secB, decB)} (slowest {Games.Max(g => g.SlowestB) * 1000:0} ms)",
 				$"  per game: decisions {a} {(double)decA / Games.Count:0}, {b} {(double)decB / Games.Count:0}; turns {Games.Average(g => g.Turns):0.0}",
 				$"  per game: lands played {a} {Games.Average(g => g.LandsA):0.0}, {b} {Games.Average(g => g.LandsB):0.0}; "
 					+ $"spells cast {a} {Games.Average(g => g.SpellsA):0.0}, {b} {Games.Average(g => g.SpellsB):0.0}",
