@@ -1,7 +1,7 @@
 ---
 id: AI-6
 title: Measure an AI change in minutes, or overnight
-status: ready
+status: done
 area: AI
 created: 2026-10-19
 ---
@@ -16,20 +16,20 @@ landed at 1.3–2 SE ("not shown"). Waiting two hours to test a change is too mu
 
 ## Requirements
 
-- [ ] **Two speeds:** a quick check that takes minutes while working, and an overnight run before
+- [x] **Two speeds:** a quick check that takes minutes while working, and an overnight run before
       anything becomes a default
-- [ ] **The quick check is a position suite**, run on demand from the console: positions from the
+- [x] **The quick check is a position suite**, run on demand from the console: positions from the
       search's self-play; each version decides in each; it reports (a) how many decisions differ
       from the committed AI, and where, and (b) how often it agrees with an ORACLE — a much deeper
       search, its answers computed once and stored — and how much score its choice gives up
-- [ ] Positions are stored as seed + decks + the moves made, replayed in milliseconds (MagicCore has
+- [x] Positions are stored as seed + decks + the moves made, replayed in milliseconds (MagicCore has
       no state serializer, and doesn't need one for this); regenerated when the engine changes the
       order of legal moves — and a stale file says so rather than replaying wrong positions
-- [ ] **The overnight run stops early** once a difference of 5pp or more — or its absence — is
+- [x] **The overnight run stops early** once a difference of 5pp or more — or its absence — is
       settled (a sequential test on mirror pairs), capped at ~600 games; it may use every core
-- [ ] **Cost is a deterministic count** — rollouts and engine steps per decision — reported beside
+- [x] **Cost is a deterministic count** — rollouts and engine steps per decision — reported beside
       the result, identical on every run and machine; wall clock only as an occasional check
-- [ ] Win/loss from games played in parallel, proven identical to `--sequential` (the results are
+- [x] Win/loss from games played in parallel, proven identical to `--sequential` (the results are
       deterministic; only time needed one game at a time, and the count replaces that)
 
 ## Decisions
@@ -66,20 +66,15 @@ oracle is the search at several times the rollout budget and depth — sized onc
       changed-vs-committed and the cost — `--suite=A`, ~20 s for 288 positions
 - [x] AI-6.4b The oracle: a much deeper search's answers at every position, stored; the report adds
       agreement with it and the score each version's choice gives up — four turns ahead; beam 86.1%
-- [ ] AI-6.5 Prove it on AI-3: re-run one AI-3.3 comparison through the new harness; Commands.md says
-      how to run each speed
+- [x] AI-6.5 Prove it on AI-3: re-run one AI-3.3 comparison through the new harness; Commands.md says
+      how to run each speed — shuffle WORSE by 5pp+ at 288 games, settling what AI-3.3 could not
 
 ## Next
 
-**AI-6.4 done; next AI-6.5** — prove the harness on AI-3: re-run one AI-3.3 comparison as the
-overnight run (`--match=beam+shuffle,beam --until-clear`) and the quick check (`--suite=beam+shuffle`),
-read them beside AI-3.3's findings, and make Commands.md say how to run each speed. The suite is
-`PositionSuite` (`MagicCore/Ai/PositionSuite.cs`; the file `MagicCore/Sets/FRA.positions.txt`,
-embedded, oracle readings included); every AI's `Decide` returns an `AiDecision` with the move. After
-`--suite=generate` the oracle must be re-run (`--suite=oracle`, ~1 min): new positions have none. Games run in parallel by default, one thread per search, one game per core, on
-the server garbage collector — keep `<ServerGarbageCollection>` in MagicConsole and the tests.
-The count: `MagicRules.CountingSteps(() => ai.Decide(s))` and `BeamSearchAi.Rollouts`. Read `docs/findings/magic-ai.md` (AI-2.3 on the harness, the AI-3
-sections for what a run costs).
+**Done (2026-10-19).** The harness is in use: `--suite=A` while working, `--match=A,B --until-clear`
+before a default — Commands.md, "Measure an AI change — two speeds". Its first user is AI-7: a pure
+optimisation must show `--suite=beam` 0 changed. Wall clock drifts ~2× within a day on this machine
+(findings, AI-6.5): time a change back to back against the committed code, or by the cost count.
 
 ## Log
 
@@ -159,3 +154,11 @@ sections for what a run costs).
   suite's own order, and readings that don't line up are stale; the oracle searches every first move
   (no cap); the "never negative" test could not fail — replaced by a hand-built judging test with an
   exact verdict. Revert-checked: dropping the loss count, the floor or the alignment check each fails.
+- 2026-10-19: AI-6.5 — `beam+shuffle` vs `beam --until-clear` stopped at 288 games, 130–158 (45.1% ±
+  1.9pp), WORSE by 5pp or more — AI-3.3's 156 games had only pointed that way; the suite (8.3%
+  changed, oracle agreement 81.3% against 86.1%) agreed in 20 s. `RunUntilClear` now starts games
+  continuously instead of waiting for each batch's slowest (judged on whole batches, so the re-run
+  reproduced the verdict exactly; a verdict abandons running games at their next decision): a fixed
+  48 games ran 159 s against 195 s back to back; both 288-game runs took 63 min hours apart — the
+  clock drifts ~2× in a day, and the cores ran half idle (findings).
+  Commands.md: the two speeds.

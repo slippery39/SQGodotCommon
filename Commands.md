@@ -85,26 +85,44 @@ dotnet run --project MagicConsole                       # pick a deck, play the 
 dotnet run --project MagicConsole -- --ai-vs-ai         # watch two AIs
 dotnet run --project MagicConsole -- --greedy           # the AI is GreedyAi (instant), not the search (BeamSearchAi, ~1 s a decision)
 dotnet run --project MagicConsole -- --seed=7 --deck=1  # replay a game; skip the deck prompt
-dotnet run --project MagicConsole -- --match=greedy,random --games=72  # AI vs AI, measured (AiMatch)
-dotnet run -c Release --project MagicConsole -- --suite=beam  # the quick check (~20 s): what an AI decides at 288 recorded
-#   positions against the committed answers, and the cost; --accept makes its answers the committed ones;
-#   --suite=generate re-records the suite (~4 min) when a test says it is stale, then --suite=oracle
-#   (~1 min) re-reads it with the oracle: a search looking four turns ahead, for agreement and score given up
-dotnet run -c Release --project MagicConsole -- --match=beam+shuffle,beam --until-clear  # the overnight run: stops once a 5pp
-#   difference (or none) is settled, judged after every 8 seeds (96 games); --games=N is the cap (default 600)
 dotnet run --project MagicConsole -- --card-values      # regenerate MagicCore/Sets/FRA.values.json (~1 s)
 #   from the solution root; CardValuesTests.TheTrackedTable_IsCurrent fails until you do, after any
 #   change to the evaluator, the engine or a card that moves a value — read the diff, then commit it
-#   games run in parallel (one per core, each search on one thread) — the SAME games as --sequential,
-#   ~6x faster; use --sequential only for wall-clock time per decision; --match=x lists the AIs
-#   the "cost per decision" line (engine steps, rollouts) is deterministic: identical on every run and machine for an uncapped AI (every --match AI; AI-6)
-#   beam is the search as it plays (held cards at 0.5 of their measured value — AI-1); beam-plain is
-#   the search before held values; beam-held=0.25 is the search at that fraction; beam-casts is the
-#   search whose simulated opponent casts from its real hand (AI-3); models combine as beam+casts+shuffle
-#   (shuffle: what the search can't know of the libraries is shuffled at its root)
 ```
 
 Enter passes; `q` quits. The decks are `FraDecks` - only cards `FraCards.IsImplemented` allows.
+
+## Measure an AI change — two speeds (MagicCore, story AI-6)
+
+From the solution root, Release. Both are deterministic: the same command gives the same answer.
+
+```
+# 1. The quick check (~20 s), while working: what the AI decides at 288 recorded positions
+dotnet run -c Release --project MagicConsole -- --suite=beam
+#   "changed": decisions that differ from the committed answers (0 = a pure optimisation, AI-7)
+#   "cost per position": engine steps and rollouts — the deterministic cost, not the clock
+#   "agrees with the oracle" / "score given up": against a search looking four turns ahead, read once.
+#   It shares beam's models, so it ranks versions of ONE model; a model change goes to step 2
+#   --accept: this AI's answers become the committed ones (after an intended behaviour change)
+#   a test says the suite is stale (the engine moved): --suite=generate (~4 min), then --suite=oracle (~1 min)
+
+# 2. The overnight run (≤ ~1 h), before anything becomes a default
+dotnet run -c Release --project MagicConsole -- --match=beam+shuffle,beam --until-clear
+#   stops once A is 5pp better, 5pp worse, or neither is settled (5% error per direction), judged
+#   after every 8 seeds (96 games); --games=N is the cap (default 600). UNDECIDED at the cap: any
+#   difference is under 5pp — read the estimate
+
+# A fixed-size match, as before (AiMatch)
+dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
+#   games run in parallel (one per core, each search on one thread) — the SAME games as --sequential,
+#   ~6x faster; use --sequential only for wall-clock time per decision; --match=x lists the AIs
+#   the "cost per decision" line (engine steps, rollouts) is deterministic: identical on every run
+#   and machine for an uncapped AI (every --match AI)
+#   beam is the search as it plays (held cards at 0.5 of their measured value — AI-1); beam-plain is
+#   the search before held values; beam-held=0.25 is the search at that fraction; models combine as
+#   beam+casts+shuffle (casts: the simulated opponent casts from its real hand; shuffle: what the
+#   search can't know of the libraries is shuffled at its root; beam-casts = beam+casts)
+```
 
 ## Play in console
 

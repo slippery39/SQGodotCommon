@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using ImmutableGameObjects;
 using MagicCore.Sets.Fra;
@@ -149,15 +150,17 @@ public static class AiMatch
 		var pairs = Pairings(a, b);
 		var clock = Stopwatch.StartNew();
 		var seeds = SeedsFor(games, pairs);
-		var results = PlaySeeds(a, b, pairs, 1, seeds, sequential);
-		return new Result(a, b, pairs.Count, seeds, results, clock.Elapsed, sequential);
+		var results = PlayAll(a, b, Schedule(pairs, seeds), sequential);
+		return new Result(a, b, pairs.Count, seeds, [.. results!], clock.Elapsed, sequential);
 	}
 
 	/// <summary>
-	/// Seeds played in batches of <see cref="SeedsPerBatch"/> until <see cref="EarlyStop"/> gives a
-	/// verdict, or <paramref name="maxGames"/> are played (story AI-6.3). Judged only between whole
-	/// batches, so where it stops depends on the results alone — never on which game finished first —
-	/// and its games are the first ones a fixed <see cref="Run"/> of that size plays.
+	/// Games played until <see cref="EarlyStop"/> gives a verdict, or <paramref name="maxGames"/> are
+	/// played (story AI-6.3). Every game up to the cap is scheduled in seed order and started as a core
+	/// frees up; the test is judged on each whole batch of <see cref="SeedsPerBatch"/> seeds once all of
+	/// its games are in, so where it stops depends on the results alone — never on which game finished
+	/// first — and its games are the first ones a fixed <see cref="Run"/> of that size plays. Once it
+	/// decides no game starts; those already running finish and are left out.
 	/// </summary>
 	public static Result RunUntilClear(
 		string a,
@@ -168,26 +171,40 @@ public static class AiMatch
 	{
 		var pairs = Pairings(a, b);
 		var clock = Stopwatch.StartNew();
-		var maxSeeds = SeedsFor(maxGames, pairs);
-		var games = new List<Game>();
-		var reading = EarlyStop.Judge([]);
-		var seed = 1;
-		while (seed <= maxSeeds && reading.Verdict == EarlyStop.Verdict.Undecided)
+		var schedule = Schedule(pairs, SeedsFor(maxGames, pairs));
+		var perBatch = SeedsPerBatch * pairs.Count * 2;
+		var (judged, reading) = (0, EarlyStop.Judge([]));
+		// Asked under PlayAll's lock after every game: judge each whole batch now complete, in order.
+		bool Enough(Game?[] results)
 		{
-			var batch = Math.Min(SeedsPerBatch, maxSeeds - seed + 1);
-			games.AddRange(PlaySeeds(a, b, pairs, seed, batch, sequential));
-			seed += batch;
-			reading = EarlyStop.Judge(PairScores(games), reading);
+			while (reading.Verdict == EarlyStop.Verdict.Undecided && judged < results.Length)
+			{
+				var next = Math.Min(judged + perBatch, results.Length);
+				if (Array.IndexOf(results, null, judged, next - judged) >= 0)
+					return false;
+				judged = next;
+				reading = EarlyStop.Judge(PairScores(results[..judged]!), reading);
+			}
+			return reading.Verdict != EarlyStop.Verdict.Undecided;
 		}
-		return new Result(a, b, pairs.Count, seed - 1, games, clock.Elapsed, sequential)
+		var results = PlayAll(a, b, schedule, sequential, Enough);
+		return new Result(
+			a,
+			b,
+			pairs.Count,
+			judged / (pairs.Count * 2),
+			[.. results[..judged]!],
+			clock.Elapsed,
+			sequential
+		)
 		{
 			Stop = reading,
 		};
 	}
 
 	/// <summary>
-	/// Seeds judged at once: 8 × 12 games (48 pairs, EarlyStop.MinPairs) — six waves on 16 cores. Every
-	/// batch waits for its slowest game; fewer, larger batches waste less of the cores on that.
+	/// Seeds judged at once: 8 × 12 games (48 pairs, EarlyStop.MinPairs). Games run continuously
+	/// across batches, so the size only sets how often the test is read — not how long cores wait.
 	/// </summary>
 	public const int SeedsPerBatch = 8;
 
@@ -205,45 +222,63 @@ public static class AiMatch
 	static int SeedsFor(int games, List<(string x, string y)> pairs) =>
 		Math.Max(1, (int)Math.Ceiling(games / (pairs.Count * 2.0)));
 
-	static Game[] PlaySeeds(
-		string a,
-		string b,
+	/// <summary>Every ordered pairing, both seats, for seeds 1..<paramref name="seeds"/> — in seed order.</summary>
+	static List<(string x, string y, int seed, bool aIsPlayer1)> Schedule(
 		List<(string x, string y)> pairs,
-		int firstSeed,
-		int seeds,
-		bool sequential
-	)
-	{
-		var schedule = (
-			from seed in Enumerable.Range(firstSeed, seeds)
+		int seeds
+	) =>
+		[
+			.. from seed in Enumerable.Range(1, seeds)
 			from pair in pairs
 			from aIsPlayer1 in new[] { true, false }
-			select (pair.x, pair.y, seed, aIsPlayer1)
-		).ToList();
-		var results = new Game[schedule.Count];
-		// One game at a time, each search uses every core; games in parallel, each search one thread.
+			select (pair.x, pair.y, seed, aIsPlayer1),
+		];
+
+	/// <summary>
+	/// Plays the schedule, starting games in schedule order as a slot frees up — one slot with each
+	/// search on every core, or one per core with each search on one thread. After each game
+	/// <paramref name="enough"/> (under a lock) may say to stop: no game starts, a running one is
+	/// abandoned at its next decision, and every game not finished stays null.
+	/// </summary>
+	static Game?[] PlayAll(
+		string a,
+		string b,
+		List<(string x, string y, int seed, bool aIsPlayer1)> schedule,
+		bool sequential,
+		Func<Game?[], bool>? enough = null
+	)
+	{
+		var results = new Game?[schedule.Count];
 		int? searchThreads = sequential ? null : 1;
-		void PlayAt(int i) =>
-			results[i] = Play(
-				a,
-				b,
-				schedule[i].x,
-				schedule[i].y,
-				schedule[i].seed,
-				schedule[i].aIsPlayer1,
-				searchThreads
-			);
-		if (sequential)
-			for (var i = 0; i < schedule.Count; i++)
-				PlayAt(i);
-		else
-			// One game per core: unbounded, the pool grows past the cores and games fight over them.
-			Parallel.For(
-				0,
-				schedule.Count,
-				new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-				PlayAt
-			);
+		var gate = new object();
+		using var stop = new CancellationTokenSource();
+		// Capped at the cores: unbounded, the pool grows past them and games fight over them. Handed out
+		// one at a time in order, so a long game never holds back the ones after it.
+		Parallel.ForEach(
+			Partitioner.Create(
+				Enumerable.Range(0, schedule.Count),
+				EnumerablePartitionerOptions.NoBuffering
+			),
+			new ParallelOptions
+			{
+				MaxDegreeOfParallelism = sequential ? 1 : Environment.ProcessorCount,
+			},
+			(i, loop) =>
+			{
+				var (x, y, seed, aIsPlayer1) = schedule[i];
+				if (Play(a, b, x, y, seed, aIsPlayer1, searchThreads, stop.Token) is not { } game)
+					return;
+				lock (gate)
+				{
+					results[i] = game;
+					if (enough?.Invoke(results) == true)
+					{
+						stop.Cancel();
+						loop.Stop();
+					}
+				}
+			}
+		);
 		return results;
 	}
 
@@ -251,14 +286,16 @@ public static class AiMatch
 	static List<double> PairScores(IEnumerable<Game> games) =>
 		[.. games.GroupBy(g => (g.Deck1, g.Deck2, g.Seed)).Select(p => p.Average(Result.ScoreOfA))];
 
-	static Game Play(
+	/// <summary>One game; null if <paramref name="stop"/> is cancelled before it ends.</summary>
+	static Game? Play(
 		string a,
 		string b,
 		string deck1,
 		string deck2,
 		int seed,
 		bool aIsPlayer1,
-		int? searchThreads
+		int? searchThreads,
+		CancellationToken stop
 	)
 	{
 		var s = MagicRules.NewGame(FraDecks.All[deck1], FraDecks.All[deck2], seed);
@@ -284,6 +321,8 @@ public static class AiMatch
 
 		for (var i = 0; i < DecisionLimit && !s.IsOver(); i++)
 		{
+			if (stop.IsCancellationRequested)
+				return null;
 			s = s.AutoPass();
 			if (s.IsOver())
 				break;

@@ -395,3 +395,32 @@ oracle's answer avoids, are counted apart. Release, 16 cores:
 - 180 of the 288 positions are scored for "given up": the rest are decided within four turns.
 - **One decided game swamps the average:** before losses were counted apart, GreedyAi's single walk
   into a loss (−9 000 against an undecided best) read as 49.72 given up a position; it is 2.15.
+
+## The harness proved on AI-3.3 (2026-10-19, AI-6.5)
+
+AI-3.3's question again — does the search lose strength when the libraries it can't know are
+shuffled? — asked at both speeds. Release, 16 logical processors (8 cores), server collector.
+
+| Speed | Command | Answer | Time |
+|---|---|---|---|
+| Quick check | `--suite=beam+shuffle` | 8.3% of decisions changed; agrees with the oracle 81.3% (beam 86.1%) | ~20 s |
+| Overnight | `--match=beam+shuffle,beam --until-clear` | **stopped at 288 games: 130–158, 45.1% ± 1.9pp — WORSE by 5pp or more** (log-likelihood: better −10.59, worse 3.40; decided at ±2.94) | 63 min |
+| AI-3.3, for reference | 156 games, `--sequential` | 72–84, 46.2% ± 2.7pp — "not shown" (1.4 SE) | 97 min |
+
+- **The overnight run settled what AI-3.3 could not:** the same direction, now a verdict. Its first
+  156 games ARE AI-3.3's (seeds 1–13); the next 132 held the same rate.
+- **The quick check pointed the same way in 20 s:** shuffle agrees with the oracle less than beam
+  does. The oracle reads the real libraries, so it favours beam by construction — whether that
+  costs games stays the match's question.
+- **Continuous scheduling changes no verdict:** the batched run and the continuous one both stopped at
+  288 games, 130–158, with the same log-likelihoods. It is judged on whole batches.
+- **Wall clock on this machine drifts ~2× within a day** — `beam` vs `greedy`, 48 games, the
+  committed code: 100 s in AI-6.2, 195 s today. Both 288-game runs took 63 min hours apart, so they
+  don't compare. Back to back, that fixed 48-game run (no batches, but the same in-order scheduler):
+  **159 s, against 195 s with `Parallel.For`'s own chunking** — one sample each.
+- **The cores ran half idle:** 42 min into the continuous run it had used 353 CPU-min, ~8.4 of 16
+  logical processors — so waiting on batches was never the main cost; the rest is AI-7's question.
+- The continuous run's 63 min includes the games still running when the verdict came, played out
+  and dropped (the batched run had none). A verdict now abandons them at their next decision.
+- **The slowest decision of a parallel run is ~35 s** (one thread, no time limit) — beside a mean
+  of ~1.1 s. A lead for AI-7's profile.
