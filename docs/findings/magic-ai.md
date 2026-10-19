@@ -270,3 +270,28 @@ each, `--sequential`, Release, at 74978b0 plus the change; the same seeds as AI-
 - **Decision: `BoardOnly` stays the default** — not stronger by the evidence, and dearer. Re-measured
   with the hand modes and in the final matrix (AI-3.9).
 - Search-vs-search games run longer (23 turns, ~74 decisions a side) than against GreedyAi (~20).
+
+## The libraries shuffled where they can't be known (2026-10-18, AI-3.3)
+
+`beam+shuffle`: the search deciding from `Hidden.Sample` — both libraries reshuffled at its root
+wherever the deciding player can't know a card's place (`Card.KnownTo`, AI-3.2), known cards kept,
+the sample on its own RNG seed — against the search that reads the libraries in their REAL order.
+156 games each, `--sequential`, Release, at 0a09d27 plus the change; the same seeds as AI-2.8.
+
+| Match | Result (1 SE over mirror pairs) | Time per decision: mean / slowest | The shuffling side by its deck (W-L) |
+|---|---|---|---|
+| **beam+shuffle vs beam** | **72–84, 46.2% ± 2.7pp** | 265 ms / 8 790 ms (beam 249 / 6 618) | White-Black 33–19, Red-Green 30–22, Jace 9–43 |
+| **beam+casts+shuffle vs beam+casts** | **69–87, 44.2% ± 2.9pp** | 349 ms / 9 969 ms (beam+casts 323 / 7 989) | White-Black 35–17, Red-Green 26–26, Jace 8–44 |
+| **beam+shuffle vs greedy** | **106–50, 67.9% ± 3.0pp** | 211 ms / 4 168 ms | White-Black 47–5, Red-Green 37–15, Jace 22–30 |
+| beam vs greedy (AI-2.8, for reference) | 111–45, 71.2% ± 3.1pp | 239 ms / 6 238 ms | White-Black 48–4, Red-Green 40–12, Jace 23–29 |
+
+- **Seeing the real library was worth 3–6pp, consistently:** −3.8pp head-to-head with `BoardOnly`
+  (1.4 SE), −5.8pp with the casting opponent (2.0 SE), −3.3pp against GreedyAi beside the baseline.
+  Every comparison points the same way — the price of no longer seeing its own future.
+- **The honest search is still far stronger than GreedyAi:** 67.9%, about six standard errors.
+- **Time: +6–8% head-to-head** — the sample is two library rebuilds per searched decision. The run
+  against GreedyAi was faster than the baseline's (211 against 239 ms); compare within one run.
+- **The Jace deck pays most** (9–43, 8–44 head-to-head): its surveils planned against cards it
+  really knew were coming.
+- **Decision (Shayne, 2026-10-18): the default is chosen at AI-3.9**, once the hand modes exist —
+  `RealOrder` (stronger, cheats) stays the default until then; `ShuffleUnknown` is honest.

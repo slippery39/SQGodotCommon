@@ -20,8 +20,8 @@ namespace MagicCore.Ai;
 /// The simulated opponent is <see cref="Settings.Opponent"/> (story AI-3) — the one place it is decided
 /// is <see cref="OpponentStep"/>, which both the rollouts and the search tree go through.
 ///
-/// ponytail: the libraries are read in their REAL order, so a rollout draws the cards really on top
-/// — the AI sees its own future. AI-3 adds "shuffle what the player can't know" as a second mode.
+/// A rollout draws the cards on top of the library it is given: what the search may know of them is
+/// decided at its root (<see cref="Hidden.Sample"/>) — the real order, or what isn't known shuffled.
 /// </summary>
 public static class Rollout
 {

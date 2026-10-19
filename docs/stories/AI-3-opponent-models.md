@@ -53,6 +53,8 @@ the opponent's real hand cheats. Which is best is a measurement, not a guess.
   model. The hand is a setting of its own, apart from the library's mode, so each is measured alone.
 - 2026-10-17, Shayne: **opponent models first, combat last** — combat is a confound, re-measured in
   the final matrix.
+- 2026-10-18, Shayne: **the library mode's default is chosen at AI-3.9**, with the hand modes in —
+  `RealOrder` (3–6pp stronger, sees the real library) stays the default until then.
 - 2026-10-17 (default, not asked): the casting opponent uses OUR cheap policy, not one of its own —
   symmetric, so a measurement isolates the model. "Our policy" (AI-3.7) swaps our side only.
 
@@ -67,9 +69,10 @@ an enum of one (AI-2.4's review removed two).
       84–72 head-to-head (1.3 SE, not shown stronger), +41% time; `BoardOnly` stays the default (d95b89f)
 - [x] AI-3.2 Engine: who knows what — library positions a player knows, and hand cards the other
       player knows; set by every FRA source, cleared on shuffle. A test per source (an inert
-      primitive throws no error — test the consequence)
-- [ ] AI-3.3 Library: "shuffle what isn't known" — both libraries, at the decision's root; measured
-      with `BoardOnly` and casts-from-hand
+      primitive throws no error — test the consequence) (0a09d27)
+- [x] AI-3.3 Library: "shuffle what isn't known" — both libraries, at the decision's root; measured
+      with `BoardOnly` and casts-from-hand. Costs 3–6pp against the real order (72–84, 69–87), +6–8%
+      time; still 106–50 against GreedyAi. The default is chosen at AI-3.9
 - [ ] AI-3.4 Hand: shuffled from its own unseen cards — the hand setting's second value; measured
 - [ ] AI-3.5 Hand: guessed from a deck model — the third value; measured
 - [ ] AI-3.6 Full responses: the opponent acts at instant speed inside our turn when it scores
@@ -81,9 +84,20 @@ an enum of one (AI-2.4's review removed two).
 
 ## Next
 
-**AI-3.2 done; next is AI-3.3** — "shuffle what isn't known" at the decision's root, reading
-`Card.KnownTo` (the rule is in `.claude/rules/magic-mechanics.md`; tests in
-`MagicCore.Tests/Sets/FraKnowledgeTests.cs`). Known gaps, each small: Theorist's Sanctum's behold
+**Paused 2026-10-18 (Shayne): the measurement runs take too long** — a head-to-head is 1.5–2 h,
+and each model needs two or three. Before resuming, settle how to measure faster (fewer games per
+step? a cheaper search setting for A/B runs? parallel games for strength, a short sequential run
+for time?). **AI-3.3 done.** `RealOrder` stays the default until AI-3.9 chooses (decided 2026-10-18).
+Deferred from AI-3.3's review: `Hidden.ShuffleUnknown` is a third copy of "out and back in" (with
+`Shuffle` and Identity Echo — one `ReorderLibrary` helper would do), and it rebuilds both libraries
+at every searched decision even when nothing can move (part of the +6–8% time).
+Next task when resumed: AI-3.4, the opponent's hand shuffled from its own unseen cards — extend `Hidden.Sample`
+(`MagicCore/Ai/Hidden.cs`) with a hand setting: the opponent's hand cards I don't know
+(`KnownTo & Opponent`) drawn from the pool of those plus its library's unknown ones. Long runs:
+search-vs-search with the casting opponent takes ~2 h — start the chain detached
+(`Start-Process pwsh -File …`) and wait on a progress file; a background command stops at 2 h.
+AI-3.2's notes, still true: who knows a card is `Card.KnownTo` (the rule is in
+`.claude/rules/magic-mechanics.md`; tests in `MagicCore.Tests/Sets/FraKnowledgeTests.cs`). Known gaps, each small: Theorist's Sanctum's behold
 (a condition as the land enters) reveals nothing; Identity Echo's revealed bottom is NOT known (its
 order is random), so it is shuffled with the rest; Pia's and Fblthp's `Reveal` have no test of their
 own (landcycling's and Loyal Tutor's do). **For AI-3.4:** `MoveKey` groups hand cards by name, so a
@@ -136,3 +150,19 @@ Traps:
   the whole library's real order; the behold test called `Pay` directly (now a real Countersculpt
   cast); a shuffle's extra pass and no-op updates gone. Thirteen tests in `FraKnowledgeTests`, ten
   rules each revert-checked. MagicCore.Tests 940 green.
+- 2026-10-18: AI-3.3 — `Hidden.Library` (`RealOrder` default, `ShuffleUnknown`) on
+  `BeamSearchAi.Settings`; `Hidden.Sample` builds the position the search decides from at its root:
+  both libraries reshuffled where the decider can't know a card's place (its own: `KnownTo & Owner`;
+  theirs: `& Opponent`), from a seed of the state's, and the sample gets its own RNG seed so a
+  rollout's shuffle can't predict the real one. Left alone while a choice offers library cards of
+  unknown place (a search lists the first copy per name). `--match` combines models:
+  `beam+casts+shuffle`. Seven tests in `HiddenTests` — one plays the same seeded game in both modes
+  and requires them to differ — five rules revert-checked. Measured (findings): **72–84 vs beam
+  (46.2% ± 2.7pp), 69–87 with the casting opponent (44.2% ± 2.9pp), 106–50 vs GreedyAi (67.9%)**;
+  +6–8% time. MagicCore.Tests 947 green.
+- 2026-10-18: /pre-commit fixes to AI-3.3 — the choice guard now compares the sample's offered ids
+  with the real choice's (it checked library cards only, so a known card mid-library, or a number
+  equal to a card's id, slipped past); the "same sample all turn" comment was untrue (marked
+  `ponytail:`); `beam-casts` throws if its model is renamed; a test half that could not fail is gone;
+  the MagicCore map, its MoveObject rule and DesignNotes' real-order ceiling brought up to date.
+- 2026-10-18: paused by Shayne after AI-3.3 — the runs take too long; pivoting to other work.

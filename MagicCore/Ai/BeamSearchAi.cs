@@ -44,6 +44,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// ponytail: the root level always completes — 16 root moves measured at 1.1–2.2 s; skip root
 	/// rollouts past the limit (scoring them by the cheap evaluation) if that ever shows on the table.
 	/// </param>
+	/// <param name="Library">What the search may know of the libraries — <see cref="Hidden.Library"/> (story AI-3).</param>
 	public sealed record Settings(
 		int Depth = 3,
 		int BeamWidth = 4,
@@ -54,7 +55,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		bool CommitPlans = true,
 		double DivergenceThreshold = 5.0,
 		Rollout.Settings? RolloutSettings = null,
-		TimeSpan? TimeLimit = null
+		TimeSpan? TimeLimit = null,
+		Hidden.Library Library = Hidden.Library.RealOrder
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -150,8 +152,10 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		};
 	}
 
+	/// <summary>The search, on the position <see cref="Hidden.Sample"/> lets it know; Decide plays the answer in the real game.</summary>
 	Decision Search(GameState s)
 	{
+		s = Hidden.Sample(s, PlayerId, options.Library);
 		(plan, planExpected, rollouts) = ([], [], 0);
 		var clock = Stopwatch.StartNew();
 		var rootTurn = s.GetGame().TurnNumber;

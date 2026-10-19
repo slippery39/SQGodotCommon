@@ -80,6 +80,8 @@ MagicCore/
 ├── Ai/BeamSearchAi.cs   the search AI: a beam over our decisions this turn, rollout-scored, plan committed;
 │                        held cards priced by their measured value by default (AI-1); Settings.Interactive
 │                        is the ~1 s wall-clock cap for the table and console — never in a sim run
+├── Ai/Hidden.cs         what the search may know of the libraries: the real order, or what isn't known
+│                        (Card.KnownTo) shuffled at its root — Hidden.Sample (story AI-3)
 ├── Ai/CardValues.cs     the card-value sandbox: each card cast into a fixed board, measured to the turn's end
 ├── Zones/Zone.cs        per-player zones (incl. Command: emblems, "until your next turn" and "this turn" effects) + shared Stack; per-CONTROLLER battlefield
 ├── Sets/FRA.values.json GENERATED card values (CardValues; MagicConsole --card-values) — embedded, a test fails while stale
@@ -102,8 +104,8 @@ else pick from `LegalActions` and `Act` — until `IsOver`.
 - **Child index 0 is the TOP** of the library and of the stack; `MoveObject` appends (= bottom).
 - **Every zone change goes through `MagicState.MoveCard`** (or `EnterBattlefield`), which calls
   `Card.Fresh()` — CR 400.7. Damage, tapped, counters, until-end-of-turn effects, combat state and
-  stack choices die there. Only `Shuffle` and `RevealUntilOntoBattlefield` use `MoveObject`, to
-  reorder within one zone.
+  stack choices die there. Only `Shuffle`, `RevealUntilOntoBattlefield` and the AI's `Hidden.Sample`
+  use `MoveObject`, to reorder within one zone (`MoveCard` would reset `KnownTo`).
 - **One computation each, never a second copy:** `s.Power(card)`/`s.Toughness`/`s.Has` (Rules/
   Characteristics.cs — the card's own numbers plus every static ability on the battlefield; rules
   never read `Card.OwnPower`/`HasOwn` or `BasePower`, which ignore every anthem on the board),

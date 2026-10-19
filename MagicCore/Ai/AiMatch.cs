@@ -29,30 +29,48 @@ public static class AiMatch
 			// The search before held values, for A/B runs.
 			["beam-plain"] = (player, _) =>
 				new BeamSearchAi(player, new BeamSearchAi.Settings().WithoutHeld()),
-			// The search whose simulated opponent casts from its real hand (AI-3.1).
-			["beam-casts"] = (player, _) =>
-				new BeamSearchAi(
-					player,
-					new BeamSearchAi.Settings(
-						RolloutSettings: BeamSearchAi.DefaultRollout with
-						{
-							Opponent = Rollout.OpponentModel.CastsFromHand,
-						}
-					)
-				),
+			// The search whose simulated opponent casts from its real hand (AI-3.1) — beam+casts.
+			["beam-casts"] = (player, seed) => Create("beam+casts", player, seed), // throws if renamed
 		};
+
+	/// <summary>
+	/// "beam+casts+shuffle": the search with each named simulation model switched on (story AI-3) —
+	/// the one list, so a combination needs no name of its own.
+	/// </summary>
+	static readonly Dictionary<string, Func<BeamSearchAi.Settings, BeamSearchAi.Settings>> Models =
+		new()
+		{
+			["casts"] = o =>
+				o with
+				{
+					RolloutSettings = (o.RolloutSettings ?? BeamSearchAi.DefaultRollout) with
+					{
+						Opponent = Rollout.OpponentModel.CastsFromHand,
+					},
+				},
+			["shuffle"] = o => o with { Library = Hidden.Library.ShuffleUnknown },
+		};
+
+	static BeamSearchAi.Settings? Combined(string name) =>
+		name.Split('+') is ["beam", .. var models]
+		&& models.Length > 0
+		&& models.All(Models.ContainsKey)
+			? models.Aggregate(new BeamSearchAi.Settings(), (o, m) => Models[m](o))
+			: null;
 
 	/// <summary>The fixed names; beside them, "beam-held=0.25" is the search at that held fraction.</summary>
 	public static IReadOnlyCollection<string> Names => Makers.Keys;
 
 	/// <summary>What --match accepts, for a usage line.</summary>
-	public static string Usage => $"{string.Join(", ", Names)}, or beam-held=<fraction>";
+	public static string Usage =>
+		$"{string.Join(", ", Names)}, beam-held=<fraction>, or beam+<model>[+<model>…] ({string.Join(", ", Models.Keys)})";
 
 	public static bool IsKnown(string name) =>
-		Makers.ContainsKey(name) || HeldFraction(name) is not null;
+		Makers.ContainsKey(name) || HeldFraction(name) is not null || Combined(name) is not null;
 
 	public static IAi Create(string name, int playerId, int seed) =>
 		Makers.TryGetValue(name, out var make) ? make(playerId, seed)
+		: Combined(name) is { } combined ? new BeamSearchAi(playerId, combined)
 		: HeldFraction(name) is { } fraction
 			? new BeamSearchAi(playerId, new BeamSearchAi.Settings().WithHeld(fraction))
 		: throw new ArgumentException($"Unknown AI '{name}' — known: {Usage}");
