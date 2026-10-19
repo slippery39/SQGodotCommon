@@ -45,7 +45,7 @@ Open questions:
       detail first; the shared engine asked again if allocation leads there
 - [x] AI-7.3a The board cache: one entry per thread, not a global weak table — suite 21.0 → 14.6 s
 - [x] AI-7.3b The server collector for the table: `Run-Godot.ps1` and the Godot csproj
-- [ ] AI-7.3c Allocation — next: `Characteristics` and `Card` reads (LINQ over `ImmutableArray`)
+- [x] AI-7.3c Allocation: power, toughness and keywords as plain loops — 36.3 → 17.9 GB over AI-7
 - [x] AI-7.3d The turn structure: trigger collection returns at once with no staged event (d1);
       `CardsIn` one iterator with cached zone keys (d2a); the check reads the battlefield once (d2b)
 - [ ] AI-7.3e Attack/block judging: reuse the score of the line the previous creature's judgment
@@ -65,27 +65,27 @@ what it saved — it may fall (fewer simulated steps), which is not a changed de
    `IsServerGC` True through it, and the caller's shell is left as it was) and the Godot csproj sets
    it for exported builds — UNVERIFIED: there is no Windows export preset, only Android's (Mono,
    which likely ignores it). F5 from the editor still gets neither (Commands.md says so).
-
 3. **The turn structure** (7.3d) — trigger collection returns at once with no staged event (62% of
    calls); `CardsIn` is one iterator and zone keys are built once; the state-based check reads each
    battlefield once. Allocation 36.4 → 21.0 GB over the suite, 0 changed (findings, "Decision-neutral
    speedups").
 
-1–3 are UNCOMMITTED in the working tree with the profile, awaiting Shayne's go to commit.
+4. **Allocation** (7.3c) — `Characteristics` (`Power`, `Toughness`, `Has`) and `Card` (`HasOwn`,
+   `OwnPower`/`OwnToughness`, `CurrentBase`) as plain loops: 21.0 → 17.9 GB, 0 changed.
 
-**Discussed with Shayne and agreed (2026-10-19): d1 → d2 → re-measure → 7.3c → 7.3e.** Next, 7.3c:
-`Card.HasOwn`/`OwnToughness`/`CurrentBase` and `Characteristics.Statics` allocate on every read
-(LINQ over `ImmutableArray` boxes it; `Has` builds a context and P/T values it never reads) —
-`IsIndestructible` 736 B a call. Plain loops over `Components`, one computation each still. Then
-7.3e: when creature k is judged, the option QuickAnswer would give it replays the line creature k−1's
+1–3 are committed (8e7b58c); 4 is UNCOMMITTED.
+
+**Discussed with Shayne and agreed (2026-10-19): d1 → d2 → re-measure → 7.3c → 7.3e.** Next, 7.3e:
+when creature k is judged, the option QuickAnswer would give it replays the line creature k−1's
 chosen option already settled — reuse that score (keep the previous judgment's state and score in
 the rollout); exactly equal, since the same state and computation give the same number. The cost
 count falls with it (fewer settle steps); "0 changed" is the test.
 
 Measured and NOT kept: `GivePriority` handing the check the same state when nothing is staged (so
-the board cache hits) — 21.0 → 20.9 GB, no CPU change; a board is cheap to rebuild. A candidate for
-later: `ZoneId` still goes through a string key, a tuple-keyed cache and a string-keyed dictionary
-for an id fixed all game (ids on `MagicPlayer`, or a per-game array).
+the board cache hits) — 21.0 → 20.9 GB, no CPU change; a board is cheap to rebuild. Candidates for
+later: `LegalActions` (12 KB a call now, the largest single allocator: every candidate through
+`ValidateAdd`'s payment search — legality's one place, so discuss first); `ZoneId` still goes
+through a string key, a tuple-keyed cache and a string-keyed dictionary for an id fixed all game (ids on `MagicPlayer`, or a per-game array).
 
 **To measure a change:** the A/B script approach — the suite without the change, then with it,
 minutes apart, both collectors (`DOTNET_gcServer=1`/`0`), with the collector's counters printed at
@@ -123,4 +123,11 @@ card data won't load —, `#:property TieredCompilation=false`), run from the so
   legend grouping only with two legends or more. Each 0 changed on the suite, cost count identical;
   allocation 36.4 → 27.0 → 24.0 → 21.0 GB (findings). 975 tests; revert-checked (lethal off by one:
   120 fail; no token sweep: 158).
-
+- 2026-10-19: AI-7.3c — `Characteristics.Power`/`Toughness` sum the applying statics directly, `Has`
+  compares the keyword before asking if a static applies (and computes no P/T a keyword question
+  never reads); `Card.HasOwn`, `OwnPower`/`OwnToughness`, `CurrentBase` loop over `Components` (LINQ
+  boxed the ImmutableArray). 0 changed; 21.0 → 17.9 GB; `IsIndestructible` 736 → 0 B a call. The
+  evaluator as loops measured too (18.0 → 17.7 GB) and not kept; so was building each P/T static's
+  context once per board (worse: 18.1 GB). `HotPathAllocationTests`: reading a creature allocates
+  nothing (LINQ `HasOwn` back: 20 000 B over 100 reads, fails). 976 tests; revert-checked (no
+  keyword granted: 95 fail; first base P/T, not latest: 1).

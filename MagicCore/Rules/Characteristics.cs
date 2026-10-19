@@ -20,18 +20,15 @@ namespace MagicCore;
 public static class Characteristics
 {
 	public static int Power(this GameState s, Card card) =>
-		card.OwnPower + Statics(s, BoardOf(s), card, ptOnly: true).Sum(a => a.Power);
+		card.OwnPower + StaticPT(s, card, power: true);
 
 	public static int Toughness(this GameState s, Card card) =>
-		card.OwnToughness + Statics(s, BoardOf(s), card, ptOnly: true).Sum(a => a.Toughness);
+		card.OwnToughness + StaticPT(s, card, power: false);
 
 	public static bool Has(this GameState s, Card card, string keyword)
 	{
 		var board = BoardOf(s);
-		return (
-				card.HasOwn(keyword)
-				|| Statics(s, board, card, ptOnly: false).Any(a => a.Keyword == keyword)
-			) && !Lost(board, card); // asked last: it's rarely true and this sits under the AI
+		return (card.HasOwn(keyword) || Grants(s, board, card, keyword)) && !Lost(board, card); // asked last: it's rarely true and this sits under the AI
 	}
 
 	/// <summary>
@@ -73,8 +70,6 @@ public static class Characteristics
 	/// </summary>
 	public static bool IsIndestructible(this GameState s, Card card) =>
 		s.Has(card, "Indestructible");
-
-	record Applied(int Power, int Toughness, string? Keyword);
 
 	/// <summary>
 	/// What the battlefield says, found once per (immutable) state — this sits under the AI's
@@ -128,34 +123,43 @@ public static class Characteristics
 		};
 	}
 
+	// The statics below are plain loops, no iterator or LINQ: every rule and every simulated step reads
+	// power, toughness and keywords (story AI-7.3c — `IsIndestructible` allocated 736 B a call).
+
 	/// <summary>Statics apply to permanents on the battlefield — not to a card in hand or a dead card's last-known copy.</summary>
-	static IEnumerable<Applied> Statics(GameState s, Board board, Card card, bool ptOnly)
+	static bool OnTheBattlefieldNow(GameState s, Board board, Card card) =>
+		board.Statics.Length > 0
+		&& s.IsOnBattlefield(card.Id)
+		&& s.GetCard(card.Id).Incarnation == card.Incarnation;
+
+	/// <summary>What the statics that apply add to its power (or toughness).</summary>
+	static int StaticPT(GameState s, Card card, bool power)
 	{
-		var all = board.Statics;
-		if (
-			all.Length == 0
-			|| !s.IsOnBattlefield(card.Id)
-			|| s.GetCard(card.Id).Incarnation != card.Incarnation
-		)
-			yield break;
-		foreach (var (source, effect) in all)
-		{
-			// A P/T pass reads only statics that change P/T; a keyword pass only those that grant one.
-			var relevant = ptOnly ? effect.ChangesPowerOrToughness : effect.Keyword is not null;
-			if (!relevant)
-				continue;
-			if (!AppliesTo(s, source, effect, card))
-				continue;
-			var context = ImmutableDictionary<string, object>
-				.Empty.Add(ContextKeys.Controller, source.ControllerId)
-				.Add(ContextKeys.Source, source.Id);
-			yield return new(
-				effect.Power.Value(s, context),
-				effect.Toughness.Value(s, context),
-				effect.Keyword
-			);
-		}
+		var board = BoardOf(s);
+		if (!OnTheBattlefieldNow(s, board, card))
+			return 0;
+		var sum = 0;
+		foreach (var (source, effect) in board.Statics)
+			if (effect.ChangesPowerOrToughness && AppliesTo(s, source, effect, card))
+				sum += (power ? effect.Power : effect.Toughness).Value(s, ContextOf(source));
+		return sum;
 	}
+
+	/// <summary>Whether a static that applies grants it <paramref name="keyword"/>.</summary>
+	static bool Grants(GameState s, Board board, Card card, string keyword)
+	{
+		if (!OnTheBattlefieldNow(s, board, card))
+			return false;
+		foreach (var (source, effect) in board.Statics)
+			if (effect.Keyword == keyword && AppliesTo(s, source, effect, card))
+				return true;
+		return false;
+	}
+
+	static ImmutableDictionary<string, object> ContextOf(Card source) =>
+		ImmutableDictionary<string, object>
+			.Empty.Add(ContextKeys.Controller, source.ControllerId)
+			.Add(ContextKeys.Source, source.Id);
 
 	/// <summary>
 	/// A keyword static's scope may read real power and toughness (CR 613) — Tetsuko — because the

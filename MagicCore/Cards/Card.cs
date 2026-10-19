@@ -82,16 +82,36 @@ public record Card : GameObject
 		(CurrentBase?.Power ?? BasePower)
 		+ PlusOneCounters
 		- MinusOneCounters
-		+ Components.OfType<UntilEndOfTurn>().Sum(u => u.Power);
+		+ Pumped(power: true);
 	public int OwnToughness =>
 		(CurrentBase?.Toughness ?? BaseToughness)
 		+ PlusOneCounters
 		- MinusOneCounters
-		+ Components.OfType<UntilEndOfTurn>().Sum(u => u.Toughness);
+		+ Pumped(power: false);
+
+	// Loops, not LINQ, here and in HasOwn: LINQ boxes the ImmutableArray, and these are read at every
+	// step the search simulates (story AI-7.3c).
+	int Pumped(bool power)
+	{
+		var sum = 0;
+		foreach (var component in Components)
+			if (component is UntilEndOfTurn u)
+				sum += power ? u.Power : u.Toughness;
+		return sum;
+	}
 
 	/// <summary>The latest "has base power and toughness P/T" effect, if any (CR 613.4b, timestamp order).</summary>
-	(int Power, int Toughness)? CurrentBase =>
-		Components.OfType<UntilEndOfTurn>().LastOrDefault(u => u.SetBase is not null)?.SetBase;
+	(int Power, int Toughness)? CurrentBase
+	{
+		get
+		{
+			(int, int)? latest = null;
+			foreach (var component in Components)
+				if (component is UntilEndOfTurn { SetBase: { } set })
+					latest = set;
+			return latest;
+		}
+	}
 
 	/// <summary>
 	/// Who knows this card while it is in a library or a hand — in a library, who knows its POSITION;
@@ -302,9 +322,15 @@ public record Card : GameObject
 			: this;
 
 	/// <summary>Printed keywords plus any granted until end of turn.</summary>
-	public bool HasOwn(string keyword) =>
-		Keywords.Contains(keyword)
-		|| Components.Any(c => c is UntilEndOfTurn u && u.Keyword == keyword);
+	public bool HasOwn(string keyword)
+	{
+		if (Keywords.Contains(keyword))
+			return true;
+		foreach (var component in Components)
+			if (component is UntilEndOfTurn u && u.Keyword == keyword)
+				return true;
+		return false;
+	}
 
 	public bool Is(CardType type) => (Types & type) != 0;
 

@@ -499,8 +499,9 @@ the pairs compare**. Allocated bytes barely move from run to run; they are the s
 | 7.3d-1 trigger collection returns at once with no staged event | 36.4 → **27.0 GB** | 119 → 97 s / 118 → 100 s | 26.4 → 17.7 s / 31.1 → 24.3 s |
 | 7.3d-2a `CardsIn` one iterator; zone keys built once | 27.0 → **24.0 GB** | 94 → 84 s / 89 → 75 s | 23.9 → 14.1 s / 21.5 → 18.4 s |
 | 7.3d-2b the state-based check: one battlefield read, plain loops | 23.8 → **21.0 GB** | 74 → 72 s / 73 → 70 s | 15.4 → 13.9 s / 17.0 → 17.3 s |
+| 7.3c power, toughness and keywords as plain loops (`Characteristics`, `Card`) | 21.0 → **17.9 GB** | 73 → 71 s / 75 → 62 s | 16.1 → 16.6 s / 19.4 → 16.4 s |
 
-- **Allocation 36.3 → 21.0 GB (−42%)** over the four. One priority pass on the turn-9 probe position:
+- **Allocation 36.3 → 17.9 GB (−51%)** over the five. One priority pass on the turn-9 probe position:
   31.8 → 17.9 KB after 7.3d-1 alone.
 - **Every `CardsIn` built a new key string, `$"{playerId}.{type}"`, formatting the enum each time**
   — likely the enum-reflection lines in the first profile (`InitializeEnumInfo`, the runtime's type
@@ -509,4 +510,17 @@ the pairs compare**. Allocated bytes barely move from run to run; they are the s
   call, `Toughness` 288 B — LINQ over `ImmutableArray` components (each boxes the array) and the
   statics iterator. That is 7.3c.
 - Revert-checked: lethal damage off by one fails 120 tests; a token sweep that removes nothing, 158.
+- **After 7.3c, on the probe position:** a priority pass 31.8 → 8.0 KB, `Evaluate` 21 → 3.1 KB,
+  `Toughness` and `IsIndestructible` 0 B (were 288 and 736 — on a board with no P/T statics: an
+  applying one still builds its context per read), a 193-step rollout 8.1 → 3.6 MB.
+  `LegalActions` is now the largest single allocator (12 KB): every candidate — targets, modes, X —
+  through `ValidateAdd`'s payment search.
+- **Measured and not kept** (no gain worth the diff): the evaluator as plain loops after 7.3c
+  (18.0 → 17.7 GB, CPU unchanged — its allocation had been the characteristic reads); handing the
+  check the same state when nothing is staged, so the board cache hits (21.0 → 20.9 GB); each P/T
+  static's context built once with its board instead of per read — WORSE, 17.9 → 18.1 GB: every new
+  state builds a board, and on these decks few of them are asked a P/T static's value.
+- 7.3c revert-checked: a static that grants no keyword fails 95 tests; base P/T from the first
+  effect instead of the latest, 1. `HotPathAllocationTests` guards the allocation itself: `HasOwn`
+  written back as LINQ allocates 200 B a read and fails it.
 
