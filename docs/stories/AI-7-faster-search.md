@@ -1,7 +1,7 @@
 ---
 id: AI-7
 title: A faster search — profiled, then optimised without changing a decision
-status: in-progress
+status: done
 area: AI
 created: 2026-10-19
 ---
@@ -18,10 +18,10 @@ search shortens AI-6's runs and the table's thinking alike. Taken up together wi
 
 - [x] Profiled first: where a decision's time goes — engine, rollout policy, evaluator, allocation —
       recorded in `docs/findings/magic-ai.md`, using AI-6's cost count
-- [ ] **A pure optimisation changes no decision** — AI-6's position suite shows zero changed
+- [x] **A pure optimisation changes no decision** — AI-6's position suite shows zero changed
       decisions against the committed AI (and `GoldenAiReplay` for GreedyAi); anything that does
       change one is a behaviour change, measured like one
-- [ ] Each optimisation reports its speedup by the cost count and by wall clock
+- [x] Each optimisation reports its speedup by the cost count and by wall clock
 
 ## Decisions
 
@@ -34,8 +34,10 @@ search shortens AI-6's runs and the table's thinking alike. Taken up together wi
 - 2026-10-19, Shayne: **the table gets the server collector both ways** — `DOTNET_gcServer=1` in
   `Run-Godot.ps1` and `<ServerGarbageCollection>` in the Godot csproj (exported builds).
 
-Open questions:
-- Whether the shared ImmutableGameObjects engine is in (asked again if allocation leads there).
+- 2026-10-19, Shayne: **7.3e skipped, AI-7 closed** — measured, the attack/block reuse would skip
+  16% of combat simulations (~6–7% of the search) for real complexity in its most delicate path. It,
+  `LegalActions` and `ZoneId` are costed in DesignNotes.md ("MagicCore search: speedups not taken").
+  The shared engine stayed out: nothing measured led there.
 
 ## Tasks
 
@@ -48,58 +50,30 @@ Open questions:
 - [x] AI-7.3c Allocation: power, toughness and keywords as plain loops — 36.3 → 17.9 GB over AI-7
 - [x] AI-7.3d The turn structure: trigger collection returns at once with no staged event (d1);
       `CardsIn` one iterator with cached zone keys (d2a); the check reads the battlefield once (d2b)
-- [ ] AI-7.3e Attack/block judging: reuse the score of the line the previous creature's judgment
-      already played (its "don't" / cheap answer)
+- [ ] ~~AI-7.3e Attack/block judging: reuse the score of the line the previous creature's judgment
+      already played~~ — skipped (Shayne): 16% of combat simulations, ~6–7% of the search
 
 Each AI-7.3 task is proven decision-neutral by the position suite (0 changed); the cost count says
 what it saved — it may fall (fewer simulated steps), which is not a changed decision.
 
 ## Next
 
-**AI-7.1 done; AI-7.2 chosen** from the profile (findings, "Where a decision's time goes"):
+**Done (2026-10-19).** The search is profiled and three times leaner: allocation over the position
+suite 36.3 → 17.9 GB, the table's case (workstation collector) 56 → ~17 s, 0 decisions changed at
+every step (findings, "Where a decision's time goes" and "Decision-neutral speedups"). The table gets
+the server collector through `Run-Godot.ps1` (F5 from the editor does not; Commands.md).
 
-1. **The board cache** (7.3a) — `Characteristics.BoardOf`'s global `ConditionalWeakTable` replaced by one
-   entry per thread: proven neutral (`--suite=beam` 0 changed, cost count identical, 975 tests; a
-   stale cache fails 122). Suite 21.0 → 14.6 s; on the table's collector 56.3 → 22.0 s.
-2. **Server GC for the table** (7.3b) — `Run-Godot.ps1` sets `DOTNET_gcServer=1` (checked: the table prints
-   `IsServerGC` True through it, and the caller's shell is left as it was) and the Godot csproj sets
-   it for exported builds — UNVERIFIED: there is no Windows export preset, only Android's (Mono,
-   which likely ignores it). F5 from the editor still gets neither (Commands.md says so).
-3. **The turn structure** (7.3d) — trigger collection returns at once with no staged event (62% of
-   calls); `CardsIn` is one iterator and zone keys are built once; the state-based check reads each
-   battlefield once. Allocation 36.4 → 21.0 GB over the suite, 0 changed (findings, "Decision-neutral
-   speedups").
+Not taken, costed in DesignNotes.md ("MagicCore search: speedups not taken"): attack/block score
+reuse (7.3e), `LegalActions` (the largest allocator left), `ZoneId`'s string keys.
 
-4. **Allocation** (7.3c) — `Characteristics` (`Power`, `Toughness`, `Has`) and `Card` (`HasOwn`,
-   `OwnPower`/`OwnToughness`, `CurrentBase`) as plain loops: 21.0 → 17.9 GB, 0 changed.
-
-1–3 are committed (8e7b58c); 4 is UNCOMMITTED.
-
-**Discussed with Shayne and agreed (2026-10-19): d1 → d2 → re-measure → 7.3c → 7.3e.** Next, 7.3e:
-when creature k is judged, the option QuickAnswer would give it replays the line creature k−1's
-chosen option already settled — reuse that score (keep the previous judgment's state and score in
-the rollout); exactly equal, since the same state and computation give the same number. The cost
-count falls with it (fewer settle steps); "0 changed" is the test.
-
-Measured and NOT kept: `GivePriority` handing the check the same state when nothing is staged (so
-the board cache hits) — 21.0 → 20.9 GB, no CPU change; a board is cheap to rebuild. Candidates for
-later: `LegalActions` (12 KB a call now, the largest single allocator: every candidate through
-`ValidateAdd`'s payment search — legality's one place, so discuss first); `ZoneId` still goes
-through a string key, a tuple-keyed cache and a string-keyed dictionary for an id fixed all game (ids on `MagicPlayer`, or a per-game array).
-
-**To measure a change:** the A/B script approach — the suite without the change, then with it,
-minutes apart, both collectors (`DOTNET_gcServer=1`/`0`), with the collector's counters printed at
-exit by a temporary line in MagicConsole/Program.cs (`GC.GetTotalAllocatedBytes`,
-`GC.GetTotalPauseDuration`, CPU time); allocated bytes are the steady measure.
-
-Also open: whether the shared ImmutableGameObjects engine is in (Decisions) — nothing measured so far
-points there; the allocation (7.3c) is the question that might.
-
-**Measuring, learned in 7.1:** read the collector's own counters (`GC.GetTotalPauseDuration`,
-`GC.GetTotalAllocatedBytes`) beside the suite; `dotnet-trace`'s thread-time samples end in a false
-`PollGC` leaf (read callers, not leaves); time single operations with tiered compilation off. The
-probe used was a .NET 10 file-based app (`#:project MagicCore`, `#:property PublishAot=false` — or
-card data won't load —, `#:property TieredCompilation=false`), run from the solution root.
+**For any later optimisation:** `--suite=beam` must show 0 changed; measure it against the tree
+without it, minutes apart, on both collectors (`DOTNET_gcServer=1`/`0`), with the collector's
+counters (`GC.GetTotalAllocatedBytes`, `GC.GetTotalPauseDuration`, CPU time) printed at exit by a
+temporary line in MagicConsole/Program.cs — this machine's speed drifts ~2× in a day, so only pairs
+compare, and allocated bytes are the steady measure. Time single operations with a .NET 10
+file-based app (`#:project MagicCore`, `#:property PublishAot=false`, `#:property
+TieredCompilation=false`) run from the solution root. `dotnet-trace`'s thread-time samples end in a
+false `PollGC` leaf: read callers, not leaves. `HotPathAllocationTests` guards the characteristic reads.
 
 ## Log
 
@@ -131,3 +105,7 @@ card data won't load —, `#:property TieredCompilation=false`), run from the so
   context once per board (worse: 18.1 GB). `HotPathAllocationTests`: reading a creature allocates
   nothing (LINQ `HasOwn` back: 20 000 B over 100 reads, fails). 976 tests; revert-checked (no
   keyword granted: 95 fail; first base P/T, not latest: 1).
+- 2026-10-19: AI-7.3e measured before building: rollouts made 18 155 combat judgments over 45 698
+  options; 7 520 follow another of the same kind by the same player — each would skip one combat
+  simulation, 16% of them. Shayne: skip it; AI-7 closed. Deferred candidates in DesignNotes.md.
+

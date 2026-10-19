@@ -523,4 +523,8 @@ the pairs compare**. Allocated bytes barely move from run to run; they are the s
 - 7.3c revert-checked: a static that grants no keyword fails 95 tests; base P/T from the first
   effect instead of the latest, 1. `HotPathAllocationTests` guards the allocation itself: `HasOwn`
   written back as LINQ allocates 200 B a read and fails it.
+- **Attack/block score reuse (7.3e), counted before building:** rollouts made 18 155 combat
+  judgments over 45 698 options (each a whole combat played forward); 7 520 judgments directly follow
+  another of the same kind by the same player, where one option's line is the one the previous
+  judgment already scored — 16% of the simulations, ~6–7% of the search at 41%. Not built.
 

@@ -1129,6 +1129,25 @@ in the code with its upgrade path; revisit when a card or the AI needs it.
 - the search runs on the table's main thread, so the window does not redraw while it thinks (the slowest `StepAi` measured 1.1 s); move `Decide` to a worker and apply on the main thread if a playtest calls it a freeze. Undo rebuilds the AIs (the search commits to a plan that an undo would put out of step)
 - the search AI (`Ai/BeamSearchAi.cs`) never responds to its OWN object on top of the stack — in its tree or for real — so a line that protects its spell with a second one is never found; branch that window if a deck needs it
 
+## MagicCore search: speedups not taken (AI-7, 2026-10-19)
+
+AI-7 cut the search's allocation in half with no decision changed (`docs/findings/magic-ai.md`,
+"Decision-neutral speedups"). Three measured candidates were left, each costed:
+
+- **Attack/block score reuse** — when creature k's attack (or block) is judged, the option
+  `QuickAnswer` would give it replays the line creature k−1's chosen option already scored, so its
+  score is known. Measured: 16% of combat simulations, ~6–7% of the search. Cost: `Rollout.Answer`
+  returns its chosen child state and best score; `Rollout.Score` and the opponent's step carry the
+  previous judgment, matched by reference; `Settle`'s 200-step cap is met a step apart on the two
+  paths (a ponytail). Take it if combat judging grows (more creatures, AI-3's attack models).
+- **`LegalActions`** — the largest single allocator left (12 KB a call): every candidate (targets,
+  modes, X) through `ValidateAdd`'s payment search. Legality's one place (MagicCore's first rule), so
+  a cheaper generator must not decide legality itself. Look first at how many candidates fail
+  validation, and at the payment search's allocation.
+- **`ZoneId`** — still a cached string key, a tuple-keyed lookup and a string-keyed dictionary for an
+  id fixed all game. Ids on `MagicPlayer` (or a per-game array) would make it a field read; ~0.1 µs a
+  call, under every `CardsIn`.
+
 ## MagicTable does not use Common's Card2D or drag-to-play (deferred)
 
 Shayne, 2026-10-09: the MagicTable front end (`SQGodotCommon/MagicTable/`) draws every card as
