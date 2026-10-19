@@ -28,15 +28,15 @@ the opponent's real hand cheats. Which is best is a measurement, not a guess.
     search root, from the state's seeded RNG); its own deck list is the guess
   - guessed from a deck model — sampled from what its deck COULD hold, never from its real cards
     (honest even in limited, where the opponent's pool is not known)
-- [ ] Each measured: head-to-head against the others and against `GreedyAi`, AND time per decision —
-      recorded side by side in `docs/findings/magic-ai.md`
+- [ ] Each measured: head-to-head against the others and against `GreedyAi`, AND its cost (AI-6's
+      count: engine steps and rollouts per decision) — recorded side by side in `docs/findings/magic-ai.md`
 - [ ] Our own side's rollout policy is swappable through the same seam (cheap greedy vs `GreedyAi`)
 - [ ] Hidden information in the library has a second mode beside AI-2's "real order": **shuffle only
       what isn't known**. Needs the engine to record which library positions a player knows — surveil
       keeps, "put on the top / bottom" (Loyal Tutor, Paradox Shaper, Identity Echo's bottom), mulligan
       bottoms — cleared when the library is shuffled; and which hand cards the other player knows
       (revealed, or returned from a public zone), for the hand modes above
-- [ ] Every combination worth running is measured the same way: strength AND time per decision
+- [ ] Every combination worth running is measured the same way: strength AND cost per decision
 - [ ] The rollout's combat: each attacker is judged alone and a trigger's target is the first legal
       one (DesignNotes ceilings). On a full board this trades both sides away — it made the card-value
       sandbox measure combat instead of the card (findings, AI-1.6) and it shapes the search's
@@ -55,6 +55,10 @@ the opponent's real hand cheats. Which is best is a measurement, not a guess.
   the final matrix.
 - 2026-10-18, Shayne: **the library mode's default is chosen at AI-3.9**, with the hand modes in —
   `RealOrder` (3–6pp stronger, sees the real library) stays the default until then.
+- 2026-10-19, Shayne (AI-3.4): **the sampled hand swaps in place** — a card drawn from the
+  opponent's library takes the place of the hand card it replaces, the rest of its library keeps its
+  order, so the hand mode is measured apart from the library's. **Measured by the suite, then
+  `--until-clear`** against `beam+casts` (the hand matters only to a casting opponent).
 - 2026-10-17 (default, not asked): the casting opponent uses OUR cheap policy, not one of its own —
   symmetric, so a measurement isolates the model. "Our policy" (AI-3.7) swaps our side only.
 
@@ -72,8 +76,10 @@ an enum of one (AI-2.4's review removed two).
       primitive throws no error — test the consequence) (0a09d27)
 - [x] AI-3.3 Library: "shuffle what isn't known" — both libraries, at the decision's root; measured
       with `BoardOnly` and casts-from-hand. Costs 3–6pp against the real order (72–84, 69–87), +6–8%
-      time; still 106–50 against GreedyAi. The default is chosen at AI-3.9
-- [ ] AI-3.4 Hand: shuffled from its own unseen cards — the hand setting's second value; measured
+      time; still 106–50 against GreedyAi. The default is chosen at AI-3.9. Settled by AI-6.5:
+      `--until-clear` stopped at 288 games, 130–158, WORSE by 5pp or more
+- [x] AI-3.4 Hand: shuffled from its own unseen cards — the hand setting's second value; measured —
+      `+unseen`: NO difference of 5pp against the real hand (384 games, 189–195); the default at AI-3.9
 - [ ] AI-3.5 Hand: guessed from a deck model — the third value; measured
 - [ ] AI-3.6 Full responses: the opponent acts at instant speed inside our turn when it scores
       better; measured — expect it to be the dearest in time
@@ -84,40 +90,38 @@ an enum of one (AI-2.4's review removed two).
 
 ## Next
 
-**Paused 2026-10-18 (Shayne): the measurement runs take too long** — a head-to-head is 1.5–2 h,
-and each model needs two or three. **Resume after AI-6** (measure in minutes, or overnight with an
-early stop) **and AI-7** (a faster search) — the measuring plan was settled there (2026-10-19). **AI-3.3 done.** `RealOrder` stays the default until AI-3.9 chooses (decided 2026-10-18).
-Deferred from AI-3.3's review: `Hidden.ShuffleUnknown` is a third copy of "out and back in" (with
-`Shuffle` and Identity Echo — one `ReorderLibrary` helper would do), and it rebuilds both libraries
-at every searched decision even when nothing can move (part of the +6–8% time).
-Next task when resumed: AI-3.4, the opponent's hand shuffled from its own unseen cards — extend `Hidden.Sample`
-(`MagicCore/Ai/Hidden.cs`) with a hand setting: the opponent's hand cards I don't know
-(`KnownTo & Opponent`) drawn from the pool of those plus its library's unknown ones. Long runs:
-search-vs-search with the casting opponent takes ~2 h — start the chain detached
-(`Start-Process pwsh -File …`) and wait on a progress file; a background command stops at 2 h.
-AI-3.2's notes, still true: who knows a card is `Card.KnownTo` (the rule is in
-`.claude/rules/magic-mechanics.md`; tests in `MagicCore.Tests/Sets/FraKnowledgeTests.cs`). Known gaps, each small: Theorist's Sanctum's behold
-(a condition as the land enters) reveals nothing; Identity Echo's revealed bottom is NOT known (its
-order is random), so it is shuffled with the rest; Pia's and Fblthp's `Reveal` have no test of their
-own (landcycling's and Loyal Tutor's do). **For AI-3.4:** `MoveKey` groups hand cards by name, so a
-revealed and a hidden copy of one card are one move and hand order picks which is cast — make the
-copies distinct (or cast the revealed one first) once the hand is sampled.
-Read first:
-`MagicCore/Ai/Rollout.cs` (`OpponentStep` is the ONE place the opponent is decided — the beam's tree
-goes through it too; `Settings.Opponent` picks the model), `BeamSearchAi.cs` (Settings,
-`DefaultRollout`), `AiMatch.Makers` (the `--match` names; `beam-casts` is AI-3.1), and in
-`docs/findings/magic-ai.md` the AI-2.8 baseline (111–45, 239 ms) and AI-3.1's runs.
+**Resumed 2026-10-19 after AI-6 and AI-7.** Measuring is now minutes: the quick check
+(`--suite=<ai>`, ~20 s) says what a change alters; the early-stop match (`--match=A,B --until-clear`)
+says whether it costs or gains 5pp — AI-3.4's took 9½ min (384 games), a fixed 156-game match 4½ min.
+Commands.md, "Measure an AI change — two speeds". The cost count (engine steps, rollouts per
+decision) is the time measure, not the clock.
 
-Traps:
-- Only `--sequential` timings are evidence; never time a search-vs-search run in parallel.
-- A 156-game sequential run (26 per ordered pairing) is ~40 min at the current speed — a casting
-  opponent will be slower.
+Done so far: casts from hand (AI-3.1, not shown stronger), who knows what (3.2), library shuffle
+(3.3: WORSE by 5pp, settled by AI-6.5), hand from unseen cards (3.4: no difference). Defaults stay
+`BoardOnly`, `RealOrder` and the real hand until AI-3.9 chooses.
+
+**Next task: AI-3.5, the hand guessed from a deck model** — sampled from what the opponent's deck
+COULD hold, never its real cards (honest even in limited). Interview Shayne first: what the deck
+model is (the FRA card pool by rarity? the decks in `FraDecks`? cards seen so far?) and how its
+hand size and lands are drawn. `Hidden.Sample` (`MagicCore/Ai/Hidden.cs`) takes a `Hidden.Hand`;
+`AiMatch.Models` names each model (`+unseen` is AI-3.4's). Measure as 3.4: the suite, then
+`beam+casts+<model>` against `beam+casts` with `--until-clear`.
+
+Notes still true:
+- The oracle shares beam's models and its board-only opponent, so it can't rank anything about the
+  opponent's hand or casting — those go to the match.
 - A sample of hidden cards must come from a COPY of the state's RNG (`TakeRng` advances the seed),
-  or searching changes the real game's draws and breaks determinism.
+  or searching changes the real game's draws; `Hidden.Sample` seeds its own `Random` from the state.
 - The tree's own opponent decisions and the rollouts must see the SAME sampled state: sample once at
   the root, before the tree, not inside `Rollout.Score`.
-- The evaluator already prices the opponent's hand blind (`HeldValues.Unknown`); a hand mode changes
+- The evaluator prices the opponent's hand blind already (`HeldValues.Unknown`); a hand mode changes
   what the opponent DOES with its hand, not how the hand is scored.
+- Deferred from AI-3.3's review: `Hidden.ShuffleUnknown` is a third copy of "out and back in" (with
+  `Shuffle` and Identity Echo — one `ReorderLibrary` helper would do; `ShuffleUnseenHand` is a
+  fourth, over two zones). Known-card gaps (AI-3.2): Theorist's Sanctum's behold reveals nothing;
+  Identity Echo's random bottom is not known; Pia's and Fblthp's `Reveal` have no test of their own.
+- `MoveKey` groups hand cards by name: a revealed and a hidden copy are one move. Moot for the
+  sampled opponent (rollouts never re-sample, and our own hand is never sampled).
 
 ## Log
 
@@ -165,3 +169,18 @@ Traps:
   `ponytail:`); `beam-casts` throws if its model is renamed; a test half that could not fail is gone;
   the MagicCore map, its MoveObject rule and DesignNotes' real-order ceiling brought up to date.
 - 2026-10-18: paused by Shayne after AI-3.3 — the runs take too long; pivoting to other work.
+- 2026-10-19: resumed after AI-6/7. Requirements: "time per decision" → the cost count (AI-6's
+  decision). AI-3.3 settled by AI-6.5 (WORSE by 5pp, 288 games).
+- 2026-10-19: AI-3.4 — `Hidden.Hand.ShuffleUnseen` (`+unseen`): the opponent's hand cards the
+  searcher hasn't seen drawn again from those and its library's unknown-place cards, swapped in place
+  (Shayne). Tests: seen cards and known places stay, the rest is drawn from the unseen, nothing of
+  ours moves, the rest of the library keeps its order, the search plays a real game differently with
+  it (revert-checked: sampling off fails all three). `beam` and `beam+shuffle` unchanged on the suite
+  (0 and 24 changed). Measured (findings): NO difference of 5pp, 384 games, 9½ min. 979 tests.
+- 2026-10-19: /pre-commit fixes to AI-3.4 — `beam+unseen` without `+casts` is refused (the
+  board-only opponent never reads its hand: it would measure only the reseed); MagicCore/CLAUDE.md's
+  MoveObject rule names the hand swap (a hypothetical — a real zone change's events must not fire)
+  and the source map the hand mode; findings say both AI-3.3 and AI-3.4 also take away the real
+  game's random seed (foresight of a random discard or order) — not separated. Kept the RNG use when
+  no hand card is unseen, so `+unseen` is the version measured (the suite: still 37 changed).
+

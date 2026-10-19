@@ -45,6 +45,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// rollouts past the limit (scoring them by the cheap evaluation) if that ever shows on the table.
 	/// </param>
 	/// <param name="Library">What the search may know of the libraries — <see cref="Hidden.Library"/> (story AI-3).</param>
+	/// <param name="Hand">What it may know of the opponent's hand — <see cref="Hidden.Hand"/> (story AI-3.4).</param>
 	/// <param name="Threads">
 	/// Threads one decision's rollouts may use; null (or below 1) is every core. 1 keeps a search on its
 	/// own thread — for games played in parallel, where nesting one parallel loop in another only adds
@@ -62,7 +63,8 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 		Rollout.Settings? RolloutSettings = null,
 		TimeSpan? TimeLimit = null,
 		Hidden.Library Library = Hidden.Library.RealOrder,
-		int? Threads = null
+		int? Threads = null,
+		Hidden.Hand Hand = Hidden.Hand.Real
 	)
 	{
 		/// <summary>The search a person plays against: about a second per decision (story AI-2.7).</summary>
@@ -201,7 +203,7 @@ public sealed class BeamSearchAi(int playerId, BeamSearchAi.Settings? settings =
 	/// <summary>The search, on the position <see cref="Hidden.Sample"/> lets it know; Decide plays the answer in the real game.</summary>
 	Decision Search(GameState s)
 	{
-		s = Hidden.Sample(s, PlayerId, options.Library);
+		s = Hidden.Sample(s, PlayerId, options.Library, options.Hand);
 		(plan, planExpected, rollouts) = ([], [], 0);
 		var clock = Stopwatch.StartNew();
 		var rootTurn = s.GetGame().TurnNumber;

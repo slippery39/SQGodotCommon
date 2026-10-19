@@ -501,6 +501,9 @@ the pairs compare**. Allocated bytes barely move from run to run; they are the s
 | 7.3d-2b the state-based check: one battlefield read, plain loops | 23.8 → **21.0 GB** | 74 → 72 s / 73 → 70 s | 15.4 → 13.9 s / 17.0 → 17.3 s |
 | 7.3c power, toughness and keywords as plain loops (`Characteristics`, `Card`) | 21.0 → **17.9 GB** | 73 → 71 s / 75 → 62 s | 16.1 → 16.6 s / 19.4 → 16.4 s |
 
+- **Whole games are unchanged too:** after 7.3c, AI-3.3's 156-game match (`beam+shuffle` vs
+  `beam`) replays exactly — 72–84, the same cost per decision (1 319.6 and 1 245.1 steps) — in
+  **272 s**, against 941 s in AI-6.2 and 5 814 s one game at a time (AI-3.3).
 - **Allocation 36.3 → 17.9 GB (−51%)** over the five. One priority pass on the turn-9 probe position:
   31.8 → 17.9 KB after 7.3d-1 alone.
 - **Every `CardsIn` built a new key string, `$"{playerId}.{type}"`, formatting the enum each time**
@@ -527,4 +530,29 @@ the pairs compare**. Allocated bytes barely move from run to run; they are the s
   judgments over 45 698 options (each a whole combat played forward); 7 520 judgments directly follow
   another of the same kind by the same player, where one option's line is the one the previous
   judgment already scored — 16% of the simulations, ~6–7% of the search at 41%. Not built.
+
+## The opponent's hand drawn from its unseen cards (2026-10-19, AI-3.4)
+
+`beam+casts+unseen`: the search's casting opponent casts from a SAMPLED hand — its hand cards the
+searching player hasn't seen drawn again from those and the cards of its library whose place is
+unknown; a card drawn from the library swaps places with the hand card it replaces, so the library
+otherwise keeps its real order (Shayne). Measured against `beam+casts` (its real hand) — the hand
+matters only to an opponent that casts. Release, 16 logical processors.
+
+| Speed | Result | Cost per decision | Time |
+|---|---|---|---|
+| Quick check (`--suite=…`) | changed 37 (12.8%; `beam+casts` 35); oracle agreement 76.7% (`beam+casts` 78.8%), wins missed 5 (3) | 3 257.7 steps a position (3 373.5) | ~20 s |
+| `--until-clear` | **384 games, 189–195, 49.2% ± 1.6pp — NO difference of 5pp either way** (log-likelihood: better −6.18, worse −3.24) | 1 509.5 steps, 7.0 rollouts (1 533.0, 6.9) | 572 s |
+
+- **Not seeing the opponent's hand costs nothing measurable**, where not seeing the libraries cost
+  5pp or more (AI-6.5). A casting opponent's real hand was no advantage worth 5pp.
+- **Both sides of either comparison differ in one more way:** the real-hand, real-order search keeps
+  the game's own random seed, so its rollouts foresee the real game's next random results (a random
+  discard, a random order); any sample gets a fresh seed. So AI-3.4 compares "real hand + that
+  foresight" with "sampled hand, none", and AI-3.3 the same for the libraries. Rare in FRA, but not
+  separated.
+- The oracle can't rank this one: it searches with the board-only opponent, which never casts, so
+  the opponent's hand is invisible to it. Its lower agreement is noise for this question.
+- By deck, the sampled side: Red-Green 77–51, White-Black 83–45, Jace 29–99 — the same shape as every
+  match on this field.
 

@@ -106,7 +106,7 @@ dotnet run -c Release --project MagicConsole -- --suite=beam
 #   --accept: this AI's answers become the committed ones (after an intended behaviour change)
 #   a test says the suite is stale (the engine moved): --suite=generate (~4 min), then --suite=oracle (~1 min)
 
-# 2. The overnight run (≤ ~1 h), before anything becomes a default
+# 2. The early-stop match (~10-30 min since AI-7; AI-3.4's: 9½ min), before anything becomes a default
 dotnet run -c Release --project MagicConsole -- --match=beam+shuffle,beam --until-clear
 #   stops once A is 5pp better, 5pp worse, or neither is settled (5% error per direction), judged
 #   after every 8 seeds (96 games); --games=N is the cap (default 600). UNDECIDED at the cap: any
@@ -121,7 +121,9 @@ dotnet run -c Release --project MagicConsole -- --match=greedy,random --games=72
 #   beam is the search as it plays (held cards at 0.5 of their measured value — AI-1); beam-plain is
 #   the search before held values; beam-held=0.25 is the search at that fraction; models combine as
 #   beam+casts+shuffle (casts: the simulated opponent casts from its real hand; shuffle: what the
-#   search can't know of the libraries is shuffled at its root; beam-casts = beam+casts)
+#   search can't know of the libraries is shuffled at its root; unseen: the opponent's hand cards it
+#   hasn't seen are drawn again from its unseen cards, AI-3.4 — only a casting opponent uses its hand;
+#   beam-casts = beam+casts)
 ```
 
 ## Play in console
